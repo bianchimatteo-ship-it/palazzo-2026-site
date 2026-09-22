@@ -16,7 +16,7 @@ Apri `http://127.0.0.1:4173`. La carriera viene salvata nel `localStorage` del b
 
 ## Pubblicazione automatica
 
-Il sito statico è configurato per GitHub Pages. Ogni push sul ramo `main` avvia il workflow in `.github/workflows/deploy.yml` e aggiorna il sito senza passaggi manuali.
+Il sito statico può essere pubblicato da GitHub Pages scegliendo il ramo `main` e la cartella `/` nelle impostazioni Pages del repository. Ogni push su `main` aggiorna automaticamente il sito.
 
 ## Struttura
 
