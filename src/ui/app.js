@@ -1,6 +1,6 @@
 import { fullDate, formatDate } from '../core/time.js';
 import { DATA_SOURCES, isSelectableParty } from '../data/schema.js';
-import { realDatabase } from '../data/repositories/real-data.js';
+import { realDatabase } from '../data/repositories/real-data.js?v=20260922-3';
 import { makeCareerDraft, renderCareerWizard } from './career-wizard.js';
 import { validateCareerStep } from '../core/career-rules.js';
 
