@@ -1,5 +1,5 @@
 import { DATA_SOURCES, emptyDataset, isSelectableParty } from '../data/schema.js';
-import { makeDemoParties, makeDemoState } from '../data/demo.js?v=20260922-3';
+import { makeDemoParties, makeDemoState } from '../data/demo.js?v=20260922-4';
 import { CAREER_LEVELS, initialCareerStatistics } from '../data/regions.js';
 import { storage } from './storage.js';
 import { advanceDays } from './time.js';

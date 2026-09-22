@@ -1,6 +1,6 @@
-import { mountApp } from './ui/app.js?v=20260922-3';
-import { store } from './core/store.js?v=20260922-3';
-import { loadRealDatabase } from './data/repositories/real-data.js?v=20260922-3';
+import { mountApp } from './ui/app.js?v=20260922-4';
+import { store } from './core/store.js?v=20260922-4';
+import { loadRealDatabase } from './data/repositories/real-data.js?v=20260922-4';
 
 const root = document.querySelector('#app');
 try {
