@@ -1,0 +1,796 @@
+[
+  {
+    "id": "cam-xix-07",
+    "officialName": "MoVimento 5 Stelle",
+    "abbreviation": null,
+    "chamber": "camera",
+    "memberCount": 48,
+    "countAsOf": "2026-09-22",
+    "leaderPoliticianId": null,
+    "constitutedAt": null,
+    "history": [],
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://www.camera.it/leg19/217",
+    "sourceName": "Camera dei deputati — XIX legislatura, composizione dei gruppi parlamentari",
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null
+  },
+  {
+    "id": "cam-xix-01",
+    "officialName": "Fratelli d'Italia",
+    "abbreviation": null,
+    "chamber": "camera",
+    "memberCount": 118,
+    "countAsOf": "2026-09-22",
+    "leaderPoliticianId": null,
+    "constitutedAt": null,
+    "history": [],
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://www.camera.it/leg19/217",
+    "sourceName": "Camera dei deputati — XIX legislatura, composizione dei gruppi parlamentari",
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null
+  },
+  {
+    "id": "cam-xix-02",
+    "officialName": "Partito Democratico - Italia Democratica e Progressista",
+    "abbreviation": null,
+    "chamber": "camera",
+    "memberCount": 68,
+    "countAsOf": "2026-09-22",
+    "leaderPoliticianId": null,
+    "constitutedAt": null,
+    "history": [],
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://www.camera.it/leg19/217",
+    "sourceName": "Camera dei deputati — XIX legislatura, composizione dei gruppi parlamentari",
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null
+  },
+  {
+    "id": "cam-xix-03",
+    "officialName": "Lega - Salvini Premier",
+    "abbreviation": null,
+    "chamber": "camera",
+    "memberCount": 57,
+    "countAsOf": "2026-09-22",
+    "leaderPoliticianId": null,
+    "constitutedAt": null,
+    "history": [],
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://www.camera.it/leg19/217",
+    "sourceName": "Camera dei deputati — XIX legislatura, composizione dei gruppi parlamentari",
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null
+  },
+  {
+    "id": "cam-xix-04",
+    "officialName": "Forza Italia - Berlusconi Presidente - PPE",
+    "abbreviation": null,
+    "chamber": "camera",
+    "memberCount": 52,
+    "countAsOf": "2026-09-22",
+    "leaderPoliticianId": null,
+    "constitutedAt": null,
+    "history": [],
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://www.camera.it/leg19/217",
+    "sourceName": "Camera dei deputati — XIX legislatura, composizione dei gruppi parlamentari",
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null
+  },
+  {
+    "id": "cam-xix-05",
+    "officialName": "Azione-Popolari europeisti riformatori-Renew Europe",
+    "abbreviation": null,
+    "chamber": "camera",
+    "memberCount": 10,
+    "countAsOf": "2026-09-22",
+    "leaderPoliticianId": null,
+    "constitutedAt": null,
+    "history": [],
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://www.camera.it/leg19/217",
+    "sourceName": "Camera dei deputati — XIX legislatura, composizione dei gruppi parlamentari",
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null
+  },
+  {
+    "id": "cam-xix-12",
+    "officialName": "MISTO-Futuro Nazionale Vannacci - Free",
+    "abbreviation": null,
+    "chamber": "camera",
+    "memberCount": 8,
+    "countAsOf": "2026-09-22",
+    "leaderPoliticianId": null,
+    "constitutedAt": null,
+    "history": [],
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://www.camera.it/leg19/217",
+    "sourceName": "Camera dei deputati — XIX legislatura, composizione dei gruppi parlamentari",
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null
+  },
+  {
+    "id": "cam-xix-06",
+    "officialName": "Alleanza Verdi e Sinistra",
+    "abbreviation": null,
+    "chamber": "camera",
+    "memberCount": 10,
+    "countAsOf": "2026-09-22",
+    "leaderPoliticianId": null,
+    "constitutedAt": null,
+    "history": [],
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://www.camera.it/leg19/217",
+    "sourceName": "Camera dei deputati — XIX legislatura, composizione dei gruppi parlamentari",
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null
+  },
+  {
+    "id": "cam-xix-08",
+    "officialName": "Italia Viva-Casa Riformista",
+    "abbreviation": null,
+    "chamber": "camera",
+    "memberCount": 7,
+    "countAsOf": "2026-09-22",
+    "leaderPoliticianId": null,
+    "constitutedAt": null,
+    "history": [],
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://www.camera.it/leg19/217",
+    "sourceName": "Camera dei deputati — XIX legislatura, composizione dei gruppi parlamentari",
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null
+  },
+  {
+    "id": "cam-xix-09",
+    "officialName": "NOI MODERATI (NOI CON L'ITALIA, CORAGGIO ITALIA, UDC E ITALIA AL CENTRO)-MAIE-CENTRO POPOLARE",
+    "abbreviation": null,
+    "chamber": "camera",
+    "memberCount": 8,
+    "countAsOf": "2026-09-22",
+    "leaderPoliticianId": null,
+    "constitutedAt": null,
+    "history": [],
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://www.camera.it/leg19/217",
+    "sourceName": "Camera dei deputati — XIX legislatura, composizione dei gruppi parlamentari",
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null
+  },
+  {
+    "id": "cam-xix-10",
+    "officialName": "MISTO",
+    "abbreviation": null,
+    "chamber": "camera",
+    "memberCount": 6,
+    "countAsOf": "2026-09-22",
+    "leaderPoliticianId": null,
+    "constitutedAt": null,
+    "history": [],
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://www.camera.it/leg19/217",
+    "sourceName": "Camera dei deputati — XIX legislatura, composizione dei gruppi parlamentari",
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null
+  },
+  {
+    "id": "cam-xix-13",
+    "officialName": "MISTO-+Europa - Stati Uniti d'Europa",
+    "abbreviation": null,
+    "chamber": "camera",
+    "memberCount": 3,
+    "countAsOf": "2026-09-22",
+    "leaderPoliticianId": null,
+    "constitutedAt": null,
+    "history": [],
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://www.camera.it/leg19/217",
+    "sourceName": "Camera dei deputati — XIX legislatura, composizione dei gruppi parlamentari",
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null
+  },
+  {
+    "id": "cam-xix-11",
+    "officialName": "MISTO-Minoranze Linguistiche",
+    "abbreviation": null,
+    "chamber": "camera",
+    "memberCount": 4,
+    "countAsOf": "2026-09-22",
+    "leaderPoliticianId": null,
+    "constitutedAt": null,
+    "history": [],
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://www.camera.it/leg19/217",
+    "sourceName": "Camera dei deputati — XIX legislatura, composizione dei gruppi parlamentari",
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null
+  },
+  {
+    "id": "senato-xix-gruppo-9",
+    "officialName": "Misto",
+    "abbreviation": null,
+    "chamber": "senato",
+    "memberCount": 8,
+    "countAsOf": "2026-09-22",
+    "leaderPoliticianId": "senato-xix-senatore-22918",
+    "constitutedAt": null,
+    "history": [
+      {
+        "officialName": "Misto",
+        "validFrom": "2022-10-18",
+        "validTo": null
+      },
+      {
+        "officialName": "Misto",
+        "validFrom": "2022-10-18",
+        "validTo": "2023-03-15"
+      },
+      {
+        "officialName": "Misto",
+        "validFrom": "2022-10-18",
+        "validTo": "2025-02-18"
+      },
+      {
+        "officialName": "Misto",
+        "validFrom": "2023-03-16",
+        "validTo": null
+      },
+      {
+        "officialName": "Misto",
+        "validFrom": "2023-11-09",
+        "validTo": null
+      },
+      {
+        "officialName": "Misto",
+        "validFrom": "2023-11-09",
+        "validTo": "2024-10-29"
+      },
+      {
+        "officialName": "Misto",
+        "validFrom": "2023-11-09",
+        "validTo": "2024-11-26"
+      }
+    ],
+    "sourceUrl": "http://dati.senato.it/gruppo/9",
+    "sourceName": "Senato della Repubblica — Open data composizione dei gruppi alla data",
+    "source": "real",
+    "verified": true,
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null,
+    "status": "active"
+  },
+  {
+    "id": "senato-xix-gruppo-71",
+    "officialName": "MoVimento 5 Stelle",
+    "abbreviation": null,
+    "chamber": "senato",
+    "memberCount": 26,
+    "countAsOf": "2026-09-22",
+    "leaderPoliticianId": "senato-xix-senatore-36417",
+    "constitutedAt": null,
+    "history": [
+      {
+        "officialName": "MoVimento 5 Stelle",
+        "validFrom": "2022-10-18",
+        "validTo": null
+      },
+      {
+        "officialName": "MoVimento 5 Stelle",
+        "validFrom": "2022-10-18",
+        "validTo": "2023-04-17"
+      },
+      {
+        "officialName": "MoVimento 5 Stelle",
+        "validFrom": "2022-10-18",
+        "validTo": "2024-02-08"
+      },
+      {
+        "officialName": "MoVimento 5 Stelle",
+        "validFrom": "2022-10-18",
+        "validTo": "2024-08-06"
+      },
+      {
+        "officialName": "MoVimento 5 Stelle",
+        "validFrom": "2022-10-18",
+        "validTo": "2026-02-25"
+      },
+      {
+        "officialName": "MoVimento 5 Stelle",
+        "validFrom": "2023-04-18",
+        "validTo": null
+      },
+      {
+        "officialName": "MoVimento 5 Stelle",
+        "validFrom": "2023-04-18",
+        "validTo": "2026-02-25"
+      },
+      {
+        "officialName": "MoVimento 5 Stelle",
+        "validFrom": "2025-01-09",
+        "validTo": null
+      },
+      {
+        "officialName": "MoVimento 5 Stelle",
+        "validFrom": "2026-02-26",
+        "validTo": null
+      }
+    ],
+    "sourceUrl": "http://dati.senato.it/gruppo/71",
+    "sourceName": "Senato della Repubblica — Open data composizione dei gruppi alla data",
+    "source": "real",
+    "verified": true,
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null,
+    "status": "active"
+  },
+  {
+    "id": "senato-xix-gruppo-85",
+    "officialName": "Fratelli d'Italia",
+    "abbreviation": null,
+    "chamber": "senato",
+    "memberCount": 63,
+    "countAsOf": "2026-09-22",
+    "leaderPoliticianId": "senato-xix-senatore-1407",
+    "constitutedAt": null,
+    "history": [
+      {
+        "officialName": "Fratelli d'Italia",
+        "validFrom": "2022-10-18",
+        "validTo": null
+      },
+      {
+        "officialName": "Fratelli d'Italia",
+        "validFrom": "2022-10-18",
+        "validTo": "2022-11-08"
+      },
+      {
+        "officialName": "Fratelli d'Italia",
+        "validFrom": "2022-10-18",
+        "validTo": "2024-05-07"
+      },
+      {
+        "officialName": "Fratelli d'Italia",
+        "validFrom": "2022-11-09",
+        "validTo": null
+      },
+      {
+        "officialName": "Fratelli d'Italia",
+        "validFrom": "2023-05-09",
+        "validTo": null
+      },
+      {
+        "officialName": "Fratelli d'Italia",
+        "validFrom": "2024-05-08",
+        "validTo": null
+      }
+    ],
+    "sourceUrl": "http://dati.senato.it/gruppo/85",
+    "sourceName": "Senato della Repubblica — Open data composizione dei gruppi alla data",
+    "source": "real",
+    "verified": true,
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null,
+    "status": "active"
+  },
+  {
+    "id": "senato-xix-gruppo-49",
+    "officialName": "Partito Democratico - Italia Democratica e Progressista",
+    "abbreviation": null,
+    "chamber": "senato",
+    "memberCount": 36,
+    "countAsOf": "2026-09-22",
+    "leaderPoliticianId": "senato-xix-senatore-25555",
+    "constitutedAt": null,
+    "history": [
+      {
+        "officialName": "Partito Democratico - Italia Democratica e Progressista",
+        "validFrom": "2022-10-18",
+        "validTo": null
+      },
+      {
+        "officialName": "Partito Democratico - Italia Democratica e Progressista",
+        "validFrom": "2022-10-18",
+        "validTo": "2022-10-24"
+      },
+      {
+        "officialName": "Partito Democratico - Italia Democratica e Progressista",
+        "validFrom": "2022-10-18",
+        "validTo": "2023-03-27"
+      },
+      {
+        "officialName": "Partito Democratico - Italia Democratica e Progressista",
+        "validFrom": "2022-10-18",
+        "validTo": "2023-04-25"
+      },
+      {
+        "officialName": "Partito Democratico - Italia Democratica e Progressista",
+        "validFrom": "2022-10-18",
+        "validTo": "2023-06-05"
+      },
+      {
+        "officialName": "Partito Democratico - Italia Democratica e Progressista",
+        "validFrom": "2022-10-18",
+        "validTo": "2025-03-06"
+      },
+      {
+        "officialName": "Partito Democratico - Italia Democratica e Progressista",
+        "validFrom": "2022-10-25",
+        "validTo": null
+      },
+      {
+        "officialName": "Partito Democratico - Italia Democratica e Progressista",
+        "validFrom": "2022-10-25",
+        "validTo": "2023-06-05"
+      },
+      {
+        "officialName": "Partito Democratico - Italia Democratica e Progressista",
+        "validFrom": "2023-03-21",
+        "validTo": null
+      },
+      {
+        "officialName": "Partito Democratico - Italia Democratica e Progressista",
+        "validFrom": "2023-03-28",
+        "validTo": null
+      },
+      {
+        "officialName": "Partito Democratico - Italia Democratica e Progressista",
+        "validFrom": "2023-05-31",
+        "validTo": null
+      },
+      {
+        "officialName": "Partito Democratico - Italia Democratica e Progressista",
+        "validFrom": "2023-06-06",
+        "validTo": null
+      }
+    ],
+    "sourceUrl": "http://dati.senato.it/gruppo/49",
+    "sourceName": "Senato della Repubblica — Open data composizione dei gruppi alla data",
+    "source": "real",
+    "verified": true,
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null,
+    "status": "active"
+  },
+  {
+    "id": "senato-xix-gruppo-56",
+    "officialName": "Forza Italia - Berlusconi Presidente - PPE",
+    "abbreviation": null,
+    "chamber": "senato",
+    "memberCount": 20,
+    "countAsOf": "2026-09-22",
+    "leaderPoliticianId": "senato-xix-senatore-22914",
+    "constitutedAt": null,
+    "history": [
+      {
+        "officialName": "Forza Italia - Berlusconi Presidente - PPE",
+        "validFrom": "2022-11-08",
+        "validTo": null
+      },
+      {
+        "officialName": "Forza Italia - Berlusconi Presidente - PPE",
+        "validFrom": "2022-11-08",
+        "validTo": "2026-03-30"
+      },
+      {
+        "officialName": "Forza Italia - Berlusconi Presidente - PPE",
+        "validFrom": "2023-01-18",
+        "validTo": "2026-03-30"
+      },
+      {
+        "officialName": "Forza Italia - Berlusconi Presidente - PPE",
+        "validFrom": "2023-11-02",
+        "validTo": null
+      },
+      {
+        "officialName": "Forza Italia - Berlusconi Presidente - PPE",
+        "validFrom": "2023-11-21",
+        "validTo": null
+      },
+      {
+        "officialName": "Forza Italia - Berlusconi Presidente - PPE",
+        "validFrom": "2023-11-21",
+        "validTo": "2026-03-25"
+      },
+      {
+        "officialName": "Forza Italia - Berlusconi Presidente - PPE",
+        "validFrom": "2023-12-13",
+        "validTo": "2026-03-30"
+      },
+      {
+        "officialName": "Forza Italia - Berlusconi Presidente - PPE",
+        "validFrom": "2024-02-21",
+        "validTo": null
+      },
+      {
+        "officialName": "Forza Italia - Berlusconi Presidente - PPE",
+        "validFrom": "2024-08-07",
+        "validTo": null
+      },
+      {
+        "officialName": "Forza Italia - Berlusconi Presidente - PPE",
+        "validFrom": "2026-03-26",
+        "validTo": null
+      },
+      {
+        "officialName": "Forza Italia - Berlusconi Presidente - PPE",
+        "validFrom": "2026-03-31",
+        "validTo": null
+      }
+    ],
+    "sourceUrl": "http://dati.senato.it/gruppo/56",
+    "sourceName": "Senato della Repubblica — Open data composizione dei gruppi alla data",
+    "source": "real",
+    "verified": true,
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null,
+    "status": "active"
+  },
+  {
+    "id": "senato-xix-gruppo-33",
+    "officialName": "Lega Salvini Premier - Partito Sardo d'Azione",
+    "abbreviation": null,
+    "chamber": "senato",
+    "memberCount": 30,
+    "countAsOf": "2026-09-22",
+    "leaderPoliticianId": "senato-xix-senatore-32706",
+    "constitutedAt": null,
+    "history": [
+      {
+        "officialName": "Lega Salvini Premier - Partito Sardo d'Azione",
+        "validFrom": "2022-10-18",
+        "validTo": null
+      },
+      {
+        "officialName": "Lega Salvini Premier - Partito Sardo d'Azione",
+        "validFrom": "2022-10-18",
+        "validTo": "2022-11-07"
+      },
+      {
+        "officialName": "Lega Salvini Premier - Partito Sardo d'Azione",
+        "validFrom": "2022-10-18",
+        "validTo": "2025-02-24"
+      },
+      {
+        "officialName": "Lega Salvini Premier - Partito Sardo d'Azione",
+        "validFrom": "2022-10-18",
+        "validTo": "2026-06-29"
+      },
+      {
+        "officialName": "Lega Salvini Premier - Partito Sardo d'Azione",
+        "validFrom": "2022-11-08",
+        "validTo": null
+      },
+      {
+        "officialName": "Lega Salvini Premier - Partito Sardo d'Azione",
+        "validFrom": "2022-11-08",
+        "validTo": "2026-06-29"
+      },
+      {
+        "officialName": "Lega Salvini Premier - Partito Sardo d'Azione",
+        "validFrom": "2025-02-25",
+        "validTo": null
+      },
+      {
+        "officialName": "Lega Salvini Premier - Partito Sardo d'Azione",
+        "validFrom": "2026-06-30",
+        "validTo": null
+      }
+    ],
+    "sourceUrl": "http://dati.senato.it/gruppo/33",
+    "sourceName": "Senato della Repubblica — Open data composizione dei gruppi alla data",
+    "source": "real",
+    "verified": true,
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null,
+    "status": "active"
+  },
+  {
+    "id": "senato-xix-gruppo-69",
+    "officialName": "Per le Autonomie (SVP-PATT, Campobase)",
+    "abbreviation": null,
+    "chamber": "senato",
+    "memberCount": 7,
+    "countAsOf": "2026-09-22",
+    "leaderPoliticianId": "senato-xix-senatore-32727",
+    "constitutedAt": null,
+    "history": [
+      {
+        "officialName": "Per le Autonomie (SVP-Patt, Campobase, Sud Chiama Nord)",
+        "validFrom": "2022-10-18",
+        "validTo": null
+      },
+      {
+        "officialName": "Per le Autonomie (SVP-Patt, Campobase, Sud Chiama Nord)",
+        "validFrom": "2022-10-18",
+        "validTo": "2023-10-04"
+      },
+      {
+        "officialName": "Per le Autonomie (SVP-Patt, Campobase, Sud Chiama Nord)",
+        "validFrom": "2022-11-09",
+        "validTo": null
+      },
+      {
+        "officialName": "Per le Autonomie (SVP-PATT, Campobase)",
+        "validFrom": "2025-02-19",
+        "validTo": null
+      }
+    ],
+    "sourceUrl": "http://dati.senato.it/gruppo/69",
+    "sourceName": "Senato della Repubblica — Open data composizione dei gruppi alla data",
+    "source": "real",
+    "verified": true,
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null,
+    "status": "active"
+  },
+  {
+    "id": "senato-xix-gruppo-92",
+    "officialName": "Civici d'Italia-UDC-Noi Moderati (Noi con l'Italia, Coraggio Italia, Italia al Centro)-MAIE-Centro Popolare",
+    "abbreviation": null,
+    "chamber": "senato",
+    "memberCount": 8,
+    "countAsOf": "2026-09-22",
+    "leaderPoliticianId": "senato-xix-senatore-22871",
+    "constitutedAt": null,
+    "history": [
+      {
+        "officialName": "Civici d'Italia - Noi Moderati (UDC - Coraggio Italia - Noi con l'Italia - Italia al Centro) - MAIE",
+        "validFrom": "2022-10-18",
+        "validTo": null
+      },
+      {
+        "officialName": "Civici d'Italia - Noi Moderati (UDC - Coraggio Italia - Noi con l'Italia - Italia al Centro) - MAIE",
+        "validFrom": "2022-10-18",
+        "validTo": "2022-11-07"
+      },
+      {
+        "officialName": "Civici d'Italia - Noi Moderati (UDC - Coraggio Italia - Noi con l'Italia - Italia al Centro) - MAIE",
+        "validFrom": "2022-10-18",
+        "validTo": "2023-03-28"
+      },
+      {
+        "officialName": "Civici d'Italia - Noi Moderati (UDC - Coraggio Italia - Noi con l'Italia - Italia al Centro) - MAIE",
+        "validFrom": "2022-11-08",
+        "validTo": null
+      },
+      {
+        "officialName": "Civici d'Italia - Noi Moderati (UDC - Coraggio Italia - Noi con l'Italia - Italia al Centro) - MAIE",
+        "validFrom": "2023-03-29",
+        "validTo": null
+      },
+      {
+        "officialName": "Civici d'Italia-UDC-Noi Moderati (Noi con l'Italia, Coraggio Italia, Italia al Centro)-MAIE-Centro Popolare",
+        "validFrom": "2024-10-30",
+        "validTo": null
+      },
+      {
+        "officialName": "Civici d'Italia-UDC-Noi Moderati (Noi con l'Italia, Coraggio Italia, Italia al Centro)-MAIE-Centro Popolare",
+        "validFrom": "2024-11-27",
+        "validTo": null
+      }
+    ],
+    "sourceUrl": "http://dati.senato.it/gruppo/92",
+    "sourceName": "Senato della Repubblica — Open data composizione dei gruppi alla data",
+    "source": "real",
+    "verified": true,
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null,
+    "status": "active"
+  },
+  {
+    "id": "senato-xix-gruppo-91",
+    "officialName": "Italia Viva - Casa Riformista",
+    "abbreviation": null,
+    "chamber": "senato",
+    "memberCount": 8,
+    "countAsOf": "2026-09-22",
+    "leaderPoliticianId": "senato-xix-senatore-33005",
+    "constitutedAt": null,
+    "history": [
+      {
+        "officialName": "Azione-ItaliaViva-RenewEurope",
+        "validFrom": "2022-10-18",
+        "validTo": null
+      },
+      {
+        "officialName": "Azione-ItaliaViva-RenewEurope",
+        "validFrom": "2022-10-18",
+        "validTo": "2022-10-18"
+      },
+      {
+        "officialName": "Azione-ItaliaViva-RenewEurope",
+        "validFrom": "2022-10-18",
+        "validTo": "2023-07-19"
+      },
+      {
+        "officialName": "Azione-ItaliaViva-RenewEurope",
+        "validFrom": "2022-10-18",
+        "validTo": "2023-11-08"
+      },
+      {
+        "officialName": "Azione-ItaliaViva-RenewEurope",
+        "validFrom": "2022-10-19",
+        "validTo": null
+      },
+      {
+        "officialName": "Azione-ItaliaViva-RenewEurope",
+        "validFrom": "2022-10-19",
+        "validTo": "2023-11-08"
+      },
+      {
+        "officialName": "Azione-ItaliaViva-RenewEurope",
+        "validFrom": "2023-04-26",
+        "validTo": "2023-07-19"
+      },
+      {
+        "officialName": "Azione-ItaliaViva-RenewEurope",
+        "validFrom": "2023-07-20",
+        "validTo": "2025-03-03"
+      },
+      {
+        "officialName": "Azione-ItaliaViva-RenewEurope",
+        "validFrom": "2023-10-05",
+        "validTo": "2025-06-03"
+      },
+      {
+        "officialName": "Italia Viva - Il Centro - Renew Europe",
+        "validFrom": "2025-03-04",
+        "validTo": null
+      },
+      {
+        "officialName": "Italia Viva - Il Centro - Renew Europe",
+        "validFrom": "2025-03-07",
+        "validTo": "2025-06-03"
+      },
+      {
+        "officialName": "Italia Viva - Il Centro - Renew Europe",
+        "validFrom": "2025-06-04",
+        "validTo": null
+      }
+    ],
+    "sourceUrl": "http://dati.senato.it/gruppo/91",
+    "sourceName": "Senato della Repubblica — Open data composizione dei gruppi alla data",
+    "source": "real",
+    "verified": true,
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null,
+    "status": "active"
+  }
+]

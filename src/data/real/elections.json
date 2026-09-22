@@ -1,0 +1,30 @@
+[
+  {
+    "id": "election-it-politiche-2022",
+    "officialName": "Elezioni politiche 2022 — Camera e Senato",
+    "level": "nazionale",
+    "electionDate": "2022-09-25",
+    "electionType": "politiche",
+    "sourceUrl": "https://www.interno.gov.it/it/temi/elezioni-e-referendum/dato-storico-elezioni",
+    "sourceName": "Ministero dell’Interno — Archivio storico delle elezioni",
+    "source": "real",
+    "verified": true,
+    "verifiedAt": "2026-09-22",
+    "validFrom": "2022-09-25",
+    "validTo": "2022-09-25"
+  },
+  {
+    "id": "election-it-europee-2024",
+    "officialName": "Elezioni europee 2024 — Italia",
+    "level": "nazionale",
+    "electionDate": "2024-06-08",
+    "electionType": "europee",
+    "sourceUrl": "https://dait.interno.gov.it/elezioni/trasparenza/elezioni-europee-2024",
+    "sourceName": "Ministero dell’Interno — Trasparenza, elezioni europee 2024",
+    "source": "real",
+    "verified": true,
+    "verifiedAt": "2026-09-22",
+    "validFrom": "2024-06-08",
+    "validTo": "2024-06-09"
+  }
+]

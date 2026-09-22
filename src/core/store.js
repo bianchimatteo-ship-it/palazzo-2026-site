@@ -7,15 +7,27 @@ import { validateNewCareerDraft } from './career-rules.js';
 
 const storedState = storage.load();
 function hydrateState(saved) {
-  if (!saved || saved.version >= 2) return saved ?? makeDemoState();
+  if (!saved) return makeDemoState();
+  if (saved.version >= 3) return saved;
   const fresh = makeDemoState();
   if (saved.clock?.currentDate) fresh.clock = { ...fresh.clock, ...saved.clock };
   if (saved.ui?.activePage) fresh.ui.activePage = saved.ui.activePage;
+  if (saved.version >= 2) {
+    const collections = Object.keys(fresh.dataset);
+    for (const collection of collections) {
+      if (Array.isArray(fresh.dataset[collection])) {
+        fresh.dataset[collection] = (saved.dataset?.[collection] ?? []).filter(record => record.source === DATA_SOURCES.SIMULATION || record.source === DATA_SOURCES.USER);
+      }
+    }
+    fresh.career = saved.career ?? fresh.career;
+    fresh.ui = { ...fresh.ui, ...saved.ui };
+    fresh.version = 3;
+  }
   return fresh;
 }
 let state = hydrateState(storedState);
 let lastSaved = storedState ? 'Salvataggio caricato' : 'Nuova carriera demo';
-if (storedState && storedState.version < 2) {
+if (storedState && storedState.version < 3) {
   try { storage.save(state); lastSaved = 'Salvataggio aggiornato'; } catch { lastSaved = 'Salvataggio locale non disponibile'; }
 }
 const listeners = new Set();
@@ -68,7 +80,7 @@ export const store = {
     const territoryId = draft.initialLevel === 'comunale' ? municipalityId : draft.initialLevel === 'regionale' ? regionId : nationId;
     if (draft.initialLevel === 'nazionale') territories.push({ id: nationId, kind: 'stato', name: 'Italia', parentId: null, source: DATA_SOURCES.USER });
 
-    const parties = [...makeDemoParties(), ...state.dataset.parties.filter(party => party.source === DATA_SOURCES.REAL && party.verified === true)];
+    const parties = [...makeDemoParties(), ...state.dataset.parties.filter(party => party.source === DATA_SOURCES.USER)];
     if (draft.partyMode === 'existing' && !parties.some(party => party.id === draft.partyId && isSelectableParty(party))) throw new Error('Il partito selezionato non è disponibile.');
     if (draft.partyMode === 'new') {
       if (!draft.partyName?.trim() || !draft.partyAbbreviation?.trim() || !draft.partyDescription?.trim() || !draft.partyOrientation) throw new Error('Completa i dati del nuovo partito.');
@@ -103,7 +115,7 @@ export const store = {
     dataset.offices = [office];
     dataset.statistics = datasetStatistics;
     state = {
-      version: 2,
+      version: 3,
       career: { id, name: `${player.displayName} — ${level.shortLabel}`, playerId, partyId, initialLevel: draft.initialLevel, territoryId, statisticsIds: statisticIds, startedAt: state.clock.currentDate, createdAt: new Date().toISOString(), status: 'active' },
       clock: { ...state.clock }, dataset,
       ui: { activePage: 'panoramica', saveName: 'Salvataggio locale', toast: 'Carriera iniziata' }

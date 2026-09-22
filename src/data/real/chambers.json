@@ -1,0 +1,26 @@
+[
+  {
+    "id": "chamber-camera",
+    "kind": "camera",
+    "officialName": "Camera dei deputati",
+    "sourceUrl": "https://www.camera.it/deputati/elenco",
+    "sourceName": "Camera dei deputati",
+    "source": "real",
+    "verified": true,
+    "verifiedAt": "2026-09-22",
+    "validFrom": "2022-10-13",
+    "validTo": null
+  },
+  {
+    "id": "chamber-senato",
+    "kind": "senato",
+    "officialName": "Senato della Repubblica",
+    "sourceUrl": "https://dati.senato.it/sito/composizione?legislatura=19&testo_generico=11",
+    "sourceName": "Senato della Repubblica — dati.senato.it",
+    "source": "real",
+    "verified": true,
+    "verifiedAt": "2026-09-22",
+    "validFrom": "2022-10-13",
+    "validTo": null
+  }
+]

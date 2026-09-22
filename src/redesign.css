@@ -347,3 +347,41 @@ body {
 @media (prefers-reduced-motion: reduce) {
   *,*::before,*::after { scroll-behavior:auto!important; transition:none!important; animation:none!important; }
 }
+
+/* Verified political reference catalogs */
+.catalog-shell { display:grid; gap:12px; }
+.catalog-summary { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; color:#778177; font-size:11px; }
+.catalog-summary strong { color:#35463b; font:700 15px Manrope,sans-serif; }
+.catalog-toolbar { display:grid; grid-template-columns:minmax(220px,1.4fr) repeat(3,minmax(135px,1fr)); gap:8px; padding:13px; border:1px solid #e3e2da; background:#faf9f4; }
+.catalog-search,.catalog-filter { display:grid; gap:5px; min-width:0; }
+.catalog-search>span,.catalog-filter>span { color:#7b8379; font-size:10px; font-weight:600; }
+.catalog-search input,.catalog-filter select { height:35px; width:100%; min-width:0; padding:0 10px; border:1px solid #ddddd4; border-radius:3px; background:#fffefa; color:#34443a; font-size:11px; }
+.catalog-body { display:grid; gap:9px; }
+.catalog-list { display:grid; border-top:1px solid #deded5; }
+.catalog-row { display:grid; grid-template-columns:32px minmax(180px,1fr) minmax(180px,250px) auto; align-items:center; gap:12px; width:100%; padding:12px 9px; border:0; border-bottom:1px solid #e7e6df; background:transparent; color:#34443a; text-align:left; }
+.catalog-row:hover { background:#f3f2eb; }
+.catalog-mark { display:grid; place-items:center; width:29px; height:29px; border:1px solid #d9ded5; border-radius:50%; color:#657d6d; font-size:10px; font-weight:700; }
+.catalog-main { display:grid; min-width:0; gap:3px; }
+.catalog-main strong { color:#34443a; font:700 12px Manrope,sans-serif; }
+.catalog-main>span,.catalog-main small { color:#80877e; font-size:10px; line-height:1.45; }
+.catalog-main small { overflow-wrap:anywhere; }
+.catalog-facts { display:grid; justify-items:start; gap:4px; color:#848a7f; font-size:9px; }
+.catalog-source,.catalog-open { color:#54735d; font-size:10px; text-decoration:none; white-space:nowrap; }
+.verified-badge { display:inline-flex; width:max-content; max-width:100%; align-items:center; padding:4px 7px; border:1px solid #cddbd0; border-radius:2px; background:#edf3ed; color:#456b51; font-size:9px; font-weight:600; }
+.catalog-footnote { margin:2px 0 0; color:#848a7f; font-size:10px; line-height:1.5; }
+.catalog-empty { padding:28px 15px; border:1px solid #e3e2da; color:#7a8178; font-size:12px; text-align:center; }
+.catalog-result-count { padding:5px 0; color:#788076; font-size:10px; }
+.politician-row { cursor:pointer; grid-template-columns:32px minmax(180px,1fr) auto auto; }
+.catalog-toolbar .catalog-filter>span:empty { display:none; }
+.profile-modal-backdrop { position:fixed; inset:0; z-index:10; display:grid; place-items:center; padding:18px; background:rgba(24,35,29,.42); }
+.politician-profile { position:relative; width:min(600px,100%); max-height:min(80vh,760px); overflow:auto; padding:26px; border:1px solid #deded5; background:#faf9f4; box-shadow:0 20px 70px rgba(20,30,25,.2); }
+.politician-profile h2 { margin:13px 0 5px; color:#304438; font:700 26px Manrope,sans-serif; }
+.politician-profile>p { color:#788076; font-size:12px; }
+.politician-profile dl { display:grid; grid-template-columns:160px 1fr; gap:0; margin:20px 0; border-top:1px solid #e5e4dc; }
+.politician-profile dt,.politician-profile dd { margin:0; padding:10px 0; border-bottom:1px solid #e5e4dc; font-size:11px; }
+.politician-profile dt { color:#80877e; }
+.politician-profile dd { color:#3d4a40; }
+.politician-profile>a { color:#54735d; font-size:11px; }
+.profile-modal-close { position:absolute; top:12px; right:14px; border:0; background:none; color:#748075; font-size:24px; }
+@media(max-width:900px) { .catalog-toolbar { grid-template-columns:repeat(2,minmax(0,1fr)); } .catalog-row { grid-template-columns:30px minmax(0,1fr) auto; } .catalog-facts { grid-column:2; } .catalog-source,.catalog-open { grid-column:3; grid-row:1; } }
+@media(max-width:600px) { .catalog-toolbar { grid-template-columns:1fr; } .catalog-row,.politician-row { grid-template-columns:28px minmax(0,1fr); gap:9px; } .catalog-facts { grid-column:2; } .catalog-source,.catalog-open,.politician-row>.verified-badge { grid-column:2; grid-row:auto; } .politician-profile { padding:22px 16px; } .politician-profile dl { grid-template-columns:115px 1fr; } }

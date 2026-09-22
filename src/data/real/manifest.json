@@ -1,0 +1,40 @@
+{
+  "datasetVersion": "2026-09-22.1",
+  "snapshotDate": "2026-09-22",
+  "publisher": "POLITICANDO 2026 — importatore open data",
+  "sourcePolicy": "Primary institutional sources only; unknown values are null. Registry entries are sourced to registration deliberations; only explicit deregistration notices set historical status. MEF 2‰ evidence is dated to its reporting year.",
+  "sourceUrls": {
+    "cameraRoster": "https://www.camera.it/deputati/ws/elenco_deputati?_format=json&leg=19",
+    "cameraDirectory": "https://www.camera.it/deputati/elenco",
+    "cameraGroups": "https://www.camera.it/leg19/217",
+    "senateOpenData": "https://dati.senato.it/sito/composizione?legislatura=19&testo_generico=11",
+    "senateMembers": "https://dati.senato.it/sito/composizione?legislatura=19&testo_generico=11",
+    "senateGroups": "https://dati.senato.it/sito/composizione?legislatura=19&testo_generico=11&active_tab_78=80",
+    "mefTwoPerThousand": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
+    "partyRegister": "https://www.parlamento.it/Parlamento/1063",
+    "interiorEuropeanTransparency": "https://dait.interno.gov.it/elezioni/trasparenza/elezioni-europee-2024",
+    "interiorElectionArchive": "https://www.interno.gov.it/it/temi/elezioni-e-referendum/dato-storico-elezioni"
+  },
+  "collections": {
+    "parties": 68,
+    "politicalMovements": 2,
+    "parliamentaryGroups": 22,
+    "coalitions": 0,
+    "electoralLists": 13,
+    "politicians": 604,
+    "offices": 613,
+    "partyMemberships": 0,
+    "groupMemberships": 674,
+    "electionParticipations": 268,
+    "partyMembershipHistory": 0,
+    "officeHistory": 613,
+    "territories": 23,
+    "elections": 2
+  },
+  "warnings": [
+    "Il Registro nazionale Parlamento include le iscrizioni storiche ancora visibili; lo stato historical è valorizzato solo quando il registro documenta cancellazione. La registrazione non certifica automaticamente attività politica sul territorio.",
+    "La Camera espone anagrafica, collegio e lista di elezione nelle schede individuali; tali campi sono importati separatamente dai gruppi.",
+    "Dati Senato corrente via open data per il 22/09/2026; i gruppi e le appartenenze sono esportati separatamente e non diventano partiti.",
+    "Sono importati i mandati di deputato/senatore e i presidenti di gruppo restituiti dal dataset ufficiale del Senato; altre cariche sono lasciate non assegnate finché non vengono importate da fonti specifiche."
+  ]
+}
