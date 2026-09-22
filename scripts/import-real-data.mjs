@@ -14,7 +14,20 @@ const urls = {
   mefTwoPerThousand: 'https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101',
   partyRegister: 'https://www.parlamento.it/Parlamento/1063',
   interiorEuropeanTransparency: 'https://dait.interno.gov.it/elezioni/trasparenza/elezioni-europee-2024',
-  interiorElectionArchive: 'https://www.interno.gov.it/it/temi/elezioni-e-referendum/dato-storico-elezioni'
+  interiorElectionArchive: 'https://www.interno.gov.it/it/temi/elezioni-e-referendum/dato-storico-elezioni',
+  futuroNazionaleHome: 'https://futuronazionale.it/',
+  futuroNazionaleTransparency: 'https://futuronazionale.it/trasparenza/',
+  futuroNazionaleOrganigram: 'https://futuronazionale.it/organigramma/',
+  futuroNazionaleLogoPage: 'https://futuronazionale.it/il-logo/',
+  futuroNazionaleLogo: 'https://futuronazionale.it/wp-content/uploads/2026/01/Futuro-Nazionale-logo.png',
+  cameraFuturoNazionaleComponent: 'https://www.camera.it/leg19/1351?id_tipografico=08&shadow_organo_parlamentare=3508',
+  pattHome: 'https://patt.tn.it/', pattOrganization: 'https://patt.tn.it/partito/organizzazione/organi-e-cariche/',
+  pattCouncil: 'https://www.consiglio.provincia.tn.it/telefono-posta-elettronica/Pages/consiglieri-e-gruppi-consiliari.aspx',
+  svpHome: 'https://www.svp.eu/de/partei-883.html', svpCouncil: 'https://www.landtag-bz.org/de/fraktionen/suedtiroler-volkspartei',
+  stellaAlpinaHome: 'https://www.stella-alpina.org/',
+  unionValdotaineHome: 'https://www.unionvaldotaine.org/', unionValdotaineElections: 'https://www.unionvaldotaine.org/infos/trasparenza/elezioni/', unionValdotaineStatutes: 'https://www.unionvaldotaine.org/mouvement/statuts/',
+  campobaseHome: 'https://www.campobasetrentino.it/', campobaseCouncil: 'https://www25.consiglio.provincia.tn.it/istituzione/i-gruppi-consiliari/pagine/gruppo-consiliare?id=1777121&uid=1777121', campobaseStatute: 'https://www.gazzettaufficiale.it/eli/gu/2023/11/29/279/sg/pdf',
+  sudChiamaNordHome: 'https://sud-chiamanord.it/', sudChiamaNordAssembly: 'https://www.ars.sicilia.it/gruppi-parlamentari/XVIII-sud-chiama-nord-le-autonomie'
 };
 const SOURCE = 'real';
 const mefPartyNames = [
@@ -83,8 +96,101 @@ for (const [id,name] of mefPartyNames) {
   const same = [...parties, ...politicalMovements].find(item => normalize(item.officialName) === normalize(name));
   if (same) {
     same.twoPerThousandYear = 2025;
-    same.secondarySources = [{ sourceUrl:urls.mefTwoPerThousand, sourceName:'Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024', verifiedAt:AS_OF }];
+    same.secondarySources = [meta(urls.mefTwoPerThousand,'Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024')];
   } else parties.push({ id:`party-mef-2025-${id}`, entityType:'party', officialName:name, abbreviation:null, factualDescription:null, color:null, website:null, level:null, geographicArea:null, regionId:null, status:null, parliamentaryPresence:null, regionalPresence:null, localPresence:null, foundedAt:null, registeredAt:null, leadership:[], twoPerThousandYear:2025, ...meta(urls.mefTwoPerThousand,'Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024') });
+}
+// Curated official-source addition: the Chamber documents a parliamentary
+// component bearing the name, while the party's own pages confirm its identity,
+// organigram and logo. The component is not treated as a parliamentary group
+// membership or as proof that every component member belongs to the party.
+const existingFuturoNazionale = [...parties, ...politicalMovements].find(item => normalize(item.officialName) === normalize('Futuro Nazionale'));
+const futuroNazionaleId = existingFuturoNazionale?.id ?? 'party-futuro-nazionale';
+const futuroNazionale = existingFuturoNazionale ?? {
+    id:futuroNazionaleId, entityType:'party', officialName:'Futuro Nazionale', abbreviation:null,
+    factualDescription:null, color:null, level:null, geographicArea:null, regionId:null,
+    parliamentaryPresence:null, regionalPresence:null, localPresence:null, foundedAt:null, registeredAt:null,
+    leadership:[],
+    ...meta(urls.futuroNazionaleTransparency,'Futuro Nazionale — sito ufficiale, sezione Trasparenza')
+  };
+if (!existingFuturoNazionale) parties.push(futuroNazionale);
+Object.assign(futuroNazionale, {
+    website:urls.futuroNazionaleHome, status:'active', logoUrl:urls.futuroNazionaleLogo,
+    logoAsset:'./src/data/real/assets/logos/futuro-nazionale.png', logoSource:urls.futuroNazionaleLogoPage,
+    logoVerified:true, logoAlt:'Logo ufficiale di Futuro Nazionale',
+    secondarySources:[
+      meta(urls.futuroNazionaleHome,'Futuro Nazionale — sito ufficiale, tesseramento 2026'),
+      meta(urls.futuroNazionaleOrganigram,'Futuro Nazionale — organigramma ufficiale'),
+      meta(urls.cameraFuturoNazionaleComponent,'Camera dei deputati — componente Misto Futuro Nazionale Vannacci-Free')
+    ]
+  });
+// Geographic presence and current activity are populated only where an official
+// party or institutional page supports the specific field. Group presence stays
+// separate from individual party membership.
+const regionalEvidence = [
+  {
+    id:'party-registro-p1-2014-09-ir', level:'regional', geographicArea:'Provincia autonoma di Trento', regionId:'it-region-04', website:urls.pattHome, status:'active', regionalPresence:true,
+    sources:[
+      [urls.pattOrganization,'PATT — organizzazione e cariche'],
+      [urls.pattCouncil,'Consiglio della Provincia autonoma di Trento — consiglieri e gruppi']
+    ]
+  },
+  {
+    id:'party-registro-p1-2015-19-ir', level:'regional', geographicArea:'Provincia autonoma di Bolzano / Alto Adige', regionId:'it-region-04', website:urls.svpHome, status:'active', regionalPresence:true,
+    sources:[
+      [urls.svpHome,'Südtiroler Volkspartei — sito ufficiale'],
+      [urls.svpCouncil,'Consiglio della Provincia autonoma di Bolzano — gruppo Südtiroler Volkspartei']
+    ]
+  },
+  {
+    id:'party-registro-p1-2016-34-ir', level:'regional', geographicArea:'Valle d’Aosta', regionId:'it-region-02', website:urls.stellaAlpinaHome, status:'active',
+    sources:[[urls.stellaAlpinaHome,'Stella Alpina — sito ufficiale, movimento politico']]
+  },
+  {
+    id:'party-registro-p1-2015-26-ir', level:'regional', geographicArea:'Valle d’Aosta', regionId:'it-region-02', website:urls.unionValdotaineHome, status:'active',
+    sources:[
+      [urls.unionValdotaineHome,'Union Valdôtaine — sito ufficiale'],
+      [urls.unionValdotaineElections,'Union Valdôtaine — trasparenza elettorale regionale 2025'],
+      [urls.unionValdotaineStatutes,'Union Valdôtaine — statuto e organizzazione']
+    ]
+  },
+  {
+    id:'party-registro-p1-2023-69-ir', level:'regional', geographicArea:'Provincia autonoma di Trento', regionId:'it-region-04', website:urls.campobaseHome, status:'active', regionalPresence:true,
+    sources:[
+      [urls.campobaseHome,'Campobase — sito ufficiale'],
+      [urls.campobaseCouncil,'Consiglio della Provincia autonoma di Trento — gruppo consiliare Campobase'],
+      [urls.campobaseStatute,'Gazzetta Ufficiale — statuto di Campobase']
+    ]
+  },
+  {
+    id:'party-registro-p1-2022-67-ir', level:'regional', geographicArea:'Sicilia', regionId:'it-region-19', website:urls.sudChiamaNordHome, status:'active', regionalPresence:true,
+    sources:[
+      [urls.sudChiamaNordHome,'Sud chiama Nord — sito ufficiale'],
+      [urls.sudChiamaNordAssembly,'Assemblea regionale siciliana — gruppo parlamentare']
+    ]
+  }
+];
+for (const evidence of regionalEvidence) {
+  const party = parties.find(item => item.id === evidence.id);
+  if (!party) throw new Error(`Entità regionale attesa non trovata: ${evidence.id}`);
+  const { id, sources, ...verifiedFields } = evidence;
+  Object.assign(party, verifiedFields, { secondarySources:[...(party.secondarySources ?? []), ...sources.map(([sourceUrl,sourceName]) => meta(sourceUrl,sourceName))] });
+}
+const politicalFigures = [
+  ['figure-roberto-vannacci','Roberto','Vannacci'],
+  ['figure-massimiliano-simoni','Massimiliano','Simoni'],
+  ['figure-edoardo-ziello','Edoardo','Ziello'],
+  ['figure-annamaria-frigo','Annamaria','Frigo']
+].map(([id,firstName,lastName]) => ({ id, firstName, lastName, fullName:`${firstName} ${lastName}`, birthDate:null, birthPlace:null, source:SOURCE, verified:true, sourceUrl:urls.futuroNazionaleOrganigram, sourceName:'Futuro Nazionale — organigramma ufficiale', verifiedAt:AS_OF, validFrom:null, validTo:null }));
+const partyLeaderships = [
+  ['party-leadership-fn-president','figure-roberto-vannacci','Presidente'],
+  ['party-leadership-fn-coordinator','figure-massimiliano-simoni','Coordinatore Nazionale'],
+  ['party-leadership-fn-organization','figure-edoardo-ziello','Responsabile Organizzazione'],
+  ['party-leadership-fn-membership','figure-annamaria-frigo','Responsabile Tesseramento Nazionale']
+].map(([id,politicalFigureId,role]) => ({ id, partyId:futuroNazionaleId, politicalFigureId, role, source:SOURCE, verified:true, sourceUrl:urls.futuroNazionaleOrganigram, sourceName:'Futuro Nazionale — organigramma ufficiale', verifiedAt:AS_OF, validFrom:null, validTo:null }));
+// A record-level logo contract is present everywhere; an absent official asset
+// stays null rather than being fabricated or inferred from party colours.
+for (const entity of [...parties, ...politicalMovements]) {
+  Object.assign(entity, {logoUrl:entity.logoUrl ?? null, logoAsset:entity.logoAsset ?? null, logoSource:entity.logoSource ?? null, logoVerified:entity.logoVerified ?? null, logoAlt:entity.logoAlt ?? null});
 }
 const empty = [];
 
@@ -270,18 +376,18 @@ const elections = [
   { id:'election-it-europee-2024', officialName:'Elezioni europee 2024 — Italia', level:'nazionale', electionDate:'2024-06-08', electionType:'europee', sourceUrl:urls.interiorEuropeanTransparency, sourceName:'Ministero dell’Interno — Trasparenza, elezioni europee 2024', source:SOURCE, verified:true, verifiedAt:AS_OF, validFrom:'2024-06-08', validTo:'2024-06-09' }
 ];
 const manifest = {
-  datasetVersion:'2026-09-22.1', snapshotDate:AS_OF, publisher:'POLITICANDO 2026 — importatore open data', sourcePolicy:'Primary institutional sources only; unknown values are null. Registry entries are sourced to registration deliberations; only explicit deregistration notices set historical status. MEF 2‰ evidence is dated to its reporting year.',
+  datasetVersion:'2026-09-22.3', snapshotDate:AS_OF, publisher:'POLITICANDO 2026 — importatore open data', sourcePolicy:'Primary institutional sources only; unknown values are null. Registry entries are sourced to registration deliberations; only explicit deregistration notices set historical status. MEF 2‰ evidence is dated to its reporting year.',
   sourceUrls:urls,
-  collections:{parties:parties.length,politicalMovements:politicalMovements.length,parliamentaryGroups:parliamentaryGroups.length,coalitions:0,electoralLists:electionLists.length,politicians:politicians.length,offices:offices.length,partyMemberships:0,groupMemberships:groupMemberships.length,electionParticipations:electionParticipations.length,partyMembershipHistory:0,officeHistory:officeHistory.length,territories:territories.length,elections:elections.length},
+  collections:{parties:parties.length,politicalMovements:politicalMovements.length,politicalFigures:politicalFigures.length,partyLeaderships:partyLeaderships.length,parliamentaryGroups:parliamentaryGroups.length,coalitions:0,electoralLists:electionLists.length,politicians:politicians.length,offices:offices.length,partyMemberships:0,groupMemberships:groupMemberships.length,electionParticipations:electionParticipations.length,partyMembershipHistory:0,officeHistory:officeHistory.length,territories:territories.length,elections:elections.length},
   warnings:['Il Registro nazionale Parlamento include le iscrizioni storiche ancora visibili; lo stato historical è valorizzato solo quando il registro documenta cancellazione. La registrazione non certifica automaticamente attività politica sul territorio.','La Camera espone anagrafica, collegio e lista di elezione nelle schede individuali; tali campi sono importati separatamente dai gruppi.','Dati Senato corrente via open data per il 22/09/2026; i gruppi e le appartenenze sono esportati separatamente e non diventano partiti.','Sono importati i mandati di deputato/senatore e i presidenti di gruppo restituiti dal dataset ufficiale del Senato; altre cariche sono lasciate non assegnate finché non vengono importate da fonti specifiche.']
 };
 await Promise.all([
-  save('parties.json', parties), save('political-movements.json', politicalMovements), save('parliamentary-groups.json', parliamentaryGroups),
+  save('parties.json', parties), save('political-movements.json', politicalMovements), save('political-figures.json', politicalFigures), save('party-leaderships.json', partyLeaderships), save('parliamentary-groups.json', parliamentaryGroups),
   save('politicians.json', politicians), save('group-memberships.json', groupMemberships), save('party-memberships.json', empty),
   save('party-membership-history.json', empty), save('parliamentary-group-history.json', parliamentaryGroupHistory), save('office-history.json', officeHistory),
   save('offices.json', offices), save('coalitions.json', empty), save('electoral-lists.json', electionLists),
   save('election-participations.json', electionParticipations), save('territories.json', territories), save('elections.json', elections), save('chambers.json', chambers),
   save('manifest.json', manifest),
-  save('database.json', { parties, politicalMovements, parliamentaryGroups, coalitions:empty, electoralLists:electionLists, politicians, offices, partyMemberships:empty, groupMemberships, electionParticipations, partyMembershipHistory:empty, parliamentaryGroupHistory, officeHistory, territories, elections, chambers, manifest })
+  save('database.json', { parties, politicalMovements, politicalFigures, partyLeaderships, parliamentaryGroups, coalitions:empty, electoralLists:electionLists, politicians, offices, partyMemberships:empty, groupMemberships, electionParticipations, partyMembershipHistory:empty, parliamentaryGroupHistory, officeHistory, territories, elections, chambers, manifest })
 ]);
 console.log(JSON.stringify(manifest.collections,null,2));

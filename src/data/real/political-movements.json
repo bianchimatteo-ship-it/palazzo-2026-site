@@ -28,11 +28,20 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2017-45-ir",
@@ -59,6 +68,11 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2017-12-18",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   }
 ]

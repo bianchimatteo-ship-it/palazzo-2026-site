@@ -385,3 +385,128 @@ body {
 .profile-modal-close { position:absolute; top:12px; right:14px; border:0; background:none; color:#748075; font-size:24px; }
 @media(max-width:900px) { .catalog-toolbar { grid-template-columns:repeat(2,minmax(0,1fr)); } .catalog-row { grid-template-columns:30px minmax(0,1fr) auto; } .catalog-facts { grid-column:2; } .catalog-source,.catalog-open { grid-column:3; grid-row:1; } }
 @media(max-width:600px) { .catalog-toolbar { grid-template-columns:1fr; } .catalog-row,.politician-row { grid-template-columns:28px minmax(0,1fr); gap:9px; } .catalog-facts { grid-column:2; } .catalog-source,.catalog-open,.politician-row>.verified-badge { grid-column:2; grid-row:auto; } .politician-profile { padding:22px 16px; } .politician-profile dl { grid-template-columns:115px 1fr; } }
+
+/* Progressive real-data archives and local logo administration. */
+.catalog-body { min-width:0; }
+.catalog-toolbar { grid-template-columns:minmax(230px,1.3fr) repeat(3,minmax(145px,1fr)); }
+.catalog-search input:focus,.catalog-filter select:focus,.logo-admin-field input:focus { outline:2px solid rgba(76,108,81,.22); outline-offset:1px; border-color:#829783; }
+.catalog-state { min-height:160px; display:grid; justify-items:center; align-content:center; gap:10px; padding:28px; border:1px solid #deded5; background:#faf9f4; color:#7b8379; text-align:center; }
+.catalog-state strong { color:#35463b; font:700 15px Manrope,sans-serif; }
+.catalog-state-error { justify-items:start; text-align:left; border-color:#d9c9bd; }
+.catalog-state-error button,.catalog-pagination button,.wizard-show-more,.logo-admin-more { min-height:36px; padding:0 13px; border:1px solid #bdc8bc; border-radius:4px; background:#f6f6f0; color:#3f604a; font:600 11px 'DM Sans',sans-serif; cursor:pointer; }
+.catalog-spinner { width:21px; height:21px; border:2px solid #d7ded5; border-top-color:#56745d; border-radius:50%; animation:catalog-spin .75s linear infinite; }
+@keyframes catalog-spin { to { transform:rotate(360deg); } }
+.catalog-result-count { color:#687468; font-size:11px; }
+.catalog-pagination { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 0; color:#7c847a; font-size:10px; }
+.catalog-pagination button:hover,.wizard-show-more:hover,.logo-admin-more:hover { background:#e9ede5; }
+.organization-list { display:grid; gap:7px; }
+.organization-card { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:7px 12px; padding:11px 14px; border:1px solid #e2e2d9; background:#faf9f4; }
+.organization-card:hover { border-color:#c5cec1; background:#fcfbf7; }
+.organization-open { min-width:0; display:grid; grid-template-columns:52px minmax(0,1fr) minmax(150px,220px) auto; align-items:center; gap:14px; width:100%; padding:0; border:0; background:transparent; text-align:left; color:inherit; cursor:pointer; }
+.organization-logo { display:grid; place-items:center; width:48px; height:48px; overflow:hidden; border:1px solid #e1e2da; border-radius:50%; background:#fff; }
+.organization-logo img,.politics-logo-image { display:block; width:100%; height:100%; object-fit:contain; }
+.organization-logo-empty { background:#f3f2eb; color:#a2a89f; font-size:17px; }
+.organization-copy { display:grid; min-width:0; gap:3px; }
+.organization-copy strong { color:#34443a; font:700 13px/1.35 Manrope,sans-serif; }
+.organization-copy>span,.organization-copy small { color:#788176; font-size:10px; line-height:1.4; }
+.organization-copy small { display:-webkit-box; overflow:hidden; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.organization-facts { display:grid; gap:4px; color:#778075; font-size:9px; line-height:1.35; }
+.organization-open .verified-badge { justify-self:end; }
+.organization-card>.catalog-source { grid-column:2; justify-self:end; }
+.organization-profile { max-height:min(85vh,800px); }
+.organization-profile-head { display:flex; align-items:center; gap:15px; margin:16px 0; }
+.organization-profile-head>img,.organization-profile-head>.organization-logo { flex:none; width:64px; height:64px; object-fit:contain; border:1px solid #e1e2da; border-radius:50%; background:white; padding:5px; }
+.organization-profile-head h2 { margin:0 0 5px; }
+.organization-profile-head p { margin:0; }
+.organization-profile dl { grid-template-columns:175px minmax(0,1fr); }
+.organization-profile dd { overflow-wrap:anywhere; }
+.organization-profile dd a,.organization-sources a { color:#54735d; }
+.organization-leadership { padding:8px 0 15px; }
+.organization-leadership h3 { color:#34453a; font:700 15px Manrope,sans-serif; }
+.organization-leadership ul { display:grid; gap:8px; margin:0; padding:0; list-style:none; }
+.organization-leadership li { display:grid; grid-template-columns:minmax(140px,.6fr) minmax(120px,1fr) auto; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid #e5e4dc; color:#667268; font-size:11px; }
+.organization-leadership li strong { color:#3c5142; }
+.organization-leadership li a { color:#54735d; font-size:10px; }
+.organization-sources { display:flex; align-items:center; flex-wrap:wrap; gap:14px; padding-top:12px; border-top:1px solid #e5e4dc; font-size:11px; }
+.party-detail-heading { display:flex; align-items:center; gap:14px; }
+.party-detail-heading img { width:56px; height:56px; object-fit:contain; border:1px solid #e1e2da; border-radius:50%; background:#fff; padding:4px; }
+.politics-logo-image { flex:none; width:42px; height:42px; padding:3px; border:1px solid #e1e2da; border-radius:50%; background:#fff; }
+.wizard-party-controls { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(170px,.8fr); gap:10px; margin:10px 0 8px; }
+.wizard-party-controls label { display:grid; gap:5px; color:#687381; font-size:9px; font-weight:600; }
+.wizard-party-controls input,.wizard-party-controls select { width:100%; height:36px; padding:0 9px; border:1px solid #e0e4e9; border-radius:4px; background:#fff; color:#303b48; font:400 10px 'DM Sans',sans-serif; }
+.wizard-party-count { margin:7px 0; color:#828b84; font-size:9px; }
+.demo-party-list { max-height:310px; overflow:auto; padding-right:3px; }
+.wizard-party-logo,.wizard-party-placeholder { flex:none; display:grid; place-items:center; width:38px; height:38px; object-fit:contain; border:1px solid #e1e2da; border-radius:50%; background:#fff; color:#98a097; }
+.wizard-party-placeholder { border-radius:5px; background:#edf0e9; color:#48614e; font-size:10px; font-weight:700; }
+.wizard-party-placeholder-neutral { background:#f3f2eb; color:#a2a89f; font-size:18px; font-weight:400; }
+.wizard-show-more { margin-top:8px; }
+.logo-admin-backdrop { position:fixed; inset:0; z-index:20; display:grid; place-items:center; padding:18px; background:rgba(24,35,29,.56); }
+.logo-admin-dialog { display:grid; grid-template-rows:auto auto minmax(0,1fr); width:min(1120px,100%); height:min(820px,calc(100dvh - 36px)); overflow:hidden; border:1px solid #d9dbd2; background:#f7f6ef; box-shadow:0 24px 80px rgba(12,25,18,.3); }
+.logo-admin-heading { display:flex; justify-content:space-between; align-items:flex-start; padding:19px 23px 13px; border-bottom:1px solid #deded5; }
+.logo-admin-heading h1 { margin:5px 0; color:#2c4034; font:700 25px Manrope,sans-serif; }
+.logo-admin-heading p { margin:0; color:#788176; font-size:11px; }
+.logo-admin-heading .profile-modal-close { position:static; width:34px; height:34px; border:1px solid #deded5; background:#fffefa; font-size:22px; cursor:pointer; }
+.logo-admin-toolbar { display:flex; align-items:flex-end; justify-content:space-between; gap:14px; padding:12px 20px; border-bottom:1px solid #deded5; }
+.logo-admin-toolbar>div { display:flex; gap:7px; flex-wrap:wrap; }
+.logo-admin-toolbar .secondary-button { margin:0; }
+.logo-admin-layout { min-height:0; display:grid; grid-template-columns:minmax(260px,.85fr) minmax(0,1.5fr); }
+.logo-admin-list { overflow:auto; padding:8px 11px; border-right:1px solid #deded5; }
+.logo-admin-item { display:grid; grid-template-columns:25px minmax(0,1fr) auto; align-items:center; gap:8px; width:100%; padding:9px 7px; border:0; border-bottom:1px solid #e7e6df; background:transparent; color:#405044; text-align:left; cursor:pointer; }
+.logo-admin-item:hover,.logo-admin-item.selected { background:#e9ede5; }
+.logo-admin-item-mark { display:grid; place-items:center; width:21px; height:21px; border:1px solid #d3dbd2; border-radius:50%; color:#6a896e; font-size:11px; }
+.logo-admin-item>span:nth-child(2) { display:grid; gap:3px; min-width:0; }
+.logo-admin-item strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:#34443a; font-size:10px; }
+.logo-admin-item small,.logo-admin-item em { color:#7e867c; font-size:9px; font-style:normal; }
+.logo-admin-item em { white-space:nowrap; }
+.logo-admin-more { width:100%; margin-top:9px; }
+.logo-admin-editor { overflow:auto; padding:20px 23px; }
+.logo-admin-selected { display:flex; align-items:center; gap:16px; padding-bottom:17px; border-bottom:1px solid #deded5; }
+.logo-admin-preview { flex:none; display:grid; place-items:center; width:92px; height:92px; overflow:hidden; border:1px solid #deded5; border-radius:50%; background:#fff; color:#999f95; font-size:10px; text-align:center; }
+.logo-admin-preview img { width:100%; height:100%; object-fit:contain; padding:5px; }
+.logo-admin-selected h2 { margin:6px 0; color:#304438; font:700 20px Manrope,sans-serif; }
+.logo-admin-selected code { color:#657366; font-size:10px; overflow-wrap:anywhere; }
+.logo-admin-selected>div:last-child>span:last-child { color:#7d857c; font-size:10px; }
+.logo-admin-note { display:grid; gap:4px; margin:14px 0; padding:11px 13px; border-left:3px solid #b49b68; background:#eeeee7; color:#727b71; font-size:10px; line-height:1.5; }
+.logo-admin-note strong { color:#495c4c; }
+.logo-admin-upload,.logo-admin-field { display:grid; gap:6px; margin:13px 0; color:#626f63; font-size:10px; font-weight:600; }
+.logo-admin-upload input { max-width:100%; padding:8px; border:1px dashed #b9c3b7; background:#faf9f4; color:#5f695f; font:10px 'DM Sans',sans-serif; }
+.logo-admin-field input { width:100%; height:36px; padding:0 10px; border:1px solid #ddddd4; border-radius:3px; background:#fffefa; color:#34443a; font:11px 'DM Sans',sans-serif; }
+.logo-admin-check { display:flex; align-items:center; gap:8px; margin:13px 0; color:#626f63; font-size:10px; }
+.logo-admin-check input { accent-color:#55735d; }
+.logo-admin-preview-caption { margin-top:8px; color:#858d82; font-size:9px; }
+.logo-admin-actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+.logo-admin-actions .primary-button,.logo-admin-actions .secondary-button { margin:0; }
+.logo-admin-actions button:disabled { opacity:.45; cursor:not-allowed; }
+@media(max-width:900px) {
+  .organization-open { grid-template-columns:48px minmax(0,1fr) auto; }
+  .organization-facts { grid-column:2; }
+  .organization-open .verified-badge { grid-column:3; grid-row:1; }
+  .organization-card>.catalog-source { grid-column:2/-1; }
+  .logo-admin-layout { grid-template-columns:minmax(210px,.75fr) minmax(0,1.25fr); }
+}
+@media(max-width:600px) {
+  .organization-card { grid-template-columns:minmax(0,1fr); padding:10px; }
+  .organization-open { grid-template-columns:42px minmax(0,1fr); gap:9px; }
+  .organization-logo { width:40px; height:40px; }
+  .organization-open .verified-badge { grid-column:2; grid-row:auto; justify-self:start; }
+  .organization-facts { grid-column:2; }
+  .organization-card>.catalog-source { grid-column:2; justify-self:start; }
+  .organization-profile dl { grid-template-columns:115px minmax(0,1fr); }
+  .organization-leadership li { grid-template-columns:minmax(0,1fr) auto; }
+  .organization-leadership li span { grid-column:1; }
+  .organization-leadership li a { grid-column:2; grid-row:1/3; }
+  .wizard-party-controls { grid-template-columns:1fr; }
+  .demo-party-list { max-height:240px; }
+  .logo-admin-backdrop { padding:0; }
+  .logo-admin-dialog { width:100%; height:100dvh; border:0; }
+  .logo-admin-heading { padding:15px; }
+  .logo-admin-toolbar { align-items:stretch; flex-direction:column; padding:10px 13px; }
+  .logo-admin-toolbar>div { justify-content:space-between; }
+  .logo-admin-layout { grid-template-columns:1fr; grid-template-rows:minmax(155px,27vh) minmax(0,1fr); }
+  .logo-admin-list { border-right:0; border-bottom:1px solid #deded5; }
+  .logo-admin-item { grid-template-columns:21px minmax(0,1fr) auto; padding:7px 5px; }
+  .logo-admin-editor { padding:14px; }
+  .logo-admin-preview { width:72px; height:72px; }
+  .logo-admin-selected h2 { font-size:17px; }
+}
+@media(prefers-reduced-motion:reduce) { .catalog-spinner { animation:none; border-top-color:#d7ded5; } }

@@ -21,15 +21,15 @@ export function makeCareerDraft(currentDate, parties = []) {
   };
 }
 
-export function renderCareerWizard(state, draft) {
+export function renderCareerWizard(state, draft, realParties = [], logoFor = () => null) {
   const steps = [
     ['Profilo', 'Crea il politico', 'person'], ['Percorso', 'Scegli il livello', 'route'],
     ['Partito', 'Scegli l’appartenenza', 'party'], ['Riepilogo', 'Pronto a iniziare', 'summary']
   ];
   const level = CAREER_LEVELS[draft.initialLevel];
-  const parties = state.dataset.parties.filter(isSelectableParty);
+  const parties = [...state.dataset.parties.filter(isSelectableParty), ...realParties.filter(isSelectableParty)];
   const activeStep = steps[draft.step - 1];
-  const body = draft.step === 1 ? profileStep(state, draft) : draft.step === 2 ? levelStep(draft) : draft.step === 3 ? partyStep(draft, parties) : summaryStep(draft, parties, level);
+  const body = draft.step === 1 ? profileStep(state, draft) : draft.step === 2 ? levelStep(draft) : draft.step === 3 ? partyStep(draft, parties, logoFor) : summaryStep(draft, parties, level);
   const backButton = draft.step > 1
     ? `<button type="button" class="secondary-button wizard-back" data-wizard-action="back">${ico('back', 16)} Indietro</button>`
     : `<button type="button" class="wizard-cancel" data-wizard-action="cancel">Annulla</button>`;
@@ -47,7 +47,7 @@ export function renderCareerWizard(state, draft) {
 }
 
 function stepIntro(step) {
-  return ['Le informazioni personali restano parte del tuo salvataggio locale.', 'Il livello è il punto di partenza, non il risultato di un’elezione.', 'I partiti demo sono chiaramente marcati; in futuro potranno aggiungersi dataset reali verificati.', 'Controlla le scelte: potrai correggere ogni passaggio prima di confermare.'][step - 1];
+  return ['Le informazioni personali restano parte del tuo salvataggio locale.', 'Il livello è il punto di partenza, non il risultato di un’elezione.', 'Puoi scegliere tra dati reali verificati, partiti demo oppure crearne uno tuo.', 'Controlla le scelte: potrai correggere ogni passaggio prima di confermare.'][step - 1];
 }
 function profileStep(state, d) {
   return `<div class="wizard-form-grid">
@@ -68,14 +68,34 @@ function levelStep(d) {
   };
   return `<div class="level-cards">${Object.entries(CAREER_LEVELS).map(([key, config], i) => `<button type="button" class="level-card ${d.initialLevel === key ? 'selected' : ''}" data-level="${key}" aria-pressed="${d.initialLevel === key}"><span class="level-card-top"><span class="level-index">0${i + 1}</span><span class="radio-ring"></span></span><strong>${config.label}</strong><p>${details[key][1]}</p><span class="level-scope">${details[key][0]}</span></button>`).join('')}</div><div class="wizard-data-note">La scelta configura il territorio e l’incarico iniziale. Non simula elezioni o vittorie.</div>`;
 }
-function partyStep(d, parties) {
+function partyStep(d, parties, logoFor) {
   const modes = [
     ['independent', 'Indipendente', 'Comincia senza affiliazione.'],
-    ['existing', 'Entra in un partito', 'Partiti demo o dati reali verificati.'],
+    ['existing', 'Entra in un partito', 'Scegli tra dati reali verificati e partiti demo.'],
     ['new', 'Crea un partito', 'Definisci una nuova organizzazione.']
   ];
   let detail = '';
-  if (d.partyMode === 'existing') detail = `<div class="demo-party-list">${parties.map(party => `<button type="button" class="demo-party ${d.partyId === party.id ? 'selected' : ''}" data-party-id="${esc(party.id)}" aria-pressed="${d.partyId === party.id}"><span class="party-swatch" style="--party:${esc(party.color)}">${esc(party.abbreviation)}</span><span class="demo-party-copy"><strong>${esc(party.name)}</strong><small>${esc(party.description)}</small><em>${esc(party.orientation)}</em></span><span class="source-pill">${party.source === DATA_SOURCES.SIMULATION ? 'DEMO · SIMULAZIONE' : 'DATASET VERIFICATO'}</span></button>`).join('')}</div>`;
+  if (d.partyMode === 'existing') {
+    const query = String(d.partyQuery ?? '').trim().toLocaleLowerCase('it-IT');
+    const available = parties.filter(party => {
+      const sourceAllowed = !d.partyFilter || d.partyFilter === 'all' || party.source === d.partyFilter;
+      const searchText = [party.officialName, party.name, party.abbreviation].filter(Boolean).join(' ').toLocaleLowerCase('it-IT');
+      return sourceAllowed && (!query || searchText.includes(query));
+    }).sort((a, b) => (a.officialName ?? a.name).localeCompare(b.officialName ?? b.name, 'it'));
+    const limit = Math.max(12, Number(d.partyListLimit) || 12);
+    const shown = available.slice(0, limit);
+    const cards = shown.map(party => {
+      const name = party.officialName ?? party.name;
+      const logo = logoFor(party) ?? party.logoAsset ?? party.logoUrl;
+      const mark = logo
+        ? `<img class="wizard-party-logo" src="${esc(logo)}" alt="${esc(party.logoAlt ?? `Logo di ${name}`)}" loading="lazy" />`
+        : `<span class="wizard-party-placeholder" aria-hidden="true">${party.source === DATA_SOURCES.REAL ? '—' : esc((party.abbreviation || name.slice(0, 2)).slice(0, 3))}</span>`;
+      const dataLabel = party.source === DATA_SOURCES.REAL ? 'DATO REALE VERIFICATO' : party.source === DATA_SOURCES.USER ? 'CREATO DA TE' : 'SIMULAZIONE';
+      const description = party.factualDescription ?? party.description;
+      return `<button type="button" class="demo-party ${d.partyId === party.id ? 'selected' : ''}" data-party-id="${esc(party.id)}" aria-pressed="${d.partyId === party.id}">${mark}<span class="demo-party-copy"><strong>${esc(name)}</strong><small>${esc([party.abbreviation, description].filter(Boolean).join(' · ') || (party.source === DATA_SOURCES.REAL ? 'Descrizione non disponibile nelle fonti caricate.' : party.description || ''))}</small></span><span class="source-pill">${dataLabel}</span></button>`;
+    }).join('');
+    detail = `<div class="wizard-party-controls"><label>Cerca partito<input type="search" name="partyQuery" data-wizard-party-search value="${val(d, 'partyQuery')}" placeholder="Nome o sigla…" autocomplete="off" /></label><label>Origine<select name="partyFilter" data-wizard-party-filter><option value="all" ${!d.partyFilter || d.partyFilter === 'all' ? 'selected' : ''}>Tutte le origini</option><option value="real" ${d.partyFilter === 'real' ? 'selected' : ''}>Dati reali verificati</option><option value="simulation" ${d.partyFilter === 'simulation' ? 'selected' : ''}>Partiti demo</option><option value="user" ${d.partyFilter === 'user' ? 'selected' : ''}>Creati da te</option></select></label></div><div class="wizard-party-count">${available.length ? `Mostrati ${shown.length} di ${available.length}` : 'Nessun partito corrisponde alla ricerca.'}</div><div class="demo-party-list">${cards || '<div class="empty-inline">Prova un altro nome o cambia il filtro.</div>'}</div>${shown.length < available.length ? '<button type="button" class="wizard-show-more" data-wizard-show-parties>Mostra altri partiti</button>' : ''}<div class="wizard-data-note">I dati reali sono di sola lettura; i partiti demo e quelli creati da te sono contrassegnati separatamente.</div>`;
+  }
   if (d.partyMode === 'new') detail = `<div class="new-party-form">
     <div class="wizard-form-grid"><label>Nome del partito<input name="partyName" value="${val(d, 'partyName')}" maxlength="60" placeholder="Es. Comunità in Movimento" /></label><label>Abbreviazione<input name="partyAbbreviation" value="${val(d, 'partyAbbreviation')}" maxlength="8" placeholder="Es. CIM" /></label>
       <label class="wizard-full-field">Descrizione<textarea name="partyDescription" maxlength="240" rows="2" placeholder="Qual è la ragione d’essere del partito?">${val(d, 'partyDescription')}</textarea></label>
@@ -90,7 +110,7 @@ function partyStep(d, parties) {
 }
 function summaryStep(d, parties, level) {
   const party = d.partyMode === 'existing' ? parties.find(p => p.id === d.partyId) : null;
-  const partySummary = d.partyMode === 'independent' ? 'Indipendente' : d.partyMode === 'existing' ? `${party?.name ?? 'Partito non selezionato'} · ${party?.source === DATA_SOURCES.REAL ? 'Dato verificato' : 'Simulazione'}` : `${d.partyName || 'Nuovo partito'} (${(d.partyAbbreviation || '—').toUpperCase()}) · Creato da te`;
+  const partySummary = d.partyMode === 'independent' ? 'Indipendente' : d.partyMode === 'existing' ? `${party?.officialName ?? party?.name ?? 'Partito non selezionato'}${party?.abbreviation ? ` · ${party.abbreviation}` : ''} · ${party?.source === DATA_SOURCES.REAL ? 'Dato reale verificato' : party?.source === DATA_SOURCES.USER ? 'Creato da te' : 'Simulazione'}` : `${d.partyName || 'Nuovo partito'} (${(d.partyAbbreviation || '—').toUpperCase()}) · Creato da te`;
   const stats = initialCareerStatistics(d.initialLevel);
   const territorySummary = d.initialLevel === 'comunale' ? `${d.municipality || 'Comune'} · ${d.region || 'Regione'}` : d.initialLevel === 'regionale' ? d.region || 'Regione da scegliere' : 'Italia · livello nazionale';
   const metrics = [['Popolarità', stats.popularity], ['Reputazione', stats.reputation], ['Consenso iniziale', stats.consensus], ['Esperienza', stats.experience], ['Influenza', stats.influence], ['Notorietà', stats.notoriety]];

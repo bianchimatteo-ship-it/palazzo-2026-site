@@ -2,7 +2,7 @@
 
 Una carriera nella politica italiana.
 
-Fondamenta per una simulazione gestionale della politica italiana. I dati reali importati, quelli generati dalla simulazione e quelli creati dall’utente restano archivi separati. Il database reale è uno snapshot aggiornato al **22 settembre 2026**; i campi non presenti nelle fonti sono `null` e non vengono ricostruiti per deduzione.
+Fondamenta di una simulazione gestionale della politica italiana. I dati reali, quelli generati dalla simulazione e quelli creati dall’utente restano separati. Lo snapshot reale è riferito al **22 settembre 2026**; i campi senza una fonte sufficiente rimangono `null`.
 
 ## Avvio
 
@@ -12,65 +12,69 @@ Richiede Node.js 20 o successivo, senza dipendenze esterne.
 npm start
 ```
 
-Apri `http://127.0.0.1:4173`. La carriera viene salvata nel `localStorage` del browser in uso. Il comando “Avanza di 1 settimana” aggiorna la data, genera una voce di agenda simulata e salva la carriera.
+Apri `http://127.0.0.1:4173`. La carriera viene salvata nel `localStorage` del browser in uso. Il comando “Avanza di 1 settimana” aggiorna la data e registra un’attività simulata.
 
-## Snapshot reale incluso
+## Dataset reale
 
-Rilevazione importata il 22 settembre 2026:
+Snapshot verificato al 22 settembre 2026:
 
-- **68 partiti** e **2 movimenti politici** nel registro ufficiale della Commissione di garanzia, più i riferimenti del MEF 2‰ integrati quando il nome coincide con la voce registrata;
-- **30** organizzazioni risultano nella tabella del 2‰ relativa alle dichiarazioni 2025/redditi 2024, che non viene confusa con una prova di rappresentanza elettorale;
-- **22 gruppi parlamentari**: 13 alla Camera e 9 al Senato, mantenuti distinti dai partiti;
+- **69 partiti** e **2 movimenti politici**, 71 entità complessive;
+- **6 entità** con livello regionale/territoriale e regione documentati;
 - **604 parlamentari in carica**: 399 deputati e 205 senatori;
-- **674 appartenenze ai gruppi**: roster corrente per la Camera e periodi di adesione documentati per i senatori attualmente in carica;
-- **13 etichette di lista elettorale** ricavate dalle schede dei deputati e **268 relazioni** tra deputato, lista d’elezione e consultazione politica 2022;
-- **23 nodi territoriali**: Italia, le 20 regioni con codice ISTAT stabile, Camera e Senato; comuni e articolazioni provinciali restano predisposti nello schema in attesa di importare i relativi elenchi ufficiali aggiornati.
-- **2 consultazioni** configurate: elezioni politiche 2022 ed europee 2024.
+- **22 gruppi parlamentari**: 13 alla Camera e 9 al Senato;
+- **4 figure politiche** e **4 incarichi di partito** collegati tramite ID stabili, verificati sull’organigramma ufficiale di Futuro Nazionale;
+- **674 appartenenze** ai gruppi parlamentari;
+- **613 incarichi** parlamentari importati;
+- **13 etichette** di lista elettorale e **268 relazioni** tra candidati, liste e consultazioni;
+- **23 territori**: Italia, 20 regioni, Camera e Senato;
+- **2 consultazioni**: elezioni politiche 2022 ed europee 2024.
 
-Il dataset contiene **70 entità politiche** (68 partiti e 2 movimenti) documentate dal Registro nazionale o dai dati MEF 2‰; include entità attive e storiche del registro e non pretende di censire ogni formazione locale italiana. Il numero di partiti parlamentari e non parlamentari **non è ancora determinabile senza ambiguità**: il dato della Camera e del Senato identifica il gruppo, mentre la lista d’elezione può essere una lista congiunta o una coalizione. Non trasformiamo queste relazioni in appartenenze a un partito. Per questo, i valori di presenza parlamentare, livello territoriale, regione e partecipazioni elettorali dei singoli partiti sono lasciati non documentati finché non esiste un collegamento verificato. La sezione Politici mostra separatamente gruppo e lista d’elezione.
+Il dataset non attribuisce automaticamente i parlamentari ai partiti: Camera e Senato documentano gruppi e liste d’elezione, che possono aggregare realtà diverse. Perciò il numero di partiti parlamentari e non parlamentari non viene stimato. Anche presenza locale, appartenenze individuali ai partiti, colore, orientamento, data di fondazione e cariche non documentate restano non valorizzati. La presenza regionale viene indicata solo per le formazioni con una fonte istituzionale o del partito adeguata; un gruppo consiliare non è convertito in un gruppo parlamentare nazionale né in appartenenze individuali.
 
-### Fonti istituzionali
+Futuro Nazionale è incluso come partito sulla base delle sue pagine ufficiali di trasparenza e organigramma. La componente della Camera con un nome simile resta un’entità parlamentare distinta: non è usata per dedurre l’iscrizione al partito di ogni componente.
 
-- [Parlamento italiano — Registro nazionale dei partiti politici](https://www.parlamento.it/Parlamento/1063), deliberazioni d’iscrizione e cancellazioni;
-- [Ministero dell’Economia e delle Finanze — dati 2‰](https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101), dichiarazioni 2025/redditi 2024;
-- [Camera dei deputati — elenco e schede della XIX legislatura](https://www.camera.it/deputati/elenco) e [composizione dei gruppi](https://www.camera.it/leg19/217);
-- [Senato — Open data sulla composizione](https://dati.senato.it/sito/composizione?legislatura=19&testo_generico=11), esportazioni datate di senatori e gruppi;
-- [ISTAT — codici delle unità amministrative territoriali](https://www.istat.it/classificazione/codici-dei-comuni-delle-province-e-delle-regioni/), codici e nomi ufficiali delle 20 regioni;
-- [Ministero dell’Interno — trasparenza elezioni europee 2024](https://dait.interno.gov.it/elezioni/trasparenza/elezioni-europee-2024) e [archivio storico](https://www.interno.gov.it/it/temi/elezioni-e-referendum/dato-storico-elezioni).
+## Fonti
 
-Sono state importate le schede individuali ufficiali della Camera per nascita, collegio, circoscrizione, lista d’elezione e proclamazione. Per i senatori e per gli incarichi istituzionali non coperti dagli export importati, i dati personali e gli incarichi non verificati restano null o non collegati.
+- [Parlamento italiano — Registro nazionale dei partiti politici](https://www.parlamento.it/Parlamento/1063), deliberazioni d’iscrizione e cancellazione;
+- [MEF — dati 2 per mille](https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101), dichiarazioni 2025/redditi 2024;
+- [Camera dei deputati — schede della XIX legislatura](https://www.camera.it/deputati/elenco) e [composizione dei gruppi](https://www.camera.it/leg19/217);
+- [Senato — dati aperti sulla composizione](https://dati.senato.it/sito/composizione?legislatura=19&testo_generico=11);
+- [ISTAT — codici territoriali](https://www.istat.it/classificazione/codici-dei-comuni-delle-province-e-delle-regioni/);
+- [Ministero dell’Interno — trasparenza elezioni europee 2024](https://dait.interno.gov.it/elezioni/trasparenza/elezioni-europee-2024) e [archivio storico elettorale](https://www.interno.gov.it/it/temi/elezioni-e-referendum/dato-storico-elezioni);
+- [Futuro Nazionale — sito](https://futuronazionale.it/), [trasparenza](https://futuronazionale.it/trasparenza/), [organigramma](https://futuronazionale.it/organigramma/) e [logo ufficiale](https://futuronazionale.it/il-logo/);
+- fonti territoriali ufficiali: [PATT](https://patt.tn.it/), [Südtiroler Volkspartei](https://www.svp.eu/de/partei-883.html), [Stella Alpina](https://www.stella-alpina.org/), [Union Valdôtaine](https://www.unionvaldotaine.org/), [Campobase](https://www.campobasetrentino.it/), [Sud chiama Nord](https://sud-chiamanord.it/), insieme alle pagine ufficiali dei rispettivi consigli regionali/provinciali e dell’Assemblea regionale siciliana riportate nelle schede.
 
-## Criteri di inclusione e qualità
+Le fonti sono collegate direttamente alle schede. Ogni record reale contiene `source: "real"`, `verified: true`, `sourceUrl`, `sourceName` e `verifiedAt`; validità temporale e date di ingresso/uscita sono valorizzate quando la fonte le documenta.
 
-- Ogni record reale contiene `source: "real"`, `verified: true`, `sourceUrl`, `sourceName` e `verifiedAt`; `validFrom`/`validTo` sono valorizzati solo quando la fonte consente di identificarli.
-- Gli ID sono chiavi interne stabili o identificativi istituzionali: URI/numero Senato, identificativo della scheda Camera o numero di deliberazione. Le relazioni usano ID, mai il testo visualizzato.
-- Le schede del registro e le voci MEF non inventano sito, colore, leadership, area geografica o ideologia: tali campi sono `null` se non attestati.
-- I gruppi parlamentari sono entità a sé. Le appartenenze documentate non diventano partiti; la lista d’elezione non diventa coalizione.
-- Il database reale non contiene consenso o statistiche simulate. Le carriere demo e le carriere utente non possono modificare lo snapshot reale.
-- I nomi duplicati normalizzati, gli ID ripetuti, i nomi organizzativi duplicati dopo normalizzazione, le fonti mancanti, i collegamenti non risolti e i conteggi dei gruppi incoerenti fanno fallire il controllo qualità. Gli omonimi politici sono ammessi perché identificati con ID istituzionali distinti.
+## Struttura e caricamento
 
-## Struttura dati
+- `src/data/real/`: snapshot reale suddiviso in JSON per collezione, con `manifest.json`; `database.json` è conservato per controllo ed esportazione;
+- `src/data/simulation/`: contenuti dimostrativi separati;
+- `src/data/user/`: punto d’ingresso per i contenuti creati durante la carriera;
+- `src/data/repositories/`: repository e caricamento delle collezioni; la UI non importa direttamente i file JSON;
+- `src/data/real/party-leaderships.json`, `political-figures.json`, `group-memberships.json`, `party-memberships.json`, `office-history.json` e `parliamentary-group-history.json`: relazioni e storico separati, legati con ID;
+- `src/data/real/assets/logos/`: loghi reali verificati e inclusi nel progetto;
+- `src/data/repositories/logo-store.js`: loghi aggiunti dal gestore locale, conservati in IndexedDB del browser e mai presentati come fonti reali;
+- `scripts/import-real-data.mjs`: importer ripetibile delle fonti;
+- `scripts/validate-real-data.mjs`: controlli su provenienza, duplicati, relazioni, conteggi e assenza di statistiche reali inventate;
+- `scripts/check-published-site.mjs`: controllo diretto della versione pubblicata su GitHub Pages, inclusa la corrispondenza dei file remoti con lo snapshot locale.
 
-- `src/data/real/`: snapshot istituzionale versionato, file per collezione e `database.json` aggregato usato in lettura dalla UI;
-- `src/data/simulation/`: dati e statistiche dimostrativi;
-- `src/data/user/`: punto d’ingresso per i record creati nelle carriere;
-- `src/data/repositories/`: accesso alla base reale separato dalla carriera locale;
-- `scripts/import-real-data.mjs`: importa i registri ufficiali e genera lo snapshot; le nuove etichette di lista richiedono assegnazione manuale di un ID stabile;
-- `scripts/validate-real-data.mjs`: controlla provenienza, duplicati, integrità relazionale, numeri dei gruppi e separazione dei dati.
+All’apertura vengono caricati manifest e partiti/movimenti. Politici, gruppi e altri dettagli vengono richiesti quando si apre il relativo archivio, così il browser non scarica il JSON aggregato da circa 2 MB.
 
-Collezioni disponibili: `parties`, `politicalMovements`, `parliamentaryGroups`, `coalitions`, `electoralLists`, `politicians`, `offices`, `partyMemberships`, `groupMemberships`, `electionParticipations`, `partyMembershipHistory`, `parliamentaryGroupHistory`, `officeHistory`, `territories`, `elections`, `chambers`.
+## Aggiornamento e verifica
 
-## Aggiornamento dei dati
-
-Dalla cartella del progetto esegui:
+Dalla cartella del progetto:
 
 ```sh
 npm run import:real-data
 npm run check:real-data
+npm run check:published-site
 ```
 
-L’importatore scarica fonti pubbliche istituzionali e riscrive soltanto `src/data/real/`. Il controllo si interrompe se le fonti cambiano struttura, se non trova un identificativo istituzionale o se una relazione risulta incoerente. Per aggiornare data di snapshot e `verifiedAt`, modificare la costante `AS_OF` nello script dopo avere fissato la data effettiva di consultazione. Verificare la differenza dei file prima di pubblicare lo snapshot.
+L’importatore scarica fonti pubbliche e riscrive esclusivamente `src/data/real/`. Impostare `AS_OF` alla data effettiva di verifica e aggiornare il numero versione del dataset nello script. Prima di pubblicare, controllare il diff e il risultato del validatore.
 
-## Pubblicazione automatica
+`check:published-site` interroga l’URL GitHub Pages, controlla tutti i JSON pubblici e verifica che corrispondano ai file presenti nella working tree. Va eseguito dopo che GitHub Pages ha terminato la pubblicazione.
 
-Il sito statico può essere pubblicato da GitHub Pages scegliendo il ramo `main` e la cartella `/` nelle impostazioni Pages del repository. Ogni push su `main` aggiorna automaticamente il sito.
+## GitHub Pages
+
+Il sito statico è pubblicato dal ramo `main` alla radice del repository. Ogni push su `main` aggiorna automaticamente la pagina quando la build Pages termina.

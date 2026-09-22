@@ -1,0 +1,62 @@
+[
+  {
+    "id": "figure-roberto-vannacci",
+    "firstName": "Roberto",
+    "lastName": "Vannacci",
+    "fullName": "Roberto Vannacci",
+    "birthDate": null,
+    "birthPlace": null,
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://futuronazionale.it/organigramma/",
+    "sourceName": "Futuro Nazionale — organigramma ufficiale",
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null
+  },
+  {
+    "id": "figure-massimiliano-simoni",
+    "firstName": "Massimiliano",
+    "lastName": "Simoni",
+    "fullName": "Massimiliano Simoni",
+    "birthDate": null,
+    "birthPlace": null,
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://futuronazionale.it/organigramma/",
+    "sourceName": "Futuro Nazionale — organigramma ufficiale",
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null
+  },
+  {
+    "id": "figure-edoardo-ziello",
+    "firstName": "Edoardo",
+    "lastName": "Ziello",
+    "fullName": "Edoardo Ziello",
+    "birthDate": null,
+    "birthPlace": null,
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://futuronazionale.it/organigramma/",
+    "sourceName": "Futuro Nazionale — organigramma ufficiale",
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null
+  },
+  {
+    "id": "figure-annamaria-frigo",
+    "firstName": "Annamaria",
+    "lastName": "Frigo",
+    "fullName": "Annamaria Frigo",
+    "birthDate": null,
+    "birthPlace": null,
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://futuronazionale.it/organigramma/",
+    "sourceName": "Futuro Nazionale — organigramma ufficiale",
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null
+  }
+]

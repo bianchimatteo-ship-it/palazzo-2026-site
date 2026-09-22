@@ -1,0 +1,54 @@
+[
+  {
+    "id": "party-leadership-fn-president",
+    "partyId": "party-futuro-nazionale",
+    "politicalFigureId": "figure-roberto-vannacci",
+    "role": "Presidente",
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://futuronazionale.it/organigramma/",
+    "sourceName": "Futuro Nazionale — organigramma ufficiale",
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null
+  },
+  {
+    "id": "party-leadership-fn-coordinator",
+    "partyId": "party-futuro-nazionale",
+    "politicalFigureId": "figure-massimiliano-simoni",
+    "role": "Coordinatore Nazionale",
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://futuronazionale.it/organigramma/",
+    "sourceName": "Futuro Nazionale — organigramma ufficiale",
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null
+  },
+  {
+    "id": "party-leadership-fn-organization",
+    "partyId": "party-futuro-nazionale",
+    "politicalFigureId": "figure-edoardo-ziello",
+    "role": "Responsabile Organizzazione",
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://futuronazionale.it/organigramma/",
+    "sourceName": "Futuro Nazionale — organigramma ufficiale",
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null
+  },
+  {
+    "id": "party-leadership-fn-membership",
+    "partyId": "party-futuro-nazionale",
+    "politicalFigureId": "figure-annamaria-frigo",
+    "role": "Responsabile Tesseramento Nazionale",
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://futuronazionale.it/organigramma/",
+    "sourceName": "Futuro Nazionale — organigramma ufficiale",
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null
+  }
+]

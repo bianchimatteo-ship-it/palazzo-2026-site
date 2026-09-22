@@ -8,7 +8,8 @@ export const PROVENANCE_FIELDS = Object.freeze(['source', 'verified', 'sourceUrl
 export const POLITICAL_COLLECTIONS = Object.freeze([
   'parties', 'politicalMovements', 'parliamentaryGroups', 'coalitions', 'electoralLists',
   'politicians', 'offices', 'partyMemberships', 'groupMemberships', 'electionParticipations',
-  'partyMembershipHistory', 'parliamentaryGroupHistory', 'officeHistory', 'territories', 'elections'
+  'partyMembershipHistory', 'parliamentaryGroupHistory', 'officeHistory', 'territories', 'elections',
+  'politicalFigures', 'partyLeaderships'
 ]);
 
 export function validateRealRecord(record, collection = 'record') {
@@ -23,7 +24,7 @@ export function validateRealRecord(record, collection = 'record') {
 // `source` is required on every record to preserve data provenance end-to-end.
 export const ENTITY_FIELDS = Object.freeze({
   politicians: ['id', 'firstName', 'lastName', 'displayName', 'birthDate', 'gender', 'region', 'municipality', 'previousProfession', 'partyId', 'territoryId', 'roleId', 'source', 'createdAt'],
-  parties: ['id', 'name', 'abbreviation', 'description', 'color', 'orientation', 'policyPositions', 'source', 'sourceRef', 'verified', 'createdAt', 'foundedAt'],
+  parties: ['id', 'name', 'abbreviation', 'description', 'color', 'orientation', 'policyPositions', 'source', 'sourceRef', 'verified', 'createdAt', 'foundedAt', 'logoUrl', 'logoAsset', 'logoSource', 'logoVerified', 'logoAlt'],
   elections: ['id', 'name', 'level', 'date', 'territoryId', 'electionType', 'status', 'source'],
   territories: ['id', 'kind', 'name', 'parentId', 'source'],
   offices: ['id', 'title', 'institution', 'level', 'politicianId', 'territoryId', 'startDate', 'endDate', 'source'],
@@ -40,7 +41,7 @@ const REQUIRED_FIELDS = Object.freeze({
   chambers: ['id', 'kind', 'name', 'source', 'verified']
 });
 
-export const isSelectableParty = party => party?.source === DATA_SOURCES.SIMULATION || (party?.source === DATA_SOURCES.REAL && party.verified === true);
+export const isSelectableParty = party => party?.source === DATA_SOURCES.SIMULATION || party?.source === DATA_SOURCES.USER || (party?.source === DATA_SOURCES.REAL && party.verified === true);
 
 export function validateEntity(collection, record) {
   const required = REQUIRED_FIELDS[collection];

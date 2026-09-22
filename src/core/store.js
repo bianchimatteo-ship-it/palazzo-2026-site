@@ -1,5 +1,5 @@
 import { DATA_SOURCES, emptyDataset, isSelectableParty } from '../data/schema.js';
-import { makeDemoParties, makeDemoState } from '../data/demo.js?v=20260922-4';
+import { makeDemoParties, makeDemoState } from '../data/demo.js?v=20260923-1';
 import { CAREER_LEVELS, initialCareerStatistics } from '../data/regions.js';
 import { storage } from './storage.js';
 import { advanceDays } from './time.js';
@@ -61,8 +61,8 @@ export const store = {
     try { storage.clear(); } catch { /* storage may be unavailable */ }
     lastSaved = 'Nuova carriera demo'; emit();
   },
-  createCareer(draft) {
-    const selectableParties = state.dataset.parties.filter(isSelectableParty);
+  createCareer(draft, realParties = []) {
+    const selectableParties = [...state.dataset.parties.filter(isSelectableParty), ...realParties.filter(party => party?.source === DATA_SOURCES.REAL && party.verified === true)];
     const errors = validateNewCareerDraft({ ...draft, currentDate: state.clock.currentDate }, selectableParties);
     if (errors.length) throw new Error(errors[0]);
     const level = CAREER_LEVELS[draft.initialLevel];
@@ -81,13 +81,13 @@ export const store = {
     if (draft.initialLevel === 'nazionale') territories.push({ id: nationId, kind: 'stato', name: 'Italia', parentId: null, source: DATA_SOURCES.USER });
 
     const parties = [...makeDemoParties(), ...state.dataset.parties.filter(party => party.source === DATA_SOURCES.USER)];
-    if (draft.partyMode === 'existing' && !parties.some(party => party.id === draft.partyId && isSelectableParty(party))) throw new Error('Il partito selezionato non è disponibile.');
+    if (draft.partyMode === 'existing' && ![...parties, ...realParties].some(party => party.id === draft.partyId && isSelectableParty(party))) throw new Error('Il partito selezionato non è disponibile.');
     if (draft.partyMode === 'new') {
       if (!draft.partyName?.trim() || !draft.partyAbbreviation?.trim() || !draft.partyDescription?.trim() || !draft.partyOrientation) throw new Error('Completa i dati del nuovo partito.');
       parties.push({
         id: partyId, name: draft.partyName.trim(), abbreviation: draft.partyAbbreviation.trim().toUpperCase(),
         description: draft.partyDescription.trim(), color: draft.partyColor || '#264d82', orientation: draft.partyOrientation,
-        policyPositions: { ...draft.policyPositions }, source: DATA_SOURCES.USER, createdAt: state.clock.currentDate
+        policyPositions: { ...draft.policyPositions }, source: DATA_SOURCES.USER, createdAt: state.clock.currentDate, logoUrl: null, logoAsset: null, logoSource: null, logoVerified: null, logoAlt: null
       });
     }
     const profession = draft.previousProfession.trim();

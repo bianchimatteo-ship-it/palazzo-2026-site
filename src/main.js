@@ -1,10 +1,11 @@
-import { mountApp } from './ui/app.js?v=20260922-4';
-import { store } from './core/store.js?v=20260922-4';
-import { loadRealDatabase } from './data/repositories/real-data.js?v=20260922-4';
+import { mountApp } from './ui/app.js?v=20260923-1';
+import { store } from './core/store.js?v=20260923-1';
+import { loadRealCollections, loadRealDatabase } from './data/repositories/real-data.js?v=20260923-1';
 
 const root = document.querySelector('#app');
 try {
   await loadRealDatabase();
+  await loadRealCollections(['parties','politicalMovements']);
   mountApp(root, store);
 } catch (error) {
   console.error('Avvio di POLITICANDO 2026 non riuscito:', error);

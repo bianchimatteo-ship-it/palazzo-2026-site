@@ -3,16 +3,16 @@ import { DATA_SOURCES, emptyDataset } from '../schema.js';
 // All sample names, events, and numbers are invented for interface demonstration.
 export function makeDemoParties() {
   return [
-    { id: 'partito-demo', name: 'Alleanza Civica', abbreviation: 'AC', description: 'Una forza civica di esempio, creata solo per la simulazione.', color: '#264d82', orientation: 'Centrismo civico', policyPositions: { economia: 3, welfare: 4, ambiente: 4, europa: 4 }, source: DATA_SOURCES.SIMULATION, createdAt: '2026-01-01' },
-    { id: 'partito-territori-demo', name: 'Rete dei Territori', abbreviation: 'RDT', description: 'Partito dimostrativo con attenzione alle autonomie locali.', color: '#347b70', orientation: 'Autonomista', policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 }, source: DATA_SOURCES.SIMULATION, createdAt: '2026-01-01' },
-    { id: 'partito-futuro-demo', name: 'Futuro Comune', abbreviation: 'FC', description: 'Organizzazione dimostrativa orientata a innovazione e servizi.', color: '#895f98', orientation: 'Progressista', policyPositions: { economia: 3, welfare: 5, ambiente: 5, europa: 4 }, source: DATA_SOURCES.SIMULATION, createdAt: '2026-01-01' }
+    { id: 'partito-demo', name: 'Alleanza Civica', abbreviation: 'AC', description: 'Una forza civica di esempio, creata solo per la simulazione.', color: '#264d82', orientation: 'Centrismo civico', policyPositions: { economia: 3, welfare: 4, ambiente: 4, europa: 4 }, source: DATA_SOURCES.SIMULATION, createdAt: '2026-01-01', logoUrl: null, logoAsset: null, logoSource: null, logoVerified: null, logoAlt: null },
+    { id: 'partito-territori-demo', name: 'Rete dei Territori', abbreviation: 'RDT', description: 'Partito dimostrativo con attenzione alle autonomie locali.', color: '#347b70', orientation: 'Autonomista', policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 }, source: DATA_SOURCES.SIMULATION, createdAt: '2026-01-01', logoUrl: null, logoAsset: null, logoSource: null, logoVerified: null, logoAlt: null },
+    { id: 'partito-futuro-demo', name: 'Futuro Comune', abbreviation: 'FC', description: 'Organizzazione dimostrativa orientata a innovazione e servizi.', color: '#895f98', orientation: 'Progressista', policyPositions: { economia: 3, welfare: 5, ambiente: 5, europa: 4 }, source: DATA_SOURCES.SIMULATION, createdAt: '2026-01-01', logoUrl: null, logoAsset: null, logoSource: null, logoVerified: null, logoAlt: null }
   ];
 }
 
 export function makeDemoState() {
   const dataset = emptyDataset();
   dataset.parties.push(...makeDemoParties());
-  dataset.politicians.push({ id: 'politico-demo', firstName: 'Giulia', lastName: 'Rinaldi', displayName: 'Giulia Rinaldi', birthDate: '1988-04-20', gender: 'donna', region: 'Toscana', municipality: 'Valleverde', previousProfession: 'Insegnante', partyId: 'partito-demo', territoryId: 'territorio-demo', roleId: 'incarico-demo', source: DATA_SOURCES.SIMULATION, createdAt: '2026-01-01' });
+  dataset.politicians.push({ id: 'politico-demo', firstName: 'Giulia', lastName: 'Rinaldi', displayName: 'Giulia Rinaldi', birthDate: '1988-04-20', gender: 'donna', region: 'Toscana', municipality: 'Valleverde', previousProfession: 'Insegnante', partyId: 'partito-demo', territoryId: 'territorio-demo', roleId: 'incarico-demo', source: DATA_SOURCES.SIMULATION, createdAt: '2026-01-01', logoUrl: null, logoAsset: null, logoSource: null, logoVerified: null, logoAlt: null });
   dataset.territories.push({ id: 'territorio-demo', kind: 'regione', name: 'Toscana', parentId: null, source: DATA_SOURCES.SIMULATION });
   dataset.offices.push({ id: 'incarico-demo', title: 'Consigliera comunale', institution: 'Comune di Valleverde', level: 'locale', politicianId: 'politico-demo', territoryId: 'territorio-demo', startDate: '2026-01-01', endDate: null, source: DATA_SOURCES.SIMULATION });
   dataset.statistics.push(

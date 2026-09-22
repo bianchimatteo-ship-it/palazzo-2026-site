@@ -24,7 +24,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2014-10-17",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2014-02-ir",
@@ -51,7 +56,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2014-10-17",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2014-03-ir",
@@ -78,7 +88,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2014-10-17",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2014-04-ir",
@@ -109,11 +124,20 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2014-05-ir",
@@ -144,11 +168,20 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2014-07-ir",
@@ -175,7 +208,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2014-10-17",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2014-08-ir",
@@ -202,7 +240,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2014-10-17",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2014-09-ir",
@@ -211,13 +254,13 @@
     "abbreviation": null,
     "factualDescription": null,
     "color": null,
-    "website": null,
-    "level": null,
-    "geographicArea": null,
-    "regionId": null,
+    "website": "https://patt.tn.it/",
+    "level": "regional",
+    "geographicArea": "Provincia autonoma di Trento",
+    "regionId": "it-region-04",
     "status": "active",
     "parliamentaryPresence": null,
-    "regionalPresence": null,
+    "regionalPresence": true,
     "localPresence": null,
     "foundedAt": null,
     "registeredAt": "2014-10-17",
@@ -233,11 +276,38 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "source": "real",
+        "verified": true,
+        "sourceUrl": "https://patt.tn.it/partito/organizzazione/organi-e-cariche/",
+        "sourceName": "PATT — organizzazione e cariche",
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "source": "real",
+        "verified": true,
+        "sourceUrl": "https://www.consiglio.provincia.tn.it/telefono-posta-elettronica/Pages/consiglieri-e-gruppi-consiliari.aspx",
+        "sourceName": "Consiglio della Provincia autonoma di Trento — consiglieri e gruppi",
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2014-10-ir",
@@ -264,7 +334,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2014-10-17",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2014-11-ir",
@@ -295,11 +370,20 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2014-13-ir",
@@ -330,11 +414,20 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2015-14-ir",
@@ -365,11 +458,20 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2015-17-ir",
@@ -400,11 +502,20 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2015-18-ir",
@@ -435,11 +546,20 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2015-19-ir",
@@ -448,13 +568,13 @@
     "abbreviation": null,
     "factualDescription": null,
     "color": null,
-    "website": null,
-    "level": null,
-    "geographicArea": null,
-    "regionId": null,
+    "website": "https://www.svp.eu/de/partei-883.html",
+    "level": "regional",
+    "geographicArea": "Provincia autonoma di Bolzano / Alto Adige",
+    "regionId": "it-region-04",
     "status": "active",
     "parliamentaryPresence": null,
-    "regionalPresence": null,
+    "regionalPresence": true,
     "localPresence": null,
     "foundedAt": null,
     "registeredAt": "2015-10-05",
@@ -470,11 +590,38 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "source": "real",
+        "verified": true,
+        "sourceUrl": "https://www.svp.eu/de/partei-883.html",
+        "sourceName": "Südtiroler Volkspartei — sito ufficiale",
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "source": "real",
+        "verified": true,
+        "sourceUrl": "https://www.landtag-bz.org/de/fraktionen/suedtiroler-volkspartei",
+        "sourceName": "Consiglio della Provincia autonoma di Bolzano — gruppo Südtiroler Volkspartei",
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2015-21-ir",
@@ -501,7 +648,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2015-10-05",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2015-22-ir",
@@ -532,11 +684,20 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2015-24-ir",
@@ -563,7 +724,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2015-11-30",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2015-25-ir",
@@ -590,7 +756,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2015-11-30",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2015-26-ir",
@@ -599,10 +770,10 @@
     "abbreviation": null,
     "factualDescription": null,
     "color": null,
-    "website": null,
-    "level": null,
-    "geographicArea": null,
-    "regionId": null,
+    "website": "https://www.unionvaldotaine.org/",
+    "level": "regional",
+    "geographicArea": "Valle d’Aosta",
+    "regionId": "it-region-02",
     "status": "active",
     "parliamentaryPresence": null,
     "regionalPresence": null,
@@ -621,11 +792,47 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "source": "real",
+        "verified": true,
+        "sourceUrl": "https://www.unionvaldotaine.org/",
+        "sourceName": "Union Valdôtaine — sito ufficiale",
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "source": "real",
+        "verified": true,
+        "sourceUrl": "https://www.unionvaldotaine.org/infos/trasparenza/elezioni/",
+        "sourceName": "Union Valdôtaine — trasparenza elettorale regionale 2025",
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "source": "real",
+        "verified": true,
+        "sourceUrl": "https://www.unionvaldotaine.org/mouvement/statuts/",
+        "sourceName": "Union Valdôtaine — statuto e organizzazione",
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2015-27-ir",
@@ -652,7 +859,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2015-11-30",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2015-28-ir",
@@ -679,7 +891,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2015-11-30",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2015-29-ir",
@@ -710,11 +927,20 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2016-31-ir",
@@ -741,7 +967,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2016-03-31",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2016-32-ir",
@@ -772,11 +1003,20 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2016-33-ir",
@@ -803,7 +1043,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2016-03-31",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2016-34-ir",
@@ -812,10 +1057,10 @@
     "abbreviation": null,
     "factualDescription": null,
     "color": null,
-    "website": null,
-    "level": null,
-    "geographicArea": null,
-    "regionId": null,
+    "website": "https://www.stella-alpina.org/",
+    "level": "regional",
+    "geographicArea": "Valle d’Aosta",
+    "regionId": "it-region-02",
     "status": "active",
     "parliamentaryPresence": null,
     "regionalPresence": null,
@@ -834,11 +1079,29 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "source": "real",
+        "verified": true,
+        "sourceUrl": "https://www.stella-alpina.org/",
+        "sourceName": "Stella Alpina — sito ufficiale, movimento politico",
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2016-35-ir",
@@ -865,7 +1128,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2016-11-30",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2016-36-ir",
@@ -892,7 +1160,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2016-11-30",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2016-37-ir",
@@ -919,7 +1192,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2016-11-30",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2016-38-ir",
@@ -946,7 +1224,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2016-11-30",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2016-39-ir",
@@ -973,7 +1256,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2016-11-30",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2017-40-ir",
@@ -1000,7 +1288,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2017-11-15",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2017-41-ir",
@@ -1031,11 +1324,20 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2017-43-ir",
@@ -1066,11 +1368,20 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2017-44-ir",
@@ -1101,11 +1412,20 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2018-47-ir",
@@ -1132,7 +1452,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2018-11-30",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2018-48-ir",
@@ -1159,7 +1484,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2018-12-07",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2019-49-ir",
@@ -1186,7 +1516,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2019-04-17",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2019-50-ir",
@@ -1213,7 +1548,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2019-11-27",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2019-51-ir",
@@ -1244,11 +1584,20 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2019-52-ir",
@@ -1279,11 +1628,20 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2019-53-ir",
@@ -1314,11 +1672,20 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2020-54-ir",
@@ -1345,7 +1712,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2020-05-20",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2020-55-ir",
@@ -1372,7 +1744,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2020-07-09",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2020-56-ir",
@@ -1403,11 +1780,20 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2021-57-ir",
@@ -1434,7 +1820,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2021-04-21",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2021-58-ir",
@@ -1461,7 +1852,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2021-05-05",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2021-59-ir",
@@ -1488,7 +1884,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2021-11-25",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2022-60-ir",
@@ -1519,11 +1920,20 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2022-61-ir",
@@ -1550,7 +1960,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2022-02-08",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2022-62-ir",
@@ -1577,7 +1992,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2022-04-07",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2022-63-ir",
@@ -1604,7 +2024,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2022-04-07",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2022-64-ir",
@@ -1631,7 +2056,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2022-04-20",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2022-65-ir",
@@ -1658,7 +2088,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2022-05-25",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2022-66-ir",
@@ -1685,7 +2120,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2022-11-24",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2022-67-ir",
@@ -1694,13 +2134,13 @@
     "abbreviation": null,
     "factualDescription": null,
     "color": null,
-    "website": null,
-    "level": null,
-    "geographicArea": null,
-    "regionId": null,
+    "website": "https://sud-chiamanord.it/",
+    "level": "regional",
+    "geographicArea": "Sicilia",
+    "regionId": "it-region-19",
     "status": "active",
     "parliamentaryPresence": null,
-    "regionalPresence": null,
+    "regionalPresence": true,
     "localPresence": null,
     "foundedAt": null,
     "registeredAt": "2022-11-24",
@@ -1716,11 +2156,38 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "source": "real",
+        "verified": true,
+        "sourceUrl": "https://sud-chiamanord.it/",
+        "sourceName": "Sud chiama Nord — sito ufficiale",
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "source": "real",
+        "verified": true,
+        "sourceUrl": "https://www.ars.sicilia.it/gruppi-parlamentari/XVIII-sud-chiama-nord-le-autonomie",
+        "sourceName": "Assemblea regionale siciliana — gruppo parlamentare",
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2023-68-ir",
@@ -1751,11 +2218,20 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2023-69-ir",
@@ -1764,13 +2240,13 @@
     "abbreviation": null,
     "factualDescription": null,
     "color": null,
-    "website": null,
-    "level": null,
-    "geographicArea": null,
-    "regionId": null,
+    "website": "https://www.campobasetrentino.it/",
+    "level": "regional",
+    "geographicArea": "Provincia autonoma di Trento",
+    "regionId": "it-region-04",
     "status": "active",
     "parliamentaryPresence": null,
-    "regionalPresence": null,
+    "regionalPresence": true,
     "localPresence": null,
     "foundedAt": null,
     "registeredAt": "2023-10-19",
@@ -1786,11 +2262,47 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "source": "real",
+        "verified": true,
+        "sourceUrl": "https://www.campobasetrentino.it/",
+        "sourceName": "Campobase — sito ufficiale",
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "source": "real",
+        "verified": true,
+        "sourceUrl": "https://www25.consiglio.provincia.tn.it/istituzione/i-gruppi-consiliari/pagine/gruppo-consiliare?id=1777121&uid=1777121",
+        "sourceName": "Consiglio della Provincia autonoma di Trento — gruppo consiliare Campobase",
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "source": "real",
+        "verified": true,
+        "sourceUrl": "https://www.gazzettaufficiale.it/eli/gu/2023/11/29/279/sg/pdf",
+        "sourceName": "Gazzetta Ufficiale — statuto di Campobase",
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2024-70-ir",
@@ -1817,7 +2329,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2024-05-29",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2024-71-ir",
@@ -1848,11 +2365,20 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2024-72-ir",
@@ -1879,7 +2405,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2024-10-16",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2024-73-ir",
@@ -1910,11 +2441,20 @@
     "twoPerThousandYear": 2025,
     "secondarySources": [
       {
+        "source": "real",
+        "verified": true,
         "sourceUrl": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
         "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
-        "verifiedAt": "2026-09-22"
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
       }
-    ]
+    ],
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2024-74-ir",
@@ -1941,7 +2481,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2024-12-10",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2025-75-ir",
@@ -1968,7 +2513,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2025-04-09",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-registro-p1-2026-77-ir",
@@ -1995,7 +2545,12 @@
     "sourceName": "Parlamento italiano — Commissione di garanzia, Registro nazionale dei partiti politici",
     "verifiedAt": "2026-09-22",
     "validFrom": "2026-01-08",
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-mef-2025-15",
@@ -2022,7 +2577,12 @@
     "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
     "verifiedAt": "2026-09-22",
     "validFrom": null,
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
   },
   {
     "id": "party-mef-2025-21",
@@ -2049,6 +2609,71 @@
     "sourceName": "Ministero dell’Economia e delle Finanze — 2 per mille, dichiarazioni 2025/redditi 2024",
     "verifiedAt": "2026-09-22",
     "validFrom": null,
-    "validTo": null
+    "validTo": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null
+  },
+  {
+    "id": "party-futuro-nazionale",
+    "entityType": "party",
+    "officialName": "Futuro Nazionale",
+    "abbreviation": null,
+    "factualDescription": null,
+    "color": null,
+    "level": null,
+    "geographicArea": null,
+    "regionId": null,
+    "parliamentaryPresence": null,
+    "regionalPresence": null,
+    "localPresence": null,
+    "foundedAt": null,
+    "registeredAt": null,
+    "leadership": [],
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://futuronazionale.it/trasparenza/",
+    "sourceName": "Futuro Nazionale — sito ufficiale, sezione Trasparenza",
+    "verifiedAt": "2026-09-22",
+    "validFrom": null,
+    "validTo": null,
+    "website": "https://futuronazionale.it/",
+    "status": "active",
+    "logoUrl": "https://futuronazionale.it/wp-content/uploads/2026/01/Futuro-Nazionale-logo.png",
+    "logoAsset": "./src/data/real/assets/logos/futuro-nazionale.png",
+    "logoSource": "https://futuronazionale.it/il-logo/",
+    "logoVerified": true,
+    "logoAlt": "Logo ufficiale di Futuro Nazionale",
+    "secondarySources": [
+      {
+        "source": "real",
+        "verified": true,
+        "sourceUrl": "https://futuronazionale.it/",
+        "sourceName": "Futuro Nazionale — sito ufficiale, tesseramento 2026",
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "source": "real",
+        "verified": true,
+        "sourceUrl": "https://futuronazionale.it/organigramma/",
+        "sourceName": "Futuro Nazionale — organigramma ufficiale",
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "source": "real",
+        "verified": true,
+        "sourceUrl": "https://www.camera.it/leg19/1351?id_tipografico=08&shadow_organo_parlamentare=3508",
+        "sourceName": "Camera dei deputati — componente Misto Futuro Nazionale Vannacci-Free",
+        "verifiedAt": "2026-09-22",
+        "validFrom": null,
+        "validTo": null
+      }
+    ]
   }
 ]
