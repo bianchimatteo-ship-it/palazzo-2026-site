@@ -3,8 +3,13 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 const DEFAULT_URL = 'https://bianchimatteo-ship-it.github.io/palazzo-2026-site/';
-const pageUrl = new URL(process.argv[2] || DEFAULT_URL);
-if (!pageUrl.pathname.endsWith('/')) pageUrl.pathname += '/';
+const defaultPageUrl = new URL(process.argv[2] || DEFAULT_URL);
+if (!defaultPageUrl.pathname.endsWith('/')) defaultPageUrl.pathname += '/';
+const localIndexSource = await readFile(new URL('../index.html', import.meta.url), 'utf8');
+const indexVersion = localIndexSource.match(/main\.js\?v=([^"']+)/)?.[1];
+if (!indexVersion) throw new Error('Versione cache di index.html non trovata nel progetto locale');
+const pageUrl = new URL(defaultPageUrl);
+if (!process.argv[2]) pageUrl.searchParams.set('v', indexVersion);
 const root = new URL('../', import.meta.url);
 const files = {
   parties:'parties.json', politicalMovements:'political-movements.json', politicalFigures:'political-figures.json', partyLeaderships:'party-leaderships.json',
@@ -26,6 +31,7 @@ function hash(bytes) { return createHash('sha256').update(bytes).digest('hex'); 
 try {
   const { bytes:indexBytes } = await get(pageUrl);
   const html = indexBytes.toString('utf8');
+  assert(hash(indexBytes) === hash(Buffer.from(localIndexSource)), 'index.html live è diverso dal progetto locale');
   assert(/<title>POLITICANDO 2026/.test(html), 'Titolo HTML non trovato');
   const mainPath = html.match(/<script[^>]+src=["']([^"']*main\.js(?:\?[^"']*)?)["']/i)?.[1];
   if (!mainPath) throw new Error('index.html pubblicato non riferisce src/main.js');
@@ -61,7 +67,8 @@ try {
     const records = JSON.parse(bytes.toString('utf8'));
     const expectedCount = liveManifest.collections[name];
     assert(Array.isArray(records), `${name}: JSON live non è un array`);
-    assert(records.length === expectedCount, `${name}: conteggio live ${records.length}, atteso ${expectedCount}`);
+    assert(records.length === localRecords.length, `${name}: conteggio live ${records.length}, atteso ${localRecords.length}`);
+    if (Number.isInteger(expectedCount)) assert(records.length === expectedCount, `${name}: conteggio live ${records.length}, atteso dal manifest ${expectedCount}`);
     assert(JSON.stringify(records) === JSON.stringify(localRecords), `${name}: dati live diversi dai file locali`);
     return [name,records];
   }));
