@@ -36,8 +36,9 @@
 .situation-bar small { color: #a9bcb1; font-size: 10.5px; font-weight: 750; letter-spacing: .12em; }
 .situation-bar strong { color: #fffaf1; font: 700 14px/1.25 Manrope, sans-serif; overflow: hidden; text-overflow: ellipsis; }
 .situation-bar em { color: #b8c7be; font: italic 12.5px 'Newsreader', Georgia, serif; }
-.situation-bar .state-badge { margin-left: auto; }
+.situation-bar strong .state-badge { margin-left: 6px; vertical-align: 1px; font-size: 10.5px; padding: 2px 7px 2px 5px; }
 
+.hq-days strong { white-space: nowrap; }
 .hq-sub { display: block; font-style: normal; font-size: 12px; font-weight: 650; }
 .hq-sub.up { color: #1f6b3d; }
 .hq-sub.down { color: #a33d25; }
@@ -304,6 +305,12 @@
 .law-real-draft { grid-column: 1 / -1; margin: 0; padding: 8px 10px; border-left: 3px solid #1f568f; background: #eef4fb; color: #1f3f63; font-size: 12.5px; }
 
 /* Responsive. */
+@media (max-width: 1280px) {
+  .society-grid, .org-grid { grid-template-columns: 1fr; }
+  .situation-bar { grid-template-columns: 1fr 1fr; }
+  .situation-bar > div:nth-child(3) { border-left: 0; }
+  .situation-bar > div:nth-child(n+3) { border-top: 1px solid rgba(255,255,255,.1); }
+}
 @media (max-width: 1180px) {
   .dash-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .segment-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -314,10 +321,6 @@
   .org-kpis > div:nth-child(n+4) { border-top: 1px solid #e8e8e0; }
 }
 @media (max-width: 1000px) {
-  .situation-bar { grid-template-columns: 1fr 1fr; }
-  .situation-bar > div:nth-child(3) { border-left: 0; }
-  .situation-bar > div:nth-child(n+3) { border-top: 1px solid rgba(255,255,255,.1); }
-  .society-grid, .org-grid { grid-template-columns: 1fr; }
   .budget-list { grid-template-columns: 1fr; }
 }
 @media (max-width: 600px) {

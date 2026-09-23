@@ -1,27 +1,27 @@
-import { fullDate, formatDate } from '../core/time.js?v=20260924-8';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260924-8';
-import { isRealCollectionLoaded, loadRealCollections, pristineRecord, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20260924-8';
-import { addRoleOverride, clearAdminArchive, exportAdminArchive, hasAdminPin, importAdminArchive, isAdminUnlocked, lockAdmin, removeRoleOverride, resetRecordOverride, saveRecordOverride, setAdminPin, setRecordField, unlockAdmin } from '../data/repositories/admin-store.js?v=20260924-8';
-import { renderAdminPanel } from './admin-panel.js?v=20260924-8';
-import { deleteLocalLogo, exportLogoConfiguration, getLocalLogo, importLogoConfiguration, listLocalLogos, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20260924-8';
-import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20260924-8';
-import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20260924-8';
-import { renderLogoAdmin } from './logo-admin.js?v=20260924-8';
-import { makeCareerDraft, renderCareerWizard } from './career-wizard.js?v=20260924-8';
-import { validateCareerStep } from '../core/career-rules.js?v=20260924-8';
-import { renderCampaignPage } from './campaign-mode.js?v=20260924-8';
-import { renderParliamentPage } from './parliament-mode.js?v=20260924-8';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-8';
-import { CAREER_LEVELS, careerLevelLabel } from '../data/regions.js?v=20260924-8';
-import { renderElectionCalendar, renderHeadquarters, renderInbox, renderPartyPosition } from './game-mode.js?v=20260924-8';
-import { attachChartInteractions, renderPollsPage } from './polls-mode.js?v=20260924-8';
-import { glyph, officeIcon } from './visuals.js?v=20260924-8';
-import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20260924-8';
-import { renderFinancePage } from './finance-mode.js?v=20260924-8';
-import { renderContactsPanel, renderOrganizationPanel } from './organization-mode.js?v=20260924-8';
-import { renderRealLaws } from './real-laws.js?v=20260924-8';
-import { realLawArea } from '../core/society-engine.js?v=20260924-8';
-import { canManageParliament } from '../core/parliament-engine.js?v=20260924-8';
+import { fullDate, formatDate } from '../core/time.js?v=20260924-9';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260924-9';
+import { isRealCollectionLoaded, loadRealCollections, pristineRecord, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20260924-9';
+import { addRoleOverride, clearAdminArchive, exportAdminArchive, hasAdminPin, importAdminArchive, isAdminUnlocked, lockAdmin, removeRoleOverride, resetRecordOverride, saveRecordOverride, setAdminPin, setRecordField, unlockAdmin } from '../data/repositories/admin-store.js?v=20260924-9';
+import { renderAdminPanel } from './admin-panel.js?v=20260924-9';
+import { deleteLocalLogo, exportLogoConfiguration, getLocalLogo, importLogoConfiguration, listLocalLogos, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20260924-9';
+import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20260924-9';
+import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20260924-9';
+import { renderLogoAdmin } from './logo-admin.js?v=20260924-9';
+import { makeCareerDraft, renderCareerWizard } from './career-wizard.js?v=20260924-9';
+import { validateCareerStep } from '../core/career-rules.js?v=20260924-9';
+import { renderCampaignPage } from './campaign-mode.js?v=20260924-9';
+import { renderParliamentPage } from './parliament-mode.js?v=20260924-9';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-9';
+import { CAREER_LEVELS, careerLevelLabel } from '../data/regions.js?v=20260924-9';
+import { renderElectionCalendar, renderHeadquarters, renderInbox, renderPartyPosition } from './game-mode.js?v=20260924-9';
+import { attachChartInteractions, renderPollsPage } from './polls-mode.js?v=20260924-9';
+import { glyph, officeIcon } from './visuals.js?v=20260924-9';
+import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20260924-9';
+import { renderFinancePage } from './finance-mode.js?v=20260924-9';
+import { renderContactsPanel, renderOrganizationPanel } from './organization-mode.js?v=20260924-9';
+import { renderRealLaws } from './real-laws.js?v=20260924-9';
+import { realLawArea } from '../core/society-engine.js?v=20260924-9';
+import { canManageParliament } from '../core/parliament-engine.js?v=20260924-9';
 
 const mainSectionActive = (id, page) => page === id || (id === 'calendario' && page === 'eventi') || (id === 'parlamento' && ['governo', 'leggi'].includes(page)) || (id === 'partito' && page === 'partiti-lista') || (id === 'profilo' && page === 'politici');
 const mainNavigation = [
@@ -91,6 +91,7 @@ export function mountApp(root, store) {
     try {
       await loadRealCollections(['politicians', 'parliamentaryGroups', 'offices']);
       store.syncRealContacts({ politicians: realDatabase.politicians ?? [], groups: realDatabase.parliamentaryGroups ?? [], offices: realDatabase.offices ?? [] });
+      store.calibrateSociety(deputiesByRegion(realDatabase.politicians ?? []));
     } catch { /* contacts stay as saved when the archive cannot be loaded */ }
   };
   const realParties = () => [...(realDatabase.parties ?? []), ...(realDatabase.politicalMovements ?? [])];
@@ -170,13 +171,14 @@ export function mountApp(root, store) {
     ? ['parties','politicalMovements','territories','electionParticipations']
     : page === 'politici' ? ['politicians','parliamentaryGroups','partyMemberships']
     : page === 'leggi' ? ['parliamentaryGroups','groupMemberships','chambers','politicians','laws']
+    : page === 'territori' ? ['politicians']
     : ['parlamento','governo'].includes(page) ? ['parliamentaryGroups','groupMemberships','chambers','politicians']
     : page === 'elezioni' ? ['politicians','parliamentaryGroups']
     : page === 'sondaggi' ? ['partyLeaderships','politicalFigures']
     : page === 'amministrazione' ? ['parties','politicalMovements','politicians','parliamentaryGroups','offices'] : [];
   const ensurePageData = async (page, force = false) => {
     const required = collectionsForPage(page);
-    if (!required.length) { store.navigate(page); return; }
+    if (!required.length) { if (page !== store.getState().ui.activePage) globalThis.scrollTo?.(0, 0); store.navigate(page); return; }
     if (page !== store.getState().ui.activePage) globalThis.scrollTo?.(0, 0);
     const parliamentaryPage = ['parlamento','governo','leggi'].includes(page);
     const missing = required.filter(name => !isRealCollectionLoaded(name));
@@ -583,6 +585,18 @@ export function mountApp(root, store) {
   refreshContacts();
 }
 
+// Verified deputies in office elected in each region's circoscrizioni: a real reference next to the simulated indicators.
+const regionKey = value => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('it-IT').replace(/[^a-z]/g, '');
+function deputiesByRegion(politicians) {
+  const counts = {};
+  const regions = ['Abruzzo', 'Basilicata', 'Calabria', 'Campania', 'Emilia-Romagna', 'Friuli-Venezia Giulia', 'Lazio', 'Liguria', 'Lombardia', 'Marche', 'Molise', 'Piemonte', 'Puglia', 'Sardegna', 'Sicilia', 'Toscana', 'Trentino-Alto Adige', 'Umbria', 'Valle d’Aosta', 'Veneto'];
+  for (const person of politicians) {
+    if (person.source !== DATA_SOURCES.REAL || person.verified !== true || person.chamber !== 'camera' || person.termEnd) continue;
+    const region = regions.find(name => regionKey(person.circoscription).startsWith(regionKey(name)));
+    if (region) counts[region] = (counts[region] ?? 0) + 1;
+  }
+  return counts;
+}
 function officeLabel(office) {
   return office.endDate ? `${office.title} · concluso` : office.title;
 }
@@ -616,7 +630,7 @@ function subpage(state, page, player, party, events, catalog, options = {}) {
   const listContents = {
     amministrazione: renderAdminPanel(options.admin, options.adminContext()),
     sondaggi: renderPollsPage(state, { logoFor: id => { const record = options.findParty?.(id); return record ? options.logoFor?.(record) : null; }, realLeader: options.realLeader }) + (state.society ? `<section class="hq-panel media-panel"><div class="home-section-heading"><div><span class="section-kicker">MEDIA · SIMULATI</span><h2>Come ti raccontano</h2></div></div>${renderMediaPanel(state)}</section>` : ''),
-    territori: renderTerritoriesPage(state, options.territory),
+    territori: renderTerritoriesPage(state, { ...options.territory, deputies: deputiesByRegion(realDatabase.politicians ?? []) }),
     finanze: renderFinancePage(state),
     parlamento: renderParliamentPage('parlamento', state, { party, player, status: catalogStatus, politicians: realDatabase.politicians ?? [] }) + `<section class="hq-panel contacts-panel"><div class="home-section-heading"><div><span class="section-kicker">PARLAMENTARI REALI · RAPPORTI SIMULATI</span><h2>I tuoi interlocutori in Parlamento</h2></div></div>${renderContactsPanel(state)}</section>`,
     governo: renderParliamentPage('governo', state, { party, player, status: catalogStatus, politicians: realDatabase.politicians ?? [] }),

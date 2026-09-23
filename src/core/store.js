@@ -1,19 +1,19 @@
-import { DATA_SOURCES, emptyDataset, isSelectableParty } from '../data/schema.js?v=20260924-8';
-import { makeDemoParties, makeDemoState } from '../data/demo.js?v=20260924-8';
-import { CAREER_LEVELS, initialCareerStatistics } from '../data/regions.js?v=20260924-8';
-import { storage } from './storage.js?v=20260924-8';
-import { advanceDays, formatDate } from './time.js?v=20260924-8';
-import { validateNewCareerDraft } from './career-rules.js?v=20260924-8';
-import { advanceCampaign, breakCampaignAlliance, createCampaign, decideCampaignEvent, negotiateCampaignAlliance, performCampaignActivity } from './campaign-engine.js?v=20260924-8';
-import { activeMinisters, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20260924-8';
-import { addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, contestPartyRank, createGameState, joinParty, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20260924-8';
-import { PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20260924-8';
-import { advanceWorld, applyWorldSignals, breakAlliance, campaignPollBonus, createWorld, normalizeWorld, proposeAlliance, setPlayerParty } from './world-engine.js?v=20260924-8';
-import { advanceSociety, applyLawToSociety, createSociety, mediaEvent, normalizeSociety, regionAttention, societyMood } from './society-engine.js?v=20260924-8';
-import { ACTIVITY_MEDIA, INDICATORS, ISSUE_TOPICS } from '../data/simulation/society-rules.js?v=20260924-8';
-import { book, setBudgetLevel } from './finance-engine.js?v=20260924-8';
-import { isPartyLeader } from './organization-engine.js?v=20260924-8';
-import { selectContacts, syncContacts } from './contacts-engine.js?v=20260924-8';
+import { DATA_SOURCES, emptyDataset, isSelectableParty } from '../data/schema.js?v=20260924-9';
+import { makeDemoParties, makeDemoState } from '../data/demo.js?v=20260924-9';
+import { CAREER_LEVELS, initialCareerStatistics } from '../data/regions.js?v=20260924-9';
+import { storage } from './storage.js?v=20260924-9';
+import { advanceDays, formatDate } from './time.js?v=20260924-9';
+import { validateNewCareerDraft } from './career-rules.js?v=20260924-9';
+import { advanceCampaign, breakCampaignAlliance, createCampaign, decideCampaignEvent, negotiateCampaignAlliance, performCampaignActivity } from './campaign-engine.js?v=20260924-9';
+import { activeMinisters, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20260924-9';
+import { addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, contestPartyRank, createGameState, joinParty, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20260924-9';
+import { PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20260924-9';
+import { advanceWorld, applyWorldSignals, breakAlliance, campaignPollBonus, createWorld, normalizeWorld, proposeAlliance, setPlayerParty } from './world-engine.js?v=20260924-9';
+import { advanceSociety, applyLawToSociety, calibrateWeights, createSociety, mediaEvent, normalizeSociety, regionAttention, societyMood } from './society-engine.js?v=20260924-9';
+import { ACTIVITY_MEDIA, INDICATORS, ISSUE_TOPICS } from '../data/simulation/society-rules.js?v=20260924-9';
+import { book, setBudgetLevel } from './finance-engine.js?v=20260924-9';
+import { isPartyLeader } from './organization-engine.js?v=20260924-9';
+import { selectContacts, syncContacts } from './contacts-engine.js?v=20260924-9';
 
 const STATE_VERSION = 6;
 const PARLIAMENTARY_CAMPAIGN_ROLES = Object.freeze({ deputato: 'camera', uninominale: 'camera', senatore: 'senato' });
@@ -603,6 +603,13 @@ export const store = {
     const value = Number(level);
     if (!['territorio', 'comunicazione', 'formazione'].includes(priorityId) || ![0, 1, 2].includes(value)) throw new Error('Priorità non valida.');
     state = { ...state, game: { ...state.game, party: { ...party, org: { ...party.org, priorities: { ...party.org.priorities, [priorityId]: value } } } }, ui: { ...state.ui, toast: 'Priorità del partito aggiornate' } };
+    persist(); emit();
+  },
+  // National averages weigh each region by its verified number of Camera seats.
+  calibrateSociety(weights = {}) {
+    const society = calibrateWeights(state.society, weights, 'camera');
+    if (society === state.society) return;
+    state = { ...state, society };
     persist(); emit();
   },
   // Real parliamentarians pertinent to the career: identity from the verified dataset, relationship simulated.

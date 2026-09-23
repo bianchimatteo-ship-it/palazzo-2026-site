@@ -1,4 +1,4 @@
-import { ELECTION_MODELS, EUROPEAN_THRESHOLD } from '../data/simulation/campaign-rules.js?v=20260924-8';
+import { ELECTION_MODELS, EUROPEAN_THRESHOLD } from '../data/simulation/campaign-rules.js?v=20260924-9';
 
 const clamp = (value,min=0,max=100) => Math.min(max,Math.max(min,value));
 const rounded = value => Math.round(value*100)/100;

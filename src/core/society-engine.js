@@ -1,5 +1,5 @@
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-8';
-import { INDICATORS, ISSUE_THRESHOLD, ISSUE_TOPICS, LAW_EFFECTS, LAW_PHASE_IN_WEEKS, MEDIA_OUTLETS, REAL_TOPIC_AREAS, SCENARIO_EXECUTIVE, SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-8';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-9';
+import { INDICATORS, ISSUE_THRESHOLD, ISSUE_TOPICS, LAW_EFFECTS, LAW_PHASE_IN_WEEKS, MEDIA_OUTLETS, REAL_TOPIC_AREAS, SCENARIO_EXECUTIVE, SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-9';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -227,6 +227,15 @@ export function advanceSociety(input, { date, week, government = null, notoriety
   return { society, lines, derived, measure };
 }
 
+// Regions weigh on national averages in proportion to a verified reference (Camera seats by region).
+export function calibrateWeights(input, weights = {}, reference = 'camera') {
+  if (!input || input.weightSource === reference || !Object.keys(weights).length) return input;
+  const society = copy(input);
+  for (const region of Object.values(society.regions)) if (weights[region.name] > 0) region.weight = weights[region.name];
+  society.weightSource = reference;
+  refresh(society);
+  return society;
+}
 // Local listening, visits and promises move a region's opinion a little.
 export function regionAttention(input, regionName, delta) {
   const society = copy(input);

@@ -19,10 +19,10 @@ const before = await fingerprint();
 const [groups, politicians, offices, laws, parties] = await Promise.all(['parliamentary-groups', 'politicians', 'offices', 'laws', 'parties'].map(read));
 const politiciansSnapshot = JSON.stringify(politicians);
 
-const society = await import('../src/core/society-engine.js?v=20260924-8');
-const finance = await import('../src/core/finance-engine.js?v=20260924-8');
-const organization = await import('../src/core/organization-engine.js?v=20260924-8');
-const contacts = await import('../src/core/contacts-engine.js?v=20260924-8');
+const society = await import('../src/core/society-engine.js');
+const finance = await import('../src/core/finance-engine.js');
+const organization = await import('../src/core/organization-engine.js');
+const contacts = await import('../src/core/contacts-engine.js');
 
 // 1. Società: stabile nel tempo, territori diversi, problemi che nascono dalla situazione.
 let issuesSeen = 0;
@@ -107,7 +107,12 @@ const draft = { firstName: 'Marta', lastName: 'Neri', birthDate: '1985-02-11', g
 store.createCareer(draft, [], groups);
 store.initializeParliament(groups);
 store.syncRealContacts({ politicians, groups, offices });
+const seats = {};
+for (const person of politicians.filter(item => item.chamber === 'camera' && !item.termEnd)) { const region = Object.keys(store.getState().society.regions).find(name => person.circoscription?.toLowerCase().startsWith(name.toLowerCase().slice(0, 6))); if (region) seats[region] = (seats[region] ?? 0) + 1; }
+store.calibrateSociety(seats);
 let state = store.getState();
+assert.equal(state.society.weightSource, 'camera', 'Le medie nazionali usano i seggi reali della Camera come pesi.');
+assert.equal(state.society.regions.Lombardia.weight, seats.Lombardia);
 assert.equal(state.society.source, 'simulation');
 assert.equal(state.game.legislature.label, 'XIX legislatura');
 assert.ok(state.game.contacts.length >= 4 && state.game.party.org && state.game.finance);

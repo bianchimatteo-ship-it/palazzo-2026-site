@@ -1,8 +1,8 @@
 // Country, territories, citizens and media: the simulated society as the player sees it.
-import { INDICATORS, MEDIA_OUTLETS, SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-8';
-import { nationalIndicators, societyMood } from '../core/society-engine.js?v=20260924-8';
-import { artTile, glyph } from './visuals.js?v=20260924-8';
-import { breakdown, esc, levelState, lineChart, meter, num, rampColor, SERIES, signed, sparkline, stateBadge, trendState, GREEN_RAMP } from './charts.js?v=20260924-8';
+import { INDICATORS, MEDIA_OUTLETS, SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-9';
+import { nationalIndicators, societyMood } from '../core/society-engine.js?v=20260924-9';
+import { artTile, glyph } from './visuals.js?v=20260924-9';
+import { breakdown, esc, levelState, lineChart, meter, num, rampColor, SERIES, signed, sparkline, stateBadge, trendState, GREEN_RAMP } from './charts.js?v=20260924-9';
 
 // Tile cartogram of the regions: a recognisable boot, one tile per region.
 const TILES = Object.freeze({
@@ -20,15 +20,20 @@ const TREND_LABELS = { crescita: 'In crescita', calo: 'In calo', stabile: 'Stabi
 
 export function territoryMap(society, { measure = 'satisfaction', selected = null, home = null, compact = false } = {}) {
   const issues = new Set(society.issues.filter(item => item.region).map(item => item.region));
+  // The colour scale follows the spread of the data, so differences between regions stay visible.
+  const values = Object.values(society.regions).map(region => regionValue(region, measure));
+  const middle = (Math.min(...values) + Math.max(...values)) / 2;
+  const low = Math.floor(Math.min(Math.min(...values), middle - 8));
+  const high = Math.ceil(Math.max(Math.max(...values), middle + 8));
   const tiles = Object.values(society.regions).map(region => {
     const [col, row, code] = TILES[region.name] ?? [0, 0, region.name.slice(0, 3).toUpperCase()];
     const value = regionValue(region, measure);
-    const fill = rampColor(value, 25, 85);
+    const fill = rampColor(value, low, high);
     const dark = GREEN_RAMP.indexOf(fill) >= 6;
     const tip = `${region.name}: ${MAP_MEASURES.find(item => item.id === measure)?.label ?? ''} ${num(value, 0)}/100${issues.has(region.name) ? ' · problema aperto' : ''}`;
     return `<button class="map-tile ${region.name === selected ? 'is-selected' : ''} ${region.name === home ? 'is-home' : ''}" style="grid-column:${col + 1};grid-row:${row + 1};background:${fill};color:${dark ? '#fffdf7' : '#17301f'}" ${compact ? 'tabindex="-1"' : `data-territory-region="${esc(region.name)}"`} data-tip="${esc(tip)}" aria-label="${esc(tip)}"><b>${code}</b>${compact ? '' : `<small>${num(value, 0)}</small>`}${issues.has(region.name) ? `<i class="map-alert" aria-hidden="true">${glyph('alert', 11, 2.4)}</i>` : ''}</button>`;
   }).join('');
-  const scale = compact ? '' : `<div class="region-scale"><span>25</span><i style="background:linear-gradient(90deg,${GREEN_RAMP.join(',')})"></i><span>85+</span></div>`;
+  const scale = compact ? '' : `<div class="region-scale"><span>${low}</span><i style="background:linear-gradient(90deg,${GREEN_RAMP.join(',')})"></i><span>${high}</span></div>`;
   return `<div class="tile-map ${compact ? 'is-compact' : ''}">${tiles}</div>${scale}`;
 }
 
@@ -42,7 +47,7 @@ function economyStrip(society) {
   return `<div class="economy-strip">${item('Crescita del PIL', economy.growth, 'growth', false)}${item('Disoccupazione', economy.unemployment, 'unemployment', true)}${item('Inflazione', economy.inflation, 'inflation', true)}${item('Deficit / PIL', economy.deficit, 'deficit', true)}<div class="economy-item"><small>Debito / PIL</small><strong>${num(economy.debt, 1)}%</strong></div>${item('Margine di bilancio', society.publicFinance.headroom, 'headroom', false, '/100')}</div>`;
 }
 
-function regionDetail(society, name, home) {
+function regionDetail(society, name, home, deputies = null) {
   const region = society.regions[name] ?? Object.values(society.regions)[0];
   const effects = society.effects.filter(effect => effect.region === region.name);
   const incoming = Object.values(effects.reduce((acc, effect) => { const key = `${effect.indicator}|${effect.cause}`; acc[key] ??= { indicator: effect.indicator, cause: effect.cause, total: 0, weeks: effect.remaining }; acc[key].total += effect.perWeek * effect.remaining; return acc; }, {}));
@@ -54,7 +59,7 @@ function regionDetail(society, name, home) {
   }).join('');
   const [satState, satLabel] = levelState(region.satisfaction, { crisis: 38, risk: 46, good: 62 });
   return `<article class="region-detail">
-    <header>${artTile('map', region.name === home ? 'var(--party-accent)' : '#318a5b', 'md')}<div><span class="section-kicker">${region.name === home ? 'LA TUA REGIONE' : 'REGIONE'}</span><h3>${esc(region.name)}</h3><p class="section-subtitle">Peso demografico ${region.weight}/10 · fiducia nelle istituzioni ${num(region.trust, 0)}/100</p></div>${stateBadge(satState, `Soddisfazione ${num(region.satisfaction, 0)} · ${satLabel}`)}</header>
+    <header>${artTile('map', region.name === home ? 'var(--party-accent)' : '#318a5b', 'md')}<div><span class="section-kicker">${region.name === home ? 'LA TUA REGIONE' : 'REGIONE'}</span><h3>${esc(region.name)}</h3><p class="section-subtitle">Fiducia nelle istituzioni ${num(region.trust, 0)}/100${deputies ? ` · ${deputies} deputati in carica per questa regione (dato reale)` : ''}</p></div>${stateBadge(satState, `Soddisfazione ${num(region.satisfaction, 0)} · ${satLabel}`)}</header>
     <div class="indicator-list">${bars}</div>
     ${issues.length ? `<div class="issue-list">${issues.map(issue => `<div class="issue-row">${stateBadge(issue.severity >= 6 ? 'crisi' : 'rischio', issue.severity >= 6 ? 'Crisi' : 'A rischio')}<span>${esc(indicatorLabel(issue.indicator))}: sotto la soglia di guardia</span></div>`).join('')}</div>` : ''}
     ${incoming.length ? `<div class="incoming"><small>EFFETTI IN ARRIVO DALLE LEGGI</small>${incoming.slice(0, 5).map(item => `<div>${glyph('law', 14)}<span>${esc(indicatorLabel(item.indicator))} ${signed(item.total)} in ${item.weeks} settimane · ${esc(item.cause)}</span></div>`).join('')}</div>` : '<p class="quiet-copy">Nessuna legge in fase di attuazione in questa regione.</p>'}
@@ -96,7 +101,7 @@ export function renderTerritoriesPage(state, ui = {}) {
     </section>
     <div class="society-grid">
       ${panel('MAPPA DEI TERRITORI · SIMULATA', 'L’Italia regione per regione', `<div class="measure-picker" role="group" aria-label="Indicatore della mappa">${MAP_MEASURES.map(item => `<button class="chip-button ${item.id === measure ? 'active' : ''}" data-territory-measure="${esc(item.id)}">${esc(item.label)}</button>`).join('')}</div>${territoryMap(society, { measure, selected, home })}<p class="poll-footnote">Scegli una regione per il dettaglio. Il segnale rosso indica un problema aperto; il bordo dorato la tua regione.</p>`, '', 'map-panel')}
-      ${panel('DETTAGLIO', 'Indicatori, problemi, effetti', regionDetail(society, selected, home))}
+      ${panel('DETTAGLIO', 'Indicatori, problemi, effetti', regionDetail(society, selected, home, ui.deputies?.[selected] ?? null))}
     </div>
     <div class="society-grid">
       ${panel('ANDAMENTO', 'Come stanno i cittadini', lineChart({ series: [{ label: 'Soddisfazione', short: 'Soddisf.', color: SERIES[0], values: historyOf(society, 'satisfaction'), emphasis: true }, { label: 'Fiducia', color: SERIES[1], values: historyOf(society, 'trust') }, { label: 'Partecipazione', short: 'Partecip.', color: SERIES[2], values: historyOf(society, 'participation') }], labels, tips: society.history.slice(-26).map(item => `Settimana ${item.week}`), ariaLabel: 'Soddisfazione, fiducia e partecipazione nelle ultime settimane' }))}
@@ -107,7 +112,7 @@ export function renderTerritoriesPage(state, ui = {}) {
       ${panel('LEGGI E PROVVEDIMENTI', 'Cosa arriva sui territori', lawsApplied(society))}
       ${panel(governing ? 'GOVERNO IN CARICA' : 'ESECUTIVO DI SCENARIO', governing ? 'Il governo della simulazione' : esc(executive.label), `<dl class="hq-facts"><div><dt>Gradimento</dt><dd>${num(governing ? state.world?.polls?.at(-1)?.government?.approval : executive.approval, 0)}/100</dd></div><div><dt>Margine di bilancio</dt><dd>${num(society.publicFinance.headroom, 0)}/100 ${meter(society.publicFinance.headroom, society.publicFinance.headroom < 20 ? 'danger' : '')}</dd></div><div><dt>Risorse già impegnate</dt><dd>${num(society.publicFinance.committed, 0)} punti</dd></div></dl><p class="parliament-note">${governing ? 'Il governo formato in Parlamento risponde ai cittadini: la sua stabilità pesa sull’economia e l’umore del Paese pesa sul suo gradimento.' : 'Finché in Parlamento non nasce un governo della simulazione, un esecutivo di scenario interviene ogni sei settimane sul problema più urgente, se i conti lo consentono. Non rappresenta il governo reale.'}</p>`)}
     </div>
-    <p class="poll-footnote">Popolazione, territori, economia, conti pubblici e media di questa pagina sono interamente simulati (source: simulation): non sono statistiche ufficiali né dati reali.</p>
+    <p class="poll-footnote">Popolazione, territori, economia, conti pubblici e media di questa pagina sono interamente simulati (source: simulation): non sono statistiche ufficiali né dati reali.${society.weightSource === 'camera' ? ' Le medie nazionali pesano ogni regione per il numero di deputati in carica eletti nelle sue circoscrizioni (dato reale della Camera).' : ''}</p>
   </div>`;
 }
 

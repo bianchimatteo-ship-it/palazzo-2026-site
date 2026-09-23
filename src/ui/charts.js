@@ -1,7 +1,7 @@
 // Shared building blocks for the simulation screens: numbers, state badges, meters and charts.
 // Charts follow the same rules as the polls page: thin marks, one axis, legend + direct labels,
 // hover tooltips through data-trend / data-tip, text in ink rather than in the series colour.
-import { glyph } from './visuals.js?v=20260924-8';
+import { glyph } from './visuals.js?v=20260924-9';
 
 export const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const num = (value, digits = 1) => value === null || value === undefined || Number.isNaN(Number(value)) ? '—' : Number(value).toLocaleString('it-IT', { maximumFractionDigits: digits });
@@ -45,6 +45,13 @@ export function sparkline(values, color = 'var(--party-accent)') {
   return `<svg class="sparkline" viewBox="0 0 120 32" aria-hidden="true"><polyline points="${coords.map(point => point.join(',')).join(' ')}" /><circle cx="${lx}" cy="${ly}" r="3.5" style="fill:${esc(color)}" /></svg>`;
 }
 
+// Round tick spacing (1, 2, 5 × 10ⁿ) whatever the magnitude of the data.
+function niceStep(raw) {
+  const magnitude = 10 ** Math.floor(Math.log10(Math.max(raw, 1e-9)));
+  const normal = raw / magnitude;
+  return (normal <= 1 ? 1 : normal <= 2 ? 2 : normal <= 5 ? 5 : 10) * magnitude;
+}
+const compact = value => Math.abs(value) >= 10000 ? `${num(value / 1000, 1)}k` : num(value, 1);
 // Multi-series line chart with legend, direct end labels and a crosshair tooltip.
 export function lineChart({ series, labels, tips = labels, unit = '', min = null, max = null, height = 230, ariaLabel = 'Andamento', digits = 1 }) {
   const length = labels.length;
@@ -55,12 +62,12 @@ export function lineChart({ series, labels, tips = labels, unit = '', min = null
   const low = min ?? Math.floor(Math.min(...values) - 2);
   const high = max ?? Math.ceil(Math.max(...values) + 2);
   const span = high - low || 1;
-  const step = span > 60 ? 20 : span > 24 ? 10 : span > 10 ? 5 : span > 4 ? 2 : 1;
+  const step = niceStep(span / 5);
   const x = i => L + i * plotW / (length - 1);
   const y = v => T + (1 - (v - low) / span) * plotH;
   const ticks = [];
   for (let v = Math.ceil(low / step) * step; v <= high; v += step) ticks.push(v);
-  const grid = ticks.map(v => `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 3.5}" text-anchor="end">${num(v, 1)}</text>`).join('');
+  const grid = ticks.map(v => `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 3.5}" text-anchor="end">${compact(v)}</text>`).join('');
   const every = Math.max(1, Math.ceil(length / 6));
   const xTicks = labels.map((label, i) => i % every === 0 || i === length - 1 ? `<text class="tick" x="${x(i)}" y="${H - 8}" text-anchor="middle">${esc(label)}</text>` : '').join('');
   const lines = series.map(item => `<path class="series ${item.emphasis ? 'is-player' : ''}" d="${item.values.map((v, i) => Number.isFinite(v) ? `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}` : '').join(' ')}" style="stroke:${esc(item.color)}"/>`).join('');

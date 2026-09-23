@@ -1,18 +1,18 @@
-import { activityProblem, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyContestScore, situation, upcomingElections } from '../core/career-engine.js?v=20260924-8';
-import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20260924-8';
-import { ACTIVITY_CATEGORIES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20260924-8';
-import { careerLevelLabel } from '../data/regions.js?v=20260924-8';
-import { formatDate } from '../core/time.js?v=20260924-8';
-import { renderBarometerPanel } from './polls-mode.js?v=20260924-8';
-import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20260924-8';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-8';
-import { societyMood } from '../core/society-engine.js?v=20260924-8';
-import { financeOutlook } from '../core/finance-engine.js?v=20260924-8';
-import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20260924-8';
-import { renderCountryCard, renderMediaPanel, renderTerritoryCard } from './society-mode.js?v=20260924-8';
-import { renderFinanceCard } from './finance-mode.js?v=20260924-8';
-import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20260924-8';
-import { stateBadge } from './charts.js?v=20260924-8';
+import { activityProblem, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyContestScore, situation, upcomingElections } from '../core/career-engine.js?v=20260924-9';
+import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20260924-9';
+import { ACTIVITY_CATEGORIES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20260924-9';
+import { careerLevelLabel } from '../data/regions.js?v=20260924-9';
+import { formatDate } from '../core/time.js?v=20260924-9';
+import { renderBarometerPanel } from './polls-mode.js?v=20260924-9';
+import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20260924-9';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-9';
+import { societyMood } from '../core/society-engine.js?v=20260924-9';
+import { financeOutlook } from '../core/finance-engine.js?v=20260924-9';
+import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20260924-9';
+import { renderCountryCard, renderMediaPanel, renderTerritoryCard } from './society-mode.js?v=20260924-9';
+import { renderFinanceCard } from './finance-mode.js?v=20260924-9';
+import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20260924-9';
+import { stateBadge } from './charts.js?v=20260924-9';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const num = (value, digits = 1) => Number(value ?? 0).toLocaleString('it-IT', { maximumFractionDigits: digits });
@@ -183,7 +183,7 @@ function situationBar(state) {
   return `<section class="situation-bar">
     <div>${glyph('flag', 16)}<span><small>ITALIA</small><strong>${esc(legislature.label)}</strong><em>${legislature.reference === 'real' ? 'riferimento reale' : 'simulata'}</em></span></div>
     <div>${glyph(governing ? 'ministry' : 'dome', 16)}<span><small>ESECUTIVO</small><strong>${esc(executive)}</strong><em>${governing ? 'nato in Parlamento nella simulazione' : 'scenario, non il governo reale'}</em></span></div>
-    ${mood === null ? '' : `<div>${glyph('users', 16)}<span><small>UMORE DEL PAESE</small><strong>${num(mood, 0)}/100</strong></span>${stateBadge(moodState[0], moodState[1])}</div>`}
+    ${mood === null ? '' : `<div>${glyph('users', 16)}<span><small>UMORE DEL PAESE</small><strong>${num(mood, 0)}/100 ${stateBadge(moodState[0], moodState[1])}</strong></span></div>`}
     <div>${glyph('clock', 16)}<span><small>SETTIMANA ${game.week.index}</small><strong>${esc(formatDate(state.clock.currentDate))}</strong></span></div>
   </section>`;
 }
