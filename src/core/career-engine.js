@@ -1,11 +1,11 @@
-import { advanceDays } from './time.js?v=20260924-6';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-6';
-import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260924-6';
+import { advanceDays } from './time.js?v=20260924-7';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-7';
+import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260924-7';
 import {
   APPOINTMENTS, BASE_WEEKLY_INCOME, CAREER_EVENTS, CAREER_OBJECTIVES, CURRENT_TEMPLATES, EARLY_ELECTION_AFTER_WEEKS, ELECTION_SCHEDULE,
   FORCED_EVENTS, LEGACY_RIVAL_NAMES, SIMULATED_RIVAL_LABEL, FOUNDER_RANK, LEVEL_FIRST_ELECTION, OFFICE_INCOME, PARTY_RANKS, RELATION_TEMPLATES, STAT_LABELS,
   WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES
-} from '../data/simulation/career-rules.js?v=20260924-6';
+} from '../data/simulation/career-rules.js?v=20260924-7';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));

@@ -1,7 +1,7 @@
-import { allianceOf, latestPoll } from '../core/world-engine.js?v=20260924-6';
-import { COMPATIBLE_FAMILIES, FAMILY_LABELS } from '../data/simulation/polling-rules.js?v=20260924-6';
-import { formatDate } from '../core/time.js?v=20260924-6';
-import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20260924-6';
+import { allianceOf, latestPoll } from '../core/world-engine.js?v=20260924-7';
+import { COMPATIBLE_FAMILIES, FAMILY_LABELS } from '../data/simulation/polling-rules.js?v=20260924-7';
+import { formatDate } from '../core/time.js?v=20260924-7';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20260924-7';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const pct = (value, digits = 1) => value === null || value === undefined ? '—' : `${Number(value).toLocaleString('it-IT', { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;

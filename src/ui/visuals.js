@@ -87,7 +87,8 @@ export function inkOn(hex) {
 
 // Party mark: the verified logo when available, otherwise initials on the party colour.
 export function emblem({ label, abbreviation, color, logo = null }, size = 'md') {
-  const text = (abbreviation || String(label ?? 'P').split(/\s+/).map(word => word[0]).join('')).slice(0, 3).toUpperCase();
+  const initials = String(label ?? 'P').split(/[\s\-–—/]+/).map(word => word.replace(/[^\p{L}\p{N}]/gu, '')[0]).filter(Boolean).join('');
+  const text = (abbreviation || initials || 'P').slice(0, 3).toUpperCase();
   const fill = color || '#8c988b';
   return logo
     ? `<span class="emblem emblem-${size} has-logo" style="--emblem:${esc(fill)}"><img src="${esc(logo)}" alt="" loading="lazy" /></span>`

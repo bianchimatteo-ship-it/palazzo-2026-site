@@ -1,10 +1,10 @@
-import { activityProblem, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyContestScore, situation, upcomingElections } from '../core/career-engine.js?v=20260924-6';
-import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20260924-6';
-import { ACTIVITY_CATEGORIES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20260924-6';
-import { careerLevelLabel } from '../data/regions.js?v=20260924-6';
-import { formatDate } from '../core/time.js?v=20260924-6';
-import { renderBarometerPanel } from './polls-mode.js?v=20260924-6';
-import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20260924-6';
+import { activityProblem, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyContestScore, situation, upcomingElections } from '../core/career-engine.js?v=20260924-7';
+import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20260924-7';
+import { ACTIVITY_CATEGORIES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20260924-7';
+import { careerLevelLabel } from '../data/regions.js?v=20260924-7';
+import { formatDate } from '../core/time.js?v=20260924-7';
+import { renderBarometerPanel } from './polls-mode.js?v=20260924-7';
+import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20260924-7';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const num = (value, digits = 1) => Number(value ?? 0).toLocaleString('it-IT', { maximumFractionDigits: digits });
