@@ -1,4 +1,4 @@
-import { CAREER_LEVELS, ITALIAN_REGIONS } from '../data/regions.js';
+import { CAREER_LEVELS, ITALIAN_REGIONS } from '../data/regions.js?v=20260923-3';
 import { isSelectableParty } from '../data/schema.js';
 
 const genders = new Set(['preferisco-non-specificare', 'donna', 'uomo', 'non-binario']);
@@ -9,7 +9,7 @@ const isValidDate = value => {
   return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value;
 };
 
-export function validateCareerStep(draft, step, selectableParties) {
+export function validateCareerStep(draft, step, selectableParties, parliamentaryGroups = []) {
   const errors = [];
   if (step === 1) {
     if (!draft.firstName?.trim()) errors.push('Inserisci il nome.');
@@ -20,7 +20,15 @@ export function validateCareerStep(draft, step, selectableParties) {
     if (!draft.municipality?.trim()) errors.push('Inserisci il comune di residenza.');
     if (!draft.previousProfession?.trim()) errors.push('Inserisci la professione precedente.');
   }
-  if (step === 2 && !CAREER_LEVELS[draft.initialLevel]) errors.push('Scegli un livello iniziale.');
+  if (step === 2) {
+    const level = CAREER_LEVELS[draft.initialLevel];
+    if (!level) errors.push('Scegli un percorso iniziale.');
+    else if (level.chamber) {
+      if (draft.parliamentStartMode !== 'real-context') errors.push('Scegli il contesto parlamentare reale per questo percorso.');
+      const selectedGroup = parliamentaryGroups.find(group => group.id === draft.parliamentaryGroupId && group.source === 'real' && group.verified === true && group.chamber === level.chamber);
+      if (!selectedGroup) errors.push(`Scegli un gruppo reale della ${level.chamber === 'camera' ? 'Camera' : 'Senato'} per lo scenario.`);
+    }
+  }
   if (step === 3) {
     if (!['independent', 'existing', 'new'].includes(draft.partyMode)) errors.push('Scegli come iniziare il percorso di partito.');
     if (draft.partyMode === 'existing' && !selectableParties.some(p => p.id === draft.partyId && isSelectableParty(p))) errors.push('Seleziona un partito demo o verificato.');
@@ -39,6 +47,6 @@ export function validateCareerStep(draft, step, selectableParties) {
   return errors;
 }
 
-export function validateNewCareerDraft(draft, selectableParties) {
-  return [1, 2, 3].flatMap(step => validateCareerStep(draft, step, selectableParties));
+export function validateNewCareerDraft(draft, selectableParties, parliamentaryGroups = []) {
+  return [1, 2, 3].flatMap(step => validateCareerStep(draft, step, selectableParties, parliamentaryGroups));
 }

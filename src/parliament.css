@@ -1,0 +1,187 @@
+/* Real context and career actions: the labels keep official references separate from play data. */
+.wizard-parliament-context{margin-top:15px;padding:15px;border:1px solid #d9ded5;border-radius:5px;background:#f8f8f1}
+.wizard-parliament-title{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.wizard-parliament-title>div{display:grid;gap:5px}
+.wizard-parliament-title strong{color:#304438;font:700 15px Manrope,sans-serif}
+.wizard-parliament-context>p{margin:10px 0;color:#727c72;font-size:11px;line-height:1.55}
+.wizard-group-search{display:grid;gap:6px;max-width:320px;color:#647168;font-size:10px;font-weight:650}
+.wizard-group-search input{height:35px;padding:0 10px;border:1px solid #d8ddd4;border-radius:4px;background:#fff;color:#33463a}
+.wizard-group-list{display:grid;gap:5px;max-height:230px;overflow:auto;margin:9px 0}
+.wizard-group-option{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid #e0e4dc;border-radius:4px;background:#fff}
+.wizard-group-option.selected{border-color:#7d9b89;background:#edf2eb}
+.wizard-group-option>button{flex:1;min-width:0;display:flex;align-items:center;gap:9px;padding:0;border:0;background:transparent;text-align:left;cursor:pointer}
+.wizard-group-option .radio-ring{flex:none}
+.wizard-group-option>button>span:last-child{display:grid;gap:3px}
+.wizard-group-option strong{color:#3b4b40;font-size:10px;line-height:1.3}
+.wizard-group-option small{color:#858c83;font-size:8px}
+.wizard-group-option>a,.wizard-party-source{flex:none;color:#4d735d;font-size:9px;text-decoration:none}
+.wizard-group-option>a:hover,.wizard-party-source:hover{text-decoration:underline}
+.wizard-group-selected{padding-top:5px;color:#788276;font-size:9px}
+.wizard-group-selected strong{color:#375a46}
+.wizard-context-note strong{color:#3f624e}
+.wizard-party-entry{display:grid;grid-template-columns:minmax(0,1fr) auto auto;align-items:center;gap:9px;border:1px solid #e3e7df;border-left:3px solid var(--party-color,#dadfd7);border-radius:5px;background:#fff}
+.wizard-party-entry.selected{border-color:var(--party-color,#9eac9d);background:#fbfcf8}
+.wizard-party-entry .demo-party{border:0;background:transparent}
+.wizard-party-entry .demo-party.selected{background:transparent}
+.wizard-party-entry .demo-party-copy em{font-style:normal;white-space:normal;line-height:1.4;color:#7f887c}
+.wizard-party-entry .source-pill{align-self:center}
+.wizard-party-source{padding-right:10px;white-space:nowrap}
+.wizard-party-placeholder{flex:none;border-radius:50%;background:#ecefe8;color:#4b6150}
+.wizard-party-logo{flex:none}
+.wizard-party-count{margin:7px 0;color:#7d867c;font-size:9px}
+.wizard-data-note{font-size:9px;line-height:1.55}
+
+.parliament-mode{display:grid;gap:21px;color:#2d3c32}
+.parliament-mode-hero{display:flex;justify-content:space-between;align-items:center;gap:22px;padding:22px 25px;border-radius:5px;background:#20473d;color:#fbfaf1}
+.parliament-mode-hero h2{margin:5px 0 7px;color:#fffaf1;font:700 clamp(23px,3vw,32px)/1.1 Manrope,sans-serif;letter-spacing:-.045em}
+.parliament-mode-hero p{max-width:710px;margin:0;color:#d0d9d1;font-size:11px;line-height:1.6}
+.parliament-mode-hero .section-kicker{color:#d8bb7a}
+.parliament-provenance{display:inline-flex;align-items:center;width:max-content;min-height:22px;padding:0 8px;border:1px solid #d4d9d0;border-radius:3px;color:#6e786d;font-size:8px;font-weight:750;letter-spacing:.06em;white-space:nowrap}
+.parliament-mode-hero .parliament-provenance{border-color:rgba(255,255,255,.23);color:#e6e9de}
+.parliament-provenance.real{border-color:#9cbaa2;background:#edf4ed;color:#40684d}
+.parliament-provenance.simulated{border-color:#e3d0a5;background:#f7f1e2;color:#8a6d35}
+.parliament-player{display:flex;align-items:center;gap:11px;min-width:230px;padding:12px 0 12px 17px;border-left:1px solid rgba(255,255,255,.2)}
+.parliament-player>span:last-child{display:grid;gap:4px}
+.parliament-player small{color:#d1d9d0;font-size:9px}
+.parliament-player strong{max-width:260px;color:#fffaf1;font-size:12px;line-height:1.4}
+.player-avatar{width:37px;height:37px;display:grid;place-items:center;border:1px solid #c9b278;border-radius:50%;background:#34594d;color:#ead6a2;font:700 14px Manrope,sans-serif}
+.parliament-party-banner{display:flex;align-items:center;gap:11px;min-height:54px;padding:7px 12px;border-left:4px solid var(--party-color,#8c988b);background:#eeefe8}
+.parliament-party-banner>span{display:grid;gap:3px}
+.parliament-party-banner small{color:#7d847a;font-size:8px}
+.parliament-party-banner strong{color:#35473c;font:700 12px Manrope,sans-serif}
+.parliament-party-banner img,.parliament-party-banner i,.parliament-party-mark{width:34px;height:34px;display:grid;place-items:center;object-fit:contain;border-radius:4px;background:#fff;color:#3e5645;font:700 10px Manrope,sans-serif;font-style:normal}
+.parliament-status-line{display:flex;align-items:center;flex-wrap:wrap;gap:10px 18px;padding:0 2px;color:#798276;font-size:10px}
+.parliament-status-line b{color:#385646}
+.parliament-chamber-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.chamber-panel,.government-start,.government-current,.law-proposal-form,.parliament-callout,.parliament-timeline{padding:20px 22px;border:1px solid #dcdfd5;border-radius:5px;background:#faf9f3}
+.chamber-panel-head,.law-card>header,.law-proposal-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.chamber-panel-head h2{margin:5px 0 0;color:#304338;font:700 19px Manrope,sans-serif;letter-spacing:-.035em}
+.chamber-totals{display:flex;gap:0;margin:17px 0 10px;border-top:1px solid #e4e5dc;border-bottom:1px solid #e4e5dc}
+.chamber-totals>span{flex:1;display:grid;gap:4px;padding:10px 12px 10px 0}
+.chamber-totals>span+span{padding-left:13px;border-left:1px solid #e0e2d9}
+.chamber-totals small,.government-majority-strip small{color:#858a7f;font-size:8px;font-weight:700;letter-spacing:.07em}
+.chamber-totals strong{color:#314c3c;font:700 21px Manrope,sans-serif}
+.parliament-group-list{display:grid}
+.parliament-group-row{padding:9px 0 8px;border-bottom:1px solid #e7e7df}
+.parliament-group-row:last-child{border-bottom:0}
+.parliament-group-main{display:grid;grid-template-columns:23px minmax(0,1fr) 48px;align-items:center;gap:8px}
+.group-order{color:#b49a65;font:700 9px Manrope,sans-serif}
+.parliament-group-name{display:grid;gap:3px;min-width:0}
+.parliament-group-name>strong{color:#3c493f;font-size:10px;line-height:1.35}
+.parliament-group-name>strong em{display:inline-block;margin-left:5px;color:#52745a;font-size:8px;font-style:normal}
+.parliament-group-name>small{color:#858b81;font-size:8px}
+.parliament-sim-seat{display:grid;justify-items:end;color:#364d3c;font:700 13px Manrope,sans-serif}
+.parliament-sim-seat small{color:#9a8b68;font:500 7px 'DM Sans',sans-serif;text-transform:uppercase}
+.parliament-seat-track{height:3px;margin:6px 56px 2px 31px;overflow:hidden;background:#e6e7df}
+.parliament-seat-track i{display:block;height:100%;background:#839989}
+.player-group .parliament-seat-track i{background:var(--party-color,#b2975c)}
+.parliament-source{display:inline-block;margin:5px 0 0 31px;color:#55765e;font-size:8px;text-decoration:none}
+.parliament-source:hover{text-decoration:underline}
+.parliament-note{margin:8px 0 0;color:#82877d;font-size:9px;line-height:1.5}
+.parliament-access-note{padding:12px 14px;border-left:3px solid #c0a166;background:#f4f0e4;color:#72694f;font-size:10px;line-height:1.55}
+.parliament-callout h3,.government-start h2,.law-proposal-form h2{margin:5px 0;color:#314439;font:700 19px Manrope,sans-serif}
+.parliament-callout p,.government-start>p,.law-proposal-form>p{color:#788075;font-size:10px;line-height:1.6}
+.parliament-choice-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:12px 0}
+.parliament-choice{display:grid;grid-template-columns:18px minmax(0,1fr) auto;align-items:center;gap:8px;padding:9px;border:1px solid #e0e3da;background:#fff}
+.parliament-choice>span{display:grid;gap:3px}
+.parliament-choice strong{color:#435147;font-size:10px}
+.parliament-choice small{color:#82897e;font-size:8px}
+.parliament-choice input{accent-color:#365c47}
+.parliament-choice .parliament-source{margin:0}
+.parliament-timeline{padding-top:18px}
+.parliament-timeline .home-section-heading{margin-bottom:3px}
+.parliament-timeline h2{font-size:18px}
+.parliament-timeline-item{display:grid;grid-template-columns:76px 12px minmax(0,1fr);align-items:start;gap:9px;padding:11px 0;border-top:1px solid #e6e6de}
+.parliament-timeline-item time{color:#778175;font-size:9px}
+.timeline-mark{width:7px;height:7px;margin-top:4px;border-radius:50%;background:#a58b55}
+.parliament-timeline-item>div{display:grid;gap:4px}
+.parliament-timeline-item strong{color:#405045;font-size:10px;font-weight:600;line-height:1.4}
+.parliament-timeline-item small{color:#92968c;font-size:8px}
+.government-majority-strip{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-top:1px solid #d9ddd3;border-bottom:1px solid #d9ddd3}
+.government-majority-strip>span{display:grid;gap:4px;padding:13px 16px 13px 0}
+.government-majority-strip>span+span{padding-left:17px;border-left:1px solid #d9ddd3}
+.government-majority-strip strong{color:#345140;font:700 23px Manrope,sans-serif}
+.government-majority-strip strong i{color:#73806f;font:500 9px 'DM Sans',sans-serif}
+.government-majority-strip em{color:#838a7e;font-size:8px;font-style:normal}
+.government-start h2{font-size:21px}
+.coalition-checks{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:15px 0}
+.government-chamber{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;min-width:0;margin:0;padding:11px;border:1px solid #e2e4da}
+.government-chamber legend{padding:0 5px;color:#667364;font-size:9px;font-weight:700}
+.government-group-check{display:flex;align-items:flex-start;gap:6px;min-width:0;padding:5px 0;cursor:pointer}
+.government-group-check input{margin:2px 0 0;accent-color:#315944}
+.government-group-check span{display:grid;gap:3px;min-width:0}
+.government-group-check strong{overflow:hidden;color:#455147;font-size:8px;line-height:1.3;text-overflow:ellipsis}
+.government-group-check small{color:#868c82;font-size:7px}
+.government-start>.primary-button:disabled,.law-proposal-form .primary-button:disabled{opacity:.45;cursor:not-allowed}
+.government-current .home-section-heading{align-items:center}
+.government-current .home-section-heading h2{font-size:19px}
+.government-members{display:flex;flex-wrap:wrap;gap:6px}
+.government-members span{padding:6px 8px;border:1px solid #e2e3db;background:#f4f3eb;color:#586457;font-size:8px}
+.minister-list{margin:12px 0}
+.minister-line{display:grid;grid-template-columns:1fr 1fr auto;align-items:center;gap:10px;padding:9px 0;border-top:1px solid #e6e6de}
+.minister-line>span{color:#6d786c;font-size:9px}
+.minister-line strong{color:#3e5546;font-size:9px}
+.minister-line small{color:#999b91;font-size:8px}
+.minister-form,.government-actions{display:flex;align-items:end;flex-wrap:wrap;gap:9px;margin:13px 0;padding-top:11px;border-top:1px solid #e1e2d9}
+.minister-form label,.government-actions label{display:grid;gap:5px;min-width:150px;color:#768073;font-size:8px}
+.minister-form select,.government-actions select,.law-negotiation select{height:34px;padding:0 8px;border:1px solid #d9ddd3;border-radius:3px;background:#fff;color:#455348;font-size:9px}
+.coalition-edit{margin-top:12px;padding-top:10px;border-top:1px solid #e1e2d9}
+.coalition-edit summary{color:#58705c;font-size:9px;cursor:pointer}
+.coalition-edit .coalition-checks{margin-top:8px}
+.coalition-edit>.secondary-button{margin-bottom:5px}
+.law-proposal-form{display:grid;gap:12px}
+.law-proposal-heading{align-items:center}
+.law-proposal-heading h2{font-size:20px}
+.law-form-grid{display:grid;grid-template-columns:1fr 220px;gap:10px}
+.law-form-grid label,.law-negotiation label{display:grid;gap:6px;color:#6f7a6e;font-size:9px;font-weight:650}
+.law-form-grid input,.law-form-grid select,.law-form-grid textarea,.law-negotiation input{width:100%;padding:9px;border:1px solid #dce0d6;border-radius:3px;background:#fff;color:#37483b;font:10px 'DM Sans',sans-serif}
+.law-form-grid input,.law-form-grid select{height:35px}
+.law-summary-field{grid-column:1/-1}
+.law-form-grid textarea{resize:vertical;line-height:1.5}
+.law-proposal-form>p{margin:0}
+.law-board>.home-section-heading{margin:0 0 9px}
+.law-board>.home-section-heading>span{color:#848a80;font-size:9px}
+.law-card{margin:10px 0;padding:15px 17px;border:1px solid #dfe2d8;border-radius:4px;background:#faf9f3}
+.law-card>header{align-items:center}
+.law-card h3{margin:4px 0;color:#35473b;font:700 16px/1.25 Manrope,sans-serif}
+.law-card>p{margin:7px 0;color:#737c72;font-size:10px;line-height:1.55}
+.law-amendment-list{display:grid;gap:4px}
+.law-amendment-list span{color:#8c764b;font-size:8px}
+.law-actions{margin:9px 0}
+.law-negotiation{display:grid;gap:9px;padding:12px;background:#f0f1e9}
+.law-negotiation form{display:flex;align-items:end;gap:8px}
+.law-negotiation form label{flex:1}
+.law-negotiation-actions{display:flex;align-items:end;flex-wrap:wrap;gap:8px}
+.law-negotiation-actions label{min-width:190px}
+.law-negotiation small{color:#858a80;font-size:8px}
+.law-vote-result{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;padding:9px 0;border-top:1px solid #e3e4dc;color:#727c70;font-size:8px}
+.law-vote-result strong{color:#3d5745}
+.law-vote-result b{color:#3f5947}
+.law-vote-result em{color:#92723b;font-style:normal;font-weight:750}
+.law-updated{display:block;margin-top:8px;color:#90958a;font-size:8px}
+.parliament-group-meta{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin:5px 0 0 31px;color:#858b81;font-size:8px}
+.parliament-group-meta b{color:#4b6452}
+.parliament-group-meta .parliament-source{margin:0}
+.parliament-group-name>strong em.group-position{color:#8a6d35}
+.parliament-role-panel{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;padding:16px 20px;border:1px solid #dcdfd5;border-left:3px solid #c0a166;border-radius:5px;background:#faf9f3}
+.parliament-role-panel h3{margin:5px 0 4px;color:#314439;font:700 17px Manrope,sans-serif}
+.parliament-role-panel p{margin:0 0 5px;color:#788075;font-size:10px;line-height:1.55}
+.parliament-role-panel b{color:#385646}
+.parliament-role-panel small{color:#8a8f84;font-size:8px}
+.parliament-role-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.parliament-role-list span{padding:5px 8px;border:1px solid #e2e3db;background:#f4f3eb;color:#586457;font-size:8px}
+.parliament-role-action{display:grid;justify-items:end;gap:6px;max-width:240px;text-align:right}
+.parliament-role-action .secondary-button:disabled{opacity:.45;cursor:not-allowed}
+.parliament-group-change{margin-top:0;padding:12px 16px;border:1px solid #e1e2d9;border-radius:5px;background:#faf9f3}
+.minister-line.player-minister strong{color:#8a6d35}
+.government-vote-summary{margin-top:12px;padding-top:10px;border-top:1px solid #e1e2d9}
+.government-vote-summary>strong{color:#58705c;font-size:9px}
+.government-vote-summary .law-vote-result{margin-top:6px;padding:6px 0;border-top:0}
+.career-history-block{flex:1;min-width:0}
+.career-history-block .parliament-timeline-item strong{font:600 11px/1.4 'DM Sans',sans-serif}
+.parliament-empty{padding:38px 5px;color:#35483a}
+.parliament-empty h2{font:700 25px Manrope,sans-serif}
+.parliament-empty p{color:#798176;font-size:12px}
+
+@media(max-width:900px){.parliament-chamber-grid{grid-template-columns:1fr}.government-chamber{grid-template-columns:1fr 1fr}}
+@media(max-width:600px){.parliament-mode{gap:14px}.parliament-mode-hero{align-items:flex-start;flex-direction:column;padding:18px}.parliament-player{min-width:0;width:100%;padding:10px 0 0;border-left:0;border-top:1px solid rgba(255,255,255,.2)}.chamber-panel,.government-start,.government-current,.law-proposal-form,.parliament-callout,.parliament-timeline{padding:15px}.parliament-choice-list,.coalition-checks{grid-template-columns:1fr}.government-chamber{grid-template-columns:1fr 1fr}.law-form-grid{grid-template-columns:1fr}.law-summary-field{grid-column:auto}.law-negotiation form{align-items:stretch;flex-direction:column}.parliament-role-panel{flex-direction:column;padding:15px}.parliament-role-action{justify-items:start;max-width:none;text-align:left}.parliament-group-meta{margin-left:0}.minister-line{grid-template-columns:1fr 1fr}.minister-line small{grid-column:1/-1}.parliament-choice{grid-template-columns:18px minmax(0,1fr)}.parliament-choice .parliament-source{grid-column:2}.wizard-parliament-title{align-items:flex-start;flex-direction:column}.wizard-party-entry{grid-template-columns:minmax(0,1fr) auto}.wizard-party-entry .demo-party{grid-column:1/-1}.wizard-party-source{padding:0 10px 9px}.wizard-party-entry .source-pill{display:none}}

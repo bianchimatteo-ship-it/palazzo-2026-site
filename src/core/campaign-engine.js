@@ -1,7 +1,7 @@
 import { advanceDays } from './time.js';
 import { CAMPAIGN_ACTIVITIES, DEBATE_TOPICS, ELECTION_MODELS, EUROPEAN_THRESHOLD } from '../data/simulation/campaign-rules.js';
 import { runFinalElection, runFirstRound } from './election-engine.js';
-import { ITALIAN_REGIONS } from '../data/regions.js';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260923-3';
 
 const SOURCE = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
@@ -272,7 +272,7 @@ export function createCampaign({career,player,statistics=[],offices=[],territori
   const campaignId=ids('campagna',seed);
   const playerCandidateId=ids('candidatura-giocatore',seed);
   const officeTitle=String(offices.find(item=>item.id===player.roleId)?.title??'');
-  const incumbency=/deputat|senat/i.test(officeTitle) && !/inizial/i.test(officeTitle);
+  const incumbency=type==='politiche' && /deputat|senat/i.test(officeTitle) && !/inizial/i.test(officeTitle);
   const candidate=createCandidate({id:playerCandidateId,player:true,partyId,displayName:player.displayName,seed,stats:playerStats});
   const opponents=buildOpponents(partyId,partyCatalog,seed);
   const candidates=[candidate,...opponents];

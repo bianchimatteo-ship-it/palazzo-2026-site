@@ -8,6 +8,7 @@
     "import:real-data": "node scripts/import-real-data.mjs",
     "check:real-data": "node scripts/validate-real-data.mjs",
     "check:published-site": "node scripts/check-published-site.mjs",
-    "check:campaign": "node scripts/check-campaign.mjs"
+    "check:campaign": "node scripts/check-campaign.mjs",
+    "check:parliament": "node scripts/check-parliament.mjs"
   }
 }
