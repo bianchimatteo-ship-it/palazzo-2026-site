@@ -1,4 +1,4 @@
-import { BUDGET_LINES, DEBT_CRISIS_THRESHOLD, DEBT_WEEKLY_INTEREST, FINANCE_CATEGORIES, HISTORY_WEEKS, LEDGER_SIZE, RESERVE_BEFORE_REPAYING } from '../data/simulation/finance-rules.js?v=20260924-10';
+import { BUDGET_LINES, DEBT_CRISIS_THRESHOLD, DEBT_WEEKLY_INTEREST, FINANCE_CATEGORIES, HISTORY_WEEKS, LEDGER_SIZE, RESERVE_BEFORE_REPAYING } from '../data/simulation/finance-rules.js?v=20260924-11';
 
 const SIM = 'simulation';
 const blankPeriod = () => ({ income: 0, expense: 0, byCategory: {} });

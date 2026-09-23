@@ -67,8 +67,8 @@ export function changeContact(contacts, personId, delta, note = null, week = nul
 
 export function contactStance(relation) {
   if (relation >= 68) return ['alleato', 'Disponibile a sostenerti'];
-  if (relation >= 52) return ['cordiale', 'Rapporto cordiale'];
-  if (relation >= 35) return ['neutrale', 'Rapporto freddo'];
+  if (relation >= 55) return ['cordiale', 'Rapporto cordiale'];
+  if (relation >= 35) return ['neutrale', 'Rapporto neutrale'];
   return ['ostile', 'Contrario alle tue iniziative'];
 }
 
