@@ -1,12 +1,14 @@
 import { fullDate, formatDate } from '../core/time.js';
 import { DATA_SOURCES, isSelectableParty } from '../data/schema.js';
-import { isRealCollectionLoaded, loadRealCollections, realDatabase } from '../data/repositories/real-data.js?v=20260923-1';
+import { isRealCollectionLoaded, loadRealCollections, realDatabase } from '../data/repositories/real-data.js?v=20260923-2';
 import { deleteLocalLogo, exportLogoConfiguration, getLocalLogo, importLogoConfiguration, listLocalLogos, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js';
-import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20260923-1';
-import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20260923-1';
-import { renderLogoAdmin } from './logo-admin.js?v=20260923-1';
+import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20260923-2';
+import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20260923-2';
+import { renderLogoAdmin } from './logo-admin.js?v=20260923-2';
 import { makeCareerDraft, renderCareerWizard } from './career-wizard.js';
 import { validateCareerStep } from '../core/career-rules.js';
+import { renderCampaignPage } from './campaign-mode.js';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js';
 
 const mainSectionActive = (id, page) => page === id || (id === 'calendario' && page === 'eventi') || (id === 'parlamento' && ['governo', 'leggi'].includes(page)) || (id === 'partito' && page === 'partiti-lista') || (id === 'profilo' && page === 'politici');
 const mainNavigation = [
@@ -20,7 +22,7 @@ const pages = {
   carriera: { title: 'Carriera', eyebrow: 'IL TUO PERCORSO', intro: 'Costruisci la tua presenza, un incarico alla volta.' },
   partito: { title: 'Il tuo partito', eyebrow: 'APPARTENENZA', intro: 'Relazioni, linea politica e peso nel partito.' },
   calendario: { title: 'Agenda', eyebrow: 'IL TUO TEMPO', intro: 'Appuntamenti e momenti da tenere d’occhio.' },
-  elezioni: { title: 'Elezioni', eyebrow: 'ORIZZONTE ELETTORALE', intro: 'Consulta le scadenze e prepara il prossimo appuntamento.' },
+  elezioni: { title: 'Campagna elettorale', eyebrow: 'ORIZZONTE ELETTORALE', intro: 'Scegli una sfida, conquista la candidatura e guida la campagna.' },
   sondaggi: { title: 'Sondaggi', eyebrow: 'UMORE DEL PAESE', intro: 'Indicatori di consenso pronti per collegarsi ai dati di simulazione.' },
   parlamento: { title: 'Parlamento', eyebrow: 'LE CAMERE', intro: 'Seggi, gruppi e lavori parlamentari.' },
   governo: { title: 'Governo', eyebrow: 'PALAZZO CHIGI', intro: 'Composizione, agenda e approvazione dell’esecutivo.' },
@@ -79,7 +81,7 @@ export function mountApp(root, store) {
         </aside>
         <main class="main-area">
           <header class="topbar"><div class="topbar-title"><strong>${current.title}</strong><span>${current.intro}</span></div><div class="top-actions"><div class="date-chip">${icon('calendar', 16)}<span>${fullDate(state.clock.currentDate)}</span></div><button class="icon-button" aria-label="Salva carriera" title="Salva carriera" data-action="save">${icon('save', 17)}</button><button class="advance-button" data-action="advance">Avanza settimana ${icon('arrow', 17)}</button></div></header>
-          <div class="page-wrap">${wizard ? '' : (state.ui.activePage === 'panoramica' ? dashboard(state, { player, party, eventList, logoFor }) : subpage(state, current, player, party, eventList, catalog, { logoFor }))}</div>
+          <div class="page-wrap">${wizard ? '' : (state.ui.activePage === 'panoramica' ? dashboard(state, { player, party, eventList, logoFor }) : subpage(state, current, player, party, eventList, catalog, { logoFor, parties:realParties() }))}</div>
         </main>
         ${wizard ? renderCareerWizard(state, wizard, realParties(), logoFor) : ''}
         ${logoAdminOpen ? renderLogoAdmin({selectedId:selectedLogoPartyId,query:catalog.logoQuery,page:catalog.logoPage,metadata:[...logoMetadata.values()],entities:[...realParties(),...state.dataset.parties],logoFor,error:logoAdminError,pendingPreview:pendingLogoUrl}) : ''}
@@ -163,6 +165,21 @@ export function mountApp(root, store) {
       catch (error) { catalog.errors.politicianProfile = error.message || 'Dettagli non disponibili.'; }
       catalog.profileLoading = false; render(store.getState(),store.getLastSaved()); return;
     }
+    const campaignEvent = event.target.closest('[data-campaign-event]');
+    if (campaignEvent) { store.decideCampaignEvent(campaignEvent.dataset.campaignEvent,campaignEvent.dataset.campaignChoice); return; }
+    const campaignBreak = event.target.closest('[data-campaign-break-alliance]')?.dataset.campaignBreakAlliance;
+    if (campaignBreak) { try { store.breakCampaignAlliance(campaignBreak); } catch(error) { store.getState().ui.toast=error.message; render(store.getState(),store.getLastSaved()); } return; }
+    const campaignActivity = event.target.closest('[data-campaign-activity]')?.dataset.campaignActivity;
+    if (campaignActivity) {
+      try {
+        store.performCampaignActivity(campaignActivity,{
+          territoryId:root.querySelector('[data-campaign-territory]')?.value,
+          topicId:root.querySelector('[data-campaign-topic]')?.value,
+          targetCandidateId:root.querySelector('[data-campaign-ally]')?.value
+        });
+      } catch(error) { store.getState().ui.toast=error.message; render(store.getState(),store.getLastSaved()); }
+      return;
+    }
     const partyOpen = event.target.closest('[data-party-profile]')?.dataset.partyProfile;
     if (partyOpen) {
       catalog.selectedPartyId = partyOpen; catalog.profileLoading = true; render(store.getState(),store.getLastSaved());
@@ -209,6 +226,13 @@ export function mountApp(root, store) {
     const action = event.target.closest('[data-action]')?.dataset.action;
     if (action === 'advance') store.advance(7);
     else if (action === 'save') store.save();
+    else if (action === 'campaign-start') {
+      try {
+        const value=name=>root.querySelector(`[data-campaign-setup="${name}"]`)?.value;
+        store.startCampaign({electionType:value('electionType'),objective:value('objective'),role:value('role'),municipalityBand:value('municipalityBand')},realParties());
+      } catch(error) { store.getState().ui.toast=error.message || 'Impossibile avviare la campagna.'; render(store.getState(),store.getLastSaved()); }
+    }
+    else if (action === 'campaign-new') store.clearCampaign();
     else if (action === 'new-career') {
       wizard = makeCareerDraft(store.getState().clock.currentDate,store.getState().dataset.parties);
       if (!isRealCollectionLoaded('parties') || !isRealCollectionLoaded('politicalMovements')) {
@@ -270,6 +294,16 @@ export function mountApp(root, store) {
       if (field.dataset.catalogFilter.startsWith('party')) catalog.partyPage=1;
       if (field.dataset.catalogFilter.startsWith('politician')) catalog.politicianPage=1;
       updateCatalog(); return;
+    }
+    if (field.matches('[data-campaign-setup="electionType"]')) {
+      const type=field.value;
+      const options={comunale:[['sindaco','Sindaco'],['consigliere','Consigliere']],regionale:[['presidente','Presidente di Regione'],['consigliere','Consigliere regionale']],politiche:[['deputato','Deputato'],['senatore','Senatore'],['uninominale','Collegio uninominale simulato']],europee:[['eurodeputato','Eurodeputato']]};
+      const role=root.querySelector('[data-campaign-setup="role"]');
+      if(role) role.innerHTML=(options[type]??options.comunale).map(([id,label])=>`<option value="${id}">${label}</option>`).join('');
+      const band=root.querySelector('.municipality-band-field'); if(band) band.hidden=type!=='comunale';
+      const help=root.querySelector('[data-campaign-model-help]');
+      if(help) help.innerHTML=`${ELECTION_MODELS[type].strategy} · <a href="${ELECTION_MODELS[type].referenceUrl}" target="_blank" rel="noopener noreferrer">${ELECTION_MODELS[type].referenceName} ↗</a>`;
+      return;
     }
     if (field.matches('[data-wizard-party-filter]')) { syncWizardDraft(); wizard.partyListLimit=12; preserveFocusRender('[data-wizard-party-filter]'); return; }
     if (field.matches('[data-logo-upload]')) {
@@ -344,6 +378,7 @@ function subpage(state, page, player, party, events, catalog, options = {}) {
     calendario: `<div class="agenda-list">${events.map(e => `<div class="agenda-row"><div class="agenda-date"><strong>${formatDate(e.date, { day: '2-digit' })}</strong><span>${formatDate(e.date, { month: 'short' })}</span></div><div class="agenda-row-text"><span class="event-tag">${esc(e.category)}</span><strong>${esc(e.title)}</strong><small>${esc(e.status)}</small></div><span class="source-pill">${sourceLabel(e.source)}</span></div>`).join('') || '<div class="empty-state">La tua agenda è libera. Avanza il tempo per generare i primi appuntamenti.</div>'}</div>`,
     politici: `<div class="catalog-body" data-catalog-body>${renderPoliticianArchive(catalog,{status:catalogStatus})}</div>`,
     'partiti-lista': `<div class="catalog-body" data-catalog-body>${renderPartyArchive(catalog,{status:catalogStatus,logoFor:options.logoFor})}</div>`,
+    elezioni: renderCampaignPage(state,options.parties??[],options.logoFor),
     partito: `<div class="feature-card party-detail-card"><span class="feature-icon">◇</span><div class="eyebrow">${party ? 'AFFILIAZIONE ATTUALE' : 'PROFILO INDIPENDENTE'}</div><div class="party-detail-heading">${party && options.logoFor?.(party) ? `<img src="${esc(options.logoFor(party))}" alt="${esc(party.logoAlt || `Logo di ${party.officialName || party.name}`)}" />` : ''}<h2>${party ? esc(party.officialName || party.name) : 'Nessuna affiliazione'}</h2></div><p>${party ? esc(party.source === DATA_SOURCES.REAL ? party.factualDescription || 'Descrizione non disponibile nelle fonti consultate.' : party.description || 'Partito pronto a essere configurato.') : 'Puoi restare indipendente. La scelta di un partito o la sua creazione sarà disponibile all’avvio di una nuova carriera.'}</p><div class="party-detail-meta">${party ? `<span class="source-pill">${sourceLabel(party.source)}${party.source === DATA_SOURCES.REAL ? ' verificato' : ''}</span>${party.abbreviation ? `<span>${esc(party.abbreviation)}</span>` : ''}${party.orientation ? `<span><small>ORIENTAMENTO</small><strong>${esc(party.orientation)}</strong></span>` : ''}${party.status ? `<span>${esc(party.status)}</span>` : ''}` : '<span class="source-pill">Nessuna affiliazione</span>'}</div>${party?.source === DATA_SOURCES.REAL && party.sourceUrl ? `<a class="catalog-source" href="${esc(party.sourceUrl)}" target="_blank" rel="noopener noreferrer">Fonte ufficiale ↗</a>` : ''}${party?.policyPositions ? `<div class="policy-summary">${[['economia','Economia'],['welfare','Welfare'],['ambiente','Ambiente'],['europa','Europa']].map(([key,label]) => `<span><small>${label}</small><strong>${Number(party.policyPositions[key] ?? 3)} <i>/ 5</i></strong><b><i style="width:${Number(party.policyPositions[key] ?? 3)*20}%"></i></b></span>`).join('')}</div>` : ''}</div>`,
     carriera: `<div class="career-roadmap"><div class="roadmap-lead"><span class="section-kicker">PUNTO DI PARTENZA</span><h2>${player ? esc(player.displayName) : 'Crea il tuo politico'}</h2><p>${player ? `${esc(player.previousProfession)} · ${esc(player.municipality)}, ${esc(player.region)}` : 'Scegli chi vuoi diventare e da dove iniziare.'}</p>${player ? '' : '<button class="primary-button" data-action="new-career">Crea il tuo politico ' + icon('arrow', 16) + '</button>'}</div><div class="roadmap-stage"><span class="roadmap-number">01</span><div><small>IL TUO LIVELLO INIZIALE</small><strong>${({comunale:'Politica comunale',regionale:'Politica regionale',nazionale:'Politica nazionale'})[state.career.initialLevel] ?? 'Da definire'}</strong><span>${esc(state.dataset.territories.find(item => item.id === state.career.territoryId)?.name ?? player?.region ?? 'Italia')}</span></div></div><div class="roadmap-stage upcoming"><span class="roadmap-number">02</span><div><small>PROSSIMO CAPITOLO</small><strong>Fatti conoscere sul territorio</strong><span>Il percorso si svilupperà con le prossime fasi del gioco.</span></div></div><button class="text-link" data-nav="profilo">Vai al tuo profilo ${icon('arrow', 16)}</button></div>`,
     profilo: `<div class="profile-page"><section class="profile-page-lead"><div class="hero-avatar">${player ? esc(player.firstName[0] + player.lastName[0]) : 'P'}</div><div><span class="section-kicker">IL TUO POLITICO</span><h2>${player ? esc(player.displayName) : 'Nessun profilo creato'}</h2><p>${player ? `${esc(player.previousProfession)} · residente a ${esc(player.municipality)}, ${esc(player.region)}` : 'Crea una carriera per definire il tuo profilo.'}</p></div>${player ? '' : '<button class="primary-button" data-action="new-career">Nuova carriera ' + icon('arrow', 16) + '</button>'}</section><div class="profile-page-facts"><div><span>INCARICO</span><strong>${player?.roleId ? esc(state.dataset.offices.find(item => item.id === player.roleId)?.title ?? 'Da assegnare') : 'Da assegnare'}</strong></div><div><span>TERRITORIO</span><strong>${esc(state.dataset.territories.find(item => item.id === player?.territoryId)?.name ?? player?.region ?? 'Italia')}</strong></div><div><span>PARTITO</span><strong>${party ? esc(partyName(party)) : 'Indipendente'}</strong></div></div><section class="profile-metrics"><h3>Statistiche</h3>${profileMetrics}</section><button class="text-link" data-nav="politici">Esplora i profili politici ${icon('arrow', 16)}</button></div>`,

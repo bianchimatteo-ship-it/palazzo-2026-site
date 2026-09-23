@@ -1,6 +1,6 @@
 // The immutable real snapshot is fetched by collection. The 2 MB aggregate is
 // retained for exports and validation, but the browser never downloads it.
-export const REAL_DATA_ASSET_VERSION = '20260923-1';
+export const REAL_DATA_ASSET_VERSION = '20260923-2';
 
 export let realDatabase = Object.freeze({});
 const loadingCollections = new Map();
