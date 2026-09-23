@@ -1,5 +1,5 @@
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-5';
-import { CHART_SLOTS, COMPATIBLE_FAMILIES, DEMO_FAMILIES, FAMILY_BY_ORIENTATION, INITIAL_ALLIANCES, SIMULATED_FIGURE_ROLES, POLL_INSTITUTES, SCENARIO_FORCES, SPLINTER_NAMES, WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20260924-5';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-6';
+import { CHART_SLOTS, COMPATIBLE_FAMILIES, DEMO_FAMILIES, FAMILY_BY_ORIENTATION, INITIAL_ALLIANCES, SIMULATED_FIGURE_ROLES, POLL_INSTITUTES, SCENARIO_FORCES, SPLINTER_NAMES, WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20260924-6';
 
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));

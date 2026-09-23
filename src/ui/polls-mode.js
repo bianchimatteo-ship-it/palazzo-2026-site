@@ -1,7 +1,7 @@
-import { allianceOf, latestPoll } from '../core/world-engine.js?v=20260924-5';
-import { COMPATIBLE_FAMILIES, FAMILY_LABELS } from '../data/simulation/polling-rules.js?v=20260924-5';
-import { formatDate } from '../core/time.js?v=20260924-5';
-import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20260924-5';
+import { allianceOf, latestPoll } from '../core/world-engine.js?v=20260924-6';
+import { COMPATIBLE_FAMILIES, FAMILY_LABELS } from '../data/simulation/polling-rules.js?v=20260924-6';
+import { formatDate } from '../core/time.js?v=20260924-6';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20260924-6';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const pct = (value, digits = 1) => value === null || value === undefined ? '—' : `${Number(value).toLocaleString('it-IT', { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
@@ -68,11 +68,12 @@ function nationalBars(world, poll, index, logo) {
     const tip = `${party.label}: ${pct(row.share)} (${signed(row.delta)} punti) · intervallo ${pct(Math.max(0, row.share - margin))}–${pct(row.share + margin)}`;
     return `<div class="poll-bar-row ${party.isPlayer ? 'is-player' : ''}" data-tip="${esc(tip)}" tabindex="0"><span class="poll-bar-name">${emblem({ label: party.label, abbreviation: party.abbreviation, color: party.color, logo: logo?.(party.id) }, 'sm')}<span><strong>${esc(party.label)}</strong><small>${esc(FAMILY_LABELS[party.family] ?? '')}${party.isPlayer ? ' · il tuo partito' : ''}${party.refSource === 'real' ? ' · riferimento reale, stima simulata' : ''}</small></span></span><span class="poll-bar-track"><i class="poll-bar-fill" style="width:${width}%;background:${esc(party.color)}"></i><i class="poll-bar-whisker" style="left:${Math.max(0, (row.share - margin) / max * 100)}%;width:${Math.min(100, 2 * margin / max * 100)}%"></i></span><span class="poll-bar-value">${pct(row.share)}</span>${deltaChip(row.delta, party.isPlayer)}</div>`;
   };
-  return `<div class="poll-bars">${rows.map(bar).join('')}<div class="poll-bar-row is-others"><span class="poll-bar-name"><span class="emblem emblem-sm emblem-ghost" aria-hidden="true">…</span><span><strong>Altri</strong><small>Liste minori</small></span></span><span class="poll-bar-track"><i class="poll-bar-fill" style="width:${others / max * 100}%;background:#b9bdb3"></i></span><span class="poll-bar-value">${pct(others)}</span><span class="delta delta-flat"></span></div></div><p class="poll-footnote">Barre = stima del sondaggio; la linea sottile indica l’intervallo del margine d’errore al 95%. Percentuali sui voti validi.</p>`;
+  return `<div class="poll-bars">${rows.map(bar).join('')}<div class="poll-bar-row is-others"><span class="poll-bar-name"><span class="emblem emblem-sm emblem-ghost" aria-hidden="true">…</span><span><strong>Altri</strong><small>Liste minori</small></span></span><span class="poll-bar-track"><i class="poll-bar-fill" style="width:${others / max * 100}%;background:#b9bdb3"></i></span><span class="poll-bar-value">${pct(others)}</span><span></span></div></div><p class="poll-footnote">Barre = stima del sondaggio; la linea sottile indica l’intervallo del margine d’errore al 95%. Percentuali sui voti validi.</p>`;
 }
 
 function trendChart(world, index) {
   const polls = world.polls.slice(-16);
+  if (polls.length < 2) return '<p class="quiet-copy">Il trend compare dal secondo sondaggio: chiudi la settimana per la prossima rilevazione.</p>';
   const latest = polls.at(-1);
   const player = world.parties.find(item => item.isPlayer);
   const leaders = [...latest.results].filter(row => row.partyId !== player?.id).sort((a, b) => b.share - a.share).slice(0, player ? 3 : 4).map(row => row.partyId);
