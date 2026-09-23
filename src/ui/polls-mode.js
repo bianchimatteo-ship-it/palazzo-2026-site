@@ -1,7 +1,7 @@
-import { allianceOf, latestPoll } from '../core/world-engine.js?v=20260924-7';
-import { COMPATIBLE_FAMILIES, FAMILY_LABELS } from '../data/simulation/polling-rules.js?v=20260924-7';
-import { formatDate } from '../core/time.js?v=20260924-7';
-import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20260924-7';
+import { allianceOf, latestPoll } from '../core/world-engine.js?v=20260924-8';
+import { COMPATIBLE_FAMILIES, FAMILY_LABELS } from '../data/simulation/polling-rules.js?v=20260924-8';
+import { formatDate } from '../core/time.js?v=20260924-8';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20260924-8';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const pct = (value, digits = 1) => value === null || value === undefined ? '—' : `${Number(value).toLocaleString('it-IT', { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
@@ -216,7 +216,7 @@ export function attachChartInteractions(root) {
       const key = document.createElement('i');
       key.style.background = series.color;
       const value = document.createElement('b');
-      value.textContent = Number.isFinite(series.values[index]) ? `${series.values[index].toLocaleString('it-IT', { maximumFractionDigits: 1 })}%` : '—';
+      value.textContent = Number.isFinite(series.values[index]) ? `${series.values[index].toLocaleString('it-IT', { maximumFractionDigits: 1 })}${data.unit ?? '%'}` : '—';
       row.append(key, value, document.createTextNode(` ${series.label}`));
       return row;
     });

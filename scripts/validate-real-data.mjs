@@ -40,8 +40,20 @@ if (db.statistics?.length) fail('Il database reale non deve contenere statistich
 if (realRecords.some(record => ['consensus','popularity','reputation','approval'].includes(record.metric))) fail('Trovati indicatori simulati tra i dati reali');
 if (Object.entries(db.manifest.collections).some(([name,count]) => count !== (db[name]?.length ?? 0))) fail('Conteggi nel manifest non coerenti');
 if (!db.politicians.every(person => person.chamber === 'camera' || person.chamber === 'senato')) fail('Parlamentare senza Camera/Senato');
+// Real bills and laws live in their own file (imported from the Senate open data), outside the aggregate.
+const laws = JSON.parse(await readFile(new URL('../src/data/real/laws.json', import.meta.url), 'utf8'));
+const lawsManifest = JSON.parse(await readFile(new URL('../src/data/real/manifest.json', import.meta.url), 'utf8'));
+if (lawsManifest.collections.laws !== laws.length) fail('Conteggio delle leggi nel manifest non coerente');
+if (new Set(laws.map(law => law.id)).size !== laws.length) fail('Leggi: ID duplicati');
+for (const law of laws) {
+  if (law.source !== 'real' || law.verified !== true || !law.verifiedAt || !/^https:\/\/www\.senato\.it\//.test(law.sourceUrl) || !/^http:\/\/dati\.senato\.it\/ddl\/\d+$/.test(law.dataUrl)) fail(`Legge ${law.id}: provenienza incompleta`);
+  if (!law.officialTitle?.trim() || !law.status || law.legislature !== 19) fail(`Legge ${law.id}: dati essenziali mancanti`);
+  if (law.outcome === 'legge' && (!Number.isInteger(law.lawNumber) || !law.lawDate)) fail(`Legge ${law.id}: numero o data della legge mancanti`);
+  if (['effects','consensus','impact'].some(key => key in law)) fail(`Legge ${law.id}: contiene valori simulati`);
+}
 if (process.exitCode) process.exit(process.exitCode);
 const nameCounts = new Map();
 for (const person of db.politicians) { const name=normalize(person.fullName); nameCounts.set(name,(nameCounts.get(name)??0)+1); }
 const homonyms = [...nameCounts.values()].filter(count=>count>1).reduce((sum,count)=>sum+count,0);
+console.log(`Leggi reali: ${laws.length} atti del Senato (${laws.filter(law => law.outcome === 'legge').length} leggi approvate definitivamente).`);
 console.log(`Controllo completato: ${db.parties.length} partiti, ${db.politicalMovements.length} movimenti, ${organizations.filter(item=>item.level==='regional').length} entità territoriali documentate, ${db.politicalFigures?.length ?? 0} figure, ${db.partyLeaderships?.length ?? 0} relazioni di leadership, ${db.parliamentaryGroups.length} gruppi, ${db.politicians.length} parlamentari; ${homonyms} omonimi politici (ID distinti), nessuna sigla o nome duplicato; provenienza e relazioni valide.`);

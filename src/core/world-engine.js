@@ -1,5 +1,5 @@
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-7';
-import { CHART_SLOTS, COMPATIBLE_FAMILIES, DEMO_FAMILIES, FAMILY_BY_ORIENTATION, INITIAL_ALLIANCES, SIMULATED_FIGURE_ROLES, POLL_INSTITUTES, SCENARIO_FORCES, SPLINTER_NAMES, WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20260924-7';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-8';
+import { CHART_SLOTS, COMPATIBLE_FAMILIES, DEMO_FAMILIES, FAMILY_BY_ORIENTATION, INITIAL_ALLIANCES, SIMULATED_FIGURE_ROLES, POLL_INSTITUTES, SCENARIO_FORCES, SPLINTER_NAMES, WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20260924-8';
 
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -155,13 +155,17 @@ function publishPoll(world, { date, stats = {}, parliament = null, game = null }
   const player = world.playerPartyId;
   const regional = player ? Object.fromEntries(ITALIAN_REGIONS.map(region => [region, round1(regionalShares(world, region, boosts.regional).find(row => row.partyId === player)?.share ?? 0)])) : {};
   const local = player ? round1(localShares(world, boosts.regional, boosts.local).find(row => row.partyId === player)?.share ?? 0) : null;
-  const government = parliament?.government && ['active', 'crisis'].includes(parliament.government.status) ? round1(clamp(22 + (parliament.government.stability ?? 50) * 0.45 + gaussian(world) * 2, 5, 75)) : null;
-  world.undecided = round1(clamp(world.undecided + gaussian(world) + (parliament?.government?.status === 'crisis' ? 0.8 : 0) - (world.undecided - 27) * 0.1, 15, 42));
+  const mood = world.society?.mood ?? 50;
+  const government = parliament?.government && ['active', 'crisis'].includes(parliament.government.status) ? round1(clamp(22 + (parliament.government.stability ?? 50) * 0.3 + (mood - 50) * 0.35 + 7 + gaussian(world) * 2, 5, 75)) : null;
+  const undecidedTarget = 27 + (48 - (world.society?.trust ?? 48)) * 0.3;
+  world.undecided = round1(clamp(world.undecided + gaussian(world) + (parliament?.government?.status === 'crisis' ? 0.8 : 0) - (world.undecided - undecidedTarget) * 0.1, 15, 42));
   const poll = {
     id: `sondaggio-${world.week}-${world.polls.length}-${sample}`, week: world.week, date, institute: institute.name, sample, margin, undecided: world.undecided, results, regional, local,
     regionalHome: player ? regional[world.place.region] ?? null : null,
     personal: { approval: round1(clamp((stats.popularity ?? 45) * 0.55 + (stats.reputation ?? 50) * 0.45 + gaussian(world) * 2.4, 0, 100)), popularity: stats.popularity ?? null, notoriety: stats.notoriety ?? null },
-    government: government === null ? null : { approval: government }, source: SIM
+    government: government === null ? null : { approval: government },
+    executive: government === null && world.society?.executive ? { label: world.society.executive.label, approval: round1(clamp(world.society.executive.approval + gaussian(world) * 1.5, 5, 80)) } : null,
+    mood: world.society ? { satisfaction: world.society.mood, trust: world.society.trust } : null, source: SIM
   };
   // The full regional map is kept for the latest poll only; the home region stays in every entry.
   world.polls = [...world.polls.map(item => item.regional ? { ...item, regional: null } : item), poll].slice(-HISTORY);
@@ -275,7 +279,7 @@ function allianceDynamics(world, date) {
 }
 
 // One simulated week of the political world. Returns reactions the career can respond to.
-export function advanceWorld(input, { date, week, stats = {}, deltas = {}, game = null, parliament: parliamentInput = null, majorityShift = null }) {
+export function advanceWorld(input, { date, week, stats = {}, deltas = {}, game = null, parliament: parliamentInput = null, majorityShift = null, society = null }) {
   const world = copy(input);
   let parliament = copy(parliamentInput);
   world.week = week;
@@ -292,9 +296,16 @@ export function advanceWorld(input, { date, week, stats = {}, deltas = {}, game 
     const majority = inMajority(parliament);
     const government = majority ? ((parliament.government.stability ?? 50) - 50) / 400 : 0;
     const unity = game?.party && game.party.support < 25 ? -0.08 : 0;
-    player.baseline = round2(Math.max(0.3, player.baseline + personal + government + unity));
+    // Citizens judge whoever governs: a better mood rewards the majority, a worse one the opposition.
+    const mood = society ? (majority === true ? society.moodDelta * 0.05 : majority === false ? -society.moodDelta * 0.025 : 0) + clamp((society.sentiment ?? 0) / 100 * 0.05, -0.05, 0.05) : 0;
+    player.baseline = round2(Math.max(0.3, player.baseline + personal + government + unity + clamp(mood, -0.25, 0.25)));
     player.cohesion = Math.round(game?.party?.support ?? player.cohesion);
     player.crisis = game?.party && game.party.support < 25 ? (player.crisis ?? { since: week, source: SIM }) : null;
+  }
+  // Low institutional trust feeds the protest area and the undecided.
+  if (society) {
+    addEffect(world, { family: 'populista', delta: round2(clamp((48 - society.trust) * 0.02, -0.2, 0.4)), remaining: 1, cause: 'fiducia' });
+    world.society = { mood: society.mood, trust: society.trust, executive: society.executive ?? null, source: SIM };
   }
   partyDynamics(world, date);
   allianceDynamics(world, date);
@@ -344,6 +355,7 @@ export function applyWorldSignals(input, signals = [], date) {
     else if (signal.type === 'minister') push(0.4, 5, `Ministro: ${signal.portfolio}`, 'Il tuo ingresso al governo dà visibilità al partito.', 'good', 'star');
     else if (signal.type === 'congress') push(signal.won ? 0.4 : -0.5, 4, `Congresso: vince ${signal.winner}`, signal.won ? 'La tua area guida il partito: unità ritrovata.' : 'La nuova leadership ti è ostile: il partito appare diviso.', signal.won ? 'good' : 'bad', 'crown');
     else if (signal.type === 'stance') push(signal.delta, 3, `Presa di posizione: ${signal.title}`, 'La tua reazione pubblica sposta l’attenzione sul partito.', signal.delta >= 0 ? 'good' : 'bad', 'megaphone');
+    else if (signal.type === 'chronicle') logEvent(world, date, { kind: signal.kind ?? 'cronaca', icon: signal.icon ?? 'pin', scope: signal.scope ?? 'nazionale', title: signal.title, body: signal.body ?? '', tone: signal.tone ?? 'neutral' });
     else if (signal.type === 'election') {
       const gap = signal.pollShare === null ? 0 : clamp((signal.share - signal.pollShare) * 0.15, -2, 2);
       push(signal.mandate ? 1 : -0.4, 4, `${signal.label}: ${String(Math.round(signal.share * 10) / 10).replace('.', ',')}%`, signal.mandate ? 'Il risultato elettorale dà slancio al partito.' : 'Il voto ridimensiona le ambizioni del partito.', signal.mandate ? 'good' : 'bad', 'ballot', round2(gap));

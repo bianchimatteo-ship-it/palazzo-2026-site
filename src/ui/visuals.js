@@ -34,7 +34,16 @@ const PATHS = Object.freeze({
   law: 'M6 3h9l4 4v14H6z M14 3v5h5 M9 13h6 M9 17h4',
   pin: 'M12 21s-7-6.2-7-12a7 7 0 0 1 14 0c0 5.8-7 12-7 12Z M12 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z',
   trophy: 'M8 21h8 M12 17v4 M7 4h10v5a5 5 0 0 1-10 0z M7 6H4a3 3 0 0 0 3 4 M17 6h3a3 3 0 0 1-3 4',
-  route: 'M6 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z M18 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z M8 18h4a3 3 0 0 0 3-3V9a3 3 0 0 1 3-3'
+  route: 'M6 20a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z M18 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z M8 18h4a3 3 0 0 0 3-3V9a3 3 0 0 1 3-3',
+  trendUp: 'M3 17l6-6 4 4 8-8 M15 7h6v6',
+  trendDown: 'M3 7l6 6 4-4 8 8 M15 17h6v-6',
+  steady: 'M3 12h16 M15 8l4 4-4 4',
+  wallet: 'M4 7h15a1 1 0 0 1 1 1v11H5a1 1 0 0 1-1-1z M4 7l11-4 1 4 M16 13h4',
+  map: 'M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z M9 4v14 M15 6v14',
+  news: 'M4 5h13v14H6a2 2 0 0 1-2-2z M17 9h3v8a2 2 0 0 1-2 2 M7 9h7 M7 13h7 M7 16h4',
+  target: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z M12 16a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z M12 12h.01',
+  clock: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z M12 7v5l3 2',
+  sections: 'M3 21h18 M5 21V11l4-3 4 3v10 M13 21v-7l3-2 3 2v7 M8 14h2 M8 17h2'
 });
 
 export function glyph(name, size = 20, stroke = 1.7) {

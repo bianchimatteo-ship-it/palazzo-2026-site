@@ -56,6 +56,27 @@ La sezione **Sondaggi** pubblica ogni settimana un sondaggio simulato (istituto 
 npm run check:polls
 ```
 
+## Simulazione del Paese: territori, cittadini, economia, media
+
+Ogni settimana, con o senza il giocatore, si muove un Paese simulato: 20 regioni con indicatori propri (economia, occupazione, servizi, sanità, istruzione, infrastrutture, trasporti, sicurezza, ambiente), soddisfazione e fiducia nelle istituzioni; cinque gruppi di popolazione con priorità, situazione economica, fiducia e partecipazione; crescita, disoccupazione, inflazione, deficit, debito e margine di bilancio pubblico; canali mediatici generici (TV, stampa, social, radio) con visibilità e tono della copertura. La pagina **Territori** mostra la mappa a tessere delle regioni, il dettaglio di ogni regione, i gruppi di cittadini, gli andamenti e le misure in vigore; la Home apre con la situazione del Paese (legislatura, esecutivo, umore) e un cruscotto di Paese, territorio, partito e finanze con stati visivi di crescita, calo, rischio e crisi.
+
+I sistemi sono collegati: una **legge** approvata in Parlamento consuma margine di bilancio (senza coperture ha effetti ridotti e appesantisce il deficit), arriva gradualmente sui **territori** — di più dove il servizio è più indietro —, cambia l’umore dei **cittadini** interessati, finisce sui **media** e nella cronaca; l’umore del Paese sposta il gradimento del **governo** e i **sondaggi** (premia la maggioranza quando le cose vanno bene, l’opposizione quando vanno male), la fiducia bassa alimenta indecisi e area di protesta; sondaggi e clima fanno crescere o calare gli iscritti del **partito**; chi governa (sindaco, presidente di regione, maggioranza, ministro) risponde dei risultati con la propria popolarità; umore e partecipazione entrano nelle **campagne elettorali** e nell’affluenza. I problemi dei territori diventano decisioni in agenda con conseguenze immediate e future (una promessa viene verificata dopo 12 settimane). Senza un governo nato in Parlamento agisce un *esecutivo di scenario*, che non rappresenta il governo reale. Tutto questo è `source: "simulation"` e non descrive statistiche ufficiali.
+
+## Partito come organizzazione e finanze
+
+Il partito del giocatore ha iscritti, militanti, dirigenti, sezioni o federazioni regionali, organi interni (dall’assemblea degli iscritti alla segreteria nazionale), coesione, conflitti tra le correnti, disciplina personale, congresso ordinario annuale, selezione dei candidati prima di ogni elezione (primarie, accordo in direzione, indicazione della propria area) e una tesoreria con quote, 2×1000 stimato, contributi degli eletti e spese per sezioni, personale, comunicazione, formazione e campagne. Nuove attività (tesseramento, apertura di sezioni, formazione, contributi, campagne di comunicazione del partito, mediazione e disciplina) dipendono dal ruolo interno; incarichi si conquistano e si perdono. Le **Finanze** del politico hanno un registro per categoria, un budget settimanale (staff che aggiunge giorni, comunicazione, presenza sul territorio, sede), debito con interessi, crisi finanziaria, bilanci annuali e indice di sostenibilità. Anche per i partiti reali questi numeri sono solo stime di gioco.
+
+## Parlamentari e leggi reali nella simulazione
+
+La carriera incontra **parlamentari reali**: eletti nella regione del giocatore, colleghi di gruppo e presidenti di gruppo documentati. Nome, Camera, gruppo, circoscrizione e incarico vengono copiati senza modifiche dal dataset verificato (con eventuali correzioni dell’area amministrativa); rapporto, firme alle proposte, emendamenti contrari e incontri sono iniziative simulate e dichiarate come tali, senza scandali o ruoli attribuiti. La pagina **Leggi** elenca **436 atti reali della XIX legislatura** dal Senato (352 leggi approvate definitivamente e 84 in corso), con titolo, stato, numero e data esatti e link alla scheda ufficiale: il giocatore può proporre una *modifica simulata* collegata a un atto reale, che resta distinta dall’atto e non lo modifica. L’area di gioco accanto a ogni atto è solo un’interpretazione dei temi ufficiali.
+
+```sh
+npm run import:real-laws
+npm run check:simulation
+```
+
+Font: Manrope per i titoli, Newsreader per i sottotitoli, DM Sans per il testo.
+
 ## Area amministrativa (proprietario)
 
 Da **Impostazioni → Area amministrativa** (oppure `#amministrazione`) il proprietario, dopo aver impostato un PIN, corregge nome, sigla, descrizione e informazioni dei partiti, il logo (archivio loghi locale), i deputati e senatori collegati, nomi e informazioni dei politici, gruppo, partito e incarichi. Le modifiche sono salvate nell’archivio `politicando.admin.overrides.v1` del browser, separato dal salvataggio di gioco, e applicate come livello sopra il dataset reale a ogni caricamento: i JSON in `src/data/real/` non vengono mai modificati e ogni record corretto è segnalato come tale. L’archivio resta dopo refresh, riavvii e aggiornamenti del codice finché non viene cancellato; si può esportare e importare in JSON. Il PIN protegge l’area in quel browser, non è un’autenticazione lato server, e le modifiche valgono solo sul dispositivo in cui sono state fatte (o dove l’archivio viene importato).
@@ -87,7 +108,8 @@ Snapshot verificato al 22 settembre 2026:
 - **613 incarichi** parlamentari importati;
 - **13 etichette** di lista elettorale e **268 relazioni** tra candidati, liste e consultazioni;
 - **23 territori**: Italia, 20 regioni, Camera e Senato;
-- **2 consultazioni**: elezioni politiche 2022 ed europee 2024.
+- **2 consultazioni**: elezioni politiche 2022 ed europee 2024;
+- **436 atti legislativi** della XIX legislatura dal Senato (352 leggi approvate definitivamente, 84 in corso), verificati il 23 settembre 2026.
 
 Il dataset non attribuisce automaticamente i parlamentari ai partiti: Camera e Senato documentano gruppi e liste d’elezione, che possono aggregare realtà diverse. Perciò il numero di partiti parlamentari e non parlamentari non viene stimato. Anche presenza locale, appartenenze individuali ai partiti, colore, orientamento, data di fondazione e cariche non documentate restano non valorizzati. La presenza regionale viene indicata solo per le formazioni con una fonte istituzionale o del partito adeguata; un gruppo consiliare non è convertito in un gruppo parlamentare nazionale né in appartenenze individuali.
 
@@ -98,7 +120,7 @@ Futuro Nazionale è incluso come partito sulla base delle sue pagine ufficiali d
 - [Parlamento italiano — Registro nazionale dei partiti politici](https://www.parlamento.it/Parlamento/1063), deliberazioni d’iscrizione e cancellazione;
 - [MEF — dati 2 per mille](https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101), dichiarazioni 2025/redditi 2024;
 - [Camera dei deputati — schede della XIX legislatura](https://www.camera.it/deputati/elenco) e [composizione dei gruppi](https://www.camera.it/leg19/217);
-- [Senato — dati aperti sulla composizione](https://dati.senato.it/sito/composizione?legislatura=19&testo_generico=11);
+- [Senato — dati aperti sulla composizione](https://dati.senato.it/sito/composizione?legislatura=19&testo_generico=11) e [dati aperti sui disegni di legge](https://dati.senato.it/sito/home) (endpoint SPARQL);
 - [ISTAT — codici territoriali](https://www.istat.it/classificazione/codici-dei-comuni-delle-province-e-delle-regioni/);
 - [Ministero dell’Interno — trasparenza elezioni europee 2024](https://dait.interno.gov.it/elezioni/trasparenza/elezioni-europee-2024) e [archivio storico elettorale](https://www.interno.gov.it/it/temi/elezioni-e-referendum/dato-storico-elezioni);
 - [Futuro Nazionale — sito](https://futuronazionale.it/), [trasparenza](https://futuronazionale.it/trasparenza/), [organigramma](https://futuronazionale.it/organigramma/) e [logo ufficiale](https://futuronazionale.it/il-logo/);

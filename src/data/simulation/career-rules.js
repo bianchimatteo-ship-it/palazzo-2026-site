@@ -28,10 +28,18 @@ export const WEEKLY_ACTIVITIES = Object.freeze([
   { id: 'riunione', category: 'partito', requires: 'member', label: 'Riunione di partito', detail: 'Presenza negli organismi: il sostegno interno si costruisce qui.', cost: { ap: 1 }, effects: { party: { support: 3 }, relations: { leadership: 2 } } },
   { id: 'corrente', category: 'partito', requires: 'party', target: 'current', label: 'Lavora con una corrente', detail: 'Ti avvicina a un’area interna e ti allontana dalle altre.', cost: { ap: 2, capital: 2 }, effects: { party: { support: 2 }, relations: { target: 7, otherCurrents: -2 } } },
   { id: 'leadership', category: 'partito', requires: 'member', label: 'Incontro con la leadership', detail: 'Un canale diretto con chi decide candidature e incarichi.', cost: { ap: 1, capital: 3 }, effects: { relations: { leadership: 6 }, stats: { influence: 0.8 } }, risk: { chance: 0.15, label: 'La leadership ti riceve con freddezza', effects: { relations: { leadership: -3 } } } },
-  { id: 'dissenso', category: 'partito', requires: 'member', label: 'Prendi posizione contro la linea', detail: 'Visibilità e peso personale, al prezzo del conflitto interno.', cost: { ap: 1 }, effects: { stats: { notoriety: 3, influence: 1.2, reputation: 0.5 }, party: { support: -6 }, relations: { leadership: -10 } } },
+  { id: 'dissenso', category: 'partito', requires: 'member', label: 'Prendi posizione contro la linea', detail: 'Visibilità e peso personale, al prezzo del conflitto interno.', cost: { ap: 1 }, effects: { stats: { notoriety: 3, influence: 1.2, reputation: 0.5 }, party: { support: -6 }, relations: { leadership: -10 }, org: { discipline: -14, cohesion: -2 } } },
+  { id: 'tesseramento', category: 'partito', requires: 'party', label: 'Campagna di tesseramento', detail: 'Banchetti e porta a porta: nuovi iscritti per il partito e più peso per te.', cost: { ap: 1, funds: 150 }, effects: { org: { members: 1 }, party: { support: 1.5 } }, risk: { chance: 0.08, label: 'Polemica su tessere gonfiate', effects: { stats: { reputation: -1 }, party: { support: -2 } } } },
+  { id: 'sezione', category: 'partito', requires: sit => sit.party && (sit.game.party.affiliation === 'founder' || sit.game.party.rank >= 1), requiresLabel: 'Serve un incarico nel partito (dal direttivo locale in su).', target: 'region', label: 'Apri o rilancia una sezione', detail: 'Una sede con volontari: radica il partito in una regione.', cost: { ap: 2, funds: 600, capital: 2 }, effects: { org: { section: true }, stats: { popularity: 0.5 }, party: { support: 1 } } },
+  { id: 'formazione', category: 'partito', requires: sit => sit.party && (sit.game.party.affiliation === 'founder' || sit.game.party.rank >= 1), requiresLabel: 'Serve un incarico nel partito (dal direttivo locale in su).', label: 'Scuola di formazione per militanti', detail: 'Militanti più preparati e un partito più compatto.', cost: { ap: 1, funds: 300 }, effects: { org: { militants: 0.05, cohesion: 3 }, stats: { experience: 0.5 } } },
+  { id: 'contributo', category: 'partito', requires: 'party', label: 'Versa un contributo al partito', detail: 'Sostieni la tesoreria: la leadership se ne ricorda.', cost: { funds: 500 }, effects: { org: { treasury: 500 }, party: { support: 2 }, relations: { leadership: 2 } } },
+  { id: 'campagna-partito', category: 'partito', requires: sit => sit.party && (sit.game.party.affiliation === 'founder' || sit.game.party.rank >= 2), requiresLabel: 'Serve un ruolo regionale o nazionale nel partito.', label: 'Campagna di comunicazione del partito', detail: 'Spot e manifesti pagati dalla tesoreria: sposta i sondaggi del partito.', cost: { ap: 1, capital: 2, treasury: 1200 }, effects: { org: { communication: true }, world: 0.35, stats: { notoriety: 1 } }, media: { outlet: 'tv-nazionale', tone: 1 } },
+  { id: 'mediazione-correnti', category: 'partito', requires: sit => sit.party && (sit.game.party.affiliation === 'founder' || sit.game.party.rank >= 2), requiresLabel: 'Serve un ruolo regionale o nazionale nel partito.', label: 'Media tra le correnti', detail: 'Ricuci gli scontri interni prima che diventino una crisi.', cost: { ap: 2, capital: 2 }, effects: { org: { conflicts: -30, cohesion: 4 }, party: { support: 2 } } },
+  { id: 'disciplina', category: 'partito', requires: sit => sit.party && (sit.game.party.affiliation === 'founder' || sit.game.party.rank >= 3), requiresLabel: 'Serve un posto in direzione nazionale o la guida del partito.', label: 'Richiama il partito all’unità', detail: 'Linea comune e regole per tutti: più coesione, qualche malumore.', cost: { ap: 1, capital: 3 }, effects: { org: { cohesion: 8, conflicts: -15 }, relations: { rival: -4 } } },
   { id: 'aula', category: 'parlamento', requires: 'seat', label: 'Lavoro in commissione e in Aula', detail: 'Presenza, dossier e relazioni dentro il gruppo.', cost: { ap: 2 }, effects: { stats: { experience: 1.6, influence: 0.8 }, group: { support: 3 } } },
   { id: 'diplomazia', category: 'parlamento', requires: 'seat', target: 'group', label: 'Diplomazia con un gruppo', detail: 'Migliora il rapporto con un gruppo: pesa su trattative e votazioni.', cost: { ap: 1, capital: 2 }, effects: { groups: { target: 5 }, stats: { influence: 0.4 } } },
   { id: 'incontro', category: 'relazioni', target: 'character', label: 'Incontro riservato', detail: 'Un caffè lontano dai riflettori.', cost: { ap: 1, funds: 120 }, effects: { relations: { target: 6 } }, risk: { chance: 0.1, label: 'L’incontro finisce sui giornali', effects: { stats: { reputation: -1 }, relations: { target: -2 } } } },
+  { id: 'incontro-parlamentare', category: 'relazioni', target: 'contact', label: 'Incontra un parlamentare', detail: 'Persone reali del Parlamento: il rapporto (simulato) pesa su firme, emendamenti e voti.', cost: { ap: 1, capital: 1 }, effects: { contacts: { target: 8 }, stats: { influence: 0.3 } }, risk: { chance: 0.1, label: 'L’incontro resta formale', effects: { contacts: { target: -3 } } } },
   { id: 'mediazione', category: 'relazioni', target: 'character', label: 'Mediazione politica', detail: 'Chiude un contrasto con un accordo esplicito.', cost: { ap: 2, capital: 3 }, effects: { relations: { target: 11 }, stats: { influence: 1 } } },
   { id: 'raccolta', category: 'risorse', label: 'Raccolta fondi', detail: 'Cene e contributi tracciati: risorse per le prossime settimane.', cost: { ap: 1 }, effects: { funds: 1200 }, risk: { chance: 0.15, label: 'Polemica sui finanziatori', effects: { stats: { reputation: -1.5 } } } },
   { id: 'dossier', category: 'risorse', label: 'Studio dei dossier', detail: 'Esperienza e un po’ di capitale politico.', cost: { ap: 1 }, effects: { stats: { experience: 1.4 }, capital: 1 } },
@@ -140,7 +148,7 @@ export const CAREER_EVENTS = Object.freeze([
     { id: 'accetta', label: 'Accetta', cost: { ap: 2 }, effects: { stats: { notoriety: 5, popularity: 1.5 } }, risk: { chance: 0.3, label: 'Uno scivolone diventa virale', effects: { stats: { reputation: -3 } } } },
     { id: 'collaboratore', label: 'Manda un collaboratore', effects: { stats: { notoriety: 1 } } },
     { id: 'declina', label: 'Declina', effects: {} }] },
-  { id: 'congresso', weight: 2, when: ctx => ctx.member && ctx.game.week.index >= 4 && ctx.game.party.leadershipContestWeek !== ctx.game.week.index, title: 'Congresso: {currentA} contro {currentB}', body: 'Due aree del partito si contendono la guida. Schierarsi può pagare molto o costare caro.', defaultChoice: 'neutrale', choices: [
+  { id: 'congresso', weight: 0, when: () => false, title: 'Congresso: {currentA} contro {currentB}', body: 'Due aree del partito si contendono la guida. Schierarsi può pagare molto o costare caro.', defaultChoice: 'neutrale', choices: [
     { id: 'a', label: 'Sostieni {currentA}', special: 'leadership-a' },
     { id: 'b', label: 'Sostieni {currentB}', special: 'leadership-b' },
     { id: 'neutrale', label: 'Resta neutrale', effects: { party: { support: -1 } } }] },
@@ -155,7 +163,7 @@ export const CAREER_EVENTS = Object.freeze([
   { id: 'tensione-maggioranza', weight: 3, when: ctx => ctx.seat && ctx.inMajority, title: 'Tensione nella maggioranza', body: 'Due alleati litigano su una nomina: il governo chiede lealtà.', defaultChoice: 'defilato', choices: [
     { id: 'sostieni', label: 'Sostieni il governo', effects: { group: { support: 3 }, government: { stability: 6 } } },
     { id: 'rimpasto', label: 'Chiedi un rimpasto', effects: { stats: { influence: 2 }, government: { stability: -8 }, groups: { coalition: -2 } } },
-    { id: 'minaccia', label: 'Minaccia di uscire', effects: { stats: { influence: 3, notoriety: 2 }, government: { stability: -15 }, groups: { coalition: -5 } } },
+    { id: 'minaccia', label: 'Minaccia di uscire', effects: { stats: { influence: 3, notoriety: 2 }, government: { stability: -15 }, groups: { coalition: -5 }, org: { discipline: -10 } } },
     { id: 'defilato', label: 'Resta defilato', effects: { government: { stability: -3 } } }] },
   { id: 'decreto', weight: 3, when: ctx => ctx.seat && ctx.governing && !ctx.inMajority, title: 'Il governo presenta un decreto contestato', body: 'L’opposizione deve decidere come reagire in Aula.', defaultChoice: 'lascia', choices: [
     { id: 'ostruzionismo', label: 'Guida l’ostruzionismo', cost: { ap: 1 }, effects: { stats: { notoriety: 3 }, government: { stability: -5 }, group: { support: 2 }, groups: { coalition: -3 } } },
@@ -196,6 +204,42 @@ export const FORCED_EVENTS = Object.freeze({
     { id: 'nega', label: 'Nega tutto', outcomes: [
       { chance: 0.4, label: 'La notizia si sgonfia', effects: { stats: { reputation: -2 } } },
       { chance: 0.6, label: 'Le prove emergono: scandalo', effects: { stats: { reputation: -8 }, relations: { leadership: -6, media: -4 } } }] }] }
+});
+
+// Events raised by the concrete situation (territory, finances, party, Parliament) rather than drawn at random.
+export const SITUATION_EVENTS = Object.freeze({
+  'crisi-territoriale': { id: 'crisi-territoriale', title: '{issueTitle}', body: '{issueBody}', defaultChoice: 'silenzio', choices: [
+    { id: 'visita', label: 'Vai sul posto e ascolta', cost: { ap: 1, funds: 150 }, effects: { stats: { popularity: 1.5, reputation: 0.5 }, relations: { civic: 2 } }, special: 'region-attention' },
+    { id: 'promessa', label: 'Prometti una soluzione entro 12 settimane', effects: { stats: { popularity: 2, notoriety: 1 } }, special: 'promise' },
+    { id: 'aula', label: 'Porta il problema in Aula con una proposta', requires: 'seat', cost: { ap: 1, capital: 2 }, effects: { stats: { reputation: 1, experience: 0.5 } }, special: 'issue-law' },
+    { id: 'silenzio', label: 'Non intervenire', effects: { stats: { popularity: -1 } }, special: 'region-neglect' }] },
+  'crisi-finanziaria': { id: 'crisi-finanziaria', title: 'I conti del tuo comitato sono in crisi', body: 'Il debito ha superato la soglia di guardia: fornitori e collaboratori chiedono garanzie.', defaultChoice: 'tagli', choices: [
+    { id: 'tagli', label: 'Taglia tutte le spese ricorrenti', effects: { stats: { notoriety: -0.5 } }, special: 'budget-cut' },
+    { id: 'prestito', label: 'Chiedi un prestito al partito', requires: 'party', effects: { party: { support: -4 }, relations: { leadership: -2 } }, special: 'party-loan' },
+    { id: 'raccolta', label: 'Lancia una raccolta fondi straordinaria', cost: { ap: 2 }, effects: { funds: 1800 }, special: 'repay-debt', risk: { chance: 0.3, label: 'I donatori chiedono troppo in cambio: polemica', effects: { stats: { reputation: -2 } } } }] },
+  'selezione-candidati': { id: 'selezione-candidati', title: 'Selezione dei candidati: {election}', body: 'Il partito decide come scegliere chi corre per {election}. Il metodo pesa sulla tua candidatura interna.', defaultChoice: 'rinuncia', choices: [
+    { id: 'primarie', label: 'Chiedi le primarie', cost: { ap: 2, funds: 400 }, special: 'selection-primarie' },
+    { id: 'accordo', label: 'Tratta un posto in lista con la direzione', cost: { capital: 4 }, special: 'selection-accordo' },
+    { id: 'corrente', label: 'Fatti indicare dalla tua area', special: 'selection-corrente' },
+    { id: 'rinuncia', label: 'Non chiedere nulla', effects: { party: { support: 1 } }, special: 'selection-rinuncia' }] },
+  'conflitto-interno': { id: 'conflitto-interno', title: 'Scontro aperto nel partito', body: '{conflict}: la tensione è salita al punto da paralizzare gli organi.', defaultChoice: 'fuori', choices: [
+    { id: 'media', label: 'Proponi una mediazione', cost: { ap: 1, capital: 2 }, effects: { org: { conflicts: -45, cohesion: 5 }, party: { support: 2 } } },
+    { id: 'schierati', label: 'Schierati con {currentA}', effects: { relations: { currentA: 6, otherCurrents: -3 }, org: { conflicts: 10 }, party: { support: -1 } } },
+    { id: 'fuori', label: 'Resta fuori dallo scontro', effects: { org: { cohesion: -3 } } }] },
+  'tesoreria-rosso': { id: 'tesoreria-rosso', title: 'La tesoreria del partito è in rosso', body: 'Il tesoriere chiede alla direzione di scegliere: tagli, sottoscrizione o nuovi contributi.', defaultChoice: 'rinvia', choices: [
+    { id: 'tagli', label: 'Taglia comunicazione e formazione', effects: { org: { cohesion: -3 } }, special: 'party-cuts' },
+    { id: 'sottoscrizione', label: 'Lancia una sottoscrizione tra gli iscritti', cost: { ap: 1 }, effects: { party: { support: 1 } }, special: 'party-subscription' },
+    { id: 'contributo', label: 'Versa tu un contributo', cost: { funds: 1000 }, effects: { org: { treasury: 1000 }, party: { support: 3 } } },
+    { id: 'rinvia', label: 'Rinvia la decisione', effects: { org: { cohesion: -4 } } }] },
+  'sostegno-parlamentare': { id: 'sostegno-parlamentare', title: '{contact} offre sostegno alla tua proposta', body: '{contact} è disposto a sottoscrivere “{law}”. Persona reale (dati verificati), iniziativa simulata dal gioco.', defaultChoice: 'declina', choices: [
+    { id: 'accetta', label: 'Accetta la firma', effects: { contacts: { target: 4 } }, special: 'cosign' },
+    { id: 'declina', label: 'Ringrazia e declina', effects: { contacts: { target: -3 } } }] },
+  'emendamenti-contrari': { id: 'emendamenti-contrari', title: '{contact} prepara emendamenti contrari', body: '{contact} annuncia emendamenti contrari a “{law}”. Persona reale (dati verificati), iniziativa simulata dal gioco.', defaultChoice: 'ignora', choices: [
+    { id: 'incontra', label: 'Chiedi un incontro', cost: { ap: 1, capital: 2 }, effects: { contacts: { target: 10 } } },
+    { id: 'ignora', label: 'Vai avanti senza trattare', effects: { groups: { contact: -3 } } }] },
+  'richiesta-territorio': { id: 'richiesta-territorio', title: '{contact} propone un incontro su {region}', body: '{contact}, eletto in {circoscription}, chiede un confronto sui problemi del territorio. Persona reale (dati verificati), proposta simulata dal gioco.', defaultChoice: 'declina', choices: [
+    { id: 'incontra', label: 'Accetta l’incontro', cost: { ap: 1 }, effects: { contacts: { target: 8 }, stats: { popularity: 0.5, experience: 0.5 } } },
+    { id: 'declina', label: 'Declina', effects: { contacts: { target: -2 } } }] }
 });
 
 export const CAREER_OBJECTIVES = Object.freeze([

@@ -2,7 +2,7 @@
 // retained for exports and validation, but the browser never downloads it.
 export const REAL_DATA_ASSET_VERSION = '20260923-2';
 
-import { applyAdminOverrides } from './admin-store.js?v=20260924-7';
+import { applyAdminOverrides } from './admin-store.js?v=20260924-8';
 
 export let realDatabase = Object.freeze({});
 // Untouched copies of what the files contain, so owner overrides can be re-layered or reverted.
@@ -26,7 +26,8 @@ const collectionFiles = Object.freeze({
   elections: 'elections.json',
   chambers: 'chambers.json',
   politicalFigures: 'political-figures.json',
-  partyLeaderships: 'party-leaderships.json'
+  partyLeaderships: 'party-leaderships.json',
+  laws: 'laws.json'
 });
 let manifestPromise;
 

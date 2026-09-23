@@ -33,7 +33,8 @@
     "campobaseCouncil": "https://www25.consiglio.provincia.tn.it/istituzione/i-gruppi-consiliari/pagine/gruppo-consiliare?id=1777121&uid=1777121",
     "campobaseStatute": "https://www.gazzettaufficiale.it/eli/gu/2023/11/29/279/sg/pdf",
     "sudChiamaNordHome": "https://sud-chiamanord.it/",
-    "sudChiamaNordAssembly": "https://www.ars.sicilia.it/gruppi-parlamentari/XVIII-sud-chiama-nord-le-autonomie"
+    "sudChiamaNordAssembly": "https://www.ars.sicilia.it/gruppi-parlamentari/XVIII-sud-chiama-nord-le-autonomie",
+    "senateBills": "https://dati.senato.it/sito/home"
   },
   "collections": {
     "parties": 69,
@@ -51,7 +52,8 @@
     "partyMembershipHistory": 0,
     "officeHistory": 613,
     "territories": 23,
-    "elections": 2
+    "elections": 2,
+    "laws": 436
   },
   "warnings": [
     "Il Registro nazionale Parlamento include le iscrizioni storiche ancora visibili; lo stato historical è valorizzato solo quando il registro documenta cancellazione. La registrazione non certifica automaticamente attività politica sul territorio.",
