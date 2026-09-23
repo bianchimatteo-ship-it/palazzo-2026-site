@@ -1,17 +1,21 @@
-import { fullDate, formatDate } from '../core/time.js?v=20260924-3';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260924-3';
-import { isRealCollectionLoaded, loadRealCollections, realDatabase } from '../data/repositories/real-data.js?v=20260924-3';
-import { deleteLocalLogo, exportLogoConfiguration, getLocalLogo, importLogoConfiguration, listLocalLogos, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20260924-3';
-import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20260924-3';
-import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20260924-3';
-import { renderLogoAdmin } from './logo-admin.js?v=20260924-3';
-import { makeCareerDraft, renderCareerWizard } from './career-wizard.js?v=20260924-3';
-import { validateCareerStep } from '../core/career-rules.js?v=20260924-3';
-import { renderCampaignPage } from './campaign-mode.js?v=20260924-3';
-import { renderParliamentPage } from './parliament-mode.js?v=20260924-3';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-3';
-import { CAREER_LEVELS, careerLevelLabel } from '../data/regions.js?v=20260924-3';
-import { renderElectionCalendar, renderHeadquarters, renderInbox, renderPartyPosition } from './game-mode.js?v=20260924-3';
+import { fullDate, formatDate } from '../core/time.js?v=20260924-5';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260924-5';
+import { isRealCollectionLoaded, loadRealCollections, pristineRecord, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20260924-5';
+import { addRoleOverride, clearAdminArchive, exportAdminArchive, hasAdminPin, importAdminArchive, isAdminUnlocked, lockAdmin, removeRoleOverride, resetRecordOverride, saveRecordOverride, setAdminPin, setRecordField, unlockAdmin } from '../data/repositories/admin-store.js?v=20260924-5';
+import { renderAdminPanel } from './admin-panel.js?v=20260924-5';
+import { deleteLocalLogo, exportLogoConfiguration, getLocalLogo, importLogoConfiguration, listLocalLogos, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20260924-5';
+import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20260924-5';
+import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20260924-5';
+import { renderLogoAdmin } from './logo-admin.js?v=20260924-5';
+import { makeCareerDraft, renderCareerWizard } from './career-wizard.js?v=20260924-5';
+import { validateCareerStep } from '../core/career-rules.js?v=20260924-5';
+import { renderCampaignPage } from './campaign-mode.js?v=20260924-5';
+import { renderParliamentPage } from './parliament-mode.js?v=20260924-5';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-5';
+import { CAREER_LEVELS, careerLevelLabel } from '../data/regions.js?v=20260924-5';
+import { renderElectionCalendar, renderHeadquarters, renderInbox, renderPartyPosition } from './game-mode.js?v=20260924-5';
+import { attachChartInteractions, renderPollsPage } from './polls-mode.js?v=20260924-5';
+import { glyph, officeIcon } from './visuals.js?v=20260924-5';
 
 const mainSectionActive = (id, page) => page === id || (id === 'calendario' && page === 'eventi') || (id === 'parlamento' && ['governo', 'leggi'].includes(page)) || (id === 'partito' && page === 'partiti-lista') || (id === 'profilo' && page === 'politici');
 const mainNavigation = [
@@ -26,14 +30,15 @@ const pages = {
   partito: { title: 'Il tuo partito', eyebrow: 'APPARTENENZA', intro: 'Relazioni, linea politica e peso nel partito.' },
   calendario: { title: 'Agenda', eyebrow: 'IL TUO TEMPO', intro: 'Appuntamenti e momenti da tenere d’occhio.' },
   elezioni: { title: 'Campagna elettorale', eyebrow: 'ORIZZONTE ELETTORALE', intro: 'Scegli una sfida, conquista la candidatura e guida la campagna.' },
-  sondaggi: { title: 'Sondaggi', eyebrow: 'UMORE DEL PAESE', intro: 'Indicatori di consenso pronti per collegarsi ai dati di simulazione.' },
+  sondaggi: { title: 'Sondaggi', eyebrow: 'UMORE DEL PAESE', intro: 'Consensi, trend e mondo politico della simulazione.' },
   parlamento: { title: 'Parlamento', eyebrow: 'LE CAMERE', intro: 'Seggi, gruppi e lavori parlamentari.' },
   governo: { title: 'Governo', eyebrow: 'PALAZZO CHIGI', intro: 'Composizione, agenda e approvazione dell’esecutivo.' },
   leggi: { title: 'Leggi', eyebrow: 'ITER LEGISLATIVO', intro: 'Proposte, commissioni e provvedimenti.' },
   eventi: { title: 'Eventi', eyebrow: 'CRONACA POLITICA', intro: 'Gli eventi che scandiscono la vita pubblica.' },
   politici: { title: 'Politici', eyebrow: 'PERSONE', intro: 'Profili e incarichi nel panorama politico.' },
   'partiti-lista': { title: 'Partiti', eyebrow: 'ORGANIZZAZIONI', intro: 'Le forze politiche del mondo di gioco.' },
-  impostazioni: { title: 'Impostazioni', eyebrow: 'PREFERENZE', intro: 'Gestisci carriera, dati e salvataggio.' }
+  impostazioni: { title: 'Impostazioni', eyebrow: 'PREFERENZE', intro: 'Gestisci carriera, dati e salvataggio.' },
+  amministrazione: { title: 'Amministrazione', eyebrow: 'RISERVATO AL PROPRIETARIO', intro: 'Correzioni ai dati di partiti e politici.' }
 };
 const icon = (name, size = 20) => {
   const paths = { arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>', plus: '<path d="M12 5v14M5 12h14"/>', chevron: '<path d="m9 18 6-6-6-6"/>', save: '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/><path d="M17 21v-8H7v8M7 3v5h8"/>', calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 11h18"/>', home: '<path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H4a1 1 0 0 1-1-1z"/>', route: '<circle cx="6" cy="18" r="2"/><circle cx="18" cy="6" r="2"/><path d="M8 18h4a3 3 0 0 0 3-3V9a3 3 0 0 1 3-3"/>', party: '<path d="M4 5h16v14H4zM8 9h8M8 13h5"/>', ballot: '<path d="M5 4h14v17H5zM8 8l1.5 1.5L12 7M8 14l1.5 1.5L12 13M14 9h2M14 15h2"/>', building: '<path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-5h6v5M9 9h.01M15 9h.01M9 12h.01M15 12h.01"/>', chart: '<path d="M4 19V5M4 19h17M8 15l4-4 3 2 5-6"/>', person: '<circle cx="12" cy="8" r="4"/><path d="M5 21a7 7 0 0 1 14 0"/>', settings: '<circle cx="12" cy="12" r="3"/><path d="m19.4 15 .1.1 1.4 1.1-1.4 2.4-1.7-.6a8 8 0 0 1-1.7 1l-.3 1.8h-2.8l-.3-1.8a8 8 0 0 1-1.7-1l-1.7.6-1.4-2.4L7.3 15a8 8 0 0 1 0-2l-1.4-1.1 1.4-2.4 1.7.6a8 8 0 0 1 1.7-1l.3-1.8h2.8l.3 1.8a8 8 0 0 1 1.7 1l1.7-.6 1.4 2.4-1.4 1.1a8 8 0 0 1-.1 2Z"/>', close: '<path d="m18 6-12 12M6 6l12 12"/>', spark: '<path d="m12 3 1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z"/>' };
@@ -70,6 +75,7 @@ export function mountApp(root, store) {
     selectedPoliticianId:null, selectedPartyId:null, profileLoading:false, loadingPage:null, errors:{}, loadTicket:0,
     logoQuery:'', logoPage:1
   };
+  const admin = { tab: 'partiti', query: '', linkQuery: '', chamber: 'all', partyId: null, politicianId: null, message: '' };
   const realParties = () => [...(realDatabase.parties ?? []), ...(realDatabase.politicalMovements ?? [])];
   const findParty = id => [...store.getState().dataset.parties, ...realParties()].find(item => item.id === id) ?? null;
   const logoFor = party => {
@@ -78,15 +84,34 @@ export function mountApp(root, store) {
     if (party?.logoAsset) return new URL(party.logoAsset, document.baseURI).href;
     return party?.logoVerified && party?.logoUrl ? party.logoUrl : null;
   };
+  // Verified party offices only: when the dataset has none, the field stays empty.
+  const realLeader = partyId => {
+    const roles = (realDatabase.partyLeaderships ?? []).filter(item => item.partyId === partyId && item.source === DATA_SOURCES.REAL && item.verified === true);
+    const names = roles.map(item => { const figure = (realDatabase.politicalFigures ?? []).find(person => person.id === item.politicalFigureId && person.source === DATA_SOURCES.REAL && person.verified === true); return figure ? `${item.role}: ${figure.fullName}` : null; }).filter(Boolean);
+    return names.length ? names.slice(0, 2).join(' · ') : null;
+  };
   const selectableParties = () => [...store.getState().dataset.parties.filter(isSelectableParty), ...realParties().filter(isSelectableParty)];
+  const adminContext = () => ({
+    parties: [...(realDatabase.parties ?? []).map(party => ({ ...party, collection: 'parties' })), ...(realDatabase.politicalMovements ?? []).map(party => ({ ...party, collection: 'politicalMovements' }))].sort((a, b) => a.officialName.localeCompare(b.officialName, 'it')),
+    politicians: [...(realDatabase.politicians ?? [])].sort((a, b) => a.fullName.localeCompare(b.fullName, 'it')),
+    groups: realDatabase.parliamentaryGroups ?? [], offices: realDatabase.offices ?? [], pristine: pristineRecord, logoFor,
+    unlocked: isAdminUnlocked(), hasPin: hasAdminPin(), loading: catalog.loadingPage === 'amministrazione'
+  });
+  // Every owner edit re-layers the archive over the real snapshot and redraws.
+  const adminDone = message => { refreshAdminOverrides(); admin.message = message; render(store.getState(), store.getLastSaved()); };
+  const adminSelected = () => admin.tab === 'politici'
+    ? { collection: 'politicians', id: admin.politicianId }
+    : { collection: realDatabase.politicalMovements?.some(item => item.id === admin.partyId) ? 'politicalMovements' : 'parties', id: admin.partyId };
   const render = (state, lastSaved) => {
     const player = state.dataset.politicians.find(p => p.id === state.career.playerId);
     const partyId = player ? player.partyId : state.career.partyId;
     const party = findParty(partyId);
     const current = pages[state.ui.activePage] ?? pages.panoramica;
     const eventList = [...state.dataset.events].filter(e => e.date >= state.clock.currentDate).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 4);
+    const playerForce = state.world?.parties?.find(item => item.isPlayer);
+    const accent = playerForce?.color ?? '#c0a166';
     root.innerHTML = `
-      <div class="app-shell">
+      <div class="app-shell" style="--party-accent:${esc(accent)}">
         <aside class="sidebar">
           <a class="brand" href="#panoramica" aria-label="Politicando 2026, Home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span class="brand-copy"><strong>POLITICANDO</strong><small>2026</small></span></a><div class="brand-subtitle">Una carriera nella<br/>politica italiana</div>
           <nav class="main-nav" aria-label="Navigazione principale">${mainNavigation.map(([id, glyph, label]) => `<button class="nav-item ${mainSectionActive(id, state.ui.activePage) ? 'active' : ''}" data-nav="${id}" aria-label="${label}" title="${label}" aria-current="${mainSectionActive(id, state.ui.activePage) ? 'page' : 'false'}">${icon(glyph, 19)}<span>${label}</span></button>`).join('')}</nav>
@@ -94,7 +119,7 @@ export function mountApp(root, store) {
         </aside>
         <main class="main-area">
           <header class="topbar"><div class="topbar-title"><strong>${current.title}</strong><span>${current.intro}</span></div><div class="top-actions"><div class="date-chip">${icon('calendar', 16)}<span>${fullDate(state.clock.currentDate)}</span></div><button class="icon-button" aria-label="Salva carriera" title="Salva carriera" data-action="save">${icon('save', 17)}</button><span class="week-chip">Settimana ${state.game.week.index} · ${state.game.week.ap}/${state.game.week.maxAp} giorni</span><button class="advance-button" data-action="advance" ${state.game.status === 'ended' ? 'disabled' : ''}>${state.campaign?.status === 'active' ? 'Avanza campagna' : 'Chiudi settimana'} ${icon('arrow', 17)}</button></div></header>
-          <div class="page-wrap">${wizard ? '' : (state.ui.activePage === 'panoramica' ? renderHeadquarters(state, { partyName: party ? partyName(party) : null }) : subpage(state, current, player, party, eventList, catalog, { logoFor, parties:realParties(), selectable:selectableParties() }))}</div>
+          <div class="page-wrap">${wizard ? '' : (state.ui.activePage === 'panoramica' ? renderHeadquarters(state, { partyName: party ? partyName(party) : null }) : subpage(state, current, player, party, eventList, catalog, { logoFor, parties:realParties(), selectable:selectableParties(), findParty, realLeader, admin, adminContext }))}</div>
         </main>
         ${wizard ? renderCareerWizard(state, wizard, realParties(), logoFor, realDatabase.parliamentaryGroups ?? [], realDatabase.partyLeaderships ?? [], realDatabase.politicalFigures ?? [], realDatabase.politicians ?? []) : ''}
         ${logoAdminOpen ? renderLogoAdmin({selectedId:selectedLogoPartyId,query:catalog.logoQuery,page:catalog.logoPage,metadata:[...logoMetadata.values()],entities:[...realParties(),...state.dataset.parties],logoFor,error:logoAdminError,pendingPreview:pendingLogoUrl}) : ''}
@@ -127,7 +152,10 @@ export function mountApp(root, store) {
   const collectionsForPage = page => page === 'partiti-lista'
     ? ['parties','politicalMovements','territories','electionParticipations']
     : page === 'politici' ? ['politicians','parliamentaryGroups','partyMemberships']
-    : ['parlamento','governo','leggi'].includes(page) ? ['parliamentaryGroups','groupMemberships','chambers','politicians'] : [];
+    : ['parlamento','governo','leggi'].includes(page) ? ['parliamentaryGroups','groupMemberships','chambers','politicians']
+    : page === 'elezioni' ? ['politicians','parliamentaryGroups']
+    : page === 'sondaggi' ? ['partyLeaderships','politicalFigures']
+    : page === 'amministrazione' ? ['parties','politicalMovements','politicians','parliamentaryGroups','offices'] : [];
   const ensurePageData = async (page, force = false) => {
     const required = collectionsForPage(page);
     if (!required.length) { store.navigate(page); return; }
@@ -244,6 +272,32 @@ export function mountApp(root, store) {
       } catch (error) { store.getState().ui.toast = error.message; render(store.getState(),store.getLastSaved()); }
       return;
     }
+    const adminTarget = event.target.closest('[data-admin-tab],[data-admin-select-party],[data-admin-select-politician],[data-admin-reset-record],[data-admin-reset-field],[data-admin-logo],[data-admin-unlink],[data-admin-link],[data-admin-remove-role],[data-admin-export],[data-admin-clear],[data-admin-lock]');
+    if (adminTarget) {
+      const data = adminTarget.dataset;
+      try {
+        if (data.adminTab) { admin.tab = data.adminTab; admin.query = ''; admin.message = ''; render(store.getState(), store.getLastSaved()); }
+        else if (data.adminSelectParty) { admin.partyId = data.adminSelectParty; admin.linkQuery = ''; admin.message = ''; render(store.getState(), store.getLastSaved()); }
+        else if (data.adminSelectPolitician) { admin.politicianId = data.adminSelectPolitician; admin.message = ''; render(store.getState(), store.getLastSaved()); }
+        else if ('adminResetRecord' in data) { const target = adminSelected(); if (globalThis.confirm?.('Ripristinare tutti i dati originali di questo record?') !== false) { resetRecordOverride(target.collection, target.id); adminDone('Dati originali ripristinati.'); } }
+        else if (data.adminResetField) { const target = adminSelected(); const original = pristineRecord(target.collection, target.id) ?? {}; setRecordField(target.collection, target.id, data.adminResetField, original[data.adminResetField] ?? null, original); adminDone('Campo ripristinato al valore del dataset.'); }
+        else if (data.adminLogo) { selectedLogoPartyId = data.adminLogo; logoAdminOpen = true; catalog.logoPage = 1; logoAdminError = ''; render(store.getState(), store.getLastSaved()); }
+        else if (data.adminUnlink) { setRecordField('politicians', data.adminUnlink, 'partyId', null, pristineRecord('politicians', data.adminUnlink) ?? {}); adminDone('Parlamentare scollegato dal partito.'); }
+        else if (data.adminLink) { const personId = root.querySelector('[data-admin-link-select]')?.value; if (!personId) throw new Error('Scegli un parlamentare da collegare.'); setRecordField('politicians', personId, 'partyId', data.adminLink, pristineRecord('politicians', personId) ?? {}); admin.linkQuery = ''; adminDone('Parlamentare collegato al partito.'); }
+        else if (data.adminRemoveRole) { removeRoleOverride(admin.politicianId, data.adminRemoveRole); adminDone('Incarico rimosso.'); }
+        else if ('adminExport' in data) { const url = URL.createObjectURL(new Blob([exportAdminArchive()], { type: 'application/json' })); const link = document.createElement('a'); link.href = url; link.download = `politicando-archivio-amministrativo-${new Date().toISOString().slice(0, 10)}.json`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); admin.message = 'Archivio esportato.'; render(store.getState(), store.getLastSaved()); }
+        else if ('adminClear' in data) { if (globalThis.confirm?.('Cancellare tutte le modifiche amministrative? L’operazione non si può annullare.')) { clearAdminArchive(); adminDone('Archivio amministrativo svuotato: sono tornati i dati del dataset.'); } }
+        else if ('adminLock' in data) { lockAdmin(); admin.message = ''; render(store.getState(), store.getLastSaved()); }
+      } catch (error) { admin.message = error.message; render(store.getState(), store.getLastSaved()); }
+      return;
+    }
+    const worldAlliance = event.target.closest('[data-world-alliance]')?.dataset.worldAlliance;
+    const worldBreak = event.target.closest('[data-world-break]')?.dataset.worldBreak;
+    if (worldAlliance || worldBreak) {
+      try { if (worldAlliance) store.proposeAlliance(worldAlliance); else store.breakAlliance(worldBreak); }
+      catch (error) { store.getState().ui.toast = error.message; render(store.getState(),store.getLastSaved()); }
+      return;
+    }
     const gameActivity = event.target.closest('[data-game-activity]')?.dataset.gameActivity;
     const agendaChoice = event.target.closest('[data-agenda-choice]');
     const fastForward = event.target.closest('[data-game-fastforward]')?.dataset.gameFastforward;
@@ -315,7 +369,7 @@ export function mountApp(root, store) {
     else if (action === 'campaign-start') {
       try {
         const value=name=>root.querySelector(`[data-campaign-setup="${name}"]`)?.value;
-        store.startCampaign({electionType:value('electionType'),objective:value('objective'),role:value('role'),municipalityBand:value('municipalityBand')},realParties());
+        store.startCampaign({electionType:value('electionType'),objective:value('objective'),role:value('role'),municipalityBand:value('municipalityBand')},realParties(),{politicians:realDatabase.politicians??[],groups:realDatabase.parliamentaryGroups??[]});
       } catch(error) { store.getState().ui.toast=error.message || 'Impossibile avviare la campagna.'; render(store.getState(),store.getLastSaved()); }
     }
     else if (action === 'campaign-new') store.clearCampaign();
@@ -355,8 +409,29 @@ export function mountApp(root, store) {
       catch (error) { logoAdminError=error.message || 'Eliminazione non riuscita.'; render(store.getState(),store.getLastSaved()); }
     }
   });
-  root.addEventListener('submit', event => {
+  root.addEventListener('submit', async event => {
     const form = event.target;
+    if (form.matches('[data-admin-lock-form],[data-admin-form],[data-admin-role-form],[data-admin-pin-form]')) {
+      event.preventDefault();
+      const data = Object.fromEntries(new FormData(form));
+      try {
+        if (form.matches('[data-admin-lock-form]')) {
+          if (hasAdminPin()) await unlockAdmin(data.pin);
+          else { if (data.pin !== data.confirm) throw new Error('I due PIN non coincidono.'); await setAdminPin(data.pin); }
+          admin.message = '';
+          await ensurePageData('amministrazione', true);
+        } else if (form.matches('[data-admin-pin-form]')) {
+          if (data.pin !== data.confirm) throw new Error('I due PIN non coincidono.');
+          await setAdminPin(data.pin); admin.message = 'PIN aggiornato.'; render(store.getState(), store.getLastSaved());
+        } else if (form.matches('[data-admin-role-form]')) {
+          addRoleOverride(form.dataset.adminId, data); adminDone('Incarico aggiunto.');
+        } else {
+          saveRecordOverride(form.dataset.adminCollection, form.dataset.adminId, data, pristineRecord(form.dataset.adminCollection, form.dataset.adminId) ?? {});
+          adminDone('Modifiche salvate nell’archivio amministrativo.');
+        }
+      } catch (error) { admin.message = error.message; render(store.getState(), store.getLastSaved()); }
+      return;
+    }
     if (form.matches('[data-law-proposal-form]')) {
       event.preventDefault();
       const data = new FormData(form);
@@ -382,6 +457,8 @@ export function mountApp(root, store) {
       if (field.dataset.catalogFilter === 'politicianQuery') catalog.politicianPage=1;
       updateCatalog(); return;
     }
+    if (field.matches('[data-admin-query]')) { admin.query = field.value; preserveFocusRender('[data-admin-query]'); return; }
+    if (field.matches('[data-admin-link-query]')) { admin.linkQuery = field.value; preserveFocusRender('[data-admin-link-query]'); return; }
     if (field.matches('[data-logo-query]')) { catalog.logoQuery=field.value; catalog.logoPage=1; updateLogoAdmin(); return; }
     if (!wizard || !field.matches('.career-wizard [name]')) return;
     if (field.name.startsWith('policy_')) wizard.policyPositions[field.name.slice(7)] = Number(field.value);
@@ -410,6 +487,13 @@ export function mountApp(root, store) {
       if(help) help.innerHTML=`${ELECTION_MODELS[type].strategy} · <a href="${ELECTION_MODELS[type].referenceUrl}" target="_blank" rel="noopener noreferrer">${ELECTION_MODELS[type].referenceName} ↗</a>`;
       return;
     }
+    if (field.matches('[data-admin-chamber]')) { admin.chamber = field.value; render(store.getState(), store.getLastSaved()); return; }
+    if (field.matches('[data-admin-import]')) {
+      const file = field.files?.[0]; if (!file) return;
+      try { importAdminArchive(await file.text()); adminDone('Archivio importato e applicato.'); }
+      catch (error) { admin.message = error.message || 'Importazione non riuscita.'; render(store.getState(), store.getLastSaved()); }
+      field.value = ''; return;
+    }
     if (field.matches('[data-wizard-party-filter]')) { syncWizardDraft(); wizard.partyListLimit=12; preserveFocusRender('[data-wizard-party-filter]'); return; }
     if (field.matches('[data-logo-upload]')) {
       const file=field.files?.[0]; if(!file) return;
@@ -437,6 +521,7 @@ export function mountApp(root, store) {
     if (more) { catalog[more]++; updateCatalog(); }
   });
   store.subscribe(render);
+  attachChartInteractions(root);
   // The URL hash mirrors the section, so links, reloads and the back button land on the same page.
   const initialPage = pageFromHash() ?? (pages[store.getState().ui.activePage] ? store.getState().ui.activePage : 'panoramica');
   setHash(initialPage, true);
@@ -466,7 +551,7 @@ function careerHistory(state, player) {
   if (!player) return '';
   const electionNames = { comunale: 'comunali', regionale: 'regionali', politiche: 'politiche', europee: 'europee' };
   const offices = state.dataset.offices.filter(item => item.politicianId === player.id).sort((a, b) => String(b.startDate).localeCompare(String(a.startDate)));
-  const officeRows = offices.map(item => `<article class="parliament-timeline-item"><time>${esc(item.startDate)}</time><span class="timeline-mark"></span><div><strong>${esc(item.title)} · ${esc(item.institution)}</strong><small>${item.endDate ? `concluso il ${esc(item.endDate)}` : 'in corso'} · ${sourceLabel(item.source)}</small></div></article>`).join('');
+  const officeRows = offices.map(item => `<article class="parliament-timeline-item office-row"><time>${esc(item.startDate)}</time><span class="office-icon">${glyph(officeIcon(item), 16)}</span><div><strong>${esc(item.title)} · ${esc(item.institution)}</strong><small>${item.endDate ? `concluso il ${esc(item.endDate)}` : 'in corso'} · ${sourceLabel(item.source)}</small></div></article>`).join('');
   const entries = [
     ...[...(state.career.parliamentHistory ?? [])].reverse().map(item => ({ date: item.date, text: item.text, kind: 'Parlamento' })),
     ...[...(state.career.electionHistory ?? [])].reverse().map(item => ({ date: item.date, text: `Elezioni ${electionNames[item.electionType] ?? item.electionType}: ${Number(item.percent ?? 0).toLocaleString('it-IT', { maximumFractionDigits: 1 })}% · ${item.personalMandate ? 'mandato ottenuto' : 'nessun mandato'}`, kind: 'Elezioni' }))
@@ -480,6 +565,8 @@ function subpage(state, page, player, party, events, catalog, options = {}) {
   const profileMetrics = [['popularity', 'Popolarità'], ['reputation', 'Reputazione'], ['consensus', 'Consenso'], ['experience', 'Esperienza'], ['influence', 'Influenza'], ['notoriety', 'Notorietà']].map(([metric, label]) => { const record = personalStats.find(item => item.metric === metric) ?? (metric === 'consensus' ? state.dataset.statistics.find(item => item.metric === metric && item.subjectId === party?.id) : null); return `<div><span>${label}</span><strong>${record ? `${String(record.value).replace('.', ',')}${record.unit === '%' ? '%' : ''}${record.unit === '%' ? '' : '<small> / 100</small>'}` : '—'}</strong></div>`; }).join('');
   const catalogStatus = { loading: catalog.loadingPage === state.ui.activePage, error: catalog.errors[state.ui.activePage] ?? '' };
   const listContents = {
+    amministrazione: renderAdminPanel(options.admin, options.adminContext()),
+    sondaggi: renderPollsPage(state, { logoFor: id => { const record = options.findParty?.(id); return record ? options.logoFor?.(record) : null; }, realLeader: options.realLeader }),
     parlamento: renderParliamentPage('parlamento', state, { party, player, status: catalogStatus, politicians: realDatabase.politicians ?? [] }),
     governo: renderParliamentPage('governo', state, { party, player, status: catalogStatus, politicians: realDatabase.politicians ?? [] }),
     leggi: renderParliamentPage('leggi', state, { party, player, status: catalogStatus, politicians: realDatabase.politicians ?? [] }),
@@ -491,7 +578,7 @@ function subpage(state, page, player, party, events, catalog, options = {}) {
     carriera: `<div class="career-roadmap"><div class="roadmap-lead"><span class="section-kicker">PUNTO DI PARTENZA</span><h2>${player ? esc(player.displayName) : 'Crea il tuo politico'}</h2><p>${player ? `${esc(player.previousProfession)} · ${esc(player.municipality)}, ${esc(player.region)}` : 'Scegli chi vuoi diventare e da dove iniziare.'}</p>${player ? '' : '<button class="primary-button" data-action="new-career">Crea il tuo politico ' + icon('arrow', 16) + '</button>'}</div><div class="roadmap-stage"><span class="roadmap-number">01</span><div><small>IL TUO LIVELLO INIZIALE</small><strong>${esc(careerLevelLabel(state.career.initialLevel) ?? 'Da definire')}</strong><span>${esc(state.dataset.territories.find(item => item.id === state.career.territoryId)?.name ?? player?.region ?? 'Italia')}</span></div></div><div class="roadmap-stage upcoming"><span class="roadmap-number">02</span><div><small>PROSSIMO CAPITOLO</small><strong>${esc(careerNextStep(state))}</strong><span>${state.parliament?.player ? 'Leggi, governo e incarichi si gestiscono nella sezione Parlamento.' : 'Candidati alle elezioni per conquistare un incarico e far crescere il tuo profilo.'}</span></div></div>${careerHistory(state, player)}<button class="text-link" data-nav="profilo">Vai al tuo profilo ${icon('arrow', 16)}</button></div>`,
     profilo: `<div class="profile-page"><section class="profile-page-lead"><div class="hero-avatar">${player ? esc(player.firstName[0] + player.lastName[0]) : 'P'}</div><div><span class="section-kicker">IL TUO POLITICO</span><h2>${player ? esc(player.displayName) : 'Nessun profilo creato'}</h2><p>${player ? `${esc(player.previousProfession)} · residente a ${esc(player.municipality)}, ${esc(player.region)}` : 'Crea una carriera per definire il tuo profilo.'}</p></div>${player ? '' : '<button class="primary-button" data-action="new-career">Nuova carriera ' + icon('arrow', 16) + '</button>'}</section><div class="profile-page-facts"><div><span>INCARICO</span><strong>${player?.roleId && state.dataset.offices.some(item => item.id === player.roleId) ? esc(officeLabel(state.dataset.offices.find(item => item.id === player.roleId))) : 'Da assegnare'}</strong></div><div><span>TERRITORIO</span><strong>${esc(state.dataset.territories.find(item => item.id === player?.territoryId)?.name ?? player?.region ?? 'Italia')}</strong></div><div><span>PARTITO</span><strong>${party ? esc(partyName(party)) : 'Indipendente'}</strong></div></div><section class="profile-metrics"><h3>Statistiche</h3>${profileMetrics}</section><button class="text-link" data-nav="politici">Esplora i profili politici ${icon('arrow', 16)}</button></div>`,
     eventi: `<div class="agenda-list">${events.map(e => `<div class="agenda-row"><div class="agenda-date"><strong>${formatDate(e.date, { day: '2-digit' })}</strong><span>${formatDate(e.date, { month: 'short' })}</span></div><div class="agenda-row-text"><span class="event-tag">${esc(e.category)}</span><strong>${esc(e.title)}</strong><small>${esc(e.status)}</small></div><span class="source-pill">${sourceLabel(e.source)}</span></div>`).join('') || '<div class="empty-state">Nessun evento in programma.</div>'}</div>`,
-    impostazioni: `<div class="settings-grid"><article class="panel settings-card"><div class="eyebrow">SALVATAGGIO</div><h3>La tua carriera è locale</h3><p>Il salvataggio viene conservato in questo browser. Puoi salvare in qualsiasi momento dalla barra superiore.</p><button class="secondary-button" data-action="save">Salva adesso ${icon('save', 16)}</button></article><article class="panel settings-card"><div class="eyebrow">DATI DI GIOCO</div><h3>Demo e provenienza</h3><p>I dataset di riferimento sono separati dai dati della carriera. Le schede reali mostrano fonte, verifica e data di riferimento; i dati non disponibili restano vuoti.</p><span class="source-pill">${(realDatabase.manifest?.collections?.parties ?? 0) + (realDatabase.manifest?.collections?.politicalMovements ?? 0)} organizzazioni · ${realDatabase.manifest?.collections?.politicians ?? 0} parlamentari</span></article><article class="panel settings-card"><div class="eyebrow">ASSET DEI PARTITI</div><h3>Gestione loghi</h3><p>Carica o sostituisci file per l’uso in questo browser. I file locali non si sincronizzano con GitHub Pages.</p><button class="secondary-button" data-action="logo-admin">Apri gestione loghi ${icon('arrow',15)}</button></article><article class="panel settings-card danger-card"><div class="eyebrow">NUOVA PARTITA</div><h3>Ricomincia la demo</h3><p>Ripristina la carriera dimostrativa e ricrea il salvataggio locale.</p><button class="secondary-button" data-action="reset">Nuova carriera demo</button></article></div>`,
+    impostazioni: `<div class="settings-grid"><article class="panel settings-card"><div class="eyebrow">SALVATAGGIO</div><h3>La tua carriera è locale</h3><p>Il salvataggio viene conservato in questo browser. Puoi salvare in qualsiasi momento dalla barra superiore.</p><button class="secondary-button" data-action="save">Salva adesso ${icon('save', 16)}</button></article><article class="panel settings-card"><div class="eyebrow">DATI DI GIOCO</div><h3>Demo e provenienza</h3><p>I dataset di riferimento sono separati dai dati della carriera. Le schede reali mostrano fonte, verifica e data di riferimento; i dati non disponibili restano vuoti.</p><span class="source-pill">${(realDatabase.manifest?.collections?.parties ?? 0) + (realDatabase.manifest?.collections?.politicalMovements ?? 0)} organizzazioni · ${realDatabase.manifest?.collections?.politicians ?? 0} parlamentari</span></article><article class="panel settings-card"><div class="eyebrow">ASSET DEI PARTITI</div><h3>Gestione loghi</h3><p>Carica o sostituisci file per l’uso in questo browser. I file locali non si sincronizzano con GitHub Pages.</p><button class="secondary-button" data-action="logo-admin">Apri gestione loghi ${icon('arrow',15)}</button></article><article class="panel settings-card"><div class="eyebrow">AREA RISERVATA</div><h3>Amministrazione dei dati</h3><p>Correggi nomi, sigle, descrizioni, loghi, collegamenti e incarichi di partiti e politici. Le modifiche restano in un archivio separato e non toccano il dataset reale.</p><button class="secondary-button" data-nav="amministrazione">Apri l’area amministrativa ${icon('arrow',15)}</button></article><article class="panel settings-card danger-card"><div class="eyebrow">NUOVA PARTITA</div><h3>Ricomincia la demo</h3><p>Ripristina la carriera dimostrativa e ricrea il salvataggio locale.</p><button class="secondary-button" data-action="reset">Nuova carriera demo</button></article></div>`,
   };
   const placeholder = `<div class="coming-grid"><div class="coming-main panel"><span class="feature-icon">${page.title.slice(0, 1)}</span><div class="eyebrow">STRUTTURA PRONTA</div><h2>${page.title} in costruzione</h2><p>Questa sezione è già collegata alla navigazione. La struttura dati è pronta per accogliere contenuti verificati e dati generati dalla simulazione, con provenienza esplicita.</p><div class="coming-tags"><span>Database modulare</span><span>Dati versionati</span><span>Pronto a espandersi</span></div></div><div class="coming-side panel"><div class="eyebrow">COMPONENTI PREVISTI</div>${plannedFor(state.ui.activePage).map(x => `<div class="planned-item"><span>${icon('chevron', 15)}</span>${x}</div>`).join('')}</div></div>`;
   const routeGroups = { partito: [['partiti-lista', 'Tutti i partiti']], parlamento: [['governo', 'Governo'], ['leggi', 'Leggi']], governo: [['parlamento', 'Camere'], ['leggi', 'Leggi']], leggi: [['parlamento', 'Camere'], ['governo', 'Governo']], calendario: [['eventi', 'Eventi']], eventi: [['calendario', 'Agenda']], profilo: [['politici', 'Archivio politici']], politici: [['profilo', 'Il tuo profilo']], 'partiti-lista': [['partito', 'Il tuo partito']] };

@@ -1,0 +1,241 @@
+import { allianceOf, latestPoll } from '../core/world-engine.js?v=20260924-5';
+import { COMPATIBLE_FAMILIES, FAMILY_LABELS } from '../data/simulation/polling-rules.js?v=20260924-5';
+import { formatDate } from '../core/time.js?v=20260924-5';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20260924-5';
+
+const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const pct = (value, digits = 1) => value === null || value === undefined ? '—' : `${Number(value).toLocaleString('it-IT', { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
+const signed = value => `${value > 0 ? '+' : value < 0 ? '−' : '±'}${Math.abs(Number(value) || 0).toLocaleString('it-IT', { maximumFractionDigits: 1 })}`;
+const shortDate = date => formatDate(date, { day: 'numeric', month: 'short' });
+const SEQUENTIAL = ['#cde2fb', '#b7d3f6', '#9ec5f4', '#86b6ef', '#6da7ec', '#5598e7', '#3987e5', '#2a78d6', '#256abf', '#1c5cab', '#184f95', '#104281'];
+const TONE_COLORS = { good: '#1baf7a', bad: '#e34948', neutral: 'var(--party-accent)' };
+const SCOPE_LABELS = { nazionale: 'Nazionale', regionale: 'Regionale', locale: 'Locale' };
+
+function partyIndex(world) { return Object.fromEntries(world.parties.map(party => [party.id, party])); }
+function deltaChip(value, emphasis = false) {
+  const tone = !emphasis || !value ? 'flat' : value > 0 ? 'up' : 'down';
+  return `<span class="delta delta-${tone}">${signed(value)}</span>`;
+}
+
+function sparkline(values, color = 'var(--party-accent)') {
+  const points = values.filter(value => Number.isFinite(value));
+  if (points.length < 2) return '';
+  const min = Math.min(...points), max = Math.max(...points), span = max - min || 1;
+  const coords = points.map((value, index) => [4 + index * 112 / (points.length - 1), 28 - (value - min) / span * 22]);
+  const [lx, ly] = coords.at(-1);
+  return `<svg class="sparkline" viewBox="0 0 120 32" aria-hidden="true"><polyline points="${coords.map(point => point.join(',')).join(' ')}" /><circle cx="${lx}" cy="${ly}" r="3.5" style="fill:${esc(color)}" /></svg>`;
+}
+
+function statTile(label, value, delta, series, note = '', emphasis = true) {
+  return `<div class="poll-stat"><span class="poll-stat-label">${esc(label)}</span><strong>${value}</strong>${delta === null ? '' : deltaChip(delta, emphasis)}${sparkline(series)}${note ? `<small>${esc(note)}</small>` : ''}</div>`;
+}
+
+function barometer(state, world, poll, parties) {
+  const player = world.parties.find(item => item.isPlayer);
+  const previous = world.polls.at(-2);
+  const history = key => world.polls.slice(-12).map(item => key(item));
+  const playerRow = player ? poll.results.find(row => row.partyId === player.id) : null;
+  const headline = player
+    ? `<h2>${esc(player.label)} al ${pct(playerRow?.share)}</h2><p>${deltaChip(playerRow?.delta ?? 0, true)} rispetto al sondaggio precedente · margine d’errore ±${String(poll.margin).replace('.', ',')} punti</p>`
+    : `<h2>Gradimento personale al ${pct(poll.personal.approval, 0)}</h2><p>Sei indipendente: il barometro misura te, non un partito.</p>`;
+  const region = world.place.region || 'Regione';
+  const municipality = world.place.municipality || 'Comune';
+  const tiles = player ? [
+    statTile('Nazionale', pct(playerRow?.share), playerRow?.delta ?? 0, history(item => item.results.find(row => row.partyId === player.id)?.share)),
+    statTile(region, pct(poll.regionalHome), previous ? Math.round(((poll.regionalHome ?? 0) - (previous.regionalHome ?? poll.regionalHome ?? 0)) * 10) / 10 : 0, history(item => item.regionalHome)),
+    statTile(municipality, pct(poll.local), previous ? Math.round(((poll.local ?? 0) - (previous.local ?? poll.local ?? 0)) * 10) / 10 : 0, history(item => item.local), 'Territorio del tuo politico')
+  ].join('') : '';
+  const personal = [
+    statTile('Gradimento personale', pct(poll.personal.approval, 0), previous ? Math.round((poll.personal.approval - previous.personal.approval) * 10) / 10 : 0, history(item => item.personal?.approval), 'Il tuo politico, separato dal partito'),
+    statTile('Gradimento del governo', poll.government ? pct(poll.government.approval, 0) : 'Nessun governo', poll.government && previous?.government ? Math.round((poll.government.approval - previous.government.approval) * 10) / 10 : null, history(item => item.government?.approval ?? null), poll.government ? 'Legato alla stabilità della maggioranza' : 'Si misura quando un governo è in carica', false),
+    statTile('Indecisi', pct(poll.undecided, 0), previous ? Math.round((poll.undecided - previous.undecided) * 10) / 10 : 0, history(item => item.undecided), 'Fuori dal totale dei voti validi', false)
+  ].join('');
+  return `<section class="poll-hero" style="--hero-accent:${esc(player?.color ?? 'var(--party-accent)')}">
+    <div class="poll-hero-main">${player ? emblem({ label: player.label, abbreviation: player.abbreviation, color: player.color, logo: parties.logo?.(player.id) }, 'lg') : `<span class="poll-hero-icon">${glyph('chart', 30)}</span>`}<div><span class="section-kicker">BAROMETRO POLITICO · SETTIMANA ${poll.week}</span>${headline}<small>${esc(poll.institute)} · ${poll.sample.toLocaleString('it-IT')} interviste · ${esc(formatDate(poll.date))} · istituto e sondaggio simulati</small></div></div>
+    ${tiles ? `<div class="poll-tiles">${tiles}</div>` : ''}
+    <div class="poll-tiles secondary">${personal}</div>
+  </section>`;
+}
+
+function nationalBars(world, poll, index, logo) {
+  const rows = [...poll.results].sort((a, b) => b.share - a.share);
+  const max = Math.max(...rows.map(row => row.share), 10);
+  const others = Math.round((100 - rows.reduce((sum, row) => sum + row.share, 0)) * 10) / 10;
+  const bar = row => {
+    const party = index[row.partyId];
+    const margin = Math.round(1.96 * Math.sqrt(Math.max(0.0004, row.share / 100 * (1 - row.share / 100)) / poll.sample) * 1000) / 10;
+    const width = row.share / max * 100;
+    const tip = `${party.label}: ${pct(row.share)} (${signed(row.delta)} punti) · intervallo ${pct(Math.max(0, row.share - margin))}–${pct(row.share + margin)}`;
+    return `<div class="poll-bar-row ${party.isPlayer ? 'is-player' : ''}" data-tip="${esc(tip)}" tabindex="0"><span class="poll-bar-name">${emblem({ label: party.label, abbreviation: party.abbreviation, color: party.color, logo: logo?.(party.id) }, 'sm')}<span><strong>${esc(party.label)}</strong><small>${esc(FAMILY_LABELS[party.family] ?? '')}${party.isPlayer ? ' · il tuo partito' : ''}${party.refSource === 'real' ? ' · riferimento reale, stima simulata' : ''}</small></span></span><span class="poll-bar-track"><i class="poll-bar-fill" style="width:${width}%;background:${esc(party.color)}"></i><i class="poll-bar-whisker" style="left:${Math.max(0, (row.share - margin) / max * 100)}%;width:${Math.min(100, 2 * margin / max * 100)}%"></i></span><span class="poll-bar-value">${pct(row.share)}</span>${deltaChip(row.delta, party.isPlayer)}</div>`;
+  };
+  return `<div class="poll-bars">${rows.map(bar).join('')}<div class="poll-bar-row is-others"><span class="poll-bar-name"><span class="emblem emblem-sm emblem-ghost" aria-hidden="true">…</span><span><strong>Altri</strong><small>Liste minori</small></span></span><span class="poll-bar-track"><i class="poll-bar-fill" style="width:${others / max * 100}%;background:#b9bdb3"></i></span><span class="poll-bar-value">${pct(others)}</span><span class="delta delta-flat"></span></div></div><p class="poll-footnote">Barre = stima del sondaggio; la linea sottile indica l’intervallo del margine d’errore al 95%. Percentuali sui voti validi.</p>`;
+}
+
+function trendChart(world, index) {
+  const polls = world.polls.slice(-16);
+  const latest = polls.at(-1);
+  const player = world.parties.find(item => item.isPlayer);
+  const leaders = [...latest.results].filter(row => row.partyId !== player?.id).sort((a, b) => b.share - a.share).slice(0, player ? 3 : 4).map(row => row.partyId);
+  const ids = [...(player ? [player.id] : []), ...leaders];
+  const series = ids.map(id => ({ id, label: index[id].label, abbreviation: index[id].abbreviation, color: index[id].color, player: id === player?.id, values: polls.map(poll => poll.results.find(row => row.partyId === id)?.share ?? null) }));
+  const W = 660, H = 250, L = 34, R = 132, T = 14, B = 28;
+  const plotW = W - L - R, plotH = H - T - B;
+  const top = Math.max(...series.flatMap(item => item.values.filter(Number.isFinite)), 10);
+  const step = top > 30 ? 10 : 5;
+  const maxY = Math.ceil((top + 2) / step) * step;
+  const x = i => L + (polls.length === 1 ? plotW / 2 : i * plotW / (polls.length - 1));
+  const y = v => T + (1 - v / maxY) * plotH;
+  const grid = Array.from({ length: maxY / step + 1 }, (_, i) => i * step).map(v => `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 3.5}" text-anchor="end">${v}</text>`).join('');
+  const every = Math.max(1, Math.ceil(polls.length / 6));
+  const xTicks = polls.map((poll, i) => i % every === 0 || i === polls.length - 1 ? `<text class="tick" x="${x(i)}" y="${H - 8}" text-anchor="middle">S${poll.week}</text>` : '').join('');
+  const lines = series.map(item => {
+    const d = item.values.map((v, i) => Number.isFinite(v) ? `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}` : '').join(' ');
+    return `<path class="series ${item.player ? 'is-player' : ''}" d="${d}" style="stroke:${esc(item.color)}"/>`;
+  }).join('');
+  // End labels sit in a column with leader lines instead of being nudged off their lines.
+  const ends = series.map(item => ({ ...item, endY: y(item.values.at(-1) ?? 0) })).sort((a, b) => a.endY - b.endY);
+  let cursor = T;
+  for (const item of ends) { item.labelY = Math.max(item.endY, cursor); cursor = item.labelY + 16; }
+  const overflow = cursor - 16 - (H - B);
+  if (overflow > 0) for (const item of ends) item.labelY -= overflow;
+  const labels = ends.map(item => `<circle class="end-dot" cx="${x(polls.length - 1)}" cy="${item.endY}" r="4" style="fill:${esc(item.color)}"/><line class="leader" x1="${x(polls.length - 1) + 6}" y1="${item.endY}" x2="${W - R + 10}" y2="${item.labelY}"/><text class="end-label ${item.player ? 'is-player' : ''}" x="${W - R + 14}" y="${item.labelY + 4}">${esc(item.abbreviation)} ${pct(item.values.at(-1))}</text>`).join('');
+  const payload = { x: polls.map((_, i) => x(i) / W), weeks: polls.map(poll => `Settimana ${poll.week} · ${poll.institute}`), series: series.map(item => ({ label: item.label, color: item.color, values: item.values })) };
+  const legend = series.map(item => `<span class="legend-item ${item.player ? 'is-player' : ''}"><i style="background:${esc(item.color)}"></i>${esc(item.label)}</span>`).join('');
+  return `<div class="trend-legend">${legend}</div><div class="trend-chart" data-trend="${esc(JSON.stringify(payload))}" tabindex="0" aria-label="Andamento dei sondaggi nelle ultime ${polls.length} settimane"><svg viewBox="0 0 ${W} ${H}" role="img" aria-hidden="true">${grid}${xTicks}${lines}${labels}<line class="crosshair" x1="0" x2="0" y1="${T}" y2="${H - B}" visibility="hidden"/></svg></div>`;
+}
+
+function regionalMap(world, poll) {
+  const entries = Object.entries(poll.regional ?? {});
+  if (!entries.length) return '<p class="quiet-copy">Il dettaglio regionale riguarda il partito del giocatore.</p>';
+  const values = entries.map(([, value]) => value);
+  const min = Math.min(...values), max = Math.max(...values), span = max - min || 1;
+  const tiles = entries.map(([region, value]) => {
+    const fill = SEQUENTIAL[Math.min(SEQUENTIAL.length - 1, Math.floor((value - min) / span * (SEQUENTIAL.length - 1)))];
+    return `<span class="region-tile ${region === world.place.region ? 'is-home' : ''}" style="background:${fill};color:${inkOn(fill)}" data-tip="${esc(`${region}: ${pct(value)}`)}" tabindex="0"><small>${esc(region)}</small><strong>${pct(value)}</strong></span>`;
+  }).join('');
+  return `<div class="region-grid">${tiles}</div><div class="region-scale"><span>${pct(min)}</span><i style="background:linear-gradient(90deg,${SEQUENTIAL.join(',')})"></i><span>${pct(max)}</span></div><p class="poll-footnote">Bordo dorato: la tua regione. Le differenze regionali sono simulate e cambiano con eventi territoriali e con la tua popolarità.</p>`;
+}
+
+function forcesGrid(state, world, poll, index, logo, realLeader) {
+  const player = world.parties.find(item => item.isPlayer);
+  const playerAlliance = player ? allianceOf(world, player.id) : null;
+  const rows = [...poll.results].sort((a, b) => b.share - a.share).map(row => {
+    const party = index[row.partyId];
+    const leader = world.figures.find(item => item.id === party.leaderId);
+    const alliance = allianceOf(world, party.id);
+    const compatible = player && COMPATIBLE_FAMILIES[player.family]?.includes(party.family);
+    const canPropose = player && !party.isPlayer && !playerAlliance && state.game?.status !== 'ended';
+    return `<article class="force-card ${party.isPlayer ? 'is-player' : ''}" style="--force:${esc(party.color)}">
+      <header>${emblem({ label: party.label, abbreviation: party.abbreviation, color: party.color, logo: logo?.(party.id) }, 'md')}<div><strong>${esc(party.label)}</strong><small>${esc(FAMILY_LABELS[party.family] ?? '')}</small></div><b>${pct(row.share)}</b></header>
+      <dl><div><dt>Guida</dt><dd>${esc(party.refSource === 'real' ? (realLeader?.(party.id) ?? 'Non documentata nel dataset') : leader ? leader.name : party.leaderRole ?? '—')}</dd></div><div><dt>Coesione</dt><dd><b class="hq-bar ${party.cohesion < 30 ? 'danger' : ''}"><i style="width:${party.cohesion}%"></i></b></dd></div></dl>
+      <div class="force-badges">${party.crisis ? '<span class="badge badge-bad">Crisi interna</span>' : ''}${alliance ? `<span class="badge">${glyph('link', 13)} ${esc(alliance.label)}</span>` : ''}${party.origin === 'scissione' ? '<span class="badge">Nata da una scissione</span>' : ''}${party.refSource === 'real' ? '<span class="badge">Riferimento reale · dati di gioco</span>' : ''}</div>
+      ${canPropose ? `<button class="secondary-button" data-world-alliance="${esc(party.id)}">Proponi un’alleanza · 1 giorno · 4 cap.${compatible ? '' : ' (distante)'}</button>` : ''}
+      ${party.isPlayer && playerAlliance ? `<button class="text-link" data-world-break="${esc(playerAlliance.id)}">Rompi ${esc(playerAlliance.label)}</button>` : ''}
+    </article>`;
+  }).join('');
+  return `<div class="force-grid">${rows}</div>`;
+}
+
+function chronicle(world, limit = 10) {
+  return `<div class="chronicle">${world.events.slice(0, limit).map(event => `<article class="chronicle-item tone-${esc(event.tone)}">${artTile(event.icon ?? 'globe', TONE_COLORS[event.tone] ?? TONE_COLORS.neutral, 'sm')}<div><span class="chronicle-meta">${esc(SCOPE_LABELS[event.scope] ?? 'Scenario')} · S${event.week} · ${esc(shortDate(event.date))}</span><strong>${esc(event.title)}</strong><small>${esc(event.body)}</small>${event.lines?.length ? `<em>${esc(event.lines.join(' · '))}</em>` : ''}</div></article>`).join('') || '<p class="quiet-copy">La cronaca si riempirà settimana dopo settimana.</p>'}</div>`;
+}
+
+function dataTable(world, index) {
+  const polls = world.polls.slice(-12);
+  const ids = [...new Set(polls.flatMap(poll => poll.results.map(row => row.partyId)))];
+  return `<details class="poll-table"><summary>Tabella dei dati (ultimi ${polls.length} sondaggi)</summary><div class="poll-table-scroll"><table><thead><tr><th>Forza</th>${polls.map(poll => `<th>S${poll.week}</th>`).join('')}</tr></thead><tbody>${ids.map(id => `<tr><th>${esc(index[id]?.label ?? id)}</th>${polls.map(poll => `<td>${pct(poll.results.find(row => row.partyId === id)?.share ?? null)}</td>`).join('')}</tr>`).join('')}<tr><th>Gradimento personale</th>${polls.map(poll => `<td>${pct(poll.personal?.approval, 0)}</td>`).join('')}</tr><tr><th>Indecisi</th>${polls.map(poll => `<td>${pct(poll.undecided, 0)}</td>`).join('')}</tr></tbody></table></div></details>`;
+}
+
+export function renderPollsPage(state, options = {}) {
+  const world = state.world;
+  const poll = latestPoll(world);
+  if (!poll) return '<p class="quiet-copy">Il primo sondaggio arriverà a fine settimana.</p>';
+  const index = partyIndex(world);
+  const logo = options.logoFor;
+  const panel = (kicker, title, body, extra = '') => `<section class="hq-panel poll-panel"><div class="home-section-heading"><div><span class="section-kicker">${kicker}</span><h2>${title}</h2></div>${extra}</div>${body}</section>`;
+  const alliances = world.alliances.filter(item => item.status === 'active').map(item => `<div class="alliance-row">${glyph('link', 18)}<div><strong>${esc(item.label)}</strong><small>${item.partyIds.map(id => esc(index[id]?.label ?? id)).join(' + ')} · dal ${esc(shortDate(item.since))}</small></div><b class="hq-bar ${item.cohesion < 30 ? 'danger' : 'good'}"><i style="width:${item.cohesion}%"></i></b></div>`).join('') || '<p class="quiet-copy">Nessuna alleanza attiva.</p>';
+  const figures = [...world.figures].reverse().slice(0, 8).map(figure => `<div class="figure-row">${glyph(figure.role === 'Segreteria' ? 'crown' : 'user', 18)}<div><strong>${esc(figure.name)}</strong><small>${esc(figure.role)}${figure.partyId && index[figure.partyId] ? ` · ${esc(index[figure.partyId].label)}` : ''}${figure.status === 'dimesso' ? ' · ha lasciato' : ''}</small></div></div>`).join('');
+  return `<div class="polls-page">
+    ${barometer(state, world, poll, { logo })}
+    <div class="poll-grid">
+      ${panel('SONDAGGIO DELLA SETTIMANA', 'Intenzioni di voto', nationalBars(world, poll, index, logo), `<span class="hq-count">±${String(poll.margin).replace('.', ',')}</span>`)}
+      ${panel('TREND', 'Come cambiano i consensi', trendChart(world, index))}
+    </div>
+    <div class="poll-grid">
+      ${panel('TERRITORIO', 'Il tuo partito regione per regione', regionalMap(world, poll))}
+      ${panel('CRONACA POLITICA', 'Cosa muove i sondaggi', chronicle(world, 6))}
+    </div>
+    ${panel('MONDO POLITICO · SIMULATO', 'Le forze in campo', forcesGrid(state, world, poll, index, logo, options.realLeader))}
+    <div class="poll-grid">
+      ${panel('ALLEANZE', 'Intese e rotture', alliances)}
+      ${panel('FIGURE SIMULATE', 'Volti della scena', figures || '<p class="quiet-copy">Nessuna figura ancora.</p>')}
+    </div>
+    ${dataTable(world, index)}
+    <p class="poll-footnote">Istituti, forze politiche, leader, alleanze ed eventi di questa pagina sono simulati (source: simulation). Un partito reale scelto come riferimento compare solo con il suo nome: le percentuali sono stime di gioco e non sondaggi reali.</p>
+  </div>`;
+}
+
+// Compact barometer for the Home side column.
+export function renderBarometerPanel(state) {
+  const world = state.world;
+  const poll = latestPoll(world);
+  if (!poll) return '';
+  const player = world.parties.find(item => item.isPlayer);
+  const row = player ? poll.results.find(item => item.partyId === player.id) : null;
+  const series = world.polls.slice(-12).map(item => player ? item.results.find(entry => entry.partyId === player.id)?.share : item.personal?.approval);
+  return `<div class="barometer"><div class="barometer-main"><div><small>${player ? esc(player.label) : 'Gradimento personale'}</small><strong>${player ? pct(row?.share) : pct(poll.personal.approval, 0)}</strong>${player ? deltaChip(row?.delta ?? 0, true) : ''}</div>${sparkline(series, player?.color ?? 'var(--party-accent)')}</div><dl class="hq-facts"><div><dt>Gradimento personale</dt><dd>${pct(poll.personal.approval, 0)}</dd></div>${player ? `<div><dt>${esc(world.place.municipality || 'Territorio')}</dt><dd>${pct(poll.local)}</dd></div>` : ''}${poll.government ? `<div><dt>Governo</dt><dd>${pct(poll.government.approval, 0)}</dd></div>` : ''}<div><dt>Istituto</dt><dd>${esc(poll.institute)} · ±${String(poll.margin).replace('.', ',')}</dd></div></dl></div>${chronicle(world, 3)}`;
+}
+
+// Tooltips for charts and marks: values stay reachable through labels and the data table.
+export function attachChartInteractions(root) {
+  if (!root?.addEventListener || typeof document === 'undefined') return;
+  const tip = document.createElement('div');
+  tip.className = 'viz-tip';
+  tip.hidden = true;
+  document.body.append(tip);
+  const place = (clientX, clientY) => {
+    const { innerWidth } = window;
+    tip.style.left = `${Math.min(innerWidth - tip.offsetWidth - 12, clientX + 14)}px`;
+    tip.style.top = `${Math.max(8, clientY - tip.offsetHeight - 12)}px`;
+  };
+  const hide = () => { tip.hidden = true; root.querySelectorAll('.crosshair').forEach(line => line.setAttribute('visibility', 'hidden')); };
+  const showText = (text, x, y) => { tip.replaceChildren(document.createTextNode(text)); tip.hidden = false; place(x, y); };
+  const showTrend = (chart, clientX, clientY) => {
+    const data = JSON.parse(chart.dataset.trend);
+    const box = chart.getBoundingClientRect();
+    const ratio = (clientX - box.left) / box.width;
+    const index = data.x.reduce((best, value, i) => Math.abs(value - ratio) < Math.abs(data.x[best] - ratio) ? i : best, 0);
+    const line = chart.querySelector('.crosshair');
+    const xPos = data.x[index] * Number(chart.querySelector('svg').viewBox.baseVal.width);
+    line.setAttribute('x1', xPos); line.setAttribute('x2', xPos); line.setAttribute('visibility', 'visible');
+    const title = document.createElement('strong');
+    title.textContent = data.weeks[index];
+    const rows = data.series.map(series => {
+      const row = document.createElement('span');
+      const key = document.createElement('i');
+      key.style.background = series.color;
+      const value = document.createElement('b');
+      value.textContent = Number.isFinite(series.values[index]) ? `${series.values[index].toLocaleString('it-IT', { maximumFractionDigits: 1 })}%` : '—';
+      row.append(key, value, document.createTextNode(` ${series.label}`));
+      return row;
+    });
+    tip.replaceChildren(title, ...rows);
+    tip.hidden = false;
+    place(clientX, clientY);
+  };
+  root.addEventListener('pointermove', event => {
+    const chart = event.target.closest?.('[data-trend]');
+    if (chart) return showTrend(chart, event.clientX, event.clientY);
+    const mark = event.target.closest?.('[data-tip]');
+    if (mark) return showText(mark.dataset.tip, event.clientX, event.clientY);
+    if (!tip.hidden) hide();
+  });
+  root.addEventListener('pointerleave', hide);
+  root.addEventListener('focusin', event => {
+    const chart = event.target.closest?.('[data-trend]');
+    const box = event.target.getBoundingClientRect();
+    if (chart) showTrend(chart, box.right - 4, box.top + 20);
+    else if (event.target.closest?.('[data-tip]')) showText(event.target.dataset.tip, box.left + box.width / 2, box.top);
+  });
+  root.addEventListener('focusout', hide);
+}

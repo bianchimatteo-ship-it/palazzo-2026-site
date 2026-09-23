@@ -48,7 +48,9 @@ export const RELATION_TEMPLATES = Object.freeze([
   { id: 'unions', label: 'Sindacati', kind: 'Territorio', base: 45 }
 ]);
 
-export const FICTIONAL_RIVALS = Object.freeze(['Marco Ferri', 'Laura Conti', 'Paolo Serra', 'Chiara Villa', 'Andrea Galli', 'Sara Fontana', 'Luca Moretti', 'Elena Rizzo']);
+// No documented person fits an internal rival of a player-made politician: the role stays explicitly simulated.
+export const SIMULATED_RIVAL_LABEL = 'Rivale interno (figura simulata)';
+export const LEGACY_RIVAL_NAMES = Object.freeze(['Marco Ferri', 'Laura Conti', 'Paolo Serra', 'Chiara Villa', 'Andrea Galli', 'Sara Fontana', 'Luca Moretti', 'Elena Rizzo']);
 
 export const CURRENT_TEMPLATES = Object.freeze([
   { id: 'riformisti', label: 'Area riformista' },
@@ -126,7 +128,7 @@ export const CAREER_EVENTS = Object.freeze([
       { chance: 0.5, label: 'Le accuse cadono: la tua lealtà viene apprezzata', effects: { stats: { reputation: 1.5, notoriety: 2 } } },
       { chance: 0.5, label: 'Emergono nuovi elementi: la tua difesa si ritorce contro di te', effects: { stats: { reputation: -6 }, relations: { leadership: -4 } } }] },
     { id: 'silenzio', label: 'Resta in silenzio', effects: { stats: { reputation: -1.5, notoriety: 1 } } }] },
-  { id: 'rivale', weight: 2, title: '{rival} ti attacca pubblicamente', body: 'Il tuo rivale mette in dubbio il tuo lavoro davanti a iscritti e giornalisti.', defaultChoice: 'lascia', choices: [
+  { id: 'rivale', weight: 2, title: 'Il tuo rivale interno ti attacca pubblicamente', body: 'Un rivale interno (figura simulata) mette in dubbio il tuo lavoro davanti a iscritti e giornalisti.', defaultChoice: 'lascia', choices: [
     { id: 'rispondi', label: 'Rispondi colpo su colpo', effects: { stats: { notoriety: 3 }, relations: { rival: -8 }, party: { support: -2 } } },
     { id: 'chiarimento', label: 'Cerca un chiarimento', cost: { capital: 2 }, effects: { relations: { rival: 8 }, party: { support: 1 } } },
     { id: 'lascia', label: 'Lascia correre', effects: { party: { support: -1 }, stats: { influence: -0.5 } } }] },
@@ -166,6 +168,10 @@ export const CAREER_EVENTS = Object.freeze([
   { id: 'crisi-ministero', weight: 3, when: ctx => ctx.minister, title: 'Emergenza nel tuo ministero', body: 'Un dossier esplode sui giornali: serve una risposta.', defaultChoice: 'tecnici', choices: [
     { id: 'responsabilita', label: 'Assumi la responsabilità', cost: { ap: 1 }, effects: { stats: { reputation: 2 }, government: { stability: 3 } }, risk: { chance: 0.3, label: 'La gestione viene giudicata tardiva', effects: { stats: { reputation: -3 } } } },
     { id: 'tecnici', label: 'Scarica sui tecnici', effects: { stats: { reputation: -1 }, government: { stability: -2 } } }] },
+  { id: 'presa-posizione', weight: 0, when: () => false, title: 'Prendi posizione: {event}', body: '{eventBody}', defaultChoice: 'silenzio', choices: [
+    { id: 'proposta', label: 'Intervieni con una proposta', cost: { ap: 1 }, effects: { stats: { notoriety: 2, reputation: 1 } }, special: 'world-stance-proposal' },
+    { id: 'attacco', label: 'Attacca gli avversari', effects: { stats: { notoriety: 3, reputation: -0.5 }, relations: { media: 2 } }, special: 'world-stance-attack' },
+    { id: 'silenzio', label: 'Resta in silenzio', effects: { stats: { notoriety: -0.5 } } }] },
   { id: 'sindacati-vertenza', weight: 1, title: 'Vertenza in una fabbrica del territorio', body: 'Lavoratori e azienda chiedono una mediazione politica.', defaultChoice: 'osserva', choices: [
     { id: 'lavoratori', label: 'Stai con i lavoratori', effects: { relations: { unions: 7, business: -4 }, stats: { popularity: 1 } } },
     { id: 'mediazione', label: 'Proponi una mediazione', cost: { ap: 1, capital: 2 }, effects: { relations: { unions: 3, business: 3 }, stats: { reputation: 1.5 } } },

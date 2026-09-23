@@ -1,11 +1,11 @@
-import { advanceDays } from './time.js?v=20260924-3';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-3';
-import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260924-3';
+import { advanceDays } from './time.js?v=20260924-5';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-5';
+import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260924-5';
 import {
   APPOINTMENTS, BASE_WEEKLY_INCOME, CAREER_EVENTS, CAREER_OBJECTIVES, CURRENT_TEMPLATES, EARLY_ELECTION_AFTER_WEEKS, ELECTION_SCHEDULE,
-  FICTIONAL_RIVALS, FORCED_EVENTS, FOUNDER_RANK, LEVEL_FIRST_ELECTION, OFFICE_INCOME, PARTY_RANKS, RELATION_TEMPLATES, STAT_LABELS,
+  FORCED_EVENTS, LEGACY_RIVAL_NAMES, SIMULATED_RIVAL_LABEL, FOUNDER_RANK, LEVEL_FIRST_ELECTION, OFFICE_INCOME, PARTY_RANKS, RELATION_TEMPLATES, STAT_LABELS,
   WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES
-} from '../data/simulation/career-rules.js?v=20260924-3';
+} from '../data/simulation/career-rules.js?v=20260924-5';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -70,7 +70,7 @@ export function createGameState({ seedText, currentDate, level, party = null, pl
   const seed = hash(seedText);
   const member = party?.id && !party.founder;
   const relations = RELATION_TEMPLATES.filter(item => item.requires !== 'member' || member).map(item => ({
-    id: item.id, label: item.id === 'rival' ? FICTIONAL_RIVALS[seed % FICTIONAL_RIVALS.length] : item.label,
+    id: item.id, label: item.id === 'rival' ? SIMULATED_RIVAL_LABEL : item.label,
     kind: item.kind, value: item.base, source: SIM
   }));
   const elections = Object.keys(ELECTION_SCHEDULE).map(type => makeElection(type, advanceDays(currentDate, 7 * (LEVEL_FIRST_ELECTION[level]?.[type] ?? ELECTION_SCHEDULE[type].firstWeeks)), place));
@@ -96,7 +96,8 @@ export function normalizeGameState(game) {
     ...game,
     week: { ap: WEEKLY_ACTION_POINTS, maxAp: WEEKLY_ACTION_POINTS, categoriesUsed: [], ...(game.week ?? {}) },
     resources: { funds: 0, politicalCapital: 30, source: SIM, ...(game.resources ?? {}) },
-    relations: Array.isArray(game.relations) ? game.relations : [],
+    // Older saves named the rival with a realistic invented name: it becomes an explicit simulated role.
+    relations: Array.isArray(game.relations) ? game.relations.map(item => item.id === 'rival' && LEGACY_RIVAL_NAMES.includes(item.label) ? { ...item, label: SIMULATED_RIVAL_LABEL } : item) : [],
     elections: Array.isArray(game.elections) ? game.elections : []
   };
 }
@@ -222,7 +223,7 @@ function eventParams(ctx) {
   const currents = [...(game.party?.currents ?? [])].sort((a, b) => b.strength - a.strength);
   return {
     municipality: game.place.municipality || 'il tuo comune', region: game.place.region || 'la tua regione',
-    rival: game.relations.find(item => item.id === 'rival')?.label ?? 'Un rivale', party: game.party?.label || 'il partito',
+    rival: 'il tuo rivale interno', party: game.party?.label || 'il partito',
     currentA: currents[0]?.label, currentB: currents[1]?.label, currentAId: currents[0]?.id, currentBId: currents[1]?.id
   };
 }
@@ -253,6 +254,15 @@ function fillInbox(ctx, env, lines) {
     lines.push(`Nuova decisione: ${fill(event.title, params)}`);
   }
 }
+// The political world can ask for a reaction: it lands in the week's agenda like any other event.
+export function addWorldReaction(input, reaction) {
+  const game = copy(input);
+  if (game.status === 'ended' || game.inbox.some(item => item.templateId === 'presa-posizione')) return game;
+  const template = CAREER_EVENTS.find(entry => entry.id === 'presa-posizione');
+  const ctx = { game };
+  game.inbox.push(instantiate(template, 'evento', ctx, { event: reaction.title, eventBody: reaction.body }));
+  return game;
+}
 export function describeEffects(effects = {}) {
   const parts = [];
   for (const [metric, delta] of Object.entries(effects.stats ?? {})) parts.push(`${STAT_LABELS[metric]} ${signed(delta)}`);
@@ -270,7 +280,7 @@ export function describeEffects(effects = {}) {
 export function describeChoice(item, choiceId) {
   const choice = templateFor(item)?.choices.find(entry => entry.id === choiceId);
   if (!choice) return { effects: '', risk: '' };
-  const risk = choice.risk ? `Rischio ${Math.round(choice.risk.chance * 100)}%` : choice.outcomes ? 'Esito incerto' : choice.special?.startsWith('leadership') ? 'Esito legato al congresso' : choice.special === 'leave-party' ? 'Lasci il partito' : choice.special === 'resign' ? 'Lasci gli incarichi' : '';
+  const risk = choice.risk ? `Rischio ${Math.round(choice.risk.chance * 100)}%` : choice.special?.startsWith('world-stance') ? 'Sposta i sondaggi del partito' : choice.outcomes ? 'Esito incerto' : choice.special?.startsWith('leadership') ? 'Esito legato al congresso' : choice.special === 'leave-party' ? 'Lasci il partito' : choice.special === 'resign' ? 'Lasci gli incarichi' : '';
   return { effects: describeEffects(choice.effects), risk };
 }
 function runChoice(ctx, env, item, choice, lines, specials) {
@@ -338,6 +348,8 @@ function handleSpecial(ctx, env, special, item, lines, specials) {
       changeRelation(game, backed, 4);
       lines.push(`${winner.label} vince il congresso: la nuova leadership non dimentica (sostegno −6).`);
     }
+  } else if (special === 'world-stance-proposal' || special === 'world-stance-attack') {
+    specials.push({ type: 'world-stance', delta: special === 'world-stance-proposal' ? 0.4 : 0.25, title: item.params.event });
   } else if (special === 'flag-opaque-funding') {
     game.flags.opaqueFunding = game.week.index;
   } else if (special === 'leave-party') {

@@ -1,4 +1,4 @@
-import { realDatabase } from '../data/repositories/real-data.js?v=20260924-3';
+import { realDatabase } from '../data/repositories/real-data.js?v=20260924-5';
 
 const esc = (value = '') => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const pageSize = 48;
@@ -12,8 +12,9 @@ export function renderPoliticianArchive(filters, { status = {} } = {}) {
   const people = realDatabase.politicians ?? [];
   const groups = realDatabase.parliamentaryGroups ?? [];
   const partyMemberships = realDatabase.partyMemberships ?? [];
-  const parties = realDatabase.parties ?? [];
-  const partyIds = [...new Set(partyMemberships.map(item => item.partyId))];
+  const parties = [...(realDatabase.parties ?? []), ...(realDatabase.politicalMovements ?? [])];
+  // Owner-made links (admin archive) sit beside documented memberships.
+  const partyIds = [...new Set([...partyMemberships.map(item => item.partyId), ...people.map(person => person.partyId).filter(Boolean)])];
   const partyOptions = partyIds.map(id => [id,parties.find(item => item.id === id)?.officialName ?? id]).sort((a,b) => a[1].localeCompare(b[1],'it'));
   const groupOptions = groups.map(group => [group.id,`${group.officialName} · ${group.chamber === 'camera' ? 'Camera' : 'Senato'}`]).sort((a,b) => a[1].localeCompare(b[1],'it'));
   const controls = `<div class="catalog-toolbar politician-toolbar"><label class="catalog-search"><span>Cerca una persona</span><input type="search" data-catalog-filter="politicianQuery" value="${esc(filters.politicianQuery)}" placeholder="Nome o cognome…" autocomplete="off" /></label>${select('politicianChamber',[['all','Camera e Senato'],['camera','Camera'],['senato','Senato']],filters.politicianChamber)}${select('politicianParty',[['all',partyOptions.length ? 'Tutti i partiti documentati' : 'Partito: non documentato'],...partyOptions],filters.politicianParty)}${select('politicianGroup',[['all','Tutti i gruppi parlamentari'],...groupOptions],filters.politicianGroup)}</div>`;
@@ -21,7 +22,7 @@ export function renderPoliticianArchive(filters, { status = {} } = {}) {
   const query = String(filters.politicianQuery ?? '').trim().toLocaleLowerCase('it-IT');
   if (query) filtered = filtered.filter(person => person.fullName.toLocaleLowerCase('it-IT').includes(query));
   if (filters.politicianChamber !== 'all') filtered = filtered.filter(person => person.chamber === filters.politicianChamber);
-  if (filters.politicianParty !== 'all') filtered = filtered.filter(person => partyMemberships.some(item => item.politicianId === person.id && item.partyId === filters.politicianParty));
+  if (filters.politicianParty !== 'all') filtered = filtered.filter(person => person.partyId === filters.politicianParty || partyMemberships.some(item => item.politicianId === person.id && item.partyId === filters.politicianParty));
   if (filters.politicianGroup !== 'all') filtered = filtered.filter(person => person.groupId === filters.politicianGroup);
   filtered = [...filtered].sort((a,b) => a.fullName.localeCompare(b.fullName,'it'));
   const visible = filtered.slice(0,Math.max(1,Number(filters.politicianPage)||1)*pageSize);
@@ -30,8 +31,8 @@ export function renderPoliticianArchive(filters, { status = {} } = {}) {
     const chamber = person.chamber === 'camera' ? 'camera' : 'senato';
     const group = groupById.get(person.groupId);
     const linkedParty = partyMemberships.find(item => item.politicianId === person.id);
-    const party = linkedParty && parties.find(item => item.id === linkedParty.partyId);
-    return `<button type="button" class="catalog-row politician-row" data-politician-profile="${esc(person.id)}"><span class="catalog-mark" aria-hidden="true">${chamber === 'camera' ? 'C' : 'S'}</span><span class="catalog-main"><strong>${esc(person.fullName)}</strong><span>${chamber === 'camera' ? 'Deputato · Camera dei deputati' : 'Senatore · Senato della Repubblica'}${group ? ` · ${esc(group.officialName)}` : ''}</span><small>${person.birthDate ? `Nato il ${esc(person.birthDate)}` : 'Data di nascita non disponibile'}${person.electedOnList ? ` · Lista d’elezione: ${esc(person.electedOnList)}` : ''}${party ? ` · Partito: ${esc(party.officialName)}` : ''}</small></span><span class="verified-badge">Dato reale verificato</span><span class="catalog-open">Profilo ↗</span></button>`;
+    const party = parties.find(item => item.id === (linkedParty?.partyId ?? person.partyId));
+    return `<button type="button" class="catalog-row politician-row" data-politician-profile="${esc(person.id)}"><span class="catalog-mark" aria-hidden="true">${chamber === 'camera' ? 'C' : 'S'}</span><span class="catalog-main"><strong>${esc(person.fullName)}</strong><span>${chamber === 'camera' ? 'Deputato · Camera dei deputati' : 'Senatore · Senato della Repubblica'}${group ? ` · ${esc(group.officialName)}` : ''}</span><small>${person.birthDate ? `Nato il ${esc(person.birthDate)}` : 'Data di nascita non disponibile'}${person.electedOnList ? ` · Lista d’elezione: ${esc(person.electedOnList)}` : ''}${party ? ` · Partito: ${esc(party.officialName)}` : ''}</small></span><span class="verified-badge">${person.adminEdited ? 'Dato reale con correzioni dell’amministratore' : 'Dato reale verificato'}</span><span class="catalog-open">Profilo ↗</span></button>`;
   }).join('');
   const noPartyFacts = partyMemberships.length ? '' : '<p class="catalog-footnote">Il dataset aggiornato non contiene appartenenze individuali a partiti verificate con una relazione esplicita. Il gruppo parlamentare è mostrato separatamente e non viene usato come sostituto del partito.</p>';
   const pagination = visible.length < filtered.length ? `<div class="catalog-pagination"><span>Mostrati ${visible.length} di ${filtered.length}</span><button type="button" data-catalog-more="politicianPage">Mostra altri 48</button></div>` : `<div class="catalog-pagination"><span>${filtered.length} risultati</span></div>`;
@@ -46,11 +47,12 @@ export function renderPoliticianProfile(id, { loading = false } = {}) {
   const memberships = (realDatabase.groupMemberships ?? []).filter(item => item.politicianId === id).sort((a,b) => String(a.validFrom ?? '').localeCompare(String(b.validFrom ?? '')));
   const offices = (realDatabase.offices ?? []).filter(item => item.politicianId === id);
   const partyMemberships = (realDatabase.partyMemberships ?? []).filter(item => item.politicianId === id);
-  const parties = realDatabase.parties ?? [];
+  const parties = [...(realDatabase.parties ?? []), ...(realDatabase.politicalMovements ?? [])];
+  const adminParty = person.partyId ? parties.find(item => item.id === person.partyId) : null;
   const chamberName = person.chamber === 'camera' ? 'Camera dei deputati' : 'Senato della Repubblica';
   const items = [
-    ['Partito',partyMemberships.length ? partyMemberships.map(item => parties.find(party => party.id === item.partyId)?.officialName).filter(Boolean).join(', ') : 'Non documentato separatamente dal gruppo'],
-    ['Lista d’elezione',person.electedOnList],['Gruppo parlamentare',group?.officialName],['Data di nascita',person.birthDate],['Luogo di nascita',person.birthPlace],['Collegio/circoscrizione',person.constituency || person.circoscription],['Cariche',offices.length ? offices.map(item => item.title).join(', ') : null]
+    ['Partito',partyMemberships.length ? partyMemberships.map(item => parties.find(party => party.id === item.partyId)?.officialName).filter(Boolean).join(', ') : adminParty ? `${adminParty.officialName} (collegamento dell’amministratore)` : 'Non documentato separatamente dal gruppo'],
+    ['Lista d’elezione',person.electedOnList],['Gruppo parlamentare',group?.officialName],['Data di nascita',person.birthDate],['Luogo di nascita',person.birthPlace],['Collegio/circoscrizione',person.constituency || person.circoscription],['Cariche',[...offices.map(item => item.title), ...(person.adminRoles ?? []).map(role => `${role.title}${role.institution ? `, ${role.institution}` : ''} (aggiunto dall’amministratore)`)].join(', ') || null]
   ];
   const groupHistory = memberships.map(item => {
     const membershipGroup = (realDatabase.parliamentaryGroups ?? []).find(entry => entry.id === item.groupId);

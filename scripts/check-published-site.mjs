@@ -20,6 +20,26 @@ const files = {
 };
 const failures = [];
 const assert = (condition, message) => { if (!condition) failures.push(message); };
+const SPECIFIER = /(?:from\s+|import\s*\(\s*)['"](\.{1,2}\/[^'"]+?\.js)(?:\?v=([^'"]*))?['"]/g;
+
+// Local consistency first: every module and stylesheet must carry the version index.html asks for.
+async function localModuleGraph() {
+  const seen = new Map();
+  const visit = async path => {
+    if (seen.has(path)) return;
+    const source = await readFile(new URL(`../${path}`, import.meta.url), 'utf8');
+    seen.set(path, source);
+    for (const [, relative, version] of source.matchAll(SPECIFIER)) {
+      const target = new URL(relative, new URL(`http://local/${path}`)).pathname.slice(1);
+      assert(version === indexVersion, `${path} importa ${relative} con versione ${version ?? 'assente'} invece di ${indexVersion}`);
+      await visit(target);
+    }
+  };
+  await visit('src/main.js');
+  return seen;
+}
+const localModules = await localModuleGraph();
+const stylesheets = [...localIndexSource.matchAll(/<link rel="stylesheet" href="\.\/([^"?]+\.css)\?v=([^"]+)"/g)].map(([, path, version]) => { assert(version === indexVersion, `${path} è collegato con la versione ${version}`); return path; });
 async function get(url) {
   const response = await fetch(url, { signal:AbortSignal.timeout(30000), headers:{'cache-control':'no-cache'} });
   if (!response.ok) throw new Error(`${response.status} ${url}`);
@@ -96,17 +116,25 @@ try {
     assert(liveLogo.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])), 'Logo pubblicato non è un PNG valido');
   } else assert(false, 'Asset del logo verificato non associato a Futuro Nazionale');
 
-  for (const asset of ['src/styles.css','src/redesign.css','src/parliament.css','src/game.css']) {
+  for (const asset of stylesheets) {
     const live = new URL(asset, pageUrl); live.searchParams.set('v', mainUrl.searchParams.get('v') ?? version);
     try {
       const [{ bytes }, expected] = await Promise.all([get(live), readFile(new URL(`../${asset}`, import.meta.url))]);
       assert(hash(bytes) === hash(expected), `${asset} live diverso dal file locale`);
     } catch (error) { failures.push(`${asset} non disponibile nella versione pubblicata (${error.message})`); }
   }
+  // Every module reachable from main.js must be online and identical to the local file.
+  for (const [path, source] of localModules) {
+    const live = new URL(path, pageUrl); live.searchParams.set('v', indexVersion);
+    try {
+      const { bytes } = await get(live);
+      assert(hash(bytes) === hash(Buffer.from(source)), `${path} live diverso dal file locale`);
+    } catch (error) { failures.push(`${path} non disponibile nella versione pubblicata (${error.message})`); }
+  }
   if (failures.length) throw new Error(`Verifica Pages fallita:\n- ${failures.join('\n- ')}`);
   console.log(`GitHub Pages verificato: ${pageUrl.href}`);
   console.log(`Snapshot ${liveManifest.snapshotDate}; ${db.parties.length} partiti, ${db.politicalMovements.length} movimenti, ${db.politicians.length} parlamentari, ${db.parliamentaryGroups.length} gruppi.`);
-  console.log(`${Object.keys(files).length} collezioni live e asset verificati; hash remoti uguali ai file locali; caricamento per collezione confermato.`);
+  console.log(`${Object.keys(files).length} collezioni live, ${localModules.size} moduli JS e ${stylesheets.length} fogli di stile verificati con la versione ${indexVersion}; hash remoti uguali ai file locali.`);
 } catch (error) {
   console.error(error.message);
   process.exitCode = 1;

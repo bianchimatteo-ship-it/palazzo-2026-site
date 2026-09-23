@@ -10,6 +10,8 @@
     "check:published-site": "node scripts/check-published-site.mjs",
     "check:campaign": "node scripts/check-campaign.mjs",
     "check:parliament": "node scripts/check-parliament.mjs",
-    "check:gameplay": "node scripts/check-gameplay.mjs"
+    "check:gameplay": "node scripts/check-gameplay.mjs",
+    "check:polls": "node scripts/check-polls.mjs",
+    "version:build": "node scripts/set-build-version.mjs"
   }
 }

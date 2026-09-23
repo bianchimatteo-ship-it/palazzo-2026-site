@@ -1,7 +1,7 @@
-import { advanceDays } from './time.js?v=20260924-3';
-import { CAMPAIGN_ACTIVITIES, DEBATE_TOPICS, ELECTION_MODELS, EUROPEAN_THRESHOLD } from '../data/simulation/campaign-rules.js?v=20260924-3';
-import { runFinalElection, runFirstRound } from './election-engine.js?v=20260924-3';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-3';
+import { advanceDays } from './time.js?v=20260924-5';
+import { CAMPAIGN_ACTIVITIES, DEBATE_TOPICS, ELECTION_MODELS, EUROPEAN_THRESHOLD } from '../data/simulation/campaign-rules.js?v=20260924-5';
+import { runFinalElection, runFirstRound } from './election-engine.js?v=20260924-5';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-5';
 
 const SOURCE = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
@@ -53,7 +53,7 @@ function createCandidate({ id, player = false, partyId = null, displayName, seed
   };
 }
 
-function buildOpponents(partyId, catalog, seed, count = 3) {
+function buildOpponents(partyId, catalog, seed, count = 3, realCandidates = []) {
   const rand = randomFrom(seed ^ 0x5bd1e995);
   const parties = catalog.filter(item => item?.id && item.id !== partyId && (item.source === 'real' || item.source === 'simulation' || item.source === 'user'))
     .sort((a,b) => String(a.id).localeCompare(String(b.id)));
@@ -62,7 +62,10 @@ function buildOpponents(partyId, catalog, seed, count = 3) {
   for (let index=0;index<count;index++) {
     const party = parties[index % Math.max(1, parties.length)] ?? null;
     const candidateId = ids('candidatura-simulata',seed,index+1);
-    candidates.push(createCandidate({ id:candidateId, partyId:party?.id ?? null, displayName:`Candidatura simulata ${index+1}`, seed:seed + index*97 }));
+    const person = realCandidates[index];
+    // A documented parliamentarian keeps only verified identity data; campaign numbers stay simulated.
+    if (person) candidates.push({ ...createCandidate({ id:candidateId, partyId:null, displayName:person.fullName, seed:seed + index*97 }), realReference:{ politicianId:person.id, fullName:person.fullName, chamber:person.chamber, groupId:person.groupId ?? null, groupName:person.groupName ?? null, electedOnList:person.electedOnList ?? null, circoscription:person.circoscription ?? null, sourceUrl:person.sourceUrl, sourceName:person.sourceName, source:'real', verified:true } });
+    else candidates.push(createCandidate({ id:candidateId, partyId:party?.id ?? null, displayName:`Candidatura simulata ${index+1}`, seed:seed + index*97 }));
   }
   return candidates;
 }
@@ -274,7 +277,7 @@ export function createCampaign({career,player,statistics=[],offices=[],territori
   const officeTitle=String(offices.find(item=>item.id===player.roleId)?.title??'');
   const incumbency=type==='politiche' && /deputat|senat/i.test(officeTitle) && !/inizial/i.test(officeTitle);
   const candidate=createCandidate({id:playerCandidateId,player:true,partyId,displayName:player.displayName,seed,stats:playerStats});
-  const opponents=buildOpponents(partyId,partyCatalog,seed);
+  const opponents=buildOpponents(partyId,partyCatalog,seed,3,config.realCandidates??[]);
   const candidates=[candidate,...opponents];
   initSupport(campaignAreas,candidates,player,seed);
   const focus=campaignAreas.find(area=>area.name===player.municipality)?.id ?? campaignAreas.find(area=>area.region===player.region)?.id ?? campaignAreas[0].id;

@@ -46,6 +46,24 @@ La Home è il quartier generale del politico: statistiche con variazione settima
 npm run check:gameplay
 ```
 
+## Sondaggi e mondo politico dinamico
+
+La sezione **Sondaggi** pubblica ogni settimana un sondaggio simulato (istituto immaginario, campione e margine d’errore al 95%) con consenso nazionale, regionale (tutte le regioni) e locale del partito del giocatore, gradimento personale separato dal partito, gradimento del governo, indecisi, trend e tabella dei dati. Il mondo di gioco comprende forze di scenario inventate, i partiti demo e il partito del giocatore: crisi interne, cambi di guida, scissioni, alleanze e rotture, nuovi volti, eventi nazionali e territoriali con effetti temporanei o permanenti, cambi di maggioranza in Parlamento. Carriera, leggi, governo ed elezioni spostano i sondaggi; i sondaggi e le alleanze modificano la partenza delle campagne; alcuni eventi chiedono al giocatore di prendere posizione. Tutto ciò che viene generato è `source: "simulation"`: un partito reale compare solo con il suo nome e le sue percentuali sono stime di gioco, non sondaggi reali.
+
+**Persone reali.** Dove il dataset verificato contiene persone pertinenti, il gioco usa loro con nome e dati esatti: nelle politiche per la Camera gli avversari sono deputati in carica della circoscrizione del giocatore (gruppo e lista d’elezione verificati; i numeri di campagna restano simulati); per un partito reale la guida mostra solo gli organi documentati, altrimenti resta vuota. Leader delle forze inventate, rivale interno e nuovi volti sono ruoli dichiaratamente simulati, senza nomi realistici. Nessuna persona reale riceve incarichi non documentati.
+
+```sh
+npm run check:polls
+```
+
+## Area amministrativa (proprietario)
+
+Da **Impostazioni → Area amministrativa** (oppure `#amministrazione`) il proprietario, dopo aver impostato un PIN, corregge nome, sigla, descrizione e informazioni dei partiti, il logo (archivio loghi locale), i deputati e senatori collegati, nomi e informazioni dei politici, gruppo, partito e incarichi. Le modifiche sono salvate nell’archivio `politicando.admin.overrides.v1` del browser, separato dal salvataggio di gioco, e applicate come livello sopra il dataset reale a ogni caricamento: i JSON in `src/data/real/` non vengono mai modificati e ogni record corretto è segnalato come tale. L’archivio resta dopo refresh, riavvii e aggiornamenti del codice finché non viene cancellato; si può esportare e importare in JSON. Il PIN protegge l’area in quel browser, non è un’autenticazione lato server, e le modifiche valgono solo sul dispositivo in cui sono state fatte (o dove l’archivio viene importato).
+
+## Pubblicazione e cache
+
+`npm run version:build` imposta un’unica versione di cache su `index.html` e su tutti gli import dei moduli; la versione avanza sempre. `check:published-site` verifica in locale che nessun modulo o foglio di stile abbia una versione diversa e, online, confronta ogni modulo raggiungibile da `main.js`, ogni foglio di stile e ogni collezione di dati con i file locali. All’avvio, se il browser ha in cache un `index.html` più vecchio della versione online, la pagina si ricarica da sola sulla build aggiornata.
+
 ## Carriera parlamentare, governo e leggi
 
 Il Career Wizard offre quattro percorsi: Comunale, Regionale, Deputato e Senatore. Per Deputato e Senatore si sceglie esplicitamente un gruppo reale della Camera o del Senato: Camere e gruppi sono riferimenti verificati in sola lettura, mentre il seggio del giocatore, le consistenze dello scenario e ogni conseguenza sono `source: "simulation"`. Partito e gruppo restano distinti.

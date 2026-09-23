@@ -1,4 +1,4 @@
-import { DATA_SOURCES, emptyDataset } from '../schema.js?v=20260924-3';
+import { DATA_SOURCES, emptyDataset } from '../schema.js?v=20260924-5';
 
 // All sample names, events, and numbers are invented for interface demonstration.
 export function makeDemoParties() {
@@ -12,7 +12,7 @@ export function makeDemoParties() {
 export function makeDemoState() {
   const dataset = emptyDataset();
   dataset.parties.push(...makeDemoParties());
-  dataset.politicians.push({ id: 'politico-demo', firstName: 'Giulia', lastName: 'Rinaldi', displayName: 'Giulia Rinaldi', birthDate: '1988-04-20', gender: 'donna', region: 'Toscana', municipality: 'Valleverde', previousProfession: 'Insegnante', partyId: 'partito-demo', territoryId: 'territorio-demo', roleId: 'incarico-demo', source: DATA_SOURCES.SIMULATION, createdAt: '2026-01-01', logoUrl: null, logoAsset: null, logoSource: null, logoVerified: null, logoAlt: null });
+  dataset.politicians.push({ id: 'politico-demo', firstName: 'Profilo', lastName: 'Demo', displayName: 'Profilo demo (simulato)', birthDate: '1988-04-20', gender: 'donna', region: 'Toscana', municipality: 'Valleverde', previousProfession: 'Insegnante', partyId: 'partito-demo', territoryId: 'territorio-demo', roleId: 'incarico-demo', source: DATA_SOURCES.SIMULATION, createdAt: '2026-01-01', logoUrl: null, logoAsset: null, logoSource: null, logoVerified: null, logoAlt: null });
   dataset.territories.push({ id: 'territorio-demo', kind: 'regione', name: 'Toscana', parentId: null, source: DATA_SOURCES.SIMULATION });
   dataset.offices.push({ id: 'incarico-demo', title: 'Consigliera comunale', institution: 'Comune di Valleverde', level: 'locale', politicianId: 'politico-demo', territoryId: 'territorio-demo', startDate: '2026-01-01', endDate: null, source: DATA_SOURCES.SIMULATION });
   dataset.statistics.push(

@@ -1,4 +1,4 @@
-import { DATA_SOURCES } from '../data/schema.js?v=20260924-3';
+import { DATA_SOURCES } from '../data/schema.js?v=20260924-5';
 
 export const CHAMBERS = Object.freeze({
   camera: { label: 'Camera dei deputati', shortLabel: 'Camera', source: DATA_SOURCES.REAL },
@@ -479,6 +479,24 @@ export function advanceGovernmentWeek(parliament, currentDate, roll = 0.5) {
   const severity = Math.min(24, 10 + Math.max(0, 3 - government.supportingGroupIds.length) * 2);
   const next = { ...parliament, government: { ...government, stability, status: 'crisis', crisisSeverity: severity, crisisOpenedAt: currentDate } };
   return record(next, currentDate, 'crisi-spontanea', 'La maggioranza si sfalda: il governo deve tornare a chiedere la fiducia.', { governmentId: government.id, severity, source: DATA_SOURCES.SIMULATION });
+}
+
+// A fragile majority loses a piece: an external supporter first, otherwise the smallest partner.
+export function majorityShift(parliament, currentDate) {
+  const government = parliament?.government;
+  if (!government || government.status !== 'active') return parliament;
+  const supporter = government.supportingGroupIds.at(-1);
+  if (supporter) {
+    const next = { ...parliament, government: { ...government, supportingGroupIds: government.supportingGroupIds.slice(0, -1), stability: Math.max(0, (government.stability ?? 50) - 6) } };
+    return record(next, currentDate, 'cambio-maggioranza', `${getGroup(parliament, supporter)?.officialName ?? 'Un gruppo'} ritira il sostegno esterno al governo.`, { governmentId: government.id, groupId: supporter, source: DATA_SOURCES.SIMULATION });
+  }
+  const partners = government.coalitionGroupIds.filter(id => id !== parliament.player?.groupId);
+  if (government.coalitionGroupIds.length < 2 || !partners.length) return parliament;
+  const leaving = [...partners].sort((a, b) => (getGroup(parliament, a)?.simulatedSeats ?? 0) - (getGroup(parliament, b)?.simulatedSeats ?? 0))[0];
+  const coalitionGroupIds = government.coalitionGroupIds.filter(id => id !== leaving);
+  const ministers = government.ministers.map(item => item.groupId === leaving && !item.endedAt ? { ...item, endedAt: currentDate, endReason: 'Gruppo uscito dalla maggioranza' } : item);
+  const next = { ...parliament, government: { ...government, coalitionGroupIds, ministers, status: 'crisis', crisisSeverity: 12, crisisOpenedAt: currentDate, stability: Math.min(government.stability ?? 50, 20) } };
+  return record(next, currentDate, 'cambio-maggioranza', `${getGroup(parliament, leaving)?.officialName ?? 'Un gruppo'} esce dalla maggioranza: il governo deve verificare la fiducia.`, { governmentId: government.id, groupId: leaving, source: DATA_SOURCES.SIMULATION });
 }
 
 export function nextParliamentaryRole(parliament) {

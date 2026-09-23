@@ -2,7 +2,11 @@
 // retained for exports and validation, but the browser never downloads it.
 export const REAL_DATA_ASSET_VERSION = '20260923-2';
 
+import { applyAdminOverrides } from './admin-store.js?v=20260924-5';
+
 export let realDatabase = Object.freeze({});
+// Untouched copies of what the files contain, so owner overrides can be re-layered or reverted.
+const pristine = new Map();
 const loadingCollections = new Map();
 const collectionFiles = Object.freeze({
   parties: 'parties.json',
@@ -75,7 +79,8 @@ export async function loadRealCollections(collections = []) {
         if (Number.isInteger(expected) && records.length !== expected) {
           throw new Error(`La collezione ${name} è incompleta (${records.length}/${expected}).`);
         }
-        realDatabase = Object.freeze({ ...realDatabase, [name]: freezeRecords(records) });
+        pristine.set(name, freezeRecords(records));
+        realDatabase = Object.freeze({ ...realDatabase, [name]: freezeRecords(applyAdminOverrides(name, records)) });
       }).catch(error => {
         loadingCollections.delete(name);
         throw error;
@@ -85,6 +90,17 @@ export async function loadRealCollections(collections = []) {
     return loadingCollections.get(name);
   }));
   return realDatabase;
+}
+
+// Re-applies the owner archive after an edit, without reloading the files.
+export function refreshAdminOverrides() {
+  const updates = {};
+  for (const [name, records] of pristine) updates[name] = freezeRecords(applyAdminOverrides(name, records.map(record => structuredClone(record))));
+  realDatabase = Object.freeze({ ...realDatabase, ...updates });
+  return realDatabase;
+}
+export function pristineRecord(collection, id) {
+  return (pristine.get(collection) ?? []).find(item => item.id === id) ?? null;
 }
 
 export function isRealCollectionLoaded(collection) {
