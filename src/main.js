@@ -1,6 +1,6 @@
-import { mountApp } from './ui/app.js?v=20260924-11';
-import { store } from './core/store.js?v=20260924-11';
-import { loadRealCollections, loadRealDatabase } from './data/repositories/real-data.js?v=20260924-11';
+import { mountApp } from './ui/app.js?v=20260924-13';
+import { store } from './core/store.js?v=20260924-13';
+import { loadRealCollections, loadRealDatabase } from './data/repositories/real-data.js?v=20260924-13';
 
 const BUILD = new URL(import.meta.url).searchParams.get('v');
 

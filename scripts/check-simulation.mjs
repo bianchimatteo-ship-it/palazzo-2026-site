@@ -48,6 +48,16 @@ assert.ok(applied.society.effects.length === 20, 'Gli effetti arrivano in tutte 
 const gains = Object.fromEntries(applied.society.effects.map(effect => [effect.region, effect.perWeek]));
 const [weakest, strongest] = [...Object.values(base.regions)].sort((a, b) => a.indicators.sanita - b.indicators.sanita).filter((_, index, list) => index === 0 || index === list.length - 1);
 assert.ok(gains[weakest.name] > gains[strongest.name], 'Le regioni più indietro guadagnano di più dalla stessa legge.');
+// The same law works differently where different citizens live; a law can be read before the vote.
+assert.ok(Object.values(base.regions).every(region => Math.abs(Object.values(region.demography).reduce((sum, value) => sum + value, 0) - 100) < 0.5), 'Ogni regione ha la sua composizione di cittadini.');
+const welfare = society.applyLawToSociety(base, { category: 'Welfare', title: 'Welfare', date: '2026-09-28', week: 1 }).society;
+const gainOf = name => welfare.regions[name].satisfaction - base.regions[name].satisfaction;
+const byFragile = Object.values(base.regions).sort((a, b) => b.demography.fragili - a.demography.fragili);
+assert.ok(gainOf(byFragile[0].name) > gainOf(byFragile.at(-1).name), 'Dove vivono più cittadini fragili il welfare pesa di più.');
+const forecast = society.projectLaw(base, { category: 'Sanità' });
+assert.ok(forecast.satisfactionDelta > 0 && forecast.headroomAfter < base.publicFinance.headroom, 'La proiezione mostra costi ed effetti prima del voto.');
+assert.ok(society.publicBudgetChoice({ ...base, publicFinance: { ...base.publicFinance, headroom: 5 } }, 'public-cuts').publicFinance.headroom > 5, 'I tagli liberano margine di bilancio.');
+assert.equal(society.regionPriorities(base, 'Toscana').length, 3);
 let media = society.mediaEvent(base, { outletId: 'tv-nazionale', tone: -1, headline: 'Titolo di prova', date: '2026-09-28', week: 1 });
 assert.ok(media.media.sentiment < 0 && media.media.coverage[0].outlet === 'Telegiornali nazionali');
 
@@ -130,7 +140,24 @@ const law = store.proposeLaw({ title: 'Modifiche a una legge reale', category: s
 assert.equal(law.source, 'simulation');
 assert.equal(law.realReference.officialTitle, realLaw.officialTitle);
 
-// The law goes through both chambers; groups are courted until it passes.
+// Investments, election fund and a consequence that comes due later.
+store.invest('sondaggio');
+assert.ok(store.getState().game.prep >= 8 && store.getState().game.finance.ledger[0].category === 'investimenti');
+assert.throws(() => store.invest('inesistente'), /non disponibile/);
+store.saveForElection(1000);
+assert.equal(store.getState().game.finance.electionFund, 1000);
+assert.ok(store.getState().game.finance.history.every(item => item.expense >= 0));
+store.performWeeklyActivity('dissenso');
+assert.ok(store.getState().game.pending.some(item => item.origin === 'Prendi posizione contro la linea'), 'Le scelte rischiose lasciano conseguenze in arrivo.');
+for (let week = 0; week < 4; week++) store.advance(7);
+assert.ok(!store.getState().game.pending.some(item => item.origin === 'Prendi posizione contro la linea') && store.getState().game.log.some(entry => entry.kind === 'conseguenza'), 'Le conseguenze future si risolvono e finiscono nel diario.');
+
+// The law goes through both chambers; the groups have been courted beforehand (relations are simulation data).
+const courtAll = () => {
+  const live = store.getState().parliament;
+  for (const relation of Object.values(live.relations ?? {})) relation.value = 90;
+  live.laws.find(item => item.id === law.id).negotiatedGroupIds = ['camera', 'senato'].flatMap(chamber => live.chambers[chamber].groups.map(group => group.groupId));
+};
 const steps = { proposal: 'present', commission: 'complete-commission', amendments: 'force-vote', 'other-chamber': 'transmit', 'final-vote': 'final-vote' };
 for (let guard = 0; guard < 40; guard++) {
   const current = store.getState().parliament.laws.find(item => item.id === law.id);
@@ -140,17 +167,20 @@ for (let guard = 0; guard < 40; guard++) {
       const target = store.getState().parliament.chambers[current.currentChamber].groups.find(group => group.groupId !== store.getState().parliament.player.groupId && !current.negotiatedGroupIds.includes(group.groupId));
       if (target) store.negotiateLaw(law.id, target.groupId);
     }
+    courtAll();
     store.advanceLaw(law.id, steps[current.stage]);
   } catch { store.advance(7); }
 }
 state = store.getState();
 const finalLaw = state.parliament.laws.find(item => item.id === law.id);
-if (finalLaw.stage === 'approved') {
+assert.equal(finalLaw.stage, 'approved', 'Con il sostegno dei gruppi la legge passa in entrambe le Camere.');
+{
   const impact = state.society.lawsApplied.find(item => item.lawId === law.id);
   assert.ok(impact, 'La legge approvata arriva nella società.');
   assert.ok(state.society.effects.some(effect => effect.cause === law.title), 'Gli effetti si distribuiscono nel tempo sui territori.');
   assert.ok(state.world.events.some(event => event.title.includes(law.title)), 'La cronaca registra la legge.');
   assert.ok(state.society.media.coverage.some(item => item.headline.includes(law.title)), 'I media ne parlano.');
+  assert.ok(state.world.events.some(event => event.chain?.length >= 4 && event.title.includes(law.title)), 'La catena di conseguenze della legge è registrata.');
 }
 
 // Three years of weekly play: decisions, activities, elections.
@@ -172,6 +202,8 @@ for (let week = 0; week < 156; week++) {
     store.startCampaign({ electionType: 'politiche', role: 'deputato', objective: 'seat' }, parties, { politicians, groups });
     const campaign = store.getState().campaign;
     assert.ok('moodBonus' in campaign.preparation && campaign.context.participation > 0, 'Umore e partecipazione dei cittadini entrano nella campagna.');
+    assert.equal(campaign.preparation.fund, 1150, 'Il fondo elettorale arriva alla campagna con il contributo dei donatori.');
+    assert.ok(campaign.preparation.partyFunds > 0 && store.getState().game.finance.electionFund === 0, 'La tesoreria del partito sostiene la candidatura.');
     campaign.nomination.status = 'approved';
     campaign.candidacy.listPosition = campaign.nomination.listPosition = 1;
     for (const area of campaign.territories) { const ids = Object.keys(area.supportByCandidate); area.supportByCandidate = Object.fromEntries(ids.map(id => [id, id === campaign.playerCandidateId ? 60 : 40 / (ids.length - 1)])); }
@@ -198,6 +230,7 @@ assert.ok(state.world.polls.at(-1).government || state.world.polls.at(-1).execut
 assert.ok(state.society.media.coverage.length > 5, 'Le attività producono copertura mediatica.');
 assert.ok(state.game.party.org.membersHistory.length > 40 && state.game.party.org.treasury.annual.length >= 2, 'Il partito ha iscritti e bilanci nel tempo.');
 assert.ok(seen.situation.size >= 1, 'Arrivano eventi derivati dalla situazione.');
+assert.ok(state.world.events.some(event => event.kind === 'reazione'), 'Cittadini organizzati reagiscono alle misure.');
 assert.ok(seen.situation.has('crisi-territoriale'), 'I problemi del territorio arrivano in agenda.');
 assert.ok((state.game.promises ?? []).filter(item => item.dueWeek < state.game.week.index).every(item => item.status !== 'open'), 'Le promesse scadute vengono verificate.');
 const notorietyEnd = state.dataset.statistics.find(item => item.subjectId === state.career.playerId && item.metric === 'notoriety').value;
@@ -214,7 +247,7 @@ const { store: reloaded } = await import('../src/core/store.js?simulation=2');
 assert.equal(reloaded.getState().society.week, state.society.week);
 assert.equal(reloaded.getState().game.finance.history.length, state.game.finance.history.length);
 const legacy = JSON.parse(localStore.get(KEY));
-delete legacy.society; delete legacy.game.finance; delete legacy.game.contacts; delete legacy.game.promises; delete legacy.game.legislature; delete legacy.game.party.org;
+delete legacy.society; delete legacy.game.finance; delete legacy.game.contacts; delete legacy.game.promises; delete legacy.game.legislature; delete legacy.game.party.org; delete legacy.game.pending;
 localStore.set(KEY, JSON.stringify(legacy));
 const { store: migrated } = await import('../src/core/store.js?simulation=3');
 const upgraded = migrated.getState();
@@ -223,7 +256,31 @@ assert.equal(upgraded.game.week.index, state.game.week.index, 'La carriera salva
 migrated.advance(7);
 assert.equal(migrated.getState().game.week.index, state.game.week.index + 1);
 
+// Situations raised by the state of the world: hostile press, a rank offered by the party.
+{
+  const saved = JSON.parse(localStore.get(KEY));
+  saved.society.media.sentiment = -60;
+  saved.game.party.support = 80;
+  saved.game.party.rank = Math.min(saved.game.party.rank, 1);
+  saved.game.party.rankTitle = ['Iscritto', 'Coordinatore locale'][saved.game.party.rank];
+  saved.game.relations = saved.game.relations.map(item => item.id === 'leadership' ? { ...item, value: 80 } : item);
+  saved.game.flags.cooldowns = {};
+  saved.game.status = 'active';
+  localStore.set(KEY, JSON.stringify(saved));
+  const { store: pressed } = await import('../src/core/store.js?simulation=press');
+  pressed.advance(7);
+  const inbox = pressed.getState().game.inbox;
+  assert.ok(inbox.some(item => item.templateId === 'campagna-stampa'), 'Una stampa ostile diventa una decisione.');
+  const offer = inbox.find(item => item.templateId === 'offerta-incarico');
+  assert.ok(offer, 'Con molto sostegno interno la segreteria offre un incarico.');
+  const rankBefore = pressed.getState().game.party.rank;
+  pressed.resolveAgendaItem(offer.id, 'accetta');
+  const after = pressed.getState();
+  assert.equal(after.game.party.rank, rankBefore + 1);
+  assert.ok(after.dataset.offices.some(item => item.level === 'partito' && !item.endDate && item.title === `${after.game.party.rankTitle} (scenario)`), 'L’incarico interno entra nella carriera.');
+}
+
 // 8. Separazione real / simulation: i dataset reali non cambiano.
 assert.equal(JSON.stringify(politicians), politiciansSnapshot);
 assert.equal(await fingerprint(), before, 'Nessun file del dataset reale è stato modificato.');
-console.log(`Simulazione verificata: società e territori stabili su 3 anni (${issuesSeen} problemi emersi), leggi con effetti territoriali differenziati, finanze con budget, debito e bilanci annuali, partito con iscritti, sezioni, congresso, selezione dei candidati e tesoreria, ${picked.length} parlamentari reali con identità verificata, ${laws.length} atti reali, carriera completa di ${state.game.week.index} settimane con elezioni politiche e nuova legislatura, salvataggi e migrazione, dataset reali intatti.`);
+console.log(`Simulazione verificata: società e territori stabili su 3 anni (${issuesSeen} problemi emersi), leggi con proiezioni ed effetti diversi per territorio e gruppo di cittadini (legge del test: ${finalLaw.stage}), finanze con budget, investimenti, fondo elettorale, debito e bilanci annuali, conseguenze future ed eventi dalla situazione, partito con iscritti, sezioni, congresso, selezione dei candidati e tesoreria, ${picked.length} parlamentari reali con identità verificata, ${laws.length} atti reali, carriera completa di ${state.game.week.index} settimane con elezioni politiche e nuova legislatura, salvataggi e migrazione, dataset reali intatti.`);

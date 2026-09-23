@@ -1,5 +1,5 @@
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-11';
-import { INDICATORS, ISSUE_THRESHOLD, ISSUE_TOPICS, LAW_EFFECTS, LAW_PHASE_IN_WEEKS, MEDIA_OUTLETS, REAL_TOPIC_AREAS, SCENARIO_EXECUTIVE, SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-11';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-13';
+import { INDICATORS, ISSUE_THRESHOLD, ISSUE_TOPICS, LAW_EFFECTS, LAW_PHASE_IN_WEEKS, MEDIA_OUTLETS, REAL_TOPIC_AREAS, SCENARIO_EXECUTIVE, SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-13';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -22,11 +22,27 @@ const between = (society, min, max) => min + draw(society) * (max - min);
 function economyMood(economy) {
   return clamp(50 + (economy.growth - 0.8) * 12 - (economy.unemployment - 7.5) * 4 - (economy.inflation - 2) * 5 - Math.max(0, economy.deficit - 3.5) * 3, 0, 100);
 }
-function regionSatisfaction(region, economy) {
+// Each region has its own mix of citizens: the same measure pleases some territories more than others.
+function segmentPull(region, segments) {
+  return segments.reduce((sum, segment) => sum + (region.demography?.[segment.id] ?? segment.share) / 100 * (segment.mood ?? 0), 0);
+}
+function regionSatisfaction(region, economy, segments = []) {
   const values = INDICATOR_IDS.map(id => region.indicators[id]);
   const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
   const needs = values.filter(value => value < 45).reduce((sum, value) => sum + (45 - value), 0);
-  return clamp(mean * 0.75 - needs * 0.25 + economyMood(economy) * 0.3, 0, 100);
+  return clamp(mean * 0.75 - needs * 0.25 + economyMood(economy) * 0.3 + segmentPull(region, segments) * 0.8, 0, 100);
+}
+function makeDemography(rand) {
+  const raw = SEGMENTS.map(segment => [segment.id, segment.share * (0.7 + rand() * 0.6)]);
+  const total = raw.reduce((sum, [, value]) => sum + value, 0);
+  return Object.fromEntries(raw.map(([id, value]) => [id, round1(value / total * 100)]));
+}
+// What citizens of a region ask for first: weak services weighted by who lives there.
+export function regionPriorities(society, name, count = 3) {
+  const region = society?.regions?.[name];
+  if (!region) return [];
+  const weight = id => 1 + SEGMENTS.reduce((sum, segment) => sum + (region.demography?.[segment.id] ?? segment.share) / 100 * (segment.attention[id] ?? 0), 0) * 3;
+  return INDICATOR_IDS.map(id => ({ id, label: INDICATORS.find(item => item.id === id).label, score: (100 - region.indicators[id]) * weight(id) })).sort((a, b) => b.score - a.score).slice(0, count);
 }
 export function nationalIndicators(society) {
   const total = Object.values(society.regions).reduce((sum, region) => sum + region.weight, 0) || 1;
@@ -42,7 +58,10 @@ export function societyMood(society) {
 }
 function refresh(society) {
   const national = nationalIndicators(society);
-  for (const region of Object.values(society.regions)) region.satisfaction = round1(regionSatisfaction(region, society.economy));
+  for (const region of Object.values(society.regions)) {
+    region.satisfaction = round1(regionSatisfaction(region, society.economy, society.segments));
+    region.participation = round1(clamp(35 + region.trust * 0.35 + Math.abs(region.satisfaction - 50) * 0.3, 20, 90));
+  }
   for (const segment of society.segments) {
     const topics = Object.entries(segment.attention).reduce((sum, [id, weight]) => sum + (national[id] ?? 50) * weight, 0);
     segment.satisfaction = round1(clamp(topics * 0.7 + economyMood(society.economy) * 0.2 + segment.economic * 0.1 + (segment.mood ?? 0), 0, 100));
@@ -67,6 +86,7 @@ export function createSociety({ seedText, date, week = 1, homeRegion = null, not
       indicators: Object.fromEntries(INDICATOR_IDS.map(id => [id, Math.round(between(society, 38, 72))])), satisfaction: 50, source: SIM
     };
   }
+  for (const region of Object.values(society.regions)) region.demography = makeDemography(() => draw(society));
   society.segments = SEGMENTS.map(segment => ({ ...segment, attention: { ...segment.attention }, economic: Math.round(between(society, 38, 62)), trust: round1(between(society, 42, 56)), mood: 0, satisfaction: 50, participation: 60, source: SIM }));
   society.media = { visibility: round1(clamp(notoriety * 0.7, 5, 90)), sentiment: 0, outlets: MEDIA_OUTLETS.map(outlet => ({ ...outlet, stance: 0, attention: 10, source: SIM })), coverage: [], source: SIM };
   society.executive = { label: SCENARIO_EXECUTIVE.label, approval: 45, lastActionWeek: week, measures: [], source: SIM };
@@ -77,7 +97,17 @@ export function createSociety({ seedText, date, week = 1, homeRegion = null, not
 }
 export function normalizeSociety(society) {
   if (!society || typeof society !== 'object' || !society.regions) return null;
-  return { effects: [], issues: [], lawsApplied: [], history: [], ...society };
+  const next = { effects: [], issues: [], lawsApplied: [], history: [], ...society };
+  // Saves from before regional demography get a stable mix derived from the region's name.
+  if (Object.values(next.regions).some(region => !region.demography)) {
+    next.regions = Object.fromEntries(Object.entries(next.regions).map(([name, region]) => {
+      if (region.demography) return [name, region];
+      let state = hash(`${next.seed}|${name}`);
+      return [name, { ...region, demography: makeDemography(() => { state = (Math.imul(state, 1664525) + 1013904223) >>> 0; return state / 4294967296; }) }];
+    }));
+    refresh(next);
+  }
+  return next;
 }
 function snapshot(society, date) {
   return { week: society.week, date, satisfaction: society.satisfaction, trust: round1(society.trust), participation: society.participation, growth: society.economy.growth, unemployment: society.economy.unemployment, inflation: society.economy.inflation, deficit: society.economy.deficit, headroom: round1(society.publicFinance.headroom), visibility: society.media.visibility, sentiment: society.media.sentiment };
@@ -233,6 +263,45 @@ export function calibrateWeights(input, weights = {}, reference = 'camera') {
   const society = copy(input);
   for (const region of Object.values(society.regions)) if (weights[region.name] > 0) region.weight = weights[region.name];
   society.weightSource = reference;
+  refresh(society);
+  return society;
+}
+// Listening to a group of citizens: their mood improves, most where they are numerous.
+export function segmentAttention(input, segmentId, delta, regionName = null) {
+  const society = copy(input);
+  const segment = society.segments.find(item => item.id === segmentId);
+  if (!segment) return society;
+  segment.mood = round1(clamp((segment.mood ?? 0) + delta * 0.4, -15, 15));
+  const region = society.regions[regionName];
+  if (region) region.trust = round1(clamp(region.trust + delta * (region.demography?.[segmentId] ?? segment.share) / 25));
+  refresh(society);
+  return society;
+}
+// What a law would do before it is voted: cost, coverage, territories, citizens, satisfaction once in force.
+export function projectLaw(society, { category, compromiseLevel = 0 }) {
+  const { society: after, summary } = applyLawToSociety(society, { category, compromiseLevel, title: 'proiezione', date: null, week: society.week });
+  if (!summary) return null;
+  for (const effect of after.effects.filter(item => item.cause === 'proiezione')) after.regions[effect.region].indicators[effect.indicator] = round1(clamp(after.regions[effect.region].indicators[effect.indicator] + effect.perWeek * effect.remaining));
+  refresh(after);
+  return { ...summary, satisfactionDelta: round1(after.satisfaction - society.satisfaction), headroomAfter: after.publicFinance.headroom };
+}
+// Choices on the public budget when the margin is exhausted.
+export function publicBudgetChoice(input, kind) {
+  const society = copy(input);
+  const mood = (id, delta) => { const segment = society.segments.find(item => item.id === id); if (segment) segment.mood = round1(clamp((segment.mood ?? 0) + delta, -15, 15)); };
+  if (kind === 'public-cuts') {
+    society.publicFinance.headroom = round1(clamp(society.publicFinance.headroom + 12));
+    for (const region of Object.values(society.regions)) { region.indicators.servizi = round1(clamp(region.indicators.servizi - 1.5)); region.indicators.sanita = round1(clamp(region.indicators.sanita - 1)); }
+    mood('fragili', -3); mood('anziani', -2);
+  } else if (kind === 'public-deficit') {
+    society.publicFinance.headroom = round1(clamp(society.publicFinance.headroom + 10));
+    society.economy.deficit = round1(society.economy.deficit + 0.5);
+    society.trust = round1(clamp(society.trust - 1.5, 5, 95));
+  } else if (kind === 'public-taxes') {
+    society.publicFinance.headroom = round1(clamp(society.publicFinance.headroom + 9));
+    society.economy.growth = round2(society.economy.growth - 0.1);
+    mood('imprese', -3); mood('famiglie', -1.5);
+  }
   refresh(society);
   return society;
 }

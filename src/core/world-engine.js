@@ -1,5 +1,5 @@
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-11';
-import { CHART_SLOTS, COMPATIBLE_FAMILIES, DEMO_FAMILIES, FAMILY_BY_ORIENTATION, INITIAL_ALLIANCES, SIMULATED_FIGURE_ROLES, POLL_INSTITUTES, SCENARIO_FORCES, SPLINTER_NAMES, WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20260924-11';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-13';
+import { CHART_SLOTS, COMPATIBLE_FAMILIES, DEMO_FAMILIES, FAMILY_BY_ORIENTATION, INITIAL_ALLIANCES, SIMULATED_FIGURE_ROLES, POLL_INSTITUTES, SCENARIO_FORCES, SPLINTER_NAMES, WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20260924-13';
 
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -355,7 +355,7 @@ export function applyWorldSignals(input, signals = [], date) {
     else if (signal.type === 'minister') push(0.4, 5, `Ministro: ${signal.portfolio}`, 'Il tuo ingresso al governo dà visibilità al partito.', 'good', 'star');
     else if (signal.type === 'congress') push(signal.won ? 0.4 : -0.5, 4, `Congresso: vince ${signal.winner}`, signal.won ? 'La tua area guida il partito: unità ritrovata.' : 'La nuova leadership ti è ostile: il partito appare diviso.', signal.won ? 'good' : 'bad', 'crown');
     else if (signal.type === 'stance') push(signal.delta, 3, `Presa di posizione: ${signal.title}`, 'La tua reazione pubblica sposta l’attenzione sul partito.', signal.delta >= 0 ? 'good' : 'bad', 'megaphone');
-    else if (signal.type === 'chronicle') logEvent(world, date, { kind: signal.kind ?? 'cronaca', icon: signal.icon ?? 'pin', scope: signal.scope ?? 'nazionale', title: signal.title, body: signal.body ?? '', tone: signal.tone ?? 'neutral' });
+    else if (signal.type === 'chronicle') logEvent(world, date, { kind: signal.kind ?? 'cronaca', icon: signal.icon ?? 'pin', scope: signal.scope ?? 'nazionale', title: signal.title, body: signal.body ?? '', tone: signal.tone ?? 'neutral', chain: signal.chain ?? null });
     else if (signal.type === 'election') {
       const gap = signal.pollShare === null ? 0 : clamp((signal.share - signal.pollShare) * 0.15, -2, 2);
       push(signal.mandate ? 1 : -0.4, 4, `${signal.label}: ${String(Math.round(signal.share * 10) / 10).replace('.', ',')}%`, signal.mandate ? 'Il risultato elettorale dà slancio al partito.' : 'Il voto ridimensiona le ambizioni del partito.', signal.mandate ? 'good' : 'bad', 'ballot', round2(gap));

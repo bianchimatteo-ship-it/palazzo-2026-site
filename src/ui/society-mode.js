@@ -1,9 +1,10 @@
 // Country, territories, citizens and media: the simulated society as the player sees it.
-import { INDICATORS, MEDIA_OUTLETS, SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-11';
-import { nationalIndicators, societyMood } from '../core/society-engine.js?v=20260924-11';
-import { artTile, glyph } from './visuals.js?v=20260924-11';
+import { INDICATORS, MEDIA_OUTLETS, SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-13';
+import { nationalIndicators, regionPriorities, societyMood } from '../core/society-engine.js?v=20260924-13';
+import { illustration } from './illustrations.js?v=20260924-13';
+import { artTile, glyph } from './visuals.js?v=20260924-13';
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
-import { breakdown, esc, levelState, lineChart, meter, num, rampColor, SERIES, signed, sparkline, stateBadge, trendState, GREEN_RAMP } from './charts.js?v=20260924-11';
+import { breakdown, esc, levelState, lineChart, meter, num, rampColor, SERIES, signed, sparkline, stateBadge, trendState, GREEN_RAMP } from './charts.js?v=20260924-13';
 
 // Tile cartogram of the regions: a recognisable boot, one tile per region.
 const TILES = Object.freeze({
@@ -18,6 +19,7 @@ const regionValue = (region, measure) => measure === 'satisfaction' ? region.sat
 const historyOf = (society, key, count = 26) => society.history.slice(-count).map(item => item[key]);
 const change = (society, key, weeks = 4) => { const list = society.history; const now = list.at(-1)?.[key]; const then = list.at(-1 - weeks)?.[key] ?? list[0]?.[key]; return Number.isFinite(now) && Number.isFinite(then) ? Math.round((now - then) * 10) / 10 : 0; };
 const TREND_LABELS = { crescita: 'In crescita', calo: 'In calo', stabile: 'Stabile' };
+const SHORT_SEGMENTS = { giovani: 'Giovani', famiglie: 'Famiglie', anziani: 'Pensionati', imprese: 'Autonomi e imprese', fragili: 'Redditi bassi' };
 
 export function territoryMap(society, { measure = 'satisfaction', selected = null, home = null, compact = false } = {}) {
   const issues = new Set(society.issues.filter(item => item.region).map(item => item.region));
@@ -61,6 +63,8 @@ function regionDetail(society, name, home, deputies = null) {
   const [satState, satLabel] = levelState(region.satisfaction, { crisis: 38, risk: 46, good: 62 });
   return `<article class="region-detail">
     <header>${artTile('map', region.name === home ? 'var(--party-accent)' : '#318a5b', 'md')}<div><span class="section-kicker">${region.name === home ? 'LA TUA REGIONE' : 'REGIONE'}</span><h3>${esc(region.name)}</h3><p class="section-subtitle">Fiducia nelle istituzioni ${num(region.trust, 0)}/100${deputies ? ` · ${deputies} deputati in carica per questa regione (dato reale)` : ''}</p></div>${stateBadge(satState, `Soddisfazione ${num(region.satisfaction, 0)} · ${satLabel}`)}</header>
+    <div class="region-facts"><div><small>Partecipazione attesa</small><strong>${num(region.participation ?? 0, 0)}%</strong></div><div><small>Priorità dei cittadini</small><strong>${regionPriorities(society, region.name).map(item => esc(item.label)).join(' · ')}</strong></div></div>
+    ${region.demography ? `<div class="demography"><small>CHI CI VIVE · SIMULAZIONE</small><div class="demography-bar">${SEGMENTS.map((segment, index) => `<i style="flex:${region.demography[segment.id]};background:${SERIES[index]}" data-tip="${esc(`${segment.label}: ${num(region.demography[segment.id], 1)}%`)}" tabindex="0"></i>`).join('')}</div><div class="demography-legend">${SEGMENTS.map((segment, index) => `<span><i style="background:${SERIES[index]}"></i>${esc(SHORT_SEGMENTS[segment.id] ?? segment.label)} ${num(region.demography[segment.id], 0)}%</span>`).join('')}</div></div>` : ''}
     <div class="indicator-list">${bars}</div>
     ${issues.length ? `<div class="issue-list">${issues.map(issue => `<div class="issue-row">${stateBadge(issue.severity >= 6 ? 'crisi' : 'rischio', issue.severity >= 6 ? 'Crisi' : 'A rischio')}<span>${esc(indicatorLabel(issue.indicator))}: sotto la soglia di guardia</span></div>`).join('')}</div>` : ''}
     ${incoming.length ? `<div class="incoming"><small>EFFETTI IN ARRIVO DALLE LEGGI</small>${incoming.slice(0, 5).map(item => `<div>${glyph('law', 14)}<span>${esc(indicatorLabel(item.indicator))} ${signed(item.total)} in ${weeks(item.weeks)} · ${esc(item.cause)}</span></div>`).join('')}</div>` : '<p class="quiet-copy">Nessuna legge in fase di attuazione in questa regione.</p>'}
@@ -96,7 +100,7 @@ export function renderTerritoriesPage(state, ui = {}) {
   const governing = ['active', 'crisis'].includes(state.parliament?.government?.status);
   return `<div class="society-page">
     <section class="society-hero">
-      <div class="society-hero-main"><span class="section-kicker">IL PAESE · SETTIMANA ${society.week}</span><h2>Umore del Paese: ${num(mood, 0)}/100</h2><p class="section-subtitle">Cittadini, territori ed economia si muovono ogni settimana, con o senza di te: leggi, crisi, media e scelte del governo cambiano i numeri qui sotto.</p></div>
+      ${illustration('borgo', 'hero-art')}<div class="society-hero-main"><span class="section-kicker">IL PAESE · SETTIMANA ${society.week}</span><h2>Umore del Paese: ${num(mood, 0)}/100</h2><p class="section-subtitle">Cittadini, territori ed economia si muovono ogni settimana, con o senza di te: leggi, crisi, media e scelte del governo cambiano i numeri qui sotto.</p></div>
       <div class="society-kpis">${kpi('Soddisfazione dei cittadini', num(society.satisfaction, 1), change(society, 'satisfaction'), historyOf(society, 'satisfaction'))}${kpi('Fiducia nelle istituzioni', num(society.trust, 1), change(society, 'trust'), historyOf(society, 'trust'))}${kpi('Partecipazione attesa', num(society.participation, 1), change(society, 'participation'), historyOf(society, 'participation'), '', { unit: '%' })}</div>
       ${economyStrip(society)}
     </section>

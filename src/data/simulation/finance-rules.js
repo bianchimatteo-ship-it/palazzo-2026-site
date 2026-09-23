@@ -16,6 +16,8 @@ export const FINANCE_CATEGORIES = Object.freeze({
   relazioni: { label: 'Relazioni e rappresentanza', kind: 'uscita' },
   interessi: { label: 'Interessi sul debito', kind: 'uscita' },
   debito: { label: 'Rimborso del debito', kind: 'uscita' },
+  investimenti: { label: 'Investimenti', kind: 'uscita' },
+  fondo: { label: 'Fondo elettorale', kind: 'movimento' },
   altro: { label: 'Altro', kind: 'uscita' }
 });
 
@@ -43,6 +45,14 @@ export const BUDGET_LINES = Object.freeze([
     { cost: 260, label: 'Sede aperta', effect: 'Preparazione elettorale +1,5 e sostegno nel partito +0,3 a settimana.' }] }
 ]);
 
+// One-off investments: some become lasting assets, others buy information or preparation.
+export const INVESTMENTS = Object.freeze([
+  { id: 'piattaforma', label: 'Piattaforma per volontari e contatti', icon: 'users', cost: 2500, value: 1200, effect: 'Notorietà +0,3 a settimana; 3 volontari in più all’avvio di ogni campagna.' },
+  { id: 'sede-propria', label: 'Acquisto della sede del comitato', icon: 'town', cost: 6000, value: 5400, effect: 'Con la sede aperta paghi solo le utenze (60 € invece di 260 €); resta nel tuo patrimonio.' },
+  { id: 'sondaggio', label: 'Sondaggio riservato sul territorio', icon: 'chart', cost: 1500, value: 0, repeatable: true, effect: 'Sai dove concentrarti: preparazione elettorale +8 e capitale politico +2.' },
+  { id: 'ufficio-stampa', label: 'Ufficio stampa esterno (un anno)', icon: 'news', cost: 3200, value: 0, weeks: 52, effect: 'Per 52 settimane i rischi delle attività sui media si dimezzano e le redazioni +0,5 a settimana.' }
+]);
+export const ELECTION_FUND_MATCH = 0.15;
 export const DEBT_WEEKLY_INTEREST = 0.01;
 export const DEBT_CRISIS_THRESHOLD = 2500;
 export const RESERVE_BEFORE_REPAYING = 1500;

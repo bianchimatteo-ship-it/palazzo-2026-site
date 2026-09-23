@@ -14,6 +14,8 @@
     "check:gameplay": "node scripts/check-gameplay.mjs",
     "check:polls": "node scripts/check-polls.mjs",
     "check:simulation": "node scripts/check-simulation.mjs",
-    "version:build": "node scripts/set-build-version.mjs"
+    "version:build": "node scripts/set-build-version.mjs",
+    "cf:dev": "npx --yes wrangler@4 dev",
+    "cf:deploy": "npx --yes wrangler@4 deploy"
   }
 }

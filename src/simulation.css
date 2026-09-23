@@ -44,12 +44,6 @@
 .hq-sub.down { color: #a33d25; }
 .hq-sub-heading { margin: 16px 0 8px; }
 
-/* Problems and deadlines. */
-.alert-strip { display: flex; flex-wrap: wrap; gap: 8px; }
-.alert-pill { display: inline-flex; align-items: center; gap: 7px; min-height: 36px; padding: 6px 12px 6px 10px; border: 0; border-radius: 30px; font: 650 12.5px 'DM Sans', sans-serif; text-align: left; cursor: pointer; transition: transform .15s; }
-.alert-pill:hover { transform: translateY(-1px); }
-.alert-pill.state-crisi { background: #a3281f; color: #fff6f4; box-shadow: none; }
-.alert-pill.state-crisi .glyph { color: #ffd2cc; }
 
 /* Dashboard cards under the hero. */
 .dash-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
@@ -304,6 +298,112 @@
 .law-links .law-impact.bad .glyph { color: #e34948; }
 .law-real-draft { grid-column: 1 / -1; margin: 0; padding: 8px 10px; border-left: 3px solid #1f568f; background: #eef4fb; color: #1f3f63; font-size: 12.5px; }
 
+/* Illustrations: line-art scenes tinted by the party colour. */
+.illustration { display: block; pointer-events: none; }
+.illustration .ill-ground { stroke-width: 1.5; opacity: .6; }
+.illustration .ill-soft { opacity: .45; }
+.illustration .ill-accent { stroke: var(--party-accent); stroke-width: 2.4; }
+.illustration .ill-accent-fill { fill: color-mix(in srgb, var(--party-accent) 55%, transparent); stroke: var(--party-accent); }
+.illustration .ill-crowd circle { fill: currentColor; opacity: .35; }
+.hq-hero { position: relative; }
+.hq-hero-art { position: absolute; right: 236px; top: 12px; width: 250px; height: auto; color: rgba(255, 244, 222, .11); z-index: 0; display: none; }
+@media (min-width: 1360px) { .hq-hero-art { display: block; } }
+.hq-hero > *:not(.hq-hero-art) { position: relative; z-index: 1; }
+.society-hero, .finance-hero { position: relative; overflow: hidden; }
+.hero-art { position: absolute; right: 18px; top: 6px; width: 260px; height: auto; color: rgba(255, 244, 222, .14); }
+.society-hero > *:not(.hero-art), .finance-hero > *:not(.hero-art) { position: relative; }
+.party-org { position: relative; }
+.org-art { position: absolute; right: 0; top: -8px; width: 190px; height: auto; color: #b8c2b5; opacity: .55; }
+.party-org > .home-section-heading { position: relative; padding-right: 150px; }
+
+/* Political phase in the situation bar. */
+.situation-bar em .glyph { vertical-align: -1px; color: #d8bb7a; }
+.situation-bar.phase-crisi { box-shadow: inset 0 -3px 0 #e34948; }
+.situation-bar.phase-crisi em { color: #ffb4a8; }
+.situation-bar.phase-campagna, .situation-bar.phase-preelettorale { box-shadow: inset 0 -3px 0 #eda100; }
+.situation-bar.phase-tensione em { color: #ffcf9c; }
+
+/* Staff briefing. */
+.briefing { display: grid; gap: 12px; padding: 16px 18px; border: 1px solid #dcdfd5; border-left: 4px solid var(--party-accent); border-radius: 6px; background: linear-gradient(90deg, color-mix(in srgb, var(--party-accent) 7%, #faf9f3), #faf9f3 60%); }
+.briefing > header { display: flex; gap: 12px; align-items: center; }
+.briefing > header > .glyph { color: var(--party-accent); }
+.briefing h2 { margin: 3px 0 0; color: #20322a; font: 750 19px/1.2 Manrope, sans-serif; letter-spacing: -.035em; }
+.briefing-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.briefing-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 11px; align-items: center; padding: 11px 12px; border-radius: 6px; background: #fff; border: 1px solid #e3e5dc; box-shadow: none; color: inherit; font: inherit; }
+.briefing-item strong { display: block; color: #22342a; font-size: 13.5px; line-height: 1.3; }
+.briefing-item small { display: block; margin-top: 2px; color: #667067; font-size: 12px; line-height: 1.4; }
+.briefing-icon { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 9px; background: #ecede6; color: #4f5a52; }
+.briefing-item.state-crisi .briefing-icon { background: #fbe1df; color: #a3281f; }
+.briefing-item.state-rischio .briefing-icon { background: #fdf1d4; color: #83560a; }
+.briefing-item.state-calo .briefing-icon { background: #fdece2; color: #a1461a; }
+.briefing-item.state-crescita .briefing-icon { background: #e1f3e8; color: #1c6a3b; }
+.briefing-item.state-crisi { border-color: #efb3ad; }
+.briefing-item .secondary-button { white-space: nowrap; }
+
+/* Cause-and-effect chains. */
+.chain-list { display: grid; gap: 10px; margin-bottom: 14px; }
+.chain { padding: 12px 14px; border: 1px solid #e0e2d9; border-left: 3px solid #1baf7a; border-radius: 0 6px 6px 0; background: #fff; }
+.chain.tone-bad { border-left-color: #e34948; }
+.chain.tone-neutral { border-left-color: var(--party-accent); }
+.chain header { display: flex; gap: 8px; align-items: center; color: #22342a; }
+.chain header strong { flex: 1; font-size: 13.5px; }
+.chain header time { color: #8a7951; font-size: 11.5px; font-weight: 700; }
+.chain ol { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; }
+.chain li { position: relative; display: flex; gap: 6px; align-items: flex-start; max-width: 260px; padding: 6px 9px; border-radius: 6px; background: #f3f4ee; color: #34463a; font-size: 12px; line-height: 1.35; }
+.chain li .glyph { flex: none; margin-top: 1px; color: #5d7a69; }
+.chain li + li::before { content: "→"; position: absolute; left: -11px; top: 6px; color: #9aa39a; font-weight: 700; }
+.chain li + li { margin-left: 8px; }
+.pending { margin: 0 0 14px; padding: 12px 14px; border: 1px dashed #c9ceBF; border-radius: 6px; background: #fbfaf5; }
+.pending ul { display: grid; gap: 8px; margin: 8px 0 0; padding: 0; list-style: none; }
+.pending li { display: flex; gap: 9px; align-items: flex-start; }
+.pending li .glyph { color: #8a7951; margin-top: 2px; }
+.pending strong { display: block; color: #2f4337; font-size: 13px; }
+.pending small { color: #6f786e; font-size: 11.5px; }
+.hq-activity-copy .hq-risk { color: #8a4b1f; }
+.hq-activity-copy span b { margin-right: 4px; color: #56605a; font-size: 10.5px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; }
+.dash-facts .dash-wide { grid-column: 1 / -1; }
+
+/* Territory detail: who lives there and what they ask. */
+.region-facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 16px; margin: 12px 0 0; padding: 10px 12px; border-radius: 6px; background: #f3f4ee; }
+.region-facts small { display: block; color: #7b827a; font-size: 11.5px; }
+.region-facts strong { color: #2f4337; font-size: 13px; }
+.demography { margin-top: 12px; }
+.demography > small { color: #8a7951; font-size: 10.5px; font-weight: 750; letter-spacing: .1em; }
+.demography-bar { display: flex; gap: 2px; height: 12px; margin: 6px 0; }
+.demography-bar i { border-radius: 2px; }
+.demography-bar i:first-child { border-radius: 4px 2px 2px 4px; }
+.demography-bar i:last-child { border-radius: 2px 4px 4px 2px; }
+.demography-legend { display: flex; flex-wrap: wrap; gap: 4px 12px; color: #4b5b51; font-size: 11.5px; }
+.demography-legend i { display: inline-block; width: 9px; height: 9px; margin-right: 4px; border-radius: 2px; vertical-align: -1px; }
+
+/* Investments and balance sheet. */
+.balance-sheet { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); margin-bottom: 14px; border: 1px solid #e0e2d9; border-radius: 6px; background: #fff; overflow: hidden; }
+.balance-sheet > div { display: grid; gap: 3px; padding: 10px 12px; }
+.balance-sheet > div + div { border-left: 1px solid #ecece4; }
+.balance-sheet small { color: #7b827a; font-size: 11.5px; }
+.balance-sheet strong { color: #2f4337; font: 750 16px Manrope, sans-serif; }
+.balance-sheet strong.out { color: #a1461a; }
+.balance-sheet .is-total { background: #20473d; }
+.balance-sheet .is-total small { color: #cfdad3; }
+.balance-sheet .is-total strong { color: #fffaf1; }
+.invest-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.invest-card { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 11px; padding: 12px; border: 1px solid #e0e2d9; border-radius: 6px; background: #fff; }
+.invest-card strong { display: block; color: #22342a; font-size: 13.5px; }
+.invest-card small { display: block; margin: 3px 0 8px; color: #667067; font-size: 12px; line-height: 1.4; }
+.invest-card.is-owned { border-color: #b7dcc4; background: #f5fbf7; }
+.fund-box { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; margin-top: 12px; padding: 12px; border: 1px solid #efd3cf; border-radius: 6px; background: #fdf7f5; }
+.fund-box strong { display: block; color: #22342a; font-size: 13.5px; }
+.fund-box small { color: #667067; font-size: 12px; line-height: 1.4; }
+.fund-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip-button:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Law forecast. */
+.law-forecast { margin: 10px 0 4px; padding: 10px 12px; border-radius: 6px; background: #eef4fb; }
+.law-forecast > div { display: grid; gap: 4px; margin-top: 6px; }
+.law-forecast span:not(.section-kicker) { display: flex; gap: 6px; align-items: flex-start; color: #1f3f63; font-size: 12.5px; line-height: 1.4; }
+.law-forecast .glyph { flex: none; margin-top: 2px; }
+.state-successo { background: #fbf0d3; color: #7a5a0e; box-shadow: inset 0 0 0 1px #ecd18f; }
+
 /* Responsive. */
 @media (max-width: 1280px) {
   .society-grid, .org-grid { grid-template-columns: 1fr; }
@@ -313,6 +413,7 @@
 }
 @media (max-width: 1180px) {
   .dash-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .briefing-grid { grid-template-columns: 1fr; }
   .segment-list { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .economy-strip, .finance-kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 12px; }
   .economy-item:nth-child(4), .finance-kpis > div:nth-child(4) { border-left: 0; }
@@ -321,7 +422,11 @@
   .org-kpis > div:nth-child(n+4) { border-top: 1px solid #e8e8e0; }
 }
 @media (max-width: 1000px) {
-  .budget-list { grid-template-columns: 1fr; }
+  .budget-list, .invest-grid { grid-template-columns: 1fr; }
+  .balance-sheet { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .balance-sheet > div:nth-child(odd) { border-left: 0; }
+  .balance-sheet > div:nth-child(n+3) { border-top: 1px solid #ecece4; }
+  .balance-sheet .is-total { grid-column: 1 / -1; }
 }
 @media (max-width: 600px) {
   .situation-bar { grid-template-columns: 1fr; }
@@ -354,5 +459,17 @@
   .annual-table th, .annual-table td { padding: 7px 5px; }
   .intro { font-size: 14.5px; }
   .topbar-title span { font-size: 12px; max-width: 170px; }
-  .alert-pill { font-size: 12px; }
+  .briefing { padding: 13px; }
+  .briefing-item { grid-template-columns: auto minmax(0, 1fr); }
+  .briefing-item .secondary-button { grid-column: 1 / -1; justify-content: center; }
+  .chain li { max-width: none; width: 100%; }
+  .chain li + li { margin-left: 0; }
+  .chain li + li::before { content: "↓"; left: 50%; top: -14px; }
+  .chain ol { gap: 14px; }
+  .fund-box { grid-template-columns: auto minmax(0, 1fr); }
+  .fund-actions { grid-column: 1 / -1; }
+  .hero-art { width: 170px; opacity: .6; }
+  .org-art { display: none; }
+  .party-org > .home-section-heading { padding-right: 0; }
+  .region-facts { grid-template-columns: 1fr; gap: 6px; }
 }

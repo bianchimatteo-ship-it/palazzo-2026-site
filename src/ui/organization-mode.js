@@ -1,10 +1,11 @@
 // The party as an organisation, and the real parliamentarians the career deals with.
-import { ORGANS, organOf, treasuryOutlook } from '../core/organization-engine.js?v=20260924-11';
-import { contactStance } from '../core/contacts-engine.js?v=20260924-11';
-import { SELECTION_METHODS } from '../data/simulation/organization-rules.js?v=20260924-11';
-import { artTile, glyph } from './visuals.js?v=20260924-11';
+import { ORGANS, organOf, treasuryOutlook } from '../core/organization-engine.js?v=20260924-13';
+import { contactStance } from '../core/contacts-engine.js?v=20260924-13';
+import { SELECTION_METHODS } from '../data/simulation/organization-rules.js?v=20260924-13';
+import { artTile, glyph } from './visuals.js?v=20260924-13';
+import { illustration } from './illustrations.js?v=20260924-13';
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
-import { esc, euro, levelState, lineChart, meter, num, SERIES, signed, sparkline, stateBadge, trendState } from './charts.js?v=20260924-11';
+import { esc, euro, levelState, lineChart, meter, num, SERIES, signed, sparkline, stateBadge, trendState } from './charts.js?v=20260924-13';
 
 const TREND_LABELS = { crescita: 'In crescita', calo: 'In calo', stabile: 'Stabile' };
 
@@ -22,7 +23,7 @@ export function renderOrganizationPanel(state) {
   const selections = Object.values(org.selections ?? {}).slice(-4).reverse();
   const organs = ORGANS.map(item => `<li class="${item.level === organ.level ? 'current' : item.level < organ.level ? 'done' : ''}"><span>${esc(item.label)}</span><small>${esc(item.scope)}</small></li>`).join('');
   return `<section class="party-org">
-    <div class="home-section-heading"><div><span class="section-kicker">IL PARTITO COME ORGANIZZAZIONE · SIMULAZIONE</span><h2>Siedi in: ${esc(organ.label)}</h2><p class="section-subtitle">${esc(organ.detail)}</p></div>${stateBadge(cohesionState, `Coesione ${num(org.cohesion, 0)} · ${cohesionLabel}`)}</div>
+    ${illustration('piazza', 'org-art')}<div class="home-section-heading"><div><span class="section-kicker">IL PARTITO COME ORGANIZZAZIONE · SIMULAZIONE</span><h2>Siedi in: ${esc(organ.label)}</h2><p class="section-subtitle">${esc(organ.detail)}</p></div>${stateBadge(cohesionState, `Coesione ${num(org.cohesion, 0)} · ${cohesionLabel}`)}</div>
     <div class="org-kpis">
       <div><small>ISCRITTI</small><strong>${num(org.members, 0)}</strong>${stateBadge(growthState, `${TREND_LABELS[growthState]} ${org.growth ? `${signed(org.growth)}%` : ''}`.trim())}</div>
       <div><small>MILITANTI ATTIVI</small><strong>${num(org.militants, 0)}</strong><span>${num(org.members ? org.militants / org.members * 100 : 0, 0)}% degli iscritti</span></div>

@@ -1,27 +1,27 @@
-import { fullDate, formatDate } from '../core/time.js?v=20260924-11';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260924-11';
-import { isRealCollectionLoaded, loadRealCollections, pristineRecord, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20260924-11';
-import { addRoleOverride, clearAdminArchive, exportAdminArchive, hasAdminPin, importAdminArchive, isAdminUnlocked, lockAdmin, removeRoleOverride, resetRecordOverride, saveRecordOverride, setAdminPin, setRecordField, unlockAdmin } from '../data/repositories/admin-store.js?v=20260924-11';
-import { renderAdminPanel } from './admin-panel.js?v=20260924-11';
-import { deleteLocalLogo, exportLogoConfiguration, getLocalLogo, importLogoConfiguration, listLocalLogos, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20260924-11';
-import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20260924-11';
-import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20260924-11';
-import { renderLogoAdmin } from './logo-admin.js?v=20260924-11';
-import { makeCareerDraft, renderCareerWizard } from './career-wizard.js?v=20260924-11';
-import { validateCareerStep } from '../core/career-rules.js?v=20260924-11';
-import { renderCampaignPage } from './campaign-mode.js?v=20260924-11';
-import { renderParliamentPage } from './parliament-mode.js?v=20260924-11';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-11';
-import { CAREER_LEVELS, careerLevelLabel } from '../data/regions.js?v=20260924-11';
-import { renderElectionCalendar, renderHeadquarters, renderInbox, renderPartyPosition } from './game-mode.js?v=20260924-11';
-import { attachChartInteractions, renderPollsPage } from './polls-mode.js?v=20260924-11';
-import { glyph, officeIcon } from './visuals.js?v=20260924-11';
-import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20260924-11';
-import { renderFinancePage } from './finance-mode.js?v=20260924-11';
-import { renderContactsPanel, renderOrganizationPanel } from './organization-mode.js?v=20260924-11';
-import { renderRealLaws } from './real-laws.js?v=20260924-11';
-import { realLawArea } from '../core/society-engine.js?v=20260924-11';
-import { canManageParliament } from '../core/parliament-engine.js?v=20260924-11';
+import { fullDate, formatDate } from '../core/time.js?v=20260924-13';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260924-13';
+import { isRealCollectionLoaded, loadRealCollections, pristineRecord, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20260924-13';
+import { addRoleOverride, clearAdminArchive, exportAdminArchive, hasAdminPin, importAdminArchive, isAdminUnlocked, lockAdmin, removeRoleOverride, resetRecordOverride, saveRecordOverride, setAdminPin, setRecordField, unlockAdmin } from '../data/repositories/admin-store.js?v=20260924-13';
+import { renderAdminPanel } from './admin-panel.js?v=20260924-13';
+import { deleteLocalLogo, exportLogoConfiguration, getLocalLogo, importLogoConfiguration, listLocalLogos, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20260924-13';
+import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20260924-13';
+import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20260924-13';
+import { renderLogoAdmin } from './logo-admin.js?v=20260924-13';
+import { makeCareerDraft, renderCareerWizard } from './career-wizard.js?v=20260924-13';
+import { validateCareerStep } from '../core/career-rules.js?v=20260924-13';
+import { renderCampaignPage } from './campaign-mode.js?v=20260924-13';
+import { renderParliamentPage } from './parliament-mode.js?v=20260924-13';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-13';
+import { CAREER_LEVELS, careerLevelLabel } from '../data/regions.js?v=20260924-13';
+import { renderElectionCalendar, renderHeadquarters, renderInbox, renderPartyPosition } from './game-mode.js?v=20260924-13';
+import { attachChartInteractions, renderPollsPage } from './polls-mode.js?v=20260924-13';
+import { glyph, officeIcon } from './visuals.js?v=20260924-13';
+import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20260924-13';
+import { renderFinancePage } from './finance-mode.js?v=20260924-13';
+import { renderContactsPanel, renderOrganizationPanel } from './organization-mode.js?v=20260924-13';
+import { renderRealLaws } from './real-laws.js?v=20260924-13';
+import { realLawArea } from '../core/society-engine.js?v=20260924-13';
+import { canManageParliament } from '../core/parliament-engine.js?v=20260924-13';
 
 const mainSectionActive = (id, page) => page === id || (id === 'calendario' && page === 'eventi') || (id === 'parlamento' && ['governo', 'leggi'].includes(page)) || (id === 'partito' && page === 'partiti-lista') || (id === 'profilo' && page === 'politici');
 const mainNavigation = [
@@ -311,7 +311,9 @@ export function mountApp(root, store) {
       } catch (error) { admin.message = error.message; render(store.getState(), store.getLastSaved()); }
       return;
     }
-    const simulationControl = event.target.closest('[data-territory-measure],[data-territory-region],[data-budget-line],[data-party-priority],[data-real-law-more],[data-real-law-amend]');
+    const scrollTarget = event.target.closest('[data-scroll]')?.dataset.scroll;
+    if (scrollTarget) { document.getElementById(scrollTarget)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    const simulationControl = event.target.closest('[data-territory-measure],[data-territory-region],[data-budget-line],[data-party-priority],[data-real-law-more],[data-real-law-amend],[data-invest],[data-election-fund]');
     if (simulationControl) {
       const data = simulationControl.dataset;
       try {
@@ -319,6 +321,8 @@ export function mountApp(root, store) {
         else if (data.territoryRegion) { territory.region = data.territoryRegion; render(store.getState(), store.getLastSaved()); root.querySelector('.region-detail')?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' }); }
         else if (data.budgetLine) store.setBudget(data.budgetLine, Number(data.budgetLevel));
         else if (data.partyPriority) store.setPartyPriority(data.partyPriority, Number(data.partyPriorityLevel));
+        else if (data.invest) store.invest(data.invest);
+        else if (data.electionFund) store.saveForElection(Number(data.electionFund));
         else if ('realLawMore' in data) { realLaws.page++; render(store.getState(), store.getLastSaved()); }
         else if (data.realLawAmend) {
           const law = (realDatabase.laws ?? []).find(item => item.id === data.realLawAmend);

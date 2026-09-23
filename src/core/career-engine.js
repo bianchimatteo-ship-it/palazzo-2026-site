@@ -1,17 +1,18 @@
-import { advanceDays } from './time.js?v=20260924-11';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-11';
-import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260924-11';
+import { advanceDays } from './time.js?v=20260924-13';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-13';
+import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260924-13';
 import {
   APPOINTMENTS, BASE_WEEKLY_INCOME, CAREER_EVENTS, CAREER_OBJECTIVES, CURRENT_TEMPLATES, EARLY_ELECTION_AFTER_WEEKS, ELECTION_SCHEDULE,
   FORCED_EVENTS, LEGACY_RIVAL_NAMES, SIMULATED_RIVAL_LABEL, FOUNDER_RANK, LEVEL_FIRST_ELECTION, OFFICE_INCOME, PARTY_RANKS, RELATION_TEMPLATES, STAT_LABELS,
   SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES
-} from '../data/simulation/career-rules.js?v=20260924-11';
-import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20260924-11';
-import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20260924-11';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-11';
-import { book, createFinance, normalizeFinance, settleFinanceWeek } from './finance-engine.js?v=20260924-11';
-import { advanceOrganization, applyOrgEffects, createOrganization, isPartyLeader, normalizeOrganization, treasuryBook } from './organization-engine.js?v=20260924-11';
-import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20260924-11';
+} from '../data/simulation/career-rules.js?v=20260924-13';
+import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20260924-13';
+import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20260924-13';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-13';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-13';
+import { book, buyInvestment, createFinance, depositElectionFund, hasAsset, normalizeFinance, settleFinanceWeek } from './finance-engine.js?v=20260924-13';
+import { advanceOrganization, applyOrgEffects, createOrganization, isPartyLeader, normalizeOrganization, treasuryBook } from './organization-engine.js?v=20260924-13';
+import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20260924-13';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -116,7 +117,7 @@ export function normalizeGameState(game) {
   const party = game.party ? { ...game.party, org: normalizeOrganization(game.party.org, { rand: seeded(hash(`${game.seed}|${game.party.partyId}|org`)), founder: game.party.affiliation === 'founder', region: game.place?.region ?? null, week, date }) } : game.party ?? null;
   return {
     status: 'active', prep: 0, pastParties: [], inbox: [], log: [], objectives: {}, flags: {}, lastReport: null, lastEventId: null, fallenWeeks: 0, place: {},
-    contacts: [], promises: [], legislature: { ...REAL_LEGISLATURE },
+    contacts: [], promises: [], pending: [], legislature: { ...REAL_LEGISLATURE },
     ...game, party,
     finance: normalizeFinance(game.finance, { week, date, funds: game.resources?.funds ?? 0 }),
     week: { ap: WEEKLY_ACTION_POINTS, maxAp: WEEKLY_ACTION_POINTS, categoriesUsed: [], ...(game.week ?? {}) },
@@ -145,6 +146,11 @@ function applyEffects(ctx, effects = {}, targetId = null, lines = [], params = {
     const delta = raw > 0 && metric !== 'consensus' && current > 55 ? round2(raw * clamp((100 - current) / 45, 0.15, 1)) : raw;
     ctx.stats[metric] = clamp(round2(current + delta));
     lines.push(`${STAT_LABELS[metric]} ${signed(delta)}`);
+  }
+  if (effects.fundsFrom) {
+    const amount = Math.max(effects.fundsFrom.min ?? 0, Math.round((ctx.stats[effects.fundsFrom.stat] ?? 0) * effects.fundsFrom.factor));
+    book(game, amount, 'donazioni', params.fundsLabel ?? null, params.date ?? null);
+    lines.push(`Fondi +${amount} €`);
   }
   if (effects.funds) { book(game, effects.funds, effects.funds > 0 ? 'donazioni' : 'altro', params.fundsLabel ?? null, params.date ?? null); lines.push(`Fondi ${effects.funds > 0 ? '+' : '−'}${Math.abs(effects.funds)} €`); }
   if (effects.capital) { game.resources.politicalCapital = clamp(game.resources.politicalCapital + effects.capital); lines.push(`Capitale politico ${signed(effects.capital)}`); }
@@ -188,6 +194,35 @@ function pay(game, cost = {}, category = 'altro', label = null, date = null) {
   if (cost.capital) game.resources.politicalCapital -= cost.capital;
   if (cost.treasury) treasuryBook(game.party.org, -cost.treasury, 'comunicazione', label);
 }
+// Future consequences: scheduled now, decided when they come due (the outcome is not known in advance).
+function schedule(game, later, origin) {
+  if (!later) return;
+  game.pending = [...(game.pending ?? []), { id: `seguito-${game.week.index}-${(game.pending ?? []).length}-${game.rngState % 9973}`, dueWeek: game.week.index + later.weeks, madeWeek: game.week.index, hint: later.hint ?? later.label, label: later.label, chance: later.chance ?? 1, effects: later.effects ?? null, outcomes: later.outcomes ?? null, origin, source: SIM }];
+}
+function resolvePending(ctx, env, date, lines) {
+  const game = ctx.game;
+  for (const item of (game.pending ?? []).filter(entry => entry.dueWeek <= game.week.index)) {
+    const itemLines = [];
+    let tone = 'neutral';
+    let title = item.label;
+    if (item.outcomes) {
+      let roll = draw(game);
+      const outcome = item.outcomes.find(entry => (roll -= entry.chance) < 0) ?? item.outcomes.at(-1);
+      title = `${item.label}: ${outcome.label}`;
+      applyEffects(ctx, outcome.effects, null, itemLines, { date });
+      tone = Object.values(outcome.effects?.stats ?? {}).some(value => value < 0) ? 'bad' : 'good';
+    } else if (draw(game) < item.chance) {
+      applyEffects(ctx, item.effects, null, itemLines, { date });
+      tone = 'bad';
+    } else {
+      title = `Scampato: ${item.hint.charAt(0).toLowerCase()}${item.hint.slice(1)}`;
+      tone = 'good';
+    }
+    lines.push(`Conseguenza di “${item.origin}”: ${title}`);
+    addLog(game, date, 'conseguenza', title, [`Da: ${item.origin}`, ...itemLines], tone);
+  }
+  game.pending = (game.pending ?? []).filter(entry => entry.dueWeek > game.week.index);
+}
 function addLog(game, date, kind, title, lines = [], tone = 'neutral') {
   game.log.unshift({ id: `diario-${game.week.index}-${game.log.length}-${game.rngState % 9973}`, week: game.week.index, date, kind, title, lines, tone, source: SIM });
   game.log = game.log.slice(0, 40);
@@ -225,18 +260,38 @@ export function performActivity(input, env, activityId, targetId = null) {
   if (activity.target === 'group' && !ctx.parliament?.relations?.[targetId]) throw new Error('Scegli un gruppo parlamentare.');
   if (activity.target === 'region' && !ITALIAN_REGIONS.includes(targetId)) throw new Error('Scegli una regione.');
   if (activity.target === 'contact' && !(ctx.game.contacts ?? []).some(item => item.person.id === targetId)) throw new Error('Scegli un parlamentare tra i tuoi contatti.');
+  if (activity.target === 'segment' && !SEGMENTS.some(item => item.id === targetId)) throw new Error('Scegli un gruppo di cittadini.');
   pay(ctx.game, activity.cost, ACTIVITY_FINANCE_CATEGORY[activity.category], activity.label, env.currentDate);
   ctx.game.week.categoriesUsed = [...new Set([...ctx.game.week.categoriesUsed, activity.category])];
   const lines = applyEffects(ctx, activity.effects, targetId, [], { date: env.currentDate, fundsLabel: activity.label });
   let tone = 'good';
-  if (activity.risk && draw(ctx.game) < activity.risk.chance) {
+  // An external press office halves the risks of media exposure.
+  const riskChance = activity.risk ? activity.risk.chance * (activity.category === 'media' && hasAsset(ctx.game.finance, 'ufficio-stampa', ctx.game.week.index) ? 0.5 : 1) : 0;
+  if (activity.risk && draw(ctx.game) < riskChance) {
     lines.push(activity.risk.label);
     applyEffects(ctx, activity.risk.effects, targetId, lines, { date: env.currentDate });
     tone = 'bad';
   }
+  schedule(ctx.game, activity.later, activity.label);
   addLog(ctx.game, env.currentDate, 'attività', activity.label, lines, tone);
   const completed = refreshObjectives(ctx, env, [], env.currentDate);
   return { ctx, report: { title: activity.label, lines, tone }, completed, activity, targetId };
+}
+
+// ---------- investments ----------
+export function makeInvestment(input, env, id) {
+  const ctx = start(input);
+  const investment = buyInvestment(ctx.game, id, env.currentDate);
+  const lines = [`Spesa ${investment.cost} €`];
+  if (id === 'sondaggio') applyEffects(ctx, { prep: 8, capital: 2 }, null, lines);
+  addLog(ctx.game, env.currentDate, 'finanze', `Investimento: ${investment.label}`, lines, 'good');
+  return { ctx, investment };
+}
+export function saveForElection(input, env, amount) {
+  const ctx = start(input);
+  const fund = depositElectionFund(ctx.game, amount, env.currentDate);
+  addLog(ctx.game, env.currentDate, 'finanze', `Fondo elettorale: ${fund} € accantonati`, ['All’avvio della campagna i donatori aggiungono il 15%.'], 'neutral');
+  return { ctx, fund };
 }
 
 // ---------- inbox ----------
@@ -321,7 +376,18 @@ export function describeEffects(effects = {}) {
   if (effects.funds) parts.push(`Fondi ${signed(effects.funds)} €`);
   if (effects.capital) parts.push(`Capitale ${signed(effects.capital)}`);
   if (effects.prep) parts.push(`Preparazione ${signed(effects.prep)}`);
-  for (const [key, delta] of Object.entries(effects.relations ?? {})) parts.push(`${key === 'target' ? 'Rapporto scelto' : key === 'otherCurrents' ? 'Altre correnti' : RELATION_TEMPLATES.find(entry => entry.id === key)?.label ?? 'Rapporto'} ${signed(delta)}`);
+  if (effects.fundsFrom) parts.push(`Fondi in base alla ${STAT_LABELS[effects.fundsFrom.stat].toLowerCase()} (circa ${effects.fundsFrom.factor} € per punto)`);
+  for (const [key, delta] of Object.entries(effects.relations ?? {})) parts.push(`${key === 'target' ? 'Rapporto scelto' : key === 'otherCurrents' ? 'Altre correnti' : key === 'currentA' ? 'Area scelta' : RELATION_TEMPLATES.find(entry => entry.id === key)?.label ?? 'Rapporto'} ${signed(delta)}`);
+  const org = effects.org ?? {};
+  if (org.members) parts.push('Nuovi iscritti');
+  if (org.militants) parts.push('Più militanti attivi');
+  if (org.section) parts.push('Sezione nella regione scelta');
+  if (org.cohesion) parts.push(`Coesione ${signed(org.cohesion)}`);
+  if (org.conflicts) parts.push(`Tensioni interne ${signed(org.conflicts)}`);
+  if (org.treasury) parts.push(`Tesoreria del partito +${org.treasury} €`);
+  if (org.discipline) parts.push(`Disciplina ${signed(org.discipline)}`);
+  if (effects.contacts?.target) parts.push(`Rapporto con il parlamentare ${signed(effects.contacts.target)}`);
+  if (effects.world) parts.push(`Sondaggi del partito +${String(effects.world).replace('.', ',')}`);
   if (effects.party?.support) parts.push(`Sostegno nel partito ${signed(effects.party.support)}`);
   if (effects.group?.support) parts.push(`Sostegno nel gruppo ${signed(effects.group.support)}`);
   if (effects.groups?.target) parts.push(`Rapporto con il gruppo ${signed(effects.groups.target)}`);
@@ -332,7 +398,7 @@ export function describeEffects(effects = {}) {
 export function describeChoice(item, choiceId) {
   const choice = templateFor(item)?.choices.find(entry => entry.id === choiceId);
   if (!choice) return { effects: '', risk: '' };
-  const risk = choice.risk ? `Rischio ${Math.round(choice.risk.chance * 100)}%` : choice.special?.startsWith('world-stance') ? 'Sposta i sondaggi del partito' : choice.outcomes ? 'Esito incerto' : choice.special?.startsWith('leadership') ? 'Esito legato al congresso' : choice.special === 'leave-party' ? 'Lasci il partito' : choice.special === 'resign' ? 'Lasci gli incarichi' : '';
+  const risk = choice.later ? `Possibili conseguenze future: ${choice.later.hint.charAt(0).toLowerCase()}${choice.later.hint.slice(1)}` : choice.risk ? `Rischio ${Math.round(choice.risk.chance * 100)}%` : choice.special?.startsWith('world-stance') ? 'Sposta i sondaggi del partito' : choice.outcomes ? 'Esito incerto' : choice.special?.startsWith('leadership') ? 'Esito legato al congresso' : choice.special === 'leave-party' ? 'Lasci il partito' : choice.special === 'resign' ? 'Lasci gli incarichi' : '';
   return { effects: describeEffects(choice.effects), risk };
 }
 function runChoice(ctx, env, item, choice, lines, specials) {
@@ -344,10 +410,12 @@ function runChoice(ctx, env, item, choice, lines, specials) {
     const outcome = choice.outcomes.find(entry => (roll -= entry.chance) < 0) ?? choice.outcomes.at(-1);
     lines.push(outcome.label);
     applyEffects(ctx, outcome.effects, null, lines, params);
+    schedule(ctx.game, outcome.later, item.title);
     if (outcome.special) handleSpecial(ctx, env, outcome.special, item, lines, specials);
     tone = outcome.special || Object.values(outcome.effects?.stats ?? {}).some(value => value < -2) ? 'bad' : 'good';
   }
   if (choice.risk && draw(ctx.game) < choice.risk.chance) { lines.push(choice.risk.label); applyEffects(ctx, choice.risk.effects, null, lines, params); tone = 'bad'; }
+  schedule(ctx.game, choice.later, item.title);
   if (choice.special) handleSpecial(ctx, env, choice.special, item, lines, specials);
   return tone;
 }
@@ -446,6 +514,15 @@ function handleSpecial(ctx, env, special, item, lines, specials) {
     const amount = Math.round(game.party.org.members * 1.5);
     treasuryBook(game.party.org, amount, 'donazioni', 'Sottoscrizione straordinaria');
     lines.push(`La sottoscrizione raccoglie ${amount.toLocaleString('it-IT')} €.`);
+  } else if (special === 'media-repair' || special.startsWith('public-')) {
+    specials.push({ type: special });
+  } else if (special === 'accept-rank') {
+    const rank = nextPartyRank(game);
+    if (rank) {
+      game.party.rank = rank.level; game.party.rankTitle = rank.title;
+      game.party.history.push({ week: game.week.index, date: env.currentDate, text: `Nominato ${rank.title.toLowerCase()} su proposta della segreteria`, source: SIM });
+      lines.push(`Diventi ${rank.title.toLowerCase()}.`);
+    }
   } else if (special === 'cosign') {
     const contact = (game.contacts ?? []).find(entry => entry.person.id === item.params.contactId);
     if (contact) contact.cosigned = [...new Set([...(contact.cosigned ?? []), item.params.lawId])];
@@ -739,6 +816,7 @@ export function advanceWeek(input, env, governmentWeek = parliament => parliamen
     if (item.kind !== 'appuntamento') lines.push(`Senza una tua decisione: ${item.title}`);
     if (game.status === 'ended') break;
   }
+  if (game.status !== 'ended') resolvePending(ctx, env, date, lines);
   if (game.status !== 'ended') {
     const budget = weeklySystems(ctx, env, date, closing, lines, specials);
     const capitalGain = Math.round(2 + (ctx.stats.influence ?? 30) / 25 + ((game.party?.rank ?? 0) >= 2 ? 1 : 0));

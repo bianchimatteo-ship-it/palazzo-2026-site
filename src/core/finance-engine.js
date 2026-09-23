@@ -1,11 +1,11 @@
-import { BUDGET_LINES, DEBT_CRISIS_THRESHOLD, DEBT_WEEKLY_INTEREST, FINANCE_CATEGORIES, HISTORY_WEEKS, LEDGER_SIZE, RESERVE_BEFORE_REPAYING } from '../data/simulation/finance-rules.js?v=20260924-11';
+import { BUDGET_LINES, DEBT_CRISIS_THRESHOLD, DEBT_WEEKLY_INTEREST, ELECTION_FUND_MATCH, FINANCE_CATEGORIES, HISTORY_WEEKS, INVESTMENTS, LEDGER_SIZE, RESERVE_BEFORE_REPAYING } from '../data/simulation/finance-rules.js?v=20260924-13';
 
 const SIM = 'simulation';
 const blankPeriod = () => ({ income: 0, expense: 0, byCategory: {} });
 
 export function createFinance({ week = 1, date = null, funds = 0 } = {}) {
   return {
-    version: 1, source: SIM, budget: { personale: 0, comunicazione: 0, territorio: 0, sede: 0 }, debt: 0,
+    version: 1, source: SIM, budget: { personale: 0, comunicazione: 0, territorio: 0, sede: 0 }, debt: 0, assets: [], electionFund: 0,
     ledger: [], current: { week, ...blankPeriod() }, history: [], year: date ? date.slice(0, 4) : null, yearTotals: blankPeriod(), annual: [], openingFunds: funds
   };
 }
@@ -15,7 +15,8 @@ export function normalizeFinance(finance, { week = 1, date = null, funds = 0 } =
   return { ...base, ...finance, budget: { ...base.budget, ...(finance.budget ?? {}) }, current: { ...base.current, ...(finance.current ?? {}) }, yearTotals: { ...base.yearTotals, ...(finance.yearTotals ?? {}) } };
 }
 function tally(period, amount, category) {
-  if (amount >= 0) period.income += amount; else period.expense -= amount;
+  // Moving money into the election fund is not spending: it stays out of income and expenses.
+  if (FINANCE_CATEGORIES[category]?.kind !== 'movimento') { if (amount >= 0) period.income += amount; else period.expense -= amount; }
   period.byCategory[category] = (period.byCategory[category] ?? 0) + amount;
 }
 
@@ -36,8 +37,41 @@ export function book(game, amount, category = 'altro', label = null, date = null
   return value;
 }
 
-export function budgetCost(budget = {}) {
-  return BUDGET_LINES.reduce((sum, line) => sum + (line.levels[budget[line.id] ?? 0]?.cost ?? 0), 0);
+const owns = (finance, id, week = null) => (finance?.assets ?? []).some(asset => asset.id === id && (!asset.untilWeek || week === null || week <= asset.untilWeek));
+function lineCost(line, level, finance) {
+  const cost = line.levels[level]?.cost ?? 0;
+  return line.id === 'sede' && cost && owns(finance, 'sede-propria') ? 60 : cost;
+}
+export function budgetCost(budget = {}, finance = null) {
+  return BUDGET_LINES.reduce((sum, line) => sum + lineCost(line, budget[line.id] ?? 0, finance), 0);
+}
+export const hasAsset = owns;
+// One-off purchases; the caller applies the immediate effects of those that have them.
+export function buyInvestment(game, id, date) {
+  const investment = INVESTMENTS.find(item => item.id === id);
+  if (!investment) throw new Error('Investimento non disponibile.');
+  if (!investment.repeatable && owns(game.finance, id, game.week.index)) throw new Error('Hai già questo investimento.');
+  if (game.resources.funds < investment.cost) throw new Error(`Servono ${investment.cost} € in cassa.`);
+  book(game, -investment.cost, 'investimenti', investment.label, date);
+  if (!investment.repeatable) game.finance.assets = [...(game.finance.assets ?? []).filter(asset => asset.id !== id), { id, label: investment.label, value: investment.value, boughtWeek: game.week.index, untilWeek: investment.weeks ? game.week.index + investment.weeks : null, source: SIM }];
+  return investment;
+}
+export function depositElectionFund(game, amount, date) {
+  const value = Math.round(amount);
+  if (!(value > 0)) throw new Error('Indica una cifra da accantonare.');
+  if (game.resources.funds < value) throw new Error('Non hai questa cifra in cassa.');
+  book(game, -value, 'fondo', 'Accantonamento nel fondo elettorale', date);
+  game.finance.electionFund = (game.finance.electionFund ?? 0) + value;
+  return game.finance.electionFund;
+}
+// The fund goes to the campaign; donors add a share on top of what was set aside.
+export function releaseElectionFund(game, date) {
+  const fund = game.finance?.electionFund ?? 0;
+  if (!fund) return 0;
+  const total = Math.round(fund * (1 + ELECTION_FUND_MATCH));
+  game.finance.electionFund = 0;
+  game.finance.ledger = [{ week: game.week?.index ?? null, date, category: 'fondo', amount: 0, label: `Fondo elettorale alla campagna: ${total} € (di cui ${total - fund} € dai donatori)`, balance: game.resources.funds, source: SIM }, ...game.finance.ledger].slice(0, LEDGER_SIZE);
+  return total;
 }
 export function setBudgetLevel(input, lineId, level) {
   const line = BUDGET_LINES.find(item => item.id === lineId);
@@ -57,7 +91,7 @@ export function settleFinanceWeek(game, { week, date, incomes = [], partyContrib
   const add = (bucket, key, value) => { bucket[key] = Math.round(((bucket[key] ?? 0) + value) * 100) / 100; };
   for (const line of BUDGET_LINES) {
     const level = finance.budget[line.id] ?? 0;
-    const cost = line.levels[level]?.cost ?? 0;
+    const cost = lineCost(line, level, finance);
     if (!cost) continue;
     book(game, -cost, line.category, `${line.label}: ${line.levels[level].label.toLowerCase()}`, date);
     if (line.id === 'personale') { effects.staffDays = level === 2 || week % 2 === 0 ? 1 : 0; if (level === 2) effects.capital += 1; }
@@ -65,6 +99,9 @@ export function settleFinanceWeek(game, { week, date, incomes = [], partyContrib
     if (line.id === 'territorio') { add(effects.stats, 'popularity', level === 2 ? 1 : 0.5); if (level === 2) add(effects.stats, 'consensus', 0.2); add(effects.relations, 'civic', level === 2 ? 1 : 0.5); effects.territory = true; }
     if (line.id === 'sede') { effects.prep += 1.5; effects.party += 0.3; }
   }
+  if (owns(finance, 'piattaforma')) add(effects.stats, 'notoriety', 0.3);
+  if (owns(finance, 'ufficio-stampa', week)) add(effects.relations, 'media', 0.5);
+  finance.assets = (finance.assets ?? []).filter(asset => !asset.untilWeek || asset.untilWeek >= week);
   if (finance.debt > 0) {
     const interest = Math.max(1, Math.round(finance.debt * DEBT_WEEKLY_INTEREST));
     book(game, -interest, 'interessi', 'Interessi sul debito', date);
@@ -97,6 +134,7 @@ export function financeOutlook(game) {
   const expense = Math.round(average('expense'));
   const runway = expense > 0 ? Math.floor(game.resources.funds / expense) : null;
   const status = finance.debt >= DEBT_CRISIS_THRESHOLD ? ['crisi', 'Crisi finanziaria'] : finance.debt > 0 || (runway !== null && runway < 6 && net < 0) ? ['rischio', 'A rischio'] : net < 0 ? ['calo', 'In calo'] : ['solida', 'Sostenibile'];
-  return { net, expense, income: Math.round(average('income')), runway, debt: finance.debt, recurring: budgetCost(finance.budget), status: status[0], statusLabel: status[1] };
+  const assets = (finance.assets ?? []).reduce((sum, asset) => sum + (asset.value ?? 0), 0);
+  return { net, expense, income: Math.round(average('income')), runway, debt: finance.debt, recurring: budgetCost(finance.budget, finance), assets, fund: finance.electionFund ?? 0, netWorth: game.resources.funds + assets + (finance.electionFund ?? 0) - finance.debt, status: status[0], statusLabel: status[1] };
 }
-export { BUDGET_LINES, FINANCE_CATEGORIES };
+export { BUDGET_LINES, FINANCE_CATEGORIES, INVESTMENTS };

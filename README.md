@@ -62,9 +62,11 @@ Ogni settimana, con o senza il giocatore, si muove un Paese simulato: 20 regioni
 
 I sistemi sono collegati: una **legge** approvata in Parlamento consuma margine di bilancio (senza coperture ha effetti ridotti e appesantisce il deficit), arriva gradualmente sui **territori** — di più dove il servizio è più indietro —, cambia l’umore dei **cittadini** interessati, finisce sui **media** e nella cronaca; l’umore del Paese sposta il gradimento del **governo** e i **sondaggi** (premia la maggioranza quando le cose vanno bene, l’opposizione quando vanno male), la fiducia bassa alimenta indecisi e area di protesta; sondaggi e clima fanno crescere o calare gli iscritti del **partito**; chi governa (sindaco, presidente di regione, maggioranza, ministro) risponde dei risultati con la propria popolarità; umore e partecipazione entrano nelle **campagne elettorali** e nell’affluenza. I problemi dei territori diventano decisioni in agenda con conseguenze immediate e future (una promessa viene verificata dopo 12 settimane). Senza un governo nato in Parlamento agisce un *esecutivo di scenario*, che non rappresenta il governo reale. Tutto questo è `source: "simulation"` e non descrive statistiche ufficiali.
 
+**Quartier generale.** La Home mostra la fase politica (inizio legislatura, clima pre-elettorale, crisi di governo, campagna, malcontento), il briefing dello staff con le priorità della settimana e dove intervenire, le catene di cause ed effetti delle misure (bilancio → territori → cittadini → media → sondaggi) e le conseguenze ancora in arrivo. Molte scelte hanno ora **conseguenze future**: si vedono come rischio al momento della decisione e si risolvono settimane dopo. Nuove situazioni nascono dallo stato del mondo: stampa ostile, crollo o slancio nei sondaggi, conti pubblici esauriti quando si governa, incarico offerto dalla segreteria. Ogni regione ha una propria composizione di cittadini (giovani, famiglie, pensionati, autonomi, redditi bassi), quindi la stessa legge produce effetti diversi da territorio a territorio; le proposte in Aula mostrano prima del voto costo, coperture, soddisfazione attesa, regioni e gruppi favorevoli o contrari, e dopo l’approvazione lo stato di attuazione.
+
 ## Partito come organizzazione e finanze
 
-Il partito del giocatore ha iscritti, militanti, dirigenti, sezioni o federazioni regionali, organi interni (dall’assemblea degli iscritti alla segreteria nazionale), coesione, conflitti tra le correnti, disciplina personale, congresso ordinario annuale, selezione dei candidati prima di ogni elezione (primarie, accordo in direzione, indicazione della propria area) e una tesoreria con quote, 2×1000 stimato, contributi degli eletti e spese per sezioni, personale, comunicazione, formazione e campagne. Nuove attività (tesseramento, apertura di sezioni, formazione, contributi, campagne di comunicazione del partito, mediazione e disciplina) dipendono dal ruolo interno; incarichi si conquistano e si perdono. Le **Finanze** del politico hanno un registro per categoria, un budget settimanale (staff che aggiunge giorni, comunicazione, presenza sul territorio, sede), debito con interessi, crisi finanziaria, bilanci annuali e indice di sostenibilità. Anche per i partiti reali questi numeri sono solo stime di gioco.
+Il partito del giocatore ha iscritti, militanti, dirigenti, sezioni o federazioni regionali, organi interni (dall’assemblea degli iscritti alla segreteria nazionale), coesione, conflitti tra le correnti, disciplina personale, congresso ordinario annuale, selezione dei candidati prima di ogni elezione (primarie, accordo in direzione, indicazione della propria area) e una tesoreria con quote, 2×1000 stimato, contributi degli eletti e spese per sezioni, personale, comunicazione, formazione e campagne. Nuove attività (tesseramento, apertura di sezioni, formazione, contributi, campagne di comunicazione del partito, mediazione e disciplina) dipendono dal ruolo interno; incarichi si conquistano e si perdono. Le **Finanze** del politico hanno un registro per categoria, un budget settimanale (staff che aggiunge giorni, comunicazione, presenza sul territorio, sede), investimenti (piattaforma per i volontari, sede di proprietà, sondaggio riservato, ufficio stampa), patrimonio netto, un fondo elettorale vincolato che i donatori integrano del 15%, debito con interessi, crisi finanziaria, bilanci annuali e indice di sostenibilità; all’avvio di una campagna anche la tesoreria del partito finanzia il candidato, in base al ruolo e al sostegno interno. Anche per i partiti reali questi numeri sono solo stime di gioco.
 
 ## Parlamentari e leggi reali nella simulazione
 
@@ -157,6 +159,18 @@ npm run check:published-site
 L’importatore scarica fonti pubbliche e riscrive esclusivamente `src/data/real/`. Impostare `AS_OF` alla data effettiva di verifica e aggiornare il numero versione del dataset nello script. Prima di pubblicare, controllare il diff e il risultato del validatore.
 
 `check:published-site` interroga l’URL GitHub Pages, controlla tutti i JSON pubblici e verifica che corrispondano ai file presenti nella working tree. Va eseguito dopo che GitHub Pages ha terminato la pubblicazione.
+
+## Cloudflare Workers
+
+Lo stesso sito è pubblicato anche come Worker con asset statici (`palazzo-2026-site` su workers.dev). `wrangler.jsonc` indica come cartella degli asset la radice del progetto, così import relativi, JSON e navigazione restano identici a GitHub Pages; `.assetsignore` esclude tutto ciò che non serve al gioco (`.git`, `node_modules`, `scripts`, `outputs`, README, configurazioni e lo snapshot `database.json` usato solo dagli script). Senza questa configurazione l’auto-configurazione di Cloudflare pubblicava la radice intera, compreso `node_modules/workerd` (127 MiB), e il deploy falliva.
+
+```sh
+npm run cf:dev      # anteprima locale su http://localhost:8787
+npm run cf:deploy   # pubblicazione su Cloudflare Workers
+npm run check:published-site -- https://palazzo-2026-site.<sottodominio>.workers.dev/
+```
+
+Anche il collegamento Git di Cloudflare usa `wrangler.jsonc`: ogni push su `main` aggiorna sia GitHub Pages sia il Worker.
 
 ## GitHub Pages
 

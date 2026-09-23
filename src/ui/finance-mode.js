@@ -1,8 +1,9 @@
 // Money of the career and of the party: balance, flows, budget, reports and sustainability.
-import { BUDGET_LINES, FINANCE_CATEGORIES, financeOutlook } from '../core/finance-engine.js?v=20260924-11';
-import { isPartyLeader, PARTY_PRIORITIES, TREASURY_LABELS, treasuryOutlook } from '../core/organization-engine.js?v=20260924-11';
-import { artTile } from './visuals.js?v=20260924-11';
-import { breakdown, esc, euro, EXPENSE_COLOR, flowChart, INCOME_COLOR, lineChart, num, SERIES, signed, sparkline, stateBadge } from './charts.js?v=20260924-11';
+import { BUDGET_LINES, FINANCE_CATEGORIES, financeOutlook, hasAsset, INVESTMENTS } from '../core/finance-engine.js?v=20260924-13';
+import { isPartyLeader, PARTY_PRIORITIES, TREASURY_LABELS, treasuryOutlook } from '../core/organization-engine.js?v=20260924-13';
+import { artTile } from './visuals.js?v=20260924-13';
+import { illustration } from './illustrations.js?v=20260924-13';
+import { breakdown, esc, euro, EXPENSE_COLOR, flowChart, INCOME_COLOR, lineChart, num, SERIES, signed, sparkline, stateBadge } from './charts.js?v=20260924-13';
 
 const STATUS_KIND = { solida: 'solida', calo: 'calo', rischio: 'rischio', crisi: 'crisi' };
 
@@ -23,6 +24,21 @@ function budgetControls(game) {
   }).join('')}</div>`;
 }
 
+// Lasting investments, the election fund and the balance sheet.
+function investmentsPanel(game, outlook) {
+  const ended = game.status === 'ended';
+  const cards = INVESTMENTS.map(item => {
+    const owned = !item.repeatable && hasAsset(game.finance, item.id, game.week.index);
+    const asset = (game.finance.assets ?? []).find(entry => entry.id === item.id);
+    const short = game.resources.funds < item.cost;
+    return `<article class="invest-card ${owned ? 'is-owned' : ''}">${artTile(item.icon, owned ? '#1baf7a' : 'var(--party-accent)', 'sm')}<div><strong>${esc(item.label)}</strong><small>${esc(item.effect)}</small>${owned ? `<span class="state-badge state-solida">Tuo dalla settimana ${asset?.boughtWeek}${asset?.untilWeek ? ` · fino alla ${asset.untilWeek}` : ''}</span>` : `<button class="secondary-button" data-invest="${esc(item.id)}" ${ended || short ? 'disabled' : ''} title="${short ? 'Cassa insufficiente' : ''}">Investi ${euro(item.cost)}</button>`}</div></article>`;
+  }).join('');
+  const fundButtons = [500, 1000, 2500].map(amount => `<button class="chip-button" data-election-fund="${amount}" ${ended || game.resources.funds < amount ? 'disabled' : ''}>+${euro(amount)}</button>`).join('');
+  return `<div class="balance-sheet"><div><small>Cassa</small><strong>${euro(game.resources.funds)}</strong></div><div><small>Fondo elettorale</small><strong>${euro(outlook.fund)}</strong></div><div><small>Beni</small><strong>${euro(outlook.assets)}</strong></div><div><small>Debito</small><strong class="${outlook.debt ? 'out' : ''}">${outlook.debt ? '−' : ''}${euro(outlook.debt)}</strong></div><div class="is-total"><small>Patrimonio netto</small><strong>${euro(outlook.netWorth)}</strong></div></div>
+    <div class="invest-grid">${cards}</div>
+    <div class="fund-box">${artTile('ballot', '#e34948', 'sm')}<div><strong>Fondo elettorale vincolato</strong><small>Accantona ora: all’avvio della prossima campagna il fondo passa ai candidati e i donatori aggiungono il 15%. Non conta come spesa.</small></div><div class="fund-actions">${fundButtons}</div></div>`;
+}
+
 export function renderFinancePage(state) {
   const game = state.game;
   if (!game?.finance) return '<p class="quiet-copy">Le finanze si attivano con la carriera.</p>';
@@ -36,7 +52,7 @@ export function renderFinancePage(state) {
   const weeks = history.map(item => ({ label: `Settimana ${item.week}`, short: `S${item.week}`, income: item.income, expense: item.expense }));
   return `<div class="finance-page">
     <section class="finance-hero">
-      <div>${artTile('wallet', 'var(--party-accent)', 'lg')}<div><span class="section-kicker">LE TUE FINANZE POLITICHE · SIMULATE</span><h2>${euro(game.resources.funds)} in cassa</h2><p class="section-subtitle">Comitato, staff, comunicazione e campagne si pagano da qui. Le spese ricorrenti lavorano per te ogni settimana; il debito costa interessi.</p></div>${stateBadge(STATUS_KIND[outlook.status], outlook.statusLabel)}</div>
+      ${illustration('tesoro', 'hero-art')}<div>${artTile('wallet', 'var(--party-accent)', 'lg')}<div><span class="section-kicker">LE TUE FINANZE POLITICHE · SIMULATE</span><h2>${euro(game.resources.funds)} in cassa</h2><p class="section-subtitle">Comitato, staff, comunicazione e campagne si pagano da qui. Le spese ricorrenti lavorano per te ogni settimana; il debito costa interessi.</p></div>${stateBadge(STATUS_KIND[outlook.status], outlook.statusLabel)}</div>
       <div class="finance-kpis"><div><small>Entrate medie</small><strong>${euro(outlook.income)}</strong><span>a settimana</span></div><div><small>Uscite medie</small><strong>${euro(outlook.expense)}</strong><span>a settimana</span></div><div><small>Risultato medio</small><strong class="${outlook.net >= 0 ? 'in' : 'out'}">${signed(outlook.net, 0)} €</strong><span>ultime 6 settimane</span></div><div><small>Spese fisse</small><strong>${euro(outlook.recurring)}</strong><span>budget settimanale</span></div><div><small>Autonomia</small><strong>${outlook.runway === null ? '—' : `${outlook.runway} sett.`}</strong><span>al ritmo attuale</span></div><div><small>Debito</small><strong class="${outlook.debt ? 'out' : ''}">${euro(outlook.debt)}</strong><span>${outlook.debt ? 'interessi 1% a settimana' : 'nessun debito'}</span></div></div>
     </section>
     <div class="society-grid">
@@ -45,7 +61,8 @@ export function renderFinancePage(state) {
     </div>
     ${panel('BILANCIO SETTIMANALE', 'Le tue spese ricorrenti', budgetControls(game) + '<p class="parliament-note">Le scelte valgono dalla prossima chiusura di settimana. Se la cassa non basta, la differenza diventa debito; oltre 2.500 € scatta una crisi finanziaria.</p>', `<span class="hq-count">${euro(outlook.recurring)}/sett.</span>`)}
     <div class="society-grid">
-      ${panel(`ANNO ${esc(finance.year ?? '')}`, 'Da dove arrivano e dove vanno', `<div class="split-breakdown"><div><small>ENTRATE</small>${year.income.length ? breakdown(year.income, { format: euro }) : '<p class="quiet-copy">—</p>'}</div><div><small>USCITE</small>${year.expense.length ? breakdown(year.expense, { format: euro }) : '<p class="quiet-copy">—</p>'}</div></div>`)}
+      ${panel('INVESTIMENTI E PATRIMONIO', 'Cosa possiedi e dove investire', investmentsPanel(game, outlook))}
+    ${panel(`ANNO ${esc(finance.year ?? '')}`, 'Da dove arrivano e dove vanno', `<div class="split-breakdown"><div><small>ENTRATE</small>${year.income.length ? breakdown(year.income, { format: euro }) : '<p class="quiet-copy">—</p>'}</div><div><small>USCITE</small>${year.expense.length ? breakdown(year.expense, { format: euro }) : '<p class="quiet-copy">—</p>'}</div></div>`)}
       ${panel('MOVIMENTI', 'Registro contabile', `<div class="ledger">${ledger || '<p class="quiet-copy">Nessun movimento.</p>'}</div>`)}
     </div>
     ${panel('BILANCI ANNUALI', 'Chiusure d’esercizio', annual)}
@@ -74,5 +91,6 @@ export function renderFinanceCard(state) {
   const game = state.game;
   if (!game?.finance) return '';
   const outlook = financeOutlook(game);
-  return `<div class="dash-body"><div class="dash-number"><strong>${euro(game.resources.funds)}</strong><small>in cassa</small>${stateBadge(STATUS_KIND[outlook.status], outlook.statusLabel)}</div>${sparkline(game.finance.history.slice(-12).map(item => item.balance))}<dl class="dash-facts"><div><dt>Risultato</dt><dd>${signed(outlook.net, 0)} €/sett.</dd></div><div><dt>Spese fisse</dt><dd>${euro(outlook.recurring)}</dd></div><div><dt>Autonomia</dt><dd>${outlook.runway === null ? '—' : `${outlook.runway} sett.`}</dd></div><div><dt>Debito</dt><dd>${euro(outlook.debt)}</dd></div></dl></div>`;
+  const org = game.party?.org;
+  return `<div class="dash-body"><div class="dash-number"><strong>${euro(game.resources.funds)}</strong><small>in cassa</small>${stateBadge(STATUS_KIND[outlook.status], outlook.statusLabel)}</div>${sparkline(game.finance.history.slice(-12).map(item => item.balance))}<dl class="dash-facts"><div><dt>Risultato</dt><dd>${signed(outlook.net, 0)} €/sett.</dd></div><div><dt>Spese fisse</dt><dd>${euro(outlook.recurring)}</dd></div><div><dt>Fondo elettorale</dt><dd>${euro(outlook.fund)}</dd></div><div><dt>Debito</dt><dd>${euro(outlook.debt)}</dd></div>${org ? `<div class="dash-wide"><dt>Tesoreria del partito</dt><dd>${euro(org.treasury.balance)} · ${esc(treasuryOutlook(org).statusLabel.toLowerCase())}</dd></div>` : ''}</dl></div>`;
 }

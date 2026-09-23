@@ -1,0 +1,9 @@
+// Cloudflare Workers: POLITICANDO 2026 is a static site served as Workers static assets.
+// The same files are published on GitHub Pages; .assetsignore keeps tooling and sources out.
+{
+  "name": "palazzo-2026-site",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    "directory": "."
+  }
+}
