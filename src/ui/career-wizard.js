@@ -1,6 +1,6 @@
-import { CAREER_LEVELS, ITALIAN_REGIONS, initialCareerStatistics } from '../data/regions.js?v=20260924-2';
-import { validateCareerStep } from '../core/career-rules.js?v=20260924-2';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260924-2';
+import { CAREER_LEVELS, ITALIAN_REGIONS, initialCareerStatistics } from '../data/regions.js?v=20260924-3';
+import { validateCareerStep } from '../core/career-rules.js?v=20260924-3';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260924-3';
 
 const esc = (value = '') => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const icon = (path, size = 17) => `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;

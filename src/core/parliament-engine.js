@@ -1,4 +1,4 @@
-import { DATA_SOURCES } from '../data/schema.js?v=20260924-2';
+import { DATA_SOURCES } from '../data/schema.js?v=20260924-3';
 
 export const CHAMBERS = Object.freeze({
   camera: { label: 'Camera dei deputati', shortLabel: 'Camera', source: DATA_SOURCES.REAL },

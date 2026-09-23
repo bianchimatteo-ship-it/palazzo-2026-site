@@ -1,17 +1,17 @@
-import { fullDate, formatDate } from '../core/time.js?v=20260924-2';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260924-2';
-import { isRealCollectionLoaded, loadRealCollections, realDatabase } from '../data/repositories/real-data.js?v=20260924-2';
-import { deleteLocalLogo, exportLogoConfiguration, getLocalLogo, importLogoConfiguration, listLocalLogos, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20260924-2';
-import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20260924-2';
-import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20260924-2';
-import { renderLogoAdmin } from './logo-admin.js?v=20260924-2';
-import { makeCareerDraft, renderCareerWizard } from './career-wizard.js?v=20260924-2';
-import { validateCareerStep } from '../core/career-rules.js?v=20260924-2';
-import { renderCampaignPage } from './campaign-mode.js?v=20260924-2';
-import { renderParliamentPage } from './parliament-mode.js?v=20260924-2';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-2';
-import { CAREER_LEVELS, careerLevelLabel } from '../data/regions.js?v=20260924-2';
-import { renderElectionCalendar, renderHeadquarters, renderInbox, renderPartyPosition } from './game-mode.js?v=20260924-2';
+import { fullDate, formatDate } from '../core/time.js?v=20260924-3';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260924-3';
+import { isRealCollectionLoaded, loadRealCollections, realDatabase } from '../data/repositories/real-data.js?v=20260924-3';
+import { deleteLocalLogo, exportLogoConfiguration, getLocalLogo, importLogoConfiguration, listLocalLogos, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20260924-3';
+import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20260924-3';
+import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20260924-3';
+import { renderLogoAdmin } from './logo-admin.js?v=20260924-3';
+import { makeCareerDraft, renderCareerWizard } from './career-wizard.js?v=20260924-3';
+import { validateCareerStep } from '../core/career-rules.js?v=20260924-3';
+import { renderCampaignPage } from './campaign-mode.js?v=20260924-3';
+import { renderParliamentPage } from './parliament-mode.js?v=20260924-3';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-3';
+import { CAREER_LEVELS, careerLevelLabel } from '../data/regions.js?v=20260924-3';
+import { renderElectionCalendar, renderHeadquarters, renderInbox, renderPartyPosition } from './game-mode.js?v=20260924-3';
 
 const mainSectionActive = (id, page) => page === id || (id === 'calendario' && page === 'eventi') || (id === 'parlamento' && ['governo', 'leggi'].includes(page)) || (id === 'partito' && page === 'partiti-lista') || (id === 'profilo' && page === 'politici');
 const mainNavigation = [

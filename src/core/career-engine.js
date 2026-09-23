@@ -1,11 +1,11 @@
-import { advanceDays } from './time.js?v=20260924-2';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-2';
-import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260924-2';
+import { advanceDays } from './time.js?v=20260924-3';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-3';
+import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260924-3';
 import {
   APPOINTMENTS, BASE_WEEKLY_INCOME, CAREER_EVENTS, CAREER_OBJECTIVES, CURRENT_TEMPLATES, EARLY_ELECTION_AFTER_WEEKS, ELECTION_SCHEDULE,
   FICTIONAL_RIVALS, FORCED_EVENTS, FOUNDER_RANK, LEVEL_FIRST_ELECTION, OFFICE_INCOME, PARTY_RANKS, RELATION_TEMPLATES, STAT_LABELS,
   WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES
-} from '../data/simulation/career-rules.js?v=20260924-2';
+} from '../data/simulation/career-rules.js?v=20260924-3';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -13,6 +13,7 @@ const round2 = value => Math.round(value * 100) / 100;
 const copy = value => value == null ? value : JSON.parse(JSON.stringify(value));
 const hash = value => [...String(value)].reduce((n, char) => (n * 31 + char.charCodeAt(0)) >>> 0, 2166136261) || 1;
 const signed = value => `${value > 0 ? '+' : ''}${String(round2(value)).replace('.', ',')}`;
+const LOCAL_EVENTS = ['protesta', 'maltempo', 'sindacati-vertenza'];
 const RELATION_BASES = Object.fromEntries(RELATION_TEMPLATES.map(item => [item.id, item.base]));
 
 function draw(game) {
@@ -296,6 +297,9 @@ export function resolveInboxItem(input, env, itemId, choiceId) {
   const problem = costProblem(ctx.game, choice.cost);
   if (problem) throw new Error(problem);
   pay(ctx.game, choice.cost);
+  const template = templateFor(item);
+  const local = item.kind === 'appuntamento' ? !['seat', 'minister'].includes(template.when) : LOCAL_EVENTS.includes(item.templateId);
+  if (choice.cost?.ap && local) ctx.game.week.categoriesUsed = [...new Set([...ctx.game.week.categoriesUsed, 'territorio'])];
   const lines = [];
   const specials = [];
   const tone = runChoice(ctx, env, item, choice, lines, specials);

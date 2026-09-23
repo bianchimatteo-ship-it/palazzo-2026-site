@@ -1,13 +1,13 @@
-import { DATA_SOURCES, emptyDataset, isSelectableParty } from '../data/schema.js?v=20260924-2';
-import { makeDemoParties, makeDemoState } from '../data/demo.js?v=20260924-2';
-import { CAREER_LEVELS, initialCareerStatistics } from '../data/regions.js?v=20260924-2';
-import { storage } from './storage.js?v=20260924-2';
-import { advanceDays, formatDate } from './time.js?v=20260924-2';
-import { validateNewCareerDraft } from './career-rules.js?v=20260924-2';
-import { advanceCampaign, breakCampaignAlliance, createCampaign, decideCampaignEvent, negotiateCampaignAlliance, performCampaignActivity } from './campaign-engine.js?v=20260924-2';
-import { activeMinisters, advanceGovernmentWeek, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20260924-2';
-import { advanceWeek, alignCurrent, contestPartyRank, createGameState, joinParty, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20260924-2';
-import { PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20260924-2';
+import { DATA_SOURCES, emptyDataset, isSelectableParty } from '../data/schema.js?v=20260924-3';
+import { makeDemoParties, makeDemoState } from '../data/demo.js?v=20260924-3';
+import { CAREER_LEVELS, initialCareerStatistics } from '../data/regions.js?v=20260924-3';
+import { storage } from './storage.js?v=20260924-3';
+import { advanceDays, formatDate } from './time.js?v=20260924-3';
+import { validateNewCareerDraft } from './career-rules.js?v=20260924-3';
+import { advanceCampaign, breakCampaignAlliance, createCampaign, decideCampaignEvent, negotiateCampaignAlliance, performCampaignActivity } from './campaign-engine.js?v=20260924-3';
+import { activeMinisters, advanceGovernmentWeek, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20260924-3';
+import { advanceWeek, alignCurrent, contestPartyRank, createGameState, joinParty, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20260924-3';
+import { PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20260924-3';
 
 const STATE_VERSION = 6;
 const PARLIAMENTARY_CAMPAIGN_ROLES = Object.freeze({ deputato: 'camera', uninominale: 'camera', senatore: 'senato' });
