@@ -1,7 +1,7 @@
 // Shared building blocks for the simulation screens: numbers, state badges, meters and charts.
 // Charts follow the same rules as the polls page: thin marks, one axis, legend + direct labels,
 // hover tooltips through data-trend / data-tip, text in ink rather than in the series colour.
-import { glyph } from './visuals.js?v=20260924-9';
+import { glyph } from './visuals.js?v=20260924-10';
 
 export const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const num = (value, digits = 1) => value === null || value === undefined || Number.isNaN(Number(value)) ? '—' : Number(value).toLocaleString('it-IT', { maximumFractionDigits: digits });
@@ -94,7 +94,7 @@ export function flowChart(rows, { height = 210 } = {}) {
   const scale = (plotH / 2) / high;
   const slot = plotW / rows.length;
   const bar = Math.min(12, slot / 2 - 3);
-  const ticks = [-high, -high / 2, 0, high / 2, high].map(v => `<line class="grid ${v === 0 ? 'baseline' : ''}" x1="${L}" x2="${W - R}" y1="${zero - v * scale}" y2="${zero - v * scale}"/><text class="tick" x="${L - 6}" y="${zero - v * scale + 3.5}" text-anchor="end">${v === 0 ? '0' : `${v > 0 ? '' : '−'}${num(Math.abs(v) / 1000, 1)}k`}</text>`).join('');
+  const ticks = [-high, -high / 2, 0, high / 2, high].map(v => `<line class="grid ${v === 0 ? 'baseline' : ''}" x1="${L}" x2="${W - R}" y1="${zero - v * scale}" y2="${zero - v * scale}"/><text class="tick" x="${L - 6}" y="${zero - v * scale + 3.5}" text-anchor="end">${v === 0 ? '0' : `${v > 0 ? '' : '−'}${Math.abs(v) >= 1000 ? `${num(Math.abs(v) / 1000, 1)}k` : num(Math.abs(v), 0)}`}</text>`).join('');
   const every = Math.max(1, Math.ceil(rows.length / 8));
   const bars = rows.map((row, i) => {
     const cx = L + slot * i + slot / 2;

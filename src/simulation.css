@@ -32,7 +32,7 @@
 .situation-bar > div { display: flex; align-items: center; gap: 10px; padding: 11px 16px; min-width: 0; }
 .situation-bar > div + div { border-left: 1px solid rgba(255,255,255,.1); }
 .situation-bar .glyph { color: #d8bb7a; }
-.situation-bar span { display: grid; min-width: 0; }
+.situation-bar > div > span { display: grid; min-width: 0; }
 .situation-bar small { color: #a9bcb1; font-size: 10.5px; font-weight: 750; letter-spacing: .12em; }
 .situation-bar strong { color: #fffaf1; font: 700 14px/1.25 Manrope, sans-serif; overflow: hidden; text-overflow: ellipsis; }
 .situation-bar em { color: #b8c7be; font: italic 12.5px 'Newsreader', Georgia, serif; }
@@ -326,7 +326,9 @@
 @media (max-width: 600px) {
   .situation-bar { grid-template-columns: 1fr; }
   .situation-bar > div + div { border-left: 0; border-top: 1px solid rgba(255,255,255,.1); }
-  .situation-bar > div { padding: 9px 13px; }
+  .situation-bar > div { padding: 8px 13px; }
+  .situation-bar em { display: none; }
+  .situation-bar strong { font-size: 13.5px; }
   .dash-grid { grid-template-columns: 1fr; }
   .society-hero, .finance-hero { padding: 17px 15px; }
   .society-kpis { grid-template-columns: 1fr; }

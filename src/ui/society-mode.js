@@ -1,8 +1,9 @@
 // Country, territories, citizens and media: the simulated society as the player sees it.
-import { INDICATORS, MEDIA_OUTLETS, SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-9';
-import { nationalIndicators, societyMood } from '../core/society-engine.js?v=20260924-9';
-import { artTile, glyph } from './visuals.js?v=20260924-9';
-import { breakdown, esc, levelState, lineChart, meter, num, rampColor, SERIES, signed, sparkline, stateBadge, trendState, GREEN_RAMP } from './charts.js?v=20260924-9';
+import { INDICATORS, MEDIA_OUTLETS, SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-10';
+import { nationalIndicators, societyMood } from '../core/society-engine.js?v=20260924-10';
+import { artTile, glyph } from './visuals.js?v=20260924-10';
+const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
+import { breakdown, esc, levelState, lineChart, meter, num, rampColor, SERIES, signed, sparkline, stateBadge, trendState, GREEN_RAMP } from './charts.js?v=20260924-10';
 
 // Tile cartogram of the regions: a recognisable boot, one tile per region.
 const TILES = Object.freeze({
@@ -62,7 +63,7 @@ function regionDetail(society, name, home, deputies = null) {
     <header>${artTile('map', region.name === home ? 'var(--party-accent)' : '#318a5b', 'md')}<div><span class="section-kicker">${region.name === home ? 'LA TUA REGIONE' : 'REGIONE'}</span><h3>${esc(region.name)}</h3><p class="section-subtitle">Fiducia nelle istituzioni ${num(region.trust, 0)}/100${deputies ? ` · ${deputies} deputati in carica per questa regione (dato reale)` : ''}</p></div>${stateBadge(satState, `Soddisfazione ${num(region.satisfaction, 0)} · ${satLabel}`)}</header>
     <div class="indicator-list">${bars}</div>
     ${issues.length ? `<div class="issue-list">${issues.map(issue => `<div class="issue-row">${stateBadge(issue.severity >= 6 ? 'crisi' : 'rischio', issue.severity >= 6 ? 'Crisi' : 'A rischio')}<span>${esc(indicatorLabel(issue.indicator))}: sotto la soglia di guardia</span></div>`).join('')}</div>` : ''}
-    ${incoming.length ? `<div class="incoming"><small>EFFETTI IN ARRIVO DALLE LEGGI</small>${incoming.slice(0, 5).map(item => `<div>${glyph('law', 14)}<span>${esc(indicatorLabel(item.indicator))} ${signed(item.total)} in ${item.weeks} settimane · ${esc(item.cause)}</span></div>`).join('')}</div>` : '<p class="quiet-copy">Nessuna legge in fase di attuazione in questa regione.</p>'}
+    ${incoming.length ? `<div class="incoming"><small>EFFETTI IN ARRIVO DALLE LEGGI</small>${incoming.slice(0, 5).map(item => `<div>${glyph('law', 14)}<span>${esc(indicatorLabel(item.indicator))} ${signed(item.total)} in ${weeks(item.weeks)} · ${esc(item.cause)}</span></div>`).join('')}</div>` : '<p class="quiet-copy">Nessuna legge in fase di attuazione in questa regione.</p>'}
   </article>`;
 }
 

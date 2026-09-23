@@ -1,9 +1,10 @@
 // The party as an organisation, and the real parliamentarians the career deals with.
-import { ORGANS, organOf, treasuryOutlook } from '../core/organization-engine.js?v=20260924-9';
-import { contactStance } from '../core/contacts-engine.js?v=20260924-9';
-import { SELECTION_METHODS } from '../data/simulation/organization-rules.js?v=20260924-9';
-import { artTile, glyph } from './visuals.js?v=20260924-9';
-import { esc, euro, levelState, lineChart, meter, num, SERIES, signed, sparkline, stateBadge, trendState } from './charts.js?v=20260924-9';
+import { ORGANS, organOf, treasuryOutlook } from '../core/organization-engine.js?v=20260924-10';
+import { contactStance } from '../core/contacts-engine.js?v=20260924-10';
+import { SELECTION_METHODS } from '../data/simulation/organization-rules.js?v=20260924-10';
+import { artTile, glyph } from './visuals.js?v=20260924-10';
+const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
+import { esc, euro, levelState, lineChart, meter, num, SERIES, signed, sparkline, stateBadge, trendState } from './charts.js?v=20260924-10';
 
 const TREND_LABELS = { crescita: 'In crescita', calo: 'In calo', stabile: 'Stabile' };
 
@@ -32,7 +33,7 @@ export function renderOrganizationPanel(state) {
     </div>
     <div class="org-grid">
       <div><div class="home-section-heading"><div><span class="section-kicker">ORGANI INTERNI</span></div></div><ol class="organ-ladder">${organs}</ol>
-        <div class="org-agenda"><div>${glyph('crown', 18)}<span><strong>${org.founder ? 'Guidi il partito da fondatore' : weeksToCongress > 0 ? `Congresso ordinario tra ${weeksToCongress} settimane` : 'Congresso in corso'}</strong><small>${org.congress.history?.[0] ? `Ultimo congresso: vince ${esc(org.congress.history[0].winner)}${org.congress.history[0].backed ? ' (la tua area)' : ''}` : 'Il congresso elegge la guida e ridisegna gli organi.'}</small></span></div>
+        <div class="org-agenda"><div>${glyph('crown', 18)}<span><strong>${org.founder ? 'Guidi il partito da fondatore' : weeksToCongress > 0 ? `Congresso ordinario tra ${weeks(weeksToCongress)}` : 'Congresso in corso'}</strong><small>${org.congress.history?.[0] ? `Ultimo congresso: vince ${esc(org.congress.history[0].winner)}${org.congress.history[0].backed ? ' (la tua area)' : ''}` : 'Il congresso elegge la guida e ridisegna gli organi.'}</small></span></div>
         ${selections.length ? selections.map(item => `<div>${glyph('ballot', 18)}<span><strong>${esc(item.election)}</strong><small>${esc(SELECTION_METHODS[item.method] ?? item.method)} · peso sulla candidatura ${signed(item.bonus, 0)}</small></span></div>`).join('') : `<div>${glyph('ballot', 18)}<span><strong>Selezione dei candidati</strong><small>Si apre tre settimane prima di ogni finestra di candidatura.</small></span></div>`}</div>
       </div>
       <div><div class="home-section-heading"><div><span class="section-kicker">ISCRITTI NEL TEMPO</span></div></div>${lineChart({ series: [{ label: 'Iscritti', color: SERIES[0], values: history.map(item => item.members), emphasis: true }], labels: history.map(item => `S${item.week}`), tips: history.map(item => `Settimana ${item.week}`), digits: 0, height: 180, ariaLabel: 'Iscritti al partito per settimana' })}</div>

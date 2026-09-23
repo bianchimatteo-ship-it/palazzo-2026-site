@@ -1,5 +1,5 @@
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-9';
-import { INDICATORS, ISSUE_THRESHOLD, ISSUE_TOPICS, LAW_EFFECTS, LAW_PHASE_IN_WEEKS, MEDIA_OUTLETS, REAL_TOPIC_AREAS, SCENARIO_EXECUTIVE, SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-9';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-10';
+import { INDICATORS, ISSUE_THRESHOLD, ISSUE_TOPICS, LAW_EFFECTS, LAW_PHASE_IN_WEEKS, MEDIA_OUTLETS, REAL_TOPIC_AREAS, SCENARIO_EXECUTIVE, SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-10';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
