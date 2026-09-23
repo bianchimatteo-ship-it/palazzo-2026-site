@@ -280,11 +280,11 @@ body {
   .profile-stat-strip { flex-wrap:wrap; }
 }
 @media (max-width:600px) {
-  .sidebar { inset:auto 0 0; z-index:8; width:100%; height:67px; padding:0 5px env(safe-area-inset-bottom); border-top:1px solid rgba(255,255,255,.1); border-right:0; }
+  .sidebar { inset:auto 0 0; z-index:8; width:100%; height:67px; flex-direction:row; align-items:stretch; padding:0 5px env(safe-area-inset-bottom); border-top:1px solid rgba(255,255,255,.1); border-right:0; }
   .sidebar .brand,.brand-subtitle { display:none; }
   .main-nav { flex:1; display:flex; flex-direction:row; align-items:stretch; gap:0; margin:0; overflow-x:auto; scrollbar-width:none; }
   .main-nav::-webkit-scrollbar { display:none; }
-  .main-nav .nav-item,.sidebar-account { min-width:59px; min-height:55px; height:55px; flex:1 0 auto; display:flex; flex-direction:column; justify-content:center; gap:3px; padding:3px 5px; border-radius:3px; font-size:9px; }
+  .main-nav .nav-item,.sidebar-account { width:auto; min-width:59px; min-height:55px; height:55px; flex:1 0 auto; display:flex; flex-direction:column; justify-content:center; gap:3px; padding:3px 5px; border-radius:3px; font-size:9px; }
   .main-nav .nav-item>span,.sidebar-bottom .nav-item>span { display:block; }
   .main-nav .nav-item svg,.sidebar-account svg { width:17px; height:17px; }
   .sidebar-bottom { display:flex; flex:none; gap:0; margin:0; padding:0; border:0; }

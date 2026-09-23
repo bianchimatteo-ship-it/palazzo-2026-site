@@ -1,11 +1,11 @@
-import { advanceDays } from './time.js?v=20260924-1';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-1';
-import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260924-1';
+import { advanceDays } from './time.js?v=20260924-2';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-2';
+import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260924-2';
 import {
   APPOINTMENTS, BASE_WEEKLY_INCOME, CAREER_EVENTS, CAREER_OBJECTIVES, CURRENT_TEMPLATES, EARLY_ELECTION_AFTER_WEEKS, ELECTION_SCHEDULE,
   FICTIONAL_RIVALS, FORCED_EVENTS, FOUNDER_RANK, LEVEL_FIRST_ELECTION, OFFICE_INCOME, PARTY_RANKS, RELATION_TEMPLATES, STAT_LABELS,
   WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES
-} from '../data/simulation/career-rules.js?v=20260924-1';
+} from '../data/simulation/career-rules.js?v=20260924-2';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -233,11 +233,15 @@ function fillInbox(ctx, env, lines) {
   const game = ctx.game;
   const sit = situation(ctx, env);
   const params = eventParams(ctx);
-  const appointments = APPOINTMENTS.filter(item => meets(item.when, sit));
+  const recent = game.lastAppointmentIds ?? [];
+  const appointments = APPOINTMENTS.filter(item => meets(item.when, sit) && !recent.includes(item.id));
+  const picked = [];
   for (let count = 0; count < 2 && appointments.length; count++) {
-    const [picked] = appointments.splice(Math.floor(draw(game) * appointments.length), 1);
-    game.inbox.push(instantiate(picked, 'appuntamento', ctx, params));
+    const [item] = appointments.splice(Math.floor(draw(game) * appointments.length), 1);
+    picked.push(item.id);
+    game.inbox.push(instantiate(item, 'appuntamento', ctx, params));
   }
+  game.lastAppointmentIds = picked;
   const events = CAREER_EVENTS.filter(item => item.id !== game.lastEventId && meets(item.when, sit) && !(item.id === 'congresso' && !params.currentB));
   if (events.length && draw(game) < 0.6) {
     const total = events.reduce((sum, item) => sum + item.weight, 0);

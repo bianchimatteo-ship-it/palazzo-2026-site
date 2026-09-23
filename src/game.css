@@ -185,6 +185,9 @@
 .subpage-content>.hq-panel+.hq-panel { margin-top:14px; }
 .agenda-heading { margin:22px 0 8px; }
 
+@media (max-width:1000px) {
+  .week-chip { display:none; }
+}
 @media (max-width:1180px) {
   .hq-grid { grid-template-columns:1fr; }
   .hq-side { grid-template-columns:repeat(2,minmax(0,1fr)); }
