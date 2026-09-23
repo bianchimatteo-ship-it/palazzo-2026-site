@@ -103,7 +103,8 @@
 .society-hero .section-subtitle, .finance-hero .section-subtitle { color: #cfdad3; max-width: 720px; }
 .society-kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .society-kpi { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 6px 10px; padding: 12px 14px; border-radius: 6px; background: rgba(255,255,255,.07); }
-.society-kpi > span { grid-column: 1 / -1; color: #c3cfc7; font-size: 12px; }
+.society-kpi > span:first-child { grid-column: 1 / -1; color: #c3cfc7; font-size: 12px; }
+.society-kpi .state-badge { justify-self: end; }
 .society-kpi strong { color: #fffaf1; font: 800 26px/1 Manrope, sans-serif; letter-spacing: -.04em; }
 .society-kpi .sparkline { grid-column: 1 / -1; width: 100%; height: 30px; }
 .society-kpi .sparkline polyline { stroke: #d8bb7a; }

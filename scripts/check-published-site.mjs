@@ -132,7 +132,7 @@ try {
     } catch (error) { failures.push(`${path} non disponibile nella versione pubblicata (${error.message})`); }
   }
   if (failures.length) throw new Error(`Verifica Pages fallita:\n- ${failures.join('\n- ')}`);
-  console.log(`GitHub Pages verificato: ${pageUrl.href}`);
+  console.log(`Sito pubblicato verificato: ${pageUrl.href}`);
   console.log(`Snapshot ${liveManifest.snapshotDate}; ${db.parties.length} partiti, ${db.politicalMovements.length} movimenti, ${db.politicians.length} parlamentari, ${db.parliamentaryGroups.length} gruppi.`);
   console.log(`${Object.keys(files).length} collezioni live, ${localModules.size} moduli JS e ${stylesheets.length} fogli di stile verificati con la versione ${indexVersion}; hash remoti uguali ai file locali.`);
 } catch (error) {

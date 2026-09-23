@@ -1,8 +1,8 @@
-import { activeMinisters, canManageParliament, CHAMBERS, CONTEST_COST, CONTEST_WINDOW_DAYS, LAW_CATEGORIES, MINISTERIAL_PORTFOLIOS, nextParliamentaryRole, parliamentGroupFacts, playerInMajority } from '../core/parliament-engine.js?v=20260924-13';
-import { DATA_SOURCES } from '../data/schema.js?v=20260924-13';
-import { artTile, glyph, LAW_ICONS } from './visuals.js?v=20260924-13';
-import { projectLaw } from '../core/society-engine.js?v=20260924-13';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-13';
+import { activeMinisters, canManageParliament, CHAMBERS, CONTEST_COST, CONTEST_WINDOW_DAYS, LAW_CATEGORIES, MINISTERIAL_PORTFOLIOS, nextParliamentaryRole, parliamentGroupFacts, playerInMajority } from '../core/parliament-engine.js?v=20260924-14';
+import { DATA_SOURCES } from '../data/schema.js?v=20260924-14';
+import { artTile, glyph, LAW_ICONS } from './visuals.js?v=20260924-14';
+import { projectLaw } from '../core/society-engine.js?v=20260924-14';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-14';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const icon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
