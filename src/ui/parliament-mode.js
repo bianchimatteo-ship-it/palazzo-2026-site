@@ -1,5 +1,5 @@
-import { activeMinisters, canManageParliament, CHAMBERS, CONTEST_COST, CONTEST_WINDOW_DAYS, LAW_CATEGORIES, MINISTERIAL_PORTFOLIOS, nextParliamentaryRole, parliamentGroupFacts, playerInMajority } from '../core/parliament-engine.js?v=20260923-3';
-import { DATA_SOURCES } from '../data/schema.js';
+import { activeMinisters, canManageParliament, CHAMBERS, CONTEST_COST, CONTEST_WINDOW_DAYS, LAW_CATEGORIES, MINISTERIAL_PORTFOLIOS, nextParliamentaryRole, parliamentGroupFacts, playerInMajority } from '../core/parliament-engine.js?v=20260924-1';
+import { DATA_SOURCES } from '../data/schema.js?v=20260924-1';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const icon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
@@ -166,8 +166,9 @@ export function renderParliamentPage(page, state, options = {}) {
     const error = options.status?.error;
     return '<section class="parliament-empty"><span class="section-kicker">DATI ISTITUZIONALI</span><h2>' + (error ? 'Camere e gruppi non disponibili.' : 'Carico le Camere e i gruppi…') + '</h2><p>' + esc(error || 'La schermata usa i gruppi parlamentari verificati nel database locale del gioco.') + '</p><button class="secondary-button" data-action="retry-parliament">Riprova a caricare i gruppi</button></section>';
   }
-  if (page === 'governo') return governmentView(parliament, options.politicians ?? []);
-  if (page === 'leggi') return lawsView(parliament);
+  const days = state.game && parliament.player ? `<div class="parliament-access-note parliament-time-note">Ogni azione in Aula usa 1 giorno della settimana: ne restano <b>${state.game.week.ap}</b> su ${state.game.week.maxAp}. Capitale politico <b>${whole(parliament.resources?.politicalCapital)}</b>.</div>` : '';
+  if (page === 'governo') return days + governmentView(parliament, options.politicians ?? []);
+  if (page === 'leggi') return days + lawsView(parliament);
   const player = options.player ?? state.dataset?.politicians?.find(item => item.id === state.career?.playerId) ?? null;
-  return renderParliament(parliament, options.party, options.politicians ?? [], player, state.clock?.currentDate ?? parliament.createdAt);
+  return days + renderParliament(parliament, options.party, options.politicians ?? [], player, state.clock?.currentDate ?? parliament.createdAt);
 }

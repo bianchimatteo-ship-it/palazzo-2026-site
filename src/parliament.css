@@ -179,6 +179,7 @@
 .government-vote-summary .law-vote-result{margin-top:6px;padding:6px 0;border-top:0}
 .career-history-block{flex:1;min-width:0}
 .career-history-block .parliament-timeline-item strong{font:600 11px/1.4 'DM Sans',sans-serif}
+.parliament-time-note{margin-bottom:14px;border-left-color:#244c40;background:#eef1ea;color:#4f6356}
 .parliament-empty{padding:38px 5px;color:#35483a}
 .parliament-empty h2{font:700 25px Manrope,sans-serif}
 .parliament-empty p{color:#798176;font-size:12px}

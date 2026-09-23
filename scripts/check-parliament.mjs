@@ -23,8 +23,19 @@ const draftFor = (level, extra = {}) => ({
   parliamentaryGroupId: level === 'deputato' ? 'cam-xix-01' : level === 'senatore' ? 'senato-xix-gruppo-85' : '',
   parliamentStartMode: 'real-context', policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 }, ...extra
 });
+// Parliamentary actions cost working days: when the week is used up the player closes it, as in the game.
+const TIMED = ['proposeLaw', 'advanceLaw', 'amendLaw', 'compromiseLaw', 'negotiateLaw', 'formGovernment', 'negotiateGovernmentSupport', 'reviseGovernmentCoalition', 'assignMinister', 'voteGovernmentConfidence', 'triggerGovernmentCrisis', 'contestCommitteeRole', 'joinParliamentaryGroup'];
+const weekly = target => {
+  for (const name of TIMED) {
+    const original = target[name];
+    if (original.weekly) continue;
+    target[name] = (...args) => { if (target.getState().game.week.ap < 1) target.advance(7); return original(...args); };
+    target[name].weekly = true;
+  }
+  return target;
+};
 let module = await import('../src/core/store.js?parliament-check=' + Date.now());
-let store = module.store;
+let store = weekly(module.store);
 
 for (const level of ['comunale', 'regionale', 'deputato', 'senatore']) {
   store.reset();
@@ -118,7 +129,7 @@ assert.equal(store.getState().parliament.laws.find(item => item.id === rejected.
 store.save();
 module = await import('../src/core/store.js?parliament-law-reload=' + Date.now());
 assert.equal(module.store.getState().parliament.laws.find(item => item.id === rejected.id).stage, 'rejected');
-store = module.store;
+store = weekly(module.store);
 
 // A campaign winner can enter the real-context flow and choose a group explicitly.
 store.reset();
@@ -127,14 +138,14 @@ state = store.getState();
 state = { ...state, career: { ...state.career, initialLevel: 'senatore', parliamentContext: { mode: 'real-context', chamber: 'senato', groupId: null, source: 'simulation' } } };
 localStore.set('palazzo-2026.career.v1', JSON.stringify(state));
 module = await import('../src/core/store.js?parliament-reload=' + Date.now());
-store = module.store;
+store = weekly(module.store);
 store.initializeParliament(groups);
 store.joinParliamentaryGroup('senato-xix-gruppo-85');
 store.save();
 module = await import('../src/core/store.js?parliament-reload-save=' + Date.now());
 assert.equal(module.store.getState().parliament.player.groupId, 'senato-xix-gruppo-85');
 assert.equal(module.store.getState().parliament.laws.length, 0);
-assert.equal(module.store.getState().version, 5);
+assert.equal(module.store.getState().version, 6);
 assert.ok(renderParliamentPage('leggi', module.store.getState()).includes('Scrivi una proposta.'));
 
 const unique = list => new Set(list.map(item => item.id)).size === list.length;
@@ -229,6 +240,7 @@ store.reset();
 store.createCareer(draftFor('regionale'), references, groups);
 store.initializeParliament(groups);
 assert.equal(store.getState().parliament.player, null, 'Un percorso regionale osserva il Parlamento senza seggio.');
+store.fastForwardToElection('politiche');
 store.startCampaign({ electionType: 'politiche', role: 'senatore', objective: 'win' }, references);
 finishCampaign(80);
 state = store.getState();
@@ -244,6 +256,7 @@ assert.ok(canManage(store.getState().parliament));
 store.reset();
 store.createCareer(draftFor('deputato', { parliamentaryGroupId: 'cam-xix-02' }), references, groups);
 const pending = store.proposeLaw({ title: 'Piano per le biblioteche', category: 'Scuola', summary: 'Rafforza le biblioteche scolastiche nello scenario di gioco.' });
+store.fastForwardToElection('politiche');
 store.startCampaign({ electionType: 'politiche', role: 'deputato', objective: 'win' }, references);
 assert.equal(store.getState().campaign.candidacy.incumbent, true);
 finishCampaign(1);
@@ -262,6 +275,7 @@ assert.equal(store.getState().parliament.player, null, 'Il ricaricamento dei gru
 // Una campagna non parlamentare non tocca il seggio di un parlamentare in carica.
 store.reset();
 store.createCareer(draftFor('senatore', { parliamentaryGroupId: 'senato-xix-gruppo-49' }), references, groups);
+store.fastForwardToElection('comunale');
 store.startCampaign({ electionType: 'comunale', role: 'sindaco', objective: 'build' }, references);
 assert.equal(store.getState().campaign.candidacy.incumbent, false);
 const campaignClock = store.getState().clock.currentDate;
@@ -290,7 +304,7 @@ assert.equal(module.store.getState().career.id, 'carriera-demo');
 assert.ok(JSON.parse(localStore.get('palazzo-2026.career.v1.backup')).payload.includes('"dataset":null'));
 localStore.set('palazzo-2026.career.v1', JSON.stringify({ ...makeDemoState(), version: 4, career: { ...makeDemoState().career, initialLevel: 'nazionale' } }));
 module = await import('../src/core/store.js?parliament-v4=' + Date.now());
-assert.equal(module.store.getState().version, 5);
+assert.equal(module.store.getState().version, 6);
 assert.equal(module.store.getState().parliament, null);
 
 console.log('Career Wizard verificato: quattro percorsi, partito indipendente/reale/utente, gruppo distinto e contesto parlamentare. Parlamento, leggi, emendamenti, voti, fiducia, crisi, storico e ricaricamento verificati. Incarichi, cambio di gruppo, ministro, caduta del governo, integrazione con la campagna e ripristino dei salvataggi verificati.');

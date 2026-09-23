@@ -12,7 +12,7 @@ Richiede Node.js 20 o successivo, senza dipendenze esterne.
 npm start
 ```
 
-Apri `http://127.0.0.1:4173`. La carriera viene salvata nel `localStorage` del browser in uso. Il comando “Avanza di 1 settimana” aggiorna la data e registra un’attività simulata.
+Apri `http://127.0.0.1:4173`. La carriera viene salvata nel `localStorage` del browser in uso. Il pulsante “Chiudi la settimana” fa avanzare il tempo e risolve la settimana di gioco.
 
 ## Modalità campagna
 
@@ -28,6 +28,22 @@ Verifica il flusso completo (candidatura, attività, eventi, alleanze, modelli, 
 
 ```sh
 npm run check:campaign
+```
+
+## Gameplay: la carriera settimana per settimana
+
+La Home è il quartier generale del politico: statistiche con variazione settimanale, giorni disponibili, fondi, capitale politico, preparazione elettorale, decisioni in agenda, attività, traguardi, calendario elettorale, posizione in Parlamento e nel partito, relazioni.
+
+- **Tempo**: ogni settimana ha 6 giorni di lavoro. Attività (territorio, media, partito, Parlamento, relazioni, risorse, preparazione elettorale) e azioni parlamentari consumano giorni, fondi o capitale politico e hanno rischi e conseguenze persistenti. “Chiudi la settimana” registra entrate e bilancio, applica le scelte di default alle decisioni lasciate aperte e genera nuovi appuntamenti ed eventi.
+- **Eventi**: appuntamenti e eventi contestuali (proteste, scandali simulati, rivalità, alleanze, congressi, crisi di maggioranza, emergenze) offrono scelte multiple con effetti ed esiti incerti. Situazioni critiche generano eventi obbligati: procedimento di espulsione, richieste di dimissioni, inchieste.
+- **Partito**: gradi interni da Iscritto a Vicesegretario, sostegno interno, rapporto con la leadership e tre correnti simulate con peso e rapporti; congressi, conflitti, espulsione, uscita e adesione. Il partito reale resta un riferimento in sola lettura.
+- **Relazioni**: leadership, rivale, associazioni, redazioni, categorie produttive, sindacati e gruppi parlamentari pesano su candidature, incarichi, trattative (un gruppo con rapporti tesi rifiuta di trattare) e votazioni.
+- **Elezioni**: calendario simulato con finestre di candidatura (cicli accelerati rispetto ai mandati reali). Preparazione, fondi, sostegno interno e rapporti modificano la partenza della campagna; se non ti ricandidi il mandato si chiude; un governo caduto senza alternativa porta a politiche anticipate.
+- **Governo**: stabilità settimanale legata ai margini della maggioranza, crisi spontanee, rinegoziazioni.
+- **Progressione e fallimento**: dieci traguardi (radicamento, rete, ruolo nel partito, candidatura, elezione, Parlamento, incarico in Aula, legge, leadership interna, Governo); la carriera può chiudersi per una crisi di reputazione.
+
+```sh
+npm run check:gameplay
 ```
 
 ## Carriera parlamentare, governo e leggi

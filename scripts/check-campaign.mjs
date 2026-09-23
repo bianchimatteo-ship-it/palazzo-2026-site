@@ -99,6 +99,8 @@ let store=module.store;
 const draft={firstName:'Alessia',lastName:'Test',birthDate:'1988-04-20',gender:'donna',region:'Lombardia',municipality:'Milano',previousProfession:'Ricercatrice',initialLevel:'regionale',partyMode:'existing',partyId:party.id,currentDate:base.clock.currentDate};
 store.createCareer(draft,[party]);
 assert.ok(renderCampaignPage(store.getState(),references,()=>null).includes('data-campaign-setup="electionType"'));
+assert.throws(()=>store.startCampaign({electionType:'politiche',role:'deputato',objective:'build'},references),/candidature/,'Le candidature seguono il calendario elettorale.');
+store.fastForwardToElection('politiche');
 store.startCampaign({electionType:'politiche',role:'deputato',objective:'build'},references);
 let campaign=store.getState().campaign;
 const activeHtml=renderCampaignPage(store.getState(),references,()=>null);
@@ -181,5 +183,5 @@ for(let index=0;index<60&&!eventWasGenerated;index++) {
 assert.ok(eventWasGenerated,'È stato generato almeno un evento contestuale durante l’esposizione mediatica.');
 
 const stored=JSON.parse(localStore.get('palazzo-2026.career.v1'));
-assert.equal(stored.version,5);
+assert.equal(stored.version,6);
 console.log('Campagna verificata: 4 modelli elettorali, ballottaggio, candidatura interna, attività, eventi, alleanze, risultato, impatto carriera e salvataggio/ricaricamento.');

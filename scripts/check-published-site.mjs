@@ -96,7 +96,7 @@ try {
     assert(liveLogo.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])), 'Logo pubblicato non è un PNG valido');
   } else assert(false, 'Asset del logo verificato non associato a Futuro Nazionale');
 
-  for (const asset of ['src/styles.css','src/redesign.css','src/parliament.css']) {
+  for (const asset of ['src/styles.css','src/redesign.css','src/parliament.css','src/game.css']) {
     const live = new URL(asset, pageUrl); live.searchParams.set('v', mainUrl.searchParams.get('v') ?? version);
     try {
       const [{ bytes }, expected] = await Promise.all([get(live), readFile(new URL(`../${asset}`, import.meta.url))]);
