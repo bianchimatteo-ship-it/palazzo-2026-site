@@ -101,8 +101,12 @@ try {
   assert(db.politicalFigures.length === localManifest.collections.politicalFigures && db.partyLeaderships.length === localManifest.collections.partyLeaderships && db.partyLeaderships.length >= 38, 'Figure politiche o incarichi di partito mancanti');
   assert([...parties, ...db.coalitions].every(item => item.politicalPosition), 'Collocazione del documento mancante in qualche entità pubblicata');
   assert(db.realPolls[0]?.source === 'real' && db.realPolls[0].results.length >= 10, 'Sondaggio reale iniziale mancante');
+  // The ISTAT comuni are compact records: real and verified, with the full provenance on their territorial unit.
+  const istatUnits = new Map(db.territorialUnits.map(unit => [unit.code, unit]));
+  assert(db.municipalities.length === localManifest.collections.municipalities && localManifest.territorialSource?.validFrom === '2026-02-21', 'Elenco ISTAT dei comuni pubblicato incompleto');
   for (const [name,records] of Object.entries(db)) for (const record of records) {
-    assert(record.source === 'real' && record.verified === true && record.sourceUrl && record.sourceName && record.verifiedAt, `${name}/${record.id}: provenienza non verificata`);
+    if (name === 'municipalities') assert(record.source === 'real' && record.verified === true && /^\d{6}$/.test(record.code) && istatUnits.get(record.unit)?.sourceUrl, `${name}/${record.id}: provenienza non verificata`);
+    else assert(record.source === 'real' && record.verified === true && record.sourceUrl && record.sourceName && record.verifiedAt, `${name}/${record.id}: provenienza non verificata`);
   }
   const partyIds = new Set(parties.map(item => item.id));
   const figureIds = new Set(db.politicalFigures.map(item => item.id));
