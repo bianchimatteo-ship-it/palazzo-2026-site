@@ -1,28 +1,28 @@
-import { DATA_SOURCES, emptyDataset, isSelectableParty } from '../data/schema.js?v=20260924-18';
-import { makeDemoState } from '../data/demo.js?v=20260924-18';
-import { CAREER_LEVELS, initialCareerStatistics } from '../data/regions.js?v=20260924-18';
-import { storage } from './storage.js?v=20260924-18';
-import { loadSettings } from './settings.js?v=20260924-18';
-import { advanceDays, formatDate } from './time.js?v=20260924-18';
-import { validateNewCareerDraft } from './career-rules.js?v=20260924-18';
-import { advanceCampaign, breakCampaignAlliance, createCampaign, decideCampaignEvent, negotiateCampaignAlliance, performCampaignActivity } from './campaign-engine.js?v=20260924-18';
-import { partnerSatisfaction, acceptLawDemand, activeMinisters, amendLawPolicy, askConfidenceOnLaw, groupProfile, issueDecree, majoritySummit, reshuffleMinister, setGovernmentProgram, settlePartnerDemand, withdrawLaw, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20260924-18';
-import { setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, saveForElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20260924-18';
-import { COMMUNICATION_STYLES, GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20260924-18';
-import { AREA_BY_ID, BUDGET_SESSION, GOVERNMENT_LINES, areaOf } from '../data/simulation/policy-rules.js?v=20260924-18';
-import { acceptAlliance, advanceWorld, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setPlayerParty, withPositions } from './world-engine.js?v=20260924-18';
-import { DIFFICULTIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20260924-18';
-import { WORLD_PARTY_COUNT } from '../data/simulation/polling-rules.js?v=20260924-18';
-import { isPrimeMinister } from './roles.js?v=20260924-18';
-import { memoryAbout, memoryBalance, memoryWeight, recordWhy, remember } from './career-engine.js?v=20260924-18';
-import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20260924-18';
-import { advanceSociety, applyBudgetPlan, applyLawToSociety, calibrateWeights, createSociety, explainMood, measureDesign, mediaEvent, normalizeSociety, provisionalBudget, publicBudgetChoice, regionAttention, revokeMeasure, segmentAttention, societyMood, societyShock } from './society-engine.js?v=20260924-18';
-import { ACTIVITY_MEDIA, INDICATORS, ISSUE_TOPICS, SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-18';
-import { book, hasAsset, releaseElectionFund, setBudgetLevel } from './finance-engine.js?v=20260924-18';
-import { isPartyLeader, treasuryBook } from './organization-engine.js?v=20260924-18';
-import { selectContacts, syncContacts } from './contacts-engine.js?v=20260924-18';
-import { NEWS_TEMPLATES, composeHeadline, weeklyNews } from './news-engine.js?v=20260924-18';
-import { macroAreaOf, MACRO_AREAS } from '../data/simulation/policy-rules.js?v=20260924-18';
+import { DATA_SOURCES, emptyDataset, isSelectableParty } from '../data/schema.js?v=20260924-19';
+import { makeDemoState } from '../data/demo.js?v=20260924-19';
+import { CAREER_LEVELS, initialCareerStatistics } from '../data/regions.js?v=20260924-19';
+import { storage } from './storage.js?v=20260924-19';
+import { loadSettings } from './settings.js?v=20260924-19';
+import { advanceDays, formatDate } from './time.js?v=20260924-19';
+import { validateNewCareerDraft } from './career-rules.js?v=20260924-19';
+import { advanceCampaign, breakCampaignAlliance, createCampaign, decideCampaignEvent, negotiateCampaignAlliance, performCampaignActivity } from './campaign-engine.js?v=20260924-19';
+import { createReferenceGovernment, neverHadGovernment, offerGroupSupport, requestGovernmentPost, withdrawGroupSupport, partnerSatisfaction, acceptLawDemand, activeMinisters, amendLawPolicy, askConfidenceOnLaw, groupProfile, issueDecree, majoritySummit, reshuffleMinister, setGovernmentProgram, settlePartnerDemand, withdrawLaw, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20260924-19';
+import { setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, saveForElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20260924-19';
+import { COMMUNICATION_STYLES, GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20260924-19';
+import { AREA_BY_ID, BUDGET_SESSION, GOVERNMENT_LINES, areaOf } from '../data/simulation/policy-rules.js?v=20260924-19';
+import { acceptAlliance, advanceWorld, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setPlayerParty, withPositions } from './world-engine.js?v=20260924-19';
+import { DIFFICULTIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20260924-19';
+import { WORLD_PARTY_COUNT } from '../data/simulation/polling-rules.js?v=20260924-19';
+import { isPrimeMinister } from './roles.js?v=20260924-19';
+import { memoryAbout, memoryBalance, memoryWeight, recordWhy, remember } from './career-engine.js?v=20260924-19';
+import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20260924-19';
+import { advanceSociety, applyBudgetPlan, applyLawToSociety, calibrateWeights, createSociety, explainMood, measureDesign, mediaEvent, normalizeSociety, provisionalBudget, publicBudgetChoice, regionAttention, revokeMeasure, segmentAttention, societyMood, societyShock } from './society-engine.js?v=20260924-19';
+import { ACTIVITY_MEDIA, INDICATORS, ISSUE_TOPICS, SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-19';
+import { book, hasAsset, releaseElectionFund, setBudgetLevel } from './finance-engine.js?v=20260924-19';
+import { isPartyLeader, treasuryBook } from './organization-engine.js?v=20260924-19';
+import { selectContacts, syncContacts } from './contacts-engine.js?v=20260924-19';
+import { NEWS_TEMPLATES, composeHeadline, weeklyNews } from './news-engine.js?v=20260924-19';
+import { macroAreaOf, MACRO_AREAS } from '../data/simulation/policy-rules.js?v=20260924-19';
 
 const STATE_VERSION = 8;
 const POSITIONS_SET = new Set(['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra']);
@@ -110,6 +110,8 @@ let realPollStart = null;
 let realPositions = new Map();
 // New careers start on the date of the real snapshot, so that government, Parliament and the opening poll are current.
 let realStartDate = null;
+// The Government in office at the start, derived from the real data (government-reference.js): every career finds it.
+let referenceGovernment = null;
 function forcesFrom({ twoPerThousand = [], parties = [], movements = [], coalitions = [], polls = [], governingIds = [], startDate = null }) {
   realStartDate = /^\d{4}-\d{2}-\d{2}$/.test(startDate ?? '') ? startDate : null;
   const entities = [...parties, ...movements, ...coalitions].filter(item => item.source === DATA_SOURCES.REAL && item.verified === true);
@@ -340,7 +342,7 @@ function worldSignalsFrom(entries, parliament) {
   return entries.flatMap(entry => {
     if (entry.type === 'iter-approved') return [{ type: 'law-approved', title: lawTitle(entry.details?.lawId) }];
     if (entry.type === 'iter-rejected') return [{ type: 'law-rejected', title: lawTitle(entry.details?.lawId) }];
-    if (entry.type === 'fiducia-ottenuta') return [{ type: 'government-formed', inMajority }];
+    if (entry.type === 'fiducia-ottenuta') return [entry.details?.renewed ? { type: 'chronicle', kind: 'governo', icon: 'dome', title: 'Il governo supera la crisi', body: 'La maggioranza conferma la fiducia in entrambe le Camere (simulazione).', tone: 'neutral' } : { type: 'government-formed', inMajority }];
     if (entry.type === 'fiducia-negata') return [{ type: 'government-fallen', inMajority }];
     if (['crisi-governo', 'crisi-spontanea'].includes(entry.type) || (entry.type === 'cambio-maggioranza' && government?.status === 'crisis')) return [{ type: 'crisis', inMajority }];
     if (entry.type === 'nomina-ministro-giocatore') return [{ type: 'minister', portfolio: government?.ministers.find(item => item.id === entry.details?.appointmentId)?.portfolio ?? 'ministero' }];
@@ -1241,7 +1243,15 @@ export const store = {
     let parliament = normalizeParliamentState(state.parliament);
     const hasChambers = parliament?.chambers.camera.groups.length && parliament.chambers.senato.groups.length;
     if (!hasChambers) {
-      parliament = createParliamentState({ career: { ...state.career, parliamentContext: context }, player, groups, currentDate: state.clock.currentDate, politicalCapital: state.game?.resources.politicalCapital ?? playerStat(state, 'influence') });
+      parliament = createParliamentState({ career: { ...state.career, parliamentContext: context }, player, groups, currentDate: state.clock.currentDate, politicalCapital: state.game?.resources.politicalCapital ?? playerStat(state, 'influence'), referenceGovernment });
+    } else if (referenceGovernment && neverHadGovernment(parliament)) {
+      // Saves made before the Government in office existed at the start find it now.
+      parliament = createReferenceGovernment(parliament, referenceGovernment, state.clock.currentDate);
+      state = { ...state, parliament: withCapital(parliament, state.game) };
+      timelineBase = state;
+      if (state.career.status !== 'demo') persist();
+      emit();
+      return state.parliament;
     } else if (chamber && parliament.player?.chamber !== chamber) {
       parliament = enterParliament(parliament, { politicianId: player?.id ?? null, chamber, groupId: context.groupId ?? null, territoryName: context.territoryName ?? player?.region ?? null, currentDate: state.clock.currentDate });
     } else if (!chamber && parliament.player) {
@@ -1419,6 +1429,39 @@ export const store = {
     if (passed) parliament = { ...parliament, government: { ...government, primeMinister: 'player' } };
     return applyParliamentUpdate(next, parliament, passed ? 'Fiducia ottenuta: sei Presidente del Consiglio' : 'Fiducia non ottenuta: il governo cade', { ...deltas, ...(open.length ? { notoriety: 4, influence: (deltas.influence ?? 0) + 3 } : {}) }, { open });
   },
+  // ---------- a Government led by someone else ----------
+  // The simulated Prime Minister's Government from the start (or any Government the player does not lead).
+  setReferenceGovernment(spec = null) {
+    referenceGovernment = spec?.groupIds?.length ? spec : null;
+    if (!referenceGovernment || !state.parliament || !neverHadGovernment(state.parliament)) return;
+    const parliament = createReferenceGovernment(normalizeParliamentState(state.parliament), referenceGovernment, state.clock.currentDate);
+    if (!parliament.government) return;
+    state = { ...state, parliament: withCapital(parliament, state.game) };
+    timelineBase = state;
+    if (state.career.status !== 'demo') persist();
+    emit();
+  },
+  supportGovernment() {
+    requireSecretary();
+    const next = withTime(PARLIAMENT_TIME_COSTS.governmentSupport);
+    const result = offerGroupSupport(next.parliament, next.clock.currentDate, { influence: playerStat(state, 'influence'), roll: rollFor(next) });
+    return applyParliamentUpdate(next, result.parliament, result.accepted ? 'Il tuo gruppo entra nella maggioranza' : 'La maggioranza respinge il sostegno del tuo gruppo', result.accepted ? { influence: 1 } : {});
+  },
+  withdrawGovernmentSupport() {
+    requireSecretary();
+    const next = withTime(PARLIAMENT_TIME_COSTS.crisis);
+    return applyParliamentUpdate(next, withdrawGroupSupport(next.parliament, next.clock.currentDate), 'Il tuo gruppo esce dalla maggioranza: il governo deve verificare la fiducia', { notoriety: 1 });
+  },
+  requestGovernmentPost(portfolio) {
+    const next = withTime(PARLIAMENT_TIME_COSTS.assignMinister);
+    if ((next.game?.resources.politicalCapital ?? 0) < 6) throw new Error('Servono 6 punti di capitale politico per chiedere un incarico di governo.');
+    const game = { ...next.game, resources: { ...next.game.resources, politicalCapital: next.game.resources.politicalCapital - 6 } };
+    const player = playerOf(state);
+    const stats = playerStats(state);
+    const result = requestGovernmentPost(withCapital(next.parliament, game), portfolio, next.clock.currentDate, { stats: { ...stats, influence: playerStat(state, 'influence') }, roll: rollFor(next), appointeeLabel: player?.displayName });
+    const open = result.appointed ? [{ id: ministerOfficeId(result.appointment), title: `Ministro · ${portfolio} (scenario)`, institution: 'Governo della Repubblica (scenario di gioco)', level: 'governo', politicianId: player?.id ?? null, territoryId: player?.territoryId ?? null, startDate: next.clock.currentDate }] : [];
+    return applyParliamentUpdate({ ...next, game }, result.parliament, result.appointed ? `Sei ministro: ${portfolio}` : 'Il Presidente del Consiglio non ti affida il ministero', result.appointed ? { influence: 3, notoriety: 3, reputation: 1 } : { influence: -0.5 }, { open });
+  },
   triggerGovernmentCrisis() {
     if (!isSecretary(state.game?.party) && !isPrimeMinister(state.parliament)) throw new Error('Una crisi di governo la aprono il Presidente del Consiglio o il segretario di un partito.');
     const next = withTime(PARLIAMENT_TIME_COSTS.crisis);
@@ -1506,7 +1549,7 @@ export const store = {
       initialLevel: draft.initialLevel, territoryId, statisticsIds: statisticIds,
       startedAt: state.clock.currentDate, createdAt: new Date().toISOString(), status: 'active', parliamentContext, difficulty
     };
-    const parliament = chamber ? createParliamentState({ career, player, groups: realGroups, currentDate: state.clock.currentDate, politicalCapital: statistics.influence }) : null;
+    const parliament = chamber ? createParliamentState({ career, player, groups: realGroups, currentDate: state.clock.currentDate, politicalCapital: statistics.influence, referenceGovernment }) : null;
     if (parliament) {
       career.parliamentHistory = [...parliament.history];
       dataset.events = parliament.history.map(event => ({ id: event.id, title: event.text, date: event.date, category: 'parlamento', status: event.type, territoryId: null, impact: event.details, source: DATA_SOURCES.SIMULATION }));

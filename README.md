@@ -38,6 +38,10 @@ In ogni elenco o scheda di deputati, senatori, dirigenti, contatti e avversari l
 
 Dal menu principale (“Account e salvataggi online”) si crea un account o si accede; la carriera in corso si salva online dopo ogni salvataggio locale e si recupera da qualsiasi dispositivo. Il Worker usa Cloudflare D1 (`politicando-accounts`, schema in `migrations/`): la password viene derivata nel browser (PBKDF2-SHA-256, 310 000 iterazioni) e il server conserva solo un hash con sale casuale; le sessioni sono token casuali salvati come hash; ogni salvataggio ha una revisione, così un dispositivo con una versione vecchia non sovrascrive quella più recente senza una scelta esplicita. Il browser conserva comunque una copia per giocare offline.
 
+## Governo in carica all’avvio
+
+Ogni carriera trova un governo già in carica, costruito sulla situazione reale all’avvio e poi del tutto simulato: `src/data/repositories/government-reference.js` ricava dal database i gruppi parlamentari dei componenti del governo reale in carica (oggi Fratelli d’Italia, Lega e Forza Italia in entrambe le Camere), il gruppo del Presidente del Consiglio e la ripartizione dei ministeri; `createReferenceGovernment` (motore parlamentare) ne fa un governo simulato con un Presidente del Consiglio simulato e ministri senza nomi. Il giocatore non ne fa parte: dal suo gruppo può offrire o ritirare il sostegno, chiedere un ministero se ha i requisiti, aprire una crisi (o una mozione di sfiducia dall’opposizione); il premier simulato risponde agli alleati e torna alle Camere per la fiducia. Se il governo cade si può formarne uno nuovo; “Nessun governo” compare solo quando nella partita non c’è davvero un esecutivo. I vecchi salvataggi senza governo lo ricevono al caricamento.
+
 ## Carriera infinita e difficoltà
 
 Nessun traguardo, anno o crollo di reputazione chiude la partita: la caduta peggiore costa incarichi e sostegni e apre una “traversata nel deserto”; i salvataggi che nelle versioni precedenti si erano chiusi riprendono. La difficoltà (Facile, Normale, Difficile) si sceglie nel riepilogo della nuova partita e modifica fondi, capitale, giorni di lavoro, statistiche iniziali, frequenza di crisi e scandali, esiti incerti, tolleranza del partito, candidature, pazienza degli alleati, disciplina delle maggioranze, rumore dei sondaggi e durata della memoria.
@@ -223,6 +227,7 @@ npm run check:admin-sync  # archivio amministrativo condiviso su Workers KV
 npm run check:document    # documento del 24/09/2026: collocazioni, nuove entità, leadership, liste, loghi dei politici, sondaggio reale
 npm run check:world       # alleanze realistiche, evoluzione dei partiti, difficoltà, notizie, memoria politica
 npm run check:accounts    # account, salvataggi online su D1 (SQLite in test), conflitti tra dispositivi
+npm run check:reference-government # governo in carica all’avvio: maggioranza reale, premier simulato, sostegno, ministero, crisi, caduta
 npm run check:all         # tutte le verifiche
 npm run check:gameplay
 npm run check:parliament

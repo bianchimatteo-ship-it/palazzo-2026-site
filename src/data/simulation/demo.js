@@ -1,4 +1,4 @@
-import { DATA_SOURCES, emptyDataset } from '../schema.js?v=20260924-18';
+import { DATA_SOURCES, emptyDataset } from '../schema.js?v=20260924-19';
 
 // All sample names, events, and numbers are invented for interface demonstration.
 export function makeDemoParties() {

@@ -159,6 +159,23 @@ assert.ok(store.getState().game.party.org.investments.some(item => item.id === '
 store.advance(7);
 
 // ---------- 5. Prime Minister: a different phase of the career, powers through Government and Parliament ----------
+// The career found a Government already in office (simulation built from the real majority): the player is not in it.
+{
+  const government = store.getState().parliament.government;
+  assert.ok(government?.status === 'active' && government.formedBy === 'reference' && government.primeMinister === 'reference', 'All’avvio c’è già un governo in carica, guidato da un Presidente del Consiglio simulato.');
+  assert.ok(!playerRoles(store.getState()).primeMinister && !government.ministers.some(item => item.playerAppointed), 'Il giocatore non ne fa parte.');
+  const governo = await goto('governo');
+  assert.ok(governo.includes('GOVERNO IN CARICA · SIMULAZIONE') && governo.includes('I Governo Meloni') && !governo.includes('Nessun governo'), 'La pagina Governo mostra il governo in carica, non “Nessun governo”.');
+  assert.ok(governo.includes('data-parliament-action="withdraw-support"') && governo.includes('data-government-post-form'), 'Dal suo gruppo di maggioranza il giocatore può chiedere un ministero o ritirare il sostegno.');
+  assert.throws(() => store.formGovernment(['cam-xix-01', 'cam-xix-04', 'senato-xix-gruppo-85', 'senato-xix-gruppo-56']), /già un governo/, 'Per formarne uno nuovo il governo in carica deve prima cadere.');
+  // The player's party takes its group out of the majority: crisis, then the simulated Prime Minister asks for confidence.
+  store.getState().game.week.ap = 6;
+  store.withdrawGovernmentSupport();
+  assert.equal(store.getState().parliament.government.status, 'crisis');
+  store.advance(7); store.advance(7);
+  assert.equal(store.getState().parliament.government.status, 'fallen', 'Senza il gruppo del giocatore la maggioranza non ha più i numeri: il governo cade.');
+  store.getState().game.week.ap = 6; store.getState().game.resources.politicalCapital = 40;
+}
 store.formGovernment(['cam-xix-01', 'cam-xix-03', 'cam-xix-04', 'senato-xix-gruppo-85', 'senato-xix-gruppo-33', 'senato-xix-gruppo-56']);
 store.voteGovernmentConfidence();
 assert.equal(store.getState().parliament.government.status, 'active', 'La coalizione ottiene la fiducia');

@@ -1,5 +1,5 @@
-import { DATA_SOURCES } from '../data/schema.js?v=20260924-18';
-import { AREA_BY_ID, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, STAGE_WEEKS, areaOf } from '../data/simulation/policy-rules.js?v=20260924-18';
+import { DATA_SOURCES } from '../data/schema.js?v=20260924-19';
+import { AREA_BY_ID, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, STAGE_WEEKS, areaOf } from '../data/simulation/policy-rules.js?v=20260924-19';
 
 export const CHAMBERS = Object.freeze({
   camera: { label: 'Camera dei deputati', shortLabel: 'Camera', source: DATA_SOURCES.REAL },
@@ -111,7 +111,7 @@ export function playerInMajority(parliament) {
   return Boolean(parliament?.player?.groupId) && governingGroupIds(parliament).has(parliament.player.groupId);
 }
 
-export function createParliamentState({ career, player, groups = [], currentDate, politicalCapital = 50 }) {
+export function createParliamentState({ career, player, groups = [], currentDate, politicalCapital = 50, referenceGovernment = null }) {
   const chamber = CHAMBERS[career?.parliamentContext?.chamber] ? career.parliamentContext.chamber : null;
   const groupId = career?.parliamentContext?.groupId ?? null;
   const chambers = Object.fromEntries(['camera', 'senato'].map(kind => {
@@ -134,11 +134,49 @@ export function createParliamentState({ career, player, groups = [], currentDate
     careerStanding: chamber ? createCareerStanding() : null,
     government: null, laws: [], history: [], pastMandates: [], pollingHook: { connected: false, source: DATA_SOURCES.SIMULATION }
   };
+  let next = parliament;
   if (chamber) {
     const referenceGroup = getGroup(parliament, validGroup);
-    return record(parliament, currentDate, 'ingresso', `${CHAMBERS[chamber].shortLabel}: avvio dello scenario parlamentare con ${referenceGroup?.officialName ?? 'gruppo da definire'}.`, { chamber, groupId: validGroup, source: DATA_SOURCES.SIMULATION });
+    next = record(parliament, currentDate, 'ingresso', `${CHAMBERS[chamber].shortLabel}: avvio dello scenario parlamentare con ${referenceGroup?.officialName ?? 'gruppo da definire'}.`, { chamber, groupId: validGroup, source: DATA_SOURCES.SIMULATION });
   }
-  return parliament;
+  // The country already has a Government when the career starts: the player finds it in office.
+  return referenceGovernment ? createReferenceGovernment(next, referenceGovernment, currentDate) : next;
+}
+
+// ---------- the Government in office at the start of a career ----------
+// Built from the real situation at the start (spec from government-reference.js: the groups of the members of the real
+// Government, the group of the real Prime Minister, who holds each ministry) and then fully simulated. The player is
+// not a member: the Prime Minister is a simulated role ('reference'), the ministers are simulated offices without names.
+export const isReferenceGovernment = government => Boolean(government) && government.formedBy === 'reference';
+export const playerLeadsGovernment = parliament => parliament?.government?.primeMinister === 'player';
+// True when the career has never seen a Government: only then the Government in office at the start can be created.
+export function neverHadGovernment(parliament) {
+  return Boolean(parliament) && !parliament.government && !(parliament.pastGovernments ?? []).length
+    && !(parliament.history ?? []).some(entry => ['governo-proposto', 'fiducia-ottenuta', 'fiducia-negata', 'governo-riferimento'].includes(entry.type));
+}
+export function createReferenceGovernment(parliament, spec, currentDate) {
+  if (!parliament || !spec || parliament.government) return parliament;
+  const coalitionGroupIds = [...new Set(spec.groupIds ?? [])].filter(id => getGroup(parliament, id));
+  if (!['camera', 'senato'].every(chamber => coalitionGroupIds.some(id => getGroup(parliament, id).chamber === chamber))) return parliament;
+  const governmentId = newId('governo-riferimento');
+  const ministers = (spec.ministries ?? []).filter(item => MINISTERIAL_PORTFOLIOS.includes(item.portfolio)).map(item => {
+    const group = item.groupId && coalitionGroupIds.includes(item.groupId) ? getGroup(parliament, item.groupId) : null;
+    const seed = hashOf(`${spec.governmentId}|${item.portfolio}`);
+    return { id: newId('nomina'), portfolio: item.portfolio, groupId: group?.groupId ?? null, groupName: group?.officialName ?? 'Tecnico indipendente', playerAppointed: false, appointeeLabel: 'Incarico simulato · ripartito all’avvio come nel governo reale', loyalty: 60 + seed % 20, competence: 45 + (seed >> 5) % 35, fromReference: true, source: DATA_SOURCES.SIMULATION, appointedAt: currentDate };
+  });
+  const seats = chamber => parliament.chambers[chamber].groups.filter(group => coalitionGroupIds.includes(group.groupId)).reduce((sum, group) => sum + group.simulatedSeats, 0);
+  const margin = Math.min(...['camera', 'senato'].map(chamber => seats(chamber) - majority(parliament, chamber)));
+  const partners = Object.fromEntries(coalitionGroupIds.filter(id => id !== parliament.player?.groupId).map(id => [id, { satisfaction: 62, demand: null, source: DATA_SOURCES.SIMULATION }]));
+  const government = {
+    id: governmentId, name: 'Governo in carica all’avvio', status: 'active', formedBy: 'reference', primeMinister: 'reference',
+    premierGroupId: spec.premierGroupId && getGroup(parliament, spec.premierGroupId) ? spec.premierGroupId : coalitionGroupIds[0],
+    coalitionGroupIds, supportingGroupIds: [], ministers, partners, confidenceVotes: [], crisisSeverity: 0, program: null, agenda: [],
+    stability: clamp(Math.round(45 + margin / 2), 25, 80), formedAt: currentDate, inheritedAt: currentDate,
+    reference: { governmentId: spec.governmentId, label: spec.label, startDate: spec.startDate, sourceUrl: spec.sourceUrl, sourceName: spec.sourceName, derivedFrom: spec.derivedFrom, source: DATA_SOURCES.REAL, verified: true },
+    source: DATA_SOURCES.SIMULATION
+  };
+  const names = coalitionGroupIds.map(id => getGroup(parliament, id).officialName);
+  return record({ ...parliament, government }, currentDate, 'governo-riferimento', `All’avvio della carriera è in carica un governo (simulazione) sostenuto da ${names.join(', ')}: maggioranza ricostruita dai gruppi dei componenti del governo reale «${spec.label}». Non ne fai parte.`, { governmentId, coalitionGroupIds, reference: spec.governmentId, source: DATA_SOURCES.SIMULATION });
 }
 
 // Restores saves written by earlier builds: missing collections get neutral defaults, nothing is dropped.
@@ -535,6 +573,86 @@ export function negotiateGovernmentSupport(parliament, groupId, currentDate, { i
   return record(next, currentDate, 'sostegno-governo', `Ottenuto un impegno simulato di sostegno da ${group.officialName}.`, { governmentId: government.id, groupId, source: DATA_SOURCES.SIMULATION });
 }
 
+// A Government the player does not lead: the player's group can offer its support (the majority decides whether to
+// accept it) or withdraw it; the player can ask the Prime Minister for a ministry when the requirements are met.
+export function offerGroupSupport(parliament, currentDate, { influence = 50, roll = 0.5 } = {}) {
+  if (!canManageParliament(parliament)) throw new Error('Serve un seggio con un gruppo di riferimento.');
+  const government = parliament.government;
+  if (!government || government.status !== 'active') throw new Error('Serve un governo in carica.');
+  if (playerLeadsGovernment(parliament)) throw new Error('Guidi già il governo: gestisci la maggioranza dalla sezione Governo.');
+  const groupId = parliament.player.groupId;
+  if ([...government.coalitionGroupIds, ...government.supportingGroupIds].includes(groupId)) throw new Error('Il tuo gruppo sostiene già il governo.');
+  if ((parliament.resources?.politicalCapital ?? 0) < 5) throw new Error('Servono 5 punti di capitale politico per trattare il sostegno.');
+  // The groups of the majority decide together: their relations with the player's group weigh on the answer.
+  const relations = government.coalitionGroupIds.map(id => parliament.relations?.[id]?.value ?? 50);
+  const mood = relations.reduce((sum, value) => sum + value, 0) / (relations.length || 1);
+  const chance = clamp(0.4 + (mood - 50) / 100 + (influence - 50) / 200 - (government.stability > 70 ? 0.1 : 0), 0.1, 0.9);
+  let next = { ...parliament, resources: { ...parliament.resources, politicalCapital: parliament.resources.politicalCapital - 5 } };
+  const group = getGroup(parliament, groupId);
+  if (roll >= chance) {
+    for (const id of government.coalitionGroupIds) next = setRelation(next, id, -2);
+    return { parliament: record(next, currentDate, 'sostegno-respinto', `La maggioranza non accetta il sostegno di ${group.officialName}: nessun accordo sul programma.`, { governmentId: government.id, groupId, chance, source: DATA_SOURCES.SIMULATION }), accepted: false, chance };
+  }
+  next = { ...next, government: { ...next.government, supportingGroupIds: [...government.supportingGroupIds, groupId], stability: clamp((government.stability ?? 50) + 3, 0, 100) } };
+  for (const id of government.coalitionGroupIds) next = setRelation(next, id, 3);
+  next = adjustStanding(next, 2);
+  return { parliament: record(next, currentDate, 'sostegno-governo', `${group.officialName} entra nella maggioranza con un sostegno esterno al governo (simulazione).`, { governmentId: government.id, groupId, chance, source: DATA_SOURCES.SIMULATION }), accepted: true, chance };
+}
+export function withdrawGroupSupport(parliament, currentDate) {
+  if (!canManageParliament(parliament)) throw new Error('Serve un seggio con un gruppo di riferimento.');
+  const government = parliament.government;
+  if (!government || !['active', 'crisis'].includes(government.status)) throw new Error('Serve un governo in carica.');
+  if (playerLeadsGovernment(parliament)) throw new Error('Guidi il governo: per lasciarlo apri una crisi o dimettiti.');
+  const groupId = parliament.player.groupId;
+  if (![...government.coalitionGroupIds, ...government.supportingGroupIds].includes(groupId)) throw new Error('Il tuo gruppo non fa parte della maggioranza.');
+  if (groupId === government.premierGroupId) throw new Error('Il gruppo del Presidente del Consiglio non lascia il proprio governo: per metterlo in discussione apri una crisi.');
+  let next = leaveMajority(parliament, groupId, currentDate, 'ritira il sostegno al governo');
+  for (const id of government.coalitionGroupIds.filter(item => item !== groupId)) next = setRelation(next, id, -8);
+  return adjustStanding(next, -2);
+}
+// A ministry is a step up: a newly elected member of Parliament does not have these numbers yet.
+export const GOVERNMENT_POST_REQUIREMENTS = Object.freeze({ influence: 62, reputation: 58, experience: 62, groupSupport: 62, mandateWeeks: 12, cooldownWeeks: 8 });
+// What still stands between the player and a ministry in a Government led by someone else.
+export function governmentPostProblems(parliament, stats = {}, currentDate = null) {
+  const government = parliament?.government;
+  const needs = GOVERNMENT_POST_REQUIREMENTS;
+  const problems = [];
+  if (!canManageParliament(parliament)) problems.push('Serve un seggio con un gruppo di riferimento.');
+  if (!government || government.status !== 'active') problems.push('Serve un governo in carica.');
+  else {
+    if (![...government.coalitionGroupIds, ...government.supportingGroupIds].includes(parliament.player?.groupId)) problems.push('Il tuo gruppo deve far parte della maggioranza.');
+    if (activeMinisters(government).some(item => item.playerAppointed)) problems.push('Hai già un incarico di governo.');
+    if (government.lastPostRequestAt && currentDate && weeksBetween(government.lastPostRequestAt, currentDate) < needs.cooldownWeeks) problems.push(`Hai chiesto un incarico da poco: riprova dal ${addDaysTo(government.lastPostRequestAt, needs.cooldownWeeks * 7)}.`);
+  }
+  if (parliament?.player?.mandateStartedAt && currentDate && weeksBetween(parliament.player.mandateStartedAt, currentDate) < needs.mandateWeeks) problems.push(`Almeno ${needs.mandateWeeks} settimane di mandato (dal ${addDaysTo(parliament.player.mandateStartedAt, needs.mandateWeeks * 7)}).`);
+  if ((stats.influence ?? 0) < needs.influence) problems.push(`Influenza almeno ${needs.influence} (ora ${Math.round(stats.influence ?? 0)}).`);
+  if ((stats.reputation ?? 0) < needs.reputation) problems.push(`Reputazione almeno ${needs.reputation} (ora ${Math.round(stats.reputation ?? 0)}).`);
+  if ((stats.experience ?? 0) < needs.experience) problems.push(`Esperienza almeno ${needs.experience} (ora ${Math.round(stats.experience ?? 0)}).`);
+  if ((parliament?.careerStanding?.partySupport ?? 0) < needs.groupSupport) problems.push(`Sostegno nel gruppo almeno ${needs.groupSupport} (ora ${Math.round(parliament?.careerStanding?.partySupport ?? 0)}).`);
+  return problems;
+}
+export function requestGovernmentPost(parliament, portfolio, currentDate, { stats = {}, roll = 0.5, appointeeLabel = null } = {}) {
+  if (playerLeadsGovernment(parliament)) throw new Error('Guidi il governo: assegna tu stesso gli incarichi.');
+  if (!MINISTERIAL_PORTFOLIOS.includes(portfolio)) throw new Error('Scegli un ministero.');
+  const problems = governmentPostProblems(parliament, stats, currentDate);
+  if (problems.length) throw new Error(`Non hai ancora i requisiti: ${problems.join(' ')}`);
+  const government = parliament.government;
+  const holder = activeMinisters(government).find(item => item.portfolio === portfolio);
+  const chance = clamp(0.3 + ((stats.influence ?? 45) - 45) / 100 + ((stats.reputation ?? 50) - 50) / 150 + ((parliament.careerStanding?.partySupport ?? 55) - 55) / 150 + ((government.stability ?? 50) - 50) / 300 - (holder ? 0.15 : 0), 0.05, 0.85);
+  let next = { ...parliament, government: { ...government, lastPostRequestAt: currentDate } };
+  if (roll >= chance) return { parliament: record(next, currentDate, 'richiesta-incarico-respinta', `Il Presidente del Consiglio (simulato) non ti affida il ministero ${portfolio}.`, { governmentId: government.id, portfolio, chance, source: DATA_SOURCES.SIMULATION }), appointed: false, chance };
+  if (holder) {
+    // A small reshuffle: the outgoing minister's group resents it.
+    next = { ...next, government: { ...next.government, ministers: next.government.ministers.map(item => item.id === holder.id ? { ...item, endedAt: currentDate, endReason: 'Rimpasto del Presidente del Consiglio (simulato)' } : item), stability: clamp((government.stability ?? 50) - 2, 0, 100) } };
+    if (holder.groupId) { next = changePartner(next, holder.groupId, -8); next = setRelation(next, holder.groupId, -4); }
+  }
+  const group = getGroup(next, next.player.groupId);
+  const appointment = { id: newId('nomina'), portfolio, groupId: group.groupId, groupName: group.officialName, playerAppointed: true, appointeeLabel: appointeeLabel || 'Il tuo politico', loyalty: 100, competence: null, source: DATA_SOURCES.SIMULATION, appointedAt: currentDate };
+  next = { ...next, government: { ...next.government, ministers: [...next.government.ministers, appointment] } };
+  next = adjustStanding(next, 2);
+  return { parliament: record(next, currentDate, 'nomina-ministro-giocatore', `Il Presidente del Consiglio (simulato) ti affida il ministero ${portfolio}${holder ? ' con un rimpasto' : ''}.`, { governmentId: government.id, appointmentId: appointment.id, portfolio, chance, source: DATA_SOURCES.SIMULATION }), appointed: true, chance, appointment };
+}
+
 export function reviseGovernmentCoalition(parliament, groupIds, currentDate) {
   if (!canManageParliament(parliament)) throw new Error('Serve un mandato parlamentare attivo per rinegoziare la coalizione.');
   const government = parliament.government;
@@ -594,16 +712,21 @@ export function voteGovernmentConfidence(parliament, currentDate) {
   const partners = Object.fromEntries([...groups].filter(id => id !== parliament.player?.groupId).map(id => [id, government.partners?.[id] ?? { satisfaction: government.coalitionGroupIds.includes(id) ? 62 : 55, demand: null, source: DATA_SOURCES.SIMULATION }]));
   let next = { ...parliament, government: { ...government, status, stability, ministers, partners, crisisSeverity: passed ? 0 : government.crisisSeverity, lastCrisisSeverity: government.crisisSeverity, confidenceVotes: [...government.confidenceVotes, { date: currentDate, votes, result: status, source: DATA_SOURCES.SIMULATION }], formedAt: passed ? (government.formedAt ?? currentDate) : government.formedAt ?? null, fallenAt: passed ? null : currentDate } };
   if (inCoalition) next = adjustStanding(next, passed ? 1 : -2);
-  return record(next, currentDate, passed ? 'fiducia-ottenuta' : 'fiducia-negata', passed ? 'La maggioranza simulata ha ottenuto la fiducia in entrambe le Camere.' : 'La maggioranza simulata non ha ottenuto la fiducia in entrambe le Camere.', { governmentId: government.id, votes, source: DATA_SOURCES.SIMULATION });
+  return record(next, currentDate, passed ? 'fiducia-ottenuta' : 'fiducia-negata', passed ? 'La maggioranza simulata ha ottenuto la fiducia in entrambe le Camere.' : 'La maggioranza simulata non ha ottenuto la fiducia in entrambe le Camere.', { governmentId: government.id, votes, renewed: government.status === 'crisis', source: DATA_SOURCES.SIMULATION });
 }
 
 export function triggerGovernmentCrisis(parliament, currentDate) {
   if (!canManageParliament(parliament)) throw new Error('Serve un mandato parlamentare attivo per aprire una crisi.');
   const government = parliament.government;
   if (!government || government.status !== 'active') throw new Error('Serve un governo in carica per aprire una crisi.');
-  const severity = Math.min(24, 8 + Math.floor(activeMinisters(government).length / 2) + Math.max(0, 3 - government.supportingGroupIds.length) * 2);
-  const next = { ...parliament, government: { ...government, status: 'crisis', crisisSeverity: severity, crisisOpenedAt: currentDate, stability: Math.min(government.stability ?? 50, 20) } };
-  return record(next, currentDate, 'crisi-governo', 'Si apre una crisi politica nello scenario; il governo deve verificare la propria fiducia.', { governmentId: government.id, severity, source: DATA_SOURCES.SIMULATION });
+  // From inside the majority a crisis can bring the Government down; from the opposition it is a no-confidence motion,
+  // which only bites when the majority is already weak.
+  const fromOpposition = !playerLeadsGovernment(parliament) && !playerInMajority(parliament);
+  const severity = fromOpposition
+    ? clamp(Math.round((55 - (government.stability ?? 50)) / 3), 0, 12)
+    : Math.min(24, 8 + Math.floor(activeMinisters(government).length / 2) + Math.max(0, 3 - government.supportingGroupIds.length) * 2);
+  const next = { ...parliament, government: { ...government, status: 'crisis', crisisSeverity: severity, crisisOpenedAt: currentDate, stability: fromOpposition ? government.stability : Math.min(government.stability ?? 50, 20) } };
+  return record(next, currentDate, 'crisi-governo', fromOpposition ? 'L’opposizione presenta una mozione di sfiducia: il governo deve verificare la fiducia nelle due Camere.' : 'Si apre una crisi politica nello scenario; il governo deve verificare la propria fiducia.', { governmentId: government.id, severity, fromOpposition, source: DATA_SOURCES.SIMULATION });
 }
 
 // ---------- the Government as an actor ----------
@@ -688,9 +811,15 @@ export function advanceGovernmentWeek(parliament, currentDate, roll = 0.5, rand 
     if (next.government) next = { ...next, government: { ...next.government, stability: clamp((next.government.stability ?? 50) - 6, 0, 100) } };
     next = record(next, currentDate, 'decreto-decaduto', `Il decreto-legge “${law.title}” decade: non è stato convertito in tempo.`, { lawId: law.id, source: DATA_SOURCES.SIMULATION });
   }
+  const random = rand ?? (() => roll);
+  // A Government led by the simulated Prime Minister goes back to the Chambers by itself, two weeks into a crisis.
+  const led = next?.government && !playerLeadsGovernment(next) && next.government.formedBy !== 'player';
+  if (led && ['crisis', 'awaiting-confidence'].includes(next.government.status) && weeksBetween(next.government.crisisOpenedAt ?? next.government.proposedAt ?? currentDate, currentDate) >= 2) {
+    next = record(next, currentDate, 'fiducia-richiesta', 'Il Presidente del Consiglio (simulato) torna alle Camere e chiede la fiducia.', { governmentId: next.government.id, source: DATA_SOURCES.SIMULATION });
+    return voteGovernmentConfidence(next, currentDate);
+  }
   const government = next?.government;
   if (!government || government.status !== 'active') return next;
-  const random = rand ?? (() => roll);
   const majorityIds = new Set([...government.coalitionGroupIds, ...government.supportingGroupIds]);
   const margin = Math.min(...['camera', 'senato'].map(chamber => next.chambers[chamber].groups.filter(group => majorityIds.has(group.groupId)).reduce((sum, group) => sum + group.simulatedSeats, 0) - majority(next, chamber)));
   const mood = partnerSatisfaction(next) ?? 55;
@@ -704,6 +833,8 @@ export function advanceGovernmentWeek(parliament, currentDate, roll = 0.5, rand 
     let delta = (holders.has(groupId) ? 0.3 : -0.6 * restless) + (55 - partner.satisfaction) * 0.03;
     next = changePartner(next, groupId, delta);
     const current = next.government.partners[groupId];
+    // The simulated Prime Minister answers the allies' demands on his own (the player does it only when leading).
+    if (led && current.demand && current.demand.deadline >= currentDate && random() < 0.25) { next = settlePartnerDemand(next, groupId, true, currentDate); continue; }
     if (current.demand && current.demand.deadline < currentDate) {
       next = settlePartnerDemand(next, groupId, false, currentDate);
       if (next.government.partners[groupId]?.satisfaction < 25) return leaveMajority(next, groupId, currentDate, 'esce dalla maggioranza dopo una richiesta ignorata');

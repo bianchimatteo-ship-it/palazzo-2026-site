@@ -3,7 +3,7 @@
 // 3. the list the person was elected on, when that list belongs to a single party (document of 24/09/2026, §6).
 // Multi-party lists stay electoral relations; coalition lists point to the coalition, never to one of its parties.
 // The parliamentary group is never used as a substitute for the party.
-import { realDatabase } from './real-data.js?v=20260924-18';
+import { realDatabase } from './real-data.js?v=20260924-19';
 
 export const PARTY_LINK_COLLECTIONS = Object.freeze(['parties', 'politicalMovements', 'coalitions', 'electoralLists', 'partyMemberships']);
 export const POLITICAL_POSITIONS = Object.freeze(['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra']);

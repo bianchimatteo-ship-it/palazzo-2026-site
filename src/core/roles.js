@@ -1,7 +1,7 @@
 // Roles and powers: what the player may do depends on the offices actually held.
 // Every power listed here is checked again by the store before the action runs.
-import { activeMinisters } from './parliament-engine.js?v=20260924-18';
-import { isSecretary } from './career-engine.js?v=20260924-18';
+import { activeMinisters } from './parliament-engine.js?v=20260924-19';
+import { isSecretary } from './career-engine.js?v=20260924-19';
 
 const governing = parliament => ['active', 'crisis'].includes(parliament?.government?.status);
 export const isPrimeMinister = parliament => governing(parliament) && parliament.government.primeMinister === 'player';
@@ -35,7 +35,9 @@ export function playerRoles(state) {
     ['Linea politica, organi, candidature, alleanze, investimenti del partito', secretary, 'Solo il segretario'],
     ['Programma e stile di comunicazione del partito', secretary, 'Solo il segretario'],
     ['Leggi con contenuto, emendamenti, trattative con i gruppi', seat, 'Serve un seggio in Parlamento'],
-    ['Formare un governo', seat && secretary, 'Serve essere segretario con un seggio'],
+    ['Formare un governo (quando non ce n’è uno in carica)', seat && secretary && !governing(parliament), governing(parliament) ? 'C’è già un governo in carica: prima deve cadere' : 'Serve essere segretario con un seggio'],
+    ['Sostenere il governo in carica, ritirare il sostegno, aprire una crisi', seat && secretary && governing(parliament) && !isPrimeMinister(parliament), isPrimeMinister(parliament) ? 'Guidi tu il governo' : 'Serve essere segretario con un seggio e un governo in carica'],
+    ['Chiedere un ministero al Presidente del Consiglio', seat && governing(parliament) && !isPrimeMinister(parliament) && [...(parliament.government.coalitionGroupIds ?? []), ...(parliament.government.supportingGroupIds ?? [])].includes(parliament.player?.groupId), 'Serve un seggio in un gruppo della maggioranza'],
     ['Dossier e crisi di un ministero', minister || Boolean(game?.flags?.scenarioOffice), 'Serve un incarico di governo'],
     ['Indirizzo politico e priorità nazionali del governo', isPrimeMinister(parliament), 'Solo il Presidente del Consiglio'],
     ['Disegni di legge del governo e legge di bilancio (li approva il Parlamento)', isPrimeMinister(parliament), 'Solo il Presidente del Consiglio'],

@@ -1,6 +1,6 @@
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-18';
-import { INDICATORS, ISSUE_THRESHOLD, ISSUE_TOPICS, MEDIA_OUTLETS, REAL_TOPIC_AREAS, SCENARIO_EXECUTIVE, SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-18';
-import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, EU_PROCEDURE_WEEKS, FINANCING, INSTRUMENT_KINDS, INTENSITY, MACRO_AREAS, POLICY_AREAS, SPREAD_BASE, TERRITORIAL_TARGETS, areaOf, macroAreaOf } from '../data/simulation/policy-rules.js?v=20260924-18';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-19';
+import { INDICATORS, ISSUE_THRESHOLD, ISSUE_TOPICS, MEDIA_OUTLETS, REAL_TOPIC_AREAS, SCENARIO_EXECUTIVE, SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-19';
+import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, EU_PROCEDURE_WEEKS, FINANCING, INSTRUMENT_KINDS, INTENSITY, MACRO_AREAS, POLICY_AREAS, SPREAD_BASE, TERRITORIAL_TARGETS, areaOf, macroAreaOf } from '../data/simulation/policy-rules.js?v=20260924-19';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -553,9 +553,11 @@ export function advanceSociety(input, { date, week, government = null, notoriety
     derived.push(issue);
     lines.push(`Nuovo problema: ${issueLabel(issue)}`);
   }
-  // Without a government formed in the game, the scenario executive acts on the most pressing problem.
+  // Unless the player leads the Government, the executive acts on its own on the most pressing problem: the scenario
+  // executive, or the Government in office led by the simulated Prime Minister.
   let measure = null;
-  const governing = government && ['active', 'crisis'].includes(government.status);
+  const governing = government && ['active', 'crisis'].includes(government.status) && government.primeMinister === 'player';
+  const actor = government && ['active', 'crisis'].includes(government.status) ? 'Il governo in carica' : 'L’esecutivo di scenario';
   if (!governing && week - society.executive.lastActionWeek >= SCENARIO_EXECUTIVE.agendaEveryWeeks) {
     const topic = society.issues[0]?.topic ?? ['Economia', 'Sanità', 'Lavoro', 'Infrastrutture', 'Welfare'][Math.floor(draw(society) * 5)];
     const spec = areaOf(topic) ?? AREA_BY_ID.economia;
@@ -570,8 +572,8 @@ export function advanceSociety(input, { date, week, government = null, notoriety
       Object.assign(society, result.society);
       society.executive.measures = [result.summary, ...(society.executive.measures ?? [])].slice(0, 12);
       measure = result.summary;
-      lines.push(`L’esecutivo di scenario adotta un provvedimento su ${spec.label.toLowerCase()}.`);
-    } else lines.push(`L’esecutivo rinvia un provvedimento su ${spec.label.toLowerCase()}: mancano le coperture.`);
+      lines.push(`${actor} adotta un provvedimento su ${spec.label.toLowerCase()}.`);
+    } else lines.push(`${actor} rinvia un provvedimento su ${spec.label.toLowerCase()}: mancano le coperture.`);
   }
   society.executive.approval = round1(clamp(society.executive.approval + (societyMood(society) - society.executive.approval) * 0.1 + (draw(society) - 0.5) * 1.5, 10, 80));
   society.history = [...society.history, snapshot(society, date)].slice(-HISTORY);

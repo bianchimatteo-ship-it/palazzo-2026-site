@@ -1,7 +1,7 @@
-import { allianceOf, latestPoll, STRATEGIES } from '../core/world-engine.js?v=20260924-18';
-import { formatDate } from '../core/time.js?v=20260924-18';
-import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20260924-18';
-import { distinctSeries } from './charts.js?v=20260924-18';
+import { allianceOf, latestPoll, STRATEGIES } from '../core/world-engine.js?v=20260924-19';
+import { formatDate } from '../core/time.js?v=20260924-19';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20260924-19';
+import { distinctSeries } from './charts.js?v=20260924-19';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const pct = (value, digits = 1) => value === null || value === undefined ? '—' : `${Number(value).toLocaleString('it-IT', { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
@@ -39,6 +39,7 @@ function statTile(label, value, delta, series, note = '', emphasis = true) {
 }
 
 function barometer(state, world, poll, parties) {
+  const inOffice = ['active', 'crisis'].includes(state.parliament?.government?.status);
   const player = world.parties.find(item => item.isPlayer);
   const previous = world.polls.at(-2);
   const history = key => world.polls.slice(-12).map(item => key(item));
@@ -55,7 +56,7 @@ function barometer(state, world, poll, parties) {
   ].join('') : '';
   const personal = [
     statTile('Gradimento personale', pct(poll.personal.approval, 0), previous ? Math.round((poll.personal.approval - previous.personal.approval) * 10) / 10 : 0, history(item => item.personal?.approval), 'Il tuo politico, separato dal partito'),
-    statTile('Gradimento del governo', poll.government ? pct(poll.government.approval, 0) : 'Nessun governo', poll.government && previous?.government ? Math.round((poll.government.approval - previous.government.approval) * 10) / 10 : null, history(item => item.government?.approval ?? null), poll.government ? 'Legato alla stabilità della maggioranza' : 'Si misura quando un governo è in carica', false),
+    statTile('Gradimento del governo', poll.government ? pct(poll.government.approval, 0) : inOffice ? 'Non rilevato' : 'Nessun governo', poll.government && previous?.government ? Math.round((poll.government.approval - previous.government.approval) * 10) / 10 : null, history(item => item.government?.approval ?? null), poll.government ? 'Legato alla stabilità della maggioranza' : inOffice ? 'La fonte reale del primo sondaggio non lo misura: dal prossimo sondaggio (simulato)' : 'Si misura quando un governo è in carica', false),
     statTile('Indecisi', pct(poll.undecided, 0), previous ? Math.round((poll.undecided - previous.undecided) * 10) / 10 : 0, history(item => item.undecided), 'Fuori dal totale dei voti validi', false)
   ].join('');
   return `<section class="poll-hero" style="--hero-accent:${esc(player?.color ?? 'var(--party-accent)')}">

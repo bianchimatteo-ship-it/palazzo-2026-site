@@ -1,7 +1,7 @@
-import { ADMIN_FIELDS, adminArchiveSummary, loadSharedArchive, overrideFor } from '../data/repositories/admin-store.js?v=20260924-18';
-import { affiliationOf, markForPerson } from './person-marks.js?v=20260924-18';
-import { hasSharedSession, sharedApiUrl } from '../data/repositories/admin-sync.js?v=20260924-18';
-import { emblem, glyph } from './visuals.js?v=20260924-18';
+import { ADMIN_FIELDS, adminArchiveSummary, loadSharedArchive, overrideFor } from '../data/repositories/admin-store.js?v=20260924-19';
+import { affiliationOf, markForPerson } from './person-marks.js?v=20260924-19';
+import { hasSharedSession, sharedApiUrl } from '../data/repositories/admin-sync.js?v=20260924-19';
+import { emblem, glyph } from './visuals.js?v=20260924-19';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const norm = value => String(value ?? '').toLocaleLowerCase('it-IT').normalize('NFD').replace(/[\u0300-\u036f]/g, '');

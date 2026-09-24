@@ -1,24 +1,24 @@
-import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyContestScore, situation, upcomingElections } from '../core/career-engine.js?v=20260924-18';
-import { playerRoles } from '../core/roles.js?v=20260924-18';
-import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20260924-18';
-import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20260924-18';
-import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260924-18';
-import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20260924-18';
-import { careerLevelLabel } from '../data/regions.js?v=20260924-18';
-import { formatDate } from '../core/time.js?v=20260924-18';
-import { renderBarometerPanel } from './polls-mode.js?v=20260924-18';
-import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20260924-18';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-18';
-import { societyMood } from '../core/society-engine.js?v=20260924-18';
-import { financeOutlook } from '../core/finance-engine.js?v=20260924-18';
-import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20260924-18';
-import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20260924-18';
-import { renderFinanceCard } from './finance-mode.js?v=20260924-18';
-import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20260924-18';
-import { stateBadge } from './charts.js?v=20260924-18';
-import { illustration } from './illustrations.js?v=20260924-18';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-18';
-import { regionPriorities } from '../core/society-engine.js?v=20260924-18';
+import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyContestScore, situation, upcomingElections } from '../core/career-engine.js?v=20260924-19';
+import { playerRoles } from '../core/roles.js?v=20260924-19';
+import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20260924-19';
+import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20260924-19';
+import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260924-19';
+import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20260924-19';
+import { careerLevelLabel } from '../data/regions.js?v=20260924-19';
+import { formatDate } from '../core/time.js?v=20260924-19';
+import { renderBarometerPanel } from './polls-mode.js?v=20260924-19';
+import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20260924-19';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-19';
+import { societyMood } from '../core/society-engine.js?v=20260924-19';
+import { financeOutlook } from '../core/finance-engine.js?v=20260924-19';
+import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20260924-19';
+import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20260924-19';
+import { renderFinanceCard } from './finance-mode.js?v=20260924-19';
+import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20260924-19';
+import { stateBadge } from './charts.js?v=20260924-19';
+import { illustration } from './illustrations.js?v=20260924-19';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-19';
+import { regionPriorities } from '../core/society-engine.js?v=20260924-19';
 
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -209,7 +209,7 @@ function situationBar(state) {
   const [phaseKind, phaseLabel, phaseIcon] = politicalPhase(state);
   return `<section class="situation-bar phase-${phaseKind}">
     <div>${glyph('flag', 16)}<span><small>ITALIA · ${legislature.reference === 'real' ? 'DATO REALE' : 'SIMULAZIONE'}</small><strong>${esc(legislature.label)}</strong><em>${glyph(phaseIcon, 12)} ${esc(phaseLabel)}</em></span></div>
-    <div>${glyph(governing ? 'ministry' : 'dome', 16)}<span><small>ESECUTIVO</small><strong>${esc(executive)}</strong><em>${governing ? 'nato in Parlamento nella simulazione' : 'scenario, non il governo reale'}</em></span></div>
+    <div>${glyph(governing ? 'ministry' : 'dome', 16)}<span><small>ESECUTIVO</small><strong>${esc(executive)}</strong><em>${governing ? (government.primeMinister === 'player' ? 'guidato da te · simulazione' : government.formedBy === 'reference' ? 'in carica dall’avvio della carriera · simulazione' : 'nato in Parlamento nella simulazione') : 'scenario, non il governo reale'}</em></span></div>
     ${mood === null ? '' : `<div>${glyph('users', 16)}<span><small>UMORE DEL PAESE</small><strong>${num(mood, 0)}/100 ${stateBadge(moodState[0], moodState[1])}</strong></span></div>`}
     <div>${glyph('clock', 16)}<span><small>SETTIMANA ${game.week.index}</small><strong>${esc(formatDate(state.clock.currentDate))}</strong></span></div>
   </section>`;

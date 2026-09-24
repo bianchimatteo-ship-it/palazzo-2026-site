@@ -1,8 +1,9 @@
-import { mountApp } from './ui/app.js?v=20260924-18';
-import { refreshSharedArchive } from './data/repositories/admin-sync.js?v=20260924-18';
-import { store } from './core/store.js?v=20260924-18';
-import { loadRealCollections, loadRealDatabase, realDatabase, realDataUrls } from './data/repositories/real-data.js?v=20260924-18';
-import { PARTY_LINK_COLLECTIONS, governingEntityIds } from './data/repositories/party-links.js?v=20260924-18';
+import { mountApp } from './ui/app.js?v=20260924-19';
+import { refreshSharedArchive } from './data/repositories/admin-sync.js?v=20260924-19';
+import { store } from './core/store.js?v=20260924-19';
+import { loadRealCollections, loadRealDatabase, realDatabase, realDataUrls } from './data/repositories/real-data.js?v=20260924-19';
+import { PARTY_LINK_COLLECTIONS, governingEntityIds } from './data/repositories/party-links.js?v=20260924-19';
+import { referenceGovernmentSpec } from './data/repositories/government-reference.js?v=20260924-19';
 
 const BUILD = new URL(import.meta.url).searchParams.get('v');
 
@@ -48,7 +49,9 @@ else {
     store.setRealReference(reference());
     mountApp(root, store);
     registerOfflineCache();
-    loadRealCollections(['government','politicians','politicalFigures',...PARTY_LINK_COLLECTIONS]).then(() => store.setRealReference(reference(governingEntityIds()))).catch(() => {});
+    // The Government in office at the start (derived from the real Government and the groups of its members) and the
+    // real majority reach the simulation once the institutional data are loaded.
+    loadRealCollections(['government','politicians','politicalFigures','parliamentaryGroups',...PARTY_LINK_COLLECTIONS]).then(() => { store.setRealReference(reference(governingEntityIds())); store.setReferenceGovernment(referenceGovernmentSpec()); }).catch(() => {});
   } catch (error) {
     console.error('Avvio di POLITICANDO 2026 non riuscito:', error);
     root.innerHTML = `<main role="alert" style="max-width:760px;margin:10vh auto;padding:32px;font:16px/1.6 system-ui,sans-serif;color:#22312e"><h1>POLITICANDO 2026</h1><p>La pagina è stata raggiunta, ma non è stato possibile caricare i dati del gioco.</p><p>${String(error?.message || 'Errore di caricamento.')}</p><p>Ricarica la pagina tra poco. Se il problema continua, comunica questo messaggio.</p></main>`;
