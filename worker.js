@@ -33,7 +33,23 @@ function cors(request) {
 function json(request, body, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...cors(request) } });
 }
-const emptyArchive = () => ({ version: 1, updatedAt: null, parties: {}, politicians: {}, logos: {} });
+const emptyArchive = () => ({ version: 1, updatedAt: null, parties: {}, politicians: {}, logos: {}, addedParties: {}, hidden: {} });
+const POSITIONS = ['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra'];
+const cleanText = (value, max) => typeof value === 'string' ? value.trim().slice(0, max) || null : null;
+// Parties added by the owner: a separate layer, never mixed with the real dataset files.
+function cleanAddedParty(id, input) {
+  if (!/^admin-party-[a-z0-9-]{3,90}$/.test(id) || !input || typeof input !== 'object') return null;
+  const officialName = cleanText(input.officialName, 160);
+  if (!officialName) return null;
+  const website = cleanText(input.website, 300);
+  return {
+    officialName, abbreviation: cleanText(input.abbreviation, 20), factualDescription: cleanText(input.factualDescription, 1500),
+    website: website && /^https?:\/\/[^\s"'<>]+$/i.test(website) ? website : null,
+    politicalPosition: POSITIONS.includes(input.politicalPosition) ? input.politicalPosition : null,
+    color: /^#[\da-f]{6}$/i.test(input.color ?? '') ? input.color : null,
+    createdAt: cleanText(input.createdAt, 40), updatedAt: cleanText(input.updatedAt, 40)
+  };
+}
 
 // Only the shapes the game writes are accepted: overrides by record id, logos by party id.
 function cleanArchive(input) {
@@ -45,7 +61,11 @@ function cleanArchive(input) {
     if (logo.url && /^https:\/\/[^\s"'<>]{4,600}$/i.test(logo.url)) logos[partyId] = { kind: 'url', url: logo.url, alt: String(logo.alt ?? '').slice(0, 160), sourceUrl: typeof logo.sourceUrl === 'string' ? logo.sourceUrl.slice(0, 600) : null, updatedAt: logo.updatedAt ?? new Date().toISOString(), origin: 'admin' };
     else if (logo.dataUrl && /^data:image\/(png|jpeg|webp|svg\+xml);base64,[\w+/=]+$/.test(logo.dataUrl) && logo.dataUrl.length <= MAX_LOGO_BYTES) logos[partyId] = { kind: 'data', dataUrl: logo.dataUrl, alt: String(logo.alt ?? '').slice(0, 160), sourceUrl: typeof logo.sourceUrl === 'string' ? logo.sourceUrl.slice(0, 600) : null, updatedAt: logo.updatedAt ?? new Date().toISOString(), origin: 'admin' };
   }
-  return { version: 1, updatedAt: new Date().toISOString(), parties: records(input.parties), politicians: records(input.politicians), logos };
+  const addedParties = {};
+  for (const [id, party] of Object.entries(records(input.addedParties)).slice(0, 300)) { const clean = cleanAddedParty(id, party); if (clean) addedParties[id] = clean; }
+  const hidden = {};
+  for (const [id, entry] of Object.entries(records(input.hidden)).slice(0, 800)) if (/^[\w.-]{1,120}$/.test(id) && entry && typeof entry === 'object') hidden[id] = { hidden: entry.hidden !== false, deleted: Boolean(entry.deleted), updatedAt: cleanText(entry.updatedAt, 40) };
+  return { version: 1, updatedAt: new Date().toISOString(), parties: records(input.parties), politicians: records(input.politicians), logos, addedParties, hidden };
 }
 async function tooManyFailures(env, request) {
   const key = `tentativi:${request.headers.get('cf-connecting-ip') ?? 'locale'}`;
@@ -190,6 +210,10 @@ async function handleApi(request, env) {
     const archive = await env.ADMIN_ARCHIVE.get(ARCHIVE_KEY, 'json') ?? emptyArchive();
     return json(request, { ...archive, configured: Boolean(await env.ADMIN_ARCHIVE.get(PIN_KEY)), source: 'user' });
   }
+  // Is this browser's owner session still valid? The game shows the admin area only after the server says so.
+  if (url.pathname === '/api/admin/session' && request.method === 'GET') {
+    return await sessionValid(env, request) ? json(request, { valid: true }) : json(request, { error: 'Sessione amministrativa non valida o scaduta.' }, 401);
+  }
   if (url.pathname === '/api/admin/session' && request.method === 'POST') {
     const guard = await tooManyFailures(env, request);
     if (guard.blocked) return json(request, { error: 'Troppi tentativi: riprova tra 15 minuti.' }, 429);
@@ -215,7 +239,7 @@ async function handleApi(request, env) {
     let archive;
     try { archive = cleanArchive(JSON.parse(text)); } catch (error) { return json(request, { error: error.message || 'Archivio non valido.' }, 400); }
     await env.ADMIN_ARCHIVE.put(ARCHIVE_KEY, JSON.stringify(archive));
-    return json(request, { ok: true, updatedAt: archive.updatedAt, parties: Object.keys(archive.parties).length, politicians: Object.keys(archive.politicians).length, logos: Object.keys(archive.logos).length });
+    return json(request, { ok: true, updatedAt: archive.updatedAt, parties: Object.keys(archive.parties).length, politicians: Object.keys(archive.politicians).length, logos: Object.keys(archive.logos).length, addedParties: Object.keys(archive.addedParties).length, hidden: Object.values(archive.hidden).filter(item => item.hidden).length });
   }
   return json(request, { error: 'Richiesta non riconosciuta.' }, 404);
 }

@@ -168,12 +168,8 @@ assert.equal(realData.realDatabase.parties.find(item => item.id === realParty.id
 admin.resetRecordOverride('parties', realParty.id);
 realData.refreshAdminOverrides();
 assert.equal(realData.realDatabase.parties.find(item => item.id === realParty.id).adminEdited, undefined);
-await admin.setAdminPin('segreto-123');
-admin.lockAdmin();
-assert.equal(admin.isAdminUnlocked(), false);
-await assert.rejects(() => admin.unlockAdmin('sbagliato'), /PIN/);
-await admin.unlockAdmin('segreto-123');
-assert.equal(admin.isAdminUnlocked(), true);
+// No PIN can be created in the browser any more: the owner is recognised only by the server (see check-admin).
+assert.ok(!('setAdminPin' in admin) && !('unlockAdmin' in admin), 'Nessun PIN locale da creare nel browser.');
 store.reset();
 assert.ok(localStore.has('politicando.admin.overrides.v1'), 'Una nuova partita non cancella l’archivio amministrativo.');
 
@@ -181,4 +177,4 @@ assert.ok(localStore.has('politicando.admin.overrides.v1'), 'Una nuova partita n
 assert.equal(await raw('parties'), snapshots.parties);
 assert.equal(await raw('politicians'), snapshots.politicians);
 
-console.log('Sondaggi e mondo verificati: consenso nazionale/regionale/locale, gradimento personale, margine d’errore, trend, eventi e reazioni, alleanze, avversari reali verificati, cambi di maggioranza, salvataggio. Archivio amministrativo verificato: override persistenti, originali intatti, import/export, PIN.');
+console.log('Sondaggi e mondo verificati: consenso nazionale/regionale/locale, gradimento personale, margine d’errore, trend, eventi e reazioni, alleanze, avversari reali verificati, cambi di maggioranza, salvataggio. Archivio amministrativo verificato: override persistenti, originali intatti, import/export, nessun PIN locale.');

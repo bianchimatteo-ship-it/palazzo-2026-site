@@ -1,9 +1,9 @@
-import { mountApp } from './ui/app.js?v=20260924-19';
-import { refreshSharedArchive } from './data/repositories/admin-sync.js?v=20260924-19';
-import { store } from './core/store.js?v=20260924-19';
-import { loadRealCollections, loadRealDatabase, realDatabase, realDataUrls } from './data/repositories/real-data.js?v=20260924-19';
-import { PARTY_LINK_COLLECTIONS, governingEntityIds } from './data/repositories/party-links.js?v=20260924-19';
-import { referenceGovernmentSpec } from './data/repositories/government-reference.js?v=20260924-19';
+import { mountApp } from './ui/app.js?v=20260924-20';
+import { refreshSharedArchive } from './data/repositories/admin-sync.js?v=20260924-20';
+import { store } from './core/store.js?v=20260924-20';
+import { loadRealCollections, loadRealDatabase, realDatabase, realDataUrls } from './data/repositories/real-data.js?v=20260924-20';
+import { PARTY_LINK_COLLECTIONS, governingEntityIds } from './data/repositories/party-links.js?v=20260924-20';
+import { referenceGovernmentSpec } from './data/repositories/government-reference.js?v=20260924-20';
 
 const BUILD = new URL(import.meta.url).searchParams.get('v');
 

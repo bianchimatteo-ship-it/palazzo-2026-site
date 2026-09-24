@@ -544,3 +544,12 @@ select option, select optgroup { background: #141b18; color: #e8ece9; font-size:
 .government-ready { margin: 0; color: #9fd9b8; font-size: 12.5px; }
 .government-post-form button { justify-self: start; }
 @media (max-width: 600px) { .government-post-form button { justify-self: stretch; } }
+
+/* ---------- admin: summary, filters, full search ---------- */
+.admin-summary { display: flex; flex-wrap: wrap; gap: 8px 14px; margin: 0 0 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255, 255, 255, .02); color: var(--ink-2); font-size: 13px; }
+.admin-summary b { color: #fff; font: 800 15px Manrope, sans-serif; margin-right: 3px; }
+.admin-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.admin-toolbar .admin-search { min-width: 200px; }
+.admin-count { margin: 6px 0; color: var(--muted); font-size: 12px; }
+.admin-more { width: 100%; justify-content: center; margin-top: 8px; }
+.badge-bad { background: rgba(227, 73, 72, .16); color: #f0a3a3; }

@@ -74,7 +74,7 @@ La sezione **Archivio** consulta senza uscire dal gioco partiti e movimenti (con
 
 ## Archivio amministrativo condiviso (Cloudflare)
 
-Correzioni ai dati e loghi dell’amministratore possono essere **pubblicati per tutti i giocatori**: il Worker (`worker.js`) risponde su `/api/admin` e li conserva in **Workers KV** (nessun R2), quindi sopravvivono a refresh, riavvii, aggiornamenti e nuovi deploy. Il gioco li scarica all’avvio (anche da GitHub Pages) e ne tiene una copia per l’uso offline; i file in `src/data/real/` non vengono mai modificati. Da **Amministrazione → Archivio → Archivio condiviso** il proprietario collega il browser: la prima volta con il codice di attivazione (segreto `ADMIN_SETUP_CODE` del Worker) e un PIN, poi solo con il PIN. Da collegato, ogni correzione e ogni logo salvato (indirizzo https o file sotto i 300 KB) viene pubblicato automaticamente.
+Correzioni ai dati e loghi dell’amministratore possono essere **pubblicati per tutti i giocatori**: il Worker (`worker.js`) risponde su `/api/admin` e li conserva in **Workers KV** (nessun R2), quindi sopravvivono a refresh, riavvii, aggiornamenti e nuovi deploy. Il gioco li scarica all’avvio (anche da GitHub Pages) e ne tiene una copia per l’uso offline; i file in `src/data/real/` non vengono mai modificati. Il proprietario collega il browser dalla schermata di accesso di `#amministrazione`: la prima volta con il codice di attivazione (segreto `ADMIN_SETUP_CODE` del Worker) e un PIN, poi solo con il PIN. Da collegato, ogni correzione, partito aggiunto o nascosto e logo salvato (indirizzo https o file sotto i 300 KB) viene pubblicato automaticamente.
 
 ## Creare un partito
 
@@ -82,7 +82,7 @@ Nel Career Wizard il nuovo partito (dato `source: user`) ha nome, sigla, descriz
 
 ## Loghi
 
-In **Impostazioni → Gestione loghi** si incolla l’indirizzo di un’immagine (o si carica un file SVG, PNG, JPEG, WebP): l’anteprima compare subito, gli errori (indirizzo non valido, pagina che non è un’immagine, sito irraggiungibile, file troppo grande) sono spiegati. Se il sito lo consente l’immagine viene copiata nel browser e funziona offline; altrimenti si conserva l’indirizzo dopo aver verificato che l’immagine si vede. I loghi aggiunti sono sempre dell’utente (`origin: "user"`) e restano separati dai loghi ufficiali verificati del repository, che tornano visibili eliminando quelli personali.
+In **Impostazioni → Gestione loghi** (visibile solo al proprietario collegato) si incolla l’indirizzo di un’immagine (o si carica un file SVG, PNG, JPEG, WebP): l’anteprima compare subito, gli errori (indirizzo non valido, pagina che non è un’immagine, sito irraggiungibile, file troppo grande) sono spiegati. Se il sito lo consente l’immagine viene copiata nel browser e funziona offline; altrimenti si conserva l’indirizzo dopo aver verificato che l’immagine si vede. I loghi aggiunti sono sempre dell’utente (`origin: "user"`) e restano separati dai loghi ufficiali verificati del repository, che tornano visibili eliminando quelli personali.
 
 ## Modalità campagna
 
@@ -151,7 +151,11 @@ Font: Manrope per i titoli, Newsreader per i sottotitoli, DM Sans per il testo.
 
 ## Area amministrativa (proprietario)
 
-Da **Impostazioni → Area amministrativa** (oppure `#amministrazione`) il proprietario, dopo aver impostato un PIN, corregge nome, sigla, descrizione e informazioni dei partiti, il logo (archivio loghi locale), i deputati e senatori collegati, nomi e informazioni dei politici, gruppo, partito e incarichi. Le modifiche sono salvate nell’archivio `politicando.admin.overrides.v1` del browser, separato dal salvataggio di gioco, e applicate come livello sopra il dataset reale a ogni caricamento: i JSON in `src/data/real/` non vengono mai modificati e ogni record corretto è segnalato come tale. L’archivio resta dopo refresh, riavvii e aggiornamenti del codice finché non viene cancellato; si può esportare e importare in JSON. Il PIN protegge l’area in quel browser, non è un’autenticazione lato server, e le modifiche valgono solo sul dispositivo in cui sono state fatte (o dove l’archivio viene importato).
+L’area amministrativa è riservata al proprietario e non compare nei menu dei giocatori. Chi apre `#amministrazione` vede solo la schermata di accesso: il PIN del proprietario è verificato dal Worker (`POST /api/admin/session`, la prima volta insieme al codice di attivazione `ADMIN_SETUP_CODE`) e a ogni apertura la sessione salvata nel browser viene riconfermata dal server (`GET /api/admin/session`); un token inventato o scaduto non apre nulla. Non esiste un PIN locale: un giocatore non può crearne uno per diventare amministratore.
+
+Il proprietario corregge nome, sigla, descrizione, collocazione e informazioni dei partiti, il logo, i deputati e senatori collegati, nomi e informazioni dei politici, gruppo, partito e incarichi. La ricerca copre tutti i partiti e movimenti e tutti i 604 parlamentari: l’elenco mostra 40 risultati alla volta con «Mostra altri», ma la ricerca non è mai limitata. Con **+ Aggiungi partito** si crea un partito (nome ufficiale, sigla, descrizione, sito, collocazione, colore, logo) marcato «aggiunto dall’amministratore» (`source: user`) e utilizzabile nel resto del gioco; nomi e sigle già esistenti sono rifiutati. Ogni partito si può nascondere, eliminare (con conferma) e ripristinare; i filtri distinguono tutti, attivi, nascosti, aggiunti, con logo e senza logo, e il riepilogo conta partiti reali, movimenti, aggiunti, nascosti e loghi configurati.
+
+Le modifiche formano un livello separato sopra il dataset reale (`politicando.admin.overrides.v1` nel browser e archivio condiviso su Workers KV, pubblicato per tutti i giocatori): i JSON in `src/data/real/` non vengono mai modificati e ogni record corretto, aggiunto o nascosto è segnalato come tale.
 
 ## Pubblicazione e cache
 
@@ -228,6 +232,7 @@ npm run check:document    # documento del 24/09/2026: collocazioni, nuove entit�
 npm run check:world       # alleanze realistiche, evoluzione dei partiti, difficoltà, notizie, memoria politica
 npm run check:accounts    # account, salvataggi online su D1 (SQLite in test), conflitti tra dispositivi
 npm run check:reference-government # governo in carica all’avvio: maggioranza reale, premier simulato, sostegno, ministero, crisi, caduta
+npm run check:admin       # area del proprietario: sessione verificata dal server, ricerca completa, aggiunta/nascondi/elimina/ripristina partiti
 npm run check:all         # tutte le verifiche
 npm run check:gameplay
 npm run check:parliament

@@ -1,5 +1,5 @@
 // Network side of the shared admin archive: read it for every player, write it with the owner's session.
-import { loadAdminArchive, loadSharedArchive, setSharedSessionToken, sharedSessionToken, storeSharedArchive } from './admin-store.js?v=20260924-19';
+import { loadAdminArchive, loadSharedArchive, setSharedSessionToken, sharedSessionToken, storeSharedArchive } from './admin-store.js?v=20260924-20';
 
 const PRODUCTION_API = 'https://palazzo-2026-site.bianchimatteo657.workers.dev/api/admin';
 // On the Worker (and its local preview) the API is on the same site; GitHub Pages reads it from the Worker.
@@ -35,13 +35,30 @@ export async function refreshSharedArchive() {
   const after = loadSharedArchive();
   return JSON.stringify({ ...after, fetchedAt: null }) !== JSON.stringify({ ...(JSON.parse(before) ?? {}), fetchedAt: null });
 }
+// The owner is whoever holds a session the server has just confirmed: a token in the browser is not enough.
+let verifiedToken = null;
 export async function openSharedSession(pin, setupCode = '') {
   const body = await call('/session', { method: 'POST', body: JSON.stringify({ pin, setupCode }) });
   setSharedSessionToken(body.token);
+  verifiedToken = body.token;
   return body;
 }
 export const hasSharedSession = () => Boolean(sharedSessionToken());
-export function closeSharedSession() { setSharedSessionToken(null); }
+export const isAdminVerified = () => Boolean(verifiedToken) && verifiedToken === sharedSessionToken();
+export async function verifySharedSession() {
+  const token = sharedSessionToken();
+  if (!token) { verifiedToken = null; return false; }
+  try {
+    await call('/session', { method: 'GET', headers: { authorization: `Bearer ${token}` } });
+    verifiedToken = token;
+    return true;
+  } catch (error) {
+    if (error.status === 401) closeSharedSession();
+    verifiedToken = null;
+    return false;
+  }
+}
+export function closeSharedSession() { setSharedSessionToken(null); verifiedToken = null; }
 // Publishes the archive in use (overrides and shared logos) for every player.
 export async function publishSharedArchive(logoPatch = {}) {
   const token = sharedSessionToken();
@@ -50,7 +67,7 @@ export async function publishSharedArchive(logoPatch = {}) {
   const logos = { ...(loadSharedArchive()?.logos ?? {}) };
   for (const [partyId, logo] of Object.entries(logoPatch)) { if (logo) logos[partyId] = { ...logo, updatedAt: new Date().toISOString() }; else delete logos[partyId]; }
   try {
-    const result = await call('', { method: 'PUT', headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ parties: archive.parties, politicians: archive.politicians, logos }) });
+    const result = await call('', { method: 'PUT', headers: { authorization: `Bearer ${token}` }, body: JSON.stringify({ parties: archive.parties, politicians: archive.politicians, logos, addedParties: archive.addedParties ?? {}, hidden: archive.hidden ?? {} }) });
     storeSharedArchive({ ...archive, logos, updatedAt: result.updatedAt, configured: true });
     return result;
   } catch (error) {

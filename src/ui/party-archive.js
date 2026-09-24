@@ -1,6 +1,6 @@
-import { realDatabase } from '../data/repositories/real-data.js?v=20260924-19';
-import { BASIS_LABELS, POLITICAL_POSITIONS, linkedPoliticians, politicianAffiliation } from '../data/repositories/party-links.js?v=20260924-19';
-import { personMark } from './visuals.js?v=20260924-19';
+import { realDatabase } from '../data/repositories/real-data.js?v=20260924-20';
+import { BASIS_LABELS, POLITICAL_POSITIONS, linkedPoliticians, politicianAffiliation } from '../data/repositories/party-links.js?v=20260924-20';
+import { personMark } from './visuals.js?v=20260924-20';
 
 const KIND_LABELS = { party: 'Partito politico', politicalMovement: 'Movimento politico', coalition: 'Coalizione / lista comune', electoralList: 'Lista elettorale' };
 const kindOf = entity => entity.entityType ?? (entity.electionId ? 'electoralList' : 'party');
@@ -8,7 +8,7 @@ const kindOf = entity => entity.entityType ?? (entity.electionId ? 'electoralLis
 export const archiveEntities = () => [
   ...(realDatabase.parties ?? []), ...(realDatabase.politicalMovements ?? []), ...(realDatabase.coalitions ?? []),
   ...(realDatabase.electoralLists ?? []).map(list => ({ ...list, entityType: 'electoralList' }))
-].filter(item => !item.sameEntityAs);
+].filter(item => !item.sameEntityAs && !item.adminHidden);
 
 const esc = (value = '') => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const pageSize = 18;
@@ -57,7 +57,7 @@ export function renderPartyArchive(filters, { status = {}, logoFor = () => null 
     const levelLabel = ({national:'Nazionale',regional:'Regionale',local:'Locale'})[party.level] || party.level;
     const area = [levelLabel, party.regionId ? regionNames.get(party.regionId) : null].filter(Boolean).join(' · ') || 'Livello territoriale non documentato';
     const description = party.factualDescription || 'Descrizione non disponibile nelle fonti consultate.';
-    return `<article class="organization-card"><button type="button" class="organization-open" data-party-profile="${esc(party.id)}" aria-label="Apri il profilo di ${esc(party.officialName)}">${logoMark(party,logoFor)}<span class="organization-copy"><strong>${esc(party.officialName)}</strong><span>${esc(party.abbreviation || 'Sigla non documentata')} · ${kind}</span><small>${esc(description)}</small></span><span class="organization-facts">${party.politicalPosition ? `<span class="position-chip">${esc(party.politicalPosition)}</span>` : ''}<span>${esc(kindOf(party) === 'electoralList' ? `Elezione: ${(realDatabase.elections ?? []).find(item => item.id === party.electionId)?.officialName ?? party.electionId}` : statusLabel)}</span><span>${esc(area)}</span><span>${esc(presence)}</span></span><span class="verified-badge">Dato reale verificato</span></button><a class="catalog-source" href="${esc(party.sourceUrl)}" target="_blank" rel="noopener noreferrer">Fonte del dato ↗</a></article>`;
+    return `<article class="organization-card"><button type="button" class="organization-open" data-party-profile="${esc(party.id)}" aria-label="Apri il profilo di ${esc(party.officialName)}">${logoMark(party,logoFor)}<span class="organization-copy"><strong>${esc(party.officialName)}${party.adminCreated ? ' <span class="badge">Aggiunto dall’amministratore</span>' : ''}</strong><span>${esc(party.abbreviation || 'Sigla non documentata')} · ${kind}</span><small>${esc(description)}</small></span><span class="organization-facts">${party.politicalPosition ? `<span class="position-chip">${esc(party.politicalPosition)}</span>` : ''}<span>${esc(kindOf(party) === 'electoralList' ? `Elezione: ${(realDatabase.elections ?? []).find(item => item.id === party.electionId)?.officialName ?? party.electionId}` : statusLabel)}</span><span>${esc(area)}</span><span>${esc(presence)}</span></span><span class="verified-badge">${party.adminCreated ? 'Dato dell’amministratore' : 'Dato reale verificato'}</span></button>${party.sourceUrl ? `<a class="catalog-source" href="${esc(party.sourceUrl)}" target="_blank" rel="noopener noreferrer">Fonte del dato ↗</a>` : ''}</article>`;
   }).join('');
   const empty = '<div class="catalog-empty">Nessun partito o movimento corrisponde ai filtri selezionati. Rimuovi un filtro o prova un’altra ricerca.</div>';
   const pagination = visible.length < results.length ? `<div class="catalog-pagination"><span>Mostrati ${visible.length} di ${results.length}</span><button type="button" data-catalog-more="partyPage">Mostra altri 18</button></div>` : `<div class="catalog-pagination"><span>${results.length} risultati</span></div>`;

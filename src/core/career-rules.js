@@ -1,5 +1,5 @@
-import { CAREER_LEVELS, ITALIAN_REGIONS } from '../data/regions.js?v=20260924-19';
-import { isSelectableParty } from '../data/schema.js?v=20260924-19';
+import { CAREER_LEVELS, ITALIAN_REGIONS } from '../data/regions.js?v=20260924-20';
+import { isSelectableParty } from '../data/schema.js?v=20260924-20';
 
 const genders = new Set(['preferisco-non-specificare', 'donna', 'uomo', 'non-binario']);
 const orientations = new Set(['Centrismo civico', 'Progressista', 'Conservatore', 'Liberale', 'Socialdemocratico', 'Ecologista', 'Popolare', 'Autonomista', 'Altro']);

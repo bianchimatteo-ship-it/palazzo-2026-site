@@ -96,6 +96,11 @@ assert.ok(world.parties.filter(item => !item.isPlayer).every(item => item.refere
 // ---------- 3. every page renders ----------
 const pages = ['panoramica', 'carriera', 'profilo', 'partito', 'territori', 'finanze', 'parlamento', 'governo', 'leggi', 'elezioni', 'calendario', 'sondaggi', 'archivio', 'amministrazione', 'impostazioni'];
 for (const id of pages) { const text = await goto(id); assert.ok(text.length > 1000, `${id} vuota`); assert.ok(clean(text), `${id}: valori non validi`); assert.ok(!/in costruzione|STRUTTURA PRONTA/.test(text), `${id}: segnaposto`); }
+// The admin area is not reachable by typing its address, and players see no way in.
+const adminPage = await goto('amministrazione');
+assert.ok(adminPage.includes('Area riservata al proprietario') && !adminPage.includes('data-admin-select-party') && !adminPage.includes('Imposta il PIN'), 'L’area amministrativa mostra solo l’accesso del proprietario.');
+const playerSettings = await goto('impostazioni');
+assert.ok(!playerSettings.includes('data-nav="amministrazione"') && !playerSettings.includes('data-action="logo-admin"'), 'Nessun ingresso all’area amministrativa per i giocatori.');
 const pollsForFounder = await goto('sondaggi');
 assert.ok(pollsForFounder.includes('Probabilità che accetti'), 'Il segretario vede, prima di proporre un’intesa, probabilità e motivi.');
 let home = await goto('panoramica');
@@ -134,7 +139,7 @@ home = await goto('panoramica');
 for (const text of ['RUOLI E POTERI', 'Fondatore e segretario', 'PERCHÉ È CAMBIATO', 'REDAZIONE', 'data-news-filter', 'data-action="menu"']) assert.ok(home.includes(text), `Home: manca ${text}`);
 assert.ok((await click({ newsFilter: 'diario' })).includes('data-news-filter="diario" class="active"'));
 const settingsPage = await goto('impostazioni');
-assert.ok(settingsPage.includes('data-setting-key="autosave"') && settingsPage.includes('Gestione loghi') && !settingsPage.includes('Ricomincia la demo'));
+assert.ok(settingsPage.includes('data-setting-key="autosave"') && !settingsPage.includes('Gestione loghi') && !settingsPage.includes('Ricomincia la demo'), 'Impostazioni del giocatore, senza strumenti del proprietario');
 
 // ---------- 4. the secretary's powers, with consequences ----------
 assert.ok(playerRoles(store.getState()).secretary, 'Il fondatore è segretario');

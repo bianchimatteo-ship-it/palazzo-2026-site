@@ -1,41 +1,41 @@
-import { fullDate, formatDate } from '../core/time.js?v=20260924-19';
-import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20260924-19';
-import { accountApiBase, currentAccount, deleteCloudSave, downloadSave, knownRevision, listCloudSaves, login, logout, register, slotForCareer, uploadSave } from '../data/repositories/account-sync.js?v=20260924-19';
-import { setPartyLogoResolver } from './person-marks.js?v=20260924-19';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260924-19';
-import { isRealCollectionLoaded, loadRealCollections, pristineRecord, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20260924-19';
-import { addRoleOverride, clearAdminArchive, exportAdminArchive, hasAdminPin, importAdminArchive, isAdminUnlocked, lockAdmin, removeRoleOverride, resetRecordOverride, saveRecordOverride, setAdminPin, setRecordField, unlockAdmin } from '../data/repositories/admin-store.js?v=20260924-19';
-import { renderAdminPanel } from './admin-panel.js?v=20260924-19';
-import { sharedLogos } from '../data/repositories/admin-store.js?v=20260924-19';
-import { closeSharedSession, hasSharedSession, openSharedSession, publishSharedArchive, refreshSharedArchive } from '../data/repositories/admin-sync.js?v=20260924-19';
-import { deleteLocalLogo, exportLogoConfiguration, fetchLogoFromUrl, getLocalLogo, importLogoConfiguration, listLocalLogos, probeImage, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20260924-19';
-import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20260924-19';
-import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20260924-19';
-import { PARTY_LINK_COLLECTIONS } from '../data/repositories/party-links.js?v=20260924-19';
-import { renderLogoAdmin } from './logo-admin.js?v=20260924-19';
-import { makeCareerDraft, renderCareerWizard, wizardLogoPreview } from './career-wizard.js?v=20260924-19';
-import { userPartyLogo } from './party-logo.js?v=20260924-19';
-import { validateCareerStep } from '../core/career-rules.js?v=20260924-19';
-import { renderCampaignPage } from './campaign-mode.js?v=20260924-19';
-import { renderParliamentPage } from './parliament-mode.js?v=20260924-19';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-19';
-import { CAREER_LEVELS, careerLevelLabel } from '../data/regions.js?v=20260924-19';
-import { renderCareerTimeline, renderElectionCalendar, renderHeadquarters, renderInbox, renderPartyPosition } from './game-mode.js?v=20260924-19';
-import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20260924-19';
-import { playerRoles } from '../core/roles.js?v=20260924-19';
-import { budgetPreview, designFromForm, planFromForm, policyFields, policyPreview } from './policy-mode.js?v=20260924-19';
-import { areaOf } from '../data/simulation/policy-rules.js?v=20260924-19';
-import { attachChartInteractions, hideChartTip, renderPollsPage } from './polls-mode.js?v=20260924-19';
-import { glyph, officeIcon } from './visuals.js?v=20260924-19';
-import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20260924-19';
-import { renderFinancePage } from './finance-mode.js?v=20260924-19';
-import { renderContactsPanel, renderOrganizationPanel } from './organization-mode.js?v=20260924-19';
-import { renderRealLaws } from './real-laws.js?v=20260924-19';
-import { realLawArea } from '../core/society-engine.js?v=20260924-19';
-import { canManageParliament } from '../core/parliament-engine.js?v=20260924-19';
-import { renderMainMenu, renderWeeklyReport, settingsView } from './menu.js?v=20260924-19';
-import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20260924-19';
-import { playSound } from './sound.js?v=20260924-19';
+import { fullDate, formatDate } from '../core/time.js?v=20260924-20';
+import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20260924-20';
+import { accountApiBase, currentAccount, deleteCloudSave, downloadSave, knownRevision, listCloudSaves, login, logout, register, slotForCareer, uploadSave } from '../data/repositories/account-sync.js?v=20260924-20';
+import { setPartyLogoResolver } from './person-marks.js?v=20260924-20';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260924-20';
+import { isRealCollectionLoaded, loadRealCollections, pristineRecord, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20260924-20';
+import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20260924-20';
+import { renderAdminPanel } from './admin-panel.js?v=20260924-20';
+import { sharedLogos } from '../data/repositories/admin-store.js?v=20260924-20';
+import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, publishSharedArchive, refreshSharedArchive, sharedApiUrl, verifySharedSession } from '../data/repositories/admin-sync.js?v=20260924-20';
+import { deleteLocalLogo, exportLogoConfiguration, fetchLogoFromUrl, getLocalLogo, importLogoConfiguration, listLocalLogos, probeImage, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20260924-20';
+import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20260924-20';
+import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20260924-20';
+import { PARTY_LINK_COLLECTIONS } from '../data/repositories/party-links.js?v=20260924-20';
+import { renderLogoAdmin } from './logo-admin.js?v=20260924-20';
+import { makeCareerDraft, renderCareerWizard, wizardLogoPreview } from './career-wizard.js?v=20260924-20';
+import { userPartyLogo } from './party-logo.js?v=20260924-20';
+import { validateCareerStep } from '../core/career-rules.js?v=20260924-20';
+import { renderCampaignPage } from './campaign-mode.js?v=20260924-20';
+import { renderParliamentPage } from './parliament-mode.js?v=20260924-20';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-20';
+import { CAREER_LEVELS, careerLevelLabel } from '../data/regions.js?v=20260924-20';
+import { renderCareerTimeline, renderElectionCalendar, renderHeadquarters, renderInbox, renderPartyPosition } from './game-mode.js?v=20260924-20';
+import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20260924-20';
+import { playerRoles } from '../core/roles.js?v=20260924-20';
+import { budgetPreview, designFromForm, planFromForm, policyFields, policyPreview } from './policy-mode.js?v=20260924-20';
+import { areaOf } from '../data/simulation/policy-rules.js?v=20260924-20';
+import { attachChartInteractions, hideChartTip, renderPollsPage } from './polls-mode.js?v=20260924-20';
+import { glyph, officeIcon } from './visuals.js?v=20260924-20';
+import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20260924-20';
+import { renderFinancePage } from './finance-mode.js?v=20260924-20';
+import { renderContactsPanel, renderOrganizationPanel } from './organization-mode.js?v=20260924-20';
+import { renderRealLaws } from './real-laws.js?v=20260924-20';
+import { realLawArea } from '../core/society-engine.js?v=20260924-20';
+import { canManageParliament } from '../core/parliament-engine.js?v=20260924-20';
+import { renderMainMenu, renderWeeklyReport, settingsView } from './menu.js?v=20260924-20';
+import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20260924-20';
+import { playSound } from './sound.js?v=20260924-20';
 
 // Phone navigation: four sections always one tap away, everything else in the "Altro" sheet.
 const MOBILE_TABS = [['panoramica', 'home', 'Home'], ['carriera', 'route', 'Carriera'], ['partito', 'party', 'Partito'], ['sondaggi', 'chart', 'Sondaggi']];
@@ -104,7 +104,7 @@ export function mountApp(root, store) {
     selectedPoliticianId:null, selectedPartyId:null, profileLoading:false, loadingPage:null, errors:{}, loadTicket:0,
     logoQuery:'', logoPage:1
   };
-  const admin = { tab: 'partiti', query: '', linkQuery: '', chamber: 'all', partyId: null, politicianId: null, message: '' };
+  const admin = { tab: 'partiti', query: '', linkQuery: '', chamber: 'all', partyId: null, politicianId: null, message: '', listPage: 1, partyFilter: 'tutti', creating: false, checking: false };
   const territory = { measure: 'satisfaction', region: null };
   const archive = { tab: 'partiti' };
   const views = { newsFilter: 'tutto', timelineFilter: 'tutto' };
@@ -190,13 +190,14 @@ export function mountApp(root, store) {
     parties: [...(realDatabase.parties ?? []).map(party => ({ ...party, collection: 'parties' })), ...(realDatabase.politicalMovements ?? []).map(party => ({ ...party, collection: 'politicalMovements' }))].sort((a, b) => a.officialName.localeCompare(b.officialName, 'it')),
     politicians: [...(realDatabase.politicians ?? [])].sort((a, b) => a.fullName.localeCompare(b.fullName, 'it')),
     groups: realDatabase.parliamentaryGroups ?? [], offices: realDatabase.offices ?? [], pristine: pristineRecord, logoFor,
-    unlocked: isAdminUnlocked(), hasPin: hasAdminPin(), loading: catalog.loadingPage === 'amministrazione'
+    // The admin area opens only for a session the server has confirmed; a player cannot create a PIN.
+    unlocked: isAdminVerified(), available: Boolean(sharedApiUrl()), configured: loadSharedArchive()?.configured !== false, checking: admin.checking, loading: catalog.loadingPage === 'amministrazione'
   });
   // Every owner edit re-layers the archive over the real snapshot and redraws.
   const adminDone = message => {
     refreshAdminOverrides(); admin.message = message; render(store.getState(), store.getLastSaved());
     // Connected to the shared archive: the change is published for every player.
-    if (hasSharedSession()) publishSharedArchive().then(() => { admin.message = `${message} Pubblicato per tutti i giocatori.`; render(store.getState(), store.getLastSaved()); }).catch(error => { admin.message = `${message} Non pubblicato: ${error.message}`; render(store.getState(), store.getLastSaved()); });
+    if (isAdminVerified()) publishSharedArchive().then(() => { admin.message = `${message} Pubblicato per tutti i giocatori.`; render(store.getState(), store.getLastSaved()); }).catch(error => { admin.message = `${message} Non pubblicato: ${error.message}`; render(store.getState(), store.getLastSaved()); });
   };
   const adminSelected = () => admin.tab === 'politici'
     ? { collection: 'politicians', id: admin.politicianId }
@@ -278,6 +279,11 @@ export function mountApp(root, store) {
     : page === 'sondaggi' ? ['partyLeaderships','politicalFigures']
     : page === 'amministrazione' ? ['parties','politicalMovements','politicians','parliamentaryGroups','offices',...PARTY_LINK_COLLECTIONS] : [];
   const ensurePageData = async (page, force = false) => {
+    // A session token in this browser is not enough: the server confirms it before the admin area opens.
+    if (page === 'amministrazione' && hasSharedSession() && !isAdminVerified() && !admin.checking) {
+      admin.checking = true;
+      verifySharedSession().finally(() => { admin.checking = false; render(store.getState(), store.getLastSaved()); });
+    }
     const required = collectionsForPage(page);
     if (!required.length) { if (page !== store.getState().ui.activePage) globalThis.scrollTo?.(0, 0); store.navigate(page); return; }
     if (page !== store.getState().ui.activePage) globalThis.scrollTo?.(0, 0);
@@ -525,12 +531,19 @@ export function mountApp(root, store) {
       } catch (error) { admin.message = error.message; }
       render(store.getState(), store.getLastSaved()); return;
     }
-    const adminTarget = event.target.closest('[data-admin-tab],[data-admin-select-party],[data-admin-select-politician],[data-admin-reset-record],[data-admin-reset-field],[data-admin-logo],[data-admin-unlink],[data-admin-link],[data-admin-remove-role],[data-admin-export],[data-admin-clear],[data-admin-lock]');
+    const adminTarget = event.target.closest('[data-admin-tab],[data-admin-select-party],[data-admin-select-politician],[data-admin-reset-record],[data-admin-reset-field],[data-admin-logo],[data-admin-unlink],[data-admin-link],[data-admin-remove-role],[data-admin-export],[data-admin-clear],[data-admin-more],[data-admin-new-party],[data-admin-cancel-new],[data-admin-hide],[data-admin-restore],[data-admin-delete]');
+    if (adminTarget && !isAdminVerified()) { admin.message = 'Sessione del proprietario non verificata.'; render(store.getState(), store.getLastSaved()); return; }
     if (adminTarget) {
       const data = adminTarget.dataset;
       try {
-        if (data.adminTab) { admin.tab = data.adminTab; admin.query = ''; admin.message = ''; render(store.getState(), store.getLastSaved()); }
-        else if (data.adminSelectParty) { admin.partyId = data.adminSelectParty; admin.linkQuery = ''; admin.message = ''; render(store.getState(), store.getLastSaved()); }
+        if (data.adminTab) { admin.tab = data.adminTab; admin.query = ''; admin.message = ''; admin.listPage = 1; admin.creating = false; render(store.getState(), store.getLastSaved()); }
+        else if (data.adminSelectParty) { admin.partyId = data.adminSelectParty; admin.creating = false; admin.linkQuery = ''; admin.message = ''; render(store.getState(), store.getLastSaved()); }
+        else if ('adminMore' in data) { admin.listPage++; render(store.getState(), store.getLastSaved()); }
+        else if ('adminNewParty' in data) { admin.creating = true; admin.partyId = null; admin.message = ''; render(store.getState(), store.getLastSaved()); }
+        else if ('adminCancelNew' in data) { admin.creating = false; admin.message = ''; render(store.getState(), store.getLastSaved()); }
+        else if (data.adminHide) { if (globalThis.confirm?.('Nascondere questo partito da tutte le liste del gioco? I dati reali restano intatti e potrai ripristinarlo.') !== false) { setRecordHidden(data.adminHide, true); adminDone('Partito nascosto dal gioco.'); } }
+        else if (data.adminDelete) { if (globalThis.confirm?.('Eliminare questo partito aggiunto? Potrai ripristinarlo dall’elenco dei nascosti.') !== false) { setRecordHidden(data.adminDelete, true, { deleted: true }); adminDone('Partito eliminato: resta ripristinabile.'); } }
+        else if (data.adminRestore) { setRecordHidden(data.adminRestore, false); adminDone('Partito ripristinato nel gioco.'); }
         else if (data.adminSelectPolitician) { admin.politicianId = data.adminSelectPolitician; admin.message = ''; render(store.getState(), store.getLastSaved()); }
         else if ('adminResetRecord' in data) { const target = adminSelected(); if (globalThis.confirm?.('Ripristinare tutti i dati originali di questo record?') !== false) { resetRecordOverride(target.collection, target.id); adminDone('Dati originali ripristinati.'); } }
         else if (data.adminResetField) { const target = adminSelected(); const original = pristineRecord(target.collection, target.id) ?? {}; setRecordField(target.collection, target.id, data.adminResetField, original[data.adminResetField] ?? null, original); adminDone('Campo ripristinato al valore del dataset.'); }
@@ -540,7 +553,6 @@ export function mountApp(root, store) {
         else if (data.adminRemoveRole) { removeRoleOverride(admin.politicianId, data.adminRemoveRole); adminDone('Incarico rimosso.'); }
         else if ('adminExport' in data) { const url = URL.createObjectURL(new Blob([exportAdminArchive()], { type: 'application/json' })); const link = document.createElement('a'); link.href = url; link.download = `politicando-archivio-amministrativo-${new Date().toISOString().slice(0, 10)}.json`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); admin.message = 'Archivio esportato.'; render(store.getState(), store.getLastSaved()); }
         else if ('adminClear' in data) { if (globalThis.confirm?.('Cancellare tutte le modifiche amministrative? L’operazione non si può annullare.')) { clearAdminArchive(); adminDone(hasSharedSession() ? 'Archivio svuotato anche per tutti i giocatori.' : 'Archivio amministrativo svuotato: sono tornati i dati del dataset.'); } }
-        else if ('adminLock' in data) { lockAdmin(); admin.message = ''; render(store.getState(), store.getLastSaved()); }
       } catch (error) { admin.message = error.message; render(store.getState(), store.getLastSaved()); }
       return;
     }
@@ -699,7 +711,7 @@ export function mountApp(root, store) {
         if (!alt) throw new Error('Inserisci un testo alternativo per il logo.');
         await saveLocalLogo(selectedLogoPartyId, pendingLogo ? {blob:pendingLogo,fileName:pendingLogo.name || 'logo',sourceUrl:pendingRemoteUrl,source,verified,alt} : {url:pendingRemoteUrl,sourceUrl:pendingRemoteUrl,source,verified,alt});
         // The owner connected to the shared archive publishes the logo for everyone: the address, or the image itself if small.
-        if (hasSharedSession() && isAdminUnlocked()) {
+        if (isAdminVerified()) {
           const shared = pendingRemoteUrl && /^https:/i.test(pendingRemoteUrl) ? { url: pendingRemoteUrl, alt, sourceUrl: source || pendingRemoteUrl } : pendingLogo && pendingLogo.size <= 300000 ? { dataUrl: await blobToDataUrl(pendingLogo), alt, sourceUrl: source || null } : null;
           if (shared) await publishSharedArchive({ [selectedLogoPartyId]: shared }).then(() => { logoAdminError = ''; }).catch(error => { logoAdminError = `Logo salvato in questo browser, non pubblicato: ${error.message}`; });
           else logoAdminError = 'Logo salvato in questo browser: per pubblicarlo per tutti usa un indirizzo https o un file sotto i 300 KB.';
@@ -710,7 +722,7 @@ export function mountApp(root, store) {
     else if (action === 'logo-delete') {
       try {
         await deleteLocalLogo(selectedLogoPartyId); logoAdminError='';
-        if (hasSharedSession() && isAdminUnlocked() && sharedLogos()[selectedLogoPartyId]) await publishSharedArchive({ [selectedLogoPartyId]: null });
+        if (isAdminVerified() && sharedLogos()[selectedLogoPartyId]) await publishSharedArchive({ [selectedLogoPartyId]: null });
         await refreshLocalLogos();
       }
       catch (error) { logoAdminError=error.message || 'Eliminazione non riuscita.'; render(store.getState(),store.getLastSaved()); }
@@ -739,22 +751,22 @@ export function mountApp(root, store) {
     if (form.matches('[data-admin-shared-form]')) {
       event.preventDefault();
       const data = Object.fromEntries(new FormData(form));
-      try { await openSharedSession(data.pin, data.setupCode ?? ''); await refreshSharedArchive(); admin.message = 'Browser collegato: le modifiche verranno pubblicate per tutti.'; }
+      try { await openSharedSession(data.pin, data.setupCode ?? ''); await refreshSharedArchive(); refreshAdminOverrides(); admin.message = 'Accesso del proprietario verificato: le modifiche vengono pubblicate per tutti.'; await ensurePageData('amministrazione', true); }
       catch (error) { admin.message = error.message; }
       render(store.getState(), store.getLastSaved()); return;
     }
-    if (form.matches('[data-admin-lock-form],[data-admin-form],[data-admin-role-form],[data-admin-pin-form]')) {
+    if (form.matches('[data-admin-new-party-form],[data-admin-form],[data-admin-role-form]')) {
       event.preventDefault();
       const data = Object.fromEntries(new FormData(form));
       try {
-        if (form.matches('[data-admin-lock-form]')) {
-          if (hasAdminPin()) await unlockAdmin(data.pin);
-          else { if (data.pin !== data.confirm) throw new Error('I due PIN non coincidono.'); await setAdminPin(data.pin); }
-          admin.message = '';
-          await ensurePageData('amministrazione', true);
-        } else if (form.matches('[data-admin-pin-form]')) {
-          if (data.pin !== data.confirm) throw new Error('I due PIN non coincidono.');
-          await setAdminPin(data.pin); admin.message = 'PIN aggiornato.'; render(store.getState(), store.getLastSaved());
+        if (!isAdminVerified()) throw new Error('Sessione del proprietario non verificata.');
+        if (form.matches('[data-admin-new-party-form]')) {
+          const id = addAdminParty(data, adminContext().parties);
+          const logoUrl = String(data.logoUrl ?? '').trim();
+          if (logoUrl && !/^https:\/\/[^\s"'<>]+$/i.test(logoUrl)) throw new Error('Il logo da indirizzo deve iniziare con https://');
+          admin.creating = false; admin.partyId = id; admin.partyFilter = 'tutti';
+          if (logoUrl) await publishSharedArchive({ [id]: { url: logoUrl, alt: `Logo di ${data.officialName}`, sourceUrl: logoUrl } });
+          adminDone('Partito aggiunto: è disponibile nelle sezioni del gioco.');
         } else if (form.matches('[data-admin-role-form]')) {
           addRoleOverride(form.dataset.adminId, data); adminDone('Incarico aggiunto.');
         } else {
@@ -813,7 +825,8 @@ export function mountApp(root, store) {
       if (field.dataset.catalogFilter === 'politicianQuery') catalog.politicianPage=1;
       updateCatalog(); return;
     }
-    if (field.matches('[data-admin-query]')) { admin.query = field.value; preserveFocusRender('[data-admin-query]'); return; }
+    if (field.matches('[data-admin-query]')) { admin.query = field.value; admin.listPage = 1; preserveFocusRender('[data-admin-query]'); return; }
+    if (field.matches('[data-admin-filter]')) { admin.partyFilter = field.value; admin.listPage = 1; render(store.getState(), store.getLastSaved()); return; }
     if (field.matches('[data-real-law-filter="query"]')) { realLaws.query = field.value; realLaws.page = 1; preserveFocusRender('[data-real-law-filter="query"]'); return; }
     if (field.matches('[data-admin-link-query]')) { admin.linkQuery = field.value; preserveFocusRender('[data-admin-link-query]'); return; }
     if (field.matches('[data-logo-query]')) { catalog.logoQuery=field.value; catalog.logoPage=1; updateLogoAdmin(); return; }
@@ -848,7 +861,7 @@ export function mountApp(root, store) {
       if(help) help.innerHTML=`${ELECTION_MODELS[type].strategy} · <a href="${ELECTION_MODELS[type].referenceUrl}" target="_blank" rel="noopener noreferrer">${ELECTION_MODELS[type].referenceName} ↗</a>`;
       return;
     }
-    if (field.matches('[data-admin-chamber]')) { admin.chamber = field.value; render(store.getState(), store.getLastSaved()); return; }
+    if (field.matches('[data-admin-chamber]')) { admin.chamber = field.value; admin.listPage = 1; render(store.getState(), store.getLastSaved()); return; }
     if (field.matches('[data-real-law-filter]') && field.dataset.realLawFilter !== 'query') { realLaws[field.dataset.realLawFilter] = field.value; realLaws.page = 1; render(store.getState(), store.getLastSaved()); return; }
     if (field.matches('[data-wizard-logo-upload]') && wizard) {
       const file = field.files?.[0]; if (!file) return;
@@ -999,7 +1012,7 @@ function subpage(state, page, player, party, events, catalog, options = {}) {
     carriera: `<div class="career-roadmap"><div class="roadmap-lead"><span class="section-kicker">PUNTO DI PARTENZA</span><h2>${player ? esc(player.displayName) : 'Crea il tuo politico'}</h2><p>${player ? `${esc(player.previousProfession)} · ${esc(player.municipality)}, ${esc(player.region)}` : 'Scegli chi vuoi diventare e da dove iniziare.'}</p>${player ? '' : '<button class="primary-button" data-action="new-career">Crea il tuo politico ' + icon('arrow', 16) + '</button>'}</div><div class="roadmap-stage"><span class="roadmap-number">01</span><div><small>IL TUO LIVELLO INIZIALE</small><strong>${esc(careerLevelLabel(state.career.initialLevel) ?? 'Da definire')}</strong><span>${esc(state.dataset.territories.find(item => item.id === state.career.territoryId)?.name ?? player?.region ?? 'Italia')}</span></div></div><div class="roadmap-stage upcoming"><span class="roadmap-number">02</span><div><small>PROSSIMO CAPITOLO</small><strong>${esc(careerNextStep(state))}</strong><span>${state.parliament?.player ? 'Leggi, governo e incarichi si gestiscono nella sezione Parlamento.' : 'Candidati alle elezioni per conquistare un incarico e far crescere il tuo profilo.'}</span></div></div>${careerHistory(state, player)}<button class="text-link" data-nav="profilo">Vai al tuo profilo ${icon('arrow', 16)}</button></div>${state.game ? `<section class="hq-panel career-timeline-panel"><div class="home-section-heading"><div><span class="section-kicker">CRONOLOGIA · SIMULAZIONE</span><h2>La tua carriera, tappa per tappa</h2></div></div>${renderCareerTimeline(state, options.views?.timelineFilter)}</section>` : ''}`,
     profilo: `<div class="profile-page"><section class="profile-page-lead"><div class="hero-avatar">${player ? esc(player.firstName[0] + player.lastName[0]) : 'P'}</div><div><span class="section-kicker">IL TUO POLITICO</span><h2>${player ? esc(player.displayName) : 'Nessun profilo creato'}</h2><p>${player ? `${esc(player.previousProfession)} · residente a ${esc(player.municipality)}, ${esc(player.region)}` : 'Crea una carriera per definire il tuo profilo.'}</p></div>${player ? '' : '<button class="primary-button" data-action="new-career">Nuova carriera ' + icon('arrow', 16) + '</button>'}</section><div class="profile-page-facts"><div><span>INCARICO</span><strong>${player?.roleId && state.dataset.offices.some(item => item.id === player.roleId) ? esc(officeLabel(state.dataset.offices.find(item => item.id === player.roleId))) : 'Da assegnare'}</strong></div><div><span>TERRITORIO</span><strong>${esc(state.dataset.territories.find(item => item.id === player?.territoryId)?.name ?? player?.region ?? 'Italia')}</strong></div><div><span>PARTITO</span><strong>${party ? esc(partyName(party)) : 'Indipendente'}</strong></div></div><section class="profile-metrics"><h3>Statistiche</h3>${profileMetrics}</section><button class="text-link" data-nav="politici">Esplora i profili politici ${icon('arrow', 16)}</button></div>`,
     eventi: `<div class="agenda-list">${events.map(e => `<div class="agenda-row"><div class="agenda-date"><strong>${formatDate(e.date, { day: '2-digit' })}</strong><span>${formatDate(e.date, { month: 'short' })}</span></div><div class="agenda-row-text"><span class="event-tag">${esc(e.category)}</span><strong>${esc(e.title)}</strong><small>${esc(e.status)}</small></div><span class="source-pill">${sourceLabel(e.source)}</span></div>`).join('') || '<div class="empty-state">Nessun evento in programma.</div>'}</div>`,
-    impostazioni: `<section class="hq-panel settings-panel">${settingsView(options.settings)}</section><div class="settings-grid"><article class="panel settings-card"><div class="eyebrow">PARTITA</div><h3>Salvataggi e partite</h3><p>${esc(options.lastSaved ?? '')}. Dal menu principale carichi, esporti o importi le partite; qui puoi salvare subito.</p><div class="setting-actions"><button class="secondary-button" data-action="save">Salva adesso ${icon('save', 16)}</button><button class="secondary-button" data-menu-action="save-slot">Salva in uno slot</button><button class="secondary-button" data-action="menu">Menu principale ${icon('menu', 15)}</button></div></article><article class="panel settings-card"><div class="eyebrow">ACCOUNT</div><h3>${options.account?.user ? `Connesso come ${esc(options.account.user.username)}` : 'Salvataggi online'}</h3><p>${options.account?.user ? `La carriera si salva anche online dopo ogni salvataggio${options.account.lastSync ? ` (ultima sincronizzazione ${esc(new Date(options.account.lastSync).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }))})` : ''}: la ritrovi su qualsiasi dispositivo.` : 'Crea un account o accedi per ritrovare le tue carriere su qualsiasi dispositivo. Il browser continua a conservarne una copia.'}</p>${options.account?.conflict ? '<p class="menu-error">Su un altro dispositivo c’è una versione più recente: scegli quale tenere.</p>' : ''}<button class="secondary-button" data-action="account">${options.account?.user ? 'Gestisci l’account' : 'Accedi o registrati'} ${icon('arrow',15)}</button></article><article class="panel settings-card"><div class="eyebrow">DATI DI GIOCO</div><h3>Reale, simulazione, utente</h3><p>I dataset reali sono separati dalla partita e non vengono mai modificati. Le schede reali mostrano fonte, verifica e data di riferimento; i dati non disponibili restano vuoti.</p><span class="source-pill">${(realDatabase.manifest?.collections?.parties ?? 0) + (realDatabase.manifest?.collections?.politicalMovements ?? 0)} organizzazioni · ${realDatabase.manifest?.collections?.politicians ?? 0} parlamentari</span></article><article class="panel settings-card"><div class="eyebrow">ASSET DEI PARTITI</div><h3>Gestione loghi</h3><p>Carica un file o incolla l’indirizzo di un’immagine: il logo resta salvato in questo browser, separato dai loghi ufficiali verificati.</p><button class="secondary-button" data-action="logo-admin">Apri gestione loghi ${icon('arrow',15)}</button></article><article class="panel settings-card"><div class="eyebrow">AREA RISERVATA</div><h3>Amministrazione dei dati</h3><p>Correggi nomi, sigle, descrizioni, loghi, collegamenti e incarichi di partiti e politici. Le modifiche restano in un archivio separato e non toccano il dataset reale.</p><button class="secondary-button" data-nav="amministrazione">Apri l’area amministrativa ${icon('arrow',15)}</button></article><article class="panel settings-card danger-card"><div class="eyebrow">NUOVA PARTITA</div><h3>Ricomincia da capo</h3><p>Crea un nuovo politico. La partita in corso viene conservata in uno slot di salvataggio.</p><button class="secondary-button" data-action="new-career">Nuova partita</button></article></div>`,
+    impostazioni: `<section class="hq-panel settings-panel">${settingsView(options.settings)}</section><div class="settings-grid"><article class="panel settings-card"><div class="eyebrow">PARTITA</div><h3>Salvataggi e partite</h3><p>${esc(options.lastSaved ?? '')}. Dal menu principale carichi, esporti o importi le partite; qui puoi salvare subito.</p><div class="setting-actions"><button class="secondary-button" data-action="save">Salva adesso ${icon('save', 16)}</button><button class="secondary-button" data-menu-action="save-slot">Salva in uno slot</button><button class="secondary-button" data-action="menu">Menu principale ${icon('menu', 15)}</button></div></article><article class="panel settings-card"><div class="eyebrow">ACCOUNT</div><h3>${options.account?.user ? `Connesso come ${esc(options.account.user.username)}` : 'Salvataggi online'}</h3><p>${options.account?.user ? `La carriera si salva anche online dopo ogni salvataggio${options.account.lastSync ? ` (ultima sincronizzazione ${esc(new Date(options.account.lastSync).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }))})` : ''}: la ritrovi su qualsiasi dispositivo.` : 'Crea un account o accedi per ritrovare le tue carriere su qualsiasi dispositivo. Il browser continua a conservarne una copia.'}</p>${options.account?.conflict ? '<p class="menu-error">Su un altro dispositivo c’è una versione più recente: scegli quale tenere.</p>' : ''}<button class="secondary-button" data-action="account">${options.account?.user ? 'Gestisci l’account' : 'Accedi o registrati'} ${icon('arrow',15)}</button></article><article class="panel settings-card"><div class="eyebrow">DATI DI GIOCO</div><h3>Reale, simulazione, utente</h3><p>I dataset reali sono separati dalla partita e non vengono mai modificati. Le schede reali mostrano fonte, verifica e data di riferimento; i dati non disponibili restano vuoti.</p><span class="source-pill">${(realDatabase.manifest?.collections?.parties ?? 0) + (realDatabase.manifest?.collections?.politicalMovements ?? 0)} organizzazioni · ${realDatabase.manifest?.collections?.politicians ?? 0} parlamentari</span></article>${isAdminVerified() ? `<article class="panel settings-card"><div class="eyebrow">ASSET DEI PARTITI</div><h3>Gestione loghi</h3><p>Carica un file o incolla l’indirizzo di un’immagine: il logo resta salvato in questo browser, separato dai loghi ufficiali verificati.</p><button class="secondary-button" data-action="logo-admin">Apri gestione loghi ${icon('arrow',15)}</button></article><article class="panel settings-card"><div class="eyebrow">AREA RISERVATA</div><h3>Amministrazione dei dati</h3><p>Correggi nomi, sigle, descrizioni, loghi, collegamenti e incarichi di partiti e politici. Le modifiche restano in un archivio separato e non toccano il dataset reale.</p><button class="secondary-button" data-nav="amministrazione">Apri l’area amministrativa ${icon('arrow',15)}</button></article>` : ''}<article class="panel settings-card danger-card"><div class="eyebrow">NUOVA PARTITA</div><h3>Ricomincia da capo</h3><p>Crea un nuovo politico. La partita in corso viene conservata in uno slot di salvataggio.</p><button class="secondary-button" data-action="new-career">Nuova partita</button></article></div>`,
   };
   const routeGroups = { territori: [['finanze', 'Finanze'], ['sondaggi', 'Sondaggi e media']], finanze: [['partito', 'Il tuo partito'], ['territori', 'Territori']], partito: [['partiti-lista', 'Tutti i partiti'], ['finanze', 'Finanze']], parlamento: [['governo', 'Governo'], ['leggi', 'Leggi']], governo: [['parlamento', 'Camere'], ['leggi', 'Leggi']], leggi: [['parlamento', 'Camere'], ['governo', 'Governo']], calendario: [['eventi', 'Eventi']], eventi: [['calendario', 'Agenda']], profilo: [['politici', 'Archivio politici']], politici: [['profilo', 'Il tuo profilo']], 'partiti-lista': [['partito', 'Il tuo partito']] };
   const routes = routeGroups[state.ui.activePage] ?? [];
