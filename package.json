@@ -7,6 +7,8 @@
     "start": "node server.mjs",
     "import:real-data": "node scripts/import-real-data.mjs",
     "import:real-laws": "node scripts/import-real-laws.mjs",
+    "import:2x1000": "node scripts/import-2x1000.mjs",
+    "import:government": "node scripts/import-government.mjs",
     "check:real-data": "node scripts/validate-real-data.mjs",
     "check:published-site": "node scripts/check-published-site.mjs",
     "check:campaign": "node scripts/check-campaign.mjs",
@@ -14,6 +16,7 @@
     "check:gameplay": "node scripts/check-gameplay.mjs",
     "check:polls": "node scripts/check-polls.mjs",
     "check:simulation": "node scripts/check-simulation.mjs",
+    "check:ui": "node scripts/check-ui.mjs",
     "version:build": "node scripts/set-build-version.mjs",
     "cf:dev": "npx --yes wrangler@4 dev",
     "cf:deploy": "npx --yes wrangler@4 deploy"

@@ -1,8 +1,8 @@
 // The immutable real snapshot is fetched by collection. The 2 MB aggregate is
 // retained for exports and validation, but the browser never downloads it.
-export const REAL_DATA_ASSET_VERSION = '20260923-2';
+export const REAL_DATA_ASSET_VERSION = '20260924-3';
 
-import { applyAdminOverrides } from './admin-store.js?v=20260924-14';
+import { applyAdminOverrides } from './admin-store.js?v=20260924-16';
 
 export let realDatabase = Object.freeze({});
 // Untouched copies of what the files contain, so owner overrides can be re-layered or reverted.
@@ -27,7 +27,9 @@ const collectionFiles = Object.freeze({
   chambers: 'chambers.json',
   politicalFigures: 'political-figures.json',
   partyLeaderships: 'party-leaderships.json',
-  laws: 'laws.json'
+  laws: 'laws.json',
+  twoPerThousand: 'two-per-thousand.json',
+  government: 'government.json'
 });
 let manifestPromise;
 
@@ -43,9 +45,11 @@ function freezeRecords(records) {
   return Object.freeze(records.map(record => freezeDeep(record)));
 }
 
+const dataUrl = file => { const url = new URL(`../real/${file}`, import.meta.url); url.searchParams.set('v', REAL_DATA_ASSET_VERSION); return url; };
+// Every real data file, for the offline cache.
+export const realDataUrls = () => ['manifest.json', ...Object.values(collectionFiles)].map(file => dataUrl(file).href);
 async function fetchJson(file) {
-  const url = new URL(`../real/${file}`, import.meta.url);
-  url.searchParams.set('v', REAL_DATA_ASSET_VERSION);
+  const url = dataUrl(file);
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Dati reali non disponibili (${response.status}: ${file}).`);
   return response.json();

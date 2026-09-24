@@ -41,7 +41,8 @@ const REQUIRED_FIELDS = Object.freeze({
   chambers: ['id', 'kind', 'name', 'source', 'verified']
 });
 
-export const isSelectableParty = party => party?.source === DATA_SOURCES.SIMULATION || party?.source === DATA_SOURCES.USER || (party?.source === DATA_SOURCES.REAL && party.verified === true);
+// Only real verified parties can be joined; a party founded by the player is the player's own (user) data.
+export const isSelectableParty = party => party?.source === DATA_SOURCES.USER || (party?.source === DATA_SOURCES.REAL && party.verified === true);
 
 export function validateEntity(collection, record) {
   const required = REQUIRED_FIELDS[collection];

@@ -1,5 +1,5 @@
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-14';
-import { CONGRESS_CYCLE_WEEKS, FIRST_CONGRESS_WEEKS, MEMBERSHIP_FEE, ORGANS, PARTY_PRIORITIES, SECTION_WEEKLY_COST, TREASURY_LABELS } from '../data/simulation/organization-rules.js?v=20260924-14';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-16';
+import { CONGRESS_CYCLE_WEEKS, FIRST_CONGRESS_WEEKS, MEMBERSHIP_FEE, ORGANS, PARTY_PRIORITIES, SECTION_WEEKLY_COST, TREASURY_LABELS } from '../data/simulation/organization-rules.js?v=20260924-16';
 
 // The party as an organisation: members, sections, bodies, cohesion, conflicts and treasury.
 // Everything is simulated and lives inside the career state (game.party.org).
@@ -87,7 +87,9 @@ export function advanceOrganization(org, { rand, week, date, pollShare = null, p
   const events = [];
   const vitality = org.sections.reduce((sum, item) => sum + item.vitality * item.members, 0) / Math.max(1, org.members);
   const recentCommunication = org.lastCommunicationWeek && week - org.lastCommunicationWeek <= 3 ? 0.003 : 0;
-  const rate = clamp(pollDelta * 0.004 + (vitality - 50) / 50 * 0.002 + (org.priorities.territorio - 1) * 0.0015 + (org.cohesion - 55) / 45 * 0.001 + (mood - 50) / 50 * 0.0005 + (rand() - 0.5) * 0.002 + recentCommunication - (org.treasury.balance < 0 ? 0.002 : 0), -0.03, 0.03);
+  const invested = id => (org.investments ?? []).some(item => item.id === id && (!item.untilWeek || item.untilWeek >= week));
+  const digital = invested('piattaforma-iscritti') ? 0.002 : 0;
+  const rate = clamp(pollDelta * 0.004 + (vitality - 50) / 50 * 0.002 + (org.priorities.territorio - 1) * 0.0015 + (org.cohesion - 55) / 45 * 0.001 + (mood - 50) / 50 * 0.0005 + (rand() - 0.5) * 0.002 + recentCommunication + digital - (org.treasury.balance < 0 ? 0.002 : 0), -0.03, 0.03);
   const before = org.members;
   for (const section of org.sections) {
     section.members = Math.max(5, Math.round(section.members * (1 + rate + (section.vitality - 50) / 50 * 0.001)));
@@ -129,7 +131,7 @@ export function advanceOrganization(org, { rand, week, date, pollShare = null, p
 
   // Cohesion and conflicts between the internal areas.
   const tension = org.conflicts.reduce((sum, item) => sum + item.intensity, 0);
-  const target = 60 - tension * 0.25 + (org.priorities.formazione - 1) * 3 - (org.treasury.balance < 0 ? 10 : 0);
+  const target = 60 - tension * 0.25 + (org.priorities.formazione - 1) * 3 + (invested('scuola-politica') ? 5 : 0) - (org.treasury.balance < 0 ? 10 : 0);
   org.cohesion = Math.round(clamp(org.cohesion + (target - org.cohesion) * 0.08 + (rand() - 0.5) * 2));
   for (const conflict of org.conflicts) conflict.intensity = Math.round(clamp(conflict.intensity - 2.5 + (org.cohesion < 40 ? 3 : 0) + (rand() - 0.5) * 4));
   const resolved = org.conflicts.filter(item => item.intensity <= 5);

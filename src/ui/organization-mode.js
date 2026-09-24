@@ -1,11 +1,11 @@
 // The party as an organisation, and the real parliamentarians the career deals with.
-import { ORGANS, organOf, treasuryOutlook } from '../core/organization-engine.js?v=20260924-14';
-import { contactStance } from '../core/contacts-engine.js?v=20260924-14';
-import { SELECTION_METHODS } from '../data/simulation/organization-rules.js?v=20260924-14';
-import { artTile, glyph } from './visuals.js?v=20260924-14';
-import { illustration } from './illustrations.js?v=20260924-14';
+import { ORGANS, organOf, treasuryOutlook } from '../core/organization-engine.js?v=20260924-16';
+import { contactStance } from '../core/contacts-engine.js?v=20260924-16';
+import { SELECTION_METHODS } from '../data/simulation/organization-rules.js?v=20260924-16';
+import { artTile, glyph } from './visuals.js?v=20260924-16';
+import { illustration } from './illustrations.js?v=20260924-16';
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
-import { esc, euro, levelState, lineChart, meter, num, SERIES, signed, sparkline, stateBadge, trendState } from './charts.js?v=20260924-14';
+import { esc, euro, levelState, lineChart, meter, num, SERIES, signed, sparkline, stateBadge, trendState } from './charts.js?v=20260924-16';
 
 const TREND_LABELS = { crescita: 'In crescita', calo: 'In calo', stabile: 'Stabile' };
 

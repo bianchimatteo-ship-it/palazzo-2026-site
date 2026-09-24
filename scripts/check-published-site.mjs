@@ -16,7 +16,8 @@ const files = {
   parliamentaryGroups:'parliamentary-groups.json', coalitions:'coalitions.json', electoralLists:'electoral-lists.json', politicians:'politicians.json',
   offices:'offices.json', partyMemberships:'party-memberships.json', groupMemberships:'group-memberships.json', electionParticipations:'election-participations.json',
   partyMembershipHistory:'party-membership-history.json', parliamentaryGroupHistory:'parliamentary-group-history.json', officeHistory:'office-history.json',
-  territories:'territories.json', elections:'elections.json', chambers:'chambers.json', laws:'laws.json'
+  territories:'territories.json', elections:'elections.json', chambers:'chambers.json', laws:'laws.json',
+  twoPerThousand:'two-per-thousand.json', government:'government.json'
 };
 const failures = [];
 const assert = (condition, message) => { if (!condition) failures.push(message); };
@@ -60,7 +61,7 @@ try {
   const { bytes:remoteMainBytes } = await get(mainUrl);
   assert(hash(remoteMainBytes) === hash(localMainBytes), 'src/main.js live è diverso dal progetto locale');
   const mainSource = remoteMainBytes.toString('utf8');
-  assert(/loadRealDatabase\s*\(/.test(mainSource) && /loadRealCollections\s*\(\s*\[['"]parties['"],\s*['"]politicalMovements['"]\]/.test(mainSource), 'Avvio pubblicato non carica manifest e partiti reali');
+  assert(/loadRealDatabase\s*\(/.test(mainSource) && /loadRealCollections\s*\(\s*\[['"]parties['"],\s*['"]politicalMovements['"]/.test(mainSource), 'Avvio pubblicato non carica manifest e partiti reali');
   assert(!/database\.json/.test(mainSource), 'main.js pubblicato richiede il JSON aggregato');
 
   const repoImport = mainSource.match(/from\s+["']([^"']*repositories\/real-data\.js(?:\?[^"']*)?)["']/);
@@ -122,6 +123,18 @@ try {
       const [{ bytes }, expected] = await Promise.all([get(live), readFile(new URL(`../${asset}`, import.meta.url))]);
       assert(hash(bytes) === hash(expected), `${asset} live diverso dal file locale`);
     } catch (error) { failures.push(`${asset} non disponibile nella versione pubblicata (${error.message})`); }
+  }
+  // The offline cache worker sits at the site root and must match the local file.
+  try {
+    const [{ bytes, response }, expected] = await Promise.all([get(new URL('sw.js', pageUrl)), readFile(new URL('../sw.js', import.meta.url))]);
+    assert(hash(bytes) === hash(expected), 'sw.js live diverso dal file locale');
+    assert(/javascript/.test(response.headers.get('content-type') ?? ''), 'sw.js non è servito come JavaScript');
+  } catch (error) { failures.push(`sw.js non disponibile (${error.message})`); }
+  // Files that must never be published: the archive is never committed; Workers also skips the tooling.
+  const unpublished = ['Archivio.zip', ...(/github\.io$/.test(pageUrl.host) ? [] : ['package.json', 'scripts/check-ui.mjs', 'wrangler.jsonc'])];
+  for (const path of unpublished) {
+    const response = await fetch(new URL(path, pageUrl), { signal: AbortSignal.timeout(30000) }).catch(() => null);
+    assert(!response?.ok, `${path} non dovrebbe essere pubblicato`);
   }
   // Every module reachable from main.js must be online and identical to the local file.
   for (const [path, source] of localModules) {

@@ -1,22 +1,26 @@
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-14';
-import { CHART_SLOTS, COMPATIBLE_FAMILIES, DEMO_FAMILIES, FAMILY_BY_ORIENTATION, INITIAL_ALLIANCES, SIMULATED_FIGURE_ROLES, POLL_INSTITUTES, SCENARIO_FORCES, SPLINTER_NAMES, WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20260924-14';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-16';
+import { CHART_SLOTS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20260924-16';
 
+// The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
+// A party enters with its real identity only (id, name, abbreviation); its starting weight is the real
+// share of 2x1000 choices (MEF), after which everything evolves inside the game.
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const round1 = value => Math.round(value * 10) / 10;
 const round2 = value => Math.round(value * 100) / 100;
 const copy = value => value == null ? value : JSON.parse(JSON.stringify(value));
 const hash = value => [...String(value)].reduce((n, char) => (n * 31 + char.charCodeAt(0)) >>> 0, 2166136261) || 1;
-const AUTONOMIST_REGIONS = ['Trentino-Alto Adige', 'Valle d’Aosta', 'Veneto', 'Lombardia', 'Friuli-Venezia Giulia', 'Sardegna'];
 const HISTORY = 52;
+// Worlds saved before real parties only (invented forces, demo parties, splinters) are rebuilt.
+const LEGACY_ORIGINS = ['scenario', 'demo', 'scissione'];
 
 function draw(world) {
   world.rngState = (Math.imul(world.rngState, 1664525) + 1013904223) >>> 0;
   return world.rngState / 4294967296;
 }
-const between = (world, [min, max]) => min + draw(world) * (max - min);
 const gaussian = world => draw(world) + draw(world) + draw(world) - 1.5;
 const fill = (text, place) => String(text).replace('{region}', place.region || 'regione').replace('{municipality}', place.municipality || 'il tuo comune');
+const tieKey = (a, b) => [a, b].sort().join('|');
 
 // A brand colour is only reused in charts when it is saturated and mid-light enough to read.
 function usableColor(hex) {
@@ -32,78 +36,64 @@ function nextSlot(world, preferred = null) {
   if (preferred && usableColor(preferred) && !used.has(preferred)) return preferred;
   return CHART_SLOTS.find(color => !used.has(color)) ?? CHART_SLOTS[world.parties.length % CHART_SLOTS.length];
 }
-function newLeader(world, partyId, role = 'Segreteria', date = null) {
-  const party = world.parties.find(item => item.id === partyId);
-  const kind = partyId ? SIMULATED_FIGURE_ROLES.leader : SIMULATED_FIGURE_ROLES.civic;
-  const count = world.figures.filter(figure => figure.partyId === partyId).length + 1;
-  const name = `${kind} ${party ? party.abbreviation : world.place.region ?? ''} n.${count}`.replace(/\s+/g, ' ');
-  const figure = { id: `figura-${world.figures.length + 1}-${hash(name + partyId) % 9973}`, name, role, partyId, since: date, status: 'active', simulated: true, source: SIM };
-  world.figures.push(figure);
-  return figure;
-}
-function regionalOffsets(world, family, boostRegion = null) {
-  return Object.fromEntries(ITALIAN_REGIONS.map(region => [region, round2((draw(world) - 0.5) * 6 + (family === 'autonomista' ? (AUTONOMIST_REGIONS.includes(region) ? 4 : -1) : 0) + (region === boostRegion ? 2.5 : 0))]));
-}
-function addParty(world, spec, date) {
+function addParty(world, spec, week) {
   const party = {
-    id: spec.id, label: spec.label, abbreviation: spec.abbreviation ?? spec.label.slice(0, 3).toUpperCase(), family: spec.family ?? 'centro',
-    color: nextSlot(world, spec.brandColor), brandColor: spec.brandColor ?? null, refSource: spec.refSource ?? SIM, origin: spec.origin ?? 'scenario',
-    isPlayer: Boolean(spec.isPlayer), baseline: round2(spec.baseline), anchor: round2(spec.baseline), regional: regionalOffsets(world, spec.family, spec.isPlayer ? world.place.region : null),
-    cohesion: spec.cohesion ?? 62, crisis: null, leaderId: null, leaderRole: spec.leaderRole ?? null, active: true, createdWeek: world.week, source: SIM
+    id: spec.id, label: spec.label, abbreviation: spec.abbreviation ?? null,
+    color: nextSlot(world, spec.brandColor), brandColor: spec.brandColor ?? null, refSource: spec.refSource ?? 'real', origin: spec.origin ?? 'real',
+    reference: spec.reference ?? null, isPlayer: Boolean(spec.isPlayer), baseline: round2(spec.baseline), anchor: round2(spec.baseline),
+    regional: Object.fromEntries(ITALIAN_REGIONS.map(region => [region, round2((draw(world) - 0.5) * 5 + (spec.isPlayer && region === world.place.region ? 2 : 0))])),
+    strategy: spec.strategy ?? 'autonoma', strategySince: week, playerRelation: 0, cohesion: 62, crisis: null, active: true, createdWeek: week, source: SIM
   };
   world.parties.push(party);
-  if (spec.leader !== false) party.leaderId = newLeader(world, party.id, 'Segreteria', date).id;
   return party;
 }
 
-export function createWorld({ seedText, date, week = 1, place = {}, playerParty = null, demoParties = [], stats = {} }) {
+// forces: [{ id, label, abbreviation, share, reference }] — real parties chosen by the caller.
+export function createWorld({ seedText, date, week = 1, place = {}, playerParty = null, forces = [], stats = {} }) {
   const seed = hash(`${seedText}|mondo`);
   const world = {
-    version: 1, source: SIM, seed, rngState: seed, createdAt: date, week, place, playerPartyId: playerParty?.id ?? null,
-    parties: [], others: 4, undecided: 27, effects: [], alliances: [], figures: [], events: [], polls: [], lastEventId: null
+    version: 2, source: SIM, seed, rngState: seed, createdAt: date, week, place, playerPartyId: playerParty?.id ?? null,
+    parties: [], others: 8, undecided: 27, effects: [], alliances: [], figures: [], events: [], polls: [], ties: {}, cooldowns: {}, lastEventId: null
   };
-  for (const force of SCENARIO_FORCES) addParty(world, { id: force.id, label: force.name, abbreviation: force.abbreviation, family: force.family, baseline: between(world, force.base), origin: 'scenario' }, date);
-  for (const demo of demoParties) {
-    if (demo.id === playerParty?.id) continue;
-    addParty(world, { id: demo.id, label: demo.label, abbreviation: demo.abbreviation, family: DEMO_FAMILIES[demo.id] ?? 'centro', baseline: between(world, [3, 7]), origin: 'demo' }, date);
-  }
-  if (playerParty) attachPlayerParty(world, playerParty, date);
-  for (const alliance of INITIAL_ALLIANCES) world.alliances.push({ ...alliance, cohesion: Math.round(between(world, [58, 72])), since: date, status: 'active', source: SIM });
+  const included = forces.reduce((sum, force) => sum + force.share, 0);
+  world.others = round2(Math.max(4, 100 - included));
+  for (const force of forces) addParty(world, { id: force.id, label: force.label, abbreviation: force.abbreviation, baseline: force.share, reference: force.reference, refSource: 'real' }, week);
+  if (playerParty) attachPlayerParty(world, playerParty, week);
+  for (let i = 0; i < world.parties.length; i++) for (let j = i + 1; j < world.parties.length; j++) world.ties[tieKey(world.parties[i].id, world.parties[j].id)] = Math.round((draw(world) - 0.5) * 20);
   publishPoll(world, { date, stats, parliament: null, game: null });
   return world;
 }
 
-// The player's party always appears in the scenario; a real party is only referenced by id.
-export function setPlayerParty(input, party, date) {
-  return attachPlayerParty(copy(input), party, date);
+// The player's party always appears; a real party keeps only its real identity.
+export function setPlayerParty(input, party) {
+  return attachPlayerParty(copy(input), party, input?.week ?? 1);
 }
-function attachPlayerParty(world, party, date) {
+function attachPlayerParty(world, party, week) {
   for (const item of world.parties) item.isPlayer = false;
   world.playerPartyId = party?.id ?? null;
   if (!party) return world;
   let entry = world.parties.find(item => item.id === party.id);
   if (!entry) {
-    const baseline = party.initialShare ?? (party.founder ? between(world, [1.5, 3]) : party.refSource === 'real' ? between(world, [2, 6]) : between(world, [4, 8]));
-    entry = addParty(world, {
-      id: party.id, label: party.label || 'Il tuo partito', abbreviation: party.abbreviation, family: party.family ?? FAMILY_BY_ORIENTATION[party.orientation] ?? DEMO_FAMILIES[party.id] ?? 'centro',
-      brandColor: party.brandColor, refSource: party.refSource, origin: 'player', isPlayer: true, baseline,
-      // Real parties keep their actual leadership out of the game: the role stays generic.
-      leader: party.refSource !== 'real' && !party.founder, leaderRole: party.founder ? 'Guidato da te' : party.refSource === 'real' ? 'Leadership (ruolo di gioco)' : null
-    }, date);
+    const baseline = party.initialShare ?? (party.founder ? 1.5 + draw(world) * 1.5 : 1 + draw(world) * 1.5);
+    entry = addParty(world, { id: party.id, label: party.label || 'Il tuo partito', abbreviation: party.abbreviation, brandColor: party.brandColor, refSource: party.refSource, origin: 'player', isPlayer: true, baseline, reference: party.reference ?? null }, week);
+    for (const other of world.parties) if (other !== entry) world.ties[tieKey(entry.id, other.id)] ??= 0;
   }
   entry.isPlayer = true;
   entry.active = true;
   return world;
 }
 
+export function isLegacyWorld(world) {
+  return Boolean(world?.parties?.some(party => LEGACY_ORIGINS.includes(party.origin)));
+}
 export function normalizeWorld(world) {
   if (!world || typeof world !== 'object' || !Array.isArray(world.parties)) return null;
-  return { effects: [], alliances: [], figures: [], events: [], polls: [], others: 4, undecided: 27, place: {}, ...world };
+  return { effects: [], alliances: [], figures: [], events: [], polls: [], others: 4, undecided: 27, place: {}, ties: {}, cooldowns: {}, ...world, parties: world.parties.map(party => ({ strategy: 'autonoma', strategySince: world.week ?? 1, playerRelation: 0, ...party })) };
 }
 
 // ---------- shares ----------
 function effectSum(world, party, scope, region = null) {
-  return world.effects.filter(effect => effect.scope === scope && (effect.partyId === party.id || (effect.family && effect.family === party.family)) && (!region || effect.region === region)).reduce((sum, effect) => sum + effect.delta, 0);
+  return world.effects.filter(effect => effect.scope === scope && (effect.partyId === party.id || (effect.strategy && effect.strategy === party.strategy && !party.isPlayer)) && (!region || effect.region === region)).reduce((sum, effect) => sum + effect.delta, 0);
 }
 function normalize(rows, others) {
   const total = rows.reduce((sum, row) => sum + row.raw, 0) + others;
@@ -147,7 +137,7 @@ function sampleShares(world, shares, sample) {
 }
 function publishPoll(world, { date, stats = {}, parliament = null, game = null }) {
   const institute = POLL_INSTITUTES[Math.floor(draw(world) * POLL_INSTITUTES.length)];
-  const sample = Math.round(between(world, institute.sample) / 10) * 10;
+  const sample = Math.round((institute.sample[0] + draw(world) * (institute.sample[1] - institute.sample[0])) / 10) * 10;
   const margin = round1(1.96 * Math.sqrt(0.25 / sample) * 100);
   const previous = world.polls.at(-1);
   const boosts = personalBoosts(stats, game?.relations ?? []);
@@ -179,6 +169,11 @@ export function playerPollShare(world, scope = 'national') {
   if (scope === 'regional') return poll.regionalHome ?? null;
   return poll.results.find(row => row.partyId === world.playerPartyId)?.share ?? null;
 }
+function trendOf(world, partyId, weeks = 4) {
+  const now = world.polls.at(-1)?.results.find(row => row.partyId === partyId)?.share;
+  const then = world.polls.at(-1 - weeks)?.results.find(row => row.partyId === partyId)?.share ?? world.polls[0]?.results.find(row => row.partyId === partyId)?.share;
+  return Number.isFinite(now) && Number.isFinite(then) ? now - then : 0;
+}
 
 // ---------- events & dynamics ----------
 function logEvent(world, date, entry) {
@@ -198,8 +193,9 @@ function inMajority(parliament) {
 function applyWorldEvent(world, event, date, parliament) {
   const lines = [];
   const player = playerParty(world);
-  for (const [family, delta] of Object.entries(event.families ?? {})) addEffect(world, { family, delta, remaining: event.duration, cause: event.id });
-  for (const [family, delta] of Object.entries(event.permanent ?? {})) for (const party of world.parties.filter(item => item.family === family)) party.baseline = round2(party.baseline + delta);
+  if (event.executive) addEffect(world, { strategy: 'governista', delta: event.executive, remaining: event.duration, cause: event.id });
+  if (event.challengers) addEffect(world, { strategy: 'opposizione', delta: event.challengers, remaining: event.duration, cause: event.id });
+  if (event.small) for (const party of world.parties.filter(item => !item.isPlayer && item.baseline < 5)) addEffect(world, { partyId: party.id, delta: event.small, remaining: event.duration, cause: event.id });
   const majority = inMajority(parliament);
   if (player && majority !== null && (event.majority || event.opposition)) {
     const delta = majority ? event.majority ?? 0 : event.opposition ?? 0;
@@ -212,74 +208,92 @@ function applyWorldEvent(world, event, date, parliament) {
     parliament.government.stability = clamp(Math.round((parliament.government.stability ?? 50) + event.stability), 0, 100);
     lines.push(`Stabilità del governo ${event.stability > 0 ? '+' : ''}${event.stability}`);
   }
+  const moved = world.parties.filter(item => !item.isPlayer && ((event.executive && item.strategy === 'governista') || (event.challengers && item.strategy === 'opposizione'))).map(item => item.label);
+  if (moved.length) lines.push(`Effetti su chi ${event.executive && event.challengers ? 'sostiene o contrasta' : event.executive ? 'sostiene' : 'contrasta'} l’esecutivo: ${moved.slice(0, 3).join(', ')}`);
   return logEvent(world, date, { kind: 'evento', eventId: event.id, icon: event.icon, scope: event.scope, title: fill(event.title, world.place), body: fill(event.body, world.place), lines, tone: (event.stability ?? 0) < 0 || (event.majority ?? 0) < 0 ? 'bad' : 'neutral', reactable: Boolean(event.reactable) });
 }
-function partyDynamics(world, date) {
+
+// Every party pursues its own strategy and changes it when it stops paying off.
+function partyAgents(world, date, { approval, player, playerIsLeader, playerStrategy }) {
+  const offers = [];
   for (const party of world.parties.filter(item => item.active && !item.isPlayer)) {
     party.cohesion = clamp(Math.round(party.cohesion + (draw(world) - 0.52) * 6 + (62 - party.cohesion) * 0.04), 0, 100);
-    if (!party.crisis && draw(world) < 0.035) party.cohesion = Math.max(0, party.cohesion - 25);
     if (!party.crisis && party.cohesion < 30) {
       party.crisis = { since: world.week, source: SIM };
       addEffect(world, { partyId: party.id, delta: -0.8, remaining: 4, cause: 'crisi-interna' });
-      logEvent(world, date, { kind: 'crisi', icon: 'alert', scope: 'nazionale', title: `Crisi interna in ${party.label}`, body: 'Correnti in rotta e dirigenti in disaccordo: il partito perde compattezza.', tone: 'bad', partyId: party.id });
-    } else if (party.crisis && world.week - party.crisis.since >= 3) {
-      if (party.baseline > 9 && draw(world) < 0.3) {
-        const name = SPLINTER_NAMES.find(item => !world.parties.some(entry => entry.label === item)) ?? `Scissione ${world.parties.length}`;
-        const share = round2(party.baseline * 0.18);
-        party.baseline = round2(party.baseline - share);
-        party.anchor = round2(party.anchor - share);
-        const splinter = addParty(world, { id: `forza-scissione-${world.week}-${hash(name) % 9973}`, label: name, family: party.family, baseline: share, origin: 'scissione', cohesion: 58 }, date);
-        party.crisis = null;
-        party.cohesion = 55;
-        logEvent(world, date, { kind: 'scissione', icon: 'split', scope: 'nazionale', title: `Scissione: nasce ${splinter.label}`, body: `Una parte di ${party.label} lascia il partito e fonda una nuova formazione (${world.figures.find(item => item.id === splinter.leaderId)?.name}, figura simulata).`, tone: 'bad', partyId: splinter.id });
-      } else if (draw(world) < 0.6) {
-        const previous = world.figures.find(item => item.id === party.leaderId);
-        if (previous) { previous.status = 'dimesso'; previous.until = date; }
-        const leader = newLeader(world, party.id, 'Segreteria', date);
-        party.leaderId = leader.id;
-        party.crisis = null;
-        party.cohesion = 62;
-        addEffect(world, { partyId: party.id, delta: 0.6, remaining: 3, cause: 'nuova-leadership' });
-        logEvent(world, date, { kind: 'leadership', icon: 'crown', scope: 'nazionale', title: `${party.label}: cambio alla guida`, body: `${previous?.name ?? 'La segreteria uscente'} lascia dopo la crisi interna; subentra ${leader.name}. Figure simulate.`, tone: 'neutral', partyId: party.id });
-      }
-    } else if (party.crisis && party.cohesion >= 45) {
+      logEvent(world, date, { kind: 'crisi', icon: 'alert', scope: 'nazionale', title: `Tensioni interne in ${party.label}`, body: 'Nello scenario il partito perde compattezza: dichiarazioni in ordine sparso e organi divisi (simulazione).', tone: 'bad', partyId: party.id });
+    } else if (party.crisis && world.week - party.crisis.since >= 3 && party.cohesion >= 45) {
       party.crisis = null;
+      logEvent(world, date, { kind: 'crisi', icon: 'link', scope: 'nazionale', title: `${party.label} ricompone le divisioni`, body: 'Nello scenario la crisi interna rientra (simulazione).', tone: 'neutral', partyId: party.id });
+    }
+    // What the strategy yields this week.
+    const effect = party.strategy === 'governista' ? (approval - 50) / 500 : party.strategy === 'opposizione' ? (50 - approval) / 500 + 0.01 : party.strategy === 'coalizione' ? (world.alliances.some(item => item.status === 'active' && item.partyIds.includes(party.id)) ? 0.02 : -0.01) : 0;
+    party.baseline = round2(Math.max(0.3, party.baseline + effect));
+    // Re-thinking the strategy: losing ground, or the climate turned.
+    const trend = trendOf(world, party.id);
+    if (world.week - party.strategySince >= 6 && (trend < -0.4 || draw(world) < 0.08)) {
+      const options = (approval < 44 ? ['opposizione', 'coalizione'] : approval > 56 ? ['governista', 'coalizione'] : ['autonoma', 'coalizione', 'opposizione', 'governista']).filter(item => item !== party.strategy);
+      const choice = options[Math.floor(draw(world) * options.length)] ?? party.strategy;
+      if (choice !== party.strategy) {
+        party.strategy = choice;
+        party.strategySince = world.week;
+        logEvent(world, date, { kind: 'strategia', icon: 'route', scope: 'nazionale', title: `${party.label} cambia strategia: ${STRATEGIES[choice].label.toLowerCase()}`, body: `${trend < -0.4 ? 'Dopo settimane in calo nei sondaggi, n' : 'N'}ello scenario il partito sceglie una nuova linea (simulazione).`, tone: 'neutral', partyId: party.id });
+      }
+    }
+    // Relationship with the player's party: it fades, and conflicting lines wear it down.
+    if (player) {
+      const clash = (party.strategy === 'opposizione' && playerStrategy === 'governista') || (party.strategy === 'governista' && playerStrategy === 'opposizione');
+      party.playerRelation = round1(clamp(party.playerRelation * 0.97 + (clash ? -1.5 : party.strategy === playerStrategy ? 0.5 : 0), -100, 100));
+      const cooldown = key => world.week - (world.cooldowns[`${key}|${party.id}`] ?? -99);
+      const allied = world.alliances.some(item => item.status === 'active' && item.partyIds.includes(player.id));
+      if (playerIsLeader && party.strategy === 'coalizione' && party.playerRelation >= 15 && !allied && cooldown('alleanza') >= 10 && draw(world) < 0.35) {
+        world.cooldowns[`alleanza|${party.id}`] = world.week;
+        offers.push({ templateId: 'proposta-alleanza', partyId: party.id, label: party.label, strategy: STRATEGIES[party.strategy].label });
+      } else if (party.strategy === 'opposizione' && party.playerRelation <= -15 && cooldown('attacco') >= 8 && draw(world) < 0.3) {
+        world.cooldowns[`attacco|${party.id}`] = world.week;
+        offers.push({ templateId: 'attacco-avversario', partyId: party.id, label: party.label });
+      }
     }
   }
+  return offers;
 }
+// Parties with close strategies draw together; tensions break the intese.
 function allianceDynamics(world, date) {
+  const allied = new Set(world.alliances.filter(item => item.status === 'active').flatMap(item => item.partyIds));
+  for (const [key, value] of Object.entries(world.ties)) {
+    const [a, b] = key.split('|').map(id => world.parties.find(item => item.id === id));
+    if (!a || !b) continue;
+    world.ties[key] = round1(clamp(value * 0.99 + (a.strategy === b.strategy ? 0.8 : -0.4), -100, 100));
+  }
   for (const alliance of world.alliances.filter(item => item.status === 'active')) {
-    alliance.cohesion = clamp(Math.round(alliance.cohesion + (draw(world) - 0.53) * 7 + (62 - alliance.cohesion) * 0.05), 0, 100);
-    if (alliance.cohesion >= 25 && draw(world) < 0.03) {
-      alliance.cohesion = Math.max(0, alliance.cohesion - 28);
-      logEvent(world, date, { kind: 'tensione', icon: 'alert', scope: 'nazionale', title: `Tensioni nell’${alliance.label.toLowerCase()}`, body: 'Candidature contese e dichiarazioni al veleno mettono alla prova l’accordo.', tone: 'bad' });
-    }
+    const tie = world.ties[tieKey(...alliance.partyIds)] ?? 0;
+    alliance.cohesion = clamp(Math.round(alliance.cohesion + (draw(world) - 0.53) * 7 + (62 - alliance.cohesion) * 0.05 + tie / 50), 0, 100);
     if (alliance.cohesion < 25) {
       alliance.status = 'broken';
       alliance.brokenAt = date;
       for (const id of alliance.partyIds) addEffect(world, { partyId: id, delta: -0.3, remaining: 3, cause: 'rottura' });
-      logEvent(world, date, { kind: 'rottura', icon: 'unlink', scope: 'nazionale', title: `Si rompe l’${alliance.label.toLowerCase()}`, body: 'Veti incrociati e accuse reciproche: gli alleati vanno ognuno per la propria strada.', tone: 'bad' });
+      logEvent(world, date, { kind: 'rottura', icon: 'unlink', scope: 'nazionale', title: `Si rompe l’${alliance.label.toLowerCase()}`, body: 'Veti incrociati e accuse reciproche: gli alleati vanno ognuno per la propria strada (simulazione).', tone: 'bad' });
     }
   }
-  if (draw(world) < 0.06) {
-    const allied = new Set(world.alliances.filter(item => item.status === 'active').flatMap(item => item.partyIds));
+  if (draw(world) < 0.07) {
     const free = world.parties.filter(item => item.active && !item.isPlayer && !allied.has(item.id));
-    for (const first of free) {
-      const second = free.find(item => item !== first && COMPATIBLE_FAMILIES[first.family]?.includes(item.family));
-      if (!second) continue;
-      world.alliances.push({ id: `alleanza-${world.week}-${first.abbreviation}-${second.abbreviation}`, label: `Intesa ${first.abbreviation}–${second.abbreviation}`, partyIds: [first.id, second.id], cohesion: 64, since: date, status: 'active', source: SIM });
-      logEvent(world, date, { kind: 'alleanza', icon: 'link', scope: 'nazionale', title: `Nuova intesa tra ${first.label} e ${second.label}`, body: 'Le due forze annunciano un percorso comune in vista delle prossime elezioni.', tone: 'neutral' });
-      break;
+    const pairs = free.flatMap((first, index) => free.slice(index + 1).map(second => [first, second, world.ties[tieKey(first.id, second.id)] ?? 0])).filter(([first, second, tie]) => tie >= 15 && (first.strategy === 'coalizione' || second.strategy === 'coalizione' || first.strategy === second.strategy)).sort((x, y) => y[2] - x[2]);
+    if (pairs.length) {
+      const [first, second] = pairs[0];
+      world.alliances.push({ id: `alleanza-${world.week}-${hash(first.id + second.id) % 9973}`, label: `Intesa simulata ${first.label} – ${second.label}`, partyIds: [first.id, second.id], cohesion: 64, since: date, status: 'active', source: SIM });
+      logEvent(world, date, { kind: 'alleanza', icon: 'link', scope: 'nazionale', title: `Intesa tra ${first.label} e ${second.label}`, body: 'Nello scenario le due forze annunciano un percorso comune (simulazione, non un accordo reale).', tone: 'neutral' });
     }
   }
-  if (draw(world) < 0.04) {
-    const figure = newLeader(world, null, 'Nuovo volto civico', date);
-    logEvent(world, date, { kind: 'figura', icon: 'user', scope: 'locale', title: 'Emerge un nuovo volto civico', body: `${figure.name}: un amministratore civico di ${world.place.region || 'una regione'} guadagna visibilità e potrebbe candidarsi. Figura simulata, non una persona reale.`, tone: 'neutral' });
+  if (draw(world) < 0.03) {
+    const count = world.figures.length + 1;
+    const figure = { id: `figura-${count}-${world.rngState % 9973}`, name: `${CIVIC_FIGURE_LABEL} n.${count}`, role: 'Volto civico', partyId: null, since: date, status: 'active', simulated: true, source: SIM };
+    world.figures.push(figure);
+    logEvent(world, date, { kind: 'figura', icon: 'user', scope: 'locale', title: 'Emerge un nuovo volto civico', body: `${figure.name}: un amministratore civico di ${world.place.region || 'una regione'} guadagna visibilità (figura simulata, non una persona reale).`, tone: 'neutral' });
   }
 }
 
-// One simulated week of the political world. Returns reactions the career can respond to.
-export function advanceWorld(input, { date, week, stats = {}, deltas = {}, game = null, parliament: parliamentInput = null, majorityShift = null, society = null }) {
+// One simulated week of the political world. Returns reactions and offers the career can respond to.
+export function advanceWorld(input, { date, week, stats = {}, deltas = {}, game = null, parliament: parliamentInput = null, majorityShift = null, society = null, playerIsLeader = false, playerStrategy = null }) {
   const world = copy(input);
   let parliament = copy(parliamentInput);
   world.week = week;
@@ -287,27 +301,29 @@ export function advanceWorld(input, { date, week, stats = {}, deltas = {}, game 
   const reactions = [];
   world.effects = world.effects.map(effect => ({ ...effect, remaining: effect.remaining - 1 })).filter(effect => effect.remaining > 0);
   for (const party of world.parties.filter(item => item.active)) {
-    party.baseline = round2(Math.max(0.3, party.baseline + (draw(world) - 0.5) * 0.35 + (party.anchor - party.baseline) * (party.isPlayer ? 0.01 : 0.04)));
+    party.baseline = round2(Math.max(0.3, party.baseline + (draw(world) - 0.5) * 0.3 + (party.anchor - party.baseline) * (party.isPlayer ? 0.01 : 0.03)));
   }
   const player = playerParty(world);
+  const majority = inMajority(parliament);
   if (player) {
-    const weight = 0.3 + (stats.notoriety ?? 30) / 100 + (game?.party?.affiliation === 'founder' ? 0.5 : (game?.party?.rank ?? 0) >= 3 ? 0.2 : 0);
+    const weight = 0.3 + (stats.notoriety ?? 30) / 100 + (game?.party?.affiliation === 'founder' || (game?.party?.rank ?? 0) >= 5 ? 0.5 : (game?.party?.rank ?? 0) >= 3 ? 0.2 : 0);
     const personal = clamp(((deltas.popularity ?? 0) * 0.03 + (deltas.reputation ?? 0) * 0.04 + (deltas.notoriety ?? 0) * 0.015) * weight, -0.5, 0.5);
-    const majority = inMajority(parliament);
     const government = majority ? ((parliament.government.stability ?? 50) - 50) / 400 : 0;
     const unity = game?.party && game.party.support < 25 ? -0.08 : 0;
     // Citizens judge whoever governs: a better mood rewards the majority, a worse one the opposition.
     const mood = society ? (majority === true ? society.moodDelta * 0.05 : majority === false ? -society.moodDelta * 0.025 : 0) + clamp((society.sentiment ?? 0) / 100 * 0.05, -0.05, 0.05) : 0;
     player.baseline = round2(Math.max(0.3, player.baseline + personal + government + unity + clamp(mood, -0.25, 0.25)));
-    player.cohesion = Math.round(game?.party?.support ?? player.cohesion);
+    player.cohesion = Math.round(game?.party?.org?.cohesion ?? game?.party?.support ?? player.cohesion);
     player.crisis = game?.party && game.party.support < 25 ? (player.crisis ?? { since: week, source: SIM }) : null;
+    if (playerStrategy) player.strategy = playerStrategy;
   }
-  // Low institutional trust feeds the protest area and the undecided.
+  // Low institutional trust feeds the parties in hard opposition and the undecided.
   if (society) {
-    addEffect(world, { family: 'populista', delta: round2(clamp((48 - society.trust) * 0.02, -0.2, 0.4)), remaining: 1, cause: 'fiducia' });
+    addEffect(world, { strategy: 'opposizione', delta: round2(clamp((48 - society.trust) * 0.02, -0.2, 0.4)), remaining: 1, cause: 'fiducia' });
     world.society = { mood: society.mood, trust: society.trust, executive: society.executive ?? null, source: SIM };
   }
-  partyDynamics(world, date);
+  const approval = world.polls.at(-1)?.government?.approval ?? world.polls.at(-1)?.executive?.approval ?? society?.executive?.approval ?? 45;
+  const offers = partyAgents(world, date, { approval, player, playerIsLeader, playerStrategy: player?.strategy ?? null });
   allianceDynamics(world, date);
   if (draw(world) < 0.55) {
     const pool = WORLD_EVENTS.filter(event => event.id !== world.lastEventId);
@@ -331,7 +347,7 @@ export function advanceWorld(input, { date, week, stats = {}, deltas = {}, game 
     const row = poll.results.find(item => item.partyId === player.id);
     lines.unshift(`Sondaggio ${poll.institute}: ${player.label} ${String(row.share).replace('.', ',')}% (${row.delta >= 0 ? '+' : ''}${String(row.delta).replace('.', ',')})`);
   }
-  return { world, parliament, lines, reactions };
+  return { world, parliament, lines, reactions, offers };
 }
 
 // Career and institutional moves ripple into polls.
@@ -347,15 +363,20 @@ export function applyWorldSignals(input, signals = [], date) {
     logEvent(world, date, { kind: 'carriera', icon, scope: 'nazionale', title, body, tone, lines: player ? [`${player.label} ${delta >= 0 ? '+' : ''}${delta} nei sondaggi${permanent ? `, ${permanent >= 0 ? '+' : ''}${permanent} di fondo` : ''}`] : [] });
   };
   for (const signal of signals) {
-    if (signal.type === 'law-approved') push(0.6, 6, `Approvata la legge “${signal.title}”`, 'Il provvedimento del tuo gruppo diventa legge nello scenario.', 'good', 'law');
+    if (signal.type === 'law-approved') push(0.6, 6, `Approvata la legge “${signal.title}”`, 'Il provvedimento diventa legge nello scenario.', 'good', 'law');
     else if (signal.type === 'law-rejected') push(-0.3, 3, `Respinta la proposta “${signal.title}”`, 'L’Aula boccia l’iniziativa: una battuta d’arresto visibile.', 'bad', 'law');
     else if (signal.type === 'government-formed') push(signal.inMajority ? 0.5 : -0.2, 4, 'Nasce un nuovo governo', signal.inMajority ? 'Il tuo gruppo fa parte della maggioranza che ha ottenuto la fiducia.' : 'Una nuova maggioranza ottiene la fiducia: il tuo gruppo resta fuori.', signal.inMajority ? 'good' : 'neutral', 'dome');
     else if (signal.type === 'government-fallen') push(signal.inMajority ? -0.8 : 0.4, 5, 'Il governo cade', signal.inMajority ? 'La maggioranza di cui fai parte perde la fiducia.' : 'La maggioranza perde la fiducia: l’opposizione guadagna terreno.', signal.inMajority ? 'bad' : 'good', 'dome');
     else if (signal.type === 'crisis') push(signal.inMajority ? -0.4 : 0.2, 3, 'Crisi di governo', 'La maggioranza deve verificare la fiducia in entrambe le Camere.', signal.inMajority ? 'bad' : 'neutral', 'alert');
     else if (signal.type === 'minister') push(0.4, 5, `Ministro: ${signal.portfolio}`, 'Il tuo ingresso al governo dà visibilità al partito.', 'good', 'star');
     else if (signal.type === 'congress') push(signal.won ? 0.4 : -0.5, 4, `Congresso: vince ${signal.winner}`, signal.won ? 'La tua area guida il partito: unità ritrovata.' : 'La nuova leadership ti è ostile: il partito appare diviso.', signal.won ? 'good' : 'bad', 'crown');
-    else if (signal.type === 'stance') push(signal.delta, 3, `Presa di posizione: ${signal.title}`, 'La tua reazione pubblica sposta l’attenzione sul partito.', signal.delta >= 0 ? 'good' : 'bad', 'megaphone');
-    else if (signal.type === 'chronicle') logEvent(world, date, { kind: signal.kind ?? 'cronaca', icon: signal.icon ?? 'pin', scope: signal.scope ?? 'nazionale', title: signal.title, body: signal.body ?? '', tone: signal.tone ?? 'neutral', chain: signal.chain ?? null });
+    else if (signal.type === 'stance') {
+      push(signal.delta, 3, `Presa di posizione: ${signal.title}`, 'La tua reazione pubblica sposta l’attenzione sul partito.', signal.delta >= 0 ? 'good' : 'bad', 'megaphone');
+      if (signal.attack) for (const party of world.parties.filter(item => !item.isPlayer)) party.playerRelation = round1(clamp(party.playerRelation - (party.strategy === 'opposizione' ? 1 : 3), -100, 100));
+    } else if (signal.type === 'relation') {
+      const party = world.parties.find(item => item.id === signal.partyId);
+      if (party) party.playerRelation = round1(clamp(party.playerRelation + signal.delta, -100, 100));
+    } else if (signal.type === 'chronicle') logEvent(world, date, { kind: signal.kind ?? 'cronaca', icon: signal.icon ?? 'pin', scope: signal.scope ?? 'nazionale', title: signal.title, body: signal.body ?? '', tone: signal.tone ?? 'neutral', chain: signal.chain ?? null });
     else if (signal.type === 'election') {
       const gap = signal.pollShare === null ? 0 : clamp((signal.share - signal.pollShare) * 0.15, -2, 2);
       push(signal.mandate ? 1 : -0.4, 4, `${signal.label}: ${String(Math.round(signal.share * 10) / 10).replace('.', ',')}%`, signal.mandate ? 'Il risultato elettorale dà slancio al partito.' : 'Il voto ridimensiona le ambizioni del partito.', signal.mandate ? 'good' : 'bad', 'ballot', round2(gap));
@@ -368,6 +389,14 @@ export function applyWorldSignals(input, signals = [], date) {
 export function allianceOf(world, partyId) {
   return world?.alliances.find(item => item.status === 'active' && item.partyIds.includes(partyId)) ?? null;
 }
+function sealAlliance(world, player, force, date) {
+  const partnerAllied = allianceOf(world, force.id);
+  if (partnerAllied) partnerAllied.partyIds = partnerAllied.partyIds.filter(id => id !== force.id);
+  if (partnerAllied && partnerAllied.partyIds.length < 2) { partnerAllied.status = 'broken'; partnerAllied.brokenAt = date; }
+  world.alliances.push({ id: `alleanza-giocatore-${world.week}-${hash(force.id) % 9973}`, label: `Intesa ${player.label} – ${force.label}`, partyIds: [player.id, force.id], cohesion: 66, since: date, status: 'active', withPlayer: true, source: SIM });
+  force.playerRelation = round1(clamp(force.playerRelation + 15, -100, 100));
+  addEffect(world, { partyId: player.id, delta: 0.3, remaining: 4, cause: 'alleanza' });
+}
 export function proposeAlliance(input, forceId, { partySupport = 50, influence = 50, date }) {
   const world = copy(input);
   const player = playerParty(world);
@@ -375,18 +404,23 @@ export function proposeAlliance(input, forceId, { partySupport = 50, influence =
   if (!player) throw new Error('Serve un partito per stringere un’alleanza.');
   if (!force) throw new Error('Forza politica non disponibile.');
   if (allianceOf(world, player.id)) throw new Error('Il tuo partito fa già parte di un’alleanza: rompila prima di cercarne un’altra.');
-  const compatible = COMPATIBLE_FAMILIES[player.family]?.includes(force.family);
   const partnerAllied = allianceOf(world, force.id);
-  const chance = clamp(0.25 + (compatible ? 0.3 : -0.15) + (partySupport - 50) / 200 + (influence - 50) / 250 - (partnerAllied ? 0.25 : 0) + (force.crisis ? 0.1 : 0), 0.05, 0.9);
+  const chance = clamp(0.25 + force.playerRelation / 200 + (force.strategy === 'coalizione' ? 0.25 : force.strategy === player.strategy ? 0.1 : -0.05) + (partySupport - 50) / 200 + (influence - 50) / 250 - (partnerAllied ? 0.25 : 0) + (force.crisis ? 0.1 : 0), 0.05, 0.9);
   const success = draw(world) < chance;
-  if (success) {
-    if (partnerAllied) partnerAllied.partyIds = partnerAllied.partyIds.filter(id => id !== force.id);
-    if (partnerAllied && partnerAllied.partyIds.length < 2) { partnerAllied.status = 'broken'; partnerAllied.brokenAt = date; }
-    world.alliances.push({ id: `alleanza-giocatore-${world.week}-${force.abbreviation}`, label: `Alleanza ${player.abbreviation}–${force.abbreviation}`, partyIds: [player.id, force.id], cohesion: 66, since: date, status: 'active', withPlayer: true, source: SIM });
-    addEffect(world, { partyId: player.id, delta: 0.3, remaining: 4, cause: 'alleanza' });
-  }
-  logEvent(world, date, { kind: success ? 'alleanza' : 'rottura', icon: success ? 'link' : 'unlink', scope: 'nazionale', title: success ? `Alleanza tra ${player.label} e ${force.label}` : `${force.label} respinge l’alleanza`, body: success ? 'L’accordo porta voti e visibilità alle prossime elezioni.' : compatible ? 'Il momento non è quello giusto: i dirigenti prendono tempo.' : 'Le distanze politiche sono troppo ampie.', tone: success ? 'good' : 'bad' });
+  if (success) sealAlliance(world, player, force, date);
+  else force.playerRelation = round1(clamp(force.playerRelation - 5, -100, 100));
+  logEvent(world, date, { kind: success ? 'alleanza' : 'rottura', icon: success ? 'link' : 'unlink', scope: 'nazionale', title: success ? `Intesa tra ${player.label} e ${force.label}` : `${force.label} respinge l’intesa`, body: success ? 'Nello scenario l’accordo porta voti e visibilità alle prossime elezioni (simulazione).' : 'Nello scenario i dirigenti prendono tempo: rapporti e strategie non coincidono (simulazione).', tone: success ? 'good' : 'bad' });
   return { world, success, chance: round2(chance) };
+}
+// An offer from another party, accepted by the player.
+export function acceptAlliance(input, forceId, date) {
+  const world = copy(input);
+  const player = playerParty(world);
+  const force = world.parties.find(item => item.id === forceId && item.active && !item.isPlayer);
+  if (!player || !force || allianceOf(world, player.id)) return world;
+  sealAlliance(world, player, force, date);
+  logEvent(world, date, { kind: 'alleanza', icon: 'link', scope: 'nazionale', title: `Intesa tra ${player.label} e ${force.label}`, body: 'Accetti la proposta: nello scenario le due forze si presentano insieme (simulazione).', tone: 'good' });
+  return world;
 }
 export function breakAlliance(input, allianceId, date) {
   const world = copy(input);
@@ -396,6 +430,7 @@ export function breakAlliance(input, allianceId, date) {
   alliance.brokenAt = date;
   const player = playerParty(world);
   if (player) addEffect(world, { partyId: player.id, delta: -0.3, remaining: 3, cause: 'rottura' });
+  for (const id of alliance.partyIds) { const party = world.parties.find(item => item.id === id && !item.isPlayer); if (party) party.playerRelation = round1(clamp(party.playerRelation - 20, -100, 100)); }
   logEvent(world, date, { kind: 'rottura', icon: 'unlink', scope: 'nazionale', title: `Rottura: ${alliance.label}`, body: 'Esci dall’accordo: più autonomia, meno voti in comune.', tone: 'bad' });
   return world;
 }
@@ -415,3 +450,4 @@ export function campaignPollBonus(world, electionType, stats = {}, relations = [
   const allies = alliance ? alliance.partyIds.filter(id => id !== player.id).reduce((sum, id) => sum + (shares.find(row => row.partyId === id)?.share ?? 0), 0) : 0;
   return { bonus: round2(clamp((share - 6) * 0.2 + allies * 0.08, -2, 4)), share: round1(share), allies: round1(allies) };
 }
+export { STRATEGIES };

@@ -1,4 +1,4 @@
-import { realDatabase } from '../data/repositories/real-data.js?v=20260924-14';
+import { realDatabase } from '../data/repositories/real-data.js?v=20260924-16';
 
 const esc = (value = '') => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const pageSize = 48;
@@ -59,6 +59,9 @@ export function renderPoliticianProfile(id, { loading = false } = {}) {
     return `${membershipGroup?.officialName ?? 'Gruppo non disponibile'}: ${item.validFrom || 'data iniziale non disponibile'} – ${item.validTo || 'in carica'}`;
   }).join('; ');
   items.push(['Storico gruppo',groupHistory]);
+  // Offices in the government in office, from the Camera open data, linked by the Camera person id.
+  const governmentRoles = (realDatabase.government ?? []).flatMap(government => government.members.filter(member => member.politicianId === id).map(member => `${member.role} (${government.label}, dal ${member.startDate})`));
+  if (governmentRoles.length) items.push(['Incarico di governo', governmentRoles.join('; ')]);
   const details = items.map(([label,value]) => `<dt>${esc(label)}</dt><dd>${value ? esc(value) : 'Non disponibile nelle fonti caricate'}</dd>`).join('');
   return `<div class="profile-modal-backdrop" data-profile-backdrop><section class="politician-profile" role="dialog" aria-modal="true" aria-labelledby="person-title"><button class="profile-modal-close" data-profile-close aria-label="Chiudi">×</button><span class="verified-badge">Dato reale verificato</span><h2 id="person-title">${esc(person.fullName)}</h2><p>${person.chamber === 'camera' ? 'Deputato' : 'Senatore'} · ${chamberName}</p><dl>${details}</dl><a href="${esc(person.sourceUrl)}" target="_blank" rel="noopener noreferrer">${esc(person.sourceName || 'Fonte istituzionale')} ↗</a></section></div>`;
 }

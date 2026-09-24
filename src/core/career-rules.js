@@ -1,5 +1,5 @@
-import { CAREER_LEVELS, ITALIAN_REGIONS } from '../data/regions.js?v=20260924-14';
-import { isSelectableParty } from '../data/schema.js?v=20260924-14';
+import { CAREER_LEVELS, ITALIAN_REGIONS } from '../data/regions.js?v=20260924-16';
+import { isSelectableParty } from '../data/schema.js?v=20260924-16';
 
 const genders = new Set(['preferisco-non-specificare', 'donna', 'uomo', 'non-binario']);
 const orientations = new Set(['Centrismo civico', 'Progressista', 'Conservatore', 'Liberale', 'Socialdemocratico', 'Ecologista', 'Popolare', 'Autonomista', 'Altro']);
@@ -31,7 +31,7 @@ export function validateCareerStep(draft, step, selectableParties, parliamentary
   }
   if (step === 3) {
     if (!['independent', 'existing', 'new'].includes(draft.partyMode)) errors.push('Scegli come iniziare il percorso di partito.');
-    if (draft.partyMode === 'existing' && !selectableParties.some(p => p.id === draft.partyId && isSelectableParty(p))) errors.push('Seleziona un partito demo o verificato.');
+    if (draft.partyMode === 'existing' && !selectableParties.some(p => p.id === draft.partyId && isSelectableParty(p))) errors.push('Seleziona un partito reale verificato oppure fondane uno tuo.');
     if (draft.partyMode === 'new') {
       if (!draft.partyName?.trim()) errors.push('Inserisci il nome del partito.');
       if (!draft.partyAbbreviation?.trim()) errors.push('Inserisci l’abbreviazione.');

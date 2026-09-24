@@ -16,3 +16,5 @@ package-lock.json
 server.mjs
 wrangler.jsonc
 src/data/real/database.json
+*.zip
+.assetsignore

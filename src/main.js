@@ -1,6 +1,6 @@
-import { mountApp } from './ui/app.js?v=20260924-14';
-import { store } from './core/store.js?v=20260924-14';
-import { loadRealCollections, loadRealDatabase } from './data/repositories/real-data.js?v=20260924-14';
+import { mountApp } from './ui/app.js?v=20260924-16';
+import { store } from './core/store.js?v=20260924-16';
+import { loadRealCollections, loadRealDatabase, realDatabase, realDataUrls } from './data/repositories/real-data.js?v=20260924-16';
 
 const BUILD = new URL(import.meta.url).searchParams.get('v');
 
@@ -19,14 +19,29 @@ async function newerBuildUrl() {
   }
 }
 
+// Offline play: a service worker keeps the game and the real data in the browser cache,
+// then warms the data files the game has not opened yet.
+function registerOfflineCache() {
+  if (!('serviceWorker' in navigator) || location.protocol === 'file:') return;
+  navigator.serviceWorker.register(new URL('../sw.js', import.meta.url)).then(() => navigator.serviceWorker.ready).then(registration => {
+    // The page itself and every module and stylesheet already loaded, then the real data files.
+    const loaded = performance.getEntriesByType('resource').map(entry => entry.name).filter(name => new URL(name).origin === location.origin);
+    const page = new URL(location.href); page.hash = '';
+    registration.active?.postMessage({ type: 'warm', urls: [page.href, ...loaded, ...realDataUrls()] });
+  }).catch(error => console.warn('Cache offline non disponibile:', error));
+}
+
 const root = document.querySelector('#app');
 const newer = await newerBuildUrl();
 if (newer) location.replace(newer);
 else {
   try {
     await loadRealDatabase();
-    await loadRealCollections(['parties','politicalMovements']);
+    await loadRealCollections(['parties','politicalMovements','twoPerThousand']);
+    // The simulated world starts from real parties and their real 2x1000 choices.
+    store.setRealReference({ twoPerThousand: realDatabase.twoPerThousand ?? [], parties: realDatabase.parties ?? [], movements: realDatabase.politicalMovements ?? [] });
     mountApp(root, store);
+    registerOfflineCache();
   } catch (error) {
     console.error('Avvio di POLITICANDO 2026 non riuscito:', error);
     root.innerHTML = `<main role="alert" style="max-width:760px;margin:10vh auto;padding:32px;font:16px/1.6 system-ui,sans-serif;color:#22312e"><h1>POLITICANDO 2026</h1><p>La pagina è stata raggiunta, ma non è stato possibile caricare i dati del gioco.</p><p>${String(error?.message || 'Errore di caricamento.')}</p><p>Ricarica la pagina tra poco. Se il problema continua, comunica questo messaggio.</p></main>`;

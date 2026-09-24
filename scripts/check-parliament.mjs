@@ -68,6 +68,9 @@ store.createCareer(deputyDraft, [party], groups);
 let state = store.getState();
 assert.equal(state.career.partyId, party.id);
 assert.equal(state.dataset.parties.some(item => item.id === party.id), false, 'Il riferimento reale non viene copiato nel dataset della carriera.');
+// Only a party secretary can form a government: a rank-and-file member cannot.
+assert.throws(() => store.formGovernment(['cam-xix-01', 'cam-xix-02', 'cam-xix-03', 'senato-xix-gruppo-85', 'senato-xix-gruppo-49', 'senato-xix-gruppo-33']), /segretario/);
+const founder = { partyMode: 'new', partyId: '', partyName: 'Lista di prova', partyAbbreviation: 'LDP', partyDescription: 'Partito fondato dal giocatore per il test.', partyOrientation: 'Altro', partyColor: '#285c42' };
 assert.equal(state.career.parliamentContext.groupId, deputyDraft.parliamentaryGroupId);
 assert.equal(state.career.parliamentContext.source, 'simulation');
 assert.ok(state.dataset.offices[0].institution === 'Camera dei deputati');
@@ -99,6 +102,12 @@ assert.ok(store.getState().career.parliamentHistory.some(item => item.type === '
 assert.ok(store.getState().dataset.laws.every(item => item.source === 'simulation'));
 
 // A three-group coalition in each House obtains confidence; minister and crisis persist in history.
+{
+  const lawState = store.getState();
+  store.reset();
+  store.createCareer(draftFor('deputato', founder), [party], groups);
+  assert.ok(lawState.parliament.laws.length, 'La legge del deputato resta nella sua carriera.');
+}
 const coalition = ['cam-xix-01','cam-xix-02','cam-xix-03','senato-xix-gruppo-85','senato-xix-gruppo-49','senato-xix-gruppo-33'];
 store.formGovernment(coalition);
 store.voteGovernmentConfidence();
@@ -153,7 +162,7 @@ const references = [party];
 
 // Incarichi parlamentari: candidatura, finestra di attesa, rigenerazione del capitale e ufficio in carriera.
 store.reset();
-store.createCareer(draftFor('deputato', { parliamentaryGroupId: 'cam-xix-01' }), references, groups);
+store.createCareer(draftFor('deputato', { parliamentaryGroupId: 'cam-xix-01', ...founder }), references, groups);
 assert.ok(store.getState().parliament.careerStanding, 'Il salvataggio parlamentare nasce con la posizione di carriera.');
 assert.ok(renderParliamentPage('parlamento', store.getState()).includes('data-parliament-action="contest-role"'));
 store.contestCommitteeRole();

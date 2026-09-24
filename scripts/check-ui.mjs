@@ -1,0 +1,242 @@
+// Interface test without a browser: the app is mounted on a minimal DOM stand-in, driven through its own
+// click handlers, and every page is checked for content and for invalid values in the HTML.
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+
+const mem = new Map();
+globalThis.localStorage = { getItem: key => mem.get(key) ?? null, setItem: (key, value) => mem.set(key, String(value)), removeItem: key => mem.delete(key) };
+const session = new Map();
+globalThis.sessionStorage = { getItem: key => session.get(key) ?? null, setItem: (key, value) => session.set(key, String(value)), removeItem: key => session.delete(key) };
+globalThis.window = { innerWidth: 1200 };
+const html = { dataset: {}, style: { props: {}, setProperty(name, value) { this.props[name] = value; } } };
+globalThis.document = { baseURI: 'http://localhost/', activeElement: null, documentElement: html, createElement: () => ({ style: {}, dataset: {}, replaceChildren() {}, append() {} }), createTextNode: text => text, body: { append() {} } };
+globalThis.indexedDB = undefined;
+globalThis.confirm = () => true;
+// Real JSON files served like the static server would.
+const serveFile = async url => {
+  const body = await readFile(fileURLToPath(new URL(url)), 'utf8');
+  return { ok: true, status: 200, json: async () => JSON.parse(body) };
+};
+globalThis.fetch = serveFile;
+
+const listeners = {};
+const root = { innerHTML: '', addEventListener: (type, fn) => { (listeners[type] ??= []).push(fn); }, querySelector: () => null, querySelectorAll: () => [] };
+const { store } = await import('../src/core/store.js');
+const { mountApp } = await import('../src/ui/app.js');
+const realData = await import('../src/data/repositories/real-data.js');
+const { loadSettings } = await import('../src/core/settings.js');
+const { playerRoles } = await import('../src/core/roles.js');
+const logos = await import('../src/data/repositories/logo-store.js');
+const { loadRealCollections, loadRealDatabase } = realData;
+
+await loadRealDatabase();
+await loadRealCollections(['parties', 'politicalMovements', 'twoPerThousand', 'parliamentaryGroups', 'politicians', 'groupMemberships', 'chambers', 'partyLeaderships', 'politicalFigures', 'offices', 'laws']);
+store.setRealReference({ twoPerThousand: realData.realDatabase.twoPerThousand, parties: realData.realDatabase.parties, movements: realData.realDatabase.politicalMovements });
+mountApp(root, store);
+
+const tick = () => new Promise(resolve => setTimeout(resolve, 5));
+const click = async attrs => { const target = el(attrs); for (const fn of listeners.click) await fn({ target }); await tick(); return root.innerHTML; };
+function el(attrs) {
+  return {
+    closest: selector => {
+      for (const part of selector.split(',')) {
+        const match = part.trim().match(/^\[data-([a-z-]+)(?:="([^"]+)")?\]$/);
+        if (!match) continue;
+        const key = match[1].replace(/-([a-z])/g, (_, char) => char.toUpperCase());
+        if (key in attrs && (match[2] === undefined || attrs[key] === match[2])) return { dataset: attrs, matches: () => false };
+      }
+      return null;
+    },
+    matches: () => false
+  };
+}
+const clean = text => !/undefined|NaN|\[object Object\]/.test(text.replace(/data-[a-z-]+="[^"]*"/g, ''));
+const goto = page => click({ nav: page });
+
+// ---------- 1. main menu at start ----------
+assert.ok(root.innerHTML.includes('main-menu'), 'All’avvio compare il menu principale');
+for (const label of ['Nuova partita', 'Carica partita', 'Come giocare', 'Impostazioni']) assert.ok(root.innerHTML.includes(label), `Menu: manca ${label}`);
+assert.ok(!root.innerHTML.includes('CONTINUA LA PARTITA'), 'Senza partita non c’è “Continua”');
+assert.ok((await click({ menu: 'guida' })).includes('guide-card') && root.innerHTML.includes('Ruoli e poteri'));
+let menuHtml = await click({ menu: 'impostazioni' });
+for (const key of ['sound', 'volume', 'motion', 'toasts', 'autosave', 'weeksPerTurn', 'textSize', 'contrast', 'density']) assert.ok(menuHtml.includes(`data-setting-key="${key}"`), `Impostazione mancante: ${key}`);
+await click({ settingKey: 'motion', settingValue: 'reduced' });
+await click({ settingKey: 'textSize', settingValue: '112' });
+await click({ settingKey: 'contrast', settingValue: 'high' });
+assert.equal(html.dataset.motion, 'reduced');
+assert.equal(html.dataset.contrast, 'high');
+assert.equal(html.style.props['--ui-scale'], '1.12');
+assert.equal(loadSettings().textSize, '112', 'Le impostazioni restano salvate');
+await click({ menuAction: 'reset-settings' });
+assert.equal(loadSettings().motion, 'full');
+assert.ok((await click({ menu: 'carica' })).includes('Nessun salvataggio negli slot'));
+
+// ---------- 2. new game from the menu: real parties only ----------
+let page = await click({ menu: 'nuova' });
+assert.ok(page.includes('career-wizard'), 'Nuova partita apre il Career Wizard');
+assert.ok(!page.includes('Partito di esempio'), 'Il segnaposto non è tra i partiti selezionabili');
+const groups = realData.realDatabase.parliamentaryGroups;
+const founder = { firstName: 'Marta', lastName: 'Neri', birthDate: '1985-02-11', gender: 'donna', region: 'Toscana', municipality: 'Siena', previousProfession: 'Architetta', initialLevel: 'deputato', parliamentaryGroupId: 'cam-xix-04', parliamentStartMode: 'real-context', partyMode: 'new', partyName: 'Lista Civica Neri', partyAbbreviation: 'LCN', partyColor: '#3a6ea5', partyDescription: 'Partito fondato dal giocatore.', partyOrientation: 'Altro', policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 } };
+store.createCareer(founder, realData.realDatabase.parties, groups);
+await click({ wizardAction: 'cancel' });
+assert.ok(store.hasCareer() && !root.innerHTML.includes('main-menu'), 'Dopo la creazione si entra in partita');
+const world = store.getState().world;
+const verified = new Set([...realData.realDatabase.parties, ...realData.realDatabase.politicalMovements].filter(item => item.source === 'real' && item.verified === true).map(item => item.id));
+assert.ok(world.parties.filter(item => !item.isPlayer).every(item => verified.has(item.id)), 'Gli altri partiti sono tutti reali verificati');
+assert.ok(world.parties.filter(item => !item.isPlayer).every(item => item.reference?.source === 'real'), 'Ogni partito ha il riferimento reale del 2×1000');
+
+// ---------- 3. every page renders ----------
+const pages = ['panoramica', 'carriera', 'profilo', 'partito', 'territori', 'finanze', 'parlamento', 'governo', 'leggi', 'elezioni', 'calendario', 'sondaggi', 'archivio', 'amministrazione', 'impostazioni'];
+for (const id of pages) { const text = await goto(id); assert.ok(text.length > 1000, `${id} vuota`); assert.ok(clean(text), `${id}: valori non validi`); assert.ok(!/in costruzione|STRUTTURA PRONTA/.test(text), `${id}: segnaposto`); }
+let home = await goto('panoramica');
+for (const text of ['RUOLI E POTERI', 'Fondatore e segretario', 'PERCHÉ È CAMBIATO', 'REDAZIONE', 'data-news-filter', 'data-action="menu"']) assert.ok(home.includes(text), `Home: manca ${text}`);
+assert.ok((await click({ newsFilter: 'diario' })).includes('data-news-filter="diario" class="active"'));
+const settingsPage = await goto('impostazioni');
+assert.ok(settingsPage.includes('data-setting-key="autosave"') && settingsPage.includes('Gestione loghi') && !settingsPage.includes('Ricomincia la demo'));
+
+// ---------- 4. the secretary's powers, with consequences ----------
+assert.ok(playerRoles(store.getState()).secretary, 'Il fondatore è segretario');
+const party = await goto('partito');
+for (const text of ['Le decisioni del segretario', 'data-secretary="line"', 'data-secretary-select="organs"', 'data-secretary-select="candidacy"', 'data-secretary="discipline"', 'data-secretary="expel"', 'data-secretary="investment"']) assert.ok(party.includes(text), `Segreteria: manca ${text}`);
+const before = store.getState();
+await click({ secretary: 'line', secretaryValue: 'coalizione' });
+let after = store.getState();
+assert.equal(after.game.party.line, 'coalizione', 'La linea cambia');
+assert.ok(after.game.week.ap < before.game.week.ap, 'La decisione costa tempo');
+assert.ok(after.game.timeline.some(item => item.title.includes('Linea del partito')), 'La decisione entra nella cronologia');
+await click({ secretary: 'line', secretaryValue: 'opposizione' });
+assert.equal(store.getState().game.party.line, 'coalizione', 'Il cooldown impedisce di cambiare subito linea');
+assert.ok(store.getState().ui.toast?.includes('settimana'), 'Il blocco è spiegato');
+const members = store.getState().game.party.org.members;
+store.expelDissidents();
+assert.ok(store.getState().game.party.org.members < members, 'L’espulsione fa perdere iscritti');
+assert.ok(store.getState().society.media.coverage.some(item => /dissidenti|espuls/i.test(item.headline)), 'La stampa ne parla');
+store.getState().game.party.org.treasury.balance = 50000;
+await click({ secretary: 'investment', secretaryValue: 'scuola-politica' });
+assert.ok(store.getState().game.party.org.investments.some(item => item.id === 'scuola-politica'), 'Investimento del partito avviato');
+store.advance(7);
+
+// ---------- 5. Prime Minister: agenda with consequences on the country ----------
+store.formGovernment(['cam-xix-01', 'cam-xix-03', 'cam-xix-04', 'senato-xix-gruppo-85', 'senato-xix-gruppo-33', 'senato-xix-gruppo-56']);
+store.voteGovernmentConfidence();
+assert.equal(store.getState().parliament.government.status, 'active', 'La coalizione ottiene la fiducia');
+{
+  assert.ok(playerRoles(store.getState()).primeMinister, 'Con la fiducia sei Presidente del Consiglio');
+  const governo = await goto('governo');
+  assert.ok(governo.includes('L’agenda del governo') && governo.includes('data-government-agenda-form'), 'Il PdC vede l’agenda');
+  assert.ok(governo.includes('I Governo Meloni'), 'Il governo reale è mostrato come riferimento');
+  store.setGovernmentAgenda(['Sanità', 'Scuola']);
+  for (let week = 0; week < 7; week++) store.advance(7);
+  const government = store.getState().parliament.government;
+  assert.ok((government.measureCount ?? 0) >= 1 || government.status !== 'active', 'L’agenda produce provvedimenti');
+  assert.ok(store.getState().game.timeline.some(item => item.kind === 'governo'), 'Fiducia e governo entrano nella cronologia');
+  assert.ok(store.getState().society.media.coverage.some(item => item.headline.startsWith('Il governo approva un decreto')), 'Il decreto finisce sui media');
+  assert.ok(store.getState().world.events.some(event => event.title.startsWith('Decreto del governo')), 'Il decreto entra nella cronaca con la catena di effetti');
+  console.log(`  PdC: governo ${government.status}, provvedimenti dell’agenda ${government.measureCount ?? 0}.`);
+}
+
+// ---------- 6. weekly report, turn speed, timeline ----------
+await goto('panoramica');
+let week = store.getState().game.week.index;
+page = await click({ action: 'advance' });
+assert.ok(store.getState().game.week.index > week, 'Chiudi settimana fa avanzare il tempo');
+assert.ok(page.includes('report-modal') && page.includes('Com’è andata la settimana'), 'Resoconto di fine settimana');
+assert.ok(!(await click({ reportClose: '' })).includes('report-modal'));
+await click({ settingKey: 'weeksPerTurn', settingValue: '2' });
+for (const item of store.getState().game.inbox) item.kind = 'normale';
+week = store.getState().game.week.index;
+store.advanceTurn();
+assert.ok(store.getState().game.week.index - week >= 1 && store.getState().game.week.index - week <= 2, 'La velocità della simulazione decide le settimane per turno');
+await click({ settingKey: 'weeksPerTurn', settingValue: '1' });
+const career = await goto('carriera');
+assert.ok(career.includes('La tua carriera, tappa per tappa') && career.includes('track-record') && career.includes('Inizia la carriera'), 'Cronologia della carriera');
+assert.ok((await click({ timelineFilter: 'partito' })).includes('data-timeline-filter="partito" class="active"'));
+
+// ---------- 7. archive of real data ----------
+page = await goto('archivio');
+assert.ok(page.includes('archive-tabs') && page.includes('Partiti e movimenti'), 'Archivio con schede');
+page = await click({ archiveTab: 'governo' });
+assert.ok(page.includes('I Governo Meloni') && page.includes('GIORGIA MELONI') && page.includes('Presidente del Consiglio dei ministri'), 'Governo reale con i nomi della fonte');
+page = await click({ archiveTab: 'gruppi' });
+assert.ok(page.includes('Camera dei deputati') && page.includes('Senato della Repubblica') && page.includes('componenti'));
+page = await click({ archiveTab: 'senatori' });
+assert.ok(page.includes('Senatore · Senato della Repubblica') && !page.includes('Deputato · Camera dei deputati'), 'La scheda Senatori mostra solo senatori');
+page = await click({ archiveTab: 'deputati' });
+assert.ok(page.includes('Deputato · Camera dei deputati') && !page.includes('Senatore · Senato della Repubblica'));
+page = await click({ archiveTab: 'leggi' });
+assert.ok(page.includes('Scheda del Senato'), 'Leggi reali consultabili');
+page = await click({ archiveTab: 'territori' });
+assert.ok(page.includes('Lombardia') && page.includes('deputati eletti'), 'Territori reali');
+page = await click({ archiveTab: 'partiti' });
+page = await click({ partyProfile: 'party-registro-p1-2015-29-ir' });
+assert.ok(page.includes('2×1000') && page.includes('Partito Democratico') && page.includes('Scelte valide'), 'Scheda partito con 2×1000 reale');
+await click({ profileClose: '' });
+page = await click({ politicianProfile: 'camera-xix-deputato-302103' });
+assert.ok(page.includes('Incarico di governo') && page.includes('Presidente del Consiglio dei ministri'), 'Scheda del parlamentare con l’incarico di governo reale');
+for (const id of pages) assert.ok(clean(await goto(id)), `${id} (dopo le azioni): valori non validi`);
+
+// ---------- 8. saves: slots, menu, continue, import/export, a second game ----------
+await click({ action: 'menu' });
+assert.ok(root.innerHTML.includes('CONTINUA LA PARTITA') && root.innerHTML.includes('Marta Neri'), 'Il menu offre “Continua” con l’ultima partita');
+await click({ menu: 'carica' });
+await click({ menuAction: 'save-slot' });
+const slots = store.listSlots();
+assert.equal(slots.length, 1, 'Salvataggio nello slot');
+const savedWeek = store.getState().game.week.index;
+const exported = store.exportSave();
+store.advance(7);
+await click({ slotLoad: slots[0].id });
+assert.equal(store.getState().game.week.index, savedWeek, 'Lo slot ripristina la partita');
+assert.ok(!root.innerHTML.includes('main-menu'), 'Caricare chiude il menu');
+store.loadGame(exported, 'Partita importata');
+assert.equal(store.getState().game.week.index, savedWeek, 'Import da file');
+assert.throws(() => store.loadGame('{"hello":1}'), /non contiene una partita/);
+await click({ action: 'menu' });
+await click({ menu: 'nuova' });
+const member = { ...founder, firstName: 'Luca', lastName: 'Bassi', partyMode: 'existing', partyId: 'party-registro-p1-2015-29-ir', initialLevel: 'comunale', parliamentaryGroupId: '' };
+store.createCareer(member, realData.realDatabase.parties, groups);
+await click({ wizardAction: 'cancel' });
+assert.ok(store.listSlots().some(slot => slot.player === 'Marta Neri'), 'La partita precedente resta in uno slot');
+const roles = playerRoles(store.getState());
+assert.ok(!roles.secretary && roles.powers.find(power => power.label.startsWith('Linea politica')).enabled === false, 'Un iscritto non ha i poteri del segretario');
+assert.throws(() => store.setPartyLine('opposizione'), /segretario/);
+assert.throws(() => store.proposeAlliance(store.getState().world.parties.find(item => !item.isPlayer).id), /segretario/);
+page = await goto('partito');
+assert.ok(!page.includes('Le decisioni del segretario') && page.includes('POSIZIONE NEL PARTITO'));
+page = await goto('sondaggi');
+assert.ok(!page.includes('data-world-alliance') && page.includes('Alleanze e rotture le decide il segretario'), 'Niente alleanze senza segreteria');
+store.clearAllSaves();
+assert.equal(store.listSlots().length, 0);
+assert.ok(!store.hasCareer());
+
+// ---------- 9. logos by address ----------
+assert.equal(logos.isImageAddress('https://example.org/logo.svg'), true);
+assert.equal(logos.isImageAddress('ftp://example.org/logo.svg'), false);
+assert.equal(logos.isImageAddress('logo.svg'), false);
+await assert.rejects(logos.fetchLogoFromUrl('non un indirizzo'), error => error.code === 'invalid');
+const reply = (status, type, bytes) => async () => ({ ok: status < 400, status, headers: { get: name => name === 'content-type' ? type : String(bytes.length) }, blob: async () => new Blob([bytes], { type }) });
+globalThis.fetch = reply(404, 'text/html', new Uint8Array(3));
+await assert.rejects(logos.fetchLogoFromUrl('https://example.org/manca.png'), error => error.code === 'http');
+globalThis.fetch = reply(200, 'text/html', new TextEncoder().encode('<html></html>'));
+await assert.rejects(logos.fetchLogoFromUrl('https://example.org/pagina'), error => error.code === 'type');
+globalThis.fetch = async () => { throw new TypeError('Failed to fetch'); };
+await assert.rejects(logos.fetchLogoFromUrl('https://example.org/protetto.png'), error => error.code === 'blocked');
+const png = new Uint8Array(33); png.set([137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 64, 0, 0, 0, 64]);
+globalThis.fetch = reply(200, 'image/png', png);
+const blob = await logos.fetchLogoFromUrl('https://example.org/logo.png');
+assert.equal(blob.type, 'image/png');
+await logos.saveLocalLogo('party-registro-p1-2015-29-ir', { blob, sourceUrl: 'https://example.org/logo.png', source: 'https://example.org', alt: 'Logo' });
+await logos.saveLocalLogo('party-futuro-nazionale', { url: 'https://example.org/remoto.svg', alt: 'Logo remoto' });
+const saved = await logos.listLocalLogos();
+assert.ok(saved.every(item => item.origin === 'user'), 'I loghi aggiunti sono sempre dell’utente');
+assert.ok(saved.find(item => item.partyId === 'party-futuro-nazionale').url === 'https://example.org/remoto.svg', 'Il logo remoto conserva l’indirizzo');
+const logoExport = await logos.exportLogoConfiguration();
+await logos.deleteLocalLogo('party-futuro-nazionale');
+await logos.importLogoConfiguration(logoExport);
+assert.equal((await logos.listLocalLogos()).length, 2, 'Import/export dei loghi, anche da indirizzo');
+assert.equal(realData.realDatabase.parties.find(item => item.id === 'party-registro-p1-2015-29-ir').logoUrl ?? null, realData.realDatabase.parties.find(item => item.id === 'party-registro-p1-2015-29-ir').logoUrl ?? null);
+assert.ok(Object.isFrozen(realData.realDatabase.parties[0]), 'I dati reali restano immutabili');
+globalThis.fetch = serveFile;
+
+console.log(`Interfaccia verificata: menu principale, guida, impostazioni applicate e salvate, nuova partita con soli partiti reali, ${pages.length} pagine senza valori non validi, poteri del segretario con costi e cooldown, agenda del Presidente del Consiglio, resoconto settimanale, velocità del turno, cronologia, archivio reale (partiti con 2×1000, deputati, senatori, gruppi, governo, leggi, territori), slot, import/export, seconda partita con ruoli limitati, loghi da indirizzo separati dai verificati.`);

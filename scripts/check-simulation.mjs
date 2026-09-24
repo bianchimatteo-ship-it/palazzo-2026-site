@@ -113,8 +113,10 @@ assert.ok(laws.filter(law => society.realLawArea(law)).length > laws.length / 3,
 
 // 6. Carriera completa di più anni: legge → parlamento → governo → finanze → territori → cittadini → sondaggi → partito → carriera → elezioni.
 const { store } = await import('../src/core/store.js?simulation=1');
-const draft = { firstName: 'Marta', lastName: 'Neri', birthDate: '1985-02-11', gender: 'donna', region: 'Toscana', municipality: 'Siena', previousProfession: 'Architetta', initialLevel: 'deputato', partyMode: 'existing', partyId: 'partito-demo', parliamentStartMode: 'real-context', parliamentaryGroupId: 'cam-xix-04', policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 } };
-store.createCareer(draft, [], groups);
+const [twoPerThousand, movements] = await Promise.all(['two-per-thousand', 'political-movements'].map(read));
+store.setRealReference({ twoPerThousand, parties, movements });
+const draft = { firstName: 'Marta', lastName: 'Neri', birthDate: '1985-02-11', gender: 'donna', region: 'Toscana', municipality: 'Siena', previousProfession: 'Architetta', initialLevel: 'deputato', partyMode: 'existing', partyId: 'party-registro-p1-2024-71-ir', parliamentStartMode: 'real-context', parliamentaryGroupId: 'cam-xix-04', policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 } };
+store.createCareer(draft, parties, groups);
 store.initializeParliament(groups);
 store.syncRealContacts({ politicians, groups, offices });
 const seats = {};

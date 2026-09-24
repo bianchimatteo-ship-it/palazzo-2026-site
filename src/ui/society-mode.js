@@ -1,10 +1,10 @@
 // Country, territories, citizens and media: the simulated society as the player sees it.
-import { INDICATORS, MEDIA_OUTLETS, SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-14';
-import { nationalIndicators, regionPriorities, societyMood } from '../core/society-engine.js?v=20260924-14';
-import { illustration } from './illustrations.js?v=20260924-14';
-import { artTile, glyph } from './visuals.js?v=20260924-14';
+import { INDICATORS, MEDIA_OUTLETS, SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-16';
+import { nationalIndicators, regionPriorities, societyMood } from '../core/society-engine.js?v=20260924-16';
+import { illustration } from './illustrations.js?v=20260924-16';
+import { artTile, glyph } from './visuals.js?v=20260924-16';
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
-import { breakdown, esc, levelState, lineChart, meter, num, rampColor, SERIES, signed, sparkline, stateBadge, trendState, GREEN_RAMP } from './charts.js?v=20260924-14';
+import { breakdown, esc, levelState, lineChart, meter, num, rampColor, SERIES, signed, sparkline, stateBadge, trendState, GREEN_RAMP } from './charts.js?v=20260924-16';
 
 // Tile cartogram of the regions: a recognisable boot, one tile per region.
 const TILES = Object.freeze({
@@ -32,7 +32,7 @@ export function territoryMap(society, { measure = 'satisfaction', selected = nul
     const [col, row, code] = TILES[region.name] ?? [0, 0, region.name.slice(0, 3).toUpperCase()];
     const value = regionValue(region, measure);
     const fill = rampColor(value, low, high);
-    const dark = GREEN_RAMP.indexOf(fill) >= 6;
+    const dark = GREEN_RAMP.indexOf(fill) < 5;
     const tip = `${region.name}: ${MAP_MEASURES.find(item => item.id === measure)?.label ?? ''} ${num(value, 0)}/100${issues.has(region.name) ? ' · problema aperto' : ''}`;
     return `<button class="map-tile ${region.name === selected ? 'is-selected' : ''} ${region.name === home ? 'is-home' : ''}" style="grid-column:${col + 1};grid-row:${row + 1};background:${fill};color:${dark ? '#fffdf7' : '#17301f'}" ${compact ? 'tabindex="-1"' : `data-territory-region="${esc(region.name)}"`} data-tip="${esc(tip)}" aria-label="${esc(tip)}"><b>${code}</b>${compact ? '' : `<small>${num(value, 0)}</small>`}${issues.has(region.name) ? `<i class="map-alert" aria-hidden="true">${glyph('alert', 11, 2.4)}</i>` : ''}</button>`;
   }).join('');

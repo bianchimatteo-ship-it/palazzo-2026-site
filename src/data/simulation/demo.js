@@ -1,9 +1,9 @@
-import { DATA_SOURCES, emptyDataset } from '../schema.js?v=20260924-14';
+import { DATA_SOURCES, emptyDataset } from '../schema.js?v=20260924-16';
 
 // All sample names, events, and numbers are invented for interface demonstration.
 export function makeDemoParties() {
   return [
-    { id: 'partito-demo', name: 'Alleanza Civica', abbreviation: 'AC', description: 'Una forza civica di esempio, creata solo per la simulazione.', color: '#264d82', orientation: 'Centrismo civico', policyPositions: { economia: 3, welfare: 4, ambiente: 4, europa: 4 }, source: DATA_SOURCES.SIMULATION, createdAt: '2026-01-01', logoUrl: null, logoAsset: null, logoSource: null, logoVerified: null, logoAlt: null },
+    { id: 'partito-demo', name: 'Partito di esempio (simulato)', abbreviation: 'PES', description: 'Segnaposto della schermata iniziale: non è un partito reale né selezionabile.', color: '#264d82', orientation: 'Centrismo civico', policyPositions: { economia: 3, welfare: 4, ambiente: 4, europa: 4 }, source: DATA_SOURCES.SIMULATION, createdAt: '2026-01-01', logoUrl: null, logoAsset: null, logoSource: null, logoVerified: null, logoAlt: null },
     { id: 'partito-territori-demo', name: 'Rete dei Territori', abbreviation: 'RDT', description: 'Partito dimostrativo con attenzione alle autonomie locali.', color: '#347b70', orientation: 'Autonomista', policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 }, source: DATA_SOURCES.SIMULATION, createdAt: '2026-01-01', logoUrl: null, logoAsset: null, logoSource: null, logoVerified: null, logoAlt: null },
     { id: 'partito-futuro-demo', name: 'Futuro Comune', abbreviation: 'FC', description: 'Organizzazione dimostrativa orientata a innovazione e servizi.', color: '#895f98', orientation: 'Progressista', policyPositions: { economia: 3, welfare: 5, ambiente: 5, europa: 4 }, source: DATA_SOURCES.SIMULATION, createdAt: '2026-01-01', logoUrl: null, logoAsset: null, logoSource: null, logoVerified: null, logoAlt: null }
   ];

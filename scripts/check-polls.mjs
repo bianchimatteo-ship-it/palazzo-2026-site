@@ -16,25 +16,34 @@ const groups = await read('parliamentary-groups');
 const politicians = await read('politicians');
 const parties = await read('parties');
 const realParty = parties.find(item => item.id === 'party-futuro-nazionale');
+const twoPerThousand = await read('two-per-thousand');
+const movements = await read('political-movements');
+const realIds = new Set([...parties, ...movements].map(item => item.id));
 let imports = 0;
 const load = async () => (await import('../src/core/store.js?polls=' + (++imports))).store;
 const reload = async mutate => { const saved = JSON.parse(localStore.get(KEY)); mutate(saved); localStore.set(KEY, JSON.stringify(saved)); return load(); };
 const draft = (level, extra = {}) => ({
   firstName: 'Marta', lastName: 'Neri', birthDate: '1985-02-11', gender: 'donna', region: 'Toscana', municipality: 'Siena', previousProfession: 'Architetta',
-  initialLevel: level, partyMode: 'existing', partyId: 'partito-demo', parliamentStartMode: 'real-context', parliamentaryGroupId: level === 'deputato' ? 'cam-xix-04' : '',
+  initialLevel: level, partyMode: 'new', partyId: '', partyName: 'Lista di prova', partyAbbreviation: 'LDP', partyDescription: 'Partito fondato dal giocatore per il test.', partyOrientation: 'Altro', partyColor: '#285c42', parliamentStartMode: 'real-context', parliamentaryGroupId: level === 'deputato' ? 'cam-xix-04' : '',
   policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 }, ...extra
 });
 const simulatedOnly = list => list.every(item => item.source === 'simulation');
 
 let store = await load();
+store.setRealReference({ twoPerThousand, parties, movements });
 
 // 1. Mondo e primo sondaggio: nazionale, regionale e locale, margine d’errore, forze e figure simulate.
 store.createCareer(draft('regionale'), [realParty], groups);
 let state = store.getState();
 let world = state.world;
 assert.equal(world.source, 'simulation');
-assert.ok(world.parties.length >= 8, 'Il mondo comprende forze di scenario, demo e il partito del giocatore.');
-assert.equal(world.parties.find(item => item.isPlayer).id, 'partito-demo');
+const playerPartyId = state.career.partyId;
+assert.ok(world.parties.length >= 8, 'Il mondo comprende i partiti reali più scelti nel 2×1000 e il partito del giocatore.');
+assert.equal(world.parties.find(item => item.isPlayer).id, playerPartyId);
+assert.ok(world.parties.filter(item => !item.isPlayer).every(item => realIds.has(item.id) && item.refSource === 'real' && item.reference?.source === 'real'), 'Solo partiti reali, con il riferimento reale del 2×1000.');
+assert.ok(!world.parties.some(item => ['scenario', 'demo', 'scissione'].includes(item.origin)), 'Nessuna forza inventata.');
+const topParty = twoPerThousand.sort((a, b) => b.validChoices - a.validChoices)[0];
+assert.ok(world.parties.some(item => item.id === topParty.partyId), 'Il partito più scelto nel 2×1000 è nel mondo.');
 let poll = world.polls.at(-1);
 assert.ok(poll.margin > 1.5 && poll.margin < 4.5, 'Il margine d’errore dipende dal campione.');
 assert.ok(poll.results.reduce((sum, row) => sum + row.share, 0) <= 100.2);
@@ -55,7 +64,7 @@ state = store.getState();
 world = state.world;
 assert.ok(world.polls.length >= 16, 'Un sondaggio a settimana alimenta il trend.');
 assert.ok(world.polls.slice(0, -1).every(item => item.regional === null) && world.polls.at(-1).regional, 'Lo storico tiene la mappa completa solo sull’ultimo sondaggio.');
-const shares = world.polls.map(item => item.results.find(row => row.partyId === 'partito-demo').share);
+const shares = world.polls.map(item => item.results.find(row => row.partyId === playerPartyId).share);
 assert.ok(new Set(shares).size > 3, 'Il consenso varia da una settimana all’altra.');
 assert.ok(world.events.some(event => event.kind === 'evento'), 'Eventi nazionali e territoriali entrano nella cronaca.');
 assert.ok(state.game.lastReport.lines.some(line => line.startsWith('Sondaggio')), 'Il bilancio settimanale riporta il sondaggio.');
@@ -68,7 +77,7 @@ if (pending) {
 }
 
 // 3. Alleanze proposte dal giocatore: costi, esito e rottura.
-const partner = store.getState().world.parties.find(item => item.id === 'forza-centro-moderato');
+const partner = store.getState().world.parties.find(item => !item.isPlayer);
 const capital = store.getState().game.resources.politicalCapital;
 const alliance = store.proposeAlliance(partner.id);
 assert.equal(store.getState().game.resources.politicalCapital, capital - 4);
@@ -101,6 +110,10 @@ store.clearCampaign();
 // 5. Governo e mondo: cambi di maggioranza con una maggioranza fragile, gradimento nei sondaggi.
 store.reset();
 store.createCareer(draft('deputato', { partyMode: 'independent', partyId: '' }), [realParty], groups);
+assert.equal(store.getState().world.playerPartyId, null, 'Un indipendente non ha un partito nei sondaggi, solo il gradimento personale.');
+assert.throws(() => store.formGovernment(['cam-xix-01', 'cam-xix-03', 'cam-xix-04', 'senato-xix-gruppo-85', 'senato-xix-gruppo-33', 'senato-xix-gruppo-56']), /segretario/, 'Un indipendente non può formare un governo.');
+store.reset();
+store.createCareer(draft('deputato'), [realParty], groups);
 store.formGovernment(['cam-xix-01', 'cam-xix-03', 'cam-xix-04', 'senato-xix-gruppo-85', 'senato-xix-gruppo-33', 'senato-xix-gruppo-56']);
 store.negotiateGovernmentSupport('cam-xix-05');
 store.voteGovernmentConfidence();
@@ -114,7 +127,6 @@ for (let week = 0; week < 25 && !shifted; week++) {
 assert.ok(shifted, 'Una maggioranza fragile può perdere pezzi da sola.');
 assert.ok(store.getState().world.events.some(event => event.kind === 'maggioranza'));
 assert.ok(store.getState().world.polls.some(item => item.government), 'Il gradimento del governo compare nei sondaggi.');
-assert.equal(store.getState().world.playerPartyId, null, 'Un indipendente non ha un partito nei sondaggi, solo il gradimento personale.');
 
 // 6. Salvataggio e ripristino del mondo.
 const snapshot = JSON.stringify(store.getState().world);

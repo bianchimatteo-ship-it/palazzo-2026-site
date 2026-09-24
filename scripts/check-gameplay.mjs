@@ -17,7 +17,7 @@ const stat = (state, metric) => state.dataset.statistics.find(item => item.subje
 const setStat = (saved, metric, value) => { saved.dataset.statistics.find(item => item.subjectId === saved.career.playerId && item.metric === metric).value = value; };
 const draft = (level, extra = {}) => ({
   firstName: 'Marta', lastName: 'Neri', birthDate: '1985-02-11', gender: 'donna', region: 'Toscana', municipality: 'Siena', previousProfession: 'Architetta',
-  initialLevel: level, partyMode: 'existing', partyId: 'partito-demo', parliamentStartMode: 'real-context',
+  initialLevel: level, partyMode: 'existing', partyId: 'party-registro-p1-2024-71-ir', parliamentStartMode: 'real-context',
   parliamentaryGroupId: level === 'deputato' ? 'cam-xix-04' : level === 'senatore' ? 'senato-xix-gruppo-56' : '',
   policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 }, ...extra
 });
@@ -36,13 +36,14 @@ const finishCampaign = (store, share) => {
 let store = await load();
 
 // 1. Inizio carriera: politico, livello, territorio, partito, statistiche e prima settimana.
-store.createCareer(draft('comunale'), [realParty], groups);
+const volt = parties.find(item => item.id === 'party-registro-p1-2024-71-ir');
+store.createCareer(draft('comunale'), [realParty, volt], groups);
 let state = store.getState();
 assert.equal(state.version, 6);
 assert.equal(state.game.source, 'simulation');
 assert.equal(state.game.week.index, 1);
 assert.equal(state.game.week.ap, 6);
-assert.equal(state.game.party.partyId, 'partito-demo');
+assert.equal(state.game.party.partyId, 'party-registro-p1-2024-71-ir');
 assert.equal(state.game.party.rankTitle, 'Iscritto');
 assert.equal(state.game.party.currents.length, 3);
 assert.ok(state.game.inbox.length >= 2, 'La prima settimana propone appuntamenti.');
@@ -175,9 +176,9 @@ assert.equal(store.getState().clock.currentDate, endedDate, 'Una carriera conclu
 
 // 10. Parlamento: lavoro in Aula, diplomazia, trattative respinte con rapporti tesi, stabilità ed elezioni anticipate.
 store.reset();
-store.createCareer(draft('deputato', { partyMode: 'independent', partyId: '' }), [realParty], groups);
+store.createCareer(draft('deputato', { partyMode: 'new', partyId: '', partyName: 'Lista di prova', partyAbbreviation: 'LDP', partyDescription: 'Partito fondato dal giocatore per il test.', partyOrientation: 'Altro', partyColor: '#285c42' }), [realParty], groups);
 state = store.getState();
-assert.equal(state.game.party, null);
+assert.equal(state.game.party.affiliation, 'founder', 'Chi fonda un partito ne è il segretario.');
 const groupSupport = state.parliament.careerStanding.partySupport;
 store.performWeeklyActivity('aula');
 assert.ok(store.getState().parliament.careerStanding.partySupport > groupSupport);

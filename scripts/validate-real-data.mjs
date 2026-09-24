@@ -51,9 +51,28 @@ for (const law of laws) {
   if (law.outcome === 'legge' && (!Number.isInteger(law.lawNumber) || !law.lawDate)) fail(`Legge ${law.id}: numero o data della legge mancanti`);
   if (['effects','consensus','impact'].some(key => key in law)) fail(`Legge ${law.id}: contiene valori simulati`);
 }
+// 2x1000 choices and amounts (MEF) and the government in office (Camera): separate verified files.
+const twoPerThousand = JSON.parse(await readFile(new URL('../src/data/real/two-per-thousand.json', import.meta.url), 'utf8'));
+if (lawsManifest.collections.twoPerThousand !== twoPerThousand.length) fail('Conteggio 2×1000 nel manifest non coerente');
+for (const row of twoPerThousand) {
+  if (row.source !== 'real' || row.verified !== true || !row.sourceUrl.startsWith('https://www1.finanze.gov.it/') || !row.verifiedAt) fail(`2×1000 ${row.id}: provenienza incompleta`);
+  if (!partyIds.has(row.partyId)) fail(`2×1000 ${row.id}: partito non presente nel dataset`);
+  if (!Number.isInteger(row.validChoices) || !Number.isInteger(row.amountEuro) || row.validChoices <= 0) fail(`2×1000 ${row.id}: valori non validi`);
+}
+const government = JSON.parse(await readFile(new URL('../src/data/real/government.json', import.meta.url), 'utf8'));
+if (lawsManifest.collections.government !== government.length) fail('Conteggio dei governi nel manifest non coerente');
+for (const cabinet of government) {
+  if (cabinet.source !== 'real' || cabinet.verified !== true || !cabinet.sourceUrl.startsWith('http://dati.camera.it/') || !cabinet.startDate) fail(`Governo ${cabinet.id}: provenienza incompleta`);
+  if (!cabinet.members.some(member => /^Presidente del Consiglio/.test(member.role))) fail(`Governo ${cabinet.id}: manca il Presidente del Consiglio`);
+  for (const member of cabinet.members) {
+    if (member.source !== 'real' || member.verified !== true || !member.fullName || !member.role) fail(`Governo ${cabinet.id}: membro incompleto ${member.id}`);
+    if (member.politicianId && !politicianIds.has(member.politicianId)) fail(`Governo ${cabinet.id}: deputato inesistente ${member.politicianId}`);
+  }
+}
 if (process.exitCode) process.exit(process.exitCode);
 const nameCounts = new Map();
 for (const person of db.politicians) { const name=normalize(person.fullName); nameCounts.set(name,(nameCounts.get(name)??0)+1); }
 const homonyms = [...nameCounts.values()].filter(count=>count>1).reduce((sum,count)=>sum+count,0);
+console.log(`2×1000: ${twoPerThousand.length} partiti (MEF 2025). Governo: ${government[0].label} con ${government[0].members.length} incarichi (Camera).`);
 console.log(`Leggi reali: ${laws.length} atti del Senato (${laws.filter(law => law.outcome === 'legge').length} leggi approvate definitivamente).`);
 console.log(`Controllo completato: ${db.parties.length} partiti, ${db.politicalMovements.length} movimenti, ${organizations.filter(item=>item.level==='regional').length} entità territoriali documentate, ${db.politicalFigures?.length ?? 0} figure, ${db.partyLeaderships?.length ?? 0} relazioni di leadership, ${db.parliamentaryGroups.length} gruppi, ${db.politicians.length} parlamentari; ${homonyms} omonimi politici (ID distinti), nessuna sigla o nome duplicato; provenienza e relazioni valide.`);

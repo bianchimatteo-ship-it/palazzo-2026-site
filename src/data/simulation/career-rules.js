@@ -75,9 +75,25 @@ export const PARTY_RANKS = Object.freeze([
   { level: 1, title: 'Coordinatore locale', threshold: 48, weeklyIncome: 80 },
   { level: 2, title: 'Responsabile regionale', threshold: 56, weeklyIncome: 150 },
   { level: 3, title: 'Membro della direzione nazionale', threshold: 64, weeklyIncome: 220 },
-  { level: 4, title: 'Vicesegretario', threshold: 72, weeklyIncome: 300 }
+  { level: 4, title: 'Vicesegretario', threshold: 72, weeklyIncome: 300 },
+  // The secretary is not contested: it is elected by a congress.
+  { level: 5, title: 'Segretario nazionale', threshold: null, weeklyIncome: 350 }
 ]);
-export const FOUNDER_RANK = Object.freeze({ level: 4, title: 'Segretario e fondatore', weeklyIncome: 150 });
+export const FOUNDER_RANK = Object.freeze({ level: 5, title: 'Segretario e fondatore', weeklyIncome: 150 });
+// The line the secretary gives the party; each internal area prefers one.
+export const PARTY_LINES = Object.freeze({
+  autonoma: { label: 'Corsa solitaria', detail: 'Identità forte, nessun vincolo: cresce solo con le tue forze.' },
+  governista: { label: 'Responsabilità di governo', detail: 'Sostieni chi governa: premia quando il Paese è soddisfatto.' },
+  opposizione: { label: 'Opposizione dura', detail: 'Visibilità sul malcontento, rapporti tesi con chi governa.' },
+  coalizione: { label: 'Costruzione di alleanze', detail: 'Apre il partito alle intese con altre forze.' }
+});
+export const CURRENT_LINES = Object.freeze({ riformisti: 'governista', territori: 'autonoma', movimento: 'opposizione' });
+// One-off decisions of the secretary on the party treasury.
+export const PARTY_INVESTMENTS = Object.freeze([
+  { id: 'piattaforma-iscritti', label: 'Piattaforma digitale per gli iscritti', cost: 15000, effect: 'Tesseramento online: iscritti in crescita costante e comunicazione più economica.' },
+  { id: 'scuola-politica', label: 'Scuola politica nazionale', cost: 9000, effect: 'Militanti più preparati e partito più compatto per un anno.' },
+  { id: 'fondo-territori', label: 'Fondo per le federazioni in difficoltà', cost: 12000, effect: 'Le sezioni più deboli ripartono: vitalità +20 dove serve.' }
+]);
 
 // Simulated calendar: cycles are compressed compared with real terms of office.
 export const ELECTION_SCHEDULE = Object.freeze({
@@ -153,6 +169,7 @@ export const CAREER_EVENTS = Object.freeze([
     { id: 'collaboratore', label: 'Manda un collaboratore', effects: { stats: { notoriety: 1 } } },
     { id: 'declina', label: 'Declina', effects: {} }] },
   { id: 'congresso', weight: 0, when: () => false, title: 'Congresso: {currentA} contro {currentB}', body: 'Due aree del partito si contendono la guida. Schierarsi può pagare molto o costare caro.', defaultChoice: 'neutrale', choices: [
+    { id: 'candidato', label: 'Candidati tu alla segreteria', requires: 'direzione', cost: { capital: 5 }, special: 'leadership-self' },
     { id: 'a', label: 'Sostieni {currentA}', special: 'leadership-a' },
     { id: 'b', label: 'Sostieni {currentB}', special: 'leadership-b' },
     { id: 'neutrale', label: 'Resta neutrale', effects: { party: { support: -1 } } }] },
@@ -257,6 +274,25 @@ export const SITUATION_EVENTS = Object.freeze({
   'offerta-incarico': { id: 'offerta-incarico', title: 'La segreteria ti offre un incarico', body: 'Il tuo peso nel partito è cresciuto: ti propongono di diventare {rank}, in cambio di lealtà alla linea.', defaultChoice: 'declina', choices: [
     { id: 'accetta', label: 'Accetta l’incarico', effects: { org: { discipline: 6 }, relations: { leadership: 3 } }, special: 'accept-rank' },
     { id: 'declina', label: 'Declina per restare libero', effects: { party: { support: -1 }, stats: { influence: 0.5 } } }] },
+  'congresso-segretario': { id: 'congresso-segretario', title: 'Congresso: la tua segreteria alla prova', body: 'Gli iscritti votano: {currentA} vuole la guida del partito. Coesione {cohesion}/100, sostegno interno {support}/100.', defaultChoice: 'difendi', choices: [
+    { id: 'unita', label: 'Proponi una segreteria unitaria', cost: { capital: 4 }, special: 'secretary-unity' },
+    { id: 'difendi', label: 'Difendi la tua linea al voto', special: 'secretary-defend' },
+    { id: 'lascia', label: 'Non ricandidarti', special: 'secretary-resign' }] },
+  'sfida-corrente': { id: 'sfida-corrente', title: '{currentA} chiede il tuo incarico', body: 'Il coordinamento dell’area (figure simulate) contesta il tuo ruolo di {rank}: vuole un proprio dirigente al tuo posto.', defaultChoice: 'resisti', choices: [
+    { id: 'tratta', label: 'Tratta: concedi spazio all’area', cost: { capital: 3 }, effects: { relations: { currentA: 10 }, party: { support: 1 } } },
+    { id: 'resisti', label: 'Resisti e vai alla conta', special: 'current-resist' },
+    { id: 'cedi', label: 'Fai un passo indietro', effects: { relations: { currentA: 15 }, party: { support: 3 }, stats: { reputation: 0.5 } }, special: 'current-cede' }] },
+  'proposta-alleanza': { id: 'proposta-alleanza', title: '{partyLabel} propone un’intesa', body: 'Nello scenario la forza (strategia: {strategy}) offre un percorso comune al tuo partito. Partito reale, proposta simulata dal gioco.', defaultChoice: 'rifiuta', choices: [
+    { id: 'accetta', label: 'Accetta l’intesa', special: 'world-alliance-accept' },
+    { id: 'tratta', label: 'Prendi tempo e tratta', cost: { capital: 3 }, special: 'world-relation-up' },
+    { id: 'rifiuta', label: 'Rifiuta', special: 'world-relation-down' }] },
+  'attacco-avversario': { id: 'attacco-avversario', title: '{partyLabel} attacca il tuo partito', body: 'Nello scenario la forza in opposizione dura prende di mira te e il tuo partito. Partito reale, attacco simulato dal gioco.', defaultChoice: 'ignora', choices: [
+    { id: 'rispondi', label: 'Rispondi colpo su colpo', effects: { stats: { notoriety: 2, reputation: -0.5 } }, special: 'world-relation-down' },
+    { id: 'chiarimento', label: 'Cerca un chiarimento', cost: { capital: 2 }, special: 'world-relation-up' },
+    { id: 'ignora', label: 'Ignora l’attacco', effects: { stats: { reputation: 0.5, notoriety: -0.5 } } }] },
+  'offerta-governo': { id: 'offerta-governo', title: 'L’esecutivo ti offre un incarico', body: 'L’esecutivo di scenario cerca figure con reputazione ed esperienza: ti propone di diventare sottosegretario.', defaultChoice: 'declina', choices: [
+    { id: 'accetta', label: 'Accetta l’incarico', effects: { stats: { influence: 2, notoriety: 2 } }, special: 'accept-scenario-office' },
+    { id: 'declina', label: 'Declina per restare libero', effects: { stats: { reputation: 0.5 } } }] },
   'sostegno-parlamentare': { id: 'sostegno-parlamentare', title: '{contact} offre sostegno alla tua proposta', body: '{contact} è disposto a sottoscrivere “{law}”. Persona reale (dati verificati), iniziativa simulata dal gioco.', defaultChoice: 'declina', choices: [
     { id: 'accetta', label: 'Accetta la firma', effects: { contacts: { target: 4 } }, special: 'cosign' },
     { id: 'declina', label: 'Ringrazia e declina', effects: { contacts: { target: -3 } } }] },

@@ -12,7 +12,27 @@ Richiede Node.js 20 o successivo, senza dipendenze esterne.
 npm start
 ```
 
-Apri `http://127.0.0.1:4173`. La carriera viene salvata nel `localStorage` del browser in uso. Il pulsante “Chiudi la settimana” fa avanzare il tempo e risolve la settimana di gioco.
+Apri `http://127.0.0.1:4173`. Il gioco si apre sul **menu principale**: Nuova partita, Carica partita (fino a 5 salvataggi, esportazione e importazione su file), Come giocare, Impostazioni e — se esiste una partita — Continua con la data dell’ultimo salvataggio. Il pulsante con le tre linee nella barra superiore riporta al menu. Il pulsante “Chiudi la settimana” fa avanzare il tempo e al termine mostra il resoconto con le cause di ogni variazione.
+
+**Impostazioni** (valgono per tutte le partite, chiave `politicando.settings.v1`): effetti sonori e volume (suoni sintetizzati, nessun file audio), animazioni complete/ridotte/disattivate, messaggi a comparsa e loro durata, resoconto settimanale, salvataggio automatico (dopo ogni azione, a fine settimana o solo manuale), velocità della simulazione (1, 2 o 4 settimane per turno, con arresto quando serve una decisione), dimensione del testo, contrasto alto, densità dell’interfaccia, ripristino, esportazione/importazione ed eliminazione dei salvataggi.
+
+**Stile**: tema scuro da videogioco in tutte le schermate, colore del partito del giocatore come accento, badge di stato (crescita, calo, rischio, crisi, successo), grafici con la palette categoriale validata per lo sfondo scuro. Titoli in Manrope, sottotitoli in Newsreader.
+
+**Offline**: dopo la prima visita un service worker (`sw.js`) conserva pagina, moduli, fogli di stile e tutti i dati reali; senza rete il gioco si avvia lo stesso. La strategia è “prima la rete”: online arriva sempre l’ultima versione.
+
+## Ruoli e poteri
+
+Ogni ruolo sblocca poteri reali, verificati di nuovo dal motore prima di ogni azione: iscritto (attività, riunioni, contributi), dirigente (sezioni, formazione, comunicazione e mediazione), direzione nazionale (priorità di bilancio, disciplina), riferimento di un’area interna (candidature della propria area), parlamentare (leggi, emendamenti, trattative), segretario (linea politica, organi e incarichi, regola per le candidature, congresso anticipato, investimenti del partito, disciplina dei parlamentari, espulsione dei dissidenti, alleanze e rotture, formazione del governo), ministro (dossier e crisi del ministero), Presidente del Consiglio (nomina dei ministri, agenda del governo con un decreto ogni sei settimane che costa bilancio pubblico e arriva su territori, cittadini e media). Il Quartier generale mostra ruoli, poteri disponibili e ciò che serve per sbloccare gli altri; ogni decisione di segreteria ha costi, intervalli minimi e conseguenze su aree interne, iscritti, coesione, sondaggi e stampa.
+
+La **cronologia della carriera** (sezione Carriera) registra ogni tappa: partiti, incarichi, governi, leggi, elezioni, decisioni chiave, promesse, record nei sondaggi. Il passato pesa: chi ha cambiato più partiti parte con meno fiducia, le promesse tradite abbassano la popolarità.
+
+## Archivio dei dati reali
+
+La sezione **Archivio** consulta senza uscire dal gioco partiti e movimenti (con le scelte reali del 2×1000, MEF dichiarazioni 2025), deputati, senatori, gruppi parlamentari con i componenti, governo in carica (Camera dei deputati, nomi come nella fonte), leggi e atti del Senato, territori. Le schede dei parlamentari riportano anche l’eventuale incarico nel governo reale. Nulla di questa sezione è modificato dalla partita.
+
+## Loghi
+
+In **Impostazioni → Gestione loghi** si incolla l’indirizzo di un’immagine (o si carica un file SVG, PNG, JPEG, WebP): l’anteprima compare subito, gli errori (indirizzo non valido, pagina che non è un’immagine, sito irraggiungibile, file troppo grande) sono spiegati. Se il sito lo consente l’immagine viene copiata nel browser e funziona offline; altrimenti si conserva l’indirizzo dopo aver verificato che l’immagine si vede. I loghi aggiunti sono sempre dell’utente (`origin: "user"`) e restano separati dai loghi ufficiali verificati del repository, che tornano visibili eliminando quelli personali.
 
 ## Modalità campagna
 
@@ -48,9 +68,9 @@ npm run check:gameplay
 
 ## Sondaggi e mondo politico dinamico
 
-La sezione **Sondaggi** pubblica ogni settimana un sondaggio simulato (istituto immaginario, campione e margine d’errore al 95%) con consenso nazionale, regionale (tutte le regioni) e locale del partito del giocatore, gradimento personale separato dal partito, gradimento del governo, indecisi, trend e tabella dei dati. Il mondo di gioco comprende forze di scenario inventate, i partiti demo e il partito del giocatore: crisi interne, cambi di guida, scissioni, alleanze e rotture, nuovi volti, eventi nazionali e territoriali con effetti temporanei o permanenti, cambi di maggioranza in Parlamento. Carriera, leggi, governo ed elezioni spostano i sondaggi; i sondaggi e le alleanze modificano la partenza delle campagne; alcuni eventi chiedono al giocatore di prendere posizione. Tutto ciò che viene generato è `source: "simulation"`: un partito reale compare solo con il suo nome e le sue percentuali sono stime di gioco, non sondaggi reali.
+La sezione **Sondaggi** pubblica ogni settimana un sondaggio simulato (istituto immaginario, campione e margine d’errore al 95%) con consenso nazionale, regionale (tutte le regioni) e locale del partito del giocatore, gradimento personale separato dal partito, gradimento del governo, indecisi, trend e tabella dei dati. Il mondo di gioco comprende solo partiti reali verificati (i primi per scelte del 2×1000, con la quota reale come punto di partenza dichiarato, non come sondaggio) e il partito del giocatore; non esistono partiti inventati. Strategie (corsa solitaria, sostegno all’esecutivo, opposizione dura, ricerca di alleanze), coesione, crisi interne, rapporti con il partito del giocatore, proposte di intesa, attacchi, alleanze e rotture sono comportamenti simulati e dichiarati, mai attribuiti come fatti ai partiti reali; eventi nazionali e territoriali hanno effetti temporanei o permanenti. Carriera, leggi, governo ed elezioni spostano i sondaggi; i sondaggi e le alleanze modificano la partenza delle campagne; alcuni eventi chiedono al giocatore di prendere posizione. Tutto ciò che viene generato è `source: "simulation"`: un partito reale compare solo con il suo nome e le sue percentuali sono stime di gioco, non sondaggi reali.
 
-**Persone reali.** Dove il dataset verificato contiene persone pertinenti, il gioco usa loro con nome e dati esatti: nelle politiche per la Camera gli avversari sono deputati in carica della circoscrizione del giocatore (gruppo e lista d’elezione verificati; i numeri di campagna restano simulati); per un partito reale la guida mostra solo gli organi documentati, altrimenti resta vuota. Leader delle forze inventate, rivale interno e nuovi volti sono ruoli dichiaratamente simulati, senza nomi realistici. Nessuna persona reale riceve incarichi non documentati.
+**Persone reali.** Dove il dataset verificato contiene persone pertinenti, il gioco usa loro con nome e dati esatti: nelle politiche per la Camera gli avversari sono deputati in carica della circoscrizione del giocatore (gruppo e lista d’elezione verificati; i numeri di campagna restano simulati); per un partito reale la guida mostra solo gli organi documentati, altrimenti resta vuota. Rivale interno e nuovi volti civici sono ruoli dichiaratamente simulati, senza nomi realistici. Nessuna persona reale riceve incarichi non documentati.
 
 ```sh
 npm run check:polls
@@ -146,6 +166,18 @@ Le fonti sono collegate direttamente alle schede. Ogni record reale contiene `so
 
 All’apertura vengono caricati manifest e partiti/movimenti. Politici, gruppi e altri dettagli vengono richiesti quando si apre il relativo archivio, così il browser non scarica il JSON aggregato da circa 2 MB.
 
+## Test
+
+```sh
+npm run check:ui          # menu, impostazioni, nuova partita, pagine, poteri, archivio, salvataggi, loghi
+npm run check:gameplay
+npm run check:parliament
+npm run check:polls
+npm run check:simulation
+npm run check:campaign
+npm run check:real-data
+```
+
 ## Aggiornamento e verifica
 
 Dalla cartella del progetto:
@@ -169,6 +201,8 @@ npm run cf:dev      # anteprima locale su http://localhost:8787
 npm run cf:deploy   # pubblicazione su Cloudflare Workers
 npm run check:published-site -- https://palazzo-2026-site.<sottodominio>.workers.dev/
 ```
+
+`.assetsignore` esclude anche gli archivi `*.zip`, che non vanno pubblicati (e sono ignorati da git). Il controllo del sito pubblicato verifica anche `sw.js` e che file di lavoro come `Archivio.zip`, `package.json` e gli script non siano raggiungibili sul Worker.
 
 Anche il collegamento Git di Cloudflare usa `wrangler.jsonc`: ogni push su `main` aggiorna sia GitHub Pages sia il Worker.
 

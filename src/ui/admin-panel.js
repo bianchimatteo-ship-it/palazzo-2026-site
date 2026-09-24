@@ -1,5 +1,5 @@
-import { ADMIN_FIELDS, adminArchiveSummary, overrideFor } from '../data/repositories/admin-store.js?v=20260924-14';
-import { emblem, glyph } from './visuals.js?v=20260924-14';
+import { ADMIN_FIELDS, adminArchiveSummary, overrideFor } from '../data/repositories/admin-store.js?v=20260924-16';
+import { emblem, glyph } from './visuals.js?v=20260924-16';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const norm = value => String(value ?? '').toLocaleLowerCase('it-IT').normalize('NFD').replace(/[\u0300-\u036f]/g, '');

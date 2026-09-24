@@ -1,14 +1,14 @@
-import { allianceOf, latestPoll } from '../core/world-engine.js?v=20260924-14';
-import { COMPATIBLE_FAMILIES, FAMILY_LABELS } from '../data/simulation/polling-rules.js?v=20260924-14';
-import { formatDate } from '../core/time.js?v=20260924-14';
-import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20260924-14';
+import { allianceOf, latestPoll, STRATEGIES } from '../core/world-engine.js?v=20260924-16';
+import { formatDate } from '../core/time.js?v=20260924-16';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20260924-16';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const pct = (value, digits = 1) => value === null || value === undefined ? '—' : `${Number(value).toLocaleString('it-IT', { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
 const signed = value => `${value > 0 ? '+' : value < 0 ? '−' : '±'}${Math.abs(Number(value) || 0).toLocaleString('it-IT', { maximumFractionDigits: 1 })}`;
 const shortDate = date => formatDate(date, { day: 'numeric', month: 'short' });
-const SEQUENTIAL = ['#cde2fb', '#b7d3f6', '#9ec5f4', '#86b6ef', '#6da7ec', '#5598e7', '#3987e5', '#2a78d6', '#256abf', '#1c5cab', '#184f95', '#104281'];
-const TONE_COLORS = { good: '#1baf7a', bad: '#e34948', neutral: 'var(--party-accent)' };
+// Blue sequential ramp, dark surface: near-zero recedes toward the background.
+const SEQUENTIAL = ['#104281', '#184f95', '#1c5cab', '#256abf', '#2a78d6', '#3987e5', '#5598e7', '#6da7ec', '#86b6ef', '#9ec5f4', '#b7d3f6', '#cde2fb'];
+const TONE_COLORS = { good: '#199e70', bad: '#e66767', neutral: 'var(--party-accent)' };
 const SCOPE_LABELS = { nazionale: 'Nazionale', regionale: 'Regionale', locale: 'Locale' };
 
 function partyIndex(world) { return Object.fromEntries(world.parties.map(party => [party.id, party])); }
@@ -66,9 +66,9 @@ function nationalBars(world, poll, index, logo) {
     const margin = Math.round(1.96 * Math.sqrt(Math.max(0.0004, row.share / 100 * (1 - row.share / 100)) / poll.sample) * 1000) / 10;
     const width = row.share / max * 100;
     const tip = `${party.label}: ${pct(row.share)} (${signed(row.delta)} punti) · intervallo ${pct(Math.max(0, row.share - margin))}–${pct(row.share + margin)}`;
-    return `<div class="poll-bar-row ${party.isPlayer ? 'is-player' : ''}" data-tip="${esc(tip)}" tabindex="0"><span class="poll-bar-name">${emblem({ label: party.label, abbreviation: party.abbreviation, color: party.color, logo: logo?.(party.id) }, 'sm')}<span><strong>${esc(party.label)}</strong><small>${esc(FAMILY_LABELS[party.family] ?? '')}${party.isPlayer ? ' · il tuo partito' : ''}${party.refSource === 'real' ? ' · riferimento reale, stima simulata' : ''}</small></span></span><span class="poll-bar-track"><i class="poll-bar-fill" style="width:${width}%;background:${esc(party.color)}"></i><i class="poll-bar-whisker" style="left:${Math.max(0, (row.share - margin) / max * 100)}%;width:${Math.min(100, 2 * margin / max * 100)}%"></i></span><span class="poll-bar-value">${pct(row.share)}</span>${deltaChip(row.delta, party.isPlayer)}</div>`;
+    return `<div class="poll-bar-row ${party.isPlayer ? 'is-player' : ''}" data-tip="${esc(tip)}" tabindex="0"><span class="poll-bar-name">${emblem({ label: party.label, abbreviation: party.abbreviation, color: party.color, logo: logo?.(party.id) }, 'sm')}<span><strong>${esc(party.label)}</strong><small>${esc(party.isPlayer ? 'Il tuo partito' : `Strategia: ${STRATEGIES[party.strategy]?.label ?? 'autonoma'}`)}</small></span></span><span class="poll-bar-track"><i class="poll-bar-fill" style="width:${width}%;background:${esc(party.color)}"></i><i class="poll-bar-whisker" style="left:${Math.max(0, (row.share - margin) / max * 100)}%;width:${Math.min(100, 2 * margin / max * 100)}%"></i></span><span class="poll-bar-value">${pct(row.share)}</span>${deltaChip(row.delta, party.isPlayer)}</div>`;
   };
-  return `<div class="poll-bars">${rows.map(bar).join('')}<div class="poll-bar-row is-others"><span class="poll-bar-name"><span class="emblem emblem-sm emblem-ghost" aria-hidden="true">…</span><span><strong>Altri</strong><small>Liste minori</small></span></span><span class="poll-bar-track"><i class="poll-bar-fill" style="width:${others / max * 100}%;background:#b9bdb3"></i></span><span class="poll-bar-value">${pct(others)}</span><span></span></div></div><p class="poll-footnote">Barre = stima del sondaggio; la linea sottile indica l’intervallo del margine d’errore al 95%. Percentuali sui voti validi.</p>`;
+  return `<div class="poll-bars">${rows.map(bar).join('')}<div class="poll-bar-row is-others"><span class="poll-bar-name"><span class="emblem emblem-sm emblem-ghost" aria-hidden="true">…</span><span><strong>Altri</strong><small>Liste minori</small></span></span><span class="poll-bar-track"><i class="poll-bar-fill" style="width:${others / max * 100}%;background:#4d5752"></i></span><span class="poll-bar-value">${pct(others)}</span><span></span></div></div><p class="poll-footnote">Barre = stima del sondaggio; la linea sottile indica l’intervallo del margine d’errore al 95%. Percentuali sui voti validi.</p>`;
 }
 
 function trendChart(world, index) {
@@ -117,24 +117,35 @@ function regionalMap(world, poll) {
   return `<div class="region-grid">${tiles}</div><div class="region-scale"><span>${pct(min)}</span><i style="background:linear-gradient(90deg,${SEQUENTIAL.join(',')})"></i><span>${pct(max)}</span></div><p class="poll-footnote">Bordo dorato: la tua regione. Le differenze regionali sono simulate e cambiano con eventi territoriali e con la tua popolarità.</p>`;
 }
 
-function forcesGrid(state, world, poll, index, logo, realLeader) {
+const euro = value => Number(value).toLocaleString('it-IT', { maximumFractionDigits: 0 });
+// Relation with the player's party, -100..100: a word for it, never only a colour.
+const relationLabel = value => value >= 30 ? 'Alleato naturale' : value >= 10 ? 'Disponibile' : value > -10 ? 'Neutrale' : value > -30 ? 'Freddo' : 'Ostile';
+function forcesGrid(state, world, poll, index, logo, realLeader, secretary) {
   const player = world.parties.find(item => item.isPlayer);
   const playerAlliance = player ? allianceOf(world, player.id) : null;
   const rows = [...poll.results].sort((a, b) => b.share - a.share).map(row => {
     const party = index[row.partyId];
-    const leader = world.figures.find(item => item.id === party.leaderId);
     const alliance = allianceOf(world, party.id);
-    const compatible = player && COMPATIBLE_FAMILIES[player.family]?.includes(party.family);
-    const canPropose = player && !party.isPlayer && !playerAlliance && state.game?.status !== 'ended';
+    const strategy = STRATEGIES[party.strategy] ?? STRATEGIES.autonoma;
+    const canPropose = secretary && player && !party.isPlayer && !playerAlliance && state.game?.status !== 'ended';
+    const relation = Number(party.playerRelation ?? 0);
+    const leader = party.refSource === 'real' ? realLeader?.(party.id) : null;
     return `<article class="force-card ${party.isPlayer ? 'is-player' : ''}" style="--force:${esc(party.color)}">
-      <header>${emblem({ label: party.label, abbreviation: party.abbreviation, color: party.color, logo: logo?.(party.id) }, 'md')}<div><strong>${esc(party.label)}</strong><small>${esc(FAMILY_LABELS[party.family] ?? '')}</small></div><b>${pct(row.share)}</b></header>
-      <dl><div><dt>Guida</dt><dd>${esc(party.refSource === 'real' ? (realLeader?.(party.id) ?? 'Non documentata nel dataset') : leader ? leader.name : party.leaderRole ?? '—')}</dd></div><div><dt>Coesione</dt><dd><b class="hq-bar ${party.cohesion < 30 ? 'danger' : ''}"><i style="width:${party.cohesion}%"></i></b></dd></div></dl>
-      <div class="force-badges">${party.crisis ? '<span class="badge badge-bad">Crisi interna</span>' : ''}${alliance ? `<span class="badge">${glyph('link', 13)} ${esc(alliance.label)}</span>` : ''}${party.origin === 'scissione' ? '<span class="badge">Nata da una scissione</span>' : ''}${party.refSource === 'real' ? '<span class="badge">Riferimento reale · dati di gioco</span>' : ''}</div>
-      ${canPropose ? `<button class="secondary-button" data-world-alliance="${esc(party.id)}">Proponi un’alleanza · 1 giorno · 4 cap.${compatible ? '' : ' (distante)'}</button>` : ''}
-      ${party.isPlayer && playerAlliance ? `<button class="text-link" data-world-break="${esc(playerAlliance.id)}">Rompi ${esc(playerAlliance.label)}</button>` : ''}
+      <header>${emblem({ label: party.label, abbreviation: party.abbreviation, color: party.color, logo: logo?.(party.id) }, 'md')}<div><strong>${esc(party.label)}</strong><small>${party.isPlayer ? 'Il tuo partito' : `${esc(strategy.label)} da S${party.strategySince ?? 1}`}</small></div><b>${pct(row.share)}</b></header>
+      <dl>
+        <div><dt>Vertici (dato reale)</dt><dd>${esc(party.refSource === 'real' ? (leader ?? 'Non documentati nel dataset') : 'Il tuo gruppo dirigente')}</dd></div>
+        ${party.reference ? `<div><dt>2×1000 ${esc(party.reference.year)} (reale)</dt><dd>${pct(party.reference.shareOfChoices, 2)} · ${euro(party.reference.validChoices)} scelte</dd></div>` : ''}
+        <div><dt>Coesione (sim.)</dt><dd><b class="hq-bar ${party.cohesion < 30 ? 'danger' : ''}"><i style="width:${party.cohesion}%"></i></b></dd></div>
+        ${player && !party.isPlayer ? `<div><dt>Rapporto con te (sim.)</dt><dd><span class="relation-chip ${relation >= 10 ? 'good' : relation <= -10 ? 'bad' : ''}">${esc(relationLabel(relation))} · ${relation > 0 ? '+' : ''}${Math.round(relation)}</span></dd></div>` : ''}
+      </dl>
+      ${party.isPlayer ? '' : `<p class="force-strategy">${esc(strategy.detail)}</p>`}
+      <div class="force-badges">${party.crisis ? '<span class="badge badge-bad">Crisi interna</span>' : ''}${alliance ? `<span class="badge">${glyph('link', 13)} ${esc(alliance.label)}</span>` : ''}</div>
+      ${canPropose ? `<button class="secondary-button" data-world-alliance="${esc(party.id)}">Proponi un’intesa · 1 giorno · 4 cap.</button>` : ''}
+      ${party.isPlayer && playerAlliance && secretary ? `<button class="text-link" data-world-break="${esc(playerAlliance.id)}">Rompi ${esc(playerAlliance.label)}</button>` : ''}
     </article>`;
   }).join('');
-  return `<div class="force-grid">${rows}</div>`;
+  const note = player && !secretary ? '<p class="parliament-note">Alleanze e rotture le decide il segretario del partito: da iscritto o dirigente puoi solo influenzare i rapporti con le tue attività.</p>' : '';
+  return `${note}<div class="force-grid">${rows}</div>`;
 }
 
 function chronicle(world, limit = 10) {
@@ -155,7 +166,8 @@ export function renderPollsPage(state, options = {}) {
   const logo = options.logoFor;
   const panel = (kicker, title, body, extra = '') => `<section class="hq-panel poll-panel"><div class="home-section-heading"><div><span class="section-kicker">${kicker}</span><h2>${title}</h2></div>${extra}</div>${body}</section>`;
   const alliances = world.alliances.filter(item => item.status === 'active').map(item => `<div class="alliance-row">${glyph('link', 18)}<div><strong>${esc(item.label)}</strong><small>${item.partyIds.map(id => esc(index[id]?.label ?? id)).join(' + ')} · dal ${esc(shortDate(item.since))}</small></div><b class="hq-bar ${item.cohesion < 30 ? 'danger' : 'good'}"><i style="width:${item.cohesion}%"></i></b></div>`).join('') || '<p class="quiet-copy">Nessuna alleanza attiva.</p>';
-  const figures = [...world.figures].reverse().slice(0, 8).map(figure => `<div class="figure-row">${glyph(figure.role === 'Segreteria' ? 'crown' : 'user', 18)}<div><strong>${esc(figure.name)}</strong><small>${esc(figure.role)}${figure.partyId && index[figure.partyId] ? ` · ${esc(index[figure.partyId].label)}` : ''}${figure.status === 'dimesso' ? ' · ha lasciato' : ''}</small></div></div>`).join('');
+  const strategyRows = Object.entries(STRATEGIES).map(([id, item]) => { const members = world.parties.filter(party => party.active && party.strategy === id); return `<div class="figure-row">${glyph(id === 'governista' ? 'dome' : id === 'opposizione' ? 'megaphone' : id === 'coalizione' ? 'link' : 'route', 18)}<div><strong>${esc(item.label)} · ${members.length}</strong><small>${members.map(party => esc(party.abbreviation || party.label)).join(', ') || 'nessuna forza'}</small></div></div>`; }).join('');
+  const figures = world.figures.filter(item => item.simulated).slice(-4).reverse().map(figure => `<div class="figure-row">${glyph('user', 18)}<div><strong>${esc(figure.name)}</strong><small>${esc(figure.role)} · figura simulata, non una persona reale</small></div></div>`).join('');
   return `<div class="polls-page">
     ${barometer(state, world, poll, { logo })}
     <div class="poll-grid">
@@ -166,13 +178,13 @@ export function renderPollsPage(state, options = {}) {
       ${panel('TERRITORIO', 'Il tuo partito regione per regione', regionalMap(world, poll))}
       ${panel('CRONACA POLITICA', 'Cosa muove i sondaggi', chronicle(world, 6))}
     </div>
-    ${panel('MONDO POLITICO · SIMULATO', 'Le forze in campo', forcesGrid(state, world, poll, index, logo, options.realLeader))}
+    ${panel('PARTITI REALI · COMPORTAMENTI SIMULATI', 'Le forze in campo', forcesGrid(state, world, poll, index, logo, options.realLeader, options.secretary))}
     <div class="poll-grid">
-      ${panel('ALLEANZE', 'Intese e rotture', alliances)}
-      ${panel('FIGURE SIMULATE', 'Volti della scena', figures || '<p class="quiet-copy">Nessuna figura ancora.</p>')}
+      ${panel('ALLEANZE · SIMULATE', 'Intese e rotture', alliances)}
+      ${panel('STRATEGIE · SIMULATE', 'Chi sta dove', strategyRows + figures)}
     </div>
     ${dataTable(world, index)}
-    <p class="poll-footnote">Istituti, forze politiche, leader, alleanze ed eventi di questa pagina sono simulati (source: simulation). Un partito reale scelto come riferimento compare solo con il suo nome: le percentuali sono stime di gioco e non sondaggi reali.</p>
+    <p class="poll-footnote">I partiti sono reali; il punto di partenza delle stime è la quota reale di scelte del 2×1000 (MEF, dichiarazioni 2025), non un sondaggio. Istituti, percentuali settimanali, strategie, alleanze, rapporti ed eventi sono simulati (source: simulation) e non attribuiscono a partiti o persone reali decisioni mai prese.</p>
   </div>`;
 }
 
