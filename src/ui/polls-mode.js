@@ -1,12 +1,13 @@
-import { allianceOf, latestPoll, STRATEGIES } from '../core/world-engine.js?v=20260924-20';
-import { formatDate } from '../core/time.js?v=20260924-20';
-import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20260924-20';
-import { distinctSeries } from './charts.js?v=20260924-20';
+import { allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20260924-21';
+import { formatDate } from '../core/time.js?v=20260924-21';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20260924-21';
+import { distinctSeries } from './charts.js?v=20260924-21';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const pct = (value, digits = 1) => value === null || value === undefined ? '—' : `${Number(value).toLocaleString('it-IT', { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
 const signed = value => `${value > 0 ? '+' : value < 0 ? '−' : '±'}${Math.abs(Number(value) || 0).toLocaleString('it-IT', { maximumFractionDigits: 1 })}`;
 const shortDate = date => formatDate(date, { day: 'numeric', month: 'short' });
+const decimal = value => Number(value).toLocaleString('it-IT', { maximumFractionDigits: 2 });
 // Blue sequential ramp, dark surface: near-zero recedes toward the background.
 const SEQUENTIAL = ['#104281', '#184f95', '#1c5cab', '#256abf', '#2a78d6', '#3987e5', '#5598e7', '#6da7ec', '#86b6ef', '#9ec5f4', '#b7d3f6', '#cde2fb'];
 const TONE_COLORS = { good: '#199e70', bad: '#e66767', neutral: 'var(--party-accent)' };
@@ -39,13 +40,16 @@ function statTile(label, value, delta, series, note = '', emphasis = true) {
 }
 
 function barometer(state, world, poll, parties) {
-  const inOffice = ['active', 'crisis'].includes(state.parliament?.government?.status);
+  // An executive exists in the simulation when the Government is in office or, outside Parliament, the scenario has one.
+  const inOffice = ['active', 'crisis'].includes(state.parliament?.government?.status) || (!state.parliament?.government && Boolean(state.society?.executive));
+  const executive = poll.government ?? poll.executive ?? null;
+  const executiveOf = item => item?.government?.approval ?? item?.executive?.approval ?? null;
   const player = world.parties.find(item => item.isPlayer);
   const previous = world.polls.at(-2);
   const history = key => world.polls.slice(-12).map(item => key(item));
   const playerRow = player ? poll.results.find(row => row.partyId === player.id) : null;
   const headline = player
-    ? `<h2>${esc(player.label)} al ${pct(playerRow?.share)}</h2><p>${deltaChip(playerRow?.delta ?? 0, true)} rispetto al sondaggio precedente · ${poll.margin ? `margine d’errore ±${String(poll.margin).replace('.', ',')} punti` : playerRow?.simulated ? 'il tuo partito non è nella fonte reale: stima iniziale simulata' : 'media di più sondaggi reali'}</p>`
+    ? `<h2>${esc(player.label)} al ${pct(playerRow?.share)}</h2><p>${deltaChip(playerRow?.delta ?? 0, true)} rispetto al sondaggio precedente · ${poll.margin ? `margine d’errore ±${String(poll.margin).replace('.', ',')} punti` : playerRow?.simulated ? 'il tuo partito non è nella fonte reale: stima iniziale simulata' : 'media di più sondaggi reali'}${playerRow?.internal ? ' · non ancora rilevato dagli istituti: stima interna simulata' : ''}</p>`
     : `<h2>Gradimento personale al ${pct(poll.personal.approval, 0)}</h2><p>Sei indipendente: il barometro misura te, non un partito.</p>`;
   const region = world.place.region || 'Regione';
   const municipality = world.place.municipality || 'Comune';
@@ -56,7 +60,7 @@ function barometer(state, world, poll, parties) {
   ].join('') : '';
   const personal = [
     statTile('Gradimento personale', pct(poll.personal.approval, 0), previous ? Math.round((poll.personal.approval - previous.personal.approval) * 10) / 10 : 0, history(item => item.personal?.approval), 'Il tuo politico, separato dal partito'),
-    statTile('Gradimento del governo', poll.government ? pct(poll.government.approval, 0) : inOffice ? 'Non rilevato' : 'Nessun governo', poll.government && previous?.government ? Math.round((poll.government.approval - previous.government.approval) * 10) / 10 : null, history(item => item.government?.approval ?? null), poll.government ? 'Legato alla stabilità della maggioranza' : inOffice ? 'La fonte reale del primo sondaggio non lo misura: dal prossimo sondaggio (simulato)' : 'Si misura quando un governo è in carica', false),
+    statTile('Gradimento del governo', executive ? pct(executive.approval, 0) : inOffice ? 'Non rilevato' : 'Nessun governo', executive && Number.isFinite(executiveOf(previous)) ? Math.round((executive.approval - executiveOf(previous)) * 10) / 10 : null, history(executiveOf), poll.government ? 'Legato alla stabilità della maggioranza' : poll.executive ? `${poll.executive.label} · simulazione` : inOffice ? 'La fonte reale del primo sondaggio non lo misura: dal prossimo sondaggio (simulato)' : 'Si misura quando un governo è in carica', false),
     statTile('Indecisi', pct(poll.undecided, 0), previous ? Math.round((poll.undecided - previous.undecided) * 10) / 10 : 0, history(item => item.undecided), 'Fuori dal totale dei voti validi', false)
   ].join('');
   return `<section class="poll-hero" style="--hero-accent:${esc(player?.color ?? 'var(--party-accent)')}">
@@ -66,18 +70,41 @@ function barometer(state, world, poll, parties) {
   </section>`;
 }
 
+// The poll as published: the forces it measures, then "Altri" as a separate row. In the first (real) poll the player's
+// party, absent from the source, is shown apart as a marked simulated estimate, outside the real total. Below, the
+// forces under observation (still inside "Altri") and who entered or left the survey this week.
+const MOVE_LABELS = { rilevato: 'Entra nei sondaggi', consolidato: 'Si consolida', emergente: 'Emergente', 'non-rilevato': 'Esce dai sondaggi' };
+function moveText(move) {
+  if (move.to === 'rilevato' && move.from === 'consolidato') return 'Non più consolidato';
+  if (move.to === 'non-rilevato' && move.from === 'emergente') return 'Non sfonda';
+  return MOVE_LABELS[move.to] ?? PRESENCE_LABELS[move.to];
+}
 function nationalBars(world, poll, index, logo) {
-  const rows = [...poll.results].sort((a, b) => b.share - a.share);
-  const max = Math.max(...rows.map(row => row.share), 10);
-  const others = Math.round((100 - rows.reduce((sum, row) => sum + row.share, 0)) * 10) / 10;
+  const real = isReal(poll);
+  const rows = poll.results.filter(row => !row.outsideSource && index[row.partyId]).sort((a, b) => b.share - a.share);
+  const estimates = poll.results.filter(row => row.outsideSource && index[row.partyId]);
+  const others = Number.isFinite(poll.others) ? poll.others : Math.round((100 - rows.reduce((sum, row) => sum + row.share, 0)) * 10) / 10;
+  const max = Math.max(...rows.map(row => row.share), ...estimates.map(row => row.share), 10);
+  const entered = new Set((poll.moves ?? []).filter(move => move.to === 'rilevato' && move.from === 'emergente').map(move => move.id));
   const bar = row => {
     const party = index[row.partyId];
     const margin = poll.sample ? Math.round(1.96 * Math.sqrt(Math.max(0.0004, row.share / 100 * (1 - row.share / 100)) / poll.sample) * 1000) / 10 : 0;
     const width = row.share / max * 100;
-    const tip = poll.sample ? `${party.label}: ${pct(row.share)} (${signed(row.delta)} punti) · intervallo ${pct(Math.max(0, row.share - margin))}–${pct(row.share + margin)}` : `${party.label}: ${pct(row.share)} · ${row.simulated ? 'stima iniziale simulata (non presente nella fonte)' : `dato reale, ${poll.real?.label ?? 'fonte reale'}`}`;
-    return `<div class="poll-bar-row ${party.isPlayer ? 'is-player' : ''}" data-tip="${esc(tip)}" tabindex="0"><span class="poll-bar-name">${emblem({ label: party.label, abbreviation: party.abbreviation, color: party.color, logo: logo?.(party.id) }, 'sm')}<span><strong>${esc(party.label)}</strong><small>${esc(party.isPlayer ? 'Il tuo partito' : `${party.position ? `${party.position} · ` : ''}${STRATEGIES[party.strategy]?.label ?? 'autonoma'}`)}</small></span></span><span class="poll-bar-track"><i class="poll-bar-fill" style="width:${width}%;background:${esc(party.color)}"></i>${margin ? `<i class="poll-bar-whisker" style="left:${Math.max(0, (row.share - margin) / max * 100)}%;width:${Math.min(100, 2 * margin / max * 100)}%"></i>` : ''}</span><span class="poll-bar-value">${pct(row.share)}</span>${deltaChip(row.delta, party.isPlayer)}</div>`;
+    const estimate = row.outsideSource || row.internal;
+    const status = row.outsideSource ? 'stima simulata: il partito non è nella fonte reale' : row.internal ? 'non ancora rilevato dagli istituti: stima interna simulata' : null;
+    const tip = poll.sample ? `${party.label}: ${pct(row.share)} (${signed(row.delta)} punti) · intervallo ${pct(Math.max(0, row.share - margin))}–${pct(row.share + margin)}${status ? ` · ${status}` : ''}` : `${party.label}: ${pct(row.share)} · ${status ?? `dato reale, ${poll.real?.label ?? 'fonte reale'}`}`;
+    const note = row.outsideSource ? 'Stima simulata · non nella fonte reale' : row.internal ? 'Non ancora rilevato · stima interna' : party.isPlayer ? 'Il tuo partito' : `${party.position ? `${party.position} · ` : ''}${STRATEGIES[party.strategy]?.label ?? 'autonoma'}`;
+    const change = entered.has(row.partyId) ? '<span class="delta delta-new">nuovo</span>' : deltaChip(row.delta, party.isPlayer);
+    return `<div class="poll-bar-row ${party.isPlayer ? 'is-player' : ''} ${estimate ? 'is-estimate' : ''}" data-tip="${esc(tip)}" tabindex="0"><span class="poll-bar-name">${emblem({ label: party.label, abbreviation: party.abbreviation, color: party.color, logo: logo?.(party.id) }, 'sm')}<span><strong>${esc(party.label)}</strong><small>${esc(note)}</small></span></span><span class="poll-bar-track"><i class="poll-bar-fill" style="width:${width}%;background-color:${esc(party.color)}"></i>${margin ? `<i class="poll-bar-whisker" style="left:${Math.max(0, (row.share - margin) / max * 100)}%;width:${Math.min(100, 2 * margin / max * 100)}%"></i>` : ''}</span><span class="poll-bar-value">${pct(row.share)}</span>${change}</div>`;
   };
-  return `<div class="poll-bars">${rows.map(bar).join('')}<div class="poll-bar-row is-others"><span class="poll-bar-name"><span class="emblem emblem-sm emblem-ghost" aria-hidden="true">…</span><span><strong>Altri</strong><small>Liste minori</small></span></span><span class="poll-bar-track"><i class="poll-bar-fill" style="width:${others / max * 100}%;background:#4d5752"></i></span><span class="poll-bar-value">${pct(others)}</span><span></span></div></div><p class="poll-footnote">${poll.sample ? 'Barre = stima del sondaggio; la linea sottile indica l’intervallo del margine d’errore al 95%. Percentuali sui voti validi.' : `Dato reale: ${esc(poll.real?.label ?? 'fonte reale')} del ${esc(formatDate(poll.real?.publishedAt ?? poll.date))}, media di più istituti (nessun margine d’errore unico). Dalla prossima settimana i sondaggi sono simulati e reagiscono alla tua carriera.`}</p>`;
+  const othersRow = `<div class="poll-bar-row is-others" data-tip="${esc(real ? `Altri: ${pct(others)} · come nella fonte reale (liste minori non indicate)` : `Altri: ${pct(others)} · liste minori e forze non rilevate dagli istituti`)}" tabindex="0"><span class="poll-bar-name"><span class="emblem emblem-sm emblem-ghost" aria-hidden="true">…</span><span><strong>Altri</strong><small>${real ? 'Liste minori · dato della fonte' : 'Liste minori e forze non rilevate'}</small></span></span><span class="poll-bar-track"><i class="poll-bar-fill" style="width:${others / max * 100}%;background-color:#4d5752"></i></span><span class="poll-bar-value">${pct(others)}</span><span></span></div>`;
+  const outside = estimates.length ? `<div class="poll-bars-divider" role="separator"><span>Fuori dalla fonte reale</span></div>${estimates.map(bar).join('')}` : '';
+  const watch = (poll.emerging ?? []).length ? `<div class="poll-watch"><strong>In osservazione</strong>${poll.emerging.map(item => `<span class="poll-watch-item" data-tip="${esc(`${item.label}: forza emergente, circa ${pct(item.share)} (stima simulata, ancora dentro “Altri”)`)}" tabindex="0">${esc(item.abbreviation || item.label)} · ~${pct(item.share)}</span>`).join('')}</div>` : '';
+  const moves = (poll.moves ?? []).length ? `<div class="poll-moves">${poll.moves.map(move => `<span class="poll-move poll-move-${esc(move.to)}">${esc(moveText(move))}: <strong>${esc(move.label)}</strong></span>`).join('')}</div>` : '';
+  const footnote = poll.sample
+    ? 'Barre = stima del sondaggio; la linea sottile indica l’intervallo del margine d’errore al 95%. Percentuali sui voti validi. Barre tratteggiate = stima interna di una forza non ancora rilevata.'
+    : `Dato reale: ${esc(poll.real?.label ?? 'fonte reale')} del ${esc(formatDate(poll.real?.publishedAt ?? poll.date))}, media di più istituti (nessun margine d’errore unico). Sono mostrate solo le forze presenti nella fonte, con “Altri” come nella fonte${estimates.length ? '; la barra tratteggiata è una stima simulata del tuo partito, fuori dal totale reale' : ''}. Dalla prossima settimana i sondaggi sono simulati e reagiscono alla tua carriera.`;
+  return `<div class="poll-bars">${rows.map(bar).join('')}${othersRow}${outside}</div>${moves}${watch}<p class="poll-footnote">${footnote}</p>`;
 }
 
 const shortLabel = item => item.abbreviation || (String(item.label).length > 14 ? `${String(item.label).slice(0, 13)}…` : item.label);
@@ -100,11 +127,12 @@ function trendChart(world, index) {
   const every = Math.max(1, Math.ceil(polls.length / 6));
   const xTicks = polls.map((poll, i) => i % every === 0 || i === polls.length - 1 ? `<text class="tick" x="${x(i)}" y="${H - 8}" text-anchor="middle">S${poll.week}</text>` : '').join('');
   const lines = series.map(item => {
-    const d = item.values.map((v, i) => Number.isFinite(v) ? `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}` : '').join(' ');
+    // A force that entered (or left) the survey has gaps: every stretch starts with its own move.
+    const d = item.values.map((v, i) => Number.isFinite(v) ? `${i === 0 || !Number.isFinite(item.values[i - 1]) ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}` : '').join(' ');
     return `<path class="series ${item.player ? 'is-player' : ''}" d="${d}" style="stroke:${esc(item.color)}"/>`;
   }).join('');
   // End labels sit in a column with leader lines instead of being nudged off their lines.
-  const ends = series.map(item => ({ ...item, endY: y(item.values.at(-1) ?? 0) })).sort((a, b) => a.endY - b.endY);
+  const ends = series.filter(item => Number.isFinite(item.values.at(-1))).map(item => ({ ...item, endY: y(item.values.at(-1)) })).sort((a, b) => a.endY - b.endY);
   let cursor = T;
   for (const item of ends) { item.labelY = Math.max(item.endY, cursor); cursor = item.labelY + 16; }
   const overflow = cursor - 16 - (H - B);
@@ -152,6 +180,7 @@ function forcesGrid(state, world, poll, index, logo, realLeader, secretary, opti
         <div><dt>Vertici (dato reale)</dt><dd>${esc(party.refSource === 'real' ? (leader ?? 'Non documentati nel dataset') : party.isPlayer ? 'Il tuo gruppo dirigente' : 'Forza simulata')}</dd></div>
         ${party.position ? `<div><dt>Collocazione${party.refSource === 'real' ? ' (documento 24/09/2026)' : ''}</dt><dd>${esc(party.position)}</dd></div>` : ''}
         ${party.pollReference ? `<div><dt>Punto di partenza (reale)</dt><dd>${pct(party.pollReference.share)} · ${esc(party.pollReference.label)}</dd></div>` : ''}
+        ${party.enteredWeek ? `<div><dt>Nei sondaggi (sim.)</dt><dd>Dalla settimana ${party.enteredWeek}</dd></div>` : ''}
         ${party.governing ? '<div><dt>Maggioranza reale</dt><dd>Nel governo in carica all’avvio</dd></div>' : ''}
         ${party.life?.congresses ? `<div><dt>Congressi (sim.)</dt><dd>${party.life.congresses} · leadership ${esc(party.life.leadership)}</dd></div>` : ''}
         ${party.reference ? `<div><dt>2×1000 ${esc(party.reference.year)} (reale)</dt><dd>${pct(party.reference.shareOfChoices, 2)} · ${euro(party.reference.validChoices)} scelte</dd></div>` : ''}
@@ -159,7 +188,7 @@ function forcesGrid(state, world, poll, index, logo, realLeader, secretary, opti
         ${player && !party.isPlayer ? `<div><dt>Rapporto con te (sim.)</dt><dd><span class="relation-chip ${relation >= 10 ? 'good' : relation <= -10 ? 'bad' : ''}">${esc(relationLabel(relation))} · ${relation > 0 ? '+' : ''}${Math.round(relation)}</span></dd></div>` : ''}
       </dl>
       ${party.isPlayer ? '' : `<p class="force-strategy">${esc(strategy.detail)}</p>`}
-      <div class="force-badges">${party.crisis ? '<span class="badge badge-bad">Crisi interna</span>' : ''}${alliance ? `<span class="badge">${glyph('link', 13)} ${esc(alliance.label)}</span>` : ''}</div>
+      <div class="force-badges">${party.presence?.status ? `<span class="badge badge-presence presence-${esc(party.presence.status)}">${esc(PRESENCE_LABELS[party.presence.status])}</span>` : ''}${party.crisis ? '<span class="badge badge-bad">Crisi interna</span>' : ''}${alliance ? `<span class="badge">${glyph('link', 13)} ${esc(alliance.label)}</span>` : ''}</div>
       ${canPropose ? oddsBlock(options.allianceOdds?.(party.id)) : ''}
       ${canPropose ? `<button class="secondary-button" data-world-alliance="${esc(party.id)}">Proponi un’intesa · 1 giorno · 4 cap.</button>` : ''}
       ${party.isPlayer && playerAlliance && secretary ? `<button class="text-link" data-world-break="${esc(playerAlliance.id)}">Rompi ${esc(playerAlliance.label)}</button>` : ''}
@@ -167,6 +196,32 @@ function forcesGrid(state, world, poll, index, logo, realLeader, secretary, opti
   }).join('');
   const note = player && !secretary ? '<p class="parliament-note">Alleanze e rotture le decide il segretario del partito: da iscritto o dirigente puoi solo influenzare i rapporti con le tue attività.</p>' : '';
   return `${note}<div class="force-grid">${rows}</div>`;
+}
+
+// Presence in the polls: who is consolidated, surveyed, emerging or outside, the latest moves and the rules.
+function presencePanel(world) {
+  const overview = presenceOverview(world);
+  if (!overview) return '';
+  const chip = item => `<span class="presence-chip ${item.isPlayer ? 'is-player' : ''}" data-tip="${esc(`${item.label}${item.since ? ` · in questo stato dalla settimana ${item.since}` : ''}`)}" tabindex="0">${esc(item.abbreviation || item.label)}</span>`;
+  const group = (id, label, items, note, body = items.map(chip).join('') || '<em>nessuna forza</em>') => `<div class="presence-group presence-${id}"><div><strong>${esc(label)} · ${items.length ?? items}</strong><small>${esc(note)}</small></div><div class="presence-chips">${body}</div></div>`;
+  const emerging = overview.emerging.map(item => `<span class="presence-chip is-emerging" data-tip="${esc(`${item.label}: circa ${pct(item.share)} (stima simulata, ancora dentro “Altri”)`)}" tabindex="0">${esc(item.abbreviation || item.label)} · ~${pct(item.share)}</span>`).join('') || '<em>nessuna forza</em>';
+  const exited = overview.exited.map(item => `<span class="presence-chip is-out" data-tip="${esc(`${item.label}: uscita dalla rilevazione nella settimana ${item.week}; la sua storia nei sondaggi resta`)}" tabindex="0">${esc(item.abbreviation || item.label)} · uscita S${item.week}</span>`).join('');
+  const rules = PRESENCE_RULES;
+  const moves = overview.moves.length ? `<ul class="presence-moves">${overview.moves.map(move => `<li><span>S${move.week}</span><b>${esc(move.label)}</b><em>${esc(PRESENCE_LABELS[move.from])} → ${esc(PRESENCE_LABELS[move.to])}</em></li>`).join('')}</ul>` : '<p class="quiet-copy">Nessun ingresso o uscita finora.</p>';
+  return `<div class="presence-grid">
+      ${group('consolidato', 'Consolidati', overview.consolidated, `Almeno ${decimal(rules.consolidate.share)}% da ${rules.consolidate.weeks} settimane`)}
+      ${group('rilevato', 'Rilevati', overview.surveyed, 'Con una propria voce nei sondaggi')}
+      ${group('emergente', 'Emergenti', overview.emerging, 'Osservati, ancora dentro “Altri”', emerging)}
+      <div class="presence-group presence-non-rilevato"><div><strong>Non rilevati · ${overview.outside}</strong><small>Forze del database fuori dai sondaggi: nessuna stima pubblicata</small></div>${exited ? `<div class="presence-chips">${exited}</div>` : ''}</div>
+    </div>
+    <h3 class="presence-subtitle">Ultimi ingressi e uscite</h3>${moves}
+    <details class="presence-rules"><summary>Come si entra e si esce dai sondaggi</summary><ul>
+      <li><strong>Emergente</strong>: almeno ${decimal(rules.emerge.share)}% per ${rules.emerge.weeks} settimane, se in crescita, molto visibile o già oltre ${decimal(rules.emerge.size)}%.</li>
+      <li><strong>Rilevato</strong>: da emergente, almeno ${decimal(rules.enter.share)}% per ${rules.enter.weeks} settimane, dopo almeno ${rules.enter.minWeeks} settimane di osservazione e con abbastanza visibilità.</li>
+      <li><strong>Consolidato</strong>: almeno ${decimal(rules.consolidate.share)}% per ${rules.consolidate.weeks} settimane; torna rilevato sotto ${decimal(rules.weaken.share)}% per ${rules.weaken.weeks} settimane.</li>
+      <li><strong>Uscita</strong>: sotto ${decimal(rules.exit.share)}% per ${rules.exit.weeks} settimane, dopo almeno ${rules.exit.minWeeks} settimane nei sondaggi; poi ${rules.exit.cooldown} settimane prima di poter riemergere. Un’emergente che non sfonda in ${rules.fade.maxWeeks} settimane torna fuori per ${rules.fade.cooldown} settimane.</li>
+      <li>Una forza fuori dai sondaggi cresce solo se c’è una ragione: un partito vicino in crisi o in calo, la sfiducia nelle istituzioni, la campagna per le europee, l’attenzione dei media, le elezioni. Nessun ingresso casuale.</li>
+    </ul></details>`;
 }
 
 function chronicle(world, limit = 10) {
@@ -187,7 +242,7 @@ export function renderPollsPage(state, options = {}) {
   const logo = options.logoFor;
   const panel = (kicker, title, body, extra = '') => `<section class="hq-panel poll-panel"><div class="home-section-heading"><div><span class="section-kicker">${kicker}</span><h2>${title}</h2></div>${extra}</div>${body}</section>`;
   const alliances = world.alliances.filter(item => item.status === 'active').map(item => `<div class="alliance-row">${glyph('link', 18)}<div><strong>${esc(item.label)}</strong><small>${item.partyIds.map(id => esc(index[id]?.label ?? id)).join(' + ')} · dal ${esc(shortDate(item.since))}</small></div><b class="hq-bar ${item.cohesion < 30 ? 'danger' : 'good'}"><i style="width:${item.cohesion}%"></i></b></div>`).join('') || '<p class="quiet-copy">Nessuna alleanza attiva.</p>';
-  const strategyRows = Object.entries(STRATEGIES).map(([id, item]) => { const members = world.parties.filter(party => party.active && party.strategy === id); return `<div class="figure-row">${glyph(id === 'governista' ? 'dome' : id === 'opposizione' ? 'megaphone' : id === 'coalizione' ? 'link' : 'route', 18)}<div><strong>${esc(item.label)} · ${members.length}</strong><small>${members.map(party => esc(party.abbreviation || party.label)).join(', ') || 'nessuna forza'}</small></div></div>`; }).join('');
+  const strategyRows = Object.entries(STRATEGIES).map(([id, item]) => { const members = world.parties.filter(party => party.active && (party.isPlayer || isSurveyed(party)) && party.strategy === id); return `<div class="figure-row">${glyph(id === 'governista' ? 'dome' : id === 'opposizione' ? 'megaphone' : id === 'coalizione' ? 'link' : 'route', 18)}<div><strong>${esc(item.label)} · ${members.length}</strong><small>${members.map(party => esc(party.abbreviation || party.label)).join(', ') || 'nessuna forza'}</small></div></div>`; }).join('');
   const figures = world.figures.filter(item => item.simulated).slice(-4).reverse().map(figure => `<div class="figure-row">${glyph('user', 18)}<div><strong>${esc(figure.name)}</strong><small>${esc(figure.role)} · figura simulata, non una persona reale</small></div></div>`).join('');
   return `<div class="polls-page">
     ${barometer(state, world, poll, { logo })}
@@ -200,12 +255,13 @@ export function renderPollsPage(state, options = {}) {
       ${panel('CRONACA POLITICA', 'Cosa muove i sondaggi', chronicle(world, 6))}
     </div>
     ${panel('PARTITI REALI · COMPORTAMENTI SIMULATI', 'Le forze in campo', forcesGrid(state, world, poll, index, logo, options.realLeader, options.secretary, { allianceOdds: options.allianceOdds }))}
+    ${panel('PRESENZA NEI SONDAGGI · SIMULAZIONE', 'Chi entra e chi esce', presencePanel(world))}
     <div class="poll-grid">
       ${panel('ALLEANZE · SIMULATE', 'Intese e rotture', alliances)}
       ${panel('STRATEGIE · SIMULATE', 'Chi sta dove', strategyRows + figures)}
     </div>
     ${dataTable(world, index)}
-    <p class="poll-footnote">I partiti sono reali; il punto di partenza delle stime è la quota reale di scelte del 2×1000 (MEF, dichiarazioni 2025), non un sondaggio. Istituti, percentuali settimanali, strategie, alleanze, rapporti ed eventi sono simulati (source: simulation) e non attribuiscono a partiti o persone reali decisioni mai prese.</p>
+    <p class="poll-footnote">I partiti sono reali. Il primo sondaggio della carriera è la fotografia della fonte reale indicata: solo le forze che misura, con “Altri” come nella fonte. Da lì istituti, percentuali settimanali, ingressi e uscite dai sondaggi, strategie, alleanze, rapporti ed eventi sono simulati (source: simulation) e non attribuiscono a partiti o persone reali decisioni mai prese. Le forze del database fuori dai sondaggi non hanno stime pubblicate finché non emergono.</p>
   </div>`;
 }
 
@@ -217,7 +273,7 @@ export function renderBarometerPanel(state) {
   const player = world.parties.find(item => item.isPlayer);
   const row = player ? poll.results.find(item => item.partyId === player.id) : null;
   const series = world.polls.slice(-12).map(item => player ? item.results.find(entry => entry.partyId === player.id)?.share : item.personal?.approval);
-  return `<div class="barometer"><div class="barometer-main"><div><small>${player ? esc(player.label) : 'Gradimento personale'}</small><strong>${player ? pct(row?.share) : pct(poll.personal.approval, 0)}</strong>${player ? deltaChip(row?.delta ?? 0, true) : ''}</div>${sparkline(series, player?.color ?? 'var(--party-accent)')}</div><dl class="hq-facts"><div><dt>Gradimento personale</dt><dd>${pct(poll.personal.approval, 0)}</dd></div>${player ? `<div><dt>${esc(world.place.municipality || 'Territorio')}</dt><dd>${pct(poll.local)}</dd></div>` : ''}${poll.government ? `<div><dt>Governo</dt><dd>${pct(poll.government.approval, 0)}</dd></div>` : ''}<div><dt>${isReal(poll) ? 'Fonte' : 'Istituto'}</dt><dd>${esc(poll.institute)} · ${marginText(poll)}</dd></div></dl></div>${chronicle(world, 3)}`;
+  return `<div class="barometer"><div class="barometer-main"><div><small>${player ? esc(player.label) : 'Gradimento personale'}</small><strong>${player ? pct(row?.share) : pct(poll.personal.approval, 0)}</strong>${player ? deltaChip(row?.delta ?? 0, true) : ''}</div>${sparkline(series, player?.color ?? 'var(--party-accent)')}</div><dl class="hq-facts"><div><dt>Gradimento personale</dt><dd>${pct(poll.personal.approval, 0)}</dd></div>${player ? `<div><dt>${esc(world.place.municipality || 'Territorio')}</dt><dd>${pct(poll.local)}</dd></div>` : ''}${poll.government ?? poll.executive ? `<div><dt>Governo</dt><dd>${pct((poll.government ?? poll.executive).approval, 0)}</dd></div>` : ''}<div><dt>${isReal(poll) ? 'Fonte' : 'Istituto'}</dt><dd>${esc(poll.institute)} · ${marginText(poll)}</dd></div></dl></div>${chronicle(world, 3)}`;
 }
 
 // Tooltips for charts and marks: values stay reachable through labels and the data table.

@@ -130,7 +130,9 @@ assert.ok(seen.newElection && seen.memoryAtElection, 'Nuove elezioni, con la mem
 assert.ok((final.game.memory ?? []).length >= 3, 'La carriera accumula una memoria politica.');
 assert.ok(final.game.timeline.length >= 8, 'La cronologia racconta la carriera.');
 assert.ok(final.game.week.index >= 180 && final.society.history.length >= 100 && final.world.polls.length >= 50, 'Anni di società e sondaggi (lo storico dei sondaggi conserva l’ultimo anno).');
-assert.ok(final.world.parties.every(party => party.isPlayer || party.reference?.source === 'real' || party.pollReference?.source === 'real' || (party.origin === 'evoluzione' && party.refSource === 'simulation' && /simulat/.test(party.label))), 'Gli altri partiti restano reali; le forze nate nella partita sono dichiaratamente simulate.');
+// Forces of the database that entered the polls during the career keep their real identity.
+const realIds = new Set([...db().parties, ...db().politicalMovements].filter(item => item.source === 'real').map(item => item.id));
+assert.ok(final.world.parties.every(party => party.isPlayer || party.reference?.source === 'real' || party.pollReference?.source === 'real' || (party.refSource === 'real' && realIds.has(party.id)) || (party.origin === 'evoluzione' && party.refSource === 'simulation' && /simulat/.test(party.label))), 'Gli altri partiti restano reali; le forze nate nella partita sono dichiaratamente simulate.');
 
 // 5. Saves: everything persists after a reload; an old save is migrated without losing the career.
 store.save();

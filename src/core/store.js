@@ -1,28 +1,28 @@
-import { DATA_SOURCES, emptyDataset, isSelectableParty } from '../data/schema.js?v=20260924-20';
-import { makeDemoState } from '../data/demo.js?v=20260924-20';
-import { CAREER_LEVELS, initialCareerStatistics } from '../data/regions.js?v=20260924-20';
-import { storage } from './storage.js?v=20260924-20';
-import { loadSettings } from './settings.js?v=20260924-20';
-import { advanceDays, formatDate } from './time.js?v=20260924-20';
-import { validateNewCareerDraft } from './career-rules.js?v=20260924-20';
-import { advanceCampaign, breakCampaignAlliance, createCampaign, decideCampaignEvent, negotiateCampaignAlliance, performCampaignActivity } from './campaign-engine.js?v=20260924-20';
-import { createReferenceGovernment, neverHadGovernment, offerGroupSupport, requestGovernmentPost, withdrawGroupSupport, partnerSatisfaction, acceptLawDemand, activeMinisters, amendLawPolicy, askConfidenceOnLaw, groupProfile, issueDecree, majoritySummit, reshuffleMinister, setGovernmentProgram, settlePartnerDemand, withdrawLaw, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20260924-20';
-import { setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, saveForElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20260924-20';
-import { COMMUNICATION_STYLES, GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20260924-20';
-import { AREA_BY_ID, BUDGET_SESSION, GOVERNMENT_LINES, areaOf } from '../data/simulation/policy-rules.js?v=20260924-20';
-import { acceptAlliance, advanceWorld, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setPlayerParty, withPositions } from './world-engine.js?v=20260924-20';
-import { DIFFICULTIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20260924-20';
-import { WORLD_PARTY_COUNT } from '../data/simulation/polling-rules.js?v=20260924-20';
-import { isPrimeMinister } from './roles.js?v=20260924-20';
-import { memoryAbout, memoryBalance, memoryWeight, recordWhy, remember } from './career-engine.js?v=20260924-20';
-import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20260924-20';
-import { advanceSociety, applyBudgetPlan, applyLawToSociety, calibrateWeights, createSociety, explainMood, measureDesign, mediaEvent, normalizeSociety, provisionalBudget, publicBudgetChoice, regionAttention, revokeMeasure, segmentAttention, societyMood, societyShock } from './society-engine.js?v=20260924-20';
-import { ACTIVITY_MEDIA, INDICATORS, ISSUE_TOPICS, SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-20';
-import { book, hasAsset, releaseElectionFund, setBudgetLevel } from './finance-engine.js?v=20260924-20';
-import { isPartyLeader, treasuryBook } from './organization-engine.js?v=20260924-20';
-import { selectContacts, syncContacts } from './contacts-engine.js?v=20260924-20';
-import { NEWS_TEMPLATES, composeHeadline, weeklyNews } from './news-engine.js?v=20260924-20';
-import { macroAreaOf, MACRO_AREAS } from '../data/simulation/policy-rules.js?v=20260924-20';
+import { DATA_SOURCES, emptyDataset, isSelectableParty } from '../data/schema.js?v=20260924-21';
+import { makeDemoState } from '../data/demo.js?v=20260924-21';
+import { CAREER_LEVELS, initialCareerStatistics } from '../data/regions.js?v=20260924-21';
+import { storage } from './storage.js?v=20260924-21';
+import { loadSettings } from './settings.js?v=20260924-21';
+import { advanceDays, formatDate } from './time.js?v=20260924-21';
+import { validateNewCareerDraft } from './career-rules.js?v=20260924-21';
+import { advanceCampaign, breakCampaignAlliance, createCampaign, decideCampaignEvent, negotiateCampaignAlliance, performCampaignActivity } from './campaign-engine.js?v=20260924-21';
+import { createReferenceGovernment, neverHadGovernment, offerGroupSupport, requestGovernmentPost, withdrawGroupSupport, partnerSatisfaction, acceptLawDemand, activeMinisters, amendLawPolicy, askConfidenceOnLaw, groupProfile, issueDecree, majoritySummit, reshuffleMinister, setGovernmentProgram, settlePartnerDemand, withdrawLaw, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20260924-21';
+import { setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, saveForElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20260924-21';
+import { COMMUNICATION_STYLES, GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20260924-21';
+import { AREA_BY_ID, BUDGET_SESSION, GOVERNMENT_LINES, areaOf } from '../data/simulation/policy-rules.js?v=20260924-21';
+import { acceptAlliance, advanceWorld, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setPlayerParty, withLatentForces, withPositions } from './world-engine.js?v=20260924-21';
+import { DIFFICULTIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20260924-21';
+import { WORLD_PARTY_COUNT } from '../data/simulation/polling-rules.js?v=20260924-21';
+import { isPrimeMinister } from './roles.js?v=20260924-21';
+import { memoryAbout, memoryBalance, memoryWeight, recordWhy, remember } from './career-engine.js?v=20260924-21';
+import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20260924-21';
+import { advanceSociety, applyBudgetPlan, applyLawToSociety, calibrateWeights, createSociety, explainMood, measureDesign, mediaEvent, normalizeSociety, provisionalBudget, publicBudgetChoice, regionAttention, revokeMeasure, segmentAttention, societyMood, societyShock } from './society-engine.js?v=20260924-21';
+import { ACTIVITY_MEDIA, INDICATORS, ISSUE_TOPICS, SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-21';
+import { book, hasAsset, releaseElectionFund, setBudgetLevel } from './finance-engine.js?v=20260924-21';
+import { isPartyLeader, treasuryBook } from './organization-engine.js?v=20260924-21';
+import { selectContacts, syncContacts } from './contacts-engine.js?v=20260924-21';
+import { NEWS_TEMPLATES, composeHeadline, weeklyNews } from './news-engine.js?v=20260924-21';
+import { macroAreaOf, MACRO_AREAS } from '../data/simulation/policy-rules.js?v=20260924-21';
 
 const STATE_VERSION = 8;
 const POSITIONS_SET = new Set(['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra']);
@@ -108,6 +108,8 @@ let realForces = [];
 let twoPerThousandById = new Map();
 let realPollStart = null;
 let realPositions = new Map();
+// The other forces of the database, outside the opening poll: they can enter the polls later in the simulation.
+let realLatent = [];
 // New careers start on the date of the real snapshot, so that government, Parliament and the opening poll are current.
 let realStartDate = null;
 // The Government in office at the start, derived from the real data (government-reference.js): every career finds it.
@@ -120,22 +122,49 @@ function forcesFrom({ twoPerThousand = [], parties = [], movements = [], coaliti
   realPositions = new Map(entities.filter(item => item.politicalPosition).map(item => [item.id, item.politicalPosition]));
   twoPerThousandById = new Map(twoPerThousand.filter(row => row.source === DATA_SOURCES.REAL && row.verified === true && catalog.has(row.partyId)).map(row => [canonical(row.partyId), row]));
   const governing = new Set(governingIds.map(canonical));
-  const reference = id => { const row = twoPerThousandById.get(id); return row ? { validChoices: row.validChoices, shareOfChoices: row.shareOfChoices, amountEuro: row.amountEuro, year: row.declarationYear, source: DATA_SOURCES.REAL } : null; };
+  const reference = reference2x1000;
   // The latest real poll available on the day the career starts.
   const poll = polls.filter(item => item.source === DATA_SOURCES.REAL && item.verified === true && item.results?.length && (!realStartDate || String(item.publishedAt) <= realStartDate)).sort((a, b) => String(b.publishedAt).localeCompare(String(a.publishedAt)))[0];
+  let forces;
   if (poll) {
     const rows = poll.results.filter(row => catalog.has(canonical(row.entityId)));
     realPollStart = { id: poll.id, label: poll.label, publishedAt: poll.publishedAt, fieldworkFrom: poll.fieldworkFrom ?? null, fieldworkTo: poll.fieldworkTo ?? null, method: poll.method ?? null, sourceUrl: poll.sourceUrl, sourceName: poll.sourceName, results: rows.map(row => ({ partyId: canonical(row.entityId), share: row.share, delta: row.delta ?? 0 })) };
-    return rows.map(row => {
+    forces = rows.map(row => {
       const entity = catalog.get(canonical(row.entityId));
       return { id: entity.id, label: row.label, officialName: entity.officialName, abbreviation: entity.abbreviation ?? null, share: row.share, position: entity.politicalPosition ?? null, governing: governing.has(entity.id), reference: reference(entity.id), pollReference: { share: row.share, label: poll.label, publishedAt: poll.publishedAt, sourceUrl: poll.sourceUrl, source: DATA_SOURCES.REAL } };
     });
+  } else {
+    realPollStart = null;
+    forces = [...twoPerThousandById.entries()].sort((a, b) => b[1].validChoices - a[1].validChoices).slice(0, WORLD_PARTY_COUNT).map(([id, row]) => {
+      const party = catalog.get(id) ?? catalog.get(row.partyId);
+      return { id: party.id, label: party.officialName, abbreviation: party.abbreviation ?? null, share: row.shareOfChoices, position: party.politicalPosition ?? null, governing: governing.has(party.id), reference: reference(party.id) };
+    });
   }
-  realPollStart = null;
-  return [...twoPerThousandById.entries()].sort((a, b) => b[1].validChoices - a[1].validChoices).slice(0, WORLD_PARTY_COUNT).map(([id, row]) => {
-    const party = catalog.get(id) ?? catalog.get(row.partyId);
-    return { id: party.id, label: party.officialName, abbreviation: party.abbreviation ?? null, share: row.shareOfChoices, position: party.politicalPosition ?? null, governing: governing.has(party.id), reference: reference(party.id) };
-  });
+  realLatent = latentCandidates(entities, parties, forces, coalitions);
+  return forces;
+}
+const reference2x1000 = id => { const row = twoPerThousandById.get(id); return row ? { validChoices: row.validChoices, shareOfChoices: row.shareOfChoices, amountEuro: row.amountEuro, year: row.declarationYear, source: DATA_SOURCES.REAL } : null; };
+// Every other force of the database can enter the polls later: the active real parties and movements (not the
+// historical ones, not the duplicates, not the components of a list the poll already measures) and the parties added
+// by the owner. They start outside the polls, with no published figure.
+function latentCandidates(entities, parties, forces, coalitions) {
+  const measured = new Set(forces.map(force => force.id));
+  const inLists = new Set(coalitions.filter(item => measured.has(item.id)).flatMap(item => item.componentPartyIds ?? []));
+  const real = entities.filter(item => item.entityType !== 'coalition' && !item.sameEntityAs && item.status === 'active' && !item.adminHidden && !measured.has(item.id) && !inLists.has(item.id));
+  const added = parties.filter(item => item.adminCreated && !item.adminHidden && !measured.has(item.id));
+  return [...real, ...added].map(item => ({
+    id: item.id, label: item.officialName ?? item.name, officialName: item.officialName ?? null, abbreviation: item.abbreviation ?? null, position: item.politicalPosition ?? null,
+    brandColor: item.color ?? null, regional: item.level === 'regional', regionalPresence: Boolean(item.regionalPresence), weight: twoPerThousandById.get(item.id)?.shareOfChoices ?? 0,
+    refSource: item.source === DATA_SOURCES.REAL ? 'real' : 'user', origin: item.adminCreated ? 'admin' : 'real', reference: reference2x1000(item.id)
+  }));
+}
+// A world is out of date when it never received the forces outside the polls, or when the database changed since.
+function latentOutOfDate(world) {
+  if (!world || !realLatent.length) return false;
+  if (!world.latentSeeded) return true;
+  const known = new Set([...world.parties.map(party => party.id), ...(world.latent ?? []).map(item => item.id)]);
+  const wanted = new Set(realLatent.map(item => item.id));
+  return realLatent.some(item => !known.has(item.id)) || (world.latent ?? []).some(item => !wanted.has(item.id));
 }
 // The player's party as the simulated world sees it: a real party is only an id, a label and its collocazione.
 function worldPartyOf(s, record = null) {
@@ -161,7 +190,7 @@ function buildWorld(s, record = null) {
   return createWorld({
     seedText: `${player?.displayName}|${player?.birthDate}|${s.career.startedAt}|${s.career.initialLevel}`,
     date: s.clock.currentDate, week: s.game?.week.index ?? 1, place: { region: player?.region ?? null, municipality: player?.municipality ?? null },
-    playerParty: worldPartyOf(s, record), forces: realForces, stats: statsOf(s), realPoll: realPollStart, pollNoise: difficultyOf(s.career?.difficulty).pollNoise
+    playerParty: worldPartyOf(s, record), forces: realForces, stats: statsOf(s), realPoll: realPollStart, pollNoise: difficultyOf(s.career?.difficulty).pollNoise, latent: realLatent
   });
 }
 // The demo protagonist used to carry a realistic invented name: it becomes an explicit demo label.
@@ -959,6 +988,7 @@ export const store = {
     if (store.hasCareer() && unsaved) store.saveToSlot('Partita precedente (salvataggio automatico)');
     state = migrateDemoParty(prepareState(hydrateState(saved)));
     if (realForces.length && state.world && isLegacyWorld(state.world)) state = { ...state, world: buildWorld(state) };
+    if (latentOutOfDate(state.world)) state = { ...state, world: withLatentForces(state.world, realLatent) };
     timelineBase = state;
     state = { ...state, ui: { ...state.ui, activePage: 'panoramica', toast } };
     persist({ force: true }); emit();
@@ -987,6 +1017,8 @@ export const store = {
     if (next.world && (isLegacyWorld(next.world) || !next.world.parties.some(party => !party.isPlayer)) && realForces.length) next = { ...next, world: buildWorld(next) };
     // Saves made before the collocazione was documented receive it without rebuilding their world.
     else if (next.world && next.world.parties.some(party => !party.position && realPositions.has(party.id))) next = { ...next, world: withPositions(next.world, Object.fromEntries(realPositions)) };
+    // Worlds saved before the presence in the polls receive the forces of the database outside the polls.
+    if (latentOutOfDate(next.world)) next = { ...next, world: withLatentForces(next.world, realLatent) };
     if (next === state) return;
     state = next;
     if (state.career.status !== 'demo') persist();
@@ -1625,7 +1657,7 @@ function applyCampaignResult(currentState,campaign) {
     career.pastParliamentContexts=[...(career.pastParliamentContexts??[]),{...previousContext,endedAt:campaign.currentDate,reason:'Seggio non confermato alle elezioni'}];
     if(parliament?.player) parliament=leaveParliament(parliament,campaign.currentDate,'Seggio non confermato alle elezioni politiche');
   }
-  const world=currentState.world?applyWorldSignals(currentState.world,[{type:'election',label:campaign.electionLabel,share:result.playerShare,mandate:result.personalMandate,pollShare:campaign.preparation?.pollShare??null}],campaign.currentDate):currentState.world;
+  const world=currentState.world?applyWorldSignals(currentState.world,[{type:'election',electionType:campaign.electionType,label:campaign.electionLabel,share:result.playerShare,mandate:result.personalMandate,pollShare:campaign.preparation?.pollShare??null}],campaign.currentDate):currentState.world;
   const next={...currentState,dataset,career,game,world,parliament:withCapital(currentState.parliament,game)};
   if(parliament===currentState.parliament) return withObjectives(next);
   // Route the parliamentary change through the shared bookkeeping (history, offices, events).

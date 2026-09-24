@@ -163,9 +163,53 @@
 /* Campaign opponents that are documented people */
 .campaign-rival.is-real .campaign-rival-logo { background:#1d2b24; color:#e8cf95; }
 
+/* Presence in the polls: estimates, forces under observation, entries and exits */
+.poll-bar-row.is-estimate .poll-bar-fill { background-image:repeating-linear-gradient(135deg, rgba(12,17,15,.5) 0 4px, transparent 4px 8px); outline:1px dashed rgba(215,223,219,.6); outline-offset:-1px; }
+.poll-bar-row.is-estimate .poll-bar-name small { color:#e8cf95; }
+.poll-bars-divider { display:flex; align-items:center; gap:10px; margin:10px 0 4px; color:#abb3af; font-size:11px; font-weight:750; letter-spacing:.05em; text-transform:uppercase; }
+.poll-bars-divider::before,.poll-bars-divider::after { content:""; flex:1; border-top:1px dashed #414a45; }
+.delta-new { background:#1b2c3d; color:#9cc6f5; }
+.poll-watch,.poll-moves { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:10px; }
+.poll-watch strong { margin-right:2px; color:#cbe0d3; font-size:12px; }
+.poll-watch-item { padding:3px 9px; border:1px dashed #56605b; border-radius:20px; color:#d7dfdb; font-size:12px; outline:none; }
+.poll-watch-item:focus-visible { border-color:var(--party-accent); }
+.poll-move { padding:4px 10px; border-radius:6px; background:#1e2522; color:#c3cbc7; font-size:12px; }
+.poll-move strong { color:#e6ece8; }
+.poll-move-rilevato,.poll-move-consolidato { background:#15291f; }
+.poll-move-non-rilevato { background:#351f19; }
+.presence-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; }
+.presence-group { display:grid; align-content:start; gap:8px; padding:12px; border:1px solid #353c39; border-radius:8px; background:#141b18; }
+.presence-group>div:first-child { display:grid; gap:2px; }
+.presence-group strong { color:#cbe0d3; font-size:13.5px; }
+.presence-group small { color:#abb3af; font-size:12px; line-height:1.4; }
+.presence-consolidato { border-top:4px solid #199e70; }
+.presence-rilevato { border-top:4px solid #3987e5; }
+.presence-emergente { border-top:4px dashed #c98500; }
+.presence-non-rilevato { border-top:4px dotted #56605b; }
+.presence-chips { display:flex; flex-wrap:wrap; gap:5px; }
+.presence-chips em { color:#8d9691; font-size:12px; }
+.presence-chip { padding:3px 8px; border-radius:20px; background:#1e2522; color:#d7dfdb; font-size:11.5px; font-weight:650; outline:none; }
+.presence-chip.is-player { box-shadow:inset 0 0 0 1px var(--party-accent); }
+.presence-chip.is-emerging { border:1px dashed #c98500; background:transparent; }
+.presence-chip.is-out { background:transparent; border:1px dotted #6b746f; color:#abb3af; }
+.presence-chip:focus-visible { box-shadow:0 0 0 2px var(--party-accent); }
+.presence-subtitle { margin:16px 0 6px; color:#cbe0d3; font:750 14px Manrope,sans-serif; }
+.presence-moves { display:grid; gap:0; margin:0; padding:0; list-style:none; }
+.presence-moves li { display:grid; grid-template-columns:48px minmax(0,1fr) auto; align-items:baseline; gap:10px; padding:7px 0; border-top:1px solid #353c39; font-size:12.5px; }
+.presence-moves span { color:#abb3af; font-variant-numeric:tabular-nums; }
+.presence-moves b { overflow:hidden; color:#d7dfdb; font-weight:650; text-overflow:ellipsis; white-space:nowrap; }
+.presence-moves em { color:#bcdac7; font-style:normal; text-align:right; }
+.presence-rules { margin-top:12px; color:#c3cbc7; font-size:12.5px; }
+.presence-rules summary { cursor:pointer; color:#cbe0d3; font-weight:700; }
+.presence-rules ul { display:grid; gap:6px; margin:10px 0 0; padding-left:18px; line-height:1.5; }
+.badge-presence.presence-consolidato { background:#15291f; color:#77c08d; }
+.badge-presence.presence-rilevato { background:#1b2c3d; color:#9cc6f5; }
+.badge-presence.presence-emergente { background:#33280f; color:#e8cf95; }
+
 @media (max-width:1000px) {
   .poll-grid { grid-template-columns:1fr; }
   .poll-tiles { grid-template-columns:1fr; }
+  .presence-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
 @media (max-width:600px) {
   .poll-hero { padding:18px 16px; }
@@ -175,6 +219,9 @@
   .poll-bar-track { grid-column:1/-1; grid-row:2; }
   .region-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .force-grid { grid-template-columns:1fr; }
+  .presence-grid { grid-template-columns:1fr; }
+  .presence-moves li { grid-template-columns:40px minmax(0,1fr); }
+  .presence-moves em { grid-column:2; text-align:left; }
   .alliance-row { grid-template-columns:24px minmax(0,1fr); }
   .alliance-row .hq-bar { grid-column:2; }
   .law-card>header { grid-template-columns:auto minmax(0,1fr); }

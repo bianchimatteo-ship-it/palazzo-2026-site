@@ -28,7 +28,7 @@ Il documento “POLITICANDO 2026 — Database politici e partiti — 24/09/2026�
 - **Nuove entità** (§4) con fonte ufficiale dell’organizzazione: Forza Nuova, CasaPound Italia, Potere al Popolo!, Rete dei Patrioti (movimenti); Democrazia Sovrana Popolare, Partito Popolare del Nord, PCI, PCL, Partito Sardo d’Azione, ORA! (partiti); Alleanza Verdi e Sinistra (coalizione); Libertà, Stati Uniti d’Europa, Pace Terra Dignità, Partito Animalista - Italexit per l’Italia (liste europee 2024). “Liberali Democratici Europei” è una denominazione riconciliata con il Partito Liberaldemocratico; i nomi MEF di M5S e +Europa restano per il 2‰ ma non compaiono come secondi partiti (`sameEntityAs`).
 - **Leadership** (§3): 34 incarichi nuovi più i 4 di Futuro Nazionale, ciascuno con la pagina ufficiale del partito; dove il documento chiede verifica e non c’è una fonte ufficiale corrente (PCL, Rete dei Patrioti, AVS, liste) il vertice resta vuoto. Le figure con nome identico a un parlamentare sono collegate alla sua scheda; un incarico documentato vale come iscrizione (`party-memberships.json`).
 - **Liste → partiti** (§6): le liste di un solo partito puntano al partito; liste di più partiti e coalizioni restano relazioni elettorali (`componentPartyIds`, `coalitionId`).
-- **Sondaggio reale iniziale**: `polls.json` (Supermedia YouTrend/Agi del 17/09/2026, fonte Agi). Ogni nuova carriera parte da questi valori, marcati come dato reale; dalla prima settimana i sondaggi sono simulati.
+- **Sondaggio reale iniziale**: `polls.json` (Supermedia YouTrend/Agi del 17/09/2026, fonte Agi). Ogni nuova carriera parte da questi valori, marcati come dato reale (solo le forze della fonte, “Altri” come nella fonte); dalla prima settimana i sondaggi sono simulati.
 
 ## Loghi dei politici
 
@@ -41,6 +41,10 @@ Dal menu principale (“Account e salvataggi online”) si crea un account o si 
 ## Governo in carica all’avvio
 
 Ogni carriera trova un governo già in carica, costruito sulla situazione reale all’avvio e poi del tutto simulato: `src/data/repositories/government-reference.js` ricava dal database i gruppi parlamentari dei componenti del governo reale in carica (oggi Fratelli d’Italia, Lega e Forza Italia in entrambe le Camere), il gruppo del Presidente del Consiglio e la ripartizione dei ministeri; `createReferenceGovernment` (motore parlamentare) ne fa un governo simulato con un Presidente del Consiglio simulato e ministri senza nomi. Il giocatore non ne fa parte: dal suo gruppo può offrire o ritirare il sostegno, chiedere un ministero se ha i requisiti, aprire una crisi (o una mozione di sfiducia dall’opposizione); il premier simulato risponde agli alleati e torna alle Camere per la fiducia. Se il governo cade si può formarne uno nuovo; “Nessun governo” compare solo quando nella partita non c’è davvero un esecutivo. I vecchi salvataggi senza governo lo ricevono al caricamento.
+
+## Presenza nei sondaggi
+
+Il primo sondaggio della carriera è la fotografia della fonte reale: solo le forze che misura, con i suoi valori, e “Altri” come nella fonte; il partito del giocatore, se la fonte non lo misura, compare a parte come stima simulata marcata, fuori dal totale reale. Gli altri partiti e movimenti reali attivi del database (non storici, non doppioni, non già misurati dentro una lista come AVS) restano fuori dai sondaggi con un piccolo consenso latente simulato, che fa parte di “Altri”, e nessuna stima pubblicata. Da lì ogni forza passa per non rilevato → emergente → rilevato → consolidato e può uscire dalla rilevazione (`PRESENCE_RULES` in `src/core/world-engine.js`): contano soglie, permanenza minima e cooldown. Una forza fuori dai sondaggi cresce solo quando c’è una condizione (un partito vicino in crisi o in calo, sfiducia nelle istituzioni, campagna per le europee, attenzione dei media, elezioni) e prende i voti ai partiti vicini. Entrando acquista colore, logo, serie e storico simulati; uscendo conserva la sua storia. La pagina Sondaggi mostra le forze in osservazione, gli ingressi e le uscite della settimana e le regole; i vecchi salvataggi ricevono le forze in attesa senza cambiare “Altri”.
 
 ## Carriera infinita e difficoltà
 
@@ -233,6 +237,7 @@ npm run check:world       # alleanze realistiche, evoluzione dei partiti, diffic
 npm run check:accounts    # account, salvataggi online su D1 (SQLite in test), conflitti tra dispositivi
 npm run check:reference-government # governo in carica all’avvio: maggioranza reale, premier simulato, sostegno, ministero, crisi, caduta
 npm run check:admin       # area del proprietario: sessione verificata dal server, ricerca completa, aggiunta/nascondi/elimina/ripristina partiti
+npm run check:poll-presence # primo sondaggio = fonte reale; ingresso/uscita dai sondaggi con soglie, permanenza e cooldown
 npm run check:all         # tutte le verifiche
 npm run check:gameplay
 npm run check:parliament
