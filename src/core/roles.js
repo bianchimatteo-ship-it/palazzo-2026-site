@@ -1,7 +1,7 @@
 // Roles and powers: what the player may do depends on the offices actually held.
 // Every power listed here is checked again by the store before the action runs.
-import { activeMinisters } from './parliament-engine.js?v=20260924-16';
-import { isSecretary } from './career-engine.js?v=20260924-16';
+import { activeMinisters } from './parliament-engine.js?v=20260924-17';
+import { isSecretary } from './career-engine.js?v=20260924-17';
 
 const governing = parliament => ['active', 'crisis'].includes(parliament?.government?.status);
 export const isPrimeMinister = parliament => governing(parliament) && parliament.government.primeMinister === 'player';
@@ -33,10 +33,14 @@ export function playerRoles(state) {
     ['Priorità di bilancio del partito e disciplina', secretary || (party?.rank ?? 0) >= 3, 'Serve la direzione nazionale'],
     ['Influenza sulle candidature della tua area', areaLead || secretary, 'Serve guidare la tua area interna'],
     ['Linea politica, organi, candidature, alleanze, investimenti del partito', secretary, 'Solo il segretario'],
-    ['Leggi, emendamenti, trattative in Aula', seat, 'Serve un seggio in Parlamento'],
+    ['Programma e stile di comunicazione del partito', secretary, 'Solo il segretario'],
+    ['Leggi con contenuto, emendamenti, trattative con i gruppi', seat, 'Serve un seggio in Parlamento'],
     ['Formare un governo', seat && secretary, 'Serve essere segretario con un seggio'],
     ['Dossier e crisi di un ministero', minister || Boolean(game?.flags?.scenarioOffice), 'Serve un incarico di governo'],
-    ['Nominare i ministri, agenda del governo, rimpasti', isPrimeMinister(parliament), 'Solo il Presidente del Consiglio']
+    ['Indirizzo politico e priorità nazionali del governo', isPrimeMinister(parliament), 'Solo il Presidente del Consiglio'],
+    ['Disegni di legge del governo e legge di bilancio (li approva il Parlamento)', isPrimeMinister(parliament), 'Solo il Presidente del Consiglio'],
+    ['Decreti-legge, solo con un’emergenza aperta (da convertire in 60 giorni)', isPrimeMinister(parliament), 'Solo il Presidente del Consiglio'],
+    ['Ministri, rimpasti, vertici di maggioranza, questione di fiducia', isPrimeMinister(parliament), 'Solo il Presidente del Consiglio']
   ].map(([label, enabled, reason]) => ({ label, enabled: Boolean(enabled), reason: enabled ? null : reason }));
   return { roles, powers, secretary, seat, minister, primeMinister: isPrimeMinister(parliament) };
 }

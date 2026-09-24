@@ -18,3 +18,4 @@ wrangler.jsonc
 src/data/real/database.json
 *.zip
 .assetsignore
+worker.js

@@ -25,11 +25,19 @@ const draftFor = (level, extra = {}) => ({
 });
 // Parliamentary actions cost working days: when the week is used up the player closes it, as in the game.
 const TIMED = ['proposeLaw', 'advanceLaw', 'amendLaw', 'compromiseLaw', 'negotiateLaw', 'formGovernment', 'negotiateGovernmentSupport', 'reviseGovernmentCoalition', 'assignMinister', 'voteGovernmentConfidence', 'triggerGovernmentCrisis', 'contestCommitteeRole', 'joinParliamentaryGroup'];
+// Each phase of a bill takes its weeks: the test lets the time pass, as a player would.
 const weekly = target => {
   for (const name of TIMED) {
     const original = target[name];
     if (original.weekly) continue;
-    target[name] = (...args) => { if (target.getState().game.week.ap < 1) target.advance(7); return original(...args); };
+    target[name] = (...args) => {
+      if (target.getState().game.week.ap < 1) target.advance(7);
+      if (name !== 'advanceLaw') return original(...args);
+      for (let guard = 0; ; guard++) {
+        try { return original(...args); }
+        catch (error) { if (guard > 6 || !/settiman/.test(error.message)) throw error; target.advance(7); }
+      }
+    };
     target[name].weekly = true;
   }
   return target;
@@ -154,7 +162,7 @@ store.save();
 module = await import('../src/core/store.js?parliament-reload-save=' + Date.now());
 assert.equal(module.store.getState().parliament.player.groupId, 'senato-xix-gruppo-85');
 assert.equal(module.store.getState().parliament.laws.length, 0);
-assert.equal(module.store.getState().version, 6);
+assert.equal(module.store.getState().version, 7);
 assert.ok(renderParliamentPage('leggi', module.store.getState()).includes('Scrivi una proposta.'));
 
 const unique = list => new Set(list.map(item => item.id)).size === list.length;
@@ -218,6 +226,10 @@ const oppositionLaw = store.proposeLaw({ title: 'Registro dei servizi', category
 store.advanceLaw(oppositionLaw.id, 'present');
 store.advanceLaw(oppositionLaw.id, 'complete-commission');
 store.negotiateLaw(oppositionLaw.id, 'cam-xix-01');
+const demand = store.getState().parliament.laws.find(item => item.id === oppositionLaw.id).demands['cam-xix-01'];
+assert.ok(demand?.label && demand.patch && !demand.accepted, 'Il gruppo chiede una modifica concreta in cambio dei voti.');
+store.acceptLawDemand(oppositionLaw.id, 'cam-xix-01');
+assert.ok(store.getState().parliament.laws.find(item => item.id === oppositionLaw.id).amendments.some(item => item.patch), 'Accogliere la richiesta cambia il contenuto del testo.');
 store.compromiseLaw(oppositionLaw.id); store.compromiseLaw(oppositionLaw.id); store.compromiseLaw(oppositionLaw.id);
 store.advanceLaw(oppositionLaw.id, 'vote');
 let tracked = store.getState().parliament.laws.find(item => item.id === oppositionLaw.id);
@@ -313,7 +325,7 @@ assert.equal(module.store.getState().career.id, 'carriera-demo');
 assert.ok(JSON.parse(localStore.get('palazzo-2026.career.v1.backup')).payload.includes('"dataset":null'));
 localStore.set('palazzo-2026.career.v1', JSON.stringify({ ...makeDemoState(), version: 4, career: { ...makeDemoState().career, initialLevel: 'nazionale' } }));
 module = await import('../src/core/store.js?parliament-v4=' + Date.now());
-assert.equal(module.store.getState().version, 6);
+assert.equal(module.store.getState().version, 7);
 assert.equal(module.store.getState().parliament, null);
 
 console.log('Career Wizard verificato: quattro percorsi, partito indipendente/reale/utente, gruppo distinto e contesto parlamentare. Parlamento, leggi, emendamenti, voti, fiducia, crisi, storico e ricaricamento verificati. Incarichi, cambio di gruppo, ministro, caduta del governo, integrazione con la campagna e ripristino dei salvataggi verificati.');

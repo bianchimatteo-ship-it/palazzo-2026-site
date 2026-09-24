@@ -296,3 +296,131 @@ html[data-density="compact"] .hq-grid, html[data-density="compact"] .dash-grid {
 .topbar-title { min-width: 0; flex: 1 1 auto; }
 .topbar-title span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 @media (max-width: 1100px) { .topbar-title span { display: none; } }
+
+/* ---------- policy designer and projected bill ---------- */
+.policy-form, .law-policy-field { display: grid; gap: 12px; }
+.policy-fields { display: grid; gap: 10px; }
+.policy-fields label { display: grid; gap: 5px; font-size: 12px; color: var(--ink-2); }
+.policy-fields select, .policy-form input[name="title"], .reshuffle-form select { min-height: 40px; border-radius: 8px; padding: 0 10px; border: 1px solid var(--line-strong); }
+.policy-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.policy-instruments, .policy-lines { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; border: 0; padding: 0; margin: 0; }
+.policy-instruments legend { font-size: 12px; color: var(--ink-2); margin-bottom: 6px; }
+.policy-choice { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 9px; border: 1px solid var(--line-strong); background: var(--panel); cursor: pointer; }
+.policy-choice input { margin-top: 3px; accent-color: var(--accent); }
+.policy-choice strong { display: block; font: 700 13px/1.3 Manrope, sans-serif; color: var(--ink); }
+.policy-choice small { display: block; color: var(--muted); font-size: 11px; line-height: 1.4; margin-top: 2px; }
+.policy-choice.active, .policy-choice:has(input:checked) { border-color: var(--accent); background: rgba(213,170,99,.1); }
+.policy-preview { display: grid; gap: 10px; padding: 14px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); }
+.preview-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+.preview-kpis > div { padding: 10px; border-radius: 8px; background: var(--panel); border: 1px solid var(--line); border-top: 2px solid var(--line-strong); }
+.preview-kpis > div.bad { border-top-color: var(--critical); }
+.preview-kpis > div.good { border-top-color: var(--good); }
+.preview-kpis small { display: block; color: var(--muted); font-size: 10px; letter-spacing: .08em; }
+.preview-kpis strong { display: block; font: 800 17px/1.3 Manrope, sans-serif; font-variant-numeric: tabular-nums; }
+.preview-kpis span { color: var(--ink-2); font-size: 11px; }
+.preview-people { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px; }
+.preview-people ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
+.preview-people li { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 6px 8px; border-radius: 7px; background: var(--panel); font-size: 12px; }
+.preview-people li span { grid-column: 1; color: var(--muted); font-size: 11px; }
+.preview-people li b { grid-row: 1 / span 2; grid-column: 2; align-self: center; font-variant-numeric: tabular-nums; }
+.preview-people li.good b { color: var(--good-ink); }
+.preview-people li.bad b { color: var(--critical-ink); }
+.preview-people li.quiet { color: var(--muted); display: block; }
+.preview-regions, .preview-security { display: grid; gap: 4px; color: var(--ink-2); font-size: 12px; }
+.preview-regions span, .preview-security { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.policy-submit { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ---------- the Prime Minister's desk ---------- */
+.pm-desk { border-color: rgba(213,170,99,.45); }
+.pm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin: 12px 0; }
+.pm-block { padding: 14px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); display: grid; gap: 10px; align-content: start; margin-top: 12px; }
+.pm-grid .pm-block { margin-top: 0; }
+.pm-block h3, .pm-block summary { display: flex; align-items: center; gap: 8px; margin: 0; font: 750 15px/1.3 Manrope, sans-serif; color: var(--ink); cursor: default; }
+.pm-block summary { cursor: pointer; }
+.pm-block h3 svg, .pm-block summary svg { color: var(--accent); }
+.program-form { display: grid; gap: 12px; margin-top: 10px; }
+.priority-groups, .wizard-program { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 8px; }
+.priority-group, .wizard-program fieldset { border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+.priority-group legend, .wizard-program legend { font-size: 11px; color: var(--muted); padding: 0 4px; }
+.priority-group .agenda-option, .wizard-program .agenda-option, .program-options .agenda-option { padding: 5px 9px; font-size: 12px; }
+.program-options { display: flex; flex-wrap: wrap; gap: 6px; max-height: 190px; overflow: auto; padding: 2px; }
+.partner-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 10px; border-radius: 8px; background: var(--panel); border: 1px solid var(--line); }
+.partner-row.danger { border-color: rgba(208,59,59,.55); }
+.partner-row strong { display: block; font-weight: 700; }
+.partner-row small { display: block; color: var(--muted); font-size: 11px; }
+.partner-mood { display: grid; gap: 4px; justify-items: end; min-width: 90px; }
+.partner-mood b { font: 800 18px/1 Manrope, sans-serif; }
+.reshuffle-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; align-items: end; }
+.reshuffle-form label { display: grid; gap: 5px; font-size: 12px; color: var(--ink-2); }
+.budget-fields { display: grid; gap: 6px; }
+.budget-field { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+.budget-field .segmented label { padding: 6px 10px; border-radius: 7px; font-size: 12px; color: var(--ink-2); cursor: pointer; }
+.budget-field .segmented label.active, .budget-field .segmented label:has(input:checked) { background: var(--accent); color: var(--accent-ink); }
+.budget-field .segmented input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+
+/* ---------- bills: content, demands, edits ---------- */
+.law-content { display: grid; gap: 8px; margin: 8px 0; padding: 10px 12px; border-radius: 9px; background: var(--panel-2); border: 1px solid var(--line); font-size: 13px; }
+.law-status-line { display: flex; flex-wrap: wrap; gap: 6px 12px; color: var(--ink-2); font-size: 12px; }
+.law-status-line span { display: inline-flex; gap: 5px; align-items: center; }
+.law-kind { padding: 2px 8px; border-radius: 999px; background: rgba(213,170,99,.14); color: #f0d59f; font-weight: 650; }
+.law-deadline { color: #f5c46a; }
+.law-demands { display: grid; gap: 6px; }
+.law-demand { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 10px; border-radius: 8px; border: 1px dashed var(--line-strong); }
+.law-demand.accepted { border-style: solid; border-color: rgba(12,163,12,.45); }
+.law-demand em { color: var(--good-ink); font-style: normal; font-size: 12px; }
+.law-edits, .law-extra { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; font-size: 12px; color: var(--muted); }
+.law-policy-preview { grid-column: 1 / -1; }
+
+/* ---------- the country: areas, security, accounts ---------- */
+.areas-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.area-group h3 { margin: 0 0 6px; font: 800 12px/1.2 Manrope, sans-serif; color: var(--accent); letter-spacing: .1em; text-transform: uppercase; }
+.area-row { display: grid; grid-template-columns: auto 1fr 70px 32px auto; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+.area-row svg { color: var(--muted); }
+.area-row strong { display: block; font-weight: 650; font-size: 13px; }
+.area-row small { display: block; color: var(--muted); font-size: 11px; }
+.area-row b { font-variant-numeric: tabular-nums; text-align: right; }
+.security-kpis, .finance-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.security-kpi, .finance-kpis > div { display: grid; gap: 4px; padding: 10px; border-radius: 9px; background: var(--panel-2); border: 1px solid var(--line); }
+.security-kpi small, .finance-kpis small { color: var(--muted); font-size: 11px; }
+.security-kpi strong, .finance-kpis strong { font: 800 22px/1.1 Manrope, sans-serif; font-variant-numeric: tabular-nums; }
+.security-kpi span, .finance-kpis span { color: var(--ink-2); font-size: 11px; line-height: 1.4; }
+
+/* ---------- memory ---------- */
+.memory-balance { display: grid; gap: 2px; margin-bottom: 8px; }
+.memory-balance small { color: var(--muted); font-size: 11px; }
+.memory-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.memory-list li { display: flex; gap: 8px; align-items: flex-start; padding: 8px; border-radius: 8px; background: var(--panel-2); border-left: 3px solid var(--line-strong); }
+.memory-list li.tone-good { border-left-color: var(--good); }
+.memory-list li.tone-bad { border-left-color: var(--critical); }
+.memory-list strong { display: block; font-size: 13px; font-weight: 650; }
+.memory-list small { color: var(--muted); font-size: 11px; }
+
+/* ---------- party identity ---------- */
+.party-identity { display: flex; align-items: center; gap: 10px; margin: -18px 7px 20px; padding: 8px 10px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--party-color) 55%, transparent); background: linear-gradient(135deg, color-mix(in srgb, var(--party-color) 22%, transparent), transparent); color: var(--ink); text-align: left; }
+.party-identity img, .party-identity i { width: 34px; height: 34px; flex: none; border-radius: 8px; object-fit: contain; background: rgba(255,255,255,.06); }
+.party-identity i { display: grid; place-items: center; font: 800 11px/1 Manrope, sans-serif; font-style: normal; color: #fff; background: var(--party-color); }
+.party-identity strong { display: block; font: 800 13px/1.2 Manrope, sans-serif; }
+.party-identity small { display: block; color: var(--muted); font-size: 11px; }
+.hero-party-logo { width: 52px; height: 52px; object-fit: contain; border-radius: 10px; background: rgba(255,255,255,.06); padding: 4px; }
+.wizard-logo { display: grid; grid-template-columns: 110px 1fr; gap: 14px; align-items: start; margin: 12px 0; }
+.wizard-logo-preview { width: 110px; height: 110px; display: grid; place-items: center; border-radius: 14px; background: repeating-conic-gradient(#1a2320 0 25%, #222d29 0 50%) 0 0/16px 16px; border: 1px solid var(--line-strong); }
+.wizard-logo-preview img { width: 96px; height: 96px; object-fit: contain; }
+.wizard-logo-controls { display: grid; gap: 8px; }
+.wizard-logo-controls .segmented label { padding: 6px 10px; border-radius: 7px; font-size: 12px; color: var(--ink-2); cursor: pointer; }
+.wizard-logo-controls .segmented label.active, .wizard-logo-controls .segmented label:has(input:checked) { background: var(--accent); color: var(--accent-ink); }
+.wizard-logo-controls .segmented input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.wizard-logo-controls small { color: var(--muted); font-size: 11px; }
+@media (max-width: 560px) {
+  .wizard-logo { grid-template-columns: 1fr; }
+  .area-row { grid-template-columns: auto 1fr 50px 28px; }
+  .area-row .state-badge { display: none; }
+  .party-identity { margin: 8px 0; }
+}
+.priority-group, .wizard-program fieldset, .program-options { align-items: flex-start; align-content: flex-start; }
+.priority-group .agenda-option, .wizard-program .agenda-option, .program-options .agenda-option { flex: 0 0 auto; height: auto; min-height: 0; border-radius: 999px; }
+.policy-form > label { display: grid; gap: 5px; font-size: 12px; color: var(--ink-2); }
+.policy-form > label input { width: 100%; }
+.policy-choice input { flex: none; width: auto; margin: 3px 0 0; }
+.policy-fields [hidden], .policy-row [hidden] { display: none !important; }
+.law-form-grid .law-policy-field, .law-form-grid .law-policy-preview { grid-column: 1 / -1; }
+.policy-choice input[type="radio"], .agenda-option input[type="checkbox"], .budget-field input[type="radio"], .wizard-logo-controls input[type="radio"] { width: 16px; height: 16px; min-height: 0; min-width: 0; padding: 0; margin: 3px 0 0; flex: none; box-shadow: none; }

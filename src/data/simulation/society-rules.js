@@ -17,20 +17,6 @@ export const SEGMENTS = Object.freeze([
   { id: 'fragili', label: 'Redditi bassi e precari', share: 12, attention: { occupazione: 0.3, servizi: 0.25, sanita: 0.2, economia: 0.15, sicurezza: 0.1 } }
 ]);
 
-// How a law of each area works through the simulated country.
-export const LAW_EFFECTS = Object.freeze({
-  Economia: { indicators: { economia: 5, occupazione: 2 }, economy: { growth: 0.25, deficit: 0.15 }, cost: 6, pleased: ['imprese', 'famiglie'], displeased: [] },
-  Lavoro: { indicators: { occupazione: 6, economia: 1 }, economy: { unemployment: -0.35, deficit: 0.1 }, cost: 5, pleased: ['giovani', 'fragili'], displeased: ['imprese'] },
-  Sanità: { indicators: { sanita: 7 }, economy: { deficit: 0.2 }, cost: 8, pleased: ['anziani', 'famiglie', 'fragili'], displeased: [] },
-  Scuola: { indicators: { istruzione: 7 }, economy: { deficit: 0.1 }, cost: 5, pleased: ['giovani', 'famiglie'], displeased: [] },
-  Sicurezza: { indicators: { sicurezza: 7 }, economy: { deficit: 0.05 }, cost: 3, pleased: ['anziani', 'famiglie'], displeased: ['giovani'] },
-  Ambiente: { indicators: { ambiente: 7, infrastrutture: 1 }, economy: { growth: -0.05, deficit: 0.05 }, cost: 4, pleased: ['giovani'], displeased: ['imprese'] },
-  Infrastrutture: { indicators: { infrastrutture: 6, trasporti: 4 }, economy: { growth: 0.15, deficit: 0.2 }, cost: 9, pleased: ['imprese', 'famiglie'], displeased: [] },
-  Giustizia: { indicators: { servizi: 4, sicurezza: 2 }, economy: {}, cost: 2, pleased: ['imprese'], displeased: [] },
-  Welfare: { indicators: { servizi: 6 }, economy: { deficit: 0.25 }, cost: 8, pleased: ['fragili', 'anziani'], displeased: ['imprese'] },
-  'Pubblica amministrazione': { indicators: { servizi: 5 }, economy: { growth: 0.05 }, cost: 3, pleased: ['imprese', 'famiglie'], displeased: [] }
-});
-export const LAW_PHASE_IN_WEEKS = 8;
 
 // Generic channels, not real outlets.
 export const MEDIA_OUTLETS = Object.freeze([
@@ -58,10 +44,21 @@ export const ISSUE_TOPICS = Object.freeze({
 export const SCENARIO_EXECUTIVE = Object.freeze({ label: 'Esecutivo nazionale (scenario)', agendaEveryWeeks: 6 });
 
 // Keyword bridge from official Senate topics (TESEO) to the game areas; the mapping is a game interpretation.
+// More specific patterns come first.
 export const REAL_TOPIC_AREAS = Object.freeze([
-  [/SALUTE|SANITAR|OSPEDAL|TUMORI|FARMAC/, 'Sanità'], [/SCUOL|ISTRUZIONE|UNIVERSIT|RICERCA/, 'Scuola'],
-  [/LAVOR|DISOCCUPAZ|OCCUPAZ|PREVIDENZ|PENSION/, 'Lavoro'], [/BILANCIO|TRIBUTAR|FISCAL|IMPRES|PREZZI|CREDITO|ECONOM/, 'Economia'],
-  [/AMBIENTE|ENERGIA|CLIMA|INQUINAMENTO|RIFIUTI|PIOGGE|CALAMIT/, 'Ambiente'], [/POLIZIA|VIOLENZA|CRIMIN|SICUREZZA|PENALE|DIFESA/, 'Sicurezza'],
-  [/OPERE PUBBLICHE|TRASPORT|STRADE|FERROVI|PORTI|INFRASTRUTT/, 'Infrastrutture'], [/PROCESS|TRIBUNAL|GIUSTIZIA|MAGISTRAT|CODICE/, 'Giustizia'],
-  [/ASSISTENZA|SICUREZZA SOCIALE|MINORI|GIOVANI|FAMIGLI|DISABIL/, 'Welfare'], [/ENTI LOCALI|AMMINISTRATIV|PUBBLICO IMPIEGO|REGIONI/, 'Pubblica amministrazione']
+  [/PENSION|PREVIDENZ/, 'Pensioni'], [/UNIVERSIT|RICERCA SCIENTIFICA|RICERCA E /, 'Università e ricerca'], [/SCUOL|ISTRUZIONE|INSEGNANT/, 'Scuola'],
+  [/SALUTE|SANITAR|OSPEDAL|TUMORI|FARMAC|MEDIC/, 'Sanità'], [/IMMIGRAZ|STRANIER|ASILO|RIFUGIAT/, 'Immigrazione'], [/CITTADINANZA/, 'Cittadinanza'],
+  [/FORZE ARMATE|MILITAR|DIFESA NAZIONALE|MISSIONI INTERNAZIONALI/, 'Difesa'], [/POLIZIA|VIOLENZA|CRIMIN|SICUREZZA PUBBLICA|MAFIA|TERRORISM/, 'Sicurezza'],
+  [/PROCESS|TRIBUNAL|GIUSTIZIA|MAGISTRAT|CODICE PENALE|CODICE CIVILE|CARCER/, 'Giustizia'], [/TRIBUTAR|FISCAL|IMPOST|TASS/, 'Tasse e fisco'],
+  [/BILANCIO DELLO STATO|FINANZA PUBBLICA|DEBITO PUBBLICO|CONTABILIT/, 'Finanze pubbliche'], [/ENERGI|GAS|ELETTRIC|IDROCARBUR/, 'Energia'],
+  [/AMBIENTE|CLIMA|INQUINAMENTO|RIFIUTI|PIOGGE|CALAMIT|PARCHI/, 'Ambiente'], [/AGRICOL|PESCA|ALIMENTAR|ZOOTECN|FORESTE/, 'Agricoltura'],
+  [/TRASPORT|FERROVI|PORTI|AEROPORT|AUTOSTRAD|CIRCOLAZIONE/, 'Trasporti'], [/OPERE PUBBLICHE|STRADE|INFRASTRUTT|APPALTI/, 'Infrastrutture'],
+  [/EDILIZIA RESIDENZIALE|ABITAZION|LOCAZION|CASA/, 'Casa'], [/NATALIT|MATERNIT|DEMOGRAF/, 'Natalità e demografia'], [/FAMIGLI|MINORI|INFANZIA/, 'Famiglia'],
+  [/GIOVANI|GIOVENT/, 'Giovani'], [/SPORT/, 'Sport'], [/TURISM/, 'Turismo'], [/BENI CULTURALI|CULTUR|SPETTACOL|CINEMA|MUSE/, 'Cultura'],
+  [/DIGITAL|TELECOMUNICAZ|INFORMATIC|INTELLIGENZA ARTIFICIALE|INTERNET/, 'Digitale e tecnologia'], [/MEZZOGIORNO|COESIONE TERRITORIALE/, 'Mezzogiorno'],
+  [/UNIONE EUROPEA|COMUNITA' EUROPEA|DIRETTIVA|REGOLAMENTO \(UE\)|DELEGAZIONE EUROPEA/, 'Europa'],
+  [/TRATTAT|RATIFICA|ACCORDO TRA|CONVENZIONE TRA|AFFARI ESTERI|COOPERAZIONE INTERNAZIONALE/, 'Esteri'],
+  [/ENTI LOCALI|REGIONI|AUTONOMI|COMUNI E PROVINCE/, 'Autonomie territoriali'], [/COMMERCI/, 'Commercio'], [/INDUSTRI|IMPRES/, 'Industria e imprese'],
+  [/LAVOR|DISOCCUPAZ|OCCUPAZ|SINDACA/, 'Lavoro'], [/ASSISTENZA|SICUREZZA SOCIALE|DISABIL|POVERT/, 'Welfare'],
+  [/AMMINISTRATIV|PUBBLICO IMPIEGO|PUBBLICA AMMINISTRAZIONE/, 'Pubblica amministrazione'], [/PREZZI|CREDITO|ECONOM|BANCH|MERCAT/, 'Economia']
 ]);

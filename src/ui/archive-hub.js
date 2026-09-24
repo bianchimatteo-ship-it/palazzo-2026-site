@@ -1,10 +1,10 @@
 // In-game archive of the real data: every tab reads the verified snapshot and never the simulation.
-import { realDatabase } from '../data/repositories/real-data.js?v=20260924-16';
-import { renderPartyArchive } from './party-archive.js?v=20260924-16';
-import { renderPoliticianArchive } from './politician-archive.js?v=20260924-16';
-import { renderRealLaws } from './real-laws.js?v=20260924-16';
-import { glyph } from './visuals.js?v=20260924-16';
-import { esc } from './charts.js?v=20260924-16';
+import { realDatabase } from '../data/repositories/real-data.js?v=20260924-17';
+import { renderPartyArchive } from './party-archive.js?v=20260924-17';
+import { renderPoliticianArchive } from './politician-archive.js?v=20260924-17';
+import { renderRealLaws } from './real-laws.js?v=20260924-17';
+import { glyph } from './visuals.js?v=20260924-17';
+import { esc } from './charts.js?v=20260924-17';
 
 export const ARCHIVE_TABS = Object.freeze([
   ['partiti', 'flag', 'Partiti e movimenti'],

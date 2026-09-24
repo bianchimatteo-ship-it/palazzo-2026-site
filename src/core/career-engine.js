@@ -1,18 +1,17 @@
-import { advanceDays } from './time.js?v=20260924-16';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-16';
-import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260924-16';
+import { advanceDays } from './time.js?v=20260924-17';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-17';
+import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260924-17';
 import {
   APPOINTMENTS, BASE_WEEKLY_INCOME, CAREER_EVENTS, CAREER_OBJECTIVES, CURRENT_TEMPLATES, EARLY_ELECTION_AFTER_WEEKS, ELECTION_SCHEDULE,
   FORCED_EVENTS, LEGACY_RIVAL_NAMES, SIMULATED_RIVAL_LABEL, FOUNDER_RANK, LEVEL_FIRST_ELECTION, OFFICE_INCOME, PARTY_RANKS, RELATION_TEMPLATES, STAT_LABELS,
-  SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS
-} from '../data/simulation/career-rules.js?v=20260924-16';
-import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20260924-16';
-import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20260924-16';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-16';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-16';
-import { book, buyInvestment, createFinance, depositElectionFund, hasAsset, normalizeFinance, settleFinanceWeek } from './finance-engine.js?v=20260924-16';
-import { advanceOrganization, applyOrgEffects, createOrganization, isPartyLeader, normalizeOrganization, treasuryBook } from './organization-engine.js?v=20260924-16';
-import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20260924-16';
+  SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS } from '../data/simulation/career-rules.js?v=20260924-17';
+import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20260924-17';
+import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20260924-17';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-17';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-17';
+import { book, buyInvestment, createFinance, depositElectionFund, hasAsset, normalizeFinance, settleFinanceWeek } from './finance-engine.js?v=20260924-17';
+import { advanceOrganization, applyOrgEffects, createOrganization, isPartyLeader, normalizeOrganization, treasuryBook } from './organization-engine.js?v=20260924-17';
+import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20260924-17';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -51,7 +50,10 @@ export function situation(ctx, env = {}) {
     party: Boolean(ctx.game.party), member: ctx.game.party?.affiliation === 'member',
     direzione: ctx.game.party?.affiliation === 'member' && ctx.game.party.rank >= 3,
     secretary: isSecretary(ctx.game.party),
-    campaignActive: env.campaign?.status === 'active'
+    premier: governing && parliament?.government?.primeMinister === 'player',
+    campaignActive: env.campaign?.status === 'active',
+    // What the rest of the world looks like this week: events depend on it.
+    signals: { crime: 45, spread: 130, euStatus: 'regolare', cohesion: ctx.game.party?.org?.cohesion ?? 60, hostileCurrents: (ctx.game.party?.currents ?? []).filter(item => (item.value ?? item.relation ?? 50) < 35).length, ministers: 0, majorityMood: 60, ...(env.signals ?? {}) }
   };
 }
 // The party secretary decides the line, alliances, candidacies and organs: the founder, or whoever wins a congress.
@@ -61,7 +63,7 @@ function meets(requirement, sit) {
   if (typeof requirement === 'function') return requirement(sit);
   return Boolean(sit[requirement]);
 }
-const requirementReason = { member: 'Serve l’iscrizione a un partito.', party: 'Serve un partito.', seat: 'Serve un seggio con un gruppo parlamentare.', minister: 'Serve un incarico di governo.', direzione: 'Serve un posto in direzione nazionale.', secretary: 'Solo il segretario del partito può farlo.' };
+const requirementReason = { member: 'Serve l’iscrizione a un partito.', party: 'Serve un partito.', seat: 'Serve un seggio con un gruppo parlamentare.', minister: 'Serve un incarico di governo.', direzione: 'Serve un posto in direzione nazionale.', secretary: 'Solo il segretario del partito può farlo.', premier: 'Solo il Presidente del Consiglio può farlo.' };
 
 // ---------- creation ----------
 function createPartyState(party, seed, context = {}) {
@@ -149,6 +151,36 @@ export function recordWhy(game, metric, delta, source) {
   if (entry) entry.delta = round2(entry.delta + delta);
   else game.why.entries.push({ metric, delta: round2(delta), source });
 }
+// ---------- political memory ----------
+// Important choices stay on record and fade slowly (half of their weight every two years).
+const MEMORY_LIMIT = 80;
+export const MEMORY_KINDS = Object.freeze({
+  'promessa-mantenuta': { label: 'Promessa mantenuta', tone: 'good' }, 'promessa-tradita': { label: 'Promessa tradita', tone: 'bad' },
+  legge: { label: 'Legge o provvedimento', tone: 'good' }, tasse: { label: 'Nuove tasse', tone: 'bad' }, tagli: { label: 'Tagli', tone: 'bad' },
+  'decreto-decaduto': { label: 'Decreto decaduto', tone: 'bad' }, 'governo-caduto': { label: 'Governo caduto', tone: 'bad' }, 'crisi-aperta': { label: 'Crisi aperta', tone: 'bad' },
+  'alleanza-rotta': { label: 'Alleanza rotta', tone: 'bad' }, 'alleato-tradito': { label: 'Alleato scontentato', tone: 'bad' }, 'cambio-partito': { label: 'Cambio di partito', tone: 'bad' },
+  scandalo: { label: 'Scandalo', tone: 'bad' }, epurazione: { label: 'Espulsioni nel partito', tone: 'bad' }, 'esercizio-provvisorio': { label: 'Esercizio provvisorio', tone: 'bad' },
+  'procedura-ue': { label: 'Procedura europea', tone: 'bad' }, elezione: { label: 'Risultato elettorale', tone: 'neutral' }, lealta: { label: 'Lealtà dimostrata', tone: 'good' }, emergenza: { label: 'Emergenza gestita', tone: 'neutral' }
+});
+export function remember(game, entry) {
+  if (!game) return game;
+  const item = { id: `memoria-${game.week?.index ?? 0}-${(game.memory ?? []).length}-${(game.rngState ?? 1) % 9973}`, week: game.week?.index ?? 0, date: entry.date ?? null, weight: 1, tone: MEMORY_KINDS[entry.kind]?.tone ?? 'neutral', source: SIM, ...entry };
+  game.memory = [item, ...(game.memory ?? [])].slice(0, MEMORY_LIMIT);
+  return item;
+}
+export function memoryWeight(game, filter = () => true) {
+  const now = game?.week?.index ?? 0;
+  return round2((game?.memory ?? []).filter(filter).reduce((sum, item) => sum + (item.weight ?? 1) * Math.pow(0.5, Math.max(0, now - item.week) / 104), 0));
+}
+// What the past brings back when voters are called to judge: a list of weighted reminders.
+export function memoryBalance(game, { region = null } = {}) {
+  const good = memoryWeight(game, item => item.tone === 'good' && (!item.region || !region || item.region === region));
+  const bad = memoryWeight(game, item => item.tone === 'bad' && (!item.region || !region || item.region === region));
+  const now = game?.week?.index ?? 0;
+  const highlights = (game?.memory ?? []).filter(item => item.tone !== 'neutral').map(item => ({ ...item, current: round2((item.weight ?? 1) * Math.pow(0.5, Math.max(0, now - item.week) / 104)) })).sort((a, b) => b.current - a.current).slice(0, 4);
+  return { good, bad, net: round2(good - bad), highlights };
+}
+
 function applyEffects(ctx, effects = {}, targetId = null, lines = [], params = {}) {
   const { game } = ctx;
   for (const [metric, raw] of Object.entries(effects.stats ?? {})) {
@@ -210,7 +242,7 @@ function pay(game, cost = {}, category = 'altro', label = null, date = null) {
 // Future consequences: scheduled now, decided when they come due (the outcome is not known in advance).
 function schedule(game, later, origin) {
   if (!later) return;
-  game.pending = [...(game.pending ?? []), { id: `seguito-${game.week.index}-${(game.pending ?? []).length}-${game.rngState % 9973}`, dueWeek: game.week.index + later.weeks, madeWeek: game.week.index, hint: later.hint ?? later.label, label: later.label, chance: later.chance ?? 1, effects: later.effects ?? null, outcomes: later.outcomes ?? null, origin, source: SIM }];
+  game.pending = [...(game.pending ?? []), { id: `seguito-${game.week.index}-${(game.pending ?? []).length}-${game.rngState % 9973}`, dueWeek: game.week.index + later.weeks, madeWeek: game.week.index, hint: later.hint ?? later.label ?? 'Esito in arrivo', label: later.label ?? 'Esito', chance: later.chance ?? 1, effects: later.effects ?? null, outcomes: later.outcomes ?? null, memory: later.memory ?? null, origin, source: SIM }];
 }
 function resolvePending(ctx, env, date, lines) {
   const game = ctx.game;
@@ -226,6 +258,7 @@ function resolvePending(ctx, env, date, lines) {
       tone = Object.values(outcome.effects?.stats ?? {}).some(value => value < 0) ? 'bad' : 'good';
     } else if (draw(game) < item.chance) {
       applyEffects(ctx, item.effects, null, itemLines, { date, source: item.origin });
+      if (item.memory) remember(game, { date, ...item.memory });
       tone = 'bad';
     } else {
       title = `Scampato: ${item.hint.charAt(0).toLowerCase()}${item.hint.slice(1)}`;
@@ -351,7 +384,36 @@ export function addSituationEvent(input, id, params = {}, urgent = false) {
   raiseSituation({ game }, id, params, urgent);
   return game;
 }
-function fillInbox(ctx, env, lines) {
+// Parameters of a drawn event: the region hit is chosen where that indicator is weakest, with some chance.
+function eventParamsFor(template, ctx, env) {
+  const params = eventParams(ctx);
+  const regions = env.signals?.regions ?? [];
+  if (template.pickRegion && regions.length) {
+    const sorted = [...regions].sort((a, b) => (a.indicators?.[template.pickRegion] ?? 50) - (b.indicators?.[template.pickRegion] ?? 50));
+    const pool = draw(ctx.game) < 0.6 ? sorted.slice(0, 6) : sorted;
+    params.region2 = pool[Math.floor(draw(ctx.game) * pool.length)]?.name ?? params.region;
+  } else params.region2 = params.region;
+  params.memory = env.signals?.memoryRecall ?? '';
+  params.lawTitle = env.signals?.lawTitle ?? 'una proposta';
+  params.lawId = env.signals?.lawId ?? null;
+  return params;
+}
+function fillText(value, params) { return typeof value === 'string' ? fill(value, params) : value; }
+function raiseEvent(ctx, template, params, specials, lines, urgent = false) {
+  const game = ctx.game;
+  const variant = template.variants ? template.variants[Math.floor(draw(game) * template.variants.length)] : null;
+  const item = instantiate(variant ? { ...template, ...variant } : template, 'evento', ctx, params);
+  if (template.category) item.category = template.category;
+  if (urgent || template.category === 'emergenza') game.inbox.unshift(item); else game.inbox.push(item);
+  game.eventHistory = { ...(game.eventHistory ?? {}), [template.id]: game.week.index };
+  game.lastEventId = template.id;
+  // Some events change the world as soon as they happen, whatever the player decides.
+  if (template.onRaise?.shock) specials.push({ type: 'society-shock', shock: Object.fromEntries(Object.entries(template.onRaise.shock).map(([key, value]) => [key, fillText(value, params)])) });
+  if (template.onRaise?.emergency) game.flags.emergencies = { ...(game.flags.emergencies ?? {}), [template.onRaise.emergency]: game.week.index };
+  lines.push(`Nuova decisione: ${item.title}`);
+  return item;
+}
+function fillInbox(ctx, env, lines, specials = []) {
   const game = ctx.game;
   const sit = situation(ctx, env);
   const params = eventParams(ctx);
@@ -364,14 +426,33 @@ function fillInbox(ctx, env, lines) {
     game.inbox.push(instantiate(item, 'appuntamento', ctx, params));
   }
   game.lastAppointmentIds = picked;
-  const events = CAREER_EVENTS.filter(item => item.id !== game.lastEventId && meets(item.when, sit) && !(item.id === 'congresso' && !params.currentB));
-  if (events.length && draw(game) < 0.6) {
-    const total = events.reduce((sum, item) => sum + item.weight, 0);
+  // Chained events come due first, if their conditions still hold.
+  for (const queued of (game.eventQueue ?? []).filter(entry => entry.dueWeek <= game.week.index)) {
+    const template = CAREER_EVENTS.find(entry => entry.id === queued.id);
+    const since = game.week.index - ((game.eventHistory ?? {})[queued.id] ?? -999);
+    if (template && since >= Math.min(template.cooldown ?? 8, 4) && meets(template.when, sit) && !game.inbox.some(item => item.templateId === template.id)) raiseEvent(ctx, template, { ...eventParamsFor(template, ctx, env), ...(queued.params ?? {}) }, specials, lines);
+  }
+  game.eventQueue = (game.eventQueue ?? []).filter(entry => entry.dueWeek > game.week.index);
+  // Procedural draw: conditions, cooldowns, rarity, exclusive categories and the situation's own weight.
+  const history = game.eventHistory ?? {};
+  const openExclusive = new Set(game.inbox.map(item => CAREER_EVENTS.find(entry => entry.id === item.templateId)?.exclusive).filter(Boolean));
+  const eligible = CAREER_EVENTS.filter(item => item.weight > 0 && item.id !== game.lastEventId && meets(item.when, sit) && !(item.id === 'congresso' && !params.currentB)
+    && game.week.index - (history[item.id] ?? -999) >= (item.cooldown ?? 8)
+    && !(item.unique && history[item.id] !== undefined)
+    && !(item.exclusive && openExclusive.has(item.exclusive))
+    && !game.inbox.some(entry => entry.templateId === item.id));
+  const weighted = eligible.map(item => ({ item, weight: item.weight * (typeof item.boost === 'function' ? item.boost(sit) : 1) * (item.rare ? 0.5 : 1) })).filter(entry => entry.weight > 0);
+  // Tense weeks bring more events: crises, campaigns, a government in trouble.
+  const tension = (sit.signals.stability ?? 60) < 35 || sit.campaignActive || sit.signals.euStatus === 'procedura' ? 0.2 : 0;
+  const rounds = draw(game) < 0.25 + tension ? 2 : 1;
+  for (let round = 0; round < rounds && weighted.length; round++) {
+    if (draw(game) >= 0.6 + tension) continue;
+    const total = weighted.reduce((sum, entry) => sum + entry.weight, 0);
     let pick = draw(game) * total;
-    const event = events.find(item => (pick -= item.weight) < 0) ?? events[0];
-    game.inbox.push(instantiate(event, 'evento', ctx, params));
-    game.lastEventId = event.id;
-    lines.push(`Nuova decisione: ${fill(event.title, params)}`);
+    const index = weighted.findIndex(entry => (pick -= entry.weight) < 0);
+    const [{ item: event }] = weighted.splice(index < 0 ? 0 : index, 1);
+    if (event.exclusive) for (let i = weighted.length - 1; i >= 0; i--) if (weighted[i].item.exclusive === event.exclusive) weighted.splice(i, 1);
+    raiseEvent(ctx, event, eventParamsFor(event, ctx, env), specials, lines);
   }
 }
 // The political world can ask for a reaction: it lands in the week's agenda like any other event.
@@ -412,25 +493,29 @@ export function describeEffects(effects = {}) {
 export function describeChoice(item, choiceId) {
   const choice = templateFor(item)?.choices.find(entry => entry.id === choiceId);
   if (!choice) return { effects: '', risk: '' };
-  const risk = choice.later ? `Possibili conseguenze future: ${choice.later.hint.charAt(0).toLowerCase()}${choice.later.hint.slice(1)}` : choice.risk ? `Rischio ${Math.round(choice.risk.chance * 100)}%` : choice.special?.startsWith('world-stance') ? 'Sposta i sondaggi del partito' : choice.outcomes ? 'Esito incerto' : choice.special?.startsWith('leadership') ? 'Esito legato al congresso' : choice.special === 'leave-party' ? 'Lasci il partito' : choice.special === 'resign' ? 'Lasci gli incarichi' : '';
+  const laterHint = choice.later ? (choice.later.hint ?? (choice.later.outcomes ? `esito incerto tra ${choice.later.weeks} settimane` : choice.later.label ?? 'conseguenze in arrivo')) : '';
+  const risk = choice.later ? `Possibili conseguenze future: ${laterHint.charAt(0).toLowerCase()}${laterHint.slice(1)}` : choice.risk ? `Rischio ${Math.round(choice.risk.chance * 100)}%` : choice.special?.startsWith('world-stance') ? 'Sposta i sondaggi del partito' : choice.outcomes ? 'Esito incerto' : choice.special?.startsWith('leadership') ? 'Esito legato al congresso' : choice.special === 'leave-party' ? 'Lasci il partito' : choice.special === 'resign' ? 'Lasci gli incarichi' : '';
   return { effects: describeEffects(choice.effects), risk };
 }
 function runChoice(ctx, env, item, choice, lines, specials) {
   let tone = 'neutral';
-  const params = { ...(item.params ?? {}), date: env.currentDate, fundsLabel: item.title };
+  const params = { ...(item.params ?? {}), date: env.currentDate, fundsLabel: item.title, source: item.title };
   applyEffects(ctx, choice.effects, item.params?.targetId ?? null, lines, params);
+  if (choice.memory) remember(ctx.game, { date: env.currentDate, ...choice.memory, text: fill(choice.memory.text, item.params) });
+  if (choice.followUp && draw(ctx.game) < (choice.followUp.chance ?? 1)) ctx.game.eventQueue = [...(ctx.game.eventQueue ?? []), { id: choice.followUp.id, dueWeek: ctx.game.week.index + (choice.followUp.weeks ?? 2), params: { region2: item.params?.region2 }, from: item.templateId }];
   if (choice.outcomes) {
     let roll = draw(ctx.game);
     const outcome = choice.outcomes.find(entry => (roll -= entry.chance) < 0) ?? choice.outcomes.at(-1);
     lines.push(outcome.label);
     applyEffects(ctx, outcome.effects, null, lines, params);
+    if (outcome.memory) remember(ctx.game, { date: env.currentDate, ...outcome.memory });
     schedule(ctx.game, outcome.later, item.title);
-    if (outcome.special) handleSpecial(ctx, env, outcome.special, item, lines, specials);
+    if (outcome.special) handleSpecial(ctx, env, outcome.special, item, lines, specials, outcome);
     tone = outcome.special || Object.values(outcome.effects?.stats ?? {}).some(value => value < -2) ? 'bad' : 'good';
   }
   if (choice.risk && draw(ctx.game) < choice.risk.chance) { lines.push(choice.risk.label); applyEffects(ctx, choice.risk.effects, null, lines, params); tone = 'bad'; }
   schedule(ctx.game, choice.later, item.title);
-  if (choice.special) handleSpecial(ctx, env, choice.special, item, lines, specials);
+  if (choice.special) handleSpecial(ctx, env, choice.special, item, lines, specials, choice);
   return tone;
 }
 export function resolveInboxItem(input, env, itemId, choiceId) {
@@ -462,8 +547,36 @@ function leaveParty(ctx, reason) {
   ctx.game.party = null;
   ctx.game.relations = ctx.game.relations.filter(item => item.id !== 'leadership');
 }
-function handleSpecial(ctx, env, special, item, lines, specials) {
+// Specials the store turns into changes of the country, the Parliament or the Government.
+const WORLD_SPECIALS = ['markets-calm', 'markets-worse', 'europe-up', 'europe-down', 'society-cost', 'minister-defend', 'minister-resign', 'budget-open', 'partner-accept', 'partner-negotiate', 'partner-refuse', 'obstruction-add', 'obstruction-clear', 'snipers'];
+function handleSpecial(ctx, env, special, item, lines, specials, choice = {}) {
   const game = ctx.game;
+  if (WORLD_SPECIALS.includes(special)) { specials.push({ type: special, params: item.params ?? {} }); return; }
+  if (special === 'emergency-decree') {
+    specials.push({ type: 'emergency-decree', decree: Object.fromEntries(Object.entries(choice.decree ?? {}).map(([key, value]) => [key, typeof value === 'string' ? fill(value, item.params) : value])), title: `Misure urgenti: ${item.title}` });
+    return;
+  }
+  if (special === 'issue-law-security') {
+    specials.push({ type: 'issue-law', region: item.params?.region2 ?? item.params?.region, topic: 'Sicurezza', indicator: 'sicurezza' });
+    return;
+  }
+  if (special === 'secretary-confidence' || special === 'secretary-resign') {
+    const party = game.party;
+    if (!party) return;
+    const cohesion = party.org?.cohesion ?? 50;
+    const holds = special === 'secretary-confidence' && draw(game) < clamp(0.3 + (party.support - 50) / 80 + (cohesion - 45) / 100, 0.1, 0.85);
+    if (holds) {
+      party.support = clamp(party.support + 5);
+      if (party.org) party.org.cohesion = Math.round(clamp(cohesion + 6));
+      lines.push('La direzione respinge la mozione: resti segretario, più forte di prima.');
+    } else {
+      party.rank = special === 'secretary-resign' ? 3 : 4; party.rankTitle = PARTY_RANKS[party.rank].title;
+      party.history.push({ week: game.week.index, date: env.currentDate, text: special === 'secretary-resign' ? 'Si dimette da segretario' : 'Sfiduciato dalla direzione nazionale', source: SIM });
+      remember(game, { date: env.currentDate, kind: 'crisi-aperta', text: special === 'secretary-resign' ? 'Dimissioni da segretario del partito' : 'Sfiduciato dalla direzione del partito', weight: 1.2 });
+      lines.push(special === 'secretary-resign' ? 'Lasci la segreteria: il partito sceglierà una nuova guida.' : 'La mozione passa: perdi la segreteria.');
+    }
+    return;
+  }
   if (special === 'leadership-a' || special === 'leadership-b') {
     const backed = special === 'leadership-a' ? item.params.currentAId : item.params.currentBId;
     const [a, b] = [item.params.currentAId, item.params.currentBId].map(id => game.party.currents.find(entry => entry.id === id));
@@ -749,6 +862,36 @@ export function assignOrgans(input, env, currentId) {
   addLog(ctx.game, env.currentDate, 'partito', `Organi e incarichi affidati a ${current.label}`, lines, 'neutral');
   return { ctx };
 }
+// The party programme: up to four national priorities; each internal area judges it against its own.
+export function setPartyProgram(input, env, areas = [], labels = {}) {
+  const chosen = [...new Set(areas)].filter(Boolean).slice(0, 4);
+  if (chosen.length < 2) throw new Error('Il programma ha bisogno di almeno due priorità.');
+  const ctx = asSecretary(input, { ap: 1, capital: 2 });
+  const party = ctx.game.party;
+  cooldown(party, 'program', 12, ctx.game.week.index);
+  party.program = { areas: chosen, since: ctx.game.week.index, source: SIM };
+  const lines = [];
+  for (const current of party.currents) {
+    const matches = chosen.filter(id => (CURRENT_AREAS[current.id] ?? []).includes(id)).length;
+    const delta = matches ? matches * 3 : -3;
+    changeRelation(ctx.game, current.id, delta);
+    lines.push(`${current.label}: ${delta > 0 ? '+' : ''}${delta}`);
+  }
+  if (party.org) party.org.cohesion = Math.round(clamp(party.org.cohesion + (chosen.some(id => (CURRENT_AREAS[party.leaderCurrentId] ?? []).includes(id)) ? 2 : -3)));
+  addLog(ctx.game, env.currentDate, 'partito', `Nuovo programma: ${chosen.map(id => labels[id] ?? id).join(', ')}`, lines, 'neutral');
+  return { ctx };
+}
+// How the party speaks: it shapes reputation, visibility and the tone of the press every week.
+export function setCommunication(input, env, style) {
+  if (!COMMUNICATION_STYLES[style]) throw new Error('Stile di comunicazione non riconosciuto.');
+  const ctx = asSecretary(input, { capital: 1 });
+  const party = ctx.game.party;
+  if (party.communication === style) throw new Error('È già lo stile del partito.');
+  cooldown(party, 'communication', 6, ctx.game.week.index);
+  party.communication = style;
+  addLog(ctx.game, env.currentDate, 'partito', `Comunicazione: ${COMMUNICATION_STYLES[style].label.toLowerCase()}`, [COMMUNICATION_STYLES[style].detail], 'neutral');
+  return { ctx };
+}
 // How the party chooses its candidates from now on.
 export const CANDIDACY_RULES = Object.freeze({
   primarie: { label: 'Primarie aperte', detail: 'Più partecipazione e iscritti, ma i candidati sfuggono al controllo della segreteria.' },
@@ -811,6 +954,7 @@ export function expelDissidents(input, env) {
   const lines = applyEffects(ctx, { org: { cohesion: 10 }, relations: { rival: -10 }, stats: { notoriety: 1, reputation: -1 } });
   lines.push(`${lost.toLocaleString('it-IT')} iscritti lasciano il partito`);
   addLog(ctx.game, env.currentDate, 'partito', 'Espulsione dei dissidenti', lines, 'bad');
+  remember(ctx.game, { date: env.currentDate, kind: 'epurazione', text: 'Espulsione dei dissidenti dal partito', weight: 1 });
   return { ctx };
 }
 
@@ -967,6 +1111,11 @@ function weeklySystems(ctx, env, date, closing, lines, specials) {
       } else if (event.type === 'treasury' && isPartyLeader(party)) raiseSituation(ctx, 'tesoreria-rosso');
       else if (event.type === 'demote') demote(ctx, env, event.reason, lines);
     }
+    // The chosen communication style works every week, for good and for bad.
+    if (isSecretary(party) && COMMUNICATION_STYLES[party.communication]) applyEffects(ctx, { stats: COMMUNICATION_STYLES[party.communication].weekly }, null, [], { source: `Comunicazione ${COMMUNICATION_STYLES[party.communication].label.toLowerCase()}` });
+    // A divided party shows in Parliament: its members follow the leadership less.
+    const standing = ctx.parliament?.careerStanding;
+    if (standing && isSecretary(party) && (party.org?.cohesion ?? 60) < 45) standing.partySupport = round2(clamp(standing.partySupport - 0.8));
     // Internal areas pursue their own ambitions: a hostile one can claim the player's office.
     if (party.affiliation === 'member' && party.rank >= 1 && party.rank <= 4 && closing - (game.flags.currentChallengeWeek ?? -99) >= 12) {
       const rival = [...party.currents].filter(current => current.id !== party.alignedCurrentId && (current.value ?? current.relation ?? 50) < 35).sort((a, b) => b.strength - a.strength)[0];
@@ -1036,7 +1185,7 @@ export function advanceWeek(input, env, governmentWeek = parliament => parliamen
     drift(ctx, lines);
     if (ctx.parliament) {
       const before = ctx.parliament.government?.status;
-      ctx.parliament = governmentWeek(ctx.parliament, date, draw(game));
+      ctx.parliament = governmentWeek(ctx.parliament, date, draw(game), () => draw(game));
       if (before === 'active' && ctx.parliament.government?.status === 'crisis') lines.push('La maggioranza si incrina: il governo entra in crisi.');
     }
     if (game.flags.opaqueFunding && !game.flags.opaqueFundingExposed && draw(game) < 0.25) { raiseForced(ctx, 'finanziamento'); game.flags.opaqueFundingExposed = true; }
@@ -1045,7 +1194,7 @@ export function advanceWeek(input, env, governmentWeek = parliament => parliamen
     updateElections(ctx, date, lines, specials);
     const days = WEEKLY_ACTION_POINTS + (game.week.nextStaffDays ?? 0);
     game.week = { index: closing + 1, startedAt: date, ap: days, maxAp: days, categoriesUsed: [] };
-    fillInbox(ctx, env, lines);
+    fillInbox(ctx, env, lines, specials);
   }
   const deltas = Object.fromEntries(Object.keys(STAT_LABELS).map(metric => [metric, round2((ctx.stats[metric] ?? 0) - (game.weekStartStats?.[metric] ?? ctx.stats[metric] ?? 0))]).filter(([, delta]) => delta));
   game.weekStartStats = { ...ctx.stats };

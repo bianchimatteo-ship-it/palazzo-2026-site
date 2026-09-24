@@ -130,6 +130,12 @@ try {
     assert(hash(bytes) === hash(expected), 'sw.js live diverso dal file locale');
     assert(/javascript/.test(response.headers.get('content-type') ?? ''), 'sw.js non è servito come JavaScript');
   } catch (error) { failures.push(`sw.js non disponibile (${error.message})`); }
+  // On Workers, the shared admin archive answers (read-only for everyone).
+  if (!/github\.io$/.test(pageUrl.host)) {
+    const response = await fetch(new URL('api/admin', pageUrl), { signal: AbortSignal.timeout(30000) }).catch(() => null);
+    const body = response?.ok ? await response.json().catch(() => null) : null;
+    assert(body && typeof body.parties === 'object' && typeof body.logos === 'object' && 'configured' in body, 'Archivio condiviso /api/admin non disponibile sul Worker');
+  }
   // Files that must never be published: the archive is never committed; Workers also skips the tooling.
   const unpublished = ['Archivio.zip', ...(/github\.io$/.test(pageUrl.host) ? [] : ['package.json', 'scripts/check-ui.mjs', 'wrangler.jsonc'])];
   for (const path of unpublished) {

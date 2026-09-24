@@ -10,7 +10,10 @@ const session = new Map();
 globalThis.sessionStorage = { getItem: key => session.get(key) ?? null, setItem: (key, value) => session.set(key, String(value)), removeItem: key => session.delete(key) };
 globalThis.window = { innerWidth: 1200 };
 const html = { dataset: {}, style: { props: {}, setProperty(name, value) { this.props[name] = value; } } };
-globalThis.document = { baseURI: 'http://localhost/', activeElement: null, documentElement: html, createElement: () => ({ style: {}, dataset: {}, replaceChildren() {}, append() {} }), createTextNode: text => text, body: { append() {} } };
+const bodyChildren = [];
+const windowListeners = {};
+globalThis.addEventListener = (type, fn) => { (windowListeners[type] ??= []).push(fn); };
+globalThis.document = { baseURI: 'http://localhost/', activeElement: null, documentElement: html, createElement: () => ({ style: {}, dataset: {}, hidden: false, children: [], replaceChildren(...items) { this.children = items; }, append() {} }), createTextNode: text => text, body: { append: element => bodyChildren.push(element) } };
 globalThis.indexedDB = undefined;
 globalThis.confirm = () => true;
 // Real JSON files served like the static server would.
@@ -77,7 +80,7 @@ let page = await click({ menu: 'nuova' });
 assert.ok(page.includes('career-wizard'), 'Nuova partita apre il Career Wizard');
 assert.ok(!page.includes('Partito di esempio'), 'Il segnaposto non è tra i partiti selezionabili');
 const groups = realData.realDatabase.parliamentaryGroups;
-const founder = { firstName: 'Marta', lastName: 'Neri', birthDate: '1985-02-11', gender: 'donna', region: 'Toscana', municipality: 'Siena', previousProfession: 'Architetta', initialLevel: 'deputato', parliamentaryGroupId: 'cam-xix-04', parliamentStartMode: 'real-context', partyMode: 'new', partyName: 'Lista Civica Neri', partyAbbreviation: 'LCN', partyColor: '#3a6ea5', partyDescription: 'Partito fondato dal giocatore.', partyOrientation: 'Altro', policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 } };
+const founder = { firstName: 'Marta', lastName: 'Neri', birthDate: '1985-02-11', gender: 'donna', region: 'Toscana', municipality: 'Siena', previousProfession: 'Architetta', initialLevel: 'deputato', parliamentaryGroupId: 'cam-xix-04', parliamentStartMode: 'real-context', partyMode: 'new', partyName: 'Lista Civica Neri', partyAbbreviation: 'LCN', partyColor: '#3a6ea5', partyColor2: '#f2c14e', partyDescription: 'Partito fondato dal giocatore.', partyOrientation: 'Altro', partyProgram: ['scuola', 'cultura'], partyLogoMode: 'builder', partyLogoShape: 'scudo', partyLogoSymbol: 'ponte', policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 } };
 store.createCareer(founder, realData.realDatabase.parties, groups);
 await click({ wizardAction: 'cancel' });
 assert.ok(store.hasCareer() && !root.innerHTML.includes('main-menu'), 'Dopo la creazione si entra in partita');
@@ -90,6 +93,30 @@ assert.ok(world.parties.filter(item => !item.isPlayer).every(item => item.refere
 const pages = ['panoramica', 'carriera', 'profilo', 'partito', 'territori', 'finanze', 'parlamento', 'governo', 'leggi', 'elezioni', 'calendario', 'sondaggi', 'archivio', 'amministrazione', 'impostazioni'];
 for (const id of pages) { const text = await goto(id); assert.ok(text.length > 1000, `${id} vuota`); assert.ok(clean(text), `${id}: valori non validi`); assert.ok(!/in costruzione|STRUTTURA PRONTA/.test(text), `${id}: segnaposto`); }
 let home = await goto('panoramica');
+// Branding: the party created in the wizard has a real identity used across the game.
+const userParty = store.getState().dataset.parties.find(party => party.source === 'user');
+assert.ok(userParty.logo?.kind === 'builder' && userParty.color2 === '#f2c14e' && userParty.program.includes('scuola') && userParty.officialName === 'Lista Civica Neri', 'Il partito creato ha logo, colori, programma e scheda completa (source: user).');
+assert.deepEqual(store.getState().game.party.program.areas, ['scuola', 'cultura'], 'Il programma del partito entra nella partita.');
+assert.ok(home.includes('class="party-identity"') && home.includes('data:image/svg+xml') && home.includes('hero-party-logo'), 'Logo e identità del partito compaiono nelle schermate.');
+assert.ok(home.includes('--party-accent:#3a6ea5'), 'Il colore del partito guida l’interfaccia.');
+const { partyLogoSvg } = await import('../src/ui/party-logo.js');
+assert.ok(partyLogoSvg({ shape: 'scudo', symbol: 'ponte', primary: '#3a6ea5', secondary: '#f2c14e', text: 'LCN' }).includes('LCN'), 'Il logo si costruisce con forme, simboli, colori e sigla.');
+// Tooltips: one element, removed on every render, route change and when its anchor disappears.
+const tip = bodyChildren.find(element => element.className === 'viz-tip');
+assert.ok(tip && bodyChildren.filter(element => element.className === 'viz-tip').length === 1, 'Un solo tooltip nel documento.');
+const anchor = { dataset: { tip: 'Sanità 58/100' }, isConnected: true, closest: selector => selector === '[data-tip]' ? anchor : null };
+const hover = () => { for (const fn of listeners.pointermove) fn({ target: { closest: selector => anchor.closest(selector) }, clientX: 100, clientY: 100 }); };
+hover();
+assert.equal(tip.hidden, false, 'Il tooltip compare al passaggio del mouse.');
+await goto('territori');
+assert.equal(tip.hidden, true, 'Cambiando pagina il tooltip sparisce.');
+hover();
+for (const fn of windowListeners.hashchange ?? []) fn({});
+assert.equal(tip.hidden, true, 'Anche al cambio di hash.');
+hover();
+for (const fn of listeners.pointerleave ?? []) fn({});
+assert.equal(tip.hidden, true, 'E quando il mouse esce.');
+home = await goto('panoramica');
 for (const text of ['RUOLI E POTERI', 'Fondatore e segretario', 'PERCHÉ È CAMBIATO', 'REDAZIONE', 'data-news-filter', 'data-action="menu"']) assert.ok(home.includes(text), `Home: manca ${text}`);
 assert.ok((await click({ newsFilter: 'diario' })).includes('data-news-filter="diario" class="active"'));
 const settingsPage = await goto('impostazioni');
@@ -117,23 +144,28 @@ await click({ secretary: 'investment', secretaryValue: 'scuola-politica' });
 assert.ok(store.getState().game.party.org.investments.some(item => item.id === 'scuola-politica'), 'Investimento del partito avviato');
 store.advance(7);
 
-// ---------- 5. Prime Minister: agenda with consequences on the country ----------
+// ---------- 5. Prime Minister: a different phase of the career, powers through Government and Parliament ----------
 store.formGovernment(['cam-xix-01', 'cam-xix-03', 'cam-xix-04', 'senato-xix-gruppo-85', 'senato-xix-gruppo-33', 'senato-xix-gruppo-56']);
 store.voteGovernmentConfidence();
 assert.equal(store.getState().parliament.government.status, 'active', 'La coalizione ottiene la fiducia');
 {
   assert.ok(playerRoles(store.getState()).primeMinister, 'Con la fiducia sei Presidente del Consiglio');
-  const governo = await goto('governo');
-  assert.ok(governo.includes('L’agenda del governo') && governo.includes('data-government-agenda-form'), 'Il PdC vede l’agenda');
+  let governo = await goto('governo');
+  for (const text of ['La guida del governo', 'data-government-program-form', 'data-government-action="summit"', 'data-policy-form', 'data-budget-form', 'Il governo propone, il Parlamento decide']) assert.ok(governo.includes(text), `Scrivania del PdC: manca ${text}`);
   assert.ok(governo.includes('I Governo Meloni'), 'Il governo reale è mostrato come riferimento');
-  store.setGovernmentAgenda(['Sanità', 'Scuola']);
-  for (let week = 0; week < 7; week++) store.advance(7);
-  const government = store.getState().parliament.government;
-  assert.ok((government.measureCount ?? 0) >= 1 || government.status !== 'active', 'L’agenda produce provvedimenti');
-  assert.ok(store.getState().game.timeline.some(item => item.kind === 'governo'), 'Fiducia e governo entrano nella cronologia');
-  assert.ok(store.getState().society.media.coverage.some(item => item.headline.startsWith('Il governo approva un decreto')), 'Il decreto finisce sui media');
-  assert.ok(store.getState().world.events.some(event => event.title.startsWith('Decreto del governo')), 'Il decreto entra nella cronaca con la catena di effetti');
-  console.log(`  PdC: governo ${government.status}, provvedimenti dell’agenda ${government.measureCount ?? 0}.`);
+  assert.ok(!governo.includes('data-government-agenda-form'), 'Niente più decreti automatici del PdC');
+  store.getState().game.week.ap = 6; store.getState().game.resources.politicalCapital = 40;
+  store.setGovernmentProgram({ line: 'crescita', priorities: ['sanita', 'scuola', 'infrastrutture'] });
+  assert.equal(store.getState().parliament.government.program.line, 'crescita');
+  const applied = store.getState().society.lawsApplied.length;
+  const bill = store.proposeGovernmentBill({ policy: { area: 'sanita', instrument: 'investimento', intensity: 2, financing: 'deficit' } });
+  assert.equal(bill.origin, 'governo');
+  assert.equal(store.getState().society.lawsApplied.length, applied, 'Il PdC non approva leggi da solo: il ddl deve passare dal Parlamento.');
+  store.advanceLaw(bill.id, 'present');
+  governo = await goto('leggi');
+  assert.ok(governo.includes('Disegno di legge del governo') && governo.includes('Prossimo passaggio tra 2 settimane'), 'La scheda mostra tipo e tempi dell’iter');
+  assert.ok(governo.includes('data-law-patch') && governo.includes('Riduci la portata'), 'Il contenuto si può emendare in commissione');
+  console.log(`  PdC: programma ${store.getState().parliament.government.program.priorities.length} priorità, ddl in ${bill.stage}.`);
 }
 
 // ---------- 6. weekly report, turn speed, timeline ----------
@@ -239,4 +271,4 @@ assert.equal(realData.realDatabase.parties.find(item => item.id === 'party-regis
 assert.ok(Object.isFrozen(realData.realDatabase.parties[0]), 'I dati reali restano immutabili');
 globalThis.fetch = serveFile;
 
-console.log(`Interfaccia verificata: menu principale, guida, impostazioni applicate e salvate, nuova partita con soli partiti reali, ${pages.length} pagine senza valori non validi, poteri del segretario con costi e cooldown, agenda del Presidente del Consiglio, resoconto settimanale, velocità del turno, cronologia, archivio reale (partiti con 2×1000, deputati, senatori, gruppi, governo, leggi, territori), slot, import/export, seconda partita con ruoli limitati, loghi da indirizzo separati dai verificati.`);
+console.log(`Interfaccia verificata: menu principale, guida, impostazioni applicate e salvate, nuova partita con soli partiti reali, ${pages.length} pagine senza valori non validi, poteri del segretario con costi e cooldown, scrivania del Presidente del Consiglio senza leggi unilaterali, identità del partito (logo, colori, programma), tooltip rimossi a ogni cambio pagina, resoconto settimanale, velocità del turno, cronologia, archivio reale (partiti con 2×1000, deputati, senatori, gruppi, governo, leggi, territori), slot, import/export, seconda partita con ruoli limitati, loghi da indirizzo separati dai verificati.`);

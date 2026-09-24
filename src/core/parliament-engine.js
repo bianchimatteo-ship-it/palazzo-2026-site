@@ -1,19 +1,14 @@
-import { DATA_SOURCES } from '../data/schema.js?v=20260924-16';
+import { DATA_SOURCES } from '../data/schema.js?v=20260924-17';
+import { AREA_BY_ID, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, STAGE_WEEKS, areaOf } from '../data/simulation/policy-rules.js?v=20260924-17';
 
 export const CHAMBERS = Object.freeze({
   camera: { label: 'Camera dei deputati', shortLabel: 'Camera', source: DATA_SOURCES.REAL },
   senato: { label: 'Senato della Repubblica', shortLabel: 'Senato', source: DATA_SOURCES.REAL }
 });
 
-export const LAW_CATEGORIES = Object.freeze([
-  'Economia', 'Lavoro', 'Sanità', 'Scuola', 'Sicurezza', 'Ambiente',
-  'Infrastrutture', 'Giustizia', 'Welfare', 'Pubblica amministrazione'
-]);
-
-export const MINISTERIAL_PORTFOLIOS = Object.freeze([
-  'Economia e finanze', 'Interno', 'Esteri', 'Giustizia', 'Difesa', 'Lavoro',
-  'Salute', 'Istruzione', 'Ambiente', 'Infrastrutture'
-]);
+// Every policy area of the simulation can be the subject of a bill.
+export const LAW_CATEGORIES = Object.freeze(POLICY_AREAS.map(item => item.label));
+export const MINISTERIAL_PORTFOLIOS = MINISTRIES;
 
 // Internal career ladder of the game: each step is a simulated appointment, never a real office.
 export const PARLIAMENTARY_ROLES = Object.freeze([
@@ -32,6 +27,31 @@ const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 const opposite = chamber => chamber === 'camera' ? 'senato' : 'camera';
 const newId = prefix => `${prefix}-${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`}`;
 const numberOr = (value, fallback) => Number.isFinite(Number(value)) ? Number(value) : fallback;
+const hashOf = value => [...String(value)].reduce((n, char) => (n * 31 + char.charCodeAt(0)) >>> 0, 2166136261) || 1;
+export const weeksBetween = (from, to) => from && to ? Math.floor((Date.parse(`${to}T12:00:00`) - Date.parse(`${from}T12:00:00`)) / 604800000) : 99;
+const addDaysTo = (date, days) => { const value = new Date(`${date}T12:00:00`); value.setDate(value.getDate() + days); return value.toISOString().slice(0, 10); };
+// Scenario priorities of a parliamentary group: drawn from its id, declared as simulation, never an attribution of real positions.
+export function groupProfile(groupId) {
+  let state = hashOf(`profilo|${groupId}`);
+  const rand = () => { state = (Math.imul(state, 1664525) + 1013904223) >>> 0; return state / 4294967296; };
+  const pool = POLICY_AREAS.map(item => item.id);
+  const pick = () => pool.splice(Math.floor(rand() * pool.length), 1)[0];
+  const likes = [pick(), pick(), pick()];
+  const dislikes = [pick(), pick()];
+  const financing = ['deficit', 'irpef', 'imprese', 'consumi', 'rendite', 'tagli'][Math.floor(rand() * 6)];
+  return { likes, dislikes, dislikesFinancing: financing, source: DATA_SOURCES.SIMULATION };
+}
+// How much a group likes the content of a bill (areas and financing), from −1 to +1.
+function contentAffinity(groupId, law) {
+  const policy = law.policy;
+  if (!policy?.area) return 0;
+  const profile = groupProfile(groupId);
+  let score = 0;
+  if (profile.likes.includes(policy.area)) score += 0.6;
+  if (profile.dislikes.includes(policy.area)) score -= 0.6;
+  if (policy.financing === profile.dislikesFinancing) score -= 0.4;
+  return clamp(score, -1, 1);
+}
 const normalizeGroup = group => ({
   groupId: group.id,
   officialName: group.officialName,
@@ -139,10 +159,10 @@ export function normalizeParliamentState(parliament) {
   for (const group of allGroups({ chambers })) if (!relations[group.groupId]) relations[group.groupId] = { value: 50, source: DATA_SOURCES.SIMULATION };
   const player = parliament.player && CHAMBERS[parliament.player.chamber] ? { position: BASE_POSITION, groupId: null, source: DATA_SOURCES.SIMULATION, ...parliament.player } : null;
   const government = parliament.government ? {
-    coalitionGroupIds: [], supportingGroupIds: [], ministers: [], confidenceVotes: [], crisisSeverity: 0, stability: 50, ...parliament.government
+    coalitionGroupIds: [], supportingGroupIds: [], ministers: [], confidenceVotes: [], crisisSeverity: 0, stability: 50, partners: {}, program: null, ...parliament.government
   } : null;
   const laws = (Array.isArray(parliament.laws) ? parliament.laws : []).map(law => ({
-    negotiatedGroupIds: [], amendments: [], votes: [], compromiseLevel: 0, forcedVote: false, ...law
+    negotiatedGroupIds: [], amendments: [], votes: [], compromiseLevel: 0, forcedVote: false, origin: 'parlamentare', kind: 'ddl', demands: {}, stageSince: law.updatedAt ?? law.introducedAt ?? null, ...law
   }));
   const standing = parliament.careerStanding
     ? { ...createCareerStanding(), ...parliament.careerStanding, roles: parliament.careerStanding.roles ?? (parliament.careerStanding.committeeRole ? [parliament.careerStanding.committeeRole] : []), roleLevel: parliament.careerStanding.roleLevel ?? (parliament.careerStanding.committeeRole ? 1 : 0) }
@@ -217,23 +237,103 @@ export function canManageParliament(parliament) {
   return Boolean(parliament?.player?.politicianId && parliament.player.groupId && getGroup(parliament, parliament.player.groupId));
 }
 
-export function proposeLaw(parliament, { title, category, summary, currentDate }) {
+export function proposeLaw(parliament, { title, category, summary, currentDate, policy = null, origin = 'parlamentare', kind = 'ddl' }) {
   if (!canManageParliament(parliament)) throw new Error('Per presentare una legge serve un percorso parlamentare e un gruppo di riferimento.');
   const cleanTitle = String(title ?? '').trim();
   const cleanSummary = String(summary ?? '').trim();
+  const area = areaOf(policy?.area) ?? areaOf(category);
   if (cleanTitle.length < 5) throw new Error('Il titolo deve contenere almeno 5 caratteri.');
-  if (!LAW_CATEGORIES.includes(category)) throw new Error('Scegli una categoria valida.');
+  if (kind !== 'manovra' && !area) throw new Error('Scegli un tema valido.');
   if (cleanSummary.length < 12) throw new Error('Descrivi la proposta con almeno 12 caratteri.');
   const law = {
-    id: newId('legge'), title: cleanTitle, category, summary: cleanSummary,
-    status: 'proposal', stage: 'proposal', introducedAt: currentDate, updatedAt: currentDate,
+    id: newId(kind === 'decreto' ? 'decreto' : kind === 'manovra' ? 'manovra' : 'legge'), title: cleanTitle, category: kind === 'manovra' ? 'Finanze pubbliche' : area.label, summary: cleanSummary,
+    status: 'proposal', stage: 'proposal', introducedAt: currentDate, updatedAt: currentDate, stageSince: currentDate,
     firstChamber: parliament.player.chamber, currentChamber: parliament.player.chamber,
-    negotiatedGroupIds: [], amendments: [], compromiseLevel: 0, forcedVote: false,
+    negotiatedGroupIds: [], amendments: [], compromiseLevel: 0, forcedVote: false, demands: {},
+    origin, kind, policy: policy ? { ...policy, area: kind === 'manovra' ? null : area.id } : (area ? { area: area.id } : null),
     votes: [], source: DATA_SOURCES.SIMULATION
   };
   let next = { ...parliament, laws: [...parliament.laws, law] };
-  next = record(next, currentDate, 'legge-proposta', `Presentata “${law.title}” (${law.category.toLowerCase()}).`, { lawId: law.id, stage: law.stage });
+  const label = kind === 'manovra' ? 'la legge di bilancio' : origin === 'governo' ? `il disegno di legge del governo “${law.title}”` : `“${law.title}”`;
+  next = record(next, currentDate, 'legge-proposta', `Presentata ${label} (${law.category.toLowerCase()}).`, { lawId: law.id, stage: law.stage, origin, kind });
   return { parliament: next, law };
+}
+// Urgent measure by the Government: in force at once, void if Parliament does not convert it within 60 days.
+export function issueDecree(parliament, { title, summary, policy, currentDate }) {
+  const government = parliament.government;
+  if (!government || government.status !== 'active') throw new Error('Un decreto-legge lo adotta solo un governo nella pienezza dei poteri.');
+  const open = parliament.laws.filter(law => law.kind === 'decreto' && !CLOSED_LAW_STAGES.includes(law.stage)).length;
+  if (open >= DECREE_RULES.maxOpen) throw new Error(`Ci sono già ${open} decreti in attesa di conversione: il Parlamento non ne può esaminare altri.`);
+  if (government.lastDecreeAt && weeksBetween(government.lastDecreeAt, currentDate) < DECREE_RULES.cooldownWeeks) throw new Error(`Troppi decreti ravvicinati: il prossimo è possibile dal ${addDaysTo(government.lastDecreeAt, DECREE_RULES.cooldownWeeks * 7)}.`);
+  const result = proposeLaw(parliament, { title, category: areaOf(policy?.area)?.label, summary, currentDate, policy, origin: 'governo', kind: 'decreto' });
+  const deadline = addDaysTo(currentDate, DECREE_RULES.conversionWeeks * 7);
+  let next = replaceLaw(result.parliament, result.law.id, law => ({ ...law, stage: 'commission', status: 'commission', inForce: true, deadline }));
+  next = { ...next, government: { ...next.government, lastDecreeAt: currentDate, decrees: (next.government.decrees ?? 0) + 1 } };
+  next = record(next, currentDate, 'decreto-adottato', `Il Consiglio dei ministri adotta il decreto-legge “${title}”: va convertito entro il ${deadline}.`, { lawId: result.law.id, deadline, source: DATA_SOURCES.SIMULATION });
+  return { parliament: next, law: next.laws.find(law => law.id === result.law.id) };
+}
+
+// The content of a bill changes: an amendment on money, cover, territory, beneficiaries or scale.
+export function amendLawPolicy(parliament, lawId, patch = {}, currentDate, { author = 'player', label = null } = {}) {
+  const law = parliament.laws.find(item => item.id === lawId);
+  if (!law || !['commission', 'amendments'].includes(law.stage)) throw new Error('Il contenuto si modifica in commissione o nella fase degli emendamenti.');
+  if (law.confidence) throw new Error('Sulla proposta è stata posta la fiducia: il testo non si può più emendare.');
+  if (law.kind === 'manovra' && !patch.plan) throw new Error('La legge di bilancio si modifica sulle voci di spesa.');
+  const allowed = ['intensity', 'financing', 'cutArea', 'target', 'segment', 'instrument', 'plan'];
+  const clean = Object.fromEntries(Object.entries(patch).filter(([key, value]) => allowed.includes(key) && value !== undefined && value !== null && value !== ''));
+  if (!Object.keys(clean).length) throw new Error('Nessuna modifica da applicare.');
+  const text = label ?? Object.entries(clean).map(([key, value]) => ({ intensity: `portata ${['', 'contenuta', 'media', 'ampia'][value] ?? value}`, financing: `copertura: ${FINANCING[value]?.label ?? value}`, cutArea: `tagli a ${AREA_BY_ID[value]?.label ?? value}`, target: `territorio: ${value}`, segment: `destinatari: ${value}`, instrument: `strumento: ${value}`, plan: 'voci di spesa riviste' }[key])).join(' · ');
+  let next = replaceLaw(parliament, lawId, current => ({ ...current, policy: { ...(current.policy ?? {}), ...clean }, amendments: [...current.amendments, { id: newId('emendamento'), text, patch: clean, author, date: currentDate, source: DATA_SOURCES.SIMULATION }], updatedAt: currentDate }));
+  // Groups read the new text: those who now like it more get closer, the others cool down.
+  const updated = next.laws.find(item => item.id === lawId);
+  for (const group of allGroups(next)) {
+    const delta = contentAffinity(group.groupId, updated) - contentAffinity(group.groupId, law);
+    if (Math.abs(delta) >= 0.2) next = setRelation(next, group.groupId, Math.round(delta * 5));
+  }
+  return record(next, currentDate, 'emendamento-contenuto', `Modificato il contenuto di “${law.title}”: ${text}.`, { lawId, patch: clean, source: DATA_SOURCES.SIMULATION });
+}
+// What a group asks in exchange for its votes, derived from its scenario priorities.
+function demandFor(parliament, law, groupId) {
+  const profile = groupProfile(groupId);
+  const policy = law.policy ?? {};
+  if (law.kind === 'manovra') {
+    const group = POLICY_AREAS.find(item => item.id === profile.likes[0])?.group;
+    return { patch: { plan: { ...(policy.plan ?? {}), allocations: { ...(policy.plan?.allocations ?? {}), [group]: 1 } } }, label: `più risorse per ${POLICY_AREAS.find(item => item.id === profile.likes[0])?.label.toLowerCase()}` };
+  }
+  if (policy.financing && policy.financing === profile.dislikesFinancing) {
+    const alternative = ['evasione', 'tagli', 'deficit', 'rendite'].find(item => item !== profile.dislikesFinancing);
+    return { patch: { financing: alternative }, label: `cambiare la copertura (${FINANCING[alternative].label.toLowerCase()} invece di ${FINANCING[policy.financing].label.toLowerCase()})` };
+  }
+  if (profile.dislikes.includes(policy.area) && (policy.intensity ?? 2) > 1) return { patch: { intensity: (policy.intensity ?? 2) - 1 }, label: 'ridurre la portata della misura' };
+  if (policy.target && policy.target !== 'nazionale') return { patch: { target: 'nazionale' }, label: 'estendere la misura a tutto il Paese' };
+  const segment = ['giovani', 'famiglie', 'anziani', 'imprese', 'fragili'][hashOf(groupId) % 5];
+  if (policy.segment !== segment) return { patch: { segment }, label: `favorire ${{ giovani: 'i giovani', famiglie: 'le famiglie', anziani: 'i pensionati', imprese: 'le imprese', fragili: 'i redditi bassi' }[segment]}` };
+  return { patch: { intensity: Math.max(1, (policy.intensity ?? 2) - 1) }, label: 'un testo più prudente' };
+}
+export function acceptLawDemand(parliament, lawId, groupId, currentDate) {
+  const law = parliament.laws.find(item => item.id === lawId);
+  const demand = law?.demands?.[groupId];
+  if (!demand || demand.accepted) throw new Error('Non c’è una richiesta aperta da questo gruppo.');
+  let next = amendLawPolicy(parliament, lawId, demand.patch, currentDate, { author: groupId, label: `Accolta la richiesta di ${getGroup(parliament, groupId)?.officialName ?? 'un gruppo'}: ${demand.label}` });
+  next = replaceLaw(next, lawId, current => ({ ...current, demands: { ...current.demands, [groupId]: { ...demand, accepted: true } } }));
+  return setRelation(next, groupId, 4);
+}
+export function withdrawLaw(parliament, lawId, currentDate) {
+  const law = parliament.laws.find(item => item.id === lawId);
+  if (!law || CLOSED_LAW_STAGES.includes(law.stage)) throw new Error('La proposta non è ritirabile.');
+  const next = replaceLaw(parliament, lawId, current => ({ ...current, stage: 'lapsed', status: 'withdrawn', updatedAt: currentDate }));
+  return record(next, currentDate, 'legge-ritirata', `Ritirata la proposta “${law.title}”.`, { lawId, source: DATA_SOURCES.SIMULATION });
+}
+// The Government stakes its life on a text: its majority closes ranks, and if the vote fails the Government falls.
+export function askConfidenceOnLaw(parliament, lawId, currentDate) {
+  const law = parliament.laws.find(item => item.id === lawId);
+  const government = parliament.government;
+  if (!government || government.status !== 'active') throw new Error('La questione di fiducia la pone un governo in carica.');
+  if (!law || law.origin !== 'governo' || !['amendments', 'final-vote'].includes(law.stage)) throw new Error('La fiducia si pone su un testo del governo arrivato al voto.');
+  if (law.confidence) throw new Error('La fiducia è già stata posta su questo testo.');
+  let next = replaceLaw(parliament, lawId, current => ({ ...current, confidence: true, updatedAt: currentDate }));
+  for (const group of allGroups(next).filter(item => !governingGroupIds(next).has(item.groupId))) next = setRelation(next, group.groupId, -3);
+  return record(next, currentDate, 'fiducia-posta', `Il governo pone la questione di fiducia su “${law.title}”: se la perde, cade.`, { lawId, source: DATA_SOURCES.SIMULATION });
 }
 
 function replaceLaw(parliament, lawId, transform) {
@@ -275,9 +375,11 @@ export function negotiateLaw(parliament, lawId, groupId, currentDate, { influenc
   if ((parliament.resources?.politicalCapital ?? 0) < 4) throw new Error('Capitale politico insufficiente per aprire un’altra trattativa.');
   if (refusesTalks(parliament, groupId, influence)) return refusal(parliament, groupId, currentDate, { lawId });
   let next = { ...parliament, resources: { ...parliament.resources, politicalCapital: parliament.resources.politicalCapital - 4 } };
-  next = replaceLaw(next, lawId, current => ({ ...current, negotiatedGroupIds: [...current.negotiatedGroupIds, groupId], updatedAt: currentDate }));
+  // Votes have a price: the group states what it wants changed in the text.
+  const demand = { ...demandFor(parliament, law, groupId), accepted: false, date: currentDate, source: DATA_SOURCES.SIMULATION };
+  next = replaceLaw(next, lawId, current => ({ ...current, negotiatedGroupIds: [...current.negotiatedGroupIds, groupId], demands: { ...(current.demands ?? {}), [groupId]: demand }, updatedAt: currentDate }));
   next = setRelation(next, groupId, 3);
-  return record(next, currentDate, 'negoziato', `Avviato un negoziato con ${target.officialName}.`, { lawId, groupId, source: DATA_SOURCES.SIMULATION });
+  return record(next, currentDate, 'negoziato', `Avviato un negoziato con ${target.officialName}: chiede di ${demand.label}.`, { lawId, groupId, demand: demand.label, source: DATA_SOURCES.SIMULATION });
 }
 
 export function compromiseLaw(parliament, lawId, currentDate) {
@@ -296,27 +398,43 @@ function calculateVote(parliament, law, chamber) {
   const governing = governingGroupIds(parliament);
   const inMajority = playerInMajority(parliament);
   const negotiated = new Set(law.negotiatedGroupIds);
+  const government = parliament.government;
+  const discipline = parliament.careerStanding?.partySupport ?? 50;
   const rows = parliament.chambers[chamber].groups;
   let yes = 0;
   const results = rows.map(group => {
     const relation = parliament.relations?.[group.groupId]?.value ?? 50;
     const own = group.groupId === parliament.player?.groupId;
-    let support = own ? 0.58
-      : negotiated.has(group.groupId) ? 0.72
-      : governing.has(group.groupId) ? (inMajority ? 0.65 : 0.4)
+    const demand = law.demands?.[group.groupId];
+    const partner = government?.partners?.[group.groupId];
+    let support = own ? 0.5 + discipline / 500
+      : negotiated.has(group.groupId) ? (demand && !demand.accepted ? 0.52 : 0.74)
+      : governing.has(group.groupId) ? (inMajority ? 0.62 : 0.4)
       : governing.size && inMajority ? 0.38 : 0.43;
     support += law.compromiseLevel * 0.035;
     support += (relation - 50) / 1000;
-    // A forced vote tightens discipline in the player's camp and hardens everyone else.
-    if (governing.has(group.groupId) && (parliament.government?.stability ?? 50) < 40) support -= (40 - parliament.government.stability) / 400;
+    // The content matters: areas and cover a group cares about move its votes.
+    if (!own) support += contentAffinity(group.groupId, law) * 0.09;
+    // Allies vote according to how satisfied they are with the Government; government bills are followed more.
+    if (partner && !own) support += (partner.satisfaction - 50) / 400 + (law.origin === 'governo' ? 0.05 : 0);
+    if (governing.has(group.groupId) && (government?.stability ?? 50) < 40) support -= (40 - government.stability) / 400;
     if (law.forcedVote) support += own || (inMajority && governing.has(group.groupId)) ? 0.1 : -0.07;
-    const votes = Math.round(group.simulatedSeats * clamp(support, 0.12, 0.9));
+    // A question of confidence binds the majority: dissenting means bringing the Government down.
+    if (law.confidence && governing.has(group.groupId)) support += 0.18;
+    // Snipers: in a secret ballot part of the majority can betray.
+    if (law.snipers && governing.has(group.groupId) && !own && !law.confidence) support -= 0.07;
+    const votes = Math.round(group.simulatedSeats * clamp(support, 0.12, 0.93));
     yes += votes;
     return { groupId: group.groupId, yesVotes: votes, simulatedSeats: group.simulatedSeats, source: DATA_SOURCES.SIMULATION };
   });
   const total = rows.reduce((sum, group) => sum + group.simulatedSeats, 0);
   const needed = Math.floor(total / 2) + 1;
-  return { chamber, yes, no: total - yes, total, needed, passed: yes >= needed, forced: Boolean(law.forcedVote), byGroup: results, source: DATA_SOURCES.SIMULATION };
+  return { chamber, yes, no: total - yes, total, needed, passed: yes >= needed, forced: Boolean(law.forcedVote), confidence: Boolean(law.confidence), byGroup: results, source: DATA_SOURCES.SIMULATION };
+}
+// Each phase takes time: commissions hear, groups negotiate, the other Chamber reads the text again.
+export function stageWait(law, currentDate) {
+  const needed = (law.kind === 'decreto' || law.kind === 'manovra' ? Math.min(1, STAGE_WEEKS[law.stage] ?? 0) : STAGE_WEEKS[law.stage] ?? 0) + (law.stage === 'commission' ? law.obstruction ?? 0 : 0);
+  return Math.max(0, needed - weeksBetween(law.stageSince ?? law.updatedAt ?? law.introducedAt, currentDate));
 }
 
 export function advanceLaw(parliament, lawId, action, currentDate) {
@@ -324,6 +442,9 @@ export function advanceLaw(parliament, lawId, action, currentDate) {
   if (!law) throw new Error('La proposta non è disponibile.');
   if (CLOSED_LAW_STAGES.includes(law.stage)) throw new Error('L’iter legislativo è già concluso.');
   if (!canManageParliament(parliament)) throw new Error('Serve un mandato parlamentare attivo per far avanzare la proposta.');
+  const wait = stageWait(law, currentDate);
+  const phaseName = { proposal: 'la presentazione', commission: 'l’esame in commissione', amendments: 'la fase degli emendamenti', 'other-chamber': 'la trasmissione', 'final-vote': 'l’esame dell’altra Camera' }[law.stage];
+  if (wait > 0) throw new Error(`Servono ancora ${wait} ${wait === 1 ? 'settimana' : 'settimane'} per ${phaseName}${law.obstruction && law.stage === 'commission' ? ' (l’opposizione fa ostruzionismo)' : ''}.`);
   let next = parliament;
   let text = '';
   if (law.stage === 'proposal' && action === 'present') {
@@ -337,6 +458,7 @@ export function advanceLaw(parliament, lawId, action, currentDate) {
     const votingLaw = forced ? { ...law, forcedVote: true } : law;
     const vote = calculateVote(next, votingLaw, law.currentChamber);
     next = replaceLaw(next, lawId, current => ({ ...current, forcedVote: forced || current.forcedVote, stage: vote.passed ? 'other-chamber' : 'rejected', status: vote.passed ? 'other-chamber' : 'rejected', votes: [...current.votes, vote], updatedAt: currentDate }));
+    if (!vote.passed && law.confidence) next = governmentDefeated(next, law, currentDate);
     if (forced) for (const group of next.chambers[law.currentChamber].groups) {
       if (group.groupId !== next.player.groupId && !(playerInMajority(next) && governingGroupIds(next).has(group.groupId))) next = setRelation(next, group.groupId, -2);
     }
@@ -351,13 +473,22 @@ export function advanceLaw(parliament, lawId, action, currentDate) {
     const resultStage = vote.passed ? 'approved' : 'rejected';
     next = replaceLaw(next, lawId, current => ({ ...current, stage: resultStage, status: resultStage, votes: [...current.votes, vote], updatedAt: currentDate }));
     next = adjustStanding(next, vote.passed ? 2 : -1);
+    if (!vote.passed && law.confidence) next = governmentDefeated(next, law, currentDate);
     text = vote.passed ? `Approvazione simulata definitiva: “${law.title}”.` : `La ${CHAMBERS[law.currentChamber].label} ha respinto “${law.title}” nella votazione finale simulata.`;
   } else {
     throw new Error('Questa azione non è disponibile nella fase corrente.');
   }
+  next = replaceLaw(next, lawId, current => current.stage !== law.stage ? { ...current, stageSince: currentDate } : current);
   const current = next.laws.find(item => item.id === lawId);
-  next = record(next, currentDate, `iter-${current.stage}`, text, { lawId, stage: current.stage, source: DATA_SOURCES.SIMULATION });
+  next = record(next, currentDate, `iter-${current.stage}`, text, { lawId, stage: current.stage, kind: current.kind, origin: current.origin, source: DATA_SOURCES.SIMULATION });
   return { parliament: next, law: current, vote: current.votes.at(-1) ?? null };
+}
+function governmentDefeated(parliament, law, currentDate) {
+  const government = parliament.government;
+  if (!government || !['active', 'crisis'].includes(government.status)) return parliament;
+  const ministers = government.ministers.map(item => item.endedAt ? item : { ...item, endedAt: currentDate, endReason: 'Fiducia negata' });
+  const next = { ...parliament, government: { ...government, status: 'fallen', stability: 0, ministers, fallenAt: currentDate } };
+  return record(next, currentDate, 'fiducia-negata', `Il governo perde la fiducia su “${law.title}” e cade.`, { governmentId: government.id, lawId: law.id, source: DATA_SOURCES.SIMULATION });
 }
 
 function validateCoalition(parliament, groupIds) {
@@ -429,8 +560,10 @@ export function assignMinister(parliament, portfolio, groupId, currentDate, { ap
   if (![...government.coalitionGroupIds, ...government.supportingGroupIds].includes(groupId)) throw new Error(toPlayer ? 'Puoi entrare nel governo solo se il tuo gruppo fa parte della maggioranza.' : 'L’incarico va assegnato a un gruppo della maggioranza o a un sostenitore.');
   if (activeMinisters(government).some(item => item.portfolio === portfolio)) throw new Error('Questo ministero è già assegnato.');
   const group = getGroup(parliament, groupId);
-  const appointment = { id: newId('nomina'), portfolio, groupId, groupName: group.officialName, playerAppointed: toPlayer, appointeeLabel: toPlayer ? (appointeeLabel || 'Il tuo politico') : 'Incarico di governo simulato', source: DATA_SOURCES.SIMULATION, appointedAt: currentDate };
+  const seed = hashOf(`${government.id}|${portfolio}|${groupId}`);
+  const appointment = { id: newId('nomina'), portfolio, groupId, groupName: group.officialName, playerAppointed: toPlayer, appointeeLabel: toPlayer ? (appointeeLabel || 'Il tuo politico') : 'Incarico di governo simulato', loyalty: toPlayer ? 100 : 55 + seed % 25, competence: toPlayer ? null : 40 + (seed >> 5) % 45, source: DATA_SOURCES.SIMULATION, appointedAt: currentDate };
   let next = { ...parliament, government: { ...government, ministers: [...government.ministers, appointment] } };
+  next = changePartner(next, groupId, 6);
   next = setRelation(next, groupId, 3);
   if (toPlayer) next = adjustStanding(next, 2);
   return record(next, currentDate, toPlayer ? 'nomina-ministro-giocatore' : 'nomina-ministro', toPlayer ? `Assunto l’incarico di ministro (${portfolio}) nello scenario.` : `Assegnato il ministero ${portfolio} al gruppo ${group.officialName} nello scenario.`, { governmentId: government.id, appointmentId: appointment.id, source: DATA_SOURCES.SIMULATION });
@@ -453,7 +586,8 @@ export function voteGovernmentConfidence(parliament, currentDate) {
   const inCoalition = groups.has(parliament.player?.groupId);
   const margin = Math.min(...votes.map(vote => vote.yes - vote.needed));
   const stability = passed ? clamp(Math.round(government.status === 'crisis' ? 40 + margin / 3 : 45 + margin / 2), 25, 80) : 0;
-  let next = { ...parliament, government: { ...government, status, stability, ministers, crisisSeverity: passed ? 0 : government.crisisSeverity, lastCrisisSeverity: government.crisisSeverity, confidenceVotes: [...government.confidenceVotes, { date: currentDate, votes, result: status, source: DATA_SOURCES.SIMULATION }], formedAt: passed ? (government.formedAt ?? currentDate) : government.formedAt ?? null, fallenAt: passed ? null : currentDate } };
+  const partners = Object.fromEntries([...groups].filter(id => id !== parliament.player?.groupId).map(id => [id, government.partners?.[id] ?? { satisfaction: government.coalitionGroupIds.includes(id) ? 62 : 55, demand: null, source: DATA_SOURCES.SIMULATION }]));
+  let next = { ...parliament, government: { ...government, status, stability, ministers, partners, crisisSeverity: passed ? 0 : government.crisisSeverity, lastCrisisSeverity: government.crisisSeverity, confidenceVotes: [...government.confidenceVotes, { date: currentDate, votes, result: status, source: DATA_SOURCES.SIMULATION }], formedAt: passed ? (government.formedAt ?? currentDate) : government.formedAt ?? null, fallenAt: passed ? null : currentDate } };
   if (inCoalition) next = adjustStanding(next, passed ? 1 : -2);
   return record(next, currentDate, passed ? 'fiducia-ottenuta' : 'fiducia-negata', passed ? 'La maggioranza simulata ha ottenuto la fiducia in entrambe le Camere.' : 'La maggioranza simulata non ha ottenuto la fiducia in entrambe le Camere.', { governmentId: government.id, votes, source: DATA_SOURCES.SIMULATION });
 }
@@ -467,17 +601,124 @@ export function triggerGovernmentCrisis(parliament, currentDate) {
   return record(next, currentDate, 'crisi-governo', 'Si apre una crisi politica nello scenario; il governo deve verificare la propria fiducia.', { governmentId: government.id, severity, source: DATA_SOURCES.SIMULATION });
 }
 
-// Weekly life of the executive: comfortable majorities steady it, thin ones erode it.
-export function advanceGovernmentWeek(parliament, currentDate, roll = 0.5) {
-  const government = parliament?.government;
-  if (!government || government.status !== 'active') return parliament;
+// ---------- the Government as an actor ----------
+function changePartner(parliament, groupId, delta, patch = {}) {
+  const government = parliament.government;
+  if (!government?.partners?.[groupId]) return parliament;
+  const partner = government.partners[groupId];
+  return { ...parliament, government: { ...government, partners: { ...government.partners, [groupId]: { ...partner, ...patch, satisfaction: clamp(Math.round((partner.satisfaction + delta) * 10) / 10, 0, 100) } } } };
+}
+export function partnerSatisfaction(parliament) {
+  const partners = Object.values(parliament?.government?.partners ?? {});
+  return partners.length ? Math.round(partners.reduce((sum, item) => sum + item.satisfaction, 0) / partners.length) : null;
+}
+// The political direction and the national priorities of the Government: allies judge them against their own.
+export function setGovernmentProgram(parliament, { line, priorities = [] }, currentDate) {
+  const government = parliament.government;
+  if (!government || !['active', 'crisis'].includes(government.status)) throw new Error('Serve un governo in carica.');
+  if (!GOVERNMENT_LINES[line]) throw new Error('Scegli un indirizzo politico.');
+  const areas = [...new Set(priorities)].filter(id => AREA_BY_ID[id]).slice(0, 5);
+  if (areas.length < 2) throw new Error('Scegli da due a cinque priorità nazionali.');
+  if (government.program?.setAt && weeksBetween(government.program.setAt, currentDate) < 8) throw new Error(`Il programma è stato fissato da poco: si può rivedere dal ${addDaysTo(government.program.setAt, 56)}.`);
+  let next = { ...parliament, government: { ...government, program: { line, priorities: areas, setAt: currentDate, source: DATA_SOURCES.SIMULATION } } };
+  const reactions = [];
+  for (const groupId of Object.keys(government.partners ?? {})) {
+    const profile = groupProfile(groupId);
+    const delta = areas.filter(id => profile.likes.includes(id)).length * 4 - areas.filter(id => profile.dislikes.includes(id)).length * 5;
+    if (delta) { next = changePartner(next, groupId, delta); reactions.push(`${getGroup(parliament, groupId)?.officialName ?? groupId} ${delta > 0 ? '+' : ''}${delta}`); }
+  }
+  return record(next, currentDate, 'programma-governo', `Programma di governo: ${GOVERNMENT_LINES[line].label.toLowerCase()} · priorità ${areas.map(id => AREA_BY_ID[id].label.toLowerCase()).join(', ')}.${reactions.length ? ` Reazioni degli alleati: ${reactions.join('; ')}.` : ''}`, { line, priorities: areas, source: DATA_SOURCES.SIMULATION });
+}
+// Summit of the majority: it can calm the allies, or make a quarrel public.
+export function majoritySummit(parliament, currentDate, roll = 0.5) {
+  const government = parliament.government;
+  if (!government || government.status !== 'active') throw new Error('Il vertice di maggioranza serve a un governo in carica.');
+  if (government.lastSummitAt && weeksBetween(government.lastSummitAt, currentDate) < 3) throw new Error('Un vertice ogni tre settimane al massimo: gli alleati non tornano al tavolo così presto.');
+  const mood = partnerSatisfaction(parliament) ?? 50;
+  const success = roll < clamp(0.35 + (mood - 40) / 80 + ((government.stability ?? 50) - 50) / 150, 0.15, 0.9);
+  let next = { ...parliament, government: { ...government, lastSummitAt: currentDate } };
+  for (const groupId of Object.keys(government.partners ?? {})) next = changePartner(next, groupId, success ? 4 : -2);
+  next = { ...next, government: { ...next.government, stability: clamp((next.government.stability ?? 50) + (success ? 4 : -3), 0, 100), ministers: next.government.ministers.map(item => item.endedAt || item.playerAppointed ? item : { ...item, loyalty: clamp((item.loyalty ?? 60) + (success ? 5 : -2), 0, 100) }) } };
+  return { parliament: record(next, currentDate, 'vertice-maggioranza', success ? 'Vertice di maggioranza: gli alleati firmano un documento comune.' : 'Vertice di maggioranza: lite sulle priorità, gli alleati escono divisi.', { success, source: DATA_SOURCES.SIMULATION }), success };
+}
+// Reshuffle: a ministry changes hands. The group that loses it resents it; the new holder is grateful.
+export function reshuffleMinister(parliament, portfolio, groupId, currentDate) {
+  const government = parliament.government;
+  if (!government || government.status !== 'active') throw new Error('Il rimpasto si fa con un governo in carica.');
+  const current = activeMinisters(government).find(item => item.portfolio === portfolio);
+  if (!current) throw new Error('Il ministero è vacante: assegnalo direttamente.');
+  if (current.groupId === groupId) throw new Error('Il ministero è già di quel gruppo.');
+  if (![...government.coalitionGroupIds, ...government.supportingGroupIds].includes(groupId)) throw new Error('Il ministero va a un gruppo della maggioranza.');
+  const ministers = government.ministers.map(item => item.id === current.id ? { ...item, endedAt: currentDate, endReason: 'Rimpasto' } : item);
+  let next = { ...parliament, government: { ...government, ministers, stability: clamp((government.stability ?? 50) - 4, 0, 100) } };
+  next = changePartner(next, current.groupId, -12);
+  next = setRelation(next, current.groupId, -6);
+  next = assignMinister(next, portfolio, groupId, currentDate);
+  return record(next, currentDate, 'rimpasto', `Rimpasto: il ministero ${portfolio} passa da ${current.groupName} a ${getGroup(parliament, groupId)?.officialName ?? groupId}.`, { portfolio, from: current.groupId, to: groupId, source: DATA_SOURCES.SIMULATION });
+}
+// An ally with a demand met, or a demand that expired.
+export function settlePartnerDemand(parliament, groupId, fulfilled, currentDate) {
+  const partner = parliament.government?.partners?.[groupId];
+  if (!partner?.demand) return parliament;
+  const next = changePartner(parliament, groupId, fulfilled ? 10 : -15, { demand: null, lastDemand: { ...partner.demand, outcome: fulfilled ? 'accolta' : 'respinta', closedAt: currentDate } });
+  return record(next, currentDate, fulfilled ? 'richiesta-accolta' : 'richiesta-respinta', `${getGroup(parliament, groupId)?.officialName ?? 'Un alleato'}: ${fulfilled ? 'richiesta soddisfatta' : 'richiesta ignorata'} (${partner.demand.label}).`, { groupId, source: DATA_SOURCES.SIMULATION });
+}
+export function leaveMajority(parliament, groupId, currentDate, reason = 'esce dalla maggioranza') {
+  const government = parliament.government;
+  if (!government || !['active', 'crisis'].includes(government.status)) return parliament;
+  const coalitionGroupIds = government.coalitionGroupIds.filter(id => id !== groupId);
+  const supportingGroupIds = government.supportingGroupIds.filter(id => id !== groupId);
+  const ministers = government.ministers.map(item => item.groupId === groupId && !item.endedAt ? { ...item, endedAt: currentDate, endReason: 'Gruppo uscito dalla maggioranza' } : item);
+  const partners = Object.fromEntries(Object.entries(government.partners ?? {}).filter(([id]) => id !== groupId));
+  const next = { ...parliament, government: { ...government, coalitionGroupIds, supportingGroupIds, ministers, partners, status: 'crisis', crisisSeverity: 14, crisisOpenedAt: currentDate, stability: Math.min(government.stability ?? 50, 22) } };
+  return record(next, currentDate, 'cambio-maggioranza', `${getGroup(parliament, groupId)?.officialName ?? 'Un gruppo'} ${reason}: il governo deve verificare la fiducia.`, { governmentId: government.id, groupId, source: DATA_SOURCES.SIMULATION });
+}
+
+// Weekly life of the executive: margins, allies' moods and demands, decrees that expire.
+export function advanceGovernmentWeek(parliament, currentDate, roll = 0.5, rand = null) {
+  let next = parliament;
+  // Decree-laws not converted in time lapse.
+  for (const law of (next?.laws ?? []).filter(item => item.kind === 'decreto' && item.deadline && !CLOSED_LAW_STAGES.includes(item.stage) && item.deadline < currentDate)) {
+    next = replaceLaw(next, law.id, current => ({ ...current, stage: 'lapsed', status: 'decaduto', inForce: false, updatedAt: currentDate }));
+    if (next.government) next = { ...next, government: { ...next.government, stability: clamp((next.government.stability ?? 50) - 6, 0, 100) } };
+    next = record(next, currentDate, 'decreto-decaduto', `Il decreto-legge “${law.title}” decade: non è stato convertito in tempo.`, { lawId: law.id, source: DATA_SOURCES.SIMULATION });
+  }
+  const government = next?.government;
+  if (!government || government.status !== 'active') return next;
+  const random = rand ?? (() => roll);
   const majorityIds = new Set([...government.coalitionGroupIds, ...government.supportingGroupIds]);
-  const margin = Math.min(...['camera', 'senato'].map(chamber => parliament.chambers[chamber].groups.filter(group => majorityIds.has(group.groupId)).reduce((sum, group) => sum + group.simulatedSeats, 0) - majority(parliament, chamber)));
-  const drift = (margin >= 15 ? 1 : margin >= 5 ? 0 : -2) + Math.round((roll - 0.5) * 4);
+  const margin = Math.min(...['camera', 'senato'].map(chamber => next.chambers[chamber].groups.filter(group => majorityIds.has(group.groupId)).reduce((sum, group) => sum + group.simulatedSeats, 0) - majority(next, chamber)));
+  const mood = partnerSatisfaction(next) ?? 55;
+  const drift = (margin >= 15 ? 1 : margin >= 5 ? 0 : -2) + Math.round((roll - 0.5) * 4) + (mood < 40 ? -1 : mood > 65 ? 1 : 0);
   const stability = clamp((government.stability ?? 50) + drift, 0, 100);
-  if (stability > 20) return { ...parliament, government: { ...government, stability } };
-  const severity = Math.min(24, 10 + Math.max(0, 3 - government.supportingGroupIds.length) * 2);
-  const next = { ...parliament, government: { ...government, stability, status: 'crisis', crisisSeverity: severity, crisisOpenedAt: currentDate } };
+  next = { ...next, government: { ...next.government, stability } };
+  // Allies: those without ministries grow restless; unhappy ones make demands, and walk out if ignored.
+  const holders = new Set(activeMinisters(government).map(item => item.groupId));
+  for (const [groupId, partner] of Object.entries(next.government.partners ?? {})) {
+    let delta = (holders.has(groupId) ? 0.3 : -0.6) + (55 - partner.satisfaction) * 0.03;
+    next = changePartner(next, groupId, delta);
+    const current = next.government.partners[groupId];
+    if (current.demand && current.demand.deadline < currentDate) {
+      next = settlePartnerDemand(next, groupId, false, currentDate);
+      if (next.government.partners[groupId]?.satisfaction < 25) return leaveMajority(next, groupId, currentDate, 'esce dalla maggioranza dopo una richiesta ignorata');
+      continue;
+    }
+    if (!current.demand && current.satisfaction < 45 && random() < 0.3) {
+      const profile = groupProfile(groupId);
+      const free = MINISTRIES.filter(portfolio => !activeMinisters(next.government).some(item => item.portfolio === portfolio && item.groupId === groupId));
+      const wantsMinistry = !holders.has(groupId) || random() < 0.4;
+      const demand = wantsMinistry
+        ? { type: 'ministero', portfolio: free[Math.floor(random() * free.length)] ?? MINISTRIES[0], deadline: addDaysTo(currentDate, 42) }
+        : { type: 'misura', area: profile.likes[Math.floor(random() * profile.likes.length)], deadline: addDaysTo(currentDate, 56) };
+      demand.label = demand.type === 'ministero' ? `il ministero ${demand.portfolio}` : `un provvedimento su ${AREA_BY_ID[demand.area].label.toLowerCase()}`;
+      demand.since = currentDate;
+      next = changePartner(next, groupId, 0, { demand: { ...demand, source: DATA_SOURCES.SIMULATION } });
+      next = record(next, currentDate, 'richiesta-alleato', `${getGroup(next, groupId)?.officialName ?? 'Un alleato'} chiede ${demand.label} entro il ${demand.deadline}, altrimenti rimette in discussione il sostegno.`, { groupId, demand: demand.label, source: DATA_SOURCES.SIMULATION });
+    }
+  }
+  if (next.government.stability > 20) return next;
+  const severity = Math.min(24, 10 + Math.max(0, 3 - next.government.supportingGroupIds.length) * 2);
+  next = { ...next, government: { ...next.government, status: 'crisis', crisisSeverity: severity, crisisOpenedAt: currentDate } };
   return record(next, currentDate, 'crisi-spontanea', 'La maggioranza si sfalda: il governo deve tornare a chiedere la fiducia.', { governmentId: government.id, severity, source: DATA_SOURCES.SIMULATION });
 }
 

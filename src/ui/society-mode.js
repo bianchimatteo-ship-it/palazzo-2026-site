@@ -1,10 +1,11 @@
 // Country, territories, citizens and media: the simulated society as the player sees it.
-import { INDICATORS, MEDIA_OUTLETS, SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-16';
-import { nationalIndicators, regionPriorities, societyMood } from '../core/society-engine.js?v=20260924-16';
-import { illustration } from './illustrations.js?v=20260924-16';
-import { artTile, glyph } from './visuals.js?v=20260924-16';
+import { INDICATORS, MEDIA_OUTLETS, SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-17';
+import { nationalIndicators, regionPriorities, societyMood } from '../core/society-engine.js?v=20260924-17';
+import { illustration } from './illustrations.js?v=20260924-17';
+import { artTile, glyph } from './visuals.js?v=20260924-17';
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
-import { breakdown, esc, levelState, lineChart, meter, num, rampColor, SERIES, signed, sparkline, stateBadge, trendState, GREEN_RAMP } from './charts.js?v=20260924-16';
+import { breakdown, esc, levelState, lineChart, meter, num, rampColor, SERIES, signed, sparkline, stateBadge, trendState, GREEN_RAMP } from './charts.js?v=20260924-17';
+import { areasPanel, publicFinancePanel, securityPanel } from './policy-mode.js?v=20260924-17';
 
 // Tile cartogram of the regions: a recognisable boot, one tile per region.
 const TILES = Object.freeze({
@@ -113,6 +114,11 @@ export function renderTerritoriesPage(state, ui = {}) {
       ${panel('MEDIA NAZIONALE', 'I servizi nel Paese', breakdown(INDICATORS.map(indicator => ({ label: indicator.label, value: national[indicator.id], color: rampColor(national[indicator.id], 25, 85) })), { max: 100, format: value => `${num(value, 0)}/100` }))}
     </div>
     ${panel('POPOLAZIONE · SIMULATA', 'Chi sono i cittadini e cosa chiedono', segmentsPanel(society))}
+    ${panel('TEMI DEL PAESE · SIMULATI', 'Trentaquattro temi, ognuno con il suo indicatore', `<div class="areas-grid">${areasPanel(society)}</div><p class="poll-footnote">Ogni tema ha un indicatore, un problema tipico, un ministero responsabile e strumenti di intervento (investimenti, riforme, sostegni, regole) nella sezione Leggi e, per il Presidente del Consiglio, nella sezione Governo.</p>`)}
+    <div class="society-grid">
+      ${panel('SICUREZZA · SIMULATA', 'Criminalità, paura e forze sul territorio', securityPanel(society))}
+      ${panel('CONTI PUBBLICI · SIMULATI', 'Deficit, debito, spread ed Europa', publicFinancePanel(society))}
+    </div>
     <div class="society-grid">
       ${panel('LEGGI E PROVVEDIMENTI', 'Cosa arriva sui territori', lawsApplied(society))}
       ${panel(governing ? 'GOVERNO IN CARICA' : 'ESECUTIVO DI SCENARIO', governing ? 'Il governo della simulazione' : esc(executive.label), `<dl class="hq-facts"><div><dt>Gradimento</dt><dd>${num(governing ? state.world?.polls?.at(-1)?.government?.approval : executive.approval, 0)}/100</dd></div><div><dt>Margine di bilancio</dt><dd>${num(society.publicFinance.headroom, 0)}/100 ${meter(society.publicFinance.headroom, society.publicFinance.headroom < 20 ? 'danger' : '')}</dd></div><div><dt>Risorse già impegnate</dt><dd>${num(society.publicFinance.committed, 0)} punti</dd></div></dl><p class="parliament-note">${governing ? 'Il governo formato in Parlamento risponde ai cittadini: la sua stabilità pesa sull’economia e l’umore del Paese pesa sul suo gradimento.' : 'Finché in Parlamento non nasce un governo della simulazione, un esecutivo di scenario interviene ogni sei settimane sul problema più urgente, se i conti lo consentono. Non rappresenta il governo reale.'}</p>`)}

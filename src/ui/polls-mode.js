@@ -1,6 +1,6 @@
-import { allianceOf, latestPoll, STRATEGIES } from '../core/world-engine.js?v=20260924-16';
-import { formatDate } from '../core/time.js?v=20260924-16';
-import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20260924-16';
+import { allianceOf, latestPoll, STRATEGIES } from '../core/world-engine.js?v=20260924-17';
+import { formatDate } from '../core/time.js?v=20260924-17';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20260924-17';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const pct = (value, digits = 1) => value === null || value === undefined ? '—' : `${Number(value).toLocaleString('it-IT', { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
@@ -200,19 +200,33 @@ export function renderBarometerPanel(state) {
 }
 
 // Tooltips for charts and marks: values stay reachable through labels and the data table.
+// One tooltip for the whole page; it disappears whenever its anchor goes away (render, route change, scroll…).
+let tipElement = null;
+let tipAnchor = null;
+const attachedRoots = new WeakSet();
+export function hideChartTip() {
+  if (tipElement) { tipElement.hidden = true; tipElement.replaceChildren(); }
+  tipAnchor = null;
+  if (typeof document !== 'undefined') for (const line of document.querySelectorAll?.('.crosshair') ?? []) line.setAttribute('visibility', 'hidden');
+}
 export function attachChartInteractions(root) {
-  if (!root?.addEventListener || typeof document === 'undefined') return;
-  const tip = document.createElement('div');
-  tip.className = 'viz-tip';
-  tip.hidden = true;
-  document.body.append(tip);
+  if (!root?.addEventListener || typeof document === 'undefined' || attachedRoots.has(root)) return;
+  attachedRoots.add(root);
+  if (!tipElement || !tipElement.isConnected) {
+    for (const stale of document.querySelectorAll?.('.viz-tip') ?? []) stale.remove?.();
+    tipElement = document.createElement('div');
+    tipElement.className = 'viz-tip';
+    tipElement.setAttribute?.('role', 'tooltip');
+    tipElement.hidden = true;
+    document.body.append(tipElement);
+  }
+  const tip = tipElement;
   const place = (clientX, clientY) => {
     const { innerWidth } = window;
-    tip.style.left = `${Math.min(innerWidth - tip.offsetWidth - 12, clientX + 14)}px`;
+    tip.style.left = `${Math.max(8, Math.min(innerWidth - tip.offsetWidth - 12, clientX + 14))}px`;
     tip.style.top = `${Math.max(8, clientY - tip.offsetHeight - 12)}px`;
   };
-  const hide = () => { tip.hidden = true; root.querySelectorAll('.crosshair').forEach(line => line.setAttribute('visibility', 'hidden')); };
-  const showText = (text, x, y) => { tip.replaceChildren(document.createTextNode(text)); tip.hidden = false; place(x, y); };
+  const showText = (anchor, text, x, y) => { tipAnchor = anchor; tip.replaceChildren(document.createTextNode(text)); tip.hidden = false; place(x, y); };
   const showTrend = (chart, clientX, clientY) => {
     const data = JSON.parse(chart.dataset.trend);
     const box = chart.getBoundingClientRect();
@@ -232,6 +246,7 @@ export function attachChartInteractions(root) {
       row.append(key, value, document.createTextNode(` ${series.label}`));
       return row;
     });
+    tipAnchor = chart;
     tip.replaceChildren(title, ...rows);
     tip.hidden = false;
     place(clientX, clientY);
@@ -240,15 +255,25 @@ export function attachChartInteractions(root) {
     const chart = event.target.closest?.('[data-trend]');
     if (chart) return showTrend(chart, event.clientX, event.clientY);
     const mark = event.target.closest?.('[data-tip]');
-    if (mark) return showText(mark.dataset.tip, event.clientX, event.clientY);
-    if (!tip.hidden) hide();
+    if (mark) return showText(mark, mark.dataset.tip, event.clientX, event.clientY);
+    if (!tip.hidden) hideChartTip();
   });
-  root.addEventListener('pointerleave', hide);
+  root.addEventListener('pointerleave', hideChartTip);
+  root.addEventListener('pointerdown', hideChartTip);
   root.addEventListener('focusin', event => {
     const chart = event.target.closest?.('[data-trend]');
     const box = event.target.getBoundingClientRect();
     if (chart) showTrend(chart, box.right - 4, box.top + 20);
-    else if (event.target.closest?.('[data-tip]')) showText(event.target.dataset.tip, box.left + box.width / 2, box.top);
+    else if (event.target.closest?.('[data-tip]')) showText(event.target, event.target.dataset.tip, box.left + box.width / 2, box.top);
   });
-  root.addEventListener('focusout', hide);
+  root.addEventListener('focusout', hideChartTip);
+  // Anything that changes the page takes the tooltip away with it.
+  globalThis.addEventListener?.('hashchange', hideChartTip);
+  globalThis.addEventListener?.('popstate', hideChartTip);
+  globalThis.addEventListener?.('scroll', hideChartTip, { passive: true, capture: true });
+  globalThis.addEventListener?.('blur', hideChartTip);
+  globalThis.addEventListener?.('keydown', event => { if (event.key === 'Escape') hideChartTip(); });
+  document.addEventListener?.('visibilitychange', hideChartTip);
+  // A re-render can remove the anchor under a still pointer: the tooltip goes with it.
+  if (typeof MutationObserver !== 'undefined') new MutationObserver(() => { if (tipAnchor && !tipAnchor.isConnected) hideChartTip(); }).observe(root, { childList: true, subtree: true });
 }

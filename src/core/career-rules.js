@@ -1,5 +1,5 @@
-import { CAREER_LEVELS, ITALIAN_REGIONS } from '../data/regions.js?v=20260924-16';
-import { isSelectableParty } from '../data/schema.js?v=20260924-16';
+import { CAREER_LEVELS, ITALIAN_REGIONS } from '../data/regions.js?v=20260924-17';
+import { isSelectableParty } from '../data/schema.js?v=20260924-17';
 
 const genders = new Set(['preferisco-non-specificare', 'donna', 'uomo', 'non-binario']);
 const orientations = new Set(['Centrismo civico', 'Progressista', 'Conservatore', 'Liberale', 'Socialdemocratico', 'Ecologista', 'Popolare', 'Autonomista', 'Altro']);
@@ -38,6 +38,9 @@ export function validateCareerStep(draft, step, selectableParties, parliamentary
       if (!draft.partyDescription?.trim()) errors.push('Inserisci una descrizione.');
       if (!orientations.has(draft.partyOrientation)) errors.push('Scegli un orientamento generale.');
       if (!/^#[\da-f]{6}$/i.test(draft.partyColor || '')) errors.push('Scegli un colore valido.');
+      if (draft.partyColor2 && !/^#[\da-f]{6}$/i.test(draft.partyColor2)) errors.push('Scegli un secondo colore valido.');
+      if ((draft.partyProgram ?? []).length > 4) errors.push('Il programma ha al massimo quattro priorità.');
+      if (draft.partyLogoMode === 'url' && !/^https?:\/\/\S+$/i.test(draft.partyLogoUrl || '')) errors.push('Incolla un indirizzo del logo che inizi con https://, oppure scegli un altro tipo di logo.');
       for (const [key, label] of [['economia','economia'], ['welfare','welfare'], ['ambiente','ambiente'], ['europa','integrazione europea']]) {
         const value = Number(draft.policyPositions?.[key]);
         if (!Number.isInteger(value) || value < 1 || value > 5) errors.push(`Imposta la posizione su ${label} da 1 a 5.`);

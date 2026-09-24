@@ -1,10 +1,10 @@
 // Main menu, how-to-play, settings, save slots and the end-of-week report.
-import { SETTINGS_SCHEMA } from '../core/settings.js?v=20260924-16';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20260924-16';
-import { formatDate } from '../core/time.js?v=20260924-16';
-import { illustration } from './illustrations.js?v=20260924-16';
-import { glyph } from './visuals.js?v=20260924-16';
-import { esc, signed } from './charts.js?v=20260924-16';
+import { SETTINGS_SCHEMA } from '../core/settings.js?v=20260924-17';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20260924-17';
+import { formatDate } from '../core/time.js?v=20260924-17';
+import { illustration } from './illustrations.js?v=20260924-17';
+import { glyph } from './visuals.js?v=20260924-17';
+import { esc, signed } from './charts.js?v=20260924-17';
 
 const when = iso => { try { return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch { return ''; } };
 const MENU = [
@@ -78,9 +78,13 @@ export function renderWeeklyReport(state) {
   const reasons = metric => why.filter(entry => entry.metric === metric).sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).slice(0, 3);
   const cards = metrics.map(([metric, delta]) => `<article class="report-metric ${delta > 0 ? 'up' : 'down'}"><header><span>${esc(STAT_LABELS[metric])}</span><strong>${signed(delta)}</strong></header>${reasons(metric).map(entry => `<small>${esc(entry.source)} <b>${signed(entry.delta)}</b></small>`).join('') || '<small>Effetto combinato della settimana</small>'}</article>`).join('');
   const urgent = game.inbox.filter(item => ['urgente', 'situazione'].includes(item.kind)).length;
+  const player = state.world?.parties?.find(item => item.isPlayer);
+  const poll = state.world?.polls?.at(-1);
+  const row = player ? poll?.results?.find(item => item.partyId === player.id) : null;
+  const consensus = row && poll.week >= report.week ? `<article class="report-metric ${row.delta >= 0 ? 'up' : 'down'} report-consensus"><header><span>Consenso di ${esc(player.label)}</span><strong>${signed(row.delta)}</strong></header>${(poll.why ?? []).slice(0, 4).map(entry => `<small>${esc(entry.label)} <b>${signed(entry.delta)}</b></small>`).join('') || '<small>Variazione dentro il margine d’errore</small>'}</article>` : '';
   return `<div class="modal-backdrop report-backdrop" data-report-close><section class="report-modal" role="dialog" aria-modal="true" aria-labelledby="report-title">
     <span class="section-kicker">RESOCONTO · SETTIMANA ${report.week}</span><h2 id="report-title">Com’è andata la settimana</h2>
-    ${cards ? `<div class="report-metrics">${cards}</div>` : '<p class="quiet-copy">Settimana stabile: nessun indicatore personale si è mosso.</p>'}
+    ${cards || consensus ? `<div class="report-metrics">${consensus}${cards}</div>` : '<p class="quiet-copy">Settimana stabile: nessun indicatore personale si è mosso.</p>'}
     <ul class="report-lines">${report.lines.slice(0, 8).map(line => `<li>${esc(line)}</li>`).join('')}</ul>
     <footer><span>${game.inbox.length} decisioni in agenda${urgent ? ` · ${urgent} urgenti` : ''}</span><button class="primary-button" data-report-close>Continua</button></footer>
   </section></div>`;

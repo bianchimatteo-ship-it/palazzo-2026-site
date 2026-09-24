@@ -20,6 +20,22 @@ Apri `http://127.0.0.1:4173`. Il gioco si apre sul **menu principale**: Nuova pa
 
 **Offline**: dopo la prima visita un service worker (`sw.js`) conserva pagina, moduli, fogli di stile e tutti i dati reali; senza rete il gioco si avvia lo stesso. La strategia è “prima la rete”: online arriva sempre l’ultima versione.
 
+## Politiche pubbliche, bilancio e difficoltà
+
+La simulazione copre **34 temi** (economia, finanze pubbliche, fisco, industria, commercio, lavoro, pensioni, welfare, sanità, scuola, università e ricerca, infrastrutture, trasporti, energia, ambiente, agricoltura, sicurezza, difesa, giustizia, immigrazione, cittadinanza, casa, famiglia, giovani, natalità, cultura, sport, turismo, digitale, pubblica amministrazione, autonomie, Mezzogiorno, esteri, Europa). Ogni tema ha un indicatore, un problema tipico che emerge quando peggiora, un ministero responsabile e quattro strumenti (investimento, riforma strutturale, sostegno mirato, regolazione) con costi, tempi ed effetti diversi (`src/data/simulation/policy-rules.js`).
+
+Ogni misura si progetta scegliendo **quanto spendere** (portata), **come finanziarla** (deficit, IRPEF sui redditi alti, contributo delle grandi imprese, accise e IVA, rendite, recupero dell’evasione dall’esito incerto, tagli a un altro settore, fondi europei solo per alcuni temi), **quale territorio** privilegiare (tutto il Paese, Nord, Centro, Mezzogiorno o una regione) e **chi favorire**. Prima del voto l’anteprima mostra costo in miliardi (di gioco), margine di bilancio, deficit, spread, soddisfazione a regime, indicatore del tema, chi guadagna e chi perde con il motivo, regioni più e meno toccate. Il deficit oltre il 3% porta richiami e procedura europea, lo spread sale e gli interessi erodono il margine: il denaro non è infinito. La **sicurezza** ha un modello proprio (criminalità, sicurezza percepita, capacità operativa, prevenzione): più agenti costano e agiscono in mesi, pene più severe rassicurano subito ma dividono e intasano la giustizia.
+
+L’iter legislativo richiede **settimane** (commissione almeno 2, poi emendamenti, altra Camera, voto finale): niente più leggi approvate in un clic. I gruppi chiedono modifiche concrete del contenuto in cambio dei voti; il voto dipende da contenuto, rapporti, disciplina del proprio gruppo, soddisfazione degli alleati, eventuali franchi tiratori e ostruzionismo.
+
+## Presidente del Consiglio
+
+Una fase diversa della carriera (sezione Governo): indirizzo politico e fino a cinque priorità nazionali; alleati con soddisfazione propria, richieste (un ministero, un provvedimento) con scadenza e uscita dalla maggioranza se ignorati; vertici di maggioranza dall’esito incerto; ministri con lealtà e competenza, rimpasti; **disegni di legge del governo** che passano dalle Camere; **decreti-legge** solo con un’emergenza aperta, in vigore subito ma decaduti (e in parte annullati) se non convertiti entro 60 giorni; **questione di fiducia** su un testo (se il voto fallisce il governo cade); **legge di bilancio** ogni autunno, da approvare entro il 31 dicembre o si va all’esercizio provvisorio. Il Presidente del Consiglio non approva mai leggi da solo.
+
+## Eventi, memoria e spiegazioni
+
+Gli eventi sono procedurali: condizioni legate alla situazione (governo, mercati, criminalità, stagioni, partito), pesi che cambiano con il contesto, cooldown, eventi rari e unici, emergenze esclusive, varianti del racconto, catene di eventi ed effetti immediati sul Paese. La **memoria politica** registra leggi, tasse, tagli, promesse, crisi, rotture, scandali ed esercizi provvisori: ogni ricordo si dimezza in due anni e pesa sulle elezioni, sulle alleanze e sui giudizi dei media. Il Quartier generale spiega il consenso del partito (per cause) e l’umore del Paese (regioni, economia, sicurezza, misure, gruppi di cittadini).
+
 ## Ruoli e poteri
 
 Ogni ruolo sblocca poteri reali, verificati di nuovo dal motore prima di ogni azione: iscritto (attività, riunioni, contributi), dirigente (sezioni, formazione, comunicazione e mediazione), direzione nazionale (priorità di bilancio, disciplina), riferimento di un’area interna (candidature della propria area), parlamentare (leggi, emendamenti, trattative), segretario (linea politica, organi e incarichi, regola per le candidature, congresso anticipato, investimenti del partito, disciplina dei parlamentari, espulsione dei dissidenti, alleanze e rotture, formazione del governo), ministro (dossier e crisi del ministero), Presidente del Consiglio (nomina dei ministri, agenda del governo con un decreto ogni sei settimane che costa bilancio pubblico e arriva su territori, cittadini e media). Il Quartier generale mostra ruoli, poteri disponibili e ciò che serve per sbloccare gli altri; ogni decisione di segreteria ha costi, intervalli minimi e conseguenze su aree interne, iscritti, coesione, sondaggi e stampa.
@@ -29,6 +45,14 @@ La **cronologia della carriera** (sezione Carriera) registra ogni tappa: partiti
 ## Archivio dei dati reali
 
 La sezione **Archivio** consulta senza uscire dal gioco partiti e movimenti (con le scelte reali del 2×1000, MEF dichiarazioni 2025), deputati, senatori, gruppi parlamentari con i componenti, governo in carica (Camera dei deputati, nomi come nella fonte), leggi e atti del Senato, territori. Le schede dei parlamentari riportano anche l’eventuale incarico nel governo reale. Nulla di questa sezione è modificato dalla partita.
+
+## Archivio amministrativo condiviso (Cloudflare)
+
+Correzioni ai dati e loghi dell’amministratore possono essere **pubblicati per tutti i giocatori**: il Worker (`worker.js`) risponde su `/api/admin` e li conserva in **Workers KV** (nessun R2), quindi sopravvivono a refresh, riavvii, aggiornamenti e nuovi deploy. Il gioco li scarica all’avvio (anche da GitHub Pages) e ne tiene una copia per l’uso offline; i file in `src/data/real/` non vengono mai modificati. Da **Amministrazione → Archivio → Archivio condiviso** il proprietario collega il browser: la prima volta con il codice di attivazione (segreto `ADMIN_SETUP_CODE` del Worker) e un PIN, poi solo con il PIN. Da collegato, ogni correzione e ogni logo salvato (indirizzo https o file sotto i 300 KB) viene pubblicato automaticamente.
+
+## Creare un partito
+
+Nel Career Wizard il nuovo partito (dato `source: user`) ha nome, sigla, descrizione, due colori, orientamento, un programma di fino a quattro priorità e un logo: costruito con forme, simboli generici (diversi dagli emblemi dei partiti esistenti), colori e sigla, oppure da un indirizzo, oppure caricato. Logo e colori personalizzano l’interfaccia (barra laterale, Quartier generale, accento dei colori); da segretario programma e comunicazione si possono cambiare e le aree interne reagiscono.
 
 ## Loghi
 
@@ -169,7 +193,12 @@ All’apertura vengono caricati manifest e partiti/movimenti. Politici, gruppi e
 ## Test
 
 ```sh
-npm run check:ui          # menu, impostazioni, nuova partita, pagine, poteri, archivio, salvataggi, loghi
+npm run check:ui          # menu, impostazioni, nuova partita, pagine, poteri, archivio, salvataggi, loghi, tooltip, identità del partito
+npm run check:government  # 34 temi, bilancio, territori, cittadini, sicurezza, Presidente del Consiglio, difficoltà
+npm run check:events      # eventi procedurali: condizioni, cooldown, rarità, esclusività, varianti, catene
+npm run check:career      # carriera pluriennale end-to-end, salvataggi e migrazione
+npm run check:admin-sync  # archivio amministrativo condiviso su Workers KV
+npm run check:all         # tutte le verifiche
 npm run check:gameplay
 npm run check:parliament
 npm run check:polls

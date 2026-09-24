@@ -1,6 +1,7 @@
-import { mountApp } from './ui/app.js?v=20260924-16';
-import { store } from './core/store.js?v=20260924-16';
-import { loadRealCollections, loadRealDatabase, realDatabase, realDataUrls } from './data/repositories/real-data.js?v=20260924-16';
+import { mountApp } from './ui/app.js?v=20260924-17';
+import { refreshSharedArchive } from './data/repositories/admin-sync.js?v=20260924-17';
+import { store } from './core/store.js?v=20260924-17';
+import { loadRealCollections, loadRealDatabase, realDatabase, realDataUrls } from './data/repositories/real-data.js?v=20260924-17';
 
 const BUILD = new URL(import.meta.url).searchParams.get('v');
 
@@ -36,6 +37,8 @@ const newer = await newerBuildUrl();
 if (newer) location.replace(newer);
 else {
   try {
+    // The owner's shared corrections and logos come first, so every collection is loaded with them (cached copy offline).
+    await refreshSharedArchive().catch(() => false);
     await loadRealDatabase();
     await loadRealCollections(['parties','politicalMovements','twoPerThousand']);
     // The simulated world starts from real parties and their real 2x1000 choices.

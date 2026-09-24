@@ -1,32 +1,37 @@
-import { fullDate, formatDate } from '../core/time.js?v=20260924-16';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260924-16';
-import { isRealCollectionLoaded, loadRealCollections, pristineRecord, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20260924-16';
-import { addRoleOverride, clearAdminArchive, exportAdminArchive, hasAdminPin, importAdminArchive, isAdminUnlocked, lockAdmin, removeRoleOverride, resetRecordOverride, saveRecordOverride, setAdminPin, setRecordField, unlockAdmin } from '../data/repositories/admin-store.js?v=20260924-16';
-import { renderAdminPanel } from './admin-panel.js?v=20260924-16';
-import { deleteLocalLogo, exportLogoConfiguration, fetchLogoFromUrl, getLocalLogo, importLogoConfiguration, listLocalLogos, probeImage, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20260924-16';
-import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20260924-16';
-import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20260924-16';
-import { renderLogoAdmin } from './logo-admin.js?v=20260924-16';
-import { makeCareerDraft, renderCareerWizard } from './career-wizard.js?v=20260924-16';
-import { validateCareerStep } from '../core/career-rules.js?v=20260924-16';
-import { renderCampaignPage } from './campaign-mode.js?v=20260924-16';
-import { renderParliamentPage } from './parliament-mode.js?v=20260924-16';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-16';
-import { CAREER_LEVELS, careerLevelLabel } from '../data/regions.js?v=20260924-16';
-import { renderCareerTimeline, renderElectionCalendar, renderHeadquarters, renderInbox, renderPartyPosition } from './game-mode.js?v=20260924-16';
-import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20260924-16';
-import { playerRoles } from '../core/roles.js?v=20260924-16';
-import { attachChartInteractions, renderPollsPage } from './polls-mode.js?v=20260924-16';
-import { glyph, officeIcon } from './visuals.js?v=20260924-16';
-import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20260924-16';
-import { renderFinancePage } from './finance-mode.js?v=20260924-16';
-import { renderContactsPanel, renderOrganizationPanel } from './organization-mode.js?v=20260924-16';
-import { renderRealLaws } from './real-laws.js?v=20260924-16';
-import { realLawArea } from '../core/society-engine.js?v=20260924-16';
-import { canManageParliament } from '../core/parliament-engine.js?v=20260924-16';
-import { renderMainMenu, renderWeeklyReport, settingsView } from './menu.js?v=20260924-16';
-import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20260924-16';
-import { playSound } from './sound.js?v=20260924-16';
+import { fullDate, formatDate } from '../core/time.js?v=20260924-17';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260924-17';
+import { isRealCollectionLoaded, loadRealCollections, pristineRecord, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20260924-17';
+import { addRoleOverride, clearAdminArchive, exportAdminArchive, hasAdminPin, importAdminArchive, isAdminUnlocked, lockAdmin, removeRoleOverride, resetRecordOverride, saveRecordOverride, setAdminPin, setRecordField, unlockAdmin } from '../data/repositories/admin-store.js?v=20260924-17';
+import { renderAdminPanel } from './admin-panel.js?v=20260924-17';
+import { sharedLogos } from '../data/repositories/admin-store.js?v=20260924-17';
+import { closeSharedSession, hasSharedSession, openSharedSession, publishSharedArchive, refreshSharedArchive } from '../data/repositories/admin-sync.js?v=20260924-17';
+import { deleteLocalLogo, exportLogoConfiguration, fetchLogoFromUrl, getLocalLogo, importLogoConfiguration, listLocalLogos, probeImage, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20260924-17';
+import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20260924-17';
+import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20260924-17';
+import { renderLogoAdmin } from './logo-admin.js?v=20260924-17';
+import { makeCareerDraft, renderCareerWizard, wizardLogoPreview } from './career-wizard.js?v=20260924-17';
+import { userPartyLogo } from './party-logo.js?v=20260924-17';
+import { validateCareerStep } from '../core/career-rules.js?v=20260924-17';
+import { renderCampaignPage } from './campaign-mode.js?v=20260924-17';
+import { renderParliamentPage } from './parliament-mode.js?v=20260924-17';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-17';
+import { CAREER_LEVELS, careerLevelLabel } from '../data/regions.js?v=20260924-17';
+import { renderCareerTimeline, renderElectionCalendar, renderHeadquarters, renderInbox, renderPartyPosition } from './game-mode.js?v=20260924-17';
+import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20260924-17';
+import { playerRoles } from '../core/roles.js?v=20260924-17';
+import { budgetPreview, designFromForm, planFromForm, policyFields, policyPreview } from './policy-mode.js?v=20260924-17';
+import { areaOf } from '../data/simulation/policy-rules.js?v=20260924-17';
+import { attachChartInteractions, hideChartTip, renderPollsPage } from './polls-mode.js?v=20260924-17';
+import { glyph, officeIcon } from './visuals.js?v=20260924-17';
+import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20260924-17';
+import { renderFinancePage } from './finance-mode.js?v=20260924-17';
+import { renderContactsPanel, renderOrganizationPanel } from './organization-mode.js?v=20260924-17';
+import { renderRealLaws } from './real-laws.js?v=20260924-17';
+import { realLawArea } from '../core/society-engine.js?v=20260924-17';
+import { canManageParliament } from '../core/parliament-engine.js?v=20260924-17';
+import { renderMainMenu, renderWeeklyReport, settingsView } from './menu.js?v=20260924-17';
+import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20260924-17';
+import { playSound } from './sound.js?v=20260924-17';
 
 const mainSectionActive = (id, page) => page === id || (id === 'calendario' && page === 'eventi') || (id === 'parlamento' && ['governo', 'leggi'].includes(page)) || (id === 'archivio' && ['partiti-lista', 'politici'].includes(page));
 const mainNavigation = [
@@ -131,6 +136,10 @@ export function mountApp(root, store) {
   const logoFor = party => {
     const local = logoUrls.get(party?.id);
     if (local) return local;
+    // Logos published by the owner are the same for every player.
+    const shared = party?.id ? sharedLogos()[party.id] : null;
+    if (shared?.url || shared?.dataUrl) return shared.url ?? shared.dataUrl;
+    if (party?.source === DATA_SOURCES.USER && party.logo) return userPartyLogo(party);
     if (party?.logoAsset) return new URL(party.logoAsset, document.baseURI).href;
     return party?.logoVerified && party?.logoUrl ? party.logoUrl : null;
   };
@@ -148,11 +157,16 @@ export function mountApp(root, store) {
     unlocked: isAdminUnlocked(), hasPin: hasAdminPin(), loading: catalog.loadingPage === 'amministrazione'
   });
   // Every owner edit re-layers the archive over the real snapshot and redraws.
-  const adminDone = message => { refreshAdminOverrides(); admin.message = message; render(store.getState(), store.getLastSaved()); };
+  const adminDone = message => {
+    refreshAdminOverrides(); admin.message = message; render(store.getState(), store.getLastSaved());
+    // Connected to the shared archive: the change is published for every player.
+    if (hasSharedSession()) publishSharedArchive().then(() => { admin.message = `${message} Pubblicato per tutti i giocatori.`; render(store.getState(), store.getLastSaved()); }).catch(error => { admin.message = `${message} Non pubblicato: ${error.message}`; render(store.getState(), store.getLastSaved()); });
+  };
   const adminSelected = () => admin.tab === 'politici'
     ? { collection: 'politicians', id: admin.politicianId }
     : { collection: realDatabase.politicalMovements?.some(item => item.id === admin.partyId) ? 'politicalMovements' : 'parties', id: admin.partyId };
   const render = (state, lastSaved) => {
+    hideChartTip();
     if (menu.open && !wizard) {
       root.innerHTML = `<div class="app-shell menu-shell">${renderMainMenu(menu, menuContext())}${state.ui.toast && settings.toasts === 'on' ? `<div class="toast" role="status">${icon('spark', 17)}${esc(state.ui.toast)}</div>` : ''}</div>`;
       return;
@@ -163,20 +177,21 @@ export function mountApp(root, store) {
     const current = pages[state.ui.activePage] ?? pages.panoramica;
     const eventList = [...state.dataset.events].filter(e => e.date >= state.clock.currentDate).sort((a, b) => a.date.localeCompare(b.date)).slice(0, 4);
     const playerForce = state.world?.parties?.find(item => item.isPlayer);
-    const accent = playerForce?.color ?? '#c0a166';
+    // The party's own colour leads the interface when it has one (user parties, or colours set by the owner).
+    const accent = (/^#[\da-f]{6}$/i.test(party?.color ?? '') ? party.color : null) ?? playerForce?.color ?? '#c0a166';
     root.innerHTML = `
       <div class="app-shell" style="--party-accent:${esc(accent)}">
         <aside class="sidebar">
-          <a class="brand" href="#panoramica" aria-label="Politicando 2026, Home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span class="brand-copy"><strong>POLITICANDO</strong><small>2026</small></span></a><div class="brand-subtitle">Una carriera nella<br/>politica italiana</div>
+          <a class="brand" href="#panoramica" aria-label="Politicando 2026, Home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span class="brand-copy"><strong>POLITICANDO</strong><small>2026</small></span></a><div class="brand-subtitle">Una carriera nella<br/>politica italiana</div>${party && state.game ? `<button class="party-identity" data-nav="partito" style="--party-color:${esc(party.color ?? accent)};--party-color2:${esc(party.color2 ?? accent)}">${logoFor(party) ? `<img src="${esc(logoFor(party))}" alt="" />` : `<i>${esc((party.abbreviation || partyName(party) || 'P').slice(0, 3))}</i>`}<span><strong>${esc(party.abbreviation || partyName(party))}</strong><small>${esc(state.game.party?.rankTitle ?? 'Partito')}</small></span></button>` : ''}
           <nav class="main-nav" aria-label="Navigazione principale">${mainNavigation.map(([id, glyph, label]) => `<button class="nav-item ${mainSectionActive(id, state.ui.activePage) ? 'active' : ''}" data-nav="${id}" aria-label="${label}" title="${label}" aria-current="${mainSectionActive(id, state.ui.activePage) ? 'page' : 'false'}">${icon(glyph, 19)}<span>${label}</span></button>`).join('')}</nav>
           <div class="sidebar-bottom"><button class="nav-item sidebar-account ${state.ui.activePage === 'profilo' || state.ui.activePage === 'politici' ? 'active' : ''}" data-nav="profilo" aria-label="Profilo" title="Profilo">${icon('person', 19)}<span>Profilo</span></button><button class="nav-item sidebar-account ${state.ui.activePage === 'impostazioni' ? 'active' : ''}" data-nav="impostazioni" aria-label="Impostazioni" title="Impostazioni">${icon('settings', 19)}<span>Impostazioni</span></button><div class="save-status"><span class="save-dot"></span><span>${lastSaved}</span></div></div>
         </aside>
         <main class="main-area">
           <header class="topbar"><div class="topbar-title"><strong>${current.title}</strong><span>${current.intro}</span></div><div class="top-actions"><button class="icon-button menu-button" data-action="menu" aria-label="Menu principale" title="Menu principale">${icon('menu', 17)}</button><div class="date-chip">${icon('calendar', 16)}<span>${fullDate(state.clock.currentDate)}</span></div><button class="icon-button" aria-label="Salva carriera" title="Salva carriera" data-action="save">${icon('save', 17)}</button><span class="week-chip">Settimana ${state.game.week.index} · ${state.game.week.ap}/${state.game.week.maxAp} giorni</span><button class="advance-button" data-action="advance" ${state.game.status === 'ended' ? 'disabled' : ''}>${state.campaign?.status === 'active' ? 'Avanza campagna' : 'Chiudi settimana'} ${icon('arrow', 17)}</button></div></header>
-          <div class="page-wrap">${wizard ? '' : (state.ui.activePage === 'panoramica' ? renderHeadquarters(state, { partyName: party ? partyName(party) : null, newsFilter: views.newsFilter }) : subpage(state, current, player, party, eventList, catalog, { logoFor, parties:realParties(), selectable:selectableParties(), findParty, realLeader, admin, adminContext, territory, realLaws, archive, views, settings, lastSaved }))}</div>
+          <div class="page-wrap">${wizard ? '' : (state.ui.activePage === 'panoramica' ? renderHeadquarters(state, { partyName: party ? partyName(party) : null, partyLogo: party ? logoFor(party) : null, newsFilter: views.newsFilter }) : subpage(state, current, player, party, eventList, catalog, { logoFor, parties:realParties(), selectable:selectableParties(), findParty, realLeader, admin, adminContext, territory, realLaws, archive, views, settings, lastSaved }))}</div>
         </main>
         ${wizard ? renderCareerWizard(state, wizard, realParties(), logoFor, realDatabase.parliamentaryGroups ?? [], realDatabase.partyLeaderships ?? [], realDatabase.politicalFigures ?? [], realDatabase.politicians ?? []) : ''}
-        ${logoAdminOpen ? renderLogoAdmin({selectedId:selectedLogoPartyId,query:catalog.logoQuery,page:catalog.logoPage,metadata:[...logoMetadata.values()],entities:[...realParties(),...state.dataset.parties],logoFor,error:logoAdminError,pendingPreview:pendingLogoUrl ?? pendingRemoteUrl,pendingRemote:Boolean(pendingRemoteUrl && !pendingLogo),urlDraft:logoUrlDraft,urlLoading:logoUrlLoading}) : ''}
+        ${logoAdminOpen ? renderLogoAdmin({shared:sharedLogos(),selectedId:selectedLogoPartyId,query:catalog.logoQuery,page:catalog.logoPage,metadata:[...logoMetadata.values()],entities:[...realParties(),...state.dataset.parties],logoFor,error:logoAdminError,pendingPreview:pendingLogoUrl ?? pendingRemoteUrl,pendingRemote:Boolean(pendingRemoteUrl && !pendingLogo),urlDraft:logoUrlDraft,urlLoading:logoUrlLoading}) : ''}
         ${catalog.selectedPoliticianId ? renderPoliticianProfile(catalog.selectedPoliticianId,{loading:catalog.profileLoading}) : ''}
         ${catalog.selectedPartyId ? renderPartyProfile(catalog.selectedPartyId,logoFor) : ''}
         ${reportOpen ? renderWeeklyReport(state) : ''}
@@ -186,10 +201,19 @@ export function mountApp(root, store) {
   };
   const syncWizardDraft = () => {
     if (!wizard) return;
-    for (const field of root.querySelectorAll('.career-wizard [name]')) {
+    const fields = [...root.querySelectorAll('.career-wizard [name]')];
+    if (fields.some(field => field.name === 'partyProgram')) wizard.partyProgram = fields.filter(field => field.name === 'partyProgram' && field.checked).map(field => field.value);
+    for (const field of fields) {
+      if (field.name === 'partyProgram' || field.type === 'file') continue;
+      if (field.type === 'radio' && !field.checked) continue;
       if (field.name.startsWith('policy_')) wizard.policyPositions[field.name.slice(7)] = Number(field.value);
       else wizard[field.name] = field.value;
     }
+  };
+  const updateWizardLogo = () => {
+    const box = root.querySelector('[data-wizard-logo-preview]');
+    const src = wizard ? wizardLogoPreview(wizard) : null;
+    if (box) box.innerHTML = src ? `<img src="${esc(src)}" alt="Anteprima del logo" />` : '<span>Logo</span>';
   };
   const preserveFocusRender = (selector) => {
     const field = selector ? root.querySelector(selector) : null;
@@ -289,6 +313,28 @@ export function mountApp(root, store) {
     logoUrlLoading = false;
     render(store.getState(), store.getLastSaved());
   };
+  // The projected bill of a measure (or of the budget) follows every change in the form, without redrawing the page.
+  const blobToDataUrl = blob => new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(reader.result); reader.onerror = () => reject(reader.error); reader.readAsDataURL(blob); });
+  const refreshPolicyPreview = (form, field = null) => {
+    if (!form) return;
+    const society = store.getState().society;
+    if (form.matches('[data-budget-form]')) {
+      for (const label of form.querySelectorAll('.segmented label')) label.classList.toggle('active', Boolean(label.querySelector('input')?.checked));
+      const target = form.querySelector('[data-budget-preview]');
+      if (target) target.innerHTML = budgetPreview(society, planFromForm(form));
+      return;
+    }
+    const design = designFromForm(form);
+    if (field?.matches?.('[data-policy-area]')) {
+      const fields = form.querySelector('[data-policy-fields]');
+      if (fields) fields.outerHTML = policyFields({ ...design, area: field.value, instrument: design?.instrument, target: 'nazionale' });
+    }
+    for (const choice of form.querySelectorAll('.policy-choice')) choice.classList.toggle('active', Boolean(choice.querySelector('input')?.checked));
+    const cut = form.querySelector('[data-policy-cut]');
+    if (cut) cut.hidden = form.querySelector('[data-policy-financing]')?.value !== 'tagli';
+    const target = form.querySelector('[data-policy-preview]');
+    if (target) target.innerHTML = policyPreview(society, designFromForm(form));
+  };
   const openNewGame = async () => {
     menu.open = false;
     wizard = makeCareerDraft(store.getState().clock.currentDate, store.getState().dataset.parties);
@@ -330,6 +376,20 @@ export function mountApp(root, store) {
       if (viewFilter.dataset.newsFilter) views.newsFilter = viewFilter.dataset.newsFilter;
       else views.timelineFilter = viewFilter.dataset.timelineFilter;
       render(store.getState(), store.getLastSaved()); return;
+    }
+    const lawControl = event.target.closest('[data-government-action],[data-law-demand],[data-law-patch],[data-law-confidence],[data-law-withdraw],[data-communication]');
+    if (lawControl) {
+      const data = lawControl.dataset;
+      try {
+        if (data.governmentAction === 'summit') store.majoritySummit();
+        else if (data.lawDemand) store.acceptLawDemand(data.lawDemand, data.groupIdDemand);
+        else if (data.lawPatch) store.amendLawPolicy(data.lawPatch, { [data.patchKey]: data.patchKey === 'intensity' ? Number(data.patchValue) : data.patchValue });
+        else if (data.lawConfidence) store.askConfidence(data.lawConfidence);
+        else if (data.lawWithdraw) { if (globalThis.confirm?.('Ritirare la proposta? Il lavoro fatto andrà perso.') === false) return; store.withdrawLaw(data.lawWithdraw); }
+        else if (data.communication) store.setCommunication(data.communication);
+        playSound('confirm');
+      } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
+      return;
     }
     const secretary = event.target.closest('[data-secretary]');
     if (secretary) {
@@ -409,6 +469,15 @@ export function mountApp(root, store) {
       } catch (error) { store.getState().ui.toast = error.message; render(store.getState(),store.getLastSaved()); }
       return;
     }
+    const sharedAction = event.target.closest('[data-admin-shared]')?.dataset.adminShared;
+    if (sharedAction) {
+      try {
+        if (sharedAction === 'publish') { const result = await publishSharedArchive(); admin.message = `Archivio pubblicato: ${result.parties} partiti, ${result.politicians} politici, ${result.logos} loghi.`; }
+        else if (sharedAction === 'refresh') { await refreshSharedArchive(); refreshAdminOverrides(); admin.message = 'Archivio condiviso aggiornato.'; }
+        else if (sharedAction === 'logout') { closeSharedSession(); admin.message = 'Browser scollegato dall’archivio condiviso.'; }
+      } catch (error) { admin.message = error.message; }
+      render(store.getState(), store.getLastSaved()); return;
+    }
     const adminTarget = event.target.closest('[data-admin-tab],[data-admin-select-party],[data-admin-select-politician],[data-admin-reset-record],[data-admin-reset-field],[data-admin-logo],[data-admin-unlink],[data-admin-link],[data-admin-remove-role],[data-admin-export],[data-admin-clear],[data-admin-lock]');
     if (adminTarget) {
       const data = adminTarget.dataset;
@@ -423,7 +492,7 @@ export function mountApp(root, store) {
         else if (data.adminLink) { const personId = root.querySelector('[data-admin-link-select]')?.value; if (!personId) throw new Error('Scegli un parlamentare da collegare.'); setRecordField('politicians', personId, 'partyId', data.adminLink, pristineRecord('politicians', personId) ?? {}); admin.linkQuery = ''; adminDone('Parlamentare collegato al partito.'); }
         else if (data.adminRemoveRole) { removeRoleOverride(admin.politicianId, data.adminRemoveRole); adminDone('Incarico rimosso.'); }
         else if ('adminExport' in data) { const url = URL.createObjectURL(new Blob([exportAdminArchive()], { type: 'application/json' })); const link = document.createElement('a'); link.href = url; link.download = `politicando-archivio-amministrativo-${new Date().toISOString().slice(0, 10)}.json`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); admin.message = 'Archivio esportato.'; render(store.getState(), store.getLastSaved()); }
-        else if ('adminClear' in data) { if (globalThis.confirm?.('Cancellare tutte le modifiche amministrative? L’operazione non si può annullare.')) { clearAdminArchive(); adminDone('Archivio amministrativo svuotato: sono tornati i dati del dataset.'); } }
+        else if ('adminClear' in data) { if (globalThis.confirm?.('Cancellare tutte le modifiche amministrative? L’operazione non si può annullare.')) { clearAdminArchive(); adminDone(hasSharedSession() ? 'Archivio svuotato anche per tutti i giocatori.' : 'Archivio amministrativo svuotato: sono tornati i dati del dataset.'); } }
         else if ('adminLock' in data) { lockAdmin(); admin.message = ''; render(store.getState(), store.getLastSaved()); }
       } catch (error) { admin.message = error.message; render(store.getState(), store.getLastSaved()); }
       return;
@@ -447,7 +516,8 @@ export function mountApp(root, store) {
           if (!law || !form) throw new Error('Atto non disponibile.');
           const label = law.lawNumber ? `legge n. ${law.lawNumber}/${String(law.lawDate ?? '').slice(0, 4)}` : 'atto in discussione al Senato';
           form.elements.title.value = `Modifiche alla ${label}`.slice(0, 90);
-          form.elements.category.value = realLawArea(law) ?? form.elements.category.value;
+          const realArea = areaOf(realLawArea(law));
+          if (realArea) { form.querySelector('[data-policy-fields]').outerHTML = policyFields({ area: realArea.id }); refreshPolicyPreview(form); }
           form.elements.summary.value = `Proposta simulata che interviene su: ${law.officialTitle}`.slice(0, 800);
           form.elements.realReference.value = law.id;
           const note = form.querySelector('[data-law-real-draft]');
@@ -504,7 +574,12 @@ export function mountApp(root, store) {
       else if (wizardAction === 'finish') {
         const failing = [1,2,3].map(step => [step, validateCareerStep(wizard,step,selectableParties(),realDatabase.parliamentaryGroups ?? [])]).find(([, errors]) => errors.length);
         if (failing) { wizard.step = failing[0]; wizard.errors = failing[1]; }
-        else { try { store.createCareer(wizard,realParties(),realDatabase.parliamentaryGroups ?? []); wizard = null; playSound('success'); refreshContacts(); } catch (error) { wizard.errors = [error.message || 'Impossibile creare la carriera.']; } }
+        else { try {
+          const player = store.createCareer(wizard,realParties(),realDatabase.parliamentaryGroups ?? []);
+          // A logo uploaded for the new party is kept in this browser with the party's id.
+          if (wizard.partyMode === 'new' && wizard.partyLogoMode === 'upload' && wizard.partyLogoBlob && player?.partyId) await saveLocalLogo(player.partyId, { blob: wizard.partyLogoBlob, fileName: wizard.partyLogoBlob.name || 'logo', source: '', verified: false, alt: `Logo di ${wizard.partyName}` }).then(refreshLocalLogos).catch(() => {});
+          wizard = null; playSound('success'); refreshContacts();
+        } catch (error) { wizard.errors = [error.message || 'Impossibile creare la carriera.']; } }
       }
       render(store.getState(),store.getLastSaved()); return;
     }
@@ -569,16 +644,33 @@ export function mountApp(root, store) {
         if (verified && !/^https?:\/\//i.test(source)) throw new Error('Per segnare il logo verificato inserisci una fonte HTTPS o HTTP.');
         if (!alt) throw new Error('Inserisci un testo alternativo per il logo.');
         await saveLocalLogo(selectedLogoPartyId, pendingLogo ? {blob:pendingLogo,fileName:pendingLogo.name || 'logo',sourceUrl:pendingRemoteUrl,source,verified,alt} : {url:pendingRemoteUrl,sourceUrl:pendingRemoteUrl,source,verified,alt});
-        pendingLogo=null; pendingLogoUrl && URL.revokeObjectURL(pendingLogoUrl); pendingLogoUrl=null; pendingRemoteUrl=null; logoUrlDraft=''; logoAdminError=''; await refreshLocalLogos();
+        // The owner connected to the shared archive publishes the logo for everyone: the address, or the image itself if small.
+        if (hasSharedSession() && isAdminUnlocked()) {
+          const shared = pendingRemoteUrl && /^https:/i.test(pendingRemoteUrl) ? { url: pendingRemoteUrl, alt, sourceUrl: source || pendingRemoteUrl } : pendingLogo && pendingLogo.size <= 300000 ? { dataUrl: await blobToDataUrl(pendingLogo), alt, sourceUrl: source || null } : null;
+          if (shared) await publishSharedArchive({ [selectedLogoPartyId]: shared }).then(() => { logoAdminError = ''; }).catch(error => { logoAdminError = `Logo salvato in questo browser, non pubblicato: ${error.message}`; });
+          else logoAdminError = 'Logo salvato in questo browser: per pubblicarlo per tutti usa un indirizzo https o un file sotto i 300 KB.';
+        }
+        pendingLogo=null; pendingLogoUrl && URL.revokeObjectURL(pendingLogoUrl); pendingLogoUrl=null; pendingRemoteUrl=null; logoUrlDraft=''; await refreshLocalLogos();
       } catch (error) { logoAdminError=error.message || 'Salvataggio non riuscito.'; render(store.getState(),store.getLastSaved()); }
     }
     else if (action === 'logo-delete') {
-      try { await deleteLocalLogo(selectedLogoPartyId); logoAdminError=''; await refreshLocalLogos(); }
+      try {
+        await deleteLocalLogo(selectedLogoPartyId); logoAdminError='';
+        if (hasSharedSession() && isAdminUnlocked() && sharedLogos()[selectedLogoPartyId]) await publishSharedArchive({ [selectedLogoPartyId]: null });
+        await refreshLocalLogos();
+      }
       catch (error) { logoAdminError=error.message || 'Eliminazione non riuscita.'; render(store.getState(),store.getLastSaved()); }
     }
   });
   root.addEventListener('submit', async event => {
     const form = event.target;
+    if (form.matches('[data-admin-shared-form]')) {
+      event.preventDefault();
+      const data = Object.fromEntries(new FormData(form));
+      try { await openSharedSession(data.pin, data.setupCode ?? ''); await refreshSharedArchive(); admin.message = 'Browser collegato: le modifiche verranno pubblicate per tutti.'; }
+      catch (error) { admin.message = error.message; }
+      render(store.getState(), store.getLastSaved()); return;
+    }
     if (form.matches('[data-admin-lock-form],[data-admin-form],[data-admin-role-form],[data-admin-pin-form]')) {
       event.preventDefault();
       const data = Object.fromEntries(new FormData(form));
@@ -605,17 +697,28 @@ export function mountApp(root, store) {
       event.preventDefault();
       const data = new FormData(form);
       const reference = (realDatabase.laws ?? []).find(item => item.id === data.get('realReference'));
-      try { store.proposeLaw({ title: data.get('title'), category: data.get('category'), summary: data.get('summary'), realReference: reference ? { id: reference.id, label: reference.lawNumber ? `legge n. ${reference.lawNumber} del ${reference.lawDate}` : reference.officialTitle.slice(0, 120), officialTitle: reference.officialTitle, lawNumber: reference.lawNumber, lawDate: reference.lawDate, status: reference.status, sourceUrl: reference.sourceUrl, source: 'real', verified: true } : null }); }
+      try { store.proposeLaw({ title: data.get('title'), policy: designFromForm(form), summary: data.get('summary'), realReference: reference ? { id: reference.id, label: reference.lawNumber ? `legge n. ${reference.lawNumber} del ${reference.lawDate}` : reference.officialTitle.slice(0, 120), officialTitle: reference.officialTitle, lawNumber: reference.lawNumber, lawDate: reference.lawDate, status: reference.status, sourceUrl: reference.sourceUrl, source: 'real', verified: true } : null }); }
       catch (error) { store.getState().ui.toast = error.message; render(store.getState(),store.getLastSaved()); }
     } else if (form.matches('[data-law-amend-form]')) {
       event.preventDefault();
       const data = new FormData(form);
       try { store.amendLaw(form.dataset.lawId, data.get('amendment')); }
       catch (error) { store.getState().ui.toast = error.message; render(store.getState(),store.getLastSaved()); }
-    } else if (form.matches('[data-government-agenda-form]')) {
+    } else if (form.matches('[data-government-program-form],[data-policy-form],[data-budget-form],[data-reshuffle-form],[data-party-program-form]')) {
       event.preventDefault();
-      try { store.setGovernmentAgenda(new FormData(form).getAll('agenda')); playSound('confirm'); }
-      catch (error) { store.getState().ui.toast = error.message; render(store.getState(),store.getLastSaved()); }
+      const data = new FormData(form);
+      try {
+        if (form.matches('[data-government-program-form]')) store.setGovernmentProgram({ line: data.get('line'), priorities: data.getAll('priorities') });
+        else if (form.matches('[data-policy-form]')) {
+          const kind = event.submitter?.value ?? 'bill';
+          const draft = { title: data.get('title'), policy: designFromForm(form) };
+          if (kind === 'decree') store.issueDecree(draft); else store.proposeGovernmentBill(draft);
+        }
+        else if (form.matches('[data-budget-form]')) store.presentBudget(planFromForm(form));
+        else if (form.matches('[data-reshuffle-form]')) store.reshuffleMinister(data.get('portfolio'), data.get('groupId'));
+        else if (form.matches('[data-party-program-form]')) store.setPartyProgram(data.getAll('program'));
+        playSound('confirm');
+      } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(),store.getLastSaved()); }
     } else if (form.matches('[data-minister-form]')) {
       event.preventDefault();
       const data = new FormData(form);
@@ -625,6 +728,7 @@ export function mountApp(root, store) {
   });
   root.addEventListener('input', event => {
     const field = event.target;
+    if (field.closest?.('[data-policy-fields]') || field.closest?.('[data-budget-form]')) { refreshPolicyPreview(field.closest('form'), field); return; }
     if (field.matches('[data-catalog-filter]')) {
       catalog[field.dataset.catalogFilter]=field.value;
       if (field.dataset.catalogFilter === 'partyQuery') catalog.partyPage=1;
@@ -636,8 +740,11 @@ export function mountApp(root, store) {
     if (field.matches('[data-admin-link-query]')) { admin.linkQuery = field.value; preserveFocusRender('[data-admin-link-query]'); return; }
     if (field.matches('[data-logo-query]')) { catalog.logoQuery=field.value; catalog.logoPage=1; updateLogoAdmin(); return; }
     if (!wizard || !field.matches('.career-wizard [name]')) return;
+    if (field.name === 'partyProgram' || field.name === 'partyLogoMode') { syncWizardDraft(); if (field.name === 'partyLogoMode') render(store.getState(), store.getLastSaved()); return; }
+    if (field.type === 'file') return;
     if (field.name.startsWith('policy_')) wizard.policyPositions[field.name.slice(7)] = Number(field.value);
     else wizard[field.name] = field.value;
+    if (/^partyLogo|^partyColor|^partyAbbreviation/.test(field.name)) updateWizardLogo();
     const output = field.closest('.policy-slider')?.querySelector('output');
     if (output) output.textContent=field.value;
     if (field.name === 'partyColor') { const caption=field.parentElement?.querySelector('span'); if(caption) caption.textContent=field.value; }
@@ -664,6 +771,18 @@ export function mountApp(root, store) {
     }
     if (field.matches('[data-admin-chamber]')) { admin.chamber = field.value; render(store.getState(), store.getLastSaved()); return; }
     if (field.matches('[data-real-law-filter]') && field.dataset.realLawFilter !== 'query') { realLaws[field.dataset.realLawFilter] = field.value; realLaws.page = 1; render(store.getState(), store.getLastSaved()); return; }
+    if (field.matches('[data-wizard-logo-upload]') && wizard) {
+      const file = field.files?.[0]; if (!file) return;
+      try {
+        wizard.partyLogoBlob = await validateLogoFile(file);
+        wizard.partyLogoBlob.name = file.name;
+        if (wizard.partyLogoPreview) URL.revokeObjectURL(wizard.partyLogoPreview);
+        wizard.partyLogoPreview = URL.createObjectURL(wizard.partyLogoBlob);
+        wizard.partyLogoError = '';
+        updateWizardLogo();
+      } catch (error) { wizard.partyLogoError = error.message; syncWizardDraft(); render(store.getState(), store.getLastSaved()); }
+      return;
+    }
     if (field.matches('[data-menu-import]')) {
       const file = field.files?.[0]; if (!file) return;
       try { store.loadGame(await file.text(), 'Partita importata'); menu.open = false; menu.error = ''; playSound('success'); await ensurePageData('panoramica'); }

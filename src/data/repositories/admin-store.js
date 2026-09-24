@@ -1,6 +1,9 @@
 // Owner edits live in their own browser archive and are layered over the real snapshot
 // at load time: the JSON files in src/data/real are never rewritten.
 const ARCHIVE_KEY = 'politicando.admin.overrides.v1';
+// Copy of the shared archive kept on the server (same for every player), cached for offline play.
+const SHARED_KEY = 'politicando.admin.shared.v1';
+const SHARED_TOKEN_KEY = 'politicando.admin.shared-session.v1';
 const LOCK_KEY = 'politicando.admin.lock.v1';
 const SESSION_KEY = 'politicando.admin.session.v1';
 
@@ -37,13 +40,36 @@ function storageAvailable() {
   try { return typeof localStorage !== 'undefined' && localStorage !== null; } catch { return false; }
 }
 // Always read from storage: the archive stays the single source of truth across tabs and module reloads.
-export function loadAdminArchive() {
+function loadLocalArchive() {
   if (!storageAvailable()) return empty();
   try {
     const parsed = JSON.parse(localStorage.getItem(ARCHIVE_KEY) ?? 'null');
     if (parsed && typeof parsed === 'object') return { ...empty(), ...parsed, parties: parsed.parties ?? {}, politicians: parsed.politicians ?? {} };
   } catch { /* an unreadable archive is left untouched in storage */ }
   return empty();
+}
+export function loadSharedArchive() {
+  if (!storageAvailable()) return null;
+  try { return JSON.parse(localStorage.getItem(SHARED_KEY) ?? 'null'); } catch { return null; }
+}
+export function storeSharedArchive(archive) {
+  if (!archive || typeof archive !== 'object') return;
+  try { localStorage.setItem(SHARED_KEY, JSON.stringify({ version: 1, updatedAt: archive.updatedAt ?? null, parties: archive.parties ?? {}, politicians: archive.politicians ?? {}, logos: archive.logos ?? {}, configured: Boolean(archive.configured), fetchedAt: new Date().toISOString() })); } catch { /* the shared copy is only a cache */ }
+}
+export const sharedLogos = () => loadSharedArchive()?.logos ?? {};
+export function sharedSessionToken() { try { return sessionStorage.getItem(SHARED_TOKEN_KEY); } catch { return null; } }
+export function setSharedSessionToken(token) { try { if (token) sessionStorage.setItem(SHARED_TOKEN_KEY, token); else sessionStorage.removeItem(SHARED_TOKEN_KEY); } catch { /* session only */ } }
+// The archive in use: the shared one (published for everyone) with this browser's newer edits on top.
+export function loadAdminArchive() {
+  const local = loadLocalArchive();
+  const shared = loadSharedArchive();
+  if (!shared) return local;
+  const merge = kind => {
+    const result = { ...(shared[kind] ?? {}) };
+    for (const [id, record] of Object.entries(local[kind] ?? {})) if (!result[id] || String(record.updatedAt ?? '') >= String(result[id].updatedAt ?? '')) result[id] = record;
+    return result;
+  };
+  return { ...local, parties: merge('parties'), politicians: merge('politicians'), updatedAt: [local.updatedAt, shared.updatedAt].filter(Boolean).sort().at(-1) ?? null };
 }
 function persist(archive) {
   archive.updatedAt = new Date().toISOString();
@@ -154,6 +180,7 @@ export function importAdminArchive(text) {
 }
 export function clearAdminArchive() {
   localStorage.removeItem(ARCHIVE_KEY);
+  localStorage.removeItem(SHARED_KEY);
   return empty();
 }
 

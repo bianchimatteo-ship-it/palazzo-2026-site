@@ -1,5 +1,5 @@
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-16';
-import { CHART_SLOTS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20260924-16';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-17';
+import { CHART_SLOTS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20260924-17';
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
 // A party enters with its real identity only (id, name, abbreviation); its starting weight is the real
@@ -149,7 +149,9 @@ function publishPoll(world, { date, stats = {}, parliament = null, game = null }
   const government = parliament?.government && ['active', 'crisis'].includes(parliament.government.status) ? round1(clamp(22 + (parliament.government.stability ?? 50) * 0.3 + (mood - 50) * 0.35 + 7 + gaussian(world) * 2, 5, 75)) : null;
   const undecidedTarget = 27 + (48 - (world.society?.trust ?? 48)) * 0.3;
   world.undecided = round1(clamp(world.undecided + gaussian(world) + (parliament?.government?.status === 'crisis' ? 0.8 : 0) - (world.undecided - undecidedTarget) * 0.1, 15, 42));
+  const why = player ? explainShare(world, results.find(row => row.partyId === player)) : [];
   const poll = {
+    why,
     id: `sondaggio-${world.week}-${world.polls.length}-${sample}`, week: world.week, date, institute: institute.name, sample, margin, undecided: world.undecided, results, regional, local,
     regionalHome: player ? regional[world.place.region] ?? null : null,
     personal: { approval: round1(clamp((stats.popularity ?? 45) * 0.55 + (stats.reputation ?? 50) * 0.45 + gaussian(world) * 2.4, 0, 100)), popularity: stats.popularity ?? null, notoriety: stats.notoriety ?? null },
@@ -160,6 +162,33 @@ function publishPoll(world, { date, stats = {}, parliament = null, game = null }
   // The full regional map is kept for the latest poll only; the home region stays in every entry.
   world.polls = [...world.polls.map(item => item.regional ? { ...item, regional: null } : item), poll].slice(-HISTORY);
   return poll;
+}
+// Why the player's party moved: its own drivers, the effects in force (by cause), and the rest (rivals and sampling).
+const EFFECT_LABELS = { 'crisi-interna': 'Crisi interna del partito', alleanza: 'Effetto dell’alleanza', rottura: 'Rottura di un’alleanza', carriera: 'Iniziative e risultati del politico', fiducia: 'Sfiducia nelle istituzioni' };
+function explainShare(world, row) {
+  const player = playerParty(world);
+  if (!player || !row) return [];
+  const active = world.parties.filter(party => party.active);
+  const total = active.reduce((sum, party) => sum + Math.max(0.3, party.baseline + effectSum(world, party, 'national')), 0) + world.others;
+  const factor = 100 / (total || 100);
+  const byCause = {};
+  for (const effect of world.effects.filter(item => item.scope === 'national' && (item.partyId === player.id || (item.strategy && item.strategy === player.strategy)))) {
+    const label = effect.label ?? EFFECT_LABELS[effect.cause] ?? 'Altri fattori';
+    byCause[label] = round2((byCause[label] ?? 0) + effect.delta);
+  }
+  const previous = player.lastEffects ?? {};
+  player.lastEffects = byCause;
+  const causes = [];
+  for (const [label, value] of Object.entries(player.components ?? {})) if (Math.abs(value * factor) >= 0.05) causes.push({ label, delta: round1(value * factor) });
+  for (const label of new Set([...Object.keys(byCause), ...Object.keys(previous)])) {
+    const change = (byCause[label] ?? 0) - (previous[label] ?? 0);
+    if (Math.abs(change * factor) >= 0.05) causes.push({ label: change > 0 || byCause[label] ? label : `Si esaurisce: ${label.toLowerCase()}`, delta: round1(change * factor) });
+  }
+  player.components = {};
+  const explained = causes.reduce((sum, item) => sum + item.delta, 0);
+  const rest = round1(row.delta - explained);
+  if (Math.abs(rest) >= 0.1) causes.push({ label: 'Mosse degli altri partiti e oscillazione del campione', delta: rest });
+  return causes.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta)).slice(0, 6);
 }
 export const latestPoll = world => world?.polls?.at(-1) ?? null;
 export function playerPollShare(world, scope = 'national') {
@@ -199,11 +228,11 @@ function applyWorldEvent(world, event, date, parliament) {
   const majority = inMajority(parliament);
   if (player && majority !== null && (event.majority || event.opposition)) {
     const delta = majority ? event.majority ?? 0 : event.opposition ?? 0;
-    addEffect(world, { partyId: player.id, delta, remaining: event.duration, cause: event.id });
+    addEffect(world, { partyId: player.id, delta, remaining: event.duration, cause: event.id, label: fill(event.title, world.place) });
     if (delta) lines.push(`${player.label} ${delta > 0 ? '+' : ''}${delta} (${majority ? 'in maggioranza' : 'all’opposizione'})`);
   }
-  if (player && event.regionalPlayer) addEffect(world, { partyId: player.id, scope: 'region', region: world.place.region, delta: event.regionalPlayer, remaining: event.duration, cause: event.id });
-  if (player && event.localPlayer) addEffect(world, { partyId: player.id, scope: 'local', delta: event.localPlayer, remaining: event.duration, cause: event.id });
+  if (player && event.regionalPlayer) addEffect(world, { partyId: player.id, scope: 'region', region: world.place.region, delta: event.regionalPlayer, remaining: event.duration, cause: event.id, label: fill(event.title, world.place) });
+  if (player && event.localPlayer) addEffect(world, { partyId: player.id, scope: 'local', delta: event.localPlayer, remaining: event.duration, cause: event.id, label: fill(event.title, world.place) });
   if (event.stability && parliament?.government && ['active', 'crisis'].includes(parliament.government.status)) {
     parliament.government.stability = clamp(Math.round((parliament.government.stability ?? 50) + event.stability), 0, 100);
     lines.push(`Stabilità del governo ${event.stability > 0 ? '+' : ''}${event.stability}`);
@@ -313,6 +342,8 @@ export function advanceWorld(input, { date, week, stats = {}, deltas = {}, game 
     // Citizens judge whoever governs: a better mood rewards the majority, a worse one the opposition.
     const mood = society ? (majority === true ? society.moodDelta * 0.05 : majority === false ? -society.moodDelta * 0.025 : 0) + clamp((society.sentiment ?? 0) / 100 * 0.05, -0.05, 0.05) : 0;
     player.baseline = round2(Math.max(0.3, player.baseline + personal + government + unity + clamp(mood, -0.25, 0.25)));
+    // What moved the party this week, before the poll's sampling: kept to explain the change.
+    player.components = { 'Immagine del tuo politico': round2(personal), 'Stabilità del governo': round2(government), 'Divisioni nel partito': round2(unity), 'Umore dei cittadini verso chi governa': round2(clamp(mood, -0.25, 0.25)) };
     player.cohesion = Math.round(game?.party?.org?.cohesion ?? game?.party?.support ?? player.cohesion);
     player.crisis = game?.party && game.party.support < 25 ? (player.crisis ?? { since: week, source: SIM }) : null;
     if (playerStrategy) player.strategy = playerStrategy;
@@ -357,7 +388,7 @@ export function applyWorldSignals(input, signals = [], date) {
   const player = playerParty(world);
   const push = (delta, remaining, title, body, tone = delta >= 0 ? 'good' : 'bad', icon = 'chart', permanent = 0) => {
     if (player) {
-      addEffect(world, { partyId: player.id, delta, remaining, cause: 'carriera' });
+      addEffect(world, { partyId: player.id, delta, remaining, cause: 'carriera', label: title });
       if (permanent) { player.baseline = round2(Math.max(0.3, player.baseline + permanent)); player.anchor = round2(Math.max(0.3, player.anchor + permanent * 0.6)); }
     }
     logEvent(world, date, { kind: 'carriera', icon, scope: 'nazionale', title, body, tone, lines: player ? [`${player.label} ${delta >= 0 ? '+' : ''}${delta} nei sondaggi${permanent ? `, ${permanent >= 0 ? '+' : ''}${permanent} di fondo` : ''}`] : [] });
@@ -376,6 +407,9 @@ export function applyWorldSignals(input, signals = [], date) {
     } else if (signal.type === 'relation') {
       const party = world.parties.find(item => item.id === signal.partyId);
       if (party) party.playerRelation = round1(clamp(party.playerRelation + signal.delta, -100, 100));
+    } else if (signal.type === 'territorial' && player) {
+      // Measures and citizens' mood move the party region by region: that is where local elections are decided.
+      for (const [region, delta] of Object.entries(signal.regions ?? {})) addEffect(world, { partyId: player.id, scope: 'region', region, delta: round2(delta), remaining: 12, cause: 'territori' });
     } else if (signal.type === 'chronicle') logEvent(world, date, { kind: signal.kind ?? 'cronaca', icon: signal.icon ?? 'pin', scope: signal.scope ?? 'nazionale', title: signal.title, body: signal.body ?? '', tone: signal.tone ?? 'neutral', chain: signal.chain ?? null });
     else if (signal.type === 'election') {
       const gap = signal.pollShare === null ? 0 : clamp((signal.share - signal.pollShare) * 0.15, -2, 2);
