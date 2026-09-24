@@ -1,41 +1,41 @@
-import { fullDate, formatDate } from '../core/time.js?v=20260924-21';
-import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20260924-21';
-import { accountApiBase, currentAccount, deleteCloudSave, downloadSave, knownRevision, listCloudSaves, login, logout, register, slotForCareer, uploadSave } from '../data/repositories/account-sync.js?v=20260924-21';
-import { setPartyLogoResolver } from './person-marks.js?v=20260924-21';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260924-21';
-import { isRealCollectionLoaded, loadRealCollections, pristineRecord, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20260924-21';
-import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20260924-21';
-import { renderAdminPanel } from './admin-panel.js?v=20260924-21';
-import { sharedLogos } from '../data/repositories/admin-store.js?v=20260924-21';
-import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, publishSharedArchive, refreshSharedArchive, sharedApiUrl, verifySharedSession } from '../data/repositories/admin-sync.js?v=20260924-21';
-import { deleteLocalLogo, exportLogoConfiguration, fetchLogoFromUrl, getLocalLogo, importLogoConfiguration, listLocalLogos, probeImage, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20260924-21';
-import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20260924-21';
-import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20260924-21';
-import { PARTY_LINK_COLLECTIONS } from '../data/repositories/party-links.js?v=20260924-21';
-import { renderLogoAdmin } from './logo-admin.js?v=20260924-21';
-import { makeCareerDraft, renderCareerWizard, wizardLogoPreview } from './career-wizard.js?v=20260924-21';
-import { userPartyLogo } from './party-logo.js?v=20260924-21';
-import { validateCareerStep } from '../core/career-rules.js?v=20260924-21';
-import { renderCampaignPage } from './campaign-mode.js?v=20260924-21';
-import { renderParliamentPage } from './parliament-mode.js?v=20260924-21';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-21';
-import { CAREER_LEVELS, careerLevelLabel } from '../data/regions.js?v=20260924-21';
-import { renderCareerTimeline, renderElectionCalendar, renderHeadquarters, renderInbox, renderPartyPosition } from './game-mode.js?v=20260924-21';
-import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20260924-21';
-import { playerRoles } from '../core/roles.js?v=20260924-21';
-import { budgetPreview, designFromForm, planFromForm, policyFields, policyPreview } from './policy-mode.js?v=20260924-21';
-import { areaOf } from '../data/simulation/policy-rules.js?v=20260924-21';
-import { attachChartInteractions, hideChartTip, renderPollsPage } from './polls-mode.js?v=20260924-21';
-import { glyph, officeIcon } from './visuals.js?v=20260924-21';
-import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20260924-21';
-import { renderFinancePage } from './finance-mode.js?v=20260924-21';
-import { renderContactsPanel, renderOrganizationPanel } from './organization-mode.js?v=20260924-21';
-import { renderRealLaws } from './real-laws.js?v=20260924-21';
-import { realLawArea } from '../core/society-engine.js?v=20260924-21';
-import { canManageParliament } from '../core/parliament-engine.js?v=20260924-21';
-import { renderMainMenu, renderWeeklyReport, settingsView } from './menu.js?v=20260924-21';
-import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20260924-21';
-import { playSound } from './sound.js?v=20260924-21';
+import { fullDate, formatDate } from '../core/time.js?v=20260924-22';
+import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20260924-22';
+import { accountApiBase, currentAccount, deleteCloudSave, downloadSave, knownRevision, listCloudSaves, login, logout, register, slotForCareer, uploadSave } from '../data/repositories/account-sync.js?v=20260924-22';
+import { setPartyLogoResolver } from './person-marks.js?v=20260924-22';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260924-22';
+import { isRealCollectionLoaded, loadRealCollections, pristineRecord, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20260924-22';
+import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20260924-22';
+import { renderAdminPanel } from './admin-panel.js?v=20260924-22';
+import { sharedLogos } from '../data/repositories/admin-store.js?v=20260924-22';
+import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, publishSharedArchive, refreshSharedArchive, sharedApiUrl, verifySharedSession } from '../data/repositories/admin-sync.js?v=20260924-22';
+import { deleteLocalLogo, exportLogoConfiguration, fetchLogoFromUrl, getLocalLogo, importLogoConfiguration, listLocalLogos, probeImage, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20260924-22';
+import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20260924-22';
+import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20260924-22';
+import { PARTY_LINK_COLLECTIONS } from '../data/repositories/party-links.js?v=20260924-22';
+import { renderLogoAdmin } from './logo-admin.js?v=20260924-22';
+import { chosenPlace, makeCareerDraft, renderCareerWizard, wizardLogoPreview } from './career-wizard.js?v=20260924-22';
+import { userPartyLogo } from './party-logo.js?v=20260924-22';
+import { CAREER_STEPS, validateCareerStep } from '../core/career-rules.js?v=20260924-22';
+import { renderCampaignPage } from './campaign-mode.js?v=20260924-22';
+import { renderParliamentPage } from './parliament-mode.js?v=20260924-22';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-22';
+import { CAREER_LEVELS, careerLevelLabel } from '../data/regions.js?v=20260924-22';
+import { renderCareerTimeline, renderElectionCalendar, renderHeadquarters, renderInbox, renderPartyPosition } from './game-mode.js?v=20260924-22';
+import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20260924-22';
+import { playerRoles } from '../core/roles.js?v=20260924-22';
+import { budgetPreview, designFromForm, planFromForm, policyFields, policyPreview } from './policy-mode.js?v=20260924-22';
+import { areaOf } from '../data/simulation/policy-rules.js?v=20260924-22';
+import { attachChartInteractions, hideChartTip, renderPollsPage } from './polls-mode.js?v=20260924-22';
+import { glyph, officeIcon } from './visuals.js?v=20260924-22';
+import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20260924-22';
+import { renderFinancePage } from './finance-mode.js?v=20260924-22';
+import { renderContactsPanel, renderOrganizationPanel } from './organization-mode.js?v=20260924-22';
+import { renderRealLaws } from './real-laws.js?v=20260924-22';
+import { realLawArea } from '../core/society-engine.js?v=20260924-22';
+import { canManageParliament } from '../core/parliament-engine.js?v=20260924-22';
+import { renderMainMenu, renderWeeklyReport, settingsView } from './menu.js?v=20260924-22';
+import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20260924-22';
+import { playSound } from './sound.js?v=20260924-22';
 
 // Phone navigation: four sections always one tap away, everything else in the "Altro" sheet.
 const MOBILE_TABS = [['panoramica', 'home', 'Home'], ['carriera', 'route', 'Carriera'], ['partito', 'party', 'Partito'], ['sondaggi', 'chart', 'Sondaggi']];
@@ -86,6 +86,8 @@ function setHash(page, replace = false) {
 
 export function mountApp(root, store) {
   let wizard = null;
+  // The ISTAT list the new career starts from (regions, supra-municipal units, comuni).
+  const wizardTerritory = () => realDatabase.municipalities?.length ? { units: realDatabase.territorialUnits ?? [], municipalities: realDatabase.municipalities, sourceUrl: realDatabase.manifest?.territorialSource?.url ?? null, sourceName: realDatabase.manifest?.territorialSource?.name ?? null } : null;
   let toastTimer;
   let logoAdminOpen = false;
   let selectedLogoPartyId = null;
@@ -229,7 +231,7 @@ export function mountApp(root, store) {
           <header class="topbar"><div class="topbar-title"><strong>${current.title}</strong><span>${current.intro}</span></div><div class="top-actions"><button class="icon-button menu-button" data-action="menu" aria-label="Menu principale" title="Menu principale">${icon('menu', 17)}</button><div class="date-chip">${icon('calendar', 16)}<span>${fullDate(state.clock.currentDate)}</span></div><button class="icon-button" aria-label="Salva carriera" title="Salva carriera" data-action="save">${icon('save', 17)}</button><span class="week-chip">Settimana ${state.game.week.index} · ${state.game.week.ap}/${state.game.week.maxAp} giorni</span><button class="advance-button" data-action="advance" ${state.game.status === 'ended' ? 'disabled' : ''}>${state.campaign?.status === 'active' ? 'Avanza campagna' : 'Chiudi settimana'} ${icon('arrow', 17)}</button></div></header>
           <div class="page-wrap">${wizard ? '' : (state.ui.activePage === 'panoramica' ? renderHeadquarters(state, { partyName: party ? partyName(party) : null, partyLogo: party ? logoFor(party) : null, newsFilter: views.newsFilter }) : subpage(state, current, player, party, eventList, catalog, { logoFor, parties:realParties(), selectable:selectableParties(), findParty, realLeader, admin, adminContext, territory, realLaws, archive, views, settings, lastSaved, account, allianceOdds: id => { try { return store.allianceOdds(id); } catch { return null; } } }))}</div>
         </main>
-        ${wizard ? renderCareerWizard(state, wizard, realParties(), logoFor, realDatabase.parliamentaryGroups ?? [], realDatabase.partyLeaderships ?? [], realDatabase.politicalFigures ?? [], realDatabase.politicians ?? []) : ''}
+        ${wizard ? renderCareerWizard(state, wizard, realParties(), logoFor, realDatabase.parliamentaryGroups ?? [], realDatabase.partyLeaderships ?? [], realDatabase.politicalFigures ?? [], realDatabase.politicians ?? [], wizardTerritory()) : ''}
         ${logoAdminOpen ? renderLogoAdmin({shared:sharedLogos(),selectedId:selectedLogoPartyId,query:catalog.logoQuery,page:catalog.logoPage,metadata:[...logoMetadata.values()],entities:[...realParties(),...state.dataset.parties],logoFor,error:logoAdminError,pendingPreview:pendingLogoUrl ?? pendingRemoteUrl,pendingRemote:Boolean(pendingRemoteUrl && !pendingLogo),urlDraft:logoUrlDraft,urlLoading:logoUrlLoading}) : ''}
         ${catalog.selectedPoliticianId ? renderPoliticianProfile(catalog.selectedPoliticianId,{loading:catalog.profileLoading,logoFor}) : ''}
         ${catalog.selectedPartyId ? renderPartyProfile(catalog.selectedPartyId,logoFor) : ''}
@@ -264,7 +266,7 @@ export function mountApp(root, store) {
     if (typeof start === 'number' && next?.setSelectionRange) next.setSelectionRange(start,end);
   };
   const failStep = () => {
-    wizard.errors = validateCareerStep(wizard, wizard.step, selectableParties(), realDatabase.parliamentaryGroups ?? []);
+    wizard.errors = validateCareerStep(wizard, wizard.step, selectableParties(), realDatabase.parliamentaryGroups ?? [], wizardTerritory());
     return wizard.errors.length > 0;
   };
   const collectionsForPage = page => page === 'partiti-lista'
@@ -383,7 +385,7 @@ export function mountApp(root, store) {
     menu.open = false;
     wizard = makeCareerDraft(store.getState().clock.currentDate, store.getState().dataset.parties);
     render(store.getState(), store.getLastSaved());
-    try { await loadRealCollections(['parties','politicalMovements','parliamentaryGroups','groupMemberships','chambers','partyLeaderships','politicalFigures','politicians']); render(store.getState(), store.getLastSaved()); }
+    try { await loadRealCollections(['territorialUnits','municipalities','parties','politicalMovements','parliamentaryGroups','groupMemberships','chambers','partyLeaderships','politicalFigures','politicians']); render(store.getState(), store.getLastSaved()); }
     catch (error) { wizard.errors = [error.message || 'I dati reali necessari al Career Wizard non sono disponibili.']; render(store.getState(), store.getLastSaved()); }
   };
   root.addEventListener('click', async event => {
@@ -628,10 +630,10 @@ export function mountApp(root, store) {
       syncWizardDraft(); wizard.errors = [];
       if (wizardAction === 'cancel') { wizard = null; if (!store.hasCareer()) menu.open = true; }
       else if (wizardAction === 'back') wizard.step = Math.max(1,wizard.step-1);
-      else if (wizardAction === 'next') { if (!failStep()) wizard.step = Math.min(4,wizard.step+1); }
-      else if (goto >= 1 && goto <= 3) wizard.step = goto;
+      else if (wizardAction === 'next') { if (!failStep()) wizard.step = Math.min(CAREER_STEPS,wizard.step+1); }
+      else if (goto >= 1 && goto < CAREER_STEPS) wizard.step = goto;
       else if (wizardAction === 'finish') {
-        const failing = [1,2,3].map(step => [step, validateCareerStep(wizard,step,selectableParties(),realDatabase.parliamentaryGroups ?? [])]).find(([, errors]) => errors.length);
+        const failing = Array.from({ length: CAREER_STEPS }, (_, index) => index + 1).map(step => [step, validateCareerStep(wizard,step,selectableParties(),realDatabase.parliamentaryGroups ?? [],wizardTerritory())]).find(([, errors]) => errors.length);
         if (failing) { wizard.step = failing[0]; wizard.errors = failing[1]; }
         else { try {
           // The Government in office at the start comes from the real data: every new career finds it.
@@ -646,6 +648,17 @@ export function mountApp(root, store) {
     }
     if (wizard) {
       if (event.target.closest('[data-wizard-show-parties]')) { syncWizardDraft(); wizard.partyListLimit = (Number(wizard.partyListLimit)||12)+12; render(store.getState(),store.getLastSaved()); return; }
+      if (event.target.closest('[data-wizard-show-municipalities]')) { syncWizardDraft(); wizard.municipalityLimit = (Number(wizard.municipalityLimit)||40)+40; render(store.getState(),store.getLastSaved()); return; }
+      // A comune picked from the ISTAT list becomes the starting territory (name, code, unit and region).
+      const municipalityCode = event.target.closest('[data-municipality-code]')?.dataset.municipalityCode;
+      if (municipalityCode) {
+        syncWizardDraft();
+        const territory = wizardTerritory();
+        wizard.municipalityCode = municipalityCode;
+        const place = chosenPlace(wizard, territory);
+        if (place) Object.assign(wizard, { municipality: place.municipality.name, region: place.region, territorialUnit: wizard.territorialUnit || '', provinceCode: place.unit.code, provinceName: place.unit.name, provinceType: place.unit.type });
+        wizard.errors = []; render(store.getState(),store.getLastSaved()); return;
+      }
       const level = event.target.closest('[data-level]')?.dataset.level;
       const mode = event.target.closest('[data-party-mode]')?.dataset.partyMode;
       const partyId = event.target.closest('[data-party-id]')?.dataset.partyId;
@@ -842,6 +855,7 @@ export function mountApp(root, store) {
     if (field.name === 'partyColor') { const caption=field.parentElement?.querySelector('span'); if(caption) caption.textContent=field.value; }
     if (field.matches('[data-wizard-party-search]')) { wizard.partyListLimit=12; preserveFocusRender('[data-wizard-party-search]'); }
     if (field.matches('[data-wizard-group-search]')) preserveFocusRender('[data-wizard-group-search]');
+    if (field.matches('[data-wizard-municipality-search]')) { wizard.municipalityLimit = 40; preserveFocusRender('[data-wizard-municipality-search]'); }
   });
   root.addEventListener('change', async event => {
     const field=event.target;
@@ -888,6 +902,9 @@ export function mountApp(root, store) {
       field.value = ''; return;
     }
     if (field.matches('[data-wizard-party-filter]')) { syncWizardDraft(); wizard.partyListLimit=12; preserveFocusRender('[data-wizard-party-filter]'); return; }
+    // Another region (or province) means another list of comuni: the choice starts again there.
+    if (field.matches('[data-wizard-region]') && wizard) { Object.assign(wizard, { region: field.value, territorialUnit: '', municipality: '', municipalityCode: '', municipalityQuery: '', municipalityLimit: 40, provinceCode: '', provinceName: '', provinceType: '', errors: [] }); render(store.getState(), store.getLastSaved()); return; }
+    if (field.matches('[data-wizard-unit]') && wizard) { wizard.territorialUnit = field.value; wizard.municipalityLimit = 40; render(store.getState(), store.getLastSaved()); return; }
     if (field.matches('[data-logo-upload]')) {
       const file=field.files?.[0]; if(!file) return;
       try {

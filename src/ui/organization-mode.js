@@ -1,12 +1,12 @@
 // The party as an organisation, and the real parliamentarians the career deals with.
-import { ORGANS, organOf, treasuryOutlook } from '../core/organization-engine.js?v=20260924-21';
-import { affiliationOf, markForPerson } from './person-marks.js?v=20260924-21';
-import { contactStance } from '../core/contacts-engine.js?v=20260924-21';
-import { SELECTION_METHODS } from '../data/simulation/organization-rules.js?v=20260924-21';
-import { artTile, glyph } from './visuals.js?v=20260924-21';
-import { illustration } from './illustrations.js?v=20260924-21';
+import { ORGANS, organOf, treasuryOutlook } from '../core/organization-engine.js?v=20260924-22';
+import { affiliationOf, markForPerson } from './person-marks.js?v=20260924-22';
+import { contactStance } from '../core/contacts-engine.js?v=20260924-22';
+import { SELECTION_METHODS } from '../data/simulation/organization-rules.js?v=20260924-22';
+import { artTile, glyph } from './visuals.js?v=20260924-22';
+import { illustration } from './illustrations.js?v=20260924-22';
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
-import { esc, euro, levelState, lineChart, meter, num, SERIES, signed, sparkline, stateBadge, trendState } from './charts.js?v=20260924-21';
+import { esc, euro, levelState, lineChart, meter, num, SERIES, signed, sparkline, stateBadge, trendState } from './charts.js?v=20260924-22';
 
 const TREND_LABELS = { crescita: 'In crescita', calo: 'In calo', stabile: 'Stabile' };
 

@@ -1,8 +1,8 @@
 // The immutable real snapshot is fetched by collection. The 2 MB aggregate is
 // retained for exports and validation, but the browser never downloads it.
-export const REAL_DATA_ASSET_VERSION = '20260924-4';
+export const REAL_DATA_ASSET_VERSION = '20260924-5';
 
-import { applyAdminOverrides } from './admin-store.js?v=20260924-21';
+import { applyAdminOverrides } from './admin-store.js?v=20260924-22';
 
 export let realDatabase = Object.freeze({});
 // Untouched copies of what the files contain, so owner overrides can be re-layered or reverted.
@@ -30,7 +30,10 @@ const collectionFiles = Object.freeze({
   laws: 'laws.json',
   twoPerThousand: 'two-per-thousand.json',
   government: 'government.json',
-  realPolls: 'polls.json'
+  realPolls: 'polls.json',
+  // ISTAT: supra-municipal units and every comune (Elenco dei comuni italiani, 21 February 2026).
+  territorialUnits: 'territorial-units.json',
+  municipalities: 'municipalities.json'
 });
 let manifestPromise;
 

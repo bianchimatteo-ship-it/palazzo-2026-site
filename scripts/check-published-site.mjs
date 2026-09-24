@@ -17,7 +17,8 @@ const files = {
   offices:'offices.json', partyMemberships:'party-memberships.json', groupMemberships:'group-memberships.json', electionParticipations:'election-participations.json',
   partyMembershipHistory:'party-membership-history.json', parliamentaryGroupHistory:'parliamentary-group-history.json', officeHistory:'office-history.json',
   territories:'territories.json', elections:'elections.json', chambers:'chambers.json', laws:'laws.json',
-  twoPerThousand:'two-per-thousand.json', government:'government.json', realPolls:'polls.json'
+  twoPerThousand:'two-per-thousand.json', government:'government.json', realPolls:'polls.json',
+  territorialUnits:'territorial-units.json', municipalities:'municipalities.json'
 };
 const failures = [];
 const assert = (condition, message) => { if (!condition) failures.push(message); };

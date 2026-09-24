@@ -1,5 +1,6 @@
-import { CAREER_LEVELS, ITALIAN_REGIONS } from '../data/regions.js?v=20260924-21';
-import { isSelectableParty } from '../data/schema.js?v=20260924-21';
+import { CAREER_LEVELS, ITALIAN_REGIONS } from '../data/regions.js?v=20260924-22';
+import { isSelectableParty } from '../data/schema.js?v=20260924-22';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20260924-22';
 
 const genders = new Set(['preferisco-non-specificare', 'donna', 'uomo', 'non-binario']);
 const orientations = new Set(['Centrismo civico', 'Progressista', 'Conservatore', 'Liberale', 'Socialdemocratico', 'Ecologista', 'Popolare', 'Autonomista', 'Altro']);
@@ -9,17 +10,28 @@ const isValidDate = value => {
   return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value;
 };
 
-export function validateCareerStep(draft, step, selectableParties, parliamentaryGroups = []) {
+// Steps of a new career: 1 where (Regione → Comune, from the ISTAT list), 2 path, 3 party, 4 difficulty, 5 who you are.
+// territory: { units, municipalities } — when given, the comune must be one of the ISTAT list, in the chosen region.
+export const CAREER_STEPS = 5;
+export function validateCareerStep(draft, step, selectableParties, parliamentaryGroups = [], territory = null) {
   const errors = [];
   if (step === 1) {
+    if (!ITALIAN_REGIONS.includes(draft.region)) errors.push('Scegli la regione in cui iniziare.');
+    else if (territory?.municipalities?.length) {
+      const municipality = territory.municipalities.find(item => item.code === draft.municipalityCode);
+      const unit = municipality ? territory.units?.find(item => item.code === municipality.unit) : null;
+      if (!municipality) errors.push('Scegli il comune dall’elenco ISTAT.');
+      else if (unit?.gameRegion !== draft.region) errors.push('Il comune scelto non si trova in questa regione.');
+    } else if (!draft.municipality?.trim()) errors.push('Scegli il comune in cui iniziare.');
+  }
+  if (step === 5) {
     if (!draft.firstName?.trim()) errors.push('Inserisci il nome.');
     if (!draft.lastName?.trim()) errors.push('Inserisci il cognome.');
     if (!isValidDate(draft.birthDate) || draft.birthDate > draft.currentDate) errors.push('Inserisci una data di nascita valida e precedente all’inizio della carriera.');
     if (!genders.has(draft.gender)) errors.push('Seleziona il genere.');
-    if (!ITALIAN_REGIONS.includes(draft.region)) errors.push('Seleziona una regione.');
-    if (!draft.municipality?.trim()) errors.push('Inserisci il comune di residenza.');
     if (!draft.previousProfession?.trim()) errors.push('Inserisci la professione precedente.');
   }
+  if (step === 4 && draft.difficulty && !DIFFICULTIES[draft.difficulty]) errors.push('Scegli una difficoltà.');
   if (step === 2) {
     const level = CAREER_LEVELS[draft.initialLevel];
     if (!level) errors.push('Scegli un percorso iniziale.');
@@ -50,6 +62,6 @@ export function validateCareerStep(draft, step, selectableParties, parliamentary
   return errors;
 }
 
-export function validateNewCareerDraft(draft, selectableParties, parliamentaryGroups = []) {
-  return [1, 2, 3].flatMap(step => validateCareerStep(draft, step, selectableParties, parliamentaryGroups));
+export function validateNewCareerDraft(draft, selectableParties, parliamentaryGroups = [], territory = null) {
+  return Array.from({ length: CAREER_STEPS }, (_, index) => index + 1).flatMap(step => validateCareerStep(draft, step, selectableParties, parliamentaryGroups, territory));
 }

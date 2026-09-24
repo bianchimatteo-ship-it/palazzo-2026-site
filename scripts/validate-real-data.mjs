@@ -103,7 +103,18 @@ for (const poll of polls) {
   for (const row of poll.results) if (!partyIds.has(row.entityId) && !coalitionIds.has(row.entityId)) fail(`Sondaggio ${poll.id}: forza senza entità ${row.entityId}`);
   if (new Set(poll.results.map(row => row.entityId)).size !== poll.results.length) fail(`Sondaggio ${poll.id}: forze duplicate`);
 }
+// ISTAT list of the comuni (21 February 2026): imported by scripts/import-istat-comuni.mjs, never written by hand.
+const municipalities = JSON.parse(await readFile(new URL('../src/data/real/municipalities.json', import.meta.url), 'utf8'));
+const territorialUnits = JSON.parse(await readFile(new URL('../src/data/real/territorial-units.json', import.meta.url), 'utf8'));
+if (municipalities.length !== 7894 || lawsManifest.collections.municipalities !== municipalities.length) fail(`Comuni ISTAT: conteggio non coerente (${municipalities.length})`);
+if (lawsManifest.collections.territorialUnits !== territorialUnits.length) fail('Unità territoriali ISTAT: conteggio nel manifest non coerente');
+if (new Set(municipalities.map(item => item.code)).size !== municipalities.length) fail('Comuni ISTAT: codici duplicati');
+const unitCodes = new Set(territorialUnits.map(unit => unit.code));
+for (const unit of territorialUnits) if (unit.source !== 'real' || unit.verified !== true || !/^https:\/\/www\.istat\.it\//.test(unit.sourceUrl) || !unit.sourceName || !unit.verifiedAt || unit.validFrom !== '2026-02-21') fail(`Unità territoriale ${unit.code}: provenienza incompleta`);
+for (const item of municipalities) if (!/^\d{6}$/.test(item.code) || item.id !== `istat-${item.code}` || !item.name || !unitCodes.has(item.unit) || item.source !== 'real' || item.verified !== true) fail(`Comune ISTAT ${item.code}: dati non validi`);
+if (new Set(territorialUnits.map(unit => unit.gameRegion)).size !== 20) fail('Unità territoriali ISTAT: le regioni non sono 20');
 if (process.exitCode) process.exit(process.exitCode);
+console.log(`ISTAT: ${municipalities.length} comuni e ${territorialUnits.length} unità territoriali sovracomunali (aggiornamento 21/02/2026).`);
 console.log(`Specifica 24/09/2026: ${organizations.length + (db.coalitions ?? []).length} entità classificate, ${db.electoralLists.length} liste (${db.electoralLists.filter(list => list.partyId).length} di partito singolo), ${db.partyMemberships.length} iscrizioni documentate, ${(db.politicalFigures ?? []).filter(item => item.politicianId).length} figure collegate a parlamentari, sondaggio reale iniziale del ${polls[0].publishedAt}.`);
 const nameCounts = new Map();
 for (const person of db.politicians) { const name=normalize(person.fullName); nameCounts.set(name,(nameCounts.get(name)??0)+1); }

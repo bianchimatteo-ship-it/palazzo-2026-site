@@ -1,5 +1,5 @@
-import { DATA_SOURCES } from '../data/schema.js?v=20260924-21';
-import { AREA_BY_ID, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, STAGE_WEEKS, areaOf } from '../data/simulation/policy-rules.js?v=20260924-21';
+import { DATA_SOURCES } from '../data/schema.js?v=20260924-22';
+import { AREA_BY_ID, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, STAGE_WEEKS, areaOf } from '../data/simulation/policy-rules.js?v=20260924-22';
 
 export const CHAMBERS = Object.freeze({
   camera: { label: 'Camera dei deputati', shortLabel: 'Camera', source: DATA_SOURCES.REAL },

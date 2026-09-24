@@ -40,7 +40,9 @@
     "oraStructure": "https://ora-italia.it/la-struttura-del-partito/",
     "cameraGroupsList": "https://www.camera.it/leg19/217",
     "senateGroupsList": "https://www.senato.it/composizione/gruppi-parlamentari/",
-    "partyRegisterList": "https://www.parlamento.it/1063"
+    "partyRegisterList": "https://www.parlamento.it/1063",
+    "istatMunicipalities": "https://www.istat.it/classificazione/codici-dei-comuni-delle-province-e-delle-regioni/",
+    "istatMunicipalitiesFile": "https://www.istat.it/storage/codici-unita-amministrative/Elenco-comuni-italiani.xlsx"
   },
   "collections": {
     "parties": 75,
@@ -62,7 +64,9 @@
     "laws": 436,
     "twoPerThousand": 30,
     "government": 1,
-    "realPolls": 1
+    "realPolls": 1,
+    "territorialUnits": 110,
+    "municipalities": 7894
   },
   "warnings": [
     "Il Registro nazionale Parlamento include le iscrizioni storiche ancora visibili; lo stato historical è valorizzato solo quando il registro documenta cancellazione. La registrazione non certifica automaticamente attività politica sul territorio.",
@@ -87,5 +91,15 @@
       "§4 nuove entità",
       "§6 collegamento liste → partiti"
     ]
+  },
+  "territorialSource": {
+    "name": "ISTAT — Elenco dei comuni italiani (aggiornamento al 21 febbraio 2026)",
+    "url": "https://www.istat.it/classificazione/codici-dei-comuni-delle-province-e-delle-regioni/",
+    "file": "https://www.istat.it/storage/codici-unita-amministrative/Elenco-comuni-italiani.xlsx",
+    "validFrom": "2026-02-21",
+    "verifiedAt": "2026-09-24",
+    "municipalities": 7894,
+    "territorialUnits": 110,
+    "note": "Codici e denominazioni ISTAT 2026, compreso il nuovo assetto territoriale della Sardegna in vigore dal 1° gennaio 2026."
   }
 }
