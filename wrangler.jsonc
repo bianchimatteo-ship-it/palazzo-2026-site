@@ -1,6 +1,7 @@
 // Cloudflare Workers: POLITICANDO 2026 is served as Workers static assets (the same files as GitHub Pages;
 // .assetsignore keeps tooling and sources out). worker.js answers only /api/*: the owner's shared archive
-// of corrections and logos, kept in Workers KV so that it survives refreshes, restarts and new deploys.
+// of corrections and logos, kept in Workers KV so that it survives refreshes, restarts and new deploys,
+// and the player accounts with their online saves, kept in Cloudflare D1.
 {
   "name": "palazzo-2026-site",
   "main": "worker.js",
@@ -14,5 +15,9 @@
   },
   "kv_namespaces": [
     { "binding": "ADMIN_ARCHIVE", "id": "a40ce7a2dc6b4ea6bfa5bedafedc421a" }
+  ],
+  // Player accounts and online career saves (tables are created by worker.js on first use; see migrations/).
+  "d1_databases": [
+    { "binding": "ACCOUNTS", "database_name": "politicando-accounts", "database_id": "38d4e3b4-a8a3-437d-8ef0-a06cc074d051", "migrations_dir": "migrations" }
   ]
 }

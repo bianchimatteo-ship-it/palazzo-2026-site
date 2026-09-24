@@ -130,12 +130,12 @@ assert.ok(seen.newElection && seen.memoryAtElection, 'Nuove elezioni, con la mem
 assert.ok((final.game.memory ?? []).length >= 3, 'La carriera accumula una memoria politica.');
 assert.ok(final.game.timeline.length >= 8, 'La cronologia racconta la carriera.');
 assert.ok(final.game.week.index >= 180 && final.society.history.length >= 100 && final.world.polls.length >= 50, 'Anni di società e sondaggi (lo storico dei sondaggi conserva l’ultimo anno).');
-assert.ok(final.world.parties.every(party => party.isPlayer || party.reference?.source === 'real'), 'Gli altri partiti restano reali.');
+assert.ok(final.world.parties.every(party => party.isPlayer || party.reference?.source === 'real' || party.pollReference?.source === 'real' || (party.origin === 'evoluzione' && party.refSource === 'simulation' && /simulat/.test(party.label))), 'Gli altri partiti restano reali; le forze nate nella partita sono dichiaratamente simulate.');
 
 // 5. Saves: everything persists after a reload; an old save is migrated without losing the career.
 store.save();
 const saved = JSON.parse(mem.get(KEY));
-assert.equal(saved.version, 7);
+assert.equal(saved.version, 8);
 assert.ok(saved.game.memory && saved.society.areas && saved.society.security && saved.parliament.laws.some(law => law.policy), 'Memoria, temi, sicurezza e contenuto delle leggi nel salvataggio.');
 ({ store } = await import('../src/core/store.js?career=2'));
 const reloaded = store.getState();
@@ -150,7 +150,7 @@ if (legacy.parliament.government) { delete legacy.parliament.government.partners
 mem.set(KEY, JSON.stringify(legacy));
 ({ store } = await import('../src/core/store.js?career=3'));
 const migrated = store.getState();
-assert.equal(migrated.version, 7);
+assert.equal(migrated.version, 8);
 assert.ok(migrated.society.areas && migrated.society.security && Number.isFinite(migrated.society.publicFinance.spread), 'Il vecchio salvataggio riceve temi, sicurezza e mercati.');
 assert.equal(migrated.game.week.index, final.game.week.index);
 assert.ok(mem.get(`${KEY}.backup`), 'Il salvataggio precedente è conservato prima dell’aggiornamento.');

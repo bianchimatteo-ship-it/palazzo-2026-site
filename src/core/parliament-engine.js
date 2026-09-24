@@ -1,5 +1,5 @@
-import { DATA_SOURCES } from '../data/schema.js?v=20260924-17';
-import { AREA_BY_ID, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, STAGE_WEEKS, areaOf } from '../data/simulation/policy-rules.js?v=20260924-17';
+import { DATA_SOURCES } from '../data/schema.js?v=20260924-18';
+import { AREA_BY_ID, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, STAGE_WEEKS, areaOf } from '../data/simulation/policy-rules.js?v=20260924-18';
 
 export const CHAMBERS = Object.freeze({
   camera: { label: 'Camera dei deputati', shortLabel: 'Camera', source: DATA_SOURCES.REAL },
@@ -394,8 +394,12 @@ export function compromiseLaw(parliament, lawId, currentDate) {
   return record(next, currentDate, 'compromesso', `Accolto un compromesso su “${law.title}”.`, { lawId, compromiseLevel: level, source: DATA_SOURCES.SIMULATION });
 }
 
+// The starting difficulty makes majorities more or less disciplined and allies more or less patient.
+const DIFFICULTY_TUNING = Object.freeze({ facile: { discipline: 0.05, drift: 0.7 }, normale: { discipline: 0, drift: 1 }, difficile: { discipline: -0.06, drift: 1.45 } });
+const tuningOf = parliament => DIFFICULTY_TUNING[parliament?.difficulty] ?? DIFFICULTY_TUNING.normale;
 function calculateVote(parliament, law, chamber) {
   const governing = governingGroupIds(parliament);
+  const tuning = tuningOf(parliament);
   const inMajority = playerInMajority(parliament);
   const negotiated = new Set(law.negotiatedGroupIds);
   const government = parliament.government;
@@ -423,6 +427,7 @@ function calculateVote(parliament, law, chamber) {
     if (law.confidence && governing.has(group.groupId)) support += 0.18;
     // Snipers: in a secret ballot part of the majority can betray.
     if (law.snipers && governing.has(group.groupId) && !own && !law.confidence) support -= 0.07;
+    if (governing.has(group.groupId) || own) support += tuning.discipline;
     const votes = Math.round(group.simulatedSeats * clamp(support, 0.12, 0.93));
     yes += votes;
     return { groupId: group.groupId, yesVotes: votes, simulatedSeats: group.simulatedSeats, source: DATA_SOURCES.SIMULATION };
@@ -695,7 +700,8 @@ export function advanceGovernmentWeek(parliament, currentDate, roll = 0.5, rand 
   // Allies: those without ministries grow restless; unhappy ones make demands, and walk out if ignored.
   const holders = new Set(activeMinisters(government).map(item => item.groupId));
   for (const [groupId, partner] of Object.entries(next.government.partners ?? {})) {
-    let delta = (holders.has(groupId) ? 0.3 : -0.6) + (55 - partner.satisfaction) * 0.03;
+    const restless = tuningOf(next).drift;
+    let delta = (holders.has(groupId) ? 0.3 : -0.6 * restless) + (55 - partner.satisfaction) * 0.03;
     next = changePartner(next, groupId, delta);
     const current = next.government.partners[groupId];
     if (current.demand && current.demand.deadline < currentDate) {
@@ -703,7 +709,7 @@ export function advanceGovernmentWeek(parliament, currentDate, roll = 0.5, rand 
       if (next.government.partners[groupId]?.satisfaction < 25) return leaveMajority(next, groupId, currentDate, 'esce dalla maggioranza dopo una richiesta ignorata');
       continue;
     }
-    if (!current.demand && current.satisfaction < 45 && random() < 0.3) {
+    if (!current.demand && current.satisfaction < 45 && random() < 0.3 * restless) {
       const profile = groupProfile(groupId);
       const free = MINISTRIES.filter(portfolio => !activeMinisters(next.government).some(item => item.portfolio === portfolio && item.groupId === groupId));
       const wantsMinistry = !holders.has(groupId) || random() < 0.4;

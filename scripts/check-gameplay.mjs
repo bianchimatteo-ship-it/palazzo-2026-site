@@ -39,7 +39,7 @@ let store = await load();
 const volt = parties.find(item => item.id === 'party-registro-p1-2024-71-ir');
 store.createCareer(draft('comunale'), [realParty, volt], groups);
 let state = store.getState();
-assert.equal(state.version, 7);
+assert.equal(state.version, 8);
 assert.equal(state.game.source, 'simulation');
 assert.equal(state.game.week.index, 1);
 assert.equal(state.game.week.ap, 6);
@@ -159,20 +159,35 @@ assert.ok(urgent, 'Le richieste di dimissioni arrivano in agenda.');
 store.resolveAgendaItem(urgent.id, 'dimettiti');
 state = store.getState();
 assert.ok(state.dataset.offices.filter(item => item.level !== 'partito' && !/inizial/i.test(item.title)).every(item => item.endDate));
-let ended = false;
-for (let attempt = 0; attempt < 30 && !ended; attempt++) {
+// The career never closes: the worst outcome is a fall (offices, allies and standing lost), then the climb starts again.
+let fell = false;
+for (let attempt = 0; attempt < 30 && !fell; attempt++) {
   store = await reload(saved => { setStat(saved, 'reputation', 5); saved.game.rngState = 1000 + attempt * 7919; saved.game.status = 'active'; });
   store.advance(7);
   const item = store.getState().game.inbox.find(entry => entry.templateId === 'dimissioni');
   if (!item) continue;
   store.resolveAgendaItem(item.id, 'resisti');
-  ended = store.getState().game.status === 'ended';
+  fell = (store.getState().game.setbacks ?? []).length > 0;
 }
-assert.ok(ended, 'Resistere può costare la carriera.');
-assert.throws(() => store.performWeeklyActivity('ascolto'), /conclusa/);
-const endedDate = store.getState().clock.currentDate;
+assert.ok(fell, 'Resistere può costare incarichi e sostegni.');
+assert.equal(store.getState().game.status, 'active', 'Anche dopo la caduta la carriera continua.');
+assert.ok(store.getState().game.memory.some(item => item.kind === 'caduta-reputazione'), 'La caduta resta nella memoria politica.');
+const fallDate = store.getState().clock.currentDate;
 store.advance(7);
-assert.equal(store.getState().clock.currentDate, endedDate, 'Una carriera conclusa non avanza.');
+assert.notEqual(store.getState().clock.currentDate, fallDate, 'Il tempo continua a scorrere dopo una caduta.');
+store.performWeeklyActivity('ascolto');
+// A save from an older version in which the career had ended is revived, with the fall on record.
+store = await reload(saved => { saved.game.status = 'ended'; saved.game.endedAt = saved.clock.currentDate; saved.game.endReason = 'Travolto dalla crisi di reputazione'; saved.version = 7; });
+assert.equal(store.getState().game.status, 'active', 'Le carriere concluse nelle vecchie versioni riprendono.');
+assert.ok(store.getState().game.setbacks.some(item => item.reason === 'Travolto dalla crisi di reputazione'), 'La vecchia chiusura diventa una caduta nella cronologia.');
+// Six more years at rock-bottom reputation: no goal, age or reputation threshold closes the game.
+const weekBefore = store.getState().game.week.index;
+for (let year = 0; year < 6; year++) {
+  store = await reload(saved => setStat(saved, 'reputation', 5));
+  for (let i = 0; i < 52; i++) store.advance(7);
+  assert.equal(store.getState().game.status, 'active', `Anno ${year + 1}: la carriera resta aperta.`);
+}
+assert.ok(store.getState().game.week.index >= weekBefore + 300, 'Sei anni di gioco senza fine partita.');
 
 // 10. Parlamento: lavoro in Aula, diplomazia, trattative respinte con rapporti tesi, stabilità ed elezioni anticipate.
 store.reset();
@@ -229,4 +244,4 @@ assert.ok(state.game.relations.every(item => item.source === 'simulation'));
 assert.ok(state.game.log.every(item => item.source === 'simulation'));
 assert.equal(JSON.stringify(parties), realSnapshot, 'Il dataset reale non viene modificato dal gioco.');
 
-console.log('Gameplay verificato: inizio carriera, settimane con tempo e risorse, attività, decisioni, partito e correnti, incarico interno, calendario e candidatura, elezione vinta e saltata, espulsione, dimissioni e fine carriera, Parlamento con rapporti e trattative, stabilità e elezioni anticipate, salvataggio.');
+console.log('Gameplay verificato: inizio carriera, settimane con tempo e risorse, attività, decisioni, partito e correnti, incarico interno, calendario e candidatura, elezione vinta e saltata, espulsione, dimissioni e caduta senza fine partita (carriera infinita, anche per i vecchi salvataggi concluse), Parlamento con rapporti e trattative, stabilità e elezioni anticipate, salvataggio.');

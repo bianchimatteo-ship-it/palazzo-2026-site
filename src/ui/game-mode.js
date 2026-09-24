@@ -1,24 +1,24 @@
-import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyContestScore, situation, upcomingElections } from '../core/career-engine.js?v=20260924-17';
-import { playerRoles } from '../core/roles.js?v=20260924-17';
-import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20260924-17';
-import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20260924-17';
-import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260924-17';
-import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20260924-17';
-import { careerLevelLabel } from '../data/regions.js?v=20260924-17';
-import { formatDate } from '../core/time.js?v=20260924-17';
-import { renderBarometerPanel } from './polls-mode.js?v=20260924-17';
-import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20260924-17';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-17';
-import { societyMood } from '../core/society-engine.js?v=20260924-17';
-import { financeOutlook } from '../core/finance-engine.js?v=20260924-17';
-import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20260924-17';
-import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20260924-17';
-import { renderFinanceCard } from './finance-mode.js?v=20260924-17';
-import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20260924-17';
-import { stateBadge } from './charts.js?v=20260924-17';
-import { illustration } from './illustrations.js?v=20260924-17';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-17';
-import { regionPriorities } from '../core/society-engine.js?v=20260924-17';
+import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyContestScore, situation, upcomingElections } from '../core/career-engine.js?v=20260924-18';
+import { playerRoles } from '../core/roles.js?v=20260924-18';
+import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20260924-18';
+import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20260924-18';
+import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260924-18';
+import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20260924-18';
+import { careerLevelLabel } from '../data/regions.js?v=20260924-18';
+import { formatDate } from '../core/time.js?v=20260924-18';
+import { renderBarometerPanel } from './polls-mode.js?v=20260924-18';
+import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20260924-18';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-18';
+import { societyMood } from '../core/society-engine.js?v=20260924-18';
+import { financeOutlook } from '../core/finance-engine.js?v=20260924-18';
+import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20260924-18';
+import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20260924-18';
+import { renderFinanceCard } from './finance-mode.js?v=20260924-18';
+import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20260924-18';
+import { stateBadge } from './charts.js?v=20260924-18';
+import { illustration } from './illustrations.js?v=20260924-18';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-18';
+import { regionPriorities } from '../core/society-engine.js?v=20260924-18';
 
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -58,7 +58,7 @@ function hero(state, gc, options) {
   const live = Object.fromEntries(Object.keys(STAT_LABELS).map(metric => [metric, (stats[metric] ?? 0) - (game.weekStartStats?.[metric] ?? stats[metric] ?? 0)]));
   const delta = metric => live[metric] || deltas[metric] || 0;
   const partyChip = game.party ? `${esc(options.partyName || game.party.label || 'Partito')} · ${esc(game.party.rankTitle)}${game.party.org ? ` · ${esc(organOf(game.party).label)}` : ''}` : 'Indipendente';
-  const status = game.status === 'ended' ? ['Carriera conclusa', 'ended'] : (stats.reputation ?? 50) < 20 || (game.party && game.party.support < 25) ? ['Carriera in pericolo', 'danger'] : ['Carriera attiva', 'ok'];
+  const status = game.flags?.comebackFrom ? ['Traversata nel deserto', 'danger'] : (stats.reputation ?? 50) < 20 || (game.party && game.party.support < 25) ? ['Carriera in pericolo', 'danger'] : ['Carriera attiva', 'ok'];
   const meters = STAT_ORDER.map(metric => `<div class="hq-meter"><span>${STAT_LABELS[metric]}</span><strong>${num(stats[metric] ?? 0)}</strong>${meter(stats[metric])}<em class="${delta(metric) > 0 ? 'up' : delta(metric) < 0 ? 'down' : ''}">${delta(metric) ? `${signed(delta(metric))} in settimana` : 'stabile'}</em></div>`).join('');
   // Careers that only track party-level consensus fall back to it, labelled as such.
   const partyConsensus = !('consensus' in stats) ? state.dataset.statistics.find(item => item.metric === 'consensus' && item.subjectId === (player?.partyId ?? state.career.partyId)) : null;
@@ -66,7 +66,7 @@ function hero(state, gc, options) {
   const consensusUnit = partyConsensus?.unit ?? units.consensus;
   return `<section class="hq-hero">
     ${illustration('palazzo', 'hq-hero-art')}
-    <div class="hq-identity"><span class="section-kicker">IL TUO POLITICO · SETTIMANA ${game.week.index}</span><div class="hq-identity-row"><div class="hero-avatar">${player ? esc(player.firstName[0] + player.lastName[0]) : 'P'}</div>${options.partyLogo ? `<img class="hero-party-logo" src="${esc(options.partyLogo)}" alt="${esc(`Logo di ${options.partyName ?? 'partito'}`)}" />` : ''}<div><h1>${player ? esc(player.displayName) : 'Nessun politico'}</h1><p>${office ? `<span class="hq-office">${glyph(officeIcon(office), 15)}</span>${esc(office.endDate ? `${office.title} · concluso` : office.title)}` : 'Nessun incarico'} <span>·</span> ${esc(territory)}</p><div class="hq-chips"><span>${partyChip}</span><span>${esc(careerLevelLabel(state.career.currentLevel ?? state.career.initialLevel) ?? 'Percorso')}</span><span class="hq-status ${status[1]}">${status[0]}</span></div></div></div></div>
+    <div class="hq-identity"><span class="section-kicker">IL TUO POLITICO · SETTIMANA ${game.week.index}</span><div class="hq-identity-row"><div class="hero-avatar">${player ? esc(player.firstName[0] + player.lastName[0]) : 'P'}</div>${options.partyLogo ? `<img class="hero-party-logo" src="${esc(options.partyLogo)}" alt="${esc(`Logo di ${options.partyName ?? 'partito'}`)}" />` : ''}<div><h1>${player ? esc(player.displayName) : 'Nessun politico'}</h1><p>${office ? `<span class="hq-office">${glyph(officeIcon(office), 15)}</span>${esc(office.endDate ? `${office.title} · concluso` : office.title)}` : 'Nessun incarico'} <span>·</span> ${esc(territory)}</p><div class="hq-chips"><span>${partyChip}</span><span>${esc(careerLevelLabel(state.career.currentLevel ?? state.career.initialLevel) ?? 'Percorso')}</span><span title="Difficoltà scelta all’inizio">Difficoltà: ${esc(({ facile: 'Facile', normale: 'Normale', difficile: 'Difficile' })[game.difficulty] ?? 'Normale')}</span><span class="hq-status ${status[1]}">${status[0]}</span></div></div></div></div>
     <div class="hq-consensus"><span>CONSENSO</span><strong>${num(consensus)}${consensusUnit === '%' ? '%' : ''}</strong><small>${partyConsensus ? 'Consenso del partito' : delta('consensus') ? `${signed(delta('consensus'))} questa settimana` : 'Stabile questa settimana'}</small></div>
     <div class="hq-meters">${meters}</div>
   </section>`;
@@ -169,12 +169,13 @@ function relationsPanel(state) {
   return `<div class="hq-relations">${state.game.relations.map(item => `<div class="hq-relation"><span><strong>${esc(item.label)}</strong><small>${esc(item.kind)}</small></span><b>${num(item.value, 0)}</b>${meter(item.value, item.value < 30 ? 'danger' : item.value >= 65 ? 'good' : '')}</div>`).join('')}</div><p class="parliament-note">Rapporti simulati: pesano su candidature, incarichi, trattative e votazioni.</p>`;
 }
 
+// The career never ends: after a fall the headquarters shows the climb back, not a final screen.
 function endedBanner(state, gc) {
   const game = state.game;
-  if (game.status !== 'ended') return '';
-  const done = objectiveProgress(gc.ctx, gc.env).filter(item => item.done).length;
-  const offices = state.dataset.offices.filter(item => item.politicianId === gc.player?.id).length;
-  return `<section class="hq-ended"><span class="section-kicker">FINE DELLA CARRIERA · ${esc(formatDate(game.endedAt))}</span><h2>La tua carriera si chiude qui.</h2><p>${esc(game.endReason)}. Settimane giocate: ${game.week.index} · traguardi: ${done} · incarichi ricoperti: ${offices}.</p><button class="primary-button" data-action="new-career">Inizia una nuova carriera ${arrow}</button></section>`;
+  const fall = (game.setbacks ?? []).at(-1);
+  if (!fall || !game.flags?.comebackFrom || game.week.index - fall.week > 26) return '';
+  const offices = state.dataset.offices.filter(item => item.politicianId === gc.player?.id && !item.endDate).length;
+  return `<section class="hq-setback"><span class="section-kicker">TRAVERSATA NEL DESERTO · DA ${esc(formatDate(fall.date))}</span><h2>La carriera continua: si riparte dal basso.</h2><p>${esc(fall.reason)}. Settimane da allora: ${game.week.index - fall.week} · incarichi in corso: ${offices}. Ricostruisci reputazione e rapporti: quando tornerai credibile, il ritorno resterà nella tua memoria politica.</p></section>`;
 }
 
 // The phase of national politics, read from government, calendar, campaign and citizens.
@@ -287,7 +288,7 @@ export function renderMemoryPanel(state) {
   const game = state.game;
   const balance = memoryBalance(game);
   if (!balance.highlights.length) return '<p class="quiet-copy">Le scelte importanti (leggi, promesse, crisi, rotture, scandali) resteranno qui e peseranno su elezioni, alleanze e rapporti anche anni dopo.</p>';
-  return `<div class="memory-balance"><span>Bilancio della memoria: <b class="${balance.net >= 0 ? 'up' : 'down'}">${balance.net >= 0 ? '+' : '−'}${num(Math.abs(balance.net), 1)}</b></span><small>Alle prossime elezioni pesa ${balance.net >= 0 ? 'a favore' : 'contro'} di te; ogni ricordo si dimezza in due anni.</small></div><ul class="memory-list">${balance.highlights.map(item => `<li class="tone-${esc(item.tone)}">${glyph(item.tone === 'good' ? 'shield' : 'alert', 14)}<span><strong>${esc(item.text)}</strong><small>${esc(MEMORY_KINDS[item.kind]?.label ?? item.kind)} · settimana ${item.week} · peso attuale ${num(item.current, 2)}</small></span></li>`).join('')}</ul>`;
+  return `<div class="memory-balance"><span>Bilancio della memoria: <b class="${balance.net >= 0 ? 'up' : 'down'}">${balance.net >= 0 ? '+' : '−'}${num(Math.abs(balance.net), 1)}</b></span><small>Alle prossime elezioni, nelle candidature, nelle alleanze e nei sondaggi pesa ${balance.net >= 0 ? 'a favore' : 'contro'} di te; ogni ricordo perde metà del peso in circa ${num(2 * ({ facile: 0.85, difficile: 1.3 }[game.difficulty] ?? 1), 1)} anni e le scelte più gravi restano per molti anni.</small></div><ul class="memory-list">${balance.highlights.map(item => `<li class="tone-${esc(item.tone)}">${glyph(item.tone === 'good' ? 'shield' : 'alert', 14)}<span><strong>${esc(item.text)}</strong><small>${esc(MEMORY_KINDS[item.kind]?.label ?? item.kind)} · settimana ${item.week} · peso attuale ${num(item.current, 2)}</small></span></li>`).join('')}</ul>`;
 }
 export function renderWhyPanel(state) {
   const game = state.game;

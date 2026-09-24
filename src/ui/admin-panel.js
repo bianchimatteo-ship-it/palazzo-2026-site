@@ -1,6 +1,7 @@
-import { ADMIN_FIELDS, adminArchiveSummary, loadSharedArchive, overrideFor } from '../data/repositories/admin-store.js?v=20260924-17';
-import { hasSharedSession, sharedApiUrl } from '../data/repositories/admin-sync.js?v=20260924-17';
-import { emblem, glyph } from './visuals.js?v=20260924-17';
+import { ADMIN_FIELDS, adminArchiveSummary, loadSharedArchive, overrideFor } from '../data/repositories/admin-store.js?v=20260924-18';
+import { affiliationOf, markForPerson } from './person-marks.js?v=20260924-18';
+import { hasSharedSession, sharedApiUrl } from '../data/repositories/admin-sync.js?v=20260924-18';
+import { emblem, glyph } from './visuals.js?v=20260924-18';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const norm = value => String(value ?? '').toLocaleLowerCase('it-IT').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -59,13 +60,13 @@ function politiciansTab(admin, context) {
   const query = norm(admin.query);
   const people = context.politicians.filter(person => (admin.chamber === 'all' || person.chamber === admin.chamber) && (!query || norm(person.fullName).includes(query)));
   const selected = context.politicians.find(person => person.id === admin.politicianId) ?? null;
-  const list = searchList(people, admin.politicianId, 'admin-select-politician', person => `<span class="admin-chamber">${person.chamber === 'camera' ? 'C' : 'S'}</span><span><strong>${esc(person.fullName)}</strong><small>${esc(context.groups.find(group => group.id === person.groupId)?.officialName ?? 'Gruppo non indicato')}</small></span>`);
+  const list = searchList(people, admin.politicianId, 'admin-select-politician', person => `${affiliationOf(person.id) ? markForPerson(person.id) : `<span class="admin-chamber">${person.chamber === 'camera' ? 'C' : 'S'}</span>`}<span><strong>${esc(person.fullName)}</strong><small>${esc(context.groups.find(group => group.id === person.groupId)?.officialName ?? 'Gruppo non indicato')}</small></span>`);
   let editor = '<div class="admin-empty">Scegli un deputato o un senatore dall’elenco.</div>';
   if (selected) {
     const original = context.pristine('politicians', selected.id);
     const datasetRoles = context.offices.filter(office => office.politicianId === selected.id);
     editor = `<form class="admin-editor" data-admin-form="politician" data-admin-id="${esc(selected.id)}" data-admin-collection="politicians">
-      <header class="admin-editor-head"><span class="admin-avatar">${esc(selected.fullName.split(/\s+/).map(word => word[0]).join('').slice(0, 2))}</span><div><span class="section-kicker">${selected.chamber === 'camera' ? 'DEPUTATO' : 'SENATORE'} · DATASET REALE</span><h3>${esc(selected.fullName)}</h3><small>${selected.adminEdited ? `Modificato dall’amministratore · ${esc((selected.adminEdited.updatedAt ?? '').slice(0, 10))}` : 'Nessuna modifica: valori del dataset verificato'}${selected.sourceUrl ? ` · <a href="${esc(selected.sourceUrl)}" target="_blank" rel="noopener noreferrer">Scheda ufficiale ↗</a>` : ''}</small></div></header>
+      <header class="admin-editor-head">${affiliationOf(selected.id) ? markForPerson(selected.id, 'lg') : `<span class="admin-avatar">${esc(selected.fullName.split(/\s+/).map(word => word[0]).join('').slice(0, 2))}</span>`}<div><span class="section-kicker">${selected.chamber === 'camera' ? 'DEPUTATO' : 'SENATORE'} · DATASET REALE</span><h3>${esc(selected.fullName)}</h3><small>${selected.adminEdited ? `Modificato dall’amministratore · ${esc((selected.adminEdited.updatedAt ?? '').slice(0, 10))}` : 'Nessuna modifica: valori del dataset verificato'}${selected.sourceUrl ? ` · <a href="${esc(selected.sourceUrl)}" target="_blank" rel="noopener noreferrer">Scheda ufficiale ↗</a>` : ''}</small></div></header>
       <div class="admin-fields">${editorFields('politicians', selected, original, context)}</div>
       <div class="admin-actions"><button class="primary-button" type="submit">Salva modifiche</button>${overrideFor('politicians', selected.id) ? '<button type="button" class="secondary-button" data-admin-reset-record>Ripristina i dati originali</button>' : ''}</div>
     </form>

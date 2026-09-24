@@ -74,6 +74,10 @@ assert.equal(loadSettings().textSize, '112', 'Le impostazioni restano salvate');
 await click({ menuAction: 'reset-settings' });
 assert.equal(loadSettings().motion, 'full');
 assert.ok((await click({ menu: 'carica' })).includes('Nessun salvataggio negli slot'));
+// Account: sign in or sign up from the menu; the career is then kept online too.
+menuHtml = await click({ menu: 'account' });
+assert.ok(menuHtml.includes('data-account-form="login"') && menuHtml.includes('data-account-form="register"'), 'Dal menu si accede o si crea un account.');
+assert.ok(menuHtml.includes('non lascia mai il tuo browser in chiaro'), 'Si spiega come viene protetta la password.');
 
 // ---------- 2. new game from the menu: real parties only ----------
 let page = await click({ menu: 'nuova' });
@@ -92,7 +96,12 @@ assert.ok(world.parties.filter(item => !item.isPlayer).every(item => item.refere
 // ---------- 3. every page renders ----------
 const pages = ['panoramica', 'carriera', 'profilo', 'partito', 'territori', 'finanze', 'parlamento', 'governo', 'leggi', 'elezioni', 'calendario', 'sondaggi', 'archivio', 'amministrazione', 'impostazioni'];
 for (const id of pages) { const text = await goto(id); assert.ok(text.length > 1000, `${id} vuota`); assert.ok(clean(text), `${id}: valori non validi`); assert.ok(!/in costruzione|STRUTTURA PRONTA/.test(text), `${id}: segnaposto`); }
+const pollsForFounder = await goto('sondaggi');
+assert.ok(pollsForFounder.includes('Probabilità che accetti'), 'Il segretario vede, prima di proporre un’intesa, probabilità e motivi.');
 let home = await goto('panoramica');
+// Phones: four sections one tap away and an "Altro" sheet with every other section.
+assert.ok(home.includes('class="mobile-tabbar"') && (home.match(/class="mobile-tab /g) ?? []).length === 5 && home.includes('data-mobile-more'), 'Barra inferiore con 5 tasti immediati.');
+assert.ok(home.includes('data-mobile-sheet hidden') && ['finanze', 'parlamento', 'archivio', 'impostazioni'].every(id => home.includes(`class="sheet-item " data-nav="${id}"`) || home.includes(`class="sheet-item active" data-nav="${id}"`)), 'Il pannello “Altro” raggiunge tutte le sezioni.');
 // Branding: the party created in the wizard has a real identity used across the game.
 const userParty = store.getState().dataset.parties.find(party => party.source === 'user');
 assert.ok(userParty.logo?.kind === 'builder' && userParty.color2 === '#f2c14e' && userParty.program.includes('scuola') && userParty.officialName === 'Lista Civica Neri', 'Il partito creato ha logo, colori, programma e scheda completa (source: user).');
@@ -108,8 +117,13 @@ const anchor = { dataset: { tip: 'Sanità 58/100' }, isConnected: true, closest:
 const hover = () => { for (const fn of listeners.pointermove) fn({ target: { closest: selector => anchor.closest(selector) }, clientX: 100, clientY: 100 }); };
 hover();
 assert.equal(tip.hidden, false, 'Il tooltip compare al passaggio del mouse.');
+assert.notEqual(tip.style.display, 'none', 'Visibile solo mentre serve.');
 await goto('territori');
 assert.equal(tip.hidden, true, 'Cambiando pagina il tooltip sparisce.');
+assert.equal(tip.style.display, 'none', 'Il riquadro nascosto non resta a schermo: display none anche se il CSS lo imposta a griglia.');
+hover();
+for (const fn of listeners.pointerout ?? []) fn({ relatedTarget: null });
+assert.equal(tip.style.display, 'none', 'Uscendo dall’elemento il tooltip sparisce subito.');
 hover();
 for (const fn of windowListeners.hashchange ?? []) fn({});
 assert.equal(tip.hidden, true, 'Anche al cambio di hash.');

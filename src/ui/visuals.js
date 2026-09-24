@@ -94,6 +94,14 @@ export function inkOn(hex) {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.36 ? '#1f2a24' : '#fffdf7';
 }
 
+// A real politician's mark: the logo of the party the database links them to; without a logo, that party's
+// fallback emblem; with no documented party, the chamber initial as before. The link is never written here.
+export function personMark({ chamber, link = null, logo = null } = {}, size = 'sm') {
+  if (!link?.entity) return `<span class="catalog-mark" aria-hidden="true">${chamber === 'senato' ? 'S' : 'C'}</span>`;
+  const title = `${link.entity.officialName} — ${link.detail}`;
+  return `<span class="person-mark" title="${esc(title)}" role="img" aria-label="${esc(title)}">${emblem({ label: link.entity.officialName, abbreviation: link.entity.abbreviation, color: link.entity.color, logo }, size)}</span>`;
+}
+
 // Party mark: the verified logo when available, otherwise initials on the party colour.
 export function emblem({ label, abbreviation, color, logo = null }, size = 'md') {
   const initials = String(label ?? 'P').split(/[\s\-–—/]+/).map(word => word.replace(/[^\p{L}\p{N}]/gu, '')[0]).filter(Boolean).join('');

@@ -162,7 +162,7 @@ store.save();
 module = await import('../src/core/store.js?parliament-reload-save=' + Date.now());
 assert.equal(module.store.getState().parliament.player.groupId, 'senato-xix-gruppo-85');
 assert.equal(module.store.getState().parliament.laws.length, 0);
-assert.equal(module.store.getState().version, 7);
+assert.equal(module.store.getState().version, 8);
 assert.ok(renderParliamentPage('leggi', module.store.getState()).includes('Scrivi una proposta.'));
 
 const unique = list => new Set(list.map(item => item.id)).size === list.length;
@@ -325,7 +325,7 @@ assert.equal(module.store.getState().career.id, 'carriera-demo');
 assert.ok(JSON.parse(localStore.get('palazzo-2026.career.v1.backup')).payload.includes('"dataset":null'));
 localStore.set('palazzo-2026.career.v1', JSON.stringify({ ...makeDemoState(), version: 4, career: { ...makeDemoState().career, initialLevel: 'nazionale' } }));
 module = await import('../src/core/store.js?parliament-v4=' + Date.now());
-assert.equal(module.store.getState().version, 7);
+assert.equal(module.store.getState().version, 8);
 assert.equal(module.store.getState().parliament, null);
 
 console.log('Career Wizard verificato: quattro percorsi, partito indipendente/reale/utente, gruppo distinto e contesto parlamentare. Parlamento, leggi, emendamenti, voti, fiducia, crisi, storico e ricaricamento verificati. Incarichi, cambio di gruppo, ministro, caduta del governo, integrazione con la campagna e ripristino dei salvataggi verificati.');

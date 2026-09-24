@@ -183,5 +183,5 @@ for(let index=0;index<60&&!eventWasGenerated;index++) {
 assert.ok(eventWasGenerated,'È stato generato almeno un evento contestuale durante l’esposizione mediatica.');
 
 const stored=JSON.parse(localStore.get('palazzo-2026.career.v1'));
-assert.equal(stored.version,7);
+assert.equal(stored.version,8);
 console.log('Campagna verificata: 4 modelli elettorali, ballottaggio, candidatura interna, attività, eventi, alleanze, risultato, impatto carriera e salvataggio/ricaricamento.');

@@ -100,6 +100,7 @@
 .trend-chart:focus-visible { box-shadow:0 0 0 3px #5d88bd; border-radius:6px; }
 
 .viz-tip { position:fixed; z-index:50; display:grid; gap:4px; min-width:160px; max-width:280px; padding:10px 12px; border-radius:8px; background:#1d2b24; color:#f5f3ea; font-size:12.5px; line-height:1.4; box-shadow:0 8px 24px rgba(0,0,0,.2); pointer-events:none; }
+.viz-tip[hidden] { display:none !important; }
 .viz-tip strong { color:#e8cf95; font-size:12px; }
 .viz-tip span { display:flex; align-items:center; gap:7px; }
 .viz-tip span i { width:14px; height:3px; border-radius:2px; }

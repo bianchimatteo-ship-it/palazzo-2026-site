@@ -6,7 +6,7 @@
     "chamber": "camera",
     "constituency": null,
     "coalitionId": null,
-    "partyId": null,
+    "partyId": "party-registro-p1-2022-63-ir",
     "ballotSymbol": null,
     "source": "real",
     "verified": true,
@@ -14,7 +14,10 @@
     "sourceName": "Camera dei deputati — scheda del deputato, lista di elezione",
     "verifiedAt": "2026-09-22",
     "validFrom": "2022-09-25",
-    "validTo": "2022-09-25"
+    "validTo": "2022-09-25",
+    "componentPartyIds": [],
+    "listType": "lista di partito",
+    "listLinkSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §6"
   },
   {
     "id": "electoral-list-camera-2022-005",
@@ -23,7 +26,7 @@
     "chamber": "camera",
     "constituency": null,
     "coalitionId": null,
-    "partyId": null,
+    "partyId": "party-registro-p1-2014-04-ir",
     "ballotSymbol": null,
     "source": "real",
     "verified": true,
@@ -31,7 +34,10 @@
     "sourceName": "Camera dei deputati — scheda del deputato, lista di elezione",
     "verifiedAt": "2026-09-22",
     "validFrom": "2022-09-25",
-    "validTo": "2022-09-25"
+    "validTo": "2022-09-25",
+    "componentPartyIds": [],
+    "listType": "lista di partito",
+    "listLinkSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §6"
   },
   {
     "id": "electoral-list-camera-2022-010",
@@ -40,7 +46,7 @@
     "chamber": "camera",
     "constituency": null,
     "coalitionId": null,
-    "partyId": null,
+    "partyId": "party-registro-p1-2015-29-ir",
     "ballotSymbol": null,
     "source": "real",
     "verified": true,
@@ -48,7 +54,10 @@
     "sourceName": "Camera dei deputati — scheda del deputato, lista di elezione",
     "verifiedAt": "2026-09-22",
     "validFrom": "2022-09-25",
-    "validTo": "2022-09-25"
+    "validTo": "2022-09-25",
+    "componentPartyIds": [],
+    "listType": "lista di partito",
+    "listLinkSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §6"
   },
   {
     "id": "electoral-list-camera-2022-006",
@@ -57,7 +66,7 @@
     "chamber": "camera",
     "constituency": null,
     "coalitionId": null,
-    "partyId": null,
+    "partyId": "party-registro-p1-2017-41-ir",
     "ballotSymbol": null,
     "source": "real",
     "verified": true,
@@ -65,7 +74,10 @@
     "sourceName": "Camera dei deputati — scheda del deputato, lista di elezione",
     "verifiedAt": "2026-09-22",
     "validFrom": "2022-09-25",
-    "validTo": "2022-09-25"
+    "validTo": "2022-09-25",
+    "componentPartyIds": [],
+    "listType": "lista di partito",
+    "listLinkSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §6"
   },
   {
     "id": "electoral-list-camera-2022-003",
@@ -74,7 +86,7 @@
     "chamber": "camera",
     "constituency": null,
     "coalitionId": null,
-    "partyId": null,
+    "partyId": "party-registro-p1-2015-20-ir",
     "ballotSymbol": null,
     "source": "real",
     "verified": true,
@@ -82,7 +94,10 @@
     "sourceName": "Camera dei deputati — scheda del deputato, lista di elezione",
     "verifiedAt": "2026-09-22",
     "validFrom": "2022-09-25",
-    "validTo": "2022-09-25"
+    "validTo": "2022-09-25",
+    "componentPartyIds": [],
+    "listType": "lista di partito",
+    "listLinkSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §6"
   },
   {
     "id": "electoral-list-camera-2022-002",
@@ -99,7 +114,13 @@
     "sourceName": "Camera dei deputati — scheda del deputato, lista di elezione",
     "verifiedAt": "2026-09-22",
     "validFrom": "2022-09-25",
-    "validTo": "2022-09-25"
+    "validTo": "2022-09-25",
+    "componentPartyIds": [
+      "party-registro-p1-2019-51-ir",
+      "party-registro-p1-2019-52-ir"
+    ],
+    "listType": "lista di più partiti",
+    "listLinkSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §6"
   },
   {
     "id": "electoral-list-camera-2022-007",
@@ -116,7 +137,10 @@
     "sourceName": "Camera dei deputati — scheda del deputato, lista di elezione",
     "verifiedAt": "2026-09-22",
     "validFrom": "2022-09-25",
-    "validTo": "2022-09-25"
+    "validTo": "2022-09-25",
+    "componentPartyIds": [],
+    "listType": "coalizione/lista 2022 — non partito singolo",
+    "listLinkSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §6"
   },
   {
     "id": "electoral-list-camera-2022-001",
@@ -124,7 +148,7 @@
     "electionId": "election-it-politiche-2022",
     "chamber": "camera",
     "constituency": null,
-    "coalitionId": null,
+    "coalitionId": "coalition-alleanza-verdi-sinistra",
     "partyId": null,
     "ballotSymbol": null,
     "source": "real",
@@ -133,7 +157,13 @@
     "sourceName": "Camera dei deputati — scheda del deputato, lista di elezione",
     "verifiedAt": "2026-09-22",
     "validFrom": "2022-09-25",
-    "validTo": "2022-09-25"
+    "validTo": "2022-09-25",
+    "componentPartyIds": [
+      "party-registro-p1-2014-13-ir",
+      "party-registro-p1-2017-44-ir"
+    ],
+    "listType": "lista di coalizione",
+    "listLinkSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §6"
   },
   {
     "id": "electoral-list-camera-2022-004",
@@ -150,7 +180,10 @@
     "sourceName": "Camera dei deputati — scheda del deputato, lista di elezione",
     "verifiedAt": "2026-09-22",
     "validFrom": "2022-09-25",
-    "validTo": "2022-09-25"
+    "validTo": "2022-09-25",
+    "componentPartyIds": [],
+    "listType": "coalizione/lista 2022 — non partito singolo",
+    "listLinkSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §6"
   },
   {
     "id": "electoral-list-camera-2022-011",
@@ -159,7 +192,7 @@
     "chamber": "camera",
     "constituency": null,
     "coalitionId": null,
-    "partyId": null,
+    "partyId": "party-registro-p1-2022-67-ir",
     "ballotSymbol": null,
     "source": "real",
     "verified": true,
@@ -167,7 +200,10 @@
     "sourceName": "Camera dei deputati — scheda del deputato, lista di elezione",
     "verifiedAt": "2026-09-22",
     "validFrom": "2022-09-25",
-    "validTo": "2022-09-25"
+    "validTo": "2022-09-25",
+    "componentPartyIds": [],
+    "listType": "lista di partito",
+    "listLinkSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §6"
   },
   {
     "id": "electoral-list-camera-2022-012",
@@ -184,7 +220,13 @@
     "sourceName": "Camera dei deputati — scheda del deputato, lista di elezione",
     "verifiedAt": "2026-09-22",
     "validFrom": "2022-09-25",
-    "validTo": "2022-09-25"
+    "validTo": "2022-09-25",
+    "componentPartyIds": [
+      "party-registro-p1-2015-19-ir",
+      "party-registro-p1-2014-09-ir"
+    ],
+    "listType": "lista di più partiti",
+    "listLinkSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §6"
   },
   {
     "id": "electoral-list-camera-2022-013",
@@ -201,7 +243,10 @@
     "sourceName": "Camera dei deputati — scheda del deputato, lista di elezione",
     "verifiedAt": "2026-09-22",
     "validFrom": "2022-09-25",
-    "validTo": "2022-09-25"
+    "validTo": "2022-09-25",
+    "componentPartyIds": [],
+    "listType": "lista autonoma — nessun partito singolo dedotto",
+    "listLinkSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §6"
   },
   {
     "id": "electoral-list-camera-2022-009",
@@ -210,7 +255,7 @@
     "chamber": "camera",
     "constituency": null,
     "coalitionId": null,
-    "partyId": null,
+    "partyId": "party-registro-p1-2015-14-ir",
     "ballotSymbol": null,
     "source": "real",
     "verified": true,
@@ -218,6 +263,105 @@
     "sourceName": "Camera dei deputati — scheda del deputato, lista di elezione",
     "verifiedAt": "2026-09-22",
     "validFrom": "2022-09-25",
-    "validTo": "2022-09-25"
+    "validTo": "2022-09-25",
+    "componentPartyIds": [],
+    "listType": "lista di partito",
+    "listLinkSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §6"
+  },
+  {
+    "id": "electoral-list-europee-2024-liberta",
+    "officialName": "Libertà",
+    "electionId": "election-it-europee-2024",
+    "chamber": null,
+    "constituency": null,
+    "coalitionId": null,
+    "partyId": null,
+    "componentPartyIds": [],
+    "ballotSymbol": null,
+    "listType": "lista elettorale",
+    "leadership": null,
+    "politicalPosition": "centro",
+    "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2 e §4",
+    "positionAsOf": "2026-09-24",
+    "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §4",
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://dait.interno.gov.it/elezioni/trasparenza/elezioni-europee-2024",
+    "sourceName": "Ministero dell’Interno — Trasparenza, elezioni europee 2024",
+    "verifiedAt": "2026-09-24",
+    "validFrom": "2024-06-08",
+    "validTo": "2024-06-09"
+  },
+  {
+    "id": "electoral-list-europee-2024-stati-uniti-d-europa",
+    "officialName": "Stati Uniti d’Europa",
+    "electionId": "election-it-europee-2024",
+    "chamber": null,
+    "constituency": null,
+    "coalitionId": null,
+    "partyId": null,
+    "componentPartyIds": [],
+    "ballotSymbol": null,
+    "listType": "lista elettorale",
+    "leadership": null,
+    "politicalPosition": "centro",
+    "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2 e §4",
+    "positionAsOf": "2026-09-24",
+    "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §4",
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://dait.interno.gov.it/elezioni/trasparenza/elezioni-europee-2024",
+    "sourceName": "Ministero dell’Interno — Trasparenza, elezioni europee 2024",
+    "verifiedAt": "2026-09-24",
+    "validFrom": "2024-06-08",
+    "validTo": "2024-06-09"
+  },
+  {
+    "id": "electoral-list-europee-2024-pace-terra-dignita",
+    "officialName": "Pace Terra Dignità",
+    "electionId": "election-it-europee-2024",
+    "chamber": null,
+    "constituency": null,
+    "coalitionId": null,
+    "partyId": null,
+    "componentPartyIds": [],
+    "ballotSymbol": null,
+    "listType": "lista elettorale",
+    "leadership": null,
+    "politicalPosition": "sinistra",
+    "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2 e §4",
+    "positionAsOf": "2026-09-24",
+    "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §4",
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://dait.interno.gov.it/elezioni/trasparenza/elezioni-europee-2024",
+    "sourceName": "Ministero dell’Interno — Trasparenza, elezioni europee 2024",
+    "verifiedAt": "2026-09-24",
+    "validFrom": "2024-06-08",
+    "validTo": "2024-06-09"
+  },
+  {
+    "id": "electoral-list-europee-2024-partito-animalista-italexit-per-l-italia",
+    "officialName": "Partito Animalista - Italexit per l’Italia",
+    "electionId": "election-it-europee-2024",
+    "chamber": null,
+    "constituency": null,
+    "coalitionId": null,
+    "partyId": null,
+    "componentPartyIds": [],
+    "ballotSymbol": null,
+    "listType": "lista elettorale",
+    "leadership": null,
+    "politicalPosition": "destra",
+    "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2 e §4",
+    "positionAsOf": "2026-09-24",
+    "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §4",
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://dait.interno.gov.it/elezioni/trasparenza/elezioni-europee-2024",
+    "sourceName": "Ministero dell’Interno — Trasparenza, elezioni europee 2024",
+    "verifiedAt": "2026-09-24",
+    "validFrom": "2024-06-08",
+    "validTo": "2024-06-09"
   }
 ]

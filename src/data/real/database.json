@@ -7,7 +7,7 @@
       "abbreviation": null,
       "factualDescription": null,
       "color": null,
-      "website": null,
+      "website": "http://www.rifondazione.it/",
       "level": null,
       "geographicArea": null,
       "regionId": null,
@@ -30,7 +30,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "estrema sinistra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2014-02-ir",
@@ -62,7 +65,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "sinistra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2014-03-ir",
@@ -94,7 +100,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro-destra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2014-04-ir",
@@ -103,7 +112,7 @@
       "abbreviation": null,
       "factualDescription": null,
       "color": null,
-      "website": null,
+      "website": "https://www.fratelli-italia.it/",
       "level": null,
       "geographicArea": null,
       "regionId": null,
@@ -138,7 +147,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "destra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2014-05-ir",
@@ -147,7 +159,7 @@
       "abbreviation": null,
       "factualDescription": null,
       "color": null,
-      "website": null,
+      "website": "https://www.partitosocialista.it/",
       "level": null,
       "geographicArea": null,
       "regionId": null,
@@ -182,7 +194,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro-sinistra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2014-07-ir",
@@ -214,7 +229,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro-sinistra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2014-08-ir",
@@ -246,7 +264,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "destra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2014-09-ir",
@@ -308,7 +329,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2014-10-ir",
@@ -340,7 +364,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2014-11-ir",
@@ -384,7 +411,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "destra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2014-13-ir",
@@ -393,7 +423,7 @@
       "abbreviation": null,
       "factualDescription": null,
       "color": null,
-      "website": null,
+      "website": "https://europaverde.it/",
       "level": null,
       "geographicArea": null,
       "regionId": null,
@@ -428,7 +458,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "sinistra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2015-14-ir",
@@ -437,7 +470,7 @@
       "abbreviation": null,
       "factualDescription": null,
       "color": null,
-      "website": null,
+      "website": "https://www.maiemondiale.com/",
       "level": null,
       "geographicArea": null,
       "regionId": null,
@@ -472,7 +505,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2015-17-ir",
@@ -481,7 +517,7 @@
       "abbreviation": null,
       "factualDescription": null,
       "color": null,
-      "website": null,
+      "website": "https://www.ilcentrodemocratico.it/",
       "level": null,
       "geographicArea": null,
       "regionId": null,
@@ -516,7 +552,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro-sinistra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2015-18-ir",
@@ -525,7 +564,7 @@
       "abbreviation": null,
       "factualDescription": null,
       "color": null,
-      "website": null,
+      "website": "https://www.italiadeivalori.it/",
       "level": null,
       "geographicArea": null,
       "regionId": null,
@@ -560,7 +599,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro-sinistra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2015-19-ir",
@@ -622,7 +664,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2015-21-ir",
@@ -654,7 +699,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2015-22-ir",
@@ -698,7 +746,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2015-24-ir",
@@ -730,7 +781,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2015-25-ir",
@@ -739,7 +793,7 @@
       "abbreviation": null,
       "factualDescription": null,
       "color": null,
-      "website": null,
+      "website": "https://www.udc-italia.it/",
       "level": null,
       "geographicArea": null,
       "regionId": null,
@@ -762,7 +816,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro-destra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2015-26-ir",
@@ -833,7 +890,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2015-27-ir",
@@ -865,7 +925,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2015-28-ir",
@@ -874,7 +937,7 @@
       "abbreviation": null,
       "factualDescription": null,
       "color": null,
-      "website": null,
+      "website": "https://www.partitoliberaleitaliano.org/",
       "level": null,
       "geographicArea": null,
       "regionId": null,
@@ -897,7 +960,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2015-29-ir",
@@ -906,7 +972,7 @@
       "abbreviation": null,
       "factualDescription": null,
       "color": null,
-      "website": null,
+      "website": "https://partitodemocratico.it/",
       "level": null,
       "geographicArea": null,
       "regionId": null,
@@ -941,7 +1007,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro-sinistra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2016-31-ir",
@@ -973,7 +1042,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "destra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2016-32-ir",
@@ -1017,7 +1089,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "sinistra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2016-33-ir",
@@ -1049,7 +1124,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro-destra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2016-34-ir",
@@ -1102,7 +1180,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2016-35-ir",
@@ -1134,7 +1215,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro-destra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2016-36-ir",
@@ -1166,7 +1250,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro-sinistra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2016-37-ir",
@@ -1198,7 +1285,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "destra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2016-38-ir",
@@ -1230,7 +1320,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro-destra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2016-39-ir",
@@ -1262,7 +1355,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro-sinistra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2017-40-ir",
@@ -1294,7 +1390,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "sinistra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2017-41-ir",
@@ -1303,7 +1402,7 @@
       "abbreviation": null,
       "factualDescription": null,
       "color": null,
-      "website": null,
+      "website": "https://legaonline.it/",
       "level": null,
       "geographicArea": null,
       "regionId": null,
@@ -1338,7 +1437,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "destra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2017-43-ir",
@@ -1347,7 +1449,7 @@
       "abbreviation": null,
       "factualDescription": null,
       "color": null,
-      "website": null,
+      "website": "https://www.democraziasolidale.it/",
       "level": null,
       "geographicArea": null,
       "regionId": null,
@@ -1382,7 +1484,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro-sinistra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2017-44-ir",
@@ -1391,7 +1496,7 @@
       "abbreviation": null,
       "factualDescription": null,
       "color": null,
-      "website": null,
+      "website": "https://www.sinistraitaliana.si/",
       "level": null,
       "geographicArea": null,
       "regionId": null,
@@ -1426,7 +1531,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "sinistra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2018-47-ir",
@@ -1435,7 +1543,7 @@
       "abbreviation": null,
       "factualDescription": null,
       "color": null,
-      "website": null,
+      "website": "https://www.piueuropa.eu/",
       "level": null,
       "geographicArea": null,
       "regionId": null,
@@ -1458,7 +1566,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2018-48-ir",
@@ -1490,7 +1601,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro-sinistra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2019-49-ir",
@@ -1522,7 +1636,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro-destra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2019-50-ir",
@@ -1554,7 +1671,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2019-51-ir",
@@ -1563,7 +1683,7 @@
       "abbreviation": null,
       "factualDescription": null,
       "color": null,
-      "website": null,
+      "website": "https://www.azione.it/",
       "level": null,
       "geographicArea": null,
       "regionId": null,
@@ -1598,7 +1718,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2019-52-ir",
@@ -1607,7 +1730,7 @@
       "abbreviation": null,
       "factualDescription": null,
       "color": null,
-      "website": null,
+      "website": "https://www.italiaviva.it/",
       "level": null,
       "geographicArea": null,
       "regionId": null,
@@ -1642,7 +1765,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2019-53-ir",
@@ -1686,7 +1812,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2020-54-ir",
@@ -1718,7 +1847,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2020-55-ir",
@@ -1750,7 +1882,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro-destra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2020-56-ir",
@@ -1759,7 +1894,7 @@
       "abbreviation": null,
       "factualDescription": null,
       "color": null,
-      "website": null,
+      "website": "https://www.noimoderati.it/",
       "level": null,
       "geographicArea": null,
       "regionId": null,
@@ -1794,7 +1929,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro-destra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2021-57-ir",
@@ -1826,7 +1964,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2021-58-ir",
@@ -1858,7 +1999,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2021-59-ir",
@@ -1890,7 +2034,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "destra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2022-60-ir",
@@ -1934,7 +2081,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro-destra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2022-61-ir",
@@ -1966,7 +2116,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2022-62-ir",
@@ -1998,7 +2151,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "destra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2022-63-ir",
@@ -2007,7 +2163,7 @@
       "abbreviation": null,
       "factualDescription": null,
       "color": null,
-      "website": null,
+      "website": "https://www.movimento5stelle.eu/",
       "level": null,
       "geographicArea": null,
       "regionId": null,
@@ -2030,7 +2186,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro-sinistra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2022-64-ir",
@@ -2062,7 +2221,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2022-65-ir",
@@ -2094,7 +2256,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2022-66-ir",
@@ -2126,7 +2291,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2022-67-ir",
@@ -2188,7 +2356,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2023-68-ir",
@@ -2232,7 +2403,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2023-69-ir",
@@ -2303,7 +2477,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2024-70-ir",
@@ -2335,7 +2512,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro-destra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2024-71-ir",
@@ -2379,7 +2559,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2024-72-ir",
@@ -2411,7 +2594,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2024-73-ir",
@@ -2455,7 +2641,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2024-74-ir",
@@ -2464,7 +2653,7 @@
       "abbreviation": null,
       "factualDescription": null,
       "color": null,
-      "website": null,
+      "website": "https://partitoliberaldemocratico.com/",
       "level": null,
       "geographicArea": null,
       "regionId": null,
@@ -2487,7 +2676,16 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24",
+      "aliases": [
+        {
+          "name": "Liberali Democratici Europei",
+          "note": "Riconciliato con il Partito Liberaldemocratico come indicato nel documento (POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §4): nessun record separato."
+        }
+      ]
     },
     {
       "id": "party-registro-p1-2025-75-ir",
@@ -2519,7 +2717,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "destra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2026-77-ir",
@@ -2551,7 +2752,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "sinistra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-mef-2025-15",
@@ -2583,7 +2787,12 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro-sinistra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24",
+      "sameEntityAs": "party-registro-p1-2022-63-ir",
+      "sameEntityNote": "Denominazione usata dal MEF per il 2‰ della stessa forza iscritta al Registro: non è un secondo partito."
     },
     {
       "id": "party-mef-2025-21",
@@ -2615,7 +2824,12 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24",
+      "sameEntityAs": "party-registro-p1-2018-47-ir",
+      "sameEntityNote": "Denominazione usata dal MEF per il 2‰ della stessa forza iscritta al Registro: non è un secondo partito."
     },
     {
       "id": "party-futuro-nazionale",
@@ -2675,7 +2889,237 @@
           "validFrom": null,
           "validTo": null
         }
-      ]
+      ],
+      "politicalPosition": "destra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
+    },
+    {
+      "entityType": "party",
+      "officialName": "Democrazia Sovrana Popolare",
+      "abbreviation": null,
+      "factualDescription": null,
+      "color": null,
+      "website": "https://democraziasovranapopolare.it/",
+      "level": null,
+      "geographicArea": null,
+      "regionId": null,
+      "status": "active",
+      "parliamentaryPresence": null,
+      "regionalPresence": null,
+      "localPresence": null,
+      "foundedAt": null,
+      "registeredAt": null,
+      "leadership": [],
+      "logoUrl": null,
+      "logoAsset": null,
+      "logoSource": null,
+      "logoVerified": null,
+      "logoAlt": null,
+      "id": "party-democrazia-sovrana-popolare",
+      "organizationType": "partito",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://democraziasovranapopolare.it/democrazia-sovrana-popolare/",
+      "sourceName": "Democrazia Sovrana Popolare — sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null,
+      "politicalPosition": "sinistra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2 e §4",
+      "positionAsOf": "2026-09-24",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §4"
+    },
+    {
+      "entityType": "party",
+      "officialName": "Partito Popolare del Nord - Autonomia e Libertà",
+      "abbreviation": null,
+      "factualDescription": null,
+      "color": null,
+      "website": "https://partitopopolarenord.org/",
+      "level": null,
+      "geographicArea": null,
+      "regionId": null,
+      "status": "active",
+      "parliamentaryPresence": null,
+      "regionalPresence": null,
+      "localPresence": null,
+      "foundedAt": null,
+      "registeredAt": null,
+      "leadership": [],
+      "logoUrl": null,
+      "logoAsset": null,
+      "logoSource": null,
+      "logoVerified": null,
+      "logoAlt": null,
+      "id": "party-partito-popolare-del-nord",
+      "organizationType": "partito",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://partitopopolarenord.org/lo-statuto/",
+      "sourceName": "Partito Popolare del Nord — statuto sul sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null,
+      "politicalPosition": "centro-destra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2 e §4",
+      "positionAsOf": "2026-09-24",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §4"
+    },
+    {
+      "entityType": "party",
+      "officialName": "Partito Comunista Italiano",
+      "abbreviation": "PCI",
+      "factualDescription": null,
+      "color": null,
+      "website": "https://www.ilpartitocomunistaitaliano.it/",
+      "level": null,
+      "geographicArea": null,
+      "regionId": null,
+      "status": "active",
+      "parliamentaryPresence": null,
+      "regionalPresence": null,
+      "localPresence": null,
+      "foundedAt": null,
+      "registeredAt": null,
+      "leadership": [],
+      "logoUrl": null,
+      "logoAsset": null,
+      "logoSource": null,
+      "logoVerified": null,
+      "logoAlt": null,
+      "id": "party-partito-comunista-italiano",
+      "organizationType": "partito",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.ilpartitocomunistaitaliano.it/",
+      "sourceName": "Partito Comunista Italiano — sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null,
+      "politicalPosition": "sinistra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2 e §4",
+      "positionAsOf": "2026-09-24",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §4"
+    },
+    {
+      "entityType": "party",
+      "officialName": "Partito Comunista dei Lavoratori",
+      "abbreviation": "PCL",
+      "factualDescription": null,
+      "color": null,
+      "website": "https://pclavoratori.it/",
+      "level": null,
+      "geographicArea": null,
+      "regionId": null,
+      "status": "active",
+      "parliamentaryPresence": null,
+      "regionalPresence": null,
+      "localPresence": null,
+      "foundedAt": null,
+      "registeredAt": null,
+      "leadership": [],
+      "logoUrl": null,
+      "logoAsset": null,
+      "logoSource": null,
+      "logoVerified": null,
+      "logoAlt": null,
+      "id": "party-partito-comunista-dei-lavoratori",
+      "organizationType": "partito",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://pclavoratori.it/",
+      "sourceName": "Partito Comunista dei Lavoratori — sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null,
+      "politicalPosition": "estrema sinistra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2 e §4",
+      "positionAsOf": "2026-09-24",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §4"
+    },
+    {
+      "entityType": "party",
+      "officialName": "Partito Sardo d’Azione",
+      "abbreviation": "PSd’Az",
+      "factualDescription": null,
+      "color": null,
+      "website": "http://www.psdaz.net/",
+      "level": "regional",
+      "geographicArea": "Sardegna",
+      "regionId": "it-region-20",
+      "status": "active",
+      "parliamentaryPresence": null,
+      "regionalPresence": null,
+      "localPresence": null,
+      "foundedAt": null,
+      "registeredAt": null,
+      "leadership": [],
+      "logoUrl": null,
+      "logoAsset": null,
+      "logoSource": null,
+      "logoVerified": null,
+      "logoAlt": null,
+      "id": "party-partito-sardo-d-azione",
+      "organizationType": "partito regionale",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "http://www.psdaz.net/index.php/organizatzione/segreteria-nazionale/2-partito",
+      "sourceName": "Partito Sardo d’Azione — segreteria nazionale, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null,
+      "politicalPosition": "centro-destra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2 e §4",
+      "positionAsOf": "2026-09-24",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §4"
+    },
+    {
+      "entityType": "party",
+      "officialName": "ORA!",
+      "abbreviation": null,
+      "factualDescription": null,
+      "color": null,
+      "website": "https://ora-italia.it/",
+      "level": null,
+      "geographicArea": null,
+      "regionId": null,
+      "status": "active",
+      "parliamentaryPresence": null,
+      "regionalPresence": null,
+      "localPresence": null,
+      "foundedAt": null,
+      "registeredAt": null,
+      "leadership": [],
+      "logoUrl": null,
+      "logoAsset": null,
+      "logoSource": null,
+      "logoVerified": null,
+      "logoAlt": null,
+      "id": "party-ora",
+      "organizationType": "partito",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://ora-italia.it/la-struttura-del-partito/",
+      "sourceName": "ORA! — struttura del partito, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null,
+      "secondarySources": [
+        {
+          "source": "real",
+          "verified": true,
+          "sourceUrl": "https://ora-italia.it/",
+          "sourceName": "ORA! — sito ufficiale",
+          "verifiedAt": "2026-09-24",
+          "validFrom": null,
+          "validTo": null
+        }
+      ],
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2 e §4",
+      "positionAsOf": "2026-09-24",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §4"
     }
   ],
   "politicalMovements": [
@@ -2721,7 +3165,10 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro-destra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
     },
     {
       "id": "party-registro-p1-2017-45-ir",
@@ -2753,7 +3200,154 @@
       "logoAsset": null,
       "logoSource": null,
       "logoVerified": null,
-      "logoAlt": null
+      "logoAlt": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2",
+      "positionAsOf": "2026-09-24"
+    },
+    {
+      "entityType": "politicalMovement",
+      "officialName": "Forza Nuova",
+      "abbreviation": null,
+      "factualDescription": null,
+      "color": null,
+      "website": "https://www.forzanuova1997.it/",
+      "level": null,
+      "geographicArea": null,
+      "regionId": null,
+      "status": "active",
+      "parliamentaryPresence": null,
+      "regionalPresence": null,
+      "localPresence": null,
+      "foundedAt": null,
+      "registeredAt": null,
+      "leadership": [],
+      "logoUrl": null,
+      "logoAsset": null,
+      "logoSource": null,
+      "logoVerified": null,
+      "logoAlt": null,
+      "id": "movement-forza-nuova",
+      "organizationType": "movimento/partito",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.forzanuova1997.it/",
+      "sourceName": "Forza Nuova — sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null,
+      "politicalPosition": "estrema destra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2 e §4",
+      "positionAsOf": "2026-09-24",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §4"
+    },
+    {
+      "entityType": "politicalMovement",
+      "officialName": "CasaPound Italia",
+      "abbreviation": null,
+      "factualDescription": null,
+      "color": null,
+      "website": "https://casapounditalia.org/",
+      "level": null,
+      "geographicArea": null,
+      "regionId": null,
+      "status": "active",
+      "parliamentaryPresence": null,
+      "regionalPresence": null,
+      "localPresence": null,
+      "foundedAt": null,
+      "registeredAt": null,
+      "leadership": [],
+      "logoUrl": null,
+      "logoAsset": null,
+      "logoSource": null,
+      "logoVerified": null,
+      "logoAlt": null,
+      "id": "movement-casapound-italia",
+      "organizationType": "movimento",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://casapounditalia.org/",
+      "sourceName": "CasaPound Italia — sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null,
+      "politicalPosition": "estrema destra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2 e §4",
+      "positionAsOf": "2026-09-24",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §4"
+    },
+    {
+      "entityType": "politicalMovement",
+      "officialName": "Potere al Popolo!",
+      "abbreviation": null,
+      "factualDescription": null,
+      "color": null,
+      "website": "https://poterealpopolo.org/",
+      "level": null,
+      "geographicArea": null,
+      "regionId": null,
+      "status": "active",
+      "parliamentaryPresence": null,
+      "regionalPresence": null,
+      "localPresence": null,
+      "foundedAt": null,
+      "registeredAt": null,
+      "leadership": [],
+      "logoUrl": null,
+      "logoAsset": null,
+      "logoSource": null,
+      "logoVerified": null,
+      "logoAlt": null,
+      "id": "movement-potere-al-popolo",
+      "organizationType": "movimento/partito",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://poterealpopolo.org/organizzazione/",
+      "sourceName": "Potere al Popolo! — organizzazione, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null,
+      "politicalPosition": "estrema sinistra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2 e §4",
+      "positionAsOf": "2026-09-24",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §4"
+    },
+    {
+      "entityType": "politicalMovement",
+      "officialName": "Rete dei Patrioti",
+      "abbreviation": null,
+      "factualDescription": null,
+      "color": null,
+      "website": "https://retedeipatrioti.it/",
+      "level": null,
+      "geographicArea": null,
+      "regionId": null,
+      "status": "active",
+      "parliamentaryPresence": null,
+      "regionalPresence": null,
+      "localPresence": null,
+      "foundedAt": null,
+      "registeredAt": null,
+      "leadership": [],
+      "logoUrl": null,
+      "logoAsset": null,
+      "logoSource": null,
+      "logoVerified": null,
+      "logoAlt": null,
+      "id": "movement-rete-dei-patrioti",
+      "organizationType": "movimento politico",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://retedeipatrioti.it/chi-siamo/",
+      "sourceName": "Rete dei Patrioti — chi siamo, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null,
+      "politicalPosition": "estrema destra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2 e §4",
+      "positionAsOf": "2026-09-24",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §4"
     }
   ],
   "politicalFigures": [
@@ -2770,7 +3364,8 @@
       "sourceName": "Futuro Nazionale — organigramma ufficiale",
       "verifiedAt": "2026-09-22",
       "validFrom": null,
-      "validTo": null
+      "validTo": null,
+      "politicianId": null
     },
     {
       "id": "figure-massimiliano-simoni",
@@ -2785,7 +3380,8 @@
       "sourceName": "Futuro Nazionale — organigramma ufficiale",
       "verifiedAt": "2026-09-22",
       "validFrom": null,
-      "validTo": null
+      "validTo": null,
+      "politicianId": null
     },
     {
       "id": "figure-edoardo-ziello",
@@ -2800,7 +3396,8 @@
       "sourceName": "Futuro Nazionale — organigramma ufficiale",
       "verifiedAt": "2026-09-22",
       "validFrom": null,
-      "validTo": null
+      "validTo": null,
+      "politicianId": "camera-xix-deputato-307143"
     },
     {
       "id": "figure-annamaria-frigo",
@@ -2814,6 +3411,551 @@
       "sourceUrl": "https://futuronazionale.it/organigramma/",
       "sourceName": "Futuro Nazionale — organigramma ufficiale",
       "verifiedAt": "2026-09-22",
+      "validFrom": null,
+      "validTo": null,
+      "politicianId": null
+    },
+    {
+      "id": "figure-maurizio-acerbo",
+      "firstName": "Maurizio",
+      "lastName": "Acerbo",
+      "fullName": "Maurizio Acerbo",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": null,
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "http://web.rifondazione.it/home/index.php/segretario",
+      "sourceName": "Rifondazione Comunista — il segretario, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-stefano-de-luca",
+      "firstName": "Stefano",
+      "lastName": "de Luca",
+      "fullName": "Stefano de Luca",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": null,
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.partitoliberaleitaliano.org/squadra/",
+      "sourceName": "Partito Liberale Italiano — squadra, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-grazio-trufolo",
+      "firstName": "Grazio",
+      "lastName": "Trufolo",
+      "fullName": "Grazio Trufolo",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": null,
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.partitoliberaleitaliano.org/squadra/",
+      "sourceName": "Partito Liberale Italiano — squadra, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-vincenzo-maraio",
+      "firstName": "Vincenzo",
+      "lastName": "Maraio",
+      "fullName": "Vincenzo Maraio",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": null,
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.partitosocialista.it/noi/il-segretario/",
+      "sourceName": "Partito Socialista Italiano — il segretario, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-elly-schlein",
+      "firstName": "Elly",
+      "lastName": "Schlein",
+      "fullName": "Elly Schlein",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": "camera-xix-deputato-308930",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://partitodemocratico.it/dem/elly-schlein/",
+      "sourceName": "Partito Democratico — Elly Schlein, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-giorgia-meloni",
+      "firstName": "Giorgia",
+      "lastName": "Meloni",
+      "fullName": "Giorgia Meloni",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": "camera-xix-deputato-302103",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.fratelli-italia.it/esecutivo-nazionale-2/",
+      "sourceName": "Fratelli d’Italia — esecutivo nazionale, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-matteo-salvini",
+      "firstName": "Matteo",
+      "lastName": "Salvini",
+      "fullName": "Matteo Salvini",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": "senato-xix-senatore-25407",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://legaonline.it/organigramma/",
+      "sourceName": "Lega per Salvini Premier — organigramma, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-giuseppe-conte",
+      "firstName": "Giuseppe",
+      "lastName": "Conte",
+      "fullName": "Giuseppe Conte",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": "camera-xix-deputato-307926",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.movimento5stelle.eu/giuseppe-conte-eletto-presidente-del-movimento-5-stelle/",
+      "sourceName": "MoVimento 5 Stelle — elezione del Presidente, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-carlo-calenda",
+      "firstName": "Carlo",
+      "lastName": "Calenda",
+      "fullName": "Carlo Calenda",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": "senato-xix-senatore-30110",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.azione.it/organi-nazionali/segreteria-nazionale/",
+      "sourceName": "Azione — segreteria nazionale, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-matteo-renzi",
+      "firstName": "Matteo",
+      "lastName": "Renzi",
+      "fullName": "Matteo Renzi",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": "senato-xix-senatore-30742",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.italiaviva.it/",
+      "sourceName": "Italia Viva — sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-riccardo-magi",
+      "firstName": "Riccardo",
+      "lastName": "Magi",
+      "fullName": "Riccardo Magi",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": "camera-xix-deputato-307436",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.piueuropa.eu/cariche",
+      "sourceName": "+Europa — cariche, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-nicola-fratoianni",
+      "firstName": "Nicola",
+      "lastName": "Fratoianni",
+      "fullName": "Nicola Fratoianni",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": "camera-xix-deputato-305880",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.sinistraitaliana.si/chi-siamo/segreteria-nazionale/",
+      "sourceName": "Sinistra Italiana — segreteria nazionale, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-angelo-bonelli",
+      "firstName": "Angelo",
+      "lastName": "Bonelli",
+      "fullName": "Angelo Bonelli",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": "camera-xix-deputato-302080",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://europaverde.it/i-due-portavoce/",
+      "sourceName": "Europa Verde — i due portavoce, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-bruno-tabacci",
+      "firstName": "Bruno",
+      "lastName": "Tabacci",
+      "fullName": "Bruno Tabacci",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": "camera-xix-deputato-34580",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.ilcentrodemocratico.it/ufficio-di-presidenza/",
+      "sourceName": "Centro Democratico — ufficio di presidenza e segreteria, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-margherita-rebuffoni",
+      "firstName": "Margherita",
+      "lastName": "Rebuffoni",
+      "fullName": "Margherita Rebuffoni",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": null,
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.ilcentrodemocratico.it/ufficio-di-presidenza/",
+      "sourceName": "Centro Democratico — ufficio di presidenza e segreteria, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-ignazio-messina",
+      "firstName": "Ignazio",
+      "lastName": "Messina",
+      "fullName": "Ignazio Messina",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": null,
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.italiadeivalori.it/esecutivonazionale",
+      "sourceName": "Italia dei Valori — esecutivo nazionale, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-antonio-de-poli",
+      "firstName": "Antonio",
+      "lastName": "De Poli",
+      "fullName": "Antonio De Poli",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": "senato-xix-senatore-22814",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.udc-italia.it/view/segretario/",
+      "sourceName": "UDC — segretario, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-lorenzo-cesa",
+      "firstName": "Lorenzo",
+      "lastName": "Cesa",
+      "fullName": "Lorenzo Cesa",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": "camera-xix-deputato-301439",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.udc-italia.it/",
+      "sourceName": "UDC — sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-paolo-ciani",
+      "firstName": "Paolo",
+      "lastName": "Ciani",
+      "fullName": "Paolo Ciani",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": "camera-xix-deputato-308835",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.democraziasolidale.it/organi-nazionali/",
+      "sourceName": "Democrazia Solidale — organi nazionali, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-maurizio-lupi",
+      "firstName": "Maurizio",
+      "lastName": "Lupi",
+      "fullName": "Maurizio Lupi",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": "camera-xix-deputato-300447",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.noimoderati.it/il-partito",
+      "sourceName": "Noi Moderati — il partito, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-luigi-marattin",
+      "firstName": "Luigi",
+      "lastName": "Marattin",
+      "fullName": "Luigi Marattin",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": "camera-xix-deputato-307328",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://partitoliberaldemocratico.com/",
+      "sourceName": "Partito Liberaldemocratico — sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-simone-marchiori",
+      "firstName": "Simone",
+      "lastName": "Marchiori",
+      "fullName": "Simone Marchiori",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": null,
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://patt.tn.it/partito/organizzazione/organi-e-cariche/",
+      "sourceName": "PATT — organi e cariche, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-mauro-verones",
+      "firstName": "Mauro",
+      "lastName": "Verones",
+      "fullName": "Mauro Verones",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": null,
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://patt.tn.it/partito/organizzazione/organi-e-cariche/",
+      "sourceName": "PATT — organi e cariche, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-ricardo-merlo",
+      "firstName": "Ricardo",
+      "lastName": "Merlo",
+      "fullName": "Ricardo Merlo",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": null,
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.maiemondiale.com/index.php/chisiamo/",
+      "sourceName": "MAIE — chi siamo, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-roberto-fiore",
+      "firstName": "Roberto",
+      "lastName": "Fiore",
+      "fullName": "Roberto Fiore",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": null,
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.forzanuova1997.it/",
+      "sourceName": "Forza Nuova — sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-gianluca-iannone",
+      "firstName": "Gianluca",
+      "lastName": "Iannone",
+      "fullName": "Gianluca Iannone",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": null,
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://casapounditalia.org/",
+      "sourceName": "CasaPound Italia — sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-francesco-toscano",
+      "firstName": "Francesco",
+      "lastName": "Toscano",
+      "fullName": "Francesco Toscano",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": null,
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://democraziasovranapopolare.it/democrazia-sovrana-popolare/",
+      "sourceName": "Democrazia Sovrana Popolare — sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-roberto-castelli",
+      "firstName": "Roberto",
+      "lastName": "Castelli",
+      "fullName": "Roberto Castelli",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": null,
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://partitopopolarenord.org/",
+      "sourceName": "Partito Popolare del Nord — sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-marta-collot",
+      "firstName": "Marta",
+      "lastName": "Collot",
+      "fullName": "Marta Collot",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": null,
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://poterealpopolo.org/collot-granato-portavoce-nuovo-coordinamento-nazionale-commissione-garanzia/",
+      "sourceName": "Potere al Popolo! — portavoce nazionali, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-giuliano-granato",
+      "firstName": "Giuliano",
+      "lastName": "Granato",
+      "fullName": "Giuliano Granato",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": null,
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://poterealpopolo.org/collot-granato-portavoce-nuovo-coordinamento-nazionale-commissione-garanzia/",
+      "sourceName": "Potere al Popolo! — portavoce nazionali, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-mauro-alboresi",
+      "firstName": "Mauro",
+      "lastName": "Alboresi",
+      "fullName": "Mauro Alboresi",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": null,
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.ilpartitocomunistaitaliano.it/organizzazione/alboresi-mauro/",
+      "sourceName": "Partito Comunista Italiano — organizzazione, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-christian-solinas",
+      "firstName": "Christian",
+      "lastName": "Solinas",
+      "fullName": "Christian Solinas",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": null,
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "http://www.psdaz.net/index.php/organizatzione/segreteria-nazionale/2-partito",
+      "sourceName": "Partito Sardo d’Azione — segreteria nazionale, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-michele-boldrin",
+      "firstName": "Michele",
+      "lastName": "Boldrin",
+      "fullName": "Michele Boldrin",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": null,
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://ora-italia.it/la-struttura-del-partito/",
+      "sourceName": "ORA! — struttura del partito, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "figure-alberto-forchielli",
+      "firstName": "Alberto",
+      "lastName": "Forchielli",
+      "fullName": "Alberto Forchielli",
+      "birthDate": null,
+      "birthPlace": null,
+      "politicianId": null,
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://ora-italia.it/la-struttura-del-partito/",
+      "sourceName": "ORA! — struttura del partito, sito ufficiale",
+      "verifiedAt": "2026-09-24",
       "validFrom": null,
       "validTo": null
     }
@@ -2868,6 +4010,482 @@
       "sourceUrl": "https://futuronazionale.it/organigramma/",
       "sourceName": "Futuro Nazionale — organigramma ufficiale",
       "verifiedAt": "2026-09-22",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-2014-01-ir-segretario-nazionale-maurizio-acerbo",
+      "partyId": "party-registro-p1-2014-01-ir",
+      "politicalFigureId": "figure-maurizio-acerbo",
+      "role": "Segretario nazionale",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "http://web.rifondazione.it/home/index.php/segretario",
+      "sourceName": "Rifondazione Comunista — il segretario, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-2015-28-ir-presidente-stefano-de-luca",
+      "partyId": "party-registro-p1-2015-28-ir",
+      "politicalFigureId": "figure-stefano-de-luca",
+      "role": "Presidente",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.partitoliberaleitaliano.org/squadra/",
+      "sourceName": "Partito Liberale Italiano — squadra, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-2015-28-ir-segretario-grazio-trufolo",
+      "partyId": "party-registro-p1-2015-28-ir",
+      "politicalFigureId": "figure-grazio-trufolo",
+      "role": "Segretario",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.partitoliberaleitaliano.org/squadra/",
+      "sourceName": "Partito Liberale Italiano — squadra, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-2014-05-ir-segretario-nazionale-vincenzo-maraio",
+      "partyId": "party-registro-p1-2014-05-ir",
+      "politicalFigureId": "figure-vincenzo-maraio",
+      "role": "Segretario nazionale",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.partitosocialista.it/noi/il-segretario/",
+      "sourceName": "Partito Socialista Italiano — il segretario, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-2015-29-ir-segretaria-nazionale-elly-schlein",
+      "partyId": "party-registro-p1-2015-29-ir",
+      "politicalFigureId": "figure-elly-schlein",
+      "role": "Segretaria nazionale",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://partitodemocratico.it/dem/elly-schlein/",
+      "sourceName": "Partito Democratico — Elly Schlein, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-2014-04-ir-presidente-giorgia-meloni",
+      "partyId": "party-registro-p1-2014-04-ir",
+      "politicalFigureId": "figure-giorgia-meloni",
+      "role": "Presidente",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.fratelli-italia.it/esecutivo-nazionale-2/",
+      "sourceName": "Fratelli d’Italia — esecutivo nazionale, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-2017-41-ir-segretario-federale-matteo-salvini",
+      "partyId": "party-registro-p1-2017-41-ir",
+      "politicalFigureId": "figure-matteo-salvini",
+      "role": "Segretario federale",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://legaonline.it/organigramma/",
+      "sourceName": "Lega per Salvini Premier — organigramma, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-2022-63-ir-presidente-giuseppe-conte",
+      "partyId": "party-registro-p1-2022-63-ir",
+      "politicalFigureId": "figure-giuseppe-conte",
+      "role": "Presidente",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.movimento5stelle.eu/giuseppe-conte-eletto-presidente-del-movimento-5-stelle/",
+      "sourceName": "MoVimento 5 Stelle — elezione del Presidente, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-2019-51-ir-segretario-carlo-calenda",
+      "partyId": "party-registro-p1-2019-51-ir",
+      "politicalFigureId": "figure-carlo-calenda",
+      "role": "Segretario",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.azione.it/organi-nazionali/segreteria-nazionale/",
+      "sourceName": "Azione — segreteria nazionale, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-2019-52-ir-presidente-dell-associazione-matteo-renzi",
+      "partyId": "party-registro-p1-2019-52-ir",
+      "politicalFigureId": "figure-matteo-renzi",
+      "role": "Presidente dell’Associazione",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.italiaviva.it/",
+      "sourceName": "Italia Viva — sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-2018-47-ir-segretario-riccardo-magi",
+      "partyId": "party-registro-p1-2018-47-ir",
+      "politicalFigureId": "figure-riccardo-magi",
+      "role": "Segretario",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.piueuropa.eu/cariche",
+      "sourceName": "+Europa — cariche, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-2017-44-ir-segretario-nazionale-nicola-fratoianni",
+      "partyId": "party-registro-p1-2017-44-ir",
+      "politicalFigureId": "figure-nicola-fratoianni",
+      "role": "Segretario nazionale",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.sinistraitaliana.si/chi-siamo/segreteria-nazionale/",
+      "sourceName": "Sinistra Italiana — segreteria nazionale, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-2014-13-ir-co-portavoce-nazionale-angelo-bonelli",
+      "partyId": "party-registro-p1-2014-13-ir",
+      "politicalFigureId": "figure-angelo-bonelli",
+      "role": "Co-portavoce nazionale",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://europaverde.it/i-due-portavoce/",
+      "sourceName": "Europa Verde — i due portavoce, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-2015-17-ir-presidente-nazionale-bruno-tabacci",
+      "partyId": "party-registro-p1-2015-17-ir",
+      "politicalFigureId": "figure-bruno-tabacci",
+      "role": "Presidente nazionale",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.ilcentrodemocratico.it/ufficio-di-presidenza/",
+      "sourceName": "Centro Democratico — ufficio di presidenza e segreteria, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-2015-17-ir-segretario-nazionale-margherita-rebuffoni",
+      "partyId": "party-registro-p1-2015-17-ir",
+      "politicalFigureId": "figure-margherita-rebuffoni",
+      "role": "Segretario nazionale",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.ilcentrodemocratico.it/ufficio-di-presidenza/",
+      "sourceName": "Centro Democratico — ufficio di presidenza e segreteria, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-2015-18-ir-segretario-nazionale-ignazio-messina",
+      "partyId": "party-registro-p1-2015-18-ir",
+      "politicalFigureId": "figure-ignazio-messina",
+      "role": "Segretario nazionale",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.italiadeivalori.it/esecutivonazionale",
+      "sourceName": "Italia dei Valori — esecutivo nazionale, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-2015-25-ir-segretario-nazionale-antonio-de-poli",
+      "partyId": "party-registro-p1-2015-25-ir",
+      "politicalFigureId": "figure-antonio-de-poli",
+      "role": "Segretario nazionale",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.udc-italia.it/view/segretario/",
+      "sourceName": "UDC — segretario, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-2015-25-ir-presidente-nazionale-lorenzo-cesa",
+      "partyId": "party-registro-p1-2015-25-ir",
+      "politicalFigureId": "figure-lorenzo-cesa",
+      "role": "Presidente nazionale",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.udc-italia.it/",
+      "sourceName": "UDC — sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-2017-43-ir-segretario-nazionale-paolo-ciani",
+      "partyId": "party-registro-p1-2017-43-ir",
+      "politicalFigureId": "figure-paolo-ciani",
+      "role": "Segretario nazionale",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.democraziasolidale.it/organi-nazionali/",
+      "sourceName": "Democrazia Solidale — organi nazionali, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-2020-56-ir-presidente-maurizio-lupi",
+      "partyId": "party-registro-p1-2020-56-ir",
+      "politicalFigureId": "figure-maurizio-lupi",
+      "role": "Presidente",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.noimoderati.it/il-partito",
+      "sourceName": "Noi Moderati — il partito, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-2024-74-ir-segretario-nazionale-luigi-marattin",
+      "partyId": "party-registro-p1-2024-74-ir",
+      "politicalFigureId": "figure-luigi-marattin",
+      "role": "Segretario nazionale",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://partitoliberaldemocratico.com/",
+      "sourceName": "Partito Liberaldemocratico — sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-2014-09-ir-segretario-politico-simone-marchiori",
+      "partyId": "party-registro-p1-2014-09-ir",
+      "politicalFigureId": "figure-simone-marchiori",
+      "role": "Segretario politico",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://patt.tn.it/partito/organizzazione/organi-e-cariche/",
+      "sourceName": "PATT — organi e cariche, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-2014-09-ir-presidente-mauro-verones",
+      "partyId": "party-registro-p1-2014-09-ir",
+      "politicalFigureId": "figure-mauro-verones",
+      "role": "Presidente",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://patt.tn.it/partito/organizzazione/organi-e-cariche/",
+      "sourceName": "PATT — organi e cariche, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-2015-14-ir-presidente-ricardo-merlo",
+      "partyId": "party-registro-p1-2015-14-ir",
+      "politicalFigureId": "figure-ricardo-merlo",
+      "role": "Presidente",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.maiemondiale.com/index.php/chisiamo/",
+      "sourceName": "MAIE — chi siamo, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-forza-nuova-segretario-nazionale-roberto-fiore",
+      "partyId": "movement-forza-nuova",
+      "politicalFigureId": "figure-roberto-fiore",
+      "role": "Segretario nazionale",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.forzanuova1997.it/",
+      "sourceName": "Forza Nuova — sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-casapound-italia-figura-di-riferimento-fondatore-gianluca-iannone",
+      "partyId": "movement-casapound-italia",
+      "politicalFigureId": "figure-gianluca-iannone",
+      "role": "Figura di riferimento / fondatore",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://casapounditalia.org/",
+      "sourceName": "CasaPound Italia — sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-democrazia-sovrana-popolare-presidente-francesco-toscano",
+      "partyId": "party-democrazia-sovrana-popolare",
+      "politicalFigureId": "figure-francesco-toscano",
+      "role": "Presidente",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://democraziasovranapopolare.it/democrazia-sovrana-popolare/",
+      "sourceName": "Democrazia Sovrana Popolare — sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-partito-popolare-del-nord-segretario-roberto-castelli",
+      "partyId": "party-partito-popolare-del-nord",
+      "politicalFigureId": "figure-roberto-castelli",
+      "role": "Segretario",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://partitopopolarenord.org/",
+      "sourceName": "Partito Popolare del Nord — sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-potere-al-popolo-portavoce-marta-collot",
+      "partyId": "movement-potere-al-popolo",
+      "politicalFigureId": "figure-marta-collot",
+      "role": "Portavoce",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://poterealpopolo.org/collot-granato-portavoce-nuovo-coordinamento-nazionale-commissione-garanzia/",
+      "sourceName": "Potere al Popolo! — portavoce nazionali, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-potere-al-popolo-portavoce-giuliano-granato",
+      "partyId": "movement-potere-al-popolo",
+      "politicalFigureId": "figure-giuliano-granato",
+      "role": "Portavoce",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://poterealpopolo.org/collot-granato-portavoce-nuovo-coordinamento-nazionale-commissione-garanzia/",
+      "sourceName": "Potere al Popolo! — portavoce nazionali, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-partito-comunista-italiano-segretario-generale-mauro-alboresi",
+      "partyId": "party-partito-comunista-italiano",
+      "politicalFigureId": "figure-mauro-alboresi",
+      "role": "Segretario generale",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.ilpartitocomunistaitaliano.it/organizzazione/alboresi-mauro/",
+      "sourceName": "Partito Comunista Italiano — organizzazione, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-partito-sardo-d-azione-segretario-nazionale-christian-solinas",
+      "partyId": "party-partito-sardo-d-azione",
+      "politicalFigureId": "figure-christian-solinas",
+      "role": "Segretario nazionale",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "http://www.psdaz.net/index.php/organizatzione/segreteria-nazionale/2-partito",
+      "sourceName": "Partito Sardo d’Azione — segreteria nazionale, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-ora-segretario-michele-boldrin",
+      "partyId": "party-ora",
+      "politicalFigureId": "figure-michele-boldrin",
+      "role": "Segretario",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://ora-italia.it/la-struttura-del-partito/",
+      "sourceName": "ORA! — struttura del partito, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-leadership-ora-presidente-alberto-forchielli",
+      "partyId": "party-ora",
+      "politicalFigureId": "figure-alberto-forchielli",
+      "role": "Presidente",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §3",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://ora-italia.it/la-struttura-del-partito/",
+      "sourceName": "ORA! — struttura del partito, sito ufficiale",
+      "verifiedAt": "2026-09-24",
       "validFrom": null,
       "validTo": null
     }
@@ -3668,7 +5286,50 @@
       "status": "active"
     }
   ],
-  "coalitions": [],
+  "coalitions": [
+    {
+      "id": "coalition-alleanza-verdi-sinistra",
+      "entityType": "coalition",
+      "coalitionType": "coalizione/lista elettorale",
+      "officialName": "Alleanza Verdi e Sinistra",
+      "abbreviation": "AVS",
+      "website": "https://verdisinistra.it/",
+      "componentPartyIds": [
+        "party-registro-p1-2014-13-ir",
+        "party-registro-p1-2017-44-ir"
+      ],
+      "leadership": null,
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://verdisinistra.it/",
+      "sourceName": "Alleanza Verdi e Sinistra — sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null,
+      "secondarySources": [
+        {
+          "source": "real",
+          "verified": true,
+          "sourceUrl": "https://www.sinistraitaliana.si/chi-siamo/alleanza-verdi-sinistra/",
+          "sourceName": "Sinistra Italiana — Alleanza Verdi e Sinistra",
+          "verifiedAt": "2026-09-24",
+          "validFrom": null,
+          "validTo": null
+        }
+      ],
+      "status": null,
+      "color": null,
+      "logoUrl": null,
+      "logoAsset": null,
+      "logoSource": null,
+      "logoVerified": null,
+      "logoAlt": null,
+      "politicalPosition": "sinistra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2 e §4",
+      "positionAsOf": "2026-09-24",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §4"
+    }
+  ],
   "electoralLists": [
     {
       "id": "electoral-list-camera-2022-008",
@@ -3677,7 +5338,7 @@
       "chamber": "camera",
       "constituency": null,
       "coalitionId": null,
-      "partyId": null,
+      "partyId": "party-registro-p1-2022-63-ir",
       "ballotSymbol": null,
       "source": "real",
       "verified": true,
@@ -3685,7 +5346,10 @@
       "sourceName": "Camera dei deputati — scheda del deputato, lista di elezione",
       "verifiedAt": "2026-09-22",
       "validFrom": "2022-09-25",
-      "validTo": "2022-09-25"
+      "validTo": "2022-09-25",
+      "componentPartyIds": [],
+      "listType": "lista di partito",
+      "listLinkSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §6"
     },
     {
       "id": "electoral-list-camera-2022-005",
@@ -3694,7 +5358,7 @@
       "chamber": "camera",
       "constituency": null,
       "coalitionId": null,
-      "partyId": null,
+      "partyId": "party-registro-p1-2014-04-ir",
       "ballotSymbol": null,
       "source": "real",
       "verified": true,
@@ -3702,7 +5366,10 @@
       "sourceName": "Camera dei deputati — scheda del deputato, lista di elezione",
       "verifiedAt": "2026-09-22",
       "validFrom": "2022-09-25",
-      "validTo": "2022-09-25"
+      "validTo": "2022-09-25",
+      "componentPartyIds": [],
+      "listType": "lista di partito",
+      "listLinkSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §6"
     },
     {
       "id": "electoral-list-camera-2022-010",
@@ -3711,7 +5378,7 @@
       "chamber": "camera",
       "constituency": null,
       "coalitionId": null,
-      "partyId": null,
+      "partyId": "party-registro-p1-2015-29-ir",
       "ballotSymbol": null,
       "source": "real",
       "verified": true,
@@ -3719,7 +5386,10 @@
       "sourceName": "Camera dei deputati — scheda del deputato, lista di elezione",
       "verifiedAt": "2026-09-22",
       "validFrom": "2022-09-25",
-      "validTo": "2022-09-25"
+      "validTo": "2022-09-25",
+      "componentPartyIds": [],
+      "listType": "lista di partito",
+      "listLinkSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §6"
     },
     {
       "id": "electoral-list-camera-2022-006",
@@ -3728,7 +5398,7 @@
       "chamber": "camera",
       "constituency": null,
       "coalitionId": null,
-      "partyId": null,
+      "partyId": "party-registro-p1-2017-41-ir",
       "ballotSymbol": null,
       "source": "real",
       "verified": true,
@@ -3736,7 +5406,10 @@
       "sourceName": "Camera dei deputati — scheda del deputato, lista di elezione",
       "verifiedAt": "2026-09-22",
       "validFrom": "2022-09-25",
-      "validTo": "2022-09-25"
+      "validTo": "2022-09-25",
+      "componentPartyIds": [],
+      "listType": "lista di partito",
+      "listLinkSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §6"
     },
     {
       "id": "electoral-list-camera-2022-003",
@@ -3745,7 +5418,7 @@
       "chamber": "camera",
       "constituency": null,
       "coalitionId": null,
-      "partyId": null,
+      "partyId": "party-registro-p1-2015-20-ir",
       "ballotSymbol": null,
       "source": "real",
       "verified": true,
@@ -3753,7 +5426,10 @@
       "sourceName": "Camera dei deputati — scheda del deputato, lista di elezione",
       "verifiedAt": "2026-09-22",
       "validFrom": "2022-09-25",
-      "validTo": "2022-09-25"
+      "validTo": "2022-09-25",
+      "componentPartyIds": [],
+      "listType": "lista di partito",
+      "listLinkSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §6"
     },
     {
       "id": "electoral-list-camera-2022-002",
@@ -3770,7 +5446,13 @@
       "sourceName": "Camera dei deputati — scheda del deputato, lista di elezione",
       "verifiedAt": "2026-09-22",
       "validFrom": "2022-09-25",
-      "validTo": "2022-09-25"
+      "validTo": "2022-09-25",
+      "componentPartyIds": [
+        "party-registro-p1-2019-51-ir",
+        "party-registro-p1-2019-52-ir"
+      ],
+      "listType": "lista di più partiti",
+      "listLinkSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §6"
     },
     {
       "id": "electoral-list-camera-2022-007",
@@ -3787,7 +5469,10 @@
       "sourceName": "Camera dei deputati — scheda del deputato, lista di elezione",
       "verifiedAt": "2026-09-22",
       "validFrom": "2022-09-25",
-      "validTo": "2022-09-25"
+      "validTo": "2022-09-25",
+      "componentPartyIds": [],
+      "listType": "coalizione/lista 2022 — non partito singolo",
+      "listLinkSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §6"
     },
     {
       "id": "electoral-list-camera-2022-001",
@@ -3795,7 +5480,7 @@
       "electionId": "election-it-politiche-2022",
       "chamber": "camera",
       "constituency": null,
-      "coalitionId": null,
+      "coalitionId": "coalition-alleanza-verdi-sinistra",
       "partyId": null,
       "ballotSymbol": null,
       "source": "real",
@@ -3804,7 +5489,13 @@
       "sourceName": "Camera dei deputati — scheda del deputato, lista di elezione",
       "verifiedAt": "2026-09-22",
       "validFrom": "2022-09-25",
-      "validTo": "2022-09-25"
+      "validTo": "2022-09-25",
+      "componentPartyIds": [
+        "party-registro-p1-2014-13-ir",
+        "party-registro-p1-2017-44-ir"
+      ],
+      "listType": "lista di coalizione",
+      "listLinkSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §6"
     },
     {
       "id": "electoral-list-camera-2022-004",
@@ -3821,7 +5512,10 @@
       "sourceName": "Camera dei deputati — scheda del deputato, lista di elezione",
       "verifiedAt": "2026-09-22",
       "validFrom": "2022-09-25",
-      "validTo": "2022-09-25"
+      "validTo": "2022-09-25",
+      "componentPartyIds": [],
+      "listType": "coalizione/lista 2022 — non partito singolo",
+      "listLinkSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §6"
     },
     {
       "id": "electoral-list-camera-2022-011",
@@ -3830,7 +5524,7 @@
       "chamber": "camera",
       "constituency": null,
       "coalitionId": null,
-      "partyId": null,
+      "partyId": "party-registro-p1-2022-67-ir",
       "ballotSymbol": null,
       "source": "real",
       "verified": true,
@@ -3838,7 +5532,10 @@
       "sourceName": "Camera dei deputati — scheda del deputato, lista di elezione",
       "verifiedAt": "2026-09-22",
       "validFrom": "2022-09-25",
-      "validTo": "2022-09-25"
+      "validTo": "2022-09-25",
+      "componentPartyIds": [],
+      "listType": "lista di partito",
+      "listLinkSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §6"
     },
     {
       "id": "electoral-list-camera-2022-012",
@@ -3855,7 +5552,13 @@
       "sourceName": "Camera dei deputati — scheda del deputato, lista di elezione",
       "verifiedAt": "2026-09-22",
       "validFrom": "2022-09-25",
-      "validTo": "2022-09-25"
+      "validTo": "2022-09-25",
+      "componentPartyIds": [
+        "party-registro-p1-2015-19-ir",
+        "party-registro-p1-2014-09-ir"
+      ],
+      "listType": "lista di più partiti",
+      "listLinkSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §6"
     },
     {
       "id": "electoral-list-camera-2022-013",
@@ -3872,7 +5575,10 @@
       "sourceName": "Camera dei deputati — scheda del deputato, lista di elezione",
       "verifiedAt": "2026-09-22",
       "validFrom": "2022-09-25",
-      "validTo": "2022-09-25"
+      "validTo": "2022-09-25",
+      "componentPartyIds": [],
+      "listType": "lista autonoma — nessun partito singolo dedotto",
+      "listLinkSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §6"
     },
     {
       "id": "electoral-list-camera-2022-009",
@@ -3881,7 +5587,7 @@
       "chamber": "camera",
       "constituency": null,
       "coalitionId": null,
-      "partyId": null,
+      "partyId": "party-registro-p1-2015-14-ir",
       "ballotSymbol": null,
       "source": "real",
       "verified": true,
@@ -3889,7 +5595,106 @@
       "sourceName": "Camera dei deputati — scheda del deputato, lista di elezione",
       "verifiedAt": "2026-09-22",
       "validFrom": "2022-09-25",
-      "validTo": "2022-09-25"
+      "validTo": "2022-09-25",
+      "componentPartyIds": [],
+      "listType": "lista di partito",
+      "listLinkSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §6"
+    },
+    {
+      "id": "electoral-list-europee-2024-liberta",
+      "officialName": "Libertà",
+      "electionId": "election-it-europee-2024",
+      "chamber": null,
+      "constituency": null,
+      "coalitionId": null,
+      "partyId": null,
+      "componentPartyIds": [],
+      "ballotSymbol": null,
+      "listType": "lista elettorale",
+      "leadership": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2 e §4",
+      "positionAsOf": "2026-09-24",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §4",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://dait.interno.gov.it/elezioni/trasparenza/elezioni-europee-2024",
+      "sourceName": "Ministero dell’Interno — Trasparenza, elezioni europee 2024",
+      "verifiedAt": "2026-09-24",
+      "validFrom": "2024-06-08",
+      "validTo": "2024-06-09"
+    },
+    {
+      "id": "electoral-list-europee-2024-stati-uniti-d-europa",
+      "officialName": "Stati Uniti d’Europa",
+      "electionId": "election-it-europee-2024",
+      "chamber": null,
+      "constituency": null,
+      "coalitionId": null,
+      "partyId": null,
+      "componentPartyIds": [],
+      "ballotSymbol": null,
+      "listType": "lista elettorale",
+      "leadership": null,
+      "politicalPosition": "centro",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2 e §4",
+      "positionAsOf": "2026-09-24",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §4",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://dait.interno.gov.it/elezioni/trasparenza/elezioni-europee-2024",
+      "sourceName": "Ministero dell’Interno — Trasparenza, elezioni europee 2024",
+      "verifiedAt": "2026-09-24",
+      "validFrom": "2024-06-08",
+      "validTo": "2024-06-09"
+    },
+    {
+      "id": "electoral-list-europee-2024-pace-terra-dignita",
+      "officialName": "Pace Terra Dignità",
+      "electionId": "election-it-europee-2024",
+      "chamber": null,
+      "constituency": null,
+      "coalitionId": null,
+      "partyId": null,
+      "componentPartyIds": [],
+      "ballotSymbol": null,
+      "listType": "lista elettorale",
+      "leadership": null,
+      "politicalPosition": "sinistra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2 e §4",
+      "positionAsOf": "2026-09-24",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §4",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://dait.interno.gov.it/elezioni/trasparenza/elezioni-europee-2024",
+      "sourceName": "Ministero dell’Interno — Trasparenza, elezioni europee 2024",
+      "verifiedAt": "2026-09-24",
+      "validFrom": "2024-06-08",
+      "validTo": "2024-06-09"
+    },
+    {
+      "id": "electoral-list-europee-2024-partito-animalista-italexit-per-l-italia",
+      "officialName": "Partito Animalista - Italexit per l’Italia",
+      "electionId": "election-it-europee-2024",
+      "chamber": null,
+      "constituency": null,
+      "coalitionId": null,
+      "partyId": null,
+      "componentPartyIds": [],
+      "ballotSymbol": null,
+      "listType": "lista elettorale",
+      "leadership": null,
+      "politicalPosition": "destra",
+      "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2 e §4",
+      "positionAsOf": "2026-09-24",
+      "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §4",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://dait.interno.gov.it/elezioni/trasparenza/elezioni-europee-2024",
+      "sourceName": "Ministero dell’Interno — Trasparenza, elezioni europee 2024",
+      "verifiedAt": "2026-09-24",
+      "validFrom": "2024-06-08",
+      "validTo": "2024-06-09"
     }
   ],
   "politicians": [
@@ -30429,7 +32234,232 @@
       "verifiedAt": "2026-09-22"
     }
   ],
-  "partyMemberships": [],
+  "partyMemberships": [
+    {
+      "id": "party-membership-camera-xix-deputato-307143-party-futuro-nazionale",
+      "politicianId": "camera-xix-deputato-307143",
+      "partyId": "party-futuro-nazionale",
+      "basis": "incarico di partito documentato",
+      "role": "Responsabile Organizzazione",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://futuronazionale.it/organigramma/",
+      "sourceName": "Futuro Nazionale — organigramma ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-membership-camera-xix-deputato-308930-party-registro-p1-2015-29-ir",
+      "politicianId": "camera-xix-deputato-308930",
+      "partyId": "party-registro-p1-2015-29-ir",
+      "basis": "incarico di partito documentato",
+      "role": "Segretaria nazionale",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://partitodemocratico.it/dem/elly-schlein/",
+      "sourceName": "Partito Democratico — Elly Schlein, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-membership-camera-xix-deputato-302103-party-registro-p1-2014-04-ir",
+      "politicianId": "camera-xix-deputato-302103",
+      "partyId": "party-registro-p1-2014-04-ir",
+      "basis": "incarico di partito documentato",
+      "role": "Presidente",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.fratelli-italia.it/esecutivo-nazionale-2/",
+      "sourceName": "Fratelli d’Italia — esecutivo nazionale, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-membership-senato-xix-senatore-25407-party-registro-p1-2017-41-ir",
+      "politicianId": "senato-xix-senatore-25407",
+      "partyId": "party-registro-p1-2017-41-ir",
+      "basis": "incarico di partito documentato",
+      "role": "Segretario federale",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://legaonline.it/organigramma/",
+      "sourceName": "Lega per Salvini Premier — organigramma, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-membership-camera-xix-deputato-307926-party-registro-p1-2022-63-ir",
+      "politicianId": "camera-xix-deputato-307926",
+      "partyId": "party-registro-p1-2022-63-ir",
+      "basis": "incarico di partito documentato",
+      "role": "Presidente",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.movimento5stelle.eu/giuseppe-conte-eletto-presidente-del-movimento-5-stelle/",
+      "sourceName": "MoVimento 5 Stelle — elezione del Presidente, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-membership-senato-xix-senatore-30110-party-registro-p1-2019-51-ir",
+      "politicianId": "senato-xix-senatore-30110",
+      "partyId": "party-registro-p1-2019-51-ir",
+      "basis": "incarico di partito documentato",
+      "role": "Segretario",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.azione.it/organi-nazionali/segreteria-nazionale/",
+      "sourceName": "Azione — segreteria nazionale, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-membership-senato-xix-senatore-30742-party-registro-p1-2019-52-ir",
+      "politicianId": "senato-xix-senatore-30742",
+      "partyId": "party-registro-p1-2019-52-ir",
+      "basis": "incarico di partito documentato",
+      "role": "Presidente dell’Associazione",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.italiaviva.it/",
+      "sourceName": "Italia Viva — sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-membership-camera-xix-deputato-307436-party-registro-p1-2018-47-ir",
+      "politicianId": "camera-xix-deputato-307436",
+      "partyId": "party-registro-p1-2018-47-ir",
+      "basis": "incarico di partito documentato",
+      "role": "Segretario",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.piueuropa.eu/cariche",
+      "sourceName": "+Europa — cariche, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-membership-camera-xix-deputato-305880-party-registro-p1-2017-44-ir",
+      "politicianId": "camera-xix-deputato-305880",
+      "partyId": "party-registro-p1-2017-44-ir",
+      "basis": "incarico di partito documentato",
+      "role": "Segretario nazionale",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.sinistraitaliana.si/chi-siamo/segreteria-nazionale/",
+      "sourceName": "Sinistra Italiana — segreteria nazionale, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-membership-camera-xix-deputato-302080-party-registro-p1-2014-13-ir",
+      "politicianId": "camera-xix-deputato-302080",
+      "partyId": "party-registro-p1-2014-13-ir",
+      "basis": "incarico di partito documentato",
+      "role": "Co-portavoce nazionale",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://europaverde.it/i-due-portavoce/",
+      "sourceName": "Europa Verde — i due portavoce, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-membership-camera-xix-deputato-34580-party-registro-p1-2015-17-ir",
+      "politicianId": "camera-xix-deputato-34580",
+      "partyId": "party-registro-p1-2015-17-ir",
+      "basis": "incarico di partito documentato",
+      "role": "Presidente nazionale",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.ilcentrodemocratico.it/ufficio-di-presidenza/",
+      "sourceName": "Centro Democratico — ufficio di presidenza e segreteria, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-membership-senato-xix-senatore-22814-party-registro-p1-2015-25-ir",
+      "politicianId": "senato-xix-senatore-22814",
+      "partyId": "party-registro-p1-2015-25-ir",
+      "basis": "incarico di partito documentato",
+      "role": "Segretario nazionale",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.udc-italia.it/view/segretario/",
+      "sourceName": "UDC — segretario, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-membership-camera-xix-deputato-301439-party-registro-p1-2015-25-ir",
+      "politicianId": "camera-xix-deputato-301439",
+      "partyId": "party-registro-p1-2015-25-ir",
+      "basis": "incarico di partito documentato",
+      "role": "Presidente nazionale",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.udc-italia.it/",
+      "sourceName": "UDC — sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-membership-camera-xix-deputato-308835-party-registro-p1-2017-43-ir",
+      "politicianId": "camera-xix-deputato-308835",
+      "partyId": "party-registro-p1-2017-43-ir",
+      "basis": "incarico di partito documentato",
+      "role": "Segretario nazionale",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.democraziasolidale.it/organi-nazionali/",
+      "sourceName": "Democrazia Solidale — organi nazionali, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-membership-camera-xix-deputato-300447-party-registro-p1-2020-56-ir",
+      "politicianId": "camera-xix-deputato-300447",
+      "partyId": "party-registro-p1-2020-56-ir",
+      "basis": "incarico di partito documentato",
+      "role": "Presidente",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://www.noimoderati.it/il-partito",
+      "sourceName": "Noi Moderati — il partito, sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    },
+    {
+      "id": "party-membership-camera-xix-deputato-307328-party-registro-p1-2024-74-ir",
+      "politicianId": "camera-xix-deputato-307328",
+      "partyId": "party-registro-p1-2024-74-ir",
+      "basis": "incarico di partito documentato",
+      "role": "Segretario nazionale",
+      "source": "real",
+      "verified": true,
+      "sourceUrl": "https://partitoliberaldemocratico.com/",
+      "sourceName": "Partito Liberaldemocratico — sito ufficiale",
+      "verifiedAt": "2026-09-24",
+      "validFrom": null,
+      "validTo": null
+    }
+  ],
   "groupMemberships": [
     {
       "id": "gm-camera-xix-deputato-307394",
@@ -59476,8 +61506,8 @@
     }
   ],
   "manifest": {
-    "datasetVersion": "2026-09-22.3",
-    "snapshotDate": "2026-09-22",
+    "datasetVersion": "2026-09-24.1",
+    "snapshotDate": "2026-09-24",
     "publisher": "POLITICANDO 2026 — importatore open data",
     "sourcePolicy": "Primary institutional sources only; unknown values are null. Registry entries are sourced to registration deliberations; only explicit deregistration notices set historical status. MEF 2‰ evidence is dated to its reporting year.",
     "sourceUrls": {
@@ -59510,19 +61540,26 @@
       "campobaseCouncil": "https://www25.consiglio.provincia.tn.it/istituzione/i-gruppi-consiliari/pagine/gruppo-consiliare?id=1777121&uid=1777121",
       "campobaseStatute": "https://www.gazzettaufficiale.it/eli/gu/2023/11/29/279/sg/pdf",
       "sudChiamaNordHome": "https://sud-chiamanord.it/",
-      "sudChiamaNordAssembly": "https://www.ars.sicilia.it/gruppi-parlamentari/XVIII-sud-chiama-nord-le-autonomie"
+      "sudChiamaNordAssembly": "https://www.ars.sicilia.it/gruppi-parlamentari/XVIII-sud-chiama-nord-le-autonomie",
+      "senateBills": "https://dati.senato.it/sito/home",
+      "cameraGovernment": "https://dati.camera.it/sparql",
+      "supermedia20260917": "https://www.agi.it/politica/news/2026-09-17/supermedia-agi-youtrend-39116714/",
+      "oraStructure": "https://ora-italia.it/la-struttura-del-partito/",
+      "cameraGroupsList": "https://www.camera.it/leg19/217",
+      "senateGroupsList": "https://www.senato.it/composizione/gruppi-parlamentari/",
+      "partyRegisterList": "https://www.parlamento.it/1063"
     },
     "collections": {
-      "parties": 69,
-      "politicalMovements": 2,
-      "politicalFigures": 4,
-      "partyLeaderships": 4,
+      "parties": 75,
+      "politicalMovements": 6,
+      "politicalFigures": 38,
+      "partyLeaderships": 38,
       "parliamentaryGroups": 22,
-      "coalitions": 0,
-      "electoralLists": 13,
+      "coalitions": 1,
+      "electoralLists": 17,
       "politicians": 604,
       "offices": 613,
-      "partyMemberships": 0,
+      "partyMemberships": 16,
       "groupMemberships": 674,
       "electionParticipations": 268,
       "partyMembershipHistory": 0,
@@ -59534,7 +61571,20 @@
       "Il Registro nazionale Parlamento include le iscrizioni storiche ancora visibili; lo stato historical è valorizzato solo quando il registro documenta cancellazione. La registrazione non certifica automaticamente attività politica sul territorio.",
       "La Camera espone anagrafica, collegio e lista di elezione nelle schede individuali; tali campi sono importati separatamente dai gruppi.",
       "Dati Senato corrente via open data per il 22/09/2026; i gruppi e le appartenenze sono esportati separatamente e non diventano partiti.",
-      "Sono importati i mandati di deputato/senatore e i presidenti di gruppo restituiti dal dataset ufficiale del Senato; altre cariche sono lasciate non assegnate finché non vengono importate da fonti specifiche."
-    ]
+      "Sono importati i mandati di deputato/senatore e i presidenti di gruppo restituiti dal dataset ufficiale del Senato; altre cariche sono lasciate non assegnate finché non vengono importate da fonti specifiche.",
+      "La collocazione politica (estrema sinistra … estrema destra) è la classificazione sintetica del documento di specifica del 24/09/2026; per liste e coalizioni indica l’aggregazione e non sostituisce le singole componenti.",
+      "Le liste con più partiti o coalizioni restano relazioni elettorali: non diventano iscrizione a un singolo partito. Le iscrizioni individuali documentate derivano solo da incarichi di partito verificati.",
+      "Il sondaggio iniziale è la Supermedia YouTrend/Agi del 17/09/2026 (dato reale); dalla prima settimana di gioco i sondaggi sono simulati."
+    ],
+    "specification": {
+      "title": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026",
+      "asOf": "2026-09-24",
+      "sections": [
+        "§2 collocazione",
+        "§3 leadership",
+        "§4 nuove entità",
+        "§6 collegamento liste → partiti"
+      ]
+    }
   }
 }

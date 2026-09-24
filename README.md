@@ -20,6 +20,28 @@ Apri `http://127.0.0.1:4173`. Il gioco si apre sul **menu principale**: Nuova pa
 
 **Offline**: dopo la prima visita un service worker (`sw.js`) conserva pagina, moduli, fogli di stile e tutti i dati reali; senza rete il gioco si avvia lo stesso. La strategia è “prima la rete”: online arriva sempre l’ultima versione.
 
+## Documento dati del 24/09/2026
+
+Il documento “POLITICANDO 2026 — Database politici e partiti — 24/09/2026” è integrato con `npm run import:document` (`scripts/import-document-2026-09-24.mjs`), idempotente: aggiunge senza sostituire né duplicare.
+
+- **Collocazione** (§2) per ogni partito, movimento e coalizione (`politicalPosition`: estrema sinistra … estrema destra), con la fonte del documento. Per liste e coalizioni indica l’aggregazione.
+- **Nuove entità** (§4) con fonte ufficiale dell’organizzazione: Forza Nuova, CasaPound Italia, Potere al Popolo!, Rete dei Patrioti (movimenti); Democrazia Sovrana Popolare, Partito Popolare del Nord, PCI, PCL, Partito Sardo d’Azione, ORA! (partiti); Alleanza Verdi e Sinistra (coalizione); Libertà, Stati Uniti d’Europa, Pace Terra Dignità, Partito Animalista - Italexit per l’Italia (liste europee 2024). “Liberali Democratici Europei” è una denominazione riconciliata con il Partito Liberaldemocratico; i nomi MEF di M5S e +Europa restano per il 2‰ ma non compaiono come secondi partiti (`sameEntityAs`).
+- **Leadership** (§3): 34 incarichi nuovi più i 4 di Futuro Nazionale, ciascuno con la pagina ufficiale del partito; dove il documento chiede verifica e non c’è una fonte ufficiale corrente (PCL, Rete dei Patrioti, AVS, liste) il vertice resta vuoto. Le figure con nome identico a un parlamentare sono collegate alla sua scheda; un incarico documentato vale come iscrizione (`party-memberships.json`).
+- **Liste → partiti** (§6): le liste di un solo partito puntano al partito; liste di più partiti e coalizioni restano relazioni elettorali (`componentPartyIds`, `coalitionId`).
+- **Sondaggio reale iniziale**: `polls.json` (Supermedia YouTrend/Agi del 17/09/2026, fonte Agi). Ogni nuova carriera parte da questi valori, marcati come dato reale; dalla prima settimana i sondaggi sono simulati.
+
+## Loghi dei politici
+
+In ogni elenco o scheda di deputati, senatori, dirigenti, contatti e avversari l’iniziale è sostituita dal logo del partito collegato nel database (`src/data/repositories/party-links.js`): collegamento dell’amministratore, poi iscrizione documentata, poi lista d’elezione di un solo partito (o coalizione della lista). Il gruppo parlamentare non viene mai usato per dedurre il partito. Il logo è quello verificato o pubblicato dall’amministratore; senza logo resta il segno grafico del partito, senza partito documentato l’iniziale della Camera.
+
+## Account e salvataggi online
+
+Dal menu principale (“Account e salvataggi online”) si crea un account o si accede; la carriera in corso si salva online dopo ogni salvataggio locale e si recupera da qualsiasi dispositivo. Il Worker usa Cloudflare D1 (`politicando-accounts`, schema in `migrations/`): la password viene derivata nel browser (PBKDF2-SHA-256, 310 000 iterazioni) e il server conserva solo un hash con sale casuale; le sessioni sono token casuali salvati come hash; ogni salvataggio ha una revisione, così un dispositivo con una versione vecchia non sovrascrive quella più recente senza una scelta esplicita. Il browser conserva comunque una copia per giocare offline.
+
+## Carriera infinita e difficoltà
+
+Nessun traguardo, anno o crollo di reputazione chiude la partita: la caduta peggiore costa incarichi e sostegni e apre una “traversata nel deserto”; i salvataggi che nelle versioni precedenti si erano chiusi riprendono. La difficoltà (Facile, Normale, Difficile) si sceglie nel riepilogo della nuova partita e modifica fondi, capitale, giorni di lavoro, statistiche iniziali, frequenza di crisi e scandali, esiti incerti, tolleranza del partito, candidature, pazienza degli alleati, disciplina delle maggioranze, rumore dei sondaggi e durata della memoria.
+
 ## Politiche pubbliche, bilancio e difficoltà
 
 La simulazione copre **34 temi** (economia, finanze pubbliche, fisco, industria, commercio, lavoro, pensioni, welfare, sanità, scuola, università e ricerca, infrastrutture, trasporti, energia, ambiente, agricoltura, sicurezza, difesa, giustizia, immigrazione, cittadinanza, casa, famiglia, giovani, natalità, cultura, sport, turismo, digitale, pubblica amministrazione, autonomie, Mezzogiorno, esteri, Europa). Ogni tema ha un indicatore, un problema tipico che emerge quando peggiora, un ministero responsabile e quattro strumenti (investimento, riforma strutturale, sostegno mirato, regolazione) con costi, tempi ed effetti diversi (`src/data/simulation/policy-rules.js`).
@@ -198,6 +220,9 @@ npm run check:government  # 34 temi, bilancio, territori, cittadini, sicurezza, 
 npm run check:events      # eventi procedurali: condizioni, cooldown, rarità, esclusività, varianti, catene
 npm run check:career      # carriera pluriennale end-to-end, salvataggi e migrazione
 npm run check:admin-sync  # archivio amministrativo condiviso su Workers KV
+npm run check:document    # documento del 24/09/2026: collocazioni, nuove entità, leadership, liste, loghi dei politici, sondaggio reale
+npm run check:world       # alleanze realistiche, evoluzione dei partiti, difficoltà, notizie, memoria politica
+npm run check:accounts    # account, salvataggi online su D1 (SQLite in test), conflitti tra dispositivi
 npm run check:all         # tutte le verifiche
 npm run check:gameplay
 npm run check:parliament

@@ -69,7 +69,42 @@ for (const cabinet of government) {
     if (member.politicianId && !politicianIds.has(member.politicianId)) fail(`Governo ${cabinet.id}: deputato inesistente ${member.politicianId}`);
   }
 }
+// Specification of 24/09/2026: every entity classified, lists linked without turning into memberships, no alias clashes.
+const POSITIONS = ['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra'];
+const coalitionIds = idsByCollection('coalitions');
+for (const entity of [...organizations, ...(db.coalitions ?? [])]) if (!POSITIONS.includes(entity.politicalPosition)) fail(`${entity.id}: collocazione politica mancante o non valida`);
+for (const list of db.electoralLists) {
+  if (list.politicalPosition && !POSITIONS.includes(list.politicalPosition)) fail(`${list.id}: collocazione non valida`);
+  if (list.electionId === 'election-it-politiche-2022' && !list.listType) fail(`${list.id}: lista 2022 senza collegamento documentato`);
+  if (list.partyId && !partyIds.has(list.partyId)) fail(`${list.id}: partito della lista inesistente`);
+  if (list.coalitionId && !coalitionIds.has(list.coalitionId)) fail(`${list.id}: coalizione inesistente`);
+  for (const id of list.componentPartyIds ?? []) if (!partyIds.has(id)) fail(`${list.id}: componente inesistente ${id}`);
+  if (list.partyId && (list.componentPartyIds ?? []).length > 1) fail(`${list.id}: una lista di più partiti non può avere un partito singolo`);
+}
+for (const coalition of db.coalitions ?? []) for (const id of coalition.componentPartyIds ?? []) if (!partyIds.has(id)) fail(`${coalition.id}: componente inesistente ${id}`);
+for (const entity of organizations) if (entity.sameEntityAs && (!partyIds.has(entity.sameEntityAs) || entity.sameEntityAs === entity.id)) fail(`${entity.id}: riconciliazione non valida`);
+const allNames = new Map();
+for (const entity of [...organizations.filter(item => !item.sameEntityAs), ...(db.coalitions ?? [])]) for (const name of [entity.officialName, ...(entity.aliases ?? []).map(alias => alias.name)]) {
+  const key = normalize(name);
+  if (allNames.has(key) && allNames.get(key) !== entity.id) fail(`Nome duplicato tra entità: ${name}`);
+  allNames.set(key, entity.id);
+}
+for (const figure of db.politicalFigures ?? []) if (figure.politicianId && !politicianIds.has(figure.politicianId)) fail(`Figura collegata a un parlamentare inesistente: ${figure.id}`);
+for (const figure of db.politicalFigures ?? []) if (figure.politicianId && normalize(db.politicians.find(person => person.id === figure.politicianId).fullName) !== normalize(figure.fullName)) fail(`Figura collegata a una persona con nome diverso: ${figure.id}`);
+const membershipKeys = db.partyMemberships.map(item => `${item.politicianId}|${item.partyId}`);
+if (new Set(membershipKeys).size !== membershipKeys.length) fail('Iscrizioni a partito duplicate');
+// The opening poll: a real, sourced snapshot linked to entities of the dataset.
+const polls = JSON.parse(await readFile(new URL('../src/data/real/polls.json', import.meta.url), 'utf8'));
+if (lawsManifest.collections.realPolls !== polls.length) fail('Conteggio dei sondaggi reali nel manifest non coerente');
+for (const poll of polls) {
+  if (poll.source !== 'real' || poll.verified !== true || !/^https:\/\//.test(poll.sourceUrl) || !poll.publishedAt) fail(`Sondaggio ${poll.id}: provenienza incompleta`);
+  const total = poll.results.reduce((sum, row) => sum + row.share, 0);
+  if (total > 100 || total < 80) fail(`Sondaggio ${poll.id}: totale non plausibile (${total})`);
+  for (const row of poll.results) if (!partyIds.has(row.entityId) && !coalitionIds.has(row.entityId)) fail(`Sondaggio ${poll.id}: forza senza entità ${row.entityId}`);
+  if (new Set(poll.results.map(row => row.entityId)).size !== poll.results.length) fail(`Sondaggio ${poll.id}: forze duplicate`);
+}
 if (process.exitCode) process.exit(process.exitCode);
+console.log(`Specifica 24/09/2026: ${organizations.length + (db.coalitions ?? []).length} entità classificate, ${db.electoralLists.length} liste (${db.electoralLists.filter(list => list.partyId).length} di partito singolo), ${db.partyMemberships.length} iscrizioni documentate, ${(db.politicalFigures ?? []).filter(item => item.politicianId).length} figure collegate a parlamentari, sondaggio reale iniziale del ${polls[0].publishedAt}.`);
 const nameCounts = new Map();
 for (const person of db.politicians) { const name=normalize(person.fullName); nameCounts.set(name,(nameCounts.get(name)??0)+1); }
 const homonyms = [...nameCounts.values()].filter(count=>count>1).reduce((sum,count)=>sum+count,0);

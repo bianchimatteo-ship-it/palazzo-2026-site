@@ -19,3 +19,4 @@ src/data/real/database.json
 *.zip
 .assetsignore
 worker.js
+migrations

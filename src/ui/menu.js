@@ -1,15 +1,16 @@
 // Main menu, how-to-play, settings, save slots and the end-of-week report.
-import { SETTINGS_SCHEMA } from '../core/settings.js?v=20260924-17';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20260924-17';
-import { formatDate } from '../core/time.js?v=20260924-17';
-import { illustration } from './illustrations.js?v=20260924-17';
-import { glyph } from './visuals.js?v=20260924-17';
-import { esc, signed } from './charts.js?v=20260924-17';
+import { SETTINGS_SCHEMA } from '../core/settings.js?v=20260924-18';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20260924-18';
+import { formatDate } from '../core/time.js?v=20260924-18';
+import { illustration } from './illustrations.js?v=20260924-18';
+import { glyph } from './visuals.js?v=20260924-18';
+import { esc, signed } from './charts.js?v=20260924-18';
 
 const when = iso => { try { return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch { return ''; } };
 const MENU = [
   ['nuova', 'flag', 'Nuova partita', 'Crea il tuo politico e scegli da dove partire'],
   ['carica', 'book', 'Carica partita', 'Salvataggi, file esportati e importati'],
+  ['account', 'users', 'Account e salvataggi online', 'Ritrova le tue carriere su ogni dispositivo'],
   ['guida', 'target', 'Come giocare', 'Obiettivo, tempo, decisioni, elezioni'],
   ['impostazioni', 'shield', 'Impostazioni', 'Audio, animazioni, salvataggi, accessibilità']
 ];
@@ -23,7 +24,9 @@ const HOW_TO = [
   ['Elezioni', 'ballot', 'Il calendario apre le finestre di candidatura. Preparazione, fondi, fondo elettorale, sostegno del partito, sondaggi e umore dei cittadini decidono come parte la campagna.'],
   ['Paese, cittadini e conseguenze', 'map', 'Una legge costa margine di bilancio, arriva sui territori, cambia l’umore dei gruppi di cittadini, finisce sui media e sposta i sondaggi. Il Quartier generale spiega il perché di ogni variazione.'],
   ['Dati reali e simulazione', 'shield', 'Partiti, parlamentari, gruppi, governo in carica, leggi e 2×1000 sono dati reali verificati e restano invariati. Tutto ciò che nasce dal gioco è simulazione; le correzioni dell’amministratore sono dati dell’utente.'],
-  ['Salvataggi', 'book', 'Il gioco salva nel browser secondo le impostazioni. Puoi conservare fino a 5 partite, esportarle su file e reimportarle su un altro dispositivo.']
+  ['Salvataggi e account', 'book', 'Con un account le carriere si salvano anche online e si ritrovano su qualsiasi dispositivo; il browser ne tiene una copia per giocare offline. Senza account puoi comunque conservare fino a 5 partite nel browser ed esportarle su file.'],
+  ['Carriera infinita', 'route', 'Non c’è una fine: né traguardi, né anni, né crolli di reputazione chiudono la partita. Una caduta costa incarichi e sostegni, ma si può sempre risalire.'],
+  ['Difficoltà', 'shield', 'Facile, Normale o Difficile si scelgono all’inizio: cambiano risorse, frequenza delle crisi, esiti incerti, pazienza del partito e degli alleati, candidature e disciplina delle maggioranze.']
 ];
 
 function continueCard(meta, lastSaved, unsaved) {
@@ -37,6 +40,23 @@ function loadView({ hasCareer, meta, slots, error }) {
     <div class="slot-list">${rows || '<p class="quiet-copy">Nessun salvataggio negli slot.</p>'}</div>
     <label class="menu-import"><input type="file" accept="application/json,.json" data-menu-import />${glyph('book', 16)} Importa una partita da file</label>
     ${error ? `<p class="menu-error" role="alert">${esc(error)}</p>` : ''}`;
+}
+
+// Account: sign up or sign in, then every career is also kept online and can be resumed on another device.
+function accountView(account = {}) {
+  const note = account.error ? `<p class="menu-error" role="alert">${esc(account.error)}</p>` : account.message ? `<p class="account-message" role="status">${esc(account.message)}</p>` : '';
+  if (!account.available) return `<h2>Account e salvataggi online</h2><p class="section-subtitle">Gli account funzionano sul sito pubblicato. Da qui la partita resta salvata in questo browser: puoi esportarla su file dal menu Carica partita.</p>${note}`;
+  if (!account.user) return `<h2>Account e salvataggi online</h2><p class="section-subtitle">Con un account le tue carriere si salvano online e le ritrovi su qualsiasi dispositivo. Il browser ne conserva comunque una copia per giocare anche senza connessione.</p>
+    <div class="account-forms">
+      <form class="account-form" data-account-form="login"><h3>Accedi</h3><label>Nome utente<input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required minlength="3" maxlength="24" /></label><label>Password<input name="password" type="password" autocomplete="current-password" required minlength="8" /></label><button class="primary-button" type="submit" ${account.busy ? 'disabled' : ''}>${account.busy === 'login' ? 'Accesso in corso…' : 'Accedi'}</button></form>
+      <form class="account-form" data-account-form="register"><h3>Crea un account</h3><label>Nome utente<input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required minlength="3" maxlength="24" placeholder="3–24 caratteri: a-z, 0-9, . _ -" /></label><label>Password<input name="password" type="password" autocomplete="new-password" required minlength="8" placeholder="Almeno 8 caratteri" /></label><label>Ripeti la password<input name="confirm" type="password" autocomplete="new-password" required minlength="8" /></label><button class="secondary-button" type="submit" ${account.busy ? 'disabled' : ''}>${account.busy === 'register' ? 'Creazione in corso…' : 'Crea l’account'}</button><small>Non serve un indirizzo email. La password non lascia mai il tuo browser in chiaro: conservala con cura, non può essere recuperata.</small></form>
+    </div>${note}`;
+  const rows = (account.saves ?? []).map(save => `<article class="slot-row ${save.slot === account.currentSlot ? 'is-current' : ''}"><div><strong>${esc(save.name || save.meta?.player || 'Carriera')}</strong><span>${esc(save.meta?.role ?? 'Senza incarico')} · ${esc(save.meta?.party ?? '')}${save.meta?.difficulty ? ` · ${esc(save.meta.difficulty)}` : ''}</span><small>Settimana ${esc(save.meta?.week ?? '—')} · ${esc(save.meta?.gameDate ? formatDate(save.meta.gameDate) : '')} · online dal ${esc(when(save.updatedAt))} · revisione ${esc(save.revision)}</small></div><button class="primary-button" data-cloud-load="${esc(save.slot)}">Carica</button><button class="icon-text-button" data-cloud-delete="${esc(save.slot)}" aria-label="Elimina online ${esc(save.name || 'carriera')}">${glyph('alert', 15)} Elimina</button></article>`).join('');
+  const conflict = account.conflict ? `<div class="account-conflict" role="alert"><strong>Su un altro dispositivo c’è una versione più recente di questa carriera</strong><small>Online: revisione ${esc(account.conflict.remote?.revision)} del ${esc(when(account.conflict.remote?.updatedAt))}. Scegli quale tenere.</small><div class="setting-actions"><button class="primary-button" data-conflict="download">Usa la versione online</button><button class="secondary-button" data-conflict="overwrite">Sovrascrivi con questa</button></div></div>` : '';
+  return `<h2>Account e salvataggi online</h2><p class="section-subtitle">Connesso come <strong>${esc(account.user.username)}</strong>. La carriera in corso si sincronizza da sola dopo ogni salvataggio${account.lastSync ? ` · ultima sincronizzazione ${esc(when(account.lastSync))}` : ''}.</p>
+    ${conflict}
+    <div class="setting-actions"><button class="primary-button" data-account-action="sync" ${account.busy ? 'disabled' : ''}>${account.busy === 'sync' ? 'Sincronizzazione…' : 'Salva ora online'}</button><button class="secondary-button" data-account-action="refresh">Aggiorna elenco</button><button class="secondary-button" data-account-action="logout">Esci</button></div>
+    <div class="slot-list">${rows || '<p class="quiet-copy">Nessuna carriera salvata online: la prossima volta che salvi, la carriera in corso comparirà qui.</p>'}</div>${note}`;
 }
 
 function guideView() {
@@ -53,7 +73,7 @@ export function settingsView(settings, { error = '' } = {}) {
 
 export function renderMainMenu(menu, context) {
   const { hasCareer, meta, lastSaved, unsaved, stats, settings } = context;
-  const side = menu.view === 'carica' ? loadView(context) : menu.view === 'guida' ? guideView() : menu.view === 'impostazioni' ? settingsView(settings, context) : `<h2>La politica italiana, settimana dopo settimana</h2><p class="section-subtitle">Un gestionale di carriera in un mondo politico vivo: partiti, parlamentari, governo e leggi reali; tutto ciò che accade in partita è simulazione dichiarata.</p>
+  const side = menu.view === 'carica' ? loadView(context) : menu.view === 'account' ? accountView(context.account) : menu.view === 'guida' ? guideView() : menu.view === 'impostazioni' ? settingsView(settings, context) : `<h2>La politica italiana, settimana dopo settimana</h2><p class="section-subtitle">Un gestionale di carriera in un mondo politico vivo: partiti, parlamentari, governo e leggi reali; tutto ciò che accade in partita è simulazione dichiarata.</p>
     <div class="menu-facts">${stats.map(([value, label]) => `<div><strong>${esc(value)}</strong><span>${esc(label)}</span></div>`).join('')}</div>`;
   return `<div class="main-menu">
     ${illustration('palazzo', 'menu-art')}
@@ -62,7 +82,7 @@ export function renderMainMenu(menu, context) {
       <p class="menu-tagline">Una carriera nella politica italiana</p>
       ${hasCareer ? continueCard(meta, lastSaved, unsaved) : ''}
       <nav class="menu-list" aria-label="Menu principale">${MENU.map(([id, icon, label, detail]) => `<button class="menu-item ${menu.view === id ? 'active' : ''}" data-menu="${id}">${glyph(icon, 18)}<span><strong>${esc(label)}</strong><small>${esc(detail)}</small></span></button>`).join('')}</nav>
-      <p class="menu-footnote">Dati reali verificati · simulazione dichiarata · i salvataggi restano nel tuo browser</p>
+      <p class="menu-footnote">Dati reali verificati · simulazione dichiarata · ${context.account?.user ? `salvataggi online come ${esc(context.account.user.username)}` : 'salvataggi nel browser, online con un account'}</p>
     </div>
     <section class="menu-panel" aria-live="polite">${side}</section>
   </div>`;

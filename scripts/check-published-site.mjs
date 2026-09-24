@@ -17,7 +17,7 @@ const files = {
   offices:'offices.json', partyMemberships:'party-memberships.json', groupMemberships:'group-memberships.json', electionParticipations:'election-participations.json',
   partyMembershipHistory:'party-membership-history.json', parliamentaryGroupHistory:'parliamentary-group-history.json', officeHistory:'office-history.json',
   territories:'territories.json', elections:'elections.json', chambers:'chambers.json', laws:'laws.json',
-  twoPerThousand:'two-per-thousand.json', government:'government.json'
+  twoPerThousand:'two-per-thousand.json', government:'government.json', realPolls:'polls.json'
 };
 const failures = [];
 const assert = (condition, message) => { if (!condition) failures.push(message); };
@@ -80,7 +80,7 @@ try {
   const [{ bytes:manifestBytes }, localManifest] = await Promise.all([get(manifestUrl), localJson('manifest.json')]);
   const liveManifest = JSON.parse(manifestBytes.toString('utf8'));
   assert(JSON.stringify(liveManifest) === JSON.stringify(localManifest), 'Manifest remoto non corrisponde allo snapshot locale');
-  assert(liveManifest.snapshotDate === '2026-09-22', `Snapshot pubblicato inatteso: ${liveManifest.snapshotDate}`);
+  assert(liveManifest.snapshotDate === localManifest.snapshotDate && liveManifest.snapshotDate >= '2026-09-24', `Snapshot pubblicato inatteso: ${liveManifest.snapshotDate}`);
 
   const collections = await Promise.all(Object.entries(files).map(async ([name,file]) => {
     const url = new URL(file, assetBase); url.searchParams.set('v', version);
@@ -95,9 +95,11 @@ try {
   }));
   const db = Object.fromEntries(collections);
   const parties = [...db.parties,...db.politicalMovements];
-  assert(db.parties.length === 69 && db.politicalMovements.length === 2, 'Conteggi pubblicati dei partiti/movimenti non corrispondono');
+  assert(db.parties.length === localManifest.collections.parties && db.politicalMovements.length === localManifest.collections.politicalMovements, 'Conteggi pubblicati dei partiti/movimenti non corrispondono');
   assert(db.politicians.length === 604 && db.parliamentaryGroups.length === 22, 'Conteggi pubblicati di politici/gruppi non corrispondono');
-  assert(db.politicalFigures.length === 4 && db.partyLeaderships.length === 4, 'Figure politiche o incarichi di partito mancanti');
+  assert(db.politicalFigures.length === localManifest.collections.politicalFigures && db.partyLeaderships.length === localManifest.collections.partyLeaderships && db.partyLeaderships.length >= 38, 'Figure politiche o incarichi di partito mancanti');
+  assert([...parties, ...db.coalitions].every(item => item.politicalPosition), 'Collocazione del documento mancante in qualche entità pubblicata');
+  assert(db.realPolls[0]?.source === 'real' && db.realPolls[0].results.length >= 10, 'Sondaggio reale iniziale mancante');
   for (const [name,records] of Object.entries(db)) for (const record of records) {
     assert(record.source === 'real' && record.verified === true && record.sourceUrl && record.sourceName && record.verifiedAt, `${name}/${record.id}: provenienza non verificata`);
   }
@@ -130,14 +132,25 @@ try {
     assert(hash(bytes) === hash(expected), 'sw.js live diverso dal file locale');
     assert(/javascript/.test(response.headers.get('content-type') ?? ''), 'sw.js non è servito come JavaScript');
   } catch (error) { failures.push(`sw.js non disponibile (${error.message})`); }
+  // Favicon and web app manifest: the POLITICANDO mark in every browser.
+  for (const asset of ['favicon.ico', 'favicon.svg', 'site.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png', 'icons/favicon-32.png']) {
+    try {
+      const [{ bytes }, expected] = await Promise.all([get(new URL(asset, pageUrl)), readFile(new URL(`../${asset}`, import.meta.url))]);
+      assert(hash(bytes) === hash(expected), `${asset} live diverso dal file locale`);
+    } catch (error) { failures.push(`${asset} non disponibile (${error.message})`); }
+  }
   // On Workers, the shared admin archive answers (read-only for everyone).
   if (!/github\.io$/.test(pageUrl.host)) {
     const response = await fetch(new URL('api/admin', pageUrl), { signal: AbortSignal.timeout(30000) }).catch(() => null);
     const body = response?.ok ? await response.json().catch(() => null) : null;
     assert(body && typeof body.parties === 'object' && typeof body.logos === 'object' && 'configured' in body, 'Archivio condiviso /api/admin non disponibile sul Worker');
+    // The account service is wired to its database: without a session it answers 401 (no account is created here).
+    const account = await fetch(new URL('api/account/me', pageUrl), { signal: AbortSignal.timeout(30000) }).catch(() => null);
+    const accountBody = account ? await account.json().catch(() => null) : null;
+    assert(account?.status === 401 && /Sessione/.test(accountBody?.error ?? ''), `Servizio account non pronto sul Worker (${account?.status} ${accountBody?.error ?? ''})`);
   }
   // Files that must never be published: the archive is never committed; Workers also skips the tooling.
-  const unpublished = ['Archivio.zip', ...(/github\.io$/.test(pageUrl.host) ? [] : ['package.json', 'scripts/check-ui.mjs', 'wrangler.jsonc'])];
+  const unpublished = ['Archivio.zip', ...(/github\.io$/.test(pageUrl.host) ? [] : ['package.json', 'scripts/check-ui.mjs', 'wrangler.jsonc', 'worker.js', 'migrations/0001_accounts.sql'])];
   for (const path of unpublished) {
     const response = await fetch(new URL(path, pageUrl), { signal: AbortSignal.timeout(30000) }).catch(() => null);
     assert(!response?.ok, `${path} non dovrebbe essere pubblicato`);

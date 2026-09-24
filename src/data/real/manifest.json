@@ -1,6 +1,6 @@
 {
-  "datasetVersion": "2026-09-22.3",
-  "snapshotDate": "2026-09-22",
+  "datasetVersion": "2026-09-24.1",
+  "snapshotDate": "2026-09-24",
   "publisher": "POLITICANDO 2026 — importatore open data",
   "sourcePolicy": "Primary institutional sources only; unknown values are null. Registry entries are sourced to registration deliberations; only explicit deregistration notices set historical status. MEF 2‰ evidence is dated to its reporting year.",
   "sourceUrls": {
@@ -35,19 +35,24 @@
     "sudChiamaNordHome": "https://sud-chiamanord.it/",
     "sudChiamaNordAssembly": "https://www.ars.sicilia.it/gruppi-parlamentari/XVIII-sud-chiama-nord-le-autonomie",
     "senateBills": "https://dati.senato.it/sito/home",
-    "cameraGovernment": "https://dati.camera.it/sparql"
+    "cameraGovernment": "https://dati.camera.it/sparql",
+    "supermedia20260917": "https://www.agi.it/politica/news/2026-09-17/supermedia-agi-youtrend-39116714/",
+    "oraStructure": "https://ora-italia.it/la-struttura-del-partito/",
+    "cameraGroupsList": "https://www.camera.it/leg19/217",
+    "senateGroupsList": "https://www.senato.it/composizione/gruppi-parlamentari/",
+    "partyRegisterList": "https://www.parlamento.it/1063"
   },
   "collections": {
-    "parties": 69,
-    "politicalMovements": 2,
-    "politicalFigures": 4,
-    "partyLeaderships": 4,
+    "parties": 75,
+    "politicalMovements": 6,
+    "politicalFigures": 38,
+    "partyLeaderships": 38,
     "parliamentaryGroups": 22,
-    "coalitions": 0,
-    "electoralLists": 13,
+    "coalitions": 1,
+    "electoralLists": 17,
     "politicians": 604,
     "offices": 613,
-    "partyMemberships": 0,
+    "partyMemberships": 16,
     "groupMemberships": 674,
     "electionParticipations": 268,
     "partyMembershipHistory": 0,
@@ -56,17 +61,31 @@
     "elections": 2,
     "laws": 436,
     "twoPerThousand": 30,
-    "government": 1
+    "government": 1,
+    "realPolls": 1
   },
   "warnings": [
     "Il Registro nazionale Parlamento include le iscrizioni storiche ancora visibili; lo stato historical è valorizzato solo quando il registro documenta cancellazione. La registrazione non certifica automaticamente attività politica sul territorio.",
     "La Camera espone anagrafica, collegio e lista di elezione nelle schede individuali; tali campi sono importati separatamente dai gruppi.",
     "Dati Senato corrente via open data per il 22/09/2026; i gruppi e le appartenenze sono esportati separatamente e non diventano partiti.",
-    "Sono importati i mandati di deputato/senatore e i presidenti di gruppo restituiti dal dataset ufficiale del Senato; altre cariche sono lasciate non assegnate finché non vengono importate da fonti specifiche."
+    "Sono importati i mandati di deputato/senatore e i presidenti di gruppo restituiti dal dataset ufficiale del Senato; altre cariche sono lasciate non assegnate finché non vengono importate da fonti specifiche.",
+    "La collocazione politica (estrema sinistra … estrema destra) è la classificazione sintetica del documento di specifica del 24/09/2026; per liste e coalizioni indica l’aggregazione e non sostituisce le singole componenti.",
+    "Le liste con più partiti o coalizioni restano relazioni elettorali: non diventano iscrizione a un singolo partito. Le iscrizioni individuali documentate derivano solo da incarichi di partito verificati.",
+    "Il sondaggio iniziale è la Supermedia YouTrend/Agi del 17/09/2026 (dato reale); dalla prima settimana di gioco i sondaggi sono simulati."
   ],
   "twoPerThousandTotals": {
     "declarationYear": 2025,
     "validChoices": 2216663,
     "amountEuro": 32584199
+  },
+  "specification": {
+    "title": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026",
+    "asOf": "2026-09-24",
+    "sections": [
+      "§2 collocazione",
+      "§3 leadership",
+      "§4 nuove entità",
+      "§6 collegamento liste → partiti"
+    ]
   }
 }

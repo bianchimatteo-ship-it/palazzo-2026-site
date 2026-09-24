@@ -1,8 +1,9 @@
-import { CAMPAIGN_ACTIVITIES, CAMPAIGN_OBJECTIVES, DEBATE_TOPICS, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-17';
-import { campaignSummary } from '../core/campaign-engine.js?v=20260924-17';
-import { resultDescription } from '../core/election-engine.js?v=20260924-17';
-import { formatDate } from '../core/time.js?v=20260924-17';
-import { careerLevelLabel } from '../data/regions.js?v=20260924-17';
+import { CAMPAIGN_ACTIVITIES, CAMPAIGN_OBJECTIVES, DEBATE_TOPICS, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-18';
+import { affiliationOf, markForPerson } from './person-marks.js?v=20260924-18';
+import { campaignSummary } from '../core/campaign-engine.js?v=20260924-18';
+import { resultDescription } from '../core/election-engine.js?v=20260924-18';
+import { formatDate } from '../core/time.js?v=20260924-18';
+import { careerLevelLabel } from '../data/regions.js?v=20260924-18';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const roleLabels={sindaco:'Candidatura a sindaco',consigliere:'Candidato in lista per il consiglio',presidente:'Candidato alla presidenza regionale',deputato:'Candidato alla Camera',senatore:'Candidato al Senato',uninominale:'Collegio uninominale simulato',eurodeputato:'Candidato al Parlamento europeo'};
@@ -51,7 +52,8 @@ function renderActive(campaign,parties,logoFor) {
     const img=affiliated&&logoFor(affiliated)?`<img src="${esc(logoFor(affiliated))}" alt="${esc(affiliated.logoAlt??`Logo ${partyName(affiliated)}`)}">`:'';
     const affiliation=realIdentity(candidate)??(affiliated?partyName(affiliated):'Indipendente simulato');
     const initials=candidate.realReference?candidate.realReference.fullName.split(/\s+/).map(word=>word[0]).join('').slice(0,2):(affiliated?.abbreviation??'S').slice(0,2);
-    return `<div class="campaign-rival ${candidate.status==='allied'?'is-allied':''} ${candidate.realReference?'is-real':''}"><div class="campaign-rival-logo">${img||esc(initials)}</div><div class="campaign-rival-main"><strong>${candidate.realReference?esc(candidate.realReference.fullName):'Candidatura simulata'}</strong><span>${esc(affiliation)}${!candidate.realReference&&affiliated?.abbreviation?` · ${esc(affiliated.abbreviation)}`:''}</span><small>${candidate.realReference?'Persona reale · dati di campagna simulati · ':''}${esc(candidate.lastAction)}</small>${realSourceLink(candidate)}</div><div class="campaign-rival-score"><strong>${pct(support)}</strong><span>${candidate.status==='allied'?'in alleanza':`risorse ${number(candidate.resources.money)} €`}</span></div>${affiliated?`<button class="text-link" data-party-profile="${esc(affiliated.id)}">Scheda partito ↗</button>`:''}</div>`;
+    const realMark=candidate.realReference&&affiliationOf(candidate.realReference.politicianId)?markForPerson(candidate.realReference.politicianId):'';
+    return `<div class="campaign-rival ${candidate.status==='allied'?'is-allied':''} ${candidate.realReference?'is-real':''}"><div class="campaign-rival-logo">${realMark||img||esc(initials)}</div><div class="campaign-rival-main"><strong>${candidate.realReference?esc(candidate.realReference.fullName):'Candidatura simulata'}</strong><span>${esc(affiliation)}${!candidate.realReference&&affiliated?.abbreviation?` · ${esc(affiliated.abbreviation)}`:''}</span><small>${candidate.realReference?'Persona reale · dati di campagna simulati · ':''}${esc(candidate.lastAction)}</small>${realSourceLink(candidate)}</div><div class="campaign-rival-score"><strong>${pct(support)}</strong><span>${candidate.status==='allied'?'in alleanza':`risorse ${number(candidate.resources.money)} €`}</span></div>${affiliated?`<button class="text-link" data-party-profile="${esc(affiliated.id)}">Scheda partito ↗</button>`:''}</div>`;
   }).join('');
   const territoryOptions=campaign.territories.map(area=>`<option value="${esc(area.id)}">${esc(area.name)}</option>`).join('');
   const debateOptions=DEBATE_TOPICS.map(topic=>`<option value="${topic.id}">${esc(topic.label)} · preparazione ${number(campaign.preparationByTopic[topic.id]??0)}</option>`).join('');

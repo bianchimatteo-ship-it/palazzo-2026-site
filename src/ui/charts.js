@@ -1,7 +1,7 @@
 // Shared building blocks for the simulation screens: numbers, state badges, meters and charts.
 // Charts follow the same rules as the polls page: thin marks, one axis, legend + direct labels,
 // hover tooltips through data-trend / data-tip, text in ink rather than in the series colour.
-import { glyph } from './visuals.js?v=20260924-17';
+import { glyph } from './visuals.js?v=20260924-18';
 
 export const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const num = (value, digits = 1) => value === null || value === undefined || Number.isNaN(Number(value)) ? '—' : Number(value).toLocaleString('it-IT', { maximumFractionDigits: digits });
@@ -46,6 +46,25 @@ export function sparkline(values, color = 'var(--party-accent)') {
   return `<svg class="sparkline" viewBox="0 0 120 32" aria-hidden="true"><polyline points="${coords.map(point => point.join(',')).join(' ')}" /><circle cx="${lx}" cy="${ly}" r="3.5" style="fill:${esc(color)}" /></svg>`;
 }
 
+// Lines drawn together must be told apart: when two series have colours too close to read, the later one takes
+// the next validated palette slot that is far enough from all the others (the entity keeps its colour elsewhere).
+function rgb(hex) { const value = /^#([\da-f]{6})$/i.exec(hex ?? '')?.[1]; return value ? [0, 2, 4].map(i => parseInt(value.slice(i, i + 2), 16)) : null; }
+function colorGap(a, b) {
+  const x = rgb(a), y = rgb(b);
+  if (!x || !y) return 999;
+  const mean = (x[0] + y[0]) / 2;
+  const [dr, dg, db] = [x[0] - y[0], x[1] - y[1], x[2] - y[2]];
+  return Math.sqrt((2 + mean / 256) * dr * dr + 4 * dg * dg + (2 + (255 - mean) / 256) * db * db);
+}
+export function distinctSeries(series, minimum = 150) {
+  const used = [];
+  return series.map(item => {
+    let color = item.color;
+    if (used.some(other => colorGap(other, color) < minimum)) color = SERIES.find(candidate => used.every(other => colorGap(other, candidate) >= minimum)) ?? color;
+    used.push(color);
+    return { ...item, color };
+  });
+}
 // Round tick spacing (1, 2, 5 × 10ⁿ) whatever the magnitude of the data.
 function niceStep(raw) {
   const magnitude = 10 ** Math.floor(Math.log10(Math.max(raw, 1e-9)));
@@ -54,7 +73,8 @@ function niceStep(raw) {
 }
 const compact = value => Math.abs(value) >= 10000 ? `${num(value / 1000, 1)}k` : num(value, 1);
 // Multi-series line chart with legend, direct end labels and a crosshair tooltip.
-export function lineChart({ series, labels, tips = labels, unit = '', min = null, max = null, height = 230, ariaLabel = 'Andamento', digits = 1 }) {
+export function lineChart({ series: input, labels, tips = labels, unit = '', min = null, max = null, height = 230, ariaLabel = 'Andamento', digits = 1 }) {
+  const series = distinctSeries(input);
   const length = labels.length;
   if (length < 2) return '<p class="quiet-copy">Il grafico compare dalla seconda settimana: chiudi la settimana per vedere l’andamento.</p>';
   const W = 660, H = height, L = 40, R = 150, T = 14, B = 28;

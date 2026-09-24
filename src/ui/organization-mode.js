@@ -1,11 +1,12 @@
 // The party as an organisation, and the real parliamentarians the career deals with.
-import { ORGANS, organOf, treasuryOutlook } from '../core/organization-engine.js?v=20260924-17';
-import { contactStance } from '../core/contacts-engine.js?v=20260924-17';
-import { SELECTION_METHODS } from '../data/simulation/organization-rules.js?v=20260924-17';
-import { artTile, glyph } from './visuals.js?v=20260924-17';
-import { illustration } from './illustrations.js?v=20260924-17';
+import { ORGANS, organOf, treasuryOutlook } from '../core/organization-engine.js?v=20260924-18';
+import { affiliationOf, markForPerson } from './person-marks.js?v=20260924-18';
+import { contactStance } from '../core/contacts-engine.js?v=20260924-18';
+import { SELECTION_METHODS } from '../data/simulation/organization-rules.js?v=20260924-18';
+import { artTile, glyph } from './visuals.js?v=20260924-18';
+import { illustration } from './illustrations.js?v=20260924-18';
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
-import { esc, euro, levelState, lineChart, meter, num, SERIES, signed, sparkline, stateBadge, trendState } from './charts.js?v=20260924-17';
+import { esc, euro, levelState, lineChart, meter, num, SERIES, signed, sparkline, stateBadge, trendState } from './charts.js?v=20260924-18';
 
 const TREND_LABELS = { crescita: 'In crescita', calo: 'In calo', stabile: 'Stabile' };
 
@@ -66,7 +67,7 @@ export function renderContactsPanel(state, { compact = false } = {}) {
     const [stance, label] = contactStance(contact.relation);
     const person = contact.person;
     const chamber = person.chamber === 'senato' ? 'Senato' : 'Camera';
-    return `<article class="contact-card stance-${stance}"><header>${artTile(person.chamber === 'senato' ? 'dome' : 'users', stance === 'ostile' ? '#e34948' : stance === 'alleato' ? '#1baf7a' : '#2a78d6', 'sm')}<div><strong>${esc(person.fullName)}</strong><small>${esc(chamber)} · ${esc(person.groupName ?? 'Gruppo non indicato')}${person.circoscription ? ` · ${esc(person.circoscription)}` : ''}</small>${person.verifiedRole ? `<small class="verified-role">${glyph('shield', 12)} ${esc(person.verifiedRole)}</small>` : ''}</div></header>
+    return `<article class="contact-card stance-${stance}"><header>${affiliationOf(person.id) ? markForPerson(person.id, 'md') : artTile(person.chamber === 'senato' ? 'dome' : 'users', stance === 'ostile' ? '#e34948' : stance === 'alleato' ? '#1baf7a' : '#2a78d6', 'sm')}<div><strong>${esc(person.fullName)}</strong><small>${esc(chamber)} · ${esc(person.groupName ?? 'Gruppo non indicato')}${person.circoscription ? ` · ${esc(person.circoscription)}` : ''}</small>${person.verifiedRole ? `<small class="verified-role">${glyph('shield', 12)} ${esc(person.verifiedRole)}</small>` : ''}</div></header>
       <div class="contact-relation"><span>${esc(label)}</span>${meter(contact.relation, stance === 'ostile' ? 'danger' : stance === 'alleato' ? 'good' : '')}<b>${num(contact.relation, 0)}</b></div>
       <footer><span class="badge">${esc(REASONS[contact.reason] ?? 'Contatto')}</span>${contact.cosigned?.length ? `<span class="badge">${contact.cosigned.length} firme su tue proposte</span>` : ''}${compact ? '' : `${person.sourceUrl ? `<a class="catalog-source" href="${esc(person.sourceUrl)}" target="_blank" rel="noopener noreferrer">Scheda ufficiale ↗</a>` : ''}<button class="secondary-button" data-game-activity="incontro-parlamentare" data-activity-target-value="${esc(person.id)}" ${busy ? 'disabled' : ''}>Incontra · 1 giorno · 1 cap.</button>`}</footer></article>`;
   }).join('');

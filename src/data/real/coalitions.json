@@ -1,1 +1,44 @@
-[]
+[
+  {
+    "id": "coalition-alleanza-verdi-sinistra",
+    "entityType": "coalition",
+    "coalitionType": "coalizione/lista elettorale",
+    "officialName": "Alleanza Verdi e Sinistra",
+    "abbreviation": "AVS",
+    "website": "https://verdisinistra.it/",
+    "componentPartyIds": [
+      "party-registro-p1-2014-13-ir",
+      "party-registro-p1-2017-44-ir"
+    ],
+    "leadership": null,
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://verdisinistra.it/",
+    "sourceName": "Alleanza Verdi e Sinistra — sito ufficiale",
+    "verifiedAt": "2026-09-24",
+    "validFrom": null,
+    "validTo": null,
+    "secondarySources": [
+      {
+        "source": "real",
+        "verified": true,
+        "sourceUrl": "https://www.sinistraitaliana.si/chi-siamo/alleanza-verdi-sinistra/",
+        "sourceName": "Sinistra Italiana — Alleanza Verdi e Sinistra",
+        "verifiedAt": "2026-09-24",
+        "validFrom": null,
+        "validTo": null
+      }
+    ],
+    "status": null,
+    "color": null,
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": null,
+    "logoAlt": null,
+    "politicalPosition": "sinistra",
+    "positionSource": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §2 e §4",
+    "positionAsOf": "2026-09-24",
+    "documentRef": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026, §4"
+  }
+]

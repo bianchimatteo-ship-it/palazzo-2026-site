@@ -1,7 +1,8 @@
-import { mountApp } from './ui/app.js?v=20260924-17';
-import { refreshSharedArchive } from './data/repositories/admin-sync.js?v=20260924-17';
-import { store } from './core/store.js?v=20260924-17';
-import { loadRealCollections, loadRealDatabase, realDatabase, realDataUrls } from './data/repositories/real-data.js?v=20260924-17';
+import { mountApp } from './ui/app.js?v=20260924-18';
+import { refreshSharedArchive } from './data/repositories/admin-sync.js?v=20260924-18';
+import { store } from './core/store.js?v=20260924-18';
+import { loadRealCollections, loadRealDatabase, realDatabase, realDataUrls } from './data/repositories/real-data.js?v=20260924-18';
+import { PARTY_LINK_COLLECTIONS, governingEntityIds } from './data/repositories/party-links.js?v=20260924-18';
 
 const BUILD = new URL(import.meta.url).searchParams.get('v');
 
@@ -40,11 +41,14 @@ else {
     // The owner's shared corrections and logos come first, so every collection is loaded with them (cached copy offline).
     await refreshSharedArchive().catch(() => false);
     await loadRealDatabase();
-    await loadRealCollections(['parties','politicalMovements','twoPerThousand']);
-    // The simulated world starts from real parties and their real 2x1000 choices.
-    store.setRealReference({ twoPerThousand: realDatabase.twoPerThousand ?? [], parties: realDatabase.parties ?? [], movements: realDatabase.politicalMovements ?? [] });
+    await loadRealCollections(['parties','politicalMovements','coalitions','twoPerThousand','realPolls']);
+    // The simulated world starts from the latest real poll (Supermedia), the documented collocazione of every force
+    // and, once the government data is loaded, the parties of the real majority in office.
+    const reference = (governingIds = []) => ({ twoPerThousand: realDatabase.twoPerThousand ?? [], parties: realDatabase.parties ?? [], movements: realDatabase.politicalMovements ?? [], coalitions: realDatabase.coalitions ?? [], polls: realDatabase.realPolls ?? [], governingIds, startDate: realDatabase.manifest?.snapshotDate ?? null });
+    store.setRealReference(reference());
     mountApp(root, store);
     registerOfflineCache();
+    loadRealCollections(['government','politicians','politicalFigures',...PARTY_LINK_COLLECTIONS]).then(() => store.setRealReference(reference(governingEntityIds()))).catch(() => {});
   } catch (error) {
     console.error('Avvio di POLITICANDO 2026 non riuscito:', error);
     root.innerHTML = `<main role="alert" style="max-width:760px;margin:10vh auto;padding:32px;font:16px/1.6 system-ui,sans-serif;color:#22312e"><h1>POLITICANDO 2026</h1><p>La pagina è stata raggiunta, ma non è stato possibile caricare i dati del gioco.</p><p>${String(error?.message || 'Errore di caricamento.')}</p><p>Ricarica la pagina tra poco. Se il problema continua, comunica questo messaggio.</p></main>`;
