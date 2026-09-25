@@ -2,8 +2,8 @@
 // concentric arcs and handed out group by group from left to right, following the political position of each group's
 // members; every seat is a real parliamentarian in office (identity from the verified dataset), the player's own seat,
 // or — only when the scenario gives a group more seats than the dataset lists — an unnamed seat of that group.
-import { electionListOf, groupAffiliation, inOffice, politicianAffiliation, positionAxis } from '../data/repositories/party-links.js?v=20260925-8';
-import { CHART_SLOTS } from '../data/simulation/polling-rules.js?v=20260925-8';
+import { electionListOf, groupAffiliation, inOffice, politicianAffiliation, positionAxis } from '../data/repositories/party-links.js?v=20260925-9';
+import { CHART_SLOTS } from '../data/simulation/polling-rules.js?v=20260925-9';
 
 // Colour: the eight validated slots of the game's charts in fixed order to the largest groups (or parties) of the
 // reference composition; smaller groups and the Misto family fold into neutral tones. Identity is never colour alone:
@@ -70,7 +70,9 @@ export function groupIdentities(parliament, { politicians = [], db = {}, date = 
     const list = members.get(group.groupId) ?? [];
     const axes = list.map(person => positionAxis(entityOf(person, db)?.politicalPosition)).filter(Number.isFinite);
     const name = group.officialName ?? group.groupId;
-    return [group.groupId, { groupId: group.groupId, chamber, name, misto: MISTO.test(name.trim()), reference: group.reference?.memberCount ?? list.length, axis: axes.length >= Math.max(2, list.length * 0.25) ? axes.reduce((sum, value) => sum + value, 0) / axes.length : null }];
+    // The groups of a legislature simulated by the game carry the collocazione of their party.
+    const own = group.simulated && Number.isFinite(group.axis) ? group.axis : null;
+    return [group.groupId, { groupId: group.groupId, chamber, name, misto: MISTO.test(name.trim()), reference: group.reference?.memberCount ?? list.length, axis: axes.length >= Math.max(2, list.length * 0.25) ? axes.reduce((sum, value) => sum + value, 0) / axes.length : own }];
   }));
   // Families: a group of one chamber and the most similar group of the other one (by name).
   const family = new Map([...info.keys()].map(id => [id, id]));

@@ -19,7 +19,8 @@ const waitFor = async (check, timeout = 20000) => { const start = Date.now(); fo
 
 const server = spawn(process.execPath, ['server.mjs'], { cwd: root, env: { ...process.env, PORT: String(PORT) }, stdio: 'ignore' });
 const profile = await mkdtemp(join(tmpdir(), 'politicando-responsive-'));
-const chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${DEBUG}`, `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--disable-extensions', '--hide-scrollbars', '--mute-audio', 'about:blank'], { stdio: 'ignore' });
+// Chrome refuses to start its sandbox as root (containers, CI): there it runs without it.
+const chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${DEBUG}`, `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--disable-extensions', '--hide-scrollbars', '--mute-audio', ...(process.getuid?.() === 0 ? ['--no-sandbox'] : []), 'about:blank'], { stdio: 'ignore' });
 const cleanup = async () => { chrome.kill('SIGKILL'); server.kill('SIGKILL'); await pause(200); await rm(profile, { recursive: true, force: true }).catch(() => {}); };
 
 let exitCode = 0;
@@ -60,7 +61,7 @@ try {
   // What is audited: every section, and every internal tab of the redesigned ones.
   const views = [
     ['panoramica'], ['profilo'], ['territori'], ['finanze'], ['sondaggi'], ['governo'], ['leggi'], ['archivio'], ['impostazioni'],
-    ...['panoramica', 'candidatura', 'campagna', 'avversari', 'risultati', 'storico'].map(tab => ['elezioni', 'elezioni', tab]),
+    ...['panoramica', 'nazionali', 'candidatura', 'campagna', 'avversari', 'risultati', 'storico'].map(tab => ['elezioni', 'elezioni', tab]),
     ...['percorso', 'progressione', 'incarichi', 'cronologia', 'obiettivi'].map(tab => ['carriera', 'carriera', tab]),
     ...['panoramica', 'ruoli', 'organizzazione', 'territorio', 'storico'].map(tab => ['partito', 'partito', tab]),
     ...['settimana', 'calendario', 'attivita', 'registro'].map(tab => ['calendario', 'agenda', tab]),

@@ -137,7 +137,7 @@ assert.ok(final.world.parties.every(party => party.isPlayer || party.reference?.
 // 5. Saves: everything persists after a reload; an old save is migrated without losing the career.
 store.save();
 const saved = JSON.parse(mem.get(KEY));
-assert.equal(saved.version, 8);
+assert.equal(saved.version, 9);
 assert.ok(saved.game.memory && saved.society.areas && saved.society.security && saved.parliament.laws.some(law => law.policy), 'Memoria, temi, sicurezza e contenuto delle leggi nel salvataggio.');
 ({ store } = await import('../src/core/store.js?career=2'));
 const reloaded = store.getState();
@@ -152,7 +152,7 @@ if (legacy.parliament.government) { delete legacy.parliament.government.partners
 mem.set(KEY, JSON.stringify(legacy));
 ({ store } = await import('../src/core/store.js?career=3'));
 const migrated = store.getState();
-assert.equal(migrated.version, 8);
+assert.equal(migrated.version, 9);
 assert.ok(migrated.society.areas && migrated.society.security && Number.isFinite(migrated.society.publicFinance.spread), 'Il vecchio salvataggio riceve temi, sicurezza e mercati.');
 assert.equal(migrated.game.week.index, final.game.week.index);
 assert.ok(mem.get(`${KEY}.backup`), 'Il salvataggio precedente è conservato prima dell’aggiornamento.');

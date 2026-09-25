@@ -106,13 +106,13 @@ La sezione **Elezioni** avvia una campagna giocabile. Ogni elezione usa un model
 
 Le candidature in partiti esistenti devono superare una selezione interna. Una candidatura parlamentare in carica può perdere sostegno o posizione e non ha il rinnovo garantito. Attività, avversari, consenso, risorse, alleanze, risultati e impatti sulla carriera sono salvati con `source: "simulation"`; un partito reale resta solo un riferimento al proprio ID e non viene modificato. Le schede reali di partiti e politici continuano a mostrare esclusivamente i campi documentati e le fonti disponibili.
 
-I risultati contano schede normalizzate su 100.000 elettori simulati. Quote, seggi e territori sono uno scenario di gioco, non risultati o sondaggi reali e non costituiscono un calcolo legale. Il modello europeo applica la soglia del 4% documentata per le elezioni europee; circoscrizioni e quote di gioco restano simulate. Le regole regionali variano da regione a regione, perciò l’allocazione regionale è dichiarata semplificata. La modalità dei sondaggi non è ancora implementata: il motore espone un hook non collegato.
+I risultati contano schede normalizzate su 100.000 elettori simulati. Quote, seggi e territori sono uno scenario di gioco, non risultati o sondaggi reali e non costituiscono un calcolo legale. Il modello europeo applica la soglia del 4% documentata per le elezioni europee; circoscrizioni e quote di gioco restano simulate. Le regole regionali variano da regione a regione, perciò l’allocazione regionale è dichiarata semplificata. I sondaggi simulati del partito orientano la partenza della campagna; alle politiche e alle europee seggi ed eletti vengono dal voto nazionale sulla mappa reale del 2022 (vedi **Ciclo nazionale**).
 
 Il database attuale non contiene un collegamento verificato tra tutti i partiti e i risultati elettorali storici: i numeri di consenso delle campagne non possono quindi essere inizializzati come fatti reali. Le affiliazioni prive di fonte restano `null` e la campagna non deduce il partito da un gruppo parlamentare o da una lista.
 
 ### Centrale elettorale, campagna ed esiti (dal 25/09/2026)
 
-La sezione **Elezioni** è una centrale elettorale con schede interne (Panoramica, Candidatura, Campagna, Sondaggi e avversari, Risultati, Storico) ricordate tra una schermata e l’altra: prossimo voto con conto alla rovescia, calendario, clima politico, preparazione, regole dei seggi, concorrenti interni, posizione in lista, coalizione, corsa in tempo reale e storico.
+La sezione **Elezioni** è una centrale elettorale con schede interne (Panoramica, Nazionali, Candidatura, Campagna, Sondaggi e avversari, Risultati, Storico) ricordate tra una schermata e l’altra: prossimo voto con conto alla rovescia, calendario, clima politico, preparazione, regole dei seggi, concorrenti interni, posizione in lista, coalizione, corsa in tempo reale e storico.
 
 - **Candidatura non automatica**: il partito decide alla scadenza con una probabilità che dipende dal sostegno interno rispetto alla soglia *e* al distacco dai concorrenti; un margine stretto può dare una posizione in lista peggiore, un distacco negativo porta all’esclusione.
 - **Campagna** (`src/data/simulation/campaign-rules.js`, `src/core/campaign-engine.js`): 34 azioni (comizi, incontri, porta a porta, eventi, social, interviste, conferenze stampa, dibattiti, manifesti e pubblicità, raccolte fondi, associazioni e categorie, accordi territoriali, sostegni pubblici, vita locale, focus sui temi, gestione delle crisi, iniziative con il partito e la coalizione, mobilitazione finale) con costi, tempo, rischi, requisiti ed effetti diversi; l’effetto cambia con la fase (apertura, fase centrale, rush finale, ballottaggio), il tipo di elezione, il territorio, la strategia, la ripetizione, il tema in agenda, il clima del Paese e i sondaggi del partito. Ogni azione mostra l’effetto atteso. Eventi e occasioni (maltempo, notizie false, gaffe dei rivali, sondaggi locali, richieste delle categorie, volontari, scandali in lista, leader nazionale, confronti TV, temi emergenti, video virali, patti con i sindaci, scioperi, donatori…) sono pesati sulle condizioni e non si ripetono a breve: due campagne non sono mai uguali. Le polemiche non gestite pesano ogni settimana.
@@ -155,6 +155,24 @@ npm run check:territory
 - **Persistenza**: schede interne (Elezioni, Carriera, Partito, Agenda), filtri (agenda, comitati, emiciclo, archivi di partiti e parlamentari con ordinamento e pagina, scheda dell’Archivio, leggi reali, misura e regione dei Territori, area del proprietario), selezioni (parlamentare, commissione, votazione dell’emiciclo) e categorie richiudibili (attività della settimana, azioni di campagna) restano come li lascia il giocatore dopo ogni aggiornamento, cambio pagina o ricaricamento. Sono comodità di questo browser (`politicando.views.v1`), mai dati di gioco.
 - **Responsive**: nessun testo è più troncato con i puntini (nomi di partiti, gruppi, comuni, relazioni vanno a capo), i controlli segmentati non vengono tagliati, i menu a tendina non allargano la pagina, tabelle e schede diventano elenchi etichettati quando lo spazio è poco; `npm run check:responsive` controlla ogni vista in un vero browser.
 
+## Ciclo nazionale: politiche, europee, nuove Camere e governo (dal 25/09/2026)
+
+Le elezioni nazionali non sono più una corsa isolata del giocatore: il Paese vota, nascono nuove Camere e un nuovo governo, e il mondo politico ne tiene conto (`src/core/legislature-engine.js`, integrazione in `src/core/store.js`, vista `src/ui/national-view.js` in **Elezioni → Nazionali**).
+
+- **Mappa elettorale reale del 2022** (`src/data/real/electoral-geography.json`, `npm run import:electoral-geography`): i 147 collegi uninominali della Camera e i 74 del Senato, i 49 e 26 collegi plurinominali, circoscrizioni, ripartizioni estere, seggi e voti di lista del 25 settembre 2022 dai file ufficiali di Eligendo (Ministero dell’Interno, nella copia pubblica di onData), con vincitori, secondi classificati e i 7.894 comuni ISTAT 2026 ricondotti ai loro collegi. Senato in Trentino-Alto Adige: collegi e comuni ufficiali, risultato 2022 assente nella copia dei dati e sostituito, dichiaratamente, dal voto della Camera negli stessi comuni. È un documento reale (`source: "real"`, fonte e data di verifica), validato da `check:real-data` e confrontato online da `check:published-site`.
+- **Calendario**: la XIX legislatura (prima seduta il 13 ottobre 2022) scade il 12 ottobre 2027 e si vota domenica 26 settembre 2027; ogni nuova legislatura dura cinque anni dalla prima seduta (18 giorni dopo il voto). Europee il 10 giugno 2029 (data non ancora fissata: seconda domenica di giugno, simulata) e poi ogni cinque anni. Le candidature si aprono sette settimane prima del voto. Uno scioglimento anticipato porta al voto di domenica, dopo la campagna. I salvataggi con il vecchio calendario accelerato passano a quello reale.
+- **Coalizioni e campagna nazionale**: all’apertura delle candidature i partiti si raccolgono attorno al primo partito di ciascun campo secondo collocazione, rapporti, alleanze, rotture e strategia; fino al deposito delle liste le coalizioni possono cambiare. Il segretario sceglie se chiedere l’ingresso in una coalizione (il leader può dire di no), correre da solo o lasciar decidere la direzione, e la linea della campagna nazionale (identitaria, di coalizione, sui collegi contendibili, contro il primo avversario), con costi in capitale e tesoreria ed effetti settimanali sui sondaggi; il voto utile premia le coalizioni e penalizza le piccole liste che corrono da sole.
+- **Il voto sulla mappa**: ogni collegio parte dal voto di lista del 2022 e si sposta con i sondaggi simulati (misto di spostamento proporzionale e uniforme, con le forze nuove sul profilo delle forze vicine e i totali nazionali rispettati), più le sorprese del giorno del voto; nell’uninominale vince il candidato della coalizione più votata, e i collegi della coalizione sono ripartiti tra i suoi partiti; proporzionale con soglie del 3% per le liste e del 10% per le coalizioni (i voti delle liste coalizzate tra 1% e 3% contano per la coalizione), minoranze linguistiche al 20% nella regione, quoziente e resti più alti, Senato su base regionale, eletti all’estero per ripartizione. Con i voti del 2022 il modello riproduce 146 collegi su 147 della Camera e i seggi proporzionali di ogni lista entro due. Senza mappa (primo avvio offline) si usa un conteggio semplificato con le stesse soglie.
+- **La tua candidatura**: nell’uninominale corri nel collegio reale del tuo comune come candidato della coalizione, con la lista nel plurinominale; in lista conta la posizione nel collegio plurinominale (Senato: la quota regionale). Chi guida il partito è capolista e, come la legge consente, in cinque collegi plurinominali. L’andamento della campagna rispetto alle attese sposta il tuo collegio e, per il segretario, il partito. Il resoconto del voto mostra liste, seggi, le 20 regioni, il collegio e la circoscrizione.
+- **Nuove Camere e gruppi**: il voto apre la nuova legislatura (simulata): gruppi dei partiti con i numeri del regolamento semplificato (Camera 20, o 10 per chi supera la soglia; Senato 6), gli altri eletti nel Misto divisi per componente; le proposte in esame decadono, il vecchio mandato si chiude e chi è eletto siede con il gruppo del proprio partito. Parlamento, emiciclo e Governo dichiarano che le nuove Camere sono simulate e senza parlamentari reali; la XIX legislatura resta nell’archivio.
+- **Formazione del governo**: prima seduta, consultazioni al Quirinale, incarico, giuramento e fiducia, settimana per settimana; il governo uscente resta per gli affari correnti. Governa la coalizione vincente (allargata se il margine è troppo stretto), altrimenti una maggioranza nata dopo il voto o un governo del Presidente; se il tuo partito serve alla maggioranza decidi se sostenerla, se guidi il primo partito della coalizione vincente ricevi l’incarico (formi il governo, scegli i ministri, chiedi la fiducia). Senza alcuna maggioranza le Camere vengono sciolte. Quando un governo di una legislatura della partita cade, si riaprono le consultazioni nelle stesse Camere (governo bis, ter… senza chi ha lasciato la maggioranza) prima di tornare al voto. Nel mondo politico governano i partiti della nuova maggioranza e i sondaggi ripartono dal risultato.
+- **Europee**: 76 seggi, soglia del 4%, cinque circoscrizioni; il risultato dà o toglie slancio ai partiti nelle settimane successive; da candidato contano i seggi della lista nella tua circoscrizione e le preferenze.
+- **Salvataggi**: il ciclo nazionale (legislatura, campagna, ultimi voti in forma compatta, formazione, storia) è nel salvataggio, versione 9; i salvataggi precedenti lo ricevono all’apertura, con una copia di sicurezza.
+
+```sh
+npm run check:legislature
+```
+
 ## Gameplay: la carriera settimana per settimana
 
 La Home è il quartier generale del politico: statistiche con variazione settimanale, giorni disponibili, fondi, capitale politico, preparazione elettorale, decisioni in agenda, attività, traguardi, calendario elettorale, posizione in Parlamento e nel partito, relazioni.
@@ -163,9 +181,9 @@ La Home è il quartier generale del politico: statistiche con variazione settima
 - **Eventi**: appuntamenti e eventi contestuali (proteste, scandali simulati, rivalità, alleanze, congressi, crisi di maggioranza, emergenze) offrono scelte multiple con effetti ed esiti incerti. Situazioni critiche generano eventi obbligati: procedimento di espulsione, richieste di dimissioni, inchieste.
 - **Partito**: gradi interni da Iscritto a Vicesegretario (conquistati con una probabilità, mai in automatico), sostegno interno, rapporto con la leadership e tre correnti simulate con peso e rapporti; congressi, conflitti, espulsione, uscita e adesione. Il partito reale resta un riferimento in sola lettura.
 - **Relazioni**: leadership, rivale, associazioni, redazioni, categorie produttive, sindacati e gruppi parlamentari pesano su candidature, incarichi, trattative (un gruppo con rapporti tesi rifiuta di trattare) e votazioni.
-- **Elezioni**: calendario simulato con finestre di candidatura (cicli accelerati rispetto ai mandati reali). Preparazione, fondi, sostegno interno e rapporti modificano la partenza della campagna; se non ti ricandidi il mandato si chiude; un governo caduto senza alternativa porta a politiche anticipate.
+- **Elezioni**: politiche ed europee seguono il calendario reale (fine della legislatura, europee del 2029 e poi ogni cinque anni); comunali e regionali hanno finestre di candidatura su cicli di gioco accelerati. Preparazione, fondi, sostegno interno e rapporti modificano la partenza della campagna; se non ti ricandidi il mandato si chiude; senza una maggioranza le Camere vengono sciolte e si torna al voto.
 - **Governo**: stabilità settimanale legata ai margini della maggioranza, crisi spontanee, rinegoziazioni.
-- **Progressione e fallimento**: dieci traguardi (radicamento, rete, ruolo nel partito, candidatura, elezione, Parlamento, incarico in Aula, legge, leadership interna, Governo); la carriera può chiudersi per una crisi di reputazione.
+- **Progressione e cadute**: dieci traguardi (radicamento, rete, ruolo nel partito, candidatura, elezione, Parlamento, incarico in Aula, legge, leadership interna, Governo); una crisi di reputazione costa incarichi e sostegni, ma la carriera non si chiude (vedi **Carriera infinita e difficoltà**).
 
 ```sh
 npm run check:gameplay
@@ -239,19 +257,21 @@ npm run check:hemicycle
 
 ## Dataset reale
 
-Snapshot verificato al 22 settembre 2026:
+Snapshot verificato al 24 settembre 2026:
 
-- **69 partiti** e **2 movimenti politici**, 71 entità complessive;
-- **6 entità** con livello regionale/territoriale e regione documentati;
-- **604 parlamentari in carica**: 399 deputati e 205 senatori;
+- **75 partiti** e **6 movimenti politici**, 81 entità complessive;
+- **7 entità** con livello regionale/territoriale e regione documentati;
+- **604 parlamentari** della XIX legislatura, 603 in carica: 398 deputati e 205 senatori;
 - **22 gruppi parlamentari**: 13 alla Camera e 9 al Senato;
-- **4 figure politiche** e **4 incarichi di partito** collegati tramite ID stabili, verificati sull’organigramma ufficiale di Futuro Nazionale;
+- **38 figure politiche** e **38 incarichi di partito** collegati tramite ID stabili;
 - **674 appartenenze** ai gruppi parlamentari;
 - **613 incarichi** parlamentari importati;
-- **13 etichette** di lista elettorale e **268 relazioni** tra candidati, liste e consultazioni;
+- **17 etichette** di lista elettorale e **268 relazioni** tra candidati, liste e consultazioni;
 - **23 territori**: Italia, 20 regioni, Camera e Senato;
 - **2 consultazioni**: elezioni politiche 2022 ed europee 2024;
-- **436 atti legislativi** della XIX legislatura dal Senato (352 leggi approvate definitivamente, 84 in corso), verificati il 23 settembre 2026.
+- **436 atti legislativi** della XIX legislatura dal Senato (352 leggi approvate definitivamente, 84 in corso), verificati il 23 settembre 2026;
+- **24 commissioni permanenti** con 655 componenti; **110 unità territoriali** e **7.894 comuni** ISTAT (21 febbraio 2026);
+- **mappa elettorale delle politiche 2022** (Eligendo): 147 + 74 collegi uninominali, 49 + 26 plurinominali, circoscrizioni, ripartizioni estere, seggi e voti di lista, comuni ricondotti ai collegi (documento `electoral-geography.json`).
 
 Il dataset non attribuisce automaticamente i parlamentari ai partiti: Camera e Senato documentano gruppi e liste d’elezione, che possono aggregare realtà diverse. Perciò il numero di partiti parlamentari e non parlamentari non viene stimato. Anche presenza locale, appartenenze individuali ai partiti, colore, orientamento, data di fondazione e cariche non documentate restano non valorizzati. La presenza regionale viene indicata solo per le formazioni con una fonte istituzionale o del partito adeguata; un gruppo consiliare non è convertito in un gruppo parlamentare nazionale né in appartenenze individuali.
 
@@ -265,6 +285,7 @@ Futuro Nazionale è incluso come partito sulla base delle sue pagine ufficiali d
 - [Senato — dati aperti sulla composizione](https://dati.senato.it/sito/composizione?legislatura=19&testo_generico=11) e [dati aperti sui disegni di legge](https://dati.senato.it/sito/home) (endpoint SPARQL);
 - [ISTAT — codici territoriali](https://www.istat.it/classificazione/codici-dei-comuni-delle-province-e-delle-regioni/);
 - [Ministero dell’Interno — trasparenza elezioni europee 2024](https://dait.interno.gov.it/elezioni/trasparenza/elezioni-europee-2024) e [archivio storico elettorale](https://www.interno.gov.it/it/temi/elezioni-e-referendum/dato-storico-elezioni);
+- [Ministero dell’Interno — Eligendo, politiche del 25 settembre 2022](https://elezioni.interno.gov.it/report/20220925) (collegi, circoscrizioni, voti e seggi), nella copia pubblica dei file ufficiali di [onData — elezioni politiche 2022](https://github.com/ondata/elezioni-politiche-2022);
 - [Futuro Nazionale — sito](https://futuronazionale.it/), [trasparenza](https://futuronazionale.it/trasparenza/), [organigramma](https://futuronazionale.it/organigramma/) e [logo ufficiale](https://futuronazionale.it/il-logo/);
 - fonti territoriali ufficiali: [PATT](https://patt.tn.it/), [Südtiroler Volkspartei](https://www.svp.eu/de/partei-883.html), [Stella Alpina](https://www.stella-alpina.org/), [Union Valdôtaine](https://www.unionvaldotaine.org/), [Campobase](https://www.campobasetrentino.it/), [Sud chiama Nord](https://sud-chiamanord.it/), insieme alle pagine ufficiali dei rispettivi consigli regionali/provinciali e dell’Assemblea regionale siciliana riportate nelle schede.
 
@@ -283,6 +304,8 @@ Le fonti sono collegate direttamente alle schede. Ogni record reale contiene `so
 - `scripts/validate-real-data.mjs`: controlli su provenienza, duplicati, relazioni, conteggi e assenza di statistiche reali inventate;
 - `scripts/check-published-site.mjs`: controllo diretto della versione pubblicata su GitHub Pages, inclusa la corrispondenza dei file remoti con lo snapshot locale;
 - `src/core/campaign-engine.js` e `src/core/election-engine.js`: stato e risoluzione delle campagne, separati dal database reale;
+- `src/core/legislature-engine.js`: ciclo nazionale (calendario, coalizioni, voto sulla mappa 2022, nuove Camere e gruppi, formazione del governo, europee); `src/ui/national-view.js` la vista **Elezioni → Nazionali**;
+- `scripts/import-electoral-geography.mjs`: importer ripetibile della mappa elettorale 2022 (file Eligendo, copia onData con commit fissato);
 
 All’apertura vengono caricati manifest e partiti/movimenti. Politici, gruppi e altri dettagli vengono richiesti quando si apre il relativo archivio, così il browser non scarica il JSON aggregato da circa 2 MB.
 
@@ -295,10 +318,11 @@ npm run check:elections   # esiti elettorali vari e non automatici, ballottaggio
 npm run check:sections    # progressione non automatica (probabilità ed esiti), percorsi di carriera, agenda datata, schede di Carriera, Partito e Agenda
 npm run check:hemicycle   # commissioni reali, emiciclo Camera/Senato, colori e ordine dei gruppi, voti dei singoli coerenti coi totali, voto segreto, fiducia
 npm run check:territory   # comitati Regione → Provincia → Comune, stati, azioni, crisi, effetti su campagna/voto/promozioni; editor dei loghi
-npm run check:responsive  # Chrome senza interfaccia: 32 viste e 4 finestre a 375/768/1280 px senza scorrimento orizzontale, elementi fuori schermo, contenuti nascosti o testi troncati (saltato se Chrome manca; CHROME_PATH per indicarlo)
+npm run check:responsive  # Chrome senza interfaccia: 33 viste e 4 finestre a 375/768/1280 px senza scorrimento orizzontale, elementi fuori schermo, contenuti nascosti o testi troncati (saltato se Chrome manca; CHROME_PATH per indicarlo)
 npm run check:government  # 34 temi, bilancio, territori, cittadini, sicurezza, Presidente del Consiglio, difficoltà
 npm run check:events      # eventi procedurali: condizioni, cooldown, rarità, esclusività, varianti, catene
 npm run check:career      # carriera pluriennale end-to-end, salvataggi e migrazione
+npm run check:legislature # ciclo nazionale: mappa 2022 riprodotta, calendario, soglie, gruppi, formazione del governo, crisi, europee, salvataggi, vista Nazionali
 npm run check:admin-sync  # archivio amministrativo condiviso su Workers KV
 npm run check:document    # documento del 24/09/2026: collocazioni, nuove entità, leadership, liste, loghi dei politici, sondaggio reale
 npm run check:world       # alleanze realistiche, evoluzione dei partiti, difficoltà, notizie, memoria politica

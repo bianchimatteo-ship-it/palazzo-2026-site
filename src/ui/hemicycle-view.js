@@ -1,12 +1,12 @@
 // The interactive hemicycle of the Parlamento section: Camera and Senato apart, one marker per seat (real
 // parliamentarians in office, the player's seat), colours by group or by party, filters by party, group and
 // committee, a card for every parliamentarian and, for a simulated vote, the vote of every seat.
-import { chamberRoster, committeesOf, partyColors, UNKNOWN_COLOR } from '../core/hemicycle.js?v=20260925-8';
-import { individualVotes, VOTE_CHOICES, voteCatalog, voteSummary } from '../core/vote-engine.js?v=20260925-8';
-import { BASIS_LABELS, electionListOf, groupAffiliation, groupLabel, politicianAffiliation } from '../data/repositories/party-links.js?v=20260925-8';
-import { formatDate } from '../core/time.js?v=20260925-8';
-import { glyph } from './visuals.js?v=20260925-8';
-import { badge, esc, num, table } from './sections-kit.js?v=20260925-8';
+import { chamberRoster, committeesOf, partyColors, UNKNOWN_COLOR } from '../core/hemicycle.js?v=20260925-9';
+import { individualVotes, VOTE_CHOICES, voteCatalog, voteSummary } from '../core/vote-engine.js?v=20260925-9';
+import { BASIS_LABELS, electionListOf, groupAffiliation, groupLabel, politicianAffiliation } from '../data/repositories/party-links.js?v=20260925-9';
+import { formatDate } from '../core/time.js?v=20260925-9';
+import { glyph } from './visuals.js?v=20260925-9';
+import { badge, esc, num, table } from './sections-kit.js?v=20260925-9';
 
 export const HEMICYCLE_DEFAULTS = Object.freeze({ chamber: null, colorBy: 'gruppo', party: '', group: '', committee: '', vote: '', selected: null });
 const CHAMBER_LABELS = { camera: 'Camera dei deputati', senato: 'Senato della Repubblica' };
@@ -20,10 +20,15 @@ const personName = person => person?.fullName ?? `${person?.firstName ?? ''} ${p
 export function hemicycleModel(state, { politicians = [], db = {}, view = {} } = {}) {
   const parliament = state.parliament;
   if (!parliament) return null;
+  // A legislature born from a vote of the game: its members are not real people (no archive, no committees).
+  const simulated = parliament.legislature?.reference === 'simulation';
+  if (simulated) { politicians = []; db = {}; }
   const chamber = ['camera', 'senato'].includes(view.chamber) ? view.chamber : parliament.player?.chamber ?? 'camera';
   const roster = chamberRoster(parliament, chamber, { politicians, db });
   const parties = partyColors(politicians, db);
-  const votes = voteCatalog(parliament).filter(vote => vote.chamber === chamber);
+  // Only the votes of the Chambers in office (after a general election the old ones belong to the past legislature).
+  const since = parliament.legislature?.firstSitting ?? parliament.legislature?.since ?? null;
+  const votes = voteCatalog(parliament).filter(vote => vote.chamber === chamber && (!since || !vote.date || vote.date >= since));
   const vote = votes.find(item => item.id === view.vote) ?? null;
   const summary = vote ? voteSummary(vote) : null;
   const law = vote?.lawId ? (parliament.laws ?? []).find(item => item.id === vote.lawId) : null;
@@ -43,19 +48,19 @@ export function hemicycleModel(state, { politicians = [], db = {}, view = {} } =
   const byGroup = new Map(roster.groups.map(item => [item.groupId, item]));
   const playerParty = state.career?.partyId ?? null;
   const colorOf = (seat, index) => individual ? VOTE_CHOICES[individual.choices[index]].color
-    : seat.placeholder ? UNKNOWN_COLOR
+    : seat.placeholder ? (simulated ? byGroup.get(seat.groupId)?.color ?? UNKNOWN_COLOR : UNKNOWN_COLOR)
     : view.colorBy === 'partito' ? (seat.player ? parties.get(playerParty)?.color ?? UNKNOWN_COLOR : parties.get(entityOf(seat)?.id)?.color ?? UNKNOWN_COLOR)
     : byGroup.get(seat.groupId)?.color ?? UNKNOWN_COLOR;
   const visible = roster.seats.filter(matches).length;
   const selected = view.selected ? roster.seats.find(seat => seatKey(seat) === view.selected) ?? null : null;
-  return { parliament, chamber, roster, parties, votes, vote, summary, law, individual, committees, committee, group, matches, colorOf, entityOf, byGroup, visible, selected };
+  return { parliament, simulated, chamber, roster, parties, votes, vote, summary, law, individual, committees, committee, group, matches, colorOf, entityOf, byGroup, visible, selected };
 }
 
 function svg(model, view) {
   const { roster } = model;
   const { layout } = roster;
   const circles = roster.seats.map((seat, index) => {
-    const name = seat.player ? 'Il tuo seggio' : seat.person ? personName(seat.person) : 'Seggio del gruppo (non attribuito)';
+    const name = seat.player ? 'Il tuo seggio' : seat.person ? personName(seat.person) : model.simulated ? 'Seggio del gruppo (eletto simulato)' : 'Seggio del gruppo (non attribuito)';
     const label = `${name} · ${model.byGroup.get(seat.groupId)?.shortName ?? ''}${model.individual ? ` · ${VOTE_CHOICES[model.individual.choices[index]].label}` : ''}`;
     const classes = ['hemi-seat', model.matches(seat) ? '' : 'is-dim', seat.player ? 'is-player' : '', seat.placeholder ? 'is-placeholder' : '', model.selected && seatKey(model.selected) === seatKey(seat) ? 'is-selected' : ''].filter(Boolean).join(' ');
     return `<circle class="${classes}" cx="${seat.x}" cy="${seat.y}" r="${layout.radius.toFixed(1)}" fill="${model.colorOf(seat, index)}" data-hemi-seat="${esc(seatKey(seat))}"><title>${esc(label)}</title></circle>`;
@@ -81,6 +86,12 @@ function legend(model, view) {
 }
 
 function controls(model, view, counts) {
+  if (model.simulated) return `<div class="hemi-controls">
+    <div class="hemi-switch" role="group" aria-label="Camera">${['camera', 'senato'].map(chamber => `<button type="button" class="${model.chamber === chamber ? 'active' : ''}" data-hemi-chamber="${chamber}" aria-pressed="${model.chamber === chamber}">${chamber === 'camera' ? 'Camera' : 'Senato'} <small>${counts[chamber]}</small></button>`).join('')}</div>
+    <label>Gruppo<select data-hemi-filter="group"><option value="">Tutti</option>${model.roster.groups.map(group => `<option value="${esc(group.groupId)}" ${model.group === group.groupId ? 'selected' : ''}>${esc(group.shortName)} · ${group.seats}</option>`).join('')}</select></label>
+    <label>Votazione<select data-hemi-filter="vote"><option value="">Composizione (nessuna)</option>${model.votes.map(item => `<option value="${esc(item.id)}" ${model.vote?.id === item.id ? 'selected' : ''}>${esc(`${shortDate(item.date)} · ${KIND_LABELS[item.kind] ?? 'Votazione'}: ${item.label ?? ''}`.slice(0, 90))}</option>`).join('')}</select></label>
+    <button type="button" class="text-link" data-hemi-reset ${model.group || model.vote ? '' : 'disabled'}>Azzera filtri</button>
+  </div>`;
   const partyOptions = [...model.parties.values()].map(item => `<option value="${esc(item.entity.id)}" ${view.party === item.entity.id ? 'selected' : ''}>${esc(item.entity.officialName)} · ${item.count}</option>`).join('');
   return `<div class="hemi-controls">
     <div class="hemi-switch" role="group" aria-label="Camera">${['camera', 'senato'].map(chamber => `<button type="button" class="${model.chamber === chamber ? 'active' : ''}" data-hemi-chamber="${chamber}" aria-pressed="${model.chamber === chamber}">${chamber === 'camera' ? 'Camera' : 'Senato'} <small>${counts[chamber]}</small></button>`).join('')}</div>
@@ -108,6 +119,7 @@ function card(model, state, db, logoFor) {
     const role = state.parliament?.careerStanding?.committeeRole?.title ?? 'Componente del gruppo';
     return `<div class="hemi-card is-player">${close}<span class="section-kicker">IL TUO SEGGIO · SIMULAZIONE</span><h3>${esc(player?.displayName ?? 'Il tuo politico')}</h3><dl class="hemi-facts"><div><dt>Gruppo</dt><dd>${esc(group?.name ?? '—')}</dd></div><div><dt>Ruolo</dt><dd>${esc(role)}</dd></div><div><dt>Camera</dt><dd>${esc(CHAMBER_LABELS[model.chamber])}</dd></div></dl>${voteRow}<button class="text-link" data-section-tab="carriera" data-section-tab-value="progressione">Incarichi e probabilità ${glyph('route', 14)}</button></div>`;
   }
+  if (!seat.person && model.simulated) return `<div class="hemi-card">${close}<span class="section-kicker">SEGGIO DEL GRUPPO · LEGISLATURA SIMULATA</span><h3>${esc(group?.shortName ?? 'Gruppo')}</h3><p class="sx-note">Un eletto della partita: le Camere nate dal voto simulato non hanno parlamentari reali. Il gruppo ha ${num(group?.seats ?? 0, 0)} seggi.</p>${voteRow}</div>`;
   if (!seat.person) return `<div class="hemi-card">${close}<span class="section-kicker">SEGGIO DEL GRUPPO · SCENARIO</span><h3>${esc(group?.shortName ?? 'Gruppo')}</h3><p class="sx-note">Nello scenario il gruppo ha più seggi dei componenti presenti nell’archivio verificato: questo seggio non è attribuito a nessuna persona reale.</p>${voteRow}</div>`;
   const person = seat.person;
   const affiliation = politicianAffiliation(person, db);
@@ -168,6 +180,7 @@ function committeePanel(model, db) {
 
 // The accessible alternative to the drawing: the members that match the filters, as a list of buttons.
 function memberList(model, db, view) {
+  if (model.simulated) return model.group ? `<p class="sx-note">${esc(model.byGroup.get(model.group)?.name ?? 'Gruppo')}: ${num(model.byGroup.get(model.group)?.seats ?? 0, 0)} seggi nella legislatura simulata.</p>` : '<p class="sx-note">Scegli un gruppo per evidenziarne i seggi.</p>';
   if (!(view.party || model.group || model.committee)) return '<p class="sx-note">Scegli un partito, un gruppo o una commissione per l’elenco dei componenti (utile anche da tastiera).</p>';
   const seats = model.roster.seats.filter(model.matches);
   const items = seats.slice(0, 60).map(seat => `<li><button type="button" data-hemi-seat="${esc(seatKey(seat))}" class="${model.selected && seatKey(model.selected) === seatKey(seat) ? 'active' : ''}"><i style="background:${model.colorOf(seat, model.roster.seats.indexOf(seat))}"></i><span>${esc(seat.player ? 'Il tuo seggio' : seat.person ? personName(seat.person) : 'Seggio non attribuito')}</span><small>${esc(model.byGroup.get(seat.groupId)?.shortName ?? '')}</small></button></li>`).join('');
@@ -178,15 +191,18 @@ export function renderHemicycle(state, { politicians = [], db = {}, view = {}, l
   const settings = { ...HEMICYCLE_DEFAULTS, ...view };
   const model = hemicycleModel(state, { politicians, db, view: settings });
   if (!model) return '';
-  if (!politicians.length) return `<section class="hemicycle sx-card" id="hemicycle"><span class="section-kicker">EMICICLO INTERATTIVO</span><p class="sx-empty">Carico i parlamentari in carica…</p></section>`;
+  if (!politicians.length && !model.simulated) return `<section class="hemicycle sx-card" id="hemicycle"><span class="section-kicker">EMICICLO INTERATTIVO</span><p class="sx-empty">Carico i parlamentari in carica…</p></section>`;
   const counts = Object.fromEntries(['camera', 'senato'].map(chamber => [chamber, (state.parliament.chambers?.[chamber]?.groups ?? []).reduce((sum, group) => sum + (group.simulatedSeats ?? 0), 0)]));
-  const placeholders = model.roster.groups.reduce((sum, group) => sum + group.placeholders, 0);
+  const placeholders = model.simulated ? 0 : model.roster.groups.reduce((sum, group) => sum + group.placeholders, 0);
+  const intro = model.simulated
+    ? `Ogni punto è un seggio della ${esc(state.parliament.legislature?.label ?? 'legislatura simulata')}: i gruppi nati dal voto della partita e il tuo seggio. Nessun parlamentare reale siede in queste Camere. La disposizione è grafica; i gruppi vanno da sinistra a destra secondo la collocazione dei partiti.`
+    : 'Ogni punto è un seggio: parlamentari reali in carica (dati verificati) e il tuo seggio nella partita. La disposizione è grafica, non la posizione fisica in Aula; i gruppi vanno da sinistra a destra secondo la collocazione dei loro componenti.';
   return `<section class="hemicycle" id="hemicycle">
-    <header class="hemi-head"><div><span class="section-kicker">EMICICLO INTERATTIVO · RAPPRESENTAZIONE GRAFICA</span><h2>${esc(CHAMBER_LABELS[model.chamber])}</h2><p>Ogni punto è un seggio: parlamentari reali in carica (dati verificati) e il tuo seggio nella partita. La disposizione è grafica, non la posizione fisica in Aula; i gruppi vanno da sinistra a destra secondo la collocazione dei loro componenti.</p></div><span class="hemi-count">${model.visible === model.roster.total ? `${num(model.roster.total, 0)} seggi` : `${num(model.visible, 0)} di ${num(model.roster.total, 0)}`}</span></header>
+    <header class="hemi-head"><div><span class="section-kicker">EMICICLO INTERATTIVO · RAPPRESENTAZIONE GRAFICA</span><h2>${esc(CHAMBER_LABELS[model.chamber])}</h2><p>${intro}</p></div><span class="hemi-count">${model.visible === model.roster.total ? `${num(model.roster.total, 0)} seggi` : `${num(model.visible, 0)} di ${num(model.roster.total, 0)}`}</span></header>
     ${controls(model, settings, counts)}
     <div class="hemi-layout">
       <div class="hemi-stage">${svg(model, settings)}${legend(model, settings)}${placeholders ? `<p class="sx-note">${placeholders} ${placeholders === 1 ? 'seggio' : 'seggi'} dello scenario senza un componente nell’archivio verificato: sono in grigio e non sono attribuiti a nessuno.</p>` : ''}</div>
-      <aside class="hemi-side">${card(model, state, db, logoFor)}${committeePanel(model, db)}${memberList(model, db, settings)}</aside>
+      <aside class="hemi-side">${card(model, state, db, logoFor)}${model.simulated ? '' : committeePanel(model, db)}${memberList(model, db, settings)}</aside>
     </div>
     ${votePanel(model, db)}
   </section>`;

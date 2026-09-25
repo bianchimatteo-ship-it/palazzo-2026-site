@@ -44,7 +44,9 @@
     "istatMunicipalitiesFile": "https://www.istat.it/storage/codici-unita-amministrative/Elenco-comuni-italiani.xlsx",
     "supermedia20260924": "https://www.agi.it/politica/news/2026-09-24/supermedia-agi-youtrend-fdi-39219483/",
     "cameraCommittees": "https://dati.camera.it/sparql",
-    "senateCommittees": "https://dati.senato.it/sparql"
+    "senateCommittees": "https://dati.senato.it/sparql",
+    "electoralGeography": "https://elezioni.interno.gov.it/report/20220925",
+    "electoralGeographyMirror": "https://github.com/ondata/elezioni-politiche-2022"
   },
   "collections": {
     "parties": 75,
@@ -118,5 +120,21 @@
       ]
     }
   ],
-  "politiciansInOffice": 603
+  "politiciansInOffice": 603,
+  "documents": {
+    "electoralGeography": {
+      "file": "electoral-geography.json",
+      "electionDate": "2022-09-25",
+      "collegi": {
+        "camera": 147,
+        "senato": 74
+      },
+      "plurinominali": {
+        "camera": 49,
+        "senato": 26
+      },
+      "comuni": 7894,
+      "verifiedAt": "2026-09-25"
+    }
+  }
 }

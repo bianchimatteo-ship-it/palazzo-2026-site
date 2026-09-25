@@ -128,8 +128,44 @@ const unitCodes = new Set(territorialUnits.map(unit => unit.code));
 for (const unit of territorialUnits) if (unit.source !== 'real' || unit.verified !== true || !/^https:\/\/www\.istat\.it\//.test(unit.sourceUrl) || !unit.sourceName || !unit.verifiedAt || unit.validFrom !== '2026-02-21') fail(`Unità territoriale ${unit.code}: provenienza incompleta`);
 for (const item of municipalities) if (!/^\d{6}$/.test(item.code) || item.id !== `istat-${item.code}` || !item.name || !unitCodes.has(item.unit) || item.source !== 'real' || item.verified !== true) fail(`Comune ISTAT ${item.code}: dati non validi`);
 if (new Set(territorialUnits.map(unit => unit.gameRegion)).size !== 20) fail('Unità territoriali ISTAT: le regioni non sono 20');
+// Electoral map of the general election of 2022 (scripts/import-electoral-geography.mjs, Eligendo via the onData copy).
+const geography = JSON.parse(await readFile(new URL('../src/data/real/electoral-geography.json', import.meta.url), 'utf8'));
+const geoManifest = lawsManifest.documents?.electoralGeography;
+if (geography.source !== 'real' || geography.verified !== true || !/^https:\/\/elezioni\.interno\.gov\.it\//.test(geography.sourceUrl) || !geography.sourceName || !geography.verifiedAt || !/^[0-9a-f]{40}$/.test(geography.mirror?.commit ?? '')) fail('Mappa elettorale 2022: provenienza incompleta');
+if (!geoManifest || geoManifest.collegi.camera !== geography.camera.collegi.length || geoManifest.collegi.senato !== geography.senato.collegi.length || geoManifest.comuni !== Object.keys(geography.comuni).length) fail('Mappa elettorale 2022: conteggi nel manifest non coerenti');
+const listCodes = new Set(geography.lists.map(item => item.code));
+if (listCodes.size !== geography.lists.length) fail('Mappa elettorale 2022: codici di lista duplicati');
+const gameRegions = new Set(territorialUnits.map(unit => unit.gameRegion));
+const expected = { camera: { collegi: 147, plurinominali: 49, circoscrizioni: 28, italia: 392, proporzionali: 245, estero: 8, total: 400 }, senato: { collegi: 74, plurinominali: 26, circoscrizioni: 20, italia: 196, proporzionali: 122, estero: 4, total: 200 } };
+for (const [chamber, want] of Object.entries(expected)) {
+  const data = geography[chamber];
+  const sum = (items, key) => items.reduce((total, item) => total + item[key], 0);
+  if (data.collegi.length !== want.collegi || data.plurinominali.length !== want.plurinominali || data.circoscrizioni.length !== want.circoscrizioni) fail(`Mappa elettorale 2022, ${chamber}: collegi, plurinominali o circoscrizioni in numero errato`);
+  if (sum(data.circoscrizioni, 'seats') !== want.italia || sum(data.plurinominali, 'seats') !== want.proporzionali || sum(data.estero, 'seats') !== want.estero || data.collegi.length + want.proporzionali + want.estero !== want.total) fail(`Mappa elettorale 2022, ${chamber}: i seggi non tornano`);
+  const circIds = new Set(data.circoscrizioni.map(item => item.id));
+  const pluriIds = new Set(data.plurinominali.map(item => item.id));
+  if (new Set(data.collegi.map(item => item.id)).size !== data.collegi.length) fail(`Mappa elettorale 2022, ${chamber}: ID dei collegi duplicati`);
+  for (const item of data.collegi) {
+    const votes = Object.values(item.votes).reduce((total, value) => total + value, 0);
+    if (!circIds.has(item.circoscrizione) || (item.plurinominale && !pluriIds.has(item.plurinominale)) || !gameRegions.has(item.region) || !item.name || !item.code) fail(`Collegio ${item.id}: riferimenti non validi`);
+    if (Object.keys(item.votes).some(code => !listCodes.has(code)) || Math.abs(votes - item.valid) > 1 || item.valid <= 0) fail(`Collegio ${item.id}: voti non coerenti`);
+    if (!item.baseline && (!item.winner?.name || !(item.winner.share > 0 && item.winner.share < 100))) fail(`Collegio ${item.id}: vincitore 2022 mancante`);
+    if (item.baseline && (item.winner || item.baseline !== 'camera-2022' || !item.baselineNote)) fail(`Collegio ${item.id}: base stimata non dichiarata`);
+  }
+  for (const item of data.plurinominali) if (!(item.seats >= 1) || !circIds.has(item.circoscrizione) || item.collegi !== data.collegi.filter(district => district.plurinominale === item.id).length) fail(`Plurinominale ${item.id}: dati non coerenti`);
+  for (const item of data.estero) if (!(item.seats >= 1) || Object.keys(item.votes).some(code => !listCodes.has(code))) fail(`Estero ${item.id}: dati non coerenti`);
+  if (data.national.lists.some(row => !listCodes.has(row.code)) || sum(data.national.lists, 'seats') !== want.proporzionali) fail(`Mappa elettorale 2022, ${chamber}: totali nazionali non coerenti`);
+}
+const cameraCount = geography.camera.collegi.length, senateCount = geography.senato.collegi.length;
+for (const item of municipalities) {
+  const [camera, senato] = geography.comuni[item.code] ?? [];
+  if (!camera?.length || !senato?.length || camera.some(index => !(index >= 0 && index < cameraCount)) || senato.some(index => !(index >= 0 && index < senateCount))) fail(`Comune ISTAT ${item.code}: collegi elettorali mancanti`);
+}
+const istatCodes = new Set(municipalities.map(item => item.code));
+if (Object.keys(geography.comuni).some(code => !istatCodes.has(code))) fail('Mappa elettorale 2022: comuni fuori dall’elenco ISTAT 2026');
 if (process.exitCode) process.exit(process.exitCode);
 console.log(`ISTAT: ${municipalities.length} comuni e ${territorialUnits.length} unità territoriali sovracomunali (aggiornamento 21/02/2026).`);
+console.log(`Politiche 2022 (Eligendo): Camera ${geography.camera.collegi.length} collegi uninominali, ${geography.camera.plurinominali.length} plurinominali, ${geography.camera.circoscrizioni.length} circoscrizioni; Senato ${geography.senato.collegi.length} collegi uninominali, ${geography.senato.plurinominali.length} plurinominali; ${Object.keys(geography.comuni).length} comuni collegati.`);
 console.log(`Specifica 24/09/2026: ${organizations.length + (db.coalitions ?? []).length} entità classificate, ${db.electoralLists.length} liste (${db.electoralLists.filter(list => list.partyId).length} di partito singolo), ${db.partyMemberships.length} iscrizioni documentate, ${(db.politicalFigures ?? []).filter(item => item.politicianId).length} figure collegate a parlamentari, sondaggio reale iniziale del ${polls[0].publishedAt}.`);
 const nameCounts = new Map();
 for (const person of db.politicians) { const name=normalize(person.fullName); nameCounts.set(name,(nameCounts.get(name)??0)+1); }

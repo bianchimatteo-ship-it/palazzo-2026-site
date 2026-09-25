@@ -1,9 +1,9 @@
-import { mountApp } from './ui/app.js?v=20260925-8';
-import { refreshSharedArchive } from './data/repositories/admin-sync.js?v=20260925-8';
-import { store } from './core/store.js?v=20260925-8';
-import { loadRealCollections, loadRealDatabase, realDatabase, realDataUrls } from './data/repositories/real-data.js?v=20260925-8';
-import { PARTY_LINK_COLLECTIONS, governingEntityIds } from './data/repositories/party-links.js?v=20260925-8';
-import { referenceGovernmentSpec } from './data/repositories/government-reference.js?v=20260925-8';
+import { mountApp } from './ui/app.js?v=20260925-9';
+import { refreshSharedArchive } from './data/repositories/admin-sync.js?v=20260925-9';
+import { store } from './core/store.js?v=20260925-9';
+import { loadRealCollections, loadRealDatabase, loadRealDocument, realDatabase, realDataUrls } from './data/repositories/real-data.js?v=20260925-9';
+import { PARTY_LINK_COLLECTIONS, governingEntityIds } from './data/repositories/party-links.js?v=20260925-9';
+import { referenceGovernmentSpec } from './data/repositories/government-reference.js?v=20260925-9';
 
 const BUILD = new URL(import.meta.url).searchParams.get('v');
 
@@ -52,6 +52,9 @@ else {
     // The Government in office at the start (derived from the real Government and the groups of its members) and the
     // real majority reach the simulation once the institutional data are loaded.
     loadRealCollections(['government','politicians','politicalFigures','parliamentaryGroups',...PARTY_LINK_COLLECTIONS]).then(() => { store.setRealReference(reference(governingEntityIds())); store.setReferenceGovernment(referenceGovernmentSpec()); }).catch(() => {});
+    // The real electoral map of 2022 (collegi, circoscrizioni, seats and results): the general and European elections
+    // of the game are counted on it. Until it arrives (or offline without cache) the vote uses a simplified count.
+    loadRealDocument('electoralGeography').then(geography => store.setElectoralGeography(geography)).catch(error => console.warn('Mappa elettorale 2022 non disponibile:', error));
   } catch (error) {
     console.error('Avvio di POLITICANDO 2026 non riuscito:', error);
     root.innerHTML = `<main role="alert" style="max-width:760px;margin:10vh auto;padding:32px;font:16px/1.6 system-ui,sans-serif;color:#22312e"><h1>POLITICANDO 2026</h1><p>La pagina è stata raggiunta, ma non è stato possibile caricare i dati del gioco.</p><p>${String(error?.message || 'Errore di caricamento.')}</p><p>Ricarica la pagina tra poco. Se il problema continua, comunica questo messaggio.</p></main>`;

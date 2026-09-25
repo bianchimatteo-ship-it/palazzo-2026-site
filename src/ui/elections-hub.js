@@ -1,19 +1,20 @@
 // The electoral centre: next vote, calendar, context, candidacy, campaign, polls and rivals, results and history.
-import { upcomingElections } from '../core/career-engine.js?v=20260925-8';
-import { campaignSummary, strategyOf } from '../core/campaign-engine.js?v=20260925-8';
-import { CAMPAIGN_PHASES, ELECTION_MODELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20260925-8';
-import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20260925-8';
-import { formatDate } from '../core/time.js?v=20260925-8';
-import { societyMood } from '../core/society-engine.js?v=20260925-8';
-import { renderCampaignPage } from './campaign-mode.js?v=20260925-8';
-import { politicalPhase } from './game-mode.js?v=20260925-8';
-import { lineChart, SERIES } from './charts.js?v=20260925-8';
-import { glyph } from './visuals.js?v=20260925-8';
-import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, sectionTabs, signed, table, weeksLabel } from './sections-kit.js?v=20260925-8';
-import { renderElectionReport } from './election-report.js?v=20260925-8';
+import { upcomingElections } from '../core/career-engine.js?v=20260925-9';
+import { campaignSummary, strategyOf } from '../core/campaign-engine.js?v=20260925-9';
+import { CAMPAIGN_PHASES, ELECTION_MODELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20260925-9';
+import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20260925-9';
+import { formatDate } from '../core/time.js?v=20260925-9';
+import { societyMood } from '../core/society-engine.js?v=20260925-9';
+import { renderCampaignPage } from './campaign-mode.js?v=20260925-9';
+import { politicalPhase } from './game-mode.js?v=20260925-9';
+import { lineChart, SERIES } from './charts.js?v=20260925-9';
+import { glyph } from './visuals.js?v=20260925-9';
+import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, sectionTabs, signed, table, weeksLabel } from './sections-kit.js?v=20260925-9';
+import { renderElectionReport } from './election-report.js?v=20260925-9';
+import { renderNationalView } from './national-view.js?v=20260925-9';
 export { renderElectionReport };
 
-export const ELECTION_TABS = Object.freeze([['panoramica', 'Panoramica'], ['candidatura', 'Candidatura'], ['campagna', 'Campagna'], ['avversari', 'Sondaggi e avversari'], ['risultati', 'Risultati'], ['storico', 'Storico']]);
+export const ELECTION_TABS = Object.freeze([['panoramica', 'Panoramica'], ['nazionali', 'Nazionali'], ['candidatura', 'Candidatura'], ['campagna', 'Campagna'], ['avversari', 'Sondaggi e avversari'], ['risultati', 'Risultati'], ['storico', 'Storico']]);
 const TYPE_ICONS = { comunale: 'town', regionale: 'map', politiche: 'dome', europee: 'globe' };
 const STATUS = { upcoming: ['In calendario', 'neutral'], open: ['Candidature aperte', 'good'], running: ['Campagna in corso', 'warn'], missed: ['Candidature chiuse', 'bad'], held: ['Concluse', 'neutral'] };
 const daysUntil = (from, to) => Math.max(0, Math.round((Date.parse(`${to}T12:00:00`) - Date.parse(`${from}T12:00:00`)) / 86400000));
@@ -92,7 +93,7 @@ function calendar(state) {
     const when = entry.status === 'upcoming' ? `tra ${weeksLabel(weeksUntil(today, entry.windowOpensAt))}` : entry.status === 'open' ? `chiude tra ${Math.max(0, daysUntil(today, entry.windowClosesAt))} giorni` : '';
     return `<li class="eh-cal-item status-${esc(entry.status)}"><span class="eh-cal-icon">${glyph(TYPE_ICONS[entry.type] ?? 'ballot', 18)}</span><div class="eh-cal-body"><div class="eh-cal-title"><strong>${esc(entry.label)}${entry.early ? ' · anticipate' : ''}</strong>${badge(label, tone)}</div><small>Candidature ${esc(shortDate(entry.windowOpensAt))} – ${esc(shortDate(entry.windowClosesAt))} · voto ${esc(formatDate(entry.electionDate))}${when ? ` · ${esc(when)}` : ''}</small></div><div class="eh-cal-action">${action}</div></li>`;
   }).join('');
-  return `<ol class="eh-calendar">${rows || '<li class="sx-empty">Nessuna elezione in calendario.</li>'}</ol><p class="sx-note">Calendario simulato con cicli accelerati rispetto ai mandati reali. Se non ti candidi, un mandato dello stesso tipo si conclude.</p>`;
+  return `<ol class="eh-calendar">${rows || '<li class="sx-empty">Nessuna elezione in calendario.</li>'}</ol><p class="sx-note">Politiche ed europee seguono il calendario reale (fine della legislatura, europee del 2029 e poi ogni cinque anni); comunali e regionali hanno cicli di gioco accelerati. Se non ti candidi, un mandato dello stesso tipo si conclude. <button class="text-link" data-section-tab="elezioni" data-section-tab-value="nazionali">Ciclo nazionale ${arrow}</button></p>`;
 }
 
 function context(state) {
@@ -109,7 +110,7 @@ function context(state) {
   const chart = poll && poll.history.filter(value => value !== null).length > 2 ? lineChart({ series: [{ label: poll.party.label, color: SERIES[0], values: poll.history, emphasis: true }], labels: poll.history.map((_, index) => `${index + 1}`), unit: '%', height: 150, ariaLabel: 'Il tuo partito negli ultimi sondaggi' }) : '';
   return `<ul class="eh-facts">
       <li>${glyph(phaseIcon, 16)}<span><small>Fase politica</small><strong>${esc(phaseLabel)}</strong></span></li>
-      <li>${glyph('ministry', 16)}<span><small>Governo</small><strong>${governing ? `${government.status === 'crisis' ? 'In crisi' : 'In carica'}${seat ? ` · ${inMajority ? 'sei in maggioranza' : 'sei all’opposizione'}` : ' · non siedi in Parlamento'}` : government?.status === 'fallen' ? 'Caduto: verso un nuovo governo' : government?.status === 'awaiting-confidence' ? 'In attesa della fiducia' : esc(state.society?.executive?.label ?? 'Esecutivo di scenario in carica')}</strong></span></li>
+      <li>${glyph('ministry', 16)}<span><small>Governo</small><strong>${governing ? `${government.status === 'crisis' ? 'In crisi' : 'In carica'}${seat ? ` · ${inMajority ? 'sei in maggioranza' : 'sei all’opposizione'}` : ' · non siedi in Parlamento'}` : government?.status === 'fallen' ? 'Caduto: verso un nuovo governo' : government?.status === 'caretaker' ? 'Dimissionario: affari correnti fino al nuovo governo' : government?.status === 'awaiting-confidence' ? 'In attesa della fiducia' : esc(state.society?.executive?.label ?? 'Esecutivo di scenario in carica')}</strong></span></li>
       <li>${glyph('users', 16)}<span><small>Umore dei cittadini</small><strong>${mood === null ? '—' : `${num(mood, 0)}/100 · ${mood < 45 ? 'chi governa rischia' : mood >= 58 ? 'premia chi governa' : 'neutro'}`}</strong></span></li>
       <li>${glyph('link', 16)}<span><small>Alleanze del partito</small><strong>${allyNames.length ? esc(allyNames.join(', ')) : poll ? 'Nessuna intesa attiva' : 'Nessun partito'}</strong></span></li>
     </ul>${chart ? `<div class="eh-chart"><span class="section-kicker">IL TUO PARTITO NEI SONDAGGI · SIMULATI</span>${chart}</div>` : ''}`;
@@ -191,17 +192,19 @@ function history(state) {
   return card({ kicker: 'STORICO ELETTORALE · SIMULAZIONE', title: `${entries.length} ${entries.length === 1 ? 'elezione' : 'elezioni'} · ${wins} con mandato`, body: table([['date', 'Data'], ['type', 'Elezione'], ['share', '%', 'num'], ['position', 'Pos.', 'num'], ['outcome', 'Esito'], ['expectation', 'Attese'], ['seats', 'Seggi lista', 'num']], rows, { empty: 'Nessuna elezione ancora disputata.' }) });
 }
 
-export function renderElectionsHub(state, { parties = [], logoFor = () => null, tab = null } = {}) {
+export function renderElectionsHub(state, { parties = [], logoFor = () => null, tab = null, national = null, geography = null, nationalView = null } = {}) {
   if (!state.game) return empty('Crea prima un politico per entrare nella centrale elettorale.', '<button class="primary-button" data-action="new-career">Crea il politico</button>');
   const active = ELECTION_TABS.some(([id]) => id === tab) ? tab : defaultElectionTab(state);
   const summary = state.campaign?.status === 'active' ? campaignSummary(state.campaign) : null;
-  const counts = { campagna: state.campaign?.status === 'active' ? '●' : '', storico: (state.career.electionHistory ?? []).length || '' };
+  const formation = state.national?.formation;
+  const counts = { campagna: state.campaign?.status === 'active' ? '●' : '', nazionali: state.national?.campaign || (formation && !['completata', 'fallita'].includes(formation.phase)) ? '●' : '', storico: (state.career.electionHistory ?? []).length || '' };
   let body = '';
   if (active === 'panoramica') body = `<div class="sx-grid two">${card({ kicker: 'CALENDARIO ELETTORALE', title: 'Quando si vota', body: calendar(state) })}${card({ kicker: 'CONTESTO POLITICO', title: 'Il clima del voto', body: context(state) })}</div><div class="sx-grid two">${card({ kicker: 'PREPARAZIONE', title: 'Quanto sei pronto', body: readiness(state) })}${card({ kicker: 'REGOLE DEL GIOCO', title: 'Come si assegnano i seggi', body: rules(state) })}</div>`;
   else if (active === 'candidatura') body = candidacy(state);
   else if (active === 'campagna') body = `<div class="eh-campaign">${renderCampaignPage(state, parties, logoFor)}</div>`;
   else if (active === 'avversari') body = rivals(state, parties, logoFor);
   else if (active === 'risultati') body = renderElectionReport(state.career.lastElectionReport);
+  else if (active === 'nazionali') body = national ? renderNationalView(state, national(), { geography, view: nationalView }) : empty('Il ciclo nazionale si apre con i dati della partita: calendario, coalizioni e proiezione dei seggi.');
   else body = history(state);
   return `<div class="elections-hub">${hero(state, summary)}${sectionTabs('elezioni', ELECTION_TABS.map(([id, label]) => [id, label, counts[id]]), active)}<div class="sx-body" role="tabpanel">${body}</div></div>`;
 }

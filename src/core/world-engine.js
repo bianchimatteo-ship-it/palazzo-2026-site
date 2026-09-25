@@ -1,5 +1,5 @@
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260925-8';
-import { CHART_SLOTS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20260925-8';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260925-9';
+import { CHART_SLOTS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20260925-9';
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
 // A party enters with its real identity only (id, name, abbreviation, documented collocazione); its starting weight
@@ -1075,6 +1075,46 @@ export function applyWorldSignals(input, signals = [], date) {
       for (const force of outsideForces(world)) if (national ? (isLatent(force) ? force.support : force.baseline) >= 0.3 : force.regional) notice(force, national ? 8 : 6);
     }
   }
+  return world;
+}
+
+// ---------- the national cycle (legislature-engine) ----------
+// A general election resets the level of every force to the vote: the next simulated poll starts from the result.
+export function alignWorldToVote(input, shares = [], date, { title = 'Risultati delle elezioni', body = '' } = {}) {
+  if (!input || !shares.length) return input;
+  const world = copy(input);
+  const byId = new Map(shares.map(row => [row.partyId, row.share]));
+  for (const party of world.parties.filter(item => item.active && byId.has(item.id))) {
+    const share = Math.max(0.3, byId.get(party.id));
+    party.baseline = round2(share);
+    party.anchor = round2(share);
+  }
+  world.effects = world.effects.filter(effect => effect.cause === 'territori');
+  world.pollErrors = {};
+  logEvent(world, date, { kind: 'elezioni', icon: 'ballot', scope: 'nazionale', title, body, tone: 'neutral' });
+  return world;
+}
+// The forces of the parliamentary majority support the Government; the others go back to their own line.
+export function setGoverningForces(input, partyIds = [], date, { label = 'un nuovo governo', log = true } = {}) {
+  if (!input) return input;
+  const world = copy(input);
+  const majority = new Set(partyIds);
+  for (const party of world.parties.filter(item => item.active)) {
+    const was = party.governing;
+    party.governing = majority.has(party.id);
+    if (party.isPlayer) continue;
+    if (party.governing && party.strategy !== 'governista') { party.strategy = 'governista'; party.strategySince = world.week; }
+    else if (!party.governing && was && party.strategy === 'governista') { party.strategy = Math.abs(party.axis ?? 0) >= 2 || party.baseline >= 10 ? 'opposizione' : 'coalizione'; party.strategySince = world.week; }
+  }
+  if (log) logEvent(world, date, { kind: 'governo', icon: 'dome', scope: 'nazionale', title: `Nasce ${label}`, body: `Lo sostengono ${world.parties.filter(item => majority.has(item.id)).map(item => item.label).join(', ') || 'forze diverse'} (simulazione).`, tone: 'neutral' });
+  return world;
+}
+// Effects of a national campaign on several forces at once (coalitions, useful vote, the player's party line).
+export function addWorldEffects(input, effects = [], date, entry = null) {
+  if (!input || (!effects.length && !entry)) return input;
+  const world = copy(input);
+  for (const effect of effects) if (world.parties.some(party => party.id === effect.partyId && party.active)) addEffect(world, { remaining: 2, cause: 'campagna-nazionale', ...effect });
+  if (entry) logEvent(world, date, { kind: 'elezioni', icon: 'megaphone', scope: 'nazionale', tone: 'neutral', ...entry });
   return world;
 }
 

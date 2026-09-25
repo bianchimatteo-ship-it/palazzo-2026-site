@@ -1,24 +1,24 @@
-import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20260925-8';
-import { playerRoles } from '../core/roles.js?v=20260925-8';
-import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20260925-8';
-import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20260925-8';
-import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260925-8';
-import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20260925-8';
-import { careerLevelLabel } from '../data/regions.js?v=20260925-8';
-import { formatDate } from '../core/time.js?v=20260925-8';
-import { renderBarometerPanel } from './polls-mode.js?v=20260925-8';
-import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20260925-8';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260925-8';
-import { societyMood } from '../core/society-engine.js?v=20260925-8';
-import { financeOutlook } from '../core/finance-engine.js?v=20260925-8';
-import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20260925-8';
-import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20260925-8';
-import { renderFinanceCard } from './finance-mode.js?v=20260925-8';
-import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20260925-8';
-import { stateBadge } from './charts.js?v=20260925-8';
-import { illustration } from './illustrations.js?v=20260925-8';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260925-8';
-import { regionPriorities } from '../core/society-engine.js?v=20260925-8';
+import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20260925-9';
+import { playerRoles } from '../core/roles.js?v=20260925-9';
+import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20260925-9';
+import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20260925-9';
+import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260925-9';
+import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20260925-9';
+import { careerLevelLabel } from '../data/regions.js?v=20260925-9';
+import { formatDate } from '../core/time.js?v=20260925-9';
+import { renderBarometerPanel } from './polls-mode.js?v=20260925-9';
+import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20260925-9';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260925-9';
+import { societyMood } from '../core/society-engine.js?v=20260925-9';
+import { financeOutlook } from '../core/finance-engine.js?v=20260925-9';
+import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20260925-9';
+import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20260925-9';
+import { renderFinanceCard } from './finance-mode.js?v=20260925-9';
+import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20260925-9';
+import { stateBadge } from './charts.js?v=20260925-9';
+import { illustration } from './illustrations.js?v=20260925-9';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260925-9';
+import { regionPriorities } from '../core/society-engine.js?v=20260925-9';
 
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -147,7 +147,7 @@ export function renderElectionCalendar(state, { detailed = false } = {}) {
     const action = entry.status === 'open' && state.campaign?.status !== 'active' ? `<button class="text-link" data-nav="elezioni">Candidati ${arrow}</button>` : entry.status === 'upcoming' && state.campaign?.status !== 'active' && game.status !== 'ended' ? `<button class="text-link" data-game-fastforward="${esc(entry.type)}" data-fastforward-label="${esc(entry.label)}" data-fastforward-date="${esc(entry.windowOpensAt)}" data-fastforward-weeks="${weeksUntil(today, entry.windowOpensAt)}">Avanza fino alle candidature ${arrow}</button>` : '';
     return `<div class="hq-election ${entry.status}"><div><strong>${esc(entry.label)}${entry.early ? ' · anticipate' : ''}</strong>${status}<small>Voto il ${esc(formatDate(entry.electionDate))}</small></div>${action}</div>`;
   }).join('');
-  const note = detailed ? `<p class="parliament-note">Calendario simulato con cicli accelerati rispetto ai mandati reali. Quando si aprono le candidature puoi avviare la campagna; se non ti candidi, un mandato dello stesso tipo si conclude. La preparazione accumulata (${num(game.prep, 0)}%), i fondi e il sostegno nel partito entrano nella campagna.</p>` : '';
+  const note = detailed ? `<p class="parliament-note">Politiche ed europee seguono il calendario reale (fine della legislatura, europee 2029 e poi ogni cinque anni); comunali e regionali hanno cicli di gioco accelerati. Quando si aprono le candidature puoi avviare la campagna; se non ti candidi, un mandato dello stesso tipo si conclude. La preparazione accumulata (${num(game.prep, 0)}%), i fondi e il sostegno nel partito entrano nella campagna.</p>` : '';
   return `<div class="hq-elections">${rows || '<p class="quiet-copy">Nessuna elezione in calendario.</p>'}</div>${note}`;
 }
 
@@ -186,7 +186,9 @@ export function politicalPhase(state) {
   if (state.campaign?.status === 'active') return ['campagna', 'Campagna elettorale in corso', 'ballot'];
   if (government?.status === 'crisis') return ['crisi', 'Crisi di governo', 'alert'];
   if (government?.status === 'awaiting-confidence') return ['trattativa', 'Trattative per il nuovo governo', 'link'];
-  if (government?.status === 'fallen') return ['crisi', 'Governo caduto: verso il voto', 'alert'];
+  if (government?.status === 'fallen') return ['crisi', state.national?.formation?.crisis && state.national.formation.phase !== 'fallita' ? 'Governo caduto: consultazioni in corso' : 'Governo caduto: verso il voto', 'alert'];
+  // After the vote: new Chambers, consultations, confidence (national cycle).
+  if (government?.status === 'caretaker' || (state.national?.formation && !['completata', 'fallita'].includes(state.national.formation.phase))) return ['trattativa', 'Dopo il voto: si forma il nuovo governo', 'link'];
   const politiche = game.elections.find(item => item.type === 'politiche' && item.status !== 'held');
   if (politiche && (politiche.status === 'open' || weeksUntil(date, politiche.windowOpensAt) <= 10)) return ['preelettorale', 'Fine legislatura: clima pre-elettorale', 'ballot'];
   if (game.legislature?.since && weeksUntil(game.legislature.since, date) <= 12) return ['inizio', 'Inizio di legislatura', 'flag'];
@@ -203,7 +205,7 @@ function situationBar(state) {
   const governing = ['active', 'crisis'].includes(government?.status);
   const executive = governing
     ? `${government.status === 'crisis' ? 'Governo in crisi' : 'Governo in carica'} · stabilità ${num(government.stability ?? 50, 0)}${poll?.government ? ` · gradimento ${num(poll.government.approval, 0)}%` : ''}`
-    : government?.status === 'awaiting-confidence' ? 'Governo in attesa della fiducia' : `${state.society?.executive?.label ?? 'Esecutivo di scenario'}${poll?.executive ? ` · gradimento ${num(poll.executive.approval, 0)}%` : ''}`;
+    : government?.status === 'awaiting-confidence' ? 'Governo in attesa della fiducia' : government?.status === 'caretaker' ? `${government.name}: affari correnti` : `${state.society?.executive?.label ?? 'Esecutivo di scenario'}${poll?.executive ? ` · gradimento ${num(poll.executive.approval, 0)}%` : ''}`;
   const mood = state.society ? societyMood(state.society) : null;
   const moodState = mood === null ? null : mood < 40 ? ['crisi', 'Malcontento'] : mood < 47 ? ['rischio', 'Clima teso'] : mood >= 58 ? ['crescita', 'Clima positivo'] : ['stabile', 'Clima stabile'];
   const [phaseKind, phaseLabel, phaseIcon] = politicalPhase(state);

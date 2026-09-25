@@ -2,7 +2,7 @@
 // internal relations, the state of the party, the territory, resources and the political moment. Crossing a
 // threshold makes it likely, never certain; the same attempt can end in a promotion, a lower office than hoped,
 // a postponement, an internal defeat or even a demotion.
-import { committeeStrength } from './committee-engine.js?v=20260925-8';
+import { committeeStrength } from './committee-engine.js?v=20260925-9';
 
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
 const round1 = value => Math.round(value * 10) / 10;

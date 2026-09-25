@@ -1,4 +1,4 @@
-import { ELECTION_MODELS, EUROPEAN_CONSTITUENCIES, EUROPEAN_THRESHOLD, OUTCOME_LABELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20260925-8';
+import { ELECTION_MODELS, EUROPEAN_CONSTITUENCIES, EUROPEAN_THRESHOLD, OUTCOME_LABELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20260925-9';
 
 const clamp = (value,min=0,max=100) => Math.min(max,Math.max(min,value));
 const rounded = value => Math.round(value*100)/100;
@@ -235,7 +235,7 @@ export function runFinalElection(campaign,firstRound=null) {
 
 // Preference votes: inside a list the seats go to the candidates with the most preferences. The player's pull
 // (notoriety, reputation, local roots, campaign on the ground) competes with the list mates'.
-function preferenceStanding(campaign, listSeats) {
+export function preferenceStanding(campaign, listSeats) {
   const rand = seeded(hash(`${campaign.id}|preferenze`));
   const stats = campaign.candidateStats ?? {};
   const player = campaign.candidates.find(item => item.isPlayer);

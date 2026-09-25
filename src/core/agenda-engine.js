@@ -1,9 +1,9 @@
 // The political agenda: every dated commitment of the career in one calendar — votes and candidacy windows,
 // candidate selection, congresses, promises to verify, pending consequences, decrees to convert, allies' demands,
 // investments that expire and decisions held until a date. Read-only: it derives everything from the state.
-import { advanceDays, formatDate } from './time.js?v=20260925-8';
-import { upcomingElections } from './career-engine.js?v=20260925-8';
-import { SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20260925-8';
+import { advanceDays, formatDate } from './time.js?v=20260925-9';
+import { upcomingElections } from './career-engine.js?v=20260925-9';
+import { SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20260925-9';
 
 export const AGENDA_KINDS = Object.freeze({
   elezione: { label: 'Elezioni', icon: 'ballot' },
@@ -16,7 +16,8 @@ export const AGENDA_KINDS = Object.freeze({
   decreto: { label: 'Decreto-legge', icon: 'law' },
   alleato: { label: 'Richiesta di un alleato', icon: 'link' },
   investimento: { label: 'Investimento', icon: 'money' },
-  decisione: { label: 'Decisione', icon: 'alert' }
+  decisione: { label: 'Decisione', icon: 'alert' },
+  legislatura: { label: 'Legislatura e governo', icon: 'dome' }
 });
 const CLOSED = ['approved', 'rejected', 'lapsed'];
 const daysBetween = (from, to) => Math.round((Date.parse(`${to}T12:00:00`) - Date.parse(`${from}T12:00:00`)) / 86400000);
@@ -75,6 +76,20 @@ export function agendaCalendar(state, { horizonDays = 730 } = {}) {
     const group = Object.values(parliament.chambers ?? {}).flatMap(chamber => chamber.groups ?? []).find(item => item.groupId === groupId);
     add({ id: `richiesta-${groupId}-${partner.demand.deadline}`, date: partner.demand.deadline, kind: 'alleato', title: `${group?.officialName ?? 'Un alleato'} chiede ${partner.demand.label}`, detail: 'Se la richiesta resta senza risposta, il sostegno al governo vacilla.', tone: 'warn', action: { type: 'nav', page: 'governo' } });
   }
+  // The national cycle: lists filed for the general election, the steps of the formation of the Government, the end
+  // of the legislature.
+  const national = state.national;
+  if (national?.campaign && !national.campaign.fixed) add({ id: `liste-${national.campaign.electionId}`, date: national.campaign.filingDate, kind: 'legislatura', title: 'Deposito delle liste per le politiche', detail: 'Da quel giorno le coalizioni sono fissate fino al voto.', tone: 'warn', action: { type: 'tab', section: 'elezioni', tab: 'nazionali' } });
+  const formation = national?.formation;
+  if (formation && !['completata', 'fallita'].includes(formation.phase)) {
+    const step = formation.phase === 'insediamento' ? [formation.firstSitting, formation.crisis ? 'Consultazioni al Quirinale' : 'Prima seduta delle nuove Camere', 'Poi si aprono le consultazioni.']
+      : formation.phase === 'consultazioni' ? [formation.consultationsEnd, 'Si chiudono le consultazioni', 'Il Presidente della Repubblica affida l’incarico.']
+      : formation.phase === 'incarico' ? [formation.playerAccepted ? formation.confidenceAt : formation.mandateEnd, formation.playerAccepted ? 'Il tuo governo davanti alle Camere' : 'Scade l’incarico', formation.playerAccepted ? 'Entro questa data chiedi la fiducia (sezione Governo).' : 'Accetta o rinuncia all’incarico.']
+      : [formation.confidenceAt, 'Voto di fiducia al nuovo governo', 'Camera e Senato votano la fiducia.'];
+    add({ id: `formazione-${formation.resultId}-${formation.phase}`, date: step[0], kind: 'legislatura', title: step[1], detail: step[2], tone: formation.phase === 'incarico' ? 'warn' : 'neutral', action: { type: 'tab', section: 'elezioni', tab: 'nazionali' } });
+    if (formation.deadline) add({ id: `formazione-${formation.resultId}-scadenza`, date: formation.deadline, kind: 'legislatura', title: 'Termine per formare il governo', detail: 'Senza una maggioranza le Camere vengono sciolte.' });
+  }
+  if (national?.legislature?.naturalEnd) add({ id: `fine-legislatura-${national.legislature.number}`, date: national.legislature.naturalEnd, kind: 'legislatura', title: `Scadenza della ${national.legislature.label}`, detail: 'Le Camere scadono cinque anni dopo la prima seduta.' });
   // Money: investments that expire.
   for (const asset of (game.finance?.assets ?? []).filter(item => item.untilWeek)) add({ id: `asset-${asset.id}-${asset.untilWeek}`, date: weekDate(game, asset.untilWeek + 1), kind: 'investimento', title: `Scade: ${asset.label}`, detail: 'Dopo la scadenza l’effetto si esaurisce.', action: { type: 'nav', page: 'finanze' } });
   for (const investment of (party?.org?.investments ?? []).filter(item => item.untilWeek && item.untilWeek >= game.week.index)) add({ id: `partito-${investment.id}-${investment.untilWeek}`, date: weekDate(game, investment.untilWeek + 1), kind: 'investimento', title: `Scade l’investimento del partito: ${investment.label ?? investment.id}`, detail: 'Tesoreria del partito.', action: { type: 'nav', page: 'finanze' } });

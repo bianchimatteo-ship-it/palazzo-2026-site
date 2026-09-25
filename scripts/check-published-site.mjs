@@ -95,6 +95,15 @@ try {
     return [name,records];
   }));
   const db = Object.fromEntries(collections);
+  // Real documents (not lists of records): the electoral map of 2022 must be online and identical to the local file.
+  for (const [name, document] of Object.entries(liveManifest.documents ?? {})) {
+    const url = new URL(document.file, assetBase); url.searchParams.set('v', version);
+    const [{ bytes }, local] = await Promise.all([get(url), readFile(new URL(`../src/data/real/${document.file}`, import.meta.url))]);
+    assert(hash(bytes) === hash(local), `${name}: documento live diverso dal file locale`);
+    const live = JSON.parse(bytes.toString('utf8'));
+    assert(live.source === 'real' && live.verified === true && live.sourceUrl && live.sourceName && live.verifiedAt, `${name}: provenienza non verificata`);
+    if (name === 'electoralGeography') assert(live.camera?.collegi?.length === 147 && live.senato?.collegi?.length === 74, `${name}: collegi pubblicati incompleti`);
+  }
   const parties = [...db.parties,...db.politicalMovements];
   assert(db.parties.length === localManifest.collections.parties && db.politicalMovements.length === localManifest.collections.politicalMovements, 'Conteggi pubblicati dei partiti/movimenti non corrispondono');
   assert(db.politicians.length === 604 && db.parliamentaryGroups.length === 22, 'Conteggi pubblicati di politici/gruppi non corrispondono');

@@ -39,7 +39,7 @@ let store = await load();
 const volt = parties.find(item => item.id === 'party-registro-p1-2024-71-ir');
 store.createCareer(draft('comunale'), [realParty, volt], groups);
 let state = store.getState();
-assert.equal(state.version, 8);
+assert.equal(state.version, 9);
 assert.equal(state.game.source, 'simulation');
 assert.equal(state.game.week.index, 1);
 assert.equal(state.game.week.ap, 6);

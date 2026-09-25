@@ -568,7 +568,19 @@ export const SITUATION_EVENTS = Object.freeze({
     { id: 'aula', label: 'Concentrati sul lavoro in Aula', effects: { stats: { reputation: 0.5 } } }] },
   'impegni-elettorali': { id: 'impegni-elettorali', title: 'Gli impegni presi in campagna', body: 'In campagna hai preso {commitments} impegni con categorie e territori: ora ti chiedono conto.', defaultChoice: 'rinvia', choices: [
     { id: 'onora', label: 'Onora gli impegni', cost: { ap: 1, capital: 2 }, effects: { stats: { reputation: 1.5 }, relations: { civic: 3 } } },
-    { id: 'rinvia', label: 'Rinvia a tempi migliori', later: { weeks: 8, label: 'Impegni elettorali', chance: 0.6, hint: 'Le categorie potrebbero accusarti di aver tradito le promesse', effects: { stats: { reputation: -2 } }, memory: { kind: 'promessa-tradita', text: 'Impegni elettorali non mantenuti', weight: 1 } } }] }
+    { id: 'rinvia', label: 'Rinvia a tempi migliori', later: { weeks: 8, label: 'Impegni elettorali', chance: 0.6, hint: 'Le categorie potrebbero accusarti di aver tradito le promesse', effects: { stats: { reputation: -2 } }, memory: { kind: 'promessa-tradita', text: 'Impegni elettorali non mantenuti', weight: 1 } } }] },
+  // The national cycle (legislature-engine): the secretary decides the coalition, the support to a new majority, the mandate.
+  'coalizioni-politiche': { id: 'coalizioni-politiche', title: 'Politiche: con chi corre {party}', body: 'Si aprono le candidature per le elezioni politiche: le liste si depositano entro il {deadline}. Nei collegi uninominali vince chi prende un voto in più, e da soli si rischia di restare senza seggi. La coalizione più vicina è {coalition}: il suo leader ti accoglierebbe con una probabilità stimata del {chance}.', defaultChoice: 'direzione', choices: [
+    { id: 'aderisci', label: 'Chiedi di entrare in {coalition}', cost: { capital: 3 }, special: 'national-coalition' },
+    { id: 'da-soli', label: 'Corri da solo: identità e mani libere', effects: { party: { support: 1 } }, special: 'national-alone' },
+    { id: 'direzione', label: 'Lascia decidere alla direzione, in base ai rapporti con gli altri partiti', special: 'national-auto' }] },
+  'sostegno-nuovo-governo': { id: 'sostegno-nuovo-governo', title: 'Consultazioni: {majority}', body: 'Dopo il voto nessuna coalizione governa da sola. Al Quirinale si lavora a {majority} attorno a {leader}: il tuo partito deve dire se ci sta.', defaultChoice: 'valuta', choices: [
+    { id: 'sostieni', label: 'Sostieni il nuovo governo', effects: { stats: { influence: 1 }, party: { support: -1 } }, special: 'national-support' },
+    { id: 'opposizione', label: 'Resta all’opposizione', effects: { stats: { reputation: 0.5 } }, special: 'national-opposition' },
+    { id: 'valuta', label: 'Decidi con gli altri partiti: segui la direzione', special: 'national-wait' }] },
+  'incarico-governo': { id: 'incarico-governo', title: 'Il Presidente della Repubblica ti affida l’incarico', body: 'Il tuo partito guida {majority}: tocca a te formare il governo, distribuire i ministeri e chiedere la fiducia alle Camere. Se rinunci, l’incarico passa a un’altra figura di {leader}.', defaultChoice: 'accetta', choices: [
+    { id: 'accetta', label: 'Accetta l’incarico: formi il governo', effects: { stats: { notoriety: 2, influence: 2 } }, special: 'national-mandate-accept' },
+    { id: 'rinuncia', label: 'Rinuncia e lascia l’incarico a un’altra figura', effects: { party: { support: -2 } }, special: 'national-mandate-decline' }] }
 });
 
 export const CAREER_OBJECTIVES = Object.freeze([

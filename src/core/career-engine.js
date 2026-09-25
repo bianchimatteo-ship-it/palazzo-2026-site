@@ -1,21 +1,22 @@
-import { advanceDays } from './time.js?v=20260925-8';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260925-8';
-import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260925-8';
+import { advanceDays } from './time.js?v=20260925-9';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260925-9';
+import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260925-9';
 import {
   APPOINTMENTS, BASE_WEEKLY_INCOME, CAREER_EVENTS, CAREER_OBJECTIVES, CURRENT_TEMPLATES, EARLY_ELECTION_AFTER_WEEKS, ELECTION_SCHEDULE,
   FORCED_EVENTS, LEGACY_RIVAL_NAMES, SIMULATED_RIVAL_LABEL, FOUNDER_RANK, LEVEL_FIRST_ELECTION, OFFICE_INCOME, PARTY_RANKS, RELATION_TEMPLATES, STAT_LABELS,
-  SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS } from '../data/simulation/career-rules.js?v=20260925-8';
-import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20260925-8';
-import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20260925-8';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260925-8';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260925-8';
-import { book, buyInvestment, createFinance, depositElectionFund, hasAsset, normalizeFinance, settleFinanceWeek } from './finance-engine.js?v=20260925-8';
-import { advanceOrganization, applyOrgEffects, createOrganization, isPartyLeader, normalizeOrganization, treasuryBook } from './organization-engine.js?v=20260925-8';
-import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20260925-8';
-import { HARD_CATEGORIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20260925-8';
-import { macroAreaOf } from '../data/simulation/policy-rules.js?v=20260925-8';
-import { advancementOdds, evaluateAdvancement, progressionFactors } from './progression-engine.js?v=20260925-8';
-import { advanceCommittees, applyCommitteeAction, COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, foundCommittee } from './committee-engine.js?v=20260925-8';
+  SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS } from '../data/simulation/career-rules.js?v=20260925-9';
+import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20260925-9';
+import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20260925-9';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260925-9';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260925-9';
+import { book, buyInvestment, createFinance, depositElectionFund, hasAsset, normalizeFinance, settleFinanceWeek } from './finance-engine.js?v=20260925-9';
+import { advanceOrganization, applyOrgEffects, createOrganization, isPartyLeader, normalizeOrganization, treasuryBook } from './organization-engine.js?v=20260925-9';
+import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20260925-9';
+import { HARD_CATEGORIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20260925-9';
+import { macroAreaOf } from '../data/simulation/policy-rules.js?v=20260925-9';
+import { advancementOdds, evaluateAdvancement, progressionFactors } from './progression-engine.js?v=20260925-9';
+import { advanceCommittees, applyCommitteeAction, COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, foundCommittee } from './committee-engine.js?v=20260925-9';
+import { europeanElectionDate, legislatureTerm, LEGISLATURE_RULES, sundayOnOrBefore } from './legislature-engine.js?v=20260925-9';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -37,11 +38,13 @@ function seeded(seed) {
   let state = seed >>> 0 || 1;
   return () => { state = (Math.imul(state, 1664525) + 1013904223) >>> 0; return state / 4294967296; };
 }
-export const REAL_LEGISLATURE = Object.freeze({ number: 19, label: 'XIX legislatura', reference: 'real', source: 'real' });
+// The XIX legislature in office when a career starts: its first sitting (13 October 2022) is the start of the Camera
+// in the real dataset (chambers.json); its natural end and the day of the next general election follow from it.
+export const REAL_LEGISLATURE = Object.freeze({ number: 19, label: 'XIX legislatura', reference: 'real', firstSitting: '2022-10-13', source: 'real' });
 const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII', 'XIII', 'XIV', 'XV', 'XVI', 'XVII', 'XVIII', 'XIX', 'XX', 'XXI', 'XXII', 'XXIII', 'XXIV', 'XXV'];
 function nextLegislature(game, date) {
   const number = (game.legislature?.number ?? 19) + 1;
-  game.legislature = { number, label: `${ROMAN[number] ?? number} legislatura (simulata)`, reference: 'simulation', since: date, source: SIM };
+  game.legislature = { number, label: `${ROMAN[number] ?? number} legislatura (simulata)`, reference: 'simulation', since: date, firstSitting: advanceDays(date, LEGISLATURE_RULES.firstSittingDays), source: SIM };
 }
 
 // ---------- situation ----------
@@ -96,6 +99,18 @@ function createPartyState(party, seed, context = {}) {
     org: createOrganization({ rand: seeded(seed ^ 0x5bd1e995), founder, region: context.region ?? null, share: context.share ?? null, week: context.week ?? 1, date: context.date ?? null })
   };
 }
+// National votes follow the real calendar: the general election at the natural end of the legislature (or early),
+// the European elections in 2029 and then every five years. The candidacy window opens a campaign before the vote.
+function nationalElectionDate(game, type, today) {
+  const model = ELECTION_MODELS[type];
+  const earliest = advanceDays(today, 7 + model.campaignDays);
+  const planned = type === 'politiche' ? legislatureTerm(game.legislature ?? REAL_LEGISLATURE).plannedVote : europeanElectionDate(today);
+  return planned >= earliest ? planned : earliest;
+}
+function makeNationalElection(type, electionDate, place = {}, early = false) {
+  const entry = makeElection(type, advanceDays(electionDate, -ELECTION_MODELS[type].campaignDays), place, early);
+  return { ...entry, electionDate, calendar: 'nazionale' };
+}
 function makeElection(type, windowOpensAt, place = {}, early = false) {
   const model = ELECTION_MODELS[type];
   const labels = { comunale: `Comunali · ${place.municipality || 'il tuo comune'}`, regionale: `Regionali · ${place.region || 'la tua regione'}`, politiche: early ? 'Politiche anticipate' : 'Elezioni politiche', europee: 'Elezioni europee' };
@@ -114,14 +129,16 @@ export function createGameState({ seedText, currentDate, level, party = null, pl
     id: item.id, label: item.id === 'rival' ? SIMULATED_RIVAL_LABEL : item.label,
     kind: item.kind, value: clamp(item.base + (item.id === 'rival' ? -setting.relationStart : setting.relationStart)), source: SIM
   }));
-  const elections = Object.keys(ELECTION_SCHEDULE).map(type => makeElection(type, advanceDays(currentDate, 7 * (LEVEL_FIRST_ELECTION[level]?.[type] ?? ELECTION_SCHEDULE[type].firstWeeks)), place));
+  const elections = Object.keys(ELECTION_SCHEDULE).map(type => ['politiche', 'europee'].includes(type)
+    ? makeNationalElection(type, nationalElectionDate({ legislature: REAL_LEGISLATURE }, type, currentDate), place)
+    : makeElection(type, advanceDays(currentDate, 7 * (LEVEL_FIRST_ELECTION[level]?.[type] ?? ELECTION_SCHEDULE[type].firstWeeks)), place));
   const startingFunds = Math.round((funds ?? ({ comunale: 1500, regionale: 2500, deputato: 4000, senatore: 4000 }[level] ?? 2000)) * setting.funds);
   const game = {
     version: 1, source: SIM, status: 'active', seed, rngState: seed, place, difficulty: difficultyId(difficulty),
     week: { index: 1, startedAt: currentDate, ap: WEEKLY_ACTION_POINTS, maxAp: WEEKLY_ACTION_POINTS, categoriesUsed: [] },
     resources: { funds: startingFunds, politicalCapital: clamp(Math.round((parliament?.resources?.politicalCapital ?? stats.influence ?? 30) + setting.capital), 0, 100), source: SIM },
     prep: 0, relations, party: createPartyState(party, seed, { region: place.region, share: party?.share ?? null, week: 1, date: currentDate }), pastParties: [], elections,
-    inbox: [], log: [], objectives: {}, flags: {}, lastReport: null, weekStartStats: { ...stats }, lastEventId: null,
+    inbox: [], log: [], objectives: {}, flags: { nationalCalendar: 2 }, lastReport: null, weekStartStats: { ...stats }, lastEventId: null,
     fallenWeeks: 0, endedAt: null, endReason: null,
     finance: createFinance({ week: 1, date: currentDate, funds: startingFunds }), contacts: [], promises: [], legislature: { ...REAL_LEGISLATURE }
   };
@@ -139,7 +156,7 @@ export function normalizeGameState(game) {
   const party = game.party ? { ...game.party, ...(game.party.affiliation === 'founder' ? { rank: FOUNDER_RANK.level } : {}), org: normalizeOrganization(game.party.org, { rand: seeded(hash(`${game.seed}|${game.party.partyId}|org`)), founder: game.party.affiliation === 'founder', region: game.place?.region ?? null, week, date }) } : game.party ?? null;
   // The career never closes: a save that had ended resumes, with the fall kept on record.
   const revived = game.status === 'ended' ? { status: 'active', endedAt: null, endReason: null, setbacks: [...(game.setbacks ?? []), { week, date: game.endedAt ?? date, reason: game.endReason ?? 'Crisi di reputazione', source: SIM }] } : {};
-  return {
+  return alignNationalCalendar({
     status: 'active', prep: 0, pastParties: [], inbox: [], log: [], objectives: {}, flags: {}, lastReport: null, lastEventId: null, fallenWeeks: 0, place: {},
     contacts: [], promises: [], pending: [], legislature: { ...REAL_LEGISLATURE }, difficulty: 'normale', setbacks: [],
     ...game, ...revived, party,
@@ -149,7 +166,20 @@ export function normalizeGameState(game) {
     // Older saves named the rival with a realistic invented name: it becomes an explicit simulated role.
     relations: Array.isArray(game.relations) ? game.relations.map(item => item.id === 'rival' && LEGACY_RIVAL_NAMES.includes(item.label) ? { ...item, label: SIMULATED_RIVAL_LABEL } : item) : [],
     elections: Array.isArray(game.elections) ? game.elections : []
-  };
+  });
+}
+// Saves made with the accelerated national calendar: the general and European elections still ahead move to the real
+// calendar (end of the legislature, European elections of 2029 and every five years). Local votes keep their cycle.
+function alignNationalCalendar(game) {
+  if (game.flags?.nationalCalendar === 2) return game;
+  const today = game.week?.startedAt;
+  if (!today) return game;
+  const legislature = { ...REAL_LEGISLATURE, ...(game.legislature ?? {}), firstSitting: game.legislature?.firstSitting ?? (game.legislature?.since ? advanceDays(game.legislature.since, LEGISLATURE_RULES.firstSittingDays) : REAL_LEGISLATURE.firstSitting) };
+  const elections = game.elections.map(entry => {
+    if (!['politiche', 'europee'].includes(entry.type) || entry.status !== 'upcoming' || entry.early) return entry;
+    return { ...makeNationalElection(entry.type, nationalElectionDate({ legislature }, entry.type, today), game.place ?? {}), id: entry.id };
+  });
+  return { ...game, legislature, elections, flags: { ...(game.flags ?? {}), nationalCalendar: 2 } };
 }
 
 // ---------- effects ----------
@@ -587,7 +617,9 @@ function leaveParty(ctx, reason) {
   ctx.game.relations = ctx.game.relations.filter(item => item.id !== 'leadership');
 }
 // Specials the store turns into changes of the country, the Parliament or the Government.
-const WORLD_SPECIALS = ['markets-calm', 'markets-worse', 'europe-up', 'europe-down', 'society-cost', 'minister-defend', 'minister-resign', 'budget-open', 'partner-accept', 'partner-negotiate', 'partner-refuse', 'obstruction-add', 'obstruction-clear', 'snipers'];
+const WORLD_SPECIALS = ['markets-calm', 'markets-worse', 'europe-up', 'europe-down', 'society-cost', 'minister-defend', 'minister-resign', 'budget-open', 'partner-accept', 'partner-negotiate', 'partner-refuse', 'obstruction-add', 'obstruction-clear', 'snipers',
+  // The national cycle (legislature-engine): coalitions before the vote, support and mandate after it.
+  'national-coalition', 'national-alone', 'national-auto', 'national-support', 'national-opposition', 'national-wait', 'national-mandate-accept', 'national-mandate-decline'];
 function handleSpecial(ctx, env, special, item, lines, specials, choice = {}) {
   const game = ctx.game;
   if (WORLD_SPECIALS.includes(special)) { specials.push({ type: special, params: item.params ?? {} }); return; }
@@ -1157,6 +1189,9 @@ export function markElectionRunning(game, electionId, campaignId) {
   return { ...game, elections: game.elections.map(item => item.id === electionId ? { ...item, status: 'running', campaignId } : item) };
 }
 function reschedule(game, entry) {
+  // The next general election at the natural end of the new legislature; the European ones five years later.
+  if (entry.type === 'politiche') { game.elections.push(makeNationalElection('politiche', legislatureTerm(game.legislature).plannedVote, game.place)); return; }
+  if (entry.type === 'europee') { game.elections.push(makeNationalElection('europee', europeanElectionDate(entry.electionDate), game.place)); return; }
   const cycle = ELECTION_SCHEDULE[entry.type].cycleWeeks * 7;
   const base = entry.early ? entry.electionDate : entry.windowOpensAt;
   game.elections.push(makeElection(entry.type, advanceDays(base, cycle), game.place));
@@ -1167,8 +1202,8 @@ export function markElectionHeld(game, campaignId, result) {
   if (!entry) return next;
   entry.status = 'held';
   entry.result = result;
-  reschedule(next, entry);
   if (entry.type === 'politiche') nextLegislature(next, entry.electionDate);
+  reschedule(next, entry);
   return next;
 }
 function updateElections(ctx, date, lines, specials) {
@@ -1185,8 +1220,10 @@ function updateElections(ctx, date, lines, specials) {
     }
     if (entry.status === 'missed' && date >= entry.electionDate) {
       entry.status = 'held';
+      if (entry.type === 'politiche') { nextLegislature(game, entry.electionDate); lines.push(`Si vota: si apre la ${game.legislature.label}.`); }
       reschedule(game, entry);
-      if (entry.type === 'politiche') { nextLegislature(game, entry.electionDate); lines.push(`Si apre la ${game.legislature.label}.`); }
+      // The country votes without the player: the store runs the national vote (legislature-engine).
+      if (['politiche', 'europee'].includes(entry.type)) specials.push({ type: 'national-vote', electionType: entry.type, date: entry.electionDate, electionId: entry.id });
     }
   }
   // A government that stays fallen long enough brings the general election forward.
@@ -1194,11 +1231,24 @@ function updateElections(ctx, date, lines, specials) {
   game.fallenWeeks = government?.status === 'fallen' ? (game.fallenWeeks ?? 0) + 1 : 0;
   const politics = game.elections.find(item => item.type === 'politiche' && item.status === 'upcoming');
   if (game.fallenWeeks >= EARLY_ELECTION_AFTER_WEEKS && politics && politics.windowOpensAt > advanceDays(date, 7)) {
-    const early = makeElection('politiche', advanceDays(date, 7), game.place, true);
-    Object.assign(politics, { ...early, id: politics.id });
+    bringElectionForward(game, politics, date);
     lines.push('Nessuna maggioranza dopo la caduta del governo: si va alle politiche anticipate.');
-    game.fallenWeeks = 0;
   }
+}
+function bringElectionForward(game, politics, date) {
+  // Candidacies open in a week; the country votes on the first Sunday after the campaign.
+  const earliest = advanceDays(date, 7 + ELECTION_MODELS.politiche.campaignDays);
+  const early = makeNationalElection('politiche', sundayOnOrBefore(advanceDays(earliest, 6)), game.place, true);
+  Object.assign(politics, { ...early, id: politics.id });
+  game.fallenWeeks = 0;
+}
+// The Chambers are dissolved (no Government after the vote): the general election is brought forward, the
+// candidacies open in a week and the country votes after the campaign.
+export function scheduleEarlyElection(input, date) {
+  const game = copy(input);
+  const politics = game.elections.find(item => item.type === 'politiche' && item.status === 'upcoming');
+  if (politics && politics.windowOpensAt > advanceDays(date, 7)) bringElectionForward(game, politics, date);
+  return game;
 }
 
 // ---------- week ----------
@@ -1274,8 +1324,10 @@ function weeklySystems(ctx, env, date, closing, lines, specials) {
   const seat = Boolean(ctx.parliament?.player?.groupId);
   const playerGovernment = ['active', 'crisis'].includes(ctx.parliament?.government?.status);
   if (seat && !isSecretary(game.party) && !game.flags.scenarioOffice && !playerGovernment && (ctx.stats.reputation ?? 0) >= 55 && (ctx.stats.influence ?? 0) >= 45 && draw(game) < 0.04) raiseSituation(ctx, 'offerta-governo');
-  // Real parliamentarians react to the player's initiatives (the reaction is simulated).
-  const laws = (ctx.parliament?.laws ?? []).filter(law => !['approved', 'rejected', 'lapsed'].includes(law.stage));
+  // Real parliamentarians react to the player's initiatives (the reaction is simulated); in Chambers born from a vote of
+  // the game they do not sit, so they do not act on the player's bills.
+  const simulatedChambers = ctx.parliament?.legislature?.reference === 'simulation';
+  const laws = simulatedChambers ? [] : (ctx.parliament?.laws ?? []).filter(law => !['approved', 'rejected', 'lapsed'].includes(law.stage));
   const initiative = advanceContacts(game.contacts ?? [], { rand: () => draw(game), openLaw: laws[0] ?? null, seat: Boolean(ctx.parliament?.player?.groupId), region: game.place.region });
   if (initiative) {
     const { contact } = initiative;

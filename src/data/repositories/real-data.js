@@ -1,8 +1,8 @@
 // The immutable real snapshot is fetched by collection. The 2 MB aggregate is
 // retained for exports and validation, but the browser never downloads it.
-export const REAL_DATA_ASSET_VERSION = '20260925-6';
+export const REAL_DATA_ASSET_VERSION = '20260925-9';
 
-import { applyAdminOverrides } from './admin-store.js?v=20260925-8';
+import { applyAdminOverrides } from './admin-store.js?v=20260925-9';
 
 export let realDatabase = Object.freeze({});
 // Untouched copies of what the files contain, so owner overrides can be re-layered or reverted.
@@ -38,6 +38,12 @@ const collectionFiles = Object.freeze({
   territorialUnits: 'territorial-units.json',
   municipalities: 'municipalities.json'
 });
+// Real documents that are not a list of records: loaded whole, when the game needs them.
+const documentFiles = Object.freeze({
+  // Electoral map of the general election of 2022 (Eligendo): districts, circoscrizioni, seats, results by list, comuni.
+  electoralGeography: 'electoral-geography.json'
+});
+const loadingDocuments = new Map();
 let manifestPromise;
 
 function freezeDeep(value) {
@@ -54,7 +60,7 @@ function freezeRecords(records) {
 
 const dataUrl = file => { const url = new URL(`../real/${file}`, import.meta.url); url.searchParams.set('v', REAL_DATA_ASSET_VERSION); return url; };
 // Every real data file, for the offline cache.
-export const realDataUrls = () => ['manifest.json', ...Object.values(collectionFiles)].map(file => dataUrl(file).href);
+export const realDataUrls = () => ['manifest.json', ...Object.values(collectionFiles), ...Object.values(documentFiles)].map(file => dataUrl(file).href);
 async function fetchJson(file) {
   const url = dataUrl(file);
   const response = await fetch(url);
@@ -102,6 +108,24 @@ export async function loadRealCollections(collections = []) {
     return loadingCollections.get(name);
   }));
   return realDatabase;
+}
+
+// A real document (see documentFiles), loaded once and kept frozen in realDatabase under its name.
+export async function loadRealDocument(name) {
+  await loadRealDatabase();
+  if (!documentFiles[name]) throw new Error(`Documento reale sconosciuto: ${name}`);
+  if (Object.hasOwn(realDatabase, name)) return realDatabase[name];
+  if (!loadingDocuments.has(name)) {
+    loadingDocuments.set(name, fetchJson(documentFiles[name]).then(document => {
+      if (!document || typeof document !== 'object' || Array.isArray(document) || document.source !== 'real') throw new Error(`Il documento ${name} non ha il formato previsto.`);
+      realDatabase = Object.freeze({ ...realDatabase, [name]: freezeDeep(document) });
+      return realDatabase[name];
+    }).catch(error => {
+      loadingDocuments.delete(name);
+      throw error;
+    }));
+  }
+  return loadingDocuments.get(name);
 }
 
 // Re-applies the owner archive after an edit, without reloading the files.
