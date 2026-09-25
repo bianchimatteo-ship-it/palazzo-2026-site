@@ -553,3 +553,12 @@ select option, select optgroup { background: #141b18; color: #e8ece9; font-size:
 .admin-count { margin: 6px 0; color: var(--muted); font-size: 12px; }
 .admin-more { width: 100%; justify-content: center; margin-top: 8px; }
 .badge-bad { background: rgba(227, 73, 72, .16); color: #f0a3a3; }
+
+/* Admin: party, group/component and election list side by side */
+.admin-affiliation { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:8px; margin:0 0 12px; }
+.admin-affiliation span { display:grid; gap:3px; padding:9px 11px; border:1px solid #353c39; border-radius:6px; background:#141b18; }
+.admin-affiliation small { color:#9ea6a2; font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+.admin-affiliation strong { color:#dbe6df; font-size:13px; line-height:1.35; }
+.admin-affiliation .text-link { justify-self:start; font-size:12px; }
+.admin-warning { color:#f0b35a; }
+.catalog-row.is-former { opacity:.75; }

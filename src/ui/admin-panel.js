@@ -1,7 +1,8 @@
-import { ADMIN_FIELDS, POSITIONS, adminArchiveSummary, loadSharedArchive, overrideFor } from '../data/repositories/admin-store.js?v=20260924-22';
-import { affiliationOf, markForPerson } from './person-marks.js?v=20260924-22';
-import { hasSharedSession, sharedApiUrl } from '../data/repositories/admin-sync.js?v=20260924-22';
-import { emblem, glyph } from './visuals.js?v=20260924-22';
+import { ADMIN_FIELDS, POSITIONS, adminArchiveSummary, loadSharedArchive, overrideFor } from '../data/repositories/admin-store.js?v=20260925-1';
+import { affiliationOf, markForPerson } from './person-marks.js?v=20260925-1';
+import { hasSharedSession, sharedApiUrl } from '../data/repositories/admin-sync.js?v=20260925-1';
+import { emblem, glyph } from './visuals.js?v=20260925-1';
+import { BASIS_LABELS, electionListOf, groupAffiliation, groupLabel, politicianAffiliation } from '../data/repositories/party-links.js?v=20260925-1';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const norm = value => String(value ?? '').toLocaleLowerCase('it-IT').normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -22,16 +23,22 @@ function fieldInput(field, value, context) {
   if (field.type === 'date') return `<input type="date" ${name} value="${esc(value)}" />`;
   if (field.type === 'position') return `<select ${name}><option value="">Non classificata</option>${POSITIONS.map(item => `<option value="${esc(item)}" ${item === value ? 'selected' : ''}>${esc(item.charAt(0).toUpperCase() + item.slice(1))}</option>`).join('')}</select>`;
   if (field.type === 'chamber') return `<select ${name}><option value="camera" ${value === 'camera' ? 'selected' : ''}>Camera dei deputati</option><option value="senato" ${value === 'senato' ? 'selected' : ''}>Senato della Repubblica</option></select>`;
-  if (field.type === 'group') return `<select ${name}><option value="">Nessun gruppo</option>${context.groups.map(group => `<option value="${esc(group.id)}" ${group.id === value ? 'selected' : ''}>${esc(group.officialName)} · ${group.chamber === 'camera' ? 'Camera' : 'Senato'}</option>`).join('')}</select>`;
+  // Only the groups of the person's Chamber; a group of the other Chamber already saved stays visible (and flagged)
+  // so that saving the form never changes it silently.
+  if (field.type === 'group') return `<select ${name}><option value="">Nessun gruppo</option>${context.groups.filter(group => !context.chamber || group.chamber === context.chamber || group.id === value).map(group => `<option value="${esc(group.id)}" ${group.id === value ? 'selected' : ''}>${esc(groupTitle(group))} · ${group.chamber === 'camera' ? 'Camera' : 'Senato'}${context.chamber && group.chamber !== context.chamber ? ' (altra Camera!)' : ''}</option>`).join('')}</select>`;
   if (field.type === 'party') return `<select ${name}><option value="">Nessun partito collegato</option>${context.parties.map(party => `<option value="${esc(party.id)}" ${party.id === value ? 'selected' : ''}>${esc(party.officialName ?? party.name)}</option>`).join('')}</select>`;
   return `<input type="${field.type === 'url' ? 'url' : 'text'}" ${name} value="${esc(value)}" maxlength="${field.max ?? 200}" />`;
 }
+// The Camera lists the components of the Misto group as groups named "MISTO-…": group Misto, component "…".
+const groupTitle = group => { const component = group.officialName.match(/^MISTO\s*[-–]\s*(.+)$/i)?.[1]; return component ? `Misto · componente ${component}` : /^misto$/i.test(group.officialName.trim()) ? 'Misto' : group.officialName; };
 function editorFields(kind, record, original, context) {
   const edited = new Set(record.adminEdited?.fields ?? []);
+  const scoped = kind === 'politicians' ? { ...context, chamber: record.chamber } : context;
   return ADMIN_FIELDS[kind].map(field => {
     const originalValue = original?.[field.key];
     const shown = field.type === 'group' ? context.groups.find(group => group.id === originalValue)?.officialName : field.type === 'party' ? context.parties.find(party => party.id === originalValue)?.officialName : originalValue;
-    return `<label class="admin-field ${field.type === 'textarea' ? 'is-wide' : ''} ${edited.has(field.key) ? 'is-edited' : ''}"><span>${esc(field.label)}${field.required ? ' *' : ''}</span>${fieldInput(field, record[field.key], context)}${edited.has(field.key) ? `<small>Dato del dataset: ${esc(shown ?? 'vuoto')} <button type="button" class="text-link" data-admin-reset-field="${esc(field.key)}">Ripristina</button></small>` : ''}</label>`;
+    const wrongChamber = field.type === 'group' && record[field.key] && context.groups.find(group => group.id === record[field.key])?.chamber !== record.chamber;
+    return `<label class="admin-field ${field.type === 'textarea' ? 'is-wide' : ''} ${edited.has(field.key) ? 'is-edited' : ''}"><span>${esc(field.label)}${field.required ? ' *' : ''}</span>${fieldInput(field, record[field.key], scoped)}${wrongChamber ? `<small class="admin-warning">Il gruppo salvato appartiene all’altra Camera: nel gioco viene letto come il gruppo con lo stesso nome della ${record.chamber === 'camera' ? 'Camera' : 'Senato'}. Scegli qui il gruppo corretto e salva.</small>` : ''}${edited.has(field.key) ? `<small>Dato del dataset: ${esc(shown ?? 'vuoto')} <button type="button" class="text-link" data-admin-reset-field="${esc(field.key)}">Ripristina</button></small>` : ''}</label>`;
   }).join('');
 }
 function badges(item) {
@@ -67,6 +74,7 @@ function partiesTab(admin, context) {
     const candidates = linkQuery.length >= 2 ? context.politicians.filter(person => person.partyId !== selected.id && norm(person.fullName).includes(linkQuery)).slice(0, 30) : [];
     editor = `<form class="admin-editor" data-admin-form="party" data-admin-id="${esc(selected.id)}" data-admin-collection="${esc(selected.collection)}">
       <header class="admin-editor-head">${emblem({ label: selected.officialName, abbreviation: selected.abbreviation, color: selected.color, logo: context.logoFor(selected) }, 'lg')}<div><span class="section-kicker">PARTITO · ${selected.collection === 'politicalMovements' ? 'MOVIMENTO' : 'DATASET REALE'}</span><h3>${esc(selected.officialName)}</h3><small>${selected.adminEdited ? `Modificato dall’amministratore · ${esc((selected.adminEdited.updatedAt ?? '').slice(0, 10))}` : 'Nessuna modifica: valori del dataset verificato'}</small></div></header>
+      ${(context.aliasesOf?.(selected.id) ?? []).length ? `<p class="admin-note">Altre denominazioni dello stesso partito (non compaiono come partiti separati): ${context.aliasesOf(selected.id).map(alias => esc(alias.officialName)).join(', ')}.</p>` : ''}
       <div class="admin-fields">${editorFields('parties', selected, original, context)}</div>
       <div class="admin-actions"><button class="primary-button" type="submit">Salva modifiche</button>${selected.adminEdited ? '<button type="button" class="secondary-button" data-admin-reset-record>Ripristina i dati originali</button>' : ''}${selected.adminHidden ? `<button type="button" class="secondary-button" data-admin-restore="${esc(selected.id)}">Ripristina ${selected.adminDeleted ? 'il partito eliminato' : 'nel gioco'}</button>` : selected.adminCreated ? `<button type="button" class="secondary-button danger" data-admin-delete="${esc(selected.id)}">Elimina</button>` : `<button type="button" class="secondary-button danger" data-admin-hide="${esc(selected.id)}">Nascondi dal gioco</button>`}</div>
       <p class="admin-note">${selected.adminCreated ? 'Partito aggiunto dall’amministratore: vive solo nel livello amministrativo.' : 'Dato reale: nascondere o modificare non cambia mai i file del dataset.'}${selected.adminHidden ? ' Ora non compare nelle liste del gioco.' : ''}</p>
@@ -78,17 +86,27 @@ function partiesTab(admin, context) {
   return `${summary}${toolbar}<div class="admin-split"><aside class="admin-list"><label class="admin-search">Cerca partito<input type="search" data-admin-query value="${esc(admin.query)}" placeholder="Nome, sigla o altra denominazione…" autocomplete="off" /></label>${list}</aside><div class="admin-main">${editor}</div></div>`;
 }
 
+// Party, group/component and 2022 list, side by side: the list can be proposed as the party, never applied alone.
+function affiliationSummary(person, context) {
+  const link = politicianAffiliation(person);
+  const own = groupAffiliation(person);
+  const list = electionListOf(person);
+  const proposable = !person.partyId && list?.kind === 'list' && list.entity && context.parties.some(party => party.id === list.entity.id);
+  return `<div class="admin-affiliation"><span><small>Partito attuale</small><strong>${link ? `${esc(link.entity.officialName)} · ${esc(BASIS_LABELS[link.basis])}` : 'Non documentato'}</strong></span><span><small>Gruppo</small><strong>${esc(groupLabel(own) ?? 'Non indicato')}${own?.corrected ? ' · da correggere (altra Camera)' : ''}</strong></span><span><small>Lista d’elezione 2022</small><strong>${list ? `${esc(list.label)}${list.entity ? ` · ${list.kind === 'coalition-list' ? 'coalizione' : 'partito'} ${esc(list.entity.officialName)}` : ' · più partiti'}` : 'Non indicata'}</strong>${proposable ? `<button type="button" class="text-link" data-admin-suggest-party="${esc(list.entity.id)}">Usa come partito attuale (da confermare con Salva)</button>` : ''}</span>${person.termEnd ? `<span><small>Mandato</small><strong>Concluso il ${esc(person.termEnd)}</strong></span>` : ''}</div>`;
+}
+
 function politiciansTab(admin, context) {
   const query = norm(admin.query);
   const people = context.politicians.filter(person => (admin.chamber === 'all' || person.chamber === admin.chamber) && (!query || norm(person.fullName).includes(query)));
   const selected = context.politicians.find(person => person.id === admin.politicianId) ?? null;
-  const list = searchList(people, admin.politicianId, 'admin-select-politician', person => `${affiliationOf(person.id) ? markForPerson(person.id) : `<span class="admin-chamber">${person.chamber === 'camera' ? 'C' : 'S'}</span>`}<span><strong>${esc(person.fullName)}</strong><small>${esc(context.groups.find(group => group.id === person.groupId)?.officialName ?? 'Gruppo non indicato')}</small></span>`, admin.listPage);
+  const list = searchList(people, admin.politicianId, 'admin-select-politician', person => `${affiliationOf(person.id) ? markForPerson(person.id) : `<span class="admin-chamber">${person.chamber === 'camera' ? 'C' : 'S'}</span>`}<span><strong>${esc(person.fullName)}</strong><small>${esc((group => group ? groupTitle(group) : 'Gruppo non indicato')(context.groups.find(group => group.id === person.groupId)))}${person.termEnd ? ' · mandato concluso' : ''}</small></span>`, admin.listPage);
   let editor = '<div class="admin-empty">Scegli un deputato o un senatore dall’elenco.</div>';
   if (selected) {
     const original = context.pristine('politicians', selected.id);
     const datasetRoles = context.offices.filter(office => office.politicianId === selected.id);
     editor = `<form class="admin-editor" data-admin-form="politician" data-admin-id="${esc(selected.id)}" data-admin-collection="politicians">
       <header class="admin-editor-head">${affiliationOf(selected.id) ? markForPerson(selected.id, 'lg') : `<span class="admin-avatar">${esc(selected.fullName.split(/\s+/).map(word => word[0]).join('').slice(0, 2))}</span>`}<div><span class="section-kicker">${selected.chamber === 'camera' ? 'DEPUTATO' : 'SENATORE'} · DATASET REALE</span><h3>${esc(selected.fullName)}</h3><small>${selected.adminEdited ? `Modificato dall’amministratore · ${esc((selected.adminEdited.updatedAt ?? '').slice(0, 10))}` : 'Nessuna modifica: valori del dataset verificato'}${selected.sourceUrl ? ` · <a href="${esc(selected.sourceUrl)}" target="_blank" rel="noopener noreferrer">Scheda ufficiale ↗</a>` : ''}</small></div></header>
+      ${affiliationSummary(selected, context)}
       <div class="admin-fields">${editorFields('politicians', selected, original, context)}</div>
       <div class="admin-actions"><button class="primary-button" type="submit">Salva modifiche</button>${overrideFor('politicians', selected.id) ? '<button type="button" class="secondary-button" data-admin-reset-record>Ripristina i dati originali</button>' : ''}</div>
     </form>

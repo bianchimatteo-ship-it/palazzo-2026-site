@@ -476,14 +476,22 @@
       "office-camera-xix-deputato-307749-mandate"
     ],
     "termStart": "2022-09-30",
-    "termEnd": null,
+    "termEnd": "2026-09-15",
     "source": "real",
     "verified": true,
     "sourceUrl": "https://www.camera.it/deputati/elenco/19-307749",
     "sourceName": "Camera dei deputati — scheda anagrafica e mandato parlamentare",
     "verifiedAt": "2026-09-22",
     "validFrom": "2022-09-30",
-    "validTo": null
+    "validTo": "2026-09-15",
+    "mandateEnd": {
+      "date": "2026-09-15",
+      "reason": "Nomina a componente dell’Autorità garante della concorrenza e del mercato; seggio uninominale Abruzzo U01 in attesa di elezione suppletiva",
+      "sourceUrl": "https://www.camera.it/deputati/elenco/19-307749",
+      "sourceName": "Camera dei deputati — scheda di Alberto Bagnai (fine mandato 15/09/2026)",
+      "secondarySourceUrl": "https://www.ilfattoquotidiano.it/2026/08/05/bagnai-antitrust-nomina-lega-notizie/8471054/",
+      "verifiedAt": "2026-09-25"
+    }
   },
   {
     "id": "camera-xix-deputato-307134",

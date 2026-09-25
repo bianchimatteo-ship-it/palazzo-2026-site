@@ -28,11 +28,11 @@ Il documento “POLITICANDO 2026 — Database politici e partiti — 24/09/2026�
 - **Nuove entità** (§4) con fonte ufficiale dell’organizzazione: Forza Nuova, CasaPound Italia, Potere al Popolo!, Rete dei Patrioti (movimenti); Democrazia Sovrana Popolare, Partito Popolare del Nord, PCI, PCL, Partito Sardo d’Azione, ORA! (partiti); Alleanza Verdi e Sinistra (coalizione); Libertà, Stati Uniti d’Europa, Pace Terra Dignità, Partito Animalista - Italexit per l’Italia (liste europee 2024). “Liberali Democratici Europei” è una denominazione riconciliata con il Partito Liberaldemocratico; i nomi MEF di M5S e +Europa restano per il 2‰ ma non compaiono come secondi partiti (`sameEntityAs`).
 - **Leadership** (§3): 34 incarichi nuovi più i 4 di Futuro Nazionale, ciascuno con la pagina ufficiale del partito; dove il documento chiede verifica e non c’è una fonte ufficiale corrente (PCL, Rete dei Patrioti, AVS, liste) il vertice resta vuoto. Le figure con nome identico a un parlamentare sono collegate alla sua scheda; un incarico documentato vale come iscrizione (`party-memberships.json`).
 - **Liste → partiti** (§6): le liste di un solo partito puntano al partito; liste di più partiti e coalizioni restano relazioni elettorali (`componentPartyIds`, `coalitionId`).
-- **Sondaggio reale iniziale**: `polls.json` (Supermedia YouTrend/Agi del 17/09/2026, fonte Agi). Ogni nuova carriera parte da questi valori, marcati come dato reale (solo le forze della fonte, “Altri” come nella fonte); dalla prima settimana i sondaggi sono simulati.
+- **Sondaggio reale iniziale**: `polls.json` (Supermedia AGI/YouTrend del 24/09/2026, sondaggi dal 10 al 23 settembre, fonte Agi; importato con `npm run import:update`). Ogni nuova carriera parte da questi valori, marcati come dato reale (solo le 12 forze della fonte, “Altri” 3,0% come nella fonte); dalla prima settimana i sondaggi sono simulati.
 
 ## Loghi dei politici
 
-In ogni elenco o scheda di deputati, senatori, dirigenti, contatti e avversari l’iniziale è sostituita dal logo del partito collegato nel database (`src/data/repositories/party-links.js`): collegamento dell’amministratore, poi iscrizione documentata, poi lista d’elezione di un solo partito (o coalizione della lista). Il gruppo parlamentare non viene mai usato per dedurre il partito. Il logo è quello verificato o pubblicato dall’amministratore; senza logo resta il segno grafico del partito, senza partito documentato l’iniziale della Camera.
+Partito, gruppo parlamentare, componente e lista d’elezione sono relazioni distinte (`src/data/repositories/party-links.js`). Il **partito attuale** viene solo dal collegamento dell’amministratore (archivio del browser e archivio condiviso KV, che prevalgono sempre) o da un’iscrizione/incarico documentato con fonte (`party-memberships.json`); il gruppo non è mai un partito e la **lista d’elezione del 2022** resta una relazione elettorale mostrata a parte (in Admin si può proporre come partito, da confermare). I componenti del gruppo Misto (es. “MISTO-Futuro Nazionale Vannacci - Free”) sono mostrati come gruppo Misto e componente; un gruppo dell’altra Camera salvato per errore in Admin non viene modificato ma è letto come il gruppo omonimo della Camera giusta e segnalato. In ogni elenco o scheda l’iniziale è sostituita dal logo del partito attuale; senza partito documentato resta l’iniziale della Camera. I mandati conclusi (es. Alberto Bagnai, 15/09/2026) restano nell’archivio ma escono dagli elenchi dei parlamentari in carica.
 
 ## Account e salvataggi online
 
@@ -243,6 +243,7 @@ npm run check:reference-government # governo in carica all’avvio: maggioranza 
 npm run check:admin       # area del proprietario: sessione verificata dal server, ricerca completa, aggiunta/nascondi/elimina/ripristina partiti
 npm run check:poll-presence # primo sondaggio = fonte reale; ingresso/uscita dai sondaggi con soglie, permanenza e cooldown
 npm run check:onboarding  # nuova carriera: Regione → Comune ISTAT → percorso → partito → difficoltà → chi sei
+npm run check:affiliations # partito/gruppo/componente/lista separati, modifiche Admin prevalenti, AVS unica nei sondaggi, alias, migrazioni
 npm run check:all         # tutte le verifiche
 npm run check:gameplay
 npm run check:parliament

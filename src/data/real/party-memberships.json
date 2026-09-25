@@ -222,5 +222,139 @@
     "verifiedAt": "2026-09-24",
     "validFrom": null,
     "validTo": null
+  },
+  {
+    "id": "party-membership-camera-xix-deputato-308244-party-registro-p1-2019-51-ir",
+    "validTo": null,
+    "politicianId": "camera-xix-deputato-308244",
+    "partyId": "party-registro-p1-2019-51-ir",
+    "basis": "incarico di partito documentato",
+    "role": "Presidente (eletta dal congresso del 29 marzo 2025)",
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://www.ildenaro.it/elena-bonetti-eletta-presidente-di-azione-tesoriere-sottanelli/",
+    "sourceName": "Il Denaro — «Il Congresso di Azione ha eletto per acclamazione Elena Bonetti presidente del partito» (29/03/2025)",
+    "verifiedAt": "2026-09-25",
+    "validFrom": "2025-03-29"
+  },
+  {
+    "id": "party-membership-senato-xix-senatore-31725-party-registro-p1-2019-52-ir",
+    "validTo": null,
+    "politicianId": "senato-xix-senatore-31725",
+    "partyId": "party-registro-p1-2019-52-ir",
+    "basis": "adesione documentata",
+    "role": "Aderente (dal 7 marzo 2025; eletta con il Partito Democratico)",
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://www.ilfattoquotidiano.it/2025/03/07/annamaria-furlan-lex-segretaria-cisl-lascia-il-pd-e-passa-a-iv-disaccordi-sui-temi-del-lavoro-guerini-interrogarsi-sulle-ragioni/7903780/",
+    "sourceName": "Il Fatto Quotidiano — Annamaria Furlan lascia il Pd e passa a Italia Viva (07/03/2025)",
+    "verifiedAt": "2026-09-25",
+    "validFrom": "2025-03-07",
+    "secondarySources": [
+      {
+        "source": "real",
+        "verified": true,
+        "sourceUrl": "https://www.ilfoglio.it/politica/2025/03/07/news/annamaria-furlan-lascia-il-pd-e-passa-a-iv-decisiva-l-astensione-sul-ddl-partecipazione--7495684/",
+        "sourceName": "Il Foglio — Annamaria Furlan lascia il Pd e passa a Iv (07/03/2025)",
+        "verifiedAt": "2026-09-25",
+        "validFrom": "2025-03-07",
+        "validTo": null
+      }
+    ]
+  },
+  {
+    "id": "party-membership-senato-xix-senatore-32634-party-registro-p1-2022-63-ir",
+    "validTo": null,
+    "politicianId": "senato-xix-senatore-32634",
+    "partyId": "party-registro-p1-2022-63-ir",
+    "basis": "appartenenza documentata",
+    "role": "Senatrice del Movimento 5 Stelle",
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://www.cremonaoggi.it/2026/07/02/rai-floridia-mi-dimetto-da-presidente-della-commissione-di-vigilanza-lasciano-tutti-i-membri-dopposizione/",
+    "sourceName": "CremonaOggi — «la senatrice del Movimento 5 Stelle» (02/07/2026)",
+    "verifiedAt": "2026-09-25",
+    "validFrom": null
+  },
+  {
+    "id": "party-membership-senato-xix-senatore-36399-party-registro-p1-2014-07-ir",
+    "validTo": null,
+    "politicianId": "senato-xix-senatore-36399",
+    "partyId": "party-registro-p1-2014-07-ir",
+    "basis": "adesione documentata",
+    "role": "Senatrice dei Verdi-Grüne-Vërc (aderente da marzo 2025; eletta con Alleanza Verdi e Sinistra)",
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://www.verdi.bz.it/it/senatrice-aurora-floridia/",
+    "sourceName": "Verdi Grüne Vërc — pagina ufficiale della senatrice Aurora Floridia",
+    "verifiedAt": "2026-09-25",
+    "validFrom": "2025-03-01",
+    "secondarySources": [
+      {
+        "source": "real",
+        "verified": true,
+        "sourceUrl": "https://www.ansa.it/trentino/notizie/2025/02/22/senatrice-aurora-floridia-aderisce-ai-verdi-altoatesini_893e7253-58e4-461e-961e-6f6f3c9f2081.html",
+        "sourceName": "Ansa — Senatrice Aurora Floridia aderisce ai Verdi altoatesini (22/02/2025)",
+        "verifiedAt": "2026-09-25",
+        "validFrom": "2025-02-22",
+        "validTo": null
+      }
+    ]
+  },
+  {
+    "id": "party-membership-senato-xix-senatore-36436-party-registro-p1-2019-51-ir",
+    "validTo": null,
+    "politicianId": "senato-xix-senatore-36436",
+    "partyId": "party-registro-p1-2019-51-ir",
+    "basis": "appartenenza documentata",
+    "role": "Senatore di Azione (nel gruppo Misto dal 9 novembre 2023)",
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://www.ilrestodelcarlino.it/bologna/politica/lombardo-azione-dem-elezioni-dde75f21",
+    "sourceName": "Il Resto del Carlino — «senatore di Azione ed ex esponente del Pd» (01/08/2026)",
+    "verifiedAt": "2026-09-25",
+    "validFrom": null
+  },
+  {
+    "id": "party-membership-camera-xix-deputato-308838-party-registro-p1-2015-20-ir",
+    "validTo": null,
+    "politicianId": "camera-xix-deputato-308838",
+    "partyId": "party-registro-p1-2015-20-ir",
+    "basis": "incarico di partito documentato",
+    "role": "Segretario nazionale",
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://forzaitalia.it/risultati-congresso-nazionale-forza-italia/",
+    "sourceName": "Forza Italia — risultati del Congresso nazionale del 23-24 febbraio 2024 (sito ufficiale)",
+    "verifiedAt": "2026-09-25",
+    "validFrom": "2024-02-24"
+  },
+  {
+    "id": "party-membership-camera-xix-deputato-302867-party-registro-p1-2015-20-ir",
+    "validTo": null,
+    "politicianId": "camera-xix-deputato-302867",
+    "partyId": "party-registro-p1-2015-20-ir",
+    "basis": "incarico di partito documentato",
+    "role": "Vicesegretaria nazionale",
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://forzaitalia.it/risultati-congresso-nazionale-forza-italia/",
+    "sourceName": "Forza Italia — risultati del Congresso nazionale del 23-24 febbraio 2024 (sito ufficiale)",
+    "verifiedAt": "2026-09-25",
+    "validFrom": "2024-02-24"
+  },
+  {
+    "id": "party-membership-camera-xix-deputato-307604-party-registro-p1-2015-20-ir",
+    "validTo": null,
+    "politicianId": "camera-xix-deputato-307604",
+    "partyId": "party-registro-p1-2015-20-ir",
+    "basis": "incarico di partito documentato",
+    "role": "Vicesegretario nazionale",
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://forzaitalia.it/risultati-congresso-nazionale-forza-italia/",
+    "sourceName": "Forza Italia — risultati del Congresso nazionale del 23-24 febbraio 2024 (sito ufficiale)",
+    "verifiedAt": "2026-09-25",
+    "validFrom": "2024-02-24"
   }
 ]

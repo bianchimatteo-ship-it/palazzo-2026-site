@@ -243,7 +243,7 @@
     "groupId": "cam-xix-03",
     "chamber": "camera",
     "validFrom": null,
-    "validTo": null,
+    "validTo": "2026-09-15",
     "office": null,
     "source": "real",
     "verified": true,

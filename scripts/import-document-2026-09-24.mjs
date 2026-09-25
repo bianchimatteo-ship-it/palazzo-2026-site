@@ -219,14 +219,17 @@ if (unlinked.length) throw new Error(`Liste senza collegamento: ${unlinked.map(i
 // ---------- write back, aggregate and manifest ----------
 const collections = { parties: 'parties.json', politicalMovements: 'political-movements.json', coalitions: 'coalitions.json', electoralLists: 'electoral-lists.json', politicalFigures: 'political-figures.json', partyLeaderships: 'party-leaderships.json', partyMemberships: 'party-memberships.json' };
 for (const [name, file] of Object.entries(collections)) { await save(file, files[file]); files['database.json'][name] = files[file]; }
-await save('polls.json', POLLS);
+// The opening poll is kept up to date by later imports (scripts/import-update-2026-09-25.mjs): an older one never overwrites it.
+const currentPolls = JSON.parse(await readFile(new URL('polls.json', ROOT), 'utf8').catch(() => '[]'));
+const latestPoll = currentPolls.map(item => item.publishedAt).sort().at(-1) ?? '';
+if (!latestPoll || latestPoll <= POLLS[0].publishedAt) await save('polls.json', POLLS);
 const manifest = files['manifest.json'];
 manifest.datasetVersion = '2026-09-24.1';
 manifest.snapshotDate = AS_OF;
 manifest.specification = { title: DOCUMENT, asOf: AS_OF, sections: ['§2 collocazione', '§3 leadership', '§4 nuove entità', '§6 collegamento liste → partiti'] };
 for (const [name, file] of Object.entries(collections)) manifest.collections[name] = files[file].length;
-manifest.collections.realPolls = POLLS.length;
-manifest.sourceUrls = { ...manifest.sourceUrls, supermedia20260917: POLLS[0].sourceUrl, oraStructure: 'https://ora-italia.it/la-struttura-del-partito/', cameraGroupsList: 'https://www.camera.it/leg19/217', senateGroupsList: 'https://www.senato.it/composizione/gruppi-parlamentari/', partyRegisterList: 'https://www.parlamento.it/1063' };
+manifest.collections.realPolls = latestPoll > POLLS[0].publishedAt ? currentPolls.length : POLLS.length;
+manifest.sourceUrls = { ...manifest.sourceUrls, ...(latestPoll > POLLS[0].publishedAt ? {} : { supermedia20260917: POLLS[0].sourceUrl }), oraStructure: 'https://ora-italia.it/la-struttura-del-partito/', cameraGroupsList: 'https://www.camera.it/leg19/217', senateGroupsList: 'https://www.senato.it/composizione/gruppi-parlamentari/', partyRegisterList: 'https://www.parlamento.it/1063' };
 manifest.warnings = [...new Set([...(manifest.warnings ?? []), 'La collocazione politica (estrema sinistra … estrema destra) è la classificazione sintetica del documento di specifica del 24/09/2026; per liste e coalizioni indica l’aggregazione e non sostituisce le singole componenti.', 'Le liste con più partiti o coalizioni restano relazioni elettorali: non diventano iscrizione a un singolo partito. Le iscrizioni individuali documentate derivano solo da incarichi di partito verificati.', 'Il sondaggio iniziale è la Supermedia YouTrend/Agi del 17/09/2026 (dato reale); dalla prima settimana di gioco i sondaggi sono simulati.'])];
 // The aggregate keeps its own manifest: only the collections it contains are counted there.
 const aggregate = files['database.json'].manifest;

@@ -1,9 +1,9 @@
-import { CAMPAIGN_ACTIVITIES, CAMPAIGN_OBJECTIVES, DEBATE_TOPICS, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260924-22';
-import { affiliationOf, markForPerson } from './person-marks.js?v=20260924-22';
-import { campaignSummary } from '../core/campaign-engine.js?v=20260924-22';
-import { resultDescription } from '../core/election-engine.js?v=20260924-22';
-import { formatDate } from '../core/time.js?v=20260924-22';
-import { careerLevelLabel } from '../data/regions.js?v=20260924-22';
+import { CAMPAIGN_ACTIVITIES, CAMPAIGN_OBJECTIVES, DEBATE_TOPICS, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260925-1';
+import { affiliationOf, markForPerson } from './person-marks.js?v=20260925-1';
+import { campaignSummary } from '../core/campaign-engine.js?v=20260925-1';
+import { resultDescription } from '../core/election-engine.js?v=20260925-1';
+import { formatDate } from '../core/time.js?v=20260925-1';
+import { careerLevelLabel } from '../data/regions.js?v=20260925-1';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const roleLabels={sindaco:'Candidatura a sindaco',consigliere:'Candidato in lista per il consiglio',presidente:'Candidato alla presidenza regionale',deputato:'Candidato alla Camera',senatore:'Candidato al Senato',uninominale:'Collegio uninominale simulato',eurodeputato:'Candidato al Parlamento europeo'};

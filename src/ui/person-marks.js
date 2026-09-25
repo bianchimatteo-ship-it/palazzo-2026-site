@@ -1,8 +1,8 @@
 // The party mark of any real parliamentarian, wherever a list of people is drawn (contacts, rivals, admin lists).
 // The link comes from the database (party-links), the logo from the same resolver the party archive uses.
-import { realDatabase } from '../data/repositories/real-data.js?v=20260924-22';
-import { politicianAffiliation } from '../data/repositories/party-links.js?v=20260924-22';
-import { personMark } from './visuals.js?v=20260924-22';
+import { realDatabase } from '../data/repositories/real-data.js?v=20260925-1';
+import { politicianAffiliation } from '../data/repositories/party-links.js?v=20260925-1';
+import { personMark } from './visuals.js?v=20260925-1';
 
 let resolveLogo = () => null;
 export function setPartyLogoResolver(resolver) { resolveLogo = typeof resolver === 'function' ? resolver : () => null; }

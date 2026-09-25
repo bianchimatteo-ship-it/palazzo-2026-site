@@ -1,7 +1,7 @@
-import { allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20260924-22';
-import { formatDate } from '../core/time.js?v=20260924-22';
-import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20260924-22';
-import { distinctSeries } from './charts.js?v=20260924-22';
+import { allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20260925-1';
+import { formatDate } from '../core/time.js?v=20260925-1';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20260925-1';
+import { distinctSeries } from './charts.js?v=20260925-1';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const pct = (value, digits = 1) => value === null || value === undefined ? '—' : `${Number(value).toLocaleString('it-IT', { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
@@ -51,6 +51,7 @@ function barometer(state, world, poll, parties) {
   const headline = player
     ? `<h2>${esc(player.label)} al ${pct(playerRow?.share)}</h2><p>${deltaChip(playerRow?.delta ?? 0, true)} rispetto al sondaggio precedente · ${poll.margin ? `margine d’errore ±${String(poll.margin).replace('.', ',')} punti` : playerRow?.simulated ? 'il tuo partito non è nella fonte reale: stima iniziale simulata' : 'media di più sondaggi reali'}${playerRow?.internal ? ' · non ancora rilevato dagli istituti: stima interna simulata' : ''}</p>`
     : `<h2>Gradimento personale al ${pct(poll.personal.approval, 0)}</h2><p>Sei indipendente: il barometro misura te, non un partito.</p>`;
+  const component = player && world.playerComponent?.label ? `<p class="poll-component-note">Il tuo partito, ${esc(world.playerComponent.label)}, è rilevato nei sondaggi dentro ${esc(player.label)}: una sola forza, una sola serie.</p>` : '';
   const region = world.place.region || 'Regione';
   const municipality = world.place.municipality || 'Comune';
   const tiles = player ? [
@@ -64,7 +65,7 @@ function barometer(state, world, poll, parties) {
     statTile('Indecisi', pct(poll.undecided, 0), previous ? Math.round((poll.undecided - previous.undecided) * 10) / 10 : 0, history(item => item.undecided), 'Fuori dal totale dei voti validi', false)
   ].join('');
   return `<section class="poll-hero" style="--hero-accent:${esc(player?.color ?? 'var(--party-accent)')}">
-    <div class="poll-hero-main">${player ? emblem({ label: player.label, abbreviation: player.abbreviation, color: player.color, logo: parties.logo?.(player.id) }, 'lg') : `<span class="poll-hero-icon">${glyph('chart', 30)}</span>`}<div><span class="section-kicker">BAROMETRO POLITICO · SETTIMANA ${poll.week}</span>${headline}<small>${pollSourceLine(poll)}</small></div></div>
+    <div class="poll-hero-main">${player ? emblem({ label: player.label, abbreviation: player.abbreviation, color: player.color, logo: parties.logo?.(player.id) }, 'lg') : `<span class="poll-hero-icon">${glyph('chart', 30)}</span>`}<div><span class="section-kicker">BAROMETRO POLITICO · SETTIMANA ${poll.week}</span>${headline}${component}<small>${pollSourceLine(poll)}</small></div></div>
     ${tiles ? `<div class="poll-tiles">${tiles}</div>` : ''}
     <div class="poll-tiles secondary">${personal}</div>
   </section>`;

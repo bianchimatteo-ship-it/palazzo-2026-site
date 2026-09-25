@@ -1,28 +1,28 @@
-import { DATA_SOURCES, emptyDataset, isSelectableParty } from '../data/schema.js?v=20260924-22';
-import { makeDemoState } from '../data/demo.js?v=20260924-22';
-import { CAREER_LEVELS, initialCareerStatistics } from '../data/regions.js?v=20260924-22';
-import { storage } from './storage.js?v=20260924-22';
-import { loadSettings } from './settings.js?v=20260924-22';
-import { advanceDays, formatDate } from './time.js?v=20260924-22';
-import { validateNewCareerDraft } from './career-rules.js?v=20260924-22';
-import { advanceCampaign, breakCampaignAlliance, createCampaign, decideCampaignEvent, negotiateCampaignAlliance, performCampaignActivity } from './campaign-engine.js?v=20260924-22';
-import { createReferenceGovernment, neverHadGovernment, offerGroupSupport, requestGovernmentPost, withdrawGroupSupport, partnerSatisfaction, acceptLawDemand, activeMinisters, amendLawPolicy, askConfidenceOnLaw, groupProfile, issueDecree, majoritySummit, reshuffleMinister, setGovernmentProgram, settlePartnerDemand, withdrawLaw, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20260924-22';
-import { setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, saveForElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20260924-22';
-import { COMMUNICATION_STYLES, GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20260924-22';
-import { AREA_BY_ID, BUDGET_SESSION, GOVERNMENT_LINES, areaOf } from '../data/simulation/policy-rules.js?v=20260924-22';
-import { acceptAlliance, advanceWorld, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setPlayerParty, withLatentForces, withPositions } from './world-engine.js?v=20260924-22';
-import { DIFFICULTIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20260924-22';
-import { WORLD_PARTY_COUNT } from '../data/simulation/polling-rules.js?v=20260924-22';
-import { isPrimeMinister } from './roles.js?v=20260924-22';
-import { memoryAbout, memoryBalance, memoryWeight, recordWhy, remember } from './career-engine.js?v=20260924-22';
-import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20260924-22';
-import { advanceSociety, applyBudgetPlan, applyLawToSociety, calibrateWeights, createSociety, explainMood, measureDesign, mediaEvent, normalizeSociety, provisionalBudget, publicBudgetChoice, regionAttention, revokeMeasure, segmentAttention, societyMood, societyShock } from './society-engine.js?v=20260924-22';
-import { ACTIVITY_MEDIA, INDICATORS, ISSUE_TOPICS, SEGMENTS } from '../data/simulation/society-rules.js?v=20260924-22';
-import { book, hasAsset, releaseElectionFund, setBudgetLevel } from './finance-engine.js?v=20260924-22';
-import { isPartyLeader, treasuryBook } from './organization-engine.js?v=20260924-22';
-import { selectContacts, syncContacts } from './contacts-engine.js?v=20260924-22';
-import { NEWS_TEMPLATES, composeHeadline, weeklyNews } from './news-engine.js?v=20260924-22';
-import { macroAreaOf, MACRO_AREAS } from '../data/simulation/policy-rules.js?v=20260924-22';
+import { DATA_SOURCES, emptyDataset, isSelectableParty } from '../data/schema.js?v=20260925-1';
+import { makeDemoState } from '../data/demo.js?v=20260925-1';
+import { CAREER_LEVELS, initialCareerStatistics } from '../data/regions.js?v=20260925-1';
+import { storage } from './storage.js?v=20260925-1';
+import { loadSettings } from './settings.js?v=20260925-1';
+import { advanceDays, formatDate } from './time.js?v=20260925-1';
+import { validateNewCareerDraft } from './career-rules.js?v=20260925-1';
+import { advanceCampaign, breakCampaignAlliance, createCampaign, decideCampaignEvent, negotiateCampaignAlliance, performCampaignActivity } from './campaign-engine.js?v=20260925-1';
+import { createReferenceGovernment, neverHadGovernment, offerGroupSupport, requestGovernmentPost, withdrawGroupSupport, partnerSatisfaction, acceptLawDemand, activeMinisters, amendLawPolicy, askConfidenceOnLaw, groupProfile, issueDecree, majoritySummit, reshuffleMinister, setGovernmentProgram, settlePartnerDemand, withdrawLaw, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20260925-1';
+import { setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, saveForElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20260925-1';
+import { COMMUNICATION_STYLES, GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20260925-1';
+import { AREA_BY_ID, BUDGET_SESSION, GOVERNMENT_LINES, areaOf } from '../data/simulation/policy-rules.js?v=20260925-1';
+import { acceptAlliance, advanceWorld, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setPlayerParty, withCanonicalForces, withLatentForces, withPartyIdentities, withPositions } from './world-engine.js?v=20260925-1';
+import { DIFFICULTIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20260925-1';
+import { WORLD_PARTY_COUNT } from '../data/simulation/polling-rules.js?v=20260925-1';
+import { isPrimeMinister } from './roles.js?v=20260925-1';
+import { memoryAbout, memoryBalance, memoryWeight, recordWhy, remember } from './career-engine.js?v=20260925-1';
+import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20260925-1';
+import { advanceSociety, applyBudgetPlan, applyLawToSociety, calibrateWeights, createSociety, explainMood, measureDesign, mediaEvent, normalizeSociety, provisionalBudget, publicBudgetChoice, regionAttention, revokeMeasure, segmentAttention, societyMood, societyShock } from './society-engine.js?v=20260925-1';
+import { ACTIVITY_MEDIA, INDICATORS, ISSUE_TOPICS, SEGMENTS } from '../data/simulation/society-rules.js?v=20260925-1';
+import { book, hasAsset, releaseElectionFund, setBudgetLevel } from './finance-engine.js?v=20260925-1';
+import { isPartyLeader, treasuryBook } from './organization-engine.js?v=20260925-1';
+import { selectContacts, syncContacts } from './contacts-engine.js?v=20260925-1';
+import { NEWS_TEMPLATES, composeHeadline, weeklyNews } from './news-engine.js?v=20260925-1';
+import { macroAreaOf, MACRO_AREAS } from '../data/simulation/policy-rules.js?v=20260925-1';
 
 const STATE_VERSION = 8;
 const POSITIONS_SET = new Set(['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra']);
@@ -75,7 +75,8 @@ function pertinentDeputies(people = {}, region, seedText) {
   if (!target) return [];
   const groups = new Map((people.groups ?? []).map(group => [group.id, group.officialName]));
   const rank = person => [...`${seedText}|${person.id}`].reduce((n, char) => (n * 31 + char.charCodeAt(0)) >>> 0, 7);
-  const pool = (people.politicians ?? []).filter(person => person.source === DATA_SOURCES.REAL && person.verified === true && person.chamber === 'camera' && territoryKey(person.circoscription).startsWith(target)).sort((a, b) => rank(a) - rank(b));
+  // Only deputies in office: a mandate that ended (e.g. Bagnai, 15/09/2026) leaves the pool.
+  const pool = (people.politicians ?? []).filter(person => person.source === DATA_SOURCES.REAL && person.verified === true && person.chamber === 'camera' && !person.termEnd && territoryKey(person.circoscription).startsWith(target)).sort((a, b) => rank(a) - rank(b));
   const picked = [];
   for (const person of pool) {
     if (picked.length === 3) break;
@@ -110,6 +111,11 @@ let realPollStart = null;
 let realPositions = new Map();
 // The other forces of the database, outside the opening poll: they can enter the polls later in the simulation.
 let realLatent = [];
+// One force per party in the polls: MEF aliases → the registered party; components of a list the poll measures as
+// one force (Sinistra Italiana, Europa Verde → Alleanza Verdi e Sinistra) → that force. identities: the real
+// catalogue with the owner's corrections (names, abbreviations, colours, collocazione).
+let realForceMap = {};
+let realIdentities = {};
 // New careers start on the date of the real snapshot, so that government, Parliament and the opening poll are current.
 let realStartDate = null;
 // The Government in office at the start, derived from the real data (government-reference.js): every career finds it.
@@ -131,7 +137,7 @@ function forcesFrom({ twoPerThousand = [], parties = [], movements = [], coaliti
     realPollStart = { id: poll.id, label: poll.label, publishedAt: poll.publishedAt, fieldworkFrom: poll.fieldworkFrom ?? null, fieldworkTo: poll.fieldworkTo ?? null, method: poll.method ?? null, sourceUrl: poll.sourceUrl, sourceName: poll.sourceName, results: rows.map(row => ({ partyId: canonical(row.entityId), share: row.share, delta: row.delta ?? 0 })) };
     forces = rows.map(row => {
       const entity = catalog.get(canonical(row.entityId));
-      return { id: entity.id, label: row.label, officialName: entity.officialName, abbreviation: entity.abbreviation ?? null, share: row.share, position: entity.politicalPosition ?? null, governing: governing.has(entity.id), reference: reference(entity.id), pollReference: { share: row.share, label: poll.label, publishedAt: poll.publishedAt, sourceUrl: poll.sourceUrl, source: DATA_SOURCES.REAL } };
+      return { id: entity.id, label: row.label, officialName: entity.officialName, abbreviation: entity.abbreviation ?? null, brandColor: entity.color ?? null, share: row.share, position: entity.politicalPosition ?? null, governing: governing.has(entity.id), reference: reference(entity.id), pollReference: { share: row.share, label: poll.label, publishedAt: poll.publishedAt, sourceUrl: poll.sourceUrl, source: DATA_SOURCES.REAL } };
     });
   } else {
     realPollStart = null;
@@ -141,7 +147,22 @@ function forcesFrom({ twoPerThousand = [], parties = [], movements = [], coaliti
     });
   }
   realLatent = latentCandidates(entities, parties, forces, coalitions);
+  const measured = new Set(forces.map(force => force.id));
+  realForceMap = Object.fromEntries([
+    ...entities.filter(item => item.sameEntityAs && catalog.has(item.sameEntityAs)).map(item => [item.id, item.sameEntityAs]),
+    ...coalitions.filter(item => measured.has(item.id)).flatMap(item => (item.componentPartyIds ?? []).map(id => [id, item.id]))
+  ]);
+  realIdentities = Object.fromEntries([...entities, ...parties.filter(item => item.adminCreated)].map(item => [item.id, { label: forces.find(force => force.id === item.id)?.label ?? item.officialName, officialName: item.officialName, abbreviation: item.abbreviation ?? null, position: item.politicalPosition ?? null, color: item.color ?? null }]));
   return forces;
+}
+// The force the polls measure for a party: itself, the registered party of an alias, or the list it runs in.
+function pollForceOf(partyId) {
+  return realForceMap[partyId] ?? partyId;
+}
+// Saves are brought in line with one force per party and with the owner's corrections, without losing history.
+function alignWorld(world) {
+  if (!world) return world;
+  return withPartyIdentities(withCanonicalForces(world, realForceMap, realIdentities), realIdentities);
 }
 const reference2x1000 = id => { const row = twoPerThousandById.get(id); return row ? { validChoices: row.validChoices, shareOfChoices: row.shareOfChoices, amountEuro: row.amountEuro, year: row.declarationYear, source: DATA_SOURCES.REAL } : null; };
 // Every other force of the database can enter the polls later: the active real parties and movements (not the
@@ -150,8 +171,10 @@ const reference2x1000 = id => { const row = twoPerThousandById.get(id); return r
 function latentCandidates(entities, parties, forces, coalitions) {
   const measured = new Set(forces.map(force => force.id));
   const inLists = new Set(coalitions.filter(item => measured.has(item.id)).flatMap(item => item.componentPartyIds ?? []));
-  const real = entities.filter(item => item.entityType !== 'coalition' && !item.sameEntityAs && item.status === 'active' && !item.adminHidden && !measured.has(item.id) && !inLists.has(item.id));
-  const added = parties.filter(item => item.adminCreated && !item.adminHidden && !measured.has(item.id));
+  // The forces a world already has are skipped by the world itself (an older career may have started from another
+  // poll): here only the aliases and the components of a list measured as one force are left out.
+  const real = entities.filter(item => item.entityType !== 'coalition' && !item.sameEntityAs && item.status === 'active' && !item.adminHidden && !inLists.has(item.id));
+  const added = parties.filter(item => item.adminCreated && !item.adminHidden);
   return [...real, ...added].map(item => ({
     id: item.id, label: item.officialName ?? item.name, officialName: item.officialName ?? null, abbreviation: item.abbreviation ?? null, position: item.politicalPosition ?? null,
     brandColor: item.color ?? null, regional: item.level === 'regional', regionalPresence: Boolean(item.regionalPresence), weight: twoPerThousandById.get(item.id)?.shareOfChoices ?? 0,
@@ -169,8 +192,15 @@ function latentOutOfDate(world) {
 // The player's party as the simulated world sees it: a real party is only an id, a label and its collocazione.
 function worldPartyOf(s, record = null) {
   const player = playerOf(s);
-  const partyId = player ? player.partyId : s.career.partyId;
-  if (!partyId) return null;
+  const ownId = player ? player.partyId : s.career.partyId;
+  if (!ownId) return null;
+  // A party measured inside a list (SI, EV → AVS) or under another name is the force of that list in the polls.
+  const partyId = pollForceOf(ownId);
+  if (partyId !== ownId) {
+    const identity = realIdentities[partyId] ?? {};
+    const own = record ?? s.dataset.parties.find(item => item.id === ownId) ?? null;
+    return { id: partyId, label: identity.label ?? identity.officialName ?? partyId, abbreviation: identity.abbreviation ?? null, brandColor: identity.color ?? null, refSource: DATA_SOURCES.REAL, founder: false, position: identity.position ?? null, reference: null, component: { id: ownId, label: own?.officialName ?? own?.name ?? null } };
+  }
   const known = record ?? s.dataset.parties.find(item => item.id === partyId) ?? null;
   const reference = twoPerThousandById.get(partyId);
   return {
@@ -989,6 +1019,7 @@ export const store = {
     state = migrateDemoParty(prepareState(hydrateState(saved)));
     if (realForces.length && state.world && isLegacyWorld(state.world)) state = { ...state, world: buildWorld(state) };
     if (latentOutOfDate(state.world)) state = { ...state, world: withLatentForces(state.world, realLatent) };
+    if (state.world) state = { ...state, world: alignWorld(state.world) };
     timelineBase = state;
     state = { ...state, ui: { ...state.ui, activePage: 'panoramica', toast } };
     persist({ force: true }); emit();
@@ -1019,6 +1050,8 @@ export const store = {
     else if (next.world && next.world.parties.some(party => !party.position && realPositions.has(party.id))) next = { ...next, world: withPositions(next.world, Object.fromEntries(realPositions)) };
     // Worlds saved before the presence in the polls receive the forces of the database outside the polls.
     if (latentOutOfDate(next.world)) next = { ...next, world: withLatentForces(next.world, realLatent) };
+    // One force per party (AVS, aliases) and the owner's corrections to names, abbreviations and colours.
+    if (next.world) { const aligned = alignWorld(next.world); if (aligned !== next.world) next = { ...next, world: aligned }; }
     if (next === state) return;
     state = next;
     if (state.career.status !== 'demo') persist();
@@ -1230,7 +1263,7 @@ export const store = {
     const result = joinParty({ game: state.game, stats: statsOf(state), parliament: state.parliament }, gameEnv(state), { id: party.id, label: party.officialName ?? party.name });
     const player = playerOf(state);
     state = { ...state, career: { ...state.career, partyId: party.id }, dataset: { ...state.dataset, politicians: state.dataset.politicians.map(item => item.id === player?.id ? { ...item, partyId: party.id } : item) } };
-    if (state.world) state = { ...state, world: setPlayerParty(state.world, { id: party.id, label: party.officialName ?? party.name, abbreviation: party.abbreviation, brandColor: party.color ?? null, refSource: party.source, orientation: party.orientation ?? null, position: party.politicalPosition ?? realPositions.get(party.id) ?? party.position ?? null }, state.clock.currentDate) };
+    if (state.world) state = { ...state, world: setPlayerParty(state.world, worldPartyOf(state, party), state.clock.currentDate) };
     return commitGame(result, `Hai aderito a ${party.officialName ?? party.name}`);
   },
   // Odds and reasons of an intesa, before proposing it: collocazione, programme, memory, interests, majorities.

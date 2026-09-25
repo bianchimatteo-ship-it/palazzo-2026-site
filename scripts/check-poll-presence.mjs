@@ -50,7 +50,7 @@ assert.ok(own.simulated && own.outsideSource && !own.real, 'Il partito creato da
 assert.equal(first.others, Math.round((100 - sourceTotal) * 10) / 10, '“Altri” è quello della fonte (100 meno le forze rilevate), separato.');
 assert.equal(first.othersSource, 'real');
 let html = renderPollsPage(state, {});
-assert.ok(html.includes('Fuori dalla fonte reale') && html.includes('Stima simulata · non nella fonte reale') && html.includes('3,1%'), 'La stima del partito del giocatore è separata e marcata; “Altri” resta quello della fonte.');
+assert.ok(html.includes('Fuori dalla fonte reale') && html.includes('Stima simulata · non nella fonte reale') && html.includes(`${String(first.others.toFixed(1)).replace('.', ',')}%`), 'La stima del partito del giocatore è separata e marcata; “Altri” resta quello della fonte.');
 assert.equal((html.match(/class="poll-bar-row (?!is-others)/g) ?? []).length, source.results.length + 1, 'Barre: le forze della fonte più la stima del tuo partito (e “Altri” a parte).');
 assert.ok(!html.includes('Partito Socialista Italiano'), 'Le forze del database fuori dal sondaggio non hanno una barra né una stima.');
 

@@ -1,5 +1,5 @@
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260924-22';
-import { CHART_SLOTS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20260924-22';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260925-1';
+import { CHART_SLOTS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20260925-1';
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
 // A party enters with its real identity only (id, name, abbreviation, documented collocazione); its starting weight
@@ -74,7 +74,7 @@ function addParty(world, spec, week) {
   const axis = Number.isFinite(spec.axis) ? spec.axis : axisOf(spec.position);
   const party = {
     id: spec.id, label: spec.label, abbreviation: spec.abbreviation ?? null, officialName: spec.officialName ?? null,
-    color: nextSlot(world, spec.brandColor), brandColor: spec.brandColor ?? null, refSource: spec.refSource ?? 'real', origin: spec.origin ?? 'real',
+    color: nextSlot(world, spec.brandColor ? readableOnDark(spec.brandColor) : null), brandColor: spec.brandColor ?? null, refSource: spec.refSource ?? 'real', origin: spec.origin ?? 'real',
     reference: spec.reference ?? null, pollReference: spec.pollReference ?? null, position: spec.position ?? positionOf(axis), axis, governing: Boolean(spec.governing),
     isPlayer: Boolean(spec.isPlayer), baseline: round2(spec.baseline), anchor: round2(spec.baseline),
     regional: Object.fromEntries(ITALIAN_REGIONS.map(region => [region, round2((draw(world) - 0.5) * 5 + (spec.isPlayer && region === world.place.region ? 2 : 0))])),
@@ -136,6 +136,103 @@ function seedLatent(world, candidates = []) {
   world.residual = round2(Math.max(0.3, residual - used));
   world.latentSeeded = true;
   world.others = othersOf(world);
+  return world;
+}
+// ---------- one force per party in the polls ----------
+// A force recorded under another name of the same party (a MEF alias) or as a component of a list the polls
+// measure as one force (Sinistra Italiana and Europa Verde inside Alleanza Verdi e Sinistra) becomes that single
+// force. Nothing of the history is lost: in every poll the rows of the components are summed into its row.
+// map: { fromId: toId }; identities: { toId: { label, officialName, abbreviation, position } }.
+export function withCanonicalForces(input, map = {}, identities = {}) {
+  if (!input?.parties?.some(party => map[party.id])) return input;
+  const world = copy(input);
+  const into = id => map[id] ?? id;
+  for (const party of [...world.parties].filter(item => map[item.id])) {
+    const target = into(party.id);
+    const host = world.parties.find(item => item.id === target);
+    if (host) {
+      host.baseline = round2(host.baseline + party.baseline);
+      host.anchor = round2((host.anchor ?? host.baseline) + (party.anchor ?? party.baseline));
+      host.isPlayer = host.isPlayer || party.isPlayer;
+      host.active = host.active || party.active;
+    } else {
+      const identity = identities[target] ?? {};
+      const axis = identity.position ? axisOf(identity.position) : party.axis;
+      world.parties.push({ ...party, id: target, label: identity.label ?? party.label, officialName: identity.officialName ?? party.officialName ?? null, abbreviation: identity.abbreviation ?? null, position: identity.position ?? party.position, axis: axis ?? party.axis, reference: null, pollReference: party.pollReference ?? null, mergedFrom: [party.id] });
+    }
+    const merged = world.parties.find(item => item.id === target);
+    merged.mergedFrom = [...new Set([...(merged.mergedFrom ?? []), party.id])];
+    world.parties = world.parties.filter(item => item !== party);
+  }
+  // Poll history: one row per force, components summed.
+  world.polls = world.polls.map(poll => {
+    const rows = new Map();
+    for (const row of poll.results) {
+      const id = into(row.partyId);
+      const current = rows.get(id);
+      rows.set(id, current ? { ...current, share: round1(current.share + row.share), delta: round1((current.delta ?? 0) + (row.delta ?? 0)) } : { ...row, partyId: id });
+    }
+    return { ...poll, results: [...rows.values()], emerging: (poll.emerging ?? []).filter(item => !map[item.partyId]), moves: (poll.moves ?? []).map(move => ({ ...move, id: into(move.id) })) };
+  });
+  const pair = key => key.split('|').map(into);
+  const ties = {};
+  for (const [key, value] of Object.entries(world.ties ?? {})) {
+    const [a, b] = pair(key);
+    if (a === b) continue;
+    const merged = tieKey(a, b);
+    ties[merged] = merged in ties ? round1((ties[merged] + value) / 2) : value;
+  }
+  world.ties = ties;
+  for (const bag of ['grudges', 'cooldowns']) world[bag] = Object.fromEntries(Object.entries(world[bag] ?? {}).map(([key, value]) => [key.includes('|') ? key.split('|').map(into).join('|') : key, value]));
+  world.effects = (world.effects ?? []).map(effect => effect.partyId ? { ...effect, partyId: into(effect.partyId) } : effect);
+  world.events = (world.events ?? []).map(event => event.partyId ? { ...event, partyId: into(event.partyId) } : event);
+  world.presenceMoves = (world.presenceMoves ?? []).map(move => ({ ...move, id: into(move.id) }));
+  world.alliances = (world.alliances ?? []).map(alliance => {
+    const partyIds = [...new Set(alliance.partyIds.map(into))];
+    return partyIds.length < 2 && alliance.status === 'active' ? { ...alliance, partyIds, status: 'broken', brokenAt: alliance.brokenAt ?? world.createdAt } : { ...alliance, partyIds };
+  });
+  world.latent = (world.latent ?? []).filter(item => !map[item.id]);
+  if (world.playerPartyId) world.playerPartyId = into(world.playerPartyId);
+  world.others = othersOf(world);
+  return world;
+}
+// The owner's corrections to a party (colour, abbreviation, official name, collocazione) reach the forces of the
+// world. A colour too dark or too light for the dark game surface keeps its hue and gets a readable lightness.
+export function readableOnDark(hex) {
+  if (!/^#[\da-f]{6}$/i.test(hex ?? '')) return null;
+  const [r, g, b] = [1, 3, 5].map(index => parseInt(hex.slice(index, index + 2), 16) / 255);
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h = 0, s = 0; const l = (max + min) / 2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    h = max === r ? (g - b) / d + (g < b ? 6 : 0) : max === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    h /= 6;
+  }
+  const light = clamp(l, 0.46, 0.7), sat = clamp(s, 0.4, 0.95);
+  const q = light < 0.5 ? light * (1 + sat) : light + sat - light * sat, p = 2 * light - q;
+  const channel = t => { t = (t + 1) % 1; const v = t < 1 / 6 ? p + (q - p) * 6 * t : t < 1 / 2 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p; return Math.round(v * 255).toString(16).padStart(2, '0'); };
+  return `#${channel(h + 1 / 3)}${channel(h)}${channel(h - 1 / 3)}`;
+}
+export function withPartyIdentities(input, identities = {}) {
+  if (!input?.parties) return input;
+  const changes = input.parties.filter(party => {
+    const identity = identities[party.id];
+    if (!identity) return false;
+    const color = identity.color ? readableOnDark(identity.color) : null;
+    return (identity.abbreviation && identity.abbreviation !== party.abbreviation) || (identity.officialName && identity.officialName !== party.officialName) || (color && color !== party.color) || (identity.position && identity.position !== party.position);
+  });
+  if (!changes.length) return input;
+  const world = copy(input);
+  for (const party of world.parties) {
+    const identity = identities[party.id];
+    if (!identity) continue;
+    if (identity.abbreviation) party.abbreviation = identity.abbreviation;
+    if (identity.officialName) party.officialName = identity.officialName;
+    if (identity.position && identity.position !== party.position) { party.position = identity.position; party.axis = axisOf(identity.position); }
+    const color = identity.color ? readableOnDark(identity.color) : null;
+    if (color) { party.brandColor = identity.color; party.color = color; }
+  }
   return world;
 }
 // Saves made before the presence model: every force they list was in the polls; the forces of the database that
@@ -201,6 +298,8 @@ export function setPlayerParty(input, party) {
 function attachPlayerParty(world, party, week) {
   for (const item of world.parties) item.isPlayer = false;
   world.playerPartyId = party?.id ?? null;
+  // The player's own party when the polls measure it inside a list (e.g. Sinistra Italiana inside AVS).
+  world.playerComponent = party?.component ?? null;
   if (!party) return world;
   let entry = world.parties.find(item => item.id === party.id);
   if (!entry) {

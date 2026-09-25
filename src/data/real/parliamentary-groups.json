@@ -58,8 +58,8 @@
     "officialName": "Lega - Salvini Premier",
     "abbreviation": null,
     "chamber": "camera",
-    "memberCount": 57,
-    "countAsOf": "2026-09-22",
+    "memberCount": 56,
+    "countAsOf": "2026-09-24",
     "leaderPoliticianId": null,
     "constitutedAt": null,
     "history": [],
@@ -69,7 +69,8 @@
     "sourceName": "Camera dei deputati — XIX legislatura, composizione dei gruppi parlamentari",
     "verifiedAt": "2026-09-22",
     "validFrom": null,
-    "validTo": null
+    "validTo": null,
+    "countNote": "Senza Alberto Bagnai, cessato dal mandato il 15/09/2026"
   },
   {
     "id": "cam-xix-04",

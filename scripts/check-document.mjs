@@ -85,14 +85,16 @@ const affiliation = id => links.politicianAffiliation(person(id));
 assert.equal(affiliation('camera-xix-deputato-308930').entity.officialName, 'Partito Democratico');
 assert.equal(affiliation('camera-xix-deputato-308930').basis, 'membership', 'Un incarico documentato vale come iscrizione.');
 assert.equal(affiliation('camera-xix-deputato-307143').entity.id, 'party-futuro-nazionale', 'Un incarico documentato prevale sulla lista d’elezione.');
+// The 2022 list is an electoral relation, never the current party (people change party during the legislature).
 const byList = db.politicians.find(item => item.electedOnList === 'MOVIMENTO 5 STELLE' && !db.partyMemberships.some(member => member.politicianId === item.id));
-assert.equal(links.politicianAffiliation(byList).basis, 'list');
-assert.equal(links.politicianAffiliation(byList).entity.id, 'party-registro-p1-2022-63-ir');
+assert.equal(links.politicianAffiliation(byList), null, 'La lista d’elezione non diventa il partito attuale.');
+assert.equal(links.electionListOf(byList).entity.id, 'party-registro-p1-2022-63-ir', 'La lista resta come relazione elettorale, separata.');
 const coalitionOnly = db.politicians.find(item => item.electedOnList === "FRATELLI D'ITALIA - LEGA - NM - UDC - FI-PPE" && !db.partyMemberships.some(member => member.politicianId === item.id));
 assert.equal(links.politicianAffiliation(coalitionOnly), null, 'Eletti in collegi di coalizione: nessun partito dedotto.');
 const senator = db.politicians.find(item => item.chamber === 'senato' && !db.partyMemberships.some(member => member.politicianId === item.id));
 assert.equal(links.politicianAffiliation(senator), null, 'Il gruppo parlamentare non viene mai usato per dedurre il partito.');
-assert.equal(links.linkedPoliticians('party-registro-p1-2015-29-ir').length > 50, true);
+assert.ok(links.linkedPoliticians('party-registro-p1-2015-29-ir').some(item => item.person.id === 'camera-xix-deputato-308930'), 'Iscritti documentati del partito.');
+assert.ok(links.electedOnListsOf('party-registro-p1-2015-29-ir').length > 50, 'Eletti nelle liste del partito, come relazione elettorale.');
 assert.deepEqual(links.governingEntityIds().sort(), ['party-registro-p1-2014-04-ir', 'party-registro-p1-2015-20-ir', 'party-registro-p1-2017-41-ir'], 'Maggioranza reale derivata dai membri del governo in carica.');
 
 // ---------- party logos instead of initials, derived from the database ----------
@@ -105,7 +107,7 @@ assert.ok(html.includes('src="https://example.org/pd.svg"') && html.includes('pe
 html = renderPoliticianArchive({ ...filters, politicianQuery: 'ziello' }, { logoFor });
 assert.ok(html.includes('futuro-nazionale.png'), 'Il logo verificato di Futuro Nazionale.');
 html = renderPoliticianArchive({ ...filters, politicianQuery: person(byList.id).fullName.toLowerCase() }, { logoFor });
-assert.ok(html.includes('class="emblem emblem-sm"') && !html.includes('<img'), 'Senza logo disponibile: il segno grafico già previsto per quel partito.');
+assert.ok(html.includes('class="catalog-mark"') && html.includes('Partito non documentato') && html.includes('Lista 2022: MOVIMENTO 5 STELLE'), 'Senza partito documentato: iniziale della Camera; la lista 2022 resta indicata a parte.');
 html = renderPoliticianArchive({ ...filters, politicianQuery: senator.fullName.toLowerCase() }, { logoFor });
 assert.ok(html.includes('class="catalog-mark"'), 'Senza partito documentato resta l’iniziale della Camera.');
 html = renderPoliticianArchive({ ...filters, politicianQuery: '', politicianParty: 'party-registro-p1-2015-29-ir' }, { logoFor });
@@ -119,15 +121,16 @@ assert.equal((html.match(/data-party-profile="party-mef-2025-15"/g) ?? []).lengt
 html = renderPartyArchive({ ...catalog, partyPosition: 'estrema destra' }, { logoFor });
 assert.ok(html.includes('Forza Nuova') && html.includes('CasaPound Italia') && !html.includes('Partito Democratico'), 'Filtro per collocazione.');
 html = renderPartyProfile('party-registro-p1-2015-29-ir', logoFor);
-assert.ok(html.includes('Elly Schlein') && html.includes('Parlamentari collegati') && html.includes('partito della lista d’elezione'), 'Scheda del partito: organi e parlamentari collegati con la base del collegamento.');
+assert.ok(html.includes('Elly Schlein') && html.includes('Parlamentari collegati') && html.includes('Eletti nel 2022 nelle liste'), 'Scheda del partito: organi, iscritti documentati ed eletti nelle liste, separati.');
 html = renderPartyProfile('party-registro-p1-2022-63-ir', logoFor);
 assert.ok(html.includes('2×1000'), 'Il 2‰ registrato con il nome MEF compare nella scheda del partito.');
 
 // ---------- the real opening poll ----------
 const poll = db.realPolls[0];
-assert.equal(poll.publishedAt, '2026-09-17');
+assert.equal(poll.publishedAt, '2026-09-24');
 assert.ok(/agi\.it/.test(poll.sourceUrl) && poll.source === 'real');
-assert.equal(poll.results.find(row => row.entityId === 'party-registro-p1-2014-04-ir').share, 26.6);
+assert.equal(poll.results.find(row => row.entityId === 'party-registro-p1-2014-04-ir').share, 27.0);
+assert.equal(db.realPolls.length, 1, 'Il sondaggio del 24/09 sostituisce quello del 17/09.');
 const { store } = await import('../src/core/store.js');
 store.setRealReference({ twoPerThousand: db.twoPerThousand, parties: db.parties, movements: db.politicalMovements, coalitions: db.coalitions, polls: db.realPolls, governingIds: links.governingEntityIds(), startDate: db.manifest.snapshotDate });
 const draft = { firstName: 'Anna', lastName: 'Prova', birthDate: '1988-03-01', gender: 'donna', region: 'Lazio', municipality: 'Viterbo', previousProfession: 'Insegnante', initialLevel: 'comunale', partyMode: 'new', partyName: 'Lista di prova', partyAbbreviation: 'LDP', partyDescription: 'Partito creato per il test.', partyOrientation: 'Altro', partyColor: '#285c42', partyPosition: 'centro-sinistra', difficulty: 'difficile', policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 } };
@@ -138,8 +141,10 @@ assert.equal(state.career.startedAt, '2026-09-24');
 const first = state.world.polls[0];
 assert.ok(first.real.publishedAt <= state.clock.currentDate, 'Il sondaggio reale è quello disponibile alla data di avvio.');
 assert.equal(first.source, 'real', 'La carriera parte dal sondaggio reale.');
-assert.equal(first.results.find(row => row.partyId === 'party-registro-p1-2015-29-ir').share, 21.1);
-assert.equal(first.results.find(row => row.partyId === 'coalition-alleanza-verdi-sinistra').share, 6.4, 'AVS entra come coalizione, con il suo dato reale.');
+assert.equal(first.results.find(row => row.partyId === 'party-registro-p1-2015-29-ir').share, 20.8);
+assert.equal(first.results.find(row => row.partyId === 'coalition-alleanza-verdi-sinistra').share, 6.5, 'AVS entra come coalizione, con il suo dato reale.');
+assert.equal(first.results.find(row => row.partyId === 'party-registro-p1-2022-67-ir').share, 1.1, 'Sud chiama Nord è nella fonte del 24/09.');
+assert.ok(!first.results.some(row => row.partyId === 'party-registro-p1-2024-74-ir'), 'Il Partito Liberaldemocratico non è nella fonte del 24/09: nessuna riga.');
 assert.ok(first.results.find(row => row.partyId === state.world.playerPartyId).simulated, 'Il partito creato dal giocatore è una stima simulata, dichiarata.');
 assert.equal(state.world.parties.find(item => item.id === 'party-registro-p1-2014-04-ir').governing, true);
 assert.equal(state.world.parties.find(item => item.id === 'party-registro-p1-2015-29-ir').strategy, 'opposizione', 'Chi è fuori dalla maggioranza reale parte all’opposizione.');

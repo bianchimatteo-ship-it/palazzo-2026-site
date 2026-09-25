@@ -190,8 +190,9 @@ assert.equal(state.parliament.careerStanding.committeeRole, null, 'Il cambio di 
 assert.ok(state.dataset.offices.find(item => item.id === roleOffice.id).endDate, 'L’ufficio simulato viene chiuso.');
 assert.equal(state.career.parliamentContext.groupId, 'cam-xix-03');
 assert.equal(state.parliament.chambers.camera.groups.find(item => item.groupId === 'cam-xix-01').simulatedSeats, 118);
-assert.equal(state.parliament.chambers.camera.groups.find(item => item.groupId === 'cam-xix-03').simulatedSeats, 58);
-assert.equal(groups.find(item => item.id === 'cam-xix-03').memberCount, 57, 'Il dato reale resta invariato.');
+// Lega at the Camera: 56 deputies in office (Bagnai's mandate ended on 15/09/2026), plus the player's seat.
+assert.equal(state.parliament.chambers.camera.groups.find(item => item.groupId === 'cam-xix-03').simulatedSeats, 57);
+assert.equal(groups.find(item => item.id === 'cam-xix-03').memberCount, 56, 'Il dato reale resta invariato.');
 assert.ok(unique(state.career.parliamentHistory) && unique(state.dataset.events), 'Lo storico non duplica gli eventi.');
 
 // Governo: una sola trattativa aperta, coalizione su entrambe le Camere, ministro del giocatore e caduta.
