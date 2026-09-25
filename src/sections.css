@@ -556,6 +556,22 @@
 .logo-admin-preview { background: #f4f1ea; }
 .logo-admin-preview img { max-width: 100%; max-height: 100%; }
 
+/* ---------- audit responsive: nessun testo tagliato, niente allargamenti della pagina ---------- */
+/* Names are never cut with an ellipsis: they wrap on the next line (parties, groups, comuni, relations, lists). */
+.poll-bar-name strong, .poll-bar-name small, .topbar-title span, .government-group-check strong, .municipality-option strong, .municipality-option small,
+.hq-relation strong, .organization-copy small, .logo-admin-item strong, .campaign-rival-main strong, .campaign-rival-main span, .campaign-rival-main small,
+.region-tile small, .presence-moves b, .admin-list-item strong, .admin-list-item small, .situation-bar strong, .breakdown-row b, .profile-name strong,
+.profile-name small, .demo-party-copy small, .mobile-tab span, .archive-tab span { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+.topbar-title span { line-height: 1.3; }
+/* Segmented controls: buttons shrink and wrap their label instead of being clipped by the rounded frame. */
+.segmented { overflow: visible; }
+.segmented button { overflow-wrap: anywhere; }
+.segmented button:first-child { border-radius: 5px 0 0 5px; }
+.segmented button:last-child { border-radius: 0 5px 5px 0; }
+/* The planner's target select keeps to its column (its longest option never widens the page). */
+.hq-activity { grid-template-columns: minmax(0, 1fr) auto minmax(120px, 240px); }
+html body .hq-activity-action select:not([multiple]) { width: 100%; max-width: 240px; }
+
 /* ---------- responsive ---------- */
 @media (max-width: 1100px) {
   .sx-grid.three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -608,6 +624,8 @@
   .ag-week { grid-template-columns: 1fr; }
   .ag-week-action .primary-button, .ag-week-action .secondary-button { flex: 1 1 100%; justify-content: center; }
   .ag-item { grid-template-columns: 46px minmax(0, 1fr); }
+  .hq-activity { grid-template-columns: 1fr; }
+  html body .hq-activity-action select:not([multiple]) { max-width: none; }
   .ag-action { grid-column: 2; }
   .ag-months { grid-template-columns: 1fr; }
   .ag-month { padding: 12px; }

@@ -1,11 +1,11 @@
 // AGENDA — the time of the career: this week's decisions and days, the calendar of every dated commitment
 // (votes, candidacies, congresses, promises, decrees, consequences), the weekly activities and the register.
-import { AGENDA_KINDS, agendaByMonth, agendaCalendar } from '../core/agenda-engine.js?v=20260925-7';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20260925-7';
-import { advanceDays, formatDate } from '../core/time.js?v=20260925-7';
-import { glyph } from './visuals.js?v=20260925-7';
-import { renderInbox, renderPlanner } from './game-mode.js?v=20260925-7';
-import { arrow, badge, card, esc, euro, num, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20260925-7';
+import { AGENDA_KINDS, agendaByMonth, agendaCalendar } from '../core/agenda-engine.js?v=20260925-8';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20260925-8';
+import { advanceDays, formatDate } from '../core/time.js?v=20260925-8';
+import { glyph } from './visuals.js?v=20260925-8';
+import { renderInbox, renderPlanner } from './game-mode.js?v=20260925-8';
+import { arrow, badge, card, esc, euro, num, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20260925-8';
 
 export const AGENDA_TABS = Object.freeze([['settimana', 'Questa settimana'], ['calendario', 'Calendario'], ['attivita', 'Attività'], ['registro', 'Registro']]);
 // Filters of the calendar: groups of kinds, kept across redraws by the caller.

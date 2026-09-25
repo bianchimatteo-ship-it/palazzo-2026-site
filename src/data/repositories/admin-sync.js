@@ -1,5 +1,5 @@
 // Network side of the shared admin archive: read it for every player, write it with the owner's session.
-import { loadAdminArchive, loadSharedArchive, setSharedSessionToken, sharedSessionToken, storeSharedArchive } from './admin-store.js?v=20260925-7';
+import { loadAdminArchive, loadSharedArchive, setSharedSessionToken, sharedSessionToken, storeSharedArchive } from './admin-store.js?v=20260925-8';
 
 const PRODUCTION_API = 'https://palazzo-2026-site.bianchimatteo657.workers.dev/api/admin';
 // On the Worker (and its local preview) the API is on the same site; GitHub Pages reads it from the Worker.

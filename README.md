@@ -150,6 +150,11 @@ npm run check:sections
 npm run check:territory
 ```
 
+## Filtri, schede e responsive (dal 25/09/2026)
+
+- **Persistenza**: schede interne (Elezioni, Carriera, Partito, Agenda), filtri (agenda, comitati, emiciclo, archivi di partiti e parlamentari con ordinamento e pagina, scheda dell’Archivio, leggi reali, misura e regione dei Territori, area del proprietario), selezioni (parlamentare, commissione, votazione dell’emiciclo) e categorie richiudibili (attività della settimana, azioni di campagna) restano come li lascia il giocatore dopo ogni aggiornamento, cambio pagina o ricaricamento. Sono comodità di questo browser (`politicando.views.v1`), mai dati di gioco.
+- **Responsive**: nessun testo è più troncato con i puntini (nomi di partiti, gruppi, comuni, relazioni vanno a capo), i controlli segmentati non vengono tagliati, i menu a tendina non allargano la pagina, tabelle e schede diventano elenchi etichettati quando lo spazio è poco; `npm run check:responsive` controlla ogni vista in un vero browser.
+
 ## Gameplay: la carriera settimana per settimana
 
 La Home è il quartier generale del politico: statistiche con variazione settimanale, giorni disponibili, fondi, capitale politico, preparazione elettorale, decisioni in agenda, attività, traguardi, calendario elettorale, posizione in Parlamento e nel partito, relazioni.
@@ -290,6 +295,7 @@ npm run check:elections   # esiti elettorali vari e non automatici, ballottaggio
 npm run check:sections    # progressione non automatica (probabilità ed esiti), percorsi di carriera, agenda datata, schede di Carriera, Partito e Agenda
 npm run check:hemicycle   # commissioni reali, emiciclo Camera/Senato, colori e ordine dei gruppi, voti dei singoli coerenti coi totali, voto segreto, fiducia
 npm run check:territory   # comitati Regione → Provincia → Comune, stati, azioni, crisi, effetti su campagna/voto/promozioni; editor dei loghi
+npm run check:responsive  # Chrome senza interfaccia: 32 viste e 4 finestre a 375/768/1280 px senza scorrimento orizzontale, elementi fuori schermo, contenuti nascosti o testi troncati (saltato se Chrome manca; CHROME_PATH per indicarlo)
 npm run check:government  # 34 temi, bilancio, territori, cittadini, sicurezza, Presidente del Consiglio, difficoltà
 npm run check:events      # eventi procedurali: condizioni, cooldown, rarità, esclusività, varianti, catene
 npm run check:career      # carriera pluriennale end-to-end, salvataggi e migrazione

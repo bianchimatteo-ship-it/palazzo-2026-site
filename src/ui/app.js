@@ -1,48 +1,48 @@
-import { fullDate, formatDate } from '../core/time.js?v=20260925-7';
-import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20260925-7';
-import { accountApiBase, currentAccount, deleteCloudSave, downloadSave, knownRevision, listCloudSaves, login, logout, register, slotForCareer, uploadSave } from '../data/repositories/account-sync.js?v=20260925-7';
-import { setPartyLogoResolver } from './person-marks.js?v=20260925-7';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260925-7';
-import { isRealCollectionLoaded, loadRealCollections, pristineRecord, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20260925-7';
-import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20260925-7';
-import { renderAdminPanel } from './admin-panel.js?v=20260925-7';
-import { sharedLogos } from '../data/repositories/admin-store.js?v=20260925-7';
-import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, publishSharedArchive, refreshSharedArchive, sharedApiUrl, verifySharedSession } from '../data/repositories/admin-sync.js?v=20260925-7';
-import { deleteLocalLogo, exportLogoConfiguration, fetchLogoFromUrl, getLocalLogo, importLogoConfiguration, listLocalLogos, probeImage, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20260925-7';
-import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20260925-7';
-import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20260925-7';
-import { PARTY_LINK_COLLECTIONS } from '../data/repositories/party-links.js?v=20260925-7';
-import { renderLogoAdmin } from './logo-admin.js?v=20260925-7';
-import { chosenPlace, makeCareerDraft, renderCareerWizard, wizardLogoPreview } from './career-wizard.js?v=20260925-7';
-import { userPartyLogo } from './party-logo.js?v=20260925-7';
-import { CAREER_STEPS, validateCareerStep } from '../core/career-rules.js?v=20260925-7';
-import { renderElectionsHub } from './elections-hub.js?v=20260925-7';
-import { renderCareerPage } from './career-page.js?v=20260925-7';
-import { renderPartyPage } from './party-page.js?v=20260925-7';
-import { renderAgendaPage } from './agenda-page.js?v=20260925-7';
-import { HEMICYCLE_DEFAULTS, renderHemicycle } from './hemicycle-view.js?v=20260925-7';
-import { drawLogoEditor, exportLogo, measureBackground, panFromDrag, renderLogoEditor } from './logo-editor-view.js?v=20260925-7';
-import { createEditorState } from '../core/logo-editor.js?v=20260925-7';
-import { renderParliamentPage } from './parliament-mode.js?v=20260925-7';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260925-7';
-import { CAREER_LEVELS } from '../data/regions.js?v=20260925-7';
-import { renderHeadquarters } from './game-mode.js?v=20260925-7';
-import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20260925-7';
-import { playerRoles } from '../core/roles.js?v=20260925-7';
-import { budgetPreview, designFromForm, planFromForm, policyFields, policyPreview } from './policy-mode.js?v=20260925-7';
-import { areaOf } from '../data/simulation/policy-rules.js?v=20260925-7';
-import { attachChartInteractions, hideChartTip, renderPollsPage } from './polls-mode.js?v=20260925-7';
-import { glyph } from './visuals.js?v=20260925-7';
-import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20260925-7';
-import { renderFinancePage } from './finance-mode.js?v=20260925-7';
-import { renderContactsPanel } from './organization-mode.js?v=20260925-7';
-import { renderRealLaws } from './real-laws.js?v=20260925-7';
-import { realLawArea } from '../core/society-engine.js?v=20260925-7';
-import { canManageParliament } from '../core/parliament-engine.js?v=20260925-7';
-import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, TOUR_STEPS } from './menu.js?v=20260925-7';
-import { MAX_SLOTS } from '../core/storage.js?v=20260925-7';
-import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20260925-7';
-import { playSound } from './sound.js?v=20260925-7';
+import { fullDate, formatDate } from '../core/time.js?v=20260925-8';
+import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20260925-8';
+import { accountApiBase, currentAccount, deleteCloudSave, downloadSave, knownRevision, listCloudSaves, login, logout, register, slotForCareer, uploadSave } from '../data/repositories/account-sync.js?v=20260925-8';
+import { setPartyLogoResolver } from './person-marks.js?v=20260925-8';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260925-8';
+import { isRealCollectionLoaded, loadRealCollections, pristineRecord, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20260925-8';
+import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20260925-8';
+import { renderAdminPanel } from './admin-panel.js?v=20260925-8';
+import { sharedLogos } from '../data/repositories/admin-store.js?v=20260925-8';
+import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, publishSharedArchive, refreshSharedArchive, sharedApiUrl, verifySharedSession } from '../data/repositories/admin-sync.js?v=20260925-8';
+import { deleteLocalLogo, exportLogoConfiguration, fetchLogoFromUrl, getLocalLogo, importLogoConfiguration, listLocalLogos, probeImage, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20260925-8';
+import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20260925-8';
+import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20260925-8';
+import { PARTY_LINK_COLLECTIONS } from '../data/repositories/party-links.js?v=20260925-8';
+import { renderLogoAdmin } from './logo-admin.js?v=20260925-8';
+import { chosenPlace, makeCareerDraft, renderCareerWizard, wizardLogoPreview } from './career-wizard.js?v=20260925-8';
+import { userPartyLogo } from './party-logo.js?v=20260925-8';
+import { CAREER_STEPS, validateCareerStep } from '../core/career-rules.js?v=20260925-8';
+import { renderElectionsHub } from './elections-hub.js?v=20260925-8';
+import { renderCareerPage } from './career-page.js?v=20260925-8';
+import { renderPartyPage } from './party-page.js?v=20260925-8';
+import { renderAgendaPage } from './agenda-page.js?v=20260925-8';
+import { HEMICYCLE_DEFAULTS, renderHemicycle } from './hemicycle-view.js?v=20260925-8';
+import { drawLogoEditor, exportLogo, measureBackground, panFromDrag, renderLogoEditor } from './logo-editor-view.js?v=20260925-8';
+import { createEditorState } from '../core/logo-editor.js?v=20260925-8';
+import { renderParliamentPage } from './parliament-mode.js?v=20260925-8';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260925-8';
+import { CAREER_LEVELS } from '../data/regions.js?v=20260925-8';
+import { renderHeadquarters } from './game-mode.js?v=20260925-8';
+import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20260925-8';
+import { playerRoles } from '../core/roles.js?v=20260925-8';
+import { budgetPreview, designFromForm, planFromForm, policyFields, policyPreview } from './policy-mode.js?v=20260925-8';
+import { areaOf } from '../data/simulation/policy-rules.js?v=20260925-8';
+import { attachChartInteractions, hideChartTip, renderPollsPage } from './polls-mode.js?v=20260925-8';
+import { glyph } from './visuals.js?v=20260925-8';
+import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20260925-8';
+import { renderFinancePage } from './finance-mode.js?v=20260925-8';
+import { renderContactsPanel } from './organization-mode.js?v=20260925-8';
+import { renderRealLaws } from './real-laws.js?v=20260925-8';
+import { realLawArea } from '../core/society-engine.js?v=20260925-8';
+import { canManageParliament } from '../core/parliament-engine.js?v=20260925-8';
+import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, TOUR_STEPS } from './menu.js?v=20260925-8';
+import { MAX_SLOTS } from '../core/storage.js?v=20260925-8';
+import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20260925-8';
+import { playSound } from './sound.js?v=20260925-8';
 
 // Phone navigation: four sections always one tap away, everything else in the "Altro" sheet.
 const MOBILE_TABS = [['panoramica', 'home', 'Home'], ['carriera', 'route', 'Carriera'], ['partito', 'party', 'Partito'], ['sondaggi', 'chart', 'Sondaggi']];
@@ -200,6 +200,23 @@ export function mountApp(root, store) {
     };
   };
   const realLaws = { query: '', outcome: 'all', area: 'all', page: 1 };
+  // Filters, sorting and selections of the other pages (catalogues, archive, real laws, territories, the owner's area)
+  // are kept in this browser like the tabs: they survive redraws, navigation and a reload.
+  const VIEW_FIELDS = Object.freeze({
+    catalog: ['partyQuery', 'partyPresence', 'partyType', 'partyLevel', 'partyRegion', 'partyStatus', 'partyElection', 'partySort', 'partyPage', 'politicianQuery', 'politicianChamber', 'politicianParty', 'politicianGroup', 'politicianPage'],
+    admin: ['tab', 'chamber', 'partyFilter'], territory: ['measure', 'region'], archive: ['tab'], realLaws: ['query', 'outcome', 'area', 'page']
+  });
+  const viewTargets = { catalog, admin, territory, archive, realLaws };
+  for (const [name, fields] of Object.entries(VIEW_FIELDS)) for (const field of fields) {
+    const value = views.pages?.[name]?.[field];
+    if (value === null || (typeof value === 'string' && value.length <= 200) || (Number.isInteger(value) && value > 0)) viewTargets[name][field] = value;
+  }
+  let lastPages = '';
+  const persistViewState = () => {
+    const pages = Object.fromEntries(Object.entries(VIEW_FIELDS).map(([name, fields]) => [name, Object.fromEntries(fields.map(field => [field, viewTargets[name][field] ?? null]))]));
+    const text = JSON.stringify(pages);
+    if (text !== lastPages) { lastPages = text; views.pages = pages; saveViews(); }
+  };
   // Real parliamentarians pertinent to the career: loaded in the background, then kept in step.
   const refreshContacts = async () => {
     try {
@@ -249,7 +266,9 @@ export function mountApp(root, store) {
   const adminSelected = () => admin.tab === 'politici'
     ? { collection: 'politicians', id: admin.politicianId }
     : { collection: realDatabase.politicalMovements?.some(item => item.id === admin.partyId) ? 'politicalMovements' : 'parties', id: admin.partyId };
-  const render = (state, lastSaved) => { renderFrame(state, lastSaved); paintLogoEditor(); };
+  // Collapsible categories (weekly activities, campaign actions) reopen as the player left them.
+  const restoreDetails = () => { for (const element of root.querySelectorAll?.('details[data-remember]') ?? []) { const saved = views.open?.[element.dataset.remember]; if (typeof saved === 'boolean' && element.open !== saved) element.open = saved; } };
+  const render = (state, lastSaved) => { renderFrame(state, lastSaved); paintLogoEditor(); restoreDetails(); persistViewState(); };
   const renderFrame = (state, lastSaved) => {
     hideChartTip();
     if (menu.open && !wizard) {
@@ -1073,6 +1092,12 @@ export function mountApp(root, store) {
       catch (error) { store.getState().ui.toast = error.message; render(store.getState(),store.getLastSaved()); }
     }
   });
+  root.addEventListener('toggle', event => {
+    const element = event.target;
+    if (!element?.matches?.('details[data-remember]')) return;
+    views.open = { ...(views.open ?? {}), [element.dataset.remember]: element.open };
+    saveViews();
+  }, true);
   // Dragging on the logo editor's stage moves the frame over the image.
   root.addEventListener('pointerdown', event => {
     const stage = event.target?.closest?.('[data-logo-stage]');

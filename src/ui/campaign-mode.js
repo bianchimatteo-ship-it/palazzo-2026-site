@@ -1,12 +1,12 @@
-import { CAMPAIGN_OBJECTIVES, CAMPAIGN_PHASES, CAMPAIGN_STRATEGIES, DEBATE_TOPICS, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260925-7';
-import { affiliationOf, markForPerson } from './person-marks.js?v=20260925-7';
-import { campaignActivities, campaignSummary, strategyFit, strategyOf } from '../core/campaign-engine.js?v=20260925-7';
-import { resultDescription } from '../core/election-engine.js?v=20260925-7';
-import { formatDate } from '../core/time.js?v=20260925-7';
-import { careerLevelLabel } from '../data/regions.js?v=20260925-7';
-import { upcomingElections } from '../core/career-engine.js?v=20260925-7';
-import { renderElectionReport } from './election-report.js?v=20260925-7';
-import { glyph } from './visuals.js?v=20260925-7';
+import { CAMPAIGN_OBJECTIVES, CAMPAIGN_PHASES, CAMPAIGN_STRATEGIES, DEBATE_TOPICS, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260925-8';
+import { affiliationOf, markForPerson } from './person-marks.js?v=20260925-8';
+import { campaignActivities, campaignSummary, strategyFit, strategyOf } from '../core/campaign-engine.js?v=20260925-8';
+import { resultDescription } from '../core/election-engine.js?v=20260925-8';
+import { formatDate } from '../core/time.js?v=20260925-8';
+import { careerLevelLabel } from '../data/regions.js?v=20260925-8';
+import { upcomingElections } from '../core/career-engine.js?v=20260925-8';
+import { renderElectionReport } from './election-report.js?v=20260925-8';
+import { glyph } from './visuals.js?v=20260925-8';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const roleLabels={sindaco:'Candidatura a sindaco',consigliere:'Candidato in lista per il consiglio',presidente:'Candidato alla presidenza regionale',deputato:'Candidato alla Camera',senatore:'Candidato al Senato',uninominale:'Collegio uninominale simulato',eurodeputato:'Candidato al Parlamento europeo'};
@@ -102,7 +102,7 @@ function renderActive(campaign,parties,logoFor) {
       const risk=Math.round(activity.risk*(strategy.risk??1));
       return `<div class="campaign-activity ${ok?'':'is-blocked'}"><div class="campaign-activity-copy"><strong>${esc(activity.label)}</strong><span>${esc(activity.detail)}</span><small>${activity.days} ${activity.days===1?'giorno':'giorni'} · Rischio ${risk}/100 · ${esc(SCOPE_NAMES[activity.scope]??'Territorio')}${expected?` · effetto atteso <b>+${String(expected).replace('.',',')} punti</b>`:''}</small>${chips?`<span class="campaign-mods">${chips}</span>`:''}</div><div class="campaign-activity-cost">${esc(activityCost(activity))}</div><button class="campaign-action-button" data-campaign-activity="${activity.id}" ${ok?'':'disabled'}>${ok?'Scegli':'Non disponibile'}</button>${reason?`<small class="campaign-activity-reason">${esc(reason)}</small>`:''}</div>`;
     }).join('');
-    return `<details class="campaign-activity-group" ${['territory','media','event'].includes(category)?'open':''}><summary>${glyph(icon,16)}<span>${esc(label)}</span><small>${available} disponibili su ${rows.length}</small></summary>${body}</details>`;
+    return `<details class="campaign-activity-group" data-remember="campagna-${category}" ${['territory','media','event'].includes(category)?'open':''}><summary>${glyph(icon,16)}<span>${esc(label)}</span><small>${available} disponibili su ${rows.length}</small></summary>${body}</details>`;
   }).join('');
   const pending=campaign.pendingEvents.map(event=>`<article class="campaign-event-choice"><span class="campaign-kicker">EVENTO · ${esc(formatDate(event.date,{day:'numeric',month:'short'}))}</span><h4>${esc(event.title)}</h4><p>${esc(event.body)}</p><div>${event.choices.map(choice=>`<button class="secondary-button" data-campaign-event="${esc(event.id)}" data-campaign-choice="${esc(choice.id)}">${esc(choice.label)}</button>`).join('')}</div></article>`).join('');
   const history=campaign.history.slice(0,6).map(item=>`<div class="campaign-log-row"><time>G${item.day}</time><div><strong>${esc(item.text)}</strong><small>${esc(formatDate(item.date,{day:'numeric',month:'short'}))} · simulazione</small></div></div>`).join('');

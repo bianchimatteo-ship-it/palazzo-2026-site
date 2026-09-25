@@ -265,6 +265,10 @@ assert.ok((await click({ timelineFilter: 'partito' })).includes('data-timeline-f
 page = await goto('archivio');
 assert.ok(page.includes('archive-tabs') && page.includes('Partiti e movimenti'), 'Archivio con schede');
 page = await click({ archiveTab: 'governo' });
+// Filters and selections outside the redesigned sections are kept too (archive tab, catalogue filters, laws, territories).
+const savedViews = () => JSON.parse(localStorage.getItem('politicando.views.v1') ?? '{}');
+assert.equal(savedViews().pages?.archive?.tab, 'governo', 'La scheda dell’Archivio resta salvata.');
+assert.ok(['partySort', 'politicianChamber', 'politicianQuery'].every(key => key in (savedViews().pages?.catalog ?? {})) && 'measure' in (savedViews().pages?.territory ?? {}) && 'outcome' in (savedViews().pages?.realLaws ?? {}), 'Filtri di archivi, territori e leggi salvati.');
 assert.ok(page.includes('I Governo Meloni') && page.includes('GIORGIA MELONI') && page.includes('Presidente del Consiglio dei ministri'), 'Governo reale con i nomi della fonte');
 page = await click({ archiveTab: 'gruppi' });
 assert.ok(page.includes('Camera dei deputati') && page.includes('Senato della Repubblica') && page.includes('componenti'));
