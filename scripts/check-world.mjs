@@ -75,7 +75,7 @@ assert.ok(world.polls.every((poll, index) => index === 0 || poll.source !== 'rea
 assert.ok((kinds.get('congresso') ?? 0) >= 5, `Congressi dei partiti nel corso degli anni (${kinds.get('congresso') ?? 0}).`);
 const evolved = world.parties.filter(item => item.origin === 'evoluzione');
 for (const force of evolved) assert.ok(/simulat/.test(force.label) && force.refSource === 'simulation', `Le nuove forze sono dichiaratamente simulate: ${force.label}`);
-for (const event of world.events.filter(item => ['congresso', 'scissione', 'fusione', 'nuova-forza', 'organizzazione'].includes(item.kind))) assert.ok(/simulat/.test(event.body), `Evento di partito senza etichetta di simulazione: ${event.title}`);
+for (const event of world.events.filter(item => ['congresso', 'scissione', 'fusione', 'nuova-forza', 'organizzazione'].includes(item.kind))) assert.ok(/simula(t|zion)/.test(event.body), `Evento di partito senza etichetta di simulazione: ${event.title}`);
 assert.ok(world.parties.filter(item => !item.isPlayer && item.origin !== 'evoluzione').every(item => forces.some(force => force.id === item.id)), 'I partiti reali restano quelli reali: nessun nome inventato al loro posto.');
 assert.ok(world.parties.some(item => item.life?.congresses > 0 && ['nuova', 'confermata'].includes(item.life.leadership)));
 console.log(`  dieci anni: ${alliancesFormed.length} intese (${alliancesFormed.filter(item => item.gap > 2).length} eccezioni motivate), congressi ${kinds.get('congresso') ?? 0}, scissioni ${kinds.get('scissione') ?? 0}, fusioni ${kinds.get('fusione') ?? 0}, nuove forze ${kinds.get('nuova-forza') ?? 0}, riorganizzazioni ${kinds.get('organizzazione') ?? 0}`);

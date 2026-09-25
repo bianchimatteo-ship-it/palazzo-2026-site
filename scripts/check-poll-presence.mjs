@@ -64,7 +64,8 @@ assert.ok(latentIds.includes(PSI) && !latentIds.includes('party-registro-p1-2014
 assert.ok(!latentIds.includes('party-registro-p1-2014-13-ir') && !latentIds.includes('party-registro-p1-2017-44-ir'), 'Europa Verde e Sinistra Italiana sono già misurate dentro AVS.');
 assert.ok(state.world.latent.every(item => item.presence.status === PRESENCE.NONE && item.source === 'simulation' && item.support > 0), 'Fuori dai sondaggi, con un consenso latente simulato.');
 const latentTotal = state.world.latent.reduce((sum, item) => sum + item.support, 0);
-assert.ok(Math.abs(latentTotal + state.world.residual - first.others) < 0.05, 'Il consenso latente è una parte di “Altri”: nessun punto inventato.');
+// The player's new party takes part of its starting consensus from “Altri”: the rest of “Altri” is the latent pool.
+assert.ok(Math.abs(latentTotal + state.world.residual + (state.world.playerStart?.fromOthers ?? 0) - first.others) < 0.05, 'Il consenso latente è una parte di “Altri”: nessun punto inventato.');
 assert.ok(latentTotal < first.others, '“Altri” comprende anche liste minori non censite.');
 store.advance(7);
 state = store.getState();
@@ -94,10 +95,11 @@ const forces = [
 ];
 const testPoll = { id: 'prova', label: 'Media reale di prova', publishedAt: '2026-09-17', sourceUrl: 'https://example.org/sondaggio', sourceName: 'Fonte di prova', results: forces.map(item => ({ partyId: item.id, share: item.share })) };
 const latent = [{ id: 'lat-a', label: 'Forza in attesa A', position: 'centro-sinistra', weight: 1 }, { id: 'lat-b', label: 'Forza in attesa B', position: 'destra', weight: 0.5 }, ...Array.from({ length: 8 }, (_, i) => ({ id: `lat-${i}`, label: `Forza in attesa ${i}`, position: 'centro', weight: 0 }))];
-const makeWorld = seed => engine.createWorld({ seedText: seed, date: '2026-09-24', place: { region: 'Lazio' }, playerParty: { id: 'io', label: 'Il mio partito', position: 'centro', founder: true }, forces, realPoll: testPoll, latent });
+// The player here is an independent (no party): the forces of the test world keep exactly the figures of the source.
+const makeWorld = seed => engine.createWorld({ seedText: seed, date: '2026-09-24', place: { region: 'Lazio' }, playerParty: null, forces, realPoll: testPoll, latent });
 const step = (input, week, date, extra = {}) => engine.advanceWorld(input, { date, week, stats: { popularity: 45, reputation: 55, notoriety: 40 }, society: { mood: 50, moodDelta: 0, trust: 48, sentiment: 0 }, ...extra }).world;
 let world = makeWorld('presenza');
-assert.ok(Math.abs(world.others - 1.5) < 0.05 && world.latent.length === 10);
+assert.ok(Math.abs(world.others + (world.playerStart?.fromOthers ?? 0) - 1.5) < 0.05 && world.latent.length === 10, '“Altri” della fonte = forze in attesa + liste minori + la quota presa dal nuovo partito.');
 // Without a condition nothing enters: no rise, no crossing of the thresholds.
 world.cooldowns.rise = 100000;
 let date = '2026-09-24';

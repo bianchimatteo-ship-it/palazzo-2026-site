@@ -50,6 +50,10 @@ La nuova carriera parte da **“Dove vuoi iniziare?”**: Regione → (provincia
 
 Il primo sondaggio della carriera è la fotografia della fonte reale: solo le forze che misura, con i suoi valori, e “Altri” come nella fonte; il partito del giocatore, se la fonte non lo misura, compare a parte come stima simulata marcata, fuori dal totale reale. Gli altri partiti e movimenti reali attivi del database (non storici, non doppioni, non già misurati dentro una lista come AVS) restano fuori dai sondaggi con un piccolo consenso latente simulato, che fa parte di “Altri”, e nessuna stima pubblicata. Da lì ogni forza passa per non rilevato → emergente → rilevato → consolidato e può uscire dalla rilevazione (`PRESENCE_RULES` in `src/core/world-engine.js`): contano soglie, permanenza minima e cooldown. Una forza fuori dai sondaggi cresce solo quando c’è una condizione (un partito vicino in crisi o in calo, sfiducia nelle istituzioni, campagna per le europee, attenzione dei media, elezioni) e prende i voti ai partiti vicini. Entrando acquista colore, logo, serie e storico simulati; uscendo conserva la sua storia. La pagina Sondaggi mostra le forze in osservazione, gli ingressi e le uscite della settimana e le regole; i vecchi salvataggi ricevono le forze in attesa senza cambiare “Altri”.
 
+## Sondaggi simulati credibili
+
+Dopo il primo sondaggio (dato reale) le rilevazioni sono simulate e partono dall’ultimo dato reale. L’errore di ogni rilevazione non è un’estrazione nuova ogni settimana: persiste da una settimana all’altra (come nei panel degli istituti) e ogni istituto simulato ha un piccolo effetto proprio; nessuna forza si sposta tra due sondaggi consecutivi oltre un limite legato alla sua dimensione (0,25 + 3,5% della quota; al primo sondaggio simulato il 60% di questo limite), così crisi e scissioni emergono nel giro di qualche settimana. Eventi, strategie (sostegno al governo o opposizione), alleanze e crisi pesano in proporzione alla dimensione del partito ed entrano ed escono in modo graduale. Il partito nuovo del giocatore prende il consenso iniziale per metà da “Altri” e per metà, in proporzione, dalle altre forze (`world.playerStart`).
+
 ## Carriera infinita e difficoltà
 
 Nessun traguardo, anno o crollo di reputazione chiude la partita: la caduta peggiore costa incarichi e sostegni e apre una “traversata nel deserto”; i salvataggi che nelle versioni precedenti si erano chiusi riprendono. La difficoltà (Facile, Normale, Difficile) si sceglie nel riepilogo della nuova partita e modifica fondi, capitale, giorni di lavoro, statistiche iniziali, frequenza di crisi e scandali, esiti incerti, tolleranza del partito, candidature, pazienza degli alleati, disciplina delle maggioranze, rumore dei sondaggi e durata della memoria.
@@ -244,6 +248,7 @@ npm run check:admin       # area del proprietario: sessione verificata dal serve
 npm run check:poll-presence # primo sondaggio = fonte reale; ingresso/uscita dai sondaggi con soglie, permanenza e cooldown
 npm run check:onboarding  # nuova carriera: Regione → Comune ISTAT → percorso → partito → difficoltà → chi sei
 npm run check:affiliations # partito/gruppo/componente/lista separati, modifiche Admin prevalenti, AVS unica nei sondaggi, alias, migrazioni
+npm run check:poll-realism # sondaggi simulati: partenza dal dato reale, variazioni graduali, normalizzazione, effetto degli eventi
 npm run check:all         # tutte le verifiche
 npm run check:gameplay
 npm run check:parliament

@@ -1,5 +1,5 @@
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260925-1';
-import { CHART_SLOTS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20260925-1';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260925-2';
+import { CHART_SLOTS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20260925-2';
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
 // A party enters with its real identity only (id, name, abbreviation, documented collocazione); its starting weight
@@ -286,11 +286,33 @@ export function createWorld({ seedText, date, week = 1, place = {}, playerParty 
   for (let i = 0; i < world.parties.length; i++) for (let j = i + 1; j < world.parties.length; j++) world.ties[tieKey(world.parties[i].id, world.parties[j].id)] = initialTie(world, world.parties[i], world.parties[j]);
   world.residual = world.others;
   seedLatent(world, latent);
+  carvePlayerShare(world);
   if (realPoll?.results?.length) publishRealPoll(world, realPoll, { date, stats });
   else publishPoll(world, { date, stats, parliament: null, game: null });
   return world;
 }
 
+// The simulated polls start from the last real one: a player's party that the source does not measure takes its
+// initial consensus first from “Altri” (minor lists and forces outside the polls): half of it, up to 60% of “Altri”; the rest evenly
+// from the other forces, so that the real forces keep their figures in the first simulated weeks.
+function carvePlayerShare(world) {
+  const player = playerParty(world);
+  if (!player || isSurveyed(player) || !(player.baseline > 0)) return;
+  const others = othersOf(world);
+  const fromOthers = Math.min(player.baseline * 0.5, others * 0.6);
+  if (others > 0 && Array.isArray(world.latent)) {
+    const factor = (others - fromOthers) / others;
+    world.residual = round4((world.residual ?? others) * factor);
+    for (const force of world.latent) for (const key of ['support', 'anchor', 'base']) if (Number.isFinite(force[key])) force[key] = round4(Math.max(0.01, force[key] * factor));
+  }
+  const rest = player.baseline - fromOthers;
+  const forces = world.parties.filter(party => party.active && !party.isPlayer && isSurveyed(party));
+  const total = forces.reduce((sum, party) => sum + party.baseline, 0);
+  if (rest > 0 && total > 0) for (const party of forces) { const share = rest * party.baseline / total; party.baseline = round4(party.baseline - share); party.anchor = round4((party.anchor ?? party.baseline) - share); }
+  // Where the new party's starting consensus comes from, kept for the explanations.
+  world.playerStart = { fromOthers: round2(fromOthers), fromForces: round2(Math.max(0, rest)), source: SIM };
+  world.others = othersOf(world);
+}
 // The player's party always appears; a real party keeps only its real identity.
 export function setPlayerParty(input, party) {
   return attachPlayerParty(copy(input), party, input?.week ?? 1);
@@ -337,8 +359,17 @@ export function withPositions(input, positions = {}) {
 }
 
 // ---------- shares ----------
+// An effect moves a force in proportion to its size (−0.5 is a lot for a 1% party, little for a 27% one) and comes
+// in and goes out over two weeks instead of in a single step. Effects of one week (recomputed every week) count whole.
+function effectWeight(effect) {
+  const total = effect.total ?? effect.remaining;
+  if (!Number.isFinite(total) || total <= 1) return 1;
+  return Math.min(1, (total - effect.remaining + 1) / 2, effect.remaining / 2 + 0.5);
+}
 function effectSum(world, party, scope, region = null) {
-  return world.effects.filter(effect => effect.scope === scope && (effect.partyId === party.id || (effect.strategy && effect.strategy === party.strategy && !party.isPlayer)) && (!region || effect.region === region)).reduce((sum, effect) => sum + effect.delta, 0);
+  const scale = sizeFactor(party.baseline, 8) * (party.isPlayer ? 1.3 : 1);
+  return world.effects.filter(effect => effect.scope === scope && (effect.partyId === party.id || (effect.strategy && effect.strategy === party.strategy && !party.isPlayer)) && (!region || effect.region === region))
+    .reduce((sum, effect) => sum + effect.delta * effectWeight(effect) * (effect.unscaled ? 1 : Math.min(1, scale)), 0);
 }
 function normalize(rows, others) {
   const total = rows.reduce((sum, row) => sum + row.raw, 0) + others;
@@ -386,14 +417,28 @@ export function personalBoosts(stats = {}, relations = []) {
 }
 
 // ---------- polls ----------
-function sampleShares(world, shares, sample) {
+// A poll is not a fresh random draw every week: institutes weight their panels, so the error persists from one
+// week to the next (AR 0.7) and each institute has a small, stable house effect. Consecutive polls therefore move by
+// tenths of a point, not by whole points, while the level can still differ from the true share within the margin.
+const POLL_ERROR_MEMORY = 0.7;
+function houseEffect(instituteId, partyId, share) {
+  const offset = (hash(`${instituteId}|${partyId}`) % 1000) / 1000 - 0.5;
+  return offset * 0.3 * clamp(Math.sqrt(Math.max(share, 0.1) / 10), 0.3, 1.2);
+}
+function sampleShares(world, shares, sample, instituteId = 'x') {
+  world.pollErrors ??= {};
   const noisy = shares.map(row => {
     const p = row.share / 100;
     const sigma = Math.sqrt(Math.max(0.0004, p * (1 - p)) / sample) * 100;
-    return { partyId: row.partyId, raw: Math.max(0.2, row.share + gaussian(world) * 2 * sigma * (world.pollNoise ?? 1)) };
+    const error = round4((world.pollErrors[row.partyId] ?? 0) * POLL_ERROR_MEMORY + gaussian(world) * 2 * 0.25 * sigma * (world.pollNoise ?? 1));
+    world.pollErrors[row.partyId] = error;
+    return { partyId: row.partyId, raw: Math.max(0.2, row.share + error + houseEffect(instituteId, row.partyId, row.share)) };
   });
   return normalize(noisy, 100 - shares.reduce((sum, row) => sum + row.share, 0));
 }
+// No force moves by more than a credible amount between two consecutive polls: large changes (a split, a crisis)
+// show up over a few weeks, as in real series.
+const weeklyCap = share => 0.25 + 0.035 * share;
 function publishPoll(world, { date, stats = {}, parliament = null, game = null }) {
   const institute = POLL_INSTITUTES[Math.floor(draw(world) * POLL_INSTITUTES.length)];
   const sample = Math.round((institute.sample[0] + draw(world) * (institute.sample[1] - institute.sample[0])) / 10) * 10;
@@ -403,7 +448,13 @@ function publishPoll(world, { date, stats = {}, parliament = null, game = null }
   const player = world.playerPartyId;
   const playerSurveyed = isSurveyed(world.parties.find(item => item.id === player));
   // A force that has just entered the survey has no previous figure: its change starts from the next poll.
-  const results = sampleShares(world, nationalShares(world), sample).map(row => ({ ...row, share: round1(row.share), delta: previous ? round1(row.share - (previous.results.find(item => item.partyId === row.partyId)?.share ?? row.share)) : 0, ...(row.partyId === player && !playerSurveyed ? { internal: true } : {}) }));
+  const results = sampleShares(world, nationalShares(world), sample, institute.id).map(row => {
+    const before = previous?.results.find(item => item.partyId === row.partyId)?.share;
+    // The first simulated poll starts from the real one: it may move less than an ordinary week.
+    const cap = Number.isFinite(before) ? weeklyCap(before) * (previous?.source === 'real' ? 0.6 : 1) : 0;
+    const share = Number.isFinite(before) ? round1(clamp(row.share, before - cap, before + cap)) : round1(row.share);
+    return { ...row, share, delta: Number.isFinite(before) ? round1(share - before) : 0, ...(row.partyId === player && !playerSurveyed ? { internal: true } : {}) };
+  });
   const regional = player ? Object.fromEntries(ITALIAN_REGIONS.map(region => [region, round1(regionalShares(world, region, boosts.regional).find(row => row.partyId === player)?.share ?? 0)])) : {};
   const local = player ? round1(localShares(world, boosts.regional, boosts.local).find(row => row.partyId === player)?.share ?? 0) : null;
   const mood = world.society?.mood ?? 50;
@@ -502,7 +553,8 @@ function logEvent(world, date, entry) {
 }
 function addEffect(world, effect) {
   if (!effect.delta) return;
-  world.effects.push({ id: `effetto-${world.week}-${world.effects.length}-${world.rngState % 997}`, scope: 'national', remaining: 4, source: SIM, ...effect });
+  const entry = { id: `effetto-${world.week}-${world.effects.length}-${world.rngState % 997}`, scope: 'national', remaining: 4, source: SIM, ...effect };
+  world.effects.push({ ...entry, total: entry.remaining });
 }
 function playerParty(world) { return world.parties.find(item => item.isPlayer) ?? null; }
 function inMajority(parliament) {
