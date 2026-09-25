@@ -117,7 +117,7 @@ export const EARLY_ELECTION_AFTER_WEEKS = 4;
 
 export const OFFICE_INCOME = Object.freeze([
   { match: /ministro/i, amount: 650 }, { match: /deputat|senat/i, amount: 900 }, { match: /sindac|presidente di regione/i, amount: 600 },
-  { match: /consiglier|parlamento europeo/i, amount: 350 }, { match: /commissione/i, amount: 150 }
+  { match: /assessor/i, amount: 450 }, { match: /consiglier|parlamento europeo/i, amount: 350 }, { match: /commissione|capogruppo/i, amount: 150 }
 ]);
 
 // Weekly appointments: optional opportunities that expire at the end of the week.
@@ -519,7 +519,52 @@ export const SITUATION_EVENTS = Object.freeze({
     { id: 'ignora', label: 'Vai avanti senza trattare', effects: { groups: { contact: -3 } } }] },
   'richiesta-territorio': { id: 'richiesta-territorio', title: '{contact} propone un incontro su {region}', body: '{contact}, eletto in {circoscription}, chiede un confronto sui problemi del territorio. Persona reale (dati verificati), proposta simulata dal gioco.', defaultChoice: 'declina', choices: [
     { id: 'incontra', label: 'Accetta l’incontro', cost: { ap: 1 }, effects: { contacts: { target: 8 }, stats: { popularity: 0.5, experience: 0.5 } } },
-    { id: 'declina', label: 'Declina', effects: { contacts: { target: -2 } } }] }
+    { id: 'declina', label: 'Declina', effects: { contacts: { target: -2 } } }] },
+  // After an election: what the vote opens, never granted.
+  'dopo-voto-vittoria': { id: 'dopo-voto-vittoria', title: 'Dopo il voto: {election}', body: 'Risultato: {outcome}. Partito, alleati e stampa aspettano la tua prima mossa.', defaultChoice: 'squadra', choices: [
+    { id: 'squadra', label: 'Ringrazia la squadra e il territorio', effects: { stats: { popularity: 1 }, relations: { civic: 2 } } },
+    { id: 'agenda', label: 'Annuncia subito tre priorità', cost: { ap: 1 }, effects: { stats: { reputation: 1, notoriety: 1 } }, later: { weeks: 12, label: 'Le priorità annunciate dopo il voto', hint: 'I cittadini verificheranno le priorità annunciate', outcomes: [
+      { chance: 0.5, label: 'Prime promesse mantenute', effects: { stats: { reputation: 2, popularity: 1 } } },
+      { chance: 0.5, label: 'Le priorità restano sulla carta', effects: { stats: { reputation: -1.5 } } }] } },
+    { id: 'partito', label: 'Dedica il risultato al partito', requires: 'party', effects: { party: { support: 3 }, relations: { leadership: 3 } } }] },
+  'dopo-voto-sconfitta': { id: 'dopo-voto-sconfitta', title: 'Dopo il voto: {election}', body: '{outcome}. La carriera non finisce qui: nel partito e sul territorio si discute di come ripartire.', defaultChoice: 'silenzio', choices: [
+    { id: 'responsabilita', label: 'Assumiti la responsabilità', effects: { stats: { reputation: 1.5 }, party: { support: -1 }, relations: { leadership: 2 } } },
+    { id: 'colpa', label: 'Accusa il partito di non averti sostenuto', requires: 'party', effects: { stats: { notoriety: 2 }, party: { support: -6 }, relations: { leadership: -6 } }, risk: { chance: 0.3, label: 'La direzione valuta provvedimenti nei tuoi confronti', effects: { party: { support: -6 } } } },
+    { id: 'territorio', label: 'Riparti dal territorio', cost: { ap: 1 }, effects: { stats: { popularity: 1 }, prep: 10, relations: { civic: 3 } } },
+    { id: 'silenzio', label: 'Rimani in silenzio', effects: { stats: { notoriety: -1 } } }] },
+  'giunta-offerta': { id: 'giunta-offerta', title: 'La giunta: {executive} valuta il tuo nome', body: 'La maggioranza compone la giunta. Puoi chiedere un assessorato, ma la scelta non è tua: contano gli equilibri tra gli alleati.', defaultChoice: 'consiglio', choices: [
+    { id: 'chiedi', label: 'Chiedi un assessorato', cost: { capital: 3 }, outcomes: [
+      { chance: 0.4, label: 'Nominato assessore', effects: { stats: { influence: 3, reputation: 1 } }, special: 'local-office', office: { title: 'Assessore {assessorLevel}', institution: '{institution}', level: '{level}' } },
+      { chance: 0.3, label: 'Solo una delega da consigliere: meno di quanto speravi', effects: { stats: { influence: 1 } }, special: 'local-office', office: { title: 'Consigliere delegato ({assessorLevel})', institution: '{institution}', level: '{level}' } },
+      { chance: 0.3, label: 'L’assessorato va a un alleato', effects: { stats: { influence: -1 }, relations: { leadership: -2 } } }] },
+    { id: 'consiglio', label: 'Resta in consiglio senza chiedere nulla', effects: { stats: { reputation: 0.5 } } }] },
+  'giunta-composizione': { id: 'giunta-composizione', title: 'La tua giunta: {institution}', body: 'Da capo dell’esecutivo scegli gli assessori. Alleati, partito e società civile si aspettano posti: ogni scelta scontenta qualcuno.', defaultChoice: 'partito', choices: [
+    { id: 'alleati', label: 'Premia gli alleati della coalizione', effects: { stats: { influence: 1 }, party: { support: -2 }, relations: { civic: -1 } }, risk: { chance: 0.25, label: 'Il partito lamenta troppi posti agli alleati', effects: { relations: { leadership: -3 } } } },
+    { id: 'partito', label: 'Dai i posti chiave al tuo partito', effects: { party: { support: 4 }, relations: { leadership: 2, civic: -2 } }, risk: { chance: 0.3, label: 'Gli alleati minacciano di uscire dalla maggioranza', effects: { stats: { reputation: -1 } } } },
+    { id: 'civici', label: 'Scegli figure competenti della società civile', cost: { capital: 3 }, effects: { stats: { reputation: 2 }, party: { support: -3 }, relations: { civic: 4 } } }] },
+  'capogruppo-opposizione': { id: 'capogruppo-opposizione', title: 'Chi guida l’opposizione?', body: 'Il gruppo di opposizione deve scegliere il capogruppo. È una vetrina, ma anche un banco di prova.', defaultChoice: 'rinuncia', choices: [
+    { id: 'candidati', label: 'Candidati a capogruppo', cost: { capital: 2 }, outcomes: [
+      { chance: 0.55, label: 'Eletto capogruppo dell’opposizione', effects: { stats: { notoriety: 2, influence: 2 } }, special: 'local-office', office: { title: 'Capogruppo di opposizione', institution: '{institution}', level: '{level}' } },
+      { chance: 0.45, label: 'Il gruppo sceglie un altro nome', effects: { stats: { influence: -1 } } }] },
+    { id: 'rinuncia', label: 'Lascia spazio ad altri', effects: { party: { support: 1 } } }] },
+  'ricorso-elettorale': { id: 'ricorso-elettorale', title: 'Una sconfitta di misura', body: 'Hai perso per meno di {margin} punti. Qualcuno ti consiglia un ricorso sui verbali di alcune sezioni.', defaultChoice: 'accetta', choices: [
+    { id: 'ricorso', label: 'Presenta ricorso', cost: { funds: 2500, ap: 1 }, outcomes: [
+      { chance: 0.12, label: 'Riconteggio favorevole in alcune sezioni: il risultato resta, ma la stampa ti dà ragione', effects: { stats: { reputation: 1, notoriety: 2 } } },
+      { chance: 0.88, label: 'Ricorso respinto', effects: { stats: { reputation: -1.5 } } }] },
+    { id: 'accetta', label: 'Riconosci la vittoria dell’avversario', effects: { stats: { reputation: 1.5 } } }] },
+  'resa-dei-conti': { id: 'resa-dei-conti', title: 'Resa dei conti nel partito dopo il voto', body: '{currentA} chiede una discussione sulla sconfitta e sulle responsabilità: in gioco c’è il tuo incarico.', defaultChoice: 'difenditi', choices: [
+    { id: 'difenditi', label: 'Difendi le tue scelte alla conta', special: 'current-resist' },
+    { id: 'cedi', label: 'Fai un passo indietro', special: 'current-cede' },
+    { id: 'rilancia', label: 'Rilancia con un’iniziativa interna', cost: { ap: 1, capital: 2 }, effects: { party: { support: 2 }, relations: { currentA: 3 } } }] },
+  'consultazioni-governo': { id: 'consultazioni-governo', title: 'Dopo le politiche: la squadra di governo', body: 'Si discute degli incarichi dopo il voto. I posti sono pochi, contesi tra alleati e correnti: un seggio non basta.', defaultChoice: 'aula', choices: [
+    { id: 'governo', label: 'Proponi il tuo nome per un incarico di governo', cost: { capital: 4 }, outcomes: [
+      { chance: 0.2, label: 'Entri nell’esecutivo come sottosegretario', effects: { stats: { influence: 3, notoriety: 2 } }, special: 'accept-scenario-office' },
+      { chance: 0.25, label: 'Niente governo: il partito ti indica per un ruolo in commissione', effects: { stats: { influence: 1.5 } } },
+      { chance: 0.55, label: 'Nessun incarico: la squadra è già fatta', effects: { relations: { leadership: -2 } } }] },
+    { id: 'aula', label: 'Concentrati sul lavoro in Aula', effects: { stats: { reputation: 0.5 } } }] },
+  'impegni-elettorali': { id: 'impegni-elettorali', title: 'Gli impegni presi in campagna', body: 'In campagna hai preso {commitments} impegni con categorie e territori: ora ti chiedono conto.', defaultChoice: 'rinvia', choices: [
+    { id: 'onora', label: 'Onora gli impegni', cost: { ap: 1, capital: 2 }, effects: { stats: { reputation: 1.5 }, relations: { civic: 3 } } },
+    { id: 'rinvia', label: 'Rinvia a tempi migliori', later: { weeks: 8, label: 'Impegni elettorali', chance: 0.6, hint: 'Le categorie potrebbero accusarti di aver tradito le promesse', effects: { stats: { reputation: -2 } }, memory: { kind: 'promessa-tradita', text: 'Impegni elettorali non mantenuti', weight: 1 } } }] }
 });
 
 export const CAREER_OBJECTIVES = Object.freeze([

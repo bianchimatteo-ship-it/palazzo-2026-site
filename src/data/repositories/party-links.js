@@ -7,7 +7,7 @@
 //   electoral relation, shown apart.
 // - Group and component: in the Camera open data the components of the Misto group are listed as groups named
 //   "MISTO-…": they are shown as group Misto, component "…".
-import { pristineRecord, realDatabase } from './real-data.js?v=20260925-3';
+import { pristineRecord, realDatabase } from './real-data.js?v=20260925-4';
 
 export const PARTY_LINK_COLLECTIONS = Object.freeze(['parties', 'politicalMovements', 'coalitions', 'electoralLists', 'partyMemberships']);
 export const POLITICAL_POSITIONS = Object.freeze(['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra']);

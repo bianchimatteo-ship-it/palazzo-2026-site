@@ -1,19 +1,19 @@
-import { advanceDays } from './time.js?v=20260925-3';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260925-3';
-import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260925-3';
+import { advanceDays } from './time.js?v=20260925-4';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260925-4';
+import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260925-4';
 import {
   APPOINTMENTS, BASE_WEEKLY_INCOME, CAREER_EVENTS, CAREER_OBJECTIVES, CURRENT_TEMPLATES, EARLY_ELECTION_AFTER_WEEKS, ELECTION_SCHEDULE,
   FORCED_EVENTS, LEGACY_RIVAL_NAMES, SIMULATED_RIVAL_LABEL, FOUNDER_RANK, LEVEL_FIRST_ELECTION, OFFICE_INCOME, PARTY_RANKS, RELATION_TEMPLATES, STAT_LABELS,
-  SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS } from '../data/simulation/career-rules.js?v=20260925-3';
-import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20260925-3';
-import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20260925-3';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260925-3';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260925-3';
-import { book, buyInvestment, createFinance, depositElectionFund, hasAsset, normalizeFinance, settleFinanceWeek } from './finance-engine.js?v=20260925-3';
-import { advanceOrganization, applyOrgEffects, createOrganization, isPartyLeader, normalizeOrganization, treasuryBook } from './organization-engine.js?v=20260925-3';
-import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20260925-3';
-import { HARD_CATEGORIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20260925-3';
-import { macroAreaOf } from '../data/simulation/policy-rules.js?v=20260925-3';
+  SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS } from '../data/simulation/career-rules.js?v=20260925-4';
+import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20260925-4';
+import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20260925-4';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260925-4';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260925-4';
+import { book, buyInvestment, createFinance, depositElectionFund, hasAsset, normalizeFinance, settleFinanceWeek } from './finance-engine.js?v=20260925-4';
+import { advanceOrganization, applyOrgEffects, createOrganization, isPartyLeader, normalizeOrganization, treasuryBook } from './organization-engine.js?v=20260925-4';
+import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20260925-4';
+import { HARD_CATEGORIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20260925-4';
+import { macroAreaOf } from '../data/simulation/policy-rules.js?v=20260925-4';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -405,9 +405,12 @@ function raiseSituation(ctx, id, params = {}, urgent = false) {
   if (urgent) game.inbox.unshift(item); else game.inbox.push(item);
   return item;
 }
-export function addSituationEvent(input, id, params = {}, urgent = false) {
+export function addSituationEvent(input, id, params = {}, urgent = false, { holdWeeks = 0, holdUntil = null } = {}) {
   const game = copy(input);
-  raiseSituation({ game }, id, params, urgent);
+  const item = raiseSituation({ game }, id, params, urgent);
+  // Raised while weeks are being closed (after a vote): it stays in the agenda until the given date or week.
+  if (item && holdWeeks) item.holdUntilWeek = (game.week?.index ?? 0) + holdWeeks;
+  if (item && holdUntil) item.holdUntilDate = holdUntil;
   return game;
 }
 // Parameters of a drawn event: the region hit is chosen where that indicator is weakest, with some chance.
@@ -713,6 +716,11 @@ function handleSpecial(ctx, env, special, item, lines, specials, choice = {}) {
     if (contact) contact.cosigned = [...new Set([...(contact.cosigned ?? []), item.params.lawId])];
     specials.push({ type: 'cosign', lawId: item.params.lawId, person: contact?.person ?? null });
     lines.push(`${item.params.contact} sottoscrive la proposta (simulazione).`);
+  } else if (special === 'local-office') {
+    // An office that comes from a decision of others (the giunta, the group): the store records it.
+    const office = Object.fromEntries(Object.entries(choice.office ?? {}).map(([key, value]) => [key, typeof value === 'string' ? fill(value, item.params) : value]));
+    specials.push({ type: 'local-office', office });
+    lines.push(`Nuovo incarico: ${office.title ?? 'incarico locale'}.`);
   }
 }
 // Running for secretary at a congress: support, the strength of one's area, influence and cohesion count.
@@ -1216,6 +1224,7 @@ export function advanceWeek(input, env, governmentWeek = parliament => parliamen
   if (game.status === 'ended') return { ctx, specials, report: null };
   const closing = game.week.index;
   for (const item of [...game.inbox]) {
+    if ((item.holdUntilWeek ?? 0) > closing || (item.holdUntilDate && item.holdUntilDate > date)) continue;
     const choice = templateFor(item)?.choices.find(entry => entry.id === item.defaultChoice);
     game.inbox = game.inbox.filter(entry => entry.id !== item.id);
     if (!choice) continue;

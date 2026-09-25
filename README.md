@@ -110,10 +110,22 @@ I risultati contano schede normalizzate su 100.000 elettori simulati. Quote, seg
 
 Il database attuale non contiene un collegamento verificato tra tutti i partiti e i risultati elettorali storici: i numeri di consenso delle campagne non possono quindi essere inizializzati come fatti reali. Le affiliazioni prive di fonte restano `null` e la campagna non deduce il partito da un gruppo parlamentare o da una lista.
 
-Verifica il flusso completo (candidatura, attività, eventi, alleanze, modelli, scrutinio e salvataggio) con:
+### Centrale elettorale, campagna ed esiti (dal 25/09/2026)
+
+La sezione **Elezioni** è una centrale elettorale con schede interne (Panoramica, Candidatura, Campagna, Sondaggi e avversari, Risultati, Storico) ricordate tra una schermata e l’altra: prossimo voto con conto alla rovescia, calendario, clima politico, preparazione, regole dei seggi, concorrenti interni, posizione in lista, coalizione, corsa in tempo reale e storico.
+
+- **Candidatura non automatica**: il partito decide alla scadenza con una probabilità che dipende dal sostegno interno rispetto alla soglia *e* al distacco dai concorrenti; un margine stretto può dare una posizione in lista peggiore, un distacco negativo porta all’esclusione.
+- **Campagna** (`src/data/simulation/campaign-rules.js`, `src/core/campaign-engine.js`): 34 azioni (comizi, incontri, porta a porta, eventi, social, interviste, conferenze stampa, dibattiti, manifesti e pubblicità, raccolte fondi, associazioni e categorie, accordi territoriali, sostegni pubblici, vita locale, focus sui temi, gestione delle crisi, iniziative con il partito e la coalizione, mobilitazione finale) con costi, tempo, rischi, requisiti ed effetti diversi; l’effetto cambia con la fase (apertura, fase centrale, rush finale, ballottaggio), il tipo di elezione, il territorio, la strategia, la ripetizione, il tema in agenda, il clima del Paese e i sondaggi del partito. Ogni azione mostra l’effetto atteso. Eventi e occasioni (maltempo, notizie false, gaffe dei rivali, sondaggi locali, richieste delle categorie, volontari, scandali in lista, leader nazionale, confronti TV, temi emergenti, video virali, patti con i sindaci, scioperi, donatori…) sono pesati sulle condizioni e non si ripetono a breve: due campagne non sono mai uguali. Le polemiche non gestite pesano ogni settimana.
+- **Strategie** (consolidare, nuovi elettori, territorio, social e media, un tema, contrasto a un avversario, coalizione): cambiano cosa rende, rischi e oscillazioni del risultato; ognuna rende di più in certi contesti e nessuna è sempre la migliore. Si possono cambiare in corsa a un costo, non negli ultimi cinque giorni.
+- **Voto non automatico**: la campagna sposta pochi punti con rendimenti decrescenti; il giorno del voto indecisi, affluenza e mobilitazione aggiungono incertezza (riproducibile per la stessa carriera). Una coalizione porta solo una parte dei voti dell’alleato (55–85%).
+- **Esiti**: vittoria, vittoria o sconfitta al ballottaggio, secondo/terzo posto, eletto grazie alla lista o alla coalizione, collegio perso ma eletto nel proporzionale, sconfitto ma in consiglio all’opposizione, primo dei non eletti, preferenze insufficienti, posizione in lista non utile, lista sotto soglia, esclusione dalla candidatura; confronto con attese e sondaggi. Regole semplificate dichiarate: soglie (3%, 4% europee), premio di maggioranza nei comuni e nelle regioni, liste bloccate alle politiche, preferenze alle comunali, regionali ed europee.
+- **Risultati e conseguenze** (`src/core/aftermath-engine.js`): voti, percentuale, posizione, seggi, affluenza, collegio o circoscrizione, preferenze, liste e coalizioni, distribuzione territoriale, ballottaggio; variazioni di reputazione, influenza, notorietà, popolarità, capitale, sostegno nel partito, rapporto con la leadership e con le correnti; incarico con lato (maggioranza/opposizione). Il voto apre decisioni in agenda che restano una settimana: giunta da comporre o assessorato da chiedere (esito incerto, anche inferiore alle attese), capogruppo di opposizione, ricorso dopo una sconfitta di misura, resa dei conti nel partito, squadra di governo dopo le politiche (mai assegnata in automatico), impegni presi in campagna. Una sconfitta non chiude la carriera.
+
+Verifica il flusso completo con:
 
 ```sh
 npm run check:campaign
+npm run check:elections
 ```
 
 ## Gameplay: la carriera settimana per settimana
@@ -241,6 +253,7 @@ All’apertura vengono caricati manifest e partiti/movimenti. Politici, gruppi e
 ```sh
 npm run check:ui          # menu, impostazioni, nuova partita, pagine, poteri, archivio, salvataggi, loghi, tooltip, identità del partito
 npm run check:first-run   # primo avvio: benvenuto e account prima della prima carriera, tour saltabile una volta, guida, conferme del gioco
+npm run check:elections   # esiti elettorali vari e non automatici, ballottaggio, soglie, preferenze, conseguenze, varietà delle campagne, strategie
 npm run check:government  # 34 temi, bilancio, territori, cittadini, sicurezza, Presidente del Consiglio, difficoltà
 npm run check:events      # eventi procedurali: condizioni, cooldown, rarità, esclusività, varianti, catene
 npm run check:career      # carriera pluriennale end-to-end, salvataggi e migrazione

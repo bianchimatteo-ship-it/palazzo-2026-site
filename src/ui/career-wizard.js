@@ -1,9 +1,9 @@
-import { CAREER_LEVELS, ITALIAN_REGIONS, initialCareerStatistics } from '../data/regions.js?v=20260925-3';
-import { LOGO_SHAPES, LOGO_SYMBOLS, partyLogoDataUrl } from './party-logo.js?v=20260925-3';
-import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260925-3';
-import { validateCareerStep } from '../core/career-rules.js?v=20260925-3';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260925-3';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20260925-3';
+import { CAREER_LEVELS, ITALIAN_REGIONS, initialCareerStatistics } from '../data/regions.js?v=20260925-4';
+import { LOGO_SHAPES, LOGO_SYMBOLS, partyLogoDataUrl } from './party-logo.js?v=20260925-4';
+import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260925-4';
+import { validateCareerStep } from '../core/career-rules.js?v=20260925-4';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260925-4';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20260925-4';
 
 const POSITIONS = ['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra'];
 
