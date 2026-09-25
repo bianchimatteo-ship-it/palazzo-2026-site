@@ -1,10 +1,11 @@
-import { activeMinisters, canManageParliament, CHAMBERS, CONTEST_COST, CONTEST_WINDOW_DAYS, GOVERNMENT_POST_REQUIREMENTS, governmentPostProblems, MINISTERIAL_PORTFOLIOS, nextParliamentaryRole, parliamentGroupFacts, playerInMajority } from '../core/parliament-engine.js?v=20260925-5';
-import { DATA_SOURCES } from '../data/schema.js?v=20260925-5';
-import { careerOverview } from '../core/career-overview.js?v=20260925-5';
-import { artTile, glyph, LAW_ICONS } from './visuals.js?v=20260925-5';
-import { measureDesign, projectLaw } from '../core/society-engine.js?v=20260925-5';
-import { governmentDesk, lawContent, policyFields, policyPreview } from './policy-mode.js?v=20260925-5';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260925-5';
+import { activeMinisters, canManageParliament, CHAMBERS, CONTEST_COST, CONTEST_WINDOW_DAYS, GOVERNMENT_POST_REQUIREMENTS, governmentPostProblems, MINISTERIAL_PORTFOLIOS, nextParliamentaryRole, parliamentGroupFacts, playerInMajority } from '../core/parliament-engine.js?v=20260925-6';
+import { DATA_SOURCES } from '../data/schema.js?v=20260925-6';
+import { careerOverview } from '../core/career-overview.js?v=20260925-6';
+import { voteSummary } from '../core/vote-engine.js?v=20260925-6';
+import { artTile, glyph, LAW_ICONS } from './visuals.js?v=20260925-6';
+import { measureDesign, projectLaw } from '../core/society-engine.js?v=20260925-6';
+import { governmentDesk, lawContent, policyFields, policyPreview } from './policy-mode.js?v=20260925-6';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260925-6';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const icon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
@@ -104,7 +105,8 @@ function groupChecks(parliament, selectedIds = [], politicians = []) {
 function confidenceSummary(government) {
   const last = government?.confidenceVotes?.at(-1);
   if (!last) return '';
-  return '<div class="government-vote-summary"><strong>Ultima fiducia · ' + esc(last.date) + '</strong>' + last.votes.map(vote => '<div class="law-vote-result"><strong>' + esc(CHAMBERS[vote.chamber]?.shortLabel || vote.chamber) + '</strong><span>Favorevoli <b>' + whole(vote.yes) + '</b></span><span>Soglia <b>' + whole(vote.needed) + '</b></span>' + (vote.nominalSupport !== vote.yes ? '<span>Defezioni per la crisi <b>' + whole(vote.nominalSupport - vote.yes) + '</b></span>' : '') + '<em>' + (vote.passed ? 'FIDUCIA' : 'NON RAGGIUNTA') + ' · simulazione</em></div>').join('') + '</div>';
+  const index = government.confidenceVotes.length;
+  return '<div class="government-vote-summary"><strong>Ultima fiducia · ' + esc(last.date) + '</strong>' + last.votes.map(vote => '<div class="law-vote-result"><strong>' + esc(CHAMBERS[vote.chamber]?.shortLabel || vote.chamber) + '</strong><span>Favorevoli <b>' + whole(vote.yes) + '</b></span><span>Soglia <b>' + whole(vote.needed) + '</b></span>' + (vote.nominalSupport !== vote.yes ? '<span>Defezioni per la crisi <b>' + whole(vote.nominalSupport - vote.yes) + '</b></span>' : '') + '<em>' + (vote.passed ? 'FIDUCIA' : 'NON RAGGIUNTA') + ' · VOTAZIONE SIMULATA</em><button type="button" class="text-link" data-hemi-vote="' + esc(vote.id ?? `fiducia-${index}-${vote.chamber}`) + '" data-hemi-vote-chamber="' + esc(vote.chamber) + '">Vedi i voti nell’emiciclo</button></div>').join('') + '</div>';
 }
 function governmentStart(parliament, politicians, canEdit, fallen) {
   return '<section class="government-start"><span class="section-kicker">COSTRUISCI LA MAGGIORANZA</span><h2>' + (fallen ? 'Serve un nuovo governo.' : 'Nessun governo è stato formato.') + '</h2><p>Seleziona gruppi in entrambe le Camere, negozia i numeri e poi chiedi la fiducia. Le soglie sono calcolate sullo scenario di questa carriera.</p><div class="coalition-checks">' + groupChecks(parliament, [], politicians) + '</div><button class="primary-button" data-parliament-action="form-government" ' + (!canEdit ? 'disabled' : '') + '>Apri la trattativa ' + icon + '</button></section>';
@@ -187,7 +189,7 @@ function lawCard(law, parliament, society = null, state = null) {
   const canAct = canManageParliament(parliament);
   const chamber = CHAMBERS[law.currentChamber]?.label ?? law.currentChamber;
   const controls = canAct && ['amendments', 'final-vote'].includes(law.stage) ? negotiationControls(law, parliament) : '';
-  const votes = (law.votes ?? []).map(vote => '<div class="law-vote-result"><strong>' + esc(CHAMBERS[vote.chamber]?.shortLabel || vote.chamber) + '</strong><span>Favorevoli <b>' + whole(vote.yes) + '</b></span><span>Contrari <b>' + whole(vote.no) + '</b></span><span>Soglia <b>' + whole(vote.needed) + '</b></span><em>' + (vote.passed ? 'APPROVATA' : 'RESPINTA') + (vote.forced ? ' · voto forzato' : '') + ' · simulazione</em></div>').join('');
+  const votes = (law.votes ?? []).map((vote, index) => { const summary = voteSummary({ ...vote, id: vote.id ?? `${law.id}-voto-${index + 1}` }); return '<div class="law-vote-result"><strong>' + esc(CHAMBERS[vote.chamber]?.shortLabel || vote.chamber) + '</strong><span>Favorevoli <b>' + whole(summary.yes) + '</b></span><span>Contrari <b>' + whole(summary.against) + '</b></span><span>Astenuti <b>' + whole(summary.abstain) + '</b></span><span>Soglia <b>' + whole(vote.needed) + '</b></span><em>' + (vote.passed ? 'APPROVATA' : 'RESPINTA') + (vote.forced ? ' · voto forzato' : '') + (vote.secret ? ' · voto segreto' : '') + ' · VOTAZIONE SIMULATA</em><button type="button" class="text-link" data-hemi-vote="' + esc(vote.id ?? `${law.id}-voto-${index + 1}`) + '" data-hemi-vote-chamber="' + esc(vote.chamber) + '">Vedi i voti nell’emiciclo</button></div>'; }).join('');
   const impact = society?.lawsApplied?.find(item => item.lawId === law.id);
   const segment = id => SEGMENTS.find(item => item.id === id)?.label.toLowerCase() ?? id;
   // Before the vote: what the law would cost and change. After: how far it has come into force.
@@ -225,5 +227,5 @@ export function renderParliamentPage(page, state, options = {}) {
   if (page === 'leggi') return days + lawsView(parliament, { society: state.society, realLaws: options.realLaws, state });
   const player = options.player ?? state.dataset?.politicians?.find(item => item.id === state.career?.playerId) ?? null;
   const odds = state.game ? careerOverview(state)?.tracks.find(track => track.id === 'parlamento')?.odds ?? null : null;
-  return days + renderParliament(parliament, options.party, options.politicians ?? [], player, state.clock?.currentDate ?? parliament.createdAt, odds);
+  return days + (options.hemicycle ?? '') + renderParliament(parliament, options.party, options.politicians ?? [], player, state.clock?.currentDate ?? parliament.createdAt, odds);
 }

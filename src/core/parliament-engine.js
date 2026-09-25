@@ -1,6 +1,7 @@
-import { DATA_SOURCES } from '../data/schema.js?v=20260925-5';
-import { AREA_BY_ID, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, STAGE_WEEKS, areaOf } from '../data/simulation/policy-rules.js?v=20260925-5';
-import { evaluateAdvancement } from './progression-engine.js?v=20260925-5';
+import { DATA_SOURCES } from '../data/schema.js?v=20260925-6';
+import { AREA_BY_ID, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, STAGE_WEEKS, areaOf } from '../data/simulation/policy-rules.js?v=20260925-6';
+import { evaluateAdvancement } from './progression-engine.js?v=20260925-6';
+import { groupLine, splitGroupVote } from './vote-engine.js?v=20260925-6';
 
 export const CHAMBERS = Object.freeze({
   camera: { label: 'Camera dei deputati', shortLabel: 'Camera', source: DATA_SOURCES.REAL },
@@ -436,7 +437,11 @@ export function compromiseLaw(parliament, lawId, currentDate) {
 // The starting difficulty makes majorities more or less disciplined and allies more or less patient.
 const DIFFICULTY_TUNING = Object.freeze({ facile: { discipline: 0.05, drift: 0.7 }, normale: { discipline: 0, drift: 1 }, difficile: { discipline: -0.06, drift: 1.45 } });
 const tuningOf = parliament => DIFFICULTY_TUNING[parliament?.difficulty] ?? DIFFICULTY_TUNING.normale;
-function calculateVote(parliament, law, chamber) {
+// Groups vote as blocs: the support of a group (0–1) becomes the share of its members voting in favour along a steep
+// curve — a group convinced by the text votes almost compact, a hostile one almost compact against, a divided one
+// splits. Negotiations and compromises move whole groups, not a few votes.
+export const cohesiveShare = support => clamp(0.5 + 0.5 * Math.tanh((support - 0.5) * 12) / Math.tanh(6), 0.02, 0.98);
+function calculateVote(parliament, law, chamber, currentDate = null) {
   const governing = governingGroupIds(parliament);
   const tuning = tuningOf(parliament);
   const inMajority = playerInMajority(parliament);
@@ -467,13 +472,21 @@ function calculateVote(parliament, law, chamber) {
     // Snipers: in a secret ballot part of the majority can betray.
     if (law.snipers && governing.has(group.groupId) && !own && !law.confidence) support -= 0.07;
     if (governing.has(group.groupId) || own) support += tuning.discipline;
-    const votes = Math.round(group.simulatedSeats * clamp(support, 0.12, 0.93));
+    const votes = Math.round(group.simulatedSeats * cohesiveShare(clamp(support, 0.12, 0.93)));
     yes += votes;
-    return { groupId: group.groupId, yesVotes: votes, simulatedSeats: group.simulatedSeats, source: DATA_SOURCES.SIMULATION };
+    // Snipers: the votes of the majority that a compact group would have given and the secret ballot took away.
+    const snipers = law.snipers && governing.has(group.groupId) && !own && !law.confidence ? Math.max(0, Math.round(group.simulatedSeats * cohesiveShare(clamp(support + 0.07, 0.12, 0.93))) - votes) : 0;
+    // The votes not in favour split into against and abstentions (vote-engine); the line is what most members do.
+    const split = splitGroupVote({ seats: group.simulatedSeats, yes: votes, confidence: Boolean(law.confidence), seed: `${law.id}|${chamber}|${law.stage}|${(law.votes ?? []).length}|${group.groupId}` });
+    return { groupId: group.groupId, yesVotes: votes, noVotes: split.no, abstainVotes: split.abstain, line: groupLine(split), snipers, governing: governing.has(group.groupId), simulatedSeats: group.simulatedSeats, source: DATA_SOURCES.SIMULATION };
   });
   const total = rows.reduce((sum, group) => sum + group.simulatedSeats, 0);
   const needed = Math.floor(total / 2) + 1;
-  return { chamber, yes, no: total - yes, total, needed, passed: yes >= needed, forced: Boolean(law.forcedVote), confidence: Boolean(law.confidence), byGroup: results, source: DATA_SOURCES.SIMULATION };
+  const against = results.reduce((sum, row) => sum + row.noVotes, 0);
+  const abstain = results.reduce((sum, row) => sum + row.abstainVotes, 0);
+  // `no` stays "not in favour" (the rule of the game counts an absolute majority of the members); against and
+  // abstentions are counted apart.
+  return { id: `${law.id}-${chamber}-${(law.votes ?? []).length + 1}`, date: currentDate, kind: law.kind === 'decreto' ? 'decreto' : law.kind === 'manovra' ? 'manovra' : 'legge', label: law.title, chamber, yes, no: total - yes, against, abstain, total, needed, passed: yes >= needed, forced: Boolean(law.forcedVote), confidence: Boolean(law.confidence), secret: Boolean(law.snipers && !law.confidence), snipers: results.reduce((sum, row) => sum + row.snipers, 0), byGroup: results, source: DATA_SOURCES.SIMULATION };
 }
 // Each phase takes time: commissions hear, groups negotiate, the other Chamber reads the text again.
 export function stageWait(law, currentDate) {
@@ -500,7 +513,7 @@ export function advanceLaw(parliament, lawId, action, currentDate) {
   } else if (law.stage === 'amendments' && ['vote', 'force-vote'].includes(action)) {
     const forced = action === 'force-vote';
     const votingLaw = forced ? { ...law, forcedVote: true } : law;
-    const vote = calculateVote(next, votingLaw, law.currentChamber);
+    const vote = calculateVote(next, votingLaw, law.currentChamber, currentDate);
     next = replaceLaw(next, lawId, current => ({ ...current, forcedVote: forced || current.forcedVote, stage: vote.passed ? 'other-chamber' : 'rejected', status: vote.passed ? 'other-chamber' : 'rejected', votes: [...current.votes, vote], updatedAt: currentDate }));
     if (!vote.passed && law.confidence) next = governmentDefeated(next, law, currentDate);
     if (forced) for (const group of next.chambers[law.currentChamber].groups) {
@@ -513,7 +526,7 @@ export function advanceLaw(parliament, lawId, action, currentDate) {
     next = replaceLaw(next, lawId, current => ({ ...current, currentChamber: nextChamber, stage: 'final-vote', status: 'final-vote', negotiatedGroupIds: [], updatedAt: currentDate }));
     text = `“${law.title}” arriva alla ${CHAMBERS[nextChamber].label} per la votazione finale.`;
   } else if (law.stage === 'final-vote' && action === 'final-vote') {
-    const vote = calculateVote(next, law, law.currentChamber);
+    const vote = calculateVote(next, law, law.currentChamber, currentDate);
     const resultStage = vote.passed ? 'approved' : 'rejected';
     next = replaceLaw(next, lawId, current => ({ ...current, stage: resultStage, status: resultStage, votes: [...current.votes, vote], updatedAt: currentDate }));
     next = adjustStanding(next, vote.passed ? 2 : -1);
@@ -710,7 +723,19 @@ export function voteGovernmentConfidence(parliament, currentDate) {
     const total = totalSeats(parliament, chamber);
     const needed = Math.floor(total / 2) + 1;
     const risk = Math.floor(yes * government.crisisSeverity / 100);
-    return { chamber, yes: Math.max(0, yes - risk), nominalSupport: yes, total, needed, passed: yes - risk >= needed, source: DATA_SOURCES.SIMULATION };
+    // Roll-call vote: the majority votes in favour except the defections of the crisis (spread over its groups),
+    // the opposition against, with a few abstentions.
+    let left = risk;
+    const byGroup = parliament.chambers[chamber].groups.map((group, index, all) => {
+      const seats = group.simulatedSeats;
+      if (!groups.has(group.groupId)) { const split = splitGroupVote({ seats, yes: 0, confidence: true, seed: `${government.id}|fiducia|${currentDate}|${group.groupId}` }); return { groupId: group.groupId, yesVotes: 0, noVotes: split.no, abstainVotes: split.abstain, line: groupLine(split), snipers: 0, governing: false, simulatedSeats: seats, source: DATA_SOURCES.SIMULATION }; }
+      const share = yes ? Math.round(risk * seats / yes) : 0;
+      const lastMajority = !all.slice(index + 1).some(item => groups.has(item.groupId));
+      const defections = Math.min(seats, lastMajority ? left : Math.min(left, share));
+      left -= defections;
+      return { groupId: group.groupId, yesVotes: seats - defections, noVotes: defections, abstainVotes: 0, line: 'favorevole', snipers: 0, governing: true, simulatedSeats: seats, source: DATA_SOURCES.SIMULATION };
+    });
+    return { id: `${government.id}-fiducia-${(government.confidenceVotes ?? []).length + 1}-${chamber}`, date: currentDate, kind: 'fiducia', label: 'Fiducia al governo', chamber, yes: Math.max(0, yes - risk), nominalSupport: yes, total, needed, passed: yes - risk >= needed, confidence: true, byGroup, source: DATA_SOURCES.SIMULATION };
   });
   const passed = votes.every(vote => vote.passed);
   const status = passed ? 'active' : 'fallen';

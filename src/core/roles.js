@@ -1,7 +1,7 @@
 // Roles and powers: what the player may do depends on the offices actually held.
 // Every power listed here is checked again by the store before the action runs.
-import { activeMinisters } from './parliament-engine.js?v=20260925-5';
-import { isSecretary } from './career-engine.js?v=20260925-5';
+import { activeMinisters } from './parliament-engine.js?v=20260925-6';
+import { isSecretary } from './career-engine.js?v=20260925-6';
 
 const governing = parliament => ['active', 'crisis'].includes(parliament?.government?.status);
 export const isPrimeMinister = parliament => governing(parliament) && parliament.government.primeMinister === 'player';

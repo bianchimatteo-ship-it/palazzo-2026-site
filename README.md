@@ -212,6 +212,17 @@ La sezione **Parlamento** mostra la composizione di scenario delle due Camere, i
 npm run check:parliament
 ```
 
+### Emiciclo interattivo, commissioni e voti dei singoli (dal 25/09/2026)
+
+- **Emiciclo** (`src/core/hemicycle.js`, `src/ui/hemicycle-view.js`): Camera e Senato separati, disegno semicircolare con un marker per seggio — i parlamentari reali in carica (identità, gruppo e incarichi dal dataset verificato, con le correzioni dell’amministratore) e il seggio del giocatore. È una rappresentazione grafica, non la posizione fisica in Aula: i gruppi occupano spicchi contigui da sinistra a destra secondo la collocazione dei loro componenti. Colori per gruppo o per partito con la tavolozza validata del gioco (8 colori in ordine fisso alle forze più grandi, stesso colore alla Camera e al Senato; gruppi minori e Misto in toni neutri, sempre con legenda). Filtri per partito, gruppo, commissione e Camera, ricordati tra una schermata e l’altra; elenco accessibile dei componenti filtrati.
+- **Scheda del parlamentare**: nome, logo e partito documentato (mai dedotto da lista o gruppo), gruppo e componente del Misto, ruoli verificati, collegio e circoscrizione, lista d’elezione 2022 (indicata come tale), commissioni con eventuale carica, data d’inizio del mandato, fonte ufficiale; rapporto simulato e incontro se è un tuo contatto.
+- **Commissioni permanenti reali** (`npm run import:committees`, `scripts/import-committees.mjs`): 14 della Camera e 10 del Senato con componenti e uffici di presidenza in carica dagli open data ufficiali (dati.camera.it, dati.senato.it); `src/data/real/committees.json` e `committee-memberships.json`. Le cariche elette per metà legislatura e i record duplicati aperti della fonte vengono esclusi; una presidenza cessata senza successore resta vacante (come nella fonte).
+- **Voti dei singoli** (`src/core/vote-engine.js`): il motore decide i voti di ogni gruppo, ora compatti (un gruppo convinto vota quasi tutto a favore, uno ostile quasi tutto contro); il resto si divide in contrari e astenuti, ogni gruppo ha una linea e chi vota diversamente è un discordante. Capigruppo e leader di partito documentati non votano mai contro la linea. Nel voto segreto i singoli non sono noti e i franchi tiratori sono solo stimati, mai attribuiti. Emiciclo verde/rosso/grigio chiaro, totali, esito, maggioranza richiesta, dettaglio per gruppo, elenco dei discordanti; ogni votazione è marcata **VOTAZIONE SIMULATA** (anche la fiducia, con dettaglio per gruppo). Dalle leggi e dalla fiducia si apre il voto nell’emiciclo.
+
+```sh
+npm run check:hemicycle
+```
+
 ## Dataset reale
 
 Snapshot verificato al 22 settembre 2026:
@@ -268,6 +279,7 @@ npm run check:ui          # menu, impostazioni, nuova partita, pagine, poteri, a
 npm run check:first-run   # primo avvio: benvenuto e account prima della prima carriera, tour saltabile una volta, guida, conferme del gioco
 npm run check:elections   # esiti elettorali vari e non automatici, ballottaggio, soglie, preferenze, conseguenze, varietà delle campagne, strategie
 npm run check:sections    # progressione non automatica (probabilità ed esiti), percorsi di carriera, agenda datata, schede di Carriera, Partito e Agenda
+npm run check:hemicycle   # commissioni reali, emiciclo Camera/Senato, colori e ordine dei gruppi, voti dei singoli coerenti coi totali, voto segreto, fiducia
 npm run check:government  # 34 temi, bilancio, territori, cittadini, sicurezza, Presidente del Consiglio, difficoltà
 npm run check:events      # eventi procedurali: condizioni, cooldown, rarità, esclusività, varianti, catene
 npm run check:career      # carriera pluriennale end-to-end, salvataggi e migrazione

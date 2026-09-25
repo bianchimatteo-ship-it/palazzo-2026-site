@@ -1,7 +1,7 @@
-import { allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20260925-5';
-import { formatDate } from '../core/time.js?v=20260925-5';
-import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20260925-5';
-import { distinctSeries } from './charts.js?v=20260925-5';
+import { allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20260925-6';
+import { formatDate } from '../core/time.js?v=20260925-6';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20260925-6';
+import { distinctSeries } from './charts.js?v=20260925-6';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const pct = (value, digits = 1) => value === null || value === undefined ? '—' : `${Number(value).toLocaleString('it-IT', { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;

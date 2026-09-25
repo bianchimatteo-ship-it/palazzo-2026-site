@@ -1,15 +1,15 @@
 // PARTITO — the organisation seen from inside: identity, the player's role and odds, internal areas, members and
 // sections, the secretary's desk and the history. The real party stays a reference; everything inside is simulated.
-import { careerOverview } from '../core/career-overview.js?v=20260925-5';
-import { organOf, treasuryOutlook } from '../core/organization-engine.js?v=20260925-5';
-import { playerRoles } from '../core/roles.js?v=20260925-5';
-import { formatDate } from '../core/time.js?v=20260925-5';
-import { lineChart, SERIES } from './charts.js?v=20260925-5';
-import { glyph } from './visuals.js?v=20260925-5';
-import { renderPartyPosition, renderSecretaryDesk } from './game-mode.js?v=20260925-5';
-import { renderOrganizationPanel } from './organization-mode.js?v=20260925-5';
-import { renderOddsCard } from './career-page.js?v=20260925-5';
-import { arrow, badge, bar, card, esc, euro, num, pct, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20260925-5';
+import { careerOverview } from '../core/career-overview.js?v=20260925-6';
+import { organOf, treasuryOutlook } from '../core/organization-engine.js?v=20260925-6';
+import { playerRoles } from '../core/roles.js?v=20260925-6';
+import { formatDate } from '../core/time.js?v=20260925-6';
+import { lineChart, SERIES } from './charts.js?v=20260925-6';
+import { glyph } from './visuals.js?v=20260925-6';
+import { renderPartyPosition, renderSecretaryDesk } from './game-mode.js?v=20260925-6';
+import { renderOrganizationPanel } from './organization-mode.js?v=20260925-6';
+import { renderOddsCard } from './career-page.js?v=20260925-6';
+import { arrow, badge, bar, card, esc, euro, num, pct, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20260925-6';
 
 const SOURCE_LABELS = { real: 'Dato reale verificato', user: 'Creato da te', simulation: 'Simulazione' };
 const partyName = party => party?.officialName ?? party?.name ?? 'Partito';

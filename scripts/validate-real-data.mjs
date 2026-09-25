@@ -103,6 +103,21 @@ for (const poll of polls) {
   for (const row of poll.results) if (!partyIds.has(row.entityId) && !coalitionIds.has(row.entityId)) fail(`Sondaggio ${poll.id}: forza senza entità ${row.entityId}`);
   if (new Set(poll.results.map(row => row.entityId)).size !== poll.results.length) fail(`Sondaggio ${poll.id}: forze duplicate`);
 }
+// Permanent committees of the XIX legislature (scripts/import-committees.mjs, official SPARQL of Camera and Senato).
+const committees = JSON.parse(await readFile(new URL('../src/data/real/committees.json', import.meta.url), 'utf8'));
+const committeeMemberships = JSON.parse(await readFile(new URL('../src/data/real/committee-memberships.json', import.meta.url), 'utf8'));
+if (lawsManifest.collections.committees !== committees.length || lawsManifest.collections.committeeMemberships !== committeeMemberships.length) fail('Commissioni: conteggi nel manifest non coerenti');
+const committeeIds = new Set(committees.map(item => item.id));
+if (committeeIds.size !== committees.length || new Set(committeeMemberships.map(item => item.id)).size !== committeeMemberships.length) fail('Commissioni: ID duplicati');
+if (committees.filter(item => item.chamber === 'camera').length !== 14 || committees.filter(item => item.chamber === 'senato').length !== 10) fail('Commissioni permanenti: attese 14 alla Camera e 10 al Senato');
+for (const item of committees) if (item.source !== 'real' || item.verified !== true || !/^http:\/\/dati\.(camera|senato)\.it\//.test(item.sourceUrl) || !item.sourceName || !item.verifiedAt || !item.officialName) fail(`Commissione ${item.id}: provenienza incompleta`);
+const peopleById = new Map(db.politicians.map(person => [person.id, person]));
+for (const row of committeeMemberships) {
+  const person = peopleById.get(row.politicianId);
+  if (!committeeIds.has(row.committeeId) || !person || person.termEnd || person.chamber !== row.chamber) fail(`Appartenenza a commissione senza riferimenti validi: ${row.id}`);
+  if (row.source !== 'real' || row.verified !== true || !row.sourceUrl || !row.verifiedAt || !['Presidente', 'Vicepresidente', 'Segretario', 'Componente'].includes(row.role)) fail(`Appartenenza a commissione ${row.id}: dati non validi`);
+}
+for (const item of committees) if (committeeMemberships.filter(row => row.committeeId === item.id && row.role === 'Presidente').length > 1) fail(`Commissione ${item.id}: più di un presidente`);
 // ISTAT list of the comuni (21 February 2026): imported by scripts/import-istat-comuni.mjs, never written by hand.
 const municipalities = JSON.parse(await readFile(new URL('../src/data/real/municipalities.json', import.meta.url), 'utf8'));
 const territorialUnits = JSON.parse(await readFile(new URL('../src/data/real/territorial-units.json', import.meta.url), 'utf8'));
@@ -121,4 +136,5 @@ for (const person of db.politicians) { const name=normalize(person.fullName); na
 const homonyms = [...nameCounts.values()].filter(count=>count>1).reduce((sum,count)=>sum+count,0);
 console.log(`2×1000: ${twoPerThousand.length} partiti (MEF 2025). Governo: ${government[0].label} con ${government[0].members.length} incarichi (Camera).`);
 console.log(`Leggi reali: ${laws.length} atti del Senato (${laws.filter(law => law.outcome === 'legge').length} leggi approvate definitivamente).`);
+console.log(`Commissioni permanenti: ${committees.length} (Camera e Senato) con ${committeeMemberships.length} componenti in carica, verificate il ${committees[0].verifiedAt}.`);
 console.log(`Controllo completato: ${db.parties.length} partiti, ${db.politicalMovements.length} movimenti, ${organizations.filter(item=>item.level==='regional').length} entità territoriali documentate, ${db.politicalFigures?.length ?? 0} figure, ${db.partyLeaderships?.length ?? 0} relazioni di leadership, ${db.parliamentaryGroups.length} gruppi, ${db.politicians.length} parlamentari; ${homonyms} omonimi politici (ID distinti), nessuna sigla o nome duplicato; provenienza e relazioni valide.`);
