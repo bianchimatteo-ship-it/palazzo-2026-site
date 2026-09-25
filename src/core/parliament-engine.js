@@ -1,5 +1,6 @@
-import { DATA_SOURCES } from '../data/schema.js?v=20260925-4';
-import { AREA_BY_ID, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, STAGE_WEEKS, areaOf } from '../data/simulation/policy-rules.js?v=20260925-4';
+import { DATA_SOURCES } from '../data/schema.js?v=20260925-5';
+import { AREA_BY_ID, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, STAGE_WEEKS, areaOf } from '../data/simulation/policy-rules.js?v=20260925-5';
+import { evaluateAdvancement } from './progression-engine.js?v=20260925-5';
 
 export const CHAMBERS = Object.freeze({
   camera: { label: 'Camera dei deputati', shortLabel: 'Camera', source: DATA_SOURCES.REAL },
@@ -631,6 +632,13 @@ export function governmentPostProblems(parliament, stats = {}, currentDate = nul
   if ((parliament?.careerStanding?.partySupport ?? 0) < needs.groupSupport) problems.push(`Sostegno nel gruppo almeno ${needs.groupSupport} (ora ${Math.round(parliament?.careerStanding?.partySupport ?? 0)}).`);
   return problems;
 }
+// The odds that the Prime Minister (simulated) hands the player a ministry: influence, reputation, the group's support
+// and the stability of the Government count; an occupied portfolio needs a reshuffle and is harder to get.
+export function governmentPostOdds(parliament, stats = {}, portfolio = null) {
+  const government = parliament?.government;
+  const holder = portfolio && government ? activeMinisters(government).find(item => item.portfolio === portfolio) : null;
+  return clamp(0.3 + ((stats.influence ?? 45) - 45) / 100 + ((stats.reputation ?? 50) - 50) / 150 + ((parliament?.careerStanding?.partySupport ?? 55) - 55) / 150 + ((government?.stability ?? 50) - 50) / 300 - (holder ? 0.15 : 0), 0.05, 0.85);
+}
 export function requestGovernmentPost(parliament, portfolio, currentDate, { stats = {}, roll = 0.5, appointeeLabel = null } = {}) {
   if (playerLeadsGovernment(parliament)) throw new Error('Guidi il governo: assegna tu stesso gli incarichi.');
   if (!MINISTERIAL_PORTFOLIOS.includes(portfolio)) throw new Error('Scegli un ministero.');
@@ -638,9 +646,10 @@ export function requestGovernmentPost(parliament, portfolio, currentDate, { stat
   if (problems.length) throw new Error(`Non hai ancora i requisiti: ${problems.join(' ')}`);
   const government = parliament.government;
   const holder = activeMinisters(government).find(item => item.portfolio === portfolio);
-  const chance = clamp(0.3 + ((stats.influence ?? 45) - 45) / 100 + ((stats.reputation ?? 50) - 50) / 150 + ((parliament.careerStanding?.partySupport ?? 55) - 55) / 150 + ((government.stability ?? 50) - 50) / 300 - (holder ? 0.15 : 0), 0.05, 0.85);
+  const chance = governmentPostOdds(parliament, stats, portfolio);
   let next = { ...parliament, government: { ...government, lastPostRequestAt: currentDate } };
-  if (roll >= chance) return { parliament: record(next, currentDate, 'richiesta-incarico-respinta', `Il Presidente del Consiglio (simulato) non ti affida il ministero ${portfolio}.`, { governmentId: government.id, portfolio, chance, source: DATA_SOURCES.SIMULATION }), appointed: false, chance };
+  // Not a ministry, but a place in the Government: a close refusal can end in an undersecretary post.
+  if (roll >= chance) return { parliament: record(next, currentDate, 'richiesta-incarico-respinta', `Il Presidente del Consiglio (simulato) non ti affida il ministero ${portfolio}${roll < chance + 0.18 ? ': ti propone un incarico da sottosegretario' : ''}.`, { governmentId: government.id, portfolio, chance, source: DATA_SOURCES.SIMULATION }), appointed: false, chance, lower: roll < chance + 0.18 };
   if (holder) {
     // A small reshuffle: the outgoing minister's group resents it.
     next = { ...next, government: { ...next.government, ministers: next.government.ministers.map(item => item.id === holder.id ? { ...item, endedAt: currentDate, endReason: 'Rimpasto del Presidente del Consiglio (simulato)' } : item), stability: clamp((government.stability ?? 50) - 2, 0, 100) } };
@@ -881,7 +890,7 @@ export function nextParliamentaryRole(parliament) {
   return PARLIAMENTARY_ROLES[parliament?.careerStanding?.roleLevel ?? 0] ?? null;
 }
 
-export function contestCommitteeRole(parliament, currentDate, stats = {}) {
+export function contestCommitteeRole(parliament, currentDate, stats = {}, { roll = 0.5, roll2 = 0.5, factors = null } = {}) {
   if (!canManageParliament(parliament)) throw new Error('Scegli un gruppo parlamentare prima di candidarti a un incarico interno.');
   const standing = parliament.careerStanding ?? createCareerStanding();
   const role = PARLIAMENTARY_ROLES[standing.roleLevel ?? 0];
@@ -893,25 +902,44 @@ export function contestCommitteeRole(parliament, currentDate, stats = {}) {
   if ((parliament.resources?.politicalCapital ?? 0) < CONTEST_COST) throw new Error(`Servono ${CONTEST_COST} punti di capitale politico per affrontare la competizione interna.`);
   const influence = numberOr(stats.influence, 50), reputation = numberOr(stats.reputation, 50), experience = numberOr(stats.experience, 40);
   const threshold = standing.competitionStrength ?? role.threshold;
-  const score = Math.round((influence * 0.35) + (reputation * 0.3) + (experience * 0.2) + (standing.partySupport * 0.15));
-  const success = score >= threshold;
-  const appointment = success ? { id: newId('incarico-parlamentare'), title: role.title, level: role.level, chamber: parliament.player.chamber, groupId: parliament.player.groupId, appointedAt: currentDate, endedAt: null, source: DATA_SOURCES.SIMULATION } : null;
-  const roles = success ? [...standing.roles.map(item => item.endedAt ? item : { ...item, endedAt: currentDate }), appointment] : standing.roles;
+  // Influence, reputation, experience, the group's support, seniority and results decide the odds; the group can also
+  // give a smaller role, postpone, prefer someone else or take back a role.
+  const result = evaluateAdvancement('parlamento', { factors: factors ?? { influence, reputation, experience, group: standing.partySupport, seniority: 40, results: 50 }, threshold, capital: parliament.resources?.politicalCapital ?? 0, rank: standing.roleLevel ?? 0, hostile: standing.partySupport < 50, roll, roll2 });
+  const outcome = result.outcome;
+  const success = outcome === 'promosso';
+  const minor = outcome === 'incarico-inferiore';
+  const demoted = outcome === 'retrocessione' && (standing.roleLevel ?? 0) >= 1;
+  const appointment = success ? { id: newId('incarico-parlamentare'), title: role.title, level: role.level, chamber: parliament.player.chamber, groupId: parliament.player.groupId, appointedAt: currentDate, endedAt: null, source: DATA_SOURCES.SIMULATION }
+    : minor ? { id: newId('incarico-parlamentare'), title: 'Segretario di commissione', level: standing.roleLevel ?? 0, minor: true, chamber: parliament.player.chamber, groupId: parliament.player.groupId, appointedAt: currentDate, endedAt: null, source: DATA_SOURCES.SIMULATION } : null;
+  const closeCurrent = success || demoted;
+  const roles = [...standing.roles.map(item => item.endedAt || !closeCurrent ? item : { ...item, endedAt: currentDate }), ...(appointment ? [appointment] : [])];
+  const previousLevel = standing.roleLevel ?? 0;
+  const roleLevel = success ? role.level : demoted ? previousLevel - 1 : previousLevel;
+  const committeeRole = success ? appointment : demoted ? (previousLevel - 1 >= 1 ? { ...(standing.committeeRole ?? {}), title: PARLIAMENTARY_ROLES[previousLevel - 2]?.title ?? 'Componente', level: previousLevel - 1 } : null) : minor && !standing.committeeRole ? appointment : standing.committeeRole;
+  const supportDelta = { promosso: 2, 'incarico-inferiore': 1, stallo: -1, 'sconfitta-interna': -3, retrocessione: -4 }[outcome] ?? 0;
   const updatedStanding = {
     ...standing,
     roles,
-    roleLevel: success ? role.level : standing.roleLevel ?? 0,
-    position: success ? `${role.title} (simulato)` : standing.position,
-    committeeRole: success ? appointment : standing.committeeRole,
-    partySupport: clamp(standing.partySupport + (success ? 2 : -2), 0, 100),
-    competitionStrength: success ? (PARLIAMENTARY_ROLES[role.level]?.threshold ?? threshold) : threshold,
+    roleLevel,
+    position: success ? `${role.title} (simulato)` : demoted ? `${committeeRole?.title ?? 'Componente del gruppo'} (simulato)` : standing.position,
+    committeeRole,
+    partySupport: clamp(standing.partySupport + supportDelta, 0, 100),
+    competitionStrength: success ? (PARLIAMENTARY_ROLES[role.level]?.threshold ?? threshold) : demoted ? (PARLIAMENTARY_ROLES[Math.max(0, previousLevel - 1)]?.threshold ?? threshold) : threshold,
     lastContestAt: currentDate,
-    lastContest: { roleTitle: role.title, score, threshold, result: success ? 'success' : 'not-selected', date: currentDate, source: DATA_SOURCES.SIMULATION },
+    lastContest: { roleTitle: role.title, score: result.score, threshold, chance: result.chance, outcome, label: result.label, result: success ? 'success' : 'not-selected', date: currentDate, source: DATA_SOURCES.SIMULATION },
+    contests: [...(standing.contests ?? []), { kind: 'parlamento', target: role.title, score: result.score, threshold, chance: result.chance, outcome, label: result.label, date: currentDate, source: DATA_SOURCES.SIMULATION }].slice(-12),
     source: DATA_SOURCES.SIMULATION
   };
   let next = { ...parliament, careerStanding: updatedStanding, player: { ...parliament.player, position: updatedStanding.position }, resources: { ...parliament.resources, politicalCapital: parliament.resources.politicalCapital - CONTEST_COST } };
-  next = record(next, currentDate, success ? 'incarico-conquistato' : 'competizione-interna', success ? `Conquistato l’incarico di ${role.title.toLowerCase()} nello scenario.` : `La competizione interna per l’incarico di ${role.title.toLowerCase()} non è stata vinta; il prossimo tentativo richiederà nuova preparazione.`, { score, threshold, role: role.title, result: success ? 'success' : 'not-selected', source: DATA_SOURCES.SIMULATION });
-  return { parliament: next, success, score, threshold, role, appointment };
+  const texts = {
+    promosso: `Conquistato l’incarico di ${role.title.toLowerCase()} nello scenario.`,
+    'incarico-inferiore': `Il gruppo non ti indica come ${role.title.toLowerCase()}: ottieni solo il ruolo di segretario di commissione.`,
+    stallo: `Il gruppo rinvia la scelta per l’incarico di ${role.title.toLowerCase()}: se ne riparlerà.`,
+    'sconfitta-interna': `Il gruppo preferisce un altro nome per l’incarico di ${role.title.toLowerCase()}.`,
+    retrocessione: demoted ? 'La conta nel gruppo va male: perdi l’incarico che avevi.' : `La competizione per l’incarico di ${role.title.toLowerCase()} finisce male: il gruppo ti mette da parte.`
+  };
+  next = record(next, currentDate, success ? 'incarico-conquistato' : 'competizione-interna', texts[outcome], { score: result.score, threshold, chance: result.chance, outcome, role: role.title, result: success ? 'success' : 'not-selected', source: DATA_SOURCES.SIMULATION });
+  return { parliament: next, success, outcome, label: result.label, chance: result.chance, factors: result.factors, score: result.score, threshold, role, appointment, demoted };
 }
 
 export function parliamentGroupFacts(parliament, chamber) {

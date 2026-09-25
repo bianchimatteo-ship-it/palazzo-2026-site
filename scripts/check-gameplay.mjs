@@ -88,9 +88,19 @@ for (let week = 0; week < 4; week++) {
 }
 state = store.getState();
 assert.ok(state.game.party.support > 55, 'Le riunioni fanno crescere il sostegno interno.');
-const rank = store.contestPartyRank();
+// A promotion is never certain: several ways to end; with work in the party it eventually comes.
+const attempts = [];
+for (let attempt = 0; attempt < 6; attempt++) {
+  const result = store.contestPartyRank();
+  attempts.push(result);
+  assert.ok(['promosso', 'incarico-inferiore', 'stallo', 'sconfitta-interna', 'retrocessione'].includes(result.outcome), `Esito della sfida interna: ${result.outcome}`);
+  assert.ok(result.chance > 0 && result.chance < 0.87 && result.factors.length >= 6, 'Probabilità mai certa, spiegata fattore per fattore.');
+  if (result.success) break;
+  for (let week = 0; week < 3; week++) { for (const id of ['riunione', 'leadership']) { try { store.performWeeklyActivity(id); } catch { /* time or capital */ } } store.advance(7); }
+}
+const rank = attempts.at(-1);
 state = store.getState();
-assert.equal(rank.success, true, `Incarico interno atteso (punteggio ${rank.score}).`);
+assert.equal(rank.success, true, `L’incarico interno arriva con l’impegno (${attempts.map(item => item.outcome).join(', ')}).`);
 assert.equal(state.game.party.rankTitle, 'Coordinatore locale');
 assert.ok(state.dataset.offices.some(item => item.level === 'partito' && !item.endDate));
 assert.ok(state.game.objectives.partito, 'Il traguardo di partito è registrato.');

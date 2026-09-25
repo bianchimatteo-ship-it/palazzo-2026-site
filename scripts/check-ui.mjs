@@ -152,7 +152,11 @@ assert.ok(settingsPage.includes('data-setting-key="autosave"') && !settingsPage.
 
 // ---------- 4. the secretary's powers, with consequences ----------
 assert.ok(playerRoles(store.getState()).secretary, 'Il fondatore è segretario');
-const party = await goto('partito');
+// The Partito section opens on the overview; the secretary's desk has its own tab, remembered across redraws.
+const partyOverview = await goto('partito');
+for (const text of ['party-page', 'IL TUO PARTITO', 'data-section-tab-value="segreteria"', 'Le aree del partito', 'Il partito nei sondaggi']) assert.ok(partyOverview.includes(text), `Partito: manca ${text}`);
+const party = await click({ sectionTab: 'partito', sectionTabValue: 'segreteria' });
+assert.ok((await goto('panoramica')) && (await goto('partito')).includes('Le decisioni del segretario'), 'La scheda Segreteria resta aperta tornando al Partito.');
 for (const text of ['Le decisioni del segretario', 'data-secretary="line"', 'data-secretary-select="organs"', 'data-secretary-select="candidacy"', 'data-secretary="discipline"', 'data-secretary="expel"', 'data-secretary="investment"']) assert.ok(party.includes(text), `Segreteria: manca ${text}`);
 const before = store.getState();
 await click({ secretary: 'line', secretaryValue: 'coalizione' });
@@ -248,7 +252,12 @@ page = await click({ gameFastforward: 'comunale', fastforwardLabel: 'Elezioni co
 assert.ok(page.includes('Avanzare fino alle candidature?') && page.includes('circa 30 settimane') && page.includes('Elezioni comunali'), 'Il salto fino alle candidature chiede conferma e dice quanto tempo passa.');
 await click({ confirm: 'cancel' });
 assert.equal(store.getState().game.week.index, week, 'Annullando il salto il tempo non avanza.');
-const career = await goto('carriera');
+// Carriera: the four tracks with the odds of the next step; the timeline has its own tab.
+let career = await goto('carriera');
+for (const text of ['career-page', 'ISTITUZIONI ELETTE', 'PARTITO', 'PARLAMENTO', 'GOVERNO', 'PROSSIMO PASSO', 'data-section-tab-value="progressione"']) assert.ok(career.includes(text), `Carriera: manca ${text}`);
+career = await click({ sectionTab: 'carriera', sectionTabValue: 'progressione' });
+assert.ok(career.includes('COME FUNZIONA') && career.includes('Come può finire') && career.includes('STORICO DEI TENTATIVI'), 'Progressione: probabilità, esiti possibili e tentativi.');
+career = await click({ sectionTab: 'carriera', sectionTabValue: 'cronologia' });
 assert.ok(career.includes('La tua carriera, tappa per tappa') && career.includes('track-record') && career.includes('Inizia la carriera'), 'Cronologia della carriera');
 assert.ok((await click({ timelineFilter: 'partito' })).includes('data-timeline-filter="partito" class="active"'));
 
@@ -308,7 +317,9 @@ assert.ok(!roles.secretary && roles.powers.find(power => power.label.startsWith(
 assert.throws(() => store.setPartyLine('opposizione'), /segretario/);
 assert.throws(() => store.proposeAlliance(store.getState().world.parties.find(item => !item.isPlayer).id), /segretario/);
 page = await goto('partito');
-assert.ok(!page.includes('Le decisioni del segretario') && page.includes('POSIZIONE NEL PARTITO'));
+assert.ok(!page.includes('Le decisioni del segretario') && !page.includes('data-section-tab-value="segreteria"') && page.includes('LA TUA POSIZIONE'), 'Un iscritto non vede la scheda Segreteria (la scheda salvata non valida torna alla Panoramica).');
+page = await click({ sectionTab: 'partito', sectionTabValue: 'ruoli' });
+assert.ok(page.includes('POSIZIONE NEL PARTITO') && page.includes('probabilità stimata') && page.includes('PROBABILITÀ SIMULATA'), 'Ruoli e correnti: la promozione mostra probabilità e fattori, non solo una soglia.');
 page = await goto('sondaggi');
 assert.ok(!page.includes('data-world-alliance') && page.includes('Alleanze e rotture le decide il segretario'), 'Niente alleanze senza segreteria');
 store.clearAllSaves();

@@ -1,10 +1,10 @@
 // Main menu, how-to-play, settings, save slots and the end-of-week report.
-import { SETTINGS_SCHEMA } from '../core/settings.js?v=20260925-4';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20260925-4';
-import { formatDate } from '../core/time.js?v=20260925-4';
-import { illustration } from './illustrations.js?v=20260925-4';
-import { glyph } from './visuals.js?v=20260925-4';
-import { esc, signed } from './charts.js?v=20260925-4';
+import { SETTINGS_SCHEMA } from '../core/settings.js?v=20260925-5';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20260925-5';
+import { formatDate } from '../core/time.js?v=20260925-5';
+import { illustration } from './illustrations.js?v=20260925-5';
+import { glyph } from './visuals.js?v=20260925-5';
+import { esc, signed } from './charts.js?v=20260925-5';
 
 const when = iso => { try { return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch { return ''; } };
 const MENU = [

@@ -169,11 +169,22 @@ const unique = list => new Set(list.map(item => item.id)).size === list.length;
 const references = [party];
 
 // Incarichi parlamentari: candidatura, finestra di attesa, rigenerazione del capitale e ufficio in carriera.
-store.reset();
-store.createCareer(draftFor('deputato', { parliamentaryGroupId: 'cam-xix-01', ...founder }), references, groups);
-assert.ok(store.getState().parliament.careerStanding, 'Il salvataggio parlamentare nasce con la posizione di carriera.');
-assert.ok(renderParliamentPage('parlamento', store.getState()).includes('data-parliament-action="contest-role"'));
-store.contestCommitteeRole();
+// A contest is never won by default: the outcome (promotion, smaller role, postponement, internal defeat) depends
+// on the odds; different careers try until one wins, to check the office that comes with it.
+const OUTCOMES = ['promosso', 'incarico-inferiore', 'stallo', 'sconfitta-interna', 'retrocessione'];
+const contestOutcomes = [];
+for (let attempt = 0; attempt < 10; attempt++) {
+  store.reset();
+  store.createCareer(draftFor('deputato', { parliamentaryGroupId: 'cam-xix-01', ...founder, firstName: `Prova${attempt}` }), references, groups);
+  assert.ok(store.getState().parliament.careerStanding, 'Il salvataggio parlamentare nasce con la posizione di carriera.');
+  assert.ok(renderParliamentPage('parlamento', store.getState()).includes('data-parliament-action="contest-role"'));
+  store.contestCommitteeRole();
+  const contest = store.getState().parliament.careerStanding.lastContest;
+  assert.ok(OUTCOMES.includes(contest.outcome) && contest.chance > 0 && contest.chance < 0.87, 'Esito della competizione interna mai certo.');
+  contestOutcomes.push(contest.outcome);
+  if (contest.outcome === 'promosso') break;
+}
+assert.ok(contestOutcomes.includes('promosso'), `Un incarico in Aula si può conquistare (${contestOutcomes.join(', ')}).`);
 state = store.getState();
 assert.equal(state.parliament.careerStanding.committeeRole.title, 'Responsabile di commissione');
 const roleOffice = state.dataset.offices.find(item => item.title.startsWith('Responsabile di commissione'));

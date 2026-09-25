@@ -1,19 +1,20 @@
-import { advanceDays } from './time.js?v=20260925-4';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260925-4';
-import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260925-4';
+import { advanceDays } from './time.js?v=20260925-5';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260925-5';
+import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260925-5';
 import {
   APPOINTMENTS, BASE_WEEKLY_INCOME, CAREER_EVENTS, CAREER_OBJECTIVES, CURRENT_TEMPLATES, EARLY_ELECTION_AFTER_WEEKS, ELECTION_SCHEDULE,
   FORCED_EVENTS, LEGACY_RIVAL_NAMES, SIMULATED_RIVAL_LABEL, FOUNDER_RANK, LEVEL_FIRST_ELECTION, OFFICE_INCOME, PARTY_RANKS, RELATION_TEMPLATES, STAT_LABELS,
-  SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS } from '../data/simulation/career-rules.js?v=20260925-4';
-import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20260925-4';
-import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20260925-4';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260925-4';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260925-4';
-import { book, buyInvestment, createFinance, depositElectionFund, hasAsset, normalizeFinance, settleFinanceWeek } from './finance-engine.js?v=20260925-4';
-import { advanceOrganization, applyOrgEffects, createOrganization, isPartyLeader, normalizeOrganization, treasuryBook } from './organization-engine.js?v=20260925-4';
-import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20260925-4';
-import { HARD_CATEGORIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20260925-4';
-import { macroAreaOf } from '../data/simulation/policy-rules.js?v=20260925-4';
+  SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS } from '../data/simulation/career-rules.js?v=20260925-5';
+import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20260925-5';
+import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20260925-5';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260925-5';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260925-5';
+import { book, buyInvestment, createFinance, depositElectionFund, hasAsset, normalizeFinance, settleFinanceWeek } from './finance-engine.js?v=20260925-5';
+import { advanceOrganization, applyOrgEffects, createOrganization, isPartyLeader, normalizeOrganization, treasuryBook } from './organization-engine.js?v=20260925-5';
+import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20260925-5';
+import { HARD_CATEGORIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20260925-5';
+import { macroAreaOf } from '../data/simulation/policy-rules.js?v=20260925-5';
+import { advancementOdds, evaluateAdvancement, progressionFactors } from './progression-engine.js?v=20260925-5';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -705,11 +706,19 @@ function handleSpecial(ctx, env, special, item, lines, specials, choice = {}) {
   } else if (special === 'media-repair' || special.startsWith('public-')) {
     specials.push({ type: special });
   } else if (special === 'accept-rank') {
+    // An offer from the leadership is a strong push, not a guarantee: the organs still have to agree.
     const rank = nextPartyRank(game);
     if (rank?.threshold) {
-      game.party.rank = rank.level; game.party.rankTitle = rank.title;
-      game.party.history.push({ week: game.week.index, date: env.currentDate, text: `Nominato ${rank.title.toLowerCase()} su proposta della segreteria`, source: SIM });
-      lines.push(`Diventi ${rank.title.toLowerCase()}.`);
+      const result = evaluateAdvancement('partito', { factors: progressionFactors({ game, stats: ctx.stats, parliament: ctx.parliament }), threshold: rank.threshold, bonus: 12, game, capital: game.resources.politicalCapital, rank: game.party.rank, hostile: false, roll: draw(game), roll2: draw(game) });
+      recordContest(game.party, { week: game.week.index, date: env.currentDate, kind: 'proposta', target: rank.title, outcome: result.outcome === 'promosso' || result.outcome === 'incarico-inferiore' ? result.outcome : 'stallo', label: result.outcome === 'promosso' ? result.label : result.outcome === 'incarico-inferiore' ? result.label : 'Proposta arenata negli organi', chance: result.chance, score: result.score, threshold: rank.threshold });
+      if (result.outcome === 'promosso') {
+        game.party.rank = rank.level; game.party.rankTitle = rank.title;
+        game.party.history.push({ week: game.week.index, date: env.currentDate, text: `Nominato ${rank.title.toLowerCase()} su proposta della segreteria`, source: SIM });
+        lines.push(`Diventi ${rank.title.toLowerCase()}.`);
+      } else if (result.outcome === 'incarico-inferiore') {
+        game.party.minorRoles = [...(game.party.minorRoles ?? []), { title: `Responsabile di settore (invece di ${rank.title.toLowerCase()})`, week: game.week.index, source: SIM }].slice(-6);
+        lines.push(`Gli organi ridimensionano la proposta: ti affidano solo un incarico di settore.`);
+      } else lines.push('La proposta si arena negli organi del partito: se ne riparlerà.');
     }
   } else if (special === 'cosign') {
     const contact = (game.contacts ?? []).find(entry => entry.person.id === item.params.contactId);
@@ -835,6 +844,17 @@ export function partyContestScore(ctx) {
   const leadership = ctx.game.relations.find(item => item.id === 'leadership')?.value ?? 50;
   return Math.round(party.support * 0.45 + leadership * 0.35 + (ctx.stats.influence ?? 30) * 0.2 + (party.alignedCurrentId && party.alignedCurrentId === party.leaderCurrentId ? 4 : 0));
 }
+// The odds of the next internal office, factor by factor (no draw: for the interface).
+export function partyAdvancementOdds(ctx) {
+  const rank = nextPartyRank(ctx.game);
+  if (!rank?.threshold) return null;
+  return { ...advancementOdds('partito', { factors: progressionFactors({ game: ctx.game, stats: ctx.stats, parliament: ctx.parliament }), threshold: rank.threshold, game: ctx.game, capital: ctx.game.resources.politicalCapital }), rank };
+}
+// Every attempt to climb stays on record: the career shows what was tried, with which odds and how it ended.
+function recordContest(party, entry) {
+  party.contests = [...(party.contests ?? []), { ...entry, source: SIM }].slice(-12);
+}
+const hostileCurrent = party => [...(party?.currents ?? [])].filter(current => current.id !== party.alignedCurrentId && (current.value ?? current.relation ?? 50) < 42).sort((a, b) => b.strength - a.strength)[0] ?? null;
 export function contestPartyRank(input, env) {
   const ctx = start(input);
   const party = ctx.game.party;
@@ -846,20 +866,37 @@ export function contestPartyRank(input, env) {
   const problem = costProblem(ctx.game, { ap: 2, capital: 4 });
   if (problem) throw new Error(problem);
   pay(ctx.game, { ap: 2, capital: 4 });
-  const score = partyContestScore(ctx);
-  const success = score >= rank.threshold;
+  // Not a threshold to cross: support, leadership, the weight of one's area, influence, results, territory, the state
+  // of the party and the moment decide the odds, and the same attempt can end in several ways.
+  const hostile = hostileCurrent(party);
+  const result = evaluateAdvancement('partito', { factors: progressionFactors({ game: ctx.game, stats: ctx.stats, parliament: ctx.parliament }), threshold: rank.threshold, game: ctx.game, capital: ctx.game.resources.politicalCapital, rank: party.rank, hostile: Boolean(hostile), roll: draw(ctx.game), roll2: draw(ctx.game) });
   party.lastRankContestWeek = ctx.game.week.index;
-  const lines = [`Punteggio ${score} su soglia ${rank.threshold}`];
-  if (success) {
+  recordContest(party, { week: ctx.game.week.index, date: env.currentDate, kind: 'partito', target: rank.title, outcome: result.outcome, label: result.label, chance: result.chance, score: result.score, threshold: rank.threshold });
+  const lines = [`Probabilità stimata ${Math.round(result.chance * 100)}% · punteggio ${String(result.score).replace('.', ',')} su soglia ${rank.threshold}`];
+  const week = ctx.game.week.index;
+  if (result.outcome === 'promosso') {
     party.rank = rank.level; party.rankTitle = rank.title;
     applyEffects(ctx, { party: { support: 3 }, stats: { influence: 2, notoriety: 1 } }, null, lines);
-    party.history.push({ week: ctx.game.week.index, date: env.currentDate, text: `Nominato ${rank.title.toLowerCase()}`, source: SIM });
+    party.history.push({ week, date: env.currentDate, text: `Nominato ${rank.title.toLowerCase()}`, source: SIM });
+  } else if (result.outcome === 'incarico-inferiore') {
+    party.minorRoles = [...(party.minorRoles ?? []), { title: `Responsabile di settore (invece di ${rank.title.toLowerCase()})`, week, source: SIM }].slice(-6);
+    applyEffects(ctx, { party: { support: 1 }, stats: { influence: 0.5 } }, null, lines);
+    lines.push(`Invece di ${rank.title.toLowerCase()} ti affidano solo un incarico di settore.`);
+    party.history.push({ week, date: env.currentDate, text: `Ottiene solo un incarico di settore (puntava a ${rank.title.toLowerCase()})`, source: SIM });
+  } else if (result.outcome === 'stallo') {
+    applyEffects(ctx, { relations: { leadership: -1 } }, null, lines);
+    lines.push('La direzione rinvia la decisione: se ne riparlerà.');
+  } else if (result.outcome === 'sconfitta-interna') {
+    applyEffects(ctx, { party: { support: -4 }, relations: { leadership: -2 } }, null, lines);
+    if (hostile) changeRelation(ctx.game, hostile.id, -3);
+    lines.push(`${hostile?.label ?? 'Un’altra area'} impone un proprio nome: la tua candidatura interna perde.`);
   } else {
-    applyEffects(ctx, { party: { support: -3 }, relations: { leadership: -2 } }, null, lines);
+    applyEffects(ctx, { party: { support: -5 }, relations: { leadership: -3 } }, null, lines);
+    demote(ctx, env, 'La sfida si ritorce contro di te', lines);
   }
-  addLog(ctx.game, env.currentDate, 'partito', success ? `Nuovo incarico: ${rank.title}` : `Sfida interna persa: ${rank.title}`, lines, success ? 'good' : 'bad');
+  addLog(ctx.game, env.currentDate, 'partito', result.outcome === 'promosso' ? `Nuovo incarico: ${rank.title}` : `${result.label}: ${rank.title}`, lines, result.tone === 'good' ? 'good' : result.tone === 'bad' ? 'bad' : 'neutral');
   const completed = refreshObjectives(ctx, env, [], env.currentDate);
-  return { ctx, success, rank, score, completed };
+  return { ctx, success: result.outcome === 'promosso', outcome: result.outcome, label: result.label, chance: result.chance, factors: result.factors, rank, score: result.score, completed };
 }
 export function alignCurrent(input, env, currentId) {
   const ctx = start(input);

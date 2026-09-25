@@ -1,9 +1,10 @@
-import { activeMinisters, canManageParliament, CHAMBERS, CONTEST_COST, CONTEST_WINDOW_DAYS, GOVERNMENT_POST_REQUIREMENTS, governmentPostProblems, MINISTERIAL_PORTFOLIOS, nextParliamentaryRole, parliamentGroupFacts, playerInMajority } from '../core/parliament-engine.js?v=20260925-4';
-import { DATA_SOURCES } from '../data/schema.js?v=20260925-4';
-import { artTile, glyph, LAW_ICONS } from './visuals.js?v=20260925-4';
-import { measureDesign, projectLaw } from '../core/society-engine.js?v=20260925-4';
-import { governmentDesk, lawContent, policyFields, policyPreview } from './policy-mode.js?v=20260925-4';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260925-4';
+import { activeMinisters, canManageParliament, CHAMBERS, CONTEST_COST, CONTEST_WINDOW_DAYS, GOVERNMENT_POST_REQUIREMENTS, governmentPostProblems, MINISTERIAL_PORTFOLIOS, nextParliamentaryRole, parliamentGroupFacts, playerInMajority } from '../core/parliament-engine.js?v=20260925-5';
+import { DATA_SOURCES } from '../data/schema.js?v=20260925-5';
+import { careerOverview } from '../core/career-overview.js?v=20260925-5';
+import { artTile, glyph, LAW_ICONS } from './visuals.js?v=20260925-5';
+import { measureDesign, projectLaw } from '../core/society-engine.js?v=20260925-5';
+import { governmentDesk, lawContent, policyFields, policyPreview } from './policy-mode.js?v=20260925-5';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260925-5';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const icon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
@@ -53,7 +54,7 @@ function playerGroupSelector(parliament) {
   if (!parliament.player.groupId) return '<section class="parliament-callout"><span class="section-kicker">IL TUO GRUPPO</span><h3>Scegli il gruppo di riferimento</h3><p>Il mandato è simulato e il gruppo non viene dedotto dal partito. Scegli a quale contesto collegare il personaggio.</p><div class="parliament-choice-list">' + groupChoices(parliament) + '</div><button class="primary-button" data-parliament-action="join-group">Conferma il gruppo ' + icon + '</button></section>';
   return '<details class="coalition-edit parliament-group-change"><summary>Cambia gruppo parlamentare</summary><p class="parliament-note">Lasciare il gruppo costa reputazione e interrompe gli incarichi ottenuti al suo interno.</p><div class="parliament-choice-list">' + groupChoices(parliament) + '</div><button class="secondary-button" data-parliament-action="join-group">Passa al gruppo selezionato</button></details>';
 }
-function rolePanel(parliament, currentDate) {
+function rolePanel(parliament, currentDate, odds = null) {
   const standing = parliament.careerStanding;
   if (!parliament.player || !standing) return '';
   const canAct = canManageParliament(parliament);
@@ -62,8 +63,11 @@ function rolePanel(parliament, currentDate) {
   const capital = parliament.resources?.politicalCapital ?? 0;
   const blocker = !canAct ? 'Scegli prima un gruppo.' : !next ? 'Hai raggiunto l’incarico più alto previsto.' : wait ? `Nuovo tentativo tra ${wait} giorni.` : capital < CONTEST_COST ? `Servono ${CONTEST_COST} punti di capitale politico.` : '';
   const roles = (standing.roles ?? []).map(role => '<span>' + esc(role.title) + ' · dal ' + esc(role.appointedAt) + (role.endedAt ? ' al ' + esc(role.endedAt) : ' · in corso') + '</span>').join('');
-  const last = standing.lastContest ? '<small>Ultima competizione: ' + esc(standing.lastContest.roleTitle || 'incarico') + ' · punteggio ' + whole(standing.lastContest.score) + ' su soglia ' + whole(standing.lastContest.threshold) + ' · ' + (standing.lastContest.result === 'success' ? 'vinta' : 'non vinta') + '</small>' : '';
-  return '<section class="parliament-role-panel"><div><span class="section-kicker">INCARICHI PARLAMENTARI</span><h3>' + esc(standing.committeeRole?.title || 'Nessun incarico interno') + '</h3><p>Sostegno nel gruppo <b>' + whole(standing.partySupport) + ' / 100</b>' + (next ? ' · Prossimo obiettivo: <b>' + esc(next.title) + '</b> (soglia ' + whole(standing.competitionStrength ?? next.threshold) + ')' : '') + '</p>' + last + (roles ? '<div class="parliament-role-list">' + roles + '</div>' : '') + '</div><div class="parliament-role-action"><button class="secondary-button" data-parliament-action="contest-role" ' + (blocker ? 'disabled' : '') + '>Candidati all’incarico</button><small>' + esc(blocker || `Costo ${CONTEST_COST} di capitale politico. Contano influenza, reputazione, esperienza e sostegno nel gruppo.`) + '</small></div></section>';
+  const lastContest = standing.lastContest;
+  // The outcome of the last attempt as it was decided: odds, and one of the possible endings (not just won or lost).
+  const last = lastContest ? '<small>Ultima competizione: ' + esc(lastContest.roleTitle || 'incarico') + (Number.isFinite(lastContest.chance) ? ' · probabilità ' + Math.round(lastContest.chance * 100) + '%' : ' · punteggio ' + whole(lastContest.score) + ' su soglia ' + whole(lastContest.threshold)) + ' · ' + esc(lastContest.label || (lastContest.result === 'success' ? 'vinta' : 'non vinta')) + '</small>' : '';
+  const chance = next && odds && Number.isFinite(odds.chance) ? ' · probabilità stimata <b>' + Math.round(odds.chance * 100) + '%</b>' : '';
+  return '<section class="parliament-role-panel"><div><span class="section-kicker">INCARICHI PARLAMENTARI</span><h3>' + esc(standing.committeeRole?.title || 'Nessun incarico interno') + '</h3><p>Sostegno nel gruppo <b>' + whole(standing.partySupport) + ' / 100</b>' + (next ? ' · Prossimo obiettivo: <b>' + esc(next.title) + '</b> (soglia ' + whole(standing.competitionStrength ?? next.threshold) + ')' + chance : '') + '</p>' + last + (roles ? '<div class="parliament-role-list">' + roles + '</div>' : '') + '</div><div class="parliament-role-action"><button class="secondary-button" data-parliament-action="contest-role" ' + (blocker ? 'disabled' : '') + '>Candidati all’incarico</button><small>' + esc(blocker || `Costo ${CONTEST_COST} di capitale politico. Superare la soglia rende la nomina probabile, non certa: contano influenza, reputazione, esperienza, sostegno nel gruppo, anzianità e risultati. Può finire anche con un incarico minore, un rinvio o un altro nome.`) + '</small><button class="text-link" data-section-tab="carriera" data-section-tab-value="progressione">Fattori e probabilità</button></div></section>';
 }
 function timeline(parliament) {
   const entries = [...(parliament.history ?? [])].slice(-6).reverse();
@@ -79,12 +83,12 @@ function initials(player) {
   return player ? esc((player.firstName?.[0] ?? '') + (player.lastName?.[0] ?? '')) || 'P' : 'P';
 }
 
-function renderParliament(parliament, party, politicians, player, currentDate) {
+function renderParliament(parliament, party, politicians, player, currentDate, odds = null) {
   const seat = parliament.player;
   const currentGroup = seat?.groupId ? groupsFor(parliament).find(group => group.groupId === seat.groupId) : null;
   const roleText = seat ? CHAMBERS[seat.chamber].label : 'Nessun incarico parlamentare nella carriera';
   const majorityLabel = seat?.groupId && ['active', 'crisis'].includes(parliament.government?.status) ? (playerInMajority(parliament) ? 'Il tuo gruppo sostiene il governo' : 'Il tuo gruppo è all’opposizione') : '';
-  return '<div class="parliament-mode"><section class="parliament-mode-hero"><div><span class="section-kicker">POLITICA IN AULA</span><h2>Due Camere, una partita.</h2><p>Composizione reale usata come riferimento; maggioranze, posizione del giocatore e conseguenze appartengono al salvataggio simulato.</p></div><div class="parliament-player"><span class="player-avatar">' + initials(player) + '</span><span><small>' + esc(roleText) + '</small><strong>' + esc(seat ? currentGroup?.officialName || 'Gruppo da scegliere' : 'Osservatore') + '</strong></span></div></section>' + playerParty(party) + (seat && !seat.groupId ? playerGroupSelector(parliament) : '') + (seat ? '<section class="parliament-status-line">' + dataMarker(DATA_SOURCES.SIMULATION, 'RUOLO DI GIOCO') + '<span>' + esc(seat.position) + '</span><span>Capitale politico <b>' + whole(parliament.resources?.politicalCapital) + ' / 100</b></span>' + (majorityLabel ? '<span>' + esc(majorityLabel) + '</span>' : '') + '<span>Approvazione e seggi non sono dati ufficiali.</span></section>' : '') + rolePanel(parliament, currentDate) + (seat?.groupId ? playerGroupSelector(parliament) : '') + '<div class="parliament-chamber-grid">' + chamberPanel(parliament, 'camera', politicians) + chamberPanel(parliament, 'senato', politicians) + '</div>' + accessNote(parliament) + timeline(parliament) + '</div>';
+  return '<div class="parliament-mode"><section class="parliament-mode-hero"><div><span class="section-kicker">POLITICA IN AULA</span><h2>Due Camere, una partita.</h2><p>Composizione reale usata come riferimento; maggioranze, posizione del giocatore e conseguenze appartengono al salvataggio simulato.</p></div><div class="parliament-player"><span class="player-avatar">' + initials(player) + '</span><span><small>' + esc(roleText) + '</small><strong>' + esc(seat ? currentGroup?.officialName || 'Gruppo da scegliere' : 'Osservatore') + '</strong></span></div></section>' + playerParty(party) + (seat && !seat.groupId ? playerGroupSelector(parliament) : '') + (seat ? '<section class="parliament-status-line">' + dataMarker(DATA_SOURCES.SIMULATION, 'RUOLO DI GIOCO') + '<span>' + esc(seat.position) + '</span><span>Capitale politico <b>' + whole(parliament.resources?.politicalCapital) + ' / 100</b></span>' + (majorityLabel ? '<span>' + esc(majorityLabel) + '</span>' : '') + '<span>Approvazione e seggi non sono dati ufficiali.</span></section>' : '') + rolePanel(parliament, currentDate, odds) + (seat?.groupId ? playerGroupSelector(parliament) : '') + '<div class="parliament-chamber-grid">' + chamberPanel(parliament, 'camera', politicians) + chamberPanel(parliament, 'senato', politicians) + '</div>' + accessNote(parliament) + timeline(parliament) + '</div>';
 }
 
 function groupChecks(parliament, selectedIds = [], politicians = []) {
@@ -220,5 +224,6 @@ export function renderParliamentPage(page, state, options = {}) {
   }
   if (page === 'leggi') return days + lawsView(parliament, { society: state.society, realLaws: options.realLaws, state });
   const player = options.player ?? state.dataset?.politicians?.find(item => item.id === state.career?.playerId) ?? null;
-  return days + renderParliament(parliament, options.party, options.politicians ?? [], player, state.clock?.currentDate ?? parliament.createdAt);
+  const odds = state.game ? careerOverview(state)?.tracks.find(track => track.id === 'parlamento')?.odds ?? null : null;
+  return days + renderParliament(parliament, options.party, options.politicians ?? [], player, state.clock?.currentDate ?? parliament.createdAt, odds);
 }

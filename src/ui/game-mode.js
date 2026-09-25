@@ -1,24 +1,24 @@
-import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyContestScore, situation, upcomingElections } from '../core/career-engine.js?v=20260925-4';
-import { playerRoles } from '../core/roles.js?v=20260925-4';
-import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20260925-4';
-import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20260925-4';
-import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260925-4';
-import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20260925-4';
-import { careerLevelLabel } from '../data/regions.js?v=20260925-4';
-import { formatDate } from '../core/time.js?v=20260925-4';
-import { renderBarometerPanel } from './polls-mode.js?v=20260925-4';
-import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20260925-4';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260925-4';
-import { societyMood } from '../core/society-engine.js?v=20260925-4';
-import { financeOutlook } from '../core/finance-engine.js?v=20260925-4';
-import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20260925-4';
-import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20260925-4';
-import { renderFinanceCard } from './finance-mode.js?v=20260925-4';
-import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20260925-4';
-import { stateBadge } from './charts.js?v=20260925-4';
-import { illustration } from './illustrations.js?v=20260925-4';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260925-4';
-import { regionPriorities } from '../core/society-engine.js?v=20260925-4';
+import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20260925-5';
+import { playerRoles } from '../core/roles.js?v=20260925-5';
+import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20260925-5';
+import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20260925-5';
+import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260925-5';
+import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20260925-5';
+import { careerLevelLabel } from '../data/regions.js?v=20260925-5';
+import { formatDate } from '../core/time.js?v=20260925-5';
+import { renderBarometerPanel } from './polls-mode.js?v=20260925-5';
+import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20260925-5';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260925-5';
+import { societyMood } from '../core/society-engine.js?v=20260925-5';
+import { financeOutlook } from '../core/finance-engine.js?v=20260925-5';
+import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20260925-5';
+import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20260925-5';
+import { renderFinanceCard } from './finance-mode.js?v=20260925-5';
+import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20260925-5';
+import { stateBadge } from './charts.js?v=20260925-5';
+import { illustration } from './illustrations.js?v=20260925-5';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260925-5';
+import { regionPriorities } from '../core/society-engine.js?v=20260925-5';
 
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -388,6 +388,13 @@ export function renderHeadquarters(state, options = {}) {
     <footer class="home-footer"><span>POLITICANDO 2026</span><span>Persone e dati istituzionali reali restano in sola lettura (dati verificati); carriera, cittadini, territori, economia, media e relazioni sono simulati.</span></footer></div>`;
 }
 
+// Pieces of the headquarters reused by the redesigned sections (Carriera, Partito, Agenda).
+export function renderPlanner(state) { return planner(state, gameContext(state)); }
+export function renderObjectivesPanel(state) { return objectivesPanel(gameContext(state)); }
+export function renderSecretaryDesk(state) { return secretaryPanel(state); }
+export function renderRelationsPanel(state) { return relationsPanel(state); }
+export function renderConsequencesPanel(state) { return consequencesPanel(state); }
+
 export function renderPartyPosition(state, options = {}) {
   const game = state.game;
   const gc = gameContext(state);
@@ -398,7 +405,7 @@ export function renderPartyPosition(state, options = {}) {
   const party = game.party;
   const leadership = game.relations.find(item => item.id === 'leadership');
   const next = nextPartyRank(game);
-  const score = party.affiliation === 'member' ? partyContestScore(gc.ctx) : null;
+  const odds = party.affiliation === 'member' ? partyAdvancementOdds(gc.ctx) : null;
   const cooldown = party.lastRankContestWeek && game.week.index - party.lastRankContestWeek < 3 ? `Nuovo tentativo dalla settimana ${party.lastRankContestWeek + 3}.` : '';
   const blocker = !next ? '' : cooldown || costProblem(game, { ap: 2, capital: 4 });
   const ladder = party.affiliation === 'founder'
@@ -409,13 +416,13 @@ export function renderPartyPosition(state, options = {}) {
   return `<section class="party-position"><div class="home-section-heading"><div><span class="section-kicker">POSIZIONE NEL PARTITO · SIMULAZIONE</span><h2>${esc(party.rankTitle)}</h2></div><button class="text-link" data-party-action="leave">Lascia il partito</button></div>
     <div class="party-metrics"><div><small>SOSTEGNO INTERNO</small><strong>${num(party.support, 0)}</strong>${meter(party.support, party.support < 25 ? 'danger' : '')}</div>${leadership ? `<div><small>RAPPORTO CON LA LEADERSHIP</small><strong>${num(leadership.value, 0)}</strong>${meter(leadership.value)}</div>` : ''}<div><small>AREA DI RIFERIMENTO</small><strong class="small">${esc(party.currents.find(item => item.id === party.alignedCurrentId)?.label ?? 'Nessuna')}</strong></div></div>
     ${ladder}
-    ${next?.threshold ? `<div class="party-contest"><div><strong>Prossimo incarico: ${esc(next.title)}</strong><small>Il tuo punteggio interno è ${score} su una soglia di ${next.threshold}: contano sostegno, rapporto con la leadership, influenza e l’area che guida il partito.</small></div><button class="primary-button" data-party-action="contest" ${blocker ? 'disabled' : ''}>Candidati · 2 giorni · 4 cap.</button>${blocker ? `<em>${esc(blocker)}</em>` : ''}</div>` : ''}
+    ${next?.threshold ? `<div class="party-contest"><div><strong>Prossimo incarico: ${esc(next.title)} · probabilità stimata ${Math.round((odds?.chance ?? 0) * 100)}%</strong><small>Punteggio ${num(odds?.score ?? 0, 0)} su soglia ${next.threshold}: superarla rende la nomina probabile, non certa. Contano sostegno, leadership, la tua area, influenza, risultati, territorio e salute del partito; l’esito può essere anche un incarico minore, un rinvio o una sconfitta interna.</small></div><button class="primary-button" data-party-action="contest" ${blocker ? 'disabled' : ''}>Candidati · 2 giorni · 4 cap.</button>${blocker ? `<em>${esc(blocker)}</em>` : ''}</div>` : ''}
     ${party.affiliation === 'member' && next && !next.threshold ? '<div class="hq-note">Sei in direzione nazionale: la segreteria si conquista solo al congresso, candidandoti quando viene convocato.</div>' : ''}
     ${party.support < 25 && party.affiliation === 'member' ? '<div class="hq-note danger">Il sostegno interno è molto basso: sotto quota 20 il partito può avviare un procedimento di espulsione.</div>' : ''}
     <div class="home-section-heading"><div><span class="section-kicker">CORRENTI INTERNE · SIMULATE</span><h3>Equilibri del partito</h3></div></div><div class="party-currents">${currents}</div>
     ${log ? `<div class="hq-log-list">${log}</div>` : ''}
     <p class="parliament-note">Correnti, leadership e incarichi interni sono ruoli di gioco: non rappresentano persone o organi reali del partito.</p></section>
-    ${playerRoles(state).secretary ? secretaryPanel(state) : ''}`;
+    ${options.withSecretary !== false && playerRoles(state).secretary ? secretaryPanel(state) : ''}`;
 }
 
 // The secretary's desk: every control calls a decision the store checks again, with costs and cooldowns.

@@ -128,13 +128,26 @@ npm run check:campaign
 npm run check:elections
 ```
 
+## Carriera, Partito e Agenda (dal 25/09/2026)
+
+Tre sezioni con un’identità propria, ognuna con intestazione, indicatori e schede interne ricordate tra una schermata e l’altra (anche dopo un ricaricamento):
+
+- **Carriera** (`src/ui/career-page.js`, `src/core/career-overview.js`) — *il percorso e la progressione*. Quattro percorsi che avanzano a velocità diverse: istituzioni elette (consigliere, assessore, sindaco, consigliere e presidente di Regione, parlamentare, europarlamentare), partito (da Iscritto a Vicesegretario; la segreteria solo al congresso), Parlamento (componente del gruppo, responsabile, vicepresidente e presidente di commissione) e governo (sottosegretario, ministro, Presidente del Consiglio). Per ognuno: posizione attuale, prossimo passo, requisiti, probabilità e ciò che lo blocca. Schede: Percorso, Progressione (fattori, pesi, momento politico, esiti possibili, storico dei tentativi), Incarichi e poteri, Cronologia, Obiettivi.
+- **Progressione non automatica** (`src/core/progression-engine.js`): ogni promozione (partito, commissioni, proposta della segreteria) pesa consenso, reputazione, esperienza, influenza, risultati elettorali recenti, rapporti con la leadership, forza della propria area, salute del partito, territorio, capitale politico e momento (congresso vicino, partito diviso, scontri aperti). Superare la soglia rende la nomina probabile (mai oltre l’86%), non certa; lo stesso tentativo può finire con la promozione, un incarico minore, un rinvio, una sconfitta interna o — se molto sotto la soglia e con un incarico da perdere — una retrocessione. Ogni tentativo resta nello storico con probabilità ed esito; la richiesta di un ministero mostra la sua probabilità e può finire con un posto da sottosegretario.
+- **Partito** (`src/ui/party-page.js`) — *organizzazione, rapporti interni, ruoli e consenso*: identità (dati reali verificati in sola lettura), la tua posizione con probabilità del prossimo incarico, equilibri tra le aree, il partito nei sondaggi, allerte (sostegno, congresso, conflitti, tesoreria); schede Ruoli e correnti, Organizzazione (iscritti, organi, sezioni, conflitti), Segreteria (solo per chi guida il partito) e Storico (nomine, sfide, congressi, partiti lasciati).
+- **Agenda** (`src/ui/agenda-page.js`, `src/core/agenda-engine.js`) — *il calendario delle attività e delle decisioni imminenti*: la settimana (giorni, decisioni, prossimi 14 giorni, bilancio della settimana chiusa), un calendario con griglia mensile e lista di tutti gli impegni datati (candidature, voto, ballottaggio, decisione sulla candidatura, selezione dei candidati, congresso, promesse da verificare, conseguenze in arrivo, decreti da convertire, richieste degli alleati, investimenti in scadenza, decisioni in sospeso) con filtri ricordati, le attività della settimana e il registro.
+
+```sh
+npm run check:sections
+```
+
 ## Gameplay: la carriera settimana per settimana
 
 La Home è il quartier generale del politico: statistiche con variazione settimanale, giorni disponibili, fondi, capitale politico, preparazione elettorale, decisioni in agenda, attività, traguardi, calendario elettorale, posizione in Parlamento e nel partito, relazioni.
 
 - **Tempo**: ogni settimana ha 6 giorni di lavoro. Attività (territorio, media, partito, Parlamento, relazioni, risorse, preparazione elettorale) e azioni parlamentari consumano giorni, fondi o capitale politico e hanno rischi e conseguenze persistenti. “Chiudi la settimana” registra entrate e bilancio, applica le scelte di default alle decisioni lasciate aperte e genera nuovi appuntamenti ed eventi.
 - **Eventi**: appuntamenti e eventi contestuali (proteste, scandali simulati, rivalità, alleanze, congressi, crisi di maggioranza, emergenze) offrono scelte multiple con effetti ed esiti incerti. Situazioni critiche generano eventi obbligati: procedimento di espulsione, richieste di dimissioni, inchieste.
-- **Partito**: gradi interni da Iscritto a Vicesegretario, sostegno interno, rapporto con la leadership e tre correnti simulate con peso e rapporti; congressi, conflitti, espulsione, uscita e adesione. Il partito reale resta un riferimento in sola lettura.
+- **Partito**: gradi interni da Iscritto a Vicesegretario (conquistati con una probabilità, mai in automatico), sostegno interno, rapporto con la leadership e tre correnti simulate con peso e rapporti; congressi, conflitti, espulsione, uscita e adesione. Il partito reale resta un riferimento in sola lettura.
 - **Relazioni**: leadership, rivale, associazioni, redazioni, categorie produttive, sindacati e gruppi parlamentari pesano su candidature, incarichi, trattative (un gruppo con rapporti tesi rifiuta di trattare) e votazioni.
 - **Elezioni**: calendario simulato con finestre di candidatura (cicli accelerati rispetto ai mandati reali). Preparazione, fondi, sostegno interno e rapporti modificano la partenza della campagna; se non ti ricandidi il mandato si chiude; un governo caduto senza alternativa porta a politiche anticipate.
 - **Governo**: stabilità settimanale legata ai margini della maggioranza, crisi spontanee, rinegoziazioni.
@@ -254,6 +267,7 @@ All’apertura vengono caricati manifest e partiti/movimenti. Politici, gruppi e
 npm run check:ui          # menu, impostazioni, nuova partita, pagine, poteri, archivio, salvataggi, loghi, tooltip, identità del partito
 npm run check:first-run   # primo avvio: benvenuto e account prima della prima carriera, tour saltabile una volta, guida, conferme del gioco
 npm run check:elections   # esiti elettorali vari e non automatici, ballottaggio, soglie, preferenze, conseguenze, varietà delle campagne, strategie
+npm run check:sections    # progressione non automatica (probabilità ed esiti), percorsi di carriera, agenda datata, schede di Carriera, Partito e Agenda
 npm run check:government  # 34 temi, bilancio, territori, cittadini, sicurezza, Presidente del Consiglio, difficoltà
 npm run check:events      # eventi procedurali: condizioni, cooldown, rarità, esclusività, varianti, catene
 npm run check:career      # carriera pluriennale end-to-end, salvataggi e migrazione

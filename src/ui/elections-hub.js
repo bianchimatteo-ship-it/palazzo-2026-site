@@ -1,16 +1,16 @@
 // The electoral centre: next vote, calendar, context, candidacy, campaign, polls and rivals, results and history.
-import { upcomingElections } from '../core/career-engine.js?v=20260925-4';
-import { campaignSummary, strategyOf } from '../core/campaign-engine.js?v=20260925-4';
-import { CAMPAIGN_PHASES, ELECTION_MODELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20260925-4';
-import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20260925-4';
-import { formatDate } from '../core/time.js?v=20260925-4';
-import { societyMood } from '../core/society-engine.js?v=20260925-4';
-import { renderCampaignPage } from './campaign-mode.js?v=20260925-4';
-import { politicalPhase } from './game-mode.js?v=20260925-4';
-import { lineChart, SERIES } from './charts.js?v=20260925-4';
-import { glyph } from './visuals.js?v=20260925-4';
-import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, sectionTabs, signed, table, weeksLabel } from './sections-kit.js?v=20260925-4';
-import { renderElectionReport } from './election-report.js?v=20260925-4';
+import { upcomingElections } from '../core/career-engine.js?v=20260925-5';
+import { campaignSummary, strategyOf } from '../core/campaign-engine.js?v=20260925-5';
+import { CAMPAIGN_PHASES, ELECTION_MODELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20260925-5';
+import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20260925-5';
+import { formatDate } from '../core/time.js?v=20260925-5';
+import { societyMood } from '../core/society-engine.js?v=20260925-5';
+import { renderCampaignPage } from './campaign-mode.js?v=20260925-5';
+import { politicalPhase } from './game-mode.js?v=20260925-5';
+import { lineChart, SERIES } from './charts.js?v=20260925-5';
+import { glyph } from './visuals.js?v=20260925-5';
+import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, sectionTabs, signed, table, weeksLabel } from './sections-kit.js?v=20260925-5';
+import { renderElectionReport } from './election-report.js?v=20260925-5';
 export { renderElectionReport };
 
 export const ELECTION_TABS = Object.freeze([['panoramica', 'Panoramica'], ['candidatura', 'Candidatura'], ['campagna', 'Campagna'], ['avversari', 'Sondaggi e avversari'], ['risultati', 'Risultati'], ['storico', 'Storico']]);
