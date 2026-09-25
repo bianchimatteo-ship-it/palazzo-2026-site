@@ -1,7 +1,7 @@
-import { advanceDays } from './time.js?v=20260925-2';
-import { CAMPAIGN_ACTIVITIES, DEBATE_TOPICS, ELECTION_MODELS, EUROPEAN_THRESHOLD } from '../data/simulation/campaign-rules.js?v=20260925-2';
-import { runFinalElection, runFirstRound } from './election-engine.js?v=20260925-2';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260925-2';
+import { advanceDays } from './time.js?v=20260925-3';
+import { CAMPAIGN_ACTIVITIES, DEBATE_TOPICS, ELECTION_MODELS, EUROPEAN_THRESHOLD } from '../data/simulation/campaign-rules.js?v=20260925-3';
+import { runFinalElection, runFirstRound } from './election-engine.js?v=20260925-3';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260925-3';
 
 const SOURCE = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));

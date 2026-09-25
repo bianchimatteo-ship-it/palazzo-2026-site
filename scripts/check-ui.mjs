@@ -15,7 +15,8 @@ const windowListeners = {};
 globalThis.addEventListener = (type, fn) => { (windowListeners[type] ??= []).push(fn); };
 globalThis.document = { baseURI: 'http://localhost/', activeElement: null, documentElement: html, createElement: () => ({ style: {}, dataset: {}, hidden: false, children: [], replaceChildren(...items) { this.children = items; }, append() {} }), createTextNode: text => text, body: { append: element => bodyChildren.push(element) } };
 globalThis.indexedDB = undefined;
-globalThis.confirm = () => true;
+// Sensitive actions use the game's own confirmation dialog, never the browser's confirm().
+globalThis.confirm = () => { throw new Error('Il gioco non deve usare il confirm() del browser.'); };
 // Real JSON files served like the static server would.
 const serveFile = async url => {
   const body = await readFile(fileURLToPath(new URL(url)), 'utf8');
@@ -71,7 +72,12 @@ assert.equal(html.dataset.motion, 'reduced');
 assert.equal(html.dataset.contrast, 'high');
 assert.equal(html.style.props['--ui-scale'], '1.12');
 assert.equal(loadSettings().textSize, '112', 'Le impostazioni restano salvate');
+menuHtml = await click({ menuAction: 'reset-settings' });
+assert.ok(menuHtml.includes('confirm-dialog') && menuHtml.includes('Ripristinare le impostazioni?') && menuHtml.includes('data-confirm="cancel"'), 'Il ripristino delle impostazioni chiede conferma con la finestra del gioco.');
+assert.ok(!(await click({ confirm: 'cancel' })).includes('confirm-dialog'), 'Annulla chiude la conferma.');
+assert.equal(loadSettings().motion, 'reduced', 'Annullando non cambia nulla.');
 await click({ menuAction: 'reset-settings' });
+await click({ confirm: 'ok' });
 assert.equal(loadSettings().motion, 'full');
 assert.ok((await click({ menu: 'carica' })).includes('Nessun salvataggio negli slot'));
 // Account: sign in or sign up from the menu; the career is then kept online too.
@@ -81,6 +87,9 @@ assert.ok(menuHtml.includes('non lascia mai il tuo browser in chiaro'), 'Si spie
 
 // ---------- 2. new game from the menu: real parties only ----------
 let page = await click({ menu: 'nuova' });
+assert.ok(page.includes('Prima di iniziare: il tuo account') && !page.includes('career-wizard'), 'Senza account, Nuova partita porta prima alla creazione o all’accesso dell’account.');
+// Here the account service is not reachable: the game can start in this browser (the fallback of the account view).
+page = await click({ menuAction: 'start-local' });
 assert.ok(page.includes('career-wizard'), 'Nuova partita apre il Career Wizard');
 assert.ok(!page.includes('Partito di esempio'), 'Il segnaposto non è tra i partiti selezionabili');
 const groups = realData.realDatabase.parliamentaryGroups;
@@ -209,14 +218,36 @@ await goto('panoramica');
 let week = store.getState().game.week.index;
 page = await click({ action: 'advance' });
 assert.ok(store.getState().game.week.index > week, 'Chiudi settimana fa avanzare il tempo');
+assert.ok(!page.includes('confirm-dialog'), 'Una sola settimana non chiede conferma.');
 assert.ok(page.includes('report-modal') && page.includes('Com’è andata la settimana'), 'Resoconto di fine settimana');
 assert.ok(!(await click({ reportClose: '' })).includes('report-modal'));
 await click({ settingKey: 'weeksPerTurn', settingValue: '2' });
 for (const item of store.getState().game.inbox) item.kind = 'normale';
 week = store.getState().game.week.index;
-store.advanceTurn();
+page = await click({ action: 'advance' });
+assert.ok(page.includes('confirm-dialog') && page.includes('Avanzare di 2 settimane?') && page.includes('Non chiedere più in questa sessione'), 'Avanzare di più settimane in un’azione chiede conferma.');
+await click({ confirm: 'cancel' });
+assert.equal(store.getState().game.week.index, week, 'Annullando il tempo non avanza.');
+await click({ action: 'advance' });
+for (const fn of windowListeners.keydown ?? []) fn({ key: 'Escape' });
+await tick();
+assert.ok(!root.innerHTML.includes('confirm-dialog') && store.getState().game.week.index === week, 'Esc chiude la conferma senza avanzare.');
+await click({ action: 'advance' });
+for (const fn of listeners.change) await fn({ target: { matches: selector => selector === '[data-confirm-option]', checked: true } });
+await click({ confirm: 'ok' });
 assert.ok(store.getState().game.week.index - week >= 1 && store.getState().game.week.index - week <= 2, 'La velocità della simulazione decide le settimane per turno');
+if (root.innerHTML.includes('report-modal')) await click({ reportClose: '' });
+for (const item of store.getState().game.inbox) item.kind = 'normale';
+week = store.getState().game.week.index;
+page = await click({ action: 'advance' });
+assert.ok(!page.includes('confirm-dialog') && store.getState().game.week.index > week, '“Non chiedere più in questa sessione” vale per il resto della sessione.');
+if (root.innerHTML.includes('report-modal')) await click({ reportClose: '' });
 await click({ settingKey: 'weeksPerTurn', settingValue: '1' });
+week = store.getState().game.week.index;
+page = await click({ gameFastforward: 'comunale', fastforwardLabel: 'Elezioni comunali', fastforwardDate: '2027-05-02', fastforwardWeeks: '30' });
+assert.ok(page.includes('Avanzare fino alle candidature?') && page.includes('circa 30 settimane') && page.includes('Elezioni comunali'), 'Il salto fino alle candidature chiede conferma e dice quanto tempo passa.');
+await click({ confirm: 'cancel' });
+assert.equal(store.getState().game.week.index, week, 'Annullando il salto il tempo non avanza.');
 const career = await goto('carriera');
 assert.ok(career.includes('La tua carriera, tappa per tappa') && career.includes('track-record') && career.includes('Inizia la carriera'), 'Cronologia della carriera');
 assert.ok((await click({ timelineFilter: 'partito' })).includes('data-timeline-filter="partito" class="active"'));
@@ -254,7 +285,8 @@ assert.equal(slots.length, 1, 'Salvataggio nello slot');
 const savedWeek = store.getState().game.week.index;
 const exported = store.exportSave();
 store.advance(7);
-await click({ slotLoad: slots[0].id });
+page = await click({ slotLoad: slots[0].id });
+if (page.includes('confirm-dialog')) { assert.ok(page.includes('Caricare questo salvataggio?'), 'Con modifiche non salvate il caricamento chiede conferma.'); await click({ confirm: 'ok' }); }
 assert.equal(store.getState().game.week.index, savedWeek, 'Lo slot ripristina la partita');
 assert.ok(!root.innerHTML.includes('main-menu'), 'Caricare chiude il menu');
 store.loadGame(exported, 'Partita importata');
@@ -266,6 +298,11 @@ const member = { ...founder, firstName: 'Luca', lastName: 'Bassi', partyMode: 'e
 store.createCareer(member, realData.realDatabase.parties, groups);
 await click({ wizardAction: 'cancel' });
 assert.ok(store.listSlots().some(slot => slot.player === 'Marta Neri'), 'La partita precedente resta in uno slot');
+const keptSlot = store.listSlots()[0];
+page = await click({ slotDelete: keptSlot.id });
+assert.ok(page.includes('Eliminare questo salvataggio?') && page.includes('tone-danger') && page.includes('Elimina salvataggio'), 'Eliminare un salvataggio chiede conferma.');
+await click({ confirm: 'cancel' });
+assert.ok(store.listSlots().some(slot => slot.id === keptSlot.id), 'Annullando il salvataggio resta.');
 const roles = playerRoles(store.getState());
 assert.ok(!roles.secretary && roles.powers.find(power => power.label.startsWith('Linea politica')).enabled === false, 'Un iscritto non ha i poteri del segretario');
 assert.throws(() => store.setPartyLine('opposizione'), /segretario/);

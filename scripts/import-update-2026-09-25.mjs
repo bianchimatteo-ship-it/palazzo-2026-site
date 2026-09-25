@@ -84,13 +84,18 @@ for (const [key, name] of Object.entries(names)) await save(name, files[key]);
 const aggregate = await read('database.json');
 for (const key of Object.keys(names)) if (key in aggregate) aggregate[key] = files[key];
 aggregate.manifest.collections = { ...aggregate.manifest.collections, ...Object.fromEntries(Object.keys(names).filter(key => key in aggregate.manifest.collections).map(key => [key, files[key].length])) };
-await save('database.json', aggregate);
 const manifest = await read('manifest.json');
 manifest.politiciansInOffice = politicians.filter(item => !item.termEnd).length;
 manifest.collections = { ...manifest.collections, realPolls: 1, ...Object.fromEntries(Object.keys(names).filter(key => key in manifest.collections).map(key => [key, files[key].length])) };
 const { supermedia20260917, ...sourceUrls } = manifest.sourceUrls ?? {};
 manifest.sourceUrls = { ...sourceUrls, supermedia20260924: AGI };
 manifest.updates = [...(manifest.updates ?? []).filter(item => item.date !== VERIFIED_AT), { date: VERIFIED_AT, notes: ['Sondaggio reale iniziale: Supermedia AGI/YouTrend del 24/09/2026', 'Iscrizioni documentate: Tajani, Deborah Bergamini, Benigni, Bonetti, Furlan, Barbara Floridia, Aurora Floridia, Lombardo', 'Fine mandato di Alberto Bagnai (15/09/2026)', 'Il partito attuale di un parlamentare non si deduce dalla lista d’elezione né dal gruppo'] }];
-manifest.warnings = [...new Set([...(manifest.warnings ?? []), 'Il partito attuale di un parlamentare viene solo da un collegamento dell’amministratore o da un’iscrizione documentata: la lista d’elezione 2022 è una relazione elettorale e il gruppo parlamentare non è un partito.'])];
+// The note on the opening poll names the poll in use (the one of 17/09 is replaced).
+const POLL_NOTE = 'Il sondaggio iniziale è la Supermedia YouTrend/Agi del 24/09/2026 (dato reale: solo le forze presenti nella fonte, “Altri” come nella fonte); dalla prima settimana di gioco i sondaggi sono simulati.';
+manifest.warnings = [...new Set([...(manifest.warnings ?? []).filter(item => !item.startsWith('Il sondaggio iniziale è la Supermedia')), POLL_NOTE, 'Il partito attuale di un parlamentare viene solo da un collegamento dell’amministratore o da un’iscrizione documentata: la lista d’elezione 2022 è una relazione elettorale e il gruppo parlamentare non è un partito.'])];
 await save('manifest.json', manifest);
+// The aggregate keeps its own manifest in step: same sources and notes.
+aggregate.manifest.sourceUrls = { ...Object.fromEntries(Object.entries(aggregate.manifest.sourceUrls ?? {}).filter(([key]) => key !== 'supermedia20260917')), supermedia20260924: AGI };
+aggregate.manifest.warnings = manifest.warnings;
+await save('database.json', aggregate);
 console.log(`Aggiornamento del 25/09/2026: sondaggio ${POLL.label} del ${POLL.publishedAt} (${POLL.results.length} forze, Altri ${POLL.others}%), ${MEMBERSHIPS.length} iscrizioni documentate (${memberships.length} in totale), Bagnai cessato il ${END} (Lega Camera: ${lega.memberCount} componenti).`);

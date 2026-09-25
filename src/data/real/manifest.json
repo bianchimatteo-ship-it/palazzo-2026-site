@@ -75,8 +75,8 @@
     "Sono importati i mandati di deputato/senatore e i presidenti di gruppo restituiti dal dataset ufficiale del Senato; altre cariche sono lasciate non assegnate finché non vengono importate da fonti specifiche.",
     "La collocazione politica (estrema sinistra … estrema destra) è la classificazione sintetica del documento di specifica del 24/09/2026; per liste e coalizioni indica l’aggregazione e non sostituisce le singole componenti.",
     "Le liste con più partiti o coalizioni restano relazioni elettorali: non diventano iscrizione a un singolo partito. Le iscrizioni individuali documentate derivano solo da incarichi di partito verificati.",
-    "Il sondaggio iniziale è la Supermedia YouTrend/Agi del 17/09/2026 (dato reale); dalla prima settimana di gioco i sondaggi sono simulati.",
-    "Il partito attuale di un parlamentare viene solo da un collegamento dell’amministratore o da un’iscrizione documentata: la lista d’elezione 2022 è una relazione elettorale e il gruppo parlamentare non è un partito."
+    "Il partito attuale di un parlamentare viene solo da un collegamento dell’amministratore o da un’iscrizione documentata: la lista d’elezione 2022 è una relazione elettorale e il gruppo parlamentare non è un partito.",
+    "Il sondaggio iniziale è la Supermedia YouTrend/Agi del 24/09/2026 (dato reale: solo le forze presenti nella fonte, “Altri” come nella fonte); dalla prima settimana di gioco i sondaggi sono simulati."
   ],
   "twoPerThousandTotals": {
     "declarationYear": 2025,

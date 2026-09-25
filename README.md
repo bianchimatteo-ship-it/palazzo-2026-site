@@ -14,6 +14,10 @@ npm start
 
 Apri `http://127.0.0.1:4173`. Il gioco si apre sul **menu principale**: Nuova partita, Carica partita (fino a 5 salvataggi, esportazione e importazione su file), Come giocare, Impostazioni e — se esiste una partita — Continua con la data dell’ultimo salvataggio. Il pulsante con le tre linee nella barra superiore riporta al menu. Il pulsante “Chiudi la settimana” fa avanzare il tempo e al termine mostra il resoconto con le cause di ogni variazione.
 
+**Primo avvio e account.** Alla prima apertura senza account (sul sito pubblicato) il menu mostra un benvenuto che spiega perché serve l’account, come sincronizza le carriere, cosa succede ai salvataggi online e che passando da un dispositivo all’altro non si perde nulla; “Nuova partita” porta prima a creare l’account o ad accedere (se il servizio account non risponde si può iniziare comunque nel browser). Dopo la registrazione un breve tour di cinque passaggi, saltabile e mostrato una sola volta (`politicando.onboarding.v1` nel browser), porta a “Inizia nuova carriera”. Chi è già connesso non vede mai il benvenuto; il sistema account non è cambiato. **Come giocare** ha 16 sezioni brevi con indice ed esempi concreti.
+
+**Conferme.** Le azioni irreversibili o che fanno avanzare molto la partita chiedono conferma con la finestra del gioco (Annulla/Conferma, Esc per annullare), mai con il `confirm()` del browser: eliminare un salvataggio, tutti i salvataggi o una copia online; ripristinare impostazioni, campi o record; importare una partita o sostituire l’archivio amministrativo; caricare una partita con modifiche non salvate; iniziare una nuova carriera quando ce n’è una in corso; avanzare di più di una settimana in un’azione o fino alle candidature; lasciare il partito, espellere i dissidenti, ritirare una proposta o il sostegno al governo; nascondere, eliminare o svuotare nell’area amministrativa. Una settimana normale non chiede conferma.
+
 **Impostazioni** (valgono per tutte le partite, chiave `politicando.settings.v1`): effetti sonori e volume (suoni sintetizzati, nessun file audio), animazioni complete/ridotte/disattivate, messaggi a comparsa e loro durata, resoconto settimanale, salvataggio automatico (dopo ogni azione, a fine settimana o solo manuale), velocità della simulazione (1, 2 o 4 settimane per turno, con arresto quando serve una decisione), dimensione del testo, contrasto alto, densità dell’interfaccia, ripristino, esportazione/importazione ed eliminazione dei salvataggi.
 
 **Stile**: tema scuro da videogioco in tutte le schermate, colore del partito del giocatore come accento, badge di stato (crescita, calo, rischio, crisi, successo), grafici con la palette categoriale validata per lo sfondo scuro. Titoli in Manrope, sottotitoli in Newsreader.
@@ -236,6 +240,7 @@ All’apertura vengono caricati manifest e partiti/movimenti. Politici, gruppi e
 
 ```sh
 npm run check:ui          # menu, impostazioni, nuova partita, pagine, poteri, archivio, salvataggi, loghi, tooltip, identità del partito
+npm run check:first-run   # primo avvio: benvenuto e account prima della prima carriera, tour saltabile una volta, guida, conferme del gioco
 npm run check:government  # 34 temi, bilancio, territori, cittadini, sicurezza, Presidente del Consiglio, difficoltà
 npm run check:events      # eventi procedurali: condizioni, cooldown, rarità, esclusività, varianti, catene
 npm run check:career      # carriera pluriennale end-to-end, salvataggi e migrazione

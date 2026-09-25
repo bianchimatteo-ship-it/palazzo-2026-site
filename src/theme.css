@@ -562,3 +562,56 @@ select option, select optgroup { background: #141b18; color: #e8ece9; font-size:
 .admin-affiliation .text-link { justify-self:start; font-size:12px; }
 .admin-warning { color:#f0b35a; }
 .catalog-row.is-former { opacity:.75; }
+
+/* ---------- confirmations: irreversible or far-reaching actions ---------- */
+.modal-backdrop.confirm-backdrop { z-index: 80 !important; }
+.confirm-dialog { width: min(520px, 100%); border-top: 3px solid var(--accent); }
+.confirm-dialog.tone-danger { border-top-color: var(--critical); }
+.confirm-dialog .section-kicker { display: inline-flex; align-items: center; gap: 7px; font: 800 11px/1 Manrope, sans-serif; }
+.confirm-dialog.tone-danger .section-kicker { color: var(--critical-ink); }
+.confirm-dialog h2 { margin: 10px 0 8px; font: 800 22px/1.2 Manrope, sans-serif; }
+.confirm-dialog > p { margin: 0; color: var(--ink-2); font-size: 14px; line-height: 1.55; }
+.confirm-dialog .report-lines { margin: 12px 0 4px; }
+.confirm-option { display: flex; align-items: center; gap: 9px; margin: 14px 0 2px; color: var(--ink-2); font-size: 13px; cursor: pointer; }
+.confirm-option input { width: 17px; height: 17px; accent-color: var(--accent); }
+.confirm-dialog footer { justify-content: flex-end; margin-top: 18px; }
+.confirm-dialog footer button, .welcome-actions > button, .tour-actions > button:not(.text-link) { height: auto; min-height: 40px; margin-top: 0; padding: 0 16px; font-size: 13px; }
+.welcome-actions, .tour-actions { align-items: center; }
+.tour-actions .text-link { min-height: 40px; padding: 0 10px; font-size: 13px; }
+.primary-button.danger { background: var(--critical); color: #fff; }
+.primary-button.danger:hover { background: #b83232; color: #fff; }
+
+/* ---------- first opening: account welcome, tour, guide ---------- */
+.welcome-points { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 16px 0 4px; }
+.welcome-point { display: flex; gap: 12px; padding: 14px; border-radius: 10px; background: var(--panel-2); border: 1px solid var(--line); }
+.welcome-point svg { color: var(--accent); flex: none; margin-top: 2px; }
+.welcome-point strong { font: 750 14px/1.3 Manrope, sans-serif; }
+.welcome-point p { margin: 4px 0 0; color: var(--ink-2); font-size: 13px; line-height: 1.5; }
+.welcome-actions { margin-top: 16px; }
+.welcome-note { display: block; margin-top: 10px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.menu-panel .account-message { margin: 10px 0 0; padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(159,217,184,.35); background: rgba(159,217,184,.07); }
+.account-forms.focus-register .account-form[data-account-form="register"], .account-forms.focus-login .account-form[data-account-form="login"] { order: -1; border-color: var(--accent); box-shadow: inset 0 0 0 1px rgba(213,170,99,.35); }
+.tour-card { display: grid; justify-items: center; gap: 6px; margin: 18px 0 8px; padding: 30px 24px 26px; border-radius: 14px; border: 1px solid var(--line); background: radial-gradient(420px 220px at 50% 0%, rgba(213,170,99,.12), transparent 70%), var(--panel-2); text-align: center; }
+.tour-icon { display: grid; place-items: center; width: 72px; height: 72px; margin-bottom: 8px; border-radius: 50%; border: 1px solid rgba(213,170,99,.5); background: rgba(213,170,99,.1); color: var(--accent); box-shadow: var(--glow); }
+.menu-panel .tour-card h2 { margin: 0; }
+.tour-card p { max-width: 46ch; margin: 4px 0 0; color: var(--ink-2); font: italic 400 17px/1.5 Newsreader, Georgia, serif; }
+.tour-dots { display: flex; justify-content: center; gap: 7px; margin: 12px 0 4px; }
+.tour-dots i { width: 8px; height: 8px; border-radius: 4px; background: var(--line-strong); transition: width .2s ease, background .2s ease; }
+.tour-dots i.active { width: 22px; background: var(--accent); }
+.tour-actions { justify-content: center; align-items: center; }
+.guide-index { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 2px; }
+.guide-index a { padding: 6px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel-2); color: var(--ink-2); font-size: 12px; text-decoration: none; transition: border-color .15s ease, color .15s ease; }
+.guide-index a:hover { border-color: var(--accent); color: #fff; }
+.guide-card { scroll-margin-top: 16px; }
+.guide-card .guide-example { margin-top: 8px; padding: 8px 10px; border-left: 2px solid var(--accent); border-radius: 0 6px 6px 0; background: rgba(213,170,99,.06); font-style: italic; }
+.guide-example b { display: block; margin-bottom: 3px; color: var(--accent); font: 800 10px/1 Manrope, sans-serif; letter-spacing: .12em; text-transform: uppercase; }
+@media (max-width: 560px) {
+  .welcome-points { grid-template-columns: 1fr; }
+  .welcome-actions > button { width: 100%; justify-content: center; }
+  .tour-card { padding: 24px 16px 20px; }
+  .tour-card p { font-size: 16px; }
+  .confirm-dialog footer { flex-direction: column-reverse; align-items: stretch; }
+  .confirm-dialog footer button { width: 100%; justify-content: center; }
+}
+/* The decorative palace never widens the page (it overflowed by a few pixels around 1000px). */
+.menu-shell { overflow-x: hidden; overflow-x: clip; }

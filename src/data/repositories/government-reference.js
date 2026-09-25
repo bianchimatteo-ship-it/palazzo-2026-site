@@ -2,7 +2,7 @@
 // the parliamentary groups of the members of the real Government in office, the group of the real Prime Minister
 // and which group holds each ministry. The career then turns this into a simulated Government (see
 // createReferenceGovernment in parliament-engine): the real records stay untouched and separate.
-import { realDatabase } from './real-data.js?v=20260925-2';
+import { realDatabase } from './real-data.js?v=20260925-3';
 
 const key = value => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('it-IT').replace(/\s+/g, ' ').trim();
 // Real ministries → portfolios of the simulation (only the ones the game models; the others are left out).

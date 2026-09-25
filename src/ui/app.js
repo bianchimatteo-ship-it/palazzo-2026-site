@@ -1,41 +1,42 @@
-import { fullDate, formatDate } from '../core/time.js?v=20260925-2';
-import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20260925-2';
-import { accountApiBase, currentAccount, deleteCloudSave, downloadSave, knownRevision, listCloudSaves, login, logout, register, slotForCareer, uploadSave } from '../data/repositories/account-sync.js?v=20260925-2';
-import { setPartyLogoResolver } from './person-marks.js?v=20260925-2';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260925-2';
-import { isRealCollectionLoaded, loadRealCollections, pristineRecord, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20260925-2';
-import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20260925-2';
-import { renderAdminPanel } from './admin-panel.js?v=20260925-2';
-import { sharedLogos } from '../data/repositories/admin-store.js?v=20260925-2';
-import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, publishSharedArchive, refreshSharedArchive, sharedApiUrl, verifySharedSession } from '../data/repositories/admin-sync.js?v=20260925-2';
-import { deleteLocalLogo, exportLogoConfiguration, fetchLogoFromUrl, getLocalLogo, importLogoConfiguration, listLocalLogos, probeImage, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20260925-2';
-import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20260925-2';
-import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20260925-2';
-import { PARTY_LINK_COLLECTIONS } from '../data/repositories/party-links.js?v=20260925-2';
-import { renderLogoAdmin } from './logo-admin.js?v=20260925-2';
-import { chosenPlace, makeCareerDraft, renderCareerWizard, wizardLogoPreview } from './career-wizard.js?v=20260925-2';
-import { userPartyLogo } from './party-logo.js?v=20260925-2';
-import { CAREER_STEPS, validateCareerStep } from '../core/career-rules.js?v=20260925-2';
-import { renderCampaignPage } from './campaign-mode.js?v=20260925-2';
-import { renderParliamentPage } from './parliament-mode.js?v=20260925-2';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260925-2';
-import { CAREER_LEVELS, careerLevelLabel } from '../data/regions.js?v=20260925-2';
-import { renderCareerTimeline, renderElectionCalendar, renderHeadquarters, renderInbox, renderPartyPosition } from './game-mode.js?v=20260925-2';
-import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20260925-2';
-import { playerRoles } from '../core/roles.js?v=20260925-2';
-import { budgetPreview, designFromForm, planFromForm, policyFields, policyPreview } from './policy-mode.js?v=20260925-2';
-import { areaOf } from '../data/simulation/policy-rules.js?v=20260925-2';
-import { attachChartInteractions, hideChartTip, renderPollsPage } from './polls-mode.js?v=20260925-2';
-import { glyph, officeIcon } from './visuals.js?v=20260925-2';
-import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20260925-2';
-import { renderFinancePage } from './finance-mode.js?v=20260925-2';
-import { renderContactsPanel, renderOrganizationPanel } from './organization-mode.js?v=20260925-2';
-import { renderRealLaws } from './real-laws.js?v=20260925-2';
-import { realLawArea } from '../core/society-engine.js?v=20260925-2';
-import { canManageParliament } from '../core/parliament-engine.js?v=20260925-2';
-import { renderMainMenu, renderWeeklyReport, settingsView } from './menu.js?v=20260925-2';
-import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20260925-2';
-import { playSound } from './sound.js?v=20260925-2';
+import { fullDate, formatDate } from '../core/time.js?v=20260925-3';
+import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20260925-3';
+import { accountApiBase, currentAccount, deleteCloudSave, downloadSave, knownRevision, listCloudSaves, login, logout, register, slotForCareer, uploadSave } from '../data/repositories/account-sync.js?v=20260925-3';
+import { setPartyLogoResolver } from './person-marks.js?v=20260925-3';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260925-3';
+import { isRealCollectionLoaded, loadRealCollections, pristineRecord, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20260925-3';
+import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20260925-3';
+import { renderAdminPanel } from './admin-panel.js?v=20260925-3';
+import { sharedLogos } from '../data/repositories/admin-store.js?v=20260925-3';
+import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, publishSharedArchive, refreshSharedArchive, sharedApiUrl, verifySharedSession } from '../data/repositories/admin-sync.js?v=20260925-3';
+import { deleteLocalLogo, exportLogoConfiguration, fetchLogoFromUrl, getLocalLogo, importLogoConfiguration, listLocalLogos, probeImage, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20260925-3';
+import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20260925-3';
+import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20260925-3';
+import { PARTY_LINK_COLLECTIONS } from '../data/repositories/party-links.js?v=20260925-3';
+import { renderLogoAdmin } from './logo-admin.js?v=20260925-3';
+import { chosenPlace, makeCareerDraft, renderCareerWizard, wizardLogoPreview } from './career-wizard.js?v=20260925-3';
+import { userPartyLogo } from './party-logo.js?v=20260925-3';
+import { CAREER_STEPS, validateCareerStep } from '../core/career-rules.js?v=20260925-3';
+import { renderCampaignPage } from './campaign-mode.js?v=20260925-3';
+import { renderParliamentPage } from './parliament-mode.js?v=20260925-3';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260925-3';
+import { CAREER_LEVELS, careerLevelLabel } from '../data/regions.js?v=20260925-3';
+import { renderCareerTimeline, renderElectionCalendar, renderHeadquarters, renderInbox, renderPartyPosition } from './game-mode.js?v=20260925-3';
+import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20260925-3';
+import { playerRoles } from '../core/roles.js?v=20260925-3';
+import { budgetPreview, designFromForm, planFromForm, policyFields, policyPreview } from './policy-mode.js?v=20260925-3';
+import { areaOf } from '../data/simulation/policy-rules.js?v=20260925-3';
+import { attachChartInteractions, hideChartTip, renderPollsPage } from './polls-mode.js?v=20260925-3';
+import { glyph, officeIcon } from './visuals.js?v=20260925-3';
+import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20260925-3';
+import { renderFinancePage } from './finance-mode.js?v=20260925-3';
+import { renderContactsPanel, renderOrganizationPanel } from './organization-mode.js?v=20260925-3';
+import { renderRealLaws } from './real-laws.js?v=20260925-3';
+import { realLawArea } from '../core/society-engine.js?v=20260925-3';
+import { canManageParliament } from '../core/parliament-engine.js?v=20260925-3';
+import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, TOUR_STEPS } from './menu.js?v=20260925-3';
+import { MAX_SLOTS } from '../core/storage.js?v=20260925-3';
+import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20260925-3';
+import { playSound } from './sound.js?v=20260925-3';
 
 // Phone navigation: four sections always one tap away, everything else in the "Altro" sheet.
 const MOBILE_TABS = [['panoramica', 'home', 'Home'], ['carriera', 'route', 'Carriera'], ['partito', 'party', 'Partito'], ['sondaggi', 'chart', 'Sondaggi']];
@@ -142,6 +143,24 @@ export function mountApp(root, store) {
   };
   const scheduleSync = () => { if (!account.user) return; clearTimeout(syncTimer); syncTimer = setTimeout(() => { syncCareer().then(() => { if (menu.open) render(store.getState(), store.getLastSaved()); }); }, 6000); };
   let reportOpen = false;
+  // Confirmation of irreversible or far-reaching actions: a dialog in the game's style (never the browser's confirm).
+  let pendingConfirm = null;
+  let skipMultiWeekConfirm = false;
+  const askConfirm = options => new Promise(resolve => { pendingConfirm = { ...options, resolve }; render(store.getState(), store.getLastSaved()); });
+  const settleConfirm = ok => {
+    if (!pendingConfirm) return;
+    const { resolve } = pendingConfirm;
+    const option = Boolean(root.querySelector?.('[data-confirm-option]')?.checked ?? pendingConfirm.optionChecked);
+    pendingConfirm = null;
+    resolve({ ok, option });
+    render(store.getState(), store.getLastSaved());
+  };
+  // Runs the action only after the confirmation; the click handler returns at once (the dialog stays open).
+  const confirmThen = (options, action) => { askConfirm(options).then(async answer => { if (!answer.ok) return; try { await action(answer); } catch (error) { menu.error = error.message; admin.message = error.message; } render(store.getState(), store.getLastSaved()); }); };
+  // First opening: the account comes before the first career; after the registration a short tour, shown once.
+  const ONBOARDING_KEY = 'politicando.onboarding.v1';
+  const onboarding = () => { try { return JSON.parse(localStorage.getItem(ONBOARDING_KEY) ?? '{}') ?? {}; } catch { return {}; } };
+  const markOnboarding = patch => { try { localStorage.setItem(ONBOARDING_KEY, JSON.stringify({ ...onboarding(), ...patch })); } catch { /* the flag is a convenience */ } };
   let settings = loadSettings();
   const applySettings = () => {
     const html = document.documentElement;
@@ -212,7 +231,10 @@ export function mountApp(root, store) {
   const render = (state, lastSaved) => {
     hideChartTip();
     if (menu.open && !wizard) {
-      root.innerHTML = `<div class="app-shell menu-shell">${renderMainMenu(menu, menuContext())}${state.ui.toast && settings.toasts === 'on' ? `<div class="toast" role="status">${icon('spark', 17)}${esc(state.ui.toast)}</div>` : ''}</div>`;
+      root.innerHTML = `<div class="app-shell menu-shell">${renderMainMenu(menu, menuContext())}${renderConfirmDialog(pendingConfirm)}${state.ui.toast && settings.toasts === 'on' ? `<div class="toast" role="status">${icon('spark', 17)}${esc(state.ui.toast)}</div>` : ''}</div>`;
+      if (pendingConfirm) root.querySelector?.('[data-confirm="cancel"]')?.focus?.();
+      // First-run steps: on a phone the panel sits below the menu list, so it is brought into view.
+      if (menu.reveal) { menu.reveal = false; if (globalThis.matchMedia?.('(max-width: 900px)')?.matches) root.querySelector?.('.menu-panel')?.scrollIntoView?.({ block: 'start' }); }
       return;
     }
     const player = state.dataset.politicians.find(p => p.id === state.career.playerId);
@@ -241,8 +263,10 @@ export function mountApp(root, store) {
         ${catalog.selectedPoliticianId ? renderPoliticianProfile(catalog.selectedPoliticianId,{loading:catalog.profileLoading,logoFor}) : ''}
         ${catalog.selectedPartyId ? renderPartyProfile(catalog.selectedPartyId,logoFor) : ''}
         ${reportOpen ? renderWeeklyReport(state) : ''}
+        ${renderConfirmDialog(pendingConfirm)}
         ${state.ui.toast && settings.toasts === 'on' ? `<div class="toast" role="status">${icon('spark', 17)}${esc(state.ui.toast)}</div>` : ''}
       </div>`;
+    if (pendingConfirm) root.querySelector?.('[data-confirm="cancel"]')?.focus?.();
     if (state.ui.toast) { clearTimeout(toastTimer); toastTimer = setTimeout(() => { const s = store.getState(); if (s.ui.toast) { s.ui.toast = null; render(s, store.getLastSaved()); } }, { short: 1600, normal: 2600, long: 4500 }[settings.toastLength] ?? 2600); }
   };
   const syncWizardDraft = () => {
@@ -386,6 +410,16 @@ export function mountApp(root, store) {
     const target = form.querySelector('[data-policy-preview]');
     if (target) target.innerHTML = policyPreview(society, designFromForm(form));
   };
+  // Creates the career from the wizard (the real Government in office is loaded first, so every career finds it).
+  const finishWizard = async () => {
+    try {
+      try { await loadRealCollections(['government','politicians','parliamentaryGroups']); store.setReferenceGovernment(referenceGovernmentSpec()); } catch { /* without the real Government the career starts without one */ }
+      const player = store.createCareer(wizard,realParties(),realDatabase.parliamentaryGroups ?? []);
+      // A logo uploaded for the new party is kept in this browser with the party's id.
+      if (wizard.partyMode === 'new' && wizard.partyLogoMode === 'upload' && wizard.partyLogoBlob && player?.partyId) await saveLocalLogo(player.partyId, { blob: wizard.partyLogoBlob, fileName: wizard.partyLogoBlob.name || 'logo', source: '', verified: false, alt: `Logo di ${wizard.partyName}` }).then(refreshLocalLogos).catch(() => {});
+      wizard = null; playSound('success'); refreshContacts();
+    } catch (error) { if (wizard) wizard.errors = [error.message || 'Impossibile creare la carriera.']; }
+  };
   const openNewGame = async () => {
     menu.open = false;
     wizard = makeCareerDraft(store.getState().clock.currentDate, store.getState().dataset.parties);
@@ -394,30 +428,63 @@ export function mountApp(root, store) {
     catch (error) { wizard.errors = [error.message || 'I dati reali necessari al Career Wizard non sono disponibili.']; render(store.getState(), store.getLastSaved()); }
   };
   root.addEventListener('click', async event => {
-    const menuTarget = event.target.closest('[data-menu],[data-menu-action],[data-slot-load],[data-slot-delete],[data-setting-key],[data-report-close],[data-account-action],[data-cloud-load],[data-cloud-delete],[data-conflict]');
+    if (pendingConfirm) {
+      const choice = event.target.closest('[data-confirm]')?.dataset.confirm;
+      if (choice) { settleConfirm(choice === 'ok'); return; }
+      if (event.target.matches?.('[data-confirm-backdrop]')) { settleConfirm(false); return; }
+      if (event.target.closest('.confirm-dialog')) return;
+    }
+    const tour = event.target.closest('[data-tour]')?.dataset.tour;
+    if (tour) {
+      if (tour === 'next') { menu.tourStep = Math.min(TOUR_STEPS.length - 1, (menu.tourStep ?? 0) + 1); menu.reveal = true; }
+      else if (tour === 'prev') { menu.tourStep = Math.max(0, (menu.tourStep ?? 0) - 1); menu.reveal = true; }
+      else { markOnboarding({ tour: 'done' }); menu.view = 'home'; if (tour === 'finish') { playSound('confirm'); await openNewGame(); return; } }
+      playSound('click'); render(store.getState(), store.getLastSaved()); return;
+    }
+    // Guide index: scroll to the section without touching the URL hash (it names the game page).
+    const guideJump = event.target.closest('[data-guide-jump]')?.dataset.guideJump;
+    if (guideJump) {
+      event.preventDefault();
+      const smooth = settings.motion === 'full' && !globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+      root.querySelector?.(`#${guideJump}`)?.scrollIntoView?.({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
+      return;
+    }
+    const menuTarget =event.target.closest('[data-menu],[data-menu-action],[data-slot-load],[data-slot-delete],[data-setting-key],[data-report-close],[data-account-action],[data-cloud-load],[data-cloud-delete],[data-conflict]');
     if (menuTarget) {
       const data = menuTarget.dataset;
       if (menuTarget.matches('.report-backdrop') && event.target.closest('.report-modal')) return;
       menu.error = '';
       try {
         if (data.menu === 'continua') { menu.open = false; playSound('confirm'); await ensurePageData(pageFromHash() ?? store.getState().ui.activePage ?? 'panoramica'); }
+        // A new career needs an account (when the account service is reachable): the account comes first.
+        else if (data.menu === 'nuova' && account.available && !account.user && !menu.localStart) { menu.view = 'benvenuto'; menu.needAccount = true; menu.reveal = true; playSound('click'); }
         else if (data.menu === 'nuova') { playSound('confirm'); await openNewGame(); return; }
+        else if (data.menu === 'account' && data.accountMode) { menu.view = 'account'; account.mode = data.accountMode; account.error = ''; account.message = ''; menu.reveal = true; playSound('click'); }
         else if (data.menu) { menu.view = menu.view === data.menu ? 'home' : data.menu; playSound('click'); }
+        else if (data.menuAction === 'start-local') { menu.localStart = true; markOnboarding({ localStart: true }); playSound('confirm'); await openNewGame(); return; }
         else if (data.menuAction === 'save-slot') { store.saveToSlot(); playSound('success'); }
         else if (data.menuAction === 'export') { download(store.exportSave(), `politicando-partita-${new Date().toISOString().slice(0, 10)}.json`); }
-        else if (data.menuAction === 'reset-settings') { settings = resetSettings(); applySettings(); }
-        else if (data.menuAction === 'clear-saves') { if (globalThis.confirm?.('Eliminare la partita in corso e tutti i salvataggi? L’operazione non si può annullare.')) { store.clearAllSaves(); menu.open = true; menu.view = 'home'; } }
-        else if (data.slotLoad) { store.loadSlot(data.slotLoad); menu.open = false; playSound('success'); await ensurePageData('panoramica'); }
-        else if (data.slotDelete) { if (globalThis.confirm?.('Eliminare questo salvataggio?') !== false) store.deleteSlot(data.slotDelete); }
+        else if (data.menuAction === 'reset-settings') { confirmThen({ title: 'Ripristinare le impostazioni?', body: 'Audio, animazioni, testo, contrasto, notifiche, velocità della simulazione e salvataggio automatico tornano ai valori iniziali. Le partite e i salvataggi non vengono toccati.', confirmLabel: 'Ripristina' }, () => { settings = resetSettings(); applySettings(); }); return; }
+        else if (data.menuAction === 'clear-saves') { confirmThen({ title: 'Eliminare tutti i salvataggi?', body: 'La partita in corso e tutti i salvataggi di questo browser verranno cancellati. L’operazione non si può annullare.', details: [account.user ? 'Le copie online nel tuo account restano: potrai recuperarle dal menu Account.' : 'Senza account non resta nessuna copia: esporta prima su file ciò che vuoi tenere.', 'L’archivio dell’amministratore e i loghi non vengono toccati.'], confirmLabel: 'Elimina tutto', tone: 'danger' }, () => { store.clearAllSaves(); menu.open = true; menu.view = 'home'; }); return; }
+        else if (data.slotLoad) {
+          const load = async () => { store.loadSlot(data.slotLoad); menu.open = false; playSound('success'); await ensurePageData('panoramica'); };
+          if (store.hasCareer() && store.hasUnsavedChanges()) { confirmThen({ title: 'Caricare questo salvataggio?', body: 'La partita in corso ha modifiche non salvate: verrà salvata in uno slot prima di caricare quella scelta.', confirmLabel: 'Carica' }, load); return; }
+          await load();
+        }
+        else if (data.slotDelete) { const slot = store.listSlots().find(item => item.id === data.slotDelete); confirmThen({ title: 'Eliminare questo salvataggio?', body: `«${slot?.name ?? 'Salvataggio'}» verrà eliminato da questo browser. L’operazione non si può annullare.`, confirmLabel: 'Elimina salvataggio', tone: 'danger' }, () => store.deleteSlot(data.slotDelete)); return; }
         else if (data.settingKey) { settings = saveSetting(data.settingKey, data.settingValue); applySettings(); playSound('click'); }
         else if ('reportClose' in data) reportOpen = false;
         else if (data.accountAction === 'logout') { await logout(); account.user = null; account.saves = []; account.conflict = null; account.message = 'Sei uscito: le carriere restano online e nel browser.'; }
         else if (data.accountAction === 'refresh') { await refreshCloud(); }
         else if (data.accountAction === 'sync') { account.busy = 'sync'; render(store.getState(), store.getLastSaved()); store.save(); await syncCareer({ silent: false }); account.busy = false; }
-        else if (data.cloudLoad) { const remote = await downloadSave(data.cloudLoad); store.loadGame(remote.state, 'Carriera recuperata dal tuo account'); account.currentSlot = data.cloudLoad; menu.open = false; playSound('success'); await ensurePageData('panoramica'); }
-        else if (data.cloudDelete) { if (globalThis.confirm?.('Eliminare questa carriera dall’archivio online? La copia nel browser resta.') !== false) { await deleteCloudSave(data.cloudDelete); await refreshCloud(); } }
+        else if (data.cloudLoad) {
+          const load = async () => { const remote = await downloadSave(data.cloudLoad); store.loadGame(remote.state, 'Carriera recuperata dal tuo account'); account.currentSlot = data.cloudLoad; menu.open = false; playSound('success'); await ensurePageData('panoramica'); };
+          if (store.hasCareer() && store.hasUnsavedChanges()) { confirmThen({ title: 'Caricare la carriera online?', body: 'La partita in corso ha modifiche non salvate: verrà salvata in uno slot prima di caricare la carriera dal tuo account.', confirmLabel: 'Carica' }, load); return; }
+          await load();
+        }
+        else if (data.cloudDelete) { confirmThen({ title: 'Eliminare la copia online?', body: 'Questa carriera verrà eliminata dall’archivio del tuo account. La copia nel browser resta.', confirmLabel: 'Elimina online', tone: 'danger' }, async () => { await deleteCloudSave(data.cloudDelete); await refreshCloud(); }); return; }
         else if (data.conflict === 'download' && account.conflict) { const remote = await downloadSave(account.conflict.slot); store.loadGame(remote.state, 'Versione online caricata'); account.conflict = null; }
-        else if (data.conflict === 'overwrite' && account.conflict) { await syncCareer({ force: true, silent: false }); }
+        else if (data.conflict === 'overwrite' && account.conflict) { confirmThen({ title: 'Sovrascrivere la versione online?', body: 'La versione più recente salvata da un altro dispositivo verrà sostituita da quella di questo browser.', confirmLabel: 'Sovrascrivi', tone: 'danger' }, () => syncCareer({ force: true, silent: false })); return; }
       } catch (error) { menu.error = error.message; }
       render(store.getState(), store.getLastSaved());
       return;
@@ -443,7 +510,7 @@ export function mountApp(root, store) {
         else if (data.lawDemand) store.acceptLawDemand(data.lawDemand, data.groupIdDemand);
         else if (data.lawPatch) store.amendLawPolicy(data.lawPatch, { [data.patchKey]: data.patchKey === 'intensity' ? Number(data.patchValue) : data.patchValue });
         else if (data.lawConfidence) store.askConfidence(data.lawConfidence);
-        else if (data.lawWithdraw) { if (globalThis.confirm?.('Ritirare la proposta? Il lavoro fatto andrà perso.') === false) return; store.withdrawLaw(data.lawWithdraw); }
+        else if (data.lawWithdraw) { const lawId = data.lawWithdraw; confirmThen({ kicker: 'LEGGI', title: 'Ritirare la proposta?', body: 'La proposta esce dall’iter e il lavoro fatto in commissione e con i gruppi andrà perso.', confirmLabel: 'Ritira la proposta', tone: 'danger' }, () => store.withdrawLaw(lawId)); return; }
         else if (data.communication) store.setCommunication(data.communication);
         playSound('confirm');
       } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
@@ -458,7 +525,7 @@ export function mountApp(root, store) {
         else if (decision === 'organs') store.assignOrgans(chosen('organs'));
         else if (decision === 'candidacy') store.setCandidacyRule(chosen('candidacy'));
         else if (decision === 'discipline') store.disciplineGroup();
-        else if (decision === 'expel') { if (globalThis.confirm?.('Espellere i dissidenti? Il 2% degli iscritti lascerà il partito.') === false) return; store.expelDissidents(); }
+        else if (decision === 'expel') { confirmThen({ kicker: 'PARTITO', title: 'Espellere i dissidenti?', body: 'Il 2% degli iscritti lascerà il partito: la linea si rafforza, ma la minoranza non lo dimenticherà.', confirmLabel: 'Espelli', tone: 'danger' }, () => store.expelDissidents()); return; }
         else if (decision === 'congress') store.callEarlyCongress();
         else if (decision === 'investment') store.partyInvestment(value);
         playSound('confirm');
@@ -524,7 +591,7 @@ export function mountApp(root, store) {
         } else if (parliamentAction === 'confidence') store.voteGovernmentConfidence();
         else if (parliamentAction === 'crisis') store.triggerGovernmentCrisis();
         else if (parliamentAction === 'support-government') store.supportGovernment();
-        else if (parliamentAction === 'withdraw-support') { if (globalThis.confirm?.('Il tuo gruppo esce dalla maggioranza e il governo dovrà verificare la fiducia. Confermi?') !== false) store.withdrawGovernmentSupport(); }
+        else if (parliamentAction === 'withdraw-support') { confirmThen({ kicker: 'GOVERNO', title: 'Ritirare il sostegno al governo?', body: 'Il tuo gruppo esce dalla maggioranza e il governo dovrà verificare la fiducia: può cadere.', confirmLabel: 'Ritira il sostegno', tone: 'danger' }, () => store.withdrawGovernmentSupport()); return; }
         else if (parliamentAction === 'contest-role') store.contestCommitteeRole();
       } catch (error) { store.getState().ui.toast = error.message; render(store.getState(),store.getLastSaved()); }
       return;
@@ -548,18 +615,18 @@ export function mountApp(root, store) {
         else if ('adminMore' in data) { admin.listPage++; render(store.getState(), store.getLastSaved()); }
         else if ('adminNewParty' in data) { admin.creating = true; admin.partyId = null; admin.message = ''; render(store.getState(), store.getLastSaved()); }
         else if ('adminCancelNew' in data) { admin.creating = false; admin.message = ''; render(store.getState(), store.getLastSaved()); }
-        else if (data.adminHide) { if (globalThis.confirm?.('Nascondere questo partito da tutte le liste del gioco? I dati reali restano intatti e potrai ripristinarlo.') !== false) { setRecordHidden(data.adminHide, true); adminDone('Partito nascosto dal gioco.'); } }
-        else if (data.adminDelete) { if (globalThis.confirm?.('Eliminare questo partito aggiunto? Potrai ripristinarlo dall’elenco dei nascosti.') !== false) { setRecordHidden(data.adminDelete, true, { deleted: true }); adminDone('Partito eliminato: resta ripristinabile.'); } }
+        else if (data.adminHide) { confirmThen({ kicker: 'AREA AMMINISTRATIVA', title: 'Nascondere il partito dal gioco?', body: 'Non comparirà più nelle liste del gioco. I dati reali restano intatti e potrai ripristinarlo dall’elenco dei nascosti.', confirmLabel: 'Nascondi' }, () => { setRecordHidden(data.adminHide, true); adminDone('Partito nascosto dal gioco.'); }); return; }
+        else if (data.adminDelete) { confirmThen({ kicker: 'AREA AMMINISTRATIVA', title: 'Eliminare il partito aggiunto?', body: 'Il partito aggiunto da te verrà eliminato dal gioco e dall’archivio condiviso (se collegato). Resta ripristinabile dall’elenco dei nascosti.', confirmLabel: 'Elimina partito', tone: 'danger' }, () => { setRecordHidden(data.adminDelete, true, { deleted: true }); adminDone('Partito eliminato: resta ripristinabile.'); }); return; }
         else if (data.adminRestore) { setRecordHidden(data.adminRestore, false); adminDone('Partito ripristinato nel gioco.'); }
         else if (data.adminSelectPolitician) { admin.politicianId = data.adminSelectPolitician; admin.message = ''; render(store.getState(), store.getLastSaved()); }
-        else if ('adminResetRecord' in data) { const target = adminSelected(); if (globalThis.confirm?.('Ripristinare tutti i dati originali di questo record?') !== false) { resetRecordOverride(target.collection, target.id); adminDone('Dati originali ripristinati.'); } }
-        else if (data.adminResetField) { const target = adminSelected(); const original = pristineRecord(target.collection, target.id) ?? {}; setRecordField(target.collection, target.id, data.adminResetField, original[data.adminResetField] ?? null, original); adminDone('Campo ripristinato al valore del dataset.'); }
+        else if ('adminResetRecord' in data) { const target = adminSelected(); confirmThen({ kicker: 'AREA AMMINISTRATIVA', title: 'Ripristinare i dati originali?', body: 'Tutte le tue correzioni su questo record verranno rimosse e torneranno i valori del dataset verificato (anche per tutti i giocatori, se l’archivio condiviso è collegato).', confirmLabel: 'Ripristina il record', tone: 'danger' }, () => { resetRecordOverride(target.collection, target.id); adminDone('Dati originali ripristinati.'); }); return; }
+        else if (data.adminResetField) { const target = adminSelected(); const field = data.adminResetField; confirmThen({ kicker: 'AREA AMMINISTRATIVA', title: 'Ripristinare questo campo?', body: 'La tua correzione su questo campo verrà rimossa e tornerà il valore del dataset verificato.', confirmLabel: 'Ripristina il campo' }, () => { const original = pristineRecord(target.collection, target.id) ?? {}; setRecordField(target.collection, target.id, field, original[field] ?? null, original); adminDone('Campo ripristinato al valore del dataset.'); }); return; }
         else if (data.adminLogo) { selectedLogoPartyId = data.adminLogo; logoAdminOpen = true; catalog.logoPage = 1; logoAdminError = ''; render(store.getState(), store.getLastSaved()); }
         else if (data.adminUnlink) { setRecordField('politicians', data.adminUnlink, 'partyId', null, pristineRecord('politicians', data.adminUnlink) ?? {}); adminDone('Parlamentare scollegato dal partito.'); }
         else if (data.adminLink) { const personId = root.querySelector('[data-admin-link-select]')?.value; if (!personId) throw new Error('Scegli un parlamentare da collegare.'); setRecordField('politicians', personId, 'partyId', data.adminLink, pristineRecord('politicians', personId) ?? {}); admin.linkQuery = ''; adminDone('Parlamentare collegato al partito.'); }
         else if (data.adminRemoveRole) { removeRoleOverride(admin.politicianId, data.adminRemoveRole); adminDone('Incarico rimosso.'); }
         else if ('adminExport' in data) { const url = URL.createObjectURL(new Blob([exportAdminArchive()], { type: 'application/json' })); const link = document.createElement('a'); link.href = url; link.download = `politicando-archivio-amministrativo-${new Date().toISOString().slice(0, 10)}.json`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); admin.message = 'Archivio esportato.'; render(store.getState(), store.getLastSaved()); }
-        else if ('adminClear' in data) { if (globalThis.confirm?.('Cancellare tutte le modifiche amministrative? L’operazione non si può annullare.')) { clearAdminArchive(); adminDone(hasSharedSession() ? 'Archivio svuotato anche per tutti i giocatori.' : 'Archivio amministrativo svuotato: sono tornati i dati del dataset.'); } }
+        else if ('adminClear' in data) { confirmThen({ kicker: 'AREA AMMINISTRATIVA', title: 'Cancellare tutte le modifiche amministrative?', body: 'Correzioni, collegamenti, partiti aggiunti e nascosti di questo browser verranno cancellati' + (hasSharedSession() ? ', anche nell’archivio condiviso per tutti i giocatori.' : '.') + ' L’operazione non si può annullare: esporta prima l’archivio se vuoi conservarlo.', confirmLabel: 'Cancella tutto', tone: 'danger' }, () => { clearAdminArchive(); adminDone(hasSharedSession() ? 'Archivio svuotato anche per tutti i giocatori.' : 'Archivio amministrativo svuotato: sono tornati i dati del dataset.'); }); return; }
       } catch (error) { admin.message = error.message; render(store.getState(), store.getLastSaved()); }
       return;
     }
@@ -611,10 +678,17 @@ export function mountApp(root, store) {
       try {
         if (gameActivity) { const result = store.performWeeklyActivity(gameActivity, activityButton.dataset.activityTargetValue ?? root.querySelector(`[data-activity-target="${gameActivity}"]`)?.value ?? null); playSound(result.report.tone === 'bad' ? 'failure' : 'confirm'); }
         else if (agendaChoice) { const result = store.resolveAgendaItem(agendaChoice.dataset.agendaItem, agendaChoice.dataset.agendaChoice); playSound(result.report.tone === 'bad' ? 'failure' : 'confirm'); }
-        else if (fastForward) store.fastForwardToElection(fastForward);
+        else if (fastForward) {
+          // Far-reaching: many weeks in one action, so it is confirmed first.
+          const info = event.target.closest('[data-game-fastforward]').dataset;
+          const count = Number(info.fastforwardWeeks) || 0;
+          const opens = info.fastforwardDate ? new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${info.fastforwardDate}T12:00:00`)) : '';
+          confirmThen({ kicker: 'AVANZAMENTO', title: 'Avanzare fino alle candidature?', body: `Il tempo scorrerà${count > 1 ? ` per circa ${count} settimane` : ''} fino all’apertura delle candidature${info.fastforwardLabel ? ` (${info.fastforwardLabel}${opens ? `, dal ${opens}` : ''})` : ''}.`, details: ['Attività, eventi e scadenze andranno avanti senza di te: le decisioni in agenda si chiuderanno con la scelta predefinita.', 'Il salto non si può annullare: se vuoi un punto a cui tornare, salva prima in uno slot dal menu.'], confirmLabel: 'Avanza fino alle candidature' }, () => store.fastForwardToElection(fastForward));
+          return;
+        }
         else if (partyCurrent) store.alignPartyCurrent(partyCurrent);
         else if (partyAction === 'contest') store.contestPartyRank();
-        else if (partyAction === 'leave') { if (globalThis.confirm?.('Vuoi davvero lasciare il partito? Perderai ruolo e sostegno interno.') !== false) store.leaveParty(); }
+        else if (partyAction === 'leave') { confirmThen({ kicker: 'PARTITO', title: 'Lasciare il partito?', body: 'Perderai ruolo e sostegno interno; iscritti e alleati se ne ricorderanno.', confirmLabel: 'Lascia il partito', tone: 'danger' }, () => store.leaveParty()); return; }
         else if (partyAction === 'join') store.joinParty(root.querySelector('[data-party-join]')?.value, realParties());
       } catch (error) { store.getState().ui.toast = error.message; render(store.getState(),store.getLastSaved()); }
       return;
@@ -640,14 +714,13 @@ export function mountApp(root, store) {
       else if (wizardAction === 'finish') {
         const failing = Array.from({ length: CAREER_STEPS }, (_, index) => index + 1).map(step => [step, validateCareerStep(wizard,step,selectableParties(),realDatabase.parliamentaryGroups ?? [],wizardTerritory())]).find(([, errors]) => errors.length);
         if (failing) { wizard.step = failing[0]; wizard.errors = failing[1]; }
-        else { try {
-          // The Government in office at the start comes from the real data: every new career finds it.
-          try { await loadRealCollections(['government','politicians','parliamentaryGroups']); store.setReferenceGovernment(referenceGovernmentSpec()); } catch { /* without the real Government the career starts without one */ }
-          const player = store.createCareer(wizard,realParties(),realDatabase.parliamentaryGroups ?? []);
-          // A logo uploaded for the new party is kept in this browser with the party's id.
-          if (wizard.partyMode === 'new' && wizard.partyLogoMode === 'upload' && wizard.partyLogoBlob && player?.partyId) await saveLocalLogo(player.partyId, { blob: wizard.partyLogoBlob, fileName: wizard.partyLogoBlob.name || 'logo', source: '', verified: false, alt: `Logo di ${wizard.partyName}` }).then(refreshLocalLogos).catch(() => {});
-          wizard = null; playSound('success'); refreshContacts();
-        } catch (error) { wizard.errors = [error.message || 'Impossibile creare la carriera.']; } }
+        else if (store.hasCareer() && !wizard.confirmedReplace) {
+          const full = store.listSlots().length >= MAX_SLOTS;
+          const meta = store.currentMeta();
+          confirmThen({ title: 'Iniziare una nuova carriera?', body: `La carriera in corso (${meta?.player ?? 'giocatore'}, settimana ${meta?.week ?? '—'}) non sarà più quella attiva.`, details: [full ? `Gli slot sono pieni (${MAX_SLOTS}): la carriera in corso non potrà essere salvata e andrà persa. Annulla ed esportala su file, oppure libera uno slot dal menu Carica partita.` : 'Verrà salvata automaticamente in uno slot: potrai ricaricarla dal menu Carica partita.', account.user ? 'Anche la copia online nel tuo account resta disponibile.' : ''], confirmLabel: 'Inizia la nuova carriera', tone: full ? 'danger' : 'primary' }, async () => { if (!wizard) return; wizard.confirmedReplace = true; await finishWizard(); });
+          return;
+        }
+        else await finishWizard();
       }
       render(store.getState(),store.getLastSaved()); return;
     }
@@ -698,10 +771,20 @@ export function mountApp(root, store) {
     if (nav) { if (nav.dataset.archiveJump) archive.tab = nav.dataset.archiveJump; setHash(nav.dataset.nav); await ensurePageData(nav.dataset.nav); return; }
     const action = event.target.closest('[data-action]')?.dataset.action;
     if (action === 'advance') {
-      store.advanceTurn();
-      const game = store.getState().game;
-      playSound(game?.inbox.some(item => ['urgente', 'situazione'].includes(item.kind)) ? 'alert' : 'week');
-      if (settings.weeklyReport === 'on' && game?.lastReport) { reportOpen = true; render(store.getState(), store.getLastSaved()); }
+      const run = () => {
+        store.advanceTurn();
+        const game = store.getState().game;
+        playSound(game?.inbox.some(item => ['urgente', 'situazione'].includes(item.kind)) ? 'alert' : 'week');
+        if (settings.weeklyReport === 'on' && game?.lastReport) { reportOpen = true; render(store.getState(), store.getLastSaved()); }
+      };
+      // One week never asks; more than one week in a single action is confirmed (it can be turned off for the session).
+      const weeks = Number(settings.weeksPerTurn) || 1;
+      if (weeks > 1 && !skipMultiWeekConfirm) {
+        askConfirm({ kicker: 'AVANZAMENTO', title: `Avanzare di ${weeks} settimane?`, body: `Il tempo scorrerà per ${weeks} settimane di fila: attività non svolte, scadenze ed eventi andranno avanti senza di te.`, details: ['La simulazione si ferma prima se arriva una decisione urgente o una situazione da gestire.', 'Puoi tornare a una settimana per turno nelle impostazioni (Velocità della simulazione).'], option: 'Non chiedere più in questa sessione', confirmLabel: `Avanza di ${weeks} settimane` })
+          .then(answer => { if (!answer.ok) return; if (answer.option) skipMultiWeekConfirm = true; run(); render(store.getState(), store.getLastSaved()); });
+        return;
+      }
+      run();
     }
     else if (action === 'menu') { menu.open = true; menu.view = 'home'; render(store.getState(), store.getLastSaved()); }
     else if (action === 'account') { menu.open = true; menu.view = 'account'; await refreshCloud(); render(store.getState(), store.getLastSaved()); }
@@ -759,17 +842,23 @@ export function mountApp(root, store) {
       event.preventDefault();
       const data = Object.fromEntries(new FormData(form));
       const mode = form.dataset.accountForm;
-      account.error = ''; account.message = '';
+      account.error = ''; account.message = ''; account.unreachable = false;
       if (mode === 'register' && data.password !== data.confirm) { account.error = 'Le due password non coincidono.'; render(store.getState(), store.getLastSaved()); return; }
       account.busy = mode; render(store.getState(), store.getLastSaved());
       try {
         if (mode === 'register') await register(data.username, data.password); else await login(data.username, data.password);
         account.user = currentAccount();
         account.message = mode === 'register' ? 'Account creato: da ora le tue carriere si salvano anche online.' : `Bentornato, ${account.user.username}.`;
+        markOnboarding({ account: true });
         await refreshCloud();
         // The running career joins the account at once (never overwriting a newer version saved elsewhere).
         if (store.hasCareer()) await syncCareer();
-      } catch (error) { account.error = error.message; }
+        const wanted = menu.needAccount;
+        menu.needAccount = false;
+        account.busy = false;
+        if (mode === 'register' && onboarding().tour !== 'done') { menu.view = 'tour'; menu.tourStep = 0; menu.reveal = true; }
+        else if (wanted) { await openNewGame(); return; }
+      } catch (error) { account.error = error.message; account.unreachable = ['offline', 'timeout'].includes(error.code) || error.status >= 500; }
       account.busy = false;
       render(store.getState(), store.getLastSaved()); return;
     }
@@ -870,6 +959,8 @@ export function mountApp(root, store) {
     if (field.matches('[data-wizard-municipality-search]')) { wizard.municipalityLimit = 40; preserveFocusRender('[data-wizard-municipality-search]'); }
   });
   root.addEventListener('change', async event => {
+    // The dialog's option survives a redraw while the confirmation is open.
+    if (pendingConfirm && event.target.matches?.('[data-confirm-option]')) { pendingConfirm.optionChecked = Boolean(event.target.checked); return; }
     const field=event.target;
     if (field.matches('[data-catalog-filter]')) {
       catalog[field.dataset.catalogFilter]=field.value;
@@ -903,15 +994,21 @@ export function mountApp(root, store) {
     }
     if (field.matches('[data-menu-import]')) {
       const file = field.files?.[0]; if (!file) return;
-      try { store.loadGame(await file.text(), 'Partita importata'); menu.open = false; menu.error = ''; playSound('success'); await ensurePageData('panoramica'); }
-      catch (error) { menu.error = error instanceof SyntaxError ? 'Il file non è un salvataggio leggibile.' : error.message; render(store.getState(), store.getLastSaved()); }
-      field.value = ''; return;
+      field.value = '';
+      const text = await file.text();
+      const run = async () => {
+        try { store.loadGame(text, 'Partita importata'); menu.open = false; menu.error = ''; playSound('success'); await ensurePageData('panoramica'); }
+        catch (error) { menu.error = error instanceof SyntaxError ? 'Il file non è un salvataggio leggibile.' : error.message; render(store.getState(), store.getLastSaved()); }
+      };
+      if (store.hasCareer()) { confirmThen({ title: 'Importare questa partita?', body: `La partita del file «${file.name}» sostituirà quella in corso.`, details: [store.hasUnsavedChanges() ? 'La partita in corso ha modifiche non salvate: verrà salvata in uno slot prima dell’importazione.' : 'La partita in corso resta nei tuoi salvataggi (e online, se hai un account).'], confirmLabel: 'Importa' }, run); return; }
+      await run(); return;
     }
     if (field.matches('[data-admin-import]')) {
       const file = field.files?.[0]; if (!file) return;
-      try { importAdminArchive(await file.text()); adminDone('Archivio importato e applicato.'); }
-      catch (error) { admin.message = error.message || 'Importazione non riuscita.'; render(store.getState(), store.getLastSaved()); }
-      field.value = ''; return;
+      field.value = '';
+      const text = await file.text();
+      confirmThen({ kicker: 'AREA AMMINISTRATIVA', title: 'Sostituire l’archivio amministrativo?', body: `Le correzioni di questo browser verranno sostituite da quelle del file «${file.name}»${isAdminVerified() ? ' e pubblicate per tutti i giocatori' : ''}. Esporta prima l’archivio attuale se vuoi conservarlo.`, confirmLabel: 'Importa e sostituisci', tone: 'danger' }, () => { try { importAdminArchive(text); adminDone('Archivio importato e applicato.'); } catch (error) { admin.message = error.message || 'Importazione non riuscita.'; } });
+      return;
     }
     if (field.matches('[data-wizard-party-filter]')) { syncWizardDraft(); wizard.partyListLimit=12; preserveFocusRender('[data-wizard-party-filter]'); return; }
     // Another region (or province) means another list of comuni: the choice starts again there.
@@ -949,6 +1046,11 @@ export function mountApp(root, store) {
     if (more) { catalog[more]++; updateCatalog(); }
   });
   store.subscribe(render);
+  // First opening without an account (and the account service reachable): the welcome screen explains the account
+  // and leads to it before the first career. Players already signed in are never asked again.
+  if (!account.user && account.available && !onboarding().account && menu.open) { menu.view = 'benvenuto'; menu.reveal = true; render(store.getState(), store.getLastSaved()); }
+  // Escape closes the confirmation dialog (it means “Annulla”).
+  globalThis.addEventListener?.('keydown', event => { if (event.key === 'Escape' && pendingConfirm) settleConfirm(false); });
   // Every local save is followed by an online save of the same career (debounced), when the player has an account.
   let lastSavedSeen = store.getLastSaved();
   store.subscribe((state, saved) => { if (saved !== lastSavedSeen) { lastSavedSeen = saved; if (/^Salvat|aggiornato/.test(saved ?? '')) scheduleSync(); } });
