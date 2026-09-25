@@ -1,46 +1,48 @@
-import { fullDate, formatDate } from '../core/time.js?v=20260925-6';
-import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20260925-6';
-import { accountApiBase, currentAccount, deleteCloudSave, downloadSave, knownRevision, listCloudSaves, login, logout, register, slotForCareer, uploadSave } from '../data/repositories/account-sync.js?v=20260925-6';
-import { setPartyLogoResolver } from './person-marks.js?v=20260925-6';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260925-6';
-import { isRealCollectionLoaded, loadRealCollections, pristineRecord, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20260925-6';
-import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20260925-6';
-import { renderAdminPanel } from './admin-panel.js?v=20260925-6';
-import { sharedLogos } from '../data/repositories/admin-store.js?v=20260925-6';
-import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, publishSharedArchive, refreshSharedArchive, sharedApiUrl, verifySharedSession } from '../data/repositories/admin-sync.js?v=20260925-6';
-import { deleteLocalLogo, exportLogoConfiguration, fetchLogoFromUrl, getLocalLogo, importLogoConfiguration, listLocalLogos, probeImage, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20260925-6';
-import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20260925-6';
-import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20260925-6';
-import { PARTY_LINK_COLLECTIONS } from '../data/repositories/party-links.js?v=20260925-6';
-import { renderLogoAdmin } from './logo-admin.js?v=20260925-6';
-import { chosenPlace, makeCareerDraft, renderCareerWizard, wizardLogoPreview } from './career-wizard.js?v=20260925-6';
-import { userPartyLogo } from './party-logo.js?v=20260925-6';
-import { CAREER_STEPS, validateCareerStep } from '../core/career-rules.js?v=20260925-6';
-import { renderElectionsHub } from './elections-hub.js?v=20260925-6';
-import { renderCareerPage } from './career-page.js?v=20260925-6';
-import { renderPartyPage } from './party-page.js?v=20260925-6';
-import { renderAgendaPage } from './agenda-page.js?v=20260925-6';
-import { HEMICYCLE_DEFAULTS, renderHemicycle } from './hemicycle-view.js?v=20260925-6';
-import { renderParliamentPage } from './parliament-mode.js?v=20260925-6';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260925-6';
-import { CAREER_LEVELS } from '../data/regions.js?v=20260925-6';
-import { renderHeadquarters } from './game-mode.js?v=20260925-6';
-import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20260925-6';
-import { playerRoles } from '../core/roles.js?v=20260925-6';
-import { budgetPreview, designFromForm, planFromForm, policyFields, policyPreview } from './policy-mode.js?v=20260925-6';
-import { areaOf } from '../data/simulation/policy-rules.js?v=20260925-6';
-import { attachChartInteractions, hideChartTip, renderPollsPage } from './polls-mode.js?v=20260925-6';
-import { glyph } from './visuals.js?v=20260925-6';
-import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20260925-6';
-import { renderFinancePage } from './finance-mode.js?v=20260925-6';
-import { renderContactsPanel } from './organization-mode.js?v=20260925-6';
-import { renderRealLaws } from './real-laws.js?v=20260925-6';
-import { realLawArea } from '../core/society-engine.js?v=20260925-6';
-import { canManageParliament } from '../core/parliament-engine.js?v=20260925-6';
-import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, TOUR_STEPS } from './menu.js?v=20260925-6';
-import { MAX_SLOTS } from '../core/storage.js?v=20260925-6';
-import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20260925-6';
-import { playSound } from './sound.js?v=20260925-6';
+import { fullDate, formatDate } from '../core/time.js?v=20260925-7';
+import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20260925-7';
+import { accountApiBase, currentAccount, deleteCloudSave, downloadSave, knownRevision, listCloudSaves, login, logout, register, slotForCareer, uploadSave } from '../data/repositories/account-sync.js?v=20260925-7';
+import { setPartyLogoResolver } from './person-marks.js?v=20260925-7';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260925-7';
+import { isRealCollectionLoaded, loadRealCollections, pristineRecord, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20260925-7';
+import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20260925-7';
+import { renderAdminPanel } from './admin-panel.js?v=20260925-7';
+import { sharedLogos } from '../data/repositories/admin-store.js?v=20260925-7';
+import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, publishSharedArchive, refreshSharedArchive, sharedApiUrl, verifySharedSession } from '../data/repositories/admin-sync.js?v=20260925-7';
+import { deleteLocalLogo, exportLogoConfiguration, fetchLogoFromUrl, getLocalLogo, importLogoConfiguration, listLocalLogos, probeImage, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20260925-7';
+import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20260925-7';
+import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20260925-7';
+import { PARTY_LINK_COLLECTIONS } from '../data/repositories/party-links.js?v=20260925-7';
+import { renderLogoAdmin } from './logo-admin.js?v=20260925-7';
+import { chosenPlace, makeCareerDraft, renderCareerWizard, wizardLogoPreview } from './career-wizard.js?v=20260925-7';
+import { userPartyLogo } from './party-logo.js?v=20260925-7';
+import { CAREER_STEPS, validateCareerStep } from '../core/career-rules.js?v=20260925-7';
+import { renderElectionsHub } from './elections-hub.js?v=20260925-7';
+import { renderCareerPage } from './career-page.js?v=20260925-7';
+import { renderPartyPage } from './party-page.js?v=20260925-7';
+import { renderAgendaPage } from './agenda-page.js?v=20260925-7';
+import { HEMICYCLE_DEFAULTS, renderHemicycle } from './hemicycle-view.js?v=20260925-7';
+import { drawLogoEditor, exportLogo, measureBackground, panFromDrag, renderLogoEditor } from './logo-editor-view.js?v=20260925-7';
+import { createEditorState } from '../core/logo-editor.js?v=20260925-7';
+import { renderParliamentPage } from './parliament-mode.js?v=20260925-7';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260925-7';
+import { CAREER_LEVELS } from '../data/regions.js?v=20260925-7';
+import { renderHeadquarters } from './game-mode.js?v=20260925-7';
+import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20260925-7';
+import { playerRoles } from '../core/roles.js?v=20260925-7';
+import { budgetPreview, designFromForm, planFromForm, policyFields, policyPreview } from './policy-mode.js?v=20260925-7';
+import { areaOf } from '../data/simulation/policy-rules.js?v=20260925-7';
+import { attachChartInteractions, hideChartTip, renderPollsPage } from './polls-mode.js?v=20260925-7';
+import { glyph } from './visuals.js?v=20260925-7';
+import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20260925-7';
+import { renderFinancePage } from './finance-mode.js?v=20260925-7';
+import { renderContactsPanel } from './organization-mode.js?v=20260925-7';
+import { renderRealLaws } from './real-laws.js?v=20260925-7';
+import { realLawArea } from '../core/society-engine.js?v=20260925-7';
+import { canManageParliament } from '../core/parliament-engine.js?v=20260925-7';
+import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, TOUR_STEPS } from './menu.js?v=20260925-7';
+import { MAX_SLOTS } from '../core/storage.js?v=20260925-7';
+import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20260925-7';
+import { playSound } from './sound.js?v=20260925-7';
 
 // Phone navigation: four sections always one tap away, everything else in the "Altro" sheet.
 const MOBILE_TABS = [['panoramica', 'home', 'Home'], ['carriera', 'route', 'Carriera'], ['partito', 'party', 'Partito'], ['sondaggi', 'chart', 'Sondaggi']];
@@ -97,6 +99,11 @@ export function mountApp(root, store) {
   let logoAdminOpen = false;
   let selectedLogoPartyId = null;
   let pendingLogo = null;
+  // The logo editor (crop, ratio, zoom, transparency, dominant colour) for the owner's logos and the wizard's party.
+  let logoEditor = null;
+  let logoEditorImage = null;
+  let logoEditorUrl = null;
+  let logoDrag = null;
   let pendingLogoUrl = null;
   let logoAdminError = '';
   // A logo loaded from an address: a copied file (Blob) or, when the site forbids copying, the address itself.
@@ -242,7 +249,8 @@ export function mountApp(root, store) {
   const adminSelected = () => admin.tab === 'politici'
     ? { collection: 'politicians', id: admin.politicianId }
     : { collection: realDatabase.politicalMovements?.some(item => item.id === admin.partyId) ? 'politicalMovements' : 'parties', id: admin.partyId };
-  const render = (state, lastSaved) => {
+  const render = (state, lastSaved) => { renderFrame(state, lastSaved); paintLogoEditor(); };
+  const renderFrame = (state, lastSaved) => {
     hideChartTip();
     if (menu.open && !wizard) {
       root.innerHTML = `<div class="app-shell menu-shell">${renderMainMenu(menu, menuContext())}${renderConfirmDialog(pendingConfirm)}${state.ui.toast && settings.toasts === 'on' ? `<div class="toast" role="status">${icon('spark', 17)}${esc(state.ui.toast)}</div>` : ''}</div>`;
@@ -270,10 +278,10 @@ export function mountApp(root, store) {
         <div class="mobile-sheet" id="mobile-sheet" data-mobile-sheet hidden><div class="mobile-sheet-panel" role="dialog" aria-modal="true" aria-label="Tutte le sezioni"><div class="mobile-sheet-head"><strong>Sezioni</strong><button type="button" class="icon-button" data-mobile-close aria-label="Chiudi">×</button></div><div class="mobile-sheet-grid">${[...mainNavigation, ['profilo', 'person', 'Profilo'], ['impostazioni', 'settings', 'Impostazioni']].map(([id, glyph, label]) => `<button type="button" class="sheet-item ${mainSectionActive(id, state.ui.activePage) ? 'active' : ''}" data-nav="${id}">${icon(glyph, 22)}<span>${label}</span></button>`).join('')}<button type="button" class="sheet-item" data-action="menu">${icon('menu', 22)}<span>Menu principale</span></button><button type="button" class="sheet-item" data-action="account">${icon('person', 22)}<span>Account</span></button></div><div class="mobile-sheet-status"><span class="save-dot"></span>${lastSaved}</div></div></div>
         <main class="main-area">
           <header class="topbar"><div class="topbar-title"><strong>${current.title}</strong><span>${current.intro}</span></div><div class="top-actions"><button class="icon-button menu-button" data-action="menu" aria-label="Menu principale" title="Menu principale">${icon('menu', 17)}</button><div class="date-chip">${icon('calendar', 16)}<span>${fullDate(state.clock.currentDate)}</span></div><button class="icon-button" aria-label="Salva carriera" title="Salva carriera" data-action="save">${icon('save', 17)}</button><span class="week-chip">Settimana ${state.game.week.index} · ${state.game.week.ap}/${state.game.week.maxAp} giorni</span><button class="advance-button" data-action="advance" ${state.game.status === 'ended' ? 'disabled' : ''}>${state.campaign?.status === 'active' ? 'Avanza campagna' : 'Chiudi settimana'} ${icon('arrow', 17)}</button></div></header>
-          <div class="page-wrap">${wizard ? '' : (state.ui.activePage === 'panoramica' ? renderHeadquarters(state, { partyName: party ? partyName(party) : null, partyLogo: party ? logoFor(party) : null, newsFilter: views.newsFilter }) : subpage(state, current, player, party, eventList, catalog, { logoFor, parties:realParties(), selectable:selectableParties(), findParty, realLeader, admin, adminContext, territory, realLaws, archive, views, tabFor, settings, lastSaved, account, allianceOdds: id => { try { return store.allianceOdds(id); } catch { return null; } } }))}</div>
+          <div class="page-wrap">${wizard ? '' : (state.ui.activePage === 'panoramica' ? renderHeadquarters(state, { partyName: party ? partyName(party) : null, partyLogo: party ? logoFor(party) : null, newsFilter: views.newsFilter }) : subpage(state, current, player, party, eventList, catalog, { logoFor, homePlace: () => store.homePlace(), parties:realParties(), selectable:selectableParties(), findParty, realLeader, admin, adminContext, territory, realLaws, archive, views, tabFor, settings, lastSaved, account, allianceOdds: id => { try { return store.allianceOdds(id); } catch { return null; } } }))}</div>
         </main>
         ${wizard ? renderCareerWizard(state, wizard, realParties(), logoFor, realDatabase.parliamentaryGroups ?? [], realDatabase.partyLeaderships ?? [], realDatabase.politicalFigures ?? [], realDatabase.politicians ?? [], wizardTerritory()) : ''}
-        ${logoAdminOpen ? renderLogoAdmin({shared:sharedLogos(),selectedId:selectedLogoPartyId,query:catalog.logoQuery,page:catalog.logoPage,metadata:[...logoMetadata.values()],entities:[...realParties(),...state.dataset.parties],logoFor,error:logoAdminError,pendingPreview:pendingLogoUrl ?? pendingRemoteUrl,pendingRemote:Boolean(pendingRemoteUrl && !pendingLogo),urlDraft:logoUrlDraft,urlLoading:logoUrlLoading}) : ''}
+        ${logoAdminOpen ? renderLogoAdmin({shared:sharedLogos(),selectedId:selectedLogoPartyId,query:catalog.logoQuery,page:catalog.logoPage,metadata:[...logoMetadata.values()],entities:[...realParties(),...state.dataset.parties],logoFor,error:logoAdminError,pendingPreview:pendingLogoUrl ?? pendingRemoteUrl,pendingRemote:Boolean(pendingRemoteUrl && !pendingLogo),urlDraft:logoUrlDraft,urlLoading:logoUrlLoading,editorHtml:logoEditor?.context === 'admin' ? renderLogoEditor(logoEditor, { context: 'admin' }) : ''}) : ''}
         ${catalog.selectedPoliticianId ? renderPoliticianProfile(catalog.selectedPoliticianId,{loading:catalog.profileLoading,logoFor}) : ''}
         ${catalog.selectedPartyId ? renderPartyProfile(catalog.selectedPartyId,logoFor) : ''}
         ${reportOpen ? renderWeeklyReport(state) : ''}
@@ -322,6 +330,7 @@ export function mountApp(root, store) {
     : page === 'archivio' ? ARCHIVE_COLLECTIONS[archive.tab] ?? ARCHIVE_COLLECTIONS.partiti
     : page === 'elezioni' ? ['politicians','parliamentaryGroups',...PARTY_LINK_COLLECTIONS]
     : page === 'sondaggi' ? ['partyLeaderships','politicalFigures']
+    : page === 'partito' ? ['territorialUnits']
     : page === 'amministrazione' ? ['parties','politicalMovements','politicians','parliamentaryGroups','offices',...PARTY_LINK_COLLECTIONS] : [];
   const ensurePageData = async (page, force = false) => {
     // A session token in this browser is not enough: the server confirms it before the admin area opens.
@@ -341,6 +350,7 @@ export function mountApp(root, store) {
     if (!missing.length && !force) {
       catalog.loadingPage = null;
       if (parliamentaryPage) { store.setReferenceGovernment(referenceGovernmentSpec()); store.initializeParliament(realDatabase.parliamentaryGroups ?? []); refreshContacts(); }
+      if (page === 'partito') store.initializeCommittees(realDatabase.territorialUnits ?? []);
       return;
     }
     try {
@@ -348,6 +358,7 @@ export function mountApp(root, store) {
       if (ticket === catalog.loadTicket) {
         catalog.loadingPage = null;
         if (parliamentaryPage) { store.setReferenceGovernment(referenceGovernmentSpec()); store.initializeParliament(realDatabase.parliamentaryGroups ?? []); refreshContacts(); }
+        if (page === 'partito') store.initializeCommittees(realDatabase.territorialUnits ?? []);
         render(store.getState(),store.getLastSaved());
       }
     } catch (error) {
@@ -381,6 +392,31 @@ export function mountApp(root, store) {
     }
   };
   const updateLogoAdmin = () => preserveFocusRender('[data-logo-query]');
+  const closeLogoEditor = () => { if (logoEditorUrl) URL.revokeObjectURL(logoEditorUrl); logoEditor = null; logoEditorImage = null; logoEditorUrl = null; logoDrag = null; };
+  const openLogoEditor = async (blob, context, name = 'logo') => {
+    closeLogoEditor();
+    const url = URL.createObjectURL(blob);
+    const image = new Image();
+    image.src = url;
+    try { await image.decode(); } catch { URL.revokeObjectURL(url); return; }
+    // An SVG without a declared size is drawn at 512 px.
+    const width = image.naturalWidth || 512, height = image.naturalHeight || 512;
+    logoEditor = { ...createEditorState({ width, height, name, type: blob.type || 'image/png' }), context };
+    logoEditor.background = measureBackground(logoEditor, image);
+    logoEditorImage = image; logoEditorUrl = url;
+  };
+  // After each render: the editor's canvases are drawn (in the wizard the editor sits in its own slot).
+  const paintLogoEditor = () => {
+    if (!logoEditor) return;
+    if (logoEditor.context === 'wizard') { const slot = root.querySelector?.('[data-logo-editor-slot]'); if (slot && !slot.querySelector('[data-logo-editor]')) slot.innerHTML = renderLogoEditor(logoEditor, { context: 'wizard' }); }
+    drawLogoEditor(root, logoEditor, logoEditorImage);
+  };
+  // The wizard shows the edited logo in its summary and in the party identity.
+  const refreshWizardLogoPreview = () => {
+    if (!wizard || logoEditor?.context !== 'wizard') return;
+    const canvas = root.querySelector?.('[data-logo-result]');
+    if (canvas?.toDataURL) { wizard.partyLogoPreview = canvas.toDataURL('image/png'); updateWizardLogo(); }
+  };
 
   // Pasting or submitting an address loads the image, shows it and waits for "Salva nel browser".
   const previewLogoUrl = async address => {
@@ -392,6 +428,7 @@ export function mountApp(root, store) {
       const blob = await fetchLogoFromUrl(logoUrlDraft);
       pendingLogo = blob; pendingLogo.name = new URL(logoUrlDraft).pathname.split('/').pop() || 'logo';
       pendingLogoUrl = URL.createObjectURL(blob); pendingRemoteUrl = logoUrlDraft;
+      await openLogoEditor(blob, 'admin', pendingLogo.name);
     } catch (error) {
       // The site forbids copying (or labels the file oddly): the address is kept if the image displays.
       if (['blocked', 'type'].includes(error.code)) {
@@ -430,7 +467,11 @@ export function mountApp(root, store) {
       try { await loadRealCollections(['government','politicians','parliamentaryGroups']); store.setReferenceGovernment(referenceGovernmentSpec()); } catch { /* without the real Government the career starts without one */ }
       const player = store.createCareer(wizard,realParties(),realDatabase.parliamentaryGroups ?? []);
       // A logo uploaded for the new party is kept in this browser with the party's id.
-      if (wizard.partyMode === 'new' && wizard.partyLogoMode === 'upload' && wizard.partyLogoBlob && player?.partyId) await saveLocalLogo(player.partyId, { blob: wizard.partyLogoBlob, fileName: wizard.partyLogoBlob.name || 'logo', source: '', verified: false, alt: `Logo di ${wizard.partyName}` }).then(refreshLocalLogos).catch(() => {});
+      if (wizard.partyMode === 'new' && wizard.partyLogoMode === 'upload' && wizard.partyLogoBlob && player?.partyId) {
+        const edited = logoEditor?.context === 'wizard' ? await exportLogo(logoEditor, logoEditorImage, wizard.partyLogoBlob).catch(() => null) : null;
+        await saveLocalLogo(player.partyId, { blob: edited?.blob ?? wizard.partyLogoBlob, fileName: wizard.partyLogoBlob.name || 'logo', source: '', verified: false, alt: `Logo di ${wizard.partyName}`, editor: edited?.editor ?? null }).then(refreshLocalLogos).catch(() => {});
+        closeLogoEditor();
+      }
       wizard = null; playSound('success'); refreshContacts();
     } catch (error) { if (wizard) wizard.errors = [error.message || 'Impossibile creare la carriera.']; }
   };
@@ -515,6 +556,44 @@ export function mountApp(root, store) {
       if (viewFilter.dataset.newsFilter) views.newsFilter = viewFilter.dataset.newsFilter;
       else views.timelineFilter = viewFilter.dataset.timelineFilter;
       saveViews(); render(store.getState(), store.getLastSaved()); return;
+    }
+    // Logo editor: back to the original frame, or the dominant colour as the party colour.
+    if (logoEditor && event.target.closest('[data-logo-edit-reset]')) {
+      const keep = { context: logoEditor.context, background: logoEditor.background };
+      logoEditor = { ...createEditorState({ width: logoEditor.width, height: logoEditor.height, name: logoEditor.name, type: logoEditor.type }), ...keep };
+      render(store.getState(), store.getLastSaved()); refreshWizardLogoPreview(); return;
+    }
+    if (logoEditor && event.target.closest('[data-logo-edit-color]')) {
+      const color = logoEditor.dominant;
+      try {
+        if (!color) throw new Error('Nessun colore dominante: l’immagine è trasparente o in scala di grigi.');
+        if (logoEditor.context === 'wizard' && wizard) { wizard.partyColor = color; render(store.getState(), store.getLastSaved()); updateWizardLogo(); return; }
+        const collection = realDatabase.politicalMovements?.some(item => item.id === selectedLogoPartyId) ? 'politicalMovements' : realDatabase.parties?.some(item => item.id === selectedLogoPartyId) ? 'parties' : null;
+        if (!collection || !isAdminVerified()) throw new Error('Il colore si imposta così solo per i partiti reali, dall’area del proprietario.');
+        setRecordField(collection, selectedLogoPartyId, 'color', color, pristineRecord(collection, selectedLogoPartyId) ?? {});
+        adminDone(`Colore del partito impostato a ${color}.`);
+      } catch (error) { logoAdminError = error.message; render(store.getState(), store.getLastSaved()); }
+      return;
+    }
+    // Territorial committees: actions on a committee, new committees on the ISTAT map, the list of comuni on demand.
+    const committeeControl = event.target.closest('[data-committee-action],[data-committee-found],[data-committee-load]');
+    if (committeeControl) {
+      const data = committeeControl.dataset;
+      try {
+        if (data.committeeLoad) { await loadRealCollections([data.committeeLoad]); render(store.getState(), store.getLastSaved()); return; }
+        if (data.committeeFound === 'provincia') {
+          const unit = (realDatabase.territorialUnits ?? []).find(item => item.code === root.querySelector('[data-committee-found-unit]')?.value);
+          if (!unit) throw new Error('Scegli la provincia o la città metropolitana.');
+          store.committeeAction('fonda', { level: 'provincia', name: unit.name, region: unit.gameRegion, unitCode: unit.code, unitType: unit.type });
+        } else if (data.committeeFound === 'comune') {
+          const place = (realDatabase.municipalities ?? []).find(item => item.code === root.querySelector('[data-committee-found-municipality]')?.value);
+          if (!place) throw new Error('Scegli il comune.');
+          store.committeeAction('fonda', { level: 'comune', name: place.name, region: store.homePlace().region, unitCode: place.unit, municipalityCode: place.code });
+        } else if (data.committeeAction === 'fonda') store.committeeAction('fonda', { level: data.committeeLevel, name: data.committeeName, region: data.committeeRegion, unitCode: data.committeeUnit || null, unitType: data.committeeUnitType || null, municipalityCode: data.committeeMunicipality || null });
+        else store.committeeAction(data.committeeAction, { committeeId: data.committeeId });
+        playSound('confirm');
+      } catch (error) { store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
+      return;
     }
     // The hemicycle: seats, chamber, colours, legend filters and the vote to show; the view is kept across redraws.
     const hemi = event.target.closest('[data-hemi-seat],[data-hemi-chamber],[data-hemi-color],[data-hemi-filter-group],[data-hemi-filter-party],[data-hemi-reset],[data-hemi-close],[data-hemi-vote]');
@@ -817,11 +896,11 @@ export function mountApp(root, store) {
       return;
     }
     if (event.target.closest('[data-action="logo-admin-close"]') || event.target.matches('[data-logo-admin-backdrop]')) {
-      logoAdminOpen = false; pendingLogo = null; pendingLogoUrl && URL.revokeObjectURL(pendingLogoUrl); pendingLogoUrl = null; pendingRemoteUrl = null; logoUrlDraft = ''; logoAdminError = ''; render(store.getState(),store.getLastSaved()); return;
+      logoAdminOpen = false; pendingLogo = null; pendingLogoUrl && URL.revokeObjectURL(pendingLogoUrl); pendingLogoUrl = null; pendingRemoteUrl = null; logoUrlDraft = ''; logoAdminError = ''; if (logoEditor?.context === 'admin') closeLogoEditor(); render(store.getState(),store.getLastSaved()); return;
     }
     if (event.target.matches('[data-logo-admin-item]')) return;
     const logoParty = event.target.closest('[data-logo-party-id]')?.dataset.logoPartyId;
-    if (logoParty) { selectedLogoPartyId = logoParty; pendingLogo = null; pendingLogoUrl && URL.revokeObjectURL(pendingLogoUrl); pendingLogoUrl = null; pendingRemoteUrl = null; logoUrlDraft = ''; logoAdminError = ''; render(store.getState(),store.getLastSaved()); return; }
+    if (logoParty) { selectedLogoPartyId = logoParty; pendingLogo = null; pendingLogoUrl && URL.revokeObjectURL(pendingLogoUrl); pendingLogoUrl = null; pendingRemoteUrl = null; logoUrlDraft = ''; logoAdminError = ''; if (logoEditor?.context === 'admin') closeLogoEditor(); render(store.getState(),store.getLastSaved()); return; }
     // The phone sheet opens and closes at once, without redrawing the page.
     const sheet = root.querySelector('[data-mobile-sheet]');
     if (event.target.closest('[data-mobile-more]')) { const open = sheet.hidden; sheet.hidden = !open; event.target.closest('[data-mobile-more]').setAttribute('aria-expanded', String(open)); if (open) sheet.querySelector('.sheet-item.active, .sheet-item')?.focus?.(); return; }
@@ -878,14 +957,17 @@ export function mountApp(root, store) {
         const alt = root.querySelector('[data-logo-alt]')?.value.trim() || '';
         if (verified && !/^https?:\/\//i.test(source)) throw new Error('Per segnare il logo verificato inserisci una fonte HTTPS o HTTP.');
         if (!alt) throw new Error('Inserisci un testo alternativo per il logo.');
-        await saveLocalLogo(selectedLogoPartyId, pendingLogo ? {blob:pendingLogo,fileName:pendingLogo.name || 'logo',sourceUrl:pendingRemoteUrl,source,verified,alt} : {url:pendingRemoteUrl,sourceUrl:pendingRemoteUrl,source,verified,alt});
+        // The editor's result (crop, ratio, zoom, transparency) is what is saved, with its metadata; source and verification stay as declared.
+        const edited = pendingLogo && logoEditor?.context === 'admin' ? await exportLogo(logoEditor, logoEditorImage, pendingLogo) : null;
+        if (edited) { const name = pendingLogo.name || 'logo'; pendingLogo = edited.blob; pendingLogo.name = edited.blob.type === 'image/png' && !/\.png$/i.test(name) ? `${name.replace(/\.[a-z0-9]+$/i, '')}.png` : name; }
+        await saveLocalLogo(selectedLogoPartyId, pendingLogo ? {blob:pendingLogo,fileName:pendingLogo.name || 'logo',sourceUrl:pendingRemoteUrl,source,verified,alt,editor:edited?.editor ?? null} : {url:pendingRemoteUrl,sourceUrl:pendingRemoteUrl,source,verified,alt});
         // The owner connected to the shared archive publishes the logo for everyone: the address, or the image itself if small.
         if (isAdminVerified()) {
           const shared = pendingRemoteUrl && /^https:/i.test(pendingRemoteUrl) ? { url: pendingRemoteUrl, alt, sourceUrl: source || pendingRemoteUrl } : pendingLogo && pendingLogo.size <= 300000 ? { dataUrl: await blobToDataUrl(pendingLogo), alt, sourceUrl: source || null } : null;
           if (shared) await publishSharedArchive({ [selectedLogoPartyId]: shared }).then(() => { logoAdminError = ''; }).catch(error => { logoAdminError = `Logo salvato in questo browser, non pubblicato: ${error.message}`; });
           else logoAdminError = 'Logo salvato in questo browser: per pubblicarlo per tutti usa un indirizzo https o un file sotto i 300 KB.';
         }
-        pendingLogo=null; pendingLogoUrl && URL.revokeObjectURL(pendingLogoUrl); pendingLogoUrl=null; pendingRemoteUrl=null; logoUrlDraft=''; await refreshLocalLogos();
+        pendingLogo=null; pendingLogoUrl && URL.revokeObjectURL(pendingLogoUrl); pendingLogoUrl=null; pendingRemoteUrl=null; logoUrlDraft=''; closeLogoEditor(); await refreshLocalLogos();
       } catch (error) { logoAdminError=error.message || 'Salvataggio non riuscito.'; render(store.getState(),store.getLastSaved()); }
     }
     else if (action === 'logo-delete') {
@@ -991,8 +1073,28 @@ export function mountApp(root, store) {
       catch (error) { store.getState().ui.toast = error.message; render(store.getState(),store.getLastSaved()); }
     }
   });
+  // Dragging on the logo editor's stage moves the frame over the image.
+  root.addEventListener('pointerdown', event => {
+    const stage = event.target?.closest?.('[data-logo-stage]');
+    if (!stage || !logoEditor) return;
+    const box = stage.getBoundingClientRect();
+    logoDrag = { x: event.clientX, y: event.clientY, panX: logoEditor.panX, panY: logoEditor.panY, ratio: stage.width / Math.max(1, box.width), scale: Number(stage.dataset.scale) || 1 };
+    stage.setPointerCapture?.(event.pointerId);
+    event.preventDefault?.();
+  });
+  root.addEventListener('pointermove', event => {
+    if (!logoDrag || !logoEditor) return;
+    const next = panFromDrag({ ...logoEditor, panX: logoDrag.panX, panY: logoDrag.panY }, (event.clientX - logoDrag.x) * logoDrag.ratio, (event.clientY - logoDrag.y) * logoDrag.ratio, logoDrag.scale);
+    Object.assign(logoEditor, next);
+    for (const key of ['panX', 'panY']) { const input = root.querySelector(`input[data-logo-edit="${key}"]`); if (input) input.value = String(logoEditor[key]); }
+    drawLogoEditor(root, logoEditor, logoEditorImage);
+  });
+  const endLogoDrag = () => { if (logoDrag) { logoDrag = null; refreshWizardLogoPreview(); } };
+  root.addEventListener('pointerup', endLogoDrag);
+  root.addEventListener('pointercancel', endLogoDrag);
   root.addEventListener('input', event => {
     const field = event.target;
+    if (logoEditor && field.matches?.('input[type="range"][data-logo-edit]')) { logoEditor[field.dataset.logoEdit] = Number(field.value); drawLogoEditor(root, logoEditor, logoEditorImage); return; }
     if (field.closest?.('[data-policy-fields]') || field.closest?.('[data-budget-form]')) { refreshPolicyPreview(field.closest('form'), field); return; }
     if (field.matches('[data-catalog-filter]')) {
       catalog[field.dataset.catalogFilter]=field.value;
@@ -1039,6 +1141,16 @@ export function mountApp(root, store) {
       if(help) help.innerHTML=`${ELECTION_MODELS[type].strategy} · <a href="${ELECTION_MODELS[type].referenceUrl}" target="_blank" rel="noopener noreferrer">${ELECTION_MODELS[type].referenceName} ↗</a>`;
       return;
     }
+    if (logoEditor && field.matches('[data-logo-edit]')) {
+      const key = field.dataset.logoEdit;
+      if (key === 'ratio') logoEditor.ratio = field.value;
+      else if (key === 'transparent') logoEditor.transparent = Boolean(field.checked);
+      else logoEditor[key] = Number(field.value);
+      if (['ratio', 'transparent'].includes(key)) render(store.getState(), store.getLastSaved());
+      refreshWizardLogoPreview();
+      return;
+    }
+    if (field.matches('[data-view-filter-select]')) { views.filters[field.dataset.viewFilterSelect] = field.value; saveViews(); render(store.getState(), store.getLastSaved()); return; }
     if (field.matches('[data-hemi-filter]')) { views.hemicycle[field.dataset.hemiFilter] = field.value; if (field.dataset.hemiFilter === 'vote') views.hemicycle.selected = null; saveViews(); render(store.getState(), store.getLastSaved()); return; }
     if (field.matches('[data-admin-chamber]')) { admin.chamber = field.value; admin.listPage = 1; render(store.getState(), store.getLastSaved()); return; }
     if (field.matches('[data-real-law-filter]') && field.dataset.realLawFilter !== 'query') { realLaws[field.dataset.realLawFilter] = field.value; realLaws.page = 1; render(store.getState(), store.getLastSaved()); return; }
@@ -1047,9 +1159,12 @@ export function mountApp(root, store) {
       try {
         wizard.partyLogoBlob = await validateLogoFile(file);
         wizard.partyLogoBlob.name = file.name;
-        if (wizard.partyLogoPreview) URL.revokeObjectURL(wizard.partyLogoPreview);
+        if (wizard.partyLogoPreview?.startsWith?.('blob:')) URL.revokeObjectURL(wizard.partyLogoPreview);
         wizard.partyLogoPreview = URL.createObjectURL(wizard.partyLogoBlob);
+        await openLogoEditor(wizard.partyLogoBlob, 'wizard', file.name);
         wizard.partyLogoError = '';
+        paintLogoEditor();
+        refreshWizardLogoPreview();
         updateWizardLogo();
       } catch (error) { wizard.partyLogoError = error.message; syncWizardDraft(); render(store.getState(), store.getLastSaved()); }
       return;
@@ -1081,9 +1196,9 @@ export function mountApp(root, store) {
       try {
         pendingLogo=await validateLogoFile(file); pendingLogo.name=file.name; pendingRemoteUrl=null;
         pendingLogoUrl && URL.revokeObjectURL(pendingLogoUrl); pendingLogoUrl=URL.createObjectURL(pendingLogo);
-        root.querySelector('.logo-admin-preview').innerHTML=`<img src="${esc(pendingLogoUrl)}" alt="Anteprima del file selezionato" />`;
-        root.querySelector('[data-logo-preview-caption]').textContent='Anteprima temporanea. Premi “Salva nel browser” per conservarla.';
-        root.querySelector('[data-action="logo-save"]').disabled=false; logoAdminError='';
+        logoAdminError='';
+        await openLogoEditor(pendingLogo, 'admin', file.name);
+        render(store.getState(), store.getLastSaved());
       } catch(error) { logoAdminError=error.message || 'File non valido.'; render(store.getState(),store.getLastSaved()); }
     }
     if (field.matches('[data-logo-import-file]')) {
@@ -1178,7 +1293,7 @@ function subpage(state, page, player, party, events, catalog, options = {}) {
     politici: `<div class="catalog-body" data-catalog-body>${renderPoliticianArchive(catalog,{status:catalogStatus,logoFor:options.logoFor})}</div>`,
     'partiti-lista': `<div class="catalog-body" data-catalog-body>${renderPartyArchive(catalog,{status:catalogStatus,logoFor:options.logoFor})}</div>`,
     elezioni: renderElectionsHub(state, { parties: options.parties ?? [], logoFor: options.logoFor, tab: options.tabFor?.('elezioni', state) }),
-    partito: state.game ? renderPartyPage(state, { tab: options.tabFor?.('partito', state), record: party, logoFor: options.logoFor, selectable: options.selectable ?? [] }) : `<div class="feature-card party-detail-card"><span class="feature-icon">◇</span><div class="eyebrow">${party ? 'AFFILIAZIONE ATTUALE' : 'PROFILO INDIPENDENTE'}</div><div class="party-detail-heading">${party && options.logoFor?.(party) ? `<img src="${esc(options.logoFor(party))}" alt="${esc(party.logoAlt || `Logo di ${party.officialName || party.name}`)}" />` : ''}<h2>${party ? esc(party.officialName || party.name) : 'Nessuna affiliazione'}</h2></div><p>${party ? esc(party.source === DATA_SOURCES.REAL ? party.factualDescription || 'Descrizione non disponibile nelle fonti consultate.' : party.description || 'Partito pronto a essere configurato.') : 'Sei indipendente. Qui sotto puoi aderire a un partito oppure continuare senza affiliazione.'}</p><div class="party-detail-meta">${party ? `<span class="source-pill">${sourceLabel(party.source)}${party.source === DATA_SOURCES.REAL ? ' verificato' : ''}</span>${party.abbreviation ? `<span>${esc(party.abbreviation)}</span>` : ''}${party.orientation ? `<span><small>ORIENTAMENTO</small><strong>${esc(party.orientation)}</strong></span>` : ''}${party.status ? `<span>${esc(party.status)}</span>` : ''}` : '<span class="source-pill">Nessuna affiliazione</span>'}</div>${party?.source === DATA_SOURCES.REAL && party.sourceUrl ? `<a class="catalog-source" href="${esc(party.sourceUrl)}" target="_blank" rel="noopener noreferrer">Fonte ufficiale ↗</a>` : ''}${party?.policyPositions ? `<div class="policy-summary">${[['economia','Economia'],['welfare','Welfare'],['ambiente','Ambiente'],['europa','Europa']].map(([key,label]) => `<span><small>${label}</small><strong>${Number(party.policyPositions[key] ?? 3)} <i>/ 5</i></strong><b><i style="width:${Number(party.policyPositions[key] ?? 3)*20}%"></i></b></span>`).join('')}</div>` : ''}</div>`,
+    partito: state.game ? renderPartyPage(state, { tab: options.tabFor?.('partito', state), record: party, logoFor: options.logoFor, selectable: options.selectable ?? [], territory: { units: realDatabase.territorialUnits ?? [], municipalities: isRealCollectionLoaded('municipalities') ? realDatabase.municipalities : null, home: options.homePlace?.() ?? {}, filter: options.views?.filters?.comitati ?? 'tutti', region: options.views?.filters?.['comitati-regione'] ?? '' } }) : `<div class="feature-card party-detail-card"><span class="feature-icon">◇</span><div class="eyebrow">${party ? 'AFFILIAZIONE ATTUALE' : 'PROFILO INDIPENDENTE'}</div><div class="party-detail-heading">${party && options.logoFor?.(party) ? `<img src="${esc(options.logoFor(party))}" alt="${esc(party.logoAlt || `Logo di ${party.officialName || party.name}`)}" />` : ''}<h2>${party ? esc(party.officialName || party.name) : 'Nessuna affiliazione'}</h2></div><p>${party ? esc(party.source === DATA_SOURCES.REAL ? party.factualDescription || 'Descrizione non disponibile nelle fonti consultate.' : party.description || 'Partito pronto a essere configurato.') : 'Sei indipendente. Qui sotto puoi aderire a un partito oppure continuare senza affiliazione.'}</p><div class="party-detail-meta">${party ? `<span class="source-pill">${sourceLabel(party.source)}${party.source === DATA_SOURCES.REAL ? ' verificato' : ''}</span>${party.abbreviation ? `<span>${esc(party.abbreviation)}</span>` : ''}${party.orientation ? `<span><small>ORIENTAMENTO</small><strong>${esc(party.orientation)}</strong></span>` : ''}${party.status ? `<span>${esc(party.status)}</span>` : ''}` : '<span class="source-pill">Nessuna affiliazione</span>'}</div>${party?.source === DATA_SOURCES.REAL && party.sourceUrl ? `<a class="catalog-source" href="${esc(party.sourceUrl)}" target="_blank" rel="noopener noreferrer">Fonte ufficiale ↗</a>` : ''}${party?.policyPositions ? `<div class="policy-summary">${[['economia','Economia'],['welfare','Welfare'],['ambiente','Ambiente'],['europa','Europa']].map(([key,label]) => `<span><small>${label}</small><strong>${Number(party.policyPositions[key] ?? 3)} <i>/ 5</i></strong><b><i style="width:${Number(party.policyPositions[key] ?? 3)*20}%"></i></b></span>`).join('')}</div>` : ''}</div>`,
     carriera: renderCareerPage(state, { tab: options.tabFor?.('carriera', state), timelineFilter: options.views?.timelineFilter }),
     profilo: `<div class="profile-page"><section class="profile-page-lead"><div class="hero-avatar">${player ? esc(player.firstName[0] + player.lastName[0]) : 'P'}</div><div><span class="section-kicker">IL TUO POLITICO</span><h2>${player ? esc(player.displayName) : 'Nessun profilo creato'}</h2><p>${player ? `${esc(player.previousProfession)} · residente a ${esc(player.municipality)}, ${esc(player.region)}` : 'Crea una carriera per definire il tuo profilo.'}</p></div>${player ? '' : '<button class="primary-button" data-action="new-career">Nuova carriera ' + icon('arrow', 16) + '</button>'}</section><div class="profile-page-facts"><div><span>INCARICO</span><strong>${player?.roleId && state.dataset.offices.some(item => item.id === player.roleId) ? esc(officeLabel(state.dataset.offices.find(item => item.id === player.roleId))) : 'Da assegnare'}</strong></div><div><span>TERRITORIO</span><strong>${esc(state.dataset.territories.find(item => item.id === player?.territoryId)?.name ?? player?.region ?? 'Italia')}</strong></div><div><span>PARTITO</span><strong>${party ? esc(partyName(party)) : 'Indipendente'}</strong></div></div><section class="profile-metrics"><h3>Statistiche</h3>${profileMetrics}</section><button class="text-link" data-nav="politici">Esplora i profili politici ${icon('arrow', 16)}</button></div>`,
     eventi: `<div class="agenda-list">${events.map(e => `<div class="agenda-row"><div class="agenda-date"><strong>${formatDate(e.date, { day: '2-digit' })}</strong><span>${formatDate(e.date, { month: 'short' })}</span></div><div class="agenda-row-text"><span class="event-tag">${esc(e.category)}</span><strong>${esc(e.title)}</strong><small>${esc(e.status)}</small></div><span class="source-pill">${sourceLabel(e.source)}</span></div>`).join('') || '<div class="empty-state">Nessun evento in programma.</div>'}</div>`,

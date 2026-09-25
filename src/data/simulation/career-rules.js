@@ -552,6 +552,10 @@ export const SITUATION_EVENTS = Object.freeze({
       { chance: 0.12, label: 'Riconteggio favorevole in alcune sezioni: il risultato resta, ma la stampa ti dà ragione', effects: { stats: { reputation: 1, notoriety: 2 } } },
       { chance: 0.88, label: 'Ricorso respinto', effects: { stats: { reputation: -1.5 } } }] },
     { id: 'accetta', label: 'Riconosci la vittoria dell’avversario', effects: { stats: { reputation: 1.5 } } }] },
+  'comitato-in-crisi': { id: 'comitato-in-crisi', title: 'Il comitato di {committee} è in difficoltà', body: '{committeeLevel} di {committee} è in stato di {committeeStatus}: iscritti in calo e un responsabile che risponde sempre meno a te. Senza un intervento il territorio lavorerà contro di te alla prossima campagna.', defaultChoice: 'lascia', choices: [
+    { id: 'intervieni', label: 'Vai sul territorio e rimetti in piedi il comitato', cost: { ap: 1, capital: 1 }, special: 'committee-rescue', effects: { stats: { popularity: 0.3 } } },
+    { id: 'commissaria', label: 'Chiedi alla segreteria di commissariarlo', cost: { capital: 3 }, requires: 'party', special: 'committee-commissar', effects: { party: { support: -1 } } },
+    { id: 'lascia', label: 'Lascia che si arrangino', special: 'committee-neglect' }] },
   'resa-dei-conti': { id: 'resa-dei-conti', title: 'Resa dei conti nel partito dopo il voto', body: '{currentA} chiede una discussione sulla sconfitta e sulle responsabilità: in gioco c’è il tuo incarico.', defaultChoice: 'difenditi', choices: [
     { id: 'difenditi', label: 'Difendi le tue scelte alla conta', special: 'current-resist' },
     { id: 'cedi', label: 'Fai un passo indietro', special: 'current-cede' },

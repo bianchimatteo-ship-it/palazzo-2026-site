@@ -141,6 +141,15 @@ Tre sezioni con un’identità propria, ognuna con intestazione, indicatori e sc
 npm run check:sections
 ```
 
+## Comitati territoriali ed editor dei loghi (dal 25/09/2026)
+
+- **Comitati territoriali** (`src/core/committee-engine.js`, `src/ui/committees-view.js`, Partito → Territorio): la rete del tuo partito Regione → Provincia o città metropolitana → Comune sulla geografia ISTAT (nomi e codici reali; iscritti, volontari, organizzazione, consenso locale, fedeltà, responsabili e stati sono simulati, i responsabili sono sempre figure simulate). Stati: fondazione, crescita, consolidamento, crisi, perdita del controllo (il comitato risponde a un’altra area), dissoluzione. Azioni con costi: fondare o rifondare, visitare e rilanciare, cambiare il responsabile, finanziare, mobilitare i volontari, commissariare (solo chi guida il partito). Un comitato di casa in crisi apre una decisione in agenda. Effetti reali: alla partenza della campagna i comitati del territorio del voto danno volontari, organizzazione, peso sulla candidatura e consenso locale (un comitato fuori controllo pesa contro); il risultato del voto li rafforza o li mette alla prova; alle promozioni contano come radicamento. Filtri per regione e stato ricordati.
+- **Editor dei loghi** (`src/core/logo-editor.js`, `src/ui/logo-editor-view.js`): nella gestione loghi del proprietario (file o indirizzo, quando l’immagine si può copiare) e nella creazione del partito. Ritaglio con proporzione libera o quadrata, zoom (sotto 1 lascia margini trasparenti invece di tagliare il logo) e spostamento trascinando, sfondo uniforme reso trasparente con tolleranza, anteprima su chiaro, scuro e trasparenza, colore dominante automatico (applicabile al partito). Senza modifiche resta il file originale (un SVG resta vettoriale); altrimenti PNG fino a 512 px. Con il logo restano fonte, stato di verifica dichiarato e metadati (ritaglio, proporzione, zoom, trasparenza, colore, file originale). I loghi non sono più forzati in un cerchio.
+
+```sh
+npm run check:territory
+```
+
 ## Gameplay: la carriera settimana per settimana
 
 La Home è il quartier generale del politico: statistiche con variazione settimanale, giorni disponibili, fondi, capitale politico, preparazione elettorale, decisioni in agenda, attività, traguardi, calendario elettorale, posizione in Parlamento e nel partito, relazioni.
@@ -280,6 +289,7 @@ npm run check:first-run   # primo avvio: benvenuto e account prima della prima c
 npm run check:elections   # esiti elettorali vari e non automatici, ballottaggio, soglie, preferenze, conseguenze, varietà delle campagne, strategie
 npm run check:sections    # progressione non automatica (probabilità ed esiti), percorsi di carriera, agenda datata, schede di Carriera, Partito e Agenda
 npm run check:hemicycle   # commissioni reali, emiciclo Camera/Senato, colori e ordine dei gruppi, voti dei singoli coerenti coi totali, voto segreto, fiducia
+npm run check:territory   # comitati Regione → Provincia → Comune, stati, azioni, crisi, effetti su campagna/voto/promozioni; editor dei loghi
 npm run check:government  # 34 temi, bilancio, territori, cittadini, sicurezza, Presidente del Consiglio, difficoltà
 npm run check:events      # eventi procedurali: condizioni, cooldown, rarità, esclusività, varianti, catene
 npm run check:career      # carriera pluriennale end-to-end, salvataggi e migrazione

@@ -2,6 +2,8 @@
 // internal relations, the state of the party, the territory, resources and the political moment. Crossing a
 // threshold makes it likely, never certain; the same attempt can end in a promotion, a lower office than hoped,
 // a postponement, an internal defeat or even a demotion.
+import { committeeStrength } from './committee-engine.js?v=20260925-7';
+
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
 const round1 = value => Math.round(value * 10) / 10;
 const round2 = value => Math.round(value * 100) / 100;
@@ -31,6 +33,9 @@ export function progressionFactors({ game = null, stats = {}, parliament = null,
   const wins = recent.filter(item => item.kind === 'vittoria-elettorale').length;
   const losses = recent.filter(item => item.kind === 'sconfitta-elettorale').length;
   const home = party?.org?.sections?.find(item => item.region === game?.place?.region) ?? null;
+  // The committees of the player's own territory, when the party has them: the comune first, then the region.
+  const homeCommittees = (party?.org?.committees ?? []).filter(item => item.region === game?.place?.region && item.status !== 'dissoluzione' && ['comune', 'provincia'].includes(item.level));
+  const rooted = homeCommittees.length ? homeCommittees.reduce((sum, item) => sum + committeeStrength(item), 0) / homeCommittees.length : null;
   const cohesion = party?.org?.cohesion ?? 55;
   const trend = party?.org?.growth ?? 0;
   const mandateWeeks = parliament?.player?.mandateStartedAt && game?.week?.startedAt ? Math.max(0, Math.round((Date.parse(`${game.week.startedAt}T12:00:00`) - Date.parse(`${parliament.player.mandateStartedAt}T12:00:00`)) / 604800000)) : 0;
@@ -42,7 +47,7 @@ export function progressionFactors({ game = null, stats = {}, parliament = null,
     reputation: clamp(stats.reputation ?? 50),
     experience: clamp(stats.experience ?? 30),
     results: clamp(50 + wins * 15 - losses * 12),
-    territory: clamp((stats.popularity ?? 45) * .6 + (home?.vitality ?? 40) * .4),
+    territory: clamp((stats.popularity ?? 45) * .6 + (rooted ?? home?.vitality ?? 40) * .4),
     party: clamp(cohesion * .7 + 15 + trend * 60),
     group: clamp(parliament?.careerStanding?.partySupport ?? 50),
     seniority: clamp(30 + mandateWeeks * 1.2)

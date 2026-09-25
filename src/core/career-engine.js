@@ -1,20 +1,21 @@
-import { advanceDays } from './time.js?v=20260925-6';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260925-6';
-import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260925-6';
+import { advanceDays } from './time.js?v=20260925-7';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260925-7';
+import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260925-7';
 import {
   APPOINTMENTS, BASE_WEEKLY_INCOME, CAREER_EVENTS, CAREER_OBJECTIVES, CURRENT_TEMPLATES, EARLY_ELECTION_AFTER_WEEKS, ELECTION_SCHEDULE,
   FORCED_EVENTS, LEGACY_RIVAL_NAMES, SIMULATED_RIVAL_LABEL, FOUNDER_RANK, LEVEL_FIRST_ELECTION, OFFICE_INCOME, PARTY_RANKS, RELATION_TEMPLATES, STAT_LABELS,
-  SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS } from '../data/simulation/career-rules.js?v=20260925-6';
-import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20260925-6';
-import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20260925-6';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260925-6';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260925-6';
-import { book, buyInvestment, createFinance, depositElectionFund, hasAsset, normalizeFinance, settleFinanceWeek } from './finance-engine.js?v=20260925-6';
-import { advanceOrganization, applyOrgEffects, createOrganization, isPartyLeader, normalizeOrganization, treasuryBook } from './organization-engine.js?v=20260925-6';
-import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20260925-6';
-import { HARD_CATEGORIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20260925-6';
-import { macroAreaOf } from '../data/simulation/policy-rules.js?v=20260925-6';
-import { advancementOdds, evaluateAdvancement, progressionFactors } from './progression-engine.js?v=20260925-6';
+  SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS } from '../data/simulation/career-rules.js?v=20260925-7';
+import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20260925-7';
+import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20260925-7';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260925-7';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260925-7';
+import { book, buyInvestment, createFinance, depositElectionFund, hasAsset, normalizeFinance, settleFinanceWeek } from './finance-engine.js?v=20260925-7';
+import { advanceOrganization, applyOrgEffects, createOrganization, isPartyLeader, normalizeOrganization, treasuryBook } from './organization-engine.js?v=20260925-7';
+import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20260925-7';
+import { HARD_CATEGORIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20260925-7';
+import { macroAreaOf } from '../data/simulation/policy-rules.js?v=20260925-7';
+import { advancementOdds, evaluateAdvancement, progressionFactors } from './progression-engine.js?v=20260925-7';
+import { advanceCommittees, applyCommitteeAction, COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, foundCommittee } from './committee-engine.js?v=20260925-7';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -695,6 +696,14 @@ function handleSpecial(ctx, env, special, item, lines, specials, choice = {}) {
     const holds = special === 'current-resist' && draw(game) < clamp(0.4 + (party.support - 50) / 80 + (leadership - 50) / 200, 0.1, 0.9);
     if (holds) { party.support = clamp(party.support + 2); changeRelation(game, item.params.currentAId, -5); lines.push('Alla conta resti al tuo posto: l’area esce ridimensionata.'); }
     else demote(ctx, env, special === 'current-cede' ? 'Fai un passo indietro a favore dell’area' : 'La conta interna ti dà torto', lines);
+  } else if (special === 'committee-rescue' || special === 'committee-commissar' || special === 'committee-neglect') {
+    // A committee in trouble: going there, having it placed under a commissioner, or letting it go.
+    const committee = game.party?.org?.committees?.find(entry => entry.id === item.params.committeeId);
+    if (committee && committee.status !== 'dissoluzione') {
+      if (special === 'committee-rescue') { committee.organization = Math.round(clamp(committee.organization + 12)); committee.loyalty = Math.round(clamp(committee.loyalty + 10)); committee.lastVisitWeek = game.week.index; lines.push(`Il comitato di ${committee.name} riparte: organizzazione ${committee.organization}, fedeltà ${committee.loyalty}.`); }
+      else if (special === 'committee-commissar') { committee.leader = { label: 'Commissario (figura simulata nominata dalla segreteria)', currentId: null, player: false }; committee.loyalty = 75; committee.status = 'crisi'; committee.statusSince = game.week.index; lines.push(`La segreteria commissaria il comitato di ${committee.name}: il controllo torna, qualche malumore resta.`); if (game.party.org) game.party.org.cohesion = Math.round(clamp(game.party.org.cohesion - 2)); }
+      else { committee.loyalty = Math.round(clamp(committee.loyalty - 6)); lines.push(`Il comitato di ${committee.name} resta da solo: la fedeltà a te cala.`); }
+    }
   } else if (special === 'accept-scenario-office') {
     game.flags.scenarioOffice = { title: 'Sottosegretario (esecutivo di scenario)', since: game.week.index, source: SIM };
     specials.push({ type: 'scenario-office', title: game.flags.scenarioOffice.title });
@@ -1028,6 +1037,36 @@ export function partyInvestment(input, env, id) {
   addLog(ctx.game, env.currentDate, 'partito', `Investimento del partito: ${investment.label}`, lines, 'good');
   return { ctx, investment };
 }
+// Territorial committees: found one, visit, change its leader, fund, mobilise, place it under a commissioner.
+export function committeeAction(input, env, actionId, target = {}) {
+  const spec = COMMITTEE_ACTIONS[actionId];
+  if (!spec) throw new Error('Azione non disponibile.');
+  const ctx = start(input);
+  const party = ctx.game.party;
+  if (!party?.org) throw new Error('I comitati territoriali sono quelli del tuo partito: serve un partito.');
+  if (actionId === 'commissaria' && !isPartyLeader(party)) throw new Error('Solo chi guida il partito può commissariare un comitato.');
+  const problem = costProblem(ctx.game, spec.cost);
+  if (problem) throw new Error(problem);
+  const org = party.org;
+  const week = ctx.game.week.index;
+  const rand = () => draw(ctx.game);
+  let committee;
+  let lines;
+  if (actionId === 'fonda') {
+    if (!['provincia', 'comune'].includes(target.level) || !target.name || !target.region) throw new Error('Scegli dove fondare il comitato.');
+    const parent = (org.committees ?? []).find(item => item.id === target.parentId) ?? (org.committees ?? []).find(item => item.level === (target.level === 'comune' ? 'provincia' : 'regione') && item.region === target.region && (target.level === 'provincia' || item.unitCode === target.unitCode));
+    committee = foundCommittee(org, { level: target.level, name: target.name, region: target.region, parentId: parent?.id ?? null, week, currents: party.currents, rand, extra: { unitCode: target.unitCode ?? null, unitType: target.unitType ?? null, municipalityCode: target.municipalityCode ?? null } });
+    lines = [`Nasce il ${COMMITTEE_LEVELS[committee.level].label.toLowerCase()} di ${committee.name}`];
+  } else {
+    committee = (org.committees ?? []).find(item => item.id === target.committeeId);
+    if (!committee) throw new Error('Comitato non trovato.');
+    lines = applyCommitteeAction(org, committee, actionId, { week, rand, currents: party.currents, leader: isPartyLeader(party) });
+  }
+  pay(ctx.game, spec.cost, 'partito', `${spec.label}: ${committee.name}`, env.currentDate);
+  if (['rilancia', 'mobilita'].includes(actionId) && committee.region === ctx.game.place?.region) applyEffects(ctx, { stats: { popularity: 0.3, notoriety: 0.2 } }, null, lines, { source: `Comitato di ${committee.name}` });
+  addLog(ctx.game, env.currentDate, 'partito', `${spec.label}: ${COMMITTEE_LEVELS[committee.level].label.toLowerCase()} di ${committee.name}`, lines, 'good');
+  return { ctx, committee, lines };
+}
 // The party's parliamentarians are asked to follow the line: the group closes ranks, individual contacts cool.
 export function disciplineGroup(input, env) {
   const ctx = asSecretary(input, { ap: 1, capital: 3 });
@@ -1192,6 +1231,13 @@ function weeklySystems(ctx, env, date, closing, lines, specials) {
   if (party?.org) {
     const org = advanceOrganization(party.org, { rand: () => draw(game), week: closing, date, pollShare: env.pollShare ?? null, pollDelta: env.pollDelta ?? 0, mood: env.mood ?? 50, rank: party.rank, founder: party.affiliation === 'founder', support: party.support, currents: party.currents, campaignActive: env.campaign?.status === 'active' });
     lines.push(...org.lines.slice(0, 2));
+    // Territorial committees: their week, and a decision when one of the player's own territory is in trouble.
+    if (party.org.committees?.length) {
+      const territory = advanceCommittees(party.org, { rand: () => draw(game), week: closing, regionalShares: env.regionalShares ?? {}, nationalShare: env.pollShare ?? null, currents: party.currents, campaignActive: env.campaign?.status === 'active' });
+      lines.push(...territory.lines.slice(0, 1));
+      const trouble = territory.events.find(event => event.status !== 'dissoluzione' && party.org.committees.find(item => item.id === event.committee)?.region === game.place?.region);
+      if (trouble && !game.inbox.some(item => item.templateId === 'comitato-in-crisi')) raiseSituation(ctx, 'comitato-in-crisi', { committee: trouble.name, committeeId: trouble.committee, committeeLevel: COMMITTEE_LEVELS[trouble.level].label, committeeStatus: COMMITTEE_STATES[trouble.status].label.toLowerCase() });
+    }
     for (const event of org.events) {
       if (event.type === 'congress' && !game.inbox.some(item => ['congresso', 'congresso-segretario'].includes(item.templateId))) {
         const params = eventParams(ctx);

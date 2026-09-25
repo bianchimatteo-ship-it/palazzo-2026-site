@@ -1,6 +1,6 @@
-import { CAREER_LEVELS, ITALIAN_REGIONS } from '../data/regions.js?v=20260925-6';
-import { isSelectableParty } from '../data/schema.js?v=20260925-6';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20260925-6';
+import { CAREER_LEVELS, ITALIAN_REGIONS } from '../data/regions.js?v=20260925-7';
+import { isSelectableParty } from '../data/schema.js?v=20260925-7';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20260925-7';
 
 const genders = new Set(['preferisco-non-specificare', 'donna', 'uomo', 'non-binario']);
 const orientations = new Set(['Centrismo civico', 'Progressista', 'Conservatore', 'Liberale', 'Socialdemocratico', 'Ecologista', 'Popolare', 'Autonomista', 'Altro']);

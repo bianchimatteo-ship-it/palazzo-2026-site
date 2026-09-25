@@ -1,9 +1,9 @@
-import { CAREER_LEVELS, ITALIAN_REGIONS, initialCareerStatistics } from '../data/regions.js?v=20260925-6';
-import { LOGO_SHAPES, LOGO_SYMBOLS, partyLogoDataUrl } from './party-logo.js?v=20260925-6';
-import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260925-6';
-import { validateCareerStep } from '../core/career-rules.js?v=20260925-6';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260925-6';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20260925-6';
+import { CAREER_LEVELS, ITALIAN_REGIONS, initialCareerStatistics } from '../data/regions.js?v=20260925-7';
+import { LOGO_SHAPES, LOGO_SYMBOLS, partyLogoDataUrl } from './party-logo.js?v=20260925-7';
+import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260925-7';
+import { validateCareerStep } from '../core/career-rules.js?v=20260925-7';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260925-7';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20260925-7';
 
 const POSITIONS = ['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra'];
 
@@ -203,7 +203,8 @@ function logoBuilder(d) {
   const modes = [['builder', 'Crea con forme e simboli'], ['url', 'Da un indirizzo'], ['upload', 'Carica un file']].map(([id, label]) => '<label class="' + (mode === id ? 'active' : '') + '"><input type="radio" name="partyLogoMode" value="' + id + '" ' + (mode === id ? 'checked' : '') + ' />' + label + '</label>').join('');
   const builder = mode === 'builder' ? '<label>Forma<select name="partyLogoShape">' + Object.entries(LOGO_SHAPES).map(([id, item]) => '<option value="' + id + '" ' + (d.partyLogoShape === id ? 'selected' : '') + '>' + esc(item.label) + '</option>').join('') + '</select></label><label>Simbolo<select name="partyLogoSymbol">' + Object.entries(LOGO_SYMBOLS).map(([id, item]) => '<option value="' + id + '" ' + (d.partyLogoSymbol === id ? 'selected' : '') + '>' + esc(item.label) + '</option>').join('') + '</select></label>' : '';
   const url = mode === 'url' ? '<label class="wizard-full-field">Indirizzo dell’immagine<input type="url" name="partyLogoUrl" value="' + val(d, 'partyLogoUrl') + '" placeholder="https://…/logo.png" /></label>' : '';
-  const upload = mode === 'upload' ? '<label class="wizard-full-field logo-admin-upload">File SVG, PNG, JPEG o WebP (resta in questo browser)<input type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp" data-wizard-logo-upload /></label>' + (d.partyLogoError ? '<small class="menu-error">' + esc(d.partyLogoError) + '</small>' : '') : '';
+  // After choosing the file the editor opens in its slot: crop, ratio, zoom, transparency, dominant colour.
+  const upload = mode === 'upload' ? '<label class="wizard-full-field logo-admin-upload">File SVG, PNG, JPEG o WebP (resta in questo browser)<input type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp" data-wizard-logo-upload /></label>' + (d.partyLogoError ? '<small class="menu-error">' + esc(d.partyLogoError) + '</small>' : '') + '<div class="wizard-full-field" data-logo-editor-slot></div>' : '';
   return '<div class="wizard-logo"><div class="wizard-logo-preview" data-wizard-logo-preview>' + (preview ? '<img src="' + esc(preview) + '" alt="Anteprima del logo" />' : '<span>Logo</span>') + '</div><div class="wizard-logo-controls"><div class="segmented" role="group" aria-label="Tipo di logo">' + modes + '</div><div class="wizard-form-grid">' + builder + url + upload + '</div><small>I simboli disponibili sono segni grafici generici, diversi dagli emblemi dei partiti esistenti. Il logo è un dato dell’utente.</small></div></div>';
 }
 function summaryStep(d, parties, level, parliamentaryGroups, place = null) {

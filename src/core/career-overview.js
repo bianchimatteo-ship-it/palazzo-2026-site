@@ -1,12 +1,12 @@
 // The career as four tracks that move at different speeds: institutions won at the polls, the party, Parliament and
 // the Government. For each one: where the player stands, the next step, what it takes, the odds (the same functions
 // the engines use to decide) and what is blocking it. Nothing here is granted: it only reads the state.
-import { costProblem, nextPartyRank, partyAdvancementOdds, upcomingElections } from './career-engine.js?v=20260925-6';
-import { activeMinisters, canManageParliament, CONTEST_COST, CONTEST_WINDOW_DAYS, governmentPostOdds, governmentPostProblems, nextParliamentaryRole, PARLIAMENTARY_ROLES } from './parliament-engine.js?v=20260925-6';
-import { isPrimeMinister } from './roles.js?v=20260925-6';
-import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20260925-6';
-import { advancementOdds, progressionFactors } from './progression-engine.js?v=20260925-6';
-import { formatDate } from './time.js?v=20260925-6';
+import { costProblem, nextPartyRank, partyAdvancementOdds, upcomingElections } from './career-engine.js?v=20260925-7';
+import { activeMinisters, canManageParliament, CONTEST_COST, CONTEST_WINDOW_DAYS, governmentPostOdds, governmentPostProblems, nextParliamentaryRole, PARLIAMENTARY_ROLES } from './parliament-engine.js?v=20260925-7';
+import { isPrimeMinister } from './roles.js?v=20260925-7';
+import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20260925-7';
+import { advancementOdds, progressionFactors } from './progression-engine.js?v=20260925-7';
+import { formatDate } from './time.js?v=20260925-7';
 
 const day = date => date ? formatDate(date) : '';
 const daysBetween = (from, to) => Math.round((Date.parse(`${to}T12:00:00`) - Date.parse(`${from}T12:00:00`)) / 86400000);

@@ -52,7 +52,9 @@ export async function getLocalLogo(partyId) {
 export async function saveLocalLogo(partyId, logo) {
   const remote = !(logo?.blob instanceof Blob) && isImageAddress(logo?.url);
   if (!partyId || (!(logo?.blob instanceof Blob) && !remote)) throw new Error('Partito o file logo non valido.');
-  const record = { partyId, ...(remote ? { url: String(logo.url).trim(), mimeType: null } : { blob: logo.blob, mimeType: logo.blob.type }), fileName: logo.fileName || 'logo', origin: 'user', sourceUrl: logo.sourceUrl ? String(logo.sourceUrl).trim() : null, source: String(logo.source || '').trim(), verified: Boolean(logo.verified), alt: String(logo.alt || '').trim(), updatedAt: new Date().toISOString() };
+  // The editor's choices (crop, ratio, zoom, transparency, dominant colour, original file) travel with the logo.
+  const editor = logo.editor && typeof logo.editor === 'object' ? JSON.parse(JSON.stringify(logo.editor)) : null;
+  const record = { partyId, ...(remote ? { url: String(logo.url).trim(), mimeType: null } : { blob: logo.blob, mimeType: logo.blob.type }), fileName: logo.fileName || 'logo', origin: 'user', sourceUrl: logo.sourceUrl ? String(logo.sourceUrl).trim() : null, source: String(logo.source || '').trim(), verified: Boolean(logo.verified), alt: String(logo.alt || '').trim(), editor, updatedAt: new Date().toISOString() };
   const database = await openDatabase();
   if (!database) memory.set(partyId, record);
   else await withStore('readwrite', store => store.put(record));
@@ -179,7 +181,7 @@ export async function importLogoConfiguration(text) {
   for (const item of data.logos) {
     if (item.partyId && item.url && item.base64 === undefined) {
       if (!isImageAddress(item.url)) throw new Error('Configurazione con indirizzo di logo non valido.');
-      await saveLocalLogo(item.partyId, { url: item.url, sourceUrl: item.sourceUrl, source: item.source, verified: item.verified, alt: item.alt });
+      await saveLocalLogo(item.partyId, { url: item.url, sourceUrl: item.sourceUrl, source: item.source, verified: item.verified, alt: item.alt, editor: item.editor ?? null });
       continue;
     }
     if (!item.partyId || typeof item.base64 !== 'string' || item.base64.length > 3_000_000) throw new Error('Configurazione con logo non valido.');
@@ -188,6 +190,6 @@ export async function importLogoConfiguration(text) {
     if (bytes.byteLength > MAX_FILE_BYTES || !['image/png','image/svg+xml',...RASTER_TYPES].includes(item.mimeType)) throw new Error('Formato o dimensione del logo non ammessi.');
     let blob = new Blob([bytes], { type: item.mimeType });
     if (item.mimeType === 'image/svg+xml') blob = sanitizeSvg(await blob.text());
-    await saveLocalLogo(item.partyId, { blob, fileName: item.fileName, sourceUrl: item.sourceUrl, source: item.source, verified: item.verified, alt: item.alt });
+    await saveLocalLogo(item.partyId, { blob, fileName: item.fileName, sourceUrl: item.sourceUrl, source: item.source, verified: item.verified, alt: item.alt, editor: item.editor ?? null });
   }
 }
