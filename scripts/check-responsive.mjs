@@ -123,7 +123,7 @@ try {
       for (const issue of issues) report.push(`${label} · ${view.filter(Boolean).join(' › ')} · ${issue.kind}: ${issue.el} (${issue.detail})`);
       // The Home as a command centre: who you are and the main action on the first screen, the resources right after.
       if (view[0] === 'panoramica') {
-        const home = await evaluate(`(() => { const top = selector => { const el = document.querySelector(selector); return el ? el.getBoundingClientRect().top + scrollY : null; }; return { action: top('.hqc-action'), resources: top('.hqc-resources'), overview: top('.hqc-overview'), screen: innerHeight, tabs: [...document.querySelectorAll('.mobile-tab')].filter(tab => getComputedStyle(tab).display !== 'none').length }; })()`);
+        const home = await evaluate(`(() => { const top = selector => { const el = document.querySelector(selector); return el ? el.getBoundingClientRect().top + scrollY : null; }; return { action: top('.hqc-action'), resources: top('.hqc-resources'), overview: top('.hqc-board'), screen: innerHeight, tabs: [...document.querySelectorAll('.mobile-tab')].filter(tab => getComputedStyle(tab).display !== 'none').length }; })()`);
         if (home.action === null || home.action > home.screen * 1.05) report.push(`${label} · Home: l’azione principale non è nella prima schermata (${home.action} px su ${home.screen})`);
         if (!(home.resources > home.action && home.overview > home.resources)) report.push(`${label} · Home: ordine dei blocchi non rispettato`);
         if (width <= 600 && home.tabs !== 6) report.push(`${label} · barra inferiore con ${home.tabs} tasti invece di 6`);

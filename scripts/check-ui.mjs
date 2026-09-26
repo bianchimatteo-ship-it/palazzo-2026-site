@@ -301,8 +301,15 @@ assert.ok(page.includes('Incarico di governo') && page.includes('Presidente del 
 for (const id of pages) assert.ok(clean(await goto(id)), `${id} (dopo le azioni): valori non validi`);
 
 // ---------- 8. saves: slots, menu, continue, import/export, a second game ----------
+// Entering a career always starts from the Home, whatever page was open before (Continua, slots, imports).
+await goto('parlamento');
 await click({ action: 'menu' });
 assert.ok(root.innerHTML.includes('CONTINUA LA PARTITA') && root.innerHTML.includes('Marta Neri'), 'Il menu offre “Continua” con l’ultima partita');
+page = await click({ menu: 'continua' });
+assert.equal(store.getState().ui.activePage, 'panoramica', '“Continua” porta alla Home, non all’ultima pagina visitata.');
+assert.ok(page.includes('class="hq hqc"'), 'Dopo “Continua” si vede la Home.');
+await goto('finanze');
+await click({ action: 'menu' });
 await click({ menu: 'carica' });
 await click({ menuAction: 'save-slot' });
 const slots = store.listSlots();
@@ -314,6 +321,7 @@ page = await click({ slotLoad: slots[0].id });
 if (page.includes('confirm-dialog')) { assert.ok(page.includes('Caricare questo salvataggio?'), 'Con modifiche non salvate il caricamento chiede conferma.'); await click({ confirm: 'ok' }); }
 assert.equal(store.getState().game.week.index, savedWeek, 'Lo slot ripristina la partita');
 assert.ok(!root.innerHTML.includes('main-menu'), 'Caricare chiude il menu');
+assert.equal(store.getState().ui.activePage, 'panoramica', 'Caricando un salvataggio si parte dalla Home.');
 store.loadGame(exported, 'Partita importata');
 assert.equal(store.getState().game.week.index, savedWeek, 'Import da file');
 assert.throws(() => store.loadGame('{"hello":1}'), /non contiene una partita/);

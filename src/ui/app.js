@@ -1,48 +1,48 @@
-import { fullDate, formatDate } from '../core/time.js?v=20260926-9';
-import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20260926-9';
-import { accountApiBase, currentAccount, probeAccountService, deleteCloudSave, downloadSave, knownRevision, listCloudSaves, login, logout, register, slotForCareer, uploadSave } from '../data/repositories/account-sync.js?v=20260926-9';
-import { setPartyLogoResolver } from './person-marks.js?v=20260926-9';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260926-9';
-import { isRealCollectionLoaded, loadRealCollections, loadRealCollectionsSettled, pristineRecord, realDataFailures, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20260926-9';
-import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20260926-9';
-import { renderAdminPanel } from './admin-panel.js?v=20260926-9';
-import { sharedLogos } from '../data/repositories/admin-store.js?v=20260926-9';
-import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, publishSharedArchive, refreshSharedArchive, sharedApiUrl, verifySharedSession } from '../data/repositories/admin-sync.js?v=20260926-9';
-import { deleteLocalLogo, exportLogoConfiguration, fetchLogoFromUrl, getLocalLogo, importLogoConfiguration, listLocalLogos, probeImage, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20260926-9';
-import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20260926-9';
-import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20260926-9';
-import { PARTY_LINK_COLLECTIONS } from '../data/repositories/party-links.js?v=20260926-9';
-import { renderLogoAdmin } from './logo-admin.js?v=20260926-9';
-import { chosenPlace, makeCareerDraft, renderCareerWizard, wizardLogoPreview } from './career-wizard.js?v=20260926-9';
-import { userPartyLogo } from './party-logo.js?v=20260926-9';
-import { CAREER_STEPS, validateCareerStep } from '../core/career-rules.js?v=20260926-9';
-import { renderElectionsHub } from './elections-hub.js?v=20260926-9';
-import { renderCareerPage } from './career-page.js?v=20260926-9';
-import { renderPartyPage } from './party-page.js?v=20260926-9';
-import { renderAgendaPage } from './agenda-page.js?v=20260926-9';
-import { HEMICYCLE_DEFAULTS, renderHemicycle } from './hemicycle-view.js?v=20260926-9';
-import { drawLogoEditor, exportLogo, measureBackground, panFromDrag, renderLogoEditor } from './logo-editor-view.js?v=20260926-9';
-import { createEditorState } from '../core/logo-editor.js?v=20260926-9';
-import { renderParliamentPage } from './parliament-mode.js?v=20260926-9';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260926-9';
-import { CAREER_LEVELS } from '../data/regions.js?v=20260926-9';
-import { renderHeadquarters } from './game-mode.js?v=20260926-9';
-import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20260926-9';
-import { playerRoles } from '../core/roles.js?v=20260926-9';
-import { budgetPreview, designFromForm, planFromForm, policyFields, policyPreview } from './policy-mode.js?v=20260926-9';
-import { areaOf } from '../data/simulation/policy-rules.js?v=20260926-9';
-import { attachChartInteractions, hideChartTip, renderPollsPage } from './polls-mode.js?v=20260926-9';
-import { glyph } from './visuals.js?v=20260926-9';
-import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20260926-9';
-import { renderFinancePage } from './finance-mode.js?v=20260926-9';
-import { renderContactsPanel } from './organization-mode.js?v=20260926-9';
-import { renderRealLaws } from './real-laws.js?v=20260926-9';
-import { realLawArea } from '../core/society-engine.js?v=20260926-9';
-import { canManageParliament } from '../core/parliament-engine.js?v=20260926-9';
-import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, TOUR_STEPS } from './menu.js?v=20260926-9';
-import { MAX_SLOTS } from '../core/storage.js?v=20260926-9';
-import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20260926-9';
-import { playSound } from './sound.js?v=20260926-9';
+import { fullDate, formatDate } from '../core/time.js?v=20260926-10';
+import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20260926-10';
+import { accountApiBase, currentAccount, probeAccountService, deleteCloudSave, downloadSave, knownRevision, listCloudSaves, login, logout, register, slotForCareer, uploadSave } from '../data/repositories/account-sync.js?v=20260926-10';
+import { setPartyLogoResolver } from './person-marks.js?v=20260926-10';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260926-10';
+import { isRealCollectionLoaded, loadRealCollections, loadRealCollectionsSettled, pristineRecord, realDataFailures, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20260926-10';
+import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20260926-10';
+import { renderAdminPanel } from './admin-panel.js?v=20260926-10';
+import { sharedLogos } from '../data/repositories/admin-store.js?v=20260926-10';
+import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, publishSharedArchive, refreshSharedArchive, sharedApiUrl, verifySharedSession } from '../data/repositories/admin-sync.js?v=20260926-10';
+import { deleteLocalLogo, exportLogoConfiguration, fetchLogoFromUrl, getLocalLogo, importLogoConfiguration, listLocalLogos, probeImage, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20260926-10';
+import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20260926-10';
+import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20260926-10';
+import { PARTY_LINK_COLLECTIONS } from '../data/repositories/party-links.js?v=20260926-10';
+import { renderLogoAdmin } from './logo-admin.js?v=20260926-10';
+import { chosenPlace, makeCareerDraft, renderCareerWizard, wizardLogoPreview } from './career-wizard.js?v=20260926-10';
+import { userPartyLogo } from './party-logo.js?v=20260926-10';
+import { CAREER_STEPS, validateCareerStep } from '../core/career-rules.js?v=20260926-10';
+import { renderElectionsHub } from './elections-hub.js?v=20260926-10';
+import { renderCareerPage } from './career-page.js?v=20260926-10';
+import { renderPartyPage } from './party-page.js?v=20260926-10';
+import { renderAgendaPage } from './agenda-page.js?v=20260926-10';
+import { HEMICYCLE_DEFAULTS, renderHemicycle } from './hemicycle-view.js?v=20260926-10';
+import { drawLogoEditor, exportLogo, measureBackground, panFromDrag, renderLogoEditor } from './logo-editor-view.js?v=20260926-10';
+import { createEditorState } from '../core/logo-editor.js?v=20260926-10';
+import { renderParliamentPage } from './parliament-mode.js?v=20260926-10';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260926-10';
+import { CAREER_LEVELS } from '../data/regions.js?v=20260926-10';
+import { renderHeadquarters } from './game-mode.js?v=20260926-10';
+import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20260926-10';
+import { playerRoles } from '../core/roles.js?v=20260926-10';
+import { budgetPreview, designFromForm, planFromForm, policyFields, policyPreview } from './policy-mode.js?v=20260926-10';
+import { areaOf } from '../data/simulation/policy-rules.js?v=20260926-10';
+import { attachChartInteractions, hideChartTip, renderPollsPage } from './polls-mode.js?v=20260926-10';
+import { glyph } from './visuals.js?v=20260926-10';
+import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20260926-10';
+import { renderFinancePage } from './finance-mode.js?v=20260926-10';
+import { renderContactsPanel } from './organization-mode.js?v=20260926-10';
+import { renderRealLaws } from './real-laws.js?v=20260926-10';
+import { realLawArea } from '../core/society-engine.js?v=20260926-10';
+import { canManageParliament } from '../core/parliament-engine.js?v=20260926-10';
+import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, TOUR_STEPS } from './menu.js?v=20260926-10';
+import { MAX_SLOTS } from '../core/storage.js?v=20260926-10';
+import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20260926-10';
+import { playSound } from './sound.js?v=20260926-10';
 
 // The main sections, one tap away on every screen (Home · Carriera · Partito · Elezioni · Parlamento); everything else
 // is under “Altro” (a group of the sidebar on computers, a sheet on phones).
@@ -328,7 +328,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
         <div class="mobile-sheet" id="mobile-sheet" data-mobile-sheet hidden><div class="mobile-sheet-panel" role="dialog" aria-modal="true" aria-label="Tutte le sezioni"><div class="mobile-sheet-head"><strong>Sezioni</strong><button type="button" class="icon-button" data-mobile-close aria-label="Chiudi">×</button></div><div class="mobile-sheet-grid">${[...mainNavigation, ['profilo', 'person', 'Profilo'], ['impostazioni', 'settings', 'Impostazioni']].map(([id, glyph, label]) => `<button type="button" class="sheet-item ${mainSectionActive(id, state.ui.activePage) ? 'active' : ''}" data-nav="${id}">${icon(glyph, 22)}<span>${label}</span></button>`).join('')}<button type="button" class="sheet-item" data-action="menu">${icon('menu', 22)}<span>Menu principale</span></button><button type="button" class="sheet-item" data-action="account">${icon('person', 22)}<span>Account</span></button></div><div class="mobile-sheet-status"><span class="save-dot"></span>${lastSaved}</div></div></div>
         <main class="main-area">
           <header class="topbar"><div class="topbar-title"><strong>${current.title}</strong><span>${current.intro}</span></div><div class="top-actions"><div class="top-tools"><button class="icon-button menu-button" data-action="menu" aria-label="Menu principale" title="Menu principale">${icon('menu', 17)}</button><button class="icon-button" aria-label="Salva carriera" title="Salva carriera" data-action="save">${icon('save', 17)}</button></div><div class="top-time"><div class="date-chip">${icon('calendar', 16)}<span>${fullDate(state.clock.currentDate)}</span></div><span class="week-chip">Settimana ${state.game.week.index} · ${state.game.week.ap}/${state.game.week.maxAp} giorni</span><button class="advance-button" data-action="advance" ${state.game.status === 'ended' ? 'disabled' : ''}>${state.campaign?.status === 'active' ? 'Avanza campagna' : 'Chiudi settimana'} ${icon('arrow', 17)}</button></div></div></header>
-          ${wizard ? '' : dataNotice()}<div class="page-wrap">${wizard ? '' : (state.ui.activePage === 'panoramica' ? renderHeadquarters(state, { partyName: party ? partyName(party) : null, partyLogo: party ? logoFor(party) : null, newsFilter: views.newsFilter }) : subpage(state, current, player, party, eventList, catalog, { logoFor, homePlace: () => store.homePlace(), nationalOverview: () => store.nationalOverview(), electoralGeography: () => store.electoralGeography?.() ?? null, parties:realParties(), selectable:selectableParties(), findParty, realLeader, admin, adminContext, territory, realLaws, archive, views, tabFor, settings, lastSaved, account, allianceOdds: id => { try { return store.allianceOdds(id); } catch { return null; } } }))}</div>
+          ${wizard ? '' : dataNotice()}<div class="page-wrap">${wizard ? '' : (state.ui.activePage === 'panoramica' ? renderHeadquarters(state, { partyName: party ? partyName(party) : null, partyLogo: party ? logoFor(party) : null, newsFilter: views.newsFilter, expanded: views.homeExpand ?? {} }) : subpage(state, current, player, party, eventList, catalog, { logoFor, homePlace: () => store.homePlace(), nationalOverview: () => store.nationalOverview(), electoralGeography: () => store.electoralGeography?.() ?? null, parties:realParties(), selectable:selectableParties(), findParty, realLeader, admin, adminContext, territory, realLaws, archive, views, tabFor, settings, lastSaved, account, allianceOdds: id => { try { return store.allianceOdds(id); } catch { return null; } } }))}</div>
         </main>
         ${wizard ? renderCareerWizard(state, wizard, realParties(), logoFor, realDatabase.parliamentaryGroups ?? [], realDatabase.partyLeaderships ?? [], realDatabase.politicalFigures ?? [], realDatabase.politicians ?? [], wizardTerritoryView(), wizardDataStatus()) : ''}
         ${logoAdminOpen ? renderLogoAdmin({shared:sharedLogos(),selectedId:selectedLogoPartyId,query:catalog.logoQuery,page:catalog.logoPage,metadata:[...logoMetadata.values()],entities:[...realParties(),...state.dataset.parties],logoFor,error:logoAdminError,pendingPreview:pendingLogoUrl ?? pendingRemoteUrl,pendingRemote:Boolean(pendingRemoteUrl && !pendingLogo),urlDraft:logoUrlDraft,urlLoading:logoUrlLoading,editorHtml:logoEditor?.context === 'admin' ? renderLogoEditor(logoEditor, { context: 'admin' }) : ''}) : ''}
@@ -512,6 +512,8 @@ export function mountApp(root, store, { retryData = null } = {}) {
     if (target) target.innerHTML = policyPreview(society, designFromForm(form));
   };
   // Creates the career from the wizard (the real Government in office is loaded first, so every career finds it).
+  // Entering a career (Continua, a save, an import, a new career) always starts from the Home, on phones and computers.
+  const enterHome = async () => { setHash('panoramica', true); globalThis.scrollTo?.(0, 0); await ensurePageData('panoramica'); };
   const finishWizard = async () => {
     try {
       try { await loadRealCollections(['government','politicians','parliamentaryGroups']); store.setReferenceGovernment(referenceGovernmentSpec()); } catch { /* without the real Government the career starts without one */ }
@@ -522,7 +524,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
         await saveLocalLogo(player.partyId, { blob: edited?.blob ?? wizard.partyLogoBlob, fileName: wizard.partyLogoBlob.name || 'logo', source: '', verified: false, alt: `Logo di ${wizard.partyName}`, editor: edited?.editor ?? null }).then(refreshLocalLogos).catch(() => {});
         closeLogoEditor();
       }
-      wizard = null; playSound('success'); refreshContacts();
+      wizard = null; playSound('success'); refreshContacts(); await enterHome();
     } catch (error) { if (wizard) wizard.errors = [error.message || 'Impossibile creare la carriera.']; }
   };
   // Every collection the wizard needs is loaded on its own: one that fails does not block the others, and the
@@ -569,7 +571,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
       if (menuTarget.matches('.report-backdrop') && event.target.closest('.report-modal')) return;
       menu.error = '';
       try {
-        if (data.menu === 'continua') { menu.open = false; playSound('confirm'); await ensurePageData(pageFromHash() ?? store.getState().ui.activePage ?? 'panoramica'); }
+        if (data.menu === 'continua') { menu.open = false; playSound('confirm'); await enterHome(); }
         // A new career needs an account (when the account service is reachable): the account comes first.
         // Unreachable service: the welcome says so and offers “Inizia senza account” (and “Riprova”) at once.
         else if (data.menu === 'nuova' && account.status !== 'none' && !account.user && !menu.localStart) { menu.view = 'benvenuto'; menu.needAccount = true; menu.reveal = true; playSound('click'); }
@@ -582,7 +584,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
         else if (data.menuAction === 'reset-settings') { confirmThen({ title: 'Ripristinare le impostazioni?', body: 'Audio, animazioni, testo, contrasto, notifiche, velocità della simulazione e salvataggio automatico tornano ai valori iniziali. Le partite e i salvataggi non vengono toccati.', confirmLabel: 'Ripristina' }, () => { settings = resetSettings(); applySettings(); }); return; }
         else if (data.menuAction === 'clear-saves') { confirmThen({ title: 'Eliminare tutti i salvataggi?', body: 'La partita in corso e tutti i salvataggi di questo browser verranno cancellati. L’operazione non si può annullare.', details: [account.user ? 'Le copie online nel tuo account restano: potrai recuperarle dal menu Account.' : 'Senza account non resta nessuna copia: esporta prima su file ciò che vuoi tenere.', 'L’archivio dell’amministratore e i loghi non vengono toccati.'], confirmLabel: 'Elimina tutto', tone: 'danger' }, () => { store.clearAllSaves(); menu.open = true; menu.view = 'home'; }); return; }
         else if (data.slotLoad) {
-          const load = async () => { store.loadSlot(data.slotLoad); menu.open = false; playSound('success'); await ensurePageData('panoramica'); };
+          const load = async () => { store.loadSlot(data.slotLoad); menu.open = false; playSound('success'); await enterHome(); };
           if (store.hasCareer() && store.hasUnsavedChanges()) { confirmThen({ title: 'Caricare questo salvataggio?', body: 'La partita in corso ha modifiche non salvate: verrà salvata in uno slot prima di caricare quella scelta.', confirmLabel: 'Carica' }, load); return; }
           await load();
         }
@@ -594,12 +596,12 @@ export function mountApp(root, store, { retryData = null } = {}) {
         else if (data.accountAction === 'probe') { await probeAccount(); }
         else if (data.accountAction === 'sync') { account.busy = 'sync'; render(store.getState(), store.getLastSaved()); store.save(); await syncCareer({ silent: false }); account.busy = false; }
         else if (data.cloudLoad) {
-          const load = async () => { const remote = await downloadSave(data.cloudLoad); store.loadGame(remote.state, 'Carriera recuperata dal tuo account'); account.currentSlot = data.cloudLoad; menu.open = false; playSound('success'); await ensurePageData('panoramica'); };
+          const load = async () => { const remote = await downloadSave(data.cloudLoad); store.loadGame(remote.state, 'Carriera recuperata dal tuo account'); account.currentSlot = data.cloudLoad; menu.open = false; playSound('success'); await enterHome(); };
           if (store.hasCareer() && store.hasUnsavedChanges()) { confirmThen({ title: 'Caricare la carriera online?', body: 'La partita in corso ha modifiche non salvate: verrà salvata in uno slot prima di caricare la carriera dal tuo account.', confirmLabel: 'Carica' }, load); return; }
           await load();
         }
         else if (data.cloudDelete) { confirmThen({ title: 'Eliminare la copia online?', body: 'Questa carriera verrà eliminata dall’archivio del tuo account. La copia nel browser resta.', confirmLabel: 'Elimina online', tone: 'danger' }, async () => { await deleteCloudSave(data.cloudDelete); await refreshCloud(); }); return; }
-        else if (data.conflict === 'download' && account.conflict) { const remote = await downloadSave(account.conflict.slot); store.loadGame(remote.state, 'Versione online caricata'); account.conflict = null; }
+        else if (data.conflict === 'download' && account.conflict) { const remote = await downloadSave(account.conflict.slot); store.loadGame(remote.state, 'Versione online caricata'); account.conflict = null; if (!menu.open) await enterHome(); }
         else if (data.conflict === 'overwrite' && account.conflict) { confirmThen({ title: 'Sovrascrivere la versione online?', body: 'La versione più recente salvata da un altro dispositivo verrà sostituita da quella di questo browser.', confirmLabel: 'Sovrascrivi', tone: 'danger' }, () => syncCareer({ force: true, silent: false })); return; }
       } catch (error) { menu.error = error.message; }
       render(store.getState(), store.getLastSaved());
@@ -612,6 +614,9 @@ export function mountApp(root, store, { retryData = null } = {}) {
       await ensurePageData('archivio');
       render(store.getState(), store.getLastSaved()); return;
     }
+    // Home on phones: a folded list opens (or closes) and stays as the player left it.
+    const expand = event.target.closest('[data-home-expand]')?.dataset.homeExpand;
+    if (expand) { views.homeExpand = { ...(views.homeExpand ?? {}), [expand]: !views.homeExpand?.[expand] }; saveViews(); render(store.getState(), store.getLastSaved()); return; }
     const viewFilter = event.target.closest('[data-news-filter],[data-timeline-filter]');
     if (viewFilter) {
       if (viewFilter.dataset.newsFilter) views.newsFilter = viewFilter.dataset.newsFilter;
@@ -1302,7 +1307,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
       field.value = '';
       const text = await file.text();
       const run = async () => {
-        try { store.loadGame(text, 'Partita importata'); menu.open = false; menu.error = ''; playSound('success'); await ensurePageData('panoramica'); }
+        try { store.loadGame(text, 'Partita importata'); menu.open = false; menu.error = ''; playSound('success'); await enterHome(); }
         catch (error) { menu.error = error instanceof SyntaxError ? 'Il file non è un salvataggio leggibile.' : error.message; render(store.getState(), store.getLastSaved()); }
       };
       if (store.hasCareer()) { confirmThen({ title: 'Importare questa partita?', body: `La partita del file «${file.name}» sostituirà quella in corso.`, details: [store.hasUnsavedChanges() ? 'La partita in corso ha modifiche non salvate: verrà salvata in uno slot prima dell’importazione.' : 'La partita in corso resta nei tuoi salvataggi (e online, se hai un account).'], confirmLabel: 'Importa' }, run); return; }
@@ -1370,8 +1375,9 @@ export function mountApp(root, store, { retryData = null } = {}) {
     render(store.getState(), store.getLastSaved());
   });
   attachChartInteractions(root);
-  // The URL hash mirrors the section, so links, reloads and the back button land on the same page.
-  const initialPage = pageFromHash() ?? (pages[store.getState().ui.activePage] ? store.getState().ui.activePage : 'panoramica');
+  // The URL hash mirrors the section, so links and the back button land on the same page; opening the game (behind
+  // the main menu) starts from the Home, never from the last page visited.
+  const initialPage = 'panoramica';
   setHash(initialPage, true);
   globalThis.addEventListener?.('hashchange', () => {
     const page = pageFromHash();

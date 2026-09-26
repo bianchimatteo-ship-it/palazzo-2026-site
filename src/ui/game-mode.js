@@ -1,24 +1,24 @@
-import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20260926-9';
-import { playerRoles } from '../core/roles.js?v=20260926-9';
-import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20260926-9';
-import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20260926-9';
-import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260926-9';
-import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20260926-9';
-import { careerLevelLabel } from '../data/regions.js?v=20260926-9';
-import { formatDate } from '../core/time.js?v=20260926-9';
-import { renderBarometerPanel } from './polls-mode.js?v=20260926-9';
-import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20260926-9';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-9';
-import { societyMood } from '../core/society-engine.js?v=20260926-9';
-import { financeOutlook } from '../core/finance-engine.js?v=20260926-9';
-import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20260926-9';
-import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20260926-9';
-import { renderFinanceCard } from './finance-mode.js?v=20260926-9';
-import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20260926-9';
-import { stateBadge } from './charts.js?v=20260926-9';
-import { illustration } from './illustrations.js?v=20260926-9';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260926-9';
-import { regionPriorities } from '../core/society-engine.js?v=20260926-9';
+import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20260926-10';
+import { playerRoles } from '../core/roles.js?v=20260926-10';
+import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20260926-10';
+import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20260926-10';
+import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260926-10';
+import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20260926-10';
+import { careerLevelLabel } from '../data/regions.js?v=20260926-10';
+import { formatDate } from '../core/time.js?v=20260926-10';
+import { renderBarometerPanel } from './polls-mode.js?v=20260926-10';
+import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20260926-10';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-10';
+import { societyMood } from '../core/society-engine.js?v=20260926-10';
+import { financeOutlook } from '../core/finance-engine.js?v=20260926-10';
+import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20260926-10';
+import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20260926-10';
+import { renderFinanceCard } from './finance-mode.js?v=20260926-10';
+import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20260926-10';
+import { stateBadge } from './charts.js?v=20260926-10';
+import { illustration } from './illustrations.js?v=20260926-10';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260926-10';
+import { regionPriorities } from '../core/society-engine.js?v=20260926-10';
 
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -123,17 +123,23 @@ function resourcesBar(state, gc) {
 function band(kicker, title, lead, body, { id = '', className = '', extra = '' } = {}) {
   return `<section class="hqc-band ${className}" ${id ? `id="${id}"` : ''}><header class="hqc-band-head"><div><span class="section-kicker">${esc(kicker)}</span><h2>${esc(title)}</h2>${lead ? `<p>${esc(lead)}</p>` : ''}</div>${extra}</header>${body}</section>`;
 }
+// On phones the longest lists show their first items; “Mostra tutte” opens the rest (the choice is remembered).
+// Computers always show everything. fold: the list's opening tag gets the classes, the button follows the list.
+function folded(html, listClass, key, count, limit, noun, expanded = {}) {
+  if (count <= limit) return html;
+  const open = Boolean(expanded[key]);
+  return html.replace(`class="${listClass}"`, `class="${listClass} hqc-fold fold-${limit}${open ? '' : ' is-folded'}"`) + `<button type="button" class="hqc-more" data-home-expand="${esc(key)}" aria-expanded="${open}">${open ? 'Mostra meno' : `Mostra ${noun} (${count})`}</button>`;
+}
 // 3. What to do: the staff's priorities and the decisions of the week.
-function prioritiesBlock(state, gc) {
+function prioritiesBlock(state, gc, expanded) {
   const game = state.game;
   const priorities = briefing(state, gc, { bare: true });
-  return `<div class="hqc-todo">
-    ${band('PRIORITÀ DELLO STAFF', 'Cosa conta di più', 'Le questioni più urgenti della settimana, in ordine di importanza, con il posto dove agire.', priorities || '<p class="quiet-copy">Nessuna emergenza: puoi dedicare la settimana a costruire consenso e rapporti.</p>', { className: 'hqc-priorities' })}
-    ${band('DECISIONI DELLA SETTIMANA', 'Da decidere', 'Ogni scelta mostra costo ed effetti; entro fine settimana, senza scelta, si applica quella indicata.', renderInbox(state), { id: 'hq-inbox', className: 'hqc-decisions', extra: `<span class="hq-count" title="Decisioni in attesa">${game.inbox.length}</span>` })}
-  </div>`;
+  const count = (priorities.match(/class="briefing-item /g) ?? []).length;
+  return `${band('PRIORITÀ DELLO STAFF', 'Cosa conta di più', 'Le questioni più urgenti della settimana, in ordine di importanza, con il posto dove agire.', priorities ? folded(priorities, 'briefing-grid', 'priorita', count, 2, 'tutte le priorità', expanded) : '<p class="quiet-copy">Nessuna emergenza: puoi dedicare la settimana a costruire consenso e rapporti.</p>', { className: 'hqc-priorities' })}
+    ${band('DECISIONI DELLA SETTIMANA', 'Da decidere', 'Ogni scelta mostra costo ed effetti; entro fine settimana, senza scelta, si applica quella indicata.', folded(renderInbox(state), 'hq-inbox-list', 'decisioni', game.inbox.length, 2, 'tutte le decisioni', expanded), { id: 'hq-inbox', className: 'hqc-decisions', extra: `<span class="hq-count" title="Decisioni in attesa">${game.inbox.length}</span>` })}`;
 }
 // 4. What is coming: the elections in the calendar (the first is the one that matters most), deadlines, next goal.
-function upcomingBlock(state, gc) {
+function upcomingBlock(state, gc, expanded) {
   const game = state.game;
   const rows = [];
   const party = game.party;
@@ -142,22 +148,22 @@ function upcomingBlock(state, gc) {
   for (const law of (state.parliament?.laws ?? []).filter(item => !['approved', 'rejected', 'lapsed'].includes(item.stage)).slice(0, 2)) rows.push(['law', law.title, 'iter parlamentare in corso', 'leggi']);
   const pending = (game.pending ?? []).length;
   if (pending) rows.push(['clock', `${pending} ${pending === 1 ? 'conseguenza' : 'conseguenze'} in arrivo`, 'effetti ritardati di scelte passate', '']);
-  const deadlines = rows.length ? `<ul class="hqc-deadlines">${rows.map(([icon, title, when, page]) => `<li>${glyph(icon, 16)}<span><strong>${esc(title)}</strong><small>${esc(when)}</small></span>${page ? `<button class="text-link" data-nav="${page}" aria-label="Apri ${esc(title)}">${arrow}</button>` : `<button class="text-link" data-scroll="hq-consequences" aria-label="Vedi le conseguenze">${arrow}</button>`}</li>`).join('')}</ul>` : '<p class="quiet-copy">Nessun congresso, promessa o legge in scadenza.</p>';
+  const deadlines = rows.length ? folded(`<ul class="hqc-deadlines">${rows.map(([icon, title, when, page]) => `<li>${glyph(icon, 16)}<span><strong>${esc(title)}</strong><small>${esc(when)}</small></span>${page ? `<button class="text-link" data-nav="${page}" aria-label="Apri ${esc(title)}">${arrow}</button>` : `<button class="text-link" data-scroll="hq-consequences" aria-label="Vedi le conseguenze">${arrow}</button>`}</li>`).join('')}</ul>`, 'hqc-deadlines', 'scadenze', rows.length, 2, 'tutte le scadenze', expanded) : '<p class="quiet-copy">Nessun congresso, promessa o legge in scadenza.</p>';
   const goals = objectiveProgress(gc.ctx, gc.env).filter(item => item.available);
   const done = goals.filter(item => item.done).length;
   const next = goals.find(item => !item.done);
   const goal = `<div class="hqc-goal"><div class="hq-objective-head"><strong>${done} / ${goals.length}</strong>${meter(goals.length ? done / goals.length * 100 : 0, 'gold')}</div>${next ? `<p class="hq-next-goal"><small>PROSSIMO TRAGUARDO</small><strong>${esc(next.label)}</strong><span>${esc(next.detail)}</span></p>` : '<p class="hq-next-goal"><strong>Tutti i traguardi raggiunti.</strong></p>'}<button class="text-link" data-scroll="hq-deadlines">Tutti i traguardi ${arrow}</button></div>`;
-  return `<div class="hqc-upcoming">
-    ${band('ELEZIONI IN CALENDARIO', 'Il prossimo voto', 'La prima è la più vicina: quando si aprono le candidature puoi candidarti dalla centrale elettorale.', renderElectionCalendar(state), { className: 'hqc-elections', extra: '<button class="text-link" data-nav="elezioni">Elezioni</button>' })}
+  const calendar = renderElectionCalendar(state);
+  const elections = (calendar.match(/class="hq-election /g) ?? []).length;
+  return `${band('ELEZIONI IN CALENDARIO', 'Il prossimo voto', 'La prima è la più vicina: quando si aprono le candidature puoi candidarti dalla centrale elettorale.', folded(calendar, 'hq-elections', 'elezioni', elections, 1, 'tutte le elezioni', expanded), { className: 'hqc-elections', extra: '<button class="text-link" data-nav="elezioni">Elezioni</button>' })}
     ${band('SCADENZE', 'In arrivo', 'Congressi, promesse fatte ai cittadini, leggi in Aula e conseguenze delle scelte passate.', deadlines, { className: 'hqc-deadline-band', extra: '<button class="text-link" data-nav="calendario">Agenda</button>' })}
-    ${band('TRAGUARDI', 'Obiettivi della carriera', 'Le tappe che misurano la tua crescita politica.', goal, { className: 'hqc-goals' })}
-  </div>`;
+    ${band('TRAGUARDI', 'Obiettivi della carriera', 'Le tappe che misurano la tua crescita politica.', goal, { className: 'hqc-goals' })}`;
 }
 // 5. The whole picture: one card per area, a few numbers each, and the way into the section with every detail.
 function summaryCard({ kicker, title, icon, color, lead, body, page, cta, more = '' }) {
   return `<article class="dash-card hqc-card" style="--dash:${color}"><header>${artTile(icon, color, 'sm')}<div><span class="section-kicker">${esc(kicker)}</span><h3>${title}</h3></div></header><p class="hqc-card-lead">${esc(lead)}</p><div class="hqc-card-body">${body}</div><footer>${page ? `<button class="secondary-button" data-nav="${page}">${esc(cta)} ${arrow}</button>` : ''}${more}</footer></article>`;
 }
-function summariesBlock(state, gc) {
+function summariesBlock(state, gc, expanded) {
   const game = state.game;
   const parliament = state.parliament;
   const seat = parliament?.player;
@@ -202,7 +208,9 @@ function summariesBlock(state, gc) {
     summaryCard({ kicker: 'RELAZIONI', title: 'Chi conta per te', icon: 'users', color: '#2fa39a', lead: 'I rapporti più fragili: pesano su candidature, incarichi e voti.', body: relationsBody, page: '', cta: '', more: '<button class="secondary-button" data-scroll="hq-relations">Tutte le relazioni ' + arrow + '</button>' }),
     summaryCard({ kicker: 'MEMORIA POLITICA', title: 'Quello che non si dimentica', icon: 'book', color: '#9aa7a1', lead: 'Scelte che pesano ancora su elezioni, alleanze e rapporti.', body: memoryBody, page: 'carriera', cta: 'Memoria e cronologia' })
   ];
-  return band('IL QUADRO COMPLETO', 'Tutte le aree in breve', 'Un riepilogo per area: apri la sezione per vedere i dettagli e agire.', `<div class="hqc-cards">${cards.join('')}</div>`, { className: 'hqc-overview' });
+  // The cards flow in the board's columns with the other blocks; on phones the first four, then “Mostra tutte”.
+  const open = Boolean(expanded.aree);
+  return `<header class="hqc-overview hqc-band-head"><div><span class="section-kicker">IL QUADRO COMPLETO</span><h2>Tutte le aree in breve</h2><p>Un riepilogo per area: apri la sezione per vedere i dettagli e agire.</p></div></header>${cards.map((card, index) => index >= 4 && !open ? card.replace('class="dash-card hqc-card"', 'class="dash-card hqc-card is-folded-card"') : card).join('')}<button type="button" class="hqc-more hqc-more-cards" data-home-expand="aree" aria-expanded="${open}">${open ? 'Mostra meno aree' : `Mostra tutte le aree (${cards.length})`}</button>`;
 }
 // Details of the week kept on the Home, folded: open one to read or act without leaving the page.
 function drawer(id, kicker, title, lead, body, { badge = '', wide = false } = {}) {
@@ -506,12 +514,17 @@ function deadlinesPanel(state, gc) {
 // and decisions; 4. what is coming; 5. every area in brief (each card opens its section); then the details, folded.
 export function renderHeadquarters(state, options = {}) {
   const gc = gameContext(state);
+  const expanded = options.expanded ?? {};
+  // The board: priorities, decisions, the coming votes and deadlines, goals and the area cards flow in balanced
+  // columns on computers (no empty space beside a long list), in this order on one column on phones.
   return `<div class="hq hqc">${endedBanner(state, gc)}
     ${commandHeader(state, gc, options)}
     ${resourcesBar(state, gc)}
-    ${prioritiesBlock(state, gc)}
-    ${upcomingBlock(state, gc)}
-    ${summariesBlock(state, gc)}
+    <div class="hqc-board">
+      ${prioritiesBlock(state, gc, expanded)}
+      ${upcomingBlock(state, gc, expanded)}
+      ${summariesBlock(state, gc, expanded)}
+    </div>
     ${detailsBlock(state, gc, options)}
     <footer class="home-footer"><span>POLITICANDO 2026</span><span>Persone e dati istituzionali reali restano in sola lettura (dati verificati); carriera, cittadini, territori, economia, media e relazioni sono simulati.</span></footer></div>`;
 }
