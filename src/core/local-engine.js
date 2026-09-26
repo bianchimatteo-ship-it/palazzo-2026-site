@@ -5,12 +5,12 @@
 // deadline, votes with individual dissent, and a player who proposes, votes, negotiates or governs. A council that loses
 // its majority is dissolved and votes early. Everything is simulation; the European groups start from their real size
 // at the constitutive session of 2024 (europarl), then evolve in the game.
-import { uniqueId } from './ids.js?v=20260926-8';
-import { DATA_SOURCES } from '../data/schema.js?v=20260926-8';
-import { AREA_BY_ID, CAMP_PRIORITIES, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260926-8';
-import { cohesiveShare } from './parliament-engine.js?v=20260926-8';
-import { groupLine, seededRandom, splitGroupVote } from './vote-engine.js?v=20260926-8';
-import { advanceDays } from './time.js?v=20260926-8';
+import { uniqueId } from './ids.js?v=20260926-9';
+import { DATA_SOURCES } from '../data/schema.js?v=20260926-9';
+import { AREA_BY_ID, CAMP_PRIORITIES, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260926-9';
+import { cohesiveShare } from './parliament-engine.js?v=20260926-9';
+import { groupLine, seededRandom, splitGroupVote } from './vote-engine.js?v=20260926-9';
+import { advanceDays } from './time.js?v=20260926-9';
 
 const SIM = DATA_SOURCES.SIMULATION;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));

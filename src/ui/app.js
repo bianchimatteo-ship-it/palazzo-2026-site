@@ -1,57 +1,56 @@
-import { fullDate, formatDate } from '../core/time.js?v=20260926-8';
-import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20260926-8';
-import { accountApiBase, currentAccount, probeAccountService, deleteCloudSave, downloadSave, knownRevision, listCloudSaves, login, logout, register, slotForCareer, uploadSave } from '../data/repositories/account-sync.js?v=20260926-8';
-import { setPartyLogoResolver } from './person-marks.js?v=20260926-8';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260926-8';
-import { isRealCollectionLoaded, loadRealCollections, loadRealCollectionsSettled, pristineRecord, realDataFailures, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20260926-8';
-import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20260926-8';
-import { renderAdminPanel } from './admin-panel.js?v=20260926-8';
-import { sharedLogos } from '../data/repositories/admin-store.js?v=20260926-8';
-import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, publishSharedArchive, refreshSharedArchive, sharedApiUrl, verifySharedSession } from '../data/repositories/admin-sync.js?v=20260926-8';
-import { deleteLocalLogo, exportLogoConfiguration, fetchLogoFromUrl, getLocalLogo, importLogoConfiguration, listLocalLogos, probeImage, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20260926-8';
-import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20260926-8';
-import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20260926-8';
-import { PARTY_LINK_COLLECTIONS } from '../data/repositories/party-links.js?v=20260926-8';
-import { renderLogoAdmin } from './logo-admin.js?v=20260926-8';
-import { chosenPlace, makeCareerDraft, renderCareerWizard, wizardLogoPreview } from './career-wizard.js?v=20260926-8';
-import { userPartyLogo } from './party-logo.js?v=20260926-8';
-import { CAREER_STEPS, validateCareerStep } from '../core/career-rules.js?v=20260926-8';
-import { renderElectionsHub } from './elections-hub.js?v=20260926-8';
-import { renderCareerPage } from './career-page.js?v=20260926-8';
-import { renderPartyPage } from './party-page.js?v=20260926-8';
-import { renderAgendaPage } from './agenda-page.js?v=20260926-8';
-import { HEMICYCLE_DEFAULTS, renderHemicycle } from './hemicycle-view.js?v=20260926-8';
-import { drawLogoEditor, exportLogo, measureBackground, panFromDrag, renderLogoEditor } from './logo-editor-view.js?v=20260926-8';
-import { createEditorState } from '../core/logo-editor.js?v=20260926-8';
-import { renderParliamentPage } from './parliament-mode.js?v=20260926-8';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260926-8';
-import { CAREER_LEVELS } from '../data/regions.js?v=20260926-8';
-import { renderHeadquarters } from './game-mode.js?v=20260926-8';
-import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20260926-8';
-import { playerRoles } from '../core/roles.js?v=20260926-8';
-import { budgetPreview, designFromForm, planFromForm, policyFields, policyPreview } from './policy-mode.js?v=20260926-8';
-import { areaOf } from '../data/simulation/policy-rules.js?v=20260926-8';
-import { attachChartInteractions, hideChartTip, renderPollsPage } from './polls-mode.js?v=20260926-8';
-import { glyph } from './visuals.js?v=20260926-8';
-import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20260926-8';
-import { renderFinancePage } from './finance-mode.js?v=20260926-8';
-import { renderContactsPanel } from './organization-mode.js?v=20260926-8';
-import { renderRealLaws } from './real-laws.js?v=20260926-8';
-import { realLawArea } from '../core/society-engine.js?v=20260926-8';
-import { canManageParliament } from '../core/parliament-engine.js?v=20260926-8';
-import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, TOUR_STEPS } from './menu.js?v=20260926-8';
-import { MAX_SLOTS } from '../core/storage.js?v=20260926-8';
-import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20260926-8';
-import { playSound } from './sound.js?v=20260926-8';
+import { fullDate, formatDate } from '../core/time.js?v=20260926-9';
+import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20260926-9';
+import { accountApiBase, currentAccount, probeAccountService, deleteCloudSave, downloadSave, knownRevision, listCloudSaves, login, logout, register, slotForCareer, uploadSave } from '../data/repositories/account-sync.js?v=20260926-9';
+import { setPartyLogoResolver } from './person-marks.js?v=20260926-9';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260926-9';
+import { isRealCollectionLoaded, loadRealCollections, loadRealCollectionsSettled, pristineRecord, realDataFailures, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20260926-9';
+import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20260926-9';
+import { renderAdminPanel } from './admin-panel.js?v=20260926-9';
+import { sharedLogos } from '../data/repositories/admin-store.js?v=20260926-9';
+import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, publishSharedArchive, refreshSharedArchive, sharedApiUrl, verifySharedSession } from '../data/repositories/admin-sync.js?v=20260926-9';
+import { deleteLocalLogo, exportLogoConfiguration, fetchLogoFromUrl, getLocalLogo, importLogoConfiguration, listLocalLogos, probeImage, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20260926-9';
+import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20260926-9';
+import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20260926-9';
+import { PARTY_LINK_COLLECTIONS } from '../data/repositories/party-links.js?v=20260926-9';
+import { renderLogoAdmin } from './logo-admin.js?v=20260926-9';
+import { chosenPlace, makeCareerDraft, renderCareerWizard, wizardLogoPreview } from './career-wizard.js?v=20260926-9';
+import { userPartyLogo } from './party-logo.js?v=20260926-9';
+import { CAREER_STEPS, validateCareerStep } from '../core/career-rules.js?v=20260926-9';
+import { renderElectionsHub } from './elections-hub.js?v=20260926-9';
+import { renderCareerPage } from './career-page.js?v=20260926-9';
+import { renderPartyPage } from './party-page.js?v=20260926-9';
+import { renderAgendaPage } from './agenda-page.js?v=20260926-9';
+import { HEMICYCLE_DEFAULTS, renderHemicycle } from './hemicycle-view.js?v=20260926-9';
+import { drawLogoEditor, exportLogo, measureBackground, panFromDrag, renderLogoEditor } from './logo-editor-view.js?v=20260926-9';
+import { createEditorState } from '../core/logo-editor.js?v=20260926-9';
+import { renderParliamentPage } from './parliament-mode.js?v=20260926-9';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260926-9';
+import { CAREER_LEVELS } from '../data/regions.js?v=20260926-9';
+import { renderHeadquarters } from './game-mode.js?v=20260926-9';
+import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20260926-9';
+import { playerRoles } from '../core/roles.js?v=20260926-9';
+import { budgetPreview, designFromForm, planFromForm, policyFields, policyPreview } from './policy-mode.js?v=20260926-9';
+import { areaOf } from '../data/simulation/policy-rules.js?v=20260926-9';
+import { attachChartInteractions, hideChartTip, renderPollsPage } from './polls-mode.js?v=20260926-9';
+import { glyph } from './visuals.js?v=20260926-9';
+import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20260926-9';
+import { renderFinancePage } from './finance-mode.js?v=20260926-9';
+import { renderContactsPanel } from './organization-mode.js?v=20260926-9';
+import { renderRealLaws } from './real-laws.js?v=20260926-9';
+import { realLawArea } from '../core/society-engine.js?v=20260926-9';
+import { canManageParliament } from '../core/parliament-engine.js?v=20260926-9';
+import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, TOUR_STEPS } from './menu.js?v=20260926-9';
+import { MAX_SLOTS } from '../core/storage.js?v=20260926-9';
+import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20260926-9';
+import { playSound } from './sound.js?v=20260926-9';
 
-// Phone navigation: four sections always one tap away, everything else in the "Altro" sheet.
-const MOBILE_TABS = [['panoramica', 'home', 'Home'], ['carriera', 'route', 'Carriera'], ['partito', 'party', 'Partito'], ['sondaggi', 'chart', 'Sondaggi']];
+// The main sections, one tap away on every screen (Home · Carriera · Partito · Elezioni · Parlamento); everything else
+// is under “Altro” (a group of the sidebar on computers, a sheet on phones).
+const PRIMARY_NAVIGATION = [['panoramica', 'home', 'Home'], ['carriera', 'route', 'Carriera'], ['partito', 'party', 'Partito'], ['elezioni', 'ballot', 'Elezioni'], ['parlamento', 'building', 'Parlamento']];
+const MOBILE_TABS = PRIMARY_NAVIGATION;
 const mainSectionActive = (id, page) => page === id || (id === 'calendario' && page === 'eventi') || (id === 'parlamento' && ['governo', 'leggi'].includes(page)) || (id === 'archivio' && ['partiti-lista', 'politici'].includes(page));
-const mainNavigation = [
-  ['panoramica', 'home', 'Home'], ['carriera', 'route', 'Carriera'], ['partito', 'party', 'Partito'],
-  ['territori', 'map', 'Territori'], ['elezioni', 'ballot', 'Elezioni'], ['parlamento', 'building', 'Parlamento'],
-  ['sondaggi', 'chart', 'Sondaggi'], ['finanze', 'wallet', 'Finanze'], ['calendario', 'calendar', 'Agenda'], ['archivio', 'archive', 'Archivio']
-];
+const OTHER_NAVIGATION = [['territori', 'map', 'Territori'], ['sondaggi', 'chart', 'Sondaggi e media'], ['finanze', 'wallet', 'Finanze'], ['calendario', 'calendar', 'Agenda'], ['archivio', 'archive', 'Archivio']];
+const mainNavigation = [...PRIMARY_NAVIGATION, ...OTHER_NAVIGATION];
 const pages = {
   panoramica: { title: 'Home', eyebrow: 'LA TUA PARTITA', intro: 'Una carriera nella politica italiana' },
   profilo: { title: 'Profilo', eyebrow: 'IL TUO POLITICO', intro: 'La persona e i numeri della tua carriera.' },
@@ -322,13 +321,13 @@ export function mountApp(root, store, { retryData = null } = {}) {
       <div class="app-shell${wizard ? ' wizard-open' : ''}" style="--party-accent:${esc(accent)}">
         <aside class="sidebar">
           <a class="brand" href="#panoramica" aria-label="Politicando 2026, Home"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span class="brand-copy"><strong>POLITICANDO</strong><small>2026</small></span></a><div class="brand-subtitle">Una carriera nella<br/>politica italiana</div>${party && state.game ? `<button class="party-identity" data-nav="partito" style="--party-color:${esc(party.color ?? accent)};--party-color2:${esc(party.color2 ?? accent)}">${logoFor(party) ? `<img src="${esc(logoFor(party))}" alt="" />` : `<i>${esc((party.abbreviation || partyName(party) || 'P').slice(0, 3))}</i>`}<span><strong>${esc(party.abbreviation || partyName(party))}</strong><small>${esc(state.game.party?.rankTitle ?? 'Partito')}</small></span></button>` : ''}
-          <nav class="main-nav" aria-label="Navigazione principale">${mainNavigation.map(([id, glyph, label]) => `<button class="nav-item ${mainSectionActive(id, state.ui.activePage) ? 'active' : ''}" data-nav="${id}" aria-label="${label}" title="${label}" aria-current="${mainSectionActive(id, state.ui.activePage) ? 'page' : 'false'}">${icon(glyph, 19)}<span>${label}</span></button>`).join('')}</nav>
+          <nav class="main-nav" aria-label="Navigazione principale">${[PRIMARY_NAVIGATION, OTHER_NAVIGATION].map((group, index) => `${index ? '<span class="nav-group-label" aria-hidden="true">Altro</span>' : ''}${group.map(([id, glyph, label]) => `<button class="nav-item ${mainSectionActive(id, state.ui.activePage) ? 'active' : ''}" data-nav="${id}" aria-label="${label}" title="${label}" aria-current="${mainSectionActive(id, state.ui.activePage) ? 'page' : 'false'}">${icon(glyph, 19)}<span>${label}</span></button>`).join('')}`).join('')}</nav>
           <div class="sidebar-bottom"><button class="nav-item sidebar-account ${state.ui.activePage === 'profilo' || state.ui.activePage === 'politici' ? 'active' : ''}" data-nav="profilo" aria-label="Profilo" title="Profilo">${icon('person', 19)}<span>Profilo</span></button><button class="nav-item sidebar-account ${state.ui.activePage === 'impostazioni' ? 'active' : ''}" data-nav="impostazioni" aria-label="Impostazioni" title="Impostazioni">${icon('settings', 19)}<span>Impostazioni</span></button><div class="save-status"><span class="save-dot"></span><span>${lastSaved}</span></div></div>
         </aside>
         <nav class="mobile-tabbar" aria-label="Navigazione rapida">${MOBILE_TABS.map(([id, glyph, label]) => `<button type="button" class="mobile-tab ${mainSectionActive(id, state.ui.activePage) ? 'active' : ''}" data-nav="${id}" aria-current="${mainSectionActive(id, state.ui.activePage) ? 'page' : 'false'}">${icon(glyph, 21)}<span>${label}</span></button>`).join('')}<button type="button" class="mobile-tab ${MOBILE_TABS.some(([id]) => mainSectionActive(id, state.ui.activePage)) ? '' : 'active'}" data-mobile-more aria-expanded="false" aria-controls="mobile-sheet">${icon('menu', 21)}<span>Altro</span></button></nav>
         <div class="mobile-sheet" id="mobile-sheet" data-mobile-sheet hidden><div class="mobile-sheet-panel" role="dialog" aria-modal="true" aria-label="Tutte le sezioni"><div class="mobile-sheet-head"><strong>Sezioni</strong><button type="button" class="icon-button" data-mobile-close aria-label="Chiudi">×</button></div><div class="mobile-sheet-grid">${[...mainNavigation, ['profilo', 'person', 'Profilo'], ['impostazioni', 'settings', 'Impostazioni']].map(([id, glyph, label]) => `<button type="button" class="sheet-item ${mainSectionActive(id, state.ui.activePage) ? 'active' : ''}" data-nav="${id}">${icon(glyph, 22)}<span>${label}</span></button>`).join('')}<button type="button" class="sheet-item" data-action="menu">${icon('menu', 22)}<span>Menu principale</span></button><button type="button" class="sheet-item" data-action="account">${icon('person', 22)}<span>Account</span></button></div><div class="mobile-sheet-status"><span class="save-dot"></span>${lastSaved}</div></div></div>
         <main class="main-area">
-          <header class="topbar"><div class="topbar-title"><strong>${current.title}</strong><span>${current.intro}</span></div><div class="top-actions"><button class="icon-button menu-button" data-action="menu" aria-label="Menu principale" title="Menu principale">${icon('menu', 17)}</button><div class="date-chip">${icon('calendar', 16)}<span>${fullDate(state.clock.currentDate)}</span></div><button class="icon-button" aria-label="Salva carriera" title="Salva carriera" data-action="save">${icon('save', 17)}</button><span class="week-chip">Settimana ${state.game.week.index} · ${state.game.week.ap}/${state.game.week.maxAp} giorni</span><button class="advance-button" data-action="advance" ${state.game.status === 'ended' ? 'disabled' : ''}>${state.campaign?.status === 'active' ? 'Avanza campagna' : 'Chiudi settimana'} ${icon('arrow', 17)}</button></div></header>
+          <header class="topbar"><div class="topbar-title"><strong>${current.title}</strong><span>${current.intro}</span></div><div class="top-actions"><div class="top-tools"><button class="icon-button menu-button" data-action="menu" aria-label="Menu principale" title="Menu principale">${icon('menu', 17)}</button><button class="icon-button" aria-label="Salva carriera" title="Salva carriera" data-action="save">${icon('save', 17)}</button></div><div class="top-time"><div class="date-chip">${icon('calendar', 16)}<span>${fullDate(state.clock.currentDate)}</span></div><span class="week-chip">Settimana ${state.game.week.index} · ${state.game.week.ap}/${state.game.week.maxAp} giorni</span><button class="advance-button" data-action="advance" ${state.game.status === 'ended' ? 'disabled' : ''}>${state.campaign?.status === 'active' ? 'Avanza campagna' : 'Chiudi settimana'} ${icon('arrow', 17)}</button></div></div></header>
           ${wizard ? '' : dataNotice()}<div class="page-wrap">${wizard ? '' : (state.ui.activePage === 'panoramica' ? renderHeadquarters(state, { partyName: party ? partyName(party) : null, partyLogo: party ? logoFor(party) : null, newsFilter: views.newsFilter }) : subpage(state, current, player, party, eventList, catalog, { logoFor, homePlace: () => store.homePlace(), nationalOverview: () => store.nationalOverview(), electoralGeography: () => store.electoralGeography?.() ?? null, parties:realParties(), selectable:selectableParties(), findParty, realLeader, admin, adminContext, territory, realLaws, archive, views, tabFor, settings, lastSaved, account, allianceOdds: id => { try { return store.allianceOdds(id); } catch { return null; } } }))}</div>
         </main>
         ${wizard ? renderCareerWizard(state, wizard, realParties(), logoFor, realDatabase.parliamentaryGroups ?? [], realDatabase.partyLeaderships ?? [], realDatabase.politicalFigures ?? [], realDatabase.politicians ?? [], wizardTerritoryView(), wizardDataStatus()) : ''}
@@ -859,7 +858,13 @@ export function mountApp(root, store, { retryData = null } = {}) {
       return;
     }
     const scrollTarget = event.target.closest('[data-scroll]')?.dataset.scroll;
-    if (scrollTarget) { document.getElementById(scrollTarget)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+    if (scrollTarget) {
+      const target = document.getElementById(scrollTarget);
+      // A folded block of the Home opens when an action points to it (and stays open, as the player left it).
+      if (target?.matches?.('details') && !target.open) target.open = true;
+      target?.scrollIntoView({ behavior: settings.motion === 'full' ? 'smooth' : 'auto', block: 'start' });
+      return;
+    }
     const simulationControl = event.target.closest('[data-territory-measure],[data-territory-region],[data-budget-line],[data-party-priority],[data-real-law-more],[data-real-law-amend],[data-invest],[data-election-fund]');
     if (simulationControl) {
       const data = simulationControl.dataset;
