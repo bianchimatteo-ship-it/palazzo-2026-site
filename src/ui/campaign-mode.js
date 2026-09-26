@@ -1,12 +1,12 @@
-import { CAMPAIGN_OBJECTIVES, CAMPAIGN_PHASES, CAMPAIGN_STRATEGIES, DEBATE_TOPICS, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260926-1';
-import { affiliationOf, markForPerson } from './person-marks.js?v=20260926-1';
-import { campaignActivities, campaignSummary, strategyFit, strategyOf } from '../core/campaign-engine.js?v=20260926-1';
-import { resultDescription } from '../core/election-engine.js?v=20260926-1';
-import { formatDate } from '../core/time.js?v=20260926-1';
-import { careerLevelLabel } from '../data/regions.js?v=20260926-1';
-import { upcomingElections } from '../core/career-engine.js?v=20260926-1';
-import { renderElectionReport } from './election-report.js?v=20260926-1';
-import { glyph } from './visuals.js?v=20260926-1';
+import { CAMPAIGN_OBJECTIVES, CAMPAIGN_PHASES, CAMPAIGN_STRATEGIES, DEBATE_TOPICS, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260926-2';
+import { affiliationOf, markForPerson } from './person-marks.js?v=20260926-2';
+import { campaignActivities, campaignSummary, strategyFit, strategyOf } from '../core/campaign-engine.js?v=20260926-2';
+import { resultDescription } from '../core/election-engine.js?v=20260926-2';
+import { formatDate } from '../core/time.js?v=20260926-2';
+import { careerLevelLabel } from '../data/regions.js?v=20260926-2';
+import { upcomingElections } from '../core/career-engine.js?v=20260926-2';
+import { renderElectionReport } from './election-report.js?v=20260926-2';
+import { glyph } from './visuals.js?v=20260926-2';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const roleLabels={sindaco:'Candidatura a sindaco',consigliere:'Candidato in lista per il consiglio',presidente:'Candidato alla presidenza regionale',deputato:'Candidato alla Camera',senatore:'Candidato al Senato',uninominale:'Collegio uninominale simulato',eurodeputato:'Candidato al Parlamento europeo'};

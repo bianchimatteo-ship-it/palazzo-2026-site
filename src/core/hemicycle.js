@@ -2,8 +2,8 @@
 // concentric arcs and handed out group by group from left to right, following the political position of each group's
 // members; every seat is a real parliamentarian in office (identity from the verified dataset), the player's own seat,
 // or — only when the scenario gives a group more seats than the dataset lists — an unnamed seat of that group.
-import { electionListOf, groupAffiliation, inOffice, politicianAffiliation, positionAxis } from '../data/repositories/party-links.js?v=20260926-1';
-import { CHART_SLOTS } from '../data/simulation/polling-rules.js?v=20260926-1';
+import { electionListOf, groupAffiliation, inOffice, politicianAffiliation, positionAxis } from '../data/repositories/party-links.js?v=20260926-2';
+import { CHART_SLOTS } from '../data/simulation/polling-rules.js?v=20260926-2';
 
 // Colour: the eight validated slots of the game's charts in fixed order to the largest groups (or parties) of the
 // reference composition; smaller groups and the Misto family fold into neutral tones. Identity is never colour alone:

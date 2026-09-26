@@ -1,22 +1,22 @@
-import { advanceDays } from './time.js?v=20260926-1';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260926-1';
-import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260926-1';
+import { advanceDays } from './time.js?v=20260926-2';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260926-2';
+import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260926-2';
 import {
   APPOINTMENTS, BASE_WEEKLY_INCOME, CAREER_EVENTS, CAREER_OBJECTIVES, CURRENT_TEMPLATES, EARLY_ELECTION_AFTER_WEEKS, ELECTION_SCHEDULE,
   FORCED_EVENTS, LEGACY_RIVAL_NAMES, SIMULATED_RIVAL_LABEL, FOUNDER_RANK, LEVEL_FIRST_ELECTION, OFFICE_INCOME, PARTY_RANKS, RELATION_TEMPLATES, STAT_LABELS,
-  SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS } from '../data/simulation/career-rules.js?v=20260926-1';
-import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20260926-1';
-import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20260926-1';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-1';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260926-1';
-import { book, buyInvestment, createFinance, depositElectionFund, hasAsset, normalizeFinance, settleFinanceWeek } from './finance-engine.js?v=20260926-1';
-import { advanceOrganization, applyOrgEffects, createOrganization, isPartyLeader, normalizeOrganization, treasuryBook } from './organization-engine.js?v=20260926-1';
-import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20260926-1';
-import { HARD_CATEGORIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20260926-1';
-import { macroAreaOf } from '../data/simulation/policy-rules.js?v=20260926-1';
-import { advancementOdds, evaluateAdvancement, progressionFactors } from './progression-engine.js?v=20260926-1';
-import { advanceCommittees, applyCommitteeAction, COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, foundCommittee } from './committee-engine.js?v=20260926-1';
-import { europeanElectionDate, legislatureTerm, LEGISLATURE_RULES, sundayOnOrBefore } from './legislature-engine.js?v=20260926-1';
+  SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS } from '../data/simulation/career-rules.js?v=20260926-2';
+import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20260926-2';
+import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20260926-2';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-2';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260926-2';
+import { book, buyInvestment, createFinance, depositElectionFund, hasAsset, normalizeFinance, settleFinanceWeek } from './finance-engine.js?v=20260926-2';
+import { advanceOrganization, applyOrgEffects, createOrganization, isPartyLeader, normalizeOrganization, treasuryBook } from './organization-engine.js?v=20260926-2';
+import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20260926-2';
+import { HARD_CATEGORIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20260926-2';
+import { macroAreaOf } from '../data/simulation/policy-rules.js?v=20260926-2';
+import { advancementOdds, evaluateAdvancement, progressionFactors } from './progression-engine.js?v=20260926-2';
+import { advanceCommittees, applyCommitteeAction, COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, foundCommittee } from './committee-engine.js?v=20260926-2';
+import { europeanElectionDate, legislatureTerm, LEGISLATURE_RULES, sundayOnOrBefore } from './legislature-engine.js?v=20260926-2';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -626,7 +626,9 @@ const WORLD_SPECIALS = ['markets-calm', 'markets-worse', 'europe-up', 'europe-do
   // The national cycle (legislature-engine): coalitions before the vote, support and mandate after it.
   'national-coalition', 'national-alone', 'national-auto', 'national-support', 'national-opposition', 'national-wait', 'national-mandate-accept', 'national-mandate-decline',
   // The player's vote on a bill of the others (lawmaking-engine).
-  'law-vote-line', 'law-vote-yes', 'law-vote-no', 'law-vote-abstain', 'law-vote-absent'];
+  'law-vote-line', 'law-vote-yes', 'law-vote-no', 'law-vote-abstain', 'law-vote-absent',
+  // The player's vote on a confidence vote, the answer to a request of external support (cabinet-engine).
+  'confidence-vote-line', 'confidence-vote-yes', 'confidence-vote-no', 'confidence-vote-abstain', 'confidence-vote-absent', 'support-accept', 'support-refuse'];
 function handleSpecial(ctx, env, special, item, lines, specials, choice = {}) {
   const game = ctx.game;
   if (WORLD_SPECIALS.includes(special)) { specials.push({ type: special, params: item.params ?? {} }); return; }

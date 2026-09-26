@@ -1,16 +1,16 @@
 // PARTITO — the organisation seen from inside: identity, the player's role and odds, internal areas, members and
 // sections, the secretary's desk and the history. The real party stays a reference; everything inside is simulated.
-import { careerOverview } from '../core/career-overview.js?v=20260926-1';
-import { organOf, treasuryOutlook } from '../core/organization-engine.js?v=20260926-1';
-import { playerRoles } from '../core/roles.js?v=20260926-1';
-import { formatDate } from '../core/time.js?v=20260926-1';
-import { lineChart, SERIES } from './charts.js?v=20260926-1';
-import { glyph } from './visuals.js?v=20260926-1';
-import { renderPartyPosition, renderSecretaryDesk } from './game-mode.js?v=20260926-1';
-import { renderOrganizationPanel } from './organization-mode.js?v=20260926-1';
-import { renderOddsCard } from './career-page.js?v=20260926-1';
-import { renderCommitteesPanel } from './committees-view.js?v=20260926-1';
-import { arrow, badge, bar, card, esc, euro, num, pct, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20260926-1';
+import { careerOverview } from '../core/career-overview.js?v=20260926-2';
+import { organOf, treasuryOutlook } from '../core/organization-engine.js?v=20260926-2';
+import { playerRoles } from '../core/roles.js?v=20260926-2';
+import { formatDate } from '../core/time.js?v=20260926-2';
+import { lineChart, SERIES } from './charts.js?v=20260926-2';
+import { glyph } from './visuals.js?v=20260926-2';
+import { renderPartyPosition, renderSecretaryDesk } from './game-mode.js?v=20260926-2';
+import { renderOrganizationPanel } from './organization-mode.js?v=20260926-2';
+import { renderOddsCard } from './career-page.js?v=20260926-2';
+import { renderCommitteesPanel } from './committees-view.js?v=20260926-2';
+import { arrow, badge, bar, card, esc, euro, num, pct, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20260926-2';
 
 const SOURCE_LABELS = { real: 'Dato reale verificato', user: 'Creato da te', simulation: 'Simulazione' };
 const partyName = party => party?.officialName ?? party?.name ?? 'Partito';

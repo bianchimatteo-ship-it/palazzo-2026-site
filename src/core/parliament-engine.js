@@ -1,7 +1,7 @@
-import { DATA_SOURCES } from '../data/schema.js?v=20260926-1';
-import { AREA_BY_ID, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, STAGE_WEEKS, areaOf } from '../data/simulation/policy-rules.js?v=20260926-1';
-import { evaluateAdvancement } from './progression-engine.js?v=20260926-1';
-import { groupLine, splitGroupVote } from './vote-engine.js?v=20260926-1';
+import { DATA_SOURCES } from '../data/schema.js?v=20260926-2';
+import { AREA_BY_ID, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, STAGE_WEEKS, areaOf } from '../data/simulation/policy-rules.js?v=20260926-2';
+import { evaluateAdvancement } from './progression-engine.js?v=20260926-2';
+import { groupLine, splitGroupVote } from './vote-engine.js?v=20260926-2';
 
 export const CHAMBERS = Object.freeze({
   camera: { label: 'Camera dei deputati', shortLabel: 'Camera', source: DATA_SOURCES.REAL },
@@ -743,28 +743,46 @@ export function assignMinister(parliament, portfolio, groupId, currentDate, { ap
   return record(next, currentDate, toPlayer ? 'nomina-ministro-giocatore' : 'nomina-ministro', toPlayer ? `Assunto l’incarico di ministro (${portfolio}) nello scenario.` : `Assegnato il ministero ${portfolio} al gruppo ${group.officialName} nello scenario.`, { governmentId: government.id, appointmentId: appointment.id, source: DATA_SOURCES.SIMULATION });
 }
 
+// The confidence vote in both Chambers (roll call): the majority votes in favour except the defections of the crisis,
+// the opposition against with a few abstentions. The player's seat votes as the player decided (the Government's
+// pendingPlayerVote, from the agenda or the Governo page), otherwise with the group.
 export function voteGovernmentConfidence(parliament, currentDate) {
   const government = parliament.government;
   if (!government || !['awaiting-confidence', 'crisis'].includes(government.status)) throw new Error('Non è prevista una votazione di fiducia in questa fase.');
   const groups = new Set([...government.coalitionGroupIds, ...government.supportingGroupIds]);
+  const seat = parliament.player?.groupId ? parliament.player : null;
+  const decided = government.pendingPlayerVote ?? null;
+  let playerVote = null;
   const votes = ['camera', 'senato'].map(chamber => {
-    const yes = parliament.chambers[chamber].groups.filter(group => groups.has(group.groupId)).reduce((sum, group) => sum + group.simulatedSeats, 0);
+    const nominal = parliament.chambers[chamber].groups.filter(group => groups.has(group.groupId)).reduce((sum, group) => sum + group.simulatedSeats, 0);
     const total = totalSeats(parliament, chamber);
     const needed = Math.floor(total / 2) + 1;
-    const risk = Math.floor(yes * government.crisisSeverity / 100);
-    // Roll-call vote: the majority votes in favour except the defections of the crisis (spread over its groups),
-    // the opposition against, with a few abstentions.
+    const risk = Math.floor(nominal * government.crisisSeverity / 100);
+    // The defections of the crisis are spread over the groups of the majority.
     let left = risk;
     const byGroup = parliament.chambers[chamber].groups.map((group, index, all) => {
       const seats = group.simulatedSeats;
       if (!groups.has(group.groupId)) { const split = splitGroupVote({ seats, yes: 0, confidence: true, seed: `${government.id}|fiducia|${currentDate}|${group.groupId}` }); return { groupId: group.groupId, yesVotes: 0, noVotes: split.no, abstainVotes: split.abstain, line: groupLine(split), snipers: 0, governing: false, simulatedSeats: seats, source: DATA_SOURCES.SIMULATION }; }
-      const share = yes ? Math.round(risk * seats / yes) : 0;
+      const share = nominal ? Math.round(risk * seats / nominal) : 0;
       const lastMajority = !all.slice(index + 1).some(item => groups.has(item.groupId));
       const defections = Math.min(seats, lastMajority ? left : Math.min(left, share));
       left -= defections;
       return { groupId: group.groupId, yesVotes: seats - defections, noVotes: defections, abstainVotes: 0, line: 'favorevole', snipers: 0, governing: true, simulatedSeats: seats, source: DATA_SOURCES.SIMULATION };
     });
-    return { id: `${government.id}-fiducia-${(government.confidenceVotes ?? []).length + 1}-${chamber}`, date: currentDate, kind: 'fiducia', label: 'Fiducia al governo', chamber, yes: Math.max(0, yes - risk), nominalSupport: yes, total, needed, passed: yes - risk >= needed, confidence: true, byGroup, source: DATA_SOURCES.SIMULATION };
+    // The player's own vote: taken from the group's line, given to the player's choice.
+    const own = seat?.chamber === chamber ? byGroup.find(row => row.groupId === seat.groupId) : null;
+    if (own) {
+      const line = own.governing ? 'favorevole' : own.line;
+      const choice = !decided || decided === 'linea' ? line : decided;
+      const bucket = { favorevole: 'yesVotes', contrario: 'noVotes', astenuto: 'abstainVotes' };
+      if (own[bucket[line]] > 0) own[bucket[line]] -= 1; else if (own.noVotes > 0) own.noVotes -= 1; else if (own.abstainVotes > 0) own.abstainVotes -= 1; else own.yesVotes = Math.max(0, own.yesVotes - 1);
+      if (bucket[choice]) own[bucket[choice]] += 1;
+      own.playerChoice = choice;
+      playerVote = { chamber, choice, line };
+    }
+    const yes = byGroup.reduce((sum, row) => sum + row.yesVotes, 0);
+    if (playerVote?.chamber === chamber) playerVote.decisive = playerVote.choice === 'favorevole' ? yes === needed : yes === needed - 1;
+    return { id: `${government.id}-fiducia-${(government.confidenceVotes ?? []).length + 1}-${chamber}`, date: currentDate, kind: 'fiducia', label: 'Fiducia al governo', chamber, yes, nominalSupport: nominal, total, needed, passed: yes >= needed, confidence: true, byGroup, ...(playerVote?.chamber === chamber ? { playerChoice: playerVote.choice, playerLine: playerVote.line, decisive: playerVote.decisive } : {}), source: DATA_SOURCES.SIMULATION };
   });
   const passed = votes.every(vote => vote.passed);
   const status = passed ? 'active' : 'fallen';
@@ -773,9 +791,19 @@ export function voteGovernmentConfidence(parliament, currentDate) {
   const margin = Math.min(...votes.map(vote => vote.yes - vote.needed));
   const stability = passed ? clamp(Math.round(government.status === 'crisis' ? 40 + margin / 3 : 45 + margin / 2), 25, 80) : 0;
   const partners = Object.fromEntries([...groups].filter(id => id !== parliament.player?.groupId).map(id => [id, government.partners?.[id] ?? { satisfaction: government.coalitionGroupIds.includes(id) ? 62 : 55, demand: null, source: DATA_SOURCES.SIMULATION }]));
-  let next = { ...parliament, government: { ...government, status, stability, ministers, partners, crisisSeverity: passed ? 0 : government.crisisSeverity, lastCrisisSeverity: government.crisisSeverity, confidenceVotes: [...government.confidenceVotes, { date: currentDate, votes, result: status, source: DATA_SOURCES.SIMULATION }], formedAt: passed ? (government.formedAt ?? currentDate) : government.formedAt ?? null, fallenAt: passed ? null : currentDate } };
+  let next = { ...parliament, government: { ...government, status, stability, ministers, partners, pendingPlayerVote: null, crisisSeverity: passed ? 0 : government.crisisSeverity, lastCrisisSeverity: government.crisisSeverity, confidenceVotes: [...government.confidenceVotes, { date: currentDate, votes, result: status, source: DATA_SOURCES.SIMULATION }], formedAt: passed ? (government.formedAt ?? currentDate) : government.formedAt ?? null, fallenAt: passed ? null : currentDate } };
   if (inCoalition) next = adjustStanding(next, passed ? 1 : -2);
-  return record(next, currentDate, passed ? 'fiducia-ottenuta' : 'fiducia-negata', passed ? 'La maggioranza simulata ha ottenuto la fiducia in entrambe le Camere.' : 'La maggioranza simulata non ha ottenuto la fiducia in entrambe le Camere.', { governmentId: government.id, votes: votes.map(vote => ({ chamber: vote.chamber, yes: vote.yes, needed: vote.needed, passed: vote.passed })), renewed: government.status === 'crisis', source: DATA_SOURCES.SIMULATION });
+  const player = playerVote ? { playerChoice: playerVote.choice, playerLine: playerVote.line, decisive: Boolean(playerVote.decisive), decided: Boolean(decided), yes: votes.find(vote => vote.chamber === playerVote.chamber).yes, needed: votes.find(vote => vote.chamber === playerVote.chamber).needed } : {};
+  return record(next, currentDate, passed ? 'fiducia-ottenuta' : 'fiducia-negata', passed ? 'La maggioranza simulata ha ottenuto la fiducia in entrambe le Camere.' : 'La maggioranza simulata non ha ottenuto la fiducia in entrambe le Camere.', { governmentId: government.id, governmentName: government.name, votes: votes.map(vote => ({ chamber: vote.chamber, yes: vote.yes, needed: vote.needed, passed: vote.passed })), renewed: government.status === 'crisis', ...player, source: DATA_SOURCES.SIMULATION });
+}
+// The player's vote on the next confidence vote (the agenda, or the Governo page).
+export function setConfidenceVote(parliament, choice) {
+  const government = parliament?.government;
+  if (!['linea', 'favorevole', 'contrario', 'astenuto', 'assente'].includes(choice)) throw new Error('Scelta di voto non valida.');
+  if (!parliament?.player?.groupId) throw new Error('Serve un seggio con un gruppo parlamentare.');
+  if (!government || !['awaiting-confidence', 'crisis'].includes(government.status)) throw new Error('Non è prevista una votazione di fiducia.');
+  if (government.primeMinister === 'player' || government.formedBy === 'player') throw new Error('È il tuo governo: la fiducia la chiedi tu.');
+  return { ...parliament, government: { ...government, pendingPlayerVote: choice } };
 }
 
 export function triggerGovernmentCrisis(parliament, currentDate) {
@@ -861,7 +889,7 @@ export function leaveMajority(parliament, groupId, currentDate, reason = 'esce d
   const supportingGroupIds = government.supportingGroupIds.filter(id => id !== groupId);
   const ministers = government.ministers.map(item => item.groupId === groupId && !item.endedAt ? { ...item, endedAt: currentDate, endReason: 'Gruppo uscito dalla maggioranza' } : item);
   const partners = Object.fromEntries(Object.entries(government.partners ?? {}).filter(([id]) => id !== groupId));
-  const next = { ...parliament, government: { ...government, coalitionGroupIds, supportingGroupIds, ministers, partners, status: 'crisis', crisisSeverity: 14, crisisOpenedAt: currentDate, stability: Math.min(government.stability ?? 50, 22) } };
+  const next = { ...parliament, government: { ...government, coalitionGroupIds, supportingGroupIds, ministers, partners, leftGroupIds: [...new Set([...(government.leftGroupIds ?? []), groupId])], status: 'crisis', crisisSeverity: 14, crisisOpenedAt: currentDate, stability: Math.min(government.stability ?? 50, 22) } };
   return record(next, currentDate, 'cambio-maggioranza', `${getGroup(parliament, groupId)?.officialName ?? 'Un gruppo'} ${reason}: il governo deve verificare la fiducia.`, { governmentId: government.id, groupId, source: DATA_SOURCES.SIMULATION });
 }
 
@@ -886,8 +914,12 @@ export function advanceGovernmentWeek(parliament, currentDate, roll = 0.5, rand 
   const majorityIds = new Set([...government.coalitionGroupIds, ...government.supportingGroupIds]);
   const margin = Math.min(...['camera', 'senato'].map(chamber => next.chambers[chamber].groups.filter(group => majorityIds.has(group.groupId)).reduce((sum, group) => sum + group.simulatedSeats, 0) - majority(next, chamber)));
   const mood = partnerSatisfaction(next) ?? 55;
-  const drift = (margin >= 15 ? 1 : margin >= 5 ? 0 : -2) + Math.round((roll - 0.5) * 4) + (mood < 40 ? -1 : mood > 65 ? 1 : 0);
-  const stability = clamp((government.stability ?? 50) + drift, 0, 100);
+  // Stability tends to a level set by the margin, the allies' mood and the wear of time in office, with the ups and
+  // downs of politics around it: a large majority is not a guarantee, a thin one is not a sentence.
+  const months = weeksBetween(government.formedAt ?? government.inheritedAt ?? currentDate, currentDate) / 4.3;
+  const target = clamp(48 + clamp(margin, -12, 12) * 0.8 + (mood - 55) * 0.5 - Math.min(12, months / 3), 15, 80);
+  const drift = (target - (government.stability ?? 50)) * 0.08 + (roll - 0.5) * 5;
+  const stability = clamp(Math.round((government.stability ?? 50) + drift), 0, 100);
   next = { ...next, government: { ...next.government, stability } };
   // Allies: those without ministries grow restless; unhappy ones make demands, and walk out if ignored.
   const holders = new Set(activeMinisters(government).map(item => item.groupId));
@@ -928,7 +960,7 @@ export function majorityShift(parliament, currentDate) {
   if (!government || government.status !== 'active') return parliament;
   const supporter = government.supportingGroupIds.at(-1);
   if (supporter) {
-    const next = { ...parliament, government: { ...government, supportingGroupIds: government.supportingGroupIds.slice(0, -1), stability: Math.max(0, (government.stability ?? 50) - 6) } };
+    const next = { ...parliament, government: { ...government, supportingGroupIds: government.supportingGroupIds.slice(0, -1), leftGroupIds: [...new Set([...(government.leftGroupIds ?? []), supporter])], stability: Math.max(0, (government.stability ?? 50) - 6) } };
     return record(next, currentDate, 'cambio-maggioranza', `${getGroup(parliament, supporter)?.officialName ?? 'Un gruppo'} ritira il sostegno esterno al governo.`, { governmentId: government.id, groupId: supporter, source: DATA_SOURCES.SIMULATION });
   }
   const partners = government.coalitionGroupIds.filter(id => id !== parliament.player?.groupId);
@@ -936,7 +968,7 @@ export function majorityShift(parliament, currentDate) {
   const leaving = [...partners].sort((a, b) => (getGroup(parliament, a)?.simulatedSeats ?? 0) - (getGroup(parliament, b)?.simulatedSeats ?? 0))[0];
   const coalitionGroupIds = government.coalitionGroupIds.filter(id => id !== leaving);
   const ministers = government.ministers.map(item => item.groupId === leaving && !item.endedAt ? { ...item, endedAt: currentDate, endReason: 'Gruppo uscito dalla maggioranza' } : item);
-  const next = { ...parliament, government: { ...government, coalitionGroupIds, ministers, status: 'crisis', crisisSeverity: 12, crisisOpenedAt: currentDate, stability: Math.min(government.stability ?? 50, 20) } };
+  const next = { ...parliament, government: { ...government, coalitionGroupIds, ministers, leftGroupIds: [...new Set([...(government.leftGroupIds ?? []), leaving])], status: 'crisis', crisisSeverity: 12, crisisOpenedAt: currentDate, stability: Math.min(government.stability ?? 50, 20) } };
   return record(next, currentDate, 'cambio-maggioranza', `${getGroup(parliament, leaving)?.officialName ?? 'Un gruppo'} esce dalla maggioranza: il governo deve verificare la fiducia.`, { governmentId: government.id, groupId: leaving, source: DATA_SOURCES.SIMULATION });
 }
 

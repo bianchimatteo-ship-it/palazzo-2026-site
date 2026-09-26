@@ -5,10 +5,10 @@
 // it needs or puts the question of confidence; the bills of the opposition often never reach the floor. The player sits
 // in one Chamber: speaks, amends and casts a personal vote on every bill there — and the vote has consequences.
 // Everything here is simulation (source: simulation); the groups of the real XIX legislature keep their real reference.
-import { DATA_SOURCES } from '../data/schema.js?v=20260926-1';
-import { AREA_BY_ID, DECREE_RULES, FINANCING, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260926-1';
-import { amendLawPolicy, campOfAxis, cohesiveShare, governingGroupIds, groupProfile, parliamentInternals } from './parliament-engine.js?v=20260926-1';
-import { groupLine, splitGroupVote } from './vote-engine.js?v=20260926-1';
+import { DATA_SOURCES } from '../data/schema.js?v=20260926-2';
+import { AREA_BY_ID, DECREE_RULES, FINANCING, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260926-2';
+import { amendLawPolicy, campOfAxis, cohesiveShare, governingGroupIds, groupProfile, parliamentInternals } from './parliament-engine.js?v=20260926-2';
+import { groupLine, splitGroupVote } from './vote-engine.js?v=20260926-2';
 
 const { getGroup, allGroups, record, replaceLaw, demandFor, contentAffinity, setRelation } = parliamentInternals;
 const SIM = DATA_SOURCES.SIMULATION;
@@ -50,28 +50,34 @@ export const committeeFor = (chamber, area) => `commissione-${chamber}-xix-${(ch
 
 // ---------- the groups and their parties ----------
 // The force of the world behind each group: a group born from a vote of the game already knows it; a group of the real
-// XIX legislature is read from its name (the force it mentions first; a force outside the polls only when the name
-// starts with it); the Misto has none. The axis of the force gives the group its collocazione in the game.
-const phraseKey = value => ` ${String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('it-IT').replace(/[’']/g, ' ').replace(/[^a-z0-9+]+/g, ' ').trim()} `;
+// XIX legislature is read from its name — the force it mentions first (a force outside the polls only when the name
+// starts with it), or else the force in the polls whose name contains the first part of the group's name ("Lega -
+// Salvini Premier" → "Lega per Salvini Premier"); the Misto has none. The axis of the force gives the group its
+// collocazione in the game.
+const phraseKey = value => ` ${String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('it-IT').replace(/[’']/g, ' ').replace(/\+\s+/g, '+').replace(/[^a-z0-9+]+/g, ' ').trim()} `;
 export function linkGroupsToParties(parliament, world) {
   if (!parliament?.chambers || !world?.parties) return parliament;
   const forces = [...world.parties.filter(party => party.active).map(party => ({ party, latent: false })), ...(world.latent ?? []).map(party => ({ party, latent: true }))];
   const axisOfParty = id => { const force = forces.find(item => item.party.id === id)?.party; return Number.isFinite(force?.axis) ? force.axis : null; };
   let changed = false;
   const chambers = Object.fromEntries(Object.entries(parliament.chambers).map(([chamber, data]) => [chamber, { ...data, groups: (data.groups ?? []).map(group => {
-    if (group.partyChecked) return group;
+    // Read once (again for a group left without a force by an earlier, stricter reading).
+    if (group.partyChecked === 2 || (group.partyChecked && group.partyId)) return group;
     changed = true;
-    if (group.partyId !== undefined && group.partyId !== null) return { ...group, axis: Number.isFinite(group.axis) ? group.axis : axisOfParty(group.partyId) ?? 0, partyChecked: true };
+    if (group.partyId !== undefined && group.partyId !== null) return { ...group, axis: Number.isFinite(group.axis) ? group.axis : axisOfParty(group.partyId) ?? 0, partyChecked: 2 };
     const bare = String(group.officialName ?? '').replace(/^\s*misto\s*[-–]?\s*/i, '');
-    if (!bare.trim()) return { ...group, partyId: null, axis: 0, partyChecked: true };
+    if (!bare.trim()) return { ...group, partyId: null, axis: 0, partyChecked: 2 };
     const name = phraseKey(bare);
-    const hits = forces.map(({ party, latent }) => {
+    const direct = forces.map(({ party, latent }) => {
       const keys = [party.label, party.officialName, party.abbreviation].filter(Boolean).map(phraseKey).filter(key => key.trim().length >= 3);
       const at = Math.min(...keys.map(key => name.indexOf(key)).filter(index => index >= 0));
       return Number.isFinite(at) && (!latent || at === 0) ? { id: party.id, at, length: Math.max(...keys.map(key => key.length)), latent } : null;
     }).filter(Boolean).sort((a, b) => a.at - b.at || b.length - a.length || Number(a.latent) - Number(b.latent));
-    const partyId = hits[0]?.id ?? null;
-    return { ...group, partyId, partyVia: partyId ? 'nome del gruppo' : null, axis: Number.isFinite(group.axis) ? group.axis : axisOfParty(partyId) ?? 0, partyChecked: true };
+    // The first part of the group's name inside the name of a force in the polls (the largest one when several).
+    const head = phraseKey(bare.split(/\s[-–]\s|-(?=[A-Z])/)[0]);
+    const reverse = head.trim().length >= 4 ? forces.filter(({ party, latent }) => !latent && [party.label, party.officialName].filter(Boolean).some(label => phraseKey(label).includes(head))).sort((a, b) => (b.party.baseline ?? 0) - (a.party.baseline ?? 0)) : [];
+    const partyId = (direct[0]?.at === 0 ? direct[0].id : null) ?? reverse[0]?.party.id ?? direct[0]?.id ?? null;
+    return { ...group, partyId, partyVia: partyId ? 'nome del gruppo' : null, axis: Number.isFinite(group.axis) && group.partyId ? group.axis : axisOfParty(partyId) ?? 0, partyChecked: 2 };
   }) }]));
   return changed ? { ...parliament, chambers } : parliament;
 }

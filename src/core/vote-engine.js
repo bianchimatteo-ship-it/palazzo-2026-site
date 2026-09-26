@@ -12,9 +12,11 @@ export const VOTE_CHOICES = Object.freeze({
 });
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 export const hashOf = value => [...String(value)].reduce((n, char) => (Math.imul(n, 31) + char.charCodeAt(0)) >>> 0, 2166136261) || 1;
-// A small deterministic sequence: the same vote always gives the same seats.
+// A small deterministic sequence: the same vote always gives the same seats. The seed is mixed first (the finalizer of
+// MurmurHash3), so that close seeds ("crisi-1", "crisi-2") give unrelated sequences from the first number on.
+export const mixSeed = value => { let h = value >>> 0; h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16; return h >>> 0 || 1; };
 export function seededRandom(seed) {
-  let state = hashOf(seed);
+  let state = mixSeed(hashOf(seed));
   return () => { state = (Math.imul(state, 1664525) + 1013904223) >>> 0; return state / 4294967296; };
 }
 

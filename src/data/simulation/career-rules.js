@@ -588,6 +588,17 @@ export const SITUATION_EVENTS = Object.freeze({
     { id: 'contrario', label: 'Vota contro', special: 'law-vote-no' },
     { id: 'astenuto', label: 'Astieniti', special: 'law-vote-abstain' },
     { id: 'assente', label: 'Non partecipare al voto', special: 'law-vote-absent' }] },
+  // The Government (led by others) asks the Chambers for confidence: the player's own vote.
+  'voto-fiducia': { id: 'voto-fiducia', title: 'Fiducia al {government}', body: '{situation} Si vota il {when}: il tuo gruppo vota {line}. Votare contro la linea su una fiducia è una scelta che il gruppo, il partito e gli elettori ricordano.', defaultChoice: 'linea', choices: [
+    { id: 'linea', label: 'Vota con il tuo gruppo ({lineShort})', special: 'confidence-vote-line' },
+    { id: 'favorevole', label: 'Vota la fiducia', special: 'confidence-vote-yes' },
+    { id: 'contrario', label: 'Vota contro il governo', special: 'confidence-vote-no' },
+    { id: 'astenuto', label: 'Astieniti', special: 'confidence-vote-abstain' },
+    { id: 'assente', label: 'Non partecipare al voto', special: 'confidence-vote-absent' }] },
+  // A Government with thin numbers asks the player's party for external support.
+  'richiesta-sostegno': { id: 'richiesta-sostegno', title: 'Il governo chiede il sostegno di {party}', body: '{government} ha una maggioranza di pochi voti (margine {margin}) e chiede al tuo partito un sostegno esterno: votare la fiducia e i provvedimenti principali, senza ministri. Dà peso e visibilità, ma lega il partito alle scelte del governo.', defaultChoice: 'rifiuta', choices: [
+    { id: 'sostieni', label: 'Concedi il sostegno esterno', effects: { stats: { influence: 1.5 }, party: { support: -1 } }, special: 'support-accept' },
+    { id: 'rifiuta', label: 'Resta all’opposizione', effects: { stats: { reputation: 0.5 } }, special: 'support-refuse' }] },
   'incarico-governo': { id: 'incarico-governo', title: 'Il Presidente della Repubblica ti affida l’incarico', body: 'Il tuo partito guida {majority}: tocca a te formare il governo, distribuire i ministeri e chiedere la fiducia alle Camere. Se rinunci, l’incarico passa a un’altra figura di {leader}.', defaultChoice: 'accetta', choices: [
     { id: 'accetta', label: 'Accetta l’incarico: formi il governo', effects: { stats: { notoriety: 2, influence: 2 } }, special: 'national-mandate-accept' },
     { id: 'rinuncia', label: 'Rinuncia e lascia l’incarico a un’altra figura', effects: { party: { support: -2 } }, special: 'national-mandate-decline' }] }

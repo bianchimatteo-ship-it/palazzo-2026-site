@@ -115,7 +115,12 @@ for (let i = 0; i < 180; i++) {
     } catch { /* not available this week */ }
   }
   // Late in the career, bring the government down to test the road to early elections.
-  if (i === 120 && store.getState().parliament.government?.status === 'active') { give(); store.triggerGovernmentCrisis(); seen.crisis = true; }
+  // (a player who lost the seat at the polls cannot open it: the test opens it among the others, as an ally walking out would)
+  if (i === 120 && store.getState().parliament.government?.status === 'active') {
+    if (store.getState().parliament.player?.groupId) { give(); store.triggerGovernmentCrisis(); }
+    else Object.assign(store.getState().parliament.government, { status: 'crisis', crisisSeverity: 12, crisisOpenedAt: store.getState().clock.currentDate });
+    seen.crisis = true;
+  }
   week();
 }
 const final = store.getState();

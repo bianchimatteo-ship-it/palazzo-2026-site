@@ -3,11 +3,12 @@
 // Chambers and their groups, the formation of the Government. Everything that happens is simulation: the real data are
 // the geography, the seats and the 2022 results the vote starts from; parties, coalitions, votes and seats of the game
 // are estimates of the game and never presented as real results.
-import { advanceDays, formatDate } from './time.js?v=20260926-1';
-import { axisOf, nationalShares } from './world-engine.js?v=20260926-1';
-import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20260926-1';
-import { archiveGovernment, voteGovernmentConfidence } from './parliament-engine.js?v=20260926-1';
-import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20260926-1';
+import { advanceDays, formatDate } from './time.js?v=20260926-2';
+import { axisOf, nationalShares } from './world-engine.js?v=20260926-2';
+import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20260926-2';
+import { archiveGovernment, voteGovernmentConfidence } from './parliament-engine.js?v=20260926-2';
+import { seededRandom } from './vote-engine.js?v=20260926-2';
+import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20260926-2';
 
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -684,13 +685,22 @@ const seatsIn = (parliament, chamber, groupIds) => (parliament.chambers?.[chambe
 const totalIn = (parliament, chamber) => (parliament.chambers?.[chamber]?.groups ?? []).reduce((sum, group) => sum + group.simulatedSeats, 0);
 const hasMajority = (parliament, groupIds) => ['camera', 'senato'].every(chamber => seatsIn(parliament, chamber, groupIds) >= Math.floor(totalIn(parliament, chamber) / 2) + 1);
 const groupsOfParties = (parliament, partyIds) => ['camera', 'senato'].flatMap(chamber => (parliament.chambers?.[chamber]?.groups ?? []).filter(group => partyIds.includes(group.partyId)).map(group => group.groupId));
-// Who can govern after the vote: the coalition that won both Chambers; otherwise the largest one with the closest
-// partners; otherwise a broad Government of the President (every force but the far ends). null: no majority at all.
-// exclude: forces that said no (the player's party in opposition); include: forces that joined the majority.
-export function majorityAfterVote(parliament, result, world = null, { exclude = [], include = [] } = {}) {
+// Who can govern: after the vote, the coalition that won both Chambers (it governs by right, widened with close forces
+// up to a safe margin). Otherwise — a hung Parliament, a crisis, a second round of consultations — several majorities
+// are possible and the consultations settle on one of them, not always the same: around each of the largest forces
+// the partners are sought by affinity (collocazione, relations between the parties, grudges), a distant partner gives
+// external support rather than joining the cabinet; a grand coalition of the two largest forces and a Government of the
+// President (a technical Prime Minister backed by nearly everyone) are the last resorts. The chance of each depends on
+// cohesion, margin, the weight of its leader and the relations inside it; `rand` draws one (the most likely without it).
+// exclude: forces that said no (the player's party in opposition); include: forces that joined the majority;
+// previous: the majority of a fallen Government (a crisis tends to end with the same forces, or most of them).
+// null: no majority at all.
+export function majorityAfterVote(parliament, result, world = null, { exclude = [], include = [], crisis = false, rand = null, previous = null } = {}) {
   const coalitions = result.coalitions ?? [];
   const forcesOf = id => coalitions.find(item => item.id === id)?.partyIds ?? [id];
   const axis = id => world?.parties?.find(item => item.id === id)?.axis ?? 0;
+  const tie = (a, b) => world?.ties?.[[a, b].sort().join('|')] ?? 0;
+  const grudge = (a, b) => world?.grudges?.[[a, b].sort().join('|')] ?? 0;
   const out = partyIds => [...new Set([...partyIds, ...include])].filter(id => !exclude.includes(id));
   const blocs = [...coalitions.map(item => ({ id: item.id, partyIds: out(item.partyIds), leaderId: item.leaderId, coalition: true })), ...result.camera.parties.filter(row => !row.coalitionId && !String(row.id).startsWith('lista:') && !exclude.includes(row.id)).map(row => ({ id: row.id, partyIds: [row.id], leaderId: row.id, coalition: false }))].filter(bloc => bloc.partyIds.length && !exclude.includes(bloc.leaderId));
   const weightOf = bloc => ['camera', 'senato'].reduce((sum, chamber) => sum + bloc.partyIds.reduce((acc, id) => acc + (result[chamber].parties.find(row => row.id === id)?.seats ?? 0), 0), 0);
@@ -706,8 +716,8 @@ export function majorityAfterVote(parliament, result, world = null, { exclude = 
     return marginOf(ids) > marginOf(partyIds) ? ids : partyIds;
   };
   const byCloseness = (leaderAxis, skip) => blocs.filter(bloc => !skip(bloc)).sort((a, b) => Math.abs(axis(a.leaderId) - leaderAxis) - Math.abs(axis(b.leaderId) - leaderAxis) || weightOf(b) - weightOf(a));
-  const majority = (kind, leaderId, partyIds, label) => ({ kind, leaderId, partyIds, groupIds: groupsOfParties(parliament, partyIds), label });
-  if (result.winner) {
+  const majority = (kind, leaderId, partyIds, label, supportPartyIds = []) => ({ kind, leaderId, partyIds, supportPartyIds, groupIds: groupsOfParties(parliament, [...partyIds, ...supportPartyIds]), label });
+  if (result.winner && !crisis) {
     const partyIds = out(forcesOf(result.winner));
     if (marginOf(partyIds) >= 0) {
       const winner = coalitions.find(item => item.id === result.winner);
@@ -715,29 +725,71 @@ export function majorityAfterVote(parliament, result, world = null, { exclude = 
       return majority('coalizione', leaderId, widen(partyIds, axis(leaderId), byCloseness(axis(leaderId), bloc => bloc.coalition || bloc.partyIds.some(id => partyIds.includes(id)))), winner?.label ?? null);
     }
   }
-  const largest = [...blocs].sort((a, b) => weightOf(b) - weightOf(a))[0];
-  if (largest) {
-    const leaderAxis = axis(largest.leaderId);
-    const partners = byCloseness(leaderAxis, bloc => bloc === largest);
-    const partyIds = [...largest.partyIds];
-    for (const partner of partners) {
-      if (Math.abs(axis(partner.leaderId) - leaderAxis) > 2) break;
-      partyIds.push(...partner.partyIds);
-      if (marginOf(partyIds) >= 0) return majority('coalizione-post-voto', largest.leaderId, widen(partyIds, leaderAxis, partners.filter(bloc => !bloc.partyIds.some(id => partyIds.includes(id)))), 'Maggioranza nata dopo il voto');
+  // How well two forces can govern together: close collocazione, good relations, no grudges.
+  const affinity = (lead, bloc) => 1.6 - Math.abs(axis(bloc.leaderId) - axis(lead.leaderId)) * 0.8 + tie(lead.leaderId, bloc.leaderId) / 60 - grudge(lead.leaderId, bloc.leaderId) / 40;
+  const candidates = [];
+  const ranked = [...blocs].sort((a, b) => weightOf(b) - weightOf(a));
+  const previousIds = new Set(previous?.partyIds ?? []);
+  const score = (leaderRank, partyIds, supportPartyIds) => {
+    const members = [...partyIds, ...supportPartyIds];
+    const axes = members.map(axis);
+    const spread = Math.max(...axes) - Math.min(...axes);
+    const margin = marginOf(members);
+    const ties = partyIds.length > 1 ? partyIds.slice(1).reduce((sum, id) => sum + tie(partyIds[0], id), 0) / (partyIds.length - 1) : 20;
+    const continuity = previousIds.size ? members.filter(id => previousIds.has(id)).length / previousIds.size : 0;
+    return [4, 1.4, 0.6][leaderRank] * Math.exp(-spread / 2.2) * (margin >= LEGISLATURE_RULES.safeMargin ? 1.25 : margin >= 3 ? 1 : 0.7) * clamp(1 + ties / 120, 0.5, 1.6) * (1 + continuity * (crisis ? 1.2 : 0.3)) * (supportPartyIds.length ? 0.85 : 1);
+  };
+  ranked.slice(0, 3).forEach((lead, rank) => {
+    const partners = blocs.filter(bloc => bloc !== lead).map(bloc => ({ bloc, value: affinity(lead, bloc) })).filter(item => item.value > -1.2).sort((a, b) => b.value - a.value || weightOf(b.bloc) - weightOf(a.bloc));
+    const partyIds = [...lead.partyIds];
+    const support = [];
+    for (const { bloc } of partners) {
+      if (marginOf([...partyIds, ...support]) >= 0) break;
+      // A force far from the leader gives its votes from outside, without ministers.
+      (Math.abs(axis(bloc.leaderId) - axis(lead.leaderId)) >= 2 ? support : partyIds).push(...bloc.partyIds.filter(id => !partyIds.includes(id) && !support.includes(id)));
     }
-  }
+    if (marginOf([...partyIds, ...support]) < 0) return;
+    const widened = widen(partyIds, axis(lead.leaderId), byCloseness(axis(lead.leaderId), bloc => [...partyIds, ...support].some(id => bloc.partyIds.includes(id))));
+    const winnerLed = result.winner && forcesOf(result.winner).includes(lead.leaderId);
+    candidates.push({ ...majority(winnerLed ? 'coalizione' : 'coalizione-post-voto', lead.leaderId, widened, winnerLed ? coalitions.find(item => item.id === result.winner)?.label ?? null : support.length ? 'Maggioranza con sostegno esterno' : 'Maggioranza nata in Parlamento', support), weight: score(rank, widened, support) });
+  });
+  // The two largest forces together: a grand coalition, when they are not at opposite ends.
+  const [first, second] = ranked;
+  if (first && second && Math.abs(axis(first.leaderId) - axis(second.leaderId)) <= 3 && marginOf([...first.partyIds, ...second.partyIds]) >= 0) candidates.push({ ...majority('grande-coalizione', first.leaderId, [...first.partyIds, ...second.partyIds], 'Grande coalizione'), weight: 0.35 * (crisis ? 1.4 : 1) });
+  // The last resort: a technical Prime Minister backed by every force but the far ends.
   const broad = blocs.filter(bloc => Math.abs(axis(bloc.leaderId)) < 3).flatMap(bloc => bloc.partyIds);
-  if (broad.length && marginOf(broad) >= 0) return majority('governo-del-presidente', null, broad, 'Governo del Presidente');
-  return null;
+  if (broad.length && marginOf(broad) >= 0) candidates.push({ ...majority('governo-del-presidente', null, broad, 'Governo del Presidente'), weight: candidates.length ? 0.25 * (crisis ? 1.5 : 1) : 1 });
+  if (!candidates.length) return null;
+  const total = candidates.reduce((sum, item) => sum + item.weight, 0);
+  let pick = rand ? rand() * total : null;
+  const chosen = pick === null ? [...candidates].sort((a, b) => b.weight - a.weight)[0] : candidates.find(item => (pick -= item.weight) < 0) ?? candidates.at(-1);
+  const { weight, ...picked } = chosen;
+  return { ...picked, alternatives: candidates.length, chance: Math.round(weight / total * 100) / 100 };
+}
+// The Chambers as they are now, read as the result of a vote (seats of every force in each Chamber): the consultations
+// of a crisis in a legislature not born from a vote of the game start from here.
+export function seatResult(parliament, { date = null } = {}) {
+  const chamberOf = chamber => {
+    const parties = new Map();
+    for (const group of parliament?.chambers?.[chamber]?.groups ?? []) {
+      if (!group.partyId) continue;
+      parties.set(group.partyId, (parties.get(group.partyId) ?? 0) + (group.simulatedSeats ?? 0));
+    }
+    return { parties: [...parties.entries()].map(([id, seats]) => ({ id, seats, coalitionId: null })), coalitions: [], total: totalIn(parliament, chamber) };
+  };
+  return { id: `aula-${date ?? 'oggi'}`, date, kind: 'aula', coalitions: [], winner: null, camera: chamberOf('camera'), senato: chamberOf('senato'), source: SIM };
 }
 // A Government of the new legislature (simulated Prime Minister, or the player when the player accepts the mandate).
 export function electedGovernment(parliament, { majority, number, date, formedBy = 'elezioni', leaderLabel = null, premierLabel = null }) {
   const next = copy(parliament);
-  const groupIds = majority.groupIds.filter(id => ['camera', 'senato'].some(chamber => (next.chambers[chamber].groups ?? []).some(group => group.groupId === id)));
+  const known = id => ['camera', 'senato'].some(chamber => (next.chambers[chamber].groups ?? []).some(group => group.groupId === id));
+  // The forces of the external support vote the confidence without ministers.
+  const supportIds = groupsOfParties(next, majority.supportPartyIds ?? []).filter(known);
+  const groupIds = majority.groupIds.filter(id => known(id) && !supportIds.includes(id));
   const premierGroupId = groupIds.find(id => (next.chambers.camera.groups ?? []).find(group => group.groupId === id)?.partyId === majority.leaderId) ?? groupIds[0] ?? null;
   // Ministries in proportion to the seats of each majority group at the Camera (the player's Government: chosen by the player).
   const ministers = formedBy === 'player' ? [] : simulatedMinisters(next, groupIds, { number, date });
-  const partners = Object.fromEntries(groupIds.filter(id => id !== next.player?.groupId).map(id => [id, { satisfaction: 62, demand: null, source: SIM }]));
+  const partners = Object.fromEntries([...groupIds, ...supportIds].filter(id => id !== next.player?.groupId).map(id => [id, { satisfaction: supportIds.includes(id) ? 55 : 62, demand: null, source: SIM }]));
   if (next.government) next.pastGovernments = archiveGovernment(next, { status: next.government.status === 'caretaker' ? 'concluded' : next.government.status, endedAt: date });
   const base = majority.kind === 'governo-del-presidente' ? 'Governo del Presidente' : `Governo ${leaderLabel ?? majority.label ?? 'di coalizione'}`;
   // A second Government of the same leader in the same legislature is a "bis" (then "ter", "quater").
@@ -745,7 +797,7 @@ export function electedGovernment(parliament, { majority, number, date, formedBy
   const name = `${base}${['', ' bis', ' ter', ' quater'][again] ?? ` (${again + 1}º)`} · ${legislatureLabel(number)}`;
   next.government = {
     id: `governo-leg${number}-${date}`, name, status: 'awaiting-confidence', formedBy, primeMinister: formedBy === 'player' ? null : 'simulato', premierLabel: premierLabel ?? (majority.kind === 'governo-del-presidente' ? 'Presidente del Consiglio tecnico (simulato)' : `Presidente del Consiglio (simulato) di ${leaderLabel ?? 'area di maggioranza'}`),
-    premierGroupId, coalitionGroupIds: groupIds, supportingGroupIds: [], ministers, partners, confidenceVotes: [], crisisSeverity: 0, program: null, agenda: [],
+    premierGroupId, coalitionGroupIds: groupIds, supportingGroupIds: supportIds, ministers, partners, confidenceVotes: [], crisisSeverity: 0, program: null, agenda: [],
     stability: 55, proposedAt: date, legislature: number, majorityKind: majority.kind, majorityPartyIds: majority.partyIds, source: SIM
   };
   next.history = [...(next.history ?? []), { id: `governo-leg${number}-${date}`, date, type: 'governo-proposto', text: `${name}: giura il governo e si presenta alle Camere per la fiducia.`, details: { governmentId: next.government.id, coalitionGroupIds: groupIds, source: SIM }, source: SIM }];
@@ -774,8 +826,8 @@ export const FORMATION_PHASES = Object.freeze({
 });
 // A Government of a legislature born from a vote of the game falls: consultations in the same Chambers, for a new
 // Government (the same majority with a new cabinet, or a broader one) or, failing that, the dissolution.
-export function crisisFormation(result, { date, number, governmentName = null }) {
-  return { phase: 'insediamento', crisis: true, number, resultId: result.id, votedAt: result.date, firstSitting: date, deadline: advanceDays(date, LEGISLATURE_RULES.formationDeadlineWeeks * 7), attempts: 0, majority: null, excluded: [], included: [], steps: [{ date, phase: 'insediamento', text: `${governmentName ?? 'Il governo'} ha perso la fiducia: il Presidente della Repubblica apre le consultazioni nelle stesse Camere.` }], source: SIM };
+export function crisisFormation(result, { date, number, governmentName = null, previous = null }) {
+  return { phase: 'insediamento', crisis: true, number, resultId: result.id, votedAt: result.date, firstSitting: date, previous, deadline: advanceDays(date, LEGISLATURE_RULES.formationDeadlineWeeks * 7), attempts: 0, majority: null, excluded: [], included: [], steps: [{ date, phase: 'insediamento', text: `${governmentName ?? 'Il governo'} ha perso la fiducia: il Presidente della Repubblica apre le consultazioni nelle stesse Camere.` }], source: SIM };
 }
 export function startFormation(result, { date, number }) {
   const firstSitting = advanceDays(date, LEGISLATURE_RULES.firstSittingDays);
@@ -792,8 +844,10 @@ export function formationStep({ formation, parliament, result, world = null, dat
   const lines = [];
   const step = (phase, text) => { next.phase = phase; next.steps.push({ date, phase, text }); lines.push(text); };
   const done = extra => ({ formation: next, parliament: chambers, events, lines, ...extra });
-  // After a failed confidence vote the second round looks for a broader majority (no coalition wins by right).
-  const find = () => majorityAfterVote(chambers, next.attempts ? { ...result, winner: null } : result, world, { exclude: next.excluded ?? [], include: next.included ?? [] });
+  // After a failed confidence vote the second round looks for a broader majority (no coalition wins by right). In a
+  // crisis, or with no winner, the consultations can settle on different majorities (drawn with the formation's own
+  // sequence: the same answers of the parties give the same outcome).
+  const find = () => majorityAfterVote(chambers, next.attempts ? { ...result, winner: null } : result, world, { exclude: next.excluded ?? [], include: next.included ?? [], crisis: Boolean(next.crisis || next.attempts), previous: next.previous ?? null, rand: seededRandom(`${next.resultId}|${next.firstSitting}|${next.attempts ?? 0}|${(next.excluded ?? []).join(',')}|${(next.included ?? []).join(',')}`) });
   const propose = majority => {
     chambers = electedGovernment(chambers, { majority, number: next.number, date, leaderLabel: majority.leaderId ? labelOf(majority.leaderId) : null });
     next.confidenceAt = advanceDays(date, LEGISLATURE_RULES.confidenceDays);
@@ -831,7 +885,8 @@ export function formationStep({ formation, parliament, result, world = null, dat
       return done();
     }
     const government = propose(majority);
-    step('fiducia', `${government.name}: giura e chiede la fiducia alle Camere.`);
+    const support = majority.supportPartyIds?.length ? ` Sostegno esterno di ${majority.supportPartyIds.map(labelOf).join(', ')}, senza ministri.` : '';
+    step('fiducia', `${government.name}: giura e chiede la fiducia alle Camere.${support}`);
     return done();
   }
   if (next.phase === 'incarico') {
