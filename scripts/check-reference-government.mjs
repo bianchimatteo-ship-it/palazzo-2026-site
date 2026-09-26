@@ -112,7 +112,7 @@ store.createCareer(draft({ parliamentaryGroupId: 'cam-xix-03', firstName: 'Quart
 state = store.getState(); state.game.week.ap = 6; state.game.resources.politicalCapital = 60;
 store.withdrawGovernmentSupport();
 assert.equal(store.getState().parliament.government.status, 'crisis', 'Il gruppo esce dalla maggioranza: crisi.');
-store.advance(7); store.advance(7);
+for (let week = 0; week < 3 && store.getState().parliament.government.status !== 'fallen'; week++) store.advance(7);
 state = store.getState();
 assert.equal(state.parliament.government.status, 'fallen', 'Senza quei seggi la fiducia non arriva: il governo cade.');
 html = renderParliamentPage('governo', state, { secretary: true });

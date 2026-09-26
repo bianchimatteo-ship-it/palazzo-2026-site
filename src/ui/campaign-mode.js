@@ -1,12 +1,12 @@
-import { CAMPAIGN_OBJECTIVES, CAMPAIGN_PHASES, CAMPAIGN_STRATEGIES, DEBATE_TOPICS, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260926-2';
-import { affiliationOf, markForPerson } from './person-marks.js?v=20260926-2';
-import { campaignActivities, campaignSummary, strategyFit, strategyOf } from '../core/campaign-engine.js?v=20260926-2';
-import { resultDescription } from '../core/election-engine.js?v=20260926-2';
-import { formatDate } from '../core/time.js?v=20260926-2';
-import { careerLevelLabel } from '../data/regions.js?v=20260926-2';
-import { upcomingElections } from '../core/career-engine.js?v=20260926-2';
-import { renderElectionReport } from './election-report.js?v=20260926-2';
-import { glyph } from './visuals.js?v=20260926-2';
+import { CAMPAIGN_OBJECTIVES, CAMPAIGN_PHASES, CAMPAIGN_STRATEGIES, DEBATE_TOPICS, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260926-3';
+import { affiliationOf, markForPerson } from './person-marks.js?v=20260926-3';
+import { campaignActivities, campaignSummary, strategyFit, strategyOf } from '../core/campaign-engine.js?v=20260926-3';
+import { resultDescription } from '../core/election-engine.js?v=20260926-3';
+import { formatDate } from '../core/time.js?v=20260926-3';
+import { careerLevelLabel } from '../data/regions.js?v=20260926-3';
+import { upcomingElections } from '../core/career-engine.js?v=20260926-3';
+import { renderElectionReport } from './election-report.js?v=20260926-3';
+import { glyph } from './visuals.js?v=20260926-3';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const roleLabels={sindaco:'Candidatura a sindaco',consigliere:'Candidato in lista per il consiglio',presidente:'Candidato alla presidenza regionale',deputato:'Candidato alla Camera',senatore:'Candidato al Senato',uninominale:'Collegio uninominale simulato',eurodeputato:'Candidato al Parlamento europeo'};
@@ -86,7 +86,7 @@ function renderActive(campaign,parties,logoFor) {
     const initials=candidate.realReference?candidate.realReference.fullName.split(/\s+/).map(word=>word[0]).join('').slice(0,2):(affiliated?.abbreviation??'S').slice(0,2);
     const realMark=candidate.realReference&&affiliationOf(candidate.realReference.politicianId)?markForPerson(candidate.realReference.politicianId):'';
     const targeted=campaign.strategy?.id==='contrasto'&&campaign.strategy.targetId===candidate.id;
-    return `<div class="campaign-rival ${candidate.status==='allied'?'is-allied':''} ${candidate.realReference?'is-real':''} ${targeted?'is-target':''}"><div class="campaign-rival-logo">${realMark||img||esc(initials)}</div><div class="campaign-rival-main"><strong>${candidate.realReference?esc(candidate.realReference.fullName):'Candidatura simulata'}${targeted?' <em>nel mirino</em>':''}</strong><span>${esc(affiliation)}${!candidate.realReference&&affiliated?.abbreviation?` · ${esc(affiliated.abbreviation)}`:''}</span><small>${candidate.realReference?'Persona reale · dati di campagna simulati · ':''}${esc(candidate.lastAction)}</small>${realSourceLink(candidate)}</div><div class="campaign-rival-score"><strong>${pct(support)}</strong><span>${candidate.status==='allied'?'in alleanza':`risorse ${number(candidate.resources.money)} €`}</span></div>${affiliated?`<button class="text-link" data-party-profile="${esc(affiliated.id)}">Scheda partito ↗</button>`:''}</div>`;
+    return `<div class="campaign-rival ${candidate.status==='allied'?'is-allied':''} ${candidate.status==='withdrawn'?'is-withdrawn':''} ${candidate.realReference?'is-real':''} ${targeted?'is-target':''}"><div class="campaign-rival-logo">${realMark||img||esc(initials)}</div><div class="campaign-rival-main"><strong>${candidate.realReference?esc(candidate.realReference.fullName):'Candidatura simulata'}${targeted?' <em>nel mirino</em>':''}</strong><span>${esc(affiliation)}${!candidate.realReference&&affiliated?.abbreviation?` · ${esc(affiliated.abbreviation)}`:''}</span><small>${candidate.realReference?'Persona reale · dati di campagna simulati · ':''}${esc(candidate.lastAction)}</small>${realSourceLink(candidate)}</div><div class="campaign-rival-score"><strong>${pct(support)}</strong><span>${candidate.status==='allied'?'in alleanza':candidate.status==='withdrawn'?'ritirata':`risorse ${number(candidate.resources.money)} €`}</span></div>${affiliated?`<button class="text-link" data-party-profile="${esc(affiliated.id)}">Scheda partito ↗</button>`:''}</div>`;
   }).join('');
   const territoryOptions=campaign.territories.map(area=>`<option value="${esc(area.id)}" ${area.id===campaign.candidacy?.territoryId?'selected':''}>${esc(area.name)}</option>`).join('');
   const debateOptions=DEBATE_TOPICS.map(topic=>`<option value="${topic.id}" ${topic.id===(campaign.strategy?.topicId??campaign.nationalContext.salientTopic)?'selected':''}>${esc(topic.label)} · preparazione ${number(campaign.preparationByTopic[topic.id]??0)}${topic.id===campaign.nationalContext.salientTopic?' · al centro del dibattito':''}</option>`).join('');

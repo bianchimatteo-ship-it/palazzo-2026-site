@@ -190,7 +190,8 @@ store.advance(7);
   store.getState().game.week.ap = 6;
   store.withdrawGovernmentSupport();
   assert.equal(store.getState().parliament.government.status, 'crisis');
-  store.advance(7); store.advance(7);
+  // The simulated Prime Minister goes back to the Chambers (or resigns before): without those seats the Government falls.
+  for (let week = 0; week < 3 && store.getState().parliament.government.status !== 'fallen'; week++) store.advance(7);
   assert.equal(store.getState().parliament.government.status, 'fallen', 'Senza il gruppo del giocatore la maggioranza non ha più i numeri: il governo cade.');
   store.getState().game.week.ap = 6; store.getState().game.resources.politicalCapital = 40;
 }

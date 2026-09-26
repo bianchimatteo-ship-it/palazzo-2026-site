@@ -1,7 +1,7 @@
-import { DATA_SOURCES } from '../data/schema.js?v=20260926-2';
-import { AREA_BY_ID, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, STAGE_WEEKS, areaOf } from '../data/simulation/policy-rules.js?v=20260926-2';
-import { evaluateAdvancement } from './progression-engine.js?v=20260926-2';
-import { groupLine, splitGroupVote } from './vote-engine.js?v=20260926-2';
+import { DATA_SOURCES } from '../data/schema.js?v=20260926-3';
+import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, STAGE_WEEKS, areaOf } from '../data/simulation/policy-rules.js?v=20260926-3';
+import { evaluateAdvancement } from './progression-engine.js?v=20260926-3';
+import { groupLine, splitGroupVote } from './vote-engine.js?v=20260926-3';
 
 export const CHAMBERS = Object.freeze({
   camera: { label: 'Camera dei deputati', shortLabel: 'Camera', source: DATA_SOURCES.REAL },
@@ -35,11 +35,7 @@ const addDaysTo = (date, days) => { const value = new Date(`${date}T12:00:00`); 
 // Scenario priorities of a parliamentary group, declared as simulation, never an attribution of real positions. A group
 // linked to a force of the world draws them from its place on the left–right axis (the same for its groups in both
 // Chambers); any other group from its id. Accepts the group or its id.
-const CAMP_AREAS = Object.freeze({
-  destra: ['sicurezza', 'immigrazione', 'fisco', 'famiglia', 'difesa', 'autonomie', 'industria', 'giustizia', 'demografia', 'energia'],
-  sinistra: ['welfare', 'sanita', 'lavoro', 'ambiente', 'scuola', 'casa', 'cittadinanza', 'universita', 'giovani', 'trasporti'],
-  centro: ['economia', 'europa', 'pa', 'digitale', 'infrastrutture', 'giustizia', 'industria', 'fisco', 'universita', 'turismo']
-});
+const CAMP_AREAS = CAMP_PRIORITIES;
 const CAMP_DISLIKED_FINANCING = Object.freeze({ destra: ['irpef', 'imprese', 'rendite'], sinistra: ['tagli', 'consumi'], centro: ['deficit', 'irpef', 'tagli'] });
 export const campOfAxis = axis => axis >= 1 ? 'destra' : axis <= -1 ? 'sinistra' : 'centro';
 export function groupProfile(group) {
@@ -57,7 +53,10 @@ export function groupProfile(group) {
   }
   const camp = campOfAxis(axis);
   const own = [...CAMP_AREAS[camp]];
-  const likes = [pick(own), pick(own), pick(own)];
+  // The current agenda of the group's force (world-engine) comes first: interests change over time.
+  const agenda = (group.agenda ?? []).filter(id => AREA_BY_ID[id]).slice(0, 3);
+  const likes = [...agenda];
+  while (likes.length < 3) { const item = pick(own); if (!likes.includes(item)) likes.push(item); }
   const far = (camp === 'destra' ? CAMP_AREAS.sinistra : camp === 'sinistra' ? CAMP_AREAS.destra : POLICY_AREAS.map(item => item.id)).filter(item => !likes.includes(item));
   const dislikes = [pick(far), pick(far)];
   const financings = CAMP_DISLIKED_FINANCING[camp];

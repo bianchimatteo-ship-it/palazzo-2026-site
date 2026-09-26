@@ -118,3 +118,11 @@ export const BUDGET_SESSION = Object.freeze({ opensMonth: 10, deadline: '12-31',
 // Ministries of the simulated executive: each one answers for its areas.
 export const MINISTRIES = Object.freeze([...new Set(POLICY_AREAS.map(item => item.portfolio))]);
 export const areasOfPortfolio = portfolio => POLICY_AREAS.filter(item => item.portfolio === portfolio).map(item => item.id);
+
+// The areas each camp tends to care about (rules of the game, never an attribution of real positions): the scenario
+// priorities of parliamentary groups and the agendas of the forces of the world are drawn from here.
+export const CAMP_PRIORITIES = Object.freeze({
+  destra: ['sicurezza', 'immigrazione', 'fisco', 'famiglia', 'difesa', 'autonomie', 'industria', 'giustizia', 'demografia', 'energia'],
+  sinistra: ['welfare', 'sanita', 'lavoro', 'ambiente', 'scuola', 'casa', 'cittadinanza', 'universita', 'giovani', 'trasporti'],
+  centro: ['economia', 'europa', 'pa', 'digitale', 'infrastrutture', 'giustizia', 'industria', 'fisco', 'universita', 'turismo']
+});

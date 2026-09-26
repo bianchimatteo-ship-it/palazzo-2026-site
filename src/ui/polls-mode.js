@@ -1,7 +1,7 @@
-import { allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20260926-2';
-import { formatDate } from '../core/time.js?v=20260926-2';
-import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20260926-2';
-import { distinctSeries } from './charts.js?v=20260926-2';
+import { allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20260926-3';
+import { formatDate } from '../core/time.js?v=20260926-3';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20260926-3';
+import { distinctSeries } from './charts.js?v=20260926-3';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const pct = (value, digits = 1) => value === null || value === undefined ? '—' : `${Number(value).toLocaleString('it-IT', { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
@@ -242,7 +242,8 @@ export function renderPollsPage(state, options = {}) {
   const index = partyIndex(world);
   const logo = options.logoFor;
   const panel = (kicker, title, body, extra = '') => `<section class="hq-panel poll-panel"><div class="home-section-heading"><div><span class="section-kicker">${kicker}</span><h2>${title}</h2></div>${extra}</div>${body}</section>`;
-  const alliances = world.alliances.filter(item => item.status === 'active').map(item => `<div class="alliance-row">${glyph('link', 18)}<div><strong>${esc(item.label)}</strong><small>${item.partyIds.map(id => esc(index[id]?.label ?? id)).join(' + ')} · dal ${esc(shortDate(item.since))}</small></div><b class="hq-bar ${item.cohesion < 30 ? 'danger' : 'good'}"><i style="width:${item.cohesion}%"></i></b></div>`).join('') || '<p class="quiet-copy">Nessuna alleanza attiva.</p>';
+  // Coalitions of several forces show what was conceded to get in (collegi, programme, leadership, vetoes).
+  const alliances = world.alliances.filter(item => item.status === 'active' && item.partyIds.length >= 2).map(item => `<div class="alliance-row">${glyph('link', 18)}<div><strong>${esc(item.label)}</strong><small>${item.partyIds.map(id => esc(index[id]?.label ?? id)).join(' + ')} · dal ${esc(shortDate(item.since))}</small>${(item.terms ?? []).length ? `<small class="alliance-terms">Accordi: ${item.terms.slice(-3).map(term => esc(term.text)).join(' · ')}</small>` : ''}</div><b class="hq-bar ${item.cohesion < 30 ? 'danger' : 'good'}"><i style="width:${item.cohesion}%"></i></b></div>`).join('') || '<p class="quiet-copy">Nessuna alleanza attiva.</p>';
   const strategyRows = Object.entries(STRATEGIES).map(([id, item]) => { const members = world.parties.filter(party => party.active && (party.isPlayer || isSurveyed(party)) && party.strategy === id); return `<div class="figure-row">${glyph(id === 'governista' ? 'dome' : id === 'opposizione' ? 'megaphone' : id === 'coalizione' ? 'link' : 'route', 18)}<div><strong>${esc(item.label)} · ${members.length}</strong><small>${members.map(party => esc(party.abbreviation || party.label)).join(', ') || 'nessuna forza'}</small></div></div>`; }).join('');
   const figures = world.figures.filter(item => item.simulated).slice(-4).reverse().map(figure => `<div class="figure-row">${glyph('user', 18)}<div><strong>${esc(figure.name)}</strong><small>${esc(figure.role)} · figura simulata, non una persona reale</small></div></div>`).join('');
   return `<div class="polls-page">

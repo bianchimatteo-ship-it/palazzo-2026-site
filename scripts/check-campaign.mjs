@@ -81,7 +81,9 @@ for(const [type,role] of [['comunale','sindaco'],['regionale','presidente'],['po
   const player={...base.dataset.politicians[0],partyId:null,region:'Toscana',municipality:'Valleverde'};
   let runoff=createCampaign({career:{...base.career,id:'test-runoff',partyId:null},player,statistics:base.dataset.statistics,partyCatalog:[],currentDate:'2026-09-23',config:{electionType:'comunale',role:'sindaco',municipalityBand:'oltre-15000'}});
   const [own,...rivals]=runoff.candidates;
-  runoff.territories[0].supportByCandidate={ [own.id]:34,[rivals[0].id]:31,[rivals[1].id]:21,[rivals[2].id]:14 };
+  // In a comune above 15,000 inhabitants four rival candidacies run (RIVALS_BY_TYPE).
+  assert.equal(rivals.length,4,'Nei comuni sopra i 15.000 abitanti corrono più candidature.');
+  runoff.territories[0].supportByCandidate={ [own.id]:34,[rivals[0].id]:31,[rivals[1].id]:21,[rivals[2].id]:9,[rivals[3].id]:5 };
   const first=runFirstRound(runoff);
   assert.equal(first.requiresRunoff,true);
   runoff.firstRoundResult=first; runoff.runoffCandidateIds=first.runoffCandidateIds; runoff.stage='ballottaggio';
@@ -89,7 +91,7 @@ for(const [type,role] of [['comunale','sindaco'],['regionale','presidente'],['po
   const final=runFinalElection(runoff,first);
   assert.equal(final.stage,'risultato-finale');
   assert.equal(final.runoffResults.length,2);
-  assert.equal(final.groups.length,4,'Il risultato municipale mantiene anche le liste escluse dal ballottaggio per i seggi consiliari.');
+  assert.equal(final.groups.length,runoff.candidates.length,'Il risultato municipale mantiene anche le liste escluse dal ballottaggio per i seggi consiliari.');
   assert.equal(final.groups.reduce((sum,item)=>sum+item.seats,0),16);
 }
 

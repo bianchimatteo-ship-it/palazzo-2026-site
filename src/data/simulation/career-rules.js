@@ -507,6 +507,10 @@ export const SITUATION_EVENTS = Object.freeze({
     { id: 'accetta', label: 'Accetta l’intesa', special: 'world-alliance-accept' },
     { id: 'tratta', label: 'Prendi tempo e tratta', cost: { capital: 3 }, special: 'world-relation-up' },
     { id: 'rifiuta', label: 'Rifiuta', special: 'world-relation-down' }] },
+  'proposta-coalizione': { id: 'proposta-coalizione', title: '{partyLabel} ti invita nella coalizione', body: 'Nello scenario {coalition} ({members} forze) cerca alleati: entrare dà più peso nei collegi e alle politiche, ma lega il partito agli altri. Puoi entrare subito o trattare condizioni (collegi, programma, un veto): gli alleati possono dire di no. Partiti reali, proposta simulata dal gioco.', defaultChoice: 'rifiuta', choices: [
+    { id: 'entra', label: 'Entra nella coalizione', effects: { party: { support: 1 } }, special: 'world-coalition-join' },
+    { id: 'condizioni', label: 'Tratta le condizioni prima di entrare', cost: { capital: 3 }, special: 'world-coalition-terms' },
+    { id: 'rifiuta', label: 'Resta autonomo', special: 'world-relation-down' }] },
   'attacco-avversario': { id: 'attacco-avversario', title: '{partyLabel} attacca il tuo partito', body: 'Nello scenario la forza in opposizione dura prende di mira te e il tuo partito. Partito reale, attacco simulato dal gioco.', defaultChoice: 'ignora', choices: [
     { id: 'rispondi', label: 'Rispondi colpo su colpo', effects: { stats: { notoriety: 2, reputation: -0.5 } }, special: 'world-relation-down' },
     { id: 'chiarimento', label: 'Cerca un chiarimento', cost: { capital: 2 }, special: 'world-relation-up' },

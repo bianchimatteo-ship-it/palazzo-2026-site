@@ -3,12 +3,12 @@
 // Chambers and their groups, the formation of the Government. Everything that happens is simulation: the real data are
 // the geography, the seats and the 2022 results the vote starts from; parties, coalitions, votes and seats of the game
 // are estimates of the game and never presented as real results.
-import { advanceDays, formatDate } from './time.js?v=20260926-2';
-import { axisOf, nationalShares } from './world-engine.js?v=20260926-2';
-import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20260926-2';
-import { archiveGovernment, voteGovernmentConfidence } from './parliament-engine.js?v=20260926-2';
-import { seededRandom } from './vote-engine.js?v=20260926-2';
-import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20260926-2';
+import { advanceDays, formatDate } from './time.js?v=20260926-3';
+import { axisOf, nationalShares } from './world-engine.js?v=20260926-3';
+import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20260926-3';
+import { archiveGovernment, voteGovernmentConfidence } from './parliament-engine.js?v=20260926-3';
+import { seededRandom } from './vote-engine.js?v=20260926-3';
+import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20260926-3';
 
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -139,6 +139,18 @@ export function buildCoalitions(world, { playerChoice = null } = {}) {
   const centre = forces.filter(force => force.axis === 0 && force.share >= 8 && force !== right && force !== left).sort((a, b) => b.share - a.share)[0];
   const anchors = [right, left, centre].filter(Boolean);
   const coalitions = anchors.map(anchor => ({ id: `coalizione-${slug(anchor.id)}`, label: COALITION_LABELS[campOf(anchor.axis)], leaderId: anchor.id, camp: campOf(anchor.axis), partyIds: [anchor.id], simulated: true, source: SIM }));
+  // The coalitions negotiated in the world run as they are: around an anchor they are its coalition, otherwise a pole
+  // of their own (the player's party follows its secretary's choice).
+  const inPlay = new Set(forces.map(force => force.id));
+  const worldCoalitions = (world.alliances ?? []).filter(item => item.status === 'active' && item.partyIds.filter(id => inPlay.has(id)).length >= 2).map(item => item.partyIds.filter(id => inPlay.has(id) && !(forces.find(force => force.id === id)?.isPlayer && playerChoice)));
+  for (const members of worldCoalitions) {
+    const anchored = coalitions.find(coalition => members.includes(coalition.leaderId));
+    if (anchored) { for (const id of members) if (!coalitions.some(coalition => coalition.partyIds.includes(id))) anchored.partyIds.push(id); continue; }
+    const free = members.filter(id => !coalitions.some(coalition => coalition.partyIds.includes(id)));
+    if (free.length < 2) continue;
+    const leader = forces.filter(force => free.includes(force.id)).sort((a, b) => b.share - a.share)[0];
+    coalitions.push({ id: `coalizione-${slug(leader.id)}`, label: `Coalizione ${leader.abbreviation || leader.label}`, leaderId: leader.id, camp: campOf(leader.axis), partyIds: [leader.id, ...free.filter(id => id !== leader.id)], negotiated: true, simulated: true, source: SIM });
+  }
   const affinity = (force, coalition) => {
     const anchor = forces.find(item => item.id === coalition.leaderId);
     if (!anchor || (coalition.camp === 'destra' && force.axis < 0) || (coalition.camp === 'sinistra' && force.axis > 0) || (coalition.camp === 'centro' && Math.abs(force.axis) > 1)) return -Infinity;
@@ -150,7 +162,7 @@ export function buildCoalitions(world, { playerChoice = null } = {}) {
   };
   const player = forces.find(force => force.isPlayer);
   for (const force of forces) {
-    if (anchors.includes(force)) continue;
+    if (anchors.includes(force) || coalitions.some(coalition => coalition.partyIds.includes(force.id))) continue;
     if (force.isPlayer && playerChoice) {
       const chosen = coalitions.find(item => item.id === playerChoice);
       if (chosen) chosen.partyIds.push(force.id);

@@ -276,3 +276,5 @@
 .cabinet-life .cabinet-dimissioni-governo,.cabinet-life .cabinet-fiducia-negata,.cabinet-life .cabinet-cambio-maggioranza{color:#fc9a82}
 .cabinet-life .cabinet-sostegno-esterno,.cabinet-life .cabinet-fiducia-ottenuta{color:#7fd49a}
 .confidence-vote{margin:10px 0;padding:10px 12px;border-radius:8px;border:1px solid var(--line-strong)}
+.campaign-rival.is-withdrawn{opacity:.55}
+.alliance-terms{display:block;margin-top:3px;color:var(--muted);font-size:11px}

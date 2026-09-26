@@ -5,10 +5,10 @@
 // it needs or puts the question of confidence; the bills of the opposition often never reach the floor. The player sits
 // in one Chamber: speaks, amends and casts a personal vote on every bill there — and the vote has consequences.
 // Everything here is simulation (source: simulation); the groups of the real XIX legislature keep their real reference.
-import { DATA_SOURCES } from '../data/schema.js?v=20260926-2';
-import { AREA_BY_ID, DECREE_RULES, FINANCING, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260926-2';
-import { amendLawPolicy, campOfAxis, cohesiveShare, governingGroupIds, groupProfile, parliamentInternals } from './parliament-engine.js?v=20260926-2';
-import { groupLine, splitGroupVote } from './vote-engine.js?v=20260926-2';
+import { DATA_SOURCES } from '../data/schema.js?v=20260926-3';
+import { AREA_BY_ID, DECREE_RULES, FINANCING, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260926-3';
+import { amendLawPolicy, campOfAxis, cohesiveShare, governingGroupIds, groupProfile, parliamentInternals } from './parliament-engine.js?v=20260926-3';
+import { groupLine, splitGroupVote } from './vote-engine.js?v=20260926-3';
 
 const { getGroup, allGroups, record, replaceLaw, demandFor, contentAffinity, setRelation } = parliamentInternals;
 const SIM = DATA_SOURCES.SIMULATION;
@@ -78,6 +78,19 @@ export function linkGroupsToParties(parliament, world) {
     const reverse = head.trim().length >= 4 ? forces.filter(({ party, latent }) => !latent && [party.label, party.officialName].filter(Boolean).some(label => phraseKey(label).includes(head))).sort((a, b) => (b.party.baseline ?? 0) - (a.party.baseline ?? 0)) : [];
     const partyId = (direct[0]?.at === 0 ? direct[0].id : null) ?? reverse[0]?.party.id ?? direct[0]?.id ?? null;
     return { ...group, partyId, partyVia: partyId ? 'nome del gruppo' : null, axis: Number.isFinite(group.axis) && group.partyId ? group.axis : axisOfParty(partyId) ?? 0, partyChecked: 2 };
+  }) }]));
+  return changed ? { ...parliament, chambers } : parliament;
+}
+// The current agenda of each force reaches its groups: what a group cares about in the Chambers changes with it.
+export function syncAgendas(parliament, world) {
+  if (!parliament?.chambers || !world?.parties) return parliament;
+  const agendaOf = new Map(world.parties.filter(party => party.agenda?.length).map(party => [party.id, party.agenda]));
+  let changed = false;
+  const chambers = Object.fromEntries(Object.entries(parliament.chambers).map(([chamber, data]) => [chamber, { ...data, groups: (data.groups ?? []).map(group => {
+    const agenda = group.partyId ? agendaOf.get(group.partyId) : null;
+    if (!agenda || (group.agenda ?? []).join(',') === agenda.join(',')) return group;
+    changed = true;
+    return { ...group, agenda: [...agenda] };
   }) }]));
   return changed ? { ...parliament, chambers } : parliament;
 }
@@ -407,7 +420,7 @@ export function compactLegislature(parliament) {
 // player's votes, the bills coming to the floor of the player's Chamber).
 export function advanceLegislativeWeek(input, ctx) {
   if (!input?.chambers?.camera?.groups?.length || !input?.chambers?.senato?.groups?.length) return { parliament: input, events: [], lines: [] };
-  let parliament = linkGroupsToParties(input, ctx.world);
+  let parliament = syncAgendas(linkGroupsToParties(input, ctx.world), ctx.world);
   const events = [];
   const lines = [];
   const generated = generateBills(parliament, ctx);

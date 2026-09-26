@@ -2,11 +2,11 @@
 // elections, coalitions and national campaign, the seats projected on the real map of 2022, the last votes, the new
 // Chambers and the formation of the Government. The map, the seats and the results of 2022 are real data (Eligendo);
 // polls, coalitions, votes, seats and Governments of the game are simulation, and every block says which is which.
-import { districtRows } from '../core/legislature-engine.js?v=20260926-2';
-import { formatDate } from '../core/time.js?v=20260926-2';
-import { SERIES } from './charts.js?v=20260926-2';
-import { glyph } from './visuals.js?v=20260926-2';
-import { arrow, badge, bar, card, esc, euro, kpi, num, pct, table } from './sections-kit.js?v=20260926-2';
+import { districtRows } from '../core/legislature-engine.js?v=20260926-3';
+import { formatDate } from '../core/time.js?v=20260926-3';
+import { SERIES } from './charts.js?v=20260926-3';
+import { glyph } from './visuals.js?v=20260926-3';
+import { arrow, badge, bar, card, esc, euro, kpi, num, pct, table } from './sections-kit.js?v=20260926-3';
 
 export const NATIONAL_MAP_VIEWS = Object.freeze([['proiezione', 'Proiezione di oggi'], ['2022', 'Vincitori 2022 (reale)'], ['voto', 'Ultimo voto della partita']]);
 const NEUTRAL = '#8d9791';

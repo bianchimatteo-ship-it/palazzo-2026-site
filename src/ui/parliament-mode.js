@@ -1,16 +1,16 @@
-import { activeMinisters, canManageParliament, CHAMBERS, CONTEST_COST, CONTEST_WINDOW_DAYS, GOVERNMENT_POST_REQUIREMENTS, governingGroupIds, governmentPostProblems, MINISTERIAL_PORTFOLIOS, nextParliamentaryRole, parliamentGroupFacts, playerInMajority } from '../core/parliament-engine.js?v=20260926-2';
-import { amendmentOdds, forecastVote, LAW_SPONSORS, PLAYER_VOTE_CHOICES } from '../core/lawmaking-engine.js?v=20260926-2';
-import { AREA_BY_ID, FINANCING, GOVERNMENT_LINES } from '../data/simulation/policy-rules.js?v=20260926-2';
+import { activeMinisters, canManageParliament, CHAMBERS, CONTEST_COST, CONTEST_WINDOW_DAYS, GOVERNMENT_POST_REQUIREMENTS, governingGroupIds, governmentPostProblems, MINISTERIAL_PORTFOLIOS, nextParliamentaryRole, parliamentGroupFacts, playerInMajority } from '../core/parliament-engine.js?v=20260926-3';
+import { amendmentOdds, forecastVote, LAW_SPONSORS, PLAYER_VOTE_CHOICES } from '../core/lawmaking-engine.js?v=20260926-3';
+import { AREA_BY_ID, FINANCING, GOVERNMENT_LINES } from '../data/simulation/policy-rules.js?v=20260926-3';
 const GOVERNMENT_LINE_LABELS = Object.fromEntries(Object.entries(GOVERNMENT_LINES).map(([id, item]) => [id, item.label]));
-import { AMENDMENT_CAPITAL_COST } from '../data/simulation/career-rules.js?v=20260926-2';
-import { DATA_SOURCES } from '../data/schema.js?v=20260926-2';
-import { careerOverview } from '../core/career-overview.js?v=20260926-2';
-import { voteSummary } from '../core/vote-engine.js?v=20260926-2';
-import { artTile, glyph, LAW_ICONS } from './visuals.js?v=20260926-2';
-import { measureDesign, projectLaw } from '../core/society-engine.js?v=20260926-2';
-import { governmentDesk, lawContent, policyFields, policyPreview } from './policy-mode.js?v=20260926-2';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260926-2';
-import { legislatureLabel } from '../core/legislature-engine.js?v=20260926-2';
+import { AMENDMENT_CAPITAL_COST } from '../data/simulation/career-rules.js?v=20260926-3';
+import { DATA_SOURCES } from '../data/schema.js?v=20260926-3';
+import { careerOverview } from '../core/career-overview.js?v=20260926-3';
+import { voteSummary } from '../core/vote-engine.js?v=20260926-3';
+import { artTile, glyph, LAW_ICONS } from './visuals.js?v=20260926-3';
+import { measureDesign, projectLaw } from '../core/society-engine.js?v=20260926-3';
+import { governmentDesk, lawContent, policyFields, policyPreview } from './policy-mode.js?v=20260926-3';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260926-3';
+import { legislatureLabel } from '../core/legislature-engine.js?v=20260926-3';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const icon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';

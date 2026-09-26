@@ -1,5 +1,6 @@
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-2';
-import { CHART_SLOTS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20260926-2';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-3';
+import { CHART_SLOTS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20260926-3';
+import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20260926-3';
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
 // A party enters with its real identity only (id, name, abbreviation, documented collocazione); its starting weight
@@ -20,7 +21,8 @@ export const axisOf = position => { const index = POSITIONS.indexOf(position); r
 const positionOf = axis => Number.isFinite(axis) ? POSITIONS[clamp(Math.round(axis), -3, 3) + 3] : null;
 const distance = (a, b) => Number.isFinite(a?.axis) && Number.isFinite(b?.axis) ? Math.abs(a.axis - b.axis) : 2;
 const shortName = label => String(label ?? '').replace(/\s*\(.*\)\s*$/, '');
-const EVOLVED_LIMIT = 4;
+// New forces are born more rarely the more the new ones already crowd the field (no fixed ceiling).
+const crowding = world => 1 / (1 + world.parties.filter(item => item.active && item.origin === 'evoluzione').length / 3);
 // Worlds saved before real parties only (invented forces, demo parties, old splinters) are rebuilt; from version 3
 // splits and new forces are the simulated evolution of the world and are kept.
 const LEGACY_ORIGINS = ['scenario', 'demo', 'scissione'];
@@ -599,6 +601,34 @@ function bleed(world, party) {
   if (!total) return;
   receivers.forEach((force, index) => { bump(force, loss * 0.6 * weights[index] / total, 0.5); notice(force, 1.5); });
 }
+// ---------- goals and agendas of the parties (simulation) ----------
+const GOALS = Object.freeze({
+  soglia: { label: 'superare la soglia di sbarramento', strategy: 'coalizione' },
+  governare: { label: 'restare al governo', strategy: 'governista' },
+  guidare: { label: 'guidare il proprio schieramento', strategy: 'opposizione' },
+  ricompattare: { label: 'ricompattarsi dopo le divisioni', strategy: 'autonoma' },
+  crescere: { label: 'crescere nei consensi', strategy: null }
+});
+function goalOf(world, party) {
+  const share = trueShares(world).get(party.id) ?? party.baseline;
+  if (share < 3.5) return 'soglia';
+  if (party.crisis || trendOf(world, party.id, 8) < -0.6) return 'ricompattare';
+  if (party.governing) return 'governare';
+  const camp = world.parties.filter(item => item.active && Math.sign(item.axis ?? 0) === Math.sign(party.axis ?? 0) && (item.axis ?? 0) !== 0);
+  if ((party.axis ?? 0) !== 0 && camp.every(item => item.baseline <= party.baseline)) return 'guidare';
+  return 'crescere';
+}
+// A force's priorities: areas of its camp, reshuffled every year (a new leadership, a new season, a new electorate).
+function refreshAgenda(world, party, date) {
+  const camp = (party.axis ?? 0) >= 1 ? 'destra' : (party.axis ?? 0) <= -1 ? 'sinistra' : 'centro';
+  const pool = [...CAMP_PRIORITIES[camp]];
+  const agenda = [];
+  while (agenda.length < 3 && pool.length) agenda.push(pool.splice(Math.floor(draw(world) * pool.length), 1)[0]);
+  const before = party.agenda;
+  party.agenda = agenda;
+  party.agendaSince = world.week - Math.floor(draw(world) * 6);
+  if (before?.length && party.baseline >= 5) logEvent(world, date, { kind: 'strategia', icon: 'route', scope: 'nazionale', title: `${party.label} cambia priorità`, body: `Nello scenario al centro dell’agenda del partito ora ci sono ${agenda.map(id => AREA_BY_ID[id]?.label.toLowerCase() ?? id).join(', ')} (simulazione).`, tone: 'neutral', partyId: party.id });
+}
 // Every party pursues its own strategy and changes it when it stops paying off.
 function partyAgents(world, date, { approval, player, playerIsLeader, playerStrategy }) {
   const offers = [];
@@ -613,6 +643,12 @@ function partyAgents(world, date, { approval, player, playerIsLeader, playerStra
       logEvent(world, date, { kind: 'crisi', icon: 'link', scope: 'nazionale', title: `${party.label} ricompone le divisioni`, body: 'Nello scenario la crisi interna rientra (simulazione).', tone: 'neutral', partyId: party.id });
     }
     if (party.crisis) bleed(world, party);
+    // What the party wants now (every quarter) and what it cares about (every year): both change with its situation.
+    // Each party on its own calendar (not all in the same week).
+    party.goalSince ??= world.week - Math.floor(draw(world) * 13);
+    party.agendaSince ??= party.agenda ? world.week : world.week - 52 + Math.floor(draw(world) * 8);
+    if (world.week - party.goalSince >= 13) { const goal = goalOf(world, party); if (goal !== party.goal && party.goal && party.baseline >= 5) logEvent(world, date, { kind: 'strategia', icon: 'route', scope: 'nazionale', title: `${party.label}: nuovo obiettivo`, body: `Nello scenario il partito punta ora a ${GOALS[goal].label} (simulazione).`, tone: 'neutral', partyId: party.id }); party.goal = goal; party.goalSince = world.week; }
+    if (world.week - party.agendaSince >= 52) refreshAgenda(world, party, date);
     // What the strategy yields this week.
     const effect = party.strategy === 'governista' ? (approval - 50) / 500 : party.strategy === 'opposizione' ? (50 - approval) / 500 + 0.01 : party.strategy === 'coalizione' ? (world.alliances.some(item => item.status === 'active' && item.partyIds.includes(party.id)) ? 0.02 : -0.01) : 0;
     party.baseline = round2(Math.max(0.3, party.baseline + effect * sizeFactor(party.baseline, 6)));
@@ -620,7 +656,9 @@ function partyAgents(world, date, { approval, player, playerIsLeader, playerStra
     const trend = trendOf(world, party.id);
     if (world.week - party.strategySince >= 6 && (trend < -0.4 || draw(world) < 0.08)) {
       const options = (approval < 44 ? ['opposizione', 'coalizione'] : approval > 56 ? ['governista', 'coalizione'] : ['autonoma', 'coalizione', 'opposizione', 'governista']).filter(item => item !== party.strategy);
-      const choice = options[Math.floor(draw(world) * options.length)] ?? party.strategy;
+      // The goal of the moment points to a strategy; the climate and chance decide among the others.
+      const preferred = GOALS[party.goal]?.strategy;
+      const choice = preferred && preferred !== party.strategy && draw(world) < 0.6 ? preferred : options[Math.floor(draw(world) * options.length)] ?? party.strategy;
       if (choice !== party.strategy) {
         party.strategy = choice;
         party.strategySince = world.week;
@@ -660,17 +698,108 @@ function agreementMotive(a, b) {
 function breakWithGrudge(world, alliance, date, reason) {
   alliance.status = 'broken';
   alliance.brokenAt = date;
-  const key = tieKey(...alliance.partyIds.slice(0, 2));
-  world.grudges[key] = 40;
-  world.ties[key] = round1(clamp((world.ties[key] ?? 0) - 25, -100, 100));
+  for (let i = 0; i < alliance.partyIds.length; i++) for (let j = i + 1; j < alliance.partyIds.length; j++) {
+    const key = tieKey(alliance.partyIds[i], alliance.partyIds[j]);
+    world.grudges[key] = 40;
+    world.ties[key] = round1(clamp((world.ties[key] ?? 0) - 25, -100, 100));
+  }
   for (const id of alliance.partyIds) addEffect(world, { partyId: id, delta: -0.3, remaining: 3, cause: 'rottura' });
   stirOutside(world, alliance.partyIds, 4);
-  logEvent(world, date, { kind: 'rottura', icon: 'unlink', scope: 'nazionale', title: `Si rompe l’${alliance.label.toLowerCase()}`, body: `${reason} Il rancore resterà: per molto tempo sarà difficile ritrovare un accordo (simulazione).`, tone: 'bad' });
+  logEvent(world, date, { kind: 'rottura', icon: 'unlink', scope: 'nazionale', title: `Si rompe ${withArticle(alliance.label)}`, body: `${reason} Il rancore resterà: per molto tempo sarà difficile ritrovare un accordo (simulazione).`, tone: 'bad' });
 }
-function allianceDynamics(world, date) {
+// “l’intesa…”, “la coalizione…”: alliances are feminine nouns in Italian.
+const withArticle = label => { const text = String(label ?? '').charAt(0).toLocaleLowerCase('it-IT') + String(label ?? '').slice(1); return /^[aeiouàèéìòù]/i.test(text) ? `l’${text}` : `la ${text}`; };
+
+// ---------- coalitions: more forces, negotiations, vetoes, concessions, ruptures ----------
+// An alliance can grow into a coalition of several forces. A force that wants to join negotiates: it asks for
+// something (candidacies in the single-member colleges, a point of the programme, the leadership when it weighs
+// almost as much as the leader), or puts a veto on a member it has a grudge with. The members decide: they concede,
+// or the talks fail. Coalitions live on the relations among their members and lose first their most distant member.
+// Before a general election everything accelerates: the electoral law rewards whoever runs together.
+const COALITION_SEASON_WEEKS = 52;
+const camps = world => world.alliances.filter(item => item.status === 'active').map(alliance => ({ alliance, members: alliance.partyIds.map(id => world.parties.find(party => party.id === id && party.active)).filter(Boolean) })).filter(item => item.members.length);
+const leaderOf = members => [...members].sort((a, b) => b.baseline - a.baseline)[0];
+function campFit(world, party, camp) {
+  const leader = leaderOf(camp.members);
+  const ties = camp.members.reduce((sum, member) => sum + (world.ties[tieKey(party.id, member.id)] ?? 0), 0) / camp.members.length;
+  const gap = distance(party, leader);
+  const size = trueShares(world).get(party.id) ?? party.baseline;
+  const governing = camp.members.every(member => member.governing) && party.governing;
+  return ties / 45 - gap * 0.85 + (party.strategy === 'coalizione' ? 0.7 : party.strategy === 'autonoma' ? -0.7 : 0) + (party.goal === 'soglia' ? 0.6 : 0) + (size < 3 ? 0.4 : size > 15 ? -0.3 : 0) + (party.crisis ? 0.2 : 0) + (governing ? 0.8 : 0);
+}
+// What a force asks to join, and whether the members concede it. Returns { accepted, term, excluded }.
+function negotiate(world, party, camp) {
+  const leader = leaderOf(camp.members);
+  const shares = trueShares(world);
+  const own = shares.get(party.id) ?? party.baseline, lead = shares.get(leader.id) ?? leader.baseline;
+  const enemy = camp.members.find(member => world.grudges?.[tieKey(party.id, member.id)] || (world.ties[tieKey(party.id, member.id)] ?? 0) < -30);
+  const term = enemy ? { kind: 'veto', partyId: party.id, target: enemy.id, text: `${party.label} pone il veto su ${enemy.label}` }
+    : own >= lead * 0.75 ? { kind: 'guida', partyId: party.id, text: `${party.label} chiede la guida della coalizione` }
+    : party.agenda?.length && draw(world) < 0.5 ? { kind: 'programma', partyId: party.id, area: party.agenda[0], text: `${party.label} chiede di mettere ${AREA_BY_ID[party.agenda[0]]?.label.toLowerCase() ?? 'un suo tema'} al centro del programma` }
+    : { kind: 'collegi', partyId: party.id, text: `${party.label} chiede più collegi di quanto pesa` };
+  // What the force brings against what it costs: its votes, the relations with the members, the price of the request.
+  const value = Math.sqrt(Math.max(0.3, own)) / 3 + camp.members.reduce((sum, member) => sum + (world.ties[tieKey(party.id, member.id)] ?? 0), 0) / camp.members.length / 120;
+  const cost = { veto: enemy ? Math.sqrt(Math.max(0.3, shares.get(enemy.id) ?? enemy.baseline)) / 2.5 : 0, guida: 0.9, programma: 0.15, collegi: 0.3 }[term.kind];
+  const accepted = draw(world) < clamp(0.45 + value - cost, 0.05, 0.9);
+  return { accepted, term, excluded: accepted && term.kind === 'veto' ? enemy : null };
+}
+function joinCamp(world, camp, party, date, reason, { terms = null } = {}) {
+  const alliance = camp.alliance;
+  // A force already bound to another one brings its partner along when the partner is compatible too.
+  const previous = world.alliances.find(item => item !== alliance && item.status === 'active' && item.partyIds.includes(party.id));
+  const newcomers = [party.id];
+  if (previous) {
+    for (const id of previous.partyIds.filter(item => item !== party.id && !alliance.partyIds.includes(item))) {
+      const partner = world.parties.find(item => item.id === id && item.active);
+      if (partner && campFit(world, partner, camp) > -0.4 && distance(partner, leaderOf(camp.members)) <= 2) newcomers.push(id);
+    }
+    previous.status = 'merged'; previous.mergedInto = alliance.id; previous.brokenAt = date;
+  }
+  alliance.partyIds = [...new Set([...alliance.partyIds, ...newcomers])];
+  alliance.kind = 'coalizione';
+  if (terms) alliance.terms = [...(alliance.terms ?? []), { ...terms, date }].slice(-8);
+  alliance.cohesion = clamp(Math.round(alliance.cohesion - 2 - (terms ? 3 : 0)), 0, 100);
+  alliance.history = [...(alliance.history ?? []), { date, text: `${newcomers.map(id => world.parties.find(item => item.id === id)?.label ?? id).join(' e ')} ${newcomers.length > 1 ? 'entrano' : 'entra'} nella coalizione` }].slice(-12);
+  for (const id of newcomers) for (const member of alliance.partyIds.filter(item => item !== id)) world.ties[tieKey(id, member)] = round1(clamp((world.ties[tieKey(id, member)] ?? 0) + 6, -100, 100));
+  const members = alliance.partyIds.map(id => world.parties.find(item => item.id === id)).filter(Boolean);
+  const leader = leaderOf(members);
+  if (alliance.partyIds.length >= 3 && /^Intesa/.test(alliance.label)) alliance.label = `Coalizione guidata da ${leader.label}`;
+  const names = newcomers.map(id => world.parties.find(item => item.id === id)?.label ?? id);
+  logEvent(world, date, { kind: 'alleanza', icon: 'link', scope: 'nazionale', title: `${names.join(' e ')} ${newcomers.length > 1 ? 'entrano' : 'entra'} nella coalizione di ${leader?.label ?? 'un’altra forza'}`, body: `${reason === 'soglia' ? 'Da soli il rischio è restare sotto la soglia di sbarramento' : reason === 'invito' ? 'L’invito del partito più grande è stato accolto' : 'Programmi e rapporti abbastanza vicini'}${terms ? `; accordo raggiunto: ${terms.text.charAt(0).toLocaleLowerCase('it-IT') + terms.text.slice(1)}, gli alleati concedono` : ''} (simulazione).`, tone: 'neutral' });
+}
+// The player's party joins a coalition (an invitation accepted), with or without asking for conditions.
+export function joinCoalition(input, allianceId, date, { terms = false } = {}) {
+  const world = copy(input);
+  const player = playerParty(world);
+  const alliance = world.alliances.find(item => item.id === allianceId && item.status === 'active');
+  if (!player || !alliance) throw new Error('La coalizione non è più disponibile.');
+  const members = alliance.partyIds.map(id => world.parties.find(item => item.id === id)).filter(Boolean);
+  if (terms) {
+    const talks = negotiate(world, player, { alliance, members });
+    if (!talks.accepted) {
+      for (const member of members) world.ties[tieKey(player.id, member.id)] = round1(clamp((world.ties[tieKey(player.id, member.id)] ?? 0) - 6, -100, 100));
+      logEvent(world, date, { kind: 'rottura', icon: 'unlink', scope: 'nazionale', title: `Nessun accordo con ${withArticle(alliance.label)}`, body: `${talks.term.text}: gli alleati non concedono, il tuo partito resta fuori (simulazione).`, tone: 'bad' });
+      return { world, joined: false, term: talks.term };
+    }
+    if (talks.excluded) leaveCoalition(world, alliance, talks.excluded, date, `escluso dal veto di ${player.label}`);
+    joinCamp(world, { alliance, members: alliance.partyIds.map(id => world.parties.find(item => item.id === id)).filter(Boolean) }, player, date, 'invito', { terms: talks.term });
+  } else joinCamp(world, { alliance, members }, player, date, 'invito');
+  alliance.withPlayer = true;
+  addEffect(world, { partyId: player.id, delta: 0.3, remaining: 4, cause: 'alleanza' });
+  return { world, joined: true, term: null };
+}
+function leaveCoalition(world, alliance, member, date, reason) {
+  alliance.partyIds = alliance.partyIds.filter(id => id !== member.id);
+  alliance.cohesion = clamp(alliance.cohesion - 6, 0, 100);
+  for (const id of alliance.partyIds) world.ties[tieKey(member.id, id)] = round1(clamp((world.ties[tieKey(member.id, id)] ?? 0) - 15, -100, 100));
+  world.grudges[tieKey(member.id, leaderOf(alliance.partyIds.map(id => world.parties.find(item => item.id === id)).filter(Boolean))?.id ?? '')] = 30;
+  logEvent(world, date, { kind: 'rottura', icon: 'unlink', scope: 'nazionale', title: `${member.label} lascia ${withArticle(alliance.label)}`, body: `${reason.charAt(0).toLocaleUpperCase('it-IT') + reason.slice(1)}: gli altri restano insieme, ma la coalizione è più debole (simulazione).`, tone: 'bad', partyId: member.id });
+  if (alliance.partyIds.length < 2) { alliance.status = 'broken'; alliance.brokenAt = date; }
+}
+function allianceDynamics(world, date, { nationalVoteIn = null, player = null, playerIsLeader = false } = {}) {
+  const offers = [];
   world.grudges ??= {};
   for (const key of Object.keys(world.grudges)) { world.grudges[key] = round1(world.grudges[key] - 0.4); if (world.grudges[key] <= 0) delete world.grudges[key]; }
-  const allied = new Set(world.alliances.filter(item => item.status === 'active').flatMap(item => item.partyIds));
   for (const [key, value] of Object.entries(world.ties)) {
     const [a, b] = key.split('|').map(id => world.parties.find(item => item.id === id));
     if (!a || !b) continue;
@@ -679,13 +808,25 @@ function allianceDynamics(world, date) {
     const majority = a.strategy === 'governista' && b.strategy === 'governista' ? 0.3 : 0;
     world.ties[key] = round1(clamp(value * 0.99 + (a.strategy === b.strategy ? 0.8 : -0.4) + ideology + majority - (world.grudges[key] ?? 0) / 100, -100, 100));
   }
-  for (const alliance of world.alliances.filter(item => item.status === 'active')) {
-    const tie = world.ties[tieKey(...alliance.partyIds)] ?? 0;
-    const [a, b] = alliance.partyIds.map(id => world.parties.find(item => item.id === id));
-    const strain = a && b ? Math.max(0, distance(a, b) - 1) * 1.2 : 0;
-    alliance.cohesion = clamp(Math.round(alliance.cohesion + (draw(world) - 0.53) * 7 + (62 - alliance.cohesion) * 0.05 + tie / 50 - strain), 0, 100);
-    if (alliance.cohesion < 25) breakWithGrudge(world, alliance, date, strain > 1 ? 'Troppa distanza sui programmi: l’accordo non regge.' : 'Veti incrociati e accuse reciproche: gli alleati vanno ognuno per la propria strada.');
+  const season = Number.isFinite(nationalVoteIn) && nationalVoteIn >= 0 && nationalVoteIn <= COALITION_SEASON_WEEKS;
+  // A pole nobody joined dissolves once the electoral season is over.
+  for (const alliance of world.alliances.filter(item => item.status === 'active' && item.partyIds.length < 2 && !season)) { alliance.status = 'closed'; alliance.brokenAt = date; }
+  // Alliances and coalitions live on the relations among their members and on the distance from the leader.
+  for (const camp of camps(world).filter(item => item.alliance.partyIds.length >= 2)) {
+    const { alliance, members } = camp;
+    if (members.length < 2) { alliance.status = 'broken'; alliance.brokenAt = date; continue; }
+    const pairs = members.flatMap((first, index) => members.slice(index + 1).map(second => world.ties[tieKey(first.id, second.id)] ?? 0));
+    const tie = pairs.reduce((sum, value) => sum + value, 0) / (pairs.length || 1);
+    const leader = leaderOf(members);
+    const farthest = members.filter(item => item !== leader).sort((a, b) => distance(b, leader) - distance(a, leader))[0];
+    const strain = farthest ? Math.max(0, distance(farthest, leader) - 1) * 1.2 : 0;
+    alliance.cohesion = clamp(Math.round(alliance.cohesion + (draw(world) - 0.53) * 7 + (62 - alliance.cohesion) * 0.05 + tie / 50 - strain - (members.length >= 4 ? 0.5 : 0)), 0, 100);
+    if (alliance.cohesion >= 25) continue;
+    if (members.length >= 3 && farthest && !farthest.isPlayer) leaveCoalition(world, alliance, farthest, date, strain > 1 ? 'troppa distanza sui programmi' : 'veti incrociati e accuse reciproche');
+    else breakWithGrudge(world, alliance, date, strain > 1 ? 'Troppa distanza sui programmi: l’accordo non regge.' : 'Veti incrociati e accuse reciproche: gli alleati vanno ognuno per la propria strada.');
   }
+  // New agreements between two free forces.
+  const allied = new Set(world.alliances.filter(item => item.status === 'active').flatMap(item => item.partyIds));
   if (draw(world) < 0.07) {
     const free = world.parties.filter(item => item.active && !item.isPlayer && isSurveyed(item) && !allied.has(item.id));
     const pairs = free.flatMap((first, index) => free.slice(index + 1).map(second => [first, second, world.ties[tieKey(first.id, second.id)] ?? 0]))
@@ -698,12 +839,48 @@ function allianceDynamics(world, date) {
       logEvent(world, date, { kind: 'alleanza', icon: 'link', scope: 'nazionale', title: `Intesa tra ${first.label} e ${second.label}`, body: `Motivo: ${motive}. Nello scenario le due forze annunciano un percorso comune (simulazione, non un accordo reale).`, tone: 'neutral' });
     }
   }
+  // Coalitions grow: all year round slowly, fast in the year before a general election (poles first).
+  const urgency = Number.isFinite(nationalVoteIn) && nationalVoteIn >= 0 && nationalVoteIn <= COALITION_SEASON_WEEKS ? clamp(1 - nationalVoteIn / COALITION_SEASON_WEEKS, 0.15, 1) : 0.08;
+  if (urgency > 0.1) for (const party of world.parties.filter(item => item.active && !item.isPlayer && isSurveyed(item) && (trueShares(world).get(item.id) ?? 0) >= 12 && !camps(world).some(camp => camp.alliance.partyIds.includes(item.id)))) {
+    if (party.strategy === 'autonoma' && draw(world) < 0.5) continue;
+    world.alliances.push({ id: `coalizione-${world.week}-${hash(party.id) % 9973}`, label: `Coalizione guidata da ${party.label}`, partyIds: [party.id], leaderId: party.id, kind: 'coalizione', cohesion: 64, since: date, status: 'active', electoral: true, motive: 'polo del proprio schieramento', source: SIM });
+  }
+  const current = camps(world);
+  for (const party of world.parties.filter(item => item.active && !item.isPlayer && isSurveyed(item) && !current.some(camp => camp.members.length >= 2 && camp.alliance.partyIds.includes(item.id)))) {
+    const own = current.find(camp => camp.alliance.partyIds.includes(party.id));
+    const options = current.filter(camp => camp !== own && !camp.alliance.partyIds.includes(party.id) && distance(party, leaderOf(camp.members)) <= 2).map(camp => ({ camp, fit: campFit(world, party, camp) })).sort((a, b) => b.fit - a.fit);
+    const best = options[0];
+    if (!best || best.fit < -0.6) continue;
+    // A pole alone joins another pole only when they are close.
+    if (own && own.members.length === 1 && (trueShares(world).get(party.id) ?? 0) >= 12 && best.fit < 0.4) continue;
+    if (draw(world) >= clamp(0.02 + urgency * 0.2 * (1 / (1 + Math.exp(-best.fit * 1.6))), 0.01, 0.3)) continue;
+    // A force that already counts, or holds a grudge, negotiates before joining.
+    const small = (trueShares(world).get(party.id) ?? 0) < 3;
+    const talks = small && !best.camp.members.some(member => world.grudges?.[tieKey(party.id, member.id)]) ? null : negotiate(world, party, best.camp);
+    if (talks && !talks.accepted) {
+      for (const member of best.camp.members) world.ties[tieKey(party.id, member.id)] = round1(clamp((world.ties[tieKey(party.id, member.id)] ?? 0) - 8, -100, 100));
+      logEvent(world, date, { kind: 'rottura', icon: 'unlink', scope: 'nazionale', title: `Trattativa fallita tra ${party.label} e ${withArticle(best.camp.alliance.label)}`, body: `${talks.term.text}: gli alleati non concedono (simulazione).`, tone: 'neutral', partyId: party.id });
+      continue;
+    }
+    if (talks?.excluded) leaveCoalition(world, best.camp.alliance, talks.excluded, date, `escluso dal veto di ${party.label}`);
+    joinCamp(world, { alliance: best.camp.alliance, members: best.camp.alliance.partyIds.map(id => world.parties.find(item => item.id === id)).filter(Boolean) }, party, date, small ? 'soglia' : best.fit > 1 ? 'affinita' : 'invito', { terms: talks?.term ?? null });
+  }
+  // The player's party: the coalition closest to it invites it (the secretary decides; otherwise the party decides).
+  if (player && urgency > 0.1 && !camps(world).some(camp => camp.members.length >= 2 && camp.alliance.partyIds.includes(player.id))) {
+    const best = camps(world).filter(camp => camp.members.length && !camp.alliance.partyIds.includes(player.id) && distance(player, leaderOf(camp.members)) <= 2).map(camp => ({ camp, fit: campFit(world, { ...player, strategy: player.strategy ?? 'coalizione' }, camp) })).sort((a, b) => b.fit - a.fit)[0];
+    const leader = best ? leaderOf(best.camp.members) : null;
+    if (best && leader && best.fit > -0.5 && world.week - (world.cooldowns[`coalizione|${leader.id}`] ?? -99) >= 12 && draw(world) < 0.1 + urgency * 0.3) {
+      world.cooldowns[`coalizione|${leader.id}`] = world.week;
+      if (playerIsLeader) offers.push({ templateId: 'proposta-coalizione', partyId: leader.id, label: leader.label, allianceId: best.camp.alliance.id, coalition: best.camp.alliance.label, members: String(best.camp.members.length) });
+    }
+  }
   if (draw(world) < 0.03) {
     const count = world.figures.length + 1;
     const figure = { id: `figura-${count}-${world.rngState % 9973}`, name: `${CIVIC_FIGURE_LABEL} n.${count}`, role: 'Volto civico', partyId: null, since: date, status: 'active', simulated: true, source: SIM };
     world.figures.push(figure);
     logEvent(world, date, { kind: 'figura', icon: 'user', scope: 'locale', title: 'Emerge un nuovo volto civico', body: `${figure.name}: un amministratore civico di ${world.place.region || 'una regione'} guadagna visibilità (figura simulata, non una persona reale).`, tone: 'neutral' });
   }
+  return offers;
 }
 
 // ---------- evolution of the parties (simulation only) ----------
@@ -750,37 +927,46 @@ function merge(world, absorber, absorbed, date) {
   for (const alliance of world.alliances.filter(item => item.status === 'active' && item.partyIds.includes(absorbed.id))) { alliance.status = 'broken'; alliance.brokenAt = date; }
   logEvent(world, date, { kind: 'fusione', icon: 'link', scope: 'nazionale', title: `${absorbed.label} confluisce in ${absorber.label}`, body: `Nello scenario due forze vicine (${absorber.position ?? 'collocazione n.d.'}) uniscono liste e organizzazione per contare di più (simulazione, non un accordo reale).`, tone: 'neutral' });
 }
-function partyLife(world, date) {
+function partyLife(world, date, trust = 48) {
   for (const party of world.parties.filter(item => item.active && !item.isPlayer && isSurveyed(item))) {
     party.life ??= { nextCongress: world.week + 80, minority: 22, leadership: 'uscente', congresses: 0 };
     // The internal minority grows when the party is divided and losing ground.
     party.life.minority = round1(clamp(party.life.minority + (party.cohesion < 40 ? 0.6 : -0.2) + (trendOf(world, party.id, 6) < -0.5 ? 0.4 : 0), 8, 60));
     if (world.week >= party.life.nextCongress) congress(world, party, date);
-    else if (party.cohesion < 32 && party.life.minority > 40 && party.baseline >= 3 && world.parties.filter(item => item.active && item.origin === 'evoluzione').length < EVOLVED_LIMIT && draw(world) < 0.06) split(world, party, date);
+    else if (party.cohesion < 32 && party.life.minority > 40 && party.baseline >= 3 && draw(world) < 0.06 * crowding(world)) split(world, party, date);
     else if (party.cohesion < 35 && !party.crisis && draw(world) < 0.02) {
       party.cohesion = clamp(party.cohesion + 8, 0, 100);
       logEvent(world, date, { kind: 'organizzazione', icon: 'route', scope: 'nazionale', title: `${party.label} si riorganizza`, body: 'Nello scenario nuovi dipartimenti e coordinatori territoriali provano a ricompattare il partito (simulazione).', tone: 'neutral', partyId: party.id });
     }
   }
-  // Two small, close forces with good relations can merge.
+  // Two close forces with good relations can merge: the small ones more easily, a federation of larger ones rarely.
   if (draw(world) < 0.03) {
-    const small = world.parties.filter(item => item.active && !item.isPlayer && isSurveyed(item) && item.baseline < 3);
-    const pairs = small.flatMap((a, index) => small.slice(index + 1).map(b => [a, b])).filter(([a, b]) => distance(a, b) <= 1 && (world.ties[tieKey(a.id, b.id)] ?? 0) >= 40 && !world.grudges?.[tieKey(a.id, b.id)]);
+    const pool = world.parties.filter(item => item.active && !item.isPlayer && isSurveyed(item) && item.baseline < 8);
+    const pairs = pool.flatMap((a, index) => pool.slice(index + 1).map(b => [a, b])).filter(([a, b]) => distance(a, b) <= 1 && (world.ties[tieKey(a.id, b.id)] ?? 0) >= (a.baseline + b.baseline < 5 ? 40 : 60) && !world.grudges?.[tieKey(a.id, b.id)]);
     if (pairs.length) { const [a, b] = pairs[Math.floor(draw(world) * pairs.length)]; if (a.baseline >= b.baseline) merge(world, a, b, date); else merge(world, b, a, date); }
   }
-  // Rarely, a new civic force is born (simulated, with an explicit label).
-  if (draw(world) < 0.004 && world.parties.filter(item => item.active && item.origin === 'evoluzione').length < EVOLVED_LIMIT) {
+  // A split that did not take off goes back home when the wounds have healed (a ricomposizione).
+  for (const force of world.parties.filter(item => item.active && item.origin === 'evoluzione' && item.parentId && item.baseline < 1.5 && world.week - (item.createdWeek ?? world.week) >= 52)) {
+    const parent = world.parties.find(item => item.id === force.parentId && item.active);
+    if (parent && !world.grudges?.[tieKey(force.id, parent.id)] && (world.ties[tieKey(force.id, parent.id)] ?? -100) >= 10 && draw(world) < 0.05) { merge(world, parent, force, date); break; }
+  }
+  // New forces: a civic list now and then; a protest movement when trust in the institutions is low. Rarer when many
+  // new forces already crowd the field.
+  const born = (kind, label, axis, baseline, strategy, body, masculine = false) => {
     const count = world.parties.filter(item => item.origin === 'evoluzione').length + 1;
-    const force = addParty(world, { id: `evoluzione-civica-${world.week}-${world.rngState % 997}`, label: `Nuova forza civica (simulata n.${count})`, baseline: round2(0.8 + draw(world) * 0.9), refSource: 'simulation', origin: 'evoluzione', axis: Math.round((draw(world) - 0.5) * 2), strategy: 'autonoma', presence: presenceFor(PRESENCE.EMERGING, world.week) }, world.week);
+    const force = addParty(world, { id: `evoluzione-${kind}-${world.week}-${world.rngState % 997}`, label: `${label} (${masculine ? 'simulato' : 'simulata'} n.${count})`, baseline, refSource: 'simulation', origin: 'evoluzione', axis, strategy, presence: presenceFor(PRESENCE.EMERGING, world.week) }, world.week);
     for (const other of world.parties) if (other !== force) world.ties[tieKey(force.id, other.id)] = initialTie(world, force, other);
     force.visibility = 35;
-    logEvent(world, date, { kind: 'nuova-forza', icon: 'spark', scope: 'nazionale', title: 'Nasce una nuova forza civica', body: `${force.label}: amministratori locali e associazioni si presentano insieme (forza simulata, non un partito reale). Entrerà nei sondaggi solo se il consenso regge.`, tone: 'neutral' });
-  }
+    logEvent(world, date, { kind: 'nuova-forza', icon: 'spark', scope: 'nazionale', title: kind === 'protesta' ? 'Nasce un movimento di protesta' : 'Nasce una nuova forza civica', body: `${force.label}: ${body} (forza simulata, non un partito reale). Entrerà nei sondaggi solo se il consenso regge.`, tone: 'neutral' });
+  };
+  if (draw(world) < 0.004 * crowding(world)) born('civica', 'Nuova forza civica', Math.round((draw(world) - 0.5) * 2), round2(0.8 + draw(world) * 0.9), 'autonoma', 'amministratori locali e associazioni si presentano insieme');
+  if (trust < 40 && draw(world) < (40 - trust) * 0.0008 * crowding(world)) born('protesta', 'Movimento di protesta', draw(world) < 0.5 ? 0 : (draw(world) < 0.5 ? -3 : 3), round2(0.6 + draw(world) * 0.8), 'opposizione', 'la sfiducia nelle istituzioni porta in piazza cittadini senza partito', true);
 }
 
 // ---------- presence in the polls: the weekly step (simulation) ----------
 const SPOTLIGHT_COOLDOWN = 6;
-const RISE_COOLDOWN = 40;
+// Between the start of two rises (of different forces) at least this many weeks.
+const RISE_COOLDOWN = 12;
 const levelOf = force => isLatent(force) ? force.support : force.baseline;
 // What a rising force gains comes from the voters of the close forces in the polls (all of them if none is close).
 function takeFrom(world, force, amount) {
@@ -846,7 +1032,9 @@ function outsideDynamics(world, date, trust = 48) {
       const euro = euroYear && month >= 2 && month <= 5;
       const chance = 0.1 + (trouble ? 0.25 : 0) + (distrust ? 0.15 : 0) + (euro ? 0.15 : 0) + (levelOf(force) >= 0.3 ? 0.1 : 0);
       const reason = trouble ? `elettori delusi da ${trouble.label} guardano altrove` : distrust ? 'cresce la sfiducia nelle istituzioni' : euro ? 'la campagna per le europee dà spazio alle liste minori' : 'più attenzione dei media';
-      if (!outsideForces(world).some(item => item.rise) && world.week - (world.cooldowns.rise ?? -99) >= RISE_COOLDOWN && draw(world) < chance) startRise(world, force, date, reason);
+      // Several forces can grow at the same time, each rarer than the one before (attention and voters are limited).
+      const rising = outsideForces(world).filter(item => item.rise).length;
+      if (world.week - (world.cooldowns.rise ?? -99) >= RISE_COOLDOWN && draw(world) < chance * Math.pow(0.4, rising)) startRise(world, force, date, reason);
       // Attention for a tiny force changes little and makes no news.
       else if (levelOf(force) >= 0.1) logEvent(world, date, { kind: 'visibilita', icon: 'megaphone', scope: 'nazionale', title: `Più attenzione per ${force.label}`, body: 'Nello scenario i media parlano di più di questa forza, che è fuori dai sondaggi nazionali: senza un consenso che cresce e regge per settimane, gli istituti non la rileveranno (simulazione, nessuna dichiarazione o iniziativa reale).', tone: 'neutral', partyId: force.id });
     }
@@ -962,7 +1150,7 @@ export function presenceOverview(world) {
 }
 
 // One simulated week of the political world. Returns reactions and offers the career can respond to.
-export function advanceWorld(input, { date, week, stats = {}, deltas = {}, game = null, parliament: parliamentInput = null, majorityShift = null, society = null, playerIsLeader = false, playerStrategy = null }) {
+export function advanceWorld(input, { date, week, stats = {}, deltas = {}, game = null, parliament: parliamentInput = null, majorityShift = null, society = null, playerIsLeader = false, playerStrategy = null, nationalVoteIn = null }) {
   const world = copy(input);
   let parliament = copy(parliamentInput);
   world.week = week;
@@ -996,8 +1184,8 @@ export function advanceWorld(input, { date, week, stats = {}, deltas = {}, game 
   }
   const approval = world.polls.at(-1)?.government?.approval ?? world.polls.at(-1)?.executive?.approval ?? society?.executive?.approval ?? 45;
   const offers = partyAgents(world, date, { approval, player, playerIsLeader, playerStrategy: player?.strategy ?? null });
-  allianceDynamics(world, date);
-  partyLife(world, date);
+  offers.push(...allianceDynamics(world, date, { nationalVoteIn, player, playerIsLeader }));
+  partyLife(world, date, society?.trust ?? world.society?.trust ?? 48);
   if (draw(world) < 0.55) {
     const pool = WORLD_EVENTS.filter(event => event.id !== world.lastEventId);
     const total = pool.reduce((sum, event) => sum + event.weight, 0);
@@ -1120,7 +1308,7 @@ export function addWorldEffects(input, effects = [], date, entry = null) {
 
 // ---------- alliances with the player ----------
 export function allianceOf(world, partyId) {
-  return world?.alliances.find(item => item.status === 'active' && item.partyIds.includes(partyId)) ?? null;
+  return world?.alliances.find(item => item.status === 'active' && item.partyIds.length >= 2 && item.partyIds.includes(partyId)) ?? null;
 }
 function sealAlliance(world, player, force, date, motive = null) {
   const partnerAllied = allianceOf(world, force.id);
@@ -1192,9 +1380,10 @@ export function breakAlliance(input, allianceId, date) {
   const world = copy(input);
   const alliance = world.alliances.find(item => item.id === allianceId && item.status === 'active');
   if (!alliance) throw new Error('Alleanza non disponibile.');
-  alliance.status = 'broken';
-  alliance.brokenAt = date;
   const player = playerParty(world);
+  // From a coalition of several forces the player's party walks out; the others stay together.
+  if (player && alliance.partyIds.length >= 3) { alliance.partyIds = alliance.partyIds.filter(id => id !== player.id); alliance.cohesion = clamp(alliance.cohesion - 6, 0, 100); alliance.withPlayer = false; }
+  else { alliance.status = 'broken'; alliance.brokenAt = date; }
   world.grudges ??= {};
   for (const id of alliance.partyIds) if (id !== player?.id) world.grudges[tieKey(player?.id ?? '', id)] = 50;
   if (player) addEffect(world, { partyId: player.id, delta: -0.3, remaining: 3, cause: 'rottura' });

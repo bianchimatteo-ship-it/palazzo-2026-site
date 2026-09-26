@@ -1,7 +1,7 @@
-import { advanceDays } from './time.js?v=20260926-2';
-import { CAMPAIGN_ACTIVITIES, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_STRATEGIES, DEBATE_TOPICS, ELECTION_MODELS, EUROPEAN_THRESHOLD, phaseOf } from '../data/simulation/campaign-rules.js?v=20260926-2';
-import { aggregateShares, runFinalElection, runFirstRound } from './election-engine.js?v=20260926-2';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-2';
+import { advanceDays } from './time.js?v=20260926-3';
+import { CAMPAIGN_ACTIVITIES, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_STRATEGIES, DEBATE_TOPICS, ELECTION_MODELS, EUROPEAN_THRESHOLD, phaseOf } from '../data/simulation/campaign-rules.js?v=20260926-3';
+import { aggregateShares, runFinalElection, runFirstRound } from './election-engine.js?v=20260926-3';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-3';
 
 const SOURCE = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
@@ -91,6 +91,9 @@ function buildOpponents(partyId, catalog, seed, count = 3, realCandidates = [], 
   return candidates;
 }
 
+// How many rival candidacies run against the player, by kind of election.
+export const RIVALS_BY_TYPE = Object.freeze({ comunale:{ small:3, default:4 }, regionale:{ default:4 }, politiche:{ default:5 }, europee:{ default:6 } });
+const candidateLabel = candidate => candidate.realReference?.fullName ?? (candidate.partyAbbreviation || candidate.partyLabel ? `la candidatura di ${candidate.partyAbbreviation || candidate.partyLabel}` : candidate.displayName);
 function initSupport(areas, candidates, player, seed) {
   const rand = randomFrom(seed ^ 0x7f4a7c15);
   for (const area of areas) {
@@ -459,6 +462,28 @@ function opponentTurn(campaign) {
       }
     }
   }
+  // The rivals among themselves: momentum rises and falls, the two strongest clash (an attack can backfire), a
+  // candidacy far behind withdraws and backs another one.
+  for (const rival of activeOpponents(campaign)) {
+    rival.campaignStats.momentum = round(clamp(Number(rival.campaignStats.momentum ?? 0) * .8 + gaussian(campaign) * 1.2, -5, 5));
+    moveSupport(campaign, rival.id, rival.campaignStats.momentum * .06);
+  }
+  const field = [...activeOpponents(campaign)].sort((a, b) => weightedShare(campaign, b.id) - weightedShare(campaign, a.id));
+  if (field.length >= 2 && draw(campaign) < .22) {
+    const [first, second] = field;
+    const backfires = draw(campaign) < .35;
+    transferSupport(campaign, first.id, second.id, (.15 + draw(campaign) * .35) * (backfires ? -1 : 1));
+    second.lastAction = backfires ? 'Il suo attacco alla candidatura in testa si è ritorto contro.' : 'Attacca la candidatura in testa e guadagna terreno.';
+    addHistory(campaign, 'scontro', `Scontro tra ${candidateLabel(second)} e ${candidateLabel(first)}: ${backfires ? 'l’attacco si ritorce contro chi lo ha lanciato' : 'chi insegue recupera qualcosa'}.`, { source: SOURCE });
+  }
+  const last = field.at(-1);
+  if (field.length >= 3 && last && weightedShare(campaign, last.id) < 8 && campaign.day < campaign.totalDays - 7 && draw(campaign) < .12) {
+    const backed = field.slice(0, -1).sort((a, b) => Number(b.relationship ?? 0) - Number(a.relationship ?? 0))[0];
+    transferSupport(campaign, last.id, backed.id, 100);
+    last.status = 'withdrawn'; last.endorsedId = backed.id;
+    last.lastAction = `Si è ritirata e sostiene ${candidateLabel(backed)}.`;
+    addHistory(campaign, 'ritiro', `${candidateLabel(last).charAt(0).toLocaleUpperCase('it-IT') + candidateLabel(last).slice(1)} si ritira e indica di votare ${candidateLabel(backed)}.`, { source: SOURCE });
+  }
   const currentLeader = activeOpponents(campaign).sort((a,b)=>supportAt(campaign,campaign.territories[0].id,b.id)-supportAt(campaign,campaign.territories[0].id,a.id))[0];
   if (currentLeader && player && supportAt(campaign,campaign.territories[0].id,currentLeader.id)-supportAt(campaign,campaign.territories[0].id,player.id)>14 && draw(campaign)<.24) {
     pendingEvent(campaign,'rival','Un avversario attacca la tua proposta','Una candidatura rivale contesta pubblicamente una tua scelta. Rispondere può attirare attenzione e comporta un rischio reputazionale.',[
@@ -573,7 +598,9 @@ export function createCampaign({career,player,statistics=[],offices=[],territori
   const officeTitle=String(offices.find(item=>item.id===player.roleId)?.title??'');
   const incumbency=type==='politiche' && /deputat|senat/i.test(officeTitle) && !/inizial/i.test(officeTitle);
   const candidate=createCandidate({id:playerCandidateId,player:true,partyId,displayName:player.displayName,seed,stats:playerStats});
-  const opponents=buildOpponents(partyId,partyCatalog,seed,3,config.realCandidates??[],{ type, region:player.region ?? null, weights:config.partyWeights ?? {} });
+  // More forces in the field where more of them really run: a small comune, a big one, a region, the whole country.
+  const rivals=RIVALS_BY_TYPE[type]?.[type==='comunale'&&config.municipalityBand!=='oltre-15000'?'small':'default'] ?? 3;
+  const opponents=buildOpponents(partyId,partyCatalog,seed,rivals,config.realCandidates??[],{ type, region:player.region ?? null, weights:config.partyWeights ?? {} });
   const candidates=[candidate,...opponents];
   initSupport(campaignAreas,candidates,player,seed);
   const focus=campaignAreas.find(area=>area.name===player.municipality)?.id ?? campaignAreas.find(area=>area.region===player.region)?.id ?? campaignAreas.find(area=>area.constituency && (config.constituency === area.constituency))?.id ?? campaignAreas[0].id;
