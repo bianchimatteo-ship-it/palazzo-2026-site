@@ -1,13 +1,13 @@
 // CARRIERA — the path and the progression: four tracks (institutions, party, Parliament, Government), the odds of
 // every next step with the factors that decide them, offices and powers, the timeline and the goals.
-import { careerOverview } from '../core/career-overview.js?v=20260926-4';
-import { ADVANCEMENT_OUTCOMES } from '../core/progression-engine.js?v=20260926-4';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20260926-4';
-import { careerLevelLabel } from '../data/regions.js?v=20260926-4';
-import { formatDate } from '../core/time.js?v=20260926-4';
-import { glyph, officeIcon } from './visuals.js?v=20260926-4';
-import { renderCareerTimeline, renderMemoryPanel, renderObjectivesPanel, renderRolesPanel, renderWhyPanel } from './game-mode.js?v=20260926-4';
-import { arrow, badge, bar, card, empty, esc, num, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20260926-4';
+import { careerOverview } from '../core/career-overview.js?v=20260926-5';
+import { ADVANCEMENT_OUTCOMES } from '../core/progression-engine.js?v=20260926-5';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20260926-5';
+import { careerLevelLabel } from '../data/regions.js?v=20260926-5';
+import { formatDate } from '../core/time.js?v=20260926-5';
+import { glyph, officeIcon } from './visuals.js?v=20260926-5';
+import { renderCareerTimeline, renderMemoryPanel, renderObjectivesPanel, renderRolesPanel, renderWhyPanel } from './game-mode.js?v=20260926-5';
+import { arrow, badge, bar, card, empty, esc, num, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20260926-5';
 
 export const CAREER_TABS = Object.freeze([['percorso', 'Percorso'], ['progressione', 'Progressione'], ['incarichi', 'Incarichi e poteri'], ['cronologia', 'Cronologia'], ['obiettivi', 'Obiettivi']]);
 const STAT_ORDER = ['popularity', 'reputation', 'influence', 'experience', 'notoriety'];

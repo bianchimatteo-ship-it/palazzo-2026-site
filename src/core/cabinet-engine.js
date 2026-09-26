@@ -3,9 +3,9 @@
 // numbers are thin, and in a crisis tries to save itself — a "verifica" with a new programme and attention to the
 // allies, new supporters — before going back to the Chambers, or resigns when the numbers are gone. It works with the
 // primitives of parliament-engine (programme, reshuffle, appointments, majority); everything here is simulation.
-import { DATA_SOURCES } from '../data/schema.js?v=20260926-4';
-import { AREA_BY_ID, GOVERNMENT_LINES, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260926-4';
-import { activeMinisters, assignMinister, campOfAxis, governingGroupIds, groupProfile, leaveMajority, parliamentInternals, reshuffleMinister, setGovernmentProgram } from './parliament-engine.js?v=20260926-4';
+import { DATA_SOURCES } from '../data/schema.js?v=20260926-5';
+import { AREA_BY_ID, GOVERNMENT_LINES, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260926-5';
+import { activeMinisters, assignMinister, campOfAxis, governingGroupIds, groupProfile, leaveMajority, parliamentInternals, reshuffleMinister, setGovernmentProgram } from './parliament-engine.js?v=20260926-5';
 
 const { getGroup, allGroups, record, majority, setRelation } = parliamentInternals;
 const SIM = DATA_SOURCES.SIMULATION;

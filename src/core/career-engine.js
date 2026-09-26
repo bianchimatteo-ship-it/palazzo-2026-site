@@ -1,22 +1,22 @@
-import { advanceDays, nextMunicipalVote, nextRegionalVote } from './time.js?v=20260926-4';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260926-4';
-import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260926-4';
+import { advanceDays, nextMunicipalVote, nextRegionalVote } from './time.js?v=20260926-5';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260926-5';
+import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260926-5';
 import {
   APPOINTMENTS, BASE_WEEKLY_INCOME, CAREER_EVENTS, CAREER_OBJECTIVES, CURRENT_TEMPLATES, EARLY_ELECTION_AFTER_WEEKS, ELECTION_SCHEDULE,
   FORCED_EVENTS, LEGACY_RIVAL_NAMES, SIMULATED_RIVAL_LABEL, FOUNDER_RANK, LEVEL_FIRST_ELECTION, OFFICE_INCOME, PARTY_RANKS, RELATION_TEMPLATES, STAT_LABELS,
-  SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS } from '../data/simulation/career-rules.js?v=20260926-4';
-import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20260926-4';
-import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20260926-4';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-4';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260926-4';
-import { book, buyInvestment, createFinance, depositElectionFund, hasAsset, normalizeFinance, settleFinanceWeek } from './finance-engine.js?v=20260926-4';
-import { advanceOrganization, applyOrgEffects, createOrganization, isPartyLeader, normalizeOrganization, treasuryBook } from './organization-engine.js?v=20260926-4';
-import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20260926-4';
-import { HARD_CATEGORIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20260926-4';
-import { macroAreaOf } from '../data/simulation/policy-rules.js?v=20260926-4';
-import { advancementOdds, evaluateAdvancement, progressionFactors } from './progression-engine.js?v=20260926-4';
-import { advanceCommittees, applyCommitteeAction, COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, foundCommittee } from './committee-engine.js?v=20260926-4';
-import { europeanElectionDate, legislatureTerm, LEGISLATURE_RULES, sundayOnOrBefore } from './legislature-engine.js?v=20260926-4';
+  SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS } from '../data/simulation/career-rules.js?v=20260926-5';
+import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20260926-5';
+import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20260926-5';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-5';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260926-5';
+import { book, buyInvestment, createFinance, depositElectionFund, hasAsset, normalizeFinance, settleFinanceWeek } from './finance-engine.js?v=20260926-5';
+import { advanceOrganization, applyOrgEffects, createOrganization, isPartyLeader, normalizeOrganization, treasuryBook } from './organization-engine.js?v=20260926-5';
+import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20260926-5';
+import { HARD_CATEGORIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20260926-5';
+import { macroAreaOf } from '../data/simulation/policy-rules.js?v=20260926-5';
+import { advancementOdds, evaluateAdvancement, progressionFactors } from './progression-engine.js?v=20260926-5';
+import { advanceCommittees, applyCommitteeAction, COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, foundCommittee } from './committee-engine.js?v=20260926-5';
+import { europeanElectionDate, legislatureTerm, LEGISLATURE_RULES, sundayOnOrBefore } from './legislature-engine.js?v=20260926-5';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -121,6 +121,19 @@ export function localCalendarOf(calendar, { municipalityCode = null, region = nu
 function makeLocalElection(type, lastDate, today, place = {}, real = false) {
   const electionDate = type === 'comunale' ? nextMunicipalVote(lastDate, advanceDays(today, 7 + ELECTION_MODELS[type].campaignDays)) : nextRegionalVote(lastDate, advanceDays(today, 7 + ELECTION_MODELS[type].campaignDays));
   return { ...makeElection(type, advanceDays(electionDate, -ELECTION_MODELS[type].campaignDays), place), electionDate, calendar: real ? 'reale' : 'simulato', lastVote: lastDate };
+}
+// A council dissolved (a motion of no confidence): the comune votes in the next spring round, a region within ten weeks.
+export function scheduleEarlyLocalElection(input, type, date) {
+  const game = copy(input);
+  const entry = game.elections.find(item => item.type === type && item.status === 'upcoming');
+  if (!entry) return input;
+  const earliest = advanceDays(date, 70);
+  let year = Number(date.slice(0, 4));
+  while (sundayOnOrBefore(`${year}-05-31`) <= earliest) year++;
+  const electionDate = type === 'comunale' ? sundayOnOrBefore(`${year}-05-31`) : sundayOnOrBefore(earliest);
+  if (electionDate >= entry.electionDate) return input;
+  Object.assign(entry, { ...makeElection(type, advanceDays(electionDate, -ELECTION_MODELS[type].campaignDays), game.place, true), id: entry.id, electionDate, calendar: entry.calendar ?? 'simulato', early: true });
+  return game;
 }
 // Upcoming local votes of a career moved to the calendar of its place (a save made before the calendar existed).
 export function alignLocalCalendar(input, local, today) {
@@ -655,7 +668,9 @@ const WORLD_SPECIALS = ['markets-calm', 'markets-worse', 'europe-up', 'europe-do
   // The player's vote on a bill of the others (lawmaking-engine).
   'law-vote-line', 'law-vote-yes', 'law-vote-no', 'law-vote-abstain', 'law-vote-absent',
   // The player's vote on a confidence vote, the answer to a request of external support (cabinet-engine).
-  'confidence-vote-line', 'confidence-vote-yes', 'confidence-vote-no', 'confidence-vote-abstain', 'confidence-vote-absent', 'support-accept', 'support-refuse'];
+  'confidence-vote-line', 'confidence-vote-yes', 'confidence-vote-no', 'confidence-vote-abstain', 'confidence-vote-absent', 'support-accept', 'support-refuse',
+  // Local and European institutions (local-engine): the player's vote in the council, a group threatening to leave.
+  'local-vote-line', 'local-vote-yes', 'local-vote-no', 'local-vote-abstain', 'local-vote-absent', 'local-concede', 'local-hold'];
 function handleSpecial(ctx, env, special, item, lines, specials, choice = {}) {
   const game = ctx.game;
   if (WORLD_SPECIALS.includes(special)) { specials.push({ type: special, params: item.params ?? {} }); return; }

@@ -1,7 +1,7 @@
 // The logo editor: crop frame over the original image (drag to pan, sliders for zoom and ratio), transparency of a
 // flat background, previews on light, dark and transparent backgrounds, the dominant colour. Markup is a string like
 // every other view; drawing happens on canvases after each render (drawLogoEditor).
-import { backgroundColor, cropRect, dominantColor, editorMetadata, frameAspect, knockOut, LOGO_EDITOR_LIMITS, outputSize, placement, untouched } from '../core/logo-editor.js?v=20260926-4';
+import { backgroundColor, cropRect, dominantColor, editorMetadata, frameAspect, knockOut, LOGO_EDITOR_LIMITS, outputSize, placement, untouched } from '../core/logo-editor.js?v=20260926-5';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const range = (key, label, min, max, step, value, disabled = false, hint = '') => `<label class="le-field"><span>${esc(label)} <b data-logo-value="${key}">${esc(value)}</b></span><input type="range" data-logo-edit="${key}" min="${min}" max="${max}" step="${step}" value="${esc(value)}" ${disabled ? 'disabled' : ''} />${hint ? `<small>${esc(hint)}</small>` : ''}</label>`;

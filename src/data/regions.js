@@ -5,8 +5,8 @@ export const ITALIAN_REGIONS = Object.freeze([
 ]);
 
 export const CAREER_LEVELS = Object.freeze({
-  comunale: { label: 'Carriera comunale', shortLabel: 'Comunale', territory: 'comune', office: 'Percorso comunale iniziale' },
-  regionale: { label: 'Carriera regionale', shortLabel: 'Regionale', territory: 'regione', office: 'Percorso regionale iniziale' },
+  comunale: { label: 'Carriera comunale', shortLabel: 'Comunale', territory: 'comune', office: 'Consigliere comunale' },
+  regionale: { label: 'Carriera regionale', shortLabel: 'Regionale', territory: 'regione', office: 'Consigliere regionale' },
   deputato: { label: 'Carriera come Deputato', shortLabel: 'Deputato', territory: 'camera', office: 'Deputato (scenario di simulazione)', chamber: 'camera' },
   senatore: { label: 'Carriera come Senatore', shortLabel: 'Senatore', territory: 'senato', office: 'Senatore (scenario di simulazione)', chamber: 'senato' }
 });

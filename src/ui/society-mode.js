@@ -1,11 +1,12 @@
 // Country, territories, citizens and media: the simulated society as the player sees it.
-import { INDICATORS, MEDIA_OUTLETS, SEGMENTS } from '../data/simulation/society-rules.js?v=20260926-4';
-import { nationalIndicators, regionPriorities, societyMood } from '../core/society-engine.js?v=20260926-4';
-import { illustration } from './illustrations.js?v=20260926-4';
-import { artTile, glyph } from './visuals.js?v=20260926-4';
+import { INDICATORS, MEDIA_OUTLETS, SEGMENTS } from '../data/simulation/society-rules.js?v=20260926-5';
+import { nationalIndicators, regionPriorities, societyMood } from '../core/society-engine.js?v=20260926-5';
+import { illustration } from './illustrations.js?v=20260926-5';
+import { artTile, glyph } from './visuals.js?v=20260926-5';
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
-import { breakdown, esc, levelState, lineChart, meter, num, rampColor, SERIES, signed, sparkline, stateBadge, trendState, GREEN_RAMP } from './charts.js?v=20260926-4';
-import { areasPanel, publicFinancePanel, securityPanel } from './policy-mode.js?v=20260926-4';
+import { breakdown, esc, levelState, lineChart, meter, num, rampColor, SERIES, signed, sparkline, stateBadge, trendState, GREEN_RAMP } from './charts.js?v=20260926-5';
+import { areasPanel, publicFinancePanel, securityPanel } from './policy-mode.js?v=20260926-5';
+import { renderInstitutions } from './local-mode.js?v=20260926-5';
 
 // Tile cartogram of the regions: a recognisable boot, one tile per region.
 const TILES = Object.freeze({
@@ -100,6 +101,7 @@ export function renderTerritoriesPage(state, ui = {}) {
   const executive = society.executive;
   const governing = ['active', 'crisis'].includes(state.parliament?.government?.status);
   return `<div class="society-page">
+    ${renderInstitutions(state)}
     <section class="society-hero">
       ${illustration('borgo', 'hero-art')}<div class="society-hero-main"><span class="section-kicker">IL PAESE · SETTIMANA ${society.week}</span><h2>Umore del Paese: ${num(mood, 0)}/100</h2><p class="section-subtitle">Cittadini, territori ed economia si muovono ogni settimana, con o senza di te: leggi, crisi, media e scelte del governo cambiano i numeri qui sotto.</p></div>
       <div class="society-kpis">${kpi('Soddisfazione dei cittadini', num(society.satisfaction, 1), change(society, 'satisfaction'), historyOf(society, 'satisfaction'))}${kpi('Fiducia nelle istituzioni', num(society.trust, 1), change(society, 'trust'), historyOf(society, 'trust'))}${kpi('Partecipazione attesa', num(society.participation, 1), change(society, 'participation'), historyOf(society, 'participation'), '', { unit: '%' })}</div>

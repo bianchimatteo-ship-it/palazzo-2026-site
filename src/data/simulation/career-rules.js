@@ -603,6 +603,17 @@ export const SITUATION_EVENTS = Object.freeze({
   'richiesta-sostegno': { id: 'richiesta-sostegno', title: 'Il governo chiede il sostegno di {party}', body: '{government} ha una maggioranza di pochi voti (margine {margin}) e chiede al tuo partito un sostegno esterno: votare la fiducia e i provvedimenti principali, senza ministri. Dà peso e visibilità, ma lega il partito alle scelte del governo.', defaultChoice: 'rifiuta', choices: [
     { id: 'sostieni', label: 'Concedi il sostegno esterno', effects: { stats: { influence: 1.5 }, party: { support: -1 } }, special: 'support-accept' },
     { id: 'rifiuta', label: 'Resta all’opposizione', effects: { stats: { reputation: 0.5 } }, special: 'support-refuse' }] },
+  // Local and European institutions (local-engine).
+  'voto-consiglio': { id: 'voto-consiglio', title: '{institution}: {actTitle}', body: '{actLabel} al voto il {when}. Il tuo gruppo è orientato a votare {lineLabel}; previsione: {forecast}. Votare contro la linea si nota, nel gruppo e sul territorio.', defaultChoice: 'linea', choices: [
+    { id: 'linea', label: 'Vota con il tuo gruppo ({lineLabel})', special: 'local-vote-line' },
+    { id: 'favorevole', label: 'Vota a favore', special: 'local-vote-yes' },
+    { id: 'contrario', label: 'Vota contro', special: 'local-vote-no' },
+    { id: 'astenuto', label: 'Astieniti', special: 'local-vote-abstain' },
+    { id: 'assente', label: 'Non partecipare al voto', special: 'local-vote-absent' }] },
+  'crisi-giunta': { id: 'crisi-giunta', title: '{group} minaccia di lasciare la maggioranza', body: 'Nel {institution} il gruppo si sente trascurato: senza i suoi voti la maggioranza vacilla e l’opposizione è pronta alla sfiducia. Puoi dargli un assessorato (a spese di un altro gruppo), trattare o tenere il punto.', defaultChoice: 'tieni', choices: [
+    { id: 'concedi', label: 'Concedi un assessorato', effects: { stats: { influence: -0.5 } }, special: 'local-concede' },
+    { id: 'tratta', label: 'Tratta: un impegno sul programma', cost: { capital: 3 }, special: 'local-hold' },
+    { id: 'tieni', label: 'Tieni il punto', effects: { stats: { reputation: 0.5 } } }] },
   'incarico-governo': { id: 'incarico-governo', title: 'Il Presidente della Repubblica ti affida l’incarico', body: 'Il tuo partito guida {majority}: tocca a te formare il governo, distribuire i ministeri e chiedere la fiducia alle Camere. Se rinunci, l’incarico passa a un’altra figura di {leader}.', defaultChoice: 'accetta', choices: [
     { id: 'accetta', label: 'Accetta l’incarico: formi il governo', effects: { stats: { notoriety: 2, influence: 2 } }, special: 'national-mandate-accept' },
     { id: 'rinuncia', label: 'Rinuncia e lascia l’incarico a un’altra figura', effects: { party: { support: -2 } }, special: 'national-mandate-decline' }] }
