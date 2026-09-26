@@ -79,6 +79,17 @@ assert.ok(check({}, 1).some(error => /regione/.test(error)));
 assert.ok(check({ region: 'Lazio', municipality: 'Paese inventato' }, 1).some(error => /elenco ISTAT/.test(error)), 'Un comune scritto a mano non basta.');
 assert.ok(check({ region: 'Piemonte', municipalityCode: '058091', municipality: 'Roma' }, 1).some(error => /regione/.test(error)), 'Il comune deve essere nella regione scelta.');
 assert.deepEqual(check({ region: 'Lazio', municipalityCode: '058091', municipality: 'Roma' }, 1), []);
+// The ISTAT list not loaded (still loading or failed): the wizard accepts no comune at all, not even one typed freely.
+const wizardCheck = (d, list) => validateCareerStep({ ...makeCareerDraft('2026-09-24'), ...d }, 1, db.parties, db.parliamentaryGroups, list, { requireTerritory: true });
+assert.ok(wizardCheck({ region: 'Lazio', municipality: 'Paese inventato' }, null).some(error => /elenco ISTAT dei comuni non è ancora disponibile/.test(error)), 'Senza elenco ISTAT il wizard non accetta comuni inventati.');
+assert.ok(wizardCheck({ region: 'Lazio', municipality: 'Roma' }, { status: 'error' }).length === 1, 'Elenco ISTAT fallito: nessun comune accettato.');
+assert.deepEqual(wizardCheck({ region: 'Lazio', municipalityCode: '058091', municipality: 'Roma' }, territory), [], 'Con l’elenco caricato il comune ISTAT è accettato.');
+// The wizard while the list is loading or failed: a clear state, and “Riprova” after a failure.
+const loadingHtml = renderCareerWizard(state, { ...makeCareerDraft('2026-09-24'), region: 'Lazio' }, db.parties, () => null, db.parliamentaryGroups, [], [], [], { status: 'loading' });
+assert.ok(loadingHtml.includes('Caricamento dell’elenco ISTAT dei comuni') && !loadingHtml.includes('data-wizard-retry-data'), 'Elenco ISTAT in caricamento: il wizard lo dice.');
+const failedHtml = renderCareerWizard(state, { ...makeCareerDraft('2026-09-24'), region: 'Lazio' }, db.parties, () => null, db.parliamentaryGroups, [], [], [], { status: 'error', error: 'Dati reali non disponibili (503: municipalities.json).' }, { loading: false, failed: ['parlamentari'] });
+assert.ok(failedHtml.includes('L’elenco ISTAT dei comuni non è stato caricato') && failedHtml.includes('503: municipalities.json') && failedHtml.includes('data-wizard-retry-data') && !failedHtml.includes('data-municipality-code'), 'Elenco ISTAT fallito: motivo e “Riprova”, nessun elenco inventato.');
+assert.ok(failedHtml.includes('Non è stato possibile caricare: parlamentari'), 'Gli altri dati mancanti sono indicati nel wizard.');
 assert.ok(check({ difficulty: 'impossibile' }, 4).length === 1 && check({ difficulty: 'difficile' }, 4).length === 0);
 assert.ok(check({}, 5).length >= 3 && check({ firstName: 'Ada', lastName: 'Prova', birthDate: '1990-05-05', previousProfession: 'Insegnante' }, 5).length === 0, 'Il profilo si compila alla fine.');
 

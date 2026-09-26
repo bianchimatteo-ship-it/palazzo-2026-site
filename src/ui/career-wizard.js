@@ -1,9 +1,9 @@
-import { CAREER_LEVELS, ITALIAN_REGIONS, initialCareerStatistics } from '../data/regions.js?v=20260926-6';
-import { LOGO_SHAPES, LOGO_SYMBOLS, partyLogoDataUrl } from './party-logo.js?v=20260926-6';
-import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260926-6';
-import { validateCareerStep } from '../core/career-rules.js?v=20260926-6';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260926-6';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20260926-6';
+import { CAREER_LEVELS, ITALIAN_REGIONS, initialCareerStatistics } from '../data/regions.js?v=20260926-7';
+import { LOGO_SHAPES, LOGO_SYMBOLS, partyLogoDataUrl } from './party-logo.js?v=20260926-7';
+import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260926-7';
+import { validateCareerStep } from '../core/career-rules.js?v=20260926-7';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20260926-7';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20260926-7';
 
 const POSITIONS = ['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra'];
 
@@ -37,8 +37,9 @@ export function makeCareerDraft(currentDate, parties = []) {
   };
 }
 
-// territory: { units, municipalities, source } — the ISTAT list (territorial-units.json, municipalities.json).
-export function renderCareerWizard(state, draft, realParties = [], logoFor = () => null, parliamentaryGroups = [], partyLeaderships = [], politicalFigures = [], realPoliticians = [], territory = null) {
+// territory: { units, municipalities, source } — the ISTAT list (territorial-units.json, municipalities.json), or
+// { status: 'loading' | 'error', error } while it is missing. data: { loading, failed } — the other real data.
+export function renderCareerWizard(state, draft, realParties = [], logoFor = () => null, parliamentaryGroups = [], partyLeaderships = [], politicalFigures = [], realPoliticians = [], territory = null, data = null) {
   const steps = WIZARD_STEPS;
   const level = CAREER_LEVELS[draft.initialLevel];
   const parties = [...state.dataset.parties.filter(isSelectableParty), ...realParties.filter(isSelectableParty)];
@@ -52,10 +53,12 @@ export function renderCareerWizard(state, draft, realParties = [], logoFor = () 
     ? `<button type="button" class="primary-button" data-wizard-action="finish">Inizia carriera ${ico('arrow', 16)}</button>`
     : `<button type="button" class="primary-button" data-wizard-action="next">Continua ${ico('arrow', 16)}</button>`;
   const errorBox = draft.errors?.length ? `<div class="wizard-errors" role="alert">${draft.errors.map(error => `<span>${esc(error)}</span>`).join('')}</div>` : '';
+  // Real data that did not arrive (parties, groups, people): the wizard goes on with the rest and offers a new attempt.
+  const dataBox = data?.failed?.length ? `<div class="wizard-data-alert" role="alert"><span>Non è stato possibile caricare: ${esc(data.failed.join(', '))}. Le scelte che ne dipendono restano vuote finché i dati non arrivano.</span><button type="button" class="secondary-button" data-wizard-retry-data>Riprova</button></div>` : '';
   return `<div class="wizard-backdrop"><section class="career-wizard" role="dialog" aria-modal="true" aria-labelledby="wizard-title">
     <aside class="wizard-aside"><div class="wizard-brand"><span class="brand-mark"><i></i><i></i><i></i></span><span>POLITICANDO <small>2026</small></span></div><span class="wizard-aside-label">NUOVA CARRIERA</span><h2>Una storia<br/>da scrivere.</h2><p>Scegli da dove cominciare, poi il percorso, il partito e la difficoltà.</p><div class="wizard-steps">${steps.map((s, i) => `<div class="wizard-step ${draft.step === i + 1 ? 'current' : ''} ${draft.step > i + 1 ? 'complete' : ''}"><span class="wizard-step-icon">${draft.step > i + 1 ? '✓' : ico(s[2], 16)}</span><span><small>PASSAGGIO ${String(i + 1).padStart(2, '0')}</small><strong>${s[0]}</strong></span></div>`).join('')}</div><div class="wizard-aside-foot"><span class="live-dot"></span><span>Il salvataggio avviene solo quando inizi la carriera.</span></div></aside>
     <div class="wizard-main"><header class="wizard-header"><div><span class="wizard-kicker">PASSAGGIO ${String(draft.step).padStart(2, '0')} <i>/</i> ${String(LAST_STEP).padStart(2, '0')}</span><h1 id="wizard-title">${activeStep[1]}</h1><p>${stepIntro(draft.step)}</p></div><button class="wizard-x" type="button" aria-label="Annulla nuova carriera" data-wizard-action="cancel">×</button></header>
-      <div class="wizard-body">${errorBox}${body}</div>
+      <div class="wizard-body">${errorBox}${dataBox}${body}</div>
       <footer class="wizard-footer">${backButton}<span class="wizard-footer-note">${draft.step < LAST_STEP ? 'Puoi tornare indietro e modificare ogni scelta.' : `Avvio della carriera il ${esc(state.clock.currentDate)}.`}</span>${actionButton}</footer>
     </div>
   </section></div>`;
@@ -87,7 +90,10 @@ function placeLine(d, place) {
 function whereStep(d, territory) {
   const regionSelect = `<label>Regione<select name="region" data-wizard-region><option value="">Scegli la regione</option>${ITALIAN_REGIONS.map(region => `<option value="${esc(region)}" ${d.region === region ? 'selected' : ''}>${esc(region)}</option>`).join('')}</select></label>`;
   const note = `<div class="wizard-data-note">Fonte: ${territory?.sourceUrl ? `<a href="${esc(territory.sourceUrl)}" target="_blank" rel="noopener noreferrer">${esc(territory.sourceName ?? 'ISTAT')} ↗</a>` : 'ISTAT, Elenco dei comuni italiani (21 febbraio 2026)'} · ${Number(territory?.municipalities?.length ?? 7894).toLocaleString('it-IT')} comuni, codici e denominazioni 2026 (compreso il nuovo assetto della Sardegna). Dato reale, in sola lettura: la tua carriera resta una simulazione.</div>`;
-  if (!territory?.municipalities?.length) return `<div class="wizard-form-grid">${regionSelect}</div><div class="empty-inline" role="status">Caricamento dell’elenco ISTAT dei comuni…</div>${note}`;
+  // The ISTAT list is compulsory: while it is loading the wizard says so; if it failed, the reason and “Riprova”.
+  if (!territory?.municipalities?.length) return `<div class="wizard-form-grid">${regionSelect}</div>${territory?.status === 'error'
+    ? `<div class="wizard-data-alert" role="alert"><span>L’elenco ISTAT dei comuni non è stato caricato${territory.error ? ` (${esc(territory.error)})` : ''}. Il comune va scelto da quell’elenco: controlla la connessione e riprova.</span><button type="button" class="secondary-button" data-wizard-retry-data>Riprova</button></div>`
+    : '<div class="empty-inline" role="status">Caricamento dell’elenco ISTAT dei comuni…</div>'}${note}`;
   if (!d.region) return `<div class="wizard-form-grid">${regionSelect}</div><div class="wizard-place-hint">${ico('pin', 18)}<span>Scegli prima la regione: poi puoi cercare il comune, anche filtrando per provincia o città metropolitana.</span></div>${note}`;
   const units = territory.units.filter(unit => unit.gameRegion === d.region).sort((a, b) => a.name.localeCompare(b.name, 'it'));
   const unitSelect = `<label>Provincia o città metropolitana<select name="territorialUnit" data-wizard-unit><option value="">Tutte (${units.length})</option>${units.map(unit => `<option value="${esc(unit.code)}" ${d.territorialUnit === unit.code ? 'selected' : ''}>${esc(unitLabel(unit))} · ${esc(unit.type)}</option>`).join('')}</select></label>`;

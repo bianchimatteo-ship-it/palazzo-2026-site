@@ -2,8 +2,8 @@
 // retained for exports and validation, but the browser never downloads it.
 export const REAL_DATA_ASSET_VERSION = '20260926-4';
 
-import { applyAdminOverrides } from './admin-store.js?v=20260926-6';
-import { displayCase, withDisplayNames } from './name-case.js?v=20260926-6';
+import { applyAdminOverrides } from './admin-store.js?v=20260926-7';
+import { displayCase, withDisplayNames } from './name-case.js?v=20260926-7';
 
 export let realDatabase = Object.freeze({});
 // Untouched copies of what the files contain, so owner overrides can be re-layered or reverted.
@@ -48,6 +48,11 @@ const documentFiles = Object.freeze({
 });
 const loadingDocuments = new Map();
 let manifestPromise;
+// What could not be loaded (a collection, a document or the manifest) and why: the game starts with the rest and
+// says what is missing; a later successful load removes the entry.
+const failures = new Map();
+export const realDataFailures = () => [...failures].map(([name, message]) => ({ name, message }));
+const failed = (name, error) => { failures.set(name, error?.message || 'Caricamento non riuscito.'); throw error; };
 
 function freezeDeep(value) {
   if (value && typeof value === 'object' && !Object.isFrozen(value)) {
@@ -78,10 +83,11 @@ export async function loadRealDatabase() {
         throw new Error('Il manifest dei dati reali non ha il formato previsto.');
       }
       realDatabase = Object.freeze({ ...realDatabase, manifest:freezeDeep(manifest) });
+      failures.delete('manifest');
       return realDatabase;
     }).catch(error => {
       manifestPromise = null;
-      throw error;
+      failed('manifest', error);
     });
   }
   return manifestPromise;
@@ -104,15 +110,25 @@ export async function loadRealCollections(collections = []) {
         records = withDisplayNames(name, records);
         pristine.set(name, freezeRecords(records));
         realDatabase = Object.freeze({ ...realDatabase, [name]: freezeRecords(applyAdminOverrides(name, records)) });
+        failures.delete(name);
       }).catch(error => {
         loadingCollections.delete(name);
-        throw error;
+        failed(name, error);
       });
       loadingCollections.set(name, request);
     }
     return loadingCollections.get(name);
   }));
   return realDatabase;
+}
+
+// Like loadRealCollections, but one missing or damaged collection does not stop the others: every collection that
+// arrives is loaded (with the same integrity checks), and the ones that fail are listed with their reason.
+export async function loadRealCollectionsSettled(collections = []) {
+  const names = [...new Set(collections)];
+  const results = await Promise.allSettled(names.map(name => loadRealCollections([name])));
+  const failedNames = names.map((name, index) => results[index].status === 'rejected' ? { name, message: results[index].reason?.message || 'Caricamento non riuscito.' } : null).filter(Boolean);
+  return { loaded: names.filter(name => Object.hasOwn(realDatabase, name)), failed: failedNames };
 }
 
 // A real document (see documentFiles), loaded once and kept frozen in realDatabase under its name.
@@ -126,10 +142,11 @@ export async function loadRealDocument(name) {
       // The lists of the 2022 map are published in capitals: shown in normal capitalisation, the source form kept.
       const shown = name === 'electoralGeography' && Array.isArray(document.lists) ? { ...document, lists: document.lists.map(item => { const cased = displayCase(item.name); return cased === item.name ? item : { ...item, name: cased, registeredName: item.name }; }) } : document;
       realDatabase = Object.freeze({ ...realDatabase, [name]: freezeDeep(shown) });
+      failures.delete(name);
       return realDatabase[name];
     }).catch(error => {
       loadingDocuments.delete(name);
-      throw error;
+      failed(name, error);
     }));
   }
   return loadingDocuments.get(name);

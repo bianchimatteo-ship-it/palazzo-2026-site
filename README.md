@@ -14,7 +14,7 @@ npm start
 
 Apri `http://127.0.0.1:4173`. Il gioco si apre sul **menu principale**: Nuova partita, Carica partita (fino a 5 salvataggi, esportazione e importazione su file), Come giocare, Impostazioni e — se esiste una partita — Continua con la data dell’ultimo salvataggio. Il pulsante con le tre linee nella barra superiore riporta al menu. Il pulsante “Chiudi la settimana” fa avanzare il tempo e al termine mostra il resoconto con le cause di ogni variazione.
 
-**Primo avvio e account.** Alla prima apertura senza account (sul sito pubblicato) il menu mostra un benvenuto che spiega perché serve l’account, come sincronizza le carriere, cosa succede ai salvataggi online e che passando da un dispositivo all’altro non si perde nulla; “Nuova partita” porta prima a creare l’account o ad accedere (se il servizio account non risponde si può iniziare comunque nel browser). Dopo la registrazione un breve tour di cinque passaggi, saltabile e mostrato una sola volta (`politicando.onboarding.v1` nel browser), porta a “Inizia nuova carriera”. Chi è già connesso non vede mai il benvenuto; il sistema account non è cambiato. **Come giocare** ha 16 sezioni brevi con indice ed esempi concreti.
+**Primo avvio e account.** Alla prima apertura senza account (sul sito pubblicato) il menu mostra un benvenuto che spiega perché serve l’account, come sincronizza le carriere, cosa succede ai salvataggi online e che passando da un dispositivo all’altro non si perde nulla; “Nuova partita” porta prima a creare l’account o ad accedere. Il servizio account viene davvero interrogato all’apertura (`/api/account/status` sul Worker; un indirizzo configurato non basta): finché la verifica è in corso, e subito se il servizio non risponde, il benvenuto offre “Inizia senza account” (con “Riprova”). La scelta di iniziare senza account resta ricordata nel browser: ricaricando la pagina non si torna al benvenuto. Dopo la registrazione un breve tour di cinque passaggi, saltabile e mostrato una sola volta (`politicando.onboarding.v1` nel browser), porta a “Inizia nuova carriera”. Chi è già connesso non vede mai il benvenuto; il sistema account non è cambiato. **Come giocare** ha 16 sezioni brevi con indice ed esempi concreti.
 
 **Conferme.** Le azioni irreversibili o che fanno avanzare molto la partita chiedono conferma con la finestra del gioco (Annulla/Conferma, Esc per annullare), mai con il `confirm()` del browser: eliminare un salvataggio, tutti i salvataggi o una copia online; ripristinare impostazioni, campi o record; importare una partita o sostituire l’archivio amministrativo; caricare una partita con modifiche non salvate; iniziare una nuova carriera quando ce n’è una in corso; avanzare di più di una settimana in un’azione o fino alle candidature; lasciare il partito, espellere i dissidenti, ritirare una proposta o il sostegno al governo; nascondere, eliminare o svuotare nell’area amministrativa. Una settimana normale non chiede conferma.
 
@@ -22,7 +22,9 @@ Apri `http://127.0.0.1:4173`. Il gioco si apre sul **menu principale**: Nuova pa
 
 **Stile**: tema scuro da videogioco in tutte le schermate, colore del partito del giocatore come accento, badge di stato (crescita, calo, rischio, crisi, successo), grafici con la palette categoriale validata per lo sfondo scuro. Titoli in Manrope, sottotitoli in Newsreader.
 
-**Offline**: dopo la prima visita un service worker (`sw.js`) conserva pagina, moduli, fogli di stile e tutti i dati reali; senza rete il gioco si avvia lo stesso. La strategia è “prima la rete”: online arriva sempre l’ultima versione.
+**Offline**: dopo la prima visita un service worker (`sw.js`) conserva pagina, moduli, fogli di stile e tutti i dati reali; senza rete il gioco si avvia lo stesso. La strategia è “prima la rete”: online arriva sempre l’ultima versione. In cache vanno solo le richieste GET dei file del gioco: POST, PUT, DELETE e gli altri metodi, l’API (account, salvataggi online, archivio del proprietario) e le richieste con credenziali passano sempre dalla rete senza copie.
+
+**Avvio robusto**: se una collezione reale non arriva o non supera il controllo di integrità (conteggi del manifest), il gioco si apre con tutto il resto e un avviso indica solo i dati mancanti, con “Riprova” che richiede soltanto quelli. Il Career Wizard fa lo stesso: se l’elenco ISTAT dei comuni non è caricato lo dice (caricamento, errore con “Riprova”) e non accetta comuni scritti a mano. Solo il manifest dei dati reali, necessario ai controlli di integrità, resta indispensabile (schermata di errore con “Riprova”). Su telefono il wizard sta sopra la barra di navigazione, che resta nascosta finché è aperto.
 
 ## Documento dati del 24/09/2026
 
@@ -313,11 +315,14 @@ All’apertura vengono caricati manifest e partiti/movimenti. Politici, gruppi e
 
 ```sh
 npm run check:ui          # menu, impostazioni, nuova partita, pagine, poteri, archivio, salvataggi, loghi, tooltip, identità del partito
-npm run check:first-run   # primo avvio: benvenuto e account prima della prima carriera, tour saltabile una volta, guida, conferme del gioco
+npm run check:first-run   # primo avvio: benvenuto e account prima della prima carriera, servizio account verificato davvero (non raggiungibile: “Inizia senza account” subito), avvio locale persistente, tour saltabile una volta, guida, conferme del gioco
+npm run check:boot        # avvio con collezioni reali mancanti o danneggiate: il gioco si apre, avviso solo per ciò che manca, “Riprova”
+npm run check:service-worker # sw.js: in cache solo le GET dei file del gioco, mai POST/PUT/DELETE né l’API
 npm run check:elections   # esiti elettorali vari e non automatici, ballottaggio, soglie, preferenze, conseguenze, varietà delle campagne, strategie
 npm run check:sections    # progressione non automatica (probabilità ed esiti), percorsi di carriera, agenda datata, schede di Carriera, Partito e Agenda
 npm run check:hemicycle   # commissioni reali, emiciclo Camera/Senato, colori e ordine dei gruppi, voti dei singoli coerenti coi totali, voto segreto, fiducia
 npm run check:territory   # comitati Regione → Provincia → Comune, stati, azioni, crisi, effetti su campagna/voto/promozioni; editor dei loghi
+npm run check:mobile-start # Chrome a 375 px con tocchi reali: primo avvio, boot con collezioni fallite, API account non raggiungibile, avvio locale persistente, wizard sopra la navigazione mobile (footer e “Inizia carriera” cliccabili, anche da “Altro”), ISTAT non caricato, service worker (saltato se Chrome manca)
 npm run check:responsive  # Chrome senza interfaccia: 33 viste e 4 finestre a 375/768/1280 px senza scorrimento orizzontale, elementi fuori schermo, contenuti nascosti o testi troncati (saltato se Chrome manca; CHROME_PATH per indicarlo)
 npm run check:government  # 34 temi, bilancio, territori, cittadini, sicurezza, Presidente del Consiglio, difficoltà
 npm run check:events      # eventi procedurali: condizioni, cooldown, rarità, esclusività, varianti, catene

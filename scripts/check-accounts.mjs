@@ -94,6 +94,20 @@ globalThis.location = new URL(`${ORIGIN}/`);
 globalThis.fetch = async (url, init = {}) => { requests.push({ url: String(url), body: init.body ?? null }); return worker.fetch(new Request(url, init), env); };
 const client = await import('../src/data/repositories/account-sync.js');
 assert.equal(client.accountApiBase(), ORIGIN);
+// The game asks whether the service really answers (an address alone is not enough).
+result = await api('/api/account/status');
+assert.ok(result.status === 200 && result.body.ok === true && result.headers.get('content-type').includes('application/json'), 'Il Worker risponde allo stato del servizio account, senza sessione.');
+assert.equal(await client.probeAccountService(), 'available', 'Servizio account raggiungibile riconosciuto.');
+const realFetch = globalThis.fetch;
+globalThis.fetch = async () => { throw new TypeError('Failed to fetch'); };
+assert.equal(await client.probeAccountService(), 'unreachable', 'Nessuna risposta: servizio non raggiungibile.');
+globalThis.fetch = async () => new Response('Not found', { status: 404, headers: { 'content-type': 'text/plain' } });
+assert.equal(await client.probeAccountService(), 'unreachable', 'Una pagina che non è il servizio (sito statico senza Worker): non raggiungibile.');
+globalThis.fetch = async () => new Response(JSON.stringify({ error: 'Gli account non sono ancora configurati su questo sito.' }), { status: 503, headers: { 'content-type': 'application/json' } });
+assert.equal(await client.probeAccountService(), 'unreachable', 'Servizio senza database (503): non raggiungibile.');
+globalThis.fetch = (url, init = {}) => new Promise((resolve, reject) => init.signal?.addEventListener('abort', () => reject(Object.assign(new Error('aborted'), { name: 'AbortError' }))));
+assert.equal(await client.probeAccountService({ timeout: 30 }), 'unreachable', 'Servizio che non risponde entro il tempo: non raggiungibile.');
+globalThis.fetch = realFetch;
 globalThis.localStorage = deviceA;
 await assert.rejects(client.register('ab', 'password-lunga'), /Nome utente/);
 await assert.rejects(client.register('giocatrice', 'corta'), /almeno 8/);
@@ -124,5 +138,6 @@ await assert.rejects(client.listCloudSaves(), /Sessione/, 'Dopo l’uscita serve
 // Local-only copies of the game (localhost without the API): the client says so instead of failing silently.
 globalThis.location = new URL('http://localhost:8080/');
 assert.equal(client.accountApiBase(), null);
+assert.equal(await client.probeAccountService(), 'none', 'Senza indirizzo del servizio: nessun account da offrire.');
 await assert.rejects(client.login('giocatrice', 'una-password-lunga'), /sito pubblicato/);
 console.log('Account verificati: registrazione e accesso con password mai inviata in chiaro (PBKDF2 nel browser + hash con sale sul server), sessioni a token conservate come hash, uscita, tentativi limitati, salvataggi online compressi con revisioni e protezione dai conflitti tra dispositivi, limiti di dimensione e numero, isolamento tra account, CORS per GitHub Pages, persistenza dopo un nuovo deploy, carriera recuperata su un secondo dispositivo.');

@@ -134,6 +134,8 @@ async function handleAccounts(request, env, url) {
   if (!db) return json(request, { error: 'Gli account non sono ancora configurati su questo sito.' }, 503);
   await ensureSchema(db);
   const path = url.pathname.replace(/\/+$/, '');
+  // The game asks whether the service answers before offering the account (no data, no session needed).
+  if (path === '/api/account/status' && request.method === 'GET') return json(request, { ok: true, service: 'accounts' });
   if ((path === '/api/account/register' || path === '/api/account/login') && request.method === 'POST') {
     const guard = await accountGuard(db, request, path.endsWith('register') ? 'registrazione' : 'accesso');
     if (guard.blocked) return json(request, { error: 'Troppi tentativi: riprova tra 15 minuti.' }, 429);

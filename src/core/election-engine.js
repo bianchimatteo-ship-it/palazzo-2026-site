@@ -1,4 +1,4 @@
-import { ELECTION_MODELS, EUROPEAN_CONSTITUENCIES, EUROPEAN_THRESHOLD, OUTCOME_LABELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20260926-6';
+import { ELECTION_MODELS, EUROPEAN_CONSTITUENCIES, EUROPEAN_THRESHOLD, OUTCOME_LABELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20260926-7';
 
 const clamp = (value,min=0,max=100) => Math.min(max,Math.max(min,value));
 const rounded = value => Math.round(value*100)/100;

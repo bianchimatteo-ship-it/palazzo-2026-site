@@ -20,17 +20,20 @@ globalThis.confirm = () => { throw new Error('Il gioco non deve usare il confirm
 // The forms of the stand-in DOM carry their values.
 globalThis.FormData = class { constructor(form) { return new Map(Object.entries(form.values ?? {})); } };
 
-// Real JSON files from disk; the account service is a stand-in that records the calls.
+// Real JSON files from disk; the account service is a stand-in that records the calls (it answers in JSON, as the
+// Worker does). The check of the service at the opening (/api/account/status) is recorded apart.
 const calls = [];
+const probes = [];
 let serviceDown = false;
 globalThis.fetch = async (url, options = {}) => {
   const href = String(url);
   if (href.startsWith('https://')) {
-    if (serviceDown) throw new TypeError('fetch failed');
     const path = new URL(href).pathname;
-    calls.push(path);
-    const body = ['/api/account/register', '/api/account/login'].includes(path) ? { username: JSON.parse(options.body).username, token: 'token-di-prova' } : path === '/api/saves' ? { saves: [] } : {};
-    return { ok: true, status: 200, json: async () => body };
+    if (path === '/api/account/status') probes.push(serviceDown ? 'down' : 'up');
+    if (serviceDown) throw new TypeError('fetch failed');
+    if (path !== '/api/account/status') calls.push(path);
+    const body = ['/api/account/register', '/api/account/login'].includes(path) ? { username: JSON.parse(options.body).username, token: 'token-di-prova' } : path === '/api/saves' ? { saves: [] } : path === '/api/account/status' ? { ok: true, service: 'accounts' } : {};
+    return { ok: true, status: 200, headers: new Headers({ 'content-type': 'application/json; charset=utf-8' }), json: async () => body };
   }
   const body = await readFile(fileURLToPath(new URL(href)), 'utf8');
   return { ok: true, status: 200, json: async () => JSON.parse(body) };
@@ -77,6 +80,10 @@ const WELCOME = 'Prima di iniziare: il tuo account';
 let game = open();
 let page = game.root.innerHTML;
 assert.ok(page.includes('main-menu') && page.includes('PRIMO AVVIO') && page.includes(WELCOME), 'Al primo avvio senza account parte il benvenuto.');
+await tick();
+page = game.root.innerHTML;
+assert.deepEqual(probes, ['up'], 'All’apertura il servizio account viene davvero interrogato (non basta un indirizzo).');
+assert.ok(!page.includes('data-menu-action="start-local"'), 'Con il servizio raggiungibile l’account viene prima della carriera.');
 for (const text of ['Perché serve', 'Salvataggi e sincronizzazione', 'I salvataggi online', 'Nessuna perdita', 'non si perdono', 'Crea un account', 'Ho già un account: accedi']) assert.ok(page.includes(text), `Benvenuto: manca «${text}».`);
 page = await game.click({ menu: 'nuova' });
 assert.ok(page.includes(WELCOME) && page.includes('Per iniziare una nuova carriera crea il tuo account o accedi') && !page.includes('career-wizard'), 'Senza account la nuova carriera passa prima dall’account.');
@@ -131,13 +138,35 @@ assert.ok(!game.root.innerHTML.includes('COME FUNZIONA') && !game.root.innerHTML
 // ---------- 6. account service unreachable: the game can still start in this browser ----------
 mem.clear(); serviceDown = true;
 game = open();
+await tick();
+page = game.root.innerHTML;
+assert.ok(page.includes(WELCOME) && page.includes('Il servizio account non risponde') && page.includes('data-menu-action="start-local"') && page.includes('data-account-action="probe"'), 'Servizio account non raggiungibile all’apertura: “Inizia senza account” (e “Riprova”) subito, senza passare dai moduli.');
+assert.ok(!page.includes('data-account-mode="register"'), 'Con il servizio non raggiungibile non si resta bloccati sulla registrazione.');
+page = await game.click({ menu: 'nuova' });
+assert.ok(page.includes(WELCOME) && page.includes('data-menu-action="start-local"') && !page.includes('career-wizard') && !page.includes('data-account-form'), 'Con il servizio non raggiungibile “Nuova carriera” propone subito “Inizia senza account”, senza moduli bloccanti.');
+serviceDown = false;
+page = await game.click({ accountAction: 'probe' });
+assert.ok(page.includes('data-account-mode="register"') && !page.includes('Il servizio account non risponde'), '“Riprova”: quando il servizio torna, l’account è di nuovo proposto.');
+// The service answered at the opening but stops answering during the registration.
+mem.clear();
+game = open();
+await tick();
 await game.click({ menu: 'nuova' });
 await game.click({ menu: 'account', accountMode: 'register' });
+serviceDown = true;
 page = await game.submit('register', { username: 'prova.rete', password: 'password-lunga', confirm: 'password-lunga' });
 assert.ok(page.includes('Connessione assente') && page.includes('data-menu-action="start-local"'), 'Se il servizio non risponde si può iniziare senza account.');
 page = await game.click({ menuAction: 'start-local' });
 assert.ok(page.includes('career-wizard'));
+assert.equal(flags().localStart, true, 'La scelta “Inizia senza account” viene ricordata.');
 serviceDown = false;
+// Reload after the local start: the service answers again, but the player is not sent back to the account welcome.
+const reloaded = open();
+await tick();
+assert.ok(!reloaded.root.innerHTML.includes(WELCOME), 'Avvio locale persistente: al ricaricamento non torna il benvenuto account.');
+page = await reloaded.click({ menu: 'nuova' });
+assert.ok(page.includes('career-wizard') && !page.includes(WELCOME), 'Dopo l’avvio locale “Nuova carriera” apre subito la carriera.');
+await reloaded.click({ wizardAction: 'cancel' });
 
 // ---------- 7. “Come giocare”: short sections with examples ----------
 page = await game.click({ wizardAction: 'cancel' });

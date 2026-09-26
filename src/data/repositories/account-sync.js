@@ -20,6 +20,23 @@ export function accountApiBase() {
   if (/github\.io$/.test(location.hostname)) return PRODUCTION_ORIGIN;
   return null;
 }
+// Is the account service really there? A short request to the Worker's status route: an answer from the service
+// (even “not signed in”, from an older Worker) means available; no answer, a timeout, a server error or a page that is
+// not the service (a static host without the Worker) means unreachable. Without an address: 'none'.
+export async function probeAccountService({ timeout = 5000 } = {}) {
+  const base = accountApiBase();
+  if (!base) return 'none';
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  try {
+    const response = await fetch(`${base}/api/account/status`, { signal: controller.signal, cache: 'no-store' });
+    const type = response.headers?.get?.('content-type') ?? '';
+    if (response.status >= 500 || !type.includes('application/json')) return 'unreachable';
+    await response.json();
+    return 'available';
+  } catch { return 'unreachable'; }
+  finally { clearTimeout(timer); }
+}
 export const currentAccount = () => { const value = read(ACCOUNT_KEY); return value?.username && value?.token ? value : null; };
 // Revisions known on this device, per account: they tell whether another device saved a newer version meanwhile.
 const revisionStore = () => { const value = read(REVISIONS_KEY); return value?.username === currentAccount()?.username && value?.slots ? value : { username: currentAccount()?.username ?? null, slots: {} }; };

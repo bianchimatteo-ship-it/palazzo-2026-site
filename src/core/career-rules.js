@@ -1,6 +1,6 @@
-import { CAREER_LEVELS, ITALIAN_REGIONS } from '../data/regions.js?v=20260926-6';
-import { isSelectableParty } from '../data/schema.js?v=20260926-6';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20260926-6';
+import { CAREER_LEVELS, ITALIAN_REGIONS } from '../data/regions.js?v=20260926-7';
+import { isSelectableParty } from '../data/schema.js?v=20260926-7';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20260926-7';
 
 const genders = new Set(['preferisco-non-specificare', 'donna', 'uomo', 'non-binario']);
 const orientations = new Set(['Centrismo civico', 'Progressista', 'Conservatore', 'Liberale', 'Socialdemocratico', 'Ecologista', 'Popolare', 'Autonomista', 'Altro']);
@@ -13,10 +13,13 @@ const isValidDate = value => {
 // Steps of a new career: 1 where (Regione → Comune, from the ISTAT list), 2 path, 3 party, 4 difficulty, 5 who you are.
 // territory: { units, municipalities } — when given, the comune must be one of the ISTAT list, in the chosen region.
 export const CAREER_STEPS = 5;
-export function validateCareerStep(draft, step, selectableParties, parliamentaryGroups = [], territory = null) {
+// requireTerritory: the Career Wizard needs the ISTAT list; while it is missing no comune can be accepted (never one
+// typed freely). Without it (saves, tests, careers built in code) a comune name is enough, as before.
+export function validateCareerStep(draft, step, selectableParties, parliamentaryGroups = [], territory = null, { requireTerritory = false } = {}) {
   const errors = [];
   if (step === 1) {
     if (!ITALIAN_REGIONS.includes(draft.region)) errors.push('Scegli la regione in cui iniziare.');
+    else if (requireTerritory && !territory?.municipalities?.length) errors.push('L’elenco ISTAT dei comuni non è ancora disponibile: attendi il caricamento o premi «Riprova».');
     else if (territory?.municipalities?.length) {
       const municipality = territory.municipalities.find(item => item.code === draft.municipalityCode);
       const unit = municipality ? territory.units?.find(item => item.code === municipality.unit) : null;

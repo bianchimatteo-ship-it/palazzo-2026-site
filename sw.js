@@ -1,16 +1,25 @@
 // POLITICANDO 2026 offline cache: network first, so a new build is always picked up online;
 // when the network is missing, the last copy of the page, the code and the real data is used.
-const CACHE = 'politicando-offline-v1';
+const CACHE = 'politicando-offline-v2';
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', event => {
   event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key.startsWith('politicando-') && key !== CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim()));
 });
 
+// Only the files of the game are kept: GET requests of this site, never the API (accounts, online saves, owner
+// archive: personal and always live) nor anything sent with credentials. POST, PUT, DELETE and the other methods are
+// never touched by the service worker, and the Cache API itself only stores GET.
+const cacheable = request => {
+  if (request.method !== 'GET') return false;
+  const url = new URL(request.url);
+  return url.origin === self.location.origin && !url.pathname.includes('/api/') && !request.headers.has('authorization');
+};
+
 // One copy per file: a newer build (?v=...) replaces the older one instead of piling up.
 async function remember(request, response) {
   const url = new URL(request.url);
-  if (url.searchParams.has('build-check') || !response.ok || response.type === 'opaque') return;
+  if (!cacheable(request) || url.searchParams.has('build-check') || !response.ok || response.type === 'opaque') return;
   const cache = await caches.open(CACHE);
   for (const key of await cache.keys()) {
     const old = new URL(key.url);
@@ -21,8 +30,8 @@ async function remember(request, response) {
 
 self.addEventListener('fetch', event => {
   const { request } = event;
-  const url = new URL(request.url);
-  if (request.method !== 'GET' || url.origin !== self.location.origin) return;
+  // Anything else (other methods, the API, other sites) goes straight to the network, as without the service worker.
+  if (!cacheable(request)) return;
   event.respondWith((async () => {
     try {
       const response = await fetch(request);
@@ -50,9 +59,9 @@ self.addEventListener('message', event => {
   event.waitUntil((async () => {
     const cache = await caches.open(CACHE);
     for (const href of event.data.urls) {
-      const url = new URL(href);
-      if (url.origin !== self.location.origin || await cache.match(href)) continue;
-      try { const response = await fetch(href); await remember(new Request(href), response); } catch { /* retried at the next visit */ }
+      const request = new Request(href);
+      if (!cacheable(request) || await cache.match(request)) continue;
+      try { const response = await fetch(request); await remember(request, response); } catch { /* retried at the next visit */ }
     }
   })());
 });

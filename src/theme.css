@@ -452,6 +452,22 @@ html[data-density="compact"] .hq-grid, html[data-density="compact"] .dash-grid {
   .profile-modal-backdrop .politician-profile, .modal-backdrop .report-modal { width: 100%; max-width: none; max-height: 100dvh; border-radius: 0; }
 }
 
+/* ---------- Career Wizard above the phone navigation ----------
+   The wizard is a full-screen dialog: above the tab bar (30) and the “Altro” sheet (40), below the confirmations
+   and reports (50+). While it is open the phone navigation is not shown at all, so it can neither cover nor take the
+   taps meant for the wizard's footer (“Continua”, “Inizia carriera”). */
+.wizard-backdrop { z-index: 45; }
+.app-shell.wizard-open > .mobile-tabbar, .app-shell.wizard-open > .mobile-sheet { display: none !important; }
+/* Missing real data: said once, with a new attempt (boot notice, wizard, account service). */
+.data-alert, .wizard-data-alert, .account-unreachable { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; padding: 11px 14px; border: 1px solid rgba(224, 181, 113, .45); border-radius: 8px; background: rgba(224, 181, 113, .08); color: var(--ink-2, #d8e0dc); font-size: 13px; line-height: 1.5; }
+.data-alert > span, .wizard-data-alert > span { flex: 1 1 220px; min-width: 0; }
+.data-alert > svg { flex: none; color: #e0b571; }
+.data-alert { margin: 12px 16px 0; }
+.menu-shell > .data-alert { position: relative; z-index: 2; margin: 12px auto 0; width: min(100% - 32px, 1180px); }
+.wizard-data-alert { margin-bottom: 12px; }
+.account-unreachable { flex-direction: column; align-items: flex-start; margin: 12px 0; }
+.account-unreachable small { color: var(--muted, #9aa7a1); }
+
 /* ---------- dropdowns: one readable style everywhere, laws included ---------- */
 html body select:not([multiple]) { appearance: none; -webkit-appearance: none; height: auto; min-height: 40px; max-width: 100%; padding: 8px 34px 8px 11px; border: 1px solid var(--line-strong); border-radius: 8px; background-color: var(--panel-2, #141b18); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 6 6.5l5-5' fill='none' stroke='%23c9b98f' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; color: var(--ink, #e8ece9); font: 500 13.5px/1.3 'DM Sans', sans-serif; text-overflow: ellipsis; white-space: nowrap; overflow: hidden; cursor: pointer; }
 html body select:not([multiple]):hover { border-color: #5d6d65; }
