@@ -73,7 +73,11 @@ assert.equal(new Set(db.politicalFigures.map(item => norm(item.fullName))).size,
 assert.equal(db.politicians.length, 604, 'I 604 parlamentari restano gli stessi, senza duplicati.');
 
 // ---------- §6 lists → parties, and the party of each politician ----------
-const list = name => db.electoralLists.find(item => item.officialName === name);
+const list = name => db.electoralLists.find(item => item.officialName === name || item.registeredName === name);
+// Names in normal capitalisation (never all capitals); the form of the source stays in registeredName.
+assert.ok(db.politicians.every(item => /\p{Ll}/u.test(item.fullName)) && db.electoralLists.every(item => /\p{Ll}/u.test(item.officialName)) && db.parties.every(item => /\p{Ll}/u.test(item.officialName) || !/\p{L}{2}/u.test(item.officialName)), 'Nessun nome politico tutto in maiuscolo.');
+assert.equal(db.politicians.find(item => item.registeredName === "ALESSANDRO URZI'")?.fullName, 'Alessandro Urzì', 'Il nome della fonte resta in registeredName; l’apostrofo usato come accento diventa accento.');
+assert.equal(list("FRATELLI D'ITALIA CON GIORGIA MELONI").officialName, "Fratelli d'Italia con Giorgia Meloni");
 assert.equal(list("FRATELLI D'ITALIA CON GIORGIA MELONI").partyId, 'party-registro-p1-2014-04-ir');
 assert.equal(list('FORZA ITALIA').partyId, 'party-registro-p1-2015-20-ir');
 assert.equal(list('AZIONE - ITALIA VIVA - CALENDA').partyId, null, 'Una lista di due partiti non diventa iscrizione a uno solo.');
@@ -107,11 +111,11 @@ assert.ok(html.includes('src="https://example.org/pd.svg"') && html.includes('pe
 html = renderPoliticianArchive({ ...filters, politicianQuery: 'ziello' }, { logoFor });
 assert.ok(html.includes('futuro-nazionale.png'), 'Il logo verificato di Futuro Nazionale.');
 html = renderPoliticianArchive({ ...filters, politicianQuery: person(byList.id).fullName.toLowerCase() }, { logoFor });
-assert.ok(html.includes('class="catalog-mark"') && html.includes('Partito non documentato') && html.includes('Lista 2022: MOVIMENTO 5 STELLE'), 'Senza partito documentato: iniziale della Camera; la lista 2022 resta indicata a parte.');
+assert.ok(html.includes('class="catalog-mark"') && html.includes('Partito non documentato') && html.includes('Lista 2022: Movimento 5 Stelle'), 'Senza partito documentato: iniziale della Camera; la lista 2022 resta indicata a parte.');
 html = renderPoliticianArchive({ ...filters, politicianQuery: senator.fullName.toLowerCase() }, { logoFor });
 assert.ok(html.includes('class="catalog-mark"'), 'Senza partito documentato resta l’iniziale della Camera.');
 html = renderPoliticianArchive({ ...filters, politicianQuery: '', politicianParty: 'party-registro-p1-2015-29-ir' }, { logoFor });
-assert.ok(html.includes('Elly Schlein'.toUpperCase()) || html.includes('ELLY SCHLEIN'), 'Filtro per partito collegato.');
+assert.ok(html.includes('Elly Schlein') && !html.includes('ELLY SCHLEIN'), 'Filtro per partito collegato; nomi in maiuscolo normale, mai tutto maiuscolo.');
 html = renderPoliticianProfile('camera-xix-deputato-308930', { logoFor });
 assert.ok(html.includes('pd.svg') && html.includes('centro-sinistra'), 'La scheda mostra logo e collocazione del partito.');
 const catalog = { partyQuery: '', partyType: 'all', partyPresence: 'all', partyLevel: 'all', partyRegion: 'all', partyStatus: 'all', partyElection: 'all', partySort: 'name', partyPage: 20 };

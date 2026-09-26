@@ -2,7 +2,8 @@
 // retained for exports and validation, but the browser never downloads it.
 export const REAL_DATA_ASSET_VERSION = '20260926-4';
 
-import { applyAdminOverrides } from './admin-store.js?v=20260926-5';
+import { applyAdminOverrides } from './admin-store.js?v=20260926-6';
+import { displayCase, withDisplayNames } from './name-case.js?v=20260926-6';
 
 export let realDatabase = Object.freeze({});
 // Untouched copies of what the files contain, so owner overrides can be re-layered or reverted.
@@ -99,6 +100,8 @@ export async function loadRealCollections(collections = []) {
         if (Number.isInteger(expected) && records.length !== expected) {
           throw new Error(`La collezione ${name} è incompleta (${records.length}/${expected}).`);
         }
+        // Names in capitals (as some sources publish them) are shown in normal capitalisation; the source form stays in registeredName.
+        records = withDisplayNames(name, records);
         pristine.set(name, freezeRecords(records));
         realDatabase = Object.freeze({ ...realDatabase, [name]: freezeRecords(applyAdminOverrides(name, records)) });
       }).catch(error => {
@@ -120,7 +123,9 @@ export async function loadRealDocument(name) {
   if (!loadingDocuments.has(name)) {
     loadingDocuments.set(name, fetchJson(documentFiles[name]).then(document => {
       if (!document || typeof document !== 'object' || Array.isArray(document) || document.source !== 'real') throw new Error(`Il documento ${name} non ha il formato previsto.`);
-      realDatabase = Object.freeze({ ...realDatabase, [name]: freezeDeep(document) });
+      // The lists of the 2022 map are published in capitals: shown in normal capitalisation, the source form kept.
+      const shown = name === 'electoralGeography' && Array.isArray(document.lists) ? { ...document, lists: document.lists.map(item => { const cased = displayCase(item.name); return cased === item.name ? item : { ...item, name: cased, registeredName: item.name }; }) } : document;
+      realDatabase = Object.freeze({ ...realDatabase, [name]: freezeDeep(shown) });
       return realDatabase[name];
     }).catch(error => {
       loadingDocuments.delete(name);

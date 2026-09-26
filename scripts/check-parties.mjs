@@ -129,4 +129,30 @@ console.log(`  Coalizioni: fino a ${biggest} forze, condizioni ${[...terms.entri
   console.log(`  Campagne: rivali ${Object.entries(counts).map(([type, count]) => `${type} ${count}`).join(', ')}; ${clashes} scontri tra rivali, ${withdrawn} ritiri con indicazione di voto.`);
 }
 
+// ---------- 6. chains of events: an event sets others in motion ----------
+{
+  const { WORLD_CHAIN_STAGES, WORLD_PARTY_EVENTS } = await import(`../src/data/simulation/polling-rules.js${v}`);
+  let world = W.createWorld({ seedText: 'catene', date: '2026-09-24', place: { region: 'Lazio', municipality: 'Roma' }, playerParty: null, forces, realPoll });
+  let date = '2026-09-24', developments = 0, roots = 0, shocks = 0;
+  const branches = new Set(), regions = new Set();
+  for (let week = 2; week <= 156; week++) {
+    date = addDays(date, 7);
+    const out = W.advanceWorld(world, { date, week, stats: {}, society: society(44) });
+    world = out.world;
+    shocks += out.shocks.length;
+    for (const shock of out.shocks) if (shock.region) regions.add(shock.region);
+    assert.ok((world.chains ?? []).length <= 6, 'Poche vicende aperte alla volta.');
+    for (const event of world.events.filter(item => item.week === week && item.chain)) {
+      if (event.chain.step) { developments++; branches.add(event.title.replace(/ (in|a|vicino a|per|da) .*$/, '')); assert.ok(event.chain.rootTitle, 'Ogni sviluppo sa da quale vicenda nasce.'); }
+      else roots++;
+      if (event.eventId === 'partito-inchiesta') assert.equal(world.parties.find(item => item.id === event.partyId)?.refSource, 'simulation', 'Le inchieste riguardano solo forze nate nella partita, mai partiti reali.');
+    }
+  }
+  assert.ok(developments >= 10 && branches.size >= 5, `Gli eventi hanno sviluppi diversi nelle settimane successive (${developments} sviluppi, ${branches.size} esiti).`);
+  assert.ok(shocks >= 20 && regions.has('Lazio'), 'Gli eventi cambiano il Paese: indicatori, economia, fiducia (anche nella regione del giocatore).');
+  for (const stage of Object.values(WORLD_CHAIN_STAGES)) for (const next of stage.next ?? []) assert.ok(!next.id || WORLD_CHAIN_STAGES[next.id], `Sviluppo sconosciuto: ${next.id}`);
+  assert.ok(WORLD_PARTY_EVENTS.filter(event => /inchiesta/i.test(event.title)).every(event => event.target === 'simulated'), 'Nessuna inchiesta attribuita a un partito reale.');
+  console.log(`  Catene di eventi in tre anni: ${roots} eventi, ${developments} sviluppi (${branches.size} esiti diversi), ${shocks} effetti sul Paese.`);
+}
+
 console.log('Partiti e alleanze verificati: coalizioni di più forze trattate con richieste, veti e concessioni, rotture e uscite, obiettivi e agende che cambiano e arrivano in Aula, nuove forze senza tetto fisso, coalizioni elettorali coerenti con quelle trattate, campagne con più avversari che si muovono da soli.');

@@ -1,9 +1,9 @@
 // Money of the career and of the party: balance, flows, budget, reports and sustainability.
-import { BUDGET_LINES, FINANCE_CATEGORIES, financeOutlook, hasAsset, INVESTMENTS } from '../core/finance-engine.js?v=20260926-5';
-import { isPartyLeader, PARTY_PRIORITIES, TREASURY_LABELS, treasuryOutlook } from '../core/organization-engine.js?v=20260926-5';
-import { artTile } from './visuals.js?v=20260926-5';
-import { illustration } from './illustrations.js?v=20260926-5';
-import { breakdown, esc, euro, EXPENSE_COLOR, flowChart, INCOME_COLOR, lineChart, num, SERIES, signed, sparkline, stateBadge } from './charts.js?v=20260926-5';
+import { BUDGET_LINES, FINANCE_CATEGORIES, financeOutlook, hasAsset, INVESTMENTS } from '../core/finance-engine.js?v=20260926-6';
+import { isPartyLeader, PARTY_PRIORITIES, TREASURY_LABELS, treasuryOutlook } from '../core/organization-engine.js?v=20260926-6';
+import { artTile } from './visuals.js?v=20260926-6';
+import { illustration } from './illustrations.js?v=20260926-6';
+import { breakdown, esc, euro, EXPENSE_COLOR, flowChart, INCOME_COLOR, lineChart, num, SERIES, signed, sparkline, stateBadge } from './charts.js?v=20260926-6';
 
 const STATUS_KIND = { solida: 'solida', calo: 'calo', rischio: 'rischio', crisi: 'crisi' };
 

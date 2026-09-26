@@ -5,10 +5,10 @@
 // it needs or puts the question of confidence; the bills of the opposition often never reach the floor. The player sits
 // in one Chamber: speaks, amends and casts a personal vote on every bill there — and the vote has consequences.
 // Everything here is simulation (source: simulation); the groups of the real XIX legislature keep their real reference.
-import { DATA_SOURCES } from '../data/schema.js?v=20260926-5';
-import { AREA_BY_ID, DECREE_RULES, FINANCING, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260926-5';
-import { amendLawPolicy, campOfAxis, cohesiveShare, governingGroupIds, groupProfile, parliamentInternals } from './parliament-engine.js?v=20260926-5';
-import { groupLine, splitGroupVote } from './vote-engine.js?v=20260926-5';
+import { DATA_SOURCES } from '../data/schema.js?v=20260926-6';
+import { AREA_BY_ID, DECREE_RULES, FINANCING, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260926-6';
+import { amendLawPolicy, campOfAxis, cohesiveShare, governingGroupIds, groupProfile, parliamentInternals } from './parliament-engine.js?v=20260926-6';
+import { groupLine, splitGroupVote } from './vote-engine.js?v=20260926-6';
 
 const { getGroup, allGroups, record, replaceLaw, demandFor, contentAffinity, setRelation } = parliamentInternals;
 const SIM = DATA_SOURCES.SIMULATION;

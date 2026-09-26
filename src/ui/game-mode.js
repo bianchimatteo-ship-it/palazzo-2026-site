@@ -1,24 +1,24 @@
-import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20260926-5';
-import { playerRoles } from '../core/roles.js?v=20260926-5';
-import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20260926-5';
-import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20260926-5';
-import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260926-5';
-import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20260926-5';
-import { careerLevelLabel } from '../data/regions.js?v=20260926-5';
-import { formatDate } from '../core/time.js?v=20260926-5';
-import { renderBarometerPanel } from './polls-mode.js?v=20260926-5';
-import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20260926-5';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-5';
-import { societyMood } from '../core/society-engine.js?v=20260926-5';
-import { financeOutlook } from '../core/finance-engine.js?v=20260926-5';
-import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20260926-5';
-import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20260926-5';
-import { renderFinanceCard } from './finance-mode.js?v=20260926-5';
-import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20260926-5';
-import { stateBadge } from './charts.js?v=20260926-5';
-import { illustration } from './illustrations.js?v=20260926-5';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260926-5';
-import { regionPriorities } from '../core/society-engine.js?v=20260926-5';
+import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20260926-6';
+import { playerRoles } from '../core/roles.js?v=20260926-6';
+import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20260926-6';
+import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20260926-6';
+import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260926-6';
+import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20260926-6';
+import { careerLevelLabel } from '../data/regions.js?v=20260926-6';
+import { formatDate } from '../core/time.js?v=20260926-6';
+import { renderBarometerPanel } from './polls-mode.js?v=20260926-6';
+import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20260926-6';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-6';
+import { societyMood } from '../core/society-engine.js?v=20260926-6';
+import { financeOutlook } from '../core/finance-engine.js?v=20260926-6';
+import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20260926-6';
+import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20260926-6';
+import { renderFinanceCard } from './finance-mode.js?v=20260926-6';
+import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20260926-6';
+import { stateBadge } from './charts.js?v=20260926-6';
+import { illustration } from './illustrations.js?v=20260926-6';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260926-6';
+import { regionPriorities } from '../core/society-engine.js?v=20260926-6';
 
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -313,12 +313,15 @@ const NEWS_FILTERS = [['tutto', 'Tutto'], ['cronaca', 'Cronaca'], ['media', 'Tit
 export function renderNewsroom(state, filter = 'tutto') {
   const game = state.game;
   const items = [
-    ...(state.world?.events ?? []).map(event => ({ kind: 'cronaca', week: event.week, icon: event.icon ?? 'news', tone: event.tone, title: event.title, body: event.body, label: 'Cronaca politica' })),
+    ...(state.world?.events ?? []).map(event => ({ kind: 'cronaca', week: event.week, icon: event.icon ?? 'news', tone: event.tone, title: event.title, body: event.body, label: event.chain?.step ? `Sviluppi · ${event.chain.rootTitle ?? 'vicenda in corso'}` : 'Cronaca politica' })),
     ...(state.society?.media?.coverage ?? []).map(item => ({ kind: 'media', week: item.week, icon: 'news', tone: item.tone, title: item.headline, body: '', label: item.outlet })),
     ...game.log.map(entry => ({ kind: 'diario', week: entry.week, icon: entry.kind === 'partito' ? 'flag' : entry.kind === 'conseguenza' ? 'route' : 'pin', tone: entry.tone, title: entry.title, body: (entry.lines ?? []).slice(0, 2).join(' · '), label: 'Diario' }))
   ].filter(item => filter === 'tutto' || item.kind === filter).sort((a, b) => b.week - a.week).slice(0, 10);
   const tabs = `<div class="segmented news-filter" role="group" aria-label="Filtra le notizie">${NEWS_FILTERS.map(([id, label]) => `<button data-news-filter="${id}" class="${filter === id ? 'active' : ''}" aria-pressed="${filter === id}">${label}</button>`).join('')}</div>`;
-  return `${tabs}<div class="newsroom">${items.map(item => `<article class="news-item tone-${esc(item.tone ?? 'neutral')}">${glyph(item.icon, 16)}<div><span class="news-meta">${esc(item.label)} · S${item.week}</span><strong>${esc(item.title)}</strong>${item.body ? `<small>${esc(item.body)}</small>` : ''}</div></article>`).join('') || '<p class="quiet-copy">Nessuna notizia per questo filtro.</p>'}</div><p class="poll-footnote">Cronaca, titoli e testate sono simulati: nessuna dichiarazione o fatto è attribuito a persone reali.</p>`;
+  // Stories still open: something will follow, the outcome is not known in advance.
+  const open = [...new Map((state.world?.chains ?? []).map(chain => [chain.root, chain])).values()].filter(chain => chain.rootTitle);
+  const threads = open.length && filter !== 'diario' && filter !== 'media' ? `<p class="news-threads">${glyph('route', 14)} Vicende aperte: ${open.slice(0, 4).map(chain => `<b>${esc(chain.rootTitle)}</b>`).join(' · ')} — gli sviluppi arrivano nelle prossime settimane.</p>` : '';
+  return `${tabs}${threads}<div class="newsroom">${items.map(item => `<article class="news-item tone-${esc(item.tone ?? 'neutral')}">${glyph(item.icon, 16)}<div><span class="news-meta">${esc(item.label)} · S${item.week}</span><strong>${esc(item.title)}</strong>${item.body ? `<small>${esc(item.body)}</small>` : ''}</div></article>`).join('') || '<p class="quiet-copy">Nessuna notizia per questo filtro.</p>'}</div><p class="poll-footnote">Cronaca, titoli e testate sono simulati: nessuna dichiarazione o fatto è attribuito a persone reali.</p>`;
 }
 
 // The career timeline: every milestone, week by week; what happened before shapes what comes next.

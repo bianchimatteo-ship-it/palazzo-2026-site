@@ -1,7 +1,7 @@
 // The full report of a vote, shared by the electoral centre and the campaign page.
-import { formatDate } from '../core/time.js?v=20260926-5';
-import { glyph } from './visuals.js?v=20260926-5';
-import { arrow, badge, bar, card, empty, esc, kpi, num, pct, signed, table } from './sections-kit.js?v=20260926-5';
+import { formatDate } from '../core/time.js?v=20260926-6';
+import { glyph } from './visuals.js?v=20260926-6';
+import { arrow, badge, bar, card, empty, esc, kpi, num, pct, signed, table } from './sections-kit.js?v=20260926-6';
 
 const EVENT_LABELS = { 'dopo-voto-vittoria': 'Le prime mosse dopo il voto', 'dopo-voto-sconfitta': 'Come ripartire dopo il voto', 'giunta-offerta': 'La giunta valuta il tuo nome', 'giunta-composizione': 'La scelta della tua giunta', 'capogruppo-opposizione': 'Chi guida l’opposizione', 'ricorso-elettorale': 'Un possibile ricorso', 'resa-dei-conti': 'Resa dei conti nel partito', 'consultazioni-governo': 'La squadra di governo', 'impegni-elettorali': 'Gli impegni presi in campagna' };
 const STAT_NAMES = { reputation: 'Reputazione', influence: 'Influenza', notoriety: 'Notorietà', popularity: 'Popolarità' };

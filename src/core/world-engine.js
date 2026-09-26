@@ -1,7 +1,7 @@
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-5';
-import { CHART_SLOTS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20260926-5';
-import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20260926-5';
-import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20260926-5';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-6';
+import { CHART_SLOTS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20260926-6';
+import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20260926-6';
+import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20260926-6';
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
 // A party enters with its real identity only (id, name, abbreviation, documented collocazione); its starting weight
@@ -590,6 +590,75 @@ function applyWorldEvent(world, event, date, parliament) {
   const moved = world.parties.filter(item => !item.isPlayer && inResults(item) && ((event.executive && item.strategy === 'governista') || (event.challengers && item.strategy === 'opposizione'))).map(item => item.label);
   if (moved.length) lines.push(`Effetti su chi ${event.executive && event.challengers ? 'sostiene o contrasta' : event.executive ? 'sostiene' : 'contrasta'} l’esecutivo: ${moved.slice(0, 3).join(', ')}`);
   return logEvent(world, date, { kind: 'evento', eventId: event.id, icon: event.icon, scope: event.scope, title: fill(event.title, world.place), body: fill(event.body, world.place), lines, tone: (event.stability ?? 0) < 0 || (event.majority ?? 0) < 0 ? 'bad' : 'neutral', reactable: Boolean(event.reactable) });
+}
+
+// ---------- chains of events ----------
+// An event of the country sets other things in motion: weeks later a decree or a protest, a resignation or a motion of
+// no confidence, a party that splits or makes peace, allies who distance themselves. The chains live in world.chains
+// (a few at a time); what they do to the country (indicators, economy, trust) is handed to the society as shocks.
+const CHAIN_LIMIT = 6;
+function chainConditions(world, parliament) {
+  const government = parliament?.government;
+  const stability = government && ['active', 'crisis'].includes(government.status) ? government.stability ?? 50 : world.society?.executive?.approval ?? 48;
+  const trust = world.society?.trust ?? 48;
+  return { governoStabile: stability >= 50, governoDebole: stability < 50, fiduciaBassa: trust < 45, fiduciaAlta: trust >= 50 };
+}
+function scheduleNext(world, options, ctx, date, conditions) {
+  const pool = (options ?? []).filter(option => !option.when || conditions[option.when]);
+  if (!pool.length || (world.chains ?? []).length >= CHAIN_LIMIT) return null;
+  let pick = draw(world) * pool.reduce((sum, option) => sum + option.weight, 0);
+  const choice = pool.find(option => (pick -= option.weight) < 0) ?? pool[0];
+  if (!choice.id || !WORLD_CHAIN_STAGES[choice.id]) return null;
+  const [low, high] = choice.weeks ?? [2, 3];
+  const weeks = low + Math.floor(draw(world) * (high - low + 1));
+  const chain = { id: `catena-${world.week}-${hash(`${choice.id}|${date}|${ctx.partyId ?? ''}`) % 99991}`, stageId: choice.id, due: advanceDays(date, weeks * 7), step: (ctx.step ?? 0) + 1, root: ctx.root, rootTitle: ctx.rootTitle, partyId: ctx.partyId ?? null, source: SIM };
+  world.chains = [...(world.chains ?? []), chain];
+  return chain;
+}
+const fillParty = (text, party) => String(text).replace(/\{party\}/g, party?.label ?? 'un partito');
+function pushShock(world, shock) {
+  if (!shock) return;
+  world.pendingShocks = [...(world.pendingShocks ?? []), { ...shock, region: shock.region === 'home' ? world.place?.region ?? null : shock.region ?? null }];
+}
+// One stage of a chain (or the start of a party event): the effects of a world event, plus the force it concerns.
+function applyStage(world, stage, id, ctx, date, parliament) {
+  const party = ctx.partyId ? world.parties.find(item => item.id === ctx.partyId && item.active) : null;
+  if (ctx.partyId && !party) return null;
+  const title = fillParty(stage.title, party);
+  const entry = applyWorldEvent(world, { ...stage, id, title, body: fillParty(stage.body, party) }, date, parliament);
+  if (party) {
+    if (stage.partyDelta) addEffect(world, { partyId: party.id, delta: stage.partyDelta, remaining: stage.duration ?? 3, cause: id, label: fill(title, world.place) });
+    if (stage.partyCohesion) party.cohesion = clamp(Math.round((party.cohesion ?? 60) + stage.partyCohesion), 0, 100);
+    const alliance = world.alliances.find(item => item.status === 'active' && item.partyIds.includes(party.id) && item.partyIds.length >= 2);
+    if (alliance && stage.alliance) alliance.cohesion = clamp(Math.round(alliance.cohesion + stage.alliance), 0, 100);
+    if (alliance && stage.alliesDelta) for (const other of alliance.partyIds.filter(item => item !== party.id)) addEffect(world, { partyId: other, delta: stage.alliesDelta, remaining: stage.duration ?? 3, cause: id });
+    if (stage.partyDelta) entry.lines = [...entry.lines, `${party.label} ${stage.partyDelta > 0 ? '+' : ''}${stage.partyDelta}`];
+    if (alliance && stage.alliance) entry.lines = [...entry.lines, `Coesione di ${alliance.label}: ${alliance.cohesion}`];
+  }
+  pushShock(world, stage.shock);
+  Object.assign(entry, { chain: { root: ctx.root, rootTitle: ctx.rootTitle, step: ctx.step ?? 0 }, partyId: party?.id ?? null });
+  return entry;
+}
+// The force a party event concerns: inquiries only for forces born in the game; divisions or choices for any force.
+function eventTarget(world, event) {
+  const pool = world.parties.filter(item => item.active && !item.isPlayer && inResults(item) && item.baseline >= 1.5 && (event.target !== 'simulated' || item.refSource === SIM));
+  if (!pool.length) return null;
+  let pick = draw(world) * pool.reduce((sum, item) => sum + Math.sqrt(item.baseline), 0);
+  return pool.find(item => (pick -= Math.sqrt(item.baseline)) < 0) ?? pool[0];
+}
+function advanceChains(world, date, parliament, reactions, lines) {
+  const conditions = chainConditions(world, parliament);
+  const due = (world.chains ?? []).filter(chain => chain.due <= date).slice(0, 2);
+  world.chains = (world.chains ?? []).filter(chain => !due.includes(chain));
+  for (const chain of due) {
+    const stage = WORLD_CHAIN_STAGES[chain.stageId];
+    if (!stage) continue;
+    const entry = applyStage(world, stage, chain.stageId, chain, date, parliament);
+    if (!entry) continue;
+    lines.push(`Sviluppi: ${entry.title}`);
+    if (stage.reactable) reactions.push({ eventId: chain.stageId, title: entry.title, body: entry.body });
+    scheduleNext(world, stage.next, chain, date, conditions);
+  }
 }
 
 // A party in crisis loses voters for good: close forces outside the polls pick up part of them, and get noticed.
@@ -1187,15 +1256,25 @@ export function advanceWorld(input, { date, week, stats = {}, deltas = {}, game 
   const offers = partyAgents(world, date, { approval, player, playerIsLeader, playerStrategy: player?.strategy ?? null });
   offers.push(...allianceDynamics(world, date, { nationalVoteIn, player, playerIsLeader }));
   partyLife(world, date, society?.trust ?? world.society?.trust ?? 48);
+  // What the events of the previous weeks set in motion comes due; then (often) something new happens.
+  advanceChains(world, date, parliament, reactions, lines);
   if (draw(world) < 0.55) {
-    const pool = WORLD_EVENTS.filter(event => event.id !== world.lastEventId);
+    const running = new Set((world.chains ?? []).map(chain => chain.root));
+    const pool = [...WORLD_EVENTS, ...WORLD_PARTY_EVENTS].filter(event => event.id !== world.lastEventId && !running.has(event.id));
     const total = pool.reduce((sum, event) => sum + event.weight, 0);
     let pick = draw(world) * total;
     const event = pool.find(item => (pick -= item.weight) < 0) ?? pool[0];
-    world.lastEventId = event.id;
-    const entry = applyWorldEvent(world, event, date, parliament);
-    lines.push(`Cronaca: ${entry.title}`);
-    if (event.reactable) reactions.push({ eventId: event.id, title: entry.title, body: entry.body });
+    const target = event.target ? eventTarget(world, event) : null;
+    if (!event.target || target) {
+      world.lastEventId = event.id;
+      const ctx = { root: event.id, rootTitle: null, partyId: target?.id ?? null, step: 0 };
+      const entry = event.target ? applyStage(world, event, event.id, ctx, date, parliament) : applyWorldEvent(world, event, date, parliament);
+      ctx.rootTitle = entry.title;
+      if (!event.target) { pushShock(world, WORLD_FOLLOWUPS[event.id]?.shock); entry.chain = { root: event.id, rootTitle: entry.title, step: 0 }; }
+      lines.push(`Cronaca: ${entry.title}`);
+      if (event.reactable) reactions.push({ eventId: event.id, title: entry.title, body: entry.body });
+      scheduleNext(world, event.next ?? WORLD_FOLLOWUPS[event.id]?.next, ctx, date, chainConditions(world, parliament));
+    }
   }
   // A shaky majority can lose pieces on its own.
   if (majorityShift && parliament?.government?.status === 'active' && (parliament.government.stability ?? 50) < 32 && draw(world) < 0.3) {
@@ -1214,7 +1293,9 @@ export function advanceWorld(input, { date, week, stats = {}, deltas = {}, game 
     const row = poll.results.find(item => item.partyId === player.id);
     lines.unshift(`Sondaggio ${poll.institute}: ${player.label} ${String(row.share).replace('.', ',')}% (${row.delta >= 0 ? '+' : ''}${String(row.delta).replace('.', ',')})`);
   }
-  return { world, parliament, lines, reactions, offers };
+  const shocks = world.pendingShocks ?? [];
+  delete world.pendingShocks;
+  return { world, parliament, lines, reactions, offers, shocks };
 }
 
 // Career and institutional moves ripple into polls.
@@ -1297,8 +1378,10 @@ function regionalVote(world, region, date) {
   for (const row of shares) byCamp[campOfForce(world.parties.find(item => item.id === row.partyId))] += row.share;
   // The region's own political history (the 2022 vote compared with the country) and the incumbent's advantage.
   const lean = world.localCalendar.leans?.[region] ?? {};
-  for (const camp of Object.keys(byCamp)) byCamp[camp] += (lean[camp] ?? 0) + (world.localCalendar.regions[region]?.camp === camp ? 2 : 0);
-  for (const camp of Object.keys(byCamp)) byCamp[camp] = Math.max(0, byCamp[camp] + gaussian(world) * 3);
+  // Regional votes follow the national mood less than general elections: the region's history weighs more, the outgoing
+  // president has an advantage, and the candidates make a difference of several points.
+  for (const camp of Object.keys(byCamp)) byCamp[camp] += (lean[camp] ?? 0) * 1.6 + (world.localCalendar.regions[region]?.camp === camp ? 4 : 0);
+  for (const camp of Object.keys(byCamp)) byCamp[camp] = Math.max(0, byCamp[camp] + gaussian(world) * 5);
   const ranking = Object.entries(byCamp).sort((a, b) => b[1] - a[1]);
   const [winner] = ranking[0];
   const total = ranking.reduce((sum, [, value]) => sum + value, 0) || 1;

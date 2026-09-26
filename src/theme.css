@@ -161,6 +161,8 @@ b.down { color: var(--critical-ink); }
 .newsroom { display: grid; gap: 2px; }
 .news-item { display: flex; gap: 12px; padding: 11px 4px; border-bottom: 1px solid var(--line); }
 .news-item > svg { flex: none; margin-top: 3px; color: var(--muted); }
+.news-threads { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 8px 0 4px; padding: 8px 10px; border-radius: 8px; background: var(--panel-2); color: var(--muted); font-size: 12px; line-height: 1.5; }
+.news-threads b { color: var(--ink-2); font-weight: 650; }
 .news-item.tone-good > svg { color: var(--good-ink); }
 .news-item.tone-bad > svg { color: var(--critical-ink); }
 .news-meta { display: block; color: var(--muted); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; }
