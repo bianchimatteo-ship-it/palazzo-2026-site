@@ -1,8 +1,8 @@
-import { ADMIN_FIELDS, POSITIONS, adminArchiveSummary, loadSharedArchive, overrideFor } from '../data/repositories/admin-store.js?v=20260926-3';
-import { affiliationOf, markForPerson } from './person-marks.js?v=20260926-3';
-import { hasSharedSession, sharedApiUrl } from '../data/repositories/admin-sync.js?v=20260926-3';
-import { emblem, glyph } from './visuals.js?v=20260926-3';
-import { BASIS_LABELS, electionListOf, groupAffiliation, groupLabel, politicianAffiliation } from '../data/repositories/party-links.js?v=20260926-3';
+import { ADMIN_FIELDS, POSITIONS, adminArchiveSummary, loadSharedArchive, overrideFor } from '../data/repositories/admin-store.js?v=20260926-4';
+import { affiliationOf, markForPerson } from './person-marks.js?v=20260926-4';
+import { hasSharedSession, sharedApiUrl } from '../data/repositories/admin-sync.js?v=20260926-4';
+import { emblem, glyph } from './visuals.js?v=20260926-4';
+import { BASIS_LABELS, electionListOf, groupAffiliation, groupLabel, politicianAffiliation } from '../data/repositories/party-links.js?v=20260926-4';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const norm = value => String(value ?? '').toLocaleLowerCase('it-IT').normalize('NFD').replace(/[\u0300-\u036f]/g, '');

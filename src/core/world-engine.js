@@ -1,6 +1,7 @@
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-3';
-import { CHART_SLOTS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20260926-3';
-import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20260926-3';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-4';
+import { CHART_SLOTS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20260926-4';
+import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20260926-4';
+import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20260926-4';
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
 // A party enters with its real identity only (id, name, abbreviation, documented collocazione); its starting weight
@@ -1203,6 +1204,8 @@ export function advanceWorld(input, { date, week, stats = {}, deltas = {}, game 
     logEvent(world, date, { kind: 'maggioranza', icon: 'dome', scope: 'nazionale', title: 'Cambio di maggioranza', body: entry?.text ?? 'La maggioranza perde un pezzo.', tone: 'bad' });
     lines.push(`Parlamento: ${entry?.text ?? 'cambio di maggioranza'}`);
   }
+  // Somewhere in the country the citizens vote: regions and comuni on their own calendar.
+  localVotes(world, date);
   // Forces outside the polls move too; then every force is measured against the thresholds of the survey.
   outsideDynamics(world, date, society?.trust ?? world.society?.trust ?? 48);
   presenceStep(world, date, stats);
@@ -1264,6 +1267,83 @@ export function applyWorldSignals(input, signals = [], date) {
     }
   }
   return world;
+}
+
+// ---------- local and regional votes around the country (the real calendar, simulated results) ----------
+// Every region votes five years after its last real election, every comune in its spring round: each year somewhere
+// the country votes. The results are simulated from the regional polls of the game; the winners gain momentum there.
+// A regional government can also fall and bring the vote forward. The player's own region votes in the career.
+const CAMP_LABELS = Object.freeze({ destra: 'centrodestra', sinistra: 'centrosinistra', centro: 'centro' });
+const campOfForce = force => (force?.axis ?? 0) >= 1 ? 'destra' : (force?.axis ?? 0) <= -1 ? 'sinistra' : 'centro';
+// summary: { regions: [{ region, lastElection }], municipalities: { 'YYYY-MM-DD': count } } (the last vote of the comuni).
+export function withLocalCalendar(input, summary, date) {
+  if (!input || !summary?.regions?.length || input.localCalendar?.version === 1) return input;
+  const world = copy(input);
+  const rounds = {};
+  for (const [last, count] of Object.entries(summary.municipalities ?? {})) { const next = nextMunicipalVote(last, date); rounds[next] = (rounds[next] ?? 0) + count; }
+  world.localCalendar = { version: 1, regions: Object.fromEntries(summary.regions.map(item => [item.region, { last: item.lastElection, next: nextRegionalVote(item.lastElection, date), camp: null }])), rounds, source: SIM };
+  return world;
+}
+// How each region leans compared with the country, camp by camp (points): from the real vote of 2022 (store).
+export function withRegionalLeans(input, leans) {
+  if (!input?.localCalendar || !leans || input.localCalendar.leans) return input;
+  const world = copy(input);
+  world.localCalendar.leans = leans;
+  return world;
+}
+function regionalVote(world, region, date) {
+  const shares = regionalShares(world, region);
+  const byCamp = { destra: 0, sinistra: 0, centro: 0 };
+  for (const row of shares) byCamp[campOfForce(world.parties.find(item => item.id === row.partyId))] += row.share;
+  // The region's own political history (the 2022 vote compared with the country) and the incumbent's advantage.
+  const lean = world.localCalendar.leans?.[region] ?? {};
+  for (const camp of Object.keys(byCamp)) byCamp[camp] += (lean[camp] ?? 0) + (world.localCalendar.regions[region]?.camp === camp ? 2 : 0);
+  for (const camp of Object.keys(byCamp)) byCamp[camp] = Math.max(0, byCamp[camp] + gaussian(world) * 3);
+  const ranking = Object.entries(byCamp).sort((a, b) => b[1] - a[1]);
+  const [winner] = ranking[0];
+  const total = ranking.reduce((sum, [, value]) => sum + value, 0) || 1;
+  const entry = world.localCalendar.regions[region];
+  const change = entry.camp && entry.camp !== winner;
+  entry.camp = winner;
+  for (const party of world.parties.filter(item => item.active && campOfForce(item) === winner && item.baseline >= 1)) {
+    addEffect(world, { partyId: party.id, scope: 'region', region, delta: 0.8, remaining: 26, cause: 'territori' });
+    addEffect(world, { partyId: party.id, delta: 0.12, remaining: 3, cause: 'elezioni-locali', label: `Regionali in ${region}` });
+  }
+  logEvent(world, date, { kind: 'elezioni', icon: 'ballot', scope: 'regionale', title: `Regionali in ${region}: vince il ${CAMP_LABELS[winner]}`, body: `${ranking.map(([camp, value]) => `${CAMP_LABELS[camp]} ${round1(value * 100 / total)}%`).join(', ')}${change ? '. La regione cambia colore' : ''} (risultato simulato; la data segue il calendario reale).`, tone: 'neutral' });
+}
+function localVotes(world, date) {
+  const calendar = world.localCalendar;
+  if (!calendar) return;
+  const weekAgo = advanceDays(date, -7);
+  for (const [region, entry] of Object.entries(calendar.regions)) {
+    if (region === world.place?.region) continue;
+    // A regional government falls now and then: the vote comes forward.
+    if (!entry.early && entry.next > advanceDays(date, 120) && draw(world) < 0.0004) {
+      entry.next = sundayOnOrBeforeDate(advanceDays(date, 70));
+      entry.early = true;
+      logEvent(world, date, { kind: 'elezioni', icon: 'alert', scope: 'regionale', title: `Crisi in Regione ${region}: si torna al voto`, body: `Il presidente della Regione si dimette e il consiglio si scioglie: elezioni anticipate il ${entry.next} (simulazione).`, tone: 'bad' });
+    }
+    if (entry.next > weekAgo && entry.next <= date) {
+      regionalVote(world, region, date);
+      entry.last = entry.next;
+      entry.next = nextRegionalVote(entry.last, date);
+      entry.early = false;
+    }
+  }
+  for (const [day, count] of Object.entries(calendar.rounds ?? {})) {
+    if (!(day > weekAgo && day <= date)) continue;
+    delete calendar.rounds[day];
+    const next = nextMunicipalVote(day, day);
+    calendar.rounds[next] = (calendar.rounds[next] ?? 0) + count;
+    const national = nationalShares(world);
+    const byCamp = { destra: 0, sinistra: 0, centro: 0 };
+    for (const row of national) byCamp[campOfForce(world.parties.find(item => item.id === row.partyId))] += row.share;
+    const total = Object.values(byCamp).reduce((sum, value) => sum + value, 0) || 1;
+    const won = Object.fromEntries(Object.entries(byCamp).map(([camp, value]) => [camp, Math.round(count * clamp(value / total + gaussian(world) * 0.04, 0, 1) * 0.8)]));
+    const lead = Object.entries(won).sort((a, b) => b[1] - a[1])[0][0];
+    for (const party of world.parties.filter(item => item.active && campOfForce(item) === lead && item.baseline >= 1)) addEffect(world, { partyId: party.id, delta: 0.08, remaining: 2, cause: 'elezioni-locali', label: 'Amministrative' });
+    logEvent(world, date, { kind: 'elezioni', icon: 'ballot', scope: 'locale', title: `Amministrative: si vota in ${count} comuni`, body: `Il ${CAMP_LABELS[lead]} conquista più comuni (${Object.entries(won).map(([camp, value]) => `${CAMP_LABELS[camp]} ${value}`).join(', ')}; gli altri vanno a liste civiche). Risultati simulati, calendario reale dei comuni al voto.`, tone: 'neutral' });
+  }
 }
 
 // ---------- the national cycle (legislature-engine) ----------

@@ -1,17 +1,17 @@
 // The electoral centre: next vote, calendar, context, candidacy, campaign, polls and rivals, results and history.
-import { upcomingElections } from '../core/career-engine.js?v=20260926-3';
-import { campaignSummary, strategyOf } from '../core/campaign-engine.js?v=20260926-3';
-import { CAMPAIGN_PHASES, ELECTION_MODELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20260926-3';
-import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20260926-3';
-import { formatDate } from '../core/time.js?v=20260926-3';
-import { societyMood } from '../core/society-engine.js?v=20260926-3';
-import { renderCampaignPage } from './campaign-mode.js?v=20260926-3';
-import { politicalPhase } from './game-mode.js?v=20260926-3';
-import { lineChart, SERIES } from './charts.js?v=20260926-3';
-import { glyph } from './visuals.js?v=20260926-3';
-import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, sectionTabs, signed, table, weeksLabel } from './sections-kit.js?v=20260926-3';
-import { renderElectionReport } from './election-report.js?v=20260926-3';
-import { renderNationalView } from './national-view.js?v=20260926-3';
+import { upcomingElections } from '../core/career-engine.js?v=20260926-4';
+import { campaignSummary, strategyOf } from '../core/campaign-engine.js?v=20260926-4';
+import { CAMPAIGN_PHASES, ELECTION_MODELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20260926-4';
+import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20260926-4';
+import { formatDate } from '../core/time.js?v=20260926-4';
+import { societyMood } from '../core/society-engine.js?v=20260926-4';
+import { renderCampaignPage } from './campaign-mode.js?v=20260926-4';
+import { politicalPhase } from './game-mode.js?v=20260926-4';
+import { lineChart, SERIES } from './charts.js?v=20260926-4';
+import { glyph } from './visuals.js?v=20260926-4';
+import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, sectionTabs, signed, table, weeksLabel } from './sections-kit.js?v=20260926-4';
+import { renderElectionReport } from './election-report.js?v=20260926-4';
+import { renderNationalView } from './national-view.js?v=20260926-4';
 export { renderElectionReport };
 
 export const ELECTION_TABS = Object.freeze([['panoramica', 'Panoramica'], ['nazionali', 'Nazionali'], ['candidatura', 'Candidatura'], ['campagna', 'Campagna'], ['avversari', 'Sondaggi e avversari'], ['risultati', 'Risultati'], ['storico', 'Storico']]);
@@ -93,7 +93,7 @@ function calendar(state) {
     const when = entry.status === 'upcoming' ? `tra ${weeksLabel(weeksUntil(today, entry.windowOpensAt))}` : entry.status === 'open' ? `chiude tra ${Math.max(0, daysUntil(today, entry.windowClosesAt))} giorni` : '';
     return `<li class="eh-cal-item status-${esc(entry.status)}"><span class="eh-cal-icon">${glyph(TYPE_ICONS[entry.type] ?? 'ballot', 18)}</span><div class="eh-cal-body"><div class="eh-cal-title"><strong>${esc(entry.label)}${entry.early ? ' · anticipate' : ''}</strong>${badge(label, tone)}</div><small>Candidature ${esc(shortDate(entry.windowOpensAt))} – ${esc(shortDate(entry.windowClosesAt))} · voto ${esc(formatDate(entry.electionDate))}${when ? ` · ${esc(when)}` : ''}</small></div><div class="eh-cal-action">${action}</div></li>`;
   }).join('');
-  return `<ol class="eh-calendar">${rows || '<li class="sx-empty">Nessuna elezione in calendario.</li>'}</ol><p class="sx-note">Politiche ed europee seguono il calendario reale (fine della legislatura, europee del 2029 e poi ogni cinque anni); comunali e regionali hanno cicli di gioco accelerati. Se non ti candidi, un mandato dello stesso tipo si conclude. <button class="text-link" data-section-tab="elezioni" data-section-tab-value="nazionali">Ciclo nazionale ${arrow}</button></p>`;
+  return `<ol class="eh-calendar">${rows || '<li class="sx-empty">Nessuna elezione in calendario.</li>'}</ol><p class="sx-note">Politiche ed europee seguono il calendario reale (fine della legislatura, europee del 2029 e poi ogni cinque anni); comunali e regionali seguono il calendario reale del tuo comune e della tua regione (ultimo voto da Eligendo, cinque anni di mandato), e ogni anno qualche regione o comune va al voto. Se non ti candidi, un mandato dello stesso tipo si conclude. <button class="text-link" data-section-tab="elezioni" data-section-tab-value="nazionali">Ciclo nazionale ${arrow}</button></p>`;
 }
 
 function context(state) {

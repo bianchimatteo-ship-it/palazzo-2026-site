@@ -1,22 +1,22 @@
-import { advanceDays } from './time.js?v=20260926-3';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260926-3';
-import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260926-3';
+import { advanceDays, nextMunicipalVote, nextRegionalVote } from './time.js?v=20260926-4';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260926-4';
+import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260926-4';
 import {
   APPOINTMENTS, BASE_WEEKLY_INCOME, CAREER_EVENTS, CAREER_OBJECTIVES, CURRENT_TEMPLATES, EARLY_ELECTION_AFTER_WEEKS, ELECTION_SCHEDULE,
   FORCED_EVENTS, LEGACY_RIVAL_NAMES, SIMULATED_RIVAL_LABEL, FOUNDER_RANK, LEVEL_FIRST_ELECTION, OFFICE_INCOME, PARTY_RANKS, RELATION_TEMPLATES, STAT_LABELS,
-  SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS } from '../data/simulation/career-rules.js?v=20260926-3';
-import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20260926-3';
-import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20260926-3';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-3';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260926-3';
-import { book, buyInvestment, createFinance, depositElectionFund, hasAsset, normalizeFinance, settleFinanceWeek } from './finance-engine.js?v=20260926-3';
-import { advanceOrganization, applyOrgEffects, createOrganization, isPartyLeader, normalizeOrganization, treasuryBook } from './organization-engine.js?v=20260926-3';
-import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20260926-3';
-import { HARD_CATEGORIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20260926-3';
-import { macroAreaOf } from '../data/simulation/policy-rules.js?v=20260926-3';
-import { advancementOdds, evaluateAdvancement, progressionFactors } from './progression-engine.js?v=20260926-3';
-import { advanceCommittees, applyCommitteeAction, COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, foundCommittee } from './committee-engine.js?v=20260926-3';
-import { europeanElectionDate, legislatureTerm, LEGISLATURE_RULES, sundayOnOrBefore } from './legislature-engine.js?v=20260926-3';
+  SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS } from '../data/simulation/career-rules.js?v=20260926-4';
+import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20260926-4';
+import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20260926-4';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-4';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260926-4';
+import { book, buyInvestment, createFinance, depositElectionFund, hasAsset, normalizeFinance, settleFinanceWeek } from './finance-engine.js?v=20260926-4';
+import { advanceOrganization, applyOrgEffects, createOrganization, isPartyLeader, normalizeOrganization, treasuryBook } from './organization-engine.js?v=20260926-4';
+import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20260926-4';
+import { HARD_CATEGORIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20260926-4';
+import { macroAreaOf } from '../data/simulation/policy-rules.js?v=20260926-4';
+import { advancementOdds, evaluateAdvancement, progressionFactors } from './progression-engine.js?v=20260926-4';
+import { advanceCommittees, applyCommitteeAction, COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, foundCommittee } from './committee-engine.js?v=20260926-4';
+import { europeanElectionDate, legislatureTerm, LEGISLATURE_RULES, sundayOnOrBefore } from './legislature-engine.js?v=20260926-4';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -107,6 +107,31 @@ function nationalElectionDate(game, type, today) {
   const planned = type === 'politiche' ? legislatureTerm(game.legislature ?? REAL_LEGISLATURE).plannedVote : europeanElectionDate(today);
   return planned >= earliest ? planned : earliest;
 }
+// ---------- the calendar of local votes (dates: time.js) ----------
+// The last local and regional vote of the player's place: the real ones (local-elections.json) when documented,
+// otherwise a year of the game drawn from the comune (declared as simulated).
+export function localCalendarOf(calendar, { municipalityCode = null, region = null, seed = 'comune' } = {}) {
+  const municipal = municipalityCode ? Object.entries(calendar?.municipalities ?? {}).find(([, codes]) => codes.includes(municipalityCode))?.[0] ?? null : null;
+  const regional = calendar?.regions?.find(item => item.region === region)?.lastElection ?? null;
+  return {
+    comunale: municipal ?? `${2021 + hash(`${seed}|comunali`) % 5}-05-30`, comunaleReal: Boolean(municipal),
+    regionale: regional ?? `${2021 + hash(`${region}|regionali`) % 5}-06-01`, regionaleReal: Boolean(regional)
+  };
+}
+function makeLocalElection(type, lastDate, today, place = {}, real = false) {
+  const electionDate = type === 'comunale' ? nextMunicipalVote(lastDate, advanceDays(today, 7 + ELECTION_MODELS[type].campaignDays)) : nextRegionalVote(lastDate, advanceDays(today, 7 + ELECTION_MODELS[type].campaignDays));
+  return { ...makeElection(type, advanceDays(electionDate, -ELECTION_MODELS[type].campaignDays), place), electionDate, calendar: real ? 'reale' : 'simulato', lastVote: lastDate };
+}
+// Upcoming local votes of a career moved to the calendar of its place (a save made before the calendar existed).
+export function alignLocalCalendar(input, local, today) {
+  const game = copy(input);
+  if (!local || game.flags?.localCalendar === 1) return input;
+  game.elections = game.elections.map(entry => ['comunale', 'regionale'].includes(entry.type) && entry.status === 'upcoming' && !entry.early
+    ? { ...makeLocalElection(entry.type, local[entry.type], today, game.place ?? {}, local[`${entry.type}Real`]), id: entry.id }
+    : entry);
+  game.flags = { ...(game.flags ?? {}), localCalendar: 1 };
+  return game;
+}
 function makeNationalElection(type, electionDate, place = {}, early = false) {
   const entry = makeElection(type, advanceDays(electionDate, -ELECTION_MODELS[type].campaignDays), place, early);
   return { ...entry, electionDate, calendar: 'nazionale' };
@@ -121,7 +146,7 @@ function makeElection(type, windowOpensAt, place = {}, early = false) {
   };
 }
 
-export function createGameState({ seedText, currentDate, level, party = null, place = {}, stats = {}, parliament = null, funds = null, difficulty = 'normale' }) {
+export function createGameState({ seedText, currentDate, level, party = null, place = {}, stats = {}, parliament = null, funds = null, difficulty = 'normale', localCalendar = null }) {
   const seed = hash(seedText);
   const member = party?.id && !party.founder;
   const setting = difficultyOf(difficulty);
@@ -129,8 +154,10 @@ export function createGameState({ seedText, currentDate, level, party = null, pl
     id: item.id, label: item.id === 'rival' ? SIMULATED_RIVAL_LABEL : item.label,
     kind: item.kind, value: clamp(item.base + (item.id === 'rival' ? -setting.relationStart : setting.relationStart)), source: SIM
   }));
+  // National votes on the real national calendar, local votes on the calendar of the player's comune and region.
   const elections = Object.keys(ELECTION_SCHEDULE).map(type => ['politiche', 'europee'].includes(type)
     ? makeNationalElection(type, nationalElectionDate({ legislature: REAL_LEGISLATURE }, type, currentDate), place)
+    : localCalendar ? makeLocalElection(type, localCalendar[type], currentDate, place, localCalendar[`${type}Real`])
     : makeElection(type, advanceDays(currentDate, 7 * (LEVEL_FIRST_ELECTION[level]?.[type] ?? ELECTION_SCHEDULE[type].firstWeeks)), place));
   const startingFunds = Math.round((funds ?? ({ comunale: 1500, regionale: 2500, deputato: 4000, senatore: 4000 }[level] ?? 2000)) * setting.funds);
   const game = {
@@ -138,7 +165,7 @@ export function createGameState({ seedText, currentDate, level, party = null, pl
     week: { index: 1, startedAt: currentDate, ap: WEEKLY_ACTION_POINTS, maxAp: WEEKLY_ACTION_POINTS, categoriesUsed: [] },
     resources: { funds: startingFunds, politicalCapital: clamp(Math.round((parliament?.resources?.politicalCapital ?? stats.influence ?? 30) + setting.capital), 0, 100), source: SIM },
     prep: 0, relations, party: createPartyState(party, seed, { region: place.region, share: party?.share ?? null, week: 1, date: currentDate }), pastParties: [], elections,
-    inbox: [], log: [], objectives: {}, flags: { nationalCalendar: 2 }, lastReport: null, weekStartStats: { ...stats }, lastEventId: null,
+    inbox: [], log: [], objectives: {}, flags: { nationalCalendar: 2, ...(localCalendar ? { localCalendar: 1 } : {}) }, lastReport: null, weekStartStats: { ...stats }, lastEventId: null,
     fallenWeeks: 0, endedAt: null, endReason: null,
     finance: createFinance({ week: 1, date: currentDate, funds: startingFunds }), contacts: [], promises: [], legislature: { ...REAL_LEGISLATURE }
   };
@@ -1203,6 +1230,8 @@ function reschedule(game, entry) {
   // The next general election at the natural end of the new legislature; the European ones five years later.
   if (entry.type === 'politiche') { game.elections.push(makeNationalElection('politiche', legislatureTerm(game.legislature).plannedVote, game.place)); return; }
   if (entry.type === 'europee') { game.elections.push(makeNationalElection('europee', europeanElectionDate(entry.electionDate), game.place)); return; }
+  // Local votes on their calendar: five years (a comune in its spring round), also after an early vote.
+  if (entry.calendar || game.flags?.localCalendar === 1) { game.elections.push(makeLocalElection(entry.type, entry.electionDate, entry.electionDate, game.place, entry.calendar === 'reale')); return; }
   const cycle = ELECTION_SCHEDULE[entry.type].cycleWeeks * 7;
   const base = entry.early ? entry.electionDate : entry.windowOpensAt;
   game.elections.push(makeElection(entry.type, advanceDays(base, cycle), game.place));

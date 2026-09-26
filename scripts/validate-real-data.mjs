@@ -128,6 +128,18 @@ const unitCodes = new Set(territorialUnits.map(unit => unit.code));
 for (const unit of territorialUnits) if (unit.source !== 'real' || unit.verified !== true || !/^https:\/\/www\.istat\.it\//.test(unit.sourceUrl) || !unit.sourceName || !unit.verifiedAt || unit.validFrom !== '2026-02-21') fail(`Unità territoriale ${unit.code}: provenienza incompleta`);
 for (const item of municipalities) if (!/^\d{6}$/.test(item.code) || item.id !== `istat-${item.code}` || !item.name || !unitCodes.has(item.unit) || item.source !== 'real' || item.verified !== true) fail(`Comune ISTAT ${item.code}: dati non validi`);
 if (new Set(territorialUnits.map(unit => unit.gameRegion)).size !== 20) fail('Unità territoriali ISTAT: le regioni non sono 20');
+// Calendar of local and regional elections (scripts/import-local-calendar.mjs: Eligendo open data, verified sources).
+{
+  const local = JSON.parse(await readFile(new URL('../src/data/real/local-elections.json', import.meta.url), 'utf8'));
+  const localManifest = lawsManifest.documents?.localElections;
+  if (local.source !== 'real' || local.verified !== true || !/^https:\/\/elezionistorico\.interno\.gov\.it\//.test(local.sourceUrl) || !local.verifiedAt) fail('Calendario locale: provenienza incompleta');
+  const codes = Object.values(local.municipalities).flat();
+  const known = new Set(municipalities.map(item => item.code));
+  if (codes.some(code => !known.has(code)) || new Set(codes).size !== codes.length) fail('Calendario locale: codici ISTAT non validi o duplicati');
+  if (Object.keys(local.municipalities).some(date => !/^20(19|2\d)-\d{2}-\d{2}$/.test(date))) fail('Calendario locale: date non valide');
+  if (local.regions.length !== 20 || local.regions.some(item => !/^20\d{2}-\d{2}-\d{2}$/.test(item.lastElection ?? '') || !item.sourceUrl || !new Set(territorialUnits.map(unit => unit.gameRegion)).has(item.region))) fail('Calendario locale: regioni incomplete');
+  if (!localManifest || localManifest.comuni !== codes.length || localManifest.regions !== local.regions.length) fail('Calendario locale: conteggi nel manifest non coerenti');
+}
 // Electoral map of the general election of 2022 (scripts/import-electoral-geography.mjs, Eligendo via the onData copy).
 const geography = JSON.parse(await readFile(new URL('../src/data/real/electoral-geography.json', import.meta.url), 'utf8'));
 const geoManifest = lawsManifest.documents?.electoralGeography;

@@ -2,11 +2,11 @@
 // elections, coalitions and national campaign, the seats projected on the real map of 2022, the last votes, the new
 // Chambers and the formation of the Government. The map, the seats and the results of 2022 are real data (Eligendo);
 // polls, coalitions, votes, seats and Governments of the game are simulation, and every block says which is which.
-import { districtRows } from '../core/legislature-engine.js?v=20260926-3';
-import { formatDate } from '../core/time.js?v=20260926-3';
-import { SERIES } from './charts.js?v=20260926-3';
-import { glyph } from './visuals.js?v=20260926-3';
-import { arrow, badge, bar, card, esc, euro, kpi, num, pct, table } from './sections-kit.js?v=20260926-3';
+import { districtRows } from '../core/legislature-engine.js?v=20260926-4';
+import { formatDate } from '../core/time.js?v=20260926-4';
+import { SERIES } from './charts.js?v=20260926-4';
+import { glyph } from './visuals.js?v=20260926-4';
+import { arrow, badge, bar, card, esc, euro, kpi, num, pct, table } from './sections-kit.js?v=20260926-4';
 
 export const NATIONAL_MAP_VIEWS = Object.freeze([['proiezione', 'Proiezione di oggi'], ['2022', 'Vincitori 2022 (reale)'], ['voto', 'Ultimo voto della partita']]);
 const NEUTRAL = '#8d9791';
@@ -59,7 +59,7 @@ function calendarCard(overview) {
     kpi({ label: 'Prossime politiche', value: politiche ? esc(shortDay(politiche.electionDate)) : '—', note: politiche?.early ? 'anticipate' : `fine naturale ${esc(shortDay(calendar.politiche.naturalEnd))}` }),
     kpi({ label: 'Prossime europee', value: europee ? esc(shortDay(europee.electionDate)) : esc(shortDay(calendar.europee.date)), note: '76 seggi all’Italia · soglia 4%' })
   ].join('');
-  return card({ kicker: 'CALENDARIO NAZIONALE', title: 'Legislatura, politiche ed europee', body: `<div class="sx-kpis nv-kpis">${kpis}</div><ol class="nv-timeline">${items}</ol>${formation ? `<p class="sx-note">${glyph('dome', 14)} In corso: ${esc(overview.phases[formation.phase] ?? formation.phase)}.</p>` : ''}<p class="sx-note">Politiche ed europee seguono il calendario reale: la legislatura dura cinque anni dalla prima seduta e si vota poco prima della scadenza, salvo scioglimento anticipato. Comunali e regionali restano su cicli di gioco accelerati.</p>` });
+  return card({ kicker: 'CALENDARIO NAZIONALE', title: 'Legislatura, politiche ed europee', body: `<div class="sx-kpis nv-kpis">${kpis}</div><ol class="nv-timeline">${items}</ol>${formation ? `<p class="sx-note">${glyph('dome', 14)} In corso: ${esc(overview.phases[formation.phase] ?? formation.phase)}.</p>` : ''}<p class="sx-note">Politiche ed europee seguono il calendario reale: la legislatura dura cinque anni dalla prima seduta e si vota poco prima della scadenza, salvo scioglimento anticipato. Comunali e regionali seguono il calendario reale di ogni comune e regione (ultimo voto da Eligendo, mandato di cinque anni): ogni anno si vota da qualche parte.</p>` });
 }
 
 // ---------- coalitions and national campaign ----------

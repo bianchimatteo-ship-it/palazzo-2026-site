@@ -1,8 +1,8 @@
 // The immutable real snapshot is fetched by collection. The 2 MB aggregate is
 // retained for exports and validation, but the browser never downloads it.
-export const REAL_DATA_ASSET_VERSION = '20260926-1';
+export const REAL_DATA_ASSET_VERSION = '20260926-4';
 
-import { applyAdminOverrides } from './admin-store.js?v=20260926-3';
+import { applyAdminOverrides } from './admin-store.js?v=20260926-4';
 
 export let realDatabase = Object.freeze({});
 // Untouched copies of what the files contain, so owner overrides can be re-layered or reverted.
@@ -41,7 +41,9 @@ const collectionFiles = Object.freeze({
 // Real documents that are not a list of records: loaded whole, when the game needs them.
 const documentFiles = Object.freeze({
   // Electoral map of the general election of 2022 (Eligendo): districts, circoscrizioni, seats, results by list, comuni.
-  electoralGeography: 'electoral-geography.json'
+  electoralGeography: 'electoral-geography.json',
+  // Last municipal election of every comune and last regional election of every region (Eligendo; verified sources).
+  localElections: 'local-elections.json'
 });
 const loadingDocuments = new Map();
 let manifestPromise;

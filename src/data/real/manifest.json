@@ -135,6 +135,12 @@
       },
       "comuni": 7894,
       "verifiedAt": "2026-09-25"
+    },
+    "localElections": {
+      "file": "local-elections.json",
+      "comuni": 6926,
+      "regions": 20,
+      "verifiedAt": "2026-09-26"
     }
   }
 }

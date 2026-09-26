@@ -1,9 +1,9 @@
-import { mountApp } from './ui/app.js?v=20260926-3';
-import { refreshSharedArchive } from './data/repositories/admin-sync.js?v=20260926-3';
-import { store } from './core/store.js?v=20260926-3';
-import { loadRealCollections, loadRealDatabase, loadRealDocument, realDatabase, realDataUrls } from './data/repositories/real-data.js?v=20260926-3';
-import { PARTY_LINK_COLLECTIONS, governingEntityIds } from './data/repositories/party-links.js?v=20260926-3';
-import { referenceGovernmentSpec } from './data/repositories/government-reference.js?v=20260926-3';
+import { mountApp } from './ui/app.js?v=20260926-4';
+import { refreshSharedArchive } from './data/repositories/admin-sync.js?v=20260926-4';
+import { store } from './core/store.js?v=20260926-4';
+import { loadRealCollections, loadRealDatabase, loadRealDocument, realDatabase, realDataUrls } from './data/repositories/real-data.js?v=20260926-4';
+import { PARTY_LINK_COLLECTIONS, governingEntityIds } from './data/repositories/party-links.js?v=20260926-4';
+import { referenceGovernmentSpec } from './data/repositories/government-reference.js?v=20260926-4';
 
 const BUILD = new URL(import.meta.url).searchParams.get('v');
 
@@ -55,6 +55,8 @@ else {
     // The real electoral map of 2022 (collegi, circoscrizioni, seats and results): the general and European elections
     // of the game are counted on it. Until it arrives (or offline without cache) the vote uses a simplified count.
     loadRealDocument('electoralGeography').then(geography => store.setElectoralGeography(geography)).catch(error => console.warn('Mappa elettorale 2022 non disponibile:', error));
+    // The real calendar of local and regional votes: every comune and region votes in its own year.
+    loadRealDocument('localElections').then(doc => store.setLocalCalendar(doc)).catch(error => console.warn('Calendario delle elezioni locali non disponibile:', error));
   } catch (error) {
     console.error('Avvio di POLITICANDO 2026 non riuscito:', error);
     root.innerHTML = `<main role="alert" style="max-width:760px;margin:10vh auto;padding:32px;font:16px/1.6 system-ui,sans-serif;color:#22312e"><h1>POLITICANDO 2026</h1><p>La pagina è stata raggiunta, ma non è stato possibile caricare i dati del gioco.</p><p>${String(error?.message || 'Errore di caricamento.')}</p><p>Ricarica la pagina tra poco. Se il problema continua, comunica questo messaggio.</p></main>`;
