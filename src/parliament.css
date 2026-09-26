@@ -206,3 +206,61 @@
 .municipality-option small{overflow:hidden;color:#98a29d;font-size:11px;text-overflow:ellipsis;white-space:nowrap}
 .wizard-profile{margin-bottom:14px}
 @media(max-width:600px){.municipality-list{grid-template-columns:1fr;max-height:280px}.wizard-place-line{flex-wrap:wrap}.wizard-place-line button{margin-left:0}}
+/* The bills of the Government, of the groups and of the committees (lawmaking-engine). */
+.bill-board>.parliament-note{margin:4px 0 10px}
+.bill-filters{margin:4px 0 12px}
+.bill-card{position:relative;border-left-width:4px}
+.bill-card.side-governo{border-left-color:#2a78d6}
+.bill-card.side-maggioranza{border-left-color:#1baf7a}
+.bill-card.side-opposizione{border-left-color:#e3a348}
+.bill-card.side-commissione{border-left-color:#8f7ad6}
+.bill-sponsor{display:flex;flex-wrap:wrap;align-items:center;gap:6px;color:var(--muted);font-size:12px}
+.bill-sponsor b{padding:2px 8px;border-radius:20px;font:700 11px 'DM Sans',sans-serif;color:#0c1210}
+.bill-sponsor .sponsor-governo{background:#6fa6ee}.bill-sponsor .sponsor-maggioranza{background:#5fd39c}.bill-sponsor .sponsor-opposizione{background:#f0bf73}.bill-sponsor .sponsor-commissione{background:#b9a8f0}
+.bill-steps{display:flex;flex-wrap:wrap;gap:4px;margin:10px 0 8px;padding:0;list-style:none;counter-reset:bill}
+.bill-steps li{position:relative;padding:4px 10px 4px 22px;border-radius:20px;background:var(--panel-2);color:var(--muted);font:600 11.5px 'DM Sans',sans-serif}
+.bill-steps li::before{counter-increment:bill;content:counter(bill);position:absolute;left:7px;top:4px;font-size:10px;opacity:.8}
+.bill-steps li.done{color:var(--ink-2);background:#1f2d27}
+.bill-steps li.current{color:var(--accent-ink);background:var(--accent)}
+.bill-steps li.outcome{padding-left:10px}.bill-steps li.outcome::before{content:''}
+.bill-steps li.outcome.good{background:#132a1e;color:#7fd49a}.bill-steps li.outcome.bad{background:#351f19;color:#fc9a82}
+.bill-meta{display:flex;flex-wrap:wrap;gap:6px 12px;margin:6px 0;color:var(--muted);font-size:12px}
+.bill-meta span{display:inline-flex;align-items:center;gap:5px}
+.bill-flag{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;background:var(--panel-3);color:var(--ink-2);font:650 11.5px 'DM Sans',sans-serif}
+.bill-flag.good{background:#132a1e;color:#7fd49a}.bill-flag.bad{background:#351f19;color:#fc9a82}.bill-flag.warn{background:#2c2208;color:#f2c46d}
+.bill-forecast{margin:10px 0;padding:10px 12px;border-radius:8px;background:var(--panel-2)}
+.bill-forecast-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px;align-items:baseline}
+.bill-forecast-head strong{font:700 12.5px 'DM Sans',sans-serif}
+.bill-forecast-head strong.good{color:#7fd49a}.bill-forecast-head strong.bad{color:#fc9a82}
+.bill-meter{position:relative;height:8px;margin:8px 0;border-radius:6px;background:#2a3531;overflow:visible}
+.bill-meter i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#3f8f6a,#5fd39c)}
+.bill-meter b{position:absolute;top:-4px;width:2px;height:16px;background:var(--accent);transform:translateX(-1px)}
+.bill-positions{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0}
+.bill-pos{padding:3px 8px;border-radius:14px;border:1px solid var(--line-strong);font-size:11.5px;color:var(--ink-2);background:var(--panel)}
+.bill-pos b{font-weight:750}
+.bill-pos.pos-favorevole{border-color:#2f6b4c;background:#10241a}.bill-pos.pos-contrario{border-color:#6b352b;background:#2a1612}.bill-pos.pos-astenuto{border-color:#5a5a45;background:#22221a}
+.bill-pos.own{outline:2px solid var(--accent);outline-offset:1px}
+.bill-forecast small{color:var(--muted);font-size:11px}
+.bill-actions{display:grid;gap:10px;margin:10px 0;padding:10px 0;border-top:1px solid var(--line)}
+.bill-speak{display:flex;flex-wrap:wrap;gap:8px}
+.bill-amend{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px}
+.bill-amend label{display:grid;gap:4px;flex:1 1 240px;color:var(--muted);font-size:12px}
+.bill-amend select{min-height:38px;padding:6px 8px;border-radius:6px}
+.bill-vote{display:grid;gap:6px}
+.bill-vote>span{color:var(--muted);font-size:12px}
+.bill-vote-choices{display:flex;flex-wrap:wrap;gap:6px}
+.bill-journal{margin:6px 0;padding:0;list-style:none;color:var(--muted);font-size:12px;line-height:1.5}
+.bill-journal time{color:var(--ink-2);font-weight:650}
+.bill-archive{margin-top:12px;color:var(--ink-2);font-size:12.5px}
+.bill-archive summary{cursor:pointer;font-weight:700}
+.bill-archive ul{margin:8px 0;padding:0;list-style:none;display:grid;gap:6px}
+.bill-archive small{color:var(--muted)}
+@media (max-width:640px){
+  .bill-steps li{font-size:11px;padding:3px 8px 3px 20px}
+  .bill-amend button,.bill-speak button{width:100%}
+  .bill-forecast-head{flex-direction:column}
+}
+.bill-key{display:inline-block;width:9px;height:9px;margin:0 3px 0 6px;border-radius:50%;vertical-align:-1px;border:1px solid var(--line-strong)}
+.bill-key.pos-favorevole{background:#3f8f6a;border-color:#5fd39c}.bill-key.pos-contrario{background:#8a3b2e;border-color:#fc9a82}.bill-key.pos-astenuto{background:#5a5a45;border-color:#b8b48a}
+.bill-deal{display:flex;align-items:flex-start;gap:8px;flex:1 1 100%;color:var(--muted);font-size:12px;line-height:1.4}
+.bill-deal input{margin-top:2px}

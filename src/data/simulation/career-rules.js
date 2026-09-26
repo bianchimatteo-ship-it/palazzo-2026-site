@@ -16,8 +16,11 @@ export const STAT_LABELS = Object.freeze({
 export const PARLIAMENT_TIME_COSTS = Object.freeze({
   joinGroup: 1, contestRole: 1, proposeLaw: 1, amendLaw: 1, negotiateLaw: 1, compromiseLaw: 1,
   advanceLaw: 1, formGovernment: 1, governmentSupport: 1, reviseCoalition: 1, assignMinister: 1, confidence: 1, crisis: 1,
-  governmentBill: 2, decree: 2, budget: 2, program: 1, summit: 2, reshuffle: 1, confidenceOnLaw: 1, amendPolicy: 1, withdraw: 1
+  governmentBill: 2, decree: 2, budget: 2, program: 1, summit: 2, reshuffle: 1, confidenceOnLaw: 1, amendPolicy: 1, withdraw: 1,
+  // On the bills of the others: a speech in committee or on the floor, an amendment (it also costs political capital).
+  speakOnLaw: 1, amendOthers: 1
 });
+export const AMENDMENT_CAPITAL_COST = 2;
 // Political capital spent by the Government's big moves.
 export const GOVERNMENT_CAPITAL_COSTS = Object.freeze({ governmentBill: 3, decree: 5, budget: 4, program: 2, summit: 3, reshuffle: 4, confidenceOnLaw: 4 });
 
@@ -578,6 +581,13 @@ export const SITUATION_EVENTS = Object.freeze({
     { id: 'sostieni', label: 'Sostieni il nuovo governo', effects: { stats: { influence: 1 }, party: { support: -1 } }, special: 'national-support' },
     { id: 'opposizione', label: 'Resta all’opposizione', effects: { stats: { reputation: 0.5 } }, special: 'national-opposition' },
     { id: 'valuta', label: 'Decidi con gli altri partiti: segui la direzione', special: 'national-wait' }] },
+  // A bill of the Government, of another group or of a committee comes to the floor of the player's Chamber.
+  'voto-aula': { id: 'voto-aula', title: 'Voto in Aula: {lawTitle}', body: '{sponsorLine} {whereWhen} Il tuo gruppo è orientato a votare {lineLabel}; previsione: {forecast}.{confidenceLine} Votare in dissenso ti rende visibile, ma il gruppo e il partito se ne ricordano.', defaultChoice: 'linea', choices: [
+    { id: 'linea', label: 'Segui la linea del gruppo ({lineShort})', special: 'law-vote-line' },
+    { id: 'favorevole', label: 'Vota a favore', special: 'law-vote-yes' },
+    { id: 'contrario', label: 'Vota contro', special: 'law-vote-no' },
+    { id: 'astenuto', label: 'Astieniti', special: 'law-vote-abstain' },
+    { id: 'assente', label: 'Non partecipare al voto', special: 'law-vote-absent' }] },
   'incarico-governo': { id: 'incarico-governo', title: 'Il Presidente della Repubblica ti affida l’incarico', body: 'Il tuo partito guida {majority}: tocca a te formare il governo, distribuire i ministeri e chiedere la fiducia alle Camere. Se rinunci, l’incarico passa a un’altra figura di {leader}.', defaultChoice: 'accetta', choices: [
     { id: 'accetta', label: 'Accetta l’incarico: formi il governo', effects: { stats: { notoriety: 2, influence: 2 } }, special: 'national-mandate-accept' },
     { id: 'rinuncia', label: 'Rinuncia e lascia l’incarico a un’altra figura', effects: { party: { support: -2 } }, special: 'national-mandate-decline' }] }

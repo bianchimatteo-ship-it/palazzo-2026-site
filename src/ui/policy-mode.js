@@ -1,12 +1,12 @@
 // Public policy in the interface: designing a measure, its projected bill, the Government's desk,
 // the budget law and the state of the country's policy areas, security and accounts.
-import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, FINANCING, GOVERNMENT_LINES, INSTRUMENT_KINDS, INTENSITY, MINISTRIES, POLICY_AREAS, TERRITORIAL_TARGETS } from '../data/simulation/policy-rules.js?v=20260925-9';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260925-9';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260925-9';
-import { areaTable, budgetImpact, measureDesign, projectMeasure } from '../core/society-engine.js?v=20260925-9';
-import { activeMinisters, groupProfile, partnerSatisfaction, stageWait } from '../core/parliament-engine.js?v=20260925-9';
-import { glyph } from './visuals.js?v=20260925-9';
-import { esc, stateBadge } from './charts.js?v=20260925-9';
+import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, FINANCING, GOVERNMENT_LINES, INSTRUMENT_KINDS, INTENSITY, MINISTRIES, POLICY_AREAS, TERRITORIAL_TARGETS } from '../data/simulation/policy-rules.js?v=20260926-1';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260926-1';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-1';
+import { areaTable, budgetImpact, measureDesign, projectMeasure } from '../core/society-engine.js?v=20260926-1';
+import { activeMinisters, groupProfile, partnerSatisfaction, stageWait } from '../core/parliament-engine.js?v=20260926-1';
+import { glyph } from './visuals.js?v=20260926-1';
+import { esc, stateBadge } from './charts.js?v=20260926-1';
 
 const num = (value, digits = 1) => Number(value ?? 0).toLocaleString('it-IT', { maximumFractionDigits: digits });
 const signed = (value, digits = 1) => `${value > 0 ? '+' : value < 0 ? '−' : '±'}${num(Math.abs(value ?? 0), digits)}`;
@@ -100,7 +100,7 @@ export function governmentDesk(state) {
   const lines = Object.entries(GOVERNMENT_LINES).map(([id, item]) => `<label class="policy-choice ${program?.line === id ? 'active' : ''}"><input type="radio" name="line" value="${id}" ${program?.line === id ? 'checked' : ''} required /><span><strong>${esc(item.label)}</strong><small>${esc(item.detail)}</small></span></label>`).join('');
   const priorities = Object.entries(AREA_GROUPS).map(([group, label]) => `<fieldset class="priority-group"><legend>${esc(label)}</legend>${POLICY_AREAS.filter(item => item.group === group).map(item => `<label class="agenda-option"><input type="checkbox" name="priorities" value="${item.id}" ${program?.priorities?.includes(item.id) ? 'checked' : ''} /><span>${esc(item.label)}</span></label>`).join('')}</fieldset>`).join('');
   const partners = Object.entries(government.partners ?? {}).map(([id, partner]) => {
-    const profile = groupProfile(id);
+    const profile = groupProfile(['camera', 'senato'].flatMap(chamber => parliament.chambers?.[chamber]?.groups ?? []).find(group => group.groupId === id) ?? id);
     const ministries = activeMinisters(government).filter(item => item.groupId === id).map(item => item.portfolio);
     return `<article class="partner-row ${partner.satisfaction < 35 ? 'danger' : ''}"><div><strong>${esc(groupName(parliament, id))}</strong><small>Priorità attribuite dallo scenario: ${profile.likes.map(area => esc(AREA_BY_ID[area].label.toLowerCase())).join(', ')} · non gradisce ${esc(FINANCING[profile.dislikesFinancing].label.toLowerCase())}</small><small>${ministries.length ? `Ministeri: ${ministries.map(esc).join(', ')}` : 'Nessun ministero'}</small>${partner.demand ? `<em class="decision-block">Chiede ${esc(partner.demand.label)} entro il ${esc(partner.demand.deadline)}</em>` : ''}</div><span class="partner-mood"><b>${num(partner.satisfaction, 0)}</b>${meterBar(partner.satisfaction, partner.satisfaction < 35 ? 'danger' : partner.satisfaction > 65 ? 'good' : '')}</span></article>`;
   }).join('') || '<p class="quiet-copy">Il governo non ha alleati da gestire.</p>';

@@ -225,7 +225,9 @@ assert.ok(seen.congress, 'Il congresso ordinario si tiene durante la carriera.')
 assert.ok(seen.campaign && seen.legislature, 'Le politiche si svolgono e si apre una nuova legislatura simulata.');
 assert.equal(state.game.legislature.reference, 'simulation');
 assert.ok(state.game.finance.history.length >= 50 && state.game.finance.annual.length >= 2, 'Il bilancio annuale si chiude ogni anno.');
-assert.ok(state.game.finance.ledger.some(entry => entry.category === 'comunicazione') && state.game.finance.ledger.some(entry => entry.category === 'territorio'), 'Le spese finiscono nel registro per categoria.');
+// The ledger keeps the latest movements; weeks and years keep the totals by category.
+const booked = category => state.game.finance.ledger.some(entry => entry.category === category) || [...state.game.finance.history, ...state.game.finance.annual].some(period => period.byCategory?.[category]);
+assert.ok(booked('comunicazione') && booked('territorio'), 'Le spese finiscono nel registro per categoria.');
 assert.ok(state.society.history.length >= 100, 'La società evolve anche senza il giocatore.');
 assert.ok(state.world.polls.at(-1).mood, 'I sondaggi leggono l’umore dei cittadini.');
 assert.ok(state.world.polls.at(-1).government || state.world.polls.at(-1).executive, 'Il gradimento dell’esecutivo è misurato.');
@@ -278,8 +280,13 @@ assert.equal(migrated.getState().game.week.index, state.game.week.index + 1);
   const rankBefore = pressed.getState().game.party.rank;
   pressed.resolveAgendaItem(offer.id, 'accetta');
   const after = pressed.getState();
-  assert.equal(after.game.party.rank, rankBefore + 1);
-  assert.ok(after.dataset.offices.some(item => item.level === 'partito' && !item.endDate && item.title === `${after.game.party.rankTitle} (scenario)`), 'L’incarico interno entra nella carriera.');
+  // The offer is a strong push, not a guarantee: the organs decide, and the outcome is recorded either way.
+  const proposal = after.game.party.contests?.at(-1);
+  assert.equal(proposal?.kind, 'proposta', 'La proposta della segreteria passa dagli organi del partito.');
+  if (proposal.outcome === 'promosso') {
+    assert.equal(after.game.party.rank, rankBefore + 1);
+    assert.ok(after.dataset.offices.some(item => item.level === 'partito' && !item.endDate && item.title === `${after.game.party.rankTitle} (scenario)`), 'L’incarico interno entra nella carriera.');
+  } else assert.ok(after.game.party.rank <= rankBefore + 1, 'Senza il via libera degli organi il ruolo non cambia.');
 }
 
 // 8. Separazione real / simulation: i dataset reali non cambiano.

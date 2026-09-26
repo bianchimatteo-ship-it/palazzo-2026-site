@@ -1,9 +1,9 @@
-import { mountApp } from './ui/app.js?v=20260925-9';
-import { refreshSharedArchive } from './data/repositories/admin-sync.js?v=20260925-9';
-import { store } from './core/store.js?v=20260925-9';
-import { loadRealCollections, loadRealDatabase, loadRealDocument, realDatabase, realDataUrls } from './data/repositories/real-data.js?v=20260925-9';
-import { PARTY_LINK_COLLECTIONS, governingEntityIds } from './data/repositories/party-links.js?v=20260925-9';
-import { referenceGovernmentSpec } from './data/repositories/government-reference.js?v=20260925-9';
+import { mountApp } from './ui/app.js?v=20260926-1';
+import { refreshSharedArchive } from './data/repositories/admin-sync.js?v=20260926-1';
+import { store } from './core/store.js?v=20260926-1';
+import { loadRealCollections, loadRealDatabase, loadRealDocument, realDatabase, realDataUrls } from './data/repositories/real-data.js?v=20260926-1';
+import { PARTY_LINK_COLLECTIONS, governingEntityIds } from './data/repositories/party-links.js?v=20260926-1';
+import { referenceGovernmentSpec } from './data/repositories/government-reference.js?v=20260926-1';
 
 const BUILD = new URL(import.meta.url).searchParams.get('v');
 
@@ -49,9 +49,9 @@ else {
     store.setRealReference(reference());
     mountApp(root, store);
     registerOfflineCache();
-    // The Government in office at the start (derived from the real Government and the groups of its members) and the
-    // real majority reach the simulation once the institutional data are loaded.
-    loadRealCollections(['government','politicians','politicalFigures','parliamentaryGroups',...PARTY_LINK_COLLECTIONS]).then(() => { store.setRealReference(reference(governingEntityIds())); store.setReferenceGovernment(referenceGovernmentSpec()); }).catch(() => {});
+    // The Government in office at the start (derived from the real Government and the groups of its members), the
+    // real majority and the verified groups of the Chambers reach the simulation once the institutional data are loaded.
+    loadRealCollections(['government','politicians','politicalFigures','parliamentaryGroups',...PARTY_LINK_COLLECTIONS]).then(() => { store.setRealReference(reference(governingEntityIds())); store.setReferenceGovernment(referenceGovernmentSpec()); store.setParliamentaryGroups(realDatabase.parliamentaryGroups ?? []); }).catch(() => {});
     // The real electoral map of 2022 (collegi, circoscrizioni, seats and results): the general and European elections
     // of the game are counted on it. Until it arrives (or offline without cache) the vote uses a simplified count.
     loadRealDocument('electoralGeography').then(geography => store.setElectoralGeography(geography)).catch(error => console.warn('Mappa elettorale 2022 non disponibile:', error));

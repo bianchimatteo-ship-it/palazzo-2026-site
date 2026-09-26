@@ -1,12 +1,15 @@
-import { activeMinisters, canManageParliament, CHAMBERS, CONTEST_COST, CONTEST_WINDOW_DAYS, GOVERNMENT_POST_REQUIREMENTS, governmentPostProblems, MINISTERIAL_PORTFOLIOS, nextParliamentaryRole, parliamentGroupFacts, playerInMajority } from '../core/parliament-engine.js?v=20260925-9';
-import { DATA_SOURCES } from '../data/schema.js?v=20260925-9';
-import { careerOverview } from '../core/career-overview.js?v=20260925-9';
-import { voteSummary } from '../core/vote-engine.js?v=20260925-9';
-import { artTile, glyph, LAW_ICONS } from './visuals.js?v=20260925-9';
-import { measureDesign, projectLaw } from '../core/society-engine.js?v=20260925-9';
-import { governmentDesk, lawContent, policyFields, policyPreview } from './policy-mode.js?v=20260925-9';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260925-9';
-import { legislatureLabel } from '../core/legislature-engine.js?v=20260925-9';
+import { activeMinisters, canManageParliament, CHAMBERS, CONTEST_COST, CONTEST_WINDOW_DAYS, GOVERNMENT_POST_REQUIREMENTS, governingGroupIds, governmentPostProblems, MINISTERIAL_PORTFOLIOS, nextParliamentaryRole, parliamentGroupFacts, playerInMajority } from '../core/parliament-engine.js?v=20260926-1';
+import { amendmentOdds, forecastVote, LAW_SPONSORS, PLAYER_VOTE_CHOICES } from '../core/lawmaking-engine.js?v=20260926-1';
+import { AREA_BY_ID, FINANCING } from '../data/simulation/policy-rules.js?v=20260926-1';
+import { AMENDMENT_CAPITAL_COST } from '../data/simulation/career-rules.js?v=20260926-1';
+import { DATA_SOURCES } from '../data/schema.js?v=20260926-1';
+import { careerOverview } from '../core/career-overview.js?v=20260926-1';
+import { voteSummary } from '../core/vote-engine.js?v=20260926-1';
+import { artTile, glyph, LAW_ICONS } from './visuals.js?v=20260926-1';
+import { measureDesign, projectLaw } from '../core/society-engine.js?v=20260926-1';
+import { governmentDesk, lawContent, policyFields, policyPreview } from './policy-mode.js?v=20260926-1';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260926-1';
+import { legislatureLabel } from '../core/legislature-engine.js?v=20260926-1';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const icon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
@@ -79,7 +82,7 @@ function rolePanel(parliament, currentDate, odds = null) {
   return '<section class="parliament-role-panel"><div><span class="section-kicker">INCARICHI PARLAMENTARI</span><h3>' + esc(standing.committeeRole?.title || 'Nessun incarico interno') + '</h3><p>Sostegno nel gruppo <b>' + whole(standing.partySupport) + ' / 100</b>' + (next ? ' · Prossimo obiettivo: <b>' + esc(next.title) + '</b> (soglia ' + whole(standing.competitionStrength ?? next.threshold) + ')' + chance : '') + '</p>' + last + (roles ? '<div class="parliament-role-list">' + roles + '</div>' : '') + '</div><div class="parliament-role-action"><button class="secondary-button" data-parliament-action="contest-role" ' + (blocker ? 'disabled' : '') + '>Candidati all’incarico</button><small>' + esc(blocker || `Costo ${CONTEST_COST} di capitale politico. Superare la soglia rende la nomina probabile, non certa: contano influenza, reputazione, esperienza, sostegno nel gruppo, anzianità e risultati. Può finire anche con un incarico minore, un rinvio o un altro nome.`) + '</small><button class="text-link" data-section-tab="carriera" data-section-tab-value="progressione">Fattori e probabilità</button></div></section>';
 }
 function timeline(parliament) {
-  const entries = [...(parliament.history ?? [])].slice(-6).reverse();
+  const entries = [...(parliament.history ?? [])].filter(item => !item.details?.auto).slice(-6).reverse();
   return '<section class="parliament-timeline"><div class="home-section-heading"><div><span class="section-kicker">STORICO DELLA CARRIERA</span><h2>Decisioni a Palazzo</h2></div></div>' + (entries.map(item => '<article class="parliament-timeline-item"><time>' + esc(item.date) + '</time><span class="timeline-mark"></span><div><strong>' + esc(item.text) + '</strong><small>' + esc(item.type.replaceAll('-', ' ')) + ' · source: simulation</small></div></article>').join('') || '<p class="quiet-copy">Le attività parlamentari appariranno qui e nello storico della carriera.</p>') + '</section>';
 }
 function accessNote(parliament) {
@@ -227,11 +230,100 @@ function lawCard(law, parliament, society = null, state = null) {
   ].filter(Boolean).join('');
   return '<article class="law-card stage-' + esc(law.stage) + '"><header>' + artTile(LAW_ICONS[law.category] ?? 'law', law.stage === 'approved' ? '#1baf7a' : law.stage === 'rejected' || law.stage === 'lapsed' ? '#e34948' : '#2a78d6') + '<div class="law-card-title"><span class="section-kicker">' + esc(law.category.toUpperCase()) + ' · ' + esc(chamber) + '</span><h3>' + esc(law.title) + '</h3></div>' + dataMarker(DATA_SOURCES.SIMULATION, statusNames[law.stage] || law.stage) + '</header><p>' + esc(law.summary) + '</p>' + (state ? lawContent(law, parliament, state) : '') + '<div class="law-amendment-list">' + (law.amendments ?? []).map(item => '<span>Emendamento simulato · ' + esc(item.text) + '</span>').join('') + (law.negotiatedGroupIds?.length ? '<span>Gruppi coinvolti nella trattativa: ' + whole(law.negotiatedGroupIds.length) + '</span>' : '') + '</div>' + forecast + (links ? '<div class="law-links">' + links + '</div>' : '') + '<div class="law-actions">' + lawAction(law, canAct) + '</div>' + controls + votes + '<small class="law-updated">Ultimo passaggio: ' + esc(law.updatedAt || law.introducedAt) + (law.stage === 'lapsed' ? ' · decaduta con la fine del mandato' : '') + '</small></article>';
 }
+// ---------- the bills of the Government, of the groups and of the committees (lawmaking-engine) ----------
+const BILL_FILTERS = [['tutte', 'Tutte'], ['governo', 'Governo'], ['maggioranza', 'Maggioranza'], ['opposizione', 'Opposizione'], ['commissione', 'Commissioni'], ['aula', 'Al voto nella tua Camera'], ['concluse', 'Concluse']];
+const BILL_STEPS = [['proposal', 'Presentata'], ['commission', 'In commissione'], ['amendments', 'Emendamenti e Aula'], ['other-chamber', 'Verso l’altra Camera'], ['final-vote', 'Voto finale']];
+const CLOSED_STAGES = ['approved', 'rejected', 'lapsed'];
+const LINE_LABELS = { favorevole: 'Favorevole', contrario: 'Contrario', astenuto: 'Astensione' };
+const SEGMENT_OPTIONS = [['giovani', 'i giovani'], ['famiglie', 'le famiglie'], ['anziani', 'i pensionati'], ['imprese', 'le imprese'], ['fragili', 'i redditi bassi']];
+// Majority or opposition as it is now for an open bill (a change of majority changes it), as it was for a closed one.
+function billSide(law, governing) {
+  if (['governo', 'commissione'].includes(law.sponsor?.kind)) return law.sponsor.kind;
+  if (CLOSED_STAGES.includes(law.stage)) return law.sponsor?.kind ?? 'opposizione';
+  return governing.has(law.sponsor?.groupId) ? 'maggioranza' : 'opposizione';
+}
+function billMatches(law, filter, parliament, governing) {
+  const open = !CLOSED_STAGES.includes(law.stage);
+  if (filter === 'concluse') return !open;
+  if (filter === 'aula') return open && law.currentChamber === parliament.player?.chamber && ['amendments', 'final-vote'].includes(law.stage);
+  if (filter === 'tutte') return true;
+  return open && billSide(law, governing) === filter;
+}
+function billSteps(law) {
+  const index = BILL_STEPS.findIndex(([id]) => id === law.stage);
+  const closed = CLOSED_STAGES.includes(law.stage);
+  const outcome = law.stage === 'approved' ? 'Approvata' : law.status === 'arenata' ? 'Ferma in commissione' : law.stage === 'lapsed' ? 'Decaduta' : law.stage === 'rejected' ? 'Respinta' : null;
+  return '<ol class="bill-steps">' + BILL_STEPS.map(([id, label], position) => '<li class="' + (closed || position < index ? 'done' : position === index ? 'current' : '') + '">' + esc(label) + '</li>').join('') + (outcome ? '<li class="outcome ' + (law.stage === 'approved' ? 'good' : 'bad') + '">' + esc(outcome) + '</li>' : '') + '</ol>';
+}
+function billForecast(law, parliament, world) {
+  if (CLOSED_STAGES.includes(law.stage) || law.stage === 'proposal') return '';
+  const forecast = forecastVote(parliament, law, { world });
+  const groups = parliament.chambers[law.currentChamber]?.groups ?? [];
+  // Short names: the force of the world behind the group when it is known, otherwise the group's own name.
+  const nameOf = id => { const group = groups.find(item => item.groupId === id); const party = group?.partyId ? world?.parties?.find(item => item.id === group.partyId) : null; const name = party && !/^misto/i.test(group.officialName ?? '') ? party.label : group?.officialName ?? id; return name.length > 34 ? name.slice(0, 32) + '…' : name; };
+  const width = forecast.total ? Math.round(forecast.yes / forecast.total * 100) : 0;
+  const mark = forecast.total ? Math.round(forecast.needed / forecast.total * 100) : 50;
+  const positions = [...forecast.positions].sort((a, b) => b.seats - a.seats).map(item => '<span class="bill-pos pos-' + item.line + (item.groupId === parliament.player?.groupId ? ' own' : '') + '" title="' + esc(LINE_LABELS[item.line]) + ' · sostegno stimato ' + Math.round(item.support * 100) + '%">' + esc(nameOf(item.groupId)) + ' <b>' + whole(item.seats) + '</b>' + (item.groupId === parliament.player?.groupId ? ' · il tuo gruppo' : '') + '</span>').join('');
+  return '<div class="bill-forecast"><div class="bill-forecast-head"><span class="section-kicker">PREVISIONE IN AULA · ' + esc(CHAMBERS[law.currentChamber]?.shortLabel.toUpperCase()) + '</span><strong class="' + (forecast.passes ? 'good' : 'bad') + '">' + (forecast.passes ? 'Passerebbe' : 'Verrebbe respinta') + ' · circa ' + whole(forecast.yes) + ' sì, ne servono ' + whole(forecast.needed) + '</strong></div><div class="bill-meter" role="img" aria-label="Voti favorevoli stimati ' + whole(forecast.yes) + ' su ' + whole(forecast.total) + ', soglia ' + whole(forecast.needed) + '"><i style="width:' + width + '%"></i><b style="left:' + mark + '%"></b></div><div class="bill-positions">' + positions + '</div><small><i class="bill-key pos-favorevole"></i> a favore <i class="bill-key pos-contrario"></i> contro <i class="bill-key pos-astenuto"></i> astensione · posizioni stimate dei gruppi: il voto vero può cambiare con emendamenti, trattative, fiducia e dissensi individuali.</small></div>';
+}
+function billAmendments(law) {
+  const policy = law.policy ?? {};
+  const options = [];
+  if ((policy.intensity ?? 2) > 1) options.push(['intensity:' + ((policy.intensity ?? 2) - 1), 'Riduci la portata della misura']);
+  if ((policy.intensity ?? 2) < 3) options.push(['intensity:' + ((policy.intensity ?? 2) + 1), 'Aumenta la portata della misura']);
+  for (const [id, item] of Object.entries(FINANCING)) if (id !== policy.financing && (id !== 'ue' || AREA_BY_ID[policy.area]?.euFunds)) options.push(['financing:' + id, 'Copertura: ' + item.label.toLowerCase()]);
+  for (const [id, label] of SEGMENT_OPTIONS) if (policy.segment !== id) options.push(['segment:' + id, 'Più attenzione per ' + label]);
+  return options;
+}
+function billActions(law, parliament, extras) {
+  const seat = parliament.player;
+  if (!canManageParliament(parliament) || CLOSED_STAGES.includes(law.stage)) return '';
+  if (law.currentChamber !== seat.chamber) return '<p class="parliament-note">Ora la esamina ' + (law.currentChamber === 'camera' ? 'la Camera' : 'il Senato') + ': potrai intervenire e votare quando arriva nella tua Camera.</p>';
+  const speak = ['favorevole', 'contrario'].map(stance => '<button class="secondary-button" data-bill-speak="' + stance + '" data-law-id="' + esc(law.id) + '"' + (law.playerStance === stance ? ' disabled' : '') + '>' + (stance === 'favorevole' ? 'Intervieni a favore' : 'Intervieni contro') + ' · 1 giorno</button>').join('');
+  const oddsOf = offerVote => amendmentOdds(parliament, law, { influence: extras.influence ?? 50, committeeRole: Boolean(parliament.careerStanding?.committeeRole), offerVote });
+  const open = law.kind !== 'manovra' && ['commission', 'amendments'].includes(law.stage);
+  const deal = law.sponsor?.groupId !== seat.groupId && !law.playerDeal ? '<label class="bill-deal"><input type="checkbox" name="deal" value="1" /> Offri il tuo voto favorevole in cambio (probabilità ' + Math.round(oddsOf(true) * 100) + '%): se poi non lo rispetti, il proponente non lo dimentica</label>' : '';
+  const amend = open ? (law.confidence ? '<p class="parliament-note">Sul testo c’è la fiducia: niente più emendamenti.</p>' : '<form class="bill-amend" data-bill-amend-form data-law-id="' + esc(law.id) + '"><label>Il tuo emendamento<select name="patch">' + billAmendments(law).map(([value, label]) => '<option value="' + esc(value) + '">' + esc(label) + '</option>').join('') + '</select></label><button class="secondary-button" type="submit">Presenta · 1 giorno · ' + AMENDMENT_CAPITAL_COST + ' cap. · probabilità ' + Math.round(oddsOf(false) * 100) + '%</button>' + deal + '</form>') : '';
+  const voting = ['commission', 'amendments', 'final-vote'].includes(law.stage) ? '<div class="bill-vote"><span>Il tuo voto quando arriva in Aula</span><div class="bill-vote-choices" role="group" aria-label="Il tuo voto">' + Object.entries(PLAYER_VOTE_CHOICES).map(([id, label]) => '<button type="button" class="chip-button' + ((law.pendingPlayerVote ?? 'linea') === id ? ' active' : '') + '" data-bill-vote="' + id + '" data-law-id="' + esc(law.id) + '" aria-pressed="' + ((law.pendingPlayerVote ?? 'linea') === id) + '">' + esc(label) + '</button>').join('') + '</div></div>' : '';
+  return '<div class="bill-actions"><div class="bill-speak">' + speak + '</div>' + amend + voting + '</div>';
+}
+function billCard(law, parliament, extras = {}) {
+  const governing = extras.governing ?? governingGroupIds(parliament);
+  const side = billSide(law, governing);
+  const committee = (extras.committees ?? []).find(item => item.id === law.committeeId);
+  const chamber = CHAMBERS[law.currentChamber]?.shortLabel ?? law.currentChamber;
+  const kindLabel = law.kind === 'decreto' ? 'Decreto-legge' : law.kind === 'manovra' ? 'Legge di bilancio' : 'Disegno di legge';
+  const open = !CLOSED_STAGES.includes(law.stage);
+  const next = open && law.nextStepAt ? '<span>' + glyph('clock', 13) + ' Prossimo passaggio: ' + esc(law.nextStepAt) + '</span>' : '';
+  const decree = law.kind === 'decreto' && open ? '<span class="bill-flag warn">In vigore · va convertito entro il ' + esc(law.deadline ?? '') + '</span>' : '';
+  const confidence = law.confidence && open ? '<span class="bill-flag bad">Fiducia posta dal governo</span>' : '';
+  const stance = (law.playerStance ? '<span class="bill-flag">Sei intervenuto ' + (law.playerStance === 'favorevole' ? 'a favore' : 'contro') + '</span>' : '') + (law.playerDeal ? '<span class="bill-flag warn">Accordo: hai promesso il voto favorevole</span>' : '');
+  const amendments = (law.playerAmendments ?? []).map(item => '<span class="bill-flag ' + (item.accepted ? 'good' : 'bad') + '">Tuo emendamento ' + (item.accepted ? 'approvato' : 'respinto') + '</span>').join('');
+  const votes = (law.votes ?? []).map((vote, index) => { const summary = voteSummary({ ...vote, id: vote.id ?? law.id + '-voto-' + (index + 1) }); const mine = vote.playerChoice ? '<span>Il tuo voto <b>' + esc(PLAYER_VOTE_CHOICES[vote.playerChoice] ?? vote.playerChoice) + '</b></span>' : ''; return '<div class="law-vote-result"><strong>' + esc(CHAMBERS[vote.chamber]?.shortLabel || vote.chamber) + ' · ' + esc(vote.date ?? '') + '</strong><span>Favorevoli <b>' + whole(summary.yes) + '</b></span><span>Contrari <b>' + whole(summary.against) + '</b></span><span>Astenuti <b>' + whole(summary.abstain) + '</b></span><span>Soglia <b>' + whole(summary.needed) + '</b></span>' + (summary.dissent ? '<span>Voti in dissenso <b>' + whole(summary.dissent) + '</b></span>' : '') + mine + '<em>' + (summary.passed ? 'Approvata' : 'Respinta') + '</em><button class="text-link" data-hemi-vote="' + esc(summary.id) + '" data-hemi-vote-chamber="' + esc(vote.chamber) + '">Vedi nell’emiciclo</button></div>'; }).join('');
+  const journal = (law.journal ?? []).slice(-3).reverse().map(item => '<li><time>' + esc(item.date) + '</time> ' + esc(item.text) + '</li>').join('');
+  const impact = extras.society?.lawsApplied?.find(item => item.lawId === law.id);
+  return '<article class="law-card bill-card stage-' + esc(law.stage) + ' side-' + esc(side) + '"><header>' + artTile(LAW_ICONS[law.category] ?? 'law', side === 'governo' ? '#2a78d6' : side === 'maggioranza' ? '#1baf7a' : side === 'opposizione' ? '#e3a348' : '#8f7ad6') + '<div class="law-card-title"><span class="section-kicker">' + esc(kindLabel.toUpperCase()) + ' · ' + esc(law.category.toUpperCase()) + ' · ' + esc(chamber.toUpperCase()) + '</span><h3>' + esc(law.title) + '</h3><span class="bill-sponsor"><b class="sponsor-' + esc(side) + '">' + esc(LAW_SPONSORS[side]?.label ?? side) + '</b> ' + esc(side === 'governo' ? 'Consiglio dei ministri (simulato)' : law.sponsor?.label ?? '') + '</span></div>' + dataMarker(DATA_SOURCES.SIMULATION, statusNames[law.stage] || law.stage) + '</header><p>' + esc(law.summary) + '</p>' + billSteps(law) + '<div class="bill-meta">' + (committee ? '<span>' + glyph('users', 13) + ' ' + esc(committee.number) + ' Commissione · ' + esc(committee.shortName ?? committee.name) + ' <small>(reale)</small></span>' : '') + next + decree + confidence + stance + amendments + '</div>' + billForecast(law, parliament, extras.world) + billActions(law, parliament, extras) + (journal ? '<ul class="bill-journal">' + journal + '</ul>' : '') + (impact ? '<p class="law-impact ' + (impact.covered ? 'good' : 'bad') + '">' + glyph('map', 13) + ' Effetti sul Paese: ' + (impact.covered ? 'coperture trovate' : 'coperture insufficienti') + (impact.topRegions?.length ? ' · più visibili in ' + impact.topRegions.map(item => esc(item.name)).join(', ') : '') + '</p>' : '') + votes + '</article>';
+}
+function billsBoard(parliament, extras = {}) {
+  const governing = governingGroupIds(parliament);
+  const bills = (parliament.laws ?? []).filter(law => law.auto);
+  if (!bills.length && !(parliament.lawArchive ?? []).length) return '<section class="law-board bill-board"><div class="home-section-heading"><div><span class="section-kicker">IN PARLAMENTO · SIMULAZIONE</span><h2>Le proposte degli altri</h2></div></div><p class="quiet-copy">Governo, gruppi e commissioni presentano le loro proposte settimana dopo settimana: le troverai qui.</p></section>';
+  const filter = BILL_FILTERS.some(([id]) => id === extras.filter) ? extras.filter : 'tutte';
+  const open = bills.filter(law => !CLOSED_STAGES.includes(law.stage));
+  const counts = Object.fromEntries(BILL_FILTERS.map(([id]) => [id, bills.filter(law => billMatches(law, id, parliament, governing)).length]));
+  const shown = bills.filter(law => billMatches(law, filter, parliament, governing)).sort((a, b) => Number(CLOSED_STAGES.includes(a.stage)) - Number(CLOSED_STAGES.includes(b.stage)) || String(a.nextStepAt ?? '9999').localeCompare(String(b.nextStepAt ?? '9999')) || String(b.updatedAt).localeCompare(String(a.updatedAt)));
+  const year = String(extras.currentDate ?? '').slice(0, 4);
+  const approvedYear = [...bills, ...(parliament.lawArchive ?? [])].filter(law => law.stage === 'approved' && String(law.updatedAt ?? law.closedAt ?? '').startsWith(year)).length;
+  const toVote = open.filter(law => law.currentChamber === parliament.player?.chamber && ['amendments', 'final-vote'].includes(law.stage)).length;
+  const filters = '<div class="ag-filters bill-filters" role="group" aria-label="Filtra le proposte">' + BILL_FILTERS.filter(([id]) => id !== 'aula' || parliament.player?.groupId).map(([id, label]) => '<button type="button" data-view-filter="leggi" data-view-filter-value="' + id + '" class="' + (filter === id ? 'active' : '') + '" aria-pressed="' + (filter === id) + '">' + esc(label) + (counts[id] ? ' · ' + counts[id] : '') + '</button>').join('') + '</div>';
+  const archive = (parliament.lawArchive ?? []).slice(0, 8).map(item => '<li><span class="bill-flag ' + (item.stage === 'approved' ? 'good' : 'bad') + '">' + esc(item.stage === 'approved' ? 'Approvata' : item.status === 'arenata' ? 'Ferma' : item.stage === 'lapsed' ? 'Decaduta' : 'Respinta') + '</span> ' + esc(item.title) + ' <small>' + esc(item.sponsor?.kind === 'governo' ? 'Governo' : item.sponsor?.label ?? '') + ' · ' + esc(item.closedAt ?? '') + '</small></li>').join('');
+  return '<section class="law-board bill-board"><div class="home-section-heading"><div><span class="section-kicker">IN PARLAMENTO · SIMULAZIONE</span><h2>Le proposte di governo, gruppi e commissioni</h2></div><span>' + whole(open.length) + ' in discussione · ' + whole(approvedYear) + ' approvate nel ' + esc(year) + (toVote ? ' · ' + whole(toVote) + ' al voto nella tua Camera' : '') + '</span></div><p class="parliament-note">Ogni settimana il governo, i gruppi di maggioranza e di opposizione e le commissioni presentano e portano avanti le loro proposte. ' + (canManageParliament(parliament) ? 'Puoi intervenire, presentare emendamenti e decidere il tuo voto: votare contro la linea del gruppo si nota.' : 'Senza un seggio le segui dall’esterno: le leggi approvate cambiano il Paese e i sondaggi.') + '</p>' + filters + (shown.map(law => billCard(law, parliament, { ...extras, governing })).join('') || '<p class="quiet-copy">Nessuna proposta in questo filtro.</p>') + (archive ? '<details class="bill-archive"><summary>Archivio delle proposte concluse</summary><ul>' + archive + '</ul></details>' : '') + '</section>';
+}
 function lawsView(parliament, extras = {}) {
   const playerCanAct = canManageParliament(parliament);
-  const proposals = [...(parliament.laws ?? [])].reverse().map(law => lawCard(law, parliament, extras.society, extras.state)).join('');
+  const proposals = [...(parliament.laws ?? [])].filter(law => !law.auto).reverse().map(law => lawCard(law, parliament, extras.society, extras.state)).join('');
   const form = '<form class="law-proposal-form" data-law-proposal-form><div class="law-proposal-heading"><div><span class="section-kicker">NUOVA INIZIATIVA</span><h2>Scrivi una proposta.</h2></div>' + dataMarker(DATA_SOURCES.SIMULATION, 'PROPOSTA DEL GIOCATORE') + '</div><div class="law-form-grid"><label>Titolo<input name="title" required minlength="5" maxlength="90" placeholder="Dai un nome alla proposta" /></label><div class="law-policy-field">' + policyFields({ area: 'sanita' }) + '</div><div class="law-policy-preview" data-policy-preview>' + (extras.society ? policyPreview(extras.society, measureDesign({ area: 'sanita' })) : '') + '</div><label class="law-summary-field">Contenuto<textarea name="summary" required minlength="12" maxlength="800" rows="3" placeholder="Quale cambiamento vuoi introdurre?"></textarea></label><input type="hidden" name="realReference" value="" /><p class="law-real-draft" data-law-real-draft hidden></p></div><button class="primary-button" type="submit" ' + (!playerCanAct ? 'disabled' : '') + '>Presenta la legge ' + icon + '</button><p>Le proposte attraversano commissione, emendamenti, prima votazione, seconda Camera e voto finale. Ogni esito è source: simulation.</p></form>';
-  return '<div class="parliament-mode laws-mode"><section class="parliament-mode-hero"><div><span class="section-kicker">ITER LEGISLATIVO</span><h2>Una proposta alla volta.</h2><p>Costruisci consenso in aula, negozia modifiche e scegli quando portare il testo al voto.</p></div>' + dataMarker(DATA_SOURCES.SIMULATION, 'LEGISLAZIONE DELLA PARTITA') + '</section>' + accessNote(parliament) + form + '<section class="law-board"><div class="home-section-heading"><div><span class="section-kicker">IN DISCUSSIONE</span><h2>Proposte e votazioni</h2></div><span>' + (parliament.laws?.length ?? 0) + ' iniziative</span></div>' + (proposals || '<p class="quiet-copy">Non hai ancora presentato una proposta.</p>') + '</section>' + (extras.realLaws ? '<section class="law-board real-law-board"><div class="home-section-heading"><div><span class="section-kicker">XIX LEGISLATURA · DATI REALI VERIFICATI</span><h2>Leggi e disegni di legge reali</h2></div></div>' + extras.realLaws + '</section>' : '') + timeline(parliament) + '</div>';
+  return '<div class="parliament-mode laws-mode"><section class="parliament-mode-hero"><div><span class="section-kicker">ITER LEGISLATIVO</span><h2>Una proposta alla volta.</h2><p>Governo, maggioranza, opposizione e commissioni legiferano ogni settimana. Le tue proposte le porti avanti tu: costruisci consenso, negozia e scegli quando portarle al voto.</p></div>' + dataMarker(DATA_SOURCES.SIMULATION, 'LEGISLAZIONE DELLA PARTITA') + '</section>' + accessNote(parliament) + form + '<section class="law-board"><div class="home-section-heading"><div><span class="section-kicker">LE TUE INIZIATIVE</span><h2>Proposte e votazioni</h2></div><span>' + (parliament.laws ?? []).filter(law => !law.auto).length + ' iniziative</span></div>' + (proposals || '<p class="quiet-copy">Non hai ancora presentato una proposta.</p>') + '</section>' + billsBoard(parliament, extras) + (extras.realLaws ? '<section class="law-board real-law-board"><div class="home-section-heading"><div><span class="section-kicker">XIX LEGISLATURA · DATI REALI VERIFICATI</span><h2>Leggi e disegni di legge reali</h2></div></div>' + extras.realLaws + '</section>' : '') + timeline(parliament) + '</div>';
 }
 
 export function renderParliamentPage(page, state, options = {}) {
@@ -245,7 +337,10 @@ export function renderParliamentPage(page, state, options = {}) {
     const stats = Object.fromEntries((state.dataset?.statistics ?? []).filter(item => item.subjectId === state.career?.playerId).map(item => [item.metric, item.value]));
     return days + governmentDesk(state) + governmentView(parliament, options.politicians ?? [], state.world?.polls?.at(-1)?.government?.approval ?? null, { stats, secretary: options.secretary, currentDate: state.clock?.currentDate, national: state.national ?? null });
   }
-  if (page === 'leggi') return days + lawsView(parliament, { society: state.society, realLaws: options.realLaws, state });
+  if (page === 'leggi') {
+    const influence = (state.dataset?.statistics ?? []).find(item => item.subjectId === state.career?.playerId && item.metric === 'influence')?.value ?? 50;
+    return days + lawsView(parliament, { society: state.society, realLaws: options.realLaws, state, world: state.world, filter: options.lawFilter, committees: options.committees ?? [], currentDate: state.clock?.currentDate, influence });
+  }
   const player = options.player ?? state.dataset?.politicians?.find(item => item.id === state.career?.playerId) ?? null;
   const odds = state.game ? careerOverview(state)?.tracks.find(track => track.id === 'parlamento')?.odds ?? null : null;
   return days + (options.hemicycle ?? '') + renderParliament(parliament, options.party, options.politicians ?? [], player, state.clock?.currentDate ?? parliament.createdAt, odds);

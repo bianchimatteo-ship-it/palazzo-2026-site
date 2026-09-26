@@ -1,11 +1,11 @@
 // Country, territories, citizens and media: the simulated society as the player sees it.
-import { INDICATORS, MEDIA_OUTLETS, SEGMENTS } from '../data/simulation/society-rules.js?v=20260925-9';
-import { nationalIndicators, regionPriorities, societyMood } from '../core/society-engine.js?v=20260925-9';
-import { illustration } from './illustrations.js?v=20260925-9';
-import { artTile, glyph } from './visuals.js?v=20260925-9';
+import { INDICATORS, MEDIA_OUTLETS, SEGMENTS } from '../data/simulation/society-rules.js?v=20260926-1';
+import { nationalIndicators, regionPriorities, societyMood } from '../core/society-engine.js?v=20260926-1';
+import { illustration } from './illustrations.js?v=20260926-1';
+import { artTile, glyph } from './visuals.js?v=20260926-1';
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
-import { breakdown, esc, levelState, lineChart, meter, num, rampColor, SERIES, signed, sparkline, stateBadge, trendState, GREEN_RAMP } from './charts.js?v=20260925-9';
-import { areasPanel, publicFinancePanel, securityPanel } from './policy-mode.js?v=20260925-9';
+import { breakdown, esc, levelState, lineChart, meter, num, rampColor, SERIES, signed, sparkline, stateBadge, trendState, GREEN_RAMP } from './charts.js?v=20260926-1';
+import { areasPanel, publicFinancePanel, securityPanel } from './policy-mode.js?v=20260926-1';
 
 // Tile cartogram of the regions: a recognisable boot, one tile per region.
 const TILES = Object.freeze({

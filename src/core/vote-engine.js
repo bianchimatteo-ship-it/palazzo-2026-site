@@ -45,7 +45,7 @@ export function voteSummary(vote, { seed = null } = {}) {
     const split = Number.isFinite(row.noVotes) && Number.isFinite(row.abstainVotes) ? { yes, no: row.noVotes, abstain: row.abstainVotes } : splitGroupVote({ seats, yes, confidence: vote.confidence, seed: `${key}|${row.groupId}` });
     const line = row.line ?? groupLine(split);
     const withLine = split[{ favorevole: 'yes', contrario: 'no', astenuto: 'abstain' }[line]];
-    return { groupId: row.groupId, seats, ...split, line, dissent: Math.max(0, seats - withLine), snipers: row.snipers ?? 0, governing: Boolean(row.governing) };
+    return { groupId: row.groupId, seats, ...split, line, dissent: Math.max(0, seats - withLine), snipers: row.snipers ?? 0, governing: Boolean(row.governing), playerChoice: row.playerChoice ?? null };
   });
   const against = groups.length ? groups.reduce((sum, row) => sum + row.no, 0) : Math.max(0, (vote.total ?? 0) - (vote.yes ?? 0));
   const abstain = groups.reduce((sum, row) => sum + row.abstain, 0);
@@ -58,23 +58,29 @@ export function voteSummary(vote, { seed = null } = {}) {
 }
 
 // The vote of every seat of a chamber roster (see hemicycle.js): members of a group follow its line, the dissenters
-// are drawn from the group with the vote's own sequence. The player follows the line of the group (or votes in favour
-// of an own bill). In a secret ballot the individual votes are not known.
+// are drawn from the group with the vote's own sequence, the members least tied to the line first (a trait of each
+// seat, the same in every vote: the usual dissenters of a group, never a statement about a real person). The player's
+// seat votes as the player decided (recorded with the vote), otherwise with the line of the group (or in favour of an
+// own bill). In a secret ballot the individual votes are not known.
+export const independenceOf = seat => (hashOf(`indipendenza|${seat?.person?.id ?? `${seat?.groupId}|${seat?.placeholderIndex ?? 0}`}`) % 1000) / 1000;
 export function individualVotes(summary, roster, { playerBill = false } = {}) {
   const choices = new Array(roster.length).fill('assente');
   if (!summary) return { choices, dissenters: [] };
   if (summary.secret) return { choices: choices.map((_, index) => roster[index]?.groupId ? 'segreto' : 'assente'), dissenters: [] };
   const dissenters = [];
   for (const group of summary.groups) {
-    const seats = roster.map((seat, index) => ({ seat, index })).filter(item => item.seat.groupId === group.groupId);
+    const decided = group.playerChoice ?? null;
+    // A player who stayed away leaves the seat empty.
+    const seats = roster.map((seat, index) => ({ seat, index })).filter(item => item.seat.groupId === group.groupId && !(item.seat.player && decided === 'assente'));
     if (!seats.length) continue;
     const random = seededRandom(`${summary.id ?? summary.chamber}|${group.groupId}|posti`);
     // The player's seat first, then who sets the group's line (group presidents, party leaders: they never break it),
-    // then the others in the vote's own random order (the same in every browser).
-    const order = seats.map(item => ({ ...item, key: random() })).sort((a, b) => Number(b.seat.player) - Number(a.seat.player) || Number(Boolean(b.seat.keepsLine)) - Number(Boolean(a.seat.keepsLine)) || a.key - b.key);
+    // then the others from the most to the least loyal, with a share of chance.
+    const order = seats.map(item => ({ ...item, key: random() * 0.55 + independenceOf(item.seat) * 0.45 })).sort((a, b) => Number(b.seat.player) - Number(a.seat.player) || Number(Boolean(b.seat.keepsLine)) - Number(Boolean(a.seat.keepsLine)) || a.key - b.key);
     const counts = { favorevole: group.yes, contrario: group.no, astenuto: group.abstain };
     const sequence = [group.line, ...['favorevole', 'contrario', 'astenuto'].filter(choice => choice !== group.line)];
-    if (playerBill && order[0]?.seat.player && counts.favorevole > 0) sequence.unshift('favorevole');
+    if (order[0]?.seat.player && decided && counts[decided] > 0) sequence.unshift(decided);
+    else if (playerBill && order[0]?.seat.player && counts.favorevole > 0) sequence.unshift('favorevole');
     let cursor = 0;
     for (const choice of [...new Set(sequence)]) {
       for (let taken = 0; taken < counts[choice] && cursor < order.length; taken++, cursor++) {

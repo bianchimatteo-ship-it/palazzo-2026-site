@@ -1,12 +1,12 @@
 // The interactive hemicycle of the Parlamento section: Camera and Senato apart, one marker per seat (real
 // parliamentarians in office, the player's seat), colours by group or by party, filters by party, group and
 // committee, a card for every parliamentarian and, for a simulated vote, the vote of every seat.
-import { chamberRoster, committeesOf, partyColors, UNKNOWN_COLOR } from '../core/hemicycle.js?v=20260925-9';
-import { individualVotes, VOTE_CHOICES, voteCatalog, voteSummary } from '../core/vote-engine.js?v=20260925-9';
-import { BASIS_LABELS, electionListOf, groupAffiliation, groupLabel, politicianAffiliation } from '../data/repositories/party-links.js?v=20260925-9';
-import { formatDate } from '../core/time.js?v=20260925-9';
-import { glyph } from './visuals.js?v=20260925-9';
-import { badge, esc, num, table } from './sections-kit.js?v=20260925-9';
+import { chamberRoster, committeesOf, partyColors, UNKNOWN_COLOR } from '../core/hemicycle.js?v=20260926-1';
+import { individualVotes, VOTE_CHOICES, voteCatalog, voteSummary } from '../core/vote-engine.js?v=20260926-1';
+import { BASIS_LABELS, electionListOf, groupAffiliation, groupLabel, politicianAffiliation } from '../data/repositories/party-links.js?v=20260926-1';
+import { formatDate } from '../core/time.js?v=20260926-1';
+import { glyph } from './visuals.js?v=20260926-1';
+import { badge, esc, num, table } from './sections-kit.js?v=20260926-1';
 
 export const HEMICYCLE_DEFAULTS = Object.freeze({ chamber: null, colorBy: 'gruppo', party: '', group: '', committee: '', vote: '', selected: null });
 const CHAMBER_LABELS = { camera: 'Camera dei deputati', senato: 'Senato della Repubblica' };
@@ -32,7 +32,7 @@ export function hemicycleModel(state, { politicians = [], db = {}, view = {} } =
   const vote = votes.find(item => item.id === view.vote) ?? null;
   const summary = vote ? voteSummary(vote) : null;
   const law = vote?.lawId ? (parliament.laws ?? []).find(item => item.id === vote.lawId) : null;
-  const individual = summary ? individualVotes(summary, roster.seats, { playerBill: Boolean(law && law.origin !== 'governo') }) : null;
+  const individual = summary ? individualVotes(summary, roster.seats, { playerBill: Boolean(law && !law.auto && law.origin !== 'governo') }) : null;
   const committees = (db.committees ?? []).filter(item => item.chamber === chamber);
   const committee = committees.find(item => item.id === view.committee) ?? null;
   const committeeIds = committee ? new Set((db.committeeMemberships ?? []).filter(row => row.committeeId === committee.id).map(row => row.politicianId)) : null;

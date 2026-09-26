@@ -1,33 +1,35 @@
-import { DATA_SOURCES, emptyDataset, isSelectableParty } from '../data/schema.js?v=20260925-9';
-import { makeDemoState } from '../data/demo.js?v=20260925-9';
-import { CAREER_LEVELS, initialCareerStatistics } from '../data/regions.js?v=20260925-9';
-import { storage } from './storage.js?v=20260925-9';
-import { loadSettings } from './settings.js?v=20260925-9';
-import { advanceDays, formatDate } from './time.js?v=20260925-9';
-import { validateNewCareerDraft } from './career-rules.js?v=20260925-9';
-import { advanceCampaign, breakCampaignAlliance, createCampaign, decideCampaignEvent, negotiateCampaignAlliance, performCampaignActivity, setCampaignStrategy, setExpectation } from './campaign-engine.js?v=20260925-9';
-import { electionAftermath } from './aftermath-engine.js?v=20260925-9';
-import { progressionFactors } from './progression-engine.js?v=20260925-9';
-import { committeeSupport, committeesAfterVote, createCommittees } from './committee-engine.js?v=20260925-9';
-import { createReferenceGovernment, neverHadGovernment, offerGroupSupport, requestGovernmentPost, withdrawGroupSupport, partnerSatisfaction, acceptLawDemand, activeMinisters, amendLawPolicy, askConfidenceOnLaw, groupProfile, issueDecree, majoritySummit, reshuffleMinister, setGovernmentProgram, settlePartnerDemand, withdrawLaw, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20260925-9';
-import { committeeAction, setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, saveForElection, scheduleEarlyElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20260925-9';
-import { COMMUNICATION_STYLES, GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20260925-9';
-import { AREA_BY_ID, BUDGET_SESSION, GOVERNMENT_LINES, areaOf } from '../data/simulation/policy-rules.js?v=20260925-9';
-import { acceptAlliance, addWorldEffects, advanceWorld, alignWorldToVote, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setGoverningForces, setPlayerParty, withCanonicalForces, withLatentForces, withPartyIdentities, withPositions } from './world-engine.js?v=20260925-9';
-import { FORMATION_PHASES, LEGISLATURE_RULES, NATIONAL_LINES, acceptMandate, crisisFormation, startFormation, buildCoalitions, campaignWeekEffects, coalitionOptions, compactResult, contestedDistricts, createNationalState, europeanListSeats, formationStep, groupOfParty, homeDistricts, legislatureGroups, legislatureTerm, nationalCalendar, nationalHistory, nationalProjection, normalizeNationalState, openLegislature, politicheOutcome, regionalBreakdown, runEuropeanVote, runNationalVote, seatPlayer, voteForces } from './legislature-engine.js?v=20260925-9';
-import { classifyOutcome, preferenceStanding } from './election-engine.js?v=20260925-9';
-import { DIFFICULTIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20260925-9';
-import { WORLD_PARTY_COUNT } from '../data/simulation/polling-rules.js?v=20260925-9';
-import { isPrimeMinister } from './roles.js?v=20260925-9';
-import { memoryAbout, memoryBalance, memoryWeight, recordWhy, remember } from './career-engine.js?v=20260925-9';
-import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20260925-9';
-import { advanceSociety, applyBudgetPlan, applyLawToSociety, calibrateWeights, createSociety, explainMood, measureDesign, mediaEvent, normalizeSociety, provisionalBudget, publicBudgetChoice, regionAttention, revokeMeasure, segmentAttention, societyMood, societyShock } from './society-engine.js?v=20260925-9';
-import { ACTIVITY_MEDIA, INDICATORS, ISSUE_TOPICS, SEGMENTS } from '../data/simulation/society-rules.js?v=20260925-9';
-import { book, hasAsset, releaseElectionFund, setBudgetLevel } from './finance-engine.js?v=20260925-9';
-import { isPartyLeader, treasuryBook } from './organization-engine.js?v=20260925-9';
-import { selectContacts, syncContacts } from './contacts-engine.js?v=20260925-9';
-import { NEWS_TEMPLATES, composeHeadline, weeklyNews } from './news-engine.js?v=20260925-9';
-import { macroAreaOf, MACRO_AREAS } from '../data/simulation/policy-rules.js?v=20260925-9';
+import { DATA_SOURCES, emptyDataset, isSelectableParty } from '../data/schema.js?v=20260926-1';
+import { makeDemoState } from '../data/demo.js?v=20260926-1';
+import { CAREER_LEVELS, initialCareerStatistics } from '../data/regions.js?v=20260926-1';
+import { storage } from './storage.js?v=20260926-1';
+import { loadSettings } from './settings.js?v=20260926-1';
+import { advanceDays, formatDate } from './time.js?v=20260926-1';
+import { validateNewCareerDraft } from './career-rules.js?v=20260926-1';
+import { advanceCampaign, breakCampaignAlliance, createCampaign, decideCampaignEvent, negotiateCampaignAlliance, performCampaignActivity, setCampaignStrategy, setExpectation } from './campaign-engine.js?v=20260926-1';
+import { electionAftermath } from './aftermath-engine.js?v=20260926-1';
+import { progressionFactors } from './progression-engine.js?v=20260926-1';
+import { committeeSupport, committeesAfterVote, createCommittees } from './committee-engine.js?v=20260926-1';
+import { createReferenceGovernment, neverHadGovernment, offerGroupSupport, requestGovernmentPost, withdrawGroupSupport, partnerSatisfaction, acceptLawDemand, activeMinisters, amendLawPolicy, askConfidenceOnLaw, groupProfile, issueDecree, majoritySummit, reshuffleMinister, setGovernmentProgram, settlePartnerDemand, withdrawLaw, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20260926-1';
+import { committeeAction, setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, saveForElection, scheduleEarlyElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20260926-1';
+import { AMENDMENT_CAPITAL_COST, COMMUNICATION_STYLES, GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20260926-1';
+import { advanceLegislativeWeek, amendOthersLaw, amendmentOdds, setPlayerVote, speakOnLaw } from './lawmaking-engine.js?v=20260926-1';
+import { seededRandom } from './vote-engine.js?v=20260926-1';
+import { AREA_BY_ID, BUDGET_SESSION, GOVERNMENT_LINES, areaOf } from '../data/simulation/policy-rules.js?v=20260926-1';
+import { acceptAlliance, addWorldEffects, advanceWorld, alignWorldToVote, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setGoverningForces, setPlayerParty, withCanonicalForces, withLatentForces, withPartyIdentities, withPositions } from './world-engine.js?v=20260926-1';
+import { FORMATION_PHASES, LEGISLATURE_RULES, NATIONAL_LINES, acceptMandate, crisisFormation, startFormation, buildCoalitions, campaignWeekEffects, coalitionOptions, compactResult, contestedDistricts, createNationalState, europeanListSeats, formationStep, groupOfParty, homeDistricts, legislatureGroups, legislatureTerm, nationalCalendar, nationalHistory, nationalProjection, normalizeNationalState, openLegislature, politicheOutcome, regionalBreakdown, runEuropeanVote, runNationalVote, seatPlayer, voteForces } from './legislature-engine.js?v=20260926-1';
+import { classifyOutcome, preferenceStanding } from './election-engine.js?v=20260926-1';
+import { DIFFICULTIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20260926-1';
+import { WORLD_PARTY_COUNT } from '../data/simulation/polling-rules.js?v=20260926-1';
+import { isPrimeMinister } from './roles.js?v=20260926-1';
+import { memoryAbout, memoryBalance, memoryWeight, recordWhy, remember } from './career-engine.js?v=20260926-1';
+import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20260926-1';
+import { advanceSociety, applyBudgetPlan, applyLawToSociety, calibrateWeights, createSociety, explainMood, measureDesign, mediaEvent, normalizeSociety, provisionalBudget, publicBudgetChoice, regionAttention, revokeMeasure, segmentAttention, societyMood, societyShock } from './society-engine.js?v=20260926-1';
+import { ACTIVITY_MEDIA, INDICATORS, ISSUE_TOPICS, SEGMENTS } from '../data/simulation/society-rules.js?v=20260926-1';
+import { book, hasAsset, releaseElectionFund, setBudgetLevel } from './finance-engine.js?v=20260926-1';
+import { isPartyLeader, treasuryBook } from './organization-engine.js?v=20260926-1';
+import { selectContacts, syncContacts } from './contacts-engine.js?v=20260926-1';
+import { NEWS_TEMPLATES, composeHeadline, weeklyNews } from './news-engine.js?v=20260926-1';
+import { macroAreaOf, MACRO_AREAS } from '../data/simulation/policy-rules.js?v=20260926-1';
 
 const STATE_VERSION = 9;
 const POSITIONS_SET = new Set(['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra']);
@@ -126,6 +128,9 @@ let realIdentities = {};
 let realStartDate = null;
 // The Government in office at the start, derived from the real data (government-reference.js): every career finds it.
 let referenceGovernment = null;
+// The verified groups of the real Chambers: with them the national Parliament works from the first week of every
+// career, also when the player does not sit in it.
+let realParliamentaryGroups = [];
 function forcesFrom({ twoPerThousand = [], parties = [], movements = [], coalitions = [], polls = [], governingIds = [], startDate = null }) {
   realStartDate = /^\d{4}-\d{2}-\d{2}$/.test(startDate ?? '') ? startDate : null;
   const entities = [...parties, ...movements, ...coalitions].filter(item => item.source === DATA_SOURCES.REAL && item.verified === true);
@@ -274,6 +279,8 @@ function emit() { for (const listener of listeners) listener(state, lastSaved); 
 // ---------- career timeline ----------
 // Every save compares the career with the previous save and writes down what changed.
 const TIMELINE_LIMIT = 300;
+// The events of the dataset are read for what is coming: the past ones are kept only up to this number.
+const EVENTS_LIMIT = 240;
 function addTimeline(s, entries) {
   if (!entries.length || !s.game) return s;
   const week = s.game.week.index;
@@ -301,7 +308,7 @@ function timelineDiff(before, after) {
     else if (ga.status === 'fallen') entries.push({ kind: 'governo', title: `Cade ${ga.name}`, tone: 'bad' });
   }
   const known = new Set((before.parliament?.history ?? []).map(item => item.id));
-  for (const item of after.parliament?.history ?? []) if (!known.has(item.id) && ['iter-approved', 'iter-rejected'].includes(item.type)) entries.push({ kind: 'legge', title: item.text, tone: item.type === 'iter-approved' ? 'good' : 'bad' });
+  for (const item of after.parliament?.history ?? []) if (!known.has(item.id) && !item.details?.auto && ['iter-approved', 'iter-rejected'].includes(item.type)) entries.push({ kind: 'legge', title: item.text, tone: item.type === 'iter-approved' ? 'good' : 'bad' });
   for (const result of (after.career.electionHistory ?? []).slice(before.career.electionHistory?.length ?? 0)) entries.push({ kind: 'elezione', title: `Elezioni ${result.electionType}: ${String(Math.round((result.percent ?? 0) * 10) / 10).replace('.', ',')}%`, detail: result.personalMandate ? 'Mandato conquistato' : 'Nessun mandato', tone: result.personalMandate ? 'good' : 'bad' });
   if (after.game.legislature?.number !== before.game.legislature?.number) entries.push({ kind: 'governo', title: `Si apre la ${after.game.legislature.label}`, tone: 'neutral' });
   if (after.game.status === 'ended' && before.game.status !== 'ended') entries.push({ kind: 'fine', title: 'La carriera si chiude', detail: after.game.endReason, tone: 'bad' });
@@ -412,13 +419,24 @@ function withObjectives(s) {
   return { ...s, game: ctx.game, parliament: withCapital(s.parliament, ctx.game) };
 }
 
+// Who answers for a law in front of the voters: the player for the own bills (and for the Government's when in the
+// majority), the player's party for the bills of the player's group, the others otherwise.
+function lawCredit(law, parliament) {
+  if (!law) return 'others';
+  const governs = Boolean(parliament?.player?.groupId && playerInMajority(parliament));
+  if (!law.auto) return law.origin === 'governo' ? (governs || isPrimeMinister(parliament) ? 'player' : 'others') : 'player';
+  if (law.sponsor?.kind === 'governo') return governs ? 'player' : 'others';
+  return law.sponsor?.groupId && law.sponsor.groupId === parliament?.player?.groupId ? 'group' : 'others';
+}
 function worldSignalsFrom(entries, parliament) {
   const government = parliament?.government;
   const inMajority = Boolean(government && parliament.player?.groupId && [...government.coalitionGroupIds, ...government.supportingGroupIds].includes(parliament.player.groupId));
   const lawTitle = id => parliament?.laws.find(law => law.id === id)?.title ?? 'proposta';
+  // The laws of the Government and of the other groups move their own parties (legislativeEffects), not the player's.
+  const own = entry => !entry.details?.auto || lawCredit(parliament?.laws.find(law => law.id === entry.details?.lawId), parliament) === 'player';
   return entries.flatMap(entry => {
-    if (entry.type === 'iter-approved') return [{ type: 'law-approved', title: lawTitle(entry.details?.lawId) }];
-    if (entry.type === 'iter-rejected') return [{ type: 'law-rejected', title: lawTitle(entry.details?.lawId) }];
+    if (entry.type === 'iter-approved' && own(entry)) return [{ type: 'law-approved', title: lawTitle(entry.details?.lawId) }];
+    if (entry.type === 'iter-rejected' && own(entry)) return [{ type: 'law-rejected', title: lawTitle(entry.details?.lawId) }];
     if (entry.type === 'fiducia-ottenuta') return [entry.details?.renewed ? { type: 'chronicle', kind: 'governo', icon: 'dome', title: 'Il governo supera la crisi', body: 'La maggioranza conferma la fiducia in entrambe le Camere (simulazione).', tone: 'neutral' } : { type: 'government-formed', inMajority }];
     if (entry.type === 'fiducia-negata') return [{ type: 'government-fallen', inMajority }];
     if (['crisi-governo', 'crisi-spontanea'].includes(entry.type) || (entry.type === 'cambio-maggioranza' && government?.status === 'crisis')) return [{ type: 'crisis', inMajority }];
@@ -442,24 +460,26 @@ function computeParliamentUpdate(currentState, parliament, toast, metricDeltas =
   const playerGoverns = Boolean(parliament?.player?.groupId && playerInMajority(parliament));
   const measureTaken = (law, summary, headline) => {
     society = mediaEvent(society, { outletId: 'tv-nazionale', tone: summary.covered && (summary.controversy ?? 0) < 0.8 ? 1 : -0.7, intensity: 1.2, headline, date: currentDate, week });
-    chronicle.push({ type: 'chronicle', kind: 'legge', icon: 'law', title: headline, body: `${summary.covered ? 'Coperture trovate nei conti pubblici' : 'Coperture insufficienti: effetti ridotti e deficit in aumento'}. Effetti più visibili in ${(summary.topRegions ?? []).map(item => item.name).join(', ') || 'tutto il Paese'} nelle prossime settimane.`, tone: summary.covered ? 'good' : 'bad', chain: lawChain(summary, law.title, Boolean(currentState.world?.playerPartyId)) }, ...lawReaction(summary, law.title));
-    if (!summary.covered) deltas.reputation = (deltas.reputation ?? 0) - 1;
+    const responsible = lawCredit(law, parliament);
+    chronicle.push({ type: 'chronicle', kind: 'legge', icon: 'law', title: headline, body: `${law.auto && law.sponsor ? `Proposta di ${law.sponsor.kind === 'governo' ? 'governo' : law.sponsor.label}. ` : ''}${summary.covered ? 'Coperture trovate nei conti pubblici' : 'Coperture insufficienti: effetti ridotti e deficit in aumento'}. Effetti più visibili in ${(summary.topRegions ?? []).map(item => item.name).join(', ') || 'tutto il Paese'} nelle prossime settimane.`, tone: summary.covered ? 'good' : 'bad', chain: lawChain(summary, law.title, Boolean(currentState.world?.playerPartyId) && responsible !== 'others') }, ...lawReaction(summary, law.title));
+    if (!summary.covered && responsible === 'player') deltas.reputation = (deltas.reputation ?? 0) - 1;
+    const credit = lawCredit(law, parliament);
     // Acting on the party's programme keeps the party together.
-    if (currentState.game?.party?.program?.areas?.includes(summary.area) && (law.origin !== 'governo' || playerGoverns)) programHits += 1;
-    if (law.origin === 'governo' ? playerGoverns : true) {
+    if (currentState.game?.party?.program?.areas?.includes(summary.area) && credit !== 'others') programHits += 1;
+    if (credit === 'player') {
       memories.push({ kind: 'legge', text: `${law.kind === 'decreto' ? 'Decreto' : 'Legge'}: ${law.title}`, area: summary.area ?? null, weight: 1 });
       if (['irpef', 'imprese', 'consumi', 'rendite'].includes(summary.financing)) memories.push({ kind: 'tasse', text: `${summary.financingLabel} per finanziare “${law.title}”`, segments: (summary.losers ?? []).map(item => item.id), weight: 1.2 });
       if (summary.financing === 'tagli') memories.push({ kind: 'tagli', text: `Tagli per finanziare “${law.title}”`, weight: 0.8 });
     }
     // Whoever is responsible gains where the measure lands and loses where it leaves people out.
-    if (playerGoverns || law.origin !== 'governo') {
+    if (credit !== 'others') {
       for (const item of summary.topRegions ?? []) territorial[item.name] = round2((territorial[item.name] ?? 0) + 0.35);
       for (const item of summary.bottomRegions ?? []) if (summary.target && summary.target !== 'nazionale') territorial[item.name] = round2((territorial[item.name] ?? 0) - 0.25);
     }
     // Allies judge the content against their own priorities.
     if (parliament?.government?.partners && law.policy?.area) {
       for (const groupId of Object.keys(parliament.government.partners)) {
-        const profile = groupProfile(groupId);
+        const profile = groupProfile(['camera', 'senato'].flatMap(chamber => parliament.chambers?.[chamber]?.groups ?? []).find(group => group.groupId === groupId) ?? groupId);
         const delta = (profile.likes.includes(law.policy.area) ? 3 : 0) - (profile.dislikes.includes(law.policy.area) ? 3 : 0) - (law.policy.financing === profile.dislikesFinancing ? 2 : 0);
         const partner = parliament.government.partners[groupId];
         if (partner.demand?.type === 'misura' && partner.demand.area === law.policy.area) parliament = settlePartnerDemand(parliament, groupId, true, currentDate);
@@ -484,10 +504,10 @@ function computeParliamentUpdate(currentState, parliament, toast, metricDeltas =
     } else if (entry.type === 'iter-approved' && law.kind === 'decreto') {
       chronicle.push({ type: 'chronicle', kind: 'legge', icon: 'law', title: `Convertito in legge il decreto “${law.title}”`, body: 'Il Parlamento conferma il decreto: gli effetti diventano definitivi.', tone: 'good' });
       if (parliament.government) parliament = { ...parliament, government: { ...parliament.government, stability: Math.min(100, (parliament.government.stability ?? 50) + 2) } };
-    } else if (entry.type === 'decreto-decaduto') {
+    } else if (entry.type === 'decreto-decaduto' || (entry.type === 'iter-rejected' && law.kind === 'decreto')) {
       society = revokeMeasure(society, law.title);
       society = mediaEvent(society, { outletId: 'quotidiani', tone: -1, intensity: 1.3, headline: `Decade il decreto “${law.title}”: figuraccia del governo`, date: currentDate, week });
-      deltas.reputation = (deltas.reputation ?? 0) - 1.5;
+      if (lawCredit(law, parliament) === 'player') deltas.reputation = (deltas.reputation ?? 0) - 1.5;
       if (parliament.government?.primeMinister === 'player') memories.push({ kind: 'decreto-decaduto', text: `Decaduto il decreto “${law.title}”`, weight: 1.5 });
       chronicle.push({ type: 'chronicle', kind: 'governo', icon: 'alert', title: `Decade il decreto “${law.title}”`, body: 'Non convertito in tempo: gli effetti futuri si fermano e parte di quelli già prodotti viene annullata.', tone: 'bad' });
     }
@@ -510,16 +530,18 @@ function computeParliamentUpdate(currentState, parliament, toast, metricDeltas =
     if (index < 0) statistics.push({ id: makeId('stat-' + metric), subjectId: playerId, metric, value: roundStat(delta), unit: '100', asOf: currentDate, source: DATA_SOURCES.SIMULATION });
     else statistics[index] = { ...statistics[index], value: roundStat(statistics[index].value + delta), asOf: currentDate, source: DATA_SOURCES.SIMULATION };
   }
-  const lawRecords = (parliament?.laws ?? []).map(law => ({ id: law.id, title: law.title, summary: law.summary, category: law.category, status: law.status, stage: law.stage, chamberId: 'chamber-' + law.firstChamber, introducedAt: law.introducedAt, updatedAt: law.updatedAt, source: DATA_SOURCES.SIMULATION }));
+  const lawRecords = (parliament?.laws ?? []).filter(law => !law.auto || !['approved', 'rejected', 'lapsed'].includes(law.stage)).map(law => ({ id: law.id, title: law.title, summary: law.summary, category: law.category, status: law.status, stage: law.stage, chamberId: 'chamber-' + law.firstChamber, introducedAt: law.introducedAt, updatedAt: law.updatedAt, source: DATA_SOURCES.SIMULATION }));
+  // The career keeps the player's parliamentary life; the calendar of the other actors stays in the parliament.
+  const careerEntries = newEntries.filter(entry => !entry.details?.auto);
   let dataset = {
     ...currentState.dataset, statistics, laws: lawRecords,
-    events: [...currentState.dataset.events, ...newEntries.map(event => ({ id: event.id, title: event.text, date: event.date, category: 'parlamento', status: event.type, territoryId: null, impact: event.details, source: DATA_SOURCES.SIMULATION }))]
+    events: [...currentState.dataset.events, ...careerEntries.map(event => ({ id: event.id, title: event.text, date: event.date, category: 'parlamento', status: event.type, territoryId: null, impact: event.details, source: DATA_SOURCES.SIMULATION }))].slice(-EVENTS_LIMIT)
   };
   // The Prime Minister stays in office for current business after the vote (caretaker), until a new Government is sworn in.
   const premierEnded = currentState.parliament?.government?.primeMinister === 'player' && !(['active', 'crisis', 'caretaker'].includes(parliament?.government?.status) && parliament.government.id === currentState.parliament.government.id) ? [`incarico-premier-${currentState.parliament.government.id}`] : [];
   dataset = closeOffices(dataset, [...endedRoleOfficeIds(currentState.parliament, parliament), ...endedMinisterOfficeIds(currentState.parliament, parliament), ...premierEnded, ...(officeChanges.close ?? [])], currentDate);
   for (const office of officeChanges.open ?? []) dataset = openOffice(dataset, office);
-  let career = newEntries.length ? { ...currentState.career, parliamentHistory: [...(currentState.career.parliamentHistory ?? []), ...newEntries] } : currentState.career;
+  let career = careerEntries.length ? { ...currentState.career, parliamentHistory: [...(currentState.career.parliamentHistory ?? []), ...careerEntries] } : currentState.career;
   if (parliament?.player && career.parliamentContext) career = { ...career, parliamentContext: { ...career.parliamentContext, chamber: parliament.player.chamber, groupId: parliament.player.groupId } };
   const world = currentState.world && newEntries.length ? applyWorldSignals(currentState.world, [...worldSignalsFrom(newEntries, parliament), ...chronicle], currentDate) : currentState.world;
   // The parliament engine spends political capital; the career keeps a single balance.
@@ -536,6 +558,11 @@ function applyParliamentUpdate(...args) {
 }
 
 // Parliamentarians who back the player (or signed the bill) bring their group closer, once per law.
+// The manual iter (present, negotiate, compromise, vote, withdraw) is for the player's own bills; the bills of the
+// Government and of the other groups follow the calendar of the Chambers.
+function requireOwnLaw(s, lawId) {
+  if (s.parliament?.laws.find(item => item.id === lawId)?.auto) throw new Error('È una proposta di altri: puoi intervenire, presentare emendamenti e decidere il tuo voto dalla sua scheda.');
+}
 function withContactSupport(parliament, contacts, lawId) {
   const law = parliament?.laws.find(item => item.id === lawId);
   if (!law || law.contactSupport || !parliament.relations) return parliament;
@@ -685,6 +712,9 @@ function handleSpecials(s, specials) {
       next = special.electionType === 'politiche'
         ? endMandate(next, 'Non ricandidato alle elezioni politiche')
         : { ...next, dataset: closeTermOffices(next.dataset, player?.id, special.electionType, next.clock.currentDate) };
+    } else if (special.type.startsWith('law-vote-') && next.parliament) {
+      const choice = { 'law-vote-line': 'linea', 'law-vote-yes': 'favorevole', 'law-vote-no': 'contrario', 'law-vote-abstain': 'astenuto', 'law-vote-absent': 'assente' }[special.type];
+      try { next = { ...next, parliament: setPlayerVote(next.parliament, special.params?.lawId, choice) }; } catch { /* the bill is no longer on the floor of the player's Chamber */ }
     } else if (special.type === 'national-vote') {
       // The country votes without the player (national cycle): new Chambers, or the European Parliament.
       next = holdNationalVote(next, special.electionType, { date: special.date });
@@ -735,7 +765,7 @@ function issueText(issue, society) {
 function tickSociety(s, date, report) {
   if (!s.society || !s.game || s.game.status === 'ended') return s;
   const before = s.society;
-  const out = advanceSociety(before, { date, week: report.week, government: s.parliament?.government ?? null, notoriety: playerStat(s, 'notoriety', 20) });
+  const out = advanceSociety(before, { date, week: report.week, government: s.parliament?.government ?? null, notoriety: playerStat(s, 'notoriety', 20), legislates: chambersAtWork(s.parliament) });
   let society = out.society;
   const region = playerOf(s)?.region ?? null;
   const deltas = { reputation: clampTo(society.media.sentiment / 400, -0.25, 0.25) };
@@ -937,6 +967,7 @@ function settleWeeks(s) {
     const difficulty = difficultyId(next.career.difficulty);
     const result = advanceWeek({ game: next.game, stats: statsOf(next), parliament: next.parliament ? { ...next.parliament, difficulty } : next.parliament }, { ...gameEnv(next), currentDate: weekEnd }, advanceGovernmentWeek);
     next = applyGameResult(next, result.ctx, next.ui.toast, result.specials);
+    if (result.report) next = tickLegislature(next, weekEnd);
     if (result.report) next = tickSociety(next, weekEnd, result.report);
     if (next.world && result.report) next = tickWorld(next, weekEnd, result.report);
     if (result.report) next = tickNational(next, weekEnd);
@@ -965,7 +996,7 @@ function stepTime(days) {
   if (justFinished) state = { ...state, ui: { ...state.ui, toast: 'Voto concluso: risultati disponibili' } };
   else if (state.game?.week.index === weekBefore) state = { ...state, ui: { ...state.ui, toast: `Tempo avanzato al ${week}` } };
   const inParliament = Boolean(state.parliament?.player) && campaign?.status !== 'active' && campaign?.status !== 'finished';
-  state = { ...state, dataset: { ...state.dataset, events: [...state.dataset.events, { id: makeId('evento'), title: campaign?.status === 'active' ? 'Giornata di campagna' : campaign?.status === 'finished' ? 'Campagna conclusa' : inParliament ? 'Settimana di lavori parlamentari' : 'Agenda aggiornata', date: state.clock.currentDate, category: campaign?.status === 'active' ? 'campagna' : inParliament ? 'parlamento' : 'agenda', status: 'da pianificare', source: DATA_SOURCES.SIMULATION }] } };
+  state = { ...state, dataset: { ...state.dataset, events: [...state.dataset.events, { id: makeId('evento'), title: campaign?.status === 'active' ? 'Giornata di campagna' : campaign?.status === 'finished' ? 'Campagna conclusa' : inParliament ? 'Settimana di lavori parlamentari' : 'Agenda aggiornata', date: state.clock.currentDate, category: campaign?.status === 'active' ? 'campagna' : inParliament ? 'parlamento' : 'agenda', status: 'da pianificare', source: DATA_SOURCES.SIMULATION }].slice(-EVENTS_LIMIT) } };
 }
 function commitGame(result, toast) {
   state = applyGameResult(state, result.ctx, toast, result.specials ?? []);
@@ -1014,6 +1045,87 @@ const SEAT_RULE_EU = 'Europee: 76 seggi, soglia nazionale del 4% (dato reale ver
 const nationalOf = s => normalizeNationalState(s.national, { currentDate: s.clock.currentDate, legislature: s.national ? null : s.game?.legislature ?? null });
 const pct1 = value => `${String(Math.round((value ?? 0) * 10) / 10).replace('.', ',')}%`;
 const nationalLabel = (s, vote = null) => id => s.world?.parties?.find(item => item.id === id)?.label ?? vote?.coalitions?.find(item => item.id === id)?.label ?? vote?.camera?.parties?.find(row => row.id === id)?.label ?? vote?.national?.find(row => row.id === id)?.label ?? id;
+// ---------- the Chambers at work (lawmaking-engine) ----------
+// Every week the Government, the groups and the committees move their bills; approved laws reach the country through
+// computeParliamentUpdate; the parties behind them gain or lose visibility; the player is asked how to vote on the
+// bills of the own Chamber and answers for the votes cast.
+const chambersAtWork = parliament => Boolean(parliament?.chambers?.camera?.groups?.length && parliament?.chambers?.senato?.groups?.length);
+const VOTE_WORDS = Object.freeze({ favorevole: 'a favore', contrario: 'contro', astenuto: 'con l’astensione', assente: 'senza partecipare al voto' });
+const LINE_WORDS = Object.freeze({ favorevole: 'a favore', contrario: 'contro', astenuto: 'per l’astensione' });
+function legislativeEffects(world, before, parliament, date) {
+  if (!world) return world;
+  const known = new Set((before?.history ?? []).map(entry => entry.id));
+  const effects = [];
+  for (const entry of (parliament?.history ?? []).filter(item => !known.has(item.id) && item.details?.auto)) {
+    const law = parliament.laws.find(item => item.id === entry.details.lawId);
+    if (!law?.sponsor || lawCredit(law, parliament) !== 'others') continue;
+    // A law approved is visibility for the party that proposed it (the Prime Minister's party for the Government).
+    if (entry.type === 'iter-approved' && law.sponsor.partyId) effects.push({ partyId: law.sponsor.partyId, delta: law.kind === 'ddl' ? 0.25 : 0.15, remaining: 4, label: `Approvata la legge “${law.title}”` });
+    // A Government text rejected costs the parties of the majority.
+    if (entry.type === 'iter-rejected' && law.sponsor.kind === 'governo') for (const partyId of new Set(governingGroups(parliament).map(group => group.partyId).filter(Boolean))) effects.push({ partyId, delta: -0.15, remaining: 3, label: `Il governo battuto su “${law.title}”` });
+  }
+  return effects.length ? addWorldEffects(world, effects.slice(0, 8), date) : world;
+}
+const governingGroups = parliament => { const ids = new Set([...(parliament?.government?.coalitionGroupIds ?? []), ...(parliament?.government?.supportingGroupIds ?? [])]); return ['camera', 'senato'].flatMap(chamber => parliament?.chambers?.[chamber]?.groups ?? []).filter(group => ids.has(group.groupId)); };
+// What the player's vote costs or earns: the group and the party keep count of dissent, the media of decisive votes.
+function playerVoteOutcome(s, event) {
+  const dissent = event.choice !== event.line && event.choice !== 'assente';
+  const tight = Math.abs(event.yes - event.needed) <= 3;
+  const betrayal = dissent && event.confidence && playerInMajority(s.parliament) && event.choice !== 'favorevole';
+  const partyDelta = betrayal ? -6 : dissent ? -2.5 : event.choice === 'assente' ? (tight ? -1.5 : -0.3) : 0.3;
+  const groupDelta = betrayal ? -8 : dissent ? -3 : event.choice === 'assente' ? -1 : 0.8;
+  const deltas = {};
+  if (dissent) deltas.notoriety = 0.8;
+  if (event.decisive) { deltas.notoriety = (deltas.notoriety ?? 0) + 1.5; deltas.influence = 1; }
+  let parliament = s.parliament;
+  if (parliament?.careerStanding) parliament = { ...parliament, careerStanding: { ...parliament.careerStanding, partySupport: clampTo(parliament.careerStanding.partySupport + groupDelta, 0, 100) } };
+  // A deal broken (an amendment obtained in exchange for the vote) is not forgotten by the sponsor.
+  const relationDelta = event.dealBroken ? -10 : event.choice === 'favorevole' ? 2 : event.choice === 'contrario' ? -2 : 0;
+  if (relationDelta && event.sponsor?.groupId && event.sponsor.groupId !== parliament?.player?.groupId && parliament?.relations?.[event.sponsor.groupId]) parliament = { ...parliament, relations: { ...parliament.relations, [event.sponsor.groupId]: { ...parliament.relations[event.sponsor.groupId], value: clampTo(parliament.relations[event.sponsor.groupId].value + relationDelta, 0, 100) } } };
+  let game = deepCopy(s.game);
+  if (game.party) game.party.support = clampTo(game.party.support + partyDelta, 0, 100);
+  const outcome = event.passed ? (event.finalVote ? 'approvata definitivamente' : 'approvata e trasmessa all’altra Camera') : 'respinta';
+  const text = `${event.decisive ? 'Il tuo voto decide: ' : ''}“${event.title}” ${outcome} (${event.yes} sì, soglia ${event.needed}). Hai votato ${VOTE_WORDS[event.choice] ?? event.choice}${dissent ? `, contro la linea del gruppo (${LINE_WORDS[event.line] ?? event.line})` : ''}.`;
+  if (dissent || event.decisive || betrayal) remember(game, { date: s.clock.currentDate, kind: dissent ? 'dissenso' : 'voto', text, weight: betrayal ? 1.5 : event.decisive ? 1.2 : 0.6, subject: event.sponsor?.partyId ?? null });
+  if (event.dealBroken) remember(game, { date: s.clock.currentDate, kind: 'alleato-tradito', text: `Accordo non rispettato su “${event.title}”`, subject: event.sponsor?.partyId ?? null, weight: 1 });
+  if (betrayal || event.decisive || (dissent && event.fromGovernment)) game = addDiary(game, { kind: 'parlamento', date: s.clock.currentDate, title: betrayal ? 'Voti contro la fiducia al governo che sostieni' : event.decisive ? 'Il tuo voto è decisivo' : 'Voti in dissenso dal tuo gruppo', lines: [text], tone: betrayal ? 'bad' : event.decisive ? 'good' : 'neutral' });
+  let next = { ...s, parliament, game };
+  if (event.decisive || betrayal) next = addTimeline(next, [{ kind: 'legge', title: text, tone: betrayal ? 'bad' : 'good' }]);
+  if (next.society && (dissent || event.decisive)) next = { ...next, society: mediaEvent(next.society, { outletId: 'quotidiani', tone: event.decisive ? 0.6 : 0.2, intensity: event.decisive ? 1.2 : 0.6, headline: event.decisive ? `Decisivo il voto di ${playerOf(s)?.displayName ?? 'un parlamentare'} su “${event.title}”` : `${playerOf(s)?.displayName ?? 'Un parlamentare'} vota in dissenso su “${event.title}”`, date: s.clock.currentDate, week: s.game.week.index }) };
+  const stats = statsOf(next);
+  const changed = Object.fromEntries(Object.entries(deltas).map(([metric, delta]) => [metric, roundStat((stats[metric] ?? 50) + delta)]));
+  if (Object.keys(changed).length) next = { ...next, dataset: { ...next.dataset, statistics: writeStats(next, { ...stats, ...changed }) } };
+  return { state: next, line: text };
+}
+function tickLegislature(input, date) {
+  let s = input;
+  // A career outside Parliament finds the Chambers (and the Government in office) at work all the same.
+  if (!s.parliament && realParliamentaryGroups.length && s.game && s.career.status !== 'demo') {
+    const created = createParliamentState({ career: { ...s.career, parliamentContext: null }, player: playerOf(s), groups: realParliamentaryGroups, currentDate: date, politicalCapital: s.game.resources.politicalCapital, referenceGovernment });
+    s = computeParliamentUpdate(s, withCapital(created, s.game), s.ui.toast);
+  }
+  const before = s.parliament;
+  if (!chambersAtWork(before) || !s.game || s.game.status === 'ended') return s;
+  const out = advanceLegislativeWeek(before, { date, rand: seededRandom(`${s.career.id ?? 'carriera'}|${date}|camere`), world: s.world, society: s.society });
+  if (out.parliament === before && !out.events.length) return s;
+  let next = computeParliamentUpdate(s, withCapital(out.parliament, s.game), s.ui.toast);
+  next = { ...next, world: legislativeEffects(next.world, before, next.parliament, date) };
+  const lines = [...out.lines];
+  for (const event of out.events.filter(item => item.type === 'voto-giocatore')) {
+    const result = playerVoteOutcome(next, event);
+    next = result.state;
+    lines.push(result.line);
+  }
+  let game = next.game;
+  // A vote already decided from the bill's card is not asked again.
+  for (const event of out.events.filter(item => item.type === 'voto-in-arrivo' && item.important && !item.decided)) {
+    const sponsorLine = event.sponsor?.kind === 'governo' ? (event.kind === 'manovra' ? 'La legge di bilancio del governo arriva al voto.' : event.kind === 'decreto' ? 'Il decreto-legge del governo va convertito in legge.' : 'Un disegno di legge del governo arriva al voto.') : event.sponsor?.kind === 'commissione' ? 'Il testo unificato della commissione arriva al voto.' : `La proposta di ${event.sponsor?.label ?? 'un gruppo'} arriva al voto.`;
+    const forecast = event.margin >= 0 ? `passa con circa ${event.yes} voti (soglia ${event.needed})` : `mancano circa ${Math.abs(event.margin)} voti alla soglia di ${event.needed}`;
+    game = addSituationEvent(game, 'voto-aula', { lawId: event.lawId, lawTitle: event.title, sponsorLine, whereWhen: `${event.finalVote ? 'Voto finale' : 'Prima votazione'} ${next.parliament.player.chamber === 'camera' ? 'alla Camera' : 'al Senato'}: ${formatDate(event.date)}.`, lineLabel: LINE_WORDS[event.line] ?? event.line, lineShort: LINE_WORDS[event.line] ?? event.line, forecast, confidenceLine: event.confidence ? ' Il governo ha posto la questione di fiducia: se il voto fallisce, cade.' : '', dedupe: `${event.lawId}|${event.finalVote ? 'finale' : 'prima'}` }, event.confidence || Math.abs(event.margin) <= 5, { holdUntil: event.date });
+  }
+  if (lines.length && game.lastReport) game = { ...game, lastReport: { ...game.lastReport, lines: [...game.lastReport.lines, ...lines.slice(0, 4)] } };
+  return { ...next, game, parliament: withCapital(next.parliament, game) };
+}
 function nationalFormationOpen(s) {
   const formation = s.national?.formation;
   return Boolean(formation && !['completata', 'fallita'].includes(formation.phase));
@@ -1719,8 +1831,12 @@ export const store = {
   },
 
   // ---------- parliament ----------
+  setParliamentaryGroups(realGroups = []) {
+    realParliamentaryGroups = realGroups.filter(group => group?.source === DATA_SOURCES.REAL && group.verified === true);
+  },
   initializeParliament(realGroups = []) {
     const groups = realGroups.filter(group => group?.source === DATA_SOURCES.REAL && group.verified === true);
+    if (groups.length) realParliamentaryGroups = groups;
     if (!groups.length) return state.parliament;
     const player = playerOf(state);
     const context = state.career.parliamentContext ?? null;
@@ -1778,20 +1894,24 @@ export const store = {
     return parliament.laws.find(law => law.id === result.law.id);
   },
   amendLaw(lawId, text) {
+    requireOwnLaw(state, lawId);
     const next = withTime(PARLIAMENT_TIME_COSTS.amendLaw);
     return applyParliamentUpdate(next, amendLaw(next.parliament, lawId, text, next.clock.currentDate), 'Emendamento registrato');
   },
   negotiateLaw(lawId, groupId) {
+    requireOwnLaw(state, lawId);
     const next = withTime(PARLIAMENT_TIME_COSTS.negotiateLaw);
     const parliament = negotiateLaw(next.parliament, lawId, groupId, next.clock.currentDate, { influence: playerStat(state, 'influence') });
     const refused = parliament.history.at(-1)?.type === 'negoziato-rifiutato';
     return applyParliamentUpdate(next, parliament, refused ? 'Il gruppo rifiuta di trattare: migliora prima i rapporti' : 'Trattativa legislativa aggiornata', refused ? {} : { influence: 0.5 });
   },
   compromiseLaw(lawId) {
+    requireOwnLaw(state, lawId);
     const next = withTime(PARLIAMENT_TIME_COSTS.compromiseLaw);
     return applyParliamentUpdate(next, compromiseLaw(next.parliament, lawId, next.clock.currentDate), 'Compromesso registrato');
   },
   advanceLaw(lawId, action) {
+    requireOwnLaw(state, lawId);
     const next = withTime(PARLIAMENT_TIME_COSTS.advanceLaw);
     const result = advanceLaw(withContactSupport(next.parliament, next.game?.contacts ?? [], lawId), lawId, action, next.clock.currentDate);
     const finished = ['approved', 'rejected'].includes(result.law.stage);
@@ -1867,21 +1987,60 @@ export const store = {
   },
   askConfidence(lawId) {
     requirePremier();
+    requireOwnLaw(state, lawId);
     const next = withGovernmentCost('confidenceOnLaw');
     return applyParliamentUpdate(next, askConfidenceOnLaw(next.parliament, lawId, next.clock.currentDate), 'Questione di fiducia posta: la maggioranza è chiamata a compattarsi');
   },
   amendLawPolicy(lawId, patch = {}) {
+    requireOwnLaw(state, lawId);
     const law = state.parliament?.laws.find(item => item.id === lawId);
     if (law?.origin === 'governo' && !isPrimeMinister(state.parliament) && !canManageParliament(state.parliament)) throw new Error('Serve un seggio per emendare.');
     const next = withTime(PARLIAMENT_TIME_COSTS.amendPolicy);
     return applyParliamentUpdate(next, amendLawPolicy(next.parliament, lawId, patch, next.clock.currentDate), 'Emendamento al contenuto approvato in commissione');
   },
   acceptLawDemand(lawId, groupId) {
+    requireOwnLaw(state, lawId);
     return applyParliamentUpdate(state, acceptLawDemand(state.parliament, lawId, groupId, state.clock.currentDate), 'Richiesta accolta: il testo cambia, il gruppo sostiene la proposta');
   },
   withdrawLaw(lawId) {
+    requireOwnLaw(state, lawId);
     const next = withTime(PARLIAMENT_TIME_COSTS.withdraw);
     return applyParliamentUpdate(next, withdrawLaw(next.parliament, lawId, next.clock.currentDate), 'Proposta ritirata', { reputation: -0.5 });
+  },
+  // ---------- the bills of the Government, of the other groups and of the committees ----------
+  // A speech for or against: the sponsor's group notices it, the media report it.
+  speakOnLaw(lawId, stance) {
+    const next = withTime(PARLIAMENT_TIME_COSTS.speakOnLaw);
+    const parliament = speakOnLaw(next.parliament, lawId, stance, next.clock.currentDate);
+    const law = parliament.laws.find(item => item.id === lawId);
+    const echoed = next.society ? { ...next, society: mediaEvent(next.society, { outletId: 'tv-nazionale', tone: 0.3, intensity: 0.5, headline: `${playerOf(next)?.displayName ?? 'Un parlamentare'} interviene ${stance === 'favorevole' ? 'a sostegno di' : 'contro'} “${law.title}”`, date: next.clock.currentDate, week: next.game?.week.index ?? 1 }) } : next;
+    return applyParliamentUpdate(echoed, parliament, stance === 'favorevole' ? 'Intervento a sostegno della proposta' : 'Intervento contro la proposta', { notoriety: 0.5, experience: 0.25 });
+  },
+  // An amendment to a bill of the others: whoever proposed it decides whether to accept it.
+  amendOthersLaw(lawId, patchKey, patchValue, { offerVote = false } = {}) {
+    const law = state.parliament?.laws.find(item => item.id === lawId);
+    if (!law?.auto) throw new Error('Per le tue proposte modifica direttamente il testo.');
+    if ((state.game?.resources.politicalCapital ?? state.parliament?.resources?.politicalCapital ?? 0) < AMENDMENT_CAPITAL_COST) throw new Error(`Servono ${AMENDMENT_CAPITAL_COST} punti di capitale politico per presentare un emendamento.`);
+    const next = withTime(PARLIAMENT_TIME_COSTS.amendOthers);
+    const paid = { ...next.parliament, resources: { ...next.parliament.resources, politicalCapital: next.parliament.resources.politicalCapital - AMENDMENT_CAPITAL_COST } };
+    const roll = seededRandom(`${state.career.id}|${lawId}|${(law.playerAmendments ?? []).length}|${next.clock.currentDate}|emendamento`)();
+    const result = amendOthersLaw(paid, lawId, { [patchKey]: patchKey === 'intensity' ? Number(patchValue) : patchValue }, next.clock.currentDate, { influence: playerStat(state, 'influence'), committeeRole: Boolean(next.parliament.careerStanding?.committeeRole), roll, offerVote });
+    // A deal fixes the vote: the pending request of the agenda is answered.
+    const answered = result.accepted && offerVote && next.game ? { ...next, game: { ...next.game, inbox: next.game.inbox.filter(item => !(item.templateId === 'voto-aula' && item.params?.lawId === lawId)) } } : next;
+    applyParliamentUpdate(answered, result.parliament, result.accepted ? (offerVote ? 'Accordo fatto: emendamento approvato, voterai a favore' : 'Emendamento approvato: il testo cambia') : `Emendamento respinto (probabilità stimata ${Math.round(result.chance * 100)}%)`, result.accepted ? { influence: 0.5, experience: 0.5 } : { experience: 0.25 });
+    return result;
+  },
+  amendmentOdds(lawId, { offerVote = false } = {}) {
+    const law = state.parliament?.laws.find(item => item.id === lawId);
+    return law ? amendmentOdds(state.parliament, law, { influence: playerStat(state, 'influence'), committeeRole: Boolean(state.parliament.careerStanding?.committeeRole), offerVote }) : 0;
+  },
+  // How the player will vote when the bill comes to the floor of the player's Chamber.
+  castLawVote(lawId, choice) {
+    const labels = { linea: 'Voterai con il tuo gruppo', favorevole: 'Voterai a favore', contrario: 'Voterai contro', astenuto: 'Ti asterrai', assente: 'Non parteciperai al voto' };
+    const parliament = setPlayerVote(state.parliament, lawId, choice);
+    // The decision taken from the bill's card answers the pending request of the agenda.
+    const game = state.game ? { ...state.game, inbox: state.game.inbox.filter(item => !(item.templateId === 'voto-aula' && item.params?.lawId === lawId)) } : state.game;
+    return applyParliamentUpdate({ ...state, game }, parliament, labels[choice] ?? 'Voto registrato');
   },
   negotiateGovernmentSupport(groupId) {
     requireFormateur();

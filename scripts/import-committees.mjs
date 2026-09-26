@@ -98,8 +98,17 @@ const senatePermanent = senateRows.filter(row => /\/commissione\/0-\d+$/.test(va
 const senateUris = [...new Set(senatePermanent.map(row => value(row, 'c')))];
 const titles = await sparql(SENATO, `PREFIX osr: <http://dati.senato.it/osr/>
 SELECT ?c ?titolo ?breve WHERE { ?c a osr:Commissione . OPTIONAL { ?c osr:titolo ?titolo } OPTIONAL { ?c osr:titoloBreve ?breve } FILTER(?c IN (${senateUris.map(uri => `<${uri}>`).join(', ')})) }`);
-const titleOf = new Map(titles.map(row => [value(row, 'c'), { title: value(row, 'titolo'), short: value(row, 'breve') }]));
 const labelOrdinal = uri => Number((senatePermanent.find(row => value(row, 'c') === uri)?.label?.value ?? '').match(/(\d+)ª/)?.[1] ?? 0);
+// A committee can keep the titles of earlier legislatures (the EU committee, 0-14, was the 14ª before 2022): the title
+// that carries the number of its XIX legislature memberships wins.
+const titleOf = new Map();
+for (const row of titles) {
+  const uri = value(row, 'c');
+  const entry = { title: value(row, 'titolo'), short: value(row, 'breve') };
+  const current = titleOf.get(uri);
+  const fits = item => item?.title?.startsWith(`${labelOrdinal(uri)}ª`);
+  if (!current || (!fits(current) && fits(entry))) titleOf.set(uri, entry);
+}
 const senateCommittees = senateUris.map(uri => {
   const ordinal = labelOrdinal(uri);
   const info = titleOf.get(uri) ?? {};

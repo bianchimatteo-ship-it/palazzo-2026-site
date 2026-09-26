@@ -1,6 +1,6 @@
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260925-9';
-import { INDICATORS, ISSUE_THRESHOLD, ISSUE_TOPICS, MEDIA_OUTLETS, REAL_TOPIC_AREAS, SCENARIO_EXECUTIVE, SEGMENTS } from '../data/simulation/society-rules.js?v=20260925-9';
-import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, EU_PROCEDURE_WEEKS, FINANCING, INSTRUMENT_KINDS, INTENSITY, MACRO_AREAS, POLICY_AREAS, SPREAD_BASE, TERRITORIAL_TARGETS, areaOf, macroAreaOf } from '../data/simulation/policy-rules.js?v=20260925-9';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-1';
+import { INDICATORS, ISSUE_THRESHOLD, ISSUE_TOPICS, MEDIA_OUTLETS, REAL_TOPIC_AREAS, SCENARIO_EXECUTIVE, SEGMENTS } from '../data/simulation/society-rules.js?v=20260926-1';
+import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, EU_PROCEDURE_WEEKS, FINANCING, INSTRUMENT_KINDS, INTENSITY, MACRO_AREAS, POLICY_AREAS, SPREAD_BASE, TERRITORIAL_TARGETS, areaOf, macroAreaOf } from '../data/simulation/policy-rules.js?v=20260926-1';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -495,7 +495,7 @@ function areasWeek(society) {
     if (funded && spec.regional) for (const region of Object.values(society.regions)) for (const indicator of Object.keys(spec.regional)) region.indicators[indicator] = round1(clamp(region.indicators[indicator] + funded * 0.3));
   }
 }
-export function advanceSociety(input, { date, week, government = null, notoriety = 20 }) {
+export function advanceSociety(input, { date, week, government = null, notoriety = 20, legislates = false }) {
   const society = normalizeSociety(copy(input));
   society.week = week;
   const lines = [];
@@ -554,11 +554,13 @@ export function advanceSociety(input, { date, week, government = null, notoriety
     lines.push(`Nuovo problema: ${issueLabel(issue)}`);
   }
   // Unless the player leads the Government, the executive acts on its own on the most pressing problem: the scenario
-  // executive, or the Government in office led by the simulated Prime Minister.
+  // executive, or the Government in office led by the simulated Prime Minister. When the Chambers are at work
+  // (lawmaking-engine) a Government in office acts through its bills and decrees instead.
   let measure = null;
-  const governing = government && ['active', 'crisis'].includes(government.status) && government.primeMinister === 'player';
-  const actor = government && ['active', 'crisis'].includes(government.status) ? 'Il governo in carica' : 'L’esecutivo di scenario';
-  if (!governing && week - society.executive.lastActionWeek >= SCENARIO_EXECUTIVE.agendaEveryWeeks) {
+  const inOffice = government && ['active', 'crisis'].includes(government.status);
+  const governing = inOffice && government.primeMinister === 'player';
+  const actor = inOffice ? 'Il governo in carica' : 'L’esecutivo di scenario';
+  if (!governing && !(legislates && inOffice) && week - society.executive.lastActionWeek >= SCENARIO_EXECUTIVE.agendaEveryWeeks) {
     const topic = society.issues[0]?.topic ?? ['Economia', 'Sanità', 'Lavoro', 'Infrastrutture', 'Welfare'][Math.floor(draw(society) * 5)];
     const spec = areaOf(topic) ?? AREA_BY_ID.economia;
     society.executive.lastActionWeek = week;

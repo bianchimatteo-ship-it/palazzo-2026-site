@@ -3,11 +3,11 @@
 // Chambers and their groups, the formation of the Government. Everything that happens is simulation: the real data are
 // the geography, the seats and the 2022 results the vote starts from; parties, coalitions, votes and seats of the game
 // are estimates of the game and never presented as real results.
-import { advanceDays, formatDate } from './time.js?v=20260925-9';
-import { axisOf, nationalShares } from './world-engine.js?v=20260925-9';
-import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20260925-9';
-import { voteGovernmentConfidence } from './parliament-engine.js?v=20260925-9';
-import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20260925-9';
+import { advanceDays, formatDate } from './time.js?v=20260926-1';
+import { axisOf, nationalShares } from './world-engine.js?v=20260926-1';
+import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20260926-1';
+import { archiveGovernment, voteGovernmentConfidence } from './parliament-engine.js?v=20260926-1';
+import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20260926-1';
 
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -738,7 +738,7 @@ export function electedGovernment(parliament, { majority, number, date, formedBy
   // Ministries in proportion to the seats of each majority group at the Camera (the player's Government: chosen by the player).
   const ministers = formedBy === 'player' ? [] : simulatedMinisters(next, groupIds, { number, date });
   const partners = Object.fromEntries(groupIds.filter(id => id !== next.player?.groupId).map(id => [id, { satisfaction: 62, demand: null, source: SIM }]));
-  if (next.government) next.pastGovernments = [...(next.pastGovernments ?? []), { ...next.government, status: next.government.status === 'caretaker' ? 'concluded' : next.government.status, endedAt: date }];
+  if (next.government) next.pastGovernments = archiveGovernment(next, { status: next.government.status === 'caretaker' ? 'concluded' : next.government.status, endedAt: date });
   const base = majority.kind === 'governo-del-presidente' ? 'Governo del Presidente' : `Governo ${leaderLabel ?? majority.label ?? 'di coalizione'}`;
   // A second Government of the same leader in the same legislature is a "bis" (then "ter", "quater").
   const again = (next.pastGovernments ?? []).filter(item => item.legislature === number && String(item.name ?? '').startsWith(base)).length;

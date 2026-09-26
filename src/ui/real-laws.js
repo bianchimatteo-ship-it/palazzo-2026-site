@@ -1,9 +1,9 @@
 // Real bills and laws of the XIX legislature, as published by the Senate open data.
 // Titles, status, numbers and dates are shown exactly as in the source; the game area
 // next to each act is only the game's reading of its official topics.
-import { realLawArea } from '../core/society-engine.js?v=20260925-9';
-import { LAW_ICONS, glyph } from './visuals.js?v=20260925-9';
-import { esc } from './charts.js?v=20260925-9';
+import { realLawArea } from '../core/society-engine.js?v=20260926-1';
+import { LAW_ICONS, glyph } from './visuals.js?v=20260926-1';
+import { esc } from './charts.js?v=20260926-1';
 
 export const REAL_LAW_PAGE = 12;
 const formatDay = value => value ? new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(`${value}T12:00:00`)) : '—';
