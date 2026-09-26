@@ -1,6 +1,7 @@
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-7';
-import { INDICATORS, ISSUE_THRESHOLD, ISSUE_TOPICS, MEDIA_OUTLETS, REAL_TOPIC_AREAS, SCENARIO_EXECUTIVE, SEGMENTS } from '../data/simulation/society-rules.js?v=20260926-7';
-import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, EU_PROCEDURE_WEEKS, FINANCING, INSTRUMENT_KINDS, INTENSITY, MACRO_AREAS, POLICY_AREAS, SPREAD_BASE, TERRITORIAL_TARGETS, areaOf, macroAreaOf } from '../data/simulation/policy-rules.js?v=20260926-7';
+import { uniqueId } from './ids.js?v=20260926-8';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-8';
+import { INDICATORS, ISSUE_THRESHOLD, ISSUE_TOPICS, MEDIA_OUTLETS, REAL_TOPIC_AREAS, SCENARIO_EXECUTIVE, SEGMENTS } from '../data/simulation/society-rules.js?v=20260926-8';
+import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, EU_PROCEDURE_WEEKS, FINANCING, INSTRUMENT_KINDS, INTENSITY, MACRO_AREAS, POLICY_AREAS, SPREAD_BASE, TERRITORIAL_TARGETS, areaOf, macroAreaOf } from '../data/simulation/policy-rules.js?v=20260926-8';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -290,7 +291,7 @@ export function measureImpact(society, input) {
   };
 }
 function pushEffect(society, effect) {
-  society.effects.push({ id: `effetto-${society.week}-${society.effects.length}-${society.rngState % 997}`, delay: 0, source: SIM, ...effect });
+  society.effects.push({ id: uniqueId(society.effects, `effetto-${society.week}-${society.effects.length}-${society.rngState % 997}`), delay: 0, source: SIM, ...effect });
 }
 // Applies a measure: the money goes at once, the effects arrive week after week (and bonuses fade).
 export function applyMeasure(input, design, { title, origin = 'giocatore', date, week, lawId = null } = {}) {
@@ -417,7 +418,7 @@ export function mediaEvent(input, { outletId, tone = 0, intensity = 1, headline,
   society.media.sentiment = round1(clamp(society.media.sentiment + tone * intensity * outlet.reach / 12, -100, 100));
   outlet.stance = round1(clamp(outlet.stance + tone * intensity * 3, -100, 100));
   outlet.attention = round1(clamp(outlet.attention + intensity * 8));
-  if (headline) society.media.coverage = [{ id: `copertura-${week}-${society.media.coverage.length}`, week, date, outletId: outlet.id, outlet: outlet.label, headline, tone: tone > 0 ? 'good' : tone < 0 ? 'bad' : 'neutral', source: SIM }, ...society.media.coverage].slice(0, 40);
+  if (headline) society.media.coverage = [{ id: uniqueId(society.media.coverage, `copertura-${week}-${society.media.coverage.length}`), week, date, outletId: outlet.id, outlet: outlet.label, headline, tone: tone > 0 ? 'good' : tone < 0 ? 'bad' : 'neutral', source: SIM }, ...society.media.coverage].slice(0, 40);
   return society;
 }
 // A shock in the news: fear rises faster than crime itself; an area or region can take the hit too.

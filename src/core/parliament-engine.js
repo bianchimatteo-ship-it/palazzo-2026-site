@@ -1,7 +1,7 @@
-import { DATA_SOURCES } from '../data/schema.js?v=20260926-7';
-import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, STAGE_WEEKS, areaOf } from '../data/simulation/policy-rules.js?v=20260926-7';
-import { evaluateAdvancement } from './progression-engine.js?v=20260926-7';
-import { groupLine, splitGroupVote } from './vote-engine.js?v=20260926-7';
+import { DATA_SOURCES } from '../data/schema.js?v=20260926-8';
+import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, STAGE_WEEKS, areaOf } from '../data/simulation/policy-rules.js?v=20260926-8';
+import { evaluateAdvancement } from './progression-engine.js?v=20260926-8';
+import { groupLine, splitGroupVote } from './vote-engine.js?v=20260926-8';
 
 export const CHAMBERS = Object.freeze({
   camera: { label: 'Camera dei deputati', shortLabel: 'Camera', source: DATA_SOURCES.REAL },
@@ -106,6 +106,10 @@ function setRelation(parliament, groupId, delta) {
   const current = parliament.relations?.[groupId] ?? { value: 50, source: DATA_SOURCES.SIMULATION };
   return { ...parliament, relations: { ...parliament.relations, [groupId]: { ...current, value: clamp(current.value + delta, 0, 100), source: DATA_SOURCES.SIMULATION } } };
 }
+// In the simulated legislatures the composition that came out of the vote already includes the player's seat
+// (seatPlayer): entering does not add one, and leaving hands it to the next elected of the same group. The real XIX
+// legislature counts the real members, to whom the player's seat is added.
+const ownSeatIncluded = parliament => parliament?.legislature?.reference === 'simulation';
 function changeSeats(parliament, chamber, groupId, delta) {
   const current = parliament.chambers?.[chamber];
   if (!current || !groupId) return parliament;
@@ -191,7 +195,7 @@ export function createReferenceGovernment(parliament, spec, currentDate) {
   const ministers = (spec.ministries ?? []).filter(item => MINISTERIAL_PORTFOLIOS.includes(item.portfolio)).map(item => {
     const group = item.groupId && coalitionGroupIds.includes(item.groupId) ? getGroup(parliament, item.groupId) : null;
     const seed = hashOf(`${spec.governmentId}|${item.portfolio}`);
-    return { id: newId('nomina'), portfolio: item.portfolio, groupId: group?.groupId ?? null, groupName: group?.officialName ?? 'Tecnico indipendente', playerAppointed: false, appointeeLabel: 'Incarico simulato · ripartito all’avvio come nel governo reale', loyalty: 60 + seed % 20, competence: 45 + (seed >> 5) % 35, fromReference: true, source: DATA_SOURCES.SIMULATION, appointedAt: currentDate };
+    return { id: newId('nomina'), portfolio: item.portfolio, groupId: group?.groupId ?? null, groupName: group?.officialName ?? 'Tecnico indipendente', playerAppointed: false, appointeeLabel: 'Incarico simulato · ripartito all’avvio come nel governo reale', loyalty: 60 + seed % 20, competence: 45 + (seed >>> 5) % 35, fromReference: true, source: DATA_SOURCES.SIMULATION, appointedAt: currentDate };
   });
   const seats = chamber => parliament.chambers[chamber].groups.filter(group => coalitionGroupIds.includes(group.groupId)).reduce((sum, group) => sum + group.simulatedSeats, 0);
   const margin = Math.min(...['camera', 'senato'].map(chamber => seats(chamber) - majority(parliament, chamber)));
@@ -253,10 +257,10 @@ export function enterParliament(parliament, { politicianId, chamber, groupId = n
     next = { ...next, player: { ...current, politicianId: politicianId ?? current.politicianId, territoryName: territoryName ?? current.territoryName, mandateStartedAt: currentDate } };
     return record(next, currentDate, 'rielezione', `${CHAMBERS[chamber].shortLabel}: seggio confermato, il mandato prosegue nello scenario.`, { chamber, groupId: current.groupId, source: DATA_SOURCES.SIMULATION });
   }
-  if (current?.groupId) next = changeSeats(next, current.chamber, current.groupId, -1);
+  if (current?.groupId && !ownSeatIncluded(next)) next = changeSeats(next, current.chamber, current.groupId, -1);
   const target = groupId ? getGroup(next, groupId) : null;
   const validGroup = target?.chamber === chamber ? groupId : null;
-  if (validGroup) next = changeSeats(next, chamber, validGroup, 1);
+  if (validGroup && !ownSeatIncluded(next)) next = changeSeats(next, chamber, validGroup, 1);
   next = {
     ...next, contextMode: 'real-context', careerStanding: createCareerStanding(),
     player: { politicianId, chamber, groupId: validGroup, position: BASE_POSITION, territoryName, mandateStartedAt: currentDate, source: DATA_SOURCES.SIMULATION }
@@ -270,7 +274,7 @@ export function enterParliament(parliament, { politicianId, chamber, groupId = n
 export function leaveParliament(parliament, currentDate, reason = 'Mandato concluso') {
   const current = parliament?.player;
   if (!current) return parliament;
-  let next = current.groupId ? changeSeats(parliament, current.chamber, current.groupId, -1) : parliament;
+  let next = current.groupId && !ownSeatIncluded(parliament) ? changeSeats(parliament, current.chamber, current.groupId, -1) : parliament;
   const laws = next.laws.map(law => CLOSED_LAW_STAGES.includes(law.stage) ? law : { ...law, stage: 'lapsed', status: 'lapsed', updatedAt: currentDate });
   const mandate = {
     id: newId('mandato-concluso'), chamber: current.chamber, groupId: current.groupId, startedAt: current.mandateStartedAt ?? next.createdAt, endedAt: currentDate,
@@ -734,7 +738,7 @@ export function assignMinister(parliament, portfolio, groupId, currentDate, { ap
   if (activeMinisters(government).some(item => item.portfolio === portfolio)) throw new Error('Questo ministero è già assegnato.');
   const group = getGroup(parliament, groupId);
   const seed = hashOf(`${government.id}|${portfolio}|${groupId}`);
-  const appointment = { id: newId('nomina'), portfolio, groupId, groupName: group.officialName, playerAppointed: toPlayer, appointeeLabel: toPlayer ? (appointeeLabel || 'Il tuo politico') : 'Incarico di governo simulato', loyalty: toPlayer ? 100 : 55 + seed % 25, competence: toPlayer ? null : 40 + (seed >> 5) % 45, source: DATA_SOURCES.SIMULATION, appointedAt: currentDate };
+  const appointment = { id: newId('nomina'), portfolio, groupId, groupName: group.officialName, playerAppointed: toPlayer, appointeeLabel: toPlayer ? (appointeeLabel || 'Il tuo politico') : 'Incarico di governo simulato', loyalty: toPlayer ? 100 : 55 + seed % 25, competence: toPlayer ? null : 40 + (seed >>> 5) % 45, source: DATA_SOURCES.SIMULATION, appointedAt: currentDate };
   let next = { ...parliament, government: { ...government, ministers: [...government.ministers, appointment] } };
   next = changePartner(next, groupId, 6);
   next = setRelation(next, groupId, 3);
@@ -775,13 +779,14 @@ export function voteGovernmentConfidence(parliament, currentDate) {
       const choice = !decided || decided === 'linea' ? line : decided;
       const bucket = { favorevole: 'yesVotes', contrario: 'noVotes', astenuto: 'abstainVotes' };
       if (own[bucket[line]] > 0) own[bucket[line]] -= 1; else if (own.noVotes > 0) own.noVotes -= 1; else if (own.abstainVotes > 0) own.abstainVotes -= 1; else own.yesVotes = Math.max(0, own.yesVotes - 1);
-      if (bucket[choice]) own[bucket[choice]] += 1;
+      // Not taking part: the seat is counted as absent.
+      if (bucket[choice]) own[bucket[choice]] += 1; else own.absentVotes = (own.absentVotes ?? 0) + 1;
       own.playerChoice = choice;
       playerVote = { chamber, choice, line };
     }
     const yes = byGroup.reduce((sum, row) => sum + row.yesVotes, 0);
     if (playerVote?.chamber === chamber) playerVote.decisive = playerVote.choice === 'favorevole' ? yes === needed : yes === needed - 1;
-    return { id: `${government.id}-fiducia-${(government.confidenceVotes ?? []).length + 1}-${chamber}`, date: currentDate, kind: 'fiducia', label: 'Fiducia al governo', chamber, yes, nominalSupport: nominal, total, needed, passed: yes >= needed, confidence: true, byGroup, ...(playerVote?.chamber === chamber ? { playerChoice: playerVote.choice, playerLine: playerVote.line, decisive: playerVote.decisive } : {}), source: DATA_SOURCES.SIMULATION };
+    return { id: `${government.id}-fiducia-${(government.confidenceVotes ?? []).length + 1}-${chamber}`, date: currentDate, kind: 'fiducia', label: 'Fiducia al governo', chamber, yes, nominalSupport: nominal, absent: byGroup.reduce((sum, row) => sum + (row.absentVotes ?? 0), 0), total, needed, passed: yes >= needed, confidence: true, byGroup, ...(playerVote?.chamber === chamber ? { playerChoice: playerVote.choice, playerLine: playerVote.line, decisive: playerVote.decisive } : {}), source: DATA_SOURCES.SIMULATION };
   });
   const passed = votes.every(vote => vote.passed);
   const status = passed ? 'active' : 'fallen';

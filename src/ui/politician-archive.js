@@ -1,6 +1,6 @@
-import { realDatabase } from '../data/repositories/real-data.js?v=20260926-7';
-import { BASIS_LABELS, electionListOf, groupAffiliation, groupLabel, inOffice, politicianAffiliation } from '../data/repositories/party-links.js?v=20260926-7';
-import { personMark } from './visuals.js?v=20260926-7';
+import { realDatabase } from '../data/repositories/real-data.js?v=20260926-8';
+import { BASIS_LABELS, electionListOf, groupAffiliation, groupLabel, inOffice, politicianAffiliation } from '../data/repositories/party-links.js?v=20260926-8';
+import { personMark } from './visuals.js?v=20260926-8';
 
 const esc = (value = '') => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const pageSize = 48;

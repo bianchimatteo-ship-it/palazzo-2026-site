@@ -1,5 +1,5 @@
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-7';
-import { CONGRESS_CYCLE_WEEKS, FIRST_CONGRESS_WEEKS, MEMBERSHIP_FEE, ORGANS, PARTY_PRIORITIES, SECTION_WEEKLY_COST, TREASURY_LABELS } from '../data/simulation/organization-rules.js?v=20260926-7';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-8';
+import { CONGRESS_CYCLE_WEEKS, FIRST_CONGRESS_WEEKS, MEMBERSHIP_FEE, ORGANS, PARTY_PRIORITIES, SECTION_WEEKLY_COST, TREASURY_LABELS } from '../data/simulation/organization-rules.js?v=20260926-8';
 
 // The party as an organisation: members, sections, bodies, cohesion, conflicts and treasury.
 // Everything is simulated and lives inside the career state (game.party.org).

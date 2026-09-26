@@ -1,22 +1,23 @@
-import { advanceDays, nextMunicipalVote, nextRegionalVote } from './time.js?v=20260926-7';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260926-7';
-import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260926-7';
+import { uniqueId } from './ids.js?v=20260926-8';
+import { advanceDays, nextMunicipalVote, nextRegionalVote } from './time.js?v=20260926-8';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260926-8';
+import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260926-8';
 import {
   APPOINTMENTS, BASE_WEEKLY_INCOME, CAREER_EVENTS, CAREER_OBJECTIVES, CURRENT_TEMPLATES, EARLY_ELECTION_AFTER_WEEKS, ELECTION_SCHEDULE,
   FORCED_EVENTS, LEGACY_RIVAL_NAMES, SIMULATED_RIVAL_LABEL, FOUNDER_RANK, LEVEL_FIRST_ELECTION, OFFICE_INCOME, PARTY_RANKS, RELATION_TEMPLATES, STAT_LABELS,
-  SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS } from '../data/simulation/career-rules.js?v=20260926-7';
-import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20260926-7';
-import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20260926-7';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-7';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260926-7';
-import { book, buyInvestment, createFinance, depositElectionFund, hasAsset, normalizeFinance, settleFinanceWeek } from './finance-engine.js?v=20260926-7';
-import { advanceOrganization, applyOrgEffects, createOrganization, isPartyLeader, normalizeOrganization, treasuryBook } from './organization-engine.js?v=20260926-7';
-import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20260926-7';
-import { HARD_CATEGORIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20260926-7';
-import { macroAreaOf } from '../data/simulation/policy-rules.js?v=20260926-7';
-import { advancementOdds, evaluateAdvancement, progressionFactors } from './progression-engine.js?v=20260926-7';
-import { advanceCommittees, applyCommitteeAction, COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, foundCommittee } from './committee-engine.js?v=20260926-7';
-import { europeanElectionDate, legislatureTerm, LEGISLATURE_RULES, sundayOnOrBefore } from './legislature-engine.js?v=20260926-7';
+  SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS } from '../data/simulation/career-rules.js?v=20260926-8';
+import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20260926-8';
+import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20260926-8';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-8';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260926-8';
+import { book, buyInvestment, createFinance, depositElectionFund, hasAsset, normalizeFinance, settleFinanceWeek } from './finance-engine.js?v=20260926-8';
+import { advanceOrganization, applyOrgEffects, createOrganization, isPartyLeader, normalizeOrganization, treasuryBook } from './organization-engine.js?v=20260926-8';
+import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20260926-8';
+import { HARD_CATEGORIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20260926-8';
+import { macroAreaOf } from '../data/simulation/policy-rules.js?v=20260926-8';
+import { advancementOdds, evaluateAdvancement, progressionFactors } from './progression-engine.js?v=20260926-8';
+import { advanceCommittees, applyCommitteeAction, COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, foundCommittee } from './committee-engine.js?v=20260926-8';
+import { europeanElectionDate, legislatureTerm, LEGISLATURE_RULES, sundayOnOrBefore } from './legislature-engine.js?v=20260926-8';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -257,7 +258,7 @@ export const MEMORY_KINDS = Object.freeze({
 const currentWeight = (game, item) => (item.weight ?? 1) * Math.pow(0.5, Math.max(0, (game?.week?.index ?? 0) - item.week) / (HALF_LIFE * rules(game).memoryFade));
 export function remember(game, entry) {
   if (!game) return game;
-  const item = { id: `memoria-${game.week?.index ?? 0}-${(game.memory ?? []).length}-${(game.rngState ?? 1) % 9973}`, week: game.week?.index ?? 0, date: entry.date ?? null, weight: 1, tone: MEMORY_KINDS[entry.kind]?.tone ?? 'neutral', source: SIM, ...entry };
+  const item = { id: uniqueId(game.memory, `memoria-${game.week?.index ?? 0}-${(game.memory ?? []).length}-${(game.rngState ?? 1) % 9973}`), week: game.week?.index ?? 0, date: entry.date ?? null, weight: 1, tone: MEMORY_KINDS[entry.kind]?.tone ?? 'neutral', source: SIM, ...entry };
   let memory = [item, ...(game.memory ?? [])];
   // When the record is full the faintest memory goes, not the oldest: a heavy choice can weigh for many years.
   while (memory.length > MEMORY_LIMIT) { const faintest = memory.slice(1).reduce((low, entry) => currentWeight(game, entry) < currentWeight(game, low) ? entry : low); memory = memory.filter(entry => entry !== faintest); }
@@ -341,7 +342,7 @@ function pay(game, cost = {}, category = 'altro', label = null, date = null) {
 // Future consequences: scheduled now, decided when they come due (the outcome is not known in advance).
 function schedule(game, later, origin) {
   if (!later) return;
-  game.pending = [...(game.pending ?? []), { id: `seguito-${game.week.index}-${(game.pending ?? []).length}-${game.rngState % 9973}`, dueWeek: game.week.index + later.weeks, madeWeek: game.week.index, hint: later.hint ?? later.label ?? 'Esito in arrivo', label: later.label ?? 'Esito', chance: later.chance ?? 1, effects: later.effects ?? null, outcomes: later.outcomes ?? null, memory: later.memory ?? null, origin, source: SIM }];
+  game.pending = [...(game.pending ?? []), { id: uniqueId(game.pending, `seguito-${game.week.index}-${(game.pending ?? []).length}-${game.rngState % 9973}`), dueWeek: game.week.index + later.weeks, madeWeek: game.week.index, hint: later.hint ?? later.label ?? 'Esito in arrivo', label: later.label ?? 'Esito', chance: later.chance ?? 1, effects: later.effects ?? null, outcomes: later.outcomes ?? null, memory: later.memory ?? null, origin, source: SIM }];
 }
 function resolvePending(ctx, env, date, lines) {
   const game = ctx.game;
@@ -368,7 +369,7 @@ function resolvePending(ctx, env, date, lines) {
   game.pending = (game.pending ?? []).filter(entry => entry.dueWeek > game.week.index);
 }
 function addLog(game, date, kind, title, lines = [], tone = 'neutral') {
-  game.log.unshift({ id: `diario-${game.week.index}-${game.log.length}-${game.rngState % 9973}`, week: game.week.index, date, kind, title, lines, tone, source: SIM });
+  game.log.unshift({ id: uniqueId(game.log, `diario-${game.week.index}-${game.log.length}-${game.rngState % 9973}`), week: game.week.index, date, kind, title, lines, tone, source: SIM });
   game.log = game.log.slice(0, 40);
 }
 function start(ctx) {

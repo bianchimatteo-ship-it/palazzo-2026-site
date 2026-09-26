@@ -1,6 +1,6 @@
-import { realDatabase } from '../data/repositories/real-data.js?v=20260926-7';
-import { BASIS_LABELS, POLITICAL_POSITIONS, electedOnListsOf, linkedPoliticians, politicianAffiliation } from '../data/repositories/party-links.js?v=20260926-7';
-import { personMark } from './visuals.js?v=20260926-7';
+import { realDatabase } from '../data/repositories/real-data.js?v=20260926-8';
+import { BASIS_LABELS, POLITICAL_POSITIONS, electedOnListsOf, linkedPoliticians, politicianAffiliation } from '../data/repositories/party-links.js?v=20260926-8';
+import { personMark } from './visuals.js?v=20260926-8';
 
 const KIND_LABELS = { party: 'Partito politico', politicalMovement: 'Movimento politico', coalition: 'Coalizione / lista comune', electoralList: 'Lista elettorale' };
 const kindOf = entity => entity.entityType ?? (entity.electionId ? 'electoralList' : 'party');

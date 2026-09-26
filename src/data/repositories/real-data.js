@@ -2,8 +2,8 @@
 // retained for exports and validation, but the browser never downloads it.
 export const REAL_DATA_ASSET_VERSION = '20260926-4';
 
-import { applyAdminOverrides } from './admin-store.js?v=20260926-7';
-import { displayCase, withDisplayNames } from './name-case.js?v=20260926-7';
+import { applyAdminOverrides } from './admin-store.js?v=20260926-8';
+import { displayCase, withDisplayNames } from './name-case.js?v=20260926-8';
 
 export let realDatabase = Object.freeze({});
 // Untouched copies of what the files contain, so owner overrides can be re-layered or reverted.

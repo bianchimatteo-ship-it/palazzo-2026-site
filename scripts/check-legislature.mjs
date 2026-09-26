@@ -295,4 +295,9 @@ assert.ok(q.national.lastEuropee?.date === '2029-06-10' && q.national.lastEurope
 assert.ok(q.game.elections.some(item => item.type === 'europee' && item.status === 'upcoming' && item.electionDate.startsWith('2034-06')), 'Prossime europee nel 2034.');
 clean(renderElectionsHub(q, { parties: db().parties, logoFor: () => null, tab: 'nazionali', national: () => quiet.nationalOverview(), geography, nationalView: 'voto' }), 'Nazionali (europee)');
 
+// The central invariants hold after a quiet career through the new legislature and the European elections.
+const { checkInvariants } = await import(`../src/core/invariants.js${v}`);
+const invariants = checkInvariants(q, { realPartyIds: [...db().parties, ...db().politicalMovements].map(item => item.id), realGroupIds: db().parliamentaryGroups.map(item => item.id) });
+assert.ok(invariants.ok, `Invarianti dopo il ciclo nazionale: ${invariants.issues.slice(0, 5).map(issue => `[${issue.code}] ${issue.message}`).join('; ')}`);
+
 console.log(`Ciclo nazionale verificato: mappa reale 2022 (147 + 74 collegi, ${Object.keys(geography.comuni).length} comuni), calendario (XIX legislatura al voto il 26/09/2027, europee 2029 e 2034, ciclo quinquennale, scioglimento di domenica), voto sulla mappa (2022 riprodotto: ${vote22.camera.collegi.filter(row => row.f && same(row)).length}/147 collegi, seggi proporzionali entro 2), soglie e minoranze, gruppi e Misto, formazione (${phases.join(' → ')}), incarico al giocatore, scioglimento, store (${report.outcome.code}, XX legislatura, governo ${formed.phase}), crisi con consultazioni, salvataggi e migrazione, europee senza il giocatore, viste Nazionali, Governo, Parlamento ed emiciclo.`);

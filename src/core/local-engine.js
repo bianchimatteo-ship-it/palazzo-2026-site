@@ -5,11 +5,12 @@
 // deadline, votes with individual dissent, and a player who proposes, votes, negotiates or governs. A council that loses
 // its majority is dissolved and votes early. Everything is simulation; the European groups start from their real size
 // at the constitutive session of 2024 (europarl), then evolve in the game.
-import { DATA_SOURCES } from '../data/schema.js?v=20260926-7';
-import { AREA_BY_ID, CAMP_PRIORITIES, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260926-7';
-import { cohesiveShare } from './parliament-engine.js?v=20260926-7';
-import { groupLine, seededRandom, splitGroupVote } from './vote-engine.js?v=20260926-7';
-import { advanceDays } from './time.js?v=20260926-7';
+import { uniqueId } from './ids.js?v=20260926-8';
+import { DATA_SOURCES } from '../data/schema.js?v=20260926-8';
+import { AREA_BY_ID, CAMP_PRIORITIES, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260926-8';
+import { cohesiveShare } from './parliament-engine.js?v=20260926-8';
+import { groupLine, seededRandom, splitGroupVote } from './vote-engine.js?v=20260926-8';
+import { advanceDays } from './time.js?v=20260926-8';
 
 const SIM = DATA_SOURCES.SIMULATION;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -80,7 +81,7 @@ export const majorityMargin = inst => inst.groups.filter(group => group.side ===
 // ---------- acts ----------
 function newAct(inst, { kind, sponsor, area, title, date, budget = false }) {
   const rules = INSTITUTIONS[inst.kind];
-  return { id: `${inst.id}-atto-${inst.acts.length + inst.archive.length + 1}`, kind, title, area, sponsor, budget, stage: 'commissione', introducedAt: date, nextStepAt: advanceDays(date, (budget ? 2 : 1 + (inst.acts.length % 3)) * 7), votes: [], pendingPlayerVote: null, label: rules.acts[kind], source: SIM };
+  return { id: uniqueId([...inst.acts, ...inst.archive], `${inst.id}-atto-${inst.acts.length + inst.archive.length + 1}`), kind, title, area, sponsor, budget, stage: 'commissione', introducedAt: date, nextStepAt: advanceDays(date, (budget ? 2 : 1 + (inst.acts.length % 3)) * 7), votes: [], pendingPlayerVote: null, label: rules.acts[kind], source: SIM };
 }
 const TITLES = {
   comune: { executive: area => `Delibera: ${AREA_BY_ID[area]?.label.toLowerCase() ?? 'servizi'} in città`, majority: area => `Mozione: più attenzione a ${AREA_BY_ID[area]?.label.toLowerCase() ?? 'servizi'}`, opposition: area => `Mozione dell’opposizione su ${AREA_BY_ID[area]?.label.toLowerCase() ?? 'servizi'}` },
@@ -130,7 +131,7 @@ function voteAct(inst, act, date) {
     const value = support(inst, act, group);
     const own = group.id === inst.playerGroupId;
     // The day of the vote: a few absent, a few who follow their own mind (more in a group that holds together less).
-    const absent = Math.floor(group.seats * rand() * 0.12);
+    let absent = Math.floor(group.seats * rand() * 0.12);
     const others = Math.max(0, (own ? group.seats - 1 : group.seats) - absent);
     const mood = clamp(value + (rand() - 0.5) * (0.12 + (100 - group.cohesion) / 250), 0.02, 0.98);
     let yes = Math.round(others * cohesiveShare(mood));
@@ -139,7 +140,7 @@ function voteAct(inst, act, date) {
     if (own) {
       line = value >= 0.55 ? 'favorevole' : value <= 0.42 ? 'contrario' : 'astenuto';
       choice = !decided || decided === 'linea' ? line : decided;
-      if (choice === 'favorevole') yes += 1; else if (choice === 'contrario') no += 1; else if (choice === 'astenuto') abstain += 1;
+      if (choice === 'favorevole') yes += 1; else if (choice === 'contrario') no += 1; else if (choice === 'astenuto') abstain += 1; else absent += 1;
     }
     return { groupId: group.id, yesVotes: yes, noVotes: no, abstainVotes: abstain, absent, line: groupLine({ yes, no, abstain }), seats: group.seats, ...(own ? { playerChoice: choice } : {}) };
   });

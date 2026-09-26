@@ -1,7 +1,8 @@
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-7';
-import { CHART_SLOTS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20260926-7';
-import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20260926-7';
-import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20260926-7';
+import { uniqueId } from './ids.js?v=20260926-8';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-8';
+import { CHART_SLOTS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20260926-8';
+import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20260926-8';
+import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20260926-8';
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
 // A party enters with its real identity only (id, name, abbreviation, documented collocazione); its starting weight
@@ -192,7 +193,8 @@ export function withCanonicalForces(input, map = {}, identities = {}) {
   world.presenceMoves = (world.presenceMoves ?? []).map(move => ({ ...move, id: into(move.id) }));
   world.alliances = (world.alliances ?? []).map(alliance => {
     const partyIds = [...new Set(alliance.partyIds.map(into))];
-    return partyIds.length < 2 && alliance.status === 'active' ? { ...alliance, partyIds, status: 'broken', brokenAt: alliance.brokenAt ?? world.createdAt } : { ...alliance, partyIds };
+    const leaderId = alliance.leaderId ? into(alliance.leaderId) : alliance.leaderId;
+    return partyIds.length < 2 && alliance.status === 'active' ? { ...alliance, partyIds, leaderId, status: 'broken', brokenAt: alliance.brokenAt ?? world.createdAt } : { ...alliance, partyIds, leaderId };
   });
   world.latent = (world.latent ?? []).filter(item => !map[item.id]);
   if (world.playerPartyId) world.playerPartyId = into(world.playerPartyId);
@@ -467,7 +469,7 @@ function publishPoll(world, { date, stats = {}, parliament = null, game = null }
   const why = player ? explainShare(world, results.find(row => row.partyId === player)) : [];
   const poll = {
     why,
-    id: `sondaggio-${world.week}-${world.polls.length}-${sample}`, week: world.week, date, institute: institute.name, sample, margin, undecided: world.undecided, results, regional, local,
+    id: uniqueId(world.polls, `sondaggio-${world.week}-${world.polls.length}-${sample}`), week: world.week, date, institute: institute.name, sample, margin, undecided: world.undecided, results, regional, local,
     regionalHome: player ? regional[world.place.region] ?? null : null,
     personal: { approval: round1(clamp((stats.popularity ?? 45) * 0.55 + (stats.reputation ?? 50) * 0.45 + gaussian(world) * 2.4, 0, 100)), popularity: stats.popularity ?? null, notoriety: stats.notoriety ?? null },
     government: government === null ? null : { approval: government },
@@ -551,12 +553,12 @@ function trendOf(world, partyId, weeks = 4) {
 
 // ---------- events & dynamics ----------
 function logEvent(world, date, entry) {
-  world.events = [{ id: `cronaca-${world.week}-${world.events.length}-${world.rngState % 9973}`, week: world.week, date, tone: 'neutral', lines: [], source: SIM, ...entry }, ...world.events].slice(0, 40);
+  world.events = [{ id: uniqueId(world.events, `cronaca-${world.week}-${world.events.length}-${world.rngState % 9973}`), week: world.week, date, tone: 'neutral', lines: [], source: SIM, ...entry }, ...world.events].slice(0, 40);
   return world.events[0];
 }
 function addEffect(world, effect) {
   if (!effect.delta) return;
-  const entry = { id: `effetto-${world.week}-${world.effects.length}-${world.rngState % 997}`, scope: 'national', remaining: 4, source: SIM, ...effect };
+  const entry = { id: uniqueId(world.effects, `effetto-${world.week}-${world.effects.length}-${world.rngState % 997}`), scope: 'national', remaining: 4, source: SIM, ...effect };
   world.effects.push({ ...entry, total: entry.remaining });
 }
 function playerParty(world) { return world.parties.find(item => item.isPlayer) ?? null; }
@@ -858,8 +860,16 @@ export function joinCoalition(input, allianceId, date, { terms = false } = {}) {
   addEffect(world, { partyId: player.id, delta: 0.3, remaining: 4, cause: 'alleanza' });
   return { world, joined: true, term: null };
 }
+// A coalition whose leading force walks out is led by the largest force still in it (and named after it).
+function settleLeader(world, alliance) {
+  if (!alliance.leaderId || alliance.partyIds.includes(alliance.leaderId)) return;
+  const leader = leaderOf(alliance.partyIds.map(id => world.parties.find(item => item.id === id)).filter(Boolean));
+  alliance.leaderId = leader?.id ?? alliance.partyIds[0] ?? null;
+  if (leader && /^Coalizione guidata da /.test(alliance.label ?? '')) alliance.label = `Coalizione guidata da ${leader.label}`;
+}
 function leaveCoalition(world, alliance, member, date, reason) {
   alliance.partyIds = alliance.partyIds.filter(id => id !== member.id);
+  settleLeader(world, alliance);
   alliance.cohesion = clamp(alliance.cohesion - 6, 0, 100);
   for (const id of alliance.partyIds) world.ties[tieKey(member.id, id)] = round1(clamp((world.ties[tieKey(member.id, id)] ?? 0) - 15, -100, 100));
   world.grudges[tieKey(member.id, leaderOf(alliance.partyIds.map(id => world.parties.find(item => item.id === id)).filter(Boolean))?.id ?? '')] = 30;
@@ -868,6 +878,8 @@ function leaveCoalition(world, alliance, member, date, reason) {
 }
 function allianceDynamics(world, date, { nationalVoteIn = null, player = null, playerIsLeader = false } = {}) {
   const offers = [];
+  // Every coalition is led by one of its members (also for saves where the leader had walked out).
+  for (const alliance of world.alliances) settleLeader(world, alliance);
   world.grudges ??= {};
   for (const key of Object.keys(world.grudges)) { world.grudges[key] = round1(world.grudges[key] - 0.4); if (world.grudges[key] <= 0) delete world.grudges[key]; }
   for (const [key, value] of Object.entries(world.ties)) {
@@ -1475,7 +1487,7 @@ export function allianceOf(world, partyId) {
 }
 function sealAlliance(world, player, force, date, motive = null) {
   const partnerAllied = allianceOf(world, force.id);
-  if (partnerAllied) partnerAllied.partyIds = partnerAllied.partyIds.filter(id => id !== force.id);
+  if (partnerAllied) { partnerAllied.partyIds = partnerAllied.partyIds.filter(id => id !== force.id); settleLeader(world, partnerAllied); }
   if (partnerAllied && partnerAllied.partyIds.length < 2) { partnerAllied.status = 'broken'; partnerAllied.brokenAt = date; }
   world.alliances.push({ id: `alleanza-giocatore-${world.week}-${hash(force.id) % 9973}`, label: `Intesa ${player.label} – ${force.label}`, partyIds: [player.id, force.id], cohesion: 66, since: date, status: 'active', withPlayer: true, motive: motive ?? agreementMotive(player, force), source: SIM });
   force.playerRelation = round1(clamp(force.playerRelation + 15, -100, 100));
@@ -1545,7 +1557,7 @@ export function breakAlliance(input, allianceId, date) {
   if (!alliance) throw new Error('Alleanza non disponibile.');
   const player = playerParty(world);
   // From a coalition of several forces the player's party walks out; the others stay together.
-  if (player && alliance.partyIds.length >= 3) { alliance.partyIds = alliance.partyIds.filter(id => id !== player.id); alliance.cohesion = clamp(alliance.cohesion - 6, 0, 100); alliance.withPlayer = false; }
+  if (player && alliance.partyIds.length >= 3) { alliance.partyIds = alliance.partyIds.filter(id => id !== player.id); settleLeader(world, alliance); alliance.cohesion = clamp(alliance.cohesion - 6, 0, 100); alliance.withPlayer = false; }
   else { alliance.status = 'broken'; alliance.brokenAt = date; }
   world.grudges ??= {};
   for (const id of alliance.partyIds) if (id !== player?.id) world.grudges[tieKey(player?.id ?? '', id)] = 50;

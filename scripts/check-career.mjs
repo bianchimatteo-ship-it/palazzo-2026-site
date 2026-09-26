@@ -163,5 +163,9 @@ assert.equal(migrated.game.week.index, final.game.week.index);
 assert.ok(mem.get(`${KEY}.backup`), 'Il salvataggio precedente è conservato prima dell’aggiornamento.');
 store.advance(7);
 assert.equal(store.getState().game.week.index, final.game.week.index + 1, 'La partita migrata prosegue.');
+// The central invariants hold at the end of the career and on the migrated save.
+const { checkInvariants } = await import('../src/core/invariants.js');
+const invariantContext = { realPartyIds: [...db().parties, ...db().politicalMovements].map(item => item.id), realGroupIds: db().parliamentaryGroups.map(item => item.id) };
+for (const [label, snapshot] of [['fine carriera', final], ['salvataggio migrato', store.getState()]]) { const result = checkInvariants(snapshot, invariantContext); assert.ok(result.ok, `Invarianti (${label}): ${result.issues.slice(0, 5).map(issue => `[${issue.code}] ${issue.message}`).join('; ')}`); }
 
 console.log(`Carriera pluriennale verificata: ${final.game.week.index} settimane, ${Object.entries(seen).filter(([, value]) => value).length}/${Object.keys(seen).length} tappe (leadership, governo, programma, legge ${passed.stage}, decreto, manovra, crisi, territori, spiegazioni del consenso, media, cittadini, nuove elezioni con memoria), ${final.game.memory.length} ricordi politici, salvataggio, ricaricamento e migrazione di un salvataggio precedente.`);

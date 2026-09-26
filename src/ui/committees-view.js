@@ -1,11 +1,11 @@
 // The territorial committees of the party (Partito → Territorio): the player's own chain Region → Province → Comune,
 // every committee with state, strength, members, volunteers, local consensus, loyalty and leader, the actions that
 // change them, and new committees to found on the ISTAT map.
-import { COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, committeeStrength, committeeSummary } from '../core/committee-engine.js?v=20260926-7';
-import { costProblem } from '../core/career-engine.js?v=20260926-7';
-import { isPartyLeader } from '../core/organization-engine.js?v=20260926-7';
-import { glyph } from './visuals.js?v=20260926-7';
-import { arrow, badge, bar, card, esc, euro, kpi, num } from './sections-kit.js?v=20260926-7';
+import { COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, committeeStrength, committeeSummary } from '../core/committee-engine.js?v=20260926-8';
+import { costProblem } from '../core/career-engine.js?v=20260926-8';
+import { isPartyLeader } from '../core/organization-engine.js?v=20260926-8';
+import { glyph } from './visuals.js?v=20260926-8';
+import { arrow, badge, bar, card, esc, euro, kpi, num } from './sections-kit.js?v=20260926-8';
 
 export const COMMITTEE_FILTERS = Object.freeze([['tutti', 'Tutti'], ['attivi', 'Attivi'], ['problemi', 'In crisi o fuori controllo'], ['sciolti', 'Sciolti']]);
 const STATE_ORDER = ['fondazione', 'crescita', 'consolidamento', 'crisi', 'perdita-controllo', 'dissoluzione'];

@@ -3,12 +3,13 @@
 // Chambers and their groups, the formation of the Government. Everything that happens is simulation: the real data are
 // the geography, the seats and the 2022 results the vote starts from; parties, coalitions, votes and seats of the game
 // are estimates of the game and never presented as real results.
-import { advanceDays, formatDate } from './time.js?v=20260926-7';
-import { axisOf, nationalShares } from './world-engine.js?v=20260926-7';
-import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20260926-7';
-import { archiveGovernment, voteGovernmentConfidence } from './parliament-engine.js?v=20260926-7';
-import { seededRandom } from './vote-engine.js?v=20260926-7';
-import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20260926-7';
+import { uniqueId } from './ids.js?v=20260926-8';
+import { advanceDays, formatDate } from './time.js?v=20260926-8';
+import { axisOf, nationalShares } from './world-engine.js?v=20260926-8';
+import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20260926-8';
+import { archiveGovernment, voteGovernmentConfidence } from './parliament-engine.js?v=20260926-8';
+import { seededRandom } from './vote-engine.js?v=20260926-8';
+import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20260926-8';
 
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -212,7 +213,7 @@ export function normalizeNationalState(national, { currentDate, legislature = nu
   return { votes: [], history: [], campaign: null, formation: null, lastPolitiche: null, lastEuropee: null, ...national, legislature: { ...(national.legislature ?? {}), number: term.number, label: term.label, firstSitting: term.firstSitting, naturalEnd: term.naturalEnd, reference: term.number === 19 ? 'real' : SIM }, version: 1, source: SIM };
 }
 export function nationalHistory(national, date, kind, text, extra = {}) {
-  return { ...national, history: [{ id: `nazionale-${date}-${kind}-${(national.history ?? []).length}`, date, kind, text, ...extra, source: SIM }, ...(national.history ?? [])].slice(0, 60) };
+  return { ...national, history: [{ id: uniqueId(national.history, `nazionale-${date}-${kind}-${(national.history ?? []).length}`), date, kind, text, ...extra, source: SIM }, ...(national.history ?? [])].slice(0, 60) };
 }
 
 // ---------- the geography ----------
@@ -830,7 +831,7 @@ function simulatedMinisters(parliament, groupIds, { number, date, taken = [] }) 
   while (queue.length < free.length && groups.some(group => counts.get(group.groupId) > 0)) for (const group of groups) if (counts.get(group.groupId) > 0 && queue.length < free.length) { queue.push(group); counts.set(group.groupId, counts.get(group.groupId) - 1); }
   return queue.map((group, index) => {
     const seed = hash(`${number}|${free[index]}|${group.groupId}`);
-    return { id: `nomina-${number}-${date}-${slug(free[index])}`, portfolio: free[index], groupId: group.groupId, groupName: group.officialName, playerAppointed: false, appointeeLabel: 'Incarico simulato · nuova legislatura', loyalty: 60 + seed % 20, competence: 45 + (seed >> 5) % 35, source: SIM, appointedAt: date };
+    return { id: `nomina-${number}-${date}-${slug(free[index])}`, portfolio: free[index], groupId: group.groupId, groupName: group.officialName, playerAppointed: false, appointeeLabel: 'Incarico simulato · nuova legislatura', loyalty: 60 + seed % 20, competence: 45 + (seed >>> 5) % 35, source: SIM, appointedAt: date };
   });
 }
 export const FORMATION_PHASES = Object.freeze({

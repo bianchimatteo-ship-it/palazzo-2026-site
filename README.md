@@ -313,6 +313,8 @@ All’apertura vengono caricati manifest e partiti/movimenti. Politici, gruppi e
 
 ## Test
 
+**Stabilità.** `src/core/invariants.js` raccoglie in un unico controllo ciò che deve valere in qualunque momento della partita: nessun `NaN`/`undefined`/valore impossibile, ID unici, riferimenti validi (partiti, gruppi, politici, incarichi, leggi, elezioni), seggi di Camera e Senato che tornano, voti in cui sì + no + astensioni + assenze = componenti, partiti ↔ gruppi, governo ↔ maggioranza e ministri, elezioni sempre in calendario, campagne con risultato, leggi con un iter che prosegue, carriera e incarichi del giocatore coerenti. Lo usano `check:invariants`, `check:long-run`, `check:career` e `check:legislature`; `scripts/lib/long-run.mjs` fa giocare il motore reale per anni con decisioni tratte dal seed (anche gli ID sono deterministici).
+
 ```sh
 npm run check:ui          # menu, impostazioni, nuova partita, pagine, poteri, archivio, salvataggi, loghi, tooltip, identità del partito
 npm run check:first-run   # primo avvio: benvenuto e account prima della prima carriera, servizio account verificato davvero (non raggiungibile: “Inizia senza account” subito), avvio locale persistente, tour saltabile una volta, guida, conferme del gioco
@@ -327,6 +329,8 @@ npm run check:responsive  # Chrome senza interfaccia: 33 viste e 4 finestre a 37
 npm run check:government  # 34 temi, bilancio, territori, cittadini, sicurezza, Presidente del Consiglio, difficoltà
 npm run check:events      # eventi procedurali: condizioni, cooldown, rarità, esclusività, varianti, catene
 npm run check:career      # carriera pluriennale end-to-end, salvataggi e migrazione
+npm run check:invariants  # invarianti centrali (src/core/invariants.js): stati puliti per ogni livello di partenza e ogni tipo di danno riconosciuto (NaN, undefined, valori impossibili, ID duplicati, riferimenti rotti, seggi, voti, governo e maggioranza, elezioni, campagne, leggi, carriera)
+npm run check:long-run    # carriere di 5, 10, 20 e 30 anni sul motore reale con 4 seed e livelli diversi (processi paralleli): invarianti ogni trimestre, elezioni, governi, bilanci, partiti, sondaggi, leggi ed eventi sempre attivi, nessun blocco, stato salvabile; stesso seed + stesse decisioni = stessa partita (LONG_RUN_YEARS=5 per una prova rapida)
 npm run check:legislature # ciclo nazionale: mappa 2022 riprodotta, calendario, soglie, gruppi, formazione del governo, crisi, europee, salvataggi, vista Nazionali
 npm run check:admin-sync  # archivio amministrativo condiviso su Workers KV
 npm run check:document    # documento del 24/09/2026: collocazioni, nuove entità, leadership, liste, loghi dei politici, sondaggio reale

@@ -5,10 +5,10 @@
 // it needs or puts the question of confidence; the bills of the opposition often never reach the floor. The player sits
 // in one Chamber: speaks, amends and casts a personal vote on every bill there — and the vote has consequences.
 // Everything here is simulation (source: simulation); the groups of the real XIX legislature keep their real reference.
-import { DATA_SOURCES } from '../data/schema.js?v=20260926-7';
-import { AREA_BY_ID, DECREE_RULES, FINANCING, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260926-7';
-import { amendLawPolicy, campOfAxis, cohesiveShare, governingGroupIds, groupProfile, parliamentInternals } from './parliament-engine.js?v=20260926-7';
-import { groupLine, splitGroupVote } from './vote-engine.js?v=20260926-7';
+import { DATA_SOURCES } from '../data/schema.js?v=20260926-8';
+import { AREA_BY_ID, DECREE_RULES, FINANCING, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260926-8';
+import { amendLawPolicy, campOfAxis, cohesiveShare, governingGroupIds, groupProfile, parliamentInternals } from './parliament-engine.js?v=20260926-8';
+import { groupLine, splitGroupVote } from './vote-engine.js?v=20260926-8';
 
 const { getGroup, allGroups, record, replaceLaw, demandFor, contentAffinity, setRelation } = parliamentInternals;
 const SIM = DATA_SOURCES.SIMULATION;
@@ -227,14 +227,15 @@ export function autoVote(parliament, law, chamber, { date, world = null, playerC
     const others = own ? Math.max(0, group.simulatedSeats - 1) : group.simulatedSeats;
     let votes = Math.round(others * cohesiveShare(support));
     const split = splitGroupVote({ seats: others, yes: votes, confidence: Boolean(law.confidence), seed: `${law.id}|${chamber}|${(law.votes ?? []).length}|${group.groupId}` });
-    let no = split.no, abstain = split.abstain;
+    let no = split.no, abstain = split.abstain, absent = 0;
     if (own) {
       groupLineBefore = line;
       choice = !playerChoice || playerChoice === 'linea' ? line : playerChoice;
-      if (choice === 'favorevole') votes += 1; else if (choice === 'contrario') no += 1; else if (choice === 'astenuto') abstain += 1;
+      // The player who does not take part is counted as absent (every seat is accounted for).
+      if (choice === 'favorevole') votes += 1; else if (choice === 'contrario') no += 1; else if (choice === 'astenuto') abstain += 1; else absent += 1;
     }
     yes += votes;
-    return { groupId: group.groupId, yesVotes: votes, noVotes: no, abstainVotes: abstain, line: groupLine({ yes: votes, no, abstain }), governing: governing.has(group.groupId), simulatedSeats: group.simulatedSeats, ...(own ? { playerChoice: choice } : {}) };
+    return { groupId: group.groupId, yesVotes: votes, noVotes: no, abstainVotes: abstain, ...(absent ? { absentVotes: absent } : {}), line: groupLine({ yes: votes, no, abstain }), governing: governing.has(group.groupId), simulatedSeats: group.simulatedSeats, ...(own ? { playerChoice: choice } : {}) };
   });
   const total = rows.reduce((sum, group) => sum + group.simulatedSeats, 0);
   const needed = Math.floor(total / 2) + 1;
@@ -243,7 +244,7 @@ export function autoVote(parliament, law, chamber, { date, world = null, playerC
   const decisive = Boolean(choice) && (choice === 'favorevole' ? passed && yes === needed : !passed && yes === needed - 1);
   return {
     id: `${law.id}-${chamber}-${(law.votes ?? []).length + 1}`, date, kind: law.kind === 'decreto' ? 'decreto' : law.kind === 'manovra' ? 'manovra' : 'legge', label: law.title, chamber,
-    yes, no: total - yes, against: byGroup.reduce((sum, row) => sum + row.noVotes, 0), abstain: byGroup.reduce((sum, row) => sum + row.abstainVotes, 0), total, needed, passed,
+    yes, no: total - yes, against: byGroup.reduce((sum, row) => sum + row.noVotes, 0), abstain: byGroup.reduce((sum, row) => sum + row.abstainVotes, 0), absent: byGroup.reduce((sum, row) => sum + (row.absentVotes ?? 0), 0), total, needed, passed,
     forced: false, confidence: Boolean(law.confidence), secret: false, snipers: 0, byGroup, playerChoice: choice, playerLine: groupLineBefore, decisive, source: SIM
   };
 }

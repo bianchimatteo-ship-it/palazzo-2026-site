@@ -2,10 +2,10 @@
 // and its assessori, the acts in discussion with the forecast and the player's vote, what the player can do (propose,
 // question, negotiate, govern), the chronicle of the council. Everything here is simulation, except the size of the
 // European groups at the constitutive session of 2024 (real, with its source).
-import { EP_GROUPS_2024, forecastAct, INSTITUTIONS, isClosedAct, LOCAL_VOTE_CHOICES, localAreas, majorityMargin } from '../core/local-engine.js?v=20260926-7';
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20260926-7';
-import { esc, meter, num } from './charts.js?v=20260926-7';
-import { glyph } from './visuals.js?v=20260926-7';
+import { EP_GROUPS_2024, forecastAct, INSTITUTIONS, isClosedAct, LOCAL_VOTE_CHOICES, localAreas, majorityMargin } from '../core/local-engine.js?v=20260926-8';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20260926-8';
+import { esc, meter, num } from './charts.js?v=20260926-8';
+import { glyph } from './visuals.js?v=20260926-8';
 
 const STAGES = Object.freeze({ commissione: 'In commissione', aula: 'In aula', approvato: 'Approvato', respinto: 'Respinto', ritirato: 'Ritirato' });
 const SIDE_LABELS = Object.freeze({ maggioranza: 'Maggioranza', opposizione: 'Opposizione' });
