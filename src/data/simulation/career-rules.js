@@ -115,6 +115,18 @@ export const ELECTION_SCHEDULE = Object.freeze({
   politiche: { firstWeeks: 20, cycleWeeks: 78, windowDays: 14 },
   europee: { firstWeeks: 30, cycleWeeks: 96, windowDays: 14 }
 });
+// The yearly round: when no vote of the player's own falls in a calendar year, or for more than about thirteen months,
+// the spring round of the amministrative becomes the player's. The party asks for a campaign five weeks before; the result (the party's course in
+// the polls, chance and the campaign) weighs on who took part and on who stayed out.
+export const ROUND_RULES = Object.freeze({
+  leadDays: 35, maxGapDays: 400,
+  engagement: { giro: 0.5, sostegno: 0.2, fuori: 0 },
+  outcomes: {
+    buono: { label: 'risultato positivo', tone: 'good', giro: { stats: { reputation: 1, influence: 1.5 }, party: { support: 3 } }, sostegno: { party: { support: 1 } }, fuori: { party: { support: -1 } } },
+    'in-linea': { label: 'risultato in linea con le attese', tone: 'neutral', giro: { stats: { notoriety: 0.5 }, party: { support: 1 } }, sostegno: {}, fuori: {} },
+    deludente: { label: 'risultato deludente', tone: 'bad', giro: { stats: { notoriety: 0.5 }, party: { support: -1 } }, sostegno: { party: { support: -0.5 } }, fuori: { stats: { reputation: 0.5 } } }
+  }
+});
 export const LEVEL_FIRST_ELECTION = Object.freeze({ comunale: { comunale: 4 }, regionale: { regionale: 5 }, deputato: { politiche: 26 }, senatore: { politiche: 26 } });
 export const EARLY_ELECTION_AFTER_WEEKS = 4;
 
@@ -576,6 +588,11 @@ export const SITUATION_EVENTS = Object.freeze({
   'impegni-elettorali': { id: 'impegni-elettorali', title: 'Gli impegni presi in campagna', body: 'In campagna hai preso {commitments} impegni con categorie e territori: ora ti chiedono conto.', defaultChoice: 'rinvia', choices: [
     { id: 'onora', label: 'Onora gli impegni', cost: { ap: 1, capital: 2 }, effects: { stats: { reputation: 1.5 }, relations: { civic: 3 } } },
     { id: 'rinvia', label: 'Rinvia a tempi migliori', later: { weeks: 8, label: 'Impegni elettorali', chance: 0.6, hint: 'Le categorie potrebbero accusarti di aver tradito le promesse', effects: { stats: { reputation: -2 } }, memory: { kind: 'promessa-tradita', text: 'Impegni elettorali non mantenuti', weight: 1 } } }] },
+  // A year without a vote of the player's own: the spring round of the amministrative (career-engine, yearly round).
+  'tornata-amministrativa': { id: 'tornata-amministrativa', title: 'Amministrative {year}: si vota in {count}', body: 'Quest’anno non ci sono elezioni per te, ma il {when} {side} si misura nei comuni al voto. Chi fa campagna per i candidati si fa vedere e se ne prende il merito; chi resta fuori non rischia nulla se va male, ma se va bene resta a guardare.', defaultChoice: 'sostegno', choices: [
+    { id: 'giro', label: 'Fai campagna nei comuni al voto', cost: { ap: 2, funds: 600 }, effects: { stats: { notoriety: 1 }, party: { support: 1 } }, special: 'round-engage' },
+    { id: 'sostegno', label: 'Sostieni i candidati a distanza (comunicati e social)', effects: { party: { support: 0.3 } }, special: 'round-engage' },
+    { id: 'fuori', label: 'Resta fuori dalla campagna', special: 'round-engage' }] },
   // The national cycle (legislature-engine): the secretary decides the coalition, the support to a new majority, the mandate.
   'coalizioni-politiche': { id: 'coalizioni-politiche', title: 'Politiche: con chi corre {party}', body: 'Si aprono le candidature per le elezioni politiche: le liste si depositano entro il {deadline}. Nei collegi uninominali vince chi prende un voto in più, e da soli si rischia di restare senza seggi. La coalizione più vicina è {coalition}: il suo leader ti accoglierebbe con una probabilità stimata del {chance}.', defaultChoice: 'direzione', choices: [
     { id: 'aderisci', label: 'Chiedi di entrare in {coalition}', cost: { capital: 3 }, special: 'national-coalition' },

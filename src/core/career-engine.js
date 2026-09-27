@@ -1,11 +1,11 @@
 import { uniqueId } from './ids.js?v=20260926-10';
-import { advanceDays, nextMunicipalVote, nextRegionalVote } from './time.js?v=20260926-10';
+import { advanceDays, formatDate, nextMunicipalVote, nextRegionalVote } from './time.js?v=20260926-10';
 import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20260926-10';
 import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20260926-10';
 import {
   APPOINTMENTS, BASE_WEEKLY_INCOME, CAREER_EVENTS, CAREER_OBJECTIVES, CURRENT_TEMPLATES, EARLY_ELECTION_AFTER_WEEKS, ELECTION_SCHEDULE,
   FORCED_EVENTS, LEGACY_RIVAL_NAMES, SIMULATED_RIVAL_LABEL, FOUNDER_RANK, LEVEL_FIRST_ELECTION, OFFICE_INCOME, PARTY_RANKS, RELATION_TEMPLATES, STAT_LABELS,
-  SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS } from '../data/simulation/career-rules.js?v=20260926-10';
+  SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS, ROUND_RULES } from '../data/simulation/career-rules.js?v=20260926-10';
 import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20260926-10';
 import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20260926-10';
 import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-10';
@@ -144,6 +144,7 @@ export function alignLocalCalendar(input, local, today) {
     ? { ...makeLocalElection(entry.type, local[entry.type], today, game.place ?? {}, local[`${entry.type}Real`]), id: entry.id }
     : entry);
   game.flags = { ...(game.flags ?? {}), localCalendar: 1 };
+  if (game.rounds) planRounds(game, today);
   return game;
 }
 function makeNationalElection(type, electionDate, place = {}, early = false) {
@@ -181,8 +182,10 @@ export function createGameState({ seedText, currentDate, level, party = null, pl
     prep: 0, relations, party: createPartyState(party, seed, { region: place.region, share: party?.share ?? null, week: 1, date: currentDate }), pastParties: [], elections,
     inbox: [], log: [], objectives: {}, flags: { nationalCalendar: 2, ...(localCalendar ? { localCalendar: 1 } : {}) }, lastReport: null, weekStartStats: { ...stats }, lastEventId: null,
     fallenWeeks: 0, endedAt: null, endReason: null,
-    finance: createFinance({ week: 1, date: currentDate, funds: startingFunds }), contacts: [], promises: [], legislature: { ...REAL_LEGISLATURE }
+    finance: createFinance({ week: 1, date: currentDate, funds: startingFunds }), contacts: [], promises: [], legislature: { ...REAL_LEGISLATURE },
+    roundsFrom: currentDate, rounds: []
   };
+  planRounds(game, currentDate);
   const ctx = { game, stats: { ...stats }, parliament };
   refreshObjectives(ctx, {}, [], currentDate);
   fillInbox(ctx, {}, []);
@@ -681,6 +684,11 @@ function handleSpecial(ctx, env, special, item, lines, specials, choice = {}) {
   }
   if (special === 'issue-law-security') {
     specials.push({ type: 'issue-law', region: item.params?.region2 ?? item.params?.region, topic: 'Sicurezza', indicator: 'sicurezza' });
+    return;
+  }
+  if (special === 'round-engage') {
+    const round = (game.rounds ?? []).find(entry => entry.id === item.params?.roundId);
+    if (round) round.engagement = choice.id;
     return;
   }
   if (special === 'secretary-confidence' || special === 'secretary-resign') {
@@ -1239,6 +1247,68 @@ export function openElection(game, type, date) {
 export function upcomingElections(game) {
   return [...game.elections].filter(item => item.status !== 'held').sort((a, b) => a.windowOpensAt.localeCompare(b.windowOpensAt));
 }
+// ---------- a relevant vote every year ----------
+// Five-year mandates and four votes of the player's own (comune, regione, politiche, europee) leave years without a vote.
+// The spring round of the amministrative (every year, in hundreds of comuni: Eligendo calendar) fills them: when more
+// than a year — or a whole calendar year — would pass without a vote, that round becomes the player's round. The party
+// asks for a campaign in the comuni at the polls and the result weighs on who took part, and on who stayed out.
+const springRound = year => sundayOnOrBefore(`${year}-05-31`);
+export const upcomingRounds = game => (game?.rounds ?? []).filter(item => item.status !== 'held').sort((a, b) => a.electionDate.localeCompare(b.electionDate));
+// The dates of the rounds needed from the last vote on (own votes and rounds already under way count as votes).
+export function roundPlan(game, today) {
+  const fixed = (game.rounds ?? []).filter(item => item.status !== 'upcoming').map(item => item.electionDate);
+  const events = [...new Set([...(game.elections ?? []).map(item => item.electionDate), ...fixed])].filter(Boolean).sort();
+  const horizon = advanceDays(today, 400);
+  const plan = [];
+  let last = [game.roundsFrom ?? today, ...events.filter(date => date <= today)].sort().at(-1);
+  for (let guard = 0; last < horizon && guard < 80; guard++) {
+    const cap = [advanceDays(last, ROUND_RULES.maxGapDays), `${Number(last.slice(0, 4)) + 1}-12-31`].sort()[0];
+    const next = events.find(date => date > last);
+    if (next && next <= cap) { last = next; continue; }
+    const year = Number(last.slice(0, 4));
+    last = springRound(year) > last ? springRound(year) : springRound(year + 1);
+    plan.push(last);
+  }
+  return plan;
+}
+function planRounds(game, today, localRounds = null) {
+  const plan = roundPlan(game, today);
+  // A round no longer needed (an early vote has filled the year) leaves the calendar until its campaign has started.
+  const rounds = (game.rounds ?? []).filter(item => item.status !== 'upcoming' || plan.includes(item.electionDate));
+  for (const day of plan.filter(date => date > today && !rounds.some(item => item.electionDate === date))) {
+    const year = Number(day.slice(0, 4));
+    rounds.push({ id: `tornata-${day}`, type: 'amministrative', year, label: `Amministrative ${year}`, electionDate: day, windowOpensAt: advanceDays(day, -ROUND_RULES.leadDays), comuni: null, status: 'upcoming', engagement: null, outcome: null, source: SIM });
+  }
+  for (const round of rounds) if (!round.comuni && localRounds?.[round.electionDate]) round.comuni = localRounds[round.electionDate];
+  const held = rounds.filter(item => item.status === 'held').slice(-4);
+  game.rounds = [...held, ...rounds.filter(item => item.status !== 'held')].sort((a, b) => a.electionDate.localeCompare(b.electionDate));
+}
+function updateRounds(ctx, env, date, lines) {
+  const game = ctx.game;
+  game.roundsFrom ??= date;
+  planRounds(game, date, env.localRounds);
+  for (const round of game.rounds) {
+    if (round.status === 'upcoming' && date >= round.windowOpensAt && date < round.electionDate) {
+      round.status = 'open';
+      raiseSituation(ctx, 'tornata-amministrativa', { roundId: round.id, year: round.year, when: formatDate(round.electionDate), count: round.comuni ? `${round.comuni} comuni` : 'centinaia di comuni', side: game.party?.label ?? 'le liste civiche a te vicine', dedupe: round.id });
+      lines.push(`${round.label}: il ${formatDate(round.electionDate)} si vota nei comuni, decidi quanto impegnarti.`);
+    }
+    if (round.status !== 'held' && date >= round.electionDate) {
+      round.status = 'held';
+      // The result: the party's course in the polls, chance and the campaign done.
+      const engagement = round.engagement ?? 'sostegno';
+      const score = clamp(env.pollDelta ?? 0, -1.5, 1.5) * 0.8 + (draw(game) - 0.5) * 2.4 + (ROUND_RULES.engagement[engagement] ?? 0);
+      const code = score > 0.45 ? 'buono' : score < -0.45 ? 'deludente' : 'in-linea';
+      const outcome = ROUND_RULES.outcomes[code];
+      const roundLines = applyEffects(ctx, outcome[engagement] ?? {}, null, [], { source: round.label, date });
+      round.outcome = { code, label: outcome.label, engagement };
+      if (engagement === 'giro' && code !== 'in-linea') remember(game, { date, kind: code === 'buono' ? 'vittoria-elettorale' : 'sconfitta-elettorale', text: `${round.label}: ${code === 'buono' ? 'la campagna nei comuni paga' : 'una campagna nei comuni finita male'}`, region: game.place?.region ?? null, weight: 0.4 });
+      const title = `${round.label}: ${outcome.label}${game.party ? ` per ${game.party.label ?? 'il partito'}` : ''}`;
+      addLog(game, date, 'elezioni', title, [{ giro: 'Hai fatto campagna nei comuni al voto.', sostegno: 'Hai sostenuto i candidati a distanza.', fuori: 'Sei rimasto fuori dalla campagna.' }[engagement], ...roundLines], outcome.tone);
+      lines.push(title);
+    }
+  }
+}
 export function markElectionRunning(game, electionId, campaignId) {
   return { ...game, elections: game.elections.map(item => item.id === electionId ? { ...item, status: 'running', campaignId } : item) };
 }
@@ -1444,6 +1514,7 @@ export function advanceWeek(input, env, governmentWeek = parliament => parliamen
     // A comeback after a fall: once standing is rebuilt, it is remembered as a return.
     if (game.flags.comebackFrom && game.week.index - game.flags.comebackFrom >= 12 && (ctx.stats.reputation ?? 0) >= 45) { remember(game, { date, kind: 'ritorno', text: 'Ritorno sulla scena dopo la caduta', weight: 1.5 }); addLog(game, date, 'ritorno', 'Il ritorno', ['Dopo la caduta hai ricostruito credibilità e rapporti.'], 'good'); game.flags.comebackFrom = null; }
     updateElections(ctx, date, lines, specials);
+    updateRounds(ctx, env, date, lines);
     const days = WEEKLY_ACTION_POINTS + (game.week.nextStaffDays ?? 0) + rules(game).apBonus;
     game.week = { index: closing + 1, startedAt: date, ap: days, maxAp: days, categoriesUsed: [] };
     fillInbox(ctx, env, lines, specials);

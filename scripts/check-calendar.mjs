@@ -69,12 +69,26 @@ assert.ok(s.world.localCalendar.leans?.['Emilia-Romagna']?.sinistra > 0 && s.wor
 assert.equal(s.game.flags.localCalendar, 1, '…e passa al calendario reale appena arriva.');
 assert.ok(s.world.localCalendar?.version === 1 && Object.keys(s.world.localCalendar.regions).length === 20, 'Il mondo conosce il calendario di tutte le regioni.');
 const years = new Map();
+let engaged = null, logged = false;
 for (let week = 0; week < 170; week++) {
   const out = store.getState();
   if (out.game.status === 'ended') out.game.status = 'active';
+  // The yearly round: when the request arrives, the player campaigns in the comuni at the polls.
+  const request = out.game.inbox.find(item => item.templateId === 'tornata-amministrativa');
+  if (request && !engaged) { out.game.week.ap = Math.max(out.game.week.ap, 2); out.game.resources.funds = Math.max(out.game.resources.funds, 1000); store.resolveAgendaItem(request.id, 'giro'); engaged = request.params.roundId; }
   store.advance(7);
+  logged ||= store.getState().game.log.some(item => item.title.startsWith('Amministrative 2028:'));
 }
 s = store.getState();
+// Firenze: politiche 2027, comunali and europee 2029, regionali 2030 — 2028 has no vote of the player's own, so the
+// spring round of the amministrative is the player's round.
+const round2028 = s.game.rounds.find(item => item.year === 2028);
+assert.ok(round2028 && round2028.status === 'held' && round2028.electionDate === '2028-05-28', 'Nel 2028 la tornata amministrativa di primavera è la tornata del giocatore.');
+assert.ok(engaged === round2028.id && round2028.engagement === 'giro' && ['buono', 'in-linea', 'deludente'].includes(round2028.outcome?.code), 'La campagna nei comuni è registrata e il risultato pesa sulla carriera.');
+assert.ok(round2028.comuni > 100, `Il numero di comuni al voto viene dal calendario reale (${round2028.comuni}).`);
+assert.ok(logged, 'Il risultato della tornata finisce nel diario.');
+const votedYears = new Set([...s.game.elections.filter(item => item.electionDate <= s.clock.currentDate).map(item => item.electionDate), ...s.game.rounds.filter(item => item.status === 'held').map(item => item.electionDate)].map(date => date.slice(0, 4)));
+assert.ok(['2027', '2028', '2029'].every(year => votedYears.has(year)), `Un voto ogni anno per il giocatore (${[...votedYears].sort().join(', ')}).`);
 const votes = s.world.events.filter(item => item.kind === 'elezioni');
 for (const event of votes) years.set(event.date.slice(0, 4), (years.get(event.date.slice(0, 4)) ?? 0) + 1);
 // The world keeps the events of the last year only: the calendar itself shows the votes already held.
@@ -85,7 +99,49 @@ assert.ok(new Set(heldRegions.map(([, entry]) => entry.camp)).size >= 2 || heldR
 assert.ok(votes.some(item => /^Amministrative: si vota in \d+ comuni/.test(item.title)) || Object.keys(s.world.localCalendar.rounds).every(date => date > '2027-06-30'), 'Ogni primavera si vota in qualche comune.');
 console.log(`  Tre anni: regionali in ${heldRegions.map(([region, entry]) => `${region} (${entry.camp})`).join(', ')}; eventi elettorali recenti per anno ${[...years.entries()].map(([year, count]) => `${year}: ${count}`).join(', ')}.`);
 
-// ---------- 4. early regional votes ----------
+// ---------- 4. a vote every year: twenty years of careers, with early votes ----------
+{
+  // Real calendars with the most years without a vote of the player's own (Sicilia votes in 2027 with the politiche).
+  const places = [['Toscana', '2023-05-14'], ['Lombardia', '2024-06-09'], ['Campania', '2026-05-24'], ['Sicilia', '2022-06-12'], ['Lazio', '2021-10-03'], ['Veneto', '2025-05-25']];
+  const stats = { popularity: 50, reputation: 50, notoriety: 30, influence: 30, consensus: 5, experience: 20 };
+  let worst = 0, rounds = 0;
+  for (const [index, [region, comunale]] of places.entries()) {
+    let game = C.createGameState({ seedText: `anni|${region}`, currentDate: '2026-09-24', level: 'comunale', place: { region, municipality: 'Comune di prova' }, localCalendar: { comunale, regionale: calendar.regions.find(item => item.region === region).lastElection, comunaleReal: true, regionaleReal: true } });
+    let date = '2026-09-24';
+    let ctxStats = { ...stats };
+    const votes = new Map();
+    for (let week = 0; week < 52 * 20 + 4; week++) {
+      date = T.advanceDays(date, 7);
+      // A Government falls in the spring of 2030 and no majority is found: early general election. Half the comuni are
+      // dissolved in the summer of 2031: they vote again the next spring.
+      const parliament = date >= '2030-03-01' && date <= '2030-04-20' ? { government: { status: 'fallen' }, chambers: {}, laws: [] } : null;
+      if (index % 2 === 0 && date >= '2031-07-01' && date < '2031-07-08') game = C.scheduleEarlyLocalElection(game, 'comunale', date);
+      const out = C.advanceWeek({ game, stats: ctxStats, parliament }, { currentDate: date, pollDelta: 0 });
+      game = out.ctx.game; ctxStats = out.ctx.stats; game.status = 'active';
+      for (const entry of game.elections) if (entry.electionDate <= date) votes.set(entry.id, { type: entry.type, date: entry.electionDate, early: Boolean(entry.early) });
+      for (const round of game.rounds) if (round.status === 'held') votes.set(round.id, { type: 'tornata', date: round.electionDate });
+    }
+    const list = [...votes.values()].sort((a, b) => a.date.localeCompare(b.date));
+    rounds += list.filter(item => item.type === 'tornata').length;
+    for (let year = 2027; year <= 2046; year++) assert.ok(list.some(item => item.date.startsWith(String(year))), `${region}: nessun voto nel ${year}.`);
+    list.reduce((previous, item) => { worst = Math.max(worst, (Date.parse(item.date) - Date.parse(previous)) / 86400000); return item.date; }, '2026-09-24');
+    // Mandates keep their length: five years between two votes of the same kind, except when the second is early.
+    for (const type of ['comunale', 'regionale', 'politiche', 'europee']) {
+      const dates = list.filter(item => item.type === type);
+      for (let i = 1; i < dates.length; i++) {
+        const years = (Date.parse(dates[i].date) - Date.parse(dates[i - 1].date)) / (365.25 * 86400000);
+        if (!dates[i].early) assert.ok(years > 4.8 && years < 5.15, `${region}: ${type} ${dates[i - 1].date} → ${dates[i].date} (${years.toFixed(2)} anni).`);
+        else assert.ok(years < 5, `${region}: voto anticipato ${type} il ${dates[i].date}.`);
+      }
+    }
+    assert.ok(list.some(item => item.type === 'politiche' && item.early && item.date.startsWith('2030')), `${region}: politiche anticipate dopo la caduta del governo.`);
+    if (index % 2 === 0) assert.ok(list.some(item => item.type === 'comunale' && item.date === '2032-05-30'), `${region}: comune sciolto, si vota alla primavera successiva.`);
+  }
+  assert.ok(worst <= 400, `Mai più di tredici mesi senza un voto (massimo ${worst} giorni).`);
+  console.log(`  Vent’anni in 6 calendari reali: un voto ogni anno (al massimo ${worst} giorni senza), ${rounds} tornate amministrative al posto degli anni vuoti, mandati di cinque anni anche dopo politiche e comunali anticipate.`);
+}
+
+// ---------- 5. early regional votes ----------
 {
   let world = W.withLocalCalendar(s.world, { regions: calendar.regions, municipalities: {} }, '2026-10-01');
   world = structuredClone(s.world);
@@ -97,4 +153,4 @@ console.log(`  Tre anni: regionali in ${heldRegions.map(([region, entry]) => `${
   }
   assert.ok(early >= 1, 'Una giunta regionale può cadere: si vota prima.');
 }
-console.log('Calendario verificato: mandati di cinque anni sfalsati (dati Eligendo), turno di primavera per legge, voti locali della carriera nel calendario del proprio territorio, regionali e amministrative nel Paese ogni anno, voto anticipato quando cade una giunta.');
+console.log('Calendario verificato: mandati di cinque anni sfalsati (dati Eligendo), turno di primavera per legge, voti locali della carriera nel calendario del proprio territorio, un voto rilevante ogni anno per il giocatore (le amministrative di primavera negli anni senza un suo voto), regionali e amministrative nel Paese ogni anno, voto anticipato quando cade un governo o una giunta, mandati coerenti dopo il voto anticipato.');

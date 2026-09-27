@@ -375,7 +375,7 @@ function gameEnv(s) {
   // The party's estimated share in every region (national share and the regional offset of the simulated polls).
   const force = s.world?.parties?.find(item => item.isPlayer);
   const regionalShares = force && row ? Object.fromEntries(Object.entries(force.regional ?? {}).map(([region, offset]) => [region, Math.max(0, row.share + offset)])) : {};
-  return { career: s.career, offices: s.dataset.offices, campaign: s.campaign, player: playerOf(s), currentDate: s.clock.currentDate, pollShare: row?.share ?? null, pollDelta: row?.delta ?? 0, regionalShares, mood: s.society ? societyMood(s.society) : 50, signals: worldSignalsFor(s) };
+  return { career: s.career, offices: s.dataset.offices, campaign: s.campaign, player: playerOf(s), currentDate: s.clock.currentDate, pollShare: row?.share ?? null, pollDelta: row?.delta ?? 0, regionalShares, mood: s.society ? societyMood(s.society) : 50, signals: worldSignalsFor(s), localRounds: s.world?.localCalendar?.rounds ?? null };
 }
 // Where the player lives: region, comune and the ISTAT unit (province or metropolitan city) of the comune.
 function homePlace(s) {

@@ -2,7 +2,7 @@
 // candidate selection, congresses, promises to verify, pending consequences, decrees to convert, allies' demands,
 // investments that expire and decisions held until a date. Read-only: it derives everything from the state.
 import { advanceDays, formatDate } from './time.js?v=20260926-10';
-import { upcomingElections } from './career-engine.js?v=20260926-10';
+import { upcomingElections, upcomingRounds } from './career-engine.js?v=20260926-10';
 import { SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20260926-10';
 
 export const AGENDA_KINDS = Object.freeze({
@@ -50,6 +50,11 @@ export function agendaCalendar(state, { horizonDays = 730 } = {}) {
     }
     if (entry.status === 'open') add({ id: `${entry.id}-chiusura`, date: entry.windowClosesAt, kind: 'candidature', title: `Ultimo giorno per candidarti: ${entry.label}`, detail: 'Se non ti candidi, un mandato dello stesso tipo si conclude.', tone: 'warn', urgent: true, action: { type: 'tab', section: 'elezioni', tab: 'campagna' } });
     if (entry.status !== 'missed') add({ id: `${entry.id}-voto`, date: entry.electionDate, kind: 'elezione', title: `Si vota: ${entry.label}`, detail: entry.status === 'running' ? 'Sei in campagna.' : entry.status === 'open' ? 'Candidature aperte.' : 'In calendario.', tone: entry.status === 'running' ? 'warn' : 'neutral', action: { type: 'nav', page: 'elezioni' } });
+  }
+  // The yearly round (a year without a vote of the player's own): the campaign in the comuni at the polls.
+  for (const round of upcomingRounds(game)) {
+    if (round.status === 'upcoming') add({ id: `${round.id}-campagna`, date: round.windowOpensAt, kind: 'campagna', title: `${round.label}: ${party ? 'il partito chiede' : 'le liste civiche chiedono'} il tuo impegno`, detail: 'Nessun voto tuo quest’anno: si vota nei comuni e puoi fare campagna per i candidati.' });
+    add({ id: `${round.id}-voto`, date: round.electionDate, kind: 'elezione', title: `Si vota: ${round.label}`, detail: `${round.comuni ? `${round.comuni} comuni al voto` : 'Comuni al voto'} · non sei candidato.`, action: { type: 'nav', page: 'elezioni' } });
   }
   // The campaign in progress: the internal nomination deadline and the vote (with the runoff, if any).
   if (campaign?.status === 'active') {
