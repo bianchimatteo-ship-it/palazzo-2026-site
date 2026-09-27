@@ -397,6 +397,13 @@ export function amendOthersLaw(parliament, lawId, patch, date, { influence = 50,
 export const PLAYER_VOTE_CHOICES = Object.freeze({ linea: 'Segui la linea del gruppo', favorevole: 'Favorevole', contrario: 'Contrario', astenuto: 'Astenuto', assente: 'Non partecipi al voto' });
 export function setPlayerVote(parliament, lawId, choice) {
   if (!PLAYER_VOTE_CHOICES[choice]) throw new Error('Scelta di voto non valida.');
+  const own = parliament.laws.find(item => item.id === lawId && !item.auto);
+  // The player's own bill: the vote counts in the player's Chamber, the one where the bill is voted first.
+  if (own) {
+    if (CLOSED.includes(own.stage) || !['proposal', 'commission', 'amendments'].includes(own.stage)) throw new Error('La tua proposta è già stata votata nella tua Camera.');
+    if (!parliament.player?.groupId || own.currentChamber !== parliament.player.chamber) throw new Error('Voti la tua proposta quando è all’esame della tua Camera.');
+    return replaceLaw(parliament, lawId, current => ({ ...current, pendingPlayerVote: choice }));
+  }
   const law = openLawIn(parliament, lawId);
   if (!['commission', 'amendments', 'final-vote'].includes(law.stage)) throw new Error('Il voto in Aula arriva dopo l’esame in commissione.');
   return replaceLaw(parliament, lawId, current => ({ ...current, pendingPlayerVote: choice }));

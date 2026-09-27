@@ -481,10 +481,16 @@ function calculateVote(parliament, law, chamber, currentDate = null) {
   const government = parliament.government;
   const discipline = parliament.careerStanding?.partySupport ?? 50;
   const rows = parliament.chambers[chamber].groups;
+  // The player's own seat votes as the player decided (in favour of the own bill unless decided otherwise); the other
+  // members of every group are simulated.
+  const seatedGroupId = parliament.player?.chamber === chamber ? parliament.player.groupId ?? null : null;
   let yes = 0;
+  let playerChoice = null, playerLine = null;
   const results = rows.map(group => {
     const relation = parliament.relations?.[group.groupId]?.value ?? 50;
     const own = group.groupId === parliament.player?.groupId;
+    const seated = Boolean(seatedGroupId) && group.groupId === seatedGroupId;
+    const members = seated ? Math.max(0, group.simulatedSeats - 1) : group.simulatedSeats;
     const demand = law.demands?.[group.groupId];
     const partner = government?.partners?.[group.groupId];
     let support = own ? 0.5 + discipline / 500
@@ -504,21 +510,30 @@ function calculateVote(parliament, law, chamber, currentDate = null) {
     // Snipers: in a secret ballot part of the majority can betray.
     if (law.snipers && governing.has(group.groupId) && !own && !law.confidence) support -= 0.07;
     if (governing.has(group.groupId) || own) support += tuning.discipline;
-    const votes = Math.round(group.simulatedSeats * cohesiveShare(clamp(support, 0.12, 0.93)));
-    yes += votes;
+    let votes = Math.round(members * cohesiveShare(clamp(support, 0.12, 0.93)));
     // Snipers: the votes of the majority that a compact group would have given and the secret ballot took away.
     const snipers = law.snipers && governing.has(group.groupId) && !own && !law.confidence ? Math.max(0, Math.round(group.simulatedSeats * cohesiveShare(clamp(support + 0.07, 0.12, 0.93))) - votes) : 0;
     // The votes not in favour split into against and abstentions (vote-engine); the line is what most members do.
-    const split = splitGroupVote({ seats: group.simulatedSeats, yes: votes, confidence: Boolean(law.confidence), seed: `${law.id}|${chamber}|${law.stage}|${(law.votes ?? []).length}|${group.groupId}` });
-    return { groupId: group.groupId, yesVotes: votes, noVotes: split.no, abstainVotes: split.abstain, line: groupLine(split), snipers, governing: governing.has(group.groupId), simulatedSeats: group.simulatedSeats, source: DATA_SOURCES.SIMULATION };
+    const split = splitGroupVote({ seats: members, yes: votes, confidence: Boolean(law.confidence), seed: `${law.id}|${chamber}|${law.stage}|${(law.votes ?? []).length}|${group.groupId}` });
+    let no = split.no, abstain = split.abstain, absent = 0;
+    if (seated) {
+      playerLine = groupLine(split);
+      playerChoice = !law.pendingPlayerVote || law.pendingPlayerVote === 'linea' ? playerLine : law.pendingPlayerVote;
+      // The player who does not take part is counted as absent (every seat is accounted for).
+      if (playerChoice === 'favorevole') votes += 1; else if (playerChoice === 'contrario') no += 1; else if (playerChoice === 'astenuto') abstain += 1; else absent += 1;
+    }
+    yes += votes;
+    return { groupId: group.groupId, yesVotes: votes, noVotes: no, abstainVotes: abstain, ...(absent ? { absentVotes: absent } : {}), line: seated ? groupLine({ yes: votes, no, abstain }) : groupLine(split), snipers, governing: governing.has(group.groupId), simulatedSeats: group.simulatedSeats, ...(seated ? { playerChoice } : {}), source: DATA_SOURCES.SIMULATION };
   });
   const total = rows.reduce((sum, group) => sum + group.simulatedSeats, 0);
   const needed = Math.floor(total / 2) + 1;
   const against = results.reduce((sum, row) => sum + row.noVotes, 0);
   const abstain = results.reduce((sum, row) => sum + row.abstainVotes, 0);
+  const passed = yes >= needed;
   // `no` stays "not in favour" (the rule of the game counts an absolute majority of the members); against and
-  // abstentions are counted apart.
-  return { id: `${law.id}-${chamber}-${(law.votes ?? []).length + 1}`, date: currentDate, kind: law.kind === 'decreto' ? 'decreto' : law.kind === 'manovra' ? 'manovra' : 'legge', label: law.title, chamber, yes, no: total - yes, against, abstain, total, needed, passed: yes >= needed, forced: Boolean(law.forcedVote), confidence: Boolean(law.confidence), secret: Boolean(law.snipers && !law.confidence), snipers: results.reduce((sum, row) => sum + row.snipers, 0), byGroup: results, source: DATA_SOURCES.SIMULATION };
+  // abstentions are counted apart. The player's vote decides when, without it, the outcome would have been the opposite.
+  const player = playerChoice ? { playerChoice, playerLine, decisive: playerChoice === 'favorevole' ? passed && yes === needed : !passed && yes === needed - 1 } : {};
+  return { id: `${law.id}-${chamber}-${(law.votes ?? []).length + 1}`, date: currentDate, kind: law.kind === 'decreto' ? 'decreto' : law.kind === 'manovra' ? 'manovra' : 'legge', label: law.title, chamber, yes, no: total - yes, against, abstain, absent: results.reduce((sum, row) => sum + (row.absentVotes ?? 0), 0), total, needed, passed, forced: Boolean(law.forcedVote), confidence: Boolean(law.confidence), secret: Boolean(law.snipers && !law.confidence), snipers: results.reduce((sum, row) => sum + row.snipers, 0), byGroup: results, ...player, source: DATA_SOURCES.SIMULATION };
 }
 // Each phase takes time: commissions hear, groups negotiate, the other Chamber reads the text again.
 export function stageWait(law, currentDate) {
@@ -546,7 +561,7 @@ export function advanceLaw(parliament, lawId, action, currentDate) {
     const forced = action === 'force-vote';
     const votingLaw = forced ? { ...law, forcedVote: true } : law;
     const vote = calculateVote(next, votingLaw, law.currentChamber, currentDate);
-    next = replaceLaw(next, lawId, current => ({ ...current, forcedVote: forced || current.forcedVote, stage: vote.passed ? 'other-chamber' : 'rejected', status: vote.passed ? 'other-chamber' : 'rejected', votes: [...current.votes, vote], updatedAt: currentDate }));
+    next = replaceLaw(next, lawId, current => ({ ...current, forcedVote: forced || current.forcedVote, stage: vote.passed ? 'other-chamber' : 'rejected', status: vote.passed ? 'other-chamber' : 'rejected', votes: [...current.votes, vote], pendingPlayerVote: null, updatedAt: currentDate }));
     if (!vote.passed && law.confidence) next = governmentDefeated(next, law, currentDate);
     if (forced) for (const group of next.chambers[law.currentChamber].groups) {
       if (group.groupId !== next.player.groupId && !(playerInMajority(next) && governingGroupIds(next).has(group.groupId))) next = setRelation(next, group.groupId, -2);
@@ -560,7 +575,7 @@ export function advanceLaw(parliament, lawId, action, currentDate) {
   } else if (law.stage === 'final-vote' && action === 'final-vote') {
     const vote = calculateVote(next, law, law.currentChamber, currentDate);
     const resultStage = vote.passed ? 'approved' : 'rejected';
-    next = replaceLaw(next, lawId, current => ({ ...current, stage: resultStage, status: resultStage, votes: [...current.votes, vote], updatedAt: currentDate }));
+    next = replaceLaw(next, lawId, current => ({ ...current, stage: resultStage, status: resultStage, votes: [...current.votes, vote], pendingPlayerVote: null, updatedAt: currentDate }));
     next = adjustStanding(next, vote.passed ? 2 : -1);
     if (!vote.passed && law.confidence) next = governmentDefeated(next, law, currentDate);
     text = vote.passed ? `Approvazione simulata definitiva: “${law.title}”.` : `La ${CHAMBERS[law.currentChamber].label} ha respinto “${law.title}” nella votazione finale simulata.`;

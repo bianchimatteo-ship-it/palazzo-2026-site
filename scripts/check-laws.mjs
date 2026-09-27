@@ -84,6 +84,12 @@ const allBills = s => [...s.parliament.laws.filter(law => law.auto), ...(s.parli
     const everyone = roster.filter(seat => !seat.player).map(seat => ({ index: roster.indexOf(seat) }));
     assert.ok(mean(others) >= mean(everyone) - 0.02, 'I dissidenti sono soprattutto i parlamentari meno legati alla linea.');
   }
+  // The player's seat really counts: the same vote with the opposite choice moves exactly one vote.
+  const against = LM.autoVote(withBill, bill, 'camera', { date: s.clock.currentDate, world: s.world, playerChoice: 'contrario' });
+  const abstaining = LM.autoVote(withBill, bill, 'camera', { date: s.clock.currentDate, world: s.world, playerChoice: 'astenuto' });
+  assert.ok(vote.yes === against.yes + 1 && against.against === vote.against + 1, 'Favorevole o contrario: il voto del giocatore sposta esattamente un voto.');
+  assert.ok(abstaining.yes === against.yes && abstaining.abstain === against.abstain + 1 && abstaining.against === against.against - 1, 'L’astensione del giocatore è contata tra gli astenuti.');
+  assert.deepEqual(vote.byGroup.filter(row => row.groupId !== 'cam-xix-02'), against.byGroup.filter(row => row.groupId !== 'cam-xix-02'), 'Gli altri parlamentari restano simulati, indipendenti dalla scelta del giocatore.');
   const absent = LM.autoVote(withBill, bill, 'camera', { date: s.clock.currentDate, world: s.world, playerChoice: 'assente' });
   assert.equal(absent.byGroup.find(row => row.groupId === 'cam-xix-02').yesVotes + absent.byGroup.find(row => row.groupId === 'cam-xix-02').noVotes + absent.byGroup.find(row => row.groupId === 'cam-xix-02').abstainVotes, own.simulatedSeats - 1, 'Chi non partecipa al voto non è contato.');
   assert.throws(() => LM.setPlayerVote(withBill, 'prova-governo', 'forse'), /non valida/);

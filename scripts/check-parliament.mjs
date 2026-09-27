@@ -106,7 +106,26 @@ store.advanceLaw(law.id, 'final-vote');
 law = store.getState().parliament.laws.find(item => item.id === law.id);
 assert.equal(law.stage, 'approved');
 assert.equal(law.votes.length, 2);
+// The player's own vote counts: in favour of the own bill unless decided otherwise, only in the player's Chamber.
+assert.equal(law.votes[0].playerChoice, 'favorevole', 'Alla Camera il giocatore vota la sua proposta.');
+const ownRow = law.votes[0].byGroup.find(row => row.playerChoice);
+assert.ok(ownRow && ownRow.yesVotes + ownRow.noVotes + ownRow.abstainVotes + (ownRow.absentVotes ?? 0) === ownRow.simulatedSeats, 'Il seggio del giocatore è contato nel suo gruppo, gli altri sono simulati.');
+assert.ok(!law.votes[1].playerChoice, 'Al Senato il giocatore non vota.');
 assert.ok(store.getState().career.parliamentHistory.some(item => item.type === 'legge-proposta'));
+// FAVOREVOLE / CONTRARIO / ASTENUTO on the own bill: the choice from the card enters the count of the Chamber.
+let abstained = store.proposeLaw({ title: 'Registro dei beni comuni', category: 'Ambiente', summary: 'Un registro simulato dei beni comuni gestiti dai cittadini.' });
+assert.match(renderParliamentPage('leggi', store.getState()), /Il tuo voto in Aula[\s\S]*data-bill-vote="favorevole"[\s\S]*data-bill-vote="contrario"[\s\S]*data-bill-vote="astenuto"/, 'La scheda della tua proposta mostra Favorevole, Contrario, Astenuto.');
+store.castLawVote(abstained.id, 'astenuto');
+assert.equal(store.getState().parliament.laws.find(item => item.id === abstained.id).pendingPlayerVote, 'astenuto');
+store.advanceLaw(abstained.id, 'present');
+store.advanceLaw(abstained.id, 'complete-commission');
+store.advanceLaw(abstained.id, 'vote');
+abstained = store.getState().parliament.laws.find(item => item.id === abstained.id);
+const abstention = abstained.votes[0];
+assert.equal(abstention.playerChoice, 'astenuto', 'Il giocatore si astiene sulla sua proposta, come deciso.');
+assert.equal(abstention.yes + abstention.against + abstention.abstain + (abstention.absent ?? 0), abstention.total, 'Ogni seggio è contato.');
+assert.equal(abstention.byGroup.reduce((sum, row) => sum + row.abstainVotes, 0), abstention.abstain);
+assert.throws(() => store.castLawVote(abstained.id, 'favorevole'), /già stata votata/, 'Dopo il voto la scelta non si cambia.');
 assert.ok(store.getState().dataset.laws.every(item => item.source === 'simulation'));
 
 // A three-group coalition in each House obtains confidence; minister and crisis persist in history.
