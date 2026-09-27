@@ -18,6 +18,10 @@ export function playerRoles(state) {
   if (party?.affiliation === 'founder') roles.push(['fondatore', 'Fondatore e segretario']);
   else if (secretary) roles.push(['segretario', 'Segretario nazionale']);
   else if (party?.affiliation === 'member') roles.push([party.rank >= 3 ? 'direzione' : party.rank >= 1 ? 'dirigente' : 'iscritto', party.rankTitle]);
+  // The councils where the player sits (local-engine): Comune, Regione, Parlamento europeo.
+  const institutions = (state.local?.institutions ?? []).filter(item => item.status === 'active');
+  const leads = institutions.some(item => item.executive?.leader === 'player');
+  for (const inst of institutions) roles.push(inst.executive?.leader === 'player' ? ['esecutivo-locale', inst.kind === 'regione' ? `Presidente della ${inst.name}` : `Sindaco${String(inst.name).replace(/^Comune/, '')}`] : ['consigliere', { comune: 'Consigliere comunale', regione: 'Consigliere regionale', europa: 'Deputato al Parlamento europeo' }[inst.kind] ?? 'Consigliere']);
   if (areaLead) roles.push(['corrente', 'Riferimento della tua area interna']);
   if (seat) roles.push(['parlamentare', parliament.player.chamber === 'senato' ? 'Senatore' : 'Deputato']);
   if (parliament?.careerStanding?.committeeRole) roles.push(['commissione', parliament.careerStanding.committeeRole.title]);
@@ -34,6 +38,8 @@ export function playerRoles(state) {
     ['Influenza sulle candidature della tua area', areaLead || secretary, 'Serve guidare la tua area interna'],
     ['Linea politica, organi, candidature, alleanze, investimenti del partito', secretary, 'Solo il segretario'],
     ['Programma e stile di comunicazione del partito', secretary, 'Solo il segretario'],
+    ['Proposte, voti, interrogazioni e trattative in consiglio o al Parlamento europeo', institutions.length > 0, 'Serve un seggio in un consiglio comunale o regionale, o al Parlamento europeo'],
+    ['Giunta, assessori, bilancio e tributi locali', leads, 'Solo il sindaco o il presidente della Regione'],
     ['Leggi con contenuto, emendamenti, trattative con i gruppi', seat, 'Serve un seggio in Parlamento'],
     ['Formare un governo (quando non ce n’è uno in carica)', seat && secretary && !governing(parliament), governing(parliament) ? 'C’è già un governo in carica: prima deve cadere' : 'Serve essere segretario con un seggio'],
     ['Sostenere il governo in carica, ritirare il sostegno, aprire una crisi', seat && secretary && governing(parliament) && !isPrimeMinister(parliament), isPrimeMinister(parliament) ? 'Guidi tu il governo' : 'Serve essere segretario con un seggio e un governo in carica'],

@@ -43,7 +43,7 @@ const PLACES = [
 ];
 
 // Starts the engine and a career for the seed. Returns the store, the real reference and the decision maker.
-export async function startCareer({ seed = 'a', level = 'deputato', partyId = 'party-registro-p1-2017-41-ir' } = {}) {
+export async function startCareer({ seed = 'a', level = 'deputato', partyId = 'party-registro-p1-2017-41-ir', region = null } = {}) {
   const env = await environment(seed);
   // The modules as the game loads them (with the build stamp of index.html): one instance of each, shared with the
   // engine's own imports, so the real data loaded here are the ones the reference Government and majority read.
@@ -64,7 +64,8 @@ export async function startCareer({ seed = 'a', level = 'deputato', partyId = 'p
   store.setElectoralGeography(await real.loadRealDocument('electoralGeography'));
   store.setLocalCalendar(await real.loadRealDocument('localElections'));
   const pick = seeded(`profilo|${seed}`);
-  const place = PLACES[Math.floor(pick() * PLACES.length)];
+  const drawn = PLACES[Math.floor(pick() * PLACES.length)];
+  const place = PLACES.find(item => item.region === region) ?? drawn;
   const birth = `19${60 + Math.floor(pick() * 30)}-0${1 + Math.floor(pick() * 9)}-1${Math.floor(pick() * 9)}`;
   store.createCareer({ firstName: `Prova${seed}`, lastName: 'Lunga', birthDate: birth, gender: 'donna', ...place, previousProfession: 'Insegnante', ...PROFILES[level], partyMode: 'existing', partyId, difficulty: 'normale', policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 } }, db.parties, db.parliamentaryGroups);
   if (['deputato', 'senatore'].includes(level)) store.initializeParliament(db.parliamentaryGroups);

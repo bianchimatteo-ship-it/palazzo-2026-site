@@ -13,7 +13,9 @@ export const CAREER_LEVELS = Object.freeze({
 
 // Saves created before the Deputato/Senatore split still carry the old national path.
 const LEGACY_LEVEL_LABELS = Object.freeze({ nazionale: 'Carriera nazionale' });
-export const careerLevelLabel = level => CAREER_LEVELS[level]?.label ?? LEGACY_LEVEL_LABELS[level] ?? null;
+// Levels reached only by election (not a starting point of the wizard).
+const ELECTED_LEVEL_LABELS = Object.freeze({ europeo: 'Carriera europea' });
+export const careerLevelLabel = level => CAREER_LEVELS[level]?.label ?? ELECTED_LEVEL_LABELS[level] ?? LEGACY_LEVEL_LABELS[level] ?? null;
 
 // Deterministic baseline: each higher entry point starts with more experience
 // and visibility, while personal standing remains close to neutral.

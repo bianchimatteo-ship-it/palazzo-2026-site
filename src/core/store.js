@@ -425,7 +425,23 @@ function closeOffices(dataset, ids, date) {
 }
 function closeTermOffices(dataset, playerId, electionType, date) {
   const levels = electionType === 'politiche' ? ['politiche', 'deputato', 'senatore'] : [electionType];
-  return { ...dataset, offices: dataset.offices.map(item => item.politicianId === playerId && !item.endDate && levels.includes(item.level) && !/inizial/i.test(item.title) ? { ...item, endDate: date } : item) };
+  const offices = dataset.offices.map(item => item.politicianId === playerId && !item.endDate && levels.includes(item.level) && !/inizial/i.test(item.title) ? { ...item, endDate: date } : item);
+  // The office shown for the player follows the terms still open: a lost vote ends that term, not the others.
+  const roleId = dataset.politicians?.find(item => item.id === playerId)?.roleId;
+  const open = offices.find(item => item.id === roleId)?.endDate ? offices.filter(item => item.politicianId === playerId && !item.endDate).sort((a, b) => String(b.startDate ?? '').localeCompare(String(a.startDate ?? '')))[0] : null;
+  return { ...dataset, offices, ...(open ? { politicians: dataset.politicians.map(item => item.id === playerId ? { ...item, roleId: open.id } : item) } : {}) };
+}
+// The level of a local or European career: the highest term still open (Comune, Regione, Parlamento europeo).
+const LOCAL_LEVELS = Object.freeze({ comunale: 'comunale', regionale: 'regionale', europee: 'europeo' });
+function localCareerLevel(offices, playerId) {
+  const open = new Set(offices.filter(item => item.politicianId === playerId && !item.endDate).map(item => LOCAL_LEVELS[item.level]).filter(Boolean));
+  return ['europeo', 'regionale', 'comunale'].find(level => open.has(level)) ?? null;
+}
+// After a local or European term opens or ends (a seat in Parliament stays the reference while it lasts).
+function withLocalLevel(s) {
+  if (!s.career || s.career.parliamentContext) return s;
+  const level = localCareerLevel(s.dataset.offices, s.career.playerId);
+  return level || Object.values(LOCAL_LEVELS).includes(s.career.currentLevel) ? { ...s, career: { ...s.career, currentLevel: level } } : s;
 }
 const roleOfficeId = role => 'incarico-' + role.id;
 const ministerOfficeId = appointment => 'incarico-' + appointment.id;
@@ -755,7 +771,7 @@ function handleSpecials(s, specials) {
     } else if (special.type === 'election-missed') {
       next = special.electionType === 'politiche'
         ? endMandate(next, 'Non ricandidato alle elezioni politiche')
-        : closeInstitution({ ...next, dataset: closeTermOffices(next.dataset, player?.id, special.electionType, next.clock.currentDate) }, INSTITUTION_OF[special.electionType], next.clock.currentDate);
+        : withLocalLevel(closeInstitution({ ...next, dataset: closeTermOffices(next.dataset, player?.id, special.electionType, next.clock.currentDate) }, INSTITUTION_OF[special.electionType], next.clock.currentDate));
     } else if (special.type.startsWith('confidence-vote-') && next.parliament?.government) {
       const choice = { 'confidence-vote-line': 'linea', 'confidence-vote-yes': 'favorevole', 'confidence-vote-no': 'contrario', 'confidence-vote-abstain': 'astenuto', 'confidence-vote-absent': 'assente' }[special.type];
       try { next = { ...next, parliament: setConfidenceVote(next.parliament, choice) }; } catch { /* the vote has already taken place */ }
@@ -1234,7 +1250,7 @@ function tickLocal(input, date) {
         game = scheduleEarlyLocalElection(game, type, date);
         remember(game, { date, kind: inst.executive?.leader === 'player' ? 'crisi-governo' : 'decisione', text: `${rules.label} sciolto dopo la sfiducia`, weight: inst.executive?.leader === 'player' ? 1.5 : 0.6 });
         game = addDiary(game, { kind: 'territorio', date, title: `${inst.name}: consiglio sciolto, si torna al voto`, lines: [`Elezioni anticipate: ${formatDate(game.elections.find(item => item.type === type && item.status === 'upcoming')?.electionDate ?? date)}.`], tone: 'bad' });
-        next = { ...next, dataset: closeTermOffices(next.dataset, playerOf(next)?.id, type, date) };
+        next = withLocalLevel({ ...next, dataset: closeTermOffices(next.dataset, playerOf(next)?.id, type, date) });
         if (inst.executive?.leader === 'player') add('reputation', -3);
         chronicle.push({ type: 'chronicle', kind: 'territorio', icon: 'alert', title: `${inst.name}: consiglio sciolto dopo la sfiducia`, body: 'Arriva un commissario; si torna al voto in anticipo (simulazione).', tone: 'bad' });
       }
@@ -1704,7 +1720,9 @@ export const store = {
     const target = upcomingElections(state.game).find(item => item.type === type);
     if (!target) throw new Error('Nessuna elezione di questo tipo in calendario.');
     if (state.campaign?.status === 'active') throw new Error('Concludi prima la campagna in corso.');
-    for (let guard = 0; !openElection(state.game, type, state.clock.currentDate) && state.game.status !== 'ended' && guard < 160; guard++) stepTime(7);
+    // As many weeks as it takes to reach the window (a regional vote can be up to five years away).
+    const weeks = Math.ceil((Date.parse(target.windowOpensAt) - Date.parse(state.clock.currentDate)) / (7 * 86400000)) + 4;
+    for (let guard = 0; !openElection(state.game, type, state.clock.currentDate) && state.game.status !== 'ended' && guard < Math.max(160, Math.min(330, weeks)); guard++) stepTime(7);
     const open = openElection(state.game, type, state.clock.currentDate);
     state = { ...state, ui: { ...state.ui, toast: open ? `Candidature aperte: ${open.label}` : state.game.status === 'ended' ? 'La carriera si è conclusa' : 'Finestra non raggiunta' } };
     persist(); emit();
@@ -2658,6 +2676,11 @@ function applyCampaignResult(currentState,campaign) {
     const office={id:makeId('incarico-simulato'),title,institution:campaign.electionType==='comunale'?`Comune di ${player.municipality}`:campaign.electionType==='regionale'?`Regione ${player.region}`:campaign.electionType==='europee'?'Parlamento europeo':'Repubblica italiana',level:campaign.electionType,side:aftermath.office.side??null,via:aftermath.office.via??null,politicianId:player.id,territoryId:campaign.territoryId,startDate:campaign.currentDate,endDate:null,source:DATA_SOURCES.SIMULATION};
     dataset={...dataset,offices:[...dataset.offices,office],politicians:dataset.politicians.map(item=>item.id===player.id?{...item,roleId:office.id}:item)};
     career.status='elected';
+  }
+  // A local or European vote moves the level of the career (a seat in Parliament stays the reference while it lasts).
+  if(LOCAL_LEVELS[campaign.electionType]&&!career.parliamentContext) {
+    const level=localCareerLevel(dataset.offices,player.id);
+    if(level||Object.values(LOCAL_LEVELS).includes(career.currentLevel)) career.currentLevel=level;
   }
   // Calendar, party and relationships react to the vote.
   let game=currentState.game?markElectionHeld(currentState.game,campaign.id,{percent:result.playerShare,personalMandate:result.personalMandate,outcome:outcome.code??null}):currentState.game;

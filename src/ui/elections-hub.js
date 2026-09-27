@@ -10,7 +10,7 @@ import { politicalPhase } from './game-mode.js?v=20260926-10';
 import { lineChart, SERIES } from './charts.js?v=20260926-10';
 import { glyph } from './visuals.js?v=20260926-10';
 import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, sectionTabs, signed, table, weeksLabel } from './sections-kit.js?v=20260926-10';
-import { renderElectionReport } from './election-report.js?v=20260926-10';
+import { mandatePlace, renderElectionReport } from './election-report.js?v=20260926-10';
 import { renderNationalView } from './national-view.js?v=20260926-10';
 export { renderElectionReport };
 
@@ -203,7 +203,7 @@ export function renderElectionsHub(state, { parties = [], logoFor = () => null, 
   else if (active === 'candidatura') body = candidacy(state);
   else if (active === 'campagna') body = `<div class="eh-campaign">${renderCampaignPage(state, parties, logoFor)}</div>`;
   else if (active === 'avversari') body = rivals(state, parties, logoFor);
-  else if (active === 'risultati') body = renderElectionReport(state.career.lastElectionReport);
+  else if (active === 'risultati') body = renderElectionReport(state.career.lastElectionReport, { place: mandatePlace(state, state.career.lastElectionReport) });
   else if (active === 'nazionali') body = national ? renderNationalView(state, national(), { geography, view: nationalView }) : empty('Il ciclo nazionale si apre con i dati della partita: calendario, coalizioni e proiezione dei seggi.');
   else body = history(state);
   return `<div class="elections-hub">${hero(state, summary)}${sectionTabs('elezioni', ELECTION_TABS.map(([id, label]) => [id, label, counts[id]]), active)}<div class="sx-body" role="tabpanel">${body}</div></div>`;
