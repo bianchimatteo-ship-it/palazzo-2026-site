@@ -71,9 +71,10 @@ assert.ok(state.game.lastReport.lines.some(line => line.startsWith('Sondaggio'))
 assert.ok(reaction, 'Un evento del mondo chiede una presa di posizione al giocatore.');
 const pending = store.getState().game.inbox.find(item => item.templateId === 'presa-posizione');
 if (pending) {
-  const events = store.getState().world.events.length;
+  // The chronicle keeps the latest 40 entries: the new one is the first.
+  const latest = store.getState().world.events[0]?.id;
   store.resolveAgendaItem(pending.id, 'attacco');
-  assert.ok(store.getState().world.events.length > events && store.getState().world.events[0].title.startsWith('Presa di posizione'));
+  assert.ok(store.getState().world.events[0].id !== latest && store.getState().world.events[0].title.startsWith('Presa di posizione'));
 }
 
 // 3. Alleanze proposte dal giocatore: costi, esito e rottura.

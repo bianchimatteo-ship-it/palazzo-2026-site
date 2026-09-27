@@ -17,6 +17,11 @@ export const POLL_INSTITUTES = Object.freeze([
 // How many real parties enter the world besides the player's: the ones with the most 2x1000 choices (MEF, real).
 export const WORLD_PARTY_COUNT = 7;
 
+// The approval of a government at mid stability with the citizens' mood at 50 (world-engine, publishPoll): the level
+// at which the parties backing or fighting the executive neither gain nor lose. Above it the majority gains, below it
+// the opposition does; no force gains or loses just for its role.
+export const APPROVAL_NEUTRAL = 44;
+
 // Strategies the parties choose and change on their own during the game.
 export const STRATEGIES = Object.freeze({
   autonoma: { label: 'Corsa solitaria', detail: 'Pensa alla propria crescita, senza legarsi all’esecutivo né agli altri.' },
@@ -28,14 +33,17 @@ export const STRATEGIES = Object.freeze({
 export const CIVIC_FIGURE_LABEL = 'Volto civico simulato';
 
 // National and territorial events. `executive` moves the parties that back the executive,
-// `challengers` those in hard opposition, `small` the parties under 5%; `majority`/`opposition`
-// concern the player's side in Parliament; `stability` touches the government of the simulation.
+// `challengers` those in hard opposition, `small` the parties under 5% (the pool is balanced: what helps the small
+// forces in one event squeezes them in another); `stability` touches the government of the simulation.
+// `majority`/`opposition` and `regionalPlayer`/`localPlayer` say how the event reads for the player's side and
+// territory (the tone of the chronicle): they do not move the player's party, which moves only with the player's
+// actions (the reactions to the event) and standing.
 export const WORLD_EVENTS = Object.freeze([
   { id: 'rincari', icon: 'energy', scope: 'nazionale', weight: 3, title: 'Rincari energetici', body: 'Bollette in aumento: famiglie e imprese chiedono misure immediate.', executive: -0.5, challengers: 0.8, majority: -0.6, stability: -4, duration: 6, reactable: true },
   { id: 'dati-economia', icon: 'chart', scope: 'nazionale', weight: 2, title: 'Dati economici sopra le attese', body: 'Crescita e occupazione migliorano nelle stime diffuse questa settimana (scenario).', executive: 0.6, challengers: -0.3, majority: 0.8, stability: 4, duration: 5 },
   { id: 'sciopero', icon: 'megaphone', scope: 'nazionale', weight: 2, title: 'Sciopero generale', body: 'Trasporti e scuole si fermano per una giornata di mobilitazione nazionale (scenario).', executive: -0.3, challengers: 0.5, stability: -2, duration: 3, reactable: true },
   { id: 'scandalo-ministero', icon: 'scandal', scope: 'nazionale', weight: 2, title: 'Inchiesta su un ministero dello scenario', body: 'Un’inchiesta giornalistica simulata coinvolge gli uffici di un dicastero del governo di gioco.', executive: -0.8, challengers: 0.6, majority: -1, opposition: 0.6, stability: -6, duration: 5 },
-  { id: 'vertice-ue', icon: 'globe', scope: 'nazionale', weight: 2, title: 'Vertice europeo decisivo', body: 'Il negoziato su bilancio e transizione occupa l’agenda (scenario).', executive: 0.3, small: -0.1, duration: 3 },
+  { id: 'vertice-ue', icon: 'globe', scope: 'nazionale', weight: 2, title: 'Vertice europeo decisivo', body: 'Il negoziato su bilancio e transizione occupa l’agenda (scenario).', executive: 0.3, small: -0.4, duration: 3 },
   { id: 'sicurezza', icon: 'shield', scope: 'nazionale', weight: 2, title: 'Allarme sicurezza nelle città', body: 'Una serie di episodi di cronaca riaccende il dibattito sulla sicurezza (scenario).', challengers: 0.6, executive: -0.2, duration: 4, reactable: true },
   { id: 'clima', icon: 'leaf', scope: 'nazionale', weight: 2, title: 'Ondata di calore record', body: 'Siccità e caldo estremo portano l’ambiente al centro della discussione (scenario).', small: 0.3, executive: -0.2, duration: 4 },
   { id: 'riforma-pensioni', icon: 'scales', scope: 'nazionale', weight: 1, title: 'Riforma delle pensioni', body: 'Il dibattito sulla riforma divide maggioranza e opposizione (scenario).', challengers: 0.5, executive: -0.3, majority: -0.5, stability: -3, duration: 6, reactable: true },

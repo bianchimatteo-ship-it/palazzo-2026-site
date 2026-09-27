@@ -1,6 +1,6 @@
 import { uniqueId } from './ids.js?v=20260926-10';
 import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-10';
-import { CHART_SLOTS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20260926-10';
+import { APPROVAL_NEUTRAL, CHART_SLOTS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20260926-10';
 import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20260926-10';
 import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20260926-10';
 
@@ -372,7 +372,7 @@ function effectWeight(effect) {
   return Math.min(1, (total - effect.remaining + 1) / 2, effect.remaining / 2 + 0.5);
 }
 function effectSum(world, party, scope, region = null) {
-  const scale = sizeFactor(party.baseline, 8) * (party.isPlayer ? 1.3 : 1);
+  const scale = sizeFactor(party.baseline, 8);
   return world.effects.filter(effect => effect.scope === scope && (effect.partyId === party.id || (effect.strategy && effect.strategy === party.strategy && !party.isPlayer)) && (!region || effect.region === region))
     .reduce((sum, effect) => sum + effect.delta * effectWeight(effect) * (effect.unscaled ? 1 : Math.min(1, scale)), 0);
 }
@@ -426,9 +426,12 @@ export function personalBoosts(stats = {}, relations = []) {
 // week to the next (AR 0.7) and each institute has a small, stable house effect. Consecutive polls therefore move by
 // tenths of a point, not by whole points, while the level can still differ from the true share within the margin.
 const POLL_ERROR_MEMORY = 0.7;
-function houseEffect(instituteId, partyId, share) {
-  const offset = (hash(`${instituteId}|${partyId}`) % 1000) / 1000 - 0.5;
-  return offset * 0.3 * clamp(Math.sqrt(Math.max(share, 0.1) / 10), 0.3, 1.2);
+const houseLean = (instituteId, partyId) => (hash(`${instituteId}|${partyId}`) % 1000) / 1000 - 0.5;
+// Each institute leans a little on each force, but no force is favoured on average: the leans of the institutes on a
+// force sum to zero.
+export function houseEffect(instituteId, partyId, share) {
+  const mean = POLL_INSTITUTES.reduce((sum, item) => sum + houseLean(item.id, partyId), 0) / POLL_INSTITUTES.length;
+  return (houseLean(instituteId, partyId) - mean) * 0.3 * clamp(Math.sqrt(Math.max(share, 0.1) / 10), 0.3, 1.2);
 }
 function sampleShares(world, shares, sample, instituteId = 'x') {
   world.pollErrors ??= {};
@@ -453,13 +456,25 @@ function publishPoll(world, { date, stats = {}, parliament = null, game = null }
   const player = world.playerPartyId;
   const playerSurveyed = isSurveyed(world.parties.find(item => item.id === player));
   // A force that has just entered the survey has no previous figure: its change starts from the next poll.
+  const floors = new Map();
   const results = sampleShares(world, nationalShares(world), sample, institute.id).map(row => {
     const before = previous?.results.find(item => item.partyId === row.partyId)?.share;
     // The first simulated poll starts from the real one: it may move less than an ordinary week.
     const cap = Number.isFinite(before) ? weeklyCap(before) * (previous?.source === 'real' ? 0.6 : 1) : 0;
     const share = Number.isFinite(before) ? round1(clamp(row.share, before - cap, before + cap)) : round1(row.share);
+    floors.set(row.partyId, Number.isFinite(before) ? before - cap : 0);
     return { ...row, share, delta: Number.isFinite(before) ? round1(share - before) : 0, ...(row.partyId === player && !playerSurveyed ? { internal: true } : {}) };
   });
+  // Rounded and capped one by one, the figures can pass 100 when "Altri" is tiny: the excess goes back a tenth at a
+  // time from the largest forces that still have room within their weekly change.
+  for (let excess = round1(results.reduce((sum, row) => sum + row.share, 0) - 100), guard = 0; excess > 0.05 && guard < 20; guard++) {
+    const row = results.filter(item => item.share - 0.1 >= floors.get(item.partyId) - 1e-9).sort((a, b) => b.share - a.share)[0];
+    if (!row) break;
+    row.share = round1(row.share - 0.1);
+    const before = previous?.results.find(item => item.partyId === row.partyId)?.share;
+    row.delta = Number.isFinite(before) ? round1(row.share - before) : 0;
+    excess = round1(excess - 0.1);
+  }
   const regional = player ? Object.fromEntries(ITALIAN_REGIONS.map(region => [region, round1(regionalShares(world, region, boosts.regional).find(row => row.partyId === player)?.share ?? 0)])) : {};
   const local = player ? round1(localShares(world, boosts.regional, boosts.local).find(row => row.partyId === player)?.share ?? 0) : null;
   const mood = world.society?.mood ?? 50;
@@ -562,14 +577,8 @@ function addEffect(world, effect) {
   world.effects.push({ ...entry, total: entry.remaining });
 }
 function playerParty(world) { return world.parties.find(item => item.isPlayer) ?? null; }
-function inMajority(parliament) {
-  const government = parliament?.government;
-  if (!government || !['active', 'crisis'].includes(government.status) || !parliament.player?.groupId) return null;
-  return [...government.coalitionGroupIds, ...government.supportingGroupIds].includes(parliament.player.groupId);
-}
 function applyWorldEvent(world, event, date, parliament) {
   const lines = [];
-  const player = playerParty(world);
   if (event.executive) addEffect(world, { strategy: 'governista', delta: event.executive, remaining: event.duration, cause: event.id });
   if (event.challengers) addEffect(world, { strategy: 'opposizione', delta: event.challengers, remaining: event.duration, cause: event.id });
   if (event.small) {
@@ -577,14 +586,8 @@ function applyWorldEvent(world, event, date, parliament) {
     // What helps or hurts the small forces also changes how much the ones outside the polls are noticed.
     for (const force of (world.latent ?? []).filter(item => item.support >= 0.3)) notice(force, Math.sign(event.small) * 3);
   }
-  const majority = inMajority(parliament);
-  if (player && majority !== null && (event.majority || event.opposition)) {
-    const delta = majority ? event.majority ?? 0 : event.opposition ?? 0;
-    addEffect(world, { partyId: player.id, delta, remaining: event.duration, cause: event.id, label: fill(event.title, world.place) });
-    if (delta) lines.push(`${player.label} ${delta > 0 ? '+' : ''}${delta} (${majority ? 'in maggioranza' : 'all’opposizione'})`);
-  }
-  if (player && event.regionalPlayer) addEffect(world, { partyId: player.id, scope: 'region', region: world.place.region, delta: event.regionalPlayer, remaining: event.duration, cause: event.id, label: fill(event.title, world.place) });
-  if (player && event.localPlayer) addEffect(world, { partyId: player.id, scope: 'local', delta: event.localPlayer, remaining: event.duration, cause: event.id, label: fill(event.title, world.place) });
+  // The player's party is not moved by the events of the world: only by what the player does about them (reactions,
+  // stances) and by the player's own standing.
   if (event.stability && parliament?.government && ['active', 'crisis'].includes(parliament.government.status)) {
     parliament.government.stability = clamp(Math.round((parliament.government.stability ?? 50) + event.stability), 0, 100);
     lines.push(`Stabilità del governo ${event.stability > 0 ? '+' : ''}${event.stability}`);
@@ -633,7 +636,7 @@ function applyStage(world, stage, id, ctx, date, parliament) {
     if (stage.partyCohesion) party.cohesion = clamp(Math.round((party.cohesion ?? 60) + stage.partyCohesion), 0, 100);
     const alliance = world.alliances.find(item => item.status === 'active' && item.partyIds.includes(party.id) && item.partyIds.length >= 2);
     if (alliance && stage.alliance) alliance.cohesion = clamp(Math.round(alliance.cohesion + stage.alliance), 0, 100);
-    if (alliance && stage.alliesDelta) for (const other of alliance.partyIds.filter(item => item !== party.id)) addEffect(world, { partyId: other, delta: stage.alliesDelta, remaining: stage.duration ?? 3, cause: id });
+    if (alliance && stage.alliesDelta) for (const other of alliance.partyIds.filter(item => item !== party.id && item !== world.playerPartyId)) addEffect(world, { partyId: other, delta: stage.alliesDelta, remaining: stage.duration ?? 3, cause: id });
     if (stage.partyDelta) entry.lines = [...entry.lines, `${party.label} ${stage.partyDelta > 0 ? '+' : ''}${stage.partyDelta}`];
     if (alliance && stage.alliance) entry.lines = [...entry.lines, `Coesione di ${alliance.label}: ${alliance.cohesion}`];
   }
@@ -721,13 +724,14 @@ function partyAgents(world, date, { approval, player, playerIsLeader, playerStra
     party.agendaSince ??= party.agenda ? world.week : world.week - 52 + Math.floor(draw(world) * 8);
     if (world.week - party.goalSince >= 13) { const goal = goalOf(world, party); if (goal !== party.goal && party.goal && party.baseline >= 5) logEvent(world, date, { kind: 'strategia', icon: 'route', scope: 'nazionale', title: `${party.label}: nuovo obiettivo`, body: `Nello scenario il partito punta ora a ${GOALS[goal].label} (simulazione).`, tone: 'neutral', partyId: party.id }); party.goal = goal; party.goalSince = world.week; }
     if (world.week - party.agendaSince >= 52) refreshAgenda(world, party, date);
-    // What the strategy yields this week.
-    const effect = party.strategy === 'governista' ? (approval - 50) / 500 : party.strategy === 'opposizione' ? (50 - approval) / 500 + 0.01 : party.strategy === 'coalizione' ? (world.alliances.some(item => item.status === 'active' && item.partyIds.includes(party.id)) ? 0.02 : -0.01) : 0;
+    // What the strategy yields this week: backing or fighting the executive pays with the approval of the government
+    // (around its neutral level); an alliance found pays as much as a search without partners costs.
+    const effect = party.strategy === 'governista' ? (approval - APPROVAL_NEUTRAL) / 500 : party.strategy === 'opposizione' ? (APPROVAL_NEUTRAL - approval) / 500 : party.strategy === 'coalizione' ? (world.alliances.some(item => item.status === 'active' && item.partyIds.includes(party.id)) ? 0.01 : -0.01) : 0;
     party.baseline = round2(Math.max(0.3, party.baseline + effect * sizeFactor(party.baseline, 6)));
     // Re-thinking the strategy: losing ground, or the climate turned.
     const trend = trendOf(world, party.id);
     if (world.week - party.strategySince >= 6 && (trend < -0.4 || draw(world) < 0.08)) {
-      const options = (approval < 44 ? ['opposizione', 'coalizione'] : approval > 56 ? ['governista', 'coalizione'] : ['autonoma', 'coalizione', 'opposizione', 'governista']).filter(item => item !== party.strategy);
+      const options = (approval < APPROVAL_NEUTRAL - 6 ? ['opposizione', 'coalizione'] : approval > APPROVAL_NEUTRAL + 6 ? ['governista', 'coalizione'] : ['autonoma', 'coalizione', 'opposizione', 'governista']).filter(item => item !== party.strategy);
       // The goal of the moment points to a strategy; the climate and chance decide among the others.
       const preferred = GOALS[party.goal]?.strategy;
       const choice = preferred && preferred !== party.strategy && draw(world) < 0.6 ? preferred : options[Math.floor(draw(world) * options.length)] ?? party.strategy;
@@ -775,7 +779,8 @@ function breakWithGrudge(world, alliance, date, reason) {
     world.grudges[key] = 40;
     world.ties[key] = round1(clamp((world.ties[key] ?? 0) - 25, -100, 100));
   }
-  for (const id of alliance.partyIds) addEffect(world, { partyId: id, delta: -0.3, remaining: 3, cause: 'rottura' });
+  // The forces of the world pay the break; the player's party only for its own moves (breakAlliance).
+  for (const id of alliance.partyIds.filter(id => id !== world.playerPartyId)) addEffect(world, { partyId: id, delta: -0.3, remaining: 3, cause: 'rottura' });
   stirOutside(world, alliance.partyIds, 4);
   logEvent(world, date, { kind: 'rottura', icon: 'unlink', scope: 'nazionale', title: `Si rompe ${withArticle(alliance.label)}`, body: `${reason} Il rancore resterà: per molto tempo sarà difficile ritrovare un accordo (simulazione).`, tone: 'bad' });
 }
@@ -1240,21 +1245,21 @@ export function advanceWorld(input, { date, week, stats = {}, deltas = {}, game 
   const reactions = [];
   world.effects = world.effects.map(effect => ({ ...effect, remaining: effect.remaining - 1 })).filter(effect => effect.remaining > 0);
   // Weekly drift: small forces move less in absolute terms than large ones.
+  // The player's party moves only with the player's actions and standing: no random drift, a slow return to its level.
   for (const party of world.parties.filter(item => item.active)) {
-    party.baseline = round2(Math.max(0.3, party.baseline + (draw(world) - 0.5) * 0.3 * sizeFactor(party.baseline, 8) + (party.anchor - party.baseline) * (party.isPlayer ? 0.01 : 0.03)));
+    const noise = party.isPlayer ? 0 : (draw(world) - 0.5) * 0.3 * sizeFactor(party.baseline, 8);
+    party.baseline = round2(Math.max(0.3, party.baseline + noise + (party.anchor - party.baseline) * (party.isPlayer ? 0.01 : 0.03)));
   }
   const player = playerParty(world);
-  const majority = inMajority(parliament);
   if (player) {
     const weight = 0.3 + (stats.notoriety ?? 30) / 100 + (game?.party?.affiliation === 'founder' || (game?.party?.rank ?? 0) >= 5 ? 0.5 : (game?.party?.rank ?? 0) >= 3 ? 0.2 : 0);
     const personal = clamp(((deltas.popularity ?? 0) * 0.03 + (deltas.reputation ?? 0) * 0.04 + (deltas.notoriety ?? 0) * 0.015) * weight, -0.5, 0.5);
-    const government = majority ? ((parliament.government.stability ?? 50) - 50) / 400 : 0;
     const unity = game?.party && game.party.support < 25 ? -0.08 : 0;
-    // Citizens judge whoever governs: a better mood rewards the majority, a worse one the opposition.
-    const mood = society ? (majority === true ? society.moodDelta * 0.05 : majority === false ? -society.moodDelta * 0.025 : 0) + clamp((society.sentiment ?? 0) / 100 * 0.05, -0.05, 0.05) : 0;
-    player.baseline = round2(Math.max(0.3, player.baseline + personal + government + unity + clamp(mood, -0.25, 0.25)));
+    // How the media tell the player's story (their coverage of the player's own moves).
+    const media = society ? clamp((society.sentiment ?? 0) / 100 * 0.05, -0.05, 0.05) : 0;
+    player.baseline = round2(Math.max(0.3, player.baseline + personal + unity + media));
     // What moved the party this week, before the poll's sampling: kept to explain the change.
-    player.components = { 'Immagine del tuo politico': round2(personal), 'Stabilità del governo': round2(government), 'Divisioni nel partito': round2(unity), 'Umore dei cittadini verso chi governa': round2(clamp(mood, -0.25, 0.25)) };
+    player.components = { 'Immagine del tuo politico': round2(personal), 'Divisioni nel partito': round2(unity), 'Come ti raccontano i media': round2(media) };
     player.cohesion = Math.round(game?.party?.org?.cohesion ?? game?.party?.support ?? player.cohesion);
     player.crisis = game?.party && game.party.support < 25 ? (player.crisis ?? { since: week, source: SIM }) : null;
     if (playerStrategy) player.strategy = playerStrategy;
@@ -1264,7 +1269,7 @@ export function advanceWorld(input, { date, week, stats = {}, deltas = {}, game 
     addEffect(world, { strategy: 'opposizione', delta: round2(clamp((48 - society.trust) * 0.02, -0.2, 0.4)), remaining: 1, cause: 'fiducia' });
     world.society = { mood: society.mood, trust: society.trust, executive: society.executive ?? null, source: SIM };
   }
-  const approval = world.polls.at(-1)?.government?.approval ?? world.polls.at(-1)?.executive?.approval ?? society?.executive?.approval ?? 45;
+  const approval = world.polls.at(-1)?.government?.approval ?? world.polls.at(-1)?.executive?.approval ?? society?.executive?.approval ?? APPROVAL_NEUTRAL;
   const offers = partyAgents(world, date, { approval, player, playerIsLeader, playerStrategy: player?.strategy ?? null });
   offers.push(...allianceDynamics(world, date, { nationalVoteIn, player, playerIsLeader }));
   partyLife(world, date, society?.trust ?? world.society?.trust ?? 48);
@@ -1400,7 +1405,7 @@ function regionalVote(world, region, date) {
   const entry = world.localCalendar.regions[region];
   const change = entry.camp && entry.camp !== winner;
   entry.camp = winner;
-  for (const party of world.parties.filter(item => item.active && campOfForce(item) === winner && item.baseline >= 1)) {
+  for (const party of world.parties.filter(item => item.active && !item.isPlayer && campOfForce(item) === winner && item.baseline >= 1)) {
     addEffect(world, { partyId: party.id, scope: 'region', region, delta: 0.8, remaining: 26, cause: 'territori' });
     addEffect(world, { partyId: party.id, delta: 0.12, remaining: 3, cause: 'elezioni-locali', label: `Regionali in ${region}` });
   }
@@ -1436,7 +1441,7 @@ function localVotes(world, date) {
     const total = Object.values(byCamp).reduce((sum, value) => sum + value, 0) || 1;
     const won = Object.fromEntries(Object.entries(byCamp).map(([camp, value]) => [camp, Math.round(count * clamp(value / total + gaussian(world) * 0.04, 0, 1) * 0.8)]));
     const lead = Object.entries(won).sort((a, b) => b[1] - a[1])[0][0];
-    for (const party of world.parties.filter(item => item.active && campOfForce(item) === lead && item.baseline >= 1)) addEffect(world, { partyId: party.id, delta: 0.08, remaining: 2, cause: 'elezioni-locali', label: 'Amministrative' });
+    for (const party of world.parties.filter(item => item.active && !item.isPlayer && campOfForce(item) === lead && item.baseline >= 1)) addEffect(world, { partyId: party.id, delta: 0.08, remaining: 2, cause: 'elezioni-locali', label: 'Amministrative' });
     logEvent(world, date, { kind: 'elezioni', icon: 'ballot', scope: 'locale', title: `Amministrative: si vota in ${count} comuni`, body: `Il ${CAMP_LABELS[lead]} conquista più comuni (${Object.entries(won).map(([camp, value]) => `${CAMP_LABELS[camp]} ${value}`).join(', ')}; gli altri vanno a liste civiche). Risultati simulati, calendario reale dei comuni al voto.`, tone: 'neutral' });
   }
 }

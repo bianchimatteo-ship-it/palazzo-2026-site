@@ -1,6 +1,8 @@
 // Simulated polls are credible: they start from the last real poll, move gradually (tenths of a point a week for
 // most forces, never beyond a size-dependent bound), stay normalized, and react to events in the direction that
-// majority and opposition would expect. No random jumps of whole points.
+// majority and opposition would expect. No random jumps of whole points. And they are neutral: house effects cancel
+// out for every force, and over long runs with many seeds no force gains or loses for its size, camp or role; the
+// player's party moves only with the player's actions and standing.
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
@@ -57,4 +59,63 @@ let date = '2026-09-24';
 for (let week = 2; week <= 5; week++) { date = addDays(date, 7); hit = step(hit, week, date); calm = step(calm, week, date); }
 const sum = (target, strategy) => target.polls.at(-1).results.filter(row => target.parties.find(party => party.id === row.partyId)?.strategy === strategy).reduce((total, row) => total + row.share, 0);
 assert.ok(sum(hit, 'governista') < sum(calm, 'governista') - 0.3 && sum(hit, 'opposizione') > sum(calm, 'opposizione') + 0.3, 'Un evento che pesa sul governo sposta consensi dalla maggioranza all’opposizione.');
-console.log(`Sondaggi simulati credibili: partenza dal dato reale (primo sondaggio simulato entro il 60% della variazione massima), variazioni settimanali p90 ${pct(swings.big, 0.9)} (grandi) / ${pct(swings.mid, 0.9)} (medie) / ${pct(swings.small, 0.9)} (piccole) punti, mai oltre il limite legato alla dimensione, normalizzazione sempre a 100, deriva mediana di ${pct(drift, 0.5)} punti in due anni, eventi che spostano consenso tra maggioranza e opposizione.`);
+// ---------- neutrality: no force is favoured by the machinery of the polls ----------
+// House effects: small, and zero on average for every force (the institutes lean a little, never the same way).
+const { POLL_INSTITUTES } = await import(`../src/data/simulation/polling-rules.js${build ? `?v=${build}` : ''}`);
+let houseMax = 0;
+for (const id of [...forces.map(force => force.id), 'io', 'forza-di-prova']) for (const share of [1, 5, 25]) {
+  const leans = POLL_INSTITUTES.map(institute => engine.houseEffect(institute.id, id, share));
+  houseMax = Math.max(houseMax, ...leans.map(Math.abs));
+  assert.ok(Math.abs(leans.reduce((sum, value) => sum + value, 0) / leans.length) < 1e-9, `House effect medio nullo per ${id}.`);
+}
+assert.ok(houseMax <= 0.3, `House effect piccoli (massimo ${houseMax.toFixed(2)} punti).`);
+// Ten years with a neutral country (government at mid stability, mood 50, trust 48): every force keeps its level on
+// average, whatever its size, camp or role. Merges and splits are accounted for (what a force inherits or gives up).
+// The player's party does not move without the player's actions and standing.
+const neutral = { parliament: () => ({ government: { status: 'active', stability: 50, coalitionGroupIds: [], supportingGroupIds: [] }, player: null, history: [] }), society: { mood: 50, moodDelta: 0, trust: 48, sentiment: 0 } };
+const own = new Map(forces.map(force => [force.id, []]));
+const shares = new Map(forces.map(force => [force.id, []]));
+let playerMoved = 0, playerEffects = 0;
+for (let seed = 0; seed < 16; seed++) {
+  let world = engine.createWorld({ seedText: `neutralita-${seed}`, date: '2026-09-24', place: { region: seed % 2 ? 'Lombardia' : 'Campania' }, playerParty: { id: 'io', label: 'Il mio partito', position: ['centro', 'sinistra', 'destra', 'centro-destra'][seed % 4], founder: true }, forces, realPoll });
+  const start = new Map(world.parties.map(party => [party.id, party.baseline]));
+  const firstPoll = new Map(world.polls.at(-1).results.map(row => [row.partyId, row.share]));
+  const player = world.parties.find(party => party.isPlayer).baseline;
+  const inherited = new Map(), seen = new Set(world.parties.map(party => party.id)), merged = new Set();
+  let date = '2026-09-24';
+  for (let week = 2; week <= 520; week++) {
+    date = addDays(date, 7);
+    world = engine.advanceWorld(world, { date, week, stats: { popularity: 45, reputation: 55, notoriety: 40 }, parliament: neutral.parliament(), society: neutral.society }).world;
+    playerEffects += world.effects.filter(effect => effect.partyId === 'io').length;
+    for (const party of world.parties) {
+      // A split takes part of the parent's level for good (60%), a merge brings part of the absorbed force's (60%).
+      if (!seen.has(party.id)) { seen.add(party.id); if (party.parentId) inherited.set(party.parentId, (inherited.get(party.parentId) ?? 0) - party.baseline * 0.6); }
+      if (!party.active && party.mergedInto && !merged.has(party.id)) { merged.add(party.id); inherited.set(party.mergedInto, (inherited.get(party.mergedInto) ?? 0) + (party.anchor ?? party.baseline) * 0.6); }
+    }
+  }
+  playerMoved = Math.max(playerMoved, Math.abs(world.parties.find(party => party.isPlayer).baseline - player));
+  for (const force of forces) {
+    const party = world.parties.find(item => item.id === force.id);
+    if (!party?.active) continue;
+    own.get(force.id).push((party.baseline - start.get(force.id) - (inherited.get(force.id) ?? 0)) / start.get(force.id));
+    const share = world.polls.at(-1).results.find(row => row.partyId === force.id)?.share;
+    if (Number.isFinite(share) && !inherited.get(force.id)) shares.get(force.id).push((share - firstPoll.get(force.id)) / firstPoll.get(force.id));
+  }
+}
+const avg = values => values.reduce((sum, value) => sum + value, 0) / (values.length || 1);
+const dev = values => Math.sqrt(avg(values.map(value => (value - avg(values)) ** 2)));
+const trends = [];
+for (const force of forces) {
+  const values = own.get(force.id);
+  if (values.length < 6) continue;
+  const t = avg(values) / ((dev(values) || 1e-9) / Math.sqrt(values.length));
+  trends.push(`${force.label} ${(avg(values) * 100).toFixed(1)}%`);
+  assert.ok(Math.abs(t) <= 3 || Math.abs(avg(values)) <= 0.03, `${force.label}: tendenza sistematica in dieci anni (${(avg(values) * 100).toFixed(1)}% in media, t ${t.toFixed(1)}).`);
+}
+const byRole = flag => avg(forces.filter(force => force.governing === flag).flatMap(force => shares.get(force.id)));
+assert.ok(Math.abs(byRole(true) - byRole(false)) <= 0.03, `Governo e opposizione senza vantaggi strutturali (${(byRole(true) * 100).toFixed(1)}% contro ${(byRole(false) * 100).toFixed(1)}%).`);
+const bySize = (min, max) => avg(forces.filter(force => force.share >= min && force.share < max).flatMap(force => own.get(force.id)));
+assert.ok([bySize(10, 100), bySize(4, 10), bySize(0, 4)].every(value => Math.abs(value) <= 0.05), `Nessun vantaggio per dimensione (grandi ${(bySize(10, 100) * 100).toFixed(1)}%, medie ${(bySize(4, 10) * 100).toFixed(1)}%, piccole ${(bySize(0, 4) * 100).toFixed(1)}%).`);
+assert.ok(playerMoved < 0.01 && playerEffects === 0, `Il partito del giocatore si muove solo con le sue azioni (spostamento ${playerMoved}, effetti esterni ${playerEffects}).`);
+
+console.log(`Sondaggi simulati credibili: partenza dal dato reale (primo sondaggio simulato entro il 60% della variazione massima), variazioni settimanali p90 ${pct(swings.big, 0.9)} (grandi) / ${pct(swings.mid, 0.9)} (medie) / ${pct(swings.small, 0.9)} (piccole) punti, mai oltre il limite legato alla dimensione, normalizzazione sempre a 100, deriva mediana di ${pct(drift, 0.5)} punti in due anni, eventi che spostano consenso tra maggioranza e opposizione. Neutralità: house effect medi nulli (massimo ${houseMax.toFixed(2)} punti); in dieci anni con un Paese neutro nessuna tendenza sistematica per forza (${trends.join(', ')}), per ruolo (governo ${(byRole(true) * 100).toFixed(1)}%, altri ${(byRole(false) * 100).toFixed(1)}%) o dimensione; il partito del giocatore si muove solo con le sue azioni.`);
