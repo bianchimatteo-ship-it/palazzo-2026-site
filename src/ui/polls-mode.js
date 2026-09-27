@@ -85,11 +85,13 @@ function nationalBars(world, poll, index, logo) {
   const rows = poll.results.filter(row => !row.outsideSource && index[row.partyId]).sort((a, b) => b.share - a.share);
   const estimates = poll.results.filter(row => row.outsideSource && index[row.partyId]);
   const others = Number.isFinite(poll.others) ? poll.others : Math.round((100 - rows.reduce((sum, row) => sum + row.share, 0)) * 10) / 10;
-  const max = Math.max(...rows.map(row => row.share), ...estimates.map(row => row.share), 10);
+  const marginOf = row => poll.sample ? Math.round(1.96 * Math.sqrt(Math.max(0.0004, row.share / 100 * (1 - row.share / 100)) / poll.sample) * 1000) / 10 : 0;
+  // The scale holds the whole margin of error of the first force, so its whisker stays inside the track.
+  const max = Math.max(...rows.map(row => row.share + marginOf(row)), ...estimates.map(row => row.share), 10);
   const entered = new Set((poll.moves ?? []).filter(move => move.to === 'rilevato' && move.from === 'emergente').map(move => move.id));
   const bar = row => {
     const party = index[row.partyId];
-    const margin = poll.sample ? Math.round(1.96 * Math.sqrt(Math.max(0.0004, row.share / 100 * (1 - row.share / 100)) / poll.sample) * 1000) / 10 : 0;
+    const margin = marginOf(row);
     const width = row.share / max * 100;
     const estimate = row.outsideSource || row.internal;
     const status = row.outsideSource ? 'stima simulata: il partito non è nella fonte reale' : row.internal ? 'non ancora rilevato dagli istituti: stima interna simulata' : null;
