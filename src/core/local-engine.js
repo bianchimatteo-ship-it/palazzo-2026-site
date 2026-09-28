@@ -624,7 +624,7 @@ function applyApproved(inst, act, date, events) {
   }
   if (category === 'statuto') next = { ...next, pressure: clamp(next.pressure - 4, 0, 100) };
   // A motion approved commits the executive: an act on its theme within eight weeks (one commitment per theme at a time).
-  if (category === 'mozione' && next.executive && !(next.commitments ?? []).some(entry => entry.status === 'aperto' && entry.area === act.area)) next = { ...next, commitments: [...(next.commitments ?? []), { id: `${act.id}-impegno`, actId: act.id, area: act.area, title: act.title, player: act.sponsor.kind === 'player', from: act.sponsor.groupId ?? null, since: date, dueAt: advanceDays(date, 56), status: 'aperto' }].slice(-12) };
+  if (category === 'mozione' && next.executive && !(next.commitments ?? []).some(entry => entry.status === 'aperto' && entry.area === act.area)) next = { ...next, commitments: [...(next.commitments ?? []), { id: uniqueId(next.commitments ?? [], `${act.id}-impegno`), actId: act.id, area: act.area, title: act.title, player: act.sponsor.kind === 'player', from: act.sponsor.groupId ?? null, since: date, dueAt: advanceDays(date, 56), status: 'aperto' }].slice(-12) };
   // An act of the executive on the theme of an open commitment keeps it.
   const kept = ['executive', 'budget'].includes(act.sponsor.kind) && measure ? (next.commitments ?? []).filter(entry => entry.status === 'aperto' && entry.area === act.area) : [];
   if (kept.length) {
