@@ -3,12 +3,12 @@
 // decides, the majority it needs, what it changes, the forecast and the player's vote), what the player can do
 // (propose, question, negotiate, govern), the chronicle of the council. Everything here is simulation, except the size
 // of the European groups at the constitutive session of 2024 (real, with its source).
-import { EP_COMMITTEES, EP_COSTS, EP_GROUPS_2024, committeeById, compactVote, coverageGap, europeanOdds, forecastAct, inCommittee, INSTITUTIONS, isClosedAct, LOCAL_VOTE_CHOICES, localAreas, majorityMargin, measureOf, nextEuropeanRole, typeOfAct, voteRule, withEuropeanSeat, withLocalState } from '../core/local-engine.js?v=20260928-4';
-import { ACT_TYPES, CITY_INDICATORS, QUORUMS, neededYes, proposableTypes } from '../data/simulation/local-acts.js?v=20260928-4';
-import { INDICATORS } from '../data/simulation/society-rules.js?v=20260928-4';
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20260928-4';
-import { esc, meter, num, signed } from './charts.js?v=20260928-4';
-import { glyph } from './visuals.js?v=20260928-4';
+import { EP_COMMITTEES, EP_COSTS, EP_GROUPS_2024, committeeById, compactVote, coverageGap, europeanOdds, forecastAct, inCommittee, INSTITUTIONS, isClosedAct, LOCAL_VOTE_CHOICES, localAreas, majorityMargin, measureOf, nextEuropeanRole, typeOfAct, voteRule, withEuropeanSeat, withLocalState } from '../core/local-engine.js?v=20260928-5';
+import { ACT_TYPES, CITY_INDICATORS, QUORUMS, neededYes, proposableTypes } from '../data/simulation/local-acts.js?v=20260928-5';
+import { INDICATORS } from '../data/simulation/society-rules.js?v=20260928-5';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20260928-5';
+import { esc, meter, num, signed } from './charts.js?v=20260928-5';
+import { glyph } from './visuals.js?v=20260928-5';
 
 const STAGES = Object.freeze({ commissione: 'In commissione', giunta: 'In Giunta', aula: 'In aula', osservazioni: 'Osservazioni dei cittadini', 'seconda-lettura': 'Attesa della seconda deliberazione', risposta: 'In attesa di risposta', approvato: 'Approvato', respinto: 'Respinto', ritirato: 'Ritirato', risposto: 'Risposta data' });
 const SIDE_LABELS = Object.freeze({ maggioranza: 'Maggioranza', opposizione: 'Opposizione' });

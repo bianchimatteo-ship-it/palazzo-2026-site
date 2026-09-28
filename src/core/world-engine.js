@@ -1,8 +1,8 @@
-import { uniqueId } from './ids.js?v=20260928-4';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260928-4';
-import { APPROVAL_NEUTRAL, CHART_SLOTS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20260928-4';
-import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20260928-4';
-import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20260928-4';
+import { uniqueId } from './ids.js?v=20260928-5';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20260928-5';
+import { APPROVAL_NEUTRAL, CHART_SLOTS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20260928-5';
+import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20260928-5';
+import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20260928-5';
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
 // A party enters with its real identity only (id, name, abbreviation, documented collocazione); its starting weight
