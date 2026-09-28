@@ -325,6 +325,7 @@ npm run check:sections    # progressione non automatica (probabilità ed esiti),
 npm run check:hemicycle   # commissioni reali, emiciclo Camera/Senato, colori e ordine dei gruppi, voti dei singoli coerenti coi totali, voto segreto, fiducia
 npm run check:territory   # comitati Regione → Provincia → Comune, stati, azioni, crisi, effetti su campagna/voto/promozioni; editor dei loghi
 npm run check:mobile-start # Chrome a 375 px con tocchi reali: primo avvio, boot con collezioni fallite, API account non raggiungibile, avvio locale persistente, wizard sopra la navigazione mobile (footer e “Inizia carriera” cliccabili, anche da “Altro”), ISTAT non caricato, service worker (saltato se Chrome manca)
+npm run check:campaign-ui # Chrome con tasti reali: i select della campagna (tema, strategia) conservano la scelta dopo i ridisegni, nessun ridisegno alla fine degli avvisi, nessun ascoltatore duplicato
 npm run check:responsive  # Chrome senza interfaccia: 33 viste e 4 finestre a 375/768/1280 px senza scorrimento orizzontale, elementi fuori schermo, contenuti nascosti o testi troncati (saltato se Chrome manca; CHROME_PATH per indicarlo)
 npm run check:government  # 34 temi, bilancio, territori, cittadini, sicurezza, Presidente del Consiglio, difficoltà
 npm run check:events      # eventi procedurali: condizioni, cooldown, rarità, esclusività, varianti, catene

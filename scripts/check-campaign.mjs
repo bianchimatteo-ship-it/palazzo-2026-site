@@ -4,6 +4,7 @@ import { createCampaign, performCampaignActivity, advanceCampaign, decideCampaig
 import { runFirstRound, runFinalElection } from '../src/core/election-engine.js';
 import { makeDemoState } from '../src/data/simulation/demo.js';
 import { renderCampaignPage } from '../src/ui/campaign-mode.js';
+import { DEBATE_TOPICS } from '../src/data/simulation/campaign-rules.js';
 
 const localStore=new Map();
 globalThis.localStorage={getItem:key=>localStore.get(key)??null,setItem:(key,value)=>localStore.set(key,String(value)),removeItem:key=>localStore.delete(key)};
@@ -101,6 +102,15 @@ let store=module.store;
 const draft={firstName:'Alessia',lastName:'Test',birthDate:'1988-04-20',gender:'donna',region:'Lombardia',municipality:'Milano',previousProfession:'Ricercatrice',initialLevel:'regionale',partyMode:'existing',partyId:party.id,currentDate:base.clock.currentDate};
 store.createCareer(draft,[party]);
 assert.ok(renderCampaignPage(store.getState(),references,()=>null).includes('data-campaign-setup="electionType"'));
+// I select della campagna si ridisegnano con la scelta del giocatore (la pagina si ridisegna a ogni cambiamento del
+// gioco); una scelta che non è più tra le opzioni torna al valore predefinito.
+const selectedIn=(html,attr)=>html.match(new RegExp(`<select ${attr}[^>]*>([\\s\\S]*?)</select>`))?.[1].match(/<option value="([^"]+)" selected/)?.[1]??null;
+const setupHtml=renderCampaignPage(store.getState(),references,()=>null,{'setup.electionType':'regionale','setup.role':'consigliere','setup.topicId':DEBATE_TOPICS[3].id,'setup.strategy':'temi'});
+assert.equal(selectedIn(setupHtml,'data-campaign-setup="electionType"'),'regionale','Il tipo di elezione scelto resta al ridisegno.');
+assert.equal(selectedIn(setupHtml,'data-campaign-setup="role"'),'consigliere','Il ruolo scelto resta al ridisegno.');
+assert.equal(selectedIn(setupHtml,'data-campaign-setup="topicId"'),DEBATE_TOPICS[3].id,'Il tema scelto nell’impostazione resta al ridisegno.');
+assert.ok(/value="temi" checked/.test(setupHtml),'La strategia scelta resta al ridisegno.');
+assert.equal(selectedIn(renderCampaignPage(store.getState(),references,()=>null,{'setup.electionType':'europee','setup.role':'sindaco'}),'data-campaign-setup="role"'),'eurodeputato','Il ruolo di un’altra elezione torna al primo ruolo.');
 assert.throws(()=>store.startCampaign({electionType:'politiche',role:'deputato',objective:'build'},references),/candidature/,'Le candidature seguono il calendario elettorale.');
 store.fastForwardToElection('politiche');
 store.startCampaign({electionType:'politiche',role:'deputato',objective:'build'},references);
@@ -109,6 +119,16 @@ const activeHtml=renderCampaignPage(store.getState(),references,()=>null);
 assert.ok(activeHtml.includes('data-campaign-activity="rally"'));
 assert.ok(activeHtml.includes('Candidatura interna simulata'));
 assert.ok(activeHtml.includes('Sondaggi non collegato')||activeHtml.includes('Aggancio sondaggi: non collegato'));
+// Il tema delle attività resta quello scelto dal giocatore, non quello della strategia, anche dopo un cambio di strategia.
+const strategyTopic=campaign.strategy?.topicId??campaign.nationalContext.salientTopic;
+assert.equal(selectedIn(activeHtml,'data-campaign-topic'),strategyTopic,'Senza una scelta il tema delle attività è quello della strategia.');
+const chosenTopic=DEBATE_TOPICS.find(topic=>topic.id!==strategyTopic).id;
+assert.equal(selectedIn(renderCampaignPage(store.getState(),references,()=>null,{topic:chosenTopic}),'data-campaign-topic'),chosenTopic,'Il tema scelto resta al ridisegno.');
+const newStrategy={...store.getState(),campaign:{...campaign,strategy:{...campaign.strategy,id:'temi',topicId:DEBATE_TOPICS.find(topic=>![strategyTopic,chosenTopic].includes(topic.id)).id}}};
+const changedHtml=renderCampaignPage(newStrategy,references,()=>null,{topic:chosenTopic});
+assert.equal(selectedIn(changedHtml,'data-campaign-topic'),chosenTopic,'Dopo un cambio di strategia il tema delle attività resta quello scelto.');
+assert.equal(selectedIn(changedHtml,'data-campaign-strategy-topic'),newStrategy.campaign.strategy.topicId,'Il select della strategia mostra il tema della strategia.');
+assert.equal(selectedIn(renderCampaignPage(store.getState(),references,()=>null,{topic:'tema-inesistente'}),'data-campaign-topic'),strategyTopic,'Una scelta non valida torna al tema della strategia.');
 assert.equal(campaign.pollingHook.connected,false);
 assert.equal(campaign.partyId,party.id);
 assert.equal(campaign.nomination.status,'pending');
