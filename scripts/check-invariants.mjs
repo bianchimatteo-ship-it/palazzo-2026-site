@@ -49,6 +49,7 @@ damaged('ID undefined', 'undefined', state => { state.dataset.offices[0].politic
 damaged('Quota impossibile', 'valore-impossibile', state => { state.world.polls.at(-1).results[0].share = 140; });
 damaged('Seggi negativi', 'valore-impossibile', state => { state.parliament.chambers.camera.groups[0].simulatedSeats = -3; });
 damaged('Data non valida', 'data', state => { state.game.elections[0].electionDate = '2031-13-45'; });
+damaged('Data rimasta indietro rispetto alla settimana', 'data', state => { state.clock.currentDate = '2026-09-24'; });
 damaged('ID duplicato', 'id-duplicato', state => { state.dataset.offices.push({ ...state.dataset.offices[0] }); });
 damaged('Partito inesistente (carriera)', 'riferimento', state => { state.career.partyId = 'partito-inesistente'; player(state).partyId = 'partito-inesistente'; state.game.party.partyId = 'partito-inesistente'; });
 damaged('Partito del giocatore incoerente', 'coerenza', state => { player(state).partyId = null; });

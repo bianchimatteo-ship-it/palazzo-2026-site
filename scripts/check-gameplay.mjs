@@ -254,4 +254,35 @@ assert.ok(state.game.relations.every(item => item.source === 'simulation'));
 assert.ok(state.game.log.every(item => item.source === 'simulation'));
 assert.equal(JSON.stringify(parties), realSnapshot, 'Il dataset reale non viene modificato dal gioco.');
 
+// 13. La data di gioco segue le settimane: un tentativo di nuova carriera non tocca la partita in corso, la partita
+// precedente salvata nello slot conserva data e settimana, un salvataggio con la data rimasta indietro è riallineato.
+{
+  store = await load();
+  store.setRealReference({ parties, startDate: '2026-09-24' });
+  store.createCareer(draft('comunale'), [realParty, volt], groups);
+  for (let week = 0; week < 6; week++) store.advance(7);
+  const aligned = s => s.game.week.startedAt <= s.clock.currentDate && Date.parse(s.clock.currentDate) - Date.parse(s.game.week.startedAt) < 7 * 86400000;
+  let s = store.getState();
+  const date = s.clock.currentDate, week = s.game.week.index;
+  assert.ok(date > '2026-10-30' && week === 7 && aligned(s), `Dopo sei settimane data e settimana avanzano insieme (${date}, settimana ${week}).`);
+  assert.throws(() => store.createCareer(draft('comunale', { birthDate: '2031-01-01' }), [realParty, volt], groups), /data di nascita/);
+  assert.equal(store.getState().clock.currentDate, date, 'Un tentativo di nuova carriera non riporta la partita in corso alla data reale.');
+  store.createCareer(draft('comunale', { firstName: 'Nuova' }), [realParty, volt], groups);
+  assert.ok(store.getState().clock.currentDate === '2026-09-24' && store.getState().game.week.index === 1, 'La nuova carriera parte dalla data reale.');
+  const previous = store.listSlots().find(item => /partita precedente/.test(item.name));
+  assert.ok(previous, 'La partita precedente è salvata in uno slot.');
+  store.loadSlot(previous.id);
+  s = store.getState();
+  assert.ok(s.clock.currentDate === date && s.game.week.index === week && aligned(s), `La partita precedente conserva data e settimana (${s.clock.currentDate}, settimana ${s.game.week.index}).`);
+  store.advance(7);
+  assert.ok(store.getState().game.week.index === week + 1 && aligned(store.getState()), 'e riprende ad avanzare di settimana in settimana.');
+  // A save written with the old fault: the date back at the real start, the week months ahead.
+  store.save();
+  store = await reload(saved => { saved.clock.currentDate = '2026-09-24'; });
+  s = store.getState();
+  assert.ok(aligned(s) && s.clock.currentDate === s.game.week.startedAt, `Un salvataggio con la data rimasta indietro è riallineato alla settimana in corso (${s.clock.currentDate}).`);
+  store.advance(7);
+  assert.equal(store.getState().game.week.index, week + 2, 'Dopo il riallineamento le settimane avanzano di nuovo.');
+}
+
 console.log('Gameplay verificato: inizio carriera, settimane con tempo e risorse, attività, decisioni, partito e correnti, incarico interno, calendario e candidatura, elezione vinta e saltata, espulsione, dimissioni e caduta senza fine partita (carriera infinita, anche per i vecchi salvataggi concluse), Parlamento con rapporti e trattative, stabilità e elezioni anticipate, salvataggio.');

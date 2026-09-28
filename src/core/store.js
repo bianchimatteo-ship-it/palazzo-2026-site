@@ -280,6 +280,8 @@ function prepareState(input) {
   // A message on screen belongs to the moment it was shown, not to the save.
   const base = { ...raw, version: STATE_VERSION, campaign: raw.campaign ?? null, parliament, ui: { ...(raw.ui ?? {}), toast: null } };
   const game = normalizeGameState(raw.game) ?? buildGame(base);
+  // The date never stays behind the week in progress (saves where a new career had put the real start date back).
+  if (game?.week?.startedAt && base.clock?.currentDate && base.clock.currentDate < game.week.startedAt) base.clock = { ...base.clock, currentDate: game.week.startedAt };
   // Governments formed before Prime Ministers were tracked were the player's.
   if (parliament?.government && !parliament.government.formedBy) parliament.government = { ...parliament.government, formedBy: 'player', primeMinister: ['active', 'crisis'].includes(parliament.government.status) ? 'player' : null, agenda: parliament.government.agenda ?? [] };
   const world = normalizeWorld(raw.world) ?? buildWorld({ ...base, game });
@@ -2645,9 +2647,10 @@ export const store = {
   },
   createCareer(draft, realParties = [], realGroups = []) {
     // A new career begins on the day of the real snapshot: real government, Parliament and opening poll are all current.
-    if (realStartDate) state = { ...state, clock: { ...state.clock, currentDate: realStartDate } };
+    // The game in progress keeps its own date: it may still be saved in a slot below, or stay if the draft is refused.
+    const today = realStartDate ?? state.clock.currentDate;
     const selectableParties = [...state.dataset.parties.filter(isSelectableParty), ...realParties.filter(party => party?.source === DATA_SOURCES.REAL && party.verified === true)];
-    const errors = validateNewCareerDraft({ ...draft, currentDate: state.clock.currentDate }, selectableParties, realGroups);
+    const errors = validateNewCareerDraft({ ...draft, currentDate: today }, selectableParties, realGroups);
     if (errors.length) throw new Error(errors[0]);
     const level = CAREER_LEVELS[draft.initialLevel];
     const birthDate = draft.birthDate;
@@ -2678,8 +2681,8 @@ export const store = {
         program: (draft.partyProgram ?? []).filter(id => AREA_BY_ID[id]).slice(0, 4),
         logo: logoMode === 'url' ? { kind: 'url', url: String(draft.partyLogoUrl).trim() } : logoMode === 'upload' ? { kind: 'upload' } : { kind: 'builder', shape: draft.partyLogoShape ?? 'cerchio', symbol: draft.partyLogoSymbol ?? 'freccia' },
         politicalPosition: POSITIONS_SET.has(draft.partyPosition) ? draft.partyPosition : 'centro',
-        foundedAt: state.clock.currentDate, status: 'attivo',
-        policyPositions: { ...draft.policyPositions }, source: DATA_SOURCES.USER, createdAt: state.clock.currentDate, logoUrl: null, logoAsset: null, logoSource: null, logoVerified: null, logoAlt: `Logo di ${draft.partyName.trim()}`
+        foundedAt: today, status: 'attivo',
+        policyPositions: { ...draft.policyPositions }, source: DATA_SOURCES.USER, createdAt: today, logoUrl: null, logoAsset: null, logoSource: null, logoVerified: null, logoAlt: `Logo di ${draft.partyName.trim()}`
       });
     }
     const profession = draft.previousProfession.trim();
@@ -2689,20 +2692,20 @@ export const store = {
     const datasetStatistics = [];
     const statisticIds = Object.entries(statistics).map(([metric, value]) => {
       const statisticId = makeId('stat-' + metric);
-      datasetStatistics.push({ id: statisticId, subjectId: playerId, metric, value, unit: '100', asOf: state.clock.currentDate, source: DATA_SOURCES.SIMULATION });
+      datasetStatistics.push({ id: statisticId, subjectId: playerId, metric, value, unit: '100', asOf: today, source: DATA_SOURCES.SIMULATION });
       return statisticId;
     });
     const player = {
       id: playerId, firstName: draft.firstName.trim(), lastName: draft.lastName.trim(),
       displayName: draft.firstName.trim() + ' ' + draft.lastName.trim(), birthDate, gender: draft.gender,
       region: draft.region, municipality: draft.municipality.trim(), municipalityCode: istat.istatCode ?? null, province: istat.provinceName ?? null, previousProfession: profession,
-      partyId, territoryId, roleId: makeId('incarico'), source: DATA_SOURCES.USER, createdAt: state.clock.currentDate
+      partyId, territoryId, roleId: makeId('incarico'), source: DATA_SOURCES.USER, createdAt: today
     };
     const chamber = CAREER_LEVELS[draft.initialLevel]?.chamber ?? null;
     const office = {
       id: player.roleId, title: level.office,
       institution: draft.initialLevel === 'comunale' ? 'Comune di ' + draft.municipality.trim() : draft.initialLevel === 'regionale' ? 'Regione ' + draft.region : chamber === 'camera' ? 'Camera dei deputati' : chamber === 'senato' ? 'Senato della Repubblica' : 'Repubblica italiana',
-      level: draft.initialLevel, politicianId: playerId, territoryId, startDate: state.clock.currentDate, endDate: null,
+      level: draft.initialLevel, politicianId: playerId, territoryId, startDate: today, endDate: null,
       source: chamber ? DATA_SOURCES.SIMULATION : DATA_SOURCES.USER
     };
     const dataset = emptyDataset();
@@ -2719,9 +2722,9 @@ export const store = {
     const career = {
       id, name: player.displayName + ' — ' + level.shortLabel, playerId, partyId,
       initialLevel: draft.initialLevel, territoryId, statisticsIds: statisticIds,
-      startedAt: state.clock.currentDate, createdAt: new Date().toISOString(), status: 'active', parliamentContext, difficulty
+      startedAt: today, createdAt: new Date().toISOString(), status: 'active', parliamentContext, difficulty
     };
-    const parliament = chamber ? createParliamentState({ career, player, groups: realGroups, currentDate: state.clock.currentDate, politicalCapital: statistics.influence, referenceGovernment }) : null;
+    const parliament = chamber ? createParliamentState({ career, player, groups: realGroups, currentDate: today, politicalCapital: statistics.influence, referenceGovernment }) : null;
     if (parliament) {
       career.parliamentHistory = [...parliament.history];
       dataset.events = parliament.history.map(event => ({ id: event.id, title: event.text, date: event.date, category: 'parlamento', status: event.type, territoryId: null, impact: event.details, source: DATA_SOURCES.SIMULATION }));
@@ -2729,23 +2732,23 @@ export const store = {
     const partyRecord = [...parties, ...realParties].find(item => item.id === partyId);
     const base = {
       version: STATE_VERSION, campaign: null, parliament, career,
-      clock: { ...state.clock }, dataset,
+      clock: { ...state.clock, currentDate: today }, dataset,
       ui: { activePage: 'panoramica', saveName: 'Salvataggio locale', toast: 'Carriera iniziata: la tua prima settimana è in agenda' }
     };
     const game = buildGame(base, { partyLabel: partyRecord ? partyRecord.officialName ?? partyRecord.name : null, founder: draft.partyMode === 'new' });
     const built = buildWorld({ ...base, game }, partyRecord ?? null);
-    const calendared = built && localElections ? withLocalCalendar(built, localSummary(localElections), state.clock.currentDate) : built;
+    const calendared = built && localElections ? withLocalCalendar(built, localSummary(localElections), today) : built;
     const world = calendared?.localCalendar && electoralGeography ? withRegionalLeans(calendared, regionalLeans(electoralGeography)) : calendared;
     const society = buildSociety({ ...base, game });
-    const national = createNationalState({ currentDate: state.clock.currentDate, legislature: game.legislature });
+    const national = createNationalState({ currentDate: today, legislature: game.legislature });
     if (draft.partyMode === 'new' && game.party) game.party.program = { areas: (draft.partyProgram ?? []).filter(id => AREA_BY_ID[id]).slice(0, 4), since: 1, source: DATA_SOURCES.SIMULATION };
-    game.timeline = [{ id: makeId('storia'), week: 1, date: state.clock.currentDate, kind: 'inizio', title: `Inizia la carriera: ${level.office}`, detail: `${draft.municipality.trim()}, ${draft.region}${partyRecord ? ` · ${partyRecord.officialName ?? partyRecord.name}` : ' · indipendente'}`, tone: 'good', source: DATA_SOURCES.SIMULATION }];
+    game.timeline = [{ id: makeId('storia'), week: 1, date: today, kind: 'inizio', title: `Inizia la carriera: ${level.office}`, detail: `${draft.municipality.trim()}, ${draft.region}${partyRecord ? ` · ${partyRecord.officialName ?? partyRecord.name}` : ' · indipendente'}`, tone: 'good', source: DATA_SOURCES.SIMULATION }];
     // The game being replaced is kept in a slot, so a new game never erases an old one.
     if (store.hasCareer()) { try { store.saveToSlot(`${slotMeta(state).player} · partita precedente`); } catch { /* no room: the player is warned in the menu */ } }
     state = { ...base, game, world, society, national, parliament: withCapital(parliament, game) };
     // A local career starts with a seat in the council of the own comune or region, until its next vote.
     const localKind = { comunale: 'comune', regionale: 'regione' }[draft.initialLevel];
-    if (localKind && world) state = withInstitution(state, simulatedInstitution(state, localKind, state.clock.currentDate));
+    if (localKind && world) state = withInstitution(state, simulatedInstitution(state, localKind, today));
     timelineBase = state;
     persist({ force: true }); emit();
     return player;

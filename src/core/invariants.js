@@ -39,6 +39,8 @@ export function checkInvariants(state, context = {}) {
   scanValues(state, report);
   const today = state.clock?.currentDate;
   if (!validDay(today)) report('data', 'clock.currentDate', `Data corrente non valida: ${today}`);
+  // The date moves with the weeks: it never stays behind the week in progress.
+  else if (validDay(state.game?.week?.startedAt) && today < state.game.week.startedAt) report('data', 'clock.currentDate', `Data corrente ${today} prima dell’inizio della settimana ${state.game.week.index} (${state.game.week.startedAt})`);
   const known = knownIds(state, context);
   checkPlayer(state, known, report);
   checkWorld(state, known, report);
