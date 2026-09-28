@@ -71,7 +71,7 @@ export function createInstitution(spec) {
     executive: spec.kind === 'europa' ? null : { leader: spec.leaderIsPlayer ? 'player' : 'simulato', label: spec.leaderIsPlayer ? `Tu, ${rules.leader.toLowerCase()}` : `${rules.leader} (figura simulata) · ${leaderGroup?.label ?? ''}`.trim(), groupId: leaderGroup?.id ?? null, camp: leaderGroup?.camp ?? 'centro', members, stability: 62, program: null },
     budget: spec.kind === 'europa' ? null : { approvedYear: Number(String(spec.date).slice(0, 4)), margin: 50, localTax: 'media' },
     acts: [], archive: [], history: [{ date: spec.date, text: `${rules.label}: inizia il mandato (${spec.role === 'sindaco' || spec.role === 'presidente' ? 'guidi l’esecutivo' : spec.side === 'maggioranza' ? 'in maggioranza' : 'all’opposizione'}).` }],
-    pressure: 30, source: SIM
+    pressure: 30, ...(spec.kind === 'europa' ? { ep: europeanSeat(`${spec.kind}-${spec.date}`, spec.date, spec.committee) } : {}), source: SIM
   };
 }
 const record = (inst, date, text, type = 'evento') => ({ ...inst, history: [...inst.history, { date, text, type }].slice(-40) });
@@ -81,7 +81,7 @@ export const majorityMargin = inst => inst.groups.filter(group => group.side ===
 // ---------- acts ----------
 function newAct(inst, { kind, sponsor, area, title, date, budget = false }) {
   const rules = INSTITUTIONS[inst.kind];
-  return { id: uniqueId([...inst.acts, ...inst.archive], `${inst.id}-atto-${inst.acts.length + inst.archive.length + 1}`), kind, title, area, sponsor, budget, stage: 'commissione', introducedAt: date, nextStepAt: advanceDays(date, (budget ? 2 : 1 + (inst.acts.length % 3)) * 7), votes: [], pendingPlayerVote: null, label: rules.acts[kind], source: SIM };
+  return { id: uniqueId([...inst.acts, ...inst.archive], `${inst.id}-atto-${inst.acts.length + inst.archive.length + 1}`), kind, title, area, sponsor, budget, stage: 'commissione', introducedAt: date, nextStepAt: advanceDays(date, (budget ? 2 : 1 + (inst.acts.length % 3)) * 7), votes: [], pendingPlayerVote: null, label: rules.acts[kind], ...(inst.kind === 'europa' ? { committee: committeeOfArea(area).id, rapporteur: null } : {}), source: SIM };
 }
 const TITLES = {
   comune: { executive: area => `Delibera: ${AREA_BY_ID[area]?.label.toLowerCase() ?? 'servizi'} in città`, majority: area => `Mozione: più attenzione a ${AREA_BY_ID[area]?.label.toLowerCase() ?? 'servizi'}`, opposition: area => `Mozione dell’opposizione su ${AREA_BY_ID[area]?.label.toLowerCase() ?? 'servizi'}` },
@@ -111,6 +111,9 @@ function support(inst, act, group) {
   if (CAMP_PRIORITIES[group.camp]?.includes(act.area)) value += 0.06;
   if (inMajority && fromMajority) value += ((inst.executive?.stability ?? 60) - 55) / 250 + (group.cohesion - 60) / 300;
   if (act.concession?.[group.id]) value += 0.12;
+  // European dossiers: an amendment carried brings the text closer to its group; the rapporteur writes compromises.
+  if (act.amended?.[group.id]) value += act.amended[group.id];
+  if (act.rapporteur) value += act.rapporteur.groupId === group.id ? 0.1 : 0.03;
   // A shared theme (a motion on a local emergency, a proposal written with the other side) gathers votes across the aisle.
   if (act.consensual && inst.kind !== 'europa') value += fromMajority ? (inMajority ? 0 : 0.22) : (inMajority ? 0.26 : 0);
   // A majority group that feels neglected makes the executive pay on its acts.
@@ -201,11 +204,134 @@ export function setLocalTax(inst, level, date) {
   return record({ ...inst, budget: { ...inst.budget, localTax: level, margin } }, date, `Nuove aliquote locali: pressione fiscale ${level}.`, 'bilancio');
 }
 
+// ---------- the European Parliament: committees, dossiers, offices ----------
+// The standing committees of the European Parliament (their real names; membership, dossiers, votes and offices are
+// simulated). Every dossier is prepared in the committee of its area: a rapporteur writes the report, the groups table
+// amendments, the committee votes, then the plenary. The player sits as a full member in one committee and as a
+// substitute in another, works there (reports, amendments, votes) and can rise to group coordinator, vice-chair, chair.
+export const EP_COMMITTEES = Object.freeze([
+  { id: 'afco', code: 'AFCO', label: 'Affari costituzionali', areas: ['europa'] },
+  { id: 'envi', code: 'ENVI', label: 'Ambiente, clima e sicurezza alimentare', areas: ['ambiente'] },
+  { id: 'itre', code: 'ITRE', label: 'Industria, ricerca ed energia', areas: ['industria', 'energia'] },
+  { id: 'imco', code: 'IMCO', label: 'Mercato interno e protezione dei consumatori', areas: ['digitale'] },
+  { id: 'agri', code: 'AGRI', label: 'Agricoltura e sviluppo rurale', areas: ['agricoltura'] },
+  { id: 'libe', code: 'LIBE', label: 'Libertà civili, giustizia e affari interni', areas: ['immigrazione'] },
+  { id: 'empl', code: 'EMPL', label: 'Occupazione e affari sociali', areas: ['lavoro'] },
+  { id: 'inta', code: 'INTA', label: 'Commercio internazionale', areas: ['commercio'] },
+  { id: 'afet', code: 'AFET', label: 'Affari esteri', areas: ['esteri'] },
+  { id: 'sede', code: 'SEDE', label: 'Sicurezza e difesa', areas: ['difesa'] }
+]);
+export const committeeOfArea = area => EP_COMMITTEES.find(item => item.areas.includes(area)) ?? EP_COMMITTEES[0];
+export const committeeById = id => EP_COMMITTEES.find(item => item.id === id) ?? null;
+// The offices of a committee, one step at a time: the work done (merit: reports and amendments approved) and some
+// time in the previous office open the next one; capital pays the campaign, the committee's vote decides.
+export const EP_ROLES = Object.freeze([
+  { id: 'coordinatore', label: 'Coordinatore del gruppo in commissione', title: code => `Coordinatore del gruppo in commissione ${code}`, merit: 5, after: 0, capital: 3, base: 0.45, stats: { influence: 2, notoriety: 1 } },
+  { id: 'vicepresidente', label: 'Vicepresidente di commissione', title: code => `Vicepresidente della commissione ${code}`, merit: 15, after: 26, capital: 4, base: 0.3, stats: { influence: 3, notoriety: 1.5, reputation: 0.5 } },
+  { id: 'presidente', label: 'Presidente di commissione', title: code => `Presidente della commissione ${code}`, merit: 30, after: 52, capital: 5, base: 0.2, stats: { influence: 4, notoriety: 2, reputation: 1 } }
+]);
+const COMMITTEE_SEATS = 60;
+export const EP_COSTS = Object.freeze({ rapporteur: 2, amendment: 1, committee: 2 });
+// The seat of a new MEP: the group assigns a committee as full member and one as substitute.
+function europeanSeat(seed, date, preferred = null) {
+  const rand = seededRandom(`${seed}|commissioni`);
+  const member = committeeById(preferred)?.id ?? EP_COMMITTEES[Math.floor(rand() * EP_COMMITTEES.length)].id;
+  const others = EP_COMMITTEES.filter(item => item.id !== member);
+  return { member, substitute: others[Math.floor(rand() * others.length)].id, role: null, roleSince: null, merit: 0, reports: 0, amendments: { tabled: 0, carried: 0 }, lastBid: null, lastRequest: null, since: date, source: SIM };
+}
+// Saves made before the committees existed: the MEP gets a seat and the dossiers their committee.
+export function withEuropeanSeat(inst, date) {
+  if (inst?.kind !== 'europa' || inst.ep) return inst;
+  return { ...inst, ep: europeanSeat(inst.id, inst.since ?? date), acts: inst.acts.map(act => act.committee ? act : { ...act, committee: committeeOfArea(act.area).id, rapporteur: act.rapporteur ?? null }) };
+}
+const groupShare = inst => (inst.groups.find(group => group.id === inst.playerGroupId)?.seats ?? 0) / (inst.seats || 1);
+const roleIndex = inst => EP_ROLES.findIndex(role => role.id === inst.ep?.role);
+export const inCommittee = (inst, act) => Boolean(inst.ep && act.committee && [inst.ep.member, inst.ep.substitute].includes(act.committee));
+export const nextEuropeanRole = inst => EP_ROLES[roleIndex(inst) + 1] ?? null;
+// The odds of the player's moves in the European Parliament (the UI shows them before the choice).
+export function europeanOdds(inst, act = null, { influence = 30 } = {}) {
+  const share = groupShare(inst);
+  const office = Math.max(0, roleIndex(inst) + 1) * 0.08;
+  const role = nextEuropeanRole(inst);
+  return {
+    // Reports go to the groups in proportion to their weight (the points system): a large group, an office and a name help.
+    rapporteur: clamp(0.22 + share * 1.6 + office + (influence - 50) / 200, 0.08, 0.85),
+    // An amendment passes in committee when the others can accept it: harder against a text the own group dislikes.
+    amendment: act ? clamp(0.4 + (support(inst, act, inst.groups.find(group => group.id === inst.playerGroupId) ?? { axis: 0, side: 'opposizione', cohesion: 60 }) - 0.5) * 0.6 + (act.rapporteur?.player ? 0.3 : 0) + office + (influence - 50) / 300, 0.1, 0.9) : null,
+    role: role ? clamp(role.base + share * 0.8 + (influence - 50) / 150 + ((inst.ep?.merit ?? 0) - role.merit) * 0.03, 0.05, 0.85) : null,
+    committee: clamp(0.45 + (influence - 50) / 150 + share * 0.5, 0.15, 0.85)
+  };
+}
+const openDossier = (inst, actId) => {
+  const act = inst.acts.find(item => item.id === actId);
+  if (!inst.ep || !act || CLOSED.includes(act.stage)) throw new Error('Il dossier non è più in discussione.');
+  if (act.stage !== 'commissione') throw new Error('Il dossier ha già lasciato la commissione: ora decide la plenaria.');
+  return act;
+};
+// The player asks for a report: in the own committee, before the committee vote, when nobody has it yet.
+export function bidRapporteur(inst, actId, { influence = 30, rand = Math.random, date } = {}) {
+  inst = withEuropeanSeat(inst, date);
+  const act = openDossier(inst, actId);
+  if (act.committee !== inst.ep.member) throw new Error('Puoi chiedere le relazioni solo nella commissione di cui sei membro titolare.');
+  if (act.rapporteur) throw new Error('Il dossier ha già un relatore.');
+  if (act.sponsor.kind === 'player') throw new Error('È già la tua relazione.');
+  const won = rand() < europeanOdds(inst, act, { influence }).rapporteur;
+  const rivals = inst.groups.filter(group => group.id !== inst.playerGroupId).sort((a, b) => b.seats - a.seats);
+  const other = rivals[Math.floor(rand() * Math.min(3, rivals.length))] ?? null;
+  const rapporteur = won ? { groupId: inst.playerGroupId, player: true } : { groupId: other?.id ?? null, player: false };
+  const next = { ...inst, acts: inst.acts.map(item => item.id === actId ? { ...item, rapporteur } : item) };
+  return { inst: record(next, date, won ? `Sei relatore di “${act.title}”.` : `La relazione su “${act.title}” va a ${other?.label ?? 'un altro gruppo'}.`, 'relazione'), won, group: won ? null : other?.label ?? null };
+}
+// An amendment to a dossier of the own committees (full member or substitute), one per dossier.
+export function tableAmendment(inst, actId, { influence = 30, rand = Math.random, date } = {}) {
+  inst = withEuropeanSeat(inst, date);
+  const act = openDossier(inst, actId);
+  if (!inCommittee(inst, act)) throw new Error('Puoi emendare solo i dossier delle tue commissioni.');
+  if (act.playerAmendment) throw new Error('Hai già presentato i tuoi emendamenti su questo dossier.');
+  const carried = rand() < europeanOdds(inst, act, { influence }).amendment;
+  const amended = carried ? { ...(act.amended ?? {}), [inst.playerGroupId]: round1((act.amended?.[inst.playerGroupId] ?? 0) + 0.08) } : act.amended ?? {};
+  const ep = { ...inst.ep, merit: inst.ep.merit + (carried ? 1 : 0), amendments: { tabled: inst.ep.amendments.tabled + 1, carried: inst.ep.amendments.carried + (carried ? 1 : 0) } };
+  const next = { ...inst, ep, acts: inst.acts.map(item => item.id === actId ? { ...item, amended, playerAmendment: { carried, date } } : item) };
+  return { inst: record(next, date, `${carried ? 'Approvato in commissione' : 'Respinto in commissione'} il tuo emendamento a “${act.title}”.`, 'emendamento'), carried };
+}
+// The next office of the committee: the merit gathered opens the race, the vote of the committee decides.
+export function runForCommitteeRole(inst, { influence = 30, rand = Math.random, date } = {}) {
+  inst = withEuropeanSeat(inst, date);
+  if (!inst.ep) throw new Error('Serve un seggio al Parlamento europeo.');
+  const role = nextEuropeanRole(inst);
+  if (!role) throw new Error('Guidi già la tua commissione.');
+  if (inst.ep.merit < role.merit) throw new Error(`Per ${role.label.toLowerCase()} serve più lavoro in commissione (${inst.ep.merit} su ${role.merit}: relazioni ed emendamenti approvati).`);
+  if (inst.ep.role && weeksBetween(inst.ep.roleSince, date) < role.after) throw new Error(`Per ${role.label.toLowerCase()} servono almeno ${role.after} settimane nell’incarico attuale.`);
+  if (inst.ep.lastBid && weeksBetween(inst.ep.lastBid, date) < 8) throw new Error('Hai tentato da poco: riprova tra qualche settimana.');
+  const won = rand() < europeanOdds(inst, null, { influence }).role;
+  const committee = committeeById(inst.ep.member);
+  const ep = { ...inst.ep, lastBid: date, ...(won ? { role: role.id, roleSince: date } : {}) };
+  return { inst: record({ ...inst, ep }, date, won ? `${role.title(committee.code)}: eletto.` : `Non eletto ${role.label.toLowerCase()}: la commissione sceglie un altro nome.`, 'incarico'), won, role, committee };
+}
+// A move to another committee: the group decides, and the offices of the old one are left behind.
+export function requestCommittee(inst, committeeId, { influence = 30, rand = Math.random, date } = {}) {
+  inst = withEuropeanSeat(inst, date);
+  if (!inst.ep) throw new Error('Serve un seggio al Parlamento europeo.');
+  const target = committeeById(committeeId);
+  if (!target || target.id === inst.ep.member) throw new Error('Scegli una commissione diversa dalla tua.');
+  if (inst.ep.lastRequest && weeksBetween(inst.ep.lastRequest, date) < 26) throw new Error('Il gruppo ha già discusso la tua richiesta: riprova tra qualche mese.');
+  const moved = rand() < europeanOdds(inst, null, { influence }).committee;
+  const ep = moved ? { ...inst.ep, member: target.id, substitute: inst.ep.substitute === target.id ? inst.ep.member : inst.ep.substitute, role: null, roleSince: null, lastRequest: date } : { ...inst.ep, lastRequest: date };
+  return { inst: record({ ...inst, ep }, date, moved ? `Passi alla commissione ${target.code} (${target.label}).` : `Il gruppo respinge la richiesta di passare alla commissione ${target.code}.`, 'commissione'), moved, committee: target, leftRole: moved ? inst.ep.role : null };
+}
+// The vote in committee (about sixty members, the groups in proportion): the player votes as a full member.
+function committeeVote(inst, act, date) {
+  const total = inst.seats || 1;
+  const groups = inst.groups.map(group => ({ ...group, seats: Math.max(1, Math.round(group.seats / total * COMMITTEE_SEATS)) }));
+  const member = inst.ep?.member === act.committee;
+  return voteAct({ ...inst, groups, seats: groups.reduce((sum, group) => sum + group.seats, 0), playerGroupId: member ? inst.playerGroupId : null }, act, date);
+}
+
 // ---------- one week ----------
 // ctx: { date, rand, issues: [area], playerIsLeader }. Returns { inst, events, lines }: events for the career (votes of
 // the player, requests, the fall of the executive and the early vote).
 export function advanceInstitutionWeek(input, { date, rand = Math.random, issues = [] } = {}) {
-  let inst = input;
+  let inst = withEuropeanSeat(input, date);
   if (!inst || inst.status !== 'active') return { inst: input, events: [], lines: [] };
   const rules = INSTITUTIONS[inst.kind];
   const events = [];
@@ -220,8 +346,10 @@ export function advanceInstitutionWeek(input, { date, rand = Math.random, issues
     const leaderGroup = inst.groups.find(group => group.id === inst.executive?.groupId);
     add(newAct(inst, { kind: 'budget', sponsor: { kind: 'budget', groupId: inst.executive?.leader === 'player' ? inst.playerGroupId : leaderGroup?.id ?? null, label: rules.executive, axis: leaderGroup?.axis ?? 0 }, area: 'finanze', title: `${rules.acts.budget} ${Number(date.slice(0, 4)) + 1}`, date, budget: true }));
   }
+  // In Strasbourg the player follows above all the dossiers of the own committees (the others pass in plenary).
+  const euroArea = () => { const draw = rand(); const own = committeeById(draw < 0.45 ? inst.ep?.member : draw < 0.6 ? inst.ep?.substitute : null); return own ? own.areas[Math.floor(rand() * own.areas.length)] : pickArea(EU_AREAS); };
   if (open < 6) {
-    const executiveArea = issues.length && rand() < 0.6 ? pickArea(within(inst.kind, issues)) : pickArea(inst.kind === 'europa' ? EU_AREAS : within(inst.kind, CAMP_PRIORITIES[inst.executive?.camp ?? 'centro']));
+    const executiveArea = inst.kind === 'europa' ? euroArea() : issues.length && rand() < 0.6 ? pickArea(within(inst.kind, issues)) : pickArea(within(inst.kind, CAMP_PRIORITIES[inst.executive?.camp ?? 'centro']));
     if (inst.executive?.leader !== 'player' && rand() < rules.rates.executive) {
       const leaderGroup = inst.groups.find(group => group.id === inst.executive?.groupId);
       add(newAct(inst, { kind: 'executive', sponsor: { kind: 'executive', groupId: leaderGroup?.id ?? null, label: rules.executive, axis: inst.kind === 'europa' ? 0.5 : leaderGroup?.axis ?? 0 }, area: executiveArea, title: TITLES[inst.kind].executive(executiveArea), date }));
@@ -230,13 +358,27 @@ export function advanceInstitutionWeek(input, { date, rand = Math.random, issues
       if (!pool.length || rand() >= rules.rates[kind]) continue;
       const group = pool[Math.floor(rand() * pool.length)];
       if (group.id === inst.playerGroupId && inst.kind !== 'europa') continue;
-      const area = inst.kind !== 'europa' && issues.length && rand() < 0.35 ? pickArea(within(inst.kind, issues)) : pickArea(inst.kind === 'europa' ? EU_AREAS : within(inst.kind, CAMP_PRIORITIES[group.camp]));
+      const area = inst.kind !== 'europa' && issues.length && rand() < 0.35 ? pickArea(within(inst.kind, issues)) : inst.kind === 'europa' ? euroArea() : pickArea(within(inst.kind, CAMP_PRIORITIES[group.camp]));
       const act = newAct(inst, { kind, sponsor: { kind, groupId: group.id, label: group.label, axis: group.axis ?? 0 }, area, title: TITLES[inst.kind][kind](area), date });
       add(issues.includes(area) && rand() < 0.5 ? { ...act, consensual: true, title: `${act.title} (testo condiviso)` } : act);
     }
   }
   // The calendar of the council: committee, then the vote.
   for (const act of inst.acts.filter(item => !CLOSED.includes(item.stage) && item.nextStepAt <= date)) {
+    if (act.stage === 'commissione' && inst.kind === 'europa') {
+      // A dossier without a rapporteur gets one from a group (by weight); then the committee votes the report.
+      const pool = inst.groups.filter(group => !group.nonAttached);
+      const weights = pool.map(group => group.seats);
+      let pick = rand() * weights.reduce((sum, value) => sum + value, 0);
+      const assigned = act.rapporteur ?? (act.kind === 'player' ? { groupId: inst.playerGroupId, player: true } : { groupId: (pool.find((group, index) => (pick -= weights[index]) < 0) ?? pool[0])?.id ?? null, player: false });
+      const vote = committeeVote(inst, { ...act, rapporteur: assigned }, date);
+      const code = committeeById(act.committee)?.code ?? '';
+      inst = { ...inst, acts: inst.acts.map(item => item.id === act.id ? { ...item, rapporteur: assigned, committeeVote: { yes: vote.yes, against: vote.against, abstain: vote.abstain, total: vote.total, passed: vote.passed, playerChoice: vote.playerChoice, date }, ...(vote.passed ? { stage: 'aula', nextStepAt: advanceDays(date, 7) } : { stage: 'respinto', closedAt: date }) } : item) };
+      inst = record(inst, date, `Commissione ${code}: “${act.title}” ${vote.passed ? 'approvato, va in plenaria' : 'respinto'} (${vote.yes} sì, ${vote.against} no).`, 'commissione');
+      if (inCommittee(inst, act) || assigned.player) events.push({ type: 'commissione-votata', actId: act.id, title: act.title, committee: code, passed: vote.passed, rapporteur: assigned.player, playerChoice: vote.playerChoice, playerLine: vote.playerLine, decisive: vote.decisive });
+      if (assigned.player && !vote.passed) inst = { ...inst, ep: { ...inst.ep, merit: inst.ep.merit + 1 } };
+      continue;
+    }
     if (act.stage === 'commissione') { inst = { ...inst, acts: inst.acts.map(item => item.id === act.id ? { ...item, stage: 'aula', nextStepAt: advanceDays(date, 7) } : item) }; continue; }
     const vote = voteAct(inst, act, date);
     const stage = vote.passed ? 'approvato' : 'respinto';
@@ -250,12 +392,17 @@ export function advanceInstitutionWeek(input, { date, rand = Math.random, issues
       inst = { ...inst, groups: inst.groups.map(group => group.side === 'maggioranza' && unhappy.has(group.id) ? { ...group, cohesion: clamp(group.cohesion - 5, 0, 100) } : group) };
     }
     events.push({ type: 'atto-votato', actId: act.id, title: act.title, kind: act.kind, budget: act.budget, sponsor: act.sponsor, area: act.area, passed: vote.passed, playerChoice: vote.playerChoice, playerLine: vote.playerLine, decided: vote.decided, decisive: vote.decisive, yes: vote.yes, against: vote.against });
+    // The player's report (or own-initiative report) in plenary: the work of months is judged.
+    if (inst.ep && (act.rapporteur?.player || act.kind === 'player')) {
+      inst = { ...inst, ep: { ...inst.ep, merit: inst.ep.merit + (vote.passed ? 3 : 1), reports: inst.ep.reports + (vote.passed ? 1 : 0) } };
+      events.push({ type: 'relazione-votata', actId: act.id, title: act.title, committee: committeeById(act.committee)?.code ?? '', passed: vote.passed, own: act.kind === 'player' });
+    }
   }
   // Acts of the player's council coming to the vote within the week: the player is asked (the important ones).
   for (const act of inst.acts.filter(item => item.stage === 'aula' && item.nextStepAt <= advanceDays(date, 7) && !item.pendingPlayerVote && !item.asked)) {
     const forecast = forecastAct(inst, act);
     inst = { ...inst, acts: inst.acts.map(item => item.id === act.id ? { ...item, asked: true } : item) };
-    const important = act.budget || act.kind === 'sfiducia' || act.sponsor.groupId === inst.playerGroupId || Math.abs(forecast.yes - forecast.needed) <= 1 || (act.kind === 'executive' && rand() < 0.2);
+    const important = act.budget || act.kind === 'sfiducia' || act.sponsor.groupId === inst.playerGroupId || act.rapporteur?.player || Math.abs(forecast.yes - forecast.needed) <= 1 || (act.kind === 'executive' && rand() < 0.2);
     if (important && act.sponsor.kind !== 'player') events.push({ type: 'voto-locale', actId: act.id, title: act.title, label: act.label, budget: act.budget, line: forecast.positions.find(item => item.groupId === inst.playerGroupId)?.line ?? 'astenuto', yes: forecast.yes, needed: forecast.needed, date: act.nextStepAt });
   }
   // Groups and executive: cohesion drifts, the opposition presses, a group of the majority may walk out.

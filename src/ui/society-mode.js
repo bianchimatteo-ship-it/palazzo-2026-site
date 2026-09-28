@@ -90,7 +90,7 @@ function lawsApplied(society) {
 
 export function renderTerritoriesPage(state, ui = {}) {
   const society = state.society;
-  if (!society) return '<p class="quiet-copy">La simulazione del Paese si attiva alla prossima settimana.</p>';
+  if (!society) return `${renderInstitutions(state)}<p class="quiet-copy">La simulazione del Paese si attiva alla prossima settimana.</p>`;
   const home = state.game?.place?.region ?? null;
   const measure = MAP_MEASURES.some(item => item.id === ui.measure) ? ui.measure : 'satisfaction';
   const selected = society.regions[ui.region] ? ui.region : society.regions[home] ? home : Object.keys(society.regions)[0];

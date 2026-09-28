@@ -299,7 +299,15 @@ export function mountApp(root, store, { retryData = null } = {}) {
     if (!missing.length) return '';
     return `<div class="data-alert" role="alert">${glyph('alert', 16)}<span>Alcuni dati reali non sono disponibili: <strong>${esc(missing.map(item => dataLabel(item.name)).join(', '))}</strong>. Il gioco funziona con il resto; le parti che ne dipendono restano vuote.</span>${retryData ? `<button type="button" class="secondary-button" data-action="retry-data" ${retryingData ? 'disabled' : ''}>${retryingData ? 'Nuovo tentativo…' : 'Riprova'}</button>` : ''}</div>`;
   };
-  const render = (state, lastSaved) => { renderFrame(state, lastSaved); paintLogoEditor(); restoreDetails(); persistViewState(); };
+  // A block of another page that a link pointed to (data-nav + data-scroll): reached once that page is drawn.
+  let pendingScroll = null;
+  const scrollPending = () => {
+    const target = pendingScroll ? globalThis.document?.getElementById?.(pendingScroll) : null;
+    if (!target) return;
+    pendingScroll = null;
+    target.scrollIntoView?.({ block: 'start' });
+  };
+  const render = (state, lastSaved) => { renderFrame(state, lastSaved); paintLogoEditor(); restoreDetails(); persistViewState(); scrollPending(); };
   const renderFrame = (state, lastSaved) => {
     hideChartTip();
     if (menu.open && !wizard) {
@@ -765,13 +773,16 @@ export function mountApp(root, store, { retryData = null } = {}) {
       catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(),store.getLastSaved()); }
       return;
     }
-    const localControl = event.target.closest('[data-local-vote],[data-local-question],[data-local-concede],[data-local-tax]');
+    const localControl = event.target.closest('[data-local-vote],[data-local-question],[data-local-concede],[data-local-tax],[data-ep-rapporteur],[data-ep-amend],[data-ep-role]');
     if (localControl) {
       const { instId, actId } = localControl.dataset;
       try {
         if (localControl.dataset.localVote) store.castLocalVote(instId, actId, localControl.dataset.localVote);
         else if (localControl.dataset.localConcede) store.concedeLocal(instId, actId, localControl.dataset.localConcede);
         else if (localControl.dataset.localTax) store.setLocalTaxLevel(instId, localControl.dataset.localTax);
+        else if ('epRapporteur' in localControl.dataset) store.bidEuropeanRapporteur(instId, actId);
+        else if ('epAmend' in localControl.dataset) store.tableEuropeanAmendment(instId, actId);
+        else if ('epRole' in localControl.dataset) store.runForEuropeanRole(instId);
         else store.questionLocalExecutive(instId);
         playSound('confirm');
       } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(),store.getLastSaved()); }
@@ -863,7 +874,8 @@ export function mountApp(root, store, { retryData = null } = {}) {
       return;
     }
     const scrollTarget = event.target.closest('[data-scroll]')?.dataset.scroll;
-    if (scrollTarget) {
+    if (scrollTarget && event.target.closest('[data-scroll]').matches?.('[data-nav]') && !globalThis.document?.getElementById?.(scrollTarget)) pendingScroll = scrollTarget;
+    else if (scrollTarget) {
       const target = document.getElementById(scrollTarget);
       // A folded block of the Home opens when an action points to it (and stays open, as the player left it).
       if (target?.matches?.('details') && !target.open) target.open = true;
@@ -1153,11 +1165,12 @@ export function mountApp(root, store, { retryData = null } = {}) {
       const reference = (realDatabase.laws ?? []).find(item => item.id === data.get('realReference'));
       try { store.proposeLaw({ title: data.get('title'), policy: designFromForm(form), summary: data.get('summary'), realReference: reference ? { id: reference.id, label: reference.lawNumber ? `legge n. ${reference.lawNumber} del ${reference.lawDate}` : reference.officialTitle.slice(0, 120), officialTitle: reference.officialTitle, lawNumber: reference.lawNumber, lawDate: reference.lawDate, status: reference.status, sourceUrl: reference.sourceUrl, source: 'real', verified: true } : null }); }
       catch (error) { store.getState().ui.toast = error.message; render(store.getState(),store.getLastSaved()); }
-    } else if (form.matches('[data-local-propose-form],[data-local-reshuffle-form]')) {
+    } else if (form.matches('[data-local-propose-form],[data-local-reshuffle-form],[data-ep-committee-form]')) {
       event.preventDefault();
       const data = new FormData(form);
       try {
         if (form.matches('[data-local-propose-form]')) store.proposeLocalAct(form.dataset.instId, data.get('area'));
+        else if (form.matches('[data-ep-committee-form]')) store.requestEuropeanCommittee(form.dataset.instId, data.get('committee'));
         else store.reshuffleLocalGiunta(form.dataset.instId, data.get('portfolio'), data.get('group'));
         playSound('confirm');
       } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(),store.getLastSaved()); }

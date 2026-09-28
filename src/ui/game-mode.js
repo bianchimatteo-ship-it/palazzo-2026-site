@@ -13,6 +13,7 @@ import { societyMood } from '../core/society-engine.js?v=20260927-1';
 import { financeOutlook } from '../core/finance-engine.js?v=20260927-1';
 import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20260927-1';
 import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20260927-1';
+import { activeInstitutions, institutionLabel } from './local-mode.js?v=20260927-1';
 import { renderFinanceCard } from './finance-mode.js?v=20260927-1';
 import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20260927-1';
 import { stateBadge } from './charts.js?v=20260927-1';
@@ -51,6 +52,8 @@ function meter(value, tone = '') {
 
 // ---------- Home: the command centre ----------
 // Who the player is, as a compact identity: avatar and party logo, name, office, territory and status.
+// The councils (and the European Parliament) where the player holds a seat: one tap from the Home.
+const institutionLinks = state => { const active = activeInstitutions(state); return active.length ? `<p class="hq-institutions">${active.map(inst => `<button class="text-link" data-nav="territori" data-scroll="istituzione-${esc(inst.kind)}">${glyph(inst.kind === 'europa' ? 'globe' : inst.kind === 'regione' ? 'map' : 'town', 14)} ${esc(institutionLabel(inst))} →</button>`).join('')}</p>` : ''; };
 function identity(state, gc, options) {
   const { player, stats } = gc;
   const game = state.game;
@@ -58,7 +61,7 @@ function identity(state, gc, options) {
   const territory = state.dataset.territories.find(item => item.id === player?.territoryId)?.name ?? player?.region ?? 'Italia';
   const partyChip = game.party ? `${esc(options.partyName || game.party.label || 'Partito')} · ${esc(game.party.rankTitle)}${game.party.org ? ` · ${esc(organOf(game.party).label)}` : ''}` : 'Indipendente';
   const status = game.flags?.comebackFrom ? ['Traversata nel deserto', 'danger'] : (stats.reputation ?? 50) < 20 || (game.party && game.party.support < 25) ? ['Carriera in pericolo', 'danger'] : ['Carriera attiva', 'ok'];
-  return `<div class="hq-identity"><span class="section-kicker">IL TUO POLITICO · SETTIMANA ${game.week.index}</span><div class="hq-identity-row"><div class="hero-avatar">${player ? esc(player.firstName[0] + player.lastName[0]) : 'P'}</div>${options.partyLogo ? `<img class="hero-party-logo" src="${esc(options.partyLogo)}" alt="${esc(`Logo di ${options.partyName ?? 'partito'}`)}" />` : ''}<div><h1>${player ? esc(player.displayName) : 'Nessun politico'}</h1><p>${office ? `<span class="hq-office">${glyph(officeIcon(office), 15)}</span>${esc(office.endDate ? `${office.title} · concluso` : office.title)}` : 'Nessun incarico'} <span>·</span> ${esc(territory)}</p><div class="hq-chips"><span>${partyChip}</span><span>${esc(careerLevelLabel(state.career.currentLevel ?? state.career.initialLevel) ?? 'Percorso')}</span><span title="Difficoltà scelta all’inizio">Difficoltà: ${esc(({ facile: 'Facile', normale: 'Normale', difficile: 'Difficile' })[game.difficulty] ?? 'Normale')}</span><span class="hq-status ${status[1]}">${status[0]}</span></div></div></div></div>`;
+  return `<div class="hq-identity"><span class="section-kicker">IL TUO POLITICO · SETTIMANA ${game.week.index}</span><div class="hq-identity-row"><div class="hero-avatar">${player ? esc(player.firstName[0] + player.lastName[0]) : 'P'}</div>${options.partyLogo ? `<img class="hero-party-logo" src="${esc(options.partyLogo)}" alt="${esc(`Logo di ${options.partyName ?? 'partito'}`)}" />` : ''}<div><h1>${player ? esc(player.displayName) : 'Nessun politico'}</h1><p>${office ? `<span class="hq-office">${glyph(officeIcon(office), 15)}</span>${esc(office.endDate ? `${office.title} · concluso` : office.title)}` : 'Nessun incarico'} <span>·</span> ${esc(territory)}</p><div class="hq-chips"><span>${partyChip}</span><span>${esc(careerLevelLabel(state.career.currentLevel ?? state.career.initialLevel) ?? 'Percorso')}</span><span title="Difficoltà scelta all’inizio">Difficoltà: ${esc(({ facile: 'Facile', normale: 'Normale', difficile: 'Difficile' })[game.difficulty] ?? 'Normale')}</span><span class="hq-status ${status[1]}">${status[0]}</span></div>${institutionLinks(state)}</div></div></div>`;
 }
 // The personal indicators, with their change this week.
 function statMeters(state, gc) {

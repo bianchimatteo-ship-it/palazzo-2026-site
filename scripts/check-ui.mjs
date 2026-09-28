@@ -346,6 +346,45 @@ page = await click({ sectionTab: 'partito', sectionTabValue: 'ruoli' });
 assert.ok(page.includes('POSIZIONE NEL PARTITO') && page.includes('probabilità stimata') && page.includes('PROBABILITÀ SIMULATA'), 'Ruoli e correnti: la promozione mostra probabilità e fattori, non solo una soglia.');
 page = await goto('sondaggi');
 assert.ok(!page.includes('data-world-alliance') && page.includes('Alleanze e rotture le decide il segretario'), 'Niente alleanze senza segreteria');
+// ---------- the councils in the UI: the Territori page, the Home link, the controls of the office ----------
+{
+  const L = await import('../src/core/local-engine.js');
+  for (let week = 0; week < 3; week++) { store.getState().game.status = 'active'; store.advance(7); }
+  const council = store.getState().local?.institutions?.find(item => item.status === 'active' && item.kind === 'comune');
+  assert.ok(council, 'La carriera comunale siede nel suo consiglio');
+  let home = await goto('panoramica');
+  assert.ok(home.includes('data-nav="territori" data-scroll="istituzione-comune"'), 'La Home porta al consiglio comunale');
+  let page = await goto('territori');
+  assert.ok(page.includes('id="istituzione-comune"') && page.includes('LE TUE ISTITUZIONI') && page.includes('data-local-question') && page.includes('data-local-propose-form') && clean(page), 'Territori: il consiglio comunale con le azioni del consigliere');
+  await click({ localQuestion: '', instId: council.id });
+  assert.ok(store.getState().local.institutions.find(item => item.id === council.id).history.some(item => item.type === 'interrogazione'), 'Dal pulsante: interrogazione presentata');
+  const act = store.getState().local.institutions.find(item => item.id === council.id).acts.find(item => !L.isClosedAct(item) && item.sponsor.kind !== 'player');
+  if (act) { await click({ localVote: 'contrario', instId: council.id, actId: act.id }); assert.equal(store.getState().local.institutions.find(item => item.id === council.id).acts.find(item => item.id === act.id).pendingPlayerVote, 'contrario', 'Dal pulsante: il voto del consigliere'); }
+  await click({ localTax: 'alta', instId: council.id });
+  assert.match(store.getState().ui.toast ?? '', /Solo chi guida/, 'Il consigliere non decide le aliquote: il gioco lo spiega');
+  // A seat in the European Parliament (the outcome of a vote, here placed directly): committees and their moves.
+  const groups = L.EP_GROUPS_2024.groups.map(group => ({ ...group, side: ['epp', 'sd', 'renew'].includes(group.id) ? 'maggioranza' : 'opposizione' }));
+  store.getState().local.institutions.push(L.createInstitution({ kind: 'europa', name: 'Parlamento europeo', date: store.getState().clock.currentDate, role: 'eurodeputato', side: 'maggioranza', playerGroupId: 'sd', groups, committee: 'envi' }));
+  for (let week = 0; week < 5; week++) { store.getState().game.status = 'active'; store.advance(7); }
+  home = await goto('panoramica');
+  assert.ok(home.includes('data-scroll="istituzione-europa"'), 'La Home porta anche al Parlamento europeo');
+  page = await goto('territori');
+  assert.ok(page.includes('id="istituzione-europa"') && page.includes('Le tue commissioni') && page.includes('data-ep-role') && page.includes('data-ep-committee-form') && clean(page), 'Territori: Parlamento europeo con le sue commissioni');
+  const seats = store.getState().local.institutions.filter(item => item.status === 'active');
+  if (seats.length > 1) assert.ok(seats.every(item => page.includes(`data-scroll="istituzione-${item.kind}"`)), 'Con più istituzioni, un collegamento a ciascuna in cima alla pagina');
+  const seat = store.getState().local.institutions.find(item => item.kind === 'europa' && item.status === 'active');
+  await click({ epRole: '', instId: seat.id });
+  assert.match(store.getState().ui.toast ?? '', /più lavoro in commissione/, 'Senza lavoro in commissione niente incarichi: il gioco lo spiega');
+  const dossier = seat.acts.find(item => item.stage === 'commissione' && L.inCommittee(seat, item) && item.sponsor.kind !== 'player');
+  if (dossier) {
+    store.getState().game.week.ap = Math.max(store.getState().game.week.ap, 3);
+    store.getState().game.resources.politicalCapital = Math.max(store.getState().game.resources.politicalCapital, 6);
+    await click({ epAmend: '', instId: seat.id, actId: dossier.id });
+    assert.equal(store.getState().local.institutions.find(item => item.id === seat.id).ep.amendments.tabled, 1, 'Dal pulsante: emendamenti presentati');
+    if (dossier.committee === seat.ep.member && !dossier.rapporteur) { await click({ epRapporteur: '', instId: seat.id, actId: dossier.id }); assert.ok(store.getState().local.institutions.find(item => item.id === seat.id).acts.find(item => item.id === dossier.id).rapporteur, 'Dal pulsante: la relazione assegnata'); }
+  }
+}
+
 store.clearAllSaves();
 assert.equal(store.listSlots().length, 0);
 assert.ok(!store.hasCareer());
@@ -379,4 +418,4 @@ assert.equal(realData.realDatabase.parties.find(item => item.id === 'party-regis
 assert.ok(Object.isFrozen(realData.realDatabase.parties[0]), 'I dati reali restano immutabili');
 globalThis.fetch = serveFile;
 
-console.log(`Interfaccia verificata: menu principale, guida, impostazioni applicate e salvate, nuova partita con soli partiti reali, ${pages.length} pagine senza valori non validi, poteri del segretario con costi e cooldown, scrivania del Presidente del Consiglio senza leggi unilaterali, identità del partito (logo, colori, programma), tooltip rimossi a ogni cambio pagina, resoconto settimanale, velocità del turno, cronologia, archivio reale (partiti con 2×1000, deputati, senatori, gruppi, governo, leggi, territori), slot, import/export, seconda partita con ruoli limitati, loghi da indirizzo separati dai verificati.`);
+console.log(`Interfaccia verificata: menu principale, guida, impostazioni applicate e salvate, nuova partita con soli partiti reali, ${pages.length} pagine senza valori non validi, poteri del segretario con costi e cooldown, scrivania del Presidente del Consiglio senza leggi unilaterali, identità del partito (logo, colori, programma), tooltip rimossi a ogni cambio pagina, resoconto settimanale, velocità del turno, cronologia, archivio reale (partiti con 2×1000, deputati, senatori, gruppi, governo, leggi, territori), slot, import/export, seconda partita con ruoli limitati, loghi da indirizzo separati dai verificati; istituzioni locali ed europee raggiungibili da Home e Territori, con le azioni della carica (interrogazioni, voti, emendamenti, relazioni, incarichi).`);

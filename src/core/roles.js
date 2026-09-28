@@ -2,6 +2,7 @@
 // Every power listed here is checked again by the store before the action runs.
 import { activeMinisters } from './parliament-engine.js?v=20260927-1';
 import { isSecretary } from './career-engine.js?v=20260927-1';
+import { EP_ROLES, committeeById } from './local-engine.js?v=20260927-1';
 
 const governing = parliament => ['active', 'crisis'].includes(parliament?.government?.status);
 export const isPrimeMinister = parliament => governing(parliament) && parliament.government.primeMinister === 'player';
@@ -22,6 +23,9 @@ export function playerRoles(state) {
   const institutions = (state.local?.institutions ?? []).filter(item => item.status === 'active');
   const leads = institutions.some(item => item.executive?.leader === 'player');
   for (const inst of institutions) roles.push(inst.executive?.leader === 'player' ? ['esecutivo-locale', inst.kind === 'regione' ? `Presidente della ${inst.name}` : `Sindaco${String(inst.name).replace(/^Comune/, '')}`] : ['consigliere', { comune: 'Consigliere comunale', regione: 'Consigliere regionale', europa: 'Deputato al Parlamento europeo' }[inst.kind] ?? 'Consigliere']);
+  // An office in a committee of the European Parliament (coordinator, vice-chair, chair).
+  const committee = institutions.find(inst => inst.ep?.role);
+  if (committee) roles.push(['commissione-ue', EP_ROLES.find(role => role.id === committee.ep.role).title(committeeById(committee.ep.member)?.code ?? '')]);
   if (areaLead) roles.push(['corrente', 'Riferimento della tua area interna']);
   if (seat) roles.push(['parlamentare', parliament.player.chamber === 'senato' ? 'Senatore' : 'Deputato']);
   if (parliament?.careerStanding?.committeeRole) roles.push(['commissione', parliament.careerStanding.committeeRole.title]);
@@ -40,6 +44,7 @@ export function playerRoles(state) {
     ['Programma e stile di comunicazione del partito', secretary, 'Solo il segretario'],
     ['Proposte, voti, interrogazioni e trattative in consiglio o al Parlamento europeo', institutions.length > 0, 'Serve un seggio in un consiglio comunale o regionale, o al Parlamento europeo'],
     ['Giunta, assessori, bilancio e tributi locali', leads, 'Solo il sindaco o il presidente della Regione'],
+    ['Relazioni, emendamenti e voti nelle commissioni del Parlamento europeo', institutions.some(inst => inst.kind === 'europa'), 'Serve un seggio al Parlamento europeo'],
     ['Leggi con contenuto, emendamenti, trattative con i gruppi', seat, 'Serve un seggio in Parlamento'],
     ['Formare un governo (quando non ce n’è uno in carica)', seat && secretary && !governing(parliament), governing(parliament) ? 'C’è già un governo in carica: prima deve cadere' : 'Serve essere segretario con un seggio'],
     ['Sostenere il governo in carica, ritirare il sostegno, aprire una crisi', seat && secretary && governing(parliament) && !isPrimeMinister(parliament), isPrimeMinister(parliament) ? 'Guidi tu il governo' : 'Serve essere segretario con un seggio e un governo in carica'],

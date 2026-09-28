@@ -136,6 +136,67 @@ const groups = [
   console.log(`  Crisi: ${walkouts} uscite dalla maggioranza, ${dissolved} consigli sciolti su 12; voto anticipato il ${vote.electionDate} (comune) e il ${region.electionDate} (regione).`);
 }
 
+// ---------- 4b. the European Parliament: committees, reports, amendments, committee votes, offices ----------
+{
+  const groups = L.EP_GROUPS_2024.groups.map(group => ({ ...group, side: ['epp', 'sd', 'renew'].includes(group.id) ? 'maggioranza' : 'opposizione' }));
+  let ep = L.createInstitution({ kind: 'europa', name: 'Parlamento europeo', date: '2029-07-15', role: 'eurodeputato', side: 'maggioranza', playerGroupId: 'epp', groups, committee: 'envi' });
+  assert.ok(ep.ep.member === 'envi' && L.committeeById(ep.ep.substitute) && ep.ep.substitute !== 'envi', 'Membro titolare della commissione scelta, sostituto in un’altra.');
+  assert.equal(L.EP_COMMITTEES.length, 10);
+  for (const area of L.localAreas('europa')) assert.ok(L.EP_COMMITTEES.some(committee => committee.areas.includes(area)), `Ogni tema europeo ha la sua commissione (${area}).`);
+  let date = '2029-07-15';
+  const rand = seededRandom('commissioni');
+  let own = 0, all = 0, committeeVotes = 0, memberVotes = 0, reports = 0, bids = 0;
+  for (let week = 0; week < 60; week++) {
+    date = advanceDays(date, 7);
+    const out = L.advanceInstitutionWeek(ep, { date, rand });
+    ep = out.inst;
+    for (const event of out.events) {
+      if (event.type === 'commissione-votata') { committeeVotes++; if (event.playerChoice) memberVotes++; }
+      if (event.type === 'relazione-votata') reports++;
+    }
+    for (const act of ep.acts.filter(item => item.stage === 'commissione' && item.introducedAt === date)) { all++; if (L.inCommittee(ep, act)) own++; }
+    // The player asks for every report of the own committee.
+    for (const act of ep.acts.filter(item => item.stage === 'commissione' && item.committee === ep.ep.member && !item.rapporteur)) { ep = L.bidRapporteur(ep, act.id, { influence: 55, rand, date }).inst; bids++; }
+  }
+  assert.ok(own / all >= 0.4, `I dossier seguiti sono soprattutto quelli delle proprie commissioni (${own} su ${all}).`);
+  assert.ok(committeeVotes >= 3 && memberVotes >= 1, `Voto in commissione prima della plenaria, con il voto del giocatore da titolare (${committeeVotes} voti, ${memberVotes} da titolare).`);
+  assert.ok(bids >= 3 && reports >= 1 && ep.ep.merit >= 1, `Relazioni chieste (${bids}), votate in plenaria (${reports}), lavoro registrato (${ep.ep.merit} punti).`);
+  assert.ok(ep.acts.filter(item => item.committeeVote).every(item => item.rapporteur), 'Ogni dossier votato in commissione ha un relatore.');
+  // The rules of the moves.
+  const other = L.EP_COMMITTEES.find(committee => ![ep.ep.member, ep.ep.substitute].includes(committee.id));
+  ep = { ...ep, acts: [...ep.acts, { id: 'dossier-prova', kind: 'executive', title: 'Proposta di regolamento: prova', area: other.areas[0], committee: other.id, sponsor: { kind: 'executive', groupId: null, label: 'Commissione europea', axis: 0.5 }, stage: 'commissione', introducedAt: date, nextStepAt: advanceDays(date, 14), votes: [], rapporteur: null, pendingPlayerVote: null, label: 'Proposta della Commissione' }] };
+  assert.throws(() => L.bidRapporteur(ep, 'dossier-prova', { rand, date }), /titolare/, 'Le relazioni si chiedono nella propria commissione.');
+  assert.throws(() => L.tableAmendment(ep, 'dossier-prova', { rand, date }), /tue commissioni/, 'Si emendano i dossier delle proprie commissioni.');
+  ep = { ...ep, acts: ep.acts.map(item => item.id === 'dossier-prova' ? { ...item, committee: ep.ep.member, area: L.committeeById(ep.ep.member).areas[0] } : item) };
+  const before = L.forecastAct(ep, ep.acts.find(item => item.id === 'dossier-prova')).positions.find(item => item.groupId === 'epp').support;
+  let amended = null;
+  for (let attempt = 0; attempt < 30 && !amended?.carried; attempt++) {
+    const out = L.tableAmendment({ ...ep, acts: ep.acts.map(item => item.id === 'dossier-prova' ? { ...item, playerAmendment: null } : item) }, 'dossier-prova', { influence: 60, rand: seededRandom(`emendamento-${attempt}`), date });
+    if (out.carried) amended = out;
+  }
+  assert.ok(amended, 'Un emendamento passa in commissione.');
+  assert.ok(L.forecastAct(amended.inst, amended.inst.acts.find(item => item.id === 'dossier-prova')).positions.find(item => item.groupId === 'epp').support > before, 'L’emendamento approvato avvicina il testo al gruppo del giocatore.');
+  assert.throws(() => L.tableAmendment(amended.inst, 'dossier-prova', { rand, date }), /già presentato/, 'Un solo pacchetto di emendamenti per dossier.');
+  // Offices: work first, then time in the office.
+  let seat = { ...ep, ep: { ...ep.ep, merit: 0, role: null, roleSince: null, lastBid: null } };
+  assert.throws(() => L.runForCommitteeRole(seat, { rand, date }), /più lavoro/);
+  seat = { ...seat, ep: { ...seat.ep, merit: 40 } };
+  let office = null;
+  for (let attempt = 0; attempt < 30 && !office?.won; attempt++) office = L.runForCommitteeRole({ ...seat, ep: { ...seat.ep, lastBid: null } }, { influence: 60, rand: seededRandom(`incarico-${attempt}`), date });
+  assert.ok(office.won && office.inst.ep.role === 'coordinatore', 'Coordinatore del gruppo in commissione.');
+  assert.throws(() => L.runForCommitteeRole({ ...office.inst, ep: { ...office.inst.ep, lastBid: null } }, { rand, date: advanceDays(date, 7) }), /settimane/, 'Vicepresidente solo dopo qualche mese da coordinatore.');
+  const later = L.runForCommitteeRole({ ...office.inst, ep: { ...office.inst.ep, lastBid: null } }, { influence: 60, rand: () => 0, date: advanceDays(date, 7 * 27) });
+  assert.ok(later.won && later.inst.ep.role === 'vicepresidente', 'Poi vicepresidente della commissione.');
+  // A move to another committee leaves the office and waits some months before a new request.
+  const moved = L.requestCommittee(later.inst, other.id, { influence: 60, rand: () => 0, date });
+  assert.ok(moved.moved && moved.inst.ep.member === other.id && moved.inst.ep.role === null && moved.leftRole === 'vicepresidente');
+  assert.throws(() => L.requestCommittee(moved.inst, L.EP_COMMITTEES[0].id === other.id ? L.EP_COMMITTEES[1].id : L.EP_COMMITTEES[0].id, { rand, date }), /qualche mese/);
+  // A European Parliament saved before the committees: the MEP gets a seat and the dossiers a committee.
+  const legacy = L.withEuropeanSeat({ ...ep, ep: undefined, acts: ep.acts.map(({ committee, ...act }) => act) }, date);
+  assert.ok(legacy.ep?.member && legacy.acts.every(item => item.committee), 'I salvataggi precedenti ricevono le commissioni.');
+  console.log(`  Parlamento europeo: ${all} dossier (${own} nelle tue commissioni), ${committeeVotes} voti in commissione, ${bids} relazioni chieste, ${reports} votate in plenaria, incarichi da coordinatore a vicepresidente, cambio di commissione.`);
+}
+
 // ---------- 5. the store: a local career sits in its council, votes, proposes ----------
 {
   await realData.loadRealDatabase();

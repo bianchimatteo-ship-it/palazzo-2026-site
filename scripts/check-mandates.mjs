@@ -14,6 +14,9 @@ const { playerRoles } = await module('src/core/roles.js');
 const { careerLevelLabel } = await module('src/data/regions.js');
 const { mandatePlace } = await module('src/ui/election-report.js');
 const { renderInstitutions } = await module('src/ui/local-mode.js');
+const { renderTerritoriesPage } = await module('src/ui/society-mode.js');
+const { renderHeadquarters } = await module('src/ui/game-mode.js');
+const E = await module('src/core/local-engine.js');
 const FDI = 'party-registro-p1-2014-04-ir';
 
 const give = store => { const s = store.getState(); s.game.week.ap = Math.max(s.game.week.ap, 6); s.game.resources.funds = Math.max(s.game.resources.funds, 50000); s.game.resources.politicalCapital = 80; if (s.game.party) s.game.party.support = 90; };
@@ -52,6 +55,17 @@ const hasRole = (s, pattern) => playerRoles(s).roles.some(([, label]) => pattern
 const power = (s, prefix) => playerRoles(s).powers.find(item => item.label.startsWith(prefix));
 const inbox = s => s.game.inbox.map(item => item.templateId);
 const lines = [];
+// The mandate is reachable from the UI: the Territori page shows the council (or the European Parliament) with the
+// controls of the office, and the Home leads there in one tap.
+function ui(s, kind, { present = [], absent = [] } = {}) {
+  const page = renderTerritoriesPage(s, {});
+  assert.ok(page.includes(`id="istituzione-${kind}"`), `Territori: la scheda ${kind} è nella pagina`);
+  for (const control of present) assert.ok(page.includes(control), `Territori (${kind}): c’è ${control}`);
+  for (const control of absent) assert.ok(!page.includes(control), `Territori (${kind}): non c’è ${control}`);
+  assert.ok(!/undefined|NaN/.test(page.replace(/data-[a-z-]+="[^"]*"/g, '')), `Territori (${kind}): nessun valore non valido`);
+  assert.ok(renderHeadquarters(s).includes(`data-nav="territori" data-scroll="istituzione-${kind}"`), `Home: collegamento diretto a ${kind}`);
+  return page;
+}
 
 // ---------- 1. comunali → Sindaco → Comune (guidi la giunta) ----------
 {
@@ -62,9 +76,10 @@ const lines = [];
   assert.ok(inst && inst.playerRole === 'sindaco' && inst.executive.leader === 'player', 'Il sindaco guida la giunta del suo comune');
   assert.ok(hasRole(s, /^Sindaco di /), 'Tra i ruoli: Sindaco');
   assert.ok(power(s, 'Giunta, assessori').enabled && power(s, 'Proposte, voti').enabled, 'Il sindaco nomina gli assessori, decide i tributi e vota in consiglio');
-  assert.deepEqual(mandatePlace(s, s.career.lastElectionReport), { nav: 'territori', label: 'Vai al consiglio comunale' });
+  assert.deepEqual(mandatePlace(s, s.career.lastElectionReport), { nav: 'territori', label: 'Vai al consiglio comunale', scroll: 'istituzione-comune' });
   assert.ok(inbox(s).includes('giunta-composizione'), 'Dopo il voto: la scelta della giunta in agenda');
   assert.match(renderInstitutions(s), /data-local-tax/, 'La pagina Territori mostra il comune con le leve del sindaco');
+  ui(s, 'comune', { present: ['data-local-tax', 'data-local-reshuffle-form', 'data-local-propose-form'], absent: ['data-local-question', 'data-ep-'] });
   const member = inst.executive.members[0];
   const other = inst.groups.find(group => group.side === 'maggioranza' && group.id !== member.groupId);
   if (other) store.reshuffleLocalGiunta(inst.id, member.portfolio, other.id);
@@ -87,6 +102,7 @@ const lines = [];
   assert.ok(inbox(s).includes(inst.playerSide === 'maggioranza' ? 'giunta-offerta' : 'capogruppo-opposizione'), 'Dopo il voto: assessorato o guida dell’opposizione');
   assert.ok(power(s, 'Proposte, voti').enabled && !power(s, 'Giunta, assessori').enabled, 'Il consigliere propone e vota, non nomina la giunta');
   assert.throws(() => store.setLocalTaxLevel(inst.id, 'alta'), /Solo chi guida/);
+  ui(s, 'comune', { present: ['data-local-question', 'data-local-propose-form'], absent: ['data-local-tax', 'data-local-reshuffle-form'] });
   store.questionLocalExecutive(inst.id);
   store.proposeLocalAct(inst.id, 'trasporti');
   assert.ok(store.getState().local.institutions.find(item => item.id === inst.id).history.some(item => item.type === 'interrogazione'));
@@ -104,7 +120,8 @@ const lines = [];
   const inst = active(s, 'regione');
   assert.ok(inst && inst.playerRole === 'presidente' && inst.executive.leader === 'player');
   assert.ok(hasRole(s, /^Presidente della Regione Toscana$/));
-  assert.deepEqual(mandatePlace(s, s.career.lastElectionReport), { nav: 'territori', label: 'Vai al consiglio regionale' });
+  ui(s, 'regione', { present: ['data-local-tax', 'data-local-reshuffle-form', 'data-local-propose-form'], absent: ['data-local-question'] });
+  assert.deepEqual(mandatePlace(s, s.career.lastElectionReport), { nav: 'territori', label: 'Vai al consiglio regionale', scroll: 'istituzione-regione' });
   lines.push(`Presidente di Regione dopo ${weeks} settimane di avanzamento`);
 }
 
@@ -116,6 +133,7 @@ const lines = [];
   const inst = active(s, 'regione');
   assert.ok(inst && inst.playerRole === 'consigliere');
   assert.ok(hasRole(s, /^Consigliere regionale$/));
+  ui(s, 'regione', { present: ['data-local-question', 'data-local-propose-form'], absent: ['data-local-tax'] });
   lines.push(`Consigliere regionale: ${inst.playerSide}`);
 }
 
@@ -128,14 +146,75 @@ const lines = [];
   const inst = active(s, 'europa');
   assert.ok(inst && inst.playerRole === 'eurodeputato' && inst.groups.some(group => group.id === inst.playerGroupId), 'Siedi in un gruppo del Parlamento europeo');
   assert.ok(hasRole(s, /^Deputato al Parlamento europeo$/) && power(s, 'Proposte, voti').enabled);
-  assert.deepEqual(mandatePlace(s, s.career.lastElectionReport), { nav: 'territori', label: 'Vai al Parlamento europeo' });
+  assert.deepEqual(mandatePlace(s, s.career.lastElectionReport), { nav: 'territori', label: 'Vai al Parlamento europeo', scroll: 'istituzione-europa' });
+  ui(s, 'europa', { present: ['data-ep-committee-form', 'data-ep-role', 'data-local-question', 'data-local-propose-form', 'Le tue commissioni'], absent: ['data-local-tax'] });
+  assert.ok(inst.ep && E.committeeById(inst.ep.member) && inst.ep.member !== inst.ep.substitute, 'Membro titolare di una commissione e sostituto in un’altra');
+  assert.ok(power(s, 'Relazioni, emendamenti').enabled, 'Tra i poteri: relazioni ed emendamenti in commissione');
   store.proposeLocalAct(inst.id, 'europa');
-  for (let week = 0; week < 6; week++) playWeek(run);
+  store.questionLocalExecutive(inst.id);
+  // The committee work: every week the player asks for the reports of the own committee and amends its dossiers.
+  const stat = metric => store.getState().dataset.statistics.find(item => item.subjectId === store.getState().career.playerId && item.metric === metric)?.value ?? 0;
+  const influenceBefore = stat('influence');
+  let bids = 0, won = 0, amendments = 0, carried = 0, committeeVotes = 0;
+  for (let week = 0; week < 40; week++) {
+    const now = store.getState();
+    now.game.week.ap = Math.max(now.game.week.ap, 4);
+    now.game.resources.politicalCapital = Math.max(now.game.resources.politicalCapital, 20);
+    const seat = now.local.institutions.find(item => item.id === inst.id);
+    for (const act of seat.acts.filter(item => item.stage === 'commissione' && E.inCommittee(seat, item) && item.sponsor.kind !== 'player')) {
+      const fresh = store.getState().local.institutions.find(item => item.id === inst.id).acts.find(item => item.id === act.id);
+      if (fresh.committee === seat.ep.member && !fresh.rapporteur) { const result = store.bidEuropeanRapporteur(inst.id, act.id); bids++; won += result.won ? 1 : 0; }
+      if (!store.getState().local.institutions.find(item => item.id === inst.id).acts.find(item => item.id === act.id).playerAmendment) { const result = store.tableEuropeanAmendment(inst.id, act.id); amendments++; carried += result.carried ? 1 : 0; }
+    }
+    playWeek(run);
+    committeeVotes = store.getState().local.institutions.find(item => item.id === inst.id).acts.filter(item => item.committeeVote).length;
+  }
   const after = store.getState().local.institutions.find(item => item.id === inst.id);
+  assert.ok(bids >= 2 && amendments >= 3, `Relazioni chieste (${bids}) ed emendamenti presentati (${amendments}) nelle tue commissioni`);
+  assert.equal(after.ep.amendments.tabled, amendments);
+  assert.equal(after.ep.amendments.carried, carried);
+  assert.ok(committeeVotes >= 1 || after.archive.length, 'I dossier passano dal voto in commissione');
   assert.ok(after.acts.length + after.archive.length >= 2, 'A Strasburgo si vota');
+  if (carried || won) assert.ok(stat('influence') > influenceBefore, 'Il lavoro in commissione aumenta l’influenza');
+  // Offices of the committee: the work done opens the race (here the merit is set to reach every step).
+  const seatNow = store.getState().local.institutions.find(item => item.id === inst.id);
+  assert.throws(() => (seatNow.ep.merit < E.EP_ROLES[0].merit ? store.runForEuropeanRole(inst.id) : (() => { throw new Error('serve più lavoro'); })()), /serve più lavoro|più lavoro/);
+  let elected = null;
+  for (let attempt = 0; attempt < 12 && !elected; attempt++) {
+    const now = store.getState();
+    const current = now.local.institutions.find(item => item.id === inst.id);
+    current.ep.merit = 40; current.ep.lastBid = null;
+    now.game.week.ap = Math.max(now.game.week.ap, 2);
+    now.game.resources.politicalCapital = Math.max(now.game.resources.politicalCapital, 20);
+    const result = store.runForEuropeanRole(inst.id);
+    if (result.won) elected = result;
+    else playWeek(run);
+  }
+  assert.ok(elected, 'Con il lavoro fatto si diventa coordinatore del gruppo in commissione');
+  const code = E.committeeById(store.getState().local.institutions.find(item => item.id === inst.id).ep.member).code;
+  const roleOffice = store.getState().dataset.offices.find(item => item.politicianId === store.getState().career.playerId && !item.endDate && item.title === `Coordinatore del gruppo in commissione ${code}`);
+  assert.ok(roleOffice && roleOffice.level === 'europee', 'L’incarico entra nella carriera e finisce con la legislatura europea');
+  assert.ok(hasRole(store.getState(), new RegExp(`in commissione ${code}$`)), 'Tra i ruoli: l’incarico in commissione');
+  assert.throws(() => store.runForEuropeanRole(inst.id), /settimane|tentato/, 'Il passo successivo richiede tempo nell’incarico');
+  // A move to another committee leaves the office behind.
+  let moved = null;
+  for (let attempt = 0; attempt < 12 && !moved; attempt++) {
+    const now = store.getState();
+    const current = now.local.institutions.find(item => item.id === inst.id);
+    current.ep.lastRequest = null;
+    now.game.week.ap = Math.max(now.game.week.ap, 2);
+    now.game.resources.politicalCapital = Math.max(now.game.resources.politicalCapital, 20);
+    const target = E.EP_COMMITTEES.find(item => item.id !== current.ep.member && item.id !== current.ep.substitute);
+    const result = store.requestEuropeanCommittee(inst.id, target.id);
+    if (result.moved) moved = result;
+  }
+  assert.ok(moved, 'Il gruppo accetta prima o poi il passaggio a un’altra commissione');
+  const seatMoved = store.getState().local.institutions.find(item => item.id === inst.id);
+  assert.ok(seatMoved.ep.member === moved.committee.id && seatMoved.ep.role === null, 'Nuova commissione, incarico lasciato');
+  assert.ok(store.getState().dataset.offices.find(item => item.id === roleOffice.id).endDate, 'L’incarico nella vecchia commissione si chiude');
   // The comune of the start (Salerno votes in 2031) is still open: the career keeps both.
   assert.ok(s.dataset.offices.some(item => item.politicianId === s.career.playerId && !item.endDate && item.level === 'comunale'));
-  lines.push(`Eurodeputato: gruppo ${inst.playerGroupId}, ${after.acts.length + after.archive.length} atti`);
+  lines.push(`Eurodeputato: gruppo ${inst.playerGroupId}, commissione ${code}, ${won}/${bids} relazioni ottenute, ${carried}/${amendments} emendamenti approvati, coordinatore del gruppo, poi passaggio a ${moved.committee.code}`);
 }
 
 // ---------- 6. politiche → Deputato / Senatore → Parlamento (→ Governo) ----------

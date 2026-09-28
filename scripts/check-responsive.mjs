@@ -142,11 +142,47 @@ try {
       await evaluate(`(async () => { ${closeScript}; await new Promise(resolve => setTimeout(resolve, 500)); return true; })()`).catch(() => {});
     }
   }
+  // The councils where the player holds a mandate (a giunta led by the player, a seat in the European Parliament) with a
+  // few weeks of acts: their cards in Territori, with forms and folded details open, and the Home links to them.
+  await evaluate(`(async () => {
+    const { store } = await import('/src/core/store.js?v=${version}');
+    const L = await import('/src/core/local-engine.js?v=${version}');
+    const s = store.getState();
+    const date = s.clock.currentDate;
+    let seed = 11;
+    const rand = () => (seed = seed * 16807 % 2147483647) / 2147483647;
+    const groups = [
+      { id: 'pd', label: 'Partito Democratico', axis: -1, seats: 9, side: 'maggioranza' },
+      { id: 'civica', label: 'Lista civica · Centrosinistra per la città', axis: -1, seats: 4, side: 'maggioranza' },
+      { id: 'avs', label: 'Alleanza Verdi e Sinistra', axis: -2, seats: 2, side: 'maggioranza' },
+      { id: 'fdi', label: 'Fratelli d’Italia', axis: 2, seats: 6, side: 'opposizione' },
+      { id: 'm5s', label: 'Movimento 5 Stelle', axis: 0, seats: 3, side: 'opposizione' }
+    ];
+    let comune = L.createInstitution({ kind: 'comune', name: 'Comune di Siena', date, role: 'sindaco', side: 'maggioranza', playerGroupId: 'pd', leaderGroupId: 'pd', leaderIsPlayer: true, groups });
+    let europa = L.createInstitution({ kind: 'europa', name: 'Parlamento europeo', date, role: 'eurodeputato', side: 'maggioranza', playerGroupId: 'sd', committee: 'envi', groups: L.EP_GROUPS_2024.groups.map(group => ({ ...group, side: ['epp', 'sd', 'renew'].includes(group.id) ? 'maggioranza' : 'opposizione' })) });
+    for (let week = 0; week < 5; week++) { comune = L.advanceInstitutionWeek(comune, { date, rand }).inst; europa = L.advanceInstitutionWeek(europa, { date, rand }).inst; }
+    s.local = { ...(s.local ?? {}), institutions: [...(s.local?.institutions ?? []).filter(item => !['comune', 'europa'].includes(item.kind)), comune, europa] };
+    store.save();
+    return true;
+  })()`);
+  const institutionViews = [['panoramica'], ['territori']];
+  for (const [width, height, mobile, label] of widths) {
+    await viewport(width, height, mobile);
+    await pause(250);
+    for (const view of institutionViews) {
+      await open(view);
+      const shown = await evaluate(`(async () => { for (const drawer of document.querySelectorAll('.local-giunta, .bill-archive')) drawer.open = true; await new Promise(resolve => setTimeout(resolve, 250)); return document.querySelectorAll('${view[0] === 'territori' ? '.local-institutions [id^=istituzione-]' : '.hq-institutions button'}').length; })()`);
+      if (shown !== 2) report.push(`${label} · ${view[0]} con le istituzioni del giocatore: ${shown} istituzioni mostrate invece di 2`);
+      const issues = await evaluate(audit);
+      checked++;
+      for (const issue of issues) report.push(`${label} · ${view[0]} con le istituzioni del giocatore · ${issue.kind}: ${issue.el} (${issue.detail})`);
+    }
+  }
   if (missing.size) report.push(`finestre non aperte durante il controllo: ${[...missing].join(', ')}`);
   if (report.length) {
     exitCode = 1;
     console.error(`Controllo responsive: ${report.length} problemi su ${checked} schermate.\n- ${report.slice(0, 80).join('\n- ')}${report.length > 80 ? `\n… e altri ${report.length - 80}` : ''}`);
-  } else console.log(`Responsive verificato con Chrome: ${checked} schermate (${views.length} viste e ${opened.size} finestre: ${[...opened].join(', ')} × telefono 375, 390 e 430 px, tablet 768 px, desktop 1280 px; Home con approfondimenti aperti, azione principale nella prima schermata) senza scorrimento orizzontale, elementi fuori schermo, contenuti nascosti da overflow o testi troncati.`);
+  } else console.log(`Responsive verificato con Chrome: ${checked} schermate (${views.length} viste, Home e Territori con Comune e Parlamento europeo del giocatore e ${opened.size} finestre: ${[...opened].join(', ')} × telefono 375, 390 e 430 px, tablet 768 px, desktop 1280 px; Home con approfondimenti aperti, azione principale nella prima schermata) senza scorrimento orizzontale, elementi fuori schermo, contenuti nascosti da overflow o testi troncati.`);
   socket.close();
 } catch (error) {
   exitCode = 1;
