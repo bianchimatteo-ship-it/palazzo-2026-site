@@ -1251,7 +1251,8 @@ function tickLocal(input, date) {
     lines.push(...out.lines);
     for (const event of out.events) {
       if (event.type === 'voto-locale') {
-        const forecast = event.yes >= event.needed ? `passa con circa ${event.yes} voti su ${inst.seats}` : `servono ${event.needed} voti, previsti circa ${event.yes}`;
+        const against = event.against ?? event.needed - 1;
+        const forecast = `${event.yes > against ? 'passa' : 'non passa'}, circa ${event.yes} sì contro ${against} no`;
         game = addSituationEvent(game, 'voto-consiglio', { instId: inst.id, actId: event.actId, actTitle: event.title, actLabel: event.label, institution: rules.label, when: formatDate(event.date), lineLabel: LOCAL_LINE_WORDS[event.line] ?? event.line, forecast, dedupe: event.actId }, Boolean(event.budget), { holdUntil: event.date });
       } else if (event.type === 'atto-votato' && event.playerChoice) {
         const dissent = event.decided && event.playerChoice !== event.playerLine && event.playerChoice !== 'assente';

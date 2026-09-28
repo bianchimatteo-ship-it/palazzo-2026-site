@@ -120,11 +120,45 @@ function support(inst, act, group) {
   if (inMajority && fromMajority && group.cohesion < 50) value -= (50 - group.cohesion) / 120;
   return clamp(value, 0.05, 0.95);
 }
+const lineOf = value => value >= 0.55 ? 'favorevole' : value <= 0.42 ? 'contrario' : 'astenuto';
+// The player's seat in a vote: the chosen vote (or the line of the group) takes the place of one of the group's votes.
+const BALLOT = Object.freeze({ favorevole: 'yes', contrario: 'no', astenuto: 'abstain', assente: 'absent' });
+// Councils and the European Parliament decide by the votes cast: more in favour than against (abstentions and absences
+// count for neither side).
+const carried = ({ yes, against }) => yes > against;
+// The count of a vote: the votes of everyone else plus the player's (choice: favorevole, contrario, astenuto, assente;
+// null when the player does not vote there). Decisive: another vote of the player, everyone else voting as they did,
+// would have given the opposite outcome.
+export function countVote(others, choice = null) {
+  const ballot = choice ? BALLOT[choice] : null;
+  if (choice && !ballot) throw new Error('Scelta di voto non valida.');
+  const plus = (base, key) => (base ?? 0) + (ballot === key ? 1 : 0);
+  const tally = { yes: plus(others.yes, 'yes'), against: plus(others.against, 'no'), abstain: plus(others.abstain, 'abstain'), absent: plus(others.absent, 'absent') };
+  const passed = carried(tally);
+  const decisive = Boolean(ballot) && Object.values(BALLOT).some(other => carried({ yes: (others.yes ?? 0) + (other === 'yes' ? 1 : 0), against: (others.against ?? 0) + (other === 'no' ? 1 : 0) }) !== passed);
+  return { ...tally, passed, decisive };
+}
+// What an archived act keeps of its vote: the totals, the outcome and the player's vote.
+export const compactVote = vote => vote ? { date: vote.date, yes: vote.yes, against: vote.against, abstain: vote.abstain ?? 0, absent: vote.absent ?? (vote.byGroup ?? []).reduce((sum, row) => sum + (row.absent ?? 0), 0), passed: Boolean(vote.passed), playerChoice: vote.playerChoice ?? null, playerLine: vote.playerLine ?? null, decisive: Boolean(vote.decisive) } : null;
+// The forecast before the vote: every group votes as its members lean today (the usual defections included) and the
+// player's seat as the player chose (with the group, until a choice is made); passes if the yes outnumber the no.
 export function forecastAct(inst, act) {
-  let yes = 0;
-  const positions = inst.groups.map(group => { const value = support(inst, act, group); yes += group.seats * cohesiveShare(value); return { groupId: group.id, label: group.label, seats: group.seats, side: group.side, support: Math.round(value * 100) / 100, line: value >= 0.55 ? 'favorevole' : value <= 0.42 ? 'contrario' : 'astenuto' }; });
-  const needed = inst.kind === 'europa' ? Math.floor(inst.seats / 2) + 1 : Math.floor(inst.seats / 2) + 1;
-  return { yes: Math.round(yes), needed, total: inst.seats, passes: yes >= needed, positions };
+  const pending = BALLOT[act.pendingPlayerVote] ? act.pendingPlayerVote : null;
+  let playerChoice = null;
+  const positions = inst.groups.map(group => {
+    const value = support(inst, act, group);
+    const line = lineOf(value);
+    const own = group.id === inst.playerGroupId && group.seats > 0;
+    const members = own ? group.seats - 1 : group.seats;
+    const split = splitGroupVote({ seats: members, yes: Math.round(members * cohesiveShare(value)), seed: `${act.id}|${group.id}` });
+    const row = { yes: split.yes, no: split.no, abstain: split.abstain, absent: 0 };
+    if (own) { playerChoice = pending ?? line; row[BALLOT[playerChoice]] += 1; }
+    return { groupId: group.id, label: group.label, seats: group.seats, side: group.side, support: Math.round(value * 100) / 100, line, ...row, ...(own ? { playerChoice } : {}) };
+  });
+  const sum = key => positions.reduce((total, row) => total + row[key], 0);
+  const yes = sum('yes');
+  const against = sum('no');
+  return { yes, against, abstain: sum('abstain'), absent: sum('absent'), needed: against + 1, total: inst.seats, passes: carried({ yes, against }), positions, playerChoice };
 }
 function voteAct(inst, act, date) {
   const decided = act.pendingPlayerVote;
@@ -141,17 +175,20 @@ function voteAct(inst, act, date) {
     const split = splitGroupVote({ seats: others, yes, seed: `${act.id}|${group.id}` });
     let no = split.no, abstain = split.abstain;
     if (own) {
-      line = value >= 0.55 ? 'favorevole' : value <= 0.42 ? 'contrario' : 'astenuto';
-      choice = !decided || decided === 'linea' ? line : decided;
+      // The player's seat: one of the group's votes, as the player chose (or with the line of the group).
+      line = lineOf(value);
+      choice = !decided || decided === 'linea' ? line : BALLOT[decided] ? decided : 'assente';
       if (choice === 'favorevole') yes += 1; else if (choice === 'contrario') no += 1; else if (choice === 'astenuto') abstain += 1; else absent += 1;
     }
     return { groupId: group.id, yesVotes: yes, noVotes: no, abstainVotes: abstain, absent, line: groupLine({ yes, no, abstain }), seats: group.seats, ...(own ? { playerChoice: choice } : {}) };
   });
-  const yes = byGroup.reduce((sum, row) => sum + row.yesVotes, 0);
-  const against = byGroup.reduce((sum, row) => sum + row.noVotes, 0);
-  // Local councils decide by the majority of the votes cast; the European Parliament too (simple majority).
-  const passed = yes > against;
-  return { date, yes, against, abstain: byGroup.reduce((sum, row) => sum + row.abstainVotes, 0), total: inst.seats, passed, byGroup, playerChoice: choice, playerLine: line, decided: Boolean(decided), decisive: Boolean(choice) && choice !== 'assente' && Math.abs(yes - against) <= 1, source: SIM };
+  const total = key => byGroup.reduce((sum, row) => sum + row[key], 0);
+  // The outcome from the votes actually cast, the player's included; decisive only if another vote of the player
+  // would have reversed it.
+  const ballot = choice ? BALLOT[choice] : null;
+  const others = { yes: total('yesVotes') - (ballot === 'yes' ? 1 : 0), against: total('noVotes') - (ballot === 'no' ? 1 : 0), abstain: total('abstainVotes') - (ballot === 'abstain' ? 1 : 0), absent: total('absent') - (ballot === 'absent' ? 1 : 0) };
+  const count = countVote(others, choice);
+  return { date, yes: count.yes, against: count.against, abstain: count.abstain, absent: count.absent, total: inst.seats, passed: count.passed, byGroup, playerChoice: choice, playerLine: line, decided: Boolean(decided), decisive: count.decisive, source: SIM };
 }
 
 // ---------- the player ----------
@@ -383,7 +420,7 @@ export function advanceInstitutionWeek(input, { date, rand = Math.random, issues
     const vote = voteAct(inst, act, date);
     const stage = vote.passed ? 'approvato' : 'respinto';
     inst = { ...inst, acts: inst.acts.map(item => item.id === act.id ? { ...item, stage, votes: [...item.votes, vote], pendingPlayerVote: null, closedAt: date } : item) };
-    inst = record(inst, date, `${rules.label}: “${act.title}” ${vote.passed ? 'approvato' : 'respinto'} (${vote.yes} sì, ${vote.against} no).`, stage);
+    inst = record(inst, date, `${rules.label}: “${act.title}” ${vote.passed ? 'approvato' : 'respinto'} (${vote.yes} sì, ${vote.against} no${vote.abstain ? `, ${vote.abstain} ${vote.abstain === 1 ? 'astenuto' : 'astenuti'}` : ''}${vote.playerChoice ? `; tuo voto: ${vote.playerChoice}${vote.decisive ? ', decisivo' : ''}` : ''}).`, stage);
     if (act.budget && vote.passed) inst = { ...inst, budget: { ...inst.budget, approvedYear: Number(act.title.match(/(\d{4})$/)?.[1] ?? Number(date.slice(0, 4)) + 1) } };
     if (inst.executive && (act.sponsor.kind === 'executive' || act.budget)) {
       inst = { ...inst, executive: { ...inst.executive, stability: clamp(inst.executive.stability + (vote.passed ? 1.5 : -8), 0, 100) } };
@@ -403,7 +440,7 @@ export function advanceInstitutionWeek(input, { date, rand = Math.random, issues
     const forecast = forecastAct(inst, act);
     inst = { ...inst, acts: inst.acts.map(item => item.id === act.id ? { ...item, asked: true } : item) };
     const important = act.budget || act.kind === 'sfiducia' || act.sponsor.groupId === inst.playerGroupId || act.rapporteur?.player || Math.abs(forecast.yes - forecast.needed) <= 1 || (act.kind === 'executive' && rand() < 0.2);
-    if (important && act.sponsor.kind !== 'player') events.push({ type: 'voto-locale', actId: act.id, title: act.title, label: act.label, budget: act.budget, line: forecast.positions.find(item => item.groupId === inst.playerGroupId)?.line ?? 'astenuto', yes: forecast.yes, needed: forecast.needed, date: act.nextStepAt });
+    if (important && act.sponsor.kind !== 'player') events.push({ type: 'voto-locale', actId: act.id, title: act.title, label: act.label, budget: act.budget, line: forecast.positions.find(item => item.groupId === inst.playerGroupId)?.line ?? 'astenuto', yes: forecast.yes, against: forecast.against, needed: forecast.needed, date: act.nextStepAt });
   }
   // Groups and executive: cohesion drifts, the opposition presses, a group of the majority may walk out.
   inst = { ...inst, groups: inst.groups.map(group => ({ ...group, cohesion: clamp(Math.round(group.cohesion + (rand() - 0.5) * 4 + (68 - group.cohesion) * 0.04), 0, 100) })), pressure: clamp(Math.round(inst.pressure + (rand() - 0.45) * 3 + (inst.executive ? (50 - inst.executive.stability) * 0.02 : 0)), 0, 100) };
@@ -441,7 +478,7 @@ export function advanceInstitutionWeek(input, { date, rand = Math.random, issues
   const closed = inst.acts.filter(item => CLOSED.includes(item.stage));
   if (closed.length > 12) {
     const old = new Set(closed.slice(0, closed.length - 12).map(item => item.id));
-    inst = { ...inst, acts: inst.acts.filter(item => !old.has(item.id)), archive: [...inst.archive, ...inst.acts.filter(item => old.has(item.id)).map(item => ({ id: item.id, title: item.title, stage: item.stage, closedAt: item.closedAt }))].slice(-40) };
+    inst = { ...inst, acts: inst.acts.filter(item => !old.has(item.id)), archive: [...inst.archive, ...inst.acts.filter(item => old.has(item.id)).map(item => ({ id: item.id, title: item.title, stage: item.stage, closedAt: item.closedAt, ...(item.votes?.length ? { vote: compactVote(item.votes.at(-1)) } : {}) }))].slice(-40) };
   }
   return { inst, events, lines };
 }

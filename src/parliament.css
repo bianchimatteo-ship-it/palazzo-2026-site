@@ -255,6 +255,9 @@
 .bill-archive summary{cursor:pointer;font-weight:700}
 .bill-archive ul{margin:8px 0;padding:0;list-style:none;display:grid;gap:6px}
 .bill-archive small{color:var(--muted)}
+.bill-forecast>.section-kicker{margin-bottom:5px}
+.bill-archive .local-vote-line{display:block;margin-top:2px;font-size:11.5px;line-height:1.45}
+.bill-archive .local-vote-line b{color:var(--ink-2);font-weight:700}
 @media (max-width:640px){
   .bill-steps li{font-size:11px;padding:3px 8px 3px 20px}
   .bill-amend button,.bill-speak button{width:100%}

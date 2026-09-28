@@ -197,6 +197,110 @@ const groups = [
   console.log(`  Parlamento europeo: ${all} dossier (${own} nelle tue commissioni), ${committeeVotes} voti in commissione, ${bids} relazioni chieste, ${reports} votate in plenaria, incarichi da coordinatore a vicepresidente, cambio di commissione.`);
 }
 
+// ---------- 4c. the player's vote: one of the group's votes, in the forecast and in the result ----------
+{
+  const M = await import(`../src/ui/local-mode.js${v}`);
+  // The count: [final yes, final no, the player's vote, passes, decisive]. The others are the final count without the
+  // player's vote, with a few abstentions and absences of their own (they count for neither side).
+  const cases = [
+    [49, 49, 'favorevole', false, false], // without the player 48-49: fails whatever the player does
+    [49, 49, 'contrario', false, true], // a yes would make it 50-48
+    [49, 49, 'astenuto', false, true], // a yes would make it 50-49
+    [49, 49, 'assente', false, true],
+    [50, 49, 'favorevole', true, true], // against 49-50, abstaining 49-49: fails
+    [50, 49, 'contrario', true, false], // a yes 51-48, abstaining 50-48: passes anyway
+    [50, 49, 'astenuto', true, true], // against: 50-50, fails
+    [50, 49, 'assente', true, true],
+    [50, 50, 'favorevole', false, false], // without the player 49-50: fails anyway
+    [50, 50, 'contrario', false, true], // a yes 51-49, abstaining 50-49: passes
+    [50, 50, 'astenuto', false, true], // a yes: 51-50
+    [50, 50, 'assente', false, true],
+    [12, 11, 'astenuto', true, true], [60, 40, 'contrario', true, false], [40, 60, 'favorevole', false, false]
+  ];
+  for (const [yes, against, choice, passes, decisive] of cases) {
+    const count = L.countVote({ yes: yes - (choice === 'favorevole' ? 1 : 0), against: against - (choice === 'contrario' ? 1 : 0), abstain: 3, absent: 2 }, choice);
+    const label = `${yes}-${against} con il voto ${choice}`;
+    assert.deepEqual([count.yes, count.against, count.abstain, count.absent], [yes, against, 3 + (choice === 'astenuto' ? 1 : 0), 2 + (choice === 'assente' ? 1 : 0)], `${label}: il voto del giocatore è nel conteggio`);
+    assert.equal(count.passed, passes, `${label}: esito`);
+    assert.equal(count.decisive, decisive, `${label}: decisivo solo se un altro voto del giocatore cambia l’esito`);
+  }
+  assert.equal(L.countVote({ yes: 50, against: 50 }).decisive, false, 'Chi non vota non è decisivo');
+  assert.throws(() => L.countVote({ yes: 1, against: 0 }, 'boh'), /non valida/, 'Una scelta di voto sconosciuta è rifiutata');
+
+  // In a council: Futuro Nazionale has 4 seats, the player's among them. The player's vote takes the place of one of
+  // the four, in the forecast before the vote and in the vote itself; the others vote the same whatever the player does.
+  const council = (name, groups) => {
+    let inst = L.createInstitution({ kind: 'comune', name, date: '2026-10-01', role: 'consigliere', side: 'maggioranza', playerGroupId: 'fn', leaderGroupId: 'fdi', groups });
+    const rand = seededRandom(`voto-giocatore|${name}`);
+    for (let week = 0; week < 10 && !inst.acts.some(item => item.sponsor.kind === 'executive'); week++) inst = L.advanceInstitutionWeek(inst, { date: '2026-10-01', rand }).inst;
+    const act = inst.acts.find(item => item.sponsor.kind === 'executive');
+    assert.ok(act, `${name}: la giunta porta una delibera in consiglio`);
+    return { inst, act };
+  };
+  const vote = ({ inst, act }, choice) => {
+    const chosen = L.setLocalVote(inst, act.id, choice);
+    const forecast = L.forecastAct(chosen, chosen.acts.find(item => item.id === act.id));
+    const due = { ...chosen, acts: chosen.acts.map(item => item.id === act.id ? { ...item, stage: 'aula', nextStepAt: '2026-10-08' } : item) };
+    const out = L.advanceInstitutionWeek(due, { date: '2026-10-08', rand: seededRandom('voto-giocatore|aula') });
+    const done = out.inst.acts.find(item => item.id === act.id);
+    return { chosen, forecast, out, done, result: done.votes.at(-1), event: out.events.find(item => item.type === 'atto-votato' && item.actId === act.id) };
+  };
+  const siena = council('Comune di Siena', [
+    { id: 'fdi', label: 'Fratelli d’Italia', axis: 2, seats: 8, side: 'maggioranza' },
+    { id: 'pd', label: 'Partito Democratico', axis: -1, seats: 5, side: 'opposizione' },
+    { id: 'm5s', label: 'Movimento 5 Stelle', axis: 0, seats: 2, side: 'opposizione' },
+    { id: 'fn', label: 'Futuro Nazionale', axis: 2, seats: 4, side: 'maggioranza' },
+    { id: 'lega', label: 'Lega', axis: 2, seats: 2, side: 'maggioranza' },
+    { id: 'az', label: 'Azione', axis: 0, seats: 1, side: 'opposizione' },
+    { id: 'civ', label: 'Liste civiche', axis: 0, seats: 2, side: 'opposizione' }
+  ]);
+  const expected = { linea: [4, 0, 0, 0], favorevole: [4, 0, 0, 0], contrario: [3, 1, 0, 0], astenuto: [3, 0, 1, 0], assente: [3, 0, 0, 1] };
+  const results = {};
+  for (const [choice, counts] of Object.entries(expected)) {
+    const { chosen, forecast, done, result, event } = vote(siena, choice);
+    const own = forecast.positions.find(item => item.groupId === 'fn');
+    assert.deepEqual([own.yes, own.no, own.abstain, own.absent], counts, `Previsione con il voto ${choice}: Futuro Nazionale ${counts.join('/')} (sì/no/astenuti/assenti)`);
+    assert.equal(own.playerChoice, choice === 'linea' ? own.line : choice, `Previsione: il voto del giocatore è ${choice}`);
+    assert.equal(forecast.yes + forecast.against + forecast.abstain + forecast.absent, chosen.seats, 'Previsione: ogni seggio vota una volta');
+    const row = result.byGroup.find(item => item.groupId === 'fn');
+    assert.deepEqual([row.yesVotes, row.noVotes, row.abstainVotes, row.absent], counts, `Voto con la scelta ${choice}: Futuro Nazionale ${counts.join('/')}`);
+    assert.equal(result.playerChoice, choice === 'linea' ? result.playerLine : choice, `Voto: salvata la scelta del giocatore (${choice})`);
+    assert.equal(result.yes + result.against + result.abstain + result.absent, chosen.seats, 'Voto: ogni seggio conta una volta');
+    assert.equal(result.passed, result.yes > result.against, 'Passa con più sì che no');
+    assert.equal(done.stage, result.passed ? 'approvato' : 'respinto', 'Approvato o respinto dai voti espressi');
+    assert.equal(done.pendingPlayerVote, null, 'Dopo il voto la scelta non resta in sospeso');
+    assert.ok(event && event.playerChoice === result.playerChoice && event.passed === result.passed && event.decisive === result.decisive, 'Le conseguenze politiche usano il voto effettivo');
+    results[choice] = result;
+  }
+  assert.deepEqual([results.favorevole.yes - results.contrario.yes, results.contrario.against - results.favorevole.against, results.astenuto.abstain - results.favorevole.abstain, results.assente.absent - results.favorevole.absent], [1, 1, 1, 1], 'Il voto del giocatore sposta esattamente un voto');
+  assert.ok(Object.values(results).every(item => !item.decisive), `Con ${results.favorevole.yes} sì e ${results.favorevole.against} no il voto del giocatore non è decisivo`);
+
+  // A council on a knife-edge: 9 seats of the majority (the player's group among them) against 8.
+  const tight = council('Comune in bilico', [
+    { id: 'fdi', label: 'Fratelli d’Italia', axis: 2, seats: 5, side: 'maggioranza' },
+    { id: 'fn', label: 'Futuro Nazionale', axis: 2, seats: 4, side: 'maggioranza' },
+    { id: 'pd', label: 'Partito Democratico', axis: -1, seats: 4, side: 'opposizione' },
+    { id: 'avs', label: 'Alleanza Verdi e Sinistra', axis: -2, seats: 4, side: 'opposizione' }
+  ]);
+  const edge = { favorevole: [9, 8, 'approvato'], contrario: [8, 9, 'respinto'], astenuto: [8, 8, 'respinto'], assente: [8, 8, 'respinto'] };
+  for (const [choice, [yes, against, stage]] of Object.entries(edge)) {
+    const { forecast, done, result, event } = vote(tight, choice);
+    assert.deepEqual([result.yes, result.against, done.stage], [yes, against, stage], `In bilico, voto ${choice}: ${yes}-${against}, ${stage}`);
+    assert.ok(result.decisive && event.decisive, `In bilico, voto ${choice}: il voto del giocatore è decisivo`);
+    assert.equal(forecast.passes, stage === 'approvato', `In bilico, voto ${choice}: la previsione segue il voto del giocatore`);
+  }
+
+  // The page: before the vote the forecast (with the player's vote in the group), after it the votes actually cast.
+  const view = inst => M.renderInstitutions({ local: { institutions: [inst] }, game: { resources: { politicalCapital: 10 } }, dataset: { statistics: [] }, career: { playerId: null }, clock: { currentDate: '2026-10-08' } });
+  const before = view(vote(siena, 'contrario').chosen);
+  assert.ok(before.includes('Previsione prima del voto in aula') && before.includes('Futuro Nazionale · favorevole: <b>3</b> sì, <b>1</b> no · tu: contrario'), 'Prima del voto: la previsione conta il voto del giocatore nel suo gruppo');
+  const after = view(vote(siena, 'contrario').out.inst);
+  assert.ok(after.includes('Risultato del voto:') && after.includes('il tuo voto: <b>contrario</b>, contro la linea del gruppo'), 'Dopo il voto: i voti espressi e il voto del giocatore');
+  const closing = vote(tight, 'favorevole').out.inst;
+  assert.ok(view(closing).includes('<b>9</b> sì, <b>8</b> no · il tuo voto: <b>favorevole</b> · <b>decisivo</b>') && closing.history.some(item => /9 sì, 8 no; tuo voto: favorevole, decisivo/.test(item.text)), 'Dopo il voto: il voto decisivo è segnato');
+  console.log(`  Voto del giocatore: 49-49, 50-49, 50-50 con voto a favore, contro, astensione e assenza; Futuro Nazionale 4/3+1 in previsione e nel voto; consiglio in bilico 9-8 con voto decisivo.`);
+}
+
 // ---------- 5. the store: a local career sits in its council, votes, proposes ----------
 {
   await realData.loadRealDatabase();

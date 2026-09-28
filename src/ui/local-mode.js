@@ -2,7 +2,7 @@
 // and its assessori, the acts in discussion with the forecast and the player's vote, what the player can do (propose,
 // question, negotiate, govern), the chronicle of the council. Everything here is simulation, except the size of the
 // European groups at the constitutive session of 2024 (real, with its source).
-import { EP_COMMITTEES, EP_COSTS, EP_GROUPS_2024, committeeById, europeanOdds, forecastAct, inCommittee, INSTITUTIONS, isClosedAct, LOCAL_VOTE_CHOICES, localAreas, majorityMargin, nextEuropeanRole, withEuropeanSeat } from '../core/local-engine.js?v=20260928-1';
+import { EP_COMMITTEES, EP_COSTS, EP_GROUPS_2024, committeeById, compactVote, europeanOdds, forecastAct, inCommittee, INSTITUTIONS, isClosedAct, LOCAL_VOTE_CHOICES, localAreas, majorityMargin, nextEuropeanRole, withEuropeanSeat } from '../core/local-engine.js?v=20260928-1';
 import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20260928-1';
 import { esc, meter, num } from './charts.js?v=20260928-1';
 import { glyph } from './visuals.js?v=20260928-1';
@@ -72,14 +72,28 @@ function dossierLine(inst, act) {
   const vote = act.committeeVote ? ` · commissione: ${act.committeeVote.yes} sì, ${act.committeeVote.against} no${act.committeeVote.playerChoice ? `, tuo voto ${esc(LOCAL_VOTE_CHOICES[act.committeeVote.playerChoice] ?? act.committeeVote.playerChoice)}` : ''}` : '';
   return `<p class="bill-committee">${glyph('users', 13)} Commissione ${esc(committee?.code ?? '')}${own} · relatore: ${rapporteur}${amendment}${vote}</p>`;
 }
+// The votes of the whole assembly (yes and no always shown) or of a group (only what it casts): yes, no, abstentions,
+// absences.
+function voteCounts(row, { bold = true, group = false } = {}) {
+  const parts = [[row.yes, 'sì'], [row.no, 'no'], [row.abstain, row.abstain === 1 ? 'astenuto' : 'astenuti'], [row.absent, row.absent === 1 ? 'assente' : 'assenti']];
+  return parts.filter(([value], index) => value || (!group && index < 2)).map(([value, word]) => bold ? `<b>${value}</b> ${word}` : `${value} ${word}`).join(', ');
+}
+// After the vote: the votes actually cast (the player's included) and how the player voted.
+function resultLine(item) {
+  if (!item.vote) return item.committeeVote && !item.committeeVote.passed ? `<small class="local-vote-line">Respinto in commissione: ${item.committeeVote.yes} sì, ${item.committeeVote.against} no</small>` : '';
+  const vote = item.vote;
+  const against = vote.playerLine && vote.playerChoice !== vote.playerLine && vote.playerChoice !== 'assente' ? ', contro la linea del gruppo' : '';
+  const mine = vote.playerChoice ? ` · il tuo voto: <b>${esc(vote.playerChoice)}</b>${against}${vote.decisive ? ' · <b>decisivo</b>' : ''}` : '';
+  return `<small class="local-vote-line">Risultato del voto: ${voteCounts({ yes: vote.yes, no: vote.against, abstain: vote.abstain, absent: vote.absent })}${mine}</small>`;
+}
 function actCard(inst, act, capital, context = { capital, influence: 30 }) {
   const open = !isClosedAct(act);
   const side = sideOfAct(inst, act);
   const forecast = open ? forecastAct(inst, act) : null;
   const leads = inst.executive?.leader === 'player';
   const last = act.votes?.at(-1);
-  const positions = forecast ? `<div class="bill-positions">${forecast.positions.map(item => `<span class="bill-pos pos-${esc(item.line)}${item.groupId === inst.playerGroupId ? ' own' : ''}">${esc(item.label)} <b>${item.seats}</b> · ${esc(item.line)}</span>`).join('')}</div>` : '';
-  const forecastBox = forecast ? `<div class="bill-forecast"><div class="bill-forecast-head"><strong class="${forecast.passes ? 'good' : 'bad'}">${forecast.passes ? 'Oggi passerebbe' : 'Oggi non passerebbe'}</strong><small>circa ${forecast.yes} sì su ${forecast.total}, ne servono ${forecast.needed}</small></div><div class="bill-meter"><i style="width:${Math.min(100, forecast.yes / forecast.total * 100).toFixed(1)}%"></i><b style="left:${(forecast.needed / forecast.total * 100).toFixed(1)}%"></b></div>${positions}</div>` : '';
+  const positions = forecast ? `<div class="bill-positions">${forecast.positions.map(item => `<span class="bill-pos pos-${esc(item.line)}${item.groupId === inst.playerGroupId ? ' own' : ''}">${esc(item.label)} · ${esc(item.line)}: ${voteCounts(item, { group: true })}${item.playerChoice ? ` · tu: ${esc(item.playerChoice)}` : ''}</span>`).join('')}</div>` : '';
+  const forecastBox = forecast ? `<div class="bill-forecast"><span class="section-kicker">Previsione prima del voto ${inst.kind === 'europa' ? 'in plenaria' : 'in aula'}</span><div class="bill-forecast-head"><strong class="${forecast.passes ? 'good' : 'bad'}">${forecast.passes ? 'Oggi passerebbe' : 'Oggi non passerebbe'}</strong><small>circa ${voteCounts({ ...forecast, no: forecast.against }, { bold: false })} · passa con più sì che no</small></div><div class="bill-meter"><i style="width:${Math.min(100, forecast.yes / forecast.total * 100).toFixed(1)}%"></i><b style="left:${(forecast.needed / forecast.total * 100).toFixed(1)}%"></b></div>${positions}</div>` : '';
   const vote = open && act.sponsor.kind !== 'player' && !(leads && ['executive', 'budget'].includes(act.sponsor.kind)) ? `<div class="bill-vote"><span>Il tuo voto in aula</span><div class="bill-vote-choices" role="group" aria-label="Il tuo voto">${Object.entries(LOCAL_VOTE_CHOICES).map(([id, label]) => `<button type="button" class="chip-button${(act.pendingPlayerVote ?? 'linea') === id ? ' active' : ''}" data-local-vote="${id}" data-inst-id="${esc(inst.id)}" data-act-id="${esc(act.id)}" aria-pressed="${(act.pendingPlayerVote ?? 'linea') === id}">${esc(label)}</button>`).join('')}</div></div>` : '';
   // The head of the executive (or the proposer) can win a wavering group with a concession: 2 points of capital.
   const own = act.sponsor.kind === 'player' || (leads && ['executive', 'budget'].includes(act.sponsor.kind));
@@ -104,7 +118,7 @@ function institutionCard(input, capital, context) {
   const open = inst.acts.filter(act => !isClosedAct(act)).sort((a, b) => String(a.nextStepAt).localeCompare(String(b.nextStepAt)));
   const closed = inst.acts.filter(isClosedAct).slice(-4).reverse();
   const history = inst.history.slice(-8).reverse().map(item => `<li><time>${esc(date(item.date))}</time> ${esc(item.text)}</li>`).join('');
-  const archive = [...closed.map(act => ({ title: act.title, stage: act.stage, closedAt: act.closedAt })), ...inst.archive.slice(-6).reverse()].slice(0, 10).map(item => `<li><span class="bill-flag ${item.stage === 'approvato' ? 'good' : 'bad'}">${esc(STAGES[item.stage] ?? item.stage)}</span> ${esc(item.title)} <small>${esc(date(item.closedAt))}</small></li>`).join('');
+  const archive = [...closed.map(act => ({ title: act.title, stage: act.stage, closedAt: act.closedAt, vote: compactVote(act.votes?.at(-1)), committeeVote: act.votes?.length ? null : act.committeeVote ?? null })), ...inst.archive.slice(-6).reverse()].slice(0, 10).map(item => `<li><span class="bill-flag ${item.stage === 'approvato' ? 'good' : 'bad'}">${esc(STAGES[item.stage] ?? item.stage)}</span> ${esc(item.title)} <small>${esc(date(item.closedAt))}</small>${resultLine(item)}</li>`).join('');
   return `<section class="hq-panel local-institution" id="istituzione-${esc(inst.kind)}"><div class="home-section-heading"><div><span class="section-kicker">${esc(rules.label.toUpperCase())} · SIMULAZIONE</span><h2>${esc(inst.name)}</h2><p class="section-subtitle">${esc(roleLine(inst))}${inst.until ? ` · mandato fino al voto del ${esc(date(inst.until))}` : ''}</p></div><span class="parliament-provenance simulated">SCENARIO SIMULATO</span></div>
     <div class="local-grid"><div><h3 class="local-h">Composizione</h3>${composition(inst)}</div><div><h3 class="local-h">${esc(inst.ep ? 'Le tue commissioni' : rules.executive)}</h3>${inst.ep ? europeanPanel(inst, context) : executivePanel(inst)}</div></div>
     ${inst.ep ? `<h3 class="local-h">${esc(rules.executive)}</h3>${executivePanel(inst)}` : ''}
