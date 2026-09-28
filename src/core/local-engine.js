@@ -362,6 +362,9 @@ export function setLocalVote(inst, actId, choice) {
   if (!LOCAL_VOTE_CHOICES[choice]) throw new Error('Scelta di voto non valida.');
   const act = inst.acts.find(item => item.id === actId);
   if (!act || CLOSED.includes(act.stage)) throw new Error('L’atto non è più in discussione.');
+  // Only the acts of the council are voted in the chamber: the Giunta adopts its own, the executive answers questions.
+  const organ = act.organ ?? typeOfAct(inst, act)?.organ ?? 'consiglio';
+  if (organ !== 'consiglio') throw new Error(organ === 'giunta' ? 'Questo atto lo adotta la Giunta: il consiglio non lo vota.' : 'All’interrogazione risponde l’esecutivo: non si vota.');
   return { ...inst, acts: inst.acts.map(item => item.id === actId ? { ...item, pendingPlayerVote: choice } : item) };
 }
 // The player proposes an act on a theme: a councillor a motion or a deliberation of the council, the head of the

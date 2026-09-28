@@ -358,7 +358,7 @@ assert.ok(!page.includes('data-world-alliance') && page.includes('Alleanze e rot
   assert.ok(page.includes('id="istituzione-comune"') && page.includes('LE TUE ISTITUZIONI') && page.includes('data-local-question') && page.includes('data-local-propose-form') && clean(page), 'Territori: il consiglio comunale con le azioni del consigliere');
   await click({ localQuestion: '', instId: council.id });
   assert.ok(store.getState().local.institutions.find(item => item.id === council.id).history.some(item => item.type === 'interrogazione'), 'Dal pulsante: interrogazione presentata');
-  const act = store.getState().local.institutions.find(item => item.id === council.id).acts.find(item => !L.isClosedAct(item) && item.sponsor.kind !== 'player');
+  const act = store.getState().local.institutions.find(item => item.id === council.id).acts.find(item => !L.isClosedAct(item) && item.sponsor.kind !== 'player' && (item.organ ?? 'consiglio') === 'consiglio');
   if (act) {
     const voted = await click({ localVote: 'contrario', instId: council.id, actId: act.id });
     assert.equal(store.getState().local.institutions.find(item => item.id === council.id).acts.find(item => item.id === act.id).pendingPlayerVote, 'contrario', 'Dal pulsante: il voto del consigliere');

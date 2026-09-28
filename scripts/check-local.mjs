@@ -390,6 +390,7 @@ const groups = [
   const giunta = proposed.acts.at(-1);
   assert.equal(giunta.stage, 'giunta');
   assert.equal(L.forecastAct(proposed, giunta).organ, 'giunta');
+  assert.throws(() => L.setLocalVote(proposed, giunta.id, 'contrario'), /Giunta/, 'La delibera di Giunta non si vota in consiglio');
   out = week(at(proposed, giunta.id, 'giunta', '2027-01-17'), '2027-01-17');
   const adopted = out.inst.acts.find(item => item.id === giunta.id);
   assert.ok(adopted.stage === 'approvato' && adopted.votes.at(-1).organ === 'giunta' && adopted.votes.at(-1).byGroup.length === 0 && out.inst.history.some(item => /Giunta: “/.test(item.text)), 'La delibera di Giunta la adotta la Giunta');
@@ -442,6 +443,7 @@ const groups = [
   councillor = L.questionExecutive(councillor, '2027-01-10', 'sicurezza');
   const question = councillor.acts.at(-1);
   assert.ok(question.category === 'interrogazione' && question.stage === 'risposta' && question.organ === 'esecutivo', 'L’interrogazione aspetta la risposta, non un voto');
+  assert.throws(() => L.setLocalVote(councillor, question.id, 'favorevole'), /interrogazione/i, 'L’interrogazione non si vota');
   out = week(at(councillor, question.id, 'risposta', '2027-01-17'), '2027-01-17');
   assert.ok(out.inst.acts.find(item => item.id === question.id).answer === 'insufficiente' && out.events.some(item => item.type === 'interrogazione-risposta' && item.player), 'Servizio in difficoltà: risposta insufficiente');
   // A motion approved commits the executive; ignored, it costs stability.
