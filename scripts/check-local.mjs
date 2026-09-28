@@ -81,8 +81,12 @@ const groups = [
   assert.ok(inst.pressure > pressure, 'L’interrogazione mette pressione alla giunta.');
   assert.throws(() => L.questionExecutive(inst, advanceDays(date, 7)), /da poco/);
   assert.throws(() => L.reshuffleLocal(inst, 'Bilancio', 'b', date), /Solo chi guida/, 'Solo il sindaco nomina gli assessori.');
-  const forecast = L.forecastAct(inst, inst.acts.find(item => item.sponsor.kind === 'player'));
-  assert.ok(forecast.positions.find(item => item.groupId === 'c').line !== 'favorevole' || forecast.positions.find(item => item.groupId === 'a').support < 0.7, 'L’opposizione non regala i voti.');
+  // Who proposes counts: the majority gives an act of the opposition less than the same text brought by the giunta.
+  const proposal = inst.acts.find(item => item.sponsor.kind === 'player' && item.category !== 'interrogazione');
+  assert.equal(proposal.category, 'mozione', 'Il consigliere propone di norma una mozione');
+  const forecast = L.forecastAct(inst, proposal);
+  const byGiunta = L.forecastAct(inst, { ...proposal, kind: 'executive', sponsor: { kind: 'executive', groupId: 'a', label: 'Giunta', axis: -1 } });
+  assert.ok(forecast.positions.find(item => item.groupId === 'a').support < byGiunta.positions.find(item => item.groupId === 'a').support, 'La maggioranza non regala i voti all’opposizione: conta chi propone.');
   console.log(`  Consiglio comunale: un anno, ${passed} atti approvati e ${rejected} respinti, bilancio ${budget.passed ? 'approvato' : 'respinto'}, ${asked.length} richieste di voto al consigliere.`);
 }
 
@@ -108,7 +112,7 @@ const groups = [
 
 // ---------- 4. a majority that falls apart: motion of no confidence, dissolution, early vote ----------
 {
-  let dissolved = 0, walkouts = 0;
+  let dissolved = 0, walkouts = 0, byBudget = 0;
   for (let run = 0; run < 12; run++) {
     let inst = L.createInstitution({ kind: 'comune', name: 'Comune fragile', date: '2026-09-27', role: 'consigliere', side: 'opposizione', playerGroupId: 'd', leaderGroupId: 'a', groups: [
       { id: 'a', label: 'Lista A', axis: -1, seats: 8, side: 'maggioranza' }, { id: 'b', label: 'Lista B', axis: -2, seats: 5, side: 'maggioranza' },
@@ -121,7 +125,8 @@ const groups = [
       const out = L.advanceInstitutionWeek(inst, { date, rand });
       inst = out.inst;
       walkouts += out.events.filter(item => item.type === 'uscita-maggioranza').length;
-      if (out.events.some(item => item.type === 'scioglimento')) { dissolved++; assert.ok(inst.history.some(item => item.type === 'sfiducia'), 'Prima la mozione di sfiducia, poi lo scioglimento.'); }
+      const end = out.events.find(item => item.type === 'scioglimento');
+      if (end) { dissolved++; if (end.reason === 'bilancio') byBudget++; assert.ok(end.reason === 'bilancio' ? inst.history.filter(item => item.type === 'bilancio').length >= 1 : inst.history.some(item => item.type === 'sfiducia'), 'Prima la sfiducia (o due bilanci respinti), poi lo scioglimento.'); }
     }
   }
   assert.ok(walkouts >= 1 && dissolved >= 1, `Le maggioranze si rompono (${walkouts} uscite, ${dissolved} scioglimenti su 12 prove).`);
@@ -133,7 +138,7 @@ const groups = [
   assert.ok(vote.early);
   const region = C.scheduleEarlyLocalElection(game, 'regionale', '2027-01-10').elections.find(item => item.type === 'regionale' && item.status === 'upcoming');
   assert.ok(region.early && region.electionDate < '2027-06-01', 'Regione sciolta: voto anticipato entro pochi mesi.');
-  console.log(`  Crisi: ${walkouts} uscite dalla maggioranza, ${dissolved} consigli sciolti su 12; voto anticipato il ${vote.electionDate} (comune) e il ${region.electionDate} (regione).`);
+  console.log(`  Crisi: ${walkouts} uscite dalla maggioranza, ${dissolved} consigli sciolti su 12 (${byBudget} per il bilancio non approvato); voto anticipato il ${vote.electionDate} (comune) e il ${region.electionDate} (regione).`);
 }
 
 // ---------- 4b. the European Parliament: committees, reports, amendments, committee votes, offices ----------
@@ -232,8 +237,10 @@ const groups = [
   const council = (name, groups) => {
     let inst = L.createInstitution({ kind: 'comune', name, date: '2026-10-01', role: 'consigliere', side: 'maggioranza', playerGroupId: 'fn', leaderGroupId: 'fdi', groups });
     const rand = seededRandom(`voto-giocatore|${name}`);
-    for (let week = 0; week < 10 && !inst.acts.some(item => item.sponsor.kind === 'executive'); week++) inst = L.advanceInstitutionWeek(inst, { date: '2026-10-01', rand }).inst;
-    const act = inst.acts.find(item => item.sponsor.kind === 'executive');
+    // An act of the giunta that the council votes by the majority of the voters (a deliberation, a regulation, a plan).
+    const councilAct = item => item.sponsor.kind === 'executive' && item.organ === 'consiglio' && item.quorum === 'votanti';
+    for (let week = 0; week < 30 && !inst.acts.some(councilAct); week++) inst = L.advanceInstitutionWeek(inst, { date: '2026-10-01', rand }).inst;
+    const act = inst.acts.find(councilAct);
     assert.ok(act, `${name}: la giunta porta una delibera in consiglio`);
     return { inst, act };
   };
@@ -301,6 +308,180 @@ const groups = [
   console.log(`  Voto del giocatore: 49-49, 50-49, 50-50 con voto a favore, contro, astensione e assenza; Futuro Nazionale 4/3+1 in previsione e nel voto; consiglio in bilico 9-8 con voto decisivo.`);
 }
 
+// ---------- 6. acts with a kind: the catalogue, the majorities, the positions, the effects ----------
+{
+  const A = await import(`../src/data/simulation/local-acts.js${v}`);
+  const S = await import(`../src/core/society-engine.js${v}`);
+  // The catalogue: every kind of act says what it is for, who decides, the iter, the majority, what it changes, what
+  // follows if it passes or not.
+  for (const kind of ['comune', 'regione']) for (const type of A.ACT_TYPES[kind]) assert.ok(type.label && type.function && type.proposers && type.iter.length >= 2 && type.modifies && type.approved && type.rejected && A.QUORUMS[type.quorum], `${kind}: ${type.id} spiegato per intero`);
+  const ids = kind => A.ACT_TYPES[kind].map(type => type.id);
+  for (const id of ['delibera-giunta', 'mozione', 'interrogazione', 'bilancio', 'variazione', 'regolamento', 'piano', 'urbanistica', 'tributi', 'tariffe', 'servizi', 'opere', 'convenzione', 'statuto', 'sfiducia']) assert.ok(ids('comune').includes(id), `Comune: c’è ${id}`);
+  for (const id of ['legge', 'regolamento', 'delibera-giunta', 'piano', 'bilancio', 'variazione', 'tributi', 'mozione', 'interrogazione', 'statuto', 'sfiducia']) assert.ok(ids('regione').includes(id), `Regione: c’è ${id}`);
+  assert.ok(A.actTypeOf('comune', 'sfiducia').quorum === 'componenti' && A.actTypeOf('regione', 'sfiducia').quorum === 'componenti' && A.actTypeOf('comune', 'statuto').quorum === 'dueterzi' && A.actTypeOf('regione', 'statuto').quorum === 'componenti' && A.actTypeOf('comune', 'delibera-giunta').quorum === 'giunta', 'Maggioranze diverse per istituzione e tipo di atto');
+
+  // The majorities: of the voters, of the members, two thirds, with the legal number.
+  assert.deepEqual([A.neededYes('componenti', 24), A.neededYes('dueterzi', 24), A.neededYes('votanti', 24)], [13, 16, null]);
+  assert.deepEqual([A.legalNumber('comune', 24), A.legalNumber('comune', 24, true), A.legalNumber('regione', 30)], [12, 8, 16]);
+  const absolute = { quorum: 'componenti', seats: 24, legal: 12 };
+  assert.equal(L.countVote({ yes: 12, against: 5, abstain: 4, absent: 2 }, 'astenuto', absolute).passed, false, 'Maggioranza assoluta: 12 sì su 24 non bastano, anche con pochi no');
+  assert.equal(L.countVote({ yes: 12, against: 5, abstain: 4, absent: 2 }, 'favorevole', absolute).passed, true, '13 sì su 24: approvato');
+  assert.equal(L.countVote({ yes: 12, against: 5, abstain: 4, absent: 2 }, 'contrario', absolute).decisive, true, 'Il sì del giocatore sarebbe decisivo');
+  assert.equal(L.countVote({ yes: 15, against: 3, abstain: 2, absent: 3 }, 'favorevole', { quorum: 'dueterzi', seats: 24, legal: 12 }).passed, true, 'Due terzi: 16 sì su 24');
+  assert.equal(L.countVote({ yes: 15, against: 3, abstain: 2, absent: 3 }, 'astenuto', { quorum: 'dueterzi', seats: 24, legal: 12 }).passed, false, 'Due terzi: 15 sì non bastano');
+  const thin = L.countVote({ yes: 6, against: 3, abstain: 1, absent: 13 }, 'favorevole', { quorum: 'votanti', seats: 24, legal: 12 });
+  assert.ok(!thin.valid && !thin.passed, 'Senza numero legale non si approva nulla');
+  const walkout = L.countVote({ yes: 7, against: 3, abstain: 1, absent: 12 }, 'favorevole', { quorum: 'votanti', seats: 24, legal: 12 });
+  assert.ok(walkout.valid && walkout.passed && walkout.decisive, 'Con 12 presenti basta la maggioranza dei votanti; uscendo, il giocatore farebbe mancare il numero legale');
+
+  // The positions of the groups change with the theme and the kind of act: not the majority in favour and the
+  // opposition against on everything.
+  const groups6 = [
+    { id: 'pd', label: 'Partito Democratico', axis: -1, seats: 9, side: 'maggioranza' }, { id: 'avs', label: 'Alleanza Verdi e Sinistra', axis: -2, seats: 3, side: 'maggioranza' },
+    { id: 'civ', label: 'Lista civica', axis: 0, seats: 2, side: 'maggioranza' }, { id: 'fdi', label: 'Fratelli d’Italia', axis: 2, seats: 6, side: 'opposizione' },
+    { id: 'lega', label: 'Lega', axis: 2, seats: 2, side: 'opposizione' }, { id: 'az', label: 'Azione', axis: 0.5, seats: 2, side: 'opposizione' }
+  ];
+  const territory = { servizi: 50, sicurezza: 50, ambiente: 50, trasporti: 50, infrastrutture: 50, economia: 50 };
+  const mayor = L.createInstitution({ kind: 'comune', name: 'Comune di prova', date: '2027-01-10', role: 'sindaco', side: 'maggioranza', playerGroupId: 'pd', leaderGroupId: 'pd', leaderIsPlayer: true, groups: groups6, territory });
+  const themes = [['regolamento', 'sicurezza'], ['servizi', 'welfare'], ['piano', 'ambiente'], ['opere', 'sport'], ['regolamento', 'commercio'], ['servizi', 'trasporti'], ['opere', 'cultura'], ['urbanistica', 'casa', 'espansione'], ['urbanistica', 'casa', 'rigenerazione'], ['convenzione', 'pa']];
+  const lines = {};
+  let mixed = 0;
+  for (const [category, area, variant] of themes) {
+    const next = L.proposeLocalAct(mayor, area, '2027-01-10', { category, variant });
+    const forecast = L.forecastAct(next, next.acts.at(-1));
+    for (const item of forecast.positions) (lines[item.groupId] ??= new Set()).add(item.line);
+    if (forecast.positions.some(item => (item.side === 'maggioranza') !== (item.line === 'favorevole'))) mixed++;
+  }
+  const changing = groups6.filter(group => group.id !== 'pd' && lines[group.id].size >= 2).map(group => group.label);
+  assert.ok(changing.length >= 4, `I gruppi cambiano posizione tra un tema e l’altro (${changing.join(', ')})`);
+  assert.ok(['fdi', 'lega', 'az'].some(id => lines[id].has('favorevole')) && ['avs', 'civ'].some(id => lines[id].has('contrario')), 'L’opposizione vota a favore di qualche atto, la maggioranza contro qualcuno');
+  assert.ok(mixed >= themes.length / 2, `Non sempre maggioranza sì e opposizione no (${mixed} atti su ${themes.length})`);
+
+  // The effects of an approved act: the service improves week after week (compared with the same city without it),
+  // the budget pays, the region receives a share.
+  const at = (inst, id, stage, date) => ({ ...inst, acts: inst.acts.map(item => item.id === id ? { ...item, stage, nextStepAt: date } : item) });
+  const week = (inst, date) => L.advanceInstitutionWeek(inst, { date, rand: seededRandom(`atti|${date}`) });
+  let proposed = L.proposeLocalAct(mayor, 'sicurezza', '2027-01-10', { category: 'regolamento' });
+  const rule = proposed.acts.at(-1);
+  assert.ok(rule.organ === 'consiglio' && rule.quorum === 'votanti' && rule.measure.indicators.sicurezza > 0, 'Un regolamento lo vota il consiglio e migliora la sicurezza urbana');
+  let out = week(at(proposed, rule.id, 'aula', '2027-01-17'), '2027-01-17');
+  assert.equal(out.inst.acts.find(item => item.id === rule.id).stage, 'approvato');
+  const shared = out.events.find(item => item.type === 'effetti' && item.actId === rule.id);
+  assert.ok(shared && shared.indicators.sicurezza > 0 && shared.indicators.sicurezza < rule.measure.indicators.sicurezza, 'Una parte dell’effetto arriva alla regione');
+  let withAct = out.inst, control = week(mayor, '2027-01-17').inst;
+  for (let day = 24; day <= 24 + 7 * 9; day += 7) { const date = advanceDays('2027-01-17', day - 17); withAct = week(withAct, date).inst; control = week(control, date).inst; }
+  const gain = withAct.indicators.sicurezza - control.indicators.sicurezza;
+  assert.ok(Math.abs(gain - rule.measure.indicators.sicurezza) < 0.4, `Il regolamento migliora la sicurezza urbana di ${gain.toFixed(1)} (previsti ${rule.measure.indicators.sicurezza})`);
+  // Public works: the money at once; taxes: the rates and the margin.
+  proposed = L.proposeLocalAct(mayor, 'sport', '2027-01-10', { category: 'opere' });
+  const works = proposed.acts.at(-1);
+  out = week(at(proposed, works.id, 'aula', '2027-01-17'), '2027-01-17');
+  assert.ok(out.inst.acts.find(item => item.id === works.id).stage === 'approvato' && Math.abs(out.inst.budget.margin - (mayor.budget.margin - works.measure.cost)) < 0.01 && out.inst.effects.some(item => item.indicator === 'sport'), 'Le opere pubbliche spendono il margine e migliorano gli impianti');
+  proposed = L.proposeLocalAct(mayor, 'fisco', '2027-01-10', { category: 'tributi', variant: 'aumento' });
+  const taxes = proposed.acts.at(-1);
+  out = week(at(proposed, taxes.id, 'aula', '2027-01-17'), '2027-01-17');
+  assert.ok(out.inst.acts.find(item => item.id === taxes.id).stage === 'approvato' && out.inst.budget.localTax === 'alta' && out.inst.budget.margin === mayor.budget.margin + 12, 'Le aliquote passano in consiglio: pressione fiscale alta, più margine');
+  assert.ok(out.events.find(item => item.type === 'atto-votato' && item.actId === taxes.id)?.measure?.tax === 'su', 'L’esito porta la misura alle conseguenze politiche');
+  // Without cover the act is withdrawn; an act of the Giunta is decided by the Giunta, not by the council.
+  proposed = L.proposeLocalAct({ ...mayor, budget: { ...mayor.budget, margin: 3 } }, 'infrastrutture', '2027-01-10', { category: 'opere' });
+  out = week(at(proposed, proposed.acts.at(-1).id, 'aula', '2027-01-17'), '2027-01-17');
+  assert.ok(/copertura/.test(out.inst.acts.at(-1).withdrawn ?? '') && out.events.some(item => item.type === 'atto-ritirato'), 'Senza copertura finanziaria l’atto è ritirato');
+  proposed = L.proposeLocalAct(mayor, 'cultura', '2027-01-10', { category: 'delibera-giunta' });
+  const giunta = proposed.acts.at(-1);
+  assert.equal(giunta.stage, 'giunta');
+  assert.equal(L.forecastAct(proposed, giunta).organ, 'giunta');
+  out = week(at(proposed, giunta.id, 'giunta', '2027-01-17'), '2027-01-17');
+  const adopted = out.inst.acts.find(item => item.id === giunta.id);
+  assert.ok(adopted.stage === 'approvato' && adopted.votes.at(-1).organ === 'giunta' && adopted.votes.at(-1).byGroup.length === 0 && out.inst.history.some(item => /Giunta: “/.test(item.text)), 'La delibera di Giunta la adotta la Giunta');
+  // A town plan: adopted, eight weeks of observations, then approved; building more costs green.
+  proposed = L.proposeLocalAct(mayor, 'casa', '2027-01-10', { category: 'urbanistica', variant: 'espansione' });
+  const plan = proposed.acts.at(-1);
+  out = week(at(proposed, plan.id, 'aula', '2027-01-17'), '2027-01-17');
+  let step = out.inst.acts.find(item => item.id === plan.id);
+  assert.ok(step.stage === 'osservazioni' && step.adoptedAt === '2027-01-17' && !out.inst.effects.length, 'Il piano adottato aspetta le osservazioni');
+  out = week(at(out.inst, plan.id, 'aula', '2027-03-14'), '2027-03-14');
+  step = out.inst.acts.find(item => item.id === plan.id);
+  assert.ok(step.stage === 'approvato' && out.inst.effects.some(item => item.indicator === 'territorio' && item.perWeek > 0) && out.inst.effects.some(item => item.indicator === 'ambiente' && item.perWeek < 0), 'Approvato: più case e meno verde');
+  // The statute of the comune needs two thirds (or, failing that, twice the absolute majority).
+  proposed = L.proposeLocalAct(mayor, 'pa', '2027-01-10', { category: 'statuto' });
+  const statute = proposed.acts.at(-1);
+  out = week(at(proposed, statute.id, 'aula', '2027-01-17'), '2027-01-17');
+  step = out.inst.acts.find(item => item.id === statute.id);
+  const first = step.votes.at(-1);
+  assert.equal(first.quorum, 'dueterzi');
+  assert.ok(first.yes >= 16 ? step.stage === 'approvato' : step.stage === 'aula' && step.quorum === 'componenti', 'Statuto: due terzi, altrimenti due voti a maggioranza assoluta');
+
+  // Rejections have their own consequences: a budget not approved means a provisional budget, a second no the Prefect
+  // and dissolution. Here a small partner of the majority, neglected, votes against: 12 against 13. (Neglected, it may
+  // also leave the majority and bring a no-confidence motion first: over a few councils the budget path shows up.)
+  let byBudget = 0;
+  for (const year of [2027, 2028, 2029, 2030, 2031, 2032]) {
+    const neglected = inst => ({ ...inst, groups: inst.groups.map(group => group.id === 'p' ? { ...group, cohesion: 5 } : group) });
+    let weak = L.createInstitution({ kind: 'comune', name: `Comune in crisi ${year}`, date: `${year}-11-07`, role: 'consigliere', side: 'opposizione', playerGroupId: 'b', leaderGroupId: 'a', territory, groups: [
+      { id: 'a', label: 'Lista A', axis: -1, seats: 12, side: 'maggioranza' }, { id: 'p', label: 'Lista P', axis: 0, seats: 1, side: 'maggioranza' },
+      { id: 'b', label: 'Lista B', axis: 2, seats: 7, side: 'opposizione' }, { id: 'c', label: 'Lista C', axis: 1, seats: 5, side: 'opposizione' }] });
+    weak = week({ ...neglected(weak), executive: { ...weak.executive, stability: 60 } }, `${year}-11-07`).inst;
+    let budget = weak.acts.find(item => item.category === 'bilancio');
+    assert.ok(budget && budget.quorum === 'votanti', 'In novembre arriva il bilancio di previsione');
+    out = week(at(neglected(weak), budget.id, 'aula', `${year}-11-14`), `${year}-11-14`);
+    // The neglected partner decides (on the day it may still vote in favour: then the budget passes).
+    if (out.inst.acts.find(item => item.id === budget.id).stage !== 'respinto') { assert.ok(!out.inst.budget.provisional && out.inst.budget.approvedYear === year + 1, 'Bilancio approvato: le risorse del nuovo anno'); continue; }
+    assert.ok(out.inst.budget.provisional && out.events.some(item => item.type === 'bilancio-respinto'), 'Bilancio respinto: esercizio provvisorio');
+    assert.match(L.coverageGap(out.inst, { measure: { cost: 2 } }) ?? '', /esercizio provvisorio/, 'In esercizio provvisorio niente nuove spese');
+    weak = week(week(neglected(out.inst), `${year}-11-21`).inst, `${year}-11-28`).inst;
+    budget = weak.acts.find(item => item.category === 'bilancio' && !L.isClosedAct(item));
+    if (weak.status !== 'active' || !budget) continue;
+    out = week(at(neglected(weak), budget.id, 'aula', `${year}-12-05`), `${year}-12-05`);
+    if (out.events.some(item => item.type === 'scioglimento' && item.reason === 'bilancio')) { byBudget++; assert.equal(out.inst.status, 'sciolto', 'Secondo bilancio respinto: commissario e scioglimento'); }
+  }
+  assert.ok(byBudget >= 1, `Il secondo bilancio respinto scioglie il consiglio (${byBudget} casi su 6)`);
+
+  // A question: the answer depends on how the service is doing.
+  let councillor = L.createInstitution({ kind: 'comune', name: 'Comune di prova', date: '2027-01-10', role: 'consigliere', side: 'opposizione', playerGroupId: 'az', leaderGroupId: 'pd', groups: groups6, territory });
+  councillor = { ...councillor, indicators: { ...councillor.indicators, sicurezza: 30 } };
+  councillor = L.questionExecutive(councillor, '2027-01-10', 'sicurezza');
+  const question = councillor.acts.at(-1);
+  assert.ok(question.category === 'interrogazione' && question.stage === 'risposta' && question.organ === 'esecutivo', 'L’interrogazione aspetta la risposta, non un voto');
+  out = week(at(councillor, question.id, 'risposta', '2027-01-17'), '2027-01-17');
+  assert.ok(out.inst.acts.find(item => item.id === question.id).answer === 'insufficiente' && out.events.some(item => item.type === 'interrogazione-risposta' && item.player), 'Servizio in difficoltà: risposta insufficiente');
+  // A motion approved commits the executive; ignored, it costs stability.
+  councillor = L.createInstitution({ kind: 'comune', name: 'Comune di prova', date: '2027-01-10', role: 'consigliere', side: 'maggioranza', playerGroupId: 'avs', leaderGroupId: 'pd', groups: groups6, territory });
+  councillor = L.proposeLocalAct(councillor, 'sport', '2027-01-10');
+  const motion = councillor.acts.at(-1);
+  assert.ok(motion.category === 'mozione' && motion.stage === 'aula', 'La mozione va direttamente in aula');
+  out = week(at(councillor, motion.id, 'aula', '2027-01-17'), '2027-01-17');
+  const commitment = out.inst.commitments.find(item => item.actId === motion.id);
+  assert.ok(out.inst.acts.find(item => item.id === motion.id).stage === 'approvato' && commitment?.status === 'aperto' && commitment.dueAt === '2027-03-14', 'Mozione approvata: la giunta ha otto settimane');
+  let followed = { ...out.inst, executive: { ...out.inst.executive, leader: 'player' } };
+  const stability = followed.executive.stability;
+  out = week(followed, '2027-03-14');
+  assert.ok(out.inst.commitments.find(item => item.actId === motion.id).status === 'disatteso' && out.events.some(item => item.type === 'impegno-disatteso') && out.inst.history.some(item => /Impegno non rispettato/.test(item.text)), 'Impegno scaduto: la mozione resta senza seguito');
+
+  // A regione: a law on health moves the region's indicators through the society simulation; the statute needs two
+  // deliberations by absolute majority, two months apart.
+  const regionGroups = [{ id: 'x', label: 'Lista X', axis: -1, seats: 17, side: 'maggioranza' }, { id: 'y', label: 'Lista Y', axis: 1.5, seats: 13, side: 'opposizione' }];
+  const president = L.createInstitution({ kind: 'regione', name: 'Regione Toscana', region: 'Toscana', date: '2027-01-10', role: 'presidente', side: 'maggioranza', playerGroupId: 'x', leaderGroupId: 'x', leaderIsPlayer: true, groups: regionGroups });
+  proposed = L.proposeLocalAct(president, 'sanita', '2027-01-10', { category: 'legge' });
+  const law = proposed.acts.at(-1);
+  assert.ok(law.measure.indicators.sanita > 0 && law.label === 'Legge regionale', 'Una legge regionale sulla sanità muove l’indicatore della sanità');
+  out = week(at(proposed, law.id, 'aula', '2027-01-17'), '2027-01-17', );
+  const health = out.events.find(item => item.type === 'effetti' && item.actId === law.id);
+  assert.ok(health && health.kind === 'regione' && health.region === 'Toscana' && health.indicators.sanita === law.measure.indicators.sanita, 'Approvata: gli effetti vanno alla regione');
+  const society = S.createSociety({ seedText: 'atti-regione', date: '2027-01-10' });
+  const before = society.regions.Toscana.indicators.sanita;
+  let scheduled = S.scheduleRegionalEffects(society, { region: 'Toscana', indicators: health.indicators, phase: health.phase, lasting: health.lasting, cause: health.title });
+  const queued = scheduled.effects.filter(item => item.region === 'Toscana' && item.cause === health.title);
+  assert.ok(Math.abs(queued.reduce((sum, item) => sum + item.perWeek * item.remaining, 0) - health.indicators.sanita) < 0.1, 'La società riceve l’effetto settimana dopo settimana');
+  for (let i = 1; i <= health.phase; i++) scheduled = S.advanceSociety(scheduled, { date: advanceDays('2027-01-10', i * 7), week: i + 1 }).society;
+  assert.ok(scheduled.regions.Toscana.indicators.sanita > before, `La sanità toscana migliora (${before} → ${scheduled.regions.Toscana.indicators.sanita})`);
+  proposed = L.proposeLocalAct(president, 'autonomie', '2027-01-10', { category: 'statuto' });
+  const charter = proposed.acts.at(-1);
+  out = week(at(proposed, charter.id, 'aula', '2027-01-17'), '2027-01-17');
+  step = out.inst.acts.find(item => item.id === charter.id);
+  assert.ok(step.stage === 'seconda-lettura' && step.nextStepAt === '2027-03-21' && step.votes.at(-1).quorum === 'componenti', 'Statuto regionale: prima deliberazione, la seconda dopo almeno due mesi');
+  console.log(`  Atti: ${A.ACT_TYPES.comune.length} tipi per il comune e ${A.ACT_TYPES.regione.length} per la regione; ${changing.length} gruppi su 5 cambiano posizione tra i temi; regolamento sulla sicurezza +${gain.toFixed(1)}; bilancio respinto due volte → scioglimento; sanità toscana ${before} → ${scheduled.regions.Toscana.indicators.sanita}.`);
+}
+
 // ---------- 5. the store: a local career sits in its council, votes, proposes ----------
 {
   await realData.loadRealDatabase();
@@ -316,6 +497,7 @@ const groups = [
   assert.ok(inst.groups.some(group => group.side === 'maggioranza') && inst.groups.some(group => group.side === 'opposizione'));
   assert.ok(inst.until, 'Il mandato dura fino alle prossime comunali.');
   store.proposeLocalAct(inst.id, 'casa');
+  const proposalId = store.getState().local.institutions.find(item => item.id === inst.id).acts.at(-1).id;
   assert.throws(() => store.proposeLocalAct(inst.id, 'scuola'), /già una proposta/);
   let asked = null;
   for (let week = 0; week < 20; week++) {
@@ -329,7 +511,7 @@ const groups = [
   const after = s.local.institutions.find(item => item.id === inst.id);
   const voted = [...after.acts, ...after.archive].filter(item => ['approvato', 'respinto'].includes(item.stage));
   assert.ok(voted.length >= 3, `Il consiglio vota nelle settimane della partita (${voted.length} atti).`);
-  assert.ok(after.history.some(item => item.type === 'proposta') && voted.some(item => /Tua proposta/.test(item.title ?? '')) || after.acts.some(item => /Tua proposta/.test(item.title)), 'La proposta del giocatore fa il suo percorso.');
+  assert.ok(after.history.some(item => item.type === 'proposta') && [...after.acts, ...after.archive].some(item => item.id === proposalId), 'La proposta del giocatore fa il suo percorso.');
   assert.ok(asked, 'Il consigliere riceve le richieste di voto in agenda.');
   store.questionLocalExecutive(inst.id);
   assert.ok(store.getState().local.institutions.find(item => item.id === inst.id).history.some(item => item.type === 'interrogazione'));

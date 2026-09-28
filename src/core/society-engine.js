@@ -293,6 +293,24 @@ export function measureImpact(society, input) {
 function pushEffect(society, effect) {
   society.effects.push({ id: uniqueId(society.effects, `effetto-${society.week}-${society.effects.length}-${society.rngState % 997}`), delay: 0, source: SIM, ...effect });
 }
+// The effect of a measure on one indicator of one region, spread over its weeks; a temporary one is partly undone later.
+function pushRegionalEffect(society, { region, indicator, total, phase, lasting, cause }) {
+  pushEffect(society, { region, indicator, perWeek: round2(total / phase), remaining: phase, cause });
+  if (!lasting) pushEffect(society, { region, indicator, perWeek: round2(-total * 0.6 / 12), remaining: 12, delay: phase, cause: `${cause} (fine del sostegno)` });
+}
+// The acts of a regione (or, for a share, of a comune) on the indicators of its region: the same weekly effects as the
+// national measures, without touching the national budget; immediate ones (a provisional budget, lost funds) at once.
+export function scheduleRegionalEffects(input, { region, indicators = {}, phase = 1, lasting = true, cause = 'Atto locale', immediate = false }) {
+  const society = normalizeSociety(copy(input));
+  if (!society.regions[region]) return society;
+  for (const [indicator, total] of Object.entries(indicators)) {
+    if (!INDICATOR_IDS.includes(indicator) || !total) continue;
+    if (immediate) society.regions[region].indicators[indicator] = round1(clamp(society.regions[region].indicators[indicator] + total));
+    else pushRegionalEffect(society, { region, indicator, total, phase: Math.max(1, phase), lasting, cause });
+  }
+  refresh(society);
+  return society;
+}
 // Applies a measure: the money goes at once, the effects arrive week after week (and bonuses fade).
 export function applyMeasure(input, design, { title, origin = 'giocatore', date, week, lawId = null } = {}) {
   const society = normalizeSociety(copy(input));
@@ -301,11 +319,7 @@ export function applyMeasure(input, design, { title, origin = 'giocatore', date,
   const phase = impact.phaseIn;
   const regionalSpec = AREA_BY_ID[impact.area].regional ?? {};
   for (const [name, gain] of Object.entries(impact.regions)) {
-    for (const indicator of Object.keys(regionalSpec)) {
-      const share = impact.byIndicator[name]?.[indicator] ?? 0;
-      pushEffect(society, { region: name, indicator, perWeek: round2(share / phase), remaining: phase, cause: title });
-      if (!impact.lasting) pushEffect(society, { region: name, indicator, perWeek: round2(-share * 0.6 / 12), remaining: 12, delay: phase, cause: `${title} (fine del sostegno)` });
-    }
+    for (const indicator of Object.keys(regionalSpec)) pushRegionalEffect(society, { region: name, indicator, total: impact.byIndicator[name]?.[indicator] ?? 0, phase, lasting: impact.lasting, cause: title });
     if (!Object.keys(regionalSpec).length && Math.abs(gain) > 0.05) society.regions[name].mood = round2(clamp((society.regions[name].mood ?? 0) + gain * 0.5, -8, 8));
   }
   if (impact.areaDelta) {

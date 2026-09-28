@@ -16,7 +16,8 @@ import { AMENDMENT_CAPITAL_COST, COMMUNICATION_STYLES, GOVERNMENT_CAPITAL_COSTS,
 import { advanceLegislativeWeek, amendOthersLaw, amendmentOdds, linkGroupsToParties, setPlayerVote, speakOnLaw } from './lawmaking-engine.js?v=20260928-2';
 import { seededRandom } from './vote-engine.js?v=20260928-2';
 import { advanceCabinetWeek, joinAsSupport } from './cabinet-engine.js?v=20260928-2';
-import { EP_COSTS, EP_GROUPS_2024, EP_ROLES, INSTITUTIONS, advanceInstitutionWeek, bidRapporteur, concedeToGroup, createInstitution, epGroupFor, proposeLocalAct, questionExecutive, requestCommittee, reshuffleLocal, runForCommitteeRole, setLocalTax, setLocalVote, tableAmendment } from './local-engine.js?v=20260928-2';
+import { EP_COSTS, EP_GROUPS_2024, EP_ROLES, INSTITUTIONS, advanceInstitutionWeek, bidRapporteur, concedeToGroup, createInstitution, epGroupFor, localAreas, proposeLocalAct, questionExecutive, requestCommittee, reshuffleLocal, runForCommitteeRole, setLocalVote, tableAmendment, territoryValue } from './local-engine.js?v=20260928-2';
+import { actTypeOf } from '../data/simulation/local-acts.js?v=20260928-2';
 import { AREA_BY_ID, BUDGET_SESSION, GOVERNMENT_LINES, areaOf } from '../data/simulation/policy-rules.js?v=20260928-2';
 import { localShares, regionalShares, withRegionalLeans, withLocalCalendar, joinCoalition, acceptAlliance, addWorldEffects, advanceWorld, alignWorldToVote, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setGoverningForces, setPlayerParty, withCanonicalForces, withLatentForces, withPartyIdentities, withPositions } from './world-engine.js?v=20260928-2';
 import { FORMATION_PHASES, LEGISLATURE_RULES, NATIONAL_LINES, acceptMandate, crisisFormation, seatResult, startFormation, buildCoalitions, campaignWeekEffects, coalitionOptions, compactResult, contestedDistricts, createNationalState, europeanListSeats, formationStep, groupOfParty, homeDistricts, legislatureGroups, legislatureTerm, nationalCalendar, nationalHistory, nationalProjection, normalizeNationalState, openLegislature, politicheOutcome, regionalBreakdown, runEuropeanVote, runNationalVote, seatPlayer, voteForces } from './legislature-engine.js?v=20260928-2';
@@ -26,7 +27,7 @@ import { WORLD_PARTY_COUNT } from '../data/simulation/polling-rules.js?v=2026092
 import { isPrimeMinister } from './roles.js?v=20260928-2';
 import { memoryAbout, memoryBalance, memoryWeight, recordWhy, remember } from './career-engine.js?v=20260928-2';
 import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20260928-2';
-import { advanceSociety, applyBudgetPlan, applyLawToSociety, calibrateWeights, createSociety, explainMood, measureDesign, mediaEvent, normalizeSociety, provisionalBudget, publicBudgetChoice, regionAttention, revokeMeasure, segmentAttention, societyMood, societyShock } from './society-engine.js?v=20260928-2';
+import { advanceSociety, applyBudgetPlan, applyLawToSociety, calibrateWeights, createSociety, explainMood, measureDesign, mediaEvent, normalizeSociety, provisionalBudget, publicBudgetChoice, regionAttention, revokeMeasure, scheduleRegionalEffects, segmentAttention, societyMood, societyShock } from './society-engine.js?v=20260928-2';
 import { ACTIVITY_MEDIA, INDICATORS, ISSUE_TOPICS, SEGMENTS } from '../data/simulation/society-rules.js?v=20260928-2';
 import { book, hasAsset, releaseElectionFund, setBudgetLevel } from './finance-engine.js?v=20260928-2';
 import { isPartyLeader, treasuryBook } from './organization-engine.js?v=20260928-2';
@@ -1179,7 +1180,7 @@ function simulatedInstitution(s, kind, date) {
   const playerGroup = own ?? groups.find(group => group.id === 'lista-civica');
   playerGroup.seats += 1;
   const leader = [...bySide('maggioranza')].sort((a, b) => b.seats - a.seats)[0];
-  return createInstitution({ kind, name: kind === 'comune' ? `Comune di ${place.municipality ?? 'il tuo comune'}` : `Regione ${place.region}`, region: place.region, date, until: nextVoteOf(s, ELECTION_OF[kind]), role: 'consigliere', side: playerGroup.side, playerGroupId: playerGroup.id, leaderGroupId: leader?.id, groups: groups.map(({ share, ...group }) => group) });
+  return createInstitution({ kind, name: kind === 'comune' ? `Comune di ${place.municipality ?? 'il tuo comune'}` : `Regione ${place.region}`, region: place.region, territory: s.society?.regions?.[place.region]?.indicators ?? null, date, until: nextVoteOf(s, ELECTION_OF[kind]), role: 'consigliere', side: playerGroup.side, playerGroupId: playerGroup.id, leaderGroupId: leader?.id, groups: groups.map(({ share, ...group }) => group) });
 }
 function institutionFromResult(s, campaign, result) {
   const kind = INSTITUTION_OF[campaign.electionType];
@@ -1219,7 +1220,7 @@ function institutionFromResult(s, campaign, result) {
   const rowGroups = row => groups.filter(group => group.id === row?.id || group.id.startsWith(`${row?.id}-`));
   const playerGroup = rowGroups(playerRow).find(group => ownParty && group.partyId === ownParty) ?? rowGroups(playerRow).sort((a, b) => b.seats - a.seats)[0] ?? null;
   const leaderGroup = leads ? playerGroup : rowGroups(rows.find(row => row.id === winner)).sort((a, b) => b.seats - a.seats)[0] ?? null;
-  return createInstitution({ kind, name: kind === 'comune' ? `Comune di ${player?.municipality ?? 'il tuo comune'}` : `Regione ${player?.region ?? ''}`.trim(), region: player?.region ?? null, date, until, role: leads ? role : 'consigliere', side: playerRow?.id === winner ? 'maggioranza' : 'opposizione', playerGroupId: playerGroup?.id ?? null, leaderGroupId: leaderGroup?.id ?? winner, leaderIsPlayer: leads, groups });
+  return createInstitution({ kind, name: kind === 'comune' ? `Comune di ${player?.municipality ?? 'il tuo comune'}` : `Regione ${player?.region ?? ''}`.trim(), region: player?.region ?? null, territory: s.society?.regions?.[player?.region]?.indicators ?? null, date, until, role: leads ? role : 'consigliere', side: playerRow?.id === winner ? 'maggioranza' : 'opposizione', playerGroupId: playerGroup?.id ?? null, leaderGroupId: leaderGroup?.id ?? winner, leaderIsPlayer: leads, groups });
 }
 const INDICATOR_AREA = Object.freeze({ economia: 'economia', occupazione: 'lavoro', servizi: 'welfare', sanita: 'sanita', istruzione: 'scuola', infrastrutture: 'infrastrutture', trasporti: 'trasporti', sicurezza: 'sicurezza', ambiente: 'ambiente' });
 const LOCAL_LINE_WORDS = Object.freeze({ favorevole: 'a favore', contrario: 'contro', astenuto: 'per l’astensione' });
@@ -1246,23 +1247,54 @@ function tickLocal(input, date) {
   const chronicle = [];
   for (const inst of active) {
     const rules = INSTITUTIONS[inst.kind];
-    const out = advanceInstitutionWeek(inst, { date, rand: seededRandom(`${s.career.id}|${inst.id}|${date}`), issues });
+    const territory = inst.kind === 'regione' ? next.society?.regions?.[inst.region]?.indicators ?? null : null;
+    const out = advanceInstitutionWeek(inst, { date, rand: seededRandom(`${s.career.id}|${inst.id}|${date}`), issues, territory });
     let updated = out.inst;
     lines.push(...out.lines);
+    const leads = inst.executive?.leader === 'player';
     for (const event of out.events) {
       if (event.type === 'voto-locale') {
         const against = event.against ?? event.needed - 1;
         const forecast = `${event.yes > against ? 'passa' : 'non passa'}, circa ${event.yes} sì contro ${against} no`;
         game = addSituationEvent(game, 'voto-consiglio', { instId: inst.id, actId: event.actId, actTitle: event.title, actLabel: event.label, institution: rules.label, when: formatDate(event.date), lineLabel: LOCAL_LINE_WORDS[event.line] ?? event.line, forecast, dedupe: event.actId }, Boolean(event.budget), { holdUntil: event.date });
-      } else if (event.type === 'atto-votato' && event.playerChoice) {
-        const dissent = event.decided && event.playerChoice !== event.playerLine && event.playerChoice !== 'assente';
+      } else if (event.type === 'atto-votato') {
+        const dissent = event.playerChoice && event.decided && event.playerChoice !== event.playerLine && event.playerChoice !== 'assente';
         if (dissent) { if (game.party) game.party.support = Math.max(0, game.party.support - 1.5); add('notoriety', 0.4); remember(game, { date, kind: 'dissenso', text: `${rules.label}: voto ${LOCAL_LINE_WORDS[event.playerChoice] ?? event.playerChoice} su “${event.title}” contro il tuo gruppo`, weight: 0.4 }); }
-        if (event.sponsor?.kind === 'player' || (inst.executive?.leader === 'player' && ['executive', 'budget'].includes(event.sponsor?.kind))) {
-          if (event.passed) { add('popularity', event.budget ? 0.8 : 1); add('influence', 0.5); if (next.society && region) next = { ...next, society: regionAttention(next.society, region, 0.6) }; }
+        if (event.sponsor?.kind === 'player' || (leads && ['executive', 'budget'].includes(event.sponsor?.kind))) {
+          // The player's act: taxes raised cost popularity, taxes cut win it; the others show an executive at work.
+          const tax = event.measure?.tax;
+          if (event.passed) { add('popularity', tax === 'su' ? -2 : tax === 'giu' ? 2 : event.budget ? 0.8 : 1); add('influence', 0.5); if (!tax && next.society && region) next = { ...next, society: regionAttention(next.society, region, 0.6) }; }
           else add('reputation', event.budget ? -2 : -1);
-          lines.push(`${rules.label}: “${event.title}” ${event.passed ? 'approvato' : 'respinto'}.`);
+          lines.push(`${rules.label}: “${event.title}” ${event.passed ? (event.organ === 'giunta' ? 'adottato dalla Giunta' : 'approvato') : 'respinto'}.`);
+        } else if (inst.kind !== 'europa' && inst.playerSide !== 'maggioranza' && !event.passed && event.organ === 'consiglio' && ['executive', 'budget'].includes(event.sponsor?.kind)) {
+          // The opposition beats the executive on the floor.
+          add('notoriety', 0.4);
+          lines.push(`${rules.label}: la giunta battuta in aula su “${event.title}”.`);
         }
         if (event.decisive) { add('notoriety', 1); lines.push(`${rules.label}: il tuo voto è decisivo su “${event.title}”.`); }
+      } else if (event.type === 'effetti') {
+        // The approved acts reach the territory: the region's indicators (all of a regione's act, a share of a comune's)
+        // and the citizens who gain or pay, where they live.
+        if (next.society && event.region) {
+          next = { ...next, society: scheduleRegionalEffects(next.society, { region: event.region, indicators: event.indicators, phase: event.phase, lasting: event.lasting, cause: event.title, immediate: Boolean(event.immediate) }) };
+          for (const [segment, delta] of Object.entries(event.segments ?? {})) if (Math.abs(delta) >= 0.3) next = { ...next, society: segmentAttention(next.society, segment, delta * (inst.kind === 'comune' ? 0.3 : 0.6), event.region) };
+        }
+      } else if (event.type === 'interrogazione-risposta') {
+        if (event.player) { add('notoriety', event.answer === 'insufficiente' ? 0.6 : 0.2); if (event.answer === 'insufficiente') add('reputation', 0.4); lines.push(`${rules.label}: risposta ${event.answer} alla tua interrogazione.`); }
+        else if (leads && event.answer === 'insufficiente') { add('reputation', -0.5); lines.push(`${rules.label}: la tua giunta risponde male a un’interrogazione dell’opposizione.`); }
+      } else if (event.type === 'impegno-disatteso') {
+        if (leads) { add('reputation', -1.5); lines.push(`${rules.label}: non hai dato seguito alla mozione “${event.title}”.`); }
+        else if (event.player) { add('notoriety', 0.6); lines.push(`${rules.label}: la giunta ignora la tua mozione “${event.title}”.`); }
+      } else if (event.type === 'impegno-rispettato') {
+        if (event.player) { add('influence', 0.8); lines.push(`${rules.label}: la giunta dà seguito alla tua mozione “${event.title}”.`); }
+      } else if (event.type === 'bilancio-respinto') {
+        if (leads) { add('reputation', -3); remember(game, { date, kind: 'crisi-governo', text: `${rules.label}: bilancio respinto, esercizio provvisorio`, weight: 1 }); }
+        lines.push(`${rules.label}: bilancio respinto, esercizio provvisorio.`);
+        chronicle.push({ type: 'chronicle', kind: 'territorio', icon: 'alert', title: `${inst.name}: bilancio respinto`, body: 'Esercizio provvisorio: solo le spese obbligatorie finché il consiglio non approva il bilancio (simulazione).', tone: 'bad' });
+      } else if (event.type === 'atto-ritirato') {
+        if (event.player) { add('reputation', -0.3); lines.push(`${rules.label}: la tua proposta “${event.title}” è ritirata (${event.reason}).`); }
+      } else if (event.type === 'seduta-deserta') {
+        lines.push(`${rules.label}: manca il numero legale su “${event.title}”, seduta rinviata.`);
       } else if (event.type === 'commissione-votata') {
         if (event.rapporteur) lines.push(`Commissione ${event.committee}: la tua relazione su “${event.title}” ${event.passed ? 'passa e va in plenaria' : 'è respinta'}.`);
         else if (event.decisive) { add('notoriety', 0.5); lines.push(`Commissione ${event.committee}: il tuo voto è decisivo su “${event.title}”.`); }
@@ -1278,11 +1310,12 @@ function tickLocal(input, date) {
       } else if (event.type === 'scioglimento') {
         const type = ELECTION_OF[inst.kind];
         game = scheduleEarlyLocalElection(game, type, date);
-        remember(game, { date, kind: inst.executive?.leader === 'player' ? 'crisi-governo' : 'decisione', text: `${rules.label} sciolto dopo la sfiducia`, weight: inst.executive?.leader === 'player' ? 1.5 : 0.6 });
+        const why = event.reason === 'bilancio' ? 'dopo il bilancio non approvato' : 'dopo la sfiducia';
+        remember(game, { date, kind: inst.executive?.leader === 'player' ? 'crisi-governo' : 'decisione', text: `${rules.label} sciolto ${why}`, weight: inst.executive?.leader === 'player' ? 1.5 : 0.6 });
         game = addDiary(game, { kind: 'territorio', date, title: `${inst.name}: consiglio sciolto, si torna al voto`, lines: [`Elezioni anticipate: ${formatDate(game.elections.find(item => item.type === type && item.status === 'upcoming')?.electionDate ?? date)}.`], tone: 'bad' });
         next = withLocalLevel({ ...next, dataset: closeTermOffices(next.dataset, playerOf(next)?.id, type, date) });
         if (inst.executive?.leader === 'player') add('reputation', -3);
-        chronicle.push({ type: 'chronicle', kind: 'territorio', icon: 'alert', title: `${inst.name}: consiglio sciolto dopo la sfiducia`, body: 'Arriva un commissario; si torna al voto in anticipo (simulazione).', tone: 'bad' });
+        chronicle.push({ type: 'chronicle', kind: 'territorio', icon: 'alert', title: `${inst.name}: consiglio sciolto ${why}`, body: 'Arriva un commissario; si torna al voto in anticipo (simulazione).', tone: 'bad' });
       }
     }
     next = { ...next, local: { institutions: localOf(next).institutions.map(item => item.id === inst.id ? updated : item) } };
@@ -2350,10 +2383,13 @@ export const store = {
     return law ? amendmentOdds(state.parliament, law, { influence: playerStat(state, 'influence'), committeeRole: Boolean(state.parliament.careerStanding?.committeeRole), offerVote }) : 0;
   },
   // ---------- the local and European institutions ----------
-  proposeLocalAct(instId, area) {
+  // The player's act: a kind among those of the office (category), on a theme; variant for taxes, tariffs, town plans.
+  proposeLocalAct(instId, area, category = null, variant = null) {
     const next = withTime(1);
-    const inst = proposeLocalAct(findInstitution(next, instId), area, next.clock.currentDate);
-    state = { ...replaceInstitution(next, inst), ui: { ...next.ui, toast: 'Proposta depositata: va in commissione, poi al voto' } };
+    const inst = proposeLocalAct(findInstitution(next, instId), area, next.clock.currentDate, { category, variant });
+    const act = inst.acts.at(-1);
+    const toast = act.organ === 'giunta' ? 'Proposta in Giunta: la adotta la Giunta, senza voto del consiglio' : act.stage === 'aula' ? 'Atto depositato: va direttamente in aula al voto' : 'Proposta depositata: va in commissione, poi al voto';
+    state = { ...replaceInstitution(next, inst), ui: { ...next.ui, toast } };
     persist(); emit();
     return inst;
   },
@@ -2364,9 +2400,13 @@ export const store = {
     persist(); emit();
     return inst;
   },
-  questionLocalExecutive(instId) {
+  // A question on a theme (area; by default the weakest service of the city or of the region).
+  questionLocalExecutive(instId, area = null) {
     const next = withTime(1);
-    const inst = questionExecutive(findInstitution(next, instId), next.clock.currentDate);
+    const current = findInstitution(next, instId);
+    const regional = current.kind === 'regione' ? next.society?.regions?.[current.region]?.indicators : null;
+    const theme = area ?? (regional ? Object.values(INDICATOR_AREA).filter(id => localAreas('regione').includes(id)).map(id => [id, territoryValue(current, id, regional)]).filter(([, value]) => value !== null).sort((a, b) => a[1] - b[1])[0]?.[0] ?? null : null);
+    const inst = questionExecutive(current, next.clock.currentDate, theme);
     let updated = { ...replaceInstitution(next, inst), ui: { ...next.ui, toast: 'Interrogazione presentata' } };
     const stats = statsOf(updated);
     updated = { ...updated, dataset: { ...updated.dataset, statistics: writeStats(updated, { ...stats, notoriety: roundStat((stats.notoriety ?? 20) + 0.6) }) } };
@@ -2380,13 +2420,17 @@ export const store = {
     persist(); emit();
     return inst;
   },
+  // Local taxes: the head of the executive proposes the new rates, the council approves them (one step at a time);
+  // the popularity moves when they pass.
   setLocalTaxLevel(instId, level) {
-    const next = withTime(1);
-    const inst = setLocalTax(findInstitution(next, instId), level, next.clock.currentDate);
-    let updated = { ...replaceInstitution(next, inst), ui: { ...next.ui, toast: `Pressione fiscale locale: ${level}` } };
-    const stats = statsOf(updated);
-    updated = { ...updated, dataset: { ...updated.dataset, statistics: writeStats(updated, { ...stats, popularity: roundStat((stats.popularity ?? 45) + ({ bassa: 1.5, media: 0, alta: -2 }[level] ?? 0)) }) } };
-    state = updated; persist(); emit();
+    const current = findInstitution(state, instId);
+    if (current.executive?.leader !== 'player' || !current.budget) throw new Error('Solo chi guida l’esecutivo propone le aliquote.');
+    const steps = ['bassa', 'media', 'alta'];
+    if (!steps.includes(level)) throw new Error('Livello non valido.');
+    if (level === current.budget.localTax) throw new Error('Le aliquote sono già a questo livello.');
+    const inst = store.proposeLocalAct(instId, 'fisco', 'tributi', steps.indexOf(level) > steps.indexOf(current.budget.localTax) ? 'aumento' : 'riduzione');
+    state = { ...state, ui: { ...state.ui, toast: `${actTypeOf(current.kind, 'tributi').label}: la proposta va al voto del consiglio` } };
+    persist(); emit();
     return inst;
   },
   concedeLocal(instId, actId, groupId) {

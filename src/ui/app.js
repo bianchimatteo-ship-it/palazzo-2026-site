@@ -783,7 +783,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
         else if ('epRapporteur' in localControl.dataset) store.bidEuropeanRapporteur(instId, actId);
         else if ('epAmend' in localControl.dataset) store.tableEuropeanAmendment(instId, actId);
         else if ('epRole' in localControl.dataset) store.runForEuropeanRole(instId);
-        else store.questionLocalExecutive(instId);
+        else store.questionLocalExecutive(instId, localControl.closest?.('[data-local-question-box]')?.querySelector?.('select[name="question-area"]')?.value || null);
         playSound('confirm');
       } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(),store.getLastSaved()); }
       return;
@@ -1169,7 +1169,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
       event.preventDefault();
       const data = new FormData(form);
       try {
-        if (form.matches('[data-local-propose-form]')) store.proposeLocalAct(form.dataset.instId, data.get('area'));
+        if (form.matches('[data-local-propose-form]')) { const [category, variant] = String(data.get('category') ?? '').split('|'); store.proposeLocalAct(form.dataset.instId, data.get('area'), category || null, variant || null); }
         else if (form.matches('[data-ep-committee-form]')) store.requestEuropeanCommittee(form.dataset.instId, data.get('committee'));
         else store.reshuffleLocalGiunta(form.dataset.instId, data.get('portfolio'), data.get('group'));
         playSound('confirm');

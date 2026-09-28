@@ -311,6 +311,19 @@
 .local-inline-form{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px;margin:8px 0}
 .local-inline-form label{display:grid;gap:4px;flex:1 1 200px;min-width:0;color:var(--muted);font-size:12px}
 .local-inline-form select{width:100%;max-width:100%;min-height:38px;padding:6px 8px;border-radius:6px}
+.local-explain{margin-top:10px;padding-top:8px;border-top:1px solid var(--line-strong)}
+.local-explain summary{cursor:pointer;color:var(--ink-2);font-size:12.5px;font-weight:700}
+.local-explain .hq-facts{margin-top:6px}
+.local-measure{margin:6px 0 0;color:var(--ink-2);font-size:12px;line-height:1.45}
+.local-warning{margin:6px 0 0;color:#fc9a82;font-size:12px;line-height:1.45}
+.local-warning .glyph{vertical-align:-2px;margin-right:3px}
+.local-territory small{color:var(--muted);font-size:11px;font-weight:600}
+.local-commitments{margin:10px 0 0;color:var(--ink-2);font-size:12.5px}
+.local-commitments ul{display:grid;gap:4px;margin:6px 0 0;padding-left:18px;font-size:12px}
+.local-commitments small{color:var(--muted)}
+.local-guide li{display:block}
+.local-guide li p{margin:4px 0 0;font-size:12px;line-height:1.45}
+.local-guide li small{color:var(--muted);font-size:11px}
 .local-act{margin:8px 0}
 /* The player's institutions: a short intro, quick links when there are several, the committee of a European dossier. */
 .local-intro{margin:0}
