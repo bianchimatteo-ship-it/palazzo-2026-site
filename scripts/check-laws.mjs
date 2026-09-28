@@ -229,10 +229,14 @@ for (const item of outcomes) console.log(`  ${item.name}: ${item.bills} proposte
 {
   store.createCareer({ ...draft('comunale', '', 'Sindaca'), parliamentaryGroupId: '' }, db.parties, db.parliamentaryGroups);
   assert.equal(store.getState().parliament, null, 'Alla creazione la carriera locale non ha un seggio.');
-  for (let week = 0; week < 20; week++) { keepAlive(); store.advance(7); }
+  // The Government in office at the start is checked at the first week: in the following ones a crisis can replace it
+  // in the same Chambers, as in any career (with some seeds it loses the confidence within twenty weeks).
+  for (let week = 0; week < 20; week++) {
+    keepAlive(); store.advance(7);
+    if (!week) assert.equal(store.getState().parliament?.government?.formedBy, 'reference', 'Con il governo in carica all’avvio.');
+  }
   const s = store.getState();
   assert.ok(s.parliament?.chambers?.camera?.groups?.length && !s.parliament.player, 'Il Parlamento nazionale lavora anche per chi non ci siede.');
-  assert.equal(s.parliament.government?.formedBy, 'reference', 'Con il governo in carica all’avvio.');
   assert.ok(allBills(s).length >= 3, 'Governo e gruppi legiferano anche senza il giocatore.');
   assert.ok(!s.game.inbox.some(item => item.templateId === 'voto-aula'), 'Senza seggio nessuna richiesta di voto.');
   const html = renderParliamentPage('leggi', s, { committees: db.committees });
