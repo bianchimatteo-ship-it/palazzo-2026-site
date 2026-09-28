@@ -292,14 +292,11 @@ export function mountApp(root, store, { retryData = null } = {}) {
     : { collection: realDatabase.politicalMovements?.some(item => item.id === admin.partyId) ? 'politicalMovements' : 'parties', id: admin.partyId };
   // Collapsible categories (weekly activities, campaign actions) reopen as the player left them.
   const restoreDetails = () => { for (const element of root.querySelectorAll?.('details[data-remember]') ?? []) { const saved = views.open?.[element.dataset.remember]; if (typeof saved === 'boolean' && element.open !== saved) element.open = saved; } };
-  // The choices in the campaign's selects (setup, theme, territory, rival, strategy) are drawn again as the player left
-  // them at every redraw, until another campaign starts; the theme picked in the setup goes with the player into it.
-  const campaignPicks = { key: 'setup', values: {}, carry: null };
-  const campaignChoices = state => {
-    const key = state.campaign && state.campaign.status !== 'finished' ? state.campaign.id : 'setup';
-    if (campaignPicks.key !== key) Object.assign(campaignPicks, { key, values: key === 'setup' ? {} : { ...campaignPicks.carry }, carry: null });
-    return campaignPicks.values;
-  };
+  // The choices in the campaign's selects (setup, theme, territory, rival, strategy) are saved with the game
+  // (state.ui.campaignPicks): every redraw, reload or saved game draws them as the player left them, until another
+  // campaign starts; the theme picked in the setup goes with the player into it.
+  const campaignKey = state => state.campaign && state.campaign.status !== 'finished' ? state.campaign.id : 'setup';
+  const campaignChoices = state => { const saved = state.ui?.campaignPicks; return saved?.key === campaignKey(state) && saved.values && typeof saved.values === 'object' ? saved.values : {}; };
   const CAMPAIGN_PICKS = [['[data-campaign-topic]', 'topic'], ['[data-campaign-territory]', 'territory'], ['[data-campaign-ally]', 'ally'], ['[data-campaign-strategy-topic]', 'strategyTopic'], ['[data-campaign-strategy-target]', 'strategyTarget'], ['input[name="campaign-strategy-live"]', 'strategy'], ['input[name="campaign-strategy"]', 'setup.strategy']];
   // Real data that could not be loaded at the start: the game runs with the rest and says what is missing.
   let retryingData = false;
@@ -1065,11 +1062,9 @@ export function mountApp(root, store, { retryData = null } = {}) {
         const value=name=>root.querySelector(`[data-campaign-setup="${name}"]`)?.value;
         const strategy=root.querySelector('input[name="campaign-strategy"]:checked')?.value??null;
         const topic=campaignChoices(store.getState())['setup.topicId'];
-        campaignPicks.carry=topic?{topic,strategyTopic:topic}:null;
-        store.startCampaign({electionType:value('electionType'),objective:value('objective'),role:value('role'),municipalityBand:value('municipalityBand'),strategy,topicId:value('topicId')},realParties(),{politicians:realDatabase.politicians??[],groups:realDatabase.parliamentaryGroups??[]});
+        store.startCampaign({electionType:value('electionType'),objective:value('objective'),role:value('role'),municipalityBand:value('municipalityBand'),strategy,topicId:value('topicId'),picks:topic?{topic,strategyTopic:topic}:null},realParties(),{politicians:realDatabase.politicians??[],groups:realDatabase.parliamentaryGroups??[]});
         views.tabs.elezioni={value:'campagna',context:sectionContext('elezioni',store.getState())}; saveViews();
       } catch(error) { store.getState().ui.toast=error.message || 'Impossibile avviare la campagna.'; render(store.getState(),store.getLastSaved()); }
-      finally { campaignPicks.carry=null; }
     }
     else if (action === 'campaign-new') store.clearCampaign();
     else if (action === 'new-career') await openNewGame();
@@ -1286,7 +1281,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
     const field=event.target;
     // The campaign's selects: the choice is kept for the next redraws (another electoral model restarts the roles).
     const campaignPick = field.matches?.('[data-campaign-setup]') ? `setup.${field.dataset.campaignSetup}` : CAMPAIGN_PICKS.find(([selector]) => field.matches?.(selector))?.[1];
-    if (campaignPick) { const picks = campaignChoices(store.getState()); picks[campaignPick] = field.value; if (campaignPick === 'setup.electionType') delete picks['setup.role']; }
+    if (campaignPick) { const current = store.getState(); const values = { ...campaignChoices(current), [campaignPick]: field.value }; if (campaignPick === 'setup.electionType') delete values['setup.role']; store.setCampaignPicks({ key: campaignKey(current), values }); }
     if (field.matches('[data-catalog-filter]')) {
       catalog[field.dataset.catalogFilter]=field.value;
       if (field.dataset.catalogFilter.startsWith('party')) catalog.partyPage=1;

@@ -4,6 +4,7 @@
 // - setup: the theme picked survives a redraw and goes with the player into the campaign;
 // - campaign: while a notice ends nothing is drawn again under the player (the same select stays in the page); the
 //   theme picked for the activities survives an activity (which uses it) and a change of strategy with another theme;
+// - the choices are saved with the game: they come back after a reload of the page and with a saved game (slot);
 // - one listener for each kind of event on the page, however many redraws.
 // When Chrome is not installed the check is skipped with a message.
 import { spawn } from 'node:child_process';
@@ -45,8 +46,11 @@ try {
   // The select is marked: a redraw replaces it with a new one without the mark.
   const mark = selector => evaluate(`(() => { const el = document.querySelector(${q(selector)}); if (el) el.__kept = true; return Boolean(el); })()`);
   const kept = selector => evaluate(`Boolean(document.querySelector(${q(selector)})?.__kept)`);
+  // The page at rest: nothing drawn again for 400 ms (after a navigation the data of the page can still arrive).
+  const settle = () => evaluate(`new Promise(resolve => { let timer; const observer = new MutationObserver(() => { clearTimeout(timer); timer = setTimeout(done, 400); }); const done = () => { observer.disconnect(); resolve(true); }; observer.observe(document.getElementById('app'), { childList: true, subtree: true }); timer = setTimeout(done, 400); })`);
   // A choice as the player makes it: the select has the focus and the arrow keys move to the next themes.
   const pick = async (selector, steps = 1) => {
+    await settle();
     ok(await evaluate(`(() => { const el = document.querySelector(${q(selector)}); if (!el) return false; el.scrollIntoView({ block: 'center' }); el.focus(); return document.activeElement === el; })()`), `Il select ${selector} riceve il fuoco.`);
     const before = await valueOf(selector);
     for (let step = 0; step < steps; step++) {
@@ -59,6 +63,17 @@ try {
     return after;
   };
   const campaign = () => evaluate(`import('/src/core/store.js?v=' + document.querySelector('script[type=module]').src.split('v=')[1]).then(({ store }) => { const c = store.getState().campaign; return c ? { id: c.id, status: c.status, strategy: c.strategy, preparation: c.preparationByTopic, salient: c.nationalContext?.salientTopic } : null; })`);
+  // The page opened again from scratch (reload, “Continua”), on the campaign's tab.
+  const reopen = async () => {
+    await send('Page.navigate', { url: base });
+    await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu=continua]"))'), 30000, 'Continua dopo il ricaricamento');
+    await click('[data-menu=continua]');
+    await waitFor(() => evaluate('Boolean(document.querySelector(".page-wrap"))'), 20000, 'pagina di gioco');
+    await click('[data-nav=elezioni]');
+    await waitFor(() => evaluate('Boolean(document.querySelector("[data-section-tab=elezioni][data-section-tab-value=campagna]"))'), 10000, 'scheda Campagna');
+    await click('[data-section-tab=elezioni][data-section-tab-value=campagna]');
+  };
+  const inStore = body => evaluate(`import('/src/core/store.js?v=' + document.querySelector('script[type=module]').src.split('v=')[1]).then(({ store }) => { ${body} })`);
   const listeners = () => evaluate(`(() => { const all = getEventListeners(document.getElementById('app')); return Object.fromEntries(Object.entries(all).map(([type, list]) => [type, list.length])); })()`, true);
 
   await send('Page.enable');
@@ -99,6 +114,9 @@ try {
   await click('[data-section-tab=elezioni][data-section-tab-value=campagna]');
   await waitFor(async () => !(await kept(SETUP)), 5000, 'ridisegno dell’impostazione');
   ok(await valueOf(SETUP) === setupTopic, `Impostazione: il tema scelto resta dopo il ridisegno (${await valueOf(SETUP)}, atteso ${setupTopic}).`);
+  await reopen();
+  await waitFor(() => evaluate(`Boolean(document.querySelector(${q(SETUP)}))`), 10000, 'impostazione dopo il ricaricamento');
+  ok(await valueOf(SETUP) === setupTopic, `Impostazione: il tema scelto resta dopo il ricaricamento della pagina (${await valueOf(SETUP)}).`);
 
   // 2. The campaign starts (strategy “Consolida la base”, no theme of its own): the theme of the setup goes with it.
   ok(await click('[data-action=campaign-start]'), 'Il pulsante “Inizia la campagna” c’è.');
@@ -145,7 +163,27 @@ try {
   ok(await valueOf(TOPIC) === topic, `Dopo il cambio di strategia il tema delle attività resta ${topic} (${await valueOf(TOPIC)}).`);
   ok(await valueOf(STRATEGY_TOPIC) === strategyTopic, `Il select della strategia mostra il suo tema (${await valueOf(STRATEGY_TOPIC)}).`);
 
-  // 6. However many redraws, the page keeps one listener for each kind of event.
+  // 6. The choices are saved with the game: after a reload of the page, and with a saved game in a slot.
+  const ALLY = '[data-campaign-ally]';
+  const allyOptions = await evaluate(`document.querySelector(${q(ALLY)})?.options.length ?? 0`);
+  const ally = allyOptions > 1 ? await pick(ALLY, 1) : await valueOf(ALLY);
+  await reopen();
+  await waitFor(() => evaluate(`Boolean(document.querySelector(${q(TOPIC)}))`), 10000, 'campagna dopo il ricaricamento');
+  ok(await valueOf(TOPIC) === topic, `Dopo il ricaricamento il tema delle attività resta ${topic} (${await valueOf(TOPIC)}).`);
+  ok(await valueOf(STRATEGY_TOPIC) === strategyTopic, `Dopo il ricaricamento il tema della strategia resta ${strategyTopic} (${await valueOf(STRATEGY_TOPIC)}).`);
+  ok(await valueOf(ALLY) === ally, `Dopo il ricaricamento l’avversario scelto resta lo stesso (${await valueOf(ALLY)}).`);
+  ok(await evaluate('document.querySelector(\'input[name="campaign-strategy-live"]:checked\')?.value') === 'temi', 'Dopo il ricaricamento la strategia scelta resta selezionata.');
+  const slot = await inStore(`return store.saveToSlot('Prova dei select');`);
+  const later = await pick(TOPIC, 1);
+  ok(later !== topic, 'Dopo il salvataggio nello slot il giocatore sceglie un altro tema.');
+  await inStore(`store.loadSlot(${JSON.stringify(slot)}); return true;`);
+  await click('[data-nav=elezioni]');
+  await waitFor(() => evaluate('Boolean(document.querySelector("[data-section-tab=elezioni][data-section-tab-value=campagna]"))'), 10000, 'scheda Campagna dopo lo slot');
+  await click('[data-section-tab=elezioni][data-section-tab-value=campagna]');
+  await waitFor(() => evaluate(`Boolean(document.querySelector(${q(TOPIC)}))`), 10000, 'campagna dallo slot');
+  ok(await valueOf(TOPIC) === topic, `La partita salvata nello slot riporta il tema scelto al momento del salvataggio (${await valueOf(TOPIC)}, atteso ${topic}).`);
+
+  // 7. However many redraws, the page keeps one listener for each kind of event.
   const finalListeners = await listeners();
   ok(JSON.stringify(finalListeners) === JSON.stringify(initialListeners), `Nessun ascoltatore duplicato dopo i ridisegni (${JSON.stringify(finalListeners)}).`);
 } catch (error) {
@@ -154,5 +192,5 @@ try {
 } finally {
   await cleanup();
 }
-if (!exitCode) console.log(`Select della campagna verificati in Chrome: ${checks.length} controlli — il tema scelto resta dopo i ridisegni (impostazione, inizio campagna, attività, cambio di strategia), nessun ridisegno alla fine degli avvisi, un solo ascoltatore per tipo di evento.`);
+if (!exitCode) console.log(`Select della campagna verificati in Chrome: ${checks.length} controlli — il tema scelto resta dopo i ridisegni (impostazione, inizio campagna, attività, cambio di strategia), le scelte restano dopo il ricaricamento e con una partita salvata nello slot, nessun ridisegno alla fine degli avvisi, un solo ascoltatore per tipo di evento.`);
 process.exit(exitCode);

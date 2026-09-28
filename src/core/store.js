@@ -1884,6 +1884,13 @@ export const store = {
     emit();
   },
   clearCampaign() { state={...state,campaign:null,ui:{...state.ui,activePage:'elezioni',toast:'Pronta per una nuova elezione'}}; persist(); emit(); },
+  // The choices in the campaign's selects (setup, theme, territory, rival, strategy) are saved with the game: the page
+  // draws them again after a redraw, a reload or a saved game is opened. No redraw here: the page already shows them.
+  setCampaignPicks(picks) {
+    if (!picks || typeof picks.key !== 'string' || !picks.values || typeof picks.values !== 'object') return;
+    state = { ...state, ui: { ...state.ui, campaignPicks: { key: picks.key, values: { ...picks.values } } } };
+    if (state.career.status !== 'demo') persist();
+  },
   startCampaign(config, partyCatalog = [], realPeople = {}) {
     if (state.campaign?.status === 'active') throw new Error('Concludi o riprendi la campagna già in corso.');
     if (state.game?.status === 'ended') throw new Error('La carriera è conclusa: inizia una nuova partita.');
@@ -1966,7 +1973,9 @@ export const store = {
     book(nextGame, -transfer, 'campagne', `Fondi trasferiti alla campagna: ${election.label}`, state.clock.currentDate);
     releaseElectionFund(nextGame, state.clock.currentDate);
     if (partyFunds) treasuryBook(nextGame.party.org, -partyFunds, 'campagne', `Sostegno alla candidatura: ${election.label}`);
-    state = { ...state, campaign, game: nextGame, ui:{...state.ui,activePage:'elezioni',toast:'Campagna iniziata'} };
+    // The choices the player made in the setup (the theme) are the first ones of the campaign's selects.
+    const campaignPicks = { key: campaign.id, values: config.picks && typeof config.picks === 'object' ? { ...config.picks } : {} };
+    state = { ...state, campaign, game: nextGame, ui:{...state.ui,activePage:'elezioni',toast:'Campagna iniziata',campaignPicks} };
     persist(); emit();
     return campaign;
   },

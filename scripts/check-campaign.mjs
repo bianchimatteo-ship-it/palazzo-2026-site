@@ -127,6 +127,9 @@ assert.equal(selectedIn(renderCampaignPage(store.getState(),references,()=>null,
 const newStrategy={...store.getState(),campaign:{...campaign,strategy:{...campaign.strategy,id:'temi',topicId:DEBATE_TOPICS.find(topic=>![strategyTopic,chosenTopic].includes(topic.id)).id}}};
 const changedHtml=renderCampaignPage(newStrategy,references,()=>null,{topic:chosenTopic});
 assert.equal(selectedIn(changedHtml,'data-campaign-topic'),chosenTopic,'Dopo un cambio di strategia il tema delle attività resta quello scelto.');
+// Le scelte dei select sono salvate con la partita (state.ui.campaignPicks) e tornano dopo il ricaricamento.
+assert.deepEqual(store.getState().ui.campaignPicks,{key:campaign.id,values:{}},'Una nuova campagna parte senza scelte salvate.');
+store.setCampaignPicks({key:campaign.id,values:{topic:chosenTopic,ally:'candidatura-inesistente'}});
 assert.equal(selectedIn(changedHtml,'data-campaign-strategy-topic'),newStrategy.campaign.strategy.topicId,'Il select della strategia mostra il tema della strategia.');
 assert.equal(selectedIn(renderCampaignPage(store.getState(),references,()=>null,{topic:'tema-inesistente'}),'data-campaign-topic'),strategyTopic,'Una scelta non valida torna al tema della strategia.');
 assert.equal(campaign.pollingHook.connected,false);
@@ -139,6 +142,8 @@ store.save();
 module=await import(`../src/core/store.js?campaign-reload=${Date.now()}`);
 store=module.store;
 assert.equal(store.getState().campaign.status,'active','Campagna attiva ripristinata dal salvataggio.');
+assert.deepEqual(store.getState().ui.campaignPicks,{key:campaign.id,values:{topic:chosenTopic,ally:'candidatura-inesistente'}},'Le scelte dei select tornano con il salvataggio.');
+assert.equal(selectedIn(renderCampaignPage(store.getState(),references,()=>null,store.getState().ui.campaignPicks.values),'data-campaign-topic'),chosenTopic,'Dopo il ricaricamento il select mostra il tema scelto.');
 assert.ok(store.getState().campaign.day>0);
 assert.equal(store.getState().dataset.parties.find(item=>item.id===party.id),undefined,'Il partito reale non va copiato nel database utente/simulazione.');
 
