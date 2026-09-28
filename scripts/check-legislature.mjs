@@ -207,6 +207,7 @@ state = store.getState();
 assert.ok(seen.coalitionEvent && seen.line && seen.campaign, 'Il segretario sceglie coalizione e linea, poi si candida.');
 const vote = state.national.lastPolitiche;
 assert.ok(vote && vote.id === `politiche-${vote.date}` && isSunday(vote.date) && vote.model === 'geografia-2022', 'Il voto si tiene di domenica sulla mappa reale.');
+assert.ok(state.campaign?.national?.resultId === vote.id && state.national.votes.filter(item => item.type === 'politiche' && item.date === vote.date).length === 1, 'Il giorno delle politiche la campagna si chiude e si vota una volta sola: lo stesso voto decide il risultato della campagna.');
 assert.ok(state.national.legislature.number === 20 && state.game.legislature.number === 20 && state.parliament.legislature.number === 20 && state.parliament.legislature.reference === 'simulation', 'Si apre la XX legislatura (simulata), uguale per carriera, Parlamento e ciclo nazionale.');
 for (const chamber of ['camera', 'senato']) assert.equal(state.parliament.chambers[chamber].groups.reduce((sum, group) => sum + group.simulatedSeats, 0), chamber === 'camera' ? 400 : 200, `Nuova ${chamber}: gruppi dal voto.`);
 const report = state.career.lastElectionReport;

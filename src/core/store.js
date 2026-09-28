@@ -1639,8 +1639,10 @@ function holdNationalVote(s, type, { campaign = null, date = s.clock.currentDate
   const national = nationalOf(s);
   if (national.votes.some(vote => vote.type === type && vote.date === date)) return s;
   const legislature = number ?? (campaign ? (s.game?.legislature?.number ?? 19) + 1 : s.game?.legislature?.number ?? national.legislature.number + 1);
-  // Without the forces of the political world (an empty world) the campaign keeps its own result.
-  if (!s.world || !voteForces(s.world).forces.length) {
+  // Without the forces of the political world (an empty world) the campaign keeps its own result. Forces founded by the
+  // simulation alone do not make a political world: whether one is born before the vote must not change who decides.
+  const origins = new Map((s.world?.parties ?? []).map(party => [party.id, party.origin]));
+  if (!s.world || !voteForces(s.world).forces.some(force => origins.get(force.id) !== 'evoluzione')) {
     if (type !== 'politiche') return s;
     return { ...s, national: normalizeNationalState({ ...national, legislature: { number: legislature, since: date, firstSitting: advanceDays(date, LEGISLATURE_RULES.firstSittingDays) } }, { currentDate: date }) };
   }

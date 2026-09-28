@@ -324,6 +324,30 @@ assert.throws(() => store.proposeLaw({ title: 'Nuova proposta', category: 'Scuol
 store.initializeParliament(groups);
 assert.equal(store.getState().parliament.player, null, 'Il ricaricamento dei gruppi non riapre un mandato concluso.');
 
+// Il giorno delle politiche è deterministico: la campagna del giocatore si chiude e subito dopo si vota, una volta sola.
+// In un mondo senza le forze del mondo politico il seggio lo decide la campagna, anche quando la simulazione ha fatto
+// nascere una nuova forza prima del voto (prima dipendeva dal caso: con la forza nata votava la mappa).
+{
+  const { createWorld } = await import('../src/core/world-engine.js');
+  const born = createWorld({ seedText: 'forza-nata', date: '2027-01-01', forces: [{ id: 'evoluzione-civica-prova', label: 'Nuova forza civica (simulata n.1)', share: 3 }] }).parties[0];
+  const politicheDay = inject => {
+    store.reset();
+    store.createCareer(draftFor('regionale'), references, groups);
+    store.initializeParliament(groups);
+    store.fastForwardToElection('politiche');
+    store.startCampaign({ electionType: 'politiche', role: 'senatore', objective: 'win' }, references);
+    const world = store.getState().world;
+    if (inject) world.parties = [...world.parties.filter(party => party.origin !== 'evoluzione'), { ...born, origin: 'evoluzione', refSource: 'simulation' }];
+    else world.parties = world.parties.filter(party => party.origin !== 'evoluzione');
+    finishCampaign(80);
+    const s = store.getState();
+    return JSON.stringify({ national: s.campaign.national?.resultId ?? null, votes: (s.national?.votes ?? []).filter(vote => vote.type === 'politiche').length, mandate: s.campaign.result.personalMandate, groupId: s.parliament.player?.groupId ?? null, legislature: s.national?.legislature?.number });
+  };
+  const outcomes = [politicheDay(false), politicheDay(true), politicheDay(false), politicheDay(true)];
+  assert.equal(new Set(outcomes).size, 1, `Stesso esito il giorno delle politiche con o senza una forza nata nella simulazione: ${outcomes.join(' | ')}`);
+  assert.deepEqual(JSON.parse(outcomes[0]), { national: null, votes: 0, mandate: true, groupId: null, legislature: 20 }, 'Senza mondo politico decide la campagna e si apre la XX legislatura.');
+}
+
 // Una campagna non parlamentare non tocca il seggio di un parlamentare in carica.
 store.reset();
 store.createCareer(draftFor('senatore', { parliamentaryGroupId: 'senato-xix-gruppo-49' }), references, groups);
