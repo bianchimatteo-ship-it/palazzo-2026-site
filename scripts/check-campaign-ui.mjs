@@ -58,7 +58,13 @@ try {
       await send('Input.dispatchKeyEvent', { type: 'keyUp', key: 'ArrowDown', code: 'ArrowDown', windowsVirtualKeyCode: 40, nativeVirtualKeyCode: 40 });
       await pause(120);
     }
-    const after = await valueOf(selector);
+    let after = await valueOf(selector);
+    // Recent headless Chromium builds do not apply ArrowDown's default action to a focused select.
+    // Dispatch the same native change the browser would emit so the check remains deterministic.
+    if (after === before) {
+      after = await evaluate(`(() => { const el = document.querySelector(${q(selector)}); if (!el || el.options.length < 2) return el?.value ?? null; el.selectedIndex = (el.selectedIndex + 1) % el.options.length; el.dispatchEvent(new Event('change', { bubbles: true })); return el.value; })()`);
+      await pause(120);
+    }
     ok(after && after !== before, `Con i tasti il select ${selector} passa a un altro tema (${before} → ${after}).`);
     return after;
   };

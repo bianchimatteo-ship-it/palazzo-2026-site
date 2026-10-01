@@ -527,7 +527,7 @@ function raiseEvent(ctx, template, params, specials, lines, urgent = false) {
   game.eventHistory = { ...(game.eventHistory ?? {}), [template.id]: game.week.index };
   // Keep a short semantic history in addition to per-template cooldowns: different
   // events in the same category should not crowd out the rest of the story.
-  game.eventRecent = [{ id: template.id, category: template.category ?? null, week: game.week.index }, ...(game.eventRecent ?? [])].slice(0, 8);
+  game.eventRecent = [{ id: template.id, category: template.category ?? null, week: game.week.index }, ...(game.eventRecent ?? []).filter(entry => entry.id !== template.id)].slice(0, 8);
   game.lastEventId = template.id;
   // Some events change the world as soon as they happen, whatever the player decides.
   if (template.onRaise?.shock) specials.push({ type: 'society-shock', shock: Object.fromEntries(Object.entries(template.onRaise.shock).map(([key, value]) => [key, fillText(value, params)])) });
