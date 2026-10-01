@@ -1,0 +1,146 @@
+{
+  "datasetVersion": "2026-09-24.1",
+  "snapshotDate": "2026-09-24",
+  "publisher": "POLITICANDO 2026 — importatore open data",
+  "sourcePolicy": "Primary institutional sources only; unknown values are null. Registry entries are sourced to registration deliberations; only explicit deregistration notices set historical status. MEF 2‰ evidence is dated to its reporting year.",
+  "sourceUrls": {
+    "cameraRoster": "https://www.camera.it/deputati/ws/elenco_deputati?_format=json&leg=19",
+    "cameraDirectory": "https://www.camera.it/deputati/elenco",
+    "cameraGroups": "https://www.camera.it/leg19/217",
+    "senateOpenData": "https://dati.senato.it/sito/composizione?legislatura=19&testo_generico=11",
+    "senateMembers": "https://dati.senato.it/sito/composizione?legislatura=19&testo_generico=11",
+    "senateGroups": "https://dati.senato.it/sito/composizione?legislatura=19&testo_generico=11&active_tab_78=80",
+    "mefTwoPerThousand": "https://www1.finanze.gov.it/finanze/2xmille/public/index.php?aggiornato=1522252800&export=1&page=1&tree=2025AADUEXM0101",
+    "partyRegister": "https://www.parlamento.it/Parlamento/1063",
+    "interiorEuropeanTransparency": "https://dait.interno.gov.it/elezioni/trasparenza/elezioni-europee-2024",
+    "interiorElectionArchive": "https://www.interno.gov.it/it/temi/elezioni-e-referendum/dato-storico-elezioni",
+    "futuroNazionaleHome": "https://futuronazionale.it/",
+    "futuroNazionaleTransparency": "https://futuronazionale.it/trasparenza/",
+    "futuroNazionaleOrganigram": "https://futuronazionale.it/organigramma/",
+    "futuroNazionaleLogoPage": "https://futuronazionale.it/il-logo/",
+    "futuroNazionaleLogo": "https://futuronazionale.it/wp-content/uploads/2026/01/Futuro-Nazionale-logo.png",
+    "cameraFuturoNazionaleComponent": "https://www.camera.it/leg19/1351?id_tipografico=08&shadow_organo_parlamentare=3508",
+    "pattHome": "https://patt.tn.it/",
+    "pattOrganization": "https://patt.tn.it/partito/organizzazione/organi-e-cariche/",
+    "pattCouncil": "https://www.consiglio.provincia.tn.it/telefono-posta-elettronica/Pages/consiglieri-e-gruppi-consiliari.aspx",
+    "svpHome": "https://www.svp.eu/de/partei-883.html",
+    "svpCouncil": "https://www.landtag-bz.org/de/fraktionen/suedtiroler-volkspartei",
+    "stellaAlpinaHome": "https://www.stella-alpina.org/",
+    "unionValdotaineHome": "https://www.unionvaldotaine.org/",
+    "unionValdotaineElections": "https://www.unionvaldotaine.org/infos/trasparenza/elezioni/",
+    "unionValdotaineStatutes": "https://www.unionvaldotaine.org/mouvement/statuts/",
+    "campobaseHome": "https://www.campobasetrentino.it/",
+    "campobaseCouncil": "https://www25.consiglio.provincia.tn.it/istituzione/i-gruppi-consiliari/pagine/gruppo-consiliare?id=1777121&uid=1777121",
+    "campobaseStatute": "https://www.gazzettaufficiale.it/eli/gu/2023/11/29/279/sg/pdf",
+    "sudChiamaNordHome": "https://sud-chiamanord.it/",
+    "sudChiamaNordAssembly": "https://www.ars.sicilia.it/gruppi-parlamentari/XVIII-sud-chiama-nord-le-autonomie",
+    "senateBills": "https://dati.senato.it/sito/home",
+    "cameraGovernment": "https://dati.camera.it/sparql",
+    "oraStructure": "https://ora-italia.it/la-struttura-del-partito/",
+    "cameraGroupsList": "https://www.camera.it/leg19/217",
+    "senateGroupsList": "https://www.senato.it/composizione/gruppi-parlamentari/",
+    "partyRegisterList": "https://www.parlamento.it/1063",
+    "istatMunicipalities": "https://www.istat.it/classificazione/codici-dei-comuni-delle-province-e-delle-regioni/",
+    "istatMunicipalitiesFile": "https://www.istat.it/storage/codici-unita-amministrative/Elenco-comuni-italiani.xlsx",
+    "supermedia20260924": "https://www.agi.it/politica/news/2026-09-24/supermedia-agi-youtrend-fdi-39219483/",
+    "cameraCommittees": "https://dati.camera.it/sparql",
+    "senateCommittees": "https://dati.senato.it/sparql",
+    "electoralGeography": "https://elezioni.interno.gov.it/report/20220925",
+    "electoralGeographyMirror": "https://github.com/ondata/elezioni-politiche-2022"
+  },
+  "collections": {
+    "parties": 75,
+    "politicalMovements": 6,
+    "politicalFigures": 38,
+    "partyLeaderships": 38,
+    "parliamentaryGroups": 22,
+    "coalitions": 1,
+    "electoralLists": 17,
+    "politicians": 604,
+    "offices": 613,
+    "partyMemberships": 24,
+    "groupMemberships": 674,
+    "electionParticipations": 268,
+    "partyMembershipHistory": 0,
+    "officeHistory": 613,
+    "territories": 23,
+    "elections": 2,
+    "laws": 436,
+    "twoPerThousand": 30,
+    "government": 1,
+    "realPolls": 1,
+    "territorialUnits": 110,
+    "municipalities": 7894,
+    "committees": 24,
+    "committeeMemberships": 655
+  },
+  "warnings": [
+    "Il Registro nazionale Parlamento include le iscrizioni storiche ancora visibili; lo stato historical è valorizzato solo quando il registro documenta cancellazione. La registrazione non certifica automaticamente attività politica sul territorio.",
+    "La Camera espone anagrafica, collegio e lista di elezione nelle schede individuali; tali campi sono importati separatamente dai gruppi.",
+    "Dati Senato corrente via open data per il 22/09/2026; i gruppi e le appartenenze sono esportati separatamente e non diventano partiti.",
+    "Sono importati i mandati di deputato/senatore e i presidenti di gruppo restituiti dal dataset ufficiale del Senato; altre cariche sono lasciate non assegnate finché non vengono importate da fonti specifiche.",
+    "La collocazione politica (estrema sinistra … estrema destra) è la classificazione sintetica del documento di specifica del 24/09/2026; per liste e coalizioni indica l’aggregazione e non sostituisce le singole componenti.",
+    "Le liste con più partiti o coalizioni restano relazioni elettorali: non diventano iscrizione a un singolo partito. Le iscrizioni individuali documentate derivano solo da incarichi di partito verificati.",
+    "Il partito attuale di un parlamentare viene solo da un collegamento dell’amministratore o da un’iscrizione documentata: la lista d’elezione 2022 è una relazione elettorale e il gruppo parlamentare non è un partito.",
+    "Il sondaggio iniziale è la Supermedia YouTrend/Agi del 24/09/2026 (dato reale: solo le forze presenti nella fonte, “Altri” come nella fonte); dalla prima settimana di gioco i sondaggi sono simulati."
+  ],
+  "twoPerThousandTotals": {
+    "declarationYear": 2025,
+    "validChoices": 2216663,
+    "amountEuro": 32584199
+  },
+  "specification": {
+    "title": "POLITICANDO 2026 — Database politici e partiti — 24/09/2026",
+    "asOf": "2026-09-24",
+    "sections": [
+      "§2 collocazione",
+      "§3 leadership",
+      "§4 nuove entità",
+      "§6 collegamento liste → partiti"
+    ]
+  },
+  "territorialSource": {
+    "name": "ISTAT — Elenco dei comuni italiani (aggiornamento al 21 febbraio 2026)",
+    "url": "https://www.istat.it/classificazione/codici-dei-comuni-delle-province-e-delle-regioni/",
+    "file": "https://www.istat.it/storage/codici-unita-amministrative/Elenco-comuni-italiani.xlsx",
+    "validFrom": "2026-02-21",
+    "verifiedAt": "2026-09-24",
+    "municipalities": 7894,
+    "territorialUnits": 110,
+    "note": "Codici e denominazioni ISTAT 2026, compreso il nuovo assetto territoriale della Sardegna in vigore dal 1° gennaio 2026."
+  },
+  "updates": [
+    {
+      "date": "2026-09-25",
+      "notes": [
+        "Sondaggio reale iniziale: Supermedia AGI/YouTrend del 24/09/2026",
+        "Iscrizioni documentate: Tajani, Deborah Bergamini, Benigni, Bonetti, Furlan, Barbara Floridia, Aurora Floridia, Lombardo",
+        "Fine mandato di Alberto Bagnai (15/09/2026)",
+        "Il partito attuale di un parlamentare non si deduce dalla lista d’elezione né dal gruppo"
+      ]
+    }
+  ],
+  "politiciansInOffice": 603,
+  "documents": {
+    "electoralGeography": {
+      "file": "electoral-geography.json",
+      "electionDate": "2022-09-25",
+      "collegi": {
+        "camera": 147,
+        "senato": 74
+      },
+      "plurinominali": {
+        "camera": 49,
+        "senato": 26
+      },
+      "comuni": 7894,
+      "verifiedAt": "2026-09-25"
+    },
+    "localElections": {
+      "file": "local-elections.json",
+      "comuni": 6926,
+      "regions": 20,
+      "verifiedAt": "2026-09-26"
+    }
+  }
+}

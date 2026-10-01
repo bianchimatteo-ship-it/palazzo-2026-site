@@ -1,0 +1,138 @@
+[
+  {
+    "id": "poll-supermedia-youtrend-agi-2026-09-24",
+    "kind": "supermedia",
+    "label": "Supermedia YouTrend/Agi",
+    "publishedAt": "2026-09-24",
+    "fieldworkFrom": "2026-09-10",
+    "fieldworkTo": "2026-09-23",
+    "method": "Media ponderata dei sondaggi nazionali sulle intenzioni di voto (per numerosità del campione, data di realizzazione e metodo di raccolta)",
+    "includedPolls": [
+      "Eumetra (17/09)",
+      "Ixè (10/09)",
+      "Noto (22/09)",
+      "Only Numbers (11, 15 e 18/09)",
+      "Piepoli (11 e 21/09)",
+      "SWG (14 e 21/09)",
+      "Tecnè (09 e 16/09)",
+      "YouTrend (24/09)"
+    ],
+    "results": [
+      {
+        "label": "Fratelli d’Italia",
+        "entityId": "party-registro-p1-2014-04-ir",
+        "share": 27,
+        "delta": null
+      },
+      {
+        "label": "Partito Democratico",
+        "entityId": "party-registro-p1-2015-29-ir",
+        "share": 20.8,
+        "delta": null
+      },
+      {
+        "label": "Movimento 5 Stelle",
+        "entityId": "party-registro-p1-2022-63-ir",
+        "share": 12.6,
+        "delta": null
+      },
+      {
+        "label": "Futuro Nazionale",
+        "entityId": "party-futuro-nazionale",
+        "share": 7.8,
+        "delta": null
+      },
+      {
+        "label": "Forza Italia",
+        "entityId": "party-registro-p1-2015-20-ir",
+        "share": 7.4,
+        "delta": null
+      },
+      {
+        "label": "Alleanza Verdi e Sinistra",
+        "entityId": "coalition-alleanza-verdi-sinistra",
+        "share": 6.5,
+        "delta": null
+      },
+      {
+        "label": "Lega",
+        "entityId": "party-registro-p1-2017-41-ir",
+        "share": 5.6,
+        "delta": null
+      },
+      {
+        "label": "Azione",
+        "entityId": "party-registro-p1-2019-51-ir",
+        "share": 3.4,
+        "delta": null
+      },
+      {
+        "label": "Italia Viva",
+        "entityId": "party-registro-p1-2019-52-ir",
+        "share": 2.2,
+        "delta": null
+      },
+      {
+        "label": "+Europa",
+        "entityId": "party-registro-p1-2018-47-ir",
+        "share": 1.5,
+        "delta": null
+      },
+      {
+        "label": "Noi Moderati",
+        "entityId": "party-registro-p1-2020-56-ir",
+        "share": 1.1,
+        "delta": null
+      },
+      {
+        "label": "Sud chiama Nord",
+        "entityId": "party-registro-p1-2022-67-ir",
+        "share": 1.1,
+        "delta": null
+      }
+    ],
+    "others": 3,
+    "othersNote": "Altri: 100 meno la somma delle forze indicate dalla fonte",
+    "coalitions": [
+      {
+        "label": "Centrodestra",
+        "share": 41.1
+      },
+      {
+        "label": "Centrosinistra",
+        "share": 28.8
+      },
+      {
+        "label": "M5S",
+        "share": 12.6
+      },
+      {
+        "label": "Terzo Polo",
+        "share": 6.7
+      },
+      {
+        "label": "Altri",
+        "share": 10.8
+      }
+    ],
+    "coalitionsNote": "Aggregazioni come riportate dalla fonte; le variazioni della fonte sono rispetto alle Politiche 2022",
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://www.agi.it/politica/news/2026-09-24/supermedia-agi-youtrend-fdi-39219483/",
+    "sourceName": "Agi — Supermedia AGI/YouTrend del 24 settembre 2026",
+    "verifiedAt": "2026-09-25",
+    "validFrom": "2026-09-24",
+    "validTo": null,
+    "secondarySources": [
+      {
+        "source": "real",
+        "verified": true,
+        "sourceUrl": "https://urbanpost.it/sondaggi-youtrend-supermedia-24-settembre/",
+        "sourceName": "UrbanPost — le cifre della Supermedia YouTrend del 24/09/2026",
+        "verifiedAt": "2026-09-25",
+        "validFrom": "2026-09-24",
+        "validTo": null
+      }
+    ]
+  }
+]

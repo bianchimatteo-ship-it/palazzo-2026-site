@@ -1,0 +1,64 @@
+import { mountApp } from './ui/app.js?v=20260926-6';
+import { refreshSharedArchive } from './data/repositories/admin-sync.js?v=20260926-6';
+import { store } from './core/store.js?v=20260926-6';
+import { loadRealCollections, loadRealDatabase, loadRealDocument, realDatabase, realDataUrls } from './data/repositories/real-data.js?v=20260926-6';
+import { PARTY_LINK_COLLECTIONS, governingEntityIds } from './data/repositories/party-links.js?v=20260926-6';
+import { referenceGovernmentSpec } from './data/repositories/government-reference.js?v=20260926-6';
+
+const BUILD = new URL(import.meta.url).searchParams.get('v');
+
+// GitHub Pages lets browsers reuse index.html for a few minutes after a deploy:
+// when the page online references a newer build, reload on a URL that bypasses that cache.
+async function newerBuildUrl() {
+  try {
+    const response = await fetch(new URL(`../index.html?build-check=${Date.now()}`, import.meta.url), { cache: 'no-store' });
+    const online = (await response.text()).match(/main\.js\?v=([^"'&]+)/)?.[1];
+    const url = new URL(location.href);
+    if (!online || !BUILD || online === BUILD || url.searchParams.get('v') === online) return null;
+    url.searchParams.set('v', online);
+    return url.href;
+  } catch {
+    return null;
+  }
+}
+
+// Offline play: a service worker keeps the game and the real data in the browser cache,
+// then warms the data files the game has not opened yet.
+function registerOfflineCache() {
+  if (!('serviceWorker' in navigator) || location.protocol === 'file:') return;
+  navigator.serviceWorker.register(new URL('../sw.js', import.meta.url)).then(() => navigator.serviceWorker.ready).then(registration => {
+    // The page itself and every module and stylesheet already loaded, then the real data files.
+    const loaded = performance.getEntriesByType('resource').map(entry => entry.name).filter(name => new URL(name).origin === location.origin);
+    const page = new URL(location.href); page.hash = '';
+    registration.active?.postMessage({ type: 'warm', urls: [page.href, ...loaded, ...realDataUrls()] });
+  }).catch(error => console.warn('Cache offline non disponibile:', error));
+}
+
+const root = document.querySelector('#app');
+const newer = await newerBuildUrl();
+if (newer) location.replace(newer);
+else {
+  try {
+    // The owner's shared corrections and logos come first, so every collection is loaded with them (cached copy offline).
+    await refreshSharedArchive().catch(() => false);
+    await loadRealDatabase();
+    await loadRealCollections(['parties','politicalMovements','coalitions','twoPerThousand','realPolls']);
+    // The simulated world starts from the latest real poll (Supermedia), the documented collocazione of every force
+    // and, once the government data is loaded, the parties of the real majority in office.
+    const reference = (governingIds = []) => ({ twoPerThousand: realDatabase.twoPerThousand ?? [], parties: realDatabase.parties ?? [], movements: realDatabase.politicalMovements ?? [], coalitions: realDatabase.coalitions ?? [], polls: realDatabase.realPolls ?? [], governingIds, startDate: realDatabase.manifest?.snapshotDate ?? null });
+    store.setRealReference(reference());
+    mountApp(root, store);
+    registerOfflineCache();
+    // The Government in office at the start (derived from the real Government and the groups of its members), the
+    // real majority and the verified groups of the Chambers reach the simulation once the institutional data are loaded.
+    loadRealCollections(['government','politicians','politicalFigures','parliamentaryGroups',...PARTY_LINK_COLLECTIONS]).then(() => { store.setRealReference(reference(governingEntityIds())); store.setReferenceGovernment(referenceGovernmentSpec()); store.setParliamentaryGroups(realDatabase.parliamentaryGroups ?? []); }).catch(() => {});
+    // The real electoral map of 2022 (collegi, circoscrizioni, seats and results): the general and European elections
+    // of the game are counted on it. Until it arrives (or offline without cache) the vote uses a simplified count.
+    loadRealDocument('electoralGeography').then(geography => store.setElectoralGeography(geography)).catch(error => console.warn('Mappa elettorale 2022 non disponibile:', error));
+    // The real calendar of local and regional votes: every comune and region votes in its own year.
+    loadRealDocument('localElections').then(doc => store.setLocalCalendar(doc)).catch(error => console.warn('Calendario delle elezioni locali non disponibile:', error));
+  } catch (error) {
+    console.error('Avvio di POLITICANDO 2026 non riuscito:', error);
+    root.innerHTML = `<main role="alert" style="max-width:760px;margin:10vh auto;padding:32px;font:16px/1.6 system-ui,sans-serif;color:#22312e"><h1>POLITICANDO 2026</h1><p>La pagina è stata raggiunta, ma non è stato possibile caricare i dati del gioco.</p><p>${String(error?.message || 'Errore di caricamento.')}</p><p>Ricarica la pagina tra poco. Se il problema continua, comunica questo messaggio.</p></main>`;
+  }
+}

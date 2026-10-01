@@ -58,5 +58,10 @@
     "import:istat": "node scripts/import-istat-comuni.mjs",
     "check:poll-presence": "node scripts/check-poll-presence.mjs",
     "check:admin": "node scripts/check-admin.mjs"
+  },
+  "dependencies": {
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2"
   }
 }
