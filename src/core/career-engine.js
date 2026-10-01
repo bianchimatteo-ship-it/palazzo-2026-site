@@ -202,7 +202,7 @@ export function normalizeGameState(game) {
   const revived = game.status === 'ended' ? { status: 'active', endedAt: null, endReason: null, setbacks: [...(game.setbacks ?? []), { week, date: game.endedAt ?? date, reason: game.endReason ?? 'Crisi di reputazione', source: SIM }] } : {};
   return alignNationalCalendar({
     status: 'active', prep: 0, pastParties: [], inbox: [], log: [], objectives: {}, flags: {}, lastReport: null, lastEventId: null, fallenWeeks: 0, place: {},
-    contacts: [], promises: [], pending: [], legislature: { ...REAL_LEGISLATURE }, difficulty: 'normale', setbacks: [],
+    contacts: [], promises: [], pending: [], eventRecent: [], legislature: { ...REAL_LEGISLATURE }, difficulty: 'normale', setbacks: [],
     ...game, ...revived, party,
     finance: normalizeFinance(game.finance, { week, date, funds: game.resources?.funds ?? 0 }),
     week: { ap: WEEKLY_ACTION_POINTS, maxAp: WEEKLY_ACTION_POINTS, categoriesUsed: [], ...(game.week ?? {}) },
@@ -516,6 +516,9 @@ function raiseEvent(ctx, template, params, specials, lines, urgent = false) {
   if (template.category) item.category = template.category;
   if (urgent || template.category === 'emergenza') game.inbox.unshift(item); else game.inbox.push(item);
   game.eventHistory = { ...(game.eventHistory ?? {}), [template.id]: game.week.index };
+  // Keep a short semantic history in addition to per-template cooldowns: different
+  // events in the same category should not crowd out the rest of the story.
+  game.eventRecent = [{ id: template.id, category: template.category ?? null, week: game.week.index }, ...(game.eventRecent ?? [])].slice(0, 8);
   game.lastEventId = template.id;
   // Some events change the world as soon as they happen, whatever the player decides.
   if (template.onRaise?.shock) specials.push({ type: 'society-shock', shock: Object.fromEntries(Object.entries(template.onRaise.shock).map(([key, value]) => [key, fillText(value, params)])) });
@@ -545,6 +548,8 @@ function fillInbox(ctx, env, lines, specials = []) {
   game.eventQueue = (game.eventQueue ?? []).filter(entry => entry.dueWeek > game.week.index);
   // Procedural draw: conditions, cooldowns, rarity, exclusive categories and the situation's own weight.
   const history = game.eventHistory ?? {};
+  const recentCategories = new Map();
+  for (const entry of game.eventRecent ?? []) if (entry.category) recentCategories.set(entry.category, (recentCategories.get(entry.category) ?? 0) + 1);
   const openExclusive = new Set(game.inbox.map(item => CAREER_EVENTS.find(entry => entry.id === item.templateId)?.exclusive).filter(Boolean));
   const eligible = CAREER_EVENTS.filter(item => item.weight > 0 && item.id !== game.lastEventId && meets(item.when, sit) && !(item.id === 'congresso' && !params.currentB)
     && game.week.index - (history[item.id] ?? -999) >= (item.cooldown ?? 8)
@@ -552,7 +557,13 @@ function fillInbox(ctx, env, lines, specials = []) {
     && !(item.exclusive && openExclusive.has(item.exclusive))
     && !game.inbox.some(entry => entry.templateId === item.id));
   const setting = rules(game);
-  const weighted = eligible.map(item => ({ item, weight: item.weight * (typeof item.boost === 'function' ? item.boost(sit) : 1) * (item.rare ? 0.5 : 1) * (HARD_CATEGORIES.includes(item.category) ? setting.badEvents : item.positive ? setting.goodEvents : 1) })).filter(entry => entry.weight > 0);
+  const weighted = eligible.map(item => ({ item, weight: item.weight
+    * (typeof item.boost === 'function' ? item.boost(sit) : 1)
+    * (item.rare ? 0.5 : 1)
+    * (HARD_CATEGORIES.includes(item.category) ? setting.badEvents : item.positive ? setting.goodEvents : 1)
+    // A recent category remains possible, but loses priority so the story keeps changing.
+    * (recentCategories.has(item.category) ? (recentCategories.get(item.category) >= 2 ? 0.18 : 0.42) : 1)
+  })).filter(entry => entry.weight > 0);
   // Tense weeks bring more events: crises, campaigns, a government in trouble.
   const tension = (sit.signals.stability ?? 60) < 35 || sit.campaignActive || sit.signals.euStatus === 'procedura' ? 0.2 : 0;
   const rounds = draw(game) < 0.25 + tension ? 2 : 1;
