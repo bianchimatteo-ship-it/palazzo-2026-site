@@ -106,6 +106,13 @@ for (const { person, reason } of picked) {
 }
 const synced = contacts.syncContacts([], picked, { rand });
 assert.ok(synced.every(item => item.source === 'simulation' && item.relation >= 0 && item.relation <= 100));
+assert.ok(synced.every(item => item.person.source === 'real' && item.profile?.objective && item.profile?.interest && Number.isFinite(item.profile?.loyalty)), 'Ogni contatto reale ha un profilo AI simulato separato.');
+assert.ok(new Set(synced.map(item => item.profile.objective)).size > 1, 'I personaggi hanno obiettivi diversi.');
+const rivalMemory = contacts.changeContact(synced, synced[0].person.id, -12, 'Ha bocciato la mia proposta', 4);
+assert.equal(rivalMemory.memory.length, 1, 'La reazione del personaggio resta nella sua memoria.');
+synced[0].relation = 20;
+const initiative = contacts.advanceContacts(synced, { rand: () => 0.01, openLaw: { id: 'law-ai' }, seat: true, region: 'Toscana' });
+assert.ok(initiative?.autonomous && initiative.contact.profile, 'Un contatto reagisce autonomamente alla situazione e alla memoria.');
 
 // 5. Leggi reali: collezione verificata e area di gioco solo come interpretazione.
 assert.ok(laws.length > 300 && laws.every(law => law.source === 'real' && law.verified === true && law.sourceUrl.startsWith('https://www.senato.it/')));

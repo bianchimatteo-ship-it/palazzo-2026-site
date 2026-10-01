@@ -429,7 +429,27 @@ export const CAREER_EVENTS = Object.freeze([
     { id: 'sostieni', label: 'Sostieni la candidatura', cost: { capital: 3 }, effects: { stats: { notoriety: 3 } }, later: { weeks: 20, outcomes: [
       { chance: 0.55, label: 'Candidatura vinta: cantieri e turisti', effects: { stats: { popularity: 3, reputation: 2 } } },
       { chance: 0.45, label: 'Candidatura persa tra polemiche sui costi', effects: { stats: { reputation: -2 } } }] } },
-    { id: 'prudenza', label: 'Chiedi prima un piano dei costi', effects: { stats: { reputation: 1 } } }] }
+    { id: 'prudenza', label: 'Chiedi prima un piano dei costi', effects: { stats: { reputation: 1 } } }] },
+  { id: 'patto-territoriale', category: 'territorio', weight: 1.2, cooldown: 30, when: sit => sit.role.local || sit.role.regional, title: 'I sindaci chiedono un patto per il territorio', body: 'Comuni, associazioni e imprese chiedono una linea comune su servizi, lavoro e infrastrutture.', defaultChoice: 'tavolo', choices: [
+    { id: 'tavolo', label: 'Apri un tavolo permanente', cost: { ap: 1, capital: 2 }, effects: { relations: { civic: 5, business: 3 }, stats: { reputation: 1.5 }, permanent: { territorioImpegno: 1 } }, later: { weeks: 12, outcomes: [
+      { chance: 0.6, label: 'Il patto produce un progetto condiviso', effects: { stats: { popularity: 2 }, relations: { civic: 3 } }, memory: { kind: 'promessa-mantenuta', text: 'Patto territoriale mantenuto' } },
+      { chance: 0.4, label: 'I partner litigano sulla ripartizione dei fondi', effects: { stats: { reputation: -1 }, relations: { civic: -3 } } }] } },
+    { id: 'solo-regione', label: 'Porta tutto in Regione', effects: { stats: { influence: 2 }, relations: { civic: -1 } }, memory: { kind: 'decisione', text: 'Patto territoriale centralizzato in Regione' } },
+    { id: 'rinvia', label: 'Rinvia dopo le elezioni', effects: { stats: { popularity: -1 } }, later: { weeks: 8, chance: 0.6, hint: 'I sindaci potrebbero organizzarsi senza di te', label: 'Nasce un coordinamento civico contro il rinvio', effects: { relations: { civic: -4 }, stats: { popularity: -2 } } } }] },
+  { id: 'inchiesta-social', category: 'media', weight: 1, cooldown: 24, when: sit => sit.stats.notoriety >= 30, title: 'Un dossier sui social divide la tua maggioranza', body: 'Un video montato da un avversario riapre una vecchia polemica: la risposta può chiarire o alimentare la storia.', defaultChoice: 'spiega', choices: [
+    { id: 'spiega', label: 'Pubblica fonti e cronologia', cost: { ap: 1 }, effects: { stats: { reputation: 1 }, relations: { media: 2 }, permanent: { mediaTrasparenza: 1 } }, later: { weeks: 6, chance: 0.65, hint: 'La trasparenza può chiudere la polemica', label: 'Il dossier perde forza dopo le verifiche', effects: { stats: { reputation: 1.5 } } } },
+    { id: 'attacca', label: 'Attacca chi ha diffuso il video', effects: { stats: { notoriety: 3, reputation: -1 }, relations: { media: -3 } }, memory: { kind: 'scandalo', text: 'Scontro social con gli avversari' } },
+    { id: 'silenzio', label: 'Non amplificare la polemica', effects: { stats: { notoriety: -1 } }, later: { weeks: 4, chance: 0.45, hint: 'La polemica potrebbe tornare', label: 'Il video torna durante un’intervista', effects: { stats: { reputation: -2 } } } }] },
+  { id: 'frattura-alleanza', category: 'partito', weight: 1, cooldown: 36, when: sit => sit.party && sit.signals.hostileCurrents >= 1, exclusive: 'leadership', title: 'Una corrente minaccia di rompere', body: 'Una corrente chiede candidati, linea e garanzie: ignorarla può aprire una crisi di leadership.', defaultChoice: 'mediazione', choices: [
+    { id: 'mediazione', label: 'Concedi una mediazione pubblica', cost: { capital: 3 }, effects: { org: { cohesion: 5 }, party: { support: 2 }, relations: { otherCurrents: 4 }, permanent: { alleanzaInterna: 1 } }, later: { weeks: 10, outcomes: [
+      { chance: 0.5, label: 'La corrente rientra nella linea', effects: { org: { cohesion: 4 }, party: { support: 2 } } },
+      { chance: 0.5, label: 'La corrente usa la concessione per chiedere di più', effects: { org: { cohesion: -3 }, party: { support: -2 } } }] } },
+    { id: 'disciplina', label: 'Impone la disciplina', effects: { org: { discipline: 8, cohesion: -5 }, party: { support: -3 }, memory: { kind: 'epurazione', text: 'Disciplina imposta alla corrente dissidente' } } },
+    { id: 'lascia', label: 'Lascia che rompano', effects: { org: { cohesion: -8 }, party: { support: -4 } }, followUp: { id: 'sfiducia-interna', weeks: 3, chance: 0.7 } }] },
+  { id: 'fiducia-territorio', category: 'parlamento', weight: 0.8, cooldown: 40, when: sit => sit.seat && sit.signals.memoryPressure >= 2, title: 'Il gruppo chiede conto delle promesse', body: 'Una vecchia decisione torna in Aula: alleati e territori vogliono sapere se manterrai la parola.', defaultChoice: 'rendiconto', choices: [
+    { id: 'rendiconto', label: 'Presenta un rendiconto pubblico', cost: { ap: 1 }, effects: { stats: { reputation: 1.5 }, group: { support: 2 }, permanent: { rendiconti: 1 } }, memory: { kind: 'promessa-mantenuta', text: 'Rendiconto pubblico delle promesse' } },
+    { id: 'nuova-promessa', label: 'Annuncia un nuovo impegno', effects: { stats: { popularity: 1 } }, later: { weeks: 12, chance: 0.5, hint: 'La nuova promessa sarà verificata', label: 'Il gruppo presenta il conto della nuova promessa', effects: { group: { support: -5 }, stats: { reputation: -2 } }, memory: { kind: 'promessa-tradita', text: 'Nuova promessa rimasta senza seguito' } } },
+    { id: 'rinvia', label: 'Rinvia il rendiconto', effects: { group: { support: -3 }, stats: { reputation: -1 } } }] }
 ]);
 
 // Forced events are raised by the situation itself rather than drawn at random.

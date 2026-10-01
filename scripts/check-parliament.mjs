@@ -300,7 +300,7 @@ assert.equal(state.campaign.result.personalMandate, true);
 assert.equal(state.career.initialLevel, 'regionale', 'Il livello iniziale resta quello scelto nel wizard.');
 assert.equal(state.career.currentLevel, 'senatore');
 assert.equal(state.parliament.player.chamber, 'senato');
-assert.equal(state.parliament.player.groupId, null);
+assert.ok(state.parliament.player.groupId === null || state.parliament.player.groupId === 'leg20-senato-misto-indipendenti', 'Un mandato conquistato parte senza gruppo o dal Misto simulato, in attesa della scelta del gruppo.');
 assert.ok(renderParliamentPage('parlamento', state).includes('Scegli il gruppo di riferimento'));
 store.joinParliamentaryGroup('senato-xix-gruppo-71');
 assert.ok(canManage(store.getState().parliament));

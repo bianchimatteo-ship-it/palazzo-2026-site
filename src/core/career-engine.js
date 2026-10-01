@@ -58,6 +58,7 @@ export function situation(ctx, env = {}) {
   const titles = (env.offices ?? []).filter(item => !item.endDate && item.politicianId && item.politicianId === env.player?.id).map(item => String(item.title ?? '').toLocaleLowerCase('it-IT'));
   const region = ctx.game.place?.region ?? null;
   const share = Number.isFinite(env.pollShare) ? env.pollShare : null;
+  const remembered = memoryBalance(ctx.game, { region });
   return {
     role: { level, local: level === 'comunale' || titles.some(title => /sindac|consiglier[ea] comunale|assessor/.test(title)), mayor: titles.some(title => title.includes('sindac')), regional: level === 'regionale' || titles.some(title => /regional/.test(title)), parliamentarian: seat },
     macroArea: macroAreaOf(region), south: ['sud', 'isole'].includes(macroAreaOf(region)), north: ['nord-ovest', 'nord-est'].includes(macroAreaOf(region)),
@@ -72,7 +73,8 @@ export function situation(ctx, env = {}) {
     premier: governing && parliament?.government?.primeMinister === 'player',
     campaignActive: env.campaign?.status === 'active',
     // What the rest of the world looks like this week: events depend on it.
-    signals: { crime: 45, spread: 130, euStatus: 'regolare', cohesion: ctx.game.party?.org?.cohesion ?? 60, hostileCurrents: (ctx.game.party?.currents ?? []).filter(item => (item.value ?? item.relation ?? 50) < 35).length, ministers: 0, majorityMood: 60, ...(env.signals ?? {}) }
+    memory: remembered,
+    signals: { crime: 45, spread: 130, euStatus: 'regolare', cohesion: ctx.game.party?.org?.cohesion ?? 60, hostileCurrents: (ctx.game.party?.currents ?? []).filter(item => (item.value ?? item.relation ?? 50) < 35).length, ministers: 0, majorityMood: 60, memoryPressure: remembered.bad, ...(env.signals ?? {}) }
   };
 }
 // The party secretary decides the line, alliances, candidacies and organs: the founder, or whoever wins a congress.
@@ -303,6 +305,12 @@ function applyEffects(ctx, effects = {}, targetId = null, lines = [], params = {
   if (effects.funds) { book(game, effects.funds, effects.funds > 0 ? 'donazioni' : 'altro', params.fundsLabel ?? null, params.date ?? null); lines.push(`Fondi ${effects.funds > 0 ? '+' : '−'}${Math.abs(effects.funds)} €`); }
   if (effects.capital) { game.resources.politicalCapital = clamp(game.resources.politicalCapital + effects.capital); lines.push(`Capitale politico ${signed(effects.capital)}`); }
   if (effects.prep) { game.prep = clamp(game.prep + effects.prep); lines.push(`Preparazione elettorale ${signed(effects.prep)}`); }
+  for (const [key, delta] of Object.entries(effects.permanent ?? {})) {
+    if (!Number.isFinite(delta) || !delta) continue;
+    game.permanentEffects ??= {};
+    game.permanentEffects[key] = round2((game.permanentEffects[key] ?? 0) + delta);
+    lines.push(`${key} permanente ${signed(delta)}`);
+  }
   for (const [key, delta] of Object.entries(effects.relations ?? {})) {
     if (key === 'otherCurrents') { for (const current of game.party?.currents ?? []) if (current.id !== (params.currentAId && effects.relations.currentA ? params.currentAId : targetId)) changeRelation(game, current.id, delta); continue; }
     const item = changeRelation(game, key === 'target' ? targetId : key === 'currentA' ? params.currentAId : key, delta);
@@ -503,7 +511,8 @@ function eventParamsFor(template, ctx, env) {
     const pool = draw(ctx.game) < 0.6 ? sorted.slice(0, 6) : sorted;
     params.region2 = pool[Math.floor(draw(ctx.game) * pool.length)]?.name ?? params.region;
   } else params.region2 = params.region;
-  params.memory = env.signals?.memoryRecall ?? '';
+  const memory = memoryBalance(ctx.game, { region: ctx.game.place?.region ?? null });
+  params.memory = env.signals?.memoryRecall ?? memory.highlights[0]?.text ?? '';
   params.lawTitle = env.signals?.lawTitle ?? 'una proposta';
   params.lawId = env.signals?.lawId ?? null;
   return params;
@@ -563,6 +572,7 @@ function fillInbox(ctx, env, lines, specials = []) {
     * (HARD_CATEGORIES.includes(item.category) ? setting.badEvents : item.positive ? setting.goodEvents : 1)
     // A recent category remains possible, but loses priority so the story keeps changing.
     * (recentCategories.has(item.category) ? (recentCategories.get(item.category) >= 2 ? 0.18 : 0.42) : 1)
+    * (sit.signals.memoryPressure > 2 && ['media', 'partito', 'parlamento'].includes(item.category) ? 1.45 : 1)
   })).filter(entry => entry.weight > 0);
   // Tense weeks bring more events: crises, campaigns, a government in trouble.
   const tension = (sit.signals.stability ?? 60) < 35 || sit.campaignActive || sit.signals.euStatus === 'procedura' ? 0.2 : 0;
