@@ -689,12 +689,15 @@ function userPartyRecord(s, { id, label, abbreviation = null, fromPartyId = null
     logoUrl: null, logoAsset: null, logoSource: null, logoVerified: null, logoAlt: `Logo di ${label}`
   };
 }
-// Seats follow the split: the group of the party gives a share of its seats to a new group (in both Chambers); the new
-// group stays in the majority or goes to the opposition by a fixed draw on the ids, never by a fixed pattern.
+// Seats follow the split: the group of the party gives a share of its seats to a new group (in both Chambers). The new
+// force is in the majority or in the opposition as a whole (one draw on its id, never a fixed pattern); if leaving the
+// majority would take a Chamber's majority away from the Government in office, it stays as external support.
 function splitParliamentGroups(parliament, { fromPartyId, newPartyId, label, seatShare, date }) {
   if (!parliament?.chambers || !fromPartyId) return parliament;
   let next = parliament;
   const legislature = parliament.legislature?.number ?? 19;
+  const joinsMajority = hashText(`${newPartyId}|maggioranza`) % 100 < 55;
+  const outside = [];
   for (const chamber of ['camera', 'senato']) {
     const groups = next.chambers[chamber]?.groups ?? [];
     const source = groups.filter(group => group.partyId === fromPartyId).sort((a, b) => b.simulatedSeats - a.simulatedSeats)[0];
@@ -705,7 +708,20 @@ function splitParliamentGroups(parliament, { fromPartyId, newPartyId, label, sea
     const created = { groupId, officialName: label, chamber, simulatedSeats: moved, partyId: newPartyId, independent: false, component: false, position: null, axis: source.axis ?? 0, color: null, legislature, simulated: true, reference: { memberCount: moved, leaderPoliticianId: null, countAsOf: date, source: DATA_SOURCES.SIMULATION, verified: false, sourceUrl: null, sourceName: 'Composizione simulata dopo la scissione' }, source: DATA_SOURCES.SIMULATION };
     next = { ...next, chambers: { ...next.chambers, [chamber]: { ...next.chambers[chamber], groups: [...groups.map(group => group.groupId === source.groupId ? { ...group, simulatedSeats: group.simulatedSeats - moved } : group), created] } }, relations: { ...next.relations, [groupId]: { value: 55, source: DATA_SOURCES.SIMULATION } } };
     const government = next.government;
-    if (government?.coalitionGroupIds?.includes(source.groupId) && hashText(`${newPartyId}|${chamber}|maggioranza`) % 100 < 55) next = { ...next, government: { ...government, coalitionGroupIds: [...government.coalitionGroupIds, groupId] } };
+    if (government?.coalitionGroupIds?.includes(source.groupId)) {
+      if (joinsMajority) next = { ...next, government: { ...government, coalitionGroupIds: [...government.coalitionGroupIds, groupId] } };
+      else outside.push(groupId);
+    }
+  }
+  const government = next.government;
+  if (outside.length && government && government.status !== 'fallen') {
+    const backing = new Set([...(government.coalitionGroupIds ?? []), ...(government.supportingGroupIds ?? [])]);
+    const holds = ['camera', 'senato'].every(chamber => {
+      const groups = next.chambers[chamber]?.groups ?? [];
+      const total = groups.reduce((sum, group) => sum + (group.simulatedSeats ?? 0), 0);
+      return !total || groups.filter(group => backing.has(group.groupId)).reduce((sum, group) => sum + (group.simulatedSeats ?? 0), 0) >= Math.floor(total / 2) + 1;
+    });
+    if (!holds) next = { ...next, government: { ...government, supportingGroupIds: [...(government.supportingGroupIds ?? []), ...outside] } };
   }
   return next;
 }

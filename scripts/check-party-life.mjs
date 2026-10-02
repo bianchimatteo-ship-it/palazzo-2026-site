@@ -442,6 +442,40 @@ const runC = playDays('giorni-beta', { founder: true });
   assert.deepEqual(['camera', 'senato'].map(chamber => after.parliament.chambers[chamber].groups.reduce((sum, group) => sum + group.simulatedSeats, 0)), totals, 'La scissione sposta i seggi senza crearne');
   assert.ok(after.parliament.chambers.camera.groups.some(group => group.simulated && /scissione/i.test(group.reference?.sourceName ?? '')) || after.parliament.chambers.senato.groups.some(group => group.simulated && /scissione/i.test(group.reference?.sourceName ?? '')), 'Nasce un gruppo parlamentare della scissione');
   assert.ok(checkInvariants(after, run2.context).ok, 'Stato coerente dopo la scissione');
+  // A split never takes the Government's majority away, and the new force is on the same side in both Chambers: the
+  // majority is brought to its narrowest margin (seats go from an ally to the opposition) before the area leaves.
+  const sides = new Set();
+  for (let index = 0; index < 8 && !(sides.has('coalizione') && sides.has('sostegno')); index++) {
+    const run4 = await startCareer({ seed: `vita-maggioranza-${index}`, level: 'deputato' });
+    const decide4 = seeded(`maggioranza|${index}`);
+    for (let week = 0; week < 3; week++) playWeek({ ...run4, decide: decide4 });
+    const s4 = run4.store.getState();
+    const government = s4.parliament.government;
+    const ownGroupParty = s4.world.playerPartyId;
+    const backingOf = state => new Set([...state.parliament.government.coalitionGroupIds, ...(state.parliament.government.supportingGroupIds ?? [])]);
+    for (const chamber of ['camera', 'senato']) {
+      const groups = s4.parliament.chambers[chamber].groups;
+      const backing = backingOf(s4);
+      const total = groups.reduce((sum, group) => sum + group.simulatedSeats, 0);
+      const surplus = Math.max(0, groups.filter(group => backing.has(group.groupId)).reduce((sum, group) => sum + group.simulatedSeats, 0) - (Math.floor(total / 2) + 1));
+      const donor = groups.filter(group => backing.has(group.groupId) && group.partyId !== ownGroupParty).sort((a, b) => b.simulatedSeats - a.simulatedSeats)[0];
+      const taker = groups.filter(group => !backing.has(group.groupId)).sort((a, b) => b.simulatedSeats - a.simulatedSeats)[0];
+      donor.simulatedSeats -= surplus; taker.simulatedSeats += surplus;
+    }
+    assert.ok(government.status === 'active' && checkInvariants(s4, run4.context).ok, 'Prima della scissione il governo ha la maggioranza');
+    const leaver4 = [...s4.game.party.currents].sort((x, y) => y.strength - x.strength)[index % s4.game.party.currents.length];
+    s4.game = addSituationEvent(s4.game, 'scissione-subita', { dedupe: 'scissione-maggioranza', currentId: leaver4.id, current: leaver4.label, title: `${leaver4.label} lascia il partito`, body: 'Prova' }, true);
+    run4.store.resolveAgendaItem(s4.game.inbox.find(entry => entry.templateId === 'scissione-subita').id, 'resta');
+    const after4 = run4.store.getState();
+    const created = ['camera', 'senato'].map(chamber => after4.parliament.chambers[chamber].groups.find(group => group.simulated && /scissione/i.test(group.reference?.sourceName ?? '')));
+    assert.ok(created.every(Boolean), 'La scissione crea un gruppo in entrambe le Camere');
+    const sideOf = group => !backingOf(after4).has(group.groupId) ? 'opposizione' : after4.parliament.government.coalitionGroupIds.includes(group.groupId) ? 'coalizione' : 'sostegno';
+    assert.equal(sideOf(created[0]), sideOf(created[1]), 'Il nuovo gruppo sta dalla stessa parte alla Camera e al Senato');
+    const holds = checkInvariants(after4, run4.context);
+    assert.ok(holds.ok, `La maggioranza regge dopo la scissione: ${holds.issues.slice(0, 3).map(item => `[${item.code}] ${item.message}`).join('; ')}`);
+    sides.add(sideOf(created[0]));
+  }
+  assert.ok(sides.has('coalizione') && sides.has('sostegno'), 'Il nuovo gruppo resta in coalizione o, se uscendo farebbe cadere la maggioranza, dà un sostegno esterno');
   // A merger and a new name in the store, for the founder.
   const run3 = await startCareer({ seed: 'vita-fusione', level: 'comunale' });
   const s3 = run3.store.getState();
