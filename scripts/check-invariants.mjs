@@ -97,4 +97,23 @@ if (government && government.coalitionGroupIds.length) {
   assert.equal(record.absent, 1, 'Fiducia: l’assenza del giocatore è registrata.');
 }
 
+// ---------- 8. texts show dates through labels, never through the keys the state reads as dates ----------
+// A formatted date («21 aprile 2052») stored in a key like deadline or until would be read as a broken date (found by a
+// 30-year run): the texts of the events use label keys for what they show.
+{
+  const { DATE_KEY } = await import('../src/core/invariants.js');
+  const { CAREER_EVENTS, SITUATION_EVENTS } = await import('../src/data/simulation/career-rules.js');
+  const { DAILY_EVENTS } = await import('../src/data/simulation/daily-events.js');
+  const { LIFE_SITUATIONS } = await import('../src/data/simulation/party-life-rules.js');
+  const catalogue = [...CAREER_EVENTS, ...DAILY_EVENTS, ...Object.values(SITUATION_EVENTS), ...Object.values(LIFE_SITUATIONS)];
+  const offenders = new Set();
+  const scan = value => {
+    if (typeof value === 'string') { for (const match of value.matchAll(/\{(\w+)\}/g)) if (DATE_KEY.test(match[1])) offenders.add(match[1]); }
+    else if (Array.isArray(value)) value.forEach(scan);
+    else if (value && typeof value === 'object') Object.values(value).forEach(scan);
+  };
+  catalogue.forEach(scan);
+  assert.deepEqual([...offenders], [], `Testi di eventi con segnaposto che l’invariante legge come date: ${[...offenders].join(', ')}`);
+}
+
 console.log('Invarianti verificate: 4 livelli di partenza puliti all’avvio e dopo mesi di gioco; riconosciuti NaN/Infinity, undefined, valori impossibili, date non valide, ID duplicati, riferimenti rotti (partito, gruppo, politico, incarico, legge, elezione), seggi Camera/Senato, voti (sì + no + astenuti + assenti) ed esiti, partiti ↔ gruppi, sondaggi, governo ↔ maggioranza e ministri, elezioni bloccate o senza seguito, campagne, leggi e iter bloccati, carriera e incarichi del giocatore; l’assenza del giocatore al voto è contata.');

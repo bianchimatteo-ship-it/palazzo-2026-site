@@ -1066,7 +1066,7 @@ function raiseSituations(s, report) {
     if (month >= BUDGET_SESSION.opensMonth && (government.budgetYear ?? 0) < target && !pendingBudget) raise('sessione-bilancio', { year: String(target) }, 6);
     for (const [groupId, partner] of Object.entries(government.partners ?? {})) {
       if (!partner.demand || game.inbox.some(item => item.templateId === 'richiesta-alleato' && item.params?.groupId === groupId)) continue;
-      game = addSituationEvent(game, 'richiesta-alleato', { groupId, group: parliamentGroupName(s.parliament, groupId), demand: partner.demand.label, deadline: formatDate(partner.demand.deadline), demandType: partner.demand.type, portfolio: partner.demand.portfolio ?? null, area: partner.demand.area ?? null, dedupe: `${groupId}|${partner.demand.since}` });
+      game = addSituationEvent(game, 'richiesta-alleato', { groupId, group: parliamentGroupName(s.parliament, groupId), demand: partner.demand.label, deadlineLabel: formatDate(partner.demand.deadline), demandType: partner.demand.type, portfolio: partner.demand.portfolio ?? null, area: partner.demand.area ?? null, dedupe: `${groupId}|${partner.demand.since}` });
       raised.push(`richiesta-${groupId}`);
     }
   }
@@ -1838,7 +1838,7 @@ function tickNational(s, date) {
       national = nationalHistory({ ...national, campaign: { electionId: politiche.id, electionDate: politiche.electionDate, openedAt: date, filingDate: politiche.windowClosesAt, coalitions, playerChoice: null, line: null, lineSince: null, fixed: false, requests: [], source: DATA_SOURCES.SIMULATION } }, date, 'campagna', `Si aprono le candidature per le politiche del ${formatDate(politiche.electionDate)}: ${coalitions.map(item => `${item.label} (${item.partyIds.map(labelOf).join(', ')})`).join('; ')}.`);
       // The secretary decides with whom the party runs, until the lists are filed.
       const option = coalitionOptions(next.world, coalitions).find(item => item.compatible);
-      if (secretary && forces.some(force => force.isPlayer) && option) next = { ...next, game: addSituationEvent(next.game, 'coalizioni-politiche', { coalition: option.label, coalitionId: option.id, chance: `${Math.round(option.chance * 100)}%`, deadline: formatDate(politiche.windowClosesAt), dedupe: politiche.id }, true, { holdUntil: politiche.windowClosesAt }) };
+      if (secretary && forces.some(force => force.isPlayer) && option) next = { ...next, game: addSituationEvent(next.game, 'coalizioni-politiche', { coalition: option.label, coalitionId: option.id, chance: `${Math.round(option.chance * 100)}%`, deadlineLabel: formatDate(politiche.windowClosesAt), dedupe: politiche.id }, true, { holdUntil: politiche.windowClosesAt }) };
       next = { ...next, world: addWorldEffects(next.world, [], date, { title: 'Al via la campagna per le politiche', body: `Si vota il ${formatDate(politiche.electionDate)}. In corsa ${coalitions.map(item => item.label).join(', ')}${forces.some(force => !coalitions.some(item => item.partyIds.includes(force.id))) ? ' e le liste che corrono da sole' : ''}.`, icon: 'ballot' }) };
     } else if (!national.campaign.fixed) {
       const fixed = date >= national.campaign.filingDate;

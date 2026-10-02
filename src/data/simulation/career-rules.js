@@ -457,7 +457,7 @@ export const SITUATION_EVENTS = Object.freeze({
   'sessione-bilancio': { id: 'sessione-bilancio', title: 'Si apre la sessione di bilancio per il {year}', body: 'Entro il 31 dicembre il Parlamento deve approvare la legge di bilancio: senza, si va all’esercizio provvisorio con spesa congelata e mercati nervosi.', defaultChoice: 'rinvia', choices: [
     { id: 'prepara', label: 'Prepara la manovra (sezione Governo)', special: 'budget-open' },
     { id: 'rinvia', label: 'Rinvia di qualche settimana', effects: { government: { stability: -1 } } }] },
-  'richiesta-alleato': { id: 'richiesta-alleato', title: '{group} chiede {demand}', body: 'Un alleato della maggioranza mette sul tavolo una richiesta entro il {deadline}: se la ignori, rimetterà in discussione il sostegno al governo (comportamento simulato).', defaultChoice: 'attendi', choices: [
+  'richiesta-alleato': { id: 'richiesta-alleato', title: '{group} chiede {demand}', body: 'Un alleato della maggioranza mette sul tavolo una richiesta entro il {deadlineLabel}: se la ignori, rimetterà in discussione il sostegno al governo (comportamento simulato).', defaultChoice: 'attendi', choices: [
     { id: 'accetta', label: 'Accetta la richiesta', effects: { stats: { influence: -0.5 } }, special: 'partner-accept' },
     { id: 'tratta', label: 'Tratta: più tempo in cambio di attenzione', cost: { capital: 4 }, special: 'partner-negotiate' },
     { id: 'respingi', label: 'Respingi apertamente', effects: { stats: { notoriety: 1 } }, special: 'partner-refuse' },
@@ -594,7 +594,7 @@ export const SITUATION_EVENTS = Object.freeze({
     { id: 'sostegno', label: 'Sostieni i candidati a distanza (comunicati e social)', effects: { party: { support: 0.3 } }, special: 'round-engage' },
     { id: 'fuori', label: 'Resta fuori dalla campagna', special: 'round-engage' }] },
   // The national cycle (legislature-engine): the secretary decides the coalition, the support to a new majority, the mandate.
-  'coalizioni-politiche': { id: 'coalizioni-politiche', title: 'Politiche: con chi corre {party}', body: 'Si aprono le candidature per le elezioni politiche: le liste si depositano entro il {deadline}. Nei collegi uninominali vince chi prende un voto in più, e da soli si rischia di restare senza seggi. La coalizione più vicina è {coalition}: il suo leader ti accoglierebbe con una probabilità stimata del {chance}.', defaultChoice: 'direzione', choices: [
+  'coalizioni-politiche': { id: 'coalizioni-politiche', title: 'Politiche: con chi corre {party}', body: 'Si aprono le candidature per le elezioni politiche: le liste si depositano entro il {deadlineLabel}. Nei collegi uninominali vince chi prende un voto in più, e da soli si rischia di restare senza seggi. La coalizione più vicina è {coalition}: il suo leader ti accoglierebbe con una probabilità stimata del {chance}.', defaultChoice: 'direzione', choices: [
     { id: 'aderisci', label: 'Chiedi di entrare in {coalition}', cost: { capital: 3 }, special: 'national-coalition' },
     { id: 'da-soli', label: 'Corri da solo: identità e mani libere', effects: { party: { support: 1 } }, special: 'national-alone' },
     { id: 'direzione', label: 'Lascia decidere alla direzione, in base ai rapporti con gli altri partiti', special: 'national-auto' }] },

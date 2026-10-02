@@ -19,7 +19,7 @@ const PERCENT_KEYS = new Set(['share', 'satisfaction', 'trust', 'support', 'stab
 const COUNT_KEYS = new Set(['seats', 'simulatedSeats', 'memberCount', 'yes', 'no', 'against', 'abstain', 'absent', 'total', 'needed', 'yesVotes', 'noVotes', 'abstainVotes', 'absentVotes', 'sample', 'members', 'volunteers']);
 // Containers of changes, costs and effects: their numbers are variations (they can be negative or above 100).
 const RELATIVE_KEYS = new Set(['deltas', 'delta', 'effects', 'effect', 'outcomes', 'changes', 'change', 'impact', 'impacts', 'why', 'whyLast', 'lastWhy', 'cost', 'costs', 'bonus', 'modifiers', 'swing', 'shift', 'shifts', 'trend', 'weekStartStats', 'demands', 'reward', 'penalty', 'consequences']);
-const DATE_KEY = /^(date|since|until|startDate|endDate|electionDate|windowOpensAt|windowClosesAt|introducedAt|updatedAt|stageSince|closedAt|formedAt|fallenAt|firstSitting|naturalEnd|appointedAt|endedAt|startedAt|asOf|votedAt|deadline|nextStepAt)$/;
+export const DATE_KEY = /^(date|since|until|startDate|endDate|electionDate|windowOpensAt|windowClosesAt|introducedAt|updatedAt|stageSince|closedAt|formedAt|fallenAt|firstSitting|naturalEnd|appointedAt|endedAt|startedAt|asOf|votedAt|deadline|nextStepAt)$/;
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}/;
 // Lists whose `id` names another record (the force a move is about), not the entry itself.
 const REFERENCE_ID_LISTS = new Set(['presenceMoves']);
