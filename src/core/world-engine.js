@@ -608,6 +608,12 @@ function chainConditions(world, parliament) {
   const trust = world.society?.trust ?? 48;
   return { governoStabile: stability >= 50, governoDebole: stability < 50, fiduciaBassa: trust < 45, fiduciaAlta: trust >= 50 };
 }
+// Two chains of the same kind started the same day for the same force would get the same id: the id stays unique.
+export function uniqueChainId(chains, base) {
+  let id = base;
+  for (let n = 2; (chains ?? []).some(item => item.id === id); n++) id = `${base}-${n}`;
+  return id;
+}
 function scheduleNext(world, options, ctx, date, conditions) {
   const pool = (options ?? []).filter(option => !option.when || conditions[option.when]);
   if (!pool.length || (world.chains ?? []).length >= CHAIN_LIMIT) return null;
@@ -616,7 +622,7 @@ function scheduleNext(world, options, ctx, date, conditions) {
   if (!choice.id || !WORLD_CHAIN_STAGES[choice.id]) return null;
   const [low, high] = choice.weeks ?? [2, 3];
   const weeks = low + Math.floor(draw(world) * (high - low + 1));
-  const chain = { id: `catena-${world.week}-${hash(`${choice.id}|${date}|${ctx.partyId ?? ''}`) % 99991}`, stageId: choice.id, due: advanceDays(date, weeks * 7), step: (ctx.step ?? 0) + 1, root: ctx.root, rootTitle: ctx.rootTitle, partyId: ctx.partyId ?? null, source: SIM };
+  const chain = { id: uniqueChainId(world.chains, `catena-${world.week}-${hash(`${choice.id}|${date}|${ctx.partyId ?? ''}`) % 99991}`), stageId: choice.id, due: advanceDays(date, weeks * 7), step: (ctx.step ?? 0) + 1, root: ctx.root, rootTitle: ctx.rootTitle, partyId: ctx.partyId ?? null, source: SIM };
   world.chains = [...(world.chains ?? []), chain];
   return chain;
 }

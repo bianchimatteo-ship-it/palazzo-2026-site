@@ -2,7 +2,7 @@
 // simulated evolution of the parties (congresses, splits, mergers, new forces) kept apart from real data,
 // difficulty that changes the game, varied news linked to the career, long political memory.
 import assert from 'node:assert/strict';
-import { advanceWorld, allianceOdds, axisOf, createWorld, proposeAlliance } from '../src/core/world-engine.js';
+import { advanceWorld, allianceOdds, axisOf, createWorld, proposeAlliance, uniqueChainId } from '../src/core/world-engine.js';
 import { composeHeadline, weeklyNews, NEWS_TEMPLATES } from '../src/core/news-engine.js';
 import { advanceWeek, createGameState, memoryAbout, memoryBalance, remember } from '../src/core/career-engine.js';
 import { DIFFICULTIES } from '../src/data/simulation/difficulty-rules.js';
@@ -127,4 +127,12 @@ for (let i = 0; i < 260; i++) remember(game, { kind: 'voto', text: `Voto ${i}`, 
 assert.ok(game.memory.some(item => item.subject === 'az'), 'Una scelta pesante resta in memoria per anni anche con centinaia di ricordi minori.');
 assert.ok(memoryAbout(game, 'az', 'bad') > 0.2, 'Cinque anni dopo, quella rottura pesa ancora sui rapporti con quella forza.');
 assert.ok(memoryBalance(game).highlights.some(item => item.yearsAgo >= 4), 'La memoria dice quanti anni sono passati.');
+// Two chains of the same kind started the same day for the same force never share an id (found by a 30-year run).
+{
+  const chains = [{ id: 'catena-1495-27717' }];
+  const second = uniqueChainId(chains, 'catena-1495-27717');
+  const third = uniqueChainId([...chains, { id: second }], 'catena-1495-27717');
+  assert.ok(second !== chains[0].id && third !== second && third !== chains[0].id, 'Gli id delle catene restano unici anche con lo stesso giorno e la stessa forza.');
+  assert.equal(uniqueChainId([], 'catena-1-1'), 'catena-1-1', 'Senza collisioni l’id non cambia.');
+}
 console.log('Mondo politico verificato: sondaggio reale all’avvio e poi simulato, rapporti iniziali da collocazione e maggioranza reale, probabilità di alleanza spiegate (collocazione, strategie, maggioranze, interessi, memoria, difficoltà), intese incoerenti solo come eccezioni motivate, dieci anni di congressi e cambi di leadership simulati, scissioni/fusioni/nuove forze dichiaratamente simulate, difficoltà con effetti su risorse, eventi, capitale e partito, notizie varie e collegate senza ripetizioni, memoria politica che pesa dopo anni.');
