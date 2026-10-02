@@ -476,6 +476,34 @@ const runC = playDays('giorni-beta', { founder: true });
     sides.add(sideOf(created[0]));
   }
   assert.ok(sides.has('coalizione') && sides.has('sostegno'), 'Il nuovo gruppo resta in coalizione o, se uscendo farebbe cadere la maggioranza, dà un sostegno esterno');
+  // A split of a large party: the new force enters the polls with the room the others leave, never over 100 in total.
+  {
+    const run5 = await startCareer({ seed: 'vita-sondaggi', level: 'comunale' });
+    const decide5 = seeded('sondaggi|scelte');
+    for (let week = 0; week < 3; week++) playWeek({ ...run5, decide: decide5 });
+    const s5 = run5.store.getState();
+    const own5 = s5.world.parties.find(item => item.isPlayer);
+    // The player's party is the largest of the country, at 38%: the polls and the forces are brought to that picture.
+    const last = s5.world.polls.at(-1);
+    const others = last.results.filter(row => row.partyId !== own5.id);
+    const scale = (97 - 38) / others.reduce((sum, row) => sum + row.share, 0);
+    for (const row of last.results) row.share = row.partyId === own5.id ? 38 : Math.round(row.share * scale * 10) / 10;
+    for (const force of s5.world.parties) { const row = last.results.find(item => item.partyId === force.id); if (row) { force.baseline = row.share; force.anchor = row.share; } }
+    const leaver5 = [...s5.game.party.currents].sort((x, y) => y.strength - x.strength).find(item => item.id !== s5.game.party.alignedCurrentId);
+    s5.game = addSituationEvent(s5.game, 'scissione-subita', { dedupe: 'scissione-sondaggi', currentId: leaver5.id, current: leaver5.label, title: `${leaver5.label} lascia il partito`, body: 'Prova' }, true);
+    run5.store.resolveAgendaItem(s5.game.inbox.find(entry => entry.templateId === 'scissione-subita').id, 'resta');
+    const worst = { sum: 0, id: null };
+    let entered = false;
+    for (let week = 0; week < 40; week++) {
+      playWeek({ ...run5, decide: decide5 });
+      const poll = run5.store.getState().world.polls.at(-1);
+      const sum = poll.results.reduce((total, row) => total + row.share, 0);
+      if (sum > worst.sum) { worst.sum = sum; worst.id = poll.id; }
+      if (poll.results.some(row => /scissione/.test(row.partyId))) entered = true;
+    }
+    assert.ok(entered, 'La nuova forza entra nei sondaggi');
+    assert.ok(worst.sum <= 100.5, `I sondaggi non superano mai il 100%: ${worst.id} somma ${worst.sum.toFixed(1)}`);
+  }
   // A merger and a new name in the store, for the founder.
   const run3 = await startCareer({ seed: 'vita-fusione', level: 'comunale' });
   const s3 = run3.store.getState();

@@ -465,6 +465,15 @@ function publishPoll(world, { date, stats = {}, parliament = null, game = null }
     floors.set(row.partyId, Number.isFinite(before) ? before - cap : 0);
     return { ...row, share, delta: Number.isFinite(before) ? round1(share - before) : 0, ...(row.partyId === player && !playerSurveyed ? { internal: true } : {}) };
   });
+  // A force entering the survey takes only the room the others leave (their weekly change is capped): a large new force,
+  // such as a split of a big party, would otherwise push the total over 100 until its parent has lost the share.
+  const entrants = results.filter(row => !Number.isFinite(previous?.results.find(item => item.partyId === row.partyId)?.share));
+  if (entrants.length && entrants.length < results.length) {
+    const held = results.filter(row => !entrants.includes(row)).reduce((sum, row) => sum + row.share, 0);
+    const wanted = entrants.reduce((sum, row) => sum + row.share, 0);
+    const room = Math.max(0, 100 - held);
+    if (wanted > room) for (const row of entrants) row.share = round1(row.share * room / wanted);
+  }
   // Rounded and capped one by one, the figures can pass 100 when "Altri" is tiny: the excess goes back a tenth at a
   // time from the largest forces that still have room within their weekly change.
   for (let excess = round1(results.reduce((sum, row) => sum + row.share, 0) - 100), guard = 0; excess > 0.05 && guard < 20; guard++) {
