@@ -41,7 +41,7 @@ function identity(party, record, logoFor) {
 }
 
 function currentsCard(party) {
-  const rows = [...(party.currents ?? [])].sort((a, b) => b.strength - a.strength).map(current => `<li class="${party.alignedCurrentId === current.id ? 'is-mine' : ''}"><span><strong>${esc(current.label)}</strong><small>${party.leaderCurrentId === current.id ? 'guida il partito · ' : ''}rapporto con te ${num(current.value ?? current.relation, 0)}/100</small></span><b>${num(current.strength, 0)}%</b>${bar(current.strength, party.alignedCurrentId === current.id ? 'good' : '')}</li>`).join('');
+  const rows = [...(party.currents ?? [])].sort((a, b) => b.strength - a.strength).map(current => { const request = current.profile?.requests?.at(-1); return `<li class="${party.alignedCurrentId === current.id ? 'is-mine' : ''}"><span><strong>${esc(current.label)}</strong><small>${party.leaderCurrentId === current.id ? 'guida il partito · ' : ''}rapporto con te ${num(current.value ?? current.relation, 0)}/100</small><small>${esc(current.profile?.objective ?? 'Obiettivo in definizione')} · ${esc(current.lastAction ?? 'Iniziativa non ancora registrata')}${request?.status === 'open' ? ` · richiesta: ${esc(request.title)}` : ''}</small></span><b>${num(current.strength, 1)}%</b>${bar(current.strength, party.alignedCurrentId === current.id ? 'good' : '')}</li>`; }).join('');
   return `<ul class="pp-currents">${rows}</ul>${party.alignedCurrentId ? '' : '<p class="sx-note">Non sei schierato: al congresso e nelle nomine chi resta neutrale conta meno.</p>'}<div class="sx-actions"><button class="secondary-button" data-section-tab="partito" data-section-tab-value="ruoli">Schierati o cambia area ${arrow}</button></div>`;
 }
 
