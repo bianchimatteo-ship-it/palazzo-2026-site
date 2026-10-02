@@ -2,12 +2,12 @@
 // patterns), their requests end in agreements that can be kept, broken and renewed, the congress comes out of the
 // balances built over the months, local leaders have interests of their own, a party in opposition can be rebuilt, and
 // a party can be founded, split, merged and renamed with consequences on seats, territories, organisation and money.
-// The days of the week carry many more events, without repeating, and the whole thing is deterministic.
+// The days of the week carry events without repeating and within the cap of the agenda, and the whole thing is deterministic.
 import assert from 'node:assert/strict';
 import { advanceWeek, createGameState, lifeRespond, lifeFound, lifeMerge, lifeRename, lifeCadre, lifeRebuild, resolveInboxItem } from '../src/core/career-engine.js';
 import { advanceLife, cadreDecision, computeVitals, lifeDelegates, lifeRequestWeights, normalizeLife, projectCongress, resolveCongress, respondRequest } from '../src/core/party-life-engine.js';
 import { partyOpsAvailability, splitOff } from '../src/core/party-ops-engine.js';
-import { CAREER_EVENTS } from '../src/data/simulation/career-rules.js';
+import { AGENDA_CAPS, CAREER_EVENTS } from '../src/data/simulation/career-rules.js';
 import { DAILY_EVENTS } from '../src/data/simulation/daily-events.js';
 import { LIFE_SITUATIONS } from '../src/data/simulation/party-life-rules.js';
 import { checkInvariants } from '../src/core/invariants.js';
@@ -57,7 +57,7 @@ function playDays(seed, { weeks = 104, founder = false, decide = null } = {}) {
   let game = withTerritory(newGame(seed, { founder }));
   let date = START;
   let stats = { ...STATS };
-  const perWeek = [], titles = [], days = new Set(), categories = new Map(), repeats = [];
+  const perWeek = [], titles = [], days = new Set(), categories = new Map(), repeats = [], capped = [];
   const last = {};
   const choose = decide ?? rander(`${seed}|scelte`);
   for (let week = 0; week < weeks; week++) {
@@ -66,6 +66,10 @@ function playDays(seed, { weeks = 104, founder = false, decide = null } = {}) {
     game = result.ctx.game; stats = result.ctx.stats;
     stats.reputation = Math.max(stats.reputation, 40); game.status = 'active'; game.resources.politicalCapital = Math.max(game.resources.politicalCapital, 40);
     perWeek.push(game.inbox.length);
+    // What the draws added this week: ordinary appointments and events (chains and crises come on top of the cap).
+    const pool = [...CAREER_EVENTS, ...DAILY_EVENTS];
+    const ordinary = game.inbox.filter(item => item.kind === 'evento' && !item.chain && !AGENDA_CAPS.importantCategories.includes(item.category) && pool.find(entry => entry.id === item.templateId)?.weight > 0);
+    capped.push({ appointments: game.inbox.filter(item => item.kind === 'appuntamento').length, events: ordinary.length, important: game.inbox.filter(item => item.kind === 'evento' && !item.chain && AGENDA_CAPS.importantCategories.includes(item.category)).length, categories: new Set(ordinary.map(item => item.category)).size === ordinary.length });
     for (const item of game.inbox) {
       titles.push(`${game.week.index}|${item.templateId}|${item.day ?? '-'}`);
       if (Number.isInteger(item.day)) days.add(item.day);
@@ -76,7 +80,7 @@ function playDays(seed, { weeks = 104, founder = false, decide = null } = {}) {
     // The player answers some decisions (at random but reproducibly): the rest is settled by the week's close.
     for (const item of [...game.inbox]) if (choose() < 0.5) { try { const done = resolveInboxItem({ game, stats, parliament: null }, { currentDate: date, career: {}, offices: [], player: null, signals: signalsFor(date) }, item.id, item.choices[Math.floor(choose() * item.choices.length)].id); game = done.ctx.game; stats = done.ctx.stats; } catch { /* not affordable this week */ } }
   }
-  return { game, perWeek, titles, days, categories, repeats };
+  return { game, perWeek, titles, days, categories, repeats, capped };
 }
 const runA = playDays('giorni-alfa');
 const runB = playDays('giorni-alfa');
@@ -86,18 +90,46 @@ const runC = playDays('giorni-beta', { founder: true });
   assert.notDeepEqual(runA.titles, runC.titles, 'Un altro seme racconta un’altra storia');
   for (const run of [runA, runC]) {
     const average = run.perWeek.reduce((sum, value) => sum + value, 0) / run.perWeek.length;
-    assert.ok(average >= 4.5, `Molti più appuntamenti per settimana (media ${average.toFixed(1)})`);
-    assert.ok(Math.max(...run.perWeek) <= 14, `Mai una valanga di decisioni (massimo ${Math.max(...run.perWeek)})`);
+    assert.ok(average >= 2 && average <= 5, `Decisioni a settimana compatibili con i sei giorni (media ${average.toFixed(1)})`);
+    assert.ok(Math.max(...run.perWeek) <= 11, `Mai una valanga di decisioni (massimo ${Math.max(...run.perWeek)})`);
+    assert.ok(run.capped.every(week => week.appointments <= AGENDA_CAPS.appointments), 'Al più un appuntamento ordinario a settimana');
+    assert.ok(run.capped.every(week => week.events <= AGENDA_CAPS.tenseEvents), `Al più ${AGENDA_CAPS.tenseEvents} eventi ordinari a settimana (${Math.max(...run.capped.map(week => week.events))})`);
+    assert.ok(run.capped.filter(week => week.events === AGENDA_CAPS.tenseEvents).length <= run.capped.length * 0.2, 'Il terzo evento ordinario solo nelle settimane tese');
+    assert.ok(run.capped.every(week => week.important <= AGENDA_CAPS.important) && run.capped.every(week => week.categories), 'Poche decisioni importanti insieme e mai due eventi ordinari della stessa categoria');
+    assert.ok(run.capped.reduce((sum, week) => sum + week.events, 0) / run.capped.length >= 0.8, 'Il mondo resta vivo: eventi ordinari quasi ogni settimana');
     assert.equal(run.days.size, 7, `Tutti i giorni della settimana hanno qualcosa (${[...run.days].sort().join('')})`);
     assert.ok(run.categories.size >= 10, `Categorie diverse (${run.categories.size})`);
     assert.equal(run.repeats.length, 0, `Nessuna ripetizione prima del cooldown: ${run.repeats.slice(0, 3)}`);
     const kinds = new Set(run.titles.map(entry => entry.split('|')[1]));
-    assert.ok(kinds.size >= 60, `Varietà in due anni: ${kinds.size} eventi diversi`);
+    assert.ok(kinds.size >= 50, `Varietà in due anni: ${kinds.size} eventi diversi`);
     const weekly = Object.values(run.titles.reduce((map, entry) => { const [week, id] = entry.split('|'); if (DAILY_EVENTS.some(item => item.id === id)) map[week] = (map[week] ?? 0) + 1; return map; }, {}));
-    assert.ok(Math.max(...weekly) <= 5, `Al più cinque eventi giornalieri in una settimana (${Math.max(...weekly)})`);
+    assert.ok(Math.max(...weekly) <= 4, `Pochi eventi giornalieri in una settimana (${Math.max(...weekly)})`);
   }
   const dayHits = runA.titles.filter(entry => entry.split('|')[2] !== '-').length;
   assert.ok(dayHits > runA.titles.length * 0.5, 'La maggior parte delle decisioni cade in un giorno preciso');
+}
+
+// Chains already in the queue come on top of the cap: the week still has its own ordinary events.
+{
+  let game = withTerritory(newGame('giorni-catena'));
+  let date = START;
+  let stats = { ...STATS };
+  const chains = ['retroscena', 'lobby-richiesta', 'tavolo-esito', 'recupero-reputazione', 'polemica-social', 'intervista-eco'];
+  const pool = [...CAREER_EVENTS, ...DAILY_EVENTS];
+  let withChain = 0, full = 0;
+  for (let week = 0; week < 80; week++) {
+    date = addDays(date, 7);
+    game.eventQueue = [...(game.eventQueue ?? []), { id: chains[week % chains.length], dueWeek: game.week.index + 1 }];
+    const result = advanceWeek({ game, stats, parliament: null }, { currentDate: date, career: {}, offices: [], player: null, signals: signalsFor(date) }, value => value);
+    game = result.ctx.game; stats = result.ctx.stats;
+    stats.reputation = Math.max(stats.reputation, 40); game.status = 'active';
+    const ordinary = game.inbox.filter(item => item.kind === 'evento' && !item.chain && !AGENDA_CAPS.importantCategories.includes(item.category) && pool.find(entry => entry.id === item.templateId)?.weight > 0);
+    assert.ok(ordinary.length <= AGENDA_CAPS.tenseEvents, `Con una catena in coda gli eventi ordinari restano nel tetto (${ordinary.length})`);
+    if (game.inbox.some(item => item.chain)) { withChain += 1; if (ordinary.length >= AGENDA_CAPS.events) full += 1; }
+    game.inbox = [];
+  }
+  assert.ok(withChain >= 20, `Le catene in coda arrivano comunque (${withChain} settimane)`);
+  assert.ok(full >= 2, `E non tolgono il posto agli eventi della settimana (${full} settimane con catena e tetto pieno)`);
 }
 
 // ---------- 3. the people behind the currents act from the state ----------

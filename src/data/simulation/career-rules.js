@@ -135,6 +135,15 @@ export const OFFICE_INCOME = Object.freeze([
   { match: /assessor/i, amount: 450 }, { match: /consiglier|parlamento europeo/i, amount: 350 }, { match: /commissione|capogruppo/i, amount: 150 }
 ]);
 
+// The week has six days of action: the ordinary appointments and events that the draws add are capped, so that the
+// agenda leaves room to act. Urgent matters, crises, chains already in the queue and the decisions of the situation
+// come on top of the cap; what the cap leaves out is simply not raised (no penalty, it can come back another week).
+export const AGENDA_CAPS = Object.freeze({
+  appointments: 1, events: 2, tenseEvents: 3,
+  // Crises, emergencies and scandals do not use an ordinary slot, but no more than this many start in a week.
+  important: 2, importantCategories: Object.freeze(['crisi', 'emergenza', 'scandalo'])
+});
+
 // Weekly appointments: optional opportunities that expire at the end of the week.
 export const APPOINTMENTS = Object.freeze([
   { id: 'inaugurazione', title: 'Inaugurazione a {municipality}', body: 'Il comune inaugura uno spazio pubblico rinnovato e ti invita a intervenire.', choices: [

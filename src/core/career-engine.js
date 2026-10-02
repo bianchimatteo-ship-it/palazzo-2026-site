@@ -5,7 +5,7 @@ import { activeMinisters, governingGroupIds, playerInMajority } from './parliame
 import {
   APPOINTMENTS, BASE_WEEKLY_INCOME, CAREER_EVENTS, CAREER_OBJECTIVES, CURRENT_TEMPLATES, EARLY_ELECTION_AFTER_WEEKS, ELECTION_SCHEDULE,
   FORCED_EVENTS, LEGACY_RIVAL_NAMES, SIMULATED_RIVAL_LABEL, FOUNDER_RANK, LEVEL_FIRST_ELECTION, OFFICE_INCOME, PARTY_RANKS, RELATION_TEMPLATES, STAT_LABELS,
-  SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS, ROUND_RULES } from '../data/simulation/career-rules.js?v=20261002-1';
+  AGENDA_CAPS, SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS, ROUND_RULES } from '../data/simulation/career-rules.js?v=20261002-1';
 import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20261002-1';
 import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20261002-1';
 import { ITALIAN_REGIONS } from '../data/regions.js?v=20261002-1';
@@ -620,7 +620,7 @@ function fillInbox(ctx, env, lines, specials = []) {
   const recent = game.lastAppointmentIds ?? [];
   const appointments = APPOINTMENTS.filter(item => meets(item.when, sit) && !recent.includes(item.id));
   const picked = [];
-  for (let count = 0; count < 2 && appointments.length; count++) {
+  for (let count = 0; count < AGENDA_CAPS.appointments && appointments.length; count++) {
     const [item] = appointments.splice(Math.floor(draw(game) * appointments.length), 1);
     picked.push(item.id);
     game.inbox.push(instantiate(item, 'appuntamento', ctx, params));
@@ -630,7 +630,7 @@ function fillInbox(ctx, env, lines, specials = []) {
   for (const queued of (game.eventQueue ?? []).filter(entry => entry.dueWeek <= game.week.index)) {
     const template = EVENT_POOL.find(entry => entry.id === queued.id);
     const since = game.week.index - ((game.eventHistory ?? {})[queued.id] ?? -999);
-    if (template && since >= Math.min(template.cooldown ?? 8, 4) && meets(template.when, sit) && !game.inbox.some(item => item.templateId === template.id)) raiseEvent(ctx, template, { ...eventParamsFor(template, ctx, env), ...(queued.params ?? {}) }, specials, lines);
+    if (template && since >= Math.min(template.cooldown ?? 8, 4) && meets(template.when, sit) && !game.inbox.some(item => item.templateId === template.id)) { const chained = raiseEvent(ctx, template, { ...eventParamsFor(template, ctx, env), ...(queued.params ?? {}) }, specials, lines); if (chained) chained.chain = true; }
   }
   game.eventQueue = (game.eventQueue ?? []).filter(entry => entry.dueWeek > game.week.index);
   // Procedural draw: conditions, cooldowns, rarity, exclusive categories and the situation's own weight.
@@ -665,49 +665,76 @@ function fillInbox(ctx, env, lines, specials = []) {
   // Tense weeks bring more events: crises, campaigns, a government in trouble.
   const tension = (sit.signals.stability ?? 60) < 35 || sit.campaignActive || sit.signals.euStatus === 'procedura' ? 0.2 : 0;
   const rounds = draw(game) < 0.25 + tension ? 2 : 1;
+  // What the week can still take: ordinary events up to the cap (a little more in a tense week), a few important ones,
+  // and no second event of a category already raised this week.
+  const budget = { ordinary: tension ? AGENDA_CAPS.tenseEvents : AGENDA_CAPS.events, important: AGENDA_CAPS.important, categories: new Set() };
   for (let round = 0; round < rounds && weighted.length; round++) {
     if (draw(game) >= 0.6 + tension) continue;
-    const total = weighted.reduce((sum, entry) => sum + entry.weight, 0);
+    const open = weighted.filter(entry => fitsBudget(budget, entry.item));
+    if (!open.length) break;
+    const total = open.reduce((sum, entry) => sum + entry.weight, 0);
     let pick = draw(game) * total;
-    const index = weighted.findIndex(entry => (pick -= entry.weight) < 0);
-    const [{ item: event }] = weighted.splice(index < 0 ? 0 : index, 1);
+    const chosen = open.find(entry => (pick -= entry.weight) < 0) ?? open[0];
+    weighted.splice(weighted.indexOf(chosen), 1);
+    const event = chosen.item;
     if (event.exclusive) for (let i = weighted.length - 1; i >= 0; i--) if (weighted[i].item.exclusive === event.exclusive) weighted.splice(i, 1);
     raiseEvent(ctx, event, eventParamsFor(event, ctx, env), specials, lines);
+    spendBudget(budget, event);
   }
-  dailyEvents(ctx, env, sit, lines, specials);
+  dailyEvents(ctx, env, sit, lines, specials, budget, tension);
 }
-// The days of the week: every weekday can bring something, from a light matter to a real decision, drawn from the
-// daily catalogue with the situation's own weights; categories seen lately are less likely, so the weeks do not repeat.
+// The cap on the events that the draws add: ordinary ones use a slot, crises and scandals have their own small limit.
+const isImportant = event => AGENDA_CAPS.importantCategories.includes(event.category) || event.exclusive === 'emergenza';
+const fitsBudget = (budget, event) => !budget.categories.has(event.category) && (isImportant(event) ? budget.important > 0 : budget.ordinary > 0);
+function spendBudget(budget, event) {
+  if (isImportant(event)) budget.important -= 1; else budget.ordinary -= 1;
+  if (event.category) budget.categories.add(event.category);
+}
+// The days of the week: what the week's budget leaves free is spread over the days (the weight of each day decides
+// where), drawn from the daily catalogue with the situation's own weights; categories seen lately are less likely, so
+// the weeks do not repeat.
 const DAY_WEIGHT = [1, 1, 1, 1, 0.9, 0.55, 0.45];
-function dailyEvents(ctx, env, sit, lines, specials) {
+function dailyEvents(ctx, env, sit, lines, specials, budget, tension = 0) {
   const game = ctx.game;
   const history = game.eventHistory ?? {};
   const setting = rules(game);
-  const tension = (sit.signals.stability ?? 60) < 35 || sit.campaignActive || sit.signals.euStatus === 'procedura' ? 0.12 : 0;
   const openExclusive = new Set(game.inbox.map(item => EVENT_POOL.find(entry => entry.id === item.templateId)?.exclusive).filter(Boolean));
   const eligible = DAILY_EVENTS.filter(item => item.weight > 0 && meets(item.when, sit)
     && game.week.index - (history[item.id] ?? -999) >= (item.cooldown ?? 8)
     && !(item.exclusive && openExclusive.has(item.exclusive)) && !game.inbox.some(entry => entry.templateId === item.id));
-  const cap = tension ? 5 : 4;
-  // The consequences of earlier days that came due this week count against the same limit.
-  let raised = game.inbox.filter(item => DAILY_EVENTS.some(entry => entry.id === item.templateId)).length;
   const used = new Set();
-  for (let day = 0; day < 7 && raised < cap; day++) {
-    if (draw(game) >= (0.46 + tension) * DAY_WEIGHT[day]) continue;
-    const pool = eligible.filter(item => (item.days ?? [0, 1, 2, 3, 4]).includes(day) && !used.has(item.id)).map(item => {
+  const freeDays = [0, 1, 2, 3, 4, 5, 6];
+  // Each free slot of the week is used with some chance (a quiet week is a week too).
+  const slots = Math.max(0, budget.ordinary);
+  for (let slot = 0; slot < slots; slot++) {
+    if (draw(game) >= 0.7 + tension * 0.6) continue;
+    const day = pickDay(game, freeDays, eligible, budget, used);
+    if (day === null) break;
+    const pool = eligible.filter(item => (item.days ?? [0, 1, 2, 3, 4]).includes(day) && !used.has(item.id) && fitsBudget(budget, item)).map(item => {
       const seen = (game.eventRecent ?? []).filter(entry => entry.category === item.category).length;
       const weight = item.weight * (typeof item.boost === 'function' ? item.boost(sit) : 1) * (item.rare ? 0.5 : 1) * Math.pow(0.55, seen) * (HARD_CATEGORIES.includes(item.category) ? setting.badEvents : item.positive ? setting.goodEvents : 1);
       return { item, weight };
     }).filter(entry => entry.weight > 0);
     const total = pool.reduce((sum, entry) => sum + entry.weight, 0);
-    if (!total) continue;
+    if (!total) { freeDays.splice(freeDays.indexOf(day), 1); slot -= 1; continue; }
     let pick = draw(game) * total;
     const chosen = (pool.find(entry => (pick -= entry.weight) < 0) ?? pool[0]).item;
     used.add(chosen.id);
+    freeDays.splice(freeDays.indexOf(day), 1);
     const item = raiseEvent(ctx, chosen, eventParamsFor(chosen, ctx, env), specials, lines);
     if (item) item.day = day;
-    raised += 1;
+    spendBudget(budget, chosen);
+    // A crisis or a scandal does not use the slot of an ordinary event.
+    if (isImportant(chosen)) slot -= 1;
   }
+}
+// The day of the next event: drawn among the free days that still have something to offer, by the weight of the day.
+function pickDay(game, freeDays, eligible, budget, used) {
+  const days = freeDays.filter(day => eligible.some(item => (item.days ?? [0, 1, 2, 3, 4]).includes(day) && !used.has(item.id) && fitsBudget(budget, item)));
+  if (!days.length) return null;
+  const total = days.reduce((sum, day) => sum + DAY_WEIGHT[day], 0);
+  let pick = draw(game) * total;
+  return days.find(day => (pick -= DAY_WEIGHT[day]) < 0) ?? days[0];
 }
 // The political world can ask for a reaction: it lands in the week's agenda like any other event.
 export function addWorldReaction(input, reaction) {
