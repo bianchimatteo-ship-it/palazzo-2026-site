@@ -74,7 +74,15 @@ export function situation(ctx, env = {}) {
     campaignActive: env.campaign?.status === 'active',
     // What the rest of the world looks like this week: events depend on it.
     memory: remembered,
-    signals: { crime: 45, spread: 130, euStatus: 'regolare', cohesion: ctx.game.party?.org?.cohesion ?? 60, hostileCurrents: (ctx.game.party?.currents ?? []).filter(item => (item.value ?? item.relation ?? 50) < 35).length, ministers: 0, majorityMood: 60, memoryPressure: remembered.bad, ...(env.signals ?? {}) }
+    signals: {
+      crime: 45, spread: 130, euStatus: 'regolare', cohesion: ctx.game.party?.org?.cohesion ?? 60,
+      hostileCurrents: (ctx.game.party?.currents ?? []).filter(item => (item.value ?? item.relation ?? 50) < 35).length,
+      ministers: 0, majorityMood: 60, memoryPressure: remembered.bad, positiveMemory: remembered.good,
+      memoryNet: remembered.net, pendingPressure: (ctx.game.pending ?? []).length,
+      decisionCount: (ctx.game.memory ?? []).length,
+      memoryKinds: [...new Set((ctx.game.memory ?? []).slice(0, 12).map(item => item.kind).filter(Boolean))],
+      ...(env.signals ?? {})
+    }
   };
 }
 // The party secretary decides the line, alliances, candidacies and organs: the founder, or whoever wins a congress.
@@ -204,14 +212,20 @@ export function normalizeGameState(game) {
   const revived = game.status === 'ended' ? { status: 'active', endedAt: null, endReason: null, setbacks: [...(game.setbacks ?? []), { week, date: game.endedAt ?? date, reason: game.endReason ?? 'Crisi di reputazione', source: SIM }] } : {};
   return alignNationalCalendar({
     status: 'active', prep: 0, pastParties: [], inbox: [], log: [], objectives: {}, flags: {}, lastReport: null, lastEventId: null, fallenWeeks: 0, place: {},
-    contacts: [], promises: [], pending: [], eventRecent: [], legislature: { ...REAL_LEGISLATURE }, difficulty: 'normale', setbacks: [],
+    contacts: [], promises: [], pending: [], eventQueue: [], eventHistory: {}, eventRecent: [], memory: [], legislature: { ...REAL_LEGISLATURE }, difficulty: 'normale', setbacks: [],
     ...game, ...revived, party,
     finance: normalizeFinance(game.finance, { week, date, funds: game.resources?.funds ?? 0 }),
     week: { ap: WEEKLY_ACTION_POINTS, maxAp: WEEKLY_ACTION_POINTS, categoriesUsed: [], ...(game.week ?? {}) },
     resources: { funds: 0, politicalCapital: 30, source: SIM, ...(game.resources ?? {}) },
     // Older saves named the rival with a realistic invented name: it becomes an explicit simulated role.
     relations: Array.isArray(game.relations) ? game.relations.map(item => item.id === 'rival' && LEGACY_RIVAL_NAMES.includes(item.label) ? { ...item, label: SIMULATED_RIVAL_LABEL } : item) : [],
-    elections: Array.isArray(game.elections) ? game.elections : []
+    elections: Array.isArray(game.elections) ? game.elections : [],
+    // Pending chains were introduced after the first saves. Normalize their metadata
+    // without changing their timing or effects, so old careers gain causal history lazily.
+    pending: (Array.isArray(game.pending) ? game.pending : []).map((item, index) => ({
+      ...item, id: item.id ?? `seguito-${week}-${index}`, causes: [...new Set([...(item.causes ?? []), item.origin].filter(Boolean))], source: SIM
+    })),
+    eventQueue: (Array.isArray(game.eventQueue) ? game.eventQueue : []).map(item => ({ ...item, causes: [...new Set([...(item.causes ?? []), item.from].filter(Boolean))], source: SIM }))
   });
 }
 // Saves made with the accelerated national calendar: the general and European elections still ahead move to the real
@@ -351,9 +365,38 @@ function pay(game, cost = {}, category = 'altro', label = null, date = null) {
   if (cost.treasury) treasuryBook(game.party.org, -cost.treasury, 'comunicazione', label);
 }
 // Future consequences: scheduled now, decided when they come due (the outcome is not known in advance).
+function mergeEffects(base = {}, extra = {}) {
+  const merged = { ...base, ...extra };
+  for (const key of ['stats', 'relations', 'permanent', 'contacts', 'groups']) {
+    if (base[key] || extra[key]) merged[key] = { ...(base[key] ?? {}), ...(extra[key] ?? {}) };
+    for (const [name, value] of Object.entries(merged[key] ?? {})) {
+      if (Number.isFinite(base[key]?.[name]) && Number.isFinite(extra[key]?.[name])) merged[key][name] = round2(base[key][name] + extra[key][name]);
+    }
+  }
+  for (const key of ['party', 'org', 'government']) {
+    if (base[key] || extra[key]) merged[key] = { ...(base[key] ?? {}), ...(extra[key] ?? {}) };
+    for (const [name, value] of Object.entries(merged[key] ?? {})) {
+      if (Number.isFinite(base[key]?.[name]) && Number.isFinite(extra[key]?.[name])) merged[key][name] = round2(base[key][name] + extra[key][name]);
+    }
+  }
+  return merged;
+}
 function schedule(game, later, origin) {
-  if (!later) return;
-  game.pending = [...(game.pending ?? []), { id: uniqueId(game.pending, `seguito-${game.week.index}-${(game.pending ?? []).length}-${game.rngState % 9973}`), dueWeek: game.week.index + later.weeks, madeWeek: game.week.index, hint: later.hint ?? later.label ?? 'Esito in arrivo', label: later.label ?? 'Esito', chance: later.chance ?? 1, effects: later.effects ?? null, outcomes: later.outcomes ?? null, memory: later.memory ?? null, origin, source: SIM }];
+  if (!later || !Number.isFinite(later.weeks)) return;
+  const dueWeek = game.week.index + later.weeks;
+  const causes = [...new Set([origin, ...(later.causes ?? [])].filter(Boolean))];
+  const mergeKey = later.mergeKey ?? `${dueWeek}|${later.label ?? origin}`;
+  const existing = (game.pending ?? []).find(item => item.mergeKey === mergeKey);
+  if (existing) {
+    existing.causes = [...new Set([...(existing.causes ?? []), ...causes])];
+    existing.effects = mergeEffects(existing.effects ?? {}, later.effects ?? {});
+    existing.weight = round2((existing.weight ?? 1) + (later.weight ?? 1));
+    existing.origin = existing.origin ?? origin;
+    return existing;
+  }
+  const item = { id: uniqueId(game.pending, `seguito-${game.week.index}-${(game.pending ?? []).length}-${game.rngState % 9973}`), dueWeek, madeWeek: game.week.index, hint: later.hint ?? later.label ?? 'Esito in arrivo', label: later.label ?? 'Esito', chance: later.chance ?? 1, effects: later.effects ?? null, outcomes: later.outcomes ?? null, memory: later.memory ?? null, origin, causes, mergeKey, cascade: later.cascade ?? null, source: SIM };
+  game.pending = [...(game.pending ?? []), item];
+  return item;
 }
 function resolvePending(ctx, env, date, lines) {
   const game = ctx.game;
@@ -365,6 +408,8 @@ function resolvePending(ctx, env, date, lines) {
       const outcome = pickOutcome(game, item.outcomes);
       title = `${item.label}: ${outcome.label}`;
       applyEffects(ctx, outcome.effects, null, itemLines, { date, source: item.origin });
+      if (outcome.memory) remember(game, { date, ...outcome.memory, text: fill(outcome.memory.text ?? '', { memory: item.origin }) });
+      schedule(game, outcome.later, `${item.origin} → ${outcome.label}`);
       tone = Object.values(outcome.effects?.stats ?? {}).some(value => value < 0) ? 'bad' : 'good';
     } else if (draw(game) < item.chance) {
       applyEffects(ctx, item.effects, null, itemLines, { date, source: item.origin });
@@ -374,8 +419,10 @@ function resolvePending(ctx, env, date, lines) {
       title = `Scampato: ${item.hint.charAt(0).toLowerCase()}${item.hint.slice(1)}`;
       tone = 'good';
     }
-    lines.push(`Conseguenza di “${item.origin}”: ${title}`);
+    const causeLabel = (item.causes ?? []).length > 1 ? ` (${item.causes.length} cause collegate)` : '';
+    lines.push(`Conseguenza di “${item.origin}”${causeLabel}: ${title}`);
     addLog(game, date, 'conseguenza', title, [`Da: ${item.origin}`, ...itemLines], tone);
+    if (item.cascade) schedule(game, item.cascade, `${item.origin} → ${title}`);
   }
   game.pending = (game.pending ?? []).filter(entry => entry.dueWeek > game.week.index);
 }
@@ -513,6 +560,8 @@ function eventParamsFor(template, ctx, env) {
   } else params.region2 = params.region;
   const memory = memoryBalance(ctx.game, { region: ctx.game.place?.region ?? null });
   params.memory = env.signals?.memoryRecall ?? memory.highlights[0]?.text ?? '';
+  params.memoryNet = memory.net;
+  params.pendingCount = (ctx.game.pending ?? []).length;
   params.lawTitle = env.signals?.lawTitle ?? 'una proposta';
   params.lawId = env.signals?.lawId ?? null;
   return params;
@@ -566,6 +615,14 @@ function fillInbox(ctx, env, lines, specials = []) {
     && !(item.exclusive && openExclusive.has(item.exclusive))
     && !game.inbox.some(entry => entry.templateId === item.id));
   const setting = rules(game);
+  const memoryKinds = new Set((game.memory ?? []).slice(0, 24).map(entry => entry.kind).filter(Boolean));
+  const memoryBoost = item => {
+    if (typeof item.memoryBoost === 'function') return item.memoryBoost(sit);
+    if (Number.isFinite(item.memoryBoost)) return item.memoryBoost;
+    const kinds = item.memoryKinds ?? [];
+    if (!kinds.length) return 1;
+    return kinds.some(kind => memoryKinds.has(kind)) ? 1.8 : 0.55;
+  };
   const weighted = eligible.map(item => ({ item, weight: item.weight
     * (typeof item.boost === 'function' ? item.boost(sit) : 1)
     * (item.rare ? 0.5 : 1)
@@ -573,6 +630,8 @@ function fillInbox(ctx, env, lines, specials = []) {
     // A recent category remains possible, but loses priority so the story keeps changing.
     * (recentCategories.has(item.category) ? (recentCategories.get(item.category) >= 2 ? 0.18 : 0.42) : 1)
     * (sit.signals.memoryPressure > 2 && ['media', 'partito', 'parlamento'].includes(item.category) ? 1.45 : 1)
+    * memoryBoost(item)
+    * (sit.signals.pendingPressure > 2 && item.category === 'crisi' ? 1.25 : 1)
   })).filter(entry => entry.weight > 0);
   // Tense weeks bring more events: crises, campaigns, a government in trouble.
   const tension = (sit.signals.stability ?? 60) < 35 || sit.campaignActive || sit.signals.euStatus === 'procedura' ? 0.2 : 0;
@@ -642,7 +701,7 @@ function runChoice(ctx, env, item, choice, lines, specials) {
   const params = { ...(item.params ?? {}), date: env.currentDate, fundsLabel: item.title, source: item.title };
   applyEffects(ctx, choice.effects, item.params?.targetId ?? null, lines, params);
   if (choice.memory) remember(ctx.game, { date: env.currentDate, ...choice.memory, text: fill(choice.memory.text, item.params) });
-  if (choice.followUp && draw(ctx.game) < (choice.followUp.chance ?? 1)) ctx.game.eventQueue = [...(ctx.game.eventQueue ?? []), { id: choice.followUp.id, dueWeek: ctx.game.week.index + (choice.followUp.weeks ?? 2), params: { region2: item.params?.region2 }, from: item.templateId }];
+  if (choice.followUp && draw(ctx.game) < (choice.followUp.chance ?? 1)) ctx.game.eventQueue = [...(ctx.game.eventQueue ?? []), { id: choice.followUp.id, dueWeek: ctx.game.week.index + (choice.followUp.weeks ?? 2), params: { region2: item.params?.region2 }, from: item.templateId, causes: [item.templateId, ...(choice.followUp.causes ?? [])], source: SIM }];
   if (choice.outcomes) {
     const outcome = pickOutcome(ctx.game, choice.outcomes);
     lines.push(outcome.label);
