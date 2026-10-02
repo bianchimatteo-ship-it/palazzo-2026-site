@@ -63,7 +63,7 @@ try {
     ['panoramica'], ['profilo'], ['territori'], ['finanze'], ['sondaggi'], ['governo'], ['leggi'], ['archivio'], ['impostazioni'],
     ...['panoramica', 'nazionali', 'candidatura', 'campagna', 'avversari', 'risultati', 'storico'].map(tab => ['elezioni', 'elezioni', tab]),
     ...['percorso', 'progressione', 'incarichi', 'cronologia', 'obiettivi'].map(tab => ['carriera', 'carriera', tab]),
-    ...['panoramica', 'ruoli', 'organizzazione', 'territorio', 'storico'].map(tab => ['partito', 'partito', tab]),
+    ...['panoramica', 'ruoli', 'organizzazione', 'vita', 'territorio', 'storico'].map(tab => ['partito', 'partito', tab]),
     ...['settimana', 'calendario', 'attivita', 'registro'].map(tab => ['calendario', 'agenda', tab]),
     ['parlamento'], ['parlamento', 'hemi', 'commissione'], ['parlamento', 'hemi', 'senato']
   ];

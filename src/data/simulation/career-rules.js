@@ -197,7 +197,7 @@ export const CAREER_EVENTS = Object.freeze([
     { id: 'candidato', label: 'Candidati tu alla segreteria', requires: 'direzione', cost: { capital: 5 }, special: 'leadership-self' },
     { id: 'a', label: 'Sostieni {currentA}', special: 'leadership-a' },
     { id: 'b', label: 'Sostieni {currentB}', special: 'leadership-b' },
-    { id: 'neutrale', label: 'Resta neutrale', effects: { party: { support: -1 } } }] },
+    { id: 'neutrale', label: 'Resta neutrale', effects: { party: { support: -1 } }, special: 'leadership-neutral' }] },
   { id: 'finanziatore', category: 'scandalo', cooldown: 20, weight: 2, title: 'Un imprenditore offre un contributo', body: 'Il sostegno è generoso, ma chiede riservatezza.', defaultChoice: 'rifiuta', choices: [
     { id: 'trasparente', label: 'Accetta e rendilo pubblico', effects: { funds: 1500, stats: { reputation: -0.5 }, relations: { business: 3 } } },
     { id: 'rifiuta', label: 'Rifiuta', effects: { stats: { reputation: 1 }, relations: { business: -3 } } },

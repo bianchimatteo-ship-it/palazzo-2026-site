@@ -51,6 +51,7 @@ export function checkInvariants(state, context = {}) {
   checkCampaign(state, report);
   checkNational(state, known, report);
   checkLocal(state, report);
+  checkPartyLife(state, report);
   checkAgenda(state, known, report);
   return { ok: issues.length === 0, issues };
 }
@@ -346,4 +347,34 @@ function checkAgenda(state, known, report) {
       else if (params.actId && ![...records(inst.acts), ...records(inst.archive)].some(act => act.id === params.actId)) report('riferimento', path, `Decisione «${item.title}»: atto ${params.actId} inesistente`);
     }
   });
+}
+
+// The internal life of the party: the people behind the currents are the currents of the party, the requests and the
+// agreements point to them, the seats of the national bodies add up, the local leaders follow committees that exist.
+function checkPartyLife(state, report) {
+  const party = state.game?.party;
+  const life = party?.life;
+  if (!party || !life) return;
+  const currents = new Set(records(party.currents).map(item => item.id));
+  const actors = life.actors ?? {};
+  for (const id of Object.keys(actors)) if (!currents.has(id)) report('riferimento', `game.party.life.actors.${id}`, `Attore ${id} senza una corrente del partito`);
+  for (const id of currents) if (!actors[id]) report('riferimento', 'game.party.life.actors', `La corrente ${id} non ha il suo capo`);
+  for (const [id, actor] of Object.entries(actors)) for (const key of ['loyalty', 'grievance']) if (!(actor[key] >= 0 && actor[key] <= 100)) report('valore-impossibile', `game.party.life.actors.${id}.${key}`, `${key} = ${actor[key]} fuori da 0–100`);
+  const committees = new Set(records(party.org?.committees).map(item => item.id));
+  records(life.requests).forEach((request, index) => {
+    const path = `game.party.life.requests[${index}]`;
+    if (request.from === 'actor' && !currents.has(request.refId)) report('riferimento', path, `Richiesta ${request.id}: area ${request.refId} inesistente`);
+    if (request.from === 'cadre' && !records(life.cadres).some(item => item.id === request.refId)) report('riferimento', path, `Richiesta ${request.id}: dirigente ${request.refId} inesistente`);
+    if (!['aperta', 'trattativa'].includes(request.stage)) report('valore-impossibile', path, `Richiesta ${request.id}: fase ${request.stage} non ammessa tra le aperte`);
+  });
+  records(life.pacts).forEach((pact, index) => {
+    if (pact.status === 'attivo' && !currents.has(pact.actorId)) report('riferimento', `game.party.life.pacts[${index}]`, `Accordo ${pact.id}: area ${pact.actorId} inesistente`);
+    if (pact.status === 'attivo' && !(pact.until >= pact.since)) report('valore-impossibile', `game.party.life.pacts[${index}]`, `Accordo ${pact.id}: scade prima di iniziare`);
+  });
+  const seats = Object.values(life.organs?.seats ?? {}).reduce((sum, value) => sum + value, 0);
+  if (currents.size && seats !== (life.organs?.total ?? 9)) report('coerenza', 'game.party.life.organs', `Seggi negli organi: ${seats} su ${life.organs?.total}`);
+  records(life.cadres).forEach((cadre, index) => { if (cadre.status !== 'uscito' && party.org?.committees && !committees.has(cadre.committeeId)) report('riferimento', `game.party.life.cadres[${index}]`, `Dirigente ${cadre.id}: comitato ${cadre.committeeId} inesistente`); });
+  if (life.congress && !['forza', 'preparazione', 'delegati', 'alleanze', 'trattative', 'mozioni', 'voto'].includes(life.congress.phase)) report('valore-impossibile', 'game.party.life.congress', `Fase del congresso sconosciuta: ${life.congress.phase}`);
+  if (life.congress?.delegates && Object.values(life.congress.delegates.byCurrent ?? {}).reduce((sum, value) => sum + value, 0) + (life.congress.delegates.player ?? 0) !== life.congress.delegates.total) report('coerenza', 'game.party.life.congress.delegates', 'I delegati per area non sommano al totale');
+  records(state.game?.inbox).forEach((item, index) => { if (item.day !== undefined && !(Number.isInteger(item.day) && item.day >= 0 && item.day <= 6)) report('valore-impossibile', `game.inbox[${index}].day`, `Giorno ${item.day} fuori dalla settimana`); });
 }

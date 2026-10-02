@@ -11,7 +11,7 @@ import { electionAftermath } from './aftermath-engine.js?v=20260928-5';
 import { progressionFactors } from './progression-engine.js?v=20260928-5';
 import { committeeSupport, committeesAfterVote, createCommittees } from './committee-engine.js?v=20260928-5';
 import { setConfidenceVote, createReferenceGovernment, neverHadGovernment, offerGroupSupport, requestGovernmentPost, withdrawGroupSupport, partnerSatisfaction, acceptLawDemand, activeMinisters, amendLawPolicy, askConfidenceOnLaw, groupProfile, issueDecree, majoritySummit, reshuffleMinister, setGovernmentProgram, settlePartnerDemand, withdrawLaw, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20260928-5';
-import { scheduleEarlyLocalElection, alignLocalCalendar, localCalendarOf, committeeAction, setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, saveForElection, scheduleEarlyElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20260928-5';
+import { scheduleEarlyLocalElection, alignLocalCalendar, localCalendarOf, committeeAction, setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, lifeBreakPact, lifeCadre, lifeCongress, lifeFound, lifeMerge, lifeOverview, lifeRebuild, lifeRename, lifeRespond, partyOpsAvailability, saveForElection, scheduleEarlyElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20260928-5';
 import { AMENDMENT_CAPITAL_COST, COMMUNICATION_STYLES, GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20260928-5';
 import { advanceLegislativeWeek, amendOthersLaw, amendmentOdds, linkGroupsToParties, setPlayerVote, speakOnLaw } from './lawmaking-engine.js?v=20260928-5';
 import { seededRandom } from './vote-engine.js?v=20260928-5';
@@ -19,7 +19,7 @@ import { advanceCabinetWeek, joinAsSupport } from './cabinet-engine.js?v=2026092
 import { EP_COSTS, EP_GROUPS_2024, EP_ROLES, INSTITUTIONS, advanceInstitutionWeek, bidRapporteur, concedeToGroup, createInstitution, epGroupFor, localAreas, proposeLocalAct, questionExecutive, requestCommittee, reshuffleLocal, runForCommitteeRole, setLocalVote, tableAmendment, territoryValue } from './local-engine.js?v=20260928-5';
 import { actTypeOf } from '../data/simulation/local-acts.js?v=20260928-5';
 import { AREA_BY_ID, BUDGET_SESSION, GOVERNMENT_LINES, areaOf } from '../data/simulation/policy-rules.js?v=20260928-5';
-import { localShares, regionalShares, withRegionalLeans, withLocalCalendar, joinCoalition, acceptAlliance, addWorldEffects, advanceWorld, alignWorldToVote, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setGoverningForces, setPlayerParty, withCanonicalForces, withLatentForces, withPartyIdentities, withPositions } from './world-engine.js?v=20260928-5';
+import { mergeCandidates, mergeIntoPlayerForce, renamePlayerForce, splitPlayerForce, localShares, regionalShares, withRegionalLeans, withLocalCalendar, joinCoalition, acceptAlliance, addWorldEffects, advanceWorld, alignWorldToVote, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setGoverningForces, setPlayerParty, withCanonicalForces, withLatentForces, withPartyIdentities, withPositions } from './world-engine.js?v=20260928-5';
 import { FORMATION_PHASES, LEGISLATURE_RULES, NATIONAL_LINES, acceptMandate, crisisFormation, seatResult, startFormation, buildCoalitions, campaignWeekEffects, coalitionOptions, compactResult, contestedDistricts, createNationalState, europeanListSeats, formationStep, groupOfParty, homeDistricts, legislatureGroups, legislatureTerm, nationalCalendar, nationalHistory, nationalProjection, normalizeNationalState, openLegislature, politicheOutcome, regionalBreakdown, runEuropeanVote, runNationalVote, seatPlayer, voteForces } from './legislature-engine.js?v=20260928-5';
 import { classifyOutcome, preferenceStanding } from './election-engine.js?v=20260928-5';
 import { DIFFICULTIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20260928-5';
@@ -403,6 +403,7 @@ function worldSignalsFor(s) {
     summer: month >= 6 && month <= 8, autumn: month >= 9 && month <= 11, winter: month === 12 || month <= 2,
     regions: Object.values(s.society?.regions ?? {}).map(region => ({ name: region.name, indicators: region.indicators })),
     partyAxis: s.world?.parties?.find(party => party.isPlayer)?.axis ?? null,
+    partyGoverning: Boolean(s.world?.parties?.find(party => party.isPlayer)?.governing), neighbours: s.world ? mergeCandidates(s.world) : [],
     memoryRecall: recall?.text ?? null, electionSoon, openLawInCommission: Boolean(inCommission), lawAtVote: Boolean(atVote), lawTitle: (inCommission ?? atVote)?.title ?? null, lawId: (inCommission ?? atVote)?.id ?? null
   };
 }
@@ -669,12 +670,107 @@ function endMandate(s, reason) {
   if (next.parliament?.player) next = computeParliamentUpdate(next, leaveParliament(next.parliament, s.clock.currentDate, reason), next.ui.toast);
   return next;
 }
+// ---------- the party splits, merges, changes name (what the world, the Parliament and the records do) ----------
+const abbreviationOf = label => {
+  const words = String(label ?? '').replace(/\(.*?\)/g, '').split(/\s+/).filter(word => word.length > 2 || /^[A-ZÀ-Ý]/.test(word));
+  const initials = words.map(word => word[0]).join('').toUpperCase().slice(0, 5);
+  return initials.length >= 2 ? initials : String(label ?? 'PART').slice(0, 4).toUpperCase();
+};
+// The record of a party founded during the career (source: user), with the identity of the one it comes from.
+function userPartyRecord(s, { id, label, abbreviation = null, fromPartyId = null }) {
+  const date = s.clock.currentDate;
+  const parent = s.dataset.parties.find(item => item.id === fromPartyId) ?? null;
+  return {
+    id, name: label, officialName: label, abbreviation: String(abbreviation ?? abbreviationOf(label)).toUpperCase().slice(0, 6),
+    description: `${label}: partito fondato durante la carriera${parent ? `, nato da ${parent.officialName ?? parent.name}` : ''}.`,
+    color: parent?.color ?? '#264d82', color2: null, orientation: parent?.orientation ?? 'centro', program: [],
+    logo: { kind: 'builder', shape: 'cerchio', symbol: 'freccia' }, politicalPosition: parent?.politicalPosition ?? 'centro', foundedAt: date, status: 'attivo',
+    policyPositions: { ...(parent?.policyPositions ?? { economia: 3, welfare: 3, ambiente: 3, europa: 3 }) }, source: DATA_SOURCES.USER, createdAt: date,
+    logoUrl: null, logoAsset: null, logoSource: null, logoVerified: null, logoAlt: `Logo di ${label}`
+  };
+}
+// Seats follow the split: the group of the party gives a share of its seats to a new group (in both Chambers); the new
+// group stays in the majority or goes to the opposition by a fixed draw on the ids, never by a fixed pattern.
+function splitParliamentGroups(parliament, { fromPartyId, newPartyId, label, seatShare, date }) {
+  if (!parliament?.chambers || !fromPartyId) return parliament;
+  let next = parliament;
+  const legislature = parliament.legislature?.number ?? 19;
+  for (const chamber of ['camera', 'senato']) {
+    const groups = next.chambers[chamber]?.groups ?? [];
+    const source = groups.filter(group => group.partyId === fromPartyId).sort((a, b) => b.simulatedSeats - a.simulatedSeats)[0];
+    if (!source) continue;
+    const moved = Math.min(source.simulatedSeats - 1, Math.round(source.simulatedSeats * seatShare / 100));
+    const groupId = `leg${legislature}-${chamber}-${newPartyId}`;
+    if (moved < 1 || groups.some(group => group.groupId === groupId)) continue;
+    const created = { groupId, officialName: label, chamber, simulatedSeats: moved, partyId: newPartyId, independent: false, component: false, position: null, axis: source.axis ?? 0, color: null, legislature, simulated: true, reference: { memberCount: moved, leaderPoliticianId: null, countAsOf: date, source: DATA_SOURCES.SIMULATION, verified: false, sourceUrl: null, sourceName: 'Composizione simulata dopo la scissione' }, source: DATA_SOURCES.SIMULATION };
+    next = { ...next, chambers: { ...next.chambers, [chamber]: { ...next.chambers[chamber], groups: [...groups.map(group => group.groupId === source.groupId ? { ...group, simulatedSeats: group.simulatedSeats - moved } : group), created] } }, relations: { ...next.relations, [groupId]: { value: 55, source: DATA_SOURCES.SIMULATION } } };
+    const government = next.government;
+    if (government?.coalitionGroupIds?.includes(source.groupId) && hashText(`${newPartyId}|${chamber}|maggioranza`) % 100 < 55) next = { ...next, government: { ...government, coalitionGroupIds: [...government.coalitionGroupIds, groupId] } };
+  }
+  return next;
+}
+function applyPartySplit(s, special) {
+  const d = special.descriptor;
+  let next = s;
+  const date = next.clock.currentDate;
+  const player = playerOf(next);
+  const fromWorldId = next.world?.playerPartyId ?? null;
+  const fraction = Math.max(0.03, Math.min(0.6, d.leavingShare / 100 + (special.founded ? 0.03 + playerStat(next, 'notoriety', 20) / 1500 : 0)));
+  let record = null;
+  if (special.followed) {
+    record = userPartyRecord(next, { id: d.id, label: d.label, abbreviation: special.abbreviation, fromPartyId: next.career.partyId });
+    next = { ...next, career: { ...next.career, partyId: d.id }, dataset: { ...next.dataset, parties: [...next.dataset.parties, record], politicians: next.dataset.politicians.map(item => item.id === player?.id ? { ...item, partyId: d.id } : item), offices: next.dataset.offices.map(item => item.politicianId === player?.id && item.level === 'partito' && !item.endDate ? { ...item, endDate: date } : item) } };
+  }
+  if (next.world) {
+    let world = splitPlayerForce(next.world, { id: d.id, label: d.label, abbreviation: record?.abbreviation ?? null, fraction, date, asPlayer: Boolean(special.followed) });
+    if (special.followed) world = setPlayerParty(world, worldPartyOf(next, record), date);
+    next = { ...next, world };
+  }
+  if (next.parliament && d.seatShare > 0) {
+    let parliament = splitParliamentGroups(next.parliament, { fromPartyId: fromWorldId, newPartyId: d.id, label: d.label, seatShare: d.seatShare, date });
+    if (special.followed && parliament.player?.groupId) {
+      const groupId = `leg${parliament.legislature?.number ?? 19}-${parliament.player.chamber}-${d.id}`;
+      try { parliament = assignPlayerGroup(parliament, groupId, date); } catch { /* the player's group had no seats to give */ }
+    }
+    next = computeParliamentUpdate(next, parliament, next.ui.toast);
+  }
+  next = addTimeline(next, [{ kind: 'partito', title: special.founded ? `Fondi ${d.label}` : special.followed ? `Segui ${d.label} nella scissione` : `Scissione: ${d.label} lascia il partito`, detail: `${d.members.toLocaleString('it-IT')} iscritti, ${d.committees.length} comitati, ${d.seatShare}% dei seggi del gruppo`, tone: special.followed ? 'good' : 'bad' }]);
+  return { ...next, ui: { ...next.ui, toast: special.founded ? `Nasce ${d.label}` : special.followed ? `Guidi ${d.label}` : `${d.label} lascia il partito` } };
+}
+function applyPartyMerge(s, special) {
+  const d = special.descriptor;
+  let next = s;
+  const date = next.clock.currentDate;
+  const ownId = next.world?.playerPartyId ?? null;
+  if (next.world) next = { ...next, world: mergeIntoPlayerForce(next.world, { forceId: d.forceId, label: d.newLabel && d.newLabel !== d.previousLabel ? d.newLabel : null, date }) };
+  if (next.parliament && ownId) {
+    const parliament = { ...next.parliament, chambers: Object.fromEntries(Object.entries(next.parliament.chambers).map(([chamber, value]) => [chamber, { ...value, groups: (value.groups ?? []).map(group => group.partyId === d.forceId ? { ...group, partyId: ownId } : group) }])) };
+    next = computeParliamentUpdate(next, parliament, next.ui.toast);
+  }
+  if (d.newLabel && d.newLabel !== d.previousLabel) next = { ...next, dataset: { ...next.dataset, parties: next.dataset.parties.map(item => item.id === next.career.partyId && item.source === DATA_SOURCES.USER ? { ...item, name: d.newLabel, officialName: d.newLabel, logoAlt: `Logo di ${d.newLabel}` } : item) } };
+  next = addTimeline(next, [{ kind: 'partito', title: `Fusione con ${d.label}`, detail: `+${d.members.toLocaleString('it-IT')} iscritti, nuova area interna`, tone: 'neutral' }]);
+  return { ...next, ui: { ...next.ui, toast: `Fusione con ${d.label}` } };
+}
+function applyPartyRename(s, special) {
+  const d = special.descriptor;
+  let next = s;
+  next = { ...next, dataset: { ...next.dataset, parties: next.dataset.parties.map(item => item.id === next.career.partyId && item.source === DATA_SOURCES.USER ? { ...item, name: d.label, officialName: d.label, ...(d.abbreviation ? { abbreviation: String(d.abbreviation).toUpperCase().slice(0, 6) } : {}), logoAlt: `Logo di ${d.label}` } : item) } };
+  if (next.world) next = { ...next, world: renamePlayerForce(next.world, { label: d.label, abbreviation: d.abbreviation ? String(d.abbreviation).toUpperCase().slice(0, 6) : null, shock: d.shock, renewal: d.renewal, date: next.clock.currentDate }) };
+  next = addTimeline(next, [{ kind: 'partito', title: `Il partito diventa ${d.label}`, detail: `Prima: ${d.previous}`, tone: 'neutral' }]);
+  return { ...next, ui: { ...next.ui, toast: `Nuovo nome: ${d.label}` } };
+}
 function handleSpecials(s, specials) {
   let next = s;
   for (const special of specials) {
     const player = playerOf(next);
     if (special.type === 'world-stance') {
       next = { ...next, world: applyWorldSignals(next.world, [{ type: 'stance', delta: special.delta, title: special.title }], next.clock.currentDate) };
+    } else if (special.type === 'party-split') {
+      next = applyPartySplit(next, special);
+    } else if (special.type === 'party-merge') {
+      next = applyPartyMerge(next, special);
+    } else if (special.type === 'party-rename') {
+      next = applyPartyRename(next, special);
     } else if (special.type === 'party-left') {
       next = { ...next, world: next.world ? setPlayerParty(next.world, null, next.clock.currentDate) : next.world };
       next = {
@@ -2170,6 +2266,43 @@ export const store = {
     state = { ...state, world: breakAlliance(state.world, allianceId, state.clock.currentDate), ui: { ...state.ui, toast: 'Alleanza interrotta' } };
     for (const partyId of (alliance?.partyIds ?? []).filter(id => id !== state.world.playerPartyId)) state = rememberFact(state, { kind: 'alleanza-rotta', text: `Rotta l’${alliance.label.toLowerCase()}`, partyId, subject: partyId, weight: 1.5 });
     persist(); emit();
+  },
+  // ---------- the internal life of the party ----------
+  partyLife() {
+    const neighbours = state.world ? mergeCandidates(state.world) : [];
+    return { overview: lifeOverview(state.game), ops: partyOpsAvailability(state.game, { neighbours }), neighbours };
+  },
+  respondPartyRequest(requestId, choice) {
+    const result = lifeRespond({ game: state.game, stats: statsOf(state), parliament: state.parliament }, gameEnv(state), requestId, choice);
+    return commitGame(result, { accetta: 'Richiesta accolta', 'accetta-controfferta': 'Controfferta accolta', tratta: 'Trattativa aperta', rifiuta: 'Richiesta respinta', tempo: 'Hai preso tempo' }[choice] ?? 'Risposta registrata');
+  },
+  breakPartyPact(pactId) {
+    return commitGame(lifeBreakPact({ game: state.game, stats: statsOf(state), parliament: state.parliament }, gameEnv(state), pactId), 'Accordo denunciato');
+  },
+  partyCadreAction(args) {
+    return commitGame(lifeCadre({ game: state.game, stats: statsOf(state), parliament: state.parliament }, gameEnv(state), args), 'Dirigente locale aggiornato');
+  },
+  partyCongressWork(kind) {
+    return commitGame(lifeCongress({ game: state.game, stats: statsOf(state), parliament: state.parliament }, gameEnv(state), kind), 'Lavoro per il congresso registrato');
+  },
+  rebuildParty(focus) {
+    return commitGame(lifeRebuild({ game: state.game, stats: statsOf(state), parliament: state.parliament }, gameEnv(state), focus), 'Piano di ricostruzione avviato');
+  },
+  foundParty(args) {
+    const result = lifeFound({ game: state.game, stats: statsOf(state), parliament: state.parliament }, gameEnv(state), args);
+    return commitGame(result, 'Nuovo partito fondato');
+  },
+  mergeParty(forceId, { unifyNames = false } = {}) {
+    const force = (state.world ? mergeCandidates(state.world) : []).find(item => item.id === forceId);
+    if (!force) throw new Error('Questa forza non è più disponibile per una fusione.');
+    const ownLabel = state.game.party?.label ?? '';
+    const short = value => String(value).replace(/\s*\(.*\)\s*$/, '');
+    const newLabel = unifyNames ? `${short(ownLabel)} – ${short(force.label)}`.slice(0, 60) : null;
+    const own = state.world?.parties?.find(item => item.isPlayer);
+    return commitGame(lifeMerge({ game: state.game, stats: statsOf(state), parliament: state.parliament }, gameEnv(state), { forceId, label: short(force.label), share: force.share, ownShare: own?.baseline ?? 3, newLabel }), 'Fusione conclusa');
+  },
+  renameParty(args) {
+    return commitGame(lifeRename({ game: state.game, stats: statsOf(state), parliament: state.parliament }, gameEnv(state), args), 'Nuovo nome registrato');
   },
   leaveParty() {
     const label = state.game.party?.label ?? 'il partito';

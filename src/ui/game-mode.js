@@ -5,7 +5,7 @@ import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, PARTY_INVESTM
 import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260928-5';
 import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20260928-5';
 import { careerLevelLabel } from '../data/regions.js?v=20260928-5';
-import { formatDate } from '../core/time.js?v=20260928-5';
+import { advanceDays, formatDate } from '../core/time.js?v=20260928-5';
 import { renderBarometerPanel } from './polls-mode.js?v=20260928-5';
 import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20260928-5';
 import { ITALIAN_REGIONS } from '../data/regions.js?v=20260928-5';
@@ -241,7 +241,10 @@ export function renderInbox(state, { compact = false } = {}) {
   const game = state.game;
   if (!game.inbox.length) return `<p class="quiet-copy">Nessuna decisione in sospeso. Usa i giorni della settimana oppure chiudila.</p>`;
   const kinds = { evento: 'EVENTO', appuntamento: 'APPUNTAMENTO', urgente: 'URGENTE', situazione: 'DALLA SITUAZIONE' };
-  return `<div class="hq-inbox-list">${game.inbox.map(item => {
+  // The decisions of the situation come first; appointments and events follow in the order of the days of the week.
+  const ordered = game.inbox.map((item, index) => ({ item, index })).sort((a, b) => (a.item.day ?? -1) - (b.item.day ?? -1) || a.index - b.index).map(entry => entry.item);
+  const dayLabel = item => Number.isInteger(item.day) && game.week?.startedAt ? new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'short' }).format(new Date(`${advanceDays(game.week.startedAt, item.day)}T12:00:00`)) : '';
+  return `<div class="hq-inbox-list">${ordered.map(item => {
     const fallback = item.choices.find(choice => choice.id === item.defaultChoice)?.label ?? '';
     const choices = item.choices.map(choice => {
       const info = describeChoice(item, choice.id);
@@ -249,7 +252,7 @@ export function renderInbox(state, { compact = false } = {}) {
       return `<button class="hq-choice" data-agenda-item="${esc(item.id)}" data-agenda-choice="${esc(choice.id)}" ${problem || game.status === 'ended' ? `disabled title="${esc(problem)}"` : ''}><strong>${esc(choice.label)}</strong><span class="hq-cost">${costChips(choice.cost ?? {})}</span>${info.effects || info.risk ? `<small>${esc([info.effects, info.risk].filter(Boolean).join(' · '))}</small>` : ''}${problem ? `<em>${esc(problem)}</em>` : ''}</button>`;
     }).join('');
     const tone = item.kind === 'urgente' ? '#e34948' : item.kind === 'situazione' ? '#eb6834' : item.kind === 'evento' ? '#c0a166' : '#1baf7a';
-    return `<article class="hq-card kind-${esc(item.kind)}"><div class="hq-card-head">${artTile(EVENT_ICONS[item.templateId] ?? 'star', tone)}<div><header><span class="hq-tag">${kinds[item.kind] ?? 'DECISIONE'}</span><small>Entro fine settimana · senza scelta: “${esc(fallback)}”</small></header><h3>${esc(item.title)}</h3>${compact ? '' : `<p>${esc(item.body)}</p>`}</div></div><div class="hq-choices">${choices}</div></article>`;
+    return `<article class="hq-card kind-${esc(item.kind)}"><div class="hq-card-head">${artTile(EVENT_ICONS[item.templateId] ?? CATEGORY_VISUALS[item.category]?.icon ?? 'star', tone)}<div><header><span class="hq-tag">${kinds[item.kind] ?? 'DECISIONE'}</span>${dayLabel(item) ? `<span class="hq-day">${esc(dayLabel(item))}</span>` : ''}<small>Entro fine settimana · senza scelta: “${esc(fallback)}”</small></header><h3>${esc(item.title)}</h3>${compact ? '' : `<p>${esc(item.body)}</p>`}</div></div><div class="hq-choices">${choices}</div></article>`;
   }).join('')}</div>`;
 }
 

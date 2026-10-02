@@ -743,3 +743,45 @@ html body .hq-activity-action select:not([multiple]) { width: 100%; max-width: 2
   .nv-lines .secondary-button { white-space: normal; }
   .nv-actions .secondary-button { flex: 1 1 100%; justify-content: center; }
 }
+
+/* ---------- Vita interna del partito ---------- */
+.pl-page { display: grid; gap: 14px; }
+.pl-vitals { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.pl-vitals > div { display: grid; gap: 4px; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: 10px; background: color-mix(in srgb, var(--panel, #161c19) 70%, transparent); }
+.pl-vitals small { color: var(--ink-2); font-size: 11px; letter-spacing: .08em; }
+.pl-vitals strong { font: 700 24px Manrope, sans-serif; color: var(--ink); }
+.pl-vitals em { font-style: normal; color: var(--ink-2); font-size: 12px; line-height: 1.35; }
+.pl-requests, .pl-areas, .pl-cadres, .pl-ops { display: grid; gap: 12px; }
+.pl-request, .pl-area, .pl-cadre, .pl-op { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid var(--line-strong); border-radius: 10px; background: color-mix(in srgb, var(--panel, #161c19) 70%, transparent); }
+.pl-request.is-urgent { border-color: #e34948; }
+.pl-request header, .pl-area header, .pl-cadre header { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; flex-wrap: wrap; }
+.pl-request header small, .pl-area header small, .pl-cadre header small { color: var(--ink-2); display: block; font-size: 12px; }
+.pl-request h4, .pl-op h4 { margin: 0; font: 700 15px Manrope, sans-serif; color: var(--ink); }
+.pl-request p, .pl-op p, .pl-trait { margin: 0; color: var(--ink-2); font-size: 13px; line-height: 1.5; }
+.pl-area.is-mine { border-color: var(--accent); box-shadow: inset 0 0 0 1px rgba(213,170,99,.35); }
+.pl-cadre.is-in-uscita { border-color: #e34948; }
+.pl-cadre.is-critico { border-color: #eb6834; }
+.pl-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.pl-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.pl-actions button small, .pl-area footer small { color: var(--ink-2); }
+.pl-area footer { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.pl-meter { display: grid; grid-template-columns: minmax(120px, 190px) minmax(0, 1fr) 34px; gap: 8px; align-items: center; font-size: 12px; color: var(--ink-2); }
+.pl-meter b:last-child { text-align: right; color: var(--ink); }
+.pl-rank, .pl-notes { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; font-size: 13px; color: var(--ink-2); }
+.pl-rank li { display: grid; grid-template-columns: minmax(110px, 190px) minmax(0, 1fr) 46px; gap: 8px; align-items: center; }
+.pl-rank li b { text-align: right; color: var(--ink); }
+.pl-phases { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; list-style: none; margin: 8px 0; padding: 0; }
+.pl-phases li { padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: 8px; display: grid; gap: 2px; }
+.pl-phases li.current { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.pl-phases li.done { opacity: .6; }
+.pl-form { display: flex; gap: 10px; flex-wrap: wrap; align-items: end; }
+.pl-form label, .pl-op > label { display: grid; gap: 4px; font-size: 12px; color: var(--ink-2); }
+.pl-form input[type=text], .pl-form select { min-height: 36px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 6px; background: #141b18; color: var(--ink); }
+.pl-followers { border: 1px solid var(--line-strong); border-radius: 8px; padding: 8px 12px; display: flex; gap: 14px; flex-wrap: wrap; }
+.pl-followers label, .pl-check, .pl-op > label.pl-check { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--ink); }
+.pl-neighbour { display: flex; gap: 10px; justify-content: space-between; align-items: center; flex-wrap: wrap; padding: 6px 0; border-top: 1px solid var(--line-strong); }
+.pl-neighbour small, .pl-reason { color: var(--ink-2); display: block; font-size: 12px; }
+.pl-ops { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+@media (max-width: 720px) { .pl-vitals { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pl-meter { grid-template-columns: 1fr 1fr 30px; } .pl-rank li { grid-template-columns: 1fr 1fr 44px; } }
+/* the day of the week on the decisions of the agenda */
+.hq-day { display: inline-flex; align-items: center; padding: 1px 8px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }

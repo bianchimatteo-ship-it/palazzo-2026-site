@@ -1589,3 +1589,59 @@ export function campaignPollBonus(world, electionType, stats = {}, relations = [
   return { bonus: round2(clamp((share - 6) * 0.2 + allies * 0.08, -2, 4)), share: round1(share), allies: round1(allies) };
 }
 export { STRATEGIES };
+
+// ---------- the player's party in the political world: split, merger, new name ----------
+// A group leaves the player's party: a share of its consensus goes with it. The new force is a simulated one (a splinter
+// of the world) or, when the player follows it, the player's own party (the caller then attaches it with setPlayerParty).
+export function splitPlayerForce(input, { id, label, abbreviation = null, fraction, date, asPlayer = false }) {
+  const world = copy(input);
+  const parent = world.parties.find(item => item.id === world.playerPartyId) ?? world.parties.find(item => item.isPlayer);
+  if (!parent || world.parties.some(item => item.id === id)) return world;
+  const share = round2(Math.max(0.2, parent.baseline * clamp(fraction, 0.03, 0.6)));
+  parent.baseline = round2(Math.max(0.3, parent.baseline - share * 0.9));
+  parent.anchor = round2(Math.max(0.3, parent.anchor - share * 0.7));
+  parent.cohesion = clamp((parent.cohesion ?? 60) + 6, 0, 100);
+  const direction = Number.isFinite(parent.axis) ? (Math.sign(parent.axis) || (draw(world) < 0.5 ? -1 : 1)) : 1;
+  const force = addParty(world, { id, label, abbreviation, baseline: share, refSource: asPlayer ? 'user' : 'simulation', origin: asPlayer ? 'player' : 'evoluzione', axis: clamp((parent.axis ?? 0) + (asPlayer ? 0 : direction), -3, 3), strategy: 'opposizione', parentId: parent.id, presence: presenceFor(PRESENCE.EMERGING, world.week) }, world.week);
+  force.parentId = parent.id;
+  force.visibility = 45;
+  for (const other of world.parties) if (other !== force) world.ties[tieKey(force.id, other.id)] = other === parent ? -35 : initialTie(world, force, other);
+  addEffect(world, { partyId: parent.id, delta: -round2(share * 0.25), remaining: 8, cause: 'scissione', label: 'Scissione nel partito', unscaled: true });
+  logEvent(world, date, { kind: 'scissione', icon: 'unlink', scope: 'nazionale', title: `Scissione in ${parent.label}`, body: `${label} lascia ${parent.label} con una parte del consenso (${share.toLocaleString('it-IT')} punti nello scenario). Nessun dirigente reale è coinvolto: è un’evoluzione simulata della tua partita.`, tone: 'neutral', partyId: parent.id });
+  return world;
+}
+// Another force joins the player's party (the same fusion the world makes between simulated forces).
+export function mergeIntoPlayerForce(input, { forceId, label = null, date }) {
+  const world = copy(input);
+  const absorber = world.parties.find(item => item.id === world.playerPartyId) ?? world.parties.find(item => item.isPlayer);
+  const absorbed = world.parties.find(item => item.id === forceId && item.active && item !== absorber);
+  if (!absorber || !absorbed) return world;
+  merge(world, absorber, absorbed, date);
+  absorber.cohesion = clamp((absorber.cohesion ?? 60) - 6, 0, 100);
+  if (label) absorber.label = label;
+  addEffect(world, { partyId: absorber.id, delta: round2(Math.min(1.2, absorbed.baseline * 0.12)), remaining: 12, cause: 'fusione', label: 'Fusione tra partiti', unscaled: true });
+  return world;
+}
+// A new name: a shock on the polls now (people do not recognise it), a slow renewal later.
+export function renamePlayerForce(input, { label, abbreviation = null, shock = 0.45, renewal = 0.35, date }) {
+  const world = copy(input);
+  const force = world.parties.find(item => item.id === world.playerPartyId) ?? world.parties.find(item => item.isPlayer);
+  if (!force) return world;
+  const previous = force.label;
+  force.label = label;
+  if (abbreviation) force.abbreviation = abbreviation;
+  addEffect(world, { partyId: force.id, delta: -round2(0.8 * shock), remaining: 10, cause: 'cambio-nome', label: 'Cambio di nome', unscaled: true });
+  addEffect(world, { partyId: force.id, delta: round2(0.35 * renewal), remaining: 26, cause: 'cambio-nome-rilancio', label: 'Rilancio del nuovo nome', unscaled: true });
+  logEvent(world, date, { kind: 'identita', icon: 'spark', scope: 'nazionale', title: `${previous} diventa ${label}`, body: 'Il partito cambia nome e simbolo: nello scenario gli elettori impiegano un po’ a riconoscerlo.', tone: 'neutral', partyId: force.id });
+  return world;
+}
+// The forces close enough to the player's party to talk about a merger: friendly ties, near on the left-right axis,
+// not far apart in size (the player's own force and the ones outside the polls are left out).
+export function mergeCandidates(input, { minTie = 25, maxAxisGap = 1.6 } = {}) {
+  const own = input?.parties?.find(item => item.isPlayer);
+  if (!own || own.active === false) return [];
+  return input.parties.filter(item => item.active && !item.isPlayer && isSurveyed(item) && !item.mergedInto)
+    .map(item => ({ id: item.id, label: item.label, share: round1(item.baseline), tie: Math.round(input.ties?.[tieKey(own.id, item.id)] ?? 0), axisGap: Math.abs((own.axis ?? 0) - (item.axis ?? 0)), real: item.refSource === 'real' }))
+    .filter(item => item.tie >= minTie && item.axisGap <= maxAxisGap && item.share >= Math.max(0.5, own.baseline * 0.3) && item.share <= own.baseline * 1.8 + 1)
+    .sort((a, b) => b.tie - a.tie).slice(0, 4);
+}
