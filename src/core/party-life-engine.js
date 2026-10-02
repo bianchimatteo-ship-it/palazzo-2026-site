@@ -693,6 +693,23 @@ function schedulePhases(voteWeek, week) {
   return CONGRESS_PHASES.map(phase => { const entry = { id: phase.id, startWeek: Math.round(start) }; start += phase.weeks * scale; return entry; });
 }
 export const congressPhaseOf = (congress, week) => [...congress.schedule].reverse().find(item => item.startWeek <= week)?.id ?? congress.schedule[0].id;
+// The area that prepared the congress on its own (a plan with the federations, a motion, an agreement) arrives with more delegates.
+function preparedBonus(current, congress) {
+  const plan = current.profile?.congressPlan;
+  if (!plan || (congress.voteWeek ?? 0) - (plan.week ?? 0) > 60) return 1;
+  return 1 + (plan.action === 'endorsement-territoriale' ? 0.12 : 0.08);
+}
+// The agreements the areas reached by themselves count as alliances of the vote (the pairs stay apart).
+function adoptAgreements(party, congress, week) {
+  for (const current of party.currents) for (const pact of current.profile?.agreements ?? []) {
+    const ids = pact?.currents;
+    if (pact?.status !== 'active' || !Array.isArray(ids) || ids.length !== 2 || week - (pact.week ?? week) > 30) continue;
+    const members = ids.map(id => party.currents.find(item => item.id === id));
+    if (members.some(item => !item) || congress.alliances.some(item => item.ids.some(id => ids.includes(id)))) continue;
+    congress.alliances.push({ ids: [...ids], week, origin: 'accordo' });
+    congress.notes.push({ week, phase: 'alleanze', text: `${members[0].label} e ${members[1].label} arrivano al congresso con un’intesa già pronta.` });
+  }
+}
 function regionalDelegates(party, life, congress) {
   const org = party.org;
   const total = CONGRESS_DELEGATES[party.affiliation === 'founder' ? 'founder' : 'member'];
@@ -713,7 +730,7 @@ function regionalDelegates(party, life, congress) {
       const noise = 0.85 + (hash(`${congress.id}|${section.region}|${current.id}`) % 31) / 100;
       const lead = committee?.leader?.currentId === current.id ? 2.2 : 1;
       const mobilized = 1 + (congress.mobilization?.[current.id] ?? 0) / 100;
-      return Math.max(0.1, (current.strength ?? 1) * noise * lead * mobilized * (1 + (actor?.momentum ?? 0) / 100) * (0.6 + section.vitality / 100));
+      return Math.max(0.1, (current.strength ?? 1) * noise * lead * mobilized * (1 + (actor?.momentum ?? 0) / 100) * preparedBonus(current, congress) * (0.6 + section.vitality / 100));
     });
     const sum = weights.reduce((a, b) => a + b, 0);
     const own = committee?.leader?.player ? Math.round(delegates * 0.6) : 0;
@@ -771,7 +788,7 @@ function tickCongress(game, life, api, week, date, rand, lines, raises) {
     congress.notes.push({ week, phase, text: spec.detail });
     lines.push(`Congresso — ${spec.label}: ${spec.detail}`);
     if (phase === 'delegati') congress.delegates = regionalDelegates(party, life, congress);
-    if (phase === 'alleanze') formAlliances(party, life, congress, rand, week);
+    if (phase === 'alleanze') { adoptAgreements(party, congress, week); formAlliances(party, life, congress, rand, week); }
     if (phase === 'mozioni') congress.motions = party.currents.map(current => ({ id: current.id, label: `Mozione ${current.label}`, leaderLabel: life.actors[current.id]?.leaderLabel ?? null, line: life.actors[current.id]?.line ?? null }));
     if (['preparazione', 'alleanze', 'trattative'].includes(phase) && !game.inbox.some(item => item.templateId === 'congresso-fase') && (party.rank ?? 0) >= 1) raises.push({ id: 'congresso-fase', params: { dedupe: `${congress.id}-${phase}`, phaseLabel: spec.label, body: `${spec.detail} Le aree contano su di te: puoi lavorare per la tua parte o restare alla finestra. Peso attuale: ${Object.entries(congress.delegates.byCurrent).map(([id, n]) => `${party.currents.find(item => item.id === id)?.label ?? id} ${n}`).join(' · ')} delegati su ${congress.delegates.total}.` }, urgent: false });
   }
@@ -784,6 +801,7 @@ function tickCongress(game, life, api, week, date, rand, lines, raises) {
       congress.mobilization[current.id] = round1(clamp((congress.mobilization[current.id] ?? 0) + actor.ambition / 100 * capacity * 2.4 * (0.6 + actor.loyalty / 200), 0, 40));
     }
   }
+  if (['alleanze', 'trattative'].includes(phase)) adoptAgreements(party, congress, week);
   if (['alleanze', 'trattative', 'mozioni'].includes(phase) && week % 2 === 0) congress.delegates = regionalDelegates(party, life, congress);
   // The requests of the congress: delegates and alliances for places and lines.
   if (['alleanze', 'trattative'].includes(phase) && life.requests.filter(item => OPEN.includes(item.stage)).length < MAX_OPEN && rand() < 0.35) {

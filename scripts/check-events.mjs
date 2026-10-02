@@ -44,6 +44,8 @@ function play(seedText, { premier = false, weeks = 208, spread = 150, crime = 50
 const a = play('storia-alfa', { premier: true, spread: 240, crime: 60 });
 const b = play('storia-beta', { premier: true, spread: 240, crime: 60 });
 const citizen = play('storia-gamma', { premier: false, spread: 120, crime: 40 });
+const repeat = play('storia-alfa', { premier: true, spread: 240, crime: 60 });
+assert.deepEqual(repeat.raised.map(item => item.id), a.raised.map(item => item.id), 'Lo stesso seed riproduce la stessa storia.');
 for (const run of [a, b, citizen]) {
   const ids = new Set(run.raised.map(item => item.id));
   assert.ok(ids.size >= 12, `Varietà: ${ids.size} eventi diversi in quattro anni`);

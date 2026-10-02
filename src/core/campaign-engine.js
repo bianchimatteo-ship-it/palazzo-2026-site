@@ -32,6 +32,108 @@ function normalized(values) {
 }
 function ids(prefix, seed, index = 0) { return `${prefix}-${seed.toString(36)}-${index}`; }
 
+// The campaign is simulation data: rival identities are deliberately generated from the campaign seed and
+// candidate id, so they survive saves and remain reproducible without touching REAL or USER records.
+export const RIVAL_PERSONALITIES = Object.freeze({
+  aggressivo: Object.freeze({ attack: 1.8, defend: .65, territory: .9, visibility: 1.25, alliance: .45, withdraw: .35 }),
+  prudente: Object.freeze({ attack: .55, defend: 1.8, territory: 1.2, visibility: .75, alliance: 1.05, withdraw: .7 }),
+  opportunista: Object.freeze({ attack: 1.3, defend: .75, territory: 1.05, visibility: 1.15, alliance: 1.35, withdraw: 1.1 }),
+  diplomatico: Object.freeze({ attack: .35, defend: 1.05, territory: .85, visibility: .8, alliance: 1.95, withdraw: .55 }),
+  ideologico: Object.freeze({ attack: 1.2, defend: .9, territory: 1.05, visibility: 1.15, alliance: .55, withdraw: .25 }),
+  territoriale: Object.freeze({ attack: .75, defend: 1.15, territory: 2, visibility: .7, alliance: .8, withdraw: .45 })
+});
+const RIVAL_PERSONALITY_IDS = Object.freeze(Object.keys(RIVAL_PERSONALITIES));
+const RIVAL_OBJECTIVES = Object.freeze(['vincere', 'consolidare-territorio', 'fermare-il-giocatore', 'costruire-alleanza', 'emergere-nel-partito', 'restare-competitivo']);
+const RIVAL_INTERESTS = Object.freeze(['territorio', 'visibilita', 'programma', 'coalizioni', 'partito', 'elettorato-locale']);
+const RIVAL_MEMORY_LIMIT = 24;
+const RIVAL_MEMORY_HALF_LIFE = 90;
+const RIVAL_MEMORY_TYPES = Object.freeze({
+  attack: -1,
+  betrayal: -1.5,
+  rejection: -.65,
+  aid: 1,
+  agreement: 1,
+  conflict: -.8,
+  victory: 1,
+  defeat: -.5,
+  initiative: 0
+});
+function rivalProfileSeed(campaignSeed, candidateId) { return hash(`rival-profile|${campaignSeed}|${candidateId}`); }
+function profileForCandidate(campaignSeed, candidateId, index = 0, type = 'politiche') {
+  const seed = rivalProfileSeed(campaignSeed, candidateId);
+  const rand = randomFrom(seed ^ (index * 0x9e3779b9));
+  const personality = RIVAL_PERSONALITY_IDS[(seed + index) % RIVAL_PERSONALITY_IDS.length];
+  const objective = RIVAL_OBJECTIVES[(seed >>> 3) % RIVAL_OBJECTIVES.length];
+  const firstInterest = RIVAL_INTERESTS[(seed >>> 7) % RIVAL_INTERESTS.length];
+  const secondInterest = RIVAL_INTERESTS[(seed >>> 11) % RIVAL_INTERESTS.length];
+  const interests = [...new Set([firstInterest, secondInterest, type === 'comunale' ? 'elettorato-locale' : null].filter(Boolean))];
+  return {
+    version: 1,
+    personality,
+    objectives: [objective, objective === 'vincere' ? 'restare-competitivo' : 'vincere'],
+    interests,
+    loyalty: round(38 + rand() * 48),
+    initiative: round(.42 + rand() * .5),
+    memory: [],
+    relationships: {},
+    lastDecision: null,
+    source: SOURCE
+  };
+}
+function memoryWeightAt(campaign, entry) {
+  const age = Math.max(0, (campaign.day ?? 0) - Number(entry.day ?? campaign.day ?? 0));
+  return Number(entry.weight ?? 1) * Math.pow(.5, age / RIVAL_MEMORY_HALF_LIFE);
+}
+function ensureRivalProfile(campaign, rival, index = 0) {
+  if (!rival || rival.isPlayer) return null;
+  const fallback = profileForCandidate(campaign.seed ?? 1, rival.id, index, campaign.electionType);
+  const profile = rival.aiProfile && typeof rival.aiProfile === 'object' ? rival.aiProfile : {};
+  const normalized = {
+    ...fallback,
+    ...profile,
+    objectives: Array.isArray(profile.objectives) && profile.objectives.length ? profile.objectives : fallback.objectives,
+    interests: Array.isArray(profile.interests) && profile.interests.length ? profile.interests : fallback.interests,
+    memory: Array.isArray(profile.memory) ? profile.memory.slice(0, RIVAL_MEMORY_LIMIT) : [],
+    relationships: profile.relationships && typeof profile.relationships === 'object' ? { ...profile.relationships } : {},
+    loyalty: clamp(Number(profile.loyalty ?? fallback.loyalty)),
+    initiative: clamp(Number(profile.initiative ?? fallback.initiative), 0, 1),
+    source: SOURCE
+  };
+  // Keep the same object reference during a turn: memory/decision helpers can safely enrich it incrementally.
+  rival.aiProfile = profile === rival.aiProfile ? Object.assign(rival.aiProfile, normalized) : normalized;
+  const playerId = campaign.playerCandidateId;
+  if (playerId && !Number.isFinite(Number(rival.aiProfile.relationships[playerId]))) rival.aiProfile.relationships[playerId] = round(clamp(Number(rival.relationship ?? .5) * 100));
+  for (const other of campaign.candidates ?? []) {
+    if (other.id !== rival.id && !Number.isFinite(Number(rival.aiProfile.relationships[other.id]))) rival.aiProfile.relationships[other.id] = 50;
+  }
+  rival.relationship = round(clamp(Number(rival.aiProfile.relationships[playerId] ?? Number(rival.relationship ?? .5) * 100) / 100, 0, 1));
+  return rival.aiProfile;
+}
+function rivalMemory(campaign, rival, type, targetId = null, details = {}) {
+  const profile = ensureRivalProfile(campaign, rival);
+  if (!profile) return;
+  const entry = {
+    id: ids(`memoria-rivale-${type}`, campaign.seed, (campaign.history?.length ?? 0) + (profile.memory?.length ?? 0)),
+    type, targetId, day: campaign.day, date: campaign.currentDate, weight: details.weight ?? (Math.abs(RIVAL_MEMORY_TYPES[type] ?? 0.5) || .5),
+    valence: RIVAL_MEMORY_TYPES[type] ?? 0, source: SOURCE, ...details
+  };
+  profile.memory = [entry, ...(profile.memory ?? [])].slice(0, RIVAL_MEMORY_LIMIT);
+  if (targetId) {
+    const old = Number(profile.relationships[targetId] ?? 50);
+    const delta = Number(details.relationDelta ?? (entry.valence * (type === 'betrayal' ? 9 : type === 'agreement' ? 6 : 4)));
+    profile.relationships[targetId] = round(clamp(old + delta));
+    if (targetId === campaign.playerCandidateId) rival.relationship = round(clamp(profile.relationships[targetId] / 100, 0, 1));
+  }
+}
+function rivalMemoryScore(campaign, rival, type, targetId = null) {
+  const profile = ensureRivalProfile(campaign, rival);
+  return (profile?.memory ?? []).filter(item => item.type === type && (!targetId || item.targetId === targetId)).reduce((sum, item) => sum + memoryWeightAt(campaign, item), 0);
+}
+function rivalRelationship(campaign, rival, targetId) {
+  const profile = ensureRivalProfile(campaign, rival);
+  return Number(profile?.relationships?.[targetId] ?? (targetId === campaign.playerCandidateId ? Number(rival.relationship ?? .5) * 100 : 50));
+}
+
 function campaignTerritories(type, player, userTerritories) {
   const playerMunicipality = userTerritories.find(item => item.id === player.territoryId)?.name ?? player.municipality ?? 'Territorio locale';
   if (type === 'comunale') return [{ id:`sim-territory-comune-${hash(playerMunicipality).toString(36)}`, name:playerMunicipality, kind:'comune', weight:100, source:SOURCE, scope:'territorio comunale', organization:30 }];
@@ -84,9 +186,11 @@ function buildOpponents(partyId, catalog, seed, count = 3, realCandidates = [], 
     const party = parties[index % Math.max(1, parties.length)] ?? null;
     const candidateId = ids('candidatura-simulata',seed,index+1);
     const person = realCandidates[index];
+    const rivalSeed = seed + index * 97;
+    const aiProfile = profileForCandidate(seed, candidateId, index, type);
     // A documented parliamentarian keeps only verified identity data; campaign numbers stay simulated.
-    if (person) candidates.push({ ...createCandidate({ id:candidateId, partyId:null, displayName:person.fullName, seed:seed + index*97 }), realReference:{ politicianId:person.id, fullName:person.fullName, chamber:person.chamber, groupId:person.groupId ?? null, groupName:person.groupName ?? null, electedOnList:person.electedOnList ?? null, circoscription:person.circoscription ?? null, sourceUrl:person.sourceUrl, sourceName:person.sourceName, source:'real', verified:true } });
-    else candidates.push({ ...createCandidate({ id:candidateId, partyId:party?.id ?? null, displayName:`Candidatura simulata ${index+1}`, seed:seed + index*97 }), partyLabel:party?.officialName ?? party?.name ?? null, partyAbbreviation:party?.abbreviation ?? null });
+    if (person) candidates.push({ ...createCandidate({ id:candidateId, partyId:null, displayName:person.fullName, seed:rivalSeed }), aiProfile, realReference:{ politicianId:person.id, fullName:person.fullName, chamber:person.chamber, groupId:person.groupId ?? null, groupName:person.groupName ?? null, electedOnList:person.electedOnList ?? null, circoscription:person.circoscription ?? null, sourceUrl:person.sourceUrl, sourceName:person.sourceName, source:'real', verified:true } });
+    else candidates.push({ ...createCandidate({ id:candidateId, partyId:party?.id ?? null, displayName:`Candidatura simulata ${index+1}`, seed:rivalSeed }), aiProfile, partyLabel:party?.officialName ?? party?.name ?? null, partyAbbreviation:party?.abbreviation ?? null });
   }
   return candidates;
 }
@@ -421,74 +525,146 @@ function evaluateNomination(campaign) {
     addHistory(campaign,'candidatura',lead < 0 ? 'Il partito ha preferito un’altra candidatura interna.' : 'La candidatura non ha ottenuto sostegno interno sufficiente entro la scadenza.',{source:SOURCE});
   }
 }
+function chooseRivalAction(campaign, rival, ranked, rivals, player) {
+  const profile = ensureRivalProfile(campaign, rival, rivals.indexOf(rival));
+  const traits = RIVAL_PERSONALITIES[profile.personality] ?? RIVAL_PERSONALITIES.prudente;
+  const playerRelation = rivalRelationship(campaign, rival, player.id);
+  const hostileMemory = rivalMemoryScore(campaign, rival, 'attack', player.id) + rivalMemoryScore(campaign, rival, 'betrayal', player.id) * 1.4;
+  const cooperativeMemory = rivalMemoryScore(campaign, rival, 'agreement', player.id) + rivalMemoryScore(campaign, rival, 'aid', player.id) * 1.2;
+  const own = weightedShare(campaign, rival.id);
+  const playerShare = weightedShare(campaign, player.id);
+  const gap = playerShare - own;
+  const top = ranked.reduce((best, entry) => !best || entry.own > best.own ? entry : best, null);
+  const target = ranked[0]?.area;
+  const objectives = profile.objectives ?? [];
+  const interests = profile.interests ?? [];
+  const scores = {
+    attack: traits.attack + (hostileMemory * .22) + (playerRelation < 38 ? .65 : 0) + (gap > -5 ? .35 : -.15) + (objectives.includes('fermare-il-giocatore') ? .75 : 0),
+    defend: traits.defend + (own > 34 ? .8 : 0) + (objectives.includes('consolidare-territorio') ? .25 : 0),
+    territory: traits.territory + (interests.includes('territorio') || interests.includes('elettorato-locale') ? .55 : 0) + (target ? Math.max(0, target.player - target.own) * .06 : 0),
+    visibility: traits.visibility + (interests.includes('visibilita') ? .55 : 0) + (objectives.includes('emergere-nel-partito') ? .4 : 0),
+    alliance: traits.alliance + (cooperativeMemory * .18) + (playerRelation > 62 ? .35 : 0) + (objectives.includes('costruire-alleanza') ? .85 : 0),
+    withdraw: traits.withdraw + (own < 8 ? 1.5 : 0) + (profile.loyalty < 40 ? .45 : 0)
+  };
+  if (campaign.alliances.some(item => item.status === 'active') || rivals.length < 2) scores.alliance *= .18;
+  if (!resourceAffordable(rival.resources, { money: 140, volunteers: 1 })) {
+    scores.attack *= .35; scores.visibility *= .35; scores.alliance *= .55;
+  }
+  if (profile.personality === 'ideologico' && campaign.nationalContext?.salientTopic) scores.visibility += .2;
+  if (profile.personality === 'territoriale' && target) scores.territory += target.region === campaign.homeRegion ? .35 : 0;
+  const initiative = clamp(profile.initiative + (hostileMemory > 1 ? .12 : 0) - (cooperativeMemory > 1 ? .04 : 0), 0, 1);
+  if (draw(campaign) > initiative) return own > 24 ? 'defend' : 'territory';
+  const rankedActions = Object.entries(scores).map(([action, score]) => ({ action, score: score + draw(campaign) * .08 })).sort((a, b) => b.score - a.score);
+  return rankedActions[0]?.action ?? 'defend';
+}
+function formRivalAlliance(campaign, rival, rivals) {
+  if (campaign.alliances.some(item => item.status === 'active')) return false;
+  const profile = ensureRivalProfile(campaign, rival, rivals.indexOf(rival));
+  const partner = rivals.filter(item => item.id !== rival.id && item.status === 'active')
+    .sort((a, b) => rivalRelationship(campaign, rival, b.id) - rivalRelationship(campaign, rival, a.id))[0];
+  if (!partner) return false;
+  const trust = rivalRelationship(campaign, rival, partner.id);
+  const chance = clamp(.08 + (profile?.personality === 'diplomatico' ? .16 : 0) + (profile?.objectives?.includes('costruire-alleanza') ? .15 : 0) + trust / 500, .03, .48);
+  if (trust < 58 || draw(campaign) >= chance) return false;
+  rival.status = 'allied'; rival.coalitionLeaderId = partner.id;
+  const transfer = mergeAlliance(campaign, partner.id, rival);
+  campaign.alliances.push({ id:ids('alleanza', campaign.seed, campaign.day + rivals.indexOf(rival)), leaderCandidateId:partner.id, partnerCandidateId:rival.id, status:'active', transfer, terms:'Sostegno e campagna condivisi; seggi calcolati insieme nello scenario.', formedOn:campaign.currentDate, source:SOURCE });
+  rivalMemory(campaign, rival, 'agreement', partner.id, { relationDelta: 8, action:'accordo-tra-rivali' });
+  rivalMemory(campaign, partner, 'agreement', rival.id, { relationDelta: 8, action:'accordo-tra-rivali' });
+  addHistory(campaign, 'alleanza', 'Due candidature simulate hanno annunciato un accordo.', { source:SOURCE });
+  return true;
+}
 function opponentTurn(campaign) {
   if (campaign.status !== 'active') return;
-  campaign.aiTurns=(campaign.aiTurns??0)+1;
-  if(campaign.nomination.status==='pending') for(const rival of campaign.internalCandidates) {
-    rival.internalSupport=round(clamp(rival.internalSupport+.25+draw(campaign)*.42,0,10));
-    rival.lastAction='Sta cercando sostegno nel partito.';
+  campaign.aiTurns = (campaign.aiTurns ?? 0) + 1;
+  if (campaign.nomination.status === 'pending') for (const rival of campaign.internalCandidates) {
+    rival.internalSupport = round(clamp(rival.internalSupport + .25 + draw(campaign) * .42, 0, 10));
+    rival.lastAction = 'Sta cercando sostegno nel partito.';
   }
   const rivals = activeOpponents(campaign);
   if (!rivals.length) return;
-  const player = campaign.candidates.find(item=>item.isPlayer);
+  const player = campaign.candidates.find(item => item.isPlayer);
+  rivals.forEach((rival, index) => ensureRivalProfile(campaign, rival, index));
   for (const rival of rivals) {
+    const profile = ensureRivalProfile(campaign, rival, rivals.indexOf(rival));
     if (rival.resources.money <= 0 || rival.resources.volunteers <= 0) {
-      rival.strategy='conservazione';
-      rival.lastAction='Ha ridotto il ritmo per proteggere le risorse.';
+      rival.strategy = 'conservazione';
+      rival.lastAction = 'Ha ridotto il ritmo per proteggere le risorse.';
+      profile.lastDecision = { day:campaign.day, action:'conservazione', source:SOURCE };
       continue;
     }
-    const ranked = campaign.territories.map(area=>({area,own:Number(area.supportByCandidate[rival.id]??0),player:Number(area.supportByCandidate[player.id]??0)}));
-    ranked.sort((a,b)=>(b.player-b.own)-(a.player-a.own));
+    const ranked = campaign.territories.map(area => ({ area, own:Number(area.supportByCandidate[rival.id] ?? 0), player:Number(area.supportByCandidate[player.id] ?? 0) }));
+    ranked.sort((a, b) => (b.player - b.own) - (a.player - a.own));
     const target = ranked[0]?.area;
-    const top = ranked.reduce((a,b)=>a.own>b.own?a:b,ranked[0]);
-    // A rival attacked by the player answers in kind.
+    const top = ranked.reduce((a, b) => a.own > b.own ? a : b, ranked[0]);
     const targeted = campaign.strategy?.id === 'contrasto' && campaign.strategy.targetId === rival.id;
-    rival.strategy = targeted ? 'risposta agli attacchi' : top.own > 34 ? 'difesa del vantaggio' : rival.resources.volunteers > 6 ? 'presidio dei territori deboli' : 'visibilità mirata';
-    // Only a rival attacked in the last week answers back, and less than it was hit.
-    if (targeted && campaign.day - (campaign.lastAttackDay ?? -99) <= 7) transferSupport(campaign, player.id, rival.id, .08 + draw(campaign) * .15);
-    else if (targeted && target) moveSupport(campaign,rival.id,.2+draw(campaign)*.3,target.id);
-    else if (target) moveSupport(campaign,rival.id,.28+draw(campaign)*.37,target.id);
-    rival.resources.money=Math.max(0,rival.resources.money-Math.round(80+draw(campaign)*200));
-    rival.resources.volunteers=Math.max(0,rival.resources.volunteers-(draw(campaign)<.2?1:0));
-    rival.resources.organization=Math.max(0,rival.resources.organization-(draw(campaign)<.3?1:0));
-    rival.lastAction = targeted ? 'Risponde colpo su colpo alla tua campagna.' : rival.strategy==='difesa del vantaggio'?'Sta difendendo le aree in cui è avanti.':rival.strategy==='visibilità mirata'?'Ha ridotto gli appuntamenti per cercare copertura.':'Sta cercando sostegno nelle aree contendibili.';
-    if (!campaign.alliances.some(item=>item.status==='active') && rival.relationship > .82 && rivals.length>1 && draw(campaign)<.12) {
-      const leader = rivals.filter(item=>item.id!==rival.id).sort((a,b)=>a.relationship-b.relationship)[0];
-      if (leader) {
-        rival.status='allied'; rival.coalitionLeaderId=leader.id;
-        const transfer = mergeAlliance(campaign, leader.id, rival);
-        campaign.alliances.push({id:ids('alleanza',campaign.seed,campaign.day+rivals.indexOf(rival)),leaderCandidateId:leader.id,partnerCandidateId:rival.id,status:'active',transfer,terms:'Sostegno e campagna condivisi; seggi calcolati insieme nello scenario.',formedOn:campaign.currentDate,source:SOURCE});
-        addHistory(campaign,'alleanza','Due candidature simulate hanno annunciato un accordo.',{source:SOURCE});
-      }
+    const action = targeted && campaign.day - (campaign.lastAttackDay ?? -99) <= 7 ? 'attack' : chooseRivalAction(campaign, rival, ranked, rivals, player);
+    profile.lastDecision = { day:campaign.day, action, targetId:target?.id ?? null, source:SOURCE };
+    rival.strategy = action === 'attack' ? 'risposta agli attacchi' : action === 'defend' ? 'difesa del vantaggio' : action === 'territory' ? 'presidio dei territori deboli' : action === 'alliance' ? 'costruzione di alleanze' : action === 'withdraw' ? 'conservazione' : 'visibilità mirata';
+    if (action === 'attack') {
+      transferSupport(campaign, player.id, rival.id, targeted ? .08 + draw(campaign) * .15 : .16 + draw(campaign) * .27, target?.id);
+      moveSupport(campaign, rival.id, .12 + draw(campaign) * .24, target?.id);
+      rival.lastAction = targeted ? 'Ricorda l’attacco e risponde colpo su colpo.' : 'Apre un fronte contro la candidatura del giocatore.';
+      rivalMemory(campaign, rival, 'attack', player.id, { action:'attacco-autonomo', relationDelta:-2, weight:.35 });
+    } else if (action === 'territory' && target) {
+      moveSupport(campaign, rival.id, .3 + draw(campaign) * .4, target.id);
+      rival.lastAction = `Concentra risorse su ${target.name}.`;
+    } else if (action === 'visibility') {
+      moveSupport(campaign, rival.id, .18 + draw(campaign) * .32);
+      rival.lastAction = 'Cerca visibilità per allargare il proprio elettorato.';
+    } else if (action === 'alliance') {
+      const formed = formRivalAlliance(campaign, rival, rivals);
+      rival.lastAction = formed ? 'Ha costruito un accordo autonomo con un’altra candidatura.' : 'Ha sondato possibili alleanze senza chiudere un accordo.';
+    } else if (action === 'withdraw') {
+      rival.resources.organization = Math.min(100, Number(rival.resources.organization ?? 0) + 1);
+      rival.lastAction = 'Riduce il ritmo per conservare risorse e influenza.';
+    } else {
+      moveSupport(campaign, rival.id, .22 + draw(campaign) * .25, top?.area?.id);
+      rival.lastAction = 'Difende il vantaggio nelle aree più solide.';
     }
+    rival.resources.money = Math.max(0, rival.resources.money - Math.round(80 + draw(campaign) * 200));
+    rival.resources.volunteers = Math.max(0, rival.resources.volunteers - (draw(campaign) < (action === 'attack' ? .28 : .2) ? 1 : 0));
+    rival.resources.organization = Math.max(0, rival.resources.organization - (draw(campaign) < .3 ? 1 : 0));
+    if (action !== 'alliance' && action !== 'withdraw') rivalMemory(campaign, rival, 'initiative', null, { action, weight:.12 });
   }
-  // The rivals among themselves: momentum rises and falls, the two strongest clash (an attack can backfire), a
-  // candidacy far behind withdraws and backs another one.
+  // Rivals also remember conflicts between themselves; personality and trust change who starts them.
   for (const rival of activeOpponents(campaign)) {
     rival.campaignStats.momentum = round(clamp(Number(rival.campaignStats.momentum ?? 0) * .8 + gaussian(campaign) * 1.2, -5, 5));
     moveSupport(campaign, rival.id, rival.campaignStats.momentum * .06);
   }
   const field = [...activeOpponents(campaign)].sort((a, b) => weightedShare(campaign, b.id) - weightedShare(campaign, a.id));
-  if (field.length >= 2 && draw(campaign) < .22) {
+  if (field.length >= 2) {
     const [first, second] = field;
-    const backfires = draw(campaign) < .35;
-    transferSupport(campaign, first.id, second.id, (.15 + draw(campaign) * .35) * (backfires ? -1 : 1));
-    second.lastAction = backfires ? 'Il suo attacco alla candidatura in testa si è ritorto contro.' : 'Attacca la candidatura in testa e guadagna terreno.';
-    addHistory(campaign, 'scontro', `Scontro tra ${candidateLabel(second)} e ${candidateLabel(first)}: ${backfires ? 'l’attacco si ritorce contro chi lo ha lanciato' : 'chi insegue recupera qualcosa'}.`, { source: SOURCE });
+    const aggressiveness = RIVAL_PERSONALITIES[ensureRivalProfile(campaign, second, 0)?.personality]?.attack ?? 1;
+    const conflictChance = clamp(.08 + aggressiveness * .07 + (50 - rivalRelationship(campaign, second, first.id)) / 500, .03, .32);
+    if (draw(campaign) < conflictChance) {
+      const backfires = draw(campaign) < .35;
+      transferSupport(campaign, first.id, second.id, (.15 + draw(campaign) * .35) * (backfires ? -1 : 1));
+      second.lastAction = backfires ? 'Il suo attacco alla candidatura in testa si è ritorto contro.' : 'Attacca la candidatura in testa e guadagna terreno.';
+      rivalMemory(campaign, second, 'conflict', first.id, { action:'scontro-tra-rivali', relationDelta:-5, weight:1 });
+      rivalMemory(campaign, first, 'conflict', second.id, { action:'scontro-tra-rivali', relationDelta:-5, weight:1 });
+      addHistory(campaign, 'scontro', `Scontro tra ${candidateLabel(second)} e ${candidateLabel(first)}: ${backfires ? 'l’attacco si ritorce contro chi lo ha lanciato' : 'chi insegue recupera qualcosa'}.`, { source:SOURCE });
+    }
   }
   const last = field.at(-1);
-  if (field.length >= 3 && last && weightedShare(campaign, last.id) < 8 && campaign.day < campaign.totalDays - 7 && draw(campaign) < .12) {
-    const backed = field.slice(0, -1).sort((a, b) => Number(b.relationship ?? 0) - Number(a.relationship ?? 0))[0];
-    transferSupport(campaign, last.id, backed.id, 100);
-    last.status = 'withdrawn'; last.endorsedId = backed.id;
-    last.lastAction = `Si è ritirata e sostiene ${candidateLabel(backed)}.`;
-    addHistory(campaign, 'ritiro', `${candidateLabel(last).charAt(0).toLocaleUpperCase('it-IT') + candidateLabel(last).slice(1)} si ritira e indica di votare ${candidateLabel(backed)}.`, { source: SOURCE });
+  if (field.length >= 3 && last && weightedShare(campaign, last.id) < 8 && campaign.day < campaign.totalDays - 7) {
+    const profile = ensureRivalProfile(campaign, last, rivals.indexOf(last));
+    const withdrawChance = clamp(.04 + (profile?.personality === 'prudente' ? .1 : 0) + (profile?.objectives?.includes('restare-competitivo') ? .05 : 0) + (1 - (profile?.loyalty ?? 50) / 100) * .08, .03, .25);
+    if (draw(campaign) < withdrawChance) {
+      const backed = field.slice(0, -1).sort((a, b) => rivalRelationship(campaign, last, b.id) - rivalRelationship(campaign, last, a.id))[0];
+      transferSupport(campaign, last.id, backed.id, 100);
+      last.status = 'withdrawn'; last.endorsedId = backed.id;
+      last.lastAction = `Si è ritirata e sostiene ${candidateLabel(backed)}.`;
+      rivalMemory(campaign, last, 'defeat', backed.id, { action:'ritiro', relationDelta:2, weight:1 });
+      rivalMemory(campaign, backed, 'aid', last.id, { action:'endorsement-ricevuto', relationDelta:4, weight:1 });
+      addHistory(campaign, 'ritiro', `${candidateLabel(last).charAt(0).toLocaleUpperCase('it-IT') + candidateLabel(last).slice(1)} si ritira e indica di votare ${candidateLabel(backed)}.`, { source:SOURCE });
+    }
   }
-  const currentLeader = activeOpponents(campaign).sort((a,b)=>supportAt(campaign,campaign.territories[0].id,b.id)-supportAt(campaign,campaign.territories[0].id,a.id))[0];
-  if (currentLeader && player && supportAt(campaign,campaign.territories[0].id,currentLeader.id)-supportAt(campaign,campaign.territories[0].id,player.id)>14 && draw(campaign)<.24) {
-    pendingEvent(campaign,'rival','Un avversario attacca la tua proposta','Una candidatura rivale contesta pubblicamente una tua scelta. Rispondere può attirare attenzione e comporta un rischio reputazionale.',[
-      {id:'answer',label:'Rispondi nel merito',effects:{visibility:2,reputation:.4,politicalCapital:-1,support:.25}},
-      {id:'ignore',label:'Non spostare il programma',effects:{organization:1}}
+  const currentLeader = activeOpponents(campaign).sort((a, b) => supportAt(campaign, campaign.territories[0].id, b.id) - supportAt(campaign, campaign.territories[0].id, a.id))[0];
+  if (currentLeader && player && supportAt(campaign, campaign.territories[0].id, currentLeader.id) - supportAt(campaign, campaign.territories[0].id, player.id) > 14 && draw(campaign) < .24) {
+    pendingEvent(campaign, 'rival', 'Un avversario attacca la tua proposta', 'Una candidatura rivale contesta pubblicamente una tua scelta. Rispondere può attirare attenzione e comporta un rischio reputazionale.', [
+      { id:'answer', label:'Rispondi nel merito', effects:{ visibility:2, reputation:.4, politicalCapital:-1, support:.25 } },
+      { id:'ignore', label:'Non spostare il programma', effects:{ organization:1 } }
     ]);
   }
 }
@@ -563,6 +739,11 @@ function tick(campaign) {
 }
 function finish(campaign,firstRound=null) {
   campaign.result=runFinalElection(campaign,firstRound);
+  const playerShare = Number(campaign.result?.playerShare ?? weightedShare(campaign, campaign.playerCandidateId));
+  for (const [index, rival] of campaign.candidates.filter(item => !item.isPlayer).entries()) {
+    const rivalShare = Number(campaign.result?.shares?.[rival.id] ?? weightedShare(campaign, rival.id));
+    rivalMemory(campaign, rival, rivalShare >= playerShare ? 'victory' : 'defeat', campaign.playerCandidateId, { action:'esito-elettorale', relationDelta:rivalShare >= playerShare ? 4 : -2, weight:1.4 + (rivalShare >= playerShare ? .3 : 0), rank:index + 1 });
+  }
   const opening=campaign.expectation?.share ?? campaign.consensusHistory[0]?.value ?? campaign.result.playerShare;
   campaign.partyImpact={...campaign.partyImpact,openingConsensus:opening,electionResult:campaign.result.playerShare,consensusChange:round(campaign.result.playerShare-opening),reputationChange:round(campaign.candidateStats.reputation-campaign.startingStats.reputation),outcome:campaign.result.objectiveMet?'obiettivo-raggiunto':'obiettivo-non-raggiunto',asOf:campaign.currentDate,source:SOURCE};
   campaign.status='finished'; campaign.stage='risultato'; campaign.closedAt=campaign.currentDate;
@@ -730,8 +911,8 @@ export function performCampaignActivity(input,activityId,options={}) {
     const rival = campaign.candidates.find(item => item.id === (options.opponentId ?? strategy.targetId) && item.status === 'active' && !item.isPlayer) ?? strongestRival(campaign);
     if (rival) {
       const backlash = campaign.candidateStats.reputation < 45 && draw(campaign) < .35 * strategy.risk;
-      if (backlash) { playerTransfer(campaign, rival.id, -.3); campaign.candidateStats.reputation = round(clamp(campaign.candidateStats.reputation - .8)); report = `L’attacco a ${rival.realReference?.fullName ?? 'un avversario'} viene percepito come scorretto: effetto boomerang.`; }
-      else { playerTransfer(campaign, rival.id, round(Math.min(1.6, .9 * factor))); report = `Il confronto con ${rival.realReference?.fullName ?? 'la candidatura rivale'} sposta voti dalla sua parte alla tua.`; }
+      if (backlash) { playerTransfer(campaign, rival.id, -.3); campaign.candidateStats.reputation = round(clamp(campaign.candidateStats.reputation - .8)); rivalMemory(campaign, rival, 'attack', player.id, { action:'attacco-del-giocatore', relationDelta:-10, weight:1.4 }); report = `L’attacco a ${rival.realReference?.fullName ?? 'un avversario'} viene percepito come scorretto: effetto boomerang.`; }
+      else { playerTransfer(campaign, rival.id, round(Math.min(1.6, .9 * factor))); rivalMemory(campaign, rival, 'attack', player.id, { action:'attacco-del-giocatore', relationDelta:-7, weight:1 }); report = `Il confronto con ${rival.realReference?.fullName ?? 'la candidatura rivale'} sposta voti dalla sua parte alla tua.`; }
     } else report = 'Non ci sono avversari da mettere a confronto.';
   } else {
     let support=baseSupport()*factor;
@@ -819,11 +1000,13 @@ function negotiateAllianceInPlace(campaign,targetId,costAlreadyPaid=false) {
     const transfer = mergeAlliance(campaign, player.id, target);
     campaign.alliances.push({id:ids('alleanza',campaign.seed,campaign.day),leaderCandidateId:player.id,partnerCandidateId:target.id,status:'active',transfer,terms:'Sostegno condiviso e lista comune nello scenario simulato.',formedOn:campaign.currentDate,source:SOURCE});
     player.resources.volunteers+=2; player.resources.organization+=1;
+    rivalMemory(campaign, target, 'agreement', player.id, { action:'accordo-con-il-giocatore', relationDelta:12, weight:1.2 });
     // A coalition costs identity: part of the party does not like sharing the list.
     if (campaign.nomination.status === 'pending') campaign.nomination.internalSupport = round(clamp(campaign.nomination.internalSupport - .5, 0, 10));
     return `Accordo raggiunto con una candidatura simulata: il ${Math.round(transfer * 100)}% dei suoi elettori segue l’intesa, gli altri votano altrove.`;
   }
   campaign.candidateStats.reputation=round(clamp(campaign.candidateStats.reputation-.35));
+  rivalMemory(campaign, target, 'rejection', player.id, { action:'accordo-rifiutato-dal-giocatore', relationDelta:-4, weight:.8 });
   return `La trattativa con una candidatura simulata è fallita; il costo politico resta.`;
 }
 
@@ -845,7 +1028,7 @@ export function breakCampaignAlliance(input,allianceId) {
   if(alliance.leaderCandidateId!==campaign.playerCandidateId) throw new Error('L’accordo tra le altre candidature non è sotto il tuo controllo.');
   alliance.status='broken'; alliance.endedOn=campaign.currentDate;
   const partner=campaign.candidates.find(item=>item.id===alliance.partnerCandidateId);
-  if(partner){partner.status='active';partner.coalitionLeaderId=null;}
+  if(partner){partner.status='active';partner.coalitionLeaderId=null;rivalMemory(campaign, partner, 'betrayal', campaign.playerCandidateId, { action:'rottura-dell-alleanza', relationDelta:-18, weight:1.7 });}
   campaign.candidateStats.reputation=round(clamp(campaign.candidateStats.reputation-1.2));
   campaign.candidates.find(item=>item.isPlayer).resources.politicalCapital=Math.max(0,campaign.candidates.find(item=>item.isPlayer).resources.politicalCapital-1);
   addHistory(campaign,'alleanza','Hai interrotto un accordo; il rapporto politico ne risente.',{source:SOURCE});
@@ -882,6 +1065,7 @@ export function decideCampaignEvent(input,eventId,choiceId) {
   const rival = strongestRival(campaign);
   if(effect.rivalSupport && rival) playerTransfer(campaign, rival.id, effect.rivalSupport);
   if(effect.rivalGain && rival) playerTransfer(campaign, rival.id, -effect.rivalGain);
+  if (rival && (effect.rivalSupport || effect.rivalGain)) rivalMemory(campaign, rival, effect.rivalSupport ? 'attack' : 'aid', campaign.playerCandidateId, { action:'evento-del-giocatore', relationDelta:effect.rivalSupport ? -6 : 3, weight:1 });
   if(effect.commitment) campaign.commitments=(campaign.commitments??0)+effect.commitment;
   if(effect.crisis==='open' && !campaign.crisis) { campaign.crisis={ title:event.title, since:campaign.day, severity:1, weeks:0, source:SOURCE }; outcome.push('La vicenda rischia di trascinarsi: puoi gestirla con un’azione dedicata.'); }
   if(effect.topic==='new') {

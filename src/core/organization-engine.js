@@ -7,9 +7,152 @@ const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
 const round1 = value => Math.round(value * 10) / 10;
 const HISTORY = 52;
+const CURRENT_MEMORY_LIMIT = 24;
+const CURRENT_PROFILES = Object.freeze({
+  riformisti: Object.freeze({ objective: 'guidare-il-governo', priorities: ['economia', 'europa', 'pa', 'digitale'], initiative: .62, loyalty: .72, negotiation: .6 }),
+  territori: Object.freeze({ objective: 'radicare-il-partito', priorities: ['autonomie', 'mezzogiorno', 'agricoltura', 'trasporti', 'turismo'], initiative: .7, loyalty: .58, negotiation: .72 }),
+  movimento: Object.freeze({ objective: 'difendere-la-linea', priorities: ['welfare', 'lavoro', 'ambiente', 'casa', 'sanita'], initiative: .78, loyalty: .45, negotiation: .38 })
+});
+const hash = value => [...String(value)].reduce((n, char) => (n * 31 + char.charCodeAt(0)) >>> 0, 2166136261) || 1;
+const seeded = seed => { let state = seed >>> 0 || 1; return () => { state = (Math.imul(state, 1664525) + 1013904223) >>> 0; return state / 4294967296; }; };
+const unique = values => [...new Set(values.filter(Boolean))];
 
 const sectionLabel = (region, founder) => founder ? `Sezione ${region}` : `Federazione ${region}`;
 const blankPeriod = () => ({ income: 0, expense: 0, byCategory: {} });
+
+function profileForCurrent(current, seed = 1, index = 0) {
+  const base = CURRENT_PROFILES[current.id] ?? { objective: 'restare-competitiva', priorities: [], initiative: .55, loyalty: .55, negotiation: .5 };
+  const rand = seeded(hash(`corrente|${seed}|${current.id}|${index}`));
+  const objective = current.profile?.objective ?? base.objective;
+  return {
+    version: 1, objective, priorities: unique(current.profile?.priorities?.length ? current.profile.priorities : base.priorities),
+    initiative: Math.max(0, Math.min(1, Number(current.profile?.initiative ?? base.initiative) + (rand() - .5) * .08)),
+    loyalty: Math.max(0, Math.min(1, Number(current.profile?.loyalty ?? base.loyalty))),
+    negotiation: Math.max(0, Math.min(1, Number(current.profile?.negotiation ?? base.negotiation))),
+    memory: Array.isArray(current.profile?.memory) ? current.profile.memory.slice(0, CURRENT_MEMORY_LIMIT) : [],
+    relationships: { ...(current.profile?.relationships ?? {}) },
+    agreements: Array.isArray(current.profile?.agreements) ? current.profile.agreements.slice(-8) : [],
+    requests: Array.isArray(current.profile?.requests) ? current.profile.requests.slice(-8) : [],
+    memorySeq: Math.max(Number(current.profile?.memorySeq ?? 0), Array.isArray(current.profile?.memory) ? current.profile.memory.length : 0),
+    lastAction: current.profile?.lastAction ?? null, lastActionWeek: current.profile?.lastActionWeek ?? null,
+    congressPlan: current.profile?.congressPlan ?? null, source: SIM
+  };
+}
+
+export function normalizeCurrentProfiles(currents = [], { seed = 1, week = 1 } = {}) {
+  const list = currents.map((current, index) => {
+    const profile = profileForCurrent(current, seed, index);
+    for (const other of currents) if (other.id !== current.id && !Number.isFinite(Number(profile.relationships[other.id]))) profile.relationships[other.id] = 50;
+    return { ...current, strength: Math.max(0, Number(current.strength ?? 0)), value: Math.max(0, Math.min(100, Number(current.value ?? current.relation ?? 50))), relation: Math.max(0, Math.min(100, Number(current.value ?? current.relation ?? 50))), profile, objective: profile.objective, priorities: profile.priorities, initiative: profile.initiative, loyalty: profile.loyalty, lastAction: profile.lastAction, lastActionWeek: profile.lastActionWeek, source: SIM };
+  });
+  const total = list.reduce((sum, current) => sum + Math.max(0, current.strength), 0) || 1;
+  return list.map(current => ({ ...current, strength: Math.round(current.strength * 1000 / total) / 10 })).map((current, index, all) => ({ ...current, strength: index === all.length - 1 ? Math.max(0, 100 - all.slice(0, -1).reduce((sum, item) => sum + item.strength, 0)) : current.strength }));
+}
+
+export function rememberCurrent(currents = [], currentId, entry = {}, { week = 0, date = null } = {}) {
+  const current = currents.find(item => item.id === currentId);
+  if (!current) return null;
+  current.profile ??= profileForCurrent(current);
+  const sequence = Number(current.profile.memorySeq ?? current.profile.memory?.length ?? 0);
+  const item = { id: `corrente-${currentId}-${week}-${sequence}`, week, date, kind: entry.kind ?? 'decisione', subject: entry.subject ?? null, weight: entry.weight ?? 1, source: SIM, ...entry };
+  current.profile.memorySeq = sequence + 1;
+  current.profile.memory = [item, ...(current.profile.memory ?? [])].slice(0, CURRENT_MEMORY_LIMIT);
+  if (entry.targetId) current.profile.relationships[entry.targetId] = Math.max(0, Math.min(100, Number(current.profile.relationships[entry.targetId] ?? 50) + Number(entry.relationDelta ?? 0)));
+  if (entry.agreement) current.profile.agreements = [...(current.profile.agreements ?? []), entry.agreement].slice(-8);
+  return item;
+}
+
+function currentMemoryScore(current, predicate) {
+  return (current.profile?.memory ?? []).filter(predicate).reduce((sum, item) => sum + Number(item.weight ?? 1), 0);
+}
+
+function currentAction(current, context, rand) {
+  const profile = current.profile;
+  const lineMismatch = context.line && context.preferredLines?.[current.id] && context.line !== context.preferredLines[current.id];
+  const treasuryStress = Number(context.treasuryBalance ?? 0) < 0;
+  const congressSoon = Number(context.congressInWeeks ?? 99) <= 8;
+  const hostility = currentMemoryScore(current, item => ['linea-rifiutata', 'accordo-rotto', 'incarico-negato', 'scontro'].includes(item.kind));
+  const initiative = Math.max(0, Math.min(1, profile.initiative + (lineMismatch ? .12 : 0) + (treasuryStress ? .08 : 0) + (hostility > 1 ? .08 : 0)));
+  if (rand() > initiative) return { type: 'monitoraggio', label: 'Osserva la segreteria e conserva peso', request: null };
+  if (treasuryStress && current.id === 'territori') return { type: 'fondo-territori', label: 'Chiede risorse per le sezioni più deboli', request: 'territorio' };
+  if (lineMismatch && current.id === 'movimento') return { type: 'contestazione-linea', label: 'Prepara una contestazione pubblica della linea', request: 'linea' };
+  if (lineMismatch && current.id === 'riformisti') return { type: 'emendamento-programma', label: 'Propone una correzione governista al programma', request: 'programma' };
+  if (congressSoon && profile.objective === 'guidare-il-governo') return { type: 'accordo-congressuale', label: 'Cerca una sponda per il congresso', request: 'congresso' };
+  if (congressSoon && profile.objective === 'radicare-il-partito') return { type: 'endorsement-territoriale', label: 'Raccoglie delegati nelle federazioni', request: 'delegati' };
+  if (congressSoon) return { type: 'mozione-identitaria', label: 'Prepara una mozione identitaria', request: 'linea' };
+  if (current.id === 'territori') return { type: 'iniziativa-territoriale', label: 'Chiede un investimento per le sezioni', request: 'territorio' };
+  if (current.id === 'riformisti') return { type: 'proposta-governo', label: 'Porta un dossier economico alla direzione', request: 'programma' };
+  return { type: 'iniziativa-militanti', label: 'Mobilita i militanti su una priorità sociale', request: 'organizzazione' };
+}
+
+export function advanceCurrentPolitics(currents = [], org, context = {}) {
+  if (!currents.length) return { lines: [], events: [], requests: [], alliances: [] };
+  const normalized = normalizeCurrentProfiles(currents, { seed: context.seed ?? 1, week: context.week ?? 1 });
+  for (let index = 0; index < currents.length; index++) Object.assign(currents[index], normalized[index]);
+  const lines = [], events = [], requests = [], alliances = [];
+  const rand = context.rand ?? (() => .5);
+  const activeRequests = (org.currentPolitics?.requests ?? []).filter(item => (context.week ?? 0) - item.week < 10 && item.status === 'open');
+  for (const current of currents) {
+    const action = currentAction(current, context, rand);
+    current.profile.lastAction = action.label;
+    current.profile.lastActionWeek = context.week ?? 0;
+    current.lastAction = action.label;
+    current.lastActionWeek = context.week ?? 0;
+    rememberCurrent(currents, current.id, { kind: action.type, text: action.label, weight: action.type === 'monitoraggio' ? .2 : .6 }, context);
+    if (action.request && action.type !== 'monitoraggio' && !activeRequests.some(item => item.currentId === current.id && item.kind === action.request)) {
+      const request = { id: `richiesta-${current.id}-${context.week}`, currentId: current.id, kind: action.request, title: action.label, week: context.week ?? 0, status: 'open', urgency: current.id === 'movimento' ? 2 : 1, source: SIM };
+      requests.push(request); activeRequests.push(request); current.profile.requests = [...(current.profile.requests ?? []), request].slice(-8);
+      lines.push(`${current.label}: ${action.label}.`);
+    }
+    if (action.type === 'contestazione-linea') {
+      current.value = Math.max(0, current.value - 2); current.relation = current.value; current.strength = Math.max(1, current.strength - .7);
+      rememberCurrent(currents, current.id, { kind: 'linea-rifiutata', text: `La linea “${context.line ?? 'del partito'}” è contestata`, weight: 1, relationDelta: -2, targetId: 'segreteria' }, context);
+      events.push({ type: 'conflict', conflict: { id: `conflitto-${context.week}-${current.id}`, title: `${current.label} contesta la linea del partito`, currents: [current.id], intensity: 46, since: context.week ?? 0, source: SIM } });
+    } else if (action.type === 'accordo-congressuale' || action.type === 'endorsement-territoriale' || action.type === 'mozione-identitaria') {
+      current.profile.congressPlan = { week: context.week ?? 0, action: action.type, request: action.request, source: SIM };
+    }
+  }
+  for (let i = 0; i < currents.length; i++) for (let j = i + 1; j < currents.length; j++) {
+    const a = currents[i], b = currents[j];
+    const trust = Number(a.profile.relationships[b.id] ?? 50);
+    if (trust >= 66 && Number(b.profile.relationships[a.id] ?? 50) >= 60 && (context.congressInWeeks ?? 99) <= 10) {
+      const agreement = { id: `accordo-${a.id}-${b.id}-${context.week}`, currents: [a.id, b.id], week: context.week ?? 0, status: 'active', source: SIM };
+      alliances.push(agreement); a.profile.agreements = [...(a.profile.agreements ?? []), agreement].slice(-8); b.profile.agreements = [...(b.profile.agreements ?? []), agreement].slice(-8);
+      rememberCurrent(currents, a.id, { kind: 'accordo', agreement, targetId: b.id, relationDelta: 2 }, context); rememberCurrent(currents, b.id, { kind: 'accordo', agreement, targetId: a.id, relationDelta: 2 }, context);
+      lines.push(`${a.label} e ${b.label} preparano un accordo congressuale.`);
+      break;
+    }
+  }
+  if (context.congressInWeeks <= 8) {
+    org.congress.preparations = Object.fromEntries(currents.map(current => [current.id, { objective: current.profile.objective, plan: current.profile.congressPlan, support: Math.round(current.strength + (current.profile.agreements?.length ?? 0) * 2), source: SIM }]));
+  }
+  const total = currents.reduce((sum, current) => sum + Math.max(0, current.strength), 0) || 1;
+  for (const current of currents) current.strength = Math.round(current.strength * 100 / total * 10) / 10;
+  org.currentPolitics = { week: context.week ?? 0, requests: [...new Map([...activeRequests, ...requests].map(item => [item.id, item])).values()].slice(-18), alliances: [...(org.currentPolitics?.alliances ?? []), ...alliances].slice(-10), source: SIM };
+  return { lines, events, requests, alliances };
+}
+
+export function allocateCurrentPortfolios(currents = [], selectedId = null, { week = 0 } = {}) {
+  const roles = ['organizzazione', 'territorio', 'candidature', 'comunicazione'];
+  const roleAffinity = {
+    organizzazione: { movimento: 5, riformisti: 2 },
+    territorio: { territori: 9 },
+    candidature: { territori: 3, riformisti: 2 },
+    comunicazione: { riformisti: 7, movimento: 2 }
+  };
+  const portfolios = {};
+  const assigned = new Set();
+  for (const role of roles) {
+    const ranked = [...currents].sort((a, b) => {
+      const score = current => current.strength + (current.value ?? 50) * .12 + (current.profile?.loyalty ?? .5) * 10 + (roleAffinity[role]?.[current.id] ?? 0) + (current.id === selectedId ? 2 : 0) + (assigned.has(current.id) ? -8 : 0);
+      return score(b) - score(a) || String(a.id).localeCompare(String(b.id));
+    });
+    const candidate = ranked.find(current => !assigned.has(current.id)) ?? ranked[0];
+    portfolios[role] = candidate?.id ?? selectedId;
+    if (candidate) assigned.add(candidate.id);
+  }
+  return { selectedId, portfolios, week, source: SIM };
+}
 
 export function createOrganization({ rand, founder = false, region = null, share = null, week = 1, date = null }) {
   const home = ITALIAN_REGIONS.includes(region) ? region : ITALIAN_REGIONS[0];
@@ -22,7 +165,7 @@ export function createOrganization({ rand, founder = false, region = null, share
   return {
     version: 1, source: SIM, founder, members, militants: Math.round(members * (founder ? 0.3 : 0.09)), cadres: sections.length * (founder ? 2 : 4) + (founder ? 3 : 14),
     sections, cohesion: founder ? 72 : Math.round(52 + rand() * 14), discipline: 70, conflicts: [],
-    congress: { nextWeek: week + FIRST_CONGRESS_WEEKS, lastWeek: null, history: [] }, selections: {},
+    congress: { nextWeek: week + FIRST_CONGRESS_WEEKS, lastWeek: null, history: [], preparations: {} }, selections: {}, currentPolitics: { week: null, requests: [], alliances: [], source: SIM }, currentPortfolios: null,
     priorities: { territorio: 1, comunicazione: 1, formazione: 1 }, lastCommunicationWeek: null,
     treasury: { balance: founder ? 1500 : Math.round(members * 9), current: blankPeriod(), history: [], yearTotals: blankPeriod(), annual: [], year: date?.slice(0, 4) ?? null },
     membersHistory: [{ week, members }], growth: 0
@@ -31,7 +174,7 @@ export function createOrganization({ rand, founder = false, region = null, share
 export function normalizeOrganization(org, context) {
   if (!org || typeof org !== 'object' || !Array.isArray(org.sections)) return createOrganization(context);
   const base = createOrganization({ ...context, rand: () => 0.5 });
-  return { ...base, ...org, treasury: { ...base.treasury, ...(org.treasury ?? {}) }, congress: { ...base.congress, ...(org.congress ?? {}) }, priorities: { ...base.priorities, ...(org.priorities ?? {}) } };
+  return { ...base, ...org, treasury: { ...base.treasury, ...(org.treasury ?? {}) }, congress: { ...base.congress, ...(org.congress ?? {}), preparations: { ...(base.congress.preparations ?? {}), ...(org.congress?.preparations ?? {}) } }, currentPolitics: { ...base.currentPolitics, ...(org.currentPolitics ?? {}) }, priorities: { ...base.priorities, ...(org.priorities ?? {}) } };
 }
 
 export const organOf = party => party ? ORGANS[party.affiliation === 'founder' ? 4 : Math.min(4, party.rank ?? 0)] : null;
@@ -82,7 +225,7 @@ export function applyOrgEffects(org, effects = {}, lines = [], targetRegion = nu
 }
 
 // One week of party life. `context` carries the political climate and the player's standing.
-export function advanceOrganization(org, { rand, week, date, pollShare = null, pollDelta = 0, mood = 50, rank = 0, founder = false, support = 50, currents = [], campaignActive = false }) {
+export function advanceOrganization(org, { rand, week, date, pollShare = null, pollDelta = 0, mood = 50, rank = 0, founder = false, support = 50, currents = [], campaignActive = false, seed = 1, line = null, preferredLines = {}, congressInWeeks = 99, program = null, candidacyRule = null }) {
   const lines = [];
   const events = [];
   const vitality = org.sections.reduce((sum, item) => sum + item.vitality * item.members, 0) / Math.max(1, org.members);
@@ -129,6 +272,18 @@ export function advanceOrganization(org, { rand, week, date, pollShare = null, p
   org.treasury.year = year ?? org.treasury.year;
   if (org.treasury.balance < 0) events.push({ type: 'treasury' });
 
+  // Internal areas now act every week, using the same deterministic stream as the
+  // organisation. Their requests and alliances become inputs for congresses and
+  // appointments instead of being transient flavour text.
+  const politics = advanceCurrentPolitics(currents, org, { rand, week, date, seed, line, preferredLines, congressInWeeks, treasuryBalance: org.treasury.balance, pollShare, pollDelta, mood, support, program, candidacyRule });
+  lines.push(...politics.lines.slice(0, 3));
+  events.push(...politics.events);
+  if (currents.length) {
+    const allocation = Object.fromEntries(currents.map(current => [current.id, Math.round(Math.max(0, income) * (current.profile?.priorities?.length ?? 1) / Math.max(1, currents.reduce((sum, item) => sum + (item.profile?.priorities?.length ?? 1), 0)))]));
+    org.treasury.currentAllocation = { week, byCurrent: allocation, source: SIM };
+    org.treasury.byCurrent = { ...(org.treasury.byCurrent ?? {}), ...allocation };
+  }
+
   // Cohesion and conflicts between the internal areas.
   const tension = org.conflicts.reduce((sum, item) => sum + item.intensity, 0);
   const target = 60 - tension * 0.25 + (org.priorities.formazione - 1) * 3 + (invested('scuola-politica') ? 5 : 0) - (org.treasury.balance < 0 ? 10 : 0);
@@ -138,7 +293,7 @@ export function advanceOrganization(org, { rand, week, date, pollShare = null, p
   if (resolved.length) lines.push(`Si ricompone lo scontro: ${resolved[0].title.toLowerCase()}`);
   org.conflicts = org.conflicts.filter(item => item.intensity > 5);
   const sorted = [...currents].sort((a, b) => b.strength - a.strength);
-  if (sorted.length >= 2 && org.conflicts.length < 2 && rand() < 0.05 + Math.max(0, 60 - org.cohesion) / 500 + (sorted[0].strength - sorted[1].strength < 6 ? 0.03 : 0)) {
+  if (sorted.length >= 2 && org.conflicts.length < 2 && rand() < 0.035 + Math.max(0, 60 - org.cohesion) / 500 + (sorted[0].strength - sorted[1].strength < 6 ? 0.03 : 0)) {
     const topics = ['sulle candidature', 'sulla linea economica', 'sulle alleanze', 'sulla gestione della tesoreria', 'sul rapporto con il governo'];
     const conflict = { id: `conflitto-${week}`, title: `${sorted[0].label} contro ${sorted[1].label} ${topics[Math.floor(rand() * topics.length)]}`, currents: [sorted[0].id, sorted[1].id], intensity: Math.round(35 + rand() * 30), since: week, source: SIM };
     org.conflicts.push(conflict);

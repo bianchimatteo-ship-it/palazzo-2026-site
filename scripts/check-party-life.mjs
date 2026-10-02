@@ -508,7 +508,7 @@ const runC = playDays('giorni-beta', { founder: true });
   for (let week = 0; week < 30; week++) playWeek({ ...run, decide });
   const raw = JSON.parse(JSON.stringify(run.store.getState()));
   delete raw.game.party.life;
-  delete raw.game.recentCategories;
+  delete raw.game.eventRecent;
   for (const item of raw.game.inbox) delete item.day;
   const { normalizeGameState } = await import('../src/core/career-engine.js');
   const normalized = normalizeGameState(raw.game);

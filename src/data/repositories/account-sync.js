@@ -16,7 +16,7 @@ const write = (key, value) => { try { if (value === null) globalThis.localStorag
 export function accountApiBase() {
   const location = globalThis.location;
   if (!location) return PRODUCTION_ORIGIN;
-  if (/workers\.dev$/.test(location.hostname) || location.port === '8791') return location.origin;
+  if (/workers\.dev$/.test(location.hostname) || location.port === '8791' || location.hostname === '127.0.0.1') return location.origin;
   if (/github\.io$/.test(location.hostname)) return PRODUCTION_ORIGIN;
   return null;
 }

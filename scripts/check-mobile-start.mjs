@@ -21,7 +21,7 @@ const CHROME = [process.env.CHROME_PATH, '/Applications/Google Chrome.app/Conten
 if (!CHROME) { console.log('Controllo del primo avvio su telefono saltato: Chrome non trovato (imposta CHROME_PATH per eseguirlo).'); process.exit(0); }
 const PORT = 4600 + Math.floor(Math.random() * 400);
 const DEBUG = 9700 + Math.floor(Math.random() * 400);
-const HOST = 'politicando-prova.workers.dev';
+const HOST = '127.0.0.1';
 const ORIGIN = `http://${HOST}:${PORT}`;
 const root = fileURLToPath(new URL('..', import.meta.url));
 const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -29,9 +29,9 @@ const waitFor = async (check, timeout = 20000, what = 'condizione') => { const s
 
 const server = spawn(process.execPath, ['server.mjs'], { cwd: root, env: { ...process.env, PORT: String(PORT) }, stdio: 'ignore' });
 const profile = await mkdtemp(join(tmpdir(), 'politicando-mobile-'));
-// The host of the published Worker is mapped on the local server: the game looks for its account API there and finds
-// a static server instead (the service “does not answer”). The origin is treated as secure, as the real https one.
-const chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${DEBUG}`, `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--disable-extensions', '--hide-scrollbars', '--mute-audio', '--no-proxy-server', `--host-resolver-rules=MAP ${HOST} 127.0.0.1`, `--unsafely-treat-insecure-origin-as-secure=${ORIGIN}`, ...(process.getuid?.() === 0 ? ['--no-sandbox'] : []), 'about:blank'], { stdio: 'ignore' });
+// Use the loopback origin directly: resolving a workers.dev alias in headless Chrome is environment-dependent
+// (and can be upgraded to HTTPS by browser HSTS), so it can fail before the app receives its first request.
+const chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${DEBUG}`, `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--disable-extensions', '--hide-scrollbars', '--mute-audio', '--no-proxy-server', '--unsafely-treat-insecure-origin-as-secure=${ORIGIN}', ...(process.getuid?.() === 0 ? ['--no-sandbox'] : []), 'about:blank'], { stdio: 'ignore' });
 const cleanup = async () => { chrome.kill('SIGKILL'); server.kill('SIGKILL'); await pause(200); await rm(profile, { recursive: true, force: true }).catch(() => {}); };
 
 const checks = [];

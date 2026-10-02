@@ -37,6 +37,9 @@ export const LEGISLATIVE_RULES = Object.freeze({
   // opposition's reach the floor now and then, the majority's more often, the committees' texts almost always; the
   // others wait (a few are picked up later) and lapse in committee.
   calendarChance: { opposizione: 0.3, maggioranza: 0.7, commissione: 0.85 }, lateCalendarChance: 0.06, calendarRetryWeeks: 3, stallWeeks: 26,
+  // A bill paused by a prolonged government crisis cannot remain indefinitely in the calendar.
+  // After this grace period it lapses, leaving a fresh Parliament free to reintroduce it.
+  maxPausedWeeks: 40,
   // The budget law of the Government: presented in October, to be approved by 31 December.
   budgetMonth: 10,
   // Saves stay light: bills closed long ago keep only their outcome.
@@ -440,6 +443,12 @@ export function advanceLegislativeWeek(input, ctx) {
     const current = parliament.laws.find(item => item.id === law.id);
     if (!current || CLOSED.includes(current.stage)) continue;
     if (paused && current.kind === 'ddl' && ['amendments', 'final-vote'].includes(current.stage)) {
+      const pausedWeeks = weeksBetween(current.pausedAt ?? ctx.date, ctx.date);
+      if (pausedWeeks >= LEGISLATIVE_RULES.maxPausedWeeks) {
+        parliament = replaceLaw(parliament, current.id, item => note({ ...item, stage: 'lapsed', status: 'arenata', nextStepAt: null, updatedAt: ctx.date, stageSince: ctx.date }, ctx.date, 'Iter sospeso troppo a lungo durante la crisi di governo: la proposta decade e può essere ripresentata.'));
+        parliament = record(parliament, ctx.date, 'legge-arenata', `“${current.title}” decade dopo una sospensione prolungata della crisi di governo.`, { lawId: current.id, auto: true });
+        continue;
+      }
       parliament = replaceLaw(parliament, current.id, item => note({ ...item, nextStepAt: addDays(ctx.date, 7) }, ctx.date, item.pausedAt ? '' : 'Voto rinviato: il governo non ha la fiducia delle Camere.'));
       parliament = replaceLaw(parliament, current.id, item => ({ ...item, pausedAt: item.pausedAt ?? ctx.date }));
       continue;
