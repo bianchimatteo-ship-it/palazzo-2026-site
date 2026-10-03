@@ -86,6 +86,128 @@ const lost = { ...org, committees: org.committees.map(item => item.level === 'co
 assert.ok(committeeSupport(lost, { electionType: 'comunale', region: 'Toscana', municipality: 'Siena' }).nomination < 0, 'Un comitato fuori controllo pesa contro la candidatura.');
 assert.ok(committeeSummary(org).total === org.committees.length, 'Riepilogo della rete.');
 
+// ---------- 3b. structures: seats with a cost, volunteers, recruiting, fundraising, autonomy, crises, local events ----------
+{
+  const { ensureStructure, committeeProfile, committeeActionCost, applyLocalEvent, SEAT_TIERS, PARTY_SCALES, scaleOf } = committeesEngine;
+  const make = () => {
+    const base = { sections: [{ region: 'Toscana', members: 2400, vitality: 58 }, { region: 'Lazio', members: 3100, vitality: 44 }], priorities: { territorio: 1, formazione: 1 }, cohesion: 58, treasury: { balance: 20000, current: { income: 0, expense: 0, byCategory: {} }, yearTotals: { income: 0, expense: 0, byCategory: {} } }, growth: 0.2, conflicts: [] };
+    base.committees = createCommittees(base, { region: 'Toscana', units, home: { region: 'Toscana', municipality: 'Siena' }, currents, rank: 1, founder: false, week: 1, rand: seeded(7) });
+    return base;
+  };
+  // Older committees (without the new fields) are given them when met again, and keep working.
+  const legacy = make();
+  for (const item of legacy.committees) for (const key of ['quality', 'fatigue', 'activity', 'autonomy', 'seat', 'raised', 'membersLog', 'trend', 'autonomyBias']) delete item[key];
+  assert.doesNotThrow(() => { for (let week = 2; week <= 12; week++) advanceCommittees(legacy, { rand: seeded(week), week, regionalShares: { Toscana: 12 }, nationalShare: 10, currents }); }, 'Un vecchio comitato continua a funzionare');
+  assert.ok(legacy.committees.every(item => Number.isFinite(item.quality) && Number.isFinite(item.activity) && Number.isFinite(item.autonomy) && item.seat >= 0 && item.seat < SEAT_TIERS.length), 'E riceve qualità, attività, autonomia e sede.');
+
+  // Seats cost every week (the regional ones are the federations' own); the local fundraising comes back.
+  const economy = make();
+  const province = economy.committees.find(item => item.level === 'provincia');
+  Object.assign(province, { seat: 2, activity: 55, quality: 60 });
+  const regional = economy.committees.find(item => item.level === 'regione');
+  regional.seat = 3;
+  const before = economy.treasury.balance;
+  advanceCommittees(economy, { rand: seeded(3), week: 2, regionalShares: {}, nationalShare: 10, currents });
+  const byCategory = economy.treasury.current.byCategory;
+  const expected = Math.round(SEAT_TIERS[2].upkeep * 1.6 * PARTY_SCALES.nazionale.upkeep) + economy.committees.filter(item => item.level !== 'regione' && item !== province && item.seat > 0).reduce((sum, item) => sum + Math.round(SEAT_TIERS[item.seat].upkeep * ({ provincia: 1.6, comune: 1 }[item.level]) * PARTY_SCALES.nazionale.upkeep), 0);
+  assert.equal(-byCategory.sedi, expected, `Le sedi dei comitati locali costano ogni settimana (${-byCategory.sedi} su ${expected}); quelle regionali sono già nelle sezioni.`);
+  assert.ok(byCategory.donazioni > 0 && economy.territory.raised === byCategory.donazioni && province.raised > 0, 'La raccolta fondi locale arriva alla tesoreria del partito.');
+  assert.equal(economy.treasury.balance, before - expected + byCategory.donazioni, 'Tesoreria coerente: costi delle sedi e raccolta.');
+  // An autonomous committee keeps part of what it raises.
+  const keeper = make(), obedient = make();
+  for (const [o, autonomy] of [[keeper, 90], [obedient, 10]]) for (const item of o.committees) Object.assign(item, { autonomy, autonomyBias: autonomy > 50 ? 40 : -40, loyalty: 60 });
+  advanceCommittees(keeper, { rand: seeded(5), week: 2, nationalShare: 10, currents }); advanceCommittees(obedient, { rand: seeded(5), week: 2, nationalShare: 10, currents });
+  assert.ok(keeper.territory.raised < obedient.territory.raised, `Un comitato autonomo trattiene una parte della raccolta (${keeper.territory.raised} contro ${obedient.territory.raised}).`);
+
+  // Growth is not automatic: recruiting follows activity and work; a neglected committee loses people.
+  const worked = make(), neglected = make();
+  const pick = o => o.committees.find(item => item.level === 'provincia' && item.name === 'Pisa');
+  for (const [o, seat] of [[worked, 2], [neglected, 0]]) Object.assign(pick(o), { seat, members: 300, activists: 24, organization: 50, activity: 40, loyalty: 60 });
+  const r1 = seeded(21), r2 = seeded(21);
+  applyCommitteeAction(worked, pick(worked), 'recluta', { week: 2, rand: r1, currents, scale: 'regionale' });
+  for (let week = 3; week <= 30; week++) {
+    if (week % 4 === 0) applyCommitteeAction(worked, pick(worked), 'iniziativa', { week, rand: r1, currents });
+    advanceCommittees(worked, { rand: r1, week, regionalShares: { Toscana: 12 }, nationalShare: 10, currents });
+    advanceCommittees(neglected, { rand: r2, week, regionalShares: { Toscana: 12 }, nationalShare: 10, currents });
+  }
+  assert.ok(pick(worked).members > pick(neglected).members && pick(worked).activity > pick(neglected).activity, `Il comitato curato cresce più di quello trascurato (${pick(worked).members} contro ${pick(neglected).members} iscritti).`);
+  assert.ok(pick(neglected).activity < 40 && pick(neglected).trend <= 0.5, 'Senza attività i volontari si spengono e la crescita si ferma.');
+  assert.ok(['crescita', 'stabile', 'declino'].includes(committeeProfile(pick(worked)).trend) && ['forte', 'solido', 'debole', 'fragile'].includes(committeeProfile(pick(worked)).tier), 'Ogni comitato ha una forza e una tendenza.');
+
+  // Volunteers: quality is built with training and wears out with fatigue.
+  const crew = make();
+  const unit = pick(crew);
+  Object.assign(unit, { quality: 40, fatigue: 50, activity: 50 });
+  applyCommitteeAction(crew, unit, 'forma', { week: 2, rand: seeded(2), currents });
+  assert.ok(unit.quality === 50 && unit.fatigue === 40, 'La formazione alza la qualità e riduce la stanchezza.');
+  assert.throws(() => applyCommitteeAction(crew, unit, 'forma', { week: 3, rand: seeded(2), currents }), /da poco/, 'Non si forma di continuo.');
+  applyCommitteeAction(crew, unit, 'mobilita', { week: 3, rand: seeded(2), currents });
+  for (let week = 4; week <= 10; week++) advanceCommittees(crew, { rand: seeded(week), week, currents, campaignActive: true });
+  assert.ok(unit.fatigue > 40, 'Mobilitare stanca i volontari.');
+
+  // Autonomy: a local party leaves its committees more room than a national one; the leader can grant it or take it back.
+  assert.deepEqual([scaleOf({ nationalShare: 0.8 }), scaleOf({ nationalShare: 3 }), scaleOf({ nationalShare: 14 }), scaleOf({ nationalShare: 14, founder: true })], ['locale', 'regionale', 'nazionale', 'locale'], 'La scala del partito segue i sondaggi (o la fondazione).');
+  const local = make(), national = make();
+  for (let week = 2; week <= 60; week++) { advanceCommittees(local, { rand: seeded(week), week, nationalShare: 0.8, currents }); advanceCommittees(national, { rand: seeded(week), week, nationalShare: 14, currents }); }
+  assert.ok(pick(local).autonomy > pick(national).autonomy + 10, `Un partito locale lascia più autonomia (${pick(local).autonomy} contro ${pick(national).autonomy}).`);
+  const granted = pick(national).autonomy;
+  applyCommitteeAction(national, pick(national), 'delega', { week: 61, rand: seeded(1), currents, leader: true });
+  assert.ok(pick(national).autonomy > granted && pick(national).loyalty > 0, 'Concedere autonomia la fa salire.');
+  assert.throws(() => applyCommitteeAction(national, pick(national), 'delega', { week: 62, rand: seeded(1), currents, leader: false }), /guida il partito/, 'Solo chi guida il partito concede autonomia.');
+  const tamed = pick(national).autonomy;
+  Object.assign(pick(national), { status: 'crisi', statusSince: 0 });
+  applyCommitteeAction(national, pick(national), 'commissaria', { week: 63, rand: seeded(1), currents, leader: true });
+  assert.ok(pick(national).autonomy < tamed, 'Il commissario riporta il comitato sotto controllo.');
+
+  // A crisis costs people; without money the seats close and the activity falls.
+  const trouble = make();
+  const hit = pick(trouble);
+  Object.assign(hit, { organization: 33, status: 'crescita', statusSince: -10, members: 400, activists: 40, seat: 2 });
+  let peopleBefore = hit.members + hit.activists;
+  for (let week = 2; week < 60 && hit.status === 'crescita'; week++) { hit.organization = Math.max(0, hit.organization - 4); peopleBefore = hit.members + hit.activists; advanceCommittees(trouble, { rand: seeded(week), week, currents }); }
+  assert.ok(['crisi', 'perdita-controllo'].includes(hit.status) && hit.members + hit.activists < peopleBefore, `Entrare in crisi fa perdere iscritti e volontari (${peopleBefore} → ${hit.members + hit.activists}).`);
+  const poor = make();
+  poor.treasury.balance = -500;
+  for (const item of poor.committees.filter(item => item.level !== 'regione')) item.seat = 3;
+  for (let week = 2; week <= 60; week++) advanceCommittees(poor, { rand: seeded(100 + week), week, currents });
+  assert.ok(poor.committees.filter(item => item.level !== 'regione').some(item => item.seat < 3), 'In crisi finanziaria i comitati perdono le sedi.');
+
+  // Money and elections: the strong committees bring volunteers, mobilisation and money to the campaign.
+  const campaignOrg = make();
+  for (const item of campaignOrg.committees) Object.assign(item, { activists: 40, quality: 70, activity: 70, raised: 5000, autonomy: 40, status: 'consolidamento' });
+  const calm = committeeSupport(campaignOrg, { electionType: 'comunale', region: 'Toscana', municipality: 'Siena', week: 10 });
+  for (const item of campaignOrg.committees) item.mobilizedUntil = 20;
+  const mobilised = committeeSupport(campaignOrg, { electionType: 'comunale', region: 'Toscana', municipality: 'Siena', week: 10 });
+  assert.ok(calm.funds > 0 && calm.gotv > 0 && mobilised.gotv > calm.gotv, `Volontari di qualità e mobilitati portano più voti (${calm.gotv} → ${mobilised.gotv}) e ${calm.funds} € alla campagna.`);
+  const loose = make();
+  for (const item of loose.committees) Object.assign(item, { autonomy: 90, status: 'consolidamento', loyalty: 80, leader: { ...item.leader, player: false } });
+  assert.ok(committeeSupport(loose, { electionType: 'comunale', region: 'Toscana', municipality: 'Siena' }).nomination < 0.6, 'Comitati che decidono da soli pesano meno sulla tua candidatura.');
+
+  // The seat price grows with the level and the tier; the local events leave their mark.
+  const sede = pick(make());
+  sede.seat = 0;
+  const first = committeeActionCost(sede, 'sede').funds;
+  sede.seat = 1;
+  assert.ok(committeeActionCost(sede, 'sede').funds > first && committeeActionCost({ ...sede, level: 'regione' }, 'sede').funds > committeeActionCost(sede, 'sede').funds, 'La sede migliore costa di più a ogni passo e ai livelli alti.');
+  const eventOrg = make();
+  const lucky = pick(eventOrg);
+  Object.assign(lucky, { activity: 50, consensus: 55, quality: 60, organization: 55, fatigue: 5 });
+  const seen = new Set();
+  const luck = seeded(77);
+  for (let week = 2; week <= 400 && seen.size < 3; week++) { const out = advanceCommittees(eventOrg, { rand: luck, week, nationalShare: 10, currents, homeRegion: 'Toscana' }); for (const event of out.events.filter(item => item.type === 'local')) seen.add(event.kind); }
+  assert.deepEqual([...seen].sort(), ['concorrenza', 'opportunita', 'scandalo'], 'Nel territorio di casa capitano opportunità, scandali locali e concorrenza.');
+  const before2 = { members: lucky.members, activity: lucky.activity };
+  assert.ok(applyLocalEvent(eventOrg, lucky, 'opportunita', 'delega', { week: 1, rand: seeded(1) }).length && lucky.activity > before2.activity, 'Lasciare fare al responsabile locale dà attività e autonomia.');
+  const scandal = pick(make());
+  const consensus = scandal.consensus;
+  applyLocalEvent({}, scandal, 'scandalo', 'ignora', { week: 1, rand: seeded(1) });
+  assert.ok(scandal.consensus < consensus && scandal.members < 300 + 1000, 'Ignorare uno scandalo locale costa consenso e iscritti.');
+  const rival = pick(make());
+  const volunteers = rival.activists;
+  applyLocalEvent({}, rival, 'concorrenza', 'subisci', { week: 1, rand: seeded(1) });
+  assert.ok(rival.activists < volunteers, 'Subire la concorrenza costa i volontari migliori.');
+}
+
 // ---------- 4. the career: actions with costs, a crisis decision, campaign and weekly life ----------
 const volt = parties.find(item => item.id === 'party-registro-p1-2024-71-ir');
 store.createCareer({ firstName: 'Marta', lastName: 'Neri', birthDate: '1985-02-11', gender: 'donna', region: 'Toscana', municipality: 'Siena', municipalityCode: '052032', provinceCode: '052', provinceName: 'Siena', provinceType: 'Provincia', previousProfession: 'Architetta', initialLevel: 'comunale', partyMode: 'existing', partyId: volt.id, parliamentStartMode: 'real-context', parliamentaryGroupId: '', policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 } }, [volt], groups);
@@ -119,6 +241,37 @@ assert.ok(crisis && crisis.choices.some(choice => choice.id === 'intervieni') &&
 store.getState().game.week.ap = 6; store.getState().game.resources.politicalCapital = 20;
 store.resolveAgendaItem(crisis.id, 'intervieni');
 assert.ok(store.getState().game.party.org.committees.find(item => item.id === homeProvince.id).organization > 12, 'Intervenire rimette in piedi il comitato.');
+// The new actions through the career: recruiting, a better seat, a fundraising dinner; autonomy is for whoever leads the party.
+{
+  const G = () => store.getState().game;
+  const find = id => G().party.org.committees.find(item => item.id === id);
+  G().week.ap = 6; G().resources.funds = 8000; G().resources.politicalCapital = 20;
+  const id = G().party.org.committees.find(item => item.level === 'comune').id;
+  const { committeeActionCost } = committeesEngine;
+  const members0 = find(id).members, funds0 = G().resources.funds, ap0 = G().week.ap;
+  store.committeeAction('recluta', { committeeId: id });
+  assert.ok(find(id).members > members0 && G().resources.funds === funds0 - 350 && G().week.ap === ap0 - 1 && find(id).recruitUntil > G().week.index, 'La campagna di tesseramento porta iscritti e costa giorni e soldi.');
+  assert.throws(() => store.committeeAction('recluta', { committeeId: id }), /già in corso/, 'Non si apre due volte.');
+  const seat0 = find(id).seat, price = committeeActionCost(find(id), 'sede').funds, money = G().resources.funds;
+  store.committeeAction('sede', { committeeId: id });
+  assert.ok(find(id).seat === seat0 + 1 && G().resources.funds === money - price, `Una sede migliore costa ${price} € e dà capacità di lavoro.`);
+  const treasury0 = G().party.org.treasury.balance;
+  store.committeeAction('raccolta', { committeeId: id });
+  assert.ok(G().party.org.treasury.balance > treasury0 && find(id).raised > 0, 'La cena di raccolta fondi porta soldi alla tesoreria del partito.');
+  assert.throws(() => store.committeeAction('raccolta', { committeeId: id }), /da poco/, 'Né si ripete subito.');
+  assert.throws(() => store.committeeAction('delega', { committeeId: id }), /guida il partito/, 'Concedere autonomia spetta a chi guida il partito.');
+  // A local event of the territory is a decision with consequences on the committee.
+  const { addSituationEvent } = await import(`../src/core/career-engine.js${v}`);
+  const target = (G().party.org.committees.find(item => item.level === 'provincia' && item.unitCode === '052') ?? find(id)).id;
+  for (const [kind, choice, check] of [['opportunita', 'delega', item => item.activity > 20], ['scandalo', 'ignora', item => item.consensus < 90], ['concorrenza', 'rilancia', item => item.recruitUntil > 0]]) {
+    store.getState().game = addSituationEvent(G(), `comitato-locale-${kind}`, { committee: find(target).name, committeeId: target, committeeLevel: 'comitato provinciale', dedupe: `prova-${kind}` }, true);
+    const open = G().inbox.find(entry => entry.templateId === `comitato-locale-${kind}` && entry.params.dedupe === `prova-${kind}`);
+    assert.ok(open && open.choices.length === 3, `Evento locale: ${kind}.`);
+    G().week.ap = 6; G().resources.funds = 8000; G().resources.politicalCapital = 20;
+    store.resolveAgendaItem(open.id, choice);
+    assert.ok(check(find(target)) && G().log.some(entry => entry.lines?.some(line => line.includes(find(target).name))), `La scelta su «${kind}» lascia il suo segno sul comitato.`);
+  }
+}
 // Promotions: the territory factor reads the committees of the player's territory.
 const factors = progressionFactors({ game: store.getState().game, stats: { popularity: 50 } });
 assert.ok(Number.isFinite(factors.territory) && factors.territory > 0, 'Le promozioni leggono il radicamento dei comitati.');
@@ -130,10 +283,14 @@ for (const filter of ['attivi', 'problemi', 'sciolti']) assert.ok(clean(renderPa
 // The campaign starts with the committees of the territory: volunteers, organisation, candidacy, local support.
 store.getState().game.party.support = 70;
 if (!store.getState().game.elections.some(item => item.type === 'comunale' && item.status === 'open')) store.fastForwardToElection('comunale');
+// The programmes funded in the months before (the player's and the party's) pay off at the start of the campaign.
+store.getState().game.finance.perks = { volunteers: 4, organization: 3, selection: 0.3, week: 1 };
+store.getState().game.party.org.perks = { campaignOrganization: 2, campaignVolunteers: 3, selection: 0.2, week: 1 };
 store.startCampaign({ electionType: 'comunale', role: 'consigliere', objective: 'win' }, [volt]);
 const campaign = store.getState().campaign;
 assert.ok(campaign.preparation.committees && campaign.preparation.committees.committees.length >= 2, 'La campagna registra il contributo dei comitati del comune e della provincia.');
 assert.ok(campaign.history.some(item => /Comitati del territorio/.test(item.text)), 'Il contributo dei comitati è nella cronaca della campagna.');
+assert.ok(campaign.history.some(item => /Programmi finanziati nei mesi scorsi: \+7 volontari · \+5 organizzazione/.test(item.text)), 'I programmi finanziati (sede, logistica, ricerca, app) contano all’avvio della campagna e restano in cronaca.');
 assert.ok(Number.isFinite(campaign.preparation.committees.localSupport) && Number.isFinite(campaign.preparation.committees.nomination), 'Consenso locale e peso sulla candidatura calcolati.');
 
 // ---------- 5. logo editor ----------

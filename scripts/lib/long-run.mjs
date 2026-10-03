@@ -69,6 +69,8 @@ export async function startCareer({ seed = 'a', level = 'deputato', partyId = 'p
   const birth = `19${60 + Math.floor(pick() * 30)}-0${1 + Math.floor(pick() * 9)}-1${Math.floor(pick() * 9)}`;
   store.createCareer({ firstName: `Prova${seed}`, lastName: 'Lunga', birthDate: birth, gender: 'donna', ...place, previousProfession: 'Insegnante', ...PROFILES[level], partyMode: 'existing', partyId, difficulty: 'normale', policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 } }, db.parties, db.parliamentaryGroups);
   if (['deputato', 'senatore'].includes(level)) store.initializeParliament(db.parliamentaryGroups);
+  // The territorial committees are born when the ISTAT units are loaded, as in the game: the long run plays them too.
+  if (db.territorialUnits?.length) store.initializeCommittees(db.territorialUnits);
   const context = { realPartyIds: [...db.parties, ...db.politicalMovements, ...db.coalitions].map(item => item.id), realGroupIds: db.parliamentaryGroups.map(item => item.id) };
   return { store, db, context, env, decide: seeded(`decisioni|${seed}`) };
 }

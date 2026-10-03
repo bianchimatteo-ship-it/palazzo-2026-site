@@ -391,6 +391,7 @@
 .invest-card { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 11px; padding: 12px; border: 1px solid #373e3a; border-radius: 6px; background: #141b18; }
 .invest-card strong { display: block; color: #cbe1d4; font-size: 13.5px; }
 .invest-card small { display: block; margin: 3px 0 8px; color: #b3bbb7; font-size: 12px; line-height: 1.4; }
+.invest-card small.invest-note, .secretary-investment small.invest-note { margin: 2px 0 6px; color: #d1b97a; font-size: 11.5px; }
 .invest-card.is-owned { border-color: #294a37; background: #181f1c; }
 .fund-box { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; margin-top: 12px; padding: 12px; border: 1px solid #4e3835; border-radius: 6px; background: #181f1c; }
 .fund-box strong { display: block; color: #cbe1d4; font-size: 13.5px; }

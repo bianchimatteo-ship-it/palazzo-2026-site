@@ -1,5 +1,6 @@
 import { ITALIAN_REGIONS } from '../data/regions.js?v=20261002-1';
 import { CONGRESS_CYCLE_WEEKS, FIRST_CONGRESS_WEEKS, MEMBERSHIP_FEE, ORGANS, PARTY_PRIORITIES, SECTION_WEEKLY_COST, TREASURY_LABELS } from '../data/simulation/organization-rules.js?v=20261002-1';
+import { PARTY_INVESTMENTS } from '../data/simulation/career-rules.js?v=20261002-1';
 
 // The party as an organisation: members, sections, bodies, cohesion, conflicts and treasury.
 // Everything is simulated and lives inside the career state (game.party.org).
@@ -185,7 +186,9 @@ export function treasuryBook(org, amount, category, label = null) {
   if (!value) return;
   org.treasury.balance = Math.round(org.treasury.balance + value);
   for (const period of [org.treasury.current, org.treasury.yearTotals]) {
+    if (!period) continue;
     if (value >= 0) period.income += value; else period.expense -= value;
+    period.byCategory ??= {};
     period.byCategory[category] = (period.byCategory[category] ?? 0) + value;
   }
   if (label) org.treasury.lastEntry = { label, amount: value, category };
@@ -224,6 +227,34 @@ export function applyOrgEffects(org, effects = {}, lines = [], targetRegion = nu
   return lines;
 }
 
+// The party's funded programmes for the week (see PARTY_INVESTMENTS): upkeep out, returns in, risks, and the effects that the
+// rest of the game reads from org.perks (committees, campaigns, candidacies). Nothing is free and nothing is certain.
+function runProgrammes(org, { week, rand, lines, events }) {
+  const total = { members: 0, staff: 0, cohesion: 0 };
+  const perks = { quality: 0, organization: 0, activity: 0, recruit: 0, fundraising: 0, campaignOrganization: 0, campaignVolunteers: 0, selection: 0 };
+  for (const item of org.investments ?? []) {
+    const spec = PARTY_INVESTMENTS.find(entry => entry.id === item.id);
+    if (!spec || spec.oneOff || (item.untilWeek && item.untilWeek < week)) continue;
+    if (spec.upkeep) treasuryBook(org, -spec.upkeep, spec.category ?? 'sedi', `Mantenimento: ${spec.label}`);
+    const weekly = spec.weekly ?? {};
+    total.members += weekly.members ?? 0; total.staff += weekly.staff ?? 0; total.cohesion += weekly.cohesion ?? 0;
+    for (const [key, value] of Object.entries(weekly.committees ?? {})) perks[key] = (perks[key] ?? 0) + value;
+    perks.campaignOrganization += weekly.campaign?.organization ?? 0; perks.campaignVolunteers += weekly.campaign?.volunteers ?? 0; perks.selection += weekly.selection ?? 0;
+    // Slow returns: the income builds up over the weeks since the investment was made.
+    if (weekly.income) {
+      const ramp = Math.min(1, (week - (item.week ?? week) + 1) / weekly.income.ramp);
+      treasuryBook(org, Math.round(weekly.income.donazioni * ramp), 'donazioni', `${spec.label}: donazioni`);
+    }
+    if (spec.risk && rand() < spec.risk.chance) {
+      treasuryBook(org, -spec.risk.cost, 'formazione', spec.risk.label);
+      if (spec.risk.effects?.cohesion) org.cohesion = Math.round(clamp(org.cohesion + spec.risk.effects.cohesion));
+      lines.push(`${spec.risk.label}: −${spec.risk.cost.toLocaleString('it-IT')} € dalla tesoreria`);
+    }
+  }
+  org.perks = { ...perks, week };
+  return total;
+}
+
 // One week of party life. `context` carries the political climate and the player's standing.
 export function advanceOrganization(org, { rand, week, date, pollShare = null, pollDelta = 0, mood = 50, rank = 0, founder = false, support = 50, currents = [], campaignActive = false, seed = 1, line = null, preferredLines = {}, congressInWeeks = 99, program = null, candidacyRule = null }) {
   const lines = [];
@@ -232,7 +263,10 @@ export function advanceOrganization(org, { rand, week, date, pollShare = null, p
   const recentCommunication = org.lastCommunicationWeek && week - org.lastCommunicationWeek <= 3 ? 0.003 : 0;
   const invested = id => (org.investments ?? []).some(item => item.id === id && (!item.untilWeek || item.untilWeek >= week));
   const digital = invested('piattaforma-iscritti') ? 0.002 : 0;
-  const rate = clamp(pollDelta * 0.004 + (vitality - 50) / 50 * 0.002 + (org.priorities.territorio - 1) * 0.0015 + (org.cohesion - 55) / 45 * 0.001 + (mood - 50) / 50 * 0.0005 + (rand() - 0.5) * 0.002 + recentCommunication + digital - (org.treasury.balance < 0 ? 0.002 : 0), -0.03, 0.03);
+  // The programmes the leadership has funded: they cost to keep, return slowly, improve the committees and the campaigns,
+  // and may go wrong. What they give to the rest of the game is written in org.perks.
+  const programmes = runProgrammes(org, { week, rand, lines, events });
+  const rate = clamp(pollDelta * 0.004 + (vitality - 50) / 50 * 0.002 + (org.priorities.territorio - 1) * 0.0015 + (org.cohesion - 55) / 45 * 0.001 + (mood - 50) / 50 * 0.0005 + (rand() - 0.5) * 0.002 + recentCommunication + digital + programmes.members - (org.treasury.balance < 0 ? 0.002 : 0), -0.03, 0.03);
   const before = org.members;
   for (const section of org.sections) {
     section.members = Math.max(5, Math.round(section.members * (1 + rate + (section.vitality - 50) / 50 * 0.001)));
@@ -248,14 +282,16 @@ export function advanceOrganization(org, { rand, week, date, pollShare = null, p
   org.growth = before ? round1((org.members - before) / before * 100) : 0;
   const targetMilitants = org.members * (0.07 + org.cohesion / 1500 + org.priorities.formazione * 0.01 + (founder ? 0.12 : 0));
   org.militants = Math.round(org.militants + (targetMilitants - org.militants) * 0.1);
-  org.cadres = Math.max(org.cadres, org.sections.length * (founder ? 2 : 4) + (founder ? 3 : 14));
+  // Without money the staff leaves: the cadres shrink while the treasury is in the red, and grow back only when it is not.
+  const minimum = org.sections.length * (founder ? 2 : 4) + (founder ? 3 : 14);
+  org.cadres = org.treasury.balance < 0 ? Math.max(Math.round(minimum * 0.6), Math.round(org.cadres * 0.99)) : Math.max(org.cadres, minimum);
 
   // Treasury: fees, 2x1000 and elected members in, sections, staff and communication out.
   const income = org.members * MEMBERSHIP_FEE / 52 + Math.max(0, (pollShare ?? 2) - 1) * 650;
   treasuryBook(org, income * 0.8, 'quote');
   treasuryBook(org, income * 0.2, 'duepermille');
   treasuryBook(org, -org.sections.length * SECTION_WEEKLY_COST * (1 + 0.5 * org.priorities.territorio), 'sedi');
-  treasuryBook(org, -income * (0.72 + (rand() - 0.5) * 0.06), 'personale');
+  treasuryBook(org, -income * (0.72 + (rand() - 0.5) * 0.06) * (1 + programmes.staff), 'personale');
   for (const priority of PARTY_PRIORITIES) if (priority.id !== 'territorio') treasuryBook(org, -income * priority.costPerLevel * org.priorities[priority.id], priority.id);
   if (campaignActive) treasuryBook(org, -income * 0.5, 'campagne');
   // A party does not hoard: reserves beyond half a year of income turn into staff and initiatives.
@@ -286,7 +322,7 @@ export function advanceOrganization(org, { rand, week, date, pollShare = null, p
 
   // Cohesion and conflicts between the internal areas.
   const tension = org.conflicts.reduce((sum, item) => sum + item.intensity, 0);
-  const target = 60 - tension * 0.25 + (org.priorities.formazione - 1) * 3 + (invested('scuola-politica') ? 5 : 0) - (org.treasury.balance < 0 ? 10 : 0);
+  const target = 60 - tension * 0.25 + (org.priorities.formazione - 1) * 3 + (invested('scuola-politica') ? 5 : 0) + programmes.cohesion - (org.treasury.balance < 0 ? 10 : 0);
   org.cohesion = Math.round(clamp(org.cohesion + (target - org.cohesion) * 0.08 + (rand() - 0.5) * 2));
   for (const conflict of org.conflicts) conflict.intensity = Math.round(clamp(conflict.intensity - 2.5 + (org.cohesion < 40 ? 3 : 0) + (rand() - 0.5) * 4));
   const resolved = org.conflicts.filter(item => item.intensity <= 5);

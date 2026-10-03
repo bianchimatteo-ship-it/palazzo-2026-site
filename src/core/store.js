@@ -11,7 +11,7 @@ import { electionAftermath } from './aftermath-engine.js?v=20261002-1';
 import { progressionFactors } from './progression-engine.js?v=20261002-1';
 import { committeeSupport, committeesAfterVote, createCommittees } from './committee-engine.js?v=20261002-1';
 import { setConfidenceVote, createReferenceGovernment, neverHadGovernment, offerGroupSupport, requestGovernmentPost, withdrawGroupSupport, partnerSatisfaction, acceptLawDemand, activeMinisters, amendLawPolicy, askConfidenceOnLaw, groupProfile, issueDecree, majoritySummit, reshuffleMinister, setGovernmentProgram, settlePartnerDemand, withdrawLaw, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20261002-1';
-import { scheduleEarlyLocalElection, alignLocalCalendar, localCalendarOf, committeeAction, setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, lifeBreakPact, lifeCadre, lifeCongress, lifeFound, lifeMerge, lifeOverview, lifeRebuild, lifeRename, lifeRespond, partyOpsAvailability, saveForElection, scheduleEarlyElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20261002-1';
+import { scheduleEarlyLocalElection, alignLocalCalendar, localCalendarOf, committeeAction, setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, lifeBreakPact, lifeCadre, lifeCongress, lifeFound, lifeMerge, lifeOverview, lifeRebuild, lifeRename, lifeRespond, partyOpsAvailability, saveForElection, saveReserve, takeReserve, scheduleEarlyElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20261002-1';
 import { AMENDMENT_CAPITAL_COST, COMMUNICATION_STYLES, GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20261002-1';
 import { advanceLegislativeWeek, amendOthersLaw, amendmentOdds, linkGroupsToParties, setPlayerVote, speakOnLaw } from './lawmaking-engine.js?v=20261002-1';
 import { seededRandom } from './vote-engine.js?v=20261002-1';
@@ -2032,11 +2032,15 @@ export const store = {
     const candidate = campaign.candidates.find(item => item.isPlayer);
     // The party's committees in the territory of the vote: volunteers, organisation, the candidacy and local support.
     const home = homePlace(state);
-    const committees = org?.committees?.length ? committeeSupport(org, { electionType: config.electionType, region: home.region, provinceCode: home.provinceCode, municipality: home.municipality }) : null;
-    candidate.resources.money += transfer + game.prep * 30 + fundTotal + partyFunds;
+    const committees = org?.committees?.length ? committeeSupport(org, { electionType: config.electionType, region: home.region, provinceCode: home.provinceCode, municipality: home.municipality, week: game.week.index }) : null;
+    candidate.resources.money += transfer + game.prep * 30 + fundTotal + partyFunds + (committees?.funds ?? 0);
     if (committees) { candidate.resources.volunteers += committees.volunteers; candidate.resources.organization = Math.max(0, Math.min(100, candidate.resources.organization + committees.organization)); }
     candidate.resources.volunteers += Math.max(0, Math.round(game.prep / 6 + ((relationValue(game, 'civic') ?? 45) - 45) / 8)) + (hasAsset(game.finance, 'piattaforma') ? 3 : 0);
     candidate.resources.organization = Math.min(100, candidate.resources.organization + Math.round(game.prep / 5));
+    // The programmes funded over the months (the player's and the party's: logistics, research, scouting, apps) pay off here.
+    const programmes = { volunteers: Math.round((game.finance?.perks?.volunteers ?? 0) + (org?.perks?.campaignVolunteers ?? 0)), organization: Math.round((game.finance?.perks?.organization ?? 0) + (org?.perks?.campaignOrganization ?? 0)), selection: round2((game.finance?.perks?.selection ?? 0) + (org?.perks?.selection ?? 0)) };
+    candidate.resources.volunteers += programmes.volunteers;
+    candidate.resources.organization = Math.min(100, candidate.resources.organization + programmes.organization);
     campaign.resources = { ...candidate.resources, visibility: Math.max(0, campaign.resources.visibility + Math.round(((relationValue(game, 'media') ?? 45) - 45) / 5)), source: 'simulation' };
     if (campaign.nomination.status === 'pending') campaign.nomination.internalSupport = round2(Math.max(0, campaign.nomination.internalSupport + partyBonus));
     if (party?.affiliation === 'member') campaign.candidacy.listPosition = campaign.nomination.listPosition = Math.max(1, Math.min(6, 6 - party.rank - (party.support >= 70 ? 1 : 0)));
@@ -2055,6 +2059,7 @@ export const store = {
     poll.bonus = round2(poll.bonus + memoryBonus);
     const selection = game.party?.org?.selections?.[election.id] ?? null;
     if (selection && campaign.nomination.status === 'pending') campaign.nomination.internalSupport = round2(Math.max(0, campaign.nomination.internalSupport + selection.bonus));
+    if (campaign.nomination.status === 'pending' && programmes.selection) campaign.nomination.internalSupport = round2(Math.max(0, campaign.nomination.internalSupport + programmes.selection));
     if (committees) {
       if (campaign.nomination.status === 'pending') campaign.nomination.internalSupport = round2(Math.max(0, campaign.nomination.internalSupport + committees.nomination));
       poll.bonus = round2(poll.bonus + committees.localSupport);
@@ -2081,7 +2086,8 @@ export const store = {
     campaign.electionDate = election.electionDate;
     campaign.scheduledElectionId = election.id;
     campaign.preparation = { prep: game.prep, transfer, fund: fundTotal, partyFunds, partyBonus: round2(partyBonus), pollBonus: poll.bonus, pollShare: poll.share, allies: poll.allies, moodBonus, memory: { bonus: memoryBonus, highlights: memory.highlights.map(item => ({ text: item.text, tone: item.tone, week: item.week })) }, selection: selection ? { method: selection.method, bonus: selection.bonus } : null, committees, source: 'simulation' };
-    if (committees?.committees.length) campaign.history.unshift({ id: `comitati-${campaign.id}`, day: 0, date: state.clock.currentDate, type: 'preparazione', text: `Comitati del territorio: forza ${committees.strength}/100 · ${committees.volunteers} volontari · candidatura ${committees.nomination >= 0 ? '+' : ''}${committees.nomination} · consenso locale ${committees.localSupport >= 0 ? '+' : ''}${committees.localSupport}`, source: 'simulation' });
+    if (programmes.volunteers || programmes.organization || programmes.selection) campaign.history.unshift({ id: `programmi-${campaign.id}`, day: 0, date: state.clock.currentDate, type: 'preparazione', text: `Programmi finanziati nei mesi scorsi: ${programmes.volunteers ? `+${programmes.volunteers} volontari` : ''}${programmes.organization ? ` · +${programmes.organization} organizzazione` : ''}${programmes.selection ? ` · peso nelle candidature +${programmes.selection}` : ''}`.replace(': ·', ':').replace(/\s+/g, ' '), source: 'simulation' });
+    if (committees?.committees.length) campaign.history.unshift({ id: `comitati-${campaign.id}`, day: 0, date: state.clock.currentDate, type: 'preparazione', text: `Comitati del territorio: forza ${committees.strength}/100 · ${committees.volunteers} volontari${committees.gotv ? ` (mobilitazione +${committees.gotv})` : ''}${committees.funds ? ` · ${committees.funds.toLocaleString('it-IT')} € raccolti` : ''} · candidatura ${committees.nomination >= 0 ? '+' : ''}${committees.nomination} · consenso locale ${committees.localSupport >= 0 ? '+' : ''}${committees.localSupport}`, source: 'simulation' });
     campaign.history.unshift({ id: `preparazione-${campaign.id}`, day: 0, date: state.clock.currentDate, type: 'preparazione', text: `Preparazione ${game.prep}/100 · ${transfer} € dalla carriera${fundTotal ? ` · ${fundTotal} € dal fondo elettorale` : ''}${partyFunds ? ` · ${partyFunds} € dal partito` : ''} · sostegno interno ${partyBonus >= 0 ? '+' : ''}${round2(partyBonus)} · sondaggi ${poll.bonus >= 0 ? '+' : ''}${poll.bonus}`, source: 'simulation' });
     const nextGame = deepCopy({ ...markElectionRunning(game, election.id, campaign.id), prep: 0 });
     book(nextGame, -transfer, 'campagne', `Fondi trasferiti alla campagna: ${election.label}`, state.clock.currentDate);
@@ -2175,6 +2181,14 @@ export const store = {
   invest(investmentId) {
     const result = makeInvestment({ game: state.game, stats: statsOf(state), parliament: state.parliament }, gameEnv(state), investmentId);
     return commitGame(result, `Investimento fatto: ${result.investment.label}`);
+  },
+  saveReserve(amount) {
+    const result = saveReserve({ game: state.game, stats: statsOf(state), parliament: state.parliament }, gameEnv(state), Number(amount));
+    return commitGame(result, `Riserva di emergenza: ${result.reserve} €`);
+  },
+  takeReserve(amount) {
+    const result = takeReserve({ game: state.game, stats: statsOf(state), parliament: state.parliament }, gameEnv(state), Number(amount));
+    return commitGame(result, `Riserva: restano ${result.reserve} €`);
   },
   saveForElection(amount) {
     const result = saveForElection({ game: state.game, stats: statsOf(state), parliament: state.parliament }, gameEnv(state), Number(amount));

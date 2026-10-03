@@ -501,6 +501,10 @@
 .cm-facts dd small { display: block; color: var(--muted); font-size: 11.5px; }
 .cm-card .sx-note { margin: 0; font-size: 12.5px; }
 .cm-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.cm-badges { display: inline-flex; flex-wrap: wrap; gap: 4px; justify-content: flex-end; }
+.cm-more { flex-basis: 100%; }
+.cm-more > summary { cursor: pointer; color: var(--muted); font-size: 12.5px; padding: 4px 0; }
+.cm-more[open] > summary { color: var(--ink); }
 .cm-actions .secondary-button { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 1px; height: auto; min-height: 38px; margin: 0; padding: 5px 10px; font-size: 12.5px; text-align: left; }
 .cm-actions .secondary-button small { color: var(--muted); font-size: 11px; font-weight: 600; }
 .cm-actions > small { color: var(--muted); font-size: 12px; }

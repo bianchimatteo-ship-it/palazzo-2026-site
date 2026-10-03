@@ -102,10 +102,20 @@ export const COMMUNICATION_STYLES = Object.freeze({
   aggressiva: { label: 'Aggressiva', detail: 'Attacchi quotidiani: tanta visibilità, stampa ostile e avversari più duri.', weekly: { notoriety: 0.4, reputation: -0.15 }, sentiment: -1.2 }
 });
 // One-off decisions of the secretary on the party treasury.
+// The party's investments (the national leadership decides): some are one-off, others are programmes that cost to keep
+// (upkeep, paid by the treasury every week), return something slowly (income that builds up over `ramp` weeks), improve the
+// committees, the campaigns and the candidacies, and carry a risk. `requires` is the investment that an upgrade improves.
 export const PARTY_INVESTMENTS = Object.freeze([
-  { id: 'piattaforma-iscritti', label: 'Piattaforma digitale per gli iscritti', cost: 15000, effect: 'Tesseramento online: iscritti in crescita costante e comunicazione più economica.' },
-  { id: 'scuola-politica', label: 'Scuola politica nazionale', cost: 9000, effect: 'Militanti più preparati e partito più compatto per un anno.' },
-  { id: 'fondo-territori', label: 'Fondo per le federazioni in difficoltà', cost: 12000, effect: 'Le sezioni più deboli ripartono: vitalità +20 dove serve.' }
+  { id: 'piattaforma-iscritti', label: 'Piattaforma digitale per gli iscritti', cost: 15000, weeks: 52, upkeep: 70, category: 'comunicazione', effect: 'Tesseramento online: iscritti in crescita costante e comunicazione più economica. Un anno, 70 € a settimana di gestione.' },
+  { id: 'scuola-politica', label: 'Scuola politica nazionale', cost: 9000, weeks: 52, upkeep: 45, category: 'formazione', weekly: { committees: { quality: 8 } }, effect: 'Militanti più preparati, volontari dei comitati di qualità più alta e partito più compatto per un anno; 45 € a settimana.' },
+  { id: 'fondo-territori', label: 'Fondo per le federazioni in difficoltà', cost: 12000, oneOff: true, effect: 'Le sezioni più deboli ripartono: vitalità +20 dove serve.' },
+  { id: 'sede-nazionale', label: 'Sede nazionale ampliata', cost: 30000, upkeep: 200, category: 'sedi', weekly: { cohesion: 2, staff: -0.04, committees: { organization: 1.5, activity: 3 } }, effect: 'Segreteria, sale e uffici: più coesione, comitati meglio coordinati e personale più efficiente (−4% di spesa). Resta, ma costa 200 € a settimana.' },
+  { id: 'sedi-regionali', label: 'Rete di sedi regionali', cost: 22000, upkeep: 150, category: 'sedi', weekly: { committees: { organization: 3, activity: 4 } }, effect: 'Una sede in affitto in ogni federazione regionale: organizzazione e attività dei comitati più alte; 150 € a settimana.' },
+  { id: 'ufficio-studi', label: 'Ufficio studi e ricerca', cost: 14000, upkeep: 110, category: 'formazione', weekly: { campaign: { organization: 2 }, selection: 0.2 }, effect: 'Dati e sondaggi sul territorio: le campagne partono con +2 organizzazione e le liste sono meglio scelte; 110 € a settimana.' },
+  { id: 'app-nazionale', label: 'App e sito nazionale', cost: 18000, upkeep: 140, category: 'comunicazione', requires: 'piattaforma-iscritti', weekly: { members: 0.0015, income: { donazioni: 140, ramp: 16 }, committees: { recruit: 0.0006 } }, risk: { chance: 0.004, cost: 5000, label: 'Un incidente informatico sui dati degli iscritti', effects: { cohesion: -3 } }, effect: 'Potenzia la piattaforma: più iscritti e donazioni che crescono in quattro mesi; costa 140 € a settimana e un incidente sui dati ha un prezzo.' },
+  { id: 'raccolta-nazionale', label: 'Struttura di raccolta fondi', cost: 9000, upkeep: 130, category: 'personale', weekly: { income: { donazioni: 360, ramp: 24 }, committees: { fundraising: 0.1 } }, risk: { chance: 0.008, cost: 3000, label: 'Un caso su un grande finanziatore', effects: { cohesion: -3 } }, effect: 'Ritorno lento: dopo circa sei mesi le donazioni superano i costi e i comitati raccolgono il 10% in più; il rischio è un caso sui finanziatori.' },
+  { id: 'logistica-eventi', label: 'Logistica per eventi e manifestazioni', cost: 11000, upkeep: 100, category: 'formazione', weekly: { committees: { activity: 5, recruit: 0.0004 }, campaign: { volunteers: 3 } }, risk: { chance: 0.01, cost: 1800, label: 'Un evento va male per colpa della logistica', effects: {} }, effect: 'Palchi, mezzi e squadre: comitati più attivi e +3 volontari alle campagne; 100 € a settimana e qualche incidente.' },
+  { id: 'scouting-candidati', label: 'Scouting e formazione dei candidati', cost: 10000, upkeep: 80, weeks: 52, category: 'formazione', weekly: { selection: 0.3, campaign: { organization: 1 } }, effect: 'Per un anno candidati preparati: liste più forti (+0,3 al peso nelle candidature) e +1 organizzazione alle campagne; 80 € a settimana.' }
 ]);
 
 // Simulated calendar: cycles are compressed compared with real terms of office.
@@ -669,6 +679,18 @@ export const SITUATION_EVENTS = Object.freeze({
     { id: 'intervieni', label: 'Vai sul territorio e rimetti in piedi il comitato', cost: { ap: 1, capital: 1 }, special: 'committee-rescue', effects: { stats: { popularity: 0.3 } } },
     { id: 'commissaria', label: 'Chiedi alla segreteria di commissariarlo', cost: { capital: 3 }, requires: 'party', special: 'committee-commissar', effects: { party: { support: -1 } } },
     { id: 'lascia', label: 'Lascia che si arrangino', special: 'committee-neglect' }] },
+  'comitato-locale-opportunita': { id: 'comitato-locale-opportunita', title: 'Un’occasione per il comitato di {committee}', body: 'Si presenta un’occasione sul territorio — una festa di paese, un consiglio aperto, un tema sentito — e {committeeLevel} di {committee} chiede come muoversi. I volontari sono pochi e la stanchezza si accumula: l’esito non è garantito.', defaultChoice: 'rinuncia', choices: [
+    { id: 'investi', label: 'Investi volontari e tempo sull’occasione', cost: { ap: 1, funds: 300 }, special: 'committee-local-opportunita-investi' },
+    { id: 'delega', label: 'Lascia che ci pensi il responsabile locale', special: 'committee-local-opportunita-delega' },
+    { id: 'rinuncia', label: 'Lascia perdere', special: 'committee-local-opportunita-rinuncia' }] },
+  'comitato-locale-scandalo': { id: 'comitato-locale-scandalo', title: 'Il responsabile di {committee} finisce nei guai', body: 'Una polemica locale investe il responsabile di {committee}: stampa, iscritti e volontari aspettano di capire da che parte stai. Difenderlo costa capitale, cambiarlo costa fiducia.', defaultChoice: 'ignora', choices: [
+    { id: 'difendi', label: 'Difendilo pubblicamente', cost: { capital: 1 }, special: 'committee-local-scandalo-difendi' },
+    { id: 'sostituisci', label: 'Chiedi un passo indietro e scegli un altro responsabile', cost: { ap: 1 }, special: 'committee-local-scandalo-sostituisci' },
+    { id: 'ignora', label: 'Aspetta che passi', special: 'committee-local-scandalo-ignora' }] },
+  'comitato-locale-concorrenza': { id: 'comitato-locale-concorrenza', title: 'Un concorrente recluta a {committee}', body: 'Un altro partito apre una sede nel territorio di {committee} e punta ai volontari migliori. Si compete per persone, risorse e attenzione.', defaultChoice: 'subisci', choices: [
+    { id: 'rilancia', label: 'Rilancia il tesseramento e contendi i volontari', cost: { ap: 1, funds: 400 }, special: 'committee-local-concorrenza-rilancia' },
+    { id: 'accordo', label: 'Cerca un’intesa con le realtà locali', cost: { capital: 1 }, special: 'committee-local-concorrenza-accordo' },
+    { id: 'subisci', label: 'Non fare nulla', special: 'committee-local-concorrenza-subisci' }] },
   'resa-dei-conti': { id: 'resa-dei-conti', title: 'Resa dei conti nel partito dopo il voto', body: '{currentA} chiede una discussione sulla sconfitta e sulle responsabilità: in gioco c’è il tuo incarico.', defaultChoice: 'difenditi', choices: [
     { id: 'difenditi', label: 'Difendi le tue scelte alla conta', special: 'current-resist' },
     { id: 'cedi', label: 'Fai un passo indietro', special: 'current-cede' },

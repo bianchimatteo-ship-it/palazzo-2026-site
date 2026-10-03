@@ -108,10 +108,14 @@ export function computeVitals(party, life) {
 const INTERESTS = Object.keys(CADRE_INTERESTS);
 function syncCadres(game, life, week) {
   const org = game.party?.org;
-  const committees = committeesOf(org).filter(item => ['regione', 'provincia', 'comune'].includes(item.level));
+  // The local leaders that matter most come first: the player's own territory (comune, province, region), then the
+  // strongest committees, so that the nodes of the network have a person of their own before the rest.
+  const home = game.place?.region ?? null;
+  const rank = item => (item.region === home ? 100 : 0) + (item.level === 'comune' ? 30 : item.level === 'provincia' ? 20 : 10) + (item.organization ?? 0) / 10 + (item.members ?? 0) / 500;
+  const committees = committeesOf(org).filter(item => ['regione', 'provincia', 'comune'].includes(item.level)).sort((a, b) => rank(b) - rank(a) || String(a.id).localeCompare(String(b.id)));
   for (const committee of committees) {
     if (life.cadres.some(item => item.committeeId === committee.id)) continue;
-    if (life.cadres.filter(item => item.status !== 'uscito').length >= 12) break;
+    if (life.cadres.filter(item => item.status !== 'uscito').length >= 16) break;
     const seed = hash(`${committee.id}|${game.seed ?? 1}`);
     life.cadres.push({
       id: `quadro-${committee.id}`, committeeId: committee.id, region: committee.region, level: committee.level, name: committee.name,
@@ -153,7 +157,8 @@ function tickCadres(game, life, api, week, rand, lines) {
       raises.push({ id: 'dirigente-lascia', params: { dedupe: cadre.id, cadreId: cadre.id, title: `${committee.name}: il dirigente locale minaccia di andarsene`, body: `${cadre.label} guida il comitato di ${committee.name} (${committee.status === 'crisi' ? 'in crisi' : 'stato: ' + committee.status}) e ${CADRE_INTERESTS[cadre.interest].detail}. Il malcontento è a ${cadre.grievance}/100 e la fedeltà a ${cadre.loyalty}/100: se se ne va porta via iscritti e volontari.` }, urgent: false });
       continue;
     }
-    const kind = cadre.interest === 'seggio' ? 'candidatura-locale' : cadre.interest === 'risorse' ? 'risorse-locali' : cadre.interest === 'autonomia' ? 'autonomia' : 'risorse-locali';
+    // What a local leader asks follows what he wants and where his committee stands: a committee that already decides for itself asks for more room, one with no seat or little activity asks for means.
+    const kind = (committee.autonomy ?? 0) >= 72 && cadre.interest !== 'seggio' ? 'autonomia' : cadre.interest === 'seggio' ? 'candidatura-locale' : cadre.interest === 'risorse' || (committee.seat ?? 1) === 0 ? 'risorse-locali' : cadre.interest === 'autonomia' ? 'autonomia' : 'risorse-locali';
     if (rand() < 0.5 + cadre.grievance / 200) {
       const request = openRequest(life, game, { kind, from: 'cadre', refId: cadre.id, week, rand, api, cadre, committee });
       if (request) { cadre.nextActWeek = week + 10 + Math.floor(rand() * 8); cadre.lastActWeek = week; lines.push(request.title); }
@@ -484,7 +489,7 @@ function grant(game, life, api, request, ask, week, date, lines, specials) {
     const cadre = life.cadres.find(item => item.id === request.refId);
     const committee = org.committees.find(item => item.id === cadre?.committeeId);
     api.book(game, org, -ask.amount, 'formazione', 'Mezzi a un comitato');
-    if (committee) { committee.fundedUntil = week + 8; committee.organization = Math.round(clamp(committee.organization + 4)); committee.loyalty = Math.round(clamp(committee.loyalty + 6)); }
+    if (committee) { committee.fundedUntil = week + 8; committee.organization = Math.round(clamp(committee.organization + 4)); committee.loyalty = Math.round(clamp(committee.loyalty + 6)); if (ask.amount >= 600 && (committee.seat ?? 1) < 2 && committee.level !== 'regione') { committee.seat = (committee.seat ?? 1) + 1; committee.seatSince = week; lines.push(`${committee.name}: una sede migliore`); } }
     if (cadre) { cadre.grievance = Math.round(clamp(cadre.grievance - 20)); cadre.loyalty = Math.round(clamp(cadre.loyalty + 10)); }
     lines.push(`${committee?.name ?? 'Il comitato'}: ${ask.amount.toLocaleString('it-IT')} € dalla tesoreria`);
   } else if (kind === 'candidatura-locale') {
@@ -495,7 +500,7 @@ function grant(game, life, api, request, ask, week, date, lines, specials) {
     const cadre = life.cadres.find(item => item.id === request.refId);
     const committee = org.committees.find(item => item.id === cadre?.committeeId);
     if (cadre) { cadre.grievance = Math.round(clamp(cadre.grievance - 20)); cadre.loyalty = Math.round(clamp(cadre.loyalty + 12)); }
-    if (committee) committee.loyalty = Math.round(clamp(committee.loyalty + 8));
+    if (committee) { committee.loyalty = Math.round(clamp(committee.loyalty + 8)); committee.autonomyBias = Math.min(40, (committee.autonomyBias ?? 0) + 15); committee.autonomy = Math.round(clamp((committee.autonomy ?? 50) + 15)); }
     org.cohesion = Math.round(clamp(org.cohesion - 1)); org.discipline = Math.round(clamp(org.discipline - 2));
     lines.push('Mano libera sul territorio: più lealtà, meno disciplina');
   } else if (kind === 'fusione') {

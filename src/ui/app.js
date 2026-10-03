@@ -914,7 +914,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
       target?.scrollIntoView({ behavior: settings.motion === 'full' ? 'smooth' : 'auto', block: 'start' });
       return;
     }
-    const simulationControl = event.target.closest('[data-territory-measure],[data-territory-region],[data-budget-line],[data-party-priority],[data-real-law-more],[data-real-law-amend],[data-invest],[data-election-fund]');
+    const simulationControl = event.target.closest('[data-territory-measure],[data-territory-region],[data-budget-line],[data-party-priority],[data-real-law-more],[data-real-law-amend],[data-invest],[data-election-fund],[data-reserve],[data-reserve-release]');
     if (simulationControl) {
       const data = simulationControl.dataset;
       try {
@@ -924,6 +924,8 @@ export function mountApp(root, store, { retryData = null } = {}) {
         else if (data.partyPriority) store.setPartyPriority(data.partyPriority, Number(data.partyPriorityLevel));
         else if (data.invest) store.invest(data.invest);
         else if (data.electionFund) store.saveForElection(Number(data.electionFund));
+        else if (data.reserve) store.saveReserve(Number(data.reserve));
+        else if ('reserveRelease' in data) store.takeReserve(store.getState().game.finance.reserve ?? 0);
         else if ('realLawMore' in data) { realLaws.page++; render(store.getState(), store.getLastSaved()); }
         else if (data.realLawAmend) {
           const law = (realDatabase.laws ?? []).find(item => item.id === data.realLawAmend);

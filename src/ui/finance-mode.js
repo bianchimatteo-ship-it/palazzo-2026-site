@@ -1,5 +1,5 @@
 // Money of the career and of the party: balance, flows, budget, reports and sustainability.
-import { BUDGET_LINES, FINANCE_CATEGORIES, financeOutlook, hasAsset, INVESTMENTS } from '../core/finance-engine.js?v=20261002-1';
+import { BUDGET_LINES, FINANCE_CATEGORIES, financeOutlook, hasAsset, INVESTMENTS, RESERVE } from '../core/finance-engine.js?v=20261002-1';
 import { isPartyLeader, PARTY_PRIORITIES, TREASURY_LABELS, treasuryOutlook } from '../core/organization-engine.js?v=20261002-1';
 import { artTile } from './visuals.js?v=20261002-1';
 import { illustration } from './illustrations.js?v=20261002-1';
@@ -31,12 +31,18 @@ function investmentsPanel(game, outlook) {
     const owned = !item.repeatable && hasAsset(game.finance, item.id, game.week.index);
     const asset = (game.finance.assets ?? []).find(entry => entry.id === item.id);
     const short = game.resources.funds < item.cost;
-    return `<article class="invest-card ${owned ? 'is-owned' : ''}">${artTile(item.icon, owned ? '#1baf7a' : 'var(--party-accent)', 'sm')}<div><strong>${esc(item.label)}</strong><small>${esc(item.effect)}</small>${owned ? `<span class="state-badge state-solida">Tuo dalla settimana ${asset?.boughtWeek}${asset?.untilWeek ? ` · fino alla ${asset.untilWeek}` : ''}</span>` : `<button class="secondary-button" data-invest="${esc(item.id)}" ${ended || short ? 'disabled' : ''} title="${short ? 'Cassa insufficiente' : ''}">Investi ${euro(item.cost)}</button>`}</div></article>`;
+    const base = item.requires ? INVESTMENTS.find(entry => entry.id === item.requires) : null;
+    const missing = base && !hasAsset(game.finance, item.requires, game.week.index);
+    const why = missing ? `Serve prima: ${base.label}` : short ? 'Cassa insufficiente' : '';
+    const worth = owned && asset?.value ? ` · valore ${euro(asset.value)}` : '';
+    return `<article class="invest-card ${owned ? 'is-owned' : ''}">${artTile(item.icon, owned ? '#1baf7a' : 'var(--party-accent)', 'sm')}<div><strong>${esc(item.label)}</strong><small>${esc(item.effect)}</small>${item.requires ? `<small class="invest-note">Potenziamento di: ${esc(base?.label ?? item.requires)}</small>` : ''}${owned ? `<span class="state-badge state-solida">Tuo dalla settimana ${asset?.boughtWeek}${asset?.untilWeek ? ` · fino alla ${asset.untilWeek}` : ''}${item.upkeep ? ` · ${euro(item.upkeep)}/sett.` : ''}${worth}</span>` : `<button class="secondary-button" data-invest="${esc(item.id)}" ${ended || short || missing ? 'disabled' : ''} title="${esc(why)}">Investi ${euro(item.cost)}</button>${missing ? `<small class="invest-note">${esc(why)}</small>` : ''}`}</div></article>`;
   }).join('');
+  const reserveButtons = RESERVE.deposits.map(amount => `<button class="chip-button" data-reserve="${amount}" ${ended || game.resources.funds < amount || (outlook.reserve + amount > RESERVE.cap) ? 'disabled' : ''}>+${euro(amount)}</button>`).join('') + `<button class="chip-button" data-reserve-release ${ended || !outlook.reserve ? 'disabled' : ''}>Riprendi tutto</button>`;
   const fundButtons = [500, 1000, 2500].map(amount => `<button class="chip-button" data-election-fund="${amount}" ${ended || game.resources.funds < amount ? 'disabled' : ''}>+${euro(amount)}</button>`).join('');
-  return `<div class="balance-sheet"><div><small>Cassa</small><strong>${euro(game.resources.funds)}</strong></div><div><small>Fondo elettorale</small><strong>${euro(outlook.fund)}</strong></div><div><small>Beni</small><strong>${euro(outlook.assets)}</strong></div><div><small>Debito</small><strong class="${outlook.debt ? 'out' : ''}">${outlook.debt ? '−' : ''}${euro(outlook.debt)}</strong></div><div class="is-total"><small>Patrimonio netto</small><strong>${euro(outlook.netWorth)}</strong></div></div>
+  return `<div class="balance-sheet"><div><small>Cassa</small><strong>${euro(game.resources.funds)}</strong></div><div><small>Fondo elettorale</small><strong>${euro(outlook.fund)}</strong></div><div><small>Riserva</small><strong>${euro(outlook.reserve)}</strong></div><div><small>Beni</small><strong>${euro(outlook.assets)}</strong></div><div><small>Debito</small><strong class="${outlook.debt ? 'out' : ''}">${outlook.debt ? '−' : ''}${euro(outlook.debt)}</strong></div><div class="is-total"><small>Patrimonio netto</small><strong>${euro(outlook.netWorth)}</strong></div></div>
     <div class="invest-grid">${cards}</div>
-    <div class="fund-box">${artTile('ballot', '#e34948', 'sm')}<div><strong>Fondo elettorale vincolato</strong><small>Accantona ora: all’avvio della prossima campagna il fondo passa ai candidati e i donatori aggiungono il 15%. Non conta come spesa.</small></div><div class="fund-actions">${fundButtons}</div></div>`;
+    <div class="fund-box">${artTile('ballot', '#e34948', 'sm')}<div><strong>Fondo elettorale vincolato</strong><small>Accantona ora: all’avvio della prossima campagna il fondo passa ai candidati e i donatori aggiungono il 15%. Non conta come spesa.</small></div><div class="fund-actions">${fundButtons}</div></div>
+    <div class="fund-box">${artTile('wallet', '#1baf7a', 'sm')}<div><strong>Riserva di emergenza</strong><small>Soldi tenuti da parte: pagano per primi gli imprevisti (cause, guasti, un donatore che si ritira) e coprono il debito prima degli interessi. Si possono riprendere in ogni momento; massimo ${euro(RESERVE.cap)}. Mantenimento dei beni: ${euro(outlook.upkeep)}/sett.</small></div><div class="fund-actions">${reserveButtons}</div></div>`;
 }
 
 export function renderFinancePage(state) {

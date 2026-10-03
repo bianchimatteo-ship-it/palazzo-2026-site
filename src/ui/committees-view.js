@@ -1,7 +1,7 @@
 // The territorial committees of the party (Partito → Territorio): the player's own chain Region → Province → Comune,
 // every committee with state, strength, members, volunteers, local consensus, loyalty and leader, the actions that
 // change them, and new committees to found on the ISTAT map.
-import { COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, committeeStrength, committeeSummary } from '../core/committee-engine.js?v=20261002-1';
+import { COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, committeeActionCost, committeeProfile, committeeStrength, committeeSummary, ensureStructure, PARTY_SCALES, SEAT_TIERS } from '../core/committee-engine.js?v=20261002-1';
 import { costProblem } from '../core/career-engine.js?v=20261002-1';
 import { isPartyLeader } from '../core/organization-engine.js?v=20261002-1';
 import { glyph } from './visuals.js?v=20261002-1';
@@ -12,30 +12,46 @@ const STATE_ORDER = ['fondazione', 'crescita', 'consolidamento', 'crisi', 'perdi
 const costLabel = cost => [cost.ap ? `${cost.ap} ${cost.ap === 1 ? 'giorno' : 'giorni'}` : '', cost.capital ? `${cost.capital} cap.` : '', cost.funds ? euro(cost.funds) : '', cost.treasury ? `${euro(cost.treasury)} dalla tesoreria` : ''].filter(Boolean).join(' · ');
 const toneOf = status => COMMITTEE_STATES[status]?.tone ?? 'neutral';
 
+const COOLDOWN_REASON = { iniziativa: ['lastInitiativeWeek', 3, 'Un’iniziativa c’è già stata da poco.'], forma: ['trainedWeek', 6, 'I volontari sono stati formati da poco.'], raccolta: ['lastFundraiserWeek', 4, 'Una raccolta fondi c’è già stata da poco.'] };
 function actionButton(game, committee, actionId, { leader = false } = {}) {
-  const spec = COMMITTEE_ACTIONS[actionId];
-  const weekGap = actionId === 'rilancia' && committee.lastVisitWeek !== null && game.week.index - committee.lastVisitWeek < 2 ? 'Ci sei stato da poco.' : '';
+  const spec = { ...COMMITTEE_ACTIONS[actionId], cost: committeeActionCost(committee, actionId) };
+  const [field, weeks, why] = COOLDOWN_REASON[actionId] ?? [];
+  const extra = (field && committee[field] !== undefined && game.week.index - committee[field] < weeks ? why : '')
+    || (actionId === 'recluta' && committee.recruitUntil >= game.week.index ? 'La campagna di tesseramento è già in corso.' : '')
+    || (actionId === 'sede' && (committee.seat ?? 0) >= SEAT_TIERS.length - 1 ? 'La sede è già di proprietà.' : '')
+    || (actionId === 'delega' && !leader ? 'Solo chi guida il partito.' : '')
+    || (actionId === 'delega' && committee.leader?.player ? 'Guidi tu questo comitato.' : '');
+  const weekGap = extra || (actionId === 'rilancia' && committee.lastVisitWeek !== null && game.week.index - committee.lastVisitWeek < 2 ? 'Ci sei stato da poco.' : '');
   const problem = weekGap || (actionId === 'commissaria' && !leader ? 'Solo chi guida il partito.' : '') || (actionId === 'commissaria' && !['crisi', 'perdita-controllo'].includes(committee.status) ? 'Solo per comitati in crisi o fuori controllo.' : '') || (actionId === 'responsabile' && committee.leader?.player ? 'Guidi tu questo comitato.' : '') || costProblem(game, spec.cost) || (game.status === 'ended' ? 'Carriera conclusa.' : '');
   return `<button type="button" class="secondary-button" data-committee-action="${actionId}" data-committee-id="${esc(committee.id)}" ${problem ? `disabled title="${esc(problem)}"` : `title="${esc(spec.detail)}"`}>${esc(spec.label)} <small>${esc(costLabel(spec.cost))}</small></button>`;
 }
 
+const SEAT_UPKEEP_LEVEL = { regione: 0, provincia: 1.6, comune: 1 };
 function committeeCard(game, committee, { leader, expanded = false, currents = [] } = {}) {
+  ensureStructure(committee);
+  const profile = committeeProfile(committee);
+  const seat = SEAT_TIERS[committee.seat] ?? SEAT_TIERS[0];
+  const upkeep = Math.round(seat.upkeep * (SEAT_UPKEEP_LEVEL[committee.level] ?? 1));
   const strength = committeeStrength(committee);
   const area = currents.find(item => item.id === committee.leader?.currentId);
   const dissolved = committee.status === 'dissoluzione';
   const actions = dissolved
     ? `<button type="button" class="secondary-button" data-committee-action="fonda" data-committee-level="${esc(committee.level)}" data-committee-name="${esc(committee.name)}" data-committee-region="${esc(committee.region)}" data-committee-unit="${esc(committee.unitCode ?? '')}" data-committee-unit-type="${esc(committee.unitType ?? '')}" data-committee-municipality="${esc(committee.municipalityCode ?? '')}" ${costProblem(game, COMMITTEE_ACTIONS.fonda.cost) || committee.level === 'regione' ? 'disabled' : ''}>Rifonda <small>${esc(costLabel(COMMITTEE_ACTIONS.fonda.cost))}</small></button>`
-    : ['rilancia', 'mobilita', 'finanzia', ...(committee.leader?.player ? [] : ['responsabile']), ...(leader && ['crisi', 'perdita-controllo'].includes(committee.status) ? ['commissaria'] : [])].map(id => actionButton(game, committee, id, { leader })).join('');
+    : `${['rilancia', 'mobilita', 'finanzia', 'recluta'].map(id => actionButton(game, committee, id, { leader })).join('')}<details class="cm-more"><summary>Altre azioni</summary><div class="cm-actions">${['iniziativa', 'forma', 'raccolta', 'sede', ...(leader ? ['delega'] : []), ...(committee.leader?.player ? [] : ['responsabile']), ...(leader && ['crisi', 'perdita-controllo'].includes(committee.status) ? ['commissaria'] : [])].map(id => actionButton(game, committee, id, { leader })).join('')}</div></details>`;
   const last = committee.history?.[0];
   return `<article class="cm-card tone-${toneOf(committee.status)} ${committee.leader?.player ? 'is-mine' : ''}">
-    <header><div><span class="section-kicker">${esc(COMMITTEE_LEVELS[committee.level].label.toUpperCase())}${committee.unitType && committee.level === 'provincia' ? ` · ${esc(committee.unitType.toUpperCase())}` : ''}</span><h4>${esc(committee.name)}</h4></div>${badge(COMMITTEE_STATES[committee.status].label, toneOf(committee.status))}</header>
+    <header><div><span class="section-kicker">${esc(COMMITTEE_LEVELS[committee.level].label.toUpperCase())}${committee.unitType && committee.level === 'provincia' ? ` · ${esc(committee.unitType.toUpperCase())}` : ''}</span><h4>${esc(committee.name)}</h4></div><span class="cm-badges">${badge(COMMITTEE_STATES[committee.status].label, toneOf(committee.status))}${dissolved ? '' : badge(`${profile.tier}${profile.trend === 'stabile' ? '' : ` · ${profile.trend}`}`, profile.trend === 'declino' || profile.tier === 'fragile' ? 'warn' : profile.trend === 'crescita' || profile.tier === 'forte' ? 'good' : 'neutral')}</span></header>
     <div class="cm-strength"><span>Forza</span><b>${dissolved ? '—' : strength}</b>${bar(strength, strength >= 60 ? 'good' : strength < 35 ? 'bad' : 'warn')}</div>
     <dl class="cm-facts">
       <div><dt>Iscritti</dt><dd>${num(committee.members, 0)}</dd></div>
       <div><dt>Volontari attivi</dt><dd>${num(committee.activists, 0)}${committee.mobilizedUntil && committee.mobilizedUntil >= game.week.index ? ' · mobilitati' : ''}</dd></div>
       <div><dt>Organizzazione</dt><dd>${num(committee.organization, 0)}/100${committee.fundedUntil && committee.fundedUntil >= game.week.index ? ' · finanziata' : ''}</dd></div>
       <div><dt>Consenso locale</dt><dd title="Indice 0–100: 50 è in linea con la media nazionale del partito">${num(committee.consensus, 0)}/100</dd></div>
-      <div><dt>Fedeltà a te</dt><dd>${num(committee.loyalty, 0)}/100</dd></div>
+      <div><dt>Volontari: qualità</dt><dd>${num(committee.quality, 0)}/100<small>stanchezza ${num(committee.fatigue, 0)}/100</small></dd></div>
+      <div><dt>Attività locale</dt><dd>${num(committee.activity, 0)}/100${committee.recruitUntil && committee.recruitUntil >= game.week.index ? ' · tesseramento aperto' : ''}</dd></div>
+      <div><dt>Sede</dt><dd>${esc(seat.label)}${upkeep ? `<small>${euro(upkeep)}/sett. dalla tesoreria</small>` : ''}</dd></div>
+      <div><dt>Fedeltà a te</dt><dd>${num(committee.loyalty, 0)}/100<small>autonomia ${num(committee.autonomy, 0)}/100</small></dd></div>
+      <div><dt>Raccolti finora</dt><dd>${euro(committee.raised ?? 0)}</dd></div>
       <div><dt>Responsabile</dt><dd>${esc(committee.leader?.label ?? '—')}${area ? `<small>area: ${esc(area.label)}</small>` : ''}</dd></div>
     </dl>
     ${expanded ? `<p class="sx-note">${esc(COMMITTEE_STATES[committee.status].detail)}${last ? ` Ultimo fatto (S${last.week}): ${esc(last.text.toLowerCase())}.` : ''}</p>` : last ? `<p class="sx-note">S${last.week}: ${esc(last.text)}</p>` : ''}
@@ -79,11 +95,12 @@ export function renderCommitteesPanel(state, { units = [], municipalities = null
   const foundComune = selectedRegion === home.region && homeProvince ? (municipalities ? (comuni.length ? `<div class="cm-found"><label>Nuovo comitato comunale in provincia di ${esc(homeProvince.name)}<select data-committee-found-municipality>${comuni.map(item => `<option value="${esc(item.code)}">${esc(item.name)}${item.capital ? ' · capoluogo' : ''}</option>`).join('')}</select></label><button type="button" class="secondary-button" data-committee-found="comune" ${costProblem(game, COMMITTEE_ACTIONS.fonda.cost) ? 'disabled' : ''}>${esc(COMMITTEE_ACTIONS.fonda.label)} <small>${esc(costLabel(COMMITTEE_ACTIONS.fonda.cost))}</small></button></div>` : '') : `<div class="cm-found"><button type="button" class="text-link" data-committee-load="municipalities">Mostra i comuni della provincia di ${esc(homeProvince.name)} per fondare un comitato ${arrow}</button></div>`) : '';
   const statusChips = STATE_ORDER.map(status => `<span class="cm-chip tone-${toneOf(status)}"><b>${summary.byStatus[status]}</b>${esc(COMMITTEE_STATES[status].label)}</span>`).join('');
   return `<div class="cm-panel">
-    <div class="cm-kpis">${kpi({ label: 'Comitati attivi', value: `${summary.active}<small>/${summary.total}</small>` })}${kpi({ label: 'Forza media', value: `${summary.strength}/100`, bar: summary.strength, tone: summary.strength >= 60 ? 'good' : summary.strength < 35 ? 'bad' : '' })}${kpi({ label: 'Iscritti nei comitati locali', value: num(summary.members, 0) })}${kpi({ label: 'Volontari attivi', value: num(summary.activists, 0) })}</div>
+    <div class="cm-kpis">${kpi({ label: 'Comitati attivi', value: `${summary.active}<small>/${summary.total}</small>` })}${kpi({ label: 'Forza media', value: `${summary.strength}/100`, bar: summary.strength, tone: summary.strength >= 60 ? 'good' : summary.strength < 35 ? 'bad' : '' })}${kpi({ label: 'Iscritti nei comitati locali', value: num(summary.members, 0) })}${kpi({ label: 'Volontari attivi', value: `${num(summary.activists, 0)}<small> · qualità ${summary.quality}/100</small>` })}${kpi({ label: 'Sedi e raccolta', value: `${summary.seats}<small> sedi · ${euro(summary.upkeep)}/sett. di costi · ${euro(summary.raised)}/sett. raccolti</small>` })}${kpi({ label: 'Rete', value: `${summary.strong}<small> forti · ${summary.growing} in crescita · ${summary.declining} in declino · ${summary.fragile} fragili</small>` })}</div>
     <div class="cm-chips">${statusChips}</div>
     ${card({ kicker: 'IL TUO TERRITORIO · SIMULAZIONE', title: `${home.municipality ?? ''}${home.provinceName ? `, ${home.provinceName}` : ''} · ${home.region ?? ''}`, body: `${chain(game, committees, home, options)}<p class="sx-note">Alle elezioni i comitati del territorio del voto portano volontari, organizzazione, peso nella scelta dei candidati e consenso locale; un comitato fuori controllo lavora contro di te. Alle promozioni nel partito contano come radicamento.</p>` })}
     ${card({ kicker: 'RETE DEI COMITATI', title: selectedRegion, action: '', body: `<div class="cm-filters"><label>Regione<select data-view-filter-select="comitati-regione">${regions.map(name => `<option value="${esc(name)}" ${name === selectedRegion ? 'selected' : ''}>${esc(name)}${name === home.region ? ' · casa tua' : ''}</option>`).join('')}</select></label><div class="cm-filter-buttons" role="group" aria-label="Filtra i comitati">${COMMITTEE_FILTERS.map(([id, label]) => `<button type="button" data-view-filter="comitati" data-view-filter-value="${id}" class="${filter === id ? 'active' : ''}" aria-pressed="${filter === id}">${esc(label)}</button>`).join('')}</div></div>
       <div class="cm-grid">${inRegion.map(item => committeeCard(game, item, options)).join('') || '<p class="sx-empty">Nessun comitato per questo filtro.</p>'}</div>${foundProvince}${foundComune}` })}
+    ${summary.scale ? `<p class="sx-note">${esc(PARTY_SCALES[summary.scale].label)}: ${esc(PARTY_SCALES[summary.scale].detail)} ${summary.autonomous ? `${summary.autonomous} comitati decidono in buona parte da soli.` : ''}</p>` : ''}
     <p class="sx-note">${glyph('map', 14)} Territori e nomi sono quelli ISTAT (elenco dei comuni al 21 febbraio 2026); iscritti, responsabili, forza e stati dei comitati sono simulati e non descrivono l’organizzazione reale del partito. I responsabili sono figure simulate, mai persone reali.</p>
   </div>`;
 }

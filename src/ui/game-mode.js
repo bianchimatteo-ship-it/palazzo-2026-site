@@ -586,9 +586,14 @@ function secretaryPanel(state) {
   const organs = party.currents.map(item => `<option value="${esc(item.id)}" ${party.organsCurrentId === item.id ? 'selected' : ''}>${esc(item.label)} · peso ${num(item.strength, 1)}%</option>`).join('');
   const rule = party.candidacyRule ?? 'segreteria';
   const rules = Object.entries(CANDIDACY_RULES).map(([id, item]) => `<option value="${id}" ${rule === id ? 'selected' : ''}>${esc(item.label)}</option>`).join('');
+  const isActive = id => (org?.investments ?? []).some(entry => entry.id === id && (!entry.untilWeek || entry.untilWeek >= week));
   const investments = PARTY_INVESTMENTS.map(item => {
-    const active = (org?.investments ?? []).some(entry => entry.id === item.id && (!entry.untilWeek || entry.untilWeek >= week));
-    return `<div class="secretary-investment"><div><strong>${esc(item.label)}</strong><small>${esc(item.effect)}</small></div>${active ? '<span class="hq-tag">IN CORSO</span>' : button(`data-secretary="investment" data-secretary-value="${esc(item.id)}"`, `${euro(item.cost)} dalla tesoreria`, costProblem(game, { treasury: item.cost }))}</div>`;
+    const active = isActive(item.id);
+    const base = item.requires ? PARTY_INVESTMENTS.find(entry => entry.id === item.requires) : null;
+    const missing = base && !isActive(item.requires) ? `Serve prima: ${base.label}` : '';
+    const entry = (org?.investments ?? []).find(candidate => candidate.id === item.id && (!candidate.untilWeek || candidate.untilWeek >= week));
+    const meta = [item.upkeep ? `${euro(item.upkeep)}/sett. di mantenimento` : '', item.weeks ? `${item.weeks} settimane` : item.oneOff ? 'una tantum' : 'permanente', base ? `potenzia: ${base.label}` : '', item.risk ? 'con un rischio' : ''].filter(Boolean).join(' · ');
+    return `<div class="secretary-investment"><div><strong>${esc(item.label)}</strong><small>${esc(item.effect)}</small><small class="invest-note">${esc(meta)}</small></div>${active ? `<span class="hq-tag">IN CORSO${entry?.untilWeek ? ` · fino alla ${entry.untilWeek}` : ''}</span>` : button(`data-secretary="investment" data-secretary-value="${esc(item.id)}"`, `${euro(item.cost)} dalla tesoreria`, missing || costProblem(game, { treasury: item.cost }))}</div>`;
   }).join('');
   const congressIn = org && !org.founder ? org.congress.nextWeek - week : null;
   return `<section class="party-position secretary-desk"><div class="home-section-heading"><div><span class="section-kicker">SEGRETERIA NAZIONALE · SIMULAZIONE</span><h2>Le decisioni del segretario</h2></div><span class="hq-tag">${esc(party.rankTitle)}</span></div>

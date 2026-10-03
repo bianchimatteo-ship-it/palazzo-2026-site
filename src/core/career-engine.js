@@ -10,13 +10,13 @@ import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v
 import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20261002-1';
 import { ITALIAN_REGIONS } from '../data/regions.js?v=20261002-1';
 import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261002-1';
-import { book, buyInvestment, createFinance, depositElectionFund, hasAsset, normalizeFinance, settleFinanceWeek } from './finance-engine.js?v=20261002-1';
+import { book, buyInvestment, createFinance, depositElectionFund, depositReserve, hasAsset, normalizeFinance, releaseReserve, settleFinanceWeek } from './finance-engine.js?v=20261002-1';
 import { advanceOrganization, allocateCurrentPortfolios, applyOrgEffects, createOrganization, isPartyLeader, normalizeCurrentProfiles, normalizeOrganization, rememberCurrent, treasuryBook } from './organization-engine.js?v=20261002-1';
 import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20261002-1';
 import { HARD_CATEGORIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261002-1';
 import { macroAreaOf } from '../data/simulation/policy-rules.js?v=20261002-1';
 import { advancementOdds, evaluateAdvancement, progressionFactors } from './progression-engine.js?v=20261002-1';
-import { advanceCommittees, applyCommitteeAction, COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, foundCommittee } from './committee-engine.js?v=20261002-1';
+import { advanceCommittees, applyCommitteeAction, applyLocalEvent, COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, committeeActionCost, foundCommittee, scaleOf } from './committee-engine.js?v=20261002-1';
 import { europeanElectionDate, legislatureTerm, LEGISLATURE_RULES, sundayOnOrBefore } from './legislature-engine.js?v=20261002-1';
 import { CADRE_ACTIONS, LIFE_MEMORY_KINDS, LIFE_SITUATIONS, SPLINTER_NAMES } from '../data/simulation/party-life-rules.js?v=20261002-1';
 import { DAILY_EVENTS } from '../data/simulation/daily-events.js?v=20261002-1';
@@ -521,6 +521,20 @@ export function saveForElection(input, env, amount) {
   return { ctx, fund };
 }
 
+// The reserve of emergency: money kept apart for the unexpected (and for a debt), taken back when it is not needed.
+export function saveReserve(input, env, amount) {
+  const ctx = start(input);
+  const reserve = depositReserve(ctx.game, amount, env.currentDate);
+  addLog(ctx.game, env.currentDate, 'finanze', `Riserva di emergenza: ${reserve} € accantonati`, ['Copre gli imprevisti e il debito prima che pesino sulla cassa.'], 'neutral');
+  return { ctx, reserve };
+}
+export function takeReserve(input, env, amount) {
+  const ctx = start(input);
+  const reserve = releaseReserve(ctx.game, amount, env.currentDate);
+  addLog(ctx.game, env.currentDate, 'finanze', `Prelievo dalla riserva: restano ${reserve} €`, [], 'neutral');
+  return { ctx, reserve };
+}
+
 // ---------- inbox ----------
 function fill(text, params = {}) {
   return String(text).replace(/\{(\w+)\}/g, (match, key) => params[key] ?? match);
@@ -980,6 +994,11 @@ function handleSpecial(ctx, env, special, item, lines, specials, choice = {}) {
       else if (special === 'committee-commissar') { committee.leader = { label: 'Commissario (figura simulata nominata dalla segreteria)', currentId: null, player: false }; committee.loyalty = 75; committee.status = 'crisi'; committee.statusSince = game.week.index; lines.push(`La segreteria commissaria il comitato di ${committee.name}: il controllo torna, qualche malumore resta.`); if (game.party.org) game.party.org.cohesion = Math.round(clamp(game.party.org.cohesion - 2)); }
       else { committee.loyalty = Math.round(clamp(committee.loyalty - 6)); lines.push(`Il comitato di ${committee.name} resta da solo: la fedeltà a te cala.`); }
     }
+  } else if (special.startsWith('committee-local-')) {
+    // A local event decided: the consequences fall on the committee of the territory.
+    const [, , kind, choice] = special.split('-');
+    const committee = game.party?.org?.committees?.find(entry => entry.id === item.params.committeeId);
+    if (committee && committee.status !== 'dissoluzione') lines.push(...applyLocalEvent(game.party.org, committee, kind, choice, { week: game.week.index, rand: () => draw(game) }));
   } else if (special === 'accept-scenario-office') {
     game.flags.scenarioOffice = { title: 'Sottosegretario (esecutivo di scenario)', since: game.week.index, source: SIM };
     specials.push({ type: 'scenario-office', title: game.flags.scenarioOffice.title });
@@ -1411,11 +1430,18 @@ export function partyInvestment(input, env, id) {
   if (!investment) throw new Error('Investimento non disponibile.');
   const ctx = asSecretary(input, { treasury: investment.cost });
   const org = ctx.game.party.org;
-  if ((org.investments ?? []).some(item => item.id === id && (!item.untilWeek || item.untilWeek >= ctx.game.week.index))) throw new Error('Investimento già in corso.');
+  const week = ctx.game.week.index;
+  const active = item => item.id === id && (!item.untilWeek || item.untilWeek >= week);
+  if ((org.investments ?? []).some(active)) throw new Error('Investimento già in corso.');
+  if (investment.requires && !(org.investments ?? []).some(item => item.id === investment.requires && (!item.untilWeek || item.untilWeek >= week))) throw new Error(`Serve prima: ${PARTY_INVESTMENTS.find(item => item.id === investment.requires)?.label ?? investment.requires}.`);
   const lines = [`Tesoreria −${investment.cost.toLocaleString('it-IT')} €`];
   if (id === 'scuola-politica') applyOrgEffects(org, { militants: 0.08, cohesion: 8 }, lines);
   if (id === 'fondo-territori') for (const section of org.sections.filter(item => item.vitality < 45)) section.vitality = Math.round(clamp(section.vitality + 20));
-  org.investments = [...(org.investments ?? []), { id, label: investment.label, week: ctx.game.week.index, untilWeek: id === 'fondo-territori' ? ctx.game.week.index : ctx.game.week.index + 52, source: SIM }];
+  // A seat in every federation: the regional committees get one worth the name.
+  if (id === 'sedi-regionali') for (const committee of (org.committees ?? []).filter(item => item.level === 'regione' && item.status !== 'dissoluzione')) committee.seat = Math.max(committee.seat ?? 0, 2);
+  if (id === 'sede-nazionale') org.cadres = (org.cadres ?? 0) + 4;
+  if (investment.upkeep) lines.push(`Mantenimento: ${investment.upkeep.toLocaleString('it-IT')} € a settimana dalla tesoreria`);
+  org.investments = [...(org.investments ?? []), { id, label: investment.label, week, untilWeek: investment.oneOff ? week : investment.weeks ? week + investment.weeks : null, source: SIM }];
   const beneficiary = id === 'fondo-territori' ? 'territori' : id === 'scuola-politica' ? 'movimento' : 'riformisti';
   org.investments.at(-1).beneficiaryCurrentId = beneficiary;
   recordCurrentDecision(ctx.game, 'investimento', `Investimento: ${investment.label}`, { currentId: beneficiary, relationDelta: 3, weight: 1.1 });
@@ -1430,11 +1456,15 @@ export function committeeAction(input, env, actionId, target = {}) {
   const party = ctx.game.party;
   if (!party?.org) throw new Error('I comitati territoriali sono quelli del tuo partito: serve un partito.');
   if (actionId === 'commissaria' && !isPartyLeader(party)) throw new Error('Solo chi guida il partito può commissariare un comitato.');
-  const problem = costProblem(ctx.game, spec.cost);
-  if (problem) throw new Error(problem);
+  if (spec.leader && !isPartyLeader(party)) throw new Error('Solo chi guida il partito può prendere questa decisione.');
   const org = party.org;
   const week = ctx.game.week.index;
   const rand = () => draw(ctx.game);
+  const target0 = (org.committees ?? []).find(item => item.id === target.committeeId);
+  const cost = committeeActionCost(target0, actionId);
+  const problem = costProblem(ctx.game, cost);
+  if (problem) throw new Error(problem);
+  const scale = scaleOf({ nationalShare: env.pollShare ?? null, founder: party.affiliation === 'founder' });
   let committee;
   let lines;
   if (actionId === 'fonda') {
@@ -1445,9 +1475,9 @@ export function committeeAction(input, env, actionId, target = {}) {
   } else {
     committee = (org.committees ?? []).find(item => item.id === target.committeeId);
     if (!committee) throw new Error('Comitato non trovato.');
-    lines = applyCommitteeAction(org, committee, actionId, { week, rand, currents: party.currents, leader: isPartyLeader(party) });
+    lines = applyCommitteeAction(org, committee, actionId, { week, rand, currents: party.currents, leader: isPartyLeader(party), scale });
   }
-  pay(ctx.game, spec.cost, 'partito', `${spec.label}: ${committee.name}`, env.currentDate);
+  pay(ctx.game, cost, 'partito', `${spec.label}: ${committee.name}`, env.currentDate);
   if (['rilancia', 'mobilita'].includes(actionId) && committee.region === ctx.game.place?.region) applyEffects(ctx, { stats: { popularity: 0.3, notoriety: 0.2 } }, null, lines, { source: `Comitato di ${committee.name}` });
   addLog(ctx.game, env.currentDate, 'partito', `${spec.label}: ${COMMITTEE_LEVELS[committee.level].label.toLowerCase()} di ${committee.name}`, lines, 'good');
   return { ctx, committee, lines };
@@ -1792,7 +1822,7 @@ function weeklySystems(ctx, env, date, closing, lines, specials) {
   const total = incomes.reduce((sum, item) => sum + item.amount, 0);
   const indemnity = incomes.find(item => item.category === 'indennita')?.amount ?? 0;
   const contribution = game.party?.org ? Math.round(indemnity * ELECTED_CONTRIBUTION) : 0;
-  const finance = settleFinanceWeek(game, { week: closing, date, incomes, partyContribution: contribution });
+  const finance = settleFinanceWeek(game, { week: closing, date, incomes, partyContribution: contribution, rand: () => draw(game) });
   if (contribution) treasuryBook(game.party.org, contribution, 'contributi', 'Contributo degli eletti');
   const budget = finance.effects;
   applyEffects(ctx, { stats: budget.stats, relations: budget.relations, prep: budget.prep, capital: budget.capital, party: budget.party ? { support: budget.party } : undefined }, null, [], { source: 'Spese ricorrenti del comitato' });
@@ -1811,9 +1841,12 @@ function weeklySystems(ctx, env, date, closing, lines, specials) {
     lines.push(...org.lines.slice(0, 2));
     // Territorial committees: their week, and a decision when one of the player's own territory is in trouble.
     if (party.org.committees?.length) {
-      const territory = advanceCommittees(party.org, { rand: () => draw(game), week: closing, regionalShares: env.regionalShares ?? {}, nationalShare: env.pollShare ?? null, currents: party.currents, campaignActive: env.campaign?.status === 'active' });
+      const territory = advanceCommittees(party.org, { rand: () => draw(game), week: closing, regionalShares: env.regionalShares ?? {}, nationalShare: env.pollShare ?? null, currents: party.currents, campaignActive: env.campaign?.status === 'active', founder: party.affiliation === 'founder', line: party.line ?? null, preferredLines: CURRENT_LINES, homeRegion: game.place?.region ?? null, ownPerks: game.finance?.perks ?? {} });
       lines.push(...territory.lines.slice(0, 1));
-      const trouble = territory.events.find(event => event.status !== 'dissoluzione' && party.org.committees.find(item => item.id === event.committee)?.region === game.place?.region);
+      // A local event in the player's own territory: an opportunity, a scandal, a competitor (one decision at a time).
+      const local = territory.events.find(event => event.type === 'local');
+      if (local && !game.inbox.some(item => item.templateId?.startsWith('comitato-locale-'))) raiseSituation(ctx, `comitato-locale-${local.kind}`, { committee: local.name, committeeId: local.committee, committeeLevel: COMMITTEE_LEVELS[local.level].label.toLowerCase() });
+      const trouble = territory.events.find(event => event.type === 'committee' && event.status !== 'dissoluzione' && party.org.committees.find(item => item.id === event.committee)?.region === game.place?.region);
       if (trouble && !game.inbox.some(item => item.templateId === 'comitato-in-crisi')) raiseSituation(ctx, 'comitato-in-crisi', { committee: trouble.name, committeeId: trouble.committee, committeeLevel: COMMITTEE_LEVELS[trouble.level].label, committeeStatus: COMMITTEE_STATES[trouble.status].label.toLowerCase() });
     }
     for (const event of org.events) {

@@ -52,6 +52,7 @@ export function checkInvariants(state, context = {}) {
   checkNational(state, known, report);
   checkLocal(state, report);
   checkPartyLife(state, report);
+  checkStructures(state, report);
   checkAgenda(state, known, report);
   return { ok: issues.length === 0, issues };
 }
@@ -347,6 +348,24 @@ function checkAgenda(state, known, report) {
       else if (params.actId && ![...records(inst.acts), ...records(inst.archive)].some(act => act.id === params.actId)) report('riferimento', path, `Decisione «${item.title}»: atto ${params.actId} inesistente`);
     }
   });
+}
+
+// The territorial committees and the money: the new measures stay in their ranges, a seat is one of the known tiers, the
+// reserve and the programmes' memory cannot be negative.
+function checkStructures(state, report) {
+  const game = state.game;
+  const org = game?.party?.org;
+  records(org?.committees).forEach((committee, index) => {
+    const path = `game.party.org.committees[${index}]`;
+    for (const key of ['quality', 'fatigue', 'activity', 'autonomy']) if (committee[key] !== undefined && !(committee[key] >= 0 && committee[key] <= 100)) report('valore-impossibile', `${path}.${key}`, `Comitato ${committee.name}: ${key} = ${committee[key]} fuori da 0–100`);
+    if (committee.seat !== undefined && !(Number.isInteger(committee.seat) && committee.seat >= 0 && committee.seat <= 3)) report('valore-impossibile', `${path}.seat`, `Comitato ${committee.name}: sede ${committee.seat} sconosciuta`);
+    if (committee.raised !== undefined && !(committee.raised >= 0)) report('valore-impossibile', `${path}.raised`, `Comitato ${committee.name}: raccolta negativa`);
+  });
+  const finance = game?.finance;
+  if (finance) {
+    if (finance.reserve !== undefined && !(finance.reserve >= 0 && finance.reserve <= 12000)) report('valore-impossibile', 'game.finance.reserve', `Riserva di emergenza fuori limite: ${finance.reserve}`);
+    for (const [id, program] of Object.entries(finance.programs ?? {})) if (!(program?.weeks >= 0)) report('valore-impossibile', `game.finance.programs.${id}`, `Programma ${id}: settimane negative`);
+  }
 }
 
 // The internal life of the party: the people behind the currents are the currents of the party, the requests and the
