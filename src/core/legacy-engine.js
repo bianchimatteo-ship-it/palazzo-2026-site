@@ -4,7 +4,7 @@
 // and recorded in the Hall of Fame, which belongs to the player and outlives every career. A new career may start from
 // the legacy of a concluded one: a bounded set of starting conditions (a known name, a network, a shadow), never a
 // change to the world of the game. Pure functions over plain data. Everything is simulated.
-import { memoryBalance } from './career-engine.js?v=20261003-1';
+import { memoryBalance } from './career-engine.js?v=20261003-2';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));

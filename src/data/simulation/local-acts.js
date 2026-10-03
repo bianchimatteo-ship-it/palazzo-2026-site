@@ -3,7 +3,7 @@
 // approved or rejected. Rules of the game drawn from the TUEL (d.lgs. 267/2000) for the comuni and from the Constitution
 // (artt. 117, 121, 123, 126) and the regional statutes for the regioni, simplified; every number is a game mechanic
 // (source: simulation), never a statistic.
-import { AREA_BY_ID } from './policy-rules.js?v=20261003-1';
+import { AREA_BY_ID } from './policy-rules.js?v=20261003-2';
 
 // ---------- majorities ----------
 export const QUORUMS = Object.freeze({
