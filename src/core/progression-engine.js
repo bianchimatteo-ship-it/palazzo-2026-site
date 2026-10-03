@@ -3,6 +3,8 @@
 // threshold makes it likely, never certain; the same attempt can end in a promotion, a lower office than hoped,
 // a postponement, an internal defeat or even a demotion.
 import { committeeStrength } from './committee-engine.js?v=20261003-1';
+import { startMods, startMoment } from './start-engine.js?v=20261003-1';
+import { objectiveMods, objectiveMoment } from './objective-engine.js?v=20261003-1';
 
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
 const round1 = value => Math.round(value * 10) / 10;
@@ -38,6 +40,9 @@ export function progressionFactors({ game = null, stats = {}, parliament = null,
   const rooted = homeCommittees.length ? homeCommittees.reduce((sum, item) => sum + committeeStrength(item), 0) / homeCommittees.length : null;
   const cohesion = party?.org?.cohesion ?? 55;
   const trend = party?.org?.growth ?? 0;
+  // What the player started with (a long career behind, roots in the territory) still counts in the promotions.
+  const start = startMods(game);
+  const goals = objectiveMods(game);
   const mandateWeeks = parliament?.player?.mandateStartedAt && game?.week?.startedAt ? Math.max(0, Math.round((Date.parse(`${game.week.startedAt}T12:00:00`) - Date.parse(`${parliament.player.mandateStartedAt}T12:00:00`)) / 604800000)) : 0;
   return {
     support: clamp(party?.support ?? 50),
@@ -47,10 +52,10 @@ export function progressionFactors({ game = null, stats = {}, parliament = null,
     reputation: clamp(stats.reputation ?? 50),
     experience: clamp(stats.experience ?? 30),
     results: clamp(50 + wins * 15 - losses * 12),
-    territory: clamp((stats.popularity ?? 45) * .6 + (rooted ?? home?.vitality ?? 40) * .4),
+    territory: clamp((stats.popularity ?? 45) * .6 + (rooted ?? home?.vitality ?? 40) * .4 + start.territory + (goals.territory ?? 0)),
     party: clamp(cohesion * .7 + 15 + trend * 60),
     group: clamp(parliament?.careerStanding?.partySupport ?? 50),
-    seniority: clamp(30 + mandateWeeks * 1.2)
+    seniority: clamp(30 + mandateWeeks * 1.2 + start.seniority + (goals.seniority ?? 0))
   };
 }
 
@@ -64,6 +69,7 @@ function momentBonus(kind, { game = null, capital = 0 } = {}) {
     if ((org.cohesion ?? 55) < 40) bits.push(['Partito diviso: ogni nomina diventa uno scontro', -3]);
     if ((org.conflicts ?? []).some(item => item.intensity >= 70)) bits.push(['Scontro aperto tra le aree', -2]);
   }
+  bits.push(...startMoment(kind, game), ...objectiveMoment(kind, game));
   if (capital >= 25) bits.push(['Capitale politico da spendere', 2]);
   else if (capital < 6) bits.push(['Poco capitale politico', -2]);
   return bits;

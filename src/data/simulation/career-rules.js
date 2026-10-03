@@ -141,7 +141,7 @@ export const LEVEL_FIRST_ELECTION = Object.freeze({ comunale: { comunale: 4 }, r
 export const EARLY_ELECTION_AFTER_WEEKS = 4;
 
 export const OFFICE_INCOME = Object.freeze([
-  { match: /ministro/i, amount: 650 }, { match: /deputat|senat/i, amount: 900 }, { match: /sindac|presidente di regione/i, amount: 600 },
+  { match: /presidente della repubblica/i, amount: 1400 }, { match: /ministro/i, amount: 650 }, { match: /deputat|senat/i, amount: 900 }, { match: /sindac|presidente di regione/i, amount: 600 },
   { match: /assessor/i, amount: 450 }, { match: /consiglier|parlamento europeo/i, amount: 350 }, { match: /commissione|capogruppo/i, amount: 150 }
 ]);
 
@@ -752,15 +752,4 @@ export const SITUATION_EVENTS = Object.freeze({
     { id: 'rinuncia', label: 'Rinuncia e lascia l’incarico a un’altra figura', effects: { party: { support: -2 } }, special: 'national-mandate-decline' }] }
 });
 
-export const CAREER_OBJECTIVES = Object.freeze([
-  { id: 'radicamento', label: 'Radicamento sul territorio', detail: 'Porta la popolarità a 55.', reward: { capital: 3 } },
-  { id: 'rete', label: 'Una rete di relazioni', detail: 'Tre rapporti sopra quota 65.', reward: { capital: 3 } },
-  { id: 'partito', label: 'Un ruolo nel partito', detail: 'Ottieni un incarico interno.', reward: { capital: 4 } },
-  { id: 'candidatura', label: 'La candidatura', detail: 'Ottieni la candidatura a un’elezione.', reward: { capital: 3 } },
-  { id: 'elezione', label: 'Eletto', detail: 'Conquista un mandato alle elezioni.', reward: { capital: 5 } },
-  { id: 'parlamento', label: 'In Parlamento', detail: 'Siedi alla Camera o al Senato con un gruppo.', reward: { capital: 4 } },
-  { id: 'incarico', label: 'Responsabilità in Aula', detail: 'Conquista un incarico parlamentare.', reward: { capital: 4 } },
-  { id: 'legge', label: 'La tua legge', detail: 'Fai approvare una legge in entrambe le Camere.', reward: { capital: 5 } },
-  { id: 'dirigenza', label: 'Leadership interna', detail: 'Entra nella direzione nazionale del partito.', reward: { capital: 5 } },
-  { id: 'governo', label: 'Al Governo', detail: 'Assumi un incarico di ministro.', reward: { capital: 6 } }
-]);
+// The goals of the career (measured on the player's actions, with rewards and unlocks) live in objective-rules.js.

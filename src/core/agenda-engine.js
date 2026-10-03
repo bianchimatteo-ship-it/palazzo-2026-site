@@ -4,6 +4,7 @@
 import { advanceDays, formatDate } from './time.js?v=20261003-1';
 import { upcomingElections, upcomingRounds } from './career-engine.js?v=20261003-1';
 import { SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20261003-1';
+import { presidencySchedule, termEndOf, whiteSemester } from './presidency-engine.js?v=20261003-1';
 
 export const AGENDA_KINDS = Object.freeze({
   elezione: { label: 'Elezioni', icon: 'ballot' },
@@ -17,7 +18,8 @@ export const AGENDA_KINDS = Object.freeze({
   alleato: { label: 'Richiesta di un alleato', icon: 'link' },
   investimento: { label: 'Investimento', icon: 'money' },
   decisione: { label: 'Decisione', icon: 'alert' },
-  legislatura: { label: 'Legislatura e governo', icon: 'dome' }
+  legislatura: { label: 'Legislatura e governo', icon: 'dome' },
+  quirinale: { label: 'Quirinale', icon: 'dome' }
 });
 const CLOSED = ['approved', 'rejected', 'lapsed'];
 const daysBetween = (from, to) => Math.round((Date.parse(`${to}T12:00:00`) - Date.parse(`${from}T12:00:00`)) / 86400000);
@@ -95,6 +97,19 @@ export function agendaCalendar(state, { horizonDays = 730 } = {}) {
     if (formation.deadline) add({ id: `formazione-${formation.resultId}-scadenza`, date: formation.deadline, kind: 'legislatura', title: 'Termine per formare il governo', detail: 'Senza una maggioranza le Camere vengono sciolte.' });
   }
   if (national?.legislature?.naturalEnd) add({ id: `fine-legislatura-${national.legislature.number}`, date: national.legislature.naturalEnd, kind: 'legislatura', title: `Scadenza della ${national.legislature.label}`, detail: 'Le Camere scadono cinque anni dopo la prima seduta.' });
+  // The Quirinale: the election of the President (negotiations, first ballot, end of the term), the white semester.
+  const presidency = state.presidency;
+  if (presidency?.incumbent) {
+    const schedule = presidencySchedule(presidency.incumbent);
+    const mine = presidency.incumbent.kind === 'giocatore';
+    if (presidency.election && presidency.election.phase !== 'conclusa') {
+      if (presidency.election.phase === 'trattative') add({ id: `quirinale-${presidency.election.id}-scrutinio`, date: presidency.election.firstBallot, kind: 'quirinale', title: 'Primo scrutinio per il Presidente della Repubblica', detail: `Parlamento in seduta comune e delegati regionali: ${presidency.election.assembly.twoThirds} voti nei primi tre scrutini, poi ${presidency.election.assembly.absolute}.`, tone: 'warn', action: { type: 'tab', section: 'elezioni', tab: 'quirinale' } });
+    } else {
+      add({ id: `quirinale-trattative-${presidency.incumbent.number}`, date: schedule.opensAt, kind: 'quirinale', title: mine ? 'Si apre la corsa al tuo successore (o alla tua rielezione)' : 'Si apre la corsa al Quirinale', detail: `Il mandato del Presidente scade il ${formatDate(schedule.termEnds)}: il Parlamento in seduta comune elegge il successore a scrutinio segreto.`, action: { type: 'tab', section: 'elezioni', tab: 'quirinale' } });
+      add({ id: `quirinale-scadenza-${presidency.incumbent.number}`, date: schedule.termEnds, kind: 'quirinale', title: mine ? 'Scade il tuo mandato da Presidente della Repubblica' : 'Scade il mandato del Presidente della Repubblica', detail: 'Sette anni dal giuramento.', action: { type: 'tab', section: 'elezioni', tab: 'quirinale' } });
+    }
+    if (mine) { const semester = whiteSemester(presidency.incumbent, today, state.national?.legislature?.naturalEnd ?? null); if (!semester.active) add({ id: `quirinale-semestre-${presidency.incumbent.number}`, date: semester.since, kind: 'quirinale', title: 'Inizia il semestre bianco', detail: 'Negli ultimi sei mesi del mandato il Presidente non può sciogliere le Camere.', action: { type: 'tab', section: 'elezioni', tab: 'quirinale' } }); }
+  }
   // Money: investments that expire.
   for (const asset of (game.finance?.assets ?? []).filter(item => item.untilWeek)) add({ id: `asset-${asset.id}-${asset.untilWeek}`, date: weekDate(game, asset.untilWeek + 1), kind: 'investimento', title: `Scade: ${asset.label}`, detail: 'Dopo la scadenza l’effetto si esaurisce.', action: { type: 'nav', page: 'finanze' } });
   for (const investment of (party?.org?.investments ?? []).filter(item => item.untilWeek && item.untilWeek >= game.week.index)) add({ id: `partito-${investment.id}-${investment.untilWeek}`, date: weekDate(game, investment.untilWeek + 1), kind: 'investimento', title: `Scade l’investimento del partito: ${investment.label ?? investment.id}`, detail: 'Tesoreria del partito.', action: { type: 'nav', page: 'finanze' } });

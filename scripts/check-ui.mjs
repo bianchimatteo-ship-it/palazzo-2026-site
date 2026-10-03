@@ -389,6 +389,69 @@ assert.ok(!page.includes('data-world-alliance') && page.includes('Alleanze e rot
   }
 }
 
+// ---------- 8b. goals, the Quirinale, retirement and the Hall of Fame, through the real handlers ----------
+// The wiring of these screens (options given to each page, confirmation dialog, menu, wizard) is part of the test:
+// a page that only works when its engine is called directly would still crash in the browser.
+{
+  const game = store.getState().game;
+  game.status = 'active';
+  game.resources.politicalCapital = Math.max(game.resources.politicalCapital, 12);
+  await goto('carriera');
+  // Carriera → Obiettivi: goals measured on what the player does and decides, with the public ambition behind a confirmation.
+  let goals = await click({ sectionTab: 'carriera', sectionTabValue: 'obiettivi' });
+  assert.ok(goals.includes('goals-view') && goals.includes('obiettivi raggiunti') && goals.includes('impegni dichiarati') && goals.includes('decisioni prese') && clean(goals), 'Carriera → Obiettivi: obiettivi, impegni e decisioni dal registro della carriera.');
+  assert.ok(goals.includes('Radicamento sul territorio') && goals.includes('data-ambition-declare="radicamento"') && goals.includes('Premio'), 'Ogni obiettivo mostra misure, premio e la possibilità di dichiararlo.');
+  const asked = await click({ ambitionDeclare: 'radicamento' });
+  assert.ok(asked.includes('confirm-dialog') && asked.includes('Dichiarare questo obiettivo?') && asked.includes('data-confirm="cancel"'), 'Dichiarare un impegno chiede conferma con la finestra del gioco.');
+  await click({ confirm: 'cancel' });
+  assert.equal((store.getState().game.ambitions ?? []).length, 0, 'Annullando non si dichiara nulla.');
+  const capitalBefore = store.getState().game.resources.politicalCapital;
+  await click({ ambitionDeclare: 'radicamento' });
+  goals = await click({ confirm: 'ok' });
+  assert.equal(store.getState().game.ambitions[0]?.id, 'radicamento', 'L’impegno dichiarato entra nella partita.');
+  assert.ok(store.getState().game.resources.politicalCapital < capitalBefore, 'Dichiarare costa capitale politico.');
+  assert.ok(goals.includes('Dichiarato · scade alla settimana') && !goals.includes('data-ambition-declare="radicamento"') && clean(goals), 'L’obiettivo dichiarato mostra la scadenza e non si dichiara due volte.');
+  // The Career page also says where the starting point still weighs and how a career is concluded.
+  const percorso = await click({ sectionTab: 'carriera', sectionTabValue: 'percorso' });
+  assert.ok(percorso.includes('Eredità politica') && percorso.includes('data-retire="ritiro"') && percorso.includes('data-retire="pensionamento"') && percorso.includes('data-action="hall"') && clean(percorso), 'Carriera → Percorso: la carta della fine della carriera, con ritiro, pensionamento e Hall of Fame.');
+  assert.ok(/data-retire="pensionamento"[^>]*disabled/.test(percorso), 'Il pensionamento non è disponibile a inizio carriera: il blocco è spiegato.');
+  // Elezioni → Quirinale: the page is given the presidency by the app (a missing option would crash every Elections tab).
+  const quirinale = await click({ sectionTab: 'elezioni', sectionTabValue: 'quirinale' });
+  assert.ok(quirinale.includes('data-section-tab-value="quirinale"') && quirinale.includes('IL QUIRINALE · SIMULAZIONE') && quirinale.includes('L’elezione del Presidente') && quirinale.includes('Storia del Colle') && clean(quirinale), 'Elezioni → Quirinale: il Presidente della Repubblica, le regole dell’elezione e la storia del Colle.');
+  for (const tab of ['panoramica', 'nazionali', 'candidatura', 'campagna', 'avversari', 'risultati', 'storico']) assert.ok(clean(await click({ sectionTab: 'elezioni', sectionTabValue: tab })), `Elezioni → ${tab}: valori non validi`);
+  await click({ sectionTab: 'elezioni', sectionTabValue: 'quirinale' });
+  // Leaving politics: the confirmation, the end of the career, the Hall of Fame in the menu, the heir in the wizard.
+  await click({ sectionTab: 'carriera', sectionTabValue: 'percorso' });
+  if (store.getState().campaign?.status === 'active') store.getState().campaign.status = 'closed';
+  const leaving = await click({ retire: 'ritiro' });
+  assert.ok(leaving.includes('confirm-dialog') && leaving.includes('Lasciare la politica?') && leaving.includes('Eredità oggi'), 'Lasciare la politica chiede conferma e mostra l’eredità di oggi.');
+  await click({ confirm: 'cancel' });
+  assert.equal(store.getState().game.status, 'active', 'Annullando la carriera continua.');
+  await click({ retire: 'ritiro' });
+  const hallMenu = await click({ confirm: 'ok' });
+  assert.equal(store.getState().game.status, 'ended', 'Lasciare la politica conclude la carriera.');
+  assert.equal(store.getState().game.endKind, 'ritiro');
+  assert.ok(hallMenu.includes('main-menu') && hallMenu.includes('Hall of Fame') && hallMenu.includes('hall-entry') && hallMenu.includes('Nuova carriera con questa eredità') && clean(hallMenu), 'A carriera conclusa si apre la Hall of Fame con la nuova voce.');
+  const hallId = store.hallOfFame()[0]?.id;
+  assert.ok(hallId && hallMenu.includes(`data-hall-legacy="${hallId}"`) && hallMenu.includes(`data-hall-delete="${hallId}"`), 'La voce ha l’eredità da raccogliere e il comando per eliminarla.');
+  const homeEnded = await click({ menu: 'continua' });
+  assert.ok(homeEnded.includes('CARRIERA CONCLUSA') && homeEnded.includes(`data-hall-legacy="${hallId}"`) && clean(homeEnded), 'La Home di una carriera conclusa lo dice e porta alla nuova carriera con l’eredità.');
+  for (const id of pages) assert.ok(clean(await goto(id)), `${id} (carriera conclusa): valori non validi`);
+  // “Nuova carriera con questa eredità”: the wizard opens with that legacy chosen and says so on every step.
+  const heirWizard = await click({ hallLegacy: hallId });
+  assert.ok(heirWizard.includes('career-wizard') && heirWizard.includes('Parti dall’eredità di Luca Bassi') && clean(heirWizard), 'Il wizard parte con l’eredità scelta e lo dice.');
+  await click({ wizardAction: 'cancel' });
+  // Deleting a Hall entry asks first and removes only that entry.
+  await click({ action: 'hall' });
+  const deleting = await click({ hallDelete: hallId });
+  assert.ok(deleting.includes('Eliminare questa carriera dalla Hall of Fame?') && deleting.includes('tone-danger'), 'Eliminare una voce della Hall chiede conferma.');
+  await click({ confirm: 'cancel' });
+  assert.equal(store.hallOfFame().length, 1, 'Annullando la voce resta nella Hall of Fame.');
+  await click({ hallDelete: hallId });
+  await click({ confirm: 'ok' });
+  assert.equal(store.hallOfFame().length, 0, 'Confermando la voce esce dalla Hall of Fame.');
+}
+
 store.clearAllSaves();
 assert.equal(store.listSlots().length, 0);
 assert.ok(!store.hasCareer());
@@ -422,4 +485,4 @@ assert.equal(realData.realDatabase.parties.find(item => item.id === 'party-regis
 assert.ok(Object.isFrozen(realData.realDatabase.parties[0]), 'I dati reali restano immutabili');
 globalThis.fetch = serveFile;
 
-console.log(`Interfaccia verificata: menu principale, guida, impostazioni applicate e salvate, nuova partita con soli partiti reali, ${pages.length} pagine senza valori non validi, poteri del segretario con costi e cooldown, scrivania del Presidente del Consiglio senza leggi unilaterali, identità del partito (logo, colori, programma), tooltip rimossi a ogni cambio pagina, resoconto settimanale, velocità del turno, cronologia, archivio reale (partiti con 2×1000, deputati, senatori, gruppi, governo, leggi, territori), slot, import/export, seconda partita con ruoli limitati, loghi da indirizzo separati dai verificati; istituzioni locali ed europee raggiungibili da Home e Territori, con le azioni della carica (interrogazioni, voti, emendamenti, relazioni, incarichi).`);
+console.log(`Interfaccia verificata: menu principale, guida, impostazioni applicate e salvate, nuova partita con soli partiti reali, ${pages.length} pagine senza valori non validi, poteri del segretario con costi e cooldown, scrivania del Presidente del Consiglio senza leggi unilaterali, identità del partito (logo, colori, programma), tooltip rimossi a ogni cambio pagina, resoconto settimanale, velocità del turno, cronologia, archivio reale (partiti con 2×1000, deputati, senatori, gruppi, governo, leggi, territori), slot, import/export, seconda partita con ruoli limitati, loghi da indirizzo separati dai verificati; istituzioni locali ed europee raggiungibili da Home e Territori, con le azioni della carica (interrogazioni, voti, emendamenti, relazioni, incarichi); obiettivi con impegno dichiarato dopo conferma, Quirinale tra le schede delle Elezioni, fine della carriera con Hall of Fame ed eredità nel wizard.`);

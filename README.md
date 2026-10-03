@@ -82,7 +82,7 @@ Gli eventi sono procedurali: condizioni legate alla situazione (governo, mercati
 
 ## Ruoli e poteri
 
-Ogni ruolo sblocca poteri reali, verificati di nuovo dal motore prima di ogni azione: iscritto (attività, riunioni, contributi), dirigente (sezioni, formazione, comunicazione e mediazione), direzione nazionale (priorità di bilancio, disciplina), riferimento di un’area interna (candidature della propria area), parlamentare (leggi, emendamenti, trattative), segretario (linea politica, organi e incarichi, regola per le candidature, congresso anticipato, investimenti del partito, disciplina dei parlamentari, espulsione dei dissidenti, alleanze e rotture, formazione del governo), ministro (dossier e crisi del ministero), Presidente del Consiglio (nomina dei ministri, agenda del governo con un decreto ogni sei settimane che costa bilancio pubblico e arriva su territori, cittadini e media). Il Quartier generale mostra ruoli, poteri disponibili e ciò che serve per sbloccare gli altri; ogni decisione di segreteria ha costi, intervalli minimi e conseguenze su aree interne, iscritti, coesione, sondaggi e stampa.
+Ogni ruolo sblocca poteri reali, verificati di nuovo dal motore prima di ogni azione: iscritto (attività, riunioni, contributi), dirigente (sezioni, formazione, comunicazione e mediazione), direzione nazionale (priorità di bilancio, disciplina), riferimento di un’area interna (candidature della propria area), parlamentare (leggi, emendamenti, trattative), segretario (linea politica, organi e incarichi, regola per le candidature, congresso anticipato, investimenti del partito, disciplina dei parlamentari, espulsione dei dissidenti, alleanze e rotture, formazione del governo), ministro (dossier e crisi del ministero), Presidente del Consiglio (nomina dei ministri, agenda del governo con un decreto ogni sei settimane che costa bilancio pubblico e arriva su territori, cittadini e media). il **Presidente della Repubblica** è una carica a parte, sopra le parti e diversa dal Presidente del Consiglio (vedi sotto: elezione in seduta comune, poteri del Quirinale, mandato di sette anni); chi ha lasciato la politica ha un ruolo di carriera conclusa. Il Quartier generale mostra ruoli, poteri disponibili e ciò che serve per sbloccare gli altri; ogni decisione di segreteria ha costi, intervalli minimi e conseguenze su aree interne, iscritti, coesione, sondaggi e stampa.
 
 La **cronologia della carriera** (sezione Carriera) registra ogni tappa: partiti, incarichi, governi, leggi, elezioni, decisioni chiave, promesse, record nei sondaggi. Il passato pesa: chi ha cambiato più partiti parte con meno fiducia, le promesse tradite abbassano la popolarità.
 
@@ -173,6 +173,47 @@ Le elezioni nazionali non sono più una corsa isolata del giocatore: il Paese vo
 
 ```sh
 npm run check:legislature
+```
+
+## Presidente della Repubblica (dal 03/10/2026)
+
+Il Presidente della Repubblica è una carica istituzionalmente distinta da tutte le altre, soprattutto dal Presidente del Consiglio (che guida il governo, nomina i ministri e fissa l’agenda): non ha partito, seggio, consigli né altri incarichi, non fa le attività di un politico e decide solo ciò che il Quirinale mette sulla scrivania. Il motore è `src/core/presidency-engine.js` (funzioni pure, regole e testi in `src/data/simulation/presidency-rules.js`), collegato a `store.js` (tick settimanale dopo il mondo e il ciclo nazionale), a `career-engine.js` (eventi del Quirinale), `roles.js`, `career-overview.js` (quinto percorso di carriera), `agenda-engine.js` e alla vista `src/ui/presidency-view.js` in **Elezioni → Quirinale**.
+
+- **Chi elegge**: non i cittadini ma il **Parlamento in seduta comune** (Camera, Senato e senatori a vita) con **tre delegati per ogni Regione e uno per la Valle d’Aosta** (58), a **scrutinio segreto**. Con i dati reali sono 663 grandi elettori (399 deputati, 206 senatori, 58 delegati): due terzi sono 442, la maggioranza assoluta 332. I delegati regionali sono due della maggioranza e uno della minoranza del Consiglio, secondo le quote regionali e le tendenze del mondo simulato.
+- **Quorum**: due terzi dell’assemblea nei **primi tre scrutini**, maggioranza assoluta **dal quarto**, fino all’elezione (patto al 14º scrutinio, forzatura al 30º). Il giuramento apre un mandato di **sette anni**; negli ultimi sei mesi (183 giorni, semestre bianco) non si sciolgono le Camere.
+- **Eleggibilità**: cinquant’anni compiuti (art. 84). I candidati sono figure simulate, mai nomi reali.
+- **Candidature e negoziazioni**: i blocchi (gruppi e coalizioni, delegati regionali) lanciano nomi di area, di garanzia o di bandiera; si sponsorizza e si mette il veto, si fanno accordi e mediazioni, i candidati si “bruciano”, i franchi tiratori e la turbolenza di ogni blocco rendono il voto incerto. Il giocatore può essere osservatore, grande elettore, capo di un gruppo che decide la linea oppure candidato, con costi di capitale, sospetti per il voto segreto e conseguenze sul partito.
+- **Poteri e mandato**: consultazioni e incarico per il governo, scioglimento delle Camere (non nel semestre bianco), rinvio delle leggi, atti di grazia, messaggi e attività del Quirinale, senatori a vita. Il **credito istituzionale** (0–100, con rendimenti decrescenti) pesa sulla stabilità dei governi e sulla rielezione; alla scadenza si apre una nuova elezione (rielezione o ex Presidente, senatore a vita di diritto); le dimissioni sono possibili.
+- **Verifica**: `npm run check:presidency` (regole, assemblea reale, elezioni simulate con quorum e somme, ruoli del giocatore, incompatibilità, poteri, mandato settennale, nuova elezione, vecchi salvataggi, invarianti e pagine).
+
+```sh
+npm run check:presidency
+```
+
+## Come inizia una carriera: eurodeputato, outsider, debiti, partito diviso, consolidata (dal 03/10/2026)
+
+Oltre al percorso (comunale, regionale, deputato, senatore e ora **eurodeputato**, con un seggio nel Parlamento europeo nel gruppo del proprio partito o tra i non iscritti), il passaggio 4 del wizard sceglie **come si comincia**. Sono condizioni vere, non etichette (`src/core/start-engine.js`, regole in `src/data/simulation/start-rules.js`, wizard in `src/ui/start-wizard.js`): cambiano relazioni, risorse, vincoli, opportunità, consenso e sviluppo della carriera, e continuano a produrre conseguenze per tutta la partita.
+
+- **Outsider**: più popolarità, notorietà e fascino sugli elettori (bonus in campagna), ma meno influenza, rapporti freddi con la leadership e candidature e promozioni di partito più difficili; l’apparato ti mette alla prova e, più resti nei palazzi, meno sei un outsider (il livello scende e con lui anche il fascino).
+- **Debiti politici**: fondi e capitale di partenza più alti, creditori (finanziatore, capocorrente, sindacato, territorio: ruoli simulati) che a scadenza chiedono un favore. Si può onorare il debito (capitale e un rischio di scandalo), rinviare (la pretesa cresce) o rifiutare: dopo tre rinvii o con un rifiuto il creditore diventa un nemico che attacca a intervalli.
+- **Partito già diviso**: coesione bassa, due scontri aperti tra le aree più forti, congresso vicino e rancori; la leadership è contendibile (più peso nelle sfide interne finché dura la crisi) ma ogni scelta ti schiera. Se il partito si ricompone, la crisi finisce e resta nella memoria.
+- **Carriera già consolidata** (almeno 40 anni): esperienza, influenza, rete e anzianità alte, un incarico interno già ottenuto (responsabile regionale) ma anche aspettative alte (un risultato in linea diventa “sotto le attese” e, sotto la soglia, si perde sostegno), nemici che attaccano e un’ombra del passato che torna.
+- **Scenario personalizzato**: 13 leve (7 vantaggi e 6 zavorre, ognuna da 0 a 3) da comporre con 6 punti liberi più quelli delle zavorre; esclusioni (un outsider non ha un protettore), requisiti d’età e di partito; resta segnato come personalizzato nella Hall of Fame e vale meno.
+- **Dove pesano**: promozioni (momento e fattori), candidature (sostegno interno), campagne (mezzi, volontari, visibilità, fascino, attese), livello a cui tornano i rapporti, memoria politica e un’agenda con decisioni nuove.
+- **Verifica**: `npm run check:start`.
+
+```sh
+npm run check:start
+```
+
+## Obiettivi di carriera, Hall of Fame ed eredità (dal 03/10/2026)
+
+Gli obiettivi (`src/data/simulation/objective-rules.js`, `src/core/objective-engine.js`, vista `src/ui/goals-view.js` in **Carriera → Obiettivi**) non si spuntano: si **misurano su ciò che il giocatore fa e decide** (registro delle attività e delle scelte in `game.record`, rapporti, mandati, leggi, promesse, stato del partito). Sono 23 in otto linee (territorio, partito, istituzioni, Parlamento, Europa, parola data, la tua partenza, Quirinale). Ognuno paga un premio e **sblocca qualcosa che resta**: il livello a cui si assestano i rapporti, più peso nelle promozioni e nelle candidature, una nuova decisione in agenda (un dipartimento del partito, la tua legge che fa scuola, il primo mandato, il ruolo di garante). Un obiettivo si può **dichiarare in pubblico** (2 capitale, al massimo due alla volta, con una scadenza): mantenuto vale il doppio e resta come promessa mantenuta nella memoria politica, mancato costa reputazione e popolarità e resta come promessa tradita. I vecchi salvataggi ricevono gli obiettivi nuovi già soddisfatti senza premi retroattivi.
+
+La carriera si conclude con il **ritiro volontario** o il **pensionamento** (da 65 anni, dopo 25 anni di carriera o da ex Presidente della Repubblica; un congedo più dignitoso), da **Carriera → Percorso**: incarichi e seggio finiscono, la partita si ferma e la carriera entra nella **Hall of Fame** (menu principale), che sta nel browser, non fa parte dei salvataggi e sopravvive anche a «Elimina tutti i salvataggi». L’**eredità politica** (0–100: anni, carica più alta in proporzione a quanto è durata, mandati, leggi, obiettivi, partito guidato, reputazione, memoria, parola data, scandali e cadute; scenari personalizzati e difficoltà pesano) dà un livello (una comparsa, politico di mestiere, figura di rilievo, protagonista, statista). Una **nuova carriera può raccogliere l’eredità** di una carriera conclusa: poche condizioni di partenza in più (un nome noto, una rete, risorse, capitale; zavorre se la carriera è stata segnata da scandali o impegni mancati), con un tetto, senza costo in punti e senza toccare il mondo di gioco; la prima decisione è onorare quel nome o prendere le distanze. Scegliendo «Nuova carriera con questa eredità» (dalla Hall of Fame, dalla Home o dalla carta della carriera conclusa) il wizard parte con quell’eredità e la ricorda a ogni passaggio.
+
+```sh
+npm run check:legacy
 ```
 
 ## Gameplay: la carriera settimana per settimana
@@ -362,6 +403,9 @@ npm run check:career      # carriera pluriennale end-to-end, salvataggi e migraz
 npm run check:invariants  # invarianti centrali (src/core/invariants.js): stati puliti per ogni livello di partenza e ogni tipo di danno riconosciuto (NaN, undefined, valori impossibili, ID duplicati, riferimenti rotti, seggi, voti, governo e maggioranza, elezioni, campagne, leggi, carriera)
 npm run check:long-run    # carriere di 5, 10, 20 e 30 anni sul motore reale con 4 seed e livelli diversi (processi paralleli): invarianti ogni trimestre, elezioni, governi, bilanci, partiti, sondaggi, leggi ed eventi sempre attivi, nessun blocco, stato salvabile; stesso seed + stesse decisioni = stessa partita (LONG_RUN_YEARS=5 per una prova rapida)
 npm run check:legislature # ciclo nazionale: mappa 2022 riprodotta, calendario, soglie, gruppi, formazione del governo, crisi, europee, salvataggi, vista Nazionali
+npm run check:presidency   # Presidente della Repubblica: eleggibilità, assemblea in seduta comune con i delegati regionali, scrutini segreti e quorum, poteri, mandato settennale, nuova elezione
+npm run check:start       # come inizia una carriera: eurodeputato, outsider, debiti, partito diviso, consolidata, scenario personalizzato, conseguenze nel tempo
+npm run check:legacy      # obiettivi misurati sulle azioni, impegni dichiarati, ritiro, Hall of Fame ed eredità raccolta da una nuova carriera
 npm run check:admin-sync  # archivio amministrativo condiviso su Workers KV
 npm run check:document    # documento del 24/09/2026: collocazioni, nuove entità, leadership, liste, loghi dei politici, sondaggio reale
 npm run check:world       # alleanze realistiche, evoluzione dei partiti, difficoltà, notizie, memoria politica

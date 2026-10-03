@@ -336,7 +336,8 @@ export function classifyOutcome(campaign, result) {
   const next = rows.find(row => row.id !== campaign.playerCandidateId && row !== winner) ?? null;
   // After a runoff the comparison with expectations uses the first round (the runoff share is between two only).
   const share = result.runoffResults?.length ? (playerRow?.percent ?? result.playerShare ?? 0) : (result.playerShare ?? 0);
-  const expected = campaign.expectation?.share ?? campaign.consensusHistory?.[0]?.value ?? share;
+  // A career that starts with high expectations (a consolidated name, an outsider's hopes) raises the bar the result is judged against.
+  const expected = (campaign.expectation?.share ?? campaign.consensusHistory?.[0]?.value ?? share) + (campaign.expectation?.pressure ?? 0);
   const band = Math.max(1.5, expected * .12);
   const diff = rounded(share - expected);
   const expectation = diff >= band ? 'sopra' : diff <= -band ? 'sotto' : 'in-linea';

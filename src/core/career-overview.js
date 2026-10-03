@@ -7,6 +7,7 @@ import { isPrimeMinister } from './roles.js?v=20261003-1';
 import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261003-1';
 import { advancementOdds, progressionFactors } from './progression-engine.js?v=20261003-1';
 import { formatDate } from './time.js?v=20261003-1';
+import { presidencySchedule, presidentialEligibility, projection, termEndOf, whiteSemester } from './presidency-engine.js?v=20261003-1';
 
 const day = date => date ? formatDate(date) : '';
 const daysBetween = (from, to) => Math.round((Date.parse(`${to}T12:00:00`) - Date.parse(`${from}T12:00:00`)) / 86400000);
@@ -19,7 +20,8 @@ export const INSTITUTION_STEPS = Object.freeze([
   { id: 'assessore-regionale', label: 'Assessore regionale', level: 'regionale', test: /assessore regionale/i },
   { id: 'presidente-regione', label: 'Presidente di Regione', level: 'regionale', test: /presidente (di|della) regione/i },
   { id: 'parlamentare', label: 'Deputato o Senatore', level: 'politiche', test: /^(deputato|senatore)(?! al parlamento europeo)/i },
-  { id: 'eurodeputato', label: 'Deputato al Parlamento europeo', level: 'europee', test: /parlamento europeo/i }
+  { id: 'eurodeputato', label: 'Deputato al Parlamento europeo', level: 'europee', test: /parlamento europeo/i },
+  { id: 'presidente-repubblica', label: 'Presidente della Repubblica', level: 'quirinale', test: /presidente della repubblica/i }
 ]);
 const ELECTION_OPENS = { comunale: 'consigliere comunale o sindaco', regionale: 'consigliere regionale o presidente di Regione', politiche: 'un seggio alla Camera o al Senato', europee: 'un seggio al Parlamento europeo' };
 
@@ -132,11 +134,43 @@ function governmentTrack(state, stats) {
   };
 }
 
-// The four tracks, the next useful move, and every recent attempt to climb (with its odds and outcome).
+// The Quirinale: not a ladder step but a seat that is given by the Chambers; it asks fifty years, a name that many can vote and
+// the right moment (an election every seven years, or when the President resigns).
+function presidencyTrack(state) {
+  const game = state.game;
+  const presidency = state.presidency;
+  const player = state.dataset?.politicians?.find(item => item.id === state.career?.playerId);
+  const today = state.clock.currentDate;
+  const eligibility = presidentialEligibility({ birthDate: player?.birthDate, date: today });
+  const isPresident = presidency?.incumbent?.kind === 'giocatore' && Boolean(game.flags?.president);
+  const election = presidency?.election ?? null;
+  const schedule = presidency?.incumbent ? presidencySchedule(presidency.incumbent) : null;
+  const declared = Boolean(election?.candidates?.some(item => item.isPlayer && !item.withdrawn));
+  const steps = [
+    { id: 'eleggibile', label: 'Cinquant’anni compiuti', done: eligibility.eligible },
+    { id: 'candidato', label: 'Un nome in campo', done: declared || isPresident, current: declared && !isPresident },
+    { id: 'presidente', label: 'Presidente della Repubblica', done: false, current: isPresident }
+  ];
+  const view = election ? projection(election) : null;
+  const mine = view?.rows?.find(row => row.id === election.candidates.find(item => item.isPlayer)?.id) ?? null;
+  const when = election ? (election.phase === 'scrutini' ? 'scrutini in corso a Camere riunite' : `primo scrutinio il ${day(election.firstBallot)}`) : schedule ? `elezione dal ${day(schedule.opensAt)} (il mandato scade il ${day(schedule.termEnds)})` : '';
+  const semester = isPresident ? whiteSemester(presidency.incumbent, today, state.national?.legislature?.naturalEnd ?? null) : null;
+  return {
+    id: 'quirinale', label: 'Quirinale', icon: 'dome', steps,
+    position: isPresident ? `Presidente della Repubblica fino al ${day(termEndOf(presidency.incumbent))}` : game.flags?.exPresident ? 'Presidente emerito · senatore a vita' : eligibility.eligible ? 'Eleggibile al Quirinale' : 'Non ancora eleggibile',
+    next: isPresident ? { title: 'Alla scadenza: nuova elezione o rielezione', when: `il mandato scade il ${day(termEndOf(presidency.incumbent))}${semester?.active ? ' · semestre bianco in corso' : ''}` } : { title: election ? 'L’elezione del Presidente' : 'La prossima elezione del Presidente', when },
+    requirement: `Lo elegge il Parlamento in seduta comune con tre delegati per Regione (uno per la Valle d’Aosta), a scrutinio segreto: due terzi dell’assemblea nei primi tre scrutini, poi la maggioranza assoluta.`,
+    odds: mine ? { chance: Math.min(0.95, Math.max(0.02, mine.viability)), score: null, threshold: null, factors: [] } : null,
+    blocker: isPresident ? null : eligibility.eligible ? (election ? null : 'Nessuna elezione in corso.') : eligibility.problems[0] ?? null,
+    action: { type: 'tab', section: 'elezioni', tab: 'quirinale', label: isPresident ? 'I poteri del Quirinale' : 'Il Quirinale' },
+    contests: []
+  };
+}
+// The tracks, the next useful move, and every recent attempt to climb (with its odds and outcome).
 export function careerOverview(state) {
   if (!state?.game) return null;
   const stats = playerStatsOf(state);
-  const tracks = [institutionTrack(state), partyTrack(state, stats), parliamentTrack(state, stats), governmentTrack(state, stats)];
+  const tracks = [institutionTrack(state), partyTrack(state, stats), parliamentTrack(state, stats), governmentTrack(state, stats), ...(state.presidency ? [presidencyTrack(state)] : [])];
   const contests = tracks.flatMap(track => (track.contests ?? []).map(item => ({ ...item, track: track.id, trackLabel: track.label })))
     .sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? ''))).slice(0, 12);
   // The next useful move: an open vote first, then an attempt that is possible right now.

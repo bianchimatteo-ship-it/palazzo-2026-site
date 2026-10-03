@@ -5,8 +5,11 @@ import { ADVANCEMENT_OUTCOMES } from '../core/progression-engine.js?v=20261003-1
 import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261003-1';
 import { careerLevelLabel } from '../data/regions.js?v=20261003-1';
 import { formatDate } from '../core/time.js?v=20261003-1';
+import { startOverview } from '../core/start-engine.js?v=20261003-1';
+import { renderGoals } from './goals-view.js?v=20261003-1';
+import { renderRetirement } from './hall-view.js?v=20261003-1';
 import { glyph, officeIcon } from './visuals.js?v=20261003-1';
-import { renderCareerTimeline, renderMemoryPanel, renderObjectivesPanel, renderRolesPanel, renderWhyPanel } from './game-mode.js?v=20261003-1';
+import { renderCareerTimeline, renderMemoryPanel, renderRolesPanel, renderWhyPanel } from './game-mode.js?v=20261003-1';
 import { arrow, badge, bar, card, empty, esc, num, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261003-1';
 
 export const CAREER_TABS = Object.freeze([['percorso', 'Percorso'], ['progressione', 'Progressione'], ['incarichi', 'Incarichi e poteri'], ['cronologia', 'Cronologia'], ['obiettivi', 'Obiettivi']]);
@@ -63,7 +66,20 @@ function origin(state, player) {
     ['Settimane di carriera', num(state.game.week.index, 0)],
     ['Partiti cambiati', num((state.game.pastParties ?? []).length, 0)]
   ];
-  return `<dl class="cp-facts">${rows.map(([label, value]) => `<div><dt>${esc(label)}</dt><dd>${value}</dd></div>`).join('')}</dl>`;
+  return `<dl class="cp-facts">${rows.map(([label, value]) => `<div><dt>${esc(label)}</dt><dd>${value}</dd></div>`).join('')}</dl>${startConditions(state)}`;
+}
+
+// The conditions the career started with, and how they stand now: debts to repay, an outsider's integration, a divided
+// party, enemies, the past, expectations. They keep producing consequences, so they stay on the page.
+const DEBT_STATUS = { aperto: 'da onorare', saldato: 'saldato', tradito: 'tradito: è diventato un nemico' };
+function startConditions(state) {
+  const view = startOverview(state.game);
+  if (!view) return '';
+  const rows = view.conditions.map(item => `<div class="cp-start-row"><strong>${esc(item.label)} · ${item.now}/3${item.now !== item.level ? ` <small>(alla partenza ${item.level}/3)</small>` : ''}</strong>${item.status ? `<small class="${item.id === 'debiti' && /aperti/.test(item.status) && !/^0 aperti/.test(item.status) ? 'tone-bad' : ''}">${esc(item.status)}</small>` : ''}<small>${esc(item.lines.join(' · '))}</small></div>`).join('');
+  const debts = view.debts.length ? `<h4 class="cp-sub">Debiti politici</h4>${view.debts.map(item => `<div class="cp-start-row"><strong>${esc(item.favor.charAt(0).toUpperCase() + item.favor.slice(1))}</strong><small>${esc(item.creditor)} · ${esc(DEBT_STATUS[item.status] ?? item.status)}${item.status === 'aperto' ? ` · ${item.weeksLeft > 0 ? `scade tra ${item.weeksLeft} settimane` : item.weeksLeft === 0 ? 'scade questa settimana' : `scaduto da ${-item.weeksLeft} settimane`}${item.deferred ? ` · rinviato ${item.deferred} ${item.deferred === 1 ? 'volta' : 'volte'}` : ''}` : ''}</small></div>`).join('')}` : '';
+  const history = view.history.length > 1 ? `<h4 class="cp-sub">Cosa è successo</h4><ul class="cp-start-history">${view.history.map(item => `<li><small>settimana ${item.week}</small> ${esc(item.text)}</li>`).join('')}</ul>` : '';
+  const heir = view.legacy ? `<p class="sx-note">Hai raccolto l’eredità politica di <b>${esc(view.legacy.name)}</b> (${esc(view.legacy.tier)}, ${view.legacy.score}/100): le condizioni qui sotto vengono anche da lì.</p>` : '';
+  return `<div class="cp-start"><h4 class="cp-sub">${esc(view.label)}${view.custom ? ' · scenario personalizzato' : ''}</h4>${heir}${rows}${debts}${history}<p class="sx-note">Le condizioni di partenza sono simulate: cambiano rapporti, risorse e promozioni, e producono nuove decisioni nell’agenda.</p></div>`;
 }
 
 function factorTable(odds) {
@@ -135,7 +151,8 @@ export function renderCareerPage(state, { tab = null, timelineFilter = 'tutto' }
   let body = '';
   if (active === 'percorso') {
     body = `<div class="cp-tracks">${overview.tracks.map(trackCard).join('')}</div>
-      <div class="sx-grid two">${card({ kicker: 'PUNTO DI PARTENZA', title: 'Da dove sei partito', body: origin(state, player) })}${card({ kicker: 'TENTATIVI RECENTI', title: 'Promozioni tentate', body: contestsTable(overview.contests.slice(0, 5)), action: overview.contests.length ? `<button class="text-link" data-section-tab="carriera" data-section-tab-value="progressione">Tutti ${arrow}</button>` : '' })}</div>`;
+      <div class="sx-grid two">${card({ kicker: 'PUNTO DI PARTENZA', title: 'Da dove sei partito', body: origin(state, player) })}${card({ kicker: 'TENTATIVI RECENTI', title: 'Promozioni tentate', body: contestsTable(overview.contests.slice(0, 5)), action: overview.contests.length ? `<button class="text-link" data-section-tab="carriera" data-section-tab-value="progressione">Tutti ${arrow}</button>` : '' })}</div>
+      ${card({ kicker: state.game.status === 'ended' ? 'CARRIERA CONCLUSA' : 'FINE DELLA CARRIERA', title: 'Eredità politica', body: renderRetirement(state) })}`;
   } else if (active === 'progressione') {
     const withOdds = overview.tracks.filter(track => track.odds);
     const blocked = overview.tracks.filter(track => !track.odds && track.next);
@@ -148,7 +165,7 @@ export function renderCareerPage(state, { tab = null, timelineFilter = 'tutto' }
   } else if (active === 'cronologia') {
     body = `<div class="cp-two-col">${card({ kicker: 'CRONOLOGIA · SIMULAZIONE', title: 'La tua carriera, tappa per tappa', body: renderCareerTimeline(state, timelineFilter), className: 'career-timeline-panel' })}${card({ kicker: 'MEMORIA POLITICA', title: 'Quello che non si dimentica', body: renderMemoryPanel(state) })}</div>`;
   } else {
-    body = `<div class="sx-grid two">${card({ kicker: 'TRAGUARDI', title: 'Obiettivi della carriera', body: renderObjectivesPanel(state) })}${card({ kicker: 'PERCHÉ È CAMBIATO', title: 'Da dove vengono i tuoi numeri', body: renderWhyPanel(state) })}</div>`;
+    body = `${renderGoals(state)}${card({ kicker: 'PERCHÉ È CAMBIATO', title: 'Da dove vengono i tuoi numeri', body: renderWhyPanel(state) })}`;
   }
   return `<div class="career-page">${hero(state, player, overview)}${sectionTabs('carriera', CAREER_TABS.map(([id, label]) => [id, label, counts[id]]), active)}<div class="sx-body" role="tabpanel">${body}</div></div>`;
 }

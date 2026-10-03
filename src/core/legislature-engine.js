@@ -708,7 +708,7 @@ const groupsOfParties = (parliament, partyIds) => ['camera', 'senato'].flatMap(c
 // exclude: forces that said no (the player's party in opposition); include: forces that joined the majority;
 // previous: the majority of a fallen Government (a crisis tends to end with the same forces, or most of them).
 // null: no majority at all.
-export function majorityAfterVote(parliament, result, world = null, { exclude = [], include = [], crisis = false, rand = null, previous = null } = {}) {
+export function majorityAfterVote(parliament, result, world = null, { exclude = [], include = [], crisis = false, rand = null, previous = null, prefer = null } = {}) {
   const coalitions = result.coalitions ?? [];
   const forcesOf = id => coalitions.find(item => item.id === id)?.partyIds ?? [id];
   const axis = id => world?.parties?.find(item => item.id === id)?.axis ?? 0;
@@ -774,10 +774,16 @@ export function majorityAfterVote(parliament, result, world = null, { exclude = 
   if (broad.length && marginOf(broad) >= 0) candidates.push({ ...majority('governo-del-presidente', null, broad, 'Governo del Presidente'), weight: candidates.length ? 0.25 * (crisis ? 1.5 : 1) : 1 });
   if (!candidates.length) return null;
   const total = candidates.reduce((sum, item) => sum + item.weight, 0);
+  const ordered = [...candidates].sort((a, b) => b.weight - a.weight);
+  // The options the consultations leave open (for the President of the Republic, who decides when it is the player).
+  const options = ordered.slice(0, 3).map(item => ({ kind: item.kind, leaderId: item.leaderId, label: item.label, chance: Math.round(item.weight / total * 100) / 100 }));
+  // `prefer`: the President of the Republic (the player) hands the mandate to the most solid majority, to the next one, or
+  // to a technical Prime Minister backed by many forces.
   let pick = rand ? rand() * total : null;
-  const chosen = pick === null ? [...candidates].sort((a, b) => b.weight - a.weight)[0] : candidates.find(item => (pick -= item.weight) < 0) ?? candidates.at(-1);
+  const chosen = prefer === 'main' ? ordered[0] : prefer === 'alt' ? ordered[1] ?? ordered[0] : prefer === 'tech' ? ordered.find(item => item.kind === 'governo-del-presidente') ?? ordered[0]
+    : pick === null ? ordered[0] : candidates.find(item => (pick -= item.weight) < 0) ?? candidates.at(-1);
   const { weight, ...picked } = chosen;
-  return { ...picked, alternatives: candidates.length, chance: Math.round(weight / total * 100) / 100 };
+  return { ...picked, alternatives: candidates.length, chance: Math.round(weight / total * 100) / 100, options };
 }
 // The Chambers as they are now, read as the result of a vote (seats of every force in each Chamber): the consultations
 // of a crisis in a legislature not born from a vote of the game start from here.
@@ -849,7 +855,7 @@ export function startFormation(result, { date, number }) {
 // One step of the formation, week by week: consultations, mandate, oath, confidence. playerRole: { secretaryOf, seated }.
 // Returns the new formation, the parliament and what the player should be asked (events). The player's answers are
 // kept in the formation: excluded / included (support at the consultations), playerAccepted / playerDeclined (mandate).
-export function formationStep({ formation, parliament, result, world = null, date, playerRole = {}, labelOf = id => id }) {
+export function formationStep({ formation, parliament, result, world = null, date, playerRole = {}, labelOf = id => id, presidential = null }) {
   if (!formation || ['completata', 'fallita'].includes(formation.phase)) return { formation, parliament, events: [], lines: [] };
   const next = { ...formation, steps: [...(formation.steps ?? [])] };
   let chambers = parliament;
@@ -860,7 +866,14 @@ export function formationStep({ formation, parliament, result, world = null, dat
   // After a failed confidence vote the second round looks for a broader majority (no coalition wins by right). In a
   // crisis, or with no winner, the consultations can settle on different majorities (drawn with the formation's own
   // sequence: the same answers of the parties give the same outcome).
-  const find = () => majorityAfterVote(chambers, next.attempts ? { ...result, winner: null } : result, world, { exclude: next.excluded ?? [], include: next.included ?? [], crisis: Boolean(next.crisis || next.attempts), previous: next.previous ?? null, rand: seededRandom(`${next.resultId}|${next.firstSitting}|${next.attempts ?? 0}|${(next.excluded ?? []).join(',')}|${(next.included ?? []).join(',')}`) });
+  const find = () => majorityAfterVote(chambers, next.attempts ? { ...result, winner: null } : result, world, { exclude: next.excluded ?? [], include: next.included ?? [], crisis: Boolean(next.crisis || next.attempts), previous: next.previous ?? null, prefer: ['main', 'alt', 'tech'].includes(next.presidentChoice) ? next.presidentChoice : null, rand: seededRandom(`${next.resultId}|${next.firstSitting}|${next.attempts ?? 0}|${(next.excluded ?? []).join(',')}|${(next.included ?? []).join(',')}`) });
+  // When the player is the President of the Republic the consultations end with the player's decision on the mandate.
+  const askPresident = majority => {
+    if (!presidential?.player || !majority?.options?.length || next.presidentAsked === `${next.attempts ?? 0}`) return;
+    next.presidentAsked = `${next.attempts ?? 0}`;
+    const labels = majority.options.map(item => item.label ?? (item.kind === 'governo-del-presidente' ? 'Governo del Presidente' : 'una maggioranza'));
+    events.push({ id: 'quirinale-consultazioni', params: { situation: next.crisis ? 'Il governo è caduto e le Camere restano le stesse.' : 'Le nuove Camere sono insediate.', main: labels[0], alt: labels[1] ?? labels[0], whiteSemester: presidential.canDissolve ? '' : ' (non puoi: sei nel semestre bianco)', holdUntil: next.consultationsEnd } });
+  };
   const propose = majority => {
     chambers = electedGovernment(chambers, { majority, number: next.number, date, leaderLabel: majority.leaderId ? labelOf(majority.leaderId) : null });
     next.confidenceAt = advanceDays(date, LEGISLATURE_RULES.confidenceDays);
@@ -872,6 +885,7 @@ export function formationStep({ formation, parliament, result, world = null, dat
     next.consultationsEnd = advanceDays(date, LEGISLATURE_RULES.consultationDays);
     const majority = find();
     next.majority = majority;
+    askPresident(majority);
     // The secretary of a party outside the winning coalition says whether it supports the majority taking shape
     // (or the one that would exist with its seats).
     const own = playerRole.secretaryOf;
@@ -886,6 +900,7 @@ export function formationStep({ formation, parliament, result, world = null, dat
   if (next.phase === 'consultazioni') {
     if (date < (next.consultationsEnd ?? date)) return done();
     // The player's answer at the consultations (support or opposition) is part of the count.
+    if (next.presidentChoice === 'dissolve') { step('fallita', 'Hai deciso di sciogliere le Camere: si torna al voto.'); return done({ dissolve: true }); }
     const majority = find();
     if (!majority) { step('fallita', 'Le consultazioni non trovano una maggioranza in entrambe le Camere: il Presidente della Repubblica scioglie le Camere, si torna al voto.'); return done({ dissolve: true }); }
     next.majority = majority;
@@ -941,6 +956,8 @@ export function formationStep({ formation, parliament, result, world = null, dat
     // A second round of consultations with a broader majority.
     step('consultazioni', 'La fiducia non arriva: nuovo giro di consultazioni per una maggioranza più larga.');
     next.consultationsEnd = advanceDays(date, LEGISLATURE_RULES.consultationDays);
+    next.presidentChoice = null;
+    askPresident(find());
     return done();
   }
   return done();

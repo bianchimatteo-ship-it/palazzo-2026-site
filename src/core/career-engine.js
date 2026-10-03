@@ -3,7 +3,7 @@ import { advanceDays, formatDate, nextMunicipalVote, nextRegionalVote } from './
 import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261003-1';
 import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20261003-1';
 import {
-  APPOINTMENTS, BASE_WEEKLY_INCOME, CAREER_EVENTS, CAREER_OBJECTIVES, CURRENT_TEMPLATES, EARLY_ELECTION_AFTER_WEEKS, ELECTION_SCHEDULE,
+  APPOINTMENTS, BASE_WEEKLY_INCOME, CAREER_EVENTS, CURRENT_TEMPLATES, EARLY_ELECTION_AFTER_WEEKS, ELECTION_SCHEDULE,
   FORCED_EVENTS, LEGACY_RIVAL_NAMES, SIMULATED_RIVAL_LABEL, FOUNDER_RANK, LEVEL_FIRST_ELECTION, OFFICE_INCOME, PARTY_RANKS, RELATION_TEMPLATES, STAT_LABELS,
   AGENDA_CAPS, SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS, ROUND_RULES } from '../data/simulation/career-rules.js?v=20261003-1';
 import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20261003-1';
@@ -20,10 +20,15 @@ import { advanceCommittees, applyCommitteeAction, applyLocalEvent, COMMITTEE_ACT
 import { europeanElectionDate, legislatureTerm, LEGISLATURE_RULES, sundayOnOrBefore } from './legislature-engine.js?v=20261003-1';
 import { CADRE_ACTIONS, LIFE_MEMORY_KINDS, LIFE_SITUATIONS, SPLINTER_NAMES } from '../data/simulation/party-life-rules.js?v=20261003-1';
 import { DAILY_EVENTS } from '../data/simulation/daily-events.js?v=20261003-1';
+import { PRESIDENCY_SITUATIONS } from '../data/simulation/presidency-rules.js?v=20261003-1';
+import { START_SITUATIONS } from '../data/simulation/start-rules.js?v=20261003-1';
+import { AMBITION_BROKEN, AMBITION_COST, AMBITION_KEPT, OBJECTIVE_BY_ID, OBJECTIVE_SITUATIONS } from '../data/simulation/objective-rules.js?v=20261003-1';
+import { ambitionProblem, bump, bumpAmbition, bumpDecision, expiredAmbitions, isClassicObjective, objectiveBase, objectiveStatus } from './objective-engine.js?v=20261003-1';
+import { advanceStart, hasStart, startBase, startFundsFactor, startInit, startSpecial } from './start-engine.js?v=20261003-1';
 import { advanceLife, breakPact, cadreAction, cadreDecision, congressWork, createLife, honourListPacts, lapseAnswer, lifeOverview, normalizeLife, resolveCongress, respondRequest, startRebuild } from './party-life-engine.js?v=20261003-1';
 import { enterNewParty, foundParty, mergeParties, OP_COSTS, partyOpsAvailability, renameParty, splitOff } from './party-ops-engine.js?v=20261003-1';
 // The decisions of the party's internal life join the situation events; the daily events join the procedural ones.
-const SITUATIONS = { ...SITUATION_EVENTS, ...LIFE_SITUATIONS };
+const SITUATIONS = { ...SITUATION_EVENTS, ...LIFE_SITUATIONS, ...PRESIDENCY_SITUATIONS, ...START_SITUATIONS, ...OBJECTIVE_SITUATIONS };
 const EVENT_POOL = [...CAREER_EVENTS, ...DAILY_EVENTS];
 
 const SIM = 'simulation';
@@ -79,6 +84,8 @@ export function situation(ctx, env = {}) {
     secretary: isSecretary(ctx.game.party),
     premier: governing && parliament?.government?.primeMinister === 'player',
     campaignActive: env.campaign?.status === 'active',
+    // The President of the Republic is an office apart: no party, no seat, the activities of the Quirinale.
+    president: Boolean(ctx.game.flags?.president),
     // What the rest of the world looks like this week: events depend on it.
     memory: remembered,
     signals: {
@@ -181,7 +188,7 @@ function makeElection(type, windowOpensAt, place = {}, early = false) {
   };
 }
 
-export function createGameState({ seedText, currentDate, level, party = null, place = {}, stats = {}, parliament = null, funds = null, difficulty = 'normale', localCalendar = null }) {
+export function createGameState({ seedText, currentDate, level, party = null, place = {}, stats = {}, parliament = null, funds = null, difficulty = 'normale', localCalendar = null, start = null }) {
   const seed = hash(seedText);
   const member = party?.id && !party.founder;
   const setting = difficultyOf(difficulty);
@@ -194,18 +201,20 @@ export function createGameState({ seedText, currentDate, level, party = null, pl
     ? makeNationalElection(type, nationalElectionDate({ legislature: REAL_LEGISLATURE }, type, currentDate), place)
     : localCalendar ? makeLocalElection(type, localCalendar[type], currentDate, place, localCalendar[`${type}Real`])
     : makeElection(type, advanceDays(currentDate, 7 * (LEVEL_FIRST_ELECTION[level]?.[type] ?? ELECTION_SCHEDULE[type].firstWeeks)), place));
-  const startingFunds = Math.round((funds ?? ({ comunale: 1500, regionale: 2500, deputato: 4000, senatore: 4000 }[level] ?? 2000)) * setting.funds);
+  const startingFunds = Math.round((funds ?? ({ comunale: 1500, regionale: 2500, deputato: 4000, senatore: 4000, europeo: 4000 }[level] ?? 2000)) * setting.funds * startFundsFactor(start?.levels));
   const game = {
     version: 1, source: SIM, status: 'active', seed, rngState: seed, place, difficulty: difficultyId(difficulty),
     week: { index: 1, startedAt: currentDate, ap: WEEKLY_ACTION_POINTS, maxAp: WEEKLY_ACTION_POINTS, categoriesUsed: [] },
     resources: { funds: startingFunds, politicalCapital: clamp(Math.round((parliament?.resources?.politicalCapital ?? stats.influence ?? 30) + setting.capital), 0, 100), source: SIM },
     prep: 0, relations, party: createPartyState(party, seed, { region: place.region, share: party?.share ?? null, week: 1, date: currentDate }), pastParties: [], elections,
     inbox: [], log: [], objectives: {}, flags: { nationalCalendar: 2, ...(localCalendar ? { localCalendar: 1 } : {}) }, lastReport: null, weekStartStats: { ...stats }, lastEventId: null,
-    fallenWeeks: 0, endedAt: null, endReason: null,
+    fallenWeeks: 0, endedAt: null, endReason: null, objectivesV: 2,
     finance: createFinance({ week: 1, date: currentDate, funds: startingFunds }), contacts: [], promises: [], legislature: { ...REAL_LEGISLATURE },
     roundsFrom: currentDate, rounds: []
   };
   planRounds(game, currentDate);
+  // The conditions the player chose to start with (outsider, debts, a divided party, a consolidated career…).
+  if (hasStart(start)) startInit(game, start, lifeApi());
   const ctx = { game, stats: { ...stats }, parliament };
   refreshObjectives(ctx, {}, [], currentDate);
   fillInbox(ctx, {}, []);
@@ -221,7 +230,8 @@ export function normalizeGameState(game) {
   // Saves from before the internal life: the people behind the currents and the rest are born from the state they have.
   if (party) normalizeLife(party, { seed: hash(`${game.seed}|${party.partyId}|life`), week });
   // The career never closes: a save that had ended resumes, with the fall kept on record.
-  const revived = game.status === 'ended' ? { status: 'active', endedAt: null, endReason: null, setbacks: [...(game.setbacks ?? []), { week, date: game.endedAt ?? date, reason: game.endReason ?? 'Crisi di reputazione', source: SIM }] } : {};
+  // A career the player concluded (retirement) stays concluded; a fall (the old ending) resumes.
+  const revived = game.status === 'ended' && !game.endKind ? { status: 'active', endedAt: null, endReason: null, setbacks: [...(game.setbacks ?? []), { week, date: game.endedAt ?? date, reason: game.endReason ?? 'Crisi di reputazione', source: SIM }] } : {};
   return alignNationalCalendar({
     status: 'active', prep: 0, pastParties: [], inbox: [], log: [], objectives: {}, flags: {}, lastReport: null, lastEventId: null, fallenWeeks: 0, place: {},
     contacts: [], promises: [], pending: [], eventQueue: [], eventHistory: {}, eventRecent: [], memory: [], legislature: { ...REAL_LEGISLATURE }, difficulty: 'normale', setbacks: [],
@@ -472,6 +482,7 @@ export function spendTime(game, ap) {
 export function activityProblem(ctx, env, activity) {
   const sit = situation(ctx, env);
   if (ctx.game.status === 'ended') return 'La carriera è conclusa.';
+  if (sit.president) return 'Da Presidente della Repubblica non fai attività di parte: usa le attività del Quirinale (sezione Elezioni → Quirinale).';
   if (sit.campaignActive && activity.category !== 'parlamento') return 'In campagna: usa le attività della sezione Elezioni.';
   if (!meets(activity.requires, sit)) return requirementReason[activity.requires] ?? activity.requiresLabel ?? 'Non disponibile ora.';
   return costProblem(ctx.game, activity.cost);
@@ -490,6 +501,8 @@ export function performActivity(input, env, activityId, targetId = null) {
   if (activity.target === 'segment' && !SEGMENTS.some(item => item.id === targetId)) throw new Error('Scegli un gruppo di cittadini.');
   pay(ctx.game, activity.cost, ACTIVITY_FINANCE_CATEGORY[activity.category], activity.label, env.currentDate);
   ctx.game.week.categoriesUsed = [...new Set([...ctx.game.week.categoriesUsed, activity.category])];
+  // The ledger of what the player does: the goals of the career are measured on it.
+  bump(ctx.game, 'activities', activity.category); bump(ctx.game, 'activityIds', activity.id);
   const lines = applyEffects(ctx, activity.effects, targetId, [], { date: env.currentDate, fundsLabel: activity.label });
   let tone = 'good';
   // An external press office halves the risks of media exposure.
@@ -572,7 +585,7 @@ function eventParams(ctx) {
   };
 }
 function raiseForced(ctx, id) {
-  if (ctx.game.inbox.some(item => item.templateId === id)) return;
+  if (ctx.game.flags?.president || ctx.game.inbox.some(item => item.templateId === id)) return;
   ctx.game.inbox.unshift(instantiate(FORCED_EVENTS[id], 'urgente', ctx, eventParams(ctx)));
 }
 // Situation events carry their own parameters (territory, conflict, person, law).
@@ -580,6 +593,8 @@ function raiseSituation(ctx, id, params = {}, urgent = false) {
   const game = ctx.game;
   if (game.status === 'ended' || game.inbox.some(item => item.templateId === id && (!params.dedupe || item.params?.dedupe === params.dedupe))) return null;
   if (!SITUATIONS[id]) return null;
+  // The President of the Republic decides only what the Quirinale puts on the desk (the election, the consultations, the acts of the office).
+  if (game.flags?.president && !/^(quirinale|presidente)-/.test(id)) return null;
   const item = instantiate(SITUATIONS[id], 'situazione', ctx, { ...eventParams(ctx), ...params });
   if (urgent) game.inbox.unshift(item); else game.inbox.push(item);
   return item;
@@ -630,6 +645,8 @@ function raiseEvent(ctx, template, params, specials, lines, urgent = false) {
 function fillInbox(ctx, env, lines, specials = []) {
   const game = ctx.game;
   const sit = situation(ctx, env);
+  // The President of the Republic has no appointments of a politician: the Quirinale raises its own decisions.
+  if (sit.president) { game.lastAppointmentIds = []; game.eventQueue = []; return; }
   const params = eventParams(ctx);
   const recent = game.lastAppointmentIds ?? [];
   const appointments = APPOINTMENTS.filter(item => meets(item.when, sit) && !recent.includes(item.id));
@@ -753,7 +770,7 @@ function pickDay(game, freeDays, eligible, budget, used) {
 // The political world can ask for a reaction: it lands in the week's agenda like any other event.
 export function addWorldReaction(input, reaction) {
   const game = copy(input);
-  if (game.status === 'ended' || game.inbox.some(item => item.templateId === 'presa-posizione')) return game;
+  if (game.status === 'ended' || game.flags?.president || game.inbox.some(item => item.templateId === 'presa-posizione')) return game;
   const template = CAREER_EVENTS.find(entry => entry.id === 'presa-posizione');
   const ctx = { game };
   game.inbox.push(instantiate(template, 'evento', ctx, { event: reaction.title, eventBody: reaction.body }));
@@ -835,6 +852,7 @@ export function resolveInboxItem(input, env, itemId, choiceId) {
   if (choice.cost?.ap && local) ctx.game.week.categoriesUsed = [...new Set([...ctx.game.week.categoriesUsed, 'territorio'])];
   const lines = [];
   const specials = [];
+  bumpDecision(ctx.game, 'made'); bump(ctx.game, 'choices', `${item.templateId}.${choice.id}`);
   const tone = runChoice(ctx, env, item, choice, lines, specials);
   ctx.game.inbox = ctx.game.inbox.filter(entry => entry.id !== itemId);
   addLog(ctx.game, env.currentDate, item.kind, `${item.title} — ${fill(choice.label, item.params)}`, lines, tone);
@@ -861,7 +879,15 @@ const WORLD_SPECIALS = ['markets-calm', 'markets-worse', 'europe-up', 'europe-do
   'local-vote-line', 'local-vote-yes', 'local-vote-no', 'local-vote-abstain', 'local-vote-absent', 'local-concede', 'local-hold'];
 function handleSpecial(ctx, env, special, item, lines, specials, choice = {}) {
   const game = ctx.game;
-  if (WORLD_SPECIALS.includes(special)) { specials.push({ type: special, params: item.params ?? {} }); return; }
+  if (WORLD_SPECIALS.includes(special) || special.startsWith('presidency-')) { specials.push({ type: special, params: item.params ?? {} }); return; }
+  // The starting conditions: debts, a divided party, the outsider's apparatus, enemies, the past, expectations.
+  if (special.startsWith('start-')) { lines.push(...startSpecial(game, special, item, choice, lifeApi())); return; }
+  // The offers a reached goal puts on the desk: an office in the party, a role of guarantee.
+  if (special === 'objective-role-dipartimento' || special === 'objective-role-garante') {
+    const title = special === 'objective-role-garante' ? 'Garante dell’unità del partito' : 'Responsabile di dipartimento';
+    if (game.party) { game.party.minorRoles = [...(game.party.minorRoles ?? []), { title, week: game.week.index, source: SIM }].slice(-6); game.party.history.push({ week: game.week.index, date: env.currentDate, text: `Assume l’incarico: ${title.toLowerCase()}`, source: SIM }); lines.push(`Nuovo incarico nel partito: ${title.toLowerCase()}.`); }
+    return;
+  }
   if (special === 'emergency-decree') {
     specials.push({ type: 'emergency-decree', decree: Object.fromEntries(Object.entries(choice.decree ?? {}).map(([key, value]) => [key, typeof value === 'string' ? fill(value, item.params) : value])), title: `Misure urgenti: ${item.title}` });
     return;
@@ -1523,6 +1549,21 @@ export function joinParty(input, env, party) {
   addLog(ctx.game, env.currentDate, 'partito', `Aderisci a ${party.label || 'un partito'}`, ['Parti come iscritto: il sostegno interno va costruito.'], 'neutral');
   return { ctx };
 }
+// The party is left for an office that is above parties (the Presidency of the Republic): no stat penalty, the reason on record.
+export function leavePartyFor(input, env, reason) {
+  const ctx = start(input);
+  if (!ctx.game.party) return { ctx };
+  const label = ctx.game.party.label ?? 'il partito';
+  leaveParty(ctx, reason);
+  addLog(ctx.game, env.currentDate, 'partito', `Lasci ${label}`, [reason], 'neutral');
+  return { ctx };
+}
+// A consequence of a decision, due some weeks later (the same machinery as every other consequence of the game).
+export function scheduleFollowUp(input, later, origin) {
+  const game = copy(input);
+  schedule(game, later, origin);
+  return game;
+}
 export function quitParty(input, env) {
   const ctx = start(input);
   if (!ctx.game.party) throw new Error('Non fai parte di un partito.');
@@ -1635,35 +1676,77 @@ export function lifeRename(input, env, { label, abbreviation = null, style = 'ri
 export { lifeOverview, partyOpsAvailability };
 
 // ---------- objectives ----------
-function objectiveMet(id, ctx, env) {
-  const game = ctx.game;
-  const parliament = ctx.parliament;
-  if (id === 'radicamento') return (ctx.stats.popularity ?? 0) >= 55;
-  if (id === 'rete') return relationList(game).filter(item => (item.value ?? item.relation) >= 65).length >= 3;
-  if (id === 'partito') return (game.party?.rank ?? 0) >= 1;
-  if (id === 'candidatura') return env.campaign?.nomination?.status === 'approved' || Boolean(game.flags.candidacy);
-  if (id === 'elezione') return (env.career?.electionHistory ?? []).some(item => item.personalMandate);
-  if (id === 'parlamento') return Boolean(parliament?.player?.groupId);
-  if (id === 'incarico') return Boolean(parliament?.careerStanding?.committeeRole);
-  if (id === 'legge') return (parliament?.laws ?? []).some(law => law.stage === 'approved');
-  if (id === 'dirigenza') return (game.party?.rank ?? 0) >= 3;
-  if (id === 'governo') return (parliament?.government?.ministers ?? []).some(item => item.playerAppointed);
-  return false;
-}
+// The goals are measured on what the player does (objective-engine reads the ledger and the state); reaching one pays
+// its reward, unlocks what it says (relations that settle higher, weight in promotions and candidacies) and may put
+// a new decision on the desk. A goal declared in public (an ambition) pays double if kept and costs if broken.
+const goalExtras = game => ({ memoryNet: memoryBalance(game).net });
 export function refreshObjectives(ctx, env, lines = [], date) {
+  const game = ctx.game;
+  game.objectives ??= {};
+  let status = objectiveStatus(ctx, env, goalExtras(game));
+  // Saves from before the goals were measured: the new goals already met are written down quietly, with no reward.
+  if (!game.objectivesV) {
+    game.objectivesV = 2;
+    if (game.week.index > 1) for (const item of status) if (!isClassicObjective(item.id) && item.available && item.met && !item.done) game.objectives[item.id] = { completedAt: date, week: game.week.index, silent: true, source: SIM };
+    status = objectiveStatus(ctx, env, goalExtras(game));
+  }
   const completed = [];
-  for (const objective of CAREER_OBJECTIVES) {
-    if (ctx.game.objectives[objective.id] || !objectiveMet(objective.id, ctx, env)) continue;
-    ctx.game.objectives[objective.id] = { completedAt: date, week: ctx.game.week.index, source: SIM };
-    applyEffects(ctx, objective.reward);
-    completed.push(objective);
-    lines.push(`Traguardo raggiunto: ${objective.label}`);
-    addLog(ctx.game, date, 'traguardo', `Traguardo: ${objective.label}`, [`Capitale politico +${objective.reward.capital}`], 'good');
+  for (const item of status) {
+    if (item.done || !item.available || !item.met) continue;
+    const declared = (game.ambitions ?? []).find(entry => entry.id === item.id) ?? null;
+    game.objectives[item.id] = { completedAt: date, week: game.week.index, ...(declared ? { declared: true } : {}), source: SIM };
+    const reward = item.reward ?? {};
+    const effects = { capital: (reward.capital ?? 0) * (declared ? AMBITION_KEPT.capitalFactor : 1), stats: { ...(reward.stats ?? {}) }, relations: reward.relations, party: reward.party };
+    if (declared) for (const [metric, value] of Object.entries(AMBITION_KEPT.stats)) effects.stats[metric] = round2((effects.stats[metric] ?? 0) + value);
+    const rewardLines = [];
+    applyEffects(ctx, effects, null, rewardLines, { source: `Traguardo: ${item.label}`, date });
+    if (declared) {
+      game.ambitions = game.ambitions.filter(entry => entry.id !== item.id);
+      bumpAmbition(game, 'kept');
+      remember(game, { date, kind: 'promessa-mantenuta', text: `Obiettivo dichiarato e raggiunto: ${item.label}`, weight: 1 });
+    }
+    if (item.memory) remember(game, { date, ...item.memory });
+    if (item.unlock) {
+      game.unlocks = { ...(game.unlocks ?? {}), [item.id]: { week: game.week.index, label: item.label, text: item.unlock.text, base: item.unlock.base ?? null, mods: item.unlock.mods ?? null } };
+      if (item.unlock.offer) raiseSituation(ctx, item.unlock.offer, {}, false);
+    }
+    completed.push(item);
+    lines.push(`Traguardo raggiunto: ${item.label}`);
+    addLog(game, date, 'traguardo', `Traguardo${declared ? ' dichiarato' : ''}: ${item.label}`, [...rewardLines, item.unlock?.text ? `Sblocchi: ${item.unlock.text}` : null].filter(Boolean), 'good');
   }
   return completed;
 }
+// The state of every goal, for the pages.
 export function objectiveProgress(ctx, env) {
-  return CAREER_OBJECTIVES.map(objective => ({ ...objective, done: Boolean(ctx.game.objectives[objective.id]), completedAt: ctx.game.objectives[objective.id]?.completedAt ?? null, available: objective.id !== 'partito' && objective.id !== 'dirigenza' ? true : Boolean(ctx.game.party) }));
+  return objectiveStatus(ctx, env, goalExtras(ctx.game));
+}
+// Declaring a goal in public: a commitment with a deadline. Kept, it pays double and builds credibility; broken, it costs.
+export function declareAmbition(input, env, id) {
+  const ctx = start(input);
+  const spec = OBJECTIVE_BY_ID[id];
+  const problem = ambitionProblem(ctx, env, spec) || costProblem(ctx.game, AMBITION_COST);
+  if (problem) throw new Error(problem);
+  const week = ctx.game.week.index;
+  pay(ctx.game, AMBITION_COST, 'altro', `Obiettivo dichiarato: ${spec.label}`, env.currentDate);
+  ctx.game.ambitions = [...(ctx.game.ambitions ?? []), { id, week, deadline: week + spec.ambition.weeks, source: SIM }];
+  bumpAmbition(ctx.game, 'declared');
+  remember(ctx.game, { date: env.currentDate, kind: 'decisione', text: `Dichiari pubblicamente: ${spec.label}`, weight: 0.5 });
+  addLog(ctx.game, env.currentDate, 'traguardo', `Obiettivo dichiarato: ${spec.label}`, [`Scadenza: settimana ${week + spec.ambition.weeks} · se lo manchi paghi in credibilità, se lo mantieni il premio raddoppia`], 'neutral');
+  return { ctx, ambition: ctx.game.ambitions.at(-1), objective: spec };
+}
+// An ambition not kept by its deadline is remembered as a promise broken.
+function expireAmbitions(ctx, date, lines) {
+  const game = ctx.game;
+  for (const item of expiredAmbitions(game, game.week.index)) {
+    const spec = OBJECTIVE_BY_ID[item.id];
+    if (game.objectives?.[item.id]) continue;
+    applyEffects(ctx, { stats: AMBITION_BROKEN.stats }, null, [], { source: `Obiettivo mancato: ${spec?.label ?? item.id}`, date });
+    bumpAmbition(game, 'broken');
+    remember(game, { date, kind: 'promessa-tradita', text: `Obiettivo dichiarato e mancato: ${spec?.label ?? item.id}`, weight: 1 });
+    addLog(game, date, 'traguardo', `Obiettivo mancato: ${spec?.label ?? item.id}`, ['La scadenza è passata: reputazione −2, popolarità −1 e un impegno non mantenuto nella memoria politica.'], 'bad');
+    lines.push(`Obiettivo mancato: ${spec?.label ?? item.id}`);
+  }
+  game.ambitions = (game.ambitions ?? []).filter(item => item.deadline >= game.week.index);
 }
 
 // ---------- elections ----------
@@ -1714,7 +1797,7 @@ function updateRounds(ctx, env, date, lines) {
   game.roundsFrom ??= date;
   planRounds(game, date, env.localRounds);
   for (const round of game.rounds) {
-    if (round.status === 'upcoming' && date >= round.windowOpensAt && date < round.electionDate) {
+    if (round.status === 'upcoming' && date >= round.windowOpensAt && date < round.electionDate && !game.flags?.president) {
       round.status = 'open';
       raiseSituation(ctx, 'tornata-amministrativa', { roundId: round.id, year: round.year, when: formatDate(round.electionDate), count: round.comuni ? `${round.comuni} comuni` : 'centinaia di comuni', side: game.party?.label ?? 'le liste civiche a te vicine', dedupe: round.id });
       lines.push(`${round.label}: il ${formatDate(round.electionDate)} si vota nei comuni, decidi quanto impegnarti.`);
@@ -1761,9 +1844,11 @@ export function markElectionHeld(game, campaignId, result) {
 function updateElections(ctx, date, lines, specials) {
   const game = ctx.game;
   for (const entry of [...game.elections]) {
+    // The President of the Republic stands in no election: the country votes without the office-holder.
+    const president = Boolean(game.flags?.president);
     if (entry.status === 'upcoming' && date >= entry.windowOpensAt) {
-      entry.status = 'open';
-      lines.push(`Si apre la finestra delle candidature: ${entry.label} (fino al ${entry.windowClosesAt}).`);
+      entry.status = president ? 'missed' : 'open';
+      if (!president) lines.push(`Si apre la finestra delle candidature: ${entry.label} (fino al ${entry.windowClosesAt}).`);
     }
     if (entry.status === 'open' && date > entry.windowClosesAt) {
       entry.status = 'missed';
@@ -1910,7 +1995,7 @@ function drift(ctx, lines) {
   for (const metric of ['popularity', 'reputation', 'influence']) if ((stats[metric] ?? 0) > 60) { const wear = round2((stats[metric] - 60) * 0.04); stats[metric] = round2(stats[metric] - wear); recordWhy(game, metric, -wear, 'Stare in alto logora: servono nuovi risultati'); }
   if (game.party && game.party.support < 45) game.party.support = round2(game.party.support + 0.5);
   for (const item of game.relations) {
-    const base = RELATION_BASES[item.id] ?? 50;
+    const base = clamp((RELATION_BASES[item.id] ?? 50) + startBase(game, item.id) + objectiveBase(game, item.id));
     if (Math.abs(item.value - base) > 2) item.value = round2(item.value + (item.value > base ? -0.5 : 0.5));
   }
   const standing = ctx.parliament?.careerStanding;
@@ -1930,6 +2015,7 @@ export function advanceWeek(input, env, governmentWeek = parliament => parliamen
     game.inbox = game.inbox.filter(entry => entry.id !== item.id);
     if (!choice) continue;
     const itemLines = [];
+    if (item.kind !== 'appuntamento') bumpDecision(game, 'delegated');
     const tone = runChoice(ctx, env, item, choice, itemLines, specials);
     if (item.kind !== 'appuntamento' || itemLines.length) addLog(game, date, item.kind, `${item.title} — ${fill(choice.label, item.params)} (senza decisione)`, itemLines, tone);
     if (item.kind !== 'appuntamento') lines.push(`Senza una tua decisione: ${item.title}`);
@@ -1938,6 +2024,13 @@ export function advanceWeek(input, env, governmentWeek = parliament => parliamen
   if (game.status !== 'ended') resolvePending(ctx, env, date, lines);
   if (game.status !== 'ended') {
     const budget = weeklySystems(ctx, env, date, closing, lines, specials);
+    // The starting conditions go on: creditors ask, enemies strike, the apparatus tests the outsider, the past resurfaces.
+    if (game.start && !game.flags?.president) {
+      const pressure = advanceStart(game, lifeApi(), { week: closing, date, stats: ctx.stats, seat: Boolean(ctx.parliament?.player?.groupId), mandates: (env.career?.electionHistory ?? []).filter(item => item.personalMandate).length });
+      lines.push(...pressure.lines);
+      for (const item of pressure.raises) raiseSituation(ctx, item.id, item.params, item.urgent);
+      for (const entry of pressure.logs) addLog(game, date, entry.kind, entry.title, entry.lines, entry.tone);
+    }
     const capitalGain = Math.max(0, Math.round(2 + (ctx.stats.influence ?? 30) / 25 + ((game.party?.rank ?? 0) >= 2 ? 1 : 0) + rules(game).capitalGain));
     game.resources.politicalCapital = clamp(game.resources.politicalCapital + capitalGain);
     lines[0] += ` · capitale politico +${capitalGain}`;
@@ -1964,6 +2057,7 @@ export function advanceWeek(input, env, governmentWeek = parliament => parliamen
   game.whyLast = { week: closing, entries: game.why?.entries ?? [] };
   game.why = { week: closing + 1, entries: [] };
   refreshObjectives(ctx, env, lines, date);
+  expireAmbitions(ctx, date, lines);
   game.lastReport = { week: closing, date, lines, deltas, source: SIM };
   return { ctx, specials, report: game.lastReport };
 }

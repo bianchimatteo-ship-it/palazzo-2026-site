@@ -1,3 +1,4 @@
+import { endedHeadline } from './hall-view.js?v=20261003-1';
 import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261003-1';
 import { playerRoles } from '../core/roles.js?v=20261003-1';
 import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20261003-1';
@@ -36,7 +37,7 @@ export function gameContext(state) {
   const stats = Object.fromEntries(state.dataset.statistics.filter(item => item.subjectId === player?.id).map(item => [item.metric, item.value]));
   const units = Object.fromEntries(state.dataset.statistics.filter(item => item.subjectId === player?.id).map(item => [item.metric, item.unit]));
   const ctx = { game: state.game, stats, parliament: state.parliament };
-  const env = { career: state.career, offices: state.dataset.offices, campaign: state.campaign, player, currentDate: state.clock.currentDate };
+  const env = { career: state.career, offices: state.dataset.offices, campaign: state.campaign, player, currentDate: state.clock.currentDate, institutions: state.local?.institutions ?? [], presidency: state.presidency?.incumbent ? { kind: state.presidency.incumbent.kind, credit: state.presidency.incumbent.credit ?? 0 } : null };
   return { player, stats, units, ctx, env, sit: situation(ctx, env) };
 }
 function costChips(cost = {}) {
@@ -88,7 +89,7 @@ function mainAction(state) {
   const urgent = game.inbox.filter(item => ['urgente', 'situazione'].includes(item.kind));
   const open = upcomingElections(game).find(item => item.status === 'open');
   let next;
-  if (game.status === 'ended') next = ['CARRIERA CONCLUSA', 'La partita è ferma', 'Dal menu principale puoi caricare un salvataggio o iniziare una nuova carriera.', ''];
+  if (game.status === 'ended') next = endedHeadline(state) ?? ['CARRIERA CONCLUSA', 'La partita è ferma', 'Dal menu principale puoi caricare un salvataggio o iniziare una nuova carriera.', ''];
   else if (state.campaign?.status === 'active') next = ['CAMPAGNA IN CORSO', state.campaign.electionLabel ?? 'Campagna elettorale', 'Ogni giorno di campagna conta: attività, alleanze ed eventi si decidono nella centrale elettorale.', button('data-nav="elezioni"', 'Vai alla campagna')];
   else if (urgent.length) next = ['DA DECIDERE SUBITO', urgent[0].title, urgent.length > 1 ? `E altre ${urgent.length - 1} decisioni urgenti: se non scegli entro fine settimana si applica la scelta più passiva.` : 'Se non scegli entro fine settimana si applica la scelta più passiva.', button('data-scroll="hq-inbox"', 'Decidi ora')];
   else if (open) next = ['CANDIDATURE APERTE', open.label, `La finestra si chiude il ${shortDate(open.windowClosesAt)}: fondi, preparazione e sostegno del partito entrano nella campagna.`, button('data-nav="elezioni"', 'Candidati')];
@@ -154,8 +155,8 @@ function upcomingBlock(state, gc, expanded) {
   const deadlines = rows.length ? folded(`<ul class="hqc-deadlines">${rows.map(([icon, title, when, page]) => `<li>${glyph(icon, 16)}<span><strong>${esc(title)}</strong><small>${esc(when)}</small></span>${page ? `<button class="text-link" data-nav="${page}" aria-label="Apri ${esc(title)}">${arrow}</button>` : `<button class="text-link" data-scroll="hq-consequences" aria-label="Vedi le conseguenze">${arrow}</button>`}</li>`).join('')}</ul>`, 'hqc-deadlines', 'scadenze', rows.length, 2, 'tutte le scadenze', expanded) : '<p class="quiet-copy">Nessun congresso, promessa o legge in scadenza.</p>';
   const goals = objectiveProgress(gc.ctx, gc.env).filter(item => item.available);
   const done = goals.filter(item => item.done).length;
-  const next = goals.find(item => !item.done);
-  const goal = `<div class="hqc-goal"><div class="hq-objective-head"><strong>${done} / ${goals.length}</strong>${meter(goals.length ? done / goals.length * 100 : 0, 'gold')}</div>${next ? `<p class="hq-next-goal"><small>PROSSIMO TRAGUARDO</small><strong>${esc(next.label)}</strong><span>${esc(next.detail)}</span></p>` : '<p class="hq-next-goal"><strong>Tutti i traguardi raggiunti.</strong></p>'}<button class="text-link" data-scroll="hq-deadlines">Tutti i traguardi ${arrow}</button></div>`;
+  const next = nextGoal(goals);
+  const goal = `<div class="hqc-goal"><div class="hq-objective-head"><strong>${done} / ${goals.length}</strong>${meter(goals.length ? done / goals.length * 100 : 0, 'gold')}</div>${next ? goalLine(next) : '<p class="hq-next-goal"><strong>Tutti i traguardi raggiunti.</strong></p>'}<button class="text-link" data-nav="carriera" data-section-tab="carriera" data-section-tab-value="obiettivi">Tutti gli obiettivi ${arrow}</button></div>`;
   const calendar = renderElectionCalendar(state);
   const elections = (calendar.match(/class="hq-election /g) ?? []).length;
   return `${band('ELEZIONI IN CALENDARIO', 'Il prossimo voto', 'La prima è la più vicina: quando si aprono le candidature puoi candidarti dalla centrale elettorale.', folded(calendar, 'hq-elections', 'elezioni', elections, 1, 'tutte le elezioni', expanded), { className: 'hqc-elections', extra: '<button class="text-link" data-nav="elezioni">Elezioni</button>' })}
@@ -288,11 +289,17 @@ function reportPanel(state) {
   return `${report ? `<div class="hq-report"><strong>Bilancio della settimana ${report.week}</strong>${report.lines.map(line => `<span>${esc(line)}</span>`).join('')}${Object.keys(report.deltas ?? {}).length ? `<span>${Object.entries(report.deltas).map(([metric, value]) => `${STAT_LABELS[metric]} ${signed(value)}`).join(' · ')}</span>` : ''}</div>` : ''}<div class="hq-log-list">${log || '<p class="quiet-copy">Il diario si riempirà con le tue scelte.</p>'}</div>`;
 }
 
+// The goal closest to being reached (among those whose predecessors are done), with how far each measure is.
+function nextGoal(items) {
+  const open = items.filter(item => !item.done);
+  return [...open.filter(item => !item.waiting.length)].sort((a, b) => b.progress - a.progress)[0] ?? open[0] ?? null;
+}
+const goalLine = item => `<p class="hq-next-goal"><small>PROSSIMO TRAGUARDO${item.ambitionActive ? ' · DICHIARATO' : ''}</small><strong>${esc(item.label)}</strong><span>${esc(item.detail)}</span><small>${esc(item.rows.map(row => `${row.label} ${num(Math.min(row.value, row.target), row.target % 1 || row.value % 1 ? 1 : 0)}/${num(row.target, row.target % 1 ? 1 : 0)}`).join(' · '))}</small></p>`;
 function objectivesPanel(gc) {
   const items = objectiveProgress(gc.ctx, gc.env).filter(item => item.available);
   const done = items.filter(item => item.done).length;
-  const next = items.find(item => !item.done);
-  return `<div class="hq-objective-head"><strong>${done} / ${items.length}</strong>${meter(done / items.length * 100, 'gold')}</div>${next ? `<p class="hq-next-goal"><small>PROSSIMO TRAGUARDO</small><strong>${esc(next.label)}</strong><span>${esc(next.detail)}</span></p>` : '<p class="hq-next-goal"><strong>Tutti i traguardi raggiunti.</strong></p>'}<ol class="hq-objectives">${items.map(item => `<li class="${item.done ? 'done' : ''}"><i>${item.done ? '✓' : ''}</i><span>${esc(item.label)}</span>${item.completedAt ? `<small>${esc(shortDate(item.completedAt))}</small>` : ''}</li>`).join('')}</ol>`;
+  const next = nextGoal(items);
+  return `<div class="hq-objective-head"><strong>${done} / ${items.length}</strong>${meter(items.length ? done / items.length * 100 : 0, 'gold')}</div>${next ? goalLine(next) : '<p class="hq-next-goal"><strong>Tutti i traguardi raggiunti.</strong></p>'}<ol class="hq-objectives">${items.map(item => `<li class="${item.done ? 'done' : ''}"><i>${item.done ? '✓' : ''}</i><span>${esc(item.label)}</span>${item.completedAt ? `<small>${esc(shortDate(item.completedAt))}</small>` : item.progress > 0 ? `<small>${Math.round(item.progress * 100)}%</small>` : ''}</li>`).join('')}</ol>`;
 }
 
 export function renderElectionCalendar(state, { detailed = false } = {}) {
@@ -425,9 +432,11 @@ function consequencesPanel(state) {
 }
 
 // What the player's offices allow: every locked power says what it takes.
+// The icon of every role the game can give: the Quirinale and the party leadership are crowns, the councils a town.
+const ROLE_ICONS = Object.freeze({ premier: 'crown', segretario: 'crown', fondatore: 'crown', presidente: 'crown', 'ex-presidente': 'crown', ministro: 'ministry', sottosegretario: 'ministry', parlamentare: 'dome', commissione: 'dome', 'esecutivo-locale': 'town', consigliere: 'town', 'commissione-ue': 'globe', concluso: 'flag' });
 export function renderRolesPanel(state) {
   const { roles, powers } = playerRoles(state);
-  return `<div class="role-chips">${roles.map(([id, label]) => `<span class="role-chip role-${esc(id)}">${glyph(id === 'premier' || id === 'segretario' || id === 'fondatore' ? 'crown' : id === 'ministro' || id === 'sottosegretario' ? 'ministry' : id === 'parlamentare' || id === 'commissione' ? 'dome' : 'user', 14)}${esc(label)}</span>`).join('')}</div>
+  return `<div class="role-chips">${roles.map(([id, label]) => `<span class="role-chip role-${esc(id)}">${glyph(ROLE_ICONS[id] ?? 'user', 14)}${esc(label)}</span>`).join('')}</div>
     <ul class="power-list">${powers.map(power => `<li class="${power.enabled ? 'on' : 'off'}">${glyph(power.enabled ? 'shield' : 'clock', 14)}<span><strong>${esc(power.label)}</strong>${power.enabled ? '' : `<small>${esc(power.reason)}</small>`}</span></li>`).join('')}</ul>`;
 }
 
@@ -538,7 +547,7 @@ export function renderHeadquarters(state, options = {}) {
 // Pieces of the headquarters reused by the redesigned sections (Carriera, Partito, Agenda).
 export function renderPlanner(state) { return planner(state, gameContext(state)); }
 export function renderObjectivesPanel(state) { return objectivesPanel(gameContext(state)); }
-export function renderSecretaryDesk(state) { return secretaryPanel(state); }
+export function renderSecretaryDesk(state) { return state.game?.party ? secretaryPanel(state) : ''; }
 export function renderRelationsPanel(state) { return relationsPanel(state); }
 export function renderConsequencesPanel(state) { return consequencesPanel(state); }
 

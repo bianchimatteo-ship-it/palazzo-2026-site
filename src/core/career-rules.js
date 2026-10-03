@@ -1,6 +1,7 @@
 import { CAREER_LEVELS, ITALIAN_REGIONS } from '../data/regions.js?v=20261003-1';
 import { isSelectableParty } from '../data/schema.js?v=20261003-1';
 import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261003-1';
+import { startAgeProblems, startProblems } from './start-engine.js?v=20261003-1';
 
 const genders = new Set(['preferisco-non-specificare', 'donna', 'uomo', 'non-binario']);
 const orientations = new Set(['Centrismo civico', 'Progressista', 'Conservatore', 'Liberale', 'Socialdemocratico', 'Ecologista', 'Popolare', 'Autonomista', 'Altro']);
@@ -10,7 +11,7 @@ const isValidDate = value => {
   return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value;
 };
 
-// Steps of a new career: 1 where (Regione → Comune, from the ISTAT list), 2 path, 3 party, 4 difficulty, 5 who you are.
+// Steps of a new career: 1 where (Regione → Comune, from the ISTAT list), 2 path, 3 party, 4 difficulty and starting conditions, 5 who you are.
 // territory: { units, municipalities } — when given, the comune must be one of the ISTAT list, in the chosen region.
 export const CAREER_STEPS = 5;
 // requireTerritory: the Career Wizard needs the ISTAT list; while it is missing no comune can be accepted (never one
@@ -33,8 +34,12 @@ export function validateCareerStep(draft, step, selectableParties, parliamentary
     if (!isValidDate(draft.birthDate) || draft.birthDate > draft.currentDate) errors.push('Inserisci una data di nascita valida e precedente all’inizio della carriera.');
     if (!genders.has(draft.gender)) errors.push('Seleziona il genere.');
     if (!draft.previousProfession?.trim()) errors.push('Inserisci la professione precedente.');
+    // A career that starts consolidated needs the years to have it: the age is known only here.
+    errors.push(...startAgeProblems(draft.start, { partyMode: draft.partyMode, birthDate: draft.birthDate, date: draft.currentDate }));
   }
   if (step === 4 && draft.difficulty && !DIFFICULTIES[draft.difficulty]) errors.push('Scegli una difficoltà.');
+  // How the career starts (outsider, debts, a divided party, a consolidated career, a custom scenario).
+  if (step === 4) errors.push(...startProblems(draft.start, { partyMode: draft.partyMode }));
   if (step === 2) {
     const level = CAREER_LEVELS[draft.initialLevel];
     if (!level) errors.push('Scegli un percorso iniziale.');

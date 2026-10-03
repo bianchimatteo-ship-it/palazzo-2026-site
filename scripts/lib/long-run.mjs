@@ -13,9 +13,10 @@ const hashText = text => { let h = 2166136261; for (const char of String(text)) 
 export function seeded(seed) { let a = hashText(seed) || 1; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
 // The browser the engine expects, stood in: storage in memory, files from disk, ids from the seed.
-async function environment(seed) {
-  const mem = new Map();
-  globalThis.localStorage = { getItem: key => mem.get(key) ?? null, setItem: (key, value) => mem.set(key, String(value)), removeItem: key => mem.delete(key) };
+async function environment(seed, { keepStorage = false } = {}) {
+  // keepStorage: the browser storage of the previous career stays (the Hall of Fame outlives every career).
+  const mem = keepStorage && globalThis.localStorage?.__mem ? globalThis.localStorage.__mem : new Map();
+  globalThis.localStorage = { __mem: mem, getItem: key => mem.get(key) ?? null, setItem: (key, value) => mem.set(key, String(value)), removeItem: key => mem.delete(key) };
   globalThis.sessionStorage = { getItem: () => null, setItem() {}, removeItem() {} };
   globalThis.fetch = async url => { const body = await readFile(fileURLToPath(new URL(String(url).split('?')[0])), 'utf8'); return { ok: true, status: 200, json: async () => JSON.parse(body), text: async () => body }; };
   const rand = seeded(`id|${seed}`);
@@ -34,7 +35,8 @@ const PROFILES = {
   comunale: { initialLevel: 'comunale' },
   regionale: { initialLevel: 'regionale' },
   deputato: { initialLevel: 'deputato', parliamentStartMode: 'real-context', parliamentaryGroupId: 'cam-xix-03' },
-  senatore: { initialLevel: 'senatore', parliamentStartMode: 'real-context', parliamentaryGroupId: 'senato-xix-gruppo-56' }
+  senatore: { initialLevel: 'senatore', parliamentStartMode: 'real-context', parliamentaryGroupId: 'senato-xix-gruppo-56' },
+  europeo: { initialLevel: 'europeo' }
 };
 const PLACES = [
   { region: 'Toscana', municipality: 'Siena', municipalityCode: '052032', provinceCode: '052', provinceName: 'Siena', provinceType: 'Provincia' },
@@ -43,8 +45,8 @@ const PLACES = [
 ];
 
 // Starts the engine and a career for the seed. Returns the store, the real reference and the decision maker.
-export async function startCareer({ seed = 'a', level = 'deputato', partyId = 'party-registro-p1-2017-41-ir', region = null } = {}) {
-  const env = await environment(seed);
+export async function startCareer({ seed = 'a', level = 'deputato', partyId = 'party-registro-p1-2017-41-ir', region = null, draft = {}, keepStorage = false } = {}) {
+  const env = await environment(seed, { keepStorage });
   // The modules as the game loads them (with the build stamp of index.html): one instance of each, shared with the
   // engine's own imports, so the real data loaded here are the ones the reference Government and majority read.
   const build = (await readFile(new URL('index.html', root), 'utf8')).match(/main\.js\?v=([^"']+)/)?.[1];
@@ -67,7 +69,7 @@ export async function startCareer({ seed = 'a', level = 'deputato', partyId = 'p
   const drawn = PLACES[Math.floor(pick() * PLACES.length)];
   const place = PLACES.find(item => item.region === region) ?? drawn;
   const birth = `19${60 + Math.floor(pick() * 30)}-0${1 + Math.floor(pick() * 9)}-1${Math.floor(pick() * 9)}`;
-  store.createCareer({ firstName: `Prova${seed}`, lastName: 'Lunga', birthDate: birth, gender: 'donna', ...place, previousProfession: 'Insegnante', ...PROFILES[level], partyMode: 'existing', partyId, difficulty: 'normale', policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 } }, db.parties, db.parliamentaryGroups);
+  store.createCareer({ firstName: `Prova${seed}`, lastName: 'Lunga', birthDate: birth, gender: 'donna', ...place, previousProfession: 'Insegnante', ...PROFILES[level], partyMode: 'existing', partyId, difficulty: 'normale', policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 }, ...draft }, db.parties, db.parliamentaryGroups);
   if (['deputato', 'senatore'].includes(level)) store.initializeParliament(db.parliamentaryGroups);
   // The territorial committees are born when the ISTAT units are loaded, as in the game: the long run plays them too.
   if (db.territorialUnits?.length) store.initializeCommittees(db.territorialUnits);

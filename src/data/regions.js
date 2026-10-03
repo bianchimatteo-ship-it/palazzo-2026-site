@@ -8,7 +8,9 @@ export const CAREER_LEVELS = Object.freeze({
   comunale: { label: 'Carriera comunale', shortLabel: 'Comunale', territory: 'comune', office: 'Consigliere comunale' },
   regionale: { label: 'Carriera regionale', shortLabel: 'Regionale', territory: 'regione', office: 'Consigliere regionale' },
   deputato: { label: 'Carriera come Deputato', shortLabel: 'Deputato', territory: 'camera', office: 'Deputato (scenario di simulazione)', chamber: 'camera' },
-  senatore: { label: 'Carriera come Senatore', shortLabel: 'Senatore', territory: 'senato', office: 'Senatore (scenario di simulazione)', chamber: 'senato' }
+  senatore: { label: 'Carriera come Senatore', shortLabel: 'Senatore', territory: 'senato', office: 'Senatore (scenario di simulazione)', chamber: 'senato' },
+  // A seat at the European Parliament: no Chamber of the Italian Parliament, the institution of the career is the EP.
+  europeo: { label: 'Carriera europea', shortLabel: 'Eurodeputato', territory: 'europa', office: 'Deputato al Parlamento europeo (scenario di simulazione)', institution: 'europa' }
 });
 
 // Saves created before the Deputato/Senatore split still carry the old national path.
@@ -23,7 +25,8 @@ const LEVEL_BASELINES = Object.freeze({
   comunale: { popularity: 42, reputation: 50, consensus: 4, experience: 18, influence: 14, notoriety: 20 },
   regionale: { popularity: 43, reputation: 52, consensus: 6, experience: 36, influence: 32, notoriety: 38 },
   deputato: { popularity: 45, reputation: 54, consensus: 8, experience: 54, influence: 50, notoriety: 56 },
-  senatore: { popularity: 45, reputation: 55, consensus: 7, experience: 58, influence: 52, notoriety: 55 }
+  senatore: { popularity: 45, reputation: 55, consensus: 7, experience: 58, influence: 52, notoriety: 55 },
+  europeo: { popularity: 44, reputation: 56, consensus: 8, experience: 52, influence: 46, notoriety: 50 }
 });
 
 export function initialCareerStatistics(level) {

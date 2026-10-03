@@ -1,7 +1,7 @@
 import { uniqueId } from './ids.js?v=20261003-1';
 import { DATA_SOURCES, emptyDataset, isSelectableParty } from '../data/schema.js?v=20261003-1';
 import { makeDemoState } from '../data/demo.js?v=20261003-1';
-import { CAREER_LEVELS, initialCareerStatistics } from '../data/regions.js?v=20261003-1';
+import { CAREER_LEVELS, ITALIAN_REGIONS, initialCareerStatistics } from '../data/regions.js?v=20261003-1';
 import { storage } from './storage.js?v=20261003-1';
 import { loadSettings } from './settings.js?v=20261003-1';
 import { advanceDays, formatDate } from './time.js?v=20261003-1';
@@ -9,9 +9,12 @@ import { validateNewCareerDraft } from './career-rules.js?v=20261003-1';
 import { advanceCampaign, breakCampaignAlliance, createCampaign, decideCampaignEvent, negotiateCampaignAlliance, performCampaignActivity, setCampaignStrategy, setExpectation } from './campaign-engine.js?v=20261003-1';
 import { electionAftermath } from './aftermath-engine.js?v=20261003-1';
 import { progressionFactors } from './progression-engine.js?v=20261003-1';
+import { hasStart, planLines, startMods, startPlan, startStatDeltas } from './start-engine.js?v=20261003-1';
+import { objectiveMods } from './objective-engine.js?v=20261003-1';
+import { END_KINDS, addToHall, careerFacts, hallEntry, legacyBoon, legacyScore, legacyTags, retirementProblem, sortedHall } from './legacy-engine.js?v=20261003-1';
 import { committeeSupport, committeesAfterVote, createCommittees } from './committee-engine.js?v=20261003-1';
 import { setConfidenceVote, createReferenceGovernment, neverHadGovernment, offerGroupSupport, requestGovernmentPost, withdrawGroupSupport, partnerSatisfaction, acceptLawDemand, activeMinisters, amendLawPolicy, askConfidenceOnLaw, groupProfile, issueDecree, majoritySummit, reshuffleMinister, setGovernmentProgram, settlePartnerDemand, withdrawLaw, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20261003-1';
-import { scheduleEarlyLocalElection, alignLocalCalendar, localCalendarOf, committeeAction, setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, lifeBreakPact, lifeCadre, lifeCongress, lifeFound, lifeMerge, lifeOverview, lifeRebuild, lifeRename, lifeRespond, partyOpsAvailability, saveForElection, saveReserve, takeReserve, scheduleEarlyElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20261003-1';
+import { declareAmbition, scheduleEarlyLocalElection, alignLocalCalendar, localCalendarOf, committeeAction, setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, lifeBreakPact, lifeCadre, lifeCongress, lifeFound, lifeMerge, lifeOverview, lifeRebuild, lifeRename, lifeRespond, partyOpsAvailability, saveForElection, saveReserve, takeReserve, scheduleEarlyElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20261003-1';
 import { AMENDMENT_CAPITAL_COST, COMMUNICATION_STYLES, GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20261003-1';
 import { advanceLegislativeWeek, amendOthersLaw, amendmentOdds, linkGroupsToParties, setPlayerVote, speakOnLaw } from './lawmaking-engine.js?v=20261003-1';
 import { seededRandom } from './vote-engine.js?v=20261003-1';
@@ -25,7 +28,9 @@ import { classifyOutcome, preferenceStanding } from './election-engine.js?v=2026
 import { DIFFICULTIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261003-1';
 import { WORLD_PARTY_COUNT } from '../data/simulation/polling-rules.js?v=20261003-1';
 import { isPrimeMinister } from './roles.js?v=20261003-1';
-import { memoryAbout, memoryBalance, memoryWeight, recordWhy, remember } from './career-engine.js?v=20261003-1';
+import { costProblem, leavePartyFor, memoryAbout, memoryBalance, memoryWeight, recordWhy, remember, scheduleFollowUp } from './career-engine.js?v=20261003-1';
+import { advanceElection, affinity, applyPresidentCredit, composeAssembly, createPresidency, dealWithBloc, declareCandidacy, lineText, normalizePresidency, openElection as openPresidentialElection, playerStanding, presidencySchedule, presidentActivityEffects, presidentActivityProblem, presidentWeek, presidentialEligibility, proclaim, projection, quorumFor, resignPresidency, setPlayerLine, setPlayerVote as setPresidentialVote, sponsorCandidate, termEndOf, vetoCandidate, whiteSemester, withdrawCandidacy } from './presidency-engine.js?v=20261003-1';
+import { PRESIDENCY_RULES, PRESIDENT_ACTIVITIES, PRESIDENT_ACTS } from '../data/simulation/presidency-rules.js?v=20261003-1';
 import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20261003-1';
 import { advanceSociety, applyBudgetPlan, applyLawToSociety, calibrateWeights, createSociety, explainMood, measureDesign, mediaEvent, normalizeSociety, provisionalBudget, publicBudgetChoice, regionAttention, revokeMeasure, scheduleRegionalEffects, segmentAttention, societyMood, societyShock } from './society-engine.js?v=20261003-1';
 import { ACTIVITY_MEDIA, INDICATORS, ISSUE_TOPICS, SEGMENTS } from '../data/simulation/society-rules.js?v=20261003-1';
@@ -107,7 +112,7 @@ function buildGame(s, { partyLabel = null, founder = null, funds = null } = {}) 
     currentDate: s.clock.currentDate, level: s.career.initialLevel,
     party: partyId ? { id: partyId, label: partyLabel ?? partyRecord?.officialName ?? partyRecord?.name ?? null, founder: founder ?? partyRecord?.source === DATA_SOURCES.USER } : null,
     place: { municipality: player?.municipality ?? null, region: player?.region ?? null },
-    stats: statsOf(s), parliament: s.parliament, funds, difficulty: s.career.difficulty ?? 'normale', localCalendar: localCalendarFor(s)
+    stats: statsOf(s), parliament: s.parliament, funds, difficulty: s.career.difficulty ?? 'normale', localCalendar: localCalendarFor(s), start: s.career.start ?? null
   });
 }
 function withCapital(parliament, game) {
@@ -289,7 +294,9 @@ function prepareState(input) {
   // The national cycle (calendar, campaign, last votes, formation of the Government) follows the career's legislature.
   let national = normalizeNationalState(raw.national, { currentDate: base.clock.currentDate, legislature: raw.national ? null : game.legislature ?? null });
   if ((game.legislature?.number ?? 19) > national.legislature.number) national = normalizeNationalState({ ...national, legislature: { ...game.legislature } }, { currentDate: base.clock.currentDate });
-  return { ...base, game, world, society, national, parliament: withCapital(parliament, game) };
+  // The President of the Republic: the term in office and the next election (older saves find the current term).
+  const presidency = normalizePresidency(raw.presidency, { date: base.clock.currentDate, seed: seedOf({ ...base, game }) });
+  return { ...base, game, world, society, national, presidency, parliament: withCapital(parliament, game) };
 }
 
 const hydratedState = hydrateState(storedState);
@@ -339,7 +346,7 @@ function timelineDiff(before, after) {
   for (const item of after.parliament?.history ?? []) if (!known.has(item.id) && !item.details?.auto && ['iter-approved', 'iter-rejected'].includes(item.type)) entries.push({ kind: 'legge', title: item.text, tone: item.type === 'iter-approved' ? 'good' : 'bad' });
   for (const result of (after.career.electionHistory ?? []).slice(before.career.electionHistory?.length ?? 0)) entries.push({ kind: 'elezione', title: `Elezioni ${result.electionType}: ${String(Math.round((result.percent ?? 0) * 10) / 10).replace('.', ',')}%`, detail: result.personalMandate ? 'Mandato conquistato' : 'Nessun mandato', tone: result.personalMandate ? 'good' : 'bad' });
   if (after.game.legislature?.number !== before.game.legislature?.number) entries.push({ kind: 'governo', title: `Si apre la ${after.game.legislature.label}`, tone: 'neutral' });
-  if (after.game.status === 'ended' && before.game.status !== 'ended') entries.push({ kind: 'fine', title: 'La carriera si chiude', detail: after.game.endReason, tone: 'bad' });
+  if (after.game.status === 'ended' && before.game.status !== 'ended') entries.push(after.game.endKind ? { kind: 'fine', title: after.game.endReason ?? 'La carriera si chiude', detail: after.game.legacy ? `Eredità politica: ${after.game.legacy.score}/100 · ${after.game.legacy.tier.label}` : null, tone: 'neutral' } : { kind: 'fine', title: 'La carriera si chiude', detail: after.game.endReason, tone: 'bad' });
   return entries;
 }
 // Autosave follows the player's setting: after every action, at the end of each week, or only by hand.
@@ -378,7 +385,7 @@ function gameEnv(s) {
   // The party's estimated share in every region (national share and the regional offset of the simulated polls).
   const force = s.world?.parties?.find(item => item.isPlayer);
   const regionalShares = force && row ? Object.fromEntries(Object.entries(force.regional ?? {}).map(([region, offset]) => [region, Math.max(0, row.share + offset)])) : {};
-  return { career: s.career, offices: s.dataset.offices, campaign: s.campaign, player: playerOf(s), currentDate: s.clock.currentDate, pollShare: row?.share ?? null, pollDelta: row?.delta ?? 0, regionalShares, mood: s.society ? societyMood(s.society) : 50, signals: worldSignalsFor(s), localRounds: s.world?.localCalendar?.rounds ?? null };
+  return { career: s.career, offices: s.dataset.offices, campaign: s.campaign, player: playerOf(s), currentDate: s.clock.currentDate, institutions: s.local?.institutions ?? [], presidency: s.presidency?.incumbent ? { kind: s.presidency.incumbent.kind, credit: s.presidency.incumbent.credit ?? 0 } : null, pollShare: row?.share ?? null, pollDelta: row?.delta ?? 0, regionalShares, mood: s.society ? societyMood(s.society) : 50, signals: worldSignalsFor(s), localRounds: s.world?.localCalendar?.rounds ?? null };
 }
 // Where the player lives: region, comune and the ISTAT unit (province or metropolitan city) of the comune.
 function homePlace(s) {
@@ -922,6 +929,8 @@ function handleSpecials(s, specials) {
     } else if (special.type === 'national-vote') {
       // The country votes without the player (national cycle): new Chambers, or the European Parliament.
       next = holdNationalVote(next, special.electionType, { date: special.date });
+    } else if (special.type.startsWith('presidency-')) {
+      next = presidencyDecision(next, special);
     } else if (special.type.startsWith('national-')) {
       next = nationalDecision(next, special);
     }
@@ -1181,6 +1190,7 @@ function settleWeeks(s) {
     if (result.report) next = tickSociety(next, weekEnd, result.report);
     if (next.world && result.report) next = tickWorld(next, weekEnd, result.report);
     if (result.report) next = tickNational(next, weekEnd);
+    if (result.report) next = tickPresidency(next, weekEnd);
     if (result.report) next = tickNews(next, weekEnd, result.report.week);
     weekClosed = true;
     if (result.report) next = raiseSituations(checkBudgetDeadline(next), result.report);
@@ -1296,16 +1306,18 @@ function simulatedInstitution(s, kind, date) {
   const leader = [...bySide('maggioranza')].sort((a, b) => b.seats - a.seats)[0];
   return createInstitution({ kind, name: kind === 'comune' ? `Comune di ${place.municipality ?? 'il tuo comune'}` : `Regione ${place.region}`, region: place.region, territory: s.society?.regions?.[place.region]?.indicators ?? null, date, until: nextVoteOf(s, ELECTION_OF[kind]), role: 'consigliere', side: playerGroup.side, playerGroupId: playerGroup.id, leaderGroupId: leader?.id, groups: groups.map(({ share, ...group }) => group) });
 }
+// The European Parliament as the player sits in it: the group of the own party's collocazione, or non-attached.
+function europeanInstitution(s, date, until = nextVoteOf(s, 'europee')) {
+  const partyAxis = s.world?.parties?.find(item => item.isPlayer)?.axis ?? 0;
+  const own = s.world?.playerPartyId ? epGroupFor(partyAxis) : 'ni';
+  return createInstitution({ kind: 'europa', name: 'Parlamento europeo', date, until, role: 'eurodeputato', side: EP_MAJORITY.has(own) ? 'maggioranza' : 'opposizione', playerGroupId: own, groups: EP_GROUPS_2024.groups.map(group => ({ ...group, side: EP_MAJORITY.has(group.id) ? 'maggioranza' : 'opposizione' })) });
+}
 function institutionFromResult(s, campaign, result) {
   const kind = INSTITUTION_OF[campaign.electionType];
   const player = playerOf(s);
   const date = campaign.currentDate;
   const until = nextVoteOf(s, campaign.electionType);
-  if (kind === 'europa') {
-    const partyAxis = s.world?.parties?.find(item => item.isPlayer)?.axis ?? 0;
-    const own = s.world?.playerPartyId ? epGroupFor(partyAxis) : 'ni';
-    return createInstitution({ kind, name: 'Parlamento europeo', date, until, role: 'eurodeputato', side: EP_MAJORITY.has(own) ? 'maggioranza' : 'opposizione', playerGroupId: own, groups: EP_GROUPS_2024.groups.map(group => ({ ...group, side: EP_MAJORITY.has(group.id) ? 'maggioranza' : 'opposizione' })) });
-  }
+  if (kind === 'europa') return europeanInstitution(s, date, until);
   const axisOf = partyIds => s.world?.parties?.find(item => (partyIds ?? []).includes(item.id))?.axis ?? 0;
   const rows = (result.groups ?? []).filter(row => row.seats > 0);
   const winner = result.winnerGroupId;
@@ -1880,7 +1892,8 @@ function tickNational(s, date) {
     const result = formation.seatResult ?? national.lastPolitiche;
     const labelOf = nationalLabel(next, result);
     const seatsOf = id => ['camera', 'senato'].reduce((sum, chamber) => sum + (result[chamber]?.parties?.find(row => row.id === id)?.seats ?? 0), 0);
-    const out = formationStep({ formation, parliament: next.parliament, result, world: next.world, date, playerRole: { secretaryOf: isSecretary(next.game.party) ? next.world.playerPartyId : null, seated: Boolean(next.parliament.player?.groupId), seatsOf }, labelOf });
+    const presidential = presidentIsPlayer(next) ? { player: true, canDissolve: !whiteSemester(presidencyOf(next).incumbent, date, next.national?.legislature?.naturalEnd ?? null).active } : null;
+    const out = formationStep({ formation, parliament: next.parliament, result, world: next.world, date, playerRole: { secretaryOf: isSecretary(next.game.party) ? next.world.playerPartyId : null, seated: Boolean(next.parliament.player?.groupId), seatsOf }, labelOf, presidential });
     national = { ...national, formation: out.formation };
     for (const line of out.lines) national = nationalHistory(national, date, 'formazione', line);
     if (out.parliament !== next.parliament) next = computeParliamentUpdate(next, withCapital(out.parliament, next.game), next.ui.toast);
@@ -1910,6 +1923,363 @@ function nationalProjectionFor(s, coalitions) {
   const value = voteForces(s.world).forces.length ? nationalProjection({ geography: electoralGeography, world: s.world, coalitions, date: s.clock.currentDate, player, participation: s.society?.participation ?? 60 }) : null;
   projectionCache = { key, value: value ? { ...value, homeDistricts: districts ? { camera: districts.camera, senato: districts.senato, approximate: districts.approximate } : null, contested: { camera: contestedDistricts(value, 'camera').slice(0, 12), senato: contestedDistricts(value, 'senato').slice(0, 8) } } : null };
   return projectionCache.value;
+}
+
+// ---------- the President of the Republic (presidency-engine) ----------
+// The office above the parties: elected by the Parliament in joint session with the regional delegates, a seven-year term,
+// incompatible with every other office. The engine plays the election; here its consequences reach the career, the
+// Government, the Parliament and the world, and the player's decisions as elector, leader, candidate or President.
+const presidencyOf = s => normalizePresidency(s.presidency, { date: s.clock.currentDate, seed: seedOf(s) });
+const presidentIsPlayer = s => s.presidency?.incumbent?.kind === 'giocatore';
+const shortName = label => String(label ?? '').replace(/\s*\(figura simulata\)$/, '').replace(/\s*\(tu\)$/, ' (tu)');
+const weeksTo = (from, to) => Math.max(0, Math.ceil((Date.parse(`${to}T12:00:00`) - Date.parse(`${from}T12:00:00`)) / 604800000));
+// The regional council can send the player to the joint session: the President of the Region always goes, a councillor
+// by chance (drawn from the career's own seed, the same at every reading).
+function presidentialDelegate(s, number) {
+  const regional = (s.local?.institutions ?? []).find(item => item.kind === 'regione' && item.status === 'active');
+  if (!regional) return null;
+  const leads = regional.executive?.leader === 'player';
+  if (!leads && seededRandom(`${s.career.id}|delegato|${number}`)() >= 0.35) return null;
+  return { region: regional.region ?? homePlace(s).region, side: leads || regional.playerSide === 'maggioranza' ? 'maggioranza' : 'minoranza' };
+}
+// What the player is in this election: elector (a seat), regional delegate, leader of a force (its secretary), none.
+function presidentialRole(s, number, assembly = null, delegate = null) {
+  const game = s.game;
+  const parliament = linkGroupsToParties(s.parliament, s.world) ?? s.parliament;
+  const seat = parliament?.player?.groupId ? parliament.player : null;
+  const group = seat ? ['camera', 'senato'].flatMap(chamber => parliament.chambers?.[chamber]?.groups ?? []).find(item => item.groupId === seat.groupId) : null;
+  const ownParty = s.world?.playerPartyId ?? null;
+  const partyBloc = ownParty && (!assembly || assembly.blocs.some(bloc => bloc.id === ownParty)) ? ownParty : null;
+  const leader = Boolean(game?.party && isSecretary(game.party) && partyBloc);
+  const blocId = leader ? partyBloc : seat ? (group?.partyId ?? 'misto') : delegate ? (partyBloc ?? 'misto') : null;
+  return { elector: Boolean(seat), delegate: Boolean(delegate), leader, blocId, seat: Boolean(seat) };
+}
+// How the player stands as a candidate (prestige, breadth, partisanship): from the statistics, the offices and the past.
+function presidentialStanding(s, presidency) {
+  const government = s.parliament?.government;
+  const incumbent = presidency.incumbent.kind === 'giocatore';
+  const roles = {
+    secretary: isSecretary(s.game.party), rank: s.game.party?.rank ?? 0, independent: !s.game.party, parliamentary: Boolean(s.parliament?.player?.groupId),
+    minister: ['active', 'crisis'].includes(government?.status) && activeMinisters(government).some(item => item.playerAppointed), premier: isPrimeMinister(s.parliament),
+    formerPremier: (s.parliament?.pastGovernments ?? []).some(item => item.primeMinister === 'player'), exPresident: Boolean(s.game.flags?.exPresident),
+    regionalPresident: (s.local?.institutions ?? []).some(item => item.kind === 'regione' && item.executive?.leader === 'player'), memoryBad: memoryBalance(s.game).bad
+  };
+  return playerStanding({ stats: statsOf(s), roles, credit: incumbent ? presidency.incumbent.credit : null, incumbent });
+}
+export const presidentialEligibilityOf = s => presidentialEligibility({ birthDate: playerOf(s)?.birthDate, date: s.clock.currentDate });
+
+// The election is put off while the Chambers are dissolved or about to end (art. 85): it takes place within fifteen days
+// of the meeting of the new ones. Returns the reason, or null.
+function presidentialPostponement(s, date) {
+  const politics = (s.game.elections ?? []).find(item => item.type === 'politiche' && item.status !== 'held');
+  const end = s.national?.legislature?.naturalEnd ?? null;
+  if (politics?.early && ['upcoming', 'open', 'running', 'missed'].includes(politics.status)) return 'Le Camere sono state sciolte: si vota dopo l’insediamento delle nuove.';
+  if (politics && ['open', 'running'].includes(politics.status)) return 'Siamo in campagna per le politiche: si vota dopo l’insediamento delle nuove Camere.';
+  if (end && end >= date && advanceDays(date, PRESIDENCY_RULES.chambersEndingDays) >= end) return 'Le Camere scadono entro tre mesi: si vota dopo l’insediamento delle nuove.';
+  const formation = s.national?.formation;
+  if (formation?.firstSitting && formation.phase === 'insediamento' && date < advanceDays(formation.firstSitting, PRESIDENCY_RULES.afterNewChambersDays)) return 'Le nuove Camere non si sono ancora riunite.';
+  return null;
+}
+const raisePresidential = (game, id, params, { urgent = false, holdUntil = null } = {}) => addSituationEvent(game, id, { ...params, dedupe: `${params.dedupe ?? id}|${game.week.index}` }, urgent, holdUntil ? { holdUntil } : {});
+// A move made by hand answers the decision waiting in the agenda: it is not asked again (nor decided by default).
+const withoutPresidentialAsks = (game, ids) => ({ ...game, inbox: game.inbox.filter(item => !ids.includes(item.templateId)) });
+const candidateName = election => id => shortName(election.candidates.find(item => item.id === id)?.label ?? 'un candidato');
+
+// What the player is asked about the election this week (events of the agenda): the line of the force, the own paper in
+// the secret ballot, the candidacy offered, the availability for a second term.
+function presidentialAgenda(s, presidency, role, { opened = false, date }) {
+  let game = s.game;
+  const election = presidency.election;
+  if (!election || election.phase === 'conclusa') return game;
+  const proj = projection(election);
+  const rows = (proj?.rows ?? []).filter(row => !election.candidates.find(item => item.id === row.id)?.withdrawn);
+  const bloc = election.blocs.find(item => item.id === election.player.blocId) ?? null;
+  const weeks = weeksTo(date, election.firstBallot);
+  const names = rows.slice(0, 3).map(row => `${shortName(row.label)} (${row.votes})`);
+  const field = names.length ? `Tra i nomi che circolano: ${names.join(', ')}.` : 'Nessun nome è ancora in campo.';
+  if (opened) {
+    if (presidency.incumbent.kind === 'giocatore') game = raisePresidential(game, 'quirinale-rielezione', { weeks: weeks + 1, credit: Math.round(presidency.incumbent.credit ?? 0) }, { urgent: true });
+    else {
+      if (role.leader && !election.player.declared) game = raisePresidential(game, 'quirinale-trattative', { weeks: Math.max(1, weeks), twoThirds: election.assembly.twoThirds, absolute: election.assembly.absolute, electors: bloc?.electors ?? 0, field }, { urgent: true });
+      const eligibility = presidentialEligibility({ birthDate: playerOf(s)?.birthDate, date });
+      const standing = presidentialStanding(s, presidency);
+      if (eligibility.eligible && standing.prestige >= 62 && standing.breadth >= 48 && !election.player.declared && !election.player.declined && seededRandom(`${s.career.id}|offerta|${election.id}`)() < 0.6) {
+        const sponsor = [...election.blocs].filter(item => !item.free).sort((a, b) => affinity(b, { ...standing, camp: bloc?.camp ?? 'centro', axis: bloc?.axis ?? 0, sponsors: [], id: 'player' }) - affinity(a, { ...standing, camp: bloc?.camp ?? 'centro', axis: bloc?.axis ?? 0, sponsors: [], id: 'player' }))[0];
+        game = raisePresidential(game, 'quirinale-candidatura', { sponsor: sponsor?.label ?? 'un gruppo parlamentare', age: eligibility.age });
+      }
+    }
+  }
+  // The weeks of the ballots: the paper of the elector, the line of the leader (the votes already cast are known).
+  const ballotsNext = election.phase === 'scrutini' || weeksTo(date, election.firstBallot) <= 1;
+  if (ballotsNext && presidency.incumbent.kind !== 'giocatore' || ballotsNext && election.player.declared) {
+    const next = election.ballots.length + 1;
+    const rule = quorumFor(next, election.assembly);
+    const lineNow = bloc && election.ballots.length ? lineText(bloc.line, election) : 'aspetta le indicazioni dei capigruppo';
+    const top = rows.filter(row => row.id !== bloc?.line?.candidateId);
+    const standingText = election.ballots.length ? `Finora ${election.ballots.length} ${election.ballots.length === 1 ? 'scrutinio' : 'scrutini'} senza un eletto.` : 'È il primo scrutinio.';
+    const common = { cand1: shortName(top[0]?.label ?? rows[0]?.label ?? 'il candidato in testa'), cand1Id: top[0]?.id ?? rows[0]?.id ?? null, cand2: shortName(top[1]?.label ?? rows[1]?.label ?? 'un altro candidato'), cand2Id: top[1]?.id ?? rows[1]?.id ?? null };
+    if ((role.elector || role.delegate) && !role.leader) game = raisePresidential(game, 'quirinale-scrutinio', { ...common, rule: rule.label, needed: rule.needed, total: election.assembly.total, line: lineNow, standing: standingText });
+    if (role.leader && election.ballots.length) {
+      const last = election.ballots.at(-1);
+      game = raisePresidential(game, 'quirinale-linea', { ...common, ballots: election.ballots.length, leader: shortName(candidateName(election)(last.leaderId)), leaderVotes: last.leaderVotes, needed: rule.needed, electors: bloc?.electors ?? 0, standing: `Il tuo gruppo oggi ${lineNow}.` });
+    }
+    if (role.leader && !election.ballots.length) game = raisePresidential(game, 'quirinale-scrutinio', { ...common, rule: rule.label, needed: rule.needed, total: election.assembly.total, line: 'segue la tua linea', standing: standingText });
+  }
+  return game;
+}
+
+// ---------- the term of the President that is the player ----------
+function presidentialTerm(s, presidency, date) {
+  let next = s;
+  const incumbent = presidency.incumbent;
+  const week = s.game.week.index;
+  const weekly = presidentWeek(presidency, { week });
+  let updated = weekly.presidency;
+  // A President the Chambers trust calms them; one that has lost credit adds friction.
+  const government = next.parliament?.government;
+  if (government && ['active', 'crisis'].includes(government.status) && weekly.stability) next = { ...next, parliament: { ...next.parliament, government: { ...government, stability: clampTo(Math.round(((government.stability ?? 50) + weekly.stability) * 10) / 10, 0, 100) } } };
+  // The decisions only the President takes: a pardon, a decree with doubts, defence, the CSM, the message of the year.
+  const rand = seededRandom(`${s.career.id}|${date}|quirinale-giorni`);
+  let game = deepCopy(next.game);
+  const actions = { ...(incumbent.actions ?? {}) };
+  const year = Number(date.slice(0, 4));
+  if (Number(date.slice(5, 7)) === 12 && Number(date.slice(8, 10)) >= 24 && actions.messageYear !== year) { game = raisePresidential(game, 'presidente-fine-anno', {}, { urgent: false }); actions.messageYear = year; }
+  else if (week - (actions.dilemmaWeek ?? -99) >= 6 && rand() < 0.13) {
+    const pool = ['presidente-grazia', 'presidente-difesa', 'presidente-csm', ...(government && ['active', 'crisis'].includes(government.status) ? ['presidente-decreto'] : [])];
+    game = raisePresidential(game, pool[Math.floor(rand() * pool.length)], {}, { urgent: false });
+    actions.dilemmaWeek = week;
+  }
+  updated = { ...updated, incumbent: { ...updated.incumbent, actions } };
+  return { ...next, game, presidency: updated };
+}
+
+// ---------- opening, playing and closing the election ----------
+function tickPresidency(input, date) {
+  let s = input;
+  if (!s.game || s.game.status === 'ended' || s.career.status === 'demo' || !chambersAtWork(s.parliament)) return s;
+  let presidency = presidencyOf(s);
+  let opened = false;
+  const lines = [];
+  if (presidency.incumbent.kind === 'giocatore') { s = presidentialTerm(s, presidency, date); presidency = s.presidency; }
+  const schedule = presidencySchedule(presidency.incumbent);
+  const number = (presidency.incumbent.number ?? 1) + 1;
+  let role = { elector: false, delegate: false, leader: false, blocId: null };
+  if (!presidency.election && date >= schedule.opensAt) {
+    const reason = presidentialPostponement(s, date);
+    if (reason) {
+      if (presidency.postponed?.reason !== reason) presidency = { ...presidency, postponed: { since: date, reason }, log: [{ id: uniqueId(presidency.log, `${date}-rinvio`), date, kind: 'rinvio', text: `L’elezione del Presidente è rinviata: ${reason}` }, ...presidency.log].slice(0, 40) };
+    } else {
+      const delegate = presidentialDelegate(s, number);
+      const world = s.world;
+      const cohesion = world?.playerPartyId && s.game.party?.org ? { [world.playerPartyId]: s.game.party.org.cohesion } : {};
+      const assembly = composeAssembly({ parliament: s.parliament, world, seed: `${presidency.seed}|${number}`, cohesion, playerPartyId: world?.playerPartyId ?? null, playerDelegate: delegate });
+      role = presidentialRole(s, number, assembly, delegate);
+      const delayed = Boolean(presidency.postponed);
+      const result = openPresidentialElection(presidency, { date, assembly, player: role, reason: delayed ? presidency.postponed.reason : null, firstBallot: delayed ? advanceDays(date, 14) : null });
+      presidency = { ...result.presidency, postponed: null };
+      lines.push(...result.lines);
+      opened = true;
+      if (s.world) s = { ...s, world: applyWorldSignals(s.world, [{ type: 'chronicle', kind: 'governo', icon: 'dome', title: 'Si apre la corsa al Quirinale', body: result.lines[0], tone: 'neutral' }], date) };
+    }
+  }
+  if (presidency.election) {
+    role = presidentialRole(s, number, presidency.election.assembly ? { blocs: presidency.election.blocs } : null, presidentialDelegate(s, number));
+    if (!presidency.election.player.blocId && role.blocId) presidency = { ...presidency, election: { ...presidency.election, player: { ...presidency.election.player, blocId: role.blocId, role: role.leader ? 'leader' : role.delegate ? 'delegato' : role.elector ? 'elettore' : 'osservatore' } } };
+    const election = presidency.election;
+    const out = advanceElection(presidency, { date });
+    presidency = out.presidency;
+    lines.push(...out.lines.slice(-3));
+    if (presidency.election && presidency.election.player.vote) presidency = { ...presidency, election: { ...presidency.election, player: { ...presidency.election.player, voted: presidency.election.player.vote, vote: null } } };
+    if (out.elected) {
+      const proclaimed = proclaim(presidency, { elected: out.elected, politician: playerOf(s), date: out.elected.date });
+      s = { ...s, presidency: proclaimed.presidency };
+      s = concludePresidentialElection(s, proclaimed, { election: presidency.election, role, date });
+      if (lines.length && s.game.lastReport) s = { ...s, game: { ...s.game, lastReport: { ...s.game.lastReport, lines: [...s.game.lastReport.lines, ...lines.slice(-3)] } } };
+      return s;
+    }
+  }
+  s = { ...s, presidency };
+  if (presidency.election) s = { ...s, game: presidentialAgenda(s, presidency, role, { opened, date }) };
+  if (lines.length && s.game.lastReport) s = { ...s, game: { ...s.game, lastReport: { ...s.game.lastReport, lines: [...s.game.lastReport.lines, ...lines.slice(-3)] } } };
+  return s;
+}
+
+// The election is over: the government feels it, the force of the player too; the player becomes President, or stops being one.
+function concludePresidentialElection(input, proclaimed, { election, role, date }) {
+  let s = input;
+  const { candidate, isPlayer, former, incumbent } = proclaimed;
+  const elected = proclaimed.presidency.last?.outcome ?? {};
+  const governing = election.blocs.filter(bloc => bloc.governing);
+  const governingElectors = governing.reduce((sum, bloc) => sum + bloc.electors, 0) || 1;
+  const backing = governing.filter(bloc => (candidate?.sponsors ?? []).includes(bloc.id)).reduce((sum, bloc) => sum + bloc.electors, 0) / governingElectors;
+  // The Government: broad agreement calms it, a President chosen against part of the majority shakes it.
+  const government = s.parliament?.government;
+  let note = null;
+  if (government && ['active', 'crisis', 'awaiting-confidence'].includes(government.status)) {
+    const broad = elected.rule === 'due-terzi';
+    const delta = broad ? 3 : backing >= 0.75 ? 2 : backing < 0.5 ? -6 : 0;
+    const partners = { ...(government.partners ?? {}) };
+    if (backing < 0.5) for (const bloc of governing.filter(item => !(candidate?.sponsors ?? []).includes(item.id))) for (const group of ['camera', 'senato'].flatMap(chamber => s.parliament.chambers?.[chamber]?.groups ?? []).filter(item => item.partyId === bloc.partyId)) if (partners[group.groupId]) partners[group.groupId] = { ...partners[group.groupId], satisfaction: clampTo((partners[group.groupId].satisfaction ?? 60) - 5, 0, 100) };
+    s = { ...s, parliament: { ...s.parliament, government: { ...government, stability: clampTo((government.stability ?? 50) + delta, 0, 100), partners } } };
+    note = broad ? 'Larghe intese sul Quirinale: la maggioranza ne esce più solida.' : backing < 0.5 ? 'Il Quirinale divide la maggioranza: il governo ne esce indebolito.' : backing >= 0.75 ? 'La maggioranza elegge il suo candidato.' : null;
+  }
+  if (s.world) s = { ...s, world: applyWorldSignals(s.world, [{ type: 'chronicle', kind: 'governo', icon: 'dome', title: `Eletto il Presidente della Repubblica`, body: `${proclaimed.lines[0]}${note ? ` ${note}` : ''} (simulazione).`, tone: 'good' }], date) };
+  s = addTimeline(s, [{ kind: 'governo', title: `Quirinale: ${shortName(candidate?.label ?? 'nuovo Presidente')} eletto al ${elected.ballot}º scrutinio`, detail: `${elected.votes} voti su ${elected.total}`, tone: 'neutral' }]);
+  // What it leaves the player: the force that backed the winner gains, the one that lost its man pays.
+  let game = deepCopy(s.game);
+  const ownBloc = role.blocId;
+  const sponsoredByOwn = Boolean(ownBloc && (candidate?.sponsors ?? []).includes(ownBloc));
+  const playerCandidate = election.candidates.find(item => item.isPlayer);
+  if (!isPlayer) {
+    if (role.leader && sponsoredByOwn) { if (game.party) game.party.support = clampTo(game.party.support + 4, 0, 100); game.resources.politicalCapital = clampTo(game.resources.politicalCapital + 3, 0, 100); remember(game, { date, kind: 'alleanza', text: `Il candidato del tuo gruppo è eletto al Quirinale (${shortName(candidate?.label)})`, weight: 1, tone: 'good' }); }
+    else if (role.leader && election.candidates.some(item => (item.sponsors ?? []).includes(ownBloc) && item.withdrawn)) { if (game.party) game.party.support = clampTo(game.party.support - 3, 0, 100); remember(game, { date, kind: 'sconfitta-elettorale', text: 'Il tuo candidato al Quirinale è stato bruciato', weight: 0.8 }); }
+    if (playerCandidate && playerCandidate.id !== candidate?.id) { remember(game, { date, kind: 'sconfitta-elettorale', text: 'Candidato al Quirinale senza successo', weight: 1.2 }); game.resources.politicalCapital = clampTo(game.resources.politicalCapital - 2, 0, 100); }
+    // A paper that did not follow the line of the force is secret, but not always: the suspicion has a price.
+    if (election.player.voted && election.player.voted !== 'linea' && seededRandom(`${s.career.id}|sospetto|${election.id}`)() < 0.15 && game.party) { game.party.support = clampTo(game.party.support - 3, 0, 100); remember(game, { date, kind: 'dissenso', text: 'Si sospetta che tu sia stato un franco tiratore al Quirinale', weight: 0.8 }); }
+    // The deals made are paid later: an ally comes to collect.
+    let next = { ...s, game };
+    for (const deal of election.player.deals ?? []) {
+      const bloc = election.blocs.find(item => item.id === deal.blocId);
+      const group = bloc?.partyId ? ['camera', 'senato'].flatMap(chamber => s.parliament.chambers?.[chamber]?.groups ?? []).find(item => item.partyId === bloc.partyId) : null;
+      next = { ...next, game: scheduleFollowUp(next.game, { weeks: 8, chance: 0.8, label: `${bloc?.label ?? 'Un alleato'} chiede il conto del voto al Quirinale`, hint: `${bloc?.label ?? 'Un alleato'} potrebbe chiedere il conto del suo voto per il Quirinale`, effects: { stats: { reputation: -0.5 }, ...(group ? { groups: { [group.groupId]: -6 } } : {}), party: { support: -1 } }, memory: { kind: 'alleato-tradito', text: `${bloc?.label ?? 'Un alleato'} ti rinfaccia l’accordo sul Quirinale`, subject: bloc?.partyId ?? null, weight: 0.8 } }, 'Accordo sul Quirinale') };
+    }
+    s = next;
+    if (former?.kind === 'giocatore') s = endPresidency(s, { date, reason: 'Il successore è stato eletto' });
+  } else {
+    s = { ...s, game };
+    s = becomePresident(s, proclaimed, { date });
+  }
+  return s;
+}
+
+// ---------- incompatibility: the President holds no other office ----------
+function becomePresident(input, proclaimed, { date }) {
+  let s = input;
+  const player = playerOf(s);
+  const incumbent = proclaimed.incumbent;
+  const reelected = Boolean(incumbent.reelected);
+  if (reelected) {
+    s = { ...s, game: { ...s.game, flags: { ...s.game.flags, president: { since: incumbent.since, termEnds: termEndOf(incumbent) } } } };
+    s = addTimeline(s, [{ kind: 'incarico', title: 'Rieletto Presidente della Repubblica', detail: `${incumbent.votes} voti su ${proclaimed.record.total}`, tone: 'good' }]);
+    return { ...s, ui: { ...s.ui, toast: 'Rieletto Presidente della Repubblica' } };
+  }
+  // Ministers and the premier resign; the seat in Parliament, the councils and the European seat end.
+  let parliament = s.parliament;
+  if (parliament?.government) parliament = { ...parliament, government: { ...parliament.government, ministers: parliament.government.ministers.map(item => item.playerAppointed && !item.endedAt ? { ...item, endedAt: date, endReason: 'Eletto Presidente della Repubblica' } : item), ...(parliament.government.primeMinister === 'player' && ['active', 'crisis'].includes(parliament.government.status) ? { status: 'fallen', primeMinister: null, fallenAt: date, fallenReason: 'Il Presidente del Consiglio è eletto Presidente della Repubblica' } : {}) } };
+  if (parliament !== s.parliament) s = computeParliamentUpdate(s, parliament, s.ui.toast);
+  s = endMandate(s, 'Eletto Presidente della Repubblica');
+  for (const kind of ['comune', 'regione', 'europa']) s = closeInstitution(s, kind, date);
+  const closing = new Set(s.dataset.offices.filter(item => item.politicianId === player?.id && !item.endDate && !/inizial/i.test(item.title)).map(item => item.id));
+  s = { ...s, dataset: closeOffices(s.dataset, [...closing], date) };
+  // The party is left (the force goes on without the player), the campaign in progress is withdrawn.
+  if (s.game.party) {
+    const left = leavePartyFor({ game: s.game, stats: statsOf(s), parliament: s.parliament }, gameEnv(s), 'Eletto Presidente della Repubblica: ogni carica di partito è incompatibile');
+    s = applyGameResult(s, left.ctx, s.ui.toast, [{ type: 'party-left' }]);
+  }
+  if (s.campaign?.status === 'active') s = { ...s, campaign: null, game: { ...s.game, elections: s.game.elections.map(item => item.status === 'running' ? { ...item, status: 'missed', campaignId: null } : item) } };
+  // The office, the flag and the memory.
+  const game = deepCopy(s.game);
+  game.flags = { ...game.flags, president: { since: incumbent.since, termEnds: termEndOf(incumbent) } };
+  game.inbox = game.inbox.filter(item => /^(quirinale|presidente)-/.test(item.templateId ?? ''));
+  game.week = { ...game.week, categoriesUsed: [] };
+  remember(game, { date, kind: 'vittoria-elettorale', text: `Eletto Presidente della Repubblica al ${incumbent.ballot}º scrutinio (${incumbent.votes} voti)`, weight: 3 });
+  const office = { id: `incarico-presidente-${incumbent.number}`, title: 'Presidente della Repubblica (scenario)', institution: 'Quirinale (scenario di gioco)', level: 'presidente', politicianId: player?.id ?? null, territoryId: player?.territoryId ?? null, startDate: date, endDate: null };
+  s = { ...s, game, dataset: openOffice(s.dataset, office) };
+  s = { ...s, dataset: { ...s.dataset, politicians: s.dataset.politicians.map(item => item.id === player?.id ? { ...item, roleId: office.id } : item) }, career: { ...s.career, currentLevel: 'presidente', status: 'elected' } };
+  s = addTimeline(s, [{ kind: 'incarico', title: 'Eletto Presidente della Repubblica', detail: `${incumbent.votes} voti su ${proclaimed.record.total}: lasci ogni altra carica`, tone: 'good' }]);
+  return { ...s, ui: { ...s.ui, toast: 'Sei il Presidente della Repubblica: lasci ogni altra carica' } };
+}
+// The seven years end (a successor is elected, or the President resigns): the office closes, the former President is
+// a senator for life by right (art. 59) and no longer has a party.
+function endPresidency(input, { date, reason }) {
+  let s = input;
+  const player = playerOf(s);
+  if (!s.game.flags?.president && !s.game.flags?.exPresident) return s;
+  const game = deepCopy(s.game);
+  const term = game.flags.president ?? {};
+  game.flags = { ...game.flags, president: null, exPresident: { since: date, term, reason } };
+  remember(game, { date, kind: 'decisione', text: `Finisce il tuo mandato di Presidente della Repubblica: ${reason.charAt(0).toLowerCase()}${reason.slice(1)}`, weight: 1.5 });
+  s = { ...s, game, dataset: closeOffices(s.dataset, s.dataset.offices.filter(item => item.politicianId === player?.id && item.level === 'presidente' && !item.endDate).map(item => item.id), date) };
+  // A seat in the Senate by right: the group of the Misto, or a group of the senators for life made for the purpose.
+  let parliament = s.parliament;
+  if (parliament?.chambers?.senato) {
+    let group = (parliament.chambers.senato.groups ?? []).find(item => /misto/i.test(item.officialName ?? '') && !item.partyId) ?? (parliament.chambers.senato.groups ?? []).find(item => !item.partyId);
+    if (!group) {
+      group = { groupId: 'senato-senatori-a-vita', officialName: 'Misto – senatori a vita', chamber: 'senato', simulatedSeats: 0, partyId: null, component: true, independent: true, axis: 0, color: null, simulated: true, reference: { memberCount: 0, leaderPoliticianId: null, countAsOf: date, source: DATA_SOURCES.SIMULATION, verified: false, sourceUrl: null, sourceName: 'Senatori a vita (simulazione)' }, source: DATA_SOURCES.SIMULATION };
+      parliament = { ...parliament, chambers: { ...parliament.chambers, senato: { ...parliament.chambers.senato, groups: [...parliament.chambers.senato.groups, group] } }, relations: { ...parliament.relations, [group.groupId]: { value: 60, source: DATA_SOURCES.SIMULATION } } };
+    }
+    parliament = enterParliament(parliament, { politicianId: player?.id ?? null, chamber: 'senato', groupId: group.groupId, territoryName: playerOf(s)?.region ?? null, currentDate: date });
+    s = computeParliamentUpdate({ ...s, career: { ...s.career, currentLevel: 'senatore', parliamentContext: { mode: 'real-context', chamber: 'senato', groupId: group.groupId, territoryName: player?.region ?? null, via: 'diritto', since: date, source: DATA_SOURCES.SIMULATION } } }, withCapital(parliament, s.game), s.ui.toast);
+    s = { ...s, dataset: openOffice(s.dataset, { id: makeId('incarico-senatore-a-vita'), title: 'Senatore a vita di diritto (ex Presidente della Repubblica)', institution: 'Senato della Repubblica', level: 'senatore', politicianId: player?.id ?? null, territoryId: player?.territoryId ?? null, startDate: date }) };
+  }
+  s = addTimeline(s, [{ kind: 'incarico', title: 'Finisce il mandato da Presidente della Repubblica', detail: reason, tone: 'neutral' }]);
+  return { ...s, ui: { ...s.ui, toast: 'Il mandato è finito: sei senatore a vita di diritto' } };
+}
+
+// ---------- the decisions of the agenda about the Quirinale ----------
+function applyPresidentAct(input, actId, date) {
+  const act = PRESIDENT_ACTS[actId];
+  if (!act) return input;
+  let s = input;
+  const presidency = presidencyOf(s);
+  s = { ...s, presidency: applyPresidentCredit(presidency, act.credit, { date, act: actId, text: act.line }) };
+  const government = s.parliament?.government;
+  if (government && ['active', 'crisis'].includes(government.status) && act.stability) s = { ...s, parliament: { ...s.parliament, government: { ...government, stability: clampTo((government.stability ?? 50) + act.stability, 0, 100) } } };
+  if (s.society && act.mood) s = { ...s, society: mediaEvent(s.society, { outletId: 'tv-nazionale', tone: act.mood > 0 ? 1 : -0.6, intensity: Math.min(1.5, 0.6 + Math.abs(act.mood)), headline: `Il Presidente della Repubblica: ${act.label.toLowerCase()}`, date, week: s.game.week.index }) };
+  const stats = statsOf(s);
+  const changed = Object.fromEntries(Object.entries(act.stats ?? {}).map(([metric, value]) => [metric, roundStat((stats[metric] ?? 50) + value)]));
+  if (Object.keys(changed).length) s = { ...s, dataset: { ...s.dataset, statistics: writeStats(s, { ...stats, ...changed }) } };
+  if (act.memory) { const game = deepCopy(s.game); remember(game, { date, ...act.memory }); s = { ...s, game }; }
+  return s;
+}
+function presidencyDecision(s, special) {
+  const date = s.clock.currentDate;
+  const type = special.type;
+  const params = special.params ?? {};
+  let presidency = presidencyOf(s);
+  try {
+    if (type.startsWith('presidency-act-')) return applyPresidentAct(s, type.slice('presidency-act-'.length), date);
+    if (type.startsWith('presidency-formation-')) {
+      const formation = s.national?.formation;
+      const choice = type.slice('presidency-formation-'.length);
+      if (!formation || ['completata', 'fallita'].includes(formation.phase)) return s;
+      const semester = whiteSemester(presidency.incumbent, date, s.national?.legislature?.naturalEnd ?? null);
+      const presidentChoice = choice === 'dissolve' && semester.active ? 'main' : choice === 'dissolve' ? 'dissolve' : choice;
+      const text = presidentChoice === 'dissolve' ? 'Decidi di sciogliere le Camere.' : presidentChoice === 'tech' ? 'Decidi di tentare un governo del Presidente.' : presidentChoice === 'alt' ? 'Decidi di affidare l’incarico all’alternativa.' : 'Decidi di affidare l’incarico alla maggioranza più solida.';
+      const incumbent = { ...presidency.incumbent, formations: (presidency.incumbent.formations ?? 0) + 1 };
+      const next = { ...s, presidency: { ...presidency, incumbent }, national: nationalHistory({ ...s.national, formation: { ...formation, presidentChoice } }, date, 'consultazioni', text) };
+      return choice === 'dissolve' && semester.active ? { ...next, ui: { ...next.ui, toast: 'Sei nel semestre bianco: non puoi sciogliere le Camere' } } : next;
+    }
+    const election = presidency.election;
+    if (!election || election.phase === 'conclusa') return s;
+    const rand = seededRandom(`${s.career.id}|${type}|${date}|${election.ballots.length}`);
+    if (type === 'presidency-vote-linea') presidency = setPresidentialVote(presidency, 'linea');
+    else if (type === 'presidency-vote-bianca') presidency = setPresidentialVote(presidency, 'bianca');
+    else if (type === 'presidency-vote-c1' || type === 'presidency-vote-c2') presidency = setPresidentialVote(presidency, params[type.endsWith('c1') ? 'cand1Id' : 'cand2Id'] ?? 'linea');
+    else if (type === 'presidency-line-c1' || type === 'presidency-line-c2') presidency = sponsorCandidate(presidency, { date, candidateId: params[type.endsWith('c1') ? 'cand1Id' : 'cand2Id'], rand }).presidency;
+    else if (type === 'presidency-line-bianca') presidency = setPlayerLine(presidency, { kind: 'bianca' });
+    // Waiting does not undo a line the player has already given to the force.
+    else if (type === 'presidency-wait') { if (!election.blocs.find(item => item.id === election.player.blocId)?.playerLine) presidency = setPlayerLine(presidency, { kind: 'bianca' }); }
+    else if (type === 'presidency-propose' || type === 'presidency-shared') {
+      const bloc = election.blocs.find(item => item.id === election.player.blocId);
+      const proj = projection(election);
+      const viab = Object.fromEntries((proj?.rows ?? []).map(row => [row.id, row.viability]));
+      const field = election.candidates.filter(item => !item.withdrawn && !item.isPlayer);
+      const target = type === 'presidency-propose'
+        ? field.filter(item => item.camp === bloc?.camp).sort((a, b) => (['bandiera', 'leader'].includes(b.type) ? 1 : 0) - (['bandiera', 'leader'].includes(a.type) ? 1 : 0) || (viab[b.id] ?? 0) - (viab[a.id] ?? 0))[0]
+        : field.filter(item => item.breadth >= 60 && !item.reserve).sort((a, b) => (viab[b.id] ?? 0) - (viab[a.id] ?? 0))[0];
+      if (!target) return { ...s, ui: { ...s.ui, toast: 'Nessun candidato adatto è in campo' } };
+      presidency = sponsorCandidate(presidency, { date, candidateId: target.id, rand }).presidency;
+    }
+    else if (type === 'presidency-accept' || type === 'presidency-reelect') {
+      const standing = presidentialStanding(s, presidency);
+      const role = presidentialRole(s, election.number, { blocs: election.blocs }, null);
+      presidency = declareCandidacy(presidency, { date, standing, label: playerOf(s)?.displayName ?? 'Il tuo nome', sponsored: role.leader || (s.game.party?.rank ?? 0) >= 4, acclaim: presidency.incumbent.kind === 'giocatore' ? Math.max(0, ((presidency.incumbent.credit ?? 0) - 50) * 0.55) : 0 });
+    }
+    else if (type === 'presidency-decline' || type === 'presidency-step-down') presidency = { ...presidency, election: { ...presidency.election, player: { ...presidency.election.player, declined: true } } };
+    else return s;
+  } catch (error) { return { ...s, ui: { ...s.ui, toast: error.message } }; }
+  return { ...s, presidency };
 }
 
 export const store = {
@@ -2057,6 +2427,19 @@ export const store = {
     const memory = memoryBalance(game, { region: ['comunale', 'regionale'].includes(config.electionType) ? player?.region : null });
     const memoryBonus = round2(clampTo(memory.net * 0.35, -2.5, 1.5));
     poll.bonus = round2(poll.bonus + memoryBonus);
+    // The conditions the career started with (an outsider's appeal, a consolidated name, debts to creditors that finance…).
+    const startMod = startMods(game);
+    // What reached goals unlocked (visibility in campaign, a stronger candidacy) works here too.
+    const unlocked = objectiveMods(game);
+    if (unlocked.visibility) campaign.resources = { ...campaign.resources, visibility: Math.max(0, campaign.resources.visibility + unlocked.visibility) };
+    if (unlocked.nomination && campaign.nomination.status === 'pending') campaign.nomination.internalSupport = round2(Math.max(0, Math.min(10, campaign.nomination.internalSupport + unlocked.nomination)));
+    if (startMod.active) {
+      candidate.resources.money = Math.round(candidate.resources.money * (1 + startMod.money));
+      candidate.resources.volunteers = Math.max(0, candidate.resources.volunteers + startMod.volunteers);
+      campaign.resources = { ...campaign.resources, money: candidate.resources.money, volunteers: candidate.resources.volunteers, visibility: Math.max(0, campaign.resources.visibility + startMod.visibility) };
+      poll.bonus = round2(poll.bonus + startMod.appeal);
+      if (campaign.nomination.status === 'pending') campaign.nomination.internalSupport = round2(Math.max(0, Math.min(10, campaign.nomination.internalSupport + startMod.nomination)));
+    }
     const selection = game.party?.org?.selections?.[election.id] ?? null;
     if (selection && campaign.nomination.status === 'pending') campaign.nomination.internalSupport = round2(Math.max(0, campaign.nomination.internalSupport + selection.bonus));
     if (campaign.nomination.status === 'pending' && programmes.selection) campaign.nomination.internalSupport = round2(Math.max(0, campaign.nomination.internalSupport + programmes.selection));
@@ -2080,6 +2463,7 @@ export const store = {
     }
     // What the player may expect: the projection after polls and preparation, and the trend of the party's polls.
     setExpectation(campaign, { pollShare: poll.share ?? null });
+    if (startMod.expectation) campaign.expectation.pressure = startMod.expectation;
     const partyRow = state.world?.polls?.at(-1)?.results?.find(item => item.partyId === state.world?.playerPartyId);
     campaign.partyTrend = partyRow?.delta ?? 0;
     campaign.totalDays = Math.max(21, elapsedDays(state.clock.currentDate, election.electionDate));
@@ -2088,6 +2472,7 @@ export const store = {
     campaign.preparation = { prep: game.prep, transfer, fund: fundTotal, partyFunds, partyBonus: round2(partyBonus), pollBonus: poll.bonus, pollShare: poll.share, allies: poll.allies, moodBonus, memory: { bonus: memoryBonus, highlights: memory.highlights.map(item => ({ text: item.text, tone: item.tone, week: item.week })) }, selection: selection ? { method: selection.method, bonus: selection.bonus } : null, committees, source: 'simulation' };
     if (programmes.volunteers || programmes.organization || programmes.selection) campaign.history.unshift({ id: `programmi-${campaign.id}`, day: 0, date: state.clock.currentDate, type: 'preparazione', text: `Programmi finanziati nei mesi scorsi: ${programmes.volunteers ? `+${programmes.volunteers} volontari` : ''}${programmes.organization ? ` · +${programmes.organization} organizzazione` : ''}${programmes.selection ? ` · peso nelle candidature +${programmes.selection}` : ''}`.replace(': ·', ':').replace(/\s+/g, ' '), source: 'simulation' });
     if (committees?.committees.length) campaign.history.unshift({ id: `comitati-${campaign.id}`, day: 0, date: state.clock.currentDate, type: 'preparazione', text: `Comitati del territorio: forza ${committees.strength}/100 · ${committees.volunteers} volontari${committees.gotv ? ` (mobilitazione +${committees.gotv})` : ''}${committees.funds ? ` · ${committees.funds.toLocaleString('it-IT')} € raccolti` : ''} · candidatura ${committees.nomination >= 0 ? '+' : ''}${committees.nomination} · consenso locale ${committees.localSupport >= 0 ? '+' : ''}${committees.localSupport}`, source: 'simulation' });
+    if (startMod.notes.length) campaign.history.unshift({ id: `partenza-${campaign.id}`, day: 0, date: state.clock.currentDate, type: 'preparazione', text: `Condizioni di partenza: ${startMod.notes.join(' · ')}`, source: 'simulation' });
     campaign.history.unshift({ id: `preparazione-${campaign.id}`, day: 0, date: state.clock.currentDate, type: 'preparazione', text: `Preparazione ${game.prep}/100 · ${transfer} € dalla carriera${fundTotal ? ` · ${fundTotal} € dal fondo elettorale` : ''}${partyFunds ? ` · ${partyFunds} € dal partito` : ''} · sostegno interno ${partyBonus >= 0 ? '+' : ''}${round2(partyBonus)} · sondaggi ${poll.bonus >= 0 ? '+' : ''}${poll.bonus}`, source: 'simulation' });
     const nextGame = deepCopy({ ...markElectionRunning(game, election.id, campaign.id), prep: 0 });
     book(nextGame, -transfer, 'campagne', `Fondi trasferiti alla campagna: ${election.label}`, state.clock.currentDate);
@@ -2260,6 +2645,49 @@ export const store = {
     const result = contestPartyRank({ game: state.game, stats: statsOf(state), parliament: state.parliament }, gameEnv(state));
     return commitGame(result, result.success ? `Nuovo incarico nel partito: ${result.rank.title}` : `${result.label} · ${result.rank.title} (probabilità stimata ${Math.round(result.chance * 100)}%)`);
   },
+  // ---------- the end of a career: retirement, the Hall of Fame and the legacy ----------
+  // The weight of the career so far (what the Hall of Fame would record today): for the pages.
+  legacyPreview() {
+    if (!state.game) return null;
+    const facts = careerFacts(state);
+    return { ...legacyScore(facts), tags: legacyTags(facts), facts };
+  },
+  retirementProblem(kind) { return state.game ? retirementProblem(state, kind) : 'Nessuna carriera in corso.'; },
+  hallOfFame() { return sortedHall(storage.hall()); },
+  removeHallEntry(id) {
+    storage.saveHall(storage.hall().filter(item => item.id !== id));
+    emit();
+  },
+  // The player leaves politics (or retires): every office and council ends, the game stops, the career enters the
+  // Hall of Fame with its legacy. A new career can start from that legacy; the world of the game is never touched.
+  retireCareer(kind = 'ritiro') {
+    const problem = retirementProblem(state, kind);
+    if (problem) throw new Error(problem);
+    const today = state.clock.currentDate;
+    let next = state;
+    const player = playerOf(next);
+    let parliament = next.parliament;
+    if (parliament?.government) parliament = { ...parliament, government: { ...parliament.government, ministers: parliament.government.ministers.map(item => item.playerAppointed && !item.endedAt ? { ...item, endedAt: today, endReason: END_KINDS[kind].reason } : item) } };
+    if (parliament !== next.parliament) next = computeParliamentUpdate(next, parliament, next.ui.toast);
+    next = endMandate(next, END_KINDS[kind].reason);
+    next = { ...next, dataset: { ...next.dataset, offices: next.dataset.offices.map(item => item.politicianId === player?.id && !item.endDate ? { ...item, endDate: today } : item) } };
+    for (const institution of ['comune', 'regione', 'europa']) next = closeInstitution(next, institution, today);
+    next = { ...next, career: { ...next.career, currentLevel: null, endedAt: today, endKind: kind } };
+    // The legacy is weighed on the career as it ends (offices closed, nothing else touched), then the game stops.
+    const entry = hallEntry(next, kind);
+    const game = deepCopy(next.game);
+    remember(game, { date: today, kind: 'decisione', text: END_KINDS[kind].reason, weight: 1 });
+    Object.assign(game, { status: 'ended', endedAt: today, endKind: kind, endReason: END_KINDS[kind].reason, closedByPlayer: true, inbox: [], legacy: { score: entry.score, tier: entry.tier, tags: entry.tags, parts: entry.parts, hallId: entry.id } });
+    storage.saveHall(addToHall(storage.hall(), entry));
+    state = { ...next, game, parliament: withCapital(next.parliament, game), ui: { ...next.ui, toast: `${END_KINDS[kind].reason}: eredità ${entry.score}/100 · ${entry.tier.label}` } };
+    persist({ force: true }); emit();
+    return entry;
+  },
+  // A goal of the career declared in public: a commitment with a deadline (kept it pays double, broken it costs credibility).
+  declareAmbition(id) {
+    const result = declareAmbition({ game: state.game, stats: statsOf(state), parliament: state.parliament }, gameEnv(state), id);
+    return commitGame(result, `Obiettivo dichiarato: ${result.objective.label}`);
+  },
   alignPartyCurrent(currentId) {
     return commitGame(alignCurrent({ game: state.game, stats: statsOf(state), parliament: state.parliament }, gameEnv(state), currentId), 'Posizionamento interno aggiornato');
   },
@@ -2339,6 +2767,203 @@ export const store = {
     const result = quitParty({ game: state.game, stats: statsOf(state), parliament: state.parliament }, gameEnv(state));
     remember(result.ctx.game, { date: state.clock.currentDate, kind: 'cambio-partito', text: `Hai lasciato ${label}`, weight: 1.2 });
     return commitGame({ ...result, specials: [{ type: 'party-left' }] }, 'Hai lasciato il partito');
+  },
+
+  // ---------- the President of the Republic ----------
+  // The election (the player as elector, leader of a force or candidate) and the office (the player as President).
+  presidencyView() {
+    const presidency = presidencyOf(state);
+    const election = presidency.election;
+    const date = state.clock.currentDate;
+    const eligibility = presidentialEligibilityOf(state);
+    const role = election ? presidentialRole(state, election.number, { blocs: election.blocs }, presidentialDelegate(state, election.number)) : null;
+    const schedule = presidencySchedule(presidency.incumbent);
+    return { presidency, election, eligibility, role, schedule, projection: election ? projection(election) : null, standing: state.game ? presidentialStanding(state, presidency) : null, semester: whiteSemester(presidency.incumbent, date, state.national?.legislature?.naturalEnd ?? null), isPlayer: presidentIsPlayer(state) };
+  },
+  presidentialCandidacy() {
+    const presidency = presidencyOf(state);
+    if (!presidency.election || presidency.election.phase === 'conclusa') throw new Error('Non c’è un’elezione del Presidente in corso.');
+    const eligibility = presidentialEligibilityOf(state);
+    if (!eligibility.eligible) throw new Error(eligibility.problems[0]);
+    const role = presidentialRole(state, presidency.election.number, { blocs: presidency.election.blocs }, presidentialDelegate(state, presidency.election.number));
+    const next = declareCandidacy(presidency, { date: state.clock.currentDate, standing: presidentialStanding(state, presidency), label: playerOf(state)?.displayName ?? 'Il tuo nome', sponsored: role.leader || (state.game.party?.rank ?? 0) >= 4, acclaim: presidency.incumbent.kind === 'giocatore' ? Math.max(0, ((presidency.incumbent.credit ?? 0) - 50) * 0.55) : 0 });
+    state = { ...state, game: withoutPresidentialAsks(state.game, ['quirinale-candidatura', 'quirinale-rielezione']), presidency: next, ui: { ...state.ui, toast: 'Il tuo nome entra tra i candidati al Quirinale' } };
+    persist(); emit();
+    return next;
+  },
+  presidentialWithdraw() {
+    const presidency = withdrawCandidacy(presidencyOf(state), { date: state.clock.currentDate });
+    state = { ...state, presidency, ui: { ...state.ui, toast: 'Candidatura ritirata' } };
+    persist(); emit();
+    return presidency;
+  },
+  // A move in the negotiations: sponsor a name, veto one, strike a deal with another force (a day of work and capital).
+  presidentialMove(kind, { candidateId = null, blocId = null } = {}) {
+    const presidency = presidencyOf(state);
+    const election = presidency.election;
+    if (!election || election.phase === 'conclusa') throw new Error('Non c’è un’elezione del Presidente in corso.');
+    const role = presidentialRole(state, election.number, { blocs: election.blocs }, presidentialDelegate(state, election.number));
+    const costs = { sponsor: 2, veto: 3, deal: 3 };
+    if (!costs[kind]) throw new Error('Mossa non valida.');
+    if (kind !== 'deal' && !role.leader) throw new Error('Solo il segretario di un partito con i suoi grandi elettori guida la linea al Quirinale.');
+    if (kind === 'deal' && !role.leader && !role.elector && !role.delegate) throw new Error('Per trattare serve essere un grande elettore.');
+    if (!election.player.blocId) throw new Error('Non sei parte di un gruppo dell’assemblea.');
+    if ((state.game.resources.politicalCapital ?? 0) < costs[kind]) throw new Error(`Servono ${costs[kind]} punti di capitale politico.`);
+    let next = withTime(1);
+    const date = next.clock.currentDate;
+    const rand = seededRandom(`${next.career.id}|${kind}|${candidateId}|${blocId}|${date}|${election.ballots.length}|${election.player.actions ?? 0}`);
+    let toast;
+    let result;
+    if (kind === 'sponsor') { result = sponsorCandidate(presidency, { date, candidateId, rand }); toast = `Sostieni ${shortName(election.candidates.find(item => item.id === candidateId)?.label)}${result.followed.length ? `: si accodano ${result.followed.length} forze` : ''}`; }
+    else if (kind === 'veto') {
+      result = vetoCandidate(presidency, { date, candidateId }); toast = 'Veto posto';
+      if (next.world) next = { ...next, world: applyWorldSignals(next.world, result.sponsors.map(id => ({ type: 'relation', partyId: id, delta: -3 })), date) };
+    } else {
+      const own = election.blocs.find(item => item.id === election.player.blocId);
+      const target = election.blocs.find(item => item.id === blocId);
+      const ties = own?.partyId && target?.partyId ? next.world?.ties?.[[own.partyId, target.partyId].sort().join('|')] ?? 0 : 0;
+      result = dealWithBloc(presidency, { date, blocId, candidateId, ties, rand }); toast = result.accepted ? `${result.target.label} è disponibile: ti chiederà qualcosa in cambio` : `${result.target.label} prende tempo`;
+    }
+    const game = withoutPresidentialAsks(deepCopy(next.game), kind === 'deal' ? [] : ['quirinale-trattative', 'quirinale-linea']);
+    game.resources.politicalCapital = Math.max(0, game.resources.politicalCapital - costs[kind]);
+    state = { ...next, game, presidency: result.presidency, parliament: withCapital(next.parliament, game), ui: { ...next.ui, toast } };
+    persist(); emit();
+    return result;
+  },
+  // The line of the force (the leader) or the own paper in the secret ballot (an elector).
+  presidentialLine(line) {
+    const presidency = presidencyOf(state);
+    const election = presidency.election;
+    if (!election || election.phase === 'conclusa') throw new Error('Non c’è un’elezione del Presidente in corso.');
+    const role = presidentialRole(state, election.number, { blocs: election.blocs }, presidentialDelegate(state, election.number));
+    if (!role.leader) throw new Error('Solo chi guida una forza decide la sua linea.');
+    if (line && line !== 'bianca' && !election.candidates.some(item => item.id === line && !item.withdrawn)) throw new Error('Scegli un candidato ancora in corsa.');
+    const next = setPlayerLine(presidency, line === 'bianca' ? { kind: 'bianca' } : line ? { kind: 'candidato', candidateId: line } : null);
+    state = { ...state, game: withoutPresidentialAsks(state.game, ['quirinale-trattative', 'quirinale-linea']), presidency: next, ui: { ...state.ui, toast: 'Linea del gruppo aggiornata' } };
+    persist(); emit();
+    return next;
+  },
+  presidentialVote(vote) {
+    const presidency = presidencyOf(state);
+    const election = presidency.election;
+    if (!election || election.phase === 'conclusa') throw new Error('Non c’è un’elezione del Presidente in corso.');
+    const role = presidentialRole(state, election.number, { blocs: election.blocs }, presidentialDelegate(state, election.number));
+    if (!role.elector && !role.delegate) throw new Error('Non sei un grande elettore: serve un seggio in Parlamento o un incarico di delegato regionale.');
+    const next = setPresidentialVote(presidency, vote);
+    state = { ...state, game: withoutPresidentialAsks(state.game, ['quirinale-scrutinio']), presidency: next, ui: { ...state.ui, toast: 'Il tuo voto segreto per il prossimo scrutinio è registrato' } };
+    persist(); emit();
+    return next;
+  },
+  // The activities of the President: days of work with effects on credit, stability and mood.
+  presidentActivity(activityId, target = null) {
+    if (!presidentIsPlayer(state)) throw new Error('Solo il Presidente della Repubblica può farlo.');
+    const activity = PRESIDENT_ACTIVITIES.find(item => item.id === activityId);
+    if (!activity) throw new Error('Attività non riconosciuta.');
+    const presidency = presidencyOf(state);
+    const week = state.game.week.index;
+    const problem = presidentActivityProblem(presidency.incumbent, activity, { week, ap: state.game.week.ap }) ?? costProblem(state.game, { capital: activity.cost.capital ?? 0 });
+    if (problem) throw new Error(problem);
+    if (activity.target === 'region' && !ITALIAN_REGIONS.includes(target)) throw new Error('Scegli una regione.');
+    let next = withTime(activity.cost.ap ?? 0);
+    const date = next.clock.currentDate;
+    const effects = presidentActivityEffects(activity);
+    const game = deepCopy(next.game);
+    if (activity.cost.capital) game.resources.politicalCapital = Math.max(0, game.resources.politicalCapital - activity.cost.capital);
+    next = { ...next, game, parliament: withCapital(next.parliament, game) };
+    let updated = applyPresidentCredit(presidency, effects.credit, { date, act: activity.id, text: activity.label });
+    updated = { ...updated, incumbent: { ...updated.incumbent, actions: { ...(updated.incumbent.actions ?? {}), [activity.id]: week } } };
+    next = { ...next, presidency: updated };
+    const government = next.parliament?.government;
+    if (government && ['active', 'crisis'].includes(government.status) && effects.stability) next = { ...next, parliament: { ...next.parliament, government: { ...government, stability: clampTo((government.stability ?? 50) + effects.stability, 0, 100) } } };
+    if (next.society && effects.mood) next = { ...next, society: mediaEvent(next.society, { outletId: 'tv-nazionale', tone: effects.mood > 0 ? 1 : -0.6, intensity: 0.8, headline: `Il Presidente della Repubblica: ${activity.label.toLowerCase()}`, date, week }) };
+    if (next.society && activity.target === 'region') next = { ...next, society: regionAttention(next.society, target, 0.8) };
+    const stats = statsOf(next);
+    const changed = Object.fromEntries(Object.entries(effects.stats ?? {}).map(([metric, value]) => [metric, roundStat((stats[metric] ?? 50) + value)]));
+    if (Object.keys(changed).length) next = { ...next, dataset: { ...next.dataset, statistics: writeStats(next, { ...stats, ...changed }) } };
+    state = { ...next, ui: { ...next.ui, toast: `${activity.label}: fatto` } };
+    persist(); emit();
+    return effects;
+  },
+  // Art. 74: a law approved by the Chambers is sent back to them once, with a message, before it is promulgated.
+  presidentReturnLaw(lawId) {
+    if (!presidentIsPlayer(state)) throw new Error('Solo il Presidente della Repubblica può rinviare una legge alle Camere.');
+    const law = state.parliament?.laws?.find(item => item.id === lawId);
+    if (!law || law.stage !== 'approved' || !law.auto) throw new Error('Si può rinviare solo una legge approvata dalle Camere e non ancora promulgata.');
+    if (law.returned) throw new Error('Una legge si può rinviare una volta sola (art. 74).');
+    const date = state.clock.currentDate;
+    if (elapsedDays(law.updatedAt ?? date, date) > PRESIDENCY_RULES.returnWindowDays) throw new Error(`Sono passati più di ${PRESIDENCY_RULES.returnWindowDays} giorni dall’approvazione: la legge è stata promulgata.`);
+    const next = withTime(1);
+    let parliament = next.parliament;
+    parliament = { ...parliament, laws: parliament.laws.map(item => item.id === lawId ? { ...item, stage: 'final-vote', status: 'final-vote', returned: { at: date, by: 'presidente' }, nextStepAt: advanceDays(date, 14), updatedAt: date, stageSince: date } : item), history: [...(parliament.history ?? []), { id: `rinvio-${lawId}-${date}`, date, type: 'legge-rinviata', text: `Il Presidente della Repubblica rinvia alle Camere “${law.title}” con un messaggio motivato.`, details: { lawId, auto: false }, source: DATA_SOURCES.SIMULATION }] };
+    const government = parliament.government;
+    if (government && ['active', 'crisis'].includes(government.status)) {
+      const partners = { ...(government.partners ?? {}) };
+      const sponsor = law.sponsor?.groupId;
+      if (sponsor && partners[sponsor]) partners[sponsor] = { ...partners[sponsor], satisfaction: clampTo((partners[sponsor].satisfaction ?? 60) - 4, 0, 100) };
+      parliament = { ...parliament, government: { ...government, stability: clampTo((government.stability ?? 50) - 3, 0, 100), partners } };
+    }
+    let s = computeParliamentUpdate(next, parliament, 'Legge rinviata alle Camere');
+    if (s.society) s = { ...s, society: mediaEvent(revokeMeasure(s.society, law.title), { outletId: 'quotidiani', tone: 0.4, intensity: 1, headline: `Il Presidente della Repubblica rinvia alle Camere “${law.title}”`, date, week: s.game.week.index }) };
+    const presidency = presidencyOf(s);
+    let updated = applyPresidentCredit(presidency, 1.5, { date, act: 'rinvio', text: `Hai rinviato alle Camere “${law.title}”` });
+    updated = { ...updated, incumbent: { ...updated.incumbent, returned: [...(updated.incumbent.returned ?? []), { lawId, title: law.title, date }] } };
+    const game = deepCopy(s.game);
+    remember(game, { date, kind: 'decisione', text: `Hai rinviato alle Camere la legge “${law.title}”`, weight: 1 });
+    state = { ...s, game, presidency: updated, ui: { ...s.ui, toast: 'Legge rinviata alle Camere: gli effetti si fermano e si rivota tra due settimane' } };
+    persist(); emit();
+    return law;
+  },
+  // Art. 88: the President can dissolve the Chambers (not in the last six months of the term, unless they end too).
+  presidentDissolve() {
+    if (!presidentIsPlayer(state)) throw new Error('Solo il Presidente della Repubblica può sciogliere le Camere.');
+    const presidency = presidencyOf(state);
+    const date = state.clock.currentDate;
+    const semester = whiteSemester(presidency.incumbent, date, state.national?.legislature?.naturalEnd ?? null);
+    if (semester.active) throw new Error(`Sei nel semestre bianco (dal ${formatDate(semester.since)}): il Presidente non può sciogliere le Camere.`);
+    const government = state.parliament?.government;
+    const open = government && ['fallen', 'caretaker', 'crisis'].includes(government.status);
+    if (!open && !(state.national?.formation && !['completata', 'fallita'].includes(state.national.formation.phase))) throw new Error('Le Camere hanno una maggioranza che governa: non c’è ragione di scioglierle (servono una crisi di governo senza soluzione o consultazioni fallite).');
+    const next = withTime(1);
+    let s = { ...next, game: scheduleEarlyElection(next.game, date) };
+    const formation = s.national?.formation;
+    if (formation && !['completata', 'fallita'].includes(formation.phase)) s = { ...s, national: nationalHistory({ ...s.national, formation: { ...formation, phase: 'fallita', presidentChoice: 'dissolve' } }, date, 'formazione', 'Il Presidente scioglie le Camere: si torna al voto.') };
+    if (s.world) s = { ...s, world: addWorldEffects(s.world, [], date, { title: 'Sciolte le Camere: si torna al voto', body: 'Il Presidente della Repubblica scioglie le Camere e indice elezioni anticipate (simulazione).', icon: 'alert', tone: 'bad' }) };
+    const updated = applyPresidentCredit(presidency, -2, { date, act: 'scioglimento', text: 'Hai sciolto le Camere' });
+    const game = deepCopy(s.game);
+    remember(game, { date, kind: 'decisione', text: 'Hai sciolto le Camere', weight: 1.5 });
+    state = { ...s, game, presidency: { ...updated, incumbent: { ...updated.incumbent, dissolutions: (updated.incumbent.dissolutions ?? 0) + 1 } }, ui: { ...s.ui, toast: 'Camere sciolte: si va alle elezioni anticipate' } };
+    persist(); emit();
+    return state;
+  },
+  // Art. 59: up to five senators for life named by the President for outstanding merits (here a prestige gesture).
+  presidentLifeSenator(profile = 'scienza') {
+    if (!presidentIsPlayer(state)) throw new Error('Solo il Presidente della Repubblica nomina i senatori a vita.');
+    const presidency = presidencyOf(state);
+    const named = presidency.incumbent.lifeSenators ?? [];
+    const date = state.clock.currentDate;
+    if (named.length >= PRESIDENCY_RULES.lifeSenatorLimit) throw new Error(`Hai già nominato ${PRESIDENCY_RULES.lifeSenatorLimit} senatori a vita: è il massimo previsto.`);
+    if (named.at(-1) && elapsedDays(named.at(-1).date, date) < 365) throw new Error('Una nomina all’anno: aspetta.');
+    const labels = { scienza: 'Una figura (simulata) della scienza', arte: 'Una figura (simulata) dell’arte e della cultura', impresa: 'Una figura (simulata) dell’impresa e del lavoro', servizio: 'Una figura (simulata) del servizio pubblico' };
+    if (!labels[profile]) throw new Error('Scegli un profilo per la nomina.');
+    const next = withTime(1);
+    const updated = applyPresidentCredit(presidency, 3, { date, act: 'senatore-a-vita', text: `${labels[profile]} nominata senatore a vita` });
+    const game = deepCopy(next.game);
+    remember(game, { date, kind: 'decisione', text: `Hai nominato senatore a vita ${labels[profile].toLowerCase()}`, weight: 0.8 });
+    let s = { ...next, game, presidency: { ...updated, incumbent: { ...updated.incumbent, lifeSenators: [...named, { profile, label: labels[profile], date }] } } };
+    if (s.society) s = { ...s, society: mediaEvent(s.society, { outletId: 'quotidiani', tone: 1, intensity: 0.8, headline: `Il Presidente nomina senatore a vita: ${labels[profile].toLowerCase()}`, date, week: game.week.index }) };
+    state = { ...s, ui: { ...s.ui, toast: 'Nuovo senatore a vita (figura simulata)' } };
+    persist(); emit();
+    return labels[profile];
+  },
+  // Art. 86: resigning opens a new election within fifteen days; the President of the Senate acts meanwhile.
+  presidentResign() {
+    if (!presidentIsPlayer(state)) throw new Error('Solo il Presidente della Repubblica può dimettersi.');
+    const date = state.clock.currentDate;
+    let s = { ...state, presidency: resignPresidency(presidencyOf(state), { date }) };
+    s = endPresidency(s, { date, reason: 'Dimissioni anticipate' });
+    state = s;
+    persist(); emit();
+    return state;
   },
 
   // ---------- parliament ----------
@@ -2828,6 +3453,11 @@ export const store = {
     if (errors.length) throw new Error(errors[0]);
     const level = CAREER_LEVELS[draft.initialLevel];
     const birthDate = draft.birthDate;
+    // How the career starts: outsider, debts, a divided party, a consolidated career or a custom scenario.
+    const legacyEntry = draft.legacyId ? storage.hall().find(item => item.id === draft.legacyId) ?? null : null;
+    if (draft.legacyId && !legacyEntry) throw new Error('L’eredità scelta non è più nella Hall of Fame.');
+    const plan = startPlan(draft.start, { partyMode: draft.partyMode, legacy: legacyBoon(legacyEntry) });
+    const startDeltas = startStatDeltas(plan.levels);
     const id = makeId('carriera');
     const playerId = makeId('politico');
     const regionId = makeId('territorio-regione');
@@ -2841,7 +3471,7 @@ export const store = {
       { id: municipalityId, kind: 'comune', name: draft.municipality.trim(), parentId: regionId, source: DATA_SOURCES.USER, ...istat }
     ];
     const territoryId = draft.initialLevel === 'comunale' ? municipalityId : regionId;
-    if (['deputato','senatore'].includes(draft.initialLevel)) territories.push({ id: nationId, kind: 'stato', name: 'Italia', parentId: null, source: DATA_SOURCES.USER });
+    if (['deputato','senatore','europeo'].includes(draft.initialLevel)) territories.push({ id: nationId, kind: 'stato', name: 'Italia', parentId: null, source: DATA_SOURCES.USER });
 
     const parties = state.dataset.parties.filter(party => party.source === DATA_SOURCES.USER);
     if (draft.partyMode === 'existing' && ![...parties, ...realParties].some(party => party.id === draft.partyId && isSelectableParty(party))) throw new Error('Il partito selezionato non è disponibile.');
@@ -2862,7 +3492,7 @@ export const store = {
     const profession = draft.previousProfession.trim();
     // The difficulty shifts where the player starts: more or less popularity, reputation and influence.
     const difficulty = difficultyId(draft.difficulty);
-    const statistics = Object.fromEntries(Object.entries(initialCareerStatistics(draft.initialLevel)).map(([metric, value]) => [metric, ['popularity', 'reputation', 'influence'].includes(metric) ? Math.max(0, Math.min(100, value + difficultyOf(difficulty).statStart)) : value]));
+    const statistics = Object.fromEntries(Object.entries(initialCareerStatistics(draft.initialLevel)).map(([metric, value]) => { const bump = startDeltas[metric] ?? 0; const base = ['popularity', 'reputation', 'influence'].includes(metric) ? Math.max(0, Math.min(100, value + difficultyOf(difficulty).statStart)) : value; return [metric, bump ? Math.max(0, Math.min(100, round2(base + bump))) : base]; }));
     const datasetStatistics = [];
     const statisticIds = Object.entries(statistics).map(([metric, value]) => {
       const statisticId = makeId('stat-' + metric);
@@ -2878,9 +3508,10 @@ export const store = {
     const chamber = CAREER_LEVELS[draft.initialLevel]?.chamber ?? null;
     const office = {
       id: player.roleId, title: level.office,
-      institution: draft.initialLevel === 'comunale' ? 'Comune di ' + draft.municipality.trim() : draft.initialLevel === 'regionale' ? 'Regione ' + draft.region : chamber === 'camera' ? 'Camera dei deputati' : chamber === 'senato' ? 'Senato della Repubblica' : 'Repubblica italiana',
-      level: draft.initialLevel, politicianId: playerId, territoryId, startDate: today, endDate: null,
-      source: chamber ? DATA_SOURCES.SIMULATION : DATA_SOURCES.USER
+      institution: draft.initialLevel === 'comunale' ? 'Comune di ' + draft.municipality.trim() : draft.initialLevel === 'regionale' ? 'Regione ' + draft.region : chamber === 'camera' ? 'Camera dei deputati' : chamber === 'senato' ? 'Senato della Repubblica' : draft.initialLevel === 'europeo' ? 'Parlamento europeo' : 'Repubblica italiana',
+      // A seat at the European Parliament is an office of the European vote ('europee'), like the one a campaign wins.
+      level: draft.initialLevel === 'europeo' ? 'europee' : draft.initialLevel, politicianId: playerId, territoryId, startDate: today, endDate: null,
+      source: chamber || draft.initialLevel === 'europeo' ? DATA_SOURCES.SIMULATION : DATA_SOURCES.USER
     };
     const dataset = emptyDataset();
     dataset.parties = parties;
@@ -2896,7 +3527,11 @@ export const store = {
     const career = {
       id, name: player.displayName + ' — ' + level.shortLabel, playerId, partyId,
       initialLevel: draft.initialLevel, territoryId, statisticsIds: statisticIds,
-      startedAt: today, createdAt: new Date().toISOString(), status: 'active', parliamentContext, difficulty
+      startedAt: today, createdAt: new Date().toISOString(), status: 'active', parliamentContext, difficulty,
+      // The starting conditions in force (null for an ordinary start) and the way the career began, for the Hall of Fame.
+      start: hasStart(plan) ? plan : null, startProfile: hasStart(plan) ? plan.profile : 'ordinaria',
+      // The legacy of a concluded career this one started from (the Hall of Fame keeps the original).
+      legacyFrom: legacyEntry ? { id: legacyEntry.id, name: legacyEntry.name } : null
     };
     const parliament = chamber ? createParliamentState({ career, player, groups: realGroups, currentDate: today, politicalCapital: statistics.influence, referenceGovernment }) : null;
     if (parliament) {
@@ -2917,12 +3552,16 @@ export const store = {
     const national = createNationalState({ currentDate: today, legislature: game.legislature });
     if (draft.partyMode === 'new' && game.party) game.party.program = { areas: (draft.partyProgram ?? []).filter(id => AREA_BY_ID[id]).slice(0, 4), since: 1, source: DATA_SOURCES.SIMULATION };
     game.timeline = [{ id: makeId('storia'), week: 1, date: today, kind: 'inizio', title: `Inizia la carriera: ${level.office}`, detail: `${draft.municipality.trim()}, ${draft.region}${partyRecord ? ` · ${partyRecord.officialName ?? partyRecord.name}` : ' · indipendente'}`, tone: 'good', source: DATA_SOURCES.SIMULATION }];
+    if (hasStart(plan)) game.timeline.push({ id: makeId('storia'), week: 1, date: today, kind: 'inizio', title: `Punto di partenza: ${plan.label}`, detail: planLines(plan).map(item => `${item.label} ${item.level}/3`).join(' · '), tone: 'neutral', source: DATA_SOURCES.SIMULATION });
     // The game being replaced is kept in a slot, so a new game never erases an old one.
     if (store.hasCareer()) { try { store.saveToSlot(`${slotMeta(state).player} · partita precedente`); } catch { /* no room: the player is warned in the menu */ } }
-    state = { ...base, game, world, society, national, parliament: withCapital(parliament, game) };
+    const presidency = createPresidency({ date: today, seed: seedOf(base) });
+    state = { ...base, game, world, society, national, presidency, parliament: withCapital(parliament, game) };
     // A local career starts with a seat in the council of the own comune or region, until its next vote.
     const localKind = { comunale: 'comune', regionale: 'regione' }[draft.initialLevel];
     if (localKind && world) state = withInstitution(state, simulatedInstitution(state, localKind, today));
+    // A European career starts with a seat in the European Parliament, in the group of the own party (or non-attached).
+    if (draft.initialLevel === 'europeo' && world) state = withInstitution(state, europeanInstitution(state, today));
     timelineBase = state;
     persist({ force: true }); emit();
     return player;

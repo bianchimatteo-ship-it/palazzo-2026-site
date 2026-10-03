@@ -61,7 +61,7 @@ try {
   // What is audited: every section, and every internal tab of the redesigned ones.
   const views = [
     ['panoramica'], ['profilo'], ['territori'], ['finanze'], ['sondaggi'], ['governo'], ['leggi'], ['archivio'], ['impostazioni'],
-    ...['panoramica', 'nazionali', 'candidatura', 'campagna', 'avversari', 'risultati', 'storico'].map(tab => ['elezioni', 'elezioni', tab]),
+    ...['panoramica', 'nazionali', 'quirinale', 'candidatura', 'campagna', 'avversari', 'risultati', 'storico'].map(tab => ['elezioni', 'elezioni', tab]),
     ...['percorso', 'progressione', 'incarichi', 'cronologia', 'obiettivi'].map(tab => ['carriera', 'carriera', tab]),
     ...['panoramica', 'ruoli', 'organizzazione', 'vita', 'territorio', 'storico'].map(tab => ['partito', 'partito', tab]),
     ...['settimana', 'calendario', 'attivita', 'registro'].map(tab => ['calendario', 'agenda', tab]),
@@ -105,6 +105,7 @@ try {
   const overlays = [
     ['menu principale', 'document.querySelector("[data-action=menu]")?.click()', 'document.querySelector("[data-menu=continua]")?.click()', '.main-menu'],
     ['conferma', 'document.querySelector("[data-nav=elezioni]")?.click(); await new Promise(resolve => setTimeout(resolve, 700)); document.querySelector("[data-section-tab=elezioni][data-section-tab-value=panoramica]")?.click(); await new Promise(resolve => setTimeout(resolve, 400)); document.querySelector("[data-game-fastforward]")?.click()', 'document.querySelector("[data-confirm=cancel]")?.click()', '.confirm-dialog'],
+    ['hall of fame', 'document.querySelector("[data-action=menu]")?.click(); await new Promise(resolve => setTimeout(resolve, 500)); document.querySelector("[data-menu=hall]")?.click()', 'document.querySelector("[data-menu=continua]")?.click()', '.hall-howto'],
     ['resoconto settimanale', 'document.querySelector(".topbar [data-action=advance], [data-action=advance]")?.click(); await new Promise(resolve => setTimeout(resolve, 500)); document.querySelector("[data-confirm=ok]")?.click()', 'document.querySelector("[data-report-close]")?.click()', '.report-modal'],
     ['nuova carriera', 'document.querySelector("[data-nav=impostazioni]")?.click(); await new Promise(resolve => setTimeout(resolve, 600)); document.querySelector("[data-action=new-career]")?.click(); await new Promise(resolve => setTimeout(resolve, 600)); document.querySelector("[data-menu-action=start-local]")?.click()', 'document.querySelector("[data-wizard-action=cancel]")?.click(); await new Promise(resolve => setTimeout(resolve, 400)); document.querySelector("[data-menu=continua]")?.click()', '.career-wizard']
   ];

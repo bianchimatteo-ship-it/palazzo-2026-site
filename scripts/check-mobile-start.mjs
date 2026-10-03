@@ -134,6 +134,17 @@ try {
   await waitFor(() => has('[data-municipality-code="052032"]'), 10000, 'Siena nell’elenco');
   await tap('[data-municipality-code="052032"]', { scroll: true });
   for (let step = 1; step <= 4; step++) {
+    // Step 4 (difficulty and starting conditions): the start cards and the custom scenario work with taps, without overflowing.
+    if (step === 4) {
+      ok(await has('[data-start-profile="outsider"]') && await has('[data-start-profile="personalizzato"]'), 'Wizard su telefono: le condizioni di partenza sono nel passaggio 4.');
+      await tap('[data-start-profile="personalizzato"]', { scroll: true });
+      ok(await has('.start-editor [data-start-lever="rete"]'), 'Lo scenario personalizzato apre l’editor dei punti.');
+      await tap('.start-editor [data-start-lever="rete"][data-start-delta="1"]', { scroll: true });
+      ok(await evaluate('document.querySelector(".start-lever.active [data-start-lever=rete]") !== null && /da spendere/.test(document.querySelector(".start-points")?.textContent ?? "")'), 'Un tocco su “+” alza il livello e aggiorna i punti.');
+      ok(await evaluate('(() => { const body = document.querySelector(".wizard-body"); return body.scrollWidth <= body.clientWidth + 1; })()'), 'Il passaggio 4 non scorre in orizzontale su 375 px.');
+      await tap('[data-start-profile="outsider"]', { scroll: true });
+      ok(await evaluate('document.querySelector("[data-start-profile=outsider]").getAttribute("aria-pressed") === "true" && !document.querySelector(".start-editor")'), 'Scegliere “Outsider” chiude l’editor e seleziona la scheda.');
+    }
     await tap('.wizard-footer [data-wizard-action="next"]');
     ok(await evaluate(`document.querySelector('.wizard-kicker')?.textContent.includes('0${step + 1}')`), `Wizard su telefono: “Continua” del passaggio ${step} ricevuto.`);
   }

@@ -3,6 +3,9 @@
 import { activeMinisters } from './parliament-engine.js?v=20261003-1';
 import { isSecretary } from './career-engine.js?v=20261003-1';
 import { EP_ROLES, committeeById } from './local-engine.js?v=20261003-1';
+import { PRESIDENCY_RULES } from '../data/simulation/presidency-rules.js?v=20261003-1';
+import { presidentialEligibility, whiteSemester } from './presidency-engine.js?v=20261003-1';
+import { END_KINDS } from './legacy-engine.js?v=20261003-1';
 
 const governing = parliament => ['active', 'crisis'].includes(parliament?.government?.status);
 export const isPrimeMinister = parliament => governing(parliament) && parliament.government.primeMinister === 'player';
@@ -15,7 +18,17 @@ export function playerRoles(state) {
   const minister = governing(parliament) && activeMinisters(parliament.government).some(item => item.playerAppointed);
   const secretary = isSecretary(party);
   const areaLead = party?.affiliation === 'member' && party.rank >= 2 && party.currents?.some(current => current.id === party.alignedCurrentId && (current.value ?? current.relation ?? 0) >= 75);
+  // The President of the Republic is an office above the parties: no party, no seat, the powers of the Quirinale.
+  const president = Boolean(game?.flags?.president) && state.presidency?.incumbent?.kind === 'giocatore';
+  const exPresident = Boolean(game?.flags?.exPresident);
+  const electionRole = state.presidency?.election?.player?.role ?? null;
+  const elector = ['leader', 'elettore', 'delegato'].includes(electionRole) && state.presidency?.election?.phase !== 'conclusa';
+  const birthDate = state.dataset?.politicians?.find(item => item.id === state.career?.playerId)?.birthDate ?? null;
+  const eligibility = presidentialEligibility({ birthDate, date: state.clock?.currentDate ?? null });
+  const semester = president ? whiteSemester(state.presidency.incumbent, state.clock.currentDate, state.national?.legislature?.naturalEnd ?? null) : null;
   const roles = [];
+  if (president) roles.push(['presidente', 'Presidente della Repubblica']);
+  else if (exPresident) roles.push(['ex-presidente', 'Ex Presidente della Repubblica · senatore a vita di diritto']);
   if (party?.affiliation === 'founder') roles.push(['fondatore', 'Fondatore e segretario']);
   else if (secretary) roles.push(['segretario', 'Segretario nazionale']);
   else if (party?.affiliation === 'member') roles.push([party.rank >= 3 ? 'direzione' : party.rank >= 1 ? 'dirigente' : 'iscritto', party.rankTitle]);
@@ -32,7 +45,9 @@ export function playerRoles(state) {
   if (minister) roles.push(['ministro', 'Ministro']);
   if (game?.flags?.scenarioOffice) roles.push(['sottosegretario', game.flags.scenarioOffice.title]);
   if (isPrimeMinister(parliament)) roles.push(['premier', 'Presidente del Consiglio']);
-  if (!party) roles.push(['indipendente', 'Indipendente']);
+  if (!party && !president && !exPresident) roles.push(['indipendente', 'Indipendente']);
+  // A career the player concluded: no office, no power, only the legacy.
+  if (game?.status === 'ended' && game.endKind) roles.unshift(['concluso', `${END_KINDS[game.endKind]?.label ?? 'Carriera conclusa'}${game.legacy ? ` · eredità ${game.legacy.score}/100` : ''}`]);
   const powers = [
     ['Attività sul territorio, media e relazioni', true, null],
     ['Riunioni, tesseramento, contributi al partito', Boolean(party), 'Serve un partito'],
@@ -53,7 +68,14 @@ export function playerRoles(state) {
     ['Indirizzo politico e priorità nazionali del governo', isPrimeMinister(parliament), 'Solo il Presidente del Consiglio'],
     ['Disegni di legge del governo e legge di bilancio (li approva il Parlamento)', isPrimeMinister(parliament), 'Solo il Presidente del Consiglio'],
     ['Decreti-legge, solo con un’emergenza aperta (da convertire in 60 giorni)', isPrimeMinister(parliament), 'Solo il Presidente del Consiglio'],
-    ['Ministri, rimpasti, vertici di maggioranza, questione di fiducia', isPrimeMinister(parliament), 'Solo il Presidente del Consiglio']
+    ['Ministri, rimpasti, vertici di maggioranza, questione di fiducia', isPrimeMinister(parliament), 'Solo il Presidente del Consiglio'],
+    // The Quirinale: a different office from the Prime Minister's (it names, promulgates, dissolves; it does not govern).
+    [`Consultazioni, incarico di governo e scioglimento delle Camere${semester?.active ? ' (oggi non: semestre bianco)' : ''}`, president, 'Solo il Presidente della Repubblica'],
+    ['Promulgare o rinviare alle Camere le leggi approvate', president, 'Solo il Presidente della Repubblica'],
+    ['Messaggi alle Camere, moral suasion, visite e cerimonie di Stato', president, 'Solo il Presidente della Repubblica'],
+    ['Nominare senatori a vita (fino a cinque) e presiedere CSM e Consiglio supremo di difesa', president, 'Solo il Presidente della Repubblica'],
+    ['Votare per il Presidente della Repubblica in seduta comune (scrutinio segreto)', elector, 'Serve essere grande elettore (deputato, senatore o delegato regionale) quando si apre l’elezione'],
+    [`Candidarsi al Quirinale (${PRESIDENCY_RULES.minAge} anni compiuti e il consenso dei grandi elettori)`, eligibility.eligible && !president, president ? 'Sei già il Presidente della Repubblica' : eligibility.problems[0] ?? 'Non eleggibile']
   ].map(([label, enabled, reason]) => ({ label, enabled: Boolean(enabled), reason: enabled ? null : reason }));
-  return { roles, powers, secretary, seat, minister, primeMinister: isPrimeMinister(parliament) };
+  return { roles, powers, secretary, seat, minister, primeMinister: isPrimeMinister(parliament), president, exPresident };
 }

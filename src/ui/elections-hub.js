@@ -12,9 +12,10 @@ import { glyph } from './visuals.js?v=20261003-1';
 import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, sectionTabs, signed, table, weeksLabel } from './sections-kit.js?v=20261003-1';
 import { mandatePlace, renderElectionReport } from './election-report.js?v=20261003-1';
 import { renderNationalView } from './national-view.js?v=20261003-1';
+import { renderQuirinale } from './presidency-view.js?v=20261003-1';
 export { renderElectionReport };
 
-export const ELECTION_TABS = Object.freeze([['panoramica', 'Panoramica'], ['nazionali', 'Nazionali'], ['candidatura', 'Candidatura'], ['campagna', 'Campagna'], ['avversari', 'Sondaggi e avversari'], ['risultati', 'Risultati'], ['storico', 'Storico']]);
+export const ELECTION_TABS = Object.freeze([['panoramica', 'Panoramica'], ['nazionali', 'Nazionali'], ['quirinale', 'Quirinale'], ['candidatura', 'Candidatura'], ['campagna', 'Campagna'], ['avversari', 'Sondaggi e avversari'], ['risultati', 'Risultati'], ['storico', 'Storico']]);
 const TYPE_ICONS = { comunale: 'town', regionale: 'map', politiche: 'dome', europee: 'globe' };
 const STATUS = { upcoming: ['In calendario', 'neutral'], open: ['Candidature aperte', 'good'], running: ['Campagna in corso', 'warn'], missed: ['Candidature chiuse', 'bad'], held: ['Concluse', 'neutral'] };
 const daysUntil = (from, to) => Math.max(0, Math.round((Date.parse(`${to}T12:00:00`) - Date.parse(`${from}T12:00:00`)) / 86400000));
@@ -195,18 +196,19 @@ function history(state) {
   return card({ kicker: 'STORICO ELETTORALE · SIMULAZIONE', title: `${entries.length} ${entries.length === 1 ? 'elezione' : 'elezioni'} · ${wins} con mandato`, body: table([['date', 'Data'], ['type', 'Elezione'], ['share', '%', 'num'], ['position', 'Pos.', 'num'], ['outcome', 'Esito'], ['expectation', 'Attese'], ['seats', 'Seggi lista', 'num']], rows, { empty: 'Nessuna elezione ancora disputata.' }) });
 }
 
-export function renderElectionsHub(state, { parties = [], logoFor = () => null, tab = null, national = null, geography = null, nationalView = null, campaignPicks = {} } = {}) {
+export function renderElectionsHub(state, { parties = [], logoFor = () => null, tab = null, national = null, geography = null, nationalView = null, campaignPicks = {}, presidency = null } = {}) {
   if (!state.game) return empty('Crea prima un politico per entrare nella centrale elettorale.', '<button class="primary-button" data-action="new-career">Crea il politico</button>');
   const active = ELECTION_TABS.some(([id]) => id === tab) ? tab : defaultElectionTab(state);
   const summary = state.campaign?.status === 'active' ? campaignSummary(state.campaign) : null;
   const formation = state.national?.formation;
-  const counts = { campagna: state.campaign?.status === 'active' ? '●' : '', nazionali: state.national?.campaign || (formation && !['completata', 'fallita'].includes(formation.phase)) ? '●' : '', storico: (state.career.electionHistory ?? []).length || '' };
+  const counts = { quirinale: state.presidency?.election || state.presidency?.incumbent?.kind === 'giocatore' ? '●' : '', campagna: state.campaign?.status === 'active' ? '●' : '', nazionali: state.national?.campaign || (formation && !['completata', 'fallita'].includes(formation.phase)) ? '●' : '', storico: (state.career.electionHistory ?? []).length || '' };
   let body = '';
   if (active === 'panoramica') body = `<div class="sx-grid two">${card({ kicker: 'CALENDARIO ELETTORALE', title: 'Quando si vota', body: calendar(state) })}${card({ kicker: 'CONTESTO POLITICO', title: 'Il clima del voto', body: context(state) })}</div><div class="sx-grid two">${card({ kicker: 'PREPARAZIONE', title: 'Quanto sei pronto', body: readiness(state) })}${card({ kicker: 'REGOLE DEL GIOCO', title: 'Come si assegnano i seggi', body: rules(state) })}</div>`;
   else if (active === 'candidatura') body = candidacy(state);
   else if (active === 'campagna') body = `<div class="eh-campaign">${renderCampaignPage(state, parties, logoFor, campaignPicks)}</div>`;
   else if (active === 'avversari') body = rivals(state, parties, logoFor);
   else if (active === 'risultati') body = renderElectionReport(state.career.lastElectionReport, { place: mandatePlace(state, state.career.lastElectionReport) });
+  else if (active === 'quirinale') body = presidency ? renderQuirinale(state, presidency()) : empty('Il Quirinale si apre con i dati della partita.');
   else if (active === 'nazionali') body = national ? renderNationalView(state, national(), { geography, view: nationalView }) : empty('Il ciclo nazionale si apre con i dati della partita: calendario, coalizioni e proiezione dei seggi.');
   else body = history(state);
   return `<div class="elections-hub">${hero(state, summary)}${sectionTabs('elezioni', ELECTION_TABS.map(([id, label]) => [id, label, counts[id]]), active)}<div class="sx-body" role="tabpanel">${body}</div></div>`;

@@ -172,7 +172,7 @@ await reloaded.click({ wizardAction: 'cancel' });
 page = await game.click({ wizardAction: 'cancel' });
 assert.ok(page.includes('main-menu') && !page.includes('career-wizard'), 'Chiudendo la procedura si torna al menu.');
 page = await game.click({ menu: 'guida' });
-const sections = ['L’obiettivo', 'Iniziare una partita', 'Il tempo', 'Attività e decisioni', 'Ruoli e poteri', 'Partito', 'Parlamento, governo e leggi', 'Eventi', 'Consenso, sondaggi e media', 'Cittadini e territori', 'Finanze', 'Elezioni', 'Dati reali e simulazione', 'Salvataggi, account e sincronizzazione', 'Cosa cambia nel tempo', 'Difficoltà'];
+const sections = ['L’obiettivo', 'Iniziare una partita', 'Il tempo', 'Attività e decisioni', 'Ruoli e poteri', 'Il Quirinale', 'Obiettivi, Hall of Fame ed eredità', 'Partito', 'Parlamento, governo e leggi', 'Eventi', 'Consenso, sondaggi e media', 'Cittadini e territori', 'Finanze', 'Elezioni', 'Dati reali e simulazione', 'Salvataggi, account e sincronizzazione', 'Cosa cambia nel tempo', 'Difficoltà'];
 for (const title of sections) assert.ok(page.includes(`<strong>${title}</strong>`), `Come giocare: manca la sezione «${title}».`);
 assert.equal((page.match(/class="guide-card"/g) ?? []).length, sections.length);
 assert.equal((page.match(/class="guide-example"/g) ?? []).length, sections.length, 'Ogni sezione ha un esempio concreto.');

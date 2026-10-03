@@ -4,6 +4,9 @@ const BACKUP_KEY = `${STORAGE_KEY}.backup`;
 const SLOT_INDEX = 'politicando.slots.v1';
 const SLOT_PREFIX = 'politicando.slot.';
 export const MAX_SLOTS = 5;
+// The Hall of Fame (the careers concluded and their legacy) belongs to the player: it is not part of any save and
+// outlives every career, every slot and “delete all saves”.
+const HALL_KEY = 'politicando.hall.v1';
 
 const readJson = key => { try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; } catch { return null; } };
 
@@ -54,6 +57,12 @@ export const storage = {
   deleteSlot(id) {
     localStorage.removeItem(SLOT_PREFIX + id);
     localStorage.setItem(SLOT_INDEX, JSON.stringify(storage.listSlots().filter(entry => entry.id !== id)));
+  },
+  // ---------- the Hall of Fame ----------
+  hall() { const list = readJson(HALL_KEY); return Array.isArray(list) ? list.filter(entry => entry?.id) : []; },
+  saveHall(entries) {
+    try { localStorage.setItem(HALL_KEY, JSON.stringify(entries)); }
+    catch { throw new Error('Spazio del browser esaurito: la Hall of Fame non è stata aggiornata.'); }
   },
   clearAll() {
     for (const entry of storage.listSlots()) localStorage.removeItem(SLOT_PREFIX + entry.id);

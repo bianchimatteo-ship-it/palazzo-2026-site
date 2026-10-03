@@ -56,7 +56,7 @@ const volt = parties.find(item => item.id === 'party-registro-p1-2024-71-ir');
 store.createCareer({ firstName: 'Marta', lastName: 'Neri', birthDate: '1985-02-11', gender: 'donna', region: 'Toscana', municipality: 'Siena', previousProfession: 'Architetta', initialLevel: 'comunale', partyMode: 'existing', partyId: volt.id, parliamentStartMode: 'real-context', parliamentaryGroupId: '', policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 } }, [volt], groups);
 let state = store.getState();
 let overview = careerOverview(state);
-assert.deepEqual(overview.tracks.map(track => track.id), ['istituzioni', 'partito', 'parlamento', 'governo'], 'Quattro percorsi: istituzioni, partito, Parlamento, governo.');
+assert.deepEqual(overview.tracks.map(track => track.id), ['istituzioni', 'partito', 'parlamento', 'governo', 'quirinale'], 'Cinque percorsi: istituzioni, partito, Parlamento, governo e Quirinale.');
 const partyTrack = overview.tracks.find(track => track.id === 'partito');
 assert.ok(partyTrack.odds && partyTrack.odds.chance > 0 && partyTrack.odds.chance < 1 && partyTrack.next.title === 'Coordinatore locale', 'Il prossimo incarico nel partito mostra una probabilità, non una certezza.');
 assert.ok(partyTrack.steps.some(step => step.current) && partyTrack.steps.filter(step => step.current).length === 1, 'Una sola tappa corrente.');

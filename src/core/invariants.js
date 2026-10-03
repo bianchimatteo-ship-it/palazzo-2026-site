@@ -3,6 +3,9 @@
 // checkInvariants(state, context) → { ok, issues: [{ code, path, message }] }
 // context (optional): the real reference the state may point to — realPartyIds, realGroupIds (Sets or arrays).
 
+import { LEVER_BY_ID } from '../data/simulation/start-rules.js?v=20261003-1';
+import { AMBITION_LIMIT, OBJECTIVE_BY_ID } from '../data/simulation/objective-rules.js?v=20261003-1';
+
 const SEATS = { camera: 400, senato: 200 };
 // The Senate also has the senators for life (and, in the real XIX legislature, a few vacancies may appear in either
 // Chamber): real compositions are allowed a small margin, simulated ones must be exact.
@@ -53,6 +56,8 @@ export function checkInvariants(state, context = {}) {
   checkLocal(state, report);
   checkPartyLife(state, report);
   checkStructures(state, report);
+  checkPresidency(state, report);
+  checkCareerGoals(state, report);
   checkAgenda(state, known, report);
   return { ok: issues.length === 0, issues };
 }
@@ -370,6 +375,91 @@ function checkStructures(state, report) {
 
 // The internal life of the party: the people behind the currents are the currents of the party, the requests and the
 // agreements point to them, the seats of the national bodies add up, the local leaders follow committees that exist.
+// The President of the Republic: the term in office, the assembly of an election in progress (its total, the two thirds
+// and the absolute majority, 58 regional delegates), the ballots (the quorum of each, the sum of its votes), and the
+// office of the player when the player is President (no party, no seat, no other office, exactly one open Quirinale office).
+function checkPresidency(state, report) {
+  const presidency = state.presidency;
+  if (!presidency) return;
+  const incumbent = presidency.incumbent;
+  if (!incumbent || !['simulato', 'giocatore'].includes(incumbent.kind)) report('quirinale', 'presidency.incumbent', 'Il Presidente in carica manca o ha un tipo non valido.');
+  if (incumbent && !validDay(incumbent.since)) report('quirinale', 'presidency.incumbent.since', `Inizio del mandato non valido: ${incumbent.since}`);
+  if (incumbent && !(incumbent.number >= 1)) report('quirinale', 'presidency.incumbent.number', 'Numero del mandato non valido.');
+  const election = presidency.election;
+  if (election) {
+    const blocs = records(election.blocs);
+    const total = blocs.reduce((sum, bloc) => sum + (bloc.electors ?? 0), 0);
+    const assembly = election.assembly ?? {};
+    if (total !== assembly.total) report('quirinale', 'presidency.election.assembly.total', `Grandi elettori: ${total} nei gruppi, ${assembly.total} nell’assemblea.`);
+    if (assembly.twoThirds !== Math.ceil(2 * (assembly.total ?? 0) / 3)) report('quirinale', 'presidency.election.assembly.twoThirds', `Due terzi non coerenti con l’assemblea: ${assembly.twoThirds} su ${assembly.total}.`);
+    if (assembly.absolute !== Math.floor((assembly.total ?? 0) / 2) + 1) report('quirinale', 'presidency.election.assembly.absolute', `Maggioranza assoluta non coerente con l’assemblea: ${assembly.absolute} su ${assembly.total}.`);
+    if ((assembly.camera ?? 0) + (assembly.senato ?? 0) + (assembly.delegates ?? 0) + (assembly.lifeSenators ?? 0) !== assembly.total) report('quirinale', 'presidency.election.assembly', 'Camera, Senato, delegati e senatori a vita non sommano al totale.');
+    if (assembly.delegates !== 58 || blocs.reduce((sum, bloc) => sum + (bloc.delegates ?? 0), 0) !== 58) report('quirinale', 'presidency.election.assembly.delegates', `I delegati regionali devono essere 58 (tre per Regione, uno per la Valle d’Aosta): ${assembly.delegates}.`);
+    const regions = records(assembly.regions);
+    if (regions.length !== 20 || regions.some(region => region.delegates !== (region.region === 'Valle d’Aosta' ? 1 : 3) || records(region.slots).length !== region.delegates)) report('quirinale', 'presidency.election.assembly.regions', 'Ogni Regione deve avere tre delegati e la Valle d’Aosta uno.');
+    const candidateIds = records(election.candidates).map(item => item.id);
+    if (new Set(candidateIds).size !== candidateIds.length) report('quirinale', 'presidency.election.candidates', 'Candidati con id duplicati.');
+    const blocIds = new Set(blocs.map(bloc => bloc.id));
+    for (const candidate of records(election.candidates)) for (const id of candidate.sponsors ?? []) if (!blocIds.has(id)) report('quirinale', `presidency.election.candidates.${candidate.id}`, `Sponsor sconosciuto: ${id}`);
+    records(election.ballots).forEach((ballot, index) => {
+      const path = `presidency.election.ballots[${index}]`;
+      if (ballot.n !== index + 1) report('quirinale', path, `Scrutinio numerato ${ballot.n} al posto ${index + 1}.`);
+      const needed = ballot.n <= 3 ? assembly.twoThirds : assembly.absolute;
+      if (ballot.needed !== needed) report('quirinale', path, `Quorum del ${ballot.n}º scrutinio: ${ballot.needed} invece di ${needed} (${ballot.n <= 3 ? 'due terzi' : 'maggioranza assoluta'}).`);
+      const cast = records(ballot.votes).reduce((sum, row) => sum + (row.votes ?? 0), 0) + (ballot.blank ?? 0) + (ballot.scattered ?? 0) + (ballot.absent ?? 0);
+      if (cast !== assembly.total) report('quirinale', path, `I voti dello scrutinio sommano a ${cast}, i grandi elettori sono ${assembly.total}.`);
+      if (ballot.elected && !ballot.forced && ballot.leaderVotes < ballot.needed) report('quirinale', path, `Eletto con ${ballot.leaderVotes} voti sotto il quorum di ${ballot.needed}.`);
+      if (ballot.elected && index !== election.ballots.length - 1) report('quirinale', path, 'Uno scrutinio con un eletto non è l’ultimo.');
+    });
+  }
+  const president = Boolean(state.game?.flags?.president);
+  if (president && incumbent?.kind !== 'giocatore') report('quirinale', 'game.flags.president', 'Il giocatore è segnato come Presidente ma il Presidente in carica è un altro.');
+  if (incumbent?.kind === 'giocatore' && !president) report('quirinale', 'presidency.incumbent', 'Il Presidente in carica è il giocatore ma il suo stato non lo segna.');
+  if (president) {
+    const playerId = state.career?.playerId;
+    const open = records(state.dataset?.offices).filter(office => office.politicianId === playerId && !office.endDate);
+    if (state.game.party) report('quirinale', 'game.party', 'Il Presidente della Repubblica non può avere un partito.');
+    if (state.parliament?.player?.groupId) report('quirinale', 'parliament.player', 'Il Presidente della Repubblica non può sedere in Parlamento.');
+    if (records(state.local?.institutions).some(inst => inst.status === 'active')) report('quirinale', 'local.institutions', 'Il Presidente della Repubblica non può avere incarichi locali o europei.');
+    const quirinale = open.filter(office => office.level === 'presidente');
+    if (quirinale.length !== 1) report('quirinale', 'dataset.offices', `Deve esserci un solo incarico aperto da Presidente: ce ne sono ${quirinale.length}.`);
+    if (open.some(office => office.level !== 'presidente' && !/inizial/i.test(office.title ?? ''))) report('quirinale', 'dataset.offices', 'Il Presidente della Repubblica ha un altro incarico aperto (incompatibilità, art. 84).');
+    if (incumbent?.credit !== undefined && !(incumbent.credit >= 0 && incumbent.credit <= 100)) report('quirinale', 'presidency.incumbent.credit', `Credito del Presidente fuori scala: ${incumbent.credit}`);
+  }
+}
+
+// The starting conditions, the goals and the end of a career: levels in range, known ids, valid states and deadlines.
+function checkCareerGoals(state, report) {
+  const game = state.game;
+  if (!game) return;
+  const start = game.start;
+  if (start) {
+    for (const [id, level] of Object.entries(start.levels ?? {})) if (!LEVER_BY_ID[id] || !Number.isInteger(level) || level < 1 || level > 3) report('partenza', `game.start.levels.${id}`, `Livello di partenza non valido: ${id} = ${level}`);
+    records(start.debts).forEach((debt, index) => {
+      if (!['aperto', 'saldato', 'tradito'].includes(debt.status)) report('partenza', `game.start.debts[${index}]`, `Stato del debito non valido: ${debt.status}`);
+      if (!Number.isFinite(debt.due) || !(debt.deferred >= 0)) report('partenza', `game.start.debts[${index}]`, 'Scadenza o rinvii del debito non validi.');
+    });
+    records(start.enemies).forEach((enemy, index) => { if (!Number.isFinite(enemy.nextAttack)) report('partenza', `game.start.enemies[${index}]`, 'Il prossimo attacco del nemico non ha una settimana.'); });
+    const outsider = start.outsider;
+    if (outsider && !(outsider.level >= 0 && outsider.level <= 3 && outsider.integration >= 0 && outsider.integration <= 1.0001)) report('partenza', 'game.start.outsider', `Outsider fuori scala: livello ${outsider.level}, integrazione ${outsider.integration}`);
+    const expectation = start.expectation;
+    if (expectation && !(expectation.lowered >= 0 && expectation.lowered <= (start.levels?.aspettative ?? 0))) report('partenza', 'game.start.expectation', `Aspettative abbassate di ${expectation.lowered} livelli su ${start.levels?.aspettative ?? 0}.`);
+  }
+  const ambitions = records(game.ambitions);
+  if (ambitions.length > AMBITION_LIMIT) report('obiettivi', 'game.ambitions', `Impegni dichiarati: ${ambitions.length}, al massimo ${AMBITION_LIMIT}.`);
+  ambitions.forEach((item, index) => {
+    if (!OBJECTIVE_BY_ID[item.id]) report('obiettivi', `game.ambitions[${index}]`, `Impegno su un obiettivo sconosciuto: ${item.id}`);
+    if (!Number.isFinite(item.deadline) || item.deadline < (item.week ?? 0)) report('obiettivi', `game.ambitions[${index}]`, 'Scadenza dell’impegno non valida.');
+    if (game.objectives?.[item.id]) report('obiettivi', `game.ambitions[${index}]`, `L’obiettivo ${item.id} è già raggiunto ma l’impegno è ancora aperto.`);
+  });
+  for (const id of Object.keys(game.unlocks ?? {})) if (!OBJECTIVE_BY_ID[id]) report('obiettivi', `game.unlocks.${id}`, `Sblocco di un obiettivo sconosciuto: ${id}`);
+  if (game.status === 'ended' && game.endKind) {
+    if (!['ritiro', 'pensionamento'].includes(game.endKind)) report('fine-carriera', 'game.endKind', `Tipo di fine non valido: ${game.endKind}`);
+    if (!game.legacy || !(game.legacy.score >= 0 && game.legacy.score <= 100) || !game.legacy.hallId) report('fine-carriera', 'game.legacy', 'Una carriera conclusa deve avere la sua eredità, da 0 a 100, e la voce della Hall of Fame.');
+    if (records(state.dataset?.offices).some(office => office.politicianId === state.career?.playerId && !office.endDate)) report('fine-carriera', 'dataset.offices', 'Una carriera conclusa non ha incarichi aperti.');
+  }
+}
+
 function checkPartyLife(state, report) {
   const party = state.game?.party;
   const life = party?.life;
