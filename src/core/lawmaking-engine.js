@@ -373,18 +373,18 @@ export function speakOnLaw(parliament, lawId, stance, date) {
 // The odds that the sponsor accepts an amendment of the player: relations, the same side, the player's weight and a
 // role in committee, and the player's vote offered in exchange (a deal: breaking it later costs dearly); nothing passes
 // on a text under a question of confidence.
-export function amendmentOdds(parliament, law, { influence = 50, committeeRole = false, offerVote = false } = {}) {
+export function amendmentOdds(parliament, law, { influence = 50, committeeRole = false, offerVote = false, competence = 50 } = {}) {
   if (law.confidence) return 0;
   const governing = governingGroupIds(parliament);
   const relation = law.sponsor?.groupId ? parliament.relations?.[law.sponsor.groupId]?.value ?? 50 : 55;
   const sameSide = governing.has(parliament.player?.groupId) === sponsorGoverns(parliament, law, governing);
-  return round2(clamp(0.22 + (relation - 50) / 110 + (committeeRole ? 0.15 : 0) + (sameSide ? 0.12 : -0.05) + (influence - 50) / 250 + (offerVote ? 0.15 : 0), 0.03, 0.9));
+  return round2(clamp(0.22 + (relation - 50) / 110 + (committeeRole ? 0.15 : 0) + (sameSide ? 0.12 : -0.05) + (influence - 50) / 250 + (competence - 50) / 400 + (offerVote ? 0.15 : 0), 0.03, 0.9));
 }
-export function amendOthersLaw(parliament, lawId, patch, date, { influence = 50, committeeRole = false, roll = 0.5, offerVote = false } = {}) {
+export function amendOthersLaw(parliament, lawId, patch, date, { influence = 50, committeeRole = false, roll = 0.5, offerVote = false, competence = 50 } = {}) {
   const law = openLawIn(parliament, lawId);
   if (!['commission', 'amendments'].includes(law.stage)) throw new Error('Gli emendamenti si presentano in commissione, prima del voto.');
   if ((law.playerAmendments ?? []).filter(item => item.chamber === law.currentChamber).length >= 2) throw new Error('Hai già presentato due emendamenti a questo testo in questa Camera.');
-  const chance = amendmentOdds(parliament, law, { influence, committeeRole, offerVote });
+  const chance = amendmentOdds(parliament, law, { influence, committeeRole, offerVote, competence });
   const entry = { date, patch, chamber: law.currentChamber, chance, offerVote: Boolean(offerVote) };
   if (roll >= chance) {
     const next = replaceLaw(parliament, lawId, current => note({ ...current, playerAmendments: [...(current.playerAmendments ?? []), { ...entry, accepted: false }] }, date, 'Respinto un tuo emendamento.'));

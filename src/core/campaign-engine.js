@@ -66,7 +66,7 @@ function profileForCandidate(campaignSeed, candidateId, index = 0, type = 'polit
   const objective = RIVAL_OBJECTIVES[(seed >>> 3) % RIVAL_OBJECTIVES.length];
   const firstInterest = RIVAL_INTERESTS[(seed >>> 7) % RIVAL_INTERESTS.length];
   const secondInterest = RIVAL_INTERESTS[(seed >>> 11) % RIVAL_INTERESTS.length];
-  const interests = [...new Set([firstInterest, secondInterest, type === 'comunale' ? 'elettorato-locale' : null].filter(Boolean))];
+  const interests = [...new Set([firstInterest, secondInterest, ['comunale', 'provinciale'].includes(type) ? 'elettorato-locale' : null].filter(Boolean))];
   return {
     version: 1,
     personality,
@@ -137,6 +137,11 @@ function rivalRelationship(campaign, rival, targetId) {
 function campaignTerritories(type, player, userTerritories) {
   const playerMunicipality = userTerritories.find(item => item.id === player.territoryId)?.name ?? player.municipality ?? 'Territorio locale';
   if (type === 'comunale') return [{ id:`sim-territory-comune-${hash(playerMunicipality).toString(36)}`, name:playerMunicipality, kind:'comune', weight:100, source:SOURCE, scope:'territorio comunale', organization:30 }];
+  // The electorate of a second-level vote: the mayors and the municipal councillors of the province, by the weight of the
+  // comune they come from (rules of the game: the bigger comuni weigh more, the small ones are many).
+  if (type === 'provinciale') return [
+    ['comuni-grandi', 'Comuni sopra i 15.000 abitanti', 44], ['comuni-medi', 'Comuni tra 5.000 e 15.000 abitanti', 33], ['comuni-piccoli', 'Piccoli comuni sotto i 5.000 abitanti', 23]
+  ].map(([id,name,weight], index) => ({ id:`sim-provincia-${id}`, name, kind:'fascia-comuni-simulata', urban:index === 0, region:player.region, province:player.province ?? null, weight, source:SOURCE, organization:Math.max(8, 26 - index * 4) }));
   if (type === 'regionale') return [
     ['area-capoluogo', 'Capoluogo e area urbana', 27], ['area-nord', 'Area regionale settentrionale', 25],
     ['area-centro', 'Area regionale centrale', 25], ['area-sud', 'Area regionale meridionale', 23]
@@ -171,7 +176,7 @@ function buildOpponents(partyId, catalog, seed, count = 3, realCandidates = [], 
   const home = regionIdOf(region);
   const pool = catalog.filter(item => item?.id && item.id !== partyId && (item.source === 'real' || item.source === 'simulation' || item.source === 'user')
       && !['historical', 'inactive', 'sciolto'].includes(item.status) && !item.adminHidden && !item.sameEntityAs
-      && (!item.regionId || (['comunale', 'regionale'].includes(type) && item.regionId === home)))
+      && (!item.regionId || (['comunale', 'provinciale', 'regionale'].includes(type) && item.regionId === home)))
     .sort((a,b) => String(a.id).localeCompare(String(b.id)));
   const parties = [];
   while (pool.length) {
@@ -196,7 +201,7 @@ function buildOpponents(partyId, catalog, seed, count = 3, realCandidates = [], 
 }
 
 // How many rival candidacies run against the player, by kind of election.
-export const RIVALS_BY_TYPE = Object.freeze({ comunale:{ small:3, default:4 }, regionale:{ default:4 }, politiche:{ default:5 }, europee:{ default:6 } });
+export const RIVALS_BY_TYPE = Object.freeze({ comunale:{ small:3, default:4 }, provinciale:{ default:3 }, regionale:{ default:4 }, politiche:{ default:5 }, europee:{ default:6 } });
 const candidateLabel = candidate => candidate.realReference?.fullName ?? (candidate.partyAbbreviation || candidate.partyLabel ? `la candidatura di ${candidate.partyAbbreviation || candidate.partyLabel}` : candidate.displayName);
 function initSupport(areas, candidates, player, seed) {
   const rand = randomFrom(seed ^ 0x7f4a7c15);
@@ -248,8 +253,8 @@ function transferSupport(campaign, fromId, toId, delta, areaId = null) {
 }
 // How much a campaign can move: what the player does counts, but less and less as the gains pile up (the first
 // points come easily, then every point costs more). A strong campaign is worth a few points, never a landslide.
-const IMPACT_SCALE = Object.freeze({ comunale:.42, regionale:.5, politiche:.6, europee:.6 });
-const ELASTICITY = Object.freeze({ comunale:5, regionale:4.5, politiche:3.5, europee:3.5 });
+const IMPACT_SCALE = Object.freeze({ comunale:.42, provinciale:.4, regionale:.5, politiche:.6, europee:.6 });
+const ELASTICITY = Object.freeze({ comunale:5, provinciale:5, regionale:4.5, politiche:3.5, europee:3.5 });
 function playerMove(campaign, delta, areaId = null) {
   const player = campaign.candidates.find(item => item.isPlayer);
   if (!player || !delta) return 0;
@@ -326,8 +331,8 @@ export function strategyFit(campaign, id, { topicId = null, targetId = null } = 
   const player = campaign.candidates.find(item => item.isPlayer);
   if (id === 'consolidare') return gap <= 0 ? 1.14 : gap < 5 ? 1 : .8;
   if (id === 'nuovi') return gap > 8 ? 1.28 : gap > 0 ? 1.08 : .82;
-  if (id === 'territorio') return round(({ comunale:1.2, regionale:1.08, politiche:.88, europee:.8 })[type] * (.9 + clamp(player?.resources?.organization ?? 30, 0, 100) / 300));
-  if (id === 'media') return round(({ comunale:.86, regionale:1, politiche:1.12, europee:1.16 })[type] * (.82 + clamp(stats.notoriety ?? 20, 0, 100) / 220));
+  if (id === 'territorio') return round(({ comunale:1.2, provinciale:1.15, regionale:1.08, politiche:.88, europee:.8 })[type] * (.9 + clamp(player?.resources?.organization ?? 30, 0, 100) / 300));
+  if (id === 'media') return round(({ comunale:.86, provinciale:.7, regionale:1, politiche:1.12, europee:1.16 })[type] * (.82 + clamp(stats.notoriety ?? 20, 0, 100) / 220));
   if (id === 'temi') return (topicId ?? campaign.strategy?.topicId) === campaign.nationalContext?.salientTopic ? 1.25 : .88;
   if (id === 'contrasto') {
     const target = campaign.candidates.find(item => item.id === (targetId ?? campaign.strategy?.targetId)) ?? rival;
@@ -767,8 +772,8 @@ export function createCampaign({career,player,statistics=[],offices=[],territori
   };
   const partyRecord=partyCatalog.find(item=>item.id===partyId);
   const userOrIndependent= !partyId || partyRecord?.source==='user' || partyRecord?.id?.startsWith('partito-utente-');
-  const validRoles={comunale:['sindaco','consigliere'],regionale:['presidente','consigliere'],politiche:['deputato','senatore','uninominale'],europee:['eurodeputato']};
-  const role=config.role ?? (type==='comunale'?'sindaco':type==='regionale'?'presidente':type==='politiche'?'deputato':'eurodeputato');
+  const validRoles={comunale:['sindaco','consigliere'],provinciale:['presidente','consigliere'],regionale:['presidente','consigliere'],politiche:['deputato','senatore','uninominale'],europee:['eurodeputato']};
+  const role=config.role ?? (type==='comunale'?'sindaco':type==='provinciale'?'consigliere':type==='regionale'?'presidente':type==='politiche'?'deputato':'eurodeputato');
   if(!validRoles[type].includes(role)) throw new Error('Il ruolo selezionato non è compatibile con il tipo di elezione.');
   const campaignAreas=campaignTerritories(type,player,userTerritories);
   const localTrendRandom=randomFrom(seed ^ 0x27d4eb2f);
@@ -789,7 +794,7 @@ export function createCampaign({career,player,statistics=[],offices=[],territori
   const internalSupport=partyId && !userOrIndependent ? round(1.5+playerStats.influence*.035+(incumbency?1.5:0)) : 10;
   const nomination={status:userOrIndependent?'approved':'pending',internalSupport,requiredSupport:7,deadlineDay,listPosition:6,source:SOURCE,
     incumbent:incumbency,incumbencyNote:incumbency?'La ricandidatura è da negoziare e non è garantita.':null};
-  const baseMoney=type==='comunale'?9500:type==='regionale'?18000:28000;
+  const baseMoney=type==='comunale'?9500:type==='provinciale'?6000:type==='regionale'?18000:28000;
   const initialResources={money:baseMoney+Math.round(playerStats.influence*55),volunteers:Math.max(8,Math.round(12+playerStats.influence*.25)),organization:Math.max(12,Math.round(24+playerStats.experience*.22)),visibility:Math.round(playerStats.notoriety*.22),politicalCapital:Math.max(5,Math.round(8+playerStats.influence*.13)),source:SOURCE};
   candidate.resources={...initialResources};
   const allPartyRefs=partyCatalog.filter(item=>candidates.some(candidate=>candidate.partyId===item.id)).map(item=>({id:item.id,source:item.source,verified:item.verified===true}));
@@ -798,7 +803,7 @@ export function createCampaign({career,player,statistics=[],offices=[],territori
   const strategy = config.strategy && CAMPAIGN_STRATEGIES[config.strategy] ? config.strategy : null;
   const campaign={
     id:campaignId,careerId:career.id,playerId:player.id,electionType:type,electionLabel:model.label,model:model.model,
-    modelSource:model.source,modelReference:{source:'real',verified:true,sourceUrl:model.referenceUrl,sourceName:model.referenceName,verifiedAt:'2026-09-22',validFrom:null,validTo:null},
+    modelSource:model.source,modelReference:{source:'real',verified:model.referenceVerified!==false,sourceUrl:model.referenceUrl,sourceName:model.referenceName,verifiedAt:'2026-09-22',validFrom:null,validTo:null},
     ruleFacts:type==='europee'?{threshold:EUROPEAN_THRESHOLD}:null,
     municipalityBand:type==='comunale'?(config.municipalityBand==='oltre-15000'?'oltre-15000':'fino-15000'):null,
     objective:config.objective??'build',playerCandidateId,partyId,independent:userOrIndependent && !partyId,partyReferences:allPartyRefs,

@@ -354,14 +354,18 @@ let president;
   assert.equal(game.getState().game.status, 'active');
   assert.ok(presidency().incumbent.credit >= 0 && presidency().incumbent.credit <= 100);
   noIssues(game.getState(), 'esercizio dei poteri');
-  // Il semestre bianco: dopo l'estate del 2035 non si sciolgono le Camere (anche con una crisi aperta).
+  // Il semestre bianco: dopo l'estate del 2035 non si sciolgono le Camere (anche con una crisi aperta). Il caso in cui gli ultimi sei
+  // mesi del mandato coincidono con la fine della legislatura (art. 88) ha il suo controllo; qui la legislatura finisce molto dopo.
   while (game.getState().clock.currentDate < '2035-09-01') game.advance(7);
+  const naturalEnd = game.getState().national.legislature.naturalEnd;
+  game.getState().national.legislature.naturalEnd = '2038-05-01';
   const white = game.presidencyView();
   assert.ok(white.semester.active, 'Da agosto 2035 è semestre bianco');
   const late = game.getState();
   late.parliament.government = { ...late.parliament.government, status: 'fallen', fallenAt: late.clock.currentDate };
   late.game.week.ap = 6;
   assert.throws(() => game.presidentDissolve(), /semestre bianco/, 'Nel semestre bianco il Presidente non scioglie le Camere');
+  game.getState().national.legislature.naturalEnd = naturalEnd;
   lines.push('poteri: attività con cooldown, consultazioni decise dal Presidente, rinvio di una legge, senatori a vita, semestre bianco');
 }
 
@@ -390,15 +394,18 @@ let president;
   noIssues(s, 'rielezione');
   lines.push(`rielezione: acclamazione ${mine.acclaim}, secondo mandato al ${s.presidency.incumbent.ballot}º scrutinio`);
   // Un settennato dopo: stavolta lascia (non è disponibile) e diventa senatore a vita di diritto.
+  // The second term runs seven years from the oath, which follows the ballot that elects (the number of ballots moves the day by a few days).
+  const secondOath = game.getState().presidency.incumbent.since;
+  const secondEnd = `${Number(secondOath.slice(0, 4)) + 7}${secondOath.slice(4)}`;
   while (!game.getState().presidency.election && game.getState().clock.currentDate < '2043-03-01') game.advance(7);
   s = game.getState();
-  assert.equal(s.presidency.election?.termEnds, '2043-02-03', 'Dopo altri sette anni una nuova elezione');
+  assert.equal(s.presidency.election?.termEnds, secondEnd, 'Dopo altri sette anni una nuova elezione');
   game.resolveAgendaItem(s.game.inbox.find(item => item.templateId === 'quirinale-rielezione').id, 'non-disponibile');
   assert.ok(game.getState().presidency.election.player.declined);
   for (let week = 0; week < 14 && game.getState().presidency.election; week++) game.advance(7);
   s = game.getState();
   assert.equal(s.presidency.incumbent.kind, 'simulato', 'Un altro Presidente giura alla scadenza');
-  assert.ok(s.presidency.incumbent.since >= '2043-02-03' && s.presidency.incumbent.since <= '2043-02-25', 'Giura alla scadenza o poco dopo');
+  assert.ok(s.presidency.incumbent.since >= secondEnd && s.presidency.incumbent.since <= new Date(Date.parse(`${secondEnd}T12:00:00Z`) + 22 * 86400000).toISOString().slice(0, 10), 'Giura alla scadenza o poco dopo');
   assert.equal(s.game.flags.president, null);
   assert.ok(s.game.flags.exPresident?.term, 'Il giocatore è l’ex Presidente');
   assert.ok(s.parliament.player?.chamber === 'senato' && s.parliament.player.groupId, 'Senatore a vita di diritto: siede al Senato');

@@ -1,33 +1,35 @@
 import { uniqueId } from './ids.js?v=20261003-2';
 import { DATA_SOURCES, emptyDataset, isSelectableParty } from '../data/schema.js?v=20261003-2';
 import { makeDemoState } from '../data/demo.js?v=20261003-2';
-import { CAREER_LEVELS, ITALIAN_REGIONS, initialCareerStatistics } from '../data/regions.js?v=20261003-2';
+import { CAREER_LEVELS, ITALIAN_REGIONS, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261003-2';
 import { storage } from './storage.js?v=20261003-2';
 import { loadSettings } from './settings.js?v=20261003-2';
 import { advanceDays, formatDate } from './time.js?v=20261003-2';
 import { validateNewCareerDraft } from './career-rules.js?v=20261003-2';
 import { advanceCampaign, breakCampaignAlliance, createCampaign, decideCampaignEvent, negotiateCampaignAlliance, performCampaignActivity, setCampaignStrategy, setExpectation } from './campaign-engine.js?v=20261003-2';
 import { electionAftermath } from './aftermath-engine.js?v=20261003-2';
-import { progressionFactors } from './progression-engine.js?v=20261003-2';
+import { advancementOdds, progressionFactors } from './progression-engine.js?v=20261003-2';
 import { hasStart, planLines, startMods, startPlan, startStatDeltas } from './start-engine.js?v=20261003-2';
 import { objectiveMods } from './objective-engine.js?v=20261003-2';
 import { END_KINDS, addToHall, careerFacts, hallEntry, legacyBoon, legacyScore, legacyTags, retirementProblem, sortedHall } from './legacy-engine.js?v=20261003-2';
 import { committeeSupport, committeesAfterVote, createCommittees } from './committee-engine.js?v=20261003-2';
 import { setConfidenceVote, createReferenceGovernment, neverHadGovernment, offerGroupSupport, requestGovernmentPost, withdrawGroupSupport, partnerSatisfaction, acceptLawDemand, activeMinisters, amendLawPolicy, askConfidenceOnLaw, groupProfile, issueDecree, majoritySummit, reshuffleMinister, setGovernmentProgram, settlePartnerDemand, withdrawLaw, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20261003-2';
-import { declareAmbition, scheduleEarlyLocalElection, alignLocalCalendar, localCalendarOf, committeeAction, setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, lifeBreakPact, lifeCadre, lifeCongress, lifeFound, lifeMerge, lifeOverview, lifeRebuild, lifeRename, lifeRespond, partyOpsAvailability, saveForElection, saveReserve, takeReserve, scheduleEarlyElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20261003-2';
+import { situation, addProvincialCalendar, declareAmbition, scheduleEarlyLocalElection, alignLocalCalendar, localCalendarOf, committeeAction, setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, lifeBreakPact, lifeCadre, lifeCongress, lifeFound, lifeMerge, lifeOverview, lifeRebuild, lifeRename, lifeRespond, partyOpsAvailability, saveForElection, saveReserve, takeReserve, scheduleEarlyElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20261003-2';
 import { AMENDMENT_CAPITAL_COST, COMMUNICATION_STYLES, GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20261003-2';
 import { advanceLegislativeWeek, amendOthersLaw, amendmentOdds, linkGroupsToParties, setPlayerVote, speakOnLaw } from './lawmaking-engine.js?v=20261003-2';
 import { seededRandom } from './vote-engine.js?v=20261003-2';
 import { advanceCabinetWeek, joinAsSupport } from './cabinet-engine.js?v=20261003-2';
-import { EP_COSTS, EP_GROUPS_2024, EP_ROLES, INSTITUTIONS, advanceInstitutionWeek, bidRapporteur, concedeToGroup, createInstitution, epGroupFor, localAreas, proposeLocalAct, questionExecutive, requestCommittee, reshuffleLocal, runForCommitteeRole, setLocalVote, tableAmendment, territoryValue } from './local-engine.js?v=20261003-2';
+import { EP_COSTS, EP_GROUPS_2024, EP_ROLES, INSTITUTIONS, advanceInstitutionWeek, applyLocalEffect, bidRapporteur, concedeToGroup, createInstitution, committeeById, epGroupFor, grantDelega, localAreas, proposeLocalAct, questionExecutive, requestCommittee, reshuffleLocal, revokeDelega, runForCommitteeRole, setLocalVote, tableAmendment, territoryValue } from './local-engine.js?v=20261003-2';
+import { candidacyBlock, institutionOffice, lapsesFor, officeLabel, officeScope } from './office-engine.js?v=20261003-2';
 import { actTypeOf } from '../data/simulation/local-acts.js?v=20261003-2';
-import { AREA_BY_ID, BUDGET_SESSION, GOVERNMENT_LINES, areaOf } from '../data/simulation/policy-rules.js?v=20261003-2';
+import { SECTOR_GAINS, competenceIn, gainSector, sectorFloors, standingFactors } from './standing-engine.js?v=20261003-2';
+import { AREA_BY_ID, BUDGET_SESSION, GOVERNMENT_LINES, POLICY_AREAS, areaOf } from '../data/simulation/policy-rules.js?v=20261003-2';
 import { mergeCandidates, mergeIntoPlayerForce, renamePlayerForce, splitPlayerForce, localShares, regionalShares, withRegionalLeans, withLocalCalendar, joinCoalition, acceptAlliance, addWorldEffects, advanceWorld, alignWorldToVote, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setGoverningForces, setPlayerParty, withCanonicalForces, withLatentForces, withPartyIdentities, withPositions } from './world-engine.js?v=20261003-2';
 import { FORMATION_PHASES, LEGISLATURE_RULES, NATIONAL_LINES, acceptMandate, crisisFormation, seatResult, startFormation, buildCoalitions, campaignWeekEffects, coalitionOptions, compactResult, contestedDistricts, createNationalState, europeanListSeats, formationStep, groupOfParty, homeDistricts, legislatureGroups, legislatureTerm, nationalCalendar, nationalHistory, nationalProjection, normalizeNationalState, openLegislature, politicheOutcome, regionalBreakdown, runEuropeanVote, runNationalVote, seatPlayer, voteForces } from './legislature-engine.js?v=20261003-2';
 import { classifyOutcome, preferenceStanding } from './election-engine.js?v=20261003-2';
 import { DIFFICULTIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261003-2';
 import { WORLD_PARTY_COUNT } from '../data/simulation/polling-rules.js?v=20261003-2';
-import { isPrimeMinister } from './roles.js?v=20261003-2';
+import { heldOfficesOf, isPrimeMinister } from './roles.js?v=20261003-2';
 import { costProblem, leavePartyFor, memoryAbout, memoryBalance, memoryWeight, recordWhy, remember, scheduleFollowUp } from './career-engine.js?v=20261003-2';
 import { advanceElection, affinity, applyPresidentCredit, composeAssembly, createPresidency, dealWithBloc, declareCandidacy, lineText, normalizePresidency, openElection as openPresidentialElection, playerStanding, presidencySchedule, presidentActivityEffects, presidentActivityProblem, presidentWeek, presidentialEligibility, proclaim, projection, quorumFor, resignPresidency, setPlayerLine, setPlayerVote as setPresidentialVote, sponsorCandidate, termEndOf, vetoCandidate, whiteSemester, withdrawCandidacy } from './presidency-engine.js?v=20261003-2';
 import { PRESIDENCY_RULES, PRESIDENT_ACTIVITIES, PRESIDENT_ACTS } from '../data/simulation/presidency-rules.js?v=20261003-2';
@@ -103,6 +105,12 @@ function pertinentDeputies(people = {}, region, seedText) {
   return picked;
 }
 
+// Where the player lives for the career: the comune and the region, and the province when it has organs of its own.
+function placeOf(s) {
+  const player = playerOf(s);
+  const home = homePlace(s);
+  return { municipality: player?.municipality ?? null, region: player?.region ?? null, ...(hasProvincialLevel(home) ? { province: home.provinceName ?? null, provinceCode: home.provinceCode ?? null, provinceType: home.provinceType ?? null } : {}) };
+}
 function buildGame(s, { partyLabel = null, founder = null, funds = null } = {}) {
   const player = playerOf(s);
   const partyId = player ? player.partyId : s.career.partyId;
@@ -111,7 +119,7 @@ function buildGame(s, { partyLabel = null, founder = null, funds = null } = {}) 
     seedText: `${player?.displayName}|${player?.birthDate}|${s.career.startedAt}|${s.career.initialLevel}`,
     currentDate: s.clock.currentDate, level: s.career.initialLevel,
     party: partyId ? { id: partyId, label: partyLabel ?? partyRecord?.officialName ?? partyRecord?.name ?? null, founder: founder ?? partyRecord?.source === DATA_SOURCES.USER } : null,
-    place: { municipality: player?.municipality ?? null, region: player?.region ?? null },
+    place: placeOf(s),
     stats: statsOf(s), parliament: s.parliament, funds, difficulty: s.career.difficulty ?? 'normale', localCalendar: localCalendarFor(s), start: s.career.start ?? null
   });
 }
@@ -142,7 +150,7 @@ let referenceGovernment = null;
 let realParliamentaryGroups = [];
 // The real calendar of local and regional votes (local-elections.json): each comune and region votes in its year.
 let localElections = null;
-const localCalendarFor = s => { if (!localElections) return null; const place = homePlace(s); return localCalendarOf(localElections, { municipalityCode: place.municipalityCode, region: place.region, seed: `${place.region}|${place.municipality}` }); };
+const localCalendarFor = s => { if (!localElections) return null; const place = homePlace(s); return localCalendarOf(localElections, { municipalityCode: place.municipalityCode, region: place.region, seed: `${place.region}|${place.municipality}`, provinceCode: place.provinceCode }); };
 // How each region leans compared with the country, camp by camp: the real vote of 2022 (Camera, single-member colleges).
 const CAMP_OF_ALLIANCE_2022 = Object.freeze({ cdx: 'destra', csx: 'sinistra', m5s: 'sinistra', 'azione-iv': 'centro' });
 function regionalLeans(geography) {
@@ -284,7 +292,9 @@ function prepareState(input) {
   const parliament = normalizeParliamentState(raw.parliament);
   // A message on screen belongs to the moment it was shown, not to the save.
   const base = { ...raw, version: STATE_VERSION, campaign: raw.campaign ?? null, parliament, ui: { ...(raw.ui ?? {}), toast: null } };
-  const game = normalizeGameState(raw.game) ?? buildGame(base);
+  const normalized = normalizeGameState(raw.game) ?? buildGame(base);
+  // A career made before the provincial level, in a place that has a province with organs: its next vote enters the calendar.
+  const game = addProvincialCalendar(normalized, homePlace({ ...base, game: normalized }), localCalendarFor({ ...base, game: normalized }), normalized.week?.startedAt ?? base.clock?.currentDate);
   // The date never stays behind the week in progress (saves where a new career had put the real start date back).
   if (game?.week?.startedAt && base.clock?.currentDate && base.clock.currentDate < game.week.startedAt) base.clock = { ...base.clock, currentDate: game.week.startedAt };
   // Governments formed before Prime Ministers were tracked were the player's.
@@ -378,20 +388,39 @@ function makeId(prefix) {
 const roundStat = value => Math.round(Math.max(0, Math.min(100, value)) * 100) / 100;
 const playerStats = s => Object.fromEntries(['influence', 'reputation', 'experience'].map(metric => [metric, playerStat(s, metric)]));
 const chamberInstitution = chamber => chamber === 'camera' ? 'Camera dei deputati' : 'Senato della Repubblica';
+// How the player's party moved in the last four polls (points): a sudden swing in one poll is noise, a month of decline or growth is a story.
+function pollTrendOf(s) {
+  const shares = (s.world?.polls ?? []).slice(-5).map(poll => poll.results?.find(row => row.partyId === s.world?.playerPartyId)?.share).filter(Number.isFinite);
+  return shares.length >= 5 ? Math.round((shares.at(-1) - shares[0]) * 10) / 10 : 0;
+}
 // The career engine sees the climate it works in: polls of the player's party and the country's mood.
+// The sectors of public policy the offices held cover: a delega, a ministry, the committees of the European Parliament, the competences of an
+// executive the player leads. They are the floor of the influence in each sector (standing-engine).
+function standingFloorsOf(s) {
+  const institutions = (s.local?.institutions ?? []).filter(item => item.status === 'active');
+  const government = s.parliament?.government;
+  const minister = ['active', 'crisis'].includes(government?.status) ? activeMinisters(government).find(item => item.playerAppointed) : null;
+  return sectorFloors({
+    delegas: institutions.filter(inst => inst.playerDelega).map(inst => ({ areas: inst.playerDelega.areas, kind: inst.playerDelega.kind })),
+    euAreas: institutions.filter(inst => inst.ep?.member).flatMap(inst => committeeById(inst.ep.member)?.areas ?? []),
+    headAreas: institutions.filter(inst => inst.executive?.leader === 'player').flatMap(inst => localAreas(inst.kind)),
+    ministerAreas: minister ? POLICY_AREAS.filter(item => item.portfolio === minister.portfolio).map(item => item.id) : [],
+    premier: isPrimeMinister(s.parliament)
+  });
+}
 function gameEnv(s) {
   const poll = s.world?.polls?.at(-1);
   const row = poll?.results?.find(item => item.partyId === s.world?.playerPartyId);
   // The party's estimated share in every region (national share and the regional offset of the simulated polls).
   const force = s.world?.parties?.find(item => item.isPlayer);
   const regionalShares = force && row ? Object.fromEntries(Object.entries(force.regional ?? {}).map(([region, offset]) => [region, Math.max(0, row.share + offset)])) : {};
-  return { career: s.career, offices: s.dataset.offices, campaign: s.campaign, player: playerOf(s), currentDate: s.clock.currentDate, institutions: s.local?.institutions ?? [], presidency: s.presidency?.incumbent ? { kind: s.presidency.incumbent.kind, credit: s.presidency.incumbent.credit ?? 0 } : null, pollShare: row?.share ?? null, pollDelta: row?.delta ?? 0, regionalShares, mood: s.society ? societyMood(s.society) : 50, signals: worldSignalsFor(s), localRounds: s.world?.localCalendar?.rounds ?? null };
+  return { career: s.career, offices: s.dataset.offices, campaign: s.campaign, player: playerOf(s), currentDate: s.clock.currentDate, institutions: s.local?.institutions ?? [], standingFloors: standingFloorsOf(s), presidency: s.presidency?.incumbent ? { kind: s.presidency.incumbent.kind, credit: s.presidency.incumbent.credit ?? 0 } : null, pollShare: row?.share ?? null, pollDelta: row?.delta ?? 0, pollTrend: pollTrendOf(s), regionalShares, mood: s.society ? societyMood(s.society) : 50, signals: worldSignalsFor(s), localRounds: s.world?.localCalendar?.rounds ?? null };
 }
 // Where the player lives: region, comune and the ISTAT unit (province or metropolitan city) of the comune.
 function homePlace(s) {
   const player = playerOf(s);
   const comune = (s.dataset.territories ?? []).find(item => item.kind === 'comune' && item.source === DATA_SOURCES.USER) ?? null;
-  return { region: player?.region ?? s.game?.place?.region ?? null, municipality: player?.municipality ?? comune?.name ?? null, municipalityCode: player?.municipalityCode ?? comune?.istatCode ?? null, provinceCode: comune?.provinceCode ?? null, provinceName: comune?.provinceName ?? player?.province ?? null };
+  return { region: player?.region ?? s.game?.place?.region ?? null, municipality: player?.municipality ?? comune?.name ?? null, municipalityCode: player?.municipalityCode ?? comune?.istatCode ?? null, provinceCode: comune?.provinceCode ?? null, provinceName: comune?.provinceName ?? player?.province ?? null, provinceType: comune?.provinceType ?? null };
 }
 // The state of the country, the Government and the career that events read to decide whether they make sense.
 function worldSignalsFor(s) {
@@ -443,10 +472,10 @@ function closeTermOffices(dataset, playerId, electionType, date) {
   return { ...dataset, offices, ...(open ? { politicians: dataset.politicians.map(item => item.id === playerId ? { ...item, roleId: open.id } : item) } : {}) };
 }
 // The level of a local or European career: the highest term still open (Comune, Regione, Parlamento europeo).
-const LOCAL_LEVELS = Object.freeze({ comunale: 'comunale', regionale: 'regionale', europee: 'europeo' });
+const LOCAL_LEVELS = Object.freeze({ comunale: 'comunale', provinciale: 'provinciale', regionale: 'regionale', europee: 'europeo' });
 function localCareerLevel(offices, playerId) {
   const open = new Set(offices.filter(item => item.politicianId === playerId && !item.endDate).map(item => LOCAL_LEVELS[item.level]).filter(Boolean));
-  return ['europeo', 'regionale', 'comunale'].find(level => open.has(level)) ?? null;
+  return ['europeo', 'regionale', 'provinciale', 'comunale'].find(level => open.has(level)) ?? null;
 }
 // After a local or European term opens or ends (a seat in Parliament stays the reference while it lasts).
 function withLocalLevel(s) {
@@ -601,7 +630,7 @@ function computeParliamentUpdate(currentState, parliament, toast, metricDeltas =
   // The parliament engine spends political capital; the career keeps a single balance.
   let game = currentState.game && parliament ? { ...currentState.game, resources: { ...currentState.game.resources, politicalCapital: parliament.resources?.politicalCapital ?? currentState.game.resources.politicalCapital } } : currentState.game;
   if (game && journal) game = { ...game, why: journal };
-  if (game && memories.length) { game = deepCopy(game); for (const entry of memories) remember(game, { date: currentDate, ...entry }); }
+  if (game && memories.length) { game = deepCopy(game); for (const entry of memories) { remember(game, { date: currentDate, ...entry }); if (entry.kind === 'legge' && entry.area) gainSector(game, entry.area, SECTOR_GAINS.lawApproved, { cause: entry.text }); } }
   if (game?.party?.org && programHits) game = { ...game, party: { ...game.party, org: { ...game.party.org, cohesion: Math.min(100, game.party.org.cohesion + 2 * programHits) } } };
   return withConfidenceVotes(currentState, { ...currentState, parliament, dataset, career, game, world, society, ui: { ...currentState.ui, toast } });
 }
@@ -641,6 +670,17 @@ function withContactSupport(parliament, contacts, lawId) {
 const requireSecretary = () => { if (!isSecretary(state.game?.party)) throw new Error('Solo il segretario del partito può farlo: si diventa segretari fondando un partito o vincendo un congresso.'); };
 const requireFormateur = () => { if (state.parliament?.government?.formedBy !== 'player') throw new Error('Solo chi ha formato il governo può farlo.'); };
 const requirePremier = () => { if (!isPrimeMinister(state.parliament)) throw new Error('Solo il Presidente del Consiglio può farlo.'); };
+// What the standing of the player adds to the odds of an amendment (competence in the sector of the law, a role in the group) and of a
+// ministry (the institutions' trust, the image in the media, the competence in the sector of the ministry): all neutral at 50.
+const lawArea = law => law?.policy?.area ?? POLICY_AREAS.find(item => item.label === law?.category)?.id ?? null;
+const amendmentExtras = (s, law) => ({ committeeRole: Boolean(s.parliament?.careerStanding?.committeeRole) || heldOfficesOf(s).includes('capogruppo'), competence: competenceIn(s.game, lawArea(law)) });
+const ministryExtras = (s, portfolio) => {
+  const factors = standingFactors({ game: s.game, stats: statsOf(s), parliament: s.parliament });
+  const areas = POLICY_AREAS.filter(item => item.portfolio === portfolio).map(item => item.id);
+  return { institutional: factors.institutional, mediaRep: factors.mediaRep, competence: areas.length ? Math.max(...areas.map(area => competenceIn(s.game, area))) : 50 };
+};
+// An office just taken (a ministry, the premiership, a seat won in a vote) excludes some of those held: they lapse and the diary says why.
+const settleOffices = gained => { const settled = lapseConflicts(state, gained, state.clock.currentDate); if (settled !== state) { state = withObjectives(settled); persist(); emit(); } return state; };
 // Government acts cost days of work and political capital.
 function withGovernmentCost(action) {
   const capital = GOVERNMENT_CAPITAL_COSTS[action] ?? 0;
@@ -818,6 +858,10 @@ function handleSpecials(s, specials) {
       next = { ...next, world: applyWorldSignals(next.world, [{ type: 'relation', partyId: special.partyId, delta: special.delta }], next.clock.currentDate) };
     } else if (special.type === 'local-office' && special.office?.title) {
       next = { ...next, dataset: openOffice(next.dataset, { id: makeId('incarico-locale'), title: special.office.title, institution: special.office.institution ?? 'Ente locale', level: special.office.level ?? 'comunale', politicianId: player?.id ?? null, territoryId: player?.territoryId ?? null, startDate: next.clock.currentDate }) };
+      // The delega (or the group lead) is real in the institution, not just a title: its powers and its reviews follow.
+      next = grantLocalOffice(next, special.office);
+    } else if (special.type === 'group-leader' && next.parliament?.player?.groupId && next.game) {
+      next = { ...next, game: { ...next.game, flags: { ...next.game.flags, groupLeader: { groupId: next.parliament.player.groupId, since: next.clock.currentDate, source: DATA_SOURCES.SIMULATION } } } };
     } else if (special.type === 'scenario-office') {
       next = { ...next, dataset: openOffice(next.dataset, { id: makeId('incarico-esecutivo'), title: special.title, institution: 'Esecutivo di scenario (simulazione)', level: 'governo', politicianId: player?.id ?? null, territoryId: player?.territoryId ?? null, startDate: next.clock.currentDate }) };
     } else if (special.type === 'media-repair' && next.society) {
@@ -909,6 +953,11 @@ function handleSpecials(s, specials) {
         if (premier && parliament.relations?.[premier]) parliament = { ...parliament, relations: { ...parliament.relations, [premier]: { ...parliament.relations[premier], value: Math.max(0, parliament.relations[premier].value - 3) } } };
         next = { ...next, parliament };
       }
+    } else if (special.type === 'local-effect') {
+      // The institution the decision is about: the one of the named kind, else the highest one the player sits in.
+      const active = (next.local?.institutions ?? []).filter(item => item.status === 'active');
+      const target = active.find(item => item.kind === special.local?.kind) ?? ['regione', 'provincia', 'comune'].map(kind => active.find(item => item.kind === kind)).find(Boolean);
+      if (target) next = replaceInstitution(next, applyLocalEffect(target, special.local));
     } else if (special.type.startsWith('local-vote-')) {
       const choice = { 'local-vote-line': 'linea', 'local-vote-yes': 'favorevole', 'local-vote-no': 'contrario', 'local-vote-abstain': 'astenuto', 'local-vote-absent': 'assente' }[special.type];
       try { next = replaceInstitution(next, setLocalVote(findInstitution(next, special.params?.instId), special.params?.actId, choice)); } catch { /* the act was already voted */ }
@@ -1122,7 +1171,8 @@ function tickWorld(s, date, report) {
   if (next.society && out.shocks?.length) next = { ...next, society: out.shocks.reduce((society, shock) => societyShock(society, shock), next.society) };
   if (s.parliament) next = computeParliamentUpdate(next, withCapital(out.parliament, next.game), next.ui.toast);
   let game = next.game;
-  if (out.reactions[0]) game = addWorldReaction(game, out.reactions[0]);
+  // The world asks for a position only on what concerns the player's role (see addWorldReaction).
+  if (out.reactions[0] && game) { const sit = situation({ game, stats: statsOf(next), parliament: next.parliament }, { ...gameEnv(next), currentDate: date }); game = addWorldReaction(game, out.reactions[0], sit); }
   // Records in the polls are milestones of the career.
   const own = out.world.polls.at(-1)?.results.find(row => row.partyId === out.world.playerPartyId)?.share;
   const notes = [];
@@ -1268,9 +1318,10 @@ const nationalLabel = (s, vote = null) => id => s.world?.parties?.find(item => i
 // ---------- the local and European institutions (local-engine) ----------
 // The consiglio comunale, the consiglio regionale, the European Parliament where the player sits: built from the result
 // of the vote (or, for a local career at its start, a council simulated from the local polls), then alive every week.
-const INSTITUTION_OF = Object.freeze({ comunale: 'comune', regionale: 'regione', europee: 'europa' });
-const ELECTION_OF = Object.freeze({ comune: 'comunale', regione: 'regionale', europa: 'europee' });
+const INSTITUTION_OF = Object.freeze({ comunale: 'comune', provinciale: 'provincia', regionale: 'regione', europee: 'europa' });
+const ELECTION_OF = Object.freeze({ comune: 'comunale', provincia: 'provinciale', regione: 'regionale', europa: 'europee' });
 const EP_MAJORITY = new Set(['epp', 'sd', 'renew']);
+const DEFAULT_CANDIDACY_ROLE = Object.freeze({ comunale: 'sindaco', provinciale: 'consigliere', regionale: 'presidente', politiche: 'deputato', europee: 'eurodeputato' });
 const localOf = s => s.local ?? { institutions: [] };
 const nextVoteOf = (s, type) => (s.game?.elections ?? []).filter(item => item.type === type && item.status === 'upcoming').map(item => item.electionDate).sort()[0] ?? null;
 function withInstitution(s, inst) {
@@ -1279,32 +1330,91 @@ function withInstitution(s, inst) {
 }
 function closeInstitution(s, kind, date, status = 'concluso') {
   if (!localOf(s).institutions.some(item => item.kind === kind && item.status === 'active')) return s;
-  return { ...s, local: { institutions: localOf(s).institutions.map(item => item.kind === kind && item.status === 'active' ? { ...item, status, until: date } : item) } };
+  const closed = { ...s, local: { institutions: localOf(s).institutions.map(item => item.kind === kind && item.status === 'active' ? { ...item, status, until: date } : item) } };
+  // A provincial seat is held by a mayor or a municipal councillor of the province: without the seat in the comune it lapses.
+  return kind === 'comune' ? closeInstitution(closed, 'provincia', date, status) : closed;
+}
+// ---------- the offices: what is granted, what lapses (office-engine says which; here the state changes) ----------
+const ELECTION_OF_SCOPE = Object.freeze({ comune: 'comunale', provincia: 'provinciale', regione: 'regionale', europa: 'europee' });
+// The delega or the group lead the player receives lands in the institution where it was granted.
+function grantLocalOffice(s, office) {
+  const kind = INSTITUTION_OF[office?.level];
+  const inst = kind ? localOf(s).institutions.find(item => item.kind === kind && item.status === 'active') : null;
+  if (!inst) return s;
+  const title = String(office.title ?? '');
+  const date = s.clock.currentDate;
+  const territory = ['regione', 'provincia'].includes(inst.kind) ? s.society?.regions?.[inst.region]?.indicators ?? null : null;
+  try {
+    if (/^assessore/i.test(title)) return replaceInstitution(s, grantDelega(inst, { kind: 'assessore', date, territory }));
+    if (/^consigliere delegato/i.test(title)) return replaceInstitution(s, grantDelega(inst, { kind: 'delegato', date, territory }));
+    if (/^capogruppo/i.test(title)) return replaceInstitution(s, { ...inst, playerGroupLead: true, history: [...inst.history, { date, text: 'Sei il capogruppo: il tuo voto orienta quello del gruppo.', type: 'incarico' }].slice(-40) });
+  } catch { /* the delega is already the player's */ }
+  return s;
+}
+// An office the player leaves because the one just won excludes it: the seat in a council is closed (a comune takes the
+// provincial seat with it), a delega goes back, a seat in Parliament ends.
+function lapseOffice(s, office, date, why) {
+  const scope = officeScope(office);
+  const player = playerOf(s);
+  if (['comune', 'provincia', 'regione', 'europa'].includes(scope)) {
+    const inst = localOf(s).institutions.find(item => item.kind === scope && item.status === 'active');
+    if (!inst) return s;
+    if (office.startsWith('assessore')) return replaceInstitution(s, revokeDelega(inst, date, why));
+    const closed = closeInstitution(s, scope, date);
+    let dataset = closed.dataset;
+    for (const kind of Object.keys(ELECTION_OF_SCOPE)) if (localOf(s).institutions.some(item => item.kind === kind && item.status === 'active') && !localOf(closed).institutions.some(item => item.kind === kind && item.status === 'active')) dataset = closeTermOffices(dataset, player?.id, ELECTION_OF_SCOPE[kind], date);
+    const level = localCareerLevel(dataset.offices, player?.id);
+    return { ...closed, dataset, career: closed.career.parliamentContext ? closed.career : { ...closed.career, currentLevel: level } };
+  }
+  if ((office === 'deputato' || office === 'senatore') && s.parliament?.player) {
+    const previous = s.career.parliamentContext ?? null;
+    const dataset = closeTermOffices(s.dataset, player?.id, 'politiche', date);
+    const career = { ...s.career, currentLevel: localCareerLevel(dataset.offices, player?.id), parliamentContext: null, ...(previous ? { pastParliamentContexts: [...(s.career.pastParliamentContexts ?? []), { ...previous, endedAt: date, reason: why }] } : {}) };
+    return computeParliamentUpdate({ ...s, dataset, career }, withCapital(leaveParliament(s.parliament, date, why), s.game), s.ui?.toast);
+  }
+  return s;
+}
+// Winning (or being appointed to) an office: those it excludes lapse, and the diary says which rule applied. The chamber change
+// of a parliamentarian is the Parliament's own business, the derived offices (capogruppo, vicepremier) vanish by themselves.
+function lapseConflicts(s, gained, date) {
+  if (!gained || !s.game) return s;
+  const parliamentSeat = gained === 'deputato' || gained === 'senatore';
+  const lapsing = lapsesFor(heldOfficesOf(s).filter(id => id !== gained), gained).filter(item => !['capogruppo', 'vicepremier'].includes(item.office) && !(parliamentSeat && ['deputato', 'senatore'].includes(item.office)));
+  if (!lapsing.length) return s;
+  let next = s;
+  for (const item of lapsing) next = lapseOffice(next, item.office, date, `${officeLabel(gained)}: ${item.rule}`);
+  return { ...next, game: addDiary(next.game, { kind: 'cariche', date, title: `${officeLabel(gained)}: incompatibilità`, lines: lapsing.map(item => `Lasci ${officeLabel(item.office).toLowerCase()}: ${item.rule}`) }) };
 }
 // A council at the start of a local career: the lists of the local polls, the camp that leads them governs (with the
 // majority bonus), the player sits with the own party (or a civic list).
+// The name of the institution where the player sits: the comune, the province (or metropolitan city, or free consortium) or the region.
+function institutionName(kind, place) {
+  if (kind === 'comune') return `Comune di ${place.municipality ?? 'il tuo comune'}`;
+  if (kind === 'provincia') return `${{ 'Città metropolitana': 'Città metropolitana di', 'Libero consorzio di comuni': 'Libero consorzio comunale di' }[place.provinceType] ?? 'Provincia di'} ${place.provinceName ?? 'la tua provincia'}`;
+  return `Regione ${place.region ?? ''}`.trim();
+}
 function simulatedInstitution(s, kind, date) {
   const world = s.world;
   const place = homePlace(s);
-  const rows = (kind === 'comune' ? localShares(world) : regionalShares(world, place.region)).filter(row => row.share >= 2).sort((a, b) => b.share - a.share).slice(0, 6);
+  const rows = (['comune', 'provincia'].includes(kind) ? localShares(world) : regionalShares(world, place.region)).filter(row => row.share >= 2).sort((a, b) => b.share - a.share).slice(0, 6);
   const partyOf = id => world.parties.find(item => item.id === id);
   const campOf = axis => (axis ?? 0) >= 1 ? 'destra' : (axis ?? 0) <= -1 ? 'sinistra' : 'centro';
   const lean = world.localCalendar?.leans?.[place.region] ?? {};
   const camps = {};
   for (const row of rows) { const camp = campOf(partyOf(row.partyId)?.axis); camps[camp] = (camps[camp] ?? 0) + row.share + (lean[camp] ?? 0) / 3; }
   const governingCamp = Object.entries(camps).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'centro';
-  const seats = kind === 'comune' ? 24 : 30;
+  const seats = kind === 'comune' ? 24 : kind === 'provincia' ? 12 : 30;
   const groups = rows.map(row => ({ id: `lista-${row.partyId}`, label: partyOf(row.partyId)?.label ?? row.partyId, partyId: row.partyId, axis: partyOf(row.partyId)?.axis ?? 0, share: row.share, side: campOf(partyOf(row.partyId)?.axis) === governingCamp ? 'maggioranza' : 'opposizione' }));
-  groups.push({ id: 'lista-civica', label: 'Liste civiche', partyId: null, axis: 0, share: 8, side: governingCamp === 'centro' ? 'maggioranza' : 'opposizione' });
-  // Majority bonus: the governing camp holds 60% of the seats.
+  groups.push({ id: 'lista-civica', label: 'Liste civiche', partyId: null, axis: 0, share: kind === 'provincia' ? 14 : 8, side: governingCamp === 'centro' ? 'maggioranza' : 'opposizione' });
+  // Majority bonus: the governing camp holds 60% of the seats (58% in a province).
   const bySide = side => groups.filter(group => group.side === side);
   const share = list => list.reduce((sum, group) => sum + group.share, 0) || 1;
-  for (const [side, total] of [['maggioranza', Math.round(seats * 0.6)], ['opposizione', seats - Math.round(seats * 0.6)]]) for (const group of bySide(side)) group.seats = Math.max(1, Math.round(total * group.share / share(bySide(side))));
+  for (const [side, total] of [['maggioranza', Math.round(seats * (kind === 'provincia' ? 0.58 : 0.6))], ['opposizione', seats - Math.round(seats * (kind === 'provincia' ? 0.58 : 0.6))]]) for (const group of bySide(side)) group.seats = Math.max(1, Math.round(total * group.share / share(bySide(side))));
   const own = s.world.playerPartyId ? groups.find(group => group.partyId === s.world.playerPartyId) : null;
   const playerGroup = own ?? groups.find(group => group.id === 'lista-civica');
   playerGroup.seats += 1;
   const leader = [...bySide('maggioranza')].sort((a, b) => b.seats - a.seats)[0];
-  return createInstitution({ kind, name: kind === 'comune' ? `Comune di ${place.municipality ?? 'il tuo comune'}` : `Regione ${place.region}`, region: place.region, territory: s.society?.regions?.[place.region]?.indicators ?? null, date, until: nextVoteOf(s, ELECTION_OF[kind]), role: 'consigliere', side: playerGroup.side, playerGroupId: playerGroup.id, leaderGroupId: leader?.id, groups: groups.map(({ share, ...group }) => group) });
+  return createInstitution({ kind, name: institutionName(kind, place), region: place.region, territory: s.society?.regions?.[place.region]?.indicators ?? null, date, until: nextVoteOf(s, ELECTION_OF[kind]), role: 'consigliere', side: playerGroup.side, playerGroupId: playerGroup.id, leaderGroupId: leader?.id, groups: groups.map(({ share, ...group }) => group) });
 }
 // The European Parliament as the player sits in it: the group of the own party's collocazione, or non-attached.
 function europeanInstitution(s, date, until = nextVoteOf(s, 'europee')) {
@@ -1346,7 +1456,7 @@ function institutionFromResult(s, campaign, result) {
   const rowGroups = row => groups.filter(group => group.id === row?.id || group.id.startsWith(`${row?.id}-`));
   const playerGroup = rowGroups(playerRow).find(group => ownParty && group.partyId === ownParty) ?? rowGroups(playerRow).sort((a, b) => b.seats - a.seats)[0] ?? null;
   const leaderGroup = leads ? playerGroup : rowGroups(rows.find(row => row.id === winner)).sort((a, b) => b.seats - a.seats)[0] ?? null;
-  return createInstitution({ kind, name: kind === 'comune' ? `Comune di ${player?.municipality ?? 'il tuo comune'}` : `Regione ${player?.region ?? ''}`.trim(), region: player?.region ?? null, territory: s.society?.regions?.[player?.region]?.indicators ?? null, date, until, role: leads ? role : 'consigliere', side: playerRow?.id === winner ? 'maggioranza' : 'opposizione', playerGroupId: playerGroup?.id ?? null, leaderGroupId: leaderGroup?.id ?? winner, leaderIsPlayer: leads, groups });
+  return createInstitution({ kind, name: institutionName(kind, { ...homePlace(s), municipality: player?.municipality ?? homePlace(s).municipality }), region: player?.region ?? null, territory: s.society?.regions?.[player?.region]?.indicators ?? null, date, until, role: leads ? role : 'consigliere', side: playerRow?.id === winner ? 'maggioranza' : 'opposizione', playerGroupId: playerGroup?.id ?? null, leaderGroupId: leaderGroup?.id ?? winner, leaderIsPlayer: leads, groups });
 }
 const INDICATOR_AREA = Object.freeze({ economia: 'economia', occupazione: 'lavoro', servizi: 'welfare', sanita: 'sanita', istruzione: 'scuola', infrastrutture: 'infrastrutture', trasporti: 'trasporti', sicurezza: 'sicurezza', ambiente: 'ambiente' });
 const LOCAL_LINE_WORDS = Object.freeze({ favorevole: 'a favore', contrario: 'contro', astenuto: 'per l’astensione' });
@@ -1356,7 +1466,7 @@ function seatSavedCareer(s) {
   const player = playerOf(s);
   const open = new Set((s.dataset?.offices ?? []).filter(item => item.politicianId === player?.id && !item.endDate).map(item => item.level));
   let next = { ...s, local: { institutions: [] } };
-  for (const [level, kind] of [['comunale', 'comune'], ['regionale', 'regione']]) if (open.has(level)) next = withInstitution(next, simulatedInstitution(next, kind, s.clock.currentDate));
+  for (const [level, kind] of [['comunale', 'comune'], ['provinciale', 'provincia'], ['regionale', 'regione']]) if (open.has(level)) next = withInstitution(next, simulatedInstitution(next, kind, s.clock.currentDate));
   return next;
 }
 function tickLocal(input, date) {
@@ -1373,10 +1483,12 @@ function tickLocal(input, date) {
   const chronicle = [];
   for (const inst of active) {
     const rules = INSTITUTIONS[inst.kind];
-    const territory = inst.kind === 'regione' ? next.society?.regions?.[inst.region]?.indicators ?? null : null;
+    const territory = ['regione', 'provincia'].includes(inst.kind) ? next.society?.regions?.[inst.region]?.indicators ?? null : null;
     const out = advanceInstitutionWeek(inst, { date, rand: seededRandom(`${s.career.id}|${inst.id}|${date}`), issues, territory });
     let updated = out.inst;
     lines.push(...out.lines);
+    // A delega keeps its sector alive week after week.
+    if (updated.playerDelega) for (const area of updated.playerDelega.areas ?? []) gainSector(game, area, SECTOR_GAINS.delegaWeek / Math.max(1, updated.playerDelega.areas.length), { cause: `Delega ${updated.playerDelega.portfolio}` });
     const leads = inst.executive?.leader === 'player';
     for (const event of out.events) {
       if (event.type === 'voto-locale') {
@@ -1386,11 +1498,13 @@ function tickLocal(input, date) {
       } else if (event.type === 'atto-votato') {
         const dissent = event.playerChoice && event.decided && event.playerChoice !== event.playerLine && event.playerChoice !== 'assente';
         if (dissent) { if (game.party) game.party.support = Math.max(0, game.party.support - 1.5); add('notoriety', 0.4); remember(game, { date, kind: 'dissenso', text: `${rules.label}: voto ${LOCAL_LINE_WORDS[event.playerChoice] ?? event.playerChoice} su “${event.title}” contro il tuo gruppo`, weight: 0.4 }); }
-        if (event.sponsor?.kind === 'player' || (leads && ['executive', 'budget'].includes(event.sponsor?.kind))) {
+        if (event.sponsor?.kind === 'player' || event.delega || (leads && ['executive', 'budget'].includes(event.sponsor?.kind))) {
           // The player's act: taxes raised cost popularity, taxes cut win it; the others show an executive at work.
           const tax = event.measure?.tax;
           if (event.passed) { add('popularity', tax === 'su' ? -2 : tax === 'giu' ? 2 : event.budget ? 0.8 : 1); add('influence', 0.5); if (!tax && next.society && region) next = { ...next, society: regionAttention(next.society, region, 0.6) }; }
           else add('reputation', event.budget ? -2 : -1);
+          // The influence in the sector of the act: more for the act of a delega, a little even when it fails (you tried).
+          gainSector(game, event.area, event.passed ? (event.delega ? SECTOR_GAINS.delegaAct : SECTOR_GAINS.localAct) : SECTOR_GAINS.localActRejected, { cause: event.title });
           lines.push(`${rules.label}: “${event.title}” ${event.passed ? (event.organ === 'giunta' ? 'adottato dalla Giunta' : 'approvato') : 'respinto'}.`);
         } else if (inst.kind !== 'europa' && inst.playerSide !== 'maggioranza' && !event.passed && event.organ === 'consiglio' && ['executive', 'budget'].includes(event.sponsor?.kind)) {
           // The opposition beats the executive on the floor.
@@ -1408,6 +1522,15 @@ function tickLocal(input, date) {
       } else if (event.type === 'interrogazione-risposta') {
         if (event.player) { add('notoriety', event.answer === 'insufficiente' ? 0.6 : 0.2); if (event.answer === 'insufficiente') add('reputation', 0.4); lines.push(`${rules.label}: risposta ${event.answer} alla tua interrogazione.`); }
         else if (leads && event.answer === 'insufficiente') { add('reputation', -0.5); lines.push(`${rules.label}: la tua giunta risponde male a un’interrogazione dell’opposizione.`); }
+      } else if (event.type === 'delega-valutata') {
+        // The service of the delega is judged: the results are the player's own.
+        if (event.verdict === 'buona') { add('reputation', 1.2); add('notoriety', 0.6); add('influence', 0.6); lines.push(`${rules.label}: la tua delega (${event.portfolio}) funziona: servizio a ${Math.round(event.score)}/100.`); remember(game, { date, kind: 'decisione', text: `${rules.label}: buona valutazione della delega ${event.portfolio}`, weight: 0.5 }); }
+        else if (event.verdict === 'critica') { add('reputation', -1.4); add('popularity', -0.6); lines.push(`${rules.label}: la tua delega (${event.portfolio}) è sotto accusa: servizio a ${Math.round(event.score)}/100.`); remember(game, { date, kind: 'crisi-governo', text: `${rules.label}: delega ${event.portfolio} sotto accusa`, weight: 0.5 }); }
+      } else if (event.type === 'delega-revocata') {
+        add('reputation', -1.5); add('influence', -1);
+        lines.push(`${rules.label}: ti viene tolta la delega ${event.portfolio}.`);
+        game = addSituationEvent(game, 'delega-revocata', { instId: inst.id, institution: rules.label.toLowerCase(), portfolio: event.portfolio, dedupe: `${inst.id}|delega|${date}` }, false);
+        chronicle.push({ type: 'chronicle', kind: 'territorio', icon: 'alert', title: `${inst.name}: tolta la delega ${event.portfolio}`, body: 'Il servizio non ha convinto: la delega torna all’esecutivo (simulazione).', tone: 'bad' });
       } else if (event.type === 'impegno-disatteso') {
         if (leads) { add('reputation', -1.5); lines.push(`${rules.label}: non hai dato seguito alla mozione “${event.title}”.`); }
         else if (event.player) { add('notoriety', 0.6); lines.push(`${rules.label}: la giunta ignora la tua mozione “${event.title}”.`); }
@@ -1427,7 +1550,7 @@ function tickLocal(input, date) {
       } else if (event.type === 'relazione-votata') {
         // A report of the player judged in plenary (the own-initiative ones are rewarded as the player's proposals).
         if (!event.own) { if (event.passed) { add('influence', 2); add('reputation', 1.5); add('notoriety', 1); } else { add('reputation', -1); add('notoriety', 0.3); } }
-        if (event.passed) remember(game, { date, kind: 'legge', text: `Parlamento europeo: approvata la tua relazione su “${event.title}”`, weight: 0.8 });
+        if (event.passed) { remember(game, { date, kind: 'legge', text: `Parlamento europeo: approvata la tua relazione su “${event.title}”`, weight: 0.8 }); gainSector(game, event.area, SECTOR_GAINS.report, { cause: event.title }); }
         lines.push(`Parlamento europeo: la tua relazione “${event.title}” ${event.passed ? 'è approvata in plenaria' : 'è respinta in plenaria'}.`);
       } else if (event.type === 'uscita-maggioranza' && inst.kind !== 'europa') {
         chronicle.push({ type: 'chronicle', kind: 'territorio', icon: 'alert', title: `${inst.name}: ${event.group} lascia la maggioranza`, body: event.margin < 0 ? 'La giunta non ha più i numeri: l’opposizione prepara la sfiducia.' : 'La maggioranza si assottiglia (simulazione).', tone: 'bad' });
@@ -2168,7 +2291,7 @@ function becomePresident(input, proclaimed, { date }) {
   if (parliament?.government) parliament = { ...parliament, government: { ...parliament.government, ministers: parliament.government.ministers.map(item => item.playerAppointed && !item.endedAt ? { ...item, endedAt: date, endReason: 'Eletto Presidente della Repubblica' } : item), ...(parliament.government.primeMinister === 'player' && ['active', 'crisis'].includes(parliament.government.status) ? { status: 'fallen', primeMinister: null, fallenAt: date, fallenReason: 'Il Presidente del Consiglio è eletto Presidente della Repubblica' } : {}) } };
   if (parliament !== s.parliament) s = computeParliamentUpdate(s, parliament, s.ui.toast);
   s = endMandate(s, 'Eletto Presidente della Repubblica');
-  for (const kind of ['comune', 'regione', 'europa']) s = closeInstitution(s, kind, date);
+  for (const kind of ['comune', 'provincia', 'regione', 'europa']) s = closeInstitution(s, kind, date);
   const closing = new Set(s.dataset.offices.filter(item => item.politicianId === player?.id && !item.endDate && !/inizial/i.test(item.title)).map(item => item.id));
   s = { ...s, dataset: closeOffices(s.dataset, [...closing], date) };
   // The party is left (the force goes on without the player), the campaign in progress is withdrawn.
@@ -2383,6 +2506,10 @@ export const store = {
       const next = upcomingElections(state.game).find(item => item.type === config.electionType);
       throw new Error(next ? `Le candidature per ${next.label} si aprono il ${formatDate(next.windowOpensAt)}.` : 'Nessuna elezione di questo tipo in calendario.');
     }
+    // The offices held decide whether the candidacy is possible (a provincial seat needs a seat in a comune, a member of the
+    // Government does not run for a territorial office) and what it would cost (the offices that lapse if the vote is won).
+    const blocked = candidacyBlock({ held: heldOfficesOf(state), electionType: config.electionType, role: config.role ?? DEFAULT_CANDIDACY_ROLE[config.electionType], electionDate: election.electionDate, municipalVote: nextVoteOf(state, 'comunale') });
+    if (blocked) throw new Error(blocked);
     const player = playerOf(state);
     // Sitting deputies of the real XIX legislature as opponents: only while it is the legislature in office.
     const realCandidates = config.electionType === 'politiche' && ['deputato', 'uninominale'].includes(config.role ?? 'deputato') && (state.national?.legislature?.reference ?? 'real') === 'real' ? pertinentDeputies(realPeople, player?.region, `${state.career.id}|${state.clock.currentDate}`) : [];
@@ -2394,6 +2521,11 @@ export const store = {
     const party = game.party;
     const leadership = relationValue(game, 'leadership') ?? 50;
     const partyBonus = party?.affiliation === 'member' ? Math.max(-3, Math.min(4, (party.support - 50) / 12 + (leadership - 50) / 18 + party.rank * 0.6)) : 0;
+    // How the candidacy stands in the party also depends on the reputations of the player: the territory for a local office, the party
+    // and the institutions for the lists of Parliament (promotions are never a matter of time alone).
+    const candidacyKind = ['comunale', 'provinciale', 'regionale'].includes(config.electionType) ? 'locale' : 'partito';
+    const candidacy = advancementOdds(candidacyKind, { factors: progressionFactors({ game, stats: statsOf(state), parliament: state.parliament }), threshold: 52, game, capital: game.resources.politicalCapital });
+    const standingBonus = party?.affiliation === 'member' ? Math.max(-2, Math.min(2.2, (candidacy.score - 52) * 0.06)) : 0;
     const transfer = Math.round(game.resources.funds * 0.6);
     // The election fund (plus donors' share) and the party treasury back the candidate too.
     const fundTotal = Math.round((game.finance?.electionFund ?? 0) * 1.15);
@@ -2402,7 +2534,7 @@ export const store = {
     const candidate = campaign.candidates.find(item => item.isPlayer);
     // The party's committees in the territory of the vote: volunteers, organisation, the candidacy and local support.
     const home = homePlace(state);
-    const committees = org?.committees?.length ? committeeSupport(org, { electionType: config.electionType, region: home.region, provinceCode: home.provinceCode, municipality: home.municipality, week: game.week.index }) : null;
+    const committees = org?.committees?.length ? committeeSupport(org, { electionType: config.electionType, region: home.region, provinceCode: home.provinceCode, municipality: home.municipality, week: game.week.index, party }) : null;
     candidate.resources.money += transfer + game.prep * 30 + fundTotal + partyFunds + (committees?.funds ?? 0);
     if (committees) { candidate.resources.volunteers += committees.volunteers; candidate.resources.organization = Math.max(0, Math.min(100, candidate.resources.organization + committees.organization)); }
     candidate.resources.volunteers += Math.max(0, Math.round(game.prep / 6 + ((relationValue(game, 'civic') ?? 45) - 45) / 8)) + (hasAsset(game.finance, 'piattaforma') ? 3 : 0);
@@ -2412,7 +2544,7 @@ export const store = {
     candidate.resources.volunteers += programmes.volunteers;
     candidate.resources.organization = Math.min(100, candidate.resources.organization + programmes.organization);
     campaign.resources = { ...candidate.resources, visibility: Math.max(0, campaign.resources.visibility + Math.round(((relationValue(game, 'media') ?? 45) - 45) / 5)), source: 'simulation' };
-    if (campaign.nomination.status === 'pending') campaign.nomination.internalSupport = round2(Math.max(0, campaign.nomination.internalSupport + partyBonus));
+    if (campaign.nomination.status === 'pending') { campaign.nomination.internalSupport = round2(Math.max(0, campaign.nomination.internalSupport + partyBonus + standingBonus)); campaign.nomination.standing = { kind: candidacyKind, score: candidacy.score, chance: candidacy.chance, bonus: round2(standingBonus) }; }
     if (party?.affiliation === 'member') campaign.candidacy.listPosition = campaign.nomination.listPosition = Math.max(1, Math.min(6, 6 - party.rank - (party.support >= 70 ? 1 : 0)));
     // The founder draws up the lists of the own party and heads them.
     else if (party?.affiliation === 'founder') campaign.candidacy.listPosition = campaign.nomination.listPosition = 1;
@@ -2424,7 +2556,7 @@ export const store = {
     const moodBonus = round2(clampTo(incumbent ? (mood - 50) * 0.05 : (50 - mood) * 0.025, -1.5, 1.5));
     poll.bonus = round2(poll.bonus + moodBonus);
     // Voters remember: promises, taxes, crises and laws of past years weigh on the start of the campaign.
-    const memory = memoryBalance(game, { region: ['comunale', 'regionale'].includes(config.electionType) ? player?.region : null });
+    const memory = memoryBalance(game, { region: ['comunale', 'provinciale', 'regionale'].includes(config.electionType) ? player?.region : null });
     const memoryBonus = round2(clampTo(memory.net * 0.35, -2.5, 1.5));
     poll.bonus = round2(poll.bonus + memoryBonus);
     // The conditions the career started with (an outsider's appeal, a consolidated name, debts to creditors that finance…).
@@ -2453,7 +2585,7 @@ export const store = {
       campaign.nomination.internalSupport = round2(Math.max(0, campaign.nomination.internalSupport * (1 + difficultyOf(game.difficulty).candidacy) + clampTo(partyMemory * 0.6, -2.5, 1.5)));
       campaign.nomination.memoryNote = partyMemory < -0.5 ? 'Il partito ricorda rotture e sconfitte: la candidatura è più contesa.' : partyMemory > 0.5 ? 'Lealtà e vittorie passate ti aiutano a ottenere la candidatura.' : null;
     }
-    const local = ['comunale', 'regionale'].includes(config.electionType) ? state.society?.regions?.[player?.region] : null;
+    const local = ['comunale', 'provinciale', 'regionale'].includes(config.electionType) ? state.society?.regions?.[player?.region] : null;
     campaign.context = { participation: local?.participation ?? state.society?.participation ?? null, mood, incumbent, source: 'simulation' };
     if (poll.bonus) for (const area of campaign.territories) {
       const shares = area.supportByCandidate;
@@ -2471,7 +2603,7 @@ export const store = {
     campaign.scheduledElectionId = election.id;
     campaign.preparation = { prep: game.prep, transfer, fund: fundTotal, partyFunds, partyBonus: round2(partyBonus), pollBonus: poll.bonus, pollShare: poll.share, allies: poll.allies, moodBonus, memory: { bonus: memoryBonus, highlights: memory.highlights.map(item => ({ text: item.text, tone: item.tone, week: item.week })) }, selection: selection ? { method: selection.method, bonus: selection.bonus } : null, committees, source: 'simulation' };
     if (programmes.volunteers || programmes.organization || programmes.selection) campaign.history.unshift({ id: `programmi-${campaign.id}`, day: 0, date: state.clock.currentDate, type: 'preparazione', text: `Programmi finanziati nei mesi scorsi: ${programmes.volunteers ? `+${programmes.volunteers} volontari` : ''}${programmes.organization ? ` · +${programmes.organization} organizzazione` : ''}${programmes.selection ? ` · peso nelle candidature +${programmes.selection}` : ''}`.replace(': ·', ':').replace(/\s+/g, ' '), source: 'simulation' });
-    if (committees?.committees.length) campaign.history.unshift({ id: `comitati-${campaign.id}`, day: 0, date: state.clock.currentDate, type: 'preparazione', text: `Comitati del territorio: forza ${committees.strength}/100 · ${committees.volunteers} volontari${committees.gotv ? ` (mobilitazione +${committees.gotv})` : ''}${committees.funds ? ` · ${committees.funds.toLocaleString('it-IT')} € raccolti` : ''} · candidatura ${committees.nomination >= 0 ? '+' : ''}${committees.nomination} · consenso locale ${committees.localSupport >= 0 ? '+' : ''}${committees.localSupport}`, source: 'simulation' });
+    if (committees?.committees.length) campaign.history.unshift({ id: `comitati-${campaign.id}`, day: 0, date: state.clock.currentDate, type: 'preparazione', text: `Comitati del territorio: forza ${committees.strength}/100 · ${committees.volunteers} volontari${committees.gotv ? ` (mobilitazione +${committees.gotv})` : ''}${committees.funds ? ` · ${committees.funds.toLocaleString('it-IT')} € raccolti` : ''} · candidatura ${committees.nomination >= 0 ? '+' : ''}${committees.nomination} · consenso locale ${committees.localSupport >= 0 ? '+' : ''}${committees.localSupport}${committees.control ? ` · responsabili locali: controllo ${committees.control.index}/100 (${committees.control.byStance.tuo + committees.control.byStance['con-te']} con te, ${committees.control.byStance.distante + committees.control.byStance.contro} distanti o contro)` : ''}`, source: 'simulation' });
     if (startMod.notes.length) campaign.history.unshift({ id: `partenza-${campaign.id}`, day: 0, date: state.clock.currentDate, type: 'preparazione', text: `Condizioni di partenza: ${startMod.notes.join(' · ')}`, source: 'simulation' });
     campaign.history.unshift({ id: `preparazione-${campaign.id}`, day: 0, date: state.clock.currentDate, type: 'preparazione', text: `Preparazione ${game.prep}/100 · ${transfer} € dalla carriera${fundTotal ? ` · ${fundTotal} € dal fondo elettorale` : ''}${partyFunds ? ` · ${partyFunds} € dal partito` : ''} · sostegno interno ${partyBonus >= 0 ? '+' : ''}${round2(partyBonus)} · sondaggi ${poll.bonus >= 0 ? '+' : ''}${poll.bonus}`, source: 'simulation' });
     const nextGame = deepCopy({ ...markElectionRunning(game, election.id, campaign.id), prep: 0 });
@@ -2671,7 +2803,7 @@ export const store = {
     if (parliament !== next.parliament) next = computeParliamentUpdate(next, parliament, next.ui.toast);
     next = endMandate(next, END_KINDS[kind].reason);
     next = { ...next, dataset: { ...next.dataset, offices: next.dataset.offices.map(item => item.politicianId === player?.id && !item.endDate ? { ...item, endDate: today } : item) } };
-    for (const institution of ['comune', 'regione', 'europa']) next = closeInstitution(next, institution, today);
+    for (const institution of ['comune', 'provincia', 'regione', 'europa']) next = closeInstitution(next, institution, today);
     next = { ...next, career: { ...next.career, currentLevel: null, endedAt: today, endKind: kind } };
     // The legacy is weighed on the career as it ends (offices closed, nothing else touched), then the game stops.
     const entry = hallEntry(next, kind);
@@ -3173,7 +3305,7 @@ export const store = {
     const next = withTime(PARLIAMENT_TIME_COSTS.amendOthers);
     const paid = { ...next.parliament, resources: { ...next.parliament.resources, politicalCapital: next.parliament.resources.politicalCapital - AMENDMENT_CAPITAL_COST } };
     const roll = seededRandom(`${state.career.id}|${lawId}|${(law.playerAmendments ?? []).length}|${next.clock.currentDate}|emendamento`)();
-    const result = amendOthersLaw(paid, lawId, { [patchKey]: patchKey === 'intensity' ? Number(patchValue) : patchValue }, next.clock.currentDate, { influence: playerStat(state, 'influence'), committeeRole: Boolean(next.parliament.careerStanding?.committeeRole), roll, offerVote });
+    const result = amendOthersLaw(paid, lawId, { [patchKey]: patchKey === 'intensity' ? Number(patchValue) : patchValue }, next.clock.currentDate, { influence: playerStat(state, 'influence'), ...amendmentExtras(state, next.parliament.laws.find(item => item.id === lawId)), roll, offerVote });
     // A deal fixes the vote: the pending request of the agenda is answered.
     const answered = result.accepted && offerVote && next.game ? { ...next, game: { ...next.game, inbox: next.game.inbox.filter(item => !(item.templateId === 'voto-aula' && item.params?.lawId === lawId)) } } : next;
     applyParliamentUpdate(answered, result.parliament, result.accepted ? (offerVote ? 'Accordo fatto: emendamento approvato, voterai a favore' : 'Emendamento approvato: il testo cambia') : `Emendamento respinto (probabilità stimata ${Math.round(result.chance * 100)}%)`, result.accepted ? { influence: 0.5, experience: 0.5 } : { experience: 0.25 });
@@ -3181,7 +3313,7 @@ export const store = {
   },
   amendmentOdds(lawId, { offerVote = false } = {}) {
     const law = state.parliament?.laws.find(item => item.id === lawId);
-    return law ? amendmentOdds(state.parliament, law, { influence: playerStat(state, 'influence'), committeeRole: Boolean(state.parliament.careerStanding?.committeeRole), offerVote }) : 0;
+    return law ? amendmentOdds(state.parliament, law, { influence: playerStat(state, 'influence'), ...amendmentExtras(state, law), offerVote }) : 0;
   },
   // ---------- the local and European institutions ----------
   // The player's act: a kind among those of the office (category), on a theme; variant for taxes, tariffs, town plans.
@@ -3205,8 +3337,8 @@ export const store = {
   questionLocalExecutive(instId, area = null) {
     const next = withTime(1);
     const current = findInstitution(next, instId);
-    const regional = current.kind === 'regione' ? next.society?.regions?.[current.region]?.indicators : null;
-    const theme = area ?? (regional ? Object.values(INDICATOR_AREA).filter(id => localAreas('regione').includes(id)).map(id => [id, territoryValue(current, id, regional)]).filter(([, value]) => value !== null).sort((a, b) => a[1] - b[1])[0]?.[0] ?? null : null);
+    const regional = ['regione', 'provincia'].includes(current.kind) ? next.society?.regions?.[current.region]?.indicators : null;
+    const theme = area ?? (regional ? Object.values(INDICATOR_AREA).filter(id => localAreas(current.kind).includes(id)).map(id => [id, territoryValue(current, id, regional)]).filter(([, value]) => value !== null).sort((a, b) => a[1] - b[1])[0]?.[0] ?? null : null);
     const inst = questionExecutive(current, next.clock.currentDate, theme);
     let updated = { ...replaceInstitution(next, inst), ui: { ...next.ui, toast: 'Interrogazione presentata' } };
     const stats = statsOf(updated);
@@ -3305,7 +3437,8 @@ export const store = {
     const appointment = parliament.government.ministers.at(-1);
     parliament = fulfilMinistryDemand(parliament, portfolio, appointment.groupId, next.clock.currentDate);
     const open = appointment.playerAppointed ? [{ id: ministerOfficeId(appointment), title: `Ministro · ${portfolio} (scenario)`, institution: 'Governo della Repubblica (scenario di gioco)', level: 'governo', politicianId: player?.id ?? null, territoryId: player?.territoryId ?? null, startDate: next.clock.currentDate }] : [];
-    return applyParliamentUpdate(next, parliament, appointment.playerAppointed ? `Sei ministro: ${portfolio}` : 'Incarico simulato distribuito', appointment.playerAppointed ? { influence: 3, notoriety: 3, reputation: 1 } : {}, { open });
+    const updated = applyParliamentUpdate(next, parliament, appointment.playerAppointed ? `Sei ministro: ${portfolio}` : 'Incarico simulato distribuito', appointment.playerAppointed ? { influence: 3, notoriety: 3, reputation: 1 } : {}, { open });
+    return appointment.playerAppointed ? settleOffices('ministro') : updated;
   },
   voteGovernmentConfidence() {
     requireFormateur();
@@ -3319,7 +3452,8 @@ export const store = {
     const player = playerOf(state);
     const open = passed && government.primeMinister !== 'player' ? [{ id: `incarico-premier-${government.id}`, title: 'Presidente del Consiglio (scenario)', institution: 'Governo della Repubblica (scenario di gioco)', level: 'governo', politicianId: player?.id ?? null, territoryId: player?.territoryId ?? null, startDate: next.clock.currentDate }] : [];
     if (passed) parliament = { ...parliament, government: { ...government, primeMinister: 'player' } };
-    return applyParliamentUpdate(next, parliament, passed ? 'Fiducia ottenuta: sei Presidente del Consiglio' : 'Fiducia non ottenuta: il governo cade', { ...deltas, ...(open.length ? { notoriety: 4, influence: (deltas.influence ?? 0) + 3 } : {}) }, { open });
+    const updated = applyParliamentUpdate(next, parliament, passed ? 'Fiducia ottenuta: sei Presidente del Consiglio' : 'Fiducia non ottenuta: il governo cade', { ...deltas, ...(open.length ? { notoriety: 4, influence: (deltas.influence ?? 0) + 3 } : {}) }, { open });
+    return passed ? settleOffices('premier') : updated;
   },
   // ---------- a Government led by someone else ----------
   // The simulated Prime Minister's Government from the start (or any Government the player does not lead).
@@ -3344,19 +3478,21 @@ export const store = {
     const next = withTime(PARLIAMENT_TIME_COSTS.crisis);
     return applyParliamentUpdate(next, withdrawGroupSupport(next.parliament, next.clock.currentDate), 'Il tuo gruppo esce dalla maggioranza: il governo deve verificare la fiducia', { notoriety: 1 });
   },
+  // An office just taken excludes some of those held (see office-rules): they lapse and the diary says which rule applied.
+  settleOffices(gained) { return settleOffices(gained); },
   requestGovernmentPost(portfolio) {
     const next = withTime(PARLIAMENT_TIME_COSTS.assignMinister);
     if ((next.game?.resources.politicalCapital ?? 0) < 6) throw new Error('Servono 6 punti di capitale politico per chiedere un incarico di governo.');
     const game = { ...next.game, resources: { ...next.game.resources, politicalCapital: next.game.resources.politicalCapital - 6 } };
     const player = playerOf(state);
     const stats = playerStats(state);
-    const result = requestGovernmentPost(withCapital(next.parliament, game), portfolio, next.clock.currentDate, { stats: { ...stats, influence: playerStat(state, 'influence') }, roll: rollFor(next), appointeeLabel: player?.displayName });
+    const result = requestGovernmentPost(withCapital(next.parliament, game), portfolio, next.clock.currentDate, { stats: { ...stats, influence: playerStat(state, 'influence') }, roll: rollFor(next), appointeeLabel: player?.displayName, extras: ministryExtras(next, portfolio) });
     const open = result.appointed ? [{ id: ministerOfficeId(result.appointment), title: `Ministro · ${portfolio} (scenario)`, institution: 'Governo della Repubblica (scenario di gioco)', level: 'governo', politicianId: player?.id ?? null, territoryId: player?.territoryId ?? null, startDate: next.clock.currentDate }] : [];
     // A lower office than hoped: undersecretary instead of minister.
     const lowerGame = result.lower && !game.flags?.scenarioOffice ? { ...game, flags: { ...game.flags, scenarioOffice: { title: 'Sottosegretario (esecutivo di scenario)', since: game.week.index, source: DATA_SOURCES.SIMULATION } } } : game;
     const updated = applyParliamentUpdate({ ...next, game: lowerGame }, result.parliament, result.appointed ? `Sei ministro: ${portfolio}` : result.lower ? 'Niente ministero: ti offrono un incarico da sottosegretario' : 'Il Presidente del Consiglio non ti affida il ministero', result.appointed ? { influence: 3, notoriety: 3, reputation: 1 } : result.lower ? { influence: 1, notoriety: 1 } : { influence: -0.5 }, { open });
     if (result.lower && !game.flags?.scenarioOffice) { state = handleSpecials(state, [{ type: 'scenario-office', title: 'Sottosegretario (esecutivo di scenario)' }]); persist(); emit(); }
-    return updated;
+    return result.appointed ? settleOffices('ministro') : result.lower ? settleOffices('sottosegretario') : updated;
   },
   triggerGovernmentCrisis() {
     if (!isSecretary(state.game?.party) && !isPrimeMinister(state.parliament)) throw new Error('Una crisi di governo la aprono il Presidente del Consiglio o il segretario di un partito.');
@@ -3470,7 +3606,10 @@ export const store = {
       { id: regionId, kind: 'regione', name: draft.region, parentId: null, source: DATA_SOURCES.USER },
       { id: municipalityId, kind: 'comune', name: draft.municipality.trim(), parentId: regionId, source: DATA_SOURCES.USER, ...istat }
     ];
-    const territoryId = draft.initialLevel === 'comunale' ? municipalityId : regionId;
+    // The province of the comune (a territory of its own for a provincial career): the ISTAT unit, its name and its kind.
+    const provinceId = makeId('territorio-provincia');
+    if (draft.initialLevel === 'provinciale') territories.push({ id: provinceId, kind: 'provincia', name: draft.provinceName, parentId: regionId, source: DATA_SOURCES.USER, istatCode: draft.provinceCode, provinceType: draft.provinceType ?? null });
+    const territoryId = draft.initialLevel === 'comunale' ? municipalityId : draft.initialLevel === 'provinciale' ? provinceId : regionId;
     if (['deputato','senatore','europeo'].includes(draft.initialLevel)) territories.push({ id: nationId, kind: 'stato', name: 'Italia', parentId: null, source: DATA_SOURCES.USER });
 
     const parties = state.dataset.parties.filter(party => party.source === DATA_SOURCES.USER);
@@ -3508,7 +3647,7 @@ export const store = {
     const chamber = CAREER_LEVELS[draft.initialLevel]?.chamber ?? null;
     const office = {
       id: player.roleId, title: level.office,
-      institution: draft.initialLevel === 'comunale' ? 'Comune di ' + draft.municipality.trim() : draft.initialLevel === 'regionale' ? 'Regione ' + draft.region : chamber === 'camera' ? 'Camera dei deputati' : chamber === 'senato' ? 'Senato della Repubblica' : draft.initialLevel === 'europeo' ? 'Parlamento europeo' : 'Repubblica italiana',
+      institution: draft.initialLevel === 'comunale' ? 'Comune di ' + draft.municipality.trim() : draft.initialLevel === 'provinciale' ? institutionName('provincia', { provinceName: draft.provinceName, provinceType: draft.provinceType }) : draft.initialLevel === 'regionale' ? 'Regione ' + draft.region : chamber === 'camera' ? 'Camera dei deputati' : chamber === 'senato' ? 'Senato della Repubblica' : draft.initialLevel === 'europeo' ? 'Parlamento europeo' : 'Repubblica italiana',
       // A seat at the European Parliament is an office of the European vote ('europee'), like the one a campaign wins.
       level: draft.initialLevel === 'europeo' ? 'europee' : draft.initialLevel, politicianId: playerId, territoryId, startDate: today, endDate: null,
       source: chamber || draft.initialLevel === 'europeo' ? DATA_SOURCES.SIMULATION : DATA_SOURCES.USER
@@ -3518,6 +3657,8 @@ export const store = {
     dataset.politicians = [player];
     dataset.territories = territories;
     dataset.offices = [office];
+    // A provincial councillor is a mayor or a municipal councillor of the province: the career starts with the seat in the own comune too.
+    if (draft.initialLevel === 'provinciale') dataset.offices.push({ id: makeId('incarico'), title: CAREER_LEVELS.comunale.office, institution: 'Comune di ' + draft.municipality.trim(), level: 'comunale', politicianId: playerId, territoryId: municipalityId, startDate: today, endDate: null, source: DATA_SOURCES.USER });
     dataset.statistics = datasetStatistics;
     const parliamentContext = chamber ? {
       mode: 'real-context', chamber, groupId: draft.parliamentaryGroupId,
@@ -3558,8 +3699,10 @@ export const store = {
     const presidency = createPresidency({ date: today, seed: seedOf(base) });
     state = { ...base, game, world, society, national, presidency, parliament: withCapital(parliament, game) };
     // A local career starts with a seat in the council of the own comune or region, until its next vote.
-    const localKind = { comunale: 'comune', regionale: 'regione' }[draft.initialLevel];
+    const localKind = { comunale: 'comune', provinciale: 'comune', regionale: 'regione' }[draft.initialLevel];
     if (localKind && world) state = withInstitution(state, simulatedInstitution(state, localKind, today));
+    // ...and a provincial career in the council of the province too, besides the one of the own comune.
+    if (draft.initialLevel === 'provinciale' && world) state = withInstitution(state, simulatedInstitution(state, 'provincia', today));
     // A European career starts with a seat in the European Parliament, in the group of the own party (or non-attached).
     if (draft.initialLevel === 'europeo' && world) state = withInstitution(state, europeanInstitution(state, today));
     timelineBase = state;
@@ -3619,7 +3762,7 @@ function applyCampaignResult(currentState,campaign) {
   let career={...currentState.career,lastCampaignId:campaign.id,lastElectionResult:{...historyEntry,votes:result.playerVotes},lastElectionReport:report,electionHistory:[...(currentState.career.electionHistory??[]),historyEntry],partyImpactHistory:[...(currentState.career.partyImpactHistory??[]),{campaignId:campaign.id,partyId:campaign.partyId,consensusChange:campaign.partyImpact.consensusChange,outcome:campaign.partyImpact.outcome,date:campaign.currentDate,source:DATA_SOURCES.SIMULATION}]};
   if(result.personalMandate&&aftermath.office) {
     const title=aftermath.office.title;
-    const office={id:makeId('incarico-simulato'),title,institution:campaign.electionType==='comunale'?`Comune di ${player.municipality}`:campaign.electionType==='regionale'?`Regione ${player.region}`:campaign.electionType==='europee'?'Parlamento europeo':'Repubblica italiana',level:campaign.electionType,side:aftermath.office.side??null,via:aftermath.office.via??null,politicianId:player.id,territoryId:campaign.territoryId,startDate:campaign.currentDate,endDate:null,source:DATA_SOURCES.SIMULATION};
+    const office={id:makeId('incarico-simulato'),title,institution:campaign.electionType==='comunale'?`Comune di ${player.municipality}`:campaign.electionType==='provinciale'?institutionName('provincia',{...homePlace(currentState),municipality:player.municipality}):campaign.electionType==='regionale'?`Regione ${player.region}`:campaign.electionType==='europee'?'Parlamento europeo':'Repubblica italiana',level:campaign.electionType,side:aftermath.office.side??null,via:aftermath.office.via??null,politicianId:player.id,territoryId:campaign.territoryId,startDate:campaign.currentDate,endDate:null,source:DATA_SOURCES.SIMULATION};
     dataset={...dataset,offices:[...dataset.offices,office],politicians:dataset.politicians.map(item=>item.id===player.id?{...item,roleId:office.id}:item)};
     career.status='elected';
   }
@@ -3640,13 +3783,13 @@ function applyCampaignResult(currentState,campaign) {
     }
     game.resources={...game.resources,politicalCapital:Math.max(0,Math.min(100,(game.resources.politicalCapital??0)+(aftermath.capital??0)))};
     // The result stays in the political memory: a victory opens doors for years, a defeat is thrown back at you.
-    remember(game,{date:campaign.currentDate,kind:aftermath.memory.kind,text:`${campaign.electionLabel}: ${String(Math.round(result.playerShare*10)/10).replace('.',',')}% · ${outcome.label??(result.personalMandate?'mandato conquistato':'nessun mandato')}`,region:['comunale','regionale'].includes(campaign.electionType)?player.region:null,weight:aftermath.memory.weight});
+    remember(game,{date:campaign.currentDate,kind:aftermath.memory.kind,text:`${campaign.electionLabel}: ${String(Math.round(result.playerShare*10)/10).replace('.',',')}% · ${outcome.label??(result.personalMandate?'mandato conquistato':'nessun mandato')}`,region:['comunale','provinciale','regionale'].includes(campaign.electionType)?player.region:null,weight:aftermath.memory.weight});
     game.relations=game.relations.map(item=>item.id==='leadership'&&aftermath.party?{...item,value:Math.max(0,Math.min(100,item.value+aftermath.party.leadership))}:item);
     game.log=[{id:`diario-voto-${campaign.id}`,week:game.week.index,date:campaign.currentDate,kind:'elezioni',title:`${campaign.electionLabel}: ${outcome.label??(result.personalMandate?'mandato conquistato':'nessun mandato')}`,lines:[`${String(Math.round(result.playerShare*10)/10).replace('.',',')}% · ${outcome.positionLabel??''}${outcome.expectationLabel?` · ${outcome.expectationLabel.toLowerCase()}`:''}`,...aftermath.lines,result.objectiveMet?'Obiettivo raggiunto':'Obiettivo mancato'].filter(Boolean),tone:aftermath.tone==='good'?'good':aftermath.tone==='neutral'?'neutral':'bad',source:'simulation'},...game.log].slice(0,40);
     // The committees of the territory feel the vote.
     if(game.party?.org?.committees?.length) {
       const home=homePlace(currentState);
-      const territory=committeesAfterVote(game.party.org,{mandate:Boolean(result.personalMandate),electionType:campaign.electionType,region:home.region,provinceCode:home.provinceCode,municipality:home.municipality,week:game.week.index});
+      const territory=committeesAfterVote(game.party.org,{mandate:Boolean(result.personalMandate),electionType:campaign.electionType,region:home.region,provinceCode:home.provinceCode,municipality:home.municipality,week:game.week.index,cadres:game.party.life?.cadres??[]});
       if(territory.length) game.log[0]={...game.log[0],lines:[...game.log[0].lines,...territory.slice(0,2)]};
     }
     // What the vote opens: the giunta, the opposition, an appeal, the reckoning in the party, the government.
@@ -3688,6 +3831,10 @@ function applyCampaignResult(currentState,campaign) {
   // The council (or the European Parliament) where the vote seats the player; a lost vote ends the previous term.
   const kind=INSTITUTION_OF[campaign.electionType];
   if(kind) next=result.personalMandate&&aftermath.office?withInstitution(next,institutionFromResult(next,campaign,result)):closeInstitution(next,kind,campaign.currentDate);
+  // The office won excludes some of those held (a regional seat the Chambers, a Chamber the European Parliament...): they lapse.
+  // The office actually won (a mayoral candidate may enter the council from the opposition benches), not the one run for.
+  const wonOffice=campaign.electionType==='politiche'?(chamber?(chamber==='camera'?'deputato':'senatore'):null):institutionOffice(localOf(next).institutions.find(item=>item.kind===kind&&item.status==='active'));
+  if(result.personalMandate&&aftermath.office) next=lapseConflicts(next,wonOffice,campaign.currentDate);
   if(parliament===currentState.parliament) return withObjectives(next);
   // Route the parliamentary change through the shared bookkeeping (history, offices, events).
   return withObjectives(computeParliamentUpdate(next,withCapital(parliament,game),currentState.ui.toast));

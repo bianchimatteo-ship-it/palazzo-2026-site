@@ -1,6 +1,8 @@
 import { activeMinisters, canManageParliament, CHAMBERS, CONTEST_COST, CONTEST_WINDOW_DAYS, GOVERNMENT_POST_REQUIREMENTS, governingGroupIds, governmentPostProblems, MINISTERIAL_PORTFOLIOS, nextParliamentaryRole, parliamentGroupFacts, playerInMajority } from '../core/parliament-engine.js?v=20261003-2';
 import { amendmentOdds, forecastVote, LAW_SPONSORS, PLAYER_VOTE_CHOICES } from '../core/lawmaking-engine.js?v=20261003-2';
-import { AREA_BY_ID, FINANCING, GOVERNMENT_LINES } from '../data/simulation/policy-rules.js?v=20261003-2';
+import { competenceIn } from '../core/standing-engine.js?v=20261003-2';
+import { heldOfficesOf } from '../core/roles.js?v=20261003-2';
+import { AREA_BY_ID, FINANCING, GOVERNMENT_LINES, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261003-2';
 const GOVERNMENT_LINE_LABELS = Object.fromEntries(Object.entries(GOVERNMENT_LINES).map(([id, item]) => [id, item.label]));
 import { AMENDMENT_CAPITAL_COST } from '../data/simulation/career-rules.js?v=20261003-2';
 import { DATA_SOURCES } from '../data/schema.js?v=20261003-2';
@@ -302,7 +304,9 @@ function billActions(law, parliament, extras) {
   if (!canManageParliament(parliament) || CLOSED_STAGES.includes(law.stage)) return '';
   if (law.currentChamber !== seat.chamber) return '<p class="parliament-note">Ora la esamina ' + (law.currentChamber === 'camera' ? 'la Camera' : 'il Senato') + ': potrai intervenire e votare quando arriva nella tua Camera.</p>';
   const speak = ['favorevole', 'contrario'].map(stance => '<button class="secondary-button" data-bill-speak="' + stance + '" data-law-id="' + esc(law.id) + '"' + (law.playerStance === stance ? ' disabled' : '') + '>' + (stance === 'favorevole' ? 'Intervieni a favore' : 'Intervieni contro') + ' · 1 giorno</button>').join('');
-  const oddsOf = offerVote => amendmentOdds(parliament, law, { influence: extras.influence ?? 50, committeeRole: Boolean(parliament.careerStanding?.committeeRole), offerVote });
+  // The same odds the store applies: the weight of the player, a role in committee or at the head of the group, the competence in the sector of the law.
+  const area = law.policy?.area ?? POLICY_AREAS.find(item => item.label === law.category)?.id ?? null;
+  const oddsOf = offerVote => amendmentOdds(parliament, law, { influence: extras.influence ?? 50, committeeRole: Boolean(parliament.careerStanding?.committeeRole) || (extras.state ? heldOfficesOf(extras.state).includes('capogruppo') : false), competence: extras.state?.game ? competenceIn(extras.state.game, area) : 50, offerVote });
   const open = law.kind !== 'manovra' && ['commission', 'amendments'].includes(law.stage);
   const deal = law.sponsor?.groupId !== seat.groupId && !law.playerDeal ? '<label class="bill-deal"><input type="checkbox" name="deal" value="1" /> Offri il tuo voto favorevole in cambio (probabilità ' + Math.round(oddsOf(true) * 100) + '%): se poi non lo rispetti, il proponente non lo dimentica</label>' : '';
   const amend = open ? (law.confidence ? '<p class="parliament-note">Sul testo c’è la fiducia: niente più emendamenti.</p>' : '<form class="bill-amend" data-bill-amend-form data-law-id="' + esc(law.id) + '"><label>Il tuo emendamento<select name="patch">' + billAmendments(law).map(([value, label]) => '<option value="' + esc(value) + '">' + esc(label) + '</option>').join('') + '</select></label><button class="secondary-button" type="submit">Presenta · 1 giorno · ' + AMENDMENT_CAPITAL_COST + ' cap. · probabilità ' + Math.round(oddsOf(false) * 100) + '%</button>' + deal + '</form>') : '';

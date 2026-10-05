@@ -17,7 +17,7 @@ export const QUORUMS = Object.freeze({
 // half of the councillors in the first call and a third in the second (never less than a third, art. 38 TUEL); the
 // regional statutes ask for the majority of the members; the European Parliament for a third.
 export function legalNumber(kind, seats, secondCall = false) {
-  if (kind === 'comune') return secondCall ? Math.ceil(seats / 3) : Math.ceil(seats / 2);
+  if (kind === 'comune' || kind === 'provincia') return secondCall ? Math.ceil(seats / 3) : Math.ceil(seats / 2);
   if (kind === 'regione') return Math.floor(seats / 2) + 1;
   return Math.ceil(seats / 3);
 }
@@ -45,6 +45,8 @@ export const CITY_INDICATORS = Object.freeze([
 export const cityIndicatorOf = area => CITY_INDICATORS.find(item => item.areas.includes(area)) ?? CITY_INDICATORS.at(-1);
 // A city is a part of its region: this share of what its acts change reaches the regional indicators.
 export const CITY_SHARE_OF_REGION = 0.15;
+// A province is a part of its region too, a larger one than a city: this share of what its acts change reaches the regional indicators.
+export const PROVINCE_SHARE_OF_REGION = 0.4;
 // The regione moves the indicators of its territory (those of the society simulation): the areas that have a regional
 // indicator use it, the others the closest ones.
 const REGIONAL_FALLBACK = Object.freeze({
@@ -288,6 +290,108 @@ const REGIONE = [
     politics: 1, content: 0
   })
 ];
+// The provincia (law 56/2014): an ente di area vasta with its own organs — the President, the council and the assembly of the
+// mayors — chosen by the mayors and the municipal councillors of the province, not by the citizens. It looks after the
+// provincial roads, the buildings of the secondary schools, the planning of the territory, the environment and the
+// transport, and helps the comuni. Rules of the game, simplified.
+const PROVINCIA = [
+  T('decreto-presidente', {
+    label: 'Decreto del Presidente', organ: 'giunta', quorum: 'giunta', reference: 'legge 56/2014 e statuto provinciale', proposers: 'Presidente e consiglieri delegati',
+    function: 'Gli atti di governo dell’ente che non spettano al consiglio: manutenzioni, contributi ai comuni, incarichi, organizzazione degli uffici.',
+    iter: ['Proposta del consigliere delegato', 'Pareri tecnici e contabili', 'Decreto del Presidente'],
+    modifies: 'Un servizio della provincia, in poche settimane; spesa contenuta.',
+    approved: 'Effetto rapido sul servizio, che poi si attenua; il costo pesa sul bilancio.', rejected: 'La presidenza si divide: perde stabilità e il problema resta.',
+    politics: 0.35, effect: 1.6, cost: 1.2, phase: 4, lasting: false, weight: 0.24, player: ['leader']
+  }),
+  T('regolamento', {
+    label: 'Regolamento provinciale', reference: 'TUEL e statuto provinciale', proposers: 'Presidente e consiglieri',
+    function: 'Norme stabili su un servizio: viabilità, trasporto, uso degli edifici scolastici, autorizzazioni ambientali.',
+    iter: ['Proposta', 'Commissione consiliare', 'Voto in consiglio', 'Pubblicazione all’albo'],
+    modifies: 'Le regole di un servizio: effetto moderato e duraturo, quasi a costo zero.',
+    approved: 'Il servizio migliora a poco a poco e resta migliorato.', rejected: 'Restano le regole vecchie; chi l’ha proposto perde credibilità.',
+    politics: 0.3, effect: 2, cost: 0.3, phase: 8, weight: 0.1, player: ['leader', 'consigliere']
+  }),
+  T('piano', {
+    label: 'Piano provinciale di settore', reference: 'TUEL e legge 56/2014', proposers: 'Presidente',
+    function: 'Piani della provincia: viabilità, trasporto, edilizia scolastica, rifiuti e ambiente, sviluppo economico.',
+    iter: ['Proposta della presidenza', 'Commissione consiliare', 'Voto in consiglio', 'Attuazione in più mesi'],
+    modifies: 'Un intero settore dell’area vasta, con effetti ampi ma lenti e una spesa pluriennale.',
+    approved: 'Il settore migliora in modo stabile nei mesi successivi.', rejected: 'Il settore resta senza programmazione e continua a peggiorare; la presidenza ne esce indebolita.',
+    politics: 0.35, effect: 3, cost: 2.2, phase: 16, weight: 0.12, player: ['leader']
+  }),
+  T('opere', {
+    label: 'Strade e scuole: lavori pubblici', reference: 'programma triennale dei lavori pubblici', proposers: 'Presidente',
+    function: 'Le strade provinciali e gli edifici delle scuole superiori: ponti, frane, tetti, palestre, messa in sicurezza.', areas: ['infrastrutture', 'scuola', 'trasporti', 'ambiente'],
+    iter: ['Progetto e copertura finanziaria', 'Commissione lavori pubblici', 'Voto in consiglio', 'Gara e cantiere'],
+    modifies: 'Le strutture del tema: effetto forte ma lento (i cantieri), spesa alta.',
+    approved: 'Cantieri e poi strutture migliori; lavoro per le imprese del territorio.', rejected: 'L’opera salta e i fondi dedicati vanno persi: le strutture continuano a invecchiare.',
+    politics: 0.3, breadth: 0.15, effect: 4, cost: 5, phase: 24, weight: 0.14, player: ['leader']
+  }),
+  T('ptcp', {
+    label: 'Piano territoriale di coordinamento', quorum: 'componenti', reference: 'legge 56/2014 e leggi regionali sul governo del territorio', proposers: 'Presidente',
+    function: 'La pianificazione dell’area vasta: dove si può costruire, quali corridoi di mobilità e quali aree verdi, in accordo con i comuni.', areas: ['casa', 'ambiente', 'infrastrutture'],
+    iter: ['Proposta della presidenza', 'Parere dell’Assemblea dei sindaci', 'Adozione in consiglio', 'Osservazioni e approvazione definitiva'],
+    modifies: 'Casa, territorio e ambiente nell’intera provincia; un lavoro lento, ma che i comuni devono seguire.',
+    approved: 'Il territorio si ordina: meno scontri tra i comuni e un quadro stabile per le opere.', rejected: 'Il piano decade: ogni comune va per conto suo.',
+    politics: 0.45, breadth: 0.1, effect: 2.8, cost: 0.6, phase: 24, weight: 0.04, player: ['leader']
+  }),
+  T('convenzione', {
+    label: 'Convenzione con i comuni', reference: 'TUEL e legge 56/2014', proposers: 'Presidente',
+    function: 'La provincia aiuta i comuni: stazione appaltante, uffici associati, assistenza tecnica, trasporto intercomunale.',
+    iter: ['Accordo con i comuni interessati', 'Parere dell’Assemblea dei sindaci', 'Voto in consiglio'],
+    modifies: 'I servizi che i piccoli comuni non reggono da soli, e il rapporto tra la provincia e i sindaci.',
+    approved: 'I comuni aderenti ricevono un servizio condiviso; la presidenza guadagna fiducia tra i sindaci.', rejected: 'I comuni restano da soli e la presidenza perde appoggio.',
+    politics: 0.3, content: 0.8, breadth: 0.2, effect: 1.8, cost: 0.8, phase: 12, weight: 0.1, player: ['leader', 'consigliere']
+  }),
+  T('variazione', {
+    label: 'Variazione di bilancio', reference: 'art. 175 TUEL', proposers: 'Presidente',
+    function: 'Sposta risorse tra i programmi durante l’anno.',
+    iter: ['Proposta della presidenza', 'Parere dei revisori', 'Commissione bilancio', 'Voto in consiglio'],
+    modifies: 'Le risorse di un programma: più fondi al tema, meno margine.',
+    approved: 'Il tema riceve fondi e migliora per qualche mese.', rejected: 'Le risorse restano ferme e la presidenza perde stabilità.',
+    politics: 0.55, content: 0.6, effect: 1.8, cost: 2.4, phase: 6, lasting: false, weight: 0.06, player: ['leader']
+  }),
+  T('bilancio', {
+    label: 'Bilancio provinciale', reference: 'artt. 151, 162 e 141 TUEL', proposers: 'Presidente',
+    function: 'Entrate e spese dell’anno, dopo il parere dell’Assemblea dei sindaci: senza il bilancio la provincia spende solo il necessario.', areas: ['finanze'],
+    iter: ['Proposta della presidenza', 'Parere dei revisori dei conti', 'Parere dell’Assemblea dei sindaci', 'Voto in consiglio'],
+    modifies: 'Le risorse dell’anno (margine) e la possibilità di spendere.',
+    approved: 'Nuove risorse per l’anno e una presidenza più solida.', rejected: 'Esercizio provvisorio: solo spese obbligatorie; al secondo no il Prefetto nomina un commissario e il consiglio è sciolto.',
+    politics: 1, content: 0.25
+  }),
+  T('statuto', {
+    label: 'Statuto provinciale', quorum: 'componenti', reference: 'legge 56/2014', proposers: 'Presidente e consiglieri',
+    function: 'Gli organi dell’ente e i rapporti con i comuni: lo adotta il consiglio con il parere dell’Assemblea dei sindaci.', areas: ['pa'],
+    iter: ['Proposta', 'Parere dell’Assemblea dei sindaci', 'Voto in consiglio con la maggioranza assoluta dei componenti'],
+    modifies: 'Le regole del rapporto con i comuni: meno attrito, uffici più chiari.',
+    approved: 'Rapporti più chiari con i comuni: cala la pressione sulla presidenza.', rejected: 'Tutto come prima; la maggioranza ne esce indebolita.',
+    politics: 0.3, content: 0.6, breadth: 0.2, effect: 1, phase: 8, weight: 0.01, player: ['leader']
+  }),
+  T('mozione', {
+    label: 'Mozione', reference: 'TUEL e regolamento del consiglio provinciale', proposers: 'Consiglieri e gruppi consiliari',
+    function: 'Atto di indirizzo: il consiglio impegna il Presidente e i consiglieri delegati ad agire su un tema.',
+    iter: ['Deposito', 'Calendario dei capigruppo', 'Discussione e voto in consiglio'],
+    modifies: 'Da sola non spende e non cambia regole: crea un impegno per la presidenza.',
+    approved: 'La presidenza deve portare un atto sul tema entro 8 settimane; se non lo fa perde stabilità e credibilità.', rejected: 'Nessun impegno; chi l’ha presentata ne fa una bandiera (più pressione se è dell’opposizione).',
+    politics: 0.6, content: 0.8, breadth: -0.05, player: ['consigliere']
+  }),
+  T('interrogazione', {
+    label: 'Interrogazione', organ: 'esecutivo', quorum: 'nessuno', reference: 'TUEL e regolamento del consiglio provinciale', proposers: 'Consiglieri',
+    function: 'Domanda al Presidente o a un consigliere delegato sull’attività dell’ente: la risposta arriva entro 30 giorni.',
+    iter: ['Deposito', 'Risposta in consiglio o scritta'],
+    modifies: 'Il controllo sulla presidenza: la risposta dipende da come va il servizio.',
+    approved: 'Servizio in difficoltà: risposta debole, la presidenza perde stabilità e chi ha chiesto guadagna visibilità.', rejected: 'Servizio in salute: la presidenza risponde bene e la pressione cala.',
+    politics: 0, player: ['consigliere']
+  }),
+  T('sfiducia', {
+    label: 'Mozione di sfiducia al Presidente', quorum: 'componenti', reference: 'regola del gioco, sul modello degli artt. 52 e 141 TUEL', proposers: 'Almeno due quinti dei consiglieri',
+    function: 'Sfiducia al Presidente della Provincia: motivata, discussa dopo qualche giorno, votata per appello nominale.', areas: ['pa'],
+    iter: ['Deposito con le firme', 'Attesa di almeno 10 giorni', 'Voto per appello nominale'],
+    modifies: 'La sopravvivenza della presidenza e del consiglio.',
+    approved: 'Presidente e consiglieri delegati decadono: consiglio sciolto, arriva un commissario, si torna al voto.', rejected: 'Il Presidente resta e si rafforza; l’opposizione perde credibilità.',
+    politics: 1, content: 0
+  })
+];
 const EUROPA = [
   T('ue-proposta', {
     label: 'Proposta legislativa della Commissione', reference: 'procedura legislativa ordinaria, art. 294 TFUE', proposers: 'Commissione europea',
@@ -315,14 +419,15 @@ const EUROPA = [
     approved: 'La relazione impegna politicamente la Commissione; il relatore guadagna peso.', rejected: 'La relazione cade; il relatore perde credibilità.', politics: 0.3, player: ['consigliere', 'leader']
   })
 ];
-export const ACT_TYPES = Object.freeze({ comune: Object.freeze(COMUNE), regione: Object.freeze(REGIONE), europa: Object.freeze(EUROPA) });
+export const ACT_TYPES = Object.freeze({ comune: Object.freeze(COMUNE), provincia: Object.freeze(PROVINCIA), regione: Object.freeze(REGIONE), europa: Object.freeze(EUROPA) });
 export const actTypeOf = (kind, id) => ACT_TYPES[kind]?.find(item => item.id === id) ?? null;
 // The kinds the player can propose: a councillor, or the head of the executive (sindaco, presidente).
 export const proposableTypes = (kind, leads) => (ACT_TYPES[kind] ?? []).filter(item => item.player.includes(leads ? 'leader' : 'consigliere'));
 // The act a theme calls for when nothing else is said (the player's proposals and the executive's).
 const NATURAL = Object.freeze({
   comune: { sicurezza: 'regolamento', commercio: 'regolamento', pa: 'regolamento', trasporti: 'piano', ambiente: 'servizi', casa: 'urbanistica', welfare: 'servizi', scuola: 'opere', cultura: 'delibera-giunta', sport: 'opere', turismo: 'piano', infrastrutture: 'opere', giovani: 'servizi', digitale: 'servizi' },
-  regione: { sanita: 'piano', trasporti: 'legge', agricoltura: 'legge', ambiente: 'piano', lavoro: 'legge', industria: 'legge', scuola: 'legge', turismo: 'legge', welfare: 'legge', infrastrutture: 'piano', casa: 'legge', cultura: 'legge', energia: 'legge', autonomie: 'legge' }
+  regione: { sanita: 'piano', trasporti: 'legge', agricoltura: 'legge', ambiente: 'piano', lavoro: 'legge', industria: 'legge', scuola: 'legge', turismo: 'legge', welfare: 'legge', infrastrutture: 'piano', casa: 'legge', cultura: 'legge', energia: 'legge', autonomie: 'legge' },
+  provincia: { infrastrutture: 'opere', scuola: 'opere', trasporti: 'piano', ambiente: 'piano', casa: 'ptcp', autonomie: 'convenzione', pa: 'regolamento', turismo: 'piano', industria: 'piano', cultura: 'decreto-presidente' }
 });
 export const naturalType = (kind, area, leads) => {
   const allowed = proposableTypes(kind, leads);
@@ -366,12 +471,26 @@ const REGION_TOPICS = Object.freeze({
   energia: { legge: 'sulle comunità energetiche', giunta: 'incentivi per il fotovoltaico', piano: 'Piano energetico regionale', regolamento: 'sugli impianti rinnovabili', mozione: 'caro bollette' },
   autonomie: { legge: 'sulle unioni di comuni', giunta: 'fondo per i piccoli comuni', piano: 'Programma di riordino territoriale', regolamento: 'sulla gestione associata', mozione: 'autonomia differenziata', statuto: 'Revisione dello statuto regionale' }
 });
+const PROVINCE_TOPICS = Object.freeze({
+  infrastrutture: { decreto: 'pronto intervento sulle strade provinciali', regolamento: 'sui cantieri lungo le strade provinciali', piano: 'Piano della viabilità provinciale', opere: 'ponti, frane e messa in sicurezza delle strade provinciali', convenzione: 'con i comuni per la manutenzione delle strade', mozione: 'strade provinciali dissestate', ptcp: 'Corridoi infrastrutturali dell’area vasta' },
+  scuola: { decreto: 'interventi urgenti negli edifici delle scuole superiori', regolamento: 'sull’uso delle palestre scolastiche', piano: 'Piano dell’edilizia scolastica', opere: 'adeguamento sismico e tetti delle scuole superiori', convenzione: 'con i comuni per le palestre scolastiche', mozione: 'edilizia scolastica e sicurezza degli istituti' },
+  trasporti: { decreto: 'servizio di trasporto per le scuole superiori', regolamento: 'sui servizi di trasporto in concessione', piano: 'Piano del trasporto pubblico di area vasta', opere: 'fermate, parcheggi di scambio e collegamenti', convenzione: 'con i comuni per il trasporto intercomunale', mozione: 'collegamenti tra i comuni e le valli' },
+  ambiente: { decreto: 'controlli ambientali e autorizzazioni', regolamento: 'sulle autorizzazioni ambientali', piano: 'Piano provinciale dei rifiuti e della difesa del suolo', opere: 'difesa del suolo e corsi d’acqua', convenzione: 'con i comuni per la gestione associata dei rifiuti', mozione: 'frane, corsi d’acqua e rifiuti', ptcp: 'Tutela delle aree verdi e agricole dell’area vasta' },
+  casa: { decreto: 'osservatorio sul territorio e sulla casa', regolamento: 'sulla pianificazione sovracomunale', piano: 'Piano per il territorio e l’abitare', opere: 'recupero di edifici provinciali', convenzione: 'con i comuni per la pianificazione associata', mozione: 'consumo di suolo e pianificazione', ptcp: 'Assetto del territorio e insediamenti dell’area vasta' },
+  autonomie: { decreto: 'sportello per i piccoli comuni', regolamento: 'sugli uffici associati', piano: 'Programma di assistenza tecnica ai comuni', opere: 'sedi condivise per gli uffici dei comuni', convenzione: 'stazione appaltante e assistenza tecnica ai comuni', mozione: 'piccoli comuni e servizi associati' },
+  pa: { decreto: 'riorganizzazione degli uffici dell’ente', regolamento: 'sull’accesso agli atti', piano: 'Piano della trasparenza e dell’anticorruzione', opere: 'sede degli uffici provinciali', convenzione: 'per i servizi digitali ai comuni', mozione: 'tempi e uffici della provincia', statuto: 'Modifica dello statuto provinciale' },
+  turismo: { decreto: 'promozione dei cammini e dei borghi', regolamento: 'sull’accoglienza diffusa', piano: 'Piano del turismo di area vasta', opere: 'segnaletica e punti di accoglienza', convenzione: 'con i comuni per la promozione turistica', mozione: 'turismo e borghi' },
+  industria: { decreto: 'tavolo con le imprese del territorio', regolamento: 'sulle aree produttive', piano: 'Piano per le aree produttive e lo sviluppo economico', opere: 'infrastrutture per le aree produttive', convenzione: 'con i comuni per lo sportello unico delle imprese', mozione: 'crisi aziendali e aree produttive' },
+  cultura: { decreto: 'calendario degli eventi culturali provinciali', regolamento: 'sui contributi culturali', piano: 'Piano della cultura di area vasta', opere: 'restauro di un edificio storico provinciale', convenzione: 'con i comuni per le reti museali', mozione: 'cultura e biblioteche nei piccoli comuni' }
+});
 const lower = area => AREA_BY_ID[area]?.label.toLowerCase() ?? 'servizi';
 // The title of an act of a kind on a theme (variant: aumento/riduzione, espansione/rigenerazione).
 export function actTitle(kind, typeId, area, { variant = null, year = null } = {}) {
-  const topic = (kind === 'regione' ? REGION_TOPICS : CITY_TOPICS)[area] ?? {};
-  const place = kind === 'regione' ? 'regionali' : 'comunali';
+  const topic = (kind === 'regione' ? REGION_TOPICS : kind === 'provincia' ? PROVINCE_TOPICS : CITY_TOPICS)[area] ?? {};
+  const place = kind === 'regione' ? 'regionali' : kind === 'provincia' ? 'provinciali' : 'comunali';
   switch (typeId) {
+    case 'decreto-presidente': return `Decreto del Presidente: ${topic.decreto ?? `interventi su ${lower(area)}`}`;
+    case 'ptcp': return topic.ptcp ?? `Piano territoriale di coordinamento: ${lower(area)}`;
     case 'delibera-giunta': return `Delibera di Giunta: ${topic.giunta ?? `interventi su ${lower(area)}`}`;
     case 'tariffe': return `Tariffe: ${variant === 'riduzione' ? 'riduzione' : 'aumento'} per ${topic.tariffe ?? lower(area)}`;
     case 'tributi': return kind === 'regione' ? `Addizionale regionale IRPEF: ${variant === 'riduzione' ? 'riduzione' : 'aumento'}` : `Aliquote IMU e addizionale IRPEF: ${variant === 'riduzione' ? 'riduzione' : 'aumento'}`;
@@ -382,8 +501,8 @@ export function actTitle(kind, typeId, area, { variant = null, year = null } = {
     case 'servizi': return `Servizio pubblico: ${topic.servizi ?? lower(area)}`;
     case 'convenzione': return `Convenzione ${topic.convenzione ?? `per ${lower(area)}`}`;
     case 'variazione': return `Variazione di bilancio: fondi per ${lower(area)}`;
-    case 'bilancio': return kind === 'regione' ? `Legge di bilancio regionale ${year ?? ''}`.trim() : `Bilancio di previsione ${year ?? ''}`.trim();
-    case 'statuto': return topic.statuto ?? (kind === 'regione' ? 'Revisione dello statuto regionale' : 'Modifica dello statuto comunale');
+    case 'bilancio': return kind === 'regione' ? `Legge di bilancio regionale ${year ?? ''}`.trim() : kind === 'provincia' ? `Bilancio provinciale ${year ?? ''}`.trim() : `Bilancio di previsione ${year ?? ''}`.trim();
+    case 'statuto': return topic.statuto ?? (kind === 'regione' ? 'Revisione dello statuto regionale' : kind === 'provincia' ? 'Revisione dello statuto provinciale' : 'Modifica dello statuto comunale');
     case 'legge': return `Legge regionale ${topic.legge ?? `su ${lower(area)}`}`;
     case 'mozione': return `Mozione: ${topic.mozione ?? lower(area)}`;
     case 'interrogazione': return `Interrogazione su ${topic.mozione ?? lower(area)}`;

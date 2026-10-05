@@ -16,7 +16,7 @@ import { renderQuirinale } from './presidency-view.js?v=20261003-2';
 export { renderElectionReport };
 
 export const ELECTION_TABS = Object.freeze([['panoramica', 'Panoramica'], ['nazionali', 'Nazionali'], ['quirinale', 'Quirinale'], ['candidatura', 'Candidatura'], ['campagna', 'Campagna'], ['avversari', 'Sondaggi e avversari'], ['risultati', 'Risultati'], ['storico', 'Storico']]);
-const TYPE_ICONS = { comunale: 'town', regionale: 'map', politiche: 'dome', europee: 'globe' };
+const TYPE_ICONS = { comunale: 'town', provinciale: 'map', regionale: 'map', politiche: 'dome', europee: 'globe' };
 const STATUS = { upcoming: ['In calendario', 'neutral'], open: ['Candidature aperte', 'good'], running: ['Campagna in corso', 'warn'], missed: ['Candidature chiuse', 'bad'], held: ['Concluse', 'neutral'] };
 const daysUntil = (from, to) => Math.max(0, Math.round((Date.parse(`${to}T12:00:00`) - Date.parse(`${from}T12:00:00`)) / 86400000));
 const weeksUntil = (from, to) => Math.max(0, Math.ceil(daysUntil(from, to) / 7));
@@ -97,7 +97,7 @@ function calendar(state) {
   // The yearly round: in a year without a vote of the player's own, the amministrative where the party measures itself.
   const rounds = upcomingRounds(game).slice(0, 2).map(round => ({ date: round.windowOpensAt, html: `<li class="eh-cal-item status-${round.status === 'open' ? 'running' : 'upcoming'}"><span class="eh-cal-icon">${glyph('megaphone', 18)}</span><div class="eh-cal-body"><div class="eh-cal-title"><strong>${esc(round.label)} · tornata nei comuni</strong>${badge(round.status === 'open' ? 'Campagna per il partito' : 'In calendario', round.status === 'open' ? 'warn' : 'neutral')}</div><small>Voto ${esc(formatDate(round.electionDate))}${round.comuni ? ` in ${num(round.comuni, 0)} comuni` : ''} · non sei candidato: ${esc(game.party ? 'il partito' : 'le liste civiche')} ti chiede${game.party ? '' : 'no'} di fare campagna dal ${esc(shortDate(round.windowOpensAt))}</small></div><div class="eh-cal-action">${round.status === 'open' ? `<button class="text-link" data-section-tab="agenda" data-section-tab-value="settimana">Decidi in agenda ${arrow}</button>` : ''}</div></li>` }));
   const items = [...rows, ...rounds].sort((a, b) => a.date.localeCompare(b.date)).map(item => item.html).join('');
-  return `<ol class="eh-calendar">${items || '<li class="sx-empty">Nessuna elezione in calendario.</li>'}</ol><p class="sx-note">Politiche ed europee seguono il calendario reale (fine della legislatura, europee del 2029 e poi ogni cinque anni); comunali e regionali seguono il calendario reale del tuo comune e della tua regione (ultimo voto da Eligendo, cinque anni di mandato), e ogni anno qualche regione o comune va al voto. Nessun anno passa senza un voto: quando non ce n’è uno tuo, le amministrative di primavera diventano la tua tornata. Se non ti candidi, un mandato dello stesso tipo si conclude. <button class="text-link" data-section-tab="elezioni" data-section-tab-value="nazionali">Ciclo nazionale ${arrow}</button></p>`;
+  return `<ol class="eh-calendar">${items || '<li class="sx-empty">Nessuna elezione in calendario.</li>'}</ol><p class="sx-note">Politiche ed europee seguono il calendario reale (fine della legislatura, europee del 2029 e poi ogni cinque anni); comunali e regionali seguono il calendario reale del tuo comune e della tua regione (ultimo voto da Eligendo, cinque anni di mandato), le provinciali (secondo livello: votano sindaci e consiglieri) un ciclo semplificato di quattro anni, e ogni anno qualche regione o comune va al voto. Nessun anno passa senza un voto: quando non ce n’è uno tuo, le amministrative di primavera diventano la tua tornata. Se non ti candidi, un mandato dello stesso tipo si conclude. <button class="text-link" data-section-tab="elezioni" data-section-tab-value="nazionali">Ciclo nazionale ${arrow}</button></p>`;
 }
 
 function context(state) {
@@ -137,7 +137,7 @@ function readiness(state) {
 }
 
 function rules(state) {
-  const types = ['comunale', 'regionale', 'politiche', 'europee'];
+  const types = ['comunale', 'provinciale', 'regionale', 'politiche', 'europee'];
   return `<ul class="eh-rules">${types.map(type => `<li>${glyph(TYPE_ICONS[type], 16)}<span><strong>${esc(ELECTION_MODELS[type].label)}</strong><small>${esc(SEAT_RULES[type]?.note ?? ELECTION_MODELS[type].strategy)} <a href="${esc(ELECTION_MODELS[type].referenceUrl)}" target="_blank" rel="noopener noreferrer">Fonte ↗</a></small></span></li>`).join('')}</ul>`;
 }
 

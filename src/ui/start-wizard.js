@@ -4,9 +4,18 @@
 import { LEVER_BY_ID, START_BUDGET, START_LEVERS, START_LEVEL_MAX, START_PROFILES, START_PROFILE_ORDER } from '../data/simulation/start-rules.js?v=20261003-2';
 import { normalizeStart, planLines, startPlan } from '../core/start-engine.js?v=20261003-2';
 import { legacyPicker } from './hall-view.js?v=20261003-2';
+import { scenarioLines, scenarioOf } from '../core/scenario-engine.js?v=20261003-2';
 
 const esc = (value = '') => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const list = (items, mark) => items.length ? `<ul class="start-list">${items.map(item => `<li data-mark="${mark}">${esc(item)}</li>`).join('')}</ul>` : '';
+
+// Where the career begins before the conditions: what the level and the way of belonging start with (the same rules the engine applies).
+const AFFILIATION_OF_MODE = Object.freeze({ independent: 'independent', existing: 'member', new: 'founder' });
+export function scenarioCard(d) {
+  const scenario = scenarioOf({ level: d.initialLevel, affiliation: AFFILIATION_OF_MODE[d.partyMode] ?? 'independent' });
+  const rows = scenarioLines(scenario).map(row => `<li class="${esc(row.tone)}"><strong>${esc(row.label)}</strong> ${esc(row.items.join(' · '))}</li>`).join('');
+  return `<div class="start-scenario"><h4 class="start-sub">Dove cominci · ${esc(scenario.label)}</h4><p class="start-intro">${esc(scenario.summary.join(' '))}</p><ul class="start-scenario-lines">${rows}</ul><p class="start-note"><b>Ti si chiede:</b> ${esc(scenario.expectation.join(' '))}</p><p class="start-note"><b>Ti rema contro:</b> ${esc(scenario.pressure.join(' '))}</p></div>`;
+}
 
 function profileCards(d, selected) {
   return START_PROFILE_ORDER.map(id => {
@@ -60,6 +69,7 @@ export function startStep(d) {
   const item = START_PROFILES[profile];
   return `<section class="summary-section start-section"><div class="summary-section-heading"><div><span>CONDIZIONI DI PARTENZA</span><strong>${esc(item.label)}</strong></div></div>
     <p class="start-intro">Oltre al percorso, scegli come inizi: sono condizioni vere, non etichette. Cambiano relazioni, risorse, vincoli e opportunità e continuano a produrre conseguenze durante tutta la partita.</p>
+    ${scenarioCard(d)}
     <div class="start-grid" role="group" aria-label="Come inizia la carriera">${profileCards(d, profile)}</div>
     ${item.custom ? editor(d, levels, plan) : ''}${effects(plan)}${legacyPicker(d)}
   </section>`;

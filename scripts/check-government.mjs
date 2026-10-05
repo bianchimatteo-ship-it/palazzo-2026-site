@@ -121,7 +121,9 @@ let bill = store.proposeGovernmentBill({ title: 'Piano per la medicina territori
 assert.equal(store.getState().society.lawsApplied.length, measuresBefore, 'Il disegno di legge non produce effetti finché il Parlamento non lo approva.');
 give(); store.advanceLaw(bill.id, 'present');
 assert.throws(() => { give(); store.advanceLaw(bill.id, 'complete-commission'); }, /settiman/, 'La commissione ha i suoi tempi.');
-week(2); store.advanceLaw(bill.id, 'complete-commission');
+week(2);
+// An obstruction raised by the weeks' events adds time to the committee: wait it out (the game decides it, not the test).
+for (let attempt = 0; attempt < 6; attempt++) { try { store.advanceLaw(bill.id, 'complete-commission'); break; } catch (error) { if (!/settiman/.test(error.message) || attempt === 5) throw error; week(1); } }
 const opposition = s.parliament.chambers.camera.groups.find(group => !engine.governingGroupIds(store.getState().parliament).has(group.groupId) && group.groupId !== s.parliament.player.groupId);
 give(); store.negotiateLaw(bill.id, opposition.groupId);
 bill = store.getState().parliament.laws.find(item => item.id === bill.id);

@@ -145,6 +145,11 @@ export const LIFE_SITUATIONS = Object.freeze({
     { id: 'trattieni', label: 'Offri un incarico per trattenerlo', cost: { capital: 2 }, special: 'life-cadre-keep' },
     { id: 'incontra', label: 'Incontralo di persona', cost: { ap: 1 }, special: 'life-cadre-meet' },
     { id: 'lascia', label: 'Lascialo andare', special: 'life-cadre-leave' }] },
+  // A local leader with a following brings a package of memberships: the committee grows at once, but the party's own rules and the press have a say.
+  'capobastone-tessere': { id: 'capobastone-tessere', title: '{title}', body: '{body}', defaultChoice: 'rifiuta', choices: [
+    { id: 'accetta', label: 'Accetta il pacchetto di tessere', cost: { capital: 1 }, special: 'life-cadre-tessere' },
+    { id: 'verifica', label: 'Accetta solo dopo aver verificato le iscrizioni', cost: { ap: 1 }, special: 'life-cadre-verifica' },
+    { id: 'rifiuta', label: 'Rifiuta: le tessere si fanno in sezione', special: 'life-cadre-rifiuta' }] },
   'ricostruzione-partito': { id: 'ricostruzione-partito', title: 'Il partito all’opposizione: da dove si riparte?', body: 'Dopo la sconfitta le sezioni si svuotano e le correnti si guardano in cagnesco. Si può avviare un piano di ricostruzione di sei mesi: scegli su cosa puntare.', defaultChoice: 'rinvia', choices: [
     { id: 'territorio', label: 'Ripartire dai territori', cost: { capital: 2 }, special: 'life-rebuild-territorio' },
     { id: 'quadri', label: 'Formare i quadri', cost: { capital: 2 }, special: 'life-rebuild-quadri' },

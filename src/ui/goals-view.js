@@ -7,6 +7,7 @@ import { AMBITION_COST, AMBITION_LIMIT, OBJECTIVE_LINES, OBJECTIVE_LINE_ORDER } 
 import { memoryBalance } from '../core/career-engine.js?v=20261003-2';
 import { formatDate } from '../core/time.js?v=20261003-2';
 import { badge, bar, card, esc, num } from './sections-kit.js?v=20261003-2';
+import { REPUTATIONS } from '../data/simulation/standing-rules.js?v=20261003-2';
 
 const REWARD_LABELS = { capital: 'Capitale politico', reputation: 'Reputazione', notoriety: 'Notorietà', popularity: 'Popolarità', influence: 'Influenza' };
 const rewardText = reward => {
@@ -15,6 +16,7 @@ const rewardText = reward => {
   for (const [metric, value] of Object.entries(reward?.stats ?? {})) bits.push(`${REWARD_LABELS[metric] ?? metric} ${value > 0 ? '+' : ''}${String(value).replace('.', ',')}`);
   for (const [key, value] of Object.entries(reward?.relations ?? {})) bits.push(`Rapporto ${key === 'leadership' ? 'con la leadership' : key} +${value}`);
   if (reward?.party?.support) bits.push(`Sostegno nel partito +${reward.party.support}`);
+  for (const [id, value] of Object.entries(reward?.standing ?? {})) bits.push(`${REPUTATIONS[id]?.label ?? id} +${value}`);
   return bits.join(' · ');
 };
 const valueText = (value, target) => `${num(Math.min(value, target), target % 1 || value % 1 ? 1 : 0)}/${num(target, target % 1 ? 1 : 0)}`;

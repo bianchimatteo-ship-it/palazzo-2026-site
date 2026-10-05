@@ -10,6 +10,8 @@ import {
   REBUILD_FOCUS, REBUILD_WEEKS, REQUEST_KINDS, SPLIT_RULES
 } from '../data/simulation/party-life-rules.js?v=20261003-2';
 import { CURRENT_AREAS, CURRENT_LINES, PARTY_LINES } from '../data/simulation/career-rules.js?v=20261003-2';
+import { LEADER_RULES } from '../data/simulation/committee-rules.js?v=20261003-2';
+import { leaderKeyOf, leaderStance, territorialControl } from './committee-engine.js?v=20261003-2';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -128,15 +130,62 @@ function syncCadres(game, life, week) {
   for (const cadre of life.cadres) {
     const committee = (org?.committees ?? []).find(item => item.id === cadre.committeeId);
     if (!committee || committee.status === 'dissoluzione') { if (cadre.status !== 'uscito') cadre.status = 'uscito'; continue; }
+    // A committee that changes hands (a new leader chosen, a commissioner, the player taking it) has a new man: his interests, his
+    // ambition, his mood and the promises made to the old one are not carried over. A save from before keeps the one on record.
+    const key = leaderKeyOf(committee);
+    if (cadre.leaderKey === undefined) cadre.leaderKey = key;
+    else if (cadre.leaderKey !== key && cadre.status !== 'uscito') renewCadre(cadre, committee, game, week, key);
     cadre.player = Boolean(committee.leader?.player);
     cadre.currentId = committee.leader?.currentId ?? null;
     cadre.label = cadre.player ? 'Tu' : committee.leader?.label ?? cadre.label;
   }
   life.cadres = life.cadres.filter(item => item.status !== 'uscito' || week - (item.leftWeek ?? week) < 26);
 }
+function renewCadre(cadre, committee, game, week, key) {
+  const seed = hash(`${committee.id}|${key}|${week}|${game.seed ?? 1}`);
+  Object.assign(cadre, {
+    interest: INTERESTS[seed % INTERESTS.length], ambition: 35 + (seed >>> 3) % 55, loyalty: Math.round(clamp(committee.loyalty ?? 55)), grievance: committee.leader?.player ? 5 : 12 + (seed >>> 5) % 12,
+    status: 'attivo', sinceWeek: week, lastActWeek: null, nextActWeek: week + 8 + (seed >>> 7) % 8, promise: null, leaderKey: key
+  });
+}
+// A promise of a candidacy to a local leader breaks when its time runs out or the vote has gone by without the lists being drawn up by the
+// player: the leader remembers it, his area too.
+function breakPromise(game, life, api, cadre, committee, week, lines) {
+  const rules = LEADER_RULES.promise;
+  cadre.loyalty = Math.round(clamp(cadre.loyalty + rules.brokenLoyalty)); cadre.grievance = Math.round(clamp(cadre.grievance + rules.brokenGrievance));
+  committee.loyalty = Math.round(clamp(committee.loyalty + rules.brokenLoyalty / 3));
+  cadre.promise = null; cadre.broken = (cadre.broken ?? 0) + 1;
+  if (cadre.currentId) { api.changeRelation(game, cadre.currentId, rules.brokenRelation); const actor = life.actors[cadre.currentId]; if (actor) actor.grievance = Math.round(clamp(actor.grievance + 4)); }
+  api.remember(game, { date: api.date, kind: 'promessa-tradita', text: `Candidatura promessa al responsabile di ${committee.name} e mai arrivata`, weight: 0.9, subject: cadre.currentId ?? null });
+  note(life, week, 'quadro', `${committee.name}: la candidatura promessa non è arrivata`);
+  lines.push(`${committee.name}: la candidatura promessa non è arrivata, il responsabile se la lega al dito`);
+}
+// The lists are drawn up by the player (the secretary): the promises of a candidacy to the local leaders are kept, with what that is worth
+// in loyalty, in the relations with their area, in the committee that has one of its own on the list, and in the memory of the party.
+export function honourCadrePromises(game, api, { week, date, electionId = null }) {
+  const life = game.party?.life;
+  const lines = [];
+  if (!life) return lines;
+  const rules = LEADER_RULES.promise;
+  for (const cadre of life.cadres.filter(item => item.promise && item.status !== 'uscito' && !item.player)) {
+    if (cadre.promise.electionId && electionId && cadre.promise.electionId !== electionId) continue;
+    if (week > cadre.promise.until) continue;
+    const committee = game.party.org.committees.find(item => item.id === cadre.committeeId);
+    if (!committee) continue;
+    cadre.loyalty = Math.round(clamp(cadre.loyalty + rules.keptLoyalty)); cadre.grievance = Math.round(clamp(cadre.grievance + rules.keptGrievance));
+    committee.loyalty = Math.round(clamp(committee.loyalty + rules.keptLoyalty / 2)); committee.activity = round1(clamp((committee.activity ?? 40) + 6)); committee.consensus = Math.round(clamp(committee.consensus + 2));
+    if (cadre.currentId) api.changeRelation(game, cadre.currentId, rules.keptRelation);
+    cadre.promise = null; cadre.kept = (cadre.kept ?? 0) + 1;
+    api.remember(game, { date, kind: 'promessa-mantenuta', text: `Candidatura promessa al responsabile di ${committee.name}: nelle liste`, weight: 0.7, subject: cadre.currentId ?? null });
+    note(life, week, 'quadro', `${committee.name}: il responsabile è nelle liste, come promesso`);
+    lines.push(`Liste: il responsabile di ${committee.name} è candidato, come promesso`);
+  }
+  return lines;
+}
 function tickCadres(game, life, api, week, rand, lines) {
   const org = game.party.org;
   const raises = [];
+  const heard = {};
   for (const cadre of life.cadres.filter(item => item.status !== 'uscito')) {
     const committee = org.committees.find(item => item.id === cadre.committeeId);
     if (!committee) continue;
@@ -149,12 +198,29 @@ function tickCadres(game, life, api, week, rand, lines) {
     cadre.grievance = Math.round(clamp(cadre.grievance + (target - cadre.grievance) * 0.1 + (rand() - 0.5) * 3));
     cadre.loyalty = Math.round(clamp(cadre.loyalty + ((committee.loyalty ?? 50) - cadre.loyalty) * 0.2));
     cadre.status = cadre.player ? 'attivo' : cadre.grievance >= 70 ? 'in-uscita' : cadre.grievance >= 50 ? 'critico' : 'attivo';
+    // The discontent of the territory reaches the area the leader follows: his leader hears it every week (a critical leader one point, one
+    // on his way out two, at most three a week for an area).
+    if (actor && !cadre.player && cadre.status !== 'attivo') heard[actor.id] = (heard[actor.id] ?? 0) + (cadre.status === 'in-uscita' ? 2 : 1);
+    // A candidacy promised to him: still open, or gone by (a player who is no longer the one who draws up the lists cannot keep it: it lapses with no blame).
+    if (cadre.promise && !isSecretary(game.party)) cadre.promise = null;
+    if (cadre.promise && !cadre.player) {
+      const election = (game.elections ?? []).find(item => item.id === cadre.promise.electionId);
+      if (week > cadre.promise.until || (election && ['held', 'missed'].includes(election.status))) breakPromise(game, life, api, cadre, committee, week, lines);
+    }
     if (cadre.player || week < cadre.nextActWeek) continue;
     const open = life.requests.filter(item => OPEN.includes(item.stage));
     if (open.length >= MAX_OPEN) continue;
     if (cadre.status === 'in-uscita' && cadre.loyalty <= 30 && rand() < 0.5) {
       cadre.nextActWeek = week + 6;
       raises.push({ id: 'dirigente-lascia', params: { dedupe: cadre.id, cadreId: cadre.id, title: `${committee.name}: il dirigente locale minaccia di andarsene`, body: `${cadre.label} guida il comitato di ${committee.name} (${committee.status === 'crisi' ? 'in crisi' : 'stato: ' + committee.status}) e ${CADRE_INTERESTS[cadre.interest].detail}. Il malcontento è a ${cadre.grievance}/100 e la fedeltà a ${cadre.loyalty}/100: se se ne va porta via iscritti e volontari.` }, urgent: false });
+      continue;
+    }
+    // A leader with a following and a committee that works brings a package of memberships: the territory grows at once, with the risk that comes with it.
+    const gaps = LEADER_RULES.tessere;
+    if (cadre.status === 'attivo' && cadre.ambition >= 60 && cadre.loyalty >= 55 && committee.level !== 'regione' && (committee.organization ?? 0) >= 40 && week - (cadre.lastTesseraWeek ?? -99) >= gaps.cadreGapWeeks && week - (life.lastTesseraWeek ?? -99) >= gaps.partyGapWeeks && !game.inbox.some(item => item.templateId === 'capobastone-tessere') && rand() < gaps.chance) {
+      cadre.lastTesseraWeek = week; life.lastTesseraWeek = week; cadre.nextActWeek = week + 8;
+      const bulk = Math.max(12, Math.round(committee.members * 0.25));
+      raises.push({ id: 'capobastone-tessere', params: { dedupe: `${cadre.id}-${week}`, cadreId: cadre.id, title: `${committee.name}: il responsabile ti porta un pacchetto di tessere`, body: `${cadre.label.replace(' (figura simulata)', '')} guida il comitato di ${committee.name} e ha un seguito: propone ${bulk} nuove iscrizioni in blocco e, in cambio, ${CADRE_INTERESTS[cadre.interest].detail}. Il comitato crescerebbe subito e lui si sentirebbe in credito; ma le iscrizioni in blocco sono il genere di cosa che le altre aree contestano e che i giornali raccontano.` }, urgent: false });
       continue;
     }
     // What a local leader asks follows what he wants and where his committee stands: a committee that already decides for itself asks for more room, one with no seat or little activity asks for means.
@@ -164,6 +230,7 @@ function tickCadres(game, life, api, week, rand, lines) {
       if (request) { cadre.nextActWeek = week + 10 + Math.floor(rand() * 8); cadre.lastActWeek = week; lines.push(request.title); }
     } else cadre.nextActWeek = week + 3;
   }
+  for (const [id, points] of Object.entries(heard)) if (life.actors[id]) life.actors[id].grievance = Math.round(clamp(life.actors[id].grievance + Math.min(3, points)));
   return raises;
 }
 // The player works with a local leader: meet, promote, replace, recruit.
@@ -178,7 +245,8 @@ export function cadreAction(game, api, { action, cadreId = null, committeeId = n
     if (life.cadres.some(item => item.committeeId === committee.id && item.status !== 'uscito' && !item.player)) throw new Error('Il comitato ha già un dirigente: puoi incontrarlo o sostituirlo.');
     const seed = hash(`${committee.id}|recluta|${week}`);
     life.cadres.push({ id: `quadro-${committee.id}`, committeeId: committee.id, region: committee.region, level: committee.level, name: committee.name, label: 'Dirigente reclutato da te (figura simulata)', currentId: null, player: false, interest: INTERESTS[seed % INTERESTS.length], ambition: 40 + seed % 40, loyalty: 72, grievance: 8, status: 'attivo', sinceWeek: week, lastActWeek: null, nextActWeek: week + 12, recruitedBy: 'player', source: SIM });
-    committee.leader = { label: 'Dirigente reclutato da te (figura simulata)', currentId: null, player: false };
+    committee.leader = { label: 'Dirigente reclutato da te (figura simulata)', currentId: null, player: false, since: week };
+    life.cadres.at(-1).leaderKey = leaderKeyOf(committee);
     committee.loyalty = Math.round(clamp(Math.max(committee.loyalty, 70)));
     org.cadres = (org.cadres ?? 0) + 1;
     note(life, week, 'quadro', `Reclutato un dirigente per ${committee.name}`);
@@ -193,20 +261,26 @@ export function cadreAction(game, api, { action, cadreId = null, committeeId = n
     const resolved = cadre.grievance >= 75 && cadre.loyalty <= 30;
     cadre.loyalty = Math.round(clamp(cadre.loyalty + (resolved ? 4 : 9))); cadre.grievance = Math.round(clamp(cadre.grievance - (resolved ? 6 : 16)));
     committee.loyalty = Math.round(clamp(committee.loyalty + 4)); committee.lastVisitWeek = week;
+    if (cadre.currentId) api.changeRelation(game, cadre.currentId, 1);
     lines.push(`${committee.name}: fedeltà ${cadre.loyalty}, malcontento ${cadre.grievance}${resolved ? ' (ha già deciso: servirà altro)' : ''}`);
   } else if (action === 'promuovi') {
     cadre.loyalty = Math.round(clamp(cadre.loyalty + 22)); cadre.grievance = Math.round(clamp(cadre.grievance - 30)); cadre.ambition = Math.round(clamp(cadre.ambition + 10));
     committee.loyalty = Math.round(clamp(committee.loyalty + 12));
+    if (cadre.currentId) api.changeRelation(game, cadre.currentId, 2);
     for (const other of life.cadres.filter(item => item.id !== cadre.id && item.status !== 'uscito' && !item.player)) other.grievance = Math.round(clamp(other.grievance + 4));
     for (const actor of Object.values(life.actors)) if (actor.id !== cadre.currentId) actor.grievance = Math.round(clamp(actor.grievance + 2));
     lines.push(`${committee.name}: dirigente promosso, fedeltà ${cadre.loyalty}; gli altri quadri si sentono scavalcati`);
   } else if (action === 'sostituisci') {
     const outgoing = cadre.currentId ? life.actors[cadre.currentId] : null;
+    // A new man, chosen by the player: his own interests and ambition, no promise of the one he replaces.
+    const seed = hash(`${committee.id}|sostituisci|${week}|${game.seed ?? 1}`);
     cadre.label = 'Dirigente scelto da te (figura simulata)'; cadre.currentId = null; cadre.loyalty = 72; cadre.grievance = 10; cadre.recruitedBy = 'player';
-    committee.leader = { label: cadre.label, currentId: null, player: false };
+    cadre.interest = INTERESTS[seed % INTERESTS.length]; cadre.ambition = 35 + (seed >>> 3) % 55; cadre.promise = null; cadre.status = 'attivo';
+    committee.leader = { label: cadre.label, currentId: null, player: false, since: week };
+    cadre.leaderKey = leaderKeyOf(committee);
     committee.loyalty = Math.round(clamp(Math.max(committee.loyalty, 70)));
     committee.organization = Math.round(clamp(committee.organization - 4));
-    if (outgoing) { outgoing.grievance = Math.round(clamp(outgoing.grievance + 8)); outgoing.loyalty = Math.round(clamp(outgoing.loyalty - 5)); lines.push(`${outgoing.leaderLabel}: non gradisce il cambio`); }
+    if (outgoing) { outgoing.grievance = Math.round(clamp(outgoing.grievance + 8)); outgoing.loyalty = Math.round(clamp(outgoing.loyalty - 5)); api.changeRelation(game, outgoing.id, -3); lines.push(`${outgoing.leaderLabel}: non gradisce il cambio`); }
     lines.push(`${committee.name}: nuovo dirigente vicino a te, organizzazione −4`);
   }
   note(life, week, 'quadro', `${CADRE_ACTIONS[action].label}: ${committee.name}`);
@@ -219,6 +293,32 @@ export function cadreDecision(game, api, { cadreId, choice, week, date, rand }) 
   if (!cadre) return [];
   const committee = game.party.org.committees.find(item => item.id === cadre.committeeId);
   if (choice === 'leave') return cadreLeaves(game, life, api, cadre, week, date);
+  if (choice === 'rifiuta') {
+    cadre.grievance = Math.round(clamp(cadre.grievance + 10)); cadre.loyalty = Math.round(clamp(cadre.loyalty - 6));
+    if (cadre.currentId) api.changeRelation(game, cadre.currentId, -1);
+    return [`${committee?.name ?? 'Il comitato'}: il responsabile non la prende bene, ma le tessere restano in sezione`];
+  }
+  if (choice === 'tessere' || choice === 'verifica') {
+    const org = game.party.org;
+    const checked = choice === 'verifica';
+    const added = Math.round(Math.max(12, committee.members * 0.25) * (checked ? 0.6 : 1));
+    committee.members += added;
+    const section = org.sections.find(item => item.region === committee.region);
+    if (section) section.members += added;
+    org.members = org.sections.reduce((sum, item) => sum + item.members, 0);
+    committee.organization = Math.round(clamp(committee.organization + (checked ? 2 : 3)));
+    cadre.loyalty = Math.round(clamp(cadre.loyalty + (checked ? 4 : 8))); cadre.grievance = Math.round(clamp(cadre.grievance - 10));
+    if (cadre.currentId) api.changeRelation(game, cadre.currentId, 1);
+    const lines = [`${committee.name}: +${added} iscritti${checked ? ' (verificati uno per uno)' : ''}`];
+    // Memberships taken in bulk without a check are the stuff of the other areas' accusations.
+    if (!checked && rand() < 0.4) {
+      org.cohesion = Math.round(clamp((org.cohesion ?? 55) - 2));
+      api.remember(game, { date, kind: 'scandalo', text: `Tessere in blocco a ${committee.name}: il caso finisce sui giornali`, weight: 0.8, subject: cadre.currentId ?? null });
+      lines.push('Le altre aree contestano le iscrizioni in blocco: coesione −2 e un caso sui giornali');
+    }
+    note(life, week, 'quadro', `${committee.name}: ${added} tessere portate dal responsabile`);
+    return lines;
+  }
   if (choice === 'keep') {
     cadre.grievance = Math.round(clamp(cadre.grievance - 32)); cadre.loyalty = Math.round(clamp(cadre.loyalty + 16)); cadre.ambition = Math.round(clamp(cadre.ambition + 8));
     for (const other of life.cadres.filter(item => item.id !== cadre.id && item.status !== 'uscito' && !item.player)) other.grievance = Math.round(clamp(other.grievance + 3));
@@ -241,12 +341,17 @@ function cadreLeaves(game, life, api, cadre, week, date) {
   committee.members = Math.max(3, committee.members - lost); committee.activists = Math.max(0, committee.activists - activists);
   committee.organization = Math.round(clamp(committee.organization - 14));
   const rival = Object.values(life.actors).filter(item => item.id !== cadre.currentId).sort((a, b) => b.grievance - a.grievance)[0];
-  committee.leader = { label: `${rival ? rival.leaderLabel.split(' · ')[1]?.replace(' (figura simulata)', '') ?? 'un’altra area' : 'un’altra area'} (figura simulata)`, currentId: rival?.id ?? null, player: false };
+  committee.leader = { label: `${rival ? rival.leaderLabel.split(' · ')[1]?.replace(' (figura simulata)', '') ?? 'un’altra area' : 'un’altra area'} (figura simulata)`, currentId: rival?.id ?? null, player: false, since: week };
   committee.loyalty = Math.round(clamp(committee.loyalty - 22));
   const section = org.sections.find(item => item.region === committee.region);
   if (section && committee.level === 'regione') section.members = Math.max(5, section.members - lost);
   org.members = org.sections.reduce((sum, item) => sum + item.members, 0);
   org.militants = Math.max(0, Math.round(org.militants - activists)); org.cadres = Math.max(0, (org.cadres ?? 0) - 1);
+  // His area loses a man (and hears about it), the one that takes the committee gains ground.
+  const left = cadre.currentId ? life.actors[cadre.currentId] : null;
+  if (left) { left.grievance = Math.round(clamp(left.grievance + 4)); left.momentum = round1(clamp(left.momentum - 1, -15, 15)); api.changeRelation(game, left.id, -2); }
+  if (rival) rival.momentum = round1(clamp(rival.momentum + 1, -15, 15));
+  cadre.promise = null;
   api.remember(game, { date, kind: 'quadro-perso', text: `Il dirigente di ${committee.name} ha lasciato il partito`, weight: 0.8, subject: rival?.id ?? null });
   note(life, week, 'quadro', `${committee.name}: il dirigente se ne va (−${lost} iscritti, −${activists} volontari)`);
   return [`${committee.name}: il dirigente se ne va, −${lost} iscritti e −${activists} volontari`];
@@ -321,7 +426,7 @@ function buildRequest(kind, context) {
   }
   if (kind === 'candidatura-locale') {
     const election = electionSoon(game, date, 120);
-    return { title: `${committee.name}: il dirigente chiede una candidatura`, body: `${cadre.label.replace(' (figura simulata)', '')} guida il comitato di ${committee.name} e chiede di essere candidato${election ? ` a ${election.label}` : ' alle prossime elezioni'}: ha ambizione ${cadre.ambition}/100 e fedeltà ${cadre.loyalty}/100.`, acceptLabel: 'promettigli una candidatura', ask: { electionId: election?.id ?? null }, dueWeek: week + 6 };
+    return { title: `${committee.name}: il dirigente chiede una candidatura`, body: `${cadre.label.replace(' (figura simulata)', '')} guida il comitato di ${committee.name} e chiede di essere candidato${election ? ` a ${election.label}` : ' alle prossime elezioni'}: ha ambizione ${cadre.ambition}/100 e fedeltà ${cadre.loyalty}/100.`, acceptLabel: isSecretary(party) ? 'promettigli una candidatura' : 'promettigli il tuo sostegno', ask: { electionId: election?.id ?? null }, dueWeek: week + 6 };
   }
   if (kind === 'autonomia') {
     return { title: `${committee.name}: il dirigente chiede autonomia`, body: `Il dirigente del comitato di ${committee.name} vuole decidere da solo su sede, volontari e candidati locali. Dargli mano libera rafforza la lealtà ma la coesione ne soffre.`, acceptLabel: 'mano libera sul territorio', ask: {}, dueWeek: week + 6 };
@@ -494,8 +599,12 @@ function grant(game, life, api, request, ask, week, date, lines, specials) {
     lines.push(`${committee?.name ?? 'Il comitato'}: ${ask.amount.toLocaleString('it-IT')} € dalla tesoreria`);
   } else if (kind === 'candidatura-locale') {
     const cadre = life.cadres.find(item => item.id === request.refId);
-    if (cadre) { cadre.grievance = Math.round(clamp(cadre.grievance - 25)); cadre.loyalty = Math.round(clamp(cadre.loyalty + 16)); cadre.promise = { week, electionId: ask.electionId, until: week + 52 }; }
-    lines.push('Promessa di candidatura: il dirigente la ricorderà');
+    // Only who draws up the lists (the secretary) can promise a place in them; anyone else gives his support in the selections, a word that is not a promise.
+    const promises = isSecretary(party);
+    if (cadre) { cadre.grievance = Math.round(clamp(cadre.grievance - 25)); cadre.loyalty = Math.round(clamp(cadre.loyalty + 16)); if (promises) cadre.promise = { week, electionId: ask.electionId, until: week + 52 }; }
+    lines.push(promises ? 'Promessa di candidatura: il dirigente la ricorderà' : 'Gli assicuri il tuo sostegno nelle selezioni: il dirigente lo ricorderà');
+    // The lists of that vote are already drawn up: there is still time to add a name before the candidacies close, so the promise is kept now.
+    if (promises && cadre && ask.electionId && org.selections?.[ask.electionId]) lines.push(...honourCadrePromises(game, api, { week, date, electionId: ask.electionId }));
   } else if (kind === 'autonomia') {
     const cadre = life.cadres.find(item => item.id === request.refId);
     const committee = org.committees.find(item => item.id === cadre?.committeeId);
@@ -715,6 +824,14 @@ function adoptAgreements(party, congress, week) {
     congress.notes.push({ week, phase: 'alleanze', text: `${members[0].label} e ${members[1].label} arrivano al congresso con un’intesa già pronta.` });
   }
 }
+// The share of the local committees of a region (provincial and comunal, by level and organisation) led by people of an area: the
+// delegates of the congress come from the territory, and the territory follows its leaders.
+function localLead(party, region, currentId) {
+  const local = committeesOf(party.org).filter(item => item.region === region && ['provincia', 'comune'].includes(item.level) && !item.leader?.player);
+  const weight = item => (LEADER_RULES.levelWeight[item.level] ?? 1) * (0.6 + (item.organization ?? 0) / 100);
+  const total = local.reduce((sum, item) => sum + weight(item), 0);
+  return total ? local.filter(item => item.leader?.currentId === currentId).reduce((sum, item) => sum + weight(item), 0) / total : 0;
+}
 function regionalDelegates(party, life, congress) {
   const org = party.org;
   const total = CONGRESS_DELEGATES[party.affiliation === 'founder' ? 'founder' : 'member'];
@@ -733,7 +850,7 @@ function regionalDelegates(party, life, congress) {
     const weights = party.currents.map(current => {
       const actor = life.actors[current.id];
       const noise = 0.85 + (hash(`${congress.id}|${section.region}|${current.id}`) % 31) / 100;
-      const lead = committee?.leader?.currentId === current.id ? 2.2 : 1;
+      const lead = 1 + (committee?.leader?.currentId === current.id ? 1.2 : 0) + 0.8 * localLead(party, section.region, current.id);
       const mobilized = 1 + (congress.mobilization?.[current.id] ?? 0) / 100;
       return Math.max(0.1, (current.strength ?? 1) * noise * lead * mobilized * (1 + (actor?.momentum ?? 0) / 100) * preparedBonus(current, congress) * (0.6 + section.vitality / 100));
     });
@@ -1102,7 +1219,17 @@ export function lifeOverview(game) {
     pacts: life.pacts.map(pact => ({ id: pact.id, kind: pact.kind, title: pact.title, actor: party.currents.find(item => item.id === pact.actorId)?.label ?? pact.actorId, status: pact.status, since: pact.since, until: pact.until, weeksLeft: Math.max(0, pact.until - game.week.index), gives: PACT_KINDS[pact.kind]?.gives, asks: PACT_KINDS[pact.kind]?.asks, renewals: pact.renewals, settled: pact.settled ?? null })),
     congress: life.congress ? { id: life.congress.id, voteWeek: life.congress.voteWeek, weeksLeft: Math.max(0, life.congress.voteWeek - game.week.index), phase: phaseSpec?.id, phaseLabel: phaseSpec?.label, phaseDetail: phaseSpec?.detail, schedule: life.congress.schedule.map(item => ({ ...item, label: CONGRESS_PHASES.find(spec => spec.id === item.id)?.label })), delegates: life.congress.delegates ? { total: life.congress.delegates.total, byCurrent: life.congress.delegates.byCurrent, player: life.congress.delegates.player } : null, alliances: life.congress.alliances.map(al => ({ ids: al.ids, labels: al.ids.map(id => party.currents.find(item => item.id === id)?.label ?? id), origin: al.origin })), notes: life.congress.notes.slice(-4), projection: projectCongress(game, { mode: secretary ? 'incumbent' : 'support' }) } : null,
     nextCongressWeek: party.org?.congress?.nextWeek ?? null, lastCongress: life.lastCongress,
-    cadres: life.cadres.filter(item => item.status !== 'uscito').map(item => ({ id: item.id, name: item.name, level: item.level, region: item.region, label: item.label, interest: CADRE_INTERESTS[item.interest]?.label, loyalty: Math.round(item.loyalty), grievance: Math.round(item.grievance), status: item.status, player: item.player, committeeId: item.committeeId })),
+    cadres: life.cadres.filter(item => item.status !== 'uscito').map(item => {
+      const committee = party.org?.committees?.find(entry => entry.id === item.committeeId) ?? null;
+      const stance = committee ? leaderStance(committee, { party, cadre: item }) : null;
+      return {
+        id: item.id, name: item.name, level: item.level, region: item.region, label: item.label, interest: CADRE_INTERESTS[item.interest]?.label, loyalty: Math.round(item.loyalty), grievance: Math.round(item.grievance), ambition: Math.round(item.ambition ?? 50), status: item.status, player: item.player, committeeId: item.committeeId,
+        area: item.currentId ? party.currents.find(entry => entry.id === item.currentId)?.label ?? null : null, stance: stance ? { id: stance.id, label: stance.label, tone: stance.tone, weight: stance.weight, reasons: stance.reasons } : null,
+        autonomy: committee ? Math.round(committee.autonomy ?? 50) : null, organization: committee ? Math.round(committee.organization ?? 0) : null,
+        promise: item.promise ? { electionId: item.promise.electionId ?? null, weeksLeft: Math.max(0, item.promise.until - game.week.index) } : null
+      };
+    }),
+    control: territorialControl(party, { region: game.place?.region ?? null }),
     rebuild: life.rebuild ? { ...life.rebuild, label: REBUILD_FOCUS[life.rebuild.focus]?.label, weeksLeft: Math.max(0, life.rebuild.since + REBUILD_WEEKS - game.week.index) } : null,
     closed: life.closed.slice(0, 6), history: life.history.slice(0, 10)
   };

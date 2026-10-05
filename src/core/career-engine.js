@@ -1,5 +1,5 @@
 import { uniqueId } from './ids.js?v=20261003-2';
-import { advanceDays, formatDate, nextMunicipalVote, nextRegionalVote } from './time.js?v=20261003-2';
+import { advanceDays, formatDate, nextMunicipalVote, nextProvincialVote, nextRegionalVote } from './time.js?v=20261003-2';
 import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261003-2';
 import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20261003-2';
 import {
@@ -8,7 +8,7 @@ import {
   AGENDA_CAPS, SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS, ROUND_RULES } from '../data/simulation/career-rules.js?v=20261003-2';
 import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20261003-2';
 import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20261003-2';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261003-2';
+import { ITALIAN_REGIONS, hasProvincialLevel } from '../data/regions.js?v=20261003-2';
 import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261003-2';
 import { book, buyInvestment, createFinance, depositElectionFund, depositReserve, hasAsset, normalizeFinance, releaseReserve, settleFinanceWeek } from './finance-engine.js?v=20261003-2';
 import { advanceOrganization, allocateCurrentPortfolios, applyOrgEffects, createOrganization, isPartyLeader, normalizeCurrentProfiles, normalizeOrganization, rememberCurrent, treasuryBook } from './organization-engine.js?v=20261003-2';
@@ -16,16 +16,21 @@ import { advanceContacts, changeContact, contactLabel } from './contacts-engine.
 import { HARD_CATEGORIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261003-2';
 import { macroAreaOf } from '../data/simulation/policy-rules.js?v=20261003-2';
 import { advancementOdds, evaluateAdvancement, progressionFactors } from './progression-engine.js?v=20261003-2';
-import { advanceCommittees, applyCommitteeAction, applyLocalEvent, COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, committeeActionCost, foundCommittee, scaleOf } from './committee-engine.js?v=20261003-2';
+import { advanceCommittees, applyCommitteeAction, applyLocalEvent, COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, committeeActionCost, foundCommittee, leaderStance, scaleOf, territorialControl } from './committee-engine.js?v=20261003-2';
 import { europeanElectionDate, legislatureTerm, LEGISLATURE_RULES, sundayOnOrBefore } from './legislature-engine.js?v=20261003-2';
 import { CADRE_ACTIONS, LIFE_MEMORY_KINDS, LIFE_SITUATIONS, SPLINTER_NAMES } from '../data/simulation/party-life-rules.js?v=20261003-2';
 import { DAILY_EVENTS } from '../data/simulation/daily-events.js?v=20261003-2';
+import { eventDay, pickWeighted, reactionRelevance } from './event-engine.js?v=20261003-2';
+import { heldOffices, localOffices } from './office-engine.js?v=20261003-2';
+import { SECTOR_GAINS, advanceStanding, applyStandingEffects, createStanding, gainSector, normalizeStanding, sectorValue, standingOf } from './standing-engine.js?v=20261003-2';
+import { EVENT_SECTORS } from '../data/simulation/standing-rules.js?v=20261003-2';
+import { affiliationOf, scenarioCapitalGain, scenarioGrowth, scenarioInit, scenarioOf } from './scenario-engine.js?v=20261003-2';
 import { PRESIDENCY_SITUATIONS } from '../data/simulation/presidency-rules.js?v=20261003-2';
 import { START_SITUATIONS } from '../data/simulation/start-rules.js?v=20261003-2';
 import { AMBITION_BROKEN, AMBITION_COST, AMBITION_KEPT, OBJECTIVE_BY_ID, OBJECTIVE_SITUATIONS } from '../data/simulation/objective-rules.js?v=20261003-2';
 import { ambitionProblem, bump, bumpAmbition, bumpDecision, expiredAmbitions, isClassicObjective, objectiveBase, objectiveStatus } from './objective-engine.js?v=20261003-2';
 import { advanceStart, hasStart, startBase, startFundsFactor, startInit, startSpecial } from './start-engine.js?v=20261003-2';
-import { advanceLife, breakPact, cadreAction, cadreDecision, congressWork, createLife, honourListPacts, lapseAnswer, lifeOverview, normalizeLife, resolveCongress, respondRequest, startRebuild } from './party-life-engine.js?v=20261003-2';
+import { advanceLife, breakPact, cadreAction, cadreDecision, congressWork, createLife, honourCadrePromises, honourListPacts, lapseAnswer, lifeOverview, normalizeLife, resolveCongress, respondRequest, startRebuild } from './party-life-engine.js?v=20261003-2';
 import { enterNewParty, foundParty, mergeParties, OP_COSTS, partyOpsAvailability, renameParty, splitOff } from './party-ops-engine.js?v=20261003-2';
 // The decisions of the party's internal life join the situation events; the daily events join the procedural ones.
 const SITUATIONS = { ...SITUATION_EVENTS, ...LIFE_SITUATIONS, ...PRESIDENCY_SITUATIONS, ...START_SITUATIONS, ...OBJECTIVE_SITUATIONS };
@@ -61,6 +66,19 @@ function nextLegislature(game, date) {
 }
 
 // ---------- situation ----------
+// The offices the player holds now, read from the councils, the seat, the group, the Government and the party (office-engine).
+export function holdingsOf(ctx, env = {}) {
+  const parliament = ctx.parliament;
+  const seat = Boolean(parliament?.player?.groupId);
+  const governing = ['active', 'crisis'].includes(parliament?.government?.status);
+  const flags = ctx.game.flags ?? {};
+  return heldOffices({
+    institutions: (env.institutions ?? []).filter(inst => inst?.status === 'active'), chamber: seat ? parliament.player.chamber : null,
+    groupLeader: Boolean(seat && flags.groupLeader && flags.groupLeader.groupId === parliament.player.groupId && String(flags.groupLeader.since ?? '') >= String(parliament.player.mandateStartedAt ?? '')),
+    minister: governing && activeMinisters(parliament.government).some(item => item.playerAppointed), undersecretary: Boolean(flags.scenarioOffice),
+    premier: governing && parliament?.government?.primeMinister === 'player', inMajority: seat && playerInMajority(parliament), secretary: isSecretary(ctx.game.party), president: Boolean(flags.president)
+  });
+}
 export function situation(ctx, env = {}) {
   const parliament = ctx.parliament;
   const seat = Boolean(parliament?.player?.groupId);
@@ -71,10 +89,29 @@ export function situation(ctx, env = {}) {
   const region = ctx.game.place?.region ?? null;
   const share = Number.isFinite(env.pollShare) ? env.pollShare : null;
   const remembered = memoryBalance(ctx.game, { region });
+  // The offices the player holds in the institutions (council, province, region, European Parliament): the council the
+  // player sits in tells who the player is, better than the title of an office record.
+  const office = localOffices(env.institutions ?? []);
+  // Every office held (councils, seat, group lead, Government, party, Quirinale): events and powers read it from here.
+  const held = holdingsOf(ctx, env);
+  // The local leaders of the party in the player's territory: how far it is held, who follows, who is against, who is on his way out.
+  const control = ctx.game.party?.org?.committees?.length ? territorialControl(ctx.game.party, { region }) : null;
+  const cadres = (ctx.game.party?.life?.cadres ?? []).filter(item => item.status !== 'uscito' && !item.player);
   return {
-    role: { level, local: level === 'comunale' || titles.some(title => /sindac|consiglier[ea] comunale|assessor/.test(title)), mayor: titles.some(title => title.includes('sindac')), regional: level === 'regionale' || titles.some(title => /regional/.test(title)), parliamentarian: seat },
+    role: {
+      level, local: level === 'comunale' || Boolean(office.comune) || titles.some(title => /sindac|consiglier[ea] comunale|assessor/.test(title)),
+      mayor: office.comune === 'sindaco' || titles.some(title => title.includes('sindac')), regional: level === 'regionale' || Boolean(office.regione) || titles.some(title => /regional/.test(title)),
+      parliamentarian: seat, provincial: Boolean(office.provincia), europarl: Boolean(office.europa), assessor: held.some(id => id.startsWith('assessore')), head: held.some(id => ['sindaco', 'presidente-provincia', 'presidente-regione'].includes(id)),
+      groupLeader: held.includes('capogruppo') || held.includes('capogruppo-consiliare'), deputyPremier: held.includes('vicepremier')
+    },
+    office, holds: id => held.includes(id), held,
+    // The reputations and the sectors of influence (standing-engine): events and promotions read them.
+    standing: standingOf({ game: ctx.game, stats: ctx.stats, parliament }), sector: id => sectorValue(ctx.game.standing, id),
+    territory: control ? { control: control.index, count: control.count, withYou: control.byStance.tuo + control.byStance['con-te'], distant: control.byStance.distante, against: control.byStance.contro, critical: cadres.filter(item => item.status !== 'attivo').length, ambitious: cadres.filter(item => item.ambition >= 60 && item.loyalty >= 55 && item.status === 'attivo').length } : null,
+    // The services of the player's own region (0–100), when the world signals carry them: the territory the player answers for.
+    home: (env.signals?.regions ?? []).find(item => item.name === region)?.indicators ?? null,
     macroArea: macroAreaOf(region), south: ['sud', 'isole'].includes(macroAreaOf(region)), north: ['nord-ovest', 'nord-est'].includes(macroAreaOf(region)),
-    partyShare: share, partySmall: share !== null && share < 4, partyBig: share !== null && share >= 15, pollDelta: env.pollDelta ?? 0,
+    partyShare: share, partySmall: share !== null && share < 4, partyBig: share !== null && share >= 15, pollDelta: env.pollDelta ?? 0, pollTrend: env.pollTrend ?? 0,
     partyAxis: env.signals?.partyAxis ?? null, difficulty: difficultyId(ctx.game.difficulty),
     game: ctx.game, stats: ctx.stats, seat, governing,
     inMajority: seat && playerInMajority(parliament),
@@ -138,16 +175,19 @@ function nationalElectionDate(game, type, today) {
 // ---------- the calendar of local votes (dates: time.js) ----------
 // The last local and regional vote of the player's place: the real ones (local-elections.json) when documented,
 // otherwise a year of the game drawn from the comune (declared as simulated).
-export function localCalendarOf(calendar, { municipalityCode = null, region = null, seed = 'comune' } = {}) {
+export function localCalendarOf(calendar, { municipalityCode = null, region = null, seed = 'comune', provinceCode = null } = {}) {
   const municipal = municipalityCode ? Object.entries(calendar?.municipalities ?? {}).find(([, codes]) => codes.includes(municipalityCode))?.[0] ?? null : null;
   const regional = calendar?.regions?.find(item => item.region === region)?.lastElection ?? null;
   return {
     comunale: municipal ?? `${2021 + hash(`${seed}|comunali`) % 5}-05-30`, comunaleReal: Boolean(municipal),
-    regionale: regional ?? `${2021 + hash(`${region}|regionali`) % 5}-06-01`, regionaleReal: Boolean(regional)
+    regionale: regional ?? `${2021 + hash(`${region}|regionali`) % 5}-06-01`, regionaleReal: Boolean(regional),
+    // The provincial votes have no real calendar in the data: a year of the game drawn from the province (simulated).
+    provinciale: `${2021 + hash(`${provinceCode ?? seed}|provinciali`) % 4}-11-28`, provincialeReal: false
   };
 }
 function makeLocalElection(type, lastDate, today, place = {}, real = false) {
-  const electionDate = type === 'comunale' ? nextMunicipalVote(lastDate, advanceDays(today, 7 + ELECTION_MODELS[type].campaignDays)) : nextRegionalVote(lastDate, advanceDays(today, 7 + ELECTION_MODELS[type].campaignDays));
+  const after = advanceDays(today, 7 + ELECTION_MODELS[type].campaignDays);
+  const electionDate = type === 'comunale' ? nextMunicipalVote(lastDate, after) : type === 'provinciale' ? nextProvincialVote(lastDate, after) : nextRegionalVote(lastDate, after);
   return { ...makeElection(type, advanceDays(electionDate, -ELECTION_MODELS[type].campaignDays), place), electionDate, calendar: real ? 'reale' : 'simulato', lastVote: lastDate };
 }
 // A council dissolved (a motion of no confidence): the comune votes in the next spring round, a region within ten weeks.
@@ -174,13 +214,28 @@ export function alignLocalCalendar(input, local, today) {
   if (game.rounds) planRounds(game, today);
   return game;
 }
+// A career made before the provincial level, in a place that has a province with organs of its own: the province enters
+// the place and its next vote the calendar (the provincial votes have no real calendar: they are simulated).
+export function addProvincialCalendar(input, place = {}, calendar = null, today = null) {
+  if (input.flags?.provincialCalendar === 1) return input;
+  const game = copy(input);
+  game.flags = { ...(game.flags ?? {}), provincialCalendar: 1 };
+  if (!hasProvincialLevel(place)) return game;
+  game.place = { ...(game.place ?? {}), province: place.provinceName ?? place.province ?? null, provinceCode: place.provinceCode ?? null, provinceType: place.provinceType ?? null };
+  if (!game.elections.some(item => item.type === 'provinciale')) {
+    const last = calendar?.provinciale ?? localCalendarOf(null, { region: place.region, seed: place.municipality, provinceCode: place.provinceCode }).provinciale;
+    game.elections.push(makeLocalElection('provinciale', last, today ?? game.week?.startedAt, game.place, false));
+    game.elections.sort((a, b) => a.electionDate.localeCompare(b.electionDate));
+  }
+  return game;
+}
 function makeNationalElection(type, electionDate, place = {}, early = false) {
   const entry = makeElection(type, advanceDays(electionDate, -ELECTION_MODELS[type].campaignDays), place, early);
   return { ...entry, electionDate, calendar: 'nazionale' };
 }
 function makeElection(type, windowOpensAt, place = {}, early = false) {
   const model = ELECTION_MODELS[type];
-  const labels = { comunale: `Comunali · ${place.municipality || 'il tuo comune'}`, regionale: `Regionali · ${place.region || 'la tua regione'}`, politiche: early ? 'Politiche anticipate' : 'Elezioni politiche', europee: 'Elezioni europee' };
+  const labels = { comunale: `Comunali · ${place.municipality || 'il tuo comune'}`, provinciale: `Provinciali · ${place.province || 'la tua provincia'}`, regionale: `Regionali · ${place.region || 'la tua regione'}`, politiche: early ? 'Politiche anticipate' : 'Elezioni politiche', europee: 'Elezioni europee' };
   return {
     id: `elezione-${type}-${windowOpensAt}`, type, label: labels[type], windowOpensAt,
     windowClosesAt: advanceDays(windowOpensAt, ELECTION_SCHEDULE[type].windowDays), electionDate: advanceDays(windowOpensAt, model.campaignDays),
@@ -197,23 +252,28 @@ export function createGameState({ seedText, currentDate, level, party = null, pl
     kind: item.kind, value: clamp(item.base + (item.id === 'rival' ? -setting.relationStart : setting.relationStart)), source: SIM
   }));
   // National votes on the real national calendar, local votes on the calendar of the player's comune and region.
-  const elections = Object.keys(ELECTION_SCHEDULE).map(type => ['politiche', 'europee'].includes(type)
+  // The provincial vote exists where the province has organs of its own (see hasProvincialLevel).
+  const elections = Object.keys(ELECTION_SCHEDULE).filter(type => type !== 'provinciale' || hasProvincialLevel(place)).map(type => ['politiche', 'europee'].includes(type)
     ? makeNationalElection(type, nationalElectionDate({ legislature: REAL_LEGISLATURE }, type, currentDate), place)
     : localCalendar ? makeLocalElection(type, localCalendar[type], currentDate, place, localCalendar[`${type}Real`])
     : makeElection(type, advanceDays(currentDate, 7 * (LEVEL_FIRST_ELECTION[level]?.[type] ?? ELECTION_SCHEDULE[type].firstWeeks)), place));
-  const startingFunds = Math.round((funds ?? ({ comunale: 1500, regionale: 2500, deputato: 4000, senatore: 4000, europeo: 4000 }[level] ?? 2000)) * setting.funds * startFundsFactor(start?.levels));
+  // What the level (a council, a province, a region, the Chambers, Strasbourg) and the way of belonging start with.
+  const scenario = scenarioOf({ level, affiliation: affiliationOf(party) });
+  const startingFunds = Math.round((funds ?? ({ comunale: 1500, provinciale: 2000, regionale: 2500, deputato: 4000, senatore: 4000, europeo: 4000 }[level] ?? 2000)) * setting.funds * startFundsFactor(start?.levels) * scenario.fundsFactor);
   const game = {
     version: 1, source: SIM, status: 'active', seed, rngState: seed, place, difficulty: difficultyId(difficulty),
     week: { index: 1, startedAt: currentDate, ap: WEEKLY_ACTION_POINTS, maxAp: WEEKLY_ACTION_POINTS, categoriesUsed: [] },
     resources: { funds: startingFunds, politicalCapital: clamp(Math.round((parliament?.resources?.politicalCapital ?? stats.influence ?? 30) + setting.capital), 0, 100), source: SIM },
     prep: 0, relations, party: createPartyState(party, seed, { region: place.region, share: party?.share ?? null, week: 1, date: currentDate }), pastParties: [], elections,
-    inbox: [], log: [], objectives: {}, flags: { nationalCalendar: 2, ...(localCalendar ? { localCalendar: 1 } : {}) }, lastReport: null, weekStartStats: { ...stats }, lastEventId: null,
+    inbox: [], log: [], objectives: {}, flags: { nationalCalendar: 2, provincialCalendar: 1, ...(localCalendar ? { localCalendar: 1 } : {}) }, lastReport: null, weekStartStats: { ...stats }, lastEventId: null,
     fallenWeeks: 0, endedAt: null, endReason: null, objectivesV: 2,
     finance: createFinance({ week: 1, date: currentDate, funds: startingFunds }), contacts: [], promises: [], legislature: { ...REAL_LEGISLATURE },
-    roundsFrom: currentDate, rounds: []
+    roundsFrom: currentDate, rounds: [], standing: createStanding({ week: 1 })
   };
   planRounds(game, currentDate);
-  // The conditions the player chose to start with (outsider, debts, a divided party, a consolidated career…).
+  // The scenario of the level and of the way of belonging, then the conditions the player chose on top of it (outsider, debts, a divided
+  // party, a consolidated career…).
+  scenarioInit(game, scenario, lifeApi());
   if (hasStart(start)) startInit(game, start, lifeApi());
   const ctx = { game, stats: { ...stats }, parliament };
   refreshObjectives(ctx, {}, [], currentDate);
@@ -236,6 +296,7 @@ export function normalizeGameState(game) {
     status: 'active', prep: 0, pastParties: [], inbox: [], log: [], objectives: {}, flags: {}, lastReport: null, lastEventId: null, fallenWeeks: 0, place: {},
     contacts: [], promises: [], pending: [], eventQueue: [], eventHistory: {}, eventRecent: [], memory: [], legislature: { ...REAL_LEGISLATURE }, difficulty: 'normale', setbacks: [],
     ...game, ...revived, party,
+    standing: normalizeStanding(game.standing, { week }),
     finance: normalizeFinance(game.finance, { week, date, funds: game.resources?.funds ?? 0 }),
     week: { ap: WEEKLY_ACTION_POINTS, maxAp: WEEKLY_ACTION_POINTS, categoriesUsed: [], ...(game.week ?? {}) },
     resources: { funds: 0, politicalCapital: 30, source: SIM, ...(game.resources ?? {}) },
@@ -336,15 +397,22 @@ export function memoryBalance(game, { region = null } = {}) {
 
 function applyEffects(ctx, effects = {}, targetId = null, lines = [], params = {}) {
   const { game } = ctx;
-  for (const [metric, raw] of Object.entries(effects.stats ?? {})) {
-    if (!raw || !(metric in ctx.stats || STAT_LABELS[metric])) continue;
+  let reputationDelta = 0;
+  for (const [metric, given] of Object.entries(effects.stats ?? {})) {
+    if (!given || !(metric in ctx.stats || STAT_LABELS[metric])) continue;
+    // The level and the way of belonging set the pace at which a stat grows (a councillor is known in the neighbourhood sooner than in the country).
+    const raw = given > 0 ? round2(given * scenarioGrowth(game, metric)) : given;
     // Gains shrink near the top: the last points of popularity or reputation are the hardest.
     const current = ctx.stats[metric] ?? 0;
     const delta = raw > 0 && metric !== 'consensus' && current > 55 ? round2(raw * clamp((100 - current) / 45, 0.15, 1)) : raw;
     ctx.stats[metric] = clamp(round2(current + delta));
     recordWhy(game, metric, ctx.stats[metric] - current, params.source ?? params.fundsLabel ?? 'Altre decisioni');
     lines.push(`${STAT_LABELS[metric]} ${signed(delta)}`);
+    if (metric === 'reputation') reputationDelta = ctx.stats[metric] - current;
   }
+  // The four reputations and the sectors of influence follow the decision: its explicit changes and the share of the general
+  // reputation that belongs to its kind.
+  if (reputationDelta || effects.standing || effects.sector) lines.push(...applyStandingEffects(game, effects, { category: params.category ?? null, reputationDelta, cause: params.source ?? params.fundsLabel ?? null }));
   if (effects.fundsFrom) {
     const amount = Math.max(effects.fundsFrom.min ?? 0, Math.round((ctx.stats[effects.fundsFrom.stat] ?? 0) * effects.fundsFrom.factor));
     book(game, amount, 'donazioni', params.fundsLabel ?? null, params.date ?? null);
@@ -564,10 +632,12 @@ function instantiate(template, kind, ctx, params) {
   const taken = new Set((ctx.game.inbox ?? []).map(item => item.id));
   let id = base;
   for (let n = 2; taken.has(id); n++) id = `${base}-${n}`;
-  // The day of the week an appointment or event falls on (0 = Monday): drawn from the template's days, without using
-  // the career's random sequence. Decisions of the situation (and urgent ones) have no day: they are due this week.
-  const days = template.days ?? (kind === 'appuntamento' || kind === 'evento' ? [0, 1, 2, 3, 4] : null);
-  const day = days ? days[hash(`${base}|day`) % days.length] : null;
+  // The day of the week an appointment or event falls on (0 = Monday): a preference of the event (`days`), never a
+  // condition, drawn from a hash of the week without using the career's random sequence. Decisions of the situation
+  // (and urgent ones) have no day: they are due this week.
+  const day = kind === 'appuntamento' || kind === 'evento' || template.days
+    ? eventDay(template.days, (hash(`${base}|day`) % 10007) / 10007, AGENDA_CAPS.dayBase, (ctx.game.inbox ?? []).filter(item => item.week === ctx.game.week.index).map(item => item.day).filter(Number.isInteger))
+    : null;
   return {
     id, kind, templateId: template.id, ...(day !== null ? { day } : {}),
     title: fill(template.title, params), body: fill(template.body, params), params,
@@ -634,8 +704,9 @@ function raiseEvent(ctx, template, params, specials, lines, urgent = false) {
   game.eventHistory = { ...(game.eventHistory ?? {}), [template.id]: game.week.index };
   // Keep a short semantic history in addition to per-template cooldowns: different
   // events in the same category should not crowd out the rest of the story.
-  game.eventRecent = [{ id: template.id, category: template.category ?? null, week: game.week.index }, ...(game.eventRecent ?? []).filter(entry => entry.id !== template.id)].slice(0, 8);
+  game.eventRecent = [{ id: template.id, category: template.category ?? null, family: template.family ?? null, week: game.week.index }, ...(game.eventRecent ?? []).filter(entry => entry.id !== template.id)].slice(0, 10);
   game.lastEventId = template.id;
+  if (template.family) game.eventFamilies = { ...(game.eventFamilies ?? {}), [template.family]: game.week.index };
   // Some events change the world as soon as they happen, whatever the player decides.
   if (template.onRaise?.shock) specials.push({ type: 'society-shock', shock: Object.fromEntries(Object.entries(template.onRaise.shock).map(([key, value]) => [key, fillText(value, params)])) });
   if (template.onRaise?.emergency) game.flags.emergencies = { ...(game.flags.emergencies ?? {}), [template.onRaise.emergency]: game.week.index };
@@ -652,6 +723,8 @@ function fillInbox(ctx, env, lines, specials = []) {
   const appointments = APPOINTMENTS.filter(item => meets(item.when, sit) && !recent.includes(item.id));
   const picked = [];
   for (let count = 0; count < AGENDA_CAPS.appointments && appointments.length; count++) {
+    // Not every week brings an invitation: the appointment comes with some chance, not by calendar.
+    if (draw(game) >= AGENDA_CAPS.chances.appointment) break;
     const [item] = appointments.splice(Math.floor(draw(game) * appointments.length), 1);
     picked.push(item.id);
     game.inbox.push(instantiate(item, 'appuntamento', ctx, params));
@@ -664,55 +737,7 @@ function fillInbox(ctx, env, lines, specials = []) {
     if (template && since >= Math.min(template.cooldown ?? 8, 4) && meets(template.when, sit) && !game.inbox.some(item => item.templateId === template.id)) { const chained = raiseEvent(ctx, template, { ...eventParamsFor(template, ctx, env), ...(queued.params ?? {}) }, specials, lines); if (chained) chained.chain = true; }
   }
   game.eventQueue = (game.eventQueue ?? []).filter(entry => entry.dueWeek > game.week.index);
-  // Procedural draw: conditions, cooldowns, rarity, exclusive categories and the situation's own weight.
-  const history = game.eventHistory ?? {};
-  const recentCategories = new Map();
-  for (const entry of game.eventRecent ?? []) if (entry.category) recentCategories.set(entry.category, (recentCategories.get(entry.category) ?? 0) + 1);
-  const openExclusive = new Set(game.inbox.map(item => EVENT_POOL.find(entry => entry.id === item.templateId)?.exclusive).filter(Boolean));
-  const eligible = CAREER_EVENTS.filter(item => item.weight > 0 && item.id !== game.lastEventId && meets(item.when, sit) && !(item.id === 'congresso' && !params.currentB)
-    && game.week.index - (history[item.id] ?? -999) >= (item.cooldown ?? 8)
-    && !(item.unique && history[item.id] !== undefined)
-    && !(item.exclusive && openExclusive.has(item.exclusive))
-    && !game.inbox.some(entry => entry.templateId === item.id));
-  const setting = rules(game);
-  const memoryKinds = new Set((game.memory ?? []).slice(0, 24).map(entry => entry.kind).filter(Boolean));
-  const memoryBoost = item => {
-    if (typeof item.memoryBoost === 'function') return item.memoryBoost(sit);
-    if (Number.isFinite(item.memoryBoost)) return item.memoryBoost;
-    const kinds = item.memoryKinds ?? [];
-    if (!kinds.length) return 1;
-    return kinds.some(kind => memoryKinds.has(kind)) ? 1.8 : 0.55;
-  };
-  const weighted = eligible.map(item => ({ item, weight: item.weight
-    * (typeof item.boost === 'function' ? item.boost(sit) : 1)
-    * (item.rare ? 0.5 : 1)
-    * (HARD_CATEGORIES.includes(item.category) ? setting.badEvents : item.positive ? setting.goodEvents : 1)
-    // A recent category remains possible, but loses priority so the story keeps changing.
-    * (recentCategories.has(item.category) ? (recentCategories.get(item.category) >= 2 ? 0.18 : 0.42) : 1)
-    * (sit.signals.memoryPressure > 2 && ['media', 'partito', 'parlamento'].includes(item.category) ? 1.45 : 1)
-    * memoryBoost(item)
-    * (sit.signals.pendingPressure > 2 && item.category === 'crisi' ? 1.25 : 1)
-  })).filter(entry => entry.weight > 0);
-  // Tense weeks bring more events: crises, campaigns, a government in trouble.
-  const tension = (sit.signals.stability ?? 60) < 35 || sit.campaignActive || sit.signals.euStatus === 'procedura' ? 0.2 : 0;
-  const rounds = draw(game) < 0.25 + tension ? 2 : 1;
-  // What the week can still take: ordinary events up to the cap (a little more in a tense week), a few important ones,
-  // and no second event of a category already raised this week.
-  const budget = { ordinary: tension ? AGENDA_CAPS.tenseEvents : AGENDA_CAPS.events, important: AGENDA_CAPS.important, categories: new Set() };
-  for (let round = 0; round < rounds && weighted.length; round++) {
-    if (draw(game) >= 0.6 + tension) continue;
-    const open = weighted.filter(entry => fitsBudget(budget, entry.item));
-    if (!open.length) break;
-    const total = open.reduce((sum, entry) => sum + entry.weight, 0);
-    let pick = draw(game) * total;
-    const chosen = open.find(entry => (pick -= entry.weight) < 0) ?? open[0];
-    weighted.splice(weighted.indexOf(chosen), 1);
-    const event = chosen.item;
-    if (event.exclusive) for (let i = weighted.length - 1; i >= 0; i--) if (weighted[i].item.exclusive === event.exclusive) weighted.splice(i, 1);
-    raiseEvent(ctx, event, eventParamsFor(event, ctx, env), specials, lines);
-    spendBudget(budget, event);
-  }
-  dailyEvents(ctx, env, sit, lines, specials, budget, tension);
+  drawEvents(ctx, env, sit, params, lines, specials);
 }
 // The cap on the events that the draws add: ordinary ones use a slot, crises and scandals have their own small limit.
 const isImportant = event => AGENDA_CAPS.importantCategories.includes(event.category) || event.exclusive === 'emergenza';
@@ -721,59 +746,101 @@ function spendBudget(budget, event) {
   if (isImportant(event)) budget.important -= 1; else budget.ordinary -= 1;
   if (event.category) budget.categories.add(event.category);
 }
-// The days of the week: what the week's budget leaves free is spread over the days (the weight of each day decides
-// where), drawn from the daily catalogue with the situation's own weights; categories seen lately are less likely, so
-// the weeks do not repeat.
-const DAY_WEIGHT = [1, 1, 1, 1, 0.9, 0.55, 0.45];
-function dailyEvents(ctx, env, sit, lines, specials, budget, tension = 0) {
+// The events of the week, drawn from what the situation makes possible (never from the weekday). First the catalogue is
+// narrowed by the situation: the condition of each event, its cooldown, its family (a factory in crisis, a protest, a
+// scandal of a kind do not come twice in a row), what is already on the desk. Then probability: the weight of each event
+// (its own, the situation's boost, the difficulty, the story of the last weeks, the political memory); the important ones
+// (crises, emergencies, scandals) are drawn on their own, so that the ordinary events never crowd them out, and the quiet
+// days only fill a week that would otherwise be empty.
+function drawEvents(ctx, env, sit, params, lines, specials) {
   const game = ctx.game;
+  const caps = AGENDA_CAPS;
   const history = game.eventHistory ?? {};
   const setting = rules(game);
+  const open = new Set(game.inbox.map(item => item.templateId));
   const openExclusive = new Set(game.inbox.map(item => EVENT_POOL.find(entry => entry.id === item.templateId)?.exclusive).filter(Boolean));
-  const eligible = DAILY_EVENTS.filter(item => item.weight > 0 && meets(item.when, sit)
-    && game.week.index - (history[item.id] ?? -999) >= (item.cooldown ?? 8)
-    && !(item.exclusive && openExclusive.has(item.exclusive)) && !game.inbox.some(entry => entry.templateId === item.id));
-  const used = new Set();
-  const freeDays = [0, 1, 2, 3, 4, 5, 6];
-  // Each free slot of the week is used with some chance (a quiet week is a week too).
-  const slots = Math.max(0, budget.ordinary);
-  for (let slot = 0; slot < slots; slot++) {
-    if (draw(game) >= 0.7 + tension * 0.6) continue;
-    const day = pickDay(game, freeDays, eligible, budget, used);
-    if (day === null) break;
-    const pool = eligible.filter(item => (item.days ?? [0, 1, 2, 3, 4]).includes(day) && !used.has(item.id) && fitsBudget(budget, item)).map(item => {
-      const seen = (game.eventRecent ?? []).filter(entry => entry.category === item.category).length;
-      const weight = item.weight * (typeof item.boost === 'function' ? item.boost(sit) : 1) * (item.rare ? 0.5 : 1) * Math.pow(0.55, seen) * (HARD_CATEGORIES.includes(item.category) ? setting.badEvents : item.positive ? setting.goodEvents : 1);
-      return { item, weight };
-    }).filter(entry => entry.weight > 0);
-    const total = pool.reduce((sum, entry) => sum + entry.weight, 0);
-    if (!total) { freeDays.splice(freeDays.indexOf(day), 1); slot -= 1; continue; }
-    let pick = draw(game) * total;
-    const chosen = (pool.find(entry => (pick -= entry.weight) < 0) ?? pool[0]).item;
-    used.add(chosen.id);
-    freeDays.splice(freeDays.indexOf(day), 1);
-    const item = raiseEvent(ctx, chosen, eventParamsFor(chosen, ctx, env), specials, lines);
-    if (item) item.day = day;
-    spendBudget(budget, chosen);
-    // A crisis or a scandal does not use the slot of an ordinary event.
-    if (isImportant(chosen)) slot -= 1;
+  const recentCategories = new Map();
+  for (const entry of game.eventRecent ?? []) if (entry.category) recentCategories.set(entry.category, (recentCategories.get(entry.category) ?? 0) + 1);
+  // The last week each family of events was raised (kept apart from the short list of recent events).
+  const recentFamilies = new Map(Object.entries(game.eventFamilies ?? {}));
+  const now = game.week.index;
+  const eligible = EVENT_POOL.filter(item => item.weight > 0 && item.id !== game.lastEventId && meets(item.when, sit)
+    && now - (history[item.id] ?? -999) >= (item.cooldown ?? 8)
+    && !(item.unique && history[item.id] !== undefined)
+    && !(item.exclusive && openExclusive.has(item.exclusive))
+    && !(item.family && now - (recentFamilies.get(item.family) ?? -999) < caps.familyGapWeeks)
+    && !open.has(item.id));
+  const memoryKinds = new Set((game.memory ?? []).slice(0, 24).map(entry => entry.kind).filter(Boolean));
+  const memoryBoost = item => {
+    if (typeof item.memoryBoost === 'function') return item.memoryBoost(sit);
+    if (Number.isFinite(item.memoryBoost)) return item.memoryBoost;
+    const kinds = item.memoryKinds ?? [];
+    if (!kinds.length) return 1;
+    return kinds.some(kind => memoryKinds.has(kind)) ? 1.8 : 0.55;
+  };
+  const weigh = item => {
+    const seen = recentCategories.get(item.category) ?? 0;
+    const weight = item.weight
+      * (typeof item.boost === 'function' ? item.boost(sit) : 1)
+      * (item.rare ? 0.5 : 1)
+      * (HARD_CATEGORIES.includes(item.category) ? setting.badEvents : item.positive ? setting.goodEvents : 1)
+      // A recent category remains possible, but loses priority so the story keeps changing.
+      * (seen >= 2 ? 0.2 : seen === 1 ? 0.5 : 1)
+      * (sit.signals.memoryPressure > 2 && ['media', 'partito', 'parlamento'].includes(item.category) ? 1.45 : 1)
+      * memoryBoost(item)
+      * (sit.signals.pendingPressure > 2 && item.category === 'crisi' ? 1.25 : 1);
+    return { item, weight };
+  };
+  // Tense weeks bring more events: crises, campaigns, a government in trouble.
+  const tension = (sit.signals.stability ?? 60) < 35 || sit.campaignActive || sit.signals.euStatus === 'procedura' ? 0.2 : 0;
+  const budget = { ordinary: tension ? caps.tenseEvents : caps.events, important: caps.important, categories: new Set() };
+  // Two events of the same family do not come in the same week either.
+  const familyNow = new Set();
+  const raise = event => { raiseEvent(ctx, event, eventParamsFor(event, ctx, env), specials, lines); spendBudget(budget, event); if (event.family) familyNow.add(event.family); };
+  const rows = pool => pool.map(weigh).filter(row => row.weight > 0 && fitsBudget(budget, row.item) && !(row.item.family && familyNow.has(row.item.family)));
+  // The important ones, on their own: a crisis, an emergency or a scandal when the situation makes one possible.
+  const importantPool = eligible.filter(isImportant);
+  if (budget.important > 0 && draw(game) < caps.chances.important + tension) {
+    const chosen = pickWeighted(rows(importantPool), draw(game));
+    if (chosen) raise(chosen.item);
+  }
+  // The ordinary ones: the first, then (if it came) a second; a desk already full of decisions takes none.
+  const ordinaryPool = eligible.filter(item => !isImportant(item) && item.category !== 'quiete');
+  let raised = 0;
+  if (game.inbox.length < caps.deskLimit) {
+    for (let slot = 0; slot < budget.ordinary + raised && slot < 3; slot++) {
+      if (draw(game) >= (slot === 0 ? caps.chances.first : caps.chances.second) + tension) break;
+      const chosen = pickWeighted(rows(ordinaryPool.filter(item => !open.has(item.id))), draw(game));
+      if (!chosen) break;
+      open.add(chosen.item.id);
+      raise(chosen.item);
+      raised += 1;
+      if (budget.ordinary <= 0) break;
+    }
+  }
+  // A quiet day, only when nothing else was raised and the desk is nearly empty.
+  if (!raised && game.inbox.length <= 1 && draw(game) < caps.chances.quiet) {
+    const chosen = pickWeighted(rows(eligible.filter(item => item.category === 'quiete')), draw(game));
+    if (chosen) raise(chosen.item);
   }
 }
-// The day of the next event: drawn among the free days that still have something to offer, by the weight of the day.
-function pickDay(game, freeDays, eligible, budget, used) {
-  const days = freeDays.filter(day => eligible.some(item => (item.days ?? [0, 1, 2, 3, 4]).includes(day) && !used.has(item.id) && fitsBudget(budget, item)));
-  if (!days.length) return null;
-  const total = days.reduce((sum, day) => sum + DAY_WEIGHT[day], 0);
-  let pick = draw(game) * total;
-  return days.find(day => (pick -= DAY_WEIGHT[day]) < 0) ?? days[0];
-}
-// The political world can ask for a reaction: it lands in the week's agenda like any other event.
-export function addWorldReaction(input, reaction) {
+// The political world can ask the player for a position: a fact of the world that concerns the player's role lands in the
+// week's agenda like any other event. It is not a decision of its own right: it comes at most every few weeks, with a
+// chance that follows how much the fact concerns the player (a flood in the region is the business of whoever governs the
+// region, a national scandal of those who lead or sit in Parliament), and never above the week's ordinary cap.
+export function addWorldReaction(input, reaction, sit = null) {
   const game = copy(input);
   if (game.status === 'ended' || game.flags?.president || game.inbox.some(item => item.templateId === 'presa-posizione')) return game;
+  const caps = AGENDA_CAPS;
+  if (game.week.index - (game.lastReactionWeek ?? -99) < caps.reactionGapWeeks) return game;
+  const ordinary = game.inbox.filter(item => item.kind === 'evento' && !item.chain && !caps.importantCategories.includes(item.category)).length;
+  if (ordinary >= caps.events) return game;
+  const relevance = sit ? reactionRelevance(reaction, sit) : 1;
+  if (!(draw(game) < relevance)) return game;
   const template = CAREER_EVENTS.find(entry => entry.id === 'presa-posizione');
   const ctx = { game };
-  game.inbox.push(instantiate(template, 'evento', ctx, { event: reaction.title, eventBody: reaction.body }));
+  game.inbox.push(instantiate(template, 'evento', ctx, { event: reaction.title, eventBody: reaction.body, scope: reaction.scope ?? 'nazionale' }));
+  game.lastReactionWeek = game.week.index;
   return game;
 }
 export const requirementText = requirement => requirementReason[requirement] ?? 'Non disponibile nel tuo ruolo attuale.';
@@ -800,6 +867,9 @@ export function describeEffects(effects = {}) {
   if (effects.groups?.target) parts.push(`Rapporto con il gruppo ${signed(effects.groups.target)}`);
   if (effects.groups?.coalition) parts.push(`Maggioranza ${signed(effects.groups.coalition)}`);
   if (effects.government?.stability) parts.push(`Stabilità governo ${signed(effects.government.stability)}`);
+  if (effects.local?.stability) parts.push(`Stabilità dell’esecutivo locale ${signed(effects.local.stability)}`);
+  if (effects.local?.pressure) parts.push(`Pressione sull’ente ${signed(effects.local.pressure)}`);
+  if (effects.local?.margin) parts.push(`Margine di bilancio ${signed(effects.local.margin)}`);
   return parts.join(' · ');
 }
 export function describeChoice(item, choiceId) {
@@ -817,22 +887,36 @@ function pickOutcome(game, outcomes) {
   let roll = draw(game) * weights.reduce((sum, value) => sum + value, 0);
   return outcomes.find((outcome, index) => (roll -= weights[index]) < 0) ?? outcomes.at(-1);
 }
+// What a decision does to the institution where the player sits (its executive, its pressure, its budget): a council is
+// not part of the career state, so the store applies it (special `local-effect`).
+const pushLocal = (effects, specials, lines) => {
+  if (!effects?.local) return;
+  specials.push({ type: 'local-effect', local: effects.local });
+  const { stability, pressure, margin } = effects.local;
+  if (stability) lines.push(`Stabilità dell’esecutivo locale ${signed(stability)}`);
+  if (pressure) lines.push(`Pressione sull’ente ${signed(pressure)}`);
+  if (margin) lines.push(`Margine di bilancio ${signed(margin)}`);
+};
 function runChoice(ctx, env, item, choice, lines, specials) {
   let tone = 'neutral';
-  const params = { ...(item.params ?? {}), date: env.currentDate, fundsLabel: item.title, source: item.title };
+  const params = { ...(item.params ?? {}), date: env.currentDate, fundsLabel: item.title, source: item.title, category: templateFor(item)?.category ?? null };
   applyEffects(ctx, choice.effects, item.params?.targetId ?? null, lines, params);
+  // Taking on a matter of public policy (a choice that costs days, capital or money) earns influence in its sector.
+  if (EVENT_SECTORS[item.templateId] && (choice.cost?.ap || choice.cost?.capital || choice.cost?.funds)) gainSector(ctx.game, EVENT_SECTORS[item.templateId], SECTOR_GAINS.engage, { cause: item.title });
+  pushLocal(choice.effects, specials, lines);
   if (choice.memory) remember(ctx.game, { date: env.currentDate, ...choice.memory, text: fill(choice.memory.text, item.params) });
   if (choice.followUp && draw(ctx.game) < (choice.followUp.chance ?? 1)) ctx.game.eventQueue = [...(ctx.game.eventQueue ?? []), { id: choice.followUp.id, dueWeek: ctx.game.week.index + (choice.followUp.weeks ?? 2), params: { region2: item.params?.region2 }, from: item.templateId, causes: [item.templateId, ...(choice.followUp.causes ?? [])], source: SIM }];
   if (choice.outcomes) {
     const outcome = pickOutcome(ctx.game, choice.outcomes);
     lines.push(outcome.label);
     applyEffects(ctx, outcome.effects, null, lines, params);
+    pushLocal(outcome.effects, specials, lines);
     if (outcome.memory) remember(ctx.game, { date: env.currentDate, ...outcome.memory });
     schedule(ctx.game, outcome.later, item.title);
     if (outcome.special) handleSpecial(ctx, env, outcome.special, item, lines, specials, outcome);
     tone = outcome.special || Object.values(outcome.effects?.stats ?? {}).some(value => value < -2) ? 'bad' : 'good';
   }
-  if (choice.risk && draw(ctx.game) < choice.risk.chance * rules(ctx.game).riskChance) { lines.push(choice.risk.label); applyEffects(ctx, choice.risk.effects, null, lines, params); tone = 'bad'; }
+  if (choice.risk && draw(ctx.game) < choice.risk.chance * rules(ctx.game).riskChance) { lines.push(choice.risk.label); applyEffects(ctx, choice.risk.effects, null, lines, params); pushLocal(choice.risk.effects, specials, lines); tone = 'bad'; }
   schedule(ctx.game, choice.later, item.title);
   if (choice.special) handleSpecial(ctx, env, choice.special, item, lines, specials, choice);
   return tone;
@@ -894,6 +978,39 @@ function handleSpecial(ctx, env, special, item, lines, specials, choice = {}) {
   }
   if (special === 'issue-law-security') {
     specials.push({ type: 'issue-law', region: item.params?.region2 ?? item.params?.region, topic: 'Sicurezza', indicator: 'sicurezza' });
+    return;
+  }
+  // The leaders of the committees of the player's territory: a round of visits (they are heard, the committees feel it), or a man of trust
+  // where the territory slips away (the committee whose leader answers least gets a new one).
+  if (special === 'territory-tour' || special === 'territory-coordinator') {
+    const org = game.party?.org;
+    const week = game.week.index;
+    const cadreOf = committee => (game.party.life?.cadres ?? []).find(entry => entry.committeeId === committee.id && entry.status !== 'uscito') ?? null;
+    const home = (org?.committees ?? []).filter(entry => entry.region === game.place?.region && entry.status !== 'dissoluzione' && !entry.leader?.player);
+    if (!home.length) return;
+    if (special === 'territory-tour') {
+      for (const committee of home) {
+        committee.lastVisitWeek = week; committee.loyalty = Math.round(clamp(committee.loyalty + 4)); committee.organization = Math.round(clamp(committee.organization + 2));
+        const cadre = cadreOf(committee);
+        if (cadre) { cadre.loyalty = Math.round(clamp(cadre.loyalty + 6)); cadre.grievance = Math.round(clamp(cadre.grievance - 10)); }
+      }
+      lines.push(`Giro dei comitati: ${home.length} responsabili ascoltati, la fedeltà sale`);
+    } else {
+      const weakest = [...home].sort((a, b) => leaderStance(a, { party: game.party, cadre: cadreOf(a) }).weight - leaderStance(b, { party: game.party, cadre: cadreOf(b) }).weight)[0];
+      lines.push(...applyCommitteeAction(org, weakest, 'responsabile', { week, rand: () => draw(game), currents: game.party.currents }));
+    }
+    return;
+  }
+  // A place in the lists promised to the local leader with the most ambition: it is kept when the lists are drawn up, it breaks if the vote goes by without them.
+  if (special === 'territory-promise') {
+    const election = game.elections.filter(entry => ['upcoming', 'open'].includes(entry.status) && !game.party?.org?.selections?.[entry.id]).sort((a, b) => a.electionDate.localeCompare(b.electionDate))[0];
+    const cadres = (game.party?.life?.cadres ?? []).filter(entry => entry.status !== 'uscito' && !entry.player && !entry.promise);
+    const pick = [...cadres].sort((a, b) => b.ambition - a.ambition || String(a.id).localeCompare(String(b.id)))[0];
+    if (!election || !pick) { lines.push('Nessuna promessa da fare adesso.'); return; }
+    pick.promise = { week: game.week.index, electionId: election.id, until: game.week.index + 52 };
+    pick.grievance = Math.round(clamp(pick.grievance - 20)); pick.loyalty = Math.round(clamp(pick.loyalty + 12));
+    for (const other of cadres.filter(entry => entry.id !== pick.id)) other.grievance = Math.round(clamp(other.grievance + 2));
+    lines.push(`${pick.name}: gli prometti un posto nelle liste di ${election.label}`);
     return;
   }
   if (special === 'round-engage') {
@@ -1017,7 +1134,7 @@ function handleSpecial(ctx, env, special, item, lines, specials, choice = {}) {
     const committee = game.party?.org?.committees?.find(entry => entry.id === item.params.committeeId);
     if (committee && committee.status !== 'dissoluzione') {
       if (special === 'committee-rescue') { committee.organization = Math.round(clamp(committee.organization + 12)); committee.loyalty = Math.round(clamp(committee.loyalty + 10)); committee.lastVisitWeek = game.week.index; lines.push(`Il comitato di ${committee.name} riparte: organizzazione ${committee.organization}, fedeltà ${committee.loyalty}.`); }
-      else if (special === 'committee-commissar') { committee.leader = { label: 'Commissario (figura simulata nominata dalla segreteria)', currentId: null, player: false }; committee.loyalty = 75; committee.status = 'crisi'; committee.statusSince = game.week.index; lines.push(`La segreteria commissaria il comitato di ${committee.name}: il controllo torna, qualche malumore resta.`); if (game.party.org) game.party.org.cohesion = Math.round(clamp(game.party.org.cohesion - 2)); }
+      else if (special === 'committee-commissar') { committee.leader = { label: 'Commissario (figura simulata nominata dalla segreteria)', currentId: null, player: false, since: game.week.index }; committee.loyalty = 75; committee.status = 'crisi'; committee.statusSince = game.week.index; lines.push(`La segreteria commissaria il comitato di ${committee.name}: il controllo torna, qualche malumore resta.`); if (game.party.org) game.party.org.cohesion = Math.round(clamp(game.party.org.cohesion - 2)); }
       else { committee.loyalty = Math.round(clamp(committee.loyalty - 6)); lines.push(`Il comitato di ${committee.name} resta da solo: la fedeltà a te cala.`); }
     }
   } else if (special.startsWith('committee-local-')) {
@@ -1057,6 +1174,10 @@ function handleSpecial(ctx, env, special, item, lines, specials, choice = {}) {
     if (contact) contact.cosigned = [...new Set([...(contact.cosigned ?? []), item.params.lawId])];
     specials.push({ type: 'cosign', lawId: item.params.lawId, person: contact?.person ?? null });
     lines.push(`${item.params.contact} sottoscrive la proposta (simulazione).`);
+  } else if (special === 'group-leader') {
+    // The group chooses the player as its leader: the store records it (and it lapses with the seat or the group).
+    specials.push({ type: 'group-leader' });
+    lines.push('Sei il nuovo capogruppo.');
   } else if (special === 'local-office') {
     // An office that comes from a decision of others (the giunta, the group): the store records it.
     const office = Object.fromEntries(Object.entries(choice.office ?? {}).map(([key, value]) => [key, typeof value === 'string' ? fill(value, item.params) : value]));
@@ -1195,7 +1316,7 @@ function handleLifeSpecial(ctx, env, special, item, lines, specials) {
   else if (special === 'life-congress-mobilize') lines.push(...congressWork(game, api, { kind: 'mobilita', week }));
   else if (special === 'life-congress-ally') lines.push(...congressWork(game, api, { kind: 'alleanza', week }));
   else if (special.startsWith('life-rebuild-')) lines.push(...startRebuild(game, api, { focus: special.slice(13), week, date }));
-  else if (special === 'life-cadre-keep' || special === 'life-cadre-meet' || special === 'life-cadre-leave') lines.push(...cadreDecision(game, api, { cadreId: item.params.cadreId, choice: special.slice(11), week, date, rand }));
+  else if (['life-cadre-keep', 'life-cadre-meet', 'life-cadre-leave', 'life-cadre-tessere', 'life-cadre-verifica', 'life-cadre-rifiuta'].includes(special)) lines.push(...cadreDecision(game, api, { cadreId: item.params.cadreId, choice: special.slice(11), week, date, rand }));
   else if (special === 'life-split-stay' || special === 'life-split-hold' || special === 'life-split-follow') {
     const life = game.party?.life;
     const id = item.params.currentId;
@@ -1501,7 +1622,7 @@ export function committeeAction(input, env, actionId, target = {}) {
   } else {
     committee = (org.committees ?? []).find(item => item.id === target.committeeId);
     if (!committee) throw new Error('Comitato non trovato.');
-    lines = applyCommitteeAction(org, committee, actionId, { week, rand, currents: party.currents, leader: isPartyLeader(party), scale });
+    lines = applyCommitteeAction(org, committee, actionId, { week, rand, currents: party.currents, leader: isPartyLeader(party), scale, stance: leaderStance(committee, { party, cadre: (party.life?.cadres ?? []).find(item => item.committeeId === committee.id && item.status !== 'uscito') ?? null }) });
   }
   pay(ctx.game, cost, 'partito', `${spec.label}: ${committee.name}`, env.currentDate);
   if (['rilancia', 'mobilita'].includes(actionId) && committee.region === ctx.game.place?.region) applyEffects(ctx, { stats: { popularity: 0.3, notoriety: 0.2 } }, null, lines, { source: `Comitato di ${committee.name}` });
@@ -1696,7 +1817,7 @@ export function refreshObjectives(ctx, env, lines = [], date) {
     const declared = (game.ambitions ?? []).find(entry => entry.id === item.id) ?? null;
     game.objectives[item.id] = { completedAt: date, week: game.week.index, ...(declared ? { declared: true } : {}), source: SIM };
     const reward = item.reward ?? {};
-    const effects = { capital: (reward.capital ?? 0) * (declared ? AMBITION_KEPT.capitalFactor : 1), stats: { ...(reward.stats ?? {}) }, relations: reward.relations, party: reward.party };
+    const effects = { capital: (reward.capital ?? 0) * (declared ? AMBITION_KEPT.capitalFactor : 1), stats: { ...(reward.stats ?? {}) }, relations: reward.relations, party: reward.party, standing: reward.standing, sector: reward.sector };
     if (declared) for (const [metric, value] of Object.entries(AMBITION_KEPT.stats)) effects.stats[metric] = round2((effects.stats[metric] ?? 0) + value);
     const rewardLines = [];
     applyEffects(ctx, effects, null, rewardLines, { source: `Traguardo: ${item.label}`, date });
@@ -1926,7 +2047,7 @@ function weeklySystems(ctx, env, date, closing, lines, specials) {
     lines.push(...org.lines.slice(0, 2));
     // Territorial committees: their week, and a decision when one of the player's own territory is in trouble.
     if (party.org.committees?.length) {
-      const territory = advanceCommittees(party.org, { rand: () => draw(game), week: closing, regionalShares: env.regionalShares ?? {}, nationalShare: env.pollShare ?? null, currents: party.currents, campaignActive: env.campaign?.status === 'active', founder: party.affiliation === 'founder', line: party.line ?? null, preferredLines: CURRENT_LINES, homeRegion: game.place?.region ?? null, ownPerks: game.finance?.perks ?? {} });
+      const territory = advanceCommittees(party.org, { rand: () => draw(game), week: closing, regionalShares: env.regionalShares ?? {}, nationalShare: env.pollShare ?? null, currents: party.currents, campaignActive: env.campaign?.status === 'active', founder: party.affiliation === 'founder', line: party.line ?? null, preferredLines: CURRENT_LINES, homeRegion: game.place?.region ?? null, ownPerks: game.finance?.perks ?? {}, cadres: party.life?.cadres ?? [] });
       lines.push(...territory.lines.slice(0, 1));
       // A local event in the player's own territory: an opportunity, a scandal, a competitor (one decision at a time).
       const local = territory.events.find(event => event.type === 'local');
@@ -1967,7 +2088,7 @@ function weeklySystems(ctx, env, date, closing, lines, specials) {
     if (party.affiliation === 'member') {
       const soon = game.elections.find(entry => ['upcoming', 'open'].includes(entry.status) && !party.org.selections?.[entry.id] && entry.windowOpensAt <= advanceDays(date, SELECTION_LEAD_DAYS) && date <= entry.windowClosesAt);
       // The secretary draws up the lists; everyone else goes through the party's selection.
-      if (soon && isSecretary(party)) { party.org.selections = { ...party.org.selections, [soon.id]: { method: 'segreteria', bonus: 6, week: closing, election: soon.label, source: SIM } }; lines.push(`Da segretario compili tu le liste per ${soon.label}.`, ...honourListPacts(game, lifeApi(), { week: closing, date })); }
+      if (soon && isSecretary(party)) { party.org.selections = { ...party.org.selections, [soon.id]: { method: 'segreteria', bonus: 6, week: closing, election: soon.label, source: SIM } }; lines.push(`Da segretario compili tu le liste per ${soon.label}.`, ...honourListPacts(game, lifeApi(), { week: closing, date }), ...honourCadrePromises(game, lifeApi(), { week: closing, date, electionId: soon.id })); }
       else if (soon && !game.inbox.some(item => item.templateId === 'selezione-candidati')) raiseSituation(ctx, 'selezione-candidati', { election: soon.label, electionId: soon.id });
     }
   }
@@ -2001,6 +2122,15 @@ function drift(ctx, lines) {
   const standing = ctx.parliament?.careerStanding;
   if (standing && Math.abs(standing.partySupport - 50) > 2) standing.partySupport = round2(standing.partySupport + (standing.partySupport > 50 ? -0.5 : 0.5));
 }
+// What happens to a decision nobody took: its default choice, which must cost nothing (an unpaid choice with a cost would
+// hand its benefits to whoever did not decide); when the declared default costs something, the closest free choice.
+const isFree = choice => !choice?.cost || !Object.values(choice.cost).some(Boolean);
+function defaultChoiceOf(item) {
+  const choices = templateFor(item)?.choices ?? [];
+  const declared = choices.find(entry => entry.id === item.defaultChoice);
+  if (!declared || isFree(declared)) return declared;
+  return [...choices].reverse().find(isFree) ?? declared;
+}
 export function advanceWeek(input, env, governmentWeek = parliament => parliament) {
   const ctx = { game: copy(input.game), stats: { ...input.stats }, parliament: copy(input.parliament) };
   const game = ctx.game;
@@ -2011,7 +2141,7 @@ export function advanceWeek(input, env, governmentWeek = parliament => parliamen
   const closing = game.week.index;
   for (const item of [...game.inbox]) {
     if ((item.holdUntilWeek ?? 0) > closing || (item.holdUntilDate && item.holdUntilDate > date)) continue;
-    const choice = templateFor(item)?.choices.find(entry => entry.id === item.defaultChoice);
+    const choice = defaultChoiceOf(item);
     game.inbox = game.inbox.filter(entry => entry.id !== item.id);
     if (!choice) continue;
     const itemLines = [];
@@ -2031,11 +2161,13 @@ export function advanceWeek(input, env, governmentWeek = parliament => parliamen
       for (const item of pressure.raises) raiseSituation(ctx, item.id, item.params, item.urgent);
       for (const entry of pressure.logs) addLog(game, date, entry.kind, entry.title, entry.lines, entry.tone);
     }
-    const capitalGain = Math.max(0, Math.round(2 + (ctx.stats.influence ?? 30) / 25 + ((game.party?.rank ?? 0) >= 2 ? 1 : 0) + rules(game).capitalGain));
+    const capitalGain = Math.max(0, Math.round(2 + (ctx.stats.influence ?? 30) / 25 + ((game.party?.rank ?? 0) >= 2 ? 1 : 0) + rules(game).capitalGain + scenarioCapitalGain(game)));
     game.resources.politicalCapital = clamp(game.resources.politicalCapital + capitalGain);
     lines[0] += ` · capitale politico +${capitalGain}`;
     game.week.nextStaffDays = budget.staffDays;
     drift(ctx, lines);
+    // The reputations drift back, the influence earned fades unless the office keeps it alive.
+    advanceStanding(game, { held: holdingsOf(ctx, env), floors: env.standingFloors ?? {}, week: closing });
     if (ctx.parliament) {
       const before = ctx.parliament.government?.status;
       ctx.parliament = governmentWeek(ctx.parliament, date, draw(game), () => draw(game));

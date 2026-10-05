@@ -676,7 +676,7 @@ function advanceChains(world, date, parliament, reactions, lines) {
     const entry = applyStage(world, stage, chain.stageId, chain, date, parliament);
     if (!entry) continue;
     lines.push(`Sviluppi: ${entry.title}`);
-    if (stage.reactable) reactions.push({ eventId: chain.stageId, title: entry.title, body: entry.body });
+    if (stage.reactable) reactions.push({ eventId: chain.stageId, title: entry.title, body: entry.body, scope: entry.scope ?? stage.scope ?? 'nazionale' });
     scheduleNext(world, stage.next, chain, date, conditions);
   }
 }
@@ -1304,7 +1304,7 @@ export function advanceWorld(input, { date, week, stats = {}, deltas = {}, game 
       ctx.rootTitle = entry.title;
       if (!event.target) { pushShock(world, WORLD_FOLLOWUPS[event.id]?.shock); entry.chain = { root: event.id, rootTitle: entry.title, step: 0 }; }
       lines.push(`Cronaca: ${entry.title}`);
-      if (event.reactable) reactions.push({ eventId: event.id, title: entry.title, body: entry.body });
+      if (event.reactable) reactions.push({ eventId: event.id, title: entry.title, body: entry.body, scope: entry.scope ?? event.scope ?? 'nazionale' });
       scheduleNext(world, event.next ?? WORLD_FOLLOWUPS[event.id]?.next, ctx, date, chainConditions(world, parliament));
     }
   }

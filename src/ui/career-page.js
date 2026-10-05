@@ -9,6 +9,7 @@ import { startOverview } from '../core/start-engine.js?v=20261003-2';
 import { renderGoals } from './goals-view.js?v=20261003-2';
 import { renderRetirement } from './hall-view.js?v=20261003-2';
 import { glyph, officeIcon } from './visuals.js?v=20261003-2';
+import { REPUTATIONS, REPUTATION_IDS } from '../data/simulation/standing-rules.js?v=20261003-2';
 import { renderCareerTimeline, renderMemoryPanel, renderRolesPanel, renderWhyPanel } from './game-mode.js?v=20261003-2';
 import { arrow, badge, bar, card, empty, esc, num, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261003-2';
 
@@ -100,6 +101,29 @@ export function renderOddsCard(track) {
   return card({ kicker: `${track.label.toUpperCase()} · PROBABILITÀ SIMULATA`, title: track.next?.title ?? track.position, body, tone: chanceTone(track.odds.chance) === 'good' ? 'good' : '' });
 }
 
+// How the player stands: the capital, the notoriety and the influence, the four reputations (and what each is made of) and the
+// influence in each sector of public policy. Nothing here is granted: it is what the promotions weigh.
+export function renderStandingPanel(view) {
+  if (!view) return '';
+  const tone = value => value >= 60 ? 'good' : value < 40 ? 'bad' : '';
+  const reps = REPUTATION_IDS.map(id => {
+    const item = view.reputation[id];
+    const meta = REPUTATIONS[id];
+    if (item.value === null) return `<li class="cp-rep is-none"><span><strong>${esc(meta.label)}</strong><small>${esc(meta.detail)}</small></span><b>—</b></li>`;
+    const parts = item.parts.map(part => `<li><span>${esc(part.label)}</span><b class="${part.label === 'Reputazione generale' ? '' : part.value >= 0 ? 'tone-good' : 'tone-bad'}">${part.label === 'Reputazione generale' ? num(part.value, 0) : signed(part.value, 1)}</b></li>`).join('');
+    return `<li class="cp-rep"><span><strong>${esc(meta.label)}</strong><small>${esc(meta.drivers)}</small></span><b>${num(item.value, 0)}</b>${bar(item.value, tone(item.value))}<details><summary>Da cosa dipende</summary><ul class="cp-rep-parts">${parts}</ul></details></li>`;
+  }).join('');
+  const sectors = view.sectors.map(item => `<li class="cp-sector"><span>${esc(item.label)}</span><b>${num(item.value, 0)}</b>${bar(item.value, item.value >= 50 ? 'good' : '')}${item.floor > item.earned ? '<small>dall’incarico</small>' : ''}</li>`).join('');
+  const recent = (view.log ?? []).slice(0, 5).map(item => `<li><small>sett. ${item.week}</small> ${item.kind === 'settore' ? `Influenza ${esc((view.sectors.find(row => row.id === item.target)?.label ?? item.target).toLowerCase())}` : esc(REPUTATIONS[item.target]?.label ?? item.target)} <b class="tone-${item.delta >= 0 ? 'good' : 'bad'}">${signed(item.delta, 1)}</b>${item.cause ? ` · ${esc(item.cause)}` : ''}</li>`).join('');
+  return `<div class="cp-profile">
+    <dl class="cp-capital"><div><dt>Capitale politico</dt><dd>${num(view.capital, 0)}</dd></div><div><dt>Notorietà</dt><dd>${num(view.notoriety, 0)}</dd></div><div><dt>Influenza</dt><dd>${num(view.influence, 0)}</dd></div><div><dt>Reputazione generale</dt><dd>${num(view.base, 0)}</dd></div></dl>
+    <h4 class="cp-sub">Le quattro reputazioni</h4><ul class="cp-reps">${reps}</ul>
+    <h4 class="cp-sub">Influenza per settore</h4><ul class="cp-sectors">${sectors}</ul>
+    ${recent ? `<h4 class="cp-sub">Cosa l’ha mossa di recente</h4><ul class="cp-start-history">${recent}</ul>` : ''}
+    <p class="sx-note">La reputazione generale è una; le altre dicono chi ti stima: il partito, i cittadini, le redazioni, le istituzioni. L’influenza in un settore nasce da atti, leggi e deleghe su quei temi e svanisce se non la mantieni: pesa sulla competenza che ti riconoscono per ministeri ed emendamenti.</p>
+  </div>`;
+}
+
 function contestsTable(contests) {
   const rows = contests.map(item => ({
     date: item.date ? esc(formatDate(item.date, { day: 'numeric', month: 'short', year: 'numeric' })) : item.week ? `S${item.week}` : '—',
@@ -156,7 +180,7 @@ export function renderCareerPage(state, { tab = null, timelineFilter = 'tutto' }
   } else if (active === 'progressione') {
     const withOdds = overview.tracks.filter(track => track.odds);
     const blocked = overview.tracks.filter(track => !track.odds && track.next);
-    body = `<div class="sx-card cp-explainer"><span class="section-kicker">COME FUNZIONA</span><p>Nessun incarico arriva da solo. Ogni tentativo pesa <b>consenso, reputazione, esperienza, influenza, risultati elettorali, rapporti interni, forza della tua area, salute del partito, territorio, risorse e momento politico</b>. Superare la soglia rende la promozione probabile, mai certa: puoi ottenere l’incarico, uno minore, un rinvio, perdere contro un altro nome o, se sei molto sotto, perdere quello che hai.</p></div>
+    body = `${card({ kicker: 'PROFILO POLITICO · SIMULAZIONE', title: 'Come ti vedono', body: renderStandingPanel(overview.standing) })}<div class="sx-card cp-explainer"><span class="section-kicker">COME FUNZIONA</span><p>Nessun incarico arriva da solo. Ogni tentativo pesa <b>consenso, reputazione, esperienza, influenza, risultati elettorali, rapporti interni, forza della tua area, salute del partito, territorio, risorse e momento politico</b>. Superare la soglia rende la promozione probabile, mai certa: puoi ottenere l’incarico, uno minore, un rinvio, perdere contro un altro nome o, se sei molto sotto, perdere quello che hai.</p></div>
       ${withOdds.length ? `<div class="sx-grid two">${withOdds.map(renderOddsCard).join('')}</div>` : ''}
       ${blocked.length ? card({ kicker: 'NON ANCORA A PORTATA', title: 'Cosa manca', body: `<ul class="cp-blocked">${blocked.map(track => `<li><span class="cp-track-icon">${glyph(track.icon, 16)}</span><span><strong>${esc(track.label)}: ${esc(track.next.title)}</strong><small>${esc(track.problems?.length ? track.problems.join(' ') : track.blocker ?? track.requirement)}</small></span>${actionButton(track.action, null, false)}</li>`).join('')}</ul>` }) : ''}
       ${card({ kicker: 'STORICO DEI TENTATIVI · SIMULAZIONE', title: `${overview.contests.length} ${overview.contests.length === 1 ? 'tentativo' : 'tentativi'}`, body: contestsTable(overview.contests) })}`;

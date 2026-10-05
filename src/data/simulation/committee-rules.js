@@ -43,3 +43,33 @@ export const COMMITTEE_RULES = Object.freeze({
   trendWindow: 8,
   tiers: Object.freeze([['forte', 65], ['solido', 45], ['debole', 28], ['fragile', 0]])
 });
+
+// What a territorial leader means in politics: how far the party's line, and the player, reach through him. The weight of a leader
+// (0–1) comes from his loyalty, the area he belongs to, his discontent and the autonomy his committee has taken; the control of a
+// territory is the weight of its leaders, each counted by the level and the strength of its committee. Simulated figures only.
+export const LEADER_RULES = Object.freeze({
+  levelWeight: Object.freeze({ regione: 2, provincia: 1.5, comune: 1 }),
+  coverage: 4,
+  // The weight: a base, loyalty around 50, the bonus of an area that is the player's (or of a man the player chose), how the other areas
+  // feel about the player, the discontent above 40; the autonomy above 50 cuts it (up to 40%).
+  weight: Object.freeze({ base: 0.45, perLoyalty: 0.008, ownArea: 0.2, perRelation: 0.004, perGrievance: 0.006, autonomyCut: 0.4, lost: 0.05, min: 0.05, max: 0.98 }),
+  player: Object.freeze({ id: 'tuo', label: 'Lo guidi tu', tone: 'good', detail: 'Il comitato risponde a te: la linea arriva fino al territorio.' }),
+  stances: Object.freeze([
+    { id: 'con-te', min: 0.65, label: 'Con te', tone: 'good', detail: 'Un responsabile fedele: porta volontari, voti e candidature dalla tua parte.' },
+    { id: 'da-convincere', min: 0.4, label: 'Da convincere', tone: 'neutral', detail: 'Collabora quando conviene: va ascoltato, finanziato e coinvolto.' },
+    { id: 'distante', min: 0.2, label: 'Distante', tone: 'warn', detail: 'Ha un’agenda propria o risponde a un’altra area: aiuta poco in campagna.' },
+    { id: 'contro', min: 0, label: 'Contro di te', tone: 'bad', detail: 'Lavora contro di te: non mobilita e pesa sulle candidature.' }
+  ]),
+  // What the control of the territory does to a candidacy: the volunteers it moves (a multiplier), the weight in the choice of the
+  // candidates and the local consent (in points), around a control of 50.
+  campaign: Object.freeze({ gotvMin: 0.6, gotvMax: 1.35, nomination: 0.8, nominationCap: 0.4, local: 0.6, localCap: 0.3 }),
+  // A leader's mood moves the organisation of his committee (points of its target): a loyal one keeps it going, a critical one lets it go.
+  organization: Object.freeze({ critico: -4, inUscita: -9, fedele: 3 }),
+  // A promise of a candidacy is kept at the compiling of the lists, or breaks when its time runs out.
+  promise: Object.freeze({ keptLoyalty: 10, keptGrievance: -15, keptRelation: 2, brokenLoyalty: -22, brokenGrievance: 28, brokenRelation: -3 }),
+  // A leader with a following brings a package of memberships: the same one not before forty weeks, the party hears one at a time and not
+  // more than every twenty weeks.
+  tessere: Object.freeze({ cadreGapWeeks: 40, partyGapWeeks: 20, chance: 0.08 }),
+  // How many points of the odds of a promotion the leaders move (the control around 50), through the weights of progression.
+  progression: Object.freeze({ currentBase: 13, currentCap: 9 })
+});

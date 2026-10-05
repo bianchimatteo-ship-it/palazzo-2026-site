@@ -1,12 +1,13 @@
 // Territorial committees of the player's party: Region → Province or metropolitan city → Comune. The geography is
 // ISTAT's (names and codes of the real territorial units and comuni); members, leaders, activists, strength and states
 // are a simulation of the game and never describe the real organisation of a real party.
-import { treasuryBook } from './organization-engine.js?v=20261003-2';
-import { COMMITTEE_RULES, LOCAL_ACTIONS, LOCAL_EVENT_RULES, PARTY_SCALES, SEAT_LEVEL_FACTOR, SEAT_TIERS, scaleOf } from '../data/simulation/committee-rules.js?v=20261003-2';
+import { isPartyLeader, treasuryBook } from './organization-engine.js?v=20261003-2';
+import { COMMITTEE_RULES, LEADER_RULES, LOCAL_ACTIONS, LOCAL_EVENT_RULES, PARTY_SCALES, SEAT_LEVEL_FACTOR, SEAT_TIERS, scaleOf } from '../data/simulation/committee-rules.js?v=20261003-2';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
 const round1 = value => Math.round(value * 10) / 10;
+const round2 = value => Math.round(value * 100) / 100;
 const slug = value => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('it-IT').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
 export const COMMITTEE_STATES = Object.freeze({
@@ -72,6 +73,73 @@ export function committeeStrength(committee) {
   const activeShare = committee.members ? Math.min(100, committee.activists / committee.members * 400 * (0.75 + (committee.quality ?? 50) / 200)) : 0;
   return Math.round(clamp(committee.organization * 0.45 + activeShare * 0.15 + committee.consensus * 0.2 + committee.loyalty * 0.2));
 }
+
+// ---------- the leaders of the committees, in politics ----------
+// A committee is not only a set of figures: someone leads it, he follows an area of the party, he is loyal or discontent, and the
+// territory answers to him. The weight of a leader (0–1) is how far the party's line (and the player) reach through him; the
+// control of a territory is the weight of its leaders, each counted by the level and the strength of his committee.
+const areaRelation = area => area?.value ?? area?.relation ?? 50;
+const stanceOf = weight => LEADER_RULES.stances.find(item => weight >= item.min) ?? LEADER_RULES.stances.at(-1);
+export const leaderKeyOf = committee => `${committee?.leader?.currentId ?? '-'}|${committee?.leader?.label ?? ''}|${committee?.leader?.player ? 1 : 0}|${committee?.leader?.since ?? ''}`;
+// `cadre` is the local leader of the internal life of the party (loyalty and discontent are his); without it the committee speaks for him.
+export function leaderStance(committee, { party = null, cadre = null } = {}) {
+  const rules = LEADER_RULES.weight;
+  if (!committee || committee.status === 'dissoluzione') return { id: 'contro', label: 'Sciolto', tone: 'bad', detail: 'Il comitato non esiste più.', weight: 0, reasons: ['comitato sciolto'] };
+  if (committee.leader?.player) return { ...LEADER_RULES.player, weight: 1, reasons: ['lo guidi tu'] };
+  const live = cadre && cadre.status !== 'uscito' ? cadre : null;
+  const loyalty = live ? live.loyalty : committee.loyalty ?? 50;
+  const grievance = live ? live.grievance : 25;
+  const areaId = committee.leader?.currentId ?? null;
+  const area = areaId ? (party?.currents ?? []).find(item => item.id === areaId) ?? null : null;
+  // The leader of the party counts the ruling area as its own; anyone else counts the area they are aligned with, or a man they chose.
+  const mine = !areaId || areaId === party?.alignedCurrentId || (party && isPartyLeader(party) && areaId === party.leaderCurrentId);
+  const autonomy = committee.autonomy ?? 50;
+  const reasons = [];
+  let weight;
+  if (committee.status === 'perdita-controllo') { weight = rules.lost; reasons.push('il comitato risponde a un’altra area'); }
+  else {
+    weight = rules.base + (loyalty - 50) * rules.perLoyalty - Math.max(0, grievance - 40) * rules.perGrievance;
+    weight += mine ? rules.ownArea : (areaRelation(area) - 50) * rules.perRelation;
+    weight *= 1 - clamp((autonomy - 50) / 100, 0, rules.autonomyCut);
+    if (!areaId) reasons.push('un nome scelto da te o senza area');
+    else if (mine) reasons.push(`della tua area (${area?.label ?? 'area'})`);
+    else reasons.push(`risponde all’area «${area?.label ?? 'altra'}» (rapporto ${Math.round(areaRelation(area))})`);
+    if (loyalty >= 70) reasons.push(`fedeltà alta (${Math.round(loyalty)})`); else if (loyalty < 40) reasons.push(`fedeltà bassa (${Math.round(loyalty)})`);
+    if (grievance >= 50) reasons.push(`malcontento (${Math.round(grievance)})`);
+    if (autonomy >= 70) reasons.push(`molta autonomia (${Math.round(autonomy)})`);
+  }
+  weight = round2(clamp(weight, rules.min, rules.max));
+  const stance = stanceOf(weight);
+  return { id: stance.id, label: stance.label, tone: stance.tone, detail: stance.detail, weight, reasons };
+}
+// How far the party's people really hold a territory: the stance of every leader of its committees (region, provinces, comuni),
+// counted by level and strength. With fewer than four committees in the territory there are too few people to say how far it is held:
+// the figure stays near the neutral 50 (`coverage: false` for the committees of one vote, which are the whole territory of that vote).
+// Returns null when the party has no committees there.
+export function territorialControl(party, { region = null, committees = null, coverage = true } = {}) {
+  const cadres = party?.life?.cadres ?? [];
+  const list = (committees ?? party?.org?.committees ?? []).filter(item => item.status !== 'dissoluzione' && (!region || item.region === region));
+  if (!list.length) return null;
+  const rows = list.map(committee => {
+    const stance = leaderStance(committee, { party, cadre: cadres.find(item => item.committeeId === committee.id && item.status !== 'uscito') ?? null });
+    return { id: committee.id, name: committee.name, level: committee.level, currentId: committee.leader?.currentId ?? null, player: Boolean(committee.leader?.player), importance: (LEADER_RULES.levelWeight[committee.level] ?? 1) * (0.6 + committeeStrength(committee) / 100), ...stance };
+  });
+  const total = rows.reduce((sum, row) => sum + row.importance, 0) || 1;
+  const byStance = Object.fromEntries([LEADER_RULES.player, ...LEADER_RULES.stances].map(item => [item.id, 0]));
+  const byCurrent = {};
+  for (const row of rows) {
+    byStance[row.id] = (byStance[row.id] ?? 0) + 1;
+    const key = row.player || !row.currentId ? '_tuo' : row.currentId;
+    byCurrent[key] = round2((byCurrent[key] ?? 0) + row.importance / total);
+  }
+  const raw = rows.reduce((sum, row) => sum + row.weight * row.importance, 0) / total * 100;
+  const cover = coverage ? Math.min(1, rows.length / LEADER_RULES.coverage) : 1;
+  return {
+    index: Math.round(50 + (raw - 50) * cover), count: rows.length, byStance, byCurrent,
+    rows: rows.map(({ importance, ...row }) => row), region, source: SIM
+  };
+}
+
 const initialStatus = organization => organization >= 62 ? 'consolidamento' : organization >= 35 ? 'crescita' : organization >= 22 ? 'crisi' : 'fondazione';
 const leaderFor = (level, currents, rand, player = false) => {
   if (player) return { label: 'Tu', currentId: null, player: true };
@@ -130,7 +198,7 @@ export function foundCommittee(org, { level, name, region, parentId = null, week
   if (existing && existing.status !== 'dissoluzione') throw new Error(`Esiste già il comitato di ${name}.`);
   const committee = makeCommittee({ level, name, region, parentId, members: level === 'comune' ? 10 : 18, organization: 24, loyalty: 72, rand, week, currents, leadByPlayer: false, extra });
   committee.status = 'fondazione';
-  committee.leader = { label: `${COMMITTEE_LEVELS[level].leader} (figura simulata, vicina a te)`, currentId: null, player: false };
+  committee.leader = { label: `${COMMITTEE_LEVELS[level].leader} (figura simulata, vicina a te)`, currentId: null, player: false, since: week };
   log(committee, week, existing ? 'Rifondato dopo lo scioglimento' : 'Fondato');
   if (existing) Object.assign(existing, committee, { id: existing.id, history: [...committee.history, ...(existing.history ?? [])].slice(0, 8) });
   else org.committees.push(committee);
@@ -144,7 +212,7 @@ function fundraising(committee, scale) {
   return gross * COMMITTEE_RULES.fundraisingRate * (scale?.fundraising ?? 1);
 }
 // The player's actions on a committee (costs are paid by the career engine).
-export function applyCommitteeAction(org, committee, actionId, { week, rand = Math.random, currents = [], leader = false, scale: scaleId = 'regionale' } = {}) {
+export function applyCommitteeAction(org, committee, actionId, { week, rand = Math.random, currents = [], leader = false, scale: scaleId = 'regionale', stance = null } = {}) {
   const lines = [];
   const scale = PARTY_SCALES[scaleId] ?? PARTY_SCALES.regionale;
   if (committee.status === 'dissoluzione' && actionId !== 'fonda') throw new Error('Il comitato si è sciolto: va rifondato.');
@@ -158,7 +226,7 @@ export function applyCommitteeAction(org, committee, actionId, { week, rand = Ma
   } else if (actionId === 'responsabile') {
     if (committee.leader?.player) throw new Error('Guidi tu questo comitato.');
     const outgoing = currents.find(item => item.id === committee.leader?.currentId) ?? null;
-    committee.leader = { label: `${COMMITTEE_LEVELS[committee.level].leader} (figura simulata, vicina a te)`, currentId: null, player: false };
+    committee.leader = { label: `${COMMITTEE_LEVELS[committee.level].leader} (figura simulata, vicina a te)`, currentId: null, player: false, since: week };
     committee.loyalty = Math.round(clamp(Math.max(committee.loyalty, 70) + 6));
     committee.organization = Math.round(clamp(committee.organization - 3));
     lines.push(`${committee.name}: nuovo responsabile, fedeltà ${committee.loyalty}`);
@@ -168,9 +236,12 @@ export function applyCommitteeAction(org, committee, actionId, { week, rand = Ma
     committee.organization = Math.round(clamp(committee.organization + 3));
     lines.push(`${committee.name}: attività finanziate fino alla settimana ${week + 8}`);
   } else if (actionId === 'mobilita') {
-    committee.mobilizedUntil = week + 4;
-    committee.activists = Math.round(committee.activists * 1.35 + 3);
-    lines.push(`${committee.name}: ${committee.activists} volontari mobilitati`);
+    // The volunteers move as far as their leader pushes: one who is with the player brings more of them and for longer, one who is
+    // distant or against does the minimum (a committee without a record of its leader pushes as a neutral one).
+    const push = stance?.weight ?? 0.6;
+    committee.mobilizedUntil = week + (push >= 0.4 ? 4 : 3);
+    committee.activists = Math.round(committee.activists * (1.2 + push * 0.25) + 3);
+    lines.push(`${committee.name}: ${committee.activists} volontari mobilitati${push >= 0.65 ? ' (il responsabile spinge)' : push < 0.4 ? ' (il responsabile non spinge)' : ''}`);
   } else if (actionId === 'recluta') {
     ensureStructure(committee);
     if (committee.recruitUntil && committee.recruitUntil >= week) throw new Error('La campagna di tesseramento è già in corso.');
@@ -228,7 +299,7 @@ export function applyCommitteeAction(org, committee, actionId, { week, rand = Ma
   } else if (actionId === 'commissaria') {
     if (!leader) throw new Error('Solo chi guida il partito può commissariare un comitato.');
     if (!['crisi', 'perdita-controllo'].includes(committee.status)) throw new Error('Si commissaria solo un comitato in crisi o fuori controllo.');
-    committee.leader = { label: 'Commissario (figura simulata nominata da te)', currentId: null, player: false };
+    committee.leader = { label: 'Commissario (figura simulata nominata da te)', currentId: null, player: false, since: week };
     committee.loyalty = 78;
     committee.organization = Math.round(clamp(committee.organization + 4));
     ensureStructure(committee);
@@ -252,9 +323,10 @@ function setStatus(committee, status, week, reason) {
 // One week of territorial life: organisation, members, volunteers (and their quality), activity, seats and their cost,
 // local fundraising, autonomy, local consensus, loyalty and state. Nothing grows by itself: recruiting follows activity,
 // organisation and consensus, and a committee that is not worked on loses people, volunteers and its seat.
-export function advanceCommittees(org, { rand = Math.random, week, regionalShares = {}, nationalShare = null, currents = [], campaignActive = false, founder = false, line = null, preferredLines = {}, homeRegion = null, ownPerks = {} } = {}) {
+export function advanceCommittees(org, { rand = Math.random, week, regionalShares = {}, nationalShare = null, currents = [], campaignActive = false, founder = false, line = null, preferredLines = {}, homeRegion = null, ownPerks = {}, cadres = [] } = {}) {
   const lines = [];
   const events = [];
+  const cadreOf = new Map(cadres.filter(item => item.status !== 'uscito').map(item => [item.committeeId, item]));
   const byId = new Map((org.committees ?? []).map(item => [item.id, item]));
   const sections = new Map((org.sections ?? []).map(item => [item.region, item]));
   const growth = (org.growth ?? 0) / 100;
@@ -280,7 +352,10 @@ export function advanceCommittees(org, { rand = Math.random, week, regionalShare
     const perks = committee.leader?.player ? { ...partyPerks, quality: (partyPerks.quality ?? 0) + (ownPerks.quality ?? 0), recruit: (partyPerks.recruit ?? 0) + (ownPerks.recruit ?? 0) } : partyPerks;
     // Organisation: the federation (for the regions), the upper committee, money, visits, the seat, cohesion and the treasury.
     const base = section ? section.vitality : 48 + (parent ? (parent.organization - 50) * 0.35 : 0);
-    const target = base + ((org.priorities?.territorio ?? 1) - 1) * 6 + (funded ? 12 : 0) + (visited ? 6 : 0) + capacity * 0.4 + (perks.organization ?? 0) + (committee.activity - 40) * 0.06 - (org.treasury?.balance < 0 ? 8 : 0) - ((org.cohesion ?? 55) < 40 ? 6 : 0) - (committee.loyalty < 30 ? 5 : 0) - (committee.status === 'perdita-controllo' ? 8 : committee.status === 'crisi' ? 3 : 0) - (committee.mobilizedUntil && !mobilized && week - committee.mobilizedUntil <= 3 ? 4 : 0);
+    // The mood of the local leader works on the committee: a loyal one keeps it going, a critical one lets it go, one on his way out leaves it empty.
+    const cadre = committee.leader?.player ? null : cadreOf.get(committee.id) ?? null;
+    const moodTerm = !cadre ? 0 : cadre.status === 'in-uscita' ? LEADER_RULES.organization.inUscita : cadre.status === 'critico' ? LEADER_RULES.organization.critico : cadre.loyalty >= 70 && cadre.grievance < 30 ? LEADER_RULES.organization.fedele : 0;
+    const target = base + moodTerm + ((org.priorities?.territorio ?? 1) - 1) * 6 + (funded ? 12 : 0) + (visited ? 6 : 0) + capacity * 0.4 + (perks.organization ?? 0) + (committee.activity - 40) * 0.06 - (org.treasury?.balance < 0 ? 8 : 0) - ((org.cohesion ?? 55) < 40 ? 6 : 0) - (committee.loyalty < 30 ? 5 : 0) - (committee.status === 'perdita-controllo' ? 8 : committee.status === 'crisi' ? 3 : 0) - (committee.mobilizedUntil && !mobilized && week - committee.mobilizedUntil <= 3 ? 4 : 0);
     committee.organization = Math.round(clamp(committee.organization + (target - committee.organization) * 0.07 + (rand() - 0.5) * 4));
     // Activity fades unless it is fed: money, the seat, the volunteers on the streets, a visit, a campaign.
     committee.activity = round1(clamp(committee.activity * 0.9 + committee.organization * 0.04 + (funded ? 3 : 0) + (mobilized ? 4 : 0) + (visited ? 1.5 : 0) + (campaignActive ? 3 : 0) + (capacity ? 1 + capacity * 0.15 : 0) + (perks.activity ?? 0) * 0.1 + (rand() - 0.5) * 2 - (broke ? 3 : 0)));
@@ -377,7 +452,7 @@ export function advanceCommittees(org, { rand = Math.random, week, regionalShare
 }
 
 // The committees that count for a vote, and what they bring to the candidacy and the campaign.
-export function committeeSupport(org, { electionType, region, provinceCode = null, municipality = null, week = 0 } = {}) {
+export function committeeSupport(org, { electionType, region, provinceCode = null, municipality = null, week = 0, party = null } = {}) {
   const active = (org?.committees ?? []).filter(item => item.status !== 'dissoluzione');
   const regional = active.find(item => item.level === 'regione' && item.region === region) ?? null;
   const comune = active.find(item => item.level === 'comune' && item.region === region && item.name === municipality) ?? null;
@@ -394,8 +469,12 @@ export function committeeSupport(org, { electionType, region, provinceCode = nul
   const activists = committees.reduce((sum, item) => sum + (item.activists ?? 0), 0);
   const lost = committees.some(item => item.status === 'perdita-controllo');
   const loyal = committees.length && committees.every(item => item.loyalty >= 60);
-  // Turnout work: the volunteers by their quality, more when they are mobilised and the committee is active.
-  const gotv = round1(Math.min(12, committees.reduce((sum, item) => sum + item.activists * (item.quality ?? 50) / 100 * (item.mobilizedUntil && item.mobilizedUntil >= (week ?? 0) ? 1.5 : 1) * Math.max(0.3, (item.activity ?? 40) / 60) / 30, 0)));
+  // The leaders of these committees (with the party, to know the area and the mood of each): how far the territory follows the player.
+  const control = party && committees.length ? territorialControl(party, { committees, coverage: false }) : null;
+  const reach = control ? control.index / 100 : null;
+  const push = reach === null ? 1 : LEADER_RULES.campaign.gotvMin + (LEADER_RULES.campaign.gotvMax - LEADER_RULES.campaign.gotvMin) * reach;
+  // Turnout work: the volunteers by their quality, more when they are mobilised and the committee is active, as far as their leaders push.
+  const gotv = round1(Math.min(12, committees.reduce((sum, item) => sum + item.activists * (item.quality ?? 50) / 100 * (item.mobilizedUntil && item.mobilizedUntil >= (week ?? 0) ? 1.5 : 1) * Math.max(0.3, (item.activity ?? 40) / 60) / 30, 0) * push));
   // Local money: what the committees have raised and what the volunteers give, a share of it for the candidate.
   const funds = Math.round(committees.reduce((sum, item) => sum + Math.min(1200, (item.raised ?? 0) * 0.12 + item.activists * 10 * (item.quality ?? 50) / 100), 0));
   // Committees that decide for themselves do not hand the list to the party: a candidate from outside has a harder time.
@@ -405,19 +484,24 @@ export function committeeSupport(org, { electionType, region, provinceCode = nul
     strength, activists, gotv, funds,
     volunteers: committees.length ? Math.min(25, Math.round(activists / 25 + gotv / 3)) : 0,
     organization: committees.length ? Math.round(clamp((strength - 40) / 5 + gotv / 6, -4, 9)) : -3,
-    nomination: round1(lost ? -0.6 : autonomous ? -0.3 : loyal && strength >= 55 ? 0.6 : strength >= 45 ? 0.2 : committees.length ? -0.2 : -0.4),
-    localSupport: round1(clamp((strength - 50) / 25, -1.2, 1.5)),
+    // The weight in the choice of the candidates and the local consent: the committees' own, and what their leaders move around a control of 50.
+    nomination: round1((lost ? -0.6 : autonomous ? -0.3 : loyal && strength >= 55 ? 0.6 : strength >= 45 ? 0.2 : committees.length ? -0.2 : -0.4) + (reach === null ? 0 : clamp((reach - 0.5) * LEADER_RULES.campaign.nomination, -LEADER_RULES.campaign.nominationCap, LEADER_RULES.campaign.nominationCap))),
+    localSupport: round1(clamp((strength - 50) / 25, -1.2, 1.5) + (reach === null ? 0 : clamp((reach - 0.5) * LEADER_RULES.campaign.local, -LEADER_RULES.campaign.localCap, LEADER_RULES.campaign.localCap))),
+    control: control ? { index: control.index, byStance: control.byStance } : null,
     source: SIM
   };
 }
 
 // After a vote: a victory in the committee's territory brings members and energy, a defeat tests it.
-export function committeesAfterVote(org, { mandate, electionType, region, provinceCode = null, municipality = null, week }) {
+export function committeesAfterVote(org, { mandate, electionType, region, provinceCode = null, municipality = null, week, cadres = [] }) {
   const lines = [];
   const support = committeeSupport(org, { electionType, region, provinceCode, municipality });
   for (const ref of support.committees) {
     const committee = org.committees.find(item => item.id === ref.id);
     if (!committee) continue;
+    // The local leader takes the result as his own: a victory in his territory calms him, a defeat is blamed on whoever ran.
+    const cadre = committee.leader?.player ? null : cadres.find(item => item.committeeId === committee.id && item.status !== 'uscito') ?? null;
+    if (cadre) cadre.grievance = Math.round(clamp(cadre.grievance + (mandate ? -5 : 6)));
     committee.organization = Math.round(clamp(committee.organization + (mandate ? 6 : -5)));
     committee.members = Math.round(committee.members * (mandate ? 1.04 : 0.98));
     committee.loyalty = Math.round(clamp(committee.loyalty + (mandate ? 4 : -3)));
@@ -466,7 +550,7 @@ export function applyLocalEvent(org, committee, kind, choice, { week, rand = Mat
       committee.loyalty = Math.round(clamp(committee.loyalty + 5)); committee.consensus = Math.round(clamp(committee.consensus - 2));
       if (rand() < 0.4) { committee.consensus = Math.round(clamp(committee.consensus - 4)); people(0.02); lines.push(`${committee.name}: la difesa non convince, il caso si allarga`); } else lines.push(`${committee.name}: il caso si sgonfia, il responsabile ti è grato`);
     } else if (choice === 'sostituisci') {
-      committee.leader = { label: `${COMMITTEE_LEVELS[committee.level].leader} (figura simulata, scelta da te)`, currentId: null, player: false };
+      committee.leader = { label: `${COMMITTEE_LEVELS[committee.level].leader} (figura simulata, scelta da te)`, currentId: null, player: false, since: week };
       committee.loyalty = Math.round(clamp(Math.max(committee.loyalty, 68))); committee.autonomy = Math.round(clamp(committee.autonomy - 8)); people(0.015);
       lines.push(`${committee.name}: nuovo responsabile, qualche iscritto se ne va`);
     } else { committee.consensus = Math.round(clamp(committee.consensus - 5)); people(0.04); committee.activity = round1(clamp(committee.activity - 8)); lines.push(`${committee.name}: il caso pesa su iscritti e consenso`); }

@@ -1,4 +1,4 @@
-import { CAREER_LEVELS, ITALIAN_REGIONS, initialCareerStatistics } from '../data/regions.js?v=20261003-2';
+import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261003-2';
 import { LOGO_SHAPES, LOGO_SYMBOLS, partyLogoDataUrl } from './party-logo.js?v=20261003-2';
 import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261003-2';
 import { validateCareerStep } from '../core/career-rules.js?v=20261003-2';
@@ -47,7 +47,7 @@ export function renderCareerWizard(state, draft, realParties = [], logoFor = () 
   const parties = [...state.dataset.parties.filter(isSelectableParty), ...realParties.filter(isSelectableParty)];
   const activeStep = steps[draft.step - 1];
   const place = chosenPlace(draft, territory);
-  const body = draft.step === 1 ? whereStep(draft, territory) : draft.step === 2 ? placeLine(draft, place) + levelStep(draft, parliamentaryGroups, realPoliticians) : draft.step === 3 ? partyStep(draft, parties, logoFor, parliamentaryGroups, partyLeaderships, politicalFigures) : draft.step === 4 ? difficultyStep(draft) + startStep(draft) : profileStep(state, draft) + summaryStep(draft, parties, level, parliamentaryGroups, place);
+  const body = draft.step === 1 ? whereStep(draft, territory) : draft.step === 2 ? placeLine(draft, place) + levelStep(draft, parliamentaryGroups, realPoliticians, place) : draft.step === 3 ? partyStep(draft, parties, logoFor, parliamentaryGroups, partyLeaderships, politicalFigures) : draft.step === 4 ? difficultyStep(draft) + startStep(draft) : profileStep(state, draft) + summaryStep(draft, parties, level, parliamentaryGroups, place);
   const backButton = draft.step > 1
     ? `<button type="button" class="secondary-button wizard-back" data-wizard-action="back">${ico('back', 16)} Indietro</button>`
     : `<button type="button" class="wizard-cancel" data-wizard-action="cancel">Annulla</button>`;
@@ -127,16 +127,19 @@ function profileStep(state, d) {
     <label class="wizard-full-field">Professione precedente<input name="previousProfession" value="${val(d, 'previousProfession')}" autocomplete="organization-title" maxlength="100" placeholder="Es. insegnante, avvocata, imprenditore" /></label>
   </div><small>I dati anagrafici sono usati solo per questa carriera (source: user).</small></section>`;
 }
-function levelStep(d, parliamentaryGroups, realPoliticians) {
+function levelStep(d, parliamentaryGroups, realPoliticians, place = null) {
   const details = {
     comunale: ['Territorio locale', 'Parti dal tuo comune e costruisci relazioni nella comunità.'],
+    provinciale: ['Area vasta', 'Consigliere comunale e provinciale: la provincia la eleggono sindaci e consiglieri, non i cittadini. Contano la rete degli amministratori e le strade e le scuole del territorio.'],
     regionale: ['Scala regionale', 'Costruisci una carriera con una prospettiva regionale.'],
     deputato: ['Camera dei deputati', 'Inizia una carriera parlamentare alla Camera.'],
     senatore: ['Senato della Repubblica', 'Inizia una carriera parlamentare al Senato.'],
     europeo: ['Parlamento europeo', 'Inizia da eurodeputato: commissioni, relazioni e voti al Parlamento europeo.']
   };
   const levels = Object.entries(CAREER_LEVELS);
-  const cards = levels.map(([key, config], i) => '<button type="button" class="level-card ' + (d.initialLevel === key ? 'selected' : '') + '" data-level="' + esc(key) + '" aria-pressed="' + (d.initialLevel === key) + '"><span class="level-card-top"><span class="level-index">0' + (i + 1) + '</span><span class="radio-ring"></span></span><strong>' + (key === 'deputato' ? 'DEPUTATO' : key === 'senatore' ? 'SENATORE' : key === 'comunale' ? 'COMUNALE' : key === 'europeo' ? 'EURODEPUTATO' : 'REGIONALE') + '</strong><p>' + esc(details[key][1]) + '</p><span class="level-scope">' + esc(details[key][0]) + '</span></button>').join('');
+  // A provincial career needs a province with organs in the chosen place (not Valle d’Aosta, the autonomous provinces, FVG).
+  const noProvince = key => key === 'provinciale' && Boolean(place) && !hasProvincialLevel({ region: place.region, provinceCode: place.unit.code, provinceType: place.unit.type });
+  const cards = levels.map(([key, config], i) => '<button type="button" class="level-card ' + (d.initialLevel === key ? 'selected' : '') + (noProvince(key) ? ' is-disabled' : '') + '" data-level="' + esc(key) + '" aria-pressed="' + (d.initialLevel === key) + '"' + (noProvince(key) ? ' disabled aria-disabled="true"' : '') + '><span class="level-card-top"><span class="level-index">0' + (i + 1) + '</span><span class="radio-ring"></span></span><strong>' + (key === 'deputato' ? 'DEPUTATO' : key === 'senatore' ? 'SENATORE' : key === 'comunale' ? 'COMUNALE' : key === 'europeo' ? 'EURODEPUTATO' : key === 'provinciale' ? 'PROVINCIALE' : 'REGIONALE') + '</strong><p>' + esc(noProvince(key) ? PROVINCIAL_LEVEL_PROBLEM : details[key][1]) + '</p><span class="level-scope">' + esc(details[key][0]) + '</span></button>').join('');
   const chamber = CAREER_LEVELS[d.initialLevel]?.chamber;
   let context = '';
   if (chamber) {
@@ -225,7 +228,7 @@ function summaryStep(d, parties, level, parliamentaryGroups, place = null) {
   const chamber = CAREER_LEVELS[d.initialLevel]?.chamber;
   // Difficulty: chosen once (step 4), it changes resources, events, outcomes, relations, candidacies and Parliament.
   const difficulty = '<section class="summary-section"><div class="summary-section-heading"><div><span>04 · DIFFICOLTÀ</span><strong>' + esc(setting.label) + '</strong></div><button type="button" data-wizard-goto="4">Modifica</button></div><small>' + esc(setting.short) + '</small></section>';
-  const territorySummary = d.initialLevel === 'comunale' ? 'Comune di ' + (d.municipality || 'da scegliere') + ' · ' + (d.region || 'Regione') : d.initialLevel === 'regionale' ? (d.region || 'Regione da scegliere') : (chamber === 'camera' ? 'Camera dei deputati' : 'Senato della Repubblica') + ' · ' + (d.region || 'territorio da selezionare');
+  const territorySummary = d.initialLevel === 'comunale' ? 'Comune di ' + (d.municipality || 'da scegliere') + ' · ' + (d.region || 'Regione') : d.initialLevel === 'provinciale' ? 'Provincia di ' + (d.provinceName || 'da scegliere') + ' · Comune di ' + (d.municipality || 'da scegliere') : d.initialLevel === 'regionale' ? (d.region || 'Regione da scegliere') : (chamber === 'camera' ? 'Camera dei deputati' : 'Senato della Repubblica') + ' · ' + (d.region || 'territorio da selezionare');
   const where = '<section class="summary-section"><div class="summary-section-heading"><div><span>01 · DOVE INIZI</span><strong>' + esc(place ? 'Comune di ' + place.municipality.name : d.municipality || 'Comune da scegliere') + '</strong></div><button type="button" data-wizard-goto="1">Modifica</button></div><small>' + esc(place ? place.unit.type + ' di ' + unitLabel(place.unit) + ' · ' + place.region + ' · codice ISTAT ' + place.municipality.code : d.region || 'Regione da scegliere') + '</small></section>';
   const metrics = [['Popolarità', stats.popularity], ['Reputazione', stats.reputation], ['Consenso', stats.consensus], ['Esperienza', stats.experience], ['Influenza', stats.influence], ['Notorietà', stats.notoriety]];
   const parliamentary = chamber ? '<section class="summary-section"><div class="summary-section-heading"><div><span>CONTESTO PARLAMENTARE</span><strong>' + (chamber === 'camera' ? 'Camera dei deputati' : 'Senato della Repubblica') + '</strong></div><button type="button" data-wizard-goto="2">Modifica</button></div><div class="summary-facts"><span>Gruppo: ' + esc(parliamentaryGroup?.officialName || 'Da selezionare') + '</span><span>Territorio di riferimento: ' + esc(d.region || 'Non definito') + '</span></div><small>Posizione iniziale simulata: componente del gruppo; influenza e sostegno interno possono cambiare durante la partita. I dati personali restano creati da te, i riferimenti istituzionali sono reali.</small></section>' : '';

@@ -8,7 +8,8 @@
 import { uniqueId } from './ids.js?v=20261003-2';
 import { DATA_SOURCES } from '../data/schema.js?v=20261003-2';
 import { AREA_BY_ID, CAMP_PRIORITIES, INTENSITY } from '../data/simulation/policy-rules.js?v=20261003-2';
-import { ACT_TYPES, AREA_BREADTH, AREA_LEANS, CITY_INDICATORS, CITY_SHARE_OF_REGION, actTitle, actTypeOf, cityIndicatorOf, legalNumber, naturalType, neededYes, regionalWeights, typeFitsArea } from '../data/simulation/local-acts.js?v=20261003-2';
+import { ACT_TYPES, AREA_BREADTH, AREA_LEANS, CITY_INDICATORS, CITY_SHARE_OF_REGION, PROVINCE_SHARE_OF_REGION, actTitle, actTypeOf, cityIndicatorOf, legalNumber, naturalType, neededYes, regionalWeights, proposableTypes, typeFitsArea } from '../data/simulation/local-acts.js?v=20261003-2';
+import { DELEGA_RULES, PORTFOLIO_AREAS } from '../data/simulation/office-rules.js?v=20261003-2';
 import { cohesiveShare } from './parliament-engine.js?v=20261003-2';
 import { groupLine, seededRandom, splitGroupVote } from './vote-engine.js?v=20261003-2';
 import { advanceDays } from './time.js?v=20261003-2';
@@ -31,6 +32,14 @@ export const INSTITUTIONS = Object.freeze({
     portfolios: ['Bilancio', 'Lavori pubblici', 'Politiche sociali', 'Urbanistica', 'Mobilità', 'Cultura e turismo', 'Sicurezza urbana', 'Ambiente'],
     acts: { executive: 'Delibera della giunta', majority: 'Mozione della maggioranza', opposition: 'Mozione dell’opposizione', budget: 'Bilancio di previsione', player: 'Tua proposta di delibera' },
     rates: { executive: 0.35, majority: 0.08, opposition: 0.14 }, dissolves: true
+  },
+  // The provincia (ente di area vasta): the President and the council are chosen by the mayors and the municipal councillors
+  // of the province, the executive is the President with the consiglieri delegati (the assessori of the game).
+  provincia: {
+    label: 'Consiglio provinciale', executive: 'Presidenza e consiglieri delegati', leader: 'Presidente della Provincia', leaderTitle: 'Presidente della Provincia', member: 'Consigliere provinciale',
+    portfolios: ['Viabilità e trasporti', 'Edilizia scolastica', 'Ambiente e rifiuti', 'Pianificazione del territorio', 'Sviluppo economico', 'Servizi ai comuni'],
+    acts: { executive: 'Decreto del Presidente', majority: 'Mozione della maggioranza', opposition: 'Mozione dell’opposizione', budget: 'Bilancio provinciale', player: 'Tua proposta di deliberazione provinciale' },
+    rates: { executive: 0.28, majority: 0.07, opposition: 0.11 }, dissolves: true, secondLevel: true
   },
   regione: {
     label: 'Consiglio regionale', executive: 'Giunta regionale', leader: 'Presidente della Regione', leaderTitle: 'Presidente di Regione', member: 'Consigliere regionale',
@@ -96,6 +105,17 @@ const setAct = (inst, id, patch) => ({ ...inst, acts: inst.acts.map(item => item
 const governing = inst => new Set(inst.groups.filter(group => group.side === 'maggioranza').map(group => group.id));
 export const majorityMargin = inst => inst.groups.filter(group => group.side === 'maggioranza').reduce((sum, group) => sum + group.seats, 0) - (Math.floor(inst.seats / 2) + 1);
 
+// What a decision of the career does to the institution: the stability of the executive, the pressure of the opposition
+// and the street, the margin of the budget (the career engine names them in `effects.local`).
+export function applyLocalEffect(inst, local = {}) {
+  if (!inst || inst.status !== 'active') return inst;
+  const next = { ...inst };
+  if (local.stability && inst.executive) next.executive = { ...inst.executive, stability: clamp(round1((inst.executive.stability ?? 60) + local.stability), 0, 100) };
+  if (local.pressure) next.pressure = clamp(round1((inst.pressure ?? 30) + local.pressure), 0, 100);
+  if (local.margin && inst.budget) next.budget = { ...inst.budget, margin: clamp(round1((inst.budget.margin ?? 50) + local.margin), 0, 100) };
+  return next;
+}
+
 // ---------- acts ----------
 // The kind of an act (see ACT_TYPES); acts saved before the kinds existed get the closest one.
 export function categoryOf(inst, act) {
@@ -105,6 +125,7 @@ export function categoryOf(inst, act) {
   if (act?.budget || act?.kind === 'budget') return 'bilancio';
   if (act?.kind === 'majority' || act?.kind === 'opposition') return 'mozione';
   if (inst.kind === 'regione') return 'legge';
+  if (inst.kind === 'provincia') return act?.sponsor?.kind === 'executive' ? 'decreto-presidente' : 'mozione';
   return act?.sponsor?.kind === 'executive' ? 'servizi' : 'mozione';
 }
 export const typeOfAct = (inst, act) => actTypeOf(inst.kind, categoryOf(inst, act));
@@ -179,7 +200,8 @@ const EU_TITLES = {
 // What each level decides (competences, simplified): the executive and the groups propose on these areas.
 const COMPETENCES = Object.freeze({
   comune: ['casa', 'trasporti', 'ambiente', 'sicurezza', 'cultura', 'sport', 'welfare', 'scuola', 'turismo', 'commercio', 'infrastrutture', 'giovani', 'pa', 'digitale'],
-  regione: ['sanita', 'trasporti', 'agricoltura', 'ambiente', 'lavoro', 'industria', 'scuola', 'turismo', 'welfare', 'infrastrutture', 'casa', 'cultura', 'energia', 'autonomie']
+  regione: ['sanita', 'trasporti', 'agricoltura', 'ambiente', 'lavoro', 'industria', 'scuola', 'turismo', 'welfare', 'infrastrutture', 'casa', 'cultura', 'energia', 'autonomie'],
+  provincia: ['infrastrutture', 'scuola', 'trasporti', 'ambiente', 'casa', 'autonomie', 'pa', 'turismo', 'industria', 'cultura']
 });
 const within = (kind, pool) => { const allowed = COMPETENCES[kind]; if (!allowed) return pool; const own = pool.filter(area => allowed.includes(area)); return own.length ? own : allowed; };
 const EU_AREAS = ['europa', 'ambiente', 'agricoltura', 'digitale', 'immigrazione', 'energia', 'industria', 'commercio', 'difesa', 'esteri', 'lavoro'];
@@ -244,6 +266,10 @@ function support(inst, act, group) {
   return clamp(value, 0.05, 0.95);
 }
 const lineOf = value => value >= 0.55 ? 'favorevole' : value <= 0.42 ? 'contrario' : 'astenuto';
+// A group leader brings the own group where the own vote goes: how much the group's leaning moves toward the choice of the
+// player (up for a yes, down for a no), and what it costs the group when the choice goes against its line.
+const GROUP_PULL = 0.14;
+const pullOf = (inst, group, choice) => inst.playerGroupLead && group.id === inst.playerGroupId && BALLOT[choice] ? GROUP_PULL * ({ favorevole: 1, contrario: -1 }[choice] ?? 0) : 0;
 // The player's seat in a vote: the chosen vote (or the line of the group) takes the place of one of the group's votes.
 const BALLOT = Object.freeze({ favorevole: 'yes', contrario: 'no', astenuto: 'abstain', assente: 'absent' });
 // The rule of a vote in the assembly: the majority the act needs (see QUORUMS: of the voters, of the members, two
@@ -315,7 +341,7 @@ export function forecastAct(inst, act) {
     const line = lineOf(value);
     const own = group.id === inst.playerGroupId && group.seats > 0;
     const members = own ? group.seats - 1 : group.seats;
-    const split = splitGroupVote({ seats: members, yes: Math.round(members * cohesiveShare(value)), seed: `${act.id}|${group.id}` });
+    const split = splitGroupVote({ seats: members, yes: Math.round(members * cohesiveShare(clamp(value + (own ? pullOf(inst, group, pending) : 0), 0.02, 0.98))), seed: `${act.id}|${group.id}` });
     const row = { yes: split.yes, no: split.no, abstain: split.abstain, absent: 0 };
     if (own) { playerChoice = pending ?? line; row[BALLOT[playerChoice]] += 1; }
     return { groupId: group.id, label: group.label, seats: group.seats, side: group.side, support: Math.round(value * 100) / 100, line, ...row, ...(own ? { playerChoice } : {}) };
@@ -334,7 +360,7 @@ function voteAct(inst, act, date) {
     // The day of the vote: a few absent, a few who follow their own mind (more in a group that holds together less).
     let absent = Math.floor(group.seats * rand() * 0.12);
     const others = Math.max(0, (own ? group.seats - 1 : group.seats) - absent);
-    const mood = clamp(value + (rand() - 0.5) * (0.12 + (100 - group.cohesion) / 250), 0.02, 0.98);
+    const mood = clamp(value + (own ? pullOf(inst, group, decided) : 0) + (rand() - 0.5) * (0.12 + (100 - group.cohesion) / 250), 0.02, 0.98);
     let yes = Math.round(others * cohesiveShare(mood));
     const split = splitGroupVote({ seats: others, yes, seed: `${act.id}|${group.id}` });
     let no = split.no, abstain = split.abstain;
@@ -374,16 +400,23 @@ export function setLocalVote(inst, actId, choice) {
 export function proposeLocalAct(inst, area, date, { category = null, variant = null, intensity = 2 } = {}) {
   if (!AREA_BY_ID[area]) throw new Error('Scegli un tema.');
   inst = withLocalState(inst);
-  if (inst.acts.some(item => item.sponsor.kind === 'player' && item.category !== 'interrogazione' && !CLOSED.includes(item.stage))) throw new Error('Hai già una proposta in discussione: aspetta il voto.');
-  const leads = inst.executive?.leader === 'player';
-  const type = inst.kind === 'europa' ? actTypeOf('europa', 'ue-relazione') : category ? actTypeOf(inst.kind, category) : naturalType(inst.kind, area, leads);
-  if (!type || (inst.kind !== 'europa' && !type.player.includes(leads ? 'leader' : 'consigliere'))) throw new Error(leads ? 'Questo atto non lo propone chi guida l’esecutivo.' : 'Questo atto lo propone solo chi guida l’esecutivo.');
+  const actor = actorOf(inst);
+  const leads = actor === 'leader';
+  const delegated = actor === 'assessore' || actor === 'delegato';
+  if (inst.acts.some(item => (item.sponsor.kind === 'player' || item.byDelega) && item.category !== 'interrogazione' && !CLOSED.includes(item.stage))) throw new Error('Hai già una proposta in discussione: aspetta il voto.');
+  // An assessore (or a consigliere delegato) proposes only on the theme of the own delega, and never on the budget, the taxes or the statute.
+  if (delegated && !(inst.playerDelega?.areas ?? []).includes(area)) throw new Error(`La tua delega (${inst.playerDelega?.portfolio}) riguarda ${(inst.playerDelega?.areas ?? []).map(id => AREA_BY_ID[id]?.label.toLowerCase() ?? id).join(', ')}: gli altri temi li governa la giunta.`);
+  let type = inst.kind === 'europa' ? actTypeOf('europa', 'ue-relazione') : category ? actTypeOf(inst.kind, category) : naturalType(inst.kind, area, leads || delegated);
+  if (delegated && !category && (!type || DELEGA_FORBIDDEN.has(type.id))) type = proposableTypes(inst.kind, true).find(item => !DELEGA_FORBIDDEN.has(item.id) && typeFitsArea(item, area)) ?? null;
+  if (delegated && type && DELEGA_FORBIDDEN.has(type.id)) throw new Error('Bilancio, tributi e statuto non sono atti di una delega: li propone chi guida l’esecutivo.');
+  if (!type || (inst.kind !== 'europa' && !type.player.includes(leads || delegated ? 'leader' : 'consigliere'))) throw new Error(leads || delegated ? 'Questo atto non lo propone chi ha una delega o guida l’esecutivo.' : 'Questo atto lo propone solo chi guida l’esecutivo o ha una delega.');
   if (type.id === 'tributi' && inst.acts.some(item => item.category === 'tributi' && !CLOSED.includes(item.stage))) throw new Error('C’è già una proposta sulle aliquote in discussione.');
   const theme = typeFitsArea(type, area) ? area : type.areas[0];
   const choice = type.variants ? (type.variants.includes(variant) ? variant : type.variants[0]) : null;
   const title = inst.kind === 'europa' ? `${INSTITUTIONS.europa.acts.player}: ${AREA_BY_ID[area].label.toLowerCase()}` : actTitle(inst.kind, type.id, theme, { variant: choice });
-  const act = newAct(inst, { kind: 'player', sponsor: { kind: leads ? 'executive' : 'player', groupId: inst.playerGroupId, label: 'Tu', axis: inst.groups.find(group => group.id === inst.playerGroupId)?.axis ?? 0 }, area: theme, title, date, category: type.id, variant: choice, intensity });
-  return record({ ...inst, acts: [...inst.acts, { ...act, pendingPlayerVote: 'favorevole' }] }, date, `Presenti “${title}”.`, 'proposta');
+  const cap = actor === 'delegato' ? DELEGA_RULES.intensityCap : 3;
+  const act = newAct(inst, { kind: 'player', sponsor: { kind: leads || delegated ? 'executive' : 'player', groupId: inst.playerGroupId, label: delegated ? `Tu, ${inst.playerDelega.portfolio.toLowerCase()}` : 'Tu', axis: inst.groups.find(group => group.id === inst.playerGroupId)?.axis ?? 0 }, area: theme, title, date, category: type.id, variant: choice, intensity: leads ? intensity : Math.min(intensity, cap) });
+  return record({ ...inst, acts: [...inst.acts, { ...act, ...(delegated ? { byDelega: true } : {}), pendingPlayerVote: 'favorevole' }] }, date, delegated ? `Presenti alla giunta “${title}” (delega ${inst.playerDelega.portfolio}).` : `Presenti “${title}”.`, 'proposta');
 }
 // The executive (the player as mayor or president) wins a wavering group with a concession on an act.
 export function concedeToGroup(inst, actId, groupId, date) {
@@ -397,6 +430,8 @@ export function concedeToGroup(inst, actId, groupId, date) {
 // A question to the executive (the opposition's weapon): pressure at once, then the answer on the theme (area; by
 // default the weakest service of the city), good or poor depending on how the service is doing.
 export function questionExecutive(inst, date, area = null) {
+  const actor = actorOf(inst);
+  if (actor === 'leader' || actor === 'assessore') throw new Error(actor === 'leader' ? 'Chi guida l’esecutivo non interroga se stesso.' : 'Un assessore non interroga la giunta di cui fa parte.');
   if (inst.lastQuestionAt && weeksBetween(inst.lastQuestionAt, date) < 3) throw new Error('Hai presentato un’interrogazione da poco.');
   inst = withLocalState(inst);
   let next = { ...inst, lastQuestionAt: date, pressure: clamp(inst.pressure + 6, 0, 100), executive: inst.executive ? { ...inst.executive, stability: clamp(inst.executive.stability - 2, 0, 100) } : inst.executive };
@@ -419,10 +454,69 @@ export function reshuffleLocal(inst, portfolio, groupId, date) {
   return record({ ...inst, groups, executive: { ...inst.executive, members } }, date, `Rimpasto: l’assessorato ${portfolio} passa a ${group.label}.`, 'rimpasto');
 }
 export function setLocalTax(inst, level, date) {
+  if (inst.kind === 'provincia') throw new Error('La Provincia non ha tributi propri di peso: le aliquote le decidono i Comuni e la Regione.');
   if (inst.executive?.leader !== 'player' || !inst.budget) throw new Error('Solo chi guida l’esecutivo decide le aliquote.');
   if (!['bassa', 'media', 'alta'].includes(level)) throw new Error('Livello non valido.');
   const margin = clamp(inst.budget.margin + ({ bassa: -12, media: 0, alta: 12 }[level] - { bassa: -12, media: 0, alta: 12 }[inst.budget.localTax]), 0, 100);
   return record({ ...inst, budget: { ...inst.budget, localTax: level, margin } }, date, `Nuove aliquote locali: pressione fiscale ${level}.`, 'bilancio');
+}
+
+// ---------- the delega: an assessore (or a consigliere delegato) answers for one service of the executive ----------
+// Who the player is in the institution: the head of the executive, an assessore (a portfolio of the giunta), a consigliere
+// with a delega, or a councillor. The powers of the office follow from it (see office-rules).
+export const actorOf = inst => inst?.executive?.leader === 'player' ? 'leader' : inst?.playerDelega && inst.playerRole === 'assessore' ? 'assessore' : inst?.playerDelega && inst.playerRole === 'delegato' ? 'delegato' : 'consigliere';
+export const DELEGA_FORBIDDEN = new Set(['tributi', 'bilancio', 'variazione', 'statuto', 'sfiducia']);
+export const delegaAreasOf = (kind, portfolio) => PORTFOLIO_AREAS[kind]?.[portfolio] ?? [];
+// How the service of the delega is doing (0-100): the city's or the region's indicators on its themes (the budget's margin for the Bilancio).
+export function delegaScore(inst, territory = null) {
+  const delega = inst?.playerDelega;
+  if (!delega) return null;
+  if (delega.portfolio === 'Bilancio' && inst.budget) return round1(inst.budget.margin);
+  const values = (delega.areas ?? []).map(area => territoryValue(inst, area, territory)).filter(Number.isFinite);
+  return values.length ? round1(values.reduce((sum, value) => sum + value, 0) / values.length) : null;
+}
+// The executive gives the player a delega: a seat in the giunta (assessore) or a delegation without it (consigliere delegato; in
+// a province the consiglieri delegati are the assessori). Left to the executive, it is the service doing worst that is entrusted.
+export function grantDelega(inst, { kind = 'assessore', portfolio = null, date, territory = null } = {}) {
+  if (!inst || inst.status !== 'active' || !inst.executive) throw new Error('Nessuna giunta in cui ricevere una delega.');
+  if (inst.executive.leader === 'player') throw new Error('Chi guida l’esecutivo non ha una delega: le governa tutte.');
+  if (inst.playerDelega) throw new Error('Hai già una delega.');
+  const rules = INSTITUTIONS[inst.kind];
+  const role = inst.kind === 'provincia' || kind !== 'delegato' ? 'assessore' : 'delegato';
+  const score = name => delegaScore({ ...inst, playerDelega: { portfolio: name, areas: delegaAreasOf(inst.kind, name) } }, territory) ?? 50;
+  const ranked = rules.portfolios.map((name, index) => ({ name, index, value: score(name) })).sort((a, b) => a.value - b.value || a.index - b.index);
+  const chosen = portfolio && rules.portfolios.includes(portfolio) ? portfolio : ranked[0]?.name ?? rules.portfolios[0];
+  const areas = delegaAreasOf(inst.kind, chosen);
+  const baseline = score(chosen);
+  const members = inst.executive.members.map(member => role === 'assessore' && member.portfolio === chosen ? { ...member, holder: 'player', groupId: inst.playerGroupId ?? member.groupId, label: `Assessore · ${chosen} (tu)` } : member);
+  const next = { ...inst, playerRole: role, playerDelega: { kind: role, portfolio: chosen, areas, since: date, baseline, lastScore: baseline, lastReview: date, strikes: 0, reviews: 0 }, executive: { ...inst.executive, members } };
+  return record(next, date, role === 'assessore' ? `Sei assessore: ${chosen}.` : `Ricevi la delega su ${chosen} (consigliere delegato).`, 'delega');
+}
+// The delega goes back to the executive: the portfolio returns to a group of the majority, the player to the benches.
+export function revokeDelega(inst, date, reason = 'revoca') {
+  const delega = inst?.playerDelega;
+  if (!delega) return inst;
+  const majority = inst.groups.find(group => group.side === 'maggioranza') ?? inst.groups[0];
+  const members = (inst.executive?.members ?? []).map(member => member.holder === 'player' ? { ...member, holder: 'simulato', groupId: majority?.id ?? member.groupId, label: `Assessore (figura simulata) · ${majority?.label ?? 'lista civica'}` } : member);
+  return record({ ...inst, playerRole: 'consigliere', playerDelega: null, executive: inst.executive ? { ...inst.executive, members } : inst.executive }, date, `Perdi la delega ${delega.portfolio}: ${reason}.`, 'delega');
+}
+// Every few weeks the service of the delega is judged: a good one earns reputation, a bad one is yours to answer for, and two
+// bad reviews in a row with an executive that wobbles cost the delega.
+function reviewDelega(inst, { date, rand, territory }, events) {
+  const delega = inst.playerDelega;
+  if (!delega || !inst.executive || weeksBetween(delega.lastReview ?? delega.since, date) < DELEGA_RULES.reviewWeeks) return inst;
+  const score = delegaScore(inst, territory) ?? delega.lastScore ?? 50;
+  const before = delega.lastScore ?? delega.baseline ?? score;
+  const delta = round1(score - before);
+  const verdict = score >= DELEGA_RULES.goodScore && delta >= DELEGA_RULES.goodDrift ? 'buona' : score <= DELEGA_RULES.badScore || delta <= DELEGA_RULES.badDrift ? 'critica' : 'neutra';
+  const strikes = verdict === 'critica' ? (delega.strikes ?? 0) + 1 : verdict === 'buona' ? 0 : delega.strikes ?? 0;
+  let next = record({ ...inst, playerDelega: { ...delega, lastReview: date, lastScore: score, strikes, reviews: (delega.reviews ?? 0) + 1 } }, date, `Delega ${delega.portfolio}: valutazione ${verdict} (servizio a ${Math.round(score)}/100, ${delta >= 0 ? '+' : ''}${delta}).`, 'delega');
+  events.push({ type: 'delega-valutata', portfolio: delega.portfolio, kind: delega.kind, score, delta, verdict, strikes });
+  if (strikes >= DELEGA_RULES.strikesToRevoke && (next.executive.stability < 55 || next.playerSide !== 'maggioranza' || rand() < 0.5)) {
+    next = revokeDelega(next, date, 'due valutazioni negative di fila');
+    events.push({ type: 'delega-revocata', portfolio: delega.portfolio, kind: delega.kind });
+  }
+  return next;
 }
 
 // ---------- the European Parliament: committees, dossiers, offices ----------
@@ -557,6 +651,7 @@ function cityEffects(act, measure) {
     ...(measure.lasting ? [] : [{ actId: act.id, title: `${act.title} (fine dell’effetto)`, indicator, perWeek: round2(-delta * 0.6 / 12), remaining: 12, delay: measure.phase }])
   ]);
 }
+const scaled = (indicators, factor) => Object.fromEntries(Object.entries(indicators).map(([id, value]) => [id, round2(value * factor)]));
 // What an act of a city brings to its region: a share, on the region's indicators.
 function cityToRegion(indicators) {
   const out = {};
@@ -588,8 +683,10 @@ function cityWeek(inst, rand) {
 function executivePlan(inst, area, rand) {
   const margin = inst.budget?.margin ?? 50;
   const tax = inst.budget?.localTax ?? 'media';
-  if (margin < 18 && tax !== 'alta' && rand() < 0.3) return { type: actTypeOf(inst.kind, 'tributi'), area: 'fisco', variant: 'aumento', intensity: 2 };
-  if (margin > 78 && tax !== 'bassa' && rand() < 0.15) return { type: actTypeOf(inst.kind, 'tributi'), area: 'fisco', variant: 'riduzione', intensity: 2 };
+  // Only an institution with taxes of its own (a comune, a region) moves them: a province has none.
+  const taxType = actTypeOf(inst.kind, 'tributi');
+  if (taxType && margin < 18 && tax !== 'alta' && rand() < 0.3) return { type: taxType, area: 'fisco', variant: 'aumento', intensity: 2 };
+  if (taxType && margin > 78 && tax !== 'bassa' && rand() < 0.15) return { type: taxType, area: 'fisco', variant: 'riduzione', intensity: 2 };
   const pool = ACT_TYPES[inst.kind].filter(type => type.weight > 0 && type.id !== 'tributi' && typeFitsArea(type, area) && (!inst.budget?.provisional || type.cost <= 0.5));
   if (!pool.length) return { type: actTypeOf(inst.kind, 'regolamento'), area, variant: null, intensity: 2 };
   let pick = rand() * pool.reduce((sum, type) => sum + type.weight, 0);
@@ -619,7 +716,7 @@ function applyApproved(inst, act, date, events) {
   }
   if (measure && Object.keys(measure.indicators).length) {
     if (next.kind === 'comune') next = { ...next, effects: [...(next.effects ?? []), ...cityEffects(act, measure)] };
-    events.push({ type: 'effetti', actId: act.id, title: act.title, kind: next.kind, region: next.region, indicators: next.kind === 'regione' ? measure.indicators : cityToRegion(measure.indicators), phase: measure.phase, lasting: measure.lasting, segments: measure.segments });
+    events.push({ type: 'effetti', actId: act.id, title: act.title, kind: next.kind, region: next.region, indicators: next.kind === 'regione' ? measure.indicators : next.kind === 'provincia' ? scaled(measure.indicators, PROVINCE_SHARE_OF_REGION) : cityToRegion(measure.indicators), phase: measure.phase, lasting: measure.lasting, segments: measure.segments });
   }
   if (category === 'bilancio' && next.budget) {
     const year = Number(act.title.match(/(\d{4})$/)?.[1] ?? Number(date.slice(0, 4)) + 1);
@@ -645,17 +742,17 @@ function applyRejected(inst, act, date, events) {
   if (category === 'bilancio' && next.budget) {
     const failures = (next.budget.failures ?? 0) + 1;
     next = { ...next, budget: { ...next.budget, provisional: true, failures, retryAt: advanceDays(date, 14) } };
-    if (next.kind === 'comune' && failures >= 2) {
+    if (['comune', 'provincia'].includes(next.kind) && failures >= 2) {
       next = record({ ...next, status: 'sciolto', dissolvedAt: date }, date, 'Bilancio respinto per la seconda volta: il Prefetto nomina un commissario, il consiglio è sciolto e si torna al voto (art. 141 TUEL).', 'scioglimento');
       events.push({ type: 'scioglimento', kind: next.kind, reason: 'bilancio' });
     } else {
-      next = record(next, date, next.kind === 'comune' ? 'Bilancio respinto: esercizio provvisorio; il Prefetto diffida il consiglio ad approvarlo entro venti giorni.' : 'Legge di bilancio respinta: esercizio provvisorio, niente nuove spese finché non passa.', 'bilancio');
+      next = record(next, date, ['comune', 'provincia'].includes(next.kind) ? 'Bilancio respinto: esercizio provvisorio; il Prefetto diffida il consiglio ad approvarlo entro venti giorni.' : 'Legge di bilancio respinta: esercizio provvisorio, niente nuove spese finché non passa.', 'bilancio');
       events.push({ type: 'bilancio-respinto', failures, kind: next.kind });
     }
   }
   if (category === 'opere' && act.measure) {
     if (next.kind === 'comune' && next.indicators) { const id = cityIndicatorOf(act.area).id; next = { ...next, indicators: { ...next.indicators, [id]: round1(clamp(next.indicators[id] - 1, 0, 100)) } }; }
-    else if (next.kind === 'regione') events.push({ type: 'effetti', actId: act.id, title: `${act.title} (fondi persi)`, kind: next.kind, region: next.region, indicators: Object.fromEntries(Object.entries(regionalWeights(act.area)).map(([id, weight]) => [id, round2(-0.8 * weight)])), phase: 1, lasting: true, immediate: true, segments: {} });
+    else if (['regione', 'provincia'].includes(next.kind)) events.push({ type: 'effetti', actId: act.id, title: `${act.title} (fondi persi)`, kind: next.kind, region: next.region, indicators: Object.fromEntries(Object.entries(regionalWeights(act.area)).map(([id, weight]) => [id, round2(-0.8 * weight * (next.kind === 'provincia' ? PROVINCE_SHARE_OF_REGION : 1))])), phase: 1, lasting: true, immediate: true, segments: {} });
   }
   if (category === 'mozione') {
     const sponsor = next.groups.find(group => group.id === act.sponsor.groupId);
@@ -698,14 +795,14 @@ export function advanceInstitutionWeek(input, { date, rand = Math.random, issues
   const localIssues = issues.filter(area => (COMPETENCES[inst.kind] ?? []).includes(area));
   // The territory: the city's services move with the approved acts; a region in provisional budget loses ground.
   if (inst.kind === 'comune') inst = cityWeek(inst, seededRandom(`${inst.id}|servizi|${date}`));
-  if (inst.kind === 'regione' && inst.budget?.provisional) events.push({ type: 'effetti', title: 'Esercizio provvisorio', kind: inst.kind, region: inst.region, indicators: { servizi: -0.15, sanita: -0.15 }, phase: 1, lasting: true, immediate: true, segments: {} });
+  if (['regione', 'provincia'].includes(inst.kind) && inst.budget?.provisional) events.push({ type: 'effetti', title: 'Esercizio provvisorio', kind: inst.kind, region: inst.region, indicators: inst.kind === 'provincia' ? { servizi: -0.06, infrastrutture: -0.06 } : { servizi: -0.15, sanita: -0.15 }, phase: 1, lasting: true, immediate: true, segments: {} });
   // New acts. The budget: in autumn for the next year, or as soon as possible when a year runs without one.
   if (inst.budget && ((month >= 11 && inst.budget.approvedYear < year + 1) || inst.budget.approvedYear < year) && !inst.acts.some(item => item.budget && !CLOSED.includes(item.stage)) && (!inst.budget.retryAt || inst.budget.retryAt <= date)) {
     add(newAct(inst, { kind: 'budget', sponsor: budgetSponsor, area: 'finanze', title: actTitle(inst.kind, 'bilancio', 'finanze', { year: month >= 11 ? year + 1 : year }), date, budget: true, category: 'bilancio' }));
   }
   // In July the general adjustment of the budget gives resources to the weakest service.
   if (inst.budget && month === 7 && inst.budget.adjustedYear !== year && !inst.budget.provisional) {
-    const area = inst.kind === 'comune' ? weakCityAreas(inst, 1)[0] ?? 'pa' : localIssues[0] ?? 'sanita';
+    const area = inst.kind === 'comune' ? weakCityAreas(inst, 1)[0] ?? 'pa' : localIssues[0] ?? (inst.kind === 'provincia' ? 'infrastrutture' : 'sanita');
     inst = { ...inst, budget: { ...inst.budget, adjustedYear: year } };
     add(newAct(inst, { kind: 'budget', sponsor: budgetSponsor, area, title: `Assestamento generale di bilancio ${year}: fondi per ${AREA_BY_ID[area]?.label.toLowerCase() ?? area}`, date, category: 'variazione' }));
   }
@@ -813,18 +910,22 @@ export function advanceInstitutionWeek(input, { date, rand = Math.random, issues
       ? `Giunta: “${act.title}” ${vote.passed ? 'adottata' : 'respinta'} (${vote.yes} sì su ${vote.total}).`
       : `${rules.label}: “${act.title}” ${vote.passed ? 'approvato' : 'respinto'} (${vote.yes} sì, ${vote.against} no${vote.abstain ? `, ${vote.abstain} ${vote.abstain === 1 ? 'astenuto' : 'astenuti'}` : ''}${vote.quorum !== 'votanti' ? `; ne servivano ${vote.needed}` : ''}${vote.playerChoice ? `; tuo voto: ${vote.playerChoice}${vote.decisive ? ', decisivo' : ''}` : ''}).`, stage);
     inst = vote.passed ? applyApproved(inst, act, date, events) : applyRejected(inst, act, date, events);
+    // A group leader who carried the group against its own line pays for it in cohesion.
+    if (inst.playerGroupLead && vote.decided && vote.playerChoice && vote.playerLine && vote.playerChoice !== vote.playerLine && ['favorevole', 'contrario'].includes(vote.playerChoice)) {
+      inst = { ...inst, groups: inst.groups.map(group => group.id === inst.playerGroupId ? { ...group, cohesion: clamp(group.cohesion - 3, 0, 100) } : group) };
+    }
     if (inst.executive && ['executive', 'budget'].includes(act.sponsor.kind)) {
       inst = { ...inst, executive: { ...inst.executive, stability: clamp(inst.executive.stability + (vote.passed ? 1.5 : act.budget ? -8 : -5), 0, 100) } };
       // A group of the majority that did not follow the executive drifts away.
       const unhappy = new Set(vote.byGroup.filter(row => row.line !== 'favorevole').map(row => row.groupId));
       inst = { ...inst, groups: inst.groups.map(group => group.side === 'maggioranza' && unhappy.has(group.id) ? { ...group, cohesion: clamp(group.cohesion - 5, 0, 100) } : group) };
     }
-    events.push({ type: 'atto-votato', actId: act.id, title: act.title, kind: act.kind, category, organ: vote.organ, variant: act.variant ?? null, budget: act.budget, sponsor: act.sponsor, area: act.area, passed: vote.passed, playerChoice: vote.playerChoice, playerLine: vote.playerLine, decided: vote.decided, decisive: vote.decisive, yes: vote.yes, against: vote.against, quorum: vote.quorum, measure: act.measure ?? null });
+    events.push({ type: 'atto-votato', actId: act.id, title: act.title, kind: act.kind, category, organ: vote.organ, variant: act.variant ?? null, budget: act.budget, sponsor: act.sponsor, area: act.area, passed: vote.passed, playerChoice: vote.playerChoice, playerLine: vote.playerLine, decided: vote.decided, decisive: vote.decisive, yes: vote.yes, against: vote.against, quorum: vote.quorum, measure: act.measure ?? null, delega: Boolean(act.byDelega) });
     if (inst.status !== 'active') return { inst, events, lines };
     // The player's report (or own-initiative report) in plenary: the work of months is judged.
     if (inst.ep && (act.rapporteur?.player || act.kind === 'player')) {
       inst = { ...inst, ep: { ...inst.ep, merit: inst.ep.merit + (vote.passed ? 3 : 1), reports: inst.ep.reports + (vote.passed ? 1 : 0) } };
-      events.push({ type: 'relazione-votata', actId: act.id, title: act.title, committee: committeeById(act.committee)?.code ?? '', passed: vote.passed, own: act.kind === 'player' });
+      events.push({ type: 'relazione-votata', actId: act.id, title: act.title, committee: committeeById(act.committee)?.code ?? '', area: act.area, passed: vote.passed, own: act.kind === 'player' });
     }
   }
   // The commitments of the motions: past the deadline without an act of the executive, the council's word is ignored.
@@ -872,6 +973,8 @@ export function advanceInstitutionWeek(input, { date, rand = Math.random, issues
       events.push({ type: 'scioglimento', kind: inst.kind });
     }
   }
+  // An assessore answers for the service of the delega.
+  if (inst.playerDelega && inst.status === 'active') inst = reviewDelega(inst, { date, rand, territory }, events);
   // Closed acts leave the list after a while (the last ones stay for the record).
   const closed = inst.acts.filter(item => CLOSED.includes(item.stage));
   if (closed.length > 12) {

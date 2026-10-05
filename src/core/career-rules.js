@@ -1,4 +1,4 @@
-import { CAREER_LEVELS, ITALIAN_REGIONS } from '../data/regions.js?v=20261003-2';
+import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel } from '../data/regions.js?v=20261003-2';
 import { isSelectableParty } from '../data/schema.js?v=20261003-2';
 import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261003-2';
 import { startAgeProblems, startProblems } from './start-engine.js?v=20261003-2';
@@ -43,6 +43,7 @@ export function validateCareerStep(draft, step, selectableParties, parliamentary
   if (step === 2) {
     const level = CAREER_LEVELS[draft.initialLevel];
     if (!level) errors.push('Scegli un percorso iniziale.');
+    else if (draft.initialLevel === 'provinciale' && !hasProvincialLevel({ region: draft.region, provinceCode: draft.provinceCode, provinceType: draft.provinceType })) errors.push(PROVINCIAL_LEVEL_PROBLEM);
     else if (level.chamber) {
       if (draft.parliamentStartMode !== 'real-context') errors.push('Scegli il contesto parlamentare reale per questo percorso.');
       const selectedGroup = parliamentaryGroups.find(group => group.id === draft.parliamentaryGroupId && group.source === 'real' && group.verified === true && group.chamber === level.chamber);

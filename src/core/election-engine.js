@@ -112,6 +112,12 @@ function municipalSeats(campaign,groups,winnerId) {
   return allocateWithBonus(groups,count,winnerId ?? groups[0]?.id,rule.majorityBonus[campaign.municipalityBand ?? 'fino-15000'],campaign.municipalityBand==='oltre-15000'?rule.threshold:0);
 }
 
+// The council of a province: seats in proportion to the weighted votes of the mayors and municipal councillors, with the
+// coalition of the winner holding the majority (the game's executive governs with a majority).
+function provincialSeats(campaign,groups) {
+  return allocateWithBonus(groups,ELECTION_MODELS.provinciale.seatCount,groups[0]?.id,SEAT_RULES.provinciale.majorityBonus,SEAT_RULES.provinciale.threshold);
+}
+
 function allocateRegional(campaign,groups) {
   const rule=ELECTION_MODELS[campaign.electionType];
   return allocateWithBonus(groups,rule.seatCount,groups[0]?.id,SEAT_RULES.regionale.majorityBonus,SEAT_RULES.regionale.threshold);
@@ -202,6 +208,9 @@ export function runFinalElection(campaign,firstRound=null) {
     rows=firstRound.groups.map(row=>{const group=firstGroups.find(item=>item.id===row.candidateId);const scored=resultRow(group,row.percent,totalBallots,seatRows.find(item=>item.id===group.id)?.seats??0);const final=runoffRows.find(item=>item.candidateId===row.candidateId);return {...scored,runoffPercent:final?.percent??null,runoffVotes:final?.votes??null};});
   } else if(campaign.electionType==='comunale') {
     seatRows=municipalSeats(campaign,aggregate,aggregate[0]?.id);
+    rows=aggregate.map(group=>resultRow(group,group.share,totalBallots,seatRows.find(row=>row.id===group.id)?.seats??0));
+  } else if(campaign.electionType==='provinciale') {
+    seatRows=provincialSeats(campaign,aggregate);
     rows=aggregate.map(group=>resultRow(group,group.share,totalBallots,seatRows.find(row=>row.id===group.id)?.seats??0));
   } else if(campaign.electionType==='regionale') {
     seatRows=allocateRegional(campaign,aggregate);
@@ -366,7 +375,7 @@ export function resultDescription(campaign,result) {
   const outcome = result.outcome ?? classifyOutcome(campaign, result);
   const winnerLabel = result.groups.find(item=>item.id===result.winnerGroupId)?.label??'un’altra lista';
   const texts = {
-    vittoria: campaign.electionType==='comunale' ? 'Hai vinto la competizione per l’incarico comunale nello scenario simulato.' : campaign.electionType==='regionale'&&campaign.candidacy.role==='presidente' ? 'La tua candidatura alla presidenza è arrivata prima.' : campaign.candidacy.role==='uninominale' ? 'Hai vinto il collegio uninominale.' : `Hai conquistato un mandato. La lista collegata ha ottenuto ${row.seats} seggi.`,
+    vittoria: campaign.electionType==='comunale' ? 'Hai vinto la competizione per l’incarico comunale nello scenario simulato.' : campaign.electionType==='provinciale' ? (campaign.candidacy.role==='presidente' ? 'I sindaci e i consiglieri comunali ti hanno eletto Presidente della Provincia.' : 'La tua lista ha vinto il voto degli amministratori della provincia.') : campaign.electionType==='regionale'&&campaign.candidacy.role==='presidente' ? 'La tua candidatura alla presidenza è arrivata prima.' : campaign.candidacy.role==='uninominale' ? 'Hai vinto il collegio uninominale.' : `Hai conquistato un mandato. La lista collegata ha ottenuto ${row.seats} seggi.`,
     'ballottaggio-vinto':'Hai vinto al ballottaggio: il secondo turno ha ribaltato o confermato il primo.',
     'eletto-lista':`Eletto grazie alla lista: ${row.seats} seggi e una posizione utile${outcome.preference ? ` (${outcome.preference.rank}º per preferenze)` : ''}.`,
     'eletto-coalizione':`Eletto grazie alla coalizione: i voti degli alleati hanno portato ${row.seats} seggi.`,

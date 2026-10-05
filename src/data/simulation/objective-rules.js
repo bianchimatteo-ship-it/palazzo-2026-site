@@ -23,7 +23,7 @@ export const AMBITION_BROKEN = Object.freeze({ stats: { reputation: -2, populari
 // only once they are done). reward: capital, stats, relations, party support, applied when the goal is reached.
 // unlock: what stays — base (the level a relation returns to), mods (weights in promotions, candidacies, campaigns),
 // offer (a new decision raised at once) and the text that says it.
-export const CAREER_OBJECTIVES = Object.freeze([
+const RAW_OBJECTIVES = ([
   { id: 'radicamento', line: 'territorio', label: 'Radicamento sul territorio', detail: 'Porta la popolarità a 55 e tieni vivo il territorio con almeno 6 attività.',
     measures: [{ kind: 'stat', stat: 'popularity', target: 55, label: 'Popolarità' }, { kind: 'activities', categories: ['territorio'], target: 6, label: 'Attività sul territorio' }],
     reward: { capital: 3 }, ambition: { weeks: 26 },
@@ -32,6 +32,10 @@ export const CAREER_OBJECTIVES = Object.freeze([
     measures: [{ kind: 'relations', min: 65, target: 3, label: 'Rapporti sopra 65' }, { kind: 'activities', categories: ['relazioni', 'territorio'], target: 4, label: 'Incontri e relazioni' }],
     reward: { capital: 3 }, ambition: { weeks: 26 },
     unlock: { text: 'Redazioni e categorie produttive ti rispondono più in fretta: i rapporti con media e imprese si stabilizzano più in alto e hai più visibilità in campagna.', base: { media: 2, business: 2 }, mods: { visibility: 2 } } },
+  { id: 'territorio-con-te', line: 'territorio', needs: 'territory', label: 'Il territorio risponde a te', detail: 'Porta il controllo dei comitati del tuo territorio a 65 e tieni almeno 2 responsabili locali con te.',
+    measures: [{ kind: 'control', target: 65, label: 'Controllo del territorio' }, { kind: 'leadersWith', target: 2, label: 'Responsabili locali con te' }],
+    reward: { capital: 3 }, ambition: { weeks: 40 },
+    unlock: { text: 'I responsabili dei comitati ti riconoscono come il loro punto di riferimento: le candidature passano più facilmente dal territorio e il radicamento pesa di più nelle promozioni.', mods: { nomination: 0.5, territory: 4 } } },
   { id: 'voce', line: 'territorio', label: 'Una voce nei media', detail: 'Notorietà a 45 e almeno 4 uscite sui media.',
     measures: [{ kind: 'stat', stat: 'notoriety', target: 45, label: 'Notorietà' }, { kind: 'activities', categories: ['media'], target: 4, label: 'Uscite sui media' }],
     reward: { capital: 2, stats: { reputation: 0.5 } }, ambition: { weeks: 20 },
@@ -105,6 +109,15 @@ export const CAREER_OBJECTIVES = Object.freeze([
     measures: [{ kind: 'presidentCredit', target: 70, label: 'Credito istituzionale' }], reward: { stats: { reputation: 2 } },
     unlock: { text: 'Il tuo mandato è ricordato come un punto di riferimento per le istituzioni.' } }
 ]);
+// A goal reached also builds the reputation of its line (the party's goals the internal one, the territory's the territorial one, and
+// so on) and, where it is about a policy theme, the influence in its sector: the standing is what the promotions weigh.
+const LINE_REPUTATION = Object.freeze({ territorio: 'territorial', partito: 'internal', istituzioni: 'territorial', parlamento: 'institutional', europa: 'institutional', integrita: 'media', partenza: 'internal', quirinale: 'institutional' });
+const OWN_REPUTATION = Object.freeze({ rete: 'territorial', 'territorio-con-te': 'territorial', voce: 'media', patti: 'internal', reputazione: 'media', governo: 'institutional', legge: 'institutional', incarico: 'institutional', elezione: 'territorial', rielezione: 'territorial' });
+export const CAREER_OBJECTIVES = Object.freeze(RAW_OBJECTIVES.map(item => {
+  const reputation = OWN_REPUTATION[item.id] ?? LINE_REPUTATION[item.line];
+  const gain = Math.max(1, Math.min(4, Math.round((item.reward?.capital ?? 2) / 2)));
+  return Object.freeze({ ...item, reward: Object.freeze({ ...(item.reward ?? {}), ...(reputation && !item.reward?.standing ? { standing: Object.freeze({ [reputation]: gain }) } : {}) }) });
+}));
 export const OBJECTIVE_BY_ID = Object.freeze(Object.fromEntries(CAREER_OBJECTIVES.map(item => [item.id, item])));
 // The goals the game has always had: saves from before the new ones keep them as they were.
 export const CLASSIC_OBJECTIVES = Object.freeze(['radicamento', 'rete', 'partito', 'candidatura', 'elezione', 'parlamento', 'incarico', 'legge', 'dirigenza', 'governo']);

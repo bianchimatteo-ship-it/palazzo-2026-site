@@ -54,7 +54,7 @@ function meter(value, tone = '') {
 // ---------- Home: the command centre ----------
 // Who the player is, as a compact identity: avatar and party logo, name, office, territory and status.
 // The councils (and the European Parliament) where the player holds a seat: one tap from the Home.
-const institutionLinks = state => { const active = activeInstitutions(state); return active.length ? `<p class="hq-institutions">${active.map(inst => `<button class="text-link" data-nav="territori" data-scroll="istituzione-${esc(inst.kind)}">${glyph(inst.kind === 'europa' ? 'globe' : inst.kind === 'regione' ? 'map' : 'town', 14)} ${esc(institutionLabel(inst))} →</button>`).join('')}</p>` : ''; };
+const institutionLinks = state => { const active = activeInstitutions(state); return active.length ? `<p class="hq-institutions">${active.map(inst => `<button class="text-link" data-nav="territori" data-scroll="istituzione-${esc(inst.kind)}">${glyph(inst.kind === 'europa' ? 'globe' : inst.kind === 'regione' || inst.kind === 'provincia' ? 'map' : 'town', 14)} ${esc(institutionLabel(inst))} →</button>`).join('')}</p>` : ''; };
 function identity(state, gc, options) {
   const { player, stats } = gc;
   const game = state.game;
@@ -310,7 +310,7 @@ export function renderElectionCalendar(state, { detailed = false } = {}) {
     const action = entry.status === 'open' && state.campaign?.status !== 'active' ? `<button class="text-link" data-nav="elezioni">Candidati ${arrow}</button>` : entry.status === 'upcoming' && state.campaign?.status !== 'active' && game.status !== 'ended' ? `<button class="text-link" data-game-fastforward="${esc(entry.type)}" data-fastforward-label="${esc(entry.label)}" data-fastforward-date="${esc(entry.windowOpensAt)}" data-fastforward-weeks="${weeksUntil(today, entry.windowOpensAt)}">Avanza fino alle candidature ${arrow}</button>` : '';
     return `<div class="hq-election ${entry.status}"><div><strong>${esc(entry.label)}${entry.early ? ' · anticipate' : ''}</strong>${status}<small>Voto il ${esc(formatDate(entry.electionDate))}</small></div>${action}</div>`;
   }).join('');
-  const note = detailed ? `<p class="parliament-note">Politiche ed europee seguono il calendario reale (fine della legislatura, europee 2029 e poi ogni cinque anni); comunali e regionali seguono il calendario reale del tuo comune e della tua regione (cinque anni dall’ultimo voto). Quando si aprono le candidature puoi avviare la campagna; se non ti candidi, un mandato dello stesso tipo si conclude. La preparazione accumulata (${num(game.prep, 0)}%), i fondi e il sostegno nel partito entrano nella campagna.</p>` : '';
+  const note = detailed ? `<p class="parliament-note">Politiche ed europee seguono il calendario reale (fine della legislatura, europee 2029 e poi ogni cinque anni); comunali e regionali seguono il calendario reale del tuo comune e della tua regione (cinque anni dall’ultimo voto); le provinciali, di secondo livello, un ciclo semplificato di quattro anni. Quando si aprono le candidature puoi avviare la campagna; se non ti candidi, un mandato dello stesso tipo si conclude. La preparazione accumulata (${num(game.prep, 0)}%), i fondi e il sostegno nel partito entrano nella campagna.</p>` : '';
   return `<div class="hq-elections">${rows || '<p class="quiet-copy">Nessuna elezione in calendario.</p>'}</div>${note}`;
 }
 
@@ -433,11 +433,13 @@ function consequencesPanel(state) {
 
 // What the player's offices allow: every locked power says what it takes.
 // The icon of every role the game can give: the Quirinale and the party leadership are crowns, the councils a town.
-const ROLE_ICONS = Object.freeze({ premier: 'crown', segretario: 'crown', fondatore: 'crown', presidente: 'crown', 'ex-presidente': 'crown', ministro: 'ministry', sottosegretario: 'ministry', parlamentare: 'dome', commissione: 'dome', 'esecutivo-locale': 'town', consigliere: 'town', 'commissione-ue': 'globe', concluso: 'flag' });
+const ROLE_ICONS = Object.freeze({ premier: 'crown', segretario: 'crown', fondatore: 'crown', presidente: 'crown', 'ex-presidente': 'crown', ministro: 'ministry', vicepremier: 'crown', sottosegretario: 'ministry', assessore: 'town', capogruppo: 'dome', parlamentare: 'dome', commissione: 'dome', 'esecutivo-locale': 'town', consigliere: 'town', 'commissione-ue': 'globe', concluso: 'flag' });
 export function renderRolesPanel(state) {
-  const { roles, powers } = playerRoles(state);
+  const { roles, powers, offices } = playerRoles(state);
+  // What each office held asks of the player and what it risks (office-rules): the same word, “consigliere” or “assessore”, is not the same job in a comune, a province and a region.
+  const sheets = offices.filter(office => office.duties.length || office.risks.length).map(office => `<details class="office-sheet"><summary>${esc(office.label)}</summary><div class="office-sheet-body">${office.duties.length ? `<strong>Cosa comporta</strong><ul>${office.duties.map(item => `<li>${esc(item)}</li>`).join('')}</ul>` : ''}${office.risks.length ? `<strong>Rischi</strong><ul>${office.risks.map(item => `<li>${esc(item)}</li>`).join('')}</ul>` : ''}</div></details>`).join('');
   return `<div class="role-chips">${roles.map(([id, label]) => `<span class="role-chip role-${esc(id)}">${glyph(ROLE_ICONS[id] ?? 'user', 14)}${esc(label)}</span>`).join('')}</div>
-    <ul class="power-list">${powers.map(power => `<li class="${power.enabled ? 'on' : 'off'}">${glyph(power.enabled ? 'shield' : 'clock', 14)}<span><strong>${esc(power.label)}</strong>${power.enabled ? '' : `<small>${esc(power.reason)}</small>`}</span></li>`).join('')}</ul>`;
+    <ul class="power-list">${powers.map(power => `<li class="${power.enabled ? 'on' : 'off'}">${glyph(power.enabled ? 'shield' : 'clock', 14)}<span><strong>${esc(power.label)}</strong>${power.enabled ? '' : `<small>${esc(power.reason)}</small>`}</span></li>`).join('')}</ul>${sheets ? `<div class="office-sheets">${sheets}</div>` : ''}`;
 }
 
 // Why the indicators moved: the attributed causes of this week and of the last one.

@@ -4,6 +4,7 @@
 // campaigns and the equilibrium of the relations), and the public ambitions (a goal declared with a deadline).
 // Pure functions over plain data (nothing imports the career engine, which owns the effects).
 import { AMBITION_LIMIT, CAREER_OBJECTIVES, CLASSIC_OBJECTIVES, OBJECTIVE_BY_ID } from '../data/simulation/objective-rules.js?v=20261003-2';
+import { territorialControl } from './committee-engine.js?v=20261003-2';
 
 const SIM = 'simulation';
 const round2 = value => Math.round(value * 100) / 100;
@@ -51,6 +52,8 @@ export function measureValue(measure, ctx, env = {}, extras = {}) {
     case 'actions': return (measure.choices ?? []).reduce((sum, key) => sum + (record.choices[key] ?? 0), 0) + (measure.activities ?? []).reduce((sum, id) => sum + (record.activityIds[id] ?? 0), 0);
     case 'relations': return [...(game.relations ?? []), ...(game.party?.currents ?? [])].filter(item => (item.value ?? item.relation ?? 0) >= measure.min).length;
     case 'rank': return rankOf(game);
+    case 'control': return territorialControl(game.party, { region: game.place?.region ?? null })?.index ?? 0;
+    case 'leadersWith': return territorialControl(game.party, { region: game.place?.region ?? null })?.byStance['con-te'] ?? 0;
     case 'cohesion': return game.party?.org?.cohesion ?? 0;
     case 'candidacy': return env.campaign?.nomination?.status === 'approved' || game.flags?.candidacy ? 1 : 0;
     case 'mandates': return (env.career?.electionHistory ?? []).filter(item => item.personalMandate).length;
@@ -83,6 +86,7 @@ export function objectiveAvailable(spec, ctx, env = {}) {
   const needs = spec.needs;
   if (!needs) return true;
   if (needs === 'party') return Boolean(game.party);
+  if (needs === 'territory') return Boolean(game.party?.org?.committees?.length);
   if (needs === 'member') return game.party?.affiliation === 'member';
   if (needs === 'seat') return Boolean(ctx.parliament?.player?.groupId);
   if (needs === 'ep') return env.career?.initialLevel === 'europeo' || (env.institutions ?? []).some(item => item.kind === 'europa');

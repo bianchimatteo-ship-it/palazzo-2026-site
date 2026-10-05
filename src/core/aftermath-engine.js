@@ -21,7 +21,8 @@ const BASE = Object.freeze({
   'sotto-soglia': { reputation: -2.5, influence: -3, notoriety: 0, popularity: -1, support: -4, leadership: -3, capital: -2 },
   escluso: { reputation: -1.5, influence: -2, notoriety: -.5, popularity: 0, support: -3, leadership: -4, capital: -1 }
 });
-const EXECUTIVES = { comunale: 'il sindaco', regionale: 'il presidente della Regione' };
+const EXECUTIVES = { comunale: 'il sindaco', provinciale: 'il Presidente della Provincia', regionale: 'il presidente della Regione' };
+const MEMBER_TITLE = { comunale: 'Consigliere comunale', provinciale: 'Consigliere provinciale', regionale: 'Consigliere regionale' };
 
 // electionAftermath({ campaign, result, game, player }) → consequences, applied by the store.
 export function electionAftermath({ campaign, result, game = null, player = null }) {
@@ -46,21 +47,21 @@ export function electionAftermath({ campaign, result, game = null, player = null
   const hostile = party ? [...(party.currents ?? [])].filter(current => current.id !== party.alignedCurrentId).sort((a, b) => b.strength - a.strength)[0] ?? null : null;
   // The office that comes with the vote, and on which side of the council.
   const role = campaign.candidacy?.role;
-  const titles = { sindaco: 'Sindaco', presidente: 'Presidente di Regione', consigliere: campaign.electionType === 'comunale' ? 'Consigliere comunale' : 'Consigliere regionale', deputato: 'Deputato', senatore: 'Senatore', uninominale: 'Deputato', eurodeputato: 'Deputato al Parlamento europeo' };
+  const titles = { sindaco: 'Sindaco', presidente: campaign.electionType === 'provinciale' ? 'Presidente della Provincia' : 'Presidente di Regione', consigliere: MEMBER_TITLE[campaign.electionType] ?? 'Consigliere regionale', deputato: 'Deputato', senatore: 'Senatore', uninominale: 'Deputato', eurodeputato: 'Deputato al Parlamento europeo' };
   let office = null;
   if (outcome.mandate) {
-    const title = outcome.code === 'eletto-opposizione' ? (campaign.electionType === 'comunale' ? 'Consigliere comunale' : 'Consigliere regionale') : titles[role] ?? 'Rappresentante eletto';
+    const title = outcome.code === 'eletto-opposizione' ? MEMBER_TITLE[campaign.electionType] ?? 'Consigliere regionale' : titles[role] ?? 'Rappresentante eletto';
     office = { title, side: outcome.side ?? null, via: outcome.via ?? null };
   }
   // Next moves: what the vote opens, never granted.
   const events = [];
   const electionLabel = campaign.electionLabel ?? campaign.electionType;
-  const place = campaign.electionType === 'comunale' ? `Comune di ${player?.municipality ?? 'il tuo comune'}` : campaign.electionType === 'regionale' ? `Regione ${player?.region ?? ''}`.trim() : 'Repubblica italiana';
+  const place = campaign.electionType === 'comunale' ? `Comune di ${player?.municipality ?? 'il tuo comune'}` : campaign.electionType === 'provinciale' ? `Provincia di ${player?.province ?? 'la tua provincia'}` : campaign.electionType === 'regionale' ? `Regione ${player?.region ?? ''}`.trim() : 'Repubblica italiana';
   // A seat won from the opposition benches after losing the race is a defeat to digest, not a victory.
   if (outcome.mandate && outcome.code !== 'eletto-opposizione') events.push({ id: 'dopo-voto-vittoria', params: { election: electionLabel, outcome: outcome.label.toLowerCase() } });
   else events.push({ id: 'dopo-voto-sconfitta', params: { election: electionLabel, outcome: outcome.label } });
-  if (['comunale', 'regionale'].includes(campaign.electionType) && outcome.mandate && outcome.side === 'maggioranza' && !['sindaco', 'presidente'].includes(role)) {
-    events.push({ id: 'giunta-offerta', params: { executive: EXECUTIVES[campaign.electionType], institution: place, level: campaign.electionType, assessorLevel: campaign.electionType === 'comunale' ? 'comunale' : 'regionale' } });
+  if (['comunale', 'provinciale', 'regionale'].includes(campaign.electionType) && outcome.mandate && outcome.side === 'maggioranza' && !['sindaco', 'presidente'].includes(role)) {
+    events.push({ id: 'giunta-offerta', params: { executive: EXECUTIVES[campaign.electionType], institution: place, level: campaign.electionType, assessorLevel: { comunale: 'comunale', provinciale: 'provinciale', regionale: 'regionale' }[campaign.electionType] } });
   }
   if (['sindaco', 'presidente'].includes(role) && outcome.mandate && outcome.side === 'maggioranza') events.push({ id: 'giunta-composizione', params: { institution: place } });
   if (outcome.code === 'eletto-opposizione' || (outcome.mandate && outcome.side === 'opposizione')) events.push({ id: 'capogruppo-opposizione', params: { institution: place, level: campaign.electionType } });

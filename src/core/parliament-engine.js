@@ -694,19 +694,21 @@ export function governmentPostProblems(parliament, stats = {}, currentDate = nul
 }
 // The odds that the Prime Minister (simulated) hands the player a ministry: influence, reputation, the group's support
 // and the stability of the Government count; an occupied portfolio needs a reshuffle and is harder to get.
-export function governmentPostOdds(parliament, stats = {}, portfolio = null) {
+// extras: the standing of the player (standing-engine): the trust of the institutions, the image in the media and the competence in
+// the sector of the ministry move the odds a little; a neutral standing (50) changes nothing.
+export function governmentPostOdds(parliament, stats = {}, portfolio = null, extras = {}) {
   const government = parliament?.government;
   const holder = portfolio && government ? activeMinisters(government).find(item => item.portfolio === portfolio) : null;
-  return clamp(0.3 + ((stats.influence ?? 45) - 45) / 100 + ((stats.reputation ?? 50) - 50) / 150 + ((parliament?.careerStanding?.partySupport ?? 55) - 55) / 150 + ((government?.stability ?? 50) - 50) / 300 - (holder ? 0.15 : 0), 0.05, 0.85);
+  return clamp(0.3 + ((stats.influence ?? 45) - 45) / 100 + ((stats.reputation ?? 50) - 50) / 150 + ((parliament?.careerStanding?.partySupport ?? 55) - 55) / 150 + ((government?.stability ?? 50) - 50) / 300 + ((extras.institutional ?? 50) - 50) / 250 + ((extras.mediaRep ?? 50) - 50) / 500 + ((extras.competence ?? 50) - 50) / 300 - (holder ? 0.15 : 0), 0.05, 0.85);
 }
-export function requestGovernmentPost(parliament, portfolio, currentDate, { stats = {}, roll = 0.5, appointeeLabel = null } = {}) {
+export function requestGovernmentPost(parliament, portfolio, currentDate, { stats = {}, roll = 0.5, appointeeLabel = null, extras = {} } = {}) {
   if (playerLeadsGovernment(parliament)) throw new Error('Guidi il governo: assegna tu stesso gli incarichi.');
   if (!MINISTERIAL_PORTFOLIOS.includes(portfolio)) throw new Error('Scegli un ministero.');
   const problems = governmentPostProblems(parliament, stats, currentDate);
   if (problems.length) throw new Error(`Non hai ancora i requisiti: ${problems.join(' ')}`);
   const government = parliament.government;
   const holder = activeMinisters(government).find(item => item.portfolio === portfolio);
-  const chance = governmentPostOdds(parliament, stats, portfolio);
+  const chance = governmentPostOdds(parliament, stats, portfolio, extras);
   let next = { ...parliament, government: { ...government, lastPostRequestAt: currentDate } };
   // Not a ministry, but a place in the Government: a close refusal can end in an undersecretary post.
   if (roll >= chance) return { parliament: record(next, currentDate, 'richiesta-incarico-respinta', `Il Presidente del Consiglio (simulato) non ti affida il ministero ${portfolio}${roll < chance + 0.18 ? ': ti propone un incarico da sottosegretario' : ''}.`, { governmentId: government.id, portfolio, chance, source: DATA_SOURCES.SIMULATION }), appointed: false, chance, lower: roll < chance + 0.18 };

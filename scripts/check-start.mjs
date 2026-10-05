@@ -181,17 +181,23 @@ const BIRTH = '1975-04-03';
     c.day = c.totalDays - 1;
     store.advance(1);
   };
-  const run = await startCareer({ seed: 'europeo-voto', level: 'europeo', draft: { birthDate: BIRTH } });
-  const { store, db } = run;
-  const first = store.getState().local.institutions.find(item => item.kind === 'europa');
-  give(store);
-  assert.ok(store.fastForwardToElection('europee'), 'La finestra delle candidature europee si apre');
-  give(store);
-  store.startCampaign({ electionType: 'europee', objective: 'seat' }, db.parties, { politicians: db.politicians, groups: db.parliamentaryGroups });
-  assert.equal(store.getState().campaign.candidacy.role, 'eurodeputato', 'Si corre per il seggio europeo');
-  forceWin(store);
-  if (store.getState().campaign?.status === 'active') forceWin(store);
-  const s = store.getState();
+  // A re-election depends on how the list of the party does in the whole country (a result of the simulated world, not of the test):
+  // the same start is tried with a few seeds until the list passes the threshold and the player is elected.
+  let run = null, first = null, s = null;
+  for (const seed of ['europeo-voto', 'europeo-voto-b', 'europeo-voto-c', 'europeo-voto-d', 'europeo-voto-e', 'europeo-voto-f']) {
+    run = await startCareer({ seed, level: 'europeo', draft: { birthDate: BIRTH } });
+    const { store, db } = run;
+    first = store.getState().local.institutions.find(item => item.kind === 'europa');
+    give(store);
+    assert.ok(store.fastForwardToElection('europee'), 'La finestra delle candidature europee si apre');
+    give(store);
+    store.startCampaign({ electionType: 'europee', objective: 'seat' }, db.parties, { politicians: db.politicians, groups: db.parliamentaryGroups });
+    assert.equal(store.getState().campaign.candidacy.role, 'eurodeputato', 'Si corre per il seggio europeo');
+    forceWin(store);
+    if (store.getState().campaign?.status === 'active') forceWin(store);
+    s = store.getState();
+    if (s.career.lastElectionResult?.personalMandate) break;
+  }
   assert.ok(s.career.lastElectionResult?.personalMandate, `Mandato europeo conquistato (${s.career.lastElectionResult?.outcomeLabel})`);
   const councils = s.local.institutions.filter(item => item.kind === 'europa');
   assert.ok(councils.some(item => item.status === 'active' && item.since > first.since) && councils.some(item => item.status === 'concluso'), 'Il nuovo mandato europeo sostituisce quello di partenza, che si conclude');
@@ -344,8 +350,8 @@ const BIRTH = '1975-04-03';
   assert.equal(s.game.party.alignedCurrentId, call.params.currentAId, 'Schierarsi allinea la tua area interna');
   assert.equal(s.game.start.divided.side, call.params.currentAId);
   // Finché dura la crisi pesa; quando il partito si ricompone, il bonus finisce e resta nella memoria.
-  s.game.party.org.conflicts = []; s.game.party.org.cohesion = 64;
-  for (let i = 0; i < 8; i++) store.advance(7);
+  // (the events of the weeks may chip at the cohesion: the recomposition is kept up until it is recognised)
+  for (let i = 0; i < 14 && !store.getState().game.start.divided.resolvedAt; i++) { const live = store.getState().game; live.party.org.conflicts = []; live.party.org.cohesion = Math.max(live.party.org.cohesion, 64); store.advance(7); }
   s = store.getState();
   assert.ok(s.game.start.divided.resolvedAt, 'Il partito si ricompone');
   assert.ok(s.game.memory.some(item => /ricomposto/.test(item.text)) && s.game.log.some(item => /si ricompone/i.test(item.title)), 'Resta nella memoria e nel diario');

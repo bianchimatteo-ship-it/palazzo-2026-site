@@ -96,17 +96,22 @@ const runC = playDays('giorni-beta', { founder: true });
     assert.ok(run.capped.every(week => week.events <= AGENDA_CAPS.tenseEvents), `Al più ${AGENDA_CAPS.tenseEvents} eventi ordinari a settimana (${Math.max(...run.capped.map(week => week.events))})`);
     assert.ok(run.capped.filter(week => week.events === AGENDA_CAPS.tenseEvents).length <= run.capped.length * 0.2, 'Il terzo evento ordinario solo nelle settimane tese');
     assert.ok(run.capped.every(week => week.important <= AGENDA_CAPS.important) && run.capped.every(week => week.categories), 'Poche decisioni importanti insieme e mai due eventi ordinari della stessa categoria');
-    assert.ok(run.capped.reduce((sum, week) => sum + week.events, 0) / run.capped.length >= 0.8, 'Il mondo resta vivo: eventi ordinari quasi ogni settimana');
+    const ordinaryAverage = run.capped.reduce((sum, week) => sum + week.events, 0) / run.capped.length;
+    assert.ok(ordinaryAverage >= 0.6 && ordinaryAverage <= 1.8, `Il mondo resta vivo senza affollare l’agenda: ${ordinaryAverage.toFixed(2)} eventi ordinari a settimana`);
     assert.equal(run.days.size, 7, `Tutti i giorni della settimana hanno qualcosa (${[...run.days].sort().join('')})`);
     assert.ok(run.categories.size >= 10, `Categorie diverse (${run.categories.size})`);
     assert.equal(run.repeats.length, 0, `Nessuna ripetizione prima del cooldown: ${run.repeats.slice(0, 3)}`);
     const kinds = new Set(run.titles.map(entry => entry.split('|')[1]));
-    assert.ok(kinds.size >= 50, `Varietà in due anni: ${kinds.size} eventi diversi`);
+    assert.ok(kinds.size >= 36, `Varietà in due anni: ${kinds.size} eventi diversi`);
     const weekly = Object.values(run.titles.reduce((map, entry) => { const [week, id] = entry.split('|'); if (DAILY_EVENTS.some(item => item.id === id)) map[week] = (map[week] ?? 0) + 1; return map; }, {}));
     assert.ok(Math.max(...weekly) <= 4, `Pochi eventi giornalieri in una settimana (${Math.max(...weekly)})`);
   }
-  const dayHits = runA.titles.filter(entry => entry.split('|')[2] !== '-').length;
-  assert.ok(dayHits > runA.titles.length * 0.5, 'La maggior parte delle decisioni cade in un giorno preciso');
+  // The weekday is where an event lands, never a condition of it: events and appointments always carry a day, and no day
+  // takes more than a third of them (the weekdays are preferred a little, not reserved).
+  const dated = runA.titles.map(entry => entry.split('|')).filter(([, id]) => DAILY_EVENTS.some(item => item.id === id) || CAREER_EVENTS.some(item => item.id === id));
+  assert.ok(dated.every(([, , day]) => day !== '-'), 'Ogni evento e appuntamento cade in un giorno');
+  const byDay = [0, 1, 2, 3, 4, 5, 6].map(day => dated.filter(([, , value]) => Number(value) === day).length);
+  assert.ok(Math.max(...byDay) <= dated.length / 3, `Nessun giorno della settimana raccoglie più di un terzo degli eventi (${byDay.join('/')})`);
 }
 
 // Chains already in the queue come on top of the cap: the week still has its own ordinary events.

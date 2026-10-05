@@ -33,7 +33,7 @@ const BIRTH = '1975-04-03';
 const stat = (s, metric) => s.dataset.statistics.find(item => item.subjectId === s.career.playerId && item.metric === metric)?.value;
 // The goals as the pages show them: only the ones that exist for this player.
 const goals = s => { const gc = gameContext(s); return Object.fromEntries(CE.objectiveProgress(gc.ctx, gc.env).filter(item => item.available).map(item => [item.id, item])); };
-const MEASURE_KINDS = ['stat', 'activities', 'actions', 'relations', 'rank', 'cohesion', 'candidacy', 'mandates', 'seat', 'committeeRole', 'laws', 'minister', 'epReports', 'memory', 'memoryNet', 'debtsPaid', 'ambitionsKept', 'outsider', 'divided', 'weeksAbove', 'president', 'presidentCredit'];
+const MEASURE_KINDS = ['stat', 'activities', 'actions', 'relations', 'rank', 'cohesion', 'candidacy', 'mandates', 'seat', 'committeeRole', 'laws', 'minister', 'epReports', 'memory', 'memoryNet', 'debtsPaid', 'ambitionsKept', 'outsider', 'divided', 'weeksAbove', 'president', 'presidentCredit', 'control', 'leadersWith'];
 
 // ---------- 1. le regole degli obiettivi ----------
 {
@@ -169,7 +169,8 @@ let after;
   assert.equal(d.game.record.choices['start-partito-spaccato.ponte'], 1, 'Il ponte entra nel registro delle scelte');
   assert.equal(goals(d).pontiere.rows[0].value, 1, 'E fa avanzare «Il pontiere»');
   d.game.party.org.conflicts = []; d.game.party.org.cohesion = 64;
-  for (let i = 0; i < 16 && !diviso.store.getState().game.objectives.ricomposizione; i++) diviso.store.advance(7);
+  // Il partito resta ricomposto (la coesione e le aree in pace) finché l’obiettivo non scatta, qualunque cosa porti la settimana.
+  for (let i = 0; i < 16 && !diviso.store.getState().game.objectives.ricomposizione; i++) { const g = diviso.store.getState().game; g.party.org.conflicts = []; g.party.org.cohesion = 64; diviso.store.advance(7); }
   d = diviso.store.getState();
   assert.ok(d.game.objectives.ricomposizione, 'Ricomposto il partito, l’obiettivo è raggiunto');
   assert.ok(d.game.inbox.some(item => item.templateId === 'obiettivo-ricomposizione'), 'E il partito ti offre un ruolo di garante');

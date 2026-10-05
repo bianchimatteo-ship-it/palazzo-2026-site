@@ -10,7 +10,7 @@ const leverLabel = id => LEVER_BY_ID[id]?.label ?? id;
 const year = iso => String(iso ?? '').slice(0, 4);
 const num = value => Number(value ?? 0).toLocaleString('it-IT', { maximumFractionDigits: 1 });
 const signed = value => `${value > 0 ? '+' : value < 0 ? '−' : ''}${num(Math.abs(value))}`;
-const LEVELS = Object.freeze({ comunale: 'Comunale', regionale: 'Regionale', deputato: 'Camera dei deputati', senatore: 'Senato', europeo: 'Parlamento europeo' });
+const LEVELS = Object.freeze({ comunale: 'Comunale', provinciale: 'Provinciale', regionale: 'Regionale', deputato: 'Camera dei deputati', senatore: 'Senato', europeo: 'Parlamento europeo' });
 
 const partsList = parts => `<ul class="hall-parts">${parts.map(item => `<li class="${item.points < 0 ? 'neg' : ''}"><span>${esc(item.label)}</span><b>${signed(item.points)}</b></li>`).join('')}</ul>`;
 const tagList = tags => tags.length ? `<ul class="hall-tags">${tags.map(tag => `<li>${esc(tag)}</li>`).join('')}</ul>` : '';

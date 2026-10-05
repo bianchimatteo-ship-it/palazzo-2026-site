@@ -121,6 +121,8 @@ export const PARTY_INVESTMENTS = Object.freeze([
 // Simulated calendar: cycles are compressed compared with real terms of office.
 export const ELECTION_SCHEDULE = Object.freeze({
   comunale: { firstWeeks: 7, cycleWeeks: 56, windowDays: 14 },
+  // Second level (mayors and municipal councillors vote): the council and the President renew together, every four years.
+  provinciale: { firstWeeks: 18, cycleWeeks: 208, windowDays: 14 },
   regionale: { firstWeeks: 11, cycleWeeks: 64, windowDays: 14 },
   politiche: { firstWeeks: 20, cycleWeeks: 78, windowDays: 14 },
   europee: { firstWeeks: 30, cycleWeeks: 96, windowDays: 14 }
@@ -137,10 +139,12 @@ export const ROUND_RULES = Object.freeze({
     deludente: { label: 'risultato deludente', tone: 'bad', giro: { stats: { notoriety: 0.5 }, party: { support: -1 } }, sostegno: { party: { support: -0.5 } }, fuori: { stats: { reputation: 0.5 } } }
   }
 });
-export const LEVEL_FIRST_ELECTION = Object.freeze({ comunale: { comunale: 4 }, regionale: { regionale: 5 }, deputato: { politiche: 26 }, senatore: { politiche: 26 } });
+export const LEVEL_FIRST_ELECTION = Object.freeze({ comunale: { comunale: 4 }, provinciale: { provinciale: 8, comunale: 30 }, regionale: { regionale: 5 }, deputato: { politiche: 26 }, senatore: { politiche: 26 } });
 export const EARLY_ELECTION_AFTER_WEEKS = 4;
 
 export const OFFICE_INCOME = Object.freeze([
+  // The provincial offices are unpaid (law 56/2014): the councillors and the President are mayors and municipal councillors who hold them too.
+  { match: /provinc/i, amount: 0 },
   { match: /presidente della repubblica/i, amount: 1400 }, { match: /ministro/i, amount: 650 }, { match: /deputat|senat/i, amount: 900 }, { match: /sindac|presidente di regione/i, amount: 600 },
   { match: /assessor/i, amount: 450 }, { match: /consiglier|parlamento europeo/i, amount: 350 }, { match: /commissione|capogruppo/i, amount: 150 }
 ]);
@@ -151,7 +155,21 @@ export const OFFICE_INCOME = Object.freeze([
 export const AGENDA_CAPS = Object.freeze({
   appointments: 1, events: 2, tenseEvents: 3,
   // Crises, emergencies and scandals do not use an ordinary slot, but no more than this many start in a week.
-  important: 2, importantCategories: Object.freeze(['crisi', 'emergenza', 'scandalo'])
+  important: 2, importantCategories: Object.freeze(['crisi', 'emergenza', 'scandalo']),
+  // How often the draws bring something. Each week the ordinary events are drawn from what the situation makes possible
+  // (the first one, then, if it came, a second); an important one has a draw of its own, so that the many ordinary events
+  // never crowd it out; a quiet-day filler only fills a week that would otherwise be empty. `tension` is added to every
+  // chance in a tense week (a crisis in Government, a campaign, a procedure of the Union).
+  chances: Object.freeze({ appointment: 0.65, first: 0.7, second: 0.35, important: 0.18, quiet: 0.35 }),
+  // A desk already holding this many decisions (situations, urgent matters, chains, appointments) takes no new ordinary event.
+  deskLimit: 4,
+  // The political world asks for a position at most this often, only on what concerns the player's role, and never above
+  // the week's ordinary cap. Events of the same family (a factory in crisis, a protest, a scandal of the same kind) keep
+  // out of each other's way for this many weeks.
+  reactionGapWeeks: 6, familyGapWeeks: 8,
+  // The weekdays: where an event lands is a matter of preference (a vote falls on a working day, a village fair at the
+  // weekend), never of eligibility: every event can fall on any day.
+  dayBase: Object.freeze([1, 1, 1, 1, 0.9, 0.5, 0.4])
 });
 
 // Weekly appointments: optional opportunities that expire at the end of the week.
@@ -188,27 +206,34 @@ export const APPOINTMENTS = Object.freeze([
     { id: 'delega', label: 'Delega agli uffici', effects: { stats: { reputation: -0.5 }, government: { stability: -1 } } }] }
 ]);
 
+// The situations the events ask for (the same ones as the daily events): someone who answers for a territory, a weak or
+// strong service in the player's own region, a name that is known. `family` groups the events that tell the same kind of
+// story, so that two of them do not come close together (AGENDA_CAPS.familyGapWeeks).
+const territorial = sit => Boolean(sit.role.local || sit.role.regional || sit.role.provincial || sit.seat);
+const localOffice = sit => Boolean(sit.role.local || sit.role.provincial || sit.role.regional);
+const weak = (sit, indicator, below) => (sit.home?.[indicator] ?? 50) < below;
+const known = (sit, min) => (sit.stats?.notoriety ?? 0) >= min;
 // Contextual events with real alternatives; the default choice applies when the week closes.
 export const CAREER_EVENTS = Object.freeze([
-  { id: 'protesta', category: 'territorio', cooldown: 6, weight: 3, title: 'Protesta dei residenti a {municipality}', body: 'Un cantiere fermo da mesi porta in piazza residenti e commercianti.', defaultChoice: 'ignora', choices: [
+  { id: 'protesta', when: sit => territorial(sit) || known(sit, 20), family: 'protesta', category: 'territorio', cooldown: 6, weight: 1.8, title: 'Protesta dei residenti a {municipality}', body: 'Un cantiere fermo da mesi porta in piazza residenti e commercianti.', defaultChoice: 'ignora', choices: [
     { id: 'piazza', label: 'Vai in piazza ad ascoltare', cost: { ap: 1 }, effects: { stats: { popularity: 3 }, relations: { civic: 5 } }, risk: { chance: 0.25, label: 'Vieni contestato davanti alle telecamere', effects: { stats: { popularity: -2, notoriety: 1 } } } },
     { id: 'dichiarazione', label: 'Rilascia una dichiarazione', effects: { stats: { notoriety: 1, popularity: -0.5 } } },
     { id: 'ignora', label: 'Non intervenire', effects: { stats: { popularity: -1.5 }, relations: { civic: -3 } }, later: { weeks: 3, chance: 0.5, hint: 'La protesta potrebbe allargarsi', label: 'La protesta si allarga a tutto il quartiere', effects: { stats: { popularity: -2 }, relations: { civic: -3 } } } }] },
-  { id: 'collaboratore', category: 'scandalo', cooldown: 20, weight: 2, when: ctx => ctx.stats.notoriety >= 25, title: 'Un collaboratore finisce sotto inchiesta', body: 'Scandalo simulato: un membro del tuo staff è indagato per una consulenza.', defaultChoice: 'silenzio', choices: [
+  { id: 'collaboratore', family: 'inchiesta', category: 'scandalo', cooldown: 20, weight: 2, when: ctx => ctx.stats.notoriety >= 25, title: 'Un collaboratore finisce sotto inchiesta', body: 'Scandalo simulato: un membro del tuo staff è indagato per una consulenza.', defaultChoice: 'silenzio', choices: [
     { id: 'distanze', label: 'Prendi subito le distanze', effects: { stats: { reputation: -1 }, relations: { leadership: 2 } } },
     { id: 'difendi', label: 'Difendilo pubblicamente', outcomes: [
       { chance: 0.5, label: 'Le accuse cadono: la tua lealtà viene apprezzata', effects: { stats: { reputation: 1.5, notoriety: 2 } } },
       { chance: 0.5, label: 'Emergono nuovi elementi: la tua difesa si ritorce contro di te', effects: { stats: { reputation: -6 }, relations: { leadership: -4 } }, memory: { kind: 'scandalo', text: 'Hai difeso un collaboratore poi travolto dall’inchiesta', weight: 1.5 } }] },
     { id: 'silenzio', label: 'Resta in silenzio', effects: { stats: { reputation: -1.5, notoriety: 1 } } }] },
-  { id: 'rivale', category: 'partito', cooldown: 8, weight: 2, title: 'Il tuo rivale interno ti attacca pubblicamente', body: 'Un rivale interno (figura simulata) mette in dubbio il tuo lavoro davanti a iscritti e giornalisti.', defaultChoice: 'lascia', choices: [
+  { id: 'rivale', when: sit => sit.party, family: 'rivalita-interna', category: 'partito', cooldown: 10, weight: 1.4, title: 'Il tuo rivale interno ti attacca pubblicamente', body: 'Un rivale interno (figura simulata) mette in dubbio il tuo lavoro davanti a iscritti e giornalisti.', defaultChoice: 'lascia', choices: [
     { id: 'rispondi', label: 'Rispondi colpo su colpo', effects: { stats: { notoriety: 3 }, relations: { rival: -8 }, party: { support: -2 } } },
     { id: 'chiarimento', label: 'Cerca un chiarimento', cost: { capital: 2 }, effects: { relations: { rival: 8 }, party: { support: 1 } } },
     { id: 'lascia', label: 'Lascia correre', effects: { party: { support: -1 }, stats: { influence: -0.5 } } }] },
-  { id: 'lista-civica', category: 'territorio', cooldown: 16, weight: 2, when: ctx => !ctx.seat, title: 'Una lista civica propone un’alleanza', body: 'Un gruppo di amministratori locali cerca un riferimento per le prossime elezioni.', defaultChoice: 'rifiuta', choices: [
+  { id: 'lista-civica', category: 'territorio', cooldown: 16, weight: 2, when: sit => !sit.seat && (localOffice(sit) || sit.party), title: 'Una lista civica propone un’alleanza', body: 'Un gruppo di amministratori locali cerca un riferimento per le prossime elezioni.', defaultChoice: 'rifiuta', choices: [
     { id: 'accetta', label: 'Accetta l’alleanza', cost: { capital: 2 }, effects: { relations: { civic: 6, leadership: -2 }, prep: 8, stats: { consensus: 0.5 } }, later: { weeks: 8, chance: 0.35, hint: 'La lista civica potrebbe chiedere qualcosa in cambio', label: 'La lista civica pretende posti e visibilità', effects: { relations: { leadership: -3, civic: 2 }, stats: { reputation: -0.5 } } } },
     { id: 'tempo', label: 'Prendi tempo', effects: { relations: { civic: -1 } } },
     { id: 'rifiuta', label: 'Rifiuta', effects: { relations: { civic: -3 } } }] },
-  { id: 'prima-serata', category: 'media', cooldown: 8, weight: 2, when: ctx => ctx.stats.notoriety >= 30, title: 'Invito in prima serata', body: 'Un talk nazionale ti vuole ospite su un tema caldo.', defaultChoice: 'declina', choices: [
+  { id: 'prima-serata', family: 'ospitate', category: 'media', cooldown: 8, weight: 2, when: ctx => ctx.stats.notoriety >= 30, title: 'Invito in prima serata', body: 'Un talk nazionale ti vuole ospite su un tema caldo.', defaultChoice: 'declina', choices: [
     { id: 'accetta', label: 'Accetta', cost: { ap: 2 }, effects: { stats: { notoriety: 5, popularity: 1.5 } }, risk: { chance: 0.3, label: 'Uno scivolone diventa virale', effects: { stats: { reputation: -3 } } } },
     { id: 'collaboratore', label: 'Manda un collaboratore', effects: { stats: { notoriety: 1 } } },
     { id: 'declina', label: 'Declina', effects: {} }] },
@@ -217,11 +242,11 @@ export const CAREER_EVENTS = Object.freeze([
     { id: 'a', label: 'Sostieni {currentA}', special: 'leadership-a' },
     { id: 'b', label: 'Sostieni {currentB}', special: 'leadership-b' },
     { id: 'neutrale', label: 'Resta neutrale', effects: { party: { support: -1 } }, special: 'leadership-neutral' }] },
-  { id: 'finanziatore', category: 'scandalo', cooldown: 20, weight: 2, title: 'Un imprenditore offre un contributo', body: 'Il sostegno è generoso, ma chiede riservatezza.', defaultChoice: 'rifiuta', choices: [
+  { id: 'finanziatore', when: sit => sit.party || territorial(sit), family: 'finanziamenti', category: 'scandalo', cooldown: 20, weight: 2, title: 'Un imprenditore offre un contributo', body: 'Il sostegno è generoso, ma chiede riservatezza.', defaultChoice: 'rifiuta', choices: [
     { id: 'trasparente', label: 'Accetta e rendilo pubblico', effects: { funds: 1500, stats: { reputation: -0.5 }, relations: { business: 3 } } },
     { id: 'rifiuta', label: 'Rifiuta', effects: { stats: { reputation: 1 }, relations: { business: -3 } } },
     { id: 'riservato', label: 'Accetta senza pubblicità', effects: { funds: 2800 }, special: 'flag-opaque-funding' }] },
-  { id: 'maltempo', category: 'territorio', cooldown: 10, boost: sit => sit.signals.autumn || sit.signals.winter ? 1.6 : 0.7, weight: 2, title: 'Maltempo e danni in {region}', body: 'Allagamenti e strade chiuse: la comunità aspetta risposte.', defaultChoice: 'solidarieta', choices: [
+  { id: 'maltempo', when: sit => territorial(sit), family: 'meteo', category: 'territorio', cooldown: 10, boost: sit => sit.signals.autumn || sit.signals.winter ? 1.6 : 0.7, weight: 2, title: 'Maltempo e danni in {region}', body: 'Allagamenti e strade chiuse: la comunità aspetta risposte.', defaultChoice: 'solidarieta', choices: [
     { id: 'sul-posto', label: 'Coordina gli aiuti sul posto', cost: { ap: 2, funds: 300 }, effects: { stats: { reputation: 3, popularity: 3 }, relations: { civic: 4 } } },
     { id: 'fondi', label: 'Chiedi fondi straordinari', cost: { capital: 3 }, effects: { stats: { consensus: 1, influence: 1 } } },
     { id: 'solidarieta', label: 'Esprimi solidarietà', effects: { stats: { popularity: -1 } } }] },
@@ -245,13 +270,13 @@ export const CAREER_EVENTS = Object.freeze([
     { id: 'proposta', label: 'Intervieni con una proposta', cost: { ap: 1 }, effects: { stats: { notoriety: 2, reputation: 1 } }, special: 'world-stance-proposal' },
     { id: 'attacco', label: 'Attacca gli avversari', effects: { stats: { notoriety: 3, reputation: -0.5 }, relations: { media: 2 } }, special: 'world-stance-attack' },
     { id: 'silenzio', label: 'Resta in silenzio', effects: { stats: { notoriety: -0.5 } } }] },
-  { id: 'sindacati-vertenza', category: 'economia', cooldown: 10, weight: 1, title: 'Vertenza in una fabbrica del territorio', body: 'Lavoratori e azienda chiedono una mediazione politica.', defaultChoice: 'osserva', choices: [
+  { id: 'sindacati-vertenza', when: sit => territorial(sit) && weak(sit, 'occupazione', 64), family: 'lavoro-crisi', category: 'economia', cooldown: 10, weight: 1, title: 'Vertenza in una fabbrica del territorio', body: 'Lavoratori e azienda chiedono una mediazione politica.', defaultChoice: 'osserva', choices: [
     { id: 'lavoratori', label: 'Stai con i lavoratori', effects: { relations: { unions: 7, business: -4 }, stats: { popularity: 1 } } },
     { id: 'mediazione', label: 'Proponi una mediazione', cost: { ap: 1, capital: 2 }, effects: { relations: { unions: 3, business: 3 }, stats: { reputation: 1.5 } } },
     { id: 'osserva', label: 'Resta a guardare', effects: { relations: { unions: -2 } } }] }
 ,
   // ---------- procedural events: conditions, cooldowns, rarity, variants, chains ----------
-  { id: 'cronaca-nera', category: 'sicurezza', weight: 2, cooldown: 6, pickRegion: 'sicurezza', boost: sit => sit.signals.crime > 55 ? 2 : sit.signals.crime > 48 ? 1.3 : 0.7,
+  { id: 'cronaca-nera', when: sit => territorial(sit) || known(sit, 20), family: 'sicurezza', category: 'sicurezza', weight: 2, cooldown: 6, pickRegion: 'sicurezza', boost: sit => sit.signals.crime > 55 ? 2 : sit.signals.crime > 48 ? 1.3 : 0.7,
     variants: [
       { title: 'Aggressione in pieno centro in {region2}', body: 'Un episodio violento finisce su tutti i telegiornali: i residenti chiedono più controlli (fatto di cronaca simulato).' },
       { title: 'Rapine in serie in {region2}', body: 'Tre colpi in una settimana nella stessa zona: commercianti in allarme (fatto di cronaca simulato).' },
@@ -260,19 +285,19 @@ export const CAREER_EVENTS = Object.freeze([
     { id: 'presidio', label: 'Vai sul posto con le forze dell’ordine', cost: { ap: 1 }, effects: { stats: { popularity: 1.5, notoriety: 1 } }, special: 'region-attention' },
     { id: 'legge', label: 'Annuncia una proposta sulla sicurezza', requires: 'seat', cost: { ap: 1, capital: 2 }, effects: { stats: { notoriety: 2 } }, special: 'issue-law-security' },
     { id: 'calma', label: 'Invita alla calma e ai dati', effects: { stats: { reputation: 1, popularity: -1 } }, followUp: { id: 'cronaca-nera', weeks: 3, chance: 0.3 } }] },
-  { id: 'operazione-antimafia', category: 'sicurezza', weight: 1, cooldown: 14, pickRegion: 'sicurezza', title: 'Grande operazione contro la criminalità organizzata in {region2}', body: 'Decine di arresti in un’indagine simulata: il territorio respira, ma chiede continuità.',
+  { id: 'operazione-antimafia', when: sit => territorial(sit), family: 'sicurezza', category: 'sicurezza', weight: 1, cooldown: 14, pickRegion: 'sicurezza', title: 'Grande operazione contro la criminalità organizzata in {region2}', body: 'Decine di arresti in un’indagine simulata: il territorio respira, ma chiede continuità.',
     onRaise: { shock: { perceived: 3, crime: -1, region: '{region2}' } }, defaultChoice: 'nulla', choices: [
     { id: 'plauso', label: 'Ringrazia pubblicamente inquirenti e forze dell’ordine', effects: { stats: { reputation: 1, notoriety: 1 } } },
     { id: 'risorse', label: 'Chiedi più risorse per quegli uffici', cost: { capital: 2 }, effects: { stats: { influence: 1 } }, special: 'issue-law-security' },
     { id: 'nulla', label: 'Non commentare', effects: {} }] },
-  { id: 'chiusura-stabilimento', category: 'economia', weight: 2, cooldown: 10, pickRegion: 'occupazione', title: 'Chiude uno stabilimento in {region2}', body: 'Centinaia di posti di lavoro a rischio in un’azienda simulata: sindacati in piazza, imprese preoccupate per l’indotto.',
+  { id: 'chiusura-stabilimento', when: sit => territorial(sit) && weak(sit, 'occupazione', 64), family: 'lavoro-crisi', category: 'economia', weight: 2, cooldown: 10, pickRegion: 'occupazione', title: 'Chiude uno stabilimento in {region2}', body: 'Centinaia di posti di lavoro a rischio in un’azienda simulata: sindacati in piazza, imprese preoccupate per l’indotto.',
     onRaise: { shock: { region: '{region2}', indicator: 'occupazione', delta: -5 } }, defaultChoice: 'ignora', choices: [
     { id: 'tavolo', label: 'Apri un tavolo di crisi', cost: { ap: 1, capital: 2 }, effects: { relations: { unions: 6, business: 2 }, stats: { reputation: 1.5 } }, later: { weeks: 6, outcomes: [
       { chance: 0.5, label: 'Il tavolo trova un acquirente: posti salvati', effects: { stats: { reputation: 2, popularity: 2 } } },
       { chance: 0.5, label: 'Il tavolo fallisce: licenziamenti confermati', effects: { stats: { reputation: -1.5 }, relations: { unions: -4 } } }] } },
     { id: 'promessa', label: 'Prometti che nessuno resterà senza lavoro', effects: { stats: { popularity: 2 } }, later: { weeks: 10, chance: 0.6, hint: 'I lavoratori ricorderanno la promessa', label: 'La promessa non è mantenuta: gli operai ti contestano', effects: { stats: { popularity: -3, reputation: -2 } }, memory: { kind: 'promessa-tradita', text: 'Promessa ai lavoratori non mantenuta' } } },
     { id: 'ignora', label: 'Non intervenire', effects: { relations: { unions: -3 }, stats: { popularity: -1 } }, followUp: { id: 'sindacati-vertenza', weeks: 2, chance: 0.6 } }] },
-  { id: 'rincari-carburanti', category: 'economia', weight: 1, cooldown: 12, title: 'Carburanti alle stelle', body: 'Il prezzo alla pompa sale per settimane: autotrasportatori pronti al fermo.',
+  { id: 'rincari-carburanti', when: sit => known(sit, 15) || territorial(sit), family: 'costo-vita', category: 'economia', weight: 1, cooldown: 12, title: 'Carburanti alle stelle', body: 'Il prezzo alla pompa sale per settimane: autotrasportatori pronti al fermo.',
     onRaise: { shock: { inflation: 0.2 } }, defaultChoice: 'dichiarazione', choices: [
     { id: 'accise', label: 'Chiedi il taglio delle accise', effects: { stats: { popularity: 2, reputation: -0.5 } } },
     { id: 'mediazione', label: 'Incontra gli autotrasportatori', cost: { ap: 1 }, effects: { relations: { business: 4 }, stats: { reputation: 1 } } },
@@ -282,7 +307,7 @@ export const CAREER_EVENTS = Object.freeze([
     { id: 'rivendica', label: 'Rivendica il risultato', effects: { stats: { notoriety: 2 } }, risk: { chance: 0.35, label: 'Ti accusano di prenderti meriti non tuoi', effects: { stats: { reputation: -1.5 } } } },
     { id: 'territori', label: 'Proponi di portare i turisti nelle aree interne', cost: { ap: 1 }, effects: { stats: { reputation: 1.5 }, relations: { business: 3 } } },
     { id: 'nulla', label: 'Non commentare', effects: {} }] },
-  { id: 'inchiesta-giornalistica', category: 'media', weight: 1, cooldown: 20, when: sit => sit.stats.notoriety >= 40, title: 'Un’inchiesta giornalistica ti riguarda', body: 'Un quotidiano ricostruisce nomine e rapporti del tuo staff (vicenda simulata): nulla di penalmente rilevante, ma molte domande.', defaultChoice: 'silenzio', choices: [
+  { id: 'inchiesta-giornalistica', family: 'inchiesta', category: 'media', weight: 1, cooldown: 20, when: sit => sit.stats.notoriety >= 40, title: 'Un’inchiesta giornalistica ti riguarda', body: 'Un quotidiano ricostruisce nomine e rapporti del tuo staff (vicenda simulata): nulla di penalmente rilevante, ma molte domande.', defaultChoice: 'silenzio', choices: [
     { id: 'chiarisci', label: 'Rispondi punto per punto', cost: { ap: 1 }, effects: { stats: { reputation: 1 } }, risk: { chance: 0.3, label: 'Una risposta imprecisa riaccende il caso', effects: { stats: { reputation: -2 } } } },
     { id: 'querela', label: 'Minaccia querela', effects: { stats: { notoriety: 1 }, relations: { media: -5 } }, memory: { kind: 'scandalo', text: 'Scontro con la stampa su un’inchiesta', weight: 0.6 } },
     { id: 'silenzio', label: 'Non rispondere', effects: { stats: { reputation: -1.5 } }, memory: { kind: 'scandalo', text: 'Inchiesta giornalistica rimasta senza risposta', weight: 0.8 } }] },
@@ -306,7 +331,7 @@ export const CAREER_EVENTS = Object.freeze([
     { id: 'vertice', label: 'Convoca un vertice lampo', cost: { ap: 1, capital: 3 }, effects: { government: { stability: 2 } } },
     { id: 'fiducia', label: 'Valuta di porre la fiducia', effects: { stats: { notoriety: 1 } } },
     { id: 'rischia', label: 'Rischia il voto', special: 'snipers' }] },
-  { id: 'alluvione', category: 'emergenza', weight: 1.5, cooldown: 20, exclusive: 'emergenza', pickRegion: 'ambiente', boost: sit => sit.signals.autumn ? 2 : 0.6,
+  { id: 'alluvione', when: sit => territorial(sit), family: 'meteo', category: 'emergenza', weight: 1.5, cooldown: 20, exclusive: 'emergenza', pickRegion: 'ambiente', boost: sit => sit.signals.autumn ? 2 : 0.6,
     variants: [
       { title: 'Alluvione in {region2}', body: 'Fiumi esondati, paesi isolati e strade interrotte: servono aiuti immediati e fondi per la ricostruzione.' },
       { title: 'Frane e allagamenti in {region2}', body: 'Giorni di pioggia mettono in ginocchio il territorio: famiglie evacuate e scuole chiuse.' }],
@@ -345,7 +370,7 @@ export const CAREER_EVENTS = Object.freeze([
     { id: 'rassicura', label: 'Rassicura i mercati con un piano di rientro', cost: { capital: 3 }, effects: { stats: { reputation: 1 } }, special: 'markets-calm' },
     { id: 'tagli', label: 'Annuncia tagli immediati', effects: { stats: { popularity: -2 } }, special: 'public-cuts' },
     { id: 'ignora', label: 'Accusa la speculazione', effects: { stats: { notoriety: 2 } }, special: 'markets-worse', followUp: { id: 'richiamo-europeo', weeks: 4, chance: 0.5 } }] },
-  { id: 'richiamo-europeo', category: 'europa', weight: 2, cooldown: 12, when: sit => sit.premier && ['richiamo', 'procedura'].includes(sit.signals.euStatus), title: 'Bruxelles chiede di correggere i conti', body: 'La Commissione europea (istituzione) chiede misure per riportare il deficit sotto la soglia di riferimento.', defaultChoice: 'tratta', choices: [
+  { id: 'richiamo-europeo', category: 'europa', weight: 2, cooldown: 12, when: sit => sit.premier && ['richiamo', 'procedura'].includes(sit.signals.euStatus), title: 'Bruxelles chiede di correggere i conti', body: 'La Commissione europea (istituzione) chiede misure per riportare il deficit sotto la soglia di riferimento.', defaultChoice: 'rientro', choices: [
     { id: 'rientro', label: 'Presenta un piano di rientro', effects: { stats: { reputation: 1.5, popularity: -1 } }, special: 'public-cuts' },
     { id: 'tratta', label: 'Tratta più flessibilità', cost: { capital: 4 }, effects: { stats: { influence: 1 } }, later: { weeks: 6, outcomes: [
       { chance: 0.5, label: 'Flessibilità concessa', effects: { stats: { reputation: 1.5 } } },
@@ -364,29 +389,29 @@ export const CAREER_EVENTS = Object.freeze([
     { id: 'veto', label: 'Minaccia il veto', effects: { stats: { notoriety: 3 } }, special: 'europe-down' },
     { id: 'basso-profilo', label: 'Tieni un basso profilo', effects: {} }] },
   // ---------- events tied to role, party, territory, economy and Parliament ----------
-  { id: 'bilancio-comunale', category: 'economia', weight: 2, cooldown: 16, when: sit => sit.role.local, title: 'Il bilancio di {municipality} non torna', body: 'Mancano risorse per servizi e manutenzioni: in consiglio comunale si decide dove intervenire.', defaultChoice: 'rinvia', choices: [
+  { id: 'bilancio-comunale', family: 'bilancio', category: 'economia', weight: 2, cooldown: 16, when: sit => sit.role.local, title: 'Il bilancio di {municipality} non torna', body: 'Mancano risorse per servizi e manutenzioni: in consiglio comunale si decide dove intervenire.', defaultChoice: 'rinvia', choices: [
     { id: 'tagli', label: 'Taglia le spese non essenziali', effects: { stats: { reputation: 1.5, popularity: -1.5 }, relations: { civic: -2 } }, memory: { kind: 'tagli', text: 'Tagli al bilancio di {municipality}', weight: 0.8 } },
     { id: 'tariffe', label: 'Aumenta tariffe e addizionali', effects: { stats: { popularity: -3 }, funds: 400 }, memory: { kind: 'tasse', text: 'Tariffe comunali aumentate a {municipality}', weight: 1 } },
     { id: 'regione', label: 'Chiedi un contributo straordinario alla Regione', cost: { ap: 1, capital: 3 }, later: { weeks: 6, outcomes: [
       { chance: 0.55, label: 'La Regione stanzia i fondi', effects: { stats: { reputation: 2, popularity: 2 } } },
       { chance: 0.45, label: 'La richiesta resta nel cassetto', effects: { stats: { popularity: -1.5 } } }] } },
     { id: 'rinvia', label: 'Rinvia la decisione', effects: { stats: { reputation: -1 } }, followUp: { id: 'bilancio-comunale', weeks: 6, chance: 0.5 } }] },
-  { id: 'strade-dissestate', category: 'territorio', weight: 1.5, cooldown: 12, when: sit => sit.role.local || sit.role.regional, variants: [
+  { id: 'strade-dissestate', family: 'viabilita', category: 'territorio', weight: 1.5, cooldown: 12, when: localOffice, variants: [
       { title: 'Buche e strade dissestate a {municipality}', body: 'Un incidente riaccende le proteste: i residenti pubblicano foto e video delle strade.' },
       { title: 'Ponte chiuso per verifiche a {municipality}', body: 'Traffico deviato e commercianti in difficoltà: tutti chiedono tempi certi.' }], defaultChoice: 'promessa', choices: [
     { id: 'cantiere', label: 'Apri subito un cantiere', cost: { funds: 600, ap: 1 }, effects: { stats: { popularity: 2.5 }, relations: { civic: 3 } } },
     { id: 'promessa', label: 'Annuncia un piano per l’anno prossimo', effects: { stats: { popularity: 0.5 } }, later: { weeks: 16, chance: 0.5, hint: 'Se il piano non parte, qualcuno se lo ricorderà', label: 'Il piano per le strade non è mai partito', effects: { stats: { popularity: -2, reputation: -1.5 } }, memory: { kind: 'promessa-tradita', text: 'Piano per le strade annunciato e mai partito' } } }] },
-  { id: 'liste-attesa', category: 'sociale', weight: 2, cooldown: 14, when: sit => sit.role.regional || (sit.role.parliamentarian && sit.south), title: 'Liste d’attesa infinite negli ospedali di {region}', body: 'Mesi per una visita specialistica: i pazienti si rivolgono al privato o rinunciano alle cure.', onRaise: { shock: { area: 'sanita', areaDelta: -1 } }, defaultChoice: 'denuncia', choices: [
+  { id: 'liste-attesa', family: 'sanita', category: 'sociale', weight: 2, cooldown: 14, when: sit => sit.role.regional || (sit.role.parliamentarian && sit.south), title: 'Liste d’attesa infinite negli ospedali di {region}', body: 'Mesi per una visita specialistica: i pazienti si rivolgono al privato o rinunciano alle cure.', onRaise: { shock: { area: 'sanita', areaDelta: -1 } }, defaultChoice: 'denuncia', choices: [
     { id: 'piano', label: 'Proponi un piano straordinario per le prestazioni', cost: { ap: 1, capital: 3 }, effects: { stats: { reputation: 2 } }, later: { weeks: 10, outcomes: [
       { chance: 0.5, label: 'Le attese si accorciano davvero', effects: { stats: { popularity: 3, reputation: 1.5 } }, memory: { kind: 'promessa-mantenuta', text: 'Liste d’attesa ridotte in {region}' } },
       { chance: 0.5, label: 'Il piano resta sulla carta', effects: { stats: { popularity: -2 } }, memory: { kind: 'promessa-tradita', text: 'Piano per le liste d’attesa rimasto sulla carta' } }] } },
     { id: 'denuncia', label: 'Denuncia la situazione e attacca chi governa', effects: { stats: { notoriety: 2, reputation: -0.5 } } },
     { id: 'privato', label: 'Sostieni convenzioni con le strutture private', effects: { relations: { business: 4, unions: -3 }, stats: { popularity: 0.5 } } }] },
-  { id: 'pendolari', category: 'territorio', weight: 1.5, cooldown: 14, boost: sit => sit.north ? 1.6 : 0.8, when: sit => !sit.role.local || sit.north, title: 'Treni regionali soppressi: pendolari infuriati in {region}', body: 'Ritardi e corse cancellate ogni giorno: i comitati dei pendolari chiedono risposte a Regione e governo.', defaultChoice: 'comunicato', choices: [
+  { id: 'pendolari', family: 'viabilita', category: 'territorio', weight: 1.5, cooldown: 14, boost: sit => sit.north ? 1.6 : 0.8, when: sit => territorial(sit) && (weak(sit, 'trasporti', 62) || sit.north), title: 'Treni regionali soppressi: pendolari infuriati in {region}', body: 'Ritardi e corse cancellate ogni giorno: i comitati dei pendolari chiedono risposte a Regione e governo.', defaultChoice: 'comunicato', choices: [
     { id: 'viaggio', label: 'Viaggia una settimana con i pendolari', cost: { ap: 2 }, effects: { stats: { popularity: 3, notoriety: 2 }, relations: { civic: 4 } } },
     { id: 'gestore', label: 'Pretendi penali dal gestore del servizio', cost: { capital: 2 }, effects: { stats: { reputation: 1.5 }, relations: { business: -2 } } },
     { id: 'comunicato', label: 'Un comunicato di solidarietà', effects: { stats: { popularity: -1 } } }] },
-  { id: 'aree-interne', category: 'territorio', weight: 1.5, cooldown: 20, boost: sit => sit.south ? 1.8 : sit.macroArea === 'centro' ? 1.2 : 0.6, title: 'I borghi di {region} si svuotano', body: 'Scuole che chiudono, ambulatori senza medici, giovani che partono: i sindaci delle aree interne lanciano un appello.', defaultChoice: 'appello', choices: [
+  { id: 'aree-interne', when: sit => territorial(sit), category: 'territorio', weight: 1.5, cooldown: 20, boost: sit => sit.south ? 1.8 : sit.macroArea === 'centro' ? 1.2 : 0.6, title: 'I borghi di {region} si svuotano', body: 'Scuole che chiudono, ambulatori senza medici, giovani che partono: i sindaci delle aree interne lanciano un appello.', defaultChoice: 'appello', choices: [
     { id: 'servizi', label: 'Proponi incentivi per chi resta e servizi di prossimità', cost: { ap: 1, capital: 2 }, effects: { stats: { reputation: 2, popularity: 1.5 }, relations: { civic: 4 } }, special: 'region-attention' },
     { id: 'turismo', label: 'Punta su turismo lento e seconde case', effects: { relations: { business: 3 }, stats: { popularity: 0.5 } } },
     { id: 'appello', label: 'Rilancia l’appello dei sindaci', effects: { stats: { notoriety: 1 } } }] },
@@ -394,10 +419,11 @@ export const CAREER_EVENTS = Object.freeze([
     { id: 'decreto', label: 'Decreto per reti idriche e agricoltura', requires: 'premier', cost: { ap: 1 }, effects: { stats: { reputation: 2 } }, special: 'emergency-decree', decree: { area: 'ambiente', instrument: 'investimento', intensity: 2, financing: 'deficit', target: '{region2}' } },
     { id: 'agricoltori', label: 'Stai con gli agricoltori: ristori subito', cost: { capital: 2 }, effects: { relations: { business: 3 }, stats: { popularity: 2 } } },
     { id: 'rinvia', label: 'Aspetta le piogge d’autunno', effects: { stats: { popularity: -2 } }, later: { weeks: 4, chance: 0.5, hint: 'Se non piove, la crisi peggiora', label: 'La crisi idrica peggiora: raccolti persi', effects: { stats: { popularity: -2, reputation: -1.5 } } } }] },
-  { id: 'autonomia-differenziata', category: 'parlamento', weight: 1, cooldown: 30, when: sit => sit.role.parliamentarian || sit.role.regional, boost: sit => sit.north || sit.south ? 1.5 : 0.8, title: 'Scontro sull’autonomia delle Regioni', body: 'Più competenze alle Regioni che le chiedono: il Nord spinge, il Sud teme di restare indietro. Devi scegliere una linea.', defaultChoice: 'mediazione', choices: [
+  { id: 'autonomia-differenziata', category: 'parlamento', weight: 1, cooldown: 30, when: sit => sit.role.parliamentarian || sit.role.regional, boost: sit => sit.north || sit.south ? 1.5 : 0.8, title: 'Scontro sull’autonomia delle Regioni', body: 'Più competenze alle Regioni che le chiedono: il Nord spinge, il Sud teme di restare indietro. Devi scegliere una linea.', defaultChoice: 'silenzio', choices: [
     { id: 'favorevole', label: 'Sostieni più autonomia', effects: { stats: { popularity: 1 } }, special: 'region-attention', memory: { kind: 'decisione', text: 'Hai sostenuto l’autonomia differenziata', weight: 0.8, subject: 'autonomia' } },
     { id: 'contrario', label: 'Difendi l’uniformità dei servizi nel Paese', effects: { stats: { reputation: 1 } }, memory: { kind: 'decisione', text: 'Ti sei opposto all’autonomia differenziata', weight: 0.8, subject: 'autonomia' } },
-    { id: 'mediazione', label: 'Proponi livelli minimi garantiti prima di tutto', cost: { capital: 2 }, effects: { stats: { reputation: 1.5, influence: 1 } } }] },
+    { id: 'mediazione', label: 'Proponi livelli minimi garantiti prima di tutto', cost: { capital: 2 }, effects: { stats: { reputation: 1.5, influence: 1 } } },
+    { id: 'silenzio', label: 'Non ti esprimi: il tema divide anche il tuo gruppo', effects: { stats: { notoriety: -0.5 } } }] },
   { id: 'sotto-soglia', category: 'partito', weight: 2.5, cooldown: 20, when: sit => sit.party && sit.partySmall, title: 'Il partito è sotto la soglia di sbarramento', body: 'I sondaggi danno {party} sotto il 4%: senza una strategia, alle prossime elezioni rischia di non entrare in Parlamento.', defaultChoice: 'da-soli', choices: [
     { id: 'lista-comune', label: 'Cerca una lista comune con forze vicine', cost: { capital: 3 }, effects: { party: { support: -2 } }, special: 'seek-alliance' },
     { id: 'civici', label: 'Allarga ai civici e agli amministratori locali', cost: { ap: 1 }, effects: { relations: { civic: 5 }, prep: 6 } },
@@ -406,7 +432,7 @@ export const CAREER_EVENTS = Object.freeze([
     { id: 'a', label: 'Sostieni le richieste di {currentA}', effects: { relations: { currentA: 6, otherCurrents: -4 } } },
     { id: 'merito', label: 'Chiedi criteri trasparenti per tutti', cost: { capital: 2 }, effects: { stats: { reputation: 1.5 }, relations: { leadership: -2, otherCurrents: 2 } } },
     { id: 'attendi', label: 'Aspetta che decida la segreteria', effects: { party: { support: -1 } } }] },
-  { id: 'corteggiamento-poli', category: 'partito', weight: 1.5, cooldown: 26, when: sit => sit.secretary && sit.partyAxis !== null && Math.abs(sit.partyAxis) <= 1, title: 'Entrambi i poli corteggiano {party}', body: 'Per una forza di centro ogni voto conta doppio: destra e sinistra offrono posti e programmi, ma chiedono una scelta di campo.', defaultChoice: 'equidistanza', choices: [
+  { id: 'corteggiamento-poli', family: 'coalizione', category: 'partito', weight: 1.5, cooldown: 26, when: sit => sit.secretary && sit.partyAxis !== null && Math.abs(sit.partyAxis) <= 1, title: 'Entrambi i poli corteggiano {party}', body: 'Per una forza di centro ogni voto conta doppio: destra e sinistra offrono posti e programmi, ma chiedono una scelta di campo.', defaultChoice: 'equidistanza', choices: [
     { id: 'destra', label: 'Apri al centro-destra', effects: { stats: { influence: 2 }, party: { support: -2 } }, special: 'lean-right', memory: { kind: 'decisione', text: 'Apertura del partito al centro-destra', weight: 1, subject: 'campo' } },
     { id: 'sinistra', label: 'Apri al centro-sinistra', effects: { stats: { influence: 2 }, party: { support: -2 } }, special: 'lean-left', memory: { kind: 'decisione', text: 'Apertura del partito al centro-sinistra', weight: 1, subject: 'campo' } },
     { id: 'equidistanza', label: 'Resta equidistante', effects: { party: { support: 2 }, stats: { influence: -1 } } }] },
@@ -428,63 +454,63 @@ export const CAREER_EVENTS = Object.freeze([
   { id: 'premio-legalita', category: 'opportunita', positive: true, weight: 0.8, cooldown: 40, when: sit => sit.role.local || sit.role.regional, title: 'Un premio per il progetto sulla legalità di {municipality}', body: 'Scuole e associazioni del territorio vengono premiate per un progetto a cui hai contribuito.', defaultChoice: 'ringrazia', choices: [
     { id: 'rilancia', label: 'Rilancia il progetto in tutta la regione', cost: { ap: 1 }, effects: { stats: { reputation: 2.5, notoriety: 1.5 }, relations: { civic: 4 } } },
     { id: 'ringrazia', label: 'Ringrazia e lascia la scena alle scuole', effects: { stats: { reputation: 1.5 } } }] },
-  { id: 'fondi-europei', category: 'opportunita', positive: true, weight: 1, cooldown: 26, title: 'Fondi europei per un progetto in {region}', body: 'Un bando europeo può finanziare un’opera attesa da anni, ma servono progetti pronti e tempi certi.', defaultChoice: 'segnala', choices: [
+  { id: 'fondi-europei', when: sit => localOffice(sit) || sit.seat || sit.role.europarl, category: 'opportunita', positive: true, weight: 1, cooldown: 26, title: 'Fondi europei per un progetto in {region}', body: 'Un bando europeo può finanziare un’opera attesa da anni, ma servono progetti pronti e tempi certi.', defaultChoice: 'segnala', choices: [
     { id: 'squadra', label: 'Metti al lavoro una squadra di progettisti', cost: { funds: 500, ap: 1 }, later: { weeks: 12, outcomes: [
       { chance: 0.6, label: 'Il progetto è finanziato: cantieri in arrivo', effects: { stats: { reputation: 3, popularity: 2 } }, memory: { kind: 'legge', text: 'Fondi europei ottenuti per {region}', weight: 1 } },
       { chance: 0.4, label: 'Il bando sfuma per un errore di forma', effects: { stats: { reputation: -1.5 } } }] } },
     { id: 'segnala', label: 'Segnala il bando ai comuni', effects: { relations: { civic: 2 } } }] },
-  { id: 'crollo-sondaggi', category: 'crisi', weight: 3, cooldown: 12, when: sit => sit.party && sit.pollDelta <= -0.8, title: '{party} perde terreno nei sondaggi', body: 'Il calo è netto in una sola settimana: militanti inquieti, avversari all’attacco, giornali a caccia di responsabili.', defaultChoice: 'minimizza', choices: [
+  { id: 'crollo-sondaggi', category: 'crisi', weight: 3, cooldown: 12, when: sit => sit.party && sit.pollTrend <= -1, title: '{party} perde terreno nei sondaggi', body: 'Un mese di calo continuo, non un’oscillazione del campione: militanti inquieti, avversari all’attacco, giornali a caccia di responsabili.', defaultChoice: 'minimizza', choices: [
     { id: 'rilancio', label: 'Rilancia con una proposta forte', cost: { ap: 1, capital: 2 }, effects: { stats: { notoriety: 2 } }, special: 'world-stance-proposal' },
     { id: 'autocritica', label: 'Fai autocritica davanti agli iscritti', effects: { party: { support: 3 }, stats: { reputation: 1, notoriety: -1 } } },
     { id: 'minimizza', label: 'Minimizza: sono solo sondaggi', effects: { party: { support: -2 } } }] },
-  { id: 'exploit-sondaggi', category: 'opportunita', positive: true, weight: 2, cooldown: 12, when: sit => sit.party && sit.pollDelta >= 0.8, title: '{party} vola nei sondaggi', body: 'Una crescita così rapida attira nuovi iscritti, ma anche attenzione e attacchi.', defaultChoice: 'prudenza', choices: [
+  { id: 'exploit-sondaggi', category: 'opportunita', positive: true, weight: 2, cooldown: 12, when: sit => sit.party && sit.pollTrend >= 1, title: '{party} vola nei sondaggi', body: 'Un mese di crescita continua attira nuovi iscritti, ma anche attenzione e attacchi.', defaultChoice: 'prudenza', choices: [
     { id: 'capitalizza', label: 'Capitalizza: campagna di tesseramento', cost: { funds: 400 }, effects: { party: { support: 3 }, org: { members: 60 } } },
     { id: 'prudenza', label: 'Mantieni un profilo prudente', effects: { stats: { reputation: 1 } } }] },
-  { id: 'inchiesta-appalti', category: 'scandalo', weight: 0.7, cooldown: 40, rare: true, when: sit => sit.role.mayor || sit.role.regional, title: 'Inchiesta sugli appalti a {municipality}', body: 'La procura indaga su alcuni affidamenti dell’amministrazione (vicenda simulata): non sei indagato, ma la tua giunta è sotto i riflettori.', defaultChoice: 'attendi', choices: [
+  { id: 'inchiesta-appalti', family: 'inchiesta', category: 'scandalo', weight: 0.7, cooldown: 40, rare: true, when: sit => sit.role.mayor || sit.role.regional, title: 'Inchiesta sugli appalti a {municipality}', body: 'La procura indaga su alcuni affidamenti dell’amministrazione (vicenda simulata): non sei indagato, ma la tua giunta è sotto i riflettori.', defaultChoice: 'attendi', choices: [
     { id: 'trasparenza', label: 'Pubblica tutti gli atti e collabora', cost: { ap: 1 }, effects: { stats: { reputation: 2.5 }, relations: { media: 3 } } },
     { id: 'rimuovi', label: 'Rimuovi i dirigenti coinvolti', effects: { stats: { reputation: 1 }, relations: { civic: -2 } } },
     { id: 'attendi', label: 'Attendi l’esito dell’indagine', effects: { stats: { reputation: -1.5 } }, later: { weeks: 8, chance: 0.4, hint: 'L’inchiesta potrebbe allargarsi', label: 'L’inchiesta si allarga ad altri appalti', effects: { stats: { reputation: -4 } }, memory: { kind: 'scandalo', text: 'Inchiesta sugli appalti durante la tua amministrazione', weight: 1.5 } } }] },
-  { id: 'grande-evento', category: 'territorio', weight: 0.3, cooldown: 80, rare: true, unique: true, pickRegion: 'turismo', title: 'L’Italia si candida a un grande evento internazionale', body: 'Una candidatura a un evento sportivo internazionale (simulato) può portare investimenti in {region2}, o sprechi.', defaultChoice: 'prudenza', choices: [
+  { id: 'grande-evento', when: sit => territorial(sit), category: 'territorio', weight: 0.3, cooldown: 80, rare: true, unique: true, pickRegion: 'turismo', title: 'L’Italia si candida a un grande evento internazionale', body: 'Una candidatura a un evento sportivo internazionale (simulato) può portare investimenti in {region2}, o sprechi.', defaultChoice: 'prudenza', choices: [
     { id: 'sostieni', label: 'Sostieni la candidatura', cost: { capital: 3 }, effects: { stats: { notoriety: 3 } }, later: { weeks: 20, outcomes: [
       { chance: 0.55, label: 'Candidatura vinta: cantieri e turisti', effects: { stats: { popularity: 3, reputation: 2 } } },
       { chance: 0.45, label: 'Candidatura persa tra polemiche sui costi', effects: { stats: { reputation: -2 } } }] } },
     { id: 'prudenza', label: 'Chiedi prima un piano dei costi', effects: { stats: { reputation: 1 } } }] },
-  { id: 'patto-territoriale', category: 'territorio', weight: 1.2, cooldown: 30, when: sit => sit.role.local || sit.role.regional, title: 'I sindaci chiedono un patto per il territorio', body: 'Comuni, associazioni e imprese chiedono una linea comune su servizi, lavoro e infrastrutture.', defaultChoice: 'tavolo', choices: [
+  { id: 'patto-territoriale', category: 'territorio', weight: 1.2, cooldown: 30, when: sit => sit.role.local || sit.role.regional, title: 'I sindaci chiedono un patto per il territorio', body: 'Comuni, associazioni e imprese chiedono una linea comune su servizi, lavoro e infrastrutture.', defaultChoice: 'rinvia', choices: [
     { id: 'tavolo', label: 'Apri un tavolo permanente', cost: { ap: 1, capital: 2 }, effects: { relations: { civic: 5, business: 3 }, stats: { reputation: 1.5 }, permanent: { territorioImpegno: 1 } }, later: { weeks: 12, outcomes: [
       { chance: 0.6, label: 'Il patto produce un progetto condiviso', effects: { stats: { popularity: 2 }, relations: { civic: 3 } }, memory: { kind: 'promessa-mantenuta', text: 'Patto territoriale mantenuto' } },
       { chance: 0.4, label: 'I partner litigano sulla ripartizione dei fondi', effects: { stats: { reputation: -1 }, relations: { civic: -3 } } }] } },
     { id: 'solo-regione', label: 'Porta tutto in Regione', effects: { stats: { influence: 2 }, relations: { civic: -1 } }, memory: { kind: 'decisione', text: 'Patto territoriale centralizzato in Regione' } },
     { id: 'rinvia', label: 'Rinvia dopo le elezioni', effects: { stats: { popularity: -1 } }, later: { weeks: 8, chance: 0.6, hint: 'I sindaci potrebbero organizzarsi senza di te', label: 'Nasce un coordinamento civico contro il rinvio', effects: { relations: { civic: -4 }, stats: { popularity: -2 } } } }] },
-  { id: 'inchiesta-social', category: 'media', weight: 1, cooldown: 24, when: sit => sit.stats.notoriety >= 30, title: 'Un dossier sui social divide la tua maggioranza', body: 'Un video montato da un avversario riapre una vecchia polemica: la risposta può chiarire o alimentare la storia.', defaultChoice: 'spiega', choices: [
+  { id: 'inchiesta-social', family: 'inchiesta', category: 'media', weight: 1, cooldown: 24, when: sit => sit.stats.notoriety >= 30, title: 'Un dossier sui social divide la tua maggioranza', body: 'Un video montato da un avversario riapre una vecchia polemica: la risposta può chiarire o alimentare la storia.', defaultChoice: 'silenzio', choices: [
     { id: 'spiega', label: 'Pubblica fonti e cronologia', cost: { ap: 1 }, effects: { stats: { reputation: 1 }, relations: { media: 2 }, permanent: { mediaTrasparenza: 1 } }, later: { weeks: 6, chance: 0.65, hint: 'La trasparenza può chiudere la polemica', label: 'Il dossier perde forza dopo le verifiche', effects: { stats: { reputation: 1.5 } } } },
     { id: 'attacca', label: 'Attacca chi ha diffuso il video', effects: { stats: { notoriety: 3, reputation: -1 }, relations: { media: -3 } }, memory: { kind: 'scandalo', text: 'Scontro social con gli avversari' } },
     { id: 'silenzio', label: 'Non amplificare la polemica', effects: { stats: { notoriety: -1 } }, later: { weeks: 4, chance: 0.45, hint: 'La polemica potrebbe tornare', label: 'Il video torna durante un’intervista', effects: { stats: { reputation: -2 } } } }] },
-  { id: 'frattura-alleanza', category: 'partito', weight: 1, cooldown: 36, when: sit => sit.party && sit.signals.hostileCurrents >= 1, exclusive: 'leadership', title: 'Una corrente minaccia di rompere', body: 'Una corrente chiede candidati, linea e garanzie: ignorarla può aprire una crisi di leadership.', defaultChoice: 'mediazione', choices: [
+  { id: 'frattura-alleanza', category: 'partito', weight: 1, cooldown: 36, when: sit => sit.party && sit.signals.hostileCurrents >= 1, exclusive: 'leadership', title: 'Una corrente minaccia di rompere', body: 'Una corrente chiede candidati, linea e garanzie: ignorarla può aprire una crisi di leadership.', defaultChoice: 'lascia', choices: [
     { id: 'mediazione', label: 'Concedi una mediazione pubblica', cost: { capital: 3 }, effects: { org: { cohesion: 5 }, party: { support: 2 }, relations: { otherCurrents: 4 }, permanent: { alleanzaInterna: 1 } }, later: { weeks: 10, outcomes: [
       { chance: 0.5, label: 'La corrente rientra nella linea', effects: { org: { cohesion: 4 }, party: { support: 2 } } },
       { chance: 0.5, label: 'La corrente usa la concessione per chiedere di più', effects: { org: { cohesion: -3 }, party: { support: -2 } } }] } },
     { id: 'disciplina', label: 'Impone la disciplina', effects: { org: { discipline: 8, cohesion: -5 }, party: { support: -3 }, memory: { kind: 'epurazione', text: 'Disciplina imposta alla corrente dissidente' } } },
     { id: 'lascia', label: 'Lascia che rompano', effects: { org: { cohesion: -8 }, party: { support: -4 } }, followUp: { id: 'sfiducia-interna', weeks: 3, chance: 0.7 } }] },
-  { id: 'fiducia-territorio', category: 'parlamento', weight: 0.8, cooldown: 40, when: sit => sit.seat && sit.signals.memoryPressure >= 2, title: 'Il gruppo chiede conto delle promesse', body: 'Una vecchia decisione torna in Aula: alleati e territori vogliono sapere se manterrai la parola.', defaultChoice: 'rendiconto', choices: [
+  { id: 'fiducia-territorio', category: 'parlamento', weight: 0.8, cooldown: 40, when: sit => sit.seat && sit.signals.memoryPressure >= 2, title: 'Il gruppo chiede conto delle promesse', body: 'Una vecchia decisione torna in Aula: alleati e territori vogliono sapere se manterrai la parola.', defaultChoice: 'rinvia', choices: [
     { id: 'rendiconto', label: 'Presenta un rendiconto pubblico', cost: { ap: 1 }, effects: { stats: { reputation: 1.5 }, group: { support: 2 }, permanent: { rendiconti: 1 } }, memory: { kind: 'promessa-mantenuta', text: 'Rendiconto pubblico delle promesse' } },
     { id: 'nuova-promessa', label: 'Annuncia un nuovo impegno', effects: { stats: { popularity: 1 } }, later: { weeks: 12, chance: 0.5, hint: 'La nuova promessa sarà verificata', label: 'Il gruppo presenta il conto della nuova promessa', effects: { group: { support: -5 }, stats: { reputation: -2 } }, memory: { kind: 'promessa-tradita', text: 'Nuova promessa rimasta senza seguito' } } },
     { id: 'rinvia', label: 'Rinvia il rendiconto', effects: { group: { support: -3 }, stats: { reputation: -1 } } }] },
 
   // These events deliberately use the existing memory, pending-chain and relationship
   // primitives: each one changes a different institution and leaves a future hook.
-  { id: 'bilancio-partecipato', category: 'territorio', weight: 1.1, cooldown: 32, memoryKinds: ['tasse', 'tagli'], when: sit => sit.role.local || sit.role.regional, title: 'Il bilancio partecipato divide {municipality}', body: 'Comitati e associazioni chiedono di decidere insieme dove spendere le poche risorse rimaste. Le vecchie tasse e i tagli tornano nel confronto.', defaultChoice: 'apri', choices: [
+  { id: 'bilancio-partecipato', family: 'bilancio', category: 'territorio', weight: 1.1, cooldown: 32, memoryKinds: ['tasse', 'tagli'], when: sit => sit.role.local || sit.role.regional, title: 'Il bilancio partecipato divide {municipality}', body: 'Comitati e associazioni chiedono di decidere insieme dove spendere le poche risorse rimaste. Le vecchie tasse e i tagli tornano nel confronto.', defaultChoice: 'rinvia', choices: [
     { id: 'apri', label: 'Apri il bilancio ai cittadini', cost: { ap: 1 }, effects: { relations: { civic: 5 }, stats: { reputation: 1, popularity: 1 }, permanent: { bilancioPartecipato: 1 } }, later: { weeks: 8, outcomes: [
       { chance: 0.65, label: 'Un progetto civico entra nel bilancio', effects: { stats: { popularity: 2 }, relations: { civic: 3 } }, memory: { kind: 'promessa-mantenuta', text: 'Bilancio partecipato realizzato a {municipality}' } },
       { chance: 0.35, label: 'Le associazioni litigano sui criteri', effects: { stats: { reputation: -1 }, relations: { civic: -3 } } }], cascade: { weeks: 4, label: 'Rendiconto del bilancio partecipato', chance: 0.75, effects: { stats: { reputation: 1 } }, memory: { kind: 'decisione', text: 'Rendiconto del bilancio partecipato' } } } },
     { id: 'tecnico', label: 'Affida la scelta ai tecnici', effects: { stats: { reputation: 1 }, relations: { civic: -2 }, permanent: { bilancioTecnico: 1 } }, memory: { kind: 'decisione', text: 'Bilancio affidato ai tecnici' } },
     { id: 'rinvia', label: 'Rinvia dopo l’approvazione', effects: { stats: { popularity: -1 }, relations: { civic: -2 } }, later: { weeks: 6, label: 'I comitati organizzano un presidio', chance: 0.55, effects: { stats: { popularity: -2 }, relations: { civic: -3 } }, memory: { kind: 'crisi-aperta', text: 'Bilancio partecipato rinviato' } } }] },
-  { id: 'patto-competenze', category: 'partito', weight: 1, cooldown: 34, memoryKinds: ['alleanza', 'alleanza-rotta', 'epurazione'], when: sit => sit.member && sit.signals.hostileCurrents >= 1, title: 'Una corrente propone un patto sulle competenze', body: '{currentA} offre tregua in cambio di deleghe e una regola chiara per le candidature. È un accordo utile oggi, ma crea dipendenze per il prossimo congresso.', defaultChoice: 'firma', choices: [
+  { id: 'patto-competenze', category: 'partito', weight: 1, cooldown: 34, memoryKinds: ['alleanza', 'alleanza-rotta', 'epurazione'], when: sit => sit.member && sit.signals.hostileCurrents >= 1, title: 'Una corrente propone un patto sulle competenze', body: '{currentA} offre tregua in cambio di deleghe e una regola chiara per le candidature. È un accordo utile oggi, ma crea dipendenze per il prossimo congresso.', defaultChoice: 'rifiuta', choices: [
     { id: 'firma', label: 'Firma il patto e distribuisci deleghe', cost: { capital: 2 }, effects: { relations: { currentA: 5, otherCurrents: 2 }, party: { support: 2 }, org: { cohesion: 4 }, permanent: { pattoCompetenze: 1 } }, later: { weeks: 14, outcomes: [
       { chance: 0.55, label: 'La corrente rispetta la tregua', effects: { org: { cohesion: 4 }, party: { support: 2 } }, memory: { kind: 'alleanza', text: 'Patto sulle competenze rispettato' } },
       { chance: 0.45, label: 'La corrente usa le deleghe per preparare una sfida', effects: { org: { cohesion: -5 }, party: { support: -2 } }, memory: { kind: 'alleanza-rotta', text: 'Patto sulle competenze rotto dalla corrente' } }] } },
     { id: 'regola', label: 'Scrivi una regola uguale per tutti', cost: { ap: 1 }, effects: { org: { cohesion: 2 }, party: { support: 1 }, relations: { otherCurrents: 3 }, permanent: { regolaCandidature: 1 } }, memory: { kind: 'decisione', text: 'Regola comune per le candidature interne' } },
     { id: 'rifiuta', label: 'Rifiuta ogni spartizione', effects: { party: { support: -2 }, org: { cohesion: -4 }, relations: { currentA: -6 } }, later: { weeks: 10, label: 'La corrente apre una campagna interna', chance: 0.6, effects: { org: { conflicts: 12, cohesion: -3 }, party: { support: -3 } }, memory: { kind: 'crisi-aperta', text: 'Campagna interna della corrente dissidente' } } }] },
-  { id: 'emendamento-sociale', category: 'parlamento', weight: 1.3, cooldown: 18, memoryKinds: ['voto', 'lealta'], when: sit => sit.seat && sit.signals.openLawInCommission, title: 'Un emendamento sociale mette alla prova il gruppo', body: 'Un emendamento su casa e servizi può cambiare il testo di {lawTitle}. Il gruppo chiede disciplina, i territori chiedono coraggio.', defaultChoice: 'media', choices: [
+  { id: 'emendamento-sociale', category: 'parlamento', weight: 1.3, cooldown: 18, memoryKinds: ['voto', 'lealta'], when: sit => sit.seat && sit.signals.openLawInCommission, title: 'Un emendamento sociale mette alla prova il gruppo', body: 'Un emendamento su casa e servizi può cambiare il testo di {lawTitle}. Il gruppo chiede disciplina, i territori chiedono coraggio.', defaultChoice: 'ritira', choices: [
     { id: 'media', label: 'Media tra il gruppo e i territori', cost: { ap: 1 }, effects: { group: { support: 2 }, relations: { civic: 2 }, stats: { reputation: 1 } }, later: { weeks: 6, label: 'Il relatore recepisce la mediazione', chance: 0.7, effects: { group: { support: 2 }, stats: { reputation: 1 } }, memory: { kind: 'legge', text: 'Mediazione su un emendamento sociale' } } },
     { id: 'vota', label: 'Vota l’emendamento anche contro il gruppo', effects: { stats: { notoriety: 2, reputation: 1 }, group: { support: -5 }, relations: { civic: 3 } }, memory: { kind: 'dissenso', text: 'Dissenso su un emendamento sociale', tone: 'neutral' }, followUp: { id: 'fiducia-dissenso', weeks: 5, chance: 0.45, causes: ['emendamento-sociale'] } },
     { id: 'ritira', label: 'Chiedi di ritirare l’emendamento', effects: { group: { support: 3 }, relations: { civic: -3 }, stats: { reputation: -1 } }, memory: { kind: 'voto', text: 'Emendamento sociale ritirato per disciplina di gruppo', tone: 'bad' } }] },
@@ -499,36 +525,36 @@ export const CAREER_EVENTS = Object.freeze([
       { chance: 0.4, label: 'Gli esclusi aprono una fronda', effects: { government: { stability: -6 }, relations: { leadership: -3 } }, memory: { kind: 'crisi-governo', text: 'Rimpasto che apre una fronda nella maggioranza' } }] } },
     { id: 'resisti', label: 'Difendi la squadra attuale', effects: { government: { stability: -3 }, stats: { reputation: 1 }, relations: { civic: -2 }, permanent: { squadraStabile: 1 } }, memory: { kind: 'decisione', text: 'Squadra di governo difesa senza rimpasto' } },
     { id: 'prometti', label: 'Prometti un cambio dopo il bilancio', effects: { stats: { popularity: 1 }, government: { stability: -1 } }, later: { weeks: 10, label: 'Gli alleati presentano il conto della promessa', chance: 0.65, effects: { government: { stability: -5 }, relations: { leadership: -4 } }, memory: { kind: 'promessa-tradita', text: 'Promessa di rimpasto rimasta senza seguito' } } }] },
-  { id: 'inchiesta-fondi', category: 'media', weight: 0.8, cooldown: 38, when: sit => sit.stats.notoriety >= 35 && sit.signals.memoryPressure >= 1, title: 'Un’inchiesta sui fondi riapre una vecchia promessa', body: 'Un podcast ricostruisce chi ha finanziato il progetto annunciato anni fa. La vicenda è simulata, ma le fonti circolano già tra i giornalisti.', defaultChoice: 'documenti', choices: [
+  { id: 'inchiesta-fondi', family: 'inchiesta', category: 'media', weight: 0.8, cooldown: 38, when: sit => sit.stats.notoriety >= 35 && sit.signals.memoryPressure >= 1, title: 'Un’inchiesta sui fondi riapre una vecchia promessa', body: 'Un podcast ricostruisce chi ha finanziato il progetto annunciato anni fa. La vicenda è simulata, ma le fonti circolano già tra i giornalisti.', defaultChoice: 'silenzio', choices: [
     { id: 'documenti', label: 'Pubblica contratti e ricevute', cost: { ap: 1 }, effects: { relations: { media: 4 }, stats: { reputation: 2 }, permanent: { archivioAperto: 1 } }, later: { weeks: 5, label: 'Le verifiche sul progetto', outcomes: [
       { chance: 0.7, label: 'Le carte chiudono la polemica', effects: { stats: { reputation: 2 } }, memory: { kind: 'promessa-mantenuta', text: 'Documentazione pubblicata sui fondi' } },
       { chance: 0.3, label: 'Manca un allegato e la storia si riapre', effects: { stats: { reputation: -2 }, relations: { media: -2 } }, memory: { kind: 'scandalo', text: 'Allegato mancante nell’inchiesta sui fondi' } }] } },
     { id: 'attacca', label: 'Accusa il podcast di essere fazioso', effects: { stats: { notoriety: 2, reputation: -1 }, relations: { media: -4 } }, memory: { kind: 'scandalo', text: 'Attacco ai giornalisti sull’inchiesta dei fondi', weight: 1.2 } },
     { id: 'silenzio', label: 'Lascia parlare gli avvocati', effects: { stats: { reputation: -1 } }, later: { weeks: 7, label: 'Nuove domande sui fondi', chance: 0.5, effects: { stats: { reputation: -2 } }, memory: { kind: 'ritorno', text: 'L’inchiesta sui fondi ritorna dopo il silenzio' } } }] },
-  { id: 'accordo-imprese-verdi', category: 'economia', positive: true, weight: 1, cooldown: 42, when: sit => sit.role.regional || sit.premier, title: 'Le imprese propongono un accordo verde', body: 'Un consorzio industriale offre investimenti e formazione in cambio di tempi certi sulle autorizzazioni.', defaultChoice: 'accordo', choices: [
+  { id: 'accordo-imprese-verdi', category: 'economia', positive: true, weight: 1, cooldown: 42, when: sit => sit.role.regional || sit.premier, title: 'Le imprese propongono un accordo verde', body: 'Un consorzio industriale offre investimenti e formazione in cambio di tempi certi sulle autorizzazioni.', defaultChoice: 'rifiuta', choices: [
     { id: 'accordo', label: 'Firma un accordo con clausole sociali', cost: { capital: 2 }, effects: { relations: { business: 5, unions: 2 }, stats: { reputation: 1.5 }, permanent: { accordoVerde: 1 } }, later: { weeks: 16, outcomes: [
       { chance: 0.65, label: 'Arrivano investimenti e nuovi posti', effects: { stats: { popularity: 2, reputation: 2 }, relations: { business: 3 }, funds: 500 }, memory: { kind: 'legge', text: 'Accordo verde con clausole sociali rispettato' } },
       { chance: 0.35, label: 'I cantieri ritardano e i sindacati protestano', effects: { stats: { reputation: -1 }, relations: { unions: -4, business: -2 } }, memory: { kind: 'promessa-tradita', text: 'Accordo verde rimasto indietro' } }] } },
     { id: 'gara', label: 'Metti tutto a gara pubblica', effects: { stats: { reputation: 2 }, relations: { business: -1 }, permanent: { garaTrasparente: 1 } }, memory: { kind: 'decisione', text: 'Investimenti verdi assegnati con gara pubblica' } },
     { id: 'rifiuta', label: 'Rifiuta il patto per prudenza', effects: { relations: { business: -3 }, stats: { notoriety: -1 } }, later: { weeks: 12, label: 'Le imprese spostano il progetto altrove', chance: 0.6, effects: { stats: { popularity: -2 }, relations: { business: -2 } } } }] },
-  { id: 'costo-vita', category: 'sociale', weight: 1.8, cooldown: 20, when: sit => sit.signals.spread > 170 || sit.signals.memoryPressure >= 2, title: 'Il costo della vita entra nell’agenda', body: 'Famiglie e piccoli esercenti chiedono una risposta agli aumenti. Le promesse passate sul potere d’acquisto sono ancora ricordate.', defaultChoice: 'misure', choices: [
+  { id: 'costo-vita', family: 'costo-vita', category: 'sociale', weight: 1.8, cooldown: 20, when: sit => sit.signals.spread > 170 || sit.signals.memoryPressure >= 2, title: 'Il costo della vita entra nell’agenda', body: 'Famiglie e piccoli esercenti chiedono una risposta agli aumenti. Le promesse passate sul potere d’acquisto sono ancora ricordate.', defaultChoice: 'mercato', choices: [
     { id: 'misure', label: 'Proponi misure mirate per i redditi bassi', cost: { capital: 2 }, effects: { stats: { popularity: 2, reputation: 1 }, relations: { civic: 3 }, permanent: { protezioneRedditi: 1 } }, later: { weeks: 9, label: 'Verifica delle misure sul costo della vita', outcomes: [
       { chance: 0.55, label: 'Gli aiuti arrivano senza sprechi', effects: { stats: { reputation: 2 }, relations: { civic: 2 } }, memory: { kind: 'promessa-mantenuta', text: 'Misure sul costo della vita attuate' } },
       { chance: 0.45, label: 'Le coperture non bastano', effects: { stats: { popularity: -2, reputation: -1 }, relations: { civic: -2 } }, memory: { kind: 'promessa-tradita', text: 'Misure sul costo della vita senza coperture sufficienti' } }] } },
     { id: 'mercato', label: 'Lascia agire il mercato', effects: { stats: { reputation: 1, popularity: -2 }, relations: { civic: -2 }, permanent: { lineaMercato: 1 } }, memory: { kind: 'decisione', text: 'Risposta al costo della vita affidata al mercato' } },
     { id: 'tavolo', label: 'Convoca imprese e sindacati', cost: { ap: 1 }, effects: { relations: { business: 2, unions: 2 }, stats: { influence: 1 } }, followUp: { id: 'sindacati-vertenza', weeks: 4, chance: 0.45, causes: ['costo-vita'] } }] },
-  { id: 'elezioni-alleanze', category: 'elezioni', weight: 1.2, cooldown: 36, memoryKinds: ['alleanza', 'alleanza-rotta', 'vittoria-elettorale', 'sconfitta-elettorale'], when: sit => sit.party && (sit.signals.electionSoon || sit.campaignActive), title: 'Le alleanze elettorali chiedono una scelta', body: 'Un partner propone una lista comune: la memoria delle ultime alleanze pesa più dei sondaggi.', defaultChoice: 'coalizione', choices: [
+  { id: 'elezioni-alleanze', family: 'coalizione', category: 'elezioni', weight: 1.2, cooldown: 36, memoryKinds: ['alleanza', 'alleanza-rotta', 'vittoria-elettorale', 'sconfitta-elettorale'], when: sit => sit.party && (sit.signals.electionSoon || sit.campaignActive), title: 'Le alleanze elettorali chiedono una scelta', body: 'Un partner propone una lista comune: la memoria delle ultime alleanze pesa più dei sondaggi.', defaultChoice: 'rinvia', choices: [
     { id: 'coalizione', label: 'Costruisci una coalizione programmatica', cost: { capital: 3 }, effects: { party: { support: 2 }, stats: { influence: 2 }, relations: { civic: 2 }, permanent: { coalizioneProgrammatica: 1 } }, later: { weeks: 10, outcomes: [
       { chance: 0.6, label: 'La coalizione presenta una lista credibile', effects: { stats: { popularity: 3 }, party: { support: 2 } }, memory: { kind: 'alleanza', text: 'Coalizione elettorale costruita su un programma' } },
       { chance: 0.4, label: 'I partner litigano sulle candidature', effects: { stats: { reputation: -1 }, party: { support: -3 }, relations: { leadership: -2 } }, memory: { kind: 'alleanza-rotta', text: 'Coalizione elettorale rotta sulle candidature' } }] } },
     { id: 'soli', label: 'Corri da solo', effects: { party: { support: 2 }, stats: { notoriety: 2 }, relations: { civic: -2 }, permanent: { corsaAutonoma: 1 } }, memory: { kind: 'decisione', text: 'Corsa elettorale autonoma' } },
     { id: 'rinvia', label: 'Rinvia l’accordo dopo i sondaggi', effects: { stats: { influence: -1 } }, later: { weeks: 5, label: 'Il partner chiude con un altro partito', chance: 0.65, effects: { party: { support: -3 }, stats: { popularity: -1 } }, memory: { kind: 'alleanza-rotta', text: 'Accordo elettorale perso per un rinvio' } } }] },
-  { id: 'opportunita-carriera', category: 'carriera', positive: true, weight: 0.9, cooldown: 48, when: sit => sit.stats.reputation >= 65 && sit.stats.influence >= 45 && (sit.seat || sit.role.regional), title: 'Una fondazione ti offre una responsabilità nazionale', body: 'Un incarico di studio può aumentare la tua influenza, ma rischia di sottrarre tempo al territorio e al partito.', defaultChoice: 'accetta', choices: [
+  { id: 'opportunita-carriera', category: 'carriera', positive: true, weight: 0.9, cooldown: 48, when: sit => sit.stats.reputation >= 65 && sit.stats.influence >= 45 && (sit.seat || sit.role.regional), title: 'Una fondazione ti offre una responsabilità nazionale', body: 'Un incarico di studio può aumentare la tua influenza, ma rischia di sottrarre tempo al territorio e al partito.', defaultChoice: 'territorio', choices: [
     { id: 'accetta', label: 'Accetta e delega parte del lavoro locale', cost: { ap: 1 }, effects: { stats: { influence: 3, notoriety: 2 }, relations: { leadership: -1, civic: -1 }, permanent: { reteNazionale: 1 } }, later: { weeks: 14, label: 'Il primo rapporto della fondazione', outcomes: [
       { chance: 0.65, label: 'Il rapporto diventa una proposta di legge', effects: { stats: { reputation: 3, influence: 2 }, group: { support: 2 } }, memory: { kind: 'legge', text: 'Rapporto nazionale trasformato in proposta' } },
       { chance: 0.35, label: 'Il territorio lamenta l’assenza', effects: { stats: { popularity: -2 }, relations: { civic: -3 } }, memory: { kind: 'ritorno', text: 'Incarico nazionale pagato dal territorio' } }] } },
     { id: 'territorio', label: 'Rifiuta per restare nel territorio', effects: { stats: { popularity: 2, reputation: 1 }, relations: { civic: 3 }, permanent: { radicamentoLocale: 1 } }, memory: { kind: 'lealta', text: 'Incarico nazionale rifiutato per il territorio' } }] },
-  { id: 'opportunita-media', category: 'opportunita', positive: true, weight: 1.1, cooldown: 28, when: sit => sit.stats.reputation >= 55 && sit.stats.notoriety < 65, title: 'Un’inchiesta collaborativa ti offre spazio', body: 'Una redazione propone un dossier sui servizi pubblici: visibilità e controllo reciproco possono cambiare la percezione del tuo lavoro.', defaultChoice: 'collabora', choices: [
+  { id: 'opportunita-media', category: 'opportunita', positive: true, weight: 1.1, cooldown: 28, when: sit => sit.stats.reputation >= 55 && sit.stats.notoriety < 65, title: 'Un’inchiesta collaborativa ti offre spazio', body: 'Una redazione propone un dossier sui servizi pubblici: visibilità e controllo reciproco possono cambiare la percezione del tuo lavoro.', defaultChoice: 'controllo', choices: [
     { id: 'collabora', label: 'Collabora con dati verificabili', cost: { ap: 1 }, effects: { stats: { notoriety: 2, reputation: 1.5 }, relations: { media: 4 }, permanent: { datiAperti: 1 } }, later: { weeks: 7, label: 'Il dossier sui servizi pubblici', outcomes: [
       { chance: 0.7, label: 'Il dossier mostra risultati concreti', effects: { stats: { reputation: 2, popularity: 1 } }, memory: { kind: 'promessa-mantenuta', text: 'Dati pubblici usati per il dossier sui servizi' } },
       { chance: 0.3, label: 'Un dato incompleto alimenta una polemica', effects: { stats: { reputation: -2 }, relations: { media: -2 } }, memory: { kind: 'scandalo', text: 'Dato incompleto nel dossier sui servizi' } }] } },
@@ -655,7 +681,7 @@ export const SITUATION_EVENTS = Object.freeze({
     { id: 'colpa', label: 'Accusa il partito di non averti sostenuto', requires: 'party', effects: { stats: { notoriety: 2 }, party: { support: -6 }, relations: { leadership: -6 } }, risk: { chance: 0.3, label: 'La direzione valuta provvedimenti nei tuoi confronti', effects: { party: { support: -6 } } } },
     { id: 'territorio', label: 'Riparti dal territorio', cost: { ap: 1 }, effects: { stats: { popularity: 1 }, prep: 10, relations: { civic: 3 } } },
     { id: 'silenzio', label: 'Rimani in silenzio', effects: { stats: { notoriety: -1 } } }] },
-  'giunta-offerta': { id: 'giunta-offerta', title: 'La giunta: {executive} valuta il tuo nome', body: 'La maggioranza compone la giunta. Puoi chiedere un assessorato, ma la scelta non è tua: contano gli equilibri tra gli alleati.', defaultChoice: 'consiglio', choices: [
+  'giunta-offerta': { id: 'giunta-offerta', title: 'La giunta: {executive} valuta il tuo nome', body: 'La maggioranza compone la giunta. Puoi chiedere un assessorato, ma la scelta non è tua: contano gli equilibri tra gli alleati, e di solito si affida ai nuovi la delega più in sofferenza. Un assessore risponde del servizio: ogni sei settimane viene giudicato.', defaultChoice: 'consiglio', choices: [
     { id: 'chiedi', label: 'Chiedi un assessorato', cost: { capital: 3 }, outcomes: [
       { chance: 0.4, label: 'Nominato assessore', effects: { stats: { influence: 3, reputation: 1 } }, special: 'local-office', office: { title: 'Assessore {assessorLevel}', institution: '{institution}', level: '{level}' } },
       { chance: 0.3, label: 'Solo una delega da consigliere: meno di quanto speravi', effects: { stats: { influence: 1 } }, special: 'local-office', office: { title: 'Consigliere delegato ({assessorLevel})', institution: '{institution}', level: '{level}' } },
@@ -747,6 +773,10 @@ export const SITUATION_EVENTS = Object.freeze({
     { id: 'concedi', label: 'Concedi un assessorato', effects: { stats: { influence: -0.5 } }, special: 'local-concede' },
     { id: 'tratta', label: 'Tratta: un impegno sul programma', cost: { capital: 3 }, special: 'local-hold' },
     { id: 'tieni', label: 'Tieni il punto', effects: { stats: { reputation: 0.5 } } }] },
+  'delega-revocata': { id: 'delega-revocata', title: 'Ti tolgono la delega: {portfolio}', body: 'Per due valutazioni di fila il servizio non ha convinto e nel {institution} la tua delega torna all’esecutivo. Puoi accettare e ripartire dai banchi, protestare in pubblico o chiedere conto di come è stata decisa.', defaultChoice: 'accetta', choices: [
+    { id: 'accetta', label: 'Accetta e riparti dal consiglio', effects: { stats: { reputation: 0.5 } } },
+    { id: 'protesta', label: 'Protesta in pubblico: «Mi hanno dato il servizio più in crisi»', effects: { stats: { notoriety: 1.5, reputation: -0.5 }, relations: { leadership: -2 } }, risk: { chance: 0.3, label: 'La maggioranza si irrita per lo strappo', effects: { stats: { influence: -1 } } } },
+    { id: 'chiedi-conto', label: 'Chiedi conto di come è stata decisa', cost: { capital: 2 }, effects: { stats: { notoriety: 1, influence: 0.5 } } }] },
   'incarico-governo': { id: 'incarico-governo', title: 'Il Presidente della Repubblica ti affida l’incarico', body: 'Il tuo partito guida {majority}: tocca a te formare il governo, distribuire i ministeri e chiedere la fiducia alle Camere. Se rinunci, l’incarico passa a un’altra figura di {leader}.', defaultChoice: 'accetta', choices: [
     { id: 'accetta', label: 'Accetta l’incarico: formi il governo', effects: { stats: { notoriety: 2, influence: 2 } }, special: 'national-mandate-accept' },
     { id: 'rinuncia', label: 'Rinuncia e lascia l’incarico a un’altra figura', effects: { party: { support: -2 } }, special: 'national-mandate-decline' }] }

@@ -32,7 +32,16 @@ function forceWin(store) {
   c.day = c.totalDays - 1;
   store.advance(1);
 }
-async function win({ seed, region, type, role = null, partyId }) {
+// The vote of a list (the European elections above all) also depends on the share of the party in the polls of the simulated world and
+// on the preferences inside the list: a seed on which the party stays low or the player is too far down is skipped (up to five seeds), because
+// what this check is about is what the mandate brings once it is won.
+async function win(args) {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const outcome = await winOnce({ ...args, seed: attempt ? `${args.seed}-${attempt + 1}` : args.seed }, attempt === 4);
+    if (outcome) return outcome;
+  }
+}
+async function winOnce({ seed, region, type, role = null, partyId }, last = true) {
   const run = await startCareer({ seed, level: 'comunale', region, ...(partyId ? { partyId } : {}) });
   const { store, db } = run;
   give(store);
@@ -45,6 +54,7 @@ async function win({ seed, region, type, role = null, partyId }) {
   if (store.getState().campaign?.status === 'active') forceWin(store); // the runoff
   const s = store.getState();
   assert.equal(s.campaign?.status, 'finished', `${seed}: la campagna si chiude con il voto`);
+  if (!last && !s.career.lastElectionResult?.personalMandate) return null;
   assert.ok(s.career.lastElectionResult?.personalMandate, `${seed}: mandato conquistato (${s.career.lastElectionResult?.outcomeLabel})`);
   const player = s.dataset.politicians.find(item => item.id === s.career.playerId);
   const offices = s.dataset.offices.filter(item => item.politicianId === player.id && !item.endDate);

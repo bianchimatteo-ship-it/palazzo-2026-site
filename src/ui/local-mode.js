@@ -3,9 +3,10 @@
 // decides, the majority it needs, what it changes, the forecast and the player's vote), what the player can do
 // (propose, question, negotiate, govern), the chronicle of the council. Everything here is simulation, except the size
 // of the European groups at the constitutive session of 2024 (real, with its source).
-import { EP_COMMITTEES, EP_COSTS, EP_GROUPS_2024, committeeById, compactVote, coverageGap, europeanOdds, forecastAct, inCommittee, INSTITUTIONS, isClosedAct, LOCAL_VOTE_CHOICES, localAreas, majorityMargin, measureOf, nextEuropeanRole, typeOfAct, voteRule, withEuropeanSeat, withLocalState } from '../core/local-engine.js?v=20261003-2';
-import { ACT_TYPES, CITY_INDICATORS, QUORUMS, neededYes, proposableTypes } from '../data/simulation/local-acts.js?v=20261003-2';
+import { DELEGA_FORBIDDEN, EP_COMMITTEES, EP_COSTS, EP_GROUPS_2024, committeeById, compactVote, coverageGap, europeanOdds, forecastAct, inCommittee, INSTITUTIONS, isClosedAct, LOCAL_VOTE_CHOICES, localAreas, majorityMargin, measureOf, actorOf, delegaScore, nextEuropeanRole, typeOfAct, voteRule, withEuropeanSeat, withLocalState } from '../core/local-engine.js?v=20261003-2';
+import { ACT_TYPES, CITY_INDICATORS, QUORUMS, actTypeOf, neededYes, proposableTypes } from '../data/simulation/local-acts.js?v=20261003-2';
 import { INDICATORS } from '../data/simulation/society-rules.js?v=20261003-2';
+import { DELEGA_RULES } from '../data/simulation/office-rules.js?v=20261003-2';
 import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261003-2';
 import { esc, meter, num, signed } from './charts.js?v=20261003-2';
 import { glyph } from './visuals.js?v=20261003-2';
@@ -25,6 +26,8 @@ const giuntaSize = inst => (inst.executive?.members?.length ?? 0) + 1;
 function roleLine(inst) {
   const rules = INSTITUTIONS[inst.kind];
   const own = inst.groups.find(group => group.id === inst.playerGroupId);
+  if (inst.executive?.leader === 'player') return `${inst.kind === 'provincia' ? 'Presidente della Provincia' : inst.kind === 'regione' ? 'Presidente della Regione' : 'Sindaco'} · guidi la ${rules.executive.toLowerCase()}`;
+  if (inst.playerDelega) return `${inst.playerRole === 'assessore' ? (inst.kind === 'provincia' ? 'Assessore provinciale' : 'Assessore') : 'Consigliere delegato'} · delega ${inst.playerDelega.portfolio} · ${inst.playerSide === 'maggioranza' ? 'in maggioranza' : 'all’opposizione'}`;
   if (ROLE_LABELS[inst.playerRole] && inst.playerRole !== 'eurodeputato') return `${ROLE_LABELS[inst.playerRole]} · guidi la ${rules.executive.toLowerCase()}`;
   return `${inst.playerRole === 'eurodeputato' ? ROLE_LABELS.eurodeputato : rules.member}${own ? ` · gruppo ${own.label}` : ''} · ${inst.playerSide === 'maggioranza' ? 'in maggioranza' : 'all’opposizione'}`;
 }
@@ -60,7 +63,7 @@ function executivePanel(inst) {
   const reshuffle = leads && majority.length > 1 ? `<form class="local-inline-form" data-local-reshuffle-form data-inst-id="${esc(inst.id)}"><label>Assessorato<select name="portfolio">${inst.executive.members.map(item => `<option value="${esc(item.portfolio)}">${esc(item.portfolio)}</option>`).join('')}</select></label><label>Al gruppo<select name="group">${majority.map(group => `<option value="${esc(group.id)}">${esc(group.label)}</option>`).join('')}</select></label><button class="secondary-button" type="submit">Rimpasto · 1 giorno</button></form><p class="poll-footnote">Chi riceve l’assessorato diventa più leale, chi lo perde meno: una maggioranza trascurata può uscire e sfiduciarti.</p>` : '';
   // Local taxes: the head of the executive proposes the rates, the council votes them (one step at a time).
   const taxPending = inst.acts.some(act => act.category === 'tributi' && !isClosedAct(act));
-  const tax = leads && inst.budget ? `<div class="local-tax"><span>Pressione fiscale locale</span><div class="bill-vote-choices" role="group" aria-label="Pressione fiscale locale">${Object.entries(TAX_LEVELS).map(([id, label]) => `<button type="button" class="chip-button${inst.budget.localTax === id ? ' active' : ''}" data-local-tax="${id}" data-inst-id="${esc(inst.id)}" aria-pressed="${inst.budget.localTax === id}"${taxPending || inst.budget.localTax === id ? ' disabled' : ''}>${label}</button>`).join('')}</div><small>${taxPending ? 'La proposta sulle aliquote è in consiglio: aspetta il voto.' : 'Proponi al consiglio le nuove aliquote (un livello alla volta): più entrate allargano il margine del bilancio ma costano popolarità; meno tasse il contrario.'}</small></div>` : '';
+  const tax = leads && inst.budget && actTypeOf(inst.kind, 'tributi') ? `<div class="local-tax"><span>Pressione fiscale locale</span><div class="bill-vote-choices" role="group" aria-label="Pressione fiscale locale">${Object.entries(TAX_LEVELS).map(([id, label]) => `<button type="button" class="chip-button${inst.budget.localTax === id ? ' active' : ''}" data-local-tax="${id}" data-inst-id="${esc(inst.id)}" aria-pressed="${inst.budget.localTax === id}"${taxPending || inst.budget.localTax === id ? ' disabled' : ''}>${label}</button>`).join('')}</div><small>${taxPending ? 'La proposta sulle aliquote è in consiglio: aspetta il voto.' : 'Proponi al consiglio le nuove aliquote (un livello alla volta): più entrate allargano il margine del bilancio ma costano popolarità; meno tasse il contrario.'}</small></div>` : '';
   const budget = inst.budget ? `<div><dt>Bilancio</dt><dd>Margine ${num(inst.budget.margin, 0)}/100 · pressione fiscale ${esc(inst.budget.localTax)} · ${inst.budget.provisional ? '<b class="bad">esercizio provvisorio</b>' : `bilancio approvato per il ${inst.budget.approvedYear}`}</dd></div>` : '';
   return `<dl class="hq-facts"><div><dt>${esc(rules.leader)}</dt><dd>${esc(inst.executive.label)}</dd></div><div><dt>Stabilità</dt><dd>${num(inst.executive.stability, 0)}/100 ${meter(inst.executive.stability, inst.executive.stability < 40 ? 'danger' : '')}</dd></div><div><dt>Pressione dell’opposizione</dt><dd>${num(inst.pressure, 0)}/100 ${meter(inst.pressure, inst.pressure > 65 ? 'danger' : '')}</dd></div>${budget}</dl><details class="local-giunta"><summary>${esc(rules.executive)}: ${inst.executive.members.length} assessori (figure simulate)</summary><ul>${members}</ul></details>${tax}${reshuffle}`;
 }
@@ -87,7 +90,7 @@ function territoryPanel(inst, state) {
   }
   const list = rows.map(row => `<div><dt>${esc(row.label)}</dt><dd>${num(row.value, 0)}/100 ${meter(row.value, row.value < 40 ? 'danger' : '')}${Math.abs(row.coming) >= 0.1 ? `<small>In arrivo ${signed(row.coming)} da ${esc(row.causes.slice(0, 2).join(', ') || 'atti approvati')}</small>` : ''}</dd></div>`).join('');
   const commitments = (inst.commitments ?? []).filter(item => item.status === 'aperto').map(item => `<li>${esc(AREA_BY_ID[item.area]?.label ?? item.area)}: un atto entro il ${esc(date(item.dueAt))} <small>(mozione “${esc(item.title)}”)</small></li>`).join('');
-  return `<dl class="hq-facts local-territory">${list}</dl>${commitments ? `<div class="local-commitments"><strong>Impegni votati dal consiglio</strong><ul>${commitments}</ul></div>` : ''}<p class="poll-footnote">${inst.kind === 'comune' ? 'Servizi della città (simulazione): li muovono gli atti approvati, senza cura si consumano; una parte degli effetti arriva agli indicatori della regione.' : 'Indicatori della regione nella simulazione del Paese: gli atti approvati li muovono settimana dopo settimana.'}</p>`;
+  return `<dl class="hq-facts local-territory">${list}</dl>${commitments ? `<div class="local-commitments"><strong>Impegni votati dal consiglio</strong><ul>${commitments}</ul></div>` : ''}<p class="poll-footnote">${inst.kind === 'comune' ? 'Servizi della città (simulazione): li muovono gli atti approvati, senza cura si consumano; una parte degli effetti arriva agli indicatori della regione.' : inst.kind === 'provincia' ? 'Indicatori della regione di cui la provincia fa parte: strade, scuole e servizi di area vasta ne muovono una quota, settimana dopo settimana.' : 'Indicatori della regione nella simulazione del Paese: gli atti approvati li muovono settimana dopo settimana.'}</p>`;
 }
 // A European dossier in the own committees: the report can be asked, the text amended (odds shown before the choice).
 function dossierActions(inst, act, context) {
@@ -179,9 +182,9 @@ function actCard(inst, act, capital, context = { capital, influence: 30 }) {
   }
   // The player votes in the council on its acts, not on those of the Giunta (unless leading it) nor on questions.
   const vote = open && !question && !byGiunta && act.sponsor.kind !== 'player' && !(leads && ['executive', 'budget'].includes(act.sponsor.kind)) ? `<div class="bill-vote"><span>Il tuo voto in aula</span><div class="bill-vote-choices" role="group" aria-label="Il tuo voto">${Object.entries(LOCAL_VOTE_CHOICES).map(([id, label]) => `<button type="button" class="chip-button${(act.pendingPlayerVote ?? 'linea') === id ? ' active' : ''}" data-local-vote="${id}" data-inst-id="${esc(inst.id)}" data-act-id="${esc(act.id)}" aria-pressed="${(act.pendingPlayerVote ?? 'linea') === id}">${esc(label)}</button>`).join('')}</div></div>` : '';
-  const giuntaNote = open && byGiunta && !leads ? `<p class="poll-footnote">Atto della ${esc(INSTITUTIONS[inst.kind].executive)}: il consiglio non lo vota; puoi chiedere conto con un’interrogazione.</p>` : '';
+  const giuntaNote = open && byGiunta && !leads && actorOf(inst) !== 'assessore' ? `<p class="poll-footnote">Atto della ${esc(INSTITUTIONS[inst.kind].executive)}: il consiglio non lo vota; puoi chiedere conto con un’interrogazione.</p>` : '';
   // The head of the executive (or the proposer) can win a wavering group with a concession: 2 points of capital.
-  const own = act.sponsor.kind === 'player' || (leads && ['executive', 'budget'].includes(act.sponsor.kind));
+  const own = act.sponsor.kind === 'player' || act.byDelega || (leads && ['executive', 'budget'].includes(act.sponsor.kind));
   const wavering = own && forecast?.organ === 'consiglio' ? forecast.positions.filter(item => item.groupId !== inst.playerGroupId && item.line !== 'favorevole' && !act.concession?.[item.groupId]).sort((a, b) => b.support - a.support).slice(0, 2) : [];
   const concede = wavering.length ? `<div class="bill-speak">${wavering.map(item => `<button class="secondary-button" data-local-concede="${esc(item.groupId)}" data-inst-id="${esc(inst.id)}" data-act-id="${esc(act.id)}"${capital < 2 ? ' disabled' : ''}>Concessione a ${esc(item.label)} · 2 cap.</button>`).join('')}</div>` : '';
   const result = last && open ? `<div class="law-vote-result"><strong>Voto · ${esc(date(last.date))}</strong><span>Sì <b>${last.yes}</b></span><span>No <b>${last.against}</b></span><span>Astenuti <b>${last.abstain}</b></span>${last.playerChoice ? `<span>Il tuo voto <b>${esc(LOCAL_VOTE_CHOICES[last.playerChoice] ?? last.playerChoice)}</b>${last.playerLine && last.playerChoice !== last.playerLine && last.playerChoice !== 'assente' ? ' (in dissenso)' : ''}</span>` : ''}<em>${act.adoptedAt && !act.firstReadingAt ? 'Adottato' : 'Prima deliberazione'}</em></div>` : '';
@@ -195,19 +198,37 @@ function actCard(inst, act, capital, context = { capital, influence: 30 }) {
   const warning = gap ? `<p class="local-warning">${glyph('alert', 13)} ${esc(gap[0].toUpperCase() + gap.slice(1))}: così verrà ritirato.</p>` : '';
   return `<article class="law-card bill-card local-act stage-${esc(act.stage)} side-${esc(side)}"><div class="law-card-title"><span class="section-kicker">${esc(String(act.label ?? '').toUpperCase())} · ${esc(String(AREA_BY_ID[act.area]?.label ?? act.area).toUpperCase())}</span><h3>${esc(act.title)}</h3><span class="bill-sponsor"><b class="sponsor-${esc(side)}">${esc(side === 'governo' ? INSTITUTIONS[inst.kind].executive : side === 'maggioranza' ? 'Maggioranza' : 'Opposizione')}</b> ${side === 'governo' ? '' : esc(act.sponsor.label ?? '')}</span></div><div class="bill-meta"><span class="bill-flag ${act.stage === 'approvato' ? 'good' : act.stage === 'respinto' ? 'bad' : ''}">${esc(STAGES[act.stage] ?? act.stage)}</span>${when}${flags}</div>${dossierLine(inst, act)}${how}${measure}${warning}${forecastBox}${open && (vote || concede || dossierActions(inst, act, context)) ? `<div class="bill-actions">${dossierActions(inst, act, context)}${concede}${vote}</div>` : ''}${giuntaNote}${result}${type && inst.kind !== 'europa' ? actExplain(inst, act, type) : ''}</article>`;
 }
+// What the player is in this institution and what that asks: the head of the executive answers for everything, an assessore for the
+// service of the delega (judged every few weeks), a group leader for the cohesion of the group, a councillor for the vote and the motions.
+function roleBox(inst, state) {
+  const actor = actorOf(inst);
+  if (inst.kind === 'europa') return '';
+  if (actor === 'assessore' || actor === 'delegato') {
+    const delega = inst.playerDelega;
+    const territory = ['regione', 'provincia'].includes(inst.kind) ? state?.society?.regions?.[inst.region]?.indicators ?? null : null;
+    const score = delegaScore(inst, territory);
+    const weeks = Math.max(0, DELEGA_RULES.reviewWeeks - Math.floor((Date.parse(`${state?.clock?.currentDate ?? delega.lastReview}T12:00:00Z`) - Date.parse(`${delega.lastReview ?? delega.since}T12:00:00Z`)) / 604800000));
+    return `<div class="local-role-box"><strong>${actor === 'assessore' ? 'Assessore' : 'Consigliere delegato'} · ${esc(delega.portfolio)}</strong><span>Servizio ${Number.isFinite(score) ? `a ${num(score, 0)}/100 (all’inizio ${num(delega.baseline ?? score, 0)})` : 'non misurabile'} · prossima valutazione tra ${weeks} settimane · valutazioni negative di fila ${delega.strikes ?? 0}/${DELEGA_RULES.strikesToRevoke}</span><small>Proponi gli atti della tua delega (${esc(delega.areas.map(id => AREA_BY_ID[id]?.label.toLowerCase() ?? id).join(', '))}); ${actor === 'assessore' ? 'non interroghi la giunta di cui fai parte' : 'la giunta li adotta'}; se il servizio va male te ne rispondi.</small></div>`;
+  }
+  if (actor === 'leader') return `<div class="local-role-box"><strong>Guidi l’esecutivo</strong><small>Giunta, bilancio${actTypeOf(inst.kind, 'tributi') ? ' e tributi' : ' (la Provincia non ha tributi propri di peso)'} sono tuoi; così come la responsabilità di ogni servizio, della maggioranza e della sfiducia.</small></div>`;
+  if (inst.playerGroupLead) return `<div class="local-role-box"><strong>Capogruppo</strong><small>Il tuo voto orienta quello del gruppo; se lo porti contro la sua linea, la coesione ne risente.</small></div>`;
+  return `<div class="local-role-box"><strong>Consigliere</strong><small>Voti gli atti, presenti mozioni e interroghi l’esecutivo; non governi: la delega la dà il sindaco o il presidente.</small></div>`;
+}
 function actionsPanel(inst, capital) {
   const rules = INSTITUTIONS[inst.kind];
-  const leads = inst.executive?.leader === 'player';
-  const pending = !leads && inst.acts.some(act => act.sponsor.kind === 'player' && act.category !== 'interrogazione' && !isClosedAct(act));
-  const areas = localAreas(inst.kind).filter(id => AREA_BY_ID[id]);
+  const actor = actorOf(inst);
+  const leads = actor === 'leader';
+  const delegated = actor === 'assessore' || actor === 'delegato';
+  const pending = !leads && inst.acts.some(act => (act.sponsor.kind === 'player' || act.byDelega) && act.category !== 'interrogazione' && !isClosedAct(act));
+  const areas = (delegated ? inst.playerDelega.areas : localAreas(inst.kind)).filter(id => AREA_BY_ID[id]);
   const areaOptions = areas.map(id => `<option value="${esc(id)}">${esc(AREA_BY_ID[id].label)}</option>`).join('');
   // The kinds the office can propose (taxes have their own buttons, questions their own form); variants as options.
-  const kinds = inst.kind === 'europa' ? [] : proposableTypes(inst.kind, leads).filter(type => !['interrogazione', 'tributi'].includes(type.id));
+  const kinds = inst.kind === 'europa' ? [] : proposableTypes(inst.kind, leads || delegated).filter(type => !['interrogazione', 'tributi'].includes(type.id) && !(delegated && DELEGA_FORBIDDEN.has(type.id)));
   const money = type => type.cost > 0 ? ` · costo ${num(type.cost, 1)}` : type.revenue ? ` · entrate ${num(type.revenue, 1)}` : type.cost < 0 ? ` · risparmio ${num(-type.cost, 1)}` : '';
   const kindOptions = kinds.flatMap(type => (type.variants ?? [null]).map(variant => `<option value="${esc(variant ? `${type.id}|${variant}` : type.id)}">${esc(type.label)}${variant ? `: ${esc(variant)}` : ''}${type.areas ? ` (${esc(type.areas.map(id => AREA_BY_ID[id]?.label.toLowerCase() ?? id).join(', '))})` : ''}${esc(money(type))}</option>`)).join('');
   const kindSelect = kinds.length ? `<label>Tipo di atto<select name="category"><option value="">Quello adatto al tema</option>${kindOptions}</select></label>` : '';
   const propose = `<form class="local-inline-form" data-local-propose-form data-inst-id="${esc(inst.id)}">${kindSelect}<label>${esc(inst.kind === 'europa' ? rules.acts.player : 'Tema')}<select name="area">${areaOptions}</select></label><button class="primary-button" type="submit"${pending ? ' disabled' : ''}>Presenta · 1 giorno</button></form>${pending ? '<p class="poll-footnote">Hai già una proposta in discussione: aspetta il voto.</p>' : `<p class="poll-footnote">${leads ? `Gli atti della Giunta li adotta la Giunta, gli altri vanno in consiglio con la maggioranza richiesta; puoi fare concessioni ai gruppi incerti. Un atto che spende più del margine (${num(inst.budget?.margin ?? 0, 0)}) viene ritirato per mancanza di copertura.` : inst.kind === 'europa' ? 'Ne sei relatore: prima il voto nella commissione competente, poi la plenaria; servono voti anche fuori dal tuo gruppo.' : inst.playerSide === 'maggioranza' ? 'Dalla maggioranza ha buone probabilità se la giunta la sostiene: le mozioni approvate impegnano la giunta.' : 'Dall’opposizione passa solo se convinci qualcuno della maggioranza: scegli un tema che sentono anche loro.'}</p>`}`;
-  const question = leads ? '' : inst.kind === 'europa'
+  const question = leads || actor === 'assessore' ? '' : inst.kind === 'europa'
     ? `<div class="bill-speak"><button class="secondary-button" data-local-question data-inst-id="${esc(inst.id)}">${glyph('mic', 14)} Interrogazione alla ${esc(rules.executive)} · 1 giorno</button></div>`
     : `<div class="local-inline-form local-question" data-local-question-box><label>Interrogazione sul tema<select name="question-area">${areaOptions}</select></label><button class="secondary-button" data-local-question data-inst-id="${esc(inst.id)}">${glyph('mic', 14)} Interrogazione alla ${esc(rules.executive.toLowerCase())} · 1 giorno</button></div>`;
   return `${propose}${question}<p class="poll-footnote">Capitale politico disponibile: ${num(capital, 0)}.</p>`;
@@ -233,8 +254,8 @@ function institutionCard(input, capital, context, state) {
   const archive = [...closed.map(act => ({ title: act.title, stage: act.stage, closedAt: act.closedAt, vote: compactVote(act.votes?.at(-1)), committeeVote: act.votes?.length ? null : act.committeeVote ?? null, answer: act.answer ?? null, withdrawn: act.withdrawn ?? null, effects: measureText(inst, act) })), ...inst.archive.slice(-6).reverse()].slice(0, 10).map(item => `<li><span class="bill-flag ${item.stage === 'approvato' || item.answer === 'esauriente' ? 'good' : 'bad'}">${esc(STAGES[item.stage] ?? item.stage)}</span> ${esc(item.title)} <small>${esc(date(item.closedAt))}</small>${resultLine(item)}</li>`).join('');
   return `<section class="hq-panel local-institution" id="istituzione-${esc(inst.kind)}"><div class="home-section-heading"><div><span class="section-kicker">${esc(rules.label.toUpperCase())} · SIMULAZIONE</span><h2>${esc(inst.name)}</h2><p class="section-subtitle">${esc(roleLine(inst))}${inst.until ? ` · mandato fino al voto del ${esc(date(inst.until))}` : ''}</p></div><span class="parliament-provenance simulated">SCENARIO SIMULATO</span></div>
     <div class="local-grid"><div><h3 class="local-h">Composizione</h3>${composition(inst)}</div><div><h3 class="local-h">${esc(inst.ep ? 'Le tue commissioni' : rules.executive)}</h3>${inst.ep ? europeanPanel(inst, context) : executivePanel(inst)}</div></div>
-    ${inst.ep ? `<h3 class="local-h">${esc(rules.executive)}</h3>${executivePanel(inst)}` : `<h3 class="local-h">${esc(inst.kind === 'comune' ? 'Stato della città' : 'Stato della regione')}</h3>${territoryPanel(inst, state)}`}
-    <h3 class="local-h">Cosa puoi fare</h3>${actionsPanel(inst, capital)}
+    ${inst.ep ? `<h3 class="local-h">${esc(rules.executive)}</h3>${executivePanel(inst)}` : `<h3 class="local-h">${esc(inst.kind === 'comune' ? 'Stato della città' : inst.kind === 'provincia' ? 'Stato del territorio provinciale' : 'Stato della regione')}</h3>${territoryPanel(inst, state)}`}
+    <h3 class="local-h">Cosa puoi fare</h3>${roleBox(inst, state)}${actionsPanel(inst, capital)}
     <h3 class="local-h">In discussione (${open.length})</h3>${open.map(act => actCard(inst, act, capital, context)).join('') || '<p class="quiet-copy">Nessun atto in calendario: la giunta e i gruppi ne presentano di nuovi ogni settimana.</p>'}
     ${archive ? `<details class="bill-archive"><summary>Atti conclusi</summary><ul>${archive}</ul></details>` : ''}
     ${inst.kind !== 'europa' ? actsGuide(inst) : ''}
@@ -256,6 +277,6 @@ export const activeInstitutions = state => (state?.local?.institutions ?? []).fi
 // How a council is named in the links that lead to it (Home, election report).
 export function institutionLabel(inst) {
   if (inst.kind === 'europa') return 'Parlamento europeo';
-  if (inst.executive?.leader === 'player') return inst.kind === 'regione' ? `La tua Regione · ${inst.name.replace(/^Regione\s*/, '')}` : `Il tuo Comune · ${inst.name.replace(/^Comune di\s*/, '')}`;
-  return inst.kind === 'regione' ? 'Consiglio regionale' : 'Consiglio comunale';
+  if (inst.executive?.leader === 'player') return inst.kind === 'regione' ? `La tua Regione · ${inst.name.replace(/^Regione\s*/, '')}` : inst.kind === 'provincia' ? `La tua Provincia · ${inst.name.replace(/^(Provincia|Città metropolitana|Libero consorzio comunale)\s*(di)?\s*/, '')}` : `Il tuo Comune · ${inst.name.replace(/^Comune di\s*/, '')}`;
+  return inst.kind === 'regione' ? 'Consiglio regionale' : inst.kind === 'provincia' ? 'Consiglio provinciale' : 'Consiglio comunale';
 }

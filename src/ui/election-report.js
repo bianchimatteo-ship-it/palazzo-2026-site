@@ -8,7 +8,7 @@ const STAT_NAMES = { reputation: 'Reputazione', influence: 'Influenza', notoriet
 const toneOf = value => value > 0 ? 'good' : value < 0 ? 'bad' : 'neutral';
 
 // Where a mandate won is played while the term is open: the council (Territori page) or the Chambers.
-const PLACES = { comunale: ['comune', 'Vai al consiglio comunale'], regionale: ['regione', 'Vai al consiglio regionale'], europee: ['europa', 'Vai al Parlamento europeo'] };
+const PLACES = { comunale: ['comune', 'Vai al consiglio comunale'], provinciale: ['provincia', 'Vai al consiglio provinciale'], regionale: ['regione', 'Vai al consiglio regionale'], europee: ['europa', 'Vai al Parlamento europeo'] };
 export function mandatePlace(state, report) {
   if (!report?.personalMandate) return null;
   if (report.electionType === 'politiche') return state?.parliament?.player || state?.career?.parliamentContext ? { nav: 'parlamento', label: 'Vai al Parlamento' } : null;

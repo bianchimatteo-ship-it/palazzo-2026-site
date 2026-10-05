@@ -33,6 +33,7 @@ async function environment(seed, { keepStorage = false } = {}) {
 
 const PROFILES = {
   comunale: { initialLevel: 'comunale' },
+  provinciale: { initialLevel: 'provinciale' },
   regionale: { initialLevel: 'regionale' },
   deputato: { initialLevel: 'deputato', parliamentStartMode: 'real-context', parliamentaryGroupId: 'cam-xix-03' },
   senatore: { initialLevel: 'senatore', parliamentStartMode: 'real-context', parliamentaryGroupId: 'senato-xix-gruppo-56' },

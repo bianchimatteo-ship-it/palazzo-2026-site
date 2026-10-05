@@ -6,6 +6,7 @@ import { activeMinisters, canManageParliament, CONTEST_COST, CONTEST_WINDOW_DAYS
 import { isPrimeMinister } from './roles.js?v=20261003-2';
 import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261003-2';
 import { advancementOdds, progressionFactors } from './progression-engine.js?v=20261003-2';
+import { standingFactors, standingOf } from './standing-engine.js?v=20261003-2';
 import { formatDate } from './time.js?v=20261003-2';
 import { presidencySchedule, presidentialEligibility, projection, termEndOf, whiteSemester } from './presidency-engine.js?v=20261003-2';
 
@@ -119,7 +120,8 @@ function governmentTrack(state, stats) {
     { id: 'premier', label: 'Presidente del Consiglio', done: false, current: premier }
   ];
   const problems = parliament ? governmentPostProblems(parliament, stats, state.clock.currentDate) : ['Serve un seggio con un gruppo di riferimento.'];
-  const chance = !problems.length ? governmentPostOdds(parliament, stats) : null;
+  const standingNow = standingFactors({ game, stats, parliament });
+  const chance = !problems.length ? governmentPostOdds(parliament, stats, null, { institutional: standingNow.institutional, mediaRep: standingNow.mediaRep, competence: standingNow.competence }) : null;
   const history = (parliament?.history ?? []).filter(item => ['richiesta-incarico-respinta', 'nomina-ministro-giocatore'].includes(item.type)).slice(-6).reverse()
     .map(item => ({ kind: 'governo', target: item.details?.portfolio ? `Ministero ${item.details.portfolio}` : 'Incarico di governo', outcome: item.type === 'nomina-ministro-giocatore' ? 'promosso' : /sottosegretario/.test(item.text ?? '') ? 'incarico-inferiore' : 'sconfitta-interna', label: item.type === 'nomina-ministro-giocatore' ? 'Ministero ottenuto' : /sottosegretario/.test(item.text ?? '') ? 'Proposto un posto da sottosegretario' : 'Richiesta respinta', chance: item.details?.chance ?? null, date: item.date }));
   return {
@@ -180,5 +182,5 @@ export function careerOverview(state) {
     : open ? { track: 'istituzioni', text: `Candidature aperte: ${open.label}.` }
     : ready ? { track: ready.id, text: `${ready.next.title}: probabilità stimata ${Math.round(ready.odds.chance * 100)}%.` }
     : null;
-  return { stats, tracks, contests, focus };
+  return { stats, tracks, contests, focus, standing: standingOf({ game: state.game, stats, parliament: state.parliament }) };
 }
