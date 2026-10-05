@@ -1,10 +1,10 @@
 // The political agenda: every dated commitment of the career in one calendar — votes and candidacy windows,
 // candidate selection, congresses, promises to verify, pending consequences, decrees to convert, allies' demands,
 // investments that expire and decisions held until a date. Read-only: it derives everything from the state.
-import { advanceDays, formatDate } from './time.js?v=20261005-1';
-import { upcomingElections, upcomingRounds } from './career-engine.js?v=20261005-1';
-import { SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20261005-1';
-import { presidencySchedule, termEndOf, whiteSemester } from './presidency-engine.js?v=20261005-1';
+import { advanceDays, formatDate } from './time.js?v=20261005-2';
+import { upcomingElections, upcomingRounds } from './career-engine.js?v=20261005-2';
+import { SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20261005-2';
+import { presidencySchedule, termEndOf, whiteSemester } from './presidency-engine.js?v=20261005-2';
 
 export const AGENDA_KINDS = Object.freeze({
   elezione: { label: 'Elezioni', icon: 'ballot' },

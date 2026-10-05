@@ -4,14 +4,14 @@
 // Pure functions on a plain state (`state.presidency`): nothing here touches the store, the parliament or the world;
 // the store applies the consequences. Every draw comes from a seeded sequence: the same state gives the same vote.
 // Everything is simulation: the candidates are figures of the game and the incumbent is never named.
-import { uniqueId } from './ids.js?v=20261005-1';
-import { advanceDays, formatDate } from './time.js?v=20261005-1';
-import { seededRandom } from './vote-engine.js?v=20261005-1';
-import { campOfAxis } from './parliament-engine.js?v=20261005-1';
-import { linkGroupsToParties } from './lawmaking-engine.js?v=20261005-1';
-import { regionalShares } from './world-engine.js?v=20261005-1';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261005-1';
-import { AFFINITY, CAMP_LABELS, CANDIDATE_TYPES, PRESIDENCY_RULES, PRESIDENT_ACTIVITIES, PRESIDENT_ACTS } from '../data/simulation/presidency-rules.js?v=20261005-1';
+import { uniqueId } from './ids.js?v=20261005-2';
+import { advanceDays, formatDate } from './time.js?v=20261005-2';
+import { seededRandom } from './vote-engine.js?v=20261005-2';
+import { campOfAxis } from './parliament-engine.js?v=20261005-2';
+import { linkGroupsToParties } from './lawmaking-engine.js?v=20261005-2';
+import { regionalShares } from './world-engine.js?v=20261005-2';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261005-2';
+import { AFFINITY, CAMP_LABELS, CANDIDATE_TYPES, PRESIDENCY_RULES, PRESIDENT_ACTIVITIES, PRESIDENT_ACTS } from '../data/simulation/presidency-rules.js?v=20261005-2';
 
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));

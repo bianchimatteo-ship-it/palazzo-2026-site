@@ -1,7 +1,7 @@
-import { advanceDays } from './time.js?v=20261005-1';
-import { CAMPAIGN_ACTIVITIES, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, phaseOf } from '../data/simulation/campaign-rules.js?v=20261005-1';
-import { aggregateShares, mateForce, runFinalElection, runFirstRound } from './election-engine.js?v=20261005-1';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261005-1';
+import { advanceDays } from './time.js?v=20261005-2';
+import { CAMPAIGN_ACTIVITIES, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, phaseOf } from '../data/simulation/campaign-rules.js?v=20261005-2';
+import { aggregateShares, mateForce, runFinalElection, runFirstRound } from './election-engine.js?v=20261005-2';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261005-2';
 
 const SOURCE = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
