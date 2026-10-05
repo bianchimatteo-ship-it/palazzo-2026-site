@@ -1,8 +1,8 @@
 // Territorial committees of the player's party: Region → Province or metropolitan city → Comune. The geography is
 // ISTAT's (names and codes of the real territorial units and comuni); members, leaders, activists, strength and states
 // are a simulation of the game and never describe the real organisation of a real party.
-import { isPartyLeader, treasuryBook } from './organization-engine.js?v=20261003-2';
-import { COMMITTEE_RULES, LEADER_RULES, LOCAL_ACTIONS, LOCAL_EVENT_RULES, PARTY_SCALES, SEAT_LEVEL_FACTOR, SEAT_TIERS, scaleOf } from '../data/simulation/committee-rules.js?v=20261003-2';
+import { isPartyLeader, treasuryBook } from './organization-engine.js?v=20261005-1';
+import { COMMITTEE_RULES, LEADER_RULES, LOCAL_ACTIONS, LOCAL_EVENT_RULES, PARTY_SCALES, SEAT_LEVEL_FACTOR, SEAT_TIERS, scaleOf } from '../data/simulation/committee-rules.js?v=20261005-1';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));

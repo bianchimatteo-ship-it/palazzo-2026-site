@@ -2,11 +2,11 @@
 // internal relations, the state of the party, the territory, resources and the political moment. Crossing a
 // threshold makes it likely, never certain; the same attempt can end in a promotion, a lower office than hoped,
 // a postponement, an internal defeat or even a demotion.
-import { committeeStrength, territorialControl } from './committee-engine.js?v=20261003-2';
-import { LEADER_RULES } from '../data/simulation/committee-rules.js?v=20261003-2';
-import { startMods, startMoment } from './start-engine.js?v=20261003-2';
-import { objectiveMods, objectiveMoment } from './objective-engine.js?v=20261003-2';
-import { standingFactors } from './standing-engine.js?v=20261003-2';
+import { committeeStrength, territorialControl } from './committee-engine.js?v=20261005-1';
+import { LEADER_RULES } from '../data/simulation/committee-rules.js?v=20261005-1';
+import { startMods, startMoment } from './start-engine.js?v=20261005-1';
+import { objectiveMods, objectiveMoment } from './objective-engine.js?v=20261005-1';
+import { standingFactors } from './standing-engine.js?v=20261005-1';
 
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
 const round1 = value => Math.round(value * 10) / 10;
