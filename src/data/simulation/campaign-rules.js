@@ -79,7 +79,18 @@ export const CAMPAIGN_STRATEGIES = Object.freeze({
     pros:'Efficace quando il rivale è vicino: ogni punto che perde è un punto di distacco in meno.',cons:'Contro un rivale lontano rende poco; con una reputazione fragile genera contraccolpi.'},
   coalizione:{source:'simulation',label:'Rafforzare la coalizione',short:'Coalizione',icon:'link',detail:'Accordi, eventi comuni e liste collegate: si vince insieme, a costo di un po’ di identità.',
     mods:{territory:1,internal:1.15,event:1.05,media:.95,ads:.95,resources:1},risk:.95,volatility:.95,allianceBonus:18,
-    pros:'Trattative più facili e voti degli alleati che si sommano ai tuoi.',cons:'La tua lista pesa meno dentro la coalizione e una parte del partito lo digerisce male.'}
+    pros:'Trattative più facili e voti degli alleati che si sommano ai tuoi.',cons:'La tua lista pesa meno dentro la coalizione e una parte del partito lo digerisce male.'},
+  // The strategies of the two weeks between the rounds: they exist only there. `runoff` says how they weigh on the voters of the
+  // candidates who are out (transfer), on the turnout of the own voters (turnout) and on the vote against the other finalist (against).
+  apparentamenti:{source:'simulation',label:'Cercare gli apparentamenti',short:'Apparentamenti',icon:'link',stages:['ballottaggio'],detail:'Tra i due turni cerchi gli esclusi: accordi, impegni e posti in giunta in cambio dei loro elettori.',
+    mods:{territory:.95,internal:1.2,event:1,media:1,ads:.95,resources:1},risk:1,volatility:1,allianceBonus:20,runoff:{transfer:1.25,turnout:.92,against:1},
+    pros:'Gli elettori degli esclusi ti seguono di più e le loro liste entrano nella tua maggioranza.',cons:'Ogni accordo ha un prezzo: impegni, posti in giunta e un po’ di identità.'},
+  mobilitazione:{source:'simulation',label:'Mobilitare i tuoi elettori',short:'Mobilitazione',icon:'users',stages:['ballottaggio'],detail:'Al ballottaggio vota meno gente: vince chi riporta alle urne i suoi. Volontari, telefonate, passaggi ai seggi.',
+    mods:{territory:1.2,internal:1,event:.95,media:.9,ads:.9,resources:1},risk:.9,volatility:.95,runoff:{transfer:.88,turnout:1.55,against:1},
+    pros:'I tuoi elettori restano e votano; rende molto se l’organizzazione è solida.',cons:'Chiedi poco agli altri: gli elettori degli esclusi si astengono più spesso.'},
+  'voto-utile':{source:'simulation',label:'Il voto utile contro l’avversario',short:'Voto utile',icon:'split',stages:['ballottaggio'],detail:'Un appello netto: «o noi o loro». Convince chi voleva fermare l’altro finalista, ma polarizza e rischia di respingere gli altri.',
+    mods:{territory:.95,internal:1,event:1.05,media:1.15,ads:1.05,resources:1},risk:1.2,volatility:1.25,runoff:{transfer:1.1,turnout:1,against:1.35},
+    pros:'Raccoglie chi non vuole l’altro finalista, anche tra gli esclusi che non ti amano.',cons:'Più incertezza e toni duri: se la reputazione è fragile ti si ritorce contro.'}
 });
 
 // Costs are game values, in euro/resources and game-days. No real campaign finance totals are asserted or imported
@@ -119,6 +130,12 @@ export const CAMPAIGN_ACTIVITIES = Object.freeze([
   {source:'simulation',id:'local_ads', label:'Pubblicità su giornali e radio locali', category:'ads', days:1, risk:8, cost:{money:3500,volunteers:0,organization:1,politicalCapital:0}, effect:.6, visibility:4, preparation:0, scope:'broad', detail:'Spazi a pagamento: costano, ma raggiungono chi non segue la politica.', typeBonus:{provinciale:0.3,regionale:1.1,politiche:1.05}, saturation:.1},
   {source:'simulation',id:'social_ads', label:'Campagna social sponsorizzata', category:'ads', days:1, risk:13, cost:{money:1200,volunteers:0,organization:1,politicalCapital:0}, effect:.55, visibility:5, preparation:0, scope:'broad', detail:'Messaggi mirati per età e interessi: rende nelle aree urbane e tra i giovani; un contenuto sbagliato diventa virale nel modo sbagliato.', urban:true, saturation:.1, typeBonus:{provinciale:0.15}},
   {source:'simulation',id:'crisis_response', label:'Gestione della crisi', category:'media', days:1, risk:9, cost:{money:500,volunteers:0,organization:1,politicalCapital:2}, effect:0, visibility:2, preparation:0, scope:'media', requires:'crisis', detail:'Spiega, chiarisci, prendi le distanze: attenua la polemica in corso prima che pesi sul voto.', crisis:true},
+  {source:'simulation',id:'crew_rest', label:'Giornata di riposo', category:'internal', days:1, risk:0, cost:{money:0,volunteers:0,organization:0,politicalCapital:0}, effect:0, visibility:0, preparation:0, scope:'internal', detail:'Le squadre si fermano e recuperano: meno fatica, più resa nei giorni decisivi. Un giorno senza campagna.', rest:true},
+  {source:'simulation',id:'scouting', label:'Scouting dei candidati', category:'internal', days:2, risk:8, cost:{money:700,volunteers:1,organization:2,politicalCapital:2}, effect:0, visibility:.2, preparation:0, scope:'internal', detail:'Cerchi nomi forti sul territorio per la lista: una lista competitiva porta voti, ma i nomi forti fanno concorrenza anche a te nelle preferenze.', scouting:true, phases:['apertura'], saturation:.15},
+  {source:'simulation',id:'list_negotiation', label:'Trattativa sulla lista', category:'internal', days:2, risk:12, cost:{money:300,volunteers:0,organization:2,politicalCapital:3}, effect:0, visibility:0, preparation:0, scope:'internal', detail:'Chi pesa nel partito e sul territorio chiede posti: puoi migliorare la tua posizione, ma ogni cessione ha un prezzo politico.', listNegotiation:true, requires:'party', phases:['apertura','centrale'], saturation:.2},
+  {source:'simulation',id:'runoff_pact', label:'Apparentamento', category:'internal', days:1, risk:15, cost:{money:400,volunteers:0,organization:1,politicalCapital:3}, effect:.5, visibility:1.2, preparation:0, scope:'focused', detail:'Tra i due turni un candidato escluso può apparentarsi con te: porta gran parte dei suoi elettori e le sue liste in maggioranza, e chiede impegni e un posto in giunta.', runoffPact:true, phases:['ballottaggio'], saturation:.25},
+  {source:'simulation',id:'appeal_eliminated', label:'Appello agli elettori degli esclusi', category:'media', days:1, risk:14, cost:{money:350,volunteers:1,organization:1,politicalCapital:1}, effect:.7, visibility:3, preparation:0, scope:'broad', detail:'Parli a chi ha votato i candidati usciti al primo turno: una parte può seguirti, se non li hai attaccati.', runoffAppeal:true, phases:['ballottaggio'], saturation:.12},
+  {source:'simulation',id:'runoff_stance', label:'Indica per chi votare', category:'internal', days:1, risk:5, cost:{money:0,volunteers:0,organization:0,politicalCapital:1}, effect:0, visibility:1, preparation:0, scope:'internal', detail:'Non sei al ballottaggio: puoi indicare ai tuoi elettori per chi votare e trattare un posto per la tua lista e impegni sul programma.', runoffStance:true, phases:['ballottaggio']},
   {source:'simulation',id:'get_out_vote', label:'Mobilitazione al voto', category:'territory', days:2, risk:5, cost:{money:900,volunteers:6,organization:3,politicalCapital:1}, effect:1, visibility:.5, preparation:0, scope:'broad', phases:['finale','ballottaggio'], detail:'Telefonate, passaggi ai seggi, reti di volontari: porta alle urne chi ti sostiene già. Solo negli ultimi giorni.', gotv:true, saturation:.1}
 ]);
 
@@ -184,10 +201,99 @@ export const CAMPAIGN_EVENTS = Object.freeze([
   {id:'donatore', weight:.6, cooldown:35, title:'Un grande donatore offre un contributo', body:'Un imprenditore della zona offre un contributo importante. Qualcuno ti avverte: vorrà qualcosa in cambio.', choices:[
     {id:'take',label:'Accetta il contributo',effects:{money:3000,reputation:-.5,commitment:1}},
     {id:'refuse',label:'Rifiuta con garbo',effects:{reputation:.4}}]},
+  {id:'squadra-stanca', weight:1.8, cooldown:14, when:'tired', title:'Le squadre sono stanche', body:'Giorni di fila sul campo: i volontari rendono meno, le uscite perdono mordente e qualcuno minaccia di mollare.', choices:[
+    {id:'rest',label:'Fermati due giorni e fai riposare le squadre',effects:{rest:2,organization:1}},
+    {id:'rotate',label:'Fai ruotare le squadre e paga un rimborso',effects:{money:-600,fatigue:-14,volunteers:-1}},
+    {id:'push',label:'Spingi ancora fino al voto',effects:{reputation:-.4,fatigue:6,volunteers:-1}}]},
+  {id:'volontari-esperti', weight:.7, cooldown:28, when:'momentum', title:'Arrivano volontari con esperienza', body:'Un gruppo di ex militanti e di operatori della comunicazione offre il proprio tempo: sanno come si fa una campagna.', choices:[
+    {id:'train',label:'Inseriscili nelle squadre e fai fare formazione',effects:{money:-300,volunteers:3,quality:5}},
+    {id:'free',label:'Lasciali lavorare in autonomia',effects:{volunteers:2,quality:2}}]},
+  {id:'bilancio-mandato', weight:1.1, cooldown:35, unique:true, when:'incumbent', title:'Il bilancio del mandato finisce sui giornali', body:'Cronisti e avversari mettono a confronto promesse e risultati degli ultimi anni. Puoi rivendicare quello che è stato fatto o ammettere i ritardi e rilanciare.', choices:[
+    {id:'claim',label:'Rivendica i risultati',effects:{record:.9,visibility:2}},
+    {id:'admit',label:'Ammetti i ritardi e rilancia',effects:{record:.25,reputation:.5,visibility:1}}]},
+  {id:'dossier-uscente', weight:1, cooldown:35, unique:true, when:'challenger-record', title:'Un dossier sulle promesse dell’amministrazione uscente', body:'Un comitato civico ha messo in fila impegni presi e risultati ottenuti da chi governa. Usarlo in campagna dipende da quanto regge.', choices:[
+    {id:'use',label:'Usalo contro l’amministrazione uscente',effects:{recordAgainst:.9,visibility:2}},
+    {id:'skip',label:'Resta sulle tue proposte',effects:{reputation:.4}}]},
+  {id:'avversario-ricorda', weight:1.2, cooldown:42, unique:true, when:'recognized', title:'Un avversario che ti conosce', body:'Uno dei contendenti ha già incrociato la tua strada: ricorda come è andata l’ultima volta e te lo dice in pubblico. Puoi rispondere punto su punto o cercare un tono diverso.', choices:[
+    {id:'answer',label:'Rispondi nel merito',effects:{recognizedRival:{relation:-2,transfer:.3},visibility:2}},
+    {id:'truce',label:'Proponi una tregua dei toni',effects:{recognizedRival:{relation:8},reputation:.3}}]},
   {id:'crisi-organizzativa', weight:.8, cooldown:21, when:'lowOrganization', title:'La macchina organizzativa è sotto pressione', body:'I coordinamenti chiedono tempo e persone. Se non intervieni, alcuni appuntamenti perderanno efficacia.', choices:[
     {id:'repair',label:'Riorganizza la squadra',effects:{money:-600,organization:4,volunteers:-1}},
     {id:'continue',label:'Mantieni il programma',effects:{organization:-2,reputation:-.5}}]}
 ]);
+
+// ---------- the crew: volunteers are teams, with a quality and a fatigue ----------
+// Each team serves some kinds of activity. A team that is poorly trained or tired yields less (diminishing returns), risks more
+// and, past the burnout threshold, loses people; rest and rotation bring the fatigue down, organisation makes it grow more slowly.
+export const CREW_TEAMS = Object.freeze({
+  field:{label:'Squadra di territorio', short:'Territorio', categories:['territory'], share:.5},
+  media:{label:'Squadra comunicazione', short:'Comunicazione', categories:['media','ads'], share:.15},
+  events:{label:'Squadra eventi', short:'Eventi', categories:['event'], share:.2},
+  office:{label:'Squadra di segreteria', short:'Segreteria', categories:['internal','resources'], share:.15}
+});
+export const CREW_RULES = Object.freeze({
+  quality:{base:50, min:10, max:100, perPoint:.003, floor:.85, learnPerWeek:.25, learnCap:8, trainGain:3, burnoutLoss:2},
+  // load of an activity: days × (base + volunteers·volunteer + organisation·organization); spread over the team (size) and eased by organisation
+  fatigue:{free:25, slope:.006, floor:.5, load:{base:1.5, volunteer:.9, organization:.4}, size:8, idleRecovery:2.4, workRecovery:.7, restRecovery:15, burnout:72, tired:55, risk:.1, attrition:.1},
+  mobilization:{quality:.6, fatigue:.8, gotv:.35, gotvCap:1.2, climateIncumbent:.012, climateChallenger:.008, rivals:.6}
+});
+
+// ---------- incumbency: what a term leaves behind ----------
+// The record of the administration (see mandateRecord in the local engine) weighs on the next vote for whoever leads or sits in it.
+export const INCUMBENCY_RULES = Object.freeze({
+  standing:{leader:1, majority:.5, opposition:-.4, former:.5},
+  consensus:.05, consensusCap:4,              // points of strength at the start of the campaign per point of standing
+  expectation:.04, expectationCap:2.5,
+  nomination:.012, nominationCap:1.5,
+  claim:{perPoint:.005, min:.6, max:1.25},   // how much "claim the record" is worth (per point of standing)
+  dissolved:-25
+});
+
+// ---------- the lists: who stands with you, who competes, who decides ----------
+export const LIST_RULES = Object.freeze({
+  mates:{local:8, national:10, europee:12},
+  strength:{vote:.08, voteCap:1.6},
+  negotiation:{cost:{loyal:.4}},
+  factions:['dirigenti','territorio','giovani','liste-civiche']
+});
+
+// ---------- endorsements: who backs you, why, what it costs and what is remembered ----------
+export const ENDORSEMENT_KINDS = Object.freeze({
+  sindaco:{label:'Un sindaco o un amministratore', weight:1.2, reach:'area', cost:'impegno', trust:'istituzionale'},
+  categoria:{label:'Un’associazione di categoria', weight:1, reach:'area', cost:'impegno', trust:'economico'},
+  sindacato:{label:'Un sindacato', weight:1, reach:'area', cost:'impegno', trust:'sociale'},
+  civico:{label:'Una rete civica', weight:.8, reach:'area', cost:'autonomia', trust:'sociale'},
+  media:{label:'Una testata o un opinionista', weight:.9, reach:'ampio', cost:'indipendenza', trust:'mediatico'},
+  dirigente:{label:'Un dirigente del partito', weight:1.1, reach:'area', cost:'debito', trust:'interno'},
+  escluso:{label:'Un candidato escluso', weight:1.3, reach:'ampio', cost:'accordo', trust:'politico'}
+});
+export const ENDORSEMENT_RULES = Object.freeze({
+  maxOffers:3,
+  // How likely each kind of subject is to come forward, by kind of election (a province votes with its mayors, a comune with its civic networks).
+  weights:{
+    comunale:{sindaco:.7, categoria:1, sindacato:.8, civico:1.4, media:.7, dirigente:.8},
+    provinciale:{sindaco:2.2, categoria:.8, sindacato:.5, civico:.5, media:.3, dirigente:1},
+    regionale:{sindaco:1.2, categoria:1.1, sindacato:1, civico:.8, media:.9, dirigente:1},
+    politiche:{sindaco:.7, categoria:.9, sindacato:.9, civico:.6, media:1.3, dirigente:1.2},
+    europee:{sindaco:.5, categoria:.9, sindacato:.9, civico:.6, media:1.3, dirigente:1.2}
+  },
+  relations:{sindaco:'civic', categoria:'business', sindacato:'unions', civico:'civic', media:'media', dirigente:'leadership'},
+  motives:{ideale:'condividono le tue proposte', interesse:'cercano un posto o una garanzia', ostilita:'vogliono fermare un altro candidato', convenienza:'puntano sul vincitore', amicizia:'si fidano di te'}
+});
+
+// ---------- the runoff: two rounds, two weeks, a transfer of votes that is never complete ----------
+export const RUNOFF_RULES = Object.freeze({
+  turnoutDrop:-9, abstentionFloor:.1,
+  transfer:{endorsed:.12, neutral:.34, pact:.1, min:.03, max:.9}
+});
+
+// ---------- the rivals between campaigns: the registry that outlives one vote ----------
+export const RIVAL_PERSISTENCE = Object.freeze({
+  limit:40, memoryLimit:10, halfLifeDays:540, dropWeight:.06, forgetYears:6,
+  stances:[[25,'ostile'],[42,'freddo'],[60,'neutro'],[78,'cordiale'],[101,'alleato']],
+  // What each kind of past episode is worth when the rival decides how to behave (see the campaign engine)
+  campaign:{revenge:.35, confidence:.8, allied:.5, offer:.25, relation:70}
+});
 
 // How an election ends for the player, beyond winning and losing.
 export const OUTCOME_LABELS = Object.freeze({

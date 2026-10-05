@@ -491,7 +491,8 @@ const BIRTH = '1975-04-03';
   const mods = S.startMods(game);
   store.startCampaign({ electionType: 'comunale', role: 'consigliere', objective: 'seat' }, db.parties, { politicians: db.politicians, groups: db.parliamentaryGroups });
   const campaign = store.getState().campaign;
-  assert.equal(campaign.expectation.pressure, mods.expectation, 'La pressione delle attese entra nella campagna');
+  // The pressure of the start adds to what the term that ends says (the record of the administration), it does not replace it.
+  assert.equal(campaign.expectation.pressure, Math.round((mods.expectation + (campaign.incumbency?.expectation ?? 0)) * 100) / 100, 'La pressione delle attese entra nella campagna');
   assert.ok(campaign.history.some(item => /Condizioni di partenza/.test(item.text)), 'La campagna ricorda le condizioni di partenza');
   clean(JSON.stringify(campaign.history), 'storia della campagna');
   lines.push(`campagna: pressione delle attese +${mods.expectation} e condizioni di partenza nella storia della campagna`);

@@ -13,6 +13,7 @@ import { DELEGA_RULES, PORTFOLIO_AREAS } from '../data/simulation/office-rules.j
 import { cohesiveShare } from './parliament-engine.js?v=20261005-1';
 import { groupLine, seededRandom, splitGroupVote } from './vote-engine.js?v=20261005-1';
 import { advanceDays } from './time.js?v=20261005-1';
+import { INCUMBENCY_RULES } from '../data/simulation/campaign-rules.js?v=20261005-1';
 
 const SIM = DATA_SOURCES.SIMULATION;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -84,7 +85,7 @@ export function createInstitution(spec) {
     groups, seats: groups.reduce((sum, group) => sum + group.seats, 0),
     executive: spec.kind === 'europa' ? null : { leader: spec.leaderIsPlayer ? 'player' : 'simulato', label: spec.leaderIsPlayer ? `Tu, ${rules.leader.toLowerCase()}` : `${rules.leader} (figura simulata) · ${leaderGroup?.label ?? ''}`.trim(), groupId: leaderGroup?.id ?? null, camp: leaderGroup?.camp ?? 'centro', members, stability: 62, program: null },
     budget: spec.kind === 'europa' ? null : { approvedYear: Number(String(spec.date).slice(0, 4)), margin: 50, localTax: 'media', provisional: false, failures: 0 },
-    ...(spec.kind === 'comune' ? { indicators: cityIndicators(spec) } : {}), ...(spec.kind === 'europa' ? {} : { effects: [], commitments: [] }),
+    ...(spec.kind === 'comune' ? (indicators => ({ indicators, baseline: { services: servicesOf(indicators) } }))(cityIndicators(spec)) : {}), ...(spec.kind === 'europa' ? {} : { effects: [], commitments: [] }),
     acts: [], archive: [], history: [{ date: spec.date, text: `${rules.label}: inizia il mandato (${spec.role === 'sindaco' || spec.role === 'presidente' ? 'guidi l’esecutivo' : spec.side === 'maggioranza' ? 'in maggioranza' : 'all’opposizione'}).` }],
     pressure: 30, ...(spec.kind === 'europa' ? { ep: europeanSeat(`${spec.kind}-${spec.date}`, spec.date, spec.committee) } : {}), source: SIM
   };
@@ -99,6 +100,31 @@ function cityIndicators({ name, territory = null }) {
 export function withLocalState(inst) {
   if (!inst || inst.kind === 'europa' || (inst.effects && inst.commitments && (inst.kind !== 'comune' || inst.indicators))) return inst;
   return { ...inst, ...(inst.kind === 'comune' && !inst.indicators ? { indicators: cityIndicators({ name: inst.name }) } : {}), effects: inst.effects ?? [], commitments: inst.commitments ?? [] };
+}
+const servicesOf = indicators => { const values = Object.values(indicators ?? {}).map(Number).filter(Number.isFinite); return values.length ? round1(values.reduce((sum, value) => sum + value, 0) / values.length) : null; };
+// What a term leaves behind for the next vote: how the executive stood, what the council kept and broke, how the services of the
+// city moved and how the term ended. `score` judges the administration (-100…100); `standing` is what it means for the player: who led it
+// answers for it, who sat in its majority shares it, the opposition profits from its failures, whoever left office keeps half of it.
+export function mandateRecord(input, { date = null, former = false } = {}) {
+  const inst = withLocalState(input);
+  if (!inst || inst.kind === 'europa') return null;
+  const rules = INCUMBENCY_RULES;
+  const leads = inst.executive?.leader === 'player';
+  const weeks = weeksBetween(inst.since, date ?? inst.until ?? inst.since);
+  const commitments = inst.commitments ?? [];
+  const kept = commitments.filter(item => item.status === 'rispettato').length;
+  const broken = commitments.filter(item => item.status === 'disatteso').length;
+  const services = servicesOf(inst.indicators);
+  const servicesDelta = services !== null && inst.baseline?.services != null ? round1(services - inst.baseline.services) : 0;
+  const passed = (inst.acts ?? []).filter(item => item.stage === 'approvato' && item.sponsor?.kind === 'player').length;
+  const stability = Number(inst.executive?.stability ?? 60), pressure = Number(inst.pressure ?? 30), margin = Number(inst.budget?.margin ?? 50), failures = Number(inst.budget?.failures ?? 0);
+  let score = (stability - 60) * 0.6 + (50 - pressure) * 0.4 + (margin - 50) * 0.2 - failures * 6 + kept * 4 - broken * 7 + servicesDelta * 1.2 + passed * 1.5;
+  if (inst.status === 'sciolto') score += rules.dissolved;
+  score = round1(clamp(score, -100, 100));
+  const confidence = clamp(weeks / 78, 0.3, 1);
+  const side = leads ? 'maggioranza' : inst.playerSide ?? 'maggioranza';
+  const factor = (leads ? rules.standing.leader : side === 'maggioranza' ? rules.standing.majority : rules.standing.opposition) * (former ? rules.standing.former : 1);
+  return { kind: inst.kind, name: inst.name, role: inst.playerRole ?? null, side, leads, former, status: inst.status, weeks: weeks === 99 ? 0 : weeks, stability, pressure, margin, failures, kept, broken, servicesDelta, passed, score, confidence: round2(confidence), standing: round1(clamp(score * confidence * factor, -100, 100)), source: SIM };
 }
 const record = (inst, date, text, type = 'evento') => ({ ...inst, history: [...inst.history, { date, text, type }].slice(-40) });
 const setAct = (inst, id, patch) => ({ ...inst, acts: inst.acts.map(item => item.id === id ? { ...item, ...patch } : item) });

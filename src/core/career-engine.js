@@ -267,7 +267,7 @@ export function createGameState({ seedText, currentDate, level, party = null, pl
     prep: 0, relations, party: createPartyState(party, seed, { region: place.region, share: party?.share ?? null, week: 1, date: currentDate }), pastParties: [], elections,
     inbox: [], log: [], objectives: {}, flags: { nationalCalendar: 2, provincialCalendar: 1, ...(localCalendar ? { localCalendar: 1 } : {}) }, lastReport: null, weekStartStats: { ...stats }, lastEventId: null,
     fallenWeeks: 0, endedAt: null, endReason: null, objectivesV: 2,
-    finance: createFinance({ week: 1, date: currentDate, funds: startingFunds }), contacts: [], promises: [], legislature: { ...REAL_LEGISLATURE },
+    finance: createFinance({ week: 1, date: currentDate, funds: startingFunds }), contacts: [], promises: [], rivalRegistry: [], endorsers: [], legislature: { ...REAL_LEGISLATURE },
     roundsFrom: currentDate, rounds: [], standing: createStanding({ week: 1 })
   };
   planRounds(game, currentDate);
@@ -294,7 +294,7 @@ export function normalizeGameState(game) {
   const revived = game.status === 'ended' && !game.endKind ? { status: 'active', endedAt: null, endReason: null, setbacks: [...(game.setbacks ?? []), { week, date: game.endedAt ?? date, reason: game.endReason ?? 'Crisi di reputazione', source: SIM }] } : {};
   return alignNationalCalendar({
     status: 'active', prep: 0, pastParties: [], inbox: [], log: [], objectives: {}, flags: {}, lastReport: null, lastEventId: null, fallenWeeks: 0, place: {},
-    contacts: [], promises: [], pending: [], eventQueue: [], eventHistory: {}, eventRecent: [], memory: [], legislature: { ...REAL_LEGISLATURE }, difficulty: 'normale', setbacks: [],
+    contacts: [], promises: [], rivalRegistry: [], endorsers: [], pending: [], eventQueue: [], eventHistory: {}, eventRecent: [], memory: [], legislature: { ...REAL_LEGISLATURE }, difficulty: 'normale', setbacks: [],
     ...game, ...revived, party,
     standing: normalizeStanding(game.standing, { week }),
     finance: normalizeFinance(game.finance, { week, date, funds: game.resources?.funds ?? 0 }),

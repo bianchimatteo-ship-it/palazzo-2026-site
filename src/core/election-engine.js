@@ -204,8 +204,12 @@ export function runFinalElection(campaign,firstRound=null) {
     runoffRows=finalShares.map(group=>resultRow(group,group.share,totalBallots));
     runoffWinnerId=runoffRows[0]?.candidateId??null;
     const firstGroups=firstRound.groups.map(row=>({id:row.candidateId,share:row.percent,label:row.label,partyIds:row.partyIds,members:row.memberCandidateIds,leaderCandidateId:row.candidateId}));
-    seatRows=municipalSeats(campaign,firstGroups,runoffWinnerId);
-    rows=firstRound.groups.map(row=>{const group=firstGroups.find(item=>item.id===row.candidateId);const scored=resultRow(group,row.percent,totalBallots,seatRows.find(item=>item.id===group.id)?.seats??0);const final=runoffRows.find(item=>item.candidateId===row.candidateId);return {...scored,runoffPercent:final?.percent??null,runoffVotes:final?.votes??null};});
+    // The lists of the candidates who made a pact with the winner (an apparentamento) enter its majority: their votes and parties count with it.
+    const pactIds=new Set((campaign.runoff?.pacts??[]).filter(item=>item.finalistId===runoffWinnerId).map(item=>item.candidateId));
+    const partners=firstGroups.filter(group=>pactIds.has(group.id));
+    const joined=firstGroups.filter(group=>!pactIds.has(group.id)).map(group=>group.id===runoffWinnerId?{...group,share:rounded(group.share+partners.reduce((sum,item)=>sum+item.share,0)),partyIds:[...new Set([...(group.partyIds??[]),...partners.flatMap(item=>item.partyIds??[])])],members:[...new Set([...(group.members??[]),...partners.flatMap(item=>item.members??[])])],apparentati:partners.map(item=>item.id)}:group);
+    seatRows=municipalSeats(campaign,joined,runoffWinnerId);
+    rows=firstRound.groups.map(row=>{const group=joined.find(item=>item.id===row.candidateId)??firstGroups.find(item=>item.id===row.candidateId);const scored=resultRow(group,row.percent,totalBallots,seatRows.find(item=>item.id===group.id)?.seats??0,pactIds.has(row.candidateId)?{apparentatoCon:runoffWinnerId}:group.apparentati?.length?{apparentati:group.apparentati}:{});const final=runoffRows.find(item=>item.candidateId===row.candidateId);return {...scored,runoffPercent:final?.percent??null,runoffVotes:final?.votes??null};});
   } else if(campaign.electionType==='comunale') {
     seatRows=municipalSeats(campaign,aggregate,aggregate[0]?.id);
     rows=aggregate.map(group=>resultRow(group,group.share,totalBallots,seatRows.find(row=>row.id===group.id)?.seats??0));
@@ -234,6 +238,7 @@ export function runFinalElection(campaign,firstRound=null) {
     territories:areaResults(campaign,totalBallots),firstRound:previous??firstRound??null,
     winnerGroupId:winnerId,playerShare:runoffRows?.find(row=>row.candidateId===campaign.playerCandidateId)?.percent??playerRow?.percent??0,playerVotes:runoffRows?.find(row=>row.candidateId===campaign.playerCandidateId)?.votes??playerRow?.votes??0,runoffResults:runoffRows,
     playerSeats:playerRow?.seats??0,personalMandate:personal.mandate,personal,source:'simulation',simulated:true,
+    runoffDetail:campaign.runoff?{transfers:campaign.runoff.transfers??[],pacts:campaign.runoff.pacts??[],appeal:campaign.runoff.appeal??0}:null,
     objectiveMet:objectiveMet(campaign,playerRow,personal.mandate),
     turnout:campaign.electionDays?.at(-1)?.turnout ?? Math.round(clamp(61+(campaign.candidateStats.reputation-50)*.16+(campaign.candidateStats.notoriety-40)*.08+((campaign.context?.participation??60)-60)*.5,38,78)*100)/100,
     seatRule:SEAT_RULES[campaign.electionType]?.note ?? null
@@ -242,20 +247,36 @@ export function runFinalElection(campaign,firstRound=null) {
   return result;
 }
 
+// The strength of a name on the list for the preferences and for the places: its own pull, the push of the faction it comes from
+// (the leaders back theirs, the territory backs its local names, the young are worth more when the country is restless).
+export function mateForce(campaign, mate) {
+  const ctx = campaign.listContext ?? {};
+  const mood = campaign.nationalContext?.moodIndex ?? 50;
+  return mate.strength
+    + (mate.faction === 'dirigenti' ? 3 - (ctx.aligned ? 1.5 : 0) : 0)
+    + (mate.faction === 'territorio' && mate.areaId === campaign.candidacy?.territoryId ? 4 : 0)
+    + (mate.faction === 'giovani' && mood < 48 ? 2 : 0)
+    + (mate.faction === 'liste-civiche' && ['comunale', 'provinciale'].includes(campaign.electionType) ? 1.5 : 0);
+}
 // Preference votes: inside a list the seats go to the candidates with the most preferences. The player's pull
-// (notoriety, reputation, local roots, campaign on the ground) competes with the list mates'.
+// (notoriety, reputation, local roots, campaign on the ground) competes with the list mates': the names of the list, with the faction
+// they come from and the places they hold, when the campaign carries the list (otherwise a generic field).
 export function preferenceStanding(campaign, listSeats) {
   const rand = seeded(hash(`${campaign.id}|preferenze`));
   const stats = campaign.candidateStats ?? {};
   const player = campaign.candidates.find(item => item.isPlayer);
   const ground = ['door_to_door', 'citizen_meeting', 'local_visit', 'local_life', 'territory_campaign', 'associations'].reduce((sum, id) => sum + (campaign.activityUses?.[id] ?? 0), 0);
-  const own = 30 + (stats.notoriety ?? 20) * .5 + (stats.reputation ?? 50) * .2 + (stats.popularity ?? 40) * .2 + Math.min(14, ground * 1.5) + (player?.resources?.organization ?? 30) * .06 + Math.min(10, campaign.nomination?.internalSupport ?? 5) * 1.2 + (rand() - .5) * 16;
+  const ctx = campaign.listContext ?? {};
+  const roots = campaign.list ? (Number(ctx.territorial ?? 50) - 50) * .1 + (campaign.candidacy?.incumbent ? 3 : 0) + clamp((5 - Number(campaign.candidacy?.listPosition ?? 5)) * .8, -3, 3) : 0;
+  const own = 30 + (stats.notoriety ?? 20) * .5 + (stats.reputation ?? 50) * .2 + (stats.popularity ?? 40) * .2 + Math.min(14, ground * 1.5) + (player?.resources?.organization ?? 30) * .06 + Math.min(10, campaign.nomination?.internalSupport ?? 5) * 1.2 + roots + (rand() - .5) * 16;
   const mates = Math.max(listSeats + 3, 6);
   // List mates: a few well-known names at the top, then candidates with less pull.
-  const others = Array.from({ length: mates }, (_, index) => 66 + (rand() - .5) * 30 - index * 1.6);
+  const others = campaign.list?.mates?.length
+    ? campaign.list.mates.filter(item => item.status !== 'ritirato').map(item => mateForce(campaign, item) + (rand() - .5) * 6).sort((a, b) => b - a).slice(0, mates)
+    : Array.from({ length: mates }, (_, index) => 66 + (rand() - .5) * 30 - index * 1.6);
   const rank = 1 + others.filter(value => value > own).length;
   const votes = Math.max(40, Math.round(own * 42 * (campaign.electionType === 'europee' ? 30 : campaign.electionType === 'regionale' ? 4 : 1)));
-  return { rank, votes, listCandidates: mates + 1, seats: listSeats };
+  return { rank, votes, listCandidates: others.length + 1, seats: listSeats };
 }
 // Inside a coalition every list keeps its own seats: the player's list counts for its own share of the total.
 function ownListRatio(campaign, playerRow) {

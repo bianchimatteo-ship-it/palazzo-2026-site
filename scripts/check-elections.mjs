@@ -31,7 +31,8 @@ function play({ type, role, strategy = null, seed, bias = 0, band = 'oltre-15000
   engine.setExpectation(campaign, {});
   for (let guard = 0; campaign.status === 'active' && guard < 220; guard++) {
     if (campaign.pendingEvents.length) { const event = campaign.pendingEvents[0]; campaign = engine.decideCampaignEvent(campaign, event.id, event.choices[(seed + guard) % event.choices.length].id); continue; }
-    const options = engine.campaignActivities(campaign).filter(item => item.ok && item.activity.id !== 'debate_prep');
+    // The days of rest are for a crew that is tired: a player does not spend the campaign resting.
+    const options = engine.campaignActivities(campaign).filter(item => item.ok && item.activity.id !== 'debate_prep' && (!item.activity.rest || engine.crewOf(campaign).tired));
     if (!options.length || (seed + guard) % 7 === 0) { campaign = engine.advanceCampaign(campaign, 1); continue; }
     const score = item => item.expected - item.activity.risk * .004 + (item.activity.id === 'ally_meeting' ? .15 : 0) + (item.activity.category === 'resources' && campaign.candidates[0].resources.money < 3000 ? .3 : 0);
     options.sort((a, b) => score(b) - score(a));
@@ -41,7 +42,8 @@ function play({ type, role, strategy = null, seed, bias = 0, band = 'oltre-15000
   }
   return campaign;
 }
-const own = campaign => { const weight = campaign.territories.reduce((sum, area) => sum + area.weight, 0); return campaign.territories.reduce((sum, area) => sum + (area.supportByCandidate[campaign.playerCandidateId] ?? 0) * area.weight, 0) / weight; };
+// The share of the player at the end of the campaign; after a runoff the share of the first round (the one the expectation refers to), because the votes of the others have moved.
+const own = campaign => campaign.runoff?.firstRoundRaw?.[campaign.playerCandidateId] ?? (() => { const weight = campaign.territories.reduce((sum, area) => sum + area.weight, 0); return campaign.territories.reduce((sum, area) => sum + (area.supportByCandidate[campaign.playerCandidateId] ?? 0) * area.weight, 0) / weight; })();
 const count = (list, pick) => list.reduce((map, item) => { const key = pick(item); map[key] = (map[key] ?? 0) + 1; return map; }, {});
 
 // ---------- 1. many ways to end, and expectations ----------
@@ -135,7 +137,8 @@ assert.equal(runoffSeen.result.groups.reduce((sum, row) => sum + row.seats, 0), 
 // ---------- 6. strategies: real effects, trade-offs, none always the best ----------
 {
   const contexts = [['comunale', 'sindaco', 6], ['comunale', 'sindaco', -8], ['europee', 'eurodeputato', 0], ['regionale', 'presidente', -2], ['politiche', 'uninominale', -3]];
-  const ids = Object.keys(rules.CAMPAIGN_STRATEGIES);
+  // The strategies of the runoff exist only between the two rounds: here, the ones of the campaign.
+  const ids = Object.keys(rules.CAMPAIGN_STRATEGIES).filter(id => (rules.CAMPAIGN_STRATEGIES[id].stages ?? ['campagna']).includes('campagna'));
   const best = [];
   for (const [type, role, bias] of contexts) {
     const scores = ids.map(strategy => {
