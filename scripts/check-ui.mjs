@@ -110,8 +110,17 @@ const adminPage = await goto('amministrazione');
 assert.ok(adminPage.includes('Area riservata al proprietario') && !adminPage.includes('data-admin-select-party') && !adminPage.includes('Imposta il PIN'), 'L’area amministrativa mostra solo l’accesso del proprietario.');
 const playerSettings = await goto('impostazioni');
 assert.ok(!playerSettings.includes('data-nav="amministrazione"') && !playerSettings.includes('data-action="logo-admin"'), 'Nessun ingresso all’area amministrativa per i giocatori.');
-const pollsForFounder = await goto('sondaggi');
+// Polls, institutes and rivals are not a page of their own: the old address opens Elezioni → Sondaggi e avversari, where the forces and their alliances are one of the views.
+const pollsEntry = await goto('sondaggi');
+assert.equal(store.getState().ui.activePage, 'elezioni', '“Sondaggi” porta alla centrale elettorale, non a una pagina parallela.');
+assert.ok(pollsEntry.includes('data-section-tab="osservatorio"') && pollsEntry.includes('aria-selected="true">Sondaggi e avversari'), 'Si apre la scheda Sondaggi e avversari con le sue viste.');
+const pollsForFounder = await click({ sectionTab: 'osservatorio', sectionTabValue: 'forze' });
 assert.ok(pollsForFounder.includes('Probabilità che accetti'), 'Il segretario vede, prima di proporre un’intesa, probabilità e motivi.');
+for (const view of ['quadro', 'istituti', 'segmenti', 'territori', 'candidati', 'flussi']) { const text = await click({ sectionTab: 'osservatorio', sectionTabValue: view }); assert.ok(text.includes('class="polls-page observatory"') && clean(text), `Osservatorio · ${view}: valori non validi`); }
+await click({ sectionTab: 'osservatorio', sectionTabValue: 'istituti' });
+const instituteB = await click({ sectionTab: 'osservatorio-istituto', sectionTabValue: 'b' });
+assert.ok(instituteB.includes('Istituto B') && instituteB.includes('Scarto dalla media') && instituteB.includes('errore simulato'), 'Ogni istituto ha la sua scheda: letture, scarto dalla media e margine.');
+await click({ sectionTab: 'osservatorio', sectionTabValue: 'forze' });
 let home = await goto('panoramica');
 // Phones: the five main sections one tap away (Home · Carriera · Partito · Elezioni · Parlamento) and an "Altro" sheet
 // with every other section; on computers the sidebar shows the same five first, then the group “Altro”.

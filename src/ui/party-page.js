@@ -76,7 +76,7 @@ function countryCard(state) {
   const chart = values.length > 2 ? lineChart({ series: [{ label: poll.force.label, color: SERIES[0], values: poll.history, emphasis: true }], labels: poll.history.map((_, index) => `${index + 1}`), unit: '%', height: 150, ariaLabel: `${poll.force.label} negli ultimi sondaggi` }) : '';
   const world = state.world;
   const allies = (world.alliances ?? []).filter(item => item.status === 'active' && item.partyIds.includes(poll.force.id)).flatMap(item => item.partyIds.filter(id => id !== poll.force.id)).map(id => world.parties.find(party => party.id === id)?.label ?? id);
-  return `<div class="pp-poll"><strong>${pct(poll.share)}</strong><span class="tone-${poll.delta > 0 ? 'good' : poll.delta < 0 ? 'bad' : 'neutral'}">${signed(poll.delta)} nell’ultima rilevazione</span></div>${chart}<p class="sx-note">Alleanze attive: ${allies.length ? esc(allies.join(', ')) : 'nessuna'}. Sondaggi ${poll.source === 'real' ? 'di riferimento reali' : 'simulati dal gioco'}.</p><button class="text-link" data-nav="sondaggi">Sondaggi e alleanze ${arrow}</button>`;
+  return `<div class="pp-poll"><strong>${pct(poll.share)}</strong><span class="tone-${poll.delta > 0 ? 'good' : poll.delta < 0 ? 'bad' : 'neutral'}">${signed(poll.delta)} nell’ultima rilevazione</span></div>${chart}<p class="sx-note">Alleanze attive: ${allies.length ? esc(allies.join(', ')) : 'nessuna'}. Sondaggi ${poll.source === 'real' ? 'di riferimento reali' : 'simulati dal gioco'}.</p><button class="text-link" data-nav="sondaggi" data-obs-view="forze">Sondaggi e alleanze ${arrow}</button>`;
 }
 
 function historyTab(state) {

@@ -13,6 +13,7 @@ import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, 
 import { mandatePlace, renderElectionReport } from './election-report.js?v=20261005-2';
 import { renderNationalView } from './national-view.js?v=20261005-2';
 import { renderQuirinale } from './presidency-view.js?v=20261005-2';
+import { renderObservatory } from './observatory-view.js?v=20261005-2';
 export { renderElectionReport };
 
 export const ELECTION_TABS = Object.freeze([['panoramica', 'Panoramica'], ['nazionali', 'Nazionali'], ['quirinale', 'Quirinale'], ['candidatura', 'Candidatura'], ['campagna', 'Campagna'], ['avversari', 'Sondaggi e avversari'], ['risultati', 'Risultati'], ['storico', 'Storico']]);
@@ -152,7 +153,7 @@ function candidacy(state) {
     const rivals = (campaign.internalCandidates ?? []).map(item => `<li><span><strong>${esc(item.displayName)}</strong><small>${esc(item.lastAction ?? '')}</small></span><b>${num(item.internalSupport, 1)}/10</b>${bar(item.internalSupport * 10, 'bad')}</li>`).join('');
     const body = `<div class="eh-nomination"><div class="eh-nomination-head">${badge(status[0], status[1])}${nomination.incumbent ? badge('Uscente: ricandidatura da negoziare', 'warn') : ''}</div>
       <ul class="eh-bars"><li class="is-player"><span><strong>Il tuo sostegno interno</strong><small>soglia richiesta ${nomination.requiredSupport}/10</small></span><b>${num(nomination.internalSupport, 1)}/10</b>${bar(nomination.internalSupport * 10, 'good')}</li>${rivals}</ul>
-      <div class="eh-odds">${kpi({ label: nomination.status === 'pending' ? 'Probabilità stimata di candidatura' : 'Probabilità al momento della decisione', value: `${Math.round(odds * 100)}%`, bar: odds * 100, tone: odds >= .6 ? 'good' : odds >= .35 ? 'warn' : 'bad', note: 'Superare la soglia non basta: conta anche il distacco dai concorrenti interni.' })}${kpi({ label: 'Posizione in lista', value: `${campaign.candidacy.listPosition}ª`, note: nomination.decision?.lowerPlace ? 'più bassa di quella attesa' : 'si migliora con riunioni e costruzione della lista' })}</div>
+      <div class="eh-odds">${kpi({ label: nomination.status === 'pending' ? 'Probabilità stimata di candidatura' : 'Probabilità al momento della decisione', value: `${Math.round(odds * 100)}%`, bar: odds * 100, tone: odds >= .6 ? 'good' : odds >= .35 ? 'warn' : 'bad', note: 'Superare la soglia non basta: conta anche il distacco dai concorrenti interni.' })}${campaign.candidacy.role === 'uninominale' ? kpi({ label: 'Collegio uninominale', value: 'Nessuna lista', note: 'si vince il collegio: non c’è un posto in lista' }) : kpi({ label: 'Posizione in lista', value: `${campaign.candidacy.listPosition}ª`, note: nomination.decision?.lowerPlace ? 'più bassa di quella attesa' : 'si migliora con riunioni e costruzione della lista' })}</div>
       ${nomination.memoryNote ? `<p class="sx-note">${esc(nomination.memoryNote)}</p>` : ''}${nomination.incumbencyNote ? `<p class="sx-note">${esc(nomination.incumbencyNote)}</p>` : ''}
       ${nomination.status === 'pending' ? `<div class="sx-actions"><button class="secondary-button" data-campaign-activity="party_meeting">Riunione del partito</button><button class="secondary-button" data-campaign-activity="list_building">Costruzione della lista</button></div>` : ''}</div>`;
     return card({ kicker: 'CANDIDATURA INTERNA · SIMULAZIONE', title: campaign.electionLabel, body });
@@ -163,32 +164,6 @@ function candidacy(state) {
   return card({ kicker: 'CANDIDATURA · COME FUNZIONA', title: party.affiliation === 'founder' ? 'Da fondatore decidi tu le liste' : 'La candidatura si conquista nel partito', body: `<p class="sx-note">${party.affiliation === 'founder' ? 'Da fondatore sei candidato di diritto, ma il partito ha pochi voti di lista: coalizioni e territorio contano di più.' : `Oggi sei ${esc(rank.toLowerCase())}. All’avvio della campagna il partito valuta il tuo sostegno interno contro quello dei concorrenti: superare la soglia rende la candidatura probabile, non certa, e un margine stretto può costarti posti in lista.`}</p><ul class="eh-checklist"><li class="tone-${party.support >= 60 ? 'good' : 'warn'}"><span><strong>Sostegno interno</strong><small>riunioni, assemblee, lealtà</small></span><b>${num(party.support, 0)}/100</b></li><li class="tone-neutral"><span><strong>La tua area interna</strong><small>se guida il partito, ti sostiene</small></span><b>${esc(party.currents?.find(item => item.id === party.alignedCurrentId)?.label ?? 'nessuna')}</b></li></ul>` });
 }
 
-function rivals(state, parties, logoFor) {
-  const campaign = state.campaign;
-  if (campaign && campaign.status !== 'idle') {
-    const summary = campaign.status === 'active' ? campaignSummary(campaign) : null;
-    const standings = summary?.standings ?? (campaign.result?.groups ?? []).map((row, index) => ({ id: row.id, leaderCandidateId: row.candidateId, share: row.percent, position: index + 1, members: row.memberCandidateIds }));
-    const rows = standings.map(group => {
-      const candidate = campaign.candidates.find(item => item.id === group.leaderCandidateId);
-      const party = parties.find(item => item.id === candidate?.partyId);
-      const logo = party ? logoFor(party) : null;
-      const name = candidate?.isPlayer ? 'La tua candidatura' : candidate?.realReference?.fullName ?? 'Candidatura simulata';
-      const label = candidate?.isPlayer ? (party?.officialName ?? party?.name ?? 'Indipendente') : candidate?.realReference ? `Deputato in carica${candidate.realReference.groupName ? ` · ${candidate.realReference.groupName}` : ''}` : party?.officialName ?? party?.name ?? 'Lista simulata';
-      return { _class: candidate?.isPlayer ? 'is-player' : '', pos: `${group.position}ª`, name: `<span class="eh-cand">${logo ? `<img src="${esc(logo)}" alt="" loading="lazy">` : `<i>${esc((party?.abbreviation ?? name).slice(0, 2))}</i>`}<span><strong>${esc(name)}</strong><small>${esc(label)}${(group.members?.length ?? 1) > 1 ? ` · coalizione di ${group.members.length}` : ''}</small></span></span>`, share: `<span class="eh-share"><b>${pct(group.share)}</b>${bar(group.share, candidate?.isPlayer ? 'good' : '')}</span>`, action: candidate?.isPlayer ? '' : esc(candidate?.lastAction ?? '') };
-    });
-    const trend = campaign.consensusHistory ?? [];
-    const chart = trend.length > 1 ? lineChart({ series: [{ label: 'Proiezione', color: SERIES[0], values: trend.map(item => item.value), emphasis: true }, ...(campaign.expectation ? [{ label: 'Attesa iniziale', color: SERIES[3], values: trend.map(() => campaign.expectation.share) }] : [])], labels: trend.map(item => `G${item.day}`), unit: '%', height: 170, ariaLabel: 'Andamento della proiezione della campagna' }) : '';
-    return card({ kicker: campaign.status === 'active' ? 'CORSA IN TEMPO REALE · PROIEZIONE SIMULATA' : 'CLASSIFICA FINALE · SIMULAZIONE', title: 'Chi è in corsa', body: `${table([['pos', 'Pos.'], ['name', 'Candidatura'], ['share', 'Consenso', 'num'], ['action', 'Ultima mossa']], rows)}${chart ? `<div class="eh-chart">${chart}</div>` : ''}<p class="sx-note">La proiezione è interna al gioco: non è un sondaggio. Le persone reali mostrano solo dati verificati; i numeri di campagna sono simulati.</p>` });
-  }
-  const poll = state.world?.polls?.at(-1);
-  if (!poll) return card({ kicker: 'SONDAGGI', title: 'Nessun sondaggio', body: '<p class="sx-note">I sondaggi si aggiornano ogni settimana.</p>' });
-  const rows = [...poll.results].sort((a, b) => b.share - a.share).slice(0, 10).map((row, index) => {
-    const force = state.world.parties.find(item => item.id === row.partyId);
-    return { _class: force?.isPlayer ? 'is-player' : '', pos: `${index + 1}ª`, name: `<strong>${esc(force?.label ?? row.partyId)}</strong>`, share: `<span class="eh-share"><b>${pct(row.share)}</b>${bar(row.share * 3, force?.isPlayer ? 'good' : '')}</span>`, delta: `<span class="tone-${toneOf(row.delta)}">${signed(row.delta)}</span>` };
-  });
-  return card({ kicker: `SONDAGGIO · ${poll.source === 'real' ? 'DATO REALE' : 'SIMULATO'} · ${esc(formatDate(poll.date ?? state.clock.currentDate))}`, title: 'Le forze nazionali', body: `${table([['pos', 'Pos.'], ['name', 'Forza'], ['share', 'Consenso', 'num'], ['delta', 'Variazione', 'num']], rows)}<p class="sx-note">Gli avversari diretti si conoscono all’avvio della campagna.</p><button class="text-link" data-nav="sondaggi">Tutti i sondaggi ${arrow}</button>` });
-}
-
 function history(state) {
   const entries = [...(state.career.electionHistory ?? [])].reverse();
   const rows = entries.map(item => ({ date: esc(formatDate(item.date)), type: esc(item.electionLabel ?? item.electionType), share: pct(item.percent), position: item.position ? `${item.position}ª` : '—', outcome: `${badge(item.outcomeLabel ?? (item.personalMandate ? 'Mandato' : 'Nessun mandato'), item.personalMandate ? 'good' : 'bad')}`, expectation: item.expectation === 'sopra' ? '<span class="tone-good">sopra</span>' : item.expectation === 'sotto' ? '<span class="tone-bad">sotto</span>' : item.expectation ? 'in linea' : '—', seats: num(item.seats, 0) }));
@@ -196,7 +171,7 @@ function history(state) {
   return card({ kicker: 'STORICO ELETTORALE · SIMULAZIONE', title: `${entries.length} ${entries.length === 1 ? 'elezione' : 'elezioni'} · ${wins} con mandato`, body: table([['date', 'Data'], ['type', 'Elezione'], ['share', '%', 'num'], ['position', 'Pos.', 'num'], ['outcome', 'Esito'], ['expectation', 'Attese'], ['seats', 'Seggi lista', 'num']], rows, { empty: 'Nessuna elezione ancora disputata.' }) });
 }
 
-export function renderElectionsHub(state, { parties = [], logoFor = () => null, tab = null, national = null, geography = null, nationalView = null, campaignPicks = {}, presidency = null } = {}) {
+export function renderElectionsHub(state, { parties = [], logoFor = () => null, tab = null, national = null, geography = null, nationalView = null, campaignPicks = {}, presidency = null, polls = {} } = {}) {
   if (!state.game) return empty('Crea prima un politico per entrare nella centrale elettorale.', '<button class="primary-button" data-action="new-career">Crea il politico</button>');
   const active = ELECTION_TABS.some(([id]) => id === tab) ? tab : defaultElectionTab(state);
   const summary = state.campaign?.status === 'active' ? campaignSummary(state.campaign) : null;
@@ -206,7 +181,7 @@ export function renderElectionsHub(state, { parties = [], logoFor = () => null, 
   if (active === 'panoramica') body = `<div class="sx-grid two">${card({ kicker: 'CALENDARIO ELETTORALE', title: 'Quando si vota', body: calendar(state) })}${card({ kicker: 'CONTESTO POLITICO', title: 'Il clima del voto', body: context(state) })}</div><div class="sx-grid two">${card({ kicker: 'PREPARAZIONE', title: 'Quanto sei pronto', body: readiness(state) })}${card({ kicker: 'REGOLE DEL GIOCO', title: 'Come si assegnano i seggi', body: rules(state) })}</div>`;
   else if (active === 'candidatura') body = candidacy(state);
   else if (active === 'campagna') body = `<div class="eh-campaign">${renderCampaignPage(state, parties, logoFor, campaignPicks)}</div>`;
-  else if (active === 'avversari') body = rivals(state, parties, logoFor);
+  else if (active === 'avversari') body = renderObservatory(state, polls);
   else if (active === 'risultati') body = renderElectionReport(state.career.lastElectionReport, { place: mandatePlace(state, state.career.lastElectionReport) });
   else if (active === 'quirinale') body = presidency ? renderQuirinale(state, presidency()) : empty('Il Quirinale si apre con i dati della partita.');
   else if (active === 'nazionali') body = national ? renderNationalView(state, national(), { geography, view: nationalView }) : empty('Il ciclo nazionale si apre con i dati della partita: calendario, coalizioni e proiezione dei seggi.');

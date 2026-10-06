@@ -1,7 +1,10 @@
 import { advanceDays } from './time.js?v=20261005-2';
-import { CAMPAIGN_ACTIVITIES, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, phaseOf } from '../data/simulation/campaign-rules.js?v=20261005-2';
+import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261005-2';
 import { aggregateShares, mateForce, runFinalElection, runFirstRound } from './election-engine.js?v=20261005-2';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261005-2';
+import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261005-2';
+import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261005-2';
+import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261005-2';
+import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261005-2';
 
 const SOURCE = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
@@ -345,7 +348,8 @@ function rivalRoots(rivals, areas, seed) {
 }
 // The list the player stands in: who stands with him, how strong they are, which faction they come from. The place on the list is a
 // political result: it depends on this composition, on the territory, on the currents of the party and on what is negotiated.
-const LIST_ROLES = Object.freeze(['consigliere', 'deputato', 'senatore', 'uninominale', 'eurodeputato']);
+// A single-member district (uninominale) has no list: no composition, no place, no preferences against list mates.
+const LIST_ROLES = Object.freeze(['consigliere', 'deputato', 'senatore', 'eurodeputato']);
 function listQuality(mates) {
   const best = [...mates].filter(item => item.status !== 'ritirato').sort((a, b) => b.strength - a.strength).slice(0, 6);
   return round(clamp(best.reduce((sum, item) => sum + item.strength, 0) / Math.max(1, best.length) - 16, 0, 100));
@@ -441,37 +445,66 @@ function negotiateList(campaign, player, modifiers) {
   return `Posto migliore in lista: ora al numero ${next}. Chi ha ceduto (${giver.faction.replace('-', ' ')}) si aspetta qualcosa in cambio.`;
 }
 
-// ISTAT region codes as used by the real dataset (it-region-NN).
-const REGION_CODES = Object.freeze(['Piemonte','Valle d’Aosta','Lombardia','Trentino-Alto Adige','Veneto','Friuli-Venezia Giulia','Liguria','Emilia-Romagna','Toscana','Umbria','Marche','Lazio','Abruzzo','Molise','Campania','Puglia','Basilicata','Calabria','Sicilia','Sardegna']);
-const regionIdOf = name => { const index = REGION_CODES.indexOf(name); return index < 0 ? null : `it-region-${String(index + 1).padStart(2, '0')}`; };
-// Plausible rivals: active parties only, regional parties only in their own region (and never in a national
-// vote), the forces with more weight in the polls more often than the small ones.
-function buildOpponents(partyId, catalog, seed, count = 3, realCandidates = [], { type = null, region = null, weights = {} } = {}) {
-  const rand = randomFrom(seed ^ 0x5bd1e995);
+// Who a person of the real Parliament stands for in a roster: the force whose name his group's name resembles.
+const normalizedName = text => String(text ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('it-IT');
+const NAME_STOP = new Set(['di', 'e', 'per', 'le', 'la', 'il', 'lo', 'con', 'al', 'del', 'della', 'dei', 'gruppo', 'misto', 'italia', 'partito', 'movimento', 'alleanza', 'presidente', 'premier']);
+const nameTokens = text => new Set(normalizedName(text).split(/[^a-z0-9]+/).filter(word => word.length > 2 && !NAME_STOP.has(word)));
+function forceOfGroup(groupName, slots) {
+  const own = nameTokens(groupName);
+  if (!own.size) return null;
+  const scored = slots.map(slot => { const other = nameTokens(slot.officialName ?? slot.name); const common = [...own].filter(word => other.has(word)).length; return { slot, score: other.size ? common / Math.min(own.size, other.size) : 0, common }; }).filter(item => item.common >= 1 && item.score >= .5).sort((a, b) => b.score - a.score || a.slot.id.localeCompare(b.slot.id));
+  return scored[0]?.slot ?? null;
+}
+const partyKindOf = source => source === 'user' ? 'utente' : source === 'simulation' ? 'simulata' : 'reale';
+// Plausible rivals. In a general or a European election they are the forces that stand in that vote (the roster the world gives: the forces the polls
+// measure, the ones under observation, the ones that stood last time, the regional ones of the place): the very ids of the polls, one candidacy per
+// force, in the order of their weight. In a local vote they are drawn, seeded by the kind of election, the date and the place (two territories do
+// not have the same field): active parties only, regional parties only in their own region, the forces with more weight in the polls more often than the
+// small ones, the real parties the polls do not measure at their small weight, and now and then a candidacy without a party, declared independent
+// (never a made-up party: a simulated candidate belongs to a real force, to a force of the player or to nobody).
+function buildOpponents(partyId, catalog, seed, count = 3, realCandidates = [], { type = null, region = null, weights = {}, roster = null, place = null, independents = 0, excluded = [] } = {}) {
+  const placeKey = place ? `${place.municipalityCode ?? place.municipality ?? ''}|${place.region ?? region ?? ''}` : null;
+  const rand = randomFrom(placeKey ? (seed ^ 0x5bd1e995) ^ pollHash(placeKey) : seed ^ 0x5bd1e995);
   const home = regionIdOf(region);
-  const pool = catalog.filter(item => item?.id && item.id !== partyId && (item.source === 'real' || item.source === 'simulation' || item.source === 'user')
-      && !['historical', 'inactive', 'sciolto'].includes(item.status) && !item.adminHidden && !item.sameEntityAs
-      && (!item.regionId || (['comunale', 'provinciale', 'regionale'].includes(type) && item.regionId === home)))
-    .sort((a,b) => String(a.id).localeCompare(String(b.id)));
-  const parties = [];
-  while (pool.length) {
-    const weightOf = item => Math.max(.3, Number(weights[item.id] ?? 0)) + (item.parliamentaryPresence ? 1 : 0);
-    const total = pool.reduce((sum, item) => sum + weightOf(item), 0);
-    let pick = rand() * total;
-    const index = Math.max(0, pool.findIndex(item => (pick -= weightOf(item)) < 0));
-    parties.push(pool.splice(index, 1)[0]);
+  const national = ['politiche', 'europee'].includes(type) && roster?.participants?.some(item => !item.isPlayer && item.id !== partyId);
+  let slots = [];
+  if (national) {
+    slots = roster.participants.filter(item => !item.isPlayer && item.id !== partyId).map(item => ({ id: item.id, officialName: item.officialName ?? item.label, name: item.label, abbreviation: item.abbreviation ?? null, source: item.refSource ?? 'real', rosterReason: item.reason, surveyed: item.surveyed, rosterShare: item.share, regional: item.regional }));
+  } else {
+    const out = new Set(excluded);
+    const pool = catalog.filter(item => item?.id && item.id !== partyId && !out.has(item.id) && (item.source === 'real' || item.source === 'simulation' || item.source === 'user')
+        && !['historical', 'inactive', 'sciolto'].includes(item.status) && !item.adminHidden && !item.sameEntityAs
+        && (!item.regionId || item.regionId === home))
+      .sort((a,b) => String(a.id).localeCompare(String(b.id)));
+    const parties = [];
+    while (pool.length) {
+      const weightOf = item => Math.max(.3, Number(weights[item.id] ?? 0)) + (item.parliamentaryPresence ? 1 : 0) + (item.regionId && item.regionId === home ? 2 : 0);
+      const total = pool.reduce((sum, item) => sum + weightOf(item), 0);
+      let pick = rand() * total;
+      const index = Math.max(0, pool.findIndex(item => (pick -= weightOf(item)) < 0));
+      parties.push(pool.splice(index, 1)[0]);
+    }
+    slots = Array.from({ length: count }, (_, index) => parties[index % Math.max(1, parties.length)] ?? null).map(item => item ? { id: item.id, officialName: item.officialName ?? item.name, name: item.name ?? item.officialName, abbreviation: item.abbreviation ?? null, source: item.source, rosterReason: weights[item.id] > 0 ? 'rilevata' : item.regionId && item.regionId === home ? 'presenza-regionale' : 'non-rilevata', surveyed: Number(weights[item.id] ?? 0) > 0, regional: Boolean(item.regionId) } : null);
+    // A candidacy without a party: a civic list or an independent, for as many slots as the kind of election gives (at most one fewer than the field).
+    const free = clamp(Math.round(independents), 0, Math.max(0, slots.length - 1));
+    for (let index = 0; index < free; index++) slots[slots.length - 1 - index] = { independent: true };
   }
+  // A real parliamentarian stands for the force his group resembles (his party): his identity is verified, the numbers are simulated. In a vote
+  // without a roster he stands for no party, as before; one whose group matches no force of the roster is not made a rival of its own.
+  const matched = new Map();
+  if (national) for (const person of realCandidates) { const slot = forceOfGroup(person.groupName ?? person.electedOnList, slots.filter(item => !item.independent && !matched.has(item.id))); if (slot) matched.set(slot.id, person); }
   const candidates = [];
-  for (let index=0;index<count;index++) {
-    const party = parties[index % Math.max(1, parties.length)] ?? null;
+  slots.forEach((slot, index) => {
     const candidateId = ids('candidatura-simulata',seed,index+1);
-    const person = realCandidates[index];
+    const person = national ? matched.get(slot.id) : realCandidates[index];
     const rivalSeed = seed + index * 97;
     const aiProfile = profileForCandidate(seed, candidateId, index, type);
-    // A documented parliamentarian keeps only verified identity data; campaign numbers stay simulated.
-    if (person) candidates.push({ ...createCandidate({ id:candidateId, partyId:null, displayName:person.fullName, seed:rivalSeed }), aiProfile, realReference:{ politicianId:person.id, fullName:person.fullName, chamber:person.chamber, groupId:person.groupId ?? null, groupName:person.groupName ?? null, electedOnList:person.electedOnList ?? null, circoscription:person.circoscription ?? null, sourceUrl:person.sourceUrl, sourceName:person.sourceName, source:'real', verified:true } });
-    else candidates.push({ ...createCandidate({ id:candidateId, partyId:party?.id ?? null, displayName:`Candidatura simulata ${index+1}`, seed:rivalSeed }), aiProfile, partyLabel:party?.officialName ?? party?.name ?? null, partyAbbreviation:party?.abbreviation ?? null });
-  }
+    const party = slot?.independent ? null : slot;
+    const trace = party ? { partyKind: partyKindOf(party.source), rosterReason: party.rosterReason ?? null, surveyed: party.surveyed ?? null } : { partyKind: 'indipendente', independent: true, rosterReason: 'indipendente', surveyed: false };
+    if (person) candidates.push({ ...createCandidate({ id:candidateId, partyId:national ? party?.id ?? null : null, displayName:person.fullName, seed:rivalSeed }), aiProfile, ...(national && party ? { partyLabel:party.officialName ?? party.name ?? null, partyAbbreviation:party.abbreviation ?? null } : {}), ...trace, realReference:{ politicianId:person.id, fullName:person.fullName, chamber:person.chamber, groupId:person.groupId ?? null, groupName:person.groupName ?? null, electedOnList:person.electedOnList ?? null, circoscription:person.circoscription ?? null, sourceUrl:person.sourceUrl, sourceName:person.sourceName, source:'real', verified:true } });
+    else if (slot?.independent) candidates.push({ ...createCandidate({ id:candidateId, partyId:null, displayName:`Candidatura indipendente simulata ${index+1}`, seed:rivalSeed }), aiProfile, ...trace });
+    else candidates.push({ ...createCandidate({ id:candidateId, partyId:party?.id ?? null, displayName:`Candidatura simulata ${index+1}`, seed:rivalSeed }), aiProfile, partyLabel:party?.officialName ?? party?.name ?? null, partyAbbreviation:party?.abbreviation ?? null, ...trace });
+  });
   return candidates;
 }
 
@@ -483,7 +516,7 @@ const candidateLabel = candidate => candidate.realReference?.fullName ?? (candid
 // `extra` are points per candidate (the record of an incumbent), `edges` the party weight, `roots` the strongholds of the rivals, `homeExtra`
 // what the roots of the player (his territorial reputation, the committees) add at home. All of them are zero-mean among the rivals, so
 // a field without data starts as it always did.
-function initSupport(areas, candidates, player, seed, { extra = {}, edges = {}, roots = {}, homeExtra = 0, spread = 1.6 } = {}) {
+function initSupport(areas, candidates, player, seed, { extra = {}, edges = {}, roots = {}, homeExtra = 0, spread = 1.6, anchors = {} } = {}) {
   const rand = randomFrom(seed ^ 0x7f4a7c15);
   for (const area of areas) {
     const strengths = candidates.map((candidate,index) => {
@@ -495,6 +528,14 @@ function initSupport(areas, candidates, player, seed, { extra = {}, edges = {}, 
       const stronghold = roots[candidate.id]?.areaId === area.id ? roots[candidate.id].edge : 0;
       // The lean of the area for the party of the candidate: it differs from area to area, never on average.
       const lean = areas.length > 1 ? (randomFrom(hash(`lean|${seed}|${area.id}|${candidate.partyId ?? candidate.id}`))() - .5) * 2 * spread : 0;
+      const anchor = Number(anchors[candidate.id]);
+      if (Number.isFinite(anchor)) {
+        // A general or European vote: the force starts from its weight in the polls (what the institutes measure), moved by the quality of the candidate and by
+        // the lean of the area; the points of the local campaign scale with the size of the force, so a force of 0,3% does not start with the room of one of 20%.
+        const size = clamp(anchor / 12, .04, 1);
+        const quality = clamp((foundation - 20) / 100, -.25, .35);
+        return Math.max(.03, anchor * (1 + quality) + size * (territoryBoost + stronghold + lean + Number(extra[candidate.id] ?? 0) + (candidate.campaignStats.momentum??0)*.55 + (area.localTrend??0)*.8 + (rand()*7 - 3.5)));
+      }
       return Math.max(4, foundation + territoryBoost + stronghold + lean + Number(extra[candidate.id] ?? 0) + Number(edges[candidate.id] ?? 0) + (candidate.campaignStats.momentum??0)*.55 + (area.localTrend??0)*.8 + rand()*7 + area.organization*.015);
     });
     const shares = normalized(strengths);
@@ -512,7 +553,7 @@ function moveSupport(campaign, candidateId, delta, areaId = null) {
   for (const area of areas) {
     const shares = area.supportByCandidate;
     const own = Number(shares[candidateId] ?? 0);
-    const actual = Math.min(Math.max(-own + .01, delta), Object.keys(shares).length > 1 ? 4 : 0);
+    const actual = Math.min(Math.max(-own + .01, delta), Object.keys(shares).length > 1 ? (campaign.anchored ? Math.min(4, Math.max(.05, own * .6)) : 4) : 0);
     const others = Object.keys(shares).filter(id => id !== candidateId && campaign.candidates.find(item => item.id === id)?.status === 'active');
     const othersTotal = others.reduce((sum,id) => sum + Number(shares[id] ?? 0),0);
     if (!others.length || !othersTotal) continue;
@@ -823,6 +864,7 @@ export function activityAvailability(campaign, activity) {
   if (activity.id === 'ally_meeting' && campaign.stage === 'ballottaggio') return { ok:false, reason:'Tra i due turni gli accordi sono apparentamenti con i candidati esclusi.' };
   if ((activity.runoffPact || activity.runoffAppeal || activity.runoffStance) && !campaign.runoff) return { ok:false, reason:'Il ballottaggio di questa campagna non prevede apparentamenti.', hidden:true };
   if ((activity.scouting || activity.listNegotiation) && !campaign.list) return { ok:false, reason:'Questa candidatura non passa per una lista.', hidden:true };
+  if (activity.id === 'list_building' && campaign.candidacy?.role === 'uninominale') return { ok:false, reason:'Il collegio uninominale non ha una lista da costruire.', hidden:true };
   if (activity.listNegotiation && campaign.nomination.status === 'excluded') return { ok:false, reason:'Non sei in lista.' };
   if (campaign.day + activity.days > campaign.totalDays) return { ok:false, reason:'Tempo insufficiente.' };
   const player = campaign.candidates.find(item => item.isPlayer);
@@ -966,11 +1008,11 @@ function evaluateNomination(campaign) {
       if (campaign.nomination.listPosition !== before) addHistory(campaign, 'candidatura', `La composizione della lista (${standing.ahead} ${standing.ahead === 1 ? 'nome pesa' : 'nomi pesano'} più di te) sposta il tuo posto: dal ${before} al ${campaign.nomination.listPosition}.`, { source:SOURCE });
     }
     // A narrow decision: the candidacy comes with a worse place on the list than hoped.
-    if (roll > odds * .82 && campaign.nomination.listPosition < 8) {
+    if (campaign.nomination.listPosition !== null && roll > odds * .82 && campaign.nomination.listPosition < 8) {
       campaign.nomination.listPosition += 1 + (roll > odds * .93 ? 1 : 0);
       campaign.nomination.decision.lowerPlace = true;
       addHistory(campaign,'candidatura',`Candidatura approvata, ma in una posizione peggiore di quella attesa: numero ${campaign.nomination.listPosition}.`,{source:SOURCE});
-    } else addHistory(campaign,'candidatura','Il partito ha approvato la candidatura e la posizione in lista.',{source:SOURCE});
+    } else addHistory(campaign,'candidatura',campaign.nomination.listPosition===null?'Il partito ha approvato la candidatura nel collegio uninominale.':'Il partito ha approvato la candidatura e la posizione in lista.',{source:SOURCE});
     campaign.candidacy.listPosition = campaign.nomination.listPosition;
   } else {
     campaign.nomination.status = 'excluded';
@@ -1188,6 +1230,21 @@ function turnoutOf(campaign, round_ = 'primo-turno', mobilization = null) {
   const parts = { base:58, place:campaign.context?.participation ? round((campaign.context.participation - 60) * .4) : 0, climate:round((mood - 50) * .08), mobilization:round(own * 1.5 + rivals * .8), runoff:round_ === 'ballottaggio' ? RUNOFF_RULES.turnoutDrop : 0 };
   return { value:round(clamp(Object.values(parts).reduce((sum, value) => sum + value, 0), 32, 82)), parts };
 }
+// More noise where fewer people decide. It is the size of the electorate that counts (the voters, when the registers are known: electors times turnout), not the turnout
+// alone; when only its class is known (a comune up to 15,000 inhabitants, the second-level vote of a province) the class says it; unknown, it is neutral.
+function electorateNoise(campaign, turnout) {
+  const electorate = campaign.electorate;
+  const electors = Number(electorate?.electors);
+  if (Number.isFinite(electors) && electors > 0) return 1 + clamp((Math.log10(30000) - Math.log10(Math.max(1, electors * turnout / 100))) * .3, 0, .7);
+  return electorate?.sizeClass === 'piccolo' ? 1.2 : electorate?.sizeClass === 'secondo-livello' ? 1.15 : 1;
+}
+// The size of the electorate of the race, as far as it is known: the number of electors (the registers the store reads from the real map), or only its class.
+function electorateOf(config, type) {
+  const given = config.electorate && typeof config.electorate === 'object' ? config.electorate : {};
+  const electors = Number(given.electors);
+  const sizeClass = type === 'comunale' ? (config.municipalityBand === 'oltre-15000' ? 'medio' : 'piccolo') : type === 'provinciale' ? 'secondo-livello' : null;
+  return { electors: Number.isFinite(electors) && electors > 0 ? Math.round(electors) : null, validRatio: given.validRatio !== null && given.validRatio !== undefined && Number(given.validRatio) > 0 && Number(given.validRatio) <= 1 ? Number(given.validRatio) : null, sizeClass, basis: given.basis ?? (sizeClass === 'piccolo' || sizeClass === 'medio' ? 'fascia demografica del comune (fino o oltre 15.000 abitanti)' : null), source:SOURCE };
+}
 // The day of the vote: late deciders, turnout and the error of every projection move the final result a little.
 // How much depends on the strategy (more when looking for new voters, less when consolidating), on the climate and on the turnout
 // (a small electorate is a noisier one); the difference in mobilisation between the candidates moves the shares.
@@ -1201,7 +1258,7 @@ function electionDay(campaign, round_ = 'primo-turno') {
   const mobilization = Object.fromEntries(active.map(item => [item.id, mobilizationOf(campaign, item, round_)]));
   const mean = active.length ? Object.values(mobilization).reduce((sum, value) => sum + value, 0) / active.length : 0;
   const turnout = turnoutOf(campaign, round_, mobilization);
-  const smallElectorate = 1 + Math.max(0, 52 - turnout.value) / 120;
+  const smallElectorate = electorateNoise(campaign, turnout.value);
   const shifts = {};
   for (const candidate of active) {
     const share = Math.max(.5, before[candidate.id]);
@@ -1294,7 +1351,8 @@ function refuseEndorsement(campaign, subject, report, delta = -6) {
 // A subject comes forward on its own: the player decides whether to accept (with the commitment), accept without commitments (it is worth less) or decline.
 function endorsementOffer(campaign) {
   const box = ensureEndorsements(campaign);
-  if (box.offers >= ENDORSEMENT_RULES.maxOffers + 2) return null;
+  // At most `maxOffers` offers in a whole campaign (a subject that comes forward counts even if the player declines).
+  if (box.offers >= ENDORSEMENT_RULES.maxOffers) return null;
   const subject = drawEndorser(campaign);
   const motive = endorsementMotive(campaign, subject);
   const kind = ENDORSEMENT_KINDS[subject.kind];
@@ -1431,6 +1489,8 @@ function startRunoff(campaign, first) {
     }
   }
   addHistory(campaign, 'elezione', 'Primo turno concluso. Inizia il periodo di ballottaggio: gli elettori degli esclusi sono in gioco.', { source:SOURCE });
+  // The polls do not stop between the rounds: the first reading of the runoff asks the head-to-head of the finalists.
+  pollWave(campaign, 'Dopo il primo turno');
 }
 // During the two weeks the rival finalists work on the candidates who are out as well (both of them, when the player is out of the runoff).
 function runoffRivalMoves(campaign) {
@@ -1508,6 +1568,8 @@ function tick(campaign) {
     if (!campaign.pendingEvents.length && draw(campaign) < .5) poolEvent(campaign);
     if (!campaign.pendingEvents.length) contextualEvent(campaign,'week');
   }
+  // The institutes poll the race every week, through the runoff, until the vote (the readings never touch the sequence of the campaign).
+  if (campaign.day>0 && campaign.day%CAMPAIGN_POLL_RULES.everyDays===0 && campaign.day<campaign.totalDays) pollWave(campaign);
   if (campaign.stage==='ballottaggio' && campaign.day>=campaign.totalDays) { applyRunoffTransfers(campaign); electionDay(campaign, 'ballottaggio'); finish(campaign, campaign.firstRoundResult); }
   else if (campaign.stage==='campagna' && campaign.day>=campaign.totalDays) {
     electionDay(campaign, 'primo-turno');
@@ -1537,6 +1599,103 @@ function finish(campaign,firstRound=null) {
   addHistory(campaign,'risultato',`${campaign.result.outcome?.label ?? campaign.result.description}`,{source:SOURCE});
 }
 
+// ---------- the polls of the campaign ----------
+// Every institute polls the race (the candidacies in the field, coalitions as one) once a week, from the first day to the vote and through the
+// runoff: its sample is the one of the national panel scaled to the size of the race, its error is its own and persists from one week to the next,
+// the house effect and the weekly cap are those of the national polls (poll-observatory.js). The readings are pure functions of the seed, the day, the
+// institute and the candidacy (a hash, never the random sequence of the campaign), so asking for them changes nothing and reloading a save gives the
+// same numbers. They measure the consensus of the campaign; nothing they say moves it.
+const pollKey = campaign => campaign.electionType === 'comunale' ? (campaign.municipalityBand === 'oltre-15000' ? 'comunale' : 'comunaleSmall') : campaign.electionType;
+const packRows = rows => rows.map(row => [row.partyId, row.share, row.delta ?? 0]);
+const unpackRows = rows => (rows ?? []).map(([partyId, share, delta, spread]) => ({ partyId, share, delta, spread }));
+function ensurePolls(campaign) {
+  campaign.polls = campaign.polls && typeof campaign.polls === 'object' ? campaign.polls : {};
+  const box = campaign.polls;
+  box.waves = Array.isArray(box.waves) ? box.waves : [];
+  box.errors = box.errors && typeof box.errors === 'object' ? box.errors : {};
+  box.source = SOURCE;
+  return box;
+}
+export function pollWave(campaign, label = null) {
+  if (!campaign || campaign.status !== 'active') return null;
+  // In the runoff the polls ask the head-to-head: the finalists, as the projection of the two weeks gives them (the voters of the others in play).
+  const head = campaign.stage === 'ballottaggio' ? runoffProjection(campaign) : null;
+  const groups = aggregateShares(campaign).filter(group => group.share > 0 && (!head || group.id in head)).map(group => head ? { ...group, share: head[group.id] } : group);
+  if (!groups.length) return null;
+  const box = ensurePolls(campaign);
+  if (box.waves.at(-1)?.day === campaign.day && box.waves.at(-1)?.stage === campaign.stage) return box.waves.at(-1);
+  const scale = CAMPAIGN_POLL_RULES.sampleScale[pollKey(campaign)] ?? 1;
+  const trueRows = groups.map(group => ({ partyId: group.id, share: group.share }));
+  const last = box.waves.at(-1);
+  const wave = { id: ids('onda', campaign.seed, campaign.day), day: campaign.day, date: campaign.currentDate, stage: campaign.stage, label, institutes: {}, source: SOURCE };
+  const readings = [];
+  for (const profile of POLL_INSTITUTES) {
+    const scaled = { ...profile, sample: profile.sample.map(value => Math.max(150, Math.round(value * scale / 10) * 10)) };
+    const before = last?.institutes?.[profile.id]?.rows;
+    const out = readInstitute({ profile: scaled, seed: campaign.seed, week: campaign.day + (campaign.stage === 'ballottaggio' ? 1000 : 0), date: campaign.currentDate, trueRows, previousRows: before ? unpackRows(before) : null, errors: box.errors[profile.id] ?? {}, noise: 1 });
+    box.errors[profile.id] = out.errors;
+    wave.institutes[profile.id] = { sample: out.reading.sample, margin: out.reading.margin, rows: packRows(out.reading.rows), others: out.reading.others };
+    readings.push({ ...out.reading });
+  }
+  const average = averageOf(readings, last?.average ? unpackRows(last.average) : null);
+  wave.average = average ? packRows(average.rows.map(row => ({ ...row }))).map((row, index) => [...row, average.rows[index].spread]) : [];
+  // The groups the polls follow, as they stand now: the same ids as the candidacies of the race.
+  wave.groups = groups.map(group => ({ id: group.id, members: group.members, partyIds: group.partyIds }));
+  box.waves = [...box.waves, wave].slice(-CAMPAIGN_POLL_RULES.waves);
+  return wave;
+}
+// Which audience the player has built so far: each activity speaks to the segments of the electorate that suit it (CAMPAIGN_AUDIENCE).
+function audienceOf(activity) {
+  return CAMPAIGN_AUDIENCE.activity[activity.id] ?? CAMPAIGN_AUDIENCE.category[activity.category] ?? {};
+}
+function recordAudience(campaign, activity) {
+  const mix = audienceOf(activity);
+  if (!Object.keys(mix).length || !(activity.effect > 0 || activity.visibility > 0)) return;
+  campaign.audience = campaign.audience && typeof campaign.audience === 'object' ? campaign.audience : {};
+  for (const [segment, weight] of Object.entries(mix)) campaign.audience[segment] = round(Number(campaign.audience[segment] ?? 0) + weight * Math.max(.3, activity.effect + activity.visibility * .1));
+}
+const topicAreaOf = campaign => TOPIC_AREA[campaign.strategy?.topicId] ?? TOPIC_AREA[campaign.nationalContext?.salientTopic] ?? null;
+// The profile of a candidacy in the segments: the agenda and the stance of its force, or of its camp when the force is not one of the world; an
+// independent speaks to the services of the place. The topic the player's campaign is built on comes first in his agenda.
+function profileOf(campaign, candidate) {
+  const base = candidate.profile ?? { agenda: ['pa', 'infrastrutture', 'trasporti'], stance: 0 };
+  const topic = candidate.isPlayer ? topicAreaOf(campaign) : null;
+  return { ...base, agenda: topic ? [topic, ...(base.agenda ?? []).filter(item => item !== topic)].slice(0, 4) : base.agenda };
+}
+// The observatory of the race, for the page: the readings of every institute, the average, the standing of each group, the territories, and (given the
+// society) the segments with their insights. Pure: it reads what the campaign has saved and measures nothing new.
+export function campaignObservatory(campaign, { society = null } = {}) {
+  if (!campaign?.candidates?.length) return null;
+  const box = campaign.polls ?? { waves: [] };
+  const waves = box.waves ?? [];
+  const latest = waves.at(-1) ?? null;
+  // A candidacy is named by the force it stands for (a verified person of the real Parliament, when there is one, is named next to it: `person`).
+  const labelOf = candidate => candidate?.isPlayer ? 'La tua candidatura' : candidate?.partyLabel ? candidate.partyLabel : candidate?.realReference?.fullName ?? candidate?.displayName ?? 'Candidatura simulata';
+  const byId = new Map(campaign.candidates.map(item => [item.id, item]));
+  const head = campaign.status === 'active' && campaign.stage === 'ballottaggio' ? runoffProjection(campaign) : null;
+  // A race that is over keeps the last poll it had (the vote of a general or European election is counted on the national map, with its own rows).
+  const groupsNow = campaign.status === 'active' ? aggregateShares(campaign).filter(group => !head || group.id in head).map(group => head ? { ...group, share: head[group.id] } : group) : (latest?.groups ?? []).map(group => ({ id: group.id, leaderCandidateId: group.id, share: unpackRows(latest.average).find(row => row.partyId === group.id)?.share ?? 0, members: group.members, partyIds: group.partyIds }));
+  const rows = groupsNow.map(group => {
+    const leader = byId.get(group.leaderCandidateId ?? group.id);
+    const members = (group.members ?? [group.id]).map(id => byId.get(id)).filter(Boolean);
+    const line = id => waves.map(wave => unpackRows(wave.average).find(row => row.partyId === id)?.share ?? null);
+    const series = line(group.id);
+    const current = unpackRows(latest?.average).find(row => row.partyId === group.id) ?? null;
+    return { id: group.id, candidateId: leader?.id ?? group.id, label: members.length > 1 ? `${labelOf(leader)} e alleati` : labelOf(leader), isPlayer: members.some(item => item.isPlayer), partyId: leader?.partyId ?? null, person: leader?.realReference?.fullName ?? null, partyKind: leader?.partyKind ?? (leader?.isPlayer ? 'giocatore' : null), independent: Boolean(leader?.independent), rosterReason: leader?.rosterReason ?? null, surveyed: leader?.surveyed ?? null, members: members.map(item => item.id), projection: round(Number(group.share ?? 0)), poll: current?.share ?? null, delta: current?.delta ?? 0, spread: current?.spread ?? null, series };
+  }).sort((a, b) => (b.poll ?? b.projection) - (a.poll ?? a.projection));
+  const institutes = POLL_INSTITUTES.map(profile => ({ id: profile.id, name: profile.name, mode: profile.mode, weighting: profile.weighting, note: profile.note, history: waves.map(wave => ({ day: wave.day, date: wave.date, stage: wave.stage, ...(wave.institutes?.[profile.id] ? { sample: wave.institutes[profile.id].sample, margin: wave.institutes[profile.id].margin, rows: unpackRows(wave.institutes[profile.id].rows) } : { sample: null, margin: null, rows: [] }) })), latest: latest?.institutes?.[profile.id] ? { day: latest.day, date: latest.date, sample: latest.institutes[profile.id].sample, margin: latest.institutes[profile.id].margin, rows: unpackRows(latest.institutes[profile.id].rows) } : null }));
+  const player = campaign.candidates.find(item => item.isPlayer);
+  const entries = rows.map(row => { const candidate = byId.get(row.candidateId); return { id: row.id, share: row.poll ?? row.projection, ...profileOf(campaign, candidate ?? {}) }; });
+  const boosts = player ? { [rows.find(row => row.isPlayer)?.id ?? player.id]: Object.fromEntries(Object.entries(campaign.audience ?? {}).map(([segment, points]) => [segment, clamp(points * .012, 0, .35)])) } : {};
+  const segments = society && entries.length ? segmentSupport(entries, society, { boosts }) : null;
+  const territories = campaign.territories.map(area => ({ id: area.id, name: area.name, weight: area.weight, localTrend: area.localTrend ?? 0, shares: Object.entries(area.supportByCandidate ?? {}).map(([id, value]) => ({ candidateId: id, share: round(Number(value)) })).sort((a, b) => b.share - a.share) }));
+  const playerRow = rows.find(row => row.isPlayer) ?? null;
+  const expectation = campaign.expectation?.share ?? null;
+  const flows = latest ? flowsOf(unpackRows(latest.average), entries.map(item => ({ id: item.id, axis: item.axis ?? null }))) : [];
+  const second = playerRow && latest ? secondChoice({ id: playerRow.id, axis: entries.find(item => item.id === playerRow.id)?.axis ?? null }, entries.map(item => ({ id: item.id, axis: item.axis ?? null, share: item.share })), { abstain: true }) : [];
+  return { waves: waves.length, latest: latest ? { day: latest.day, date: latest.date, stage: latest.stage, label: latest.label ?? null } : null, rows, institutes, average: waves.map(wave => ({ day: wave.day, date: wave.date, stage: wave.stage, rows: unpackRows(wave.average) })), territories, segments, themes: society ? { national: themesOf(society, null, 4), bySegment: Object.fromEntries((society.segments ?? []).map(segment => [segment.id, themesOf(society, segment.id, 2)])) } : null, audience: campaign.audience ?? {}, flows, secondChoice: second, expectation, playerShare: playerRow ? (playerRow.poll ?? playerRow.projection) : null, roster: campaign.roster ?? null, entries };
+}
+
 export function createCampaign({career,player,statistics=[],offices=[],territories:userTerritories=[],partyCatalog=[],currentDate,config={}}) {
   if (!career?.id || !player?.id) throw new Error('Crea prima un politico per iniziare la campagna.');
   const type=config.electionType;
@@ -1564,10 +1723,23 @@ export function createCampaign({career,player,statistics=[],offices=[],territori
   const officeTitle=String(offices.find(item=>item.id===player.roleId)?.title??'');
   const incumbency=type==='politiche' && /deputat|senat/i.test(officeTitle) && !/inizial/i.test(officeTitle);
   const candidate=createCandidate({id:playerCandidateId,player:true,partyId,displayName:player.displayName,seed,stats:playerStats});
+  // What the player's own candidacy stands for: a party of the database, a party he founded (his own), or nobody.
+  candidate.partyKind=!partyId?'indipendente':userOrIndependent?'utente':partyRecord?.source==='simulation'?'simulata':'reale';
   // More forces in the field where more of them really run: a small comune, a big one, a region, the whole country.
   const rivals=RIVALS_BY_TYPE[type]?.[type==='comunale'&&config.municipalityBand!=='oltre-15000'?'small':'default'] ?? 3;
-  const opponents=buildOpponents(partyId,partyCatalog,seed,rivals,config.realCandidates??[],{ type, region:player.region ?? null, weights:config.partyWeights ?? {} });
+  // A local race is seeded by the place too, and some of its candidacies may stand without a party; a general or European one is the roster of the forces that stand.
+  const place=config.place ?? null;
+  const independentsOf=()=>{ if(!['comunale','provinciale','regionale'].includes(type)) return 0; const key=type==='comunale'?(config.municipalityBand==='oltre-15000'?'comunale':'comunaleSmall'):type; const chance=CAMPAIGN_POLL_RULES.independents[key]??0; const roll=randomFrom(hash(`indipendenti|${seed}|${place?.municipalityCode??place?.municipality??''}|${place?.region??player.region??''}`)); return (roll()<chance?1:0)+(key==='comunale'&&roll()<chance*.3?1:0); };
+  const roster=config.roster?.participants?.length?config.roster:null;
+  const opponents=buildOpponents(partyId,partyCatalog,seed,rivals,config.realCandidates??[],{ type, region:player.region ?? null, weights:config.partyWeights ?? {}, roster, place, independents:Number.isFinite(config.independents)?config.independents:independentsOf(), excluded:config.excluded ?? [] });
   const candidates=[candidate,...opponents];
+  // What each candidacy stands for in the segments of the electorate: the agenda and the stance of its force (the forces of the world give them), else of its camp.
+  const campOf=position=>/destra/.test(position??'')?'destra':/sinistra/.test(position??'')?'sinistra':'centro';
+  for(const item of candidates){
+    const force=item.partyId?config.forces?.[item.partyId]:null;
+    const record=item.partyId?partyCatalog.find(entry=>entry.id===item.partyId):null;
+    item.profile=force?{ agenda:force.agenda, stance:stanceOf(force), axis:Number.isFinite(force.axis)?force.axis:null }:item.partyId||item.isPlayer&&partyId?{ agenda:CAMP_PRIORITIES[campOf(record?.politicalPosition??record?.position)].slice(0,3), stance:0, axis:null }:{ agenda:['pa','infrastrutture','trasporti'], stance:0, axis:null };
+  }
   // The term that ends: the record of the player when he sat in the administration, or of the administration he now faces (its candidate carries it).
   const local=['comunale','provinciale','regionale'].includes(type);
   const mandateInput=local&&config.mandate&&Number.isFinite(Number(config.mandate.standing))?config.mandate:null;
@@ -1589,11 +1761,17 @@ export function createCampaign({career,player,statistics=[],offices=[],territori
   for(const [rival,record] of recognized) extra[rival.id]=round(Number(extra[rival.id]??0)+(record.last?.ahead?RIVAL_PERSISTENCE.campaign.confidence:record.last?.ahead===false?-.4:0));
   const rootsConfig=config.roots??{};
   const homeExtra=round(clamp((Number(rootsConfig.territorial??50)-50)/22,-1.6,2.2));
-  initSupport(campaignAreas,candidates,player,seed,{extra,edges:partyEdges(opponents,config.partyWeights??{}),roots:rivalRoots(opponents,campaignAreas,seed),homeExtra,spread:local?1.8:1.2});
+  // In a general or European vote the weight of each force in the polls is the starting point of the race (the roster carries it); the player's own force too.
+  const anchors={};
+  if(roster&&['politiche','europee'].includes(type)){
+    const shareOf=id=>roster.participants.find(item=>item.id===id)?.share;
+    for(const item of candidates) { const value=item.isPlayer?(partyId?shareOf(partyId):null):shareOf(item.partyId); anchors[item.id]=Number.isFinite(value)?value:item.isPlayer?.3:.3; }
+  }
+  initSupport(campaignAreas,candidates,player,seed,{extra,edges:partyEdges(opponents,config.partyWeights??{}),roots:rivalRoots(opponents,campaignAreas,seed),homeExtra,spread:local?1.8:1.2,anchors});
   const focus=campaignAreas.find(area=>area.name===player.municipality)?.id ?? campaignAreas.find(area=>area.region===player.region)?.id ?? campaignAreas.find(area=>area.constituency && (config.constituency === area.constituency))?.id ?? campaignAreas[0].id;
   const deadlineDay=model.nominationDays;
   const internalSupport=partyId && !userOrIndependent ? round(1.5+playerStats.influence*.035+(incumbency?1.5:0)) : 10;
-  const nomination={status:userOrIndependent?'approved':'pending',internalSupport,requiredSupport:7,deadlineDay,listPosition:6,source:SOURCE,
+  const nomination={status:userOrIndependent?'approved':'pending',internalSupport,requiredSupport:7,deadlineDay,listPosition:role==='uninominale'?null:6,source:SOURCE,
     incumbent:incumbency,incumbencyNote:incumbency?'La ricandidatura è da negoziare e non è garantita.':null};
   const governingIncumbent=Boolean(incumbencyRecord?.active&&incumbencyRecord.governing);
   if(incumbencyRecord&&nomination.status==='pending') {
@@ -1616,19 +1794,22 @@ export function createCampaign({career,player,statistics=[],offices=[],territori
     municipalityBand:type==='comunale'?(config.municipalityBand==='oltre-15000'?'oltre-15000':'fino-15000'):null,
     objective:config.objective??'build',playerCandidateId,partyId,independent:userOrIndependent && !partyId,partyReferences:allPartyRefs,
     initialLevel:career.initialLevel,territoryId:career.territoryId,homeRegion:player.region ?? null,territories:campaignAreas,candidates,resources:initialResources,
-    candidateStats:playerStats,startingStats:{...playerStats},nomination,internalCandidates,candidacy:{role,listPosition:6,territoryId:focus,incumbent:incumbency||governingIncumbent},incumbency:incumbencyRecord,list:buildList({seed,type,role,areas:campaignAreas}),listContext:config.listContext?{...config.listContext,source:SOURCE}:null,obligations:[],
+    candidateStats:playerStats,startingStats:{...playerStats},nomination,internalCandidates,candidacy:{role,listPosition:role==='uninominale'?null:6,territoryId:focus,incumbent:incumbency||governingIncumbent},incumbency:incumbencyRecord,list:buildList({seed,type,role,areas:campaignAreas}),listContext:config.listContext?{...config.listContext,source:SOURCE}:null,obligations:[],
     status:'active',stage:'campagna',startedAt:currentDate,currentDate,electionDate:withinDays(currentDate,model.campaignDays),
     day:0,totalDays:model.campaignDays,daysToNomination:deadlineDay,firstRoundResult:null,result:null,runoffCandidateIds:null,
     alliances:[],events:[],pendingEvents:[],history:[],consensusHistory:[],aiTurns:0,preparationByTopic:Object.fromEntries(DEBATE_TOPICS.map(topic=>[topic.id,0])),
     nationalContext:{moodIndex:Math.round(42+randomFrom(seed ^ 0x165667b1)()*18),macroTrend:round((randomFrom(seed ^ 0x9e3779b9)()-.5)*4),salientTopic:DEBATE_TOPICS[Math.floor(randomFrom(seed ^ 0x85ebca6b)()*DEBATE_TOPICS.length)].id,source:SOURCE},
     media:{coverage:0,reactions:0,criticalEvents:0,source:SOURCE},partyImpact:{internalSupport:internalSupport,source:SOURCE},
-    pollingHook:{provider:null,connected:false,signal:null,source:SOURCE,description:'Nessun sondaggio collegato: l’indicatore in schermata è una proiezione interna simulata.'},
     strategy:null,activityUses:{},crisis:null,commitments:0,eventLog:{},electionDays:[],partyTrend:0,
     crew:newCrew(playerStats,{quality:config.crew?.quality??null,fieldEdge:config.crew?.fieldEdge??0,organization:initialResources.organization}),rivalScope,endorsements:{known:Array.isArray(config.endorsers)?config.endorsers.filter(item=>item?.key&&item.areaId).map(item=>({key:item.key,kind:item.kind,areaId:item.areaId,label:item.label,relation:Number(item.relation??50)})):[],given:[],refused:[],pending:{},offers:0,source:SOURCE},
+    anchored:Object.keys(anchors).length>0,audience:{},electorate:electorateOf(config,type),roster:roster?{ type, regionId:roster.regionId??null, others:roster.others??null, participants:roster.participants.map(item=>({ id:item.id, label:item.label, abbreviation:item.abbreviation??null, refSource:item.refSource??'real', share:item.share, surveyed:item.surveyed, reason:item.reason, regional:Boolean(item.regional), isPlayer:Boolean(item.isPlayer) })), source:SOURCE }:null,
     seed,rngState:seed,source:SOURCE
   };
   addHistory(campaign,'inizio',`${model.label}: inizia una campagna di ${model.campaignDays} giorni nello scenario simulato.`,{source:SOURCE});
   for(const [rival,record] of recognized) recognizeRival(campaign,rival,record);
+  // The forces already standing with the player's (an intesa or a coalition of the world, the coalition of a general or European vote) start the race allied.
+  const alliedParties=new Set(config.allies??[]);
+  if(alliedParties.size) for(const rival of campaign.candidates.filter(item=>!item.isPlayer&&item.partyId&&alliedParties.has(item.partyId))) addHistory(campaign,'alleanza',formPlayerAlliance(campaign,campaign.candidates.find(item=>item.isPlayer),rival,'Intesa già in vigore tra i due partiti',2,{existing:true}),{source:SOURCE});
   const openingWeight=campaignAreas.reduce((sum,item)=>sum+item.weight,0)||1;
   const openingConsensus=campaignAreas.reduce((sum,item)=>sum+Number(item.supportByCandidate[playerCandidateId]??0)*item.weight,0)/openingWeight;
   campaign.consensusHistory.push({day:0,date:currentDate,value:round(openingConsensus),source:SOURCE});
@@ -1644,6 +1825,8 @@ export function setExpectation(campaign, { pollShare = null } = {}) {
   const share = round(weightedShare(campaign, campaign.playerCandidateId));
   campaign.expectation = { share, pollShare, setOn:campaign.currentDate, ...(campaign.incumbency?.expectation ? { pressure:campaign.incumbency.expectation } : {}), source:SOURCE };
   if (campaign.consensusHistory[0]) campaign.consensusHistory[0] = { ...campaign.consensusHistory[0], value:share };
+  // The opening poll of the race: what the institutes read on the first day, from the projection the campaign starts with.
+  pollWave(campaign, 'Apertura della campagna');
   return campaign;
 }
 
@@ -1666,14 +1849,15 @@ export function performCampaignActivity(input,activityId,options={}) {
   const modifiers = activityModifiers(campaign, activity, { ...options, territoryId:area?.id, topicId:topic.id });
   const factor = modifiers.total;
   campaign.activityUses = { ...(campaign.activityUses ?? {}), [activity.id]:(campaign.activityUses?.[activity.id] ?? 0) + 1 };
+  recordAudience(campaign, activity);
   let report='';
   if(activity.internalSupport) {
     if(campaign.nomination.status==='pending') {
       campaign.nomination.internalSupport=round(clamp(campaign.nomination.internalSupport+activity.internalSupport*strategy.mods.internal+Math.min(1,campaign.candidateStats.influence*.025),0,10));
-      campaign.nomination.listPosition=Math.max(1,campaign.nomination.listPosition-(activity.listPosition??0));
+      if(campaign.nomination.listPosition!==null) campaign.nomination.listPosition=Math.max(1,campaign.nomination.listPosition-(activity.listPosition??0));
       campaign.partyImpact.internalSupport=campaign.nomination.internalSupport;
-      report=`Sostegno interno ${campaign.nomination.internalSupport}/10; posizione provvisoria ${campaign.nomination.listPosition}.`;
-    } else if(campaign.nomination.status==='approved'&&activity.listPosition) {
+      report=campaign.nomination.listPosition===null?`Sostegno interno ${campaign.nomination.internalSupport}/10.`:`Sostegno interno ${campaign.nomination.internalSupport}/10; posizione provvisoria ${campaign.nomination.listPosition}.`;
+    } else if(campaign.nomination.status==='approved'&&activity.listPosition&&campaign.candidacy.listPosition!==null) {
       campaign.candidacy.listPosition=Math.max(1,campaign.candidacy.listPosition-activity.listPosition);
       campaign.nomination.listPosition=campaign.candidacy.listPosition;
       report=`La trattativa ha migliorato la tua posizione in lista: numero ${campaign.candidacy.listPosition}.`;
@@ -1848,12 +2032,14 @@ function negotiateAllianceInPlace(campaign,targetId,costAlreadyPaid=false) {
 }
 
 // The partner joins the coalition of the player: part of his voters follows the agreement, the machine grows a little, the party feels the price of sharing the list.
-function formPlayerAlliance(campaign,player,target,terms,relationDelta) {
+function formPlayerAlliance(campaign,player,target,terms,relationDelta,{ existing=false }={}) {
   target.status='allied'; target.coalitionLeaderId=player.id;
   const transfer = mergeAlliance(campaign, player.id, target);
-  campaign.alliances.push({id:ids('alleanza',campaign.seed,campaign.day),leaderCandidateId:player.id,partnerCandidateId:target.id,status:'active',transfer,terms,formedOn:campaign.currentDate,source:SOURCE});
+  campaign.alliances.push({id:ids('alleanza',campaign.seed,campaign.day+campaign.alliances.length),leaderCandidateId:player.id,partnerCandidateId:target.id,status:'active',transfer,terms,formedOn:campaign.currentDate,existing,source:SOURCE});
+  rivalMemory(campaign, target, 'agreement', player.id, { action:'accordo-con-il-giocatore', relationDelta, weight:existing?.6:1.2 });
+  // An agreement made today costs a little at home and brings a little help; one that was already in force when the campaign starts is a given.
+  if (existing) return `Corri con ${candidateLabel(target)}: l’intesa tra i due partiti era già in vigore.`;
   player.resources.volunteers+=2; player.resources.organization+=1;
-  rivalMemory(campaign, target, 'agreement', player.id, { action:'accordo-con-il-giocatore', relationDelta, weight:1.2 });
   if (campaign.nomination.status === 'pending') campaign.nomination.internalSupport = round(clamp(campaign.nomination.internalSupport - .5, 0, 10));
   return `Accordo raggiunto con una candidatura simulata: il ${Math.round(transfer * 100)}% dei suoi elettori segue l’intesa, gli altri votano altrove.`;
 }

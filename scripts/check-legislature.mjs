@@ -197,7 +197,8 @@ for (let week = 0; week < 80 && !store.getState().national.lastPolitiche; week++
     give();
     store.startCampaign({ electionType: 'politiche', role: 'uninominale', objective: 'seat' }, db().parties, { politicians: db().politicians, groups: db().parliamentaryGroups });
     const campaign = store.getState().campaign;
-    assert.equal(campaign.candidacy.listPosition, 1, 'Il fondatore guida le liste del proprio partito.');
+    assert.equal(campaign.candidacy.listPosition, null, 'Nel collegio uninominale non c’è un posto in lista: si vince il collegio.');
+    assert.equal(campaign.list, null, 'Nessuna lista da comporre per chi corre nel collegio.');
     seen.campaign = true;
   }
   if (store.getState().campaign?.status === 'active') { for (let day = 0; day < 60 && store.getState().campaign.status === 'active'; day++) store.advance(1); continue; }

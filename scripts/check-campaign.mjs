@@ -118,7 +118,9 @@ let campaign=store.getState().campaign;
 const activeHtml=renderCampaignPage(store.getState(),references,()=>null);
 assert.ok(activeHtml.includes('data-campaign-activity="rally"'));
 assert.ok(activeHtml.includes('Candidatura interna simulata'));
-assert.ok(activeHtml.includes('Sondaggi non collegato')||activeHtml.includes('Aggancio sondaggi: non collegato'));
+assert.ok(!/non collegato/i.test(activeHtml),'Nessun riferimento a un aggancio ai sondaggi «non collegato»: i sondaggi stanno in Sondaggi e avversari.');
+assert.ok(!/class="[^"]*poll-/.test(activeHtml),'La campagna non contiene sondaggi: l’analisi è nell’Osservatorio.');
+assert.ok(activeHtml.includes('Sondaggi e avversari'),'Un rimando alla scheda Sondaggi e avversari per l’analisi completa.');
 // Il tema delle attività resta quello scelto dal giocatore, non quello della strategia, anche dopo un cambio di strategia.
 const strategyTopic=campaign.strategy?.topicId??campaign.nationalContext.salientTopic;
 assert.equal(selectedIn(activeHtml,'data-campaign-topic'),strategyTopic,'Senza una scelta il tema delle attività è quello della strategia.');
@@ -132,7 +134,8 @@ assert.deepEqual(store.getState().ui.campaignPicks,{key:campaign.id,values:{}},'
 store.setCampaignPicks({key:campaign.id,values:{topic:chosenTopic,ally:'candidatura-inesistente'}});
 assert.equal(selectedIn(changedHtml,'data-campaign-strategy-topic'),newStrategy.campaign.strategy.topicId,'Il select della strategia mostra il tema della strategia.');
 assert.equal(selectedIn(renderCampaignPage(store.getState(),references,()=>null,{topic:'tema-inesistente'}),'data-campaign-topic'),strategyTopic,'Una scelta non valida torna al tema della strategia.');
-assert.equal(campaign.pollingHook.connected,false);
+assert.equal(campaign.pollingHook,undefined,'Il vecchio aggancio ai sondaggi «non collegato» non esiste più.');
+assert.ok(campaign.polls?.waves?.length>=1&&campaign.polls.waves[0].label==='Apertura della campagna','Il sondaggio di apertura della corsa è salvato con la campagna.');
 assert.equal(campaign.partyId,party.id);
 assert.equal(campaign.nomination.status,'pending');
 store.performCampaignActivity('party_meeting');

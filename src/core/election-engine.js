@@ -91,6 +91,22 @@ function resultRow(group,share,totalBallots,seats=0,extra={}) {
   };
 }
 
+// The count of a vote in real numbers when the electorate of the place is known (campaign.electorate: electors and the share of valid ballots), with the four
+// quantities kept apart: electors (who can vote), turnout (the share of them who vote), voters, and valid votes (what the lists share). When the
+// electorate is not known the count stays normalised on 100,000 ballots and says so: no number is invented.
+export function ballotsOf(campaign, turnout = null) {
+  const electorate = campaign?.electorate;
+  const electors = Number(electorate?.electors);
+  const value = Number(turnout ?? campaign?.electionDays?.at(-1)?.turnout);
+  if (Number.isFinite(electors) && electors > 0 && Number.isFinite(value)) {
+    const voters = Math.round(electors * value / 100);
+    // The share of valid votes among the voters: when it is not known (null is not a zero) it is the usual 97%.
+    const known = Number(electorate.validRatio);
+    const ratio = electorate.validRatio !== null && electorate.validRatio !== undefined && Number.isFinite(known) && known > 0 && known <= 1 ? known : .97;
+    return { ballots:Math.round(voters * ratio), electors, voters, turnout:value, validRatio:ratio, normalized:false, basis:electorate.basis ?? null };
+  }
+  return { ballots:100000, electors:null, voters:null, turnout:Number.isFinite(value) ? value : null, normalized:true, basis:null };
+}
 function areaResults(campaign,totalBallots=100000) {
   const weight = territories(campaign).reduce((sum,item)=>sum+item.weight,0) || 1;
   return territories(campaign).map(area=>{
@@ -175,15 +191,16 @@ export function runFirstRound(campaign) {
   const groups=aggregateShares(campaign);
   const leader=groups[0];
   const playerGroup=groups.find(item=>item.id===campaign.playerCandidateId);
+  const count=ballotsOf(campaign);
   const result={
     stage:'primo-turno',model:ELECTION_MODELS[campaign.electionType].model,electionType:campaign.electionType,
-    totalBallots:100000,groups:groups.map(group=>resultRow(group,group.share,100000)),
+    totalBallots:count.ballots,electorate:count,groups:groups.map(group=>resultRow(group,group.share,count.ballots)),
     territories:areaResults(campaign),playerShare:playerGroup?.share??0,source:'simulation',simulated:true
   };
   if(campaign.electionType==='comunale'&&campaign.municipalityBand==='oltre-15000'&&leader?.share<50&&groups.length>1) {
     result.requiresRunoff=true;
     result.runoffCandidateIds=groups.slice(0,2).map(item=>item.id);
-    result.runoffShares=normalizedTwoRound(campaign,result.runoffCandidateIds).map(group=>resultRow(group,group.share,100000));
+    result.runoffShares=normalizedTwoRound(campaign,result.runoffCandidateIds).map(group=>resultRow(group,group.share,count.ballots));
   } else {
     result.requiresRunoff=false;
     result.winnerGroupId=leader?.id??null;
@@ -194,7 +211,9 @@ export function runFirstRound(campaign) {
 export function runFinalElection(campaign,firstRound=null) {
   const rules=ELECTION_MODELS[campaign.electionType];
   const aggregate=aggregateShares(campaign);
-  const totalBallots=100000;
+  // In the runoff far fewer people vote: the count uses the turnout of that round.
+  const count=ballotsOf(campaign);
+  const totalBallots=count.ballots;
   let rows;
   let runoffRows=null;
   let runoffWinnerId=null;
@@ -233,8 +252,8 @@ export function runFinalElection(campaign,firstRound=null) {
   const personal=personalResult(campaign,playerRow,winner,rows);
   const previous=campaign.firstRoundResult;
   const result = {
-    stage:'risultato-finale',model:rules.model,electionType:campaign.electionType,totalBallots,
-    ballotLabel:'Schede normalizzate su 100.000 elettori simulati',groups:rows,
+    stage:'risultato-finale',model:rules.model,electionType:campaign.electionType,totalBallots,electorate:count,
+    ballotLabel:count.normalized?'Schede normalizzate su 100.000 elettori simulati':`Voti validi su ${count.electors.toLocaleString('it-IT')} elettori (affluenza ${count.turnout.toLocaleString('it-IT')}%)`,groups:rows,
     territories:areaResults(campaign,totalBallots),firstRound:previous??firstRound??null,
     winnerGroupId:winnerId,playerShare:runoffRows?.find(row=>row.candidateId===campaign.playerCandidateId)?.percent??playerRow?.percent??0,playerVotes:runoffRows?.find(row=>row.candidateId===campaign.playerCandidateId)?.votes??playerRow?.votes??0,runoffResults:runoffRows,
     playerSeats:playerRow?.seats??0,personalMandate:personal.mandate,personal,source:'simulation',simulated:true,
@@ -342,8 +361,9 @@ function personalResult(campaign,playerRow,winner,rows) {
     const districtInfo = { name:district?.name ?? null, position:districtPosition || null, share:ranking.find(group => group.id === campaign.playerCandidateId)?.share ?? 0, winnerId:ranking[0]?.id ?? null, margin:rounded((ranking[0]?.share ?? 0) - (ranking[1]?.share ?? 0)) };
     if (districtPosition === 1) return { ...base, mandate:true, via:'collegio', code:'vittoria', district:districtInfo };
     // Candidates in a single-member district also head a proportional list: losing the district is not the end.
+    // Losing the district is not the end only for who also heads (first place, closed list) a proportional list: a single-member candidate has no other place on a list.
     const constituency = base.belowThreshold ? { seats:0 } : constituencySeats(campaign, playerRow);
-    if (constituency.seats >= Math.max(1, campaign.candidacy.listPosition)) return { ...base, mandate:true, via:'proporzionale', code:'eletto-proporzionale', district:districtInfo, constituency:{ seats:constituency.seats, name:constituency.area?.name ?? null } };
+    if (constituency.seats >= 1) return { ...base, mandate:true, via:'proporzionale', code:'eletto-proporzionale', district:districtInfo, constituency:{ seats:constituency.seats, name:constituency.area?.name ?? null } };
     return { ...base, code:base.belowThreshold ? 'sotto-soglia' : 'sconfitta', district:districtInfo };
   }
   return { ...base, mandate:playerRow.percent>0, code:'eletto' };

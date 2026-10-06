@@ -329,3 +329,29 @@ export const EUROPEAN_CONSTITUENCIES = Object.freeze({
   'meridionale':['Abruzzo','Molise','Campania','Puglia','Basilicata','Calabria'],
   'insulare':['Sicilia','Sardegna']
 });
+
+// The polls of a campaign: how many people each institute interviews for a race of this kind (a share of its national sample: a comune is
+// polled on a few hundred interviews, a region on more, the whole country on the full panel) and how the waves follow the campaign.
+export const CAMPAIGN_POLL_RULES = Object.freeze({
+  sampleScale: { comunaleSmall: .3, comunale: .5, provinciale: .4, regionale: .7, politiche: 1, europee: 1 },
+  everyDays: 7, waves: 14,
+  // The rivals of a local race that stand without a party: a civic or independent candidacy (declared as such, never a made-up party).
+  independents: { comunaleSmall: .55, comunale: .75, provinciale: .3, regionale: .25 }
+});
+// Which segments of the electorate an activity speaks to (segments of the simulated society: giovani, famiglie, anziani, imprese, fragili). The sum of
+// the weights is 1: an activity done many times moves the audience of the candidate towards those segments (see the observatory of the campaign).
+export const CAMPAIGN_AUDIENCE = Object.freeze({
+  category: {
+    territory: { famiglie: .35, anziani: .35, fragili: .15, imprese: .15 }, event: { famiglie: .3, giovani: .25, anziani: .25, imprese: .2 },
+    media: { giovani: .35, famiglie: .35, imprese: .15, fragili: .15 }, ads: { famiglie: .3, giovani: .3, anziani: .25, fragili: .15 },
+    internal: {}, resources: { imprese: 1 }
+  },
+  activity: {
+    door_to_door: { anziani: .4, famiglie: .35, fragili: .25 }, local_life: { anziani: .45, famiglie: .4, fragili: .15 }, associations: { imprese: .45, fragili: .3, famiglie: .25 },
+    social: { giovani: .6, famiglie: .25, fragili: .15 }, social_ads: { giovani: .6, famiglie: .25, fragili: .15 }, local_ads: { anziani: .4, famiglie: .4, imprese: .2 },
+    posters: { anziani: .35, famiglie: .35, fragili: .3 }, interview: { famiglie: .4, anziani: .3, imprese: .3 }, national_media: { famiglie: .4, anziani: .3, giovani: .3 },
+    issue_focus: {}, rally: { famiglie: .3, anziani: .3, imprese: .2, fragili: .2 }, protest_campaign: { fragili: .5, giovani: .3, famiglie: .2 }
+  }
+});
+// The areas of policy a debate topic stands for (the topic a campaign is built on moves the agenda of the candidate in the segments).
+export const TOPIC_AREA = Object.freeze({ lavoro: 'lavoro', servizi: 'welfare', ambiente: 'ambiente', istituzioni: 'pa', sanita: 'sanita', sicurezza: 'sicurezza', 'costo-vita': 'economia', giovani: 'giovani' });

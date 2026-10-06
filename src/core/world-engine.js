@@ -3,6 +3,8 @@ import { ITALIAN_REGIONS } from '../data/regions.js?v=20261005-2';
 import { APPROVAL_NEUTRAL, CHART_SLOTS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261005-2';
 import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261005-2';
 import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261005-2';
+import { advanceObservatory, houseEffect, normalizeObservatory, observatoryView, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261005-2';
+export { houseEffect };
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
 // A party enters with its real identity only (id, name, abbreviation, documented collocazione); its starting weight
@@ -45,6 +47,18 @@ export const PRESENCE_RULES = Object.freeze({
 });
 // Small forces move less in absolute terms: 1 at `full` points and above, down to 0.3 for the smallest.
 const sizeFactor = (share, full) => clamp(Math.sqrt(Math.max(0, share) / full), 0.3, 1);
+// The smallest consensus a force of the polls holds is 0,3%. A force that is born below it (the party the player founds) keeps its own size
+// (`floor` on the force), and what is measured in absolute points (regional offsets, local pull) scales with it: a force at 0,05% is not at 2% in a region.
+const FLOOR = 0.3;
+const floorOf = party => Number.isFinite(party?.floor) ? party.floor : FLOOR;
+const tinyScale = share => share >= FLOOR ? 1 : clamp(share / FLOOR, 0.05, 1);
+// Where a force starts when no poll has ever measured it: deterministic (no draw), never the 1–3% a fresh force used to get. A force the player
+// founds or the game creates has no consensus yet (0–0,1%); a real force that the opening poll does not measure starts between 0,1 and 0,8%
+// according to what is documented of its size (its share of the 2x1000 choices, in percent) and to its identity.
+export function initialConsensus({ id, kind = 'new', weight = 0 }) {
+  if (kind !== 'real') return round2(0.01 + unit(id, 'nuova') * 0.09);
+  return round2(clamp(0.1 + 0.7 * clamp(0.55 * clamp(Number(weight) / 2, 0, 1) + 0.45 * unit(id, 'reale'), 0, 1), 0.1, 0.8));
+}
 const surveyedStatus = status => status === PRESENCE.SURVEYED || status === PRESENCE.CONSOLIDATED;
 // Worlds saved before the presence model had every force in the polls.
 export const isSurveyed = party => !party?.presence || surveyedStatus(party.presence.status);
@@ -80,7 +94,7 @@ function addParty(world, spec, week) {
     id: spec.id, label: spec.label, abbreviation: spec.abbreviation ?? null, officialName: spec.officialName ?? null,
     color: nextSlot(world, spec.brandColor ? readableOnDark(spec.brandColor) : null), brandColor: spec.brandColor ?? null, refSource: spec.refSource ?? 'real', origin: spec.origin ?? 'real',
     reference: spec.reference ?? null, pollReference: spec.pollReference ?? null, position: spec.position ?? positionOf(axis), axis, governing: Boolean(spec.governing),
-    isPlayer: Boolean(spec.isPlayer), baseline: round2(spec.baseline), anchor: round2(spec.baseline),
+    isPlayer: Boolean(spec.isPlayer), baseline: round2(spec.baseline), anchor: round2(spec.baseline), ...(spec.isPlayer && spec.baseline < FLOOR ? { floor: 0.01 } : {}),
     regional: Object.fromEntries(ITALIAN_REGIONS.map(region => [region, round2((draw(world) - 0.5) * 5 + (spec.isPlayer && region === world.place.region ? 2 : 0))])),
     strategy: spec.strategy ?? initialStrategy(spec, axis), strategySince: week, playerRelation: 0, cohesion: 62, crisis: null, active: true, createdWeek: week,
     // Simulated internal life: congress calendar and the weight of the internal minority (no real person involved).
@@ -115,8 +129,8 @@ function latentEntry(spec, support, week) {
   const visibility = round1(clamp(12 + Math.min(1, Math.max(0, spec.weight ?? 0)) * 10 + (spec.regionalPresence ? 4 : 0), 5, 45));
   return {
     id: spec.id, label: spec.label, officialName: spec.officialName ?? spec.label, abbreviation: spec.abbreviation ?? null, brandColor: spec.brandColor ?? null,
-    position: spec.position ?? positionOf(axis), axis, refSource: spec.refSource ?? 'real', origin: spec.origin ?? 'real', regional: Boolean(spec.regional), reference: spec.reference ?? null,
-    support: round4(support), anchor: round4(support), base: round4(support), visibility, baseVisibility: visibility, presence: presenceFor(PRESENCE.NONE, week), source: SIM
+    position: spec.position ?? positionOf(axis), axis, refSource: spec.refSource ?? 'real', origin: spec.origin ?? 'real', regional: Boolean(spec.regional), regionId: spec.regionId ?? null, reference: spec.reference ?? null,
+    support: round4(support), anchor: round4(support), base: round4(support), weight: round4(Math.max(0, spec.weight ?? 0)), visibility, baseVisibility: visibility, presence: presenceFor(PRESENCE.NONE, week), source: SIM
   };
 }
 function seedLatent(world, candidates = []) {
@@ -248,6 +262,9 @@ export function withLatentForces(input, candidates = []) {
   world.latent ??= [];
   world.residual ??= world.others;
   const available = new Set(candidates.map(item => item.id));
+  // The region of a regional force, and the size documented of every force, reach the entries a save already had.
+  const known = new Map(candidates.map(item => [item.id, item]));
+  for (const item of world.latent) { const spec = known.get(item.id); if (spec) { item.regionId = spec.regionId ?? null; item.weight ??= round4(Math.max(0, spec.weight ?? 0)); } }
   const gone = world.latent.filter(item => !available.has(item.id));
   if (gone.length) {
     world.latent = world.latent.filter(item => available.has(item.id));
@@ -262,7 +279,7 @@ const isLatent = force => Object.hasOwn(force, 'support');
 // Moves the consensus of a force, whether it is a party of the world or a latent force; `anchor` is the share that stays.
 function bump(force, delta, anchor = 0) {
   const key = isLatent(force) ? 'support' : 'baseline';
-  const floor = isLatent(force) ? 0.02 : 0.3;
+  const floor = isLatent(force) ? 0.02 : floorOf(force);
   force[key] = round4(Math.max(floor, force[key] + delta));
   if (anchor) force.anchor = round4(Math.max(floor, (force.anchor ?? force[key]) + delta * anchor));
 }
@@ -282,7 +299,7 @@ export function createWorld({ seedText, date, week = 1, place = {}, playerParty 
   const world = {
     version: 3, source: SIM, seed, rngState: seed, createdAt: date, week, place, playerPartyId: playerParty?.id ?? null, pollNoise,
     parties: [], others: 8, undecided: 27, effects: [], alliances: [], figures: [], events: [], polls: [], ties: {}, grudges: {}, cooldowns: {}, lastEventId: null,
-    latent: [], residual: null, presenceMoves: []
+    latent: [], residual: null, presenceMoves: [], observatory: normalizeObservatory(null)
   };
   const included = forces.reduce((sum, force) => sum + force.share, 0);
   world.others = round2(Math.max(realPoll ? 1 : 4, 100 - included));
@@ -333,7 +350,12 @@ function attachPlayerParty(world, party, week) {
     // A force of the database still outside the polls brings its simulated consensus and its presence with it.
     const latent = world.latent?.find(item => item.id === party.id) ?? null;
     if (latent) world.latent = world.latent.filter(item => item !== latent);
-    const baseline = latent ? Math.max(0.3, latent.support) : party.initialShare ?? (party.founder ? 1.5 + draw(world) * 1.5 : 1 + draw(world) * 1.5);
+    // No poll has measured the force yet: a real force starts from what is documented of it (0,1–0,8%), a new one from nothing (0–0,1%).
+    const real = (latent?.refSource ?? party.refSource) === 'real';
+    // (a new force has a random identifier: its start follows the seed of the world and its name, so the same career starts the same way. The draw the old start
+    // took is still taken, unused: the random sequence of the world, and with it the course of every other force, stays as it was.)
+    if (!latent && party.initialShare == null) draw(world);
+    const baseline = initialConsensus({ id: real ? party.id : `${world.seed}|${party.label ?? party.id}`, kind: real ? 'real' : 'new', weight: latent?.weight ?? party.initialShare ?? 0 });
     entry = addParty(world, { id: party.id, label: party.label || 'Il tuo partito', abbreviation: party.abbreviation, brandColor: party.brandColor, refSource: party.refSource, origin: 'player', isPlayer: true, baseline, reference: party.reference ?? null, position: party.position ?? latent?.position ?? null, presence: latent?.presence ?? presenceFor(PRESENCE.NONE, week) }, week);
     if (latent) entry.visibility = latent.visibility;
     for (const other of world.parties) if (other !== entry) world.ties[tieKey(entry.id, other.id)] ??= initialTie(world, entry, other);
@@ -346,6 +368,13 @@ function attachPlayerParty(world, party, week) {
   return world;
 }
 
+// A world saved before the observatory gets one that starts from its latest poll (the series continues, no past is invented).
+function withObservatory(world) {
+  const obs = normalizeObservatory(world.observatory);
+  const last = world.polls?.at(-1);
+  if (!world.observatory && last) return seedObservatory(obs, { week: last.week, date: last.date, rows: last.results.filter(row => !row.outsideSource), others: last.others ?? 0, label: null });
+  return obs;
+}
 export function isLegacyWorld(world) {
   return (world?.version ?? 2) < 3 && Boolean(world?.parties?.some(party => LEGACY_ORIGINS.includes(party.origin)));
 }
@@ -353,7 +382,7 @@ export function normalizeWorld(world) {
   if (!world || typeof world !== 'object' || !Array.isArray(world.parties)) return null;
   const week = world.week ?? 1;
   // Before the presence model every force of the world was in the polls: it keeps its place there.
-  return { effects: [], alliances: [], figures: [], events: [], polls: [], others: 4, undecided: 27, place: {}, ties: {}, grudges: {}, cooldowns: {}, pollNoise: 1, presenceMoves: [], ...world, latent: Array.isArray(world.latent) ? world.latent : [], residual: world.residual ?? world.others ?? 4, parties: world.parties.map(party => ({ strategy: 'autonoma', strategySince: week, playerRelation: 0, axis: axisOf(party.position), life: { nextCongress: week + 60 + (hash(party.id) % 120), minority: 22, leadership: 'uscente', congresses: 0 }, ...party, presence: party.presence ?? initialPresence(party.baseline ?? 0, week) })) };
+  return { effects: [], alliances: [], figures: [], events: [], polls: [], others: 4, undecided: 27, place: {}, ties: {}, grudges: {}, cooldowns: {}, pollNoise: 1, presenceMoves: [], ...world, observatory: withObservatory(world), latent: Array.isArray(world.latent) ? world.latent : [], residual: world.residual ?? world.others ?? 4, parties: world.parties.map(party => ({ strategy: 'autonoma', strategySince: week, playerRelation: 0, axis: axisOf(party.position), life: { nextCongress: week + 60 + (hash(party.id) % 120), minority: 22, leadership: 'uscente', congresses: 0 }, ...party, presence: party.presence ?? initialPresence(party.baseline ?? 0, week) })) };
 }
 // The world knows the collocazione of the real entities: older saves get it without being rebuilt.
 export function withPositions(input, positions = {}) {
@@ -380,7 +409,7 @@ function normalize(rows, others) {
   const total = rows.reduce((sum, row) => sum + row.raw, 0) + others;
   return rows.map(row => ({ partyId: row.partyId, share: round2(row.raw / total * 100) }));
 }
-const rawOf = (world, party) => Math.max(0.3, party.baseline + effectSum(world, party, 'national'));
+const rawOf = (world, party) => Math.max(floorOf(party), party.baseline + effectSum(world, party, 'national'));
 // "Altri": minor lists plus every force outside the polls (latent forces of the database, forces that left the survey).
 function othersOf(world) {
   if (!Array.isArray(world.latent)) return world.others;
@@ -402,14 +431,15 @@ export function regionalShares(world, region, boost = 0) {
   const national = nationalShares(world);
   return normalize(national.map(row => {
     const party = world.parties.find(item => item.id === row.partyId);
-    return { partyId: row.partyId, raw: Math.max(0.3, row.share + (party.regional?.[region] ?? 0) + effectSum(world, party, 'region', region) + (party.isPlayer && region === world.place.region ? boost : 0)) };
+    const tiny = tinyScale(row.share);
+    return { partyId: row.partyId, raw: Math.max(Math.min(floorOf(party), row.share), row.share + ((party.regional?.[region] ?? 0) + effectSum(world, party, 'region', region) + (party.isPlayer && region === world.place.region ? boost : 0)) * tiny) };
   }), othersOf(world));
 }
 export function localShares(world, regionalBoost = 0, localBoost = 0) {
   const regional = regionalShares(world, world.place.region, regionalBoost);
   return normalize(regional.map(row => {
     const party = world.parties.find(item => item.id === row.partyId);
-    return { partyId: row.partyId, raw: Math.max(0.3, row.share + effectSum(world, party, 'local') + (party.isPlayer ? localBoost : 0)) };
+    return { partyId: row.partyId, raw: Math.max(Math.min(floorOf(party), row.share), row.share + (effectSum(world, party, 'local') + (party.isPlayer ? localBoost : 0)) * tinyScale(row.share)) };
   }), othersOf(world));
 }
 // Personal standing turns into territorial pull for the player's party.
@@ -426,13 +456,7 @@ export function personalBoosts(stats = {}, relations = []) {
 // week to the next (AR 0.7) and each institute has a small, stable house effect. Consecutive polls therefore move by
 // tenths of a point, not by whole points, while the level can still differ from the true share within the margin.
 const POLL_ERROR_MEMORY = 0.7;
-const houseLean = (instituteId, partyId) => (hash(`${instituteId}|${partyId}`) % 1000) / 1000 - 0.5;
-// Each institute leans a little on each force, but no force is favoured on average: the leans of the institutes on a
-// force sum to zero.
-export function houseEffect(instituteId, partyId, share) {
-  const mean = POLL_INSTITUTES.reduce((sum, item) => sum + houseLean(item.id, partyId), 0) / POLL_INSTITUTES.length;
-  return (houseLean(instituteId, partyId) - mean) * 0.3 * clamp(Math.sqrt(Math.max(share, 0.1) / 10), 0.3, 1.2);
-}
+// The house effect of each institute lives in the observatory (poll-observatory.js), with the rest of what an institute measures.
 function sampleShares(world, shares, sample, instituteId = 'x') {
   world.pollErrors ??= {};
   const noisy = shares.map(row => {
@@ -440,14 +464,14 @@ function sampleShares(world, shares, sample, instituteId = 'x') {
     const sigma = Math.sqrt(Math.max(0.0004, p * (1 - p)) / sample) * 100;
     const error = round4((world.pollErrors[row.partyId] ?? 0) * POLL_ERROR_MEMORY + gaussian(world) * 2 * 0.25 * sigma * (world.pollNoise ?? 1));
     world.pollErrors[row.partyId] = error;
-    return { partyId: row.partyId, raw: Math.max(0.2, row.share + error + houseEffect(instituteId, row.partyId, row.share)) };
+    // A force that weighs less than the floor of the survey keeps its own size: a tiny new force is not lifted to 0,2%.
+    return { partyId: row.partyId, raw: Math.max(Math.min(0.2, row.share), row.share + error + houseEffect(instituteId, row.partyId, row.share)) };
   });
   return normalize(noisy, 100 - shares.reduce((sum, row) => sum + row.share, 0));
 }
-// No force moves by more than a credible amount between two consecutive polls: large changes (a split, a crisis)
+// No force moves by more than a credible amount between two consecutive polls (settleReading): large changes (a split, a crisis)
 // show up over a few weeks, as in real series.
-const weeklyCap = share => 0.25 + 0.035 * share;
-function publishPoll(world, { date, stats = {}, parliament = null, game = null }) {
+function publishPoll(world, { date, stats = {}, parliament = null, game = null, observatory = null }) {
   const institute = POLL_INSTITUTES[Math.floor(draw(world) * POLL_INSTITUTES.length)];
   const sample = Math.round((institute.sample[0] + draw(world) * (institute.sample[1] - institute.sample[0])) / 10) * 10;
   const margin = round1(1.96 * Math.sqrt(0.25 / sample) * 100);
@@ -455,35 +479,13 @@ function publishPoll(world, { date, stats = {}, parliament = null, game = null }
   const boosts = personalBoosts(stats, game?.relations ?? []);
   const player = world.playerPartyId;
   const playerSurveyed = isSurveyed(world.parties.find(item => item.id === player));
-  // A force that has just entered the survey has no previous figure: its change starts from the next poll.
-  const floors = new Map();
-  const results = sampleShares(world, nationalShares(world), sample, institute.id).map(row => {
-    const before = previous?.results.find(item => item.partyId === row.partyId)?.share;
-    // The first simulated poll starts from the real one: it may move less than an ordinary week.
-    const cap = Number.isFinite(before) ? weeklyCap(before) * (previous?.source === 'real' ? 0.6 : 1) : 0;
-    const share = Number.isFinite(before) ? round1(clamp(row.share, before - cap, before + cap)) : round1(row.share);
-    floors.set(row.partyId, Number.isFinite(before) ? before - cap : 0);
-    return { ...row, share, delta: Number.isFinite(before) ? round1(share - before) : 0, ...(row.partyId === player && !playerSurveyed ? { internal: true } : {}) };
-  });
-  // A force entering the survey takes only the room the others leave (their weekly change is capped): a large new force,
-  // such as a split of a big party, would otherwise push the total over 100 until its parent has lost the share.
-  const entrants = results.filter(row => !Number.isFinite(previous?.results.find(item => item.partyId === row.partyId)?.share));
-  if (entrants.length && entrants.length < results.length) {
-    const held = results.filter(row => !entrants.includes(row)).reduce((sum, row) => sum + row.share, 0);
-    const wanted = entrants.reduce((sum, row) => sum + row.share, 0);
-    const room = Math.max(0, 100 - held);
-    if (wanted > room) for (const row of entrants) row.share = round1(row.share * room / wanted);
-  }
-  // Rounded and capped one by one, the figures can pass 100 when "Altri" is tiny: the excess goes back a tenth at a
-  // time from the largest forces that still have room within their weekly change.
-  for (let excess = round1(results.reduce((sum, row) => sum + row.share, 0) - 100), guard = 0; excess > 0.05 && guard < 20; guard++) {
-    const row = results.filter(item => item.share - 0.1 >= floors.get(item.partyId) - 1e-9).sort((a, b) => b.share - a.share)[0];
-    if (!row) break;
-    row.share = round1(row.share - 0.1);
-    const before = previous?.results.find(item => item.partyId === row.partyId)?.share;
-    row.delta = Number.isFinite(before) ? round1(row.share - before) : 0;
-    excess = round1(excess - 0.1);
-  }
+  // The shares of the population (the simulated electorate): every institute sees them through its own sample.
+  const trueRows = nationalShares(world);
+  // A force that has just entered the survey has no previous figure: its change starts from the next poll. The first simulated
+  // poll starts from the real one: it may move less than an ordinary week. A force entering the survey takes only the room the
+  // others leave, and the total is brought back to 100 within the weekly change of each force (settleReading).
+  const results = settleReading(sampleShares(world, trueRows, sample, institute.id), previous?.results, { damp: previous?.source === 'real' ? 0.6 : 1 })
+    .map(row => ({ ...row, ...(row.partyId === player && !playerSurveyed ? { internal: true } : {}) }));
   const regional = player ? Object.fromEntries(ITALIAN_REGIONS.map(region => [region, round1(regionalShares(world, region, boosts.regional).find(row => row.partyId === player)?.share ?? 0)])) : {};
   const local = player ? round1(localShares(world, boosts.regional, boosts.local).find(row => row.partyId === player)?.share ?? 0) : null;
   const mood = world.society?.mood ?? 50;
@@ -504,7 +506,16 @@ function publishPoll(world, { date, stats = {}, parliament = null, game = null }
   };
   // The full regional map is kept for the latest poll only; the home region stays in every entry.
   world.polls = [...world.polls.map(item => item.regional ? { ...item, regional: null } : item), poll].slice(-HISTORY);
+  // Every institute publishes its own reading of the same population; the average and the segments of the week are kept (observatory).
+  const entries = results.map(row => world.parties.find(item => item.id === row.partyId)).filter(Boolean).map(party => ({ id: party.id, share: trueRows.find(row => row.partyId === party.id)?.share ?? party.baseline, agenda: agendaOf(party), stance: stanceOf(party) }));
+  world.observatory = advanceObservatory(world.observatory, { week: world.week, date, seed: world.seed, trueRows, headline: { instituteId: institute.id, results, sample, margin }, previous, noise: world.pollNoise ?? 1, society: observatory?.society ?? null, entries, undecided: world.undecided });
+  poll.instituteId = institute.id;
   return poll;
+}
+// What a force stands for in the polls' segments: its agenda, or the priorities of its camp while it has none yet.
+function agendaOf(party) {
+  if (party.agenda?.length) return party.agenda;
+  return CAMP_PRIORITIES[(party.axis ?? 0) >= 1 ? 'destra' : (party.axis ?? 0) <= -1 ? 'sinistra' : 'centro'].slice(0, 3);
 }
 // What a poll says besides its rows: "Altri", the forces under observation (emerging, still inside "Altri") and the
 // forces that entered or left the survey this week.
@@ -533,6 +544,8 @@ function publishRealPoll(world, real, { date, stats = {} }) {
     source: 'real', real: { id: real.id, label: real.label, publishedAt: real.publishedAt, fieldworkFrom: real.fieldworkFrom ?? null, fieldworkTo: real.fieldworkTo ?? null, sourceUrl: real.sourceUrl, sourceName: real.sourceName, method: real.method ?? null }
   };
   world.polls = [...world.polls, poll].slice(-HISTORY);
+  // The average of the observatory starts from the real one; the institutes begin to publish from the first simulated week.
+  world.observatory = seedObservatory(world.observatory, { week: world.week, date: poll.date, rows: results.filter(row => !row.outsideSource), others, label: real.label });
   return poll;
 }
 // Why the player's party moved: its own drivers, the effects in force (by cause), and the rest (rivals and sampling).
@@ -865,6 +878,8 @@ export function joinCoalition(input, allianceId, date, { terms = false } = {}) {
   const player = playerParty(world);
   const alliance = world.alliances.find(item => item.id === allianceId && item.status === 'active');
   if (!player || !alliance) throw new Error('La coalizione non è più disponibile.');
+  // Already inside: nothing happens twice (no new terms, no new ties, no second boost).
+  if (alliance.partyIds.includes(player.id)) return { world: input, joined: true, term: null, already: true };
   const members = alliance.partyIds.map(id => world.parties.find(item => item.id === id)).filter(Boolean);
   if (terms) {
     const talks = negotiate(world, player, { alliance, members });
@@ -1236,6 +1251,49 @@ function presenceStep(world, date, stats = {}) {
   }
   world.others = othersOf(world);
 }
+// ---------- who stands in an election (simulation) ----------
+// The forces that run in a general or a European election, drawn from the world and never from chance: the forces the polls measure (and the
+// player's own), the ones under observation (emerging), the real forces that stood at the last national vote and are still active (`precedent`:
+// their ids), and the regional forces of the region of the race (`regionId`). Nothing enters or leaves by a draw: a force enters when its
+// presence in the polls says so, or because it stood last time, and leaves with the world (a merger, an exit from the polls). A real force
+// that stands without being measured has the simulated consensus the polls give it (never below the 0,1–0,8% of initialConsensus); what the
+// unmeasured participants hold comes out of "Altri" of the poll, never from the measured forces.
+// Returns { participants: [{ id, label, abbreviation, refSource, origin, share, surveyed, reason, regional, regionId, position, axis, isPlayer }], others }.
+export function electionRoster(world, { type = 'politiche', regionId = null, precedent = [], limit = 28 } = {}) {
+  if (!world?.parties) return null;
+  const shares = trueShares(world);
+  const prior = new Set(precedent);
+  const rows = [];
+  const seen = new Set();
+  const push = (force, reason, share) => {
+    if (seen.has(force.id)) return;
+    seen.add(force.id);
+    const latent = isLatent(force);
+    rows.push({ id: force.id, label: force.label, abbreviation: force.abbreviation ?? null, officialName: force.officialName ?? null, refSource: force.refSource ?? 'real', origin: force.origin ?? 'real', share: round2(share), surveyed: !latent && isSurveyed(force), reason, regional: Boolean(force.regional), regionId: force.regionId ?? null, position: force.position ?? null, axis: Number.isFinite(force.axis) ? force.axis : null, isPlayer: Boolean(force.isPlayer), color: force.color ?? null, brandColor: force.brandColor ?? null });
+  };
+  for (const party of world.parties.filter(item => item.active && inResults(item))) push(party, party.isPlayer ? 'giocatore' : 'rilevata', shares.get(party.id) ?? party.baseline);
+  const own = new Set(rows.map(row => row.id));
+  const outside = outsideForces(world).filter(force => force.active !== false && !own.has(force.id) && !force.mergedInto);
+  for (const force of outside) {
+    const state = force.presence?.status;
+    const away = Boolean(force.regionId) && Boolean(regionId) && force.regionId !== regionId;
+    const regionalOnly = Boolean(force.regional || force.regionId) && (!regionId || force.regionId !== regionId);
+    const reason = state === PRESENCE.EMERGING ? 'emergente' : prior.has(force.id) && !regionalOnly ? 'lista-precedente' : force.regionId && !away && regionId && force.regionId === regionId ? 'presenza-regionale' : null;
+    if (!reason) continue;
+    const kind = (force.refSource ?? 'real') === 'real' ? 'real' : 'new';
+    const floor = initialConsensus({ id: kind === 'real' ? force.id : `${world.seed}|${force.label}`, kind, weight: force.weight ?? 0 });
+    push(force, reason, Math.max(shares.get(force.id) ?? 0, floor));
+  }
+  // The unmeasured participants share what "Altri" can hold, keeping a remainder for the lists nobody names.
+  const room = Math.max(0.3, othersOf(world) - 0.3);
+  const extra = rows.filter(row => !row.surveyed && !row.isPlayer);
+  const total = extra.reduce((sum, row) => sum + row.share, 0);
+  if (total > room) for (const row of extra) row.share = round2(Math.max(0.05, row.share * room / total));
+  rows.sort((a, b) => b.share - a.share || a.id.localeCompare(b.id));
+  const kept = rows.slice(0, limit);
+  const others = round2(Math.max(0.3, othersOf(world) - kept.filter(row => !row.surveyed && !row.isPlayer).reduce((sum, row) => sum + row.share, 0)));
+  return { type, regionId, participants: kept, others, source: SIM };
+}
 // For the polls page: who is where, who is being watched, who came and went (simulation).
 export function presenceOverview(world) {
   if (!world?.parties) return null;
@@ -1251,8 +1309,25 @@ export function presenceOverview(world) {
   };
 }
 
+// What the forces of the world stand for, by id: their agenda (or the priorities of their camp), their collocazione, their strategy and whether they govern.
+// The campaigns read it so that a candidacy of a force speaks to the segments of the electorate as the force does in the polls.
+export function forceProfiles(world) {
+  return Object.fromEntries((world?.parties ?? []).filter(party => party.active).map(party => [party.id, { agenda: agendaOf(party), axis: Number.isFinite(party.axis) ? party.axis : null, strategy: party.strategy ?? null, governing: Boolean(party.governing) }]));
+}
+// The observatory of the polls for the page: the readings of every institute, the average, the segments, the flows, the insights
+// (poll-observatory.js), for the forces the polls measure. society: the compact society the weekly step receives.
+export function observatoryReport(world, society = null) {
+  if (!world?.parties) return null;
+  const forces = world.parties.filter(party => party.active && inResults(party)).map(party => ({
+    id: party.id, label: party.label, abbreviation: party.abbreviation ?? null, color: party.color, share: party.baseline, axis: party.axis, agenda: agendaOf(party), strategy: party.strategy,
+    governing: Boolean(party.governing), isPlayer: Boolean(party.isPlayer), crisis: Boolean(party.crisis), cohesion: party.cohesion ?? 62, refSource: party.refSource ?? null, position: party.position ?? null
+  }));
+  const regional = Object.fromEntries(ITALIAN_REGIONS.map(region => [region, regionalShares(world, region)]));
+  return { ...observatoryView(world, { forces, society, regional }), forces, regional };
+}
+
 // One simulated week of the political world. Returns reactions and offers the career can respond to.
-export function advanceWorld(input, { date, week, stats = {}, deltas = {}, game = null, parliament: parliamentInput = null, majorityShift = null, society = null, playerIsLeader = false, playerStrategy = null, nationalVoteIn = null }) {
+export function advanceWorld(input, { date, week, stats = {}, deltas = {}, game = null, parliament: parliamentInput = null, majorityShift = null, society = null, playerIsLeader = false, playerStrategy = null, nationalVoteIn = null, observatory = null }) {
   const world = copy(input);
   let parliament = copy(parliamentInput);
   world.week = week;
@@ -1263,7 +1338,7 @@ export function advanceWorld(input, { date, week, stats = {}, deltas = {}, game 
   // The player's party moves only with the player's actions and standing: no random drift, a slow return to its level.
   for (const party of world.parties.filter(item => item.active)) {
     const noise = party.isPlayer ? 0 : (draw(world) - 0.5) * 0.3 * sizeFactor(party.baseline, 8);
-    party.baseline = round2(Math.max(0.3, party.baseline + noise + (party.anchor - party.baseline) * (party.isPlayer ? 0.01 : 0.03)));
+    party.baseline = round2(Math.max(floorOf(party), party.baseline + noise + (party.anchor - party.baseline) * (party.isPlayer ? 0.01 : 0.03)));
   }
   const player = playerParty(world);
   if (player) {
@@ -1272,9 +1347,14 @@ export function advanceWorld(input, { date, week, stats = {}, deltas = {}, game 
     const unity = game?.party && game.party.support < 25 ? -0.08 : 0;
     // How the media tell the player's story (their coverage of the player's own moves).
     const media = society ? clamp((society.sentiment ?? 0) / 100 * 0.05, -0.05, 0.05) : 0;
-    player.baseline = round2(Math.max(0.3, player.baseline + personal + unity + media));
+    // A force under 1% moves in proportion to its size: it grows more slowly than a force of the polls with the same image (the sqrt of its
+    // size) and cannot lose more than 6% of what it has in a week (a fresh party of 0,02% is not wiped out by one idle week).
+    const raw = personal + unity + media;
+    const change = player.baseline >= 1 ? raw : raw < 0 ? Math.max(raw, -Math.max(0.005, player.baseline * 0.06)) : raw * clamp(Math.sqrt(player.baseline), 0.3, 1);
+    const k = raw && player.baseline < 1 ? change / raw : 1;
+    player.baseline = round2(Math.max(floorOf(player), player.baseline + change));
     // What moved the party this week, before the poll's sampling: kept to explain the change.
-    player.components = { 'Immagine del tuo politico': round2(personal), 'Divisioni nel partito': round2(unity), 'Come ti raccontano i media': round2(media) };
+    player.components = { 'Immagine del tuo politico': round2(personal * k), 'Divisioni nel partito': round2(unity * k), 'Come ti raccontano i media': round2(media * k) };
     player.cohesion = Math.round(game?.party?.org?.cohesion ?? game?.party?.support ?? player.cohesion);
     player.crisis = game?.party && game.party.support < 25 ? (player.crisis ?? { since: week, source: SIM }) : null;
     if (playerStrategy) player.strategy = playerStrategy;
@@ -1320,7 +1400,7 @@ export function advanceWorld(input, { date, week, stats = {}, deltas = {}, game 
   // Forces outside the polls move too; then every force is measured against the thresholds of the survey.
   outsideDynamics(world, date, society?.trust ?? world.society?.trust ?? 48);
   presenceStep(world, date, stats);
-  const poll = publishPoll(world, { date, stats, parliament, game });
+  const poll = publishPoll(world, { date, stats, parliament, game, observatory });
   if (player) {
     const row = poll.results.find(item => item.partyId === player.id);
     lines.unshift(`Sondaggio ${poll.institute}: ${player.label} ${String(row.share).replace('.', ',')}% (${row.delta >= 0 ? '+' : ''}${String(row.delta).replace('.', ',')})`);
@@ -1338,7 +1418,7 @@ export function applyWorldSignals(input, signals = [], date) {
   const push = (delta, remaining, title, body, tone = delta >= 0 ? 'good' : 'bad', icon = 'chart', permanent = 0) => {
     if (player) {
       addEffect(world, { partyId: player.id, delta, remaining, cause: 'carriera', label: title });
-      if (permanent) { player.baseline = round2(Math.max(0.3, player.baseline + permanent)); player.anchor = round2(Math.max(0.3, player.anchor + permanent * 0.6)); }
+      if (permanent) { player.baseline = round2(Math.max(floorOf(player), player.baseline + permanent)); player.anchor = round2(Math.max(floorOf(player), player.anchor + permanent * 0.6)); }
     }
     logEvent(world, date, { kind: 'carriera', icon, scope: 'nazionale', title, body, tone, lines: player ? [`${player.label} ${delta >= 0 ? '+' : ''}${delta} nei sondaggi${permanent ? `, ${permanent >= 0 ? '+' : ''}${permanent} di fondo` : ''}`] : [] });
   };
@@ -1468,7 +1548,7 @@ export function alignWorldToVote(input, shares = [], date, { title = 'Risultati 
   const world = copy(input);
   const byId = new Map(shares.map(row => [row.partyId, row.share]));
   for (const party of world.parties.filter(item => item.active && byId.has(item.id))) {
-    const share = Math.max(0.3, byId.get(party.id));
+    const share = Math.max(floorOf(party), byId.get(party.id));
     party.baseline = round2(share);
     party.anchor = round2(share);
   }
@@ -1561,6 +1641,22 @@ export function proposeAlliance(input, forceId, { partySupport = 50, influence =
   logEvent(world, date, { kind: success ? 'alleanza' : 'rottura', icon: success ? 'link' : 'unlink', scope: 'nazionale', title: success ? `Intesa tra ${player.label} e ${force.label}` : `${force.label} respinge l’intesa`, body: success ? `Motivo: ${motive}. Nello scenario l’accordo porta voti e visibilità alle prossime elezioni (simulazione).` : `Nello scenario i dirigenti dicono no${obstacles.length ? `: pesano ${obstacles.join(' e ')}` : ''} (simulazione).`, tone: success ? 'good' : 'bad' });
   return { world, success, chance: odds.chance, reasons: odds.reasons };
 }
+// Why an intesa cannot be made now (an offer that arrived some weeks ago may no longer stand): null when it can.
+export function allianceBlock(world, forceId) {
+  const player = playerParty(world);
+  const force = world?.parties?.find(item => item.id === forceId && item.active && !item.isPlayer);
+  if (!player) return 'Serve un partito per stringere un’alleanza.';
+  if (!force) return 'La forza che aveva proposto l’intesa non è più in campo.';
+  if (allianceOf(world, player.id)) return 'Il tuo partito fa già parte di un’intesa: rompila prima di cercarne un’altra.';
+  return null;
+}
+// What kind of agreement an alliance of the world is: an intesa of two forces or a coalition of several, and whether it joins the forces of the government.
+export function allianceKind(world, alliance) {
+  const members = (alliance?.partyIds ?? []).map(id => world?.parties?.find(item => item.id === id)).filter(Boolean);
+  const coalition = alliance?.kind === 'coalizione' || (alliance?.partyIds?.length ?? 0) >= 3;
+  const government = members.length >= 2 && members.every(item => item.governing);
+  return { kind: coalition ? 'coalizione' : 'intesa', label: coalition ? 'Coalizione elettorale' : 'Intesa elettorale', government, governmentLabel: government ? 'Tutte forze della maggioranza di governo' : null };
+}
 // An offer from another party, accepted by the player.
 export function acceptAlliance(input, forceId, date) {
   const world = copy(input);
@@ -1576,6 +1672,8 @@ export function breakAlliance(input, allianceId, date) {
   const alliance = world.alliances.find(item => item.id === allianceId && item.status === 'active');
   if (!alliance) throw new Error('Alleanza non disponibile.');
   const player = playerParty(world);
+  // The player breaks only the intese of the own party: the agreements among the other forces are theirs.
+  if (!player || !alliance.partyIds.includes(player.id)) throw new Error('Puoi rompere solo le intese del tuo partito.');
   // From a coalition of several forces the player's party walks out; the others stay together.
   if (player && alliance.partyIds.length >= 3) { alliance.partyIds = alliance.partyIds.filter(id => id !== player.id); settleLeader(world, alliance); alliance.cohesion = clamp(alliance.cohesion - 6, 0, 100); alliance.withPlayer = false; }
   else { alliance.status = 'broken'; alliance.brokenAt = date; }

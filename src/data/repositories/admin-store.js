@@ -33,7 +33,8 @@ export const ADMIN_FIELDS = Object.freeze({
     { key: 'partyId', label: 'Partito collegato', type: 'party' }
   ]
 });
-const COLLECTION_OF = Object.freeze({ parties: 'parties', politicalMovements: 'parties', politicians: 'politicians' });
+// The coalitions that stand as one list (Alleanza Verdi e Sinistra) are political forces of the game: the owner corrects their name, colour, position and logo like a party's.
+const COLLECTION_OF = Object.freeze({ parties: 'parties', politicalMovements: 'parties', coalitions: 'parties', politicians: 'politicians' });
 export const POSITIONS = Object.freeze(['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra']);
 
 // addedParties: parties created by the owner; hidden: records the owner hid (or deleted, for added ones).

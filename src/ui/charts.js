@@ -73,11 +73,11 @@ function niceStep(raw) {
 }
 const compact = value => Math.abs(value) >= 10000 ? `${num(value / 1000, 1)}k` : num(value, 1);
 // Multi-series line chart with legend, direct end labels and a crosshair tooltip.
-export function lineChart({ series: input, labels, tips = labels, unit = '', min = null, max = null, height = 230, ariaLabel = 'Andamento', digits = 1 }) {
+export function lineChart({ series: input, labels, tips = labels, unit = '', min = null, max = null, height = 230, ariaLabel = 'Andamento', digits = 1, right = 150 }) {
   const series = distinctSeries(input);
   const length = labels.length;
   if (length < 2) return '<p class="quiet-copy">Il grafico compare dalla seconda settimana: chiudi la settimana per vedere l’andamento.</p>';
-  const W = 660, H = height, L = 40, R = 150, T = 14, B = 28;
+  const W = 660, H = height, L = 40, R = right, T = 14, B = 28;
   const plotW = W - L - R, plotH = H - T - B;
   const values = series.flatMap(item => item.values.filter(Number.isFinite));
   const low = min ?? Math.floor(Math.min(...values) - 2);

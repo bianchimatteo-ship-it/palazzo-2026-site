@@ -60,8 +60,9 @@ try {
 
   // What is audited: every section, and every internal tab of the redesigned ones.
   const views = [
-    ['panoramica'], ['profilo'], ['territori'], ['finanze'], ['sondaggi'], ['governo'], ['leggi'], ['archivio'], ['impostazioni'],
-    ...['panoramica', 'nazionali', 'quirinale', 'candidatura', 'campagna', 'avversari', 'risultati', 'storico'].map(tab => ['elezioni', 'elezioni', tab]),
+    ['panoramica'], ['profilo'], ['territori'], ['finanze'], ['governo'], ['leggi'], ['archivio'], ['impostazioni'],
+    // Sondaggi e avversari is the observatory: every one of its views, and the institutes, are audited too.
+    ...['panoramica', 'nazionali', 'quirinale', 'candidatura', 'campagna', 'avversari', 'risultati', 'storico'].flatMap(tab => [['elezioni', 'elezioni', tab], ...(tab === 'avversari' ? [['elezioni', 'osservatorio', 'quadro'], ['elezioni', 'osservatorio', 'istituti'], ['elezioni', 'osservatorio-istituto', 'b'], ['elezioni', 'osservatorio-istituto', 'confronto'], ['elezioni', 'osservatorio', 'segmenti'], ['elezioni', 'osservatorio', 'territori'], ['elezioni', 'osservatorio', 'forze'], ['elezioni', 'osservatorio', 'candidati'], ['elezioni', 'osservatorio', 'flussi']] : [])]),
     ...['percorso', 'progressione', 'incarichi', 'cronologia', 'obiettivi'].map(tab => ['carriera', 'carriera', tab]),
     ...['panoramica', 'ruoli', 'organizzazione', 'vita', 'territorio', 'storico'].map(tab => ['partito', 'partito', tab]),
     ...['settimana', 'calendario', 'attivita', 'registro'].map(tab => ['calendario', 'agenda', tab]),
@@ -122,6 +123,7 @@ try {
       const issues = await evaluate(audit);
       checked++;
       for (const issue of issues) report.push(`${label} · ${view.filter(Boolean).join(' › ')} · ${issue.kind}: ${issue.el} (${issue.detail})`);
+      if (view[1]?.startsWith('osservatorio') && !(await evaluate('Boolean(document.querySelector(".polls-page.observatory"))'))) report.push(`${label} · ${view.join(' › ')} · l’osservatorio non si apre`);
       // The Home as a command centre: who you are and the main action on the first screen, the resources right after.
       if (view[0] === 'panoramica') {
         const home = await evaluate(`(() => { const top = selector => { const el = document.querySelector(selector); return el ? el.getBoundingClientRect().top + scrollY : null; }; return { action: top('.hqc-action'), resources: top('.hqc-resources'), overview: top('.hqc-board'), screen: innerHeight, tabs: [...document.querySelectorAll('.mobile-tab')].filter(tab => getComputedStyle(tab).display !== 'none').length }; })()`);

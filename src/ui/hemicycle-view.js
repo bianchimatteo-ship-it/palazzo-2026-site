@@ -24,8 +24,12 @@ export function hemicycleModel(state, { politicians = [], db = {}, view = {} } =
   const simulated = parliament.legislature?.reference === 'simulation';
   if (simulated) { politicians = []; db = {}; }
   const chamber = ['camera', 'senato'].includes(view.chamber) ? view.chamber : parliament.player?.chamber ?? 'camera';
-  const roster = chamberRoster(parliament, chamber, { politicians, db });
-  const parties = partyColors(politicians, db);
+  // The colour of a group or a party is the main colour of its force in the game (the world's, with the owner's corrections); a party merged into another takes the colour of the force that absorbed it.
+  const forceColors = new Map();
+  for (const force of state.world?.parties ?? []) for (const id of [force.id, ...(force.mergedFrom ?? [])]) if (/^#[\da-f]{6}$/i.test(force.color ?? '')) forceColors.set(id, force.color);
+  const forceColor = id => forceColors.get(id) ?? null;
+  const roster = chamberRoster(parliament, chamber, { politicians, db, forceColor });
+  const parties = partyColors(politicians, db, null, forceColor);
   // Only the votes of the Chambers in office (after a general election the old ones belong to the past legislature).
   const since = parliament.legislature?.firstSitting ?? parliament.legislature?.since ?? null;
   const votes = voteCatalog(parliament).filter(vote => vote.chamber === chamber && (!since || !vote.date || vote.date >= since));

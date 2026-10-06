@@ -4,6 +4,10 @@ export const ITALIAN_REGIONS = Object.freeze([
   'Sardegna', 'Sicilia', 'Toscana', 'Trentino-Alto Adige', 'Umbria', 'Valle d’Aosta', 'Veneto'
 ]);
 
+// The regions in the order of the ISTAT codes (01 Piemonte … 20 Sardegna): the id of a region in the real data is `it-region-NN`.
+export const ISTAT_REGIONS = Object.freeze(['Piemonte', 'Valle d’Aosta', 'Lombardia', 'Trentino-Alto Adige', 'Veneto', 'Friuli-Venezia Giulia', 'Liguria', 'Emilia-Romagna', 'Toscana', 'Umbria', 'Marche', 'Lazio', 'Abruzzo', 'Molise', 'Campania', 'Puglia', 'Basilicata', 'Calabria', 'Sicilia', 'Sardegna']);
+export const regionIdOf = name => { const index = ISTAT_REGIONS.indexOf(name); return index < 0 ? null : `it-region-${String(index + 1).padStart(2, '0')}`; };
+
 export const CAREER_LEVELS = Object.freeze({
   comunale: { label: 'Carriera comunale', shortLabel: 'Comunale', territory: 'comune', office: 'Consigliere comunale' },
   // The province (ente di area vasta, law 56/2014): its councillors are the mayors and municipal councillors of the province,

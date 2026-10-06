@@ -11,6 +11,24 @@ import { pristineRecord, realDatabase } from './real-data.js?v=20261005-2';
 
 export const PARTY_LINK_COLLECTIONS = Object.freeze(['parties', 'politicalMovements', 'coalitions', 'electoralLists', 'partyMemberships']);
 export const POLITICAL_POSITIONS = Object.freeze(['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra']);
+// The kinds of political entity, in one place: a party and a political movement are registered organisations; a coalition (or common list, such as Alleanza Verdi e
+// Sinistra) is an electoral list of several parties, NOT a party; an electoral list is the list of one election. A coalition that stands as one list is also a
+// political force a player can belong to, that campaigns, polls and results know (see politicalForces): its components stay parties of their own.
+export const ENTITY_KIND_LABELS = Object.freeze({ party: 'Partito politico', politicalMovement: 'Movimento politico', coalition: 'Coalizione / lista elettorale', electoralList: 'Lista elettorale' });
+export const entityKind = entity => entity?.entityType ?? (entity?.electionId ? 'electoralList' : 'party');
+export const isCoalitionList = entity => entityKind(entity) === 'coalition';
+// What a force of the game is when it is not a plain party: a political movement, a common list of several parties (AVS, with the parties it brings together) or a
+// party a player created. `byId` finds the records of the components. A registered party gives null: it needs no label.
+export function forceKind(record, byId = () => null) {
+  if (!record) return null;
+  if (record.source === 'user') return { kind: 'user', label: 'Partito creato dal giocatore', components: [] };
+  const kind = entityKind(record);
+  if (kind === 'party') return null;
+  const components = kind === 'coalition' ? (record.componentPartyIds ?? []).map(byId).filter(Boolean).map(item => item.officialName ?? item.name) : [];
+  return { kind, label: ENTITY_KIND_LABELS[kind] ?? kind, components };
+}
+// The forces of the game: the registered parties and movements, and the coalitions that stand as one list (never the single lists of an election).
+export const politicalForces = (db = realDatabase) => [...(db.parties ?? []), ...(db.politicalMovements ?? []), ...(db.coalitions ?? []).filter(isCoalitionList)];
 // Left–right axis used by the simulation: −3 (estrema sinistra) … +3 (estrema destra).
 export const positionAxis = position => { const index = POLITICAL_POSITIONS.indexOf(position); return index < 0 ? null : index - 3; };
 

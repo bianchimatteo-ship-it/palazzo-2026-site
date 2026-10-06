@@ -455,6 +455,19 @@ function simplifiedChamber(chamber, context) {
 
 // The general election. coalitions: from buildCoalitions (fixed when the lists are filed). player: { forceId, region,
 // districts: { camera, senato } (ids), uninominale: 'camera' when the player runs in a single-member district, boost }.
+// The electorate of the map in use, with the four numbers kept apart: who can vote (the registers of the 2022 election, the latest real figure of the
+// map), the turnout (a share of them, simulated), how many voted and how many ballots were valid (the share of valid ballots of that election). The
+// votes of a list are its share of the valid ballots: they scale with the country, never with a fixed number of ballots. Without the map the count
+// stays normalised on 100,000 ballots and says so.
+export function nationalElectorate(geography, turnout, chamber = 'camera') {
+  const rows = geography?.[chamber]?.collegi;
+  if (!rows?.length) return { normalized: true, electors: null, voters: null, valid: null, turnout, source: SIM };
+  const sum = key => rows.reduce((total, row) => total + (row[key] ?? 0), 0);
+  const electors = sum('electors');
+  const ratio = sum('voters') ? sum('valid') / sum('voters') : 0.97;
+  const voters = Math.round(electors * turnout / 100);
+  return { normalized: false, electors, voters, valid: Math.round(voters * ratio), validRatio: Math.round(ratio * 10000) / 10000, turnout, basis: 'iscritti alle liste delle politiche 2022 (ultimo dato reale della mappa)', source: SIM };
+}
 export function runNationalVote({ geography = null, world, coalitions = [], date, seed = 'politiche', player = null, noise = true, line = null, participation = 60 }) {
   const rand = random(hash(`${seed}|${date}|politiche`));
   const base = voteForces(world);
@@ -477,7 +490,7 @@ export function runNationalVote({ geography = null, world, coalitions = [], date
   const largest = [...blocs].sort((a, b) => seatsOf(chambers.camera, b) + seatsOf(chambers.senato, b) - seatsOf(chambers.camera, a) - seatsOf(chambers.senato, a))[0] ?? null;
   const turnout = round1(clamp(63.9 + (participation - 60) * 0.45 + (noise ? rand.gauss() * 1.4 : 0), 45, 80));
   return {
-    id: `politiche-${date}`, type: 'politiche', date, model: geography ? 'geografia-2022' : 'semplificato', turnout,
+    id: `politiche-${date}`, type: 'politiche', date, model: geography ? 'geografia-2022' : 'semplificato', turnout, electorate: nationalElectorate(geography, turnout),
     national: forces.map(force => ({ id: force.id, label: force.label, share: chambers.camera.shares[force.id] ?? force.share, coalitionId: coalitionIdOf.get(force.id) ?? null, isPlayer: force.isPlayer, color: force.color })).sort((a, b) => b.share - a.share),
     others: round2(chambers.camera.shares.altri ?? others),
     coalitions: coalitions.map(coalition => ({ id: coalition.id, label: coalition.label, leaderId: coalition.leaderId, camp: coalition.camp, partyIds: coalition.partyIds.filter(id => labels.has(id)), share: chambers.camera.coalitions.find(row => row.id === coalition.id)?.share ?? 0 })),
@@ -611,8 +624,9 @@ export function runEuropeanVote({ geography = null, world, date, seed = 'europee
     const split = hare(regionsOf.map(([id]) => ({ id, votes: (areaShares?.[id]?.[force.id] ?? force.share) * (areaSeats.get(id) ?? 1) })), count);
     for (const [area, value] of split) if (value) byArea[area] = { ...(byArea[area] ?? {}), [force.id]: value };
   }
+  const turnout = round1(clamp(49.7 + (participation - 60) * 0.4 + (noise ? rand.gauss() * 1.5 : 0), 35, 70));
   return {
-    id: `europee-${date}`, type: 'europee', date, model: geography ? 'geografia-2022' : 'semplificato', turnout: round1(clamp(49.7 + (participation - 60) * 0.4 + (noise ? rand.gauss() * 1.5 : 0), 35, 70)),
+    id: `europee-${date}`, type: 'europee', date, model: geography ? 'geografia-2022' : 'semplificato', turnout, electorate: nationalElectorate(geography, turnout),
     national: forces.map(force => ({ id: force.id, label: force.label, share: force.share, seats: seats.get(force.id) ?? 0, isPlayer: force.isPlayer, color: force.color })).sort((a, b) => b.share - a.share),
     others: round2(base.others * 100 / total), threshold: rule.threshold, seats: rule.seats,
     areas: regionsOf.map(([id, regions]) => ({ id, regions, seats: areaSeats.get(id) ?? 0, parties: byArea[id] ?? {}, shares: areaShares?.[id] ?? null })), source: SIM

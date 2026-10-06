@@ -41,7 +41,7 @@ const INSTITUTION_COLLECTIONS = ['government','politicians','politicalFigures','
 // The simulated world starts from the latest real poll (Supermedia), the documented collocazione of every force
 // and, once the government data is loaded, the parties of the real majority in office. A collection that could not be
 // loaded is simply empty here: the game starts anyway and says what is missing.
-const reference = (governingIds = []) => ({ twoPerThousand: realDatabase.twoPerThousand ?? [], parties: realDatabase.parties ?? [], movements: realDatabase.politicalMovements ?? [], coalitions: realDatabase.coalitions ?? [], polls: realDatabase.realPolls ?? [], governingIds, startDate: realDatabase.manifest?.snapshotDate ?? null });
+const reference = (governingIds = []) => ({ twoPerThousand: realDatabase.twoPerThousand ?? [], parties: realDatabase.parties ?? [], movements: realDatabase.politicalMovements ?? [], coalitions: realDatabase.coalitions ?? [], polls: realDatabase.realPolls ?? [], electoralLists: realDatabase.electoralLists ?? [], governingIds, startDate: realDatabase.manifest?.snapshotDate ?? null });
 const loaded = names => names.every(name => isRealCollectionLoaded(name));
 let app = null;
 const refresh = () => app?.refresh?.();

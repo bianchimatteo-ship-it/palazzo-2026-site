@@ -80,6 +80,15 @@ export function areaValue(society, areaId) {
 export function areaTable(society) {
   return POLICY_AREAS.map(spec => ({ id: spec.id, label: spec.label, group: spec.group, groupLabel: AREA_GROUPS[spec.group], icon: spec.icon, indicator: spec.national, value: areaValue(society, spec.id), trend: society.areas?.[spec.id]?.trend ?? 0, problem: spec.problem, portfolio: spec.portfolio }));
 }
+// What the observatory of the polls reads of the society: the segments (who they are, how satisfied and how far they trust) and how every area of
+// policy is doing, which tells what each segment cares about. Compact, so that it can travel into the world and the pages.
+export function observatorySociety(society) {
+  if (!society?.segments?.length) return null;
+  return {
+    segments: society.segments.map(segment => ({ id: segment.id, label: segment.label, share: segment.share, satisfaction: segment.satisfaction, participation: segment.participation, trust: segment.trust, economic: segment.economic })),
+    areas: Object.fromEntries(areaTable(society).map(row => [row.id, row.value]))
+  };
+}
 function refresh(society) {
   const national = nationalIndicators(society);
   for (const region of Object.values(society.regions)) {

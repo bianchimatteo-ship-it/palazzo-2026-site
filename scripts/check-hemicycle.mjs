@@ -74,6 +74,18 @@ assert.equal(rosters.senato.seats.filter(seat => seat.player).length, 0, '…e n
 assert.equal(rosters.camera.seats.find(seat => seat.player).groupId, 'cam-xix-04', 'Nel suo gruppo.');
 const colorOf = (chamber, pattern) => rosters[chamber].groups.find(group => pattern.test(group.name))?.color;
 for (const pattern of [/^Fratelli d'Italia/, /^Partito Democratico/, /^MoVimento 5 Stelle/, /^Forza Italia/, /^Lega/]) assert.equal(colorOf('camera', pattern), colorOf('senato', pattern), `Stesso colore alla Camera e al Senato per ${pattern}.`);
+// The colour of a group is the colour of the force it stands for (the one the polls and the party pages use), the same in both Chambers; the groups no force stands for take the free slots of the palette.
+const FDI = 'party-registro-p1-2014-04-ir', PD = 'party-registro-p1-2015-29-ir';
+const tones = { [FDI]: '#112233', [PD]: '#445566' };
+for (const chamber of ['camera', 'senato']) {
+  const toned = hemi.chamberRoster(parliament, chamber, { politicians: db.politicians, db, forceColor: id => tones[id] ?? null });
+  const colorIn = pattern => toned.groups.find(group => pattern.test(group.name))?.color;
+  assert.equal(colorIn(/^Fratelli d'Italia/), '#112233', `${chamber}: il gruppo di Fratelli d’Italia ha il colore della sua forza.`);
+  assert.equal(colorIn(/^Partito Democratico/), '#445566', `${chamber}: il gruppo del Partito Democratico ha il colore della sua forza.`);
+  const free = toned.groups.filter(group => !/^Fratelli d'Italia|^Partito Democratico/.test(group.name) && CHART_SLOTS.includes(group.color)).map(group => group.color);
+  assert.equal(new Set(free).size, free.length, `${chamber}: gli altri gruppi non ripetono i colori della tavolozza.`);
+  assert.ok(toned.groups.every(group => /^#[\da-f]{6}$/i.test(group.color)), `${chamber}: ogni gruppo ha un colore valido.`);
+}
 const committees = hemi.committeesOf(db.committeeMemberships[0].politicianId, db);
 assert.ok(committees.length >= 1 && committees[0].committee?.name, 'Le commissioni di un parlamentare hanno nome e ruolo.');
 

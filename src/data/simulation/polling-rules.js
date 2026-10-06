@@ -6,13 +6,30 @@
 // Categorical slots stepped for the dark game surface (validated set: same hues, dark steps).
 export const CHART_SLOTS = Object.freeze(['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767']);
 
-// Simulated pollsters: explicit labels, not names that could pass for real institutes.
+// Simulated pollsters: explicit labels, not names that could pass for real institutes. Mode, fieldwork and weighting are
+// generic descriptions of a simulated panel (they do not copy the method of any real institute). `fieldworkDays` is how
+// long the interviews last, `lag` the days between the end of the fieldwork and the publication.
 export const POLL_INSTITUTES = Object.freeze([
-  { id: 'a', name: 'Rilevazione simulata A', sample: [900, 1500] },
-  { id: 'b', name: 'Rilevazione simulata B', sample: [700, 1100] },
-  { id: 'c', name: 'Rilevazione simulata C', sample: [1000, 1600] },
-  { id: 'd', name: 'Rilevazione simulata D', sample: [800, 1200] }
+  { id: 'a', name: 'Rilevazione simulata A', sample: [900, 1500], mode: 'Panel online', fieldworkDays: 3, lag: 1, weighting: 'età, area geografica e titolo di studio', note: 'Campione di un panel simulato di iscritti, ricontattato ogni settimana.' },
+  { id: 'b', name: 'Rilevazione simulata B', sample: [700, 1100], mode: 'Telefono', fieldworkDays: 4, lag: 2, weighting: 'area geografica, età e dimensione del comune', note: 'Interviste telefoniche simulate su numeri generati: più lente, campione più piccolo.' },
+  { id: 'c', name: 'Rilevazione simulata C', sample: [1000, 1600], mode: 'Telefono e online', fieldworkDays: 5, lag: 1, weighting: 'voto dichiarato alle ultime elezioni, età e area', note: 'Metodo misto: due campioni (telefono e web) ponderati insieme.' },
+  { id: 'd', name: 'Rilevazione simulata D', sample: [800, 1200], mode: 'Panel online e interviste in strada', fieldworkDays: 3, lag: 2, weighting: 'condizione professionale, età e area', note: 'Panel online integrato da interviste nei quartieri: più attenzione ai giovani e ai lavoratori.' }
 ]);
+
+// The observatory (poll-observatory.js): what every institute keeps week after week and how the segments, the flows and the
+// insights are drawn from the state of the game. Nothing here moves the votes: it only measures them.
+export const OBSERVATORY_RULES = Object.freeze({
+  // Weeks of readings kept for every institute, for the average, and weeks of segment snapshots (trends need a few).
+  history: 26, averageHistory: 52, segmentHistory: 14,
+  // The error of an institute persists from one week to the next, and is a quarter of the nominal sampling error (as in the headline poll).
+  errorMemory: 0.7, errorScale: 0.25,
+  // How much the programme of a force (its agenda), and the mood of a segment towards who governs or opposes, tilt its support among segments.
+  segment: { spread: 0.34, agenda: 1.1, mood: 0.7, min: 0.45, max: 1.8, undecided: 0.9 },
+  // Thresholds of the insights (ratio to the national average, points of change, weeks of comparison, undecided share).
+  insight: { strong: 1.12, weak: 0.88, growth: 0.4, weeks: 8, pool: 26, territory: 1.5 },
+  // Second choice: how much closeness (collocazione, relations) and size weigh.
+  secondChoice: { distance: 0.9, ties: 0.25, size: 0.5, abstain: 0.12 }
+});
 
 // How many real parties enter the world besides the player's: the ones with the most 2x1000 choices (MEF, real).
 export const WORLD_PARTY_COUNT = 7;

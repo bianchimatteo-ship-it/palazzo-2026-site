@@ -178,7 +178,8 @@ function partyStep(d, parties, logoFor, parliamentaryGroups, partyLeaderships, p
       const logo = logoFor(party) ?? party.logoAsset ?? party.logoUrl;
       const color = /^#[\da-f]{6}$/i.test(party.color ?? '') ? party.color : null;
       const mark = logo ? '<img class="wizard-party-logo" src="' + esc(logo) + '" alt="' + esc(party.logoAlt ?? ('Logo di ' + name)) + '" loading="lazy" />' : '<span class="wizard-party-placeholder" aria-hidden="true">' + esc((party.abbreviation || name.slice(0, 2)).slice(0, 3)) + '</span>';
-      const sourceName = party.source === DATA_SOURCES.REAL ? 'DATO REALE VERIFICATO' : party.source === DATA_SOURCES.USER ? 'CREATO DA TE' : 'SIMULAZIONE';
+      // A coalition that stands as one list (AVS) is a political force one can join, not a party: it says so.
+      const sourceName = (party.entityType === 'coalition' ? 'COALIZIONE / LISTA ELETTORALE · ' : '') + (party.source === DATA_SOURCES.REAL ? 'DATO REALE VERIFICATO' : party.source === DATA_SOURCES.USER ? 'CREATO DA TE' : 'SIMULAZIONE');
       const leaders = partyLeaderships.filter(item => item.partyId === party.id && item.source === DATA_SOURCES.REAL && item.verified === true).map(item => {
         const figure = politicalFigures.find(person => person.id === item.politicalFigureId && person.source === DATA_SOURCES.REAL && person.verified === true);
         return figure ? item.role + ': ' + figure.fullName : null;

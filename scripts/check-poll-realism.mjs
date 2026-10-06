@@ -49,7 +49,19 @@ const world = engine.createWorld({ seedText: 'partenza', date: '2026-09-24', pla
 assert.ok(world.polls[0].source === 'real' && world.polls[0].results.filter(row => row.real).every(row => row.share === forces.find(item => item.id === row.partyId).share), 'Il primo sondaggio è il dato reale.');
 const next = step(world, 2, '2026-10-01');
 for (const force of forces) { const row = next.polls.at(-1).results.find(item => item.partyId === force.id); assert.ok(Math.abs(row.share - force.share) <= cap(force.share) * 0.6 + 0.051, `Partenza dal dato reale: ${force.label} ${force.share} → ${row.share}.`); }
-assert.ok(world.playerStart.fromOthers > 0 && world.playerStart.fromOthers + world.playerStart.fromForces > 1, 'Il nuovo partito prende il consenso iniziale da “Altri” e dalle altre forze, dichiarato.');
+// A force with no consensus yet does not start at 1–3%: a party the player founds starts between 0 and 0,1%, a real one the opening poll does not measure
+// between 0,1 and 0,8%, both deterministic (the same career starts the same way); the points it takes come from “Altri” first, never from the real forces' figures.
+const mine = world.parties.find(party => party.isPlayer);
+assert.ok(mine.baseline >= 0 && mine.baseline <= 0.1, `Un partito nuovo parte tra 0 e 0,1% (${mine.baseline}).`);
+assert.ok(world.playerStart && world.playerStart.fromOthers >= 0 && world.playerStart.fromOthers + world.playerStart.fromForces <= 0.11, 'Il consenso iniziale è dichiarato e minimo.');
+const again = engine.createWorld({ seedText: 'partenza', date: '2026-09-24', place: { region: 'Lazio' }, playerParty: { id: 'io', label: 'Il mio partito', position: 'centro-sinistra', founder: true }, forces, realPoll });
+assert.equal(again.parties.find(party => party.isPlayer).baseline, mine.baseline, 'Stessa carriera, stessa partenza.');
+const realLatent = [{ id: 'real-latent', label: 'Forza reale fuori dal sondaggio', abbreviation: 'FRF', position: 'centro', weight: 1.2, refSource: 'real' }];
+const outside = engine.createWorld({ seedText: 'partenza', date: '2026-09-24', place: { region: 'Lazio' }, playerParty: { id: 'real-latent', label: 'Forza reale fuori dal sondaggio', position: 'centro', refSource: 'real' }, forces, realPoll, latent: realLatent });
+const outsideBase = outside.parties.find(party => party.isPlayer).baseline;
+assert.ok(outsideBase >= 0.1 && outsideBase <= 0.8, `Una forza reale fuori dal sondaggio iniziale parte tra 0,1 e 0,8% (${outsideBase}).`);
+assert.equal(engine.createWorld({ seedText: 'altro', date: '2026-09-24', place: { region: 'Lazio' }, playerParty: { id: 'real-latent', label: 'Forza reale fuori dal sondaggio', position: 'centro', refSource: 'real' }, forces, realPoll, latent: realLatent }).parties.find(party => party.isPlayer).baseline, outsideBase, 'Il consenso di una forza reale fuori dal sondaggio dipende solo da ciò che si sa di lei.');
+assert.ok(engine.initialConsensus({ id: 'x', kind: 'real', weight: 0 }) >= 0.1 && engine.initialConsensus({ id: 'x', kind: 'real', weight: 9 }) <= 0.8 && engine.initialConsensus({ id: 'x', kind: 'new' }) <= 0.1, 'Intervalli della partenza.');
 
 // Events move majority and opposition in opposite directions, gradually.
 let hit = engine.createWorld({ seedText: 'eventi', date: '2026-09-24', place: { region: 'Lazio' }, playerParty: null, forces, realPoll });

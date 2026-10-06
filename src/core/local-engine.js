@@ -85,7 +85,9 @@ export function createInstitution(spec) {
     groups, seats: groups.reduce((sum, group) => sum + group.seats, 0),
     executive: spec.kind === 'europa' ? null : { leader: spec.leaderIsPlayer ? 'player' : 'simulato', label: spec.leaderIsPlayer ? `Tu, ${rules.leader.toLowerCase()}` : `${rules.leader} (figura simulata) · ${leaderGroup?.label ?? ''}`.trim(), groupId: leaderGroup?.id ?? null, camp: leaderGroup?.camp ?? 'centro', members, stability: 62, program: null },
     budget: spec.kind === 'europa' ? null : { approvedYear: Number(String(spec.date).slice(0, 4)), margin: 50, localTax: 'media', provisional: false, failures: 0 },
-    ...(spec.kind === 'comune' ? (indicators => ({ indicators, baseline: { services: servicesOf(indicators) } }))(cityIndicators(spec)) : {}), ...(spec.kind === 'europa' ? {} : { effects: [], commitments: [] }),
+    ...(spec.kind === 'comune' ? (indicators => ({ indicators, baseline: { services: servicesOf(indicators) } }))(cityIndicators(spec)) : {}),
+    // A region or a province answers for the services of its territory too: where they stood when the term began is the starting point of its record.
+    ...(['regione', 'provincia'].includes(spec.kind) && spec.territory ? { baseline: { services: servicesOf(spec.territory) } } : {}), ...(spec.kind === 'europa' ? {} : { effects: [], commitments: [] }),
     acts: [], archive: [], history: [{ date: spec.date, text: `${rules.label}: inizia il mandato (${spec.role === 'sindaco' || spec.role === 'presidente' ? 'guidi l’esecutivo' : spec.side === 'maggioranza' ? 'in maggioranza' : 'all’opposizione'}).` }],
     pressure: 30, ...(spec.kind === 'europa' ? { ep: europeanSeat(`${spec.kind}-${spec.date}`, spec.date, spec.committee) } : {}), source: SIM
   };
@@ -114,7 +116,8 @@ export function mandateRecord(input, { date = null, former = false } = {}) {
   const commitments = inst.commitments ?? [];
   const kept = commitments.filter(item => item.status === 'rispettato').length;
   const broken = commitments.filter(item => item.status === 'disatteso').length;
-  const services = servicesOf(inst.indicators);
+  // The services of a comune are its own; those of a region or a province are the ones of the territory, as the weekly step last measured them.
+  const services = inst.kind === 'comune' ? servicesOf(inst.indicators) : Number.isFinite(inst.territoryServices) ? inst.territoryServices : null;
   const servicesDelta = services !== null && inst.baseline?.services != null ? round1(services - inst.baseline.services) : 0;
   const passed = (inst.acts ?? []).filter(item => item.stage === 'approvato' && item.sponsor?.kind === 'player').length;
   const stability = Number(inst.executive?.stability ?? 60), pressure = Number(inst.pressure ?? 30), margin = Number(inst.budget?.margin ?? 50), failures = Number(inst.budget?.failures ?? 0);
@@ -806,6 +809,8 @@ function answerQuestion(inst, act, date, territory, events) {
 export function advanceInstitutionWeek(input, { date, rand = Math.random, issues = [], territory = null } = {}) {
   let inst = withLocalState(withEuropeanSeat(input, date));
   if (!inst || inst.status !== 'active') return { inst: input, events: [], lines: [] };
+  // A region or a province keeps the services of its territory (a term that began before this was recorded takes its starting point from the first week it sees).
+  if (territory && ['regione', 'provincia'].includes(inst.kind) && servicesOf(territory) !== null) inst = { ...inst, territoryServices: servicesOf(territory), baseline: { ...(inst.baseline ?? {}), services: inst.baseline?.services ?? servicesOf(territory) } };
   const rules = INSTITUTIONS[inst.kind];
   const events = [];
   const lines = [];

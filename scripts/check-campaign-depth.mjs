@@ -23,7 +23,7 @@ const party = parties.find(item => item.id === 'party-registro-p1-2022-63-ir');
 const base = makeDemoState();
 const statistics = [...base.dataset.statistics.filter(item => item.subjectId !== base.dataset.politicians[0].id), ...[['notoriety', 30], ['influence', 40], ['reputation', 55], ['popularity', 50]].map(([metric, value]) => ({ subjectId: base.dataset.politicians[0].id, metric, value }))];
 const player = { ...base.dataset.politicians[0], partyId: party.id, region: 'Lombardia', municipality: 'Milano' };
-const make = (type, role, config = {}, id = null, date = '2026-09-25') => engine.createCampaign({ career: { ...base.career, id: id ?? `depth-${type}-${role}`, partyId: party.id }, player, statistics, partyCatalog: parties, currentDate: date, config: { electionType: type, role, objective: 'win', municipalityBand: 'oltre-15000', ...config } });
+const make = (type, role, config = {}, id = null, date = '2026-09-25') => engine.createCampaign({ career: { ...base.career, id: id ?? `depth-${type}-${role}`, partyId: party.id }, player, statistics, partyCatalog: parties, currentDate: date, config: { electionType: type, role, objective: 'win', municipalityBand: 'oltre-15000', independents: 0, ...config } });
 const approved = campaign => { campaign.nomination.status = 'approved'; return campaign; };
 const share = (campaign, id = campaign.playerCandidateId) => campaign.territories.reduce((sum, area) => sum + (area.supportByCandidate[id] ?? 0) * area.weight, 0) / campaign.territories.reduce((sum, area) => sum + area.weight, 0);
 const mean = list => list.reduce((sum, value) => sum + value, 0) / Math.max(1, list.length);
@@ -201,9 +201,18 @@ const toRunoff = (seedId, values) => { let c = splitField(approved(make('comunal
 // ---------- 5. the list: composition, scouting, negotiation, places ----------
 {
   assert.ok(!make('comunale', 'sindaco').list && !make('regionale', 'presidente').list, 'Chi corre per guidare l’esecutivo non è in una lista.');
-  for (const [type, role] of [['comunale', 'consigliere'], ['regionale', 'consigliere'], ['politiche', 'deputato'], ['politiche', 'senatore'], ['politiche', 'uninominale'], ['europee', 'eurodeputato']]) {
+  for (const [type, role] of [['comunale', 'consigliere'], ['regionale', 'consigliere'], ['politiche', 'deputato'], ['politiche', 'senatore'], ['europee', 'eurodeputato']]) {
     const c = make(type, role);
     assert.ok(c.list && c.list.mates.length >= 8 && c.list.mates.every(item => item.faction && item.areaId && Number.isFinite(item.strength)), `${type}/${role}: la lista ha i suoi nomi, con corrente e territorio.`);
+  }
+  // The single-member district has no list: no composition, no place, no scouting or negotiation, no list building.
+  {
+    const single = approved(make('politiche', 'uninominale'));
+    assert.ok(single.list === null && single.candidacy.listPosition === null && single.nomination.listPosition === null && engine.listStanding(single) === null, 'Il collegio uninominale non ha lista né posizione in lista.');
+    const offered = engine.campaignActivities(single).map(item => item.activity.id);
+    assert.ok(!offered.includes('scouting') && !offered.includes('list_negotiation') && !offered.includes('list_building'), 'Nessuna attività sulla lista per chi corre nel collegio.');
+    const run = engine.advanceCampaign(single, single.totalDays);
+    assert.ok(run.status !== 'active' && run.result.personal.code, 'La corsa nel collegio arriva al risultato.');
   }
   // The strength of the mates decides the preferences.
   const prefs = strength => { const c = approved(make('regionale', 'consigliere', {}, 'preferenze')); c.list.mates = c.list.mates.map(item => ({ ...item, strength })); return elections.preferenceStanding(c, 3).rank; };
@@ -485,7 +494,8 @@ const toRunoff = (seedId, values) => { let c = splitField(approved(make('comunal
   const registryDate = store.getState().clock.currentDate;
   store.getState().game.rivalRegistry = db.parties.map(item => ({ key: `comunale|comune:Siena|${item.id}`, label: item.name, partyId: item.id, scope: 'comune:Siena', electionType: 'comunale', personality: 'aggressivo', objectives: ['vincere'], interests: ['territorio'], loyalty: 60, initiative: .8, relation: 8, meetings: 2, firstMet: '2020-01-10', lastMet: registryDate, record: { betrayed: 1 }, last: { ahead: false }, memory: [{ type: 'betrayal', weight: 2, count: 1, date: registryDate }], source: 'simulation' }));
   store.fastForwardToElection('comunale');
-  store.startCampaign({ electionType: 'comunale', role: 'sindaco', objective: 'win', municipalityBand: 'fino-15000' }, db.parties);
+  // (no independents here: the registry written above has one record per party, and a candidacy without a party has no identity to remember)
+  store.startCampaign({ electionType: 'comunale', role: 'sindaco', objective: 'win', municipalityBand: 'fino-15000', independents: 0 }, db.parties);
   const second = store.getState().campaign;
   assert.ok(field(second).every(rival => rival.recognition?.stance === 'ostile' && rival.aiProfile.personality === 'aggressivo' && rival.aiProfile.objectives[0] === 'fermare-il-giocatore'), 'Alla campagna successiva i rivali ti riconoscono e si comportano di conseguenza.');
   // The registry is saved with the game, and a game saved before it simply has none.
