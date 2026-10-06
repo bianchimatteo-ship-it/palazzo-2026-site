@@ -3,8 +3,8 @@
 // reachable now, what it unlocked once reached (and what that changes in the promotions, the candidacies, the
 // campaigns and the equilibrium of the relations), and the public ambitions (a goal declared with a deadline).
 // Pure functions over plain data (nothing imports the career engine, which owns the effects).
-import { AMBITION_LIMIT, CAREER_OBJECTIVES, CLASSIC_OBJECTIVES, OBJECTIVE_BY_ID } from '../data/simulation/objective-rules.js?v=20261005-2';
-import { territorialControl } from './committee-engine.js?v=20261005-2';
+import { AMBITION_LIMIT, CAREER_OBJECTIVES, CLASSIC_OBJECTIVES, OBJECTIVE_BY_ID } from '../data/simulation/objective-rules.js?v=20261006-1';
+import { territorialControl } from './committee-engine.js?v=20261006-1';
 
 const SIM = 'simulation';
 const round2 = value => Math.round(value * 100) / 100;

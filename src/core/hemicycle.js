@@ -2,8 +2,8 @@
 // concentric arcs and handed out group by group from left to right, following the political position of each group's
 // members; every seat is a real parliamentarian in office (identity from the verified dataset), the player's own seat,
 // or — only when the scenario gives a group more seats than the dataset lists — an unnamed seat of that group.
-import { electionListOf, groupAffiliation, inOffice, politicianAffiliation, positionAxis } from '../data/repositories/party-links.js?v=20261005-2';
-import { CHART_SLOTS } from '../data/simulation/polling-rules.js?v=20261005-2';
+import { electionListOf, groupAffiliation, inOffice, politicianAffiliation, positionAxis } from '../data/repositories/party-links.js?v=20261006-1';
+import { CHART_SLOTS } from '../data/simulation/polling-rules.js?v=20261006-1';
 
 // Colour: the colour of a group or a party is the main colour of the force it belongs to, as the game already knows it (the world's force, with the owner's
 // corrections: `forceColor`); a group of a legislature born from a vote carries it. Only the groups no force stands for take the eight validated slots of the
