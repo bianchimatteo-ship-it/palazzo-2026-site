@@ -5,11 +5,11 @@
 // institutional one) and by the player's own choices (an offset that the decisions of a category push). The influence in a sector
 // is earned by acts, laws and reports on its themes and by the office that covers them, and it fades if it is not kept alive.
 // Pure functions on the career state; the career engine writes game.standing, the others read the view.
-import { committeeStrength, territorialControl } from './committee-engine.js?v=20261007-1';
+import { committeeStrength, territorialControl } from './committee-engine.js?v=20261007-2';
 import {
   CATEGORY_REPUTATION, REPUTATIONS, REPUTATION_IDS, SECTORS, SECTOR_GAINS, SECTOR_IDS, STANDING_RULES, areasOfSector, sectorOfArea
-} from '../data/simulation/standing-rules.js?v=20261007-1';
-import { OFFICES } from '../data/simulation/office-rules.js?v=20261007-1';
+} from '../data/simulation/standing-rules.js?v=20261007-2';
+import { OFFICES } from '../data/simulation/office-rules.js?v=20261007-2';
 
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
 const round1 = value => Math.round(value * 10) / 10;

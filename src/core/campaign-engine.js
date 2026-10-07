@@ -1,10 +1,10 @@
-import { advanceDays } from './time.js?v=20261007-1';
-import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261007-1';
-import { aggregateShares, mateForce, runFinalElection, runFirstRound } from './election-engine.js?v=20261007-1';
-import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261007-1';
-import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261007-1';
-import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261007-1';
-import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261007-1';
+import { advanceDays } from './time.js?v=20261007-2';
+import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261007-2';
+import { aggregateShares, mateForce, runFinalElection, runFirstRound } from './election-engine.js?v=20261007-2';
+import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261007-2';
+import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261007-2';
+import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261007-2';
+import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261007-2';
 
 const SOURCE = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
