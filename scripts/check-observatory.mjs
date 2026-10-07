@@ -35,7 +35,8 @@ const newParty = { partyMode: 'new', partyId: '', partyName: 'Lista di prova', p
 let imports = 0;
 const geography = JSON.parse(await readFile(new URL('../src/data/real/electoral-geography.json', import.meta.url), 'utf8'));
 const fresh = async () => { const { store } = await import(`../src/core/store.js?obs=${++imports}`); store.setRealReference(reference); store.setElectoralGeography(geography); return store; };
-const start = async (extra, level = {}) => { const store = await fresh(); store.createCareer(draft({ ...extra, ...level }), links.politicalForces(db), db.parliamentaryGroups); return store; };
+// (each career replaces the one before, kept in a slot up to five: the slots are emptied so that a series of careers is not stopped by the limit)
+const start = async (extra, level = {}) => { const store = await fresh(); for (const slot of store.listSlots()) store.deleteSlot(slot.id); store.createCareer(draft({ ...extra, ...level }), links.politicalForces(db), db.parliamentaryGroups); return store; };
 const weeks = (store, count) => { for (let i = 0; i < count; i++) { store.getState().game.status = 'active'; store.advance(7); } };
 const playerOf = store => store.getState().world.parties.find(item => item.isPlayer);
 const near = (a, b, tolerance, message) => assert.ok(Math.abs(a - b) <= tolerance, `${message} (${a} contro ${b})`);

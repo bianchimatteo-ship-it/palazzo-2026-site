@@ -33,12 +33,14 @@ store.setParliamentaryGroups(db.parliamentaryGroups);
 const clean = (html, where) => { const bad = html.replace(/data-[a-z-]+="[^"]*"/g, '').match(/.{0,60}(undefined|NaN|\[object Object\]).{0,60}/); assert.ok(!bad, `${where}: valori non validi (${bad?.[0]})`); };
 const CLOSED = ['approved', 'rejected', 'lapsed'];
 const draft = (level, groupId, name) => ({ firstName: name, lastName: 'Prova', birthDate: '1981-05-05', gender: 'donna', region: 'Toscana', municipality: 'Firenze', previousProfession: 'Avvocata', initialLevel: level, parliamentaryGroupId: groupId, parliamentStartMode: 'real-context', partyMode: 'independent', partyId: '', policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 } });
+// Each career replaces the one before (kept in a slot, up to five): the slots are emptied so that a long series of careers is not stopped by the limit.
+const startFresh = (...args) => { for (const slot of store.listSlots()) store.deleteSlot(slot.id); return store.createCareer(...args); };
 const keepAlive = () => { const s = store.getState(); if (s.game.status === 'ended') { s.game.status = 'active'; s.game.endReason = null; } for (const item of s.dataset.statistics) if (item.subjectId === s.career.playerId && item.metric === 'reputation' && item.value < 30) item.value = 30; };
 const allBills = s => [...s.parliament.laws.filter(law => law.auto), ...(s.parliament.lawArchive ?? [])];
 
 // ---------- 1. the engine ----------
 {
-  store.createCareer(draft('deputato', 'cam-xix-02', 'Motore'), db.parties, db.parliamentaryGroups);
+  startFresh(draft('deputato', 'cam-xix-02', 'Motore'), db.parties, db.parliamentaryGroups);
   store.initializeParliament(db.parliamentaryGroups);
   const s = store.getState();
   const linked = LM.linkGroupsToParties(s.parliament, s.world);
@@ -110,7 +112,7 @@ const allBills = s => [...s.parliament.laws.filter(law => law.auto), ...(s.parli
 // ---------- 2. careers: the calendar of the Chambers ----------
 const outcomes = [];
 for (const [index, [level, groupId, name]] of [['deputato', 'cam-xix-01', 'Maggioranza'], ['deputato', 'cam-xix-02', 'Opposizione'], ['senatore', 'senato-xix-gruppo-71', 'Senatrice']].entries()) {
-  store.createCareer(draft(level, groupId, name), db.parties, db.parliamentaryGroups);
+  startFresh(draft(level, groupId, name), db.parties, db.parliamentaryGroups);
   store.initializeParliament(db.parliamentaryGroups);
   const start = store.getState();
   let asked = 0, dissent = 0, voted = 0;
@@ -175,7 +177,7 @@ for (const item of outcomes) console.log(`  ${item.name}: ${item.bills} proposte
 
 // ---------- 3. the player acts on a bill of the others ----------
 {
-  store.createCareer(draft('deputato', 'cam-xix-02', 'Emendamenti'), db.parties, db.parliamentaryGroups);
+  startFresh(draft('deputato', 'cam-xix-02', 'Emendamenti'), db.parties, db.parliamentaryGroups);
   store.initializeParliament(db.parliamentaryGroups);
   let target = null;
   for (let week = 0; week < 30 && !target; week++) {
@@ -227,7 +229,7 @@ for (const item of outcomes) console.log(`  ${item.name}: ${item.bills} proposte
 
 // ---------- 4. a career outside Parliament ----------
 {
-  store.createCareer({ ...draft('comunale', '', 'Sindaca'), parliamentaryGroupId: '' }, db.parties, db.parliamentaryGroups);
+  startFresh({ ...draft('comunale', '', 'Sindaca'), parliamentaryGroupId: '' }, db.parties, db.parliamentaryGroups);
   assert.equal(store.getState().parliament, null, 'Alla creazione la carriera locale non ha un seggio.');
   // The Government in office at the start is checked at the first week: in the following ones a crisis can replace it
   // in the same Chambers, as in any career (with some seeds it loses the confidence within twenty weeks).
@@ -246,7 +248,7 @@ for (const item of outcomes) console.log(`  ${item.name}: ${item.bills} proposte
 
 // ---------- 5. saves stay light ----------
 {
-  store.createCareer(draft('deputato', 'cam-xix-03', 'Lunga'), db.parties, db.parliamentaryGroups);
+  startFresh(draft('deputato', 'cam-xix-03', 'Lunga'), db.parties, db.parliamentaryGroups);
   store.initializeParliament(db.parliamentaryGroups);
   for (let week = 0; week < 110; week++) { keepAlive(); store.advance(7); }
   const s = store.getState();
