@@ -516,7 +516,7 @@ const candidateLabel = candidate => candidate.realReference?.fullName ?? (candid
 // `extra` are points per candidate (the record of an incumbent), `edges` the party weight, `roots` the strongholds of the rivals, `homeExtra`
 // what the roots of the player (his territorial reputation, the committees) add at home. All of them are zero-mean among the rivals, so
 // a field without data starts as it always did.
-function initSupport(areas, candidates, player, seed, { extra = {}, edges = {}, roots = {}, homeExtra = 0, spread = 1.6, anchors = {} } = {}) {
+function initSupport(areas, candidates, player, seed, { extra = {}, edges = {}, roots = {}, homeExtra = 0, spread = 1.6, anchors = {}, rooted = false } = {}) {
   const rand = randomFrom(seed ^ 0x7f4a7c15);
   for (const area of areas) {
     const strengths = candidates.map((candidate,index) => {
@@ -524,7 +524,8 @@ function initSupport(areas, candidates, player, seed, { extra = {}, edges = {}, 
       const foundation = candidate.isPlayer
         ? 12 + Number(stats.popularity ?? 42)*.14 + Number(stats.notoriety ?? 20)*.07 + Number(stats.influence ?? 14)*.055 + Number(stats.experience ?? 18)*.04
         : 15 + Number(stats.notoriety ?? 35)*.08 + Number(stats.influence ?? 30)*.05 + Number(stats.experience ?? 35)*.035;
-      const territoryBoost = candidate.isPlayer && (area.name === player.municipality || area.region === player.region) ? 3.2 + homeExtra : 0;
+      // A race the party fields a candidate in (a territory that may not be his own) gives its own rooting: the candidate's points (config.rooting) replace the boost of the home.
+      const territoryBoost = candidate.isPlayer && !rooted && (area.name === player.municipality || area.region === player.region) ? 3.2 + homeExtra : 0;
       const stronghold = roots[candidate.id]?.areaId === area.id ? roots[candidate.id].edge : 0;
       // The lean of the area for the party of the candidate: it differs from area to area, never on average.
       const lean = areas.length > 1 ? (randomFrom(hash(`lean|${seed}|${area.id}|${candidate.partyId ?? candidate.id}`))() - .5) * 2 * spread : 0;
@@ -1747,6 +1748,8 @@ export function createCampaign({career,player,statistics=[],offices=[],territori
   const fieldIncumbent=local&&!incumbencyRecord?.governing&&config.field?.incumbent&&Number.isFinite(Number(config.field.incumbent.score))?config.field.incumbent:null;
   const extra={};
   if(incumbencyRecord) extra[playerCandidateId]=incumbencyRecord.start;
+  const rooted=Number.isFinite(config.rooting);
+  if(rooted) extra[playerCandidateId]=round(Number(extra[playerCandidateId]??0)+config.rooting);
   if(fieldIncumbent&&opponents[0]) {
     const boost=round(clamp(Number(fieldIncumbent.score)*clamp(Number(fieldIncumbent.confidence??1),.3,1)*INCUMBENCY_RULES.consensus,-INCUMBENCY_RULES.consensusCap,INCUMBENCY_RULES.consensusCap));
     opponents[0].incumbent=true; opponents[0].incumbency={score:round(Number(fieldIncumbent.score)),boost,label:fieldIncumbent.label??'amministrazione uscente',source:SOURCE};
@@ -1767,7 +1770,7 @@ export function createCampaign({career,player,statistics=[],offices=[],territori
     const shareOf=id=>roster.participants.find(item=>item.id===id)?.share;
     for(const item of candidates) { const value=item.isPlayer?(partyId?shareOf(partyId):null):shareOf(item.partyId); anchors[item.id]=Number.isFinite(value)?value:item.isPlayer?.3:.3; }
   }
-  initSupport(campaignAreas,candidates,player,seed,{extra,edges:partyEdges(opponents,config.partyWeights??{}),roots:rivalRoots(opponents,campaignAreas,seed),homeExtra,spread:local?1.8:1.2,anchors});
+  initSupport(campaignAreas,candidates,player,seed,{extra,edges:partyEdges(opponents,config.partyWeights??{}),roots:rivalRoots(opponents,campaignAreas,seed),homeExtra,spread:local?1.8:1.2,anchors,rooted});
   const focus=campaignAreas.find(area=>area.name===player.municipality)?.id ?? campaignAreas.find(area=>area.region===player.region)?.id ?? campaignAreas.find(area=>area.constituency && (config.constituency === area.constituency))?.id ?? campaignAreas[0].id;
   const deadlineDay=model.nominationDays;
   const internalSupport=partyId && !userOrIndependent ? round(1.5+playerStats.influence*.035+(incumbency?1.5:0)) : 10;

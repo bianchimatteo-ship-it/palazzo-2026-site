@@ -441,6 +441,24 @@ assert.ok(!page.includes('data-world-alliance') && page.includes('Alleanze e rot
   const quirinale = await click({ sectionTab: 'elezioni', sectionTabValue: 'quirinale' });
   assert.ok(quirinale.includes('data-section-tab-value="quirinale"') && quirinale.includes('IL QUIRINALE · SIMULAZIONE') && quirinale.includes('L’elezione del Presidente') && quirinale.includes('Storia del Colle') && clean(quirinale), 'Elezioni → Quirinale: il Presidente della Repubblica, le regole dell’elezione e la storia del Colle.');
   for (const tab of ['panoramica', 'nazionali', 'candidatura', 'campagna', 'avversari', 'risultati', 'storico']) assert.ok(clean(await click({ sectionTab: 'elezioni', sectionTabValue: tab })), `Elezioni → ${tab}: valori non validi`);
+  // Elezioni → Candidatura: the leader decides who runs in the regional, provincial and municipal races of the round (no days, no money).
+  {
+    const party = store.getState().game.party;
+    const watching = await click({ sectionTab: 'elezioni', sectionTabValue: 'candidatura' });
+    if (party.affiliation !== 'founder') { assert.ok(watching.includes('Solo il segretario o il fondatore decide i candidati'), 'Chi non è segretario segue le corse senza decidere.'); party.affiliation = 'founder'; }
+    store.setLocalCalendar(await realData.loadRealDocument('localElections')); // the page boot loads it (main.js)
+    await goto('elezioni');
+    const candidatura = await click({ sectionTab: 'elezioni', sectionTabValue: 'candidatura' });
+    assert.ok(candidatura.includes('CANDIDATI DEL PARTITO · CORSE TERRITORIALI') && candidatura.includes('data-race-pick=') && candidatura.includes('data-race-action="confirm"') && candidatura.includes('Nessun candidato scelto') && clean(candidatura), 'Elezioni → Candidatura: le corse territoriali del turno, con la scelta del candidato del partito.');
+    const firstRace = store.getState().races.items.find(race => race.status === 'planned');
+    const dayBefore = store.getState().clock.currentDate;
+    const apBefore = JSON.stringify(store.getState().game.resources);
+    store.chooseRaceCandidate(firstRace.id, { kind: 'simulation' }, { politicians: realData.realDatabase.politicians ?? [], groups: realData.realDatabase.parliamentaryGroups ?? [] });
+    const chosen = await click({ sectionTab: 'elezioni', sectionTabValue: 'candidatura' });
+    assert.ok(chosen.includes('Candidato scelto') && chosen.includes('Figura simulata') && chosen.includes('radicamento') && clean(chosen), 'Scelto il candidato, la corsa lo mostra con il suo radicamento.');
+    assert.equal(store.getState().clock.currentDate, dayBefore, 'Scegliere il candidato non fa passare i giorni.');
+    assert.equal(JSON.stringify(store.getState().game.resources), apBefore, 'Né consuma punti azione o risorse.');
+  }
   await click({ sectionTab: 'elezioni', sectionTabValue: 'quirinale' });
   // Leaving politics: the confirmation, the end of the career, the Hall of Fame in the menu, the heir in the wizard.
   await click({ sectionTab: 'carriera', sectionTabValue: 'percorso' });

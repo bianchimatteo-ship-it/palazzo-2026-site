@@ -88,6 +88,24 @@
 .eh-cal-body small { display: block; margin-top: 4px; color: var(--muted); font-size: 12.5px; line-height: 1.45; }
 .eh-cal-action .primary-button, .eh-cal-action .secondary-button { height: auto; min-height: 34px; margin: 0; padding: 6px 12px; font-size: 12.5px; white-space: nowrap; }
 .eh-cal-action .text-link { font-size: 12.5px; }
+/* The races of the territorial votes: the candidate of the party in each, chosen with a quick select and a confirmation */
+.eh-races { display: grid; gap: 10px; margin: 12px 0 0; padding: 0; list-style: none; }
+.eh-race { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel-2); }
+.eh-race.status-confirmed { border-color: rgba(95,211,95,.4); box-shadow: inset 3px 0 0 #3fa45d; }
+.eh-race.status-running { border-color: rgba(242,196,109,.45); box-shadow: inset 3px 0 0 #c79a3c; }
+.eh-race-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 10px; }
+.eh-race-head strong { color: var(--ink); font: 700 15px Manrope, sans-serif; }
+.eh-race-head small, .eh-race-who small { display: block; margin-top: 3px; color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+.eh-race-who { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; min-width: 0; }
+.eh-race-who strong { color: var(--ink); font-size: 14px; }
+.eh-race-pick { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; }
+.eh-race-pick label { display: grid; flex: 1 1 260px; gap: 4px; min-width: 0; }
+.eh-race-pick label > span { color: var(--muted); font-size: 11.5px; font-weight: 750; letter-spacing: .05em; text-transform: uppercase; }
+.eh-race-pick select { width: 100%; min-width: 0; text-overflow: ellipsis; }
+.eh-race-pick .primary-button { height: auto; min-height: 38px; margin: 0; padding: 7px 16px; }
+.eh-races-past { margin-top: 12px; }
+.eh-races-past summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+@media (max-width: 600px) { .eh-race-head { grid-template-columns: auto minmax(0, 1fr); } .eh-race-head .sx-badge { grid-column: 2; justify-self: start; } .eh-race-pick .primary-button { flex: 1 1 100%; } }
 .eh-facts, .eh-rules, .eh-checklist, .eh-bars, .eh-next, .eh-lines, .eh-deltas { margin: 0; padding: 0; list-style: none; }
 .eh-facts { display: grid; gap: 10px; }
 .eh-facts li, .eh-rules li { display: flex; align-items: flex-start; gap: 10px; }

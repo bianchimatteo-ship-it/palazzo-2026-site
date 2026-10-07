@@ -78,6 +78,25 @@ damaged('Due seggi insieme', 'coerenza', state => { const me = player(state); st
 damaged('Incarico chiuso prima di iniziare', 'coerenza', state => { Object.assign(state.dataset.offices[0], { startDate: '2030-01-01', endDate: '2029-01-01' }); });
 damaged('Formazione completata senza governo', 'coerenza', state => { state.national.formation = { ...(state.national.formation ?? {}), phase: 'completata' }; state.parliament.government = null; });
 
+// The races of the territorial votes (race-engine): a candidate without a person, a real politician copied among the persons of the simulation, a closed race without a
+// result, two races of the same person on the same day, a result before the vote.
+{
+  const race = (id, extra = {}) => ({ id, level: 'comunale', territory: { kind: 'comune', name: 'Torino', region: 'Piemonte', code: '001272' }, label: 'Comunali · Torino', electionDate: '2030-05-26', windowOpensAt: '2030-04-21', windowClosesAt: '2030-05-05', nextVote: '2035-05-27', status: 'planned', candidacy: null, campaignId: null, result: null, polls: null, office: null, history: [], source: 'simulation', ...extra });
+  const person = id => ({ id, firstName: 'Figura', lastName: 'simulata', displayName: 'Candidato simulato', source: 'simulation', partyId: base.world.playerPartyId, region: 'Piemonte' });
+  const candidacy = (personId, source = 'simulation') => ({ kind: 'simulation', personId, personRef: { collection: 'politicians', id: personId, source }, label: 'Candidato simulato', partyId: base.world.playerPartyId, role: 'sindaco', source, rooting: 1, from: {}, confirmedAt: '2030-01-01' });
+  const withRaces = (state, items, persons = []) => { state.races = { version: 1, items }; state.dataset.politicians.push(...persons); };
+  const good = structuredClone(base);
+  withRaces(good, [race('gara-a', { status: 'confirmed', candidacy: candidacy('persona-prova-1') })], [person('persona-prova-1')]);
+  assert.ok(checkInvariants(good, context).ok, `Una corsa con il suo candidato è coerente: ${describe(checkInvariants(good, context))}`);
+  damaged('Candidato senza persona', 'riferimento', state => withRaces(state, [race('gara-a', { status: 'confirmed', candidacy: candidacy('persona-inesistente') })]));
+  damaged('Politico reale tra le persone della simulazione', 'coerenza', state => withRaces(state, [race('gara-a', { status: 'confirmed', candidacy: candidacy('persona-prova-1', 'real') })], [person('persona-prova-1')]));
+  damaged('Corsa conclusa senza risultato', 'coerenza', state => withRaces(state, [race('gara-a', { status: 'held', candidacy: candidacy('persona-prova-1') })], [person('persona-prova-1')]));
+  damaged('Risultato prima del voto', 'coerenza', state => withRaces(state, [race('gara-a', { status: 'confirmed', candidacy: candidacy('persona-prova-1'), result: { won: true, share: 40, mandate: true } })], [person('persona-prova-1')]));
+  damaged('Corsa duplicata', 'duplicato', state => withRaces(state, [race('gara-a'), race('gara-a')]));
+  damaged('Stato sconosciuto', 'valore-impossibile', state => withRaces(state, [race('gara-a', { status: 'sospesa' })]));
+  damaged('Date della corsa fuori ordine', 'coerenza', state => withRaces(state, [race('gara-a', { windowOpensAt: '2030-06-01' })]));
+  damaged('La stessa persona in due corse lo stesso giorno', 'coerenza', state => withRaces(state, [race('gara-a', { status: 'confirmed', candidacy: candidacy('persona-prova-1') }), race('gara-b', { status: 'confirmed', candidacy: candidacy('persona-prova-1') })], [person('persona-prova-1')]));
+}
 // ---------- 3. the player who stays away from a vote is counted as absent ----------
 const parliament = structuredClone(base.parliament);
 const chamber = 'camera';

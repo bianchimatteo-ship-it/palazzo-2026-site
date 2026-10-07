@@ -1687,7 +1687,8 @@ export function breakAlliance(input, allianceId, date) {
 }
 
 // Polls and allies shape the opening of a campaign.
-export function campaignPollBonus(world, electionType, stats = {}, relations = []) {
+// region: the region of a race that is not the one of the player (a regional, provincial or municipal race elsewhere reads the polls of that region).
+export function campaignPollBonus(world, electionType, stats = {}, relations = [], { region = null } = {}) {
   if (!world) return { bonus: 0, share: null, allies: 0 };
   const player = playerParty(world);
   const boosts = personalBoosts(stats, relations);
@@ -1695,7 +1696,8 @@ export function campaignPollBonus(world, electionType, stats = {}, relations = [
     const approval = latestPoll(world)?.personal?.approval ?? 50;
     return { bonus: round2(clamp((approval - 50) * 0.05, -2, 2)), share: null, allies: 0 };
   }
-  const shares = electionType === 'comunale' ? localShares(world, boosts.regional, boosts.local) : electionType === 'regionale' ? regionalShares(world, world.place.region, boosts.regional) : nationalShares(world);
+  const elsewhere = region && region !== world.place.region;
+  const shares = elsewhere && ['comunale', 'regionale'].includes(electionType) ? regionalShares(world, region) : electionType === 'comunale' ? localShares(world, boosts.regional, boosts.local) : electionType === 'regionale' ? regionalShares(world, world.place.region, boosts.regional) : nationalShares(world);
   const share = shares.find(row => row.partyId === player.id)?.share ?? 0;
   const alliance = allianceOf(world, player.id);
   const allies = alliance ? alliance.partyIds.filter(id => id !== player.id).reduce((sum, id) => sum + (shares.find(row => row.partyId === id)?.share ?? 0), 0) : 0;

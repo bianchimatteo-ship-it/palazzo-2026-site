@@ -52,6 +52,7 @@ export function checkInvariants(state, context = {}) {
   checkLaws(state, known, report, today);
   checkElections(state, report, today);
   checkCampaign(state, report);
+  checkRaces(state, report);
   checkNational(state, known, report);
   checkLocal(state, report);
   checkPartyLife(state, report);
@@ -304,6 +305,46 @@ function checkCampaign(state, report) {
 
 // The national cycle: the seats of the last general election add up, the formation is in a known phase and a
 // completed formation has a Government.
+// The races of the territorial votes (race-engine): who stands where, and what a closed race leaves.
+const RACE_STATUSES = new Set(['planned', 'confirmed', 'running', 'held', 'missed']);
+const RACE_LEVELS = new Set(['regionale', 'provinciale', 'comunale']);
+function checkRaces(state, report) {
+  const items = records(state.races?.items);
+  if (state.races && !Array.isArray(state.races.items)) report('struttura', 'races.items', 'Le corse devono essere una lista.');
+  const persons = new Map(records(state.dataset?.politicians).map(item => [item.id, item]));
+  const seen = new Set();
+  const standing = new Map();
+  items.forEach((race, index) => {
+    const at = `races.items[${index}]`;
+    if (seen.has(race.id)) report('duplicato', at, `Corsa duplicata: ${race.id}`);
+    seen.add(race.id);
+    if (!RACE_STATUSES.has(race.status)) report('valore-impossibile', `${at}.status`, `Stato di una corsa sconosciuto: ${race.status}`);
+    if (!RACE_LEVELS.has(race.level)) report('valore-impossibile', `${at}.level`, `Livello di una corsa sconosciuto: ${race.level}`);
+    if (!race.territory?.name || !race.territory?.region) report('struttura', `${at}.territory`, `La corsa ${race.id} non ha un territorio.`);
+    if (validDay(race.windowOpensAt) && validDay(race.windowClosesAt) && validDay(race.electionDate) && !(race.windowOpensAt < race.windowClosesAt && race.windowClosesAt <= race.electionDate)) report('coerenza', at, `Le date della corsa ${race.id} non sono in ordine (candidature ${race.windowOpensAt}–${race.windowClosesAt}, voto ${race.electionDate})`);
+    const candidacy = race.candidacy;
+    if (['confirmed', 'running', 'held'].includes(race.status) && !candidacy) report('coerenza', `${at}.candidacy`, `La corsa ${race.id} (${race.status}) non ha un candidato.`);
+    if (race.status === 'planned' && candidacy) report('coerenza', `${at}.candidacy`, `La corsa ${race.id} ha un candidato ma risulta da decidere.`);
+    if (candidacy) {
+      const person = persons.get(candidacy.personId);
+      const real = candidacy.personRef?.source === 'real';
+      if (real && person) report('coerenza', `${at}.candidacy.personId`, `${candidacy.personId} è un politico reale: non è una persona della simulazione.`);
+      if (!real && !person) report('riferimento', `${at}.candidacy.personId`, `Persona ${candidacy.personId} inesistente`);
+      if (!real && person && candidacy.kind !== 'player' && person.source !== 'simulation') report('provenienza', `${at}.candidacy.personId`, `${candidacy.personId} è candidato dal partito ma non è una persona della simulazione.`);
+      if (!candidacy.partyId) report('struttura', `${at}.candidacy.partyId`, `Il candidato di ${race.id} non ha un partito.`);
+      if (['confirmed', 'running'].includes(race.status)) standing.set(candidacy.personId, [...(standing.get(candidacy.personId) ?? []), race]);
+    }
+    if (race.status === 'held' && !race.result) report('coerenza', `${at}.result`, `La corsa ${race.id} è conclusa senza risultato.`);
+    if (race.status !== 'held' && race.result) report('coerenza', `${at}.result`, `La corsa ${race.id} ha un risultato ma non è conclusa.`);
+    if (race.office && !race.result?.mandate) report('coerenza', `${at}.office`, `La corsa ${race.id} ha una carica senza un mandato.`);
+    if (race.status === 'running' && !race.campaignId) report('coerenza', `${at}.campaignId`, `La corsa ${race.id} è in svolgimento senza una campagna.`);
+  });
+  // A person stands in one race at a time (the race-engine keeps them apart in time).
+  for (const [person, races] of standing) {
+    const dates = races.map(race => race.electionDate).filter(validDay).sort();
+    for (let index = 1; index < dates.length; index++) if (dates[index] === dates[index - 1]) report('coerenza', 'races.items', `${person} è candidato in due corse lo stesso giorno (${dates[index]}).`);
+  }
+}
 function checkNational(state, known, report) {
   const national = state.national;
   if (!national) return;

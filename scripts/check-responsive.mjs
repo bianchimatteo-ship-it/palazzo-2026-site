@@ -182,11 +182,42 @@ try {
       for (const issue of issues) report.push(`${label} · ${view[0]} con le istituzioni del giocatore · ${issue.kind}: ${issue.el} (${issue.detail})`);
     }
   }
+  // The leader of the party at the territorial votes: Elezioni → Candidatura with the races of the round and a candidate chosen in a few of them.
+  const raced = await evaluate(`(async () => {
+    const { store } = await import('/src/core/store.js?v=${version}');
+    const real = await import('/src/data/repositories/real-data.js?v=${version}');
+    await real.loadRealCollections(['territorialUnits', 'municipalities', 'politicians', 'parliamentaryGroups', 'parties', 'politicalMovements']);
+    const db = real.realDatabase;
+    store.getState().game.party.affiliation = 'founder';
+    store.getState().game.party.rank = 5;
+    store.initializeCommittees(db.territorialUnits);
+    store.setTerritorialData({ units: db.territorialUnits, municipalities: db.municipalities, parties: [...db.parties, ...db.politicalMovements] });
+    const people = { politicians: db.politicians, groups: db.parliamentaryGroups };
+    const races = store.races();
+    const first = level => races.filter(race => race.level === level);
+    if (first('comunale').length) store.chooseRaceCandidate(first('comunale')[0].id, { kind: 'player' }, people);
+    if (first('provinciale').length) store.chooseRaceCandidate(first('provinciale')[0].id, { kind: 'simulation' }, people);
+    const pick = store.raceCandidates(first('regionale')[0]?.id, people)?.politicians?.find(item => item.available);
+    if (pick) store.chooseRaceCandidate(first('regionale')[0].id, { kind: 'politician', id: pick.id }, people);
+    store.save();
+    return races.length;
+  })()`);
+  if (!(raced > 0)) report.push('Candidatura: nessuna corsa territoriale in calendario per il segretario');
+  for (const [width, height, mobile, label] of widths) {
+    await viewport(width, height, mobile);
+    await pause(250);
+    await open(['elezioni', 'elezioni', 'candidatura']);
+    const shown = await evaluate('document.querySelectorAll(".eh-races .eh-race").length');
+    if (!(shown > 0) || !(await evaluate('Boolean(document.querySelector("[data-race-pick]"))'))) report.push(`${label} · Candidatura: le corse territoriali non si mostrano (${shown})`);
+    const issues = await evaluate(audit);
+    checked++;
+    for (const issue of issues) report.push(`${label} · Candidatura con le corse territoriali · ${issue.kind}: ${issue.el} (${issue.detail})`);
+  }
   if (missing.size) report.push(`finestre non aperte durante il controllo: ${[...missing].join(', ')}`);
   if (report.length) {
     exitCode = 1;
     console.error(`Controllo responsive: ${report.length} problemi su ${checked} schermate.\n- ${report.slice(0, 80).join('\n- ')}${report.length > 80 ? `\n… e altri ${report.length - 80}` : ''}`);
-  } else console.log(`Responsive verificato con Chrome: ${checked} schermate (${views.length} viste, Home e Territori con Comune e Parlamento europeo del giocatore e ${opened.size} finestre: ${[...opened].join(', ')} × telefono 375, 390 e 430 px, tablet 768 px, desktop 1280 px; Home con approfondimenti aperti, azione principale nella prima schermata) senza scorrimento orizzontale, elementi fuori schermo, contenuti nascosti da overflow o testi troncati.`);
+  } else console.log(`Responsive verificato con Chrome: ${checked} schermate (${views.length} viste, Home e Territori con Comune e Parlamento europeo del giocatore, Candidatura da segretario con le corse territoriali e ${opened.size} finestre: ${[...opened].join(', ')} × telefono 375, 390 e 430 px, tablet 768 px, desktop 1280 px; Home con approfondimenti aperti, azione principale nella prima schermata) senza scorrimento orizzontale, elementi fuori schermo, contenuti nascosti da overflow o testi troncati.`);
   socket.close();
 } catch (error) {
   exitCode = 1;
