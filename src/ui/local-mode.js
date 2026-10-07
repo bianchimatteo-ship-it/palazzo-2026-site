@@ -10,6 +10,8 @@ import { DELEGA_RULES } from '../data/simulation/office-rules.js?v=20261006-1';
 import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261006-1';
 import { esc, meter, num, signed } from './charts.js?v=20261006-1';
 import { glyph } from './visuals.js?v=20261006-1';
+import { fallbackTones, forceColorResolver, hemicycleLayout, seatColor } from '../core/hemicycle.js?v=20261006-1';
+import { SEAT_ROLES, rosterSeats } from '../core/seat-roster.js?v=20261006-1';
 
 const STAGES = Object.freeze({ commissione: 'In commissione', giunta: 'In Giunta', aula: 'In aula', osservazioni: 'Osservazioni dei cittadini', 'seconda-lettura': 'Attesa della seconda deliberazione', risposta: 'In attesa di risposta', approvato: 'Approvato', respinto: 'Respinto', ritirato: 'Ritirato', risposto: 'Risposta data' });
 const SIDE_LABELS = Object.freeze({ maggioranza: 'Maggioranza', opposizione: 'Opposizione' });
@@ -31,13 +33,50 @@ function roleLine(inst) {
   if (ROLE_LABELS[inst.playerRole] && inst.playerRole !== 'eurodeputato') return `${ROLE_LABELS[inst.playerRole]} · guidi la ${rules.executive.toLowerCase()}`;
   return `${inst.playerRole === 'eurodeputato' ? ROLE_LABELS.eurodeputato : rules.member}${own ? ` · gruppo ${own.label}` : ''} · ${inst.playerSide === 'maggioranza' ? 'in maggioranza' : 'all’opposizione'}`;
 }
-function composition(inst) {
+// The seats of a council (or of the European Parliament) as dots, one per person, in the colour of the force each belongs to (the groups no force stands for take the colours the
+// forces leave); a dot opens the card of the person on that seat. Ordered from left to right by the collocazione of the groups, the player in the middle of his group's wedge.
+function seatDots(inst, state, ui) {
+  const seats = rosterSeats(inst.roster);
+  if (!seats.length) return '';
+  const forceColor = forceColorResolver(state.world);
+  const people = new Map((state.dataset?.politicians ?? []).map(item => [item.id, item]));
+  const groups = [...inst.groups].sort((a, b) => (a.axis ?? 0) - (b.axis ?? 0) || String(a.id).localeCompare(String(b.id)));
+  const byGroup = new Map(groups.map(group => [group.id, group]));
+  const used = [...new Set(seats.map(seat => seat.partyId ? forceColor(seat.partyId) : null).filter(Boolean))];
+  const tones = fallbackTones(groups.filter(group => !group.partyId || !forceColor(group.partyId)).map(group => ({ id: group.id, seats: group.seats })), used);
+  const colorOf = seat => seatColor(seat, { forceColor, groupColor: tones.get(seat.groupId) });
+  const ordered = groups.flatMap(group => { const own = seats.filter(seat => seat.groupId === group.id); const mine = own.findIndex(seat => seat.origin === 'player'); if (mine >= 0) { const [seat] = own.splice(mine, 1); own.splice(Math.floor(own.length / 2), 0, seat); } return own; });
+  const layout = hemicycleLayout(ordered.length, { width: 1000 });
+  const radius = Math.min(layout.radius, 20);
+  const pad = Math.ceil(radius);
+  const labelOf = seat => seat.origin === 'player' ? 'Il tuo seggio' : people.get(seat.personId)?.displayName ?? 'Seggio';
+  const key = seat => `${inst.id}|${seat.personId}`;
+  const circles = ordered.map((seat, index) => `<circle class="hemi-seat${seat.origin === 'player' ? ' is-player' : ''}${ui.localSeat === key(seat) ? ' is-selected' : ''}" cx="${layout.seats[index].x}" cy="${layout.seats[index].y}" r="${radius.toFixed(1)}" fill="${colorOf(seat)}" data-local-seat="${esc(key(seat))}"><title>${esc(labelOf(seat))} · ${esc(byGroup.get(seat.groupId)?.label ?? '')}</title></circle>`).join('');
+  const forceName = id => state.world?.parties?.find(item => item.id === id || item.mergedFrom?.includes(id))?.label ?? null;
+  const entries = new Map();
+  for (const seat of ordered) { const id = seat.partyId ?? `gruppo:${seat.groupId}`; const entry = entries.get(id) ?? { color: colorOf(seat), count: 0, label: seat.partyId ? forceName(seat.partyId) ?? byGroup.get(seat.groupId)?.label : byGroup.get(seat.groupId)?.label }; entry.count++; entries.set(id, entry); }
+  const legend = [...entries.values()].sort((a, b) => b.count - a.count).map(entry => `<li><i style="background:${esc(entry.color)}"></i><span>${esc(entry.label ?? '—')}</span><b>${entry.count}</b></li>`).join('');
+  const picked = ordered.find(seat => key(seat) === ui.localSeat) ?? null;
+  const card = picked ? (() => {
+    const person = people.get(picked.personId);
+    const group = byGroup.get(picked.groupId);
+    const force = picked.partyId ? forceName(picked.partyId) : null;
+    const leads = picked.leader || (picked.origin === 'player' && inst.executive?.leader === 'player');
+    return `<div class="local-seat-card"><span class="section-kicker">${esc(picked.origin === 'player' ? 'IL TUO SEGGIO · SIMULAZIONE' : `${(SEAT_ROLES[inst.kind] ?? 'Eletto').toUpperCase()} · PERSONA DELLA SIMULAZIONE`)}</span><strong>${esc(picked.origin === 'player' ? person?.displayName ?? 'Il tuo politico' : person?.displayName ?? 'Seggio')}</strong>
+      <dl class="hq-facts"><div><dt>Gruppo</dt><dd>${esc(group?.label ?? '—')} · ${esc(SIDE_LABELS[group?.side] ?? '')}</dd></div><div><dt>Partito</dt><dd>${force ? esc(force) : inst.kind === 'europa' ? 'Delegazione di un altro Paese: il suo partito non è tra le forze del gioco' : 'Nessuna forza: lista civica o territoriale'}</dd></div>${leads ? `<div><dt>Incarico</dt><dd>${esc(INSTITUTIONS[inst.kind]?.leader ?? 'Guida l’esecutivo')}</dd></div>` : ''}<div><dt>Eletto</dt><dd>${esc(inst.name)} · dal ${esc(date(inst.roster?.date ?? inst.since))}${inst.region ? ` · ${esc(inst.region)}` : ''}</dd></div>${(person?.terms ?? []).length ? `<div><dt>Mandati precedenti</dt><dd>${person.terms.map(term => `${esc(term.assembly)} · ${esc(date(term.since))} – ${esc(date(term.until))}`).join('<br>')}</dd></div>` : ''}</dl></div>`;
+  })() : '<p class="local-seat-hint">Tocca un punto per vedere chi siede in quel seggio.</p>';
+  // The accessible alternative to the drawing (keyboard, screen readers): the members as a list of buttons; for the European Parliament the Italian delegation and the player's seat.
+  const listed = ordered.filter(seat => inst.kind !== 'europa' || seat.partyId || seat.origin === 'player');
+  const list = listed.length && listed.length <= 90 ? `<details class="local-roster-list" data-remember="local-roster-${esc(inst.kind)}"><summary>${inst.kind === 'europa' ? 'Delegazione italiana' : 'Elenco degli eletti'} (${listed.length})</summary><ul class="hemi-members">${listed.map(seat => `<li><button type="button" class="${ui.localSeat === key(seat) ? 'active' : ''}" data-local-seat="${esc(key(seat))}"><i style="background:${esc(colorOf(seat))}"></i><span>${esc(labelOf(seat))}</span><small>${esc(byGroup.get(seat.groupId)?.label ?? '')}</small></button></li>`).join('')}</ul></details>` : '';
+  return `<div class="local-hemi"><svg class="hemi-svg" viewBox="${-pad} ${-pad} ${layout.width + 2 * pad} ${Math.round(layout.height) + 2 * pad}" role="img" aria-label="${esc(`${inst.name}: ${ordered.length} seggi, uno per persona; ${[...entries.values()].map(entry => `${entry.label} ${entry.count}`).join(', ')}`)}"><g class="hemi-seats">${circles}</g></svg><ul class="local-legend">${legend}</ul>${card}${list}</div>`;
+}
+function composition(inst, state = {}, ui = {}) {
   const total = inst.seats || 1;
   const bar = [...inst.groups].sort((a, b) => (a.side === b.side ? b.seats - a.seats : a.side === 'maggioranza' ? -1 : 1)).map(group => `<i class="side-${esc(group.side)}${group.id === inst.playerGroupId ? ' own' : ''}" style="width:${(group.seats / total * 100).toFixed(2)}%" title="${esc(group.label)}: ${group.seats} seggi"></i>`).join('');
   const rows = inst.groups.map(group => `<li class="${group.id === inst.playerGroupId ? 'own' : ''}"><span class="local-dot side-${esc(group.side)}"></span><strong>${esc(group.label)}</strong><small>${esc(SIDE_LABELS[group.side] ?? group.side)}${group.id === inst.playerGroupId ? ' · il tuo gruppo' : ''}</small><b>${group.seats}</b><span class="local-cohesion" title="Coesione del gruppo">${meter(group.cohesion, group.cohesion < 45 ? 'danger' : '')}</span></li>`).join('');
   const margin = majorityMargin(inst);
   const needed = Math.floor(inst.seats / 2) + 1;
-  return `<div class="local-seats" role="img" aria-label="Composizione: ${inst.groups.map(group => `${group.label} ${group.seats}`).join(', ')}">${bar}</div><p class="local-margin">${inst.seats} seggi · maggioranza politica: ${needed + margin} seggi, ne servono ${needed} per governare${margin < 0 ? ' · <b class="bad">senza numeri: rischio sfiducia</b>' : margin === 0 ? ' · <b class="bad">nessun margine</b>' : ''}</p><ul class="local-groups">${rows}</ul>`;
+  return `<div class="local-seats" role="img" aria-label="Composizione: ${inst.groups.map(group => `${group.label} ${group.seats}`).join(', ')}">${bar}</div>${seatDots(inst, state, ui)}<p class="local-margin">${inst.seats} seggi · maggioranza politica: ${needed + margin} seggi, ne servono ${needed} per governare${margin < 0 ? ' · <b class="bad">senza numeri: rischio sfiducia</b>' : margin === 0 ? ' · <b class="bad">nessun margine</b>' : ''}</p><ul class="local-groups">${rows}</ul>`;
 }
 // The MEP's committees: full member and substitute, the work record, the next office and a move to another committee.
 function europeanPanel(inst, context) {
@@ -245,7 +284,7 @@ function actsGuide(inst) {
   const needed = Math.floor(inst.seats / 2) + 1;
   return `<details class="bill-archive local-guide"><summary>Guida agli atti: ${types.length} tipi</summary><ul>${rows}</ul><p class="poll-footnote">Maggioranza politica: la coalizione che sostiene l’esecutivo (ne servono ${needed} seggi su ${inst.seats} per governare). Maggioranza dei votanti: più sì che no. Maggioranza assoluta: ${needed} sì su ${inst.seats}. Due terzi: ${neededYes('dueterzi', inst.seats)} sì. Regole semplificate del gioco, ispirate al TUEL e alla Costituzione.</p></details>`;
 }
-function institutionCard(input, capital, context, state) {
+function institutionCard(input, capital, context, state, ui = {}) {
   const inst = withLocalState(withEuropeanSeat(input, input.since));
   const rules = INSTITUTIONS[inst.kind];
   const open = inst.acts.filter(act => !isClosedAct(act)).sort((a, b) => String(a.nextStepAt).localeCompare(String(b.nextStepAt)));
@@ -253,7 +292,7 @@ function institutionCard(input, capital, context, state) {
   const history = inst.history.slice(-8).reverse().map(item => `<li><time>${esc(date(item.date))}</time> ${esc(item.text)}</li>`).join('');
   const archive = [...closed.map(act => ({ title: act.title, stage: act.stage, closedAt: act.closedAt, vote: compactVote(act.votes?.at(-1)), committeeVote: act.votes?.length ? null : act.committeeVote ?? null, answer: act.answer ?? null, withdrawn: act.withdrawn ?? null, effects: measureText(inst, act) })), ...inst.archive.slice(-6).reverse()].slice(0, 10).map(item => `<li><span class="bill-flag ${item.stage === 'approvato' || item.answer === 'esauriente' ? 'good' : 'bad'}">${esc(STAGES[item.stage] ?? item.stage)}</span> ${esc(item.title)} <small>${esc(date(item.closedAt))}</small>${resultLine(item)}</li>`).join('');
   return `<section class="hq-panel local-institution" id="istituzione-${esc(inst.kind)}"><div class="home-section-heading"><div><span class="section-kicker">${esc(rules.label.toUpperCase())} · SIMULAZIONE</span><h2>${esc(inst.name)}</h2><p class="section-subtitle">${esc(roleLine(inst))}${inst.until ? ` · mandato fino al voto del ${esc(date(inst.until))}` : ''}</p></div><span class="parliament-provenance simulated">SCENARIO SIMULATO</span></div>
-    <div class="local-grid"><div><h3 class="local-h">Composizione</h3>${composition(inst)}</div><div><h3 class="local-h">${esc(inst.ep ? 'Le tue commissioni' : rules.executive)}</h3>${inst.ep ? europeanPanel(inst, context) : executivePanel(inst)}</div></div>
+    <div class="local-grid"><div><h3 class="local-h">Composizione</h3>${composition(inst, state, ui)}</div><div><h3 class="local-h">${esc(inst.ep ? 'Le tue commissioni' : rules.executive)}</h3>${inst.ep ? europeanPanel(inst, context) : executivePanel(inst)}</div></div>
     ${inst.ep ? `<h3 class="local-h">${esc(rules.executive)}</h3>${executivePanel(inst)}` : `<h3 class="local-h">${esc(inst.kind === 'comune' ? 'Stato della città' : inst.kind === 'provincia' ? 'Stato del territorio provinciale' : 'Stato della regione')}</h3>${territoryPanel(inst, state)}`}
     <h3 class="local-h">Cosa puoi fare</h3>${roleBox(inst, state)}${actionsPanel(inst, capital)}
     <h3 class="local-h">In discussione (${open.length})</h3>${open.map(act => actCard(inst, act, capital, context)).join('') || '<p class="quiet-copy">Nessun atto in calendario: la giunta e i gruppi ne presentano di nuovi ogni settimana.</p>'}
@@ -263,7 +302,7 @@ function institutionCard(input, capital, context, state) {
   </section>`;
 }
 // The player's active institutions (none: an empty string, the page stays as it was).
-export function renderInstitutions(state) {
+export function renderInstitutions(state, ui = {}) {
   const active = activeInstitutions(state);
   if (!active.length) return '';
   const capital = state.game?.resources?.politicalCapital ?? 0;
@@ -271,7 +310,7 @@ export function renderInstitutions(state) {
   const context = { capital, influence, today: state.clock?.currentDate ?? null };
   // Where the player's mandates are played: one card per council (and the European Parliament), reachable at once.
   const jump = active.length > 1 ? `<nav class="local-jump" aria-label="Le tue istituzioni">${active.map(inst => `<button class="chip-button" data-scroll="istituzione-${esc(inst.kind)}">${esc(institutionLabel(inst))}</button>`).join('')}</nav>` : '';
-  return `<div class="local-institutions" id="istituzioni"><div class="home-section-heading local-intro"><div><span class="section-kicker">LE TUE ISTITUZIONI</span><h2>Dove eserciti il tuo mandato</h2><p class="section-subtitle">Delibere, leggi, mozioni, voti e interrogazioni e, se guidi l’esecutivo, giunta, bilancio e tributi: ogni atto approvato cambia i servizi del territorio.</p></div></div>${jump}${active.map(inst => institutionCard(inst, capital, context, state)).join('')}<p class="poll-footnote">Consigli, giunte, gruppi, atti, voti ed effetti sono simulati (source: simulation); sindaci, presidenti e assessori non giocanti sono figure simulate, non persone reali.</p></div>`;
+  return `<div class="local-institutions" id="istituzioni"><div class="home-section-heading local-intro"><div><span class="section-kicker">LE TUE ISTITUZIONI</span><h2>Dove eserciti il tuo mandato</h2><p class="section-subtitle">Delibere, leggi, mozioni, voti e interrogazioni e, se guidi l’esecutivo, giunta, bilancio e tributi: ogni atto approvato cambia i servizi del territorio.</p></div></div>${jump}${active.map(inst => institutionCard(inst, capital, context, state, ui)).join('')}<p class="poll-footnote">Consigli, giunte, gruppi, atti, voti ed effetti sono simulati (source: simulation); sindaci, presidenti e assessori non giocanti sono figure simulate, non persone reali.</p></div>`;
 }
 export const activeInstitutions = state => (state?.local?.institutions ?? []).filter(item => item.status === 'active');
 // How a council is named in the links that lead to it (Home, election report).

@@ -55,6 +55,7 @@ export function checkInvariants(state, context = {}) {
   checkRaces(state, report);
   checkNational(state, known, report);
   checkLocal(state, report);
+  checkRosters(state, report);
   checkPartyLife(state, report);
   checkStructures(state, report);
   checkPresidency(state, report);
@@ -373,6 +374,46 @@ function checkLocal(state, report) {
       if (Number.isFinite(row.seats) && cast !== row.seats) report('voti', `${path}.acts[${inner}]`, `${act.title}: gruppo ${row.groupId} con ${cast} voti su ${row.seats} seggi`);
     }
   });
+}
+
+// Seats with people (seat-roster): every seat of an assembly the game simulates has a person who exists in the registry and is never a real one, nobody sits in two assemblies
+// at once, the seats of a roster are the seats of its groups, and the player sits only where the Parliament or the institution says he does. A saved game from before the
+// rosters has none: it is not a fault, the weekly step makes them.
+function checkRosters(state, report) {
+  const persons = new Map(records(state.dataset?.politicians).map(item => [item.id, item]));
+  const playerId = state.career?.playerId ?? null;
+  const rosters = [];
+  const parliament = state.parliament;
+  if (parliament?.legislature?.reference === 'simulation') for (const chamber of CHAMBERS) {
+    const current = parliament.chambers?.[chamber];
+    if (current?.roster) rosters.push({ at: `parliament.chambers.${chamber}.roster`, roster: current.roster, seats: new Map(records(current.groups).map(group => [group.groupId, group.simulatedSeats ?? 0])), player: parliament.player?.chamber === chamber ? parliament.player.groupId : null });
+  }
+  records(state.local?.institutions).forEach((inst, index) => {
+    if (inst.status === 'active' && inst.roster) rosters.push({ at: `local.institutions[${index}].roster`, roster: inst.roster, seats: new Map(records(inst.groups).map(group => [group.id, group.seats ?? 0])), player: inst.playerGroupId ?? null });
+    else if (inst.status !== 'active' && inst.roster) report('coerenza', `local.institutions[${index}].roster`, `${inst.name ?? inst.id}: un'istituzione conclusa tiene ancora i suoi seggi.`);
+  });
+  const seated = new Map();
+  for (const { at, roster, seats, player } of rosters) {
+    if (!Array.isArray(roster.blocks)) { report('struttura', at, 'I seggi devono essere a blocchi.'); continue; }
+    const counts = new Map();
+    for (const block of roster.blocks) {
+      if (!seats.has(block.group)) report('riferimento', at, `Seggi di un gruppo che non c'è: ${block.group}`);
+      counts.set(block.group, (counts.get(block.group) ?? 0) + (block.people?.length ?? 0));
+      for (const id of block.people ?? []) {
+        const person = persons.get(id);
+        if (!person) report('riferimento', at, `Il seggio di ${id} non ha una persona.`);
+        else if (person.source === 'real') report('provenienza', at, `${id} è una persona reale su un seggio simulato.`);
+        else if (person.origin === 'seggio' && person.source !== 'simulation') report('provenienza', at, `${id} è una persona del seggio ma non della simulazione.`);
+        // The player may hold two offices at once (the comune and the province of a municipal councillor); nobody else sits in two assemblies.
+        if (seated.has(id) && id !== playerId) report('duplicato', at, `${id} siede due volte (${seated.get(id)} e ${at}).`);
+        seated.set(id, at);
+      }
+    }
+    for (const [group, count] of seats) if ((counts.get(group) ?? 0) !== count) report('seggi', at, `Gruppo ${group}: ${counts.get(group) ?? 0} seggi con una persona su ${count}.`);
+    const mine = roster.blocks.filter(block => (block.people ?? []).includes(playerId));
+    if (roster.player && (roster.player !== playerId || mine.length !== 1 || mine[0].group !== player)) report('coerenza', at, 'Il seggio del giocatore non è nel suo gruppo.');
+    if (!roster.player && mine.length) report('coerenza', at, 'Il giocatore siede in un\'assemblea in cui non è.');
+  }
 }
 
 // The decisions waiting in the agenda point to things that exist: the law of a vote, the party, the group, the

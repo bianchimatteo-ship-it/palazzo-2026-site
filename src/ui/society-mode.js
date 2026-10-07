@@ -90,7 +90,7 @@ function lawsApplied(society) {
 
 export function renderTerritoriesPage(state, ui = {}) {
   const society = state.society;
-  if (!society) return `${renderInstitutions(state)}<p class="quiet-copy">La simulazione del Paese si attiva alla prossima settimana.</p>`;
+  if (!society) return `${renderInstitutions(state, ui)}<p class="quiet-copy">La simulazione del Paese si attiva alla prossima settimana.</p>`;
   const home = state.game?.place?.region ?? null;
   const measure = MAP_MEASURES.some(item => item.id === ui.measure) ? ui.measure : 'satisfaction';
   const selected = society.regions[ui.region] ? ui.region : society.regions[home] ? home : Object.keys(society.regions)[0];
@@ -101,7 +101,7 @@ export function renderTerritoriesPage(state, ui = {}) {
   const executive = society.executive;
   const governing = ['active', 'crisis'].includes(state.parliament?.government?.status);
   return `<div class="society-page">
-    ${renderInstitutions(state)}
+    ${renderInstitutions(state, ui)}
     <section class="society-hero">
       ${illustration('borgo', 'hero-art')}<div class="society-hero-main"><span class="section-kicker">IL PAESE · SETTIMANA ${society.week}</span><h2>Umore del Paese: ${num(mood, 0)}/100</h2><p class="section-subtitle">Cittadini, territori ed economia si muovono ogni settimana, con o senza di te: leggi, crisi, media e scelte del governo cambiano i numeri qui sotto.</p></div>
       <div class="society-kpis">${kpi('Soddisfazione dei cittadini', num(society.satisfaction, 1), change(society, 'satisfaction'), historyOf(society, 'satisfaction'))}${kpi('Fiducia nelle istituzioni', num(society.trust, 1), change(society, 'trust'), historyOf(society, 'trust'))}${kpi('Partecipazione attesa', num(society.participation, 1), change(society, 'participation'), historyOf(society, 'participation'), '', { unit: '%' })}</div>

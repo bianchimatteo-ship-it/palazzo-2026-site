@@ -1,7 +1,7 @@
 // The interactive hemicycle of the Parlamento section: Camera and Senato apart, one marker per seat (real
 // parliamentarians in office, the player's seat), colours by group or by party, filters by party, group and
 // committee, a card for every parliamentarian and, for a simulated vote, the vote of every seat.
-import { chamberRoster, committeesOf, partyColors, UNKNOWN_COLOR } from '../core/hemicycle.js?v=20261006-1';
+import { chamberRoster, committeesOf, forceColorResolver, partyColors, seatColor, UNKNOWN_COLOR } from '../core/hemicycle.js?v=20261006-1';
 import { individualVotes, VOTE_CHOICES, voteCatalog, voteSummary } from '../core/vote-engine.js?v=20261006-1';
 import { BASIS_LABELS, electionListOf, groupAffiliation, groupLabel, politicianAffiliation } from '../data/repositories/party-links.js?v=20261006-1';
 import { formatDate } from '../core/time.js?v=20261006-1';
@@ -14,7 +14,7 @@ const KIND_LABELS = { legge: 'Proposta di legge', decreto: 'Decreto-legge', mano
 const LINE_LABELS = { favorevole: 'Favorevole', contrario: 'Contrario', astenuto: 'Astensione' };
 const seatKey = seat => seat.player ? 'giocatore' : seat.person ? seat.person.id : `posto:${seat.groupId}:${seat.placeholderIndex}`;
 const shortDate = date => date ? formatDate(date, { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
-const personName = person => person?.fullName ?? `${person?.firstName ?? ''} ${person?.lastName ?? ''}`.trim();
+const personName = person => person?.fullName ?? person?.displayName ?? `${person?.firstName ?? ''} ${person?.lastName ?? ''}`.trim();
 
 // Everything the view needs, computed once per render.
 export function hemicycleModel(state, { politicians = [], db = {}, view = {} } = {}) {
@@ -25,10 +25,9 @@ export function hemicycleModel(state, { politicians = [], db = {}, view = {} } =
   if (simulated) { politicians = []; db = {}; }
   const chamber = ['camera', 'senato'].includes(view.chamber) ? view.chamber : parliament.player?.chamber ?? 'camera';
   // The colour of a group or a party is the main colour of its force in the game (the world's, with the owner's corrections); a party merged into another takes the colour of the force that absorbed it.
-  const forceColors = new Map();
-  for (const force of state.world?.parties ?? []) for (const id of [force.id, ...(force.mergedFrom ?? [])]) if (/^#[\da-f]{6}$/i.test(force.color ?? '')) forceColors.set(id, force.color);
-  const forceColor = id => forceColors.get(id) ?? null;
-  const roster = chamberRoster(parliament, chamber, { politicians, db, forceColor });
+  const forceColor = forceColorResolver(state.world);
+  const people = simulated ? new Map((state.dataset?.politicians ?? []).map(item => [item.id, item])) : null;
+  const roster = chamberRoster(parliament, chamber, { politicians, db, forceColor, people });
   const parties = partyColors(politicians, db, null, forceColor);
   // Only the votes of the Chambers in office (after a general election the old ones belong to the past legislature).
   const since = parliament.legislature?.firstSitting ?? parliament.legislature?.since ?? null;
@@ -40,7 +39,8 @@ export function hemicycleModel(state, { politicians = [], db = {}, view = {} } =
   const committees = (db.committees ?? []).filter(item => item.chamber === chamber);
   const committee = committees.find(item => item.id === view.committee) ?? null;
   const committeeIds = committee ? new Set((db.committeeMemberships ?? []).filter(row => row.committeeId === committee.id).map(row => row.politicianId)) : null;
-  const entityOf = seat => seat.person ? politicianAffiliation(seat.person, db)?.entity ?? null : null;
+  // The party of a seat: a real parliamentarian's documented party; in the Chambers of the game, the force of the person on the seat.
+  const entityOf = seat => simulated ? (seat.partyId ? { id: seat.partyId } : null) : seat.person ? politicianAffiliation(seat.person, db)?.entity ?? null : null;
   const groupIds = new Set(roster.groups.map(group => group.groupId));
   const group = groupIds.has(view.group) ? view.group : '';
   const matches = seat => {
@@ -52,12 +52,14 @@ export function hemicycleModel(state, { politicians = [], db = {}, view = {} } =
   const byGroup = new Map(roster.groups.map(item => [item.groupId, item]));
   const playerParty = state.career?.partyId ?? null;
   const colorOf = (seat, index) => individual ? VOTE_CHOICES[individual.choices[index]].color
+    : simulated && 'partyId' in seat ? seatColor(seat, { forceColor, groupColor: byGroup.get(seat.groupId)?.color })
     : seat.placeholder ? (simulated ? byGroup.get(seat.groupId)?.color ?? UNKNOWN_COLOR : UNKNOWN_COLOR)
     : view.colorBy === 'partito' ? (seat.player ? parties.get(playerParty)?.color ?? UNKNOWN_COLOR : parties.get(entityOf(seat)?.id)?.color ?? UNKNOWN_COLOR)
     : byGroup.get(seat.groupId)?.color ?? UNKNOWN_COLOR;
   const visible = roster.seats.filter(matches).length;
   const selected = view.selected ? roster.seats.find(seat => seatKey(seat) === view.selected) ?? null : null;
-  return { parliament, simulated, chamber, roster, parties, votes, vote, summary, law, individual, committees, committee, group, matches, colorOf, entityOf, byGroup, visible, selected };
+  const forces = new Map((state.world?.parties ?? []).flatMap(force => [force.id, ...(force.mergedFrom ?? [])].map(id => [id, force])));
+  return { parliament, simulated, chamber, roster, parties, votes, vote, summary, law, individual, committees, committee, group, matches, colorOf, entityOf, byGroup, visible, selected, forces, forceColor, people: people ?? new Map() };
 }
 
 function svg(model, view) {
@@ -77,8 +79,19 @@ function svg(model, view) {
   </svg>`;
 }
 
+// The Chambers of the game: the colours are the forces' (not the groups'): one entry per force, with its seats, that filters the seats like a party does.
+function forceLegend(model, view) {
+  const counts = new Map();
+  const first = new Map();
+  model.roster.seats.forEach((seat, index) => { const key = seat.partyId ?? 'nessuno'; counts.set(key, (counts.get(key) ?? 0) + 1); if (!first.has(key)) first.set(key, index); });
+  const groups = model.parliament.chambers?.[model.chamber]?.groups ?? [];
+  const labelOf = id => id === 'nessuno' ? 'Senza forza (liste e indipendenti)' : model.forces.get(id)?.abbreviation || model.forces.get(id)?.label || groups.find(group => group.partyId === id)?.officialName || id;
+  const rows = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([id, count]) => `<li><button type="button" class="${view.party === id ? 'active' : ''}" data-hemi-filter-party="${esc(id)}" aria-pressed="${view.party === id}"><i style="background:${model.colorOf(model.roster.seats[first.get(id)], first.get(id))}"></i><span>${esc(labelOf(id))}</span><b>${count}</b></button></li>`).join('');
+  return `<ul class="hemi-legend">${rows}</ul><p class="sx-note">Ogni punto è una persona e ha il colore della sua forza; i gruppi del Misto restano distinti per forza. Durante una votazione i colori indicano il voto.</p>`;
+}
 function legend(model, view) {
   if (model.summary) return `<ul class="hemi-legend is-vote">${['favorevole', 'contrario', 'astenuto'].map(choice => `<li><i style="background:${VOTE_CHOICES[choice].color}"></i><span>${VOTE_CHOICES[choice].label}</span><b>${num(model.summary[{ favorevole: 'yes', contrario: 'against', astenuto: 'abstain' }[choice]], 0)}</b></li>`).join('')}${model.summary.secret ? `<li><i style="background:${VOTE_CHOICES.segreto.color}"></i><span>Voto segreto: singoli non noti</span></li>` : ''}</ul>`;
+  if (model.simulated && model.roster.sitting) return forceLegend(model, view);
   if (view.colorBy === 'partito') {
     const counts = new Map();
     let unknown = 0;
@@ -94,7 +107,7 @@ function controls(model, view, counts) {
     <div class="hemi-switch" role="group" aria-label="Camera">${['camera', 'senato'].map(chamber => `<button type="button" class="${model.chamber === chamber ? 'active' : ''}" data-hemi-chamber="${chamber}" aria-pressed="${model.chamber === chamber}">${chamber === 'camera' ? 'Camera' : 'Senato'} <small>${counts[chamber]}</small></button>`).join('')}</div>
     <label>Gruppo<select data-hemi-filter="group"><option value="">Tutti</option>${model.roster.groups.map(group => `<option value="${esc(group.groupId)}" ${model.group === group.groupId ? 'selected' : ''}>${esc(group.shortName)} · ${group.seats}</option>`).join('')}</select></label>
     <label>Votazione<select data-hemi-filter="vote"><option value="">Composizione (nessuna)</option>${model.votes.map(item => `<option value="${esc(item.id)}" ${model.vote?.id === item.id ? 'selected' : ''}>${esc(`${shortDate(item.date)} · ${KIND_LABELS[item.kind] ?? 'Votazione'}: ${item.label ?? ''}`.slice(0, 90))}</option>`).join('')}</select></label>
-    <button type="button" class="text-link" data-hemi-reset ${model.group || model.vote ? '' : 'disabled'}>Azzera filtri</button>
+    <button type="button" class="text-link" data-hemi-reset ${view.party || model.group || model.vote ? '' : 'disabled'}>Azzera filtri</button>
   </div>`;
   const partyOptions = [...model.parties.values()].map(item => `<option value="${esc(item.entity.id)}" ${view.party === item.entity.id ? 'selected' : ''}>${esc(item.entity.officialName)} · ${item.count}</option>`).join('');
   return `<div class="hemi-controls">
@@ -122,6 +135,21 @@ function card(model, state, db, logoFor) {
     const player = state.dataset?.politicians?.find(item => item.id === state.career?.playerId);
     const role = state.parliament?.careerStanding?.committeeRole?.title ?? 'Componente del gruppo';
     return `<div class="hemi-card is-player">${close}<span class="section-kicker">IL TUO SEGGIO · SIMULAZIONE</span><h3>${esc(player?.displayName ?? 'Il tuo politico')}</h3><dl class="hemi-facts"><div><dt>Gruppo</dt><dd>${esc(group?.name ?? '—')}</dd></div><div><dt>Ruolo</dt><dd>${esc(role)}</dd></div><div><dt>Camera</dt><dd>${esc(CHAMBER_LABELS[model.chamber])}</dd></div></dl>${voteRow}<button class="text-link" data-section-tab="carriera" data-section-tab-value="progressione">Incarichi e probabilità ${glyph('route', 14)}</button></div>`;
+  }
+  if (seat.person && model.simulated) {
+    const person = seat.person;
+    const roster = model.parliament.chambers?.[model.chamber]?.roster;
+    const force = seat.partyId ? model.forces.get(seat.partyId)?.label ?? group?.name ?? null : null;
+    const terms = (person.terms ?? []).map(term => `${esc(term.assembly)} · ${esc(shortDate(term.since))} – ${esc(shortDate(term.until))}`);
+    return `<div class="hemi-card">${close}<header><span class="hemi-card-mark" style="background:${model.colorOf(seat, index)}"></span><div><span class="section-kicker">${model.chamber === 'camera' ? 'DEPUTATO' : 'SENATORE'} · PERSONA DELLA SIMULAZIONE</span><h3>${esc(personName(person))}</h3></div></header>
+      <dl class="hemi-facts">
+        <div><dt>Partito</dt><dd>${force ? esc(force) : 'Nessuna forza: lista territoriale o indipendente'}</dd></div>
+        <div><dt>Gruppo</dt><dd>${esc(group?.name ?? '—')}</dd></div>
+        <div><dt>Ruolo</dt><dd>${model.chamber === 'camera' ? 'Deputato' : 'Senatore'}${seat.origin === 'existing' ? ' · già noto al gioco' : ''}</dd></div>
+        <div><dt>Eletto</dt><dd>${esc(roster?.label ?? 'Legislatura simulata')}<small>${esc(shortDate(roster?.date))}</small></dd></div>
+        ${terms.length ? `<div><dt>Mandati precedenti</dt><dd>${terms.join('<br>')}</dd></div>` : ''}
+      </dl>${voteRow}
+      <p class="sx-note">Persona della simulazione: non esiste nei dati reali, la crea il gioco per questo seggio e la tiene finché dura il mandato.</p></div>`;
   }
   if (!seat.person && model.simulated) return `<div class="hemi-card">${close}<span class="section-kicker">SEGGIO DEL GRUPPO · LEGISLATURA SIMULATA</span><h3>${esc(group?.shortName ?? 'Gruppo')}</h3><p class="sx-note">Un eletto della partita: le Camere nate dal voto simulato non hanno parlamentari reali. Il gruppo ha ${num(group?.seats ?? 0, 0)} seggi.</p>${voteRow}</div>`;
   if (!seat.person) return `<div class="hemi-card">${close}<span class="section-kicker">SEGGIO DEL GRUPPO · SCENARIO</span><h3>${esc(group?.shortName ?? 'Gruppo')}</h3><p class="sx-note">Nello scenario il gruppo ha più seggi dei componenti presenti nell’archivio verificato: questo seggio non è attribuito a nessuna persona reale.</p>${voteRow}</div>`;
@@ -159,7 +187,7 @@ function votePanel(model, db) {
     const group = model.byGroup.get(row.groupId);
     return { _class: '', group: `<span class="hemi-group-cell"><i style="background:${group?.color ?? UNKNOWN_COLOR}"></i>${esc(group?.shortName ?? row.groupId)}</span>`, seats: num(row.seats, 0), yes: num(row.yes, 0), no: num(row.no, 0), abstain: num(row.abstain, 0), line: esc(LINE_LABELS[row.line] ?? row.line), dissent: summary.secret ? '—' : num(row.dissent, 0), snipers: summary.secret ? num(row.snipers, 0) : '—' };
   });
-  const people = new Map((db.politicians ?? []).map(person => [person.id, person]));
+  const people = model.simulated ? model.people : new Map((db.politicians ?? []).map(person => [person.id, person]));
   const dissenters = model.individual?.dissenters ?? [];
   const names = dissenters.slice(0, 16).map(item => `<li><span>${item.player ? '<b>Tu</b>' : esc(personName(people.get(item.personId)) || 'Seggio non attribuito')}</span><small>${esc(model.byGroup.get(item.groupId)?.shortName ?? '')} · ${esc(VOTE_CHOICES[item.choice].label.toLowerCase())} (linea: ${esc(LINE_LABELS[item.line].toLowerCase())})</small></li>`).join('');
   const bar = summary.total ? `<div class="hemi-vote-bar" role="img" aria-label="${esc(`${summary.yes} favorevoli, ${summary.against} contrari, ${summary.abstain} astenuti su ${summary.total}`)}"><i style="width:${summary.yes / summary.total * 100}%;background:${VOTE_CHOICES.favorevole.color}"></i><i style="width:${summary.against / summary.total * 100}%;background:${VOTE_CHOICES.contrario.color}"></i><i style="width:${summary.abstain / summary.total * 100}%;background:${VOTE_CHOICES.astenuto.color}"></i>${summary.needed ? `<b style="left:${summary.needed / summary.total * 100}%" title="Maggioranza richiesta"></b>` : ''}</div>` : '';
@@ -184,8 +212,8 @@ function committeePanel(model, db) {
 
 // The accessible alternative to the drawing: the members that match the filters, as a list of buttons.
 function memberList(model, db, view) {
-  if (model.simulated) return model.group ? `<p class="sx-note">${esc(model.byGroup.get(model.group)?.name ?? 'Gruppo')}: ${num(model.byGroup.get(model.group)?.seats ?? 0, 0)} seggi nella legislatura simulata.</p>` : '<p class="sx-note">Scegli un gruppo per evidenziarne i seggi.</p>';
-  if (!(view.party || model.group || model.committee)) return '<p class="sx-note">Scegli un partito, un gruppo o una commissione per l’elenco dei componenti (utile anche da tastiera).</p>';
+  if (model.simulated && !model.roster.sitting) return model.group ? `<p class="sx-note">${esc(model.byGroup.get(model.group)?.name ?? 'Gruppo')}: ${num(model.byGroup.get(model.group)?.seats ?? 0, 0)} seggi nella legislatura simulata.</p>` : '<p class="sx-note">Scegli un gruppo per evidenziarne i seggi.</p>';
+  if (!(view.party || model.group || model.committee)) return `<p class="sx-note">${model.simulated ? 'Scegli una forza o un gruppo per l’elenco degli eletti (utile anche da tastiera).' : 'Scegli un partito, un gruppo o una commissione per l’elenco dei componenti (utile anche da tastiera).'}</p>`;
   const seats = model.roster.seats.filter(model.matches);
   const items = seats.slice(0, 60).map(seat => `<li><button type="button" data-hemi-seat="${esc(seatKey(seat))}" class="${model.selected && seatKey(model.selected) === seatKey(seat) ? 'active' : ''}"><i style="background:${model.colorOf(seat, model.roster.seats.indexOf(seat))}"></i><span>${esc(seat.player ? 'Il tuo seggio' : seat.person ? personName(seat.person) : 'Seggio non attribuito')}</span><small>${esc(model.byGroup.get(seat.groupId)?.shortName ?? '')}</small></button></li>`).join('');
   return `<ul class="hemi-members">${items}</ul>${seats.length > 60 ? `<p class="sx-note">Primi 60 di ${seats.length}: restringi i filtri per vedere gli altri.</p>` : ''}`;
@@ -199,7 +227,7 @@ export function renderHemicycle(state, { politicians = [], db = {}, view = {}, l
   const counts = Object.fromEntries(['camera', 'senato'].map(chamber => [chamber, (state.parliament.chambers?.[chamber]?.groups ?? []).reduce((sum, group) => sum + (group.simulatedSeats ?? 0), 0)]));
   const placeholders = model.simulated ? 0 : model.roster.groups.reduce((sum, group) => sum + group.placeholders, 0);
   const intro = model.simulated
-    ? `Ogni punto è un seggio della ${esc(state.parliament.legislature?.label ?? 'legislatura simulata')}: i gruppi nati dal voto della partita e il tuo seggio. Nessun parlamentare reale siede in queste Camere. La disposizione è grafica; i gruppi vanno da sinistra a destra secondo la collocazione dei partiti.`
+    ? `Ogni punto è un seggio della ${esc(state.parliament.legislature?.label ?? 'legislatura simulata')} e ha la sua persona: i gruppi nati dal voto della partita, il tuo seggio, gli eletti già noti al gioco e persone della simulazione, ognuna con il colore della sua forza. Nessun parlamentare reale siede in queste Camere. La disposizione è grafica; i gruppi vanno da sinistra a destra secondo la collocazione dei partiti.`
     : 'Ogni punto è un seggio: parlamentari reali in carica (dati verificati) e il tuo seggio nella partita. La disposizione è grafica, non la posizione fisica in Aula; i gruppi vanno da sinistra a destra secondo la collocazione dei loro componenti.';
   return `<section class="hemicycle" id="hemicycle">
     <header class="hemi-head"><div><span class="section-kicker">EMICICLO INTERATTIVO · RAPPRESENTAZIONE GRAFICA</span><h2>${esc(CHAMBER_LABELS[model.chamber])}</h2><p>${intro}</p></div><span class="hemi-count">${model.visible === model.roster.total ? `${num(model.roster.total, 0)} seggi` : `${num(model.visible, 0)} di ${num(model.roster.total, 0)}`}</span></header>

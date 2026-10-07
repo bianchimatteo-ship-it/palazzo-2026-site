@@ -43,6 +43,7 @@ import { NEWS_TEMPLATES, composeHeadline, weeklyNews } from './news-engine.js?v=
 import { macroAreaOf, MACRO_AREAS } from '../data/simulation/policy-rules.js?v=20261006-1';
 import { RACE_ROLES, RACE_RULES } from '../data/simulation/race-rules.js?v=20261006-1';
 import { buildSlate, candidateOptions, chooseCandidate, mergeSlate, profileStats, raceDue, raceOutcome, rootingOf, runRace } from './race-engine.js?v=20261006-1';
+import { isSeatPerson, rosterInSync, rosterPeople, rosterSeats, syncRoster } from './seat-roster.js?v=20261006-1';
 
 const STATE_VERSION = 9;
 const POSITIONS_SET = new Set(['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra']);
@@ -639,7 +640,7 @@ function computeParliamentUpdate(currentState, parliament, toast, metricDeltas =
   if (game && journal) game = { ...game, why: journal };
   if (game && memories.length) { game = deepCopy(game); for (const entry of memories) { remember(game, { date: currentDate, ...entry }); if (entry.kind === 'legge' && entry.area) gainSector(game, entry.area, SECTOR_GAINS.lawApproved, { cause: entry.text }); } }
   if (game?.party?.org && programHits) game = { ...game, party: { ...game.party, org: { ...game.party.org, cohesion: Math.min(100, game.party.org.cohesion + 2 * programHits) } } };
-  return withConfidenceVotes(currentState, { ...currentState, parliament, dataset, career, game, world, society, ui: { ...currentState.ui, toast } });
+  return withChamberRosters(currentState, withConfidenceVotes(currentState, { ...currentState, parliament, dataset, career, game, world, society, ui: { ...currentState.ui, toast } }));
 }
 // The player's decided vote on a confidence vote (agenda or Governo page) weighs like a vote on a law.
 function withConfidenceVotes(before, after) {
@@ -761,7 +762,7 @@ function splitParliamentGroups(parliament, { fromPartyId, newPartyId, label, sea
     const moved = Math.min(source.simulatedSeats - 1, Math.round(source.simulatedSeats * seatShare / 100));
     const groupId = `leg${legislature}-${chamber}-${newPartyId}`;
     if (moved < 1 || groups.some(group => group.groupId === groupId)) continue;
-    const created = { groupId, officialName: label, chamber, simulatedSeats: moved, partyId: newPartyId, independent: false, component: false, position: null, axis: source.axis ?? 0, color: null, legislature, simulated: true, reference: { memberCount: moved, leaderPoliticianId: null, countAsOf: date, source: DATA_SOURCES.SIMULATION, verified: false, sourceUrl: null, sourceName: 'Composizione simulata dopo la scissione' }, source: DATA_SOURCES.SIMULATION };
+    const created = { groupId, officialName: label, chamber, simulatedSeats: moved, partyId: newPartyId, independent: false, component: false, splitFrom: source.groupId, position: null, axis: source.axis ?? 0, color: null, legislature, simulated: true, reference: { memberCount: moved, leaderPoliticianId: null, countAsOf: date, source: DATA_SOURCES.SIMULATION, verified: false, sourceUrl: null, sourceName: 'Composizione simulata dopo la scissione' }, source: DATA_SOURCES.SIMULATION };
     next = { ...next, chambers: { ...next.chambers, [chamber]: { ...next.chambers[chamber], groups: [...groups.map(group => group.groupId === source.groupId ? { ...group, simulatedSeats: group.simulatedSeats - moved } : group), created] } }, relations: { ...next.relations, [groupId]: { value: 55, source: DATA_SOURCES.SIMULATION } } };
     const government = next.government;
     if (government?.coalitionGroupIds?.includes(source.groupId)) {
@@ -1268,6 +1269,7 @@ function settleWeeks(s) {
     next = applyGameResult(next, result.ctx, next.ui.toast, result.specials);
     if (result.report) next = tickLegislature(next, weekEnd);
     if (result.report) next = tickLocal(next, weekEnd);
+    if (result.report) next = tickRosters(next);
     if (result.report) next = tickSociety(next, weekEnd, result.report);
     if (next.world && result.report) next = tickWorld(next, weekEnd, result.report);
     if (result.report) next = tickRaces(next, weekEnd);
@@ -1370,14 +1372,89 @@ const DEFAULT_CANDIDACY_ROLE = Object.freeze({ comunale: 'sindaco', provinciale:
 const localOf = s => s.local ?? { institutions: [] };
 const nextVoteOf = (s, type) => (s.game?.elections ?? []).filter(item => item.type === type && item.status === 'upcoming').map(item => item.electionDate).sort()[0] ?? null;
 function withInstitution(s, inst) {
-  const others = localOf(s).institutions.map(item => item.kind === inst.kind && item.status === 'active' ? { ...item, status: 'concluso', until: inst.since } : item);
-  return { ...s, local: { institutions: [...others.filter(item => item.status === 'active'), ...others.filter(item => item.status !== 'active').slice(-3), inst] } };
+  const replaced = localOf(s).institutions.find(item => item.kind === inst.kind && item.status === 'active') ?? null;
+  const others = localOf(s).institutions.map(item => item.kind === inst.kind && item.status === 'active' ? { ...item, status: 'concluso', until: inst.since, roster: null } : item);
+  return seatInstitution({ ...s, local: { institutions: [...others.filter(item => item.status === 'active'), ...others.filter(item => item.status !== 'active').slice(-3), inst] } }, inst.id, replaced);
 }
 function closeInstitution(s, kind, date, status = 'concluso') {
   if (!localOf(s).institutions.some(item => item.kind === kind && item.status === 'active')) return s;
-  const closed = { ...s, local: { institutions: localOf(s).institutions.map(item => item.kind === kind && item.status === 'active' ? { ...item, status, until: date } : item) } };
+  const closed = pruneSeatPersons({ ...s, local: { institutions: localOf(s).institutions.map(item => item.kind === kind && item.status === 'active' ? { ...item, status, until: date, roster: null } : item) } });
   // A provincial seat is held by a mayor or a municipal councillor of the province: without the seat in the comune it lapses.
   return kind === 'comune' ? closeInstitution(closed, 'provincia', date, status) : closed;
+}
+// ---------- the seats with people (seat-roster) ----------
+// Every seat of an assembly the game simulates (the Chambers born from a vote, the player's councils, the European Parliament) has a person: the player where he sits, a
+// person the game already knows, or a person of the simulation kept in dataset.politicians (origin 'seggio'). The roster follows the groups, so a seat never stays empty and a
+// person never sits twice; a person whose seat ended and whom nothing else refers to leaves the registry. Real Chambers and their parliamentarians are never touched.
+const liveRosters = s => [...['camera', 'senato'].map(chamber => s.parliament?.chambers?.[chamber]?.roster), ...localOf(s).institutions.filter(item => item.status === 'active').map(item => item.roster)].filter(Boolean);
+function withSeatPersons(dataset, out) {
+  let politicians = dataset.politicians;
+  if (out.updated.length) { const patches = new Map(out.updated.map(item => [item.id, item.patch])); politicians = politicians.map(item => patches.has(item.id) ? { ...item, ...patches.get(item.id) } : item); }
+  if (out.created.length) { const known = new Set(politicians.map(item => item.id)); politicians = [...politicians, ...out.created.filter(item => !known.has(item.id))]; }
+  return politicians === dataset.politicians ? dataset : { ...dataset, politicians };
+}
+function pruneSeatPersons(s) {
+  if (!s.dataset?.politicians?.some(isSeatPerson)) return s;
+  const keep = new Set([s.career?.playerId, ...liveRosters(s).flatMap(rosterPeople), ...racesOf(s).map(race => race.candidacy?.personId), ...(s.dataset.offices ?? []).map(office => office.politicianId)]);
+  const politicians = s.dataset.politicians.filter(item => !isSeatPerson(item) || keep.has(item.id));
+  return politicians.length === s.dataset.politicians.length ? s : { ...s, dataset: { ...s.dataset, politicians } };
+}
+// The persons that can take a seat of their party: the ones sent back by the assembly that closes, then the persons of the simulation the party already has.
+function rosterPool(s, closing = []) {
+  const known = s.dataset.politicians.filter(item => item.source === DATA_SOURCES.SIMULATION && item.partyId && !isSeatPerson(item) && item.id !== s.career.playerId && !/^persona-quadro-/.test(item.id)).map(item => ({ id: item.id, partyId: item.partyId }));
+  const back = closing.flatMap(roster => rosterSeats(roster).filter(seat => seat.origin !== 'player' && seat.partyId).map(seat => ({ id: seat.personId, partyId: seat.partyId, previous: { assembly: roster.label, since: roster.date } })));
+  return [...back, ...known];
+}
+const rosterContext = (s, assembly) => ({ busy: new Set(liveRosters(s).filter(roster => roster.assembly !== assembly).flatMap(rosterPeople)), people: new Map(s.dataset.politicians.map(item => [item.id, item])) });
+const chamberGroupSpec = group => ({ id: group.groupId, label: group.officialName, partyId: group.partyId ?? null, seats: group.simulatedSeats ?? 0, parts: (group.components ?? []).filter(item => item.listId).map(item => ({ partyId: null, listId: item.listId, label: item.label, seats: item.seats })) });
+// The Chambers born from a vote of the game: their seats follow the groups (a new legislature, a split, the player's entering or leaving).
+function withChamberRosters(before, after) {
+  const legislature = after.parliament?.legislature;
+  if (!after.parliament?.chambers || legislature?.reference !== DATA_SOURCES.SIMULATION || !after.career?.playerId) return after;
+  let next = after;
+  for (const chamber of ['camera', 'senato']) {
+    const current = next.parliament.chambers[chamber];
+    const groups = (current?.groups ?? []).map(chamberGroupSpec);
+    if (!groups.length) continue;
+    const assembly = current.id ?? `legislatura-${legislature.number ?? 0}-${chamber}`;
+    const mine = next.parliament.player?.chamber === chamber && next.parliament.player.groupId ? { personId: next.parliament.player.politicianId ?? next.career.playerId, groupId: next.parliament.player.groupId, partyId: next.career.partyId ?? null } : null;
+    if (rosterInSync(current.roster, groups, mine)) continue;
+    const closing = before?.parliament?.chambers?.[chamber]?.roster;
+    const out = syncRoster({
+      assembly, kind: chamber, label: `${current.label} · ${legislature.label}`, groups, previous: current.roster ?? null, player: mine, pool: rosterPool(next, !current.roster && closing && closing.assembly !== assembly ? [closing] : []), numberFrom: !current.roster && closing && closing.assembly !== assembly ? closing.counter ?? 0 : 0, ...rosterContext(next, assembly),
+      splitFrom: Object.fromEntries((current.groups ?? []).filter(group => group.splitFrom).map(group => [group.groupId, group.splitFrom])), date: legislature.since ?? next.clock.currentDate, resultId: legislature.resultId ?? null
+    });
+    next = { ...next, parliament: { ...next.parliament, chambers: { ...next.parliament.chambers, [chamber]: { ...current, roster: out.roster } } }, dataset: withSeatPersons(next.dataset, out) };
+  }
+  return next === after ? after : pruneSeatPersons(next);
+}
+// The Italian delegation of a European group: the seats the parties of the game won at the last European vote, by the group their collocazione gives them.
+function europeanParts(s, inst, groupId) {
+  const vote = s.national?.lastEuropee;
+  if (!vote?.national?.length || (vote.date ?? '') > inst.since) return [];
+  return vote.national.filter(row => row.seats > 0 && epGroupFor(s.world?.parties?.find(item => item.id === row.id)?.axis ?? 0) === groupId).map(row => ({ partyId: row.id, label: row.label, seats: row.seats }));
+}
+// A council (or the European Parliament) seated with people: at its creation, or later for a saved game that had none.
+function seatInstitution(s, instId, replaced = null) {
+  const inst = localOf(s).institutions.find(item => item.id === instId);
+  if (!inst || inst.status !== 'active' || !s.career?.playerId) return s;
+  const groups = inst.groups.map(group => ({ id: group.id, label: group.label, partyId: group.partyId ?? null, seats: group.seats, ...(inst.kind === 'europa' ? { parts: europeanParts(s, inst, group.id) } : {}) }));
+  const mine = inst.playerGroupId && groups.some(group => group.id === inst.playerGroupId) ? { personId: s.career.playerId, groupId: inst.playerGroupId, partyId: s.career.partyId ?? null } : null;
+  const executive = inst.executive;
+  const leader = executive?.groupId ? { groupId: executive.groupId, player: executive.leader === 'player', label: executive.leader === 'player' ? null : executive.label } : null;
+  const closing = replaced?.roster && replaced.name === inst.name ? [replaced.roster] : [];
+  const out = syncRoster({
+    assembly: inst.id, kind: inst.kind, label: inst.name, groups, previous: inst.roster ?? null, player: mine, pool: rosterPool(s, closing), numberFrom: replaced?.roster?.counter ?? 0, ...rosterContext(s, inst.id), date: inst.since, resultId: inst.electionId ?? null,
+    place: { name: inst.name, region: inst.region ?? null, municipality: inst.kind === 'comune' ? String(inst.name).replace(/^Comune di\s+/, '') : null }, leader
+  });
+  const next = { ...s, dataset: withSeatPersons(s.dataset, out), local: { institutions: localOf(s).institutions.map(item => item.id === instId ? { ...item, roster: out.roster } : item) } };
+  return pruneSeatPersons(next);
+}
+// Every week: the councils of a saved game that had no seats with people get them, and the Chambers follow their groups.
+function tickRosters(s) {
+  let next = s;
+  for (const inst of localOf(s).institutions.filter(item => item.status === 'active' && !item.roster)) next = seatInstitution(next, inst.id);
+  return withChamberRosters(next, next);
 }
 // ---------- the offices: what is granted, what lapses (office-engine says which; here the state changes) ----------
 const ELECTION_OF_SCOPE = Object.freeze({ comune: 'comunale', provincia: 'provinciale', regione: 'regionale', europa: 'europee' });
@@ -1502,7 +1579,7 @@ function institutionFromResult(s, campaign, result) {
   const playerGroup = rowGroups(playerRow).find(group => ownParty && group.partyId === ownParty) ?? rowGroups(playerRow).sort((a, b) => b.seats - a.seats)[0] ?? null;
   const leaderGroup = leads ? playerGroup : rowGroups(rows.find(row => row.id === winner)).sort((a, b) => b.seats - a.seats)[0] ?? null;
   const site = campaign.racePlace ?? null;
-  return createInstitution({ kind, name: institutionName(kind, site ?? { ...homePlace(s), municipality: player?.municipality ?? homePlace(s).municipality }), region: site?.region ?? player?.region ?? null, territory: s.society?.regions?.[site?.region ?? player?.region]?.indicators ?? null, date, until, role: leads ? role : 'consigliere', side: playerRow?.id === winner ? 'maggioranza' : 'opposizione', playerGroupId: playerGroup?.id ?? null, leaderGroupId: leaderGroup?.id ?? winner, leaderIsPlayer: leads, groups });
+  return { ...createInstitution({ kind, name: institutionName(kind, site ?? { ...homePlace(s), municipality: player?.municipality ?? homePlace(s).municipality }), region: site?.region ?? player?.region ?? null, territory: s.society?.regions?.[site?.region ?? player?.region]?.indicators ?? null, date, until, role: leads ? role : 'consigliere', side: playerRow?.id === winner ? 'maggioranza' : 'opposizione', playerGroupId: playerGroup?.id ?? null, leaderGroupId: leaderGroup?.id ?? winner, leaderIsPlayer: leads, groups }), electionId: campaign.id };
 }
 const INDICATOR_AREA = Object.freeze({ economia: 'economia', occupazione: 'lavoro', servizi: 'welfare', sanita: 'sanita', istruzione: 'scuola', infrastrutture: 'infrastrutture', trasporti: 'trasporti', sicurezza: 'sicurezza', ambiente: 'ambiente' });
 const LOCAL_LINE_WORDS = Object.freeze({ favorevole: 'a favore', contrario: 'contro', astenuto: 'per l’astensione' });
@@ -1613,8 +1690,10 @@ function tickLocal(input, date) {
         chronicle.push({ type: 'chronicle', kind: 'territorio', icon: 'alert', title: `${inst.name}: consiglio sciolto ${why}`, body: 'Arriva un commissario; si torna al voto in anticipo (simulazione).', tone: 'bad' });
       }
     }
-    next = { ...next, local: { institutions: localOf(next).institutions.map(item => item.id === inst.id ? updated : item) } };
+    // A council that is dissolved no longer sits: its seats go with it.
+    next = { ...next, local: { institutions: localOf(next).institutions.map(item => item.id === inst.id ? (updated.status === 'active' ? updated : { ...updated, roster: null }) : item) } };
   }
+  next = pruneSeatPersons(next);
   if (lines.length && game.lastReport) game = { ...game, lastReport: { ...game.lastReport, lines: [...game.lastReport.lines, ...lines.slice(0, 3)] } };
   next = { ...next, game };
   if (chronicle.length && next.world) next = { ...next, world: applyWorldSignals(next.world, chronicle, date) };

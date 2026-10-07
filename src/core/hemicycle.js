@@ -1,9 +1,11 @@
 // The hemicycle: a graphic representation of a Chamber (not the physical seating in the Aula). Seats are laid out on
 // concentric arcs and handed out group by group from left to right, following the political position of each group's
 // members; every seat is a real parliamentarian in office (identity from the verified dataset), the player's own seat,
-// or — only when the scenario gives a group more seats than the dataset lists — an unnamed seat of that group.
+// or — only when the scenario gives a group more seats than the dataset lists — an unnamed seat of that group. In the Chambers born from a
+// vote of the game every seat has its person (the roster of the legislature: seat-roster) and takes the colour of the force that person belongs to.
 import { electionListOf, groupAffiliation, inOffice, politicianAffiliation, positionAxis } from '../data/repositories/party-links.js?v=20261006-1';
 import { CHART_SLOTS } from '../data/simulation/polling-rules.js?v=20261006-1';
+import { rosterSeats, rosterSize } from './seat-roster.js?v=20261006-1';
 
 // Colour: the colour of a group or a party is the main colour of the force it belongs to, as the game already knows it (the world's force, with the owner's
 // corrections: `forceColor`); a group of a legislature born from a vote carries it. Only the groups no force stands for take the eight validated slots of the
@@ -12,6 +14,26 @@ import { CHART_SLOTS } from '../data/simulation/polling-rules.js?v=20261006-1';
 export const NEUTRAL_TONES = Object.freeze(['#8d9791', '#6d7872', '#a9b1ac', '#5b6560', '#b9c0bb']);
 export const UNKNOWN_COLOR = '#434d48';
 const MISTO = /^misto/i;
+
+// The colour of every force of the game as the world knows it (with the owner's corrections); a party merged into another takes the colour of the force that absorbed it.
+export function forceColorResolver(world) {
+  const colors = new Map();
+  for (const force of world?.parties ?? []) for (const id of [force.id, ...(force.mergedFrom ?? [])]) if (/^#[\da-f]{6}$/i.test(force.color ?? '')) colors.set(id, force.color);
+  return id => colors.get(id) ?? null;
+}
+// The colour of a seat of an assembly the game simulates: the colour of the force its person belongs to; a seat that belongs to no force (a territorial list, a civic list,
+// a foreign member of the European Parliament) takes the colour of its group, and an unknown one the neutral tone.
+export const seatColor = (seat, { forceColor = null, groupColor = null } = {}) => (seat.partyId ? forceColor?.(seat.partyId) : null) ?? groupColor ?? UNKNOWN_COLOR;
+// The colours of the groups no force stands for: the validated slots of the charts that no force uses, by size; the rest, and the Misto, neutral tones.
+// groups: [{ id, seats, misto }]; used: the colours already taken by forces.
+export function fallbackTones(groups, used = []) {
+  const free = CHART_SLOTS.filter(color => !used.includes(color));
+  const tones = new Map();
+  let neutral = 0;
+  let slot = 0;
+  for (const group of [...groups].sort((a, b) => b.seats - a.seats || String(a.id).localeCompare(String(b.id)))) tones.set(group.id, !group.misto && slot < free.length ? free[slot++] : NEUTRAL_TONES[neutral++ % NEUTRAL_TONES.length]);
+  return tones;
+}
 
 export function hemicycleLayout(count, { width = 1000 } = {}) {
   const outer = width / 2 - 14;
@@ -77,7 +99,8 @@ export function groupIdentities(parliament, { politicians = [], db = {}, date = 
     const tally = new Map();
     for (const person of list) { const id = entityOf(person, db)?.id; if (id) tally.set(id, (tally.get(id) ?? 0) + 1); }
     const dominant = group.simulated && group.partyId ? group.partyId : [...tally.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] ?? null;
-    const forceTone = (group.simulated && /^#[\da-f]{6}$/i.test(group.color ?? '') ? group.color : null) ?? (dominant ? forceColor?.(dominant) ?? null : null);
+    // The force's colour as the game has it today (a colour the owner or the player changed after the vote counts); the colour the group was born with only where no force says it.
+    const forceTone = (dominant ? forceColor?.(dominant) ?? null : null) ?? (group.simulated && /^#[\da-f]{6}$/i.test(group.color ?? '') ? group.color : null);
     return [group.groupId, { groupId: group.groupId, chamber, name, misto: MISTO.test(name.trim()), force: dominant, forceTone, reference: group.reference?.memberCount ?? list.length, axis: axes.length >= Math.max(2, list.length * 0.25) ? axes.reduce((sum, value) => sum + value, 0) / axes.length : own }];
   }));
   // Families: a group of one chamber and the most similar group of the other one (by name).
@@ -149,8 +172,25 @@ export function lineKeepers(db = {}) {
   return keepers;
 }
 
-export function chamberRoster(parliament, chamber, { politicians = [], db = {}, date = null, width = 1000, forceColor = null } = {}) {
+export function chamberRoster(parliament, chamber, { politicians = [], db = {}, date = null, width = 1000, forceColor = null, people = null } = {}) {
   const { groups, outside } = chamberGroups(parliament, chamber, { politicians, db, date, forceColor });
+  // A legislature born from a vote of the game: the seats are its roster's, each with its person (the player's in the middle of his group's wedge).
+  const sitting = parliament?.chambers?.[chamber]?.roster;
+  if (parliament?.legislature?.reference === 'simulation' && sitting && rosterSize(sitting) === groups.reduce((sum, group) => sum + group.seats, 0)) {
+    const byId = people instanceof Map ? people : new Map((people ?? []).map(item => [item.id, item]));
+    const all = rosterSeats(sitting);
+    const assigned = [];
+    for (const group of groups) {
+      const own = all.filter(seat => seat.groupId === group.groupId).map(seat => ({ groupId: group.groupId, person: byId.get(seat.personId) ?? null, player: seat.origin === 'player', placeholder: false, keepsLine: false, partyId: seat.partyId ?? null, listId: seat.listId ?? null, seatId: seat.id, origin: seat.origin, leader: Boolean(seat.leader) }));
+      const mine = own.findIndex(seat => seat.player);
+      if (mine >= 0) { const [seat] = own.splice(mine, 1); own.splice(Math.floor(own.length / 2), 0, seat); }
+      group.placeholders = 0;
+      group.overflow = 0;
+      assigned.push(...own);
+    }
+    const layout = hemicycleLayout(assigned.length, { width });
+    return { chamber, groups, outside: [], seats: assigned.map((seat, index) => ({ ...seat, index, ...layout.seats[index] })), layout, total: assigned.length, sitting: true };
+  }
   const keepers = lineKeepers(db);
   const playerHere = parliament?.player?.chamber === chamber && parliament.player.groupId;
   const assigned = [];

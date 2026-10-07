@@ -333,3 +333,13 @@
 .bill-committee b{color:var(--ink-2)}
 @media (max-width:760px){.local-grid{grid-template-columns:1fr}}
 @media (max-width:640px){.local-inline-form button{width:100%}.local-groups li{grid-template-columns:10px minmax(0,1fr) auto 54px}}
+/* The seats of a council or of the European Parliament: one dot per person, the colour of the person's force; the card of the seat picked. */
+.local-hemi{display:grid;gap:8px;margin:10px 0 6px}
+.local-hemi .hemi-svg{max-width:640px;margin:0 auto}
+.local-legend{display:flex;flex-wrap:wrap;gap:4px 12px;margin:0;padding:0;list-style:none}
+.local-legend li{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.local-legend i{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none}
+.local-legend b{color:var(--ink);font-weight:700}
+.local-seat-card{display:grid;gap:6px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--panel-2)}
+.local-seat-card>strong{font:700 14px Manrope,sans-serif;color:var(--ink);overflow-wrap:anywhere}
+.local-seat-hint{margin:0;color:var(--muted);font-size:12px}

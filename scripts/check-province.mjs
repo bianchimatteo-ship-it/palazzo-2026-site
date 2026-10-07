@@ -21,6 +21,7 @@ const { playerRoles, heldOfficesOf } = await module('src/core/roles.js');
 const { seededRandom } = await module('src/core/vote-engine.js');
 const { advanceDays } = await module('src/core/time.js');
 const { checkInvariants } = await module('src/core/invariants.js');
+const R = await module('src/core/seat-roster.js');
 const clean = (html, where) => { const bad = html.replace(/data-[a-z-]+="[^"]*"/g, '').match(/.{0,60}(undefined|NaN|\[object Object\]|Infinity).{0,60}/); assert.ok(!bad, `${where}: valori non validi (${bad?.[0]})`); };
 const noIssues = (state, where) => { const result = checkInvariants(state); assert.ok(result.ok, `${where}: invarianti ${JSON.stringify(result.issues?.slice(0, 3))}`); };
 const BIRTH = '1975-04-03';
@@ -120,6 +121,17 @@ for (const place of places) {
   const html = renderInstitutions(s);
   clean(html, `${place.label}: istituzioni`);
   assert.ok(html.includes('id="istituzione-provincia"') && html.includes('Consiglio provinciale') && html.includes('Stato del territorio provinciale') && !html.includes('data-local-tax'), `${place.label}: la scheda della Provincia non ha tributi`);
+  // Seats with people: the provincial council (and the comune's) has one simulated person for each seat, the player's in his group.
+  for (const inst of s.local.institutions.filter(item => item.status === 'active')) {
+    const seats = R.rosterSeats(inst.roster);
+    assert.equal(seats.length, inst.seats, `${place.label}: ${inst.name}, un seggio per persona`);
+    assert.equal(new Set(seats.map(seat => seat.personId)).size, seats.length, `${place.label}: ${inst.name}, nessuna persona due volte`);
+    assert.equal(seats.filter(seat => seat.origin === 'player').length, inst.playerGroupId ? 1 : 0, `${place.label}: ${inst.name}, il giocatore siede una volta`);
+    assert.ok(seats.filter(seat => seat.origin !== 'player').every(seat => { const person = s.dataset.politicians.find(item => item.id === seat.personId); return person?.source === 'simulation' && person.origin === 'seggio' && person.region === inst.region; }), `${place.label}: ${inst.name}, persone della simulazione del territorio`);
+  }
+  assert.ok(R.rosterSeats(provincia.roster).some(seat => seat.leader) && s.dataset.politicians.some(item => /^Consigliere provinciale simulato n\. \d+ · /.test(item.displayName ?? '')), `${place.label}: il consiglio provinciale ha i suoi consiglieri e il presidente simulato`);
+  const dots = html.match(/<circle class="hemi-seat[^>]*data-local-seat="[^"]+"/g) ?? [];
+  assert.equal(dots.length, s.local.institutions.filter(item => item.status === 'active').reduce((sum, inst) => sum + inst.seats, 0), `${place.label}: un punto per ogni seggio dei due consigli`);
   noIssues(s, place.label);
 }
 
@@ -186,6 +198,12 @@ for (const place of places) {
   assert.ok(!active('provincia') || active('comune'), 'Il seggio provinciale pende da quello comunale');
   if (result.personalMandate) assert.ok(active('provincia') && s.local.institutions.filter(inst => inst.kind === 'provincia').length >= 2, 'Eletto: nuovo consiglio provinciale, il precedente è concluso');
   else assert.ok(!active('provincia'), 'Non eletto: il seggio provinciale si chiude');
+  // Seats with people after the vote: the council that closed keeps no seats, its people leave the registry unless another office refers to them, the new one is seated.
+  const sitting = s.local.institutions.filter(inst => inst.status === 'active');
+  for (const inst of sitting) assert.equal(R.rosterSize(inst.roster), inst.seats, `${inst.name}: i seggi hanno tutti la loro persona dopo il voto`);
+  assert.ok(s.local.institutions.filter(inst => inst.status !== 'active').every(inst => !inst.roster), 'I consigli conclusi non tengono i seggi.');
+  const live = new Set(sitting.flatMap(inst => R.rosterPeople(inst.roster)));
+  assert.ok(s.dataset.politicians.filter(item => item.origin === 'seggio').every(item => live.has(item.id)), 'Le persone dei consigli conclusi escono dal registro: restano solo quelle che siedono.');
   noIssues(s, 'dopo il voto provinciale');
 }
 
@@ -213,4 +231,4 @@ for (const place of places) {
   noIssues(store.getState(), 'presidente della Provincia');
 }
 
-console.log('Provincia verificata: livello della carriera dove la provincia ha organi (103 enti su 110, non Aosta, Trento, Bolzano e le ex province del Friuli-Venezia Giulia), partenza con il seggio nel comune, consiglio e presidenza con atti, deleghe ed effetti propri (senza tributi), voto di secondo livello con candidature per ruolo, calendario e vecchi salvataggi, legame con il Comune.');
+console.log('Provincia verificata: livello della carriera dove la provincia ha organi (103 enti su 110, non Aosta, Trento, Bolzano e le ex province del Friuli-Venezia Giulia), partenza con il seggio nel comune, consiglio e presidenza con atti, deleghe ed effetti propri (senza tributi), voto di secondo livello con candidature per ruolo, calendario e vecchi salvataggi, legame con il Comune, consigli con una persona simulata per seggio (liberati a mandato chiuso).');

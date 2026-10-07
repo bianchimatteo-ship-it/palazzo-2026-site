@@ -165,6 +165,10 @@ try {
     let comune = L.createInstitution({ kind: 'comune', name: 'Comune di Siena', date, role: 'sindaco', side: 'maggioranza', playerGroupId: 'pd', leaderGroupId: 'pd', leaderIsPlayer: true, groups });
     let europa = L.createInstitution({ kind: 'europa', name: 'Parlamento europeo', date, role: 'eurodeputato', side: 'maggioranza', playerGroupId: 'sd', committee: 'envi', groups: L.EP_GROUPS_2024.groups.map(group => ({ ...group, side: ['epp', 'sd', 'renew'].includes(group.id) ? 'maggioranza' : 'opposizione' })) });
     for (let week = 0; week < 5; week++) { comune = L.advanceInstitutionWeek(comune, { date, rand }).inst; europa = L.advanceInstitutionWeek(europa, { date, rand }).inst; }
+    // Their seats have people (one dot each): made here as the store makes them at the next week.
+    const R = await import('/src/core/seat-roster.js?v=${version}');
+    const seat = inst => { const out = R.syncRoster({ assembly: inst.id, kind: inst.kind, label: inst.name, groups: inst.groups.map(group => ({ id: group.id, label: group.label, partyId: group.partyId ?? null, seats: group.seats })), player: inst.playerGroupId ? { personId: s.career.playerId, groupId: inst.playerGroupId, partyId: s.career.partyId ?? null } : null, date: inst.since, place: { name: inst.name, region: inst.region ?? null, municipality: 'Siena' } }); s.dataset.politicians.push(...out.created); return { ...inst, roster: out.roster }; };
+    comune = seat(comune); europa = seat(europa);
     s.local = { ...(s.local ?? {}), institutions: [...(s.local?.institutions ?? []).filter(item => !['comune', 'europa'].includes(item.kind)), comune, europa] };
     store.save();
     return true;
@@ -175,8 +179,11 @@ try {
     await pause(250);
     for (const view of institutionViews) {
       await open(view);
-      const shown = await evaluate(`(async () => { for (const drawer of document.querySelectorAll('.local-giunta, .bill-archive')) drawer.open = true; await new Promise(resolve => setTimeout(resolve, 250)); return document.querySelectorAll('${view[0] === 'territori' ? '.local-institutions [id^=istituzione-]' : '.hq-institutions button'}').length; })()`);
+      // A seat picked (its card is drawn and audited too), then the folded blocks opened.
+      if (view[0] === 'territori') { await evaluate(`(async () => { if (!document.querySelector('.local-seat-card')) document.querySelector('.local-institutions [data-local-seat]')?.dispatchEvent(new MouseEvent('click', { bubbles: true })); await new Promise(resolve => setTimeout(resolve, 300)); return true; })()`); if (!(await evaluate('Boolean(document.querySelector(".local-seat-card"))'))) report.push(`${label} · territori: la scheda del seggio non si apre`); }
+      const shown = await evaluate(`(async () => { for (const drawer of document.querySelectorAll('.local-giunta, .bill-archive, .local-roster-list')) drawer.open = true; await new Promise(resolve => setTimeout(resolve, 250)); return document.querySelectorAll('${view[0] === 'territori' ? '.local-institutions [id^=istituzione-]' : '.hq-institutions button'}').length; })()`);
       if (shown !== 2) report.push(`${label} · ${view[0]} con le istituzioni del giocatore: ${shown} istituzioni mostrate invece di 2`);
+      if (view[0] === 'territori' && (await evaluate('document.querySelectorAll(".local-institutions .hemi-svg").length')) !== 2) report.push(`${label} · territori: i seggi delle due istituzioni non sono disegnati`);
       const issues = await evaluate(audit);
       checked++;
       for (const issue of issues) report.push(`${label} · ${view[0]} con le istituzioni del giocatore · ${issue.kind}: ${issue.el} (${issue.detail})`);
@@ -217,7 +224,7 @@ try {
   if (report.length) {
     exitCode = 1;
     console.error(`Controllo responsive: ${report.length} problemi su ${checked} schermate.\n- ${report.slice(0, 80).join('\n- ')}${report.length > 80 ? `\n… e altri ${report.length - 80}` : ''}`);
-  } else console.log(`Responsive verificato con Chrome: ${checked} schermate (${views.length} viste, Home e Territori con Comune e Parlamento europeo del giocatore, Candidatura da segretario con le corse territoriali e ${opened.size} finestre: ${[...opened].join(', ')} × telefono 375, 390 e 430 px, tablet 768 px, desktop 1280 px; Home con approfondimenti aperti, azione principale nella prima schermata) senza scorrimento orizzontale, elementi fuori schermo, contenuti nascosti da overflow o testi troncati.`);
+  } else console.log(`Responsive verificato con Chrome: ${checked} schermate (${views.length} viste, Home e Territori con Comune e Parlamento europeo del giocatore, Candidatura da segretario con le corse territoriali, seggi di Comune e Parlamento europeo con un punto per persona e ${opened.size} finestre: ${[...opened].join(', ')} × telefono 375, 390 e 430 px, tablet 768 px, desktop 1280 px; Home con approfondimenti aperti, azione principale nella prima schermata) senza scorrimento orizzontale, elementi fuori schermo, contenuti nascosti da overflow o testi troncati.`);
   socket.close();
 } catch (error) {
   exitCode = 1;

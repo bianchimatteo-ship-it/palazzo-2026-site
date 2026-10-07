@@ -246,6 +246,33 @@ const parliamentHtml = renderParliamentPage('parlamento', state, { politicians: 
 clean(parliamentHtml, 'Parlamento');
 assert.ok(parliamentHtml.includes('LEGISLATURA SIMULATA') && !parliamentHtml.includes('componenti nel dato reale'), 'Le nuove Camere sono dichiarate simulate, senza riferimenti reali.');
 assert.ok(!db().politicians.some(person => parliamentHtml.includes(person.fullName) && person.fullName.length > 8), 'Nessun parlamentare reale siede nella legislatura simulata.');
+// Seats with people: every seat of the new Chambers has a person of the simulation (never a real one), nobody sits twice, the player (if elected) sits in his group, and the dots take the colours of their forces.
+{
+  const R = await import(`../src/core/seat-roster.js${v}`);
+  const s = store.getState();
+  const persons = new Map(s.dataset.politicians.map(item => [item.id, item]));
+  const sitting = [];
+  for (const chamber of ['camera', 'senato']) {
+    const current = s.parliament.chambers[chamber];
+    assert.equal(R.rosterSize(current.roster), current.groups.reduce((sum, group) => sum + group.simulatedSeats, 0), `${chamber}: ogni seggio della nuova legislatura ha la sua persona.`);
+    for (const group of current.groups) assert.equal(R.seatsOfGroup(current.roster, group.groupId).length, group.simulatedSeats, `${chamber}: il gruppo ${group.officialName} ha tutti i suoi seggi.`);
+    const seats = R.rosterSeats(current.roster);
+    assert.ok(seats.every(seat => persons.has(seat.personId) && persons.get(seat.personId).source !== 'real' && (seat.origin === 'player' || persons.get(seat.personId).source === 'simulation')), `${chamber}: persone esistenti e della simulazione (mai reali).`);
+    assert.ok(seats.filter(seat => seat.origin !== 'player' && seat.partyId).every(seat => persons.get(seat.personId).partyId === seat.partyId), `${chamber}: ogni persona ha la forza del suo seggio.`);
+    sitting.push(...seats.map(seat => seat.personId));
+  }
+  assert.equal(new Set(sitting).size, sitting.length, 'Nessuna persona siede due volte, né in due Camere.');
+  if (report.personalMandate) {
+    const mine = R.rosterSeats(s.parliament.chambers[s.parliament.player.chamber].roster).filter(seat => seat.origin === 'player');
+    assert.ok(mine.length === 1 && mine[0].personId === s.career.playerId && mine[0].groupId === s.parliament.player.groupId, 'Il giocatore eletto siede una volta, nel suo gruppo.');
+  } else assert.ok(!sitting.includes(s.career.playerId), 'Il giocatore non eletto non ha un seggio.');
+  const force = new Map(s.world.parties.map(item => [item.id, item.color]));
+  const html = renderHemicycle(s, {});
+  assert.equal((html.match(/<circle class="hemi-seat[ "]/g) ?? []).length, 400, 'Un punto per ognuno dei 400 seggi della Camera.');
+  const own = R.rosterSeats(s.parliament.chambers.camera.roster).find(seat => seat.partyId && force.get(seat.partyId));
+  assert.ok(html.includes(`fill="${force.get(own.partyId)}"`), 'I punti hanno il colore della forza della loro persona.');
+  clean(html, 'Emiciclo della legislatura simulata');
+}
 
 // A crisis in a legislature of the game: consultations in the same Chambers, not automatic early elections.
 if (formed.phase === 'completata') {
@@ -280,6 +307,23 @@ mem.set(KEY, JSON.stringify(legacy));
 const migrated = (await import(`../src/core/store.js${v}&legislatura=3`)).store.getState();
 assert.ok(migrated.version === 9 && migrated.national.legislature.number === migrated.game.legislature.number && migrated.game.flags.nationalCalendar === 2, 'Un salvataggio precedente riceve il ciclo nazionale.');
 assert.ok(mem.get(`${KEY}.backup`), 'Il salvataggio precedente è conservato prima dell’aggiornamento.');
+// A save made before the seats had people (a legislature of the game without rosters): the next weeks give every seat its person, the others stay as they were.
+{
+  const R = await import(`../src/core/seat-roster.js${v}`);
+  const before = structuredClone(saved);
+  for (const chamber of ['camera', 'senato']) delete before.parliament.chambers[chamber].roster;
+  before.dataset.politicians = before.dataset.politicians.filter(item => item.origin !== 'seggio');
+  mem.set(KEY, JSON.stringify(before));
+  const { store: old } = await import(`../src/core/store.js${v}&legislatura=5`);
+  old.setRealReference({ twoPerThousand: db().twoPerThousand, parties: db().parties, movements: db().politicalMovements, coalitions: db().coalitions, polls: db().realPolls, startDate: db().manifest.snapshotDate, governingIds: links.governingEntityIds(db()) });
+  old.setElectoralGeography(geography);
+  assert.ok(!old.getState().parliament.chambers.camera.roster, 'Il salvataggio di prima non ha seggi con persone.');
+  old.advance(7);
+  const now = old.getState();
+  for (const chamber of ['camera', 'senato']) assert.equal(R.rosterSize(now.parliament.chambers[chamber].roster), now.parliament.chambers[chamber].groups.reduce((sum, group) => sum + group.simulatedSeats, 0), `${chamber}: dopo una settimana ogni seggio ha la sua persona.`);
+  assert.equal(now.dataset.politicians.filter(item => !item.origin).length, saved.dataset.politicians.filter(item => !item.origin).length, 'Le altre persone non cambiano.');
+  mem.set(KEY, JSON.stringify(saved));
+}
 
 // ---------- 6. without the player: missed politiche and the European elections of 2029 ----------
 mem.delete(KEY);

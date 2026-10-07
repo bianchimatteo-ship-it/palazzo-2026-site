@@ -524,4 +524,109 @@ const groups = [
   assert.ok(saved.local.institutions.length >= 1);
 }
 
-console.log('Istituzioni locali ed europee verificate: consigli comunali e regionali con giunta, maggioranza e opposizione, atti e bilancio al voto, dissenso del consigliere, proposte, interrogazioni, rimpasti e aliquote del sindaco, concessioni ai gruppi, uscite dalla maggioranza, sfiducia e scioglimento con voto anticipato, Parlamento europeo con i gruppi reali del 2024.');
+// ---------- 6. seats with people: every seat of a council and of the European Parliament has its person ----------
+{
+  const R = await import(`../src/core/seat-roster.js${v}`);
+  const { checkInvariants } = await import(`../src/core/invariants.js${v}`);
+  const hemi = await import(`../src/core/hemicycle.js${v}`);
+  const { renderInstitutions } = await import(`../src/ui/local-mode.js${v}`);
+  const db = realData.realDatabase;
+  const realSnapshot = JSON.stringify([db.parties, db.politicalMovements, db.parliamentaryGroups]);
+  const clean = html => !/undefined|NaN|\[object Object\]|Infinity/.test(html.replace(/data-[a-z-]+="[^"]*"/g, ''));
+  const context = { realPartyIds: db.parties.map(item => item.id), realGroupIds: db.parliamentaryGroups.map(item => item.id) };
+  // What a roster must be: the seats of the groups, a person for each, the persons simulated (the player aside), nobody twice, the player in his group.
+  const assertSeated = (s, inst, label) => {
+    assert.ok(inst.roster && inst.roster.assembly === inst.id, `${label}: i seggi hanno le loro persone.`);
+    const seats = R.rosterSeats(inst.roster);
+    assert.equal(seats.length, inst.seats, `${label}: un seggio per persona su ${inst.seats}.`);
+    for (const group of inst.groups) assert.equal(R.seatsOfGroup(inst.roster, group.id).length, group.seats, `${label}: il gruppo ${group.label} ha tutti i suoi seggi.`);
+    assert.equal(new Set(seats.map(seat => seat.personId)).size, seats.length, `${label}: nessuna persona due volte.`);
+    const persons = new Map(s.dataset.politicians.map(item => [item.id, item]));
+    assert.ok(seats.every(seat => persons.has(seat.personId)), `${label}: ogni persona esiste nel registro delle persone.`);
+    assert.ok(seats.every(seat => seat.origin === 'player' ? persons.get(seat.personId).id === s.career.playerId : persons.get(seat.personId).source === 'simulation'), `${label}: tutte persone della simulazione, tranne il giocatore.`);
+    assert.ok(seats.filter(seat => seat.origin !== 'player').every(seat => (persons.get(seat.personId).partyId ?? null) === (seat.partyId ?? null)), `${label}: la persona ha il partito del suo seggio.`);
+    const mine = seats.filter(seat => seat.origin === 'player');
+    assert.ok(inst.playerGroupId ? mine.length === 1 && mine[0].groupId === inst.playerGroupId : mine.length === 0, `${label}: il giocatore siede una volta, nel suo gruppo.`);
+    return seats;
+  };
+  // A council from the start of a local career.
+  store.createCareer({ firstName: 'Lucia', lastName: 'Consiglio', birthDate: '1985-01-01', gender: 'donna', region: 'Toscana', municipality: 'Firenze', municipalityCode: '048017', previousProfession: 'Avvocata', initialLevel: 'comunale', parliamentaryGroupId: '', partyMode: 'existing', partyId: 'party-registro-p1-2017-41-ir', policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 } }, db.parties, db.parliamentaryGroups);
+  let s = store.getState();
+  let council = s.local.institutions.find(item => item.status === 'active' && item.kind === 'comune');
+  let seats = assertSeated(s, council, 'Consiglio comunale');
+  const leaderSeat = seats.find(seat => seat.leader);
+  assert.ok(leaderSeat && s.dataset.politicians.find(item => item.id === leaderSeat.personId).displayName === council.executive.label, 'Il sindaco simulato è una persona, la prima della lista che guida.');
+  assert.ok(s.dataset.politicians.filter(item => item.origin === 'seggio').every(item => item.region === 'Toscana' && item.municipality === 'Firenze' && item.firstName && item.lastName && item.displayName), 'Le persone del consiglio sono di Firenze e hanno identità dichiarata.');
+  assert.ok(checkInvariants(s, context).ok, 'Stato coerente con i seggi.');
+  // The same persons after a week, a save and a reload (nothing is made twice, nothing is overwritten).
+  const rosterBefore = JSON.stringify(council.roster);
+  const personsBefore = JSON.stringify(s.dataset.politicians.filter(item => item.origin === 'seggio'));
+  store.advance(14);
+  s = store.getState();
+  council = s.local.institutions.find(item => item.status === 'active' && item.kind === 'comune');
+  assert.equal(JSON.stringify(council.roster), rosterBefore, 'Il consiglio ha sempre le stesse persone: i seggi non si rifanno ogni settimana.');
+  assert.equal(JSON.stringify(s.dataset.politicians.filter(item => item.origin === 'seggio')), personsBefore, 'E le stesse persone nel registro.');
+  const reloaded = (await import(`../src/core/store.js${v}&ricarica=${Date.now()}`)).store.getState();
+  assert.equal(JSON.stringify(reloaded.local.institutions.find(item => item.kind === 'comune' && item.status === 'active').roster), rosterBefore, 'Dopo il ricaricamento i seggi sono quelli salvati.');
+  assert.equal(JSON.stringify(reloaded.dataset.politicians.filter(item => item.origin === 'seggio')), personsBefore, 'E le persone.');
+  // The view: one dot per seat, in the colour of the force; the card of a seat.
+  let html = renderInstitutions(s, {});
+  const dots = html.match(/<circle class="hemi-seat[^>]*data-local-seat="[^"]+"/g) ?? [];
+  assert.equal(dots.length, council.seats, 'Un punto per ogni seggio del consiglio.');
+  const force = new Map(s.world.parties.map(item => [item.id, item.color]));
+  const own = seats.find(seat => seat.partyId && force.get(seat.partyId));
+  assert.ok(html.includes(`fill="${force.get(own.partyId)}"`) && clean(html), 'I punti hanno il colore della forza della persona.');
+  const picked = seats.find(seat => seat.origin === 'simulation');
+  html = renderInstitutions(s, { localSeat: `${council.id}|${picked.personId}` });
+  assert.ok(html.includes('PERSONA DELLA SIMULAZIONE') && html.includes(s.dataset.politicians.find(item => item.id === picked.personId).displayName) && html.includes('is-selected') && clean(html), 'Un punto apre la scheda della persona.');
+  html = renderInstitutions(s, { localSeat: `${council.id}|${seats.find(seat => seat.origin === 'player').personId}` });
+  assert.ok(html.includes('IL TUO SEGGIO') && clean(html), 'Il giocatore ha il suo seggio.');
+  // A region.
+  store.createCareer({ firstName: 'Marco', lastName: 'Regione', birthDate: '1980-01-01', gender: 'uomo', region: 'Toscana', municipality: 'Siena', municipalityCode: '052032', previousProfession: 'Medico', initialLevel: 'regionale', parliamentaryGroupId: '', partyMode: 'existing', partyId: 'party-registro-p1-2015-29-ir', policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 } }, db.parties, db.parliamentaryGroups);
+  s = store.getState();
+  const region = s.local.institutions.find(item => item.status === 'active' && item.kind === 'regione');
+  seats = assertSeated(s, region, 'Consiglio regionale');
+  assert.ok(seats.filter(seat => seat.partyId).length > 0 && seats.every(seat => !seat.partyId || s.world.parties.some(item => item.id === seat.partyId)), 'I seggi dei partiti appartengono a forze del gioco.');
+  // A person the game already has for the party (a candidate it fielded) takes a seat of the party before a new person is made; a saved game that had no seats is seated at the next week.
+  const known = { id: 'persona-gara-prova', firstName: 'Figura', lastName: 'simulata', displayName: 'Candidato simulato n. 1 · Siena', source: 'simulation', partyId: s.career.partyId, region: 'Toscana', createdAt: s.clock.currentDate };
+  store.getState().dataset.politicians = [...store.getState().dataset.politicians.filter(item => item.origin !== 'seggio'), known];
+  store.getState().local.institutions = store.getState().local.institutions.map(item => item.id === region.id ? { ...item, roster: null } : item);
+  store.advance(7);
+  s = store.getState();
+  const reseated = s.local.institutions.find(item => item.status === 'active' && item.kind === 'regione');
+  seats = assertSeated(s, reseated, 'Consiglio regionale ripreso da un salvataggio senza seggi');
+  assert.ok(seats.find(seat => seat.personId === known.id)?.origin === 'existing' && seats.find(seat => seat.personId === known.id).partyId === s.career.partyId, 'Il candidato che il partito aveva già siede tra i suoi eletti, senza essere rifatto.');
+  assert.equal(s.dataset.politicians.filter(item => item.id === known.id).length, 1, 'E resta una persona sola nel registro.');
+  // The European Parliament: 720 seats, the Italian delegation by party where a vote of the game has given it.
+  store.createCareer({ firstName: 'Elena', lastName: 'Europa', birthDate: '1978-01-01', gender: 'donna', region: 'Toscana', municipality: 'Siena', municipalityCode: '052032', previousProfession: 'Giornalista', initialLevel: 'europeo', parliamentaryGroupId: '', partyMode: 'existing', partyId: 'party-registro-p1-2015-29-ir', policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 } }, db.parties, db.parliamentaryGroups);
+  s = store.getState();
+  let ep = s.local.institutions.find(item => item.status === 'active' && item.kind === 'europa');
+  seats = assertSeated(s, ep, 'Parlamento europeo');
+  assert.equal(seats.length, 720, 'Parlamento europeo: 720 persone sui 720 seggi (gruppi reali del 2024).');
+  assert.ok(seats.filter(seat => seat.partyId).length === 0 && s.dataset.politicians.filter(item => item.origin === 'seggio').every(item => item.source === 'simulation'), 'Senza un voto europeo della partita nessuna delegazione italiana è inventata: tutte persone della simulazione.');
+  const tonesBefore = clean(renderInstitutions(s, {}));
+  assert.ok(tonesBefore && (renderInstitutions(s, {}).match(/<circle class="hemi-seat/g) ?? []).length === 720, 'Un punto per ognuno dei 720 seggi.');
+  // After a European vote of the game the Italian seats carry the parties that won them (the seats of a game saved before are made at the next week).
+  const left = s.world.parties.find(item => item.axis <= -1 && !item.isPlayer);
+  const right = s.world.parties.find(item => item.axis >= 2 && !item.isPlayer);
+  store.getState().national = { ...(store.getState().national ?? {}), lastEuropee: { id: 'europee-2026-09-24', type: 'europee', date: ep.since, national: [{ id: s.world.playerPartyId, label: 'Il tuo partito', seats: 4 }, { id: left.id, label: left.label, seats: 5 }, { id: right.id, label: right.label, seats: 6 }] } };
+  store.getState().local.institutions = store.getState().local.institutions.map(item => item.id === ep.id ? { ...item, roster: null } : item);
+  store.getState().dataset.politicians = store.getState().dataset.politicians.filter(item => item.origin !== 'seggio');
+  store.advance(7);
+  s = store.getState();
+  ep = s.local.institutions.find(item => item.status === 'active' && item.kind === 'europa');
+  seats = assertSeated(s, ep, 'Parlamento europeo con la delegazione italiana');
+  for (const row of s.national.lastEuropee.national) assert.equal(seats.filter(seat => seat.partyId === row.id).length, row.seats, `${row.label}: i suoi ${row.seats} seggi sono suoi.`);
+  assert.ok(seats.filter(seat => seat.partyId === s.world.playerPartyId).some(seat => seat.origin === 'player'), 'Il giocatore siede tra gli eletti del suo partito.');
+  html = renderInstitutions(s, {});
+  for (const id of [left.id, right.id]) assert.ok(html.includes(`fill="${force.get(id) ?? s.world.parties.find(item => item.id === id).color}"`), `I seggi di ${id} hanno il colore della loro forza.`);
+  assert.ok(clean(html) && checkInvariants(s, context).ok, 'Stato coerente con la delegazione italiana.');
+  // Nobody real was touched, and a closed mandate leaves no seats and no persons behind.
+  assert.equal(JSON.stringify([db.parties, db.politicalMovements, db.parliamentaryGroups]), realSnapshot, 'I dati reali non cambiano.');
+  store.retireCareer('ritiro');
+  s = store.getState();
+  assert.ok(s.local.institutions.every(item => item.status !== 'active' && !item.roster) && !s.dataset.politicians.some(item => item.origin === 'seggio'), 'Chiuso il mandato, le istituzioni non tengono più i seggi e le persone senza altro ruolo escono dal registro.');
+  console.log(`  Seggi con persone: consiglio comunale (${council.seats}), regionale (${region.seats}) e Parlamento europeo (720, con la delegazione italiana per partito), tutti con una persona della simulazione, punti nel colore della forza, scheda del seggio, ricaricamento identico.`);
+}
+
+console.log('Istituzioni locali ed europee verificate: consigli comunali e regionali con giunta, maggioranza e opposizione, atti e bilancio al voto, dissenso del consigliere, proposte, interrogazioni, rimpasti e aliquote del sindaco, concessioni ai gruppi, uscite dalla maggioranza, sfiducia e scioglimento con voto anticipato, Parlamento europeo con i gruppi reali del 2024; seggi di consigli e Parlamento europeo con una persona della simulazione ciascuno.');

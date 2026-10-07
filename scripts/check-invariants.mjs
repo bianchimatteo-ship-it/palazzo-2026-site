@@ -1,7 +1,8 @@
 // The central invariants (src/core/invariants.js) on the real engine: every starting level is clean at the start and
 // after months of play, and every kind of damage is recognised — NaN and undefined, impossible values, duplicate ids,
 // broken references (party, group, politician, office, law, election), seats, votes (sì + no + astenuti + assenti),
-// parties and groups, Government and majority, elections and campaigns, laws and their passage, the player's career.
+// parties and groups, Government and majority, elections and campaigns, laws and their passage, the player's career, the territorial races
+// and the seats of the assemblies of the game (a person for each seat, nobody twice, never a real one).
 // The votes where the player stays away count the absence (each seat accounted for).
 import assert from 'node:assert/strict';
 
@@ -96,6 +97,18 @@ damaged('Formazione completata senza governo', 'coerenza', state => { state.nati
   damaged('Stato sconosciuto', 'valore-impossibile', state => withRaces(state, [race('gara-a', { status: 'sospesa' })]));
   damaged('Date della corsa fuori ordine', 'coerenza', state => withRaces(state, [race('gara-a', { windowOpensAt: '2030-06-01' })]));
   damaged('La stessa persona in due corse lo stesso giorno', 'coerenza', state => withRaces(state, [race('gara-a', { status: 'confirmed', candidacy: candidacy('persona-prova-1') }), race('gara-b', { status: 'confirmed', candidacy: candidacy('persona-prova-1') })], [person('persona-prova-1')]));
+}
+// Seats with people (seat-roster): a seat without a person, a person on two seats, a real person on a seat of the simulation, seats that do not add up to the groups, the player on
+// a seat he does not hold, a council that closed with its seats still there.
+{
+  assert.ok(base.parliament.legislature?.reference === 'simulation' && base.parliament.chambers.camera.roster?.blocks?.length, 'Lo stato di prova ha una legislatura simulata con i seggi di ogni Camera.');
+  const first = state => state.parliament.chambers.camera.roster.blocks[0];
+  damaged('Seggio senza persona', 'riferimento', state => { const id = first(state).people[0]; state.dataset.politicians = state.dataset.politicians.filter(item => item.id !== id); });
+  damaged('Persona su due seggi', 'duplicato', state => { const blocks = state.parliament.chambers.camera.roster.blocks; const spare = blocks.find(block => block !== blocks[0] && block.people.length); spare.people[0] = first(state).people[0]; });
+  damaged('Persona reale su un seggio simulato', 'provenienza', state => { const id = first(state).people[0]; state.dataset.politicians.find(item => item.id === id).source = 'real'; });
+  damaged('Seggi che non tornano ai gruppi', 'seggi', state => { first(state).people.pop(); });
+  damaged('Il giocatore su un seggio che non è suo', 'coerenza', state => { const roster = state.parliament.chambers.camera.roster; first(state).people[0] = state.career.playerId; roster.player = null; });
+  damaged('Consiglio concluso che tiene i seggi', 'coerenza', state => { state.local = { institutions: [{ id: 'comune-prova', kind: 'comune', name: 'Comune di prova', status: 'concluso', groups: [], seats: 0, roster: { blocks: [] } }] }; });
 }
 // ---------- 3. the player who stays away from a vote is counted as absent ----------
 const parliament = structuredClone(base.parliament);

@@ -132,7 +132,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
     logoQuery:'', logoPage:1
   };
   const admin = { tab: 'partiti', query: '', linkQuery: '', chamber: 'all', partyId: null, politicianId: null, message: '', listPage: 1, partyFilter: 'tutti', creating: false, checking: false };
-  const territory = { measure: 'satisfaction', region: null };
+  const territory = { measure: 'satisfaction', region: null, localSeat: null };
   const archive = { tab: 'partiti' };
   // Tabs and filters of the sections survive redraws and navigation; they are kept in this browser (per viewer).
   const VIEWS_KEY = 'politicando.views.v1';
@@ -230,7 +230,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
   // are kept in this browser like the tabs: they survive redraws, navigation and a reload.
   const VIEW_FIELDS = Object.freeze({
     catalog: ['partyQuery', 'partyPresence', 'partyType', 'partyLevel', 'partyRegion', 'partyStatus', 'partyElection', 'partySort', 'partyPage', 'politicianQuery', 'politicianChamber', 'politicianParty', 'politicianGroup', 'politicianPage'],
-    admin: ['tab', 'chamber', 'partyFilter'], territory: ['measure', 'region'], archive: ['tab'], realLaws: ['query', 'outcome', 'area', 'page']
+    admin: ['tab', 'chamber', 'partyFilter'], territory: ['measure', 'region', 'localSeat'], archive: ['tab'], realLaws: ['query', 'outcome', 'area', 'page']
   });
   const viewTargets = { catalog, admin, territory, archive, realLaws };
   for (const [name, fields] of Object.entries(VIEW_FIELDS)) for (const field of fields) {
@@ -966,11 +966,12 @@ export function mountApp(root, store, { retryData = null } = {}) {
       target?.scrollIntoView({ behavior: settings.motion === 'full' ? 'smooth' : 'auto', block: 'start' });
       return;
     }
-    const simulationControl = event.target.closest('[data-territory-measure],[data-territory-region],[data-budget-line],[data-party-priority],[data-real-law-more],[data-real-law-amend],[data-invest],[data-election-fund],[data-reserve],[data-reserve-release]');
+    const simulationControl = event.target.closest('[data-local-seat],[data-territory-measure],[data-territory-region],[data-budget-line],[data-party-priority],[data-real-law-more],[data-real-law-amend],[data-invest],[data-election-fund],[data-reserve],[data-reserve-release]');
     if (simulationControl) {
       const data = simulationControl.dataset;
       try {
-        if (data.territoryMeasure) { territory.measure = data.territoryMeasure; render(store.getState(), store.getLastSaved()); }
+        if (data.localSeat) { territory.localSeat = territory.localSeat === data.localSeat ? null : data.localSeat; render(store.getState(), store.getLastSaved()); }
+        else if (data.territoryMeasure) { territory.measure = data.territoryMeasure; render(store.getState(), store.getLastSaved()); }
         else if (data.territoryRegion) { territory.region = data.territoryRegion; render(store.getState(), store.getLastSaved()); root.querySelector('.region-detail')?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' }); }
         else if (data.budgetLine) store.setBudget(data.budgetLine, Number(data.budgetLevel));
         else if (data.partyPriority) store.setPartyPriority(data.partyPriority, Number(data.partyPriorityLevel));

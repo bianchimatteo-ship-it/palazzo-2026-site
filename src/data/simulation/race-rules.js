@@ -7,6 +7,8 @@ export const RACE_RULES = Object.freeze({
   horizonDays: 380,
   windowDays: 14,
   maxPerLevel: Object.freeze({ regionale: 5, provinciale: 5, comunale: 6 }),
+  // How many of the party's known politicians are put in front of the leader for a race (the ones rooted where it is held come first; the one already chosen always stays).
+  maxPoliticians: 16,
   // Distances between two votes: a person stands in one race at a time (a campaign is a full-time job); the leader who plays two of
   // his own campaigns needs the time to close the first and open the second, and to prepare the candidacy.
   personGapDays: 35,

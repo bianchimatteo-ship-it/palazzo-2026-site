@@ -136,7 +136,11 @@ export function candidateOptions({ race, items = [], today, player = null, cadre
     out.player = { kind: 'player', id: player.id, label: player.label, source: 'user', rooting: rooted({ ...from, isPlayer: true }), available: !player.block && !spacing, reason: player.block ?? spacing ?? null };
   }
   out.cadres = cadres.filter(item => item.id && item.status !== 'uscito' && !item.player).map(item => ({ kind: 'cadre', id: item.id, label: item.label, source: 'simulation', region: item.region ?? null, municipality: item.municipality ?? null, municipalityCode: item.municipalityCode ?? null, provinceCode: item.provinceCode ?? null, rooting: rooted(item), available: !busy(item.personId ?? item.id), reason: busy(item.personId ?? item.id) }));
-  out.politicians = politicians.filter(item => item.id).map(item => ({ kind: 'politician', id: item.id, label: item.label, source: item.source ?? 'real', region: item.region ?? null, rooting: rooted(item), available: !busy(item.id), reason: busy(item.id) }));
+  const known = politicians.filter(item => item.id).map(item => ({ kind: 'politician', id: item.id, label: item.label, source: item.source ?? 'real', region: item.region ?? null, rooting: rooted(item), available: !busy(item.id), reason: busy(item.id) }));
+  const ranked = known.sort((a, b) => b.rooting.points - a.rooting.points || String(a.label).localeCompare(String(b.label), 'it'));
+  const top = ranked.slice(0, RACE_RULES.maxPoliticians);
+  const chosen = race.candidacy?.kind === 'politician' ? ranked.find(item => item.id === race.candidacy.personId) : null;
+  out.politicians = chosen && !top.includes(chosen) ? [...top, chosen] : top;
   out.simulation = { kind: 'simulation', id: null, label: `Nuova figura simulata · ${race.territory.name}`, source: 'simulation', rooting: rooted({ region: race.territory.region, municipality: race.territory.kind === 'comune' ? race.territory.name : null, provinceCode: race.territory.provinceCode }), available: true, reason: null };
   return out;
 }
