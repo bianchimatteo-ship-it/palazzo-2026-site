@@ -118,6 +118,8 @@ export function enterNewParty(game, api, { descriptor = null, newPartyId, label,
   }
   game.party = created;
   game.party.support = 70;
+  // The programme goes with whoever leads the new party: the founder takes his own priorities along (a party that had none leaves the new one without).
+  if (old?.program?.areas?.length) game.party.program = { areas: [...old.program.areas], since: week, source: SIM, inheritedFrom: old.partyId };
   game.relations = game.relations.filter(item => item.id !== 'leadership');
   game.party.history.push({ week, date, text: `${label}: nasce il partito`, source: SIM });
   api.remember(game, { date, kind: 'fondazione', text: `Fondato ${label}`, weight: 1.3 });

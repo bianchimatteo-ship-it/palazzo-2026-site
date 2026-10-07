@@ -626,6 +626,14 @@ function templateFor(item) {
   if (item.kind === 'situazione') return SITUATIONS[item.templateId];
   return EVENT_POOL.find(entry => entry.id === item.templateId);
 }
+// What happens to a decision nobody took: its default choice, which must cost nothing and ask for nothing (an unpaid choice
+// with a cost would hand its benefits to whoever did not decide); when the declared default is not free, the closest free
+// choice, and when no choice is free the decision lapses with no effect. The agenda shows the same choice the week runs.
+const isFree = choice => !choice?.cost || !Object.values(choice.cost).some(Boolean);
+const freeDefault = (choices, id) => {
+  const declared = choices.find(entry => entry.id === id);
+  return declared && isFree(declared) && !declared.requires ? declared : [...choices].reverse().find(entry => isFree(entry) && !entry.requires);
+};
 function instantiate(template, kind, ctx, params) {
   // Two decisions of the same kind in the same week (two votes, two allies' demands) keep distinct ids.
   const base = `agenda-${ctx.game.week.index}-${template.id}-${ctx.game.rngState % 100000}`;
@@ -642,7 +650,7 @@ function instantiate(template, kind, ctx, params) {
     id, kind, templateId: template.id, ...(day !== null ? { day } : {}),
     title: fill(template.title, params), body: fill(template.body, params), params,
     choices: template.choices.map(choice => ({ id: choice.id, label: fill(choice.label, params), cost: choice.cost ?? null, requires: typeof choice.requires === 'string' ? choice.requires : null })),
-    defaultChoice: template.defaultChoice ?? template.choices.at(-1).id, week: ctx.game.week.index, source: SIM
+    defaultChoice: freeDefault(template.choices, template.defaultChoice ?? template.choices.at(-1).id)?.id ?? template.defaultChoice ?? template.choices.at(-1).id, week: ctx.game.week.index, source: SIM
   };
 }
 function eventParams(ctx) {
@@ -1529,7 +1537,8 @@ export function setPartyProgram(input, env, areas = [], labels = {}) {
   }
   if (party.org) party.org.cohesion = Math.round(clamp(party.org.cohesion + (chosen.some(id => (CURRENT_AREAS[party.leaderCurrentId] ?? []).includes(id)) ? 2 : -3)));
   addLog(ctx.game, env.currentDate, 'partito', `Nuovo programma: ${chosen.map(id => labels[id] ?? id).join(', ')}`, lines, 'neutral');
-  return { ctx };
+  // What the records of the user's party and the political world (the agenda the polls' segments and the campaigns read) still have to take up.
+  return { ctx, specials: [{ type: 'party-program', areas: chosen }] };
 }
 // How the party speaks: it shapes reputation, visibility and the tone of the press every week.
 export function setCommunication(input, env, style) {
@@ -2122,15 +2131,7 @@ function drift(ctx, lines) {
   const standing = ctx.parliament?.careerStanding;
   if (standing && Math.abs(standing.partySupport - 50) > 2) standing.partySupport = round2(standing.partySupport + (standing.partySupport > 50 ? -0.5 : 0.5));
 }
-// What happens to a decision nobody took: its default choice, which must cost nothing (an unpaid choice with a cost would
-// hand its benefits to whoever did not decide); when the declared default costs something, the closest free choice.
-const isFree = choice => !choice?.cost || !Object.values(choice.cost).some(Boolean);
-function defaultChoiceOf(item) {
-  const choices = templateFor(item)?.choices ?? [];
-  const declared = choices.find(entry => entry.id === item.defaultChoice);
-  if (!declared || isFree(declared)) return declared;
-  return [...choices].reverse().find(isFree) ?? declared;
-}
+const defaultChoiceOf = item => freeDefault(templateFor(item)?.choices ?? [], item.defaultChoice);
 export function advanceWeek(input, env, governmentWeek = parliament => parliament) {
   const ctx = { game: copy(input.game), stats: { ...input.stats }, parliament: copy(input.parliament) };
   const game = ctx.game;

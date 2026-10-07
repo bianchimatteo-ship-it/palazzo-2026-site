@@ -13,7 +13,7 @@ import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, 
 import { mandatePlace, renderElectionReport } from './election-report.js?v=20261006-1';
 import { renderNationalView } from './national-view.js?v=20261006-1';
 import { renderQuirinale } from './presidency-view.js?v=20261006-1';
-import { renderObservatory } from './observatory-view.js?v=20261006-1';
+import { renderCampaignObservatory } from './observatory-view.js?v=20261006-1';
 export { renderElectionReport };
 
 export const ELECTION_TABS = Object.freeze([['panoramica', 'Panoramica'], ['nazionali', 'Nazionali'], ['quirinale', 'Quirinale'], ['candidatura', 'Candidatura'], ['campagna', 'Campagna'], ['avversari', 'Sondaggi e avversari'], ['risultati', 'Risultati'], ['storico', 'Storico']]);
@@ -181,7 +181,7 @@ export function renderElectionsHub(state, { parties = [], logoFor = () => null, 
   if (active === 'panoramica') body = `<div class="sx-grid two">${card({ kicker: 'CALENDARIO ELETTORALE', title: 'Quando si vota', body: calendar(state) })}${card({ kicker: 'CONTESTO POLITICO', title: 'Il clima del voto', body: context(state) })}</div><div class="sx-grid two">${card({ kicker: 'PREPARAZIONE', title: 'Quanto sei pronto', body: readiness(state) })}${card({ kicker: 'REGOLE DEL GIOCO', title: 'Come si assegnano i seggi', body: rules(state) })}</div>`;
   else if (active === 'candidatura') body = candidacy(state);
   else if (active === 'campagna') body = `<div class="eh-campaign">${renderCampaignPage(state, parties, logoFor, campaignPicks)}</div>`;
-  else if (active === 'avversari') body = renderObservatory(state, polls);
+  else if (active === 'avversari') body = renderCampaignObservatory(state, polls);
   else if (active === 'risultati') body = renderElectionReport(state.career.lastElectionReport, { place: mandatePlace(state, state.career.lastElectionReport) });
   else if (active === 'quirinale') body = presidency ? renderQuirinale(state, presidency()) : empty('Il Quirinale si apre con i dati della partita.');
   else if (active === 'nazionali') body = national ? renderNationalView(state, national(), { geography, view: nationalView }) : empty('Il ciclo nazionale si apre con i dati della partita: calendario, coalizioni e proiezione dei seggi.');

@@ -110,10 +110,11 @@ const adminPage = await goto('amministrazione');
 assert.ok(adminPage.includes('Area riservata al proprietario') && !adminPage.includes('data-admin-select-party') && !adminPage.includes('Imposta il PIN'), 'L’area amministrativa mostra solo l’accesso del proprietario.');
 const playerSettings = await goto('impostazioni');
 assert.ok(!playerSettings.includes('data-nav="amministrazione"') && !playerSettings.includes('data-action="logo-admin"'), 'Nessun ingresso all’area amministrativa per i giocatori.');
-// Polls, institutes and rivals are not a page of their own: the old address opens Elezioni → Sondaggi e avversari, where the forces and their alliances are one of the views.
+// Sondaggi e media is a page of its own: the observatory (seven views, the forces and their alliances among them) with its view remembered.
 const pollsEntry = await goto('sondaggi');
-assert.equal(store.getState().ui.activePage, 'elezioni', '“Sondaggi” porta alla centrale elettorale, non a una pagina parallela.');
-assert.ok(pollsEntry.includes('data-section-tab="osservatorio"') && pollsEntry.includes('aria-selected="true">Sondaggi e avversari'), 'Si apre la scheda Sondaggi e avversari con le sue viste.');
+assert.equal(store.getState().ui.activePage, 'sondaggi', '“Sondaggi e media” è una pagina autonoma, non un alias della centrale elettorale.');
+assert.ok(pollsEntry.includes('data-section-tab="osservatorio"') && pollsEntry.includes('class="polls-page observatory"') && pollsEntry.includes('aria-selected="true">Quadro'), 'Si apre l’osservatorio dei sondaggi con le sue viste, dal Quadro.');
+assert.ok(pollsEntry.includes('class="obs-bars') && pollsEntry.includes('La media degli istituti e le loro rilevazioni') && !pollsEntry.includes('MEDIA DEGLI ISTITUTI') && !pollsEntry.includes('SONDAGGIO DELLA SETTIMANA'), 'Nel Quadro un solo blocco: media e rilevazioni degli istituti.');
 const pollsForFounder = await click({ sectionTab: 'osservatorio', sectionTabValue: 'forze' });
 assert.ok(pollsForFounder.includes('Probabilità che accetti'), 'Il segretario vede, prima di proporre un’intesa, probabilità e motivi.');
 for (const view of ['quadro', 'istituti', 'segmenti', 'territori', 'candidati', 'flussi']) { const text = await click({ sectionTab: 'osservatorio', sectionTabValue: view }); assert.ok(text.includes('class="polls-page observatory"') && clean(text), `Osservatorio · ${view}: valori non validi`); }
@@ -121,6 +122,18 @@ await click({ sectionTab: 'osservatorio', sectionTabValue: 'istituti' });
 const instituteB = await click({ sectionTab: 'osservatorio-istituto', sectionTabValue: 'b' });
 assert.ok(instituteB.includes('Istituto B') && instituteB.includes('Scarto dalla media') && instituteB.includes('errore simulato'), 'Ogni istituto ha la sua scheda: letture, scarto dalla media e margine.');
 await click({ sectionTab: 'osservatorio', sectionTabValue: 'forze' });
+// Changing page neither runs a poll nor touches the world: the view chosen is remembered, the numbers are the saved ones.
+{
+  const before = JSON.stringify(store.getState().world);
+  const rngBefore = store.getState().world.rngState;
+  await goto('panoramica');
+  const back = await goto('sondaggi');
+  assert.ok(back.includes('data-section-tab-value="forze" aria-selected="true"'), 'La vista scelta resta dopo il cambio di pagina.');
+  await goto('elezioni'); await click({ sectionTab: 'elezioni', sectionTabValue: 'avversari' });
+  await goto('sondaggi');
+  assert.equal(JSON.stringify(store.getState().world), before, 'Aprire e cambiare pagina non genera sondaggi né cambia il mondo.');
+  assert.equal(store.getState().world.rngState, rngBefore, 'Né tocca il generatore casuale.');
+}
 let home = await goto('panoramica');
 // Phones: the five main sections one tap away (Home · Carriera · Partito · Elezioni · Parlamento) and an "Altro" sheet
 // with every other section; on computers the sidebar shows the same five first, then the group “Altro”.

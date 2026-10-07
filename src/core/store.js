@@ -24,7 +24,7 @@ import { candidacyBlock, institutionOffice, lapsesFor, officeLabel, officeScope 
 import { actTypeOf } from '../data/simulation/local-acts.js?v=20261006-1';
 import { SECTOR_GAINS, competenceIn, gainSector, sectorFloors, standingFactors } from './standing-engine.js?v=20261006-1';
 import { AREA_BY_ID, BUDGET_SESSION, GOVERNMENT_LINES, POLICY_AREAS, areaOf } from '../data/simulation/policy-rules.js?v=20261006-1';
-import { allianceBlock, allianceOf, electionRoster, forceProfiles, mergeCandidates, mergeIntoPlayerForce, renamePlayerForce, splitPlayerForce, localShares, regionalShares, withRegionalLeans, withLocalCalendar, joinCoalition, acceptAlliance, addWorldEffects, advanceWorld, alignWorldToVote, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setGoverningForces, setPlayerParty, withCanonicalForces, withLatentForces, withPartyIdentities, withPositions } from './world-engine.js?v=20261006-1';
+import { allianceBlock, allianceOf, electionRoster, forceProfiles, mergeCandidates, mergeIntoPlayerForce, renamePlayerForce, setPlayerAgenda, splitPlayerForce, localShares, regionalShares, withRegionalLeans, withLocalCalendar, joinCoalition, acceptAlliance, addWorldEffects, advanceWorld, alignWorldToVote, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setGoverningForces, setPlayerParty, withCanonicalForces, withLatentForces, withPartyIdentities, withPositions } from './world-engine.js?v=20261006-1';
 import { FORMATION_PHASES, LEGISLATURE_RULES, NATIONAL_LINES, acceptMandate, crisisFormation, seatResult, startFormation, buildCoalitions, campaignWeekEffects, coalitionOptions, compactResult, contestedDistricts, createNationalState, europeanListSeats, formationStep, groupOfParty, homeDistricts, legislatureGroups, legislatureTerm, nationalCalendar, nationalHistory, nationalProjection, normalizeNationalState, openLegislature, politicheOutcome, regionalBreakdown, runEuropeanVote, runNationalVote, seatPlayer, voteForces } from './legislature-engine.js?v=20261006-1';
 import { classifyOutcome, preferenceStanding } from './election-engine.js?v=20261006-1';
 import { DIFFICULTIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261006-1';
@@ -60,7 +60,7 @@ function hydrateState(saved) {
   if (saved.version >= 3) return { ...saved, campaign: saved.campaign ?? null, parliament: null };
   const fresh = makeDemoState();
   if (saved.clock?.currentDate) fresh.clock = { ...fresh.clock, ...saved.clock };
-  if (saved.ui?.activePage) fresh.ui.activePage = saved.ui.activePage === 'sondaggi' ? 'elezioni' : saved.ui.activePage;
+  if (saved.ui?.activePage) fresh.ui.activePage = saved.ui.activePage;
   if (saved.version >= 2) {
     const collections = Object.keys(fresh.dataset);
     for (const collection of collections) {
@@ -732,10 +732,12 @@ const abbreviationOf = label => {
 function userPartyRecord(s, { id, label, abbreviation = null, fromPartyId = null }) {
   const date = s.clock.currentDate;
   const parent = s.dataset.parties.find(item => item.id === fromPartyId) ?? null;
+  // The programme the new party starts with is the one it inherited (the founder's); a record that has none inherits that of the party it comes from.
+  const program = s.game?.party?.partyId === id && s.game.party.program?.areas?.length ? s.game.party.program.areas : Array.isArray(parent?.program) ? parent.program : [];
   return {
     id, name: label, officialName: label, abbreviation: String(abbreviation ?? abbreviationOf(label)).toUpperCase().slice(0, 6),
     description: `${label}: partito fondato durante la carriera${parent ? `, nato da ${parent.officialName ?? parent.name}` : ''}.`,
-    color: parent?.color ?? '#264d82', color2: null, orientation: parent?.orientation ?? 'centro', program: [],
+    color: parent?.color ?? '#264d82', color2: null, orientation: parent?.orientation ?? 'centro', program: [...program],
     logo: { kind: 'builder', shape: 'cerchio', symbol: 'freccia' }, politicalPosition: parent?.politicalPosition ?? 'centro', foundedAt: date, status: 'attivo',
     policyPositions: { ...(parent?.policyPositions ?? { economia: 3, welfare: 3, ambiente: 3, europa: 3 }) }, source: DATA_SOURCES.USER, createdAt: date,
     logoUrl: null, logoAsset: null, logoSource: null, logoVerified: null, logoAlt: `Logo di ${label}`
@@ -784,14 +786,18 @@ function applyPartySplit(s, special) {
   const player = playerOf(next);
   const fromWorldId = next.world?.playerPartyId ?? null;
   const fraction = Math.max(0.03, Math.min(0.6, d.leavingShare / 100 + (special.founded ? 0.03 + playerStat(next, 'notoriety', 20) / 1500 : 0)));
+  // Founding a party with no area following is a new party with no history: it starts like any new force (the world's own start), and nobody loses consensus.
+  // A split moves the share of consensus the engine gives it.
+  const alone = Boolean(special.founded) && !(d.leavingShare > 0);
   let record = null;
   if (special.followed) {
     record = userPartyRecord(next, { id: d.id, label: d.label, abbreviation: special.abbreviation, fromPartyId: next.career.partyId });
     next = { ...next, career: { ...next.career, partyId: d.id }, dataset: { ...next.dataset, parties: [...next.dataset.parties, record], politicians: next.dataset.politicians.map(item => item.id === player?.id ? { ...item, partyId: d.id } : item), offices: next.dataset.offices.map(item => item.politicianId === player?.id && item.level === 'partito' && !item.endDate ? { ...item, endDate: date } : item) } };
   }
   if (next.world) {
-    let world = splitPlayerForce(next.world, { id: d.id, label: d.label, abbreviation: record?.abbreviation ?? null, fraction, date, asPlayer: Boolean(special.followed) });
+    let world = alone ? next.world : splitPlayerForce(next.world, { id: d.id, label: d.label, abbreviation: record?.abbreviation ?? null, fraction, date, asPlayer: Boolean(special.followed) });
     if (special.followed) world = setPlayerParty(world, worldPartyOf(next, record), date);
+    if (special.followed && next.game?.party?.program?.areas?.length) world = setPlayerAgenda(world, next.game.party.program.areas);
     next = { ...next, world };
   }
   if (next.parliament && d.seatShare > 0) {
@@ -804,6 +810,13 @@ function applyPartySplit(s, special) {
   }
   next = addTimeline(next, [{ kind: 'partito', title: special.founded ? `Fondi ${d.label}` : special.followed ? `Segui ${d.label} nella scissione` : `Scissione: ${d.label} lascia il partito`, detail: `${d.members.toLocaleString('it-IT')} iscritti, ${d.committees.length} comitati, ${d.seatShare}% dei seggi del gruppo`, tone: special.followed ? 'good' : 'bad' }]);
   return { ...next, ui: { ...next.ui, toast: special.founded ? `Nasce ${d.label}` : special.followed ? `Guidi ${d.label}` : `${d.label} lascia il partito` } };
+}
+// The programme of the player's party, wherever the game keeps it: the record of a party of the user (its identity, saved with the game) and the political world
+// (the agenda the polls' segments and the campaigns read for it). The programme of a real party is never written anywhere: only the player's own party has one.
+function applyPartyProgram(s, { areas }) {
+  let next = { ...s, dataset: { ...s.dataset, parties: s.dataset.parties.map(item => item.id === s.career.partyId && item.source === DATA_SOURCES.USER ? { ...item, program: [...areas] } : item) } };
+  if (next.world) next = { ...next, world: setPlayerAgenda(next.world, areas) };
+  return next;
 }
 function applyPartyMerge(s, special) {
   const d = special.descriptor;
@@ -837,6 +850,8 @@ function handleSpecials(s, specials) {
       next = applyPartySplit(next, special);
     } else if (special.type === 'party-merge') {
       next = applyPartyMerge(next, special);
+    } else if (special.type === 'party-program') {
+      next = applyPartyProgram(next, special);
     } else if (special.type === 'party-rename') {
       next = applyPartyRename(next, special);
     } else if (special.type === 'party-left') {
@@ -1316,11 +1331,17 @@ function allianceWindow(s) {
   const filed = (s.game?.elections ?? []).find(item => NATIONAL_TYPES.includes(item.type) && item.status !== 'held' && item.windowClosesAt && today > item.windowClosesAt && today <= item.electionDate);
   return filed ? { open: false, type: filed.type, until: filed.electionDate, reason: `Le liste per le ${filed.type === 'europee' ? 'europee' : 'politiche'} sono depositate: fino al voto del ${formatDate(filed.electionDate)} intese e coalizioni non cambiano.` } : { open: true };
 }
+// How much of the player's programme another force also has on its agenda: none in common is a small minus, all of the shorter list a plus.
+function programOverlapWith(s, forceId) {
+  const own = s.game?.party?.program?.areas ?? [];
+  const theirs = s.world ? forceProfiles(s.world)[forceId]?.agenda ?? [] : [];
+  return own.length && theirs.length ? own.filter(id => theirs.includes(id)).length / Math.min(own.length, theirs.length) : null;
+}
 function allianceContext(s, forceId) {
   const game = s.game;
   const good = memoryAbout(game, forceId, 'good');
   const bad = memoryWeight(game, item => item.kind === 'alleanza-rotta' && (item.partyId === forceId || item.subject === forceId)) + memoryAbout(game, forceId, 'bad');
-  return { partySupport: game.party?.support ?? 50, influence: playerStat(s, 'influence'), memory: { good, bad }, difficulty: difficultyOf(game.difficulty).allianceChance, programOverlap: null };
+  return { partySupport: game.party?.support ?? 50, influence: playerStat(s, 'influence'), memory: { good, bad }, difficulty: difficultyOf(game.difficulty).allianceChance, programOverlap: programOverlapWith(s, forceId) };
 }
 
 // ---------- the national cycle ----------
@@ -2432,7 +2453,7 @@ export const store = {
   getState: () => state,
   getLastSaved: () => lastSaved,
   subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); },
-  navigate(page) { state = { ...state, ui: { ...state.ui, activePage: page === 'sondaggi' ? 'elezioni' : page } }; emit(); },
+  navigate(page) { state = { ...state, ui: { ...state.ui, activePage: page } }; emit(); },
   advance(days = 7) {
     if (state.game?.status === 'ended') { state = { ...state, ui: { ...state.ui, toast: 'La carriera è conclusa: inizia una nuova partita.' } }; emit(); return; }
     stepTime(days);
@@ -3724,10 +3745,13 @@ export const store = {
     const game = buildGame(base, { partyLabel: partyRecord ? partyRecord.officialName ?? partyRecord.name : null, founder: draft.partyMode === 'new' });
     const built = buildWorld({ ...base, game }, partyRecord ?? null);
     const calendared = built && localElections ? withLocalCalendar(built, localSummary(localElections), today) : built;
-    const world = calendared?.localCalendar && electoralGeography ? withRegionalLeans(calendared, regionalLeans(electoralGeography)) : calendared;
+    const leaned = calendared?.localCalendar && electoralGeography ? withRegionalLeans(calendared, regionalLeans(electoralGeography)) : calendared;
+    // The programme of the player's own party (the one chosen in the wizard, or kept by the party of the user he joins): in the career and in the agenda of its force.
+    const programAreas = ((draft.partyMode === 'new' ? draft.partyProgram : partyRecord?.source === DATA_SOURCES.USER ? partyRecord.program : null) ?? []).filter(id => AREA_BY_ID[id]).slice(0, 4);
+    const world = leaned && programAreas.length ? setPlayerAgenda(leaned, programAreas) : leaned;
     const society = buildSociety({ ...base, game });
     const national = createNationalState({ currentDate: today, legislature: game.legislature });
-    if (draft.partyMode === 'new' && game.party) game.party.program = { areas: (draft.partyProgram ?? []).filter(id => AREA_BY_ID[id]).slice(0, 4), since: 1, source: DATA_SOURCES.SIMULATION };
+    if (programAreas.length && game.party) game.party.program = { areas: programAreas, since: 1, source: DATA_SOURCES.SIMULATION };
     game.timeline = [{ id: makeId('storia'), week: 1, date: today, kind: 'inizio', title: `Inizia la carriera: ${level.office}`, detail: `${draft.municipality.trim()}, ${draft.region}${partyRecord ? ` · ${partyRecord.officialName ?? partyRecord.name}` : ' · indipendente'}`, tone: 'good', source: DATA_SOURCES.SIMULATION }];
     if (hasStart(plan)) game.timeline.push({ id: makeId('storia'), week: 1, date: today, kind: 'inizio', title: `Punto di partenza: ${plan.label}`, detail: planLines(plan).map(item => `${item.label} ${item.level}/3`).join(' · '), tone: 'neutral', source: DATA_SOURCES.SIMULATION });
     // The game being replaced is kept in a slot, so a new game never erases an old one.

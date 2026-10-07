@@ -594,4 +594,81 @@ const runC = playDays('giorni-beta', { founder: true });
   assert.ok(tabs.includes('data-section-tab-value="vita"'), 'La scheda Vita interna è tra quelle del partito');
 }
 
-console.log(`Vita interna del partito verificata: ${DAILY_EVENTS.length} eventi giornalieri (${new Set(DAILY_EVENTS.map(item => item.category)).size} categorie, catene, successi rari), ${(runA.perWeek.reduce((a, b) => a + b, 0) / runA.perWeek.length).toFixed(1)} decisioni a settimana distribuite su tutti i giorni senza ripetizioni; capi delle correnti con carattere e richieste che dipendono dallo stato (seggi, linea, liste); risposta, trattativa con controfferta, accordi con durata, rottura, rinnovo e memoria; congresso in sette fasi con delegati dalle federazioni, alleanze, voto e conseguenze; dirigenti locali, fughe e ricostruzione all’opposizione; fondazione, scissione, fusione e cambio di nome con effetti su iscritti, comitati, cassa, seggi e sondaggi; salvataggi vecchi, determinismo e scheda Vita interna.`);
+// ---------- 10. the programme and the consensus of a party founded in the career ----------
+{
+  const { startCareer, playWeek, seeded } = await import('./lib/long-run.mjs');
+  const newParty = { partyMode: 'new', partyId: '', partyName: 'Lista di prova', partyAbbreviation: 'LDP', partyDescription: 'Partito fondato dal giocatore per il test.', partyOrientation: 'Altro', partyColor: '#285c42', partyPosition: 'centro-sinistra', partyProgram: ['lavoro', 'sanita', 'ambiente'] };
+  // Engine: the founder takes his own programme to the new party (and a party that had none leaves the new one without).
+  {
+    const base = withTerritory(newGame('programma', { founder: true }));
+    base.party.program = { areas: ['lavoro', 'sanita'], since: 1, source: 'simulation' };
+    base.resources.politicalCapital = 50; base.resources.funds = 9000;
+    const out = lifeFound({ game: base, stats: { ...STATS }, parliament: null }, { currentDate: START }, { label: 'Partito del Programma', followerIds: [] }).ctx.game;
+    assert.deepEqual(out.party.program.areas, ['lavoro', 'sanita'], 'Il nuovo partito eredita il programma del fondatore.');
+    assert.equal(out.party.program.inheritedFrom, base.party.partyId, 'E dice da dove viene.');
+    const bare = withTerritory(newGame('senza-programma', { founder: true }));
+    bare.resources.politicalCapital = 50; bare.resources.funds = 9000;
+    assert.equal(lifeFound({ game: bare, stats: { ...STATS }, parliament: null }, { currentDate: START }, { label: 'Partito Senza Programma' }).ctx.game.party.program ?? null, null, 'Senza programma da ereditare non se ne inventa uno.');
+  }
+  // Store: a party of the user keeps its programme in the record, in the career and in the agenda of its force, and after a reload.
+  const run = await startCareer({ seed: 'programma-store', level: 'deputato', draft: newParty });
+  let state = run.store.getState();
+  const own = state.world.parties.find(item => item.isPlayer);
+  const recordOf = id => run.store.getState().dataset.parties.find(item => item.id === id);
+  assert.ok(own.baseline >= 0.01 && own.baseline <= 0.1, `Una nuova fondazione senza storico parte da ${own.baseline}% (0,01–0,1%).`);
+  assert.deepEqual([recordOf(own.id).program, state.game.party.program.areas, own.agenda], [newParty.partyProgram, newParty.partyProgram, newParty.partyProgram], 'Il programma scelto nella creazione è nel partito dell’utente, nella carriera e nell’agenda della sua forza.');
+  assert.equal(recordOf(own.id).source, 'user', 'Il partito è dell’utente, non reale.');
+  state.game.resources.politicalCapital = 40; state.game.week.ap = 6;
+  run.store.setPartyProgram(['scuola', 'casa']);
+  state = run.store.getState();
+  assert.deepEqual([recordOf(own.id).program, state.game.party.program.areas, state.world.parties.find(item => item.isPlayer).agenda], [['scuola', 'casa'], ['scuola', 'casa'], ['scuola', 'casa']], 'Cambiare il programma in carriera lo aggiorna ovunque.');
+  assert.throws(() => run.store.setPartyProgram(['scuola']), /almeno due priorità/, 'Il sistema esistente chiede almeno due priorità.');
+  const odds = run.store.allianceOdds(state.world.parties.find(item => !item.isPlayer && item.active).id);
+  assert.ok(odds.reasons.some(item => item.label === 'Programmi a confronto'), 'Il programma pesa nelle probabilità di un’intesa.');
+  // Saved and reloaded: the same programme.
+  const reloaded = (await import(new URL(`../src/core/store.js?programma=${Date.now()}`, import.meta.url).href)).store.getState();
+  assert.deepEqual([reloaded.dataset.parties.find(item => item.id === own.id)?.program, reloaded.game.party.program?.areas, reloaded.world.parties.find(item => item.isPlayer)?.agenda], [['scuola', 'casa'], ['scuola', 'casa'], ['scuola', 'casa']], 'Dopo il ricaricamento il programma è quello salvato.');
+  for (let week = 0; week < 3; week++) playWeek({ ...run, decide: seeded('programma|scelte') });
+  // Founding alone: a new party with no history starts like any new force, the old one loses nothing, and the programme, colours and orientation are kept.
+  state = run.store.getState();
+  state.game.resources.politicalCapital = 60; state.game.resources.funds = 8000;
+  const parentId = state.career.partyId;
+  const parentBefore = state.world.parties.find(item => item.id === parentId).baseline;
+  run.store.foundParty({ label: 'Partito Solitario', abbreviation: 'pso', followerIds: [] });
+  state = run.store.getState();
+  const alone = state.world.parties.find(item => item.isPlayer);
+  assert.ok(alone.id !== parentId && alone.baseline >= 0.01 && alone.baseline <= 0.1 && !alone.parentId, `Fondare da soli: ${alone.baseline}% (0,01–0,1%), nessuna quota sottratta.`);
+  assert.equal(state.world.parties.find(item => item.id === parentId).baseline, parentBefore, 'Il vecchio partito non perde consenso.');
+  const aloneRecord = recordOf(alone.id);
+  assert.deepEqual([aloneRecord.program, state.game.party.program.areas, alone.agenda], [['scuola', 'casa'], ['scuola', 'casa'], ['scuola', 'casa']], 'Il programma del fondatore passa al nuovo partito, al suo record e alla sua forza.');
+  assert.ok(aloneRecord.source === 'user' && aloneRecord.color === '#285c42' && aloneRecord.orientation === 'Altro' && aloneRecord.abbreviation === 'PSO' && aloneRecord.officialName === 'Partito Solitario', 'Identità del nuovo partito: dell’utente, con i colori e l’orientamento di chi lo fonda.');
+  assert.equal(recordOf(parentId).program.join(), 'scuola,casa', 'Il partito di partenza resta com’era.');
+  // A true split (an area follows): the share the engine moves, from the parent, no more and no less.
+  const run2 = await startCareer({ seed: 'programma-scissione', level: 'deputato', draft: newParty });
+  for (let week = 0; week < 6; week++) playWeek({ ...run2, decide: seeded('programma2|scelte') });
+  const s2 = run2.store.getState();
+  s2.game.resources.politicalCapital = 60; s2.game.resources.funds = 8000;
+  s2.world.parties.find(item => item.isPlayer).baseline = 8; s2.world.parties.find(item => item.isPlayer).anchor = 8;
+  const follower = s2.game.party.currents[0].id;
+  const parent2 = s2.career.partyId;
+  const share = Math.round(s2.game.party.currents[0].strength) / 100;
+  run2.store.foundParty({ label: 'Area Fondata', abbreviation: 'afo', followerIds: [follower] });
+  const s3 = run2.store.getState();
+  const split = s3.world.parties.find(item => item.isPlayer);
+  assert.equal(split.parentId, parent2, 'La scissione ha un partito di origine.');
+  assert.ok(split.baseline > 0.5 && split.baseline < 8 * 0.7, `La scissione sposta la quota del motore (${split.baseline}% su 8%).`);
+  assert.ok(s3.world.parties.find(item => item.id === parent2).baseline < 8, 'E il partito d’origine la perde.');
+  assert.deepEqual(s3.dataset.parties.find(item => item.id === split.id).program, newParty.partyProgram, 'Nella scissione il programma del fondatore resta nel nuovo partito.');
+  assert.ok(share > 0 && checkInvariants(s3, run2.context).ok, 'Stato coerente dopo la scissione.');
+  // A real party: its record is never written, and a force of the polls keeps its identity.
+  const run3 = await startCareer({ seed: 'programma-reale', level: 'deputato' });
+  const s4 = run3.store.getState();
+  assert.ok(!s4.dataset.parties.some(item => item.id === s4.career.partyId), 'Un partito reale non è un record dell’utente.');
+  s4.game.party.affiliation = 'founder'; s4.game.party.rank = 5; s4.game.resources.politicalCapital = 40; s4.game.week.ap = 6;
+  run3.store.setPartyProgram(['economia', 'fisco']);
+  const s5 = run3.store.getState();
+  assert.ok(!s5.dataset.parties.some(item => item.id === s5.career.partyId), 'Il programma proposto in un partito reale non crea né modifica record.');
+  assert.deepEqual(s5.game.party.program.areas, ['economia', 'fisco'], 'Resta una decisione simulata della carriera.');
+}
+
+console.log(`Vita interna del partito verificata: ${DAILY_EVENTS.length} eventi giornalieri (${new Set(DAILY_EVENTS.map(item => item.category)).size} categorie, catene, successi rari), ${(runA.perWeek.reduce((a, b) => a + b, 0) / runA.perWeek.length).toFixed(1)} decisioni a settimana distribuite su tutti i giorni senza ripetizioni; capi delle correnti con carattere e richieste che dipendono dallo stato (seggi, linea, liste); risposta, trattativa con controfferta, accordi con durata, rottura, rinnovo e memoria; congresso in sette fasi con delegati dalle federazioni, alleanze, voto e conseguenze; dirigenti locali, fughe e ricostruzione all’opposizione; fondazione, scissione, fusione e cambio di nome con effetti su iscritti, comitati, cassa, seggi e sondaggi; salvataggi vecchi, determinismo e scheda Vita interna; programma del partito dell’utente persistente (record, carriera, agenda della forza, ricaricamento) ed ereditato da fondazione e scissione, fondazione senza storico a 0,01–0,1% e scissione con la quota del motore.`);

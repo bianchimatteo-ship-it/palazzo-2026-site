@@ -1,6 +1,7 @@
-// "Sondaggi e avversari": the one place of the game for the polls, the institutes and the rivals. Seven views of the same observatory: the dashboard,
-// the institutes (each one, and their comparison with the average), the segments of the electorate and the themes, the territories, the forces and
-// their alliances, the candidates of the race and the undecided with the flows between the forces.
+// "Sondaggi e media" (#sondaggi): the one observatory of the game for the polls, the institutes and the rivals. Seven views of the same observatory: the
+// dashboard, the institutes (each one, and their comparison with the average), the segments of the electorate and the themes, the territories, the forces
+// and their alliances, the candidates of the race and the undecided with the flows between the forces. Elezioni → Sondaggi e avversari shows only the race
+// of the campaign (renderCampaignObservatory): what `campaignObservatory()` reads from a valid campaign, and nothing when there is none.
 // Everything here is read from what the game has saved (the world, its observatory, the campaign) and measures the simulation: no number on these
 // pages gives a bonus, and the real parties stay real (their candidates, voters and readings are simulated, source: simulation).
 import { latestPoll, observatoryReport } from '../core/world-engine.js?v=20261006-1';
@@ -11,7 +12,7 @@ import { formatDate } from '../core/time.js?v=20261006-1';
 import { lineChart, SERIES } from './charts.js?v=20261006-1';
 import { emblem, glyph } from './visuals.js?v=20261006-1';
 import { arrow, bar, card, empty, esc, kpi, num, table } from './sections-kit.js?v=20261006-1';
-import { alliancesList, barometer, chronicle, dataTable, forcesGrid, marginText, nationalBars, partyIndex, pct, pollPanel, presencePanel, regionTiles, shortDate, signed, strategyList } from './polls-mode.js?v=20261006-1';
+import { alliancesList, barometer, chronicle, dataTable, forcesGrid, partyIndex, pct, pollPanel, presencePanel, regionTiles, shortDate, signed, strategyList } from './polls-mode.js?v=20261006-1';
 
 export const OBSERVATORY_VIEWS = Object.freeze([['quadro', 'Quadro'], ['istituti', 'Istituti'], ['segmenti', 'Segmenti e temi'], ['territori', 'Territori'], ['forze', 'Forze e alleanze'], ['candidati', 'Candidati e rivali'], ['flussi', 'Indecisi e flussi']]);
 const toneOf = value => value > 0 ? 'good' : value < 0 ? 'bad' : 'neutral';
@@ -33,9 +34,9 @@ const chartSeries = (force, values, emphasis = force.isPlayer) => ({ label: forc
 // ---------- what every view reads ----------
 function contextOf(state, options) {
   const world = state.world;
-  const poll = latestPoll(world);
+  const poll = world ? latestPoll(world) : null;
   const society = observatorySociety(state.society);
-  const report = observatoryReport(world, society);
+  const report = world ? observatoryReport(world, society) : null;
   const forces = report?.forces ?? [];
   const byId = Object.fromEntries(forces.map(force => [force.id, force]));
   const player = forces.find(force => force.isPlayer) ?? null;
@@ -44,7 +45,7 @@ function contextOf(state, options) {
   let race;
   // The race of the campaign (active or last), read only when a view needs it.
   const raceOf = () => race === undefined ? (race = state.campaign?.candidates?.length ? campaignObservatory(state.campaign, { society }) : null) : race;
-  return { state, world, poll, report, forces, byId, player, forceId, force: byId[forceId] ?? null, index: partyIndex(world), logo: options.logoFor, options, race: raceOf };
+  return { state, world, poll, report, forces, byId, player, forceId, force: byId[forceId] ?? null, index: world ? partyIndex(world) : {}, logo: options.logoFor, options, race: raceOf };
 }
 // A short row of forces to look at: the player's own and the ones that lead, as the average has them.
 function leaders(ctx, limit = 6) {
@@ -90,6 +91,35 @@ function averageTrend(ctx) {
 }
 
 // ---------- the quadro ----------
+// The average and the readings of the institutes in one block: a coloured bar for each force (the average of the institutes A, B, C and D, in the
+// colour of the force) and, beside it, what each institute read. Nothing of this is repeated elsewhere in the quadro.
+function instituteBars(ctx, { limit = 9 } = {}) {
+  const { report } = ctx;
+  const average = report?.latestAverage;
+  if (!average) return '<p class="quiet-copy">La prima media compare con il primo sondaggio.</p>';
+  const rows = average.rows.filter(row => ctx.byId[row.partyId]).sort((a, b) => b.share - a.share);
+  const shown = rows.slice(0, limit);
+  const player = rows.find(row => ctx.byId[row.partyId].isPlayer);
+  if (player && !shown.includes(player)) shown.push(player);
+  const max = Math.max(...shown.map(row => row.share), average.others, 10);
+  const seeded = !average.institutes;
+  const names = report.institutes.map(instituteName);
+  const head = seeded ? '' : `<div class="obs-bars-head" aria-hidden="true"><span>Forza e media degli istituti</span><span class="obs-bars-readings">${report.institutes.map((item, i) => `<b title="${esc(names[i])}">${esc(item.id.toUpperCase())}</b>`).join('')}</span></div>`;
+  const body = shown.map(row => {
+    const force = ctx.byId[row.partyId];
+    const digits = digitsFor(row.share);
+    const values = report.institutes.map(item => readingOf(item, row.partyId));
+    const read = values.filter(Number.isFinite);
+    const range = read.length > 1 ? Math.max(...read) - Math.min(...read) : null;
+    const tip = `${force.label}: media ${pct(row.share, digits)}${values.map((value, i) => Number.isFinite(value) ? ` · ${names[i]} ${pct(value, digitsFor(value))}` : '').join('')}${range === null ? '' : ` · forbice ${num(range, 1)} punti`}`;
+    return `<div class="obs-bar-row ${force.isPlayer ? 'is-player' : ''}" data-tip="${esc(tip)}" tabindex="0">${forceCell(force, ctx.logo, force.isPlayer ? 'Il tuo partito' : force.position ?? '')}<span class="obs-bar-track"><i style="width:${row.share / max * 100}%;background-color:${esc(force.color)}"></i></span><span class="obs-bar-avg"><b>${pct(row.share, digits)}</b>${deltaText(row.delta)}</span>${seeded ? '' : `<span class="obs-bars-readings">${values.map((value, i) => `<span title="${esc(names[i])}" data-label="${esc(report.institutes[i].id.toUpperCase())}">${Number.isFinite(value) ? pct(value, digitsFor(value)) : '—'}</span>`).join('')}</span>`}</div>`;
+  }).join('');
+  const others = `<div class="obs-bar-row is-others"><span class="obs-force"><span><strong>Altri</strong><small>liste minori e forze non rilevate</small></span></span><span class="obs-bar-track"><i style="width:${average.others / max * 100}%;background-color:#4d5752"></i></span><span class="obs-bar-avg"><b>${pct(average.others)}</b></span>${seeded ? '' : '<span class="obs-bars-readings" aria-hidden="true"></span>'}</div>`;
+  const note = seeded
+    ? `Questa è la media reale con cui parte la carriera${average.label ? ` (${esc(average.label)})` : ''}: gli istituti simulati iniziano a pubblicare dalla prima settimana.`
+    : `Le barre sono la media pesata dei ${average.institutes} istituti simulati (${num(average.sample, 0)} interviste in tutto), nel colore di ogni forza; a destra la lettura di ciascun istituto (A–D). Passando sulla riga si legge la forbice, cioè la distanza tra la lettura più alta e la più bassa. Il campione è l’insieme degli intervistati: l’elettorato simulato che vota è un’altra cosa.`;
+  return `<div class="obs-bars-wrap"><div class="obs-bars ${seeded ? 'no-readings' : ''}">${head}${body}${others}</div></div><p class="poll-footnote">${note}</p>`;
+}
 function highlights(ctx) {
   const { report } = ctx;
   const order = [...(ctx.player ? [ctx.player] : []), ...leaders(ctx, 4).filter(force => !force.isPlayer).slice(0, 3)];
@@ -108,9 +138,9 @@ function quadro(ctx) {
   const { state, world, poll, report, index, logo, options } = ctx;
   const media = options.media ? pollPanel('MEDIA · SIMULATI', 'Come ti raccontano', options.media()) : '';
   return `${barometer(state, world, poll, { logo })}
-    ${pollPanel('MEDIA DEGLI ISTITUTI · SIMULAZIONE', 'Media dei sondaggi', averageBlock(ctx, { limit: 9 }), `<span class="hq-count">${report.latestAverage?.institutes ? `${report.latestAverage.institutes} istituti` : 'dato reale'}</span>`)}
+    ${pollPanel('INTENZIONI DI VOTO · SIMULAZIONE', 'La media degli istituti e le loro rilevazioni', instituteBars(ctx, { limit: 9 }), `<span class="hq-count">${report.latestAverage?.institutes ? `${report.latestAverage.institutes} istituti` : 'dato reale'}</span>`)}
     ${pollPanel('TREND', 'Come cambiano i consensi', averageTrend(ctx))}
-    <div class="poll-grid">${pollPanel('SONDAGGIO DELLA SETTIMANA', 'Intenzioni di voto', nationalBars(world, poll, index, logo), `<span class="hq-count">${marginText(poll)}</span>`)}${pollPanel('IN EVIDENZA', 'Dove si muovono i consensi', highlights(ctx))}</div>
+    ${pollPanel('IN EVIDENZA', 'Dove si muovono i consensi', highlights(ctx))}
     ${pollPanel('CRONACA POLITICA', 'Cosa muove i sondaggi', chronicle(world, 6))}${media}${dataTable(world, index)}`;
 }
 
@@ -325,4 +355,17 @@ export function renderObservatory(state, options = {}) {
   const average = ctx.report.latestAverage;
   const head = `<div class="obs-head"><p>${glyph('chart', 16)} <span>${average?.institutes ? `Media di ${average.institutes} istituti simulati · ${num(average.sample, 0)} interviste · settimana ${average.week}` : 'Parti dalla media reale: gli istituti simulati iniziano con la prima settimana'}</span></p>${links(state)}</div>`;
   return `<div class="polls-page observatory">${viewTabs(view)}${head}${VIEW_RENDERERS[view](ctx)}<p class="poll-footnote">I partiti sono reali; sondaggi, istituti, campioni, segmenti, travasi e candidature sono simulati (source: simulation) e non attribuiscono a persone o partiti reali decisioni mai prese. Il campione dei sondaggi è l’insieme degli intervistati; l’elettorato è la popolazione simulata che vota: sono grandezze diverse.</p></div>`;
+}
+
+// Elezioni → Sondaggi e avversari: only the race of the campaign, as `campaignObservatory()` reads it from the campaign (the candidacies, the readings of
+// the institutes, the average, the territories). Without a valid campaign there is nothing to show and nothing is invented: the picture of the country is in
+// Sondaggi e media. Pure: opening it neither runs a poll nor touches the world.
+export function renderCampaignObservatory(state, options = {}) {
+  const campaign = state.campaign;
+  const ctx = contextOf(state, options);
+  const race = campaign && campaign.status !== 'idle' ? ctx.race() : null;
+  if (!race?.rows.length) {
+    return `<div class="polls-page observatory">${card({ kicker: 'CORSA · SIMULAZIONE', title: 'Nessuna campagna in corso', body: '<p class="sx-note">I sondaggi della corsa e gli avversari diretti compaiono quando c’è una campagna: in un voto politico o europeo sono le forze che davvero si presentano, in uno locale cambiano da territorio a territorio. Il quadro generale del Paese è in Sondaggi e media.</p><div class="sx-actions"><button type="button" class="secondary-button" data-nav="sondaggi">Apri Sondaggi e media</button></div>' })}</div>`;
+  }
+  return `<div class="polls-page observatory">${candidates(ctx)}${raceTerritories(ctx, race)}<p class="poll-footnote">I partiti sono reali; sondaggi, istituti, campioni e candidature della corsa sono simulati (source: simulation) e non attribuiscono a persone o partiti reali decisioni mai prese.</p></div>`;
 }

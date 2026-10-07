@@ -1735,6 +1735,16 @@ export function mergeIntoPlayerForce(input, { forceId, label = null, date }) {
   addEffect(world, { partyId: absorber.id, delta: round2(Math.min(1.2, absorbed.baseline * 0.12)), remaining: 12, cause: 'fusione', label: 'Fusione tra partiti', unscaled: true });
   return world;
 }
+// The programme of the player's party is the agenda the polls' segments and the campaigns read for its force (the other forces draw theirs from their camp).
+export function setPlayerAgenda(input, areas = []) {
+  const world = copy(input);
+  const force = world.parties.find(item => item.id === world.playerPartyId) ?? world.parties.find(item => item.isPlayer);
+  const chosen = [...new Set(areas)].filter(id => AREA_BY_ID[id]).slice(0, 4);
+  if (!force || !chosen.length) return world;
+  force.agenda = chosen;
+  force.agendaSince = world.week;
+  return world;
+}
 // A new name: a shock on the polls now (people do not recognise it), a slow renewal later.
 export function renamePlayerForce(input, { label, abbreviation = null, shock = 0.45, renewal = 0.35, date }) {
   const world = copy(input);

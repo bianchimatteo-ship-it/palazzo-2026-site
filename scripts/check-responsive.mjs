@@ -61,8 +61,9 @@ try {
   // What is audited: every section, and every internal tab of the redesigned ones.
   const views = [
     ['panoramica'], ['profilo'], ['territori'], ['finanze'], ['governo'], ['leggi'], ['archivio'], ['impostazioni'],
-    // Sondaggi e avversari is the observatory: every one of its views, and the institutes, are audited too.
-    ...['panoramica', 'nazionali', 'quirinale', 'candidatura', 'campagna', 'avversari', 'risultati', 'storico'].flatMap(tab => [['elezioni', 'elezioni', tab], ...(tab === 'avversari' ? [['elezioni', 'osservatorio', 'quadro'], ['elezioni', 'osservatorio', 'istituti'], ['elezioni', 'osservatorio-istituto', 'b'], ['elezioni', 'osservatorio-istituto', 'confronto'], ['elezioni', 'osservatorio', 'segmenti'], ['elezioni', 'osservatorio', 'territori'], ['elezioni', 'osservatorio', 'forze'], ['elezioni', 'osservatorio', 'candidati'], ['elezioni', 'osservatorio', 'flussi']] : [])]),
+    // Sondaggi e media is the observatory: every one of its views, and the institutes, are audited too.
+    ['sondaggi'], ...[['osservatorio', 'quadro'], ['osservatorio', 'istituti'], ['osservatorio-istituto', 'b'], ['osservatorio-istituto', 'confronto'], ['osservatorio', 'segmenti'], ['osservatorio', 'territori'], ['osservatorio', 'forze'], ['osservatorio', 'candidati'], ['osservatorio', 'flussi']].map(([section, tab]) => ['sondaggi', section, tab]),
+    ...['panoramica', 'nazionali', 'quirinale', 'candidatura', 'campagna', 'avversari', 'risultati', 'storico'].map(tab => ['elezioni', 'elezioni', tab]),
     ...['percorso', 'progressione', 'incarichi', 'cronologia', 'obiettivi'].map(tab => ['carriera', 'carriera', tab]),
     ...['panoramica', 'ruoli', 'organizzazione', 'vita', 'territorio', 'storico'].map(tab => ['partito', 'partito', tab]),
     ...['settimana', 'calendario', 'attivita', 'registro'].map(tab => ['calendario', 'agenda', tab]),

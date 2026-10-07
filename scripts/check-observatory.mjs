@@ -424,14 +424,14 @@ console.log('Scala del voto, offerte di sostegno e collegio uninominale verifica
 }
 console.log('Alleanze e coalizioni verificate.');
 
-// ---------- 9. the page "Sondaggi e avversari": one centre, seven views, no invalid values ----------
+// ---------- 9. the page "Sondaggi e media" (#sondaggi): one observatory, seven views, no invalid values; the hub shows only the race ----------
 const ui = await import(`../src/ui/observatory-view.js${v}`);
 const hub = await import(`../src/ui/elections-hub.js${v}`);
 const cleanHtml = (html, name) => { const text = html.replace(/data-[a-z-]+="[^"]*"/g, ''); const match = text.match(/undefined|NaN|\[object Object\]|Infinity/); if (match) console.error(`${name}: valore non valido …${text.slice(Math.max(0, match.index - 120), match.index + 30)}…`); return !match; };
 const findForce = id => forcesOfGame.find(item => item.id === id) ?? db.parties.find(item => item.id === id) ?? null;
 const kindOf = id => links.forceKind(findForce(id), findForce);
 const pageOf = (stateOf, view, extra = {}) => ui.renderObservatory(stateOf, { view, logoFor: () => null, filters: {}, secretary: true, kindOf, window: () => ({ open: true }), ...extra });
-const MARKERS = { quadro: ['Media dei sondaggi', 'Intenzioni di voto', 'Come cambiano i consensi', 'forbice'], istituti: ['Come lavora ciascun istituto', 'Istituto A', 'Istituto D', 'Scarto'], segmenti: ['Chi sono gli elettori', 'Giovani', 'Pensionati', 'Che cosa conta ora'], territori: ['regione per regione', 'region-grid', 'Dove è più forte'], forze: ['Le forze in campo', 'Movimento politico', 'Coalizione / lista elettorale', 'Componenti (partiti)', 'Chi entra e chi esce'], candidati: ['Nessuna campagna in corso'], flussi: ['Indecisi', 'Seconda scelta', 'Fedeltà'] };
+const MARKERS = { quadro: ['La media degli istituti e le loro rilevazioni', 'obs-bars', 'Come cambiano i consensi', 'forbice', 'In evidenza'.toUpperCase()], istituti: ['Come lavora ciascun istituto', 'Istituto A', 'Istituto D', 'Scarto'], segmenti: ['Chi sono gli elettori', 'Giovani', 'Pensionati', 'Che cosa conta ora'], territori: ['regione per regione', 'region-grid', 'Dove è più forte'], forze: ['Le forze in campo', 'Movimento politico', 'Coalizione / lista elettorale', 'Componenti (partiti)', 'Chi entra e chi esce'], candidati: ['Nessuna campagna in corso'], flussi: ['Indecisi', 'Seconda scelta', 'Fedeltà'] };
 const baseState = store.getState();
 for (const [view] of ui.OBSERVATORY_VIEWS) {
   const html = pageOf(baseState, view);
@@ -443,6 +443,36 @@ for (const profile of rules.POLL_INSTITUTES) {
   const html = pageOf(baseState, 'istituti', { institute: profile.id });
   assert.ok(cleanHtml(html, profile.id) && html.includes(profile.name.replace('Rilevazione simulata ', 'Istituto ')) && html.includes('errore simulato') && html.includes('Variazione') && html.includes('Margine') && html.includes(profile.mode), `Istituto ${profile.id}: letture, variazione, scarto dalla media, margine, metodo.`);
 }
+// The quadro: after the barometer ONE block, the average of the institutes A–D as coloured bars with the reading of each institute beside it; the old
+// "media degli istituti" table and "sondaggio della settimana" bars are gone, and nothing of the average is repeated elsewhere in the quadro.
+{
+  const quadroHtml = pageOf(baseState, 'quadro');
+  const report = (await import(`../src/core/world-engine.js${v}`)).observatoryReport(baseState.world, null);
+  assert.equal((quadroHtml.match(/class="obs-bars[ "]/g) ?? []).length, 1, 'Nel Quadro un solo blocco di barre.');
+  assert.ok(quadroHtml.indexOf('BAROMETRO POLITICO') >= 0 && quadroHtml.indexOf('BAROMETRO POLITICO') < quadroHtml.indexOf('class="obs-bars '), 'Il blocco viene dopo il barometro politico.');
+  for (const old of ['MEDIA DEGLI ISTITUTI', 'SONDAGGIO DELLA SETTIMANA', 'obs-average', 'poll-bar-row']) assert.ok(!quadroHtml.includes(old), `Nel Quadro non c’è più «${old}».`);
+  assert.ok(pageOf(baseState, 'istituti').includes('obs-average'), 'La tabella di confronto resta nella vista Istituti.');
+  const average = report.latestAverage;
+  const top = [...average.rows].filter(row => report.forces.some(force => force.id === row.partyId)).sort((a, b) => b.share - a.share).slice(0, 5);
+  const fmt = (value, digits) => `${Number(value).toLocaleString('it-IT', { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
+  for (const row of top) {
+    const force = report.forces.find(item => item.id === row.partyId);
+    assert.ok(quadroHtml.includes(`background-color:${force.color}`), `${force.label}: la barra ha il colore della forza.`);
+    assert.ok(quadroHtml.includes(fmt(row.share, row.share < 1 ? 2 : 1)), `${force.label}: la barra riporta la media degli istituti.`);
+    if (average.institutes) for (const institute of report.institutes) { const reading = institute.latest?.rows.find(item => item.partyId === row.partyId)?.share; if (Number.isFinite(reading)) assert.ok(quadroHtml.includes(fmt(reading, reading < 1 ? 2 : 1)), `${force.label}: la lettura dell’istituto ${institute.id.toUpperCase()}.`); }
+  }
+  if (average.institutes) for (const letter of ['A', 'B', 'C', 'D']) assert.ok(quadroHtml.includes(`<b title="Istituto ${letter}">${letter}</b>`), `Intestazione dell’istituto ${letter}.`);
+}
+// Opening the pages runs no poll and touches nothing of the world, the campaign or the random sequence.
+for (const stateOf of [baseState, eu.getState(), national.getState()]) {
+  const frozen = JSON.stringify(stateOf);
+  const rng = [stateOf.world?.rngState, stateOf.game?.rngState, stateOf.campaign?.rngState];
+  for (const [view] of ui.OBSERVATORY_VIEWS) pageOf(stateOf, view);
+  ui.renderCampaignObservatory(stateOf, { logoFor: () => null, filters: {} });
+  hub.renderElectionsHub(stateOf, { parties: forcesOfGame, logoFor: () => null, tab: 'avversari', polls: { filters: {} } });
+  assert.equal(JSON.stringify(stateOf), frozen, 'Aprire le pagine non cambia lo stato (mondo, campagna, giocatore).');
+  assert.deepEqual([stateOf.world?.rngState, stateOf.game?.rngState, stateOf.campaign?.rngState], rng, 'Né il generatore casuale.');
+}
 // The page of a race: the finished national campaign (the vote is over, its polls stay) and the running European one.
 const nationalPage = pageOf(national.getState(), 'candidati');
 assert.ok(cleanHtml(nationalPage, 'politiche') && nationalPage.includes('I sondaggi della corsa') && nationalPage.includes('Chi è in corsa') && nationalPage.includes('Forza reale') && nationalPage.includes('La tua candidatura') && /Corsa conclusa/i.test(nationalPage), 'Dopo il voto l’osservatorio mostra l’ultima corsa e i suoi sondaggi.');
@@ -451,13 +481,29 @@ assert.ok(cleanHtml(europeanPage, 'europee') && /Campagna in corso/i.test(europe
 assert.ok(pageOf(eu.getState(), 'territori').includes('Territori della corsa') || pageOf(eu.getState(), 'territori').includes('TERRITORI DELLA CORSA'), 'I territori della corsa stanno accanto a quelli del Paese.');
 // The window of the alliances is said in the forces view.
 assert.ok(pageOf(baseState, 'forze', { window: () => ({ open: false, reason: 'Le liste per le politiche sono depositate: intese ferme.' }) }).includes('Intese ferme fino al voto'), 'Quando le intese sono ferme la pagina lo dice.');
-// The hub: Sondaggi e avversari is one of its tabs and holds the observatory; the campaign page only points to it.
-const hubHtml = hub.renderElectionsHub(baseState, { parties: forcesOfGame, logoFor: () => null, tab: 'avversari', polls: { view: 'segmenti', filters: {} } });
-assert.ok(cleanHtml(hubHtml, 'hub') && hubHtml.includes('aria-selected="true">Sondaggi e avversari') && hubHtml.includes('class="polls-page observatory"') && hubHtml.includes('Chi sono gli elettori'), 'Il centro elettorale ospita l’osservatorio nella scheda Sondaggi e avversari.');
+// The hub: Elezioni → Sondaggi e avversari holds ONLY the data of the race of the campaign (campaignObservatory), never the generic picture of the country;
+// without a valid campaign it shows no numbers at all. The campaign page only points to it.
+const hubOf = (stateOf) => hub.renderElectionsHub(stateOf, { parties: forcesOfGame, logoFor: () => null, tab: 'avversari', polls: { view: 'segmenti', filters: {} } });
+const NATIONAL_ONLY = ['obs-bars ', 'Chi sono gli elettori', 'La media dei sondaggi', 'FORZE NAZIONALI', 'data-section-tab="osservatorio"', 'BAROMETRO POLITICO', 'Le forze in campo'];
+const idleHub = hubOf(baseState);
+assert.ok(cleanHtml(idleHub, 'hub') && idleHub.includes('aria-selected="true">Sondaggi e avversari') && idleHub.includes('Nessuna campagna in corso') && idleHub.includes('data-nav="sondaggi"'), 'Senza campagna la scheda lo dice e rimanda a Sondaggi e media.');
+for (const marker of [...NATIONAL_ONLY, 'obs-average', 'Chi è in corsa']) assert.ok(!idleHub.includes(marker), `Senza campagna nessun dato nella scheda: niente «${marker}».`);
+assert.ok(!/\d+,\d%/.test(idleHub.slice(idleHub.indexOf('class="polls-page'))), 'Senza campagna nessuna percentuale inventata.');
+const liveHub = hubOf(eu.getState());
+assert.ok(cleanHtml(liveHub, 'hub-europee') && liveHub.includes('class="polls-page observatory"') && liveHub.includes('I sondaggi della corsa') && liveHub.includes('Chi è in corsa') && /Campagna in corso/i.test(liveHub), 'Con una campagna valida la scheda mostra la sua corsa.');
+for (const marker of NATIONAL_ONLY) assert.ok(!liveHub.includes(marker), `Con la campagna solo la corsa: niente «${marker}».`);
+{
+  const race = campaigns.campaignObservatory(eu.getState().campaign, {});
+  const text = value => `${Number(value).toLocaleString('it-IT', { minimumFractionDigits: value < 1 ? 2 : 1, maximumFractionDigits: value < 1 ? 2 : 1 })}%`;
+  for (const row of race.rows.slice(0, 4)) assert.ok(liveHub.includes(text(row.poll ?? row.projection)), `La scheda riporta la media della corsa di ${row.label}.`);
+  assert.equal((liveHub.match(/<tr[ >]/g) ?? []).length > race.rows.length, true, 'Tutte le candidature della corsa sono in tabella.');
+}
+const finishedHub = hubOf(national.getState());
+assert.ok(cleanHtml(finishedHub, 'hub-politiche') && /Corsa conclusa/i.test(finishedHub) && finishedHub.includes('Chi è in corsa'), 'Dopo il voto la scheda mostra l’ultima corsa.');
 const campaignHtml = hub.renderElectionsHub(eu.getState(), { parties: forcesOfGame, logoFor: () => null, tab: 'campagna' });
 assert.ok(!campaignHtml.includes('non collegato') && campaignHtml.includes('data-section-tab-value="avversari"'), 'La campagna non ha sondaggi propri né riferimenti non validi: rimanda all’analisi completa.');
 assert.ok(!campaignHtml.includes('class="polls-page observatory"'), 'E nessun sondaggio dentro la campagna.');
-console.log('Pagina Sondaggi e avversari verificata.');
+console.log('Pagina Sondaggi e media (#sondaggi), blocco unico del Quadro e scheda Sondaggi e avversari solo con la corsa della campagna verificati.');
 
 const after = await fingerprint();
 assert.equal(after, before, 'I dati reali non sono stati modificati.');
