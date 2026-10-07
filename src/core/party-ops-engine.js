@@ -2,9 +2,9 @@
 // with it when it leaves — sections, committees, members, volunteers, money — what a merger adds, what a new name costs.
 // The functions work on a copy of the game owned by the caller and return a description of what the store still has to
 // apply to the political world, the Parliament and the records of the user's party. Simulated: no real party changes.
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261006-1';
-import { RENAME_STYLES } from '../data/simulation/party-life-rules.js?v=20261006-1';
-import { normalizeLife, strengthShare } from './party-life-engine.js?v=20261006-1';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261007-1';
+import { RENAME_STYLES } from '../data/simulation/party-life-rules.js?v=20261007-1';
+import { normalizeLife, strengthShare } from './party-life-engine.js?v=20261007-1';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
