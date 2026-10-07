@@ -186,7 +186,9 @@ function checkChambers(state, known, report) {
       sum += group.simulatedSeats ?? 0;
     });
     const [low, high] = simulated ? [SEATS[chamber], SEATS[chamber] + (chamber === 'senato' ? 10 : 0)] : REAL_SEAT_RANGE[chamber];
-    if (sum < low || sum > high) report('seggi', `parliament.chambers.${chamber}`, `${chamber === 'camera' ? 'Camera' : 'Senato'}: ${sum} seggi assegnati (attesi ${low === high ? low : `${low}–${high}`})`);
+    // The seats left empty (a member resigned, the next of the list has not taken it yet) are not assigned, and are counted as what they are.
+    const vacant = records(parliament.chambers[chamber]?.roster?.vacant).length;
+    if (sum + vacant < low || sum + vacant > high) report('seggi', `parliament.chambers.${chamber}`, `${chamber === 'camera' ? 'Camera' : 'Senato'}: ${sum} seggi assegnati${vacant ? ` e ${vacant} vacanti` : ''} (attesi ${low === high ? low : `${low}–${high}`})`);
   }
 }
 
@@ -410,6 +412,14 @@ function checkRosters(state, report) {
       }
     }
     for (const [group, count] of seats) if ((counts.get(group) ?? 0) !== count) report('seggi', at, `Gruppo ${group}: ${counts.get(group) ?? 0} seggi con una persona su ${count}.`);
+    // Whoever sits is a member in office; a seat left empty belongs to a group that is there, waits for its day and its former member is not seated anywhere.
+    for (const block of roster.blocks) for (const id of block.people ?? []) { const status = persons.get(id)?.member?.status; if (status && status !== 'in-carica') report('coerenza', at, `${id} siede ma risulta ${status}.`); }
+    for (const vacancy of records(roster.vacant)) {
+      if (!seats.has(vacancy.groupId)) report('riferimento', at, `Seggio vacante di un gruppo che non c'è: ${vacancy.groupId}`);
+      if (!vacancy.fillAt) report('struttura', at, `Il seggio vacante ${vacancy.id} non ha una data per il subentro.`);
+      if (seated.has(vacancy.formerPersonId) && seated.get(vacancy.formerPersonId) !== at) report('duplicato', at, `${vacancy.formerPersonId} ha lasciato il seggio ma siede altrove.`);
+      if (roster.blocks.some(block => (block.people ?? []).includes(vacancy.formerPersonId))) report('duplicato', at, `${vacancy.formerPersonId} ha lasciato il seggio ma siede ancora.`);
+    }
     const mine = roster.blocks.filter(block => (block.people ?? []).includes(playerId));
     if (roster.player && (roster.player !== playerId || mine.length !== 1 || mine[0].group !== player)) report('coerenza', at, 'Il seggio del giocatore non è nel suo gruppo.');
     if (!roster.player && mine.length) report('coerenza', at, 'Il giocatore siede in un\'assemblea in cui non è.');

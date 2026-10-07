@@ -98,7 +98,7 @@ function totalSeats(parliament, chamber) {
   return (parliament?.chambers?.[chamber]?.groups ?? []).reduce((sum, group) => sum + (group.simulatedSeats ?? 0), 0);
 }
 function majority(parliament, chamber) { return Math.floor(totalSeats(parliament, chamber) / 2) + 1; }
-function record(parliament, date, type, text, details = {}) {
+export function record(parliament, date, type, text, details = {}) {
   const entry = { id: newId('attivita-parlamentare'), date, type, text, details, source: DATA_SOURCES.SIMULATION };
   return { ...parliament, history: [...(parliament.history ?? []), entry] };
 }
@@ -110,7 +110,7 @@ function setRelation(parliament, groupId, delta) {
 // (seatPlayer): entering does not add one, and leaving hands it to the next elected of the same group. The real XIX
 // legislature counts the real members, to whom the player's seat is added.
 const ownSeatIncluded = parliament => parliament?.legislature?.reference === 'simulation';
-function changeSeats(parliament, chamber, groupId, delta) {
+export function changeSeats(parliament, chamber, groupId, delta) {
   const current = parliament.chambers?.[chamber];
   if (!current || !groupId) return parliament;
   const groups = current.groups.map(group => group.groupId === groupId ? { ...group, simulatedSeats: Math.max(0, group.simulatedSeats + delta) } : group);
@@ -912,6 +912,17 @@ export function leaveMajority(parliament, groupId, currentDate, reason = 'esce d
   const partners = Object.fromEntries(Object.entries(government.partners ?? {}).filter(([id]) => id !== groupId));
   const next = { ...parliament, government: { ...government, coalitionGroupIds, supportingGroupIds, ministers, partners, leftGroupIds: [...new Set([...(government.leftGroupIds ?? []), groupId])], status: 'crisis', crisisSeverity: 14, crisisOpenedAt: currentDate, stability: Math.min(government.stability ?? 50, 22) } };
   return record(next, currentDate, 'cambio-maggioranza', `${getGroup(parliament, groupId)?.officialName ?? 'Un gruppo'} ${reason}: il governo deve verificare la fiducia.`, { governmentId: government.id, groupId, source: DATA_SOURCES.SIMULATION });
+}
+
+// The numbers move under a Government in office (a member changes group, a seat is left empty): without a majority in a Chamber it goes to the verifica, as for any crisis of the majority.
+export function checkMajority(parliament, currentDate, cause = 'Cambiano i numeri in Parlamento') {
+  const government = parliament?.government;
+  if (!government || government.status !== 'active') return parliament;
+  const backing = new Set([...government.coalitionGroupIds, ...government.supportingGroupIds]);
+  const short = ['camera', 'senato'].filter(chamber => parliament.chambers[chamber].groups.filter(group => backing.has(group.groupId)).reduce((sum, group) => sum + group.simulatedSeats, 0) < majority(parliament, chamber));
+  if (!short.length) return parliament;
+  const next = { ...parliament, government: { ...government, status: 'crisis', crisisSeverity: 12, crisisOpenedAt: currentDate, stability: Math.min(government.stability ?? 50, 20) } };
+  return record(next, currentDate, 'crisi-spontanea', `${cause}: la maggioranza non ha più i numeri ${short.length > 1 ? 'nelle due Camere' : short[0] === 'camera' ? 'alla Camera' : 'al Senato'} e il governo deve verificare la fiducia.`, { governmentId: government.id, severity: 12, chambers: short, source: DATA_SOURCES.SIMULATION });
 }
 
 // Weekly life of the executive: margins, allies' moods and demands, decrees that expire.

@@ -46,6 +46,10 @@ export const LEGISLATURE_RULES = Object.freeze({
   thresholds: { list: 3, coalition: 10, coalitionFloor: 1, regional: 20 },
   // Parliamentary groups (simplified): Camera 20 members, or 10 for a party whose list passed the threshold; Senato 6.
   groups: { camera: 20, cameraWaiver: 10, senato: 6 },
+  // The members as persons (seat-roster): each week, in each Chamber, someone may change collocation (to another group with its party, to the Misto keeping the party, or out of the party but not the
+  // group), resign or lose the seat (the next of the list takes it after a few weeks), or a defector may go back where he was elected. A Government in crisis makes defections more likely
+  // (shaky); nobody moves again before he has sat for a while; a member of the territorial lists of the Misto may pass to another of its lists (component). A group that falls below the minimum above sits in the Misto as a political component.
+  members: { weekly: { defection: 0.08, loss: 0.03, return: 0.05 }, kinds: { group: 0.5, misto: 0.28, party: 0.14, component: 0.08 }, losses: { dimissioni: 0.5, incompatibilita: 0.25, decadenza: 0.15, decesso: 0.1 }, shaky: 2, replaceAfterDays: 14, minTenureWeeks: 10, loyalty: { min: 40, max: 90 } },
   // A majority after the vote looks for a margin of this many seats in both Chambers, when close forces allow it.
   safeMargin: 8,
   // Multi-member districts of 2022 (Camera 49, Senato 26) and the candidacies of a party leader (one district, five lists).

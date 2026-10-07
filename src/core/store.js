@@ -13,7 +13,7 @@ import { hasStart, planLines, startMods, startPlan, startStatDeltas } from './st
 import { objectiveMods } from './objective-engine.js?v=20261007-1';
 import { END_KINDS, addToHall, careerFacts, hallEntry, legacyBoon, legacyScore, legacyTags, retirementProblem, sortedHall } from './legacy-engine.js?v=20261007-1';
 import { committeeSupport, committeesAfterVote, createCommittees } from './committee-engine.js?v=20261007-1';
-import { setConfidenceVote, createReferenceGovernment, neverHadGovernment, offerGroupSupport, requestGovernmentPost, withdrawGroupSupport, partnerSatisfaction, acceptLawDemand, activeMinisters, amendLawPolicy, askConfidenceOnLaw, groupProfile, issueDecree, majoritySummit, reshuffleMinister, setGovernmentProgram, settlePartnerDemand, withdrawLaw, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20261007-1';
+import { changeSeats, checkMajority, record as recordParliament, setConfidenceVote, createReferenceGovernment, neverHadGovernment, offerGroupSupport, requestGovernmentPost, withdrawGroupSupport, partnerSatisfaction, acceptLawDemand, activeMinisters, amendLawPolicy, askConfidenceOnLaw, groupProfile, issueDecree, majoritySummit, reshuffleMinister, setGovernmentProgram, settlePartnerDemand, withdrawLaw, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20261007-1';
 import { situation, addProvincialCalendar, declareAmbition, scheduleEarlyLocalElection, alignLocalCalendar, localCalendarOf, committeeAction, setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, lifeBreakPact, lifeCadre, lifeCongress, lifeFound, lifeMerge, lifeOverview, lifeRebuild, lifeRename, lifeRespond, partyOpsAvailability, saveForElection, saveReserve, takeReserve, scheduleEarlyElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20261007-1';
 import { ADVANCE_RULES, AMENDMENT_CAPITAL_COST, COMMUNICATION_STYLES, GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20261007-1';
 import { advanceLegislativeWeek, amendOthersLaw, amendmentOdds, linkGroupsToParties, setPlayerVote, speakOnLaw } from './lawmaking-engine.js?v=20261007-1';
@@ -43,7 +43,7 @@ import { NEWS_TEMPLATES, composeHeadline, weeklyNews } from './news-engine.js?v=
 import { macroAreaOf, MACRO_AREAS } from '../data/simulation/policy-rules.js?v=20261007-1';
 import { RACE_ROLES, RACE_RULES } from '../data/simulation/race-rules.js?v=20261007-1';
 import { buildSlate, candidateOptions, chooseCandidate, mergeSlate, profileStats, raceDue, raceOutcome, rootingOf, runRace } from './race-engine.js?v=20261007-1';
-import { isSeatPerson, rosterInSync, rosterPeople, rosterSeats, syncRoster } from './seat-roster.js?v=20261007-1';
+import { MEMBER_HISTORY_LIMIT, closeVacancy, drawMemberChange, fillSeat, inOffice, isSeatPerson, leaveSeat, moveSeat, newMember, openVacancy, partsWithGuests, rosterInSync, rosterPeople, rosterSeats, seatOf, syncRoster, vacanciesOf, withMemberEntry } from './seat-roster.js?v=20261007-1';
 
 const STATE_VERSION = 9;
 const POSITIONS_SET = new Set(['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra']);
@@ -561,6 +561,7 @@ function worldSignalsFrom(entries, parliament) {
     // The life of a Government led by others: the news reports it.
     if (['rimpasto', 'nuovo-ministro', 'sostegno-esterno', 'verifica-maggioranza'].includes(entry.type)) return [{ type: 'chronicle', kind: 'governo', icon: entry.type === 'sostegno-esterno' ? 'link' : 'dome', title: { rimpasto: 'Rimpasto di governo', 'nuovo-ministro': 'Cambio nel governo', 'sostegno-esterno': 'Nuovo sostegno al governo', 'verifica-maggioranza': 'Verifica di maggioranza' }[entry.type], body: entry.text, tone: 'neutral' }];
     if (['crisi-governo', 'crisi-spontanea'].includes(entry.type) || (entry.type === 'cambio-maggioranza' && government?.status === 'crisis')) return [{ type: 'crisis', inMajority }];
+    if (MEMBER_NEWS[entry.type]) return [{ type: 'chronicle', kind: 'parlamento', icon: 'dome', title: MEMBER_NEWS[entry.type], body: entry.text, tone: 'neutral' }];
     if (entry.type === 'nomina-ministro-giocatore') return [{ type: 'minister', portfolio: government?.ministers.find(item => item.id === entry.details?.appointmentId)?.portfolio ?? 'ministero' }];
     return [];
   });
@@ -1295,6 +1296,7 @@ function settleWeeks(s) {
     const weekEnd = advanceDays(next.game.week.startedAt, 7);
     // Parliament reads the career's difficulty: discipline of the majority and patience of the allies.
     const difficulty = difficultyId(next.career.difficulty);
+    next = tickMembers(next, weekEnd);
     const result = advanceWeek({ game: next.game, stats: statsOf(next), parliament: next.parliament ? { ...next.parliament, difficulty } : next.parliament }, { ...gameEnv(next), currentDate: weekEnd }, advanceGovernmentWeek);
     next = applyGameResult(next, result.ctx, next.ui.toast, result.specials);
     if (result.report) next = tickLegislature(next, weekEnd);
@@ -1437,6 +1439,8 @@ function withSeatPersons(dataset, out) {
 function pruneSeatPersons(s) {
   if (!s.dataset?.politicians?.some(isSeatPerson)) return s;
   const keep = new Set([s.career?.playerId, ...liveRosters(s).flatMap(rosterPeople), ...racesOf(s).map(race => race.candidacy?.personId), ...(s.dataset.offices ?? []).map(office => office.politicianId)]);
+  // The members who resigned or lost the seat keep their identity and history (the latest ones): they may be named again, never seated twice.
+  for (const gone of s.dataset.politicians.filter(item => isSeatPerson(item) && item.member && !inOffice(item.member) && !keep.has(item.id)).sort((a, b) => String(b.member.until ?? '').localeCompare(String(a.member.until ?? ''))).slice(0, EX_MEMBERS_KEPT)) keep.add(gone.id);
   const politicians = s.dataset.politicians.filter(item => !isSeatPerson(item) || keep.has(item.id));
   return politicians.length === s.dataset.politicians.length ? s : { ...s, dataset: { ...s.dataset, politicians } };
 }
@@ -1447,7 +1451,8 @@ function rosterPool(s, closing = []) {
   return [...back, ...known];
 }
 const rosterContext = (s, assembly) => ({ busy: new Set(liveRosters(s).filter(roster => roster.assembly !== assembly).flatMap(rosterPeople)), people: new Map(s.dataset.politicians.map(item => [item.id, item])) });
-const chamberGroupSpec = group => ({ id: group.groupId, label: group.officialName, partyId: group.partyId ?? null, seats: group.simulatedSeats ?? 0, parts: (group.components ?? []).filter(item => item.listId).map(item => ({ partyId: null, listId: item.listId, label: item.label, seats: item.seats })) });
+// (the members who sit in a group under another party or list than its own are part of its spec: a new sync keeps them where they are)
+const chamberGroupSpec = (group, roster) => { const spec = { id: group.groupId, label: group.officialName, partyId: group.partyId ?? null, seats: group.simulatedSeats ?? 0, parts: (group.components ?? []).filter(item => item.listId).map(item => ({ partyId: null, listId: item.listId, label: item.label, seats: item.seats })) }; return { ...spec, parts: partsWithGuests(roster, spec) }; };
 // The Chambers born from a vote of the game: their seats follow the groups (a new legislature, a split, the player's entering or leaving).
 function withChamberRosters(before, after) {
   const legislature = after.parliament?.legislature;
@@ -1455,7 +1460,7 @@ function withChamberRosters(before, after) {
   let next = after;
   for (const chamber of ['camera', 'senato']) {
     const current = next.parliament.chambers[chamber];
-    const groups = (current?.groups ?? []).map(chamberGroupSpec);
+    const groups = (current?.groups ?? []).map(group => chamberGroupSpec(group, current.roster));
     if (!groups.length) continue;
     const assembly = current.id ?? `legislatura-${legislature.number ?? 0}-${chamber}`;
     const mine = next.parliament.player?.chamber === chamber && next.parliament.player.groupId ? { personId: next.parliament.player.politicianId ?? next.career.playerId, groupId: next.parliament.player.groupId, partyId: next.career.partyId ?? null } : null;
@@ -1467,7 +1472,7 @@ function withChamberRosters(before, after) {
     });
     next = { ...next, parliament: { ...next.parliament, chambers: { ...next.parliament.chambers, [chamber]: { ...current, roster: out.roster } } }, dataset: withSeatPersons(next.dataset, out) };
   }
-  return next === after ? after : pruneSeatPersons(next);
+  return next === after ? after : stampMembers(pruneSeatPersons(next));
 }
 // The Italian delegation of a European group: the seats the parties of the game won at the last European vote, by the group their collocazione gives them.
 function europeanParts(s, inst, groupId) {
@@ -1496,6 +1501,158 @@ function tickRosters(s) {
   let next = s;
   for (const inst of localOf(s).institutions.filter(item => item.status === 'active' && !item.roster)) next = seatInstitution(next, inst.id);
   return withChamberRosters(next, next);
+}
+// ---------- the members of the simulated Chambers: each one a person with a seat that can change (seat-roster) ----------
+// Group, party and list of a seat are separate things: a member changes any of them on his own (to another group with its party, to the Misto keeping the party, out of the party but not the group),
+// resigns or loses the seat (the next of the list takes it a few weeks later) or goes back where he was elected. Every change moves the person in the roster and the seat in the counts of the groups
+// together, so the majority, the opposition and the Government read it as they read any seat (a majority that falls goes to the verifica); the person keeps his history, the player what concerns him.
+const MEMBER_RULES = LEGISLATURE_RULES.members;
+const EX_MEMBERS_KEPT = 40;
+const simulatedChambers = s => s.parliament?.legislature?.reference === DATA_SOURCES.SIMULATION && chambersAtWork(s.parliament) && Boolean(s.career?.playerId);
+const memberGroupSpec = group => ({ id: group.groupId, partyId: group.partyId ?? null, seats: group.simulatedSeats ?? 0, axis: group.axis ?? 0, component: Boolean(group.component), independent: Boolean(group.independent), lists: (group.components ?? []).some(item => item.listId), listIds: (group.components ?? []).filter(item => item.listId).map(item => item.listId) });
+// Every person on a seat of the Chambers is a member (a game saved before this, or a new vote, gives the seats persons that get their state here); who comes back in a new assembly starts a new mandate.
+function stampMembers(s) {
+  if (!simulatedChambers(s)) return s;
+  const people = new Map(s.dataset.politicians.map(item => [item.id, item]));
+  const patches = new Map();
+  for (const chamber of ['camera', 'senato']) {
+    const roster = s.parliament.chambers[chamber].roster;
+    for (const seat of rosterSeats(roster)) {
+      const person = people.get(seat.personId);
+      if (!person || seat.origin === 'player' || person.source !== DATA_SOURCES.SIMULATION || (inOffice(person.member) && person.member.since >= (roster.date ?? ''))) continue;
+      const fresh = newMember({ personId: person.id, date: roster.date ?? s.clock.currentDate, relation: s.parliament.relations?.[seat.groupId]?.value ?? 50, loyalty: MEMBER_RULES.loyalty });
+      // (who sat in an earlier assembly and is back keeps his story, and has a new mandate)
+      patches.set(person.id, { member: person.member?.history?.length ? { ...fresh, history: [...person.member.history, { date: fresh.since, type: 'rieletto', text: `${roster.label}: rieletto` }].slice(-MEMBER_HISTORY_LIMIT) } : fresh });
+    }
+  }
+  return patches.size ? { ...s, dataset: { ...s.dataset, politicians: s.dataset.politicians.map(item => patches.has(item.id) ? { ...item, ...patches.get(item.id) } : item) } } : s;
+}
+// The Misto of the independents of a Chamber (made when the first member goes there).
+function independentsGroup(parliament, chamber, date) {
+  const groupId = `leg${parliament.legislature.number}-${chamber}-misto-indipendenti`;
+  const found = parliament.chambers[chamber].groups.find(item => item.groupId === groupId);
+  if (found) return { parliament, group: found };
+  const group = { groupId, officialName: 'Misto – indipendenti', chamber, simulatedSeats: 0, partyId: null, independent: true, component: true, position: null, axis: 0, color: null, legislature: parliament.legislature.number, simulated: true, reference: { memberCount: 0, leaderPoliticianId: null, countAsOf: date, source: DATA_SOURCES.SIMULATION, verified: false, sourceUrl: null, sourceName: 'Composizione simulata dopo il voto' }, source: DATA_SOURCES.SIMULATION };
+  return { group, parliament: { ...parliament, chambers: { ...parliament.chambers, [chamber]: { ...parliament.chambers[chamber], groups: [...parliament.chambers[chamber].groups, group] } }, relations: { ...parliament.relations, [groupId]: parliament.relations?.[groupId] ?? { value: 55, source: DATA_SOURCES.SIMULATION } } } };
+}
+// A party group with fewer members than the minimum for a group sits in the Misto as a political component (its seats, persons and place in the majority stay as they are).
+function foldSmallGroups(parliament, chamber, date) {
+  const minimum = chamber === 'camera' ? LEGISLATURE_RULES.groups.cameraWaiver : LEGISLATURE_RULES.groups.senato;
+  let next = parliament;
+  for (const group of parliament.chambers[chamber].groups) {
+    if (group.component || group.independent || !group.partyId || group.simulatedSeats >= minimum) continue;
+    const groups = next.chambers[chamber].groups.map(item => item.groupId === group.groupId ? { ...item, component: true, officialName: `Misto – ${group.officialName}` } : item);
+    next = { ...next, chambers: { ...next.chambers, [chamber]: { ...next.chambers[chamber], groups } } };
+    next = recordParliament(next, date, 'membro-gruppo-misto', `${group.officialName} scende a ${group.simulatedSeats} ${group.simulatedSeats === 1 ? 'componente' : 'componenti'}, sotto il minimo di ${minimum}: passa al Misto come componente politica.`, { auto: true, groupId: group.groupId, chamber, seats: group.simulatedSeats, minimum, source: DATA_SOURCES.SIMULATION });
+  }
+  return next;
+}
+// The seats of the named components of a group (the territorial lists of the Misto) follow the members who change list or leave the group.
+const listLabel = (group, listId) => group.components?.find(item => item.listId === listId)?.label ?? 'un’altra lista';
+function withComponentSeats(parliament, chamber, from, to) {
+  const groups = parliament.chambers[chamber].groups.map(group => {
+    const delta = group.groupId === from.groupId && from.listId ? [from.listId, -1] : null;
+    const gain = group.groupId === to.groupId && to.listId ? [to.listId, 1] : null;
+    if ((!delta && !gain) || !group.components) return group;
+    return { ...group, components: group.components.map(item => item.listId && delta && item.listId === delta[0] ? { ...item, seats: Math.max(0, (item.seats ?? 0) + delta[1]) } : item.listId && gain && item.listId === gain[0] ? { ...item, seats: (item.seats ?? 0) + gain[1] } : item) };
+  });
+  return { ...parliament, chambers: { ...parliament.chambers, [chamber]: { ...parliament.chambers[chamber], groups } } };
+}
+const MEMBER_LOSS_TEXT = { dimissioni: name => `${name} si dimette: il seggio resta vacante in attesa del subentro.`, incompatibilita: name => `${name} lascia il seggio per un incarico incompatibile: si attende il subentro.`, decadenza: name => `${name} decade dal seggio: si attende il subentro.`, decesso: name => `${name} muore: il seggio resta vacante in attesa del subentro.` };
+const MEMBER_LOSS_STATUS = { dimissioni: 'dimesso', incompatibilita: 'decaduto', decadenza: 'decaduto', decesso: 'deceduto' };
+const MEMBER_NEWS = { 'membro-componente': 'Un parlamentare cambia componente', 'membro-gruppo': 'Cambio di gruppo in Parlamento', 'membro-misto': 'Un parlamentare passa al Misto', 'membro-partito': 'Un parlamentare lascia il suo partito', 'membro-ritorno': 'Un parlamentare torna nel suo gruppo', 'membro-perdita': 'Seggio lasciato in Parlamento', 'membro-subentro': 'Subentro in Parlamento', 'membro-gruppo-misto': 'Un gruppo passa al Misto' };
+// One change of one member of a Chamber (a draw of the week, or a command): the person, the roster, the counts of the groups, the history, the memory of the player, the Government.
+function applyMemberChange(s, chamber, change, date) {
+  let parliament = s.parliament;
+  const current = parliament.chambers[chamber];
+  const person = s.dataset.politicians.find(item => item.id === change.personId);
+  const from = current?.roster ? seatOf(current.roster, change.personId) : null;
+  if (!inOffice(person?.member) || person.source !== DATA_SOURCES.SIMULATION || person.id === s.career.playerId || !from) return s;
+  if (change.type === 'perdita' ? false : !change.to || !['defezione', 'ritorno'].includes(change.type)) return s;
+  const name = person.displayName ?? 'Un parlamentare';
+  const mine = parliament.player?.chamber === chamber ? parliament.player.groupId : null;
+  const fromGroup = current.groups.find(group => group.groupId === from.groupId);
+  let roster = current.roster, patch, text, type, toGroupId = null;
+  if (change.type === 'perdita') {
+    const left = leaveSeat(roster, person.id);
+    roster = openVacancy(left.roster, { id: `vacante-${person.id}-${date}`, ...from, label: fromGroup?.officialName ?? null, since: date, fillAt: advanceDays(date, MEMBER_RULES.replaceAfterDays), reason: change.reason, formerPersonId: person.id });
+    parliament = changeSeats(parliament, chamber, from.groupId, -1);
+    if (from.listId) parliament = withComponentSeats(parliament, chamber, from, {});
+    type = 'membro-perdita'; text = (MEMBER_LOSS_TEXT[change.reason] ?? MEMBER_LOSS_TEXT.dimissioni)(name);
+    patch = { member: withMemberEntry(person.member, { date, type: change.reason, text, groupId: from.groupId, partyId: from.partyId }, { status: MEMBER_LOSS_STATUS[change.reason] ?? 'dimesso', until: date }) };
+  } else {
+    let target = change.to;
+    if (target.groupId === null) { const made = independentsGroup(parliament, chamber, date); parliament = made.parliament; target = { ...target, groupId: made.group.groupId }; }
+    const dest = parliament.chambers[chamber].groups.find(group => group.groupId === target.groupId);
+    if (!dest || (target.groupId === from.groupId && (target.partyId ?? null) === (from.partyId ?? null) && (target.listId ?? null) === (from.listId ?? null))) return s;
+    roster = moveSeat(roster, person.id, { groupId: target.groupId, partyId: target.partyId ?? null, ...(target.listId ? { listId: target.listId } : {}) });
+    if (target.groupId !== from.groupId) { parliament = changeSeats(parliament, chamber, from.groupId, -1); parliament = changeSeats(parliament, chamber, target.groupId, 1); }
+    // The named components of a group (its territorial lists) keep their seats in line with where the members sit.
+    if ((from.listId ?? null) !== (target.listId ?? null)) parliament = withComponentSeats(parliament, chamber, from, target);
+    toGroupId = target.groupId;
+    const party = id => id ? s.world?.parties?.find(item => item.id === id)?.label ?? 'il partito' : null;
+    if (change.type === 'ritorno') { type = 'membro-ritorno'; text = `${name} torna in ${dest.officialName}, il gruppo con cui era stato eletto.`; }
+    else if (change.kind === 'component') { type = 'membro-componente'; text = `${name} passa, nel ${dest.officialName}, da ${listLabel(dest, from.listId)} a ${listLabel(dest, target.listId)}.`; }
+    else if (change.kind === 'party') { type = 'membro-partito'; text = `${name} lascia ${party(from.partyId) ?? 'il partito'} ma resta nel gruppo ${dest.officialName}.`; }
+    else if (change.kind === 'misto') { type = 'membro-misto'; text = `${name} lascia ${fromGroup?.officialName ?? 'il gruppo'} per ${dest.officialName}${target.partyId ? ` e resta in ${party(target.partyId)}` : ''}.`; }
+    else { type = 'membro-gruppo'; text = `${name} lascia ${fromGroup?.officialName ?? 'il gruppo'} e passa a ${dest.officialName}${target.partyId ? ` (${party(target.partyId)})` : ''}.`; }
+    const rel = id => parliament.relations?.[id]?.value ?? 50;
+    let relation = target.groupId === from.groupId ? person.member.relation : Math.round(person.member.relation * 0.5 + rel(target.groupId) * 0.5);
+    if (mine && from.groupId === mine && target.groupId !== mine) relation -= 12;
+    if (mine && target.groupId === mine && from.groupId !== mine) relation += 10;
+    patch = { partyId: target.partyId ?? null, member: withMemberEntry(person.member, { date, type: change.type === 'ritorno' ? 'ritorno' : `defezione-${change.kind ?? 'group'}`, text, groupId: target.groupId, partyId: target.partyId ?? null }, { since: date, electedFor: person.member.electedFor ?? from, relation: Math.max(0, Math.min(100, relation)), loyalty: Math.round((person.member.loyalty + (change.type === 'ritorno' ? 80 : 60)) / 2) }) };
+  }
+  parliament = { ...parliament, chambers: { ...parliament.chambers, [chamber]: { ...parliament.chambers[chamber], roster } } };
+  parliament = recordParliament(parliament, date, type, text, { auto: true, personId: person.id, chamber, fromGroupId: from.groupId, toGroupId, fromPartyId: from.partyId ?? null, toPartyId: patch.partyId ?? null, reason: change.reason ?? change.kind ?? null, source: DATA_SOURCES.SIMULATION });
+  parliament = foldSmallGroups(parliament, chamber, date);
+  parliament = checkMajority(parliament, date, change.type === 'perdita' ? 'Con un seggio lasciato vacante' : `Dopo il passaggio di ${name}`);
+  let game = s.game;
+  if (game && mine && (from.groupId === mine || toGroupId === mine) && from.groupId !== toGroupId) {
+    game = deepCopy(game);
+    const leaving = from.groupId === mine;
+    remember(game, { date, kind: leaving ? 'alleato-tradito' : 'lealta', text, subject: person.id, subjects: [mine], weight: 0.6 });
+  }
+  const dataset = { ...s.dataset, politicians: s.dataset.politicians.map(item => item.id === person.id ? { ...item, ...patch } : item) };
+  return computeParliamentUpdate({ ...s, dataset, game }, parliament, s.ui.toast);
+}
+// The seats left empty are taken, after a few weeks, by the next of the list: a person of the simulation the party has, or a new one.
+function fillVacancies(s, chamber, date) {
+  let next = s;
+  for (const vacancy of vacanciesOf(s.parliament.chambers[chamber].roster).filter(item => item.fillAt <= date)) {
+    let parliament = next.parliament;
+    const current = parliament.chambers[chamber];
+    const group = current.groups.find(item => item.groupId === vacancy.groupId);
+    // (a seat of a group that is no longer there has nobody to wait for it)
+    if (!group) { next = { ...next, parliament: { ...parliament, chambers: { ...parliament.chambers, [chamber]: { ...current, roster: closeVacancy(current.roster, vacancy.id) } } } }; continue; }
+    const out = fillSeat({ roster: current.roster, vacancy, pool: rosterPool(next), busy: rosterContext(next, current.roster.assembly).busy, date });
+    const former = next.dataset.politicians.find(item => item.id === vacancy.formerPersonId)?.displayName ?? 'un parlamentare';
+    const taken = out.created ?? next.dataset.politicians.find(item => item.id === out.personId);
+    const text = `${taken?.displayName ?? 'Il nuovo eletto'} subentra a ${former} in ${group.officialName}.`;
+    const member = newMember({ personId: out.personId, date, relation: parliament.relations?.[vacancy.groupId]?.value ?? 50, loyalty: MEMBER_RULES.loyalty, history: [{ date, type: 'subentro', text }] });
+    const dataset = { ...next.dataset, politicians: [...next.dataset.politicians.map(item => item.id === out.personId ? { ...item, member } : item), ...(out.created ? [{ ...out.created, member }] : [])] };
+    parliament = changeSeats(parliament, chamber, vacancy.groupId, 1);
+    if (vacancy.listId) parliament = withComponentSeats(parliament, chamber, {}, vacancy);
+    parliament = { ...parliament, chambers: { ...parliament.chambers, [chamber]: { ...parliament.chambers[chamber], roster: out.roster } } };
+    parliament = recordParliament(parliament, date, 'membro-subentro', text, { auto: true, personId: out.personId, formerPersonId: vacancy.formerPersonId, chamber, toGroupId: vacancy.groupId, toPartyId: vacancy.partyId ?? null, source: DATA_SOURCES.SIMULATION });
+    next = computeParliamentUpdate({ ...next, dataset }, parliament, next.ui.toast);
+  }
+  return next;
+}
+// Every week, before the Government reads the numbers: the empty seats are filled, and in each Chamber one member may change (or leave, or come back).
+function tickMembers(s, date) {
+  if (!simulatedChambers(s) || nationalFormationOpen(s) || date < (s.parliament.legislature.firstSitting ?? date)) return s;
+  let next = stampMembers(s);
+  const government = next.parliament.government;
+  const pressure = government && ['crisis', 'awaiting-confidence'].includes(government.status) ? MEMBER_RULES.shaky : 1;
+  for (const chamber of ['camera', 'senato']) {
+    next = fillVacancies(next, chamber, date);
+    const current = next.parliament.chambers[chamber];
+    if (!current.roster) continue;
+    const people = new Map(next.dataset.politicians.map(item => [item.id, item]));
+    const change = drawMemberChange({ roster: current.roster, groups: current.groups.map(memberGroupSpec), people, rand: seededRandom(`${next.career.id ?? 'carriera'}|${date}|membri|${chamber}`), rules: MEMBER_RULES, pressure, playerId: next.career.playerId, date });
+    if (change) next = applyMemberChange(next, chamber, change, date);
+  }
+  return next;
 }
 // ---------- the offices: what is granted, what lapses (office-engine says which; here the state changes) ----------
 const ELECTION_OF_SCOPE = Object.freeze({ comune: 'comunale', provincia: 'provinciale', regione: 'regionale', europa: 'europee' });
@@ -2631,6 +2788,17 @@ export const store = {
     state = { ...state, ui: { ...state.ui, toast: outcome.ok ? 'Carriera salvata' : `Salvataggio non riuscito: ${outcome.error}` } };
     emit();
     return outcome;
+  },
+  // One change of one member of a simulated Chamber, as the weeks draw them (defezione, perdita, ritorno): the same function the weekly step uses. Refused for the player, a real person or
+  // a member who is no longer in office.
+  changeMember(chamber, change) {
+    if (!simulatedChambers(state)) throw new Error('Le Camere non sono ancora nate da un voto della partita.');
+    const stamped = stampMembers(state);
+    const next = applyMemberChange(stamped, chamber, change, state.clock.currentDate);
+    if (next === stamped) throw new Error('Questo cambiamento non è possibile.');
+    state = next;
+    persist(); emit();
+    return state;
   },
   // How saving stands, as facts: seq goes up at every write that succeeded; dirty = changes not saved here; error = why the last write failed.
   saveStatus: () => ({ seq: saveSeq, ok: !saveFailure, dirty: unsaved, error: saveFailure }),

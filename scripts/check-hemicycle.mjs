@@ -243,6 +243,11 @@ assert.ok(html.includes('data-hemi-filter-party="party-a"') && html.includes('da
 const person = built.created.find(item => item.partyId === 'party-b');
 html = renderHemicycle(simState, { view: { selected: person.id } });
 assert.ok(html.includes('PERSONA DELLA SIMULAZIONE') && html.includes(person.displayName) && html.includes('Partito B') && html.includes('XX legislatura') && clean(html), 'La scheda di un seggio mostra la persona, la forza, il gruppo e l’elezione.');
+// A member who has a story (person.member): the card tells how he stands with the player and what happened to him.
+person.member = { since: '2027-12-01', electedFor: { groupId: 'leg20-camera-b', partyId: 'party-b' }, loyalty: 71, relation: 62, history: [{ date: '2027-12-01', type: 'defezione-misto', text: 'Lascia il gruppo per il Misto' }] };
+html = renderHemicycle(simState, { view: { selected: person.id } });
+assert.ok(html.includes('Rapporto con te') && html.includes('62/100') && html.includes('legame con il gruppo 71/100') && html.includes('Percorso') && html.includes('Lascia il gruppo per il Misto') && clean(html), 'La scheda racconta il rapporto con il giocatore e il percorso del parlamentare.');
+delete person.member;
 html = renderHemicycle(simState, { view: { selected: 'giocatore' } });
 assert.ok(html.includes('Il tuo seggio') && clean(html), 'Il giocatore ha il suo seggio.');
 html = renderHemicycle(simState, { view: { party: 'party-a' } });

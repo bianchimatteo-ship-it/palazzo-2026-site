@@ -148,6 +148,8 @@ function card(model, state, db, logoFor) {
         <div><dt>Ruolo</dt><dd>${model.chamber === 'camera' ? 'Deputato' : 'Senatore'}${seat.origin === 'existing' ? ' · già noto al gioco' : ''}</dd></div>
         <div><dt>Eletto</dt><dd>${esc(roster?.label ?? 'Legislatura simulata')}<small>${esc(shortDate(roster?.date))}</small></dd></div>
         ${terms.length ? `<div><dt>Mandati precedenti</dt><dd>${terms.join('<br>')}</dd></div>` : ''}
+        ${person.member ? `<div><dt>Rapporto con te</dt><dd>${num(person.member.relation, 0)}/100<small>legame con il gruppo ${num(person.member.loyalty, 0)}/100 · in questa collocazione dal ${esc(shortDate(person.member.since))}</small></dd></div>` : ''}
+        ${person.member?.history?.length ? `<div><dt>Percorso</dt><dd>${person.member.history.slice(-3).map(item => `${esc(shortDate(item.date))} · ${esc(item.text)}`).join('<br>')}</dd></div>` : ''}
       </dl>${voteRow}
       <p class="sx-note">Persona della simulazione: non esiste nei dati reali, la crea il gioco per questo seggio e la tiene finché dura il mandato.</p></div>`;
   }

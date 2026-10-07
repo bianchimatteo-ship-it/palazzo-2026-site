@@ -19,6 +19,8 @@ const shortOf = label => String(label ?? '').replace(/^Misto\s*[-–]\s*/i, 'Mis
 const compact = person => Object.fromEntries(Object.entries(person).filter(([, value]) => value !== null && value !== undefined));
 export const isSeatPerson = person => person?.origin === SEAT_PERSON;
 const personIdOf = (assembly, number) => `${SEAT_ID}${hash(`${assembly}|${number}`).toString(36)}${hash(`${number}|${assembly}`).toString(36)}`;
+// A new person of the simulation for a seat (never a real one): the n-th of the assembly, of the party the seat counts for.
+const seatPerson = ({ assembly, number, kind, label, place, partyId, date }) => compact({ ...simulatedPerson({ id: personIdOf(assembly, number), label, region: place?.region ?? null, municipality: kind === 'comune' ? place?.municipality ?? null : null, partyId, date }), origin: SEAT_PERSON });
 // Who put a person on his seat: the player, the simulation (a person the roster made), or a person the game already had.
 const originOf = (roster, personId) => personId === roster?.player ? 'player' : String(personId).startsWith(SEAT_ID) ? 'simulation' : 'existing';
 
@@ -118,7 +120,7 @@ export function syncRoster({ assembly, kind, label = null, groups, previous = nu
       for (; missing > 0; missing--) {
         counter++;
         const heads = Boolean(leader && !leader.player && !leaderId && leader.groupId === group.id);
-        const person = compact({ ...simulatedPerson({ id: personIdOf(assembly, counter), label: heads && leader.label ? leader.label : `${role} simulato n. ${counter} · ${shortOf(quota.label ?? group.label)}`, region: place?.region ?? null, municipality: kind === 'comune' ? place?.municipality ?? null : null, partyId: quota.partyId, date }), origin: SEAT_PERSON });
+        const person = seatPerson({ assembly, number: counter, kind, label: heads && leader.label ? leader.label : `${role} simulato n. ${counter} · ${shortOf(quota.label ?? group.label)}`, place, partyId: quota.partyId, date });
         created.push(person);
         seats.push({ personId: person.id, ...tag(quota) });
         seated.add(person.id);
@@ -133,6 +135,133 @@ export function syncRoster({ assembly, kind, label = null, groups, previous = nu
     else blocks.push({ group: seat.groupId, party: seat.partyId, ...(seat.listId ? { list: seat.listId } : {}), people: [seat.personId] });
   }
   const released = rosterSeats(prior).map(seat => seat.personId).filter(id => !seated.has(id));
-  const roster = { version: 2, assembly, kind, label, date: prior?.date ?? date, resultId: prior ? prior.resultId ?? null : resultId, place: prior?.place ?? place ?? null, counter, player: player?.personId && seated.has(player.personId) ? player.personId : null, leader: leaderId && seated.has(leaderId) ? leaderId : null, blocks };
+  const roster = { version: 2, assembly, kind, label, date: prior?.date ?? date, resultId: prior ? prior.resultId ?? null : resultId, place: prior?.place ?? place ?? null, counter, player: player?.personId && seated.has(player.personId) ? player.personId : null, leader: leaderId && seated.has(leaderId) ? leaderId : null, ...(prior?.vacant?.length ? { vacant: prior.vacant } : {}), blocks };
   return { roster, created, updated: [...patches].map(([id, value]) => ({ id, patch: value })), released };
+}
+
+// ---------- the members: where each one sits, how a seat changes hands ----------
+// A person on a seat of a Chamber the game simulates is a member: where he was elected, how attached he is to where he sits, how he stands with the player and what happened to him (person.member,
+// in the same registry as every person). Group, party and list (component) are three separate things of a seat: a member can change any of them without the others. These functions are pure:
+// they move persons between the blocks of a roster, keep the vacant seats and draw the week's change; the counts of the groups, the Government and the world follow in the store.
+export const MEMBER_HISTORY_LIMIT = 10;
+const clampTo = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
+const weeksSince = (from, to) => from && to ? Math.floor((Date.parse(`${to}T12:00:00Z`) - Date.parse(`${from}T12:00:00Z`)) / 604800000) : 999;
+const sameBlock = (block, seat) => block.group === seat.groupId && (block.party ?? null) === (seat.partyId ?? null) && (block.list ?? null) === (seat.listId ?? null);
+const seatKeyOf = seat => ({ groupId: seat.groupId, partyId: seat.partyId ?? null, ...(seat.listId ? { listId: seat.listId } : {}) });
+
+// A member in office has no status written down (a member who left has: dimesso, decaduto, deceduto). The state is kept small: what is the same for everybody (the assembly he sits in, the
+// collocation he was elected with while he has not moved, the first election) is not repeated on every person.
+export const inOffice = member => Boolean(member) && (member.status ?? 'in-carica') === 'in-carica';
+// The state of a member who has just taken a seat: since when he is where he is, attachment and standing with the player drawn from his identity (so they are the same in every game).
+export function newMember({ personId, date, relation = 50, loyalty = { min: 40, max: 90 }, history = [] }) {
+  const roll = hash(`${personId}|membro`);
+  return { since: date, loyalty: loyalty.min + roll % (loyalty.max - loyalty.min + 1), relation: clampTo(Math.round(relation + (roll >>> 8) % 21 - 10)), ...(history.length ? { history } : {}) };
+}
+// The member with something that happened to him (the last ones are kept); patch changes the fields that moved.
+export const withMemberEntry = (member, entry, patch = {}) => ({ ...member, ...patch, history: [...(member?.history ?? []), entry].slice(-MEMBER_HISTORY_LIMIT) });
+
+// The seat a person holds in the roster, as { groupId, partyId, listId? }, or null.
+export function seatOf(roster, personId) {
+  for (const block of roster?.blocks ?? []) if (block.people.includes(personId)) return seatKeyOf({ groupId: block.group, partyId: block.party, listId: block.list });
+  return null;
+}
+// The roster without the person (his block goes when it is left empty) and the seat he held.
+export function leaveSeat(roster, personId) {
+  const seat = seatOf(roster, personId);
+  if (!seat) return { roster, seat: null };
+  const blocks = roster.blocks.map(block => block.people.includes(personId) ? { ...block, people: block.people.filter(id => id !== personId) } : block).filter(block => block.people.length);
+  return { roster: { ...roster, blocks, ...(roster.leader === personId ? { leader: null } : {}) }, seat };
+}
+// The roster with the person on a seat of the block (group, party, list): in that block, or in a new one right after the others of the group. Nobody sits twice.
+export function takeSeat(roster, personId, seat) {
+  if (seatOf(roster, personId)) throw new Error('Una persona siede su un solo seggio.');
+  const blocks = (roster.blocks ?? []).map(block => ({ ...block, people: [...block.people] }));
+  const same = blocks.find(block => sameBlock(block, seat));
+  if (same) same.people.push(personId);
+  else { let last = -1; blocks.forEach((block, index) => { if (block.group === seat.groupId) last = index; }); blocks.splice(last < 0 ? blocks.length : last + 1, 0, { group: seat.groupId, party: seat.partyId ?? null, ...(seat.listId ? { list: seat.listId } : {}), people: [personId] }); }
+  return { ...roster, blocks };
+}
+export const moveSeat = (roster, personId, seat) => { const left = leaveSeat(roster, personId); return left.seat ? takeSeat(left.roster, personId, seat) : roster; };
+// The seats of a group that are not under its own party (a member who left his party but not his group, one who sits in the Misto with his party): a new sync has to keep them.
+export function guestParts(roster, group) {
+  const parts = new Map();
+  for (const block of roster?.blocks ?? []) {
+    if (block.group !== group.id || ((block.party ?? null) === (group.partyId ?? null) && !block.list)) continue;
+    const key = `${block.party ?? ''}|${block.list ?? ''}`;
+    parts.set(key, { partyId: block.party ?? null, listId: block.list ?? null, label: null, seats: (parts.get(key)?.seats ?? 0) + block.people.length });
+  }
+  return [...parts.values()];
+}
+// The named parts of a group (its lists) and, besides them, the guests the roster has put in it.
+export const partsWithGuests = (roster, group) => { const named = group.parts ?? []; return [...named, ...guestParts(roster, group).filter(guest => !named.some(part => (part.partyId ?? null) === guest.partyId && (part.listId ?? null) === guest.listId))]; };
+
+// The seats that lost their member and wait for the next of the list.
+export const vacanciesOf = roster => roster?.vacant ?? [];
+export const openVacancy = (roster, vacancy) => ({ ...roster, vacant: [...vacanciesOf(roster), vacancy] });
+export function closeVacancy(roster, id) {
+  const { vacant, ...rest } = roster;
+  const left = (vacant ?? []).filter(item => item.id !== id);
+  return left.length ? { ...rest, vacant: left } : rest;
+}
+// A vacant seat is taken by the next of the list: a person of the simulation the party already has (never a real one), or a new one. Returns { roster, personId, created }.
+export function fillSeat({ roster, vacancy, pool = [], busy = new Set(), date }) {
+  const seated = new Set(rosterPeople(roster));
+  const known = vacancy.partyId ? pool.find(item => item.partyId === vacancy.partyId && !seated.has(item.id) && !busy.has(item.id)) : null;
+  const number = (roster.counter ?? 0) + (known ? 0 : 1);
+  const created = known ? null : seatPerson({ assembly: roster.assembly, number, kind: roster.kind, label: `${SEAT_ROLES[roster.kind] ?? 'Eletto'} simulato n. ${number} · ${shortOf(vacancy.label)}`, place: roster.place, partyId: vacancy.partyId ?? null, date });
+  const personId = known?.id ?? created.id;
+  return { roster: closeVacancy(takeSeat({ ...roster, counter: number }, personId, seatKeyOf(vacancy)), vacancy.id), personId, created };
+}
+
+const pick = (items, weight, rand) => {
+  const total = items.reduce((sum, item) => sum + Math.max(0, weight(item)), 0);
+  if (!items.length || total <= 0) return null;
+  let at = rand() * total;
+  for (const item of items) { at -= Math.max(0, weight(item)); if (at < 0) return item; }
+  return items.at(-1);
+};
+// The week's change among the members of a Chamber, drawn from a seeded generator: null, or
+//   { type: 'defezione', kind: 'group' | 'misto' | 'party' | 'component', personId, from, to }   (to: the seat he takes; to.groupId null = the Misto of the independents, not there yet)
+//   { type: 'perdita', reason, personId, from }     { type: 'ritorno', personId, from, to }
+// groups: [{ id, partyId, seats, axis, component, independent, lists (has territorial lists), listIds }]; people: Map of persons by id (with their member state); rules: LEGISLATURE_RULES.members; pressure: what a shaky Government
+// does to the defections. The player never is the one who changes (his seat is his own to move), and a real person is never here.
+export function drawMemberChange({ roster, groups, people, rand, rules, pressure = 1, playerId = null, date }) {
+  const memberOf = id => people.get(id)?.member ?? null;
+  const seated = rosterSeats(roster).filter(seat => seat.personId !== playerId && seat.origin !== 'player' && inOffice(memberOf(seat.personId)));
+  const settled = (seat, factor = 1) => weeksSince(memberOf(seat.personId)?.since, date) >= rules.minTenureWeeks * factor;
+  const groupOf = id => groups.find(item => item.id === id) ?? null;
+  const roll = rand();
+  const defect = rules.weekly.defection * pressure;
+  if (roll < defect) {
+    const seat = pick(seated.filter(item => settled(item)), item => (100 - (memberOf(item.personId)?.loyalty ?? 60)) ** 2, rand);
+    if (!seat) return null;
+    const from = seatKeyOf(seat), party = people.get(seat.personId)?.partyId ?? null, here = groupOf(seat.groupId);
+    const lists = (here?.listIds ?? []).filter(id => id !== seat.listId);
+    const kinds = Object.entries(rules.kinds).filter(([kind]) => kind !== 'party' || party).filter(([kind]) => kind !== 'misto' || !(here?.component || here?.independent)).filter(([kind]) => kind !== 'component' || (seat.listId && lists.length));
+    let kind = pick(kinds, ([, share]) => share, rand)?.[0] ?? 'group';
+    if (kind === 'group') {
+      const others = groups.filter(item => item.id !== seat.groupId && !item.component && !item.lists && item.seats > 0);
+      const to = pick(others, item => Math.sqrt(item.seats) / (1 + Math.abs((item.axis ?? 0) - (here?.axis ?? 0))), rand);
+      if (to) return { type: 'defezione', kind, personId: seat.personId, from, to: { groupId: to.id, partyId: to.partyId ?? null } };
+      kind = here?.component || here?.independent ? 'party' : 'misto';
+    }
+    if (kind === 'component') return { type: 'defezione', kind, personId: seat.personId, from, to: { groupId: seat.groupId, partyId: seat.partyId ?? null, listId: pick(lists, () => 1, rand) } };
+    if (kind === 'misto') {
+      const own = groups.find(item => item.component && !item.independent && party && item.partyId === party && item.id !== seat.groupId);
+      const independents = groups.find(item => item.independent && item.id !== seat.groupId);
+      return { type: 'defezione', kind, personId: seat.personId, from, to: { groupId: (own ?? independents)?.id ?? null, partyId: party } };
+    }
+    return party ? { type: 'defezione', kind: 'party', personId: seat.personId, from, to: { groupId: seat.groupId, partyId: null, ...(seat.listId ? { listId: seat.listId } : {}) } } : null;
+  }
+  if (roll < defect + rules.weekly.loss) {
+    const seat = pick(seated, () => 1, rand);
+    const reason = pick(Object.entries(rules.losses), ([, share]) => share, rand)?.[0] ?? 'dimissioni';
+    return seat ? { type: 'perdita', reason, personId: seat.personId, from: seatKeyOf(seat) } : null;
+  }
+  if (roll < defect + rules.weekly.loss + rules.weekly.return) {
+    const away = seated.filter(seat => { const back = memberOf(seat.personId)?.electedFor; return back && back.groupId !== seat.groupId && groupOf(back.groupId) && settled(seat, 2); });
+    const seat = pick(away, () => 1, rand);
+    return seat ? { type: 'ritorno', personId: seat.personId, from: seatKeyOf(seat), to: { ...memberOf(seat.personId).electedFor } } : null;
+  }
+  return null;
 }
