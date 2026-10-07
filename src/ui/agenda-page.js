@@ -1,7 +1,7 @@
 // AGENDA — the time of the career: this week's decisions and days, the calendar of every dated commitment
 // (votes, candidacies, congresses, promises, decrees, consequences), the weekly activities and the register.
 import { AGENDA_KINDS, agendaByMonth, agendaCalendar } from '../core/agenda-engine.js?v=20261007-1';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261007-1';
+import { ADVANCE_RULES, STAT_LABELS } from '../data/simulation/career-rules.js?v=20261007-1';
 import { advanceDays, formatDate } from '../core/time.js?v=20261007-1';
 import { glyph } from './visuals.js?v=20261007-1';
 import { renderInbox, renderPlanner } from './game-mode.js?v=20261007-1';
@@ -102,7 +102,14 @@ function hero(state, calendar) {
   });
 }
 
-export function renderAgendaPage(state, { tab = null, filter = 'tutto', events = [] } = {}) {
+// Advance to a date: any day from tomorrow on (the engine refuses what is too far); what stops the advance is told in the confirmation.
+function advanceForm(state, picked) {
+  const today = state.clock.currentDate;
+  const min = advanceDays(today, 1);
+  return `<div class="ag-goto"><label>Avanza fino al<input type="date" data-view-filter-select="advanceDate" value="${esc(picked >= min ? picked : '')}" min="${min}" max="${advanceDays(today, Math.round(365.25 * ADVANCE_RULES.maxYears))}" /></label><button class="secondary-button" data-action="advance-to-date" ${state.game.status === 'ended' ? 'disabled' : ''}>Avanza fino a questa data ${arrow}</button></div>`;
+}
+
+export function renderAgendaPage(state, { tab = null, filter = 'tutto', events = [], advanceDate = '' } = {}) {
   if (!state.game) return '';
   const calendar = agendaCalendar(state);
   const active = AGENDA_TABS.some(([id]) => id === tab) ? tab : 'settimana';
@@ -118,7 +125,7 @@ export function renderAgendaPage(state, { tab = null, filter = 'tutto', events =
     const today = state.clock.currentDate;
     const gridMonths = [today.slice(0, 7), advanceDays(`${today.slice(0, 7)}-01`, 32).slice(0, 7)];
     const filters = `<div class="ag-filters" role="group" aria-label="Filtra il calendario">${AGENDA_FILTERS.map(([id, label, kinds]) => { const count = kinds ? calendar.filter(item => kinds.includes(item.kind)).length : calendar.length; return `<button data-view-filter="agenda" data-view-filter-value="${id}" class="${group[0] === id ? 'active' : ''}" aria-pressed="${group[0] === id}">${esc(label)}${count ? ` · ${count}` : ''}</button>`; }).join('')}</div>`;
-    body = `${filters}<div class="ag-layout"><div class="ag-months">${gridMonths.map(month => monthGrid(month, visible, today)).join('')}<p class="sx-note">Giorni evidenziati: scadenze e appuntamenti. Rosso: urgente. Politiche ed europee seguono il calendario reale; comunali e regionali seguono il calendario reale del tuo comune e della tua regione.</p></div><div class="ag-timeline">${months.length ? months.map(({ month, entries }) => `<section class="ag-group"><h3>${esc(formatDate(`${month}-01`, { month: 'long', year: 'numeric' }))}</h3><ol class="ag-list">${entries.map(itemRow).join('')}</ol></section>`).join('') : '<p class="sx-empty">Nessun impegno per questo filtro nei prossimi due anni.</p>'}</div></div>`;
+    body = `${filters}${advanceForm(state, advanceDate ?? '')}<div class="ag-layout"><div class="ag-months">${gridMonths.map(month => monthGrid(month, visible, today)).join('')}<p class="sx-note">Giorni evidenziati: scadenze e appuntamenti. Rosso: urgente. Politiche ed europee seguono il calendario reale; comunali e regionali seguono il calendario reale del tuo comune e della tua regione.</p></div><div class="ag-timeline">${months.length ? months.map(({ month, entries }) => `<section class="ag-group"><h3>${esc(formatDate(`${month}-01`, { month: 'long', year: 'numeric' }))}</h3><ol class="ag-list">${entries.map(itemRow).join('')}</ol></section>`).join('') : '<p class="sx-empty">Nessun impegno per questo filtro nei prossimi due anni.</p>'}</div></div>`;
   } else if (active === 'attivita') {
     body = `${weekStrip(state)}${card({ kicker: 'AGENDA DEL POLITICO', title: 'Come usi la settimana', body: renderPlanner(state), id: 'hq-planner' })}`;
   } else {

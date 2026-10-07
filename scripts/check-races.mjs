@@ -11,6 +11,7 @@ const root = new URL('../', import.meta.url);
 const build = (await readFile(new URL('index.html', root), 'utf8')).match(/main\.js\?v=([^"']+)/)?.[1];
 const v = build ? `?v=${build}` : '?';
 const engine = await import(new URL(`src/core/race-engine.js${v}`, root).href);
+const { advanceDays } = await import(new URL(`src/core/time.js${v}`, root).href);
 const rules = (await import(new URL(`src/data/simulation/race-rules.js${v}`, root).href)).RACE_RULES;
 const models = (await import(new URL(`src/data/simulation/campaign-rules.js${v}`, root).href)).ELECTION_MODELS;
 const { checkInvariants } = await import(new URL(`src/core/invariants.js${v}`, root).href);
@@ -109,6 +110,24 @@ assert.equal(store.getState().dataset.politicians.length, persons.length, 'Né s
 // A person is in one race at a time; the player plays his campaigns apart.
 assert.throws(() => store.chooseRaceCandidate(campania.id, { kind: 'cadre', id: staff.id }, people), /Già candidato a/, 'Lo stesso quadro non corre in due corse a pochi giorni.');
 assert.throws(() => store.chooseRaceCandidate(lombardia.id, { kind: 'player' }, people), /Troppo vicina a Regionali · Piemonte/, 'Il giocatore non gioca due voti dello stesso giorno.');
+// The distance between two votes the player plays is 89 days (88 is too close, 89 is not); between two races of the same person it stays at 35 (34 is too close, 35 is not).
+assert.equal(rules.playableGapDays, 89, 'Tra due voti che il giocatore gioca passano almeno 89 giorni.');
+assert.equal(rules.personGapDays, 35, 'La distanza di una persona tra due corse non cambia.');
+{
+  const [base, other] = store.races();
+  const held = candidacy => ({ ...base, status: 'confirmed', candidacy });
+  const probe = (gap, candidacy) => engine.candidateOptions({ race: { ...other, id: 'corsa-di-prova', electionDate: advanceDays(base.electionDate, gap) }, items: [held(candidacy)], today: state.clock.currentDate, player: { id: 'p-gioco', label: 'Tu', block: null }, cadres: [{ id: 'quadro-prova', label: 'Quadro di prova' }], politicians: [], homeVotes: [], from: {}, committee: 0, standing: null });
+  const own = { kind: 'player', personId: 'p-gioco' };
+  assert.equal(probe(88, own).player.available, false, 'A 88 giorni da un voto che giochi, un altro non si gioca.');
+  assert.match(probe(88, own).player.reason, /almeno 89 giorni/);
+  assert.equal(probe(89, own).player.available, true, 'A 89 giorni sì.');
+  assert.equal(probe(-88, own).player.available, false, 'Vale anche per un voto prima.');
+  assert.equal(probe(-89, own).player.available, true);
+  const staffed = { kind: 'cadre', cadreId: 'quadro-prova', personId: 'quadro-prova' };
+  assert.equal(probe(34, staffed).cadres[0].available, false, 'Una persona non corre in due corse a 34 giorni.');
+  assert.equal(probe(35, staffed).cadres[0].available, true, 'A 35 sì: la distanza di una persona resta di 35 giorni.');
+  assert.equal(probe(34, staffed).player.available, true, 'Le corse affidate ad altri non contano per le campagne del giocatore.');
+}
 // Only the leader decides.
 const member = JSON.parse(JSON.stringify(store.getState().game.party));
 store.getState().game.party.affiliation = 'member'; store.getState().game.party.rank = 1;

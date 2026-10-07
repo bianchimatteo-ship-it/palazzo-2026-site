@@ -141,6 +141,8 @@ export const ROUND_RULES = Object.freeze({
 });
 export const LEVEL_FIRST_ELECTION = Object.freeze({ comunale: { comunale: 4 }, provinciale: { provinciale: 8, comunale: 30 }, regionale: { regionale: 5 }, deputato: { politiche: 26 }, senatore: { politiche: 26 } });
 export const EARLY_ELECTION_AFTER_WEEKS = 4;
+// Advancing to a date: the weeks go by one at a time through the ordinary engine, so a date too far away (a mistyped year) is refused rather than left to run for minutes.
+export const ADVANCE_RULES = Object.freeze({ maxYears: 40 });
 
 export const OFFICE_INCOME = Object.freeze([
   // The provincial offices are unpaid (law 56/2014): the councillors and the President are mayors and municipal councillors who hold them too.

@@ -15,7 +15,7 @@ import { END_KINDS, addToHall, careerFacts, hallEntry, legacyBoon, legacyScore, 
 import { committeeSupport, committeesAfterVote, createCommittees } from './committee-engine.js?v=20261007-1';
 import { setConfidenceVote, createReferenceGovernment, neverHadGovernment, offerGroupSupport, requestGovernmentPost, withdrawGroupSupport, partnerSatisfaction, acceptLawDemand, activeMinisters, amendLawPolicy, askConfidenceOnLaw, groupProfile, issueDecree, majoritySummit, reshuffleMinister, setGovernmentProgram, settlePartnerDemand, withdrawLaw, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20261007-1';
 import { situation, addProvincialCalendar, declareAmbition, scheduleEarlyLocalElection, alignLocalCalendar, localCalendarOf, committeeAction, setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, lifeBreakPact, lifeCadre, lifeCongress, lifeFound, lifeMerge, lifeOverview, lifeRebuild, lifeRename, lifeRespond, partyOpsAvailability, saveForElection, saveReserve, takeReserve, scheduleEarlyElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20261007-1';
-import { AMENDMENT_CAPITAL_COST, COMMUNICATION_STYLES, GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20261007-1';
+import { ADVANCE_RULES, AMENDMENT_CAPITAL_COST, COMMUNICATION_STYLES, GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20261007-1';
 import { advanceLegislativeWeek, amendOthersLaw, amendmentOdds, linkGroupsToParties, setPlayerVote, speakOnLaw } from './lawmaking-engine.js?v=20261007-1';
 import { seededRandom } from './vote-engine.js?v=20261007-1';
 import { advanceCabinetWeek, joinAsSupport } from './cabinet-engine.js?v=20261007-1';
@@ -51,6 +51,18 @@ const PARLIAMENTARY_CAMPAIGN_ROLES = Object.freeze({ deputato: 'camera', uninomi
 const isRestorableSave = saved => saved && typeof saved === 'object' && saved.career && typeof saved.career === 'object' && saved.clock?.currentDate && saved.dataset && Array.isArray(saved.dataset.politicians);
 
 const storedState = storage.load();
+// The slots and their index say the same thing from the first moment (a write that stopped half way leaves nothing orphaned or missing).
+try { storage.repairSlots(); } catch { /* the slots are read as they are */ }
+// A save written by a newer version of the game is not for this one: it is neither read down nor written over (this version stops saving while it is there).
+const isFutureSave = saved => Number.isFinite(saved?.version) && saved.version > STATE_VERSION;
+const futureProblem = version => `Salvataggio di una versione più recente del gioco (versione ${version}, questa è la ${STATE_VERSION}): non lo carico e non lo modifico. Aggiorna il gioco per riaprirlo.`;
+// How the last save went, as facts (whatever message is shown): the changes not saved yet, why the last write failed, how many writes succeeded, the save of the previous version still to be kept aside, a lock.
+let weekClosed = false;
+let unsaved = false;
+let saveFailure = null;
+let saveSeq = 0;
+let saveLock = isFutureSave(storedState) ? futureProblem(storedState.version) : null;
+let pendingBackup = null;
 function hydrateState(saved) {
   if (!saved) return makeDemoState();
   if (!isRestorableSave(saved)) {
@@ -317,13 +329,16 @@ function prepareState(input) {
   return { ...base, game, world, society, national, presidency, parliament: withCapital(parliament, game) };
 }
 
-const hydratedState = hydrateState(storedState);
+const hydratedState = hydrateState(saveLock ? null : storedState);
 let state = prepareState(hydratedState);
-let lastSaved = storedState ? (isRestorableSave(storedState) ? 'Salvataggio caricato' : 'Salvataggio non valido: copia conservata') : 'Nuova carriera demo';
-if (isRestorableSave(storedState) && storedState.version < STATE_VERSION) {
-  // The save written by the previous version is kept aside before the upgraded one replaces it.
-  storage.backup(storedState, `aggiornamento-v${storedState.version ?? 0}-v${STATE_VERSION}`);
-  try { storage.save(state); lastSaved = 'Salvataggio aggiornato'; } catch { lastSaved = 'Salvataggio locale non disponibile'; }
+let lastSaved = saveLock ? saveLock : storedState ? (isRestorableSave(storedState) ? 'Salvataggio caricato' : 'Salvataggio non valido: copia conservata') : 'Nuova carriera demo';
+if (saveLock) { unsaved = true; saveFailure = saveLock; }
+else if (isRestorableSave(storedState) && storedState.version < STATE_VERSION) {
+  // The save written by the previous version is kept aside before the upgraded one replaces it: if it cannot be kept, it is not replaced (the next save tries again).
+  const reason = `aggiornamento-v${storedState.version ?? 0}-v${STATE_VERSION}`;
+  if (storage.backup(storedState, reason)) {
+    try { storage.save(state); lastSaved = 'Salvataggio aggiornato'; } catch { lastSaved = 'Salvataggio locale non disponibile'; unsaved = true; saveFailure = lastSaved; }
+  } else { pendingBackup = { payload: storedState, reason }; lastSaved = 'Salvataggio aggiornato solo in memoria: la copia di sicurezza di quello precedente non è riuscita'; unsaved = true; saveFailure = lastSaved; }
 }
 const listeners = new Set();
 let timelineBase = state;
@@ -368,19 +383,34 @@ function timelineDiff(before, after) {
   return entries;
 }
 // Autosave follows the player's setting: after every action, at the end of each week, or only by hand.
-let weekClosed = false;
-let unsaved = false;
-function persist({ force = false } = {}) {
+// The outcome is technical (saved or not, dirty, why): nothing reads it back from the message on screen. A write that fails leaves the changes unsaved (dirty) and is tried again at the next save.
+const saveOutcome = saved => ({ ok: !saveFailure, saved, dirty: unsaved, error: saveFailure });
+// What changed since the last look goes on the timeline of the career: every save does it, and so does every step of an advance to a date (a long jump keeps the story of each week, not only the net change).
+function recordTimeline() {
   if (timelineBase) state = addTimeline(state, timelineDiff(timelineBase, state));
   timelineBase = state;
+}
+function persist({ force = false } = {}) {
+  recordTimeline();
   const mode = loadSettings().autosave;
-  if (!force && (mode === 'manual' || (mode === 'week' && !weekClosed))) { unsaved = true; lastSaved = mode === 'manual' ? 'Modifiche non salvate' : 'Salvataggio a fine settimana'; return; }
+  if (!force && (mode === 'manual' || (mode === 'week' && !weekClosed))) { unsaved = true; lastSaved = mode === 'manual' ? 'Modifiche non salvate' : 'Salvataggio a fine settimana'; return saveOutcome(false); }
   weekClosed = false;
   try {
+    if (saveLock) throw new Error(saveLock);
+    if (pendingBackup) { if (!storage.backup(pendingBackup.payload, pendingBackup.reason)) throw new Error('La copia di sicurezza del salvataggio precedente non è riuscita: non lo sovrascrivo.'); pendingBackup = null; }
     storage.save(state);
-    unsaved = false;
+    unsaved = false; saveFailure = null; saveSeq++;
     lastSaved = `Salvato alle ${new Intl.DateTimeFormat('it-IT', { hour: '2-digit', minute: '2-digit' }).format(new Date())}`;
-  } catch { lastSaved = 'Salvataggio non disponibile'; }
+  } catch (error) {
+    unsaved = true; weekClosed = true; saveFailure = error?.message || 'Salvataggio non disponibile';
+    lastSaved = saveLock ?? 'Salvataggio non disponibile';
+  }
+  return saveOutcome(!saveFailure);
+}
+// The game about to be replaced (by another one loaded or a new career) is kept in a slot first; if it cannot be kept, nothing is replaced.
+function keepCurrent(name) {
+  try { return store.saveToSlot(name); }
+  catch (error) { throw new Error(`La partita in corso non può essere conservata, quindi non la sostituisco. ${error.message}`); }
 }
 // What a save slot shows before it is opened.
 function slotMeta(s) {
@@ -1302,6 +1332,17 @@ function stepTime(days) {
   const inParliament = Boolean(state.parliament?.player) && campaign?.status !== 'active' && campaign?.status !== 'finished';
   state = { ...state, dataset: { ...state.dataset, events: [...state.dataset.events, { id: makeId('evento'), title: campaign?.status === 'active' ? 'Giornata di campagna' : campaign?.status === 'finished' ? 'Campagna conclusa' : inParliament ? 'Settimana di lavori parlamentari' : 'Agenda aggiornata', date: state.clock.currentDate, category: campaign?.status === 'active' ? 'campagna' : inParliament ? 'parlamento' : 'agenda', status: 'da pianificare', source: DATA_SOURCES.SIMULATION }].slice(-EVENTS_LIMIT) } };
 }
+// What only the player can settle before time goes on: a campaign under way, or an urgent matter or a situation that the week about to close would settle with its default
+// (the ones put on hold wait for their day, as in advanceWeek). days: how far the next step goes.
+function awaitedFromPlayer(s, days) {
+  if (s.campaign?.status === 'active') return { kind: 'campagna', title: 'La campagna in corso' };
+  const game = s.game;
+  if (!game || elapsedDays(game.week.startedAt, advanceDays(s.clock.currentDate, days)) < 7) return null;
+  const closesAt = advanceDays(game.week.startedAt, 7);
+  const item = game.inbox.find(entry => ['urgente', 'situazione'].includes(entry.kind) && !((entry.holdUntilWeek ?? 0) > game.week.index || (entry.holdUntilDate && entry.holdUntilDate > closesAt)));
+  return item ? { kind: item.kind, title: item.title } : null;
+}
+const isIsoDate = value => { try { return /^\d{4}-\d{2}-\d{2}$/.test(String(value)) && advanceDays(value, 0) === value; } catch { return false; } };
 function commitGame(result, toast) {
   state = applyGameResult(state, result.ctx, toast, result.specials ?? []);
   persist(); emit();
@@ -2555,7 +2596,46 @@ export const store = {
     persist(); emit();
     return open;
   },
-  save() { persist({ force: true }); state = { ...state, ui: { ...state.ui, toast: 'Carriera salvata' } }; emit(); },
+  // Advances to a precise future date through the ordinary weeks (stepTime, settleWeeks): no week, event, vote or election is skipped, however far the date. It stops before
+  // what only the player can settle (a campaign under way, an urgent matter, a situation) unless the staff takes over (delegate: the week closes it with its default, as it always does).
+  // maxWeeks ends the call early (the state is always at the end of a week, the page goes on in pieces). reason: 'data' reached, 'decisione', 'campagna' under way, 'fine' of the career, 'continua' (maxWeeks), 'bloccato' (no progress).
+  advanceToDate(target, { delegate = false, maxWeeks = Infinity } = {}) {
+    if (!store.hasCareer()) throw new Error('Non c’è una partita in corso.');
+    if (state.game.status === 'ended') throw new Error('La carriera è conclusa: inizia una nuova partita.');
+    const from = state.clock.currentDate;
+    if (!isIsoDate(target)) throw new Error('Data non valida.');
+    if (target <= from) throw new Error(`La data deve essere futura: oggi è il ${formatDate(from)}.`);
+    if (target > advanceDays(from, Math.round(365.25 * ADVANCE_RULES.maxYears))) throw new Error(`Si può avanzare al massimo di ${ADVANCE_RULES.maxYears} anni alla volta.`);
+    // The weeks it takes, with room for the days that do not line up: a real ceiling for the loop, besides the check that every step moves the clock.
+    const ceiling = Math.ceil(elapsedDays(from, target) / 7) * 2 + 8;
+    let steps = 0, reason = null, waiting = null;
+    for (let guard = 0; !reason; guard++) {
+      const today = state.clock.currentDate;
+      const days = Math.min(7, elapsedDays(today, target));
+      if (!state.game || state.game.status === 'ended') reason = 'fine';
+      else if (today >= target) reason = 'data';
+      else if (guard >= ceiling) reason = 'bloccato';
+      else if (!delegate && (waiting = awaitedFromPlayer(state, days))) reason = waiting.kind === 'campagna' ? 'campagna' : 'decisione';
+      else if (steps >= maxWeeks) reason = 'continua';
+      else { stepTime(days); recordTimeline(); steps++; if (state.clock.currentDate <= today) reason = 'bloccato'; }
+    }
+    const reached = state.clock.currentDate;
+    const toast = { data: `Avanzato al ${formatDate(reached)}`, decisione: `Mi fermo prima di una decisione: ${waiting?.title}`, campagna: 'Mi fermo: c’è una campagna in corso', fine: 'La carriera si è conclusa', bloccato: 'Avanzamento interrotto: il tempo non scorre', continua: state.ui.toast }[reason];
+    state = { ...state, ui: { ...state.ui, toast } };
+    if (steps) persist();
+    emit();
+    return { reason, from, target, reached, steps, waiting };
+  },
+  save() {
+    const outcome = persist({ force: true });
+    state = { ...state, ui: { ...state.ui, toast: outcome.ok ? 'Carriera salvata' : `Salvataggio non riuscito: ${outcome.error}` } };
+    emit();
+    return outcome;
+  },
+  // How saving stands, as facts: seq goes up at every write that succeeded; dirty = changes not saved here; error = why the last write failed.
+  saveStatus: () => ({ seq: saveSeq, ok: !saveFailure, dirty: unsaved, error: saveFailure }),
+  // What may go online: the career as it was last saved here, never a game with changes that were not saved (or a save that failed).
+  cloudSnapshot: () => store.hasCareer() && !unsaved && !saveFailure ? state : null,
   // ---------- games and save slots ----------
   hasCareer: () => state.career.status !== 'demo' && Boolean(state.game),
   hasUnsavedChanges: () => unsaved,
@@ -2575,7 +2655,9 @@ export const store = {
   loadGame(payload, toast = 'Partita caricata') {
     const saved = typeof payload === 'string' ? JSON.parse(payload) : payload;
     if (!isRestorableSave(saved)) throw new Error('Il file non contiene una partita di POLITICANDO 2026.');
-    if (store.hasCareer() && unsaved) store.saveToSlot('Partita precedente (salvataggio automatico)');
+    // A game of a newer version is refused as it is: this one would have to read it down, and lose what it does not know.
+    if (isFutureSave(saved)) throw new Error(`Questa partita è di una versione più recente del gioco (versione ${saved.version}, questa è la ${STATE_VERSION}): non può essere caricata qui. Aggiorna il gioco.`);
+    if (store.hasCareer() && unsaved) keepCurrent('Partita precedente (salvataggio automatico)');
     state = migrateDemoParty(prepareState(hydrateState(saved)));
     if (realForces.length && state.world && isLegacyWorld(state.world)) state = { ...state, world: buildWorld(state) };
     if (latentOutOfDate(state.world)) state = { ...state, world: withLatentForces(state.world, realLatent) };
@@ -2588,6 +2670,8 @@ export const store = {
   exportSave() { return JSON.stringify({ ...state, exportedAt: new Date().toISOString(), exportedBy: 'POLITICANDO 2026' }); },
   clearAllSaves() {
     storage.clearAll();
+    // Everything is gone (also a save of a newer version that stopped the saving): the game saves again.
+    saveLock = null; pendingBackup = null; unsaved = false; saveFailure = null;
     state = prepareState(makeDemoState());
     timelineBase = state;
     lastSaved = 'Nessuna partita salvata'; emit();
@@ -3758,8 +3842,8 @@ export const store = {
   reset() {
     state = prepareState(makeDemoState());
     timelineBase = state;
-    try { storage.clear(); } catch { /* storage may be unavailable */ }
-    lastSaved = 'Nuova carriera demo'; emit();
+    if (!saveLock) { try { storage.clear(); } catch { /* storage may be unavailable */ } }
+    lastSaved = saveLock ?? 'Nuova carriera demo'; emit();
   },
   createCareer(draft, realParties = [], realGroups = []) {
     // A new career begins on the day of the real snapshot: real government, Parliament and opening poll are all current.
@@ -3879,7 +3963,7 @@ export const store = {
     game.timeline = [{ id: makeId('storia'), week: 1, date: today, kind: 'inizio', title: `Inizia la carriera: ${level.office}`, detail: `${draft.municipality.trim()}, ${draft.region}${partyRecord ? ` · ${partyRecord.officialName ?? partyRecord.name}` : ' · indipendente'}`, tone: 'good', source: DATA_SOURCES.SIMULATION }];
     if (hasStart(plan)) game.timeline.push({ id: makeId('storia'), week: 1, date: today, kind: 'inizio', title: `Punto di partenza: ${plan.label}`, detail: planLines(plan).map(item => `${item.label} ${item.level}/3`).join(' · '), tone: 'neutral', source: DATA_SOURCES.SIMULATION });
     // The game being replaced is kept in a slot, so a new game never erases an old one.
-    if (store.hasCareer()) { try { store.saveToSlot(`${slotMeta(state).player} · partita precedente`); } catch { /* no room: the player is warned in the menu */ } }
+    if (store.hasCareer()) keepCurrent(`${slotMeta(state).player} · partita precedente`);
     const presidency = createPresidency({ date: today, seed: seedOf(base) });
     state = { ...base, game, world, society, national, presidency, parliament: withCapital(parliament, game) };
     // A local career starts with a seat in the council of the own comune or region, until its next vote.

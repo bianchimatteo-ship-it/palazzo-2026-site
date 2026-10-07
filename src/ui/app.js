@@ -1,6 +1,6 @@
 import { fullDate, formatDate } from '../core/time.js?v=20261007-1';
 import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20261007-1';
-import { accountApiBase, currentAccount, probeAccountService, deleteCloudSave, downloadSave, knownRevision, listCloudSaves, login, logout, register, slotForCareer, uploadSave } from '../data/repositories/account-sync.js?v=20261007-1';
+import { accountApiBase, commitRevision, currentAccount, probeAccountService, deleteCloudSave, downloadSave, knownRevision, listCloudSaves, login, logout, register, slotForCareer, uploadSave } from '../data/repositories/account-sync.js?v=20261007-1';
 import { setPartyLogoResolver } from './person-marks.js?v=20261007-1';
 import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261007-1';
 import { isRealCollectionLoaded, loadRealCollections, loadRealCollectionsSettled, pristineRecord, realDataFailures, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20261007-1';
@@ -167,10 +167,19 @@ export function mountApp(root, store, { retryData = null } = {}) {
     try { account.saves = await listCloudSaves(); account.error = ''; }
     catch (error) { account.error = error.message; account.user = currentAccount(); }
   };
-  const syncCareer = async ({ force = false, silent = true } = {}) => {
+  // One upload at a time (a second one would meet the revision of the first and be taken for a conflict).
+  let syncing = Promise.resolve();
+  const syncCareer = (options = {}) => { const run = syncing.then(() => syncOnce(options)); syncing = run.catch(() => {}); return run; };
+  const syncOnce = async ({ force = false, silent = true } = {}) => {
     clearTimeout(syncTimer); syncTimer = null;
     if (!account.user || !store.hasCareer()) return false;
-    const state = store.getState();
+    // Only a game that is saved here goes online: changes not saved (manual or end-of-week autosave, a write that failed) stay in this browser.
+    const state = store.cloudSnapshot();
+    if (!state) {
+      const { error } = store.saveStatus();
+      if (!silent) account.error = error ? `Il salvataggio in questo browser non è riuscito (${error}): la partita non va online.` : 'Ci sono modifiche non salvate in questo browser: salva la partita prima di portarla online.';
+      return false;
+    }
     const slot = slotForCareer(state.career.id);
     account.currentSlot = slot;
     try {
@@ -202,6 +211,21 @@ export function mountApp(root, store, { retryData = null } = {}) {
   };
   // Runs the action only after the confirmation; the click handler returns at once (the dialog stays open).
   const confirmThen = (options, action) => { askConfirm(options).then(async answer => { if (!answer.ok) return; try { await action(answer); } catch (error) { menu.error = error.message; admin.message = error.message; } render(store.getState(), store.getLastSaved()); }); };
+  // Advancing to a date goes on in pieces of 26 weeks, so the page stays alive; at every piece the store reads the state as it is (and stops before what needs the player unless it is delegated).
+  let advancingToDate = false;
+  const advanceToDate = async (target, delegate) => {
+    if (advancingToDate) return;
+    advancingToDate = true;
+    try {
+      for (let piece = 0; piece < 200; piece++) {
+        if (store.advanceToDate(target, { delegate, maxWeeks: 26 }).reason !== 'continua') break;
+        await new Promise(resolve => setTimeout(resolve));
+      }
+      playSound('week');
+    } catch (error) { store.getState().ui.toast = error.message; }
+    finally { advancingToDate = false; }
+    render(store.getState(), store.getLastSaved());
+  };
   // First opening: the account comes before the first career; after the registration a short tour, shown once.
   const ONBOARDING_KEY = 'politicando.onboarding.v1';
   const onboarding = () => { try { return JSON.parse(localStorage.getItem(ONBOARDING_KEY) ?? '{}') ?? {}; } catch { return {}; } };
@@ -622,14 +646,19 @@ export function mountApp(root, store, { retryData = null } = {}) {
         else if (data.accountAction === 'logout') { await logout(); account.user = null; account.saves = []; account.conflict = null; account.message = 'Sei uscito: le carriere restano online e nel browser.'; }
         else if (data.accountAction === 'refresh') { await refreshCloud(); }
         else if (data.accountAction === 'probe') { await probeAccount(); }
-        else if (data.accountAction === 'sync') { account.busy = 'sync'; render(store.getState(), store.getLastSaved()); store.save(); await syncCareer({ silent: false }); account.busy = false; }
+        else if (data.accountAction === 'sync') {
+          account.busy = 'sync'; render(store.getState(), store.getLastSaved());
+          const saved = store.save();
+          if (saved.ok) await syncCareer({ silent: false }); else account.error = `Il salvataggio in questo browser non è riuscito (${saved.error}): la partita non va online.`;
+          account.busy = false;
+        }
         else if (data.cloudLoad) {
-          const load = async () => { const remote = await downloadSave(data.cloudLoad); store.loadGame(remote.state, 'Carriera recuperata dal tuo account'); account.currentSlot = data.cloudLoad; menu.open = false; playSound('success'); await enterHome(); };
+          const load = async () => { const remote = await downloadSave(data.cloudLoad, { commit: false }); store.loadGame(remote.state, 'Carriera recuperata dal tuo account'); commitRevision(data.cloudLoad, remote.revision); account.currentSlot = data.cloudLoad; menu.open = false; playSound('success'); await enterHome(); };
           if (store.hasCareer() && store.hasUnsavedChanges()) { confirmThen({ title: 'Caricare la carriera online?', body: 'La partita in corso ha modifiche non salvate: verrà salvata in uno slot prima di caricare la carriera dal tuo account.', confirmLabel: 'Carica' }, load); return; }
           await load();
         }
         else if (data.cloudDelete) { confirmThen({ title: 'Eliminare la copia online?', body: 'Questa carriera verrà eliminata dall’archivio del tuo account. La copia nel browser resta.', confirmLabel: 'Elimina online', tone: 'danger' }, async () => { await deleteCloudSave(data.cloudDelete); await refreshCloud(); }); return; }
-        else if (data.conflict === 'download' && account.conflict) { const remote = await downloadSave(account.conflict.slot); store.loadGame(remote.state, 'Versione online caricata'); account.conflict = null; if (!menu.open) await enterHome(); }
+        else if (data.conflict === 'download' && account.conflict) { const remote = await downloadSave(account.conflict.slot, { commit: false }); store.loadGame(remote.state, 'Versione online caricata'); commitRevision(account.conflict.slot, remote.revision); account.conflict = null; if (!menu.open) await enterHome(); }
         else if (data.conflict === 'overwrite' && account.conflict) { confirmThen({ title: 'Sovrascrivere la versione online?', body: 'La versione più recente salvata da un altro dispositivo verrà sostituita da quella di questo browser.', confirmLabel: 'Sovrascrivi', tone: 'danger' }, () => syncCareer({ force: true, silent: false })); return; }
       } catch (error) { menu.error = error.message; }
       render(store.getState(), store.getLastSaved());
@@ -1163,6 +1192,14 @@ export function mountApp(root, store, { retryData = null } = {}) {
       }
       run();
     }
+    else if (action === 'advance-to-date') {
+      const target = views.filters.advanceDate || root.querySelector('[data-view-filter-select="advanceDate"]')?.value || '';
+      const today = store.getState().clock.currentDate;
+      if (!target || target <= today) { store.getState().ui.toast = 'Scegli una data futura.'; render(store.getState(), store.getLastSaved()); return; }
+      const weeks = Math.ceil((Date.parse(target) - Date.parse(today)) / (7 * 86400000));
+      askConfirm({ kicker: 'AVANZAMENTO', title: `Avanzare fino al ${formatDate(target)}?`, body: `Il tempo scorrerà settimana dopo settimana${weeks > 1 ? ` per circa ${weeks} settimane` : ''}: eventi, sondaggi, economia, partito, Parlamento, elezioni e società vanno avanti come sempre, senza saltare nulla.`, details: ['Si ferma prima di una decisione urgente, di una situazione da gestire o di una campagna in corso, a meno che tu non la deleghi allo staff.', 'Con la delega le decisioni si chiudono con la scelta predefinita e una campagna in corso prosegue senza di te.', 'Il salto non si può annullare: se vuoi un punto a cui tornare, salva prima in uno slot dal menu.'], option: 'Delega allo staff le decisioni che compaiono', confirmLabel: 'Avanza fino alla data' })
+        .then(answer => { if (answer.ok) advanceToDate(target, answer.option); });
+    }
     else if (action === 'menu') { menu.open = true; menu.view = 'home'; render(store.getState(), store.getLastSaved()); }
     else if (action === 'hall') { menu.open = true; menu.view = 'hall'; render(store.getState(), store.getLastSaved()); }
     else if (action === 'account') { menu.open = true; menu.view = 'account'; await refreshCloud(); render(store.getState(), store.getLastSaved()); }
@@ -1238,7 +1275,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
         markOnboarding({ account: true });
         await refreshCloud();
         // The running career joins the account at once (never overwriting a newer version saved elsewhere).
-        if (store.hasCareer()) await syncCareer();
+        if (store.hasCareer()) { await syncCareer(); if (store.saveStatus().dirty) account.message += ' La partita in corso ha modifiche non salvate: salvala per portarla online.'; }
         const wanted = menu.needAccount;
         menu.needAccount = false;
         account.busy = false;
@@ -1497,9 +1534,10 @@ export function mountApp(root, store, { retryData = null } = {}) {
   if (account.status === 'checking') probeAccount();
   // Escape closes the confirmation dialog (it means “Annulla”).
   globalThis.addEventListener?.('keydown', event => { if (event.key === 'Escape' && pendingConfirm) settleConfirm(false); });
-  // Every local save is followed by an online save of the same career (debounced), when the player has an account.
-  let lastSavedSeen = store.getLastSaved();
-  store.subscribe((state, saved) => { if (saved !== lastSavedSeen) { lastSavedSeen = saved; if (/^Salvat|aggiornato/.test(saved ?? '')) scheduleSync(); } });
+  // Every local save that went through is followed by an online save of the same career (debounced), when the player has an account. What counts is how the
+  // save really stands (a write that succeeded, nothing left unsaved), never the message on screen.
+  let savedSeen = store.saveStatus().seq;
+  store.subscribe(() => { const status = store.saveStatus(); if (status.seq !== savedSeen) { savedSeen = status.seq; if (status.ok && !status.dirty) scheduleSync(); } });
   globalThis.addEventListener?.('online', () => { if (account.user) syncCareer(); });
   if (account.user) refreshCloud().then(() => {
     // Another device may have a newer version of the career open here: say so instead of overwriting it.
@@ -1568,7 +1606,7 @@ function subpage(state, page, player, party, events, catalog, options = {}) {
     governo: renderParliamentPage('governo', state, { party, player, status: catalogStatus, politicians: realDatabase.politicians ?? [], secretary: playerRoles(state).secretary }) + realGovernmentCard(),
     archivio: renderArchiveHub(options.archive, { catalog, status: catalogStatus, logoFor: options.logoFor, realLaws: options.realLaws }),
     leggi: renderParliamentPage('leggi', state, { party, player, status: catalogStatus, politicians: realDatabase.politicians ?? [], lawFilter: options.views?.filters?.leggi, committees: realDatabase.committees ?? [], realLaws: renderRealLaws(realDatabase.laws ?? [], options.realLaws, { canPropose: canManageParliament(state.parliament), loading: catalogStatus.loading && !(realDatabase.laws ?? []).length, error: catalogStatus.error }) }),
-    calendario: state.game ? renderAgendaPage(state, { tab: options.tabFor?.('agenda', state), filter: options.views?.filters?.agenda, events }) : `<div class="agenda-list">${events.map(e => `<div class="agenda-row"><div class="agenda-date"><strong>${formatDate(e.date, { day: '2-digit' })}</strong><span>${formatDate(e.date, { month: 'short' })}</span></div><div class="agenda-row-text"><span class="event-tag">${esc(e.category)}</span><strong>${esc(e.title)}</strong><small>${esc(e.status)}</small></div><span class="source-pill">${sourceLabel(e.source)}</span></div>`).join('') || '<div class="empty-state">La tua agenda è libera. Avanza il tempo per generare i primi appuntamenti.</div>'}</div>`,
+    calendario: state.game ? renderAgendaPage(state, { tab: options.tabFor?.('agenda', state), filter: options.views?.filters?.agenda, advanceDate: options.views?.filters?.advanceDate, events }) : `<div class="agenda-list">${events.map(e => `<div class="agenda-row"><div class="agenda-date"><strong>${formatDate(e.date, { day: '2-digit' })}</strong><span>${formatDate(e.date, { month: 'short' })}</span></div><div class="agenda-row-text"><span class="event-tag">${esc(e.category)}</span><strong>${esc(e.title)}</strong><small>${esc(e.status)}</small></div><span class="source-pill">${sourceLabel(e.source)}</span></div>`).join('') || '<div class="empty-state">La tua agenda è libera. Avanza il tempo per generare i primi appuntamenti.</div>'}</div>`,
     politici: `<div class="catalog-body" data-catalog-body>${renderPoliticianArchive(catalog,{status:catalogStatus,logoFor:options.logoFor})}</div>`,
     'partiti-lista': `<div class="catalog-body" data-catalog-body>${renderPartyArchive(catalog,{status:catalogStatus,logoFor:options.logoFor})}</div>`,
     sondaggi: renderObservatory(state, observatoryOptions(state, options)),

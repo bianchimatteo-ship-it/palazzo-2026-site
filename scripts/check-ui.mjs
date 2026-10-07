@@ -286,6 +286,26 @@ page = await click({ gameFastforward: 'comunale', fastforwardLabel: 'Elezioni co
 assert.ok(page.includes('Avanzare fino alle candidature?') && page.includes('circa 30 settimane') && page.includes('Elezioni comunali'), 'Il salto fino alle candidature chiede conferma e dice quanto tempo passa.');
 await click({ confirm: 'cancel' });
 assert.equal(store.getState().game.week.index, week, 'Annullando il salto il tempo non avanza.');
+// Avanzare fino a una data: campo e bottone nella scheda Calendario, conferma con la delega allo staff, poi il tempo scorre fino al giorno scelto (e non oltre).
+const { advanceDays } = await import('../src/core/time.js');
+await goto('calendario');
+page = await click({ sectionTab: 'agenda', sectionTabValue: 'calendario' });
+assert.ok(page.includes('data-view-filter-select="advanceDate"') && page.includes('data-action="advance-to-date"') && page.includes(`min="${advanceDays(store.getState().clock.currentDate, 1)}"`), 'Il calendario ha il campo della data (da domani in poi) e il bottone per avanzare.');
+const dayBefore = store.getState().clock.currentDate;
+assert.ok(!(await click({ action: 'advance-to-date' })).includes('confirm-dialog') && store.getState().clock.currentDate === dayBefore, 'Senza una data scelta non si avanza.');
+const pickDate = value => Promise.all(listeners.change.map(fn => fn({ target: { matches: selector => selector === '[data-view-filter-select]', dataset: { viewFilterSelect: 'advanceDate' }, value } })));
+await pickDate(advanceDays(dayBefore, -3));
+assert.ok(!(await click({ action: 'advance-to-date' })).includes('confirm-dialog') && store.getState().clock.currentDate === dayBefore, 'Una data passata non si avanza.');
+await pickDate(advanceDays(dayBefore, 30));
+page = await click({ action: 'advance-to-date' });
+assert.ok(page.includes('confirm-dialog') && page.includes('Avanzare fino al') && page.includes('circa 5 settimane') && page.includes('Delega allo staff le decisioni che compaiono') && page.includes('decisione urgente'), 'Il salto a una data chiede conferma, dice quanto tempo passa e offre la delega allo staff.');
+await click({ confirm: 'cancel' });
+assert.equal(store.getState().clock.currentDate, dayBefore, 'Annullando la data non è cambiata.');
+await click({ action: 'advance-to-date' });
+for (const fn of listeners.change) await fn({ target: { matches: selector => selector === '[data-confirm-option]', checked: true } });
+await click({ confirm: 'ok' });
+assert.equal(store.getState().clock.currentDate, advanceDays(dayBefore, 30), 'Con la delega allo staff il tempo arriva alla data scelta.');
+assert.ok(!root.innerHTML.includes('confirm-dialog'));
 // Carriera: the four tracks with the odds of the next step; the timeline has its own tab.
 let career = await goto('carriera');
 for (const text of ['career-page', 'ISTITUZIONI ELETTE', 'PARTITO', 'PARLAMENTO', 'GOVERNO', 'PROSSIMO PASSO', 'data-section-tab-value="progressione"']) assert.ok(career.includes(text), `Carriera: manca ${text}`);

@@ -43,6 +43,8 @@ const revisionStore = () => { const value = read(REVISIONS_KEY); return value?.u
 const revisions = () => revisionStore().slots;
 const setRevision = (slot, revision) => { const store = revisionStore(); write(REVISIONS_KEY, { ...store, slots: { ...store.slots, [slot]: revision } }); };
 export const knownRevision = slot => revisions()[slot] ?? null;
+// The revision this device has is the one of the game it really holds: it moves only when a game was uploaded, or when a downloaded one was actually put in its place.
+export const commitRevision = (slot, revision) => { if (Number.isFinite(revision)) setRevision(slot, revision); };
 export const normalizeUsername = value => String(value ?? '').trim().toLowerCase();
 export const slotForCareer = careerId => `c-${String(careerId ?? 'carriera').toLowerCase().replace(/[^a-z0-9]/g, '')}`.slice(0, 40);
 
@@ -119,9 +121,11 @@ export async function uploadSave(slot, state, { name = null, meta = {}, force = 
   setRevision(slot, body.revision);
   return body;
 }
-export async function downloadSave(slot) {
+// commit: false leaves the known revision as it is, for who commits it (commitRevision) only once the game has really replaced the running one: a download that
+// is refused (a newer version, a backup that failed) must not make this device believe it holds a revision it does not.
+export async function downloadSave(slot, { commit = true } = {}) {
   const body = await call(`/api/saves/${encodeURIComponent(slot)}`);
-  setRevision(slot, body.revision);
+  if (commit) setRevision(slot, body.revision);
   return { state: await unpack(body), revision: body.revision, updatedAt: body.updatedAt, name: body.name, meta: body.meta };
 }
 export async function deleteCloudSave(slot) {

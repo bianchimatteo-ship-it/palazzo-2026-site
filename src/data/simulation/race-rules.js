@@ -12,7 +12,7 @@ export const RACE_RULES = Object.freeze({
   // Distances between two votes: a person stands in one race at a time (a campaign is a full-time job); the leader who plays two of
   // his own campaigns needs the time to close the first and open the second, and to prepare the candidacy.
   personGapDays: 35,
-  playableGapDays: 49,
+  playableGapDays: 89,
   // What each kind of candidate brings to a campaign (the campaign stats), before the territory. The staff and the cadres are known
   // where they work, the politicians of the Parliament everywhere a little, a new figure is nobody yet.
   profiles: Object.freeze({
