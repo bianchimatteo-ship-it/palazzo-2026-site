@@ -88,12 +88,51 @@ for(const [type,role] of [['comunale','sindaco'],['regionale','presidente'],['po
   const first=runFirstRound(runoff);
   assert.equal(first.requiresRunoff,true);
   runoff.firstRoundResult=first; runoff.runoffCandidateIds=first.runoffCandidateIds; runoff.stage='ballottaggio';
-  for(const candidate of runoff.candidates) if(!first.runoffCandidateIds.includes(candidate.id)) candidate.status='eliminated';
+  runoff.territories[0].supportByCandidate={ [own.id]:12,[rivals[0].id]:28,[rivals[1].id]:52,[rivals[2].id]:5,[rivals[3].id]:3 };
   const final=runFinalElection(runoff,first);
   assert.equal(final.stage,'risultato-finale');
   assert.equal(final.runoffResults.length,2);
-  assert.equal(final.groups.length,runoff.candidates.length,'Il risultato municipale mantiene anche le liste escluse dal ballottaggio per i seggi consiliari.');
+  assert.deepEqual(final.groups.map(item=>item.candidateId).sort(),first.runoffCandidateIds.slice().sort(),'Risultato e classifica finale contengono solo i finalisti.');
+  assert.ok(final.territories.every(area=>area.groups.length===2&&first.runoffCandidateIds.includes(area.winnerId)),'Nessun non-finalista può vincere un territorio al ballottaggio.');
+  assert.equal(final.personal.position,2,'La posizione personale è calcolata sul risultato finale.');
   assert.equal(final.groups.reduce((sum,item)=>sum+item.seats,0),16);
+}
+
+// Sondaggi settimanali e risultato condividono il consenso della campagna; gli esiti restano rumorosi ma plausibili.
+{
+  const simulate=seed=>{
+    let campaign=createCampaign({career:{...base.career,id:`poll-run-${seed}`,partyId:null},player:{...base.dataset.politicians[0],partyId:null,region:'Toscana',municipality:'Valleverde'},statistics:base.dataset.statistics,partyCatalog:[],currentDate:'2026-09-23',config:{electionType:'comunale',role:'sindaco',municipalityBand:'fino-15000'}});
+    campaign.nomination.status='approved';
+    for(let week=0;week<20&&campaign.status==='active';week++) campaign=advanceCampaign(campaign,7);
+    return campaign;
+  };
+  const simulations=Array.from({length:30},(_,seed)=>simulate(seed));
+  let coherent=0,surprises=0,maxDeviation=0;
+  for(const [seed,campaign] of simulations.entries()) {
+    assert.equal(campaign.status,'finished',`Sondaggio: simulazione ${seed} completata.`);
+    const poll=campaign.polls.at(-1);
+    assert.equal(poll.source,'simulation');
+    assert.ok(poll.sample>=700&&poll.sample<=1600&&poll.margin>2&&poll.margin<4,`Campione e margine plausibili (${seed}).`);
+    const pollRows=poll.results;
+    const finalRows=campaign.result.groups;
+    assert.deepEqual(pollRows.map(row=>row.candidateId).sort(),finalRows.map(row=>row.candidateId).sort(),`Il sondaggio finale usa solo le candidature ammesse al voto (${seed}).`);
+    const pollLeader=pollRows.toSorted((a,b)=>b.share-a.share)[0];
+    const winnerPoll=pollRows.find(row=>row.candidateId===campaign.result.winnerGroupId);
+    if(pollLeader.candidateId===campaign.result.winnerGroupId) coherent++;
+    if(pollLeader.candidateId!==campaign.result.winnerGroupId&&pollLeader.share-winnerPoll.share<=poll.margin*1.5) surprises++;
+    for(const row of finalRows) {
+      const estimate=pollRows.find(item=>item.candidateId===row.candidateId)?.share;
+      const deviation=Math.abs(row.percent-estimate);
+      maxDeviation=Math.max(maxDeviation,deviation);
+      assert.ok(deviation<=Math.min(7.5,poll.margin*3),`Esito entro una sorpresa plausibile rispetto al sondaggio (${seed}, ${row.label}: ${deviation.toFixed(2)}).`);
+    }
+    const repeated=simulate(seed);
+    assert.deepEqual(repeated.polls,campaign.polls,`Sondaggi deterministici a seed uguale (${seed}).`);
+    assert.deepEqual(repeated.result,campaign.result,`Risultato deterministico a seed uguale (${seed}).`);
+  }
+  assert.ok(coherent>0,'Il risultato conferma anche corse coerenti col sondaggio.');
+  assert.ok(surprises>0,'Esistono sorprese ravvicinate e plausibili.');
+  assert.ok(maxDeviation<8,'Non si osservano divergenze estreme tra stima e voto.');
 }
 
 // Esegue il flusso con salvataggio e ricaricamento a campagna aperta.
@@ -118,9 +157,7 @@ let campaign=store.getState().campaign;
 const activeHtml=renderCampaignPage(store.getState(),references,()=>null);
 assert.ok(activeHtml.includes('data-campaign-activity="rally"'));
 assert.ok(activeHtml.includes('Candidatura interna simulata'));
-assert.ok(!/non collegato/i.test(activeHtml),'Nessun riferimento a un aggancio ai sondaggi «non collegato»: i sondaggi stanno in Sondaggi e avversari.');
-assert.ok(!/class="[^"]*poll-/.test(activeHtml),'La campagna non contiene sondaggi: l’analisi è nell’Osservatorio.');
-assert.ok(activeHtml.includes('Sondaggi e avversari'),'Un rimando alla scheda Sondaggi e avversari per l’analisi completa.');
+assert.ok(activeHtml.includes('SONDAGGIO DI CAMPAGNA')&&activeHtml.includes('interviste'),'Il sondaggio simulato con campione è visibile nel gameplay.');
 // Il tema delle attività resta quello scelto dal giocatore, non quello della strategia, anche dopo un cambio di strategia.
 const strategyTopic=campaign.strategy?.topicId??campaign.nationalContext.salientTopic;
 assert.equal(selectedIn(activeHtml,'data-campaign-topic'),strategyTopic,'Senza una scelta il tema delle attività è quello della strategia.');
@@ -141,10 +178,12 @@ assert.equal(campaign.nomination.status,'pending');
 store.performCampaignActivity('party_meeting');
 store.performCampaignActivity('list_building');
 store.performCampaignActivity('fundraising');
+const activeCampaignPolls=store.getState().campaign.polls;
 store.save();
 module=await import(`../src/core/store.js?campaign-reload=${Date.now()}`);
 store=module.store;
 assert.equal(store.getState().campaign.status,'active','Campagna attiva ripristinata dal salvataggio.');
+assert.deepEqual(store.getState().campaign.polls,activeCampaignPolls,'Sondaggi e relativa sequenza seed sopravvivono al salvataggio/ricaricamento.');
 assert.deepEqual(store.getState().ui.campaignPicks,{key:campaign.id,values:{topic:chosenTopic,ally:'candidatura-inesistente'}},'Le scelte dei select tornano con il salvataggio.');
 assert.equal(selectedIn(renderCampaignPage(store.getState(),references,()=>null,store.getState().ui.campaignPicks.values),'data-campaign-topic'),chosenTopic,'Dopo il ricaricamento il select mostra il tema scelto.');
 assert.ok(store.getState().campaign.day>0);
@@ -189,11 +228,15 @@ if(finalState.campaign.result.personalMandate) {
   assert.equal(finalState.career.status,'elected');
 }
 assert.ok(finalState.career.electionHistory?.length);
+assert.ok(finalState.career.lastElectionReport.candidates.some(item=>item.source==='user'&&item.personId===finalState.career.playerId),'La candidatura del giocatore conserva il riferimento persistente USER.');
+assert.ok(finalState.career.electionHistory.at(-1).candidates.some(item=>item.source==='user'&&item.personId===finalState.career.playerId),'Lo storico completo conserva l’identità della candidatura.');
+assert.equal(finalState.career.lastElectionReport.poll.source,'simulation','Il resoconto conserva il sondaggio simulato prima del voto.');
 assert.ok(finalState.dataset.statistics.filter(item=>item.subjectId===finalState.career.playerId).every(item=>item.source==='simulation'));
 assert.ok(renderCampaignPage(finalState,references,()=>null).includes('SCRUTINIO CONCLUSO'));
 store.save();
 const finalModule=await import(`../src/core/store.js?campaign-final-reload=${Date.now()}`);
 assert.equal(finalModule.store.getState().campaign.status,'finished','Il risultato deve sopravvivere al ricaricamento.');
+assert.deepEqual(finalModule.store.getState().campaign.polls,finalState.campaign.polls,'Lo storico dei sondaggi resta disponibile dopo il voto e il ricaricamento.');
 assert.equal(finalModule.store.getState().career.lastCampaignId,finalState.campaign.id);
 assert.equal(JSON.stringify(party),JSON.stringify(references.find(item=>item.id===party.id)),'I dati ufficiali del partito non vengono alterati.');
 

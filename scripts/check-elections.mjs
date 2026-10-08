@@ -86,8 +86,16 @@ for (let seed = 0; seed < 40 && !runoffSeen; seed++) {
 }
 assert.ok(runoffSeen, 'Nei comuni sopra i 15.000 abitanti si arriva al ballottaggio.');
 assert.equal(runoffSeen.result.runoffResults.length, 2);
-assert.ok(runoffSeen.result.groups.length >= 3 && runoffSeen.result.groups.some(row => row.candidateId === runoffSeen.playerCandidateId), 'Il risultato mostra tutte le liste del primo turno, anche chi non va al ballottaggio (compreso il giocatore).');
-assert.ok(['ballottaggio-vinto', 'ballottaggio-perso', 'eletto-opposizione', 'sconfitta'].includes(runoffSeen.result.outcome.code));
+assert.equal(runoffSeen.result.groups.length,2,'La classifica finale contiene soltanto i due finalisti.');
+assert.ok(runoffSeen.result.groups.every(row=>runoffSeen.result.runoffResults.some(final=>final.candidateId===row.candidateId)),'Le percentuali e il vincitore finali sono riferiti ai soli finalisti.');
+assert.ok(runoffSeen.result.territories.every(area=>area.groups.length===2&&runoffSeen.result.firstRound.runoffCandidateIds.includes(area.winnerId)),'Nei territori non può vincere chi è stato eliminato al primo turno.');
+const finalPoll=runoffSeen.polls.at(-1);
+assert.equal(finalPoll.stage,'ballottaggio','La rilevazione più recente è della fase di ballottaggio.');
+assert.deepEqual(finalPoll.results.map(row=>row.candidateId).sort(),runoffSeen.result.firstRound.runoffCandidateIds.slice().sort(),'Anche i sondaggi al ballottaggio considerano solo i finalisti.');
+const finalPlayerRow=runoffSeen.result.groups.find(row=>row.candidateId===runoffSeen.playerCandidateId);
+assert.equal(runoffSeen.result.personal.position,finalPlayerRow?runoffSeen.result.groups.indexOf(finalPlayerRow)+1:null,'La posizione del giocatore usa il risultato finale.');
+assert.equal(runoffSeen.result.outcome.pollShare,finalPoll.results.find(row=>row.candidateId===runoffSeen.playerCandidateId)?.share??null,'L’esito usa l’ultima stima della fase corretta.');
+assert.ok(['ballottaggio-vinto', 'ballottaggio-perso', 'eletto-opposizione', 'sconfitta', 'escluso'].includes(runoffSeen.result.outcome.code));
 assert.equal(runoffSeen.result.groups.reduce((sum, row) => sum + row.seats, 0), 16);
 
 // ---------- 4. thresholds, closed lists, preferences, districts ----------
@@ -227,4 +235,4 @@ assert.equal(runoffSeen.result.groups.reduce((sum, row) => sum + row.seats, 0), 
   for (const text of ['Quando si vota', 'Il clima del voto', 'Quanto sei pronto', 'Come si assegnano i seggi']) assert.ok(overview.includes(text), `Panoramica: manca «${text}».`);
 }
 
-console.log(`Elezioni verificate: ${codes.size} esiti diversi (${[...codes].join(', ')}), attese sopra/in linea/sotto, posizioni fino al ${Math.max(...positions)}º posto; ${wins}/30 vittorie nelle corse serrate (mai automatiche, ma riproducibili); ballottaggio con tutte le liste del primo turno; soglie del 3% e del 4%, liste bloccate, preferenze e collegi con recupero nel proporzionale; campagne diverse per azioni (${rules.CAMPAIGN_ACTIVITIES.length}), fasi, requisiti ed eventi; strategie con compromessi e nessuna sempre vincente; conseguenze del voto sulla carriera, prossime mosse in agenda, nessun governo automatico; centrale elettorale con risultati completi.`);
+console.log(`Elezioni verificate: ${codes.size} esiti diversi (${[...codes].join(', ')}), attese sopra/in linea/sotto, posizioni fino al ${Math.max(...positions)}º posto; ${wins}/30 vittorie nelle corse serrate (mai automatiche, ma riproducibili); ballottaggio limitato ai due finalisti; soglie del 3% e del 4%, liste bloccate, preferenze e collegi con recupero nel proporzionale; campagne diverse per azioni (${rules.CAMPAIGN_ACTIVITIES.length}), fasi, requisiti ed eventi; strategie con compromessi e nessuna sempre vincente; conseguenze del voto sulla carriera, prossime mosse in agenda, nessun governo automatico; centrale elettorale con risultati completi.`);
