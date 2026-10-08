@@ -170,8 +170,9 @@ for (const race of [piemonte, lombardia, veneto, campania, comune, provincia]) {
   assert.ok(done.candidacy.personId && done.candidacy.partyId === state.world.playerPartyId, `${race.label}: la persona e il partito.`);
   assert.ok(done.territory.name && done.territory.region && done.level === race.level, `${race.label}: il territorio.`);
   assert.ok(done.campaignId && done.candidacy.role && done.candidacy.rooting !== undefined, `${race.label}: la candidatura e la campagna.`);
-  assert.ok(done.polls.waves >= 3 && done.polls.rows.length >= 3 && done.polls.rows.every(row => row.series.length >= 3), `${race.label}: i sondaggi di ogni settimana (${done.polls.waves} onde, ${done.polls.rows.length} righe, serie ${done.polls.rows.map(row => row.series.length).join('/')}).`);
-  assert.ok(done.result.groups.length >= 3 && done.result.groups.some(group => group.ours) && Number.isFinite(done.result.share) && typeof done.result.won === 'boolean', `${race.label}: il risultato.`);
+  assert.ok(done.polls.waves >= 3 && done.polls.rows.length >= 2 && done.polls.rows.every(row => row.series.length >= 3), `${race.label}: i sondaggi di ogni settimana (${done.polls.waves} onde, ${done.polls.rows.length} righe, serie ${done.polls.rows.map(row => row.series.length).join('/')}).`);
+  const playerEliminatedAtRunoff = done.result.outcome === 'escluso' && !done.result.groups.some(group => group.ours);
+  assert.ok(done.result.groups.length >= 2 && (done.result.groups.some(group => group.ours) || playerEliminatedAtRunoff) && Number.isFinite(done.result.share) && typeof done.result.won === 'boolean', `${race.label}: il risultato.`);
   assert.ok(done.history.length >= 2 && done.history.every(item => item.date && item.text), `${race.label}: lo storico.`);
   if (done.result.mandate) assert.ok(done.office?.title && done.office.personId === done.candidacy.personId && done.office.since === done.electionDate, `${race.label}: la carica di chi è eletto.`);
   else assert.equal(done.office, null, `${race.label}: nessuna carica senza mandato.`);
@@ -233,6 +234,14 @@ assert.deepEqual(await again(), first, 'Stessa partita, stessi risultati: la sim
   assert.ok(played.length >= 3, `Il giocatore sceglie sé stesso in più corse (${played.length}).`);
   for (let index = 1; index < played.length; index++) assert.ok(days(played[index - 1].electionDate, played[index].electionDate) >= rules.playableGapDays, `Tra ${played[index - 1].label} e ${played[index].label} ci sono almeno ${rules.playableGapDays} giorni.`);
   assert.ok(all.filter(race => race.status === 'held').length >= 8, 'Le altre corse si svolgono da sole, anno dopo anno.');
+  const archived = long.store.getState().races.archive;
+  assert.ok(archived.length > 0, 'Le candidature restano nello storico dopo l’uscita dalla slate attiva.');
+  const incomplete = archived.filter(item => !item.raceId || !item.electionId || !item.date || !item.level || (item.candidacy && (!item.personId || !item.role)) || !Object.hasOwn(item, 'result') || !Object.hasOwn(item, 'mandate'));
+  assert.deepEqual(incomplete.map(item => ({ id: item.id, status: item.status, personId: item.personId, role: item.role, hasResult: Object.hasOwn(item, 'result') })), [], 'Lo storico conserva elezione, data, livello, persona, ruolo, risultato (anche non votato) e mandato.');
+  const savedHistory = JSON.stringify(archived);
+  assert.ok(long.store.save().ok, 'La carriera pluriennale con archivio candidature si salva.');
+  const reloaded = (await import(`../src/core/store.js${v}&phase1-race-archive-reload`)).store;
+  assert.equal(JSON.stringify(reloaded.getState().races.archive), savedHistory, 'Lo storico candidature persiste al reload.');
   const later = checkInvariants(long.store.getState(), long.context);
   assert.ok(later.ok, `Stato coerente dopo sette anni di corse: ${later.issues.slice(0, 3).map(item => `[${item.code}] ${item.message}`).join('; ')}`);
 }

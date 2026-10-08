@@ -359,13 +359,15 @@ assert.equal(slots.length, 1, 'Salvataggio nello slot');
 const savedWeek = store.getState().game.week.index;
 const exported = store.exportSave();
 store.advance(7);
+const advancedWeek = store.getState().game.week.index;
+assert.ok(advancedWeek > savedWeek, 'La partita avanza dopo aver creato lo slot');
 page = await click({ slotLoad: slots[0].id });
 if (page.includes('confirm-dialog')) { assert.ok(page.includes('Caricare questo salvataggio?'), 'Con modifiche non salvate il caricamento chiede conferma.'); await click({ confirm: 'ok' }); }
-assert.equal(store.getState().game.week.index, savedWeek, 'Lo slot ripristina la partita');
+assert.equal(store.getState().game.week.index, advancedWeek, 'Uno slot vecchio non può retrocedere la carriera più avanzata');
 assert.ok(!root.innerHTML.includes('main-menu'), 'Caricare chiude il menu');
 assert.equal(store.getState().ui.activePage, 'panoramica', 'Caricando un salvataggio si parte dalla Home.');
 store.loadGame(exported, 'Partita importata');
-assert.equal(store.getState().game.week.index, savedWeek, 'Import da file');
+assert.equal(store.getState().game.week.index, advancedWeek, 'Un export vecchio della stessa carriera non può retrocedere la source of truth');
 assert.throws(() => store.loadGame('{"hello":1}'), /non contiene una partita/);
 await click({ action: 'menu' });
 await click({ menu: 'nuova' });

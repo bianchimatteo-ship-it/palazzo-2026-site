@@ -207,16 +207,16 @@ const unmeasured = roster.filter(item => !item.surveyed && !item.isPlayer);
 for (const item of unmeasured) assert.ok(item.share >= 0.05 && item.share < 3, `${item.label}: consenso simulato piccolo (${item.share}).`);
 // Week after week, the institutes poll the race: the opening wave, then one every seven days, through to the vote.
 const dayOf = () => national.getState().campaign;
-let waves = dayOf().polls.waves;
+let waves = dayOf().pollObservatory.waves;
 assert.equal(waves.length, 1, 'Al via la prima onda di sondaggi.');
 const seen = [];
-while (dayOf().status === 'active') { weeks(national, 1); const c = dayOf(); seen.push([c.day, c.polls.waves.length, c.polls.waves.at(-1).day]); if (c.status === 'active') assert.equal(c.polls.waves.at(-1).day, c.day, 'Ogni settimana una nuova onda, lo stesso giorno della campagna.'); }
+while (dayOf().status === 'active') { weeks(national, 1); const c = dayOf(); seen.push([c.day, c.pollObservatory.waves.length, c.pollObservatory.waves.at(-1).day]); if (c.status === 'active') assert.equal(c.pollObservatory.waves.at(-1).day, c.day, 'Ogni settimana una nuova onda, lo stesso giorno della campagna.'); }
 const finished = dayOf();
 assert.equal(finished.status, 'finished');
-assert.ok(finished.polls.waves.length >= 5, `Le onde coprono tutta la campagna (${finished.polls.waves.map(item => item.day).join(', ')}).`);
-assert.ok(finished.polls.waves.every((wave, index) => index === 0 || wave.day - finished.polls.waves[index - 1].day <= 7), 'Nessun buco tra un sondaggio e l’altro.');
+assert.ok(finished.pollObservatory.waves.length >= 5, `Le onde coprono tutta la campagna (${finished.pollObservatory.waves.map(item => item.day).join(', ')}).`);
+assert.ok(finished.pollObservatory.waves.every((wave, index) => index === 0 || wave.day - finished.pollObservatory.waves[index - 1].day <= 7), 'Nessun buco tra un sondaggio e l’altro.');
 const inField = new Set(finished.candidates.map(item => item.id));
-assert.ok(finished.polls.waves.every(wave => wave.groups.length >= 8 && wave.groups.every(group => inField.has(group.id)) && Object.keys(wave.institutes).length === 4), 'Ogni onda sonda le stesse candidature, con i quattro istituti.');
+assert.ok(finished.pollObservatory.waves.every(wave => wave.groups.length >= 8 && wave.groups.every(group => inField.has(group.id)) && Object.keys(wave.institutes).length === 4), 'Ogni onda sonda le stesse candidature, con i quattro istituti.');
 const raceView = campaigns.campaignObservatory(finished, { society: societyEngine.observatorySociety(national.getState().society) });
 assert.ok(raceView.rows.length >= 8 && raceView.rows.every(row => row.series.length >= 5) && raceView.institutes.every(item => item.history.length >= 5), 'L’osservatorio della corsa resta consultabile dopo il voto, con la storia di ogni onda.');
 assert.ok(raceView.rows.some(row => row.isPlayer) && raceView.rows.filter(row => row.partyKind === 'reale').length >= 8, 'Il giocatore e le forze reali sono tutte nell’osservatorio.');
@@ -250,7 +250,7 @@ assert.equal(europee.roster.type, 'europee');
 assert.ok(eu.getState().world.polls.at(-1).results.every(row => europee.roster.participants.some(item => item.id === row.partyId)), 'Alle europee si presentano le forze dei sondaggi.');
 assert.ok(sameSet(rivalsOf(europee).map(item => item.partyId), europee.roster.participants.filter(item => !item.isPlayer).map(item => item.id)) && rivalsOf(europee).every(item => !item.independent), 'Una candidatura per forza, come alle politiche.');
 weeks(eu, 3);
-assert.ok(eu.getState().campaign.polls.waves.length >= 3 && eu.getState().campaign.polls.waves.every(item => item.groups.length >= 8), 'Anche alle europee i sondaggi seguono la corsa ogni settimana.');
+assert.ok(eu.getState().campaign.pollObservatory.waves.length >= 3 && eu.getState().campaign.pollObservatory.waves.every(item => item.groups.length >= 8), 'Anche alle europee i sondaggi seguono la corsa ogni settimana.');
 console.log('Politiche ed europee: forze reali nel campo e sondaggi per tutta la campagna verificati.');
 
 // ---------- 5. local votes: the field changes with the place; real forces, the player's forces, independents; never a made-up party ----------
@@ -311,13 +311,13 @@ assert.ok(racing.groups.length >= 4 && racing.average.length === racing.groups.l
   let run = split(localCampaign('comunale', 'sindaco', 'Lombardia', 'Milano', 'obs-runoff'));
   run = campaigns.advanceCampaign(run, run.totalDays - run.day);
   assert.equal(run.stage, 'ballottaggio', 'Nessuno vince al primo turno: ballottaggio.');
-  const first = run.polls.waves.filter(item => item.stage === 'campagna');
-  const head = run.polls.waves.filter(item => item.stage === 'ballottaggio');
+  const first = run.pollObservatory.waves.filter(item => item.stage === 'campagna');
+  const head = run.pollObservatory.waves.filter(item => item.stage === 'ballottaggio');
   assert.ok(first.length >= 4 && head.length >= 1, 'Le onde del primo turno e, appena parte il ballottaggio, una nuova onda.');
   assert.ok(head.every(wave => wave.groups.length === 2), 'Il ballottaggio si sonda come testa a testa tra i due finalisti.');
   const wasDay = run.day;
   while (run.status === 'active') run = campaigns.advanceCampaign(run, 1);
-  const all = run.polls.waves;
+  const all = run.pollObservatory.waves;
   assert.ok(all.every((wave, index) => index === 0 || wave.day >= all[index - 1].day) && all.filter(item => item.stage === 'ballottaggio').every((wave, index, list) => index === 0 || wave.day - list[index - 1].day <= 7), 'I sondaggi non si interrompono tra i due turni.');
   assert.ok(run.day > wasDay && run.status === 'finished', 'Il ballottaggio si conclude.');
   assert.ok(campaigns.campaignObservatory(run, {}).waves >= first.length + 1, 'L’osservatorio conserva anche le onde del ballottaggio.');

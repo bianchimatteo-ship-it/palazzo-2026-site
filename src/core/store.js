@@ -62,7 +62,6 @@ let unsaved = false;
 let saveFailure = null;
 let saveSeq = 0;
 let saveLock = isFutureSave(storedState) ? futureProblem(storedState.version) : null;
-let pendingBackup = null;
 function hydrateState(saved) {
   if (!saved) return makeDemoState();
   if (!isRestorableSave(saved)) {
@@ -352,11 +351,9 @@ let state = saveLock ? storedState : prepareState(hydratedState);
 let lastSaved = saveLock ? saveLock : storedState ? (isRestorableSave(storedState) ? 'Salvataggio caricato' : 'Salvataggio non valido: copia conservata') : 'Nuova carriera demo';
 if (saveLock) { unsaved = true; saveFailure = saveLock; }
 else if (isRestorableSave(storedState) && storedState.version < STATE_VERSION) {
-  // The save written by the previous version is kept aside before the upgraded one replaces it: if it cannot be kept, it is not replaced (the next save tries again).
-  const reason = `aggiornamento-v${storedState.version ?? 0}-v${STATE_VERSION}`;
-  if (storage.backup(storedState, reason)) {
-    try { state = storage.save(state).state; lastSaved = 'Salvataggio aggiornato'; } catch { lastSaved = 'Salvataggio locale non disponibile'; unsaved = true; saveFailure = lastSaved; }
-  } else { pendingBackup = { payload: storedState, reason }; lastSaved = 'Salvataggio aggiornato solo in memoria: la copia di sicurezza di quello precedente non è riuscita'; unsaved = true; saveFailure = lastSaved; }
+  // storage.save preserves the previous schema before replacing main; a failed attempt remains retryable.
+  try { state = storage.save(state).state; lastSaved = 'Salvataggio aggiornato'; }
+  catch (error) { lastSaved = 'Salvataggio locale non disponibile'; unsaved = true; saveFailure = error?.message || lastSaved; }
 }
 const listeners = new Set();
 let timelineBase = state;
@@ -415,7 +412,6 @@ function persist({ force = false } = {}) {
   weekClosed = false;
   try {
     if (saveLock) throw new Error(saveLock);
-    if (pendingBackup) { if (!storage.backup(pendingBackup.payload, pendingBackup.reason)) throw new Error('La copia di sicurezza del salvataggio precedente non è riuscita: non lo sovrascrivo.'); pendingBackup = null; }
     const saved = storage.save(state);
     state = saved.state;
     timelineBase = state;
@@ -429,7 +425,13 @@ function persist({ force = false } = {}) {
 }
 // The game about to be replaced (by another one loaded or a new career) is kept in a slot first; if it cannot be kept, nothing is replaced.
 function keepCurrent(name) {
-  try { return store.saveToSlot(name); }
+  try {
+    const existing = storage.listSlots().find(entry => {
+      if (!entry.autoPreserve || entry.name !== name) return false;
+      try { return storage.loadSlot(entry.id)?.career?.id === state.career.id; } catch { return false; }
+    });
+    return store.saveToSlot(name, existing?.id ?? null, { autoPreserve: true });
+  }
   catch (error) { throw new Error(`La partita in corso non può essere conservata, quindi non la sostituisco. ${error.message}`); }
 }
 // What a save slot shows before it is opened.
@@ -2837,10 +2839,10 @@ export const store = {
   hasUnsavedChanges: () => unsaved,
   currentMeta: () => slotMeta(state),
   listSlots: () => storage.listSlots(),
-  saveToSlot(name = null, id = null) {
+  saveToSlot(name = null, id = null, extraMeta = {}) {
     if (!store.hasCareer()) throw new Error('Non c’è una partita da salvare.');
     const meta = slotMeta(state);
-    const slotId = storage.saveSlot(state, { ...meta, name: name?.trim() || `${meta.player} · settimana ${meta.week}` }, id);
+    const slotId = storage.saveSlot(state, { ...meta, ...extraMeta, name: name?.trim() || `${meta.player} · settimana ${meta.week}` }, id);
     state = { ...state, saveMeta: { ...(state.saveMeta ?? {}), careerId: state.career.id, revision: storage.latestRevision(state.career.id) } };
     state = { ...state, ui: { ...state.ui, toast: 'Partita salvata nello slot' } };
     emit();
@@ -2854,8 +2856,8 @@ export const store = {
     if (!isRestorableSave(saved)) throw new Error('Il file non contiene una partita di POLITICANDO 2026.');
     // A game of a newer version is refused as it is: this one would have to read it down, and lose what it does not know.
     if (isFutureSave(saved)) throw new Error(`Questa partita è di una versione più recente del gioco (versione ${saved.version}, questa è la ${STATE_VERSION}): non può essere caricata qui. Aggiorna il gioco.`);
-    saved = storage.bestForCareer(saved.career.id) ?? saved;
-    if (store.hasCareer() && unsaved) keepCurrent('Partita precedente (salvataggio automatico)');
+    saved = storage.bestForCareer(saved.career.id, saved, { preferFallbackOnProgressTie: true }) ?? saved;
+    if (store.hasCareer()) keepCurrent('Partita precedente (salvataggio automatico)');
     state = migrateDemoParty(prepareState(hydrateState(saved)));
     if (realForces.length && state.world && isLegacyWorld(state.world)) state = { ...state, world: buildWorld(state) };
     if (latentOutOfDate(state.world)) state = { ...state, world: withLatentForces(state.world, realLatent) };
@@ -2870,7 +2872,7 @@ export const store = {
   clearAllSaves() {
     storage.clearAll();
     // Everything is gone (also a save of a newer version that stopped the saving): the game saves again.
-    saveLock = null; pendingBackup = null; unsaved = false; saveFailure = null;
+    saveLock = null; unsaved = false; saveFailure = null;
     state = prepareState(makeDemoState());
     timelineBase = state;
     lastSaved = 'Nessuna partita salvata'; emit();
@@ -4039,10 +4041,13 @@ export const store = {
     return next.campaign;
   },
   reset() {
+    if (saveLock) { lastSaved = saveLock; emit(); return; }
+    try { storage.clear(state); }
+    catch (error) { lastSaved = error?.message || 'Salvataggio non disponibile'; emit(); return; }
     state = prepareState(makeDemoState());
     timelineBase = state;
-    if (!saveLock) { try { storage.clear(); } catch { /* storage may be unavailable */ } }
-    lastSaved = saveLock ?? 'Nuova carriera demo'; emit();
+    unsaved = false; saveFailure = null;
+    lastSaved = 'Nuova carriera demo'; emit();
   },
   createCareer(draft, realParties = [], realGroups = []) {
     draft = { ...draft, startingRole: draft.startingRole ?? 'militante' };

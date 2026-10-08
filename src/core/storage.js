@@ -1,7 +1,9 @@
 const STORAGE_KEY = 'palazzo-2026.career.v1';
 const BACKUP_KEY = `${STORAGE_KEY}.backup`;
 const HISTORY_KEY = `${STORAGE_KEY}.history`;
-const HISTORY_LIMIT = 6;
+const LOCK_KEY = `${STORAGE_KEY}.lock`;
+const HISTORY_LIMIT = 4;
+const LOCK_TTL = 5000;
 // Manual save slots live beside the running game: an index plus one entry per slot.
 const SLOT_INDEX = 'politicando.slots.v1';
 const SLOT_PREFIX = 'politicando.slot.';
@@ -34,7 +36,8 @@ const unwrap = (value, source) => {
   const payload = wrapper ? (typeof wrapper.payload === 'string' ? readRawJson(wrapper.payload) : wrapper.payload) : value;
   return isSave(payload) ? { state: payload, source, savedAt: wrapper?.savedAt ?? null } : null;
 };
-const samePayload = (left, right) => JSON.stringify(left) === JSON.stringify(right);
+const payloadText = value => typeof value === 'string' ? value : JSON.stringify(value);
+const samePayload = (left, right) => payloadText(left) === payloadText(right);
 function allSaveCandidates() {
   const candidates = [];
   const main = unwrap(readJson(STORAGE_KEY), 'main');
@@ -57,16 +60,71 @@ function bestCandidate(candidates) {
 }
 function appendHistory(entry) {
   const list = readJson(HISTORY_KEY);
-  const history = Array.isArray(list) ? list : [];
-  const duplicate = history.some(item => item?.reason === entry?.reason && samePayload(item?.payload, entry?.payload));
-  if (duplicate) return;
-  history.push(entry);
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(-HISTORY_LIMIT)));
+  let history = Array.isArray(list) ? list : [];
+  if (history.some(item => samePayload(item?.payload, entry?.payload))) return true;
+  history = [...history, entry].slice(-HISTORY_LIMIT);
+  while (history.length) {
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); return true; }
+    catch { history.shift(); }
+  }
+  try { localStorage.removeItem(HISTORY_KEY); } catch { /* history is only a convenience */ }
+  return false;
 }
 function archiveSnapshot(payload, reason, savedAt = new Date().toISOString()) {
   const entry = { reason, savedAt, payload: typeof payload === 'string' ? payload : JSON.stringify(payload) };
-  appendHistory(entry);
+  try { appendHistory(entry); } catch { /* history must never block a main or backup save */ }
   return entry;
+}
+const isQuotaError = error => error?.name === 'QuotaExceededError' || /quota|storage full/i.test(String(error?.message ?? ''));
+function writeWithHistoryPrune(key, value) {
+  try { localStorage.setItem(key, value); return; }
+  catch (initialError) {
+    if (key === HISTORY_KEY || !isQuotaError(initialError)) throw initialError;
+    let history = readJson(HISTORY_KEY);
+    history = Array.isArray(history) ? [...history] : [];
+    while (history.length) {
+      history.shift();
+      try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); } catch { /* continue pruning oldest entries */ }
+      try { localStorage.setItem(key, value); return; } catch (error) { if (!isQuotaError(error)) throw error; }
+    }
+    try { localStorage.removeItem(HISTORY_KEY); } catch { /* preserve the target write attempt */ }
+    localStorage.setItem(key, value);
+  }
+}
+function withWriteLock(action) {
+  const now = Date.now();
+  const occupied = readJson(LOCK_KEY);
+  if (occupied?.expiresAt > now) throw new Error('Salvataggio in corso in un’altra scheda: riprova tra qualche istante.');
+  const token = `${now}-${Math.random().toString(36).slice(2)}`;
+  writeWithHistoryPrune(LOCK_KEY, JSON.stringify({ token, expiresAt: now + LOCK_TTL }));
+  if (readJson(LOCK_KEY)?.token !== token) throw new Error('Salvataggio in corso in un’altra scheda: riprova tra qualche istante.');
+  const assertOwner = () => {
+    if (readJson(LOCK_KEY)?.token !== token) throw new Error('Salvataggio interrotto da un’altra scheda; ricarica prima di riprovare.');
+  };
+  try { return action(assertOwner); }
+  finally { try { if (readJson(LOCK_KEY)?.token === token) localStorage.removeItem(LOCK_KEY); } catch { /* the lease expires if cleanup is unavailable */ } }
+}
+function backupLocked(payload, reason) {
+  const rawPayload = payloadText(payload);
+  const incoming = typeof payload === 'string' ? readRawJson(payload) : payload;
+  const previous = unwrap(readJson(BACKUP_KEY), 'backup');
+  if (previous && isSave(previous.state) && !isSave(incoming)) {
+    archiveSnapshot(rawPayload, reason);
+    return true;
+  }
+  if (previous && isSave(incoming) && careerIdOf(previous.state) === careerIdOf(incoming)) {
+    const comparison = compareSaveVersion(previous.state, incoming);
+    if (comparison > 0 || (comparison === 0 && samePayload(previous.state, incoming))) {
+      archiveSnapshot(rawPayload, reason);
+      return true;
+    }
+  }
+  const entry = { reason, savedAt: new Date().toISOString(), payload: rawPayload };
+  try { writeWithHistoryPrune(BACKUP_KEY, JSON.stringify(entry)); }
+  catch { return false; }
+  if (previous && !samePayload(previous.state, incoming)) archiveSnapshot(previous.state, 'backup-precedente', previous.savedAt ?? undefined);
+  archiveSnapshot(rawPayload, reason, entry.savedAt);
+  return true;
 }
 function nextRevision(state) {
   return allSaveCandidates().filter(item => careerIdOf(item.state) === careerIdOf(state)).reduce((max, item) => Math.max(max, revisionOf(item.state)), revisionOf(state)) + 1;
@@ -81,79 +139,120 @@ function metaOf(payload) {
   const player = payload?.dataset?.politicians?.find?.(item => item.id === payload?.career?.playerId);
   return { player: player?.displayName ?? 'Carriera', role: null, party: payload?.game?.party?.label ?? 'Indipendente', week: payload?.game?.week?.index ?? 1, gameDate: payload?.clock?.currentDate ?? null, status: payload?.game?.status ?? 'active', name: `${player?.displayName ?? 'Carriera'} · salvataggio ritrovato` };
 }
+function repairSlotsUnlocked() {
+  const index = readJson(SLOT_INDEX);
+  const listed = Array.isArray(index) ? index.filter(entry => entry?.id) : [];
+  const exists = slotsPresent();
+  const kept = listed.filter(entry => exists(entry.id));
+  const lost = slotKeys().map(key => key.slice(SLOT_PREFIX.length)).filter(id => !kept.some(entry => entry.id === id));
+  const found = lost.map(id => ({ id, savedAt: new Date().toISOString(), ...metaOf(readJson(SLOT_PREFIX + id)) })).slice(0, Math.max(0, MAX_SLOTS - kept.length));
+  if (kept.length === listed.length && !found.length) return false;
+  writeWithHistoryPrune(SLOT_INDEX, JSON.stringify([...kept, ...found]));
+  return true;
+}
 
 export const storage = {
   load() {
+    const choose = () => {
+      const candidates = allSaveCandidates();
+      const main = candidates.find(item => item.source === 'main');
+      const best = main ? bestCandidate(candidates.filter(item => careerIdOf(item.state) === careerIdOf(main.state))) : bestCandidate(candidates);
+      return { candidates, main, best };
+    };
+    let selected = choose();
+    if (!selected.best || selected.best.source === 'main') return selected.best?.state ?? null;
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw && !unwrap(readRawJson(raw), 'main')) storage.backup(raw, 'salvataggio-main-non-recuperabile');
-    } catch { /* browser storage may be unavailable; the remaining recovery path is still attempted */ }
-    const candidates = allSaveCandidates();
-    const main = candidates.find(item => item.source === 'main');
-    const best = main ? bestCandidate(candidates.filter(item => careerIdOf(item.state) === careerIdOf(main.state))) : bestCandidate(candidates);
-    if (best && best.source !== 'main') {
-      try {
-        if (main) archiveSnapshot(main.state, 'recovery-main-precedente');
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(best.state));
-      } catch { /* the recovered copy is still returned in memory; a later save will report storage failure */ }
+      withWriteLock(assertOwner => {
+        selected = choose();
+        if (!selected.best || selected.best.source === 'main') return;
+        assertOwner();
+        const rawMain = localStorage.getItem(STORAGE_KEY);
+        if (selected.best.source !== 'backup' && !backupLocked(selected.best.state, 'recovery-copia-avanzata')) {
+          throw new Error('La copia recuperata non è riuscita: il salvataggio principale resta intatto.');
+        }
+        if (selected.main) {
+          archiveSnapshot(selected.main.state, 'recovery-main-precedente');
+        } else if (rawMain) archiveSnapshot(rawMain, 'salvataggio-main-non-recuperabile');
+        assertOwner();
+        writeWithHistoryPrune(STORAGE_KEY, JSON.stringify(selected.best.state));
+      });
+    } catch { /* return the best valid copy in memory; never replace a good backup with corrupt main */ }
+    return selected.best?.state ?? null;
+  },
+  bestForCareer(id, fallback = null, { preferFallbackOnProgressTie = false } = {}) {
+    const candidates = allSaveCandidates().filter(item => careerIdOf(item.state) === String(id));
+    const best = bestCandidate(candidates);
+    if (isSave(fallback) && careerIdOf(fallback) === String(id)) {
+      if (preferFallbackOnProgressTie && (!best || compareSaveProgress(fallback, best.state) >= 0)) return fallback;
+      if (!best || compareSaveVersion(fallback, best.state) > 0) return fallback;
     }
     return best?.state ?? null;
-  },
-  bestForCareer(id) {
-    return bestCandidate(allSaveCandidates().filter(item => careerIdOf(item.state) === String(id)))?.state ?? null;
   },
   latestRevision(id) {
     return allSaveCandidates().filter(item => careerIdOf(item.state) === String(id)).reduce((max, item) => Math.max(max, revisionOf(item.state)), 0);
   },
   save(state) {
-    const persisted = bestCandidate(allSaveCandidates().filter(item => careerIdOf(item.state) === careerIdOf(state)));
-    const baseRevision = Number.isSafeInteger(state?.saveMeta?.revision) ? state.saveMeta.revision : 0;
-    if (persisted && (compareSaveProgress(persisted.state, state) > 0 || revisionOf(persisted.state) > baseRevision)) {
-      storage.backup(state, 'conflitto-versione-obsoleta');
-      throw new Error(`Salvataggio obsoleto rifiutato: la carriera ${careerIdOf(state)} ha già una versione più avanzata.`);
-    }
-    const current = unwrap(readJson(STORAGE_KEY), 'main');
-    const switchIntent = state?.saveMeta?.switchFromCareerId === careerIdOf(current?.state) && Boolean(state?.saveMeta?.switchIntent);
-    if (current && careerIdOf(current.state) !== careerIdOf(state) && !switchIntent) {
-      storage.backup(state, 'conflitto-carriera-diversa');
-      throw new Error('La carriera persistita è cambiata in un’altra scheda; ricaricala prima di salvare.');
-    }
-    const revision = nextRevision(state);
-    const savedState = { ...state, saveMeta: { ...(state.saveMeta ?? {}), careerId: careerIdOf(state), revision, switchFromCareerId: null, switchIntent: null } };
-    const raw = JSON.stringify(savedState);
-    if (current && !samePayload(current.state, savedState)) archiveSnapshot(current.state, 'versione-precedente');
-    localStorage.setItem(STORAGE_KEY, raw);
-    const written = readJson(STORAGE_KEY);
-    if (!written || !samePayload(written, savedState)) {
-      storage.backup(savedState, 'conflitto-scrittura-concorrente');
-      throw new Error('Scrittura concorrente rilevata: il salvataggio persistito non coincide con questa versione.');
-    }
-    return { savedAt: new Date().toISOString(), state: savedState, revision };
+    if (!isSave(state)) throw new Error('La carriera non è valida e non può essere salvata.');
+    return withWriteLock(assertOwner => {
+      const careerId = careerIdOf(state);
+      const candidates = allSaveCandidates();
+      const persisted = bestCandidate(candidates.filter(item => careerIdOf(item.state) === careerId));
+      const baseRevision = revisionOf(state);
+      const progress = persisted ? compareSaveProgress(persisted.state, state) : 0;
+      if (persisted && (progress > 0 || (progress === 0 && revisionOf(persisted.state) > baseRevision))) {
+        archiveSnapshot(state, 'conflitto-versione-obsoleta');
+        throw new Error(`Salvataggio obsoleto rifiutato: la carriera ${careerId} ha già una versione più avanzata.`);
+      }
+      const current = unwrap(readJson(STORAGE_KEY), 'main');
+      const switchIntent = state?.saveMeta?.switchFromCareerId === careerIdOf(current?.state) && Boolean(state?.saveMeta?.switchIntent);
+      if (current && careerIdOf(current.state) !== careerId && !switchIntent) {
+        archiveSnapshot(state, 'conflitto-carriera-diversa');
+        throw new Error('La carriera persistita è cambiata in un’altra scheda; ricaricala prima di salvare.');
+      }
+      const revision = Math.max(nextRevision(state), baseRevision + 1);
+      const savedState = { ...state, saveMeta: { ...(state.saveMeta ?? {}), careerId, revision, switchFromCareerId: null, switchIntent: null } };
+      const raw = JSON.stringify(savedState);
+      if (current && !samePayload(current.state, savedState)) {
+        if (!backupLocked(current.state, current.state.version < (savedState.version ?? 0) ? `aggiornamento-v${current.state.version ?? 0}-v${savedState.version ?? 0}` : 'versione-precedente')) {
+          throw new Error('La copia di sicurezza del salvataggio precedente non è riuscita: la versione principale resta intatta.');
+        }
+        archiveSnapshot(current.state, 'versione-precedente');
+      }
+      assertOwner();
+      writeWithHistoryPrune(STORAGE_KEY, raw);
+      const written = readJson(STORAGE_KEY);
+      if (!written || !samePayload(written, savedState)) {
+        archiveSnapshot(savedState, 'conflitto-scrittura-concorrente');
+        throw new Error('Scrittura concorrente rilevata: il salvataggio persistito non coincide con questa versione.');
+      }
+      return { savedAt: new Date().toISOString(), state: savedState, revision };
+    });
   },
   // A save that cannot be restored is copied aside so a later autosave never erases it. True only when the copy is really there: whoever
   // is about to replace a save checks it first.
   backup(payload, reason) {
-    try {
-      const previous = readJson(BACKUP_KEY);
-      if (previous?.payload && !samePayload(previous.payload, typeof payload === 'string' ? payload : JSON.stringify(payload))) archiveSnapshot(previous.payload, previous.reason ?? 'backup-precedente', previous.savedAt);
-      const entry = archiveSnapshot(payload, reason);
-      localStorage.setItem(BACKUP_KEY, JSON.stringify(entry));
-      return true;
-    } catch { return false; }
+    try { return withWriteLock(() => backupLocked(payload, reason)); }
+    catch { return false; }
   },
-  clear() { localStorage.removeItem(STORAGE_KEY); },
+  clear(expected = null) {
+    return withWriteLock(assertOwner => {
+      const current = unwrap(readJson(STORAGE_KEY), 'main');
+      if (current && expected && careerIdOf(current.state) !== careerIdOf(expected)) {
+        throw new Error('La carriera persistita è cambiata in un’altra scheda: ricaricala prima di azzerare il salvataggio.');
+      }
+      if (current && expected && compareSaveVersion(current.state, expected) > 0) {
+        throw new Error('La partita è più recente di questa scheda: ricaricala prima di azzerare il salvataggio.');
+      }
+      assertOwner();
+      localStorage.removeItem(STORAGE_KEY);
+      return true;
+    });
+  },
 
   // ---------- manual slots ----------
   // The index and the slots say the same thing: an entry whose slot is gone leaves the list, a slot the index lost (a write that stopped half way) comes back into it.
   repairSlots() {
-    const index = readJson(SLOT_INDEX);
-    const listed = Array.isArray(index) ? index.filter(entry => entry?.id) : [];
-    const exists = slotsPresent();
-    const kept = listed.filter(entry => exists(entry.id));
-    const lost = slotKeys().map(key => key.slice(SLOT_PREFIX.length)).filter(id => !kept.some(entry => entry.id === id));
-    const found = lost.map(id => ({ id, savedAt: new Date().toISOString(), ...metaOf(readJson(SLOT_PREFIX + id)) })).slice(0, Math.max(0, MAX_SLOTS - kept.length));
-    if (kept.length === listed.length && !found.length) return false;
-    try { localStorage.setItem(SLOT_INDEX, JSON.stringify([...kept, ...found])); return true; } catch { return false; }
+    try { return withWriteLock(() => repairSlotsUnlocked()); } catch { return false; }
   },
   listSlots() {
     const index = readJson(SLOT_INDEX);
@@ -162,35 +261,33 @@ export const storage = {
   },
   // The slot and its place in the index are written together: if the index cannot say it, the slot goes back to what it was (nothing is left half done).
   saveSlot(state, meta, id = null) {
-    storage.repairSlots();
-    const best = storage.bestForCareer(careerIdOf(state));
-    const baseRevision = revisionOf(state);
-    if (best && (compareSaveProgress(best, state) > 0 || revisionOf(best) > baseRevision)) {
-      storage.backup(state, 'conflitto-slot-obsoleto');
-      throw new Error('Salvataggio nello slot rifiutato: questa scheda contiene una versione meno recente della carriera.');
-    }
-    const slots = storage.listSlots();
-    const slotId = id ?? `slot-${Date.now().toString(36)}`;
-    const known = slots.some(entry => entry.id === slotId);
-    if (!known && slots.length >= MAX_SLOTS) throw new Error(`Puoi conservare al massimo ${MAX_SLOTS} salvataggi: eliminane uno.`);
-    const savedAt = new Date().toISOString();
-    const key = SLOT_PREFIX + slotId;
-    let payload;
-    const savedState = { ...state, saveMeta: { ...(state.saveMeta ?? {}), careerId: careerIdOf(state), revision: baseRevision } };
-    try { payload = JSON.stringify(savedState); } catch { throw new Error('La partita non si può salvare nello slot.'); }
-    const before = known ? localStorage.getItem(key) : null;
-    if (before) {
-      const previous = unwrap(readRawJson(before), `slot:${slotId}`);
-      if (previous) archiveSnapshot(previous.state, 'slot-precedente');
-    }
-    try { localStorage.setItem(key, payload); }
-    catch { throw new Error('Spazio del browser esaurito: elimina un salvataggio o esportalo su file.'); }
-    try { localStorage.setItem(SLOT_INDEX, JSON.stringify([{ id: slotId, savedAt, ...meta }, ...slots.filter(entry => entry.id !== slotId)])); }
-    catch {
-      try { if (before !== null) localStorage.setItem(key, before); else localStorage.removeItem(key); } catch { /* the next opening finds the slot and lists it */ }
-      throw new Error('Spazio del browser esaurito: il salvataggio nello slot non è stato registrato.');
-    }
-    return slotId;
+    if (!isSave(state)) throw new Error('La carriera non è valida e non può essere salvata nello slot.');
+    return withWriteLock(assertOwner => {
+      repairSlotsUnlocked();
+      const baseRevision = revisionOf(state);
+      const slots = storage.listSlots();
+      const slotId = id ?? `slot-${Date.now().toString(36)}`;
+      const known = slots.some(entry => entry.id === slotId);
+      if (!known && slots.length >= MAX_SLOTS) throw new Error(`Puoi conservare al massimo ${MAX_SLOTS} salvataggi: eliminane uno.`);
+      const savedAt = new Date().toISOString();
+      const key = SLOT_PREFIX + slotId;
+      let payload;
+      const savedState = { ...state, saveMeta: { ...(state.saveMeta ?? {}), careerId: careerIdOf(state), revision: baseRevision } };
+      try { payload = JSON.stringify(savedState); } catch { throw new Error('La partita non si può salvare nello slot.'); }
+      const before = known ? localStorage.getItem(key) : null;
+      if (before) {
+        const previous = unwrap(readRawJson(before), `slot:${slotId}`);
+        if (previous) archiveSnapshot(previous.state, 'slot-precedente');
+      }
+      try { assertOwner(); writeWithHistoryPrune(key, payload); }
+      catch { throw new Error('Spazio del browser esaurito: elimina un salvataggio o esportalo su file.'); }
+      try { assertOwner(); writeWithHistoryPrune(SLOT_INDEX, JSON.stringify([{ id: slotId, savedAt, ...meta }, ...slots.filter(entry => entry.id !== slotId)])); }
+      catch {
+        try { if (before !== null) localStorage.setItem(key, before); else localStorage.removeItem(key); } catch { /* the next opening finds the slot and lists it */ }
+        throw new Error('Spazio del browser esaurito: il salvataggio nello slot non è stato registrato.');
+      }
+      return slotId;
+    });
   },
   loadSlot(id) {
     const payload = readJson(SLOT_PREFIX + id);
@@ -199,8 +296,11 @@ export const storage = {
   },
   // The index first (a failure there changes nothing), then the slot.
   deleteSlot(id) {
-    localStorage.setItem(SLOT_INDEX, JSON.stringify(storage.listSlots().filter(entry => entry.id !== id)));
-    localStorage.removeItem(SLOT_PREFIX + id);
+    return withWriteLock(assertOwner => {
+      assertOwner();
+      writeWithHistoryPrune(SLOT_INDEX, JSON.stringify(storage.listSlots().filter(entry => entry.id !== id)));
+      localStorage.removeItem(SLOT_PREFIX + id);
+    });
   },
   // ---------- the Hall of Fame ----------
   hall() { const list = readJson(HALL_KEY); return Array.isArray(list) ? list.filter(entry => entry?.id) : []; },
@@ -210,7 +310,10 @@ export const storage = {
   },
   // Every save of this browser goes: the running game, the slots (also the ones the index no longer lists) and the copy kept aside. The Hall of Fame stays.
   clearAll() {
-    for (const key of new Set([...slotKeys(), ...storage.listSlots().map(entry => SLOT_PREFIX + entry.id)])) localStorage.removeItem(key);
-    for (const key of [SLOT_INDEX, STORAGE_KEY, BACKUP_KEY, HISTORY_KEY]) localStorage.removeItem(key);
+    return withWriteLock(assertOwner => {
+      assertOwner();
+      for (const key of new Set([...slotKeys(), ...storage.listSlots().map(entry => SLOT_PREFIX + entry.id)])) localStorage.removeItem(key);
+      for (const key of [SLOT_INDEX, STORAGE_KEY, BACKUP_KEY, HISTORY_KEY]) localStorage.removeItem(key);
+    });
   }
 };

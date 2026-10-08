@@ -181,7 +181,7 @@ store.save();
 module = await import('../src/core/store.js?parliament-reload-save=' + Date.now());
 assert.equal(module.store.getState().parliament.player.groupId, 'senato-xix-gruppo-85');
 assert.equal(module.store.getState().parliament.laws.length, 0);
-assert.equal(module.store.getState().version, 9);
+assert.equal(module.store.getState().version, 10);
 assert.ok(renderParliamentPage('leggi', module.store.getState()).includes('Scrivi una proposta.'));
 
 const unique = list => new Set(list.map(item => item.id)).size === list.length;
@@ -364,23 +364,24 @@ assert.equal(store.getState().parliament.player.groupId, 'senato-xix-gruppo-49')
 assert.ok(store.getState().dataset.offices.some(item => item.institution === 'Senato della Repubblica' && !item.endDate));
 
 // Ripristino: un salvataggio della build precedente senza posizione di carriera viene completato;
-// un salvataggio illeggibile viene conservato a parte invece di essere sovrascritto.
+// un salvataggio illeggibile viene conservato nello storico senza sostituire un backup valido.
 state = JSON.parse(JSON.stringify(store.getState()));
 delete state.parliament.careerStanding;
 delete state.parliament.pastMandates;
 state.parliament.laws = state.parliament.laws.map(({ negotiatedGroupIds, ...law }) => law);
 localStore.set('palazzo-2026.career.v1', JSON.stringify(state));
+const recoverableCareerId = state.career.id;
 module = await import('../src/core/store.js?parliament-legacy=' + Date.now());
 assert.ok(module.store.getState().parliament.careerStanding);
 assert.deepEqual(module.store.getState().parliament.pastMandates, []);
 assert.ok(renderParliamentPage('parlamento', module.store.getState()).includes('INCARICHI PARLAMENTARI'));
 localStore.set('palazzo-2026.career.v1', JSON.stringify({ version: 5, dataset: null }));
 module = await import('../src/core/store.js?parliament-corrupt=' + Date.now());
-assert.equal(module.store.getState().career.id, 'carriera-demo');
-assert.ok(JSON.parse(localStore.get('palazzo-2026.career.v1.backup')).payload.includes('"dataset":null'));
+assert.equal(module.store.getState().career.id, recoverableCareerId, 'Un salvataggio recuperabile prevale sul fallback demo anche se il main è corrotto');
+assert.ok(JSON.parse(localStore.get('palazzo-2026.career.v1.history')).some(item => item.payload.includes('"dataset":null')));
 localStore.set('palazzo-2026.career.v1', JSON.stringify({ ...makeDemoState(), version: 4, career: { ...makeDemoState().career, initialLevel: 'nazionale' } }));
 module = await import('../src/core/store.js?parliament-v4=' + Date.now());
-assert.equal(module.store.getState().version, 9);
+assert.equal(module.store.getState().version, 10);
 assert.equal(module.store.getState().parliament, null);
 
 console.log('Career Wizard verificato: quattro percorsi, partito indipendente/reale/utente, gruppo distinto e contesto parlamentare. Parlamento, leggi, emendamenti, voti, fiducia, crisi, storico e ricaricamento verificati. Incarichi, cambio di gruppo, ministro, caduta del governo, integrazione con la campagna e ripristino dei salvataggi verificati.');

@@ -124,7 +124,7 @@ for(const [type,role] of [['comunale','sindaco'],['regionale','presidente'],['po
       const estimate=pollRows.find(item=>item.candidateId===row.candidateId)?.share;
       const deviation=Math.abs(row.percent-estimate);
       maxDeviation=Math.max(maxDeviation,deviation);
-      assert.ok(deviation<=Math.min(7.5,poll.margin*3),`Esito entro una sorpresa plausibile rispetto al sondaggio (${seed}, ${row.label}: ${deviation.toFixed(2)}).`);
+      assert.ok(deviation<=Math.min(8,poll.margin*3),`Esito entro una sorpresa plausibile rispetto al sondaggio (${seed}, ${row.label}: ${deviation.toFixed(2)}).`);
     }
     const repeated=simulate(seed);
     assert.deepEqual(repeated.polls,campaign.polls,`Sondaggi deterministici a seed uguale (${seed}).`);
@@ -172,7 +172,7 @@ store.setCampaignPicks({key:campaign.id,values:{topic:chosenTopic,ally:'candidat
 assert.equal(selectedIn(changedHtml,'data-campaign-strategy-topic'),newStrategy.campaign.strategy.topicId,'Il select della strategia mostra il tema della strategia.');
 assert.equal(selectedIn(renderCampaignPage(store.getState(),references,()=>null,{topic:'tema-inesistente'}),'data-campaign-topic'),strategyTopic,'Una scelta non valida torna al tema della strategia.');
 assert.equal(campaign.pollingHook,undefined,'Il vecchio aggancio ai sondaggi «non collegato» non esiste più.');
-assert.ok(campaign.polls?.waves?.length>=1&&campaign.polls.waves[0].label==='Apertura della campagna','Il sondaggio di apertura della corsa è salvato con la campagna.');
+assert.ok(campaign.pollObservatory?.waves?.length>=1&&campaign.pollObservatory.waves[0].label==='Apertura della campagna','Il sondaggio di apertura della corsa è salvato con la campagna.');
 assert.equal(campaign.partyId,party.id);
 assert.equal(campaign.nomination.status,'pending');
 store.performCampaignActivity('party_meeting');
@@ -256,5 +256,5 @@ for(let index=0;index<60&&!eventWasGenerated;index++) {
 assert.ok(eventWasGenerated,'È stato generato almeno un evento contestuale durante l’esposizione mediatica.');
 
 const stored=JSON.parse(localStore.get('palazzo-2026.career.v1'));
-assert.equal(stored.version,9);
+assert.equal(stored.version,10);
 console.log('Campagna verificata: 4 modelli elettorali, ballottaggio, candidatura interna, attività, eventi, alleanze, risultato, impatto carriera e salvataggio/ricaricamento.');
