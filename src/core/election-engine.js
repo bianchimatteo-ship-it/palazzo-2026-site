@@ -9,6 +9,21 @@ function seeded(seed) {
   let state = seed >>> 0 || 1;
   return () => { state = (Math.imul(state, 1664525) + 1013904223) >>> 0; return state / 4294967296; };
 }
+function ballotsOf(campaign) {
+  const electorate = campaign.electorate ?? {};
+  const realElectors = Number(electorate.electors);
+  const normalized = !Number.isFinite(realElectors) || realElectors <= 0;
+  const electors = normalized ? null : Math.round(realElectors);
+  const sampleElectors = electors ?? 100000;
+  const turnout = clamp(Number(campaign.electionDays?.at(-1)?.turnout ?? 61), 0, 100);
+  const validRatio = Number(electorate.validRatio) > 0 && Number(electorate.validRatio) <= 1 ? Number(electorate.validRatio) : .99;
+  const random = seeded(hash(`${campaign.id}|${campaign.seed}|${campaign.stage}|${campaign.electionDays?.length ?? 0}|schede`));
+  const normal = () => Math.sqrt(-2 * Math.log(Math.max(Number.EPSILON, random()))) * Math.cos(2 * Math.PI * random());
+  const turnoutShare = turnout / 100;
+  const voters = normalized ? 100000 : clamp(Math.round(sampleElectors * turnoutShare + normal() * Math.sqrt(sampleElectors * turnoutShare * (1 - turnoutShare))), 0, sampleElectors);
+  const ballots = normalized ? 100000 : clamp(Math.round(voters * validRatio + normal() * Math.sqrt(voters * validRatio * (1 - validRatio))), 0, voters);
+  return { electors, voters, ballots, turnout, validRatio, normalized, basis: normalized ? 'elettorato simulato normalizzato su 100.000' : electorate.basis ?? 'elettori iscritti', source: 'simulation' };
+}
 
 function allianceLeader(candidate,candidates) {
   if (candidate.coalitionLeaderId) return candidates.find(item => item.id === candidate.coalitionLeaderId) ?? candidate;
@@ -237,8 +252,8 @@ export function runFinalElection(campaign,firstRound=null) {
   const personal=personalResult(campaign,playerRow,winner,rows);
   const previous=campaign.firstRoundResult;
   const result = {
-    stage:'risultato-finale',model:rules.model,electionType:campaign.electionType,totalBallots,
-    ballotLabel:'Schede normalizzate su 100.000 elettori simulati',groups:rows,
+    stage:'risultato-finale',model:rules.model,electionType:campaign.electionType,totalBallots,electorate:count,
+    ballotLabel:count.normalized ? 'Schede normalizzate su 100.000 elettori simulati' : `Schede valide stimate su ${count.electors.toLocaleString('it-IT')} elettori`,groups:rows,
     territories:areaResults(campaign,totalBallots,campaign.stage==='ballottaggio'?firstRound?.runoffCandidateIds??null:null),firstRound:previous??firstRound??null,
     winnerGroupId:winnerId,playerShare:runoffRows?.find(row=>row.candidateId===campaign.playerCandidateId)?.percent??playerRow?.percent??0,playerVotes:runoffRows?.find(row=>row.candidateId===campaign.playerCandidateId)?.votes??playerRow?.votes??0,runoffResults:runoffRows,
     playerSeats:playerRow?.seats??0,personalMandate:personal.mandate,personal,source:'simulation',simulated:true,

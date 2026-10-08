@@ -35,6 +35,7 @@ function pollGaussian(campaign) {
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * pollDraw(campaign));
 }
 function recordCampaignPoll(campaign) {
+  if (!Array.isArray(campaign.polls)) campaign.polls = [];
   if (campaign.polls?.at(-1)?.day === campaign.day) return campaign.polls.at(-1);
   const groups = aggregateShares(campaign);
   if (!groups.length) return null;
@@ -1299,7 +1300,7 @@ function electionDay(campaign, round_ = 'primo-turno') {
   for (const candidate of active) {
     const share = Math.max(.5, before[candidate.id]);
     const volatility = candidate.isPlayer ? strategy.volatility : 1;
-    shifts[candidate.id] = round(gaussian(campaign) * (.45 + Math.sqrt(share) * .3) * volatility * climate * smallElectorate + (mobilization[candidate.id] - mean) + (candidate.isPlayer ? listEdge(campaign) : 0));
+    shifts[candidate.id] = round(gaussian(campaign) * (.45 + Math.sqrt(share) * .3) * volatility * climate * smallElectorate * .8 + (mobilization[candidate.id] - mean) + (candidate.isPlayer ? listEdge(campaign) : 0));
   }
   for (const area of campaign.territories) {
     const shares = area.supportByCandidate;
@@ -1620,6 +1621,7 @@ function tick(campaign) {
       const finalists=new Set(campaign.runoffCandidateIds);
       campaign.candidates.forEach(candidate=>{const groupId=candidate.status==='allied'?(candidate.coalitionLeaderId??candidate.id):candidate.id;if(!finalists.has(groupId))candidate.status='eliminated';});
       campaign.pendingEvents=[];
+      pollWave(campaign, 'Apertura del ballottaggio');
       addHistory(campaign,'elezione','Primo turno concluso. Inizia il periodo di ballottaggio.',{source:SOURCE});
     } else finish(campaign,first);
   }
@@ -1655,8 +1657,10 @@ const pollKey = campaign => campaign.electionType === 'comunale' ? (campaign.mun
 const packRows = rows => rows.map(row => [row.partyId, row.share, row.delta ?? 0]);
 const unpackRows = rows => (rows ?? []).map(([partyId, share, delta, spread]) => ({ partyId, share, delta, spread }));
 function ensurePolls(campaign) {
-  campaign.polls = campaign.polls && typeof campaign.polls === 'object' ? campaign.polls : {};
-  const box = campaign.polls;
+  if (!campaign.pollObservatory || typeof campaign.pollObservatory !== 'object') {
+    campaign.pollObservatory = campaign.polls && !Array.isArray(campaign.polls) ? campaign.polls : {};
+  }
+  const box = campaign.pollObservatory;
   box.waves = Array.isArray(box.waves) ? box.waves : [];
   box.errors = box.errors && typeof box.errors === 'object' ? box.errors : {};
   box.source = SOURCE;
@@ -1712,7 +1716,7 @@ function profileOf(campaign, candidate) {
 // society) the segments with their insights. Pure: it reads what the campaign has saved and measures nothing new.
 export function campaignObservatory(campaign, { society = null } = {}) {
   if (!campaign?.candidates?.length) return null;
-  const box = campaign.polls ?? { waves: [] };
+  const box = campaign.pollObservatory ?? (Array.isArray(campaign.polls) ? null : campaign.polls) ?? { waves: [] };
   const waves = box.waves ?? [];
   const latest = waves.at(-1) ?? null;
   // A candidacy is named by the force it stands for (a verified person of the real Parliament, when there is one, is named next to it: `person`).
@@ -1845,10 +1849,9 @@ export function createCampaign({career,player,statistics=[],offices=[],territori
     candidateStats:playerStats,startingStats:{...playerStats},nomination,internalCandidates,candidacy:{role,listPosition:role==='uninominale'?null:6,territoryId:focus,incumbent:incumbency||governingIncumbent},incumbency:incumbencyRecord,list:buildList({seed,type,role,areas:campaignAreas}),listContext:config.listContext?{...config.listContext,source:SOURCE}:null,obligations:[],
     status:'active',stage:'campagna',startedAt:currentDate,currentDate,electionDate:withinDays(currentDate,model.campaignDays),
     day:0,totalDays:model.campaignDays,daysToNomination:deadlineDay,firstRoundResult:null,result:null,runoffCandidateIds:null,
-    alliances:[],events:[],pendingEvents:[],history:[],consensusHistory:[],polls:[],pollErrors:{},aiTurns:0,preparationByTopic:Object.fromEntries(DEBATE_TOPICS.map(topic=>[topic.id,0])),
+    alliances:[],events:[],pendingEvents:[],history:[],consensusHistory:[],polls:[],pollObservatory:{waves:[],errors:{}},pollErrors:{},aiTurns:0,preparationByTopic:Object.fromEntries(DEBATE_TOPICS.map(topic=>[topic.id,0])),
     nationalContext:{moodIndex:Math.round(42+randomFrom(seed ^ 0x165667b1)()*18),macroTrend:round((randomFrom(seed ^ 0x9e3779b9)()-.5)*4),salientTopic:DEBATE_TOPICS[Math.floor(randomFrom(seed ^ 0x85ebca6b)()*DEBATE_TOPICS.length)].id,source:SOURCE},
     media:{coverage:0,reactions:0,criticalEvents:0,source:SOURCE},partyImpact:{internalSupport:internalSupport,source:SOURCE},
-    pollingHook:{provider:null,connected:false,signal:null,source:SOURCE,description:'Sondaggi esterni non collegati; la campagna genera stime simulate dalla propria base di consenso.'},
     strategy:null,activityUses:{},crisis:null,commitments:0,eventLog:{},electionDays:[],partyTrend:0,
     crew:newCrew(playerStats,{quality:config.crew?.quality??null,fieldEdge:config.crew?.fieldEdge??0,organization:initialResources.organization}),rivalScope,endorsements:{known:Array.isArray(config.endorsers)?config.endorsers.filter(item=>item?.key&&item.areaId).map(item=>({key:item.key,kind:item.kind,areaId:item.areaId,label:item.label,relation:Number(item.relation??50)})):[],given:[],refused:[],pending:{},offers:0,source:SOURCE},
     anchored:Object.keys(anchors).length>0,audience:{},electorate:electorateOf(config,type),roster:roster?{ type, regionId:roster.regionId??null, others:roster.others??null, participants:roster.participants.map(item=>({ id:item.id, label:item.label, abbreviation:item.abbreviation??null, refSource:item.refSource??'real', share:item.share, surveyed:item.surveyed, reason:item.reason, regional:Boolean(item.regional), isPlayer:Boolean(item.isPlayer) })), source:SOURCE }:null,

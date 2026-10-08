@@ -15,12 +15,28 @@ export const SEAT_ROLES = Object.freeze({ camera: 'Deputato', senato: 'Senatore'
 // already has, then by new ones).
 export const RE_ELECTION_SHARE = 0.6;
 const hash = value => [...String(value)].reduce((n, char) => (n * 31 + char.charCodeAt(0)) >>> 0, 2166136261) || 1;
+const FIRST_NAMES = Object.freeze(['Alessandro', 'Alessia', 'Andrea', 'Anna', 'Beatrice', 'Carlo', 'Chiara', 'Davide', 'Elena', 'Federico', 'Francesca', 'Giorgio', 'Giulia', 'Lorenzo', 'Luca', 'Marco', 'Marta', 'Matteo', 'Paola', 'Roberto', 'Sara', 'Sofia', 'Stefano', 'Valentina']);
+const LAST_NAMES = Object.freeze(['Bassi', 'Bellini', 'Bernardi', 'Caruso', 'Conti', 'Costa', 'De Luca', 'Esposito', 'Ferri', 'Fontana', 'Galli', 'Greco', 'Leone', 'Lombardi', 'Marino', 'Marini', 'Moretti', 'Pellegrini', 'Ricci', 'Rinaldi', 'Romano', 'Rossi', 'Santoro', 'Serra', 'Villa', 'Vitale']);
+function italianSeatName(id) {
+  const first = FIRST_NAMES[hash(id) % FIRST_NAMES.length];
+  const last = LAST_NAMES[hash(`${id}|cognome`) % LAST_NAMES.length].trim();
+  return { firstName: first, lastName: last, displayName: `${first} ${last}` };
+}
 const shortOf = label => String(label ?? '').replace(/^Misto\s*[-–]\s*/i, 'Misto · ').replace(/\s+/g, ' ').trim();
 const compact = person => Object.fromEntries(Object.entries(person).filter(([, value]) => value !== null && value !== undefined));
 export const isSeatPerson = person => person?.origin === SEAT_PERSON;
 const personIdOf = (assembly, number) => `${SEAT_ID}${hash(`${assembly}|${number}`).toString(36)}${hash(`${number}|${assembly}`).toString(36)}`;
 // A new person of the simulation for a seat (never a real one): the n-th of the assembly, of the party the seat counts for.
-const seatPerson = ({ assembly, number, kind, label, place, partyId, date }) => compact({ ...simulatedPerson({ id: personIdOf(assembly, number), label, region: place?.region ?? null, municipality: kind === 'comune' ? place?.municipality ?? null : null, partyId, date }), origin: SEAT_PERSON });
+const seatPerson = ({ assembly, number, kind, label, place, partyId, date }) => {
+  const id = personIdOf(assembly, number);
+  return compact({ ...simulatedPerson({ id, ...italianSeatName(id), region: place?.region ?? null, municipality: kind === 'comune' ? place?.municipality ?? null : null, partyId, date }), ...italianSeatName(id), origin: SEAT_PERSON });
+};
+// Older saves used placeholders; stabilize them from their already-persistent seat ID without touching real people.
+export function normalizeSeatPerson(person) {
+  if (!isSeatPerson(person) && !String(person?.id ?? '').startsWith(SEAT_ID)) return person;
+  if (!person || (person.firstName !== 'Figura' && !/simulat[oa] n\.\s*\d|Eletto simulato/i.test(person.displayName ?? ''))) return person;
+  return { ...person, ...italianSeatName(person.id) };
+}
 // Who put a person on his seat: the player, the simulation (a person the roster made), or a person the game already had.
 const originOf = (roster, personId) => personId === roster?.player ? 'player' : String(personId).startsWith(SEAT_ID) ? 'simulation' : 'existing';
 

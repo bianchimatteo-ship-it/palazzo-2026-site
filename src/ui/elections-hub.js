@@ -174,9 +174,9 @@ function raceRow(race, { state, leader, options }) {
   const result = race.result ? `<p class="sx-note">${race.result.won ? 'Vince il candidato del partito' : race.result.mandate ? 'Il candidato del partito entra in consiglio all’opposizione' : 'Il candidato del partito non è eletto'} (${num(race.result.share, 1)}%${race.result.position ? `, ${race.result.position}º` : ''}).${race.result.winner && !race.result.won ? ` Primo: ${esc(race.result.winner.label)} (${num(race.result.winner.percent, 1)}%).` : ''}${race.office ? ` ${esc(race.office.title)}.` : ''}</p>` : '';
   return `<li class="eh-race status-${esc(race.status)}"><div class="eh-race-head"><span class="eh-cal-icon">${glyph(RACE_ICONS[race.level] ?? 'ballot', 18)}</span><div><strong>${esc(race.label)}</strong><small>Voto ${esc(formatDate(race.electionDate))} · candidature ${esc(shortDate(race.windowOpensAt))} – ${esc(shortDate(race.windowClosesAt))}${open ? ' · aperte ora' : ''}</small></div>${badge(statusLabel, tone)}</div>${who}${picker}${play ? `<div class="sx-actions">${play}</div>` : ''}${result}</li>`;
 }
-function raceSection(state, { races = [], raceOptions = () => null } = {}) {
+function raceSection(state, { races = [], archive = [], raceOptions = () => null } = {}) {
   const game = state.game;
-  if (!game?.party) return '';
+  if (!game?.party && !archive.length) return '';
   const leader = isSecretary(game.party);
   const today = state.clock.currentDate;
   const shown = races.filter(race => ['planned', 'confirmed', 'running'].includes(race.status)).slice(0, 16);
@@ -186,7 +186,8 @@ function raceSection(state, { races = [], raceOptions = () => null } = {}) {
     : 'Solo il segretario o il fondatore decide i candidati del partito nelle corse territoriali: tu puoi seguirle da qui.';
   const rows = shown.map(race => raceRow(race, { state, leader, options: leader && ['planned', 'confirmed'].includes(race.status) && today <= race.windowClosesAt ? raceOptions(race.id) : null })).join('');
   const past = closed.map(race => raceRow(race, { state, leader: false, options: null })).join('');
-  const body = `<p class="sx-note">${esc(intro)}</p>${rows ? `<ol class="eh-races">${rows}</ol>` : '<p class="sx-empty">Nessuna corsa territoriale in calendario nei prossimi mesi: il calendario reale dei voti si carica con la pagina.</p>'}${past ? `<details class="eh-races-past"><summary>Ultime corse concluse</summary><ol class="eh-races">${past}</ol></details>` : ''}<p class="poll-footnote">Le date seguono il calendario reale dei voti (regioni, capoluoghi di provincia; per le province, un ciclo simulato). Candidati e risultati sono simulati: un politico reale resta quello dei dati, la sua candidatura no. Un candidato “figura simulata” non è mai una persona reale. Tra due voti che giochi di persona servono almeno ${RACE_RULES.playableGapDays} giorni.</p>`;
+  const archived = [...archive].reverse().map(race => raceRow(race, { state, leader: false, options: null })).join('');
+  const body = `<p class="sx-note">${esc(intro)}</p>${rows ? `<ol class="eh-races">${rows}</ol>` : '<p class="sx-empty">Nessuna corsa territoriale in calendario nei prossimi mesi: il calendario reale dei voti si carica con la pagina.</p>'}${past ? `<details class="eh-races-past"><summary>Ultime corse concluse</summary><ol class="eh-races">${past}</ol></details>` : ''}${archived ? `<details class="eh-races-past"><summary>Storico completo candidature (${archive.length})</summary><ol class="eh-races">${archived}</ol></details>` : ''}<p class="poll-footnote">Le date seguono il calendario reale dei voti (regioni, capoluoghi di provincia; per le province, un ciclo simulato). Candidati e risultati sono simulati: un politico reale resta quello dei dati, la sua candidatura no. Un candidato “figura simulata” non è mai una persona reale. Tra due voti che giochi di persona servono almeno ${RACE_RULES.playableGapDays} giorni.</p>`;
   return card({ kicker: 'CANDIDATI DEL PARTITO · CORSE TERRITORIALI · SIMULAZIONE', title: 'Regionali, provinciali e comunali', body });
 }
 
@@ -259,7 +260,7 @@ export function renderElectionsHub(state, { parties = [], logoFor = () => null, 
   const counts = { quirinale: state.presidency?.election || state.presidency?.incumbent?.kind === 'giocatore' ? '●' : '', campagna: state.campaign?.status === 'active' ? '●' : '', nazionali: state.national?.campaign || (formation && !['completata', 'fallita'].includes(formation.phase)) ? '●' : '', storico: (state.career.electionHistory ?? []).length || '' };
   let body = '';
   if (active === 'panoramica') body = `<div class="sx-grid two">${card({ kicker: 'CALENDARIO ELETTORALE', title: 'Quando si vota', body: calendar(state) })}${card({ kicker: 'CONTESTO POLITICO', title: 'Il clima del voto', body: context(state) })}</div><div class="sx-grid two">${card({ kicker: 'PREPARAZIONE', title: 'Quanto sei pronto', body: readiness(state) })}${card({ kicker: 'REGOLE DEL GIOCO', title: 'Come si assegnano i seggi', body: rules(state) })}</div>`;
-  else if (active === 'candidatura') body = candidacy(state, { races: { races: state.races?.items ?? [], raceOptions: races.raceOptions } });
+  else if (active === 'candidatura') body = candidacy(state, { races: { races: state.races?.items ?? [], archive: state.races?.archive ?? [], raceOptions: races.raceOptions } });
   else if (active === 'campagna') body = `<div class="eh-campaign">${renderCampaignPage(state, parties, logoFor, campaignPicks)}</div>`;
   else if (active === 'avversari') body = renderCampaignObservatory(state, polls);
   else if (active === 'risultati') body = renderElectionReport(state.career.lastElectionReport, { place: mandatePlace(state, state.career.lastElectionReport) });

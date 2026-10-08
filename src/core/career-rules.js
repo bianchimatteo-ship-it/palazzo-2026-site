@@ -5,6 +5,14 @@ import { startAgeProblems, startProblems } from './start-engine.js?v=20261007-2'
 
 const genders = new Set(['preferisco-non-specificare', 'donna', 'uomo', 'non-binario']);
 const orientations = new Set(['Centrismo civico', 'Progressista', 'Conservatore', 'Liberale', 'Socialdemocratico', 'Ecologista', 'Popolare', 'Autonomista', 'Altro']);
+export const STARTING_ROLES = Object.freeze({
+  militante: { label: 'Giovane militante', partyRank: 0 },
+  dirigenteLocale: { label: 'Dirigente locale', partyRank: 1 },
+  dirigenteRegionale: { label: 'Dirigente regionale', partyRank: 2 },
+  direzioneNazionale: { label: 'Direzione nazionale', partyRank: 3 },
+  segretarioNazionale: { label: 'Segretario nazionale', partyRank: 5 },
+  presidenteConsiglio: { label: 'Presidente del Consiglio', partyRank: 5, requiresParliament: true }
+});
 const isValidDate = value => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return false;
   const date = new Date(`${value}T12:00:00`);
@@ -34,6 +42,11 @@ export function validateCareerStep(draft, step, selectableParties, parliamentary
     if (!isValidDate(draft.birthDate) || draft.birthDate > draft.currentDate) errors.push('Inserisci una data di nascita valida e precedente all’inizio della carriera.');
     if (!genders.has(draft.gender)) errors.push('Seleziona il genere.');
     if (!draft.previousProfession?.trim()) errors.push('Inserisci la professione precedente.');
+    const startingRole = STARTING_ROLES[draft.startingRole ?? 'militante'];
+    if (!startingRole) errors.push('Scegli un ruolo iniziale valido.');
+    else if (startingRole.partyRank > 0 && draft.partyMode === 'independent') errors.push('Per un incarico di partito, scegli un partito o creane uno.');
+    else if (startingRole.requiresParliament && !CAREER_LEVELS[draft.initialLevel]?.chamber) errors.push('Per iniziare da Presidente del Consiglio scegli il percorso di deputato o senatore.');
+    else if (startingRole.requiresParliament && !['camera', 'senato'].every(chamber => parliamentaryGroups.some(group => group.source === 'real' && group.verified === true && group.chamber === chamber && Number(group.memberCount) > 0))) errors.push('Per iniziare da Presidente del Consiglio servono i gruppi di entrambe le Camere.');
     // A career that starts consolidated needs the years to have it: the age is known only here.
     errors.push(...startAgeProblems(draft.start, { partyMode: draft.partyMode, birthDate: draft.birthDate, date: draft.currentDate }));
   }
