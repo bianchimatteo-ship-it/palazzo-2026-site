@@ -402,13 +402,20 @@ assert.equal(JSON.parse(mem.get(KEY)).saveMeta.careerId, careerId);
 assert.equal(JSON.parse(mem.get(KEY)).version, 10, 'La migration è salvata senza downgrade.');
 assert.equal(JSON.parse(JSON.parse(mem.get(`${KEY}.backup`)).payload).version, 9, 'La versione precedente alla migration resta nel backup indipendente.');
 
-// ---------- 8. starting roles are persisted in the actual party and Government state ----------
+// ---------- 8. starting path and party positions remain separate in the actual state ----------
 const roleStore = migrated;
 const startingGroup = db.parliamentaryGroups.find(group => group.chamber === 'camera' && group.source === 'real' && group.verified === true && Number(group.memberCount) > 0);
-assert.ok(startingGroup, 'Il riferimento reale contiene un gruppo della Camera.');
-roleStore.createCareer(draft('Primo Ministro', { initialLevel: 'deputato', parliamentStartMode: 'real-context', parliamentaryGroupId: startingGroup.id, startingRole: 'presidenteConsiglio' }), db.parties, db.parliamentaryGroups);
+const startingSenateGroup = db.parliamentaryGroups.find(group => group.chamber === 'senato' && group.source === 'real' && group.verified === true && Number(group.memberCount) > 0);
+assert.ok(startingGroup && startingSenateGroup, 'Il riferimento reale contiene gruppi di entrambe le Camere.');
+const { isSecretary } = await import(`../src/core/career-engine.js${v}`);
+const { playerRoles } = await import(`../src/core/roles.js${v}`);
+storage.clearAll();
+roleStore.createCareer(draft('Primo Ministro', { initialLevel: 'deputato', parliamentStartMode: 'real-context', parliamentaryGroupId: startingGroup.id, startingOffice: 'presidenteConsiglio', startingRole: 'militante' }), db.parties, db.parliamentaryGroups);
 let roleState = roleStore.getState();
-assert.equal(roleState.career.startingRole, 'presidenteConsiglio');
+assert.equal(roleState.career.startingOffice, 'presidenteConsiglio');
+assert.equal(roleState.career.startingRole, 'militante');
+assert.equal(roleState.career.initialLevel, 'deputato', 'Il PdC conserva il contesto Camera sottostante.');
+assert.equal(roleState.career.parliamentContext.groupId, startingGroup.id, 'Il gruppo Camera scelto resta nel contesto reale.');
 assert.equal(roleState.parliament.government.primeMinister, 'player');
 assert.equal(roleState.parliament.government.formedBy, 'player');
 assert.equal(roleState.parliament.government.status, 'active');
@@ -420,9 +427,44 @@ for (const chamber of ['camera', 'senato']) {
 }
 const pmOffice = roleState.dataset.offices.find(item => item.id === roleState.career.startingOfficeId);
 assert.ok(pmOffice && !pmOffice.endDate && pmOffice.level === 'presidente-consiglio' && roleState.dataset.politicians.find(item => item.id === roleState.career.playerId).roleId === pmOffice.id, 'Il ruolo del premier è un incarico aperto collegato al player.');
+assert.ok(roleState.game.party.rank < 5, 'Il PdC non segretario non riceve il rank di segreteria.');
+assert.notEqual(roleState.game.party.rankTitle, 'Segretario nazionale', 'Il titolo resta quello della posizione di partito selezionata.');
+assert.equal(isSecretary(roleState.game.party), false, 'Il PdC non diventa segretario per effetto della carica di Governo.');
+assert.ok(!roleState.dataset.offices.some(item => item.politicianId === roleState.career.playerId && item.level === 'partito' && !item.endDate), 'Il PdC militante non riceve un incarico di partito automatico.');
+const pdcReload = (await import(`../src/core/store.js${v}&phase1-pdc-reload`)).store.getState();
+assert.equal(pdcReload.career.startingOffice, 'presidenteConsiglio', 'Il percorso PdC sopravvive al reload.');
+assert.equal(pdcReload.career.startingRole, 'militante', 'La posizione di partito resta distinta dopo il reload.');
+assert.equal(pdcReload.parliament.government.primeMinister, 'player');
+assert.equal(pdcReload.parliament.government.status, 'active');
+storage.clearAll();
+roleStore.createCareer(draft('Primo Ministro al Senato', { initialLevel: 'senatore', parliamentStartMode: 'real-context', parliamentaryGroupId: startingSenateGroup.id, startingOffice: 'presidenteConsiglio', startingRole: 'militante' }), db.parties, db.parliamentaryGroups);
+roleState = roleStore.getState();
+assert.equal(roleState.career.initialLevel, 'senatore', 'Il PdC conserva il contesto Senato sottostante.');
+assert.equal(roleState.career.parliamentContext.groupId, startingSenateGroup.id, 'Il gruppo Senato scelto resta nel contesto reale.');
+assert.equal(roleState.parliament.government.status, 'active');
+assert.equal(roleState.parliament.government.primeMinister, 'player');
+for (const chamber of ['camera', 'senato']) {
+  const groups = roleState.parliament.chambers[chamber].groups;
+  const total = groups.reduce((sum, group) => sum + group.simulatedSeats, 0);
+  const supported = groups.filter(group => roleState.parliament.government.coalitionGroupIds.includes(group.groupId)).reduce((sum, group) => sum + group.simulatedSeats, 0);
+  assert.ok(supported >= Math.floor(total / 2) + 1, `La maggioranza iniziale del PdC è coerente alla ${chamber}.`);
+}
+assert.ok(playerRoles(roleState).roles.some(([id]) => id === 'premier') && !playerRoles(roleState).roles.some(([id]) => id === 'segretario'), 'La carriera espone la carica di PdC senza il ruolo di segretario.');
+storage.clearAll();
+roleStore.createCareer(draft('PdC partito nuovo', { initialLevel: 'deputato', parliamentStartMode: 'real-context', parliamentaryGroupId: startingGroup.id, startingOffice: 'presidenteConsiglio', startingRole: 'militante', partyMode: 'new', partyId: null, partyName: 'Partito del test PdC', partyAbbreviation: 'PTP', partyDescription: 'Partito creato per il test del punto di partenza.', partyOrientation: 'Altro', partyColor: '#264d82', partyColor2: '#f2c14e' }), db.parties, db.parliamentaryGroups);
+roleState = roleStore.getState();
+assert.equal(roleState.career.startingRole, 'militante');
+assert.equal(isSecretary(roleState.game.party), false, 'Anche il PdC che fonda un partito non diventa segretario senza averlo scelto.');
+assert.ok(roleState.game.party.rank < 5 && !roleState.dataset.offices.some(item => item.level === 'partito' && !item.endDate), 'La fondazione non assegna rank o incarico di segreteria al PdC.');
+storage.clearAll();
+roleStore.createCareer(draft('PdC indipendente', { initialLevel: 'deputato', parliamentStartMode: 'real-context', parliamentaryGroupId: startingGroup.id, partyMode: 'independent', partyId: null, startingOffice: 'presidenteConsiglio', startingRole: null }), db.parties, db.parliamentaryGroups);
+roleState = roleStore.getState();
+assert.equal(roleState.career.startingRole, null, 'La carriera indipendente non persiste una posizione di partito.');
+assert.equal(roleState.game.party, null, 'La partenza indipendente non crea stato di partito.');
+assert.ok(!roleState.dataset.offices.some(item => item.level === 'partito'), 'La partenza indipendente non crea incarichi di partito.');
+storage.clearAll();
 roleStore.createCareer(draft('Segretaria', { startingRole: 'segretarioNazionale' }), db.parties, db.parliamentaryGroups);
 roleState = roleStore.getState();
-const { isSecretary } = await import(`../src/core/career-engine.js${v}`);
 assert.equal(roleState.career.startingRole, 'segretarioNazionale');
 assert.equal(roleState.game.party.rank, 5);
 assert.ok(isSecretary(roleState.game.party), 'Il ruolo iniziale usa lo stato e il controllo esistenti della segreteria.');

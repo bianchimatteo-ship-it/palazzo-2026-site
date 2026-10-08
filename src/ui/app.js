@@ -1146,15 +1146,32 @@ export function mountApp(root, store, { retryData = null } = {}) {
         wizard.errors = []; render(store.getState(),store.getLastSaved()); return;
       }
       const level = event.target.closest('[data-level]')?.dataset.level;
+      const startingOffice = event.target.closest('[data-starting-office]')?.dataset.startingOffice;
+      const pdcChamber = event.target.closest('[data-pdc-chamber]')?.dataset.pdcChamber;
       const mode = event.target.closest('[data-party-mode]')?.dataset.partyMode;
       const partyId = event.target.closest('[data-party-id]')?.dataset.partyId;
       const groupId = event.target.closest('[data-group-id]')?.dataset.groupId;
       if (level) {
+        syncWizardDraft();
         if (CAREER_LEVELS[level]?.chamber !== CAREER_LEVELS[wizard.initialLevel]?.chamber) { wizard.parliamentaryGroupId = ''; wizard.groupQuery = ''; }
-        wizard.initialLevel = level; wizard.errors = []; render(store.getState(),store.getLastSaved());
+        wizard.initialLevel = level; wizard.startingOffice = null; wizard.errors = []; render(store.getState(),store.getLastSaved());
+      }
+      else if (startingOffice) {
+        syncWizardDraft();
+        const currentChamber = CAREER_LEVELS[wizard.initialLevel]?.chamber;
+        if (!currentChamber) { wizard.initialLevel = 'deputato'; wizard.parliamentaryGroupId = ''; wizard.groupQuery = ''; }
+        if (wizard.partyMode === 'new' && wizard.startingOffice !== 'presidenteConsiglio') wizard.startingRole = 'militante';
+        wizard.startingOffice = startingOffice; wizard.errors = []; render(store.getState(),store.getLastSaved());
+      }
+      else if (pdcChamber) {
+        syncWizardDraft();
+        const nextLevel = pdcChamber === 'senato' ? 'senatore' : 'deputato';
+        if (CAREER_LEVELS[nextLevel]?.chamber !== CAREER_LEVELS[wizard.initialLevel]?.chamber) { wizard.parliamentaryGroupId = ''; wizard.groupQuery = ''; }
+        if (wizard.partyMode === 'new' && wizard.startingOffice !== 'presidenteConsiglio') wizard.startingRole = 'militante';
+        wizard.initialLevel = nextLevel; wizard.startingOffice = 'presidenteConsiglio'; wizard.errors = []; render(store.getState(),store.getLastSaved());
       }
       else if (groupId) { wizard.parliamentaryGroupId = groupId; wizard.errors = []; render(store.getState(),store.getLastSaved()); }
-      else if (mode) { syncWizardDraft(); wizard.partyMode = mode; wizard.errors = []; render(store.getState(),store.getLastSaved()); }
+      else if (mode) { syncWizardDraft(); wizard.partyMode = mode; wizard.startingRole = mode === 'independent' ? null : mode === 'new' && wizard.startingOffice !== 'presidenteConsiglio' ? 'segretarioNazionale' : (wizard.startingRole && wizard.startingRole !== 'presidenteConsiglio' ? wizard.startingRole : 'militante'); wizard.errors = []; render(store.getState(),store.getLastSaved()); }
       else if (partyId) { wizard.partyId = partyId; wizard.errors = []; render(store.getState(),store.getLastSaved()); }
       return;
     }

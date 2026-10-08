@@ -5,7 +5,7 @@ import { CAREER_LEVELS, ITALIAN_REGIONS, hasProvincialLevel, initialCareerStatis
 import { storage } from './storage.js?v=20261007-2';
 import { loadSettings } from './settings.js?v=20261007-2';
 import { advanceDays, formatDate } from './time.js?v=20261007-2';
-import { STARTING_ROLES, validateNewCareerDraft } from './career-rules.js?v=20261007-2';
+import { STARTING_OFFICES, STARTING_ROLES, validateNewCareerDraft } from './career-rules.js?v=20261007-2';
 import { advanceCampaign, applyCrewProfile, breakCampaignAlliance, campaignDebts, createCampaign, decayEndorsers, decideCampaignEvent, mergeEndorsers, mergeRivalRegistry, negotiateCampaignAlliance, performCampaignActivity, rivalLedger, setCampaignStrategy, setExpectation } from './campaign-engine.js?v=20261007-2';
 import { electionAftermath } from './aftermath-engine.js?v=20261007-2';
 import { advancementOdds, progressionFactors } from './progression-engine.js?v=20261007-2';
@@ -4050,7 +4050,14 @@ export const store = {
     lastSaved = 'Nuova carriera demo'; emit();
   },
   createCareer(draft, realParties = [], realGroups = []) {
-    draft = { ...draft, startingRole: draft.startingRole ?? 'militante' };
+    const legacyPdcRole = draft.startingRole === 'presidenteConsiglio';
+    const startingOffice = draft.startingOffice ?? (legacyPdcRole ? 'presidenteConsiglio' : null);
+    const defaultPartyRole = draft.partyMode === 'independent' ? null : draft.partyMode === 'new' && startingOffice !== 'presidenteConsiglio' ? 'segretarioNazionale' : 'militante';
+    draft = {
+      ...draft,
+      startingOffice,
+      startingRole: legacyPdcRole ? (draft.partyMode === 'independent' ? null : 'militante') : (draft.startingRole ?? defaultPartyRole)
+    };
     // A new career begins on the day of the real snapshot: real government, Parliament and opening poll are all current.
     // The game in progress keeps its own date: it may still be saved in a slot below, or stay if the draft is refused.
     const today = realStartDate ?? state.clock.currentDate;
@@ -4136,10 +4143,11 @@ export const store = {
       realReferences: { chamberId: chamber === 'camera' ? 'chamber-camera' : 'chamber-senato', groupId: draft.parliamentaryGroupId }
     } : null;
     const career = {
-      id, name: player.displayName + ' — ' + level.shortLabel, playerId, partyId,
+      id, name: player.displayName + ' — ' + (draft.startingOffice ? STARTING_OFFICES[draft.startingOffice]?.label ?? level.shortLabel : level.shortLabel), playerId, partyId,
       initialLevel: draft.initialLevel, territoryId, statisticsIds: statisticIds,
       startedAt: today, createdAt: new Date().toISOString(), status: 'active', parliamentContext, difficulty,
       startingRole: draft.startingRole,
+      startingOffice: draft.startingOffice,
       // The starting conditions in force (null for an ordinary start) and the way the career began, for the Hall of Fame.
       start: hasStart(plan) ? plan : null, startProfile: hasStart(plan) ? plan.profile : 'ordinaria',
       // The legacy of a concluded career this one started from (the Hall of Fame keeps the original).
@@ -4156,10 +4164,10 @@ export const store = {
       clock: { ...state.clock, currentDate: today }, dataset,
       ui: { activePage: 'panoramica', saveName: 'Salvataggio locale', toast: 'Carriera iniziata: la tua prima settimana è in agenda' }
     };
-    const startingRole = STARTING_ROLES[draft.startingRole] ?? STARTING_ROLES.militante;
-    const game = buildGame(base, { partyLabel: partyRecord ? partyRecord.officialName ?? partyRecord.name : null, founder: draft.partyMode === 'new' });
+    const startingRole = draft.partyMode === 'independent' ? null : STARTING_ROLES[draft.startingRole] ?? STARTING_ROLES.militante;
+    const game = buildGame(base, { partyLabel: partyRecord ? partyRecord.officialName ?? partyRecord.name : null, founder: draft.partyMode === 'new' && draft.startingRole === 'segretarioNazionale' });
     let startingOfficeId = null;
-    if (game.party) {
+    if (game.party && startingRole) {
       const rank = PARTY_RANKS[startingRole.partyRank] ?? PARTY_RANKS[0];
       if (startingRole.partyRank > 0 || !(game.party.rank > 0)) {
         game.party.rank = rank.level;
@@ -4170,10 +4178,10 @@ export const store = {
         dataset.offices.push({ id: startingOfficeId, title: startingRole.label, institution: partyRecord?.officialName ?? partyRecord?.name ?? 'Partito', level: 'partito', politicianId: playerId, territoryId: null, startDate: today, endDate: null, source: DATA_SOURCES.SIMULATION });
       }
     }
-    if (draft.startingRole === 'presidenteConsiglio') {
+    if (draft.startingOffice === 'presidenteConsiglio') {
       parliament = playerGovernment(parliament, playerId, draft.parliamentaryGroupId, today);
       const officeId = `incarico-premier-${parliament?.government?.id ?? makeId('governo-iniziale')}`;
-      dataset.offices.push({ id: officeId, title: STARTING_ROLES.presidenteConsiglio.label, institution: 'Governo della Repubblica', level: 'presidente-consiglio', politicianId: playerId, territoryId: null, startDate: today, endDate: null, source: DATA_SOURCES.SIMULATION });
+      dataset.offices.push({ id: officeId, title: STARTING_OFFICES.presidenteConsiglio.label, institution: 'Governo della Repubblica', level: 'presidente-consiglio', politicianId: playerId, territoryId: null, startDate: today, endDate: null, source: DATA_SOURCES.SIMULATION });
       player.roleId = officeId;
       career.startingOfficeId = officeId;
     } else if (startingOfficeId) career.startingOfficeId = startingOfficeId;
@@ -4187,7 +4195,9 @@ export const store = {
     const society = buildSociety({ ...base, game });
     const national = createNationalState({ currentDate: today, legislature: game.legislature });
     if (programAreas.length && game.party) game.party.program = { areas: programAreas, since: 1, source: DATA_SOURCES.SIMULATION };
-    game.timeline = [{ id: makeId('storia'), week: 1, date: today, kind: 'inizio', title: `Inizia la carriera: ${level.office}`, detail: `${STARTING_ROLES[draft.startingRole]?.label ?? STARTING_ROLES.militante.label} · ${draft.municipality.trim()}, ${draft.region}${partyRecord ? ` · ${partyRecord.officialName ?? partyRecord.name}` : ' · indipendente'}`, tone: 'good', source: DATA_SOURCES.SIMULATION }];
+    const startingPathLabel = draft.startingOffice ? STARTING_OFFICES[draft.startingOffice]?.label ?? level.office : level.office;
+    const startingPartyRole = startingRole?.label ?? 'Carriera indipendente';
+    game.timeline = [{ id: makeId('storia'), week: 1, date: today, kind: 'inizio', title: `Inizia la carriera: ${startingPathLabel}`, detail: `${startingPartyRole} · ${draft.municipality.trim()}, ${draft.region}${partyRecord ? ` · ${partyRecord.officialName ?? partyRecord.name}` : ' · indipendente'}`, tone: 'good', source: DATA_SOURCES.SIMULATION }];
     if (hasStart(plan)) game.timeline.push({ id: makeId('storia'), week: 1, date: today, kind: 'inizio', title: `Punto di partenza: ${plan.label}`, detail: planLines(plan).map(item => `${item.label} ${item.level}/3`).join(' · '), tone: 'neutral', source: DATA_SOURCES.SIMULATION });
     // The game being replaced is kept in a slot, so a new game never erases an old one.
     if (store.hasCareer()) keepCurrent(`${slotMeta(state).player} · partita precedente`);

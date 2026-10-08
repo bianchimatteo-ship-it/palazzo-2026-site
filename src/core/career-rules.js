@@ -10,8 +10,10 @@ export const STARTING_ROLES = Object.freeze({
   dirigenteLocale: { label: 'Dirigente locale', partyRank: 1 },
   dirigenteRegionale: { label: 'Dirigente regionale', partyRank: 2 },
   direzioneNazionale: { label: 'Direzione nazionale', partyRank: 3 },
-  segretarioNazionale: { label: 'Segretario nazionale', partyRank: 5 },
-  presidenteConsiglio: { label: 'Presidente del Consiglio', partyRank: 5, requiresParliament: true }
+  segretarioNazionale: { label: 'Segretario nazionale', partyRank: 5 }
+});
+export const STARTING_OFFICES = Object.freeze({
+  presidenteConsiglio: { label: 'Presidente del Consiglio', requiresChamber: true }
 });
 const isValidDate = value => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) return false;
@@ -42,11 +44,6 @@ export function validateCareerStep(draft, step, selectableParties, parliamentary
     if (!isValidDate(draft.birthDate) || draft.birthDate > draft.currentDate) errors.push('Inserisci una data di nascita valida e precedente all’inizio della carriera.');
     if (!genders.has(draft.gender)) errors.push('Seleziona il genere.');
     if (!draft.previousProfession?.trim()) errors.push('Inserisci la professione precedente.');
-    const startingRole = STARTING_ROLES[draft.startingRole ?? 'militante'];
-    if (!startingRole) errors.push('Scegli un ruolo iniziale valido.');
-    else if (startingRole.partyRank > 0 && draft.partyMode === 'independent') errors.push('Per un incarico di partito, scegli un partito o creane uno.');
-    else if (startingRole.requiresParliament && !CAREER_LEVELS[draft.initialLevel]?.chamber) errors.push('Per iniziare da Presidente del Consiglio scegli il percorso di deputato o senatore.');
-    else if (startingRole.requiresParliament && !['camera', 'senato'].every(chamber => parliamentaryGroups.some(group => group.source === 'real' && group.verified === true && group.chamber === chamber && Number(group.memberCount) > 0))) errors.push('Per iniziare da Presidente del Consiglio servono i gruppi di entrambe le Camere.');
     // A career that starts consolidated needs the years to have it: the age is known only here.
     errors.push(...startAgeProblems(draft.start, { partyMode: draft.partyMode, birthDate: draft.birthDate, date: draft.currentDate }));
   }
@@ -55,16 +52,22 @@ export function validateCareerStep(draft, step, selectableParties, parliamentary
   if (step === 4) errors.push(...startProblems(draft.start, { partyMode: draft.partyMode }));
   if (step === 2) {
     const level = CAREER_LEVELS[draft.initialLevel];
+    const startingOffice = draft.startingOffice ? STARTING_OFFICES[draft.startingOffice] : null;
     if (!level) errors.push('Scegli un percorso iniziale.');
+    else if (draft.startingOffice && !startingOffice) errors.push('Scegli un punto di partenza valido.');
+    else if (startingOffice?.requiresChamber && !level.chamber) errors.push('Per iniziare da Presidente del Consiglio scegli Camera o Senato come contesto parlamentare.');
     else if (draft.initialLevel === 'provinciale' && !hasProvincialLevel({ region: draft.region, provinceCode: draft.provinceCode, provinceType: draft.provinceType })) errors.push(PROVINCIAL_LEVEL_PROBLEM);
     else if (level.chamber) {
       if (draft.parliamentStartMode !== 'real-context') errors.push('Scegli il contesto parlamentare reale per questo percorso.');
       const selectedGroup = parliamentaryGroups.find(group => group.id === draft.parliamentaryGroupId && group.source === 'real' && group.verified === true && group.chamber === level.chamber);
       if (!selectedGroup) errors.push(`Scegli un gruppo reale della ${level.chamber === 'camera' ? 'Camera' : 'Senato'} per lo scenario.`);
     }
+    if (startingOffice?.requiresChamber && !['camera', 'senato'].every(chamber => parliamentaryGroups.some(group => group.source === 'real' && group.verified === true && group.chamber === chamber && Number(group.memberCount) > 0))) errors.push('Per iniziare da Presidente del Consiglio servono i gruppi di entrambe le Camere.');
   }
   if (step === 3) {
     if (!['independent', 'existing', 'new'].includes(draft.partyMode)) errors.push('Scegli come iniziare il percorso di partito.');
+    if (draft.partyMode === 'independent' && draft.startingRole != null) errors.push('Una carriera indipendente non può avere una posizione di partito.');
+    if (draft.partyMode !== 'independent' && draft.startingRole != null && !STARTING_ROLES[draft.startingRole]) errors.push('Scegli una posizione nel partito valida.');
     if (draft.partyMode === 'existing' && !selectableParties.some(p => p.id === draft.partyId && isSelectableParty(p))) errors.push('Seleziona un partito reale verificato oppure fondane uno tuo.');
     if (draft.partyMode === 'new') {
       if (!draft.partyName?.trim()) errors.push('Inserisci il nome del partito.');

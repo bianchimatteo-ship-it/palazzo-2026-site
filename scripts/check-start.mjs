@@ -12,7 +12,7 @@ const build = (await readFile(new URL('../index.html', import.meta.url), 'utf8')
 const module = path => import(new URL(`../${path}${build ? `?v=${build}` : ''}`, import.meta.url).href);
 const S = await module('src/core/start-engine.js');
 const R = await module('src/data/simulation/start-rules.js');
-const { validateCareerStep, validateNewCareerDraft } = await module('src/core/career-rules.js');
+const { STARTING_OFFICES, STARTING_ROLES, validateCareerStep, validateNewCareerDraft } = await module('src/core/career-rules.js');
 const { makeCareerDraft, renderCareerWizard } = await module('src/ui/career-wizard.js');
 const { CAREER_LEVELS, careerLevelLabel } = await module('src/data/regions.js');
 const { playerRoles } = await module('src/core/roles.js');
@@ -92,7 +92,31 @@ const BIRTH = '1975-04-03';
   const render = d => renderCareerWizard(state, { ...makeCareerDraft('2026-09-24'), region: 'Toscana', municipality: 'Siena', municipalityCode: '052032', ...d }, [], () => null, db.parliamentaryGroups, [], [], db.politicians, territory);
   let html = render({ step: 2 });
   assert.ok(html.includes('data-level="europeo"') && html.includes('EURODEPUTATO') && html.includes('Parlamento europeo'), 'Il percorso da eurodeputato è tra i percorsi');
+  assert.equal(CAREER_LEVELS.presidenteConsiglio, undefined, 'Il Presidente del Consiglio non è un nuovo livello di carriera.');
+  assert.equal(STARTING_ROLES.presidenteConsiglio, undefined, 'Il Presidente del Consiglio non è una posizione di partito.');
+  assert.equal(STARTING_OFFICES.presidenteConsiglio.label, 'Presidente del Consiglio');
+  assert.ok(html.includes('data-starting-office="presidenteConsiglio"') && html.includes('PRESIDENTE DEL CONSIGLIO'), 'Il PdC è selezionabile come punto di partenza.');
   assert.deepEqual(validateCareerStep({ ...makeCareerDraft('2026-09-24'), initialLevel: 'europeo' }, 2, [], db.parliamentaryGroups), [], 'Da eurodeputato non servono gruppo né Camera');
+  const cameraGroup = db.parliamentaryGroups.find(group => group.chamber === 'camera' && group.source === 'real' && group.verified === true && Number(group.memberCount) > 0);
+  const senateGroup = db.parliamentaryGroups.find(group => group.chamber === 'senato' && group.source === 'real' && group.verified === true && Number(group.memberCount) > 0);
+  assert.ok(cameraGroup && senateGroup, 'Sono disponibili gruppi reali per entrambi i contesti parlamentari.');
+  const pdcDraft = { ...makeCareerDraft('2026-09-24'), startingOffice: 'presidenteConsiglio', initialLevel: 'deputato', parliamentaryGroupId: cameraGroup.id };
+  assert.deepEqual(validateCareerStep(pdcDraft, 2, [], db.parliamentaryGroups), [], 'PdC con contesto Camera e gruppo reale valido.');
+  assert.deepEqual(validateCareerStep({ ...pdcDraft, initialLevel: 'senatore', parliamentaryGroupId: senateGroup.id }, 2, [], db.parliamentaryGroups), [], 'PdC con contesto Senato e gruppo reale valido.');
+  assert.ok(validateCareerStep({ ...pdcDraft, initialLevel: 'comunale' }, 2, [], db.parliamentaryGroups).some(text => /Camera o Senato/.test(text)), 'Il PdC senza contesto parlamentare è respinto.');
+  html = render({ ...pdcDraft, step: 2 });
+  assert.ok(html.includes('data-pdc-chamber="camera"') && html.includes('data-pdc-chamber="senato"') && html.includes('Contesto parlamentare sottostante'), 'Il PdC mantiene la scelta esplicita Camera/Senato.');
+  const partyId = db.parties.find(party => party.source === 'real' && party.verified === true)?.id;
+  const partyDraft = { ...makeCareerDraft('2026-09-24'), partyMode: 'existing', partyId };
+  for (const role of Object.keys(STARTING_ROLES)) assert.deepEqual(validateCareerStep({ ...partyDraft, startingRole: role }, 3, db.parties, db.parliamentaryGroups), [], `Posizione di partito valida: ${role}.`);
+  assert.ok(validateCareerStep({ ...partyDraft, partyMode: 'independent', startingRole: 'militante' }, 3, db.parties, db.parliamentaryGroups).some(text => /indipendente/.test(text)), 'Una carriera indipendente non può conservare un ruolo di partito.');
+  assert.deepEqual(validateCareerStep({ ...partyDraft, partyMode: 'independent', startingRole: null }, 3, db.parties, db.parliamentaryGroups), [], 'Una carriera indipendente senza posizione di partito è valida.');
+  const partyStep = render({ step: 3, partyMode: 'existing', startingRole: 'militante' });
+  assert.ok(partyStep.includes('name="startingRole"') && partyStep.includes('Posizione nel partito') && Object.values(STARTING_ROLES).every(role => partyStep.includes(role.label)), 'Le cinque posizioni sono nel passaggio Partito.');
+  assert.ok(render({ step: 3, partyMode: 'new', startingOffice: 'presidenteConsiglio', startingRole: 'militante' }).includes('name="startingRole"'), 'Anche fondando un partito da PdC si può scegliere esplicitamente la posizione, senza segreteria automatica.');
+  const independentStep = render({ step: 3, partyMode: 'independent', startingRole: null });
+  assert.ok(!independentStep.includes('name="startingRole"'), 'La carriera indipendente non mostra il menu delle posizioni di partito.');
+  assert.ok(!render({ step: 5, partyMode: 'existing' }).includes('name="startingRole"'), 'Chi sei non ripropone la posizione nel partito.');
   html = render({ step: 4, partyMode: 'existing' });
   assert.ok(html.includes('CONDIZIONI DI PARTENZA') && html.includes('DIFFICOLTÀ'), 'Il passaggio 4 ha la difficoltà e le condizioni di partenza');
   for (const id of R.START_PROFILE_ORDER) assert.ok(html.includes(`data-start-profile="${id}"`), `Scheda di partenza: ${id}`);
@@ -105,6 +129,8 @@ const BIRTH = '1975-04-03';
   assert.ok(html.includes('Cosa cambia nella tua partenza') && html.includes('Rete di relazioni · livello 2/3'), 'Dice cosa cambia, livello per livello');
   clean(html, 'scenario personalizzato');
   assert.ok(render({ step: 5, start: { profile: 'outsider', levels: {} }, partyMode: 'independent' }).includes('04 · PUNTO DI PARTENZA'), 'Il riepilogo mostra il punto di partenza');
+  const pdcSummary = render({ step: 5, startingOffice: 'presidenteConsiglio', initialLevel: 'senatore', partyMode: 'existing', startingRole: 'militante' });
+  assert.ok(pdcSummary.includes('<strong>Presidente del Consiglio</strong>') && pdcSummary.includes('Giovane militante') && !pdcSummary.includes('RUOLO INIZIALE'), 'Il riepilogo distingue percorso PdC e appartenenza senza duplicare la posizione.');
   // Le validazioni bloccano partenze impossibili.
   const base = { ...makeCareerDraft('2026-09-24'), partyMode: 'existing', birthDate: '1995-01-01', firstName: 'A', lastName: 'B', gender: 'donna', previousProfession: 'X' };
   assert.ok(validateCareerStep({ ...base, partyMode: 'independent', start: { profile: 'partito-diviso', levels: {} } }, 4, [], []).length > 0, 'Il partito diviso senza partito è respinto al passaggio 4');
@@ -113,7 +139,7 @@ const BIRTH = '1975-04-03';
   assert.deepEqual(validateCareerStep({ ...base, birthDate: BIRTH, start: { profile: 'consolidata', levels: {} } }, 5, [], []), [], 'A 51 anni passa');
   assert.deepEqual(validateCareerStep({ ...base, start: { profile: 'ordinaria', levels: {} } }, 4, [], []), [], 'L’inizio ordinario passa sempre');
   assert.throws(() => store.createCareer({ firstName: 'A', lastName: 'B', birthDate: '1995-01-01', gender: 'donna', region: 'Toscana', municipality: 'Siena', previousProfession: 'X', initialLevel: 'comunale', partyMode: 'independent', difficulty: 'normale', start: { profile: 'personalizzato', levels: { esperienza: 3, rete: 3 } }, policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 } }, db.parties, db.parliamentaryGroups), /in rosso|punt/, 'Il motore rifiuta una partenza non valida anche senza il wizard');
-  lines.push('wizard: percorso da eurodeputato, sei modi di iniziare, editor dei punti, riepilogo e validazioni (partito, punti, età)');
+  lines.push('wizard: sette punti di partenza inclusi PdC, posizioni di partito separate, editor dei punti, riepilogo e validazioni');
 }
 
 // ---------- 3. l’inizio ordinario resta quello di sempre ----------
