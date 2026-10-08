@@ -15,7 +15,8 @@ const { saveSetting } = await import(`../src/core/settings.js${v}`);
 // ---------- a browser storage that can be made to fail ----------
 const mem = globalThis.localStorage.__mem;
 const failing = new Set();   // keys (or key prefixes ending in *) whose writes fail, as when the quota is spent
-const fails = key => [...failing].some(rule => rule === key || (rule.endsWith('*') && key.startsWith(rule.slice(0, -1))));
+const fails = key => [...failing].some(rule => rule === key || (rule.endsWith('*') && key.startsWith(rule.slice(0, -1))))
+  || (failing.has('quota:main-if-backup') && key === 'palazzo-2026.career.v1' && mem.has('palazzo-2026.career.v1.backup'));
 globalThis.localStorage = {
   __mem: mem,
   get length() { return mem.size; },
@@ -104,6 +105,26 @@ const again = store.save();
 status = store.saveStatus();
 assert.ok(again.ok && status.ok && !status.dirty && status.seq === saved.seq + 1 && store.cloudSnapshot() === store.getState(), 'Tornato lo spazio: salva, non è più sporca e può andare online.');
 assert.equal(JSON.parse(mem.get(KEY)).clock.currentDate, store.getState().clock.currentDate, 'Ciò che è scritto è lo stato corrente.');
+// A backup write failure is degradable: autosave still writes main, and reload sees it.
+failing.add(`${KEY}.backup`);
+store.advance(7);
+status = store.saveStatus();
+assert.ok(status.ok && !status.dirty, 'Un backup non scrivibile non blocca l’autosave del main.');
+assert.equal(JSON.parse(mem.get(KEY)).clock.currentDate, store.getState().clock.currentDate);
+assert.ok(!/Salvataggio non riuscito/.test(store.getState().ui.toast ?? ''), 'Non riappare l’errore causato dal backup.');
+failing.clear();
+const reloadedAfterBackupFailure = (await import(`../src/core/store.js${v}&backup-failure-reload`)).store;
+assert.equal(reloadedAfterBackupFailure.getState().clock.currentDate, store.getState().clock.currentDate, 'Il reload conserva l’autosave riuscito.');
+// If quota pressure makes main replacement fail while a backup exists, only recovery data is degraded before retry.
+failing.add('quota:main-if-backup');
+store.advance(7);
+status = store.saveStatus();
+assert.ok(status.ok && !status.dirty, 'Il main viene ritentato dopo aver liberato solo il backup.');
+assert.equal(JSON.parse(mem.get(KEY)).clock.currentDate, store.getState().clock.currentDate);
+assert.ok(!mem.has(`${KEY}.backup`), 'Il backup può essere sacrificato per salvare il main sotto quota.');
+failing.clear();
+const reloadedAfterQuota = (await import(`../src/core/store.js${v}&backup-quota-reload`)).store;
+assert.equal(reloadedAfterQuota.getState().clock.currentDate, store.getState().clock.currentDate, 'Dopo il retry il reload conserva la versione più recente.');
 // Saving by hand (or at the end of the week): the changes wait, they are not “saved”.
 saveSetting('autosave', 'manual');
 store.advance(7);
@@ -174,16 +195,15 @@ opened.reset();
 assert.equal(mem.get(KEY), futureText, 'Anche azzerando la partita di prova.');
 opened.clearAllSaves();
 assert.ok(!mem.has(KEY) && opened.saveStatus().ok && !opened.saveStatus().dirty, 'Solo eliminandolo, su richiesta, il gioco torna a salvare.');
-// The upgrade of an older save keeps the old one aside first: if it cannot, it is not replaced.
+// A migration can save the upgraded main even when the backup key is temporarily unavailable.
 const older = { ...JSON.parse(JSON.stringify(store.getState())), version: 8 };
 const olderText = JSON.stringify(older);
 mem.set(KEY, olderText);
 failing.add(`${KEY}.backup`);
 const upgraded = (await import(`../src/core/store.js${v}&salvataggi=vecchio`)).store;
-assert.equal(mem.get(KEY), olderText, 'Senza la copia di sicurezza, il salvataggio vecchio non si sovrascrive.');
-assert.ok(upgraded.hasCareer() && upgraded.saveStatus().dirty && !upgraded.saveStatus().ok, 'La partita aggiornata resta in memoria, non salvata.');
-assert.equal(upgraded.save().ok, false, 'E salvare non riesce finché la copia non riesce.');
-assert.equal(mem.get(KEY), olderText, 'Ancora intatto.');
+assert.equal(JSON.parse(mem.get(KEY)).version, 10, 'La migration scrive il main anche se il backup fallisce.');
+assert.ok(upgraded.hasCareer() && upgraded.saveStatus().ok && !upgraded.saveStatus().dirty, 'La carriera migrata resta salvata e non sporca.');
+assert.equal(JSON.parse(mem.get(KEY)).clock.currentDate, older.clock.currentDate, 'La migration conserva la progressione.');
 failing.clear();
 assert.ok(upgraded.save().ok && JSON.parse(mem.get(KEY)).version === 10 && JSON.parse(mem.get(`${KEY}.backup`)).payload, 'Con la copia riuscita, il salvataggio si aggiorna.');
 
@@ -380,7 +400,7 @@ assert.equal(migrated.getState().clock.currentDate, '2032-06-01');
 assert.equal(JSON.parse(mem.get(KEY)).clock.currentDate, '2032-06-01');
 assert.equal(JSON.parse(mem.get(KEY)).saveMeta.careerId, careerId);
 assert.equal(JSON.parse(mem.get(KEY)).version, 10, 'La migration è salvata senza downgrade.');
-assert.ok(JSON.parse(mem.get(`${KEY}.history`)).some(item => item.reason === 'aggiornamento-v9-v10'), 'La versione precedente alla migration resta recuperabile.');
+assert.equal(JSON.parse(JSON.parse(mem.get(`${KEY}.backup`)).payload).version, 9, 'La versione precedente alla migration resta nel backup indipendente.');
 
 // ---------- 8. starting roles are persisted in the actual party and Government state ----------
 const roleStore = migrated;

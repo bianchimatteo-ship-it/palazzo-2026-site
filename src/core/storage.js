@@ -91,6 +91,22 @@ function writeWithHistoryPrune(key, value) {
     localStorage.setItem(key, value);
   }
 }
+function writeMainSnapshot(value) {
+  try { writeWithHistoryPrune(STORAGE_KEY, value); return; }
+  catch (error) {
+    if (!isQuotaError(error)) throw error;
+    let backup;
+    try { backup = localStorage.getItem(BACKUP_KEY); } catch { throw error; }
+    if (backup === null) throw error;
+    try { localStorage.removeItem(BACKUP_KEY); }
+    catch { throw error; }
+    try { localStorage.setItem(STORAGE_KEY, value); }
+    catch (retryError) {
+      try { localStorage.setItem(BACKUP_KEY, backup); } catch { /* main remains untouched; restore backup if space permits */ }
+      throw retryError;
+    }
+  }
+}
 function withWriteLock(action) {
   const now = Date.now();
   const occupied = readJson(LOCK_KEY);
@@ -114,16 +130,16 @@ function backupLocked(payload, reason) {
   }
   if (previous && isSave(incoming) && careerIdOf(previous.state) === careerIdOf(incoming)) {
     const comparison = compareSaveVersion(previous.state, incoming);
-    if (comparison > 0 || (comparison === 0 && samePayload(previous.state, incoming))) {
+    if (comparison > 0) {
       archiveSnapshot(rawPayload, reason);
       return true;
     }
+    if (comparison === 0 && samePayload(previous.state, incoming)) return true;
   }
   const entry = { reason, savedAt: new Date().toISOString(), payload: rawPayload };
   try { writeWithHistoryPrune(BACKUP_KEY, JSON.stringify(entry)); }
-  catch { return false; }
+  catch { archiveSnapshot(rawPayload, reason, entry.savedAt); return false; }
   if (previous && !samePayload(previous.state, incoming)) archiveSnapshot(previous.state, 'backup-precedente', previous.savedAt ?? undefined);
-  archiveSnapshot(rawPayload, reason, entry.savedAt);
   return true;
 }
 function nextRevision(state) {
@@ -167,9 +183,7 @@ export const storage = {
         if (!selected.best || selected.best.source === 'main') return;
         assertOwner();
         const rawMain = localStorage.getItem(STORAGE_KEY);
-        if (selected.best.source !== 'backup' && !backupLocked(selected.best.state, 'recovery-copia-avanzata')) {
-          throw new Error('La copia recuperata non è riuscita: il salvataggio principale resta intatto.');
-        }
+        if (selected.best.source !== 'backup') backupLocked(selected.best.state, 'recovery-copia-avanzata');
         if (selected.main) {
           archiveSnapshot(selected.main.state, 'recovery-main-precedente');
         } else if (rawMain) archiveSnapshot(rawMain, 'salvataggio-main-non-recuperabile');
@@ -213,13 +227,11 @@ export const storage = {
       const savedState = { ...state, saveMeta: { ...(state.saveMeta ?? {}), careerId, revision, switchFromCareerId: null, switchIntent: null } };
       const raw = JSON.stringify(savedState);
       if (current && !samePayload(current.state, savedState)) {
-        if (!backupLocked(current.state, current.state.version < (savedState.version ?? 0) ? `aggiornamento-v${current.state.version ?? 0}-v${savedState.version ?? 0}` : 'versione-precedente')) {
-          throw new Error('La copia di sicurezza del salvataggio precedente non è riuscita: la versione principale resta intatta.');
-        }
-        archiveSnapshot(current.state, 'versione-precedente');
+        // Backup/history are recovery aids, never a prerequisite for the main save.
+        backupLocked(current.state, current.state.version < (savedState.version ?? 0) ? `aggiornamento-v${current.state.version ?? 0}-v${savedState.version ?? 0}` : 'versione-precedente');
       }
       assertOwner();
-      writeWithHistoryPrune(STORAGE_KEY, raw);
+      writeMainSnapshot(raw);
       const written = readJson(STORAGE_KEY);
       if (!written || !samePayload(written, savedState)) {
         archiveSnapshot(savedState, 'conflitto-scrittura-concorrente');
