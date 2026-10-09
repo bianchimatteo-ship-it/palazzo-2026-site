@@ -15,6 +15,9 @@ const { saveSetting } = await import(`../src/core/settings.js${v}`);
 // ---------- a browser storage that can be made to fail ----------
 const mem = globalThis.localStorage.__mem;
 const failing = new Set();   // keys (or key prefixes ending in *) whose writes fail, as when the quota is spent
+let quotaLimit = null;
+const quotaFailures = [];
+const storageBytes = () => [...mem].reduce((sum, [key, value]) => sum + 2 * (String(key).length + String(value).length), 0);
 const fails = key => [...failing].some(rule => rule === key || (rule.endsWith('*') && key.startsWith(rule.slice(0, -1))))
   || (failing.has('quota:main-if-backup') && key === 'palazzo-2026.career.v1' && mem.has('palazzo-2026.career.v1.backup'));
 globalThis.localStorage = {
@@ -22,7 +25,17 @@ globalThis.localStorage = {
   get length() { return mem.size; },
   key: index => [...mem.keys()][index] ?? null,
   getItem: key => mem.has(key) ? mem.get(key) : null,
-  setItem: (key, value) => { if (fails(key)) throw Object.assign(new Error('QuotaExceededError'), { name: 'QuotaExceededError' }); mem.set(key, String(value)); },
+  setItem: (key, value) => {
+    const serialized = String(value);
+    const used = storageBytes();
+    const previous = mem.get(key);
+    const attempted = used - (previous === undefined ? 0 : 2 * (String(key).length + String(previous).length)) + 2 * (String(key).length + serialized.length);
+    if (fails(key) || (quotaLimit !== null && attempted > quotaLimit)) {
+      quotaFailures.push({ key, used, attempted, limit: quotaLimit });
+      throw Object.assign(new Error('QuotaExceededError'), { name: 'QuotaExceededError' });
+    }
+    mem.set(key, serialized);
+  },
   removeItem: key => { mem.delete(key); }
 };
 const KEY = 'palazzo-2026.career.v1';
@@ -134,7 +147,32 @@ assert.ok(store.save().ok && !store.saveStatus().dirty && store.cloudSnapshot(),
 saveSetting('autosave', 'action');
 
 // ---------- 3. the game being replaced is kept first, or nothing is replaced ----------
+const previousCareer = store.getState().career.id;
+const manualQuotaSlot = store.saveToSlot('Manuale intoccabile');
+storage.backup(store.getState(), 'quota-riproduzione'); // main and backup now cover the archived history snapshot
+const quotaBefore = storageBytes();
+quotaFailures.length = 0;
+quotaLimit = quotaBefore + 512; // enough for the temporary lock, not a second full career snapshot
+store.createCareer(draft('Altra con quota reale'), db.parties, db.parliamentaryGroups);
+quotaLimit = null;
+const slotQuotaFailure = quotaFailures.find(item => item.key.startsWith(SLOT));
+assert.ok(slotQuotaFailure, 'La riproduzione quota fallisce sulla scrittura del payload dello slot automatico.');
+assert.ok(slotQuotaFailure.attempted > slotQuotaFailure.limit, 'La copia completa dello slot supera lo spazio residuo simulato.');
+assert.notEqual(store.getState().career.id, previousCareer, 'La nuova carriera parte solo dopo la conservazione riuscita della precedente.');
+const preservedQuotaSlot = storage.listSlots().find(entry => entry.autoPreserve && storage.loadSlot(entry.id).career.id === previousCareer);
+assert.ok(preservedQuotaSlot, 'Il tentativo dopo la quota salva davvero la carriera precedente nello slot automatico.');
+assert.ok(storage.listSlots().some(entry => entry.id === manualQuotaSlot && !entry.autoPreserve), 'La pulizia quota non elimina lo slot manuale.');
+assert.ok(!mem.has(`${KEY}.history`), 'La cronologia ridondante viene sacrificata solo dopo che main/slot coprono quelle versioni.');
+assert.equal(storage.load().career.id, store.getState().career.id, 'Il reload mantiene la nuova carriera salvata dopo il recovery dello spazio.');
+const keyWeights = [...mem].map(([key, value]) => `${key}: ${Math.round(2 * (key.length + String(value).length) / 1024)} KiB`).filter(item => /career\.v1|politicando\.(slot|slots)/.test(item));
+console.log(`Quota riprodotta e recuperata: ${quotaBefore} B, residuo 512 B; primo tentativo ${slotQuotaFailure.key} oltre quota; cronologia ridondante rimossa e slot manuale preservato. Copie finali: ${keyWeights.join(', ') || 'nessuna slot'}.`);
 const career = store.getState().career.id;
+const firstAutoSlot = store.saveToSlot('Prima conservazione automatica', null, { autoPreserve: true });
+const autoSlotCount = storage.listSlots().filter(entry => entry.autoPreserve && storage.loadSlot(entry.id).career.id === career).length;
+assert.equal(autoSlotCount, 1);
+const reusedAutoSlot = store.saveToSlot('Seconda conservazione automatica', null, { autoPreserve: true });
+assert.equal(reusedAutoSlot, firstAutoSlot, 'La stessa carriera riusa il suo slot automatico invece di duplicarlo.');
+assert.equal(storage.listSlots().filter(entry => entry.autoPreserve && storage.loadSlot(entry.id).career.id === career).length, autoSlotCount, 'Una seconda conservazione non crea slot automatici duplicati.');
 failing.add(`${SLOT}*`);
 assert.throws(() => store.createCareer(draft('Altra'), db.parties, db.parliamentaryGroups), /non può essere conservata/);
 assert.equal(store.getState().career.id, career, 'Se la partita in corso non si può conservare, la nuova carriera non parte.');
@@ -410,6 +448,9 @@ assert.ok(startingGroup && startingSenateGroup, 'Il riferimento reale contiene g
 const { isSecretary } = await import(`../src/core/career-engine.js${v}`);
 const { FOUNDER_RANK } = await import(`../src/data/simulation/career-rules.js${v}`);
 const { playerRoles } = await import(`../src/core/roles.js${v}`);
+const { careerLevelLabel } = await import(`../src/data/regions.js${v}`);
+const { renderHeadquarters } = await import(`../src/ui/game-mode.js${v}`);
+const { renderCareerPage } = await import(`../src/ui/career-page.js${v}`);
 storage.clearAll();
 roleStore.createCareer(draft('Primo Ministro', { initialLevel: 'deputato', parliamentStartMode: 'real-context', parliamentaryGroupId: startingGroup.id, startingOffice: 'presidenteConsiglio', startingRole: 'militante' }), db.parties, db.parliamentaryGroups);
 let roleState = roleStore.getState();
@@ -494,6 +535,7 @@ roleStore.createCareer(draft('Presidente della Repubblica', { initialLevel: 'dep
 roleState = roleStore.getState();
 assert.equal(roleState.career.startingOffice, 'presidenteRepubblica');
 assert.equal(roleState.career.currentLevel, 'presidente');
+assert.equal(careerLevelLabel(roleState.career.currentLevel), 'Presidente della Repubblica');
 assert.equal(roleState.career.startingRole, null);
 assert.equal(roleState.career.partyId, null);
 assert.equal(roleState.game.party, null);
@@ -507,6 +549,10 @@ const pdrRoles = playerRoles(roleState);
 assert.ok(pdrRoles.roles.some(([id]) => id === 'presidente') && !pdrRoles.roles.some(([id]) => ['premier', 'segretario', 'parlamentare'].includes(id)), 'Il PdR ha solo il ruolo presidenziale, senza poteri da premier o segretario.');
 assert.ok(pdrRoles.powers.some(power => power.label.startsWith('Consultazioni, incarico di governo') && power.enabled), 'I poteri del Quirinale sono attivi.');
 assert.ok(pdrRoles.powers.some(power => power.label === 'Indirizzo politico e priorità nazionali del governo' && !power.enabled), 'I poteri di governo non sono attivi per il PdR.');
+const pdrHome = renderHeadquarters(roleState);
+assert.ok(pdrHome.includes('Presidente della Repubblica'), 'La dashboard mostra il titolo corretto del PdR.');
+const pdrCareerPage = renderCareerPage(roleState, { tab: 'percorso' });
+assert.ok(pdrCareerPage.includes('IL TUO PERCORSO · PRESIDENTE DELLA REPUBBLICA') && pdrCareerPage.includes('Percorso iniziale') && pdrCareerPage.includes('<dd>Presidente della Repubblica</dd>'), 'Intestazione e origine della pagina Carriera mostrano il PdR, non un livello comunale generico.');
 const pdrReloadStore = (await import(`../src/core/store.js${v}&phase1-pdr-reload`)).store;
 const pdrReload = pdrReloadStore.getState();
 assert.equal(pdrReload.presidency.incumbent.kind, 'giocatore', 'Il reload mantiene il giocatore incumbent al Quirinale.');

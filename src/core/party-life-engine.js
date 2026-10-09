@@ -4,14 +4,14 @@
 // rebuilding of a party in opposition. Everything lives in game.party.life and is simulated: no real person or
 // real organisation is described. The career engine owns the calendar and hands in the helpers it already has
 // (memory, relations, diary) through `api`, so nothing here imports the career engine.
-import { uniqueId } from './ids.js?v=20261009-1';
+import { uniqueId } from './ids.js?v=20261009-2';
 import {
   ACTOR_PERSONAS, CADRE_ACTIONS, CADRE_INTERESTS, CONGRESS_DELEGATES, CONGRESS_PHASES, EMERGING_AREAS, PACT_KINDS, PERSONAS_BY_CURRENT, PERSONA_FALLBACK,
   REBUILD_FOCUS, REBUILD_WEEKS, REQUEST_KINDS, SPLIT_RULES
-} from '../data/simulation/party-life-rules.js?v=20261009-1';
-import { CURRENT_AREAS, CURRENT_LINES, PARTY_LINES } from '../data/simulation/career-rules.js?v=20261009-1';
-import { LEADER_RULES } from '../data/simulation/committee-rules.js?v=20261009-1';
-import { leaderKeyOf, leaderStance, territorialControl } from './committee-engine.js?v=20261009-1';
+} from '../data/simulation/party-life-rules.js?v=20261009-2';
+import { CURRENT_AREAS, CURRENT_LINES, PARTY_LINES } from '../data/simulation/career-rules.js?v=20261009-2';
+import { LEADER_RULES } from '../data/simulation/committee-rules.js?v=20261009-2';
+import { leaderKeyOf, leaderStance, territorialControl } from './committee-engine.js?v=20261009-2';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));

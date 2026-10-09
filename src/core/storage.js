@@ -58,17 +58,49 @@ function allSaveCandidates() {
 function bestCandidate(candidates) {
   return candidates.reduce((best, item) => !best || compareSaveVersion(item.state, best.state) > 0 ? item : best, null);
 }
+function coveredByAnotherSave(state, excludedSource = null) {
+  return allSaveCandidates().some(item => item.source !== excludedSource && !item.source.startsWith('history:')
+    && careerIdOf(item.state) === careerIdOf(state) && compareSaveVersion(item.state, state) >= 0);
+}
+function pruneRedundantHistoryOne() {
+  const history = readJson(HISTORY_KEY);
+  if (!Array.isArray(history) || !history.length) return false;
+  const durable = allSaveCandidates().filter(item => !item.source.startsWith('history:'));
+  const index = history.findIndex((entry, offset) => {
+    const candidate = unwrap(entry, `history:${offset}`);
+    return candidate && durable.some(item => careerIdOf(item.state) === careerIdOf(candidate.state) && compareSaveVersion(item.state, candidate.state) >= 0);
+  });
+  if (index < 0) return false;
+  const next = history.filter((_, offset) => offset !== index);
+  try {
+    if (next.length) localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+    else localStorage.removeItem(HISTORY_KEY);
+    return true;
+  } catch { return false; }
+}
+function pruneRedundantBackup() {
+  const raw = readJson(BACKUP_KEY);
+  if (raw === null) return false;
+  const backup = unwrap(raw, 'backup');
+  if (backup ? !coveredByAnotherSave(backup.state, 'backup') : !allSaveCandidates().some(item => item.source === 'main' || item.source.startsWith(SLOT_PREFIX))) return false;
+  try { localStorage.removeItem(BACKUP_KEY); return true; } catch { return false; }
+}
 function appendHistory(entry) {
-  const list = readJson(HISTORY_KEY);
-  let history = Array.isArray(list) ? list : [];
+  let history = readJson(HISTORY_KEY);
+  history = Array.isArray(history) ? history : [];
   if (history.some(item => samePayload(item?.payload, entry?.payload))) return true;
-  history = [...history, entry].slice(-HISTORY_LIMIT);
-  while (history.length) {
-    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); return true; }
-    catch { history.shift(); }
+  while (history.length >= HISTORY_LIMIT) {
+    if (!pruneRedundantHistoryOne()) {
+      // Keep one best-effort copy of a corrupt main being replaced: unlike a
+      // normal rotation it is the only trace of that payload, but never let
+      // repeated corrupt mains grow history without bound.
+      if (entry?.reason !== 'salvataggio-main-non-recuperabile' || history.length > HISTORY_LIMIT) return false;
+      break;
+    }
+    history = readJson(HISTORY_KEY) ?? [];
   }
-  try { localStorage.removeItem(HISTORY_KEY); } catch { /* history is only a convenience */ }
-  return false;
+  try { localStorage.setItem(HISTORY_KEY, JSON.stringify([...history, entry])); return true; }
+  catch { return false; }
 }
 function archiveSnapshot(payload, reason, savedAt = new Date().toISOString()) {
   const entry = { reason, savedAt, payload: typeof payload === 'string' ? payload : JSON.stringify(payload) };
@@ -80,29 +112,27 @@ function writeWithHistoryPrune(key, value) {
   try { localStorage.setItem(key, value); return; }
   catch (initialError) {
     if (key === HISTORY_KEY || !isQuotaError(initialError)) throw initialError;
-    let history = readJson(HISTORY_KEY);
-    history = Array.isArray(history) ? [...history] : [];
-    while (history.length) {
-      history.shift();
-      try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); } catch { /* continue pruning oldest entries */ }
-      try { localStorage.setItem(key, value); return; } catch (error) { if (!isQuotaError(error)) throw error; }
+    let error = initialError;
+    while (pruneRedundantHistoryOne()) {
+      try { localStorage.setItem(key, value); return; }
+      catch (retryError) { if (!isQuotaError(retryError)) throw retryError; error = retryError; }
     }
-    try { localStorage.removeItem(HISTORY_KEY); } catch { /* preserve the target write attempt */ }
-    localStorage.setItem(key, value);
+    if (key !== BACKUP_KEY && pruneRedundantBackup()) {
+      try { localStorage.setItem(key, value); return; }
+      catch (retryError) { if (!isQuotaError(retryError)) throw retryError; error = retryError; }
+    }
+    throw error;
   }
 }
 function writeMainSnapshot(value) {
   try { writeWithHistoryPrune(STORAGE_KEY, value); return; }
   catch (error) {
     if (!isQuotaError(error)) throw error;
-    let backup;
-    try { backup = localStorage.getItem(BACKUP_KEY); } catch { throw error; }
-    if (backup === null) throw error;
-    try { localStorage.removeItem(BACKUP_KEY); }
-    catch { throw error; }
+    const backup = readJson(BACKUP_KEY);
+    if (backup === null || !pruneRedundantBackup()) throw error;
     try { localStorage.setItem(STORAGE_KEY, value); }
     catch (retryError) {
-      try { localStorage.setItem(BACKUP_KEY, backup); } catch { /* main remains untouched; restore backup if space permits */ }
+      try { localStorage.setItem(BACKUP_KEY, JSON.stringify(backup)); } catch { /* main remains untouched; restore backup if space permits */ }
       throw retryError;
     }
   }
@@ -226,7 +256,7 @@ export const storage = {
       const revision = Math.max(nextRevision(state), baseRevision + 1);
       const savedState = { ...state, saveMeta: { ...(state.saveMeta ?? {}), careerId, revision, switchFromCareerId: null, switchIntent: null } };
       const raw = JSON.stringify(savedState);
-      if (current && !samePayload(current.state, savedState)) {
+      if (current && !samePayload(current.state, savedState) && !coveredByAnotherSave(current.state, 'main')) {
         // Backup/history are recovery aids, never a prerequisite for the main save.
         backupLocked(current.state, current.state.version < (savedState.version ?? 0) ? `aggiornamento-v${current.state.version ?? 0}-v${savedState.version ?? 0}` : 'versione-precedente');
       }
@@ -278,21 +308,28 @@ export const storage = {
       repairSlotsUnlocked();
       const baseRevision = revisionOf(state);
       const slots = storage.listSlots();
-      const slotId = id ?? `slot-${Date.now().toString(36)}`;
+      const savedState = { ...state, saveMeta: { ...(state.saveMeta ?? {}), careerId: careerIdOf(state), revision: baseRevision } };
+      const automatic = meta?.autoPreserve ? slots.map(entry => {
+        if (!entry.autoPreserve) return null;
+        const snapshot = unwrap(readJson(SLOT_PREFIX + entry.id), `slot:${entry.id}`);
+        return snapshot && careerIdOf(snapshot.state) === careerIdOf(savedState) ? { entry, state: snapshot.state } : null;
+      }).filter(Boolean) : [];
+      const bestAutomatic = automatic.reduce((best, item) => !best || compareSaveVersion(item.state, best.state) > 0 ? item : best, null);
+      if (bestAutomatic && compareSaveVersion(bestAutomatic.state, savedState) > 0) return bestAutomatic.entry.id;
+      const slotId = id ?? bestAutomatic?.entry.id ?? `slot-${Date.now().toString(36)}`;
       const known = slots.some(entry => entry.id === slotId);
       if (!known && slots.length >= MAX_SLOTS) throw new Error(`Puoi conservare al massimo ${MAX_SLOTS} salvataggi: eliminane uno.`);
       const savedAt = new Date().toISOString();
       const key = SLOT_PREFIX + slotId;
       let payload;
-      const savedState = { ...state, saveMeta: { ...(state.saveMeta ?? {}), careerId: careerIdOf(state), revision: baseRevision } };
       try { payload = JSON.stringify(savedState); } catch { throw new Error('La partita non si può salvare nello slot.'); }
       const before = known ? localStorage.getItem(key) : null;
       if (before) {
         const previous = unwrap(readRawJson(before), `slot:${slotId}`);
-        if (previous) archiveSnapshot(previous.state, 'slot-precedente');
+        if (previous && !(meta?.autoPreserve && careerIdOf(previous.state) === careerIdOf(savedState))) archiveSnapshot(previous.state, 'slot-precedente');
       }
       try { assertOwner(); writeWithHistoryPrune(key, payload); }
-      catch { throw new Error('Spazio del browser esaurito: elimina un salvataggio o esportalo su file.'); }
+      catch { throw new Error('Spazio del browser esaurito: esporta la partita in corso o libera spazio eliminando uno slot manuale, poi riprova.'); }
       try { assertOwner(); writeWithHistoryPrune(SLOT_INDEX, JSON.stringify([{ id: slotId, savedAt, ...meta }, ...slots.filter(entry => entry.id !== slotId)])); }
       catch {
         try { if (before !== null) localStorage.setItem(key, before); else localStorage.removeItem(key); } catch { /* the next opening finds the slot and lists it */ }

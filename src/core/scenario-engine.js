@@ -3,10 +3,10 @@
 // sectors, party, growth, expectations); scenarioInit writes it into the first week of the game; scenarioGrowth and
 // scenarioCapitalGain are what goes on working afterwards (how fast the stats grow, how much capital comes each week). Pure and
 // deterministic: no draws.
-import { AFFILIATION_SCENARIOS, GROWTH_STATS, LEVEL_SCENARIOS, SCENARIO_VERSION } from '../data/simulation/scenario-rules.js?v=20261009-1';
-import { REPUTATIONS, SECTORS } from '../data/simulation/standing-rules.js?v=20261009-1';
-import { PARTY_RANKS, RELATION_TEMPLATES, STAT_LABELS } from '../data/simulation/career-rules.js?v=20261009-1';
-import { createStanding } from './standing-engine.js?v=20261009-1';
+import { AFFILIATION_SCENARIOS, GROWTH_STATS, LEVEL_SCENARIOS, SCENARIO_VERSION } from '../data/simulation/scenario-rules.js?v=20261009-2';
+import { REPUTATIONS, SECTORS } from '../data/simulation/standing-rules.js?v=20261009-2';
+import { PARTY_RANKS, RELATION_TEMPLATES, STAT_LABELS } from '../data/simulation/career-rules.js?v=20261009-2';
+import { createStanding } from './standing-engine.js?v=20261009-2';
 
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
 const round2 = value => Math.round(value * 100) / 100;

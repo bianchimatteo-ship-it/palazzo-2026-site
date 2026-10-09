@@ -1,11 +1,11 @@
 // The Quirinale in the electoral centre (tab "Quirinale"): the election of the President of the Republic (the assembly
 // of the grand electors, the field of candidates, the negotiations, the secret ballots and their quorum) and, when the
 // player is the President, the powers of the office. Everything is simulation: the candidates are figures of the game.
-import { formatDate } from '../core/time.js?v=20261009-1';
-import { CAMP_LABELS, CANDIDATE_TYPES, PRESIDENCY_RULES, PRESIDENT_ACTIVITIES } from '../data/simulation/presidency-rules.js?v=20261009-1';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261009-1';
-import { termEndOf, electionPhaseLabel, lineText } from '../core/presidency-engine.js?v=20261009-1';
-import { arrow, badge, bar, card, empty, esc, kpi, num, table } from './sections-kit.js?v=20261009-1';
+import { formatDate } from '../core/time.js?v=20261009-2';
+import { CAMP_LABELS, CANDIDATE_TYPES, PRESIDENCY_RULES, PRESIDENT_ACTIVITIES } from '../data/simulation/presidency-rules.js?v=20261009-2';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261009-2';
+import { termEndOf, electionPhaseLabel, lineText } from '../core/presidency-engine.js?v=20261009-2';
+import { arrow, badge, bar, card, empty, esc, kpi, num, table } from './sections-kit.js?v=20261009-2';
 
 const day = date => date ? formatDate(date) : '—';
 const shortName = label => String(label ?? '').replace(/\s*\(figura simulata\)$/, '');

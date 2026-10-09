@@ -5,15 +5,15 @@
 // deadline, votes with individual dissent, and a player who proposes, votes, negotiates or governs. A council that loses
 // its majority is dissolved and votes early. Everything is simulation; the European groups start from their real size
 // at the constitutive session of 2024 (europarl), then evolve in the game.
-import { uniqueId } from './ids.js?v=20261009-1';
-import { DATA_SOURCES } from '../data/schema.js?v=20261009-1';
-import { AREA_BY_ID, CAMP_PRIORITIES, INTENSITY } from '../data/simulation/policy-rules.js?v=20261009-1';
-import { ACT_TYPES, AREA_BREADTH, AREA_LEANS, CITY_INDICATORS, CITY_SHARE_OF_REGION, PROVINCE_SHARE_OF_REGION, actTitle, actTypeOf, cityIndicatorOf, legalNumber, naturalType, neededYes, regionalWeights, proposableTypes, typeFitsArea } from '../data/simulation/local-acts.js?v=20261009-1';
-import { DELEGA_RULES, PORTFOLIO_AREAS } from '../data/simulation/office-rules.js?v=20261009-1';
-import { cohesiveShare } from './parliament-engine.js?v=20261009-1';
-import { groupLine, seededRandom, splitGroupVote } from './vote-engine.js?v=20261009-1';
-import { advanceDays } from './time.js?v=20261009-1';
-import { INCUMBENCY_RULES } from '../data/simulation/campaign-rules.js?v=20261009-1';
+import { uniqueId } from './ids.js?v=20261009-2';
+import { DATA_SOURCES } from '../data/schema.js?v=20261009-2';
+import { AREA_BY_ID, CAMP_PRIORITIES, INTENSITY } from '../data/simulation/policy-rules.js?v=20261009-2';
+import { ACT_TYPES, AREA_BREADTH, AREA_LEANS, CITY_INDICATORS, CITY_SHARE_OF_REGION, PROVINCE_SHARE_OF_REGION, actTitle, actTypeOf, cityIndicatorOf, legalNumber, naturalType, neededYes, regionalWeights, proposableTypes, typeFitsArea } from '../data/simulation/local-acts.js?v=20261009-2';
+import { DELEGA_RULES, PORTFOLIO_AREAS } from '../data/simulation/office-rules.js?v=20261009-2';
+import { cohesiveShare } from './parliament-engine.js?v=20261009-2';
+import { groupLine, seededRandom, splitGroupVote } from './vote-engine.js?v=20261009-2';
+import { advanceDays } from './time.js?v=20261009-2';
+import { INCUMBENCY_RULES } from '../data/simulation/campaign-rules.js?v=20261009-2';
 
 const SIM = DATA_SOURCES.SIMULATION;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
