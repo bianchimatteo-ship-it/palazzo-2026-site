@@ -1,10 +1,10 @@
 // The starting conditions in the career wizard (step 4, under the difficulty): how the career begins — an ordinary
 // start, an outsider, with political debts, in a party already divided, with a consolidated career, or a custom
 // scenario built under a budget of points. What each choice does is read from the same rules the engine applies.
-import { LEVER_BY_ID, START_BUDGET, START_LEVERS, START_LEVEL_MAX, START_PROFILES, START_PROFILE_ORDER } from '../data/simulation/start-rules.js?v=20261009-2';
-import { normalizeStart, planLines, startPlan } from '../core/start-engine.js?v=20261009-2';
-import { legacyPicker } from './hall-view.js?v=20261009-2';
-import { scenarioLines, scenarioOf } from '../core/scenario-engine.js?v=20261009-2';
+import { LEVER_BY_ID, START_BUDGET, START_LEVERS, START_LEVEL_MAX, START_PROFILES, START_PROFILE_ORDER } from '../data/simulation/start-rules.js?v=20261009-3';
+import { normalizeStart, planLines, startPlan } from '../core/start-engine.js?v=20261009-3';
+import { legacyPicker } from './hall-view.js?v=20261009-3';
+import { scenarioLines, scenarioOf } from '../core/scenario-engine.js?v=20261009-3';
 
 const esc = (value = '') => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const list = (items, mark) => items.length ? `<ul class="start-list">${items.map(item => `<li data-mark="${mark}">${esc(item)}</li>`).join('')}</ul>` : '';

@@ -102,7 +102,11 @@ try {
   ok(Date.now() - started < 12000, 'Il servizio account non raggiungibile è riconosciuto in pochi secondi.');
   ok(await has('.welcome-points ~ .setting-actions [data-menu-action="start-local"], [data-menu-action="start-local"]'), 'API account non raggiungibile: “Inizia senza account” subito disponibile.');
   await tap('[data-menu-action="start-local"]', { scroll: true });
-  await waitFor(() => has('.career-wizard'), 10000, 'Career Wizard');
+  try { await waitFor(() => has('.career-wizard'), 10000, 'Career Wizard'); }
+  catch (error) {
+    const state = await evaluate('JSON.stringify({ url: location.href, wizard: Boolean(document.querySelector(".career-wizard")), menu: Boolean(document.querySelector(".main-menu")), welcome: document.querySelector("#app")?.innerText.slice(0, 500) })');
+    throw new Error(`${error.message} · stato dopo il tocco: ${state}`);
+  }
   ok(!(await tabbarShown()), 'Con il wizard aperto la barra di navigazione mobile non è visibile.');
 
   // ---------- 2. the ISTAT comuni do not arrive: the wizard stays usable, no comune is accepted without them ----------

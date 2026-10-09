@@ -329,7 +329,7 @@ export const storage = {
         if (previous && !(meta?.autoPreserve && careerIdOf(previous.state) === careerIdOf(savedState))) archiveSnapshot(previous.state, 'slot-precedente');
       }
       try { assertOwner(); writeWithHistoryPrune(key, payload); }
-      catch { throw new Error('Spazio del browser esaurito: esporta la partita in corso o libera spazio eliminando uno slot manuale, poi riprova.'); }
+      catch { throw new Error(`Spazio del browser esaurito: ${meta?.autoPreserve ? 'la carriera corrente resta intatta' : 'lo slot non è stato salvato'}.`); }
       try { assertOwner(); writeWithHistoryPrune(SLOT_INDEX, JSON.stringify([{ id: slotId, savedAt, ...meta }, ...slots.filter(entry => entry.id !== slotId)])); }
       catch {
         try { if (before !== null) localStorage.setItem(key, before); else localStorage.removeItem(key); } catch { /* the next opening finds the slot and lists it */ }

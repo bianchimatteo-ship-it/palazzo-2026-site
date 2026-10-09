@@ -1,9 +1,9 @@
-import { uniqueId } from './ids.js?v=20261009-2';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261009-2';
-import { APPROVAL_NEUTRAL, CHART_SLOTS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261009-2';
-import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261009-2';
-import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261009-2';
-import { advanceObservatory, houseEffect, normalizeObservatory, observatoryView, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261009-2';
+import { uniqueId } from './ids.js?v=20261009-3';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261009-3';
+import { APPROVAL_NEUTRAL, CHART_SLOTS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261009-3';
+import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261009-3';
+import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261009-3';
+import { advanceObservatory, houseEffect, normalizeObservatory, observatoryView, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261009-3';
 export { houseEffect };
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.

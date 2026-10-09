@@ -144,14 +144,14 @@ assert.equal(runoffSeen.result.groups.reduce((sum, row) => sum + row.seats, 0), 
 
 // ---------- 6. strategies: real effects, trade-offs, none always the best ----------
 {
-  const contexts = [['comunale', 'sindaco', 6], ['comunale', 'sindaco', -8], ['europee', 'eurodeputato', 0], ['regionale', 'presidente', -2], ['politiche', 'uninominale', -3]];
+  const contexts = [['comunale', 'sindaco', 6, 30], ['comunale', 'sindaco', -8, 30], ['europee', 'eurodeputato', 0, 78], ['regionale', 'presidente', -2, 30], ['politiche', 'uninominale', -3, 30]];
   // The strategies of the runoff exist only between the two rounds: here, the ones of the campaign.
   const ids = Object.keys(rules.CAMPAIGN_STRATEGIES).filter(id => (rules.CAMPAIGN_STRATEGIES[id].stages ?? ['campagna']).includes('campagna'));
   const best = [];
-  for (const [type, role, bias] of contexts) {
+  for (const [type, role, bias, notoriety] of contexts) {
     const scores = ids.map(strategy => {
       let total = 0;
-      for (let seed = 0; seed < 14; seed++) { const campaign = play({ type, role, strategy, seed: seed + 100, bias, listPosition: 1 }); total += own(campaign) - campaign.expectation.share + (['vittoria', 'ballottaggio-vinto'].includes(campaign.result.outcome.code) ? 1.5 : 0); }
+      for (let seed = 0; seed < 14; seed++) { const campaign = play({ type, role, strategy, seed: seed + 100, bias, notoriety, listPosition: 1 }); total += own(campaign) - campaign.expectation.share + (['vittoria', 'ballottaggio-vinto'].includes(campaign.result.outcome.code) ? 1.5 : 0); }
       return [strategy, total / 14];
     }).sort((a, b) => b[1] - a[1]);
     best.push(scores[0][0]);

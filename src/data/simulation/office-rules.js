@@ -3,7 +3,7 @@
 // the institutions, the Parliament, the Government and the party); this file says what that means. Powers, duties and risks
 // are rules of the game; the incompatibilities are simplified from art. 122 of the Constitution and from the laws on
 // ineligibility and incompatibility, and every refusal says which rule it applies (referenceVerified: false).
-import { DATA_SOURCES } from '../schema.js?v=20261009-2';
+import { DATA_SOURCES } from '../schema.js?v=20261009-3';
 
 export const OFFICE_RULES_SOURCE = DATA_SOURCES.SIMULATION;
 

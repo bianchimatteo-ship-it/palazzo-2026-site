@@ -167,6 +167,32 @@ assert.equal(storage.load().career.id, store.getState().career.id, 'Il reload ma
 const keyWeights = [...mem].map(([key, value]) => `${key}: ${Math.round(2 * (key.length + String(value).length) / 1024)} KiB`).filter(item => /career\.v1|politicando\.(slot|slots)/.test(item));
 console.log(`Quota riprodotta e recuperata: ${quotaBefore} B, residuo 512 B; primo tentativo ${slotQuotaFailure.key} oltre quota; cronologia ridondante rimossa e slot manuale preservato. Copie finali: ${keyWeights.join(', ') || 'nessuna slot'}.`);
 const career = store.getState().career.id;
+const recoveryDate = store.getState().clock.currentDate;
+assert.ok(!storage.listSlots().some(entry => entry.autoPreserve && storage.loadSlot(entry.id).career.id === career), 'La prova di fallimento parte senza una copia automatica già presente per la carriera corrente.');
+quotaFailures.length = 0;
+const backupBytes = 2 * (`${KEY}.backup`.length + String(mem.get(`${KEY}.backup`) ?? '').length);
+const slotSnapshot = store.getState();
+const slotState = { ...slotSnapshot, saveMeta: { ...(slotSnapshot.saveMeta ?? {}), careerId: slotSnapshot.career.id, revision: slotSnapshot.saveMeta?.revision ?? 0 } };
+const minimumAfterRedundantBackupPrune = storageBytes() - backupBytes + 2 * (`${SLOT}slot-xxxxxxxx`.length + JSON.stringify(slotState).length);
+quotaLimit = minimumAfterRedundantBackupPrune - 1; // lock and redundant backup fit; the durable automatic copy does not
+let quotaError;
+assert.throws(() => store.createCareer(draft('Spazio finito'), db.parties, db.parliamentaryGroups), error => {
+  quotaError = error;
+  return /non può essere conservata/.test(error.message);
+});
+assert.match(quotaError.message, /Menu → Carica partita → Esporta su file/, 'L’errore indica il percorso per esportare la partita rimasta intatta.');
+const recoveryFile = store.exportSave();
+assert.equal(JSON.parse(recoveryFile).career.id, career, 'L’esportazione sotto quota conserva la carriera corrente.');
+assert.equal(store.getState().career.id, career, 'La quota esaurita non sostituisce la carriera attiva.');
+const blockedSlotWrite = quotaFailures.find(item => item.key.startsWith(SLOT));
+assert.ok(blockedSlotWrite && blockedSlotWrite.attempted > blockedSlotWrite.limit, 'La copia automatica eccede davvero la quota residua.');
+assert.ok(storage.listSlots().some(entry => entry.id === manualQuotaSlot && !entry.autoPreserve), 'Lo slot manuale è ancora presente prima dell’intervento del giocatore.');
+quotaLimit = null; // spazio nuovamente disponibile dopo l’intervento del giocatore
+storage.deleteSlot(manualQuotaSlot); // libera solo lo slot manuale scelto esplicitamente
+store.loadGame(recoveryFile, 'Partita recuperata dal file');
+assert.equal(store.getState().career.id, career, 'Il file esportato ricarica la carriera dopo aver liberato spazio.');
+assert.equal(store.getState().clock.currentDate, recoveryDate, 'Il recupero dal file mantiene la data della carriera.');
+assert.ok(storage.listSlots().some(entry => entry.autoPreserve && storage.loadSlot(entry.id).career.id === career), 'Il recupero riuscito conserva anche una copia automatica verificata.');
 const firstAutoSlot = store.saveToSlot('Prima conservazione automatica', null, { autoPreserve: true });
 const autoSlotCount = storage.listSlots().filter(entry => entry.autoPreserve && storage.loadSlot(entry.id).career.id === career).length;
 assert.equal(autoSlotCount, 1);

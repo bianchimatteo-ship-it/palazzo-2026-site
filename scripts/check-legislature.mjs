@@ -245,7 +245,8 @@ clean(government, 'Governo');
 const parliamentHtml = renderParliamentPage('parlamento', state, { politicians: db().politicians, hemicycle: renderHemicycle(state, { politicians: db().politicians, db: db() }) });
 clean(parliamentHtml, 'Parlamento');
 assert.ok(parliamentHtml.includes('LEGISLATURA SIMULATA') && !parliamentHtml.includes('componenti nel dato reale'), 'Le nuove Camere sono dichiarate simulate, senza riferimenti reali.');
-assert.ok(!db().politicians.some(person => parliamentHtml.includes(person.fullName) && person.fullName.length > 8), 'Nessun parlamentare reale siede nella legislatura simulata.');
+const simulatedMemberIds = new Set(['camera', 'senato'].flatMap(chamber => state.parliament.chambers[chamber].roster.blocks.flatMap(block => block.people)));
+assert.ok(!db().politicians.some(person => simulatedMemberIds.has(person.id)), 'Nessuna identità parlamentare reale siede nella legislatura simulata.');
 // Seats with people: every seat of the new Chambers has a person of the simulation (never a real one), nobody sits twice, the player (if elected) sits in his group, and the dots take the colours of their forces.
 {
   const R = await import(`../src/core/seat-roster.js${v}`);
