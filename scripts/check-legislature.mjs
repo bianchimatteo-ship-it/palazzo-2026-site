@@ -173,7 +173,7 @@ store.setElectoralGeography(geography);
 // A founder and secretary: decides the coalition and the line, heads the lists.
 store.createCareer({ firstName: 'Nora', lastName: 'Nazionale', birthDate: '1978-02-02', gender: 'donna', region: 'Lombardia', municipality: 'Bergamo', municipalityCode: '016024', previousProfession: 'Economista', initialLevel: 'deputato', parliamentaryGroupId: 'cam-xix-02', parliamentStartMode: 'real-context', partyMode: 'new', partyName: 'Movimento Nazionale di prova', partyAbbreviation: 'MNP', partyColor: '#2a6f97', partyDescription: 'Partito del test del ciclo nazionale.', partyOrientation: 'Altro', partyPosition: 'centro-destra', partyProgram: ['lavoro'], policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 } }, db().parties, db().parliamentaryGroups);
 let state = store.getState();
-assert.equal(state.version, 9);
+assert.equal(state.version, 10);
 assert.ok(state.national && state.national.legislature.number === 19 && state.national.legislature.reference === 'real', 'La carriera parte nella XIX legislatura reale.');
 const { renderElectionsHub } = await import(`../src/ui/elections-hub.js${v}`);
 const hub = () => renderElectionsHub(store.getState(), { parties: db().parties, logoFor: () => null, tab: 'nazionali', national: () => store.nationalOverview(), geography });
@@ -245,7 +245,8 @@ clean(government, 'Governo');
 const parliamentHtml = renderParliamentPage('parlamento', state, { politicians: db().politicians, hemicycle: renderHemicycle(state, { politicians: db().politicians, db: db() }) });
 clean(parliamentHtml, 'Parlamento');
 assert.ok(parliamentHtml.includes('LEGISLATURA SIMULATA') && !parliamentHtml.includes('componenti nel dato reale'), 'Le nuove Camere sono dichiarate simulate, senza riferimenti reali.');
-assert.ok(!db().politicians.some(person => parliamentHtml.includes(person.fullName) && person.fullName.length > 8), 'Nessun parlamentare reale siede nella legislatura simulata.');
+const simulatedMemberIds = new Set(['camera', 'senato'].flatMap(chamber => state.parliament.chambers[chamber].roster.blocks.flatMap(block => block.people)));
+assert.ok(!db().politicians.some(person => simulatedMemberIds.has(person.id)), 'Nessuna identità parlamentare reale siede nella legislatura simulata.');
 // Seats with people: every seat of the new Chambers has a person of the simulation (never a real one), nobody sits twice, the player (if elected) sits in his group, and the dots take the colours of their forces.
 {
   const R = await import(`../src/core/seat-roster.js${v}`);
@@ -295,7 +296,7 @@ if (formed.phase === 'completata') {
 // Saves: the national cycle survives a reload; an old save (version 8) receives it and the real calendar.
 store.save();
 const saved = JSON.parse(mem.get(KEY));
-assert.ok(saved.version === 9 && saved.national.lastPolitiche && JSON.stringify(saved.national).length < 60000, 'Il ciclo nazionale è nel salvataggio, compatto.');
+assert.ok(saved.version === 10 && saved.national.lastPolitiche && JSON.stringify(saved.national).length < 60000, 'Il ciclo nazionale è nel salvataggio, compatto.');
 const reloaded = (await import(`../src/core/store.js${v}&legislatura=2`)).store.getState();
 assert.equal(reloaded.national.lastPolitiche.id, vote.id);
 assert.equal(reloaded.national.legislature.number, 20);
@@ -305,7 +306,7 @@ delete legacy.national;
 delete legacy.game.flags.nationalCalendar;
 mem.set(KEY, JSON.stringify(legacy));
 const migrated = (await import(`../src/core/store.js${v}&legislatura=3`)).store.getState();
-assert.ok(migrated.version === 9 && migrated.national.legislature.number === migrated.game.legislature.number && migrated.game.flags.nationalCalendar === 2, 'Un salvataggio precedente riceve il ciclo nazionale.');
+assert.ok(migrated.version === 10 && migrated.national.legislature.number === migrated.game.legislature.number && migrated.game.flags.nationalCalendar === 2, 'Un salvataggio precedente riceve il ciclo nazionale.');
 assert.ok(mem.get(`${KEY}.backup`), 'Il salvataggio precedente è conservato prima dell’aggiornamento.');
 // A save made before the seats had people (a legislature of the game without rosters): the next weeks give every seat its person, the others stay as they were.
 {

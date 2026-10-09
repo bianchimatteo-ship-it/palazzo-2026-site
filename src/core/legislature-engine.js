@@ -3,13 +3,13 @@
 // Chambers and their groups, the formation of the Government. Everything that happens is simulation: the real data are
 // the geography, the seats and the 2022 results the vote starts from; parties, coalitions, votes and seats of the game
 // are estimates of the game and never presented as real results.
-import { uniqueId } from './ids.js?v=20261007-2';
-import { advanceDays, formatDate } from './time.js?v=20261007-2';
-import { axisOf, nationalShares } from './world-engine.js?v=20261007-2';
-import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20261007-2';
-import { archiveGovernment, voteGovernmentConfidence } from './parliament-engine.js?v=20261007-2';
-import { seededRandom } from './vote-engine.js?v=20261007-2';
-import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20261007-2';
+import { uniqueId } from './ids.js?v=20261009-4';
+import { advanceDays, formatDate } from './time.js?v=20261009-4';
+import { axisOf, nationalShares } from './world-engine.js?v=20261009-4';
+import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20261009-4';
+import { archiveGovernment, voteGovernmentConfidence } from './parliament-engine.js?v=20261009-4';
+import { seededRandom } from './vote-engine.js?v=20261009-4';
+import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20261009-4';
 
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));

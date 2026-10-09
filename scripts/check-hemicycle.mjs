@@ -184,7 +184,7 @@ const built = syncRoster({ assembly: camera.id, kind: 'camera', label: 'Camera �
 assert.equal(rosterSize(built.roster), total, `Ogni seggio ha una persona (${total}).`);
 assert.equal(new Set(rosterPeople(built.roster)).size, total, 'Una persona sola per seggio: nessuna persona due volte.');
 assert.ok(built.created.length === total - 1 - 1 && built.created.every(person => person.source === 'simulation' && isSeatPerson(person) && /^persona-seggio-/.test(person.id) && person.firstName && person.lastName && person.displayName), 'Le persone nuove sono tutte della simulazione (mai reali), con identità e origine dichiarate.');
-assert.ok(built.created.every(person => /^Deputato simulato n\. \d+ · /.test(person.displayName)) && SEAT_ROLES.camera === 'Deputato', 'Si chiamano per ciò che sono: eletti simulati, senza nomi reali inventati.');
+assert.ok(built.created.every(person => person.displayName === `${person.firstName} ${person.lastName}` && !/eletto|simulat/i.test(person.displayName)) && SEAT_ROLES.camera === 'Deputato', 'Ogni eletto simulato ha un nome persistente del pool italiano, non un segnaposto né un’identità reale inventata.');
 const seatsNow = rosterSeats(built.roster);
 assert.equal(seatsNow.filter(seat => seat.origin === 'player').length, 1, 'Il giocatore eletto occupa un seggio solo.');
 assert.equal(seatsNow.find(seat => seat.origin === 'player').groupId, player.groupId, 'Nel suo gruppo.');
@@ -211,11 +211,13 @@ assert.equal(rosterSize(split.roster), total, 'Una scissione sposta i seggi, non
 const old = rosterSeats(built.roster).filter(seat => seat.partyId === 'party-a' && seat.origin === 'simulation');
 const next = syncRoster({ assembly: 'legislatura-21-camera', kind: 'camera', label: 'Camera · XXI legislatura (simulata)', numberFrom: built.roster.counter, groups: specs.map(spec => ({ ...spec, id: spec.id.replace('leg20', 'leg21') })), pool: old.map(seat => ({ id: seat.personId, partyId: 'party-a', previous: { assembly: built.roster.label, since: built.roster.date } })), date: '2032-09-26', resultId: 'politiche-2032-09-26', people: new Map(built.created.map(person => [person.id, person])) });
 const back60 = next.updated.filter(item => item.patch.terms);
-assert.equal(new Set([...built.created, ...next.created].map(person => person.displayName)).size, built.created.length + next.created.length, 'I nomi delle persone di legislature successive non si ripetono.');
+assert.equal(new Set([...built.created, ...next.created].map(person => person.id)).size, built.created.length + next.created.length, 'Gli ID delle nuove persone restano univoci tra legislature.');
+assert.ok(next.created.every(person => person.displayName === `${person.firstName} ${person.lastName}` && !/eletto|simulat/i.test(person.displayName)), 'Le nuove persone delle legislature successive usano lo stesso pool italiano deterministico.');
 assert.ok(back60.length > 0 && back60.length <= Math.floor(8 * RE_ELECTION_SHARE) && back60.every(item => item.patch.terms.at(-1).until === '2032-09-26' && item.patch.terms.at(-1).assembly), 'Dei vecchi eletti ne tornano solo una parte, con il loro storico.');
 // The leader of the executive of a council: the first seat of the leader group is his.
 const council = syncRoster({ assembly: 'comune-2027-x', kind: 'comune', label: 'Comune di X', groups: [{ id: 'g1', label: 'Lista A', partyId: 'party-a', seats: 5 }, { id: 'g2', label: 'Lista civica', partyId: null, seats: 3 }], player: { personId: 'giocatore', groupId: 'g2', partyId: null }, leader: { groupId: 'g1', label: 'Sindaco (figura simulata) · Lista A' }, place: { name: 'Comune di X', region: 'Toscana', municipality: 'X' }, date: '2027-06-01' });
-assert.ok(rosterSize(council.roster) === 8 && council.roster.leader && council.created.find(person => person.id === council.roster.leader).displayName === 'Sindaco (figura simulata) · Lista A', 'Il sindaco simulato è la prima persona della lista che guida.');
+const mayor = council.created.find(person => person.id === council.roster.leader);
+assert.ok(rosterSize(council.roster) === 8 && mayor && mayor.displayName === `${mayor.firstName} ${mayor.lastName}` && rosterSeats(council.roster).find(seat => seat.leader)?.groupId === 'g1', 'Il sindaco simulato resta la prima persona della lista che guida, con identità persistente.');
 assert.ok(council.created.every(person => person.region === 'Toscana'), 'Le persone di un consiglio sono del suo territorio.');
 // Colours: by force (the person's party), never by group; the Misto keeps its forces apart; the groups no force stands for take their own tone.
 const parliamentOf = (chambers, extra = {}) => ({ ...extra, legislature: { number: 20, label: 'XX legislatura (simulata)', reference: 'simulation', since: '2027-09-26', resultId: 'politiche-2027-09-26' }, chambers, player: { chamber: 'camera', groupId: player.groupId, politicianId: 'giocatore' }, laws: extra.laws ?? [] });

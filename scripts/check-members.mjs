@@ -76,6 +76,17 @@ for (const name of CHAMBERS) {
     if (!member.history) assert.ok(JSON.stringify(member).length < 120 && !member.electedFor && !member.assembly, 'Lo stato di chi non si è mai mosso è piccolo: non ripete quello che è uguale per tutti.');
   }
 }
+const simulatedSeats = state().dataset.politicians.filter(person => person.origin === 'seggio');
+assert.ok(simulatedSeats.length > 100, 'Le Camere hanno persone simulate persistenti.');
+assert.ok(simulatedSeats.every(person => person.firstName !== 'Figura' && person.lastName !== 'simulata' && !/simulato n\.\s*\d/i.test(person.displayName)), 'I membri simulati hanno nomi italiani, non placeholder numerati.');
+const legacySeat = { id: 'persona-seggio-legacy-test', origin: 'seggio', firstName: 'Figura', lastName: 'simulata', displayName: 'Deputato simulato n. 42' };
+const normalizedLegacy = R.normalizeSeatPerson(legacySeat);
+assert.ok(normalizedLegacy.firstName !== 'Figura' && normalizedLegacy.displayName === R.normalizeSeatPerson(legacySeat).displayName, 'Un vecchio placeholder riceve un’identità deterministica dal suo ID persistente.');
+assert.equal(R.normalizeSeatPerson({ id: 'persona-reale', source: 'real', firstName: 'Mario', lastName: 'Rossi' }).firstName, 'Mario', 'Le identità reali non vengono modificate.');
+const savedNames = new Map(simulatedSeats.map(person => [person.id, person.displayName]));
+assert.ok(store.save().ok, 'La carriera con il roster si salva.');
+const reloadedRosterStore = (await import(`../src/core/store.js${v}&reload-roster`)).store;
+for (const [id, name] of savedNames) assert.equal(reloadedRosterStore.getState().dataset.politicians.find(person => person.id === id)?.displayName, name, `${id}: il nome resta invariato al reload.`);
 sound('Camere nate dal voto');
 const members = name => R.rosterSeats(chamber(name).roster).filter(seat => seat.origin !== 'player');
 const groupOf = (name, id) => chamber(name).groups.find(group => group.groupId === id);
@@ -299,6 +310,8 @@ sound('subentro dopo il caricamento');
 
 // ---------- 10. a game saved before the members: the persons get their state at the next week ----------
 const old = JSON.parse(store.exportSave());
+old.career.id = 'career-before-members';
+old.saveMeta.careerId = old.career.id;
 for (const item of old.dataset.politicians) delete item.member;
 store.loadGame(old);
 assert.ok(state().dataset.politicians.filter(item => item.origin === 'seggio').every(item => !item.member));

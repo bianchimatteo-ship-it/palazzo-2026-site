@@ -68,7 +68,7 @@ try {
     ok(after && after !== before, `Con i tasti il select ${selector} passa a un altro tema (${before} → ${after}).`);
     return after;
   };
-  const campaign = () => evaluate(`import('/src/core/store.js?v=' + document.querySelector('script[type=module]').src.split('v=')[1]).then(({ store }) => { const c = store.getState().campaign; return c ? { id: c.id, status: c.status, strategy: c.strategy, preparation: c.preparationByTopic, salient: c.nationalContext?.salientTopic } : null; })`);
+  const campaign = () => evaluate(`import('/src/core/store.js?v=' + document.querySelector('script[type=module]').src.split('v=')[1]).then(({ store }) => { const s = store.getState(), c = s.campaign; return c ? { id: c.id, status: c.status, strategy: c.strategy, preparation: c.preparationByTopic, salient: c.nationalContext?.salientTopic, picks: s.ui?.campaignPicks, saveStatus: store.saveStatus(), revision: s.saveMeta?.revision } : null; })`);
   // The page opened again from scratch (reload, “Continua”), on the campaign's tab.
   const reopen = async () => {
     await send('Page.navigate', { url: base });
@@ -120,6 +120,8 @@ try {
   await click('[data-section-tab=elezioni][data-section-tab-value=campagna]');
   await waitFor(async () => !(await kept(SETUP)), 5000, 'ridisegno dell’impostazione');
   ok(await valueOf(SETUP) === setupTopic, `Impostazione: il tema scelto resta dopo il ridisegno (${await valueOf(SETUP)}, atteso ${setupTopic}).`);
+  const rawSetupPicks = await evaluate(`JSON.parse(localStorage.getItem('palazzo-2026.career.v1'))?.ui?.campaignPicks ?? null`);
+  ok(rawSetupPicks?.key === 'setup' && rawSetupPicks.values?.['setup.topicId'] === setupTopic, `Il tema dell’impostazione è nel main persistito (${JSON.stringify(rawSetupPicks)}; stato ${JSON.stringify(await campaign())}).`);
   await reopen();
   await waitFor(() => evaluate(`Boolean(document.querySelector(${q(SETUP)}))`), 10000, 'impostazione dopo il ricaricamento');
   ok(await valueOf(SETUP) === setupTopic, `Impostazione: il tema scelto resta dopo il ricaricamento della pagina (${await valueOf(SETUP)}).`);

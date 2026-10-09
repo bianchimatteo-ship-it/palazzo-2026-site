@@ -1,4 +1,4 @@
-import { ELECTION_MODELS, EUROPEAN_CONSTITUENCIES, EUROPEAN_THRESHOLD, OUTCOME_LABELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261007-2';
+import { ELECTION_MODELS, EUROPEAN_CONSTITUENCIES, EUROPEAN_THRESHOLD, OUTCOME_LABELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261009-4';
 
 const clamp = (value,min=0,max=100) => Math.min(max,Math.max(min,value));
 const rounded = value => Math.round(value*100)/100;
@@ -8,6 +8,21 @@ const hash = value => [...String(value)].reduce((n, char) => (n * 31 + char.char
 function seeded(seed) {
   let state = seed >>> 0 || 1;
   return () => { state = (Math.imul(state, 1664525) + 1013904223) >>> 0; return state / 4294967296; };
+}
+function ballotsOf(campaign) {
+  const electorate = campaign.electorate ?? {};
+  const realElectors = Number(electorate.electors);
+  const normalized = !Number.isFinite(realElectors) || realElectors <= 0;
+  const electors = normalized ? null : Math.round(realElectors);
+  const sampleElectors = electors ?? 100000;
+  const turnout = clamp(Number(campaign.electionDays?.at(-1)?.turnout ?? 61), 0, 100);
+  const validRatio = Number(electorate.validRatio) > 0 && Number(electorate.validRatio) <= 1 ? Number(electorate.validRatio) : .99;
+  const random = seeded(hash(`${campaign.id}|${campaign.seed}|${campaign.stage}|${campaign.electionDays?.length ?? 0}|schede`));
+  const normal = () => Math.sqrt(-2 * Math.log(Math.max(Number.EPSILON, random()))) * Math.cos(2 * Math.PI * random());
+  const turnoutShare = turnout / 100;
+  const voters = normalized ? 100000 : clamp(Math.round(sampleElectors * turnoutShare + normal() * Math.sqrt(sampleElectors * turnoutShare * (1 - turnoutShare))), 0, sampleElectors);
+  const ballots = normalized ? 100000 : clamp(Math.round(voters * validRatio + normal() * Math.sqrt(voters * validRatio * (1 - validRatio))), 0, voters);
+  return { electors, voters, ballots, turnout, validRatio, normalized, basis: normalized ? 'elettorato simulato normalizzato su 100.000' : electorate.basis ?? 'elettori iscritti', source: 'simulation' };
 }
 
 function allianceLeader(candidate,candidates) {
@@ -91,27 +106,13 @@ function resultRow(group,share,totalBallots,seats=0,extra={}) {
   };
 }
 
-// The count of a vote in real numbers when the electorate of the place is known (campaign.electorate: electors and the share of valid ballots), with the four
-// quantities kept apart: electors (who can vote), turnout (the share of them who vote), voters, and valid votes (what the lists share). When the
-// electorate is not known the count stays normalised on 100,000 ballots and says so: no number is invented.
-export function ballotsOf(campaign, turnout = null) {
-  const electorate = campaign?.electorate;
-  const electors = Number(electorate?.electors);
-  const value = Number(turnout ?? campaign?.electionDays?.at(-1)?.turnout);
-  if (Number.isFinite(electors) && electors > 0 && Number.isFinite(value)) {
-    const voters = Math.round(electors * value / 100);
-    // The share of valid votes among the voters: when it is not known (null is not a zero) it is the usual 97%.
-    const known = Number(electorate.validRatio);
-    const ratio = electorate.validRatio !== null && electorate.validRatio !== undefined && Number.isFinite(known) && known > 0 && known <= 1 ? known : .97;
-    return { ballots:Math.round(voters * ratio), electors, voters, turnout:value, validRatio:ratio, normalized:false, basis:electorate.basis ?? null };
-  }
-  return { ballots:100000, electors:null, voters:null, turnout:Number.isFinite(value) ? value : null, normalized:true, basis:null };
-}
-function areaResults(campaign,totalBallots=100000) {
+function areaResults(campaign,totalBallots=100000,finalistIds=null) {
   const weight = territories(campaign).reduce((sum,item)=>sum+item.weight,0) || 1;
   return territories(campaign).map(area=>{
     let groups=sharesByGroup(campaign,area.id);
-    if(campaign.stage==='ballottaggio') {
+    if(finalistIds) {
+      const finalists=new Set(finalistIds);
+      groups=groups.filter(group=>finalists.has(group.id));
       const retained=groups.reduce((sum,group)=>sum+group.share,0)||1;
       groups=groups.map(group=>({...group,share:rounded(group.share*100/retained)}));
     }
@@ -222,13 +223,12 @@ export function runFinalElection(campaign,firstRound=null) {
     const finalShares=normalizedTwoRound(campaign,firstRound.runoffCandidateIds);
     runoffRows=finalShares.map(group=>resultRow(group,group.share,totalBallots));
     runoffWinnerId=runoffRows[0]?.candidateId??null;
-    const firstGroups=firstRound.groups.map(row=>({id:row.candidateId,share:row.percent,label:row.label,partyIds:row.partyIds,members:row.memberCandidateIds,leaderCandidateId:row.candidateId}));
-    // The lists of the candidates who made a pact with the winner (an apparentamento) enter its majority: their votes and parties count with it.
-    const pactIds=new Set((campaign.runoff?.pacts??[]).filter(item=>item.finalistId===runoffWinnerId).map(item=>item.candidateId));
-    const partners=firstGroups.filter(group=>pactIds.has(group.id));
-    const joined=firstGroups.filter(group=>!pactIds.has(group.id)).map(group=>group.id===runoffWinnerId?{...group,share:rounded(group.share+partners.reduce((sum,item)=>sum+item.share,0)),partyIds:[...new Set([...(group.partyIds??[]),...partners.flatMap(item=>item.partyIds??[])])],members:[...new Set([...(group.members??[]),...partners.flatMap(item=>item.members??[])])],apparentati:partners.map(item=>item.id)}:group);
-    seatRows=municipalSeats(campaign,joined,runoffWinnerId);
-    rows=firstRound.groups.map(row=>{const group=joined.find(item=>item.id===row.candidateId)??firstGroups.find(item=>item.id===row.candidateId);const scored=resultRow(group,row.percent,totalBallots,seatRows.find(item=>item.id===group.id)?.seats??0,pactIds.has(row.candidateId)?{apparentatoCon:runoffWinnerId}:group.apparentati?.length?{apparentati:group.apparentati}:{});const final=runoffRows.find(item=>item.candidateId===row.candidateId);return {...scored,runoffPercent:final?.percent??null,runoffVotes:final?.votes??null};});
+    seatRows=municipalSeats(campaign,finalShares,runoffWinnerId);
+    rows=finalShares.map(group=>{
+      const first=firstRound.groups.find(item=>item.candidateId===group.id);
+      const seats=seatRows.find(item=>item.id===group.id)?.seats??0;
+      return resultRow(group,group.share,totalBallots,seats,{firstRoundPercent:first?.percent??null,runoffPercent:group.share,runoffVotes:Math.round(totalBallots*group.share/100)});
+    });
   } else if(campaign.electionType==='comunale') {
     seatRows=municipalSeats(campaign,aggregate,aggregate[0]?.id);
     rows=aggregate.map(group=>resultRow(group,group.share,totalBallots,seatRows.find(row=>row.id===group.id)?.seats??0));
@@ -253,8 +253,8 @@ export function runFinalElection(campaign,firstRound=null) {
   const previous=campaign.firstRoundResult;
   const result = {
     stage:'risultato-finale',model:rules.model,electionType:campaign.electionType,totalBallots,electorate:count,
-    ballotLabel:count.normalized?'Schede normalizzate su 100.000 elettori simulati':`Voti validi su ${count.electors.toLocaleString('it-IT')} elettori (affluenza ${count.turnout.toLocaleString('it-IT')}%)`,groups:rows,
-    territories:areaResults(campaign,totalBallots),firstRound:previous??firstRound??null,
+    ballotLabel:count.normalized ? 'Schede normalizzate su 100.000 elettori simulati' : `Schede valide stimate su ${count.electors.toLocaleString('it-IT')} elettori`,groups:rows,
+    territories:areaResults(campaign,totalBallots,campaign.stage==='ballottaggio'?firstRound?.runoffCandidateIds??null:null),firstRound:previous??firstRound??null,
     winnerGroupId:winnerId,playerShare:runoffRows?.find(row=>row.candidateId===campaign.playerCandidateId)?.percent??playerRow?.percent??0,playerVotes:runoffRows?.find(row=>row.candidateId===campaign.playerCandidateId)?.votes??playerRow?.votes??0,runoffResults:runoffRows,
     playerSeats:playerRow?.seats??0,personalMandate:personal.mandate,personal,source:'simulation',simulated:true,
     runoffDetail:campaign.runoff?{transfers:campaign.runoff.transfers??[],pacts:campaign.runoff.pacts??[],appeal:campaign.runoff.appeal??0}:null,
@@ -391,7 +391,8 @@ export function classifyOutcome(campaign, result) {
   const band = Math.max(1.5, expected * .12);
   const diff = rounded(share - expected);
   const expectation = diff >= band ? 'sopra' : diff <= -band ? 'sotto' : 'in-linea';
-  const poll = campaign.preparation?.pollShare ?? campaign.expectation?.pollShare ?? null;
+  const currentPoll = campaign.polls?.at(-1)?.results?.find(item => item.candidateId === campaign.playerCandidateId)?.share;
+  const poll = campaign.polls?.length ? (Number.isFinite(currentPoll) ? currentPoll : null) : (campaign.preparation?.pollShare ?? campaign.expectation?.pollShare ?? null);
   const position = personal.position ?? (playerRow ? rows.indexOf(playerRow) + 1 : null);
   const positionLabel = position === 1 ? 'primo posto' : position === 2 ? 'secondo posto' : position === 3 ? 'terzo posto' : position ? `${position}º posto` : 'fuori corsa';
   const margin = playerRow && winner ? rounded(winner.id === playerRow.id ? playerRow.percent - (next?.percent ?? 0) : playerRow.percent - winner.percent) : null;

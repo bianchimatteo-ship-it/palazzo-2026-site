@@ -1,17 +1,17 @@
 // CARRIERA — the path and the progression: four tracks (institutions, party, Parliament, Government), the odds of
 // every next step with the factors that decide them, offices and powers, the timeline and the goals.
-import { careerOverview } from '../core/career-overview.js?v=20261007-2';
-import { ADVANCEMENT_OUTCOMES } from '../core/progression-engine.js?v=20261007-2';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261007-2';
-import { careerLevelLabel } from '../data/regions.js?v=20261007-2';
-import { formatDate } from '../core/time.js?v=20261007-2';
-import { startOverview } from '../core/start-engine.js?v=20261007-2';
-import { renderGoals } from './goals-view.js?v=20261007-2';
-import { renderRetirement } from './hall-view.js?v=20261007-2';
-import { glyph, officeIcon } from './visuals.js?v=20261007-2';
-import { REPUTATIONS, REPUTATION_IDS } from '../data/simulation/standing-rules.js?v=20261007-2';
-import { renderCareerTimeline, renderMemoryPanel, renderRolesPanel, renderWhyPanel } from './game-mode.js?v=20261007-2';
-import { arrow, badge, bar, card, empty, esc, num, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261007-2';
+import { careerOverview } from '../core/career-overview.js?v=20261009-4';
+import { ADVANCEMENT_OUTCOMES } from '../core/progression-engine.js?v=20261009-4';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261009-4';
+import { careerLevelLabel } from '../data/regions.js?v=20261009-4';
+import { formatDate } from '../core/time.js?v=20261009-4';
+import { startOverview } from '../core/start-engine.js?v=20261009-4';
+import { renderGoals } from './goals-view.js?v=20261009-4';
+import { renderRetirement } from './hall-view.js?v=20261009-4';
+import { glyph, officeIcon } from './visuals.js?v=20261009-4';
+import { REPUTATIONS, REPUTATION_IDS } from '../data/simulation/standing-rules.js?v=20261009-4';
+import { renderCareerTimeline, renderMemoryPanel, renderRolesPanel, renderWhyPanel } from './game-mode.js?v=20261009-4';
+import { arrow, badge, bar, card, empty, esc, num, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261009-4';
 
 export const CAREER_TABS = Object.freeze([['percorso', 'Percorso'], ['progressione', 'Progressione'], ['incarichi', 'Incarichi e poteri'], ['cronologia', 'Cronologia'], ['obiettivi', 'Obiettivi']]);
 const STAT_ORDER = ['popularity', 'reputation', 'influence', 'experience', 'notoriety'];
@@ -59,8 +59,9 @@ function trackCard(track) {
 function origin(state, player) {
   const territory = state.dataset.territories.find(item => item.id === state.career.territoryId)?.name ?? player?.region ?? 'Italia';
   const start = (state.game.timeline ?? [])[0];
+  const directPresidency = state.career.startingOffice === 'presidenteRepubblica';
   const rows = [
-    ['Livello iniziale', esc(careerLevelLabel(state.career.initialLevel) ?? 'Da definire')],
+    [directPresidency ? 'Percorso iniziale' : 'Livello iniziale', esc(directPresidency ? 'Presidente della Repubblica' : careerLevelLabel(state.career.initialLevel) ?? 'Da definire')],
     ['Territorio', esc(territory)],
     ['Professione precedente', esc(player?.previousProfession ?? '—')],
     ['Inizio della carriera', start?.date ? esc(formatDate(start.date)) : '—'],
@@ -139,7 +140,7 @@ function officesCard(state, player) {
   const offices = state.dataset.offices.filter(item => item.politicianId === player?.id).sort((a, b) => String(b.startDate).localeCompare(String(a.startDate)));
   const current = offices.filter(item => !item.endDate);
   const past = offices.filter(item => item.endDate);
-  const row = item => `<li><span class="cp-office-icon">${glyph(officeIcon(item), 16)}</span><span><strong>${esc(item.title)}</strong><small>${esc(item.institution ?? '')} · dal ${esc(formatDate(item.startDate, { day: 'numeric', month: 'short', year: 'numeric' }))}${item.endDate ? ` al ${esc(formatDate(item.endDate, { day: 'numeric', month: 'short', year: 'numeric' }))}` : ''}</small></span>${item.endDate ? badge('Concluso', 'neutral') : badge('In corso', 'good')}</li>`;
+  const row = item => `<li><span class="cp-office-icon">${glyph(officeIcon(item), 16)}</span><span><strong>${esc(item.title)}</strong><small>${esc(item.institution ?? '')} · dal ${esc(formatDate(item.startDate, { day: 'numeric', month: 'short', year: 'numeric' }))}${item.endDate ? ` al ${esc(formatDate(item.endDate, { day: 'numeric', month: 'short', year: 'numeric' }))}${item.endReason ? ` · ${esc(item.endReason)}` : ''}` : ''}</small></span>${item.endDate ? badge('Concluso', 'neutral') : badge('In corso', 'good')}</li>`;
   const minor = state.game.party?.minorRoles ?? [];
   return `${current.length ? `<ul class="cp-offices">${current.map(row).join('')}</ul>` : '<p class="sx-empty">Nessun incarico in corso: si conquistano alle elezioni, nel partito e in Parlamento.</p>'}
     ${minor.length ? `<h4 class="cp-sub">Incarichi minori ottenuti</h4><ul class="cp-offices is-minor">${minor.map(item => `<li><span class="cp-office-icon">${glyph('flag', 16)}</span><span><strong>${esc(item.title)}</strong><small>settimana ${item.week} · simulazione</small></span></li>`).join('')}</ul>` : ''}

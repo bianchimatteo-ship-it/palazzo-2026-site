@@ -129,7 +129,9 @@ for (const place of places) {
     assert.equal(seats.filter(seat => seat.origin === 'player').length, inst.playerGroupId ? 1 : 0, `${place.label}: ${inst.name}, il giocatore siede una volta`);
     assert.ok(seats.filter(seat => seat.origin !== 'player').every(seat => { const person = s.dataset.politicians.find(item => item.id === seat.personId); return person?.source === 'simulation' && person.origin === 'seggio' && person.region === inst.region; }), `${place.label}: ${inst.name}, persone della simulazione del territorio`);
   }
-  assert.ok(R.rosterSeats(provincia.roster).some(seat => seat.leader) && s.dataset.politicians.some(item => /^Consigliere provinciale simulato n\. \d+ · /.test(item.displayName ?? '')), `${place.label}: il consiglio provinciale ha i suoi consiglieri e il presidente simulato`);
+  const provincialSeats = R.rosterSeats(provincia.roster);
+  const provincialPeople = provincialSeats.filter(seat => seat.origin !== 'player').map(seat => s.dataset.politicians.find(item => item.id === seat.personId));
+  assert.ok(provincialSeats.some(seat => seat.leader) && provincialPeople.length > 0 && provincialPeople.every(person => person?.firstName && person.lastName && !/simulat[oa] n\./i.test(person.displayName ?? '')), `${place.label}: il consiglio provinciale ha il presidente e persone simulate con identità stabile`);
   const dots = html.match(/<circle class="hemi-seat[^>]*data-local-seat="[^"]+"/g) ?? [];
   assert.equal(dots.length, s.local.institutions.filter(item => item.status === 'active').reduce((sum, inst) => sum + inst.seats, 0), `${place.label}: un punto per ogni seggio dei due consigli`);
   noIssues(s, place.label);

@@ -1,13 +1,13 @@
 // Roles and powers: what the player may do depends on the offices actually held.
 // Every power listed here is checked again by the store before the action runs.
-import { activeMinisters, playerInMajority } from './parliament-engine.js?v=20261007-2';
-import { heldOffices, hasPower, institutionOffice, officeLabel } from './office-engine.js?v=20261007-2';
-import { OFFICES, POWERS } from '../data/simulation/office-rules.js?v=20261007-2';
-import { isSecretary } from './career-engine.js?v=20261007-2';
-import { EP_ROLES, committeeById } from './local-engine.js?v=20261007-2';
-import { PRESIDENCY_RULES } from '../data/simulation/presidency-rules.js?v=20261007-2';
-import { presidentialEligibility, whiteSemester } from './presidency-engine.js?v=20261007-2';
-import { END_KINDS } from './legacy-engine.js?v=20261007-2';
+import { activeMinisters, playerInMajority } from './parliament-engine.js?v=20261009-4';
+import { heldOffices, hasPower, institutionOffice, officeLabel } from './office-engine.js?v=20261009-4';
+import { OFFICES, POWERS } from '../data/simulation/office-rules.js?v=20261009-4';
+import { isSecretary } from './career-engine.js?v=20261009-4';
+import { EP_ROLES, committeeById } from './local-engine.js?v=20261009-4';
+import { PRESIDENCY_RULES } from '../data/simulation/presidency-rules.js?v=20261009-4';
+import { presidentialEligibility, whiteSemester } from './presidency-engine.js?v=20261009-4';
+import { END_KINDS } from './legacy-engine.js?v=20261009-4';
 
 const governing = parliament => ['active', 'crisis'].includes(parliament?.government?.status);
 export const isPrimeMinister = parliament => governing(parliament) && parliament.government.primeMinister === 'player';

@@ -15,13 +15,27 @@ const { saveSetting } = await import(`../src/core/settings.js${v}`);
 // ---------- a browser storage that can be made to fail ----------
 const mem = globalThis.localStorage.__mem;
 const failing = new Set();   // keys (or key prefixes ending in *) whose writes fail, as when the quota is spent
-const fails = key => [...failing].some(rule => rule === key || (rule.endsWith('*') && key.startsWith(rule.slice(0, -1))));
+let quotaLimit = null;
+const quotaFailures = [];
+const storageBytes = () => [...mem].reduce((sum, [key, value]) => sum + 2 * (String(key).length + String(value).length), 0);
+const fails = key => [...failing].some(rule => rule === key || (rule.endsWith('*') && key.startsWith(rule.slice(0, -1))))
+  || (failing.has('quota:main-if-backup') && key === 'palazzo-2026.career.v1' && mem.has('palazzo-2026.career.v1.backup'));
 globalThis.localStorage = {
   __mem: mem,
   get length() { return mem.size; },
   key: index => [...mem.keys()][index] ?? null,
   getItem: key => mem.has(key) ? mem.get(key) : null,
-  setItem: (key, value) => { if (fails(key)) throw Object.assign(new Error('QuotaExceededError'), { name: 'QuotaExceededError' }); mem.set(key, String(value)); },
+  setItem: (key, value) => {
+    const serialized = String(value);
+    const used = storageBytes();
+    const previous = mem.get(key);
+    const attempted = used - (previous === undefined ? 0 : 2 * (String(key).length + String(previous).length)) + 2 * (String(key).length + serialized.length);
+    if (fails(key) || (quotaLimit !== null && attempted > quotaLimit)) {
+      quotaFailures.push({ key, used, attempted, limit: quotaLimit });
+      throw Object.assign(new Error('QuotaExceededError'), { name: 'QuotaExceededError' });
+    }
+    mem.set(key, serialized);
+  },
   removeItem: key => { mem.delete(key); }
 };
 const KEY = 'palazzo-2026.career.v1';
@@ -104,6 +118,26 @@ const again = store.save();
 status = store.saveStatus();
 assert.ok(again.ok && status.ok && !status.dirty && status.seq === saved.seq + 1 && store.cloudSnapshot() === store.getState(), 'Tornato lo spazio: salva, non è più sporca e può andare online.');
 assert.equal(JSON.parse(mem.get(KEY)).clock.currentDate, store.getState().clock.currentDate, 'Ciò che è scritto è lo stato corrente.');
+// A backup write failure is degradable: autosave still writes main, and reload sees it.
+failing.add(`${KEY}.backup`);
+store.advance(7);
+status = store.saveStatus();
+assert.ok(status.ok && !status.dirty, 'Un backup non scrivibile non blocca l’autosave del main.');
+assert.equal(JSON.parse(mem.get(KEY)).clock.currentDate, store.getState().clock.currentDate);
+assert.ok(!/Salvataggio non riuscito/.test(store.getState().ui.toast ?? ''), 'Non riappare l’errore causato dal backup.');
+failing.clear();
+const reloadedAfterBackupFailure = (await import(`../src/core/store.js${v}&backup-failure-reload`)).store;
+assert.equal(reloadedAfterBackupFailure.getState().clock.currentDate, store.getState().clock.currentDate, 'Il reload conserva l’autosave riuscito.');
+// If quota pressure makes main replacement fail while a backup exists, only recovery data is degraded before retry.
+failing.add('quota:main-if-backup');
+store.advance(7);
+status = store.saveStatus();
+assert.ok(status.ok && !status.dirty, 'Il main viene ritentato dopo aver liberato solo il backup.');
+assert.equal(JSON.parse(mem.get(KEY)).clock.currentDate, store.getState().clock.currentDate);
+assert.ok(!mem.has(`${KEY}.backup`), 'Il backup può essere sacrificato per salvare il main sotto quota.');
+failing.clear();
+const reloadedAfterQuota = (await import(`../src/core/store.js${v}&backup-quota-reload`)).store;
+assert.equal(reloadedAfterQuota.getState().clock.currentDate, store.getState().clock.currentDate, 'Dopo il retry il reload conserva la versione più recente.');
 // Saving by hand (or at the end of the week): the changes wait, they are not “saved”.
 saveSetting('autosave', 'manual');
 store.advance(7);
@@ -113,7 +147,58 @@ assert.ok(store.save().ok && !store.saveStatus().dirty && store.cloudSnapshot(),
 saveSetting('autosave', 'action');
 
 // ---------- 3. the game being replaced is kept first, or nothing is replaced ----------
+const previousCareer = store.getState().career.id;
+const manualQuotaSlot = store.saveToSlot('Manuale intoccabile');
+storage.backup(store.getState(), 'quota-riproduzione'); // main and backup now cover the archived history snapshot
+const quotaBefore = storageBytes();
+quotaFailures.length = 0;
+quotaLimit = quotaBefore + 512; // enough for the temporary lock, not a second full career snapshot
+store.createCareer(draft('Altra con quota reale'), db.parties, db.parliamentaryGroups);
+quotaLimit = null;
+const slotQuotaFailure = quotaFailures.find(item => item.key.startsWith(SLOT));
+assert.ok(slotQuotaFailure, 'La riproduzione quota fallisce sulla scrittura del payload dello slot automatico.');
+assert.ok(slotQuotaFailure.attempted > slotQuotaFailure.limit, 'La copia completa dello slot supera lo spazio residuo simulato.');
+assert.notEqual(store.getState().career.id, previousCareer, 'La nuova carriera parte solo dopo la conservazione riuscita della precedente.');
+const preservedQuotaSlot = storage.listSlots().find(entry => entry.autoPreserve && storage.loadSlot(entry.id).career.id === previousCareer);
+assert.ok(preservedQuotaSlot, 'Il tentativo dopo la quota salva davvero la carriera precedente nello slot automatico.');
+assert.ok(storage.listSlots().some(entry => entry.id === manualQuotaSlot && !entry.autoPreserve), 'La pulizia quota non elimina lo slot manuale.');
+assert.ok(!mem.has(`${KEY}.history`), 'La cronologia ridondante viene sacrificata solo dopo che main/slot coprono quelle versioni.');
+assert.equal(storage.load().career.id, store.getState().career.id, 'Il reload mantiene la nuova carriera salvata dopo il recovery dello spazio.');
+const keyWeights = [...mem].map(([key, value]) => `${key}: ${Math.round(2 * (key.length + String(value).length) / 1024)} KiB`).filter(item => /career\.v1|politicando\.(slot|slots)/.test(item));
+console.log(`Quota riprodotta e recuperata: ${quotaBefore} B, residuo 512 B; primo tentativo ${slotQuotaFailure.key} oltre quota; cronologia ridondante rimossa e slot manuale preservato. Copie finali: ${keyWeights.join(', ') || 'nessuna slot'}.`);
 const career = store.getState().career.id;
+const recoveryDate = store.getState().clock.currentDate;
+assert.ok(!storage.listSlots().some(entry => entry.autoPreserve && storage.loadSlot(entry.id).career.id === career), 'La prova di fallimento parte senza una copia automatica già presente per la carriera corrente.');
+quotaFailures.length = 0;
+const backupBytes = 2 * (`${KEY}.backup`.length + String(mem.get(`${KEY}.backup`) ?? '').length);
+const slotSnapshot = store.getState();
+const slotState = { ...slotSnapshot, saveMeta: { ...(slotSnapshot.saveMeta ?? {}), careerId: slotSnapshot.career.id, revision: slotSnapshot.saveMeta?.revision ?? 0 } };
+const minimumAfterRedundantBackupPrune = storageBytes() - backupBytes + 2 * (`${SLOT}slot-xxxxxxxx`.length + JSON.stringify(slotState).length);
+quotaLimit = minimumAfterRedundantBackupPrune - 1; // lock and redundant backup fit; the durable automatic copy does not
+let quotaError;
+assert.throws(() => store.createCareer(draft('Spazio finito'), db.parties, db.parliamentaryGroups), error => {
+  quotaError = error;
+  return /non può essere conservata/.test(error.message);
+});
+assert.match(quotaError.message, /Menu → Carica partita → Esporta su file/, 'L’errore indica il percorso per esportare la partita rimasta intatta.');
+const recoveryFile = store.exportSave();
+assert.equal(JSON.parse(recoveryFile).career.id, career, 'L’esportazione sotto quota conserva la carriera corrente.');
+assert.equal(store.getState().career.id, career, 'La quota esaurita non sostituisce la carriera attiva.');
+const blockedSlotWrite = quotaFailures.find(item => item.key.startsWith(SLOT));
+assert.ok(blockedSlotWrite && blockedSlotWrite.attempted > blockedSlotWrite.limit, 'La copia automatica eccede davvero la quota residua.');
+assert.ok(storage.listSlots().some(entry => entry.id === manualQuotaSlot && !entry.autoPreserve), 'Lo slot manuale è ancora presente prima dell’intervento del giocatore.');
+quotaLimit = null; // spazio nuovamente disponibile dopo l’intervento del giocatore
+storage.deleteSlot(manualQuotaSlot); // libera solo lo slot manuale scelto esplicitamente
+store.loadGame(recoveryFile, 'Partita recuperata dal file');
+assert.equal(store.getState().career.id, career, 'Il file esportato ricarica la carriera dopo aver liberato spazio.');
+assert.equal(store.getState().clock.currentDate, recoveryDate, 'Il recupero dal file mantiene la data della carriera.');
+assert.ok(storage.listSlots().some(entry => entry.autoPreserve && storage.loadSlot(entry.id).career.id === career), 'Il recupero riuscito conserva anche una copia automatica verificata.');
+const firstAutoSlot = store.saveToSlot('Prima conservazione automatica', null, { autoPreserve: true });
+const autoSlotCount = storage.listSlots().filter(entry => entry.autoPreserve && storage.loadSlot(entry.id).career.id === career).length;
+assert.equal(autoSlotCount, 1);
+const reusedAutoSlot = store.saveToSlot('Seconda conservazione automatica', null, { autoPreserve: true });
+assert.equal(reusedAutoSlot, firstAutoSlot, 'La stessa carriera riusa il suo slot automatico invece di duplicarlo.');
+assert.equal(storage.listSlots().filter(entry => entry.autoPreserve && storage.loadSlot(entry.id).career.id === career).length, autoSlotCount, 'Una seconda conservazione non crea slot automatici duplicati.');
 failing.add(`${SLOT}*`);
 assert.throws(() => store.createCareer(draft('Altra'), db.parties, db.parliamentaryGroups), /non può essere conservata/);
 assert.equal(store.getState().career.id, career, 'Se la partita in corso non si può conservare, la nuova carriera non parte.');
@@ -137,6 +222,18 @@ for (const entry of storage.listSlots()) storage.deleteSlot(entry.id);
 store.loadGame(old);
 assert.equal(store.getState().career.id, career, 'Con lo spazio, si carica…');
 assert.ok(storage.listSlots().some(entry => /salvataggio automatico/.test(entry.name)), '…e la partita con le modifiche non salvate resta in uno slot.');
+const otherCareerCopy = storage.listSlots().map(entry => storage.loadSlot(entry.id)).find(item => item.career.id !== career);
+assert.ok(otherCareerCopy, 'La partita precedente è conservata anche dopo il caricamento.');
+store.loadGame(otherCareerCopy);
+assert.equal(store.getState().career.id, otherCareerCopy.career.id, 'Un caricamento pulito di un’altra carriera riesce.');
+assert.ok(storage.listSlots().some(entry => storage.loadSlot(entry.id).career.id === career), 'La carriera pulita sostituita resta salvata nello slot.');
+store.loadGame(old);
+const cleanBeforeFullSlots = store.getState();
+for (const entry of storage.listSlots()) storage.deleteSlot(entry.id);
+for (let index = 0; index < MAX_SLOTS; index++) storage.saveSlot(cleanBeforeFullSlots, { name: `Capienza ${index}` }, `capienza-${index}`);
+assert.throws(() => store.loadGame(otherCareerCopy), /non può essere conservata.*al massimo/);
+assert.strictEqual(store.getState(), cleanBeforeFullSlots, 'Con tutti gli slot occupati, il caricamento non sostituisce nemmeno una partita pulita.');
+for (const entry of storage.listSlots()) storage.deleteSlot(entry.id);
 saveSetting('autosave', 'action');
 store.save();
 
@@ -153,7 +250,7 @@ assert.equal(JSON.parse(mem.get(SLOT + slotId)).version, 99, 'E lo slot resta co
 const futureText = JSON.stringify(future);
 mem.set(KEY, futureText);
 const opened = (await import(`../src/core/store.js${v}&salvataggi=futuro`)).store;
-assert.ok(/versione più recente/.test(opened.getLastSaved()) && !opened.hasCareer(), 'All’apertura lo dice e non carica la partita.');
+assert.ok(/versione più recente/.test(opened.getLastSaved()) && opened.hasCareer(), 'All’apertura mantiene disponibile la carriera recuperabile in sola lettura, senza sostituirla con la demo.');
 assert.ok(!opened.saveStatus().ok && opened.saveStatus().dirty && opened.cloudSnapshot() === null, 'Finché c’è, questa versione non salva né manda online nulla.');
 opened.navigate('carriera');
 assert.equal(opened.save().ok, false, 'Salvare non riesce…');
@@ -162,18 +259,17 @@ opened.reset();
 assert.equal(mem.get(KEY), futureText, 'Anche azzerando la partita di prova.');
 opened.clearAllSaves();
 assert.ok(!mem.has(KEY) && opened.saveStatus().ok && !opened.saveStatus().dirty, 'Solo eliminandolo, su richiesta, il gioco torna a salvare.');
-// The upgrade of an older save keeps the old one aside first: if it cannot, it is not replaced.
+// A migration can save the upgraded main even when the backup key is temporarily unavailable.
 const older = { ...JSON.parse(JSON.stringify(store.getState())), version: 8 };
 const olderText = JSON.stringify(older);
 mem.set(KEY, olderText);
 failing.add(`${KEY}.backup`);
 const upgraded = (await import(`../src/core/store.js${v}&salvataggi=vecchio`)).store;
-assert.equal(mem.get(KEY), olderText, 'Senza la copia di sicurezza, il salvataggio vecchio non si sovrascrive.');
-assert.ok(upgraded.hasCareer() && upgraded.saveStatus().dirty && !upgraded.saveStatus().ok, 'La partita aggiornata resta in memoria, non salvata.');
-assert.equal(upgraded.save().ok, false, 'E salvare non riesce finché la copia non riesce.');
-assert.equal(mem.get(KEY), olderText, 'Ancora intatto.');
+assert.equal(JSON.parse(mem.get(KEY)).version, 10, 'La migration scrive il main anche se il backup fallisce.');
+assert.ok(upgraded.hasCareer() && upgraded.saveStatus().ok && !upgraded.saveStatus().dirty, 'La carriera migrata resta salvata e non sporca.');
+assert.equal(JSON.parse(mem.get(KEY)).clock.currentDate, older.clock.currentDate, 'La migration conserva la progressione.');
 failing.clear();
-assert.ok(upgraded.save().ok && JSON.parse(mem.get(KEY)).version === 9 && JSON.parse(mem.get(`${KEY}.backup`)).payload, 'Con la copia riuscita, il salvataggio si aggiorna.');
+assert.ok(upgraded.save().ok && JSON.parse(mem.get(KEY)).version === 10 && JSON.parse(mem.get(`${KEY}.backup`)).payload, 'Con la copia riuscita, il salvataggio si aggiorna.');
 
 // ---------- 5. online: the revision follows the game ----------
 const account = await import(`../src/data/repositories/account-sync.js${v}`);
@@ -308,4 +404,227 @@ assert.equal((await account.downloadSave(slotOnline)).revision, 4, 'Il download 
   assert.equal(account.knownRevision(slot), cloudBefore, 'Anche dal tuo account: una carriera rifiutata non cambia la revisione.');
 }
 
-console.log(`Salvataggi verificati: slot e indice coerenti dopo errore o interruzione (nessuno slot orfano o senza voce, scrittura annullata se l’indice non la registra, eliminazione dall’indice per prima), «elimina tutto» anche per gli slot fuori dall’indice; salvataggio fallito = modifiche non salvate, esito tecnico indipendente dai messaggi e nessun falso successo; nulla online da una partita non salvata; partita in corso conservata prima di essere sostituita (o la sostituzione si blocca); salvataggi di una versione più recente rifiutati e mai riscritti, aggiornamento che non sovrascrive senza la copia di sicurezza; revisione online che segue il gioco davvero caricato.`);
+// ---------- 7. recover the most advanced local career and reject stale tabs/slots ----------
+storage.clearAll();
+const careerId = store.getState().career.id;
+const snapshot = (date, week, revision = 0) => {
+  const current = payload();
+  return {
+    ...current, version: 10,
+    saveMeta: { careerId, revision },
+    clock: { ...current.clock, currentDate: date },
+    game: { ...current.game, week: { ...current.game.week, index: week, startedAt: `${date.slice(0, 4)}-01-01` } }
+  };
+};
+const at2026 = storage.save(snapshot('2026-06-01', 1)).state;
+const staleTab = (await import(`../src/core/store.js${v}&phase1-old-tab`)).store;
+assert.equal(staleTab.getState().clock.currentDate, '2026-06-01', 'La seconda scheda apre la stessa carriera 2026.');
+const at2032 = storage.save(snapshot('2032-06-01', 313, at2026.saveMeta.revision)).state;
+assert.equal(at2032.saveMeta.careerId, careerId, 'La carriera mantiene il suo ID.');
+assert.ok(at2032.saveMeta.revision > at2026.saveMeta.revision, 'La revisione cresce.');
+const at2028 = snapshot('2028-06-01', 105, at2026.saveMeta.revision);
+assert.throws(() => storage.save(at2028), /obsoleto/, 'Una copia 2028 non può sovrascrivere il 2032.');
+assert.equal(JSON.parse(mem.get(KEY)).clock.currentDate, '2032-06-01', 'Il main resta al 2032.');
+assert.ok(JSON.parse(mem.get(`${KEY}.history`)).some(item => item.reason === 'conflitto-versione-obsoleta' && JSON.parse(item.payload).clock.currentDate === '2028-06-01'), 'La copia vecchia del conflitto viene conservata.');
+assert.throws(() => storage.save(at2028), /obsoleto/, 'Anche la seconda scheda viene fermata dalla revisione persistita.');
+const staleForce = staleTab.getState().world.parties.find(item => !item.isPlayer && item.position);
+assert.ok(staleForce, 'La seconda scheda ha un riferimento politico da migrare.');
+staleForce.position = null;
+staleTab.setRealReference({ twoPerThousand: db.twoPerThousand, parties: db.parties, movements: db.politicalMovements, coalitions: db.coalitions, polls: db.realPolls });
+assert.equal(JSON.parse(mem.get(KEY)).clock.currentDate, '2032-06-01', 'setRealReference non può riportare indietro il main.');
+assert.ok(!staleTab.saveStatus().ok || staleTab.saveStatus().dirty, 'La migration in una scheda vecchia resta non salvata, senza sovrascrivere quella avanzata.');
+// A more advanced backup repairs a stale main automatically.
+mem.set(KEY, JSON.stringify(at2028));
+assert.equal(storage.backup(at2032, 'backup-avanzato'), true);
+assert.equal(storage.load().clock.currentDate, '2032-06-01');
+assert.equal(JSON.parse(mem.get(KEY)).clock.currentDate, '2032-06-01', 'Il recovery ripristina il backup avanzato nel main.');
+// A corrupt main never replaces the independent valid backup, and a live tab lease refuses competing writes.
+const backupBeforeCorruption = mem.get(`${KEY}.backup`);
+mem.set(KEY, '{salvataggio incompleto');
+assert.equal(storage.load().clock.currentDate, '2032-06-01', 'Un main corrotto recupera la copia valida.');
+assert.equal(mem.get(`${KEY}.backup`), backupBeforeCorruption, 'Il main corrotto non sovrascrive il backup valido.');
+const liveLock = `${KEY}.lock`;
+mem.set(liveLock, JSON.stringify({ token: 'altra-scheda', expiresAt: Date.now() + 60_000 }));
+assert.throws(() => storage.save(snapshot('2033-06-01', 365, at2032.saveMeta.revision)), /in corso in un’altra scheda/);
+assert.equal(JSON.parse(mem.get(KEY)).clock.currentDate, '2032-06-01', 'La scheda concorrente non scrive durante il lock.');
+mem.delete(liveLock);
+// A stale manual slot remains a recoverable copy, but loading it selects the advanced save for the same career.
+mem.set(`${SLOT}slot-2028`, JSON.stringify(at2028));
+mem.set(INDEX, JSON.stringify([...storage.listSlots(), { id: 'slot-2028', savedAt: '2028-06-01', name: 'Copia vecchia' }]));
+const recoveredStore = (await import(`../src/core/store.js${v}&phase1-recovered-slot`)).store;
+recoveredStore.loadSlot('slot-2028');
+assert.equal(recoveredStore.getState().clock.currentDate, '2032-06-01', 'Aprire lo slot vecchio ricarica la versione avanzata della stessa carriera.');
+assert.equal(JSON.parse(mem.get(KEY)).clock.currentDate, '2032-06-01');
+assert.ok(storage.listSlots().some(item => storage.loadSlot(item.id).career.id === careerId), 'Anche aprire uno slot pulito conserva la carriera corrente in uno slot.');
+// A migration changes the schema but cannot change the progress or the stable career ID.
+const legacy2032 = { ...JSON.parse(mem.get(KEY)), version: 9 };
+mem.set(KEY, JSON.stringify(legacy2032));
+const migrated = (await import(`../src/core/store.js${v}&phase1-migration`)).store;
+assert.equal(migrated.getState().clock.currentDate, '2032-06-01');
+assert.equal(JSON.parse(mem.get(KEY)).clock.currentDate, '2032-06-01');
+assert.equal(JSON.parse(mem.get(KEY)).saveMeta.careerId, careerId);
+assert.equal(JSON.parse(mem.get(KEY)).version, 10, 'La migration è salvata senza downgrade.');
+assert.equal(JSON.parse(JSON.parse(mem.get(`${KEY}.backup`)).payload).version, 9, 'La versione precedente alla migration resta nel backup indipendente.');
+
+// ---------- 8. starting path and party positions remain separate in the actual state ----------
+const roleStore = migrated;
+const startingGroup = db.parliamentaryGroups.find(group => group.chamber === 'camera' && group.source === 'real' && group.verified === true && Number(group.memberCount) > 0);
+const startingSenateGroup = db.parliamentaryGroups.find(group => group.chamber === 'senato' && group.source === 'real' && group.verified === true && Number(group.memberCount) > 0);
+assert.ok(startingGroup && startingSenateGroup, 'Il riferimento reale contiene gruppi di entrambe le Camere.');
+const { isSecretary } = await import(`../src/core/career-engine.js${v}`);
+const { FOUNDER_RANK } = await import(`../src/data/simulation/career-rules.js${v}`);
+const { playerRoles } = await import(`../src/core/roles.js${v}`);
+const { careerLevelLabel } = await import(`../src/data/regions.js${v}`);
+const { renderHeadquarters } = await import(`../src/ui/game-mode.js${v}`);
+const { renderCareerPage } = await import(`../src/ui/career-page.js${v}`);
+storage.clearAll();
+roleStore.createCareer(draft('Primo Ministro', { initialLevel: 'deputato', parliamentStartMode: 'real-context', parliamentaryGroupId: startingGroup.id, startingOffice: 'presidenteConsiglio', startingRole: 'militante' }), db.parties, db.parliamentaryGroups);
+let roleState = roleStore.getState();
+assert.equal(roleState.career.startingOffice, 'presidenteConsiglio');
+assert.equal(roleState.career.startingRole, 'militante');
+assert.equal(roleState.career.initialLevel, 'deputato', 'Il PdC conserva il contesto Camera sottostante.');
+assert.equal(roleState.career.parliamentContext.groupId, startingGroup.id, 'Il gruppo Camera scelto resta nel contesto reale.');
+assert.equal(roleState.parliament.government.primeMinister, 'player');
+assert.equal(roleState.parliament.government.formedBy, 'player');
+assert.equal(roleState.parliament.government.status, 'active');
+for (const chamber of ['camera', 'senato']) {
+  const groups = roleState.parliament.chambers[chamber].groups;
+  const total = groups.reduce((sum, group) => sum + group.simulatedSeats, 0);
+  const supported = groups.filter(group => roleState.parliament.government.coalitionGroupIds.includes(group.groupId)).reduce((sum, group) => sum + group.simulatedSeats, 0);
+  assert.ok(supported >= Math.floor(total / 2) + 1, `La maggioranza iniziale è coerente alla ${chamber}.`);
+}
+const pmOffice = roleState.dataset.offices.find(item => item.id === roleState.career.startingOfficeId);
+assert.ok(pmOffice && !pmOffice.endDate && pmOffice.level === 'presidente-consiglio' && roleState.dataset.politicians.find(item => item.id === roleState.career.playerId).roleId === pmOffice.id, 'Il ruolo del premier è un incarico aperto collegato al player.');
+assert.ok(roleState.game.party.rank < 5, 'Il PdC non segretario non riceve il rank di segreteria.');
+assert.notEqual(roleState.game.party.rankTitle, 'Segretario nazionale', 'Il titolo resta quello della posizione di partito selezionata.');
+assert.equal(isSecretary(roleState.game.party), false, 'Il PdC non diventa segretario per effetto della carica di Governo.');
+assert.ok(!roleState.dataset.offices.some(item => item.politicianId === roleState.career.playerId && item.level === 'partito' && !item.endDate), 'Il PdC militante non riceve un incarico di partito automatico.');
+const pdcReload = (await import(`../src/core/store.js${v}&phase1-pdc-reload`)).store.getState();
+assert.equal(pdcReload.career.startingOffice, 'presidenteConsiglio', 'Il percorso PdC sopravvive al reload.');
+assert.equal(pdcReload.career.startingRole, 'militante', 'La posizione di partito resta distinta dopo il reload.');
+assert.equal(pdcReload.parliament.government.primeMinister, 'player');
+assert.equal(pdcReload.parliament.government.status, 'active');
+storage.clearAll();
+roleStore.createCareer(draft('Primo Ministro al Senato', { initialLevel: 'senatore', parliamentStartMode: 'real-context', parliamentaryGroupId: startingSenateGroup.id, startingOffice: 'presidenteConsiglio', startingRole: 'militante' }), db.parties, db.parliamentaryGroups);
+roleState = roleStore.getState();
+assert.equal(roleState.career.initialLevel, 'senatore', 'Il PdC conserva il contesto Senato sottostante.');
+assert.equal(roleState.career.parliamentContext.groupId, startingSenateGroup.id, 'Il gruppo Senato scelto resta nel contesto reale.');
+assert.equal(roleState.parliament.government.status, 'active');
+assert.equal(roleState.parliament.government.primeMinister, 'player');
+for (const chamber of ['camera', 'senato']) {
+  const groups = roleState.parliament.chambers[chamber].groups;
+  const total = groups.reduce((sum, group) => sum + group.simulatedSeats, 0);
+  const supported = groups.filter(group => roleState.parliament.government.coalitionGroupIds.includes(group.groupId)).reduce((sum, group) => sum + group.simulatedSeats, 0);
+  assert.ok(supported >= Math.floor(total / 2) + 1, `La maggioranza iniziale del PdC è coerente alla ${chamber}.`);
+}
+assert.ok(playerRoles(roleState).roles.some(([id]) => id === 'premier') && !playerRoles(roleState).roles.some(([id]) => id === 'segretario'), 'La carriera espone la carica di PdC senza il ruolo di segretario.');
+storage.clearAll();
+roleStore.createCareer(draft('Primo Ministro esterno', { initialLevel: 'deputato', parliamentStartMode: 'external', parliamentaryGroupId: '', startingOffice: 'presidenteConsiglio', startingRole: 'militante' }), db.parties, db.parliamentaryGroups);
+roleState = roleStore.getState();
+assert.equal(roleState.career.parliamentContext.mode, 'external', 'Il contesto del PdC esterno è persistito separatamente dal livello base.');
+assert.equal(roleState.parliament.player, null, 'Il PdC esterno non riceve un seggio né un gruppo personale.');
+assert.ok(!roleState.dataset.offices.some(item => item.politicianId === roleState.career.playerId && ['camera', 'senato', 'deputato', 'senatore'].includes(item.level)), 'Il PdC esterno non riceve un ufficio parlamentare.');
+assert.equal(roleState.parliament.government.primeMinister, 'player');
+assert.equal(roleState.parliament.government.formedBy, 'player');
+assert.equal(roleState.parliament.government.status, 'active');
+assert.equal(roleState.parliament.government.externalPrimeMinister, true);
+assert.ok(roleState.parliament.government.coalitionReferenceGroupId && !roleState.parliament.player?.groupId, 'Il gruppo di coalizione è solo un riferimento, non un’appartenenza personale.');
+for (const chamber of ['camera', 'senato']) {
+  const groups = roleState.parliament.chambers[chamber].groups;
+  const total = groups.reduce((sum, group) => sum + group.simulatedSeats, 0);
+  const supported = groups.filter(group => roleState.parliament.government.coalitionGroupIds.includes(group.groupId)).reduce((sum, group) => sum + group.simulatedSeats, 0);
+  assert.ok(supported >= Math.floor(total / 2) + 1, `Il PdC esterno ha una maggioranza coerente alla ${chamber}.`);
+}
+assert.ok(playerRoles(roleState).powers.some(power => power.label === 'Indirizzo politico e priorità nazionali del governo' && power.enabled), 'Il PdC esterno conserva i poteri esecutivi.');
+assert.ok(!playerRoles(roleState).powers.some(power => power.label === 'Formare un governo (quando non ce n’è uno in carica)' && power.enabled), 'Un premier già in carica non riceve il potere di formare un secondo governo.');
+const externalPdcReload = (await import(`../src/core/store.js${v}&phase1-external-pdc-reload`)).store.getState();
+assert.equal(externalPdcReload.parliament.player, null, 'Il reload non inventa un seggio per il PdC esterno.');
+assert.equal(externalPdcReload.parliament.government.externalPrimeMinister, true);
+assert.equal(externalPdcReload.parliament.government.status, 'active');
+assert.ok(playerRoles(externalPdcReload).roles.some(([id]) => id === 'premier'));
+storage.clearAll();
+roleStore.createCareer(draft('PdC partito nuovo', { initialLevel: 'deputato', parliamentStartMode: 'real-context', parliamentaryGroupId: startingGroup.id, startingOffice: 'presidenteConsiglio', startingRole: null, partyMode: 'new', partyId: null, partyName: 'Partito del test PdC', partyAbbreviation: 'PTP', partyDescription: 'Partito creato per il test del punto di partenza.', partyOrientation: 'Altro', partyColor: '#264d82', partyColor2: '#f2c14e' }), db.parties, db.parliamentaryGroups);
+roleState = roleStore.getState();
+assert.equal(roleState.career.startingRole, null);
+assert.equal(roleState.game.party.affiliation, 'founder', 'Il nuovo partito usa l’affiliazione di fondatore esistente.');
+assert.equal(roleState.game.party.rank, FOUNDER_RANK.level, 'Il fondatore usa il rank previsto dal sistema esistente.');
+assert.ok(isSecretary(roleState.game.party), 'Il fondatore guida il proprio partito attraverso il ruolo founder, non un ruolo PdC.');
+assert.ok(!playerRoles(roleState).roles.some(([id]) => id === 'segretario') && !roleState.dataset.offices.some(item => item.level === 'partito' && !item.endDate), 'Il fondatore non riceve un secondo ruolo o ufficio di segreteria.');
+storage.clearAll();
+roleStore.createCareer(draft('PdC indipendente', { initialLevel: 'deputato', parliamentStartMode: 'real-context', parliamentaryGroupId: startingGroup.id, partyMode: 'independent', partyId: null, startingOffice: 'presidenteConsiglio', startingRole: null }), db.parties, db.parliamentaryGroups);
+roleState = roleStore.getState();
+assert.equal(roleState.career.startingRole, null, 'La carriera indipendente non persiste una posizione di partito.');
+assert.equal(roleState.game.party, null, 'La partenza indipendente non crea stato di partito.');
+assert.ok(!roleState.dataset.offices.some(item => item.level === 'partito'), 'La partenza indipendente non crea incarichi di partito.');
+storage.clearAll();
+roleStore.createCareer(draft('Presidente della Repubblica', { initialLevel: 'deputato', startingOffice: 'presidenteRepubblica', partyMode: 'new', startingRole: 'segretarioNazionale', partyName: 'Ignorato nello scenario PdR' }), db.parties, db.parliamentaryGroups);
+roleState = roleStore.getState();
+assert.equal(roleState.career.startingOffice, 'presidenteRepubblica');
+assert.equal(roleState.career.currentLevel, 'presidente');
+assert.equal(careerLevelLabel(roleState.career.currentLevel), 'Presidente della Repubblica');
+assert.equal(roleState.career.startingRole, null);
+assert.equal(roleState.career.partyId, null);
+assert.equal(roleState.game.party, null);
+assert.equal(roleState.parliament.player, null, 'Il PdR dispone del Parlamento simulato, ma non siede in una Camera.');
+assert.equal(roleState.presidency.incumbent.kind, 'giocatore');
+assert.equal(roleState.presidency.incumbent.politicianId, roleState.career.playerId);
+assert.equal(roleState.game.flags.president.since, roleState.clock.currentDate);
+assert.ok(roleState.dataset.offices.filter(item => item.politicianId === roleState.career.playerId && !item.endDate).every(item => item.level === 'presidente'), 'Il PdR non mantiene incarichi incompatibili.');
+assert.equal(roleState.dataset.offices.filter(item => item.politicianId === roleState.career.playerId && !item.endDate).length, 1, 'Il PdR ha un solo incarico aperto.');
+const pdrRoles = playerRoles(roleState);
+assert.ok(pdrRoles.roles.some(([id]) => id === 'presidente') && !pdrRoles.roles.some(([id]) => ['premier', 'segretario', 'parlamentare'].includes(id)), 'Il PdR ha solo il ruolo presidenziale, senza poteri da premier o segretario.');
+assert.ok(pdrRoles.powers.some(power => power.label.startsWith('Consultazioni, incarico di governo') && power.enabled), 'I poteri del Quirinale sono attivi.');
+assert.ok(pdrRoles.powers.some(power => power.label === 'Indirizzo politico e priorità nazionali del governo' && !power.enabled), 'I poteri di governo non sono attivi per il PdR.');
+const pdrHome = renderHeadquarters(roleState);
+assert.ok(pdrHome.includes('Presidente della Repubblica'), 'La dashboard mostra il titolo corretto del PdR.');
+const pdrCareerPage = renderCareerPage(roleState, { tab: 'percorso' });
+assert.ok(pdrCareerPage.includes('IL TUO PERCORSO · PRESIDENTE DELLA REPUBBLICA') && pdrCareerPage.includes('Percorso iniziale') && pdrCareerPage.includes('<dd>Presidente della Repubblica</dd>'), 'Intestazione e origine della pagina Carriera mostrano il PdR, non un livello comunale generico.');
+const pdrReloadStore = (await import(`../src/core/store.js${v}&phase1-pdr-reload`)).store;
+const pdrReload = pdrReloadStore.getState();
+assert.equal(pdrReload.presidency.incumbent.kind, 'giocatore', 'Il reload mantiene il giocatore incumbent al Quirinale.');
+assert.equal(pdrReload.game.flags.president.since, pdrReload.clock.currentDate);
+assert.equal(pdrReload.parliament.player, null);
+assert.equal(pdrReload.game.party, null);
+assert.doesNotThrow(() => pdrReloadStore.presidentActivity('colloqui'), 'Una attività presidenziale esistente resta disponibile dopo il reload.');
+storage.clearAll();
+roleStore.createCareer(draft('Segretaria', { startingRole: 'segretarioNazionale' }), db.parties, db.parliamentaryGroups);
+roleState = roleStore.getState();
+assert.equal(roleState.career.startingRole, 'segretarioNazionale');
+assert.equal(roleState.game.party.rank, 5);
+assert.ok(isSecretary(roleState.game.party), 'Il ruolo iniziale usa lo stato e il controllo esistenti della segreteria.');
+assert.ok(roleState.dataset.offices.some(item => item.politicianId === roleState.career.playerId && item.level === 'partito' && !item.endDate), 'L’incarico di segretario è registrato tra gli incarichi aperti.');
+for (const [startingRole, rank] of [['militante', 0], ['dirigenteLocale', 1], ['dirigenteRegionale', 2], ['direzioneNazionale', 3]]) {
+  storage.clearAll();
+  roleStore.createCareer(draft(`Ruolo ${startingRole}`, { startingRole }), db.parties, db.parliamentaryGroups);
+  const started = roleStore.getState();
+  assert.equal(started.career.startingRole, startingRole, `${startingRole}: ruolo persistito nella carriera.`);
+  assert.equal(started.game.party.rank, rank, `${startingRole}: livello effettivo nel partito.`);
+  if (rank) assert.ok(started.dataset.offices.some(item => item.politicianId === started.career.playerId && item.level === 'partito' && !item.endDate), `${startingRole}: incarico aperto nello stato.`);
+}
+roleStore.setCampaignPicks({ key: 'setup', values: { 'setup.topicId': 'servizi' } });
+assert.equal(JSON.parse(mem.get(KEY)).ui.campaignPicks.values['setup.topicId'], 'servizi', 'Una preferenza UI scrive nella versione persistita della carriera.');
+const picksReload = (await import(`../src/core/store.js${v}&phase1-ui-picks-reload`)).store;
+assert.equal(picksReload.getState().ui.campaignPicks.values['setup.topicId'], 'servizi', 'La preferenza UI sopravvive a un reload senza downgrade.');
+const legacyV1 = { ...snapshot('2026-06-01', 1), version: 1, career: { ...snapshot('2026-06-01', 1).career, id: 'carriera-legacy-v1' }, saveMeta: { careerId: 'carriera-legacy-v1', revision: 0 } };
+delete legacyV1.world; delete legacyV1.society; delete legacyV1.national; delete legacyV1.presidency;
+mem.set(KEY, JSON.stringify(legacyV1));
+const migratedV1 = (await import(`../src/core/store.js${v}&phase1-v1-migration`)).store;
+assert.equal(migratedV1.getState().career.id, 'carriera-legacy-v1');
+assert.equal(migratedV1.getState().clock.currentDate, '2026-06-01', 'La migration più vecchia conserva la carriera e la data, senza aprire una demo.');
+assert.equal(JSON.parse(mem.get(KEY)).version, 10, 'Anche il salvataggio v1 viene migrato senza sostituirne la carriera.');
+
+// History is a small circular convenience: quota/failure there cannot block main or the independent backup.
+const historyState = migratedV1.getState();
+const dateAfterWeek = new Date(Date.parse(`${historyState.clock.currentDate}T12:00:00`) + 7 * 86400000).toISOString().slice(0, 10);
+const historyQuotaState = { ...historyState, clock: { ...historyState.clock, currentDate: dateAfterWeek }, game: { ...historyState.game, week: { ...historyState.game.week, index: historyState.game.week.index + 1 } } };
+failing.add(`${KEY}.history`);
+const withoutHistory = storage.save(historyQuotaState).state;
+assert.equal(JSON.parse(mem.get(KEY)).clock.currentDate, dateAfterWeek, 'L’indisponibilità dello storico non blocca il main.');
+assert.ok(JSON.parse(mem.get(`${KEY}.backup`)).payload, 'Il backup resta indipendente dallo storico.');
+failing.clear();
+const retried = storage.save({ ...withoutHistory, ui: { ...withoutHistory.ui, retryMarker: 'ok' } }).state;
+assert.equal(storage.load().clock.currentDate, dateAfterWeek, 'Dopo un errore transitorio, il salvataggio successivo e il reload restano validi.');
+assert.equal(retried.saveMeta.revision, withoutHistory.saveMeta.revision + 1, 'La revisione continua a crescere dopo il retry.');
+assert.ok((JSON.parse(mem.get(`${KEY}.history`)) ?? []).length <= 4, 'La cronologia circolare resta compatta.');
+
+console.log(`Salvataggi verificati: slot e indice coerenti; stale save, backup, reload, tab concorrenti, slot vecchio, migration e setRealReference non retrocedono la carriera 2026→2032; careerId/revision; PdC Camera, Senato ed esterno con maggioranze e incarichi; PdR alternativo con poteri e reload; posizioni di partito, fondatore e segretario; sincronizzazione online.`);

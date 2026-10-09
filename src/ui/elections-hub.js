@@ -1,20 +1,20 @@
 // The electoral centre: next vote, calendar, context, candidacy, campaign, polls and rivals, results and history.
-import { isSecretary, upcomingElections, upcomingRounds } from '../core/career-engine.js?v=20261007-2';
-import { RACE_RULES } from '../data/simulation/race-rules.js?v=20261007-2';
-import { campaignSummary, strategyOf } from '../core/campaign-engine.js?v=20261007-2';
-import { CAMPAIGN_PHASES, ELECTION_MODELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261007-2';
-import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261007-2';
-import { formatDate } from '../core/time.js?v=20261007-2';
-import { societyMood } from '../core/society-engine.js?v=20261007-2';
-import { renderCampaignPage } from './campaign-mode.js?v=20261007-2';
-import { politicalPhase } from './game-mode.js?v=20261007-2';
-import { lineChart, SERIES } from './charts.js?v=20261007-2';
-import { glyph } from './visuals.js?v=20261007-2';
-import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, sectionTabs, signed, table, weeksLabel } from './sections-kit.js?v=20261007-2';
-import { mandatePlace, renderElectionReport } from './election-report.js?v=20261007-2';
-import { renderNationalView } from './national-view.js?v=20261007-2';
-import { renderQuirinale } from './presidency-view.js?v=20261007-2';
-import { renderCampaignObservatory } from './observatory-view.js?v=20261007-2';
+import { isSecretary, upcomingElections, upcomingRounds } from '../core/career-engine.js?v=20261009-4';
+import { RACE_RULES } from '../data/simulation/race-rules.js?v=20261009-4';
+import { campaignSummary, strategyOf } from '../core/campaign-engine.js?v=20261009-4';
+import { CAMPAIGN_PHASES, ELECTION_MODELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261009-4';
+import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261009-4';
+import { formatDate } from '../core/time.js?v=20261009-4';
+import { societyMood } from '../core/society-engine.js?v=20261009-4';
+import { renderCampaignPage } from './campaign-mode.js?v=20261009-4';
+import { politicalPhase } from './game-mode.js?v=20261009-4';
+import { lineChart, SERIES } from './charts.js?v=20261009-4';
+import { glyph } from './visuals.js?v=20261009-4';
+import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, sectionTabs, signed, table, weeksLabel } from './sections-kit.js?v=20261009-4';
+import { mandatePlace, renderElectionReport } from './election-report.js?v=20261009-4';
+import { renderNationalView } from './national-view.js?v=20261009-4';
+import { renderQuirinale } from './presidency-view.js?v=20261009-4';
+import { renderCampaignObservatory } from './observatory-view.js?v=20261009-4';
 export { renderElectionReport };
 
 export const ELECTION_TABS = Object.freeze([['panoramica', 'Panoramica'], ['nazionali', 'Nazionali'], ['quirinale', 'Quirinale'], ['candidatura', 'Candidatura'], ['campagna', 'Campagna'], ['avversari', 'Sondaggi e avversari'], ['risultati', 'Risultati'], ['storico', 'Storico']]);
@@ -174,9 +174,9 @@ function raceRow(race, { state, leader, options }) {
   const result = race.result ? `<p class="sx-note">${race.result.won ? 'Vince il candidato del partito' : race.result.mandate ? 'Il candidato del partito entra in consiglio all’opposizione' : 'Il candidato del partito non è eletto'} (${num(race.result.share, 1)}%${race.result.position ? `, ${race.result.position}º` : ''}).${race.result.winner && !race.result.won ? ` Primo: ${esc(race.result.winner.label)} (${num(race.result.winner.percent, 1)}%).` : ''}${race.office ? ` ${esc(race.office.title)}.` : ''}</p>` : '';
   return `<li class="eh-race status-${esc(race.status)}"><div class="eh-race-head"><span class="eh-cal-icon">${glyph(RACE_ICONS[race.level] ?? 'ballot', 18)}</span><div><strong>${esc(race.label)}</strong><small>Voto ${esc(formatDate(race.electionDate))} · candidature ${esc(shortDate(race.windowOpensAt))} – ${esc(shortDate(race.windowClosesAt))}${open ? ' · aperte ora' : ''}</small></div>${badge(statusLabel, tone)}</div>${who}${picker}${play ? `<div class="sx-actions">${play}</div>` : ''}${result}</li>`;
 }
-function raceSection(state, { races = [], raceOptions = () => null } = {}) {
+function raceSection(state, { races = [], archive = [], raceOptions = () => null } = {}) {
   const game = state.game;
-  if (!game?.party) return '';
+  if (!game?.party && !archive.length) return '';
   const leader = isSecretary(game.party);
   const today = state.clock.currentDate;
   const shown = races.filter(race => ['planned', 'confirmed', 'running'].includes(race.status)).slice(0, 16);
@@ -186,7 +186,8 @@ function raceSection(state, { races = [], raceOptions = () => null } = {}) {
     : 'Solo il segretario o il fondatore decide i candidati del partito nelle corse territoriali: tu puoi seguirle da qui.';
   const rows = shown.map(race => raceRow(race, { state, leader, options: leader && ['planned', 'confirmed'].includes(race.status) && today <= race.windowClosesAt ? raceOptions(race.id) : null })).join('');
   const past = closed.map(race => raceRow(race, { state, leader: false, options: null })).join('');
-  const body = `<p class="sx-note">${esc(intro)}</p>${rows ? `<ol class="eh-races">${rows}</ol>` : '<p class="sx-empty">Nessuna corsa territoriale in calendario nei prossimi mesi: il calendario reale dei voti si carica con la pagina.</p>'}${past ? `<details class="eh-races-past"><summary>Ultime corse concluse</summary><ol class="eh-races">${past}</ol></details>` : ''}<p class="poll-footnote">Le date seguono il calendario reale dei voti (regioni, capoluoghi di provincia; per le province, un ciclo simulato). Candidati e risultati sono simulati: un politico reale resta quello dei dati, la sua candidatura no. Un candidato “figura simulata” non è mai una persona reale. Tra due voti che giochi di persona servono almeno ${RACE_RULES.playableGapDays} giorni.</p>`;
+  const archived = [...archive].reverse().map(race => raceRow(race, { state, leader: false, options: null })).join('');
+  const body = `<p class="sx-note">${esc(intro)}</p>${rows ? `<ol class="eh-races">${rows}</ol>` : '<p class="sx-empty">Nessuna corsa territoriale in calendario nei prossimi mesi: il calendario reale dei voti si carica con la pagina.</p>'}${past ? `<details class="eh-races-past"><summary>Ultime corse concluse</summary><ol class="eh-races">${past}</ol></details>` : ''}${archived ? `<details class="eh-races-past"><summary>Storico completo candidature (${archive.length})</summary><ol class="eh-races">${archived}</ol></details>` : ''}<p class="poll-footnote">Le date seguono il calendario reale dei voti (regioni, capoluoghi di provincia; per le province, un ciclo simulato). Candidati e risultati sono simulati: un politico reale resta quello dei dati, la sua candidatura no. Un candidato “figura simulata” non è mai una persona reale. Tra due voti che giochi di persona servono almeno ${RACE_RULES.playableGapDays} giorni.</p>`;
   return card({ kicker: 'CANDIDATI DEL PARTITO · CORSE TERRITORIALI · SIMULAZIONE', title: 'Regionali, provinciali e comunali', body });
 }
 
@@ -215,6 +216,35 @@ function candidacyCard(state) {
   return card({ kicker: 'CANDIDATURA · COME FUNZIONA', title: party.affiliation === 'founder' ? 'Da fondatore decidi tu le liste' : 'La candidatura si conquista nel partito', body: `<p class="sx-note">${party.affiliation === 'founder' ? 'Da fondatore sei candidato di diritto, ma il partito ha pochi voti di lista: coalizioni e territorio contano di più.' : `Oggi sei ${esc(rank.toLowerCase())}. All’avvio della campagna il partito valuta il tuo sostegno interno contro quello dei concorrenti: superare la soglia rende la candidatura probabile, non certa, e un margine stretto può costarti posti in lista.`}</p><ul class="eh-checklist"><li class="tone-${party.support >= 60 ? 'good' : 'warn'}"><span><strong>Sostegno interno</strong><small>riunioni, assemblee, lealtà</small></span><b>${num(party.support, 0)}/100</b></li><li class="tone-neutral"><span><strong>La tua area interna</strong><small>se guida il partito, ti sostiene</small></span><b>${esc(party.currents?.find(item => item.id === party.alignedCurrentId)?.label ?? 'nessuna')}</b></li></ul>` });
 }
 
+function rivals(state, parties, logoFor) {
+  const campaign = state.campaign;
+  if (campaign && campaign.status !== 'idle') {
+    const summary = campaign.status === 'active' ? campaignSummary(campaign) : null;
+    const standings = summary?.standings ?? (campaign.result?.groups ?? []).map((row, index) => ({ id: row.id, leaderCandidateId: row.candidateId, share: row.percent, position: index + 1, members: row.memberCandidateIds }));
+    const rows = standings.map(group => {
+      const candidate = campaign.candidates.find(item => item.id === group.leaderCandidateId);
+      const party = parties.find(item => item.id === candidate?.partyId);
+      const logo = party ? logoFor(party) : null;
+      const name = candidate?.isPlayer ? 'La tua candidatura' : candidate?.realReference?.fullName ?? 'Candidatura simulata';
+      const label = candidate?.isPlayer ? (party?.officialName ?? party?.name ?? 'Indipendente') : candidate?.realReference ? `Deputato in carica${candidate.realReference.groupName ? ` · ${candidate.realReference.groupName}` : ''}` : party?.officialName ?? party?.name ?? 'Lista simulata';
+      return { _class: candidate?.isPlayer ? 'is-player' : '', pos: `${group.position}ª`, name: `<span class="eh-cand">${logo ? `<img src="${esc(logo)}" alt="" loading="lazy">` : `<i>${esc((party?.abbreviation ?? name).slice(0, 2))}</i>`}<span><strong>${esc(name)}</strong><small>${esc(label)}${(group.members?.length ?? 1) > 1 ? ` · coalizione di ${group.members.length}` : ''}</small></span></span>`, share: `<span class="eh-share"><b>${pct(group.share)}</b>${bar(group.share, candidate?.isPlayer ? 'good' : '')}</span>`, action: candidate?.isPlayer ? '' : esc(candidate?.lastAction ?? '') };
+    });
+    const trend = campaign.consensusHistory ?? [];
+    const chart = trend.length > 1 ? lineChart({ series: [{ label: 'Proiezione', color: SERIES[0], values: trend.map(item => item.value), emphasis: true }, ...(campaign.expectation ? [{ label: 'Attesa iniziale', color: SERIES[3], values: trend.map(() => campaign.expectation.share) }] : [])], labels: trend.map(item => `G${item.day}`), unit: '%', height: 170, ariaLabel: 'Andamento della proiezione della campagna' }) : '';
+    const latestPoll=campaign.polls?.at(-1);
+    const playerPoll=latestPoll?.results?.find(item=>item.candidateId===campaign.playerCandidateId);
+    const pollNote=latestPoll&&playerPoll?`Ultimo sondaggio simulato (${esc(formatDate(latestPoll.date))}): tua candidatura ${pct(playerPoll.share)} ±${latestPoll.margin.toFixed(1).replace('.',',')} · ${num(latestPoll.sample)} interviste.`:'Nessun sondaggio di campagna disponibile.';
+    return card({ kicker: campaign.status === 'active' ? 'CORSA IN TEMPO REALE · CONSENSO SIMULATO' : 'CLASSIFICA FINALE · SIMULAZIONE', title: 'Chi è in corsa', body: `${table([['pos', 'Pos.'], ['name', 'Candidatura'], ['share', 'Consenso', 'num'], ['action', 'Ultima mossa']], rows)}${chart ? `<div class="eh-chart">${chart}</div>` : ''}<p class="sx-note">La tabella e il grafico mostrano la base di consenso; il sondaggio è una stima rumorosa della stessa base. ${pollNote} Le persone reali mostrano solo dati verificati, i numeri sono simulati.</p>` });
+  }
+  const poll = state.world?.polls?.at(-1);
+  if (!poll) return card({ kicker: 'SONDAGGI', title: 'Nessun sondaggio', body: '<p class="sx-note">I sondaggi si aggiornano ogni settimana.</p>' });
+  const rows = [...poll.results].sort((a, b) => b.share - a.share).slice(0, 10).map((row, index) => {
+    const force = state.world.parties.find(item => item.id === row.partyId);
+    return { _class: force?.isPlayer ? 'is-player' : '', pos: `${index + 1}ª`, name: `<strong>${esc(force?.label ?? row.partyId)}</strong>`, share: `<span class="eh-share"><b>${pct(row.share)}</b>${bar(row.share * 3, force?.isPlayer ? 'good' : '')}</span>`, delta: `<span class="tone-${toneOf(row.delta)}">${signed(row.delta)}</span>` };
+  });
+  return card({ kicker: `SONDAGGIO · ${poll.source === 'real' ? 'DATO REALE' : 'SIMULATO'} · ${esc(formatDate(poll.date ?? state.clock.currentDate))}`, title: 'Le forze nazionali', body: `${table([['pos', 'Pos.'], ['name', 'Forza'], ['share', 'Consenso', 'num'], ['delta', 'Variazione', 'num']], rows)}<p class="sx-note">Gli avversari diretti si conoscono all’avvio della campagna.</p><button class="text-link" data-nav="sondaggi">Tutti i sondaggi ${arrow}</button>` });
+}
+
 function history(state) {
   const entries = [...(state.career.electionHistory ?? [])].reverse();
   const rows = entries.map(item => ({ date: esc(formatDate(item.date)), type: esc(item.electionLabel ?? item.electionType), share: pct(item.percent), position: item.position ? `${item.position}ª` : '—', outcome: `${badge(item.outcomeLabel ?? (item.personalMandate ? 'Mandato' : 'Nessun mandato'), item.personalMandate ? 'good' : 'bad')}`, expectation: item.expectation === 'sopra' ? '<span class="tone-good">sopra</span>' : item.expectation === 'sotto' ? '<span class="tone-bad">sotto</span>' : item.expectation ? 'in linea' : '—', seats: num(item.seats, 0) }));
@@ -230,7 +260,7 @@ export function renderElectionsHub(state, { parties = [], logoFor = () => null, 
   const counts = { quirinale: state.presidency?.election || state.presidency?.incumbent?.kind === 'giocatore' ? '●' : '', campagna: state.campaign?.status === 'active' ? '●' : '', nazionali: state.national?.campaign || (formation && !['completata', 'fallita'].includes(formation.phase)) ? '●' : '', storico: (state.career.electionHistory ?? []).length || '' };
   let body = '';
   if (active === 'panoramica') body = `<div class="sx-grid two">${card({ kicker: 'CALENDARIO ELETTORALE', title: 'Quando si vota', body: calendar(state) })}${card({ kicker: 'CONTESTO POLITICO', title: 'Il clima del voto', body: context(state) })}</div><div class="sx-grid two">${card({ kicker: 'PREPARAZIONE', title: 'Quanto sei pronto', body: readiness(state) })}${card({ kicker: 'REGOLE DEL GIOCO', title: 'Come si assegnano i seggi', body: rules(state) })}</div>`;
-  else if (active === 'candidatura') body = candidacy(state, { races: { races: state.races?.items ?? [], raceOptions: races.raceOptions } });
+  else if (active === 'candidatura') body = candidacy(state, { races: { races: state.races?.items ?? [], archive: state.races?.archive ?? [], raceOptions: races.raceOptions } });
   else if (active === 'campagna') body = `<div class="eh-campaign">${renderCampaignPage(state, parties, logoFor, campaignPicks)}</div>`;
   else if (active === 'avversari') body = renderCampaignObservatory(state, polls);
   else if (active === 'risultati') body = renderElectionReport(state.career.lastElectionReport, { place: mandatePlace(state, state.career.lastElectionReport) });

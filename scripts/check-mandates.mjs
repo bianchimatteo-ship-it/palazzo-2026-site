@@ -260,6 +260,7 @@ for (const [role, chamber, region] of [['deputato', 'camera', 'Lombardia'], ['se
   const after = store.getState();
   assert.ok(dissolved, 'Senza maggioranza la sfiducia scioglie il consiglio');
   assert.ok(after.dataset.offices.find(item => item.id === office.id).endDate, 'Il mandato da presidente si chiude');
+  assert.equal(after.dataset.offices.find(item => item.id === office.id).endReason, 'decadenza', 'La chiusura per scioglimento conserva una causa coerente.');
   const shown = after.dataset.offices.find(item => item.id === after.dataset.politicians.find(item => item.id === after.career.playerId).roleId);
   assert.ok(shown && !shown.endDate && shown.level === 'comunale', `La carica mostrata passa a quella ancora aperta (${shown?.title})`);
   assert.equal(after.career.currentLevel, 'comunale');

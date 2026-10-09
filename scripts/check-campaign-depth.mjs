@@ -505,7 +505,7 @@ const toRunoff = (seedId, values) => { let c = splitField(approved(make('comunal
   const { normalizeGameState } = await import(`../src/core/career-engine.js${v}`);
   const legacy = JSON.parse(JSON.stringify(reloaded.getState().game)); delete legacy.rivalRegistry; delete legacy.endorsers;
   assert.deepEqual([normalizeGameState(legacy).rivalRegistry, normalizeGameState(legacy).endorsers], [[], []], 'Un salvataggio precedente riceve registri vuoti.');
-  assert.equal(JSON.parse(mem.get('palazzo-2026.career.v1')).version, 9, 'La versione del salvataggio non cambia.');
+  assert.equal(JSON.parse(mem.get('palazzo-2026.career.v1')).version, 10, 'La versione del salvataggio non cambia.');
 }
 
 
