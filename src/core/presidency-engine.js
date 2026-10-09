@@ -4,14 +4,14 @@
 // Pure functions on a plain state (`state.presidency`): nothing here touches the store, the parliament or the world;
 // the store applies the consequences. Every draw comes from a seeded sequence: the same state gives the same vote.
 // Everything is simulation: the candidates are figures of the game and the incumbent is never named.
-import { uniqueId } from './ids.js?v=20261007-2';
-import { advanceDays, formatDate } from './time.js?v=20261007-2';
-import { seededRandom } from './vote-engine.js?v=20261007-2';
-import { campOfAxis } from './parliament-engine.js?v=20261007-2';
-import { linkGroupsToParties } from './lawmaking-engine.js?v=20261007-2';
-import { regionalShares } from './world-engine.js?v=20261007-2';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261007-2';
-import { AFFINITY, CAMP_LABELS, CANDIDATE_TYPES, PRESIDENCY_RULES, PRESIDENT_ACTIVITIES, PRESIDENT_ACTS } from '../data/simulation/presidency-rules.js?v=20261007-2';
+import { uniqueId } from './ids.js?v=20261009-1';
+import { advanceDays, formatDate } from './time.js?v=20261009-1';
+import { seededRandom } from './vote-engine.js?v=20261009-1';
+import { campOfAxis } from './parliament-engine.js?v=20261009-1';
+import { linkGroupsToParties } from './lawmaking-engine.js?v=20261009-1';
+import { regionalShares } from './world-engine.js?v=20261009-1';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261009-1';
+import { AFFINITY, CAMP_LABELS, CANDIDATE_TYPES, PRESIDENCY_RULES, PRESIDENT_ACTIVITIES, PRESIDENT_ACTS } from '../data/simulation/presidency-rules.js?v=20261009-1';
 
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -90,9 +90,16 @@ function simulatedIncumbent({ since, number, seed, electedOn = null }) {
   const camp = ['centro', 'centro', 'sinistra', 'destra'][Math.floor(rand() * 4)];
   return { id: `presidente-${number}`, kind: 'simulato', label: 'Il Presidente della Repubblica in carica (figura simulata)', since, number, camp, activism: round2(0.25 + rand() * 0.5), electedOn, source: SIM };
 }
+function playerIncumbent({ number, since, electedOn, politician, ballot = null, votes = null, reelected = false }) {
+  return { id: `presidente-${number}`, kind: 'giocatore', label: politician?.displayName ?? 'Il giocatore', politicianId: politician?.id ?? null, since, number, camp: 'centro', electedOn, ballot, votes, credit: PRESIDENCY_RULES.creditStart, actions: {}, returned: [], dissolutions: 0, formations: 0, acts: [], lifeSenators: [], reelected, source: SIM };
+}
 export function createPresidency({ date = null, seed = 'quirinale' } = {}) {
   const incumbent = simulatedIncumbent({ since: PRESIDENCY_RULES.currentTermSince, number: 1, seed });
   return catchUp({ version: 1, seed: String(seed), incumbent, election: null, last: null, history: [], log: [], source: SIM }, date);
+}
+export function startPlayerPresidency(presidency, { date, politician } = {}) {
+  const base = presidency?.incumbent ? presidency : createPresidency({ date: null });
+  return { ...base, incumbent: playerIncumbent({ number: 1, since: date, electedOn: date, politician }), election: null, last: null, history: [], log: [], source: SIM };
 }
 // A save older than the election that should have happened (or a state without the field): the elections the career
 // has not seen are reconstructed in one line each, so that the term in office is always the current one.
@@ -545,7 +552,7 @@ export function proclaim(presidency, { elected, player = null, politician = null
   const isPlayer = Boolean(candidate?.isPlayer);
   const number = election.number;
   const incumbent = isPlayer
-    ? { id: `presidente-${number}`, kind: 'giocatore', label: politician?.displayName ?? 'Il giocatore', politicianId: politician?.id ?? null, since, number, camp: 'centro', electedOn: elected.date, ballot: elected.ballot, votes: elected.votes, credit: PRESIDENCY_RULES.creditStart, actions: {}, returned: [], dissolutions: 0, formations: 0, acts: [], lifeSenators: [], reelected: old.kind === 'giocatore', source: SIM }
+    ? playerIncumbent({ number, since, politician, electedOn: elected.date, ballot: elected.ballot, votes: elected.votes, reelected: old.kind === 'giocatore' })
     : candidate?.type === 'uscente' && old.kind === 'simulato'
       ? { ...old, since, number, electedOn: elected.date, ballot: elected.ballot, votes: elected.votes, reelected: true }
       : { ...simulatedIncumbent({ since, number, seed: presidency.seed, electedOn: elected.date }), camp: candidate?.camp ?? 'centro', activism: round2(0.2 + (candidate?.partisan ?? 0.3) * 0.5), label: `${(candidate?.label ?? 'Il nuovo Presidente').replace(/\s*\(figura simulata\)$/, '')}, eletto Presidente (figura simulata)`, ballot: elected.ballot, votes: elected.votes, sponsors: candidate?.sponsors ?? [], source: SIM };

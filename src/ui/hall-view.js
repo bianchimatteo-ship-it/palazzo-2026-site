@@ -1,9 +1,9 @@
 // HALL OF FAME, retirement and legacy: the careers concluded and what they leave. The Hall belongs to the player and
 // outlives every career; a new career can start from the legacy of one of them (a bounded set of starting conditions,
 // never a change to the world of the game). Also the card of the Career page where a career is concluded.
-import { LEVER_BY_ID, START_PROFILES } from '../data/simulation/start-rules.js?v=20261007-2';
-import { END_KINDS, LEGACY_TIERS, RETIREMENT, boonLines, careerFacts, legacyBoon, legacyScore, legacyTags, retirementProblem, tierOf } from '../core/legacy-engine.js?v=20261007-2';
-import { formatDate } from '../core/time.js?v=20261007-2';
+import { LEVER_BY_ID, START_PROFILES } from '../data/simulation/start-rules.js?v=20261009-1';
+import { END_KINDS, LEGACY_TIERS, RETIREMENT, boonLines, careerFacts, legacyBoon, legacyScore, legacyTags, retirementProblem, tierOf } from '../core/legacy-engine.js?v=20261009-1';
+import { formatDate } from '../core/time.js?v=20261009-1';
 
 const esc = (value = '') => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const leverLabel = id => LEVER_BY_ID[id]?.label ?? id;

@@ -938,10 +938,13 @@ html body .hq-activity-action select:not([multiple]) { width: 100%; max-width: 2
 .wizard-pdc-context > strong, .wizard-pdc-context > small { display: block; }
 .wizard-pdc-context > strong { color: #c9d8ea; font-size: 10px; }
 .wizard-pdc-context > small { margin-top: 7px; color: #9099a4; font-size: 8px; }
-.wizard-pdc-chambers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 9px; }
+.wizard-pdc-chambers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 9px; }
 .level-scope-choice { display: flex; align-items: center; gap: 8px; padding: 9px 10px; border: 1px solid #353c38; border-radius: 5px; background: #19201c; color: #aebed0; text-align: left; font-size: 9px; }
 .level-scope-choice.selected { border-color: #445f7b; color: #c9d8eb; }
-.wizard-party-position { margin: 0 0 14px; }
+.wizard-party-position { margin: 0 0 14px; display: grid; gap: 8px; color: #bac7d8; font-size: 10px; }
+.wizard-party-position > small { color: #9099a4; font-size: 8px; }
+.wizard-party-role-cards .level-card { min-height: 144px; }
+@media (max-width: 600px) { .wizard-pdc-chambers { grid-template-columns: 1fr; } .wizard-party-role-cards .level-card { min-height: 0; } }
 .office-sheets { margin-top: 12px; display: grid; gap: 6px; }
 .office-sheet summary { cursor: pointer; font-size: 13px; color: var(--ink-2); }
 .office-sheet-body { padding: 6px 0 4px 12px; font-size: 13px; line-height: 1.45; color: var(--ink-2); }

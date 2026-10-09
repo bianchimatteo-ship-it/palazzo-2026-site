@@ -1,7 +1,7 @@
-import { DATA_SOURCES } from '../data/schema.js?v=20261007-2';
-import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, STAGE_WEEKS, areaOf } from '../data/simulation/policy-rules.js?v=20261007-2';
-import { evaluateAdvancement } from './progression-engine.js?v=20261007-2';
-import { groupLine, splitGroupVote } from './vote-engine.js?v=20261007-2';
+import { DATA_SOURCES } from '../data/schema.js?v=20261009-1';
+import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, STAGE_WEEKS, areaOf } from '../data/simulation/policy-rules.js?v=20261009-1';
+import { evaluateAdvancement } from './progression-engine.js?v=20261009-1';
+import { groupLine, splitGroupVote } from './vote-engine.js?v=20261009-1';
 
 export const CHAMBERS = Object.freeze({
   camera: { label: 'Camera dei deputati', shortLabel: 'Camera', source: DATA_SOURCES.REAL },
@@ -154,7 +154,7 @@ export function createParliamentState({ career, player, groups = [], currentDate
   const parliament = {
     id: newId('scenario-parlamento'), source: DATA_SOURCES.SIMULATION, createdAt: currentDate,
     player: chamber ? { politicianId: player?.id ?? null, chamber, groupId: validGroup, position: BASE_POSITION, territoryName: career?.parliamentContext?.territoryName ?? null, mandateStartedAt: currentDate, source: DATA_SOURCES.SIMULATION } : null,
-    contextMode: chamber ? 'real-context' : null,
+    contextMode: career?.parliamentContext?.mode ?? (chamber ? 'real-context' : null),
     chambers, relations, resources: { politicalCapital: clamp(Number(politicalCapital) || 50, 0, 100), source: DATA_SOURCES.SIMULATION },
     careerStanding: chamber ? createCareerStanding() : null,
     government: null, laws: [], history: [], pastMandates: [], pollingHook: { connected: false, source: DATA_SOURCES.SIMULATION }
@@ -666,7 +666,7 @@ export function withdrawGroupSupport(parliament, currentDate) {
   if (playerLeadsGovernment(parliament)) throw new Error('Guidi il governo: per lasciarlo apri una crisi o dimettiti.');
   const groupId = parliament.player.groupId;
   if (![...government.coalitionGroupIds, ...government.supportingGroupIds].includes(groupId)) throw new Error('Il tuo gruppo non fa parte della maggioranza.');
-  if (groupId === government.premierGroupId) throw new Error('Il gruppo del Presidente del Consiglio non lascia il proprio governo: per metterlo in discussione apri una crisi.');
+  if (!government.externalPrimeMinister && groupId === government.premierGroupId) throw new Error('Il gruppo del Presidente del Consiglio non lascia il proprio governo: per metterlo in discussione apri una crisi.');
   let next = leaveMajority(parliament, groupId, currentDate, 'ritira il sostegno al governo');
   for (const id of government.coalitionGroupIds.filter(item => item !== groupId)) next = setRelation(next, id, -8);
   return adjustStanding(next, -2);

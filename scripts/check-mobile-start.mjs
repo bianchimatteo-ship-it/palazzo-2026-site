@@ -147,6 +147,18 @@ try {
     }
     await tap('.wizard-footer [data-wizard-action="next"]');
     ok(await evaluate(`document.querySelector('.wizard-kicker')?.textContent.includes('0${step + 1}')`), `Wizard su telefono: “Continua” del passaggio ${step} ricevuto.`);
+    if (step === 1) {
+      ok(await has('[data-starting-office="presidenteConsiglio"]') && await has('[data-starting-office="presidenteRepubblica"]'), 'Su telefono le partenze PdC e PdR sono visibili nel percorso.');
+      ok(await evaluate('(() => { const body = document.querySelector(".wizard-body"); return body.scrollWidth <= body.clientWidth + 1 && [...document.querySelectorAll(".level-cards .level-card")].length === 8 && [...document.querySelectorAll(".level-cards .level-card")].every(card => getComputedStyle(card).display !== "none" && card.getBoundingClientRect().width > 0); })()'), 'Le otto card del percorso restano visibili e senza overflow orizzontale su 375 px.');
+    }
+    if (step === 2) {
+      await tap('[data-party-mode="existing"]', { scroll: true });
+      ok(await evaluate('(() => { const body = document.querySelector(".wizard-body"), cards = [...document.querySelectorAll(".wizard-party-role-cards [data-starting-role]")]; return cards.length === 5 && cards.every(card => getComputedStyle(card).display !== "none" && card.getBoundingClientRect().width > 0) && body.scrollWidth <= body.clientWidth + 1; })()'), 'Le cinque card di posizione nel partito sono visibili e senza overflow su 375 px.');
+      await tap('[data-party-mode="independent"]', { scroll: true });
+    }
+    if (step === 4) {
+      ok(await evaluate('(() => { const body = document.querySelector(".wizard-body"), summary = document.querySelector(".summary-sheet"); return Boolean(summary) && body.scrollWidth <= body.clientWidth + 1 && summary.scrollWidth <= summary.clientWidth + 1 && summary.innerText.includes("PERCORSO ISTITUZIONALE"); })()'), 'Il riepilogo del percorso resta coerente e senza overflow orizzontale su 375 px.');
+    }
   }
   await setField('.career-wizard [name="firstName"]', 'Prova');
   await setField('.career-wizard [name="lastName"]', 'Telefono');

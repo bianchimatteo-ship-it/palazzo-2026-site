@@ -2,7 +2,7 @@
 // (how much the name weighs), the game keeps four kinds of reputation, which are not the same thing — what the party thinks of
 // you is not what the voters or the newsrooms or the institutions think — and the influence the player has in each sector of
 // public policy (health, schools, economy…). Everything here is a mechanic of the game (source: simulation).
-import { AREA_BY_ID, AREA_GROUPS } from './policy-rules.js?v=20261007-2';
+import { AREA_BY_ID, AREA_GROUPS } from './policy-rules.js?v=20261009-1';
 
 export const REPUTATIONS = Object.freeze({
   internal: {

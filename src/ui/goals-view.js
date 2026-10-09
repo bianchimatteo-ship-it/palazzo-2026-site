@@ -1,13 +1,13 @@
 // OBIETTIVI — the goals of the career, line by line: how far each one is (measured on what the player does and
 // decides), what it pays and unlocks, what is still missing, and the public ambitions (goals declared with a deadline).
-import { gameContext } from './game-mode.js?v=20261007-2';
-import { objectiveProgress } from '../core/career-engine.js?v=20261007-2';
-import { ambitionProblem } from '../core/objective-engine.js?v=20261007-2';
-import { AMBITION_COST, AMBITION_LIMIT, OBJECTIVE_LINES, OBJECTIVE_LINE_ORDER } from '../data/simulation/objective-rules.js?v=20261007-2';
-import { memoryBalance } from '../core/career-engine.js?v=20261007-2';
-import { formatDate } from '../core/time.js?v=20261007-2';
-import { badge, bar, card, esc, num } from './sections-kit.js?v=20261007-2';
-import { REPUTATIONS } from '../data/simulation/standing-rules.js?v=20261007-2';
+import { gameContext } from './game-mode.js?v=20261009-1';
+import { objectiveProgress } from '../core/career-engine.js?v=20261009-1';
+import { ambitionProblem } from '../core/objective-engine.js?v=20261009-1';
+import { AMBITION_COST, AMBITION_LIMIT, OBJECTIVE_LINES, OBJECTIVE_LINE_ORDER } from '../data/simulation/objective-rules.js?v=20261009-1';
+import { memoryBalance } from '../core/career-engine.js?v=20261009-1';
+import { formatDate } from '../core/time.js?v=20261009-1';
+import { badge, bar, card, esc, num } from './sections-kit.js?v=20261009-1';
+import { REPUTATIONS } from '../data/simulation/standing-rules.js?v=20261009-1';
 
 const REWARD_LABELS = { capital: 'Capitale politico', reputation: 'Reputazione', notoriety: 'Notorietà', popularity: 'Popolarità', influence: 'Influenza' };
 const rewardText = reward => {
