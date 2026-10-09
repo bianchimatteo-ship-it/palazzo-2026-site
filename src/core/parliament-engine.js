@@ -176,7 +176,7 @@ export const isReferenceGovernment = government => Boolean(government) && govern
 // A Government that has ended goes to the record of the career with its offices and the outcome of its confidence
 // votes (not the seat-by-seat detail): saves stay light, the last twelve are kept.
 export const PAST_GOVERNMENTS_LIMIT = 12;
-const pastGovernment = government => ({ ...government, confidenceVotes: (government.confidenceVotes ?? []).map(entry => ({ date: entry.date, result: entry.result, votes: (entry.votes ?? []).map(vote => ({ chamber: vote.chamber, yes: vote.yes, needed: vote.needed, total: vote.total, passed: vote.passed })), source: DATA_SOURCES.SIMULATION })) });
+const pastGovernment = government => ({ ...government, ...(government.accord ? { accord: compactAccord(government.accord) } : {}), confidenceVotes: (government.confidenceVotes ?? []).map(entry => ({ date: entry.date, result: entry.result, votes: (entry.votes ?? []).map(vote => ({ chamber: vote.chamber, yes: vote.yes, needed: vote.needed, total: vote.total, passed: vote.passed })), source: DATA_SOURCES.SIMULATION })) });
 export function archiveGovernment(parliament, patch = {}) {
   const past = (parliament?.pastGovernments ?? []).map(pastGovernment);
   return (parliament?.government ? [...past, { ...pastGovernment(parliament.government), ...patch }] : past).slice(-PAST_GOVERNMENTS_LIMIT);
@@ -815,7 +815,7 @@ export function voteGovernmentConfidence(parliament, currentDate) {
   let next = { ...parliament, government: { ...government, status, stability, ministers, partners, pendingPlayerVote: null, crisisSeverity: passed ? 0 : government.crisisSeverity, lastCrisisSeverity: government.crisisSeverity, confidenceVotes: [...government.confidenceVotes, { date: currentDate, votes, result: status, source: DATA_SOURCES.SIMULATION }], formedAt: passed ? (government.formedAt ?? currentDate) : government.formedAt ?? null, fallenAt: passed ? null : currentDate } };
   if (inCoalition) next = adjustStanding(next, passed ? 1 : -2);
   const player = playerVote ? { playerChoice: playerVote.choice, playerLine: playerVote.line, decisive: Boolean(playerVote.decisive), decided: Boolean(decided), yes: votes.find(vote => vote.chamber === playerVote.chamber).yes, needed: votes.find(vote => vote.chamber === playerVote.chamber).needed } : {};
-  return record(next, currentDate, passed ? 'fiducia-ottenuta' : 'fiducia-negata', passed ? 'La maggioranza simulata ha ottenuto la fiducia in entrambe le Camere.' : 'La maggioranza simulata non ha ottenuto la fiducia in entrambe le Camere.', { governmentId: government.id, governmentName: government.name, votes: votes.map(vote => ({ chamber: vote.chamber, yes: vote.yes, needed: vote.needed, passed: vote.passed })), renewed: government.status === 'crisis', ...player, source: DATA_SOURCES.SIMULATION });
+  return settleAccordAfterVote(record(next, currentDate, passed ? 'fiducia-ottenuta' : 'fiducia-negata', passed ? 'La maggioranza simulata ha ottenuto la fiducia in entrambe le Camere.' : 'La maggioranza simulata non ha ottenuto la fiducia in entrambe le Camere.', { governmentId: government.id, governmentName: government.name, votes: votes.map(vote => ({ chamber: vote.chamber, yes: vote.yes, needed: vote.needed, passed: vote.passed })), renewed: government.status === 'crisis', ...player, source: DATA_SOURCES.SIMULATION }), passed, currentDate);
 }
 // The player's vote on the next confidence vote (the agenda, or the Governo page).
 export function setConfidenceVote(parliament, choice) {
@@ -923,6 +923,201 @@ export function checkMajority(parliament, currentDate, cause = 'Cambiano i numer
   if (!short.length) return parliament;
   const next = { ...parliament, government: { ...government, status: 'crisis', crisisSeverity: 12, crisisOpenedAt: currentDate, stability: Math.min(government.stability ?? 50, 20) } };
   return record(next, currentDate, 'crisi-spontanea', `${cause}: la maggioranza non ha più i numeri ${short.length > 1 ? 'nelle due Camere' : short[0] === 'camera' ? 'alla Camera' : 'al Senato'} e il governo deve verificare la fiducia.`, { governmentId: government.id, severity: 12, chambers: short, source: DATA_SOURCES.SIMULATION });
+}
+
+// ---------- the accord of the coalition ----------
+// What the allies of a Government the player takes part in (leads it, sits in its majority or backs it from outside) obtain for their support, written down: the measures they want,
+// a ministry, a red line they will not see crossed. Each commitment has a state (aperto, rinviato, mantenuto, tradito, respinta, decaduto), a term and a criterion read from what the
+// game really does — the laws and decrees of the majority, the ministers in office. A missed term is postponed once, then it is a betrayal; the ally reacts by its weight in the majority,
+// its interests, how late it is and what the past taught it (temper: memory of broken accords, relations, grudges). Nothing is fulfilled by an event: it is fulfilled by the decisions of the game.
+export const ACCORD_RULES = Object.freeze({ measureDays: 308, ministryDays: 70, postponeDays: 84, secondAskShare: 0.2, counted: 40 });
+const majorityGroupIds = government => [...(government?.coalitionGroupIds ?? []), ...(government?.supportingGroupIds ?? [])];
+const groupSeats = (parliament, groupId) => ['camera', 'senato'].reduce((sum, chamber) => sum + (parliament.chambers?.[chamber]?.groups?.find(group => group.groupId === groupId)?.simulatedSeats ?? 0), 0);
+const seatsOfMajority = (parliament, ids) => ids.reduce((sum, id) => sum + groupSeats(parliament, id), 0) || 1;
+export const premierGroupOf = parliament => { const government = parliament?.government; return government?.premierGroupId ?? (government?.primeMinister === 'player' || government?.formedBy === 'player' ? parliament?.player?.groupId ?? null : null); };
+// An accord is written when the player has a hand in the Government: he leads it, sits in its majority or backs it.
+export function accordApplies(parliament) {
+  const government = parliament?.government;
+  if (!government || !OPEN_GOVERNMENT.includes(government.status) || !parliament.player?.groupId) return false;
+  return playerLeadsGovernment(parliament) || government.formedBy === 'player' || majorityGroupIds(government).includes(parliament.player.groupId);
+}
+const LABELS_OF_KIND = Object.freeze({ misura: 'Misura', ministero: 'Ministero', 'linea-rossa': 'Linea rossa' });
+export const accordKindLabel = kind => LABELS_OF_KIND[kind] ?? kind;
+const termLabel = c => c.kind === 'misura' ? `Un provvedimento della maggioranza su ${AREA_BY_ID[c.area]?.label.toLowerCase() ?? 'un suo tema'}` : c.kind === 'ministero' ? `Il ministero ${c.portfolio}` : c.area ? `Nessun provvedimento su ${AREA_BY_ID[c.area]?.label.toLowerCase() ?? 'un tema'}` : `Nessuna misura finanziata con ${FINANCING[c.financing]?.label.toLowerCase() ?? 'quel mezzo'}`;
+export const accordCriterion = c => c.kind === 'misura' ? 'Legge o decreto della maggioranza in materia, approvato o in vigore entro la scadenza.' : c.kind === 'ministero' ? 'Un ministro del gruppo in carica a quel dicastero entro la scadenza.' : 'Nessuna legge o decreto della maggioranza in contrasto finché dura l’accordo.';
+// The commitments the allies ask for, from their profile (interests of their force), their seats in the majority and what they remember (temper: 0–3 per group).
+export function draftAccord(parliament, date, { temper = {}, stage = 'in-vigore' } = {}) {
+  const government = parliament.government;
+  const ids = majorityGroupIds(government);
+  const premier = premierGroupOf(parliament);
+  const total = seatsOfMajority(parliament, ids);
+  const ministers = activeMinisters(government);
+  const taken = new Set(ministers.map(item => item.portfolio));
+  const held = new Set(ministers.map(item => item.groupId));
+  const commitments = [];
+  const add = (group, partial) => commitments.push({ id: `${government.id}|${group.groupId}|${commitments.length + 1}`, groupId: group.groupId, partyId: group.partyId ?? null, status: 'aperto', answer: null, postponed: 0, evidence: null, signedAt: null, due: null, ...partial });
+  for (const id of ids.filter(item => item !== premier)) {
+    const group = getGroup(parliament, id);
+    if (!group) continue;
+    const external = !government.coalitionGroupIds.includes(id);
+    const share = groupSeats(parliament, id) / total, t = temper[id] ?? 0, profile = groupProfile(group);
+    const weight = Math.min(3, 1 + (share >= 0.25 ? 1 : 0) + (t >= 2 ? 1 : 0));
+    const measures = external ? 1 : 1 + (share >= ACCORD_RULES.secondAskShare || t >= 2 ? 1 : 0);
+    profile.likes.slice(0, measures).forEach(area => add(group, { kind: 'misura', area, weight, termDays: Math.round(ACCORD_RULES.measureDays * (1 - 0.4 * share) * (1 - 0.1 * t)) }));
+    if (!external && !held.has(id) && (share >= 0.1 || t >= 1)) {
+      const free = MINISTRIES.filter(item => !taken.has(item));
+      const portfolio = free[hashOf(`${government.id}|${id}|ministero`) % free.length];
+      if (portfolio) { taken.add(portfolio); add(group, { kind: 'ministero', portfolio, weight: Math.max(2, weight), termDays: Math.round(ACCORD_RULES.ministryDays * (1 - 0.1 * t)) }); }
+    }
+    const byFinancing = hashOf(`${government.id}|${id}|linea`) % 2 === 0 && profile.dislikesFinancing;
+    add(group, byFinancing ? { kind: 'linea-rossa', financing: profile.dislikesFinancing, weight: Math.max(2, weight), termDays: null } : { kind: 'linea-rossa', area: profile.dislikes[0], weight: Math.max(2, weight), termDays: null });
+  }
+  for (const c of commitments) c.label = termLabel(c);
+  const premierGroup = getGroup(parliament, premier);
+  const live = stage === 'in-vigore';
+  const accord = {
+    id: `accordo-${government.id}`, governmentId: government.id, name: government.name, stage, draftedAt: date, signedAt: live ? date : null, checkedAt: date, counted: [],
+    premierGroupId: premier, premierPartyId: premierGroup?.partyId ?? null, commitments: commitments.map(c => ({ ...c, answer: live || c.groupId === parliament.player?.groupId ? 'accolta' : null, signedAt: live ? date : null, due: live && c.termDays ? addDaysTo(date, c.termDays) : null })), source: DATA_SOURCES.SIMULATION
+  };
+  const partners = { ...(government.partners ?? {}) };
+  for (const id of ids) if (id !== parliament.player?.groupId && !partners[id]) partners[id] = { satisfaction: government.coalitionGroupIds.includes(id) ? 62 : 55, demand: null, source: DATA_SOURCES.SIMULATION };
+  const next = { ...parliament, government: { ...government, partners, accord } };
+  return record(next, date, live ? 'accordo-firmato' : 'accordo-trattativa', live ? `Accordo di governo: ${accord.commitments.length} impegni verso gli alleati, con scadenze e criteri verificabili.` : `Trattativa sul programma di governo: gli alleati avanzano ${accord.commitments.length} richieste (misure, ministeri, linee rosse).`, { governmentId: government.id, commitments: accord.commitments.length, source: DATA_SOURCES.SIMULATION });
+}
+// The commitments of a closed accord, as the record keeps them.
+export const compactAccord = accord => ({ ...accord, counted: [], commitments: (accord.commitments ?? []).map(c => ({ id: c.id, groupId: c.groupId, partyId: c.partyId, kind: c.kind, label: c.label, area: c.area ?? null, portfolio: c.portfolio ?? null, financing: c.financing ?? null, weight: c.weight, status: ['aperto', 'rinviato'].includes(c.status) ? 'decaduto' : c.status, due: c.due ?? null, closedAt: c.closedAt ?? null, evidence: c.evidence ?? null })), stage: 'chiuso' });
+// The player answers the requests of the allies while the accord is being negotiated: accept, scale down (a longer term, less weight) or refuse (the ally remembers).
+export function answerCommitment(parliament, commitmentId, answer, date, { temper = {} } = {}) {
+  const accord = parliament?.government?.accord;
+  if (!accord || accord.stage !== 'trattativa') throw new Error('Non c’è una trattativa aperta sul programma di governo.');
+  if (!['accolta', 'ridotta', 'respinta'].includes(answer)) throw new Error('Risposta non valida.');
+  const c = accord.commitments.find(item => item.id === commitmentId);
+  if (!c || c.answer) throw new Error('Questa richiesta ha già una risposta.');
+  if (answer === 'ridotta' && c.kind === 'linea-rossa') throw new Error('Una linea rossa non si ridimensiona: la si accetta o la si respinge.');
+  const group = getGroup(parliament, c.groupId);
+  const strength = groupSeats(parliament, c.groupId) / seatsOfMajority(parliament, majorityGroupIds(parliament.government));
+  const factor = (0.7 + strength * 1.2) * (1 + 0.12 * (temper[c.groupId] ?? 0));
+  const change = answer === 'accolta' ? { answer } : answer === 'ridotta' ? { answer, weight: Math.max(1, c.weight - 1), termDays: Math.round(c.termDays * 1.5) } : { answer, status: 'respinta', closedAt: date };
+  const commitments = accord.commitments.map(item => item.id === c.id ? { ...item, ...change } : item);
+  let next = { ...parliament, government: { ...parliament.government, accord: { ...accord, commitments } } };
+  const delta = answer === 'ridotta' ? -2 * factor : answer === 'respinta' ? -(3 + 2 * c.weight) * factor : 0;
+  if (delta) { next = changePartner(next, c.groupId, Math.round(delta)); next = setRelation(next, c.groupId, Math.round(delta / 2)); }
+  return record(next, date, 'accordo-risposta', `${group?.officialName ?? 'Un alleato'}: ${termLabel(c)} — ${answer === 'accolta' ? 'accolta' : answer === 'ridotta' ? 'accolta in forma ridotta' : 'respinta'}.`, { commitmentId: c.id, groupId: c.groupId, answer, source: DATA_SOURCES.SIMULATION });
+}
+// The confidence is given: the requests nobody answered stand as accepted, the terms start to run. Denied: the accord falls with the Government.
+function settleAccordAfterVote(parliament, passed, date) {
+  const government = parliament.government;
+  const accord = government?.accord;
+  if (!accord) return parliament;
+  if (!passed) return closeAccord(parliament, date, 'il governo non ottiene la fiducia');
+  if (accord.stage !== 'trattativa') return parliament;
+  const commitments = accord.commitments.map(c => c.status === 'respinta' ? c : { ...c, answer: c.answer ?? 'accolta', signedAt: date, due: c.termDays ? addDaysTo(date, c.termDays) : null });
+  const next = { ...parliament, government: { ...government, accord: { ...accord, stage: 'in-vigore', signedAt: date, checkedAt: date, commitments } } };
+  return record(next, date, 'accordo-firmato', `Accordo di governo firmato: ${commitments.filter(c => c.status !== 'respinta').length} impegni con scadenze e criteri verificabili.`, { governmentId: government.id, source: DATA_SOURCES.SIMULATION });
+}
+export function closeAccord(parliament, date, reason) {
+  const accord = parliament?.government?.accord;
+  if (!accord || accord.stage === 'chiuso') return parliament;
+  const commitments = accord.commitments.map(c => ['aperto', 'rinviato'].includes(c.status) ? { ...c, status: 'decaduto', closedAt: date } : c);
+  return { ...parliament, government: { ...parliament.government, accord: { ...accord, stage: 'chiuso', closedAt: date, closedReason: reason, commitments } } };
+}
+// Is a bill or decree one of the majority's? The Government's, the committees', those of the groups in the majority and the player's own.
+function majorityLaw(parliament, law, ids) {
+  if (!law.auto) return law.origin === 'governo' || ids.includes(parliament.player?.groupId);
+  return law.sponsor?.kind === 'governo' || law.sponsor?.kind === 'commissione' || ids.includes(law.sponsor?.groupId);
+}
+// What a measure the player is designing would do to the accord: the red lines it crosses and the requests it answers (before deciding).
+export function accordConflicts(parliament, policy) {
+  const accord = parliament?.government?.accord;
+  if (!accord || accord.stage === 'chiuso' || !policy) return { breaks: [], serves: [] };
+  const open = accord.commitments.filter(c => ['aperto', 'rinviato'].includes(c.status));
+  const breaks = open.filter(c => c.kind === 'linea-rossa' && ((c.area && policy.area === c.area) || (c.financing && policy.financing === c.financing)));
+  const serves = open.filter(c => c.kind === 'misura' && policy.area === c.area);
+  return { breaks, serves };
+}
+// A concession to an ally who is restless: a new measure it is promised now (a commitment like the others, with a term), for its trust today.
+export function offerConcession(parliament, groupId, date) {
+  const government = parliament?.government;
+  const accord = government?.accord;
+  if (!accord || accord.stage !== 'in-vigore' || !government.partners?.[groupId]) throw new Error('Serve un accordo in vigore e un alleato da accontentare.');
+  if (!playerLeadsGovernment(parliament) && government.formedBy !== 'player') throw new Error('Le concessioni le fa chi guida il governo.');
+  if ((parliament.resources?.politicalCapital ?? 0) < 3) throw new Error('Servono 3 punti di capitale politico.');
+  if (accord.commitments.some(c => c.groupId === groupId && c.concession && c.signedAt && weeksBetween(c.signedAt, date) < 12)) throw new Error('Una concessione ogni dodici settimane per alleato: l’ultima è ancora in corso.');
+  const group = getGroup(parliament, groupId);
+  const open = new Set(accord.commitments.filter(c => c.kind === 'misura' && ['aperto', 'rinviato'].includes(c.status)).map(c => c.area));
+  const area = groupProfile(group).likes.find(item => !open.has(item)) ?? groupProfile(group).likes[0];
+  const c = { id: `${government.id}|${groupId}|c${accord.commitments.length + 1}`, groupId, partyId: group?.partyId ?? null, kind: 'misura', area, weight: 2, termDays: Math.round(ACCORD_RULES.measureDays * 0.6), status: 'aperto', answer: 'accolta', postponed: 0, evidence: null, signedAt: date, due: addDaysTo(date, Math.round(ACCORD_RULES.measureDays * 0.6)), concession: true };
+  c.label = termLabel(c);
+  let next = { ...parliament, resources: { ...parliament.resources, politicalCapital: parliament.resources.politicalCapital - 3 }, government: { ...government, accord: { ...accord, commitments: [...accord.commitments, c] } } };
+  next = changePartner(next, groupId, 8);
+  next = setRelation(next, groupId, 2);
+  return record(next, date, 'accordo-concessione', `Concessione a ${group?.officialName ?? 'un alleato'}: ${c.label.toLowerCase()} entro il ${c.due}.`, { commitmentId: c.id, groupId, source: DATA_SOURCES.SIMULATION });
+}
+function reactToCommitment(parliament, c, outcome, date, temper) {
+  const government = parliament.government;
+  const group = getGroup(parliament, c.groupId);
+  const strength = groupSeats(parliament, c.groupId) / seatsOfMajority(parliament, majorityGroupIds(government));
+  const factor = (0.7 + strength * 1.2) * (1 + 0.12 * (temper[c.groupId] ?? 0));
+  const liked = c.area && groupProfile(group ?? c.groupId).likes.includes(c.area) ? 1.2 : 1;
+  const late = outcome === 'tradito' && c.postponed ? 1 + Math.min(0.5, weeksBetween(c.originalDue ?? c.due, date) / 24) : 1;
+  const w = c.weight;
+  const delta = outcome === 'mantenuto' ? 2 + 2 * w : outcome === 'rinviato' ? -(2 + w) * factor : -(6 + 3 * w) * factor * liked * late * (c.kind === 'linea-rossa' ? 1.25 : 1);
+  const own = c.groupId === parliament.player?.groupId;
+  let next = own ? adjustStanding(parliament, Math.round(delta / 3)) : changePartner(parliament, c.groupId, Math.round(delta));
+  next = setRelation(next, c.groupId, Math.round(delta / 2.5));
+  // (the stability of a Government the player does not lead is not touched by the accord: its partners react through their satisfaction and relations)
+  const stability = !playerLeadsGovernment(parliament) ? 0 : outcome === 'mantenuto' ? w : outcome === 'rinviato' ? -1 : -Math.round((2 + 2 * w) * strength * 1.5);
+  next = { ...next, government: { ...next.government, stability: clamp((next.government.stability ?? 50) + stability, 0, 100) } };
+  if (outcome === 'tradito' && !own) {
+    const partner = next.government.partners?.[c.groupId];
+    const betrayals = next.government.accord.commitments.filter(item => item.groupId === c.groupId && item.status === 'tradito').length;
+    if (partner && ((partner.satisfaction < 25 && betrayals >= 2) || (w >= 3 && strength >= 0.3 && partner.satisfaction < 35))) next = leaveMajority(next, c.groupId, date, 'lascia la maggioranza: gli impegni dell’accordo non sono stati rispettati');
+  }
+  return next;
+}
+// Every week: what the game did (laws and decrees of the majority since the last look, the ministers in office, the terms that passed) settles the open commitments.
+// Returns { parliament, settled: [{ commitment, outcome, groupId, partyId, premierPartyId }] } for the memory of the player and the relations between the forces.
+export function tickAccord(parliament, date, { temper = {} } = {}) {
+  const government = parliament?.government;
+  const accord = government?.accord;
+  if (!accord || accord.stage !== 'in-vigore' || !['active', 'crisis'].includes(government.status)) return { parliament, settled: [] };
+  const ids = majorityGroupIds(government);
+  const fresh = (parliament.history ?? []).filter(entry => entry.date >= accord.checkedAt && ['decreto-adottato', 'iter-approved'].includes(entry.type) && !accord.counted.includes(entry.id));
+  const adopted = fresh.map(entry => ({ entry, law: parliament.laws.find(law => law.id === entry.details?.lawId) })).filter(({ entry, law }) => law && (entry.type === 'decreto-adottato' || law.kind !== 'decreto') && majorityLaw(parliament, law, ids));
+  const settled = [];
+  let next = { ...parliament, government: { ...government, accord: { ...accord, checkedAt: date, counted: [...accord.counted, ...fresh.map(entry => entry.id)].slice(-ACCORD_RULES.counted) } } };
+  const ministers = activeMinisters(government);
+  for (const c of accord.commitments.filter(item => ['aperto', 'rinviato'].includes(item.status))) {
+    const current = () => next.government.accord.commitments.find(item => item.id === c.id);
+    const set = (change) => { next = { ...next, government: { ...next.government, accord: { ...next.government.accord, commitments: next.government.accord.commitments.map(item => item.id === c.id ? { ...item, ...change } : item) } } }; };
+    if (!ids.includes(c.groupId)) { set({ status: 'decaduto', closedAt: date }); continue; }
+    let outcome = null, evidence = null, change = {};
+    if (c.kind === 'misura') { const hit = adopted.find(({ law }) => law.policy?.area === c.area); if (hit) { outcome = 'mantenuto'; evidence = { lawId: hit.law.id, title: hit.law.title, date: hit.entry.date }; } }
+    else if (c.kind === 'linea-rossa') { const hit = adopted.find(({ law }) => (c.area && law.policy?.area === c.area) || (c.financing && law.policy?.financing === c.financing)); if (hit) { outcome = 'tradito'; evidence = { lawId: hit.law.id, title: hit.law.title, date: hit.entry.date }; } }
+    else if (c.kind === 'ministero') { const minister = ministers.find(item => item.groupId === c.groupId && item.portfolio === c.portfolio); if (minister) { outcome = 'mantenuto'; evidence = { portfolio: c.portfolio, date }; } }
+    if (!outcome && c.due && date > c.due) {
+      if (!c.postponed) { outcome = 'rinviato'; change = { postponed: 1, originalDue: c.due, due: addDaysTo(date, ACCORD_RULES.postponeDays) }; }
+      else outcome = 'tradito';
+    }
+    if (!outcome) continue;
+    set({ status: outcome, closedAt: outcome === 'rinviato' ? null : date, evidence, ...change });
+    const done = { ...c, ...change, status: outcome, evidence };
+    next = reactToCommitment(next, done, outcome, date, temper);
+    const group = getGroup(next, c.groupId);
+    const text = `Accordo di governo — ${group?.officialName ?? 'un alleato'}: ${outcome === 'mantenuto' ? 'impegno mantenuto' : outcome === 'rinviato' ? `impegno rinviato al ${change.due}` : 'impegno tradito'} (${c.label}${evidence?.title ? `, «${evidence.title}»` : ''}).`;
+    next = record(next, date, 'accordo-impegno', text, { accordId: accord.id, commitmentId: c.id, groupId: c.groupId, partyId: c.partyId, outcome, kind: c.kind, source: DATA_SOURCES.SIMULATION });
+    settled.push({ commitment: done, outcome, groupId: c.groupId, partyId: group?.partyId ?? c.partyId, premierPartyId: getGroup(next, accord.premierGroupId)?.partyId ?? accord.premierPartyId, text });
+  }
+  return { parliament: next, settled };
+}
+// The accord follows the Government: written when the player has a hand in it, closed when the Government is no more or has changed.
+export function ensureAccord(parliament, date, { temper = {} } = {}) {
+  const government = parliament?.government;
+  if (!government) return parliament;
+  const accord = government.accord;
+  if (accord && (!OPEN_GOVERNMENT.includes(government.status) || accord.governmentId !== government.id)) return closeAccord(parliament, date, OPEN_GOVERNMENT.includes(government.status) ? 'un altro governo' : 'il governo è finito');
+  if (accord || !accordApplies(parliament)) return parliament;
+  return draftAccord(parliament, date, { temper, stage: government.formedBy === 'player' && government.status === 'awaiting-confidence' ? 'trattativa' : 'in-vigore' });
 }
 
 // Weekly life of the executive: margins, allies' moods and demands, decrees that expire.

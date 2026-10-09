@@ -4,7 +4,7 @@ import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, FINANCING
 import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261007-2';
 import { ITALIAN_REGIONS } from '../data/regions.js?v=20261007-2';
 import { areaTable, budgetImpact, measureDesign, projectMeasure } from '../core/society-engine.js?v=20261007-2';
-import { activeMinisters, groupProfile, partnerSatisfaction, stageWait } from '../core/parliament-engine.js?v=20261007-2';
+import { accordCriterion, accordKindLabel, activeMinisters, groupProfile, partnerSatisfaction, stageWait } from '../core/parliament-engine.js?v=20261007-2';
 import { glyph } from './visuals.js?v=20261007-2';
 import { esc, stateBadge } from './charts.js?v=20261007-2';
 
@@ -88,6 +88,43 @@ export function budgetPreview(society, plan) {
     <div><small>MARGINE PER L’ANNO</small><strong>${num(society.publicFinance.headroom, 0)} → ${num(b.headroomAfter, 0)}</strong><span>spazio per nuove misure</span></div>
     <div><small>SPESA</small><strong>${signed(b.spending, 0)}</strong><span>gruppi di spesa aumentati o tagliati</span></div></div>
     <div class="preview-people"><div><span class="section-kicker">PIÙ SODDISFATTI</span><ul>${b.winners.map(id => `<li class="good"><strong>${esc(label(id))}</strong><span>più risorse per i loro temi</span></li>`).join('') || '<li class="quiet">Nessuno in particolare</li>'}</ul></div><div><span class="section-kicker">SCONTENTI</span><ul>${b.losers.map(id => `<li class="bad"><strong>${esc(label(id))}</strong><span>tagli o più tasse</span></li>`).join('') || '<li class="quiet">Nessuno in particolare</li>'}</ul></div></div></div>`;
+}
+
+// ---------- the accord of the coalition ----------
+// The commitments the allies obtained for their support: what, by when, how it is verified, where it stands; the requests to answer while the programme is negotiated.
+const ACCORD_STATUS = Object.freeze({ aperto: ['stabile', 'In corso'], rinviato: ['rischio', 'Rinviato'], mantenuto: ['solida', 'Mantenuto'], tradito: ['crisi', 'Tradito'], respinta: ['calo', 'Respinto'], decaduto: ['calo', 'Decaduto'] });
+const shortDay = date => date ? new Date(`${date}T12:00:00`).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+function commitmentRow(c, { negotiating = false, canAnswer = false } = {}) {
+  const [kind, label] = ACCORD_STATUS[c.status] ?? ACCORD_STATUS.aperto;
+  const when = c.status === 'rinviato' ? `rinviato al ${shortDay(c.due)} (prima del ${shortDay(c.originalDue)})` : ['aperto'].includes(c.status) && c.due ? `entro il ${shortDay(c.due)}` : c.status === 'mantenuto' || c.status === 'tradito' ? `${shortDay(c.closedAt)}` : '';
+  const evidence = c.evidence?.title ? ` · «${esc(c.evidence.title)}»` : c.evidence?.portfolio ? ` · ${esc(c.evidence.portfolio)}` : '';
+  const answers = negotiating && canAnswer && !c.answer ? `<div class="accord-answers">${[['accolta', 'Accetta'], ...(c.kind === 'linea-rossa' ? [] : [['ridotta', 'Ridimensiona']]), ['respinta', 'Respingi']].map(([id, text]) => `<button class="secondary-button" data-accord-answer="${id}" data-accord-id="${esc(c.id)}">${text}</button>`).join('')}</div>` : '';
+  return `<li class="accord-commitment ${c.status}"><div><strong>${esc(c.label)}</strong><small>${esc(accordKindLabel(c.kind))} · peso ${c.weight}/3${when ? ` · ${esc(when)}` : ''}${c.answer === 'ridotta' ? ' · accolto in forma ridotta' : ''}${evidence}</small><small>Criterio: ${esc(accordCriterion(c))}</small>${answers}</div>${stateBadge(kind, label)}</li>`;
+}
+// What a measure being designed would do to the accord: the red lines it crosses and the requests it answers.
+export function accordWarning(conflicts) {
+  if (!conflicts?.breaks?.length && !conflicts?.serves?.length) return '';
+  return `<div class="accord-warning">${conflicts.breaks.map(c => `<p class="parliament-note danger">${glyph('alert', 14)} Supera una linea rossa dell’accordo: «${esc(c.label)}». L’alleato la considererebbe un tradimento.</p>`).join('')}${conflicts.serves.map(c => `<p class="parliament-note">${glyph('link', 14)} Risponde a un impegno dell’accordo: «${esc(c.label)}».</p>`).join('')}</div>`;
+}
+export function accordPanel(state) {
+  const parliament = state.parliament;
+  const government = parliament?.government;
+  const accord = government?.accord;
+  const past = (parliament?.pastGovernments ?? []).filter(item => item.accord?.commitments?.length).slice(-3).reverse();
+  if (!accord && !past.length) return '';
+  const canAnswer = government?.formedBy === 'player' && accord?.stage === 'trattativa';
+  const leads = government?.formedBy === 'player' && accord?.stage === 'in-vigore';
+  const groups = [...new Set((accord?.commitments ?? []).map(c => c.groupId))];
+  const body = groups.map(id => {
+    const partner = government.partners?.[id];
+    const mine = id === parliament.player?.groupId;
+    const list = accord.commitments.filter(c => c.groupId === id);
+    const concession = leads && partner && !mine && accord.stage === 'in-vigore' ? `<button class="secondary-button" data-accord-concession="${esc(id)}">Concessione · 1 giorno · 3 cap.</button>` : '';
+    return `<article class="pm-block accord-group"><h3>${glyph('users', 16)} ${esc(groupName(parliament, id))}${mine ? ' · il tuo gruppo' : ''} ${partner ? `<small>soddisfazione ${num(partner.satisfaction, 0)}</small>` : ''}</h3><ul class="accord-list">${list.map(c => commitmentRow(c, { negotiating: canAnswer, canAnswer })).join('')}</ul>${concession}</article>`;
+  }).join('');
+  const stage = accord ? { trattativa: 'In trattativa: rispondi alle richieste degli alleati prima della fiducia (le richieste senza risposta valgono accettate)', 'in-vigore': `In vigore dal ${shortDay(accord.signedAt)}`, chiuso: `Chiuso${accord.closedReason ? `: ${accord.closedReason}` : ''}` }[accord.stage] : '';
+  const archive = past.length ? `<details class="pm-block"><summary>${glyph('clock', 16)} Accordi dei governi precedenti</summary>${past.map(item => `<p class="parliament-note"><b>${esc(item.name)}</b>: ${['mantenuto', 'rinviato', 'tradito', 'respinta', 'decaduto'].map(st => [st, item.accord.commitments.filter(c => c.status === st).length]).filter(([, n]) => n).map(([st, n]) => `${n} ${esc(ACCORD_STATUS[st][1].toLowerCase())}`).join(' · ') || 'nessun impegno concluso'}.</p>`).join('')}</details>` : '';
+  return `<section class="government-current accord-panel"><div class="home-section-heading"><div><span class="section-kicker">ACCORDO DI COALIZIONE · SIMULAZIONE</span><h2>${esc(accord?.name ?? 'Accordi precedenti')}</h2></div></div>${accord ? `<p class="parliament-note">${esc(stage)}. Gli impegni si verificano su ciò che il gioco fa davvero: leggi e decreti della maggioranza, ministri in carica. Un impegno mancato si rinvia una volta, poi è un tradimento: l’alleato reagisce secondo peso, interessi e ritardo, e se ne ricorderà.</p>${body}` : ''}${archive}</section>`;
 }
 
 // ---------- the Prime Minister's desk ----------

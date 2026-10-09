@@ -30,7 +30,7 @@ import { chooseStart } from '../core/start-engine.js?v=20261007-2';
 import { renderHeadquarters } from './game-mode.js?v=20261007-2';
 import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20261007-2';
 import { playerRoles } from '../core/roles.js?v=20261007-2';
-import { budgetPreview, designFromForm, planFromForm, policyFields, policyPreview } from './policy-mode.js?v=20261007-2';
+import { accordWarning, budgetPreview, designFromForm, planFromForm, policyFields, policyPreview } from './policy-mode.js?v=20261007-2';
 import { areaOf } from '../data/simulation/policy-rules.js?v=20261007-2';
 import { attachChartInteractions, hideChartTip } from './polls-mode.js?v=20261007-2';
 import { renderObservatory } from './observatory-view.js?v=20261007-2';
@@ -559,7 +559,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
     const cut = form.querySelector('[data-policy-cut]');
     if (cut) cut.hidden = form.querySelector('[data-policy-financing]')?.value !== 'tagli';
     const target = form.querySelector('[data-policy-preview]');
-    if (target) target.innerHTML = policyPreview(society, designFromForm(form));
+    if (target) target.innerHTML = policyPreview(society, designFromForm(form)) + accordWarning(store.accordConflicts(designFromForm(form)));
   };
   // Creates the career from the wizard (the real Government in office is loaded first, so every career finds it).
   // Entering a career (Continua, a save, an import, a new career) always starts from the Home, on phones and computers.
@@ -761,6 +761,16 @@ export function mountApp(root, store, { retryData = null } = {}) {
         const strategy = root.querySelector('input[name="campaign-strategy-live"]:checked')?.value;
         store.setCampaignStrategy(strategy, { topicId: root.querySelector('[data-campaign-strategy-topic]')?.value, targetId: root.querySelector('[data-campaign-strategy-target]')?.value });
       } catch (error) { store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
+      return;
+    }
+    // The accord of the coalition: the requests of the allies while it is negotiated, and a concession once it is in force.
+    const accordControl = event.target.closest('[data-accord-answer],[data-accord-concession]');
+    if (accordControl) {
+      try {
+        if (accordControl.dataset.accordAnswer) store.answerAccord(accordControl.dataset.accordId, accordControl.dataset.accordAnswer);
+        else store.offerAccordConcession(accordControl.dataset.accordConcession);
+        playSound('confirm');
+      } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
       return;
     }
     const lawControl = event.target.closest('[data-government-action],[data-law-demand],[data-law-patch],[data-law-confidence],[data-law-withdraw],[data-communication]');

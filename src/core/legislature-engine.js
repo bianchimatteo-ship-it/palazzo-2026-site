@@ -127,6 +127,8 @@ export function voteForces(world) {
 }
 
 // ---------- coalitions ----------
+// A party that obtained more candidacies than its weight gives in a coalition counts this much more when the districts are shared among the forces.
+export const COLLEGI_BOOST = 1.25;
 const tieOf = (world, a, b) => world?.ties?.[[a, b].sort().join('|')] ?? 0;
 const grudgeOf = (world, a, b) => world?.grudges?.[[a, b].sort().join('|')] ?? 0;
 const campOf = axis => axis >= 1 ? 'destra' : axis <= -1 ? 'sinistra' : 'centro';
@@ -148,12 +150,17 @@ export function buildCoalitions(world, { playerChoice = null } = {}) {
   // of their own (the player's party follows its secretary's choice).
   const inPlay = new Set(forces.map(force => force.id));
   const worldCoalitions = (world.alliances ?? []).filter(item => item.status === 'active' && item.partyIds.filter(id => inPlay.has(id)).length >= 2).map(item => item.partyIds.filter(id => inPlay.has(id) && !(forces.find(force => force.id === id)?.isPlayer && playerChoice)));
+  // What the allies granted the player's party entering a coalition counts at the vote: the leadership it was given, a larger share of the candidacies.
+  const grants = (world.alliances ?? []).filter(item => item.status === 'active').flatMap(item => (item.terms ?? []).filter(term => term.status === 'aperto'));
+  const grantedLead = members => grants.find(term => term.kind === 'guida' && members.includes(term.partyId) && inPlay.has(term.partyId))?.partyId ?? null;
   for (const members of worldCoalitions) {
+    const lead = grantedLead(members);
     const anchored = coalitions.find(coalition => members.includes(coalition.leaderId));
+    if (anchored && lead && members.includes(anchored.leaderId)) { anchored.leaderId = lead; if (!anchored.partyIds.includes(lead)) anchored.partyIds.push(lead); }
     if (anchored) { for (const id of members) if (!coalitions.some(coalition => coalition.partyIds.includes(id))) anchored.partyIds.push(id); continue; }
     const free = members.filter(id => !coalitions.some(coalition => coalition.partyIds.includes(id)));
     if (free.length < 2) continue;
-    const leader = forces.filter(force => free.includes(force.id)).sort((a, b) => b.share - a.share)[0];
+    const leader = forces.find(force => force.id === lead && free.includes(force.id)) ?? forces.filter(force => free.includes(force.id)).sort((a, b) => b.share - a.share)[0];
     coalitions.push({ id: `coalizione-${slug(leader.id)}`, label: `Coalizione ${leader.abbreviation || leader.label}`, leaderId: leader.id, camp: campOf(leader.axis), partyIds: [leader.id, ...free.filter(id => id !== leader.id)], negotiated: true, simulated: true, source: SIM });
   }
   const affinity = (force, coalition) => {
@@ -190,7 +197,8 @@ export function buildCoalitions(world, { playerChoice = null } = {}) {
   // A camp label shared by two coalitions takes the name of its leader.
   for (const coalition of coalitions) if (coalitions.filter(item => item.label === coalition.label).length > 1) coalition.label = `${coalition.label} (${forces.find(item => item.id === coalition.leaderId)?.label ?? ''})`;
   if (player && playerChoice === 'alone') for (const coalition of coalitions) coalition.partyIds = coalition.partyIds.filter(id => id !== player.id || coalition.leaderId === player.id);
-  return coalitions.filter(coalition => coalition.partyIds.length > 1 || anchors.some(anchor => anchor.id === coalition.leaderId)).map(coalition => ({ ...coalition, partyIds: coalition.partyIds.sort((a, b) => (forces.find(item => item.id === b)?.share ?? 0) - (forces.find(item => item.id === a)?.share ?? 0)) }));
+  const boostOf = coalition => Object.fromEntries(grants.filter(term => term.kind === 'collegi' && coalition.partyIds.includes(term.partyId)).map(term => [term.partyId, COLLEGI_BOOST]));
+  return coalitions.filter(coalition => coalition.partyIds.length > 1 || anchors.some(anchor => anchor.id === coalition.leaderId)).map(coalition => ({ ...coalition, ...(Object.keys(boostOf(coalition)).length ? { quotaBoost: boostOf(coalition) } : {}), partyIds: coalition.partyIds.sort((a, b) => (forces.find(item => item.id === b)?.share ?? 0) - (forces.find(item => item.id === a)?.share ?? 0)) }));
 }
 export const coalitionOf = (coalitions = [], partyId) => coalitions.find(coalition => coalition.partyIds.includes(partyId)) ?? null;
 // The coalition the player's party could join (the closest camp), with the leader's disposition: shown before deciding.
@@ -248,6 +256,12 @@ function hare(entries, seats) {
   [...rows].sort((a, b) => b.rest - a.rest || String(a.id).localeCompare(String(b.id))).slice(0, left).forEach(row => { row.seats++; });
   for (const row of rows) result.set(row.id, row.seats);
   return result;
+}
+// The candidacies each force of a coalition gets among the districts, with and without what the allies granted it (to check a term at the vote).
+export function candidacyQuotas(coalition, shares, districts) {
+  const rows = boost => hare(coalition.partyIds.map(id => ({ id, votes: (shares[id] ?? 0) * (boost ? coalition.quotaBoost?.[id] ?? 1 : 1) })), districts);
+  const base = rows(false), boosted = rows(true);
+  return Object.fromEntries(coalition.partyIds.map(id => [id, { base: base.get(id) ?? 0, boosted: boosted.get(id) ?? 0 }]));
 }
 function localEstimate(now, base, nat) {
   if (!(nat > 0)) return now;
@@ -338,7 +352,7 @@ function chamberVote(geography, chamber, context) {
     holders.set(coalitionId, holder);
     const members = forces.filter(force => coalitionIdOf.get(force.id) === coalitionId);
     const reserved = player?.districts?.[chamber] && player?.uninominale === chamber && coalitionIdOf.get(player.forceId) === coalitionId ? player.districts[chamber] : null;
-    const quotas = hare(members.map(force => ({ id: force.id, votes: force.share })), districts.length);
+    const quotas = hare(members.map(force => ({ id: force.id, votes: force.share * (context.boost?.[force.id] ?? 1) })), districts.length);
     if (reserved) { holder.set(reserved, player.forceId); quotas.set(player.forceId, Math.max(0, quotas.get(player.forceId) - 1)); }
     const assigned = new Map(members.map(force => [force.id, 0]));
     const order = results.map((result, index) => ({ id: result.id, strength: result.top.find(([id]) => id === coalitionId)?.[1] ?? 0, index })).filter(item => item.id !== reserved).sort((a, b) => b.strength - a.strength || a.index - b.index);
@@ -481,7 +495,7 @@ export function runNationalVote({ geography = null, world, coalitions = [], date
   forces.forEach(force => { force.share = round2(force.share * 100 / total); });
   const others = round2(base.others * 100 / total);
   const coalitionIdOf = new Map(coalitions.flatMap(coalition => coalition.partyIds.filter(id => forces.some(force => force.id === id)).map(id => [id, coalition.id])));
-  const context = { forces, others, coalitionOf: coalitionIdOf, rand, noise, player, contested: line === 'territori' ? NATIONAL_LINES.territori.contested : 0 };
+  const context = { forces, others, coalitionOf: coalitionIdOf, boost: Object.assign({}, ...coalitions.map(coalition => coalition.quotaBoost ?? {})), rand, noise, player, contested: line === 'territori' ? NATIONAL_LINES.territori.contested : 0 };
   const chambers = Object.fromEntries(['camera', 'senato'].map(chamber => [chamber, geography ? chamberVote(geography, chamber, context) : simplifiedChamber(chamber, context)]));
   const labels = new Map(forces.map(force => [force.id, force.label]));
   const listName = code => geography?.lists?.find(item => item.code === code)?.name ?? code;

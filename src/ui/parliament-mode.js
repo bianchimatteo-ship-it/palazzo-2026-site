@@ -10,7 +10,7 @@ import { careerOverview } from '../core/career-overview.js?v=20261007-2';
 import { voteSummary } from '../core/vote-engine.js?v=20261007-2';
 import { artTile, glyph, LAW_ICONS } from './visuals.js?v=20261007-2';
 import { measureDesign, projectLaw } from '../core/society-engine.js?v=20261007-2';
-import { governmentDesk, lawContent, policyFields, policyPreview } from './policy-mode.js?v=20261007-2';
+import { accordPanel, governmentDesk, lawContent, policyFields, policyPreview } from './policy-mode.js?v=20261007-2';
 import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261007-2';
 import { legislatureLabel } from '../core/legislature-engine.js?v=20261007-2';
 
@@ -361,7 +361,7 @@ export function renderParliamentPage(page, state, options = {}) {
   const days = state.game && parliament.player ? `<div class="parliament-access-note parliament-time-note">Ogni azione in Aula usa 1 giorno della settimana: ne restano <b>${state.game.week.ap}</b> su ${state.game.week.maxAp}. Capitale politico <b>${whole(parliament.resources?.politicalCapital)}</b>.</div>` : '';
   if (page === 'governo') {
     const stats = Object.fromEntries((state.dataset?.statistics ?? []).filter(item => item.subjectId === state.career?.playerId).map(item => [item.metric, item.value]));
-    return days + governmentDesk(state) + governmentView(parliament, options.politicians ?? [], state.world?.polls?.at(-1)?.government?.approval ?? null, { stats, secretary: options.secretary, currentDate: state.clock?.currentDate, national: state.national ?? null });
+    return days + accordPanel(state) + governmentDesk(state) + governmentView(parliament, options.politicians ?? [], state.world?.polls?.at(-1)?.government?.approval ?? null, { stats, secretary: options.secretary, currentDate: state.clock?.currentDate, national: state.national ?? null });
   }
   if (page === 'leggi') {
     const influence = (state.dataset?.statistics ?? []).find(item => item.subjectId === state.career?.playerId && item.metric === 'influence')?.value ?? 50;

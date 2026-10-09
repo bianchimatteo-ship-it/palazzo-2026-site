@@ -725,7 +725,10 @@ function goalOf(world, party) {
 function refreshAgenda(world, party, date) {
   const camp = (party.axis ?? 0) >= 1 ? 'destra' : (party.axis ?? 0) <= -1 ? 'sinistra' : 'centro';
   const pool = [...CAMP_PRIORITIES[camp]];
-  const agenda = [];
+  // (an area promised to the player's party in an accord stays on the agenda while the term is open)
+  const promised = world.alliances.filter(item => item.status === 'active' && item.partyIds.includes(party.id)).flatMap(item => item.terms ?? []).filter(term => term.kind === 'programma' && term.status === 'aperto' && term.partyId !== party.id).map(term => term.area).filter(Boolean).slice(0, 2);
+  const agenda = [...promised];
+  for (const area of promised) { const at = pool.indexOf(area); if (at >= 0) pool.splice(at, 1); }
   while (agenda.length < 3 && pool.length) agenda.push(pool.splice(Math.floor(draw(world) * pool.length), 1)[0]);
   const before = party.agenda;
   party.agenda = agenda;
@@ -848,7 +851,7 @@ function negotiate(world, party, camp) {
   const accepted = draw(world) < clamp(0.45 + value - cost, 0.05, 0.9);
   return { accepted, term, excluded: accepted && term.kind === 'veto' ? enemy : null };
 }
-function joinCamp(world, camp, party, date, reason, { terms = null } = {}) {
+function joinCamp(world, camp, party, date, reason, { terms = null, due = null } = {}) {
   const alliance = camp.alliance;
   // A force already bound to another one brings its partner along when the partner is compatible too.
   const previous = world.alliances.find(item => item !== alliance && item.status === 'active' && item.partyIds.includes(party.id));
@@ -862,18 +865,23 @@ function joinCamp(world, camp, party, date, reason, { terms = null } = {}) {
   }
   alliance.partyIds = [...new Set([...alliance.partyIds, ...newcomers])];
   alliance.kind = 'coalizione';
-  if (terms) alliance.terms = [...(alliance.terms ?? []), { ...terms, date }].slice(-8);
+  // A term obtained entering the coalition is a commitment of the allies: it has a state and a term (the vote), and it changes the world — the leadership passes, the area goes on the agenda of
+  // the others — so that it can be checked at the vote (settleElectoralTerms).
+  if (terms) alliance.terms = [...(alliance.terms ?? []), { ...terms, id: `${alliance.id}|${terms.kind}|${(alliance.terms ?? []).length + 1}`, date, due, status: 'aperto', evidence: null }].slice(-8);
+  if (terms?.kind === 'guida') alliance.leaderId = party.id;
+  if (terms?.kind === 'programma' && terms.area) for (const other of alliance.partyIds.map(id => world.parties.find(item => item.id === id)).filter(item => item && item.id !== party.id)) other.agenda = [terms.area, ...(other.agenda ?? []).filter(id => id !== terms.area)].slice(0, 3);
   alliance.cohesion = clamp(Math.round(alliance.cohesion - 2 - (terms ? 3 : 0)), 0, 100);
   alliance.history = [...(alliance.history ?? []), { date, text: `${newcomers.map(id => world.parties.find(item => item.id === id)?.label ?? id).join(' e ')} ${newcomers.length > 1 ? 'entrano' : 'entra'} nella coalizione` }].slice(-12);
   for (const id of newcomers) for (const member of alliance.partyIds.filter(item => item !== id)) world.ties[tieKey(id, member)] = round1(clamp((world.ties[tieKey(id, member)] ?? 0) + 6, -100, 100));
   const members = alliance.partyIds.map(id => world.parties.find(item => item.id === id)).filter(Boolean);
   const leader = leaderOf(members);
   if (alliance.partyIds.length >= 3 && /^Intesa/.test(alliance.label)) alliance.label = `Coalizione guidata da ${leader.label}`;
+  if (terms?.kind === 'guida' && alliance.partyIds.length >= 3) alliance.label = `Coalizione guidata da ${party.label}`;
   const names = newcomers.map(id => world.parties.find(item => item.id === id)?.label ?? id);
   logEvent(world, date, { kind: 'alleanza', icon: 'link', scope: 'nazionale', title: `${names.join(' e ')} ${newcomers.length > 1 ? 'entrano' : 'entra'} nella coalizione di ${leader?.label ?? 'un’altra forza'}`, body: `${reason === 'soglia' ? 'Da soli il rischio è restare sotto la soglia di sbarramento' : reason === 'invito' ? 'L’invito del partito più grande è stato accolto' : 'Programmi e rapporti abbastanza vicini'}${terms ? `; accordo raggiunto: ${terms.text.charAt(0).toLocaleLowerCase('it-IT') + terms.text.slice(1)}, gli alleati concedono` : ''} (simulazione).`, tone: 'neutral' });
 }
 // The player's party joins a coalition (an invitation accepted), with or without asking for conditions.
-export function joinCoalition(input, allianceId, date, { terms = false } = {}) {
+export function joinCoalition(input, allianceId, date, { terms = false, due = null } = {}) {
   const world = copy(input);
   const player = playerParty(world);
   const alliance = world.alliances.find(item => item.id === allianceId && item.status === 'active');
@@ -889,7 +897,7 @@ export function joinCoalition(input, allianceId, date, { terms = false } = {}) {
       return { world, joined: false, term: talks.term };
     }
     if (talks.excluded) leaveCoalition(world, alliance, talks.excluded, date, `escluso dal veto di ${player.label}`);
-    joinCamp(world, { alliance, members: alliance.partyIds.map(id => world.parties.find(item => item.id === id)).filter(Boolean) }, player, date, 'invito', { terms: talks.term });
+    joinCamp(world, { alliance, members: alliance.partyIds.map(id => world.parties.find(item => item.id === id)).filter(Boolean) }, player, date, 'invito', { terms: talks.term, due });
   } else joinCamp(world, { alliance, members }, player, date, 'invito');
   alliance.withPlayer = true;
   addEffect(world, { partyId: player.id, delta: 0.3, remaining: 4, cause: 'alleanza' });
@@ -1684,6 +1692,54 @@ export function breakAlliance(input, allianceId, date) {
   stirOutside(world, alliance.partyIds, 3);
   logEvent(world, date, { kind: 'rottura', icon: 'unlink', scope: 'nazionale', title: `Rottura: ${alliance.label}`, body: 'Esci dall’accordo: più autonomia, meno voti in comune.', tone: 'bad' });
   return world;
+}
+
+// What keeping or breaking a commitment of an accord does between the two forces: their ties move, a betrayal leaves a grudge (which the later coalitions, electoral and of Government,
+// weigh: affinity, odds of an intesa), and the relation of the player's party with the other follows. outcome: mantenuto | rinviato | tradito; weight 1–3.
+export function recordAccordOutcome(input, args, date) {
+  if (!input || !args.fromPartyId || !args.toPartyId || args.fromPartyId === args.toPartyId) return input;
+  const world = copy(input);
+  if (!world.parties.some(item => item.id === args.fromPartyId) || !world.parties.some(item => item.id === args.toPartyId)) return input;
+  applyAccordOutcome(world, args, date);
+  return world;
+}
+function applyAccordOutcome(world, { fromPartyId, toPartyId, outcome, weight = 1, text = null }, date) {
+  const key = tieKey(fromPartyId, toPartyId);
+  const delta = outcome === 'mantenuto' ? 2 * weight : outcome === 'rinviato' ? -1 - weight : -(6 + 3 * weight);
+  world.ties[key] = round1(clamp((world.ties[key] ?? 0) + delta, -100, 100));
+  if (outcome === 'tradito') { world.grudges ??= {}; world.grudges[key] = Math.max(world.grudges[key] ?? 0, 20 + 10 * weight); }
+  const player = playerParty(world);
+  const other = player?.id === fromPartyId ? toPartyId : player?.id === toPartyId ? fromPartyId : null;
+  const party = other ? world.parties.find(item => item.id === other) : null;
+  if (party) party.playerRelation = round1(clamp(party.playerRelation + delta, -100, 100));
+  if (outcome !== 'rinviato' && text) logEvent(world, date, { kind: outcome === 'tradito' ? 'rottura' : 'alleanza', icon: outcome === 'tradito' ? 'unlink' : 'link', scope: 'nazionale', title: outcome === 'tradito' ? 'Impegno di governo tradito' : 'Impegno di governo mantenuto', body: text, tone: outcome === 'tradito' ? 'bad' : 'good' });
+}
+// At the general election the terms the player's party obtained entering a coalition are read against what really happened: the veto (the target is not in the coalition), the leadership
+// (the party leads it), the programme (the area is on the agenda of the leader), the candidacies (more districts than its weight gives). quotas: { [partyId]: { base, boosted } } of the Camera.
+// Kept or betrayed, the ties between the forces, the cohesion of the alliance and the grudges move.
+export function settleElectoralTerms(input, { coalitions = [], quotas = {}, date }) {
+  const world = copy(input);
+  const settled = [];
+  for (const alliance of world.alliances.filter(item => item.status !== 'merged' && (item.terms ?? []).some(term => term.status === 'aperto'))) {
+    for (const term of alliance.terms.filter(item => item.status === 'aperto')) {
+      const coalition = coalitions.find(item => item.partyIds.includes(term.partyId));
+      let outcome = 'decaduto', evidence = {};
+      if (coalition) {
+        if (term.kind === 'veto') { outcome = coalition.partyIds.includes(term.target) ? 'tradito' : 'mantenuto'; evidence = { target: term.target }; }
+        else if (term.kind === 'guida') { outcome = coalition.leaderId === term.partyId ? 'mantenuto' : 'tradito'; evidence = { leaderId: coalition.leaderId }; }
+        else if (term.kind === 'programma') { const leader = world.parties.find(item => item.id === coalition.leaderId); outcome = leader?.id === term.partyId || leader?.agenda?.includes(term.area) ? 'mantenuto' : 'tradito'; evidence = { leaderId: leader?.id ?? null, agenda: leader?.agenda ?? [] }; }
+        else if (term.kind === 'collegi') { const q = quotas[term.partyId]; outcome = q && q.boosted > q.base ? 'mantenuto' : 'tradito'; evidence = q ?? {}; }
+      }
+      term.status = outcome; term.closedAt = date; term.evidence = evidence;
+      if (!coalition) { settled.push({ term, outcome, allianceId: alliance.id, withPartyIds: [] }); continue; }
+      const promisor = coalition.leaderId !== term.partyId ? coalition.leaderId : coalition.partyIds.find(id => id !== term.partyId);
+      alliance.cohesion = clamp(alliance.cohesion + (outcome === 'mantenuto' ? 3 : -8), 0, 100);
+      const text = `${alliance.label}: ${outcome === 'mantenuto' ? 'mantenuto' : 'non rispettato'} l’impegno elettorale «${term.text}».`;
+      if (promisor) applyAccordOutcome(world, { fromPartyId: promisor, toPartyId: term.partyId, outcome, weight: 2, text }, date);
+      settled.push({ term, outcome, allianceId: alliance.id, promisorId: promisor ?? null, withPartyIds: coalition.partyIds.filter(id => id !== term.partyId), text });
+    }
+  }
+  return { world, settled };
 }
 
 // Polls and allies shape the opening of a campaign.

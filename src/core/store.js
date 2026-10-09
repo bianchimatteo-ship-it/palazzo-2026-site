@@ -13,10 +13,10 @@ import { hasStart, planLines, startMods, startPlan, startStatDeltas } from './st
 import { objectiveMods } from './objective-engine.js?v=20261007-2';
 import { END_KINDS, addToHall, careerFacts, hallEntry, legacyBoon, legacyScore, legacyTags, retirementProblem, sortedHall } from './legacy-engine.js?v=20261007-2';
 import { committeeSupport, committeesAfterVote, createCommittees } from './committee-engine.js?v=20261007-2';
-import { changeSeats, checkMajority, record as recordParliament, setConfidenceVote, createReferenceGovernment, neverHadGovernment, offerGroupSupport, requestGovernmentPost, withdrawGroupSupport, partnerSatisfaction, acceptLawDemand, activeMinisters, amendLawPolicy, askConfidenceOnLaw, groupProfile, issueDecree, majoritySummit, reshuffleMinister, setGovernmentProgram, settlePartnerDemand, withdrawLaw, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20261007-2';
+import { accordApplies, accordConflicts, answerCommitment, changeSeats, checkMajority, ensureAccord, offerConcession, tickAccord, record as recordParliament, setConfidenceVote, createReferenceGovernment, neverHadGovernment, offerGroupSupport, requestGovernmentPost, withdrawGroupSupport, partnerSatisfaction, acceptLawDemand, activeMinisters, amendLawPolicy, askConfidenceOnLaw, groupProfile, issueDecree, majoritySummit, reshuffleMinister, setGovernmentProgram, settlePartnerDemand, withdrawLaw, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20261007-2';
 import { situation, addProvincialCalendar, declareAmbition, scheduleEarlyLocalElection, alignLocalCalendar, localCalendarOf, committeeAction, setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, lifeBreakPact, lifeCadre, lifeCongress, lifeFound, lifeMerge, lifeOverview, lifeRebuild, lifeRename, lifeRespond, partyOpsAvailability, saveForElection, saveReserve, takeReserve, scheduleEarlyElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20261007-2';
 import { ADVANCE_RULES, AMENDMENT_CAPITAL_COST, COMMUNICATION_STYLES, GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20261007-2';
-import { advanceLegislativeWeek, amendOthersLaw, amendmentOdds, linkGroupsToParties, setPlayerVote, speakOnLaw } from './lawmaking-engine.js?v=20261007-2';
+import { advanceLegislativeWeek, amendOthersLaw, amendmentOdds, linkGroupsToParties, setPlayerVote, speakOnLaw, syncAgendas } from './lawmaking-engine.js?v=20261007-2';
 import { seededRandom } from './vote-engine.js?v=20261007-2';
 import { advanceCabinetWeek, joinAsSupport } from './cabinet-engine.js?v=20261007-2';
 import { EP_COSTS, EP_GROUPS_2024, EP_ROLES, INSTITUTIONS, advanceInstitutionWeek, applyLocalEffect, bidRapporteur, concedeToGroup, createInstitution, committeeById, epGroupFor, grantDelega, localAreas, mandateRecord, proposeLocalAct, questionExecutive, requestCommittee, reshuffleLocal, revokeDelega, runForCommitteeRole, setLocalVote, tableAmendment, territoryValue } from './local-engine.js?v=20261007-2';
@@ -24,8 +24,8 @@ import { candidacyBlock, institutionOffice, lapsesFor, officeLabel, officeScope 
 import { actTypeOf } from '../data/simulation/local-acts.js?v=20261007-2';
 import { SECTOR_GAINS, competenceIn, gainSector, sectorFloors, standingFactors } from './standing-engine.js?v=20261007-2';
 import { AREA_BY_ID, BUDGET_SESSION, GOVERNMENT_LINES, POLICY_AREAS, areaOf } from '../data/simulation/policy-rules.js?v=20261007-2';
-import { allianceBlock, allianceOf, electionRoster, forceProfiles, mergeCandidates, mergeIntoPlayerForce, renamePlayerForce, setPlayerAgenda, splitPlayerForce, localShares, regionalShares, withRegionalLeans, withLocalCalendar, joinCoalition, acceptAlliance, addWorldEffects, advanceWorld, alignWorldToVote, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setGoverningForces, setPlayerParty, withCanonicalForces, withLatentForces, withPartyIdentities, withPositions } from './world-engine.js?v=20261007-2';
-import { FORMATION_PHASES, LEGISLATURE_RULES, NATIONAL_LINES, acceptMandate, crisisFormation, seatResult, startFormation, buildCoalitions, campaignWeekEffects, coalitionOptions, compactResult, contestedDistricts, createNationalState, europeanListSeats, formationStep, groupOfParty, homeDistricts, legislatureGroups, legislatureTerm, nationalCalendar, nationalHistory, nationalProjection, normalizeNationalState, openLegislature, politicheOutcome, regionalBreakdown, runEuropeanVote, runNationalVote, seatPlayer, voteForces } from './legislature-engine.js?v=20261007-2';
+import { recordAccordOutcome, settleElectoralTerms, allianceBlock, allianceOf, electionRoster, forceProfiles, mergeCandidates, mergeIntoPlayerForce, renamePlayerForce, setPlayerAgenda, splitPlayerForce, localShares, regionalShares, withRegionalLeans, withLocalCalendar, joinCoalition, acceptAlliance, addWorldEffects, advanceWorld, alignWorldToVote, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setGoverningForces, setPlayerParty, withCanonicalForces, withLatentForces, withPartyIdentities, withPositions } from './world-engine.js?v=20261007-2';
+import { candidacyQuotas, FORMATION_PHASES, LEGISLATURE_RULES, NATIONAL_LINES, acceptMandate, crisisFormation, seatResult, startFormation, buildCoalitions, campaignWeekEffects, coalitionOptions, compactResult, contestedDistricts, createNationalState, europeanListSeats, formationStep, groupOfParty, homeDistricts, legislatureGroups, legislatureTerm, nationalCalendar, nationalHistory, nationalProjection, normalizeNationalState, openLegislature, politicheOutcome, regionalBreakdown, runEuropeanVote, runNationalVote, seatPlayer, voteForces } from './legislature-engine.js?v=20261007-2';
 import { classifyOutcome, preferenceStanding } from './election-engine.js?v=20261007-2';
 import { DIFFICULTIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261007-2';
 import { WORLD_PARTY_COUNT } from '../data/simulation/polling-rules.js?v=20261007-2';
@@ -671,7 +671,49 @@ function computeParliamentUpdate(currentState, parliament, toast, metricDeltas =
   if (game && journal) game = { ...game, why: journal };
   if (game && memories.length) { game = deepCopy(game); for (const entry of memories) { remember(game, { date: currentDate, ...entry }); if (entry.kind === 'legge' && entry.area) gainSector(game, entry.area, SECTOR_GAINS.lawApproved, { cause: entry.text }); } }
   if (game?.party?.org && programHits) game = { ...game, party: { ...game.party, org: { ...game.party.org, cohesion: Math.min(100, game.party.org.cohesion + 2 * programHits) } } };
+  // The accord of the coalition follows the Government (written when the player has a hand in it, closed when it ends).
+  if (parliament?.government) {
+    // (the groups of the real Chambers are linked to their forces before the accord is written: their interests are those of the force)
+    const linked = !parliament.government.accord && world ? syncAgendas(linkGroupsToParties(parliament, world) ?? parliament, world) : parliament;
+    const written = ensureAccord(linked, currentDate, { temper: accordTemper(game, world, linked) });
+    parliament = written !== linked ? written : parliament;
+  }
   return withChamberRosters(currentState, withConfidenceVotes(currentState, { ...currentState, parliament, dataset, career, game, world, society, ui: { ...currentState.ui, toast } }));
+}
+// How much each ally of the majority remembers against the Government's side, 0–3: broken accords on record, bad relations, a grudge between the forces. It makes its requests harder.
+function accordTemper(game, world, parliament) {
+  const government = parliament?.government;
+  const premier = government?.premierGroupId ?? (government?.primeMinister === 'player' || government?.formedBy === 'player' ? parliament.player?.groupId : null);
+  const premierParty = ['camera', 'senato'].flatMap(chamber => parliament.chambers?.[chamber]?.groups ?? []).find(group => group.groupId === premier)?.partyId ?? null;
+  const out = {};
+  for (const id of [...(government?.coalitionGroupIds ?? []), ...(government?.supportingGroupIds ?? [])]) {
+    const partyId = ['camera', 'senato'].flatMap(chamber => parliament.chambers?.[chamber]?.groups ?? []).find(group => group.groupId === id)?.partyId ?? null;
+    const grudge = partyId && premierParty ? world?.grudges?.[[partyId, premierParty].sort().join('|')] ?? 0 : 0;
+    const memory = partyId && game ? memoryAbout(game, partyId, 'bad') - memoryAbout(game, partyId, 'good') : 0;
+    out[id] = (memory > 0.8 ? 1 : 0) + ((parliament.relations?.[id]?.value ?? 50) < 40 ? 1 : 0) + (grudge > 0 ? 1 : 0);
+  }
+  return out;
+}
+// Every week the accord is read against what the game has done; the player's memory and the ties between the forces keep what came of it.
+function tickAccordWeek(s, date) {
+  // (a Government the player has a hand in that has no accord yet — a game saved before, or a mandate just begun — gets it through the usual funnel)
+  if (s.parliament?.government && !s.parliament.government.accord) return accordApplies(s.parliament) ? computeParliamentUpdate(s, s.parliament, s.ui.toast) : s;
+  if (!s.parliament?.government?.accord) return s;
+  const out = tickAccord(s.parliament, date, { temper: accordTemper(s.game, s.world, s.parliament) });
+  if (!out.settled.length) return out.parliament === s.parliament ? s : { ...s, parliament: out.parliament };
+  const player = s.parliament.player?.groupId ?? null;
+  const toWorld = id => id && id === s.career.partyId ? s.world?.playerPartyId ?? id : id;
+  let game = s.game ? deepCopy(s.game) : s.game, world = s.world;
+  for (const item of out.settled) {
+    const partner = toWorld(item.partyId), premier = toWorld(item.premierPartyId);
+    if (world) world = recordAccordOutcome(world, { fromPartyId: premier, toPartyId: partner, outcome: item.outcome, weight: item.commitment.weight, text: item.text }, date);
+    if (!game || item.outcome === 'rinviato') continue;
+    const mine = item.groupId === player;
+    const leads = out.parliament.government.primeMinister === 'player' || out.parliament.government.formedBy === 'player';
+    if (leads && !mine && partner) remember(game, { date, kind: item.outcome === 'mantenuto' ? 'promessa-mantenuta' : 'promessa-tradita', text: item.text, subject: partner, partyId: partner, weight: 0.6 + 0.3 * item.commitment.weight });
+    else if (mine && premier) remember(game, { date, kind: item.outcome === 'mantenuto' ? 'lealta' : 'alleato-tradito', text: item.text, subject: premier, partyId: premier, weight: 0.6 + 0.3 * item.commitment.weight });
+  }
+  return computeParliamentUpdate({ ...s, game, world }, out.parliament, s.ui.toast);
 }
 // The player's decided vote on a confidence vote (agenda or Governo page) weighs like a vote on a law.
 function withConfidenceVotes(before, after) {
@@ -904,7 +946,7 @@ function handleSpecials(s, specials) {
       try {
         const closed = allianceWindow(next);
         if (!closed.open) throw new Error(closed.reason);
-        const out = joinCoalition(next.world, special.allianceId, next.clock.currentDate, { terms: special.terms });
+        const out = joinCoalition(next.world, special.allianceId, next.clock.currentDate, { terms: special.terms, due: (next.game?.elections ?? []).find(item => item.type === 'politiche' && item.status !== 'held')?.electionDate ?? null });
         next = { ...next, world: out.world };
         if (out.joined && !out.already) next = rememberFact(next, { kind: 'alleanza', text: `In coalizione con ${special.params?.partyLabel ?? next.world.parties.find(item => item.id === special.partyId)?.label ?? 'altre forze'}`, partyId: special.partyId, subject: special.partyId, weight: 1 });
       } catch (error) { next = { ...next, ui: { ...next.ui, toast: error.message } }; }
@@ -1300,6 +1342,7 @@ function settleWeeks(s) {
     const result = advanceWeek({ game: next.game, stats: statsOf(next), parliament: next.parliament ? { ...next.parliament, difficulty } : next.parliament }, { ...gameEnv(next), currentDate: weekEnd }, advanceGovernmentWeek);
     next = applyGameResult(next, result.ctx, next.ui.toast, result.specials);
     if (result.report) next = tickLegislature(next, weekEnd);
+    if (result.report) next = tickAccordWeek(next, weekEnd);
     if (result.report) next = tickLocal(next, weekEnd);
     if (result.report) next = tickRosters(next);
     if (result.report) next = tickSociety(next, weekEnd, result.report);
@@ -2161,9 +2204,14 @@ function holdPolitiche(s, national, { campaign, date, number }) {
   const vote = runNationalVote({ geography, world, coalitions, date, seed: s.career.id ?? seedOf(s), player: votePlayer, line: national.campaign?.line ?? null, participation: s.society?.participation ?? 60 });
   const labelOf = nationalLabel({ world }, vote);
   const outcome = votePlayer?.candidate ? politicheOutcome(vote, votePlayer, { geography }) : null;
+  // The terms the player's party obtained entering a coalition are read against what the vote shows (leadership, programme, candidacies, vetoes).
+  const quotas = Object.assign({}, ...coalitions.map(coalition => candidacyQuotas(coalition, vote.camera.shares, vote.camera.collegi?.length ?? 0)));
+  const terms = settleElectoralTerms(world, { coalitions, quotas, date });
+  world = terms.world;
   const regions = regionalBreakdown(vote, geography, chamber ?? 'camera');
   // A seat held by a player who did not run ends with the legislature.
   next = { ...next, world };
+  for (const item of terms.settled.filter(entry => entry.term.partyId === world.playerPartyId && entry.outcome !== 'decaduto')) next = rememberFact(next, item.outcome === 'mantenuto' ? { kind: 'alleanza', text: item.text, partyId: item.promisorId, subject: item.promisorId, weight: 1 } : { kind: 'alleato-tradito', text: item.text, partyId: item.promisorId, subject: item.promisorId, weight: 1.5 });
   if (!campaign && next.career.parliamentContext) next = endMandate(next, 'Fine della legislatura');
   // The new Chambers and their groups; the outgoing Government stays for current business.
   const groups = legislatureGroups(vote, { number, date, world });
@@ -3620,6 +3668,19 @@ export const store = {
     const toast = result.law.stage === 'approved' ? 'Legge approvata in simulazione' : result.law.stage === 'rejected' ? 'Votazione conclusa: proposta respinta' : 'Iter legislativo aggiornato';
     return applyParliamentUpdate(next, result.parliament, toast, delta);
   },
+  // ---------- the accord of the coalition ----------
+  // The requests of the allies while the programme is negotiated (accepted, scaled down, refused), a concession to an ally, and what a measure would do to the accord.
+  answerAccord(commitmentId, answer) {
+    requireFormateur();
+    const parliament = answerCommitment(state.parliament, commitmentId, answer, state.clock.currentDate, { temper: accordTemper(state.game, state.world, state.parliament) });
+    return applyParliamentUpdate(state, parliament, answer === 'respinta' ? 'Richiesta respinta: l’alleato se ne ricorderà' : 'Risposta registrata');
+  },
+  offerAccordConcession(groupId) {
+    requireFormateur();
+    const next = withTime(1);
+    return applyParliamentUpdate(next, offerConcession(next.parliament, groupId, next.clock.currentDate), 'Concessione registrata nell’accordo');
+  },
+  accordConflicts: policy => accordConflicts(state.parliament, policy),
   formGovernment(groupIds) {
     requireSecretary();
     // In a crisis, before the President of the Republic gives the mandate, a secretary with a seat can present a

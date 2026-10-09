@@ -83,6 +83,11 @@ export function agendaCalendar(state, { horizonDays = 730 } = {}) {
     const group = Object.values(parliament.chambers ?? {}).flatMap(chamber => chamber.groups ?? []).find(item => item.groupId === groupId);
     add({ id: `richiesta-${groupId}-${partner.demand.deadline}`, date: partner.demand.deadline, kind: 'alleato', title: `${group?.officialName ?? 'Un alleato'} chiede ${partner.demand.label}`, detail: 'Se la richiesta resta senza risposta, il sostegno al governo vacilla.', tone: 'warn', action: { type: 'nav', page: 'governo' } });
   }
+  // The commitments of the coalition accord with a term: kept or postponed (once) or betrayed when it passes.
+  for (const c of (parliament?.government?.accord?.commitments ?? []).filter(item => ['aperto', 'rinviato'].includes(item.status) && item.due)) {
+    const group = Object.values(parliament.chambers ?? {}).flatMap(chamber => chamber.groups ?? []).find(item => item.groupId === c.groupId);
+    add({ id: `impegno-${c.id}`, date: c.due, kind: 'alleato', title: `Accordo di governo — ${group?.officialName ?? 'un alleato'}: ${c.label}`, detail: c.status === 'rinviato' ? 'Già rinviato una volta: se non viene mantenuto è un tradimento.' : 'Se la scadenza passa senza il provvedimento, l’impegno viene rinviato una volta e poi tradito.' });
+  }
   // The national cycle: lists filed for the general election, the steps of the formation of the Government, the end
   // of the legislature.
   const national = state.national;
