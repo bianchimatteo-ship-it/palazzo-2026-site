@@ -33,7 +33,8 @@ export const CATEGORY_REPUTATION = Object.freeze({
   partito: 'internal', relazioni: 'internal', carriera: 'internal',
   territorio: 'territorial', sociale: 'territorial', economia: 'territorial', sicurezza: 'territorial', emergenza: 'territorial', elezioni: 'territorial',
   media: 'media', scandalo: 'media', memoria: 'media', crisi: 'media', opportunita: 'media',
-  parlamento: 'institutional', governo: 'institutional', europa: 'institutional'
+  parlamento: 'institutional', governo: 'institutional', europa: 'institutional', esteri: 'institutional', quirinale: 'institutional',
+  cerimonie: 'media', cultura: 'media'
 });
 
 // The sectors of influence are the groups of the policy areas (the same eight as the national indicators).
