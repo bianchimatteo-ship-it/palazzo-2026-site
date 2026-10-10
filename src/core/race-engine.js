@@ -4,10 +4,10 @@
 // Pure functions on plain data: the store gives them the calendar, the people and the state of the game, and keeps what they return.
 // Everything made here is simulation: the territories and the dates come from the real calendar of the votes, the candidates and the results are
 // simulated (a real politician stays real, his candidacy is not); a new figure is a person of the simulation, never a real one.
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261009-4';
-import { RACE_LEVELS, RACE_ROLES, RACE_RULES } from '../data/simulation/race-rules.js?v=20261009-4';
-import { advanceDays, nextMunicipalVote, nextProvincialVote, nextRegionalVote } from './time.js?v=20261009-4';
-import { advanceCampaign, campaignObservatory, createCampaign, decideCampaignEvent, performCampaignActivity, setExpectation } from './campaign-engine.js?v=20261009-4';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261010-1';
+import { RACE_LEVELS, RACE_ROLES, RACE_RULES } from '../data/simulation/race-rules.js?v=20261010-1';
+import { advanceDays, nextMunicipalVote, nextProvincialVote, nextRegionalVote } from './time.js?v=20261010-1';
+import { advanceCampaign, campaignObservatory, createCampaign, decideCampaignEvent, performCampaignActivity, setExpectation } from './campaign-engine.js?v=20261010-1';
 
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
