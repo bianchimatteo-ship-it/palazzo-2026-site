@@ -4,14 +4,14 @@
 // Pure functions on a plain state (`state.presidency`): nothing here touches the store, the parliament or the world;
 // the store applies the consequences. Every draw comes from a seeded sequence: the same state gives the same vote.
 // Everything is simulation: the candidates are figures of the game and the incumbent is never named.
-import { uniqueId } from './ids.js?v=20261009-4';
-import { advanceDays, formatDate } from './time.js?v=20261009-4';
-import { seededRandom } from './vote-engine.js?v=20261009-4';
-import { campOfAxis } from './parliament-engine.js?v=20261009-4';
-import { linkGroupsToParties } from './lawmaking-engine.js?v=20261009-4';
-import { regionalShares } from './world-engine.js?v=20261009-4';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261009-4';
-import { AFFINITY, CAMP_LABELS, CANDIDATE_TYPES, PRESIDENCY_RULES, PRESIDENT_ACTIVITIES, PRESIDENT_ACTS } from '../data/simulation/presidency-rules.js?v=20261009-4';
+import { uniqueId } from './ids.js?v=20261010-1';
+import { advanceDays, formatDate } from './time.js?v=20261010-1';
+import { seededRandom } from './vote-engine.js?v=20261010-1';
+import { campOfAxis } from './parliament-engine.js?v=20261010-1';
+import { linkGroupsToParties } from './lawmaking-engine.js?v=20261010-1';
+import { regionalShares } from './world-engine.js?v=20261010-1';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261010-1';
+import { AFFINITY, CAMP_LABELS, CANDIDATE_TYPES, LEDGER_KEEP, LEDGER_RULES, PRESIDENCY_RULES, PRESIDENT_ACTIVITIES, PRESIDENT_ACTS } from '../data/simulation/presidency-rules.js?v=20261010-1';
 
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -736,6 +736,67 @@ export function presidentWeek(presidency, { week }) {
   const drift = round2((55 - credit) * 0.02);
   const next = { ...presidency, incumbent: { ...incumbent, credit: round1(clamp(credit + drift, 0, 100)) } };
   return { presidency: next, stability: round2(clamp((credit - 55) / 60, -0.4, 0.5)) };
+}
+// ---------- the commitments of the term: what a decision leaves to be checked ----------
+// A decision of the President is not only credit now: it opens a commitment (a letter on a decree, a message to the Chambers, a judge, a visit) that comes due weeks later and is checked
+// against what the Chambers, the Government and the country really did. The outcome moves the credit and the stability of the Government, and stays in the record of the term.
+export function addLedger(presidency, entry) {
+  if (presidency.incumbent.kind !== 'giocatore') return presidency;
+  const ledger = presidency.incumbent.ledger ?? [];
+  const item = { id: uniqueId(ledger, `impegno-${entry.week}-${entry.kind}`), ...entry };
+  return { ...presidency, incumbent: { ...presidency.incumbent, ledger: [...ledger, item] } };
+}
+export const ledgerLabel = entry => LEDGER_RULES[entry.kind]?.label ?? entry.kind;
+// Did it work? A check on the laws and the numbers of the game where there is something to check; where only the standing of the President counts, a seeded draw that follows the credit.
+function checkLedger(entry, { week, parliament, society, credit, rand }) {
+  const laws = parliament?.laws ?? [];
+  const history = parliament?.history ?? [];
+  const approvedSince = area => history.some(item => item.date >= entry.date && ['iter-approved', 'decreto-adottato'].includes(item.type) && laws.find(law => law.id === item.details?.lawId)?.policy?.area === area);
+  const lawOf = laws.find(law => law.id === entry.lawId);
+  const europe = society?.areas?.europa?.value ?? 50, abroad = society?.areas?.esteri?.value ?? 50;
+  if (entry.kind === 'rilievi') return { success: Boolean(lawOf && (lawOf.amendments ?? []).length > (entry.base ?? 0)) };
+  if (entry.kind === 'rinvio') return { success: Boolean(lawOf && ((lawOf.amendments ?? []).length > (entry.base ?? 0) || lawOf.stage === 'rejected')) };
+  if (entry.kind === 'messaggio') return { success: approvedSince(entry.area) };
+  if (entry.kind === 'lettera') return { success: rand() < clamp(0.35 + (credit - 50) / 150, 0.15, 0.8) };
+  if (entry.kind === 'grazia') return { success: rand() < clamp(0.5 + (credit - 50) / 200, 0.25, 0.8) };
+  if (entry.kind === 'incarico' || entry.kind === 'scioglimento') {
+    const government = parliament?.government;
+    const solid = Boolean(government && ['active', 'crisis'].includes(government.status) && (government.stability ?? 0) >= (entry.choice === 'tech' ? 45 : 38));
+    return { success: solid };
+  }
+  if (entry.kind === 'garanzia') return { success: parliament?.government && ['active', 'crisis'].includes(parliament.government.status) && (parliament.government.stability ?? 50) >= (entry.baseline ?? 0) };
+  if (entry.kind === 'diplomazia') {
+    const standing = entry.partner === 'europa' ? europe : entry.partner === 'atlantico' ? abroad : (europe + abroad) / 2;
+    const good = rand() < clamp(0.3 + (standing - 50) / 120 + ((society?.publicFinance?.euStatus ?? 'regolare') === 'regolare' ? 0.1 : -0.1), 0.1, 0.85);
+    return { success: good, shock: good ? { area: entry.partner === 'europa' ? 'europa' : 'esteri', areaDelta: 2 } : null };
+  }
+  if (entry.kind === 'corte') {
+    // The Court rules on a law of the Government approved since the nomination: how likely it is to strike it depends on who sits there.
+    const candidates = laws.filter(law => law.stage === 'approved' && law.origin === 'governo' && law.updatedAt >= entry.date && !law.annulled);
+    const profile = { accademico: 0, magistrato: 0.08, avvocato: -0.1 }[entry.profile] ?? 0;
+    const strike = candidates.length && rand() < clamp(0.3 + profile - (credit - 50) / 400, 0.1, 0.6);
+    return strike ? { success: false, annul: candidates[Math.floor(rand() * candidates.length)].id } : { success: true };
+  }
+  return { success: true };
+}
+export function settleLedger(presidency, { week, date, parliament, society }) {
+  const incumbent = presidency.incumbent;
+  if (incumbent.kind !== 'giocatore') return { presidency, results: [] };
+  const due = (incumbent.ledger ?? []).filter(entry => entry.dueWeek <= week);
+  if (!due.length) return { presidency, results: [] };
+  const results = [];
+  let verified = incumbent.verified ?? [];
+  for (const entry of due) {
+    const rule = LEDGER_RULES[entry.kind];
+    if (!rule) continue;
+    const rand = seededRandom(`${presidency.seed}|impegno|${entry.id}`);
+    const check = checkLedger(entry, { week, parliament, society, credit: incumbent.credit ?? PRESIDENCY_RULES.creditStart, rand });
+    const outcome = check.success ? rule.success : rule.failure;
+    results.push({ entry, success: Boolean(check.success), credit: outcome.credit, stability: outcome.stability, text: outcome.text, shock: check.shock ?? null, annul: check.annul ?? null });
+    verified = [{ id: entry.id, kind: entry.kind, label: rule.label, decided: entry.date, checked: date, success: Boolean(check.success), text: outcome.text }, ...verified].slice(0, LEDGER_KEEP);
+  }
+  const doneIds = new Set(due.map(entry => entry.id));
+  return { presidency: { ...presidency, incumbent: { ...incumbent, ledger: (incumbent.ledger ?? []).filter(entry => !doneIds.has(entry.id)), verified } }, results };
 }
 export const ACTS = PRESIDENT_ACTS;
 export const ACTIVITIES = PRESIDENT_ACTIVITIES;

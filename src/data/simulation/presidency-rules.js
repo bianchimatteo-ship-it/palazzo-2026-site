@@ -129,7 +129,7 @@ export const PRESIDENCY_SITUATIONS = Object.freeze({
     ]
   },
   'presidente-decreto': {
-    id: 'presidente-decreto', title: 'Un decreto-legge dai dubbi costituzionali', body: 'Il governo ti trasmette un decreto-legge: gli uffici del Quirinale segnalano profili di dubbia costituzionalità. Se lo emani, entra in vigore subito; se lo rifiuti, il governo ne esce indebolito.',
+    id: 'presidente-decreto', title: 'Il decreto-legge «{title}» dai dubbi costituzionali', body: 'Il governo ti trasmette il decreto-legge «{title}»: gli uffici del Quirinale segnalano profili di dubbia costituzionalità. Se lo emani, resta in vigore; se lo rifiuti, decade e il governo ne esce indebolito; con una lettera di rilievi chiedi di correggerlo in sede di conversione.',
     defaultChoice: 'rilievi', choices: [
       sponsorChoice('emana', 'Emana il decreto senza rilievi', 'presidency-act-decreto-emanato'),
       sponsorChoice('rilievi', 'Emana il decreto con una lettera di rilievi', 'presidency-act-decreto-rilievi'),
@@ -141,6 +141,40 @@ export const PRESIDENCY_SITUATIONS = Object.freeze({
     defaultChoice: 'governo', choices: [
       sponsorChoice('convoca', 'Convoca il Consiglio e parla al Paese', 'presidency-act-difesa'),
       sponsorChoice('governo', 'Lascia la scena al governo', 'presidency-act-difesa-governo')
+    ]
+  },
+  'presidente-legge': {
+    id: 'presidente-legge', title: 'Una legge da promulgare: «{title}»', body: 'Le Camere hanno approvato «{title}» e hai trenta giorni per promulgarla (art. 73). {doubt} Puoi promulgarla, farlo con una lettera ai presidenti delle Camere che segnali i dubbi, o rinviarla alle Camere una volta sola (art. 74): il governo ne uscirebbe indebolito.',
+    defaultChoice: 'promulga', choices: [
+      sponsorChoice('promulga', 'Promulga la legge', 'presidency-act-legge-promulgata'),
+      sponsorChoice('lettera', 'Promulga con una lettera sui dubbi di costituzionalità', 'presidency-act-legge-lettera'),
+      sponsorChoice('rinvia', 'Rinvia la legge alle Camere', 'presidency-act-legge-rinviata')
+    ]
+  },
+  'presidente-corte': {
+    id: 'presidente-corte', title: 'Nomina di un giudice della Corte costituzionale', body: 'Tocca a te nominare uno dei cinque giudici di tua competenza (art. 135). La scelta pesa per anni: la Corte giudicherà le leggi del governo e le tue scelte di oggi si vedranno nelle sentenze di domani. Giudici già nominati da te: {named}.',
+    defaultChoice: 'accademico', choices: [
+      sponsorChoice('accademico', 'Un costituzionalista indipendente', 'presidency-act-corte-accademico'),
+      sponsorChoice('magistrato', 'Un magistrato di lungo corso', 'presidency-act-corte-magistrato'),
+      sponsorChoice('avvocato', 'Un avvocato dello Stato vicino alle istituzioni', 'presidency-act-corte-avvocato')
+    ]
+  },
+  'presidente-diplomazia': {
+    id: 'presidente-diplomazia', title: 'Diplomazia: una visita di Stato', body: 'Il Presidente rappresenta l’unità nazionale e ratifica i trattati (art. 87): tre capitali attendono una tua visita, e nessuna è neutra. Le scelte del governo e i rapporti dell’Italia ne risentono. Oggi i rapporti con l’Europa valgono {europa}/100 e il peso internazionale {esteri}/100.',
+    defaultChoice: 'rinuncia', choices: [
+      sponsorChoice('europa', 'Visita alle istituzioni europee', 'presidency-act-diplomazia-europa'),
+      sponsorChoice('atlantico', 'Visita di Stato a un alleato atlantico', 'presidency-act-diplomazia-atlantico'),
+      sponsorChoice('mediterraneo', 'Viaggio nel Mediterraneo: energia e migrazioni', 'presidency-act-diplomazia-mediterraneo'),
+      sponsorChoice('rinuncia', 'Rinuncia: l’agenda interna viene prima', 'presidency-act-diplomazia-rinuncia')
+    ]
+  },
+  'presidente-garanzia': {
+    id: 'presidente-garanzia', title: 'Crisi di garanzia: lo scontro tra poteri', body: '{conflict} Il Presidente è garante della Costituzione: puoi intervenire con la moral suasion riservata, con una dichiarazione pubblica, oppure convocare i leader per un chiarimento. Se non fai nulla lo scontro si allarga.',
+    defaultChoice: 'attendi', choices: [
+      sponsorChoice('suasion', 'Moral suasion riservata sui protagonisti', 'presidency-act-garanzia-suasion'),
+      sponsorChoice('pubblica', 'Dichiarazione pubblica sul rispetto delle regole', 'presidency-act-garanzia-pubblica'),
+      sponsorChoice('leader', 'Convoca i leader di maggioranza e opposizione', 'presidency-act-garanzia-leader'),
+      sponsorChoice('attendi', 'Non intervenire', 'presidency-act-attesa')
     ]
   },
   'presidente-fine-anno': {
@@ -163,20 +197,45 @@ export const PRESIDENCY_SITUATIONS = Object.freeze({
 
 // What a decision of the President does: credit with the Chambers and the country, the stability of the Government,
 // the mood of the citizens, the personal standing, and what stays in the memory. Never the same twice in a row.
+// What a decision can also set in motion: `law` acts on the law of the decision, `ledger` is a commitment that comes due (checked against what the Chambers and the country really do:
+// see LEDGER_RULES), `shock` moves an area of the country, `court` names a judge of the Constitutional Court.
 export const PRESIDENT_ACTS = Object.freeze({
-  'grazia': { label: 'Grazia concessa', credit: 3, stability: -1, mood: 0.6, stats: { popularity: 1, reputation: -0.5 }, memory: { kind: 'decisione', text: 'Hai concesso una grazia', weight: 1 }, line: 'Concedi la grazia: parte dell’opinione pubblica applaude, la magistratura è fredda.' },
+  'grazia': { label: 'Grazia concessa', credit: 3, stability: -1, mood: 0.6, stats: { popularity: 1, reputation: -0.5 }, memory: { kind: 'decisione', text: 'Hai concesso una grazia', weight: 1 }, ledger: { kind: 'grazia', weeks: 10 }, line: 'Concedi la grazia: parte dell’opinione pubblica applaude, la magistratura è fredda.' },
   'grazia-negata': { label: 'Grazia negata', credit: 1, stability: 0, mood: -0.2, stats: { reputation: 0.5 }, memory: { kind: 'decisione', text: 'Hai respinto una domanda di grazia', weight: 0.6 }, line: 'Respingi la domanda: la giustizia ne esce rafforzata, i sostenitori del condannato protestano.' },
   'attesa': { label: 'Decisione rinviata', credit: -1, stability: 0, mood: 0, stats: {}, memory: null, line: 'Rinvii la decisione: nessuno è contento, ma nessuno può dirti di aver sbagliato.' },
   'decreto-emanato': { label: 'Decreto emanato', credit: -2, stability: 3, mood: 0, stats: { influence: -0.5 }, memory: { kind: 'decisione', text: 'Hai emanato un decreto dai dubbi costituzionali', weight: 0.8 }, line: 'Emani il decreto: il governo ringrazia, i costituzionalisti protestano.' },
-  'decreto-rilievi': { label: 'Decreto emanato con rilievi', credit: 2, stability: 0, mood: 0.2, stats: { reputation: 0.5 }, memory: null, line: 'Emani il decreto con una lettera di rilievi: il governo accetta, l’equilibrio regge.' },
-  'decreto-rifiutato': { label: 'Decreto rifiutato', credit: 3, stability: -6, mood: 0, stats: { influence: 1 }, memory: { kind: 'decisione', text: 'Hai rifiutato di emanare un decreto del governo', weight: 1.2 }, line: 'Rifiuti di emanare il decreto: il governo è in difficoltà, la Costituzione è salva.' },
+  'decreto-rilievi': { label: 'Decreto emanato con rilievi', credit: 2, stability: 0, mood: 0.2, stats: { reputation: 0.5 }, memory: null, ledger: { kind: 'rilievi', weeks: 8 }, line: 'Emani il decreto con una lettera di rilievi: il governo accetta, l’equilibrio regge.' },
+  'decreto-rifiutato': { label: 'Decreto rifiutato', credit: 3, stability: -6, mood: 0, stats: { influence: 1 }, memory: { kind: 'decisione', text: 'Hai rifiutato di emanare un decreto del governo', weight: 1.2 }, law: 'refuse', line: 'Rifiuti di emanare il decreto: il governo è in difficoltà, la Costituzione è salva.' },
   'difesa': { label: 'Consiglio supremo di difesa', credit: 3, stability: 1, mood: 0.8, stats: { notoriety: 1.5 }, memory: { kind: 'emergenza', text: 'Hai convocato il Consiglio supremo di difesa', weight: 0.8 }, line: 'Convochi il Consiglio e parli al Paese: l’Italia ti vede alla guida nei momenti difficili.' },
   'difesa-governo': { label: 'Difesa lasciata al governo', credit: -1, stability: 0, mood: -0.2, stats: {}, memory: null, line: 'Lasci la scena al governo: nessun rischio, ma qualcuno ti accusa di assenza.' },
   'messaggio-unita': { label: 'Messaggio di unità', credit: 3, stability: 1, mood: 0.8, stats: { popularity: 1 }, memory: null, line: 'Il messaggio di unità nazionale raccoglie un consenso trasversale.' },
   'messaggio-monito': { label: 'Monito alle forze politiche', credit: 1, stability: -2, mood: 0.2, stats: { influence: 0.8 }, memory: null, line: 'Il monito scuote le forze politiche: qualcuno si sente chiamato in causa.' },
-  'messaggio-riforme': { label: 'Appello alle riforme', credit: 0, stability: -1, mood: 0.2, stats: { influence: 1 }, memory: { kind: 'decisione', text: 'Hai chiesto riforme nel messaggio di fine anno', weight: 0.6 }, line: 'L’appello alle riforme apre il dibattito, ma divide la maggioranza.' },
+  'messaggio-riforme': { label: 'Appello alle riforme', credit: 0, stability: -1, mood: 0.2, stats: { influence: 1 }, memory: { kind: 'decisione', text: 'Hai chiesto riforme nel messaggio di fine anno', weight: 0.6 }, ledger: { kind: 'messaggio', weeks: 12 }, line: 'L’appello alle riforme apre il dibattito, ma divide la maggioranza.' },
   'csm-riservata': { label: 'Moral suasion al CSM', credit: 2, stability: 1, mood: 0, stats: { reputation: 0.6 }, memory: null, line: 'La moral suasion riservata raffredda lo scontro.' },
-  'csm-pubblica': { label: 'Dichiarazione sul CSM', credit: 1, stability: -2, mood: 0.2, stats: { notoriety: 1 }, memory: null, line: 'La dichiarazione pubblica riaccende le tensioni, ma fissa un confine.' }
+  'csm-pubblica': { label: 'Dichiarazione sul CSM', credit: 1, stability: -2, mood: 0.2, stats: { notoriety: 1 }, memory: null, line: 'La dichiarazione pubblica riaccende le tensioni, ma fissa un confine.' },
+  'legge-promulgata': { label: 'Legge promulgata', credit: 0.5, stability: 1, mood: 0, stats: {}, memory: null, line: 'Promulghi la legge nei tempi: il governo ringrazia, nessuno ha nulla da dire.' },
+  'legge-lettera': { label: 'Promulgazione con lettera', credit: 1, stability: -0.5, mood: 0.2, stats: { reputation: 0.4 }, memory: { kind: 'decisione', text: 'Hai promulgato una legge con una lettera sui dubbi', weight: 0.6 }, ledger: { kind: 'lettera', weeks: 8 }, line: 'Promulghi con una lettera ai presidenti delle Camere: segnali i dubbi senza fermare la legge.' },
+  'legge-rinviata': { label: 'Legge rinviata alle Camere', credit: 2, stability: 0, mood: 0.1, stats: { influence: 0.8 }, memory: { kind: 'decisione', text: 'Hai rinviato una legge alle Camere', weight: 1.1 }, law: 'return', ledger: { kind: 'rinvio', weeks: 6 }, line: 'Rinvii la legge alle Camere: gli effetti si fermano e si rivota tra due settimane.' },
+  'corte-accademico': { label: 'Giudice costituzionale: un costituzionalista', credit: 2, stability: 0, mood: 0.3, stats: { reputation: 0.6 }, court: 'accademico', memory: { kind: 'decisione', text: 'Hai nominato un costituzionalista indipendente alla Corte', weight: 0.8 }, ledger: { kind: 'corte', weeks: 26 }, line: 'Nomini un costituzionalista indipendente: la scelta è applaudita dai giuristi.' },
+  'corte-magistrato': { label: 'Giudice costituzionale: un magistrato', credit: 1.5, stability: -0.5, mood: 0.1, stats: { influence: 0.5 }, court: 'magistrato', memory: { kind: 'decisione', text: 'Hai nominato un magistrato alla Corte', weight: 0.8 }, ledger: { kind: 'corte', weeks: 30 }, line: 'Nomini un magistrato di lungo corso: la Corte sarà più attenta ai diritti dei cittadini.' },
+  'corte-avvocato': { label: 'Giudice costituzionale: un avvocato dello Stato', credit: 1, stability: 1, mood: 0, stats: {}, court: 'avvocato', memory: { kind: 'decisione', text: 'Hai nominato un avvocato dello Stato alla Corte', weight: 0.8 }, ledger: { kind: 'corte', weeks: 34 }, line: 'Nomini un avvocato dello Stato: la Corte sarà più prudente con l’azione del governo.' },
+  'diplomazia-europa': { label: 'Visita alle istituzioni europee', credit: 1.5, stability: 0.5, mood: 0.4, stats: { notoriety: 0.8 }, shock: { area: 'europa', areaDelta: 2 }, ledger: { kind: 'diplomazia', weeks: 8, partner: 'europa' }, line: 'Il tuo discorso a Bruxelles riporta l’Italia al centro del tavolo europeo.' },
+  'diplomazia-atlantico': { label: 'Visita di Stato a un alleato atlantico', credit: 1.5, stability: 0, mood: 0.4, stats: { notoriety: 0.8 }, shock: { area: 'esteri', areaDelta: 2 }, ledger: { kind: 'diplomazia', weeks: 8, partner: 'atlantico' }, line: 'La visita di Stato rafforza l’alleanza e il peso internazionale del Paese.' },
+  'diplomazia-mediterraneo': { label: 'Viaggio nel Mediterraneo', credit: 1, stability: 0.5, mood: 0.2, stats: { influence: 0.5 }, shock: { area: 'esteri', areaDelta: 1 }, ledger: { kind: 'diplomazia', weeks: 8, partner: 'mediterraneo' }, line: 'Il viaggio apre un canale su energia e migrazioni, con esiti incerti.' },
+  'diplomazia-rinuncia': { label: 'Visita rinviata', credit: -0.5, stability: 0, mood: 0, stats: {}, memory: null, line: 'Rinunci al viaggio: nessun rischio, ma qualcuno nota l’assenza.' },
+  'garanzia-suasion': { label: 'Moral suasion riservata', credit: 2, stability: 1.5, mood: 0, stats: { reputation: 0.5 }, ledger: { kind: 'garanzia', weeks: 6 }, line: 'La moral suasion raffredda lo scontro senza esporre il Quirinale.' },
+  'garanzia-pubblica': { label: 'Dichiarazione pubblica sulle regole', credit: 1, stability: -2, mood: 0.4, stats: { notoriety: 1 }, ledger: { kind: 'garanzia', weeks: 6 }, line: 'Parli in pubblico: fissi un confine, ma una parte politica si sente accusata.' },
+  'garanzia-leader': { label: 'Chiarimento tra i leader', credit: 1.5, stability: 2, mood: 0, stats: { influence: 0.8 }, ledger: { kind: 'garanzia', weeks: 6 }, line: 'Il chiarimento al Quirinale ricompone lo scontro, per ora.' },
+  'lettere-cittadini': { label: 'Risposta alle lettere dei cittadini', credit: 0.8, stability: 0, mood: 0.3, stats: { popularity: 0.5 }, memory: null, line: 'Rispondi ad alcune lettere: il Paese se ne accorge.' },
+  'cerimonia-memoria': { label: 'Cerimonia della memoria', credit: 1, stability: 0.3, mood: 0.5, stats: { reputation: 0.5 }, memory: null, line: 'La cerimonia raccoglie il Paese attorno a un ricordo condiviso.' },
+  'tragedia-visita': { label: 'Visita ai luoghi della tragedia', credit: 2, stability: 0.5, mood: 0.8, stats: { popularity: 1 }, memory: { kind: 'emergenza', text: 'Hai visitato i luoghi di una tragedia', weight: 0.8 }, line: 'La tua presenza accanto ai familiari è ricordata a lungo.' },
+  'tragedia-messaggio': { label: 'Messaggio di cordoglio', credit: 0.5, stability: 0, mood: 0.3, stats: {}, memory: null, line: 'Il messaggio di cordoglio è sobrio e arriva presto.' },
+  'ospite-stato': { label: 'Intesa con un ospite di Stato', credit: 1, stability: 0.3, mood: 0.3, stats: { notoriety: 0.5 }, shock: { area: 'esteri', areaDelta: 1 }, memory: null, line: 'Il colloquio con l’ospite di Stato porta a un’intesa sui dossier aperti.' },
+  'mediazione-sociale': { label: 'Mediazione su una vertenza', credit: 1, stability: 0.8, mood: 0.3, stats: { reputation: 0.4 }, memory: null, line: 'Ricevi le parti: il governo si sente richiamato a fare la sua parte.' },
+  'festa-europa': { label: 'Discorso europeista', credit: 0.8, stability: 0.2, mood: 0.2, stats: { notoriety: 0.5 }, shock: { area: 'europa', areaDelta: 1 }, memory: null, line: 'Il discorso europeista è letto a Bruxelles e commentato a Roma.' },
+  'intervista': { label: 'Intervista del Presidente', credit: -0.5, stability: -1, mood: 0.4, stats: { notoriety: 1.5 }, memory: { kind: 'decisione', text: 'Hai rilasciato un’intervista da Presidente', weight: 0.5 }, line: 'L’intervista fa discutere: qualcuno la legge come una linea politica.' },
+  'governo-incontro': { label: 'Incontro con il presidente del Consiglio', credit: 0.8, stability: 1.2, mood: 0, stats: { influence: 0.4 }, memory: null, line: 'L’incontro riservato con Palazzo Chigi mette ordine nei rapporti.' },
+  'riforma-appello': { label: 'Appello alle riforme', credit: 0.5, stability: -1, mood: 0.2, stats: { influence: 0.6 }, ledger: { kind: 'messaggio', weeks: 8 }, line: 'L’appello alle riforme apre il dibattito: ora si vede se il Parlamento lo raccoglie.' }
 });
 
 // The weekly activities of the President (the ones a politician has do not fit the office): days of work, effects on
@@ -188,3 +247,19 @@ export const PRESIDENT_ACTIVITIES = Object.freeze([
   { id: 'messaggio', label: 'Messaggio alle Camere', detail: 'Un messaggio formale sulle priorità del Paese: il Parlamento è invitato a discuterne. Pesa, ma si usa poco.', cost: { ap: 1, capital: 2 }, credit: 1, stability: -1, mood: 0.3, stats: { influence: 1 }, cooldownWeeks: 26 },
   { id: 'cerimonia', label: 'Cerimonia e incontri di Stato', detail: 'Il lavoro quotidiano di rappresentanza: ambasciatori, onorificenze, ricorrenze nazionali.', cost: { ap: 1 }, credit: 0.5, stability: 0, mood: 0.2, stats: { reputation: 0.4 }, cooldownWeeks: 1 }
 ]);
+
+// The commitments a decision of the President leaves behind, and how they are checked weeks later against what the Chambers, the Government and the country really did. label: how they read in the interface;
+// success: the credit and stability gained; failure: the same when they come to nothing. Never a bonus without a check.
+export const LEDGER_RULES = Object.freeze({
+  rilievi: { label: 'Lettera di rilievi sul decreto', success: { credit: 2.5, stability: 0.5, text: 'Il decreto è stato corretto in sede di conversione: la lettera ha pesato.' }, failure: { credit: -1.5, stability: 0, text: 'Il decreto è passato senza correzioni: i rilievi del Quirinale sono rimasti inascoltati.' } },
+  lettera: { label: 'Lettera sui dubbi di una legge', success: { credit: 2, stability: 0.5, text: 'Il Parlamento ha raccolto la segnalazione e ha rimesso mano alla materia.' }, failure: { credit: -0.5, stability: 0, text: 'La segnalazione non ha avuto seguito: la legge resta com’è.' } },
+  rinvio: { label: 'Rinvio di una legge', success: { credit: 2, stability: 0, text: 'Le Camere hanno corretto il testo prima di riapprovarlo: il rinvio ha avuto un senso.' }, failure: { credit: -1, stability: -1, text: 'Le Camere hanno riapprovato la legge senza cambiarla: il rinvio ha solo allungato i tempi.' } },
+  messaggio: { label: 'Messaggio alle Camere', success: { credit: 3, stability: 0.5, text: 'Il Parlamento ha approvato un provvedimento sul tema del messaggio.' }, failure: { credit: -1.5, stability: 0, text: 'Il messaggio è rimasto senza risposta: le Camere non hanno legiferato sul tema.' } },
+  corte: { label: 'Giudice costituzionale', success: { credit: 1.5, stability: 0, text: 'La Corte ha deciso con equilibrio: la tua nomina è stata una buona scelta.' }, failure: { credit: -1, stability: -1.5, text: 'La Corte ha dichiarato illegittima una legge del governo: lo scontro si riflette sul Quirinale.' } },
+  diplomazia: { label: 'Visita diplomatica', success: { credit: 2, stability: 0.5, text: 'La visita ha dato frutti: accordi e rapporti più solidi.' }, failure: { credit: -1, stability: 0, text: 'La visita non ha portato nulla: i rapporti restano freddi.' } },
+  garanzia: { label: 'Intervento di garanzia', success: { credit: 2, stability: 1, text: 'Lo scontro tra poteri si è chiuso: il tuo intervento ha retto.' }, failure: { credit: -1.5, stability: -2, text: 'Lo scontro è peggiorato: l’intervento non ha tenuto.' } },
+  incarico: { label: 'Incarico per il governo', success: { credit: 2, stability: 0.5, text: 'Il governo a cui hai dato l’incarico ha la fiducia e regge: la scelta delle consultazioni è stata solida.' }, failure: { credit: -2.5, stability: -1, text: 'Il governo a cui hai dato l’incarico non regge: la scelta delle consultazioni è messa in discussione.' } },
+  scioglimento: { label: 'Scioglimento delle Camere', success: { credit: 1.5, stability: 0.5, text: 'Dopo il voto anticipato c’è un governo che ha la fiducia: lo scioglimento ha sbloccato la crisi.' }, failure: { credit: -2, stability: -1, text: 'Dopo il voto anticipato il governo non regge ancora: lo scioglimento non ha risolto la crisi.' } },
+  grazia: { label: 'Grazia concessa', success: { credit: 1.5, stability: 0, text: 'La grazia è stata accolta senza polemiche: nessun caso di recidiva.' }, failure: { credit: -2.5, stability: -0.5, text: 'La persona graziata è tornata alla cronaca: la polemica ricade sul Colle.' } }
+});
+export const LEDGER_KEEP = 12;

@@ -661,8 +661,10 @@ select option, select optgroup { background: #141b18; color: #e8ece9; font-size:
 .project-funding { display: grid; gap: 8px; }
 .project-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .project-form { display: grid; gap: 12px; padding-top: 6px; }
-.project-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
-.project-form label { display: grid; gap: 4px; font-size: 12px; color: var(--ink-2); }
+.project-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr)); gap: 10px; }
+.project-form label { display: grid; gap: 4px; min-width: 0; font-size: 12px; color: var(--ink-2); }
+.project-form select, .project-form input { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; text-overflow: ellipsis; }
+.eu-row select { max-width: 100%; min-width: 0; }
 .eu-row { grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
 .eu-row > .secondary-button { grid-column: 1 / -1; justify-self: start; }
 .eu-row .secondary-button[disabled] { opacity: .5; cursor: not-allowed; }

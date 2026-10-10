@@ -1,20 +1,20 @@
 // The electoral centre: next vote, calendar, context, candidacy, campaign, polls and rivals, results and history.
-import { isSecretary, upcomingElections, upcomingRounds } from '../core/career-engine.js?v=20261009-4';
-import { RACE_RULES } from '../data/simulation/race-rules.js?v=20261009-4';
-import { campaignSummary, strategyOf } from '../core/campaign-engine.js?v=20261009-4';
-import { CAMPAIGN_PHASES, ELECTION_MODELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261009-4';
-import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261009-4';
-import { formatDate } from '../core/time.js?v=20261009-4';
-import { societyMood } from '../core/society-engine.js?v=20261009-4';
-import { renderCampaignPage } from './campaign-mode.js?v=20261009-4';
-import { politicalPhase } from './game-mode.js?v=20261009-4';
-import { lineChart, SERIES } from './charts.js?v=20261009-4';
-import { glyph } from './visuals.js?v=20261009-4';
-import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, sectionTabs, signed, table, weeksLabel } from './sections-kit.js?v=20261009-4';
-import { mandatePlace, renderElectionReport } from './election-report.js?v=20261009-4';
-import { renderNationalView } from './national-view.js?v=20261009-4';
-import { renderQuirinale } from './presidency-view.js?v=20261009-4';
-import { renderCampaignObservatory } from './observatory-view.js?v=20261009-4';
+import { isSecretary, upcomingElections, upcomingRounds } from '../core/career-engine.js?v=20261010-1';
+import { RACE_RULES } from '../data/simulation/race-rules.js?v=20261010-1';
+import { campaignSummary, strategyOf } from '../core/campaign-engine.js?v=20261010-1';
+import { CAMPAIGN_PHASES, ELECTION_MODELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261010-1';
+import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261010-1';
+import { formatDate } from '../core/time.js?v=20261010-1';
+import { societyMood } from '../core/society-engine.js?v=20261010-1';
+import { renderCampaignPage } from './campaign-mode.js?v=20261010-1';
+import { politicalPhase } from './game-mode.js?v=20261010-1';
+import { lineChart, SERIES } from './charts.js?v=20261010-1';
+import { glyph } from './visuals.js?v=20261010-1';
+import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, sectionTabs, signed, table, weeksLabel } from './sections-kit.js?v=20261010-1';
+import { mandatePlace, renderElectionReport } from './election-report.js?v=20261010-1';
+import { renderNationalView } from './national-view.js?v=20261010-1';
+import { renderQuirinale } from './presidency-view.js?v=20261010-1';
+import { renderCampaignObservatory } from './observatory-view.js?v=20261010-1';
 export { renderElectionReport };
 
 export const ELECTION_TABS = Object.freeze([['panoramica', 'Panoramica'], ['nazionali', 'Nazionali'], ['quirinale', 'Quirinale'], ['candidatura', 'Candidatura'], ['campagna', 'Campagna'], ['avversari', 'Sondaggi e avversari'], ['risultati', 'Risultati'], ['storico', 'Storico']]);

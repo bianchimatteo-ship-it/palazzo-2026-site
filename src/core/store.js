@@ -1,51 +1,51 @@
-import { uniqueId } from './ids.js?v=20261009-4';
-import { DATA_SOURCES, emptyDataset, isSelectableParty } from '../data/schema.js?v=20261009-4';
-import { makeDemoState } from '../data/demo.js?v=20261009-4';
-import { CAREER_LEVELS, ITALIAN_REGIONS, hasProvincialLevel, initialCareerStatistics, regionIdOf } from '../data/regions.js?v=20261009-4';
-import { storage } from './storage.js?v=20261009-4';
-import { loadSettings } from './settings.js?v=20261009-4';
-import { advanceDays, formatDate } from './time.js?v=20261009-4';
-import { STARTING_OFFICES, STARTING_ROLES, validateNewCareerDraft } from './career-rules.js?v=20261009-4';
-import { advanceCampaign, applyCrewProfile, breakCampaignAlliance, campaignDebts, createCampaign, decayEndorsers, decideCampaignEvent, mergeEndorsers, mergeRivalRegistry, negotiateCampaignAlliance, performCampaignActivity, rivalLedger, setCampaignStrategy, setExpectation } from './campaign-engine.js?v=20261009-4';
-import { electionAftermath } from './aftermath-engine.js?v=20261009-4';
-import { advancementOdds, progressionFactors } from './progression-engine.js?v=20261009-4';
-import { hasStart, planLines, startMods, startPlan, startStatDeltas } from './start-engine.js?v=20261009-4';
-import { objectiveMods } from './objective-engine.js?v=20261009-4';
-import { END_KINDS, addToHall, careerFacts, hallEntry, legacyBoon, legacyScore, legacyTags, retirementProblem, sortedHall } from './legacy-engine.js?v=20261009-4';
-import { committeeSupport, committeesAfterVote, createCommittees } from './committee-engine.js?v=20261009-4';
-import { accordApplies, accordConflicts, answerCommitment, ensureAccord, offerConcession, tickAccord, changeSeats, checkMajority, record as recordParliament, setConfidenceVote, createReferenceGovernment, neverHadGovernment, offerGroupSupport, requestGovernmentPost, withdrawGroupSupport, partnerSatisfaction, acceptLawDemand, activeMinisters, amendLawPolicy, askConfidenceOnLaw, groupProfile, issueDecree, majoritySummit, reshuffleMinister, setGovernmentProgram, settlePartnerDemand, withdrawLaw, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20261009-4';
-import { situation, addProvincialCalendar, declareAmbition, scheduleEarlyLocalElection, alignLocalCalendar, localCalendarOf, committeeAction, setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, lifeBreakPact, lifeCadre, lifeCongress, lifeFound, lifeMerge, lifeOverview, lifeRebuild, lifeRename, lifeRespond, partyOpsAvailability, saveForElection, saveReserve, takeReserve, scheduleEarlyElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20261009-4';
-import { ADVANCE_RULES, AMENDMENT_CAPITAL_COST, COMMUNICATION_STYLES, GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS, PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261009-4';
-import { syncAgendas, advanceLegislativeWeek, amendOthersLaw, amendmentOdds, linkGroupsToParties, setPlayerVote, speakOnLaw } from './lawmaking-engine.js?v=20261009-4';
-import { seededRandom } from './vote-engine.js?v=20261009-4';
-import { advanceCabinetWeek, joinAsSupport } from './cabinet-engine.js?v=20261009-4';
-import { EP_COSTS, EP_GROUPS_2024, EP_ROLES, INSTITUTIONS, advanceInstitutionWeek, applyLocalEffect, bidRapporteur, concedeToGroup, createInstitution, committeeById, epGroupFor, grantDelega, localAreas, mandateRecord, proposeLocalAct, questionExecutive, requestCommittee, reshuffleLocal, revokeDelega, runForCommitteeRole, setLocalVote, tableAmendment, territoryValue } from './local-engine.js?v=20261009-4';
-import { candidacyBlock, institutionOffice, lapsesFor, officeLabel, officeScope } from './office-engine.js?v=20261009-4';
-import { actTypeOf } from '../data/simulation/local-acts.js?v=20261009-4';
-import { SECTOR_GAINS, competenceIn, gainSector, sectorFloors, standingFactors } from './standing-engine.js?v=20261009-4';
-import { AREA_BY_ID, BILLION_PER_POINT, BUDGET_SESSION, GOVERNMENT_LINES, POLICY_AREAS, areaOf } from '../data/simulation/policy-rules.js?v=20261009-4';
-import { recordAccordOutcome, settleElectoralTerms, allianceBlock, allianceOf, electionRoster, forceProfiles, mergeCandidates, mergeIntoPlayerForce, renamePlayerForce, setPlayerAgenda, splitPlayerForce, localShares, regionalShares, withRegionalLeans, withLocalCalendar, joinCoalition, acceptAlliance, addWorldEffects, advanceWorld, alignWorldToVote, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setGoverningForces, setPlayerParty, withCanonicalForces, withLatentForces, withPartyIdentities, withPositions } from './world-engine.js?v=20261009-4';
-import { candidacyQuotas, FORMATION_PHASES, LEGISLATURE_RULES, NATIONAL_LINES, acceptMandate, crisisFormation, seatResult, startFormation, buildCoalitions, campaignWeekEffects, coalitionOptions, compactResult, contestedDistricts, createNationalState, europeanListSeats, formationStep, groupOfParty, homeDistricts, legislatureGroups, legislatureTerm, nationalCalendar, nationalHistory, nationalProjection, normalizeNationalState, openLegislature, politicheOutcome, regionalBreakdown, runEuropeanVote, runNationalVote, seatPlayer, voteForces } from './legislature-engine.js?v=20261009-4';
-import { classifyOutcome, preferenceStanding } from './election-engine.js?v=20261009-4';
-import { DIFFICULTIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261009-4';
-import { WORLD_PARTY_COUNT } from '../data/simulation/polling-rules.js?v=20261009-4';
-import { heldOfficesOf, isPrimeMinister } from './roles.js?v=20261009-4';
-import { costProblem, leavePartyFor, memoryAbout, memoryBalance, memoryWeight, recordWhy, remember, scheduleFollowUp } from './career-engine.js?v=20261009-4';
-import { advanceElection, affinity, applyPresidentCredit, composeAssembly, createPresidency, dealWithBloc, declareCandidacy, lineText, normalizePresidency, openElection as openPresidentialElection, playerStanding, presidencySchedule, presidentActivityEffects, presidentActivityProblem, presidentWeek, presidentialEligibility, proclaim, projection, quorumFor, resignPresidency, setPlayerLine, setPlayerVote as setPresidentialVote, sponsorCandidate, startPlayerPresidency, termEndOf, vetoCandidate, whiteSemester, withdrawCandidacy } from './presidency-engine.js?v=20261009-4';
-import { PRESIDENCY_RULES, PRESIDENT_ACTIVITIES, PRESIDENT_ACTS } from '../data/simulation/presidency-rules.js?v=20261009-4';
-import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20261009-4';
-import { advanceSociety, applyBudgetPlan, applyLawToSociety, calibrateWeights, createSociety, explainMood, measureDesign, mediaEvent, normalizeSociety, provisionalBudget, publicBudgetChoice, regionAttention, revokeMeasure, scheduleRegionalEffects, segmentAttention, societyMood, societyShock, observatorySociety } from './society-engine.js?v=20261009-4';
-import { ACTIVITY_MEDIA, INDICATORS, ISSUE_TOPICS, SEGMENTS } from '../data/simulation/society-rules.js?v=20261009-4';
-import { book, hasAsset, releaseElectionFund, setBudgetLevel } from './finance-engine.js?v=20261009-4';
-import { EU_CALLS } from '../data/simulation/project-rules.js?v=20261009-4';
-import { applyCall, projectQuote, proposeProject, reportCall, setProjectFunding, settleProjectIssue, suspendProject } from './project-engine.js?v=20261009-4';
-import { isPartyLeader, treasuryBook } from './organization-engine.js?v=20261009-4';
-import { selectContacts, syncContacts } from './contacts-engine.js?v=20261009-4';
-import { NEWS_TEMPLATES, composeHeadline, weeklyNews } from './news-engine.js?v=20261009-4';
-import { macroAreaOf, MACRO_AREAS } from '../data/simulation/policy-rules.js?v=20261009-4';
-import { RACE_ROLES, RACE_RULES } from '../data/simulation/race-rules.js?v=20261009-4';
-import { buildSlate, candidateOptions, chooseCandidate, mergeSlate, profileStats, raceDue, raceOutcome, rootingOf, runRace } from './race-engine.js?v=20261009-4';
-import { MEMBER_HISTORY_LIMIT, closeVacancy, drawMemberChange, fillSeat, inOffice, isSeatPerson, leaveSeat, moveSeat, newMember, normalizeSeatPerson, openVacancy, partsWithGuests, rosterInSync, rosterPeople, rosterSeats, seatOf, syncRoster, vacanciesOf, withMemberEntry } from './seat-roster.js?v=20261009-4';
+import { uniqueId } from './ids.js?v=20261010-1';
+import { DATA_SOURCES, emptyDataset, isSelectableParty } from '../data/schema.js?v=20261010-1';
+import { makeDemoState } from '../data/demo.js?v=20261010-1';
+import { CAREER_LEVELS, ITALIAN_REGIONS, hasProvincialLevel, initialCareerStatistics, regionIdOf } from '../data/regions.js?v=20261010-1';
+import { storage } from './storage.js?v=20261010-1';
+import { loadSettings } from './settings.js?v=20261010-1';
+import { advanceDays, formatDate } from './time.js?v=20261010-1';
+import { STARTING_OFFICES, STARTING_ROLES, validateNewCareerDraft } from './career-rules.js?v=20261010-1';
+import { advanceCampaign, applyCrewProfile, breakCampaignAlliance, campaignDebts, createCampaign, decayEndorsers, decideCampaignEvent, mergeEndorsers, mergeRivalRegistry, negotiateCampaignAlliance, performCampaignActivity, rivalLedger, setCampaignStrategy, setExpectation } from './campaign-engine.js?v=20261010-1';
+import { electionAftermath } from './aftermath-engine.js?v=20261010-1';
+import { advancementOdds, progressionFactors } from './progression-engine.js?v=20261010-1';
+import { hasStart, planLines, startMods, startPlan, startStatDeltas } from './start-engine.js?v=20261010-1';
+import { objectiveMods } from './objective-engine.js?v=20261010-1';
+import { END_KINDS, addToHall, careerFacts, hallEntry, legacyBoon, legacyScore, legacyTags, retirementProblem, sortedHall } from './legacy-engine.js?v=20261010-1';
+import { committeeSupport, committeesAfterVote, createCommittees } from './committee-engine.js?v=20261010-1';
+import { accordApplies, accordConflicts, answerCommitment, ensureAccord, offerConcession, tickAccord, changeSeats, checkMajority, record as recordParliament, setConfidenceVote, createReferenceGovernment, neverHadGovernment, offerGroupSupport, requestGovernmentPost, withdrawGroupSupport, partnerSatisfaction, acceptLawDemand, activeMinisters, amendLawPolicy, askConfidenceOnLaw, groupProfile, issueDecree, majoritySummit, reshuffleMinister, setGovernmentProgram, settlePartnerDemand, withdrawLaw, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20261010-1';
+import { situation, addProvincialCalendar, declareAmbition, scheduleEarlyLocalElection, alignLocalCalendar, localCalendarOf, committeeAction, setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, lifeBreakPact, lifeCadre, lifeCongress, lifeFound, lifeMerge, lifeOverview, lifeRebuild, lifeRename, lifeRespond, partyOpsAvailability, saveForElection, saveReserve, takeReserve, scheduleEarlyElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20261010-1';
+import { ADVANCE_RULES, AMENDMENT_CAPITAL_COST, COMMUNICATION_STYLES, GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS, PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261010-1';
+import { syncAgendas, advanceLegislativeWeek, amendOthersLaw, amendmentOdds, linkGroupsToParties, setPlayerVote, speakOnLaw } from './lawmaking-engine.js?v=20261010-1';
+import { seededRandom } from './vote-engine.js?v=20261010-1';
+import { advanceCabinetWeek, joinAsSupport } from './cabinet-engine.js?v=20261010-1';
+import { EP_COSTS, EP_GROUPS_2024, EP_ROLES, INSTITUTIONS, advanceInstitutionWeek, applyLocalEffect, bidRapporteur, concedeToGroup, createInstitution, committeeById, epGroupFor, grantDelega, localAreas, mandateRecord, proposeLocalAct, questionExecutive, requestCommittee, reshuffleLocal, revokeDelega, runForCommitteeRole, setLocalVote, tableAmendment, territoryValue } from './local-engine.js?v=20261010-1';
+import { candidacyBlock, institutionOffice, lapsesFor, officeLabel, officeScope } from './office-engine.js?v=20261010-1';
+import { actTypeOf } from '../data/simulation/local-acts.js?v=20261010-1';
+import { SECTOR_GAINS, competenceIn, gainSector, sectorFloors, standingFactors } from './standing-engine.js?v=20261010-1';
+import { AREA_BY_ID, BILLION_PER_POINT, BUDGET_SESSION, GOVERNMENT_LINES, POLICY_AREAS, areaOf } from '../data/simulation/policy-rules.js?v=20261010-1';
+import { recordAccordOutcome, settleElectoralTerms, allianceBlock, allianceOf, electionRoster, forceProfiles, mergeCandidates, mergeIntoPlayerForce, renamePlayerForce, setPlayerAgenda, splitPlayerForce, localShares, regionalShares, withRegionalLeans, withLocalCalendar, joinCoalition, acceptAlliance, addWorldEffects, advanceWorld, alignWorldToVote, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setGoverningForces, setPlayerParty, withCanonicalForces, withLatentForces, withPartyIdentities, withPositions } from './world-engine.js?v=20261010-1';
+import { candidacyQuotas, FORMATION_PHASES, LEGISLATURE_RULES, NATIONAL_LINES, acceptMandate, crisisFormation, seatResult, startFormation, buildCoalitions, campaignWeekEffects, coalitionOptions, compactResult, contestedDistricts, createNationalState, europeanListSeats, formationStep, groupOfParty, homeDistricts, legislatureGroups, legislatureTerm, nationalCalendar, nationalHistory, nationalProjection, normalizeNationalState, openLegislature, politicheOutcome, regionalBreakdown, runEuropeanVote, runNationalVote, seatPlayer, voteForces } from './legislature-engine.js?v=20261010-1';
+import { classifyOutcome, preferenceStanding } from './election-engine.js?v=20261010-1';
+import { DIFFICULTIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261010-1';
+import { WORLD_PARTY_COUNT } from '../data/simulation/polling-rules.js?v=20261010-1';
+import { heldOfficesOf, isPrimeMinister } from './roles.js?v=20261010-1';
+import { costProblem, leavePartyFor, memoryAbout, memoryBalance, memoryWeight, recordWhy, remember, scheduleFollowUp } from './career-engine.js?v=20261010-1';
+import { addLedger, advanceElection, ledgerLabel, affinity, applyPresidentCredit, composeAssembly, createPresidency, dealWithBloc, declareCandidacy, lineText, normalizePresidency, openElection as openPresidentialElection, playerStanding, presidencySchedule, presidentActivityEffects, presidentActivityProblem, presidentWeek, presidentialEligibility, proclaim, projection, quorumFor, resignPresidency, setPlayerLine, setPlayerVote as setPresidentialVote, settleLedger, sponsorCandidate, startPlayerPresidency, termEndOf, vetoCandidate, whiteSemester, withdrawCandidacy } from './presidency-engine.js?v=20261010-1';
+import { PRESIDENCY_RULES, PRESIDENT_ACTIVITIES, PRESIDENT_ACTS } from '../data/simulation/presidency-rules.js?v=20261010-1';
+import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20261010-1';
+import { advanceSociety, applyBudgetPlan, applyLawToSociety, calibrateWeights, createSociety, explainMood, measureDesign, mediaEvent, normalizeSociety, provisionalBudget, publicBudgetChoice, regionAttention, revokeMeasure, scheduleRegionalEffects, segmentAttention, societyMood, societyShock, observatorySociety } from './society-engine.js?v=20261010-1';
+import { ACTIVITY_MEDIA, INDICATORS, ISSUE_TOPICS, SEGMENTS } from '../data/simulation/society-rules.js?v=20261010-1';
+import { book, hasAsset, releaseElectionFund, setBudgetLevel } from './finance-engine.js?v=20261010-1';
+import { BUDGET_SECTORS, EU_CALLS, PROJECT_TYPES } from '../data/simulation/project-rules.js?v=20261010-1';
+import { applyCall, projectQuote, proposeProject, reportCall, setProjectFunding, settleProjectIssue, suspendProject } from './project-engine.js?v=20261010-1';
+import { isPartyLeader, treasuryBook } from './organization-engine.js?v=20261010-1';
+import { selectContacts, syncContacts } from './contacts-engine.js?v=20261010-1';
+import { NEWS_TEMPLATES, composeHeadline, weeklyNews } from './news-engine.js?v=20261010-1';
+import { macroAreaOf, MACRO_AREAS } from '../data/simulation/policy-rules.js?v=20261010-1';
+import { RACE_ROLES, RACE_RULES } from '../data/simulation/race-rules.js?v=20261010-1';
+import { buildSlate, candidateOptions, chooseCandidate, mergeSlate, profileStats, raceDue, raceOutcome, rootingOf, runRace } from './race-engine.js?v=20261010-1';
+import { MEMBER_HISTORY_LIMIT, closeVacancy, drawMemberChange, fillSeat, inOffice, isSeatPerson, leaveSeat, moveSeat, newMember, normalizeSeatPerson, openVacancy, partsWithGuests, rosterInSync, rosterPeople, rosterSeats, seatOf, syncRoster, vacanciesOf, withMemberEntry } from './seat-roster.js?v=20261010-1';
 
 const STATE_VERSION = 10;
 const POSITIONS_SET = new Set(['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra']);
@@ -502,7 +502,19 @@ function worldSignalsFor(s) {
   const recall = (s.game?.memory ?? []).find(item => item.tone === 'bad' && now - item.week >= 26 && (item.weight ?? 1) * Math.pow(0.5, (now - item.week) / 104) >= 0.4);
   const politiche = (s.game?.elections ?? []).find(item => item.type === 'politiche' && item.status !== 'held');
   const electionSoon = Boolean(politiche && (politiche.status === 'open' || elapsedDays(s.clock.currentDate, politiche.windowOpensAt) <= 56));
+  const works = s.society?.projects ?? [];
+  const activeWorks = works.filter(item => ['progettazione', 'gara', 'cantiere', 'collaudo'].includes(item.stage));
+  const slowest = [...activeWorks].sort((a, b) => (b.pending ? 1000 : 0) + b.delayWeeks - ((a.pending ? 1000 : 0) + a.delayWeeks))[0] ?? null;
+  const lately = works.filter(item => item.stage === 'completato' && now - (item.completedWeek ?? -99) <= 12).at(-1) ?? null;
+  const finance = s.society?.publicFinance;
+  const cut = Object.entries(finance?.sectors ?? {}).filter(([, level]) => level < 0).sort((a, b) => a[1] - b[1])[0] ?? null;
+  const dueCall = (finance?.eu?.calls ?? []).find(call => call.status === 'assegnato' && call.amount - call.committed > 0.5 && call.spendByWeek - now <= 26) ?? null;
+  const portfolioOf = item => AREA_BY_ID[PROJECT_TYPES[item?.type]?.area]?.portfolio ?? null;
+  const works1 = { active: activeWorks.length, delayed: activeWorks.filter(item => item.delayWeeks >= 3).length, overrun: activeWorks.filter(item => item.pending).length, done: lately ? 1 : 0, workId: slowest?.id ?? null, workTitle: slowest?.title ?? null, workRegion: slowest?.region ?? null, workDelay: slowest?.delayWeeks ?? 0, workMinistry: portfolioOf(slowest), doneTitle: lately?.title ?? null, doneRegion: lately?.region ?? null, doneId: lately?.id ?? null };
+  const budget1 = { fresh: finance?.budget?.approvedWeek !== undefined && now - finance.budget.approvedWeek <= 40 && !finance.budget.provisional, cutId: cut?.[0] ?? null, cutLabel: BUDGET_SECTORS.find(item => item.id === cut?.[0])?.label.toLowerCase() ?? null, excise: finance?.stance?.accise ?? 0, relief: finance?.stance?.agevolazioni ?? 0, controls: finance?.stance?.sanzioni ?? 0, deficit: s.society?.economy?.deficit ?? 3 };
+  const eu1 = { dueId: dueCall?.id ?? null, dueTitle: dueCall?.title ?? null, dueWeeks: dueCall ? dueCall.spendByWeek - now : 0, lost: finance?.eu?.lost ?? 0 };
   return {
+    works: works1, budget: budget1, eu: eu1,
     crime: s.society?.security?.crime ?? 45, perceived: s.society?.security?.perceived ?? 50, spread: s.society?.publicFinance?.spread ?? 130, euStatus: s.society?.publicFinance?.euStatus ?? 'regolare',
     stability: government?.stability ?? 60, ministers: activeMinisters(government).length, majorityMood: partnerSatisfaction(s.parliament) ?? 60,
     summer: month >= 6 && month <= 8, autumn: month >= 9 && month <= 11, winter: month === 12 || month <= 2,
@@ -2615,6 +2627,75 @@ function presidentialAgenda(s, presidency, role, { opened = false, date }) {
 }
 
 // ---------- the term of the President that is the player ----------
+const CONFLICTS = Object.freeze({
+  decreto: 'Un decreto-legge dai profili dubbi ha spaccato maggioranza e opposizione sul rispetto delle regole parlamentari.',
+  fiducia: 'Le opposizioni accusano il governo di forzare le procedure con la fiducia e chiedono al Quirinale di intervenire.',
+  magistratura: 'Il governo e una parte della magistratura sono ai ferri corti: dichiarazioni incrociate, accuse di invasione di campo.',
+  crisi: 'La maggioranza si sfarina e i leader si accusano a vicenda: serve una voce che richiami tutti alle regole.'
+});
+// What the Quirinale has on the desk this week, from the state of the Chambers and of the Government: a decree-law just adopted, a law just approved, a judge to name, a visit, a clash between powers.
+function presidentDilemma(s, incumbent, week, date, rand) {
+  const parliament = s.parliament;
+  const government = parliament?.government;
+  const open = Boolean(government && ['active', 'crisis'].includes(government.status));
+  const actions = incumbent.actions ?? {};
+  const seen = new Set(actions.seenLaws ?? []);
+  const lawOf = id => parliament?.laws?.find(item => item.id === id);
+  const since = key => week - (actions[key] ?? 0);
+  if (open) {
+    const adopted = (parliament.history ?? []).filter(entry => entry.type === 'decreto-adottato' && elapsedDays(entry.date, date) <= 21).map(entry => lawOf(entry.details?.lawId)).find(law => law && !seen.has(law.id) && !['rejected', 'lapsed', 'withdrawn'].includes(law.stage));
+    if (adopted) return { id: 'presidente-decreto', params: { title: adopted.title, lawId: adopted.id }, law: adopted.id };
+    const approved = parliament.laws.find(law => law.stage === 'approved' && law.auto && law.origin === 'governo' && !law.returned && !law.annulled && !seen.has(law.id) && law.updatedAt && elapsedDays(law.updatedAt, date) <= 14 && (law.confidence || law.kind === 'manovra'));
+    if (approved) return { id: 'presidente-legge', params: { title: approved.title, lawId: approved.id, doubt: approved.confidence ? 'Il governo ha posto la fiducia: il testo non è stato emendato in Aula.' : 'È la legge di bilancio: gli equilibri dei conti sono delicati.' }, law: approved.id };
+  }
+  if (since('dilemmaWeek') < 5 || rand() >= 0.3) return null;
+  const named = incumbent.court ?? [];
+  const lately = (incumbent.verified ?? []).slice(0, 3).some(item => !item.success);
+  const pool = [
+    { id: 'presidente-grazia', weight: 1 },
+    { id: 'presidente-difesa', weight: (s.society?.areas?.esteri?.value ?? 50) < 48 ? 2 : 0.8 },
+    { id: 'presidente-csm', weight: since('csmWeek') > 20 ? 1 : 0.3 },
+    ...(named.length < PRESIDENCY_RULES.lifeSenatorLimit && since('courtWeek') >= 52 ? [{ id: 'presidente-corte', weight: 3, params: { named: named.length ? named.map(item => ({ accademico: 'un costituzionalista', magistrato: 'un magistrato', avvocato: 'un avvocato dello Stato' }[item.profile])).join(', ') : 'nessuno' } }] : []),
+    ...(since('diplomacyWeek') >= 14 ? [{ id: 'presidente-diplomazia', weight: 2, params: { europa: Math.round(s.society?.areas?.europa?.value ?? 50), esteri: Math.round(s.society?.areas?.esteri?.value ?? 50) } }] : []),
+    ...(open && since('guaranteeWeek') >= 16 && ((government.stability ?? 60) < 45 || lately) ? [{ id: 'presidente-garanzia', weight: 3, params: { conflict: (government.stability ?? 60) < 35 ? CONFLICTS.crisi : lately ? CONFLICTS.decreto : (parliament.laws ?? []).some(law => law.confidence && !['approved', 'rejected', 'lapsed'].includes(law.stage)) ? CONFLICTS.fiducia : CONFLICTS.magistratura } }] : [])
+  ];
+  const total = pool.reduce((sum, item) => sum + item.weight, 0);
+  let roll = rand() * total;
+  return pool.find(item => (roll -= item.weight) < 0) ?? pool[0];
+}
+const DILEMMA_CLOCK = Object.freeze({ 'presidente-csm': 'csmWeek', 'presidente-corte': 'courtWeek', 'presidente-diplomazia': 'diplomacyWeek', 'presidente-garanzia': 'guaranteeWeek' });
+// The commitments that come due: each is checked against what really happened, and moves credit, stability and the country.
+function settleTermLedger(input, date) {
+  let s = input;
+  const week = s.game.week.index;
+  const out = settleLedger(presidencyOf(s), { week, date, parliament: s.parliament, society: s.society });
+  if (!out.results.length) return s;
+  let presidency = out.presidency;
+  const lines = [];
+  for (const result of out.results) {
+    presidency = applyPresidentCredit(presidency, result.credit, { date, act: `impegno-${result.entry.kind}`, text: result.text });
+    presidency = { ...presidency, log: [{ id: uniqueId(presidency.log, `${date}-impegno-${presidency.log.length}`), date, kind: 'impegno', text: result.text }, ...presidency.log].slice(0, 40) };
+    lines.push(result.text);
+  }
+  s = { ...s, presidency };
+  let game = deepCopy(s.game);
+  for (const result of out.results) {
+    const government = s.parliament?.government;
+    if (government && ['active', 'crisis'].includes(government.status) && result.stability) s = { ...s, parliament: { ...s.parliament, government: { ...government, stability: clampTo((government.stability ?? 50) + result.stability, 0, 100) } } };
+    if (result.shock && s.society) s = { ...s, society: societyShock(s.society, result.shock) };
+    if (result.annul) {
+      const law = s.parliament.laws.find(item => item.id === result.annul);
+      if (law) {
+        const parliament = recordParliament({ ...s.parliament, laws: s.parliament.laws.map(item => item.id === law.id ? { ...item, annulled: date } : item) }, date, 'legge-annullata', `La Corte costituzionale dichiara illegittima “${law.title}”.`, { lawId: law.id, source: DATA_SOURCES.SIMULATION });
+        s = computeParliamentUpdate(s, parliament, s.ui.toast);
+        if (s.society) s = { ...s, society: mediaEvent(revokeMeasure(s.society, law.title), { outletId: 'quotidiani', tone: -0.6, intensity: 1.2, headline: `La Corte costituzionale dichiara illegittima “${law.title}”`, date, week }) };
+      }
+    }
+    remember(game, { date, kind: result.success ? 'lealta' : 'decisione', text: `${result.entry.label ?? ledgerLabel(result.entry)}: ${result.text}`, weight: 0.8 });
+  }
+  const reported = s.game.lastReport;
+  return { ...s, game: { ...game, ...(reported ? { lastReport: { ...reported, lines: [...reported.lines, ...lines.slice(0, 2)] } } : {}) } };
+}
 function presidentialTerm(s, presidency, date) {
   let next = s;
   const incumbent = presidency.incumbent;
@@ -2624,16 +2705,24 @@ function presidentialTerm(s, presidency, date) {
   // A President the Chambers trust calms them; one that has lost credit adds friction.
   const government = next.parliament?.government;
   if (government && ['active', 'crisis'].includes(government.status) && weekly.stability) next = { ...next, parliament: { ...next.parliament, government: { ...government, stability: clampTo(Math.round(((government.stability ?? 50) + weekly.stability) * 10) / 10, 0, 100) } } };
-  // The decisions only the President takes: a pardon, a decree with doubts, defence, the CSM, the message of the year.
+  next = { ...next, presidency: updated };
+  // The commitments of the term that come due (letters, messages, judges, visits) are checked first.
+  next = settleTermLedger(next, date);
+  updated = presidencyOf(next);
+  // The decisions only the President takes: they come from the state of the Chambers and of the Government, not only from the calendar; the message of the year is the one fixed date.
   const rand = seededRandom(`${s.career.id}|${date}|quirinale-giorni`);
   let game = deepCopy(next.game);
-  const actions = { ...(incumbent.actions ?? {}) };
+  const actions = { ...(updated.incumbent.actions ?? {}) };
   const year = Number(date.slice(0, 4));
   if (Number(date.slice(5, 7)) === 12 && Number(date.slice(8, 10)) >= 24 && actions.messageYear !== year) { game = raisePresidential(game, 'presidente-fine-anno', {}, { urgent: false }); actions.messageYear = year; }
-  else if (week - (actions.dilemmaWeek ?? -99) >= 6 && rand() < 0.13) {
-    const pool = ['presidente-grazia', 'presidente-difesa', 'presidente-csm', ...(government && ['active', 'crisis'].includes(government.status) ? ['presidente-decreto'] : [])];
-    game = raisePresidential(game, pool[Math.floor(rand() * pool.length)], {}, { urgent: false });
-    actions.dilemmaWeek = week;
+  else {
+    const dilemma = presidentDilemma(next, { ...updated.incumbent, actions }, week, date, rand);
+    if (dilemma) {
+      game = raisePresidential(game, dilemma.id, { ...(dilemma.params ?? {}), dedupe: dilemma.law ?? dilemma.id }, { urgent: Boolean(dilemma.law) });
+      actions.dilemmaWeek = week;
+      if (DILEMMA_CLOCK[dilemma.id]) actions[DILEMMA_CLOCK[dilemma.id]] = week;
+      if (dilemma.law) actions.seenLaws = [...(actions.seenLaws ?? []), dilemma.law].slice(-12);
+    }
   }
   updated = { ...updated, incumbent: { ...updated.incumbent, actions } };
   return { ...next, game, presidency: updated };
@@ -2803,7 +2892,41 @@ function endPresidency(input, { date, reason }) {
 }
 
 // ---------- the decisions of the agenda about the Quirinale ----------
-function applyPresidentAct(input, actId, date) {
+// A law approved by the Chambers that can still be sent back (art. 74): once, within the window, only the laws of the Chambers' own calendar.
+function returnableLaw(s, lawId) {
+  const law = s.parliament?.laws?.find(item => item.id === lawId);
+  if (!law || law.stage !== 'approved' || !law.auto) throw new Error('Si può rinviare solo una legge approvata dalle Camere e non ancora promulgata.');
+  if (law.returned) throw new Error('Una legge si può rinviare una volta sola (art. 74).');
+  if (elapsedDays(law.updatedAt ?? s.clock.currentDate, s.clock.currentDate) > PRESIDENCY_RULES.returnWindowDays) throw new Error(`Sono passati più di ${PRESIDENCY_RULES.returnWindowDays} giorni dall’approvazione: la legge è stata promulgata.`);
+  return law;
+}
+// The law goes back to the Chambers: its effects stop, the sponsor's group cools down, the Government feels it, the press tells it.
+function returnLawTo(next, lawId, date) {
+  const law = next.parliament.laws.find(item => item.id === lawId);
+  let parliament = next.parliament;
+  parliament = { ...parliament, laws: parliament.laws.map(item => item.id === lawId ? { ...item, stage: 'final-vote', status: 'final-vote', returned: { at: date, by: 'presidente' }, nextStepAt: advanceDays(date, 14), updatedAt: date, stageSince: date } : item), history: [...(parliament.history ?? []), { id: makeId('attivita-parlamentare'), date, type: 'legge-rinviata', text: `Il Presidente della Repubblica rinvia alle Camere “${law.title}” (art. 74).`, details: { lawId }, source: DATA_SOURCES.SIMULATION }] };
+  const government = parliament.government;
+  if (government && ['active', 'crisis'].includes(government.status)) {
+    const partners = { ...(government.partners ?? {}) };
+    const sponsor = law.sponsor?.groupId;
+    if (sponsor && partners[sponsor]) partners[sponsor] = { ...partners[sponsor], satisfaction: clampTo((partners[sponsor].satisfaction ?? 60) - 4, 0, 100) };
+    parliament = { ...parliament, government: { ...government, stability: clampTo((government.stability ?? 50) - 3, 0, 100), partners } };
+  }
+  let s = computeParliamentUpdate(next, parliament, 'Legge rinviata alle Camere');
+  if (s.society) s = { ...s, society: mediaEvent(revokeMeasure(s.society, law.title), { outletId: 'quotidiani', tone: 0.4, intensity: 1, headline: `Il Presidente della Repubblica rinvia alle Camere “${law.title}”`, date, week: s.game.week.index }) };
+  const presidency = presidencyOf(s);
+  return { ...s, presidency: { ...presidency, incumbent: { ...presidency.incumbent, returned: [...(presidency.incumbent.returned ?? []), { lawId, title: law.title, date }] } } };
+}
+// A decree-law the President does not emanate lapses at once: its effects are undone and the Government is the weaker for it.
+function refuseDecreeTo(s, lawId, date) {
+  const law = s.parliament?.laws?.find(item => item.id === lawId);
+  if (!law || !['decreto'].includes(law.kind)) return s;
+  const parliament = recordParliament({ ...s.parliament, laws: s.parliament.laws.map(item => item.id === lawId ? { ...item, stage: 'lapsed', status: 'lapsed', lapsedReason: 'Rifiuto di emanazione del Presidente della Repubblica', updatedAt: date } : item) }, date, 'decreto-decaduto', `Il Presidente della Repubblica rifiuta di emanare il decreto “${law.title}”: decade.`, { lawId, source: DATA_SOURCES.SIMULATION });
+  let next = computeParliamentUpdate(s, parliament, 'Decreto non emanato');
+  if (next.society) next = { ...next, society: revokeMeasure(next.society, law.title) };
+  return next;
+}
+function applyPresidentAct(input, actId, date, params = {}) {
   const act = PRESIDENT_ACTS[actId];
   if (!act) return input;
   let s = input;
@@ -2816,6 +2939,19 @@ function applyPresidentAct(input, actId, date) {
   const changed = Object.fromEntries(Object.entries(act.stats ?? {}).map(([metric, value]) => [metric, roundStat((stats[metric] ?? 50) + value)]));
   if (Object.keys(changed).length) s = { ...s, dataset: { ...s.dataset, statistics: writeStats(s, { ...stats, ...changed }) } };
   if (act.memory) { const game = deepCopy(s.game); remember(game, { date, ...act.memory }); s = { ...s, game }; }
+  const week = s.game.week.index;
+  const lawBefore = params.lawId ? s.parliament?.laws?.find(item => item.id === params.lawId) : null;
+  // What the decision also does to the laws and the country, and the commitment it leaves to be checked.
+  if (act.law === 'return' && params.lawId) { try { returnableLaw(s, params.lawId); s = returnLawTo(s, params.lawId, date); } catch (error) { s = { ...s, ui: { ...s.ui, toast: error.message } }; } }
+  if (act.law === 'refuse' && params.lawId) s = refuseDecreeTo(s, params.lawId, date);
+  if (act.shock && s.society) s = { ...s, society: societyShock(s.society, act.shock) };
+  if (act.court) { const presidency = presidencyOf(s); s = { ...s, presidency: { ...presidency, incumbent: { ...presidency.incumbent, court: [...(presidency.incumbent.court ?? []), { profile: act.court, date, week }] } } }; }
+  if (act.ledger) {
+    const government = s.parliament?.government;
+    const baseline = act.ledger.kind === 'garanzia' ? (government?.stability ?? 50) - (act.stability ?? 0) : null;
+    const base = ['rilievi', 'rinvio'].includes(act.ledger.kind) ? (lawBefore?.amendments ?? []).length : null;
+    s = { ...s, presidency: addLedger(presidencyOf(s), { kind: act.ledger.kind, act: actId, date, week, dueWeek: week + act.ledger.weeks, lawId: params.lawId ?? null, area: act.ledger.area ?? params.area ?? (act.ledger.kind === 'messaggio' ? areaOf(s.society?.issues?.[0]?.topic)?.id ?? 'pa' : null), partner: act.ledger.partner ?? null, profile: act.court ?? null, baseline, base }) };
+  }
   return s;
 }
 function presidencyDecision(s, special) {
@@ -2824,7 +2960,7 @@ function presidencyDecision(s, special) {
   const params = special.params ?? {};
   let presidency = presidencyOf(s);
   try {
-    if (type.startsWith('presidency-act-')) return applyPresidentAct(s, type.slice('presidency-act-'.length), date);
+    if (type.startsWith('presidency-act-')) return applyPresidentAct(s, type.slice('presidency-act-'.length), date, params);
     if (type.startsWith('presidency-formation-')) {
       const formation = s.national?.formation;
       const choice = type.slice('presidency-formation-'.length);
@@ -2833,7 +2969,10 @@ function presidencyDecision(s, special) {
       const presidentChoice = choice === 'dissolve' && semester.active ? 'main' : choice === 'dissolve' ? 'dissolve' : choice;
       const text = presidentChoice === 'dissolve' ? 'Decidi di sciogliere le Camere.' : presidentChoice === 'tech' ? 'Decidi di tentare un governo del Presidente.' : presidentChoice === 'alt' ? 'Decidi di affidare l’incarico all’alternativa.' : 'Decidi di affidare l’incarico alla maggioranza più solida.';
       const incumbent = { ...presidency.incumbent, formations: (presidency.incumbent.formations ?? 0) + 1 };
-      const next = { ...s, presidency: { ...presidency, incumbent }, national: nationalHistory({ ...s.national, formation: { ...formation, presidentChoice } }, date, 'consultazioni', text) };
+      // The choice of the consultations is checked weeks later: does the Government it produced have the confidence and hold?
+      const week = s.game.week.index;
+      const noted = addLedger({ ...presidency, incumbent }, { kind: presidentChoice === 'dissolve' ? 'scioglimento' : 'incarico', act: `consultazioni-${presidentChoice}`, date, week, dueWeek: week + (presidentChoice === 'dissolve' ? 20 : 14), choice: presidentChoice });
+      const next = { ...s, presidency: noted, national: nationalHistory({ ...s.national, formation: { ...formation, presidentChoice } }, date, 'consultazioni', text) };
       return choice === 'dissolve' && semester.active ? { ...next, ui: { ...next.ui, toast: 'Sei nel semestre bianco: non puoi sciogliere le Camere' } } : next;
     }
     const election = presidency.election;
@@ -3578,6 +3717,11 @@ export const store = {
     next = { ...next, game, parliament: withCapital(next.parliament, game) };
     let updated = applyPresidentCredit(presidency, effects.credit, { date, act: activity.id, text: activity.label });
     updated = { ...updated, incumbent: { ...updated.incumbent, actions: { ...(updated.incumbent.actions ?? {}), [activity.id]: week } } };
+    // A message to the Chambers is a request on a subject: it is checked later against what the Chambers really approve.
+    if (activity.id === 'messaggio') {
+      const topic = areaOf(next.society?.issues?.[0]?.topic)?.id ?? 'pa';
+      updated = addLedger(updated, { kind: 'messaggio', act: 'messaggio', date, week, dueWeek: week + 8, area: topic });
+    }
     next = { ...next, presidency: updated };
     const government = next.parliament?.government;
     if (government && ['active', 'crisis'].includes(government.status) && effects.stability) next = { ...next, parliament: { ...next.parliament, government: { ...government, stability: clampTo((government.stability ?? 50) + effects.stability, 0, 100) } } };
@@ -3593,26 +3737,13 @@ export const store = {
   // Art. 74: a law approved by the Chambers is sent back to them once, with a message, before it is promulgated.
   presidentReturnLaw(lawId) {
     if (!presidentIsPlayer(state)) throw new Error('Solo il Presidente della Repubblica può rinviare una legge alle Camere.');
-    const law = state.parliament?.laws?.find(item => item.id === lawId);
-    if (!law || law.stage !== 'approved' || !law.auto) throw new Error('Si può rinviare solo una legge approvata dalle Camere e non ancora promulgata.');
-    if (law.returned) throw new Error('Una legge si può rinviare una volta sola (art. 74).');
-    const date = state.clock.currentDate;
-    if (elapsedDays(law.updatedAt ?? date, date) > PRESIDENCY_RULES.returnWindowDays) throw new Error(`Sono passati più di ${PRESIDENCY_RULES.returnWindowDays} giorni dall’approvazione: la legge è stata promulgata.`);
+    const law = returnableLaw(state, lawId);
     const next = withTime(1);
-    let parliament = next.parliament;
-    parliament = { ...parliament, laws: parliament.laws.map(item => item.id === lawId ? { ...item, stage: 'final-vote', status: 'final-vote', returned: { at: date, by: 'presidente' }, nextStepAt: advanceDays(date, 14), updatedAt: date, stageSince: date } : item), history: [...(parliament.history ?? []), { id: `rinvio-${lawId}-${date}`, date, type: 'legge-rinviata', text: `Il Presidente della Repubblica rinvia alle Camere “${law.title}” con un messaggio motivato.`, details: { lawId, auto: false }, source: DATA_SOURCES.SIMULATION }] };
-    const government = parliament.government;
-    if (government && ['active', 'crisis'].includes(government.status)) {
-      const partners = { ...(government.partners ?? {}) };
-      const sponsor = law.sponsor?.groupId;
-      if (sponsor && partners[sponsor]) partners[sponsor] = { ...partners[sponsor], satisfaction: clampTo((partners[sponsor].satisfaction ?? 60) - 4, 0, 100) };
-      parliament = { ...parliament, government: { ...government, stability: clampTo((government.stability ?? 50) - 3, 0, 100), partners } };
-    }
-    let s = computeParliamentUpdate(next, parliament, 'Legge rinviata alle Camere');
-    if (s.society) s = { ...s, society: mediaEvent(revokeMeasure(s.society, law.title), { outletId: 'quotidiani', tone: 0.4, intensity: 1, headline: `Il Presidente della Repubblica rinvia alle Camere “${law.title}”`, date, week: s.game.week.index }) };
+    const date = state.clock.currentDate;
+    let s = returnLawTo(next, lawId, date);
     const presidency = presidencyOf(s);
     let updated = applyPresidentCredit(presidency, 1.5, { date, act: 'rinvio', text: `Hai rinviato alle Camere “${law.title}”` });
-    updated = { ...updated, incumbent: { ...updated.incumbent, returned: [...(updated.incumbent.returned ?? []), { lawId, title: law.title, date }] } };
+    updated = addLedger(updated, { kind: 'rinvio', act: 'rinvio', date, week: s.game.week.index, dueWeek: s.game.week.index + 6, lawId, base: (s.parliament.laws.find(item => item.id === lawId)?.amendments ?? []).length });
     const game = deepCopy(s.game);
     remember(game, { date, kind: 'decisione', text: `Hai rinviato alle Camere la legge “${law.title}”`, weight: 1 });
     state = { ...s, game, presidency: updated, ui: { ...s.ui, toast: 'Legge rinviata alle Camere: gli effetti si fermano e si rivota tra due settimane' } };

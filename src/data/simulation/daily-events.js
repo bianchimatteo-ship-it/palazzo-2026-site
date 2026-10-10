@@ -427,6 +427,93 @@ export const DAILY_EVENTS = Object.freeze([
     c('rinvia', 'Lasci le cose come stanno', {})] }),
   d('feste-fine-anno', 'quiete', { light: true, positive: true, weight: 1.5, cooldown: 40, boost: sit => sit.signals.winter ? 3 : 0, when: sit => sit.signals.winter, days: WEEKEND, title: 'Gli auguri di fine anno', body: 'Biglietti, brindisi e bilanci dell’anno: una tradizione che nel partito pesa più di quanto sembri.', defaultChoice: 'biglietti', choices: [
     c('brindisi', 'Partecipa al brindisi del partito', { cost: { ap: 1 }, effects: { org: { cohesion: 2 }, party: { support: 1 } } }),
-    c('biglietti', 'Mandi solo gli auguri', {})] })
+    c('biglietti', 'Mandi solo gli auguri', {})] }),
+  // ---------- the Prime Minister: the works, the budget and the European funds he decided come back ----------
+  d('cantiere-fermo', 'governo', { family: 'opere', weight: 2.4, cooldown: 9, when: sit => sit.premier && sit.signals.works?.delayed >= 1, title: 'Il cantiere «{workTitle}» è fermo da {workDelay} settimane', body: 'Gare contestate, autorizzazioni, una ditta che rallenta: in {workRegion} si chiede conto del ritardo all’opera finanziata dal governo. Ogni settimana persa riduce quello che l’opera darà ai cittadini.', defaultChoice: 'attendi', choices: [
+    c('commissario', 'Nomina un commissario straordinario', { cost: { capital: 3 }, effects: { stats: { notoriety: 0.5 } }, special: 'project-commissioner' }),
+    c('ministro', 'Convoca il ministro e chiedi un cronoprogramma', { cost: { ap: 1 }, effects: { government: { stability: -0.5 } }, outcomes: [
+      { chance: 0.55, label: 'Il ministero rimette in moto il cantiere', effects: { stats: { reputation: 0.8 } }, special: 'project-commissioner' },
+      { chance: 0.45, label: 'Il cronoprogramma resta sulla carta', effects: { stats: { reputation: -0.5 } } }] }),
+    c('attendi', 'Aspetta e monitora', { effects: { stats: { reputation: -0.5 } }, special: 'project-wait' })] }),
+  d('inchiesta-opere-pubbliche', 'scandalo', { family: 'opere', weight: 1.6, cooldown: 24, memoryKinds: ['decisione', 'legge'], when: sit => sit.premier && sit.signals.works?.overrun >= 1, title: 'Inchiesta giornalistica sugli appalti di «{workTitle}»', body: 'I costi salgono e un quotidiano ricostruisce gare, subappalti e proroghe. L’opposizione chiede che il governo riferisca in Aula.', defaultChoice: 'silenzio', choices: [
+    c('trasparenza', 'Pubblica tutti gli atti e riferisci in Aula', { cost: { ap: 1 }, effects: { stats: { reputation: 1.2 }, government: { stability: -0.5 } } }),
+    c('difendi', 'Difendi il ministero', { effects: { government: { stability: -1 }, stats: { notoriety: 1 } } }),
+    c('silenzio', 'Resta in silenzio', { effects: { stats: { reputation: -2 } }, memory: { kind: 'scandalo', text: 'Inchiesta sugli appalti di {workTitle} lasciata senza risposta', weight: 1.4 } })] }),
+  d('opera-nastro', 'governo', { family: 'opere', light: true, positive: true, weight: 2, cooldown: 10, when: sit => sit.premier && sit.signals.works?.done >= 1, title: 'Il sindaco di {doneRegion} ti invita a tagliare il nastro', body: 'L’opera «{doneTitle}» apre ai cittadini: è il momento in cui si vede quello che il governo ha deciso mesi fa. Chi ci mette la faccia raccoglie il merito, chi manca viene notato.', defaultChoice: 'delega', choices: [
+    c('vai', 'Vai all’inaugurazione', { cost: { ap: 1 }, effects: { stats: { popularity: 1.6, notoriety: 1 } } }),
+    c('delega', 'Manda il ministro', { effects: { stats: { popularity: 0.4 } } })] }),
+  d('tagli-protesta', 'sociale', { family: 'bilancio', weight: 2.2, cooldown: 14, memoryKinds: ['tagli', 'legge'], when: sit => sit.premier && sit.signals.budget?.fresh && sit.signals.budget?.cutId, title: 'In piazza contro i tagli a {cutLabel}', body: 'La manovra ha tagliato il settore e ora ne arrivano gli effetti: presidi, lettere aperte, i sindaci che chiedono risposte. Una parte della maggioranza comincia a muoversi.', defaultChoice: 'dritto', choices: [
+    c('tavolo', 'Apri un tavolo con le categorie', { cost: { ap: 1 }, effects: { relations: { unions: 5 }, government: { stability: 1 } } }),
+    c('reintegra', 'Reintegra una parte dei fondi dal margine di bilancio', { cost: { capital: 2 }, effects: { stats: { popularity: 0.8 } }, special: 'society-cost' }),
+    c('dritto', 'Tira dritto: i conti vengono prima', { effects: { relations: { unions: -4 }, government: { stability: -1 }, stats: { popularity: -1 } }, memory: { kind: 'tagli', text: 'Tagli a {cutLabel} difesi contro le proteste', weight: 1 } })] }),
+  d('accise-protesta', 'sociale', { family: 'bilancio', weight: 2, cooldown: 14, memoryKinds: ['tasse'], when: sit => sit.premier && sit.signals.budget?.fresh && sit.signals.budget?.excise >= 1, title: 'Camionisti e pendolari contro l’aumento delle accise', body: 'Il prezzo dei carburanti sale: autotrasportatori in sciopero, associazioni dei consumatori in allarme. Il gettito c’è, il consenso no.', defaultChoice: 'dritto', choices: [
+    c('sconto', 'Un sostegno mirato a chi si muove per lavoro', { cost: { capital: 2 }, effects: { stats: { popularity: 1 } }, special: 'society-cost' }),
+    c('tavolo', 'Convoca le associazioni', { cost: { ap: 1 }, effects: { relations: { business: 3 }, government: { stability: 0.5 } } }),
+    c('dritto', 'Difendi la misura', { effects: { stats: { popularity: -1.5 }, government: { stability: -1 } }, memory: { kind: 'tasse', text: 'Accise più alte difese di fronte alla protesta', weight: 1 } })] }),
+  d('sgravi-imprese', 'economia', { family: 'bilancio', positive: true, weight: 1.6, cooldown: 18, memoryKinds: ['legge'], when: sit => sit.premier && sit.signals.budget?.fresh && sit.signals.budget?.relief >= 1, title: 'Gli industriali applaudono gli sgravi, i sindacati chiedono contropartite', body: 'Gli investimenti ripartono dove le agevolazioni sono arrivate. I sindacati vogliono assunzioni in cambio, le opposizioni parlano di regalo alle imprese.', defaultChoice: 'silenzio', choices: [
+    c('condiziona', 'Lega gli sgravi alle assunzioni', { cost: { capital: 1 }, effects: { relations: { unions: 4, business: -2 }, stats: { reputation: 0.8 } } }),
+    c('rivendica', 'Rivendica i risultati', { cost: { ap: 1 }, effects: { relations: { business: 4 }, stats: { notoriety: 1.2 } } }),
+    c('silenzio', 'Lascia correre', {})] }),
+  d('manovra-mercati', 'economia', { family: 'bilancio', weight: 2, cooldown: 16, when: sit => sit.premier && sit.signals.budget?.fresh && sit.signals.budget?.deficit > 3.3 && sit.signals.spread > 170, title: 'Gli analisti bocciano i saldi della manovra', body: 'Il deficit è oltre il 3%: le agenzie avvertono che i conti non reggono senza correzioni e lo spread lo mostra. Bruxelles osserva.', defaultChoice: 'difendi', choices: [
+    c('correggi', 'Annuncia una correzione dei conti', { cost: { capital: 2 }, effects: { stats: { reputation: 1 } }, special: 'public-cuts' }),
+    c('rassicura', 'Rassicura i mercati con un piano pluriennale', { cost: { capital: 3 }, special: 'markets-calm' }),
+    c('difendi', 'Difendi la manovra', { effects: { stats: { notoriety: 1 }, government: { stability: -1 } }, special: 'markets-worse' })] }),
+  d('fondi-ue-scadenze', 'europa', { family: 'europa', weight: 2.2, cooldown: 12, when: sit => sit.premier && sit.signals.eu?.dueId, title: 'Bruxelles ricorda le scadenze dei fondi «{callTitle}»', body: 'Mancano {callWeeks} settimane al termine per impegnare i fondi europei: quello che non è assegnato a opere torna indietro e pesa sui rapporti con la Commissione.', defaultChoice: 'ignora', choices: [
+    c('opere', 'Vai alla sezione Governo e finanzia un’opera', { special: 'projects-open' }),
+    c('regioni', 'Chiedi alle Regioni progetti pronti', { cost: { ap: 1 }, effects: { stats: { influence: 0.6 } }, later: { weeks: 4, chance: 0.6, label: 'Le Regioni mandano progetti utilizzabili', effects: { stats: { reputation: 0.8 } } } }),
+    c('ignora', 'Lascia correre', { effects: { stats: { reputation: -0.5 } } })] }),
+  d('ministro-opere-scarica', 'governo', { family: 'opere', weight: 1.4, cooldown: 20, when: sit => sit.premier && sit.signals.works?.delayed >= 1 && sit.signals.ministers >= 1, title: 'Il ministero {workMinistry} scarica il ritardo sulle Regioni', body: 'Per «{workTitle}» il ministero dice che il ritardo è colpa delle autorizzazioni locali. Le Regioni rispondono che mancano fondi e personale.', defaultChoice: 'difendi', choices: [
+    c('difendi', 'Difendi il ministro', { effects: { government: { stability: -1 } }, special: 'minister-defend' }),
+    c('richiama', 'Richiama il ministro in pubblico', { effects: { stats: { reputation: 1 }, government: { stability: -2 } }, special: 'minister-resign' }),
+    c('mediare', 'Convoca ministero e Regione', { cost: { ap: 1 }, effects: { government: { stability: 0.5 } } })] }),
+  // ---------- the President of the Republic: the days of the Quirinale (only for the office-holder; the decisions of the state come from the Quirinale itself) ----------
+  d('quirinale-lettere', 'quirinale', { forPresident: true, light: true, positive: true, weight: 1.8, cooldown: 8, when: sit => sit.president, title: 'Le lettere dei cittadini al Quirinale', body: 'Ogni settimana arrivano al Colle centinaia di lettere: pensionati, studenti, sindaci di paesi piccoli. Alcune chiedono solo di essere ascoltate.', defaultChoice: 'delega', choices: [
+    c('rispondi', 'Rispondi personalmente ad alcune', { cost: { ap: 1 }, special: 'presidency-act-lettere-cittadini' }),
+    c('delega', 'Lasci rispondere agli uffici', {})] }),
+  d('quirinale-memoria', 'cerimonie', { forPresident: true, light: true, weight: 2, cooldown: 6, when: sit => sit.president, title: 'Una ricorrenza nazionale: la cerimonia al Colle', body: 'Si ricorda una pagina difficile della storia del Paese: familiari, scuole, le alte cariche dello Stato. Il tono della cerimonia lo decidi tu.', defaultChoice: 'sobria', choices: [
+    c('discorso', 'Pronuncia un discorso di unità', { cost: { ap: 1 }, special: 'presidency-act-cerimonia-memoria' }),
+    c('sobria', 'Cerimonia sobria, senza parole', {})] }),
+  d('quirinale-tragedia', 'crisi', { forPresident: true, weight: 1.2, cooldown: 24, when: sit => sit.president, title: 'Una tragedia colpisce il Paese', body: 'Un crollo, un’alluvione, un incidente sul lavoro: il Paese guarda al Colle. I familiari delle vittime aspettano un segno, il governo ha già mandato i soccorsi.', defaultChoice: 'messaggio', choices: [
+    c('visita', 'Vai subito sui luoghi della tragedia', { cost: { ap: 2 }, special: 'presidency-act-tragedia-visita' }),
+    c('messaggio', 'Manda un messaggio di cordoglio', { special: 'presidency-act-tragedia-messaggio' })] }),
+  d('quirinale-governo-incontro', 'governo', { forPresident: true, weight: 2, cooldown: 6, when: sit => sit.president && sit.governing, title: 'Il presidente del Consiglio chiede un colloquio riservato', body: 'La maggioranza scricchiola e Palazzo Chigi vuole sondare il Quirinale: cosa diresti di un rimpasto, di un decreto, di un voto di fiducia? Una parola di troppo e il Colle è tirato dentro lo scontro.', defaultChoice: 'rinvia', choices: [
+    c('ricevi', 'Ricevilo e ascolta, senza impegni', { cost: { ap: 1 }, special: 'presidency-act-governo-incontro' }),
+    c('rinvia', 'Rinvia il colloquio di una settimana', {})] }),
+  d('quirinale-appello-riforme', 'governo', { forPresident: true, positive: true, weight: 1.2, cooldown: 26, when: sit => sit.president, title: 'I giuristi chiedono un tuo appello sulle riforme', body: 'Un gruppo di costituzionalisti ti scrive: la macchina dello Stato è ferma da anni e un richiamo del Colle potrebbe sbloccare il dibattito. Ma se il Parlamento non risponde, l’appello pesa su di te.', defaultChoice: 'attendi', choices: [
+    c('appello', 'Lancia l’appello', { cost: { ap: 1, capital: 1 }, special: 'presidency-act-riforma-appello' }),
+    c('attendi', 'Non rispondere', {})] }),
+  d('quirinale-polemica', 'media', { forPresident: true, weight: 1.6, cooldown: 8, when: sit => sit.president && sit.governing && sit.signals.stability < 66, title: 'Un leader accusa il Quirinale di invadere il campo', body: 'In un’intervista un leader sostiene che il Colle «fa politica». I giornali rilanciano, gli ex presidenti tacciono. Replicare vuol dire entrare nella polemica; tacere vuol dire lasciarla correre.', defaultChoice: 'silenzio', choices: [
+    c('replica', 'Una nota sobria del Quirinale sulle prerogative', { cost: { ap: 1 }, special: 'presidency-act-garanzia-pubblica' }),
+    c('silenzio', 'Lasci cadere la polemica', { effects: { stats: { reputation: 0.2 } } })] }),
+  d('quirinale-ospite-di-stato', 'esteri', { forPresident: true, positive: true, weight: 2, cooldown: 7, when: sit => sit.president, title: 'Un capo di Stato straniero in visita ufficiale', body: 'Il protocollo prevede il banchetto al Quirinale e un colloquio sui dossier aperti: energia, migrazioni, commercio. Un’occasione per rafforzare il peso internazionale dell’Italia, ma ogni parola è letta come una linea del Paese.', defaultChoice: 'cerimonia', choices: [
+    c('colloquio', 'Affianca il colloquio politico con un’intesa sui dossier', { cost: { ap: 1, capital: 1 }, special: 'presidency-act-ospite-stato' }),
+    c('cerimonia', 'Limita la visita alla cerimonia', {})] }),
+  d('quirinale-onorificenze', 'cerimonie', { forPresident: true, light: true, weight: 1.6, cooldown: 8, when: sit => sit.president, title: 'Le onorificenze della Repubblica', body: 'Si decide a chi consegnare le onorificenze dell’anno: volontari, ricercatori, operai di fabbriche in crisi. Una scelta senza polemiche, se fatta bene.', defaultChoice: 'delega', choices: [
+    c('consegna', 'Consegnale di persona', { cost: { ap: 1 }, effects: { stats: { popularity: 0.8, reputation: 0.4 } } }),
+    c('delega', 'Lascia la cerimonia al segretario generale', {})] }),
+  d('quirinale-fiducia-istituzioni', 'media', { forPresident: true, weight: 1.4, cooldown: 9, when: sit => sit.president && sit.signals.stability < 66, title: 'Un sondaggio sulla fiducia nelle istituzioni', body: 'Gli italiani si fidano più del Quirinale che del Parlamento: un dato che i giornali commentano. Ma la fiducia si consuma: dipende da come si usano i poteri.', defaultChoice: 'sobrio', choices: [
+    c('discorso', 'Ricorda il valore di terzietà in un discorso', { cost: { ap: 1 }, effects: { stats: { reputation: 0.6 } } }),
+    c('sobrio', 'Nessun commento: il Colle non commenta i sondaggi', {})] }),
+  d('quirinale-concerto', 'cultura', { forPresident: true, light: true, positive: true, weight: 1.6, cooldown: 9, when: sit => sit.president, title: 'Il concerto al Quirinale', body: 'La stagione dei concerti al Colle riapre al pubblico: ospiti giovani, musicisti, studenti dei conservatori. Un’occasione per aprire le porte del Palazzo.', defaultChoice: 'assisti', choices: [
+    c('apri', 'Apri il Palazzo a una giornata per i ragazzi', { cost: { ap: 1 }, effects: { stats: { popularity: 0.8, notoriety: 0.5 } } }),
+    c('assisti', 'Assisti al concerto', {})] }),
+  d('quirinale-vertenza', 'sociale', { forPresident: true, weight: 1.6, cooldown: 10, when: sit => sit.president, title: 'Una vertenza industriale chiede la mediazione del Colle', body: 'Sindacati e imprese si rivolgono al Presidente per una fabbrica che rischia la chiusura. Il Quirinale non governa e non tratta: può solo ricevere le parti e chiedere al governo di fare la sua parte.', defaultChoice: 'rinvia', choices: [
+    c('ricevi', 'Ricevi le parti e sollecita il governo', { cost: { ap: 1 }, special: 'presidency-act-mediazione-sociale' }),
+    c('rinvia', 'Rinvia al ministero competente', {})] }),
+  d('quirinale-festa-europa', 'europa', { forPresident: true, light: true, positive: true, weight: 1.5, cooldown: 12, when: sit => sit.president, title: 'La festa dell’Europa al Colle', body: 'Studenti, eurodeputati, ambasciatori: una giornata per ricordare le radici comuni. Le tue parole saranno lette a Bruxelles.', defaultChoice: 'saluto', choices: [
+    c('discorso', 'Pronuncia un discorso europeista', { cost: { ap: 1 }, special: 'presidency-act-festa-europa' }),
+    c('saluto', 'Un saluto istituzionale', {})] }),
+  d('quirinale-ospedale', 'territorio', { forPresident: true, light: true, weight: 1.4, cooldown: 10, when: sit => sit.president, title: 'Un ospedale ti invita nel reparto pediatrico', body: 'Un piccolo ospedale di provincia, sempre sotto organico, ti chiede una visita. Non porterai fondi, ma porterai attenzione.', defaultChoice: 'messaggio', choices: [
+    c('visita', 'Fai una visita informale', { cost: { ap: 1 }, effects: { stats: { popularity: 1, reputation: 0.3 } } }),
+    c('messaggio', 'Mandi un messaggio al personale', {})] }),
+  d('quirinale-intervista', 'media', { forPresident: true, weight: 1.2, cooldown: 14, when: sit => sit.president, title: 'Un grande quotidiano chiede un’intervista al Presidente', body: 'È un’occasione rara per parlare al Paese senza il filtro dei comunicati, ma il Colle parla di rado: ogni frase può diventare una linea politica.', defaultChoice: 'declina', choices: [
+    c('rilascia', 'Concedi un’intervista sulle istituzioni', { cost: { ap: 1 }, special: 'presidency-act-intervista' }),
+    c('declina', 'Declina: il Presidente parla con gli atti', {})] }),
+  d('quirinale-sport', 'cultura', { forPresident: true, light: true, positive: true, weight: 1.4, cooldown: 12, when: sit => sit.president, title: 'Gli atleti azzurri al Quirinale', body: 'Una squadra che ha vinto un titolo mondiale viene ricevuta al Colle: foto, medaglie, un discorso di circostanza.', defaultChoice: 'saluto', choices: [
+    c('riceve', 'Ricevi la squadra e premia i volontari dello sport di base', { cost: { ap: 1 }, effects: { stats: { popularity: 1 } } }),
+    c('saluto', 'Un saluto dal Quirinale', {})] }),
+  d('quirinale-scuole', 'cerimonie', { forPresident: true, light: true, positive: true, weight: 1.8, cooldown: 7, when: sit => sit.president, title: 'Le scuole in visita al Quirinale', body: 'Classi da tutta Italia visitano il Colle: domande a bruciapelo, un disegno per il Presidente.', defaultChoice: 'saluto', choices: [
+    c('incontra', 'Incontra i ragazzi', { cost: { ap: 1 }, effects: { stats: { popularity: 1, reputation: 0.3 } } }),
+    c('saluto', 'Un saluto dal balcone', {})] })
 ]);
 export const DAILY_EVENT_IDS = Object.freeze(DAILY_EVENTS.map(item => item.id));

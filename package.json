@@ -46,7 +46,7 @@
     "check:campaign-rivals": "node scripts/check-campaign-rivals.mjs",
     "check:career": "node scripts/check-career.mjs",
     "check:legislature": "node scripts/check-legislature.mjs",
-    "check:presidency": "node scripts/check-presidency.mjs",
+    "check:presidency": "node scripts/check-presidency.mjs && node scripts/check-president-term.mjs",
     "check:start": "node scripts/check-start.mjs",
     "check:legacy": "node scripts/check-legacy.mjs",
     "check:invariants": "node scripts/check-invariants.mjs",

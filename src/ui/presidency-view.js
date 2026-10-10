@@ -1,11 +1,11 @@
 // The Quirinale in the electoral centre (tab "Quirinale"): the election of the President of the Republic (the assembly
 // of the grand electors, the field of candidates, the negotiations, the secret ballots and their quorum) and, when the
 // player is the President, the powers of the office. Everything is simulation: the candidates are figures of the game.
-import { formatDate } from '../core/time.js?v=20261009-4';
-import { CAMP_LABELS, CANDIDATE_TYPES, PRESIDENCY_RULES, PRESIDENT_ACTIVITIES } from '../data/simulation/presidency-rules.js?v=20261009-4';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261009-4';
-import { termEndOf, electionPhaseLabel, lineText } from '../core/presidency-engine.js?v=20261009-4';
-import { arrow, badge, bar, card, empty, esc, kpi, num, table } from './sections-kit.js?v=20261009-4';
+import { formatDate } from '../core/time.js?v=20261010-1';
+import { CAMP_LABELS, CANDIDATE_TYPES, LEDGER_RULES, PRESIDENCY_RULES, PRESIDENT_ACTIVITIES } from '../data/simulation/presidency-rules.js?v=20261010-1';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261010-1';
+import { termEndOf, electionPhaseLabel, lineText } from '../core/presidency-engine.js?v=20261010-1';
+import { arrow, badge, bar, card, empty, esc, kpi, num, table } from './sections-kit.js?v=20261010-1';
 
 const day = date => date ? formatDate(date) : '—';
 const shortName = label => String(label ?? '').replace(/\s*\(figura simulata\)$/, '');
@@ -149,6 +149,14 @@ function powersCard(state, view) {
       <h4 class="cp-sub">Dimissioni</h4><ul class="qr-actions"><li><span><strong>Lasciare il Colle</strong><small>Il Presidente del Senato ti sostituisce e il Parlamento elegge il successore entro quindici giorni. Sei senatore a vita di diritto.</small></span><button class="secondary-button danger" data-presidency-action="resign">Dimettiti</button></li></ul>`
   });
 }
+// The commitments the decisions of the term have opened (they come due and are checked) and the ones already verified.
+function ledgerCard(state, view) {
+  const incumbent = view.presidency.incumbent;
+  const week = state.game.week.index;
+  const open = (incumbent.ledger ?? []).map(item => `<li><span><strong>${esc(LEDGER_RULES[item.kind]?.label ?? item.kind)}</strong><small>${esc(day(item.date))} · verifica tra ${Math.max(0, item.dueWeek - week)} settimane${item.area ? ` · tema: ${esc(item.area)}` : ''}${item.profile ? ` · ${esc(item.profile)}` : ''}</small></span></li>`).join('');
+  const done = (incumbent.verified ?? []).slice(0, 6).map(item => `<li class="${item.success ? 'good' : 'bad'}"><span><strong>${esc(item.label)}</strong><small>${esc(item.text)}</small></span><b class="tone-${item.success ? 'good' : 'bad'}">${item.success ? 'Riuscito' : 'Non riuscito'}</b></li>`).join('');
+  return card({ kicker: 'IMPEGNI E VERIFICHE', title: 'Quello che le tue scelte hanno messo in moto', body: `<h4 class="cp-sub">In attesa di verifica (${(incumbent.ledger ?? []).length})</h4>${open ? `<ul class="qr-actions">${open}</ul>` : '<p class="sx-empty">Nessun impegno aperto: lettere, messaggi, nomine e visite ne aprono uno, e dopo qualche settimana si controlla che cosa hanno prodotto davvero.</p>'}<h4 class="cp-sub">Verificati</h4>${done ? `<ul class="qr-actions">${done}</ul>` : '<p class="sx-empty">Nessuna verifica ancora.</p>'}` });
+}
 function creditCard(view) {
   const incumbent = view.presidency.incumbent;
   const acts = (incumbent.acts ?? []).slice(0, 8).map(item => `<li><time>${esc(day(item.date))}</time><span>${esc(item.text ?? item.act)} <b class="tone-${item.credit >= 0 ? 'good' : 'bad'}">${item.credit >= 0 ? '+' : ''}${num(item.credit, 1)}</b></span></li>`).join('');
@@ -160,7 +168,7 @@ export function renderQuirinale(state, view) {
   const { election, isPlayer } = view;
   const blocks = [];
   blocks.push(card({ kicker: isPlayer ? 'IL TUO MANDATO' : 'IL QUIRINALE · SIMULAZIONE', title: isPlayer ? 'Sei il Presidente della Repubblica' : election ? 'Si elegge il Presidente della Repubblica' : 'Il Presidente della Repubblica', body: summary(state, view) }));
-  if (isPlayer) blocks.push(`<div class="sx-grid two">${powersCard(state, view)}${creditCard(view)}</div>`);
+  if (isPlayer) blocks.push(`<div class="sx-grid two">${powersCard(state, view)}${creditCard(view)}</div>`, ledgerCard(state, view));
   if (election) {
     blocks.push(`<div class="sx-grid two">${movesCard(state, view)}${projectionCard(view)}</div>`, fieldCard(view), assemblyCard(election), ballotsCard(view));
   }

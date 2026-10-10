@@ -343,3 +343,5 @@
 .local-seat-card{display:grid;gap:6px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:var(--panel-2)}
 .local-seat-card>strong{font:700 14px Manrope,sans-serif;color:var(--ink);overflow-wrap:anywhere}
 .local-seat-hint{margin:0;color:var(--muted);font-size:12px}
+.minister-form select,.government-actions select{max-width:100%;min-width:0}
+.minister-form label,.government-actions label{max-width:100%}
