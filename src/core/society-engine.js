@@ -2,6 +2,8 @@ import { uniqueId } from './ids.js?v=20261009-4';
 import { ITALIAN_REGIONS } from '../data/regions.js?v=20261009-4';
 import { INDICATORS, ISSUE_THRESHOLD, ISSUE_TOPICS, MEDIA_OUTLETS, REAL_TOPIC_AREAS, SCENARIO_EXECUTIVE, SEGMENTS } from '../data/simulation/society-rules.js?v=20261009-4';
 import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, EU_PROCEDURE_WEEKS, FINANCING, INSTRUMENT_KINDS, INTENSITY, MACRO_AREAS, POLICY_AREAS, SPREAD_BASE, TERRITORIAL_TARGETS, areaOf, macroAreaOf } from '../data/simulation/policy-rules.js?v=20261009-4';
+import { BUDGET_SECTORS, FISCAL_LEVERS } from '../data/simulation/project-rules.js?v=20261009-4';
+import { euWeek, openCallWeek, projectsOf, projectsWeek } from './project-engine.js?v=20261009-4';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -391,41 +393,100 @@ export function revokeMeasure(input, title, share = 0.6) {
   refresh(society);
   return society;
 }
-// The annual budget: more or less money per group of areas, a tax lever and the deficit it implies.
-export function budgetImpact(society, plan = {}) {
-  const allocations = Object.fromEntries(Object.keys(AREA_GROUPS).map(id => [id, clamp(Math.round(Number(plan.allocations?.[id] ?? 0)), -1, 1)]));
-  const taxes = clamp(Math.round(Number(plan.taxes ?? 0)), -1, 1);
-  const spending = Object.values(allocations).reduce((sum, value) => sum + value, 0);
-  const deficit = round2(spending * 0.12 - taxes * 0.25);
-  const winners = [...new Set(Object.entries(allocations).filter(([, level]) => level > 0).flatMap(([group]) => POLICY_AREAS.filter(item => item.group === group).flatMap(item => item.pleased)))];
-  const losers = [...new Set(Object.entries(allocations).filter(([, level]) => level < 0).flatMap(([group]) => POLICY_AREAS.filter(item => item.group === group).flatMap(item => item.pleased)))];
-  if (taxes > 0) losers.push('famiglie', 'imprese');
-  return { allocations, taxes, spending, deficit, deficitAfter: round2((society?.economy?.deficit ?? 3) + deficit), headroomAfter: round1(clamp((society?.publicFinance?.headroom ?? 50) - spending * 3 + taxes * 6 + 8)), winners: winners.filter(id => !losers.includes(id)), losers: [...new Set(losers)], overLimit: (society?.economy?.deficit ?? 3) + deficit > EU_DEFICIT_LIMIT };
+// The annual budget: more or less money per group of areas and per sector (a slider each, from a cut to a boost), the economic levers (income tax, excise, firms' relief, controls and
+// penalties, regulation) and the deficit they imply. Older plans only had the groups and a tax step: the rest reads as zero.
+export function normalizeBudgetPlan(plan = {}) {
+  const level = (value, min, max) => clamp(Math.round(Number(value ?? 0)) || 0, min, max);
+  return {
+    allocations: Object.fromEntries(Object.keys(AREA_GROUPS).map(id => [id, level(plan?.allocations?.[id], -1, 1)])),
+    sectors: Object.fromEntries(BUDGET_SECTORS.map(sector => [sector.id, level(plan?.sectors?.[sector.id], -3, 3)])),
+    levers: Object.fromEntries(FISCAL_LEVERS.filter(lever => lever.id !== 'taxes').map(lever => [lever.id, level(plan?.levers?.[lever.id], lever.min, lever.max)])),
+    taxes: level(plan?.taxes, -2, 2)
+  };
+}
+// One step of a sector costs a share of what a group step costs: the bigger the area, the more it weighs.
+const sectorUnit = sector => AREA_BY_ID[sector.area].base / 24;
+// The mood each group of citizens takes from the budget law: more money for what concerns it, the taxes and charges it pays, the relief and the rules that favour or burden it.
+function budgetMoods({ allocations, sectors, levers, taxes }) {
+  const moods = {};
+  const add = (id, delta) => { moods[id] = round2((moods[id] ?? 0) + delta); };
+  for (const [group, level] of Object.entries(allocations)) for (const id of new Set(POLICY_AREAS.filter(item => item.group === group).flatMap(item => item.pleased))) add(id, level * 0.8);
+  for (const sector of BUDGET_SECTORS) { const level = sectors[sector.id]; for (const id of AREA_BY_ID[sector.area].pleased) add(id, level > 0 ? 0.5 * level : 0.8 * level); }
+  add('famiglie', taxes > 0 ? -1.5 * taxes : -1.2 * taxes); add('imprese', taxes > 0 ? -1.5 * taxes : -1.2 * taxes); if (taxes < 0) add('fragili', 0.3 * taxes);
+  add('famiglie', -0.7 * levers.accise); add('fragili', -0.9 * levers.accise); add('imprese', -0.4 * levers.accise);
+  add('imprese', 0.9 * levers.agevolazioni); add('fragili', -0.3 * levers.agevolazioni);
+  add('imprese', -0.6 * levers.sanzioni); add('fragili', 0.3 * levers.sanzioni);
+  add('imprese', -0.6 * levers.regole); add('fragili', 0.5 * levers.regole); add('giovani', 0.3 * levers.regole);
+  return moods;
+}
+export function budgetImpact(society, input = {}) {
+  const plan = normalizeBudgetPlan(input);
+  const { allocations, sectors, levers, taxes } = plan;
+  const groupSpend = Object.values(allocations).reduce((sum, value) => sum + value, 0);
+  const sectorSpend = round2(BUDGET_SECTORS.reduce((sum, sector) => sum + sectors[sector.id] * sectorUnit(sector), 0));
+  const spending = round2(groupSpend + sectorSpend);
+  const revenue = round2(taxes * 0.25 + levers.accise * 0.12 + levers.sanzioni * 0.1 - levers.agevolazioni * 0.14);
+  const deficit = round2(spending * 0.12 - revenue);
+  const moods = budgetMoods(plan);
+  const winners = Object.keys(moods).filter(id => moods[id] >= 0.4).sort((a, b) => moods[b] - moods[a]);
+  const losers = Object.keys(moods).filter(id => moods[id] <= -0.4).sort((a, b) => moods[a] - moods[b]);
+  // What the levers do to the economy once the law is in force (before the weekly drift of the stance).
+  const economy = {
+    growth: round2(-taxes * 0.08 + spending * 0.02 + levers.agevolazioni * 0.05 - levers.accise * 0.02 - levers.sanzioni * 0.015 - levers.regole * 0.03),
+    inflation: round2(levers.accise * 0.1 - taxes * 0.04 + spending * 0.03),
+    unemployment: round2(-sectors.lavoro * 0.06 - sectors.imprese * 0.03 - levers.agevolazioni * 0.04 + levers.regole * 0.02)
+  };
+  const rows = BUDGET_SECTORS.map(sector => ({ id: sector.id, label: sector.label, area: sector.area, level: sectors[sector.id], billions: round1(sectors[sector.id] * sectorUnit(sector) * 3 * BILLION_PER_POINT) }));
+  const deficitAfter = round2((society?.economy?.deficit ?? 3) + deficit);
+  return {
+    plan, allocations, sectors, levers, taxes, spending, revenue, deficit, deficitAfter, economy, rows, moods,
+    headroomAfter: round1(clamp((society?.publicFinance?.headroom ?? 50) - spending * 3 + revenue * 24 + 8)),
+    winners, losers, overLimit: deficitAfter > EU_DEFICIT_LIMIT
+  };
+}
+// The money of a sector arrives (or leaves) week after week on the area and on the regional indicators it pays for; a cut hurts more than a boost helps.
+function applySectorEffects(society, sector, level, title) {
+  const spec = AREA_BY_ID[sector.area];
+  const sign = Math.sign(level), steps = Math.abs(level), phase = sign > 0 ? 14 : 8;
+  pushEffect(society, { area: spec.id, perWeek: round2(sign * steps * 3.2 / phase), remaining: phase, cause: `${title} · ${sector.label}` });
+  const regional = Object.entries(spec.regional ?? {});
+  const gaps = Object.fromEntries(regional.map(([indicator]) => { const values = Object.values(society.regions).map(region => 100 - region.indicators[indicator]); return [indicator, values.reduce((sum, value) => sum + value, 0) / values.length || 1]; }));
+  for (const region of Object.values(society.regions)) for (const [indicator, weight] of regional) {
+    const total = sign > 0 ? 2.6 * steps * weight * (100 - region.indicators[indicator]) / gaps[indicator] : -2.2 * steps * weight;
+    pushRegionalEffect(society, { region: region.name, indicator, total: round2(total), phase, lasting: true, cause: `${title} · ${sector.label}` });
+  }
+  for (const [key, value] of Object.entries(spec.economy ?? {})) society.economy[key] = round2(society.economy[key] + value * (sign > 0 ? 0.25 : 0.15) * level);
 }
 export function applyBudgetPlan(input, plan = {}, { date, week, title = 'Legge di bilancio' } = {}) {
   const society = normalizeSociety(copy(input));
   const impact = budgetImpact(society, plan);
   const finance = society.publicFinance;
   finance.allocations = impact.allocations;
-  finance.budget = { year: Number(String(date ?? '').slice(0, 4)) || null, allocations: impact.allocations, taxes: impact.taxes, approvedWeek: week, source: SIM };
+  finance.sectors = impact.sectors;
+  finance.budget = { year: Number(String(date ?? '').slice(0, 4)) || null, allocations: impact.allocations, sectors: impact.sectors, levers: impact.levers, taxes: impact.taxes, approvedWeek: week, source: SIM };
+  finance.stance = Object.fromEntries(['taxes', ...Object.keys(impact.levers)].map(key => [key, round2(clamp((finance.stance?.[key] ?? 0) * 0.85 + (key === 'taxes' ? impact.taxes : impact.levers[key]), -6, 6))]));
   finance.headroom = impact.headroomAfter;
   society.economy.deficit = round2(clamp(society.economy.deficit + impact.deficit, 0, 12));
-  society.economy.growth = round2(society.economy.growth - impact.taxes * 0.08 + impact.spending * 0.02);
-  const mood = (id, delta) => { const segment = society.segments.find(item => item.id === id); if (segment) segment.mood = round1(clamp((segment.mood ?? 0) + delta, -15, 15)); };
-  for (const [group, level] of Object.entries(impact.allocations)) {
-    if (!level) continue;
-    for (const id of new Set(POLICY_AREAS.filter(item => item.group === group).flatMap(item => item.pleased))) mood(id, level * 0.8);
-  }
-  if (impact.taxes > 0) { mood('famiglie', -1.5); mood('imprese', -1.5); }
-  if (impact.taxes < 0) { mood('famiglie', 1.2); mood('imprese', 1.2); mood('fragili', -0.3); }
+  society.economy.growth = round2(society.economy.growth + impact.economy.growth);
+  society.economy.inflation = round2(clamp(society.economy.inflation + impact.economy.inflation, -1, 9));
+  society.economy.unemployment = round2(clamp(society.economy.unemployment + impact.economy.unemployment, 3, 16));
+  for (const sector of BUDGET_SECTORS) if (impact.sectors[sector.id]) applySectorEffects(society, sector, impact.sectors[sector.id], title);
+  for (const [id, delta] of Object.entries(impact.moods)) { const segment = society.segments.find(item => item.id === id); if (segment) segment.mood = round1(clamp((segment.mood ?? 0) + delta, -15, 15)); }
+  const { levers } = impact;
+  if (levers.accise) pushEffect(society, { area: 'ambiente', perWeek: round2(levers.accise * 0.25 / 8), remaining: 8, cause: `${title} · accise` });
+  if (levers.regole) pushEffect(society, { area: 'ambiente', perWeek: round2(levers.regole * 0.4 / 8), remaining: 8, cause: `${title} · regolamentazione` });
+  if (levers.sanzioni) pushEffect(society, { area: 'giustizia', perWeek: round2(levers.sanzioni * 0.4 / 8), remaining: 8, cause: `${title} · controlli` });
+  // The recovery of evasion is uncertain: the revenue promised by the controls may come short.
+  if (levers.sanzioni > 0 && draw(society) > FINANCING.evasione.uncertain) society.economy.deficit = round2(society.economy.deficit + levers.sanzioni * 0.03);
   refresh(society);
-  society.lawsApplied = [{ title, category: 'Finanze pubbliche', area: 'finanze', origin: 'governo', week, date, cost: round1(impact.spending * 3), covered: true, pleased: impact.winners, displeased: impact.losers, winners: impact.winners.map(id => ({ id, label: segmentLabel(id), reason: 'più risorse nel bilancio' })), losers: impact.losers.map(id => ({ id, label: segmentLabel(id), reason: 'tagli o più tasse nel bilancio' })), topRegions: [], budget: { allocations: impact.allocations, taxes: impact.taxes }, source: SIM }, ...society.lawsApplied].slice(0, 40);
+  society.lawsApplied = [{ title, category: 'Finanze pubbliche', area: 'finanze', origin: 'governo', week, date, cost: round1(impact.spending * 3), covered: true, pleased: impact.winners, displeased: impact.losers, winners: impact.winners.map(id => ({ id, label: segmentLabel(id), reason: 'più risorse o meno oneri nel bilancio' })), losers: impact.losers.map(id => ({ id, label: segmentLabel(id), reason: 'tagli o più oneri nel bilancio' })), topRegions: [], budget: { allocations: impact.allocations, sectors: impact.sectors, levers: impact.levers, taxes: impact.taxes }, source: SIM }, ...society.lawsApplied].slice(0, 40);
   return society;
 }
 // Year without an approved budget: spending frozen month by month, markets nervous.
 export function provisionalBudget(input) {
   const society = normalizeSociety(copy(input));
   society.publicFinance.allocations = Object.fromEntries(Object.keys(AREA_GROUPS).map(id => [id, 0]));
+  society.publicFinance.sectors = Object.fromEntries(BUDGET_SECTORS.map(sector => [sector.id, 0]));
   society.publicFinance.spread = round1((society.publicFinance.spread ?? SPREAD_BASE) + 35);
   society.publicFinance.budget = { ...(society.publicFinance.budget ?? {}), provisional: true, source: SIM };
   society.trust = round1(clamp(society.trust - 3, 5, 95));
@@ -511,7 +572,8 @@ function areasWeek(society) {
   for (const spec of POLICY_AREAS) {
     const entry = society.areas[spec.id];
     if (!entry) continue;
-    const funded = (allocations[spec.group] ?? 0) * 0.07;
+    const sector = BUDGET_SECTORS.find(item => item.area === spec.id);
+    const funded = (allocations[spec.group] ?? 0) * 0.07 + (sector ? (society.publicFinance.sectors?.[sector.id] ?? 0) * 0.04 : 0);
     const drift = (50 - entry.value) * 0.008 + (draw(society) - 0.5) * 0.5 + funded;
     entry.value = round1(clamp(entry.value + drift));
     entry.trend = round2((entry.trend ?? 0) * 0.85 + drift);
@@ -532,6 +594,13 @@ export function advanceSociety(input, { date, week, government = null, notoriety
   economy.inflation = round2(clamp(economy.inflation + (draw(society) - 0.5) * 0.12 + (economy.deficit - 3) * 0.01 + (2 - economy.inflation) * 0.02, -1, 9));
   economy.deficit = round2(clamp(economy.deficit + (2.8 - economy.deficit) * 0.04 - (economy.growth - 0.8) * 0.01 + Math.max(0, society.publicFinance.spread - 200) / 20000, 0, 12));
   economy.debt = round2(clamp(economy.debt + (economy.deficit - 2.6) * 0.03 - economy.growth * 0.02, 80, 200));
+  // The stance of the budget (income tax, excise, relief for firms, controls, rules) keeps working on growth and prices while it lasts, and fades if it is not renewed.
+  const stance = society.publicFinance.stance;
+  if (stance) {
+    economy.growth = round2(economy.growth + stance.agevolazioni * 0.0025 - stance.taxes * 0.002 - stance.regole * 0.001 - stance.accise * 0.0008);
+    economy.inflation = round2(clamp(economy.inflation + stance.accise * 0.002, -1, 9));
+    for (const key of Object.keys(stance)) stance[key] = round2(stance[key] * 0.995);
+  }
   // The fiscal margin refills slowly toward a normal year's room, never beyond: money is not infinite.
   society.publicFinance.headroom = round1(clamp(society.publicFinance.headroom + (55 - society.publicFinance.headroom) * 0.025 + economy.growth * 0.1 - Math.max(0, economy.deficit - 4) * 0.4, 0, 100));
   const euChange = financeWeek(society, stability);
@@ -560,6 +629,14 @@ export function advanceSociety(input, { date, week, government = null, notoriety
     segment.mood = round1((segment.mood ?? 0) * 0.93);
     segment.economic = round1(clamp(segment.economic + (economy.growth - 0.8) * 0.3 - (economy.inflation - 2) * 0.2 + (draw(society) - 0.5) * 0.6));
   }
+  // The projects of the Government go on (or slip), the European calls open, are awarded, must be reported and spent.
+  const alerts = [];
+  if (projectsOf(society).length) alerts.push(...projectsWeek(society, { date, government }));
+  if (government?.primeMinister === 'player' && ['active', 'crisis'].includes(government.status)) {
+    const call = openCallWeek(society, week);
+    if (call) alerts.push({ kind: 'bando', callId: call.id, title: call.title, amount: call.amount, deadlineWeek: call.deadlineWeek });
+  }
+  if (society.publicFinance.eu) alerts.push(...euWeek(society, { week }));
   const before = society.satisfaction;
   refresh(society);
   const trustDrift = (society.satisfaction - before) * 0.3 + (government ? (stability - 50) / 400 : 0) + (48 - society.trust) * 0.02 - (society.publicFinance.euStatus === 'procedura' ? 0.1 : 0);
@@ -603,7 +680,7 @@ export function advanceSociety(input, { date, week, government = null, notoriety
   }
   society.executive.approval = round1(clamp(society.executive.approval + (societyMood(society) - society.executive.approval) * 0.1 + (draw(society) - 0.5) * 1.5, 10, 80));
   society.history = [...society.history, snapshot(society, date)].slice(-HISTORY);
-  return { society, lines, derived, measure, euChange };
+  return { society, lines, derived, measure, euChange, alerts };
 }
 export function issueLabel(issue) {
   if (issue.scope === 'regionale') return `${INDICATORS.find(item => item.id === issue.indicator)?.label} in ${issue.region}`;

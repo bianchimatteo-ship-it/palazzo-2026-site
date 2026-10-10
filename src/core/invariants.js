@@ -59,6 +59,7 @@ export function checkInvariants(state, context = {}) {
   checkPartyLife(state, report);
   checkStructures(state, report);
   checkPresidency(state, report);
+  checkProjects(state, report);
   checkCareerGoals(state, report);
   checkAgenda(state, known, report);
   return { ok: issues.length === 0, issues };
@@ -470,6 +471,27 @@ function checkStructures(state, report) {
 // The President of the Republic: the term in office, the assembly of an election in progress (its total, the two thirds
 // and the absolute majority, 58 regional delegates), the ballots (the quorum of each, the sum of its votes), and the
 // office of the player when the player is President (no party, no seat, no other office, exactly one open Quirinale office).
+// The works and the European funds of the Government: stages and progress that make sense, money that is not more than the cost, calls that exist.
+const PROJECT_STAGE_IDS = new Set(['progettazione', 'gara', 'cantiere', 'collaudo', 'completato', 'sospeso']);
+function checkProjects(state, report) {
+  const society = state.society;
+  if (!society) return;
+  const calls = records(society.publicFinance?.eu?.calls);
+  const seen = new Set();
+  for (const [index, project] of records(society.projects).entries()) {
+    const path = `society.projects[${index}]`;
+    if (seen.has(project.id)) report('opera', path, `Opera duplicata: ${project.id}`);
+    seen.add(project.id);
+    if (!PROJECT_STAGE_IDS.has(project.stage)) report('opera', path, `Fase dell’opera non valida: ${project.stage}`);
+    if (!(project.progress >= 0 && project.progress <= 100)) report('opera', path, `Avanzamento dell’opera fuori scala: ${project.progress}`);
+    if (project.stage === 'completato' && project.progress !== 100) report('opera', path, 'Un’opera completata deve essere al 100%.');
+    if (!(project.cost > 0) || !(project.committed >= 0) || project.committed > project.cost + 1e-6) report('opera', path, `Costo o impegno dell’opera incoerenti: ${project.cost} / ${project.committed}`);
+    if (project.callId && !calls.some(call => call.id === project.callId)) report('opera', path, `Il bando europeo ${project.callId} dell’opera non esiste.`);
+  }
+  for (const [index, call] of calls.entries()) {
+    if (!(call.committed >= 0) || call.committed > call.amount + 1e-6) report('bando-ue', `society.publicFinance.eu.calls[${index}]`, `Fondi europei impegnati oltre l’importo: ${call.committed} su ${call.amount}`);
+  }
+}
 function checkPresidency(state, report) {
   const presidency = state.presidency;
   if (!presidency) return;

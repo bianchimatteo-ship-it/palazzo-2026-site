@@ -1,5 +1,6 @@
 import { DATA_SOURCES } from '../data/schema.js?v=20261009-4';
 import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, STAGE_WEEKS, areaOf } from '../data/simulation/policy-rules.js?v=20261009-4';
+import { BUDGET_SECTORS } from '../data/simulation/project-rules.js?v=20261009-4';
 import { evaluateAdvancement } from './progression-engine.js?v=20261009-4';
 import { groupLine, splitGroupVote } from './vote-engine.js?v=20261009-4';
 
@@ -63,8 +64,48 @@ export function groupProfile(group) {
   return { likes, dislikes, dislikesFinancing: financings[Math.floor(rand() * financings.length)], camp, source: DATA_SOURCES.SIMULATION };
 }
 // How much a group likes the content of a bill (areas and financing), from −1 to +1.
+// How a group reads the budget law: the sectors it cares for (more money for what it likes, a cut to it, a boost to what it dislikes) and the taxes it refuses.
+function budgetAffinity(group, plan) {
+  if (!plan) return 0;
+  const profile = groupProfile(group);
+  let score = 0;
+  for (const sector of BUDGET_SECTORS) {
+    const level = Number(plan.sectors?.[sector.id] ?? 0);
+    if (!level) continue;
+    if (profile.likes.includes(sector.area)) score += 0.12 * level;
+    else if (profile.dislikes.includes(sector.area)) score -= 0.08 * level;
+  }
+  const taxes = Number(plan.taxes ?? 0), excise = Number(plan.levers?.accise ?? 0);
+  if (['irpef', 'imprese', 'rendite'].includes(profile.dislikesFinancing) && taxes > 0) score -= 0.12 * taxes;
+  if (profile.dislikesFinancing === 'consumi' && excise > 0) score -= 0.15 * excise;
+  if (profile.dislikesFinancing === 'evasione' && Number(plan.levers?.sanzioni ?? 0) > 0) score -= 0.08 * plan.levers.sanzioni;
+  return clamp(score, -1, 1);
+}
+// What the majority would say of a budget plan before it is presented: for each group of the Government, the score and the main reason (the sectors and charges it cares about).
+export function budgetReactions(parliament, plan) {
+  const government = parliament?.government;
+  if (!government) return [];
+  const out = [];
+  for (const id of [...new Set([...(government.coalitionGroupIds ?? []), ...(government.supportingGroupIds ?? [])])]) {
+    const group = getGroup(parliament, id);
+    if (!group) continue;
+    const profile = groupProfile(group);
+    const reasons = [];
+    for (const sector of BUDGET_SECTORS) {
+      const level = Number(plan?.sectors?.[sector.id] ?? 0);
+      if (!level) continue;
+      if (profile.likes.includes(sector.area)) reasons.push(`${level > 0 ? 'più' : 'meno'} risorse per ${sector.label.toLowerCase()}, una sua priorità`);
+      else if (profile.dislikes.includes(sector.area) && level > 0) reasons.push(`più spesa per ${sector.label.toLowerCase()}, che non gradisce`);
+    }
+    if (Number(plan?.taxes ?? 0) > 0 && ['irpef', 'imprese', 'rendite'].includes(profile.dislikesFinancing)) reasons.push('più tasse, che rifiuta');
+    if (Number(plan?.levers?.accise ?? 0) > 0 && profile.dislikesFinancing === 'consumi') reasons.push('accise più alte, che rifiuta');
+    out.push({ groupId: id, name: group.officialName, score: Math.round(budgetAffinity(group, plan) * 100) / 100, reason: reasons[0] ?? 'nessuna questione di suo interesse' });
+  }
+  return out.sort((a, b) => b.score - a.score);
+}
 function contentAffinity(group, law) {
   const policy = law.policy;
+  if (law.kind === 'manovra') return budgetAffinity(group, policy?.plan);
   if (!policy?.area) return 0;
   const profile = groupProfile(group);
   let score = 0;
@@ -369,8 +410,14 @@ function demandFor(parliament, law, groupId) {
   const profile = groupProfile(getGroup(parliament, groupId) ?? groupId);
   const policy = law.policy ?? {};
   if (law.kind === 'manovra') {
-    const group = POLICY_AREAS.find(item => item.id === profile.likes[0])?.group;
-    return { patch: { plan: { ...(policy.plan ?? {}), allocations: { ...(policy.plan?.allocations ?? {}), [group]: 1 } } }, label: `più risorse per ${POLICY_AREAS.find(item => item.id === profile.likes[0])?.label.toLowerCase()}` };
+    const liked = profile.likes[0];
+    const group = POLICY_AREAS.find(item => item.id === liked)?.group;
+    const sector = BUDGET_SECTORS.find(item => item.area === liked);
+    // A sector with its own slider asks for one more step; the others for their group.
+    const plan = sector
+      ? { ...(policy.plan ?? {}), sectors: { ...(policy.plan?.sectors ?? {}), [sector.id]: Math.min(3, Number(policy.plan?.sectors?.[sector.id] ?? 0) + 1) } }
+      : { ...(policy.plan ?? {}), allocations: { ...(policy.plan?.allocations ?? {}), [group]: 1 } };
+    return { patch: { plan }, label: `più risorse per ${POLICY_AREAS.find(item => item.id === liked)?.label.toLowerCase()}` };
   }
   if (policy.financing && policy.financing === profile.dislikesFinancing) {
     const alternative = ['evasione', 'tagli', 'deficit', 'rendite'].find(item => item !== profile.dislikesFinancing);

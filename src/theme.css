@@ -633,3 +633,37 @@ select option, select optgroup { background: #141b18; color: #e8ece9; font-size:
 }
 /* The decorative palace never widens the page (it overflowed by a few pixels around 1000px). */
 .menu-shell { overflow-x: hidden; overflow-x: clip; }
+
+/* The Prime Minister's budget by sector and economic levers (sliders), the works and the European funds. */
+.budget-group { margin: 0 0 12px; padding: 10px 12px 12px; border: 1px solid var(--line); border-radius: var(--radius); min-width: 0; }
+.budget-group legend { padding: 0 6px; font-size: 12px; font-weight: 700; letter-spacing: .04em; color: var(--ink-2); }
+.slider-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 6px 22px; }
+.slider-field { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; align-items: stretch; justify-content: stretch; }
+.slider-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.slider-head label { font-weight: 600; }
+.slider-head output { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--accent); font-size: 13px; text-align: right; }
+.slider-field input[type="range"] { width: 100%; min-height: 28px; accent-color: var(--accent); cursor: pointer; }
+.slider-field input[type="range"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 6px; }
+.slider-scale { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 11px; }
+.field-detail { color: var(--muted); font-size: 11.5px; line-height: 1.4; }
+.eco-line { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; font-weight: 400; }
+.eco-line b.good { color: var(--good-ink); }
+.eco-line b.bad { color: var(--critical-ink); }
+.project-list, .eu-list { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 10px; }
+.project-row, .eu-row { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); min-width: 0; }
+.project-row.completato { border-left: 3px solid var(--good); }
+.project-row.sospeso { opacity: .8; border-left: 3px solid var(--critical); }
+.project-head { display: flex; align-items: center; gap: 10px; }
+.project-head > div { flex: 1; min-width: 0; }
+.project-head small, .eu-row small, .project-flags, .project-progress small { display: block; color: var(--muted); font-size: 12px; line-height: 1.4; }
+.project-flags { color: var(--serious); }
+.project-progress { display: grid; gap: 4px; }
+.project-funding { display: grid; gap: 8px; }
+.project-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.project-form { display: grid; gap: 12px; padding-top: 6px; }
+.project-form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.project-form label { display: grid; gap: 4px; font-size: 12px; color: var(--ink-2); }
+.eu-row { grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
+.eu-row > .secondary-button { grid-column: 1 / -1; justify-self: start; }
+.eu-row .secondary-button[disabled] { opacity: .5; cursor: not-allowed; }
+@media (max-width: 640px) { .slider-grid { grid-template-columns: minmax(0, 1fr); } .eu-row { grid-template-columns: minmax(0, 1fr); } }

@@ -867,16 +867,18 @@ function joinCamp(world, camp, party, date, reason, { terms = null, due = null }
   alliance.kind = 'coalizione';
   // A term obtained entering the coalition is a commitment of the allies: it has a state and a term (the vote), and it changes the world — the leadership passes, the area goes on the agenda of
   // the others — so that it can be checked at the vote (settleElectoralTerms).
-  if (terms) alliance.terms = [...(alliance.terms ?? []), { ...terms, id: `${alliance.id}|${terms.kind}|${(alliance.terms ?? []).length + 1}`, date, due, status: 'aperto', evidence: null }].slice(-8);
-  if (terms?.kind === 'guida') alliance.leaderId = party.id;
-  if (terms?.kind === 'programma' && terms.area) for (const other of alliance.partyIds.map(id => world.parties.find(item => item.id === id)).filter(item => item && item.id !== party.id)) other.agenda = [terms.area, ...(other.agenda ?? []).filter(id => id !== terms.area)].slice(0, 3);
+  // (the requests the other forces make among themselves stay what they were: a story of the world, not a commitment of the game)
+  const mine = Boolean(party.isPlayer);
+  if (terms) alliance.terms = [...(alliance.terms ?? []), mine ? { ...terms, id: `${alliance.id}|${terms.kind}|${(alliance.terms ?? []).length + 1}`, date, due, status: 'aperto', evidence: null } : { ...terms, date }].slice(-8);
+  if (mine && terms?.kind === 'guida') alliance.leaderId = party.id;
+  if (mine && terms?.kind === 'programma' && terms.area) for (const other of alliance.partyIds.map(id => world.parties.find(item => item.id === id)).filter(item => item && item.id !== party.id)) other.agenda = [terms.area, ...(other.agenda ?? []).filter(id => id !== terms.area)].slice(0, 3);
   alliance.cohesion = clamp(Math.round(alliance.cohesion - 2 - (terms ? 3 : 0)), 0, 100);
   alliance.history = [...(alliance.history ?? []), { date, text: `${newcomers.map(id => world.parties.find(item => item.id === id)?.label ?? id).join(' e ')} ${newcomers.length > 1 ? 'entrano' : 'entra'} nella coalizione` }].slice(-12);
   for (const id of newcomers) for (const member of alliance.partyIds.filter(item => item !== id)) world.ties[tieKey(id, member)] = round1(clamp((world.ties[tieKey(id, member)] ?? 0) + 6, -100, 100));
   const members = alliance.partyIds.map(id => world.parties.find(item => item.id === id)).filter(Boolean);
   const leader = leaderOf(members);
   if (alliance.partyIds.length >= 3 && /^Intesa/.test(alliance.label)) alliance.label = `Coalizione guidata da ${leader.label}`;
-  if (terms?.kind === 'guida' && alliance.partyIds.length >= 3) alliance.label = `Coalizione guidata da ${party.label}`;
+  if (mine && terms?.kind === 'guida' && alliance.partyIds.length >= 3) alliance.label = `Coalizione guidata da ${party.label}`;
   const names = newcomers.map(id => world.parties.find(item => item.id === id)?.label ?? id);
   logEvent(world, date, { kind: 'alleanza', icon: 'link', scope: 'nazionale', title: `${names.join(' e ')} ${newcomers.length > 1 ? 'entrano' : 'entra'} nella coalizione di ${leader?.label ?? 'un’altra forza'}`, body: `${reason === 'soglia' ? 'Da soli il rischio è restare sotto la soglia di sbarramento' : reason === 'invito' ? 'L’invito del partito più grande è stato accolto' : 'Programmi e rapporti abbastanza vicini'}${terms ? `; accordo raggiunto: ${terms.text.charAt(0).toLocaleLowerCase('it-IT') + terms.text.slice(1)}, gli alleati concedono` : ''} (simulazione).`, tone: 'neutral' });
 }

@@ -30,7 +30,7 @@ import { chooseStart } from '../core/start-engine.js?v=20261009-4';
 import { renderHeadquarters } from './game-mode.js?v=20261009-4';
 import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20261009-4';
 import { playerRoles } from '../core/roles.js?v=20261009-4';
-import { accordWarning, budgetPreview, designFromForm, planFromForm, policyFields, policyPreview } from './policy-mode.js?v=20261009-4';
+import { accordWarning, budgetPreview, designFromForm, planFromForm, policyFields, policyPreview, projectPreview, rangeText, requestFromForm } from './policy-mode.js?v=20261009-4';
 import { areaOf } from '../data/simulation/policy-rules.js?v=20261009-4';
 import { attachChartInteractions, hideChartTip } from './polls-mode.js?v=20261009-4';
 import { renderObservatory } from './observatory-view.js?v=20261009-4';
@@ -544,12 +544,25 @@ export function mountApp(root, store, { retryData = null } = {}) {
   const refreshPolicyPreview = (form, field = null) => {
     if (!form) return;
     const society = store.getState().society;
+    // Every slider says its value, and the people using a screen reader hear it too.
+    for (const range of form.querySelectorAll('input[type="range"][data-range]')) {
+      const text = rangeText(range);
+      const out = range.closest('.slider-field')?.querySelector('[data-range-out]');
+      if (out) out.textContent = text;
+      range.setAttribute('aria-valuetext', text);
+    }
     if (form.matches('[data-budget-form]')) {
       for (const label of form.querySelectorAll('.segmented label')) label.classList.toggle('active', Boolean(label.querySelector('input')?.checked));
       const target = form.querySelector('[data-budget-preview]');
-      if (target) target.innerHTML = budgetPreview(society, planFromForm(form));
+      if (target) target.innerHTML = budgetPreview(society, planFromForm(form), store.getState().parliament);
       return;
     }
+    if (form.matches('[data-project-form]')) {
+      const target = form.querySelector('[data-project-preview]');
+      if (target) target.innerHTML = projectPreview(store.getState(), requestFromForm(form));
+      return;
+    }
+    if (form.matches('[data-project-funding-form]')) return;
     const design = designFromForm(form);
     if (field?.matches?.('[data-policy-area]')) {
       const fields = form.querySelector('[data-policy-fields]');
@@ -769,6 +782,17 @@ export function mountApp(root, store, { retryData = null } = {}) {
       try {
         if (accordControl.dataset.accordAnswer) store.answerAccord(accordControl.dataset.accordId, accordControl.dataset.accordAnswer);
         else store.offerAccordConcession(accordControl.dataset.accordConcession);
+        playSound('confirm');
+      } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
+      return;
+    }
+    // The works and the European funds of the Government.
+    const worksControl = event.target.closest('[data-project-stop],[data-eu-apply],[data-eu-report]');
+    if (worksControl) {
+      try {
+        if (worksControl.dataset.projectStop) store.stopProject(worksControl.dataset.projectStop);
+        else if (worksControl.dataset.euApply) store.applyEuCall(worksControl.dataset.euApply);
+        else store.reportEuCall(worksControl.dataset.euReport);
         playSound('confirm');
       } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
       return;
@@ -1393,6 +1417,13 @@ export function mountApp(root, store, { retryData = null } = {}) {
         else if (form.matches('[data-party-program-form]')) store.setPartyProgram(data.getAll('program'));
         playSound('confirm');
       } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(),store.getLastSaved()); }
+    } else if (form.matches('[data-project-form],[data-project-funding-form]')) {
+      event.preventDefault();
+      try {
+        if (form.matches('[data-project-form]')) store.proposeProject(requestFromForm(form));
+        else store.setProjectFunding(form.dataset.projectId, new FormData(form).get('funding'));
+        playSound('confirm');
+      } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
     } else if (form.matches('[data-government-post-form]')) {
       event.preventDefault();
       const portfolio = new FormData(form).get('portfolio');
@@ -1434,7 +1465,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
   root.addEventListener('input', event => {
     const field = event.target;
     if (logoEditor && field.matches?.('input[type="range"][data-logo-edit]')) { logoEditor[field.dataset.logoEdit] = Number(field.value); drawLogoEditor(root, logoEditor, logoEditorImage); return; }
-    if (field.closest?.('[data-policy-fields]') || field.closest?.('[data-budget-form]')) { refreshPolicyPreview(field.closest('form'), field); return; }
+    if (field.closest?.('[data-policy-fields]') || field.closest?.('[data-budget-form]') || field.closest?.('[data-project-form]') || field.closest?.('[data-project-funding-form]')) { refreshPolicyPreview(field.closest('form'), field); return; }
     if (field.matches('[data-catalog-filter]')) {
       catalog[field.dataset.catalogFilter]=field.value;
       if (field.dataset.catalogFilter === 'partyQuery') catalog.partyPage=1;

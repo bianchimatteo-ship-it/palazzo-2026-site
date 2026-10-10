@@ -105,9 +105,9 @@ export function playWeek({ store, db, decide }) {
   store.advance(7);
 }
 
-// A fingerprint of the state for comparing two games: wall-clock timestamps and the interface are left out.
+// A fingerprint of the state for comparing two games: wall-clock timestamps, the interface and the save counter (how many times the game was written) are left out.
 export function fingerprint(state) {
-  const clean = JSON.stringify(state, (key, value) => key === 'ui' ? undefined : typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value) ? 'T' : value);
+  const clean = JSON.stringify(state, (key, value) => key === 'ui' ? undefined : key === 'saveMeta' ? { careerId: value?.careerId } : typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(value) ? 'T' : value);
   return createHash('sha256').update(clean).digest('hex');
 }
 

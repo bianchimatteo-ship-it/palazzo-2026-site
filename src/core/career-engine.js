@@ -960,7 +960,7 @@ function leaveParty(ctx, reason) {
   ctx.game.relations = ctx.game.relations.filter(item => item.id !== 'leadership');
 }
 // Specials the store turns into changes of the country, the Parliament or the Government.
-const WORLD_SPECIALS = ['markets-calm', 'markets-worse', 'europe-up', 'europe-down', 'society-cost', 'minister-defend', 'minister-resign', 'budget-open', 'partner-accept', 'partner-negotiate', 'partner-refuse', 'obstruction-add', 'obstruction-clear', 'snipers',
+const WORLD_SPECIALS = ['project-integrate', 'project-scale', 'project-suspend', 'project-commissioner', 'project-wait', 'project-inaugurate', 'project-inaugurate-light', 'eu-apply', 'eu-report', 'projects-open', 'markets-calm', 'markets-worse', 'europe-up', 'europe-down', 'society-cost', 'minister-defend', 'minister-resign', 'budget-open', 'partner-accept', 'partner-negotiate', 'partner-refuse', 'obstruction-add', 'obstruction-clear', 'snipers',
   // The national cycle (legislature-engine): coalitions before the vote, support and mandate after it.
   'national-coalition', 'national-alone', 'national-auto', 'national-support', 'national-opposition', 'national-wait', 'national-mandate-accept', 'national-mandate-decline',
   // The player's vote on a bill of the others (lawmaking-engine).
@@ -1995,7 +1995,9 @@ function updateElections(ctx, date, lines, specials) {
   }
   // A government that stays fallen long enough brings the general election forward.
   const government = ctx.parliament?.government;
-  game.fallenWeeks = government?.status === 'fallen' ? (game.fallenWeeks ?? 0) + 1 : 0;
+  // (only a Government that fell in the legislature in office counts: the one left behind by the vote does not bring the next election forward)
+  const fellNow = government?.status === 'fallen' && (!government.fallenAt || !game.legislature?.since || government.fallenAt >= game.legislature.since);
+  game.fallenWeeks = fellNow ? (game.fallenWeeks ?? 0) + 1 : 0;
   const politics = game.elections.find(item => item.type === 'politiche' && item.status === 'upcoming');
   if (game.fallenWeeks >= EARLY_ELECTION_AFTER_WEEKS && politics && politics.windowOpensAt > advanceDays(date, 7)) {
     bringElectionForward(game, politics, date);

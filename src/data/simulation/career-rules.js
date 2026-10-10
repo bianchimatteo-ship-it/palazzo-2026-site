@@ -16,13 +16,13 @@ export const STAT_LABELS = Object.freeze({
 export const PARLIAMENT_TIME_COSTS = Object.freeze({
   joinGroup: 1, contestRole: 1, proposeLaw: 1, amendLaw: 1, negotiateLaw: 1, compromiseLaw: 1,
   advanceLaw: 1, formGovernment: 1, governmentSupport: 1, reviseCoalition: 1, assignMinister: 1, confidence: 1, crisis: 1,
-  governmentBill: 2, decree: 2, budget: 2, program: 1, summit: 2, reshuffle: 1, confidenceOnLaw: 1, amendPolicy: 1, withdraw: 1,
+  governmentBill: 2, decree: 2, budget: 2, program: 1, summit: 2, reshuffle: 1, confidenceOnLaw: 1, amendPolicy: 1, withdraw: 1, project: 2, projectFunding: 1, projectStop: 1, euApply: 1, euReport: 1,
   // On the bills of the others: a speech in committee or on the floor, an amendment (it also costs political capital).
   speakOnLaw: 1, amendOthers: 1
 });
 export const AMENDMENT_CAPITAL_COST = 2;
 // Political capital spent by the Government's big moves.
-export const GOVERNMENT_CAPITAL_COSTS = Object.freeze({ governmentBill: 3, decree: 5, budget: 4, program: 2, summit: 3, reshuffle: 4, confidenceOnLaw: 4 });
+export const GOVERNMENT_CAPITAL_COSTS = Object.freeze({ governmentBill: 3, decree: 5, budget: 4, program: 2, summit: 3, reshuffle: 4, confidenceOnLaw: 4, project: 3, projectFunding: 1, projectStop: 2, euApply: 2, euReport: 1 });
 
 export const WEEKLY_ACTIVITIES = Object.freeze([
   { id: 'ascolto', category: 'territorio', label: 'Giro di ascolto', detail: 'Mercati, quartieri e sedi di associazione: presenza costante, poco rischio.', cost: { ap: 1, funds: 150 }, effects: { stats: { popularity: 1.4, consensus: 0.3, notoriety: 0.4 }, relations: { civic: 2 } }, risk: { chance: 0.06, label: 'Una contestazione rovina l’incontro', effects: { stats: { popularity: -1 } } } },
@@ -589,6 +589,27 @@ export const SITUATION_EVENTS = Object.freeze({
   'sessione-bilancio': { id: 'sessione-bilancio', title: 'Si apre la sessione di bilancio per il {year}', body: 'Entro il 31 dicembre il Parlamento deve approvare la legge di bilancio: senza, si va all’esercizio provvisorio con spesa congelata e mercati nervosi.', defaultChoice: 'rinvia', choices: [
     { id: 'prepara', label: 'Prepara la manovra (sezione Governo)', special: 'budget-open' },
     { id: 'rinvia', label: 'Rinvia di qualche settimana', effects: { government: { stability: -1 } } }] },
+  // The works and the European funds of the Government (project-engine): what the Prime Minister decides when a project slips, costs more, ends, or a call needs an answer.
+  'progetto-sforamento': { id: 'progetto-sforamento', title: '«{project}»: i costi salgono di {amount} punti', body: 'Il cantiere in {region} sfora il preventivo: servono altri {amount} punti su {cost}. Il ministero chiede una decisione; senza, i lavori si fermano e l’impresa chiederà ancora di più (comportamento simulato).', defaultChoice: 'attendi', choices: [
+    { id: 'integra', label: 'Integra i fondi dal margine di bilancio', cost: { ap: 1 }, special: 'project-integrate' },
+    { id: 'ridimensiona', label: 'Ridimensiona l’opera: costa meno, rende meno', cost: { capital: 1 }, special: 'project-scale' },
+    { id: 'sospendi', label: 'Sospendi i lavori e recupera una parte dell’impegno', effects: { stats: { popularity: -1.5, reputation: -0.5 } }, special: 'project-suspend' },
+    { id: 'attendi', label: 'Prendi tempo', effects: {}, special: 'project-wait' }] },
+  'progetto-ritardo': { id: 'progetto-ritardo', title: '«{project}» accumula ritardo ({delay} settimane)', body: 'L’opera in {region} è ferma alla fase «{stage}»: gare contestate, autorizzazioni, cantieri che rallentano. Ogni settimana persa riduce quel che l’opera darà ai cittadini.', defaultChoice: 'attendi', choices: [
+    { id: 'commissario', label: 'Nomina un commissario straordinario', cost: { capital: 3 }, effects: { stats: { notoriety: 0.5 } }, special: 'project-commissioner' },
+    { id: 'attendi', label: 'Aspetta e monitora', effects: {}, special: 'project-wait' }] },
+  'progetto-completato': { id: 'progetto-completato', title: '«{project}» è pronta', body: 'L’opera in {region} è collaudata e apre ai cittadini ({areaLabel}: qualità {quality}/100{late}). Chi ci mette la faccia raccoglie il merito; chi manca viene notato.', defaultChoice: 'delega', choices: [
+    { id: 'inaugura', label: 'Inaugura di persona', cost: { ap: 1 }, effects: { stats: { popularity: 2, notoriety: 1.5, reputation: 0.5 } }, special: 'project-inaugurate' },
+    { id: 'delega', label: 'Lascia l’inaugurazione al ministro', effects: { stats: { popularity: 0.5 } }, special: 'project-inaugurate-light' }] },
+  'bando-ue': { id: 'bando-ue', title: 'Bando europeo: {call}', body: 'Bruxelles ha aperto un bando da {amount} punti di fondi (circa {billions} miliardi di gioco) su «{call}». Per candidarsi serve una riforma recente nei settori {areas}; il bando scade tra {weeks} settimane. Se assegnato, i fondi vanno spesi in opere cofinanziate dallo Stato e rendicontati.', defaultChoice: 'attendi', choices: [
+    { id: 'candidati', label: 'Candida l’Italia', cost: { capital: 2, ap: 1 }, special: 'eu-apply' },
+    { id: 'attendi', label: 'Lascia correre', effects: {}, special: 'projects-open' }] },
+  'ue-rendiconto': { id: 'ue-rendiconto', title: 'Rendicontazione dei fondi europei: «{call}»', body: 'Bruxelles aspetta il rendiconto delle spese sostenute: entro {weeks} settimane. Un ritardo costa una parte dei fondi e peggiora i rapporti con la Commissione.', defaultChoice: 'attendi', choices: [
+    { id: 'rendiconta', label: 'Presenta il rendiconto', cost: { capital: 1, ap: 1 }, special: 'eu-report' },
+    { id: 'attendi', label: 'Rimanda', effects: {} }] },
+  'ue-fondi-scadenza': { id: 'ue-fondi-scadenza', title: 'Fondi europei in scadenza: «{call}»', body: 'Restano {left} punti non impegnati su «{call}» e mancano poche settimane: ciò che non è assegnato a opere torna a Bruxelles e pesa su rapporti e spread.', defaultChoice: 'attendi', choices: [
+    { id: 'progetti', label: 'Apri la sezione Governo per finanziare un’opera', special: 'projects-open' },
+    { id: 'attendi', label: 'Lascia correre', effects: {} }] },
   'richiesta-alleato': { id: 'richiesta-alleato', title: '{group} chiede {demand}', body: 'Un alleato della maggioranza mette sul tavolo una richiesta entro il {deadlineLabel}: se la ignori, rimetterà in discussione il sostegno al governo (comportamento simulato).', defaultChoice: 'attendi', choices: [
     { id: 'accetta', label: 'Accetta la richiesta', effects: { stats: { influence: -0.5 } }, special: 'partner-accept' },
     { id: 'tratta', label: 'Tratta: più tempo in cambio di attenzione', cost: { capital: 4 }, special: 'partner-negotiate' },

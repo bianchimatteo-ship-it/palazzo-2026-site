@@ -23,7 +23,7 @@ import { EP_COSTS, EP_GROUPS_2024, EP_ROLES, INSTITUTIONS, advanceInstitutionWee
 import { candidacyBlock, institutionOffice, lapsesFor, officeLabel, officeScope } from './office-engine.js?v=20261009-4';
 import { actTypeOf } from '../data/simulation/local-acts.js?v=20261009-4';
 import { SECTOR_GAINS, competenceIn, gainSector, sectorFloors, standingFactors } from './standing-engine.js?v=20261009-4';
-import { AREA_BY_ID, BUDGET_SESSION, GOVERNMENT_LINES, POLICY_AREAS, areaOf } from '../data/simulation/policy-rules.js?v=20261009-4';
+import { AREA_BY_ID, BILLION_PER_POINT, BUDGET_SESSION, GOVERNMENT_LINES, POLICY_AREAS, areaOf } from '../data/simulation/policy-rules.js?v=20261009-4';
 import { recordAccordOutcome, settleElectoralTerms, allianceBlock, allianceOf, electionRoster, forceProfiles, mergeCandidates, mergeIntoPlayerForce, renamePlayerForce, setPlayerAgenda, splitPlayerForce, localShares, regionalShares, withRegionalLeans, withLocalCalendar, joinCoalition, acceptAlliance, addWorldEffects, advanceWorld, alignWorldToVote, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setGoverningForces, setPlayerParty, withCanonicalForces, withLatentForces, withPartyIdentities, withPositions } from './world-engine.js?v=20261009-4';
 import { candidacyQuotas, FORMATION_PHASES, LEGISLATURE_RULES, NATIONAL_LINES, acceptMandate, crisisFormation, seatResult, startFormation, buildCoalitions, campaignWeekEffects, coalitionOptions, compactResult, contestedDistricts, createNationalState, europeanListSeats, formationStep, groupOfParty, homeDistricts, legislatureGroups, legislatureTerm, nationalCalendar, nationalHistory, nationalProjection, normalizeNationalState, openLegislature, politicheOutcome, regionalBreakdown, runEuropeanVote, runNationalVote, seatPlayer, voteForces } from './legislature-engine.js?v=20261009-4';
 import { classifyOutcome, preferenceStanding } from './election-engine.js?v=20261009-4';
@@ -37,6 +37,8 @@ import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20261009-4';
 import { advanceSociety, applyBudgetPlan, applyLawToSociety, calibrateWeights, createSociety, explainMood, measureDesign, mediaEvent, normalizeSociety, provisionalBudget, publicBudgetChoice, regionAttention, revokeMeasure, scheduleRegionalEffects, segmentAttention, societyMood, societyShock, observatorySociety } from './society-engine.js?v=20261009-4';
 import { ACTIVITY_MEDIA, INDICATORS, ISSUE_TOPICS, SEGMENTS } from '../data/simulation/society-rules.js?v=20261009-4';
 import { book, hasAsset, releaseElectionFund, setBudgetLevel } from './finance-engine.js?v=20261009-4';
+import { EU_CALLS } from '../data/simulation/project-rules.js?v=20261009-4';
+import { applyCall, projectQuote, proposeProject, reportCall, setProjectFunding, settleProjectIssue, suspendProject } from './project-engine.js?v=20261009-4';
 import { isPartyLeader, treasuryBook } from './organization-engine.js?v=20261009-4';
 import { selectContacts, syncContacts } from './contacts-engine.js?v=20261009-4';
 import { NEWS_TEMPLATES, composeHeadline, weeklyNews } from './news-engine.js?v=20261009-4';
@@ -1029,6 +1031,33 @@ function handleSpecials(s, specials) {
         if (parliament.relations?.[special.person.groupId]) parliament.relations[special.person.groupId] = { ...parliament.relations[special.person.groupId], value: Math.min(100, parliament.relations[special.person.groupId].value + 4) };
         next = { ...next, parliament };
       }
+    } else if (special.type.startsWith('project-') && next.society) {
+      const projectId = special.params?.projectId;
+      const answer = { 'project-integrate': 'integra', 'project-scale': 'ridimensiona', 'project-suspend': 'sospendi', 'project-commissioner': 'commissario', 'project-wait': 'attendi' }[special.type];
+      try {
+        if (answer) {
+          const out = settleProjectIssue(next.society, projectId, answer);
+          next = { ...next, society: out.society };
+          const note = { integra: ['Fondi integrati', 'Il cantiere riparte con le risorse necessarie.', 'neutral'], ridimensiona: ['Opera ridimensionata', 'Costa meno e darà meno ai cittadini.', 'neutral'], sospendi: ['Opera sospesa', 'I lavori si fermano: la regione protesta.', 'bad'], commissario: ['Commissario straordinario', 'Si accelera, ma se ne risponde.', 'neutral'], attendi: [null] }[answer];
+          if (note[0]) next = addTimeline(next, [{ kind: 'governo', title: `${note[0]}: ${out.project.title}`, detail: note[1], tone: note[2] }]);
+          if (answer === 'sospendi') { const game = deepCopy(next.game); remember(game, { date: next.clock.currentDate, kind: 'decisione', text: `Sospesa l’opera «${out.project.title}»`, region: out.project.region, weight: 1.2 }); next = { ...next, game }; }
+        } else if (special.type.startsWith('project-inaugurate')) {
+          const project = (next.society.projects ?? []).find(item => item.id === projectId);
+          if (project) {
+            next = { ...next, society: regionAttention(next.society, project.region, special.type === 'project-inaugurate' ? 4 : 1) };
+            const game = deepCopy(next.game);
+            remember(game, { date: next.clock.currentDate, kind: 'legge', text: `Aperta l’opera «${project.title}»${project.result?.late ? ` con ${project.result.late} settimane di ritardo` : ''}`, region: project.region, weight: special.type === 'project-inaugurate' ? 1.4 : 1 });
+            next = addTimeline({ ...next, game }, [{ kind: 'governo', title: `Aperta l’opera: ${project.title}`, detail: `Qualità ${Math.round((project.result?.quality ?? 1) * 100)}/100`, tone: 'good' }]);
+          }
+        }
+      } catch (error) { next = { ...next, ui: { ...next.ui, toast: error.message } }; }
+    } else if ((special.type === 'eu-apply' || special.type === 'eu-report') && next.society) {
+      try {
+        const out = special.type === 'eu-apply' ? applyCall(next.society, special.params?.callId, { week: next.game.week.index }) : reportCall(next.society, special.params?.callId, { week: next.game.week.index });
+        next = addTimeline({ ...next, society: out.society }, [{ kind: 'governo', title: special.type === 'eu-apply' ? `Candidatura al bando europeo «${out.call.title}»` : `Rendicontazione dei fondi europei «${out.call.title}»`, detail: special.type === 'eu-apply' ? `Riforma presentata: ${out.call.reform}` : 'Bruxelles prende atto', tone: 'neutral' }]);
+      } catch (error) { next = { ...next, ui: { ...next.ui, toast: error.message } }; }
+    } else if (special.type === 'projects-open') {
+      next = { ...next, ui: { ...next.ui, activePage: 'governo', toast: 'Opere e fondi europei: sezione Governo' } };
     } else if (special.type === 'budget-open') {
       next = { ...next, ui: { ...next.ui, activePage: 'governo', toast: 'Prepara la legge di bilancio nella sezione Governo' } };
     } else if (special.type === 'society-shock' && next.society) {
@@ -1208,6 +1237,27 @@ function tickSociety(s, date, report) {
     game = addSituationEvent(game, 'crisi-territoriale', { issueTitle, issueBody, region: issue.region ?? region ?? 'Italia', indicator: issue.indicator, topic: issue.topic, issueId: issue.id, dedupe: issue.id });
   }
   const chronicle = out.derived.map(item => { const [title, body] = issueText(item, society); return { type: 'chronicle', kind: 'territorio', icon: 'pin', scope: item.scope, title, body, tone: 'bad' }; });
+  // The works and the European funds: what happened this week to the projects of the Government asks for a decision (or is told in the chronicle).
+  const premier = isPrimeMinister(s.parliament);
+  const num1 = value => String(Math.round(value * 10) / 10).replace('.', ',');
+  const tell = (title, body, tone = 'neutral') => chronicle.push({ type: 'chronicle', kind: 'governo', icon: 'ministry', scope: 'nazionale', title, body, tone });
+  for (const alert of out.alerts ?? []) {
+    if (alert.kind === 'sforamento' && premier) game = addSituationEvent(game, 'progetto-sforamento', { project: alert.title, amount: num1(alert.amount), cost: num1(alert.cost), region: alert.region, projectId: alert.projectId, dedupe: `${alert.projectId}|${alert.waits}` }, true);
+    else if (alert.kind === 'ritardo' && premier) game = addSituationEvent(game, 'progetto-ritardo', { project: alert.title, delay: String(alert.delay), stage: alert.stage.toLowerCase(), region: alert.region, projectId: alert.projectId, dedupe: `${alert.projectId}|${alert.delay}` });
+    else if (alert.kind === 'completato') {
+      tell(`Aperta l’opera: ${alert.title}`, `Collaudata in ${alert.region}${alert.late ? ` con ${alert.late} settimane di ritardo` : ' nei tempi'}: i cittadini ne sentiranno gli effetti nelle settimane successive.`, 'good');
+      if (premier) game = addSituationEvent(game, 'progetto-completato', { project: alert.title, region: alert.region, areaLabel: alert.areaLabel, quality: String(Math.round(alert.quality * 100)), late: alert.late ? `, ${alert.late} settimane di ritardo` : '', projectId: alert.projectId, dedupe: alert.projectId });
+    } else if (alert.kind === 'bando' && premier) {
+      const template = EU_CALLS[(society.publicFinance.eu?.calls ?? []).find(item => item.id === alert.callId)?.template];
+      game = addSituationEvent(game, 'bando-ue', { call: alert.title, amount: num1(alert.amount), billions: num1(alert.amount * BILLION_PER_POINT), areas: (template?.areas ?? []).slice(0, 3).map(id => AREA_BY_ID[id]?.label.toLowerCase()).join(', '), weeks: String(Math.max(1, alert.deadlineWeek - report.week)), callId: alert.callId, dedupe: alert.callId });
+    } else if (alert.kind === 'bando-assegnato') { tell(`Assegnati i fondi europei: ${alert.title}`, `Bruxelles accoglie la candidatura: ${num1(alert.amount)} punti da spendere in opere cofinanziate, con rendiconti periodici.`, 'good'); if (premier) remember(game, { date, kind: 'legge', text: `Fondi europei assegnati: «${alert.title}»`, weight: 1 }); }
+    else if (alert.kind === 'bando-respinto') tell(`Candidatura respinta: ${alert.title}`, 'La Commissione non assegna i fondi: pesano i rapporti con Bruxelles e lo stato dei conti.', 'bad');
+    else if (alert.kind === 'bando-scaduto') tell(`Bando europeo scaduto: ${alert.title}`, 'Nessuna candidatura: l’occasione è persa.', 'bad');
+    else if (alert.kind === 'rendiconto' && premier) game = addSituationEvent(game, 'ue-rendiconto', { call: alert.title, weeks: String(alert.due), callId: alert.callId, dedupe: `${alert.callId}|${report.week}` });
+    else if (alert.kind === 'rendiconto-mancato') { tell(`Rendiconto mancato: ${alert.title}`, `Bruxelles trattiene ${num1(alert.lost)} punti e i rapporti peggiorano.`, 'bad'); if (premier) remember(game, { date, kind: 'procedura-ue', text: `Rendiconto dei fondi europei «${alert.title}» presentato in ritardo: persi ${num1(alert.lost)} punti`, weight: 1.2 }); }
+    else if (alert.kind === 'fondi-in-scadenza' && premier) game = addSituationEvent(game, 'ue-fondi-scadenza', { call: alert.title, left: num1(alert.left), callId: alert.callId, dedupe: alert.callId });
+    else if (alert.kind === 'fondi-perduti') { tell(`Fondi europei perduti: ${alert.title}`, `${num1(alert.lost)} punti non impegnati tornano a Bruxelles.`, 'bad'); if (premier) remember(game, { date, kind: 'procedura-ue', text: `Fondi europei non spesi: persi ${num1(alert.lost)} punti di «${alert.title}»`, weight: 1.5 }); }
+  }
   let parliament = s.parliament;
   // Citizens reward or punish whoever answers for them, territory by territory: that is where elections are won.
   const regional = {};
@@ -1573,7 +1623,10 @@ function seatInstitution(s, instId, replaced = null) {
     assembly: inst.id, kind: inst.kind, label: inst.name, groups, previous: inst.roster ?? null, player: mine, pool: rosterPool(s, closing), numberFrom: replaced?.roster?.counter ?? 0, ...rosterContext(s, inst.id), date: inst.since, resultId: inst.electionId ?? null,
     place: { name: inst.name, region: inst.region ?? null, municipality: inst.kind === 'comune' ? String(inst.name).replace(/^Comune di\s+/, '') : null }, leader
   });
-  const next = { ...s, dataset: withSeatPersons(s.dataset, out), local: { institutions: localOf(s).institutions.map(item => item.id === instId ? { ...item, roster: out.roster } : item) } };
+  const dataset = withSeatPersons(s.dataset, out);
+  // The simulated head of the executive is the person on the leading seat: the executive carries his name.
+  const head = executive && executive.leader !== 'player' && out.roster.leader ? dataset.politicians.find(item => item.id === out.roster.leader)?.displayName : null;
+  const next = { ...s, dataset, local: { institutions: localOf(s).institutions.map(item => item.id === instId ? { ...item, roster: out.roster, ...(head && head !== executive.label ? { executive: { ...executive, label: head } } : {}) } : item) } };
   return pruneSeatPersons(next);
 }
 // Every week: the councils of a saved game that had no seats with people get them, and the Chambers follow their groups.
@@ -3786,6 +3839,55 @@ export const store = {
     const result = proposeLaw(next.parliament, { title: `Legge di bilancio ${year}`, category: 'Finanze pubbliche', summary: 'Priorità di spesa, entrate e saldo per il prossimo anno.', currentDate: next.clock.currentDate, policy: { plan }, origin: 'governo', kind: 'manovra' });
     applyParliamentUpdate(next, result.parliament, 'Legge di bilancio presentata alle Camere');
     return state.parliament.laws.find(law => law.id === result.law.id);
+  },
+  // ---------- the projects of the Government and the European funds (project-engine) ----------
+  proposeProject(request = {}) {
+    requirePremier();
+    const quote = projectQuote(state.society, request, state.parliament.government);
+    if (!quote.ok) throw new Error(quote.problems[0]);
+    const next = withGovernmentCost('project');
+    const out = proposeProject(next.society, request, { date: next.clock.currentDate, week: next.game.week.index, government: next.parliament.government });
+    const game = deepCopy(next.game);
+    remember(game, { date: next.clock.currentDate, kind: 'decisione', text: `Avviata l’opera «${out.project.title}»`, region: out.project.region, weight: 0.8 });
+    state = addTimeline({ ...next, game, society: out.society, ui: { ...next.ui, toast: `Opera avviata: ${out.project.title}` } }, [{ kind: 'governo', title: `Opera avviata: ${out.project.title}`, detail: `${quote.billions} miliardi (simulati) · ${quote.weeks} settimane previste${quote.callId ? ' · cofinanziata da fondi europei' : ''}`, tone: 'neutral' }]);
+    persist(); emit();
+    return out.project;
+  },
+  setProjectFunding(projectId, funding) {
+    requirePremier();
+    const next = withGovernmentCost('projectFunding');
+    const out = setProjectFunding(next.society, projectId, funding);
+    state = { ...next, society: out.society, ui: { ...next.ui, toast: `Budget di «${out.project.title}»: ${out.project.funding}%` } };
+    persist(); emit();
+    return out.project;
+  },
+  stopProject(projectId) {
+    requirePremier();
+    const next = withGovernmentCost('projectStop');
+    const out = suspendProject(next.society, projectId);
+    const game = deepCopy(next.game);
+    remember(game, { date: next.clock.currentDate, kind: 'decisione', text: `Sospesa l’opera «${out.project.title}» con il ${Math.round(out.project.progress)}% dei lavori`, region: out.project.region, weight: 1.2 });
+    state = addTimeline({ ...next, game, society: out.society, ui: { ...next.ui, toast: `Opera sospesa: recuperati ${out.back} punti di margine` } }, [{ kind: 'governo', title: `Opera sospesa: ${out.project.title}`, detail: `Lavori al ${Math.round(out.project.progress)}%: la regione protesta`, tone: 'bad' }]);
+    persist(); emit();
+    return out.project;
+  },
+  applyEuCall(callId) {
+    requirePremier();
+    applyCall(state.society, callId, { week: state.game.week.index });
+    const next = withGovernmentCost('euApply');
+    const out = applyCall(next.society, callId, { week: next.game.week.index });
+    state = addTimeline({ ...next, society: out.society, ui: { ...next.ui, toast: `Candidatura inviata: ${out.call.title}` } }, [{ kind: 'governo', title: `Candidatura al bando europeo «${out.call.title}»`, detail: `Riforma presentata: ${out.call.reform}. La decisione arriva tra qualche settimana.`, tone: 'neutral' }]);
+    persist(); emit();
+    return out.call;
+  },
+  reportEuCall(callId) {
+    requirePremier();
+    reportCall(state.society, callId, { week: state.game.week.index });
+    const next = withGovernmentCost('euReport');
+    const out = reportCall(next.society, callId, { week: next.game.week.index });
+    state = addTimeline({ ...next, society: out.society, ui: { ...next.ui, toast: `Rendiconto presentato: ${out.call.title}` } }, [{ kind: 'governo', title: `Rendicontazione dei fondi europei «${out.call.title}»`, detail: 'Bruxelles prende atto: i rapporti con la Commissione migliorano.', tone: 'good' }]);
+    persist(); emit();
+    return out.call;
   },
   majoritySummit() {
     requirePremier();

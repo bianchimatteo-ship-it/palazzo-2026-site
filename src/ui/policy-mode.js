@@ -3,8 +3,10 @@
 import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, FINANCING, GOVERNMENT_LINES, INSTRUMENT_KINDS, INTENSITY, MINISTRIES, POLICY_AREAS, TERRITORIAL_TARGETS } from '../data/simulation/policy-rules.js?v=20261009-4';
 import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261009-4';
 import { ITALIAN_REGIONS } from '../data/regions.js?v=20261009-4';
-import { areaTable, budgetImpact, measureDesign, projectMeasure } from '../core/society-engine.js?v=20261009-4';
-import { accordCriterion, accordKindLabel, activeMinisters, groupProfile, partnerSatisfaction, stageWait } from '../core/parliament-engine.js?v=20261009-4';
+import { areaTable, budgetImpact, measureDesign, normalizeBudgetPlan, projectMeasure } from '../core/society-engine.js?v=20261009-4';
+import { BUDGET_SECTORS, EU_CALLS, FISCAL_LEVERS, PROJECT_RULES, PROJECT_TYPES } from '../data/simulation/project-rules.js?v=20261009-4';
+import { callRequirement, euView, isActive, projectQuote, projectView } from '../core/project-engine.js?v=20261009-4';
+import { accordCriterion, accordKindLabel, activeMinisters, budgetReactions, groupProfile, partnerSatisfaction, stageWait } from '../core/parliament-engine.js?v=20261009-4';
 import { glyph } from './visuals.js?v=20261009-4';
 import { esc, stateBadge } from './charts.js?v=20261009-4';
 
@@ -71,23 +73,136 @@ export function policyPreview(society, design) {
 }
 
 // ---------- the budget law ----------
-export function budgetFields(plan = {}) {
-  return `<div class="budget-fields">${Object.entries(AREA_GROUPS).map(([id, label]) => `<div class="budget-field"><span>${esc(label)}</span><div class="segmented" role="group" aria-label="${esc(label)}">${[[-1, 'Taglio'], [0, 'Invariato'], [1, 'Aumento']].map(([value, text]) => `<label class="${(plan.allocations?.[id] ?? 0) === value ? 'active' : ''}"><input type="radio" name="alloc-${id}" value="${value}" ${(plan.allocations?.[id] ?? 0) === value ? 'checked' : ''} />${text}</label>`).join('')}</div></div>`).join('')}
-    <div class="budget-field"><span>Tasse</span><div class="segmented" role="group" aria-label="Tasse">${[[-1, 'Meno tasse'], [0, 'Invariate'], [1, 'Più tasse']].map(([value, text]) => `<label class="${(plan.taxes ?? 0) === value ? 'active' : ''}"><input type="radio" name="taxes" value="${value}" ${(plan.taxes ?? 0) === value ? 'checked' : ''} />${text}</label>`).join('')}</div></div></div>`;
+// A slider with its value always in sight: the output shows the level (and, for a sector, what it costs), the scale names the two ends.
+const SECTOR_UNIT = sector => AREA_BY_ID[sector.area].base / 24 * 3 * BILLION_PER_POINT;
+export function rangeText(input) {
+  const value = Number(input.value);
+  const sector = BUDGET_SECTORS.find(item => input.name === `sector-${item.id}`);
+  if (sector) return value === 0 ? 'Invariato' : `${signed(value, 0)} · ${signed(value * SECTOR_UNIT(sector), 1)} mld`;
+  if (input.name === 'funding') return `${value}% del budget previsto`;
+  const lever = FISCAL_LEVERS.find(item => input.name === (item.id === 'taxes' ? 'taxes' : `lever-${item.id}`));
+  if (lever) return value === 0 ? (lever.min < 0 ? 'Invariate' : 'Invariati') : `${signed(value, 0)} · ${value > 0 ? lever.high : lever.low}`;
+  return String(value);
+}
+const slider = ({ name, label, min, max, value, low, high, detail = '', step = 1 }) => {
+  const id = `range-${name}`;
+  const text = rangeText({ name, value });
+  return `<div class="budget-field slider-field"><div class="slider-head"><label for="${id}">${esc(label)}</label><output for="${id}" data-range-out>${esc(text)}</output></div>
+    <input id="${id}" type="range" name="${esc(name)}" min="${min}" max="${max}" step="${step}" value="${value}" aria-valuetext="${esc(text)}" data-range />
+    <div class="slider-scale" aria-hidden="true"><small>${esc(low)}</small><small>${esc(high)}</small></div>${detail ? `<small class="field-detail">${esc(detail)}</small>` : ''}</div>`;
+};
+export function budgetFields(input = {}) {
+  const plan = normalizeBudgetPlan(input);
+  const groups = Object.entries(AREA_GROUPS).map(([id, label]) => `<div class="budget-field"><span>${esc(label)}</span><div class="segmented" role="group" aria-label="${esc(label)}">${[[-1, 'Taglio'], [0, 'Invariato'], [1, 'Aumento']].map(([value, text]) => `<label class="${plan.allocations[id] === value ? 'active' : ''}"><input type="radio" name="alloc-${id}" value="${value}" ${plan.allocations[id] === value ? 'checked' : ''} />${text}</label>`).join('')}</div></div>`).join('');
+  const sectors = BUDGET_SECTORS.map(sector => slider({ name: `sector-${sector.id}`, label: sector.label, min: -3, max: 3, value: plan.sectors[sector.id], low: 'Taglio', high: 'Aumento' })).join('');
+  const levers = FISCAL_LEVERS.map(lever => slider({ name: lever.id === 'taxes' ? 'taxes' : `lever-${lever.id}`, label: lever.label, min: lever.min, max: lever.max, value: lever.id === 'taxes' ? plan.taxes : plan.levers[lever.id], low: lever.low, high: lever.high, detail: lever.detail })).join('');
+  return `<div class="budget-fields"><fieldset class="budget-group"><legend>Spesa per grandi aree</legend>${groups}</fieldset><fieldset class="budget-group"><legend>Stanziamenti e tagli per settore</legend><div class="slider-grid">${sectors}</div></fieldset><fieldset class="budget-group"><legend>Politica economica: tasse, accise, agevolazioni, controlli, regole</legend><div class="slider-grid">${levers}</div></fieldset></div>`;
 }
 export function planFromForm(form) {
   const data = new FormData(form);
-  return { allocations: Object.fromEntries(Object.keys(AREA_GROUPS).map(id => [id, Number(data.get(`alloc-${id}`) ?? 0)])), taxes: Number(data.get('taxes') ?? 0) };
+  return {
+    allocations: Object.fromEntries(Object.keys(AREA_GROUPS).map(id => [id, Number(data.get(`alloc-${id}`) ?? 0)])),
+    sectors: Object.fromEntries(BUDGET_SECTORS.map(sector => [sector.id, Number(data.get(`sector-${sector.id}`) ?? 0)])),
+    levers: Object.fromEntries(FISCAL_LEVERS.filter(lever => lever.id !== 'taxes').map(lever => [lever.id, Number(data.get(`lever-${lever.id}`) ?? 0)])),
+    taxes: Number(data.get('taxes') ?? 0)
+  };
 }
-export function budgetPreview(society, plan) {
+export function budgetPreview(society, plan, parliament = null) {
   if (!society) return '';
   const b = budgetImpact(society, plan);
   const label = id => SEGMENTS.find(item => item.id === id)?.label ?? id;
+  const reactions = parliament ? budgetReactions(parliament, b.plan) : [];
+  const against = reactions.filter(item => item.score <= -0.15).slice(0, 3), favour = reactions.filter(item => item.score >= 0.15).slice(0, 3);
+  const eco = (name, value, digits = 2) => `<span>${esc(name)} <b class="${value > 0.005 ? 'good' : value < -0.005 ? 'bad' : ''}">${signed(value, digits)}</b></span>`;
   return `<div class="policy-preview"><div class="preview-kpis">
     <div class="${b.overLimit ? 'bad' : ''}"><small>DEFICIT</small><strong>${num(society.economy.deficit, 2)}% → ${num(b.deficitAfter, 2)}%</strong><span>${b.overLimit ? 'oltre il 3%: Bruxelles chiederà correzioni' : 'entro la soglia europea'}</span></div>
-    <div><small>MARGINE PER L’ANNO</small><strong>${num(society.publicFinance.headroom, 0)} → ${num(b.headroomAfter, 0)}</strong><span>spazio per nuove misure</span></div>
-    <div><small>SPESA</small><strong>${signed(b.spending, 0)}</strong><span>gruppi di spesa aumentati o tagliati</span></div></div>
-    <div class="preview-people"><div><span class="section-kicker">PIÙ SODDISFATTI</span><ul>${b.winners.map(id => `<li class="good"><strong>${esc(label(id))}</strong><span>più risorse per i loro temi</span></li>`).join('') || '<li class="quiet">Nessuno in particolare</li>'}</ul></div><div><span class="section-kicker">SCONTENTI</span><ul>${b.losers.map(id => `<li class="bad"><strong>${esc(label(id))}</strong><span>tagli o più tasse</span></li>`).join('') || '<li class="quiet">Nessuno in particolare</li>'}</ul></div></div></div>`;
+    <div><small>MARGINE PER L’ANNO</small><strong>${num(society.publicFinance.headroom, 0)} → ${num(b.headroomAfter, 0)}</strong><span>spazio per nuove misure e opere</span></div>
+    <div><small>SPESA NETTA</small><strong>${signed(b.spending, 2)}</strong><span>unità di spesa · gettito ${signed(b.revenue, 2)}</span></div>
+    <div><small>ECONOMIA</small><strong class="eco-line">${eco('crescita', b.economy.growth)}${eco('prezzi', b.economy.inflation)}${eco('disoccupazione', b.economy.unemployment)}</strong><span>effetto della manovra (punti)</span></div></div>
+    <div class="preview-people"><div><span class="section-kicker">PIÙ SODDISFATTI</span><ul>${b.winners.map(id => `<li class="good"><strong>${esc(label(id))}</strong><span>più risorse o meno oneri</span></li>`).join('') || '<li class="quiet">Nessuno in particolare</li>'}</ul></div><div><span class="section-kicker">PROTESTERANNO</span><ul>${b.losers.map(id => `<li class="bad"><strong>${esc(label(id))}</strong><span>tagli o più oneri</span></li>`).join('') || '<li class="quiet">Nessuno in particolare</li>'}</ul></div></div>
+    ${parliament ? `<div class="preview-people"><div><span class="section-kicker">IN PARLAMENTO, A FAVORE</span><ul>${favour.map(item => `<li class="good"><strong>${esc(item.name)}</strong><span>${esc(item.reason)}</span></li>`).join('') || '<li class="quiet">Nessun gruppo particolarmente favorevole</li>'}</ul></div><div><span class="section-kicker">IN PARLAMENTO, CONTRARI</span><ul>${against.map(item => `<li class="bad"><strong>${esc(item.name)}</strong><span>${esc(item.reason)}</span></li>`).join('') || '<li class="quiet">Nessun gruppo particolarmente contrario</li>'}</ul></div></div>` : ''}
+    <p class="parliament-note">Stime della simulazione, non previsioni reali: gli effetti arrivano settimana dopo settimana su aree, territori e cittadini.</p></div>`;
+}
+
+// ---------- the works of the Government and the European funds ----------
+const weekDate = (state, weeks) => shortDay(new Date(Date.parse(`${state.clock.currentDate}T12:00:00Z`) + weeks * 7 * 86400000).toISOString().slice(0, 10));
+export function requestFromForm(form) {
+  const data = new FormData(form);
+  const financing = String(data.get('financing') ?? 'bilancio');
+  return { type: String(data.get('type') ?? 'ospedale'), region: String(data.get('region') ?? ''), funding: Number(data.get('funding') ?? PROJECT_RULES.fundingDefault), financing: financing.startsWith('ue:') ? 'ue' : 'bilancio', callId: financing.startsWith('ue:') ? financing.slice(3) : null };
+}
+export function projectPreview(state, request) {
+  const society = state.society;
+  if (!society) return '';
+  const q = projectQuote(society, request, state.parliament?.government);
+  if (!q.type) return `<p class="parliament-note">${esc(q.problems[0])}</p>`;
+  const type = PROJECT_TYPES[q.type];
+  const gains = Object.entries(q.regional).map(([indicator, value]) => `${esc(indicator)} +${num(value, 0)}`).join(' · ');
+  return `<div class="preview-kpis">
+    <div><small>COSTO</small><strong>${num(q.cost, 1)} punti · ${num(q.billions, 1)} mld</strong><span>${q.financing === 'ue' ? `Stato ${num(q.statePart, 1)} + fondi UE ${num(q.euShare, 1)}` : 'tutto a carico del bilancio'}</span></div>
+    <div class="${q.problems.some(item => /margine/.test(item)) ? 'bad' : ''}"><small>IMPEGNO INIZIALE</small><strong>−${num(q.marginUse, 1)} di margine</strong><span>margine ${num(society.publicFinance.headroom, 0)} → ${num(q.headroomAfter, 0)}</span></div>
+    <div><small>TEMPI</small><strong>~${q.weeks} settimane</strong><span>rischio di ritardo settimanale ${num(q.delayRisk * 100, 1)}%</span></div>
+    <div><small>QUALITÀ ATTESA</small><strong>${num(q.quality * 100, 0)}/100</strong><span>${esc(gains)} in ${esc(q.region || 'regione')} a opera finita</span></div></div>
+    <p class="parliament-note">Ministero ${esc(q.ministry)} · competenza ${num(q.competence, 0)}. ${esc(type.stages)}. Un budget sotto il 100% allunga i tempi e fa sforare; sopra il 100% accelera.</p>
+    ${q.problems.map(text => `<p class="parliament-note danger">${glyph('alert', 14)} ${esc(text)}</p>`).join('')}`;
+}
+const PROJECT_TONE = { progettazione: 'stabile', gara: 'stabile', cantiere: 'stabile', collaudo: 'crescita', completato: 'solida', sospeso: 'calo' };
+function projectRow(state, project, { canAct }) {
+  const week = state.game?.week?.index ?? 0;
+  const active = isActive(project);
+  const call = project.callId ? state.society.publicFinance.eu?.calls?.find(item => item.id === project.callId) : null;
+  const flags = [project.delayWeeks ? `${project.delayWeeks} sett. di ritardo` : '', project.overruns ? `${project.overruns} sforament${project.overruns === 1 ? 'o' : 'i'}` : '', project.pending ? 'decisione in attesa: sforamento dei costi' : '', project.scope < 1 ? 'ridimensionata' : '', call ? `fondi UE · ${call.title}` : ''].filter(Boolean);
+  const funding = active && ['progettazione', 'gara'].includes(project.stage) && canAct
+    ? `<form data-project-funding-form data-project-id="${esc(project.id)}" class="project-funding">${slider({ name: 'funding', label: 'Budget', min: PROJECT_RULES.fundingMin, max: PROJECT_RULES.fundingMax, step: PROJECT_RULES.fundingStep, value: project.funding, low: `${PROJECT_RULES.fundingMin}%`, high: `${PROJECT_RULES.fundingMax}%` })}<button class="secondary-button" type="submit">Cambia budget · 1 giorno · 1 cap.</button></form>` : '';
+  const result = project.result ? `<small>Qualità finale ${num(project.result.quality * 100, 0)}/100${project.result.late ? ` · ${project.result.late} settimane di ritardo` : ''} · ${Object.entries(project.result.gains).map(([indicator, value]) => `${esc(indicator)} +${num(value, 1)}`).join(', ')}</small>` : '';
+  return `<li class="project-row ${project.stage}"><div class="project-head">${glyph(project.icon, 18)}<div><strong>${esc(project.title)}</strong><small>${esc(project.stageLabel)} · ${num(project.cost, 1)} punti (${num(project.billions, 1)} mld) · budget ${project.funding}% · ${project.financing === 'ue' ? 'cofinanziata UE' : 'bilancio'}</small></div>${stateBadge(PROJECT_TONE[project.stage] ?? 'stabile', active ? `${num(project.progress, 0)}%` : project.stageLabel)}</div>
+    ${active ? `<div class="project-progress">${meterBar(project.progress)}<small>${project.weeksLeft} settimane alla fine, a ritmo attuale (circa ${weekDate(state, project.weeksLeft)})</small></div>` : ''}${flags.length ? `<small class="project-flags">${esc(flags.join(' · '))}</small>` : ''}${result}${funding}
+    ${active && canAct ? `<div class="project-actions"><button class="text-link" data-project-stop="${esc(project.id)}">Sospendi l’opera · 1 giorno · 2 cap.</button></div>` : ''}</li>`;
+}
+export function projectsPanel(state) {
+  const society = state.society;
+  const government = state.parliament?.government;
+  if (!society || !government) return '';
+  const canAct = government.primeMinister === 'player' && ['active', 'crisis'].includes(government.status);
+  const projects = projectView(society);
+  const week = state.game?.week?.index ?? 0;
+  const eu = euView(society, week);
+  const awarded = eu.calls.filter(call => call.status === 'assegnato');
+  const active = projects.filter(item => isActive(item));
+  const done = projects.filter(item => !isActive(item)).slice(-4).reverse();
+  const financingOptions = `<option value="bilancio">Bilancio dello Stato</option>${awarded.map(call => `<option value="ue:${esc(call.id)}">Fondi UE · ${esc(call.title)} (restano ${num(call.remaining, 1)} punti)</option>`).join('')}`;
+  const form = canAct ? `<form data-project-form class="project-form"><div class="project-form-grid"><label>Opera<select name="type" data-project-type>${Object.values(PROJECT_TYPES).map(type => option(type.id, `${type.label} · ${type.base} punti`, type.id === 'ospedale')).join('')}</select></label>
+      <label>Regione<select name="region">${ITALIAN_REGIONS.map(name => option(name, name, name === (state.society.homeRegion ?? 'Lombardia'))).join('')}</select></label>
+      <label>Finanziamento<select name="financing">${financingOptions}</select></label></div>
+      ${slider({ name: 'funding', label: 'Budget dell’opera', min: PROJECT_RULES.fundingMin, max: PROJECT_RULES.fundingMax, step: PROJECT_RULES.fundingStep, value: PROJECT_RULES.fundingDefault, low: `${PROJECT_RULES.fundingMin}% (tagliata)`, high: `${PROJECT_RULES.fundingMax}% (abbondante)`, detail: 'Un budget sotto il 100% risparmia ora ma allunga i tempi e fa sforare i costi; sopra il 100% accelera e migliora il risultato.' })}
+      <div data-project-preview>${projectPreview(state, { type: 'ospedale', region: state.society.homeRegion ?? 'Lombardia', funding: PROJECT_RULES.fundingDefault })}</div>
+      <button class="primary-button" type="submit">Avvia l’opera · 2 giorni · 3 cap.</button></form>` : '';
+  return `<div class="pm-block projects-block"><h3>${glyph('bridge', 16)} Opere pubbliche · ${active.length} in corso</h3>
+    <p class="parliament-note">Ospedali, ferrovie, scuole e poli industriali: li proponi, li finanzi dal margine di bilancio o da un bando europeo, li vedi crescere settimana dopo settimana (ritardi, sforamenti) e danno risultati solo a opera finita. Margine di bilancio ora: ${num(society.publicFinance.headroom, 0)}/100.</p>
+    ${active.length ? `<ul class="project-list">${active.map(project => projectRow(state, project, { canAct })).join('')}</ul>` : '<p class="quiet-copy">Nessuna opera in corso.</p>'}
+    ${done.length ? `<details class="pm-block"><summary>${glyph('clock', 16)} Opere concluse o sospese (${done.length})</summary><ul class="project-list">${done.map(project => projectRow(state, project, { canAct: false })).join('')}</ul></details>` : ''}${form}</div>`;
+}
+export function euPanel(state) {
+  const society = state.society;
+  if (!society?.publicFinance?.eu?.calls?.length) return society && state.parliament?.government?.primeMinister === 'player' ? '<div class="pm-block eu-block"><h3>' + glyph('flag', 16) + ' Fondi europei</h3><p class="quiet-copy">Nessun bando aperto: Bruxelles ne pubblica uno ogni pochi mesi. Per candidarsi serve una riforma recente nel settore del bando.</p></div>' : '';
+  const week = state.game?.week?.index ?? 0;
+  const eu = euView(society, week);
+  const canAct = state.parliament?.government?.primeMinister === 'player' && ['active', 'crisis'].includes(state.parliament.government.status);
+  const status = { aperto: ['stabile', 'Aperto'], candidato: ['rischio', 'In valutazione'], assegnato: ['solida', 'Assegnato'], respinto: ['calo', 'Respinto'], scaduto: ['calo', 'Scaduto'], chiuso: ['stabile', 'Chiuso'] };
+  const rows = eu.calls.slice(0, 5).map(call => {
+    const [tone, text] = status[call.status] ?? ['stabile', call.status];
+    const req = call.requirement;
+    const lines = [
+      call.status === 'aperto' ? `Scade tra ${Math.max(0, call.deadlineWeek - week)} settimane · richiede una riforma su ${call.template.areas.slice(0, 3).map(id => AREA_BY_ID[id]?.label.toLowerCase()).filter(Boolean).join(', ')}: ${req?.reform ? `presente («${req.reform.title}»)` : 'manca'}${req && !req.accounts ? ' · procedura per deficit eccessivo aperta' : ''}` : '',
+      call.status === 'candidato' ? `Decisione tra ${Math.max(0, call.decideWeek - week)} settimane (riforma presentata: ${call.reform})` : '',
+      call.status === 'assegnato' ? `Impegnati ${num(call.committed, 1)} su ${num(call.amount, 1)} punti · cofinanziamento ${Math.round(call.cofinance * 100)}% a carico dello Stato · da spendere entro ${Math.max(0, call.spendByWeek - week)} settimane · rendiconti presentati ${call.reports}${call.reportDueWeek && call.committed > 0 ? ` (prossimo entro ${Math.max(0, call.reportDueWeek + 5 - week)} settimane)` : ''}${call.missed ? ` · ${call.missed} mancati` : ''}` : '',
+      call.lost ? `Perduti ${num(call.lost, 1)} punti non impegnati` : ''
+    ].filter(Boolean).join(' · ');
+    const actions = canAct ? `${call.status === 'aperto' ? `<button class="secondary-button" data-eu-apply="${esc(call.id)}" ${req?.ok ? '' : 'disabled'}>Candida l’Italia · 1 giorno · 2 cap.</button>` : ''}${call.status === 'assegnato' && call.committed > 0 ? `<button class="secondary-button" data-eu-report="${esc(call.id)}">Presenta il rendiconto · 1 giorno · 1 cap.</button>` : ''}` : '';
+    return `<li class="eu-row"><div><strong>${esc(call.title)}</strong><small>${num(call.amount, 1)} punti (${num(call.billions, 1)} mld) · opere finanziabili: ${call.template.projects.map(id => esc(PROJECT_TYPES[id].label.toLowerCase())).join(', ')}</small><small>${esc(lines)}</small></div>${stateBadge(tone, text)}${actions}</li>`;
+  }).join('');
+  return `<div class="pm-block eu-block"><h3>${glyph('flag', 16)} Fondi europei · ricevuti ${num(eu.received, 1)} · perduti ${num(eu.lost, 1)}</h3>
+    <p class="parliament-note">Bruxelles apre bandi per settore. Si partecipa con una riforma recente, si cofinanzia con il bilancio, si spende in opere e si rendiconta ogni sei mesi: i fondi non impegnati o non rendicontati tornano indietro e pesano su rapporti con la Commissione e spread.</p><ul class="eu-list">${rows}</ul></div>`;
 }
 
 // ---------- the accord of the coalition ----------
@@ -162,7 +277,8 @@ export function governmentDesk(state) {
     <div class="pm-block"><h3>${glyph('law', 16)} Nuovo provvedimento del governo</h3>
       <p class="parliament-note">Disegno di legge: segue l’iter completo alle Camere (almeno 5 settimane). Decreto-legge: in vigore subito, solo con un’emergenza aperta${emergencies.length || issues.length ? ` (oggi: ${[...new Set([...emergencies, ...issues])].slice(0, 5).map(esc).join(', ')})` : ' (oggi nessuna)'}, da convertire entro 60 giorni o decade. Decreti in attesa: ${decrees.length}/2.</p>
       <form data-policy-form data-policy-mode="government" class="policy-form"><label>Titolo<input name="title" maxlength="90" placeholder="Lascia vuoto per usare il nome dello strumento" /></label>${policyFields({ area: program?.priorities?.[0] ?? 'sanita' })}<div data-policy-preview>${policyPreview(society, measureDesign({ area: program?.priorities?.[0] ?? 'sanita' }))}</div><div class="policy-submit"><button class="primary-button" type="submit" name="submitKind" value="bill">Disegno di legge del governo · 2 giorni · 3 cap.</button><button class="secondary-button" type="submit" name="submitKind" value="decree">Decreto-legge · 2 giorni · 5 cap.</button></div></form></div>
-    <div class="pm-block"><h3>${glyph('money', 16)} Legge di bilancio ${year}</h3>${budgetStatus}${!budgetLaw && (government.budgetYear ?? 0) < year ? `<form data-budget-form class="budget-form">${budgetFields({})}<div data-budget-preview>${budgetPreview(society, {})}</div><button class="primary-button" type="submit">Presenta la manovra · 2 giorni · 4 cap.</button><small class="parliament-note">Senza approvazione entro il 31 dicembre scatta l’esercizio provvisorio: spesa congelata, spread in aumento, stabilità in calo.</small></form>` : ''}</div>
+    <div class="pm-block"><h3>${glyph('money', 16)} Legge di bilancio ${year}</h3>${budgetStatus}${!budgetLaw && (government.budgetYear ?? 0) < year ? `<form data-budget-form class="budget-form">${budgetFields({})}<div data-budget-preview>${budgetPreview(society, {}, parliament)}</div><button class="primary-button" type="submit">Presenta la manovra · 2 giorni · 4 cap.</button><small class="parliament-note">Senza approvazione entro il 31 dicembre scatta l’esercizio provvisorio: spesa congelata, spread in aumento, stabilità in calo.</small></form>` : ''}</div>
+    ${projectsPanel(state)}${euPanel(state)}
   </section>`;
 }
 
@@ -175,7 +291,7 @@ export function lawContent(law, parliament, state) {
   const kind = law.kind === 'decreto' ? 'Decreto-legge' : law.kind === 'manovra' ? 'Legge di bilancio' : law.origin === 'governo' ? 'Disegno di legge del governo' : 'Proposta parlamentare';
   const spec = AREA_BY_ID[policy?.area];
   const content = law.kind === 'manovra'
-    ? `<span>${Object.entries(policy?.plan?.allocations ?? {}).filter(([, level]) => level).map(([group, level]) => `${esc(AREA_GROUPS[group])} ${level > 0 ? '↑' : '↓'}`).join(' · ') || 'Spesa invariata'} · tasse ${['giù', 'invariate', 'su'][(policy?.plan?.taxes ?? 0) + 1]}</span>`
+    ? `<span>${[...Object.entries(policy?.plan?.allocations ?? {}).filter(([, level]) => level).map(([group, level]) => `${esc(AREA_GROUPS[group])} ${level > 0 ? '↑' : '↓'}`), ...BUDGET_SECTORS.filter(sector => policy?.plan?.sectors?.[sector.id]).map(sector => `${esc(sector.label)} ${signed(policy.plan.sectors[sector.id], 0)}`)].join(' · ') || 'Spesa invariata'} · tasse ${signed(policy?.plan?.taxes ?? 0, 0)}${FISCAL_LEVERS.filter(lever => lever.id !== 'taxes' && policy?.plan?.levers?.[lever.id]).map(lever => ` · ${esc(lever.label.toLowerCase())} ${signed(policy.plan.levers[lever.id], 0)}`).join('')}</span>`
     : spec ? `<span><b>${esc(spec.instruments[policy.instrument ?? 'investimento'])}</b> · portata ${esc(INTENSITY[(policy.intensity ?? 2) - 1].label.toLowerCase())} · ${esc(FINANCING[policy.financing ?? 'deficit'].label.toLowerCase())}${policy.financing === 'tagli' && policy.cutArea ? ` (${esc(AREA_BY_ID[policy.cutArea]?.label.toLowerCase())})` : ''} · ${esc(TERRITORIAL_TARGETS.find(item => item.id === policy.target)?.label ?? policy.target ?? 'Tutto il Paese')}${policy.segment && policy.segment !== 'tutti' ? ` · per ${esc(SEGMENTS.find(item => item.id === policy.segment)?.label.toLowerCase())}` : ''}</span>` : '';
   const status = [
     `<span class="law-kind">${esc(kind)}</span>`,

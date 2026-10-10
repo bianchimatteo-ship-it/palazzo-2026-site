@@ -573,6 +573,8 @@ function compact(election) {
 const own = election => election?.blocs?.find(bloc => bloc.id === election.player?.blocId) ?? null;
 // The player puts the own name in the field (a declared candidate, with the sponsorship of the own force when the
 // player leads it or sits in its bodies).
+// Acclaim (credit points above the threshold) and affinity from which a force calls back the President in office.
+const RECALL_ACCLAIM = 10, RECALL_AFFINITY = 55;
 export function declareCandidacy(presidency, { date, standing, label, sponsored = false, acclaim = 0 }) {
   const election = presidency.election;
   if (!election || election.phase === 'conclusa') throw new Error('Non c’è un’elezione del Presidente in corso.');
@@ -580,10 +582,15 @@ export function declareCandidacy(presidency, { date, standing, label, sponsored 
   const bloc = own(election);
   const existing = election.candidates.find(candidate => candidate.isPlayer);
   const candidate = { id: `cand-${election.number}-giocatore`, type: 'giocatore', label: `${label} (tu)`, camp: bloc?.camp ?? 'centro', axis: bloc?.axis ?? 0, prestige: standing.prestige, breadth: standing.breadth, partisan: standing.partisan, sponsors: sponsored && bloc ? [bloc.id] : [], acclaim: round1(acclaim), withdrawn: false, failures: 0, isPlayer: true, source: SIM };
+  // A President in office who served well is called back: the forces that think highly of the name (the credit built with the acts of the term) sponsor it.
+  if (acclaim >= RECALL_ACCLAIM) {
+    const recalled = election.blocs.filter(item => !item.free && !(item.vetoes ?? []).includes(candidate.id) && affinity(item, candidate) >= RECALL_AFFINITY).map(item => item.id);
+    candidate.sponsors = [...new Set([...candidate.sponsors, ...recalled])];
+  }
   const next = copy(presidency);
   next.election.candidates = existing ? next.election.candidates.map(item => item.isPlayer ? { ...candidate, id: existing.id, failures: 0 } : item) : [...next.election.candidates, candidate];
   next.election.player.declared = true;
-  return logLine(next, date, 'candidatura', `${candidate.label} entra tra i nomi per il Quirinale${sponsored ? ` con il sostegno di ${bloc.label}` : ' senza uno sponsor'}.`);
+  return logLine(next, date, 'candidatura', `${candidate.label} entra tra i nomi per il Quirinale${candidate.sponsors.length ? ` con il sostegno di ${candidate.sponsors.length > 1 ? `${candidate.sponsors.length} forze` : election.blocs.find(item => item.id === candidate.sponsors[0])?.label ?? bloc?.label}` : ' senza uno sponsor'}.`);
 }
 export function withdrawCandidacy(presidency, { date }) {
   const next = copy(presidency);

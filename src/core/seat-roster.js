@@ -15,7 +15,7 @@ export const SEAT_ROLES = Object.freeze({ camera: 'Deputato', senato: 'Senatore'
 // already has, then by new ones).
 export const RE_ELECTION_SHARE = 0.6;
 const hash = value => [...String(value)].reduce((n, char) => (n * 31 + char.charCodeAt(0)) >>> 0, 2166136261) || 1;
-const FIRST_NAMES = Object.freeze(['Alessandro', 'Alessia', 'Andrea', 'Anna', 'Beatrice', 'Carlo', 'Chiara', 'Davide', 'Elena', 'Federico', 'Francesca', 'Giorgio', 'Giulia', 'Lorenzo', 'Luca', 'Marco', 'Marta', 'Matteo', 'Paola', 'Roberto', 'Sara', 'Sofia', 'Stefano', 'Valentina']);
+const FIRST_NAMES = Object.freeze(['Alessandro', 'Alessia', 'Andrea', 'Anna', 'Beatrice', 'Carlo', 'Chiara', 'Davide', 'Elena', 'Federico', 'Francesca', 'Giorgio', 'Giulia', 'Lorenzo', 'Luca', 'Marco', 'Marta', 'Mattia', 'Paola', 'Roberto', 'Sara', 'Sofia', 'Stefano', 'Valentina']);
 const LAST_NAMES = Object.freeze(['Bassi', 'Bellini', 'Bernardi', 'Caruso', 'Conti', 'Costa', 'De Luca', 'Esposito', 'Ferri', 'Fontana', 'Galli', 'Greco', 'Leone', 'Lombardi', 'Marino', 'Marini', 'Moretti', 'Pellegrini', 'Ricci', 'Rinaldi', 'Romano', 'Rossi', 'Santoro', 'Serra', 'Villa', 'Vitale']);
 function italianSeatName(id) {
   const first = FIRST_NAMES[hash(id) % FIRST_NAMES.length];
@@ -126,6 +126,7 @@ export function syncRoster({ assembly, kind, label = null, groups, previous = nu
         let back = 0;
         for (const candidate of pool.filter(item => item.partyId === quota.partyId && !seated.has(item.id) && !busy.has(item.id))) {
           if (missing <= 0) break;
+          if (seated.has(candidate.id)) continue;
           if (candidate.previous) { if (back >= cap) continue; back++; }
           seats.push({ personId: candidate.id, ...tag(quota) });
           seated.add(candidate.id);
