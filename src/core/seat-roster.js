@@ -6,7 +6,7 @@
 // A roster is kept compact (it is saved with the game): blocks of seats by group and party, each seat being the id of its person; `rosterSeats` gives them back as
 // records (seat, person, group, party or list, who put him there, whether he leads the executive). Pure functions on plain data: the store gives them the groups,
 // the persons and the player, and keeps what they return.
-import { simulatedPerson } from './race-engine.js?v=20261010-1';
+import { simulatedPerson } from './race-engine.js?v=20261010-2';
 
 export const SEAT_PERSON = 'seggio';
 const SEAT_ID = 'persona-seggio-';

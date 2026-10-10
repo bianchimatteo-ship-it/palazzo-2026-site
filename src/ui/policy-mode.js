@@ -1,14 +1,14 @@
 // Public policy in the interface: designing a measure, its projected bill, the Government's desk,
 // the budget law and the state of the country's policy areas, security and accounts.
-import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, FINANCING, GOVERNMENT_LINES, INSTRUMENT_KINDS, INTENSITY, MINISTRIES, POLICY_AREAS, TERRITORIAL_TARGETS } from '../data/simulation/policy-rules.js?v=20261010-1';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261010-1';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261010-1';
-import { areaTable, budgetImpact, measureDesign, normalizeBudgetPlan, projectMeasure } from '../core/society-engine.js?v=20261010-1';
-import { BUDGET_SECTORS, EU_CALLS, FISCAL_LEVERS, PROJECT_RULES, PROJECT_TYPES } from '../data/simulation/project-rules.js?v=20261010-1';
-import { callRequirement, euView, isActive, projectQuote, projectView } from '../core/project-engine.js?v=20261010-1';
-import { accordCriterion, accordKindLabel, activeMinisters, budgetReactions, groupProfile, partnerSatisfaction, stageWait } from '../core/parliament-engine.js?v=20261010-1';
-import { glyph } from './visuals.js?v=20261010-1';
-import { esc, stateBadge } from './charts.js?v=20261010-1';
+import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, FINANCING, GOVERNMENT_LINES, INSTRUMENT_KINDS, INTENSITY, MINISTRIES, POLICY_AREAS, TERRITORIAL_TARGETS } from '../data/simulation/policy-rules.js?v=20261010-2';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261010-2';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261010-2';
+import { areaTable, budgetImpact, measureDesign, normalizeBudgetPlan, projectMeasure } from '../core/society-engine.js?v=20261010-2';
+import { BUDGET_SECTORS, EU_CALLS, FISCAL_LEVERS, PROJECT_RULES, PROJECT_TYPES } from '../data/simulation/project-rules.js?v=20261010-2';
+import { callRequirement, euView, isActive, projectQuote, projectView } from '../core/project-engine.js?v=20261010-2';
+import { accordCriterion, accordKindLabel, activeMinisters, budgetReactions, groupProfile, partnerSatisfaction, stageWait } from '../core/parliament-engine.js?v=20261010-2';
+import { glyph } from './visuals.js?v=20261010-2';
+import { esc, stateBadge } from './charts.js?v=20261010-2';
 
 const num = (value, digits = 1) => Number(value ?? 0).toLocaleString('it-IT', { maximumFractionDigits: digits });
 const signed = (value, digits = 1) => `${value > 0 ? '+' : value < 0 ? '−' : '±'}${num(Math.abs(value ?? 0), digits)}`;

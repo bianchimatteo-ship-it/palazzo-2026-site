@@ -8,8 +8,8 @@
 // so nothing here imports the career engine. Everything is simulated; no real person or organisation is described.
 import {
   DEBT_KINDS, ENEMY_LABELS, LEVER_BY_ID, LEVER_EFFECTS, SHADOW_LABELS, START_BUDGET, START_EXCLUSIONS, START_LEVEL_MAX, START_LEVERS, START_PACE, START_PROFILES
-} from '../data/simulation/start-rules.js?v=20261010-1';
-import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261010-1';
+} from '../data/simulation/start-rules.js?v=20261010-2';
+import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261010-2';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));

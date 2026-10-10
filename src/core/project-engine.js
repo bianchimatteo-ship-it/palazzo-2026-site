@@ -1,10 +1,10 @@
 // The concrete projects of the Government (hospitals, railways, schools, firms) and the European funds, on the state of the country (society-engine):
 // a project is proposed with a budget, financed from the fiscal margin or from an awarded European call, built week after week (progress, delays, cost overruns that ask for a decision)
 // and delivers its results on the regional indicators and on the citizens only when it is finished. Pure functions on plain data; the store keeps what they return.
-import { uniqueId } from './ids.js?v=20261010-1';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261010-1';
-import { AREA_BY_ID, BILLION_PER_POINT } from '../data/simulation/policy-rules.js?v=20261010-1';
-import { EU_CALLS, EU_RULES, PROJECT_RULES, PROJECT_STAGES, PROJECT_TYPES } from '../data/simulation/project-rules.js?v=20261010-1';
+import { uniqueId } from './ids.js?v=20261010-2';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261010-2';
+import { AREA_BY_ID, BILLION_PER_POINT } from '../data/simulation/policy-rules.js?v=20261010-2';
+import { EU_CALLS, EU_RULES, PROJECT_RULES, PROJECT_STAGES, PROJECT_TYPES } from '../data/simulation/project-rules.js?v=20261010-2';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));

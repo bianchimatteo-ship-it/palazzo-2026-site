@@ -141,7 +141,7 @@ function withWriteLock(action) {
   const now = Date.now();
   const occupied = readJson(LOCK_KEY);
   if (occupied?.expiresAt > now) throw new Error('Salvataggio in corso in un’altra scheda: riprova tra qualche istante.');
-  const token = `${now}-${Math.random().toString(36).slice(2)}`;
+  const token = `${now}-${globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2)}`;
   writeWithHistoryPrune(LOCK_KEY, JSON.stringify({ token, expiresAt: now + LOCK_TTL }));
   if (readJson(LOCK_KEY)?.token !== token) throw new Error('Salvataggio in corso in un’altra scheda: riprova tra qualche istante.');
   const assertOwner = () => {
