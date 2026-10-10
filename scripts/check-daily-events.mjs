@@ -29,7 +29,7 @@ const average = list => list.reduce((sum, value) => sum + value, 0) / Math.max(1
   const ids = POOL.map(item => item.id);
   assert.equal(new Set(ids).size, ids.length, 'Eventi: id univoci tra procedurali e giornalieri');
   assert.ok(DAILY_EVENTS.length >= 85 && CAREER_EVENTS.length >= 60, `Catalogo ampio (${DAILY_EVENTS.length} giornalieri, ${CAREER_EVENTS.length} procedurali)`);
-  const placeholders = new Set(['municipality', 'region', 'region2', 'rival', 'party', 'currentA', 'currentB', 'event', 'eventBody', 'memory', 'lawTitle', 'scope']);
+  const placeholders = new Set(['municipality', 'region', 'region2', 'rival', 'party', 'currentA', 'currentB', 'event', 'eventBody', 'memory', 'lawTitle', 'scope', 'workTitle', 'workRegion', 'workDelay', 'workMinistry', 'doneTitle', 'doneRegion', 'cutLabel', 'callTitle', 'callWeeks']);
   const referenced = new Set();
   for (const item of POOL) {
     assert.ok(item.category || item.weight === 0, `${item.id}: ha una categoria`);
@@ -104,6 +104,7 @@ const PERSONAS = [
   { id: 'senza-governo', label: 'Parlamentare senza governo in carica', level: 'deputato', party: { founder: false }, parliament: parliamentFixture({ governing: false }) },
   { id: 'ministro', label: 'Ministro', level: 'deputato', party: { founder: false }, parliament: parliamentFixture({ minister: true }) },
   { id: 'sottosegretario', label: 'Sottosegretario', level: 'deputato', party: { founder: false }, parliament: parliamentFixture(), flags: { scenarioOffice: { title: 'Sottosegretario (esecutivo di scenario)' } } },
+  { id: 'presidente-repubblica', label: 'Presidente della Repubblica', level: 'deputato', party: null, flags: { president: { since: '2026-01-01' } }, parliament: parliamentFixture() },
   { id: 'premier', label: 'Presidente del Consiglio', level: 'deputato', party: { founder: true }, parliament: parliamentFixture({ premier: true }) },
   { id: 'segretario-parlamentare', label: 'Segretario con un seggio', level: 'deputato', party: { founder: true }, parliament: parliamentFixture() },
   { id: 'capogruppo', label: 'Capogruppo alla Camera', level: 'deputato', party: { founder: false }, parliament: parliamentFixture(), flags: { groupLeader: { groupId: 'g1', since: '2000-01-01' } } },
@@ -155,6 +156,7 @@ const VARIANTS = [
   { name: 'una federazione in crisi', mutate: game => { game.party.org.sections[0].vitality = 18; } },
   { name: 'partito di centro', signals: { partyAxis: 0 } },
   { name: 'rapporti civici forti', mutate: game => { for (const item of game.relations) if (item.id === 'civic') item.value = 72; } },
+  { name: 'opere, bilancio e fondi europei', signals: { spread: 200, ministers: 2, works: { active: 2, delayed: 1, overrun: 1, done: 1, workId: 'opera-1', workTitle: 'Ospedale · Lombardia', workRegion: 'Lombardia', workDelay: 5, workMinistry: 'Salute', doneTitle: 'Scuola · Campania', doneRegion: 'Campania' }, budget: { fresh: true, cutId: 'sanita', cutLabel: 'sanità', excise: 2, relief: 2, controls: 1, deficit: 3.6 }, eu: { dueId: 'bando-1', dueTitle: 'Mobilità sostenibile', dueWeeks: 12, lost: 0 } } },
   { name: 'campagna', env: { campaign: { status: 'active' } } }, { name: 'correnti ostili', hostile: true }, { name: 'notorietà alta', stats: { notoriety: 85, reputation: 70, influence: 70, experience: 70 } }, { name: 'notorietà bassa', stats: { notoriety: 8, reputation: 40, influence: 20, experience: 20 } }
 ];
 function sitOf(persona, variant = {}) {
