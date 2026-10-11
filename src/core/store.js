@@ -1446,6 +1446,16 @@ function tickSurveyEffects(s, date) {
         world = opinionEffect(world, { delta: sign * rule.effect, weeks: rule.weeks, cause: `Sondaggio su «${law.title}» (${survey.label.toLowerCase()})` });
         const government = parliament?.government;
         if (rule.stability && government && ['active', 'crisis'].includes(government.status)) parliament = { ...parliament, government: { ...government, stability: Math.max(0, Math.min(100, (government.stability ?? 50) + sign * rule.stability)) } };
+        // The allies that had reservations about the matter (their own priorities) lean away when the citizens are against it, and take it as theirs when they are for it.
+        const partners = parliament?.government?.partners;
+        if (partners && law.area && rule.stability) {
+          const shifted = Object.fromEntries(Object.entries(partners).map(([groupId, partner]) => {
+            const profile = groupProfile(['camera', 'senato'].flatMap(chamber => parliament.chambers?.[chamber]?.groups ?? []).find(group => group.groupId === groupId) ?? groupId);
+            const delta = sign < 0 ? (profile.dislikes.includes(law.area) ? -2 : 0) : (profile.likes.includes(law.area) ? 1 : 0);
+            return [groupId, delta ? { ...partner, satisfaction: Math.max(0, Math.min(100, Math.round((partner.satisfaction + delta) * 10) / 10)) } : partner];
+          }));
+          parliament = { ...parliament, government: { ...parliament.government, partners: shifted } };
+        }
         notes.push({ law, survey, sign });
       }
       return { ...survey, applied: true };

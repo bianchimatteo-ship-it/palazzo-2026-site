@@ -124,6 +124,26 @@ store.advance(7);
 assert.equal(effects().length <= 1, true, 'Le settimane dopo non accumulano un secondo effetto.');
 for (let i = 0; i < 5; i++) store.advance(7);
 assert.equal(effects().length, 0, 'L’effetto svanisce da solo.');
+// The allies that had reservations lean away from a law the citizens reject (once), and the memory of the career keeps it.
+{
+  const parliamentEngine = await import(`../src/core/parliament-engine.js${v}`);
+  const state = st();
+  const partners = state.parliament.government.partners ?? {};
+  const groupOf = id => ['camera', 'senato'].flatMap(chamber => state.parliament.chambers[chamber].groups).find(group => group.groupId === id);
+  const entry = Object.keys(partners).map(id => ({ id, dislikes: parliamentEngine.groupProfile(groupOf(id) ?? id).dislikes })).find(item => item.dislikes.length);
+  if (entry) {
+    const area = entry.dislikes[0];
+    const before = st().parliament.government.partners[entry.id].satisfaction;
+    edit(save => { save.society.lawsApplied.unshift({ ...copy(law), lawId: 'legge-riserve', title: 'Legge con le riserve di un alleato', area, category: area, week: save.game.week.index, date: save.clock.currentDate, covered: false, deficit: 0.4, controversy: 1.2, origin: 'governo', winners: [], losers: segments.map(item => ({ id: item.id, label: item.label, delta: -2.2, reason: 'paga o perde con deficit' })) }); Object.assign(save.parliament.government, { stability: 90, status: 'active', crisisSeverity: 0 }); });
+    store.advance(7); store.advance(7);
+    const record = obsState().laws.find(item => item.lawId === 'legge-riserve');
+    assert.ok(record?.surveys[0]?.verdict === 'contrari', 'La legge è bocciata dai cittadini.');
+    const after = st().parliament.government.partners[entry.id]?.satisfaction;
+    assert.ok(after === undefined || after < before + 1, 'L’alleato che aveva riserve non ne esce più soddisfatto.');
+    const story = st().society.media.stories.find(item => item.key === 'legge:legge-riserve');
+    assert.ok(story && story.timeline.some(item => /Sondaggio:/.test(item.text)) && story.reactions.length >= 1, 'La storia della legge ha le reazioni e il sondaggio: dal fatto alla redazione, dalla redazione ai sondaggi.');
+  }
+}
 // A law of the opposition measured: nothing for the Government.
 edit(save => { save.society.lawsApplied.unshift({ ...copy(law), lawId: 'legge-opposizione', title: 'Legge dell’opposizione', week: save.game.week.index, date: save.clock.currentDate, origin: 'opposizione', losers: segments.map(item => ({ id: item.id, label: item.label, delta: -2.2 })), winners: [] }); });
 store.advance(7); store.advance(7);

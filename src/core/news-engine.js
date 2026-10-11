@@ -271,7 +271,7 @@ function surveyFact({ law, survey }, media) {
   const opens = survey.verdict === 'contrari' && !exists;
   const text = `Sondaggio: ${num(survey.approval, 0)}% favorevoli, ${num(survey.against, 0)}% contrari (±${num(survey.margin, 1)}).`;
   const reactions = survey.verdict === 'contrari' ? [{ key: `sondaggio:${law.key}:${survey.stage}`, actor: 'Opposizione', side: 'opposizione', stance: 'attacca', text: 'Cita il sondaggio per chiedere di rivedere la legge.' }] : survey.verdict === 'favorevoli' ? [{ key: `sondaggio:${law.key}:${survey.stage}`, actor: 'Maggioranza', side: 'maggioranza', stance: 'rivendica', text: 'Rivendica il gradimento dei cittadini.' }] : [];
-  return { key: `sondaggio:${law.key}:${survey.stage}`, kind: 'sondaggio', category: 'sondaggi', importance: survey.verdict === 'divisi' ? 2 : 3, tone: survey.verdict === 'contrari' ? 'bad' : survey.verdict === 'favorevoli' ? 'good' : 'neutral', week: survey.week, date: survey.date, text, data: { title: law.title, stageLabel: survey.label, approval: survey.approval, against: survey.against, undecided: survey.undecided, margin: survey.margin, verdict: survey.verdict, bySegment: survey.bySegment },
+  return { key: `sondaggio:${law.key}:${survey.stage}`, kind: 'sondaggio', category: 'sondaggi', importance: survey.verdict === 'divisi' ? 2 : 4, tone: survey.verdict === 'contrari' ? 'bad' : survey.verdict === 'favorevoli' ? 'good' : 'neutral', week: survey.week, date: survey.date, text, data: { title: law.title, stageLabel: survey.label, approval: survey.approval, against: survey.against, undecided: survey.undecided, margin: survey.margin, verdict: survey.verdict, bySegment: survey.bySegment },
     story: { kind: 'riforma', op: opens ? 'open' : 'add', existing: !opens, key, title: law.title, stage: survey.stage === 'bilancio' ? 'primi risultati' : 'reazioni', text, heat: 50, reactions } };
 }
 function lawFact(summary, ctx) {
@@ -281,12 +281,14 @@ function lawFact(summary, ctx) {
 }
 const WORLD_CATEGORY = { scandal: 'inchieste', chart: 'economia', energy: 'economia', globe: 'economia', megaphone: 'politica', shield: 'politica', scales: 'politica', users: 'partito', flag: 'partito', link: 'partito', route: 'partito', dome: 'governo', alert: 'partito', storm: 'territorio', cross: 'territorio', factory: 'territorio', star: 'territorio', leaf: 'territorio' };
 function worldFact(event, ctx) {
-  if (event.week < ctx.week - 1 || event.kind === 'carriera') return null;
+  // The laws have their own article (from the law applied or the record of the Chambers): the chronicle of the world does not tell them twice.
+  if (event.week < ctx.week - 1 || event.kind === 'carriera' || event.kind === 'legge') return null;
   const category = WORLD_CATEGORY[event.icon] ?? 'politica';
   const chain = event.chain ?? null;
   const scandal = category === 'inchieste';
   const rule = WORLD_EVENTS.find(item => item.id === event.eventId) ?? null;
-  const rootKey = chain ? `caso:${chain.root}:${event.partyId ?? ''}:${event.week - (chain.step ?? 0) * 2}` : `caso:${event.eventId ?? event.id}`;
+  const root = chain?.root ?? event.eventId ?? event.id;
+  const rootKey = chain ? `caso:${root}:${event.partyId ?? ''}:${event.week - (chain.step ?? 0) * 2}` : `caso:${root}`;
   // What the parties say follows what the event does to the Government (the same numbers the polls use), never an invented quote.
   const reactions = [];
   if (rule?.executive < 0 && rule?.challengers > 0) reactions.push({ key: event.id, actor: 'Opposizione', side: 'opposizione', stance: 'attacca', text: 'Chiede conto al Governo e porta il tema in Aula.' });
@@ -371,7 +373,7 @@ export function newsroomWeek(societyIn, ctx) {
   if (!societyIn?.media) return societyIn;
   const media = normalizeMedia(copy(societyIn.media));
   media.coverage = societyIn.media.coverage;
-  const facts = collectFacts(media, ctx).sort((a, b) => b.importance - a.importance || (a.key < b.key ? -1 : 1)).slice(0, 5);
+  const facts = collectFacts(media, ctx).sort((a, b) => b.importance - a.importance || (a.key < b.key ? -1 : 1)).slice(0, 6);
   for (const fact of facts) publishFact(media, fact, ctx);
   const history = ctx.parliament?.history ?? [];
   if (history.length) media.cursor.historyId = history.at(-1).id;
