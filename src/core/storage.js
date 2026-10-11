@@ -137,11 +137,13 @@ function writeMainSnapshot(value) {
     }
   }
 }
+let lockSequence = 0;
 function withWriteLock(action) {
   const now = Date.now();
   const occupied = readJson(LOCK_KEY);
   if (occupied?.expiresAt > now) throw new Error('Salvataggio in corso in un’altra scheda: riprova tra qualche istante.');
-  const token = `${now}-${globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2)}`;
+  // The token tells this tab from another: the moment the tab started (to the microsecond) and a counter; no random numbers, so the seeded game is never touched.
+  const token = `${now}-${globalThis.performance?.timeOrigin ?? 0}-${++lockSequence}`;
   writeWithHistoryPrune(LOCK_KEY, JSON.stringify({ token, expiresAt: now + LOCK_TTL }));
   if (readJson(LOCK_KEY)?.token !== token) throw new Error('Salvataggio in corso in un’altra scheda: riprova tra qualche istante.');
   const assertOwner = () => {

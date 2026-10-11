@@ -151,6 +151,8 @@ export function settleProjectIssue(input, projectId, choice) {
     if (society.publicFinance.headroom < pay) throw new Error(`Il margine di bilancio (${Math.round(society.publicFinance.headroom)}) non basta: servono ${pay} punti.`);
     society.publicFinance.headroom = round1(clamp(society.publicFinance.headroom - pay));
     society.economy.deficit = round2(society.economy.deficit + pending.amount * 0.012);
+    // The State pays the whole overrun (the European share is fixed): it is a commitment like the rest of the cost.
+    society.publicFinance.committed = round1((society.publicFinance.committed ?? 0) + pending.amount);
     Object.assign(project, { cost: round1(project.cost + pending.amount), committed: round1(project.committed + pay), pending: null, stall: 0 });
   } else if (choice === 'ridimensiona' && pending?.kind === 'sforamento') {
     Object.assign(project, { scope: round2(project.scope * 0.88), pending: null, stall: 2, delayWeeks: project.delayWeeks + 2 });

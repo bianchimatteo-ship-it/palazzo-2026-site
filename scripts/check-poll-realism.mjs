@@ -88,7 +88,9 @@ const neutral = { parliament: () => ({ government: { status: 'active', stability
 const own = new Map(forces.map(force => [force.id, []]));
 const shares = new Map(forces.map(force => [force.id, []]));
 let playerMoved = 0, playerEffects = 0;
-for (let seed = 0; seed < 16; seed++) {
+// 48 careers: the trend of each force is tested at |t| > 3 for about ten forces at once, and with 16 the luck of the draw alone (a single force at t 3.2 with no bias in 64 other seeds) could fail it.
+const SEEDS = 48;
+for (let seed = 0; seed < SEEDS; seed++) {
   let world = engine.createWorld({ seedText: `neutralita-${seed}`, date: '2026-09-24', place: { region: seed % 2 ? 'Lombardia' : 'Campania' }, playerParty: { id: 'io', label: 'Il mio partito', position: ['centro', 'sinistra', 'destra', 'centro-destra'][seed % 4], founder: true }, forces, realPoll });
   const start = new Map(world.parties.map(party => [party.id, party.baseline]));
   const firstPoll = new Map(world.polls.at(-1).results.map(row => [row.partyId, row.share]));
@@ -119,7 +121,8 @@ const dev = values => Math.sqrt(avg(values.map(value => (value - avg(values)) **
 const trends = [];
 for (const force of forces) {
   const values = own.get(force.id);
-  if (values.length < 6) continue;
+  // A force that survives in few careers (the rest merged or closed) is a sample of survivors, which lean upward by selection: its trend says nothing about the machinery.
+  if (values.length < 0.6 * SEEDS) continue;
   const t = avg(values) / ((dev(values) || 1e-9) / Math.sqrt(values.length));
   trends.push(`${force.label} ${(avg(values) * 100).toFixed(1)}%`);
   assert.ok(Math.abs(t) <= 3 || Math.abs(avg(values)) <= 0.03, `${force.label}: tendenza sistematica in dieci anni (${(avg(values) * 100).toFixed(1)}% in media, t ${t.toFixed(1)}).`);

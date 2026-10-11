@@ -143,8 +143,9 @@ const hospital = () => st().society.projects.find(project => project.type === 'o
 advance();
 const ask = st().game.inbox.find(item => item.templateId === 'progetto-sforamento');
 assert.ok(ask && ask.choices.map(choice => choice.id).join() === 'integra,ridimensiona,sospendi,attendi' && ask.params.projectId === hospital().id, 'Lo sforamento arriva in agenda con quattro risposte.');
-const costBefore = hospital().cost, marginBefore = st().society.publicFinance.headroom;
+const costBefore = hospital().cost, marginBefore = st().society.publicFinance.headroom, committedBefore = st().society.publicFinance.committed;
 store.resolveAgendaItem(ask.id, 'integra');
+assert.ok(Math.abs(st().society.publicFinance.committed - committedBefore - 1.4) < 0.11, 'L’integrazione entra tra gli impegni di finanza pubblica (costo + sforamento).');
 assert.ok(hospital().cost > costBefore && st().society.publicFinance.headroom < marginBefore && !hospital().pending, 'Integrare paga subito e fa ripartire il cantiere.');
 for (const [choice, check] of [
   ['ridimensiona', project => project.scope < 1 && !project.pending],
