@@ -18,6 +18,7 @@ import { activeInstitutions, institutionLabel } from './local-mode.js?v=20261010
 import { renderFinanceCard } from './finance-mode.js?v=20261010-2';
 import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20261010-2';
 import { stateBadge } from './charts.js?v=20261010-2';
+import { articleHtml, newsMedia, renderNewsroomTabs } from './news-view.js?v=20261010-2';
 import { illustration } from './illustrations.js?v=20261010-2';
 import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261010-2';
 import { regionPriorities } from '../core/society-engine.js?v=20261010-2';
@@ -225,7 +226,7 @@ function detailsBlock(state, gc, options) {
   const activities = WEEKLY_ACTIVITIES.filter(activity => !activityProblem(gc.ctx, gc.env, activity)).length;
   const drawers = [
     drawer('hq-planner', 'AGENDA DEL POLITICO', 'Come usi la settimana', 'Attività su territorio, media, partito e Parlamento: costi, effetti e rischi.', planner(state, gc), { badge: `${game.week.ap} giorni · ${activities} attività`, wide: true }),
-    drawer('hq-news', 'REDAZIONE · SIMULATA', 'Notizie della settimana', 'Cronaca politica, titoli dei giornali e il tuo diario, con filtri.', renderNewsroom(state, options.newsFilter), { wide: true }),
+    drawer('hq-news', 'REDAZIONE · SIMULATA', 'Notizie della settimana', 'Cronaca politica, titoli dei giornali e il tuo diario, con filtri.', renderNewsroom(state, options.newsFilter, options), { wide: true }),
     drawer('hq-consequences', 'CAUSE ED EFFETTI', 'Le conseguenze delle scelte', 'Catene di eventi, conseguenze in arrivo e bilancio della settimana.', consequencesPanel(state)),
     drawer('hq-why', 'PERCHÉ È CAMBIATO', 'Da dove vengono i tuoi numeri', 'Le cause di ogni variazione di consenso e indicatori.', renderWhyPanel(state)),
     drawer('hq-roles', 'RUOLI E POTERI', 'Cosa puoi fare adesso', 'Ogni potere sbloccato dai tuoi incarichi e cosa serve per gli altri.', renderRolesPanel(state)),
@@ -478,19 +479,24 @@ export function renderWhyPanel(state) {
 }
 
 // The newsroom: political chronicle, headlines and the career diary in one feed.
-const NEWS_FILTERS = [['tutto', 'Tutto'], ['cronaca', 'Cronaca'], ['media', 'Titoli'], ['diario', 'Il tuo diario']];
-export function renderNewsroom(state, filter = 'tutto') {
+const NEWS_FILTERS = [['tutto', 'Tutto'], ['articoli', 'Articoli'], ['storie', 'Storie'], ['testate', 'Testate'], ['cronaca', 'Cronaca'], ['media', 'Titoli'], ['diario', 'Il tuo diario']];
+export function renderNewsroom(state, filter = 'tutto', extras = {}) {
   const game = state.game;
+  const media = newsMedia(state);
+  const tabs = `<div class="segmented news-filter" role="group" aria-label="Filtra le notizie">${NEWS_FILTERS.map(([id, label]) => `<button data-news-filter="${id}" class="${filter === id ? 'active' : ''}" aria-pressed="${filter === id}">${label}</button>`).join('')}</div>`;
+  if (media && ['articoli', 'storie', 'testate'].includes(filter)) return `${tabs}${renderNewsroomTabs(state, { filter, category: extras.newsCategory, outlet: extras.newsOutlet })}<p class="poll-footnote">Articoli, storie e testate sono simulati dai fatti della partita: nessuna dichiarazione o fatto è attribuito a persone reali.</p>`;
+  // The world events that already have a full article are not repeated in the chronicle.
+  const written = new Set(media?.seen ?? []);
   const items = [
-    ...(state.world?.events ?? []).map(event => ({ kind: 'cronaca', week: event.week, icon: event.icon ?? 'news', tone: event.tone, title: event.title, body: event.body, label: event.chain?.step ? `Sviluppi · ${event.chain.rootTitle ?? 'vicenda in corso'}` : 'Cronaca politica' })),
+    ...(state.world?.events ?? []).filter(event => !written.has(`mondo:${event.id}`)).map(event => ({ kind: 'cronaca', week: event.week, icon: event.icon ?? 'news', tone: event.tone, title: event.title, body: event.body, label: event.chain?.step ? `Sviluppi · ${event.chain.rootTitle ?? 'vicenda in corso'}` : 'Cronaca politica' })),
     ...(state.society?.media?.coverage ?? []).map(item => ({ kind: 'media', week: item.week, icon: 'news', tone: item.tone, title: item.headline, body: '', label: item.outlet })),
     ...game.log.map(entry => ({ kind: 'diario', week: entry.week, icon: entry.kind === 'partito' ? 'flag' : entry.kind === 'conseguenza' ? 'route' : 'pin', tone: entry.tone, title: entry.title, body: (entry.lines ?? []).slice(0, 2).join(' · '), label: 'Diario' }))
   ].filter(item => filter === 'tutto' || item.kind === filter).sort((a, b) => b.week - a.week).slice(0, 10);
-  const tabs = `<div class="segmented news-filter" role="group" aria-label="Filtra le notizie">${NEWS_FILTERS.map(([id, label]) => `<button data-news-filter="${id}" class="${filter === id ? 'active' : ''}" aria-pressed="${filter === id}">${label}</button>`).join('')}</div>`;
   // Stories still open: something will follow, the outcome is not known in advance.
   const open = [...new Map((state.world?.chains ?? []).map(chain => [chain.root, chain])).values()].filter(chain => chain.rootTitle);
   const threads = open.length && filter !== 'diario' && filter !== 'media' ? `<p class="news-threads">${glyph('route', 14)} Vicende aperte: ${open.slice(0, 4).map(chain => `<b>${esc(chain.rootTitle)}</b>`).join(' · ')} — gli sviluppi arrivano nelle prossime settimane.</p>` : '';
-  return `${tabs}${threads}<div class="newsroom">${items.map(item => `<article class="news-item tone-${esc(item.tone ?? 'neutral')}">${glyph(item.icon, 16)}<div><span class="news-meta">${esc(item.label)} · S${item.week}</span><strong>${esc(item.title)}</strong>${item.body ? `<small>${esc(item.body)}</small>` : ''}</div></article>`).join('') || '<p class="quiet-copy">Nessuna notizia per questo filtro.</p>'}</div><p class="poll-footnote">Cronaca, titoli e testate sono simulati: nessuna dichiarazione o fatto è attribuito a persone reali.</p>`;
+  const lead = media && filter === 'tutto' ? media.articles.slice(0, 3).map(item => articleHtml(item, media)).join('') : '';
+  return `${tabs}${threads}${lead ? `<div class="newsroom articles">${lead}</div>` : ''}<div class="newsroom">${items.map(item => `<article class="news-item tone-${esc(item.tone ?? 'neutral')}">${glyph(item.icon, 16)}<div><span class="news-meta">${esc(item.label)} · S${item.week}</span><strong>${esc(item.title)}</strong>${item.body ? `<small>${esc(item.body)}</small>` : ''}</div></article>`).join('') || '<p class="quiet-copy">Nessuna notizia per questo filtro.</p>'}</div><p class="poll-footnote">Cronaca, titoli e testate sono simulati: nessuna dichiarazione o fatto è attribuito a persone reali.</p>`;
 }
 
 // The career timeline: every milestone, week by week; what happened before shapes what comes next.

@@ -13,12 +13,12 @@ import { hasStart, planLines, startMods, startPlan, startStatDeltas } from './st
 import { objectiveMods } from './objective-engine.js?v=20261010-2';
 import { END_KINDS, addToHall, careerFacts, hallEntry, legacyBoon, legacyScore, legacyTags, retirementProblem, sortedHall } from './legacy-engine.js?v=20261010-2';
 import { committeeSupport, committeesAfterVote, createCommittees } from './committee-engine.js?v=20261010-2';
-import { accordApplies, accordConflicts, answerCommitment, ensureAccord, offerConcession, tickAccord, changeSeats, checkMajority, record as recordParliament, setConfidenceVote, createReferenceGovernment, neverHadGovernment, offerGroupSupport, requestGovernmentPost, withdrawGroupSupport, partnerSatisfaction, acceptLawDemand, activeMinisters, amendLawPolicy, askConfidenceOnLaw, groupProfile, issueDecree, majoritySummit, reshuffleMinister, setGovernmentProgram, settlePartnerDemand, withdrawLaw, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20261010-2';
+import { accordApplies, accordConflicts, parliamentInternals, premierGroupOf, answerCommitment, ensureAccord, offerConcession, tickAccord, changeSeats, checkMajority, record as recordParliament, setConfidenceVote, createReferenceGovernment, neverHadGovernment, offerGroupSupport, requestGovernmentPost, withdrawGroupSupport, partnerSatisfaction, acceptLawDemand, activeMinisters, amendLawPolicy, askConfidenceOnLaw, groupProfile, issueDecree, majoritySummit, reshuffleMinister, setGovernmentProgram, settlePartnerDemand, withdrawLaw, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20261010-2';
 import { situation, addProvincialCalendar, declareAmbition, scheduleEarlyLocalElection, alignLocalCalendar, localCalendarOf, committeeAction, setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, lifeBreakPact, lifeCadre, lifeCongress, lifeFound, lifeMerge, lifeOverview, lifeRebuild, lifeRename, lifeRespond, partyOpsAvailability, saveForElection, saveReserve, takeReserve, scheduleEarlyElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20261010-2';
 import { ADVANCE_RULES, AMENDMENT_CAPITAL_COST, COMMUNICATION_STYLES, GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS, PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261010-2';
 import { syncAgendas, advanceLegislativeWeek, amendOthersLaw, amendmentOdds, linkGroupsToParties, setPlayerVote, speakOnLaw } from './lawmaking-engine.js?v=20261010-2';
 import { seededRandom } from './vote-engine.js?v=20261010-2';
-import { advanceCabinetWeek, joinAsSupport } from './cabinet-engine.js?v=20261010-2';
+import { advanceCabinetWeek, joinAsSupport, majorityMargin } from './cabinet-engine.js?v=20261010-2';
 import { EP_COSTS, EP_GROUPS_2024, EP_ROLES, INSTITUTIONS, advanceInstitutionWeek, applyLocalEffect, bidRapporteur, concedeToGroup, createInstitution, committeeById, epGroupFor, grantDelega, localAreas, mandateRecord, proposeLocalAct, questionExecutive, requestCommittee, reshuffleLocal, revokeDelega, runForCommitteeRole, setLocalVote, tableAmendment, territoryValue } from './local-engine.js?v=20261010-2';
 import { candidacyBlock, institutionOffice, lapsesFor, officeLabel, officeScope } from './office-engine.js?v=20261010-2';
 import { actTypeOf } from '../data/simulation/local-acts.js?v=20261010-2';
@@ -41,7 +41,7 @@ import { BUDGET_SECTORS, EU_CALLS, PROJECT_TYPES } from '../data/simulation/proj
 import { applyCall, projectQuote, proposeProject, reportCall, setProjectFunding, settleProjectIssue, suspendProject } from './project-engine.js?v=20261010-2';
 import { isPartyLeader, treasuryBook } from './organization-engine.js?v=20261010-2';
 import { selectContacts, syncContacts } from './contacts-engine.js?v=20261010-2';
-import { NEWS_TEMPLATES, composeHeadline, weeklyNews } from './news-engine.js?v=20261010-2';
+import { NEWS_TEMPLATES, activityArticle, composeHeadline, newsroomWeek, weeklyNews } from './news-engine.js?v=20261010-2';
 import { macroAreaOf, MACRO_AREAS } from '../data/simulation/policy-rules.js?v=20261010-2';
 import { RACE_ROLES, RACE_RULES } from '../data/simulation/race-rules.js?v=20261010-2';
 import { buildSlate, candidateOptions, chooseCandidate, mergeSlate, profileStats, raceDue, raceOutcome, rootingOf, runRace } from './race-engine.js?v=20261010-2';
@@ -1407,7 +1407,34 @@ function tickNews(s, date, week) {
   });
   let society = { ...s.society, media: { ...s.society.media, recentHeadlines: out.recent } };
   for (const item of out.items) society = mediaEvent(society, { outletId: item.outletId, tone: item.tone === 'good' ? 0.3 : item.tone === 'bad' ? -0.3 : 0, intensity: 0.4, headline: item.headline, date, week });
+  // The newsroom: full articles and stories from the facts of the week (the parliamentary record, laws applied, world events, works, public finance).
+  society = newsroomWeek(society, newsContext({ ...s, society }, date, week));
   return { ...s, society };
+}
+// What the newsroom reads of the game: the Government as a short description, the side of the premier, the reactions to a law (the allies by their profile, the citizens who gain or lose).
+function newsContext(s, date, week) {
+  const parliament = s.parliament;
+  const government = parliament?.government;
+  const open = government && ['active', 'crisis', 'awaiting-confidence'].includes(government.status);
+  const premier = open ? parliamentInternals.getGroup(parliament, premierGroupOf(parliament)) : null;
+  const gov = open ? { name: government.name ?? 'Il governo', stability: government.stability ?? 50, margin: (() => { try { return majorityMargin(parliament); } catch { return null; } })(), groups: (government.coalitionGroupIds?.length ?? 0) + (government.supportingGroupIds?.length ?? 0), external: government.supportingGroupIds?.length ?? 0 } : null;
+  const reactionsFor = summary => {
+    const out = [];
+    const area = summary.area;
+    for (const groupId of [...(government?.coalitionGroupIds ?? []), ...(government?.supportingGroupIds ?? [])].filter(id => id !== premierGroupOf(parliament)).slice(0, 8)) {
+      const group = parliamentInternals.getGroup(parliament, groupId);
+      if (!group) continue;
+      const profile = groupProfile(group);
+      if (profile.dislikes.includes(area)) out.push({ key: summary.lawId ?? summary.title, actor: group.officialName, side: 'maggioranza', stance: 'riserve', text: 'Esprime riserve nel merito: il tema non è tra le sue priorità.' });
+      else if (profile.likes.includes(area)) out.push({ key: summary.lawId ?? summary.title, actor: group.officialName, side: 'maggioranza', stance: 'favorevole', text: 'Rivendica il provvedimento come una propria battaglia.' });
+    }
+    const lead = (summary.losers ?? [])[0];
+    if (lead) out.push({ key: summary.lawId ?? summary.title, actor: lead.label, side: 'cittadini', stance: 'contrario', text: lead.reason ? lead.reason.charAt(0).toUpperCase() + lead.reason.slice(1) : 'Si sente penalizzato dalla misura.' });
+    const win = (summary.winners ?? [])[0];
+    if (win) out.push({ key: summary.lawId ?? summary.title, actor: win.label, side: 'cittadini', stance: 'favorevole', text: win.reason ? win.reason.charAt(0).toUpperCase() + win.reason.slice(1) : 'Ne trae vantaggio.' });
+    return out.slice(0, 4);
+  };
+  return { week, date, year: Number(String(date).slice(0, 4)), parliament, govAxis: premier?.axis ?? 0, gov, lawsApplied: s.society?.lawsApplied ?? [], worldEvents: s.world?.events ?? [], projects: s.society?.projects ?? [], euCalls: s.society?.publicFinance?.eu?.calls ?? [], finance: s.society?.publicFinance ?? null, reactionsFor };
 }
 // Writes a fact into the career's political memory.
 function rememberFact(s, entry) {
@@ -1507,6 +1534,11 @@ function publicEcho(s, activityId, tone, extra = {}) {
     const composed = composeHeadline(society.media.recentHeadlines ?? [], NEWS_TEMPLATES[activityId] ? activityId : 'social', { name, week, region: player?.region ?? 'il territorio', municipality: player?.municipality ?? 'il comune', party: s.game?.party?.label ?? name, topic }, value < 0 ? 'bad' : 'good');
     society = mediaEvent(society, { outletId, tone: value, intensity: extra.intensity ?? 1, headline: composed.text, date: s.clock.currentDate, week });
     society = { ...society, media: { ...society.media, recentHeadlines: composed.recent } };
+    // The activities that are told in full: an interview, a press conference, a talk show.
+    if (['intervista', 'conferenza', 'talk', 'prima-serata', 'interrogazione'].includes(activityId)) {
+      const priorities = s.parliament?.government?.program?.priorities ?? [];
+      society = activityArticle(society, { activity: activityId, name, topic, region: extra.region ?? player?.region ?? null, tone: tone === 'bad' ? 'bad' : tone === 'good' ? 'good' : 'neutral', party: s.game?.party?.name ?? null, week, date: s.clock.currentDate, outletId, priority: priorities.some(id => AREA_BY_ID[id]?.label?.toLowerCase() === topic) }, newsContext(s, s.clock.currentDate, week));
+    }
   }
   if (extra.region && society.regions[extra.region]) society = regionAttention(society, extra.region, tone === 'bad' ? -0.4 : extra.regionDelta ?? 0.6);
   return { ...s, society };

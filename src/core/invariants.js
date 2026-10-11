@@ -60,6 +60,7 @@ export function checkInvariants(state, context = {}) {
   checkStructures(state, report);
   checkPresidency(state, report);
   checkProjects(state, report);
+  checkNewsroom(state, report);
   checkCareerGoals(state, report);
   checkAgenda(state, known, report);
   return { ok: issues.length === 0, issues };
@@ -473,6 +474,32 @@ function checkStructures(state, report) {
 // office of the player when the player is President (no party, no seat, no other office, exactly one open Quirinale office).
 // The works and the European funds of the Government: stages and progress that make sense, money that is not more than the cost, calls that exist.
 const PROJECT_STAGE_IDS = new Set(['progettazione', 'gara', 'cantiere', 'collaudo', 'completato', 'sospeso']);
+// The newsroom: articles written once (a key never repeats), stories with a bounded heat and a timeline, outlets with a credibility in range.
+function checkNewsroom(state, report) {
+  const media = state.society?.media;
+  if (!media) return;
+  const keys = new Set();
+  for (const [index, article] of records(media.articles).entries()) {
+    const path = `society.media.articles[${index}]`;
+    if (keys.has(article.key)) report('redazione', path, `Articolo duplicato: ${article.key}`);
+    keys.add(article.key);
+    if (!article.headline || !Array.isArray(article.body) || !article.body.length) report('redazione', path, 'Un articolo ha titolo e testo.');
+    if (!article.outletId || !records(media.outlets).some(outlet => outlet.id === article.outletId)) report('redazione', path, `Testata dell’articolo sconosciuta: ${article.outletId}`);
+  }
+  const stories = new Set();
+  for (const [index, story] of records(media.stories).entries()) {
+    const path = `society.media.stories[${index}]`;
+    if (stories.has(story.key)) report('redazione', path, `Storia duplicata: ${story.key}`);
+    stories.add(story.key);
+    if (!(story.heat >= 0 && story.heat <= 100)) report('redazione', path, `Attenzione della storia fuori scala: ${story.heat}`);
+    if (!['aperta', 'chiusa'].includes(story.status)) report('redazione', path, `Stato della storia non valido: ${story.status}`);
+    if (story.status === 'chiusa' && !story.resolution) report('redazione', path, 'Una storia chiusa ha un esito.');
+    const timeKeys = new Set(records(story.timeline).map(item => item.key));
+    if (timeKeys.size !== records(story.timeline).length) report('redazione', path, 'La cronologia di una storia non ripete uno sviluppo.');
+  }
+  if (records(media.stories).filter(story => story.status === 'aperta').length > 12) report('redazione', 'society.media.stories', 'Troppe storie aperte insieme.');
+  for (const [index, outlet] of records(media.outlets).entries()) if (outlet.credibility !== undefined && !(outlet.credibility >= 0 && outlet.credibility <= 100)) report('redazione', `society.media.outlets[${index}]`, `Credibilità fuori scala: ${outlet.credibility}`);
+}
 function checkProjects(state, report) {
   const society = state.society;
   if (!society) return;
