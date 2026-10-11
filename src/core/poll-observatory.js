@@ -1,4 +1,4 @@
-import { OBSERVATORY_RULES as RULES, POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261010-2';
+import { OBSERVATORY_RULES as RULES, POLL_EXTENSIONS as EXT, POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261010-2';
 import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261010-2';
 
 // The poll observatory: what each simulated institute measures week after week, the average of the institutes, the segments
@@ -201,11 +201,11 @@ export function flowsOf(rows, forces, { minimum = 0.15, limit = 6 } = {}) {
 }
 
 // ---------- the observatory kept in the world ----------
-export const freshObservatory = () => ({ version: 1, source: 'simulation', institutes: Object.fromEntries(POLL_INSTITUTES.map(item => [item.id, { errors: {}, history: [] }])), average: [], segments: [] });
+export const freshObservatory = () => ({ version: 1, source: 'simulation', institutes: Object.fromEntries(POLL_INSTITUTES.map(item => [item.id, { errors: {}, history: [] }])), average: [], segments: [], approval: [], regional: [], laws: [] });
 export function normalizeObservatory(input) {
   const base = freshObservatory();
   if (!input || typeof input !== 'object') return base;
-  return { ...base, ...input, institutes: Object.fromEntries(POLL_INSTITUTES.map(item => [item.id, { errors: {}, history: [], ...(input.institutes?.[item.id] ?? {}) }])), average: Array.isArray(input.average) ? input.average : [], segments: Array.isArray(input.segments) ? input.segments : [] };
+  return { ...base, ...input, institutes: Object.fromEntries(POLL_INSTITUTES.map(item => [item.id, { errors: {}, history: [], ...(input.institutes?.[item.id] ?? {}) }])), average: Array.isArray(input.average) ? input.average : [], segments: Array.isArray(input.segments) ? input.segments : [], approval: Array.isArray(input.approval) ? input.approval : [], regional: Array.isArray(input.regional) ? input.regional : [], laws: Array.isArray(input.laws) ? input.laws : [] };
 }
 const pack = rows => rows.map(row => [row.partyId, row.share, row.delta ?? 0]);
 const unpack = rows => (rows ?? []).map(([partyId, share, delta]) => ({ partyId, share, delta }));
@@ -302,5 +302,117 @@ export function observatoryView(world, { forces = [], society = null, regional =
   const second = Object.fromEntries(shares.map(force => [force.id, secondChoice(force, shares, { ties })]));
   const loyalty = Object.fromEntries(shares.map(force => [force.id, loyaltyOf(force, { trend: trend(force.id) })]));
   const themes = society ? { national: themesOf(society, null, 5), bySegment: Object.fromEntries((society.segments ?? []).map(segment => [segment.id, themesOf(society, segment.id, 3)])) } : null;
-  return { institutes, average, latestAverage, previousAverage: average.at(-2) ?? null, segments: support, insights, flows: flowRows, secondChoice: second, loyalty, themes, trend: Object.fromEntries(shares.map(force => [force.id, trend(force.id)])), labelOf, weeks: average.length };
+  const scenarioForces = shares.map(force => ({ id: force.id, label: force.label, abbreviation: force.abbreviation ?? null, share: force.share, axis: force.axis, isPlayer: force.isPlayer, color: force.color, spread: latestAverage?.spread?.[force.id] ?? 0.4 })).filter(force => force.share > 0);
+  const extras = { approval: obs.approval, regionalHistory: obs.regional, laws: obs.laws, scenarioForces, scenarios: defaultScenarios(world, scenarioForces, ties) };
+  return { ...extras, institutes, average, latestAverage, previousAverage: average.at(-2) ?? null, segments: support, insights, flows: flowRows, secondChoice: second, loyalty, themes, trend: Object.fromEntries(shares.map(force => [force.id, trend(force.id)])), labelOf, weeks: average.length };
+}
+
+// ---------- approval, regions, laws, coalitions ----------
+// Approval is not a vote: a citizen can approve the Government and vote for another force. The series keeps the three readings of the headline poll week after week.
+export function recordApproval(input, { week, date, government = null, executive = null, leader = null, margin = null }) {
+  const obs = normalizeObservatory(input);
+  if (government === null && executive === null && leader === null) return obs;
+  obs.approval = [...obs.approval.filter(item => item.week !== week), { week, date, government, executive, leader, margin }].slice(-EXT.approvalKept);
+  return obs;
+}
+// The regional picture, one snapshot every few weeks for the largest forces: regional: { region: [{ partyId, share }] }.
+export function recordRegional(input, { week, date, regional, partyIds }) {
+  const obs = normalizeObservatory(input);
+  if (!regional || week % EXT.regional.every !== 0) return obs;
+  const keep = new Set(partyIds);
+  const rows = Object.fromEntries(Object.entries(regional).map(([region, list]) => [region, list.filter(row => keep.has(row.partyId)).map(row => [row.partyId, round1(row.share)])]));
+  obs.regional = [...obs.regional.filter(item => item.week !== week), { week, date, rows }].slice(-EXT.regional.kept);
+  return obs;
+}
+export const regionalSeries = (obs, partyId, region) => normalizeObservatory(obs).regional.map(item => ({ week: item.week, date: item.date, share: item.rows?.[region]?.find(([id]) => id === partyId)?.[1] ?? null })).filter(item => Number.isFinite(item.share));
+
+// What the citizens think of a law that is in force. Read from what the measure does to each segment (its winners and losers) and from who governs, never from the vote:
+// the institutes interview the same population with their own sample and error, the average is declared with its uncertainty (sampling and model), and the reading moves nothing by itself.
+export const lawKey = law => `legge:${law.lawId ?? `${law.title}|${law.week}`}`;
+function governingShareBySegment(entries, society, undecided) {
+  const support = segmentSupport(entries, society, { undecided });
+  if (!support) return {};
+  const stance = new Map(entries.map(item => [item.id, item.stance ?? 0]));
+  return Object.fromEntries(support.segments.map((segment, index) => {
+    let gov = 0, all = 0;
+    for (const [id, list] of Object.entries(support.rows)) { const value = list[index]?.support ?? 0; all += value; if ((stance.get(id) ?? 0) > 0) gov += value; }
+    return [segment.id, all ? gov / all : 0.45];
+  }));
+}
+function surveyOf(law, stage, { week, date, seed, society, entries, undecided }) {
+  const L = EXT.laws;
+  const deltas = new Map([...(law.winners ?? []), ...(law.losers ?? [])].map(item => [item.id, item.delta ?? 0]));
+  const governing = governingShareBySegment(entries, society, undecided);
+  const sign = ['giocatore', 'governo', 'maggioranza'].includes(law.origin) ? 1 : law.origin === 'opposizione' ? -1 : 0.4;
+  const segments = (society?.segments ?? []).map(segment => {
+    const base = 50 + L.scale * (deltas.get(segment.id) ?? 0) + L.partisan * ((governing[segment.id] ?? 0.45) - 0.5) * sign
+      - (law.covered === false ? L.uncovered : 0) - Math.min(L.deficitCap, (law.deficit ?? 0) * L.perDeficit) - (stage.id === 'bilancio' ? L.fatigue * (law.controversy ?? 0) : 0);
+    return { id: segment.id, label: segment.label, share: segment.share, approval: round1(clamp(base, L.floor, L.ceiling)) };
+  });
+  if (!segments.length) return null;
+  const total = segments.reduce((sum, item) => sum + item.share, 0) || 1;
+  const truth = segments.reduce((sum, item) => sum + item.approval * item.share, 0) / total;
+  const key = lawKey(law);
+  const institutes = POLL_INSTITUTES.map(profile => {
+    const sample = instituteSample(profile, seed, week);
+    const sigma = Math.sqrt(Math.max(0.04, truth / 100 * (1 - truth / 100)) / sample) * 100;
+    return { id: profile.id, sample, approval: round1(clamp(truth + gauss(seed, 'legge', key, stage.id, profile.id) * sigma * 0.5, 1, 99)) };
+  });
+  const decided = institutes.reduce((sum, item) => sum + item.approval, 0) / institutes.length;
+  const pooled = institutes.reduce((sum, item) => sum + item.sample, 0);
+  const margin = round1(Math.sqrt(marginOf(pooled) ** 2 + L.model ** 2));
+  const undecidedShare = round1(clamp(L.undecided.base + L.undecided.perControversy * (law.controversy ?? 0) * 2 - Math.abs(decided - 50) / 8, 8, 35));
+  const verdict = decided <= EXT.clear.against ? 'contrari' : decided >= EXT.clear.for ? 'favorevoli' : 'divisi';
+  return { stage: stage.id, label: stage.label, week, date, approval: round1(decided * (100 - undecidedShare) / 100), against: round1((100 - decided) * (100 - undecidedShare) / 100), undecided: undecidedShare, decided: round1(decided), margin, institutes, bySegment: segments.map(item => ({ id: item.id, label: item.label, approval: item.approval })), verdict, applied: false };
+}
+// The laws in force that are due a survey (one per stage, once). entries: the forces as segmentSupport reads them.
+export function lawSurveys(input, { week, date, seed, lawsApplied = [], society = null, entries = [], undecided = 27 }) {
+  const obs = normalizeObservatory(input);
+  if (!society?.segments?.length) return obs;
+  let laws = obs.laws;
+  for (const law of lawsApplied) {
+    const key = lawKey(law);
+    let record = laws.find(item => item.key === key);
+    for (const stage of EXT.laws.stages) {
+      if (week < (law.week ?? 0) + stage.after || record?.surveys.some(item => item.stage === stage.id)) continue;
+      const survey = surveyOf(law, stage, { week, date, seed, society, entries, undecided });
+      if (!survey) continue;
+      if (!record) { record = { key, lawId: law.lawId ?? null, title: law.title, area: law.area, category: law.category, week: law.week ?? week, date: law.date ?? date, origin: law.origin ?? null, surveys: [] }; laws = [record, ...laws]; }
+      record.surveys = [...record.surveys, survey];
+    }
+  }
+  obs.laws = laws.slice(0, EXT.laws.kept);
+  return obs;
+}
+
+// A coalition against running alone: the share of each member that the list of another force keeps (it grows with the distance on the axis and with bad relations),
+// declared with its uncertainty (the spread of the institutes and the leak itself). A projection of the voting intentions, not a result, and nothing in the game moves with it.
+export function coalitionScenario({ memberIds, leaderId = null, forces, ties = {}, label = null }) {
+  const C = EXT.coalition;
+  const byId = new Map(forces.map(item => [item.id, item]));
+  const members = [...new Set(memberIds)].map(id => byId.get(id)).filter(Boolean);
+  const lead = byId.get(leaderId) ?? members.slice().sort((a, b) => b.share - a.share)[0];
+  if (!lead || !members.length) return null;
+  const rows = members.map(member => {
+    const tie = member.id === lead.id ? 0 : ties[[member.id, lead.id].sort().join('|')] ?? 0;
+    const leak = member.id === lead.id ? 0 : clamp(C.leak + C.perAxis * Math.abs((member.axis ?? 0) - (lead.axis ?? 0)) + (tie < 0 ? C.badTies : tie > 30 ? -C.goodTies : 0), C.min, C.max);
+    return { id: member.id, label: member.label, abbreviation: member.abbreviation ?? null, share: member.share, leak: round2(leak), kept: round2(member.share * (1 - leak)) };
+  });
+  const total = rows.reduce((sum, row) => sum + row.kept, 0);
+  const uncertainty = Math.sqrt(members.reduce((sum, member) => sum + (member.spread ?? 0.4) ** 2, 0) + rows.reduce((sum, row) => sum + (C.spread * row.leak * row.share) ** 2, 0));
+  return { memberIds: members.map(item => item.id), leaderId: lead.id, label: label ?? members.map(item => item.abbreviation || item.label).join(' + '), total: round1(total), low: round1(Math.max(0, total - uncertainty)), high: round1(total + uncertainty), solo: round1(lead.share), gain: round1(total - lead.share), lost: round1(rows.reduce((sum, row) => sum + row.share, 0) - total), rows, uncertainty: round1(uncertainty) };
+}
+// The scenarios the page offers by itself: running alone, each alliance of the world, and a wide field of forces near the leader (the player's force, or the largest).
+export function defaultScenarios(world, forces, ties = world?.ties ?? {}) {
+  const shares = forces.filter(item => item.share > 0);
+  const lead = shares.find(item => item.isPlayer) ?? shares.slice().sort((a, b) => b.share - a.share)[0];
+  if (!lead) return [];
+  const out = [{ id: 'solo', ...coalitionScenario({ memberIds: [lead.id], leaderId: lead.id, forces: shares, ties, label: `${lead.abbreviation || lead.label} da sola` }) }];
+  for (const alliance of (world?.alliances ?? []).filter(item => item.status === 'active' && item.partyIds?.length >= 2)) {
+    const scenario = coalitionScenario({ memberIds: alliance.partyIds, leaderId: alliance.partyIds.includes(lead.id) ? lead.id : null, forces: shares, ties, label: alliance.label });
+    if (scenario) out.push({ id: `alleanza:${alliance.id}`, ...scenario });
+  }
+  const near = shares.filter(item => item.id !== lead.id && Math.abs((item.axis ?? 0) - (lead.axis ?? 0)) <= 1.5 && (ties[[item.id, lead.id].sort().join('|')] ?? 0) >= 0).sort((a, b) => b.share - a.share).slice(0, EXT.coalition.widest - 1);
+  if (near.length) out.push({ id: 'campo-largo', ...coalitionScenario({ memberIds: [lead.id, ...near.map(item => item.id)], leaderId: lead.id, forces: shares, ties, label: 'Campo largo' }) });
+  return out;
 }

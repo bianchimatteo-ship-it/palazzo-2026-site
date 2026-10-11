@@ -16,13 +16,13 @@ export const STAT_LABELS = Object.freeze({
 export const PARLIAMENT_TIME_COSTS = Object.freeze({
   joinGroup: 1, contestRole: 1, proposeLaw: 1, amendLaw: 1, negotiateLaw: 1, compromiseLaw: 1,
   advanceLaw: 1, formGovernment: 1, governmentSupport: 1, reviseCoalition: 1, assignMinister: 1, confidence: 1, crisis: 1,
-  governmentBill: 2, decree: 2, budget: 2, program: 1, summit: 2, reshuffle: 1, confidenceOnLaw: 1, amendPolicy: 1, withdraw: 1, project: 2, projectFunding: 1, projectStop: 1, euApply: 1, euReport: 1,
+  governmentBill: 2, decree: 2, budget: 2, program: 1, summit: 2, reshuffle: 1, confidenceOnLaw: 1, amendPolicy: 1, withdraw: 1, project: 2, projectFunding: 1, projectStop: 1, euApply: 1, euReport: 1, dossierFund: 1, dossierDraft: 1, dossierPostpone: 1, dossierWithdraw: 1,
   // On the bills of the others: a speech in committee or on the floor, an amendment (it also costs political capital).
   speakOnLaw: 1, amendOthers: 1
 });
 export const AMENDMENT_CAPITAL_COST = 2;
 // Political capital spent by the Government's big moves.
-export const GOVERNMENT_CAPITAL_COSTS = Object.freeze({ governmentBill: 3, decree: 5, budget: 4, program: 2, summit: 3, reshuffle: 4, confidenceOnLaw: 4, project: 3, projectFunding: 1, projectStop: 2, euApply: 2, euReport: 1 });
+export const GOVERNMENT_CAPITAL_COSTS = Object.freeze({ governmentBill: 3, decree: 5, budget: 4, program: 2, summit: 3, reshuffle: 4, confidenceOnLaw: 4, project: 3, projectFunding: 1, projectStop: 2, euApply: 2, euReport: 1, dossierFund: 1, dossierDraft: 2, dossierPostpone: 1, dossierWithdraw: 1 });
 
 export const WEEKLY_ACTIVITIES = Object.freeze([
   { id: 'ascolto', category: 'territorio', label: 'Giro di ascolto', detail: 'Mercati, quartieri e sedi di associazione: presenza costante, poco rischio.', cost: { ap: 1, funds: 150 }, effects: { stats: { popularity: 1.4, consensus: 0.3, notoriety: 0.4 }, relations: { civic: 2 } }, risk: { chance: 0.06, label: 'Una contestazione rovina l’incontro', effects: { stats: { popularity: -1 } } } },
@@ -595,6 +595,17 @@ export const SITUATION_EVENTS = Object.freeze({
     { id: 'ridimensiona', label: 'Ridimensiona l’opera: costa meno, rende meno', cost: { capital: 1 }, special: 'project-scale' },
     { id: 'sospendi', label: 'Sospendi i lavori e recupera una parte dell’impegno', effects: { stats: { popularity: -1.5, reputation: -0.5 } }, special: 'project-suspend' },
     { id: 'attendi', label: 'Prendi tempo', effects: {}, special: 'project-wait' }] },
+  // The dossiers of the ministers (dossier-engine): a minister's objective is late and the Prime Minister decides how to help, how much time to give, or to call it off.
+  'dossier-emergenza': { id: 'dossier-emergenza', title: 'Ministero {ministry}: «{dossier}» è indietro', body: 'Il dossier era partito per rimettere in sesto il settore, ma a metà del tempo il livello è fermo al {progress}% del cammino (obiettivo {goal}). Il ministro chiede un sostegno o più tempo; la scadenza è il {due}. Il risultato si legge sul Paese, non sulle promesse (comportamento simulato).', defaultChoice: 'attendi', choices: [
+    { id: 'finanzia', label: 'Finanzia il dossier dal margine di bilancio', cost: { ap: 1 }, special: 'dossier-fund' },
+    { id: 'rinvia', label: 'Concedi più tempo al ministro', cost: { capital: 1 }, special: 'dossier-postpone' },
+    { id: 'ritira', label: 'Ritira il dossier', effects: { stats: { reputation: -0.5 } }, special: 'dossier-withdraw' },
+    { id: 'attendi', label: 'Lascia che il ministro si arrangi', effects: {}, special: 'dossier-wait' }] },
+  'dossier-riforma': { id: 'dossier-riforma', title: 'Ministero {ministry}: «{dossier}» non decolla', body: 'A metà del tempo, nella materia non c’è ancora un provvedimento abbastanza avanti (cammino {progress}%). Il ministro può preparare un testo, chiedere più tempo, oppure il dossier fallirà alla scadenza del {due} con un costo per lui e per la sua parte (comportamento simulato).', defaultChoice: 'attendi', choices: [
+    { id: 'bozza', label: 'Fai preparare il testo al ministro e presentalo', cost: { ap: 1, capital: 1 }, special: 'dossier-draft' },
+    { id: 'rinvia', label: 'Concedi più tempo al ministro', cost: { capital: 1 }, special: 'dossier-postpone' },
+    { id: 'ritira', label: 'Ritira il dossier', effects: { stats: { reputation: -0.5 } }, special: 'dossier-withdraw' },
+    { id: 'attendi', label: 'Aspetta', effects: {}, special: 'dossier-wait' }] },
   'progetto-ritardo': { id: 'progetto-ritardo', title: '«{project}» accumula ritardo ({delay} settimane)', body: 'L’opera in {region} è ferma alla fase «{stage}»: gare contestate, autorizzazioni, cantieri che rallentano. Ogni settimana persa riduce quel che l’opera darà ai cittadini.', defaultChoice: 'attendi', choices: [
     { id: 'commissario', label: 'Nomina un commissario straordinario', cost: { capital: 3 }, effects: { stats: { notoriety: 0.5 } }, special: 'project-commissioner' },
     { id: 'attendi', label: 'Aspetta e monitora', effects: {}, special: 'project-wait' }] },

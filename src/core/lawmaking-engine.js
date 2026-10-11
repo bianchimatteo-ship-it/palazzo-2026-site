@@ -129,7 +129,10 @@ function governmentArea(government, premier, society, rand) {
   const issues = (society?.issues ?? []).map(issue => issue.area ?? POLICY_AREAS.find(item => item.label === issue.topic)?.id).filter(id => AREA_BY_ID[id]);
   if (issues.length && rand() < 0.5) return issues[Math.floor(rand() * Math.min(3, issues.length))];
   const own = government.program?.priorities?.length && rand() < 0.6 ? government.program.priorities : groupProfile(premier ?? 'governo').likes;
-  return own[Math.floor(rand() * own.length)];
+  // The reforms the ministers have taken on come first: the Government legislates where its dossiers are open.
+  const reforms = (government.dossiers ?? []).filter(item => item.kind === 'riforma' && ['aperto', 'rinviato'].includes(item.status) && !item.drafted && AREA_BY_ID[item.area]).map(item => item.area);
+  const pool = reforms.length ? [...reforms, ...own] : own;
+  return pool[Math.floor(rand() * pool.length)];
 }
 function generateBills(parliament, { date, rand, society, world }) {
   const created = [];

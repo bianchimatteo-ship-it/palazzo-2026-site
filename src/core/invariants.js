@@ -61,6 +61,7 @@ export function checkInvariants(state, context = {}) {
   checkPresidency(state, report);
   checkProjects(state, report);
   checkNewsroom(state, report);
+  checkDossiers(state, report);
   checkCareerGoals(state, report);
   checkAgenda(state, known, report);
   return { ok: issues.length === 0, issues };
@@ -474,6 +475,27 @@ function checkStructures(state, report) {
 // office of the player when the player is President (no party, no seat, no other office, exactly one open Quirinale office).
 // The works and the European funds of the Government: stages and progress that make sense, money that is not more than the cost, calls that exist.
 const PROJECT_STAGE_IDS = new Set(['progettazione', 'gara', 'cantiere', 'collaudo', 'completato', 'sospeso']);
+// The dossiers of the ministers: unique, with a valid state, a progress in range, a minister of the Government, and no more open than the limit.
+function checkDossiers(state, report) {
+  const government = state.parliament?.government;
+  const dossiers = records(government?.dossiers);
+  if (!dossiers.length) return;
+  const ids = new Set();
+  const ministers = new Set(records(government.ministers).map(item => item.id));
+  for (const [index, dossier] of dossiers.entries()) {
+    const path = `parliament.government.dossiers[${index}]`;
+    if (ids.has(dossier.id)) report('dossier', path, `Dossier duplicato: ${dossier.id}`);
+    ids.add(dossier.id);
+    if (!['aperto', 'rinviato', 'riuscito', 'fallito', 'ritirato'].includes(dossier.status)) report('dossier', path, `Stato del dossier non valido: ${dossier.status}`);
+    if (!['riforma', 'emergenza'].includes(dossier.kind)) report('dossier', path, `Tipo del dossier non valido: ${dossier.kind}`);
+    if (!(dossier.progress >= 0 && dossier.progress <= 100)) report('dossier', path, `Avanzamento del dossier fuori scala: ${dossier.progress}`);
+    if (!validDay(dossier.due)) report('dossier', path, `Scadenza del dossier non valida: ${dossier.due}`);
+    if (!ministers.has(dossier.ministerId)) report('dossier', path, 'Il ministro del dossier non fa parte del governo.');
+    if (dossier.kind === 'emergenza' && !(dossier.goal > dossier.start)) report('dossier', path, 'L’obiettivo di un’emergenza è sopra il livello di partenza.');
+  }
+  if (dossiers.filter(item => ['aperto', 'rinviato'].includes(item.status)).length > 6) report('dossier', 'parliament.government.dossiers', 'Troppi dossier aperti insieme.');
+  for (const [index, minister] of records(government.ministers).entries()) if (minister.pressure !== undefined && !(minister.pressure >= 0 && minister.pressure <= 6)) report('dossier', `parliament.government.ministers[${index}]`, `Pressione sul ministro fuori scala: ${minister.pressure}`);
+}
 // The newsroom: articles written once (a key never repeats), stories with a bounded heat and a timeline, outlets with a credibility in range.
 function checkNewsroom(state, report) {
   const media = state.society?.media;

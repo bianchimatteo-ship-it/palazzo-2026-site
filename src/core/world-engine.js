@@ -1,9 +1,9 @@
 import { uniqueId } from './ids.js?v=20261010-2';
 import { ITALIAN_REGIONS } from '../data/regions.js?v=20261010-2';
-import { APPROVAL_NEUTRAL, CHART_SLOTS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261010-2';
+import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261010-2';
 import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261010-2';
 import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261010-2';
-import { advanceObservatory, houseEffect, normalizeObservatory, observatoryView, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261010-2';
+import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261010-2';
 export { houseEffect };
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
@@ -509,6 +509,13 @@ function publishPoll(world, { date, stats = {}, parliament = null, game = null, 
   // Every institute publishes its own reading of the same population; the average and the segments of the week are kept (observatory).
   const entries = results.map(row => world.parties.find(item => item.id === row.partyId)).filter(Boolean).map(party => ({ id: party.id, share: trueRows.find(row => row.partyId === party.id)?.share ?? party.baseline, agenda: agendaOf(party), stance: stanceOf(party) }));
   world.observatory = advanceObservatory(world.observatory, { week: world.week, date, seed: world.seed, trueRows, headline: { instituteId: institute.id, results, sample, margin }, previous, noise: world.pollNoise ?? 1, society: observatory?.society ?? null, entries, undecided: world.undecided });
+  // Approval of the Government and of the leader (not the vote), the regional picture, and the laws in force that are due a survey: all measurements, none moves the world here.
+  world.observatory = recordApproval(world.observatory, { week: world.week, date, government: poll.government?.approval ?? null, executive: poll.executive?.approval ?? null, leader: poll.personal?.approval ?? null, margin });
+  if (world.week % POLL_EXTENSIONS.regional.every === 0) {
+    const leading = results.slice().sort((a, b) => b.share - a.share).slice(0, POLL_EXTENSIONS.regional.forces).map(row => row.partyId);
+    world.observatory = recordRegional(world.observatory, { week: world.week, date, regional: Object.fromEntries(ITALIAN_REGIONS.map(region => [region, regionalShares(world, region)])), partyIds: player && !leading.includes(player) ? [...leading, player] : leading });
+  }
+  world.observatory = lawSurveys(world.observatory, { week: world.week, date, seed: world.seed, lawsApplied: observatory?.lawsApplied ?? [], society: observatory?.society ?? null, entries, undecided: world.undecided });
   poll.instituteId = institute.id;
   return poll;
 }
@@ -597,6 +604,12 @@ function addEffect(world, effect) {
   if (!effect.delta) return;
   const entry = { id: uniqueId(world.effects, `effetto-${world.week}-${world.effects.length}-${world.rngState % 997}`), scope: 'national', remaining: 4, source: SIM, ...effect };
   world.effects.push({ ...entry, total: entry.remaining });
+}
+// The weight a clear reading of the opinion gives the parties that back (or fight) the executive for a few weeks: an effect like any other of the world, with its cause, that fades by itself.
+export function opinionEffect(input, { delta, weeks, cause }) {
+  const world = copy(input);
+  addEffect(world, { strategy: 'governista', delta, remaining: weeks, cause });
+  return world;
 }
 function playerParty(world) { return world.parties.find(item => item.isPlayer) ?? null; }
 function applyWorldEvent(world, event, date, parliament) {

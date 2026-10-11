@@ -793,6 +793,12 @@ export function mountApp(root, store, { retryData = null } = {}) {
       return;
     }
     // The works and the European funds of the Government.
+    const dossierControl = event.target.closest('[data-dossier-action]');
+    if (dossierControl) {
+      try { store.dossierAction(dossierControl.dataset.dossierAction, dossierControl.dataset.dossierId); playSound('confirm'); }
+      catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
+      return;
+    }
     const worksControl = event.target.closest('[data-project-stop],[data-eu-apply],[data-eu-report]');
     if (worksControl) {
       try {

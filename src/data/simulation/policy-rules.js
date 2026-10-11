@@ -112,6 +112,17 @@ export const GOVERNMENT_LINES = Object.freeze({
   riforme: { label: 'Grandi riforme', detail: 'Cambiare le regole del Paese: tempi lunghi, molti nemici, eredità duratura.', spread: -4, pleased: ['imprese'], displeased: [] }
 });
 
+// The kinds of Government the consultations produce (legislature-engine) and how each lives: the level its stability tends to (points), how fast time in office wears it (months per
+// point of stability lost, a lower number wears faster), how restless its allies are (×), and whether they ask for ministries (a technical Government has none to give).
+export const GOVERNMENT_KINDS = Object.freeze({
+  coalizione: { label: 'Coalizione uscita dal voto', target: 0, wear: 3, restless: 1, ministries: true },
+  'coalizione-post-voto': { label: 'Maggioranza nata in Parlamento', target: -2, wear: 3, restless: 1.15, ministries: true },
+  'grande-coalizione': { label: 'Grande coalizione', target: 2, wear: 2.4, restless: 1.3, ministries: true },
+  'governo-del-presidente': { label: 'Governo del Presidente', target: 3, wear: 2, restless: 0.7, ministries: false },
+  default: { label: 'Governo', target: 0, wear: 3, restless: 1, ministries: true }
+});
+export const governmentKindOf = government => GOVERNMENT_KINDS[government?.majorityKind] ?? GOVERNMENT_KINDS.default;
+
 // The annual budget: groups of areas that the manovra can fund more, keep or cut.
 export const BUDGET_SESSION = Object.freeze({ opensMonth: 10, deadline: '12-31', levels: [[-1, 'Taglio'], [0, 'Invariato'], [1, 'Aumento']] });
 

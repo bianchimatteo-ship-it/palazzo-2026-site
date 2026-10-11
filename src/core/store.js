@@ -19,16 +19,17 @@ import { ADVANCE_RULES, AMENDMENT_CAPITAL_COST, COMMUNICATION_STYLES, GOVERNMENT
 import { syncAgendas, advanceLegislativeWeek, amendOthersLaw, amendmentOdds, linkGroupsToParties, setPlayerVote, speakOnLaw } from './lawmaking-engine.js?v=20261010-2';
 import { seededRandom } from './vote-engine.js?v=20261010-2';
 import { advanceCabinetWeek, joinAsSupport, majorityMargin } from './cabinet-engine.js?v=20261010-2';
+import { draftDossierBill, fundDossier, openDossiers, postponeDossier, settleProgram, tickDossiers, withdrawDossier } from './dossier-engine.js?v=20261010-2';
 import { EP_COSTS, EP_GROUPS_2024, EP_ROLES, INSTITUTIONS, advanceInstitutionWeek, applyLocalEffect, bidRapporteur, concedeToGroup, createInstitution, committeeById, epGroupFor, grantDelega, localAreas, mandateRecord, proposeLocalAct, questionExecutive, requestCommittee, reshuffleLocal, revokeDelega, runForCommitteeRole, setLocalVote, tableAmendment, territoryValue } from './local-engine.js?v=20261010-2';
 import { candidacyBlock, institutionOffice, lapsesFor, officeLabel, officeScope } from './office-engine.js?v=20261010-2';
 import { actTypeOf } from '../data/simulation/local-acts.js?v=20261010-2';
 import { SECTOR_GAINS, competenceIn, gainSector, sectorFloors, standingFactors } from './standing-engine.js?v=20261010-2';
 import { AREA_BY_ID, BILLION_PER_POINT, BUDGET_SESSION, GOVERNMENT_LINES, POLICY_AREAS, areaOf } from '../data/simulation/policy-rules.js?v=20261010-2';
-import { recordAccordOutcome, settleElectoralTerms, allianceBlock, allianceOf, electionRoster, forceProfiles, mergeCandidates, mergeIntoPlayerForce, renamePlayerForce, setPlayerAgenda, splitPlayerForce, localShares, regionalShares, withRegionalLeans, withLocalCalendar, joinCoalition, acceptAlliance, addWorldEffects, advanceWorld, alignWorldToVote, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setGoverningForces, setPlayerParty, withCanonicalForces, withLatentForces, withPartyIdentities, withPositions } from './world-engine.js?v=20261010-2';
+import { opinionEffect, recordAccordOutcome, settleElectoralTerms, allianceBlock, allianceOf, electionRoster, forceProfiles, mergeCandidates, mergeIntoPlayerForce, renamePlayerForce, setPlayerAgenda, splitPlayerForce, localShares, regionalShares, withRegionalLeans, withLocalCalendar, joinCoalition, acceptAlliance, addWorldEffects, advanceWorld, alignWorldToVote, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setGoverningForces, setPlayerParty, withCanonicalForces, withLatentForces, withPartyIdentities, withPositions } from './world-engine.js?v=20261010-2';
 import { candidacyQuotas, FORMATION_PHASES, LEGISLATURE_RULES, NATIONAL_LINES, acceptMandate, crisisFormation, seatResult, startFormation, buildCoalitions, campaignWeekEffects, coalitionOptions, compactResult, contestedDistricts, createNationalState, europeanListSeats, formationStep, groupOfParty, homeDistricts, legislatureGroups, legislatureTerm, nationalCalendar, nationalHistory, nationalProjection, normalizeNationalState, openLegislature, politicheOutcome, regionalBreakdown, runEuropeanVote, runNationalVote, seatPlayer, voteForces } from './legislature-engine.js?v=20261010-2';
 import { classifyOutcome, preferenceStanding } from './election-engine.js?v=20261010-2';
 import { DIFFICULTIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261010-2';
-import { WORLD_PARTY_COUNT } from '../data/simulation/polling-rules.js?v=20261010-2';
+import { POLL_EXTENSIONS, WORLD_PARTY_COUNT } from '../data/simulation/polling-rules.js?v=20261010-2';
 import { heldOfficesOf, isPrimeMinister } from './roles.js?v=20261010-2';
 import { costProblem, leavePartyFor, memoryAbout, memoryBalance, memoryWeight, recordWhy, remember, scheduleFollowUp } from './career-engine.js?v=20261010-2';
 import { addLedger, advanceElection, ledgerLabel, affinity, applyPresidentCredit, composeAssembly, createPresidency, dealWithBloc, declareCandidacy, lineText, normalizePresidency, openElection as openPresidentialElection, playerStanding, presidencySchedule, presidentActivityEffects, presidentActivityProblem, presidentWeek, presidentialEligibility, proclaim, projection, quorumFor, resignPresidency, setPlayerLine, setPlayerVote as setPresidentialVote, settleLedger, sponsorCandidate, startPlayerPresidency, termEndOf, vetoCandidate, whiteSemester, withdrawCandidacy } from './presidency-engine.js?v=20261010-2';
@@ -1063,6 +1064,18 @@ function handleSpecials(s, specials) {
           }
         }
       } catch (error) { next = { ...next, ui: { ...next.ui, toast: error.message } }; }
+    } else if (special.type.startsWith('dossier-') && next.society && next.parliament?.government) {
+      try {
+        const id = special.params?.dossierId;
+        const date = next.clock.currentDate, week = next.game.week.index;
+        let title = null;
+        if (special.type === 'dossier-fund') { const out = fundDossier(next.parliament, next.society, id, { week }); next = { ...next, parliament: out.parliament, society: out.society }; title = out.dossier.title; }
+        else if (special.type === 'dossier-draft') { const out = draftDossierBill(next.parliament, id, date); next = { ...next, parliament: out.parliament }; title = out.dossier.title; }
+        else if (special.type === 'dossier-postpone') { const dossier = openDossiers(next.parliament.government).find(item => item.id === id); next = { ...next, parliament: postponeDossier(next.parliament, id, date) }; title = dossier?.title; }
+        else if (special.type === 'dossier-withdraw') { const dossier = openDossiers(next.parliament.government).find(item => item.id === id); next = { ...next, parliament: withdrawDossier(next.parliament, id, date, week) }; title = dossier?.title; }
+        const note = { 'dossier-fund': 'Dossier finanziato', 'dossier-draft': 'Testo del ministro presentato', 'dossier-postpone': 'Più tempo al ministro', 'dossier-withdraw': 'Dossier ritirato' }[special.type];
+        if (note && title) next = addTimeline(next, [{ kind: 'governo', title: `${note}: ${title}`, detail: 'Decisione del Presidente del Consiglio', tone: special.type === 'dossier-withdraw' ? 'bad' : 'neutral' }]);
+      } catch (error) { next = { ...next, ui: { ...next.ui, toast: error.message } }; }
     } else if ((special.type === 'eu-apply' || special.type === 'eu-report') && next.society) {
       try {
         const out = special.type === 'eu-apply' ? applyCall(next.society, special.params?.callId, { week: next.game.week.index }) : reportCall(next.society, special.params?.callId, { week: next.game.week.index });
@@ -1366,7 +1379,7 @@ function tickWorld(s, date, report) {
   // Weeks to the next general election: coalitions form faster as it approaches.
   const politiche = (s.game?.elections ?? []).filter(item => item.type === 'politiche' && item.status !== 'held').map(item => item.electionDate).sort()[0];
   const nationalVoteIn = politiche ? Math.round(elapsedDays(date, politiche) / 7) : null;
-  const out = advanceWorld(s.world, { date, week: report.week, stats: statsOf(s), deltas: report.deltas ?? {}, game: s.game, parliament: s.parliament, majorityShift, society: societySignal(s.society), playerIsLeader: secretary, playerStrategy: secretary ? s.game.party.line ?? 'autonoma' : null, nationalVoteIn, observatory: { society: observatorySociety(s.society) } });
+  const out = advanceWorld(s.world, { date, week: report.week, stats: statsOf(s), deltas: report.deltas ?? {}, game: s.game, parliament: s.parliament, majorityShift, society: societySignal(s.society), playerIsLeader: secretary, playerStrategy: secretary ? s.game.party.line ?? 'autonoma' : null, nationalVoteIn, observatory: { society: observatorySociety(s.society), lawsApplied: (s.society?.lawsApplied ?? []).map(item => ({ lawId: item.lawId ?? null, title: item.title, category: item.category, area: item.area, week: item.week, date: item.date, origin: item.origin, covered: item.covered, deficit: item.deficit, controversy: item.controversy, winners: (item.winners ?? []).map(row => ({ id: row.id, delta: row.delta })), losers: (item.losers ?? []).map(row => ({ id: row.id, delta: row.delta })) })) } });
   // Political memory weighs on consensus: old promises, ruptures, scandals or victories keep moving the polls.
   const remembered = s.game ? memoryBalance(s.game).net : 0;
   const world = Math.abs(remembered) >= 0.5 && out.world.playerPartyId ? applyWorldSignals(out.world, [{ type: 'memory', delta: round2(clampTo(remembered * 0.02, -0.25, 0.12)) }], date) : out.world;
@@ -1411,6 +1424,41 @@ function tickNews(s, date, week) {
   society = newsroomWeek(society, newsContext({ ...s, society }, date, week));
   return { ...s, society };
 }
+// A clear reading of the opinion on a law of the Government has consequences, once: the survey is marked as applied, whatever it says. Against it: the stability and the standing of the
+// majority give a little, for a few weeks; for it: they gain a little. The balance two months on counts only if the opinion turned. Nothing accumulates: each survey counts once and the effect fades.
+function tickSurveyEffects(s, date) {
+  const observatory = s.world?.observatory;
+  if (!observatory?.laws?.some(law => law.surveys.some(survey => !survey.applied))) return s;
+  const rules = POLL_EXTENSIONS.consequence;
+  let world = s.world, parliament = s.parliament;
+  const notes = [];
+  const laws = observatory.laws.map(law => {
+    const governs = ['giocatore', 'governo', 'maggioranza'].includes(law.origin);
+    return { ...law, surveys: law.surveys.map((survey, index) => {
+      if (survey.applied) return survey;
+      const first = law.surveys.find(item => item.stage === 'primo');
+      const clear = survey.verdict !== 'divisi';
+      const turned = survey.stage === 'bilancio' && first && first.verdict !== survey.verdict && clear;
+      const counts = governs && clear && (survey.stage === 'primo' || turned);
+      if (counts) {
+        const rule = rules[survey.stage] ?? rules.primo;
+        const sign = survey.verdict === 'favorevoli' ? 1 : -1;
+        world = opinionEffect(world, { delta: sign * rule.effect, weeks: rule.weeks, cause: `Sondaggio su «${law.title}» (${survey.label.toLowerCase()})` });
+        const government = parliament?.government;
+        if (rule.stability && government && ['active', 'crisis'].includes(government.status)) parliament = { ...parliament, government: { ...government, stability: Math.max(0, Math.min(100, (government.stability ?? 50) + sign * rule.stability)) } };
+        notes.push({ law, survey, sign });
+      }
+      return { ...survey, applied: true };
+    }) };
+  });
+  let next = { ...s, parliament, world: { ...world, observatory: { ...observatory, laws } } };
+  if (next.game && isPrimeMinister(parliament)) {
+    const game = deepCopy(next.game);
+    for (const { law, survey, sign } of notes) remember(game, { date, kind: 'legge', text: `Sondaggio su «${law.title}»: ${Math.round(survey.approval)}% favorevoli, ${Math.round(survey.against)}% contrari`, weight: 0.8, tone: sign > 0 ? 'good' : 'bad' });
+    next = { ...next, game };
+  }
+  return notes.length ? addTimeline(next, notes.map(({ law, survey, sign }) => ({ kind: 'sondaggi', title: `${law.title}: ${survey.verdict === 'contrari' ? 'bocciata dai cittadini' : 'promossa dai cittadini'}`, detail: `${Math.round(survey.approval)}% favorevoli, ${Math.round(survey.against)}% contrari (±${survey.margin})`, tone: sign > 0 ? 'good' : 'bad' }))) : next;
+}
 // What the newsroom reads of the game: the Government as a short description, the side of the premier, the reactions to a law (the allies by their profile, the citizens who gain or lose).
 function newsContext(s, date, week) {
   const parliament = s.parliament;
@@ -1434,7 +1482,8 @@ function newsContext(s, date, week) {
     if (win) out.push({ key: summary.lawId ?? summary.title, actor: win.label, side: 'cittadini', stance: 'favorevole', text: win.reason ? win.reason.charAt(0).toUpperCase() + win.reason.slice(1) : 'Ne trae vantaggio.' });
     return out.slice(0, 4);
   };
-  return { week, date, year: Number(String(date).slice(0, 4)), parliament, govAxis: premier?.axis ?? 0, gov, lawsApplied: s.society?.lawsApplied ?? [], worldEvents: s.world?.events ?? [], projects: s.society?.projects ?? [], euCalls: s.society?.publicFinance?.eu?.calls ?? [], finance: s.society?.publicFinance ?? null, reactionsFor };
+  const surveys = (s.world?.observatory?.laws ?? []).flatMap(law => (law.surveys ?? []).filter(survey => survey.week >= week - 1).map(survey => ({ law: { key: law.key, lawId: law.lawId, title: law.title }, survey })));
+  return { week, date, year: Number(String(date).slice(0, 4)), parliament, govAxis: premier?.axis ?? 0, gov, surveys, lawsApplied: s.society?.lawsApplied ?? [], worldEvents: s.world?.events ?? [], projects: s.society?.projects ?? [], euCalls: s.society?.publicFinance?.eu?.calls ?? [], finance: s.society?.publicFinance ?? null, reactionsFor };
 }
 // Writes a fact into the career's political memory.
 function rememberFact(s, entry) {
@@ -1457,6 +1506,28 @@ function checkBudgetDeadline(s) {
   next = rememberFact(next, { kind: 'esercizio-provvisorio', text: `Esercizio provvisorio nel ${year}`, weight: 3, tone: 'bad' });
   return addTimeline(next, [{ kind: 'governo', title: `Esercizio provvisorio nel ${year}`, detail: 'La legge di bilancio non è arrivata in tempo', tone: 'bad' }]);
 }
+// The dossiers of the ministers and the balance of the programme: what a minister takes on, what is late (a decision for the Prime Minister), what ended (told, remembered).
+function tickDossierWeek(s, date, report) {
+  const government = s.parliament?.government;
+  if (!government || government.status !== 'active' || !s.society || !report) return s;
+  const margin = (() => { try { return majorityMargin(s.parliament); } catch { return null; } })();
+  const out = tickDossiers(s.parliament, { date, week: report.week, society: s.society, margin });
+  const balance = settleProgram(out.parliament, s.society, date);
+  if (balance.parliament === s.parliament) return s;
+  let next = { ...s, parliament: balance.parliament };
+  const premier = isPrimeMinister(next.parliament);
+  let game = next.game ? deepCopy(next.game) : next.game;
+  const entries = [];
+  for (const alarm of out.alarms) if (premier && game) game = addSituationEvent(game, alarm.kind === 'emergenza' ? 'dossier-emergenza' : 'dossier-riforma', { ministry: alarm.portfolio, dossier: alarm.title, progress: String(alarm.progress), goal: String(alarm.goal ?? ''), due: alarm.due, dossierId: alarm.id, dedupe: alarm.id }, false);
+  for (const item of out.settled) {
+    const ok = item.outcome === 'riuscito';
+    entries.push({ kind: 'governo', title: `${ok ? 'Dossier riuscito' : 'Dossier fallito'}: ${item.dossier.title}`, detail: `Ministero ${item.dossier.portfolio}`, tone: ok ? 'good' : 'bad' });
+    if (premier && game) remember(game, { date, kind: ok ? 'legge' : 'decisione', text: `${ok ? 'Il ministro' : 'Il ministro'} ${item.dossier.portfolio}: dossier «${item.dossier.title}» ${ok ? 'portato a termine' : 'non riuscito'}`, weight: ok ? 0.8 : 1, tone: ok ? 'good' : 'bad' });
+  }
+  if (balance.report && premier) entries.push({ kind: 'governo', title: 'Bilancio del programma di governo', detail: `${balance.report.done} priorità su ${balance.report.total} attuate`, tone: balance.report.share >= 0.66 ? 'good' : balance.report.share <= 0.2 ? 'bad' : 'neutral' });
+  next = { ...next, game };
+  return entries.length ? addTimeline(next, entries) : next;
+}
 function settleWeeks(s) {
   let next = s;
   let report = null;
@@ -1469,10 +1540,12 @@ function settleWeeks(s) {
     next = applyGameResult(next, result.ctx, next.ui.toast, result.specials);
     if (result.report) next = tickLegislature(next, weekEnd);
     if (result.report) next = tickAccordWeek(next, weekEnd);
+    if (result.report) next = tickDossierWeek(next, weekEnd, result.report);
     if (result.report) next = tickLocal(next, weekEnd);
     if (result.report) next = tickRosters(next);
     if (result.report) next = tickSociety(next, weekEnd, result.report);
     if (next.world && result.report) next = tickWorld(next, weekEnd, result.report);
+    if (next.world && result.report) next = tickSurveyEffects(next, weekEnd);
     if (result.report) next = tickRaces(next, weekEnd);
     if (result.report) next = tickNational(next, weekEnd);
     if (result.report) next = tickPresidency(next, weekEnd);
@@ -4015,6 +4088,22 @@ export const store = {
     state = addTimeline({ ...next, game, society: out.society, ui: { ...next.ui, toast: `Opera avviata: ${out.project.title}` } }, [{ kind: 'governo', title: `Opera avviata: ${out.project.title}`, detail: `${quote.billions} miliardi (simulati) · ${quote.weeks} settimane previste${quote.callId ? ' · cofinanziata da fondi europei' : ''}`, tone: 'neutral' }]);
     persist(); emit();
     return out.project;
+  },
+  dossierAction(action, dossierId) {
+    requirePremier();
+    const cost = { fund: 'dossierFund', draft: 'dossierDraft', postpone: 'dossierPostpone', withdraw: 'dossierWithdraw' }[action];
+    if (!cost) throw new Error('Azione sul dossier non valida.');
+    const next = withGovernmentCost(cost);
+    const date = next.clock.currentDate, week = next.game.week.index;
+    let out = { parliament: next.parliament, society: next.society, dossier: openDossiers(next.parliament.government).find(item => item.id === dossierId) };
+    if (action === 'fund') out = fundDossier(next.parliament, next.society, dossierId, { week });
+    else if (action === 'draft') out = draftDossierBill(next.parliament, dossierId, date);
+    else if (action === 'postpone') out = { ...out, parliament: postponeDossier(next.parliament, dossierId, date) };
+    else out = { ...out, parliament: withdrawDossier(next.parliament, dossierId, date, week) };
+    const note = { fund: 'Dossier finanziato', draft: 'Testo del ministro presentato', postpone: 'Più tempo al ministro', withdraw: 'Dossier ritirato' }[action];
+    state = addTimeline({ ...next, parliament: out.parliament, society: out.society ?? next.society, ui: { ...next.ui, toast: `${note}: ${out.dossier?.title ?? 'dossier'}` } }, [{ kind: 'governo', title: `${note}: ${out.dossier?.title ?? 'dossier'}`, detail: 'Decisione del Presidente del Consiglio', tone: action === 'withdraw' ? 'bad' : 'neutral' }]);
+    persist(); emit();
+    return out.dossier;
   },
   setProjectFunding(projectId, funding) {
     requirePremier();

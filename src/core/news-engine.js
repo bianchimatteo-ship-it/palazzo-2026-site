@@ -139,6 +139,29 @@ const BUILDERS = {
     const v = HISTORY[fact.type];
     return { headline: v.h, deck: fact.text, paragraphs: [fact.text, v.p ? v.p(fact, ctx) : '', govLine(ctx)].filter(Boolean), facts: govFacts(ctx) };
   },
+  dossier(fact, ctx) {
+    const d = fact.data;
+    const title = lower(d.title ?? 'un dossier');
+    const blame = { ministro: 'La responsabilità è del ministro: il dossier non ha avuto la guida che serviva.', maggioranza: 'La maggioranza era troppo stretta per portare avanti il dossier.', circostanze: 'Le circostanze, più che il ministro, hanno frenato il dossier.' }[d.blame] ?? '';
+    const headlines = {
+      riuscito: { neutral: `Ministero ${d.portfolio}: dossier riuscito`, critical: `Il ministro ${d.portfolio} ce la fa: ora si vedranno gli effetti`, friendly: `Successo al ministero ${d.portfolio}: ${title}` },
+      fallito: { neutral: `Ministero ${d.portfolio}: dossier fallito`, critical: `Fallimento al ministero ${d.portfolio}: ${title}`, friendly: `Ministero ${d.portfolio}, il dossier non decolla: ${d.blame === 'circostanze' ? 'pesano le circostanze' : 'si cerca una soluzione'}` },
+      ritirato: { neutral: `Ministero ${d.portfolio}: ritirato il dossier`, critical: `Dossier ritirato al ministero ${d.portfolio}: marcia indietro`, friendly: `Ministero ${d.portfolio}: il Governo ritira il dossier e riparte` },
+      rinviato: { neutral: `Ministero ${d.portfolio}: più tempo per il dossier`, critical: `Dossier in ritardo al ministero ${d.portfolio}: slitta la scadenza`, friendly: `Ministero ${d.portfolio}: concessa una proroga al dossier` }
+    }[d.outcome] ?? { neutral: fact.text, critical: fact.text, friendly: fact.text };
+    return { headline: headlines, deck: fact.text, paragraphs: [fact.text, blame, d.outcome === 'riuscito' ? 'Il risultato si legge sul Paese: la fiducia nel ministro e il sostegno del suo gruppo ne escono rafforzati.' : d.outcome === 'fallito' ? 'Il ministro è sotto pressione: un altro passo falso rende più probabili le sue dimissioni.' : '', govLine(ctx)].filter(Boolean), facts: [['Ministero', d.portfolio ?? '—'], ['Esito', d.outcome], ...govFacts(ctx).slice(0, 2)] };
+  },
+  sondaggio(fact, ctx) {
+    const d = fact.data;
+    const best = (d.bySegment ?? []).slice().sort((a, b) => b.approval - a.approval), worst = best.slice().reverse();
+    const verdict = d.verdict === 'contrari' ? 'bocciata' : d.verdict === 'favorevoli' ? 'promossa' : 'accolta in modo diviso';
+    const headlines = {
+      contrari: { neutral: `«${d.title}»: solo il ${num(d.approval, 0)}% è favorevole`, critical: `«${d.title}» bocciata dai cittadini: ${num(d.against, 0)}% contrari`, friendly: `«${d.title}»: i cittadini ancora scettici, ma ${num(d.undecided, 0)}% non ha deciso` },
+      favorevoli: { neutral: `«${d.title}»: il ${num(d.approval, 0)}% approva`, critical: `«${d.title}» piace, ma restano i dubbi sui conti`, friendly: `«${d.title}» promossa dai cittadini: ${num(d.approval, 0)}% a favore` },
+      divisi: { neutral: `«${d.title}»: opinione pubblica divisa (${num(d.approval, 0)}% a favore, ${num(d.against, 0)}% contro)`, critical: `«${d.title}» non convince: il Paese è spaccato`, friendly: `«${d.title}»: il Paese si divide, ma c’è spazio per spiegarla` }
+    }[d.verdict];
+    return { headline: headlines, deck: `${d.stageLabel}: ${num(d.approval, 0)}% favorevoli, ${num(d.against, 0)}% contrari, ${num(d.undecided, 0)}% indecisi (±${num(d.margin, 1)}).`, paragraphs: [`Secondo la media di quattro istituti simulati la legge «${d.title}» è ${verdict}: ${num(d.approval, 0)}% a favore, ${num(d.against, 0)}% contro, ${num(d.undecided, 0)}% senza opinione.`, best.length ? `Tra chi ha scelto, la apprezzano di più ${lower(best[0].label)} (${num(best[0].approval, 0)}%) e meno ${lower(worst[0].label)} (${num(worst[0].approval, 0)}%).` : '', `L’incertezza della stima è di ±${num(d.margin, 1)} punti, tra campione e modello: è un giudizio sul provvedimento, non un’intenzione di voto.`].filter(Boolean), facts: [['Favorevoli', `${num(d.approval, 0)}%`], ['Contrari', `${num(d.against, 0)}%`], ['Indecisi', `${num(d.undecided, 0)}%`], ['Margine', `±${num(d.margin, 1)}`]] };
+  },
   mondo(fact) {
     const d = fact.data;
     return { headline: { neutral: d.title, critical: d.title, friendly: d.title }, deck: d.body, paragraphs: [d.body, ...(d.lines ?? []), ...(fact.reactions ?? []).map(item => `${item.actor}: ${lower(item.text)}`)].filter(Boolean), facts: (d.lines ?? []).slice(0, 2).map(line => ['Effetto', line]) };
@@ -189,6 +212,7 @@ const HISTORY = {
   'dissenso-maggioranza': { cat: 'governo', imp: 3, tone: 'bad', h: { neutral: 'Dissenso nella maggioranza su un voto', critical: 'Franchi tiratori: la maggioranza si divide', friendly: 'Un voto difficile nella maggioranza' } },
   'cambio-maggioranza': { cat: 'governo', imp: 3, tone: 'neutral', h: { neutral: 'Cambiano i numeri della maggioranza', critical: 'Maggioranza in bilico dopo i cambi di gruppo', friendly: 'La maggioranza ridisegna i numeri' } },
   'vertice-maggioranza': { cat: 'governo', imp: 2, tone: 'neutral', h: { neutral: 'Vertice di maggioranza', critical: 'Vertice di maggioranza: fumata grigia?', friendly: 'Vertice di maggioranza: gli alleati al tavolo' } },
+  'programma-bilancio': { cat: 'governo', imp: 3, tone: 'neutral', h: { neutral: 'Il Governo fa il bilancio del suo programma', critical: 'Programma di governo: quanto è stato fatto davvero?', friendly: 'Programma di governo: il bilancio delle priorità' } },
   'programma-governo': { cat: 'governo', imp: 2, tone: 'neutral', h: { neutral: 'Il Governo fissa il programma', critical: 'Il programma del Governo, tra priorità e promesse', friendly: 'Il Governo presenta le sue priorità' } }
 };
 const factFromHistory = (entry, ctx) => {
@@ -198,6 +222,11 @@ const factFromHistory = (entry, ctx) => {
     if (type !== 'iter-rejected') return null;
     const law = (ctx.parliament?.laws ?? []).find(item => item.id === entry.details?.lawId);
     return { key: `legge:${entry.details?.lawId ?? entry.id}:respinta`, kind: 'respinta', category: 'parlamento', importance: 3, tone: 'bad', week: ctx.week, date: entry.date, text: entry.text, data: { title: law?.title ?? 'il provvedimento', lawId: entry.details?.lawId ?? null }, story: law ? { kind: 'riforma', op: 'add', key: `legge:${law.id}`, title: law.title, stage: 'reazioni', text: `Respinta nella votazione finale.` } : null };
+  }
+  if (type === 'dossier-esito' || type === 'dossier-rinvio') {
+    const d = entry.details ?? {};
+    const outcome = type === 'dossier-rinvio' ? 'rinviato' : d.outcome;
+    return { key: `storia:${entry.id}`, kind: 'dossier', category: 'governo', importance: outcome === 'fallito' ? 4 : outcome === 'riuscito' ? 3 : 2, tone: outcome === 'riuscito' ? 'good' : outcome === 'fallito' ? 'bad' : 'neutral', week: ctx.week, date: entry.date, text: entry.text, data: { ...d, outcome }, story: null };
   }
   const rule = HISTORY[type];
   if (!rule) return null;
@@ -231,8 +260,19 @@ function collectFacts(media, ctx) {
   }
   for (const project of ctx.projects ?? []) facts.push(...projectFacts(project, ctx));
   facts.push(...financeFacts(ctx));
+  for (const survey of ctx.surveys ?? []) facts.push(surveyFact(survey, media));
   for (const fact of ctx.extraFacts ?? []) facts.push(fact);
   return facts.filter(Boolean);
+}
+// A survey on a law in force: the article, and a development of the law's story (opened when the verdict is against and nobody had contested it yet).
+function surveyFact({ law, survey }, media) {
+  const key = `legge:${law.lawId ?? law.title}`;
+  const exists = media.stories.some(item => item.key === key);
+  const opens = survey.verdict === 'contrari' && !exists;
+  const text = `Sondaggio: ${num(survey.approval, 0)}% favorevoli, ${num(survey.against, 0)}% contrari (±${num(survey.margin, 1)}).`;
+  const reactions = survey.verdict === 'contrari' ? [{ key: `sondaggio:${law.key}:${survey.stage}`, actor: 'Opposizione', side: 'opposizione', stance: 'attacca', text: 'Cita il sondaggio per chiedere di rivedere la legge.' }] : survey.verdict === 'favorevoli' ? [{ key: `sondaggio:${law.key}:${survey.stage}`, actor: 'Maggioranza', side: 'maggioranza', stance: 'rivendica', text: 'Rivendica il gradimento dei cittadini.' }] : [];
+  return { key: `sondaggio:${law.key}:${survey.stage}`, kind: 'sondaggio', category: 'sondaggi', importance: survey.verdict === 'divisi' ? 2 : 3, tone: survey.verdict === 'contrari' ? 'bad' : survey.verdict === 'favorevoli' ? 'good' : 'neutral', week: survey.week, date: survey.date, text, data: { title: law.title, stageLabel: survey.label, approval: survey.approval, against: survey.against, undecided: survey.undecided, margin: survey.margin, verdict: survey.verdict, bySegment: survey.bySegment },
+    story: { kind: 'riforma', op: opens ? 'open' : 'add', existing: !opens, key, title: law.title, stage: survey.stage === 'bilancio' ? 'primi risultati' : 'reazioni', text, heat: 50, reactions } };
 }
 function lawFact(summary, ctx) {
   const key = `legge:${summary.lawId ?? `${summary.title}|${summary.week}`}`;
@@ -286,7 +326,7 @@ function financeFacts(ctx) {
 function touchStory(media, spec, week, date, outletId) {
   let story = media.stories.find(item => item.key === spec.key);
   if (!story) {
-    if (spec.op === 'close' || spec.op === 'add' && !spec.title) return null;
+    if (spec.op === 'close' || spec.existing || spec.op === 'add' && !spec.title) return null;
     const open = media.stories.filter(item => item.status === 'aperta');
     if (open.length >= RULES.storiesOpen) { const coldest = open.sort((a, b) => a.heat - b.heat)[0]; closeStory(coldest, week, 'Archiviata per fare spazio a vicende più calde.'); }
     story = { id: `storia-${spec.key.replace(/[^a-z0-9]+/gi, '-').slice(0, 40)}-${media.seq}`, key: spec.key, kind: spec.kind, title: spec.title, status: 'aperta', openedWeek: week, openedDate: date, updatedWeek: week, heat: spec.heat ?? RULES.heatStart, stage: spec.stage ?? STORY_KINDS[spec.kind]?.stages[0] ?? 'apertura', outletId, timeline: [], reactions: [], resolution: null, source: RULES.source };

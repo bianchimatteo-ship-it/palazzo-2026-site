@@ -301,7 +301,7 @@ export function measureImpact(society, input) {
     targetLabel: TERRITORIAL_TARGETS.find(item => item.id === design.target)?.label ?? design.target, source: SIM
   };
 }
-function pushEffect(society, effect) {
+export function pushEffect(society, effect) {
   society.effects.push({ id: uniqueId(society.effects, `effetto-${society.week}-${society.effects.length}-${society.rngState % 997}`), delay: 0, source: SIM, ...effect });
 }
 // The effect of a measure on one indicator of one region, spread over its weeks; a temporary one is partly undone later.

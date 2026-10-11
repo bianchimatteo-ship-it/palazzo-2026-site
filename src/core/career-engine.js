@@ -966,7 +966,7 @@ function leaveParty(ctx, reason) {
   ctx.game.relations = ctx.game.relations.filter(item => item.id !== 'leadership');
 }
 // Specials the store turns into changes of the country, the Parliament or the Government.
-const WORLD_SPECIALS = ['project-integrate', 'project-scale', 'project-suspend', 'project-commissioner', 'project-wait', 'project-inaugurate', 'project-inaugurate-light', 'eu-apply', 'eu-report', 'projects-open', 'markets-calm', 'markets-worse', 'europe-up', 'europe-down', 'society-cost', 'minister-defend', 'minister-resign', 'budget-open', 'partner-accept', 'partner-negotiate', 'partner-refuse', 'obstruction-add', 'obstruction-clear', 'snipers',
+const WORLD_SPECIALS = ['dossier-fund', 'dossier-draft', 'dossier-postpone', 'dossier-withdraw', 'dossier-wait', 'project-integrate', 'project-scale', 'project-suspend', 'project-commissioner', 'project-wait', 'project-inaugurate', 'project-inaugurate-light', 'eu-apply', 'eu-report', 'projects-open', 'markets-calm', 'markets-worse', 'europe-up', 'europe-down', 'society-cost', 'minister-defend', 'minister-resign', 'budget-open', 'partner-accept', 'partner-negotiate', 'partner-refuse', 'obstruction-add', 'obstruction-clear', 'snipers',
   // The national cycle (legislature-engine): coalitions before the vote, support and mandate after it.
   'national-coalition', 'national-alone', 'national-auto', 'national-support', 'national-opposition', 'national-wait', 'national-mandate-accept', 'national-mandate-decline',
   // The player's vote on a bill of the others (lawmaking-engine).

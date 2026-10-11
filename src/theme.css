@@ -707,3 +707,43 @@ select option, select optgroup { background: #141b18; color: #e8ece9; font-size:
 .outlet-card dd { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 13px; }
 .outlet-card dd .meter { flex: 1; }
 .outlet-note { color: var(--muted); }
+
+/* The dossiers of the ministers and the balance of the programme. */
+.dossier-row.closed { opacity: .85; }
+.program-report { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 6px; }
+.program-report li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; }
+.program-report li small { grid-column: 1 / -1; color: var(--muted); font-size: 12px; }
+.program-report li.attuata { border-left: 3px solid var(--good); }
+.program-report li.ferma { border-left: 3px solid var(--critical); }
+.badge-warn { background: color-mix(in srgb, var(--serious) 18%, transparent); color: var(--serious); }
+
+/* Observatory: approval and laws, regional trend, coalition scenarios. */
+.obs-three { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
+.obs-three > div { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; }
+.obs-three small { color: var(--accent); letter-spacing: .06em; font-size: 11px; }
+.obs-three p { margin: 4px 0 0; font-size: 13px; color: var(--ink-2); }
+.obs-laws, .obs-scenarios { display: grid; gap: 10px; }
+.obs-law, .obs-scenario { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); min-width: 0; }
+.obs-law.contrari { border-left: 3px solid var(--critical); }
+.obs-law.favorevoli { border-left: 3px solid var(--good); }
+.obs-law > header, .obs-scenario > header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.obs-law > header small, .obs-scenario > header small { color: var(--muted); font-size: 12px; flex: 1 1 100%; }
+.obs-law-surveys { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.obs-law-surveys li { display: grid; grid-template-columns: minmax(110px, 160px) 1fr; gap: 4px 12px; align-items: center; font-size: 13px; }
+.obs-law-surveys li > b { grid-column: 1 / -1; font-weight: 600; }
+.obs-law-surveys small { color: var(--muted); }
+.obs-law-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--line); min-width: 0; }
+.obs-law-bar .for { background: var(--good); }
+.obs-law-bar .und { background: color-mix(in srgb, var(--muted) 55%, transparent); }
+.obs-law-bar .against { background: var(--critical); }
+.obs-law-detail > summary { cursor: pointer; font-size: 12.5px; color: var(--ink-2); }
+.obs-law-detail ul { list-style: none; margin: 6px 0; padding: 0; display: grid; gap: 4px; font-size: 13px; }
+.obs-law-detail li { display: grid; grid-template-columns: minmax(120px, 1fr) minmax(80px, 2fr) auto; gap: 8px; align-items: center; }
+.obs-scenario .obs-law-detail li { grid-template-columns: minmax(100px, 1fr) auto; }
+.obs-scenario .obs-law-detail li small { grid-column: 1 / -1; color: var(--muted); }
+.obs-range { position: relative; height: 12px; border-radius: 6px; background: var(--line); }
+.obs-range .band { position: absolute; top: 2px; bottom: 2px; border-radius: 4px; background: color-mix(in srgb, var(--accent) 45%, transparent); }
+.obs-range .dot { position: absolute; top: -2px; width: 4px; height: 16px; margin-left: -2px; border-radius: 2px; background: var(--accent); }
+.obs-select { display: inline-flex; align-items: center; gap: 8px; margin: 6px 0; font-size: 12.5px; color: var(--ink-2); }
+.obs-select select { min-height: 36px; max-width: 100%; }
+@media (max-width: 640px) { .obs-law-surveys li { grid-template-columns: minmax(0, 1fr); } .obs-law-detail li { grid-template-columns: minmax(0, 1fr) auto; } .obs-law-detail li > :nth-child(2) { grid-column: 1 / -1; } }

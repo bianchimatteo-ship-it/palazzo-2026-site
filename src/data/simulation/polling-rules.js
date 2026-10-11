@@ -31,6 +31,22 @@ export const OBSERVATORY_RULES = Object.freeze({
   secondChoice: { distance: 0.9, ties: 0.25, size: 0.5, abstain: 0.12 }
 });
 
+// What the observatory adds to the voting intentions: approval of the Government and of the leader over time (a different thing from the vote: who approves may vote
+// for someone else), the regional trend of each force, the approval of single laws, and what a coalition would be worth against running alone.
+export const POLL_EXTENSIONS = Object.freeze({
+  // Weeks of approval kept, regional snapshots (one every `every` weeks, kept `kept`) and the forces they hold (the largest ones, plus the player's).
+  approvalKept: 104, regional: { every: 4, kept: 26, forces: 8 },
+  // Laws: a survey `after` weeks from the application, and again at the balance. Kept laws, and what each survey reads.
+  laws: { stages: [{ id: 'primo', after: 1, label: 'Prima rilevazione' }, { id: 'bilancio', after: 9, label: 'Dopo due mesi' }], kept: 12, undecided: { base: 14, perControversy: 4 }, scale: 11, partisan: 18, uncovered: 4, perDeficit: 20, deficitCap: 6, fatigue: 3, floor: 6, ceiling: 94, model: 3 },
+  // A reading this clear (share of those who approve) has consequences once: against below, for above.
+  clear: { against: 38, for: 58 },
+  // What a clear reading does, once per survey and only for a law of the Government: the first survey moves the stability of the Government (points) and the standing of the majority
+  // (an effect of this size, for this many weeks: it fades by itself); the balance, two months on, only a smaller effect and only if the opinion turned.
+  consequence: { primo: { stability: 1, effect: 0.25, weeks: 4 }, bilancio: { stability: 0, effect: 0.15, weeks: 4 } },
+  // A coalition: the share each member loses on the way (it does not vote for the list of another force), growing with the distance on the axis, softened by good relations.
+  coalition: { leak: 0.035, perAxis: 0.03, badTies: 0.03, goodTies: 0.015, min: 0.01, max: 0.25, spread: 0.5, widest: 4 }
+});
+
 // How many real parties enter the world besides the player's: the ones with the most 2x1000 choices (MEF, real).
 export const WORLD_PARTY_COUNT = 7;
 

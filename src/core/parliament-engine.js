@@ -1,5 +1,5 @@
 import { DATA_SOURCES } from '../data/schema.js?v=20261010-2';
-import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, STAGE_WEEKS, areaOf } from '../data/simulation/policy-rules.js?v=20261010-2';
+import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, STAGE_WEEKS, areaOf, governmentKindOf } from '../data/simulation/policy-rules.js?v=20261010-2';
 import { BUDGET_SECTORS } from '../data/simulation/project-rules.js?v=20261010-2';
 import { evaluateAdvancement } from './progression-engine.js?v=20261010-2';
 import { groupLine, splitGroupVote } from './vote-engine.js?v=20261010-2';
@@ -1191,14 +1191,15 @@ export function advanceGovernmentWeek(parliament, currentDate, roll = 0.5, rand 
   // Stability tends to a level set by the margin, the allies' mood and the wear of time in office, with the ups and
   // downs of politics around it: a large majority is not a guarantee, a thin one is not a sentence.
   const months = weeksBetween(government.formedAt ?? government.inheritedAt ?? currentDate, currentDate) / 4.3;
-  const target = clamp(48 + clamp(margin, -12, 12) * 0.8 + (mood - 55) * 0.5 - Math.min(12, months / 3), 15, 80);
+  const kind = governmentKindOf(government);
+  const target = clamp(48 + kind.target + clamp(margin, -12, 12) * 0.8 + (mood - 55) * 0.5 - Math.min(12, months / kind.wear), 15, 80);
   const drift = (target - (government.stability ?? 50)) * 0.08 + (roll - 0.5) * 5;
   const stability = clamp(Math.round((government.stability ?? 50) + drift), 0, 100);
   next = { ...next, government: { ...next.government, stability } };
   // Allies: those without ministries grow restless; unhappy ones make demands, and walk out if ignored.
   const holders = new Set(activeMinisters(government).map(item => item.groupId));
   for (const [groupId, partner] of Object.entries(next.government.partners ?? {})) {
-    const restless = tuningOf(next).drift;
+    const restless = tuningOf(next).drift * kind.restless;
     let delta = (holders.has(groupId) ? 0.3 : -0.6 * restless) + (55 - partner.satisfaction) * 0.03;
     next = changePartner(next, groupId, delta);
     const current = next.government.partners[groupId];
@@ -1212,7 +1213,7 @@ export function advanceGovernmentWeek(parliament, currentDate, roll = 0.5, rand 
     if (!current.demand && current.satisfaction < 45 && random() < 0.3 * restless) {
       const profile = groupProfile(getGroup(next, groupId) ?? groupId);
       const free = MINISTRIES.filter(portfolio => !activeMinisters(next.government).some(item => item.portfolio === portfolio && item.groupId === groupId));
-      const wantsMinistry = !holders.has(groupId) || random() < 0.4;
+      const wantsMinistry = kind.ministries && (!holders.has(groupId) || random() < 0.4);
       const demand = wantsMinistry
         ? { type: 'ministero', portfolio: free[Math.floor(random() * free.length)] ?? MINISTRIES[0], deadline: addDaysTo(currentDate, 42) }
         : { type: 'misura', area: profile.likes[Math.floor(random() * profile.likes.length)], deadline: addDaysTo(currentDate, 56) };
