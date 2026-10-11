@@ -1439,11 +1439,15 @@ function tickSurveyEffects(s, date) {
       const first = law.surveys.find(item => item.stage === 'primo');
       const clear = survey.verdict !== 'divisi';
       const turned = survey.stage === 'bilancio' && first && first.verdict !== survey.verdict && clear;
-      const counts = governs && clear && (survey.stage === 'primo' || turned);
+      const ledByPlayer = isPrimeMinister(parliament) || parliament?.government?.formedBy === 'player';
+      const counts = governs && clear && (survey.verdict === 'contrari' || ledByPlayer) && (survey.stage === 'primo' || turned);
       if (counts) {
         const rule = rules[survey.stage] ?? rules.primo;
         const sign = survey.verdict === 'favorevoli' ? 1 : -1;
-        world = opinionEffect(world, { delta: sign * rule.effect, weeks: rule.weeks, cause: `Sondaggio su «${law.title}» (${survey.label.toLowerCase()})` });
+        // Together the effects of the surveys never move the majority by more than the cap: what is already in the world counts.
+        const active = world.effects.filter(effect => effect.strategy === 'governista' && /^Sondaggio su/.test(effect.cause ?? '')).reduce((sum, effect) => sum + effect.delta, 0);
+        const room = Math.max(-rules.cap, Math.min(rules.cap, active + sign * rule.effect)) - active;
+        if (Math.abs(room) >= 0.05) world = opinionEffect(world, { delta: Math.round(room * 100) / 100, weeks: rule.weeks, cause: `Sondaggio su «${law.title}» (${survey.label.toLowerCase()})` });
         const government = parliament?.government;
         if (rule.stability && government && ['active', 'crisis'].includes(government.status)) parliament = { ...parliament, government: { ...government, stability: Math.max(0, Math.min(100, (government.stability ?? 50) + sign * rule.stability)) } };
         // The allies that had reservations about the matter (their own priorities) lean away when the citizens are against it, and take it as theirs when they are for it.

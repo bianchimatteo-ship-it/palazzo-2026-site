@@ -146,7 +146,8 @@ console.log(`  Tre anni: regionali in ${heldRegions.map(([region, entry]) => `${
   let world = W.withLocalCalendar(s.world, { regions: calendar.regions, municipalities: {} }, '2026-10-01');
   world = structuredClone(s.world);
   let early = 0;
-  for (let run = 0; run < 400 && !early; run++) {
+  // (each region has 0,04% a week: with 400 draws the chance of seeing none is about 5%, with 2000 it is practically nil)
+  for (let run = 0; run < 2000 && !early; run++) {
     world.rngState = 12345 + run * 7919;
     const out = W.advanceWorld(world, { date: '2029-10-07', week: 999, stats: {}, society: { mood: 50, moodDelta: 0, trust: 48, sentiment: 0 } }).world;
     early = Object.values(out.localCalendar.regions).filter(entry => entry.early).length;

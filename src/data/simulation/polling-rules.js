@@ -42,7 +42,9 @@ export const POLL_EXTENSIONS = Object.freeze({
   clear: { against: 38, for: 58 },
   // What a clear reading does, once per survey and only for a law of the Government: the first survey moves the stability of the Government (points) and the standing of the majority
   // (an effect of this size, for this many weeks: it fades by itself); the balance, two months on, only a smaller effect and only if the opinion turned.
-  consequence: { primo: { stability: 1, effect: 0.25, weeks: 4 }, bilancio: { stability: 0, effect: 0.15, weeks: 4 } },
+  // A verdict against is felt by any Government; a verdict for is a merit only of a Government the player leads (the others do not get a bonus for the opinion of the citizens).
+  // The effects of the surveys together never move the majority by more than `cap` points.
+  consequence: { primo: { stability: 1, effect: 0.25, weeks: 4 }, bilancio: { stability: 0, effect: 0.15, weeks: 4 }, cap: 0.5 },
   // A coalition: the share each member loses on the way (it does not vote for the list of another force), growing with the distance on the axis, softened by good relations.
   coalition: { leak: 0.035, perAxis: 0.03, badTies: 0.03, goodTies: 0.015, min: 0.01, max: 0.25, spread: 0.5, widest: 4 }
 });
