@@ -1,6 +1,6 @@
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261011-1';
-import { CONGRESS_CYCLE_WEEKS, FIRST_CONGRESS_WEEKS, MEMBERSHIP_FEE, ORGANS, PARTY_PRIORITIES, SECTION_WEEKLY_COST, TREASURY_LABELS } from '../data/simulation/organization-rules.js?v=20261011-1';
-import { PARTY_INVESTMENTS } from '../data/simulation/career-rules.js?v=20261011-1';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261012-1';
+import { CONGRESS_CYCLE_WEEKS, FIRST_CONGRESS_WEEKS, MEMBERSHIP_FEE, ORGANS, PARTY_PRIORITIES, SECTION_WEEKLY_COST, TREASURY_LABELS } from '../data/simulation/organization-rules.js?v=20261012-1';
+import { PARTY_INVESTMENTS } from '../data/simulation/career-rules.js?v=20261012-1';
 
 // The party as an organisation: members, sections, bodies, cohesion, conflicts and treasury.
 // Everything is simulated and lives inside the career state (game.party.org).
@@ -27,7 +27,8 @@ function profileForCurrent(current, seed = 1, index = 0) {
   const objective = current.profile?.objective ?? base.objective;
   return {
     version: 1, objective, priorities: unique(current.profile?.priorities?.length ? current.profile.priorities : base.priorities),
-    initiative: Math.max(0, Math.min(1, Number(current.profile?.initiative ?? base.initiative) + (rand() - .5) * .08)),
+    // The jitter is part of the birth of the profile: a profile already there keeps its value (normalising it again must not move it, or every reload would).
+    initiative: Number.isFinite(current.profile?.initiative) ? Math.max(0, Math.min(1, current.profile.initiative)) : Math.max(0, Math.min(1, base.initiative + (rand() - .5) * .08)),
     loyalty: Math.max(0, Math.min(1, Number(current.profile?.loyalty ?? base.loyalty))),
     negotiation: Math.max(0, Math.min(1, Number(current.profile?.negotiation ?? base.negotiation))),
     memory: Array.isArray(current.profile?.memory) ? current.profile.memory.slice(0, CURRENT_MEMORY_LIMIT) : [],

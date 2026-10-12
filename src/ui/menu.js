@@ -1,11 +1,11 @@
 // Main menu, how-to-play, settings, save slots and the end-of-week report.
-import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261011-1';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261011-1';
-import { formatDate } from '../core/time.js?v=20261011-1';
-import { illustration } from './illustrations.js?v=20261011-1';
-import { glyph } from './visuals.js?v=20261011-1';
-import { hallView } from './hall-view.js?v=20261011-1';
-import { esc, signed } from './charts.js?v=20261011-1';
+import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261012-1';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261012-1';
+import { formatDate } from '../core/time.js?v=20261012-1';
+import { illustration } from './illustrations.js?v=20261012-1';
+import { glyph } from './visuals.js?v=20261012-1';
+import { hallView } from './hall-view.js?v=20261012-1';
+import { esc, signed } from './charts.js?v=20261012-1';
 
 const when = iso => { try { return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch { return ''; } };
 const MENU = [
@@ -138,7 +138,7 @@ export function renderMainMenu(menu, context) {
   return `<div class="main-menu">
     ${illustration('palazzo', 'menu-art')}
     <div class="menu-column">
-      <div class="menu-brand"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><div><strong>POLITICANDO</strong><small>2026</small></div></div>
+      <h1 class="menu-brand"><img class="brand-logo menu-logo" src="icons/logo-politicando-640.webp" srcset="icons/logo-politicando-240.webp 240w, icons/logo-politicando-640.webp 640w" sizes="(max-width:700px) 160px, 220px" width="220" height="220" alt="POLITICANDO 2026" decoding="async" /></h1>
       <p class="menu-tagline">Una carriera nella politica italiana</p>
       ${hasCareer ? continueCard(meta, lastSaved, unsaved) : ''}
       <nav class="menu-list" aria-label="Menu principale">${MENU.map(([id, icon, label, detail]) => `<button class="menu-item ${menu.view === id ? 'active' : ''}" data-menu="${id}">${glyph(icon, 18)}<span><strong>${esc(label)}</strong><small>${esc(detail)}</small></span></button>`).join('')}</nav>

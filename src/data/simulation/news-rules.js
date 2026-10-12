@@ -37,7 +37,7 @@ export const STORY_KINDS = Object.freeze({
 
 export const NEWS_RULES = Object.freeze({
   // How many full articles and stories the save keeps (the rest is archived into the headlines and the timeline).
-  articlesKept: 48, storiesOpen: 8, storiesArchived: 10, seenKept: 120, timelineKept: 14, reactionsKept: 6, bodyMax: 520,
+  articlesKept: 48, storiesOpen: 8, storiesArchived: 10, seenKept: 120, backlogWeeks: 3, backlogKept: 12, timelineKept: 14, reactionsKept: 6, bodyMax: 520,
   // A story cools every week; it closes when it has been quiet and cold, and an archived story is not reopened.
   heatStart: 55, heatDecay: 6, heatMax: 100, closeBelow: 14, quietWeeks: 5,
   // A rumour (the first stage of a case) is confirmed or denied after this many weeks: the probability depends on the credibility of the outlet that broke it.

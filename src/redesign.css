@@ -48,8 +48,11 @@ body {
 .brand-copy { display:flex; flex-direction:column; gap:1px; }
 .brand-copy strong { color:#fffaf0; font:800 15px/1 Manrope,sans-serif; letter-spacing:.055em; }
 .brand-copy small { color:#d4b778; font:700 9px/1.2 'DM Sans',sans-serif; letter-spacing:.19em; }
+.side-logo { width: 112px; max-width: 100%; margin: -6px auto -4px; }
+.brand { justify-content: center; }
 .brand-subtitle {
-  margin: 8px 7px 35px 48px;
+  margin: 6px 7px 28px;
+  text-align: center;
   color: #a9b9b0;
   font-size: 11px;
   line-height: 1.45;
@@ -250,7 +253,7 @@ body {
 .wizard-aside { background:#173a33; }
 .wizard-aside-label { color:#d5b66f; }
 .wizard-step.current { background:#2a5046; }
-.wizard-brand .brand-mark { width:27px; height:27px; }
+.wizard-logo { width:88px; height:88px; margin:-6px 0 -4px -6px; }
 .wizard-header h1 { color:#c8ded2; font-size:24px; }
 .wizard-footer .primary-button { border-radius:4px; }
 .primary-button,.secondary-button,.wizard-back { border-radius:4px; }
@@ -267,6 +270,7 @@ body {
   .sidebar { width:70px; padding:20px 9px 12px; }
   .main-area { margin-left:70px; }
   .brand { justify-content:center; padding:0; }
+  .side-logo { width:52px; margin:0; }
   .brand-copy,.brand-subtitle,.nav-item>span,.sidebar-bottom .save-status { display:none; }
   .main-nav { margin-top:30px; }
   .nav-item { justify-content:center; padding:0; gap:0; }

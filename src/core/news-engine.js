@@ -1,8 +1,8 @@
 // Simulated newsroom: headlines tied to what happens in the career, written with different structures
 // (fact, question, number, local angle, quote-like, analysis) and never the same template twice in a row.
 // Headlines speak of the player's own character and of the simulated world: no statement is put in the mouth of real people.
-import { ARTICLE_CATEGORIES, NEWSROOM_OUTLETS, NEWS_RULES as RULES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261011-1';
-import { WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20261011-1';
+import { ARTICLE_CATEGORIES, NEWSROOM_OUTLETS, NEWS_RULES as RULES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261012-1';
+import { WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20261012-1';
 const RECENT = 18;
 // A template not used recently; when every template of the kind has been used, the least recently used one.
 const pick = (list, seed, recent) => {
@@ -92,7 +92,7 @@ export function normalizeMedia(input) {
     const identity = NEWSROOM_OUTLETS[outlet.id];
     return identity ? { ...outlet, name: identity.name, tagline: identity.tagline, leaning: identity.leaning, baseCredibility: identity.credibility, credibility: Number.isFinite(outlet.credibility) ? outlet.credibility : identity.credibility } : outlet;
   });
-  return { ...media, outlets, articles: Array.isArray(media.articles) ? media.articles : [], stories: Array.isArray(media.stories) ? media.stories : [], seen: Array.isArray(media.seen) ? media.seen : [], cursor: { historyId: null, lawWeek: 0, ...(media.cursor ?? {}) }, seq: Number.isFinite(media.seq) ? media.seq : 0 };
+  return { ...media, outlets, articles: Array.isArray(media.articles) ? media.articles : [], stories: Array.isArray(media.stories) ? media.stories : [], seen: Array.isArray(media.seen) ? media.seen : [], pending: Array.isArray(media.pending) ? media.pending : [], cursor: { historyId: null, lawWeek: 0, ...(media.cursor ?? {}) }, seq: Number.isFinite(media.seq) ? media.seq : 0 };
 }
 // How an outlet frames the Government: against it when its leaning is opposite to the premier's side, with it when it is the same.
 export function edgeOf(outlet, govAxis = 0) {
@@ -373,8 +373,11 @@ export function newsroomWeek(societyIn, ctx) {
   if (!societyIn?.media) return societyIn;
   const media = normalizeMedia(copy(societyIn.media));
   media.coverage = societyIn.media.coverage;
-  const facts = collectFacts(media, ctx).sort((a, b) => b.importance - a.importance || (a.key < b.key ? -1 : 1)).slice(0, 6);
-  for (const fact of facts) publishFact(media, fact, ctx);
+  // What does not fit in this week's six is not lost (the history cursor moves on): it waits, ranked with the new facts, for a few weeks.
+  const fresh = collectFacts(media, ctx).filter(item => !media.seen.includes(item.key)), waiting = media.pending.filter(item => item?.key && (item.week ?? 0) >= ctx.week - RULES.backlogWeeks && !media.seen.includes(item.key) && !fresh.some(other => other.key === item.key));
+  const ranked = [...fresh, ...waiting].sort((a, b) => b.importance - a.importance || (a.week ?? 0) - (b.week ?? 0) || (a.key < b.key ? -1 : 1));
+  for (const fact of ranked.slice(0, 6)) publishFact(media, fact, ctx);
+  media.pending = ranked.slice(6, 6 + RULES.backlogKept);
   const history = ctx.parliament?.history ?? [];
   if (history.length) media.cursor.historyId = history.at(-1).id;
   media.cursor.lawWeek = Math.max(media.cursor.lawWeek, ctx.week);

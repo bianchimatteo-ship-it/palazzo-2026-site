@@ -71,10 +71,10 @@ h1, h2, h3, h4 { color: var(--ink); }
 .main-menu { position: relative; width: min(1180px, 100%); display: grid; grid-template-columns: minmax(300px, 400px) 1fr; gap: 28px; align-items: start; }
 .menu-art { position: absolute; inset: auto -40px -60px auto; width: 520px; max-width: 60vw; opacity: .12; pointer-events: none; }
 .menu-column { position: relative; display: grid; gap: 14px; }
-.menu-brand { display: flex; align-items: center; gap: 14px; }
-.menu-brand .brand-mark { width: 44px; height: 44px; }
-.menu-brand strong { display: block; font: 800 clamp(30px, 4vw, 44px)/1 Manrope, sans-serif; letter-spacing: .04em; color: #fff; }
-.menu-brand small { color: var(--accent); font: 700 13px/1.4 'DM Sans', sans-serif; letter-spacing: .5em; }
+.menu-brand { margin: 0; line-height: 0; }
+.brand-logo { display: block; height: auto; aspect-ratio: 1 / 1; object-fit: contain; }
+.menu-logo { width: 220px; max-width: 100%; margin: -8px 0 -14px -10px; }
+@media (max-width: 700px) { .menu-logo { width: 160px; margin: -6px 0 -10px -8px; } }
 .menu-tagline { margin: 0 0 8px; font: italic 400 20px/1.3 Newsreader, Georgia, serif; color: var(--ink-2); }
 .menu-continue { display: grid; gap: 4px; text-align: left; padding: 18px 20px; border-radius: 12px; border: 1px solid rgba(213,170,99,.6); background: linear-gradient(135deg, rgba(213,170,99,.2), rgba(213,170,99,.05)); color: var(--ink); box-shadow: var(--glow); }
 .menu-continue:hover { background: linear-gradient(135deg, rgba(213,170,99,.3), rgba(213,170,99,.08)); }
