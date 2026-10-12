@@ -62,7 +62,10 @@ try {
   const { bytes:remoteMainBytes } = await get(mainUrl);
   assert(hash(remoteMainBytes) === hash(localMainBytes), 'src/main.js live è diverso dal progetto locale');
   const mainSource = remoteMainBytes.toString('utf8');
-  assert(/loadRealDatabase\s*\(/.test(mainSource) && /loadRealCollections\s*\(\s*\[['"]parties['"],\s*['"]politicalMovements['"]/.test(mainSource), 'Avvio pubblicato non carica manifest e partiti reali');
+  // The start loads the manifest (loadRealDatabase) and then the collections of the world (WORLD_COLLECTIONS, which must contain parties and movements) through loadRealCollectionsSettled.
+  const worldList = mainSource.match(/const\s+WORLD_COLLECTIONS\s*=\s*\[([^\]]*)\]/)?.[1] ?? '';
+  const worldCollections = [...worldList.matchAll(/['"]([A-Za-z]+)['"]/g)].map(item => item[1]);
+  assert(/loadRealDatabase\s*\(/.test(mainSource) && /loadRealCollectionsSettled\s*\(\s*WORLD_COLLECTIONS\s*\)/.test(mainSource) && worldCollections.includes('parties') && worldCollections.includes('politicalMovements'), 'Avvio pubblicato non carica manifest e partiti reali');
   assert(!/database\.json/.test(mainSource), 'main.js pubblicato richiede il JSON aggregato');
 
   const repoImport = mainSource.match(/from\s+["']([^"']*repositories\/real-data\.js(?:\?[^"']*)?)["']/);
