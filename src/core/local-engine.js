@@ -9,7 +9,8 @@ import { uniqueId } from './ids.js?v=20261012-3';
 import { DATA_SOURCES } from '../data/schema.js?v=20261012-3';
 import { AREA_BY_ID, CAMP_PRIORITIES, INTENSITY } from '../data/simulation/policy-rules.js?v=20261012-3';
 import { ACT_TYPES, AREA_BREADTH, AREA_LEANS, CITY_INDICATORS, CITY_SHARE_OF_REGION, PROVINCE_SHARE_OF_REGION, actTitle, actTypeOf, legalNumber, naturalType, neededYes, regionalWeights, proposableTypes, serviceIndicatorOf, serviceIndicatorsOf, typeFitsArea } from '../data/simulation/local-acts.js?v=20261012-3';
-import { activeWorks, advanceWorks, applyWorkActivity, availableWorkTypes, emptyWorksRecord, executiveWorkChoice, planWork, startWork, workGap, worksOf } from './local-works-engine.js?v=20261012-3';
+import { activeWorks, advanceWorks, applyWorkActivity, availableWorkTypes, cofinRequest, emptyWorksRecord, executiveWorkChoice, planWork, startWork, workGap, worksOf } from './local-works-engine.js?v=20261012-3';
+import { WORK_RULES } from '../data/simulation/local-works.js?v=20261012-3';
 import { DELEGA_RULES, PORTFOLIO_AREAS } from '../data/simulation/office-rules.js?v=20261012-3';
 import { cohesiveShare } from './parliament-engine.js?v=20261012-3';
 import { groupLine, seededRandom, splitGroupVote } from './vote-engine.js?v=20261012-3';
@@ -88,7 +89,7 @@ export function createInstitution(spec) {
     budget: spec.kind === 'europa' ? null : { approvedYear: Number(String(spec.date).slice(0, 4)), margin: 50, localTax: 'media', provisional: false, failures: 0 },
     // A comune and a provincia keep the services of their own territory (the province's are its own, not the region's average): where they stood when the term began is the starting point of its record.
     ...(['comune', 'provincia'].includes(spec.kind) ? (indicators => ({ indicators, baseline: { services: servicesOf(indicators) } }))(serviceIndicators(spec)) : {}),
-    ...(spec.kind === 'regione' && spec.territory ? { baseline: { services: servicesOf(spec.territory) } } : {}), ...(spec.kind === 'europa' ? {} : { effects: [], commitments: [], works: [], worksRecord: emptyWorksRecord(), place: spec.place ?? { region: spec.region ?? null } }),
+    ...(spec.kind === 'regione' && spec.territory ? { baseline: { services: servicesOf(spec.territory) } } : {}), ...(spec.kind === 'europa' ? {} : { effects: [], commitments: [], works: [], worksArchive: [], cofin: [], worksRecord: emptyWorksRecord(), place: spec.place ?? { region: spec.region ?? null } }),
     acts: [], archive: [], history: [{ date: spec.date, text: `${rules.label}: inizia il mandato (${spec.role === 'sindaco' || spec.role === 'presidente' ? 'guidi l’esecutivo' : spec.side === 'maggioranza' ? 'in maggioranza' : 'all’opposizione'}).` }],
     pressure: 30, ...(spec.kind === 'europa' ? { ep: europeanSeat(`${spec.kind}-${spec.date}`, spec.date, spec.committee) } : {}), source: SIM
   };
@@ -104,11 +105,11 @@ function serviceIndicators({ name, territory = null, kind = 'comune' }) {
 export function withLocalState(inst, territory = null) {
   if (!inst || inst.kind === 'europa') return inst;
   const lacksServices = ['comune', 'provincia'].includes(inst.kind) && !inst.indicators;
-  if (inst.effects && inst.commitments && inst.works && inst.worksRecord && inst.place && !lacksServices) return inst;
+  if (inst.effects && inst.commitments && inst.works && inst.worksRecord && inst.worksArchive && inst.cofin && inst.place && !lacksServices) return inst;
   const indicators = lacksServices ? serviceIndicators({ name: inst.name, territory, kind: inst.kind }) : null;
   return {
     ...inst, ...(indicators ? { indicators, baseline: { ...(inst.baseline ?? {}), ...(inst.kind === 'provincia' || inst.baseline?.services == null ? { services: servicesOf(indicators) } : {}) } } : {}),
-    effects: inst.effects ?? [], commitments: inst.commitments ?? [], works: inst.works ?? [], worksRecord: inst.worksRecord ?? emptyWorksRecord(), place: inst.place ?? { region: inst.region ?? null }
+    effects: inst.effects ?? [], commitments: inst.commitments ?? [], works: inst.works ?? [], worksArchive: inst.worksArchive ?? [], cofin: inst.cofin ?? [], worksRecord: inst.worksRecord ?? emptyWorksRecord(), place: inst.place ?? { region: inst.region ?? null }
   };
 }
 const servicesOf = indicators => { const values = Object.values(indicators ?? {}).map(Number).filter(Number.isFinite); return values.length ? round1(values.reduce((sum, value) => sum + value, 0) / values.length) : null; };
@@ -150,7 +151,7 @@ export function worksRecordOf(inst) {
   const quality = completed ? round2((record.qualitySum ?? 0) / completed) : null;
   const waste = Math.min(8, (record.delayWeeks ?? 0) / 10) + Math.min(8, over * 12) + (record.suspended ?? 0) * 1.5 + (record.upkeepMissed ?? 0) * 0.8;
   const score = round1(clamp((record.onTime ?? 0) * 1.2 - waste, -14, 8));
-  return { started: record.started ?? 0, completed, open: open.length, suspended: record.suspended ?? 0, onTime: record.onTime ?? 0, quality, delayWeeks: record.delayWeeks ?? 0, overruns: record.overruns ?? 0, budgeted: round1(record.budgeted ?? 0), completedBudget: round1(record.completedBudget ?? 0), finalCost: round1(record.finalCost ?? 0), upkeepMissed: record.upkeepMissed ?? 0, protests: record.protests ?? 0, score };
+  return { started: record.started ?? 0, completed, open: open.length, suspended: record.suspended ?? 0, onTime: record.onTime ?? 0, quality, delayWeeks: record.delayWeeks ?? 0, overruns: record.overruns ?? 0, budgeted: round1(record.budgeted ?? 0), completedBudget: round1(record.completedBudget ?? 0), finalCost: round1(record.finalCost ?? 0), upkeepMissed: record.upkeepMissed ?? 0, protests: record.protests ?? 0, archived: record.archived ?? 0, cofinReceived: round2(record.cofinReceived ?? 0), cofinPaid: round2(record.cofinPaid ?? 0), score };
 }
 const record = (inst, date, text, type = 'evento') => ({ ...inst, history: [...inst.history, { date, text, type }].slice(-40) });
 const setAct = (inst, id, patch) => ({ ...inst, acts: inst.acts.map(item => item.id === id ? { ...item, ...patch } : item) });
@@ -204,9 +205,11 @@ function stanceOf(inst, category, area, sponsor, variant) {
 // of the society simulation for a regione), the budget margin it uses or brings, the taxes, the citizens who gain and
 // who pay. Motions, questions, budgets and no-confidence motions work otherwise; Europe's acts move positions and
 // careers, not the services of a territory.
-export function measureOf(inst, { category, area, variant = null, intensity = 2, workPlan = null }) {
+export function measureOf(inst, { category, area, variant = null, intensity = 2, workPlan = null, cofin = null }) {
   const type = actTypeOf(inst.kind, category);
   if (!type || inst.kind === 'europa' || ['mozione', 'interrogazione', 'sfiducia', 'bilancio'].includes(category)) return null;
+  // A co-financing agreement spends nothing when the act passes: the quota leaves the margin once, when the settlement pays it (local-works-engine).
+  if (category === 'cofinanziamento') return cofin ? { indicators: {}, cost: cofin.partnerPts, revenue: 0, tax: null, phase: 1, lasting: false, segments: {}, intensity: 2, cofin: true } : null;
   // A public work brings nothing when the act is approved: it reserves a share of its cost, and the benefits come with the finished work (local-works-engine).
   if (category === 'opere') {
     let plan = workPlan;
@@ -244,7 +247,7 @@ export function measureOf(inst, { category, area, variant = null, intensity = 2,
 }
 // A new act: its kind decides who adopts it (council, Giunta, or the executive's answer), the first step of its iter
 // and the majority it needs; its text has a place between left and right and, when approved, a measure.
-function newAct(inst, { kind, sponsor, area, title, date, budget = false, category = null, variant = null, intensity = 2, work = null }) {
+function newAct(inst, { kind, sponsor, area, title, date, budget = false, category = null, variant = null, intensity = 2, work = null, cofin = null }) {
   const rules = INSTITUTIONS[inst.kind];
   const cat = category ?? categoryOf(inst, { kind, sponsor, budget });
   const type = actTypeOf(inst.kind, cat);
@@ -254,10 +257,10 @@ function newAct(inst, { kind, sponsor, area, title, date, budget = false, catego
   // A work: the act approves a plan (the type of work, its funding, where it stands); the executive of the institution brings its own.
   const workPlan = cat === 'opere' && inst.kind !== 'europa' ? planWork(inst, { typeId: work?.typeId ?? null, area, funding: work?.funding ?? null, site: work?.site ?? 'periferia' }) : null;
   return {
-    id: uniqueId([...inst.acts, ...inst.archive], `${inst.id}-atto-${inst.acts.length + inst.archive.length + 1}`), kind, category: cat, ...(variant ? { variant } : {}), title: workPlan ? `Opere pubbliche: ${workPlan.label}` : title, area: workPlan?.area ?? area, sponsor, budget, ...(workPlan ? { workPlan } : {}),
+    id: uniqueId([...inst.acts, ...inst.archive], `${inst.id}-atto-${inst.acts.length + inst.archive.length + 1}`), kind, category: cat, ...(variant ? { variant } : {}), title: workPlan ? `Opere pubbliche: ${workPlan.label}` : title, area: workPlan?.area ?? area, sponsor, budget, ...(workPlan ? { workPlan } : {}), ...(cofin ? { cofin } : {}),
     stage: first, introducedAt: date, nextStepAt: advanceDays(date, weeks * 7), votes: [], pendingPlayerVote: null,
     label: (inst.kind === 'europa' ? rules.acts[kind] : null) ?? type?.label ?? rules.acts[kind], organ, quorum: type?.quorum ?? 'votanti',
-    stance: stanceOf(inst, cat, area, sponsor, variant), measure: measureOf(inst, { category: cat, area: workPlan?.area ?? area, variant, intensity, workPlan }),
+    stance: stanceOf(inst, cat, area, sponsor, variant), measure: measureOf(inst, { category: cat, area: workPlan?.area ?? area, variant, intensity, workPlan, cofin }),
     ...(inst.kind === 'europa' ? { committee: committeeOfArea(area).id, rapporteur: null } : {}), source: SIM
   };
 }
@@ -491,6 +494,22 @@ export function proposeLocalAct(inst, area, date, { category = null, variant = n
   const cap = actor === 'delegato' ? DELEGA_RULES.intensityCap : 3;
   const act = newAct(inst, { kind: 'player', sponsor: { kind: leads || delegated ? 'executive' : 'player', groupId: inst.playerGroupId, label: delegated ? `Tu, ${inst.playerDelega.portfolio.toLowerCase()}` : 'Tu', axis: inst.groups.find(group => group.id === inst.playerGroupId)?.axis ?? 0 }, area: theme, title, date, category: type.id, variant: choice, intensity: leads ? intensity : Math.min(intensity, cap), work: plan ? { typeId: plan.typeId, funding: plan.funding, site: plan.site } : null });
   return record({ ...inst, acts: [...inst.acts, { ...act, ...(delegated ? { byDelega: true } : {}), pendingPlayerVote: 'favorevole' }] }, date, delegated ? `Presenti alla giunta “${title}” (delega ${inst.playerDelega.portfolio}).` : `Presenti “${title}”.`, 'proposta');
+}
+// The head of the executive that builds asks another institution of the career to co-finance a work: the agreement is recorded on the work and the partner gets an act
+// (category `cofinanziamento`) for its competent organ (the Giunta). The player proposes it when he leads the partner too; otherwise the partner's executive brings it.
+export function proposeCofinance(ownerIn, workId, partnerIn, share, date) {
+  const owner = withLocalState(ownerIn);
+  const partner = withLocalState(partnerIn);
+  const request = cofinRequest(owner, workId, partner, share, date);
+  const leads = partner.executive?.leader === 'player';
+  const group = partner.groups.find(item => item.id === (leads ? partner.playerGroupId : partner.executive?.groupId));
+  const cofin = { id: request.entry.id, ownerId: owner.id, ownerName: owner.name, ownerKind: owner.kind, workId, workTitle: request.work.title, share: request.entry.share, euro: request.entry.euro, partnerPts: request.entry.partnerPts };
+  const act = newAct(partner, { kind: leads ? 'player' : 'executive', sponsor: { kind: 'executive', groupId: group?.id ?? null, label: leads ? 'Tu' : INSTITUTIONS[partner.kind].executive, axis: group?.axis ?? 0 }, area: request.work.area, title: `Cofinanziamento di «${request.work.title}» (${owner.name}): ${Math.round(request.entry.share * 100)}% del costo`, date, category: 'cofinanziamento', cofin });
+  const sent = { ...act, ...(leads ? { pendingPlayerVote: 'favorevole' } : {}) };
+  const ledger = { id: request.entry.id, ownerId: owner.id, ownerName: owner.name, ownerKind: owner.kind, workId, workTitle: request.work.title, share: request.entry.share, euro: request.entry.euro, ownerPts: request.entry.ownerPts, partnerPts: request.entry.partnerPts, terms: request.entry.terms, status: 'richiesto', requestedAt: date, actId: act.id, source: SIM };
+  const partnerOut = record({ ...partner, acts: [...partner.acts, sent], cofin: [...(partner.cofin ?? []), ledger] }, date, `${owner.name} chiede un cofinanziamento per «${request.work.title}»: ${Math.round(request.entry.share * 100)}% del costo, ${request.entry.partnerPts} punti del tuo margine.`, 'cofinanziamento');
+  const ownerOut = { ...request.inst, works: worksOf(request.inst).map(work => work.id === workId ? { ...work, cofin: work.cofin.map(row => row.id === request.entry.id ? { ...row, actId: act.id } : row) } : work) };
+  return { owner: record(ownerOut, date, `Chiedi a ${partner.name} di cofinanziare «${request.work.title}»: ${Math.round(request.entry.share * 100)}% del costo.`, 'cofinanziamento'), partner: partnerOut, act, entry: request.entry };
 }
 // The executive (the player as mayor or president) wins a wavering group with a concession on an act.
 export function concedeToGroup(inst, actId, groupId, date) {
@@ -782,6 +801,8 @@ export function coverageGap(inst, act) {
   if (!inst.budget || cost <= 0) return null;
   if (inst.budget.provisional) return 'esercizio provvisorio: niente nuove spese finché non passa il bilancio';
   if (act.workPlan || act.measure?.work) return workGap(inst, cost);
+  // A co-financing keeps a minimum reserve in the margin of the institution that pays (it cannot empty its budget for another's work).
+  if (act.cofin && cost + WORK_RULES.cofin.reserve > inst.budget.margin) return `manca la copertura finanziaria (servono ${cost} punti di margine più la riserva minima di ${WORK_RULES.cofin.reserve}, ce ne sono ${inst.budget.margin})`;
   if (cost > inst.budget.margin) return `manca la copertura finanziaria (servono ${cost} punti di margine, ce ne sono ${inst.budget.margin})`;
   return null;
 }
@@ -793,16 +814,22 @@ function applyApproved(inst, act, date, events) {
   const category = categoryOf(inst, act);
   // A public work starts instead of paying and improving at once: the share reserved now, the rest and the benefits as the site goes on.
   const isWork = category === 'opere' && next.kind !== 'europa';
+  // The money of a work and of a co-financing agreement leaves the margin later and once (the work's reserve and its drawings, the partner's payment), never with the vote.
+  const deferred = isWork || category === 'cofinanziamento';
+  if (category === 'cofinanziamento' && act.cofin) {
+    next = record(next, date, `Via libera al cofinanziamento di «${act.cofin.workTitle}» (${act.cofin.ownerName}): ${act.cofin.partnerPts} punti di margine, versati se la copertura regge.`, 'cofinanziamento');
+    events.push({ type: 'cofin-approvato', actId: act.id, title: act.cofin.workTitle, ownerName: act.cofin.ownerName, euro: act.cofin.euro, partnerPts: act.cofin.partnerPts });
+  }
   if (isWork) {
     const started = startWork(next, act, { date });
     next = record(started.inst, date, `Via libera all’opera “${started.work.label}”: ${started.work.permitLeft > 0 ? `autorizzazioni (${started.work.permitLeft} settimane), poi progetto, gara e cantiere` : 'progetto, gara e cantiere'}; preventivo ${started.work.cost} punti di margine, ${started.work.committed} già impegnati.`, 'opera');
     events.push({ type: 'opera-avviata', workId: started.work.id, title: started.work.title, label: started.work.label, area: started.work.area, cost: started.work.cost, weeks: started.work.weeks, byPlayer: started.work.byPlayer, sponsor: act.sponsor?.kind ?? null });
   }
-  if (next.budget && measure && !isWork) {
+  if (next.budget && measure && !deferred) {
     const localTax = measure.tax ? TAX_STEPS[clamp(TAX_STEPS.indexOf(next.budget.localTax) + (measure.tax === 'su' ? 1 : -1), 0, 2)] : next.budget.localTax;
     next = { ...next, budget: { ...next.budget, margin: round1(clamp(next.budget.margin - measure.cost + measure.revenue, 0, 100)), localTax } };
   }
-  if (measure && Object.keys(measure.indicators).length && !isWork) {
+  if (measure && Object.keys(measure.indicators).length && !deferred) {
     if (next.kind === 'comune' || next.kind === 'provincia') next = { ...next, effects: [...(next.effects ?? []), ...cityEffects(act, measure)] };
     events.push({ type: 'effetti', actId: act.id, title: act.title, kind: next.kind, region: next.region, indicators: next.kind === 'regione' ? measure.indicators : serviceShare(next.kind, measure.indicators), phase: measure.phase, lasting: measure.lasting, segments: measure.segments });
   }
@@ -814,7 +841,7 @@ function applyApproved(inst, act, date, events) {
   // A motion approved commits the executive: an act on its theme within eight weeks (one commitment per theme at a time).
   if (category === 'mozione' && next.executive && !(next.commitments ?? []).some(entry => entry.status === 'aperto' && entry.area === act.area)) next = { ...next, commitments: [...(next.commitments ?? []), { id: uniqueId(next.commitments ?? [], `${act.id}-impegno`), actId: act.id, area: act.area, title: act.title, player: act.sponsor.kind === 'player', from: act.sponsor.groupId ?? null, since: date, dueAt: advanceDays(date, 56), status: 'aperto' }].slice(-12) };
   // An act of the executive on the theme of an open commitment keeps it.
-  const kept = ['executive', 'budget'].includes(act.sponsor.kind) && measure ? (next.commitments ?? []).filter(entry => entry.status === 'aperto' && entry.area === act.area) : [];
+  const kept = ['executive', 'budget'].includes(act.sponsor.kind) && measure && category !== 'cofinanziamento' ? (next.commitments ?? []).filter(entry => entry.status === 'aperto' && entry.area === act.area) : [];
   if (kept.length) {
     next = record({ ...next, commitments: next.commitments.map(entry => kept.includes(entry) ? { ...entry, status: 'rispettato', closedAt: date } : entry), pressure: clamp(next.pressure - 2, 0, 100) }, date, `Impegno rispettato: “${act.title}” dà seguito alla mozione “${kept[0].title}”.`, 'impegno');
     for (const item of kept) events.push({ type: 'impegno-rispettato', title: item.title, player: item.player });

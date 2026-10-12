@@ -158,6 +158,14 @@ const COMUNE = [
     approved: 'Il servizio migliora in poche settimane e resta migliorato.', rejected: 'Il servizio resta com’è; chi lo usa protesta.',
     politics: 0.4, effect: 3.5, cost: 3.5, phase: 10, weight: 0.11, player: ['leader', 'consigliere']
   }),
+  T('cofinanziamento', {
+    label: 'Accordo di cofinanziamento', organ: 'giunta', quorum: 'giunta', reference: 'art. 30 TUEL e art. 48 TUEL', proposers: 'Giunta',
+    function: 'L’ente si impegna a pagare una quota fissa di un’opera costruita da un altro ente del suo territorio: l’accordo lo chiede chi costruisce e lo decide l’organo competente di chi paga.',
+    iter: ['Richiesta dell’ente che costruisce', 'Parere contabile sulla copertura', 'Seduta di Giunta'],
+    modifies: 'Il margine di bilancio di chi paga, una volta sola; all’ente che costruisce arriva il contributo e l’opera costa meno al suo bilancio.',
+    approved: 'La quota viene versata e l’opera dell’altro ente ha più copertura; il bilancio di chi paga si riduce di quella somma.', rejected: 'Nessun contributo: l’ente che costruisce resta con il suo bilancio.',
+    politics: 0.2, content: 1, effect: 0, cost: 0, phase: 1, lasting: false, weight: 0, player: []
+  }),
   T('convenzione', {
     label: 'Convenzione tra enti', reference: 'art. 30 TUEL', proposers: 'Giunta',
     function: 'Convenzioni con altri comuni, con la Regione o con l’ASL: polizia locale associata, servizi sociali, rifiuti, trasporti.',
@@ -216,6 +224,14 @@ const COMUNE = [
   })
 ];
 const REGIONE = [
+  T('cofinanziamento', {
+    label: 'Accordo di cofinanziamento', organ: 'giunta', quorum: 'giunta', reference: 'art. 117 e 121 Cost., accordi tra enti', proposers: 'Presidente e assessori',
+    function: 'L’ente si impegna a pagare una quota fissa di un’opera costruita da un altro ente del suo territorio: l’accordo lo chiede chi costruisce e lo decide l’organo competente di chi paga.',
+    iter: ['Richiesta dell’ente che costruisce', 'Parere contabile sulla copertura', 'Seduta della Giunta regionale'],
+    modifies: 'Il margine di bilancio di chi paga, una volta sola; all’ente che costruisce arriva il contributo e l’opera costa meno al suo bilancio.',
+    approved: 'La quota viene versata e l’opera dell’altro ente ha più copertura; il bilancio di chi paga si riduce di quella somma.', rejected: 'Nessun contributo: l’ente che costruisce resta con il suo bilancio.',
+    politics: 0.2, content: 1, effect: 0, cost: 0, phase: 1, lasting: false, weight: 0, player: []
+  }),
   T('legge', {
     label: 'Legge regionale', reference: 'artt. 117 e 121 Cost.', proposers: 'Giunta, consiglieri, enti locali e cittadini',
     function: 'Le leggi nelle materie della Regione: sanità, trasporti, formazione e lavoro, agricoltura, turismo, territorio.',
@@ -357,6 +373,14 @@ const PROVINCIA = [
     modifies: 'Casa, territorio e ambiente nell’intera provincia; un lavoro lento, ma che i comuni devono seguire.',
     approved: 'Il territorio si ordina: meno scontri tra i comuni e un quadro stabile per le opere.', rejected: 'Il piano decade: ogni comune va per conto suo.',
     politics: 0.45, breadth: 0.1, effect: 2.8, cost: 0.6, phase: 24, weight: 0.04, player: ['leader']
+  }),
+  T('cofinanziamento', {
+    label: 'Accordo di cofinanziamento', organ: 'giunta', quorum: 'giunta', reference: 'legge 56/2014 e art. 30 TUEL', proposers: 'Presidente',
+    function: 'L’ente si impegna a pagare una quota fissa di un’opera costruita da un altro ente del suo territorio: l’accordo lo chiede chi costruisce e lo decide l’organo competente di chi paga.',
+    iter: ['Richiesta dell’ente che costruisce', 'Parere contabile sulla copertura', 'Seduta del Presidente e dei consiglieri delegati'],
+    modifies: 'Il margine di bilancio di chi paga, una volta sola; all’ente che costruisce arriva il contributo e l’opera costa meno al suo bilancio.',
+    approved: 'La quota viene versata e l’opera dell’altro ente ha più copertura; il bilancio di chi paga si riduce di quella somma.', rejected: 'Nessun contributo: l’ente che costruisce resta con il suo bilancio.',
+    politics: 0.2, content: 1, effect: 0, cost: 0, phase: 1, lasting: false, weight: 0, player: []
   }),
   T('convenzione', {
     label: 'Convenzione con i comuni', reference: 'TUEL e legge 56/2014', proposers: 'Presidente',

@@ -1400,13 +1400,14 @@ export function mountApp(root, store, { retryData = null } = {}) {
       const reference = (realDatabase.laws ?? []).find(item => item.id === data.get('realReference'));
       try { store.proposeLaw({ title: data.get('title'), policy: designFromForm(form), summary: data.get('summary'), realReference: reference ? { id: reference.id, label: reference.lawNumber ? `legge n. ${reference.lawNumber} del ${reference.lawDate}` : reference.officialTitle.slice(0, 120), officialTitle: reference.officialTitle, lawNumber: reference.lawNumber, lawDate: reference.lawDate, status: reference.status, sourceUrl: reference.sourceUrl, source: 'real', verified: true } : null }); }
       catch (error) { store.getState().ui.toast = error.message; render(store.getState(),store.getLastSaved()); }
-    } else if (form.matches('[data-local-propose-form],[data-local-reshuffle-form],[data-ep-committee-form],[data-local-work-form],[data-work-funding-form]')) {
+    } else if (form.matches('[data-local-propose-form],[data-local-reshuffle-form],[data-ep-committee-form],[data-local-work-form],[data-work-funding-form],[data-work-cofin-form]')) {
       event.preventDefault();
       const data = new FormData(form);
       try {
         if (form.matches('[data-local-propose-form]')) { const [category, variant] = String(data.get('category') ?? '').split('|'); store.proposeLocalAct(form.dataset.instId, data.get('area'), category || null, variant || null); }
         else if (form.matches('[data-ep-committee-form]')) store.requestEuropeanCommittee(form.dataset.instId, data.get('committee'));
         else if (form.matches('[data-local-work-form]')) store.proposeLocalWork(form.dataset.instId, data.get('type'), { funding: Number(data.get('funding')), site: data.get('site') });
+        else if (form.matches('[data-work-cofin-form]')) store.requestWorkCofin(form.dataset.instId, form.dataset.workId, data.get('partner'), Number(data.get('share')));
         else if (form.matches('[data-work-funding-form]')) store.manageLocalWork(form.dataset.instId, form.dataset.workId, 'funding', Number(data.get('funding')));
         else store.reshuffleLocalGiunta(form.dataset.instId, data.get('portfolio'), data.get('group'));
         playSound('confirm');

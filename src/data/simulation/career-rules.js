@@ -861,6 +861,8 @@ export const SITUATION_EVENTS = Object.freeze({
   'opera-manutenzione': { id: 'opera-manutenzione', title: 'Manutenzione di «{work}»: serve pagarla', body: 'La struttura si sta consumando (condizione {condition}/100): la manutenzione del trimestre costa {due} punti. Se il margine non basta o si rinvia, l’opera perde parte dei benefici.', defaultChoice: 'rinvia', choices: [
     { id: 'paga', label: 'Paga la manutenzione dal margine di bilancio', cost: { ap: 1 }, special: 'work-upkeep-pay' },
     { id: 'rinvia', label: 'Rinvia: ci sono altre priorità', effects: { stats: { reputation: -0.3 } } }] },
+  'cofin-esito': { id: 'cofin-esito', title: 'Cofinanziamento di {partner} per «{work}»: {outcome}', body: '{detail}', defaultChoice: 'ok', choices: [
+    { id: 'ok', label: 'Preso atto', effects: {} }] },
   'incarico-governo': { id: 'incarico-governo', title: 'Il Presidente della Repubblica ti affida l’incarico', body: 'Il tuo partito guida {majority}: tocca a te formare il governo, distribuire i ministeri e chiedere la fiducia alle Camere. Se rinunci, l’incarico passa a un’altra figura di {leader}.', defaultChoice: 'accetta', choices: [
     { id: 'accetta', label: 'Accetta l’incarico: formi il governo', effects: { stats: { notoriety: 2, influence: 2 } }, special: 'national-mandate-accept' },
     { id: 'rinuncia', label: 'Rinuncia e lascia l’incarico a un’altra figura', effects: { party: { support: -2 } }, special: 'national-mandate-decline' }] }

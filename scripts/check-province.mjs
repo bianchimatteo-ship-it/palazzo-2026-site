@@ -234,4 +234,86 @@ for (const place of places) {
   noIssues(store.getState(), 'presidente della Provincia');
 }
 
-console.log('Provincia verificata: livello della carriera dove la provincia ha organi (103 enti su 110, non Aosta, Trento, Bolzano e le ex province del Friuli-Venezia Giulia), partenza con il seggio nel comune, consiglio e presidenza con atti, deleghe ed effetti propri (senza tributi), voto di secondo livello con candidature per ruolo, calendario e vecchi salvataggi, legame con il Comune, consigli con una persona simulata per seggio (liberati a mandato chiuso).');
+// ---------- 9. il cofinanziamento tra il Comune e la Provincia del percorso, le tensioni sulla maggioranza e i salvataggi vecchi ----------
+{
+  const { store } = await startCareer({ seed: 'cofin-prov', level: 'provinciale' });
+  const act = () => store.getState().local.institutions.filter(item => item.status === 'active');
+  assert.deepEqual(act().map(item => item.kind).sort(), ['comune', 'provincia'], 'Il percorso provinciale ha un Comune e una Provincia con il proprio bilancio');
+  const base = JSON.parse(store.exportSave());
+  const asMayor = save => { const copy = JSON.parse(JSON.stringify(save)); for (const inst of copy.local.institutions.filter(item => item.status === 'active' && item.kind === 'comune')) { inst.executive.leader = 'player'; inst.executive.label = 'Tu'; inst.playerRole = 'sindaco'; inst.playerSide = 'maggioranza'; } return copy; };
+  const load = save => { store.clearAllSaves(); store.loadGame(save); store.getState().game.resources.politicalCapital = 10; };
+  const comune = () => act().find(item => item.kind === 'comune');
+  const provincia = () => act().find(item => item.kind === 'provincia');
+  // A councillor (not the mayor) does not ask for money for the works of the comune.
+  load(base);
+  assert.throws(() => store.requestWorkCofin(comune().id, 'opera-inesistente', provincia().id, 0.3), /Opera non trovata|guida l’esecutivo/, 'Senza opere e senza guidare l’esecutivo non si chiede nulla');
+  // The player is the mayor: a work starts, the Province is asked to pay a share.
+  load(asMayor(base));
+  store.proposeLocalWork(comune().id, 'palazzetto', { funding: 100, site: 'centro' });
+  for (let n = 0; n < 12 && !comune().works.length; n++) store.advance(7);
+  const work = comune().works[0];
+  assert.ok(work && ['autorizzazioni', 'progettazione'].includes(work.stage), 'L’opera del Comune parte');
+  let html = renderInstitutions(store.getState(), { localInst: 'comune', localSection: 'opere' });
+  clean(html, 'opere del Comune con cofinanziamento');
+  assert.ok(html.includes('data-work-cofin-form') && html.includes('Provincia di'), 'Il sindaco vede il modulo per chiedere il cofinanziamento alla Provincia del suo percorso');
+  const margins = { comune: comune().budget.margin, provincia: provincia().budget.margin };
+  store.getState().game.resources.politicalCapital = 10;
+  store.requestWorkCofin(comune().id, work.id, provincia().id, 0.3);
+  const request = comune().works[0].cofin[0];
+  const act0 = provincia().acts.find(item => item.id === request.actId);
+  assert.ok(request.status === 'richiesto' && act0?.category === 'cofinanziamento' && act0.organ === 'giunta', 'La Provincia riceve un atto di cofinanziamento per la sua Giunta');
+  assert.equal(provincia().budget.margin, margins.provincia, 'Alla richiesta il bilancio della Provincia non si muove');
+  html = renderInstitutions(store.getState(), { localInst: 'comune', localSection: 'opere' });
+  clean(html, 'cofinanziamento richiesto');
+  assert.ok(html.includes('in attesa della decisione dell’ente') && !html.includes('data-work-cofin-form'), 'La scheda dell’opera mostra l’accordo in attesa e non ripropone lo stesso partner');
+  noIssues(store.getState(), 'cofinanziamento richiesto');
+  let esito = null;
+  for (let n = 0; n < 8 && comune().works[0].cofin[0].status === 'richiesto'; n++) { store.advance(7); esito = esito ?? store.getState().game.inbox.find(item => item.templateId === 'cofin-esito') ?? null; }
+  const settled = comune().works[0].cofin[0];
+  const ledger = provincia().cofin.find(item => item.id === settled.id);
+  assert.ok(settled.status === 'erogato' && ledger?.status === 'erogato', 'La Giunta provinciale approva e la quota viene versata (la Provincia ha i fondi)');
+  assert.equal(Math.round((margins.provincia - provincia().budget.margin) * 100) / 100, settled.partnerPts, 'La Provincia paga la sua quota, una volta (in punti suoi)');
+  assert.equal(provincia().worksRecord.cofinPaid, settled.partnerPts, 'Il suo registro conta il pagamento una volta');
+  assert.equal(comune().worksRecord.cofinReceived, settled.ownerPts, 'Il Comune registra la somma ricevuta in punti suoi');
+  assert.ok(esito && esito.params.outcome === 'versato' && esito.params.partner === provincia().name, 'Il sindaco riceve l’esito in agenda, una volta');
+  assert.equal(store.getState().game.inbox.filter(item => item.templateId === 'cofin-esito').length, 1, 'Un solo avviso per l’accordo');
+  noIssues(store.getState(), 'cofinanziamento versato');
+  const paidTwice = JSON.stringify([provincia().worksRecord.cofinPaid, provincia().cofin.length, comune().works[0].cofin.length]);
+  for (let n = 0; n < 6; n++) store.advance(7);
+  assert.equal(JSON.stringify([provincia().worksRecord.cofinPaid, provincia().cofin.length, comune().works[0].cofin.length]), paidTwice, 'Con il tempo non si paga né si registra altro');
+  // After a save and a reload the agreement is the same.
+  const persisted = JSON.parse(store.exportSave());
+  load(persisted);
+  assert.equal(JSON.stringify(comune().works[0].cofin), JSON.stringify(persisted.local.institutions.find(item => item.id === comune().id).works[0].cofin), 'L’accordo sopravvive al salvataggio');
+  noIssues(store.getState(), 'dopo il ricaricamento');
+  // A late work shakes the majority of its council, once for each threshold, and the cohesion of the national party is not touched by it.
+  const late = JSON.parse(JSON.stringify(persisted));
+  const lateComune = late.local.institutions.find(item => item.id === comune().id);
+  Object.assign(lateComune.works[0], { stage: 'cantiere', progress: 30, delayWeeks: 30, drawn: Math.max(lateComune.works[0].drawn, lateComune.works[0].cost * 0.3) });
+  const calm = JSON.parse(JSON.stringify(late));
+  calm.local.institutions.find(item => item.id === comune().id).works[0].delayWeeks = 0;
+  load(late); store.advance(7);
+  const hit = { party: store.getState().game.party.org.cohesion, groups: comune().groups.map(group => [group.id, group.side, group.cohesion]), fallout: comune().works[0].fallout, lines: store.getState().game.lastReport?.lines ?? [] };
+  load(calm); store.advance(7);
+  const still = { party: store.getState().game.party.org.cohesion, groups: comune().groups.map(group => [group.id, group.side, group.cohesion]) };
+  assert.equal(hit.party, still.party, 'La coesione del partito nazionale non dipende dai ritardi di un cantiere locale');
+  assert.ok(hit.groups.filter(group => group[1] === 'maggioranza').every((group, index) => group[2] < still.groups.filter(item => item[1] === 'maggioranza')[index][2]), 'La coesione dei gruppi di maggioranza del consiglio scende');
+  assert.ok(hit.groups.filter(group => group[1] !== 'maggioranza').every((group, index) => group[2] === still.groups.filter(item => item[1] !== 'maggioranza')[index][2]), 'Quella dell’opposizione no');
+  assert.deepEqual(hit.fallout, ['ritardo-8', 'ritardo-16', 'ritardo-26'], 'Ogni soglia è segnata una volta sull’opera');
+  assert.ok(hit.lines.some(line => /maggioranza si incrina/.test(line)), 'Il resoconto della settimana lo racconta');
+  noIssues(store.getState(), 'cantiere in ritardo');
+  // A save from before the archive and the co-financing: the arrays appear once, nothing else is touched, and the career goes on.
+  const old = JSON.parse(JSON.stringify(base));
+  for (const inst of old.local.institutions) { delete inst.worksArchive; delete inst.cofin; }
+  load(old);
+  assert.ok(act().every(item => Array.isArray(item.worksArchive) && Array.isArray(item.cofin)), 'Le istituzioni vecchie ricevono archivio e cofinanziamenti vuoti');
+  const migrated = JSON.parse(store.exportSave());
+  load(migrated);
+  assert.equal(JSON.stringify(JSON.parse(store.exportSave()).local), JSON.stringify(migrated.local), 'La migrazione è idempotente: ricaricare non cambia nulla');
+  assert.deepEqual(act().map(item => item.id).sort(), base.local.institutions.filter(item => item.status === 'active').map(item => item.id).sort(), 'Nessuna istituzione duplicata o persa');
+  assert.equal(store.getState().career.id, base.career.id, 'La carriera è la stessa');
+  store.advance(14);
+  noIssues(store.getState(), 'vecchio salvataggio dopo due settimane');
+}
+
+console.log('Provincia verificata: livello della carriera dove la provincia ha organi (103 enti su 110, non Aosta, Trento, Bolzano e le ex province del Friuli-Venezia Giulia), partenza con il seggio nel comune, consiglio e presidenza con atti, deleghe ed effetti propri (senza tributi), voto di secondo livello con candidature per ruolo, calendario e vecchi salvataggi, legame con il Comune, consigli con una persona simulata per seggio (liberati a mandato chiuso), cofinanziamento di un’opera del Comune da parte della Provincia del percorso (approvazione della Giunta, quota versata una volta, esito in agenda, salvataggio), tensioni in maggioranza senza toccare la coesione del partito nazionale e vecchi salvataggi migrati.');

@@ -20,8 +20,8 @@ import { syncAgendas, advanceLegislativeWeek, amendOthersLaw, amendmentOdds, lin
 import { seededRandom } from './vote-engine.js?v=20261012-3';
 import { advanceCabinetWeek, joinAsSupport, majorityMargin } from './cabinet-engine.js?v=20261012-3';
 import { draftDossierBill, fundDossier, openDossiers, postponeDossier, settleProgram, tickDossiers, withdrawDossier } from './dossier-engine.js?v=20261012-3';
-import { EP_COSTS, EP_GROUPS_2024, EP_ROLES, INSTITUTIONS, advanceInstitutionWeek, applyLocalEffect, bidRapporteur, concedeToGroup, createInstitution, committeeById, epGroupFor, grantDelega, localAreas, mandateRecord, proposeLocalAct, questionExecutive, requestCommittee, reshuffleLocal, revokeDelega, runForCommitteeRole, setLocalVote, tableAmendment, territoryValue, weakCityAreas, withLocalState } from './local-engine.js?v=20261012-3';
-import { answerProtest, payUpkeep, planWork, refundWork, resizeWork, resumeWork, setWorkFunding, settleWorkIssue, suspendWork, workGap, workRequestFor } from './local-works-engine.js?v=20261012-3';
+import { EP_COSTS, EP_GROUPS_2024, EP_ROLES, INSTITUTIONS, advanceInstitutionWeek, applyLocalEffect, bidRapporteur, concedeToGroup, createInstitution, committeeById, epGroupFor, grantDelega, localAreas, mandateRecord, proposeCofinance, proposeLocalAct, questionExecutive, requestCommittee, reshuffleLocal, revokeDelega, runForCommitteeRole, setLocalVote, tableAmendment, territoryValue, weakCityAreas, withLocalState } from './local-engine.js?v=20261012-3';
+import { answerProtest, payUpkeep, planWork, refundWork, resizeWork, resumeWork, setWorkFunding, settleCofinance, settleWorkIssue, suspendWork, workGap, workRequestFor } from './local-works-engine.js?v=20261012-3';
 import { WORK_BY_ID, WORK_RULES } from '../data/simulation/local-works.js?v=20261012-3';
 import { candidacyBlock, institutionOffice, lapsesFor, officeLabel, officeScope } from './office-engine.js?v=20261012-3';
 import { actTypeOf } from '../data/simulation/local-acts.js?v=20261012-3';
@@ -2177,10 +2177,18 @@ function tickLocal(input, date) {
           else if (opposition) { add('notoriety', 0.4); lines.push(`${rules.label}: protesta al cantiere «${event.title}».`); }
         } else if (event.type === 'opera-manutenzione') {
           if (event.leads) raise('opera-manutenzione', { condition: String(Math.round(event.condition)), due: fmt1(event.due), dedupe: `${event.workId}|${date}` });
+        } else if (event.type === 'opera-tensione') {
+          // A work in trouble shakes the groups of the majority (their cohesion, already taken in the council): the line and the memory of it, nothing national.
+          const names = event.groups.map(item => item.label).join(', ');
+          if (leads || mine) remember(game, { date, kind: 'crisi-governo', text: `${inst.name}: «${event.title}» (${event.why}) scuote la maggioranza`, weight: 0.5 });
+          lines.push(`${rules.label}: «${event.title}», ${event.why}: la maggioranza si incrina${names ? ` (${names})` : ''}.`);
+          chronicle.push({ type: 'chronicle', kind: 'territorio', icon: 'alert', title: `${inst.name}: tensioni in maggioranza per «${event.title}»`, body: `${event.why[0].toUpperCase() + event.why.slice(1)}: nella maggioranza cresce il malumore (simulazione).`, tone: 'bad' });
         } else if (event.type === 'opera-degrado') {
           if (leads) { add('reputation', -0.8); remember(game, { date, kind: 'crisi-governo', text: `${inst.name}: l’opera «${event.title}» si degrada per mancata manutenzione`, weight: 0.8 }); }
           chronicle.push({ type: 'chronicle', kind: 'territorio', icon: 'alert', title: `${inst.name}: «${event.title}» si degrada`, body: 'Senza manutenzione l’opera perde parte dei benefici (simulazione).', tone: 'bad' });
         }
+      } else if (event.type === 'cofin-approvato') {
+        lines.push(`${rules.label}: via libera al cofinanziamento di «${event.title}» (${event.ownerName}).`);
       } else if (event.type === 'impegno-disatteso') {
         if (leads) { add('reputation', -1.5); lines.push(`${rules.label}: non hai dato seguito alla mozione “${event.title}”.`); }
         else if (event.player) { add('notoriety', 0.6); lines.push(`${rules.label}: la giunta ignora la tua mozione “${event.title}”.`); }
@@ -2228,6 +2236,23 @@ function tickLocal(input, date) {
     }
     // A council that is dissolved no longer sits: its seats go with it.
     next = { ...next, local: { institutions: localOf(next).institutions.map(item => item.id === inst.id ? (updated.status === 'active' ? updated : { ...updated, roster: null }) : item) } };
+  }
+  // The co-financing agreements settle once the week of every institution is done: the money crosses two institutions, so it moves here and once.
+  const settled = settleCofinance(localOf(next).institutions, date);
+  if (settled.events.length) {
+    next = { ...next, local: { institutions: settled.institutions } };
+    for (const event of settled.events) {
+      const asked = settled.institutions.find(item => item.id === event.ownerId);
+      const fine = event.outcome === 'erogato';
+      const outcome = fine ? 'versato' : event.outcome === 'rifiutato' ? 'rifiutato' : 'decaduto';
+      const detail = fine ? `${event.partnerName} versa ${fmt1(event.partnerPts)} punti del suo margine; a ${event.ownerName} arrivano ${fmt1(event.ownerPts)} punti per l’opera${event.refund ? ` e ${fmt1(event.refund)} tornano al bilancio` : ''} (simulazione).` : `${event.partnerName} non finanzia l’opera: ${event.reason}.`;
+      lines.push(`Cofinanziamento di «${event.title}»: ${event.partnerName} ${fine ? 'versa la sua quota' : `non finanzia (${event.reason})`}.`);
+      if (asked?.executive?.leader === 'player') {
+        if (fine) { add('influence', 0.4); remember(game, { date, kind: 'decisione', text: `${event.ownerName}: cofinanziamento di ${event.partnerName} per «${event.title}»`, weight: 0.5 }); }
+        game = addSituationEvent(game, 'cofin-esito', { partner: event.partnerName, work: event.title, outcome, detail, dedupe: `${event.workId}|${event.partnerId}|${outcome}` }, false);
+      }
+      chronicle.push({ type: 'chronicle', kind: 'territorio', icon: 'town', title: `${event.ownerName}: cofinanziamento ${outcome} per «${event.title}»`, body: `${detail[0].toUpperCase() + detail.slice(1)}`, tone: fine ? 'good' : 'bad' });
+    }
   }
   next = pruneSeatPersons(next);
   if (lines.length && game.lastReport) game = { ...game, lastReport: { ...game.lastReport, lines: [...game.lastReport.lines, ...lines.slice(0, 3)] } };
@@ -4351,6 +4376,20 @@ export const store = {
     state = { ...replaceInstitution(next, inst), ui: { ...next.ui, toast: `Opera proposta: ${act.workPlan.label} (${act.workPlan.cost} punti di margine, ${act.workPlan.commit} da impegnare)` } };
     persist(); emit();
     return inst;
+  },
+  // Co-financing: the head of the executive that builds asks another institution of the career for a contribution (a share of the cost); the partner's organ decides.
+  requestWorkCofin(ownerId, workId, partnerId, share) {
+    findInstitution(state, ownerId); findInstitution(state, partnerId);
+    if ((state.game?.resources.politicalCapital ?? 0) < 1) throw new Error('Serve 1 punto di capitale politico per trattare un cofinanziamento.');
+    const next = withTime(1);
+    const out = proposeCofinance(findInstitution(next, ownerId), workId, findInstitution(next, partnerId), Number(share), next.clock.currentDate);
+    let updated = replaceInstitution(replaceInstitution(next, out.owner), out.partner);
+    const game = deepCopy(updated.game);
+    game.resources.politicalCapital = Math.max(0, game.resources.politicalCapital - 1);
+    updated = { ...updated, game, parliament: withCapital(updated.parliament, game), ui: { ...updated.ui, toast: `Cofinanziamento richiesto a ${out.partner.name}: ${Math.round(out.entry.share * 100)}% del costo` } };
+    state = updated;
+    persist(); emit();
+    return out.owner;
   },
   // The decisions of the head of the executive on a work: more money, another level of funding before the site opens, scaling down, suspending, resuming, the upkeep.
   // A working day each, and political capital for the heavier ones; whoever does not lead the executive proposes or follows, and spends nothing.

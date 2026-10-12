@@ -25,12 +25,27 @@ export const WORK_RULES = Object.freeze({
   maxActive: Object.freeze({ comune: 3, provincia: 3, regione: 4 }),
   // The upkeep of a finished work is paid every `upkeepEvery` weeks; unpaid, the work wears out.
   upkeepEvery: 13, wear: 9, worn: 45,
-  // A reading of the margin in euros, for the interface only: how much money a point of margin stands for in an institution of each level.
+  // A reading of the margin in euros: how much money a point of margin stands for in an institution of each level (the interface, and the common unit of the co-financing).
   euroPerPoint: Object.freeze({ comune: 120000, provincia: 900000, regione: 14000000 }),
   // A request of the citizens for a work waits for an answer this long, and does not come back before this many weeks.
   requestDueWeeks: 16, requestGapWeeks: 20,
-  // How many closed works the institution keeps in the list (the totals live in its record).
-  keepClosed: 8
+  // How many closed works the institution keeps in the detailed list; the older ones pass to the archive, which keeps what upkeep and wear need (the totals live in its record).
+  keepClosed: 8,
+  // The co-financing between institutions: a fixed contribution (a share of the cost when it is agreed) paid once by the partner, before the site opens.
+  cofin: Object.freeze({ minShare: 0.1, maxShare: 0.5, step: 0.1, minPoints: 0.05, reserve: 10, stages: Object.freeze(['autorizzazioni', 'progettazione', 'gara']), waitWeeks: 12, keepClosed: 10 }),
+  // The tension a work in trouble puts on the groups of the majority (points of cohesion, taken once for each threshold crossed, never every week).
+  fallout: Object.freeze({ delay: Object.freeze([{ weeks: 8, loss: 2 }, { weeks: 16, loss: 3 }, { weeks: 26, loss: 4 }]), overrun: 2, funds: 2, fundsWeeks: 6, protest: 1, suspend: 1.5 })
+});
+// The one economic unit the levels share: the simulated euro. A point of margin is worth a different sum of money in each level (euroPerPoint), so a contribution is
+// agreed in euros and converted into the points of the institution that pays it and of the one that receives it. Simulation, never real money.
+export const COFIN_LEVEL = Object.freeze({ comune: 0, provincia: 1, regione: 2 });
+// The agreement every co-financing follows (each entry records its terms by id): who answers for what.
+export const COFIN_TERMS = Object.freeze({
+  'quota-fissa': {
+    label: 'Contributo fisso',
+    owner: 'Chi costruisce progetta, appalta, dirige i lavori, risponde dei ritardi e dei sovracosti e paga la manutenzione.',
+    partner: 'Chi cofinanzia versa una volta sola la sua quota del preventivo (in euro simulati, nei punti del proprio margine); i sovracosti e la manutenzione restano a carico di chi costruisce.'
+  }
 });
 
 // Where the work stands in the territory: it decides who benefits more and how visible it is.
