@@ -67,9 +67,11 @@ const inbox = s => s.game.inbox.map(item => item.templateId);
 const lines = [];
 // The mandate is reachable from the UI: the Territori page shows the council (or the European Parliament) with the
 // controls of the office, and the Home leads there in one tap.
+// One mandate and one section are shown at a time: the controls are looked for across the sections of the mandate.
+const SECTIONS = ['panoramica', 'bilancio', 'opere', 'territorio', 'atti', 'cronologia'];
 function ui(s, kind, { present = [], absent = [] } = {}) {
-  const page = renderTerritoriesPage(s, {});
-  assert.ok(page.includes(`id="istituzione-${kind}"`), `Territori: la scheda ${kind} è nella pagina`);
+  assert.ok(renderTerritoriesPage(s, { localInst: kind }).includes(`id="istituzione-${kind}"`), `Territori: la scheda ${kind} è nella pagina`);
+  const page = SECTIONS.map(id => renderTerritoriesPage(s, { localInst: kind, localSection: id })).join('');
   for (const control of present) assert.ok(page.includes(control), `Territori (${kind}): c’è ${control}`);
   for (const control of absent) assert.ok(!page.includes(control), `Territori (${kind}): non c’è ${control}`);
   assert.ok(!/undefined|NaN/.test(page.replace(/data-[a-z-]+="[^"]*"/g, '')), `Territori (${kind}): nessun valore non valido`);
@@ -88,7 +90,7 @@ function ui(s, kind, { present = [], absent = [] } = {}) {
   assert.ok(power(s, 'Giunta, assessori').enabled && power(s, 'Proposte, voti').enabled, 'Il sindaco nomina gli assessori, decide i tributi e vota in consiglio');
   assert.deepEqual(mandatePlace(s, s.career.lastElectionReport), { nav: 'territori', label: 'Vai al consiglio comunale', scroll: 'istituzione-comune' });
   assert.ok(inbox(s).includes('giunta-composizione'), 'Dopo il voto: la scelta della giunta in agenda');
-  assert.match(renderInstitutions(s), /data-local-tax/, 'La pagina Territori mostra il comune con le leve del sindaco');
+  assert.match(renderInstitutions(s, { localSection: 'bilancio' }), /data-local-tax/, 'La pagina Territori mostra il comune con le leve del sindaco');
   ui(s, 'comune', { present: ['data-local-tax', 'data-local-reshuffle-form', 'data-local-propose-form'], absent: ['data-local-question', 'data-ep-'] });
   const member = inst.executive.members[0];
   const other = inst.groups.find(group => group.side === 'maggioranza' && group.id !== member.groupId);

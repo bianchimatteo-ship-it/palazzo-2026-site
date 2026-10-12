@@ -43,6 +43,21 @@ export const CITY_INDICATORS = Object.freeze([
   { id: 'uffici', label: 'Uffici e servizi digitali', icon: 'ministry', areas: ['pa', 'digitale', 'autonomie', 'finanze', 'fisco'], region: 'servizi', segments: ['imprese', 'famiglie'] }
 ]);
 export const cityIndicatorOf = area => CITY_INDICATORS.find(item => item.areas.includes(area)) ?? CITY_INDICATORS.at(-1);
+// The province's own services (0-100): what an ente di area vasta answers for, distinct from the city's and from the region's average. `region` is the
+// indicator of the society simulation a share of its change reaches (PROVINCE_SHARE_OF_REGION).
+export const PROVINCE_INDICATORS = Object.freeze([
+  { id: 'viabilita', label: 'Strade provinciali e ponti', icon: 'bridge', areas: ['infrastrutture'], region: 'infrastrutture', segments: ['imprese', 'famiglie'] },
+  { id: 'scuole', label: 'Edifici delle scuole superiori', icon: 'book', areas: ['scuola'], region: 'istruzione', segments: ['giovani', 'famiglie'] },
+  { id: 'trasporti', label: 'Trasporto di area vasta', icon: 'route', areas: ['trasporti'], region: 'trasporti', segments: ['giovani', 'famiglie'] },
+  { id: 'ambiente', label: 'Ambiente, frane e rifiuti', icon: 'leaf', areas: ['ambiente', 'energia', 'agricoltura'], region: 'ambiente', segments: ['famiglie', 'imprese'] },
+  { id: 'territorio', label: 'Pianificazione e casa', icon: 'town', areas: ['casa'], region: 'infrastrutture', segments: ['giovani', 'fragili'] },
+  { id: 'sviluppo', label: 'Sviluppo economico e turismo', icon: 'factory', areas: ['industria', 'turismo', 'cultura', 'commercio', 'economia'], region: 'economia', segments: ['imprese', 'giovani'] },
+  { id: 'comuni', label: 'Servizi ai comuni', icon: 'ministry', areas: ['autonomie', 'pa', 'digitale', 'finanze', 'fisco'], region: 'servizi', segments: ['imprese', 'famiglie'] }
+]);
+export const provinceIndicatorOf = area => PROVINCE_INDICATORS.find(item => item.areas.includes(area)) ?? PROVINCE_INDICATORS.at(-1);
+// The services an institution keeps of its own territory: a comune and a provincia have a list each; a region uses those of the society simulation.
+export const serviceIndicatorsOf = kind => kind === 'comune' ? CITY_INDICATORS : kind === 'provincia' ? PROVINCE_INDICATORS : null;
+export const serviceIndicatorOf = (kind, area) => kind === 'provincia' ? provinceIndicatorOf(area) : cityIndicatorOf(area);
 // A city is a part of its region: this share of what its acts change reaches the regional indicators.
 export const CITY_SHARE_OF_REGION = 0.15;
 // A province is a part of its region too, a larger one than a city: this share of what its acts change reaches the regional indicators.
@@ -129,10 +144,10 @@ const COMUNE = [
   }),
   T('opere', {
     label: 'Opere pubbliche', reference: 'programma triennale dei lavori pubblici, art. 42 TUEL', proposers: 'Giunta',
-    function: 'Il programma dei lavori e i progetti delle opere: strade, scuole, impianti sportivi, edifici pubblici.', areas: ['infrastrutture', 'scuola', 'sport', 'trasporti', 'casa', 'cultura', 'ambiente'],
-    iter: ['Progetto e copertura finanziaria', 'Commissione lavori pubblici', 'Voto in aula', 'Gara e cantiere'],
-    modifies: 'Le strutture del tema: effetto forte ma lento (i cantieri), spesa alta.',
-    approved: 'Cantieri e poi strutture migliori; lavoro per le imprese del territorio.', rejected: 'L’opera salta e i fondi dedicati vanno persi: la struttura continua a invecchiare.',
+    function: 'Il programma dei lavori e i progetti delle opere: strade, scuole, impianti sportivi, edifici pubblici.', areas: ['infrastrutture', 'scuola', 'sport', 'trasporti', 'casa', 'cultura', 'ambiente', 'sicurezza', 'commercio', 'welfare'],
+    iter: ['Progetto e copertura finanziaria', 'Commissione lavori pubblici', 'Voto in aula', 'Autorizzazioni, progetto, gara e cantiere'],
+    modifies: 'Le strutture del tema: il voto approva l’opera e impegna una parte della spesa; i benefici arrivano a opera finita.',
+    approved: 'Parte il ciclo dell’opera: autorizzazioni, progetto, gara, cantiere, collaudo; i benefici arrivano solo con l’apertura.', rejected: 'L’opera salta e i fondi dedicati vanno persi: la struttura continua a invecchiare.',
     politics: 0.35, breadth: 0.15, effect: 4.5, cost: 6, phase: 26, weight: 0.1, player: ['leader']
   }),
   T('servizi', {
@@ -208,6 +223,14 @@ const REGIONE = [
     modifies: 'Il servizio o il settore regionale del tema, in modo ampio e duraturo; spesa rilevante.',
     approved: 'Nei mesi successivi migliorano gli indicatori regionali del tema.', rejected: 'Il settore resta com’è; il proponente perde credibilità.',
     politics: 0.45, effect: 3.5, cost: 4, phase: 16, weight: 0.3, player: ['leader', 'consigliere']
+  }),
+  T('opere', {
+    label: 'Programma di investimenti regionali', reference: 'leggi regionali di settore e programmazione degli investimenti', proposers: 'Giunta',
+    function: 'Ospedali e strutture sanitarie, trasporti, formazione e sviluppo: il programma approva l’opera e il finanziamento; poi si fanno progetto, gara e cantiere.', areas: ['sanita', 'trasporti', 'infrastrutture', 'lavoro', 'industria'],
+    iter: ['Progetto e copertura finanziaria', 'Commissione consiliare', 'Voto in aula', 'Autorizzazioni, gara e cantiere'],
+    modifies: 'Le strutture del settore: gli effetti arrivano a opera finita, non al voto; la spesa si distribuisce lungo i lavori.',
+    approved: 'L’opera parte: autorizzazioni, progetto, gara e cantiere; i benefici arrivano a collaudo.', rejected: 'L’opera salta e il settore continua a invecchiare.',
+    politics: 0.4, breadth: 0.1, effect: 5, cost: 10, phase: 30, weight: 0.1, player: ['leader']
   }),
   T('regolamento', {
     label: 'Regolamento regionale', organ: 'giunta', quorum: 'giunta', reference: 'art. 121 Cost. e statuto regionale', proposers: 'Giunta, dopo il parere della commissione consiliare',
@@ -321,10 +344,10 @@ const PROVINCIA = [
   }),
   T('opere', {
     label: 'Strade e scuole: lavori pubblici', reference: 'programma triennale dei lavori pubblici', proposers: 'Presidente',
-    function: 'Le strade provinciali e gli edifici delle scuole superiori: ponti, frane, tetti, palestre, messa in sicurezza.', areas: ['infrastrutture', 'scuola', 'trasporti', 'ambiente'],
-    iter: ['Progetto e copertura finanziaria', 'Commissione lavori pubblici', 'Voto in consiglio', 'Gara e cantiere'],
-    modifies: 'Le strutture del tema: effetto forte ma lento (i cantieri), spesa alta.',
-    approved: 'Cantieri e poi strutture migliori; lavoro per le imprese del territorio.', rejected: 'L’opera salta e i fondi dedicati vanno persi: le strutture continuano a invecchiare.',
+    function: 'Le strade provinciali e gli edifici delle scuole superiori: ponti, frane, tetti, palestre, messa in sicurezza.', areas: ['infrastrutture', 'scuola', 'trasporti', 'ambiente', 'industria'],
+    iter: ['Progetto e copertura finanziaria', 'Commissione lavori pubblici', 'Voto in consiglio', 'Autorizzazioni, progetto, gara e cantiere'],
+    modifies: 'Le strutture del tema: il voto approva l’opera e impegna una parte della spesa; i benefici arrivano a opera finita.',
+    approved: 'Parte il ciclo dell’opera: autorizzazioni, progetto, gara, cantiere, collaudo; i benefici arrivano solo con l’apertura.', rejected: 'L’opera salta e i fondi dedicati vanno persi: le strutture continuano a invecchiare.',
     politics: 0.3, breadth: 0.15, effect: 4, cost: 5, phase: 24, weight: 0.14, player: ['leader']
   }),
   T('ptcp', {

@@ -298,7 +298,7 @@ const groups = [
   }
 
   // The page: before the vote the forecast (with the player's vote in the group), after it the votes actually cast.
-  const view = inst => M.renderInstitutions({ local: { institutions: [inst] }, game: { resources: { politicalCapital: 10 } }, dataset: { statistics: [] }, career: { playerId: null }, clock: { currentDate: '2026-10-08' } });
+  const view = inst => M.renderInstitutions({ local: { institutions: [inst] }, game: { resources: { politicalCapital: 10 } }, dataset: { statistics: [] }, career: { playerId: null }, clock: { currentDate: '2026-10-08' } }, { localSection: 'atti' });
   const before = view(vote(siena, 'contrario').chosen);
   assert.ok(before.includes('Previsione prima del voto in aula') && before.includes('Futuro Nazionale · favorevole: <b>3</b> sì, <b>1</b> no · tu: contrario'), 'Prima del voto: la previsione conta il voto del giocatore nel suo gruppo');
   const after = view(vote(siena, 'contrario').out.inst);
@@ -372,18 +372,22 @@ const groups = [
   for (let day = 24; day <= 24 + 7 * 9; day += 7) { const date = advanceDays('2027-01-17', day - 17); withAct = week(withAct, date).inst; control = week(control, date).inst; }
   const gain = withAct.indicators.sicurezza - control.indicators.sicurezza;
   assert.ok(Math.abs(gain - rule.measure.indicators.sicurezza) < 0.4, `Il regolamento migliora la sicurezza urbana di ${gain.toFixed(1)} (previsti ${rule.measure.indicators.sicurezza})`);
-  // Public works: the money at once; taxes: the rates and the margin.
+  // Public works: the vote approves the work and reserves a share of its cost, and nothing improves until the site is finished; taxes: the rates and the margin.
   proposed = L.proposeLocalAct(mayor, 'sport', '2027-01-10', { category: 'opere' });
   const works = proposed.acts.at(-1);
   out = week(at(proposed, works.id, 'aula', '2027-01-17'), '2027-01-17');
-  assert.ok(out.inst.acts.find(item => item.id === works.id).stage === 'approvato' && Math.abs(out.inst.budget.margin - (mayor.budget.margin - works.measure.cost)) < 0.01 && out.inst.effects.some(item => item.indicator === 'sport'), 'Le opere pubbliche spendono il margine e migliorano gli impianti');
+  const built = out.inst.works.at(-1);
+  assert.ok(out.inst.acts.find(item => item.id === works.id).stage === 'approvato' && built?.actId === works.id && built.stage === 'autorizzazioni', 'Approvata l’opera, parte il ciclo: autorizzazioni, non il beneficio');
+  assert.ok(Math.abs(out.inst.budget.margin - (mayor.budget.margin - works.measure.cost)) < 0.01 && built.committed === works.measure.cost && built.drawn === built.committed, 'Il voto impegna una parte del costo (una volta sola), non tutto');
+  assert.ok(!out.inst.effects.some(item => item.indicator === 'sport') && !out.events.some(item => item.type === 'effetti' && item.actId === works.id), 'Un’opera approvata non migliora subito gli impianti');
+  assert.ok(out.events.some(item => item.type === 'opera-avviata' && item.workId === built.id), 'L’avvio dell’opera arriva alla carriera');
   proposed = L.proposeLocalAct(mayor, 'fisco', '2027-01-10', { category: 'tributi', variant: 'aumento' });
   const taxes = proposed.acts.at(-1);
   out = week(at(proposed, taxes.id, 'aula', '2027-01-17'), '2027-01-17');
   assert.ok(out.inst.acts.find(item => item.id === taxes.id).stage === 'approvato' && out.inst.budget.localTax === 'alta' && out.inst.budget.margin === mayor.budget.margin + 12, 'Le aliquote passano in consiglio: pressione fiscale alta, più margine');
   assert.ok(out.events.find(item => item.type === 'atto-votato' && item.actId === taxes.id)?.measure?.tax === 'su', 'L’esito porta la misura alle conseguenze politiche');
   // Without cover the act is withdrawn; an act of the Giunta is decided by the Giunta, not by the council.
-  proposed = L.proposeLocalAct({ ...mayor, budget: { ...mayor.budget, margin: 3 } }, 'infrastrutture', '2027-01-10', { category: 'opere' });
+  proposed = L.proposeLocalAct({ ...mayor, budget: { ...mayor.budget, margin: 1 } }, 'infrastrutture', '2027-01-10', { category: 'opere' });
   out = week(at(proposed, proposed.acts.at(-1).id, 'aula', '2027-01-17'), '2027-01-17');
   assert.ok(/copertura/.test(out.inst.acts.at(-1).withdrawn ?? '') && out.events.some(item => item.type === 'atto-ritirato'), 'Senza copertura finanziaria l’atto è ritirato');
   proposed = L.proposeLocalAct(mayor, 'cultura', '2027-01-10', { category: 'delibera-giunta' });

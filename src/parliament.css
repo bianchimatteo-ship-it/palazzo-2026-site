@@ -328,6 +328,12 @@
 /* The player's institutions: a short intro, quick links when there are several, the committee of a European dossier. */
 .local-intro{margin:0}
 .local-jump{display:flex;flex-wrap:wrap;gap:6px}
+/* One mandate at a time, one section at a time: the tabs of the institutions scroll sideways on a narrow screen instead of wrapping into a column, and do not stick to the top. */
+.local-tabs,.local-jump{position:static;flex-wrap:nowrap;overflow-x:auto;margin:0 0 12px}
+.local-tabs .sx-tab,.local-jump .sx-tab{flex:0 0 auto;white-space:nowrap;min-height:40px}
+.local-tabs .sx-tab .badge{margin-left:4px}
+.local-section{display:grid;gap:10px;min-width:0}
+.work-row small.bad,.work-row .bad{color:var(--critical)}
 .bill-committee{margin:6px 0 0;color:var(--muted);font-size:12px;line-height:1.45}
 .bill-committee .glyph{vertical-align:-2px;margin-right:3px}
 .bill-committee b{color:var(--ink-2)}

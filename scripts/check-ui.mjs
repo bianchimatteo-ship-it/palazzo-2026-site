@@ -399,7 +399,9 @@ assert.ok(!page.includes('data-world-alliance') && page.includes('Alleanze e rot
   let home = await goto('panoramica');
   assert.ok(home.includes('data-nav="territori" data-scroll="istituzione-comune"'), 'La Home porta al consiglio comunale');
   let page = await goto('territori');
-  assert.ok(page.includes('id="istituzione-comune"') && page.includes('LE TUE ISTITUZIONI') && page.includes('data-local-question') && page.includes('data-local-propose-form') && clean(page), 'Territori: il consiglio comunale con le azioni del consigliere');
+  assert.ok(page.includes('id="istituzione-comune"') && page.includes('LE TUE ISTITUZIONI') && page.includes('data-local-section="atti"') && clean(page), 'Territori: il consiglio comunale con le sue sezioni');
+  page = await click({ localSection: 'atti' });
+  assert.ok(page.includes('data-local-question') && page.includes('data-local-propose-form') && clean(page), 'Territori, Consiglio e Giunta: le azioni del consigliere');
   await click({ localQuestion: '', instId: council.id });
   assert.ok(store.getState().local.institutions.find(item => item.id === council.id).history.some(item => item.type === 'interrogazione'), 'Dal pulsante: interrogazione presentata');
   const act = store.getState().local.institutions.find(item => item.id === council.id).acts.find(item => !L.isClosedAct(item) && item.sponsor.kind !== 'player' && (item.organ ?? 'consiglio') === 'consiglio');
@@ -417,9 +419,10 @@ assert.ok(!page.includes('data-world-alliance') && page.includes('Alleanze e rot
   home = await goto('panoramica');
   assert.ok(home.includes('data-scroll="istituzione-europa"'), 'La Home porta anche al Parlamento europeo');
   page = await goto('territori');
+  page = await click({ localInst: 'europa' });
   assert.ok(page.includes('id="istituzione-europa"') && page.includes('Le tue commissioni') && page.includes('data-ep-role') && page.includes('data-ep-committee-form') && clean(page), 'Territori: Parlamento europeo con le sue commissioni');
   const seats = store.getState().local.institutions.filter(item => item.status === 'active');
-  if (seats.length > 1) assert.ok(seats.every(item => page.includes(`data-scroll="istituzione-${item.kind}"`)), 'Con più istituzioni, un collegamento a ciascuna in cima alla pagina');
+  if (seats.length > 1) assert.ok(seats.every(item => page.includes(`data-local-inst="${item.kind}"`)), 'Con più istituzioni, un selettore dei mandati in cima alla pagina');
   const seat = store.getState().local.institutions.find(item => item.kind === 'europa' && item.status === 'active');
   await click({ epRole: '', instId: seat.id });
   assert.match(store.getState().ui.toast ?? '', /più lavoro in commissione/, 'Senza lavoro in commissione niente incarichi: il gioco lo spiega');

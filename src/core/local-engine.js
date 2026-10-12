@@ -8,7 +8,8 @@
 import { uniqueId } from './ids.js?v=20261012-3';
 import { DATA_SOURCES } from '../data/schema.js?v=20261012-3';
 import { AREA_BY_ID, CAMP_PRIORITIES, INTENSITY } from '../data/simulation/policy-rules.js?v=20261012-3';
-import { ACT_TYPES, AREA_BREADTH, AREA_LEANS, CITY_INDICATORS, CITY_SHARE_OF_REGION, PROVINCE_SHARE_OF_REGION, actTitle, actTypeOf, cityIndicatorOf, legalNumber, naturalType, neededYes, regionalWeights, proposableTypes, typeFitsArea } from '../data/simulation/local-acts.js?v=20261012-3';
+import { ACT_TYPES, AREA_BREADTH, AREA_LEANS, CITY_INDICATORS, CITY_SHARE_OF_REGION, PROVINCE_SHARE_OF_REGION, actTitle, actTypeOf, legalNumber, naturalType, neededYes, regionalWeights, proposableTypes, serviceIndicatorOf, serviceIndicatorsOf, typeFitsArea } from '../data/simulation/local-acts.js?v=20261012-3';
+import { activeWorks, advanceWorks, applyWorkActivity, availableWorkTypes, emptyWorksRecord, executiveWorkChoice, planWork, startWork, workGap, worksOf } from './local-works-engine.js?v=20261012-3';
 import { DELEGA_RULES, PORTFOLIO_AREAS } from '../data/simulation/office-rules.js?v=20261012-3';
 import { cohesiveShare } from './parliament-engine.js?v=20261012-3';
 import { groupLine, seededRandom, splitGroupVote } from './vote-engine.js?v=20261012-3';
@@ -85,23 +86,30 @@ export function createInstitution(spec) {
     groups, seats: groups.reduce((sum, group) => sum + group.seats, 0),
     executive: spec.kind === 'europa' ? null : { leader: spec.leaderIsPlayer ? 'player' : 'simulato', label: spec.leaderIsPlayer ? `Tu, ${rules.leader.toLowerCase()}` : `${rules.leader} (figura simulata) · ${leaderGroup?.label ?? ''}`.trim(), groupId: leaderGroup?.id ?? null, camp: leaderGroup?.camp ?? 'centro', members, stability: 62, program: null },
     budget: spec.kind === 'europa' ? null : { approvedYear: Number(String(spec.date).slice(0, 4)), margin: 50, localTax: 'media', provisional: false, failures: 0 },
-    ...(spec.kind === 'comune' ? (indicators => ({ indicators, baseline: { services: servicesOf(indicators) } }))(cityIndicators(spec)) : {}),
-    // A region or a province answers for the services of its territory too: where they stood when the term began is the starting point of its record.
-    ...(['regione', 'provincia'].includes(spec.kind) && spec.territory ? { baseline: { services: servicesOf(spec.territory) } } : {}), ...(spec.kind === 'europa' ? {} : { effects: [], commitments: [] }),
+    // A comune and a provincia keep the services of their own territory (the province's are its own, not the region's average): where they stood when the term began is the starting point of its record.
+    ...(['comune', 'provincia'].includes(spec.kind) ? (indicators => ({ indicators, baseline: { services: servicesOf(indicators) } }))(serviceIndicators(spec)) : {}),
+    ...(spec.kind === 'regione' && spec.territory ? { baseline: { services: servicesOf(spec.territory) } } : {}), ...(spec.kind === 'europa' ? {} : { effects: [], commitments: [], works: [], worksRecord: emptyWorksRecord(), place: spec.place ?? { region: spec.region ?? null } }),
     acts: [], archive: [], history: [{ date: spec.date, text: `${rules.label}: inizia il mandato (${spec.role === 'sindaco' || spec.role === 'presidente' ? 'guidi l’esecutivo' : spec.side === 'maggioranza' ? 'in maggioranza' : 'all’opposizione'}).` }],
     pressure: 30, ...(spec.kind === 'europa' ? { ep: europeanSeat(`${spec.kind}-${spec.date}`, spec.date, spec.committee) } : {}), source: SIM
   };
 }
 // The city's services at the start of the term: close to the region's (territory, when known), each city a little
 // different.
-function cityIndicators({ name, territory = null }) {
+function serviceIndicators({ name, territory = null, kind = 'comune' }) {
   const rand = seededRandom(`${name}|servizi`);
-  return Object.fromEntries(CITY_INDICATORS.map(item => [item.id, round1(clamp((territory?.[item.region] ?? 50) + (rand() - 0.5) * 12, 20, 80))]));
+  return Object.fromEntries((serviceIndicatorsOf(kind) ?? CITY_INDICATORS).map(item => [item.id, round1(clamp((territory?.[item.region] ?? 50) + (rand() - 0.5) * 12, 20, 80))]));
 }
-// Saves made before the acts had effects: the city gets its services, the council its effects and commitments.
-export function withLocalState(inst) {
-  if (!inst || inst.kind === 'europa' || (inst.effects && inst.commitments && (inst.kind !== 'comune' || inst.indicators))) return inst;
-  return { ...inst, ...(inst.kind === 'comune' && !inst.indicators ? { indicators: cityIndicators({ name: inst.name }) } : {}), effects: inst.effects ?? [], commitments: inst.commitments ?? [] };
+// Saves made before the acts had effects, the works or the province's own services: the institution gets what it lacks, without touching what it has
+// (a province's services start from the region's, with the starting point of its record on them; the territory comes from the store).
+export function withLocalState(inst, territory = null) {
+  if (!inst || inst.kind === 'europa') return inst;
+  const lacksServices = ['comune', 'provincia'].includes(inst.kind) && !inst.indicators;
+  if (inst.effects && inst.commitments && inst.works && inst.worksRecord && inst.place && !lacksServices) return inst;
+  const indicators = lacksServices ? serviceIndicators({ name: inst.name, territory, kind: inst.kind }) : null;
+  return {
+    ...inst, ...(indicators ? { indicators, baseline: { ...(inst.baseline ?? {}), ...(inst.kind === 'provincia' || inst.baseline?.services == null ? { services: servicesOf(indicators) } : {}) } } : {}),
+    effects: inst.effects ?? [], commitments: inst.commitments ?? [], works: inst.works ?? [], worksRecord: inst.worksRecord ?? emptyWorksRecord(), place: inst.place ?? { region: inst.region ?? null }
+  };
 }
 const servicesOf = indicators => { const values = Object.values(indicators ?? {}).map(Number).filter(Number.isFinite); return values.length ? round1(values.reduce((sum, value) => sum + value, 0) / values.length) : null; };
 // What a term leaves behind for the next vote: how the executive stood, what the council kept and broke, how the services of the
@@ -116,18 +124,33 @@ export function mandateRecord(input, { date = null, former = false } = {}) {
   const commitments = inst.commitments ?? [];
   const kept = commitments.filter(item => item.status === 'rispettato').length;
   const broken = commitments.filter(item => item.status === 'disatteso').length;
-  // The services of a comune are its own; those of a region or a province are the ones of the territory, as the weekly step last measured them.
-  const services = inst.kind === 'comune' ? servicesOf(inst.indicators) : Number.isFinite(inst.territoryServices) ? inst.territoryServices : null;
+  // The services of a comune and of a province are their own; those of a region are the ones of the territory, as the weekly step last measured them.
+  const services = ['comune', 'provincia'].includes(inst.kind) ? servicesOf(inst.indicators) : Number.isFinite(inst.territoryServices) ? inst.territoryServices : null;
   const servicesDelta = services !== null && inst.baseline?.services != null ? round1(services - inst.baseline.services) : 0;
   const passed = (inst.acts ?? []).filter(item => item.stage === 'approvato' && item.sponsor?.kind === 'player').length;
   const stability = Number(inst.executive?.stability ?? 60), pressure = Number(inst.pressure ?? 30), margin = Number(inst.budget?.margin ?? 50), failures = Number(inst.budget?.failures ?? 0);
-  let score = (stability - 60) * 0.6 + (50 - pressure) * 0.4 + (margin - 50) * 0.2 - failures * 6 + kept * 4 - broken * 7 + servicesDelta * 1.2 + passed * 1.5;
+  // The works: what the term built is already in the services (servicesDelta), so only the way it was done counts here: the works on time and on budget,
+  // the waste (delay, overrun, suspended sites) and the upkeep left undone.
+  const works = worksRecordOf(inst);
+  let score = (stability - 60) * 0.6 + (50 - pressure) * 0.4 + (margin - 50) * 0.2 - failures * 6 + kept * 4 - broken * 7 + servicesDelta * 1.2 + passed * 1.5 + works.score;
   if (inst.status === 'sciolto') score += rules.dissolved;
   score = round1(clamp(score, -100, 100));
   const confidence = clamp(weeks / 78, 0.3, 1);
   const side = leads ? 'maggioranza' : inst.playerSide ?? 'maggioranza';
   const factor = (leads ? rules.standing.leader : side === 'maggioranza' ? rules.standing.majority : rules.standing.opposition) * (former ? rules.standing.former : 1);
-  return { kind: inst.kind, name: inst.name, role: inst.playerRole ?? null, side, leads, former, status: inst.status, weeks: weeks === 99 ? 0 : weeks, stability, pressure, margin, failures, kept, broken, servicesDelta, passed, score, confidence: round2(confidence), standing: round1(clamp(score * confidence * factor, -100, 100)), source: SIM };
+  return { kind: inst.kind, name: inst.name, role: inst.playerRole ?? null, side, leads, former, status: inst.status, weeks: weeks === 99 ? 0 : weeks, stability, pressure, margin, failures, kept, broken, servicesDelta, passed, works, score, confidence: round2(confidence), standing: round1(clamp(score * confidence * factor, -100, 100)), source: SIM };
+}
+// What the works of the term say about the administration: started and finished, quality, cost against the plan, delays, suspended sites, upkeep. `score` is the share of the
+// verdict that is not already in the services.
+export function worksRecordOf(inst) {
+  const record = inst?.worksRecord ?? {};
+  const open = activeWorks(inst);
+  const completed = record.completed ?? 0;
+  const over = (record.completedBudget ?? 0) > 0 ? Math.max(0, (record.finalCost ?? 0) / record.completedBudget - 1) : 0;
+  const quality = completed ? round2((record.qualitySum ?? 0) / completed) : null;
+  const waste = Math.min(8, (record.delayWeeks ?? 0) / 10) + Math.min(8, over * 12) + (record.suspended ?? 0) * 1.5 + (record.upkeepMissed ?? 0) * 0.8;
+  const score = round1(clamp((record.onTime ?? 0) * 1.2 - waste, -14, 8));
+  return { started: record.started ?? 0, completed, open: open.length, suspended: record.suspended ?? 0, onTime: record.onTime ?? 0, quality, delayWeeks: record.delayWeeks ?? 0, overruns: record.overruns ?? 0, budgeted: round1(record.budgeted ?? 0), completedBudget: round1(record.completedBudget ?? 0), finalCost: round1(record.finalCost ?? 0), upkeepMissed: record.upkeepMissed ?? 0, protests: record.protests ?? 0, score };
 }
 const record = (inst, date, text, type = 'evento') => ({ ...inst, history: [...inst.history, { date, text, type }].slice(-40) });
 const setAct = (inst, id, patch) => ({ ...inst, acts: inst.acts.map(item => item.id === id ? { ...item, ...patch } : item) });
@@ -138,10 +161,19 @@ export const majorityMargin = inst => inst.groups.filter(group => group.side ===
 // and the street, the margin of the budget (the career engine names them in `effects.local`).
 export function applyLocalEffect(inst, local = {}) {
   if (!inst || inst.status !== 'active') return inst;
-  const next = { ...inst };
+  let next = { ...inst };
   if (local.stability && inst.executive) next.executive = { ...inst.executive, stability: clamp(round1((inst.executive.stability ?? 60) + local.stability), 0, 100) };
   if (local.pressure) next.pressure = clamp(round1((inst.pressure ?? 30) + local.pressure), 0, 100);
   if (local.margin && inst.budget) next.budget = { ...inst.budget, margin: clamp(round1((inst.budget.margin ?? 50) + local.margin), 0, 100) };
+  // The activities of the works (a site visit, a technical meeting, an inspection) and the care of a service act on the real state of the institution.
+  if (local.workBoost || local.workUnblock || local.scrutiny) next = applyWorkActivity(next, local);
+  if (local.service && next.indicators) {
+    const own = next.playerDelega?.areas ?? [];
+    const list = serviceIndicatorsOf(next.kind) ?? [];
+    const candidates = next.executive?.leader === 'player' ? list : list.filter(item => item.areas.some(area => own.includes(area)));
+    const weakest = [...candidates].sort((a, b) => (next.indicators[a.id] ?? 50) - (next.indicators[b.id] ?? 50))[0];
+    if (weakest) next.indicators = { ...next.indicators, [weakest.id]: round1(clamp((next.indicators[weakest.id] ?? 50) + local.service, 0, 100)) };
+  }
   return next;
 }
 
@@ -172,19 +204,25 @@ function stanceOf(inst, category, area, sponsor, variant) {
 // of the society simulation for a regione), the budget margin it uses or brings, the taxes, the citizens who gain and
 // who pay. Motions, questions, budgets and no-confidence motions work otherwise; Europe's acts move positions and
 // careers, not the services of a territory.
-export function measureOf(inst, { category, area, variant = null, intensity = 2 }) {
+export function measureOf(inst, { category, area, variant = null, intensity = 2, workPlan = null }) {
   const type = actTypeOf(inst.kind, category);
   if (!type || inst.kind === 'europa' || ['mozione', 'interrogazione', 'sfiducia', 'bilancio'].includes(category)) return null;
+  // A public work brings nothing when the act is approved: it reserves a share of its cost, and the benefits come with the finished work (local-works-engine).
+  if (category === 'opere') {
+    let plan = workPlan;
+    if (!plan) { try { plan = planWork(inst, { area }); } catch { return null; } }
+    return { indicators: {}, cost: plan.commit, revenue: 0, tax: null, phase: plan.weeks, lasting: true, segments: {}, intensity: 2, work: true };
+  }
   const level = INTENSITY[clamp(Math.round(intensity), 1, 3) - 1];
   const effect = type.effect * level.effect;
   const down = variant === 'riduzione';
   const indicators = {};
   const put = (id, value) => { if (id && Math.abs(value) >= 0.05) indicators[id] = round1((indicators[id] ?? 0) + value); };
-  if (inst.kind === 'comune') {
+  if (inst.kind === 'comune' || inst.kind === 'provincia') {
     if (category === 'urbanistica') { put('territorio', effect); put('ambiente', variant === 'espansione' ? -effect * 0.5 : effect * 0.35); }
-    else if (category === 'statuto') put('uffici', effect);
-    else if (category === 'tariffe') put(cityIndicatorOf(area).id, down ? -effect : effect);
-    else if (category !== 'tributi') put(cityIndicatorOf(area).id, effect);
+    else if (category === 'statuto') put(inst.kind === 'comune' ? 'uffici' : 'comuni', effect);
+    else if (category === 'tariffe') put(serviceIndicatorOf(inst.kind, area).id, down ? -effect : effect);
+    else if (category !== 'tributi') put(serviceIndicatorOf(inst.kind, area).id, effect);
   } else if (category !== 'tributi') {
     for (const [id, weight] of Object.entries(regionalWeights(area))) put(id, effect * weight);
   }
@@ -196,7 +234,7 @@ export function measureOf(inst, { category, area, variant = null, intensity = 2 
   const segments = {};
   const seg = (id, value) => { segments[id] = round1((segments[id] ?? 0) + value); };
   if (category === 'tributi') for (const id of ['famiglie', 'imprese']) seg(id, down ? 1.5 : -1.5);
-  else if (category === 'tariffe') for (const id of cityIndicatorOf(area).segments) seg(id, down ? 1 : -1);
+  else if (category === 'tariffe') for (const id of serviceIndicatorOf('comune', area).segments) seg(id, down ? 1 : -1);
   else {
     for (const id of AREA_BY_ID[area]?.pleased ?? []) seg(id, 0.8 * level.effect);
     for (const id of AREA_BY_ID[area]?.displeased ?? []) seg(id, -0.4 * level.effect);
@@ -206,18 +244,20 @@ export function measureOf(inst, { category, area, variant = null, intensity = 2 
 }
 // A new act: its kind decides who adopts it (council, Giunta, or the executive's answer), the first step of its iter
 // and the majority it needs; its text has a place between left and right and, when approved, a measure.
-function newAct(inst, { kind, sponsor, area, title, date, budget = false, category = null, variant = null, intensity = 2 }) {
+function newAct(inst, { kind, sponsor, area, title, date, budget = false, category = null, variant = null, intensity = 2, work = null }) {
   const rules = INSTITUTIONS[inst.kind];
   const cat = category ?? categoryOf(inst, { kind, sponsor, budget });
   const type = actTypeOf(inst.kind, cat);
   const organ = type?.organ ?? 'consiglio';
   const first = organ === 'esecutivo' ? 'risposta' : organ === 'giunta' && !type?.committeeOpinion ? 'giunta' : ['mozione', 'sfiducia'].includes(cat) ? 'aula' : 'commissione';
   const weeks = budget ? 2 : first === 'risposta' ? 2 + (inst.acts.length % 3) : first === 'giunta' ? 1 : cat === 'sfiducia' ? (inst.kind === 'comune' ? 2 : 1) : cat === 'mozione' ? 2 : type?.committeeOpinion ? 2 : 1 + (inst.acts.length % 3);
+  // A work: the act approves a plan (the type of work, its funding, where it stands); the executive of the institution brings its own.
+  const workPlan = cat === 'opere' && inst.kind !== 'europa' ? planWork(inst, { typeId: work?.typeId ?? null, area, funding: work?.funding ?? null, site: work?.site ?? 'periferia' }) : null;
   return {
-    id: uniqueId([...inst.acts, ...inst.archive], `${inst.id}-atto-${inst.acts.length + inst.archive.length + 1}`), kind, category: cat, ...(variant ? { variant } : {}), title, area, sponsor, budget,
+    id: uniqueId([...inst.acts, ...inst.archive], `${inst.id}-atto-${inst.acts.length + inst.archive.length + 1}`), kind, category: cat, ...(variant ? { variant } : {}), title: workPlan ? `Opere pubbliche: ${workPlan.label}` : title, area: workPlan?.area ?? area, sponsor, budget, ...(workPlan ? { workPlan } : {}),
     stage: first, introducedAt: date, nextStepAt: advanceDays(date, weeks * 7), votes: [], pendingPlayerVote: null,
     label: (inst.kind === 'europa' ? rules.acts[kind] : null) ?? type?.label ?? rules.acts[kind], organ, quorum: type?.quorum ?? 'votanti',
-    stance: stanceOf(inst, cat, area, sponsor, variant), measure: measureOf(inst, { category: cat, area, variant, intensity }),
+    stance: stanceOf(inst, cat, area, sponsor, variant), measure: measureOf(inst, { category: cat, area: workPlan?.area ?? area, variant, intensity, workPlan }),
     ...(inst.kind === 'europa' ? { committee: committeeOfArea(area).id, rapporteur: null } : {}), source: SIM
   };
 }
@@ -238,15 +278,15 @@ const EU_AREAS = ['europa', 'ambiente', 'agricoltura', 'digitale', 'immigrazione
 export const localAreas = kind => kind === 'europa' ? EU_AREAS : COMPETENCES[kind] ?? [];
 export const isClosedAct = act => CLOSED.includes(act.stage);
 // The themes where the city's services are weakest: the executive and the opposition look at them first.
-function weakCityAreas(inst, count = 2) {
+export function weakCityAreas(inst, count = 2) {
   if (!inst.indicators) return [];
-  const own = COMPETENCES.comune;
-  return CITY_INDICATORS.filter(item => item.areas.some(area => own.includes(area))).sort((a, b) => (inst.indicators[a.id] ?? 50) - (inst.indicators[b.id] ?? 50)).slice(0, count).map(item => item.areas.find(area => own.includes(area)));
+  const own = COMPETENCES[inst.kind] ?? COMPETENCES.comune;
+  return (serviceIndicatorsOf(inst.kind) ?? CITY_INDICATORS).filter(item => item.areas.some(area => own.includes(area))).sort((a, b) => (inst.indicators[a.id] ?? 50) - (inst.indicators[b.id] ?? 50)).slice(0, count).map(item => item.areas.find(area => own.includes(area)));
 }
 // How the territory is doing on a theme: the city's service for a comune, the region's indicators weighed for the theme
 // (territory: those of the society simulation) for a regione.
 export function territoryValue(inst, area, territory = null) {
-  if (inst.kind === 'comune') return inst.indicators?.[cityIndicatorOf(area).id] ?? null;
+  if (inst.kind === 'comune' || inst.kind === 'provincia') return inst.indicators?.[serviceIndicatorOf(inst.kind, area).id] ?? null;
   const weights = Object.entries(regionalWeights(area)).filter(([id]) => Number.isFinite(territory?.[id]));
   const total = weights.reduce((sum, [, weight]) => sum + weight, 0);
   return total ? round1(weights.reduce((sum, [id, weight]) => sum + territory[id] * weight, 0) / total) : null;
@@ -426,7 +466,7 @@ export function setLocalVote(inst, actId, choice) {
 // executive the acts of the Giunta and those it brings to the council (plans, works, taxes...), an MEP an own-initiative
 // report. category: the kind (see ACT_TYPES; by default the one the theme calls for), variant: for taxes, tariffs and
 // town planning.
-export function proposeLocalAct(inst, area, date, { category = null, variant = null, intensity = 2 } = {}) {
+export function proposeLocalAct(inst, area, date, { category = null, variant = null, intensity = 2, work = null } = {}) {
   if (!AREA_BY_ID[area]) throw new Error('Scegli un tema.');
   inst = withLocalState(inst);
   const actor = actorOf(inst);
@@ -440,11 +480,16 @@ export function proposeLocalAct(inst, area, date, { category = null, variant = n
   if (delegated && type && DELEGA_FORBIDDEN.has(type.id)) throw new Error('Bilancio, tributi e statuto non sono atti di una delega: li propone chi guida l’esecutivo.');
   if (!type || (inst.kind !== 'europa' && !type.player.includes(leads || delegated ? 'leader' : 'consigliere'))) throw new Error(leads || delegated ? 'Questo atto non lo propone chi ha una delega o guida l’esecutivo.' : 'Questo atto lo propone solo chi guida l’esecutivo o ha una delega.');
   if (type.id === 'tributi' && inst.acts.some(item => item.category === 'tributi' && !CLOSED.includes(item.stage))) throw new Error('C’è già una proposta sulle aliquote in discussione.');
-  const theme = typeFitsArea(type, area) ? area : type.areas[0];
+  // A public work: its plan decides the theme; the institution can only propose what its level builds, with the money and the sites it has.
+  const plan = type.id === 'opere' && inst.kind !== 'europa' ? planWork(inst, { typeId: work?.typeId ?? null, area, funding: work?.funding ?? null, site: work?.site ?? 'periferia' }) : null;
+  if (plan) {
+    if (delegated && !(inst.playerDelega?.areas ?? []).includes(plan.area)) throw new Error(`La tua delega (${inst.playerDelega?.portfolio}) non comprende quest’opera: la governa la giunta.`);
+  }
+  const theme = plan ? plan.area : typeFitsArea(type, area) ? area : type.areas[0];
   const choice = type.variants ? (type.variants.includes(variant) ? variant : type.variants[0]) : null;
   const title = inst.kind === 'europa' ? `${INSTITUTIONS.europa.acts.player}: ${AREA_BY_ID[area].label.toLowerCase()}` : actTitle(inst.kind, type.id, theme, { variant: choice });
   const cap = actor === 'delegato' ? DELEGA_RULES.intensityCap : 3;
-  const act = newAct(inst, { kind: 'player', sponsor: { kind: leads || delegated ? 'executive' : 'player', groupId: inst.playerGroupId, label: delegated ? `Tu, ${inst.playerDelega.portfolio.toLowerCase()}` : 'Tu', axis: inst.groups.find(group => group.id === inst.playerGroupId)?.axis ?? 0 }, area: theme, title, date, category: type.id, variant: choice, intensity: leads ? intensity : Math.min(intensity, cap) });
+  const act = newAct(inst, { kind: 'player', sponsor: { kind: leads || delegated ? 'executive' : 'player', groupId: inst.playerGroupId, label: delegated ? `Tu, ${inst.playerDelega.portfolio.toLowerCase()}` : 'Tu', axis: inst.groups.find(group => group.id === inst.playerGroupId)?.axis ?? 0 }, area: theme, title, date, category: type.id, variant: choice, intensity: leads ? intensity : Math.min(intensity, cap), work: plan ? { typeId: plan.typeId, funding: plan.funding, site: plan.site } : null });
   return record({ ...inst, acts: [...inst.acts, { ...act, ...(delegated ? { byDelega: true } : {}), pendingPlayerVote: 'favorevole' }] }, date, delegated ? `Presenti alla giunta “${title}” (delega ${inst.playerDelega.portfolio}).` : `Presenti “${title}”.`, 'proposta');
 }
 // The executive (the player as mayor or president) wins a wavering group with a concession on an act.
@@ -680,18 +725,20 @@ function cityEffects(act, measure) {
     ...(measure.lasting ? [] : [{ actId: act.id, title: `${act.title} (fine dell’effetto)`, indicator, perWeek: round2(-delta * 0.6 / 12), remaining: 12, delay: measure.phase }])
   ]);
 }
-const scaled = (indicators, factor) => Object.fromEntries(Object.entries(indicators).map(([id, value]) => [id, round2(value * factor)]));
-// What an act of a city brings to its region: a share, on the region's indicators.
-function cityToRegion(indicators) {
+// What an act of a city or a province brings to its region: a share (the province's is larger), on the region's indicators.
+function serviceShare(kind, indicators) {
   const out = {};
+  const share = kind === 'provincia' ? PROVINCE_SHARE_OF_REGION : CITY_SHARE_OF_REGION;
   for (const [id, delta] of Object.entries(indicators)) {
-    const region = CITY_INDICATORS.find(item => item.id === id)?.region;
-    if (region) out[region] = round2((out[region] ?? 0) + delta * CITY_SHARE_OF_REGION);
+    const region = serviceIndicatorsOf(kind)?.find(item => item.id === id)?.region;
+    if (region) out[region] = round2((out[region] ?? 0) + delta * share);
   }
   return out;
 }
 // A week of the city: the effects of the approved acts arrive; without care the services wear out, more in a
 // provisional budget (only the mandatory spending goes on).
+// The structures that wear fastest without care (roads, buildings, transport): the comune's and the province's.
+const HEAVY_WEAR = Object.freeze({ comune: ['opere', 'mobilita', 'sociale', 'territorio'], provincia: ['viabilita', 'scuole', 'trasporti', 'territorio'] });
 function cityWeek(inst, rand) {
   const indicators = { ...inst.indicators };
   const effects = [];
@@ -700,26 +747,30 @@ function cityWeek(inst, rand) {
     indicators[effect.indicator] = round1(clamp((indicators[effect.indicator] ?? 50) + effect.perWeek, 0, 100));
     if (effect.remaining > 1) effects.push({ ...effect, remaining: effect.remaining - 1 });
   }
-  for (const item of CITY_INDICATORS) {
+  for (const item of serviceIndicatorsOf(inst.kind) ?? CITY_INDICATORS) {
     const value = indicators[item.id] ?? 50;
-    const wear = ['opere', 'mobilita', 'sociale', 'territorio'].includes(item.id) ? 0.04 : 0.02;
+    const wear = (HEAVY_WEAR[inst.kind] ?? []).includes(item.id) ? 0.04 : 0.02;
     indicators[item.id] = round1(clamp(value - wear - (inst.budget?.provisional ? 0.15 : 0) + (50 - value) * 0.004 + (rand() - 0.5) * 0.3, 0, 100));
   }
   return { ...inst, indicators, effects };
 }
 // What the executive brings on a theme: a kind of act among those that fit it (as often as each is used), a tax change
 // when the budget asks for it, an intensity; with a provisional budget only acts without new spending.
-function executivePlan(inst, area, rand) {
+function executivePlan(inst, area, rand, { promised = false, date = null } = {}) {
   const margin = inst.budget?.margin ?? 50;
   const tax = inst.budget?.localTax ?? 'media';
   // Only an institution with taxes of its own (a comune, a region) moves them: a province has none.
   const taxType = actTypeOf(inst.kind, 'tributi');
   if (taxType && margin < 18 && tax !== 'alta' && rand() < 0.3) return { type: taxType, area: 'fisco', variant: 'aumento', intensity: 2 };
   if (taxType && margin > 78 && tax !== 'bassa' && rand() < 0.15) return { type: taxType, area: 'fisco', variant: 'riduzione', intensity: 2 };
-  const pool = ACT_TYPES[inst.kind].filter(type => type.weight > 0 && type.id !== 'tributi' && typeFitsArea(type, area) && (!inst.budget?.provisional || type.cost <= 0.5));
+  // A work only where the level builds something on the theme and the sites and the money allow it (a promise made to the council weighs on the choice).
+  const builds = availableWorkTypes(inst, area, date).length > 0 && !workGap(inst, 2);
+  const pool = ACT_TYPES[inst.kind].filter(type => type.weight > 0 && type.id !== 'tributi' && typeFitsArea(type, area) && (!inst.budget?.provisional || type.cost <= 0.5) && (type.id !== 'opere' || builds));
   if (!pool.length) return { type: actTypeOf(inst.kind, 'regolamento'), area, variant: null, intensity: 2 };
+  if (builds && promised && pool.some(item => item.id === 'opere') && rand() < 0.5) return { type: pool.find(item => item.id === 'opere'), area, variant: null, intensity: 2, work: executiveWorkChoice(inst, area, rand, date) };
   let pick = rand() * pool.reduce((sum, type) => sum + type.weight, 0);
   const type = pool.find(item => (pick -= item.weight) < 0) ?? pool[0];
+  if (type.id === 'opere') return { type, area, variant: null, intensity: 2, work: executiveWorkChoice(inst, area, rand, date) };
   const camp = inst.executive?.camp ?? 'centro';
   const variant = type.id === 'urbanistica' ? (rand() < (camp === 'destra' ? 0.65 : camp === 'sinistra' ? 0.25 : 0.45) ? 'espansione' : 'rigenerazione') : type.id === 'tariffe' ? (margin < 35 ? 'aumento' : 'riduzione') : null;
   const draw = rand();
@@ -730,6 +781,7 @@ export function coverageGap(inst, act) {
   const cost = act.measure?.cost ?? 0;
   if (!inst.budget || cost <= 0) return null;
   if (inst.budget.provisional) return 'esercizio provvisorio: niente nuove spese finché non passa il bilancio';
+  if (act.workPlan || act.measure?.work) return workGap(inst, cost);
   if (cost > inst.budget.margin) return `manca la copertura finanziaria (servono ${cost} punti di margine, ce ne sono ${inst.budget.margin})`;
   return null;
 }
@@ -739,13 +791,20 @@ function applyApproved(inst, act, date, events) {
   let next = inst;
   const measure = act.measure ?? null;
   const category = categoryOf(inst, act);
-  if (next.budget && measure) {
+  // A public work starts instead of paying and improving at once: the share reserved now, the rest and the benefits as the site goes on.
+  const isWork = category === 'opere' && next.kind !== 'europa';
+  if (isWork) {
+    const started = startWork(next, act, { date });
+    next = record(started.inst, date, `Via libera all’opera “${started.work.label}”: ${started.work.permitLeft > 0 ? `autorizzazioni (${started.work.permitLeft} settimane), poi progetto, gara e cantiere` : 'progetto, gara e cantiere'}; preventivo ${started.work.cost} punti di margine, ${started.work.committed} già impegnati.`, 'opera');
+    events.push({ type: 'opera-avviata', workId: started.work.id, title: started.work.title, label: started.work.label, area: started.work.area, cost: started.work.cost, weeks: started.work.weeks, byPlayer: started.work.byPlayer, sponsor: act.sponsor?.kind ?? null });
+  }
+  if (next.budget && measure && !isWork) {
     const localTax = measure.tax ? TAX_STEPS[clamp(TAX_STEPS.indexOf(next.budget.localTax) + (measure.tax === 'su' ? 1 : -1), 0, 2)] : next.budget.localTax;
     next = { ...next, budget: { ...next.budget, margin: round1(clamp(next.budget.margin - measure.cost + measure.revenue, 0, 100)), localTax } };
   }
-  if (measure && Object.keys(measure.indicators).length) {
-    if (next.kind === 'comune') next = { ...next, effects: [...(next.effects ?? []), ...cityEffects(act, measure)] };
-    events.push({ type: 'effetti', actId: act.id, title: act.title, kind: next.kind, region: next.region, indicators: next.kind === 'regione' ? measure.indicators : next.kind === 'provincia' ? scaled(measure.indicators, PROVINCE_SHARE_OF_REGION) : cityToRegion(measure.indicators), phase: measure.phase, lasting: measure.lasting, segments: measure.segments });
+  if (measure && Object.keys(measure.indicators).length && !isWork) {
+    if (next.kind === 'comune' || next.kind === 'provincia') next = { ...next, effects: [...(next.effects ?? []), ...cityEffects(act, measure)] };
+    events.push({ type: 'effetti', actId: act.id, title: act.title, kind: next.kind, region: next.region, indicators: next.kind === 'regione' ? measure.indicators : serviceShare(next.kind, measure.indicators), phase: measure.phase, lasting: measure.lasting, segments: measure.segments });
   }
   if (category === 'bilancio' && next.budget) {
     const year = Number(act.title.match(/(\d{4})$/)?.[1] ?? Number(date.slice(0, 4)) + 1);
@@ -780,8 +839,8 @@ function applyRejected(inst, act, date, events) {
     }
   }
   if (category === 'opere' && act.measure) {
-    if (next.kind === 'comune' && next.indicators) { const id = cityIndicatorOf(act.area).id; next = { ...next, indicators: { ...next.indicators, [id]: round1(clamp(next.indicators[id] - 1, 0, 100)) } }; }
-    else if (['regione', 'provincia'].includes(next.kind)) events.push({ type: 'effetti', actId: act.id, title: `${act.title} (fondi persi)`, kind: next.kind, region: next.region, indicators: Object.fromEntries(Object.entries(regionalWeights(act.area)).map(([id, weight]) => [id, round2(-0.8 * weight * (next.kind === 'provincia' ? PROVINCE_SHARE_OF_REGION : 1))])), phase: 1, lasting: true, immediate: true, segments: {} });
+    if (['comune', 'provincia'].includes(next.kind) && next.indicators) { const id = serviceIndicatorOf(next.kind, act.area).id; next = { ...next, indicators: { ...next.indicators, [id]: round1(clamp(next.indicators[id] - 1, 0, 100)) } }; }
+    else if (next.kind === 'regione') events.push({ type: 'effetti', actId: act.id, title: `${act.title} (fondi persi)`, kind: next.kind, region: next.region, indicators: Object.fromEntries(Object.entries(regionalWeights(act.area)).map(([id, weight]) => [id, round2(-0.8 * weight * (next.kind === 'provincia' ? PROVINCE_SHARE_OF_REGION : 1))])), phase: 1, lasting: true, immediate: true, segments: {} });
   }
   if (category === 'mozione') {
     const sponsor = next.groups.find(group => group.id === act.sponsor.groupId);
@@ -809,8 +868,8 @@ function answerQuestion(inst, act, date, territory, events) {
 export function advanceInstitutionWeek(input, { date, rand = Math.random, issues = [], territory = null } = {}) {
   let inst = withLocalState(withEuropeanSeat(input, date));
   if (!inst || inst.status !== 'active') return { inst: input, events: [], lines: [] };
-  // A region or a province keeps the services of its territory (a term that began before this was recorded takes its starting point from the first week it sees).
-  if (territory && ['regione', 'provincia'].includes(inst.kind) && servicesOf(territory) !== null) inst = { ...inst, territoryServices: servicesOf(territory), baseline: { ...(inst.baseline ?? {}), services: inst.baseline?.services ?? servicesOf(territory) } };
+  // A region keeps the services of its territory (a term that began before this was recorded takes its starting point from the first week it sees); a comune and a province have their own.
+  if (territory && inst.kind === 'regione' && servicesOf(territory) !== null) inst = { ...inst, territoryServices: servicesOf(territory), baseline: { ...(inst.baseline ?? {}), services: inst.baseline?.services ?? servicesOf(territory) } };
   const rules = INSTITUTIONS[inst.kind];
   const events = [];
   const lines = [];
@@ -825,7 +884,9 @@ export function advanceInstitutionWeek(input, { date, rand = Math.random, issues
   const budgetSponsor = { kind: 'budget', groupId: inst.executive?.leader === 'player' ? inst.playerGroupId : leaderGroup?.id ?? null, label: rules.executive, axis: leaderGroup?.axis ?? 0 };
   const localIssues = issues.filter(area => (COMPETENCES[inst.kind] ?? []).includes(area));
   // The territory: the city's services move with the approved acts; a region in provisional budget loses ground.
-  if (inst.kind === 'comune') inst = cityWeek(inst, seededRandom(`${inst.id}|servizi|${date}`));
+  if (['comune', 'provincia'].includes(inst.kind)) inst = cityWeek(inst, seededRandom(`${inst.id}|servizi|${date}`));
+  // The public works of the institution: authorisations, design, tender, site, opening, upkeep; the money follows the work.
+  { const out = advanceWorks(inst, { date, rand: seededRandom(`${inst.id}|opere|${date}`) }); inst = out.inst; events.push(...out.events); }
   if (['regione', 'provincia'].includes(inst.kind) && inst.budget?.provisional) events.push({ type: 'effetti', title: 'Esercizio provvisorio', kind: inst.kind, region: inst.region, indicators: inst.kind === 'provincia' ? { servizi: -0.06, infrastrutture: -0.06 } : { servizi: -0.15, sanita: -0.15 }, phase: 1, lasting: true, immediate: true, segments: {} });
   // New acts. The budget: in autumn for the next year, or as soon as possible when a year runs without one.
   if (inst.budget && ((month >= 11 && inst.budget.approvedYear < year + 1) || inst.budget.approvedYear < year) && !inst.acts.some(item => item.budget && !CLOSED.includes(item.stage)) && (!inst.budget.retryAt || inst.budget.retryAt <= date)) {
@@ -833,7 +894,7 @@ export function advanceInstitutionWeek(input, { date, rand = Math.random, issues
   }
   // In July the general adjustment of the budget gives resources to the weakest service.
   if (inst.budget && month === 7 && inst.budget.adjustedYear !== year && !inst.budget.provisional) {
-    const area = inst.kind === 'comune' ? weakCityAreas(inst, 1)[0] ?? 'pa' : localIssues[0] ?? (inst.kind === 'provincia' ? 'infrastrutture' : 'sanita');
+    const area = ['comune', 'provincia'].includes(inst.kind) ? weakCityAreas(inst, 1)[0] ?? 'pa' : localIssues[0] ?? 'sanita';
     inst = { ...inst, budget: { ...inst.budget, adjustedYear: year } };
     add(newAct(inst, { kind: 'budget', sponsor: budgetSponsor, area, title: `Assestamento generale di bilancio ${year}: fondi per ${AREA_BY_ID[area]?.label.toLowerCase() ?? area}`, date, category: 'variazione' }));
   }
@@ -848,10 +909,10 @@ export function advanceInstitutionWeek(input, { date, rand = Math.random, issues
       } else {
         // The executive answers the council's commitments, the problems of the territory, its own priorities.
         const committed = (inst.commitments ?? []).filter(item => item.status === 'aperto' && (COMPETENCES[inst.kind] ?? []).includes(item.area)).map(item => item.area);
-        const problems = inst.kind === 'comune' ? [...new Set([...localIssues, ...weakCityAreas(inst)])] : localIssues;
+        const problems = ['comune', 'provincia'].includes(inst.kind) ? [...new Set([...localIssues, ...weakCityAreas(inst)])] : localIssues;
         const area = committed.length && rand() < 0.6 ? pickArea(committed) : problems.length && rand() < 0.6 ? pickArea(problems) : pickArea(within(inst.kind, CAMP_PRIORITIES[inst.executive?.camp ?? 'centro']));
-        const plan = executivePlan(inst, area, rand);
-        add(newAct(inst, { kind: 'executive', sponsor, area: plan.area, title: actTitle(inst.kind, plan.type.id, plan.area, { variant: plan.variant }), date, category: plan.type.id, variant: plan.variant, intensity: plan.intensity }));
+        const plan = executivePlan(inst, area, rand, { promised: committed.includes(area), date });
+        add(newAct(inst, { kind: 'executive', sponsor, area: plan.area, title: actTitle(inst.kind, plan.type.id, plan.area, { variant: plan.variant }), date, category: plan.type.id, variant: plan.variant, intensity: plan.intensity, work: plan.work ?? null }));
       }
     }
     for (const [pool, kind] of [[majority, 'majority'], [opposition, 'opposition']]) {
@@ -870,7 +931,7 @@ export function advanceInstitutionWeek(input, { date, rand = Math.random, issues
     // The opposition questions the executive on what works worst.
     if (inst.kind !== 'europa' && opposition.length && !inst.acts.some(item => item.category === 'interrogazione' && item.kind === 'opposition' && !CLOSED.includes(item.stage)) && rand() < 0.12) {
       const group = opposition[Math.floor(rand() * opposition.length)];
-      const problems = inst.kind === 'comune' ? weakCityAreas(inst) : localIssues;
+      const problems = ['comune', 'provincia'].includes(inst.kind) ? weakCityAreas(inst) : localIssues;
       const area = problems.length ? pickArea(problems) : pickArea(within(inst.kind, CAMP_PRIORITIES[group.camp]));
       if (group.id !== inst.playerGroupId) add(newAct(inst, { kind: 'opposition', sponsor: { kind: 'opposition', groupId: group.id, label: group.label, axis: group.axis ?? 0 }, area, title: actTitle(inst.kind, 'interrogazione', area), date, category: 'interrogazione' }));
     }

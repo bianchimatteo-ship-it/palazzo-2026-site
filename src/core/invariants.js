@@ -378,6 +378,20 @@ function checkLocal(state, report) {
       const cast = (row.yesVotes ?? 0) + (row.noVotes ?? 0) + (row.abstainVotes ?? 0) + (row.absent ?? 0);
       if (Number.isFinite(row.seats) && cast !== row.seats) report('voti', `${path}.acts[${inner}]`, `${act.title}: gruppo ${row.groupId} con ${cast} voti su ${row.seats} seggi`);
     }
+    // The public works: each one is paid once (what was drawn from the margin is never more than its cost, nor less than the work done), stands in the territory of its institution,
+    // and the margin of the institution stays in its scale.
+    const ids = new Set();
+    for (const [inner, work] of records(inst.works).entries()) {
+      const at = `${path}.works[${inner}]`;
+      if (ids.has(work.id)) report('opere', at, `Opera duplicata: ${work.id}`);
+      ids.add(work.id);
+      if (!['autorizzazioni', 'progettazione', 'gara', 'cantiere', 'collaudo', 'completato', 'sospeso'].includes(work.stage)) report('opere', at, `Fase dell'opera non valida: ${work.stage}`);
+      if (!(work.progress >= 0 && work.progress <= 100)) report('opere', at, `Avanzamento fuori scala: ${work.progress}`);
+      if (!(work.cost > 0) || work.drawn > work.cost + 0.11 || work.drawn < -0.01) report('opere', at, `${work.title}: ${work.drawn} punti prelevati su un costo di ${work.cost}`);
+      if (work.stage !== 'sospeso' && work.drawn + 0.11 < work.cost * work.progress / 100) report('opere', at, `${work.title}: lavori per ${Math.round(work.cost * work.progress) / 100} punti ma solo ${work.drawn} prelevati`);
+      if (work.territory?.region && inst.region && work.territory.region !== inst.region) report('opere', at, `${work.title}: l'opera è in ${work.territory.region}, l'ente in ${inst.region}`);
+    }
+    if (inst.budget && !(inst.budget.margin >= 0 && inst.budget.margin <= 100)) report('bilancio', path, `Margine di bilancio fuori scala: ${inst.budget.margin}`);
   });
 }
 
@@ -446,6 +460,7 @@ function checkAgenda(state, known, report) {
       const inst = institutions.get(params.instId);
       if (!inst) report('riferimento', path, `Decisione «${item.title}»: istituzione ${params.instId} inesistente`);
       else if (params.actId && ![...records(inst.acts), ...records(inst.archive)].some(act => act.id === params.actId)) report('riferimento', path, `Decisione «${item.title}»: atto ${params.actId} inesistente`);
+      else if (params.workId && !records(inst.works).some(work => work.id === params.workId)) report('riferimento', path, `Decisione «${item.title}»: opera ${params.workId} inesistente`);
     }
   });
 }

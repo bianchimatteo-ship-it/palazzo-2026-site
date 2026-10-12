@@ -22,6 +22,7 @@ import { CADRE_ACTIONS, LIFE_MEMORY_KINDS, LIFE_SITUATIONS, SPLINTER_NAMES } fro
 import { DAILY_EVENTS } from '../data/simulation/daily-events.js?v=20261012-3';
 import { eventDay, pickWeighted, reactionRelevance } from './event-engine.js?v=20261012-3';
 import { heldOffices, localOffices } from './office-engine.js?v=20261012-3';
+import { worksSignals } from './local-works-engine.js?v=20261012-3';
 import { SECTOR_GAINS, advanceStanding, applyStandingEffects, createStanding, gainSector, normalizeStanding, sectorValue, standingOf } from './standing-engine.js?v=20261012-3';
 import { EVENT_SECTORS } from '../data/simulation/standing-rules.js?v=20261012-3';
 import { affiliationOf, scenarioCapitalGain, scenarioGrowth, scenarioInit, scenarioOf } from './scenario-engine.js?v=20261012-3';
@@ -42,7 +43,7 @@ const round2 = value => Math.round(value * 100) / 100;
 const copy = value => value == null ? value : JSON.parse(JSON.stringify(value));
 const hash = value => [...String(value)].reduce((n, char) => (n * 31 + char.charCodeAt(0)) >>> 0, 2166136261) || 1;
 const signed = value => `${value > 0 ? '+' : ''}${String(round2(value)).replace('.', ',')}`;
-const LOCAL_EVENTS = ['protesta', 'maltempo', 'sindacati-vertenza'];
+const LOCAL_EVENTS = ['protesta', 'maltempo', 'sindacati-vertenza', 'opera-richiesta', 'opera-richiesta-consigliere', 'opera-sforamento', 'opera-ritardo', 'opera-fondi', 'opera-protesta', 'opera-inaugurazione', 'opera-manutenzione'];
 const RELATION_BASES = Object.fromEntries(RELATION_TEMPLATES.map(item => [item.id, item.base]));
 // The difficulty chosen at the start: every system below reads it from the career itself.
 const rules = game => difficultyOf(game?.difficulty);
@@ -105,6 +106,10 @@ export function situation(ctx, env = {}) {
       groupLeader: held.includes('capogruppo') || held.includes('capogruppo-consiliare'), deputyPremier: held.includes('vicepremier')
     },
     office, holds: id => held.includes(id), held,
+    // The public works the player can steer (leads or has the delega), how many are in trouble, whether the player sits in a council from the opposition and has a proposal in discussion.
+    works: worksSignals(env.institutions ?? []),
+    oppositionLocal: (env.institutions ?? []).some(inst => inst?.status === 'active' && inst.kind !== 'europa' && inst.executive?.leader !== 'player' && !inst.playerDelega && inst.playerSide === 'opposizione'),
+    localOpen: (env.institutions ?? []).some(inst => inst?.status === 'active' && inst.kind !== 'europa' && inst.playerSide === 'opposizione' && (inst.acts ?? []).some(act => act.sponsor?.kind === 'player' && !['approvato', 'respinto', 'ritirato', 'risposto'].includes(act.stage))),
     // The reputations and the sectors of influence (standing-engine): events and promotions read them.
     standing: standingOf({ game: ctx.game, stats: ctx.stats, parliament }), sector: id => sectorValue(ctx.game.standing, id),
     territory: control ? { control: control.index, count: control.count, withYou: control.byStance.tuo + control.byStance['con-te'], distant: control.byStance.distante, against: control.byStance.contro, critical: cadres.filter(item => item.status !== 'attivo').length, ambitious: cadres.filter(item => item.ambition >= 60 && item.loyalty >= 55 && item.status === 'attivo').length } : null,
@@ -581,9 +586,13 @@ export function performActivity(input, env, activityId, targetId = null) {
     tone = 'bad';
   }
   schedule(ctx.game, activity.later, activity.label);
+  // What the activity does to the institution where the player sits (a council is not part of the career state: the store applies it).
+  const specials = [];
+  pushLocal(activity.effects, specials, lines);
+  if (tone === 'bad') pushLocal(activity.risk?.effects, specials, lines);
   addLog(ctx.game, env.currentDate, 'attività', activity.label, lines, tone);
   const completed = refreshObjectives(ctx, env, [], env.currentDate);
-  return { ctx, report: { title: activity.label, lines, tone }, completed, activity, targetId };
+  return { ctx, report: { title: activity.label, lines, tone }, completed, activity, targetId, specials };
 }
 
 // ---------- investments ----------
@@ -884,6 +893,12 @@ export function describeEffects(effects = {}) {
   if (effects.local?.stability) parts.push(`Stabilità dell’esecutivo locale ${signed(effects.local.stability)}`);
   if (effects.local?.pressure) parts.push(`Pressione sull’ente ${signed(effects.local.pressure)}`);
   if (effects.local?.margin) parts.push(`Margine di bilancio ${signed(effects.local.margin)}`);
+  if (effects.local?.workBoost) parts.push(`Cantieri più veloci per ${effects.local.workBoost} settimane`);
+  if (effects.local?.workUnblock) parts.push('Cantieri fermi sbloccati');
+  if (effects.local?.service) parts.push(`Servizio più debole ${signed(effects.local.service)}`);
+  if (effects.local?.scrutiny) parts.push('Pressione sui cantieri in ritardo');
+  if (effects.local?.motion) parts.push('Mozione sul servizio più debole');
+  if (effects.local?.negotiate) parts.push('Testo condiviso per la tua proposta');
   return parts.join(' · ');
 }
 export function describeChoice(item, choiceId) {
@@ -974,7 +989,9 @@ const WORLD_SPECIALS = ['dossier-fund', 'dossier-draft', 'dossier-postpone', 'do
   // The player's vote on a confidence vote, the answer to a request of external support (cabinet-engine).
   'confidence-vote-line', 'confidence-vote-yes', 'confidence-vote-no', 'confidence-vote-abstain', 'confidence-vote-absent', 'support-accept', 'support-refuse',
   // Local and European institutions (local-engine): the player's vote in the council, a group threatening to leave.
-  'local-vote-line', 'local-vote-yes', 'local-vote-no', 'local-vote-abstain', 'local-vote-absent', 'local-concede', 'local-hold'];
+  'local-vote-line', 'local-vote-yes', 'local-vote-no', 'local-vote-abstain', 'local-vote-absent', 'local-concede', 'local-hold',
+  // The public works of the institutions (local-works-engine): the decisions of the chain request, overrun, delay, protest, opening, upkeep.
+  'work-request-promise', 'work-request-motion', 'work-integrate', 'work-scale', 'work-suspend', 'work-commissioner', 'work-wait', 'work-refund', 'work-protest-dialog', 'work-protest-compensate', 'work-protest-ignore', 'work-inaugurate', 'work-inaugurate-light', 'work-upkeep-pay'];
 function handleSpecial(ctx, env, special, item, lines, specials, choice = {}) {
   const game = ctx.game;
   if (WORLD_SPECIALS.includes(special) || special.startsWith('presidency-')) { specials.push({ type: special, params: item.params ?? {} }); return; }

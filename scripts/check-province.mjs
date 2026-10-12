@@ -118,9 +118,10 @@ for (const place of places) {
   assert.ok(vote && vote.status === 'upcoming' && vote.label.includes(place.draft.provinceName ?? 'Siena') && vote.electionDate > s.clock.currentDate, `${place.label}: il voto provinciale è in calendario (${vote?.electionDate})`);
   assert.deepEqual(heldOfficesOf(s), ['consigliere-provinciale', 'consigliere-comunale']);
   assert.ok(playerRoles(s).roles.some(([, label]) => label === 'Consigliere provinciale'), `${place.label}: il ruolo è tra quelli del giocatore`);
-  const html = renderInstitutions(s);
+  const html = renderInstitutions(s, { localInst: 'provincia' });
   clean(html, `${place.label}: istituzioni`);
-  assert.ok(html.includes('id="istituzione-provincia"') && html.includes('Consiglio provinciale') && html.includes('Stato del territorio provinciale') && !html.includes('data-local-tax'), `${place.label}: la scheda della Provincia non ha tributi`);
+  const territory = renderInstitutions(s, { localInst: 'provincia', localSection: 'territorio' }), budget = renderInstitutions(s, { localInst: 'provincia', localSection: 'bilancio' });
+  assert.ok(html.includes('id="istituzione-provincia"') && html.includes('Consiglio provinciale') && territory.includes('Stato del territorio provinciale') && territory.includes('Strade provinciali e ponti') && !html.includes('data-local-tax') && !budget.includes('data-local-tax'), `${place.label}: la scheda della Provincia ha servizi propri e non ha tributi`);
   // Seats with people: the provincial council (and the comune's) has one simulated person for each seat, the player's in his group.
   for (const inst of s.local.institutions.filter(item => item.status === 'active')) {
     const seats = R.rosterSeats(inst.roster);
@@ -132,7 +133,7 @@ for (const place of places) {
   const provincialSeats = R.rosterSeats(provincia.roster);
   const provincialPeople = provincialSeats.filter(seat => seat.origin !== 'player').map(seat => s.dataset.politicians.find(item => item.id === seat.personId));
   assert.ok(provincialSeats.some(seat => seat.leader) && provincialPeople.length > 0 && provincialPeople.every(person => person?.firstName && person.lastName && !/simulat[oa] n\./i.test(person.displayName ?? '')), `${place.label}: il consiglio provinciale ha il presidente e persone simulate con identità stabile`);
-  const dots = html.match(/<circle class="hemi-seat[^>]*data-local-seat="[^"]+"/g) ?? [];
+  const dots = (html + renderInstitutions(s, { localInst: 'comune' })).match(/<circle class="hemi-seat[^>]*data-local-seat="[^"]+"/g) ?? [];
   assert.equal(dots.length, s.local.institutions.filter(item => item.status === 'active').reduce((sum, inst) => sum + inst.seats, 0), `${place.label}: un punto per ogni seggio dei due consigli`);
   noIssues(s, place.label);
 }
@@ -222,7 +223,7 @@ for (const place of places) {
   assert.ok(roles.roles.some(([, label]) => /^Presidente della Provincia di /.test(label)), 'Il ruolo: Presidente della Provincia');
   assert.ok(roles.powers.find(power => /Assemblea dei sindaci/.test(power.label))?.enabled, 'Il Presidente guida l’Assemblea dei sindaci');
   assert.ok(roles.powers.find(power => /^Giunta, assessori/.test(power.label))?.enabled && !roles.powers.find(power => /Tributi locali/.test(power.label)) === false, 'Compone la giunta; i tributi sono del Comune');
-  const html = renderInstitutions(state);
+  const html = renderInstitutions(state, { localInst: 'provincia' });
   clean(html, 'presidente della Provincia');
   assert.ok(/Presidente della Provincia · guidi/.test(html) && /Guidi l’esecutivo/.test(html), 'La scheda dice che guidi l’ente');
   // Da presidente si propongono gli atti dell’esecutivo; le aliquote no (non le ha).

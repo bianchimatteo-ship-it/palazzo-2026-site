@@ -132,7 +132,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
     logoQuery:'', logoPage:1
   };
   const admin = { tab: 'partiti', query: '', linkQuery: '', chamber: 'all', partyId: null, politicianId: null, message: '', listPage: 1, partyFilter: 'tutti', creating: false, checking: false };
-  const territory = { measure: 'satisfaction', region: null, localSeat: null };
+  const territory = { measure: 'satisfaction', region: null, localSeat: null, localInst: null, localSection: null };
   const archive = { tab: 'partiti' };
   // Tabs and filters of the sections survive redraws and navigation; they are kept in this browser (per viewer).
   const VIEWS_KEY = 'politicando.views.v1';
@@ -254,7 +254,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
   // are kept in this browser like the tabs: they survive redraws, navigation and a reload.
   const VIEW_FIELDS = Object.freeze({
     catalog: ['partyQuery', 'partyPresence', 'partyType', 'partyLevel', 'partyRegion', 'partyStatus', 'partyElection', 'partySort', 'partyPage', 'politicianQuery', 'politicianChamber', 'politicianParty', 'politicianGroup', 'politicianPage'],
-    admin: ['tab', 'chamber', 'partyFilter'], territory: ['measure', 'region', 'localSeat'], archive: ['tab'], realLaws: ['query', 'outcome', 'area', 'page']
+    admin: ['tab', 'chamber', 'partyFilter'], territory: ['measure', 'region', 'localSeat', 'localInst', 'localSection'], archive: ['tab'], realLaws: ['query', 'outcome', 'area', 'page']
   });
   const viewTargets = { catalog, admin, territory, archive, realLaws };
   for (const [name, fields] of Object.entries(VIEW_FIELDS)) for (const field of fields) {
@@ -893,13 +893,15 @@ export function mountApp(root, store, { retryData = null } = {}) {
       catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(),store.getLastSaved()); }
       return;
     }
-    const localControl = event.target.closest('[data-local-vote],[data-local-question],[data-local-concede],[data-local-tax],[data-ep-rapporteur],[data-ep-amend],[data-ep-role]');
+    const localControl = event.target.closest('[data-local-vote],[data-local-question],[data-local-concede],[data-local-tax],[data-ep-rapporteur],[data-ep-amend],[data-ep-role],[data-work-action],[data-work-motion]');
     if (localControl) {
       const { instId, actId } = localControl.dataset;
       try {
         if (localControl.dataset.localVote) store.castLocalVote(instId, actId, localControl.dataset.localVote);
         else if (localControl.dataset.localConcede) store.concedeLocal(instId, actId, localControl.dataset.localConcede);
         else if (localControl.dataset.localTax) store.setLocalTaxLevel(instId, localControl.dataset.localTax);
+        else if (localControl.dataset.workAction) store.manageLocalWork(instId, localControl.dataset.workId, localControl.dataset.workAction);
+        else if (localControl.dataset.workMotion) store.proposeLocalAct(instId, localControl.dataset.workMotion, 'mozione');
         else if ('epRapporteur' in localControl.dataset) store.bidEuropeanRapporteur(instId, actId);
         else if ('epAmend' in localControl.dataset) store.tableEuropeanAmendment(instId, actId);
         else if ('epRole' in localControl.dataset) store.runForEuropeanRole(instId);
@@ -1033,6 +1035,8 @@ export function mountApp(root, store, { retryData = null } = {}) {
       return;
     }
     const scrollTarget = event.target.closest('[data-scroll]')?.dataset.scroll;
+    // A link to a mandate opens that mandate (one is shown at a time).
+    if (scrollTarget?.startsWith('istituzione-')) territory.localInst = scrollTarget.slice('istituzione-'.length);
     if (scrollTarget && event.target.closest('[data-scroll]').matches?.('[data-nav]') && !globalThis.document?.getElementById?.(scrollTarget)) pendingScroll = scrollTarget;
     else if (scrollTarget) {
       const target = document.getElementById(scrollTarget);
@@ -1041,11 +1045,13 @@ export function mountApp(root, store, { retryData = null } = {}) {
       target?.scrollIntoView({ behavior: settings.motion === 'full' ? 'smooth' : 'auto', block: 'start' });
       return;
     }
-    const simulationControl = event.target.closest('[data-local-seat],[data-territory-measure],[data-territory-region],[data-budget-line],[data-party-priority],[data-real-law-more],[data-real-law-amend],[data-invest],[data-election-fund],[data-reserve],[data-reserve-release]');
+    const simulationControl = event.target.closest('[data-local-seat],[data-local-inst],[data-local-section],[data-territory-measure],[data-territory-region],[data-budget-line],[data-party-priority],[data-real-law-more],[data-real-law-amend],[data-invest],[data-election-fund],[data-reserve],[data-reserve-release]');
     if (simulationControl) {
       const data = simulationControl.dataset;
       try {
-        if (data.localSeat) { territory.localSeat = territory.localSeat === data.localSeat ? null : data.localSeat; render(store.getState(), store.getLastSaved()); }
+        if (data.localInst) { territory.localInst = data.localInst; territory.localSection = null; territory.localSeat = null; saveViews(); render(store.getState(), store.getLastSaved()); }
+        else if (data.localSection) { territory.localSection = data.localSection; saveViews(); render(store.getState(), store.getLastSaved()); }
+        else if (data.localSeat) { territory.localSeat = territory.localSeat === data.localSeat ? null : data.localSeat; render(store.getState(), store.getLastSaved()); }
         else if (data.territoryMeasure) { territory.measure = data.territoryMeasure; render(store.getState(), store.getLastSaved()); }
         else if (data.territoryRegion) { territory.region = data.territoryRegion; render(store.getState(), store.getLastSaved()); root.querySelector('.region-detail')?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' }); }
         else if (data.budgetLine) store.setBudget(data.budgetLine, Number(data.budgetLevel));
@@ -1394,12 +1400,14 @@ export function mountApp(root, store, { retryData = null } = {}) {
       const reference = (realDatabase.laws ?? []).find(item => item.id === data.get('realReference'));
       try { store.proposeLaw({ title: data.get('title'), policy: designFromForm(form), summary: data.get('summary'), realReference: reference ? { id: reference.id, label: reference.lawNumber ? `legge n. ${reference.lawNumber} del ${reference.lawDate}` : reference.officialTitle.slice(0, 120), officialTitle: reference.officialTitle, lawNumber: reference.lawNumber, lawDate: reference.lawDate, status: reference.status, sourceUrl: reference.sourceUrl, source: 'real', verified: true } : null }); }
       catch (error) { store.getState().ui.toast = error.message; render(store.getState(),store.getLastSaved()); }
-    } else if (form.matches('[data-local-propose-form],[data-local-reshuffle-form],[data-ep-committee-form]')) {
+    } else if (form.matches('[data-local-propose-form],[data-local-reshuffle-form],[data-ep-committee-form],[data-local-work-form],[data-work-funding-form]')) {
       event.preventDefault();
       const data = new FormData(form);
       try {
         if (form.matches('[data-local-propose-form]')) { const [category, variant] = String(data.get('category') ?? '').split('|'); store.proposeLocalAct(form.dataset.instId, data.get('area'), category || null, variant || null); }
         else if (form.matches('[data-ep-committee-form]')) store.requestEuropeanCommittee(form.dataset.instId, data.get('committee'));
+        else if (form.matches('[data-local-work-form]')) store.proposeLocalWork(form.dataset.instId, data.get('type'), { funding: Number(data.get('funding')), site: data.get('site') });
+        else if (form.matches('[data-work-funding-form]')) store.manageLocalWork(form.dataset.instId, form.dataset.workId, 'funding', Number(data.get('funding')));
         else store.reshuffleLocalGiunta(form.dataset.instId, data.get('portfolio'), data.get('group'));
         playSound('confirm');
       } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(),store.getLastSaved()); }
@@ -1615,6 +1623,17 @@ export function mountApp(root, store, { retryData = null } = {}) {
   if (account.status === 'checking') probeAccount();
   // Escape closes the confirmation dialog (it means “Annulla”).
   globalThis.addEventListener?.('keydown', event => { if (event.key === 'Escape' && pendingConfirm) settleConfirm(false); });
+  // The tabs of the institutions (mandates and sections) move with the arrow keys, as tabs do.
+  root.addEventListener?.('keydown', event => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+    const tab = event.target.closest?.('.local-tabs [role="tab"], .local-jump [role="tab"]');
+    if (!tab) return;
+    const tabs = [...tab.parentElement.querySelectorAll('[role="tab"]')];
+    const at = tabs.indexOf(tab);
+    const next = tabs[event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1 : (at + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length];
+    event.preventDefault();
+    next?.click();
+  });
   // Every local save that went through is followed by an online save of the same career (debounced), when the player has an account. What counts is how the
   // save really stands (a write that succeeded, nothing left unsaved), never the message on screen.
   let savedSeen = store.saveStatus().seq;

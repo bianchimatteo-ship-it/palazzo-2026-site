@@ -3,8 +3,10 @@
 // decides, the majority it needs, what it changes, the forecast and the player's vote), what the player can do
 // (propose, question, negotiate, govern), the chronicle of the council. Everything here is simulation, except the size
 // of the European groups at the constitutive session of 2024 (real, with its source).
-import { DELEGA_FORBIDDEN, EP_COMMITTEES, EP_COSTS, EP_GROUPS_2024, committeeById, compactVote, coverageGap, europeanOdds, forecastAct, inCommittee, INSTITUTIONS, isClosedAct, LOCAL_VOTE_CHOICES, localAreas, majorityMargin, measureOf, actorOf, delegaScore, nextEuropeanRole, typeOfAct, voteRule, withEuropeanSeat, withLocalState } from '../core/local-engine.js?v=20261012-3';
-import { ACT_TYPES, CITY_INDICATORS, QUORUMS, actTypeOf, neededYes, proposableTypes } from '../data/simulation/local-acts.js?v=20261012-3';
+import { DELEGA_FORBIDDEN, EP_COMMITTEES, EP_COSTS, EP_GROUPS_2024, committeeById, compactVote, coverageGap, europeanOdds, forecastAct, inCommittee, INSTITUTIONS, isClosedAct, LOCAL_VOTE_CHOICES, localAreas, majorityMargin, mandateRecord, measureOf, actorOf, delegaScore, nextEuropeanRole, typeOfAct, voteRule, weakCityAreas, withEuropeanSeat, withLocalState } from '../core/local-engine.js?v=20261012-3';
+import { ACT_TYPES, CITY_INDICATORS, PROVINCE_INDICATORS, QUORUMS, actTypeOf, neededYes, proposableTypes } from '../data/simulation/local-acts.js?v=20261012-3';
+import { WORK_PRIORITIES, WORK_RULES, WORK_SITE_LIST, WORK_TYPES, siteLabel, workTypesFor } from '../data/simulation/local-works.js?v=20261012-3';
+import { activeWorks, canManageWorks, euroOf, isActiveWork, planWork, workGap, workView, worksLedger } from '../core/local-works-engine.js?v=20261012-3';
 import { INDICATORS } from '../data/simulation/society-rules.js?v=20261012-3';
 import { DELEGA_RULES } from '../data/simulation/office-rules.js?v=20261012-3';
 import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261012-3';
@@ -21,7 +23,10 @@ const date = value => value ? new Date(`${value}T12:00:00Z`).toLocaleDateString(
 const percent = value => `${Math.round((value ?? 0) * 100)}%`;
 const ROLE_NAMES = Object.freeze({ coordinatore: 'Coordinatore del gruppo', vicepresidente: 'Vicepresidente', presidente: 'Presidente' });
 const sideOfAct = (inst, act) => act.sponsor.kind === 'executive' || act.sponsor.kind === 'budget' ? 'governo' : inst.groups.find(group => group.id === act.sponsor.groupId)?.side === 'maggioranza' ? 'maggioranza' : 'opposizione';
-const indicatorLabel = (inst, id) => (inst.kind === 'comune' ? CITY_INDICATORS : INDICATORS).find(item => item.id === id)?.label ?? id;
+const indicatorLabel = (inst, id) => (inst.kind === 'comune' ? CITY_INDICATORS : inst.kind === 'provincia' ? PROVINCE_INDICATORS : INDICATORS).find(item => item.id === id)?.label ?? id;
+// A reading of the margin points in euros (the margin is a simulated measure: the euros only say how big the work is for this level).
+const euro = (inst, points) => { const value = euroOf(inst, points); return value >= 1e6 ? `${(value / 1e6).toFixed(1).replace('.', ',')} milioni di €` : `${Math.round(value / 1000)} mila €`; };
+const pts = value => num(value, 1);
 const organLabel = (inst, type) => type.organ === 'giunta' ? INSTITUTIONS[inst.kind].executive : type.organ === 'esecutivo' ? `${INSTITUTIONS[inst.kind].leader ?? 'Esecutivo'} o assessore competente` : INSTITUTIONS[inst.kind].label;
 const giuntaSize = inst => (inst.executive?.members?.length ?? 0) + 1;
 
@@ -93,18 +98,34 @@ function europeanPanel(inst, context) {
     <div class="bill-speak">${run}</div>${move}
     <p class="poll-footnote">Le relazioni si chiedono sui dossier della commissione di cui sei titolare, gli emendamenti anche in quella in cui sei sostituto; il voto in commissione precede la plenaria. Commissioni con i nomi reali del Parlamento europeo; composizione, dossier, voti e incarichi sono simulati.</p>`;
 }
-function executivePanel(inst) {
+function executivePanel(inst, { withBudget = false } = {}) {
   const rules = INSTITUTIONS[inst.kind];
   if (!inst.executive) return `<p class="parliament-note">Nel Parlamento europeo l’iniziativa spetta alla ${esc(rules.executive)}: i gruppi politici costruiscono maggioranze diverse su ogni dossier. Gruppi e seggi di partenza: sessione costitutiva del 2024 (<a href="${esc(EP_GROUPS_2024.sourceUrl)}" target="_blank" rel="noopener">${esc(EP_GROUPS_2024.sourceName)}</a>, dato reale); da lì in poi voti e maggioranze sono simulati.</p>`;
   const leads = inst.executive.leader === 'player';
   const majority = inst.groups.filter(group => group.side === 'maggioranza');
   const members = inst.executive.members.map(item => `<li><span>${esc(item.portfolio)}</span><small>${esc(inst.groups.find(group => group.id === item.groupId)?.label ?? 'lista civica')}</small></li>`).join('');
   const reshuffle = leads && majority.length > 1 ? `<form class="local-inline-form" data-local-reshuffle-form data-inst-id="${esc(inst.id)}"><label>Assessorato<select name="portfolio">${inst.executive.members.map(item => `<option value="${esc(item.portfolio)}">${esc(item.portfolio)}</option>`).join('')}</select></label><label>Al gruppo<select name="group">${majority.map(group => `<option value="${esc(group.id)}">${esc(group.label)}</option>`).join('')}</select></label><button class="secondary-button" type="submit">Rimpasto · 1 giorno</button></form><p class="poll-footnote">Chi riceve l’assessorato diventa più leale, chi lo perde meno: una maggioranza trascurata può uscire e sfiduciarti.</p>` : '';
-  // Local taxes: the head of the executive proposes the rates, the council votes them (one step at a time).
+  const budget = withBudget && inst.budget ? `<div><dt>Bilancio</dt><dd>Margine ${num(inst.budget.margin, 0)}/100 · pressione fiscale ${esc(inst.budget.localTax)} · ${inst.budget.provisional ? '<b class="bad">esercizio provvisorio</b>' : `bilancio approvato per il ${inst.budget.approvedYear}`}</dd></div>` : '';
+  return `<dl class="hq-facts"><div><dt>${esc(rules.leader)}</dt><dd>${esc(inst.executive.label)}</dd></div><div><dt>Stabilità</dt><dd>${num(inst.executive.stability, 0)}/100 ${meter(inst.executive.stability, inst.executive.stability < 40 ? 'danger' : '')}</dd></div><div><dt>Pressione dell’opposizione</dt><dd>${num(inst.pressure, 0)}/100 ${meter(inst.pressure, inst.pressure > 65 ? 'danger' : '')}</dd></div>${budget}</dl><details class="local-giunta"><summary>${esc(rules.executive)}: ${inst.executive.members.length} assessori (figure simulate)</summary><ul>${members}</ul></details>${reshuffle}`;
+}
+// The budget of the institution: the margin (a simulated measure, in points), what the works have reserved and drawn, the upkeep they ask every year, the taxes; the euros are a reading of the points.
+function budgetPanel(inst) {
+  if (!inst.budget) return '<p class="quiet-copy">Il Parlamento europeo non ha un bilancio locale: i suoi dossier sono atti e voti.</p>';
+  const leads = inst.executive?.leader === 'player';
+  const ledger = worksLedger(inst);
   const taxPending = inst.acts.some(act => act.category === 'tributi' && !isClosedAct(act));
-  const tax = leads && inst.budget && actTypeOf(inst.kind, 'tributi') ? `<div class="local-tax"><span>Pressione fiscale locale</span><div class="bill-vote-choices" role="group" aria-label="Pressione fiscale locale">${Object.entries(TAX_LEVELS).map(([id, label]) => `<button type="button" class="chip-button${inst.budget.localTax === id ? ' active' : ''}" data-local-tax="${id}" data-inst-id="${esc(inst.id)}" aria-pressed="${inst.budget.localTax === id}"${taxPending || inst.budget.localTax === id ? ' disabled' : ''}>${label}</button>`).join('')}</div><small>${taxPending ? 'La proposta sulle aliquote è in consiglio: aspetta il voto.' : 'Proponi al consiglio le nuove aliquote (un livello alla volta): più entrate allargano il margine del bilancio ma costano popolarità; meno tasse il contrario.'}</small></div>` : '';
-  const budget = inst.budget ? `<div><dt>Bilancio</dt><dd>Margine ${num(inst.budget.margin, 0)}/100 · pressione fiscale ${esc(inst.budget.localTax)} · ${inst.budget.provisional ? '<b class="bad">esercizio provvisorio</b>' : `bilancio approvato per il ${inst.budget.approvedYear}`}</dd></div>` : '';
-  return `<dl class="hq-facts"><div><dt>${esc(rules.leader)}</dt><dd>${esc(inst.executive.label)}</dd></div><div><dt>Stabilità</dt><dd>${num(inst.executive.stability, 0)}/100 ${meter(inst.executive.stability, inst.executive.stability < 40 ? 'danger' : '')}</dd></div><div><dt>Pressione dell’opposizione</dt><dd>${num(inst.pressure, 0)}/100 ${meter(inst.pressure, inst.pressure > 65 ? 'danger' : '')}</dd></div>${budget}</dl><details class="local-giunta"><summary>${esc(rules.executive)}: ${inst.executive.members.length} assessori (figure simulate)</summary><ul>${members}</ul></details>${tax}${reshuffle}`;
+  const tax = leads && actTypeOf(inst.kind, 'tributi') ? `<div class="local-tax"><span>Pressione fiscale locale</span><div class="bill-vote-choices" role="group" aria-label="Pressione fiscale locale">${Object.entries(TAX_LEVELS).map(([id, label]) => `<button type="button" class="chip-button${inst.budget.localTax === id ? ' active' : ''}" data-local-tax="${id}" data-inst-id="${esc(inst.id)}" aria-pressed="${inst.budget.localTax === id}"${taxPending || inst.budget.localTax === id ? ' disabled' : ''}>${label}</button>`).join('')}</div><small>${taxPending ? 'La proposta sulle aliquote è in consiglio: aspetta il voto.' : 'Proponi al consiglio le nuove aliquote (un livello alla volta): più entrate allargano il margine del bilancio ma costano popolarità; meno tasse il contrario.'}</small></div>` : '';
+  const rows = [
+    ['Margine di bilancio', `${num(inst.budget.margin, 0)}/100 ${meter(inst.budget.margin, inst.budget.margin < 20 ? 'danger' : '')}`],
+    ['Bilancio', inst.budget.provisional ? '<b class="bad">esercizio provvisorio</b>: nessuna nuova opera finché non passa il bilancio' : `approvato per il ${inst.budget.approvedYear}${inst.budget.failures ? ` · ${inst.budget.failures} voto/i fallito/i` : ''}`],
+    ['Pressione fiscale', esc(TAX_LEVELS[inst.budget.localTax] ?? inst.budget.localTax)]
+  ];
+  if (inst.kind !== 'europa') rows.push(
+    ['Cantieri aperti', `${ledger.open} su ${ledger.max}`],
+    ['Impegni ancora da pagare', `${pts(ledger.residual)} punti · circa ${euro(inst, ledger.residual)}`],
+    ['Speso e impegnato sulle opere', `${pts(ledger.drawn)} punti · circa ${euro(inst, ledger.drawn)}`],
+    ['Manutenzione ogni anno', `${pts(ledger.upkeepYear)} punti · circa ${euro(inst, ledger.upkeepYear)}`]);
+  return `<dl class="hq-facts">${rows.map(([label, value]) => `<div><dt>${esc(label)}</dt><dd>${value}</dd></div>`).join('')}</dl>${tax}<p class="poll-footnote">Il margine è una misura simulata (0-100), non un saldo in euro: un’opera ne impegna una parte quando è approvata (${Math.round(WORK_RULES.commit * 100)}% del preventivo), paga il resto mentre i lavori avanzano e poi chiede manutenzione. Ogni costo esce dal margine una volta sola. Un punto vale circa ${euro(inst, 1)} per ${esc(INSTITUTIONS[inst.kind].label.toLowerCase())} (lettura indicativa, simulazione).</p>`;
 }
 // The state of the territory the institution answers for: the city's services (comune) or the region's indicators
 // (regione, those of the society simulation), with the effects of its approved acts still arriving; the commitments
@@ -112,8 +133,9 @@ function executivePanel(inst) {
 function territoryPanel(inst, state) {
   if (inst.kind === 'europa') return '';
   let rows;
-  if (inst.kind === 'comune') {
-    rows = CITY_INDICATORS.map(item => {
+  if (inst.kind === 'comune' || inst.kind === 'provincia') {
+    const list = inst.kind === 'comune' ? CITY_INDICATORS : PROVINCE_INDICATORS;
+    rows = list.map(item => {
       const effects = (inst.effects ?? []).filter(effect => effect.indicator === item.id);
       return { label: item.label, value: inst.indicators?.[item.id] ?? 50, coming: effects.reduce((sum, effect) => sum + effect.perWeek * effect.remaining, 0), causes: [...new Set(effects.filter(effect => !effect.delay).map(effect => effect.title))] };
     });
@@ -128,8 +150,11 @@ function territoryPanel(inst, state) {
     });
   }
   const list = rows.map(row => `<div><dt>${esc(row.label)}</dt><dd>${num(row.value, 0)}/100 ${meter(row.value, row.value < 40 ? 'danger' : '')}${Math.abs(row.coming) >= 0.1 ? `<small>In arrivo ${signed(row.coming)} da ${esc(row.causes.slice(0, 2).join(', ') || 'atti approvati')}</small>` : ''}</dd></div>`).join('');
-  const commitments = (inst.commitments ?? []).filter(item => item.status === 'aperto').map(item => `<li>${esc(AREA_BY_ID[item.area]?.label ?? item.area)}: un atto entro il ${esc(date(item.dueAt))} <small>(mozione “${esc(item.title)}”)</small></li>`).join('');
-  return `<dl class="hq-facts local-territory">${list}</dl>${commitments ? `<div class="local-commitments"><strong>Impegni votati dal consiglio</strong><ul>${commitments}</ul></div>` : ''}<p class="poll-footnote">${inst.kind === 'comune' ? 'Servizi della città (simulazione): li muovono gli atti approvati, senza cura si consumano; una parte degli effetti arriva agli indicatori della regione.' : inst.kind === 'provincia' ? 'Indicatori della regione di cui la provincia fa parte: strade, scuole e servizi di area vasta ne muovono una quota, settimana dopo settimana.' : 'Indicatori della regione nella simulazione del Paese: gli atti approvati li muovono settimana dopo settimana.'}</p>`;
+  // The priorities: the weakest services, with the work the level would build for each.
+  const weakest = [...rows].sort((a, b) => a.value - b.value).slice(0, 3);
+  const priorities = `<div class="local-commitments"><strong>Priorità del territorio</strong><ul>${weakest.map(row => `<li>${esc(row.label)}: ${num(row.value, 0)}/100${row.value < 45 ? ' · <b class="bad">in sofferenza</b>' : ''}</li>`).join('')}</ul></div>`;
+  const commitments = (inst.commitments ?? []).filter(item => item.status === 'aperto').map(item => `<li>${esc(AREA_BY_ID[item.area]?.label ?? item.area)}: un atto entro il ${esc(date(item.dueAt))} <small>(${item.actId ? `mozione “${esc(item.title)}”` : esc(item.title)})</small></li>`).join('');
+  return `<dl class="hq-facts local-territory">${list}</dl>${priorities}${commitments ? `<div class="local-commitments"><strong>Impegni presi</strong><ul>${commitments}</ul></div>` : ''}<p class="poll-footnote">${inst.kind === 'comune' ? 'Servizi della città (simulazione): li muovono gli atti approvati e le opere finite, senza cura si consumano; una parte degli effetti arriva agli indicatori della regione.' : inst.kind === 'provincia' ? 'Servizi propri della Provincia (strade, scuole superiori, trasporto, ambiente, sviluppo, comuni): non sono la media della regione; le opere finite e gli atti li muovono e una quota arriva alla regione.' : 'Indicatori della regione nella simulazione del Paese: gli atti e le opere finite li muovono settimana dopo settimana.'}</p>`;
 }
 // A European dossier in the own committees: the report can be asked, the text amended (odds shown before the choice).
 function dossierActions(inst, act, context) {
@@ -262,7 +287,7 @@ function actionsPanel(inst, capital) {
   const areas = (delegated ? inst.playerDelega.areas : localAreas(inst.kind)).filter(id => AREA_BY_ID[id]);
   const areaOptions = areas.map(id => `<option value="${esc(id)}">${esc(AREA_BY_ID[id].label)}</option>`).join('');
   // The kinds the office can propose (taxes have their own buttons, questions their own form); variants as options.
-  const kinds = inst.kind === 'europa' ? [] : proposableTypes(inst.kind, leads || delegated).filter(type => !['interrogazione', 'tributi'].includes(type.id) && !(delegated && DELEGA_FORBIDDEN.has(type.id)));
+  const kinds = inst.kind === 'europa' ? [] : proposableTypes(inst.kind, leads || delegated).filter(type => !['interrogazione', 'tributi', 'opere'].includes(type.id) && !(delegated && DELEGA_FORBIDDEN.has(type.id)));
   const money = type => type.cost > 0 ? ` · costo ${num(type.cost, 1)}` : type.revenue ? ` · entrate ${num(type.revenue, 1)}` : type.cost < 0 ? ` · risparmio ${num(-type.cost, 1)}` : '';
   const kindOptions = kinds.flatMap(type => (type.variants ?? [null]).map(variant => `<option value="${esc(variant ? `${type.id}|${variant}` : type.id)}">${esc(type.label)}${variant ? `: ${esc(variant)}` : ''}${type.areas ? ` (${esc(type.areas.map(id => AREA_BY_ID[id]?.label.toLowerCase() ?? id).join(', '))})` : ''}${esc(money(type))}</option>`)).join('');
   const kindSelect = kinds.length ? `<label>Tipo di atto<select name="category"><option value="">Quello adatto al tema</option>${kindOptions}</select></label>` : '';
@@ -284,33 +309,114 @@ function actsGuide(inst) {
   const needed = Math.floor(inst.seats / 2) + 1;
   return `<details class="bill-archive local-guide"><summary>Guida agli atti: ${types.length} tipi</summary><ul>${rows}</ul><p class="poll-footnote">Maggioranza politica: la coalizione che sostiene l’esecutivo (ne servono ${needed} seggi su ${inst.seats} per governare). Maggioranza dei votanti: più sì che no. Maggioranza assoluta: ${needed} sì su ${inst.seats}. Due terzi: ${neededYes('dueterzi', inst.seats)} sì. Regole semplificate del gioco, ispirate al TUEL e alla Costituzione.</p></details>`;
 }
+// ---------- the public works ----------
+const WORK_STATE_TEXT = Object.freeze({ autorizzazioni: 'In attesa delle autorizzazioni', progettazione: 'In progettazione', gara: 'In gara d’appalto', cantiere: 'Cantiere aperto', collaudo: 'In collaudo', completato: 'Aperta', sospeso: 'Sospesa' });
+function workProblemsText(work) {
+  const out = [];
+  if (work.pending) out.push(`sforamento di ${pts(work.pending.amount)} punti in attesa di una decisione`);
+  if (work.fundsAlert) out.push('ferma: manca il margine di bilancio');
+  if (work.delayWeeks >= 3) out.push(`${work.delayWeeks} settimane di ritardo`);
+  if (work.stall > 0 && !work.fundsAlert && !work.pending) out.push('cantiere fermo per qualche settimana');
+  if (work.boost > 0) out.push(`accelerata per ${work.boost} settimane`);
+  return out;
+}
+function workCard(inst, input, leads) {
+  const work = workView(inst, input);
+  const type = work.type;
+  const problems = workProblemsText(work);
+  const goal = work.goal?.indicator ? `Obiettivo: ${esc(indicatorLabel(inst, work.goal.indicator).toLowerCase())} da ${num(work.goal.from, 0)} a ${num(work.goal.to, 0)}` : `Obiettivo: più servizio nel settore ${esc(AREA_BY_ID[work.area]?.label.toLowerCase() ?? work.area)}`;
+  const site = siteLabel(work.site, inst.kind);
+  const place = work.territory?.name ?? inst.name;
+  const open = isActiveWork(work);
+  const money = `Preventivo ${pts(work.budget0 ?? work.cost)} punti (circa ${euro(inst, work.budget0 ?? work.cost)})${Math.abs(work.cost - (work.budget0 ?? work.cost)) >= 0.1 ? ` · oggi ${pts(work.cost)}` : ''} · impegnati ${pts(work.drawn)} · lavori fatti per ${pts(work.spent)}`;
+  const result = work.result ? `<p class="local-measure"><b>Risultato:</b> qualità ${Math.round(work.result.quality * 100)}/100 · costo finale ${pts(work.result.finalCost)} contro ${pts(work.result.budget)} previsti · ${work.result.late ? `${work.result.late} settimane di ritardo` : 'nei tempi'} · condizione ${Math.round(work.condition)}/100${work.degraded ? ' · <b class="bad">si sta degradando</b>' : ''}. Manutenzione: ${pts(work.upkeepYear)} punti l’anno.</p>` : '';
+  const fund = ['autorizzazioni', 'progettazione', 'gara'].includes(work.stage) ? `<form class="local-inline-form" data-work-funding-form data-inst-id="${esc(inst.id)}" data-work-id="${esc(work.id)}"><label>Livello di fondi<select name="funding">${WORK_PRIORITIES.map(item => `<option value="${item.funding}"${item.funding === work.funding ? ' selected' : ''}>${esc(item.label)} · ${item.funding}%</option>`).join('')}</select></label><button class="secondary-button" type="submit">Modifica il progetto · 1 giorno</button></form>` : '';
+  const buttons = leads ? `<div class="project-actions">${open ? `<button class="secondary-button" data-work-action="fund" data-inst-id="${esc(inst.id)}" data-work-id="${esc(work.id)}">Rifinanzia · 1 giorno · 1 cap.</button>${work.stage !== 'collaudo' ? `<button class="secondary-button" data-work-action="resize" data-inst-id="${esc(inst.id)}" data-work-id="${esc(work.id)}">Ridimensiona · 1 giorno · 1 cap.</button>` : ''}<button class="secondary-button danger-link" data-work-action="suspend" data-inst-id="${esc(inst.id)}" data-work-id="${esc(work.id)}">Sospendi · 1 giorno · 1 cap.</button>` : work.stage === 'sospeso' ? `<button class="secondary-button" data-work-action="resume" data-inst-id="${esc(inst.id)}" data-work-id="${esc(work.id)}">Riapri il cantiere · 1 giorno · 2 cap.</button>` : work.stage === 'completato' ? `<button class="secondary-button" data-work-action="upkeep" data-inst-id="${esc(inst.id)}" data-work-id="${esc(work.id)}">Paga la manutenzione · 1 giorno</button>` : ''}</div>` : '';
+  return `<article class="project-row work-row stage-${esc(work.stage)}${work.stage === 'completato' ? ' completato' : work.stage === 'sospeso' ? ' sospeso' : ''}"><div class="project-head">${glyph(type?.icon ?? 'bridge', 20)}<div><strong>${esc(work.label)}</strong><small>${esc(place)}${site ? ` · ${esc(site)}` : ''} · ${esc(WORK_STATE_TEXT[work.stage] ?? work.stageLabel)}${work.byPlayer ? ' · tua proposta' : ''}</small></div><span class="badge">${Math.round(work.progress)}%</span></div>
+    <div class="project-progress">${meter(work.progress, problems.length && open ? 'danger' : '')}<small>${open ? `Ancora circa ${work.weeksLeft} settimane · ` : ''}${esc(money)}</small></div><p class="poll-footnote">${goal}${problems.length ? ` · <b class="bad">${esc(problems.join(' · '))}</b>` : ''}</p>${result}${fund}${buttons}</article>`;
+}
+function worksSection(inst, state) {
+  if (inst.kind === 'europa') return '<p class="quiet-copy">Il Parlamento europeo non costruisce opere locali.</p>';
+  const actor = actorOf(inst);
+  const leads = canManageWorks(inst);
+  const delegated = actor === 'assessore' || actor === 'delegato';
+  const ledger = worksLedger(inst);
+  const works = (inst.works ?? []);
+  const open = works.filter(item => isActiveWork(item));
+  const suspended = works.filter(item => item.stage === 'sospeso');
+  const done = works.filter(item => item.stage === 'completato').slice(-6).reverse();
+  const waiting = inst.acts.filter(act => act.category === 'opere' && !isClosedAct(act));
+  const types = (delegated ? workTypesFor(inst.kind).filter(type => (inst.playerDelega?.areas ?? []).includes(type.area)) : workTypesFor(inst.kind));
+  const gapOf = type => { try { return workGap(inst, planWork(inst, { typeId: type.id }).commit); } catch (error) { return error.message; } };
+  const typeOptions = types.map(type => `<option value="${esc(type.id)}">${esc(type.label)} · ${esc(AREA_BY_ID[type.area]?.label ?? type.area)} · circa ${pts(type.cost)} punti (${esc(euro(inst, type.cost))})</option>`).join('');
+  const blocker = !types.length ? 'La tua delega non comprende opere in catalogo.' : (gapOf(types[0]) ?? '');
+  const pending = inst.acts.some(act => (act.sponsor.kind === 'player' || act.byDelega) && act.category !== 'interrogazione' && !isClosedAct(act));
+  const propose = leads || delegated
+    ? `<form class="local-inline-form" data-local-work-form data-inst-id="${esc(inst.id)}"><label>Opera<select name="type">${typeOptions}</select></label><label>Priorità<select name="funding">${WORK_PRIORITIES.map(item => `<option value="${item.funding}"${item.funding === 100 ? ' selected' : ''}>${esc(item.label)} · ${item.funding}%</option>`).join('')}</select></label><label>Dove<select name="site">${WORK_SITE_LIST.map(item => `<option value="${esc(item.id)}"${item.id === 'periferia' ? ' selected' : ''}>${esc(siteLabel(item.id, inst.kind))}</option>`).join('')}</select></label><button class="primary-button" type="submit"${pending || !types.length ? ' disabled' : ''}>Proponi l’opera · 1 giorno</button></form>
+      <p class="poll-footnote">${pending ? 'Hai già una proposta in discussione: aspetta il voto.' : esc(blocker || (leads ? 'La proposta va al voto dell’organo competente: se passa, l’opera riserva il 40% del costo e parte con le autorizzazioni. I benefici arrivano a opera finita.' : 'La tua delega propone l’opera; la decide il consiglio, la gestisce chi guida l’esecutivo.'))}</p>`
+    : `<p class="parliament-note">Non guidi l’esecutivo: non spendi il bilancio e non decidi sui cantieri. Puoi impegnare la giunta con una mozione su un servizio in sofferenza o ispezionare i cantieri in ritardo (Attività).</p><div class="bill-speak">${weakCityAreas(inst, 3).map(area => `<button class="secondary-button" data-work-motion="${esc(area)}" data-inst-id="${esc(inst.id)}"${pending ? ' disabled' : ''}>Mozione su ${esc(AREA_BY_ID[area]?.label.toLowerCase() ?? area)} · 1 giorno</button>`).join('') || '<small>Gli indicatori della regione dicono dove intervenire: usa il tema nel form degli atti.</small>'}</div>`;
+  const catalog = `<details class="bill-archive local-guide"><summary>Catalogo delle opere di competenza: ${workTypesFor(inst.kind).length} tipi</summary><ul>${workTypesFor(inst.kind).map(type => `<li><strong>${esc(type.label)}</strong> <small>${esc(AREA_BY_ID[type.area]?.label ?? type.area)} · circa ${pts(type.cost)} punti (${esc(euro(inst, type.cost))}) · ${type.weeks[0]}–${type.weeks[1]} settimane · manutenzione ${Math.round(type.upkeep * 100)}% l’anno</small><p>${esc(type.benefit)} ${esc(type.need)}</p></li>`).join('')}</ul><p class="poll-footnote">Ogni ente costruisce solo ciò che è di sua competenza: un Comune non costruisce un ospedale regionale. Cofinanziamenti tra enti: non ancora previsti, perché richiedono accordi approvati da entrambi gli enti con quote nei rispettivi bilanci.</p></details>`;
+  const record = ledger.record;
+  const summary = `<p class="local-margin">${ledger.open} cantieri aperti su ${ledger.max} · ${record.completed ?? 0} opere finite · ${record.suspended ?? 0} sospese · impegni residui ${pts(ledger.residual)} punti (circa ${euro(inst, ledger.residual)})</p>`;
+  const waitingList = waiting.length ? `<h4 class="news-subhead">In approvazione</h4><ul class="local-commitments">${waiting.map(act => `<li>${esc(act.title)} <small>· ${esc(STAGES[act.stage] ?? act.stage)} · preventivo ${pts(act.workPlan?.cost ?? act.measure?.cost ?? 0)} punti, ${pts(act.workPlan?.commit ?? act.measure?.cost ?? 0)} da impegnare</small></li>`).join('')}</ul>` : '';
+  return `${summary}${propose}${waitingList}<h4 class="news-subhead">Cantieri aperti (${open.length})</h4><div class="project-list">${open.map(item => workCard(inst, item, leads)).join('') || '<p class="quiet-copy">Nessun cantiere aperto: le opere nascono da atti approvati.</p>'}</div>${suspended.length ? `<h4 class="news-subhead">Sospese</h4><div class="project-list">${suspended.map(item => workCard(inst, item, leads)).join('')}</div>` : ''}${done.length ? `<h4 class="news-subhead">Concluse di recente</h4><div class="project-list">${done.map(item => workCard(inst, item, leads)).join('')}</div>` : ''}${catalog}`;
+}
+// The verdict of the term so far: how the executive stands, what the council kept, what the works say (on time, on budget, the waste, the upkeep) and what it means for the next vote.
+function resultsSection(inst, state) {
+  if (inst.kind === 'europa') return '';
+  const record = mandateRecord(inst, { date: state.clock?.currentDate ?? null });
+  const works = record.works;
+  const lines = [
+    ['Giudizio sull’amministrazione', `${signed(record.score)} su 100 (affidabilità ${Math.round(record.confidence * 100)}%)`],
+    ['Cosa significa per te', `${signed(record.standing)} ${record.leads ? '(guidi tu: ne rispondi per intero)' : record.side === 'maggioranza' ? '(sei in maggioranza: ne rispondi in parte)' : '(sei all’opposizione: ti giovano gli insuccessi altrui)'}`],
+    ['Impegni del consiglio', `${record.kept} rispettati · ${record.broken} disattesi`],
+    ['Servizi del territorio', `${signed(record.servicesDelta)} dall’inizio del mandato`],
+    ['Atti tuoi approvati', String(record.passed)],
+    ['Opere avviate / finite / sospese', `${works.started} / ${works.completed} / ${works.suspended}`],
+    ['Opere nei tempi', `${works.onTime} su ${works.completed}`],
+    ['Qualità media delle opere', works.quality === null ? 'nessuna opera ancora finita' : `${Math.round(works.quality * 100)}/100`],
+    ['Costo finale contro preventivo', works.completed ? `${pts(works.finalCost)} punti contro ${pts(works.completedBudget)} a preventivo (opere finite)` : '—'],
+    ['Ritardi accumulati', `${works.delayWeeks} settimane · ${works.overruns} sforamenti · ${works.protests} proteste`],
+    ['Manutenzione rinviata', `${works.upkeepMissed} volte`]
+  ];
+  return `<dl class="hq-facts">${lines.map(([label, value]) => `<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl><p class="poll-footnote">I benefici di un’opera finita sono già nei servizi del territorio (non si contano due volte): qui pesano il modo in cui è stata fatta (nei tempi e nei costi) e gli sprechi. Gli elettori ricordano le promesse mantenute e quelle no, i cantieri fermi e le opere aperte (simulazione).</p>`;
+}
+
+// ---------- the card of an institution: one mandate at a time, one section at a time ----------
+const SECTION_IDS = Object.freeze([['panoramica', 'Panoramica'], ['bilancio', 'Bilancio'], ['opere', 'Opere e cantieri'], ['territorio', 'Servizi e territorio'], ['atti', 'Consiglio e Giunta'], ['cronologia', 'Cronologia e risultati']]);
+const EUROPE_SECTIONS = Object.freeze([['panoramica', 'Panoramica'], ['atti', 'Dossier e voti'], ['cronologia', 'Cronologia']]);
+export const sectionsOf = inst => inst.kind === 'europa' ? EUROPE_SECTIONS : SECTION_IDS;
 function institutionCard(input, capital, context, state, ui = {}) {
   const inst = withLocalState(withEuropeanSeat(input, input.since));
   const rules = INSTITUTIONS[inst.kind];
+  const sections = sectionsOf(inst);
+  const section = sections.some(([id]) => id === ui.localSection) ? ui.localSection : 'panoramica';
   const open = inst.acts.filter(act => !isClosedAct(act)).sort((a, b) => String(a.nextStepAt).localeCompare(String(b.nextStepAt)));
   const closed = inst.acts.filter(isClosedAct).slice(-4).reverse();
-  const history = inst.history.slice(-8).reverse().map(item => `<li><time>${esc(date(item.date))}</time> ${esc(item.text)}</li>`).join('');
+  const history = inst.history.slice(-12).reverse().map(item => `<li><time>${esc(date(item.date))}</time> ${esc(item.text)}</li>`).join('');
   const archive = [...closed.map(act => ({ title: act.title, stage: act.stage, closedAt: act.closedAt, vote: compactVote(act.votes?.at(-1)), committeeVote: act.votes?.length ? null : act.committeeVote ?? null, answer: act.answer ?? null, withdrawn: act.withdrawn ?? null, effects: measureText(inst, act) })), ...inst.archive.slice(-6).reverse()].slice(0, 10).map(item => `<li><span class="bill-flag ${item.stage === 'approvato' || item.answer === 'esauriente' ? 'good' : 'bad'}">${esc(STAGES[item.stage] ?? item.stage)}</span> ${esc(item.title)} <small>${esc(date(item.closedAt))}</small>${resultLine(item)}</li>`).join('');
+  const badge = id => id === 'opere' ? activeWorks(inst).length : id === 'atti' ? open.length : 0;
+  const tabs = `<nav class="sx-tabs local-tabs" role="tablist" aria-label="Sezioni di ${esc(inst.name)}">${sections.map(([id, label]) => `<button type="button" role="tab" id="tab-${esc(inst.kind)}-${id}" class="sx-tab${section === id ? ' active' : ''}" data-local-section="${id}" aria-selected="${section === id}" aria-controls="panel-${esc(inst.kind)}" tabindex="${section === id ? 0 : -1}">${esc(label)}${badge(id) ? ` <span class="badge">${badge(id)}</span>` : ''}</button>`).join('')}</nav>`;
+  let body;
+  if (section === 'bilancio') body = `<h3 class="local-h">Bilancio e impegni</h3>${budgetPanel(inst)}`;
+  else if (section === 'opere') body = `<h3 class="local-h">Opere e cantieri</h3>${worksSection(inst, state)}`;
+  else if (section === 'territorio') body = `<h3 class="local-h">${esc(inst.kind === 'comune' ? 'Stato della città' : inst.kind === 'provincia' ? 'Stato del territorio provinciale' : 'Stato della regione')}</h3>${territoryPanel(inst, state)}`;
+  else if (section === 'atti') body = `<h3 class="local-h">Cosa puoi fare</h3>${roleBox(inst, state)}${actionsPanel(inst, capital)}<h3 class="local-h">In discussione (${open.length})</h3>${open.map(act => actCard(inst, act, capital, context)).join('') || '<p class="quiet-copy">Nessun atto in calendario: la giunta e i gruppi ne presentano di nuovi ogni settimana.</p>'}${archive ? `<details class="bill-archive"><summary>Atti conclusi</summary><ul>${archive}</ul></details>` : ''}${inst.kind !== 'europa' ? actsGuide(inst) : ''}`;
+  else if (section === 'cronologia') body = `${inst.kind !== 'europa' ? `<h3 class="local-h">Risultati del mandato</h3>${resultsSection(inst, state)}` : ''}<h3 class="local-h">Cronaca del ${esc(rules.label.toLowerCase())}</h3>${history ? `<ul class="bill-journal">${history}</ul>` : '<p class="quiet-copy">La cronaca si riempie con le decisioni del consiglio.</p>'}`;
+  else body = `<div class="local-grid"><div><h3 class="local-h">Composizione</h3>${composition(inst, state, ui)}</div><div><h3 class="local-h">${esc(inst.ep ? 'Le tue commissioni' : rules.executive)}</h3>${inst.ep ? europeanPanel(inst, context) : executivePanel(inst)}</div></div>${inst.ep ? `<h3 class="local-h">${esc(rules.executive)}</h3>${executivePanel(inst)}` : ''}<h3 class="local-h">Il tuo ruolo</h3>${roleBox(inst, state)}`;
   return `<section class="hq-panel local-institution" id="istituzione-${esc(inst.kind)}"><div class="home-section-heading"><div><span class="section-kicker">${esc(rules.label.toUpperCase())} · SIMULAZIONE</span><h2>${esc(inst.name)}</h2><p class="section-subtitle">${esc(roleLine(inst))}${inst.until ? ` · mandato fino al voto del ${esc(date(inst.until))}` : ''}</p></div><span class="parliament-provenance simulated">SCENARIO SIMULATO</span></div>
-    <div class="local-grid"><div><h3 class="local-h">Composizione</h3>${composition(inst, state, ui)}</div><div><h3 class="local-h">${esc(inst.ep ? 'Le tue commissioni' : rules.executive)}</h3>${inst.ep ? europeanPanel(inst, context) : executivePanel(inst)}</div></div>
-    ${inst.ep ? `<h3 class="local-h">${esc(rules.executive)}</h3>${executivePanel(inst)}` : `<h3 class="local-h">${esc(inst.kind === 'comune' ? 'Stato della città' : inst.kind === 'provincia' ? 'Stato del territorio provinciale' : 'Stato della regione')}</h3>${territoryPanel(inst, state)}`}
-    <h3 class="local-h">Cosa puoi fare</h3>${roleBox(inst, state)}${actionsPanel(inst, capital)}
-    <h3 class="local-h">In discussione (${open.length})</h3>${open.map(act => actCard(inst, act, capital, context)).join('') || '<p class="quiet-copy">Nessun atto in calendario: la giunta e i gruppi ne presentano di nuovi ogni settimana.</p>'}
-    ${archive ? `<details class="bill-archive"><summary>Atti conclusi</summary><ul>${archive}</ul></details>` : ''}
-    ${inst.kind !== 'europa' ? actsGuide(inst) : ''}
-    ${history ? `<details class="bill-archive" open><summary>Cronaca del ${esc(rules.label.toLowerCase())}</summary><ul class="bill-journal">${history}</ul></details>` : ''}
-  </section>`;
+    ${tabs}<div class="local-section" role="tabpanel" id="panel-${esc(inst.kind)}" aria-labelledby="tab-${esc(inst.kind)}-${section}">${body}</div></section>`;
 }
-// The player's active institutions (none: an empty string, the page stays as it was).
+// The player's active institutions (none: an empty string, the page stays as it was). One mandate is shown at a time (a selector when there are several); each has its sections.
 export function renderInstitutions(state, ui = {}) {
   const active = activeInstitutions(state);
   if (!active.length) return '';
   const capital = state.game?.resources?.politicalCapital ?? 0;
   const influence = state.dataset?.statistics?.find(item => item.subjectId === state.career?.playerId && item.metric === 'influence')?.value ?? 30;
   const context = { capital, influence, today: state.clock?.currentDate ?? null };
-  // Where the player's mandates are played: one card per council (and the European Parliament), reachable at once.
-  const jump = active.length > 1 ? `<nav class="local-jump" aria-label="Le tue istituzioni">${active.map(inst => `<button class="chip-button" data-scroll="istituzione-${esc(inst.kind)}">${esc(institutionLabel(inst))}</button>`).join('')}</nav>` : '';
-  return `<div class="local-institutions" id="istituzioni"><div class="home-section-heading local-intro"><div><span class="section-kicker">LE TUE ISTITUZIONI</span><h2>Dove eserciti il tuo mandato</h2><p class="section-subtitle">Delibere, leggi, mozioni, voti e interrogazioni e, se guidi l’esecutivo, giunta, bilancio e tributi: ogni atto approvato cambia i servizi del territorio.</p></div></div>${jump}${active.map(inst => institutionCard(inst, capital, context, state, ui)).join('')}<p class="poll-footnote">Consigli, giunte, gruppi, atti, voti ed effetti sono simulati (source: simulation); sindaci, presidenti e assessori non giocanti sono figure simulate, non persone reali.</p></div>`;
+  const selected = active.find(inst => inst.kind === ui.localInst) ?? active[0];
+  const jump = active.length > 1 ? `<nav class="sx-tabs local-jump" role="tablist" aria-label="I tuoi mandati">${active.map(inst => `<button type="button" role="tab" class="sx-tab${inst.id === selected.id ? ' active' : ''}" data-local-inst="${esc(inst.kind)}" aria-selected="${inst.id === selected.id}" tabindex="${inst.id === selected.id ? 0 : -1}">${esc(institutionLabel(inst))}</button>`).join('')}</nav>` : '';
+  return `<div class="local-institutions" id="istituzioni"><div class="home-section-heading local-intro"><div><span class="section-kicker">LE TUE ISTITUZIONI</span><h2>Dove eserciti il tuo mandato</h2><p class="section-subtitle">Un mandato alla volta: panoramica, bilancio, opere e cantieri, servizi del territorio, atti e cronologia. Ogni atto approvato e ogni opera finita cambiano i servizi del territorio.</p></div></div>${jump}${institutionCard(selected, capital, context, state, ui)}<p class="poll-footnote">Consigli, giunte, gruppi, atti, voti, opere ed effetti sono simulati (source: simulation); sindaci, presidenti e assessori non giocanti sono figure simulate, non persone reali.</p></div>`;
 }
 export const activeInstitutions = state => (state?.local?.institutions ?? []).filter(item => item.status === 'active');
 // How a council is named in the links that lead to it (Home, election report).

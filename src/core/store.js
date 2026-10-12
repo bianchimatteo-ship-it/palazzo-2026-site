@@ -20,7 +20,9 @@ import { syncAgendas, advanceLegislativeWeek, amendOthersLaw, amendmentOdds, lin
 import { seededRandom } from './vote-engine.js?v=20261012-3';
 import { advanceCabinetWeek, joinAsSupport, majorityMargin } from './cabinet-engine.js?v=20261012-3';
 import { draftDossierBill, fundDossier, openDossiers, postponeDossier, settleProgram, tickDossiers, withdrawDossier } from './dossier-engine.js?v=20261012-3';
-import { EP_COSTS, EP_GROUPS_2024, EP_ROLES, INSTITUTIONS, advanceInstitutionWeek, applyLocalEffect, bidRapporteur, concedeToGroup, createInstitution, committeeById, epGroupFor, grantDelega, localAreas, mandateRecord, proposeLocalAct, questionExecutive, requestCommittee, reshuffleLocal, revokeDelega, runForCommitteeRole, setLocalVote, tableAmendment, territoryValue } from './local-engine.js?v=20261012-3';
+import { EP_COSTS, EP_GROUPS_2024, EP_ROLES, INSTITUTIONS, advanceInstitutionWeek, applyLocalEffect, bidRapporteur, concedeToGroup, createInstitution, committeeById, epGroupFor, grantDelega, localAreas, mandateRecord, proposeLocalAct, questionExecutive, requestCommittee, reshuffleLocal, revokeDelega, runForCommitteeRole, setLocalVote, tableAmendment, territoryValue, weakCityAreas, withLocalState } from './local-engine.js?v=20261012-3';
+import { answerProtest, payUpkeep, planWork, refundWork, resizeWork, resumeWork, setWorkFunding, settleWorkIssue, suspendWork, workGap, workRequestFor } from './local-works-engine.js?v=20261012-3';
+import { WORK_BY_ID, WORK_RULES } from '../data/simulation/local-works.js?v=20261012-3';
 import { candidacyBlock, institutionOffice, lapsesFor, officeLabel, officeScope } from './office-engine.js?v=20261012-3';
 import { actTypeOf } from '../data/simulation/local-acts.js?v=20261012-3';
 import { SECTOR_GAINS, competenceIn, gainSector, sectorFloors, standingFactors } from './standing-engine.js?v=20261012-3';
@@ -328,6 +330,14 @@ function migrateDemoParty(s) {
   const parties = s.dataset.parties.filter(party => party.source !== DATA_SOURCES.SIMULATION || party.id === partyId).map(party => party.id === partyId ? { ...party, source: DATA_SOURCES.USER, legacyDemo: true } : party);
   return { ...s, dataset: { ...s.dataset, parties } };
 }
+// The institutions of an older save get what the works and the province's own services need (a place with its codes, an empty list of works, the province's services starting
+// from the region's): what they already have stays as it is. Closed institutions too, their record is read later.
+function migrateLocal(local, society) {
+  if (!local?.institutions?.length) return local;
+  let changed = false;
+  const institutions = local.institutions.map(inst => { const next = withLocalState(inst, society?.regions?.[inst.region]?.indicators ?? null); if (next !== inst) changed = true; return next; });
+  return changed ? { ...local, institutions } : local;
+}
 function prepareState(input) {
   const raw = renameLegacyDemo(input);
   const parliament = normalizeParliamentState(raw.parliament);
@@ -348,7 +358,7 @@ function prepareState(input) {
   if ((game.legislature?.number ?? 19) > national.legislature.number) national = normalizeNationalState({ ...national, legislature: { ...game.legislature } }, { currentDate: base.clock.currentDate });
   // The President of the Republic: the term in office and the next election (older saves find the current term).
   const presidency = normalizePresidency(raw.presidency, { date: base.clock.currentDate, seed: seedOf({ ...base, game }) });
-  const prepared = { ...base, game, world, society, national, presidency, parliament: withCapital(parliament, game), races: { version: 2, items: Array.isArray(raw.races?.items) ? raw.races.items : [], archive: Array.isArray(raw.races?.archive) ? raw.races.archive : [] } };
+  const prepared = { ...base, game, world, society, national, presidency, parliament: withCapital(parliament, game), local: migrateLocal(raw.local, society), races: { version: 2, items: Array.isArray(raw.races?.items) ? raw.races.items : [], archive: Array.isArray(raw.races?.archive) ? raw.races.archive : [] } };
   return { ...prepared, dataset: { ...prepared.dataset, politicians: (prepared.dataset.politicians ?? []).map(normalizeSeatPerson) } };
 }
 
@@ -1150,10 +1160,22 @@ function handleSpecials(s, specials) {
         next = { ...next, parliament };
       }
     } else if (special.type === 'local-effect') {
-      // The institution the decision is about: the one of the named kind, else the highest one the player sits in.
-      const active = (next.local?.institutions ?? []).filter(item => item.status === 'active');
-      const target = active.find(item => item.kind === special.local?.kind) ?? ['regione', 'provincia', 'comune'].map(kind => active.find(item => item.kind === kind)).find(Boolean);
-      if (target) next = replaceInstitution(next, applyLocalEffect(target, special.local));
+      // The institution the decision is about: the one of the named kind; else, for what only an executive or a delega can do, the one the player steers; for what only the opposition does, the one
+      // where the player sits in the opposition; else the highest one the player sits in.
+      const active = (next.local?.institutions ?? []).filter(item => item.status === 'active' && item.kind !== 'europa');
+      const byLevel = list => ['regione', 'provincia', 'comune'].map(kind => list.find(item => item.kind === kind)).find(Boolean);
+      const steers = item => item.executive?.leader === 'player' || Boolean(item.playerDelega);
+      const local = special.local ?? {};
+      const target = active.find(item => item.kind === local.kind) ?? (local.scrutiny || local.motion || local.negotiate ? byLevel(active.filter(item => item.playerSide === 'opposizione' && !steers(item))) : local.workBoost || local.workUnblock || local.service ? byLevel(active.filter(item => steers(item) && (local.service || (item.works ?? []).length))) : null) ?? byLevel(active.filter(item => item.executive?.leader === 'player')) ?? byLevel(active);
+      if (target) {
+        let updated = applyLocalEffect(target, local);
+        // A motion on the weakest service (opposition) and a text shared with the majority (the player's own proposal) are acts of the council.
+        if (local.motion) { try { updated = proposeLocalAct(updated, weakCityAreas(updated, 1)[0] ?? localAreas(updated.kind)[0], next.clock.currentDate, { category: 'mozione' }); } catch { /* a proposal is already in discussion */ } }
+        if (local.negotiate) { const mineAct = updated.acts.find(act => act.sponsor?.kind === 'player' && !['approvato', 'respinto', 'ritirato', 'risposto'].includes(act.stage) && !act.consensual); if (mineAct) updated = { ...updated, acts: updated.acts.map(act => act.id === mineAct.id ? { ...act, consensual: true, title: `${act.title} (testo condiviso)` } : act) }; }
+        next = replaceInstitution(next, updated);
+      }
+    } else if (special.type.startsWith('work-')) {
+      next = workDecision(next, special);
     } else if (special.type.startsWith('local-vote-')) {
       const choice = { 'local-vote-line': 'linea', 'local-vote-yes': 'favorevole', 'local-vote-no': 'contrario', 'local-vote-abstain': 'astenuto', 'local-vote-absent': 'assente' }[special.type];
       try { next = replaceInstitution(next, setLocalVote(findInstitution(next, special.params?.instId), special.params?.actId, choice)); } catch { /* the act was already voted */ }
@@ -1998,7 +2020,7 @@ function simulatedInstitution(s, kind, date) {
   const playerGroup = own ?? groups.find(group => group.id === 'lista-civica');
   playerGroup.seats += 1;
   const leader = [...bySide('maggioranza')].sort((a, b) => b.seats - a.seats)[0];
-  return createInstitution({ kind, name: institutionName(kind, place), region: place.region, territory: s.society?.regions?.[place.region]?.indicators ?? null, date, until: nextVoteOf(s, ELECTION_OF[kind]), role: 'consigliere', side: playerGroup.side, playerGroupId: playerGroup.id, leaderGroupId: leader?.id, groups: groups.map(({ share, ...group }) => group) });
+  return createInstitution({ kind, name: institutionName(kind, place), place: placeIds(place), region: place.region, territory: s.society?.regions?.[place.region]?.indicators ?? null, date, until: nextVoteOf(s, ELECTION_OF[kind]), role: 'consigliere', side: playerGroup.side, playerGroupId: playerGroup.id, leaderGroupId: leader?.id, groups: groups.map(({ share, ...group }) => group) });
 }
 // The European Parliament as the player sits in it: the group of the own party's collocazione, or non-attached.
 function europeanInstitution(s, date, until = nextVoteOf(s, 'europee')) {
@@ -2041,8 +2063,10 @@ function institutionFromResult(s, campaign, result) {
   const playerGroup = rowGroups(playerRow).find(group => ownParty && group.partyId === ownParty) ?? rowGroups(playerRow).sort((a, b) => b.seats - a.seats)[0] ?? null;
   const leaderGroup = leads ? playerGroup : rowGroups(rows.find(row => row.id === winner)).sort((a, b) => b.seats - a.seats)[0] ?? null;
   const site = campaign.racePlace ?? null;
-  return { ...createInstitution({ kind, name: institutionName(kind, site ?? { ...homePlace(s), municipality: player?.municipality ?? homePlace(s).municipality }), region: site?.region ?? player?.region ?? null, territory: s.society?.regions?.[site?.region ?? player?.region]?.indicators ?? null, date, until, role: leads ? role : 'consigliere', side: playerRow?.id === winner ? 'maggioranza' : 'opposizione', playerGroupId: playerGroup?.id ?? null, leaderGroupId: leaderGroup?.id ?? winner, leaderIsPlayer: leads, groups }), electionId: campaign.id };
+  return { ...createInstitution({ kind, name: institutionName(kind, site ?? { ...homePlace(s), municipality: player?.municipality ?? homePlace(s).municipality }), place: placeIds(site ?? homePlace(s)), region: site?.region ?? player?.region ?? null, territory: s.society?.regions?.[site?.region ?? player?.region]?.indicators ?? null, date, until, role: leads ? role : 'consigliere', side: playerRow?.id === winner ? 'maggioranza' : 'opposizione', playerGroupId: playerGroup?.id ?? null, leaderGroupId: leaderGroup?.id ?? winner, leaderIsPlayer: leads, groups }), electionId: campaign.id };
 }
+// The stable territorial identifiers of the place an institution answers for (ISTAT codes where the game has them).
+const placeIds = place => ({ region: place?.region ?? null, municipalityCode: place?.municipalityCode ?? null, municipality: place?.municipality ?? null, provinceCode: place?.provinceCode ?? null, provinceName: place?.provinceName ?? null });
 const INDICATOR_AREA = Object.freeze({ economia: 'economia', occupazione: 'lavoro', servizi: 'welfare', sanita: 'sanita', istruzione: 'scuola', infrastrutture: 'infrastrutture', trasporti: 'trasporti', sicurezza: 'sicurezza', ambiente: 'ambiente' });
 const LOCAL_LINE_WORDS = Object.freeze({ favorevole: 'a favore', contrario: 'contro', astenuto: 'per l’astensione' });
 // A career saved before the councils existed: the player is seated in the councils of the local offices still open.
@@ -2054,12 +2078,13 @@ function seatSavedCareer(s) {
   for (const [level, kind] of [['comunale', 'comune'], ['provinciale', 'provincia'], ['regionale', 'regione']]) if (open.has(level)) next = withInstitution(next, simulatedInstitution(next, kind, s.clock.currentDate));
   return next;
 }
+const fmt1 = value => String(Math.round(value * 10) / 10).replace('.', ',');
+// The political capital the head of an executive spends on a decision about a work (a working day each).
+const LOCAL_WORK_CAPITAL = Object.freeze({ fund: 1, funding: 0, resize: 1, suspend: 1, resume: 2, upkeep: 0 });
 function tickLocal(input, date) {
   const s = seatSavedCareer(input);
   const active = localOf(s).institutions.filter(item => item.status === 'active');
   if (!active.length || !s.game || s.game.status === 'ended') return s;
-  const region = homePlace(s).region;
-  const issues = (s.society?.issues ?? []).filter(issue => issue.region === region).map(issue => INDICATOR_AREA[issue.indicator]).filter(Boolean);
   let next = s;
   let game = deepCopy(s.game);
   const deltas = {};
@@ -2068,7 +2093,10 @@ function tickLocal(input, date) {
   const chronicle = [];
   for (const inst of active) {
     const rules = INSTITUTIONS[inst.kind];
-    const territory = ['regione', 'provincia'].includes(inst.kind) ? next.society?.regions?.[inst.region]?.indicators ?? null : null;
+    // The problems and the indicators are those of the territory this institution answers for (its own region), not the player's home region.
+    const region = inst.region ?? inst.place?.region ?? homePlace(s).region;
+    const issues = (s.society?.issues ?? []).filter(issue => issue.region === region).map(issue => INDICATOR_AREA[issue.indicator]).filter(Boolean);
+    const territory = ['regione', 'provincia'].includes(inst.kind) ? next.society?.regions?.[region]?.indicators ?? null : null;
     const out = advanceInstitutionWeek(inst, { date, rand: seededRandom(`${s.career.id}|${inst.id}|${date}`), issues, territory });
     let updated = out.inst;
     lines.push(...out.lines);
@@ -2116,6 +2144,43 @@ function tickLocal(input, date) {
         lines.push(`${rules.label}: ti viene tolta la delega ${event.portfolio}.`);
         game = addSituationEvent(game, 'delega-revocata', { instId: inst.id, institution: rules.label.toLowerCase(), portfolio: event.portfolio, dedupe: `${inst.id}|delega|${date}` }, false);
         chronicle.push({ type: 'chronicle', kind: 'territorio', icon: 'alert', title: `${inst.name}: tolta la delega ${event.portfolio}`, body: 'Il servizio non ha convinto: la delega torna all’esecutivo (simulazione).', tone: 'bad' });
+      } else if (event.type.startsWith('opera-')) {
+        // The public works of the institution (local-works-engine): what the player decides, what the opposition profits from, what the citizens and the memory keep.
+        const mine = leads || event.byPlayer;
+        const opposition = inst.playerSide === 'opposizione' && !leads && !inst.playerDelega;
+        const raise = (id, params, urgent = false) => { game = addSituationEvent(game, id, { work: event.title, place: inst.name, workId: event.workId, instId: inst.id, ...params }, urgent); };
+        if (event.type === 'opera-avviata') {
+          if (mine) { add('influence', 0.4); remember(game, { date, kind: 'decisione', text: `${inst.name}: avviata l’opera «${event.label}»`, weight: 0.6 }); }
+          lines.push(`${rules.label}: via libera all’opera «${event.label}» (${fmt1(event.cost)} punti di margine).`);
+          chronicle.push({ type: 'chronicle', kind: 'territorio', icon: 'town', title: `${inst.name}: via libera all’opera «${event.label}»`, body: `Autorizzazioni, progetto, gara e cantiere: circa ${event.weeks} settimane (simulazione).`, tone: 'neutral' });
+        } else if (event.type === 'opera-completata') {
+          const waste = event.late >= 12 || event.cost > event.budget * 1.15;
+          const fine = event.onTime && event.quality >= 0.95;
+          if (mine) { add('reputation', fine ? 1.2 : waste ? -1.2 : 0.4); add('influence', 0.5); gainSector(game, event.area, SECTOR_GAINS.localAct, { cause: event.title }); remember(game, { date, kind: waste ? 'crisi-governo' : 'decisione', text: `${inst.name}: aperta l’opera «${event.label}»${event.late ? ` con ${event.late} settimane di ritardo` : ' nei tempi'}, costo ${fmt1(event.cost)} contro ${fmt1(event.budget)} previsti`, weight: waste ? 1 : 0.9 }); }
+          else if (opposition && waste) add('notoriety', 0.5);
+          lines.push(`${rules.label}: aperta l’opera «${event.label}»${event.late ? ` (${event.late} settimane di ritardo)` : ''}.`);
+          chronicle.push({ type: 'chronicle', kind: 'territorio', icon: 'town', title: `${inst.name}: aperta l’opera «${event.label}»`, body: `${event.benefit} Costo ${fmt1(event.cost)} punti contro ${fmt1(event.budget)} previsti${event.late ? `, ${event.late} settimane di ritardo` : ''} (simulazione).`, tone: waste ? 'bad' : 'good' });
+          if (leads) raise('opera-inaugurazione', { benefit: event.benefit, quality: String(Math.round(event.quality * 100)), cost: fmt1(event.cost), budget: fmt1(event.budget), late: event.late ? `, con ${event.late} settimane di ritardo` : '', dedupe: event.workId });
+        } else if (event.type === 'opera-sforamento') {
+          if (event.leads) raise('opera-sforamento', { amount: fmt1(event.amount), cost: fmt1(event.cost), dedupe: `${event.workId}|${event.waits}` }, true);
+        } else if (event.type === 'opera-sforamento-risolto') {
+          if (opposition) add('notoriety', 0.3);
+          lines.push(`${rules.label}: l’opera «${event.title}» sfora il preventivo e l’esecutivo corre ai ripari.`);
+        } else if (event.type === 'opera-ritardo') {
+          if (event.leads) raise('opera-ritardo', { delay: String(event.delay), stage: String(event.stage ?? '').toLowerCase(), dedupe: `${event.workId}|${event.delay}` });
+          else if (opposition) { add('notoriety', 0.3); lines.push(`${rules.label}: ritardi all’opera «${event.title}».`); }
+        } else if (event.type === 'opera-fondi') {
+          if (event.leads) raise('opera-fondi', { need: fmt1(event.need), margin: fmt1(event.margin), dedupe: `${event.workId}|fondi` }, true);
+          else if (opposition) add('notoriety', 0.3);
+        } else if (event.type === 'opera-protesta') {
+          if (event.leads) raise('opera-protesta', { label: event.label, delay: String(event.delay), dedupe: `${event.workId}|${date}` });
+          else if (opposition) { add('notoriety', 0.4); lines.push(`${rules.label}: protesta al cantiere «${event.title}».`); }
+        } else if (event.type === 'opera-manutenzione') {
+          if (event.leads) raise('opera-manutenzione', { condition: String(Math.round(event.condition)), due: fmt1(event.due), dedupe: `${event.workId}|${date}` });
+        } else if (event.type === 'opera-degrado') {
+          if (leads) { add('reputation', -0.8); remember(game, { date, kind: 'crisi-governo', text: `${inst.name}: l’opera «${event.title}» si degrada per mancata manutenzione`, weight: 0.8 }); }
+          chronicle.push({ type: 'chronicle', kind: 'territorio', icon: 'alert', title: `${inst.name}: «${event.title}» si degrada`, body: 'Senza manutenzione l’opera perde parte dei benefici (simulazione).', tone: 'bad' });
+        }
       } else if (event.type === 'impegno-disatteso') {
         if (leads) { add('reputation', -1.5); lines.push(`${rules.label}: non hai dato seguito alla mozione “${event.title}”.`); }
         else if (event.player) { add('notoriety', 0.6); lines.push(`${rules.label}: la giunta ignora la tua mozione “${event.title}”.`); }
@@ -2152,6 +2217,15 @@ function tickLocal(input, date) {
         chronicle.push({ type: 'chronicle', kind: 'territorio', icon: 'alert', title: `${inst.name}: consiglio sciolto ${why}`, body: 'Arriva un commissario; si torna al voto in anticipo (simulazione).', tone: 'bad' });
       }
     }
+    // The citizens ask for a work where a service of the territory is weak (the start of the chain of the works): at most when the desk has room, and not often.
+    if (updated.status === 'active' && updated.kind !== 'europa' && (game.inbox ?? []).length < 4) {
+      const asked = workRequestFor(updated, { date, valueOf: area => territoryValue(updated, area, territory) });
+      if (asked && seededRandom(`${inst.id}|richiesta|${date}`)() < 0.3) {
+        updated = { ...updated, worksRecord: { ...updated.worksRecord, requestAt: date } };
+        const own = leads || (updated.playerDelega?.areas ?? []).includes(asked.area);
+        game = addSituationEvent(game, own ? 'opera-richiesta' : 'opera-richiesta-consigliere', { area: asked.area, areaLabel: AREA_BY_ID[asked.area]?.label.toLowerCase() ?? asked.area, value: String(asked.value), who: { comune: 'Cittadini e associazioni', provincia: 'Sindaci, scuole e imprese del territorio', regione: 'Cittadini, aziende sanitarie e imprese' }[inst.kind] ?? 'I cittadini', weeks: String(WORK_RULES.requestDueWeeks), place: inst.name, institution: rules.label.toLowerCase(), instId: inst.id, dedupe: `${inst.id}|${asked.area}|${date}` });
+      }
+    }
     // A council that is dissolved no longer sits: its seats go with it.
     next = { ...next, local: { institutions: localOf(next).institutions.map(item => item.id === inst.id ? (updated.status === 'active' ? updated : { ...updated, roster: null }) : item) } };
   }
@@ -2163,6 +2237,42 @@ function tickLocal(input, date) {
   const changed = Object.fromEntries(Object.entries(deltas).filter(([, value]) => Math.abs(value) >= 0.01).map(([metric, value]) => [metric, roundStat((stats[metric] ?? 50) + value)]));
   if (Object.keys(changed).length) next = { ...next, dataset: { ...next.dataset, statistics: writeStats(next, { ...stats, ...changed }) } };
   return next;
+}
+// The decisions of the chain of the public works (the inbox items and the buttons of the works page): the engine changes the institution, the state of the career keeps what it means.
+const WORK_ANSWERS = Object.freeze({ 'work-integrate': 'integra', 'work-scale': 'ridimensiona', 'work-suspend': 'sospendi', 'work-commissioner': 'commissario', 'work-wait': 'attendi' });
+function workDecision(s, special) {
+  const { instId, workId } = special.params ?? {};
+  try {
+    const inst = findInstitution(s, instId);
+    const date = s.clock.currentDate;
+    let next = s;
+    if (special.type === 'work-request-promise') {
+      const area = special.params.area;
+      const open = (inst.commitments ?? []).some(item => item.status === 'aperto' && item.area === area);
+      if (!open) next = replaceInstitution(next, { ...inst, commitments: [...(inst.commitments ?? []), { id: `${inst.id}-impegno-opera-${(inst.commitments ?? []).length + 1}`, actId: null, area, title: `Un’opera su ${special.params.areaLabel ?? area}`, player: true, from: null, since: date, dueAt: advanceDays(date, WORK_RULES.requestDueWeeks * 7), status: 'aperto' }].slice(-12), history: [...inst.history, { date, text: `Impegno con i cittadini: un’opera su ${special.params.areaLabel ?? area} entro ${WORK_RULES.requestDueWeeks} settimane.`, type: 'impegno' }].slice(-40) });
+      return next;
+    }
+    if (special.type === 'work-request-motion') {
+      try { next = replaceInstitution(next, proposeLocalAct(inst, special.params.area, date, { category: 'mozione' })); } catch (error) { next = { ...next, ui: { ...next.ui, toast: error.message } }; }
+      return next;
+    }
+    if (special.type.startsWith('work-inaugurate')) {
+      const big = special.type === 'work-inaugurate';
+      if (next.society && inst.region) next = { ...next, society: regionAttention(next.society, inst.region, big ? 4 : 1.5) };
+      const game = deepCopy(next.game);
+      remember(game, { date, kind: 'decisione', text: `${inst.name}: ${big ? 'inaugurazione' : 'apertura sobria'} dell’opera «${special.params.work}»`, weight: big ? 0.8 : 0.4 });
+      return { ...next, game };
+    }
+    let out;
+    if (WORK_ANSWERS[special.type]) out = settleWorkIssue(inst, workId, WORK_ANSWERS[special.type], date);
+    else if (special.type === 'work-refund') out = refundWork(inst, workId);
+    else if (special.type === 'work-upkeep-pay') out = payUpkeep(inst, workId);
+    else if (special.type.startsWith('work-protest-')) out = answerProtest(inst, workId, { 'work-protest-dialog': 'dialoga', 'work-protest-compensate': 'compensa', 'work-protest-ignore': 'ignora' }[special.type]);
+    if (!out) return next;
+    next = replaceInstitution(next, out.inst);
+    if (special.type === 'work-suspend') { const game = deepCopy(next.game); remember(game, { date, kind: 'decisione', text: `${inst.name}: sospesa l’opera «${out.work.title}»`, weight: 1 }); next = { ...next, game }; }
+    return next;
+  } catch (error) { return { ...s, ui: { ...s.ui, toast: error.message } }; }
 }
 // A move of the MEP: a working day and some capital; the result moves the stats, opens or closes an office of the
 // committee (level europee: it ends with the European term) and can stay in the political memory.
@@ -3448,7 +3558,7 @@ export const store = {
   performWeeklyActivity(activityId, targetId = null) {
     const result = performActivity({ game: state.game, stats: statsOf(state), parliament: state.parliament }, gameEnv(state), activityId, targetId);
     const activity = result.activity;
-    state = applyGameResult(state, result.ctx, `${result.report.title}: ${result.report.tone === 'bad' ? 'qualcosa è andato storto' : 'fatto'}`, []);
+    state = applyGameResult(state, result.ctx, `${result.report.title}: ${result.report.tone === 'bad' ? 'qualcosa è andato storto' : 'fatto'}`, result.specials ?? []);
     const home = playerOf(state)?.region ?? null;
     const region = activity.target === 'region' ? targetId : activity.category === 'territorio' ? home : null;
     // A press conference is written up according to the player's reputation.
@@ -4227,6 +4337,44 @@ export const store = {
     state = { ...replaceInstitution(next, inst), ui: { ...next.ui, toast } };
     persist(); emit();
     return inst;
+  },
+  // A public work: its type, funding and place; the act goes to the organ that approves it (council or Giunta) as any other act, and the work starts only if it passes.
+  proposeLocalWork(instId, typeId, { funding = null, site = 'periferia' } = {}) {
+    const type = WORK_BY_ID[typeId];
+    if (!type) throw new Error('Scegli il tipo di opera.');
+    // Money and sites first: a work that could not start is not proposed (no day is spent).
+    const gap = workGap(findInstitution(state, instId), planWork(findInstitution(state, instId), { typeId, funding, site }).commit);
+    if (gap) throw new Error(gap[0].toUpperCase() + gap.slice(1) + '.');
+    const next = withTime(1);
+    const inst = proposeLocalAct(findInstitution(next, instId), type.area, next.clock.currentDate, { category: 'opere', work: { typeId, funding, site } });
+    const act = inst.acts.at(-1);
+    state = { ...replaceInstitution(next, inst), ui: { ...next.ui, toast: `Opera proposta: ${act.workPlan.label} (${act.workPlan.cost} punti di margine, ${act.workPlan.commit} da impegnare)` } };
+    persist(); emit();
+    return inst;
+  },
+  // The decisions of the head of the executive on a work: more money, another level of funding before the site opens, scaling down, suspending, resuming, the upkeep.
+  // A working day each, and political capital for the heavier ones; whoever does not lead the executive proposes or follows, and spends nothing.
+  manageLocalWork(instId, workId, action, value = null) {
+    const capital = LOCAL_WORK_CAPITAL[action];
+    if (capital === undefined) throw new Error('Azione non valida.');
+    findInstitution(state, instId);
+    if ((state.game?.resources.politicalCapital ?? 0) < capital) throw new Error(`Servono ${capital} punti di capitale politico.`);
+    let next = withTime(1);
+    const inst = findInstitution(next, instId);
+    const date = next.clock.currentDate;
+    const out = { fund: () => refundWork(inst, workId), funding: () => setWorkFunding(inst, workId, value), resize: () => resizeWork(inst, workId), suspend: () => suspendWork(inst, workId, date), resume: () => resumeWork(inst, workId), upkeep: () => payUpkeep(inst, workId) }[action]();
+    next = replaceInstitution(next, out.inst);
+    const game = deepCopy(next.game);
+    game.resources.politicalCapital = Math.max(0, game.resources.politicalCapital - capital);
+    // The decision is taken: the matching requests waiting in the agenda lapse.
+    game.inbox = game.inbox.filter(item => !(item.params?.workId === workId && /^opera-(sforamento|ritardo|fondi|protesta|manutenzione)$/.test(item.templateId)));
+    if (action === 'suspend') remember(game, { date, kind: 'decisione', text: `${inst.name}: sospesa l’opera «${out.work.title}»`, weight: 1 });
+    next = { ...next, game, parliament: withCapital(next.parliament, game) };
+    if (action === 'suspend') { const stats = statsOf(next); next = { ...next, dataset: { ...next.dataset, statistics: writeStats(next, { ...stats, popularity: roundStat((stats.popularity ?? 50) - 1.5), reputation: roundStat((stats.reputation ?? 50) - 0.5) }) } }; }
+    const toast = { fund: 'Opera rifinanziata', funding: 'Progetto modificato', resize: 'Opera ridimensionata: costa meno e rende meno', suspend: 'Cantiere sospeso: recuperata una parte dell’impegno', resume: 'Cantiere riaperto', upkeep: 'Manutenzione pagata' }[action];
+    state = { ...next, ui: { ...next.ui, toast } };
+    persist(); emit();
+    return out.inst;
   },
   castLocalVote(instId, actId, choice) {
     const inst = setLocalVote(findInstitution(state, instId), actId, choice);
