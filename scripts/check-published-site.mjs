@@ -42,8 +42,11 @@ async function localModuleGraph() {
 }
 const localModules = await localModuleGraph();
 const stylesheets = [...localIndexSource.matchAll(/<link rel="stylesheet" href="\.\/([^"?]+\.css)\?v=([^"]+)"/g)].map(([, path, version]) => { assert(version === indexVersion, `${path} è collegato con la versione ${version}`); return path; });
+// Every request carries its own unique parameter (the existing ones, such as v=..., are kept) so that the edge cache never answers with an older copy.
+let verifyCounter = 0;
+const uncached = url => { const target = new URL(url); target.searchParams.set('verify', `${Date.now().toString(36)}-${process.pid}-${++verifyCounter}`); return target; };
 async function get(url) {
-  const response = await fetch(url, { signal:AbortSignal.timeout(30000), headers:{'cache-control':'no-cache'} });
+  const response = await fetch(uncached(url), { signal:AbortSignal.timeout(30000), headers:{'cache-control':'no-cache'} });
   if (!response.ok) throw new Error(`${response.status} ${url}`);
   return { response, bytes:Buffer.from(await response.arrayBuffer()) };
 }
