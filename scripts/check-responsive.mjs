@@ -179,11 +179,38 @@ try {
     await pause(250);
     for (const view of institutionViews) {
       await open(view);
-      // A seat picked (its card is drawn and audited too), then the folded blocks opened.
-      if (view[0] === 'territori') { await evaluate(`(async () => { if (!document.querySelector('.local-seat-card')) document.querySelector('.local-institutions [data-local-seat]')?.dispatchEvent(new MouseEvent('click', { bubbles: true })); await new Promise(resolve => setTimeout(resolve, 300)); return true; })()`); if (!(await evaluate('Boolean(document.querySelector(".local-seat-card"))'))) report.push(`${label} · territori: la scheda del seggio non si apre`); }
-      const shown = await evaluate(`(async () => { for (const drawer of document.querySelectorAll('.local-giunta, .bill-archive, .local-roster-list')) drawer.open = true; await new Promise(resolve => setTimeout(resolve, 250)); return document.querySelectorAll('${view[0] === 'territori' ? '.local-institutions [id^=istituzione-]' : '.hq-institutions button'}').length; })()`);
+      const openDrawers = () => evaluate(`(async () => { for (const drawer of document.querySelectorAll('.local-giunta, .bill-archive, .local-roster-list')) drawer.open = true; await new Promise(resolve => setTimeout(resolve, 250)); return true; })()`);
+      if (view[0] === 'territori') {
+        // Territori shows one mandate at a time (a selector) and one section at a time: each of the two mandates is picked, and each of its sections is opened and audited.
+        const pick = async selector => { await evaluate(`document.querySelector(${JSON.stringify(selector)})?.click(), true`); await pause(300); };
+        const kinds = await evaluate(`[...document.querySelectorAll('.local-institutions .local-jump [data-local-inst]')].map(button => button.dataset.localInst)`);
+        if (kinds.length !== 2 || !kinds.includes('comune') || !kinds.includes('europa')) report.push(`${label} · territori: il selettore dei mandati mostra ${kinds.join(', ') || 'nessun mandato'} invece di Comune ed Europa`);
+        for (const kind of kinds) {
+          await pick(`.local-institutions [data-local-inst="${kind}"]`);
+          const sections = await evaluate(`[...document.querySelectorAll('.local-institutions .local-tabs [data-local-section]')].map(button => button.dataset.localSection)`);
+          if (!sections.includes('panoramica') || sections.length < 3) report.push(`${label} · territori · ${kind}: sezioni mostrate: ${sections.join(', ') || 'nessuna'}`);
+          for (const section of sections) {
+            await pick(`.local-institutions [data-local-section="${section}"]`);
+            const where = `${label} · territori · ${kind} · ${section}`;
+            const cards = await evaluate(`[...document.querySelectorAll('.local-institutions [id^=istituzione-]')].map(card => card.id)`);
+            if (cards.length !== 1 || cards[0] !== `istituzione-${kind}`) report.push(`${where}: schede mostrate ${cards.join(', ') || 'nessuna'} invece di istituzione-${kind}`);
+            if (section === 'panoramica') {
+              // The seats of this institution are drawn, and a seat picked (its card is drawn and audited too).
+              if ((await evaluate('document.querySelectorAll(".local-institutions .hemi-svg").length')) !== 1) report.push(`${where}: i seggi dell'istituzione non sono disegnati`);
+              await evaluate(`(async () => { if (!document.querySelector('.local-seat-card')) document.querySelector('.local-institutions [data-local-seat]')?.dispatchEvent(new MouseEvent('click', { bubbles: true })); await new Promise(resolve => setTimeout(resolve, 300)); return true; })()`);
+              if (!(await evaluate('Boolean(document.querySelector(".local-seat-card"))'))) report.push(`${where}: la scheda del seggio non si apre`);
+            }
+            await openDrawers();
+            const issues = await evaluate(audit);
+            checked++;
+            for (const issue of issues) report.push(`${where} · ${issue.kind}: ${issue.el} (${issue.detail})`);
+          }
+        }
+        continue;
+      }
+      await openDrawers();
+      const shown = await evaluate(`document.querySelectorAll('.hq-institutions button').length`);
       if (shown !== 2) report.push(`${label} · ${view[0]} con le istituzioni del giocatore: ${shown} istituzioni mostrate invece di 2`);
-      if (view[0] === 'territori' && (await evaluate('document.querySelectorAll(".local-institutions .hemi-svg").length')) !== 2) report.push(`${label} · territori: i seggi delle due istituzioni non sono disegnati`);
       const issues = await evaluate(audit);
       checked++;
       for (const issue of issues) report.push(`${label} · ${view[0]} con le istituzioni del giocatore · ${issue.kind}: ${issue.el} (${issue.detail})`);
@@ -224,7 +251,7 @@ try {
   if (report.length) {
     exitCode = 1;
     console.error(`Controllo responsive: ${report.length} problemi su ${checked} schermate.\n- ${report.slice(0, 80).join('\n- ')}${report.length > 80 ? `\n… e altri ${report.length - 80}` : ''}`);
-  } else console.log(`Responsive verificato con Chrome: ${checked} schermate (${views.length} viste, Home e Territori con Comune e Parlamento europeo del giocatore, Candidatura da segretario con le corse territoriali, seggi di Comune e Parlamento europeo con un punto per persona e ${opened.size} finestre: ${[...opened].join(', ')} × telefono 375, 390 e 430 px, tablet 768 px, desktop 1280 px; Home con approfondimenti aperti, azione principale nella prima schermata) senza scorrimento orizzontale, elementi fuori schermo, contenuti nascosti da overflow o testi troncati.`);
+  } else console.log(`Responsive verificato con Chrome: ${checked} schermate (${views.length} viste, Home e Territori con Comune e Parlamento europeo del giocatore (a Territori un mandato alla volta, con tutte le sue sezioni), Candidatura da segretario con le corse territoriali, seggi di Comune e Parlamento europeo con un punto per persona e ${opened.size} finestre: ${[...opened].join(', ')} × telefono 375, 390 e 430 px, tablet 768 px, desktop 1280 px; Home con approfondimenti aperti, azione principale nella prima schermata) senza scorrimento orizzontale, elementi fuori schermo, contenuti nascosti da overflow o testi troncati.`);
   socket.close();
 } catch (error) {
   exitCode = 1;
