@@ -1,8 +1,8 @@
 // Simulated newsroom: headlines tied to what happens in the career, written with different structures
 // (fact, question, number, local angle, quote-like, analysis) and never the same template twice in a row.
 // Headlines speak of the player's own character and of the simulated world: no statement is put in the mouth of real people.
-import { ARTICLE_CATEGORIES, NEWSROOM_OUTLETS, NEWS_RULES as RULES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261012-1';
-import { WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20261012-1';
+import { ARTICLE_CATEGORIES, NEWSROOM_OUTLETS, NEWS_RULES as RULES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261012-2';
+import { WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20261012-2';
 const RECENT = 18;
 // A template not used recently; when every template of the kind has been used, the least recently used one.
 const pick = (list, seed, recent) => {
@@ -369,13 +369,16 @@ export function publishFact(mediaIn, fact, ctx) {
 
 // ---------- the week of the newsroom ----------
 // ctx: { week, date, year, parliament, govAxis, gov: { name, stability, margin, groups, external }, lawsApplied, worldEvents, projects, euCalls, finance, reactionsFor(summary) }.
+const compareText = (a, b) => { const x = String(a ?? ''), y = String(b ?? ''); return x < y ? -1 : x > y ? 1 : 0; };
 export function newsroomWeek(societyIn, ctx) {
   if (!societyIn?.media) return societyIn;
   const media = normalizeMedia(copy(societyIn.media));
   media.coverage = societyIn.media.coverage;
   // What does not fit in this week's six is not lost (the history cursor moves on): it waits, ranked with the new facts, for a few weeks.
   const fresh = collectFacts(media, ctx).filter(item => !media.seen.includes(item.key)), waiting = media.pending.filter(item => item?.key && (item.week ?? 0) >= ctx.week - RULES.backlogWeeks && !media.seen.includes(item.key) && !fresh.some(other => other.key === item.key));
-  const ranked = [...fresh, ...waiting].sort((a, b) => b.importance - a.importance || (a.week ?? 0) - (b.week ?? 0) || (a.key < b.key ? -1 : 1));
+  // A total order, also for facts with the same key (the same week, the same importance): what is written first never depends on the order they were collected in.
+  const order = (a, b) => b.importance - a.importance || (a.week ?? 0) - (b.week ?? 0) || compareText(a.key, b.key) || compareText(a.kind, b.kind) || compareText(a.text, b.text) || compareText(JSON.stringify(a.data ?? null), JSON.stringify(b.data ?? null));
+  const ranked = [...fresh, ...waiting].sort(order).filter((item, index, list) => list.findIndex(other => other.key === item.key) === index);
   for (const fact of ranked.slice(0, 6)) publishFact(media, fact, ctx);
   media.pending = ranked.slice(6, 6 + RULES.backlogKept);
   const history = ctx.parliament?.history ?? [];

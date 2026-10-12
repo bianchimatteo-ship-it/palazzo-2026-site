@@ -54,10 +54,19 @@ const open = dossiers.openDossiers(base.parliament.government).find(item => item
 assert.ok(open, 'C’è una riforma aperta da portare in porto.');
 const ctxOf = (state, extra = {}) => ({ date: state.clock.currentDate, week: state.game.week.index, society: state.society, margin: 6, ...extra });
 const ministerOf = (state, id) => state.parliament.government.ministers.find(item => item.id === id);
-// A measure on the matter is enacted: the dossier succeeds.
+// A measure of the same area that does not come from a bill of the majority does not close the reform (nothing links it to the dossier).
 {
   const state = copy(base);
-  state.society.lawsApplied = [{ title: 'Riforma di prova', category: AREA_LABEL(open.area), area: open.area, week: open.openedWeek + 1, date: state.clock.currentDate, origin: 'governo', controversy: 0.2, covered: true, cost: 1 }, ...state.society.lawsApplied];
+  state.parliament.laws = state.parliament.laws.filter(law => law.policy?.area !== open.area);
+  state.society.lawsApplied = [{ title: 'Misura altrui', category: AREA_LABEL(open.area), area: open.area, week: open.openedWeek + 1, date: state.clock.currentDate, origin: 'governo', lawId: 'legge-di-un-altro', controversy: 0.2, covered: true, cost: 1 }, { title: 'Misura senza legge', category: AREA_LABEL(open.area), area: open.area, week: open.openedWeek + 1, date: state.clock.currentDate, origin: 'governo', controversy: 0.2, covered: true, cost: 1 }, ...state.society.lawsApplied];
+  const out = dossiers.tickDossiers(state.parliament, ctxOf(state));
+  assert.equal(dossiers.dossiersOf(out.parliament.government).find(item => item.id === open.id).status, 'aperto', 'Una legge della stessa area ma non del dossier non lo chiude.');
+}
+// A measure on the matter, born from a bill of the majority, is enacted: the dossier succeeds.
+{
+  const state = copy(base);
+  state.parliament.laws = [{ id: 'legge-prova-dossier', title: 'Riforma di prova', kind: 'disegno', origin: 'governo', sponsor: { kind: 'governo' }, policy: { area: open.area }, introducedAt: open.openedDate, stage: 'approved', status: 'approved' }, ...state.parliament.laws];
+  state.society.lawsApplied = [{ title: 'Riforma di prova', category: AREA_LABEL(open.area), area: open.area, week: open.openedWeek + 1, date: state.clock.currentDate, origin: 'governo', lawId: 'legge-prova-dossier', controversy: 0.2, covered: true, cost: 1 }, ...state.society.lawsApplied];
   const before = ministerOf(state, open.ministerId), stabilityBefore = state.parliament.government.stability, partnerBefore = state.parliament.government.partners?.[open.groupId]?.satisfaction;
   const out = dossiers.tickDossiers(state.parliament, ctxOf(state));
   const done = dossiers.dossiersOf(out.parliament.government).find(item => item.id === open.id);
@@ -168,6 +177,9 @@ const reform = open;
   assert.ok(bad.report.share === 0 && bad.parliament.government.stability === Math.max(0, stability + rules.DOSSIER_RULES.program.badStability) && bad.parliament.history.some(entry => entry.type === 'programma-bilancio'), 'Un programma lasciato fermo pesa sul governo, e il bilancio resta nel registro.');
   assert.equal(dossiers.settleProgram(bad.parliament, state.society, state.clock.currentDate).report, null, 'Il bilancio si fa una volta.');
   state.society.lawsApplied = ['sanita', 'lavoro'].map(area => ({ title: `Misura ${area}`, category: area, area, week: 1, date: state.clock.currentDate, origin: 'governo', controversy: 0.1, covered: true, cost: 1 }));
+  assert.deepEqual(dossiers.programReport(state.parliament, state.society, state.clock.currentDate).rows.map(row => row.status), ['ferma', 'ferma', 'ferma'], 'Una misura senza un disegno di legge della maggioranza non attua una priorità.');
+  state.parliament.laws = [...['sanita', 'lavoro'].map(area => ({ id: `legge-${area}`, title: `Misura ${area}`, kind: 'disegno', origin: 'governo', sponsor: { kind: 'governo' }, policy: { area }, introducedAt: state.parliament.government.program.setAt, stage: 'approved', status: 'approved' })), ...state.parliament.laws];
+  state.society.lawsApplied = state.society.lawsApplied.map(item => ({ ...item, lawId: `legge-${item.area}` }));
   const good = dossiers.settleProgram(state.parliament, state.society, state.clock.currentDate);
   assert.ok(good.report.share >= rules.DOSSIER_RULES.program.good && good.parliament.government.stability === Math.min(100, stability + rules.DOSSIER_RULES.program.goodStability), 'Due priorità su tre attuate rafforzano il governo.');
   const early = copy(state); early.parliament.government.program.setAt = addWeeks(state.clock.currentDate, -3);

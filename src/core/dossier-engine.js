@@ -3,11 +3,11 @@
 // put right when its level, measured on the country, reaches the goal. A result moves the minister (loyalty, competence or pressure), the Government (stability) and the
 // group the minister comes from, once. The programme of the Government is balanced the same way against the measures enacted in its priority areas.
 // Everything is simulation: no dossier is a real decision of a real minister. Choices are a hash of the keys, never the random sequence of the game.
-import { DATA_SOURCES } from '../data/schema.js?v=20261012-1';
-import { AREA_BY_ID, areasOfPortfolio } from '../data/simulation/policy-rules.js?v=20261012-1';
-import { DOSSIER_KINDS, DOSSIER_RULES as R, LAW_PROGRESS } from '../data/simulation/dossier-rules.js?v=20261012-1';
-import { activeMinisters, canManageParliament, groupProfile, parliamentInternals, proposeLaw, record } from './parliament-engine.js?v=20261012-1';
-import { areaValue, pushEffect } from './society-engine.js?v=20261012-1';
+import { DATA_SOURCES } from '../data/schema.js?v=20261012-2';
+import { AREA_BY_ID, areasOfPortfolio } from '../data/simulation/policy-rules.js?v=20261012-2';
+import { DOSSIER_KINDS, DOSSIER_RULES as R, LAW_PROGRESS } from '../data/simulation/dossier-rules.js?v=20261012-2';
+import { activeMinisters, canManageParliament, groupProfile, parliamentInternals, proposeLaw, record } from './parliament-engine.js?v=20261012-2';
+import { areaValue, pushEffect } from './society-engine.js?v=20261012-2';
 
 const SIM = DATA_SOURCES.SIMULATION;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -34,9 +34,14 @@ const shiftStability = (parliament, delta) => withGovernment(parliament, { stabi
 // ---------- what a dossier has done ----------
 // Reform: the furthest bill of the majority on the matter introduced since the dossier opened, or a measure already applied. Emergency: the way from the starting level to the goal.
 const majorityBill = law => law.origin === 'governo' || ['governo', 'maggioranza', 'commissione'].includes(law.sponsor?.kind);
+// A measure in force counts only when it comes from a bill of the majority on the matter introduced since the start (the bills closed long ago are kept in the archive):
+// a law of the same area written by someone else, a decree of the opposition or the budget does not complete a reform or a priority of the programme.
+const majorityBillIds = (parliament, area, since) => new Set([...(parliament?.laws ?? []), ...(parliament?.lawArchive ?? [])].filter(law => (law.policy?.area ?? law.area) === area && (law.introducedAt ?? '') >= since && majorityBill(law)).map(law => law.id));
+const linkedMeasures = (parliament, lawsApplied, area, since, sinceKey, sinceValue) => { const ids = majorityBillIds(parliament, area, since); return lawsApplied.filter(item => item.area === area && item.lawId && ids.has(item.lawId) && (item[sinceKey] ?? (sinceKey === 'week' ? 0 : '')) >= sinceValue); };
 export function dossierProgress(dossier, { parliament, society, lawsApplied = society?.lawsApplied ?? [] } = {}) {
   if (dossier.kind === 'riforma') {
-    if (lawsApplied.some(item => item.area === dossier.area && (item.week ?? 0) >= dossier.openedWeek)) return { value: 100, evidence: 'Una misura nella materia è in vigore.' };
+    const enacted = linkedMeasures(parliament, lawsApplied, dossier.area, dossier.openedDate, 'week', dossier.openedWeek)[0];
+    if (enacted) return { value: 100, evidence: `«${enacted.title}» è in vigore.`, lawId: enacted.lawId };
     const laws = (parliament?.laws ?? []).filter(law => law.policy?.area === dossier.area && (law.introducedAt ?? '') >= dossier.openedDate && majorityBill(law) && law.stage !== 'rejected' && law.stage !== 'lapsed');
     const best = laws.map(law => ({ law, value: LAW_PROGRESS[law.stage] ?? 0 })).sort((a, b) => b.value - a.value)[0];
     return best ? { value: best.value, evidence: `«${best.law.title}»: ${best.law.stage}`, lawId: best.law.id } : { value: 0, evidence: 'Nessun provvedimento presentato.' };
@@ -206,7 +211,7 @@ export function programReport(parliament, society, date) {
   if (!program?.priorities?.length) return null;
   const since = program.setAt;
   const rows = program.priorities.map(area => {
-    const applied = (society?.lawsApplied ?? []).filter(item => item.area === area && item.date >= since);
+    const applied = linkedMeasures(parliament, society?.lawsApplied ?? [], area, since, 'date', since);
     const bill = (parliament.laws ?? []).filter(law => law.policy?.area === area && (law.introducedAt ?? '') >= since && majorityBill(law) && !['rejected', 'lapsed'].includes(law.stage)).sort((a, b) => (LAW_PROGRESS[b.stage] ?? 0) - (LAW_PROGRESS[a.stage] ?? 0))[0];
     return { area, label: AREA_BY_ID[area]?.label ?? area, status: applied.length ? 'attuata' : bill ? 'in-corso' : 'ferma', measures: applied.map(item => item.title), bill: bill ? { id: bill.id, title: bill.title, stage: bill.stage } : null };
   });
