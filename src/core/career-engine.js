@@ -14,7 +14,7 @@ import { book, buyInvestment, createFinance, depositElectionFund, depositReserve
 import { advanceOrganization, allocateCurrentPortfolios, applyOrgEffects, createOrganization, isPartyLeader, normalizeCurrentProfiles, normalizeOrganization, rememberCurrent, treasuryBook } from './organization-engine.js?v=20261013-1';
 import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20261013-1';
 import { HARD_CATEGORIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261013-1';
-import { macroAreaOf } from '../data/simulation/policy-rules.js?v=20261013-1';
+import { AREA_GROUPS, macroAreaOf } from '../data/simulation/policy-rules.js?v=20261013-1';
 import { advancementOdds, evaluateAdvancement, progressionFactors } from './progression-engine.js?v=20261013-1';
 import { advanceCommittees, applyCommitteeAction, applyLocalEvent, COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, committeeActionCost, foundCommittee, leaderStance, scaleOf, territorialControl } from './committee-engine.js?v=20261013-1';
 import { europeanElectionDate, legislatureTerm, LEGISLATURE_RULES, sundayOnOrBefore } from './legislature-engine.js?v=20261013-1';
@@ -558,6 +558,8 @@ export function activityProblem(ctx, env, activity) {
   if (sit.president) return 'Da Presidente della Repubblica non fai attività di parte: usa le attività del Quirinale (sezione Elezioni → Quirinale).';
   if (sit.campaignActive && activity.category !== 'parlamento') return 'In campagna: usa le attività della sezione Elezioni.';
   if (!meets(activity.requires, sit)) return requirementReason[activity.requires] ?? activity.requiresLabel ?? 'Non disponibile ora.';
+  // An activity with a weekly cap cannot be repeated for the same reward: the count restarts with the week.
+  if (activity.weekly && (ctx.game.week.activityUses?.[activity.id] ?? 0) >= activity.weekly) return activity.weekly === 1 ? 'Già fatto questa settimana: si può rifare dalla prossima.' : `Già fatto ${activity.weekly} volte questa settimana.`;
   return costProblem(ctx.game, activity.cost);
 }
 export function performActivity(input, env, activityId, targetId = null) {
@@ -570,10 +572,12 @@ export function performActivity(input, env, activityId, targetId = null) {
   if (activity.target === 'character' && !ctx.game.relations.some(item => item.id === targetId)) throw new Error('Scegli con chi parlare.');
   if (activity.target === 'group' && !ctx.parliament?.relations?.[targetId]) throw new Error('Scegli un gruppo parlamentare.');
   if (activity.target === 'region' && !ITALIAN_REGIONS.includes(targetId)) throw new Error('Scegli una regione.');
+  if (activity.target === 'region-away' && (!ITALIAN_REGIONS.includes(targetId) || targetId === ctx.game.place?.region)) throw new Error('Scegli una regione diversa dalla tua.');
   if (activity.target === 'contact' && !(ctx.game.contacts ?? []).some(item => item.person.id === targetId)) throw new Error('Scegli un parlamentare tra i tuoi contatti.');
   if (activity.target === 'segment' && !SEGMENTS.some(item => item.id === targetId)) throw new Error('Scegli un gruppo di cittadini.');
   pay(ctx.game, activity.cost, ACTIVITY_FINANCE_CATEGORY[activity.category], activity.label, env.currentDate);
   ctx.game.week.categoriesUsed = [...new Set([...ctx.game.week.categoriesUsed, activity.category])];
+  if (activity.weekly) ctx.game.week.activityUses = { ...(ctx.game.week.activityUses ?? {}), [activity.id]: (ctx.game.week.activityUses?.[activity.id] ?? 0) + 1 };
   // The ledger of what the player does: the goals of the career are measured on it.
   bump(ctx.game, 'activities', activity.category); bump(ctx.game, 'activityIds', activity.id);
   const lines = applyEffects(ctx, activity.effects, targetId, [], { date: env.currentDate, fundsLabel: activity.label });
@@ -899,6 +903,9 @@ export function describeEffects(effects = {}) {
   if (effects.local?.scrutiny) parts.push('Pressione sui cantieri in ritardo');
   if (effects.local?.motion) parts.push('Mozione sul servizio più debole');
   if (effects.local?.negotiate) parts.push('Testo condiviso per la tua proposta');
+  const REPUTATION_LABELS = { internal: 'Reputazione interna', territorial: 'Reputazione sul territorio', media: 'Reputazione mediatica', institutional: 'Reputazione istituzionale' };
+  for (const [id, delta] of Object.entries(effects.standing ?? {})) parts.push(`${REPUTATION_LABELS[id] ?? id} ${signed(delta)}`);
+  for (const [id, delta] of Object.entries(effects.sector ?? {})) parts.push(`Influenza nel settore ${AREA_GROUPS[id]?.toLowerCase() ?? id} ${signed(delta)}`);
   return parts.join(' · ');
 }
 export function describeChoice(item, choiceId) {

@@ -345,9 +345,12 @@ export function attachChartInteractions(root) {
     try { data = JSON.parse(chart.dataset.trend); } catch { return hideChartTip(); }
     const box = chart.getBoundingClientRect();
     const ratio = (clientX - box.left) / box.width;
-    const index = data.x.reduce((best, value, i) => Math.abs(value - ratio) < Math.abs(data.x[best] - ratio) ? i : best, 0);
-    const line = chart.querySelector('.crosshair');
-    const xPos = data.x[index] * Number(chart.querySelector('svg').viewBox.baseVal.width);
+    // The chart is drawn at two widths: the one on screen decides where the points are.
+    const svg = [...chart.querySelectorAll('svg')].find(item => item.getClientRects().length) ?? chart.querySelector('svg');
+    const xs = (svg.classList.contains('lc-narrow') && data.xn) || (svg.classList.contains('lc-mid') && data.xm) || data.x;
+    const index = xs.reduce((best, value, i) => Math.abs(value - ratio) < Math.abs(xs[best] - ratio) ? i : best, 0);
+    const line = svg.querySelector('.crosshair');
+    const xPos = xs[index] * Number(svg.viewBox.baseVal.width);
     line?.setAttribute('x1', xPos); line?.setAttribute('x2', xPos); line?.setAttribute('visibility', 'visible');
     const title = document.createElement('strong');
     title.textContent = data.weeks[index];

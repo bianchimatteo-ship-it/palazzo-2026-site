@@ -111,7 +111,7 @@ try {
     ['resoconto settimanale', 'document.querySelector(".topbar [data-action=advance], [data-action=advance]")?.click(); await new Promise(resolve => setTimeout(resolve, 500)); document.querySelector("[data-confirm=ok]")?.click()', 'document.querySelector("[data-report-close]")?.click()', '.report-modal'],
     ['nuova carriera', 'document.querySelector("[data-nav=impostazioni]")?.click(); await new Promise(resolve => setTimeout(resolve, 600)); document.querySelector("[data-action=new-career]")?.click(); await new Promise(resolve => setTimeout(resolve, 600)); document.querySelector("[data-menu-action=start-local]")?.click()', 'document.querySelector("[data-wizard-action=cancel]")?.click(); await new Promise(resolve => setTimeout(resolve, 400)); document.querySelector("[data-menu=continua]")?.click()', '.career-wizard']
   ];
-  const widths = [[375, 812, true, 'telefono'], [390, 844, true, 'telefono 390'], [430, 932, true, 'telefono 430'], [768, 1024, true, 'tablet'], [1280, 800, false, 'desktop']];
+  const widths = [[320, 640, true, 'telefono 320'], [375, 812, true, 'telefono'], [390, 844, true, 'telefono 390'], [430, 932, true, 'telefono 430'], [768, 1024, true, 'tablet'], [1024, 768, false, 'desktop 1024'], [1280, 800, false, 'desktop']];
   const report = [];
   const opened = new Set();
   const missing = new Set();
@@ -127,9 +127,9 @@ try {
       if (view[1]?.startsWith('osservatorio') && !(await evaluate('Boolean(document.querySelector(".polls-page.observatory"))'))) report.push(`${label} · ${view.join(' › ')} · l’osservatorio non si apre`);
       // The Home as a command centre: who you are and the main action on the first screen, the resources right after.
       if (view[0] === 'panoramica') {
-        const home = await evaluate(`(() => { const top = selector => { const el = document.querySelector(selector); return el ? el.getBoundingClientRect().top + scrollY : null; }; return { action: top('.hqc-action'), resources: top('.hqc-resources'), overview: top('.hqc-board'), screen: innerHeight, tabs: [...document.querySelectorAll('.mobile-tab')].filter(tab => getComputedStyle(tab).display !== 'none').length }; })()`);
+        const home = await evaluate(`(() => { const top = selector => { const el = document.querySelector(selector); return el ? el.getBoundingClientRect().top + scrollY : null; }; return { action: top('.hqc-action'), priorities: top('.hqc-priorities'), resources: top('.hqc-resources'), overview: top('.hqc-board-status'), screen: innerHeight, tabs: [...document.querySelectorAll('.mobile-tab')].filter(tab => getComputedStyle(tab).display !== 'none').length }; })()`);
         if (home.action === null || home.action > home.screen * 1.05) report.push(`${label} · Home: l’azione principale non è nella prima schermata (${home.action} px su ${home.screen})`);
-        if (!(home.resources > home.action && home.overview > home.resources)) report.push(`${label} · Home: ordine dei blocchi non rispettato`);
+        if (!(home.priorities > home.action && home.resources > home.priorities && home.overview > home.resources)) report.push(`${label} · Home: ordine dei blocchi non rispettato`);
         if (width <= 600 && home.tabs !== 5) report.push(`${label} · barra inferiore con ${home.tabs} tasti invece di 5`);
       }
     }
@@ -251,7 +251,7 @@ try {
   if (report.length) {
     exitCode = 1;
     console.error(`Controllo responsive: ${report.length} problemi su ${checked} schermate.\n- ${report.slice(0, 80).join('\n- ')}${report.length > 80 ? `\n… e altri ${report.length - 80}` : ''}`);
-  } else console.log(`Responsive verificato con Chrome: ${checked} schermate (${views.length} viste, Home e Territori con Comune e Parlamento europeo del giocatore (a Territori un mandato alla volta, con tutte le sue sezioni), Candidatura da segretario con le corse territoriali, seggi di Comune e Parlamento europeo con un punto per persona e ${opened.size} finestre: ${[...opened].join(', ')} × telefono 375, 390 e 430 px, tablet 768 px, desktop 1280 px; Home con approfondimenti aperti, azione principale nella prima schermata) senza scorrimento orizzontale, elementi fuori schermo, contenuti nascosti da overflow o testi troncati.`);
+  } else console.log(`Responsive verificato con Chrome: ${checked} schermate (${views.length} viste, Home e Territori con Comune e Parlamento europeo del giocatore (a Territori un mandato alla volta, con tutte le sue sezioni), Candidatura da segretario con le corse territoriali, seggi di Comune e Parlamento europeo con un punto per persona e ${opened.size} finestre: ${[...opened].join(', ')} × telefono 320, 375, 390 e 430 px, tablet 768 px, desktop 1024 e 1280 px; Home con approfondimenti aperti, azione principale nella prima schermata) senza scorrimento orizzontale, elementi fuori schermo, contenuti nascosti da overflow o testi troncati.`);
   socket.close();
 } catch (error) {
   exitCode = 1;

@@ -149,8 +149,19 @@ assert.ok(!sidebar.includes('nav-group-label'), 'Nessun gruppo “Altro” in pi
 assert.ok(sidebar.includes('class="nav-sub"') === false, 'La Panoramica non apre nessun menu secondario.');
 // The Home as a command centre, in this order: identity and main action, resources, priorities and decisions,
 // what is coming, every area in brief, then the details folded.
-const order = ['hqc-head', 'hqc-action', 'hqc-resources', 'hqc-priorities', 'id="hq-inbox"', 'hqc-elections', 'hqc-overview', 'hqc-details'].map(marker => home.indexOf(marker));
+// 1. who you are and the main action; 2. what to do now (priorities, decisions, deadlines); 3. where you stand (resources, personal indicators, then the cards of consensus, relations,
+// offices, majority, party and money); 4. what is coming (elections, goals); 5. the news that concern the career (only when the newsroom has written something); 6. the secondary areas; the details.
+const order = ['hqc-head', 'hqc-action', 'hqc-priorities', 'id="hq-inbox"', 'hqc-deadline-band', 'hqc-resources', 'hqc-indicators', 'hqc-status-head', 'hqc-elections', 'hqc-secondary-head', 'hqc-details'].map(marker => home.indexOf(marker));
 assert.ok(order.every((position, index) => position > 0 && (index === 0 || position > order[index - 1])), `Home: blocchi nell’ordine previsto (${order.join(', ')}).`);
+{
+  const cardOrder = ['ELEZIONI E SONDAGGI', 'RELAZIONI', 'CARRIERA', 'PARLAMENTO E GOVERNO', 'PARTITO', 'FINANZE'].map(area => home.indexOf(`<span class="section-kicker">${area}</span>`));
+  assert.ok(cardOrder.every((position, index) => position > 0 && (index === 0 || position > cardOrder[index - 1])), `Home: le schede dello stato (consenso, relazioni, cariche, maggioranza, partito, risorse) nell’ordine previsto (${cardOrder.join(', ')}).`);
+  const secondaryOrder = ['PAESE', 'TERRITORIO', 'MEDIA', 'MEMORIA POLITICA'].map(area => home.indexOf(`<span class="section-kicker">${area}</span>`));
+  assert.ok(secondaryOrder.every((position, index) => position > cardOrder.at(-1) && (index === 0 || position > secondaryOrder[index - 1])), 'Home: le aree secondarie vengono dopo quelle dello stato.');
+  assert.ok(home.includes('class="hq-meters"') && !home.slice(home.indexOf('hqc-head'), home.indexOf('hqc-board')).includes('hq-meters'), 'Home: gli indicatori personali sono un blocco a sé, non nell’intestazione.');
+  assert.ok(home.includes('kind-partito') || home.includes('kind-indipendente'), 'Home: il partito nell’intestazione è un’etichetta con il suo glifo.');
+  if (home.includes('hqc-news')) assert.ok(home.indexOf('hqc-elections') < home.indexOf('hqc-news') && home.indexOf('hqc-news') < home.indexOf('hqc-secondary-head') && home.includes('NOTIZIE · SIMULATE'), 'Home: le notizie rilevanti stanno dopo gli appuntamenti e prima delle aree secondarie, dichiarate simulate.');
+}
 for (const area of ['PAESE', 'PARLAMENTO E GOVERNO', 'PARTITO', 'ELEZIONI E SONDAGGI', 'CARRIERA', 'TERRITORIO', 'MEDIA', 'FINANZE', 'RELAZIONI', 'MEMORIA POLITICA']) assert.ok(home.includes(`<span class="section-kicker">${area}</span>`), `Home: manca il riepilogo ${area}.`);
 assert.ok((home.match(/class="hqc-drawer /g) ?? []).length >= 9 && home.includes('data-remember="home-hq-planner"'), 'Home: approfondimenti richiudibili e ricordati.');
 assert.ok(home.includes('data-mobile-sheet hidden') && ['calendario', 'eventi', 'carriera', 'partito', 'finanze', 'partiti-lista', 'parlamento', 'governo', 'leggi', 'territori', 'notizie', 'archivio', 'politici', 'profilo', 'impostazioni'].every(id => home.includes(`class="sheet-item " data-nav="${id}"`) || home.includes(`class="sheet-item active" data-nav="${id}"`)), 'Il pannello “Altro” raggiunge tutte le sezioni.');

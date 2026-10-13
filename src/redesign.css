@@ -61,7 +61,7 @@
 }
 .hero-profile { position:relative; display:grid; grid-template-columns:58px minmax(0,1fr) 34px; grid-template-rows:auto 1fr; align-items:center; gap:9px 17px; padding:29px 38px; }
 .hero-profile > .section-kicker { grid-column:1/-1; color:#cbb27d; }
-.section-kicker { display:block; color:#bba880; font-size:10px; font-weight:750; letter-spacing:.11em; }
+.section-kicker { display:block; color:#bba880; font-size:11.5px; font-weight:750; letter-spacing:.11em; }
 .hero-avatar { width:58px; height:58px; display:grid; place-items:center; border:1px solid rgba(83,62,16,0.7); border-radius:50%; background:var(--sage-deep); color:#eaddc0; font:700 17px Manrope,sans-serif; }
 .hero-identity h1 { margin:0 0 7px; color:var(--ink-hi); font:700 clamp(25px,3.1vw,38px)/1.08 Manrope,sans-serif; letter-spacing:-.055em; }
 .hero-identity p { margin:0; color:#dedbd1; font-size:13px; }
@@ -212,7 +212,7 @@
   .main-area { margin:0; padding-bottom:75px; }
   .topbar { height:auto; min-height:72px; padding:12px 15px; align-items:flex-start; gap:11px; }
   .topbar-title strong { font-size:16px; }
-  .topbar-title span { max-width:150px; font-size:10px; }
+  .topbar-title > span { max-width:150px; font-size:10px; }
   .top-actions { gap:5px; flex-wrap:nowrap; }
   .date-chip { height:34px; padding:0 7px; gap:5px; font-size:9px; }
   .date-chip svg { width:14px; }

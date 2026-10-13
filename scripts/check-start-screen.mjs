@@ -1,0 +1,110 @@
+// The screen shown when the game opens, before a career is loaded (src/ui/menu.js: renderMainMenu), in a real browser (Chrome over the DevTools protocol; skipped when it is not
+// installed). The order of the actions: starting a career first, resuming it second (only when there is one, with the logo and the colour of the party the career is in), then the
+// careers already made (load, Hall of Fame, account), then help and options. Every button does what it says, saves are found, nothing is lost by opening the menu; the screen does
+// not scroll sideways and is legible at 320, 375, 390, 430, 768, 1024 and 1280 px, with the two main actions on the first screen of a phone.
+import assert from 'node:assert/strict';
+import { chromeAvailable, createCareerInPage, openCareer, withBrowser } from './lib/browser.mjs';
+import { legibilityAudit } from './lib/legibility.mjs';
+
+if (!chromeAvailable) { console.log('Schermata iniziale saltata: Chrome non trovato (imposta CHROME_PATH per eseguirla).'); process.exit(0); }
+const FN = 'party-futuro-nazionale';
+const WIDTHS = [[320, 640], [375, 812], [390, 844], [430, 932], [768, 1024], [1024, 768], [1280, 800]];
+const problems = [];
+const check = (condition, message) => { if (!condition) problems.push(message); };
+
+await withBrowser(async browser => {
+  const { evaluate, viewport, goto, waitFor, pause, errors, version } = browser;
+  const menu = () => evaluate(`(() => { const q = selector => document.querySelector(selector); const order = [...document.querySelectorAll('.menu-column [data-menu]')].map(el => el.dataset.menu); const card = q('.menu-continue'); const style = card ? getComputedStyle(card) : null; return { order, groups: [...document.querySelectorAll('.menu-group-title')].map(el => el.textContent.trim()), continueCard: card ? { text: card.textContent.replace(/\\s+/g, ' ').trim(), img: card.querySelector('img')?.getAttribute('src') ?? null, ghost: Boolean(card.querySelector('.emblem-ghost')), accent: style.getPropertyValue('--party-accent').trim(), mark: card.querySelector('.emblem')?.textContent.trim() ?? '' } : null, panel: q('.menu-panel')?.textContent.replace(/\\s+/g, ' ').trim().slice(0, 400) ?? '', facts: [...document.querySelectorAll('.menu-facts strong')].map(el => el.textContent.trim()), wizard: Boolean(q('.career-wizard')), home: Boolean(q('.page-wrap') && !q('.main-menu')) }; })()`);
+  const click = async selector => { await evaluate(`document.querySelector(${JSON.stringify(selector)})?.click(), true`); await pause(500); };
+
+  const widthsPass = async label => {
+    for (const [width, height] of WIDTHS) {
+      await viewport(width, height);
+      await goto();
+      await waitFor(() => evaluate('Boolean(document.querySelector(".main-menu"))'));
+      await pause(500);
+      const audit = await evaluate(legibilityAudit('.menu-shell'));
+      for (const issue of audit.issues) check(false, `${width}px ${label} · ${issue}`);
+      const first = await evaluate(`(() => { const rect = selector => { const el = document.querySelector(selector); return el ? el.getBoundingClientRect() : null; }; const n = rect('.menu-new'), c = rect('.menu-continue'); return { newBottom: n?.bottom ?? null, continueBottom: c?.bottom ?? null, innerHeight, tops: [n?.top, c?.top] }; })()`);
+      check(first.newBottom !== null && first.newBottom <= first.innerHeight, `${width}px ${label} · «Nuova partita» è nella prima schermata (${Math.round(first.newBottom)} px su ${first.innerHeight}).`);
+      if (first.continueBottom !== null && width <= 430) check(first.continueBottom <= first.innerHeight, `${width}px ${label} · anche «Continua» è nella prima schermata (${Math.round(first.continueBottom)} px su ${first.innerHeight}).`);
+      if (first.tops[1] !== null) check(first.tops[0] < first.tops[1], `${width}px ${label} · «Nuova partita» sta sopra «Continua».`);
+    }
+    await viewport(1280, 800);
+  };
+
+  // ---------- 1. no career yet: the opening screen of a first visit ----------
+  await evaluate(`localStorage.setItem('politicando.onboarding.v1', JSON.stringify({ account: true, tour: 'done', localStart: true }))`);
+  await goto();
+  await waitFor(() => evaluate('Boolean(document.querySelector(".main-menu"))'));
+  await pause(500);
+  let state = await menu();
+  check(state.order[0] === 'nuova', `Senza carriera la prima azione è «Nuova partita» (ordine: ${state.order.join(', ')}).`);
+  check(!state.order.includes('continua') && !state.continueCard, 'Senza carriera non c’è «Continua»: nessun pannello vuoto o finto.');
+  check(JSON.stringify(state.order.slice(1)) === JSON.stringify(['carica', 'hall', 'account', 'guida', 'impostazioni']), `Poi le carriere già fatte e l’aiuto: ${state.order.slice(1).join(', ')}.`);
+  check(state.groups.join('|') === 'Le tue carriere|Aiuto e opzioni', `Gruppi: ${state.groups.join(' | ')}.`);
+  check(state.facts.length > 0 && state.facts.every(value => Number(value.replace(/\D/g, '')) > 0), `I numeri del gioco sono quelli dei dati caricati, mai zero o vuoti (${state.facts.join(', ')}).`);
+  // every entry opens its own content in the panel, and the same button closes it again
+  const titles = { carica: 'Carica partita', hall: 'Hall of Fame', account: 'Account e salvataggi online', guida: 'Come giocare', impostazioni: 'Impostazioni' };
+  for (const [id, title] of Object.entries(titles)) {
+    await click(`[data-menu=${id}]`);
+    state = await menu();
+    check(state.panel.includes(title), `«${title}» apre il suo pannello (${state.panel.slice(0, 60)}).`);
+    await click(`[data-menu=${id}]`);
+    state = await menu();
+    check(state.panel.includes('La politica italiana, settimana dopo settimana'), `Un secondo tocco su «${title}» torna alla presentazione.`);
+  }
+  await click('[data-menu=nuova]');
+  state = await menu();
+  check(state.wizard, '«Nuova partita» apre i passaggi della nuova carriera.');
+  await click('[data-wizard-action=cancel]');
+  state = await menu();
+  check(!state.wizard && state.order[0] === 'nuova', 'Annullando i passaggi si torna all’apertura.');
+
+  await widthsPass('senza carriera');
+
+  // ---------- 2. a career of Futuro Nazionale: the logo and the colour of the party ----------
+  await createCareerInPage(browser, { party: FN, group: 'cam-xix-12', weeks: 3 });
+  const before = await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); const s = store.getState(); return { week: s.game.week.index, date: s.clock.currentDate, player: s.dataset.politicians.find(item => item.id === s.career.playerId)?.displayName }; })()`);
+  await goto();
+  await waitFor(() => evaluate('Boolean(document.querySelector(".menu-continue"))'));
+  await pause(500);
+  state = await menu();
+  check(state.order[0] === 'nuova' && state.order[1] === 'continua', `Con una carriera: prima «Nuova partita», poi «Continua» (ordine: ${state.order.join(', ')}).`);
+  check(state.continueCard?.img?.includes('futuro-nazionale.png'), `Il riquadro «Continua» mostra il logo del partito della carriera (${state.continueCard?.img}).`);
+  check(/Futuro Nazionale/.test(state.continueCard?.text ?? '') && state.continueCard.text.includes(before.player) && /Settimana \d+/.test(state.continueCard.text), `Con giocatore, partito, settimana e data (${state.continueCard?.text}).`);
+  check(/^#[0-9a-f]{6}$/i.test(state.continueCard?.accent ?? ''), `Con il colore del partito (${state.continueCard?.accent}).`);
+  // it is the same colour that the career then uses
+  await click('[data-menu=continua]');
+  await waitFor(() => evaluate('Boolean(document.querySelector(".page-wrap"))'));
+  const inGame = await evaluate(`(() => { const shell = document.querySelector('.app-shell'); return { accent: getComputedStyle(shell).getPropertyValue('--party-accent').trim(), identity: shell.dataset.identity }; })()`);
+  check(inGame.identity === 'partito' && inGame.accent === state.continueCard?.accent, `«Continua» riprende la carriera con lo stesso colore (${inGame.accent} / ${state.continueCard?.accent}).`);
+  const after = await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); const s = store.getState(); return { week: s.game.week.index, date: s.clock.currentDate }; })()`);
+  check(after.week === before.week && after.date === before.date, 'Aprire il menu e continuare non cambia la partita (settimana e data uguali).');
+  // the menu opened again from inside the game: the same card, the career still there
+  await click('[data-action=menu]');
+  state = await menu();
+  check(Boolean(state.continueCard) && state.continueCard.img?.includes('futuro-nazionale.png'), 'Il menu aperto dalla partita mostra ancora la carriera con il logo.');
+  // the save slot and its row
+  await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); store.saveToSlot(); return true; })()`);
+  await click('[data-menu=carica]');
+  const slots = await evaluate(`(() => ({ rows: document.querySelectorAll('.slot-row').length, marks: document.querySelectorAll('.slot-row .emblem').length, text: [...document.querySelectorAll('.slot-row')].map(el => el.textContent.replace(/\\s+/g, ' ').trim()).join(' | ').slice(0, 300), load: Boolean(document.querySelector('[data-slot-load]')) }))()`);
+  check(slots.rows >= 2 && slots.load, `«Carica partita» elenca la partita in corso e lo slot salvato (${slots.text}).`);
+  check(slots.marks >= 1, 'Ogni salvataggio mostra il segno del partito.');
+  await click('[data-slot-load]');
+  await waitFor(() => evaluate('Boolean(document.querySelector(".page-wrap"))'));
+  const loaded = await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); const s = store.getState(); return { week: s.game.week.index, date: s.clock.currentDate }; })()`);
+  check(loaded.week === before.week && loaded.date === before.date, 'Il salvataggio caricato è la stessa partita (nessun progresso perso).');
+
+  // ---------- 3. an independent: neutral, no invented symbol ----------
+  await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); store.leaveParty(); return true; })()`);
+  await click('[data-action=menu]');
+  state = await menu();
+  check(state.continueCard?.ghost && !state.continueCard.img && /Indipendente/.test(state.continueCard.text), `L’indipendente ha un segno neutro e la scritta Indipendente (${state.continueCard?.text}).`);
+
+  // ---------- 4. widths, with a career ----------
+  await widthsPass('con carriera');
+  if (errors.length) problems.push(`Errori JavaScript: ${errors.slice(0, 3).join(' | ')}`);
+});
+if (problems.length) { console.error(`Schermata iniziale: ${problems.length} problemi.\n${[...new Set(problems)].slice(0, 60).join('\n')}`); process.exit(1); }
+console.log('Schermata iniziale verificata in Chrome: «Nuova partita» per prima, «Continua» (solo con una carriera) con logo e colore del partito, poi carriere già fatte e aiuto; ogni voce apre il suo pannello e lo richiude; Nuova partita apre i passaggi e annullare torna all’apertura; continuare e caricare uno slot riprendono la stessa partita; l’indipendente ha un segno neutro; a 320, 375, 390, 430, 768, 1024 e 1280 px nessuno scorrimento orizzontale, testi leggibili e le due azioni principali nella prima schermata del telefono.');

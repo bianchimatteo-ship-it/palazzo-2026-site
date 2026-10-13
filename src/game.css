@@ -22,7 +22,7 @@
 .hq-consensus strong { margin:3px 0 2px; color:var(--ink-hi); font:750 clamp(38px,4.6vw,54px)/1 Manrope,sans-serif; letter-spacing:-.06em; }
 .hq-consensus small { color:var(--ink-2); font-size:12px; }
 .hq-meters { grid-column:1/-1; display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); border-top:1px solid rgba(44,52,48,0.13); background:rgba(10,36,30,0.22); }
-.hq-meter { display:grid; grid-template-columns:1fr auto; align-items:baseline; gap:4px 8px; padding:12px 18px 13px; }
+.hq-meter { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:baseline; gap:4px 8px; padding:12px 18px 13px; }
 .hq-meter+.hq-meter { border-left:1px solid rgba(44,52,48,0.1); }
 .hq-meter>span { color:var(--ink-2); font-size:12px; }
 .hq-meter>strong { color:var(--ink-hi); font:700 17px Manrope,sans-serif; }

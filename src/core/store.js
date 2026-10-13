@@ -458,7 +458,7 @@ function keepCurrent(name) {
 function slotMeta(s) {
   const player = playerOf(s);
   const office = s.dataset.offices.find(item => item.id === player?.roleId);
-  return { player: player?.displayName ?? 'Carriera', role: office?.title ?? null, party: s.game?.party?.label ?? 'Indipendente', week: s.game?.week.index ?? 1, gameDate: s.clock.currentDate, status: s.game?.status ?? 'active' };
+  return { player: player?.displayName ?? 'Carriera', role: office?.title ?? null, party: s.game?.party?.label ?? 'Indipendente', partyId: s.game?.party?.partyId ?? null, week: s.game?.week.index ?? 1, gameDate: s.clock.currentDate, status: s.game?.status ?? 'active' };
 }
 function makeId(prefix) {
   const token = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -3110,7 +3110,7 @@ function becomePresident(input, proclaimed, { date }) {
   const game = deepCopy(s.game);
   game.flags = { ...game.flags, president: { since: incumbent.since, termEnds: termEndOf(incumbent) } };
   game.inbox = game.inbox.filter(item => /^(quirinale|presidente)-/.test(item.templateId ?? ''));
-  game.week = { ...game.week, categoriesUsed: [] };
+  game.week = { ...game.week, categoriesUsed: [], activityUses: {} };
   remember(game, { date, kind: 'vittoria-elettorale', text: `Eletto Presidente della Repubblica al ${incumbent.ballot}º scrutinio (${incumbent.votes} voti)`, weight: 3 });
   const office = { id: `incarico-presidente-${incumbent.number}`, title: 'Presidente della Repubblica (scenario)', institution: 'Quirinale (scenario di gioco)', level: 'presidente', politicianId: player?.id ?? null, territoryId: player?.territoryId ?? null, startDate: date, endDate: null };
   s = { ...s, game, dataset: openOffice(s.dataset, office) };
@@ -3585,13 +3585,15 @@ export const store = {
     const activity = result.activity;
     state = applyGameResult(state, result.ctx, `${result.report.title}: ${result.report.tone === 'bad' ? 'qualcosa è andato storto' : 'fatto'}`, result.specials ?? []);
     const home = playerOf(state)?.region ?? null;
-    const region = activity.target === 'region' ? targetId : activity.category === 'territorio' ? home : null;
+    const region = activity.target === 'region' || activity.target === 'region-away' ? targetId : activity.category === 'territorio' ? home : null;
     // A press conference is written up according to the player's reputation.
     const reputation = playerStat(state, 'reputation');
     const tone = activity.media?.tone === 'reputation' ? (reputation >= 55 ? 1 : reputation < 40 ? -1 : 0.3) : activity.media?.tone;
     state = publicEcho(state, activity.id, result.report.tone, { outlet: activity.media?.outlet, region, tone });
     if (state.society && activity.society?.segment) state = { ...state, society: segmentAttention(state.society, targetId, activity.society.segment * (result.report.tone === 'bad' ? -0.4 : 1), home) };
     if (state.society && activity.society?.homeTrust && home) state = { ...state, society: regionAttention(state.society, home, activity.society.homeTrust) };
+    // A visit to another region leaves its mark on that region's attention (and a visit that went wrong, a smaller opposite one).
+    if (state.society && activity.society?.regionTrust && activity.target === 'region-away' && targetId) state = { ...state, society: regionAttention(state.society, targetId, activity.society.regionTrust * (result.report.tone === 'bad' ? -0.4 : 1)) };
     if (activity.effects?.world && state.world) state = { ...state, world: applyWorldSignals(state.world, [{ type: 'stance', delta: result.report.tone === 'bad' ? -activity.effects.world / 2 : activity.effects.world, title: activity.label }], state.clock.currentDate) };
     persist(); emit();
     return result;

@@ -2,14 +2,14 @@
    Same paper-and-forest identity as the rest of the game; the party colour drives the accents. */
 
 /* Subtitles: an editorial serif under the Manrope titles. */
-.intro, .topbar-title span, .brand-subtitle, .section-subtitle, .hq-identity p, .parliament-mode-hero p, .poll-hero small {
+.intro, .topbar-title > span, .brand-subtitle, .section-subtitle, .hq-identity p, .parliament-mode-hero p, .poll-hero small {
   font-family: 'Newsreader', Georgia, 'Times New Roman', serif;
   font-style: italic;
   font-weight: 400;
   letter-spacing: 0;
 }
 .intro { font-size: 15.5px; color: #c2c5b9; }
-.topbar-title span { font-size: 13.5px;  }
+.topbar-title > span { font-size: 13.5px;  }
 
 .hq-identity p { font-size: 14.5px; }
 .section-subtitle { margin: 4px 0 0;  font-size: 14.5px; line-height: 1.45; }
@@ -229,7 +229,7 @@
 .section-tile small { color: var(--muted); font-size: 11.5px; }
 
 /* Real parliamentarians. */
-.contact-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.contact-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); gap: 12px; }
 .contact-grid.is-compact { grid-template-columns: 1fr; gap: 8px; }
 .contact-card { display: grid; gap: 9px; padding: 12px 13px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
 .contact-card header { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: center; }
@@ -248,7 +248,7 @@
 /* Media. */
 .media-summary { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin-bottom: 14px; }
 .media-gauge { display: grid; gap: 6px; align-content: start; padding: 12px 14px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
-.media-gauge small { color: #bba880; font-size: 10.5px; font-weight: 750; letter-spacing: .1em; }
+.media-gauge small { color: #bba880; font-size: 12px; font-weight: 750; letter-spacing: .1em; }
 .media-gauge strong { color: var(--ink-2); font: 800 24px Manrope, sans-serif; }
 .media-gauge strong i { font: 500 12px 'DM Sans', sans-serif; font-style: normal; color: var(--ink-3); }
 .media-gauge .state-badge { justify-self: start; }
@@ -273,7 +273,7 @@
 .real-law-tools .catalog-search { flex: 1 1 240px; display: flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 11px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); }
 .real-law-tools .catalog-search input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; font: 13px 'DM Sans', sans-serif; }
 .real-law-tools select { min-height: 40px; padding: 0 10px; border: 1px solid var(--line); border-radius: 5px; background: var(--panel); font: 13px 'DM Sans', sans-serif; color: var(--ink-2); }
-.real-law-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.real-law-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr)); gap: 12px; }
 .real-law { display: grid; gap: 9px; align-content: start; padding: 14px; border: 1px solid var(--line-strong); border-top: 3px solid var(--teal-soft); border-radius: 6px; background: var(--panel); }
 .real-law header { display: flex; gap: 10px; align-items: flex-start; }
 .real-law header .glyph { color: var(--teal-light); margin-top: 2px; }
@@ -360,7 +360,8 @@
 .pending strong { display: block; color: var(--ink-2); font-size: 13px; }
 .pending small { color: var(--muted); font-size: 11.5px; }
 .hq-activity-copy .hq-risk { color: #d19781; }
-.hq-activity-copy span b { margin-right: 4px; color: var(--ink-2); font-size: 10.5px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; }
+.hq-activity-copy span b { margin-right: 4px; color: var(--ink-2); font-size: 12px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; }
+.hq-activity-copy .hq-req { color: var(--ink-3); }
 .dash-facts .dash-wide { grid-column: 1 / -1; }
 
 /* Territory detail: who lives there and what they ask. */
@@ -459,7 +460,7 @@
   .annual-table { font-size: 12px; }
   .annual-table th, .annual-table td { padding: 7px 5px; }
   .intro { font-size: 14.5px; }
-  .topbar-title span { font-size: 12px;  }
+  .topbar-title > span { font-size: 12px;  }
   .briefing { padding: 13px; }
   .briefing-item { grid-template-columns: auto minmax(0, 1fr); }
   .briefing-item .secondary-button { grid-column: 1 / -1; justify-content: center; }

@@ -81,7 +81,7 @@ assert.ok(page('istituti').includes('Come lavora ciascun istituto') && page('ist
   const html3 = page('territori', { obsForce: other.id, obsRegion: 'Lombardia' });
   assert.ok(html3.includes('<h2>Lombardia</h2>') && html3.includes(other.label), 'La scheda segue la regione e la forza scelte.');
   // the comparison: default of three, then the choice of the player, at most four
-  assert.equal((page('territori').match(/aria-pressed="true" [^>]*title="[^"]+">[A-Z]{3}</g) ?? []).length >= 2, true, 'Il confronto parte con almeno due regioni.');
+  assert.equal((page('territori').match(/aria-pressed="true"[^>]*title="[^"]+"[^>]*>[A-Z]{3}</g) ?? []).length >= 2, true, 'Il confronto parte con almeno due regioni.');
   const picked = page('territori', { obsCompare: 'Abruzzo,Basilicata,Calabria,Campania' });
   assert.equal((picked.match(/data-view-filter="obsCompare"[^>]*disabled/g) ?? []).length, 16, 'Scelte quattro regioni, le altre sedici non si possono aggiungere.');
   assert.ok(page('territori', { obsCompare: 'Abruzzo' }).includes('Scegli almeno due regioni'), 'Con una sola regione il confronto lo chiede.');
@@ -132,4 +132,83 @@ assert.ok(page('istituti').includes('Come lavora ciascun istituto') && page('ist
   clean(html, 'prima settimana');
   assert.ok(html.includes('itmap-tile') || html.includes('Il quadro regionale compare'), 'La prima settimana: la cartina oppure il messaggio che dice quando arriva.');
 }
+
+// ---------- 9. legibility and honesty of the territory charts ----------
+{
+  const visuals = await module('src/ui/visuals.js');
+  const { forceRegionalVote2022, listsOfForce } = await module('src/core/regional-vote.js');
+  const geography = JSON.parse(await readFile(new URL('../src/data/real/electoral-geography.json', import.meta.url), 'utf8'));
+  const FDI = 'party-registro-p1-2014-04-ir', PD = 'party-registro-p1-2015-29-ir', LEGA = 'party-registro-p1-2017-41-ir', M5S = 'party-registro-p1-2022-63-ir', FI = 'party-registro-p1-2015-20-ir', FN = 'party-futuro-nazionale';
+  const pageGeo = (view, filters = {}) => renderObservatory(state, { view, logoFor: () => null, filters, secretary: true, window: () => ({ open: true }), geography });
+
+  // The ink written on any fill (party colours, tile colours, the whole RGB cube in steps) reaches 4.5:1; the old threshold gave 2.7:1 on mid tones.
+  let worst = 99;
+  for (let r = 0; r < 256; r += 15) for (let g = 0; g < 256; g += 15) for (let b = 0; b < 256; b += 15) {
+    const hex = `#${[r, g, b].map(value => value.toString(16).padStart(2, '0')).join('')}`;
+    worst = Math.min(worst, visuals.contrastRatio(visuals.inkOn(hex), hex));
+  }
+  assert.ok(worst >= 4.5, `Il testo sui riempimenti ha sempre contrasto almeno 4,5:1 (peggiore: ${worst.toFixed(2)}).`);
+  const { SEQUENTIAL } = await module('src/ui/polls-mode.js');
+  for (const color of [...SEQUENTIAL, charts.divergingColor(2, 3), charts.divergingColor(-2, 3), charts.divergingColor(null, 3)]) assert.ok(visuals.contrastRatio(visuals.inkOn(color), color) >= 4.5, `Contrasto sulla tessera ${color}.`);
+  assert.equal(visuals.partyMarkText({ abbreviation: 'FN', label: 'Futuro Nazionale' }), 'FN', 'La sigla del partito è quella dichiarata.');
+  assert.equal(visuals.partyMarkText({ label: 'Alleanza Verdi e Sinistra' }), 'AVS', 'Senza sigla: le iniziali, al massimo tre lettere.');
+
+  // The real regional vote of 2022: national figures close to the official ones, a force that did not run has none, a list absent from a region is missing (not 0%).
+  const near = (value, expected, tolerance, where) => assert.ok(Math.abs(value - expected) <= tolerance, `${where}: ${value} (atteso ${expected} ±${tolerance}).`);
+  const real = id => forceRegionalVote2022(geography, id);
+  near(real(FDI).national, 26.0, 0.3, 'Fratelli d’Italia 2022'); near(real(PD).national, 19.1, 0.3, 'PD 2022'); near(real(LEGA).national, 8.8, 0.3, 'Lega 2022'); near(real(M5S).national, 15.4, 0.3, 'M5S 2022'); near(real(FI).national, 8.1, 0.3, 'Forza Italia 2022');
+  assert.equal(real(FN), null, 'Futuro Nazionale non era in nessuna lista del 2022: nessun dato reale inventato.');
+  assert.deepEqual(listsOfForce(FN), [], 'Nessuna lista del 2022 è collegata a Futuro Nazionale.');
+  assert.equal(forceRegionalVote2022(null, FDI), null, 'Senza il documento elettorale non c’è un dato reale.');
+  assert.equal(real(LEGA).regions['Valle d’Aosta'], null, 'Dove la lista non era in scheda (Valle d’Aosta, solo collegio uninominale) il dato manca: non è 0%.');
+  assert.equal(Object.keys(real(LEGA).regions).length, 20, 'Venti regioni, con il dato dove c’è.');
+  assert.ok(real(LEGA).source.includes('Eligendo') && real(LEGA).date === '2022-09-25', 'Fonte e data del dato reale.');
+  assert.equal(real('party-registro-p1-2019-51-ir').shared, true, 'Una lista condivisa da due partiti (Azione–Italia Viva) è dichiarata tale.');
+
+  // The simulated map says so; the real one says where it comes from; a force with no 2022 list cannot select the real measure.
+  const sim = pageGeo('territori', { obsForce: LEGA });
+  assert.ok(sim.includes('src-badge is-sim') && sim.includes('stima simulata') && sim.includes('non sono rilevazioni reali'), 'La stima regionale è dichiarata simulata, non una rilevazione reale.');
+  assert.ok(sim.includes('Quota di consenso') && sim.includes('Più chiaro = più consenso') && sim.includes('itmap-ticks') && sim.includes('dato non disponibile'), 'La cartina ha scala, significato dei colori e chiave.');
+  assert.ok(/Territorio<\/b>?:? ?venti regioni|Territorio.{0,12}venti regioni/.test(sim), 'La riga di provenienza dice il territorio.');
+  assert.ok(/Quando.{0,12}settimana \d+/.test(sim), 'La riga di provenienza dice la settimana e la data.');
+  const reale = pageGeo('territori', { obsForce: LEGA, obsMapMode: 'reale' });
+  clean(reale, 'voto reale 2022');
+  assert.ok(reale.includes('src-badge is-real') && reale.includes('Eligendo') && reale.includes('2022'), 'Il dato reale cita fonte e data.');
+  assert.ok(reale.includes('data-view-filter-value="reale" aria-pressed="true"'), 'La misura reale si sceglie.');
+  const vda = reale.match(/class="itmap-tile[^"]*is-missing[^"]*"[^>]*>[\s\S]{0,200}?VDA[\s\S]{0,120}?>—</);
+  assert.ok(vda, 'In Valle d’Aosta la tessera reale è «dato non disponibile» (trattino), non 0%.');
+  const fn = pageGeo('territori', { obsForce: FN, obsMapMode: 'reale' });
+  clean(fn, 'Futuro Nazionale');
+  assert.ok(fn.includes('non è in nessuna lista delle politiche del 2022') && !fn.includes('data-view-filter-value="reale" aria-pressed="true"'), 'Futuro Nazionale: la misura reale non si offre e se ne dice il motivo; la cartina resta la stima simulata.');
+  assert.ok(!pageGeo('territori', { obsForce: FN }).includes('Voto reale 2022</small>'), 'Nessun KPI di voto reale per una forza senza lista nel 2022.');
+  const noGeo = page('territori', { obsMapMode: 'reale' });
+  assert.ok(noGeo.includes('data-view-filter-value="quota" aria-pressed="true"'), 'Senza il documento elettorale la cartina torna alla stima simulata.');
+
+  // The heatmap on a phone: macro-area filter, short marks with the names key, nothing missing drawn as zero.
+  for (const [area] of charts.MACRO_AREAS) {
+    const html = pageGeo('territori', { obsArea: area });
+    clean(html, `macro-area ${area}`);
+    assert.ok(html.includes('class="hm-wrap"') && html.includes('hm-names'), `${area}: mappa di calore con la chiave dei nomi.`);
+  }
+  assert.ok(charts.regionsOfArea('nord').length > 0 && charts.regionsOfArea('nord').every(name => ITALIAN_REGIONS.includes(name)), 'Le macro-aree usano solo regioni vere.');
+  const covered = new Set(charts.MACRO_AREAS.filter(([id]) => id !== 'tutte').flatMap(([, , members]) => members));
+  assert.equal(covered.size, 20, 'Le macro-aree coprono tutte e venti le regioni, ciascuna una volta.');
+
+  // The line chart: three layouts (wide, medium and narrow) so the text never shrinks below legible size on a phone; gaps are gaps; an empty series says so.
+  const { lineChart } = await module('src/ui/charts.js');
+  const labels = Array.from({ length: 12 }, (_, i) => `S${i + 1}`);
+  const long = 'Partito con un nome molto molto lungo per vedere come regge la legenda';
+  const html = lineChart({ series: [{ label: long, color: '#2f6fb5', values: labels.map((_, i) => 20 + i) }, { label: 'Estremo', color: '#d0805f', values: labels.map((_, i) => (i === 4 || i === 5 ? null : 0.1 * i)) }, { label: 'Negativo', color: '#6fae8a', values: labels.map((_, i) => -3 + i / 2) }], labels, unit: '%' });
+  assert.ok(html.includes('class="trend-block"') && html.includes('lc-wide') && html.includes('lc-mid') && html.includes('lc-narrow') && html.includes('data-trend='), 'Grafico a tre impaginazioni (larga, media e stretta) con i dati per il tooltip.');
+  assert.ok(html.includes('legend-value') && html.includes(long.replace(/&/g, '&amp;')), 'La legenda riporta nome intero e ultimo valore.');
+  assert.ok(!/NaN|undefined|Infinity/.test(html.replace(/data-trend="[^"]*"/, '')), 'Valori estremi, negativi e lacune non producono valori non validi.');
+  assert.ok((html.match(/<path class="series[^"]*" d="[^"]*L[\d.,-]+\s+M[\d.,-]+/g) ?? []).length >= 3, 'Una lacuna nei dati spezza la linea (la riprende con M), non la collega: in tutte le impaginazioni.');
+  assert.ok(!lineChart({ series: [{ label: 'Uno', color: '#2f6fb5', values: [1] }], labels: ['S1'] }).includes('<svg'), 'Con un solo punto non si disegna una linea.');
+  assert.ok(!lineChart({ series: [{ label: 'Nulla', color: '#2f6fb5', values: [null, null, null] }], labels: ['S1', 'S2', 'S3'] }).includes('<svg'), 'Senza valori finiti si dice che il dato manca.');
+
+  // Every figure drawn with a mark shows the mark's text beside the colour: no information by colour alone on the compare table.
+  const compare = pageGeo('territori', { obsForce: LEGA });
+  assert.ok(compare.includes('hm-mark') && compare.includes('hm-names'), 'Le righe della mappa di calore hanno sigla e, a parte, l’elenco dei nomi.');
+}
+
 console.log('Pagina Sondaggi verificata: cinque aree con le nove viste, cartina a tessere delle venti regioni, classifica e barre divergenti, scheda del territorio, confronto fino a quattro regioni, mappa di calore, coalizioni, movimenti, periodo dei grafici, dati mancanti dichiarati (province e confini) e pagina in sola lettura.');

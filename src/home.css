@@ -1,6 +1,7 @@
 /* POLITICANDO 2026 — the Home as a command centre, and the frame around every page (topbar, sidebar, cards, tabs).
-   Loaded last. The Home reads top to bottom: 1. where you are and the main action; 2. the resources of the week;
-   3. priorities and decisions; 4. what is coming; 5. every area in brief; then the details, folded. */
+   Loaded last. The Home reads top to bottom: 1. who you are, where, and the main action; 2. what to do now (priorities, decisions, deadlines);
+   3. where you stand (resources, indicators, consensus, relations, offices, majority, party, money); 4. what is coming; 5. the news that concern the career;
+   6. the secondary areas and the details, folded. The colour of the party of the career (--party-accent…) marks the first block and the status cards. */
 
 /* ---------- frame: topbar ---------- */
 .topbar { gap: 18px; }
@@ -24,7 +25,7 @@
 .hqc .quiet-copy { margin: 0; }
 
 /* 1. where you are: identity and the country on the left, the main action on the right, indicators below */
-.hqc-head { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 360px); grid-template-areas: "who action" "meters meters"; overflow: hidden; border: 1px solid var(--line-strong); border-radius: calc(var(--radius) + 2px); background: linear-gradient(135deg, #213e2f, var(--night) 55%, var(--panel)); color: var(--ink-hi); isolation: isolate; }
+.hqc-head { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 360px); grid-template-areas: "who action"; overflow: hidden; border: 1px solid var(--line-strong); border-radius: calc(var(--radius) + 2px); background: linear-gradient(135deg, #213e2f, var(--night) 55%, var(--panel)); color: var(--ink-hi); isolation: isolate; }
 .hqc-head > .hq-hero-art { position: absolute; right: 390px; top: -6px; width: 210px; z-index: 0; display: none; opacity: .55; }
 @media (min-width: 1500px) { .hqc-head > .hq-hero-art { display: block; } }
 .hqc-head > *:not(.hq-hero-art) { position: relative; z-index: 1; }
@@ -44,7 +45,8 @@
 .hqc-action > p { margin: 0; color: var(--ink-2); font-size: 13px; line-height: 1.5; }
 .hqc-action-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
 .hqc-action-buttons > button { flex: 1 1 150px; justify-content: center; min-height: 42px; }
-.hqc-head > .hq-meters { grid-area: meters; background: rgba(6,12,10,.35); border-top: 1px solid rgba(255,255,255,.08); }
+.hqc-indicators .hq-meters { grid-column: auto; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+.hqc-indicators .hq-meter { padding: 12px 16px; }
 
 /* 2. resources of the week: each tile opens the section that explains it */
 .hqc-resources { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
@@ -52,7 +54,7 @@
 .hqc-resource-link { display: grid; align-content: start; gap: 4px; width: 100%; height: 100%; min-width: 0; padding: 13px 15px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); color: var(--ink); text-align: left; font: inherit; }
 button.hqc-resource-link { cursor: pointer; transition: border-color .15s ease, transform .15s ease; }
 button.hqc-resource-link:hover { border-color: var(--accent); transform: translateY(-1px); }
-.hqc-resource small { color: var(--muted); font: 800 10.5px/1.2 Manrope, sans-serif; letter-spacing: .12em; text-transform: uppercase; }
+.hqc-resource small { color: var(--muted); font: 800 12px/1.2 Manrope, sans-serif; letter-spacing: .12em; text-transform: uppercase; }
 .hqc-resource strong { color: #fff; font: 750 22px/1.1 Manrope, sans-serif; letter-spacing: -.03em; }
 .hqc-resource strong i { color: var(--muted); font-size: 13px; font-style: normal; font-weight: 600; }
 .hqc-resource em { color: var(--muted); font-size: 12px; font-style: normal; line-height: 1.35; }
@@ -131,20 +133,20 @@ html[data-motion="reduced"] .hqc-drawer-toggle, html[data-motion="reduced"] butt
 
 /* ---------- tablets and small laptops ---------- */
 @media (max-width: 1180px) {
-  .hqc-head { grid-template-columns: minmax(0, 1fr); grid-template-areas: "who" "action" "meters"; }
+  .hqc-head { grid-template-columns: minmax(0, 1fr); grid-template-areas: "who" "action"; }
   .hqc-action { margin: 0 16px 16px; }
   .hqc-resources { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .top-time .date-chip { display: none; }
 }
 @media (max-width: 850px) {
   .hqc-drawers { grid-template-columns: minmax(0, 1fr); }
-  .hqc-head > .hq-meters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .hqc-indicators .hq-meters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 /* ---------- phones: one column, clear order, nothing sticks out ---------- */
 @media (max-width: 600px) {
   .topbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; row-gap: 10px; column-gap: 10px; min-height: 0; padding: 11px 14px; }
-  .topbar-title span { max-width: none; }
+  .topbar-title > span { max-width: none; }
   .top-actions { display: contents; }
   .top-tools { grid-column: 2; grid-row: 1; padding: 0; border: 0; gap: 6px; }
   .top-time { grid-column: 1 / -1; grid-row: 2; gap: 8px; }
@@ -158,7 +160,7 @@ html[data-motion="reduced"] .hqc-drawer-toggle, html[data-motion="reduced"] butt
   .hqc-who .situation-bar > div > .glyph { display: none; }
   .hqc-who .situation-bar em { display: none; }
   .hqc-who .situation-bar strong { font-size: 12.5px; }
-  .hqc-who .situation-bar small { font-size: 9.5px; letter-spacing: .08em; }
+  .hqc-who .situation-bar small { font-size: 11.5px; letter-spacing: .06em; }
   .hqc-action { margin: 0 12px 12px; padding: 14px; }
   .hqc-action > strong { font-size: 17px; }
 
@@ -178,16 +180,16 @@ html[data-motion="reduced"] .hqc-drawer-toggle, html[data-motion="reduced"] butt
   .hqc-board > .is-folded-card { display: none; }
   /* Less density: the explanations of the blocks, the notes of the resources and the secondary chips give way. */
   .hqc-band .hqc-band-head p, .hqc-resource em, .hqc-resource .hq-dots, .hqc-resource .hq-bar { display: none; }
-  .hqc .hq-chips span:nth-child(2), .hqc .hq-chips span:nth-child(3) { display: none; }
-  .hqc-head > .hq-meters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .hqc-head > .hq-meters .hq-meter { padding: 8px 10px; border-left: 0; }
-  .hqc-head > .hq-meters .hq-meter em { display: none; }
-  .hqc-head > .hq-meters .hq-meter > span { font-size: 11px; }
-  .hqc-head > .hq-meters .hq-meter > strong { font-size: 15px; }
+  .hqc .hq-chips > :not(.kind-partito):not(.kind-indipendente):not(.hq-status) { display: none; }
+  .hqc-indicators .hq-meters { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .hqc-indicators .hq-meters .hq-meter { padding: 8px 10px; border-left: 0; }
+  .hqc-indicators .hq-meters .hq-meter em { display: none; }
+  .hqc-indicators .hq-meters .hq-meter > span { font-size: 12px; overflow-wrap: anywhere; }
+  .hqc-indicators .hq-meters .hq-meter > strong { font-size: 15px; }
   .hqc-resources { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .hqc-resources > .hqc-resource { grid-column: span 2; }
   .hqc-resources > .hqc-resource:nth-child(n+4), .hqc-resources > .hqc-resource:last-child { grid-column: span 3; }
-  .hqc-resource small { font-size: 9.5px; letter-spacing: .06em; }
+  .hqc-resource small { font-size: 11.5px; letter-spacing: .05em; }
   .hqc-resource strong { font-size: 17px; }
   .hqc-card .sparkline, .hqc-card .hqc-card-lead { display: none; }
   .hqc-priorities .briefing-item { grid-template-columns: auto minmax(0, 1fr); }
@@ -205,3 +207,16 @@ html[data-motion="reduced"] .hqc-drawer-toggle, html[data-motion="reduced"] butt
 .hq-identity .hq-institutions { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
 .hq-institutions .text-link { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 12px; border: 1px solid rgba(240, 213, 140, .45); border-radius: 999px; background: rgba(8, 14, 12, .35); color: var(--gold-light); font: 700 12.5px/1.2 'DM Sans', sans-serif; font-style: normal; text-decoration: none; }
 
+/* ---------- the identity of the party in the first block and the status cards ---------- */
+.hqc-head { border-left: 4px solid var(--party-accent); background: linear-gradient(135deg, var(--party-accent-soft), transparent 45%), linear-gradient(135deg, #213e2f, var(--night) 55%, var(--panel)); }
+.hqc-head .hero-avatar { border-color: var(--party-accent-line); }
+.hqc-head .hero-party-logo, .hqc-head .emblem-lg { flex: none; width: 56px; height: 56px; border-radius: 10px; object-fit: contain; background: var(--ink-hi); padding: 3px; box-shadow: 0 0 0 2px var(--party-accent-line); }
+.hqc-head .emblem-lg { border-radius: 50%; padding: 0; background: var(--emblem); }
+.hqc .hq-chips .kind-chip { border-color: color-mix(in srgb, var(--kind-tone) 55%, transparent); background: color-mix(in srgb, var(--kind-tone) 14%, rgba(8,14,12,.35)); color: var(--ink-hi); font-size: 12.5px; padding: 2px 10px 2px 8px; border-radius: 999px; }
+.hqc .hq-chips .kind-gruppo, .hqc .hq-chips .kind-istituzione { border-radius: 6px; }
+.hqc .kind-chip b, .hqc .kind-chip svg { background: none; border: 0; padding: 0; }
+.hqc-board-status > .hqc-card:first-of-type { border-top-color: var(--party-accent); }
+.hqc-indicators .hq-meter > span { color: var(--ink-2); }
+@media (max-width: 600px) {
+  .hqc-head .hero-party-logo, .hqc-head .emblem-lg { width: 46px; height: 46px; }
+}

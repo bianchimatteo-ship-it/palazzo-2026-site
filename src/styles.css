@@ -28,6 +28,11 @@
   --serious: var(--terracotta); --critical: #C4574A; --critical-ink: #F0A292;
   --glow: 0 0 0 1px rgba(196,166,106,.35), 0 10px 30px rgba(0,0,0,.45);
   --shadow: none;
+  /* functional states (the same on every screen, with a glyph and a word beside the colour): urgent, to watch, on offer, done */
+  --status-urgent: #C4574A; --status-urgent-ink: #F0A292;
+  --status-attention: #D6A54C; --status-attention-ink: #E8C679;
+  --status-opportunity: #3C7C95; --status-opportunity-ink: #8EC3D6;
+  --status-done: #4C8F6B; --status-done-ink: #8FCFA9;
   --party-accent: var(--gold);
   /* shape and scale */
   --radius: 10px; --radius-lg: 14px; --radius-sm: 6px;

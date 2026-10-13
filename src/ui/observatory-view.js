@@ -12,10 +12,11 @@ import { observatorySociety } from '../core/society-engine.js?v=20261013-1';
 import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261013-1';
 import { formatDate } from '../core/time.js?v=20261013-1';
 import { lineChart, SERIES } from './charts.js?v=20261013-1';
-import { emblem, glyph } from './visuals.js?v=20261013-1';
+import { emblem, glyph, partyMarkText } from './visuals.js?v=20261013-1';
 import { arrow, bar, card, empty, esc, kpi, num, table } from './sections-kit.js?v=20261013-1';
 import { alliancesList, barometer, chronicle, dataTable, forcesGrid, partyIndex, pct, pollPanel, presencePanel, shortDate, signed, strategyList } from './polls-mode.js?v=20261013-1';
-import { heatmap, italyMap, partyBars, regionAbbreviation, regionBars, TERRITORY_MEASURES } from './territory-charts.js?v=20261013-1';
+import { heatmap, italyMap, MACRO_AREAS, partyBars, provenance, regionAbbreviation, regionBars, regionsOfArea, TERRITORY_MEASURES } from './territory-charts.js?v=20261013-1';
+import { forceRegionalVote2022 } from '../core/regional-vote.js?v=20261013-1';
 
 export const OBSERVATORY_VIEWS = Object.freeze([['quadro', 'Quadro'], ['istituti', 'Istituti'], ['segmenti', 'Segmenti e temi'], ['territori', 'Territori'], ['forze', 'Forze e alleanze'], ['candidati', 'Candidati e rivali'], ['flussi', 'Indecisi e flussi'], ['gradimento', 'Gradimento e leggi'], ['scenari', 'Scenari e coalizioni']]);
 // The page has five areas; the nine views of the observatory are gathered in them (an area with several views shows them as a second row of tabs).
@@ -288,8 +289,8 @@ function raceTerritories(ctx, race) {
   });
   return pollPanel('TERRITORI DELLA CORSA · SIMULAZIONE', 'Dove si vince la campagna', `${table([['name', 'Area'], ['weight', 'Peso', 'num'], ['lead', 'In testa'], ['mine', 'La tua quota', 'num'], ['trend', 'Tendenza', 'num']], rows)}<p class="poll-footnote">Le aree sono quelle della campagna in corso; la quota è la proiezione simulata di ogni area. La tendenza è lo scarto locale rispetto al quadro generale.</p>`);
 }
-// The regional picture of the observatory, as numbers: for the force in view, each region's share, its gap from the national figure and its change since the first
-// regional picture kept (the picture is saved every few weeks). Provinces have no readings in the model: the page says so and does not draw them.
+// The regional picture of the observatory, as numbers: for the force in view, each region's share (a simulated estimate), its gap from the national figure, its change since
+// the first regional picture kept (saved every few weeks) and, where the force ran in 2022, the real vote there. Provinces have no readings in the model: the page says so.
 function territoryModel(ctx) {
   const { report, force, world, options } = ctx;
   const regional = report.regional ?? {};
@@ -299,33 +300,46 @@ function territoryModel(ctx) {
   const national = nationalOf(force.id);
   const snapshotShare = (snapshot, region, id) => snapshot?.rows?.[region]?.find(([partyId]) => partyId === id)?.[1] ?? null;
   const hasChange = history.length >= 2;
+  const geography = typeof options.geography === 'function' ? options.geography() : options.geography ?? null;
+  const vote2022 = geography ? forceRegionalVote2022(geography, force.id) : null;
   const items = regions.map(region => {
     const raw = regional[region].find(row => row.partyId === force.id)?.share;
     const share = Number.isFinite(raw) ? raw : null;
     const base = hasChange ? snapshotShare(history[0], region, force.id) : null;
-    return { region, share, gap: share !== null && Number.isFinite(national) ? share - national : null, change: share !== null && Number.isFinite(base) ? share - base : null };
+    const real = vote2022?.regions?.[region];
+    return { region, share, gap: share !== null && Number.isFinite(national) ? share - national : null, change: share !== null && Number.isFinite(base) ? share - base : null, real: Number.isFinite(real) ? real : null };
   });
   const filters = options.filters ?? {};
   const selected = regions.includes(filters.obsRegion) ? filters.obsRegion : regions.includes(world.place.region) ? world.place.region : regions[0];
   const ranked = items.filter(item => item.share !== null).sort((a, b) => b.share - a.share);
-  const mode = TERRITORY_MEASURES.some(([id]) => id === filters.obsMapMode) && (filters.obsMapMode !== 'variazione' || hasChange) ? filters.obsMapMode : 'quota';
+  const available = { quota: true, scarto: true, variazione: hasChange, reale: Boolean(vote2022) };
+  const mode = TERRITORY_MEASURES.some(([id]) => id === filters.obsMapMode) && available[filters.obsMapMode] ? filters.obsMapMode : 'quota';
   const chosen = filters.obsCompare === undefined ? null : String(filters.obsCompare).split(',').filter(region => regions.includes(region)).slice(0, 4);
   const compare = chosen ?? [...new Set([selected, ranked[0]?.region, ranked.at(-1)?.region].filter(Boolean))];
-  return { regions, regional, history, items, national, selected, mode, compare, usingDefault: chosen === null, hasChange, ranked, nationalOf, snapshotShare };
+  const area = MACRO_AREAS.some(([id]) => id === filters.obsArea) ? filters.obsArea : 'tutte';
+  const poll = latestPoll(world);
+  return { regions, regional, history, items, national, selected, mode, compare, usingDefault: chosen === null, hasChange, ranked, nationalOf, snapshotShare, available, vote2022, area, week: poll?.week ?? world.week, date: poll?.date ?? null };
+}
+// The line under a chart that says where its figures come from (a simulated estimate, or the real vote of 2022), for which territory and which date.
+function sourceLine(model, { territory, real = false } = {}) {
+  if (real) return provenance({ kind: 'reale', territory, date: model.vote2022?.date, basis: `${esc(model.vote2022?.source ?? 'Ministero dell’Interno — Eligendo')}: voti di lista della Camera nei collegi, riuniti per regione` });
+  return provenance({ kind: 'simulato', territory, week: model.week, date: model.date, basis: 'modello regionale della simulazione (media nazionale degli istituti simulati, scarti regionali del modello ed effetti degli eventi territoriali): non sono rilevazioni reali' });
 }
 function territoryControls(ctx, model) {
   const { force } = ctx;
   const select = `<label class="obs-select">Regione <select data-view-filter-select="obsRegion">${model.regions.map(name => `<option value="${esc(name)}" ${name === model.selected ? 'selected' : ''}>${esc(name)}</option>`).join('')}</select></label>`;
-  const modes = `<div class="obs-chips" role="group" aria-label="Misura della cartina">${TERRITORY_MEASURES.map(([id, label]) => `<button type="button" class="obs-chip-btn ${id === model.mode ? 'active' : ''}" data-view-filter="obsMapMode" data-view-filter-value="${id}" aria-pressed="${id === model.mode}" ${id === 'variazione' && !model.hasChange ? 'disabled title="Serve almeno un secondo quadro regionale"' : ''}>${esc(label)}</button>`).join('')}</div>`;
+  const hints = { variazione: 'Serve almeno un secondo quadro regionale', reale: 'Questa forza non è in nessuna lista delle politiche del 2022 (o il documento elettorale non è caricato): nessun dato reale' };
+  const modes = `<div class="obs-chips" role="group" aria-label="Misura della cartina">${TERRITORY_MEASURES.map(([id, label]) => `<button type="button" class="obs-chip-btn ${id === model.mode ? 'active' : ''}" data-view-filter="obsMapMode" data-view-filter-value="${id}" aria-pressed="${id === model.mode}" ${model.available[id] ? '' : `disabled title="${esc(hints[id])}"`}>${esc(label)}</button>`).join('')}</div>`;
   const crumbs = `<nav class="obs-crumbs" aria-label="Percorso territoriale"><span>Italia</span><i aria-hidden="true">›</i><strong>${esc(model.selected)}</strong><i aria-hidden="true">›</i><span class="is-missing" title="I sondaggi del gioco sono regionali: non esistono letture per provincia">Province: dato non disponibile</span></nav>`;
-  return pollPanel('TERRITORIO · SIMULAZIONE', `${esc(force.label)} in Italia e nelle regioni`, `${crumbs}${forceChips(ctx)}<div class="obs-controls">${modes}${select}</div>`);
+  const reality = model.vote2022 ? '' : `<p class="obs-note">${esc(force.label)} non è in nessuna lista delle politiche del 2022: non c’è un dato reale per regione, solo la stima simulata.</p>`;
+  return pollPanel('TERRITORIO · SIMULAZIONE E DATO REALE', `${esc(force.label)} in Italia e nelle regioni`, `${crumbs}${forceChips(ctx)}<div class="obs-controls">${modes}${select}</div>${reality}`);
 }
 function territoryMapPanel(ctx, model) {
   const { force, world } = ctx;
   const digits = digitsFor(model.national ?? 5);
-  const notes = { quota: 'Più chiaro = più forte. Bordo dorato: la tua regione; bordo bianco: la regione aperta.', scarto: 'Petrolio: sopra il dato nazionale della forza; terracotta: sotto.', variazione: 'Petrolio: in crescita dal primo quadro regionale; terracotta: in calo.' };
-  const map = italyMap(model.items, { mode: model.mode, selected: model.selected, compare: model.compare, home: world.place.region, force: force.label, digits });
-  return pollPanel('CARTINA · SIMULAZIONE', 'Dove è forte e dove no', `${map}<p class="poll-footnote">${notes[model.mode]} La cartina è un cartogramma: una tessera per regione, vicine le regioni vicine; non ne rappresenta forma né superficie. Tocca una regione per aprirla.</p>`);
+  const real = model.mode === 'reale';
+  const map = italyMap(model.items, { mode: model.mode, selected: model.selected, compare: model.compare, home: world.place.region, force: force.label, digits: real ? 1 : digits, national: real ? model.vote2022?.national : model.national, firstWeek: model.history[0]?.week ?? null });
+  return pollPanel(real ? 'CARTINA · DATO REALE' : 'CARTINA · SIMULAZIONE', 'Dove è forte e dove no', `${map}${sourceLine(model, { territory: 'venti regioni', real })}<p class="poll-footnote">La cartina è un cartogramma: una tessera per regione, vicine le regioni vicine; non ne rappresenta forma né superficie. Tocca una regione per aprirla.</p>`);
 }
 // The open territory: the force against the country, how it moved, who it faces there.
 function territoryCard(ctx, model) {
@@ -336,20 +350,23 @@ function territoryCard(ctx, model) {
   const rows = (model.regional[region] ?? []).filter(row => byId[row.partyId]).sort((a, b) => b.share - a.share);
   const rank = rows.findIndex(row => row.partyId === force.id) + 1;
   const last = model.history.at(-1), first = model.history[0];
-  const kpis = [kpi({ label: shortOf(force), value: pct(item?.share, digits), note: rank ? `${rank}ª forza della regione su ${rows.length}` : 'non rilevata in questa regione' }), kpi({ label: 'Scarto dal dato nazionale', value: item?.gap === null || item?.gap === undefined ? '—' : signed(item.gap, 1), tone: item?.gap >= 0 ? '' : 'warn', note: Number.isFinite(model.national) ? `Italia: ${pct(model.national, digitsFor(model.national))}` : '' }), kpi({ label: 'Variazione nel tempo', value: item?.change === null || item?.change === undefined ? '—' : signed(item.change, 1), note: model.hasChange ? `dalla settimana ${first.week} alla ${last.week}` : 'serve un secondo quadro regionale' })].join('');
+  const kpis = [kpi({ label: `${shortOf(force)} (stima)`, value: pct(item?.share, digits), note: rank ? `${rank}ª forza della regione su ${rows.length}` : 'non rilevata in questa regione' }), kpi({ label: 'Scarto dal dato nazionale', value: item?.gap === null || item?.gap === undefined ? '—' : signed(item.gap, 1), tone: item?.gap >= 0 ? '' : 'warn', note: Number.isFinite(model.national) ? `Italia: ${pct(model.national, digitsFor(model.national))} · punti percentuali` : '' }), kpi({ label: 'Variazione nel tempo', value: item?.change === null || item?.change === undefined ? '—' : signed(item.change, 1), note: model.hasChange ? `punti dalla settimana ${first.week} alla ${last.week}` : 'serve un secondo quadro regionale' })];
+  // The real figure next to the estimate: what the ballot boxes said in 2022, where the force ran.
+  if (model.vote2022) kpis.push(kpi({ label: 'Voto reale 2022', value: pct(item?.real, 1), note: `${esc(model.vote2022.listName)}${model.vote2022.shared ? ' (lista comune)' : ''} · Italia ${pct(model.vote2022.national, 1)}` }));
   const party = rows.map(row => { const entry = byId[row.partyId]; return { label: entry.label, color: entry.color, share: row.share, national: model.nationalOf(row.partyId), isPlayer: entry.isPlayer, note: entry.isPlayer ? 'Il tuo partito' : entry.position ?? '', logo: emblem({ label: entry.label, abbreviation: entry.abbreviation, color: entry.color, logo: logo?.(entry.id) }, 'sm') }; });
   const rivals = rows.filter(row => row.partyId !== force.id).slice(0, 3).map(row => `<li><strong>${esc(shortOf(byId[row.partyId]))}</strong><b>${pct(row.share, digitsFor(row.share))}</b></li>`).join('');
-  return pollPanel(`SCHEDA · ${esc(regionAbbreviation(region))}`, esc(region), `<div class="sx-kpis obs-kpis">${kpis}</div>${partyBars(party, { digits })}${rivals ? `<div class="obs-rivals"><small>Concorrenti più vicini</small><ul>${rivals}</ul></div>` : ''}`, region === ctx.world.place.region ? '<span class="hq-count">la tua regione</span>' : '');
+  return pollPanel(`SCHEDA · ${esc(regionAbbreviation(region))}`, esc(region), `<div class="sx-kpis obs-kpis">${kpis.join('')}</div>${partyBars(party, { digits })}${rivals ? `<div class="obs-rivals"><small>Concorrenti più vicini</small><ul>${rivals}</ul></div>` : ''}${sourceLine(model, { territory: region })}`, region === ctx.world.place.region ? '<span class="hq-count">la tua regione</span>' : '');
 }
 function territoryRanking(ctx, model) {
-  const title = { quota: 'Dove è più forte, dove meno', scarto: 'Sopra e sotto il dato nazionale', variazione: 'Dove cresce e dove cala' }[model.mode];
-  const body = regionBars(model.items, { mode: model.mode, selected: model.selected, home: ctx.world.place.region, national: model.national, color: 'var(--teal-soft)', digits: digitsFor(model.national ?? 5) });
-  return pollPanel('CLASSIFICA DELLE REGIONI', title, `${body}<p class="poll-footnote">Le barre sono ordinate per la misura scelta sopra; ogni riga apre la scheda della regione.</p>`);
+  const real = model.mode === 'reale';
+  const title = { quota: 'Dove è più forte, dove meno', scarto: 'Sopra e sotto il dato nazionale', variazione: 'Dove cresce e dove cala', reale: 'Il voto reale del 2022, regione per regione' }[model.mode];
+  const body = regionBars(model.items, { mode: model.mode, selected: model.selected, home: ctx.world.place.region, national: real ? model.vote2022?.national : model.national, color: real ? 'var(--gold)' : 'var(--teal-soft)', digits: real ? 1 : digitsFor(model.national ?? 5) });
+  return pollPanel(real ? 'CLASSIFICA DELLE REGIONI · DATO REALE' : 'CLASSIFICA DELLE REGIONI', title, `${body}${sourceLine(model, { territory: 'venti regioni', real })}<p class="poll-footnote">Le barre sono ordinate per la misura scelta sopra; ogni riga apre la scheda della regione.</p>`);
 }
 // Territories side by side: the same force in up to four regions over time (against the national average) and the parties of each, as one table.
 function territoryCompare(ctx, model) {
   const { force, byId } = ctx;
-  const chips = `<div class="obs-chips obs-compare-chips" role="group" aria-label="Territori da confrontare (fino a quattro)">${model.regions.map(region => { const on = model.compare.includes(region); const full = !on && model.compare.length >= 4; return `<button type="button" class="obs-chip-btn ${on ? 'active' : ''}" data-view-filter="obsCompare" data-view-filter-value="${esc((on ? model.compare.filter(item => item !== region) : [...model.compare, region]).join(','))}" aria-pressed="${on}" ${full ? 'disabled' : ''} title="${esc(region)}">${esc(regionAbbreviation(region))}</button>`; }).join('')}</div>`;
+  const chips = `<div class="obs-chips obs-compare-chips" role="group" aria-label="Territori da confrontare (fino a quattro)">${model.regions.map(region => { const on = model.compare.includes(region); const full = !on && model.compare.length >= 4; return `<button type="button" class="obs-chip-btn ${on ? 'active' : ''}" data-view-filter="obsCompare" data-view-filter-value="${esc((on ? model.compare.filter(item => item !== region) : [...model.compare, region]).join(','))}" aria-pressed="${on}" ${full ? 'disabled' : ''} title="${esc(region)}" aria-label="${esc(region)}">${esc(regionAbbreviation(region))}</button>`; }).join('')}</div>`;
   const note = model.usingDefault ? 'Predefinito: la regione aperta, la più forte e la più debole per questa forza. Scegli le regioni da confrontare.' : model.compare.length < 2 ? 'Scegli almeno due regioni per il confronto.' : '';
   let body = '';
   if (model.compare.length >= 2) {
@@ -359,22 +376,25 @@ function territoryCompare(ctx, model) {
     const national = { label: 'Media nazionale', short: 'Italia', color: '#8c9a93', emphasis: false, values: weeks.map(nationalAt) };
     const chart = weeks.length >= 2 ? lineChart({ series: [...lines, national], labels: weeks.map(week => `S${week}`), tips: weeks.map(week => `${force.label} · settimana ${week}`), unit: '%', min: 0, height: 230, right: 150, ariaLabel: `${force.label}: territori a confronto nel tempo` }) : '<p class="quiet-copy">Il confronto nel tempo compare dopo il secondo quadro regionale (si registra ogni ' + POLL_EXTENSIONS.regional.every + ' settimane).</p>';
     const parties = [...(ctx.report.latestAverage?.rows ?? [])].filter(row => byId[row.partyId]).sort((a, b) => b.share - a.share).slice(0, 6);
-    const head = `<tr><th scope="col">Forza</th><th scope="col" class="hm-nat">Italia</th>${model.compare.map(region => `<th scope="col" title="${esc(region)}">${esc(regionAbbreviation(region))}</th>`).join('')}</tr>`;
-    const rows = parties.map(row => { const entry = byId[row.partyId]; return `<tr class="${entry.isPlayer ? 'is-player' : ''}"><th scope="row"><span class="hm-dot" style="background:${esc(entry.color)}"></span>${esc(shortOf(entry))}</th><td class="hm-nat">${pct(row.share, digitsFor(row.share))}</td>${model.compare.map(region => { const value = model.regional[region]?.find(item => item.partyId === row.partyId)?.share; const gap = Number.isFinite(value) ? value - row.share : null; return `<td data-tip="${esc(`${entry.label} · ${region}: ${pct(value, 1)}`)}" tabindex="0"><b>${Number.isFinite(value) ? num(value, 1) : '—'}</b>${gap === null ? '' : `<small class="${gap >= 0 ? 'up' : 'down'}">${signed(gap, 1)}</small>`}</td>`; }).join('')}</tr>`; }).join('');
-    body = `<div class="eh-chart">${chart}</div><div class="hm-wrap" role="region" aria-label="Forze nei territori a confronto" tabindex="0"><table class="hm hm-compare"><thead>${head}</thead><tbody>${rows}</tbody></table></div>`;
+    const head = `<tr><th scope="col" class="hm-corner">Forza</th><th scope="col" class="hm-nat" title="Dato nazionale">Italia</th>${model.compare.map(region => `<th scope="col" title="${esc(region)}">${esc(regionAbbreviation(region))}</th>`).join('')}</tr>`;
+    const rows = parties.map(row => { const entry = byId[row.partyId]; return `<tr class="${entry.isPlayer ? 'is-player' : ''}"><th scope="row" title="${esc(entry.label)}"><span class="hm-dot" style="background:${esc(entry.color)}"></span><b class="hm-mark">${esc(partyMarkText(entry))}</b><span class="hm-name">${esc(entry.label)}</span></th><td class="hm-nat">${pct(row.share, digitsFor(row.share))}</td>${model.compare.map(region => { const value = model.regional[region]?.find(item => item.partyId === row.partyId)?.share; const gap = Number.isFinite(value) ? value - row.share : null; return `<td data-tip="${esc(`${entry.label} · ${region}: ${Number.isFinite(value) ? pct(value, 1) : 'dato non disponibile'} · stima simulata`)}" tabindex="0"><b>${Number.isFinite(value) ? num(value, 1) : '—'}</b>${gap === null ? '' : `<small class="${gap >= 0 ? 'up' : 'down'}">${signed(gap, 1)}</small>`}</td>`; }).join('')}</tr>`; }).join('');
+    const names = `<ul class="hm-names" aria-label="Nomi delle forze">${parties.map(row => { const entry = byId[row.partyId]; return `<li><span class="hm-dot" style="background:${esc(entry.color)}"></span><b>${esc(partyMarkText(entry))}</b> ${esc(entry.label)}</li>`; }).join('')}</ul>`;
+    body = `<div class="eh-chart">${chart}</div><div class="hm-block"><div class="hm-wrap" role="region" aria-label="Forze nei territori a confronto" tabindex="0"><table class="hm hm-compare"><thead>${head}</thead><tbody>${rows}</tbody></table></div>${names}</div>`;
   }
-  return pollPanel('CONFRONTO TRA TERRITORI · SIMULAZIONE', 'Più regioni, una forza', `${chips}${note ? `<p class="quiet-copy">${esc(note)}</p>` : ''}${body}<p class="poll-footnote">Sotto ogni valore lo scarto dalla media nazionale della stessa forza. Il quadro regionale si registra a intervalli: le linee mostrano solo i punti realmente registrati.</p>`);
+  return pollPanel('CONFRONTO TRA TERRITORI · SIMULAZIONE', 'Più regioni, una forza', `${chips}${note ? `<p class="quiet-copy">${esc(note)}</p>` : ''}${body}<p class="itmap-meaning">Le linee sono la quota di consenso di ${esc(force.label)} (%) nelle regioni scelte e la media nazionale. Nella tabella: quota (%) e, sotto, lo scarto in punti dalla media nazionale della stessa forza; un trattino (—) è un dato non disponibile.</p>${sourceLine(model, { territory: model.compare.join(', ') || '—' })}<p class="poll-footnote">Il quadro regionale si registra a intervalli: le linee mostrano solo i punti realmente registrati.</p>`);
 }
-// Parties × regions: where each force is stronger or weaker than its own national figure.
+// Parties × regions: where each force is stronger or weaker than its own national figure; the regions can be taken a few at a time (ripartizioni).
 function territoryHeat(ctx, model) {
   const { byId } = ctx;
   const parties = [...(ctx.report.latestAverage?.rows ?? [])].filter(row => byId[row.partyId]).sort((a, b) => b.share - a.share).slice(0, 8);
-  const columns = model.regions.map(region => ({ label: region, short: regionAbbreviation(region), home: region === ctx.world.place.region }));
-  const rows = parties.map(row => { const entry = byId[row.partyId]; return { label: shortOf(entry), color: entry.color, national: row.share, isPlayer: entry.isPlayer, cells: model.regions.map(region => { const share = model.regional[region]?.find(item => item.partyId === row.partyId)?.share; return { region, share: Number.isFinite(share) ? share : null, gap: Number.isFinite(share) ? share - row.share : null }; }) }; });
-  return pollPanel('MAPPA DI CALORE · SIMULAZIONE', 'Forze e regioni a colpo d’occhio', `${heatmap({ columns, rows })}<p class="poll-footnote">Ogni cella è il consenso della forza nella regione; il colore dice se è sopra o sotto il suo dato nazionale. Si scorre in orizzontale: la prima colonna resta ferma.</p>`);
+  const shown = regionsOfArea(model.area).filter(region => model.regions.includes(region));
+  const columns = shown.map(region => ({ label: region, short: regionAbbreviation(region), home: region === ctx.world.place.region }));
+  const rows = parties.map(row => { const entry = byId[row.partyId]; return { label: entry.label, mark: partyMarkText(entry), color: entry.color, national: row.share, isPlayer: entry.isPlayer, cells: shown.map(region => { const share = model.regional[region]?.find(item => item.partyId === row.partyId)?.share; return { region, share: Number.isFinite(share) ? share : null, gap: Number.isFinite(share) ? share - row.share : null }; }) }; });
+  const areas = `<div class="obs-chips" role="group" aria-label="Regioni da mostrare">${MACRO_AREAS.map(([id, label]) => `<button type="button" class="obs-chip-btn ${id === model.area ? 'active' : ''}" data-view-filter="obsArea" data-view-filter-value="${id}" aria-pressed="${id === model.area}">${esc(label)}</button>`).join('')}</div>`;
+  return pollPanel('MAPPA DI CALORE · SIMULAZIONE', 'Forze e regioni a colpo d’occhio', `${areas}${heatmap({ columns, rows })}${sourceLine(model, { territory: MACRO_AREAS.find(([id]) => id === model.area)?.[1] ?? 'Tutta Italia' })}`);
 }
 function territoryMissing(model) {
-  const items = ['Province e città metropolitane: il modello dei sondaggi arriva alla regione, non ha letture provinciali (la Provincia esiste come ente da amministrare, in Territori).', 'Mappa con i confini: le geometrie delle regioni non fanno parte dei dati del gioco; la cartina è un cartogramma a tessere.', model.hasChange ? null : 'Variazione nel tempo: serve un secondo quadro regionale (registrato ogni poche settimane).'].filter(Boolean);
+  const items = ['Province e città metropolitane: il modello dei sondaggi arriva alla regione, non ha letture provinciali (la Provincia esiste come ente da amministrare, in Territori).', 'Rilevazioni reali per regione: nessun istituto reale pubblica nel gioco un dato regionale; il solo dato reale per regione è il voto delle politiche del 2022, nella misura «Voto reale 2022».', 'Mappa con i confini: le geometrie delle regioni non fanno parte dei dati del gioco; la cartina è un cartogramma a tessere.', model.hasChange ? null : 'Variazione nel tempo: serve un secondo quadro regionale (registrato ogni poche settimane).'].filter(Boolean);
   return `<details class="obs-missing"><summary>Che cosa manca, e perché</summary><ul>${items.map(item => `<li>${esc(item)}</li>`).join('')}</ul></details>`;
 }
 function territories(ctx) {

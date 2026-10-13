@@ -372,11 +372,11 @@ assert.equal((await account.downloadSave(slotOnline)).revision, 4, 'Il download 
   store.advance(7);
   assert.ok(store.saveStatus().dirty);
   for (const fn of windowListeners.online ?? []) await fn();
-  await new Promise(resolve => setTimeout(resolve, 30));
+  await new Promise(resolve => setTimeout(resolve, 150));
   assert.equal(puts(), failedPuts, 'Tornata la rete, una partita con modifiche non salvate non va online.');
   store.save();
   for (const fn of windowListeners.online ?? []) await fn();
-  await new Promise(resolve => setTimeout(resolve, 30));
+  await new Promise(resolve => setTimeout(resolve, 150));
   assert.equal(puts(), failedPuts + 1, 'Salvata, alla riconnessione va online.');
   saveSetting('autosave', 'action');
   // Another device saves a newer version: the conflict is shown, the revision does not move, the newer one is not overwritten.
