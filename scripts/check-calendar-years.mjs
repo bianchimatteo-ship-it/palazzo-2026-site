@@ -145,7 +145,8 @@ console.error(`[calendar-years ${new Date().toISOString().slice(11, 19)}] parte 
 // ---------- 3. la partita vera: otto anni sul motore completo ----------
 console.error(`[calendar-years ${new Date().toISOString().slice(11, 19)}] parte 3: tre carriere vere da otto anni`);
 for (const [level, regionName] of [['provinciale', 'Toscana'], ['regionale', 'Lombardia'], ['deputato', 'Campania']]) {
-  const run = await startCareer({ seed: `anni-${level}`, level, region: regionName });
+  // Eight real years on the real engine: only the calendar is checked here, never the saved file, so the worker does not write the career save (harness fast mode, same state and same fingerprint).
+  const run = await startCareer({ seed: `anni-${level}`, level, region: regionName, fast: true });
   const { store } = run;
   const seen = new Map();
   let worst = 0;

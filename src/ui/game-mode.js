@@ -1,27 +1,27 @@
-import { endedHeadline } from './hall-view.js?v=20261012-3';
-import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261012-3';
-import { playerRoles } from '../core/roles.js?v=20261012-3';
-import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20261012-3';
-import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261012-3';
-import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261012-3';
-import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20261012-3';
-import { careerLevelLabel } from '../data/regions.js?v=20261012-3';
-import { advanceDays, formatDate } from '../core/time.js?v=20261012-3';
-import { renderBarometerPanel } from './polls-mode.js?v=20261012-3';
-import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20261012-3';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261012-3';
-import { societyMood } from '../core/society-engine.js?v=20261012-3';
-import { financeOutlook } from '../core/finance-engine.js?v=20261012-3';
-import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20261012-3';
-import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20261012-3';
-import { activeInstitutions, institutionLabel } from './local-mode.js?v=20261012-3';
-import { renderFinanceCard } from './finance-mode.js?v=20261012-3';
-import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20261012-3';
-import { stateBadge } from './charts.js?v=20261012-3';
-import { articleHtml, newsMedia, renderNewsroomTabs } from './news-view.js?v=20261012-3';
-import { illustration } from './illustrations.js?v=20261012-3';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261012-3';
-import { regionPriorities } from '../core/society-engine.js?v=20261012-3';
+import { endedHeadline } from './hall-view.js?v=20261013-1';
+import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261013-1';
+import { playerRoles } from '../core/roles.js?v=20261013-1';
+import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20261013-1';
+import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261013-1';
+import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261013-1';
+import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20261013-1';
+import { careerLevelLabel } from '../data/regions.js?v=20261013-1';
+import { advanceDays, formatDate } from '../core/time.js?v=20261013-1';
+import { renderBarometerPanel } from './polls-mode.js?v=20261013-1';
+import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20261013-1';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261013-1';
+import { societyMood } from '../core/society-engine.js?v=20261013-1';
+import { financeOutlook } from '../core/finance-engine.js?v=20261013-1';
+import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20261013-1';
+import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20261013-1';
+import { activeInstitutions, institutionLabel } from './local-mode.js?v=20261013-1';
+import { renderFinanceCard } from './finance-mode.js?v=20261013-1';
+import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20261013-1';
+import { stateBadge } from './charts.js?v=20261013-1';
+import { articleHtml, newsMedia, renderNewsroomTabs } from './news-view.js?v=20261013-1';
+import { illustration } from './illustrations.js?v=20261013-1';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261013-1';
+import { regionPriorities } from '../core/society-engine.js?v=20261013-1';
 
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -202,14 +202,14 @@ function summariesBlock(state, gc, expanded) {
   const memory = memoryBalance(game);
   const memoryBody = memory.highlights.length ? facts([['Bilancio', `<b class="${memory.net >= 0 ? 'up' : 'down'}">${memory.net >= 0 ? '+' : '−'}${num(Math.abs(memory.net), 1)}</b> ${memory.net >= 0 ? 'a tuo favore' : 'contro di te'}`], ['Ricordo più pesante', esc(memory.highlights[0].text)]]) : '<p class="quiet-copy">Ancora nessun ricordo: leggi, promesse, crisi e rotture resteranno qui per anni.</p>';
   const cards = [
-    summaryCard({ kicker: 'PAESE', title: 'Cittadini ed economia', icon: 'globe', color: '#2a78d6', lead: 'Umore, fiducia ed economia: cambiano con leggi, eventi e governo.', body: renderCountryCard(state), page: 'territori', cta: 'Territori e cittadini' }),
+    summaryCard({ kicker: 'PAESE', title: 'Cittadini ed economia', icon: 'globe', color: '#3C7C95', lead: 'Umore, fiducia ed economia: cambiano con leggi, eventi e governo.', body: renderCountryCard(state), page: 'territori', cta: 'Territori e cittadini' }),
     summaryCard({ kicker: 'PARLAMENTO E GOVERNO', title: seat ? 'La tua posizione in Aula' : 'Le Camere', icon: 'dome', color: '#8e6cf0', lead: seat ? 'Voti, leggi, trattative e fiducia al governo.' : 'Osserva gruppi, governo e leggi; con un seggio puoi votare e proporre.', body: parliamentBody, page: 'parlamento', cta: 'Apri il Parlamento', more: governing || government ? '<button class="text-link" data-nav="governo">Governo</button>' : '' }),
     summaryCard({ kicker: 'PARTITO', title: game.party ? esc(game.party.label) : 'Indipendente', icon: 'flag', color: 'var(--party-accent)', lead: game.party ? 'Sostegno interno, correnti, sezioni e tesoreria.' : 'Aderisci a un partito per candidature di lista e incarichi interni.', body: renderPartyCard(state), page: 'partito', cta: 'Apri il partito' }),
-    summaryCard({ kicker: 'ELEZIONI E SONDAGGI', title: 'Voto e consenso', icon: 'ballot', color: '#eb6834', lead: 'Candidature, campagne, risultati e l’andamento dei partiti.', body: electionsBody, page: 'elezioni', cta: 'Centrale elettorale', more: '<button class="text-link" data-nav="sondaggi">Sondaggi</button>' }),
-    summaryCard({ kicker: 'CARRIERA', title: 'Ruoli e traguardi', icon: 'route', color: '#c0a166', lead: 'I tuoi incarichi, cosa ti permettono e il prossimo passo.', body: careerBody, page: 'carriera', cta: 'Apri la carriera' }),
-    summaryCard({ kicker: 'TERRITORIO', title: esc(game.place.region || 'Territorio'), icon: 'map', color: '#1baf7a', lead: 'Servizi, problemi e soddisfazione nella tua regione.', body: renderTerritoryCard(state), page: 'territori', cta: 'Apri il territorio' }),
-    summaryCard({ kicker: 'MEDIA', title: 'Stampa e visibilità', icon: 'news', color: '#e34948', lead: 'Come ti raccontano: pesa su reputazione e notorietà ogni settimana.', body: mediaBody, page: 'sondaggi', cta: 'Media e sondaggi', more: '<button class="text-link" data-scroll="hq-news">Notizie</button>' }),
-    summaryCard({ kicker: 'FINANZE', title: 'Il tuo comitato', icon: 'wallet', color: '#eda100', lead: 'Entrate, spese fisse, investimenti e fondo elettorale.', body: renderFinanceCard(state), page: 'finanze', cta: 'Apri le finanze' }),
+    summaryCard({ kicker: 'ELEZIONI E SONDAGGI', title: 'Voto e consenso', icon: 'ballot', color: '#D6853F', lead: 'Candidature, campagne, risultati e l’andamento dei partiti.', body: electionsBody, page: 'elezioni', cta: 'Centrale elettorale', more: '<button class="text-link" data-nav="sondaggi">Sondaggi</button>' }),
+    summaryCard({ kicker: 'CARRIERA', title: 'Ruoli e traguardi', icon: 'route', color: '#C4A66A', lead: 'I tuoi incarichi, cosa ti permettono e il prossimo passo.', body: careerBody, page: 'carriera', cta: 'Apri la carriera' }),
+    summaryCard({ kicker: 'TERRITORIO', title: esc(game.place.region || 'Territorio'), icon: 'map', color: '#4C8F6B', lead: 'Servizi, problemi e soddisfazione nella tua regione.', body: renderTerritoryCard(state), page: 'territori', cta: 'Apri il territorio' }),
+    summaryCard({ kicker: 'MEDIA', title: 'Stampa e visibilità', icon: 'news', color: '#C4574A', lead: 'Come ti raccontano: pesa su reputazione e notorietà ogni settimana.', body: mediaBody, page: 'sondaggi', cta: 'Media e sondaggi', more: '<button class="text-link" data-scroll="hq-news">Notizie</button>' }),
+    summaryCard({ kicker: 'FINANZE', title: 'Il tuo comitato', icon: 'wallet', color: '#D6A54C', lead: 'Entrate, spese fisse, investimenti e fondo elettorale.', body: renderFinanceCard(state), page: 'finanze', cta: 'Apri le finanze' }),
     summaryCard({ kicker: 'RELAZIONI', title: 'Chi conta per te', icon: 'users', color: '#2fa39a', lead: 'I rapporti più fragili: pesano su candidature, incarichi e voti.', body: relationsBody, page: '', cta: '', more: '<button class="secondary-button" data-scroll="hq-relations">Tutte le relazioni ' + arrow + '</button>' }),
     summaryCard({ kicker: 'MEMORIA POLITICA', title: 'Quello che non si dimentica', icon: 'book', color: '#9aa7a1', lead: 'Scelte che pesano ancora su elezioni, alleanze e rapporti.', body: memoryBody, page: 'carriera', cta: 'Memoria e cronologia' })
   ];
@@ -253,7 +253,7 @@ export function renderInbox(state, { compact = false } = {}) {
       const problem = costProblem(game, choice.cost ?? {}) || (choice.requires === 'seat' && !state.parliament?.player?.groupId ? 'Serve un seggio con un gruppo parlamentare.' : choice.requires === 'party' && !game.party ? 'Serve un partito.' : null);
       return `<button class="hq-choice" data-agenda-item="${esc(item.id)}" data-agenda-choice="${esc(choice.id)}" ${problem || game.status === 'ended' ? `disabled title="${esc(problem)}"` : ''}><strong>${esc(choice.label)}</strong><span class="hq-cost">${costChips(choice.cost ?? {})}</span>${info.effects || info.risk ? `<small>${esc([info.effects, info.risk].filter(Boolean).join(' · '))}</small>` : ''}${problem ? `<em>${esc(problem)}</em>` : ''}</button>`;
     }).join('');
-    const tone = item.kind === 'urgente' ? '#e34948' : item.kind === 'situazione' ? '#eb6834' : item.kind === 'evento' ? '#c0a166' : '#1baf7a';
+    const tone = item.kind === 'urgente' ? '#C4574A' : item.kind === 'situazione' ? '#D6853F' : item.kind === 'evento' ? '#C4A66A' : '#4C8F6B';
     return `<article class="hq-card kind-${esc(item.kind)}"><div class="hq-card-head">${artTile(EVENT_ICONS[item.templateId] ?? CATEGORY_VISUALS[item.category]?.icon ?? 'star', tone)}<div><header><span class="hq-tag">${kinds[item.kind] ?? 'DECISIONE'}</span>${dayLabel(item) ? `<span class="hq-day">${esc(dayLabel(item))}</span>` : ''}<small>Entro fine settimana · senza scelta: “${esc(fallback)}”</small></header><h3>${esc(item.title)}</h3>${compact ? '' : `<p>${esc(item.body)}</p>`}</div></div><div class="hq-choices">${choices}</div></article>`;
   }).join('')}</div>`;
 }

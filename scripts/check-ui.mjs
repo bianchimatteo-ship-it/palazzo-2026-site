@@ -135,20 +135,25 @@ await click({ sectionTab: 'osservatorio', sectionTabValue: 'forze' });
   assert.equal(store.getState().world.rngState, rngBefore, 'Né tocca il generatore casuale.');
 }
 let home = await goto('panoramica');
-// Phones: the five main sections one tap away (Home · Carriera · Partito · Elezioni · Parlamento) and an "Altro" sheet
-// with every other section; on computers the sidebar shows the same five first, then the group “Altro”.
+// Phones: four destinations one tap away (Home · Elezioni · Sondaggi · Istituzioni) and an "Altro" sheet with every other
+// page; on computers the sidebar lists the eight destinations (Panoramica, Carriera, Partito, Elezioni, Sondaggi, Istituzioni,
+// Territori, Informazione) and opens the pages of the one the player is in.
 const tabbar = home.slice(home.indexOf('class="mobile-tabbar"'), home.indexOf('data-mobile-sheet'));
-assert.ok(home.includes('class="mobile-tabbar"') && (tabbar.match(/class="mobile-tab /g) ?? []).length === 6 && home.includes('data-mobile-more'), 'Barra inferiore con 5 sezioni e “Altro”.');
-assert.deepEqual([...tabbar.matchAll(/class="mobile-tab [^"]*" data-nav="([^"]+)"/g)].map(match => match[1]), ['panoramica', 'carriera', 'partito', 'elezioni', 'parlamento'], 'Home · Carriera · Partito · Elezioni · Parlamento a portata di tocco.');
+assert.ok(home.includes('class="mobile-tabbar"') && (tabbar.match(/class="mobile-tab /g) ?? []).length === 5 && home.includes('data-mobile-more'), 'Barra inferiore con quattro destinazioni e “Altro”.');
+assert.deepEqual([...tabbar.matchAll(/class="mobile-tab [^"]*" data-nav="([^"]+)"/g)].map(match => match[1]), ['panoramica', 'elezioni', 'sondaggi', 'parlamento'], 'Home · Elezioni · Sondaggi · Istituzioni a portata di tocco.');
 const sidebar = home.slice(home.indexOf('class="main-nav"'), home.indexOf('class="sidebar-bottom"'));
-assert.ok(sidebar.indexOf('data-nav="parlamento"') < sidebar.indexOf('nav-group-label') && sidebar.indexOf('nav-group-label') < sidebar.indexOf('data-nav="territori"'), 'Barra laterale: le cinque sezioni principali, poi “Altro”.');
+const destinations = [...sidebar.matchAll(/<button class="nav-item [^"]*" data-nav="([^"]+)" aria-label="([^"]+)"/g)].map(match => [match[1], match[2]]);
+assert.deepEqual(destinations, [['panoramica', 'Panoramica'], ['carriera', 'Carriera'], ['partito', 'Partito'], ['elezioni', 'Elezioni'], ['sondaggi', 'Sondaggi'], ['parlamento', 'Istituzioni'], ['territori', 'Territori'], ['notizie', 'Informazione']], 'Barra laterale: le otto destinazioni, in questo ordine.');
+assert.ok(!sidebar.includes('nav-group-label'), 'Nessun gruppo “Altro” in più: ogni pagina è sotto la sua destinazione.');
+// A destination with several pages opens them as a menu under it; the other destinations stay shut.
+assert.ok(sidebar.includes('class="nav-sub"') === false, 'La Panoramica non apre nessun menu secondario.');
 // The Home as a command centre, in this order: identity and main action, resources, priorities and decisions,
 // what is coming, every area in brief, then the details folded.
 const order = ['hqc-head', 'hqc-action', 'hqc-resources', 'hqc-priorities', 'id="hq-inbox"', 'hqc-elections', 'hqc-overview', 'hqc-details'].map(marker => home.indexOf(marker));
 assert.ok(order.every((position, index) => position > 0 && (index === 0 || position > order[index - 1])), `Home: blocchi nell’ordine previsto (${order.join(', ')}).`);
 for (const area of ['PAESE', 'PARLAMENTO E GOVERNO', 'PARTITO', 'ELEZIONI E SONDAGGI', 'CARRIERA', 'TERRITORIO', 'MEDIA', 'FINANZE', 'RELAZIONI', 'MEMORIA POLITICA']) assert.ok(home.includes(`<span class="section-kicker">${area}</span>`), `Home: manca il riepilogo ${area}.`);
 assert.ok((home.match(/class="hqc-drawer /g) ?? []).length >= 9 && home.includes('data-remember="home-hq-planner"'), 'Home: approfondimenti richiudibili e ricordati.');
-assert.ok(home.includes('data-mobile-sheet hidden') && ['finanze', 'parlamento', 'archivio', 'impostazioni'].every(id => home.includes(`class="sheet-item " data-nav="${id}"`) || home.includes(`class="sheet-item active" data-nav="${id}"`)), 'Il pannello “Altro” raggiunge tutte le sezioni.');
+assert.ok(home.includes('data-mobile-sheet hidden') && ['calendario', 'eventi', 'carriera', 'partito', 'finanze', 'partiti-lista', 'parlamento', 'governo', 'leggi', 'territori', 'notizie', 'archivio', 'politici', 'profilo', 'impostazioni'].every(id => home.includes(`class="sheet-item " data-nav="${id}"`) || home.includes(`class="sheet-item active" data-nav="${id}"`)), 'Il pannello “Altro” raggiunge tutte le sezioni.');
 // Branding: the party created in the wizard has a real identity used across the game.
 const userParty = store.getState().dataset.parties.find(party => party.source === 'user');
 assert.ok(userParty.logo?.kind === 'builder' && userParty.color2 === '#f2c14e' && userParty.program.includes('scuola') && userParty.officialName === 'Lista Civica Neri', 'Il partito creato ha logo, colori, programma e scheda completa (source: user).');

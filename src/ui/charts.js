@@ -1,7 +1,7 @@
 // Shared building blocks for the simulation screens: numbers, state badges, meters and charts.
 // Charts follow the same rules as the polls page: thin marks, one axis, legend + direct labels,
 // hover tooltips through data-trend / data-tip, text in ink rather than in the series colour.
-import { glyph } from './visuals.js?v=20261012-3';
+import { glyph } from './visuals.js?v=20261013-1';
 
 export const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const num = (value, digits = 1) => value === null || value === undefined || Number.isNaN(Number(value)) ? '—' : Number(value).toLocaleString('it-IT', { maximumFractionDigits: digits });
@@ -9,11 +9,11 @@ export const euro = value => `${Math.round(Number(value) || 0).toLocaleString('i
 export const signed = (value, digits = 1) => `${value > 0 ? '+' : value < 0 ? '−' : '±'}${Math.abs(Number(value) || 0).toLocaleString('it-IT', { maximumFractionDigits: digits })}`;
 
 // Validated categorical slots (same order as the polls) and a single-hue sequential ramp.
-export const SERIES = Object.freeze(['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767']);
-export const INCOME_COLOR = '#199e70';
-export const EXPENSE_COLOR = '#d95926';
+export const SERIES = Object.freeze(['#4A9DB8', '#C4A66A', '#D0805F', '#6FAE8A', '#8E86D8', '#D98BA6', '#B9C2A0', '#7FB8D6']);
+export const INCOME_COLOR = '#4C8F6B';
+export const EXPENSE_COLOR = '#C4684B';
 // Sequential ramp for the dark surface: low values recede toward the background, high values light up.
-export const GREEN_RAMP = Object.freeze(['#0b4f2c', '#136339', '#1f7749', '#318a5b', '#479c6e', '#61ad83', '#7dbd99', '#99ccaf', '#b5dac4', '#cfe7d8', '#e6f2ea']);
+export const GREEN_RAMP = Object.freeze(['#1e382a', '#2c503d', '#3a674f', '#487f61', '#569574', '#6aa786', '#82b499', '#9ac2ac', '#b1cfbf', '#c9ddd2', '#e0ebe5']);
 export const rampColor = (value, min = 0, max = 100) => GREEN_RAMP[Math.max(0, Math.min(GREEN_RAMP.length - 1, Math.round((value - min) / ((max - min) || 1) * (GREEN_RAMP.length - 1))))];
 
 // Visual states shared by every system: growth, decline, risk, crisis, stable.

@@ -1,16 +1,16 @@
-import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261012-3';
-import { formatDate } from '../core/time.js?v=20261012-3';
-import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261012-3';
-import { distinctSeries } from './charts.js?v=20261012-3';
+import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261013-1';
+import { formatDate } from '../core/time.js?v=20261013-1';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261013-1';
+import { distinctSeries } from './charts.js?v=20261013-1';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const pct = (value, digits = 1) => value === null || value === undefined ? '—' : `${Number(value).toLocaleString('it-IT', { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
 export const signed = value => `${value > 0 ? '+' : value < 0 ? '−' : '±'}${Math.abs(Number(value) || 0).toLocaleString('it-IT', { maximumFractionDigits: 1 })}`;
 export const shortDate = date => formatDate(date, { day: 'numeric', month: 'short' });
 const decimal = value => Number(value).toLocaleString('it-IT', { maximumFractionDigits: 2 });
-// Blue sequential ramp, dark surface: near-zero recedes toward the background.
-export const SEQUENTIAL = ['#104281', '#184f95', '#1c5cab', '#256abf', '#2a78d6', '#3987e5', '#5598e7', '#6da7ec', '#86b6ef', '#9ec5f4', '#b7d3f6', '#cde2fb'];
-const TONE_COLORS = { good: '#199e70', bad: '#e66767', neutral: 'var(--party-accent)' };
+// Petrol sequential ramp (analysis), dark surface: near-zero recedes toward the background.
+export const SEQUENTIAL = ['#143643', '#1b4a5c', '#245e75', '#2c728d', '#3585a5', '#3e99bd', '#56a6c6', '#70b3cd', '#89c0d5', '#a2ccdd', '#bad9e6', '#d3e6ee'];
+const TONE_COLORS = { good: '#4C8F6B', bad: '#D9806C', neutral: 'var(--party-accent)' };
 export const pollPanel = (kicker, title, body, extra = '') => `<section class="hq-panel poll-panel"><div class="home-section-heading"><div><span class="section-kicker">${kicker}</span><h2>${title}</h2></div>${extra}</div>${body}</section>`;
 const SCOPE_LABELS = { nazionale: 'Nazionale', regionale: 'Regionale', locale: 'Locale' };
 

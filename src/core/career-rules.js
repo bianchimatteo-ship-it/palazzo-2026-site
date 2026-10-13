@@ -1,8 +1,8 @@
-import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel } from '../data/regions.js?v=20261012-3';
-import { isSelectableParty } from '../data/schema.js?v=20261012-3';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261012-3';
-import { startAgeProblems, startProblems } from './start-engine.js?v=20261012-3';
-import { presidentialEligibility } from './presidency-engine.js?v=20261012-3';
+import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel } from '../data/regions.js?v=20261013-1';
+import { isSelectableParty } from '../data/schema.js?v=20261013-1';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261013-1';
+import { startAgeProblems, startProblems } from './start-engine.js?v=20261013-1';
+import { presidentialEligibility } from './presidency-engine.js?v=20261013-1';
 
 const genders = new Set(['preferisco-non-specificare', 'donna', 'uomo', 'non-binario']);
 const orientations = new Set(['Centrismo civico', 'Progressista', 'Conservatore', 'Liberale', 'Socialdemocratico', 'Ecologista', 'Popolare', 'Autonomista', 'Altro']);
@@ -28,6 +28,10 @@ const isValidDate = value => {
 export const CAREER_STEPS = 5;
 // requireTerritory: the Career Wizard needs the ISTAT list; while it is missing no comune can be accepted (never one
 // typed freely). Without it (saves, tests, careers built in code) a comune name is enough, as before.
+// The wizard shows five steps (identity, start, party, advanced settings, summary); the checks above keep their own numbers.
+// Each step of the wizard runs the checks of the parts of the old numbering that it gathers (the age rules of the starting conditions depend on the birth date, so they run in both places).
+export const WIZARD_CHECKS = Object.freeze({ 1: [5], 2: [1, 2], 3: [3], 4: [4, 5], 5: [] });
+export const validateWizardStep = (draft, view, ...rest) => [...new Set((WIZARD_CHECKS[view] ?? []).flatMap(step => validateCareerStep(draft, step, ...rest)))];
 export function validateCareerStep(draft, step, selectableParties, parliamentaryGroups = [], territory = null, { requireTerritory = false } = {}) {
   const errors = [];
   if (step === 1) {

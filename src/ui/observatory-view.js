@@ -4,19 +4,29 @@
 // of the campaign (renderCampaignObservatory): what `campaignObservatory()` reads from a valid campaign, and nothing when there is none.
 // Everything here is read from what the game has saved (the world, its observatory, the campaign) and measures the simulation: no number on these
 // pages gives a bonus, and the real parties stay real (their candidates, voters and readings are simulated, source: simulation).
-import { latestPoll, observatoryReport } from '../core/world-engine.js?v=20261012-3';
-import { campaignObservatory } from '../core/campaign-engine.js?v=20261012-3';
-import { coalitionScenario, regionalSeries } from '../core/poll-observatory.js?v=20261012-3';
-import { POLL_EXTENSIONS } from '../data/simulation/polling-rules.js?v=20261012-3';
-import { observatorySociety } from '../core/society-engine.js?v=20261012-3';
-import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261012-3';
-import { formatDate } from '../core/time.js?v=20261012-3';
-import { lineChart, SERIES } from './charts.js?v=20261012-3';
-import { emblem, glyph } from './visuals.js?v=20261012-3';
-import { arrow, bar, card, empty, esc, kpi, num, table } from './sections-kit.js?v=20261012-3';
-import { alliancesList, barometer, chronicle, dataTable, forcesGrid, partyIndex, pct, pollPanel, presencePanel, regionTiles, shortDate, signed, strategyList } from './polls-mode.js?v=20261012-3';
+import { latestPoll, observatoryReport } from '../core/world-engine.js?v=20261013-1';
+import { campaignObservatory } from '../core/campaign-engine.js?v=20261013-1';
+import { coalitionScenario } from '../core/poll-observatory.js?v=20261013-1';
+import { POLL_EXTENSIONS } from '../data/simulation/polling-rules.js?v=20261013-1';
+import { observatorySociety } from '../core/society-engine.js?v=20261013-1';
+import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261013-1';
+import { formatDate } from '../core/time.js?v=20261013-1';
+import { lineChart, SERIES } from './charts.js?v=20261013-1';
+import { emblem, glyph } from './visuals.js?v=20261013-1';
+import { arrow, bar, card, empty, esc, kpi, num, table } from './sections-kit.js?v=20261013-1';
+import { alliancesList, barometer, chronicle, dataTable, forcesGrid, partyIndex, pct, pollPanel, presencePanel, shortDate, signed, strategyList } from './polls-mode.js?v=20261013-1';
+import { heatmap, italyMap, partyBars, regionAbbreviation, regionBars, TERRITORY_MEASURES } from './territory-charts.js?v=20261013-1';
 
 export const OBSERVATORY_VIEWS = Object.freeze([['quadro', 'Quadro'], ['istituti', 'Istituti'], ['segmenti', 'Segmenti e temi'], ['territori', 'Territori'], ['forze', 'Forze e alleanze'], ['candidati', 'Candidati e rivali'], ['flussi', 'Indecisi e flussi'], ['gradimento', 'Gradimento e leggi'], ['scenari', 'Scenari e coalizioni']]);
+// The page has five areas; the nine views of the observatory are gathered in them (an area with several views shows them as a second row of tabs).
+export const OBSERVATORY_AREAS = Object.freeze([
+  ['quadro', 'Quadro elettorale', ['quadro']],
+  ['istituti', 'Istituti e rilevazioni', ['istituti']],
+  ['territori', 'Territori', ['territori']],
+  ['forze', 'Partiti, alleanze e flussi', ['forze', 'scenari', 'flussi', 'segmenti', 'candidati']],
+  ['gradimento', 'Opinione pubblica', ['gradimento']]
+]);
+const VIEW_LABELS = Object.freeze(Object.fromEntries(OBSERVATORY_VIEWS));
 const toneOf = value => value > 0 ? 'good' : value < 0 ? 'bad' : 'neutral';
 const deltaText = value => `<span class="tone-${toneOf(value)}">${signed(value)}</span>`;
 const instituteName = item => item.name.replace('Rilevazione simulata ', 'Istituto ');
@@ -84,10 +94,15 @@ function averageBlock(ctx, { limit = 12 } = {}) {
     : `Media pesata sul campione degli ${average.institutes} istituti (${num(average.sample, 0)} interviste in tutto). La forbice è la distanza tra la lettura più alta e la più bassa. Il campione è l’insieme degli intervistati: l’elettorato simulato che vota è un’altra cosa.`;
   return `${table(columns, body, { className: 'obs-average' })}<p class="poll-footnote">${note}</p>`;
 }
+// The period of the charts: the last 8 weeks, the last 26 or all of them (the same choice for the trend and for the institutes).
+const PERIODS = Object.freeze([['8', 'Ultime 8 settimane'], ['26', 'Ultime 26'], ['all', 'Tutto lo storico']]);
+const periodOf = ctx => PERIODS.some(([id]) => id === ctx.options.filters?.obsPeriod) ? ctx.options.filters.obsPeriod : '26';
+const windowed = (list, ctx) => { const period = periodOf(ctx); return period === 'all' ? list : list.slice(-Number(period)); };
+const periodChips = ctx => `<div class="obs-chips" role="group" aria-label="Periodo dei grafici">${PERIODS.map(([id, label]) => `<button type="button" class="obs-chip-btn ${id === periodOf(ctx) ? 'active' : ''}" data-view-filter="obsPeriod" data-view-filter-value="${id}" aria-pressed="${id === periodOf(ctx)}">${esc(label)}</button>`).join('')}</div>`;
 function averageTrend(ctx) {
   const { report } = ctx;
-  const points = report?.average ?? [];
-  if (points.length < 2) return '<p class="quiet-copy">Il trend compare dalla seconda settimana: chiudi la settimana per la prossima rilevazione.</p>';
+  const points = windowed(report?.average ?? [], ctx);
+  if ((report?.average ?? []).length < 2) return '<p class="quiet-copy">Il trend compare dalla seconda settimana: chiudi la settimana per la prossima rilevazione.</p>';
   const series = leaders(ctx, 4).map(force => chartSeries(force, points.map(point => point.rows.find(row => row.partyId === force.id)?.share ?? null)));
   return lineChart({ series, labels: points.map(point => `S${point.week}`), tips: points.map(point => `Media · settimana ${point.week}${point.institutes ? ` · ${point.institutes} istituti` : ''}`), unit: '%', min: 0, height: 240, right: 190, ariaLabel: 'Media dei sondaggi, ultime settimane' });
 }
@@ -131,6 +146,28 @@ function highlights(ctx) {
   }).join('');
   return `<ul class="obs-insights">${rows}</ul><p class="poll-footnote">Letture del quadro, non effetti: dicono dove il consenso è forte o fragile secondo gli istituti e i segmenti simulati della società. Nessun bonus.</p>`;
 }
+// The coalitions and the agreements in force, as the sum of what the institutes read for their members (a sum of the readings, not a forecast: see “Scenari e coalizioni”).
+function coalitionBlock(ctx) {
+  const rows = ctx.report?.latestAverage?.rows ?? [];
+  const alliances = (ctx.world?.alliances ?? []).filter(item => item.status === 'active' && (item.partyIds ?? []).length >= 2);
+  const entries = alliances.map(item => {
+    const members = item.partyIds.map(id => rows.find(row => row.partyId === id)).filter(row => row && ctx.byId[row.partyId]);
+    return members.length >= 2 ? { label: item.label, kind: item.kind, leader: ctx.byId[item.leaderId] ?? ctx.byId[members[0].partyId], names: members.map(row => shortOf(ctx.byId[row.partyId])), total: members.reduce((sum, row) => sum + row.share, 0), delta: members.reduce((sum, row) => sum + (row.delta ?? 0), 0) } : null;
+  }).filter(Boolean).sort((a, b) => b.total - a.total);
+  if (!entries.length) return '';
+  const max = Math.max(...entries.map(item => item.total), 10);
+  const list = entries.map(item => `<li class="obs-coalition" data-tip="${esc(`${item.label}: ${item.names.join(', ')}`)}" tabindex="0"><span class="obs-two"><strong>${esc(item.label)}</strong><small>${esc(item.names.join(' · '))}</small></span><span class="obs-bar-track"><i style="width:${item.total / max * 100}%;background-color:${esc(item.leader?.color ?? '#8c9a93')}"></i></span><b>${pct(item.total, digitsFor(item.total))}</b>${deltaText(item.delta)}</li>`).join('');
+  return pollPanel('COALIZIONI E INTESE · SIMULAZIONE', 'Quanto pesano insieme', `<ul class="obs-coalitions">${list}</ul><p class="poll-footnote">Somma delle letture dei membri nella media degli istituti: una coalizione in lista unica non vale la somma, e l’intesa non è un voto. Gli scenari con i travasi sono in “Partiti, alleanze e flussi”.</p>`);
+}
+// Who gained and who lost the most since the previous average.
+function moversBlock(ctx) {
+  const rows = (ctx.report?.latestAverage?.rows ?? []).filter(row => ctx.byId[row.partyId] && Number.isFinite(row.delta));
+  const up = rows.filter(row => row.delta > 0).sort((a, b) => b.delta - a.delta).slice(0, 3);
+  const down = rows.filter(row => row.delta < 0).sort((a, b) => a.delta - b.delta).slice(0, 3);
+  if (!up.length && !down.length) return '<p class="quiet-copy">Nessuna forza si è mossa nell’ultima rilevazione, oppure la media precedente non c’è ancora.</p>';
+  const list = (items, tone) => items.length ? `<ul class="obs-movers tone-${tone}">${items.map(row => { const force = ctx.byId[row.partyId]; return `<li>${forceCell(force, ctx.logo, force.isPlayer ? 'Il tuo partito' : '')}<b>${pct(row.share, digitsFor(row.share))}</b>${deltaText(row.delta)}</li>`; }).join('')}</ul>` : '<p class="quiet-copy">Nessuna.</p>';
+  return `<div class="poll-grid"><div><h3 class="obs-sub">In crescita</h3>${list(up, 'good')}</div><div><h3 class="obs-sub">In calo</h3>${list(down, 'bad')}</div></div><p class="poll-footnote">Variazione della media degli istituti rispetto alla rilevazione precedente (${ctx.report.previousAverage ? `settimana ${ctx.report.previousAverage.week}` : 'dato non ancora disponibile'}).</p>`;
+}
 function links(state) {
   const running = state.campaign?.status === 'active';
   const items = [[running ? 'campagna' : 'candidatura', running ? 'Guida la campagna' : 'Candidatura'], ['risultati', 'Ultimo risultato'], ['storico', 'Storico elettorale']];
@@ -141,7 +178,9 @@ function quadro(ctx) {
   const media = options.media ? pollPanel('MEDIA · SIMULATI', 'Come ti raccontano', options.media()) : '';
   return `${barometer(state, world, poll, { logo })}
     ${pollPanel('INTENZIONI DI VOTO · SIMULAZIONE', 'La media degli istituti e le loro rilevazioni', instituteBars(ctx, { limit: 9 }), `<span class="hq-count">${report.latestAverage?.institutes ? `${report.latestAverage.institutes} istituti` : 'dato reale'}</span>`)}
-    ${pollPanel('TREND', 'Come cambiano i consensi', averageTrend(ctx))}
+    ${coalitionBlock(ctx)}
+    ${pollPanel('TREND', 'Come cambiano i consensi', `${periodChips(ctx)}${averageTrend(ctx)}`)}
+    ${pollPanel('PRINCIPALI MOVIMENTI', 'Chi sale e chi scende', moversBlock(ctx))}
     ${pollPanel('IN EVIDENZA', 'Dove si muovono i consensi', highlights(ctx))}
     ${pollPanel('CRONACA POLITICA', 'Cosa muove i sondaggi', chronicle(world, 6))}${media}${dataTable(world, index)}`;
 }
@@ -156,10 +195,10 @@ function gapOf(institute, average) {
 function comparisonChart(ctx) {
   const { report, force } = ctx;
   if (!force) return '';
-  const weeks = report.average.map(point => point.week);
-  if (weeks.length < 2) return '<p class="quiet-copy">Il confronto tra gli istituti compare dalla seconda settimana.</p>';
+  const weeks = windowed(report.average, ctx).map(point => point.week);
+  if (report.average.length < 2) return '<p class="quiet-copy">Il confronto tra gli istituti compare dalla seconda settimana.</p>';
   const valueAt = (history, week) => history.find(item => item.week === week)?.rows.find(row => row.partyId === force.id)?.share ?? null;
-  const series = [...report.institutes.map((item, i) => ({ label: instituteName(item), short: instituteName(item), color: SERIES[i + 1], emphasis: false, values: weeks.map(week => valueAt(item.history, week)) })), { label: 'Media', short: 'Media', color: SERIES[0], emphasis: true, values: report.average.map(point => point.rows.find(row => row.partyId === force.id)?.share ?? null) }];
+  const series = [...report.institutes.map((item, i) => ({ label: instituteName(item), short: instituteName(item), color: SERIES[i + 1], emphasis: false, values: weeks.map(week => valueAt(item.history, week)) })), { label: 'Media', short: 'Media', color: SERIES[0], emphasis: true, values: windowed(report.average, ctx).map(point => point.rows.find(row => row.partyId === force.id)?.share ?? null) }];
   return lineChart({ series, labels: weeks.map(week => `S${week}`), tips: weeks.map(week => `${force.label} · settimana ${week}`), unit: '%', min: 0, height: 240, right: 190, digits: digitsFor(force.share), ariaLabel: `${force.label}: ogni istituto e la media` });
 }
 function methodTable(ctx) {
@@ -185,7 +224,7 @@ function instituteDetail(ctx, id) {
     return { player: force.isPlayer, cell: forceCell(force, ctx.logo, force.isPlayer ? 'Il tuo partito' : ''), value: pct(row.share, digitsFor(row.share)), bar: row.share, max: top, meta: [['Variazione', previous === undefined ? '—' : deltaText(row.share - previous)], ['Scarto dalla media', deltaText(gap)], ['Margine', `±${num(margin, 1)}`]] };
   });
   rows.push({ cell: '<span class="obs-force"><span><strong>Altri</strong><small>liste minori e forze non rilevate</small></span></span>', value: pct(institute.latest.others), meta: [] });
-  const points = institute.history;
+  const points = windowed(institute.history, ctx);
   const chart = points.length >= 2 ? lineChart({ series: leaders(ctx, 4).map(force => chartSeries(force, points.map(item => item.rows.find(row => row.partyId === force.id)?.share ?? null))), labels: points.map(item => `S${item.week}`), tips: points.map(item => `${instituteName(institute)} · settimana ${item.week} · ${num(item.sample, 0)} interviste`), unit: '%', min: 0, height: 240, right: 190, ariaLabel: `Andamento delle letture di ${instituteName(institute)}` }) : '<p class="quiet-copy">La storia di questo istituto compare dalla seconda rilevazione.</p>';
   return `${card({ kicker: 'ISTITUTO · SIMULATO', title: instituteName(institute), body: head })}
     ${card({ kicker: `RILEVAZIONE DEL ${formatDate(institute.latest.date, { day: 'numeric', month: 'long' }).toUpperCase()} · SETTIMANA ${institute.latest.week}`, title: 'Che cosa misura', body: `${readList(rows)}<p class="poll-footnote">Variazione: rispetto alla rilevazione precedente dello stesso istituto. Scarto: distanza dalla media degli istituti. Ogni istituto sbaglia a modo suo e in modo costante da una settimana all’altra (errore simulato, dentro il margine): per questo la media, che li compensa, è più affidabile di una sola lettura. Lo scarto dalla media è l’unico segno visibile di quell’errore.</p>` })}
@@ -195,8 +234,9 @@ function institutes(ctx) {
   const { options, report } = ctx;
   const selected = ['confronto', ...POLL_INSTITUTES.map(item => item.id)].includes(options.institute) ? options.institute : 'confronto';
   const chips = `<div class="obs-chips" role="group" aria-label="Istituto">${[['confronto', 'Confronto'], ...report.institutes.map(item => [item.id, instituteName(item)])].map(([id, label]) => `<button type="button" class="obs-chip-btn ${id === selected ? 'active' : ''}" data-section-tab="osservatorio-istituto" data-section-tab-value="${esc(id)}" aria-pressed="${id === selected}">${esc(label)}</button>`).join('')}</div>`;
-  if (selected !== 'confronto') return `${chips}${instituteDetail(ctx, selected)}`;
-  return `${chips}
+  const filters = `<div class="obs-filters">${chips}${periodChips(ctx)}</div>`;
+  if (selected !== 'confronto') return `${filters}${instituteDetail(ctx, selected)}`;
+  return `${filters}
     ${pollPanel('MEDIA E ISTITUTI · SIMULAZIONE', 'La media e le letture di ciascun istituto', averageBlock(ctx, { limit: 14 }))}
     ${ctx.force ? pollPanel('CONFRONTO NEL TEMPO', `${esc(ctx.force.label)}: ogni istituto e la media`, `${forceChips(ctx)}${comparisonChart(ctx)}`) : ''}
     ${pollPanel('METODI', 'Come lavora ciascun istituto', methodTable(ctx))}`;
@@ -207,6 +247,15 @@ function heat(entry, national) {
   const tone = entry.factor >= 1.12 ? 'good' : entry.factor <= 0.88 ? 'bad' : 'neutral';
   const digits = digitsFor(national);
   return `<span class="obs-heat tone-${tone}" data-tip="${esc(`${pct(entry.support, digits)} contro ${pct(national, digits)} in media`)}" tabindex="0">${pct(entry.support, digits)}</span>`;
+}
+// The themes that count now (the state of each area weighs more where it is in trouble and where it matters to more segments) and, for each segment, its first ones.
+function themeBlocks(ctx) {
+  const { report } = ctx;
+  const seg = report.segments;
+  const themes = report.themes;
+  const themeList = themes ? `<ol class="obs-list">${themes.national.map(item => `<li><span><strong>${esc(item.label)}</strong><small>stato dell’area ${num(item.value, 0)}/100</small></span>${bar(item.weight, 'warn', Math.max(...themes.national.map(t => t.weight), 1))}</li>`).join('')}</ol>` : '';
+  const bySegment = themes && seg ? `<ul class="obs-segment-themes">${seg.segments.map(item => `<li><strong>${esc(item.label)}</strong><span>${(themes.bySegment[item.id] ?? []).map(theme => esc(theme.label)).join(' · ') || '—'}</span></li>`).join('')}</ul>` : '';
+  return { themeList, bySegment };
 }
 function segmentsView(ctx) {
   const { report, force } = ctx;
@@ -219,9 +268,7 @@ function segmentsView(ctx) {
     const entries = seg.rows[item.id] ?? [];
     return { _class: item.isPlayer ? 'is-player' : '', name: forceCell(item, ctx.logo, item.isPlayer ? 'Il tuo partito' : ''), national: pct(national, digitsFor(national)), ...Object.fromEntries(entries.map(entry => [entry.id, heat(entry, national)])) };
   });
-  const themes = report.themes;
-  const themeList = themes ? `<ol class="obs-list">${themes.national.map(item => `<li><span><strong>${esc(item.label)}</strong><small>stato dell’area ${num(item.value, 0)}/100</small></span>${bar(item.weight, 'warn', Math.max(...themes.national.map(t => t.weight), 1))}</li>`).join('')}</ol>` : '';
-  const bySegment = themes ? `<ul class="obs-segment-themes">${seg.segments.map(item => `<li><strong>${esc(item.label)}</strong><span>${(themes.bySegment[item.id] ?? []).map(theme => esc(theme.label)).join(' · ') || '—'}</span></li>`).join('')}</ul>` : '';
+  const { themeList, bySegment } = themeBlocks(ctx);
   const list = report.insights[force?.id] ?? [];
   const insights = force ? `<ul class="obs-list">${list.map(item => `<li class="obs-insight obs-${esc(item.kind)}"><span><strong>${esc(INSIGHT_LABELS[item.kind] ?? item.kind)}</strong> · ${esc(item.text.replace(/^(forte tra|debole tra|in crescita tra|forte in|bacino contendibile:|area da recuperare:)\s*/i, ''))}<small>${esc(item.detail)}</small></span></li>`).join('') || '<li class="obs-muted">Nessun segnale netto: la forza è vicina alla sua media in tutti i segmenti.</li>'}</ul>` : '';
   return `${pollPanel('SEGMENTI · SIMULAZIONE', 'Chi sono gli elettori', `${table([['name', 'Segmento'], ['share', 'Quota', 'num'], ['satisfaction', 'Soddisfazione', 'num'], ['participation', 'Partecipazione', 'num'], ['trust', 'Fiducia', 'num'], ['undecided', 'Indecisi', 'num']], segmentRows)}<p class="poll-footnote">Sono i segmenti aggregati della società simulata (età e condizione), mai persone reali. La partecipazione è la quota che dice di andare a votare. Genere, titolo di studio, dimensione del comune e nuovi elettori non sono simulati: l’osservatorio non li inventa.</p>`)}
@@ -241,36 +288,107 @@ function raceTerritories(ctx, race) {
   });
   return pollPanel('TERRITORI DELLA CORSA · SIMULAZIONE', 'Dove si vince la campagna', `${table([['name', 'Area'], ['weight', 'Peso', 'num'], ['lead', 'In testa'], ['mine', 'La tua quota', 'num'], ['trend', 'Tendenza', 'num']], rows)}<p class="poll-footnote">Le aree sono quelle della campagna in corso; la quota è la proiezione simulata di ogni area. La tendenza è lo scarto locale rispetto al quadro generale.</p>`);
 }
-function territories(ctx) {
-  const { report, force, world } = ctx;
-  if (!force) return empty('Nessuna forza da osservare.');
+// The regional picture of the observatory, as numbers: for the force in view, each region's share, its gap from the national figure and its change since the first
+// regional picture kept (the picture is saved every few weeks). Provinces have no readings in the model: the page says so and does not draw them.
+function territoryModel(ctx) {
+  const { report, force, world, options } = ctx;
   const regional = report.regional ?? {};
-  const national = report.latestAverage?.rows.find(row => row.partyId === force.id)?.share ?? force.share;
-  const digits = digitsFor(national);
-  const entries = Object.entries(regional).map(([region, rows]) => [region, rows.find(row => row.partyId === force.id)?.share]).filter(([, value]) => Number.isFinite(value));
-  const rows = Object.entries(regional).map(([region, list]) => {
-    const own = list.find(row => row.partyId === force.id)?.share ?? null;
-    const lead = [...list].filter(row => ctx.byId[row.partyId]).sort((a, b) => b.share - a.share)[0];
-    return { region, own, lead, gap: own === null ? null : own - national };
-  }).filter(row => row.own !== null).sort((a, b) => b.own - a.own).map(row => ({ name: `<strong>${esc(row.region)}</strong>${row.region === world.place.region ? ' <small>la tua regione</small>' : ''}`, lead: row.lead ? `${esc(shortOf(ctx.byId[row.lead.partyId]))} · ${pct(row.lead.share)}` : '—', own: pct(row.own, digits), gap: deltaText(row.gap) }));
-  return `${pollPanel('TERRITORIO · SIMULAZIONE', `${esc(force.label)} regione per regione`, `${forceChips(ctx)}${regionTiles(entries, { home: world.place.region, digits, note: 'Più chiaro = più forte. Bordo dorato: la tua regione. Le differenze regionali sono simulate: partono dal voto reale delle ultime politiche e si muovono con eventi territoriali e popolarità.' })}`)}
-    ${pollPanel('CLASSIFICA DELLE REGIONI', 'Dove è più forte, dove meno', `${table([['name', 'Regione'], ['lead', 'Prima forza'], ['own', esc(shortOf(force)), 'num'], ['gap', 'Scarto', 'num']], rows, { className: 'obs-compact' })}<p class="poll-footnote">Scarto: differenza dal dato nazionale della forza.</p>`)}
-    ${regionalTrend(ctx)}
-    ${raceTerritories(ctx, ctx.race())}`;
-}
-// The same force in one region over the weeks, against its national average: the regional picture is kept every few weeks (poll-observatory).
-function regionalTrend(ctx) {
-  const { report, force, world } = ctx;
   const history = report.regionalHistory ?? [];
-  const regions = Object.keys(report.regional ?? {});
-  const region = regions.includes(ctx.options.filters?.obsRegion) ? ctx.options.filters.obsRegion : world.place.region;
-  const own = regionalSeries({ regional: history }, force.id, region);
-  const select = `<label class="obs-select">Regione <select data-view-filter-select="obsRegion">${regions.map(name => `<option value="${esc(name)}" ${name === region ? 'selected' : ''}>${esc(name)}</option>`).join('')}</select></label>`;
-  if (own.length < 2) return pollPanel('ANDAMENTO · SIMULAZIONE', `${esc(force.label)} in ${esc(region)} nel tempo`, `${select}<p class="quiet-copy">Il quadro regionale si registra ogni ${POLL_EXTENSIONS.regional.every} settimane: dopo la seconda registrazione compare l’andamento.</p>`);
-  const nationalAt = week => (report.average ?? []).find(item => item.week === week)?.rows.find(row => row.partyId === force.id)?.share ?? null;
-  const series = [chartSeries(force, own.map(point => point.share), true), { label: 'Media nazionale', short: 'Nazionale', color: '#8c9a93', emphasis: false, values: own.map(point => nationalAt(point.week)) }];
-  const first = own[0], last = own.at(-1);
-  return pollPanel('ANDAMENTO · SIMULAZIONE', `${esc(force.label)} in ${esc(region)} nel tempo`, `${forceChips(ctx)}${select}${lineChart({ series, labels: own.map(point => `S${point.week}`), tips: own.map(point => `${region} · settimana ${point.week}`), unit: '%', min: 0, height: 220, right: 130, ariaLabel: `${force.label} in ${region}, andamento regionale` })}<p class="poll-footnote">Da ${num(first.share, 1)}% (S${first.week}) a ${num(last.share, 1)}% (S${last.week}): ${signed(last.share - first.share)} punti. Stima regionale delle intenzioni di voto, non un risultato; la serie nazionale è la media degli istituti.</p>`);
+  const regions = Object.keys(regional).sort((a, b) => a.localeCompare(b, 'it'));
+  const nationalOf = id => report.latestAverage?.rows.find(row => row.partyId === id)?.share ?? ctx.byId[id]?.share ?? null;
+  const national = nationalOf(force.id);
+  const snapshotShare = (snapshot, region, id) => snapshot?.rows?.[region]?.find(([partyId]) => partyId === id)?.[1] ?? null;
+  const hasChange = history.length >= 2;
+  const items = regions.map(region => {
+    const raw = regional[region].find(row => row.partyId === force.id)?.share;
+    const share = Number.isFinite(raw) ? raw : null;
+    const base = hasChange ? snapshotShare(history[0], region, force.id) : null;
+    return { region, share, gap: share !== null && Number.isFinite(national) ? share - national : null, change: share !== null && Number.isFinite(base) ? share - base : null };
+  });
+  const filters = options.filters ?? {};
+  const selected = regions.includes(filters.obsRegion) ? filters.obsRegion : regions.includes(world.place.region) ? world.place.region : regions[0];
+  const ranked = items.filter(item => item.share !== null).sort((a, b) => b.share - a.share);
+  const mode = TERRITORY_MEASURES.some(([id]) => id === filters.obsMapMode) && (filters.obsMapMode !== 'variazione' || hasChange) ? filters.obsMapMode : 'quota';
+  const chosen = filters.obsCompare === undefined ? null : String(filters.obsCompare).split(',').filter(region => regions.includes(region)).slice(0, 4);
+  const compare = chosen ?? [...new Set([selected, ranked[0]?.region, ranked.at(-1)?.region].filter(Boolean))];
+  return { regions, regional, history, items, national, selected, mode, compare, usingDefault: chosen === null, hasChange, ranked, nationalOf, snapshotShare };
+}
+function territoryControls(ctx, model) {
+  const { force } = ctx;
+  const select = `<label class="obs-select">Regione <select data-view-filter-select="obsRegion">${model.regions.map(name => `<option value="${esc(name)}" ${name === model.selected ? 'selected' : ''}>${esc(name)}</option>`).join('')}</select></label>`;
+  const modes = `<div class="obs-chips" role="group" aria-label="Misura della cartina">${TERRITORY_MEASURES.map(([id, label]) => `<button type="button" class="obs-chip-btn ${id === model.mode ? 'active' : ''}" data-view-filter="obsMapMode" data-view-filter-value="${id}" aria-pressed="${id === model.mode}" ${id === 'variazione' && !model.hasChange ? 'disabled title="Serve almeno un secondo quadro regionale"' : ''}>${esc(label)}</button>`).join('')}</div>`;
+  const crumbs = `<nav class="obs-crumbs" aria-label="Percorso territoriale"><span>Italia</span><i aria-hidden="true">›</i><strong>${esc(model.selected)}</strong><i aria-hidden="true">›</i><span class="is-missing" title="I sondaggi del gioco sono regionali: non esistono letture per provincia">Province: dato non disponibile</span></nav>`;
+  return pollPanel('TERRITORIO · SIMULAZIONE', `${esc(force.label)} in Italia e nelle regioni`, `${crumbs}${forceChips(ctx)}<div class="obs-controls">${modes}${select}</div>`);
+}
+function territoryMapPanel(ctx, model) {
+  const { force, world } = ctx;
+  const digits = digitsFor(model.national ?? 5);
+  const notes = { quota: 'Più chiaro = più forte. Bordo dorato: la tua regione; bordo bianco: la regione aperta.', scarto: 'Petrolio: sopra il dato nazionale della forza; terracotta: sotto.', variazione: 'Petrolio: in crescita dal primo quadro regionale; terracotta: in calo.' };
+  const map = italyMap(model.items, { mode: model.mode, selected: model.selected, compare: model.compare, home: world.place.region, force: force.label, digits });
+  return pollPanel('CARTINA · SIMULAZIONE', 'Dove è forte e dove no', `${map}<p class="poll-footnote">${notes[model.mode]} La cartina è un cartogramma: una tessera per regione, vicine le regioni vicine; non ne rappresenta forma né superficie. Tocca una regione per aprirla.</p>`);
+}
+// The open territory: the force against the country, how it moved, who it faces there.
+function territoryCard(ctx, model) {
+  const { force, byId, logo } = ctx;
+  const region = model.selected;
+  const item = model.items.find(entry => entry.region === region);
+  const digits = digitsFor(item?.share ?? 5);
+  const rows = (model.regional[region] ?? []).filter(row => byId[row.partyId]).sort((a, b) => b.share - a.share);
+  const rank = rows.findIndex(row => row.partyId === force.id) + 1;
+  const last = model.history.at(-1), first = model.history[0];
+  const kpis = [kpi({ label: shortOf(force), value: pct(item?.share, digits), note: rank ? `${rank}ª forza della regione su ${rows.length}` : 'non rilevata in questa regione' }), kpi({ label: 'Scarto dal dato nazionale', value: item?.gap === null || item?.gap === undefined ? '—' : signed(item.gap, 1), tone: item?.gap >= 0 ? '' : 'warn', note: Number.isFinite(model.national) ? `Italia: ${pct(model.national, digitsFor(model.national))}` : '' }), kpi({ label: 'Variazione nel tempo', value: item?.change === null || item?.change === undefined ? '—' : signed(item.change, 1), note: model.hasChange ? `dalla settimana ${first.week} alla ${last.week}` : 'serve un secondo quadro regionale' })].join('');
+  const party = rows.map(row => { const entry = byId[row.partyId]; return { label: entry.label, color: entry.color, share: row.share, national: model.nationalOf(row.partyId), isPlayer: entry.isPlayer, note: entry.isPlayer ? 'Il tuo partito' : entry.position ?? '', logo: emblem({ label: entry.label, abbreviation: entry.abbreviation, color: entry.color, logo: logo?.(entry.id) }, 'sm') }; });
+  const rivals = rows.filter(row => row.partyId !== force.id).slice(0, 3).map(row => `<li><strong>${esc(shortOf(byId[row.partyId]))}</strong><b>${pct(row.share, digitsFor(row.share))}</b></li>`).join('');
+  return pollPanel(`SCHEDA · ${esc(regionAbbreviation(region))}`, esc(region), `<div class="sx-kpis obs-kpis">${kpis}</div>${partyBars(party, { digits })}${rivals ? `<div class="obs-rivals"><small>Concorrenti più vicini</small><ul>${rivals}</ul></div>` : ''}`, region === ctx.world.place.region ? '<span class="hq-count">la tua regione</span>' : '');
+}
+function territoryRanking(ctx, model) {
+  const title = { quota: 'Dove è più forte, dove meno', scarto: 'Sopra e sotto il dato nazionale', variazione: 'Dove cresce e dove cala' }[model.mode];
+  const body = regionBars(model.items, { mode: model.mode, selected: model.selected, home: ctx.world.place.region, national: model.national, color: 'var(--teal-soft)', digits: digitsFor(model.national ?? 5) });
+  return pollPanel('CLASSIFICA DELLE REGIONI', title, `${body}<p class="poll-footnote">Le barre sono ordinate per la misura scelta sopra; ogni riga apre la scheda della regione.</p>`);
+}
+// Territories side by side: the same force in up to four regions over time (against the national average) and the parties of each, as one table.
+function territoryCompare(ctx, model) {
+  const { force, byId } = ctx;
+  const chips = `<div class="obs-chips obs-compare-chips" role="group" aria-label="Territori da confrontare (fino a quattro)">${model.regions.map(region => { const on = model.compare.includes(region); const full = !on && model.compare.length >= 4; return `<button type="button" class="obs-chip-btn ${on ? 'active' : ''}" data-view-filter="obsCompare" data-view-filter-value="${esc((on ? model.compare.filter(item => item !== region) : [...model.compare, region]).join(','))}" aria-pressed="${on}" ${full ? 'disabled' : ''} title="${esc(region)}">${esc(regionAbbreviation(region))}</button>`; }).join('')}</div>`;
+  const note = model.usingDefault ? 'Predefinito: la regione aperta, la più forte e la più debole per questa forza. Scegli le regioni da confrontare.' : model.compare.length < 2 ? 'Scegli almeno due regioni per il confronto.' : '';
+  let body = '';
+  if (model.compare.length >= 2) {
+    const nationalAt = week => (ctx.report.average ?? []).find(item => item.week === week)?.rows.find(row => row.partyId === force.id)?.share ?? null;
+    const weeks = model.history.map(snapshot => snapshot.week);
+    const lines = model.compare.map((region, i) => ({ label: region, short: regionAbbreviation(region), color: SERIES[i % SERIES.length], emphasis: region === model.selected, values: model.history.map(snapshot => model.snapshotShare(snapshot, region, force.id)) }));
+    const national = { label: 'Media nazionale', short: 'Italia', color: '#8c9a93', emphasis: false, values: weeks.map(nationalAt) };
+    const chart = weeks.length >= 2 ? lineChart({ series: [...lines, national], labels: weeks.map(week => `S${week}`), tips: weeks.map(week => `${force.label} · settimana ${week}`), unit: '%', min: 0, height: 230, right: 150, ariaLabel: `${force.label}: territori a confronto nel tempo` }) : '<p class="quiet-copy">Il confronto nel tempo compare dopo il secondo quadro regionale (si registra ogni ' + POLL_EXTENSIONS.regional.every + ' settimane).</p>';
+    const parties = [...(ctx.report.latestAverage?.rows ?? [])].filter(row => byId[row.partyId]).sort((a, b) => b.share - a.share).slice(0, 6);
+    const head = `<tr><th scope="col">Forza</th><th scope="col" class="hm-nat">Italia</th>${model.compare.map(region => `<th scope="col" title="${esc(region)}">${esc(regionAbbreviation(region))}</th>`).join('')}</tr>`;
+    const rows = parties.map(row => { const entry = byId[row.partyId]; return `<tr class="${entry.isPlayer ? 'is-player' : ''}"><th scope="row"><span class="hm-dot" style="background:${esc(entry.color)}"></span>${esc(shortOf(entry))}</th><td class="hm-nat">${pct(row.share, digitsFor(row.share))}</td>${model.compare.map(region => { const value = model.regional[region]?.find(item => item.partyId === row.partyId)?.share; const gap = Number.isFinite(value) ? value - row.share : null; return `<td data-tip="${esc(`${entry.label} · ${region}: ${pct(value, 1)}`)}" tabindex="0"><b>${Number.isFinite(value) ? num(value, 1) : '—'}</b>${gap === null ? '' : `<small class="${gap >= 0 ? 'up' : 'down'}">${signed(gap, 1)}</small>`}</td>`; }).join('')}</tr>`; }).join('');
+    body = `<div class="eh-chart">${chart}</div><div class="hm-wrap" role="region" aria-label="Forze nei territori a confronto" tabindex="0"><table class="hm hm-compare"><thead>${head}</thead><tbody>${rows}</tbody></table></div>`;
+  }
+  return pollPanel('CONFRONTO TRA TERRITORI · SIMULAZIONE', 'Più regioni, una forza', `${chips}${note ? `<p class="quiet-copy">${esc(note)}</p>` : ''}${body}<p class="poll-footnote">Sotto ogni valore lo scarto dalla media nazionale della stessa forza. Il quadro regionale si registra a intervalli: le linee mostrano solo i punti realmente registrati.</p>`);
+}
+// Parties × regions: where each force is stronger or weaker than its own national figure.
+function territoryHeat(ctx, model) {
+  const { byId } = ctx;
+  const parties = [...(ctx.report.latestAverage?.rows ?? [])].filter(row => byId[row.partyId]).sort((a, b) => b.share - a.share).slice(0, 8);
+  const columns = model.regions.map(region => ({ label: region, short: regionAbbreviation(region), home: region === ctx.world.place.region }));
+  const rows = parties.map(row => { const entry = byId[row.partyId]; return { label: shortOf(entry), color: entry.color, national: row.share, isPlayer: entry.isPlayer, cells: model.regions.map(region => { const share = model.regional[region]?.find(item => item.partyId === row.partyId)?.share; return { region, share: Number.isFinite(share) ? share : null, gap: Number.isFinite(share) ? share - row.share : null }; }) }; });
+  return pollPanel('MAPPA DI CALORE · SIMULAZIONE', 'Forze e regioni a colpo d’occhio', `${heatmap({ columns, rows })}<p class="poll-footnote">Ogni cella è il consenso della forza nella regione; il colore dice se è sopra o sotto il suo dato nazionale. Si scorre in orizzontale: la prima colonna resta ferma.</p>`);
+}
+function territoryMissing(model) {
+  const items = ['Province e città metropolitane: il modello dei sondaggi arriva alla regione, non ha letture provinciali (la Provincia esiste come ente da amministrare, in Territori).', 'Mappa con i confini: le geometrie delle regioni non fanno parte dei dati del gioco; la cartina è un cartogramma a tessere.', model.hasChange ? null : 'Variazione nel tempo: serve un secondo quadro regionale (registrato ogni poche settimane).'].filter(Boolean);
+  return `<details class="obs-missing"><summary>Che cosa manca, e perché</summary><ul>${items.map(item => `<li>${esc(item)}</li>`).join('')}</ul></details>`;
+}
+function territories(ctx) {
+  const { force } = ctx;
+  if (!force) return empty('Nessuna forza da osservare.');
+  if (!Object.keys(ctx.report.regional ?? {}).length) return empty('Il quadro regionale compare con la prima settimana di gioco: gli istituti simulati lo leggono ogni poche settimane.');
+  const model = territoryModel(ctx);
+  return `${territoryControls(ctx, model)}
+    <div class="obs-terr-grid">${territoryMapPanel(ctx, model)}${territoryCard(ctx, model)}</div>
+    ${territoryRanking(ctx, model)}
+    ${territoryCompare(ctx, model)}
+    ${territoryHeat(ctx, model)}
+    ${raceTerritories(ctx, ctx.race())}
+    ${territoryMissing(model)}`;
 }
 
 // ---------- the forces and the alliances ----------
@@ -366,7 +484,7 @@ const THREE = [['INTENZIONI DI VOTO', 'Per chi voterebbero oggi: la media degli 
 function approvalChart(ctx) {
   const points = ctx.report.approval ?? [];
   if (points.length < 2) return '<p class="quiet-copy">Il gradimento si registra ogni settimana: l’andamento compare dalla seconda rilevazione.</p>';
-  const series = [['government', 'Governo', '#d9b25f', true], ['leader', ctx.player ? 'Il tuo gradimento personale' : 'Leader', '#6fb1e8', false], ['executive', 'Esecutivo di scenario', '#9aa89f', false]].map(([key, label, color, emphasis]) => ({ label, short: label.length > 18 ? label.slice(0, 17) + '…' : label, color, emphasis, values: points.map(point => point[key] ?? null) })).filter(item => item.values.some(Number.isFinite));
+  const series = [['government', 'Governo', '#d9b25f', true], ['leader', ctx.player ? 'Il tuo gradimento personale' : 'Leader', '#7FB8D6', false], ['executive', 'Esecutivo di scenario', '#9aa89f', false]].map(([key, label, color, emphasis]) => ({ label, short: label.length > 18 ? label.slice(0, 17) + '…' : label, color, emphasis, values: points.map(point => point[key] ?? null) })).filter(item => item.values.some(Number.isFinite));
   const last = points.at(-1);
   return `${lineChart({ series, labels: points.map(point => `S${point.week}`), tips: points.map(point => `Gradimento · settimana ${point.week}${point.margin ? ` · ±${num(point.margin, 1)} punti` : ''}`), unit: '%', min: 0, max: 100, height: 230, right: 170, ariaLabel: 'Gradimento del Governo e del leader nel tempo' })}<p class="poll-footnote">Ultima rilevazione (S${last.week}): ${[last.government !== null ? `Governo ${num(last.government, 0)}%` : null, last.leader !== null ? `leader ${num(last.leader, 0)}%` : null, last.executive !== null ? `esecutivo di scenario ${num(last.executive, 0)}%` : null].filter(Boolean).join(' · ')}${last.margin ? `, con un margine di ±${num(last.margin, 1)} punti` : ''}. Il gradimento non è un voto: chi approva può votare un’altra forza.</p>`;
 }
@@ -376,12 +494,29 @@ function lawBlock(law) {
   const segments = `<details class="obs-law-detail"><summary>Per chi è più o meno gradita (tra chi ha scelto)</summary><ul>${last.bySegment.map(item => `<li><span>${esc(item.label)}</span>${bar(item.approval, item.approval >= 55 ? 'good' : item.approval <= 40 ? 'bad' : '')}<b>${num(item.approval, 0)}%</b></li>`).join('')}</ul><small>Letto da chi ci guadagna e da chi ci perde, e da quanto il segmento si riconosce nel Governo: ${last.institutes.map(item => `Istituto ${item.id.toUpperCase()} ${num(item.approval, 0)}% su ${num(item.sample, 0)}`).join(' · ')}.</small></details>`;
   return `<article class="obs-law ${last.verdict}"><header><strong>${esc(law.title)}</strong><small>${esc(law.category ?? '')}${law.origin ? ` · ${law.origin === 'giocatore' ? 'tua iniziativa' : esc(law.origin)}` : ''} · in vigore dalla S${law.week}</small><span class="badge">${last.verdict === 'contrari' ? 'Bocciata dai cittadini' : last.verdict === 'favorevoli' ? 'Approvata dai cittadini' : 'Opinione divisa'}</span></header><ul class="obs-law-surveys">${rows}</ul>${segments}</article>`;
 }
+// How the country judges what it lives, as the society of the game models it (satisfaction, trust in the institutions, expected turnout), week by week.
+function trustBlock(ctx) {
+  const history = ctx.state.society?.history ?? [];
+  if (history.length < 2) return pollPanel('FIDUCIA E GIUDIZIO · SIMULAZIONE', 'Soddisfazione e fiducia nelle istituzioni', '<p class="quiet-copy">Gli indicatori della società si registrano ogni settimana: l’andamento compare dalla seconda.</p>');
+  const points = windowed(history, ctx);
+  const series = [['satisfaction', 'Soddisfazione dei cittadini', SERIES[0], true], ['trust', 'Fiducia nelle istituzioni', SERIES[1], false], ['participation', 'Partecipazione attesa', SERIES[3], false]].map(([key, label, color, emphasis]) => ({ label, short: label.length > 18 ? `${label.slice(0, 17)}…` : label, color, emphasis, values: points.map(item => Number.isFinite(item[key]) ? item[key] : null) }));
+  const last = history.at(-1);
+  const kpis = [kpi({ label: 'Soddisfazione', value: `${num(last.satisfaction, 0)}/100` }), kpi({ label: 'Fiducia nelle istituzioni', value: `${num(last.trust, 0)}/100` }), kpi({ label: 'Partecipazione attesa', value: `${num(last.participation, 0)}%` })].join('');
+  return pollPanel('FIDUCIA E GIUDIZIO · SIMULAZIONE', 'Soddisfazione e fiducia nelle istituzioni', `<div class="sx-kpis obs-kpis">${kpis}</div>${periodChips(ctx)}${lineChart({ series, labels: points.map(item => `S${item.week}`), tips: points.map(item => `Settimana ${item.week}`), unit: '', min: 0, max: 100, height: 220, right: 170, ariaLabel: 'Soddisfazione, fiducia e partecipazione attesa nel tempo' })}<p class="poll-footnote">Sono indicatori della società simulata (cittadini, non elettori di un partito): si muovono con leggi, crisi, economia e media. La partecipazione è la quota che dice di andare a votare.</p>`);
+}
+function themesBlock(ctx) {
+  const { themeList, bySegment } = themeBlocks(ctx);
+  if (!themeList) return '';
+  return pollPanel('TEMI · SIMULAZIONE', 'Che cosa conta ora per i cittadini', `${themeList}${bySegment}<p class="poll-footnote">Un tema pesa di più dove l’area è in difficoltà e dove interessa a più segmenti. Il dettaglio dei segmenti è in “Partiti, alleanze e flussi”.</p>`);
+}
 function gradimento(ctx) {
   const { report } = ctx;
   const three = `<div class="obs-three">${THREE.map(([title, text]) => `<div><small>${title}</small><p>${text}</p></div>`).join('')}</div>`;
   const laws = (report.laws ?? []).filter(law => law.surveys.length);
   return `${pollPanel('TRE MISURE DIVERSE · SIMULAZIONE', 'Voto, gradimento, risultato: non sono la stessa cosa', three)}
     ${pollPanel('GRADIMENTO · SIMULAZIONE', 'Governo e leader nel tempo', approvalChart(ctx))}
+    ${trustBlock(ctx)}
+    ${themesBlock(ctx)}
     ${pollPanel('LEGGI E POLITICHE · SIMULAZIONE', 'Che cosa pensano dei provvedimenti in vigore', laws.length ? `<div class="obs-laws">${laws.map(lawBlock).join('')}</div><p class="poll-footnote">Per ogni legge in vigore gli istituti interrogano i cittadini una settimana dopo e dopo due mesi. Il risultato è una stima, con il margine del campione e quello del modello: non è un voto e da solo non cambia nulla. Se il giudizio è netto, il Governo e gli alleati ne tengono conto una volta, in modo limitato e senza accumularsi.</p>` : '<p class="quiet-copy">Nessuna legge in vigore da misurare: quando ne entra una, gli istituti la valutano.</p>')}`;
 }
 
@@ -409,8 +544,17 @@ function scenari(ctx) {
     ${pollPanel('COSTRUISCI UNO SCENARIO', 'Scegli le forze di una coalizione ipotetica', `${picker}${custom ? `<div class="obs-scenarios">${scenarioCard(custom, solo)}</div>` : '<p class="quiet-copy">Tocca due o più forze: la guida è la tua (o la più grande) se è tra quelle scelte.</p>'}`)}`;
 }
 
-const VIEW_RENDERERS = { quadro, istituti: institutes, segmenti: segmentsView, territori: territories, forze: forces, candidati: candidates, flussi, gradimento, scenari };
-const viewTabs = active => `<nav class="sx-tabs obs-tabs" role="tablist" aria-label="Aree dell’osservatorio">${OBSERVATORY_VIEWS.map(([id, label]) => `<button type="button" role="tab" class="sx-tab ${active === id ? 'active' : ''}" data-section-tab="osservatorio" data-section-tab-value="${esc(id)}" aria-selected="${active === id}">${esc(label)}</button>`).join('')}</nav>`;
+// The race of a campaign is followed in Elezioni → Sondaggi e avversari (campaignObservatory); here the same readings are the general picture of the candidates and the rivals.
+const candidatesView = ctx => `${card({ kicker: 'COMPETIZIONE ATTIVA', title: 'La corsa della campagna è in Elezioni', body: '<p class="sx-note">Candidati, rivali, territori strategici, attese e conseguenze della campagna in corso si guidano in <button type="button" class="text-link" data-section-tab="elezioni" data-section-tab-value="avversari">Elezioni → Sondaggi e avversari</button>. Qui sotto la stessa lettura, come quadro generale.</p>' })}${candidates(ctx)}`;
+const VIEW_RENDERERS = { quadro, istituti: institutes, segmenti: segmentsView, territori: territories, forze: forces, candidati: candidatesView, flussi, gradimento, scenari };
+// Five areas as tabs; the views of the area in which the player is, as a second row. The value of an area tab is the view being read when the player is already there.
+const areaOf = view => OBSERVATORY_AREAS.find(([, , views]) => views.includes(view)) ?? OBSERVATORY_AREAS[0];
+const viewTabs = active => {
+  const [, , areaViews] = areaOf(active);
+  const areas = `<nav class="sx-tabs obs-tabs" role="tablist" aria-label="Aree dell’osservatorio">${OBSERVATORY_AREAS.map(([id, label, views]) => { const on = views.includes(active); const value = on ? active : views[0]; return `<button type="button" role="tab" class="sx-tab ${on ? 'active' : ''}" data-obs-area="${id}" data-section-tab="osservatorio" data-section-tab-value="${esc(value)}" aria-selected="${on}">${esc(label)}</button>`; }).join('')}</nav>`;
+  const views = areaViews.length > 1 ? `<nav class="obs-subtabs" role="tablist" aria-label="Viste dell’area">${areaViews.map(id => `<button type="button" role="tab" class="obs-subtab ${id === active ? 'active' : ''}" data-section-tab="osservatorio" data-section-tab-value="${esc(id)}" aria-selected="${id === active}">${esc(VIEW_LABELS[id])}</button>`).join('')}</nav>` : '';
+  return areas + views;
+};
 
 // state: the game; options: { view, institute, filters, logoFor(id), window(), media() (the panel of the media, as HTML), realLeader, secretary, allianceOdds, kindOf }.
 export function renderObservatory(state, options = {}) {
@@ -420,7 +564,7 @@ export function renderObservatory(state, options = {}) {
   if (!ctx.report) return empty('L’osservatorio si apre con i dati della partita.');
   const view = OBSERVATORY_VIEWS.some(([id]) => id === options.view) ? options.view : 'quadro';
   const average = ctx.report.latestAverage;
-  const head = `<div class="obs-head"><p>${glyph('chart', 16)} <span>${average?.institutes ? `Media di ${average.institutes} istituti simulati · ${num(average.sample, 0)} interviste · settimana ${average.week}` : 'Parti dalla media reale: gli istituti simulati iniziano con la prima settimana'}</span></p>${links(state)}</div>`;
+  const head = `<div class="obs-head"><p>${glyph('chart', 16)} <span>${average?.institutes ? `Media di ${average.institutes} istituti simulati · ${num(average.sample, 0)} interviste · settimana ${average.week}${average.date ? ` · aggiornata al ${formatDate(average.date)}` : ''}` : 'Parti dalla media reale: gli istituti simulati iniziano con la prima settimana'}</span></p>${links(state)}</div>`;
   return `<div class="polls-page observatory">${viewTabs(view)}${head}${VIEW_RENDERERS[view](ctx)}<p class="poll-footnote">I partiti sono reali; sondaggi, istituti, campioni, segmenti, travasi e candidature sono simulati (source: simulation) e non attribuiscono a persone o partiti reali decisioni mai prese. Il campione dei sondaggi è l’insieme degli intervistati; l’elettorato è la popolazione simulata che vota: sono grandezze diverse.</p></div>`;
 }
 

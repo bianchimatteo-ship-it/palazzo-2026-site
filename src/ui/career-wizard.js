@@ -1,11 +1,13 @@
-import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261012-3';
-import { LOGO_SHAPES, LOGO_SYMBOLS, partyLogoDataUrl } from './party-logo.js?v=20261012-3';
-import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261012-3';
-import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261012-3';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261012-3';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261012-3';
-import { startStep, startSummary } from './start-wizard.js?v=20261012-3';
-import { legacyBanner } from './hall-view.js?v=20261012-3';
+import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261013-1';
+import { LOGO_SHAPES, LOGO_SYMBOLS, partyLogoDataUrl } from './party-logo.js?v=20261013-1';
+import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261013-1';
+import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261013-1';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261013-1';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261013-1';
+import { startStep, startSummary } from './start-wizard.js?v=20261013-1';
+import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261013-1';
+import { normalizeStart } from '../core/start-engine.js?v=20261013-1';
+import { legacyBanner } from './hall-view.js?v=20261013-1';
 
 const POSITIONS = ['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra'];
 
@@ -17,10 +19,11 @@ const iconPaths = {
   party: '<path d="M4 5h16v14H4zM8 9h8M8 13h5"/>', summary: '<path d="M5 4h14v16H5zM8 8h8M8 12h8M8 16h5"/>',
   pin: '<path d="M12 21s-6-5.3-6-10a6 6 0 0 1 12 0c0 4.7-6 10-6 10z"/><circle cx="12" cy="11" r="2"/>', gauge: '<path d="M4 16a8 8 0 1 1 16 0"/><path d="m12 16 4-5"/>'
 };
-// The five steps of a new career: where, path, party, difficulty, who you are (with the summary).
+// The five steps of a new career, from the essential to the detail: who you are, where and as what you start, the party (or none), the advanced
+// settings (difficulty and starting conditions) and the summary. Each step runs the checks it gathers (career-rules: WIZARD_CHECKS).
 export const WIZARD_STEPS = Object.freeze([
-  ['Dove', 'Dove vuoi iniziare?', 'pin'], ['Percorso', 'Scegli il percorso', 'route'], ['Partito', 'Scegli l’appartenenza', 'party'],
-  ['Difficoltà', 'Scegli la difficoltà', 'gauge'], ['Chi sei', 'Chi sei e riepilogo', 'person']
+  ['Identità', 'Chi sei', 'person'], ['Partenza', 'Da dove parti', 'pin'], ['Partito', 'Scegli l’appartenenza', 'party'],
+  ['Avanzate', 'Impostazioni avanzate', 'gauge'], ['Riepilogo', 'Riepilogo e avvio', 'summary']
 ]);
 const LAST_STEP = WIZARD_STEPS.length;
 const ico = (name, size) => icon(iconPaths[name], size);
@@ -47,7 +50,7 @@ export function renderCareerWizard(state, draft, realParties = [], logoFor = () 
   const parties = [...state.dataset.parties.filter(isSelectableParty), ...realParties.filter(isSelectableParty)];
   const activeStep = steps[draft.step - 1];
   const place = chosenPlace(draft, territory);
-  const body = draft.step === 1 ? whereStep(draft, territory) : draft.step === 2 ? placeLine(draft, place) + levelStep(draft, parliamentaryGroups, realPoliticians, place) : draft.step === 3 ? partyStep(draft, parties, logoFor, parliamentaryGroups, partyLeaderships, politicalFigures) : draft.step === 4 ? difficultyStep(draft) + startStep(draft) : profileStep(state, draft) + summaryStep(draft, parties, level, parliamentaryGroups, place);
+  const body = draft.step === 1 ? profileStep(state, draft) : draft.step === 2 ? startingPoint(draft, territory, place, parliamentaryGroups, realPoliticians) : draft.step === 3 ? partyStep(draft, parties, logoFor, parliamentaryGroups, partyLeaderships, politicalFigures) : draft.step === 4 ? advancedStep(draft) : summaryStep(draft, parties, level, parliamentaryGroups, place);
   const backButton = draft.step > 1
     ? `<button type="button" class="secondary-button wizard-back" data-wizard-action="back">${ico('back', 16)} Indietro</button>`
     : `<button type="button" class="wizard-cancel" data-wizard-action="cancel">Annulla</button>`;
@@ -58,8 +61,8 @@ export function renderCareerWizard(state, draft, realParties = [], logoFor = () 
   // Real data that did not arrive (parties, groups, people): the wizard goes on with the rest and offers a new attempt.
   const dataBox = data?.failed?.length ? `<div class="wizard-data-alert" role="alert"><span>Non è stato possibile caricare: ${esc(data.failed.join(', '))}. Le scelte che ne dipendono restano vuote finché i dati non arrivano.</span><button type="button" class="secondary-button" data-wizard-retry-data>Riprova</button></div>` : '';
   return `<div class="wizard-backdrop"><section class="career-wizard" role="dialog" aria-modal="true" aria-labelledby="wizard-title">
-    <aside class="wizard-aside"><div class="wizard-brand"><img class="brand-logo wizard-logo" src="icons/logo-politicando-640.webp" srcset="icons/logo-politicando-240.webp 240w, icons/logo-politicando-640.webp 640w" sizes="88px" width="88" height="88" alt="POLITICANDO 2026" decoding="async" /></div><span class="wizard-aside-label">NUOVA CARRIERA</span><h2>Una storia<br/>da scrivere.</h2><p>Scegli da dove cominciare, poi il percorso, il partito e la difficoltà.</p><div class="wizard-steps">${steps.map((s, i) => `<div class="wizard-step ${draft.step === i + 1 ? 'current' : ''} ${draft.step > i + 1 ? 'complete' : ''}"><span class="wizard-step-icon">${draft.step > i + 1 ? '✓' : ico(s[2], 16)}</span><span><small>PASSAGGIO ${String(i + 1).padStart(2, '0')}</small><strong>${s[0]}</strong></span></div>`).join('')}</div><div class="wizard-aside-foot"><span class="live-dot"></span><span>Il salvataggio avviene solo quando inizi la carriera.</span></div></aside>
-    <div class="wizard-main"><header class="wizard-header"><div><span class="wizard-kicker">PASSAGGIO ${String(draft.step).padStart(2, '0')} <i>/</i> ${String(LAST_STEP).padStart(2, '0')}</span><h1 id="wizard-title">${activeStep[1]}</h1><p>${stepIntro(draft.step)}</p></div><button class="wizard-x" type="button" aria-label="Annulla nuova carriera" data-wizard-action="cancel">×</button></header>
+    <aside class="wizard-aside"><div class="wizard-brand"><img class="brand-logo wizard-logo" src="icons/logo-politicando-640.webp" srcset="icons/logo-politicando-240.webp 240w, icons/logo-politicando-640.webp 640w" sizes="88px" width="88" height="88" alt="POLITICANDO 2026" decoding="async" /></div><span class="wizard-aside-label">NUOVA CARRIERA</span><h2>Una storia<br/>da scrivere.</h2><p>Chi sei, da dove parti, con quale partito e con quali regole: cinque passaggi, dal più importante al dettaglio.</p><div class="wizard-steps">${steps.map((s, i) => `<div class="wizard-step ${draft.step === i + 1 ? 'current' : ''} ${draft.step > i + 1 ? 'complete' : ''}"><span class="wizard-step-icon">${draft.step > i + 1 ? '✓' : ico(s[2], 16)}</span><span><small>PASSAGGIO ${String(i + 1).padStart(2, '0')}</small><strong>${s[0]}</strong></span></div>`).join('')}</div><div class="wizard-aside-foot"><span class="live-dot"></span><span>Il salvataggio avviene solo quando inizi la carriera.</span></div></aside>
+    <div class="wizard-main"><header class="wizard-header"><div><div class="wizard-progress" role="progressbar" aria-label="Avanzamento" aria-valuemin="1" aria-valuemax="${LAST_STEP}" aria-valuenow="${draft.step}">${steps.map((_, i) => `<i class="${draft.step > i + 1 ? 'done' : draft.step === i + 1 ? 'current' : ''}"></i>`).join('')}</div><span class="wizard-kicker">PASSAGGIO ${String(draft.step).padStart(2, '0')} <i>/</i> ${String(LAST_STEP).padStart(2, '0')}</span><h1 id="wizard-title">${activeStep[1]}</h1><p>${stepIntro(draft.step)}</p></div><button class="wizard-x" type="button" aria-label="Annulla nuova carriera" data-wizard-action="cancel">×</button></header>
       <div class="wizard-body">${legacyBanner(draft)}${errorBox}${dataBox}${body}</div>
       <footer class="wizard-footer">${backButton}<span class="wizard-footer-note">${draft.step < LAST_STEP ? 'Puoi tornare indietro e modificare ogni scelta.' : `Avvio della carriera il ${esc(state.clock.currentDate)}.`}</span>${actionButton}</footer>
     </div>
@@ -68,11 +71,11 @@ export function renderCareerWizard(state, draft, realParties = [], logoFor = () 
 
 function stepIntro(step) {
   return [
-    'Regioni, province e comuni vengono dall’elenco ufficiale ISTAT aggiornato al 21 febbraio 2026. Il comune che scegli diventa il territorio iniziale della simulazione.',
-    'Scegli una carica o un percorso: il PdC può partire con Camera, Senato o da esterno; il PdR è uno scenario alternativo.',
+    'Il tuo politico: nome, data di nascita, genere e il lavoro che facevi prima. I dati servono solo a questa carriera.',
+    'Il territorio da cui parti (elenco ufficiale ISTAT aggiornato al 21 febbraio 2026) e la carica o il percorso: dal consiglio comunale alla Camera, fino agli scenari di Presidente del Consiglio e della Repubblica.',
     'Scegli l’appartenenza e, solo se hai un partito, la posizione che ricopri già. Partito e gruppo parlamentare non sono la stessa cosa.',
-    'La difficoltà cambia risorse, eventi, alleati, candidature e Parlamento: si sceglie ora e resta per tutta la carriera. Le condizioni di partenza (outsider, debiti, un partito diviso, una carriera consolidata o uno scenario tuo) cambiano da dove cominci e continuano a pesare.',
-    'Crea il tuo politico e controlla le scelte: potrai correggere ogni passaggio prima di confermare.'
+    'Le scelte di contorno hanno già un valore predefinito: apri solo ciò che vuoi cambiare. La difficoltà resta per tutta la carriera; le condizioni di partenza continuano a pesare.',
+    'Controlla le scelte: potrai correggere ogni passaggio prima di confermare.'
   ][step - 1];
 }
 // ---------- where: Regione → (provincia) → Comune, from the ISTAT list ----------
@@ -86,8 +89,18 @@ export function chosenPlace(d, territory) {
   const unit = municipality ? territory.units.find(item => item.code === municipality.unit) ?? null : null;
   return municipality && unit ? { municipality, unit, region: unit.gameRegion } : null;
 }
-function placeLine(d, place) {
-  return place ? `<div class="wizard-place-line">${ico('pin', 15)}<span>Territorio iniziale: <strong>Comune di ${esc(place.municipality.name)}</strong> · ${esc(unitLabel(place.unit))} · ${esc(place.region)}</span><button type="button" data-wizard-goto="1">Cambia</button></div>` : '';
+// A choice of the second rank: shut by default (the default value is already good), and left as the player puts it.
+// Open or shut as the player left it (draft.open), otherwise by its default.
+const more = (d, key, title, hint, body, open = false) => `<details class="wizard-more" data-wizard-more="${key}" ${(d.open?.[key] ?? open) ? 'open' : ''}><summary data-wizard-toggle="${key}"><span>${title}</span>${hint ? `<small>${hint}</small>` : ''}</summary><div class="wizard-more-body">${body}</div></details>`;
+const block = (kicker, title, body) => `<section class="wizard-block"><header class="wizard-block-head"><span>${kicker}</span><strong>${title}</strong></header>${body}</section>`;
+// Step 2: where the career starts (region and comune: the essential) and as what (the path, the scenario and, in the Parliament, the group).
+function startingPoint(d, territory, place, parliamentaryGroups, realPoliticians) {
+  return block('DOVE', 'Il territorio da cui parti', whereStep(d, territory)) + block('RUOLO E SCENARIO', 'La carica o il percorso', levelStep(d, parliamentaryGroups, realPoliticians, place));
+}
+// Step 4: difficulty (three cards, one chosen) and the starting conditions, shut under their current choice.
+function advancedStep(d) {
+  const start = START_PROFILES[normalizeStart(d.start).profile];
+  return difficultyStep(d) + more(d, 'start', 'Condizioni di partenza', `${esc(start?.label ?? 'Ordinaria')} · outsider, debiti, partito diviso, carriera consolidata o scenario tuo`, startStep(d));
 }
 function whereStep(d, territory) {
   const regionSelect = `<label>Regione<select name="region" data-wizard-region><option value="">Scegli la regione</option>${ITALIAN_REGIONS.map(region => `<option value="${esc(region)}" ${d.region === region ? 'selected' : ''}>${esc(region)}</option>`).join('')}</select></label>`;
@@ -109,10 +122,13 @@ function whereStep(d, territory) {
   const options = matches.slice(0, limit).map(item => `<button type="button" class="municipality-option ${d.municipalityCode === item.code ? 'selected' : ''}" data-municipality-code="${esc(item.code)}" aria-pressed="${d.municipalityCode === item.code}"><strong>${esc(item.name)}${item.alt ? ` <em>/ ${esc(item.alt)}</em>` : ''}</strong><small>${esc(unitLabel(unitByCode.get(item.unit) ?? { name: '' }))}${item.capital ? ' · capoluogo' : ''}</small></button>`).join('');
   const place = chosenPlace(d, territory);
   const chosen = place ? `<div class="wizard-place-selected"><span class="source-pill">DATO REALE · ISTAT</span><strong>Comune di ${esc(place.municipality.name)}${place.municipality.alt ? ` / ${esc(place.municipality.alt)}` : ''}</strong><small>${esc(place.unit.type)} di ${esc(unitLabel(place.unit))} · ${esc(place.region)} · codice ISTAT ${esc(place.municipality.code)}</small><small>Sarà il territorio iniziale della tua carriera.</small></div>` : '<div class="wizard-place-selected is-empty">Nessun comune scelto: cercalo nell’elenco.</div>';
-  return `<div class="wizard-form-grid">${regionSelect}${unitSelect}<label class="wizard-full-field">Cerca il comune<input type="search" name="municipalityQuery" data-wizard-municipality-search value="${val(d, 'municipalityQuery')}" placeholder="Nome del comune…" autocomplete="off" /></label></div>
+  const unitChosen = units.find(unit => unit.code === d.territorialUnit);
+  const count = matches.length ? `Mostrati ${Math.min(limit, matches.length).toLocaleString('it-IT')} di ${matches.length.toLocaleString('it-IT')} comuni` : 'Nessun comune corrisponde alla ricerca.';
+  const list = `<div class="wizard-party-count">${count}</div><div class="municipality-list">${options}</div>${matches.length > limit ? '<button type="button" class="wizard-show-more" data-wizard-show-municipalities>Mostra altri comuni</button>' : ''}`;
+  return `<div class="wizard-form-grid">${regionSelect}<label class="wizard-full-field">Cerca il comune<input type="search" name="municipalityQuery" data-wizard-municipality-search value="${val(d, 'municipalityQuery')}" placeholder="Nome del comune…" autocomplete="off" /></label></div>
+    ${more(d, 'province', 'Filtra per provincia o città metropolitana', unitChosen ? esc(unitLabel(unitChosen)) : `tutte (${units.length})`, `<div class="wizard-form-grid">${unitSelect}</div>`, Boolean(d.territorialUnit))}
     ${chosen}
-    <div class="wizard-party-count">${matches.length ? `Mostrati ${Math.min(limit, matches.length).toLocaleString('it-IT')} di ${matches.length.toLocaleString('it-IT')} comuni` : 'Nessun comune corrisponde alla ricerca.'}</div>
-    <div class="municipality-list">${options}</div>${matches.length > limit ? '<button type="button" class="wizard-show-more" data-wizard-show-municipalities>Mostra altri comuni</button>' : ''}${note}`;
+    ${more(d, 'comuni', place ? 'Cambia comune' : 'Elenco dei comuni', esc(count), list, !place)}${note}`;
 }
 function difficultyStep(d) {
   const setting = DIFFICULTIES[d.difficulty] ?? DIFFICULTIES.normale;
@@ -164,7 +180,8 @@ function levelStep(d, parliamentaryGroups, realPoliticians, place = null) {
     }).join('');
     context = '<section class="wizard-parliament-context"><div class="wizard-parliament-title"><div><span class="section-kicker">CONTESTO AVANZATO · ' + (chamber === 'camera' ? 'CAMERA' : 'SENATO') + '</span><strong>' + (pdcSelected ? 'Gruppo parlamentare di riferimento' : 'Parti da un contesto parlamentare reale') + '</strong></div><span class="source-pill">Dati reali verificati</span></div><p>La Camera, il Senato e i gruppi provengono dal database reale. L’ingresso del tuo personaggio, il posto nello scenario e le variabili di gioco sono simulati.</p><label class="wizard-group-search">Cerca un gruppo<input type="search" name="groupQuery" data-wizard-group-search value="' + val(d, 'groupQuery') + '" placeholder="Nome del gruppo…" autocomplete="off" /></label><div class="wizard-group-list">' + (groupRows || '<div class="empty-inline">' + (compatible.length ? 'Nessun gruppo corrisponde alla ricerca.' : 'Caricamento dei gruppi reali in corso…') + '</div>') + '</div>' + (selected ? '<div class="wizard-group-selected">Riferimento scelto: <strong>' + esc(selected.officialName) + '</strong> · ' + esc(selected.sourceName || 'Fonte istituzionale') + '</div>' : '<div class="wizard-group-selected">Seleziona un gruppo per configurare lo scenario parlamentare.</div>') + '<div class="wizard-data-note">Partito e gruppo parlamentare restano separati. Il database non documenta una relazione diretta con questo personaggio creato da te: la scelta del gruppo è esplicita e simulata.</div></section>';
   }
-  return '<div class="level-cards">' + cards + pdcCard + presidentCard + '</div>' + pdcChambers + context + '<div class="wizard-data-note">La carriera parlamentare è uno scenario di gioco: non aggiunge il tuo personaggio agli elenchi dei parlamentari reali e non modifica le consistenze ufficiali.</div>';
+  const contextBlock = context ? more(d, 'group', 'Contesto parlamentare', esc(d.parliamentaryGroupId ? (parliamentaryGroups.find(group => group.id === d.parliamentaryGroupId)?.officialName ?? 'gruppo scelto') : 'scegli il gruppo di riferimento'), context, !d.parliamentaryGroupId) : '';
+  return '<div class="level-cards">' + cards + pdcCard + presidentCard + '</div>' + pdcChambers + contextBlock + '<div class="wizard-data-note">La carriera parlamentare è uno scenario di gioco: non aggiunge il tuo personaggio agli elenchi dei parlamentari reali e non modifica le consistenze ufficiali.</div>';
 }
 function partyStep(d, parties, logoFor, parliamentaryGroups, partyLeaderships, politicalFigures) {
   const modes = [
@@ -255,12 +272,13 @@ function summaryStep(d, parties, level, parliamentaryGroups, place = null) {
   const territorySummary = directPresident ? 'Scenario nazionale alternativo · nessuna carica territoriale personale'
     : externalPremier ? 'Governo nazionale · senza seggio parlamentare personale'
       : d.initialLevel === 'comunale' ? 'Comune di ' + (d.municipality || 'da scegliere') + ' · ' + (d.region || 'Regione') : d.initialLevel === 'provinciale' ? 'Provincia di ' + (d.provinceName || 'da scegliere') + ' · Comune di ' + (d.municipality || 'da scegliere') : d.initialLevel === 'regionale' ? (d.region || 'Regione da scegliere') : (chamber === 'camera' ? 'Camera dei deputati' : chamber === 'senato' ? 'Senato della Repubblica' : 'Territorio nazionale') + ' · ' + (d.region || 'territorio da selezionare');
-  const where = '<section class="summary-section"><div class="summary-section-heading"><div><span>01 · DOVE INIZI</span><strong>' + esc(place ? 'Comune di ' + place.municipality.name : d.municipality || 'Comune da scegliere') + '</strong></div><button type="button" data-wizard-goto="1">Modifica</button></div><small>' + esc(place ? place.unit.type + ' di ' + unitLabel(place.unit) + ' · ' + place.region + ' · codice ISTAT ' + place.municipality.code : d.region || 'Regione da scegliere') + '</small></section>';
+  const where = '<section class="summary-section"><div class="summary-section-heading"><div><span>02 · DOVE INIZI</span><strong>' + esc(place ? 'Comune di ' + place.municipality.name : d.municipality || 'Comune da scegliere') + '</strong></div><button type="button" data-wizard-goto="2">Modifica</button></div><small>' + esc(place ? place.unit.type + ' di ' + unitLabel(place.unit) + ' · ' + place.region + ' · codice ISTAT ' + place.municipality.code : d.region || 'Regione da scegliere') + '</small></section>';
   const metrics = [['Popolarità', stats.popularity], ['Reputazione', stats.reputation], ['Consenso', stats.consensus], ['Esperienza', stats.experience], ['Influenza', stats.influence], ['Notorietà', stats.notoriety]];
   const parliamentary = directPresident || externalPremier || chamber ? '<section class="summary-section"><div class="summary-section-heading"><div><span>CONTESTO PARLAMENTARE</span><strong>' + (directPresident ? 'Nessun seggio o gruppo personale' : externalPremier ? 'Esterno al Parlamento' : chamber === 'camera' ? 'Camera dei deputati' : 'Senato della Repubblica') + '</strong></div><button type="button" data-wizard-goto="2">Modifica</button></div>' + (chamber ? '<div class="summary-facts"><span>Seggio personale simulato · gruppo: ' + esc(parliamentaryGroup?.officialName || 'Da selezionare') + '</span><span>Territorio di riferimento: ' + esc(d.region || 'Non definito') + '</span></div><small>Il riferimento istituzionale è reale; il seggio del tuo personaggio appartiene solo allo scenario simulato.</small>' : '<small>' + (directPresident ? 'Le Camere esistono nello scenario, ma non hai un seggio o un gruppo personale.' : 'Il Governo usa un gruppo solo come riferimento di coalizione, senza attribuirlo al giocatore.') + '</small>') + '</section>' : '';
   const scenario = d.startingOffice ? '<section class="summary-section"><div class="summary-section-heading"><div><span>SCENARIO ISTITUZIONALE</span><strong>' + (directPresident ? 'Mandato presidenziale simulato · scenario alternativo' : 'Governo attivo formato dal giocatore') + '</strong></div></div><small>' + (directPresident ? 'Poteri del Quirinale attivi; nessuna carica parlamentare, governativa o di partito.' : externalPremier ? 'PdC esterno al Parlamento, senza seggio né gruppo personale.' : 'PdC con il seggio e il gruppo selezionati.') + '</small></section>' : '';
   const position = '<section class="summary-section"><div class="summary-section-heading"><div><span>POSIZIONE NEL PARTITO</span><strong>' + esc(partyPosition) + '</strong></div><button type="button" data-wizard-goto="3">Modifica</button></div></section>';
   const affiliation = '<section class="summary-section"><div class="summary-section-heading"><div><span>03 · APPARTENENZA</span><strong>' + esc(partySummary) + '</strong></div><button type="button" data-wizard-goto="3">Modifica</button></div>' + (party?.source === DATA_SOURCES.REAL && party.sourceUrl ? '<a class="catalog-source" href="' + esc(party.sourceUrl) + '" target="_blank" rel="noopener noreferrer">Fonte del partito ↗</a>' : '') + (d.partyMode === 'new' ? '<small>' + esc(d.partyOrientation) + ' · ' + esc(d.partyPosition ?? 'centro') + ' · Colore <i class="summary-color" style="--party:' + esc(d.partyColor) + '"></i></small>' : '') + '</section>';
   const initialStatus = directPresident ? 'Presidente della Repubblica · nessun seggio personale' : externalPremier ? 'Presidente del Consiglio · esterno al Parlamento' : chamber ? 'componente del gruppo nello scenario' : 'carriera territoriale in avvio';
-  return '<div class="summary-sheet">' + where + '<section class="summary-section"><div class="summary-section-heading"><div><span>02 · PERCORSO ISTITUZIONALE</span><strong>' + esc(pathLabel) + '</strong></div><button type="button" data-wizard-goto="2">Modifica</button></div><small>' + esc(territorySummary) + '</small></section>' + scenario + parliamentary + affiliation + position + '<section class="summary-section"><div class="summary-section-heading"><div><span>STATISTICHE INIZIALI</span><strong>Valori di gioco simulati · base bilanciata per percorso</strong></div></div><div class="summary-stat-grid">' + metrics.map(([label, value]) => '<span><small>' + label + '</small><strong>' + value + '<i>/100</i></strong></span>').join('') + '</div><small>Posizione iniziale: ' + initialStatus + ' · situazione politica non garantita.</small></section>' + difficulty + startSummary(d) + '<div class="summary-disclaimer">Il giocatore è un personaggio creato da te (source: user). I valori, la posizione e gli eventi di questa carriera sono source: simulation. Le fonti istituzionali restano in sola lettura.</div></div>';
+  const identity = '<section class="summary-section"><div class="summary-section-heading"><div><span>01 · IDENTITÀ</span><strong>' + esc([d.firstName, d.lastName].filter(Boolean).join(' ') || 'Nome da inserire') + '</strong></div><button type="button" data-wizard-goto="1">Modifica</button></div><small>' + esc([d.birthDate, d.previousProfession].filter(Boolean).join(' · ') || 'Data di nascita e professione da inserire') + '</small></section>';
+  return '<div class="summary-sheet">' + identity + where + '<section class="summary-section"><div class="summary-section-heading"><div><span>02 · PERCORSO ISTITUZIONALE</span><strong>' + esc(pathLabel) + '</strong></div><button type="button" data-wizard-goto="2">Modifica</button></div><small>' + esc(territorySummary) + '</small></section>' + scenario + parliamentary + affiliation + position + '<section class="summary-section"><div class="summary-section-heading"><div><span>STATISTICHE INIZIALI</span><strong>Valori di gioco simulati · base bilanciata per percorso</strong></div></div><div class="summary-stat-grid">' + metrics.map(([label, value]) => '<span><small>' + label + '</small><strong>' + value + '<i>/100</i></strong></span>').join('') + '</div><small>Posizione iniziale: ' + initialStatus + ' · situazione politica non garantita.</small></section>' + difficulty + startSummary(d) + '<div class="summary-disclaimer">Il giocatore è un personaggio creato da te (source: user). I valori, la posizione e gli eventi di questa carriera sono source: simulation. Le fonti istituzionali restano in sola lettura.</div></div>';
 }

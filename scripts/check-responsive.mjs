@@ -60,7 +60,7 @@ try {
 
   // What is audited: every section, and every internal tab of the redesigned ones.
   const views = [
-    ['panoramica'], ['profilo'], ['territori'], ['finanze'], ['governo'], ['leggi'], ['archivio'], ['impostazioni'],
+    ['panoramica'], ['profilo'], ['territori'], ['finanze'], ['governo'], ['leggi'], ['notizie'], ['archivio'], ['impostazioni'],
     // Sondaggi e media is the observatory: every one of its views, and the institutes, are audited too.
     ['sondaggi'], ...[['osservatorio', 'quadro'], ['osservatorio', 'istituti'], ['osservatorio-istituto', 'b'], ['osservatorio-istituto', 'confronto'], ['osservatorio', 'segmenti'], ['osservatorio', 'territori'], ['osservatorio', 'forze'], ['osservatorio', 'candidati'], ['osservatorio', 'flussi']].map(([section, tab]) => ['sondaggi', section, tab]),
     ...['panoramica', 'nazionali', 'quirinale', 'candidatura', 'campagna', 'avversari', 'risultati', 'storico'].map(tab => ['elezioni', 'elezioni', tab]),
@@ -130,7 +130,7 @@ try {
         const home = await evaluate(`(() => { const top = selector => { const el = document.querySelector(selector); return el ? el.getBoundingClientRect().top + scrollY : null; }; return { action: top('.hqc-action'), resources: top('.hqc-resources'), overview: top('.hqc-board'), screen: innerHeight, tabs: [...document.querySelectorAll('.mobile-tab')].filter(tab => getComputedStyle(tab).display !== 'none').length }; })()`);
         if (home.action === null || home.action > home.screen * 1.05) report.push(`${label} · Home: l’azione principale non è nella prima schermata (${home.action} px su ${home.screen})`);
         if (!(home.resources > home.action && home.overview > home.resources)) report.push(`${label} · Home: ordine dei blocchi non rispettato`);
-        if (width <= 600 && home.tabs !== 6) report.push(`${label} · barra inferiore con ${home.tabs} tasti invece di 6`);
+        if (width <= 600 && home.tabs !== 5) report.push(`${label} · barra inferiore con ${home.tabs} tasti invece di 5`);
       }
     }
     // Leave the hemicycle on the Camera and without filters for the next width.

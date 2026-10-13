@@ -1,12 +1,12 @@
 // Country, territories, citizens and media: the simulated society as the player sees it.
-import { INDICATORS, MEDIA_OUTLETS, SEGMENTS } from '../data/simulation/society-rules.js?v=20261012-3';
-import { nationalIndicators, regionPriorities, societyMood } from '../core/society-engine.js?v=20261012-3';
-import { illustration } from './illustrations.js?v=20261012-3';
-import { artTile, glyph } from './visuals.js?v=20261012-3';
+import { INDICATORS, MEDIA_OUTLETS, SEGMENTS } from '../data/simulation/society-rules.js?v=20261013-1';
+import { nationalIndicators, regionPriorities, societyMood } from '../core/society-engine.js?v=20261013-1';
+import { illustration } from './illustrations.js?v=20261013-1';
+import { artTile, glyph } from './visuals.js?v=20261013-1';
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
-import { breakdown, esc, levelState, lineChart, meter, num, rampColor, SERIES, signed, sparkline, stateBadge, trendState, GREEN_RAMP } from './charts.js?v=20261012-3';
-import { areasPanel, publicFinancePanel, securityPanel } from './policy-mode.js?v=20261012-3';
-import { renderInstitutions } from './local-mode.js?v=20261012-3';
+import { breakdown, esc, levelState, lineChart, meter, num, rampColor, SERIES, signed, sparkline, stateBadge, trendState, GREEN_RAMP } from './charts.js?v=20261013-1';
+import { areasPanel, publicFinancePanel, securityPanel } from './policy-mode.js?v=20261013-1';
+import { renderInstitutions } from './local-mode.js?v=20261013-1';
 
 // Tile cartogram of the regions: a recognisable boot, one tile per region.
 const TILES = Object.freeze({
@@ -85,7 +85,7 @@ function lawsApplied(society) {
   const rows = society.lawsApplied.slice(0, 8);
   if (!rows.length) return '<p class="quiet-copy">Nessuna misura ancora in vigore: le leggi approvate in Parlamento e i provvedimenti dell’esecutivo compariranno qui con i loro effetti.</p>';
   const segment = id => SEGMENTS.find(item => item.id === id)?.label ?? id;
-  return `<div class="measure-list">${rows.map(item => `<article class="measure-row">${artTile(item.origin === 'esecutivo' ? 'ministry' : 'law', item.covered ? '#1baf7a' : '#e34948', 'sm')}<div><strong>${esc(item.title)}</strong><small>${item.origin === 'esecutivo' ? 'Esecutivo di scenario' : 'Legge approvata in Parlamento'} · settimana ${item.week} · ${esc(item.category)}</small><span>${item.covered ? 'Coperture trovate' : 'Coperture insufficienti: effetti ridotti'} · costo ${num(item.cost, 1)} punti di margine · più effetti in ${item.topRegions.map(region => esc(region.name)).join(', ')}</span>${item.pleased.length || item.displeased.length ? `<em>${item.pleased.length ? `Soddisfatti: ${item.pleased.map(segment).join(', ')}` : ''}${item.displeased.length ? ` · Scontenti: ${item.displeased.map(segment).join(', ')}` : ''}</em>` : ''}</div></article>`).join('')}</div>`;
+  return `<div class="measure-list">${rows.map(item => `<article class="measure-row">${artTile(item.origin === 'esecutivo' ? 'ministry' : 'law', item.covered ? '#4C8F6B' : '#C4574A', 'sm')}<div><strong>${esc(item.title)}</strong><small>${item.origin === 'esecutivo' ? 'Esecutivo di scenario' : 'Legge approvata in Parlamento'} · settimana ${item.week} · ${esc(item.category)}</small><span>${item.covered ? 'Coperture trovate' : 'Coperture insufficienti: effetti ridotti'} · costo ${num(item.cost, 1)} punti di margine · più effetti in ${item.topRegions.map(region => esc(region.name)).join(', ')}</span>${item.pleased.length || item.displeased.length ? `<em>${item.pleased.length ? `Soddisfatti: ${item.pleased.map(segment).join(', ')}` : ''}${item.displeased.length ? ` · Scontenti: ${item.displeased.map(segment).join(', ')}` : ''}</em>` : ''}</div></article>`).join('')}</div>`;
 }
 
 export function renderTerritoriesPage(state, ui = {}) {
@@ -102,7 +102,7 @@ export function renderTerritoriesPage(state, ui = {}) {
   const governing = ['active', 'crisis'].includes(state.parliament?.government?.status);
   return `<div class="society-page">
     ${renderInstitutions(state, ui)}
-    <section class="society-hero">
+    <section class="society-hero" id="il-paese">
       ${illustration('borgo', 'hero-art')}<div class="society-hero-main"><span class="section-kicker">IL PAESE · SETTIMANA ${society.week}</span><h2>Umore del Paese: ${num(mood, 0)}/100</h2><p class="section-subtitle">Cittadini, territori ed economia si muovono ogni settimana, con o senza di te: leggi, crisi, media e scelte del governo cambiano i numeri qui sotto.</p></div>
       <div class="society-kpis">${kpi('Soddisfazione dei cittadini', num(society.satisfaction, 1), change(society, 'satisfaction'), historyOf(society, 'satisfaction'))}${kpi('Fiducia nelle istituzioni', num(society.trust, 1), change(society, 'trust'), historyOf(society, 'trust'))}${kpi('Partecipazione attesa', num(society.participation, 1), change(society, 'participation'), historyOf(society, 'participation'), '', { unit: '%' })}</div>
       ${economyStrip(society)}

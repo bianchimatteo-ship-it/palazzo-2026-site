@@ -60,8 +60,8 @@ export const EVENT_ICONS = Object.freeze({
   audizione: 'dome', 'riunione-gruppo': 'users', 'dossier-ministero': 'ministry'
 });
 export const CATEGORY_VISUALS = Object.freeze({
-  territorio: { icon: 'pin', color: '#1baf7a' }, media: { icon: 'mic', color: '#2a78d6' }, partito: { icon: 'flag', color: 'var(--party-accent)' },
-  parlamento: { icon: 'dome', color: '#c0a166' }, relazioni: { icon: 'link', color: '#4a3aa7' }, risorse: { icon: 'money', color: '#eda100' }, elezioni: { icon: 'ballot', color: '#e34948' }
+  territorio: { icon: 'pin', color: '#4C8F6B' }, media: { icon: 'mic', color: '#3C7C95' }, partito: { icon: 'flag', color: 'var(--party-accent)' },
+  parlamento: { icon: 'dome', color: '#C4A66A' }, relazioni: { icon: 'link', color: '#4a3aa7' }, risorse: { icon: 'money', color: '#D6A54C' }, elezioni: { icon: 'ballot', color: '#C4574A' }
 });
 export const LAW_ICONS = Object.freeze({
   Economia: 'money', Lavoro: 'briefcase', Sanità: 'cross', Scuola: 'book', Sicurezza: 'shield', Ambiente: 'leaf', Infrastrutture: 'bridge',

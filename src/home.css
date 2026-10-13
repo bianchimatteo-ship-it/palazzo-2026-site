@@ -5,13 +5,12 @@
 /* ---------- frame: topbar ---------- */
 .topbar { gap: 18px; }
 .topbar-title { min-width: 0; }
-.top-actions { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.top-actions { display: flex; flex: none; align-items: center; gap: 12px; min-width: 0; }
+.advance-button, .date-chip, .week-chip { white-space: nowrap; }
 .top-tools, .top-time { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .top-tools { padding-right: 12px; border-right: 1px solid var(--line); }
 
 /* ---------- frame: sidebar, main sections then “Altro” ---------- */
-.nav-group-label { display: block; margin: 14px 12px 4px; color: var(--muted); font: 800 10.5px/1 Manrope, sans-serif; letter-spacing: .16em; text-transform: uppercase; }
-@media (max-width: 850px) { .nav-group-label { margin: 10px 6px 4px; font-size: 0; height: 1px; background: var(--line); } }
 
 /* ---------- frame: cards, tabs and spacing shared by the sections ---------- */
 .sx-card { border-radius: var(--radius); }
@@ -25,20 +24,21 @@
 .hqc .quiet-copy { margin: 0; }
 
 /* 1. where you are: identity and the country on the left, the main action on the right, indicators below */
-.hqc-head { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 360px); grid-template-areas: "who action" "meters meters"; overflow: hidden; border: 1px solid var(--line-strong); border-radius: calc(var(--radius) + 2px); background: linear-gradient(135deg, #1d4238, #152a24 55%, #121a17); color: #fffaf1; isolation: isolate; }
+.hqc-head { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 360px); grid-template-areas: "who action" "meters meters"; overflow: hidden; border: 1px solid var(--line-strong); border-radius: calc(var(--radius) + 2px); background: linear-gradient(135deg, #213e2f, var(--night) 55%, var(--panel)); color: var(--ink-hi); isolation: isolate; }
 .hqc-head > .hq-hero-art { position: absolute; right: 390px; top: -6px; width: 210px; z-index: 0; display: none; opacity: .55; }
 @media (min-width: 1500px) { .hqc-head > .hq-hero-art { display: block; } }
 .hqc-head > *:not(.hq-hero-art) { position: relative; z-index: 1; }
+.hqc-head::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; z-index: 2; background: linear-gradient(90deg, var(--tri-green) 0 33.34%, var(--tri-white) 33.34% 66.67%, var(--tri-red) 66.67% 100%); opacity: .85; }
 .hqc-who { grid-area: who; min-width: 0; padding-bottom: 16px; }
 .hqc-who .hq-identity { padding: 22px 26px 12px; }
-.hqc .hq-chips span { border-color: rgba(255,255,255,.16); background: rgba(8,14,12,.35); color: #dbe3dc; }
+.hqc .hq-chips span { border-color: rgba(255,255,255,.16); background: rgba(8,14,12,.35); color: #e4e2da; }
 /* The country this week, as compact chips under the identity. */
 .hqc-who .situation-bar { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 26px; padding: 0; border-radius: 0; background: none; box-shadow: none; overflow: visible; }
 .hqc-who .situation-bar > div { flex: 1 1 190px; max-width: 100%; gap: 9px; padding: 8px 12px; border: 1px solid rgba(255,255,255,.1); border-radius: 8px; background: rgba(8,14,12,.35); }
 .hqc-who .situation-bar > div + div { border-left: 1px solid rgba(255,255,255,.1); }
 .hqc-who .situation-bar strong { font-size: 13px; white-space: normal; }
 .hqc-who .situation-bar em { font-size: 12px; }
-.hqc-action { grid-area: action; display: grid; align-content: center; gap: 8px; margin: 16px 16px 16px 0; padding: 18px 20px; border: 1px solid rgba(213,170,99,.55); border-radius: var(--radius); background: rgba(10,16,14,.72); box-shadow: var(--glow); }
+.hqc-action { grid-area: action; display: grid; align-content: center; gap: 8px; margin: 16px 16px 16px 0; padding: 18px 20px; border: 1px solid rgba(196,166,106,.55); border-radius: var(--radius); background: rgba(10,16,14,.72); box-shadow: var(--glow); }
 .hqc-action .section-kicker { color: var(--accent); }
 .hqc-action > strong { color: #fff; font: 750 19px/1.25 Manrope, sans-serif; letter-spacing: -.03em; }
 .hqc-action > p { margin: 0; color: var(--ink-2); font-size: 13px; line-height: 1.5; }
@@ -80,7 +80,7 @@ button.hqc-resource-link:hover { border-color: var(--accent); transform: transla
 .hqc-decisions .hq-inbox-list { display: grid; gap: 12px; }
 
 /* 4. what is coming: the first election is the one that matters most */
-.hqc-elections .hq-election:first-child { padding: 12px 14px; border: 1px solid rgba(213,170,99,.45); border-radius: 8px; background: rgba(213,170,99,.07); }
+.hqc-elections .hq-election:first-child { padding: 12px 14px; border: 1px solid rgba(196,166,106,.45); border-radius: 8px; background: rgba(196,166,106,.07); }
 .hqc-elections .hq-election:first-child strong { font-size: 15px; }
 .hqc-deadlines { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .hqc-deadlines li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 9px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); }
@@ -161,10 +161,10 @@ html[data-motion="reduced"] .hqc-drawer-toggle, html[data-motion="reduced"] butt
   .hqc-who .situation-bar small { font-size: 9.5px; letter-spacing: .08em; }
   .hqc-action { margin: 0 12px 12px; padding: 14px; }
   .hqc-action > strong { font-size: 17px; }
-  .hqc-head > .hq-meters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
   .hqc-resources { gap: 8px; }
   .hqc-resource-link { padding: 11px 12px; }
-  .hqc-resource strong { font-size: 19px; }
+
   .hqc-band { padding: 14px 13px; }
   /* The overview and the details lose their outer frame: the cards use the whole width. */
   .hqc-details { padding: 4px 0 0; border: 0; background: none; }
@@ -198,10 +198,10 @@ html[data-motion="reduced"] .hqc-drawer-toggle, html[data-motion="reduced"] butt
   .hqc-drawer > summary { grid-template-columns: minmax(0, 1fr) auto; padding: 12px 13px; }
   .hqc-drawer > summary .hq-count { grid-column: 1; grid-row: 2; justify-self: start; }
   .hqc-drawer-body { padding: 12px 12px 14px; }
-  .mobile-tabbar { grid-template-columns: repeat(6, minmax(0, 1fr)); padding: 0 2px env(safe-area-inset-bottom); }
-  .mobile-tab { padding: 4px 0; font-size: 10.5px; letter-spacing: -.01em; }
+
+
 }
 /* The councils where the player sits, one tap from the Home. */
 .hq-identity .hq-institutions { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 0; }
-.hq-institutions .text-link { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 12px; border: 1px solid rgba(240, 213, 140, .45); border-radius: 999px; background: rgba(8, 14, 12, .35); color: #f0d58c; font: 700 12.5px/1.2 'DM Sans', sans-serif; font-style: normal; text-decoration: none; }
+.hq-institutions .text-link { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 12px; border: 1px solid rgba(240, 213, 140, .45); border-radius: 999px; background: rgba(8, 14, 12, .35); color: var(--gold-light); font: 700 12.5px/1.2 'DM Sans', sans-serif; font-style: normal; text-decoration: none; }
 

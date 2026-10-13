@@ -108,6 +108,19 @@ try {
     throw new Error(`${error.message} · stato dopo il tocco: ${state}`);
   }
   ok(!(await tabbarShown()), 'Con il wizard aperto la barra di navigazione mobile non è visibile.');
+  // The wizard opens on who you are (step 1); the territory is the second step.
+  const fillIdentity = async () => {
+    await setField('.career-wizard [name="firstName"]', 'Prova');
+    await setField('.career-wizard [name="lastName"]', 'Telefono');
+    await setField('.career-wizard [name="birthDate"]', '1985-04-12', 'change');
+    await setField('.career-wizard [name="previousProfession"]', 'Insegnante');
+  };
+  ok(await has('.career-wizard [name="firstName"]') && !(await has('[data-wizard-region]')), 'Il wizard si apre su “Chi sei” e non sulla regione.');
+  await tap('.wizard-footer [data-wizard-action="next"]');
+  ok((await text()).includes('Inserisci il nome'), 'Senza nome il primo passaggio non va avanti (le validazioni restano).');
+  await fillIdentity();
+  await tap('.wizard-footer [data-wizard-action="next"]');
+  await waitFor(() => has('[data-wizard-region]'), 10000, 'secondo passaggio: punto di partenza');
 
   // ---------- 2. the ISTAT comuni do not arrive: the wizard stays usable, no comune is accepted without them ----------
   await waitFor(async () => (await text()).includes('L’elenco ISTAT dei comuni non è stato caricato'), 10000, 'errore ISTAT nel wizard');
@@ -131,16 +144,26 @@ try {
   ok(!(await text()).includes('Prima di iniziare'), 'Nuova carriera senza passare di nuovo dall’account.');
 
   // ---------- 4. the whole first career on the phone, with real taps on the wizard footer ----------
-  await waitFor(() => has('[data-wizard-region]'), 10000, 'passaggio Dove');
+  await fillIdentity();
+  await tap('.wizard-footer [data-wizard-action="next"]');
+  await waitFor(() => has('[data-wizard-region]'), 10000, 'passaggio Partenza');
   await setField('[data-wizard-region]', 'Toscana', 'change');
   await waitFor(() => has('[data-wizard-municipality-search]'), 10000, 'ricerca comune');
   await setField('[data-wizard-municipality-search]', 'Siena');
   await waitFor(() => has('[data-municipality-code="052032"]'), 10000, 'Siena nell’elenco');
   await tap('[data-municipality-code="052032"]', { scroll: true });
-  for (let step = 1; step <= 4; step++) {
-    // Step 4 (difficulty and starting conditions): the start cards and the custom scenario work with taps, without overflowing.
+  ok(await evaluate('document.querySelector(".wizard-more[data-wizard-more=comuni]") && !document.querySelector(".wizard-more[data-wizard-more=comuni]").open'), 'Scelto il comune, l’elenco dei comuni si chiude.');
+  // Steps 2 to 4 with real taps: the path (PdC and PdR included), the party, the advanced settings; step 5 is the summary.
+  for (let step = 2; step <= 4; step++) {
+    if (step === 2) {
+      ok(await has('[data-starting-office="presidenteConsiglio"]') && await has('[data-starting-office="presidenteRepubblica"]'), 'Su telefono le partenze PdC e PdR sono visibili nel punto di partenza.');
+      ok(await evaluate('(() => { const body = document.querySelector(".wizard-body"); return body.scrollWidth <= body.clientWidth + 1 && [...document.querySelectorAll(".level-cards .level-card")].length === 8 && [...document.querySelectorAll(".level-cards .level-card")].every(card => getComputedStyle(card).display !== "none" && card.getBoundingClientRect().width > 0); })()'), 'Le otto card del percorso restano visibili e senza overflow orizzontale su 375 px.');
+    }
+    // Step 4 (difficulty and starting conditions): the conditions are shut under their current choice; opened, the cards and the custom scenario work with taps.
     if (step === 4) {
-      ok(await has('[data-start-profile="outsider"]') && await has('[data-start-profile="personalizzato"]'), 'Wizard su telefono: le condizioni di partenza sono nel passaggio 4.');
+      ok(await evaluate('(() => { const more = document.querySelector(".wizard-more[data-wizard-more=start]"); return Boolean(more) && !more.open && Boolean(document.querySelector(".difficulty-grid")); })()'), 'Wizard su telefono: difficoltà in vista, condizioni di partenza chiuse.');
+      await tap('.wizard-more[data-wizard-more="start"] > summary', { scroll: true });
+      ok(await has('[data-start-profile="outsider"]') && await has('[data-start-profile="personalizzato"]'), 'Wizard su telefono: aperto l’accordion, le condizioni di partenza sono nel passaggio 4.');
       await tap('[data-start-profile="personalizzato"]', { scroll: true });
       ok(await has('.start-editor [data-start-lever="rete"]'), 'Lo scenario personalizzato apre l’editor dei punti.');
       await tap('.start-editor [data-start-lever="rete"][data-start-delta="1"]', { scroll: true });
@@ -151,23 +174,15 @@ try {
     }
     await tap('.wizard-footer [data-wizard-action="next"]');
     ok(await evaluate(`document.querySelector('.wizard-kicker')?.textContent.includes('0${step + 1}')`), `Wizard su telefono: “Continua” del passaggio ${step} ricevuto.`);
-    if (step === 1) {
-      ok(await has('[data-starting-office="presidenteConsiglio"]') && await has('[data-starting-office="presidenteRepubblica"]'), 'Su telefono le partenze PdC e PdR sono visibili nel percorso.');
-      ok(await evaluate('(() => { const body = document.querySelector(".wizard-body"); return body.scrollWidth <= body.clientWidth + 1 && [...document.querySelectorAll(".level-cards .level-card")].length === 8 && [...document.querySelectorAll(".level-cards .level-card")].every(card => getComputedStyle(card).display !== "none" && card.getBoundingClientRect().width > 0); })()'), 'Le otto card del percorso restano visibili e senza overflow orizzontale su 375 px.');
-    }
     if (step === 2) {
       await tap('[data-party-mode="existing"]', { scroll: true });
       ok(await evaluate('(() => { const body = document.querySelector(".wizard-body"), cards = [...document.querySelectorAll(".wizard-party-role-cards [data-starting-role]")]; return cards.length === 5 && cards.every(card => getComputedStyle(card).display !== "none" && card.getBoundingClientRect().width > 0) && body.scrollWidth <= body.clientWidth + 1; })()'), 'Le cinque card di posizione nel partito sono visibili e senza overflow su 375 px.');
       await tap('[data-party-mode="independent"]', { scroll: true });
     }
     if (step === 4) {
-      ok(await evaluate('(() => { const body = document.querySelector(".wizard-body"), summary = document.querySelector(".summary-sheet"); return Boolean(summary) && body.scrollWidth <= body.clientWidth + 1 && summary.scrollWidth <= summary.clientWidth + 1 && summary.innerText.includes("PERCORSO ISTITUZIONALE"); })()'), 'Il riepilogo del percorso resta coerente e senza overflow orizzontale su 375 px.');
+      ok(await evaluate('(() => { const body = document.querySelector(".wizard-body"), summary = document.querySelector(".summary-sheet"); return Boolean(summary) && body.scrollWidth <= body.clientWidth + 1 && summary.scrollWidth <= summary.clientWidth + 1 && summary.innerText.includes("PERCORSO ISTITUZIONALE") && summary.innerText.includes("IDENTITÀ"); })()'), 'Il riepilogo del percorso resta coerente e senza overflow orizzontale su 375 px.');
     }
   }
-  await setField('.career-wizard [name="firstName"]', 'Prova');
-  await setField('.career-wizard [name="lastName"]', 'Telefono');
-  await setField('.career-wizard [name="birthDate"]', '1985-04-12', 'change');
-  await setField('.career-wizard [name="previousProfession"]', 'Insegnante');
   await tap('.wizard-footer [data-wizard-action="finish"]');
   await waitFor(async () => !(await has('.career-wizard')) && await has('.page-wrap'), 15000, 'carriera avviata');
   ok(await tabbarShown(), '“Inizia carriera” toccato su 375 px: la carriera parte e torna la navigazione mobile.');
@@ -183,7 +198,7 @@ try {
   const layering = await evaluate('Number(getComputedStyle(document.querySelector(".wizard-backdrop")).zIndex) > Math.max(Number(getComputedStyle(document.querySelector(".mobile-tabbar")).zIndex) || 0, Number(getComputedStyle(document.querySelector(".mobile-sheet")).zIndex) || 0)');
   ok(layering, 'Il wizard sta sopra barra e foglio mobile anche come livelli (z-index).');
   await tap('.wizard-footer [data-wizard-action="next"]');
-  ok((await text()).includes('Scegli la regione in cui iniziare'), 'Il footer del wizard riceve il tocco anche dentro la partita.');
+  ok((await text()).includes('Inserisci il nome'), 'Il footer del wizard riceve il tocco anche dentro la partita.');
   await tap('.wizard-footer [data-wizard-action="cancel"]');
   await waitFor(async () => !(await has('.career-wizard')), 5000, 'chiusura wizard');
 
