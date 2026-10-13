@@ -2274,7 +2274,7 @@ function workDecision(s, special) {
     if (special.type === 'work-request-promise') {
       const area = special.params.area;
       const open = (inst.commitments ?? []).some(item => item.status === 'aperto' && item.area === area);
-      if (!open) next = replaceInstitution(next, { ...inst, commitments: [...(inst.commitments ?? []), { id: `${inst.id}-impegno-opera-${(inst.commitments ?? []).length + 1}`, actId: null, area, title: `Un’opera su ${special.params.areaLabel ?? area}`, player: true, from: null, since: date, dueAt: advanceDays(date, WORK_RULES.requestDueWeeks * 7), status: 'aperto' }].slice(-12), history: [...inst.history, { date, text: `Impegno con i cittadini: un’opera su ${special.params.areaLabel ?? area} entro ${WORK_RULES.requestDueWeeks} settimane.`, type: 'impegno' }].slice(-40) });
+      if (!open) next = replaceInstitution(next, { ...inst, commitments: [...(inst.commitments ?? []), { id: uniqueId(inst.commitments ?? [], `${inst.id}-impegno-opera-${(inst.commitments ?? []).length + 1}`), actId: null, area, title: `Un’opera su ${special.params.areaLabel ?? area}`, player: true, from: null, since: date, dueAt: advanceDays(date, WORK_RULES.requestDueWeeks * 7), status: 'aperto' }].slice(-12), history: [...inst.history, { date, text: `Impegno con i cittadini: un’opera su ${special.params.areaLabel ?? area} entro ${WORK_RULES.requestDueWeeks} settimane.`, type: 'impegno' }].slice(-40) });
       return next;
     }
     if (special.type === 'work-request-motion') {
