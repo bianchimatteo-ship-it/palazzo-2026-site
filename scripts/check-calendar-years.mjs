@@ -106,6 +106,7 @@ for (const [index, [level, regionName]] of CASES.entries()) {
 }
 
 // ---------- 2. i vecchi salvataggi ----------
+console.error(`[calendar-years ${new Date().toISOString().slice(11, 19)}] parte 1 completata`);
 {
   for (const [regionName, expectProvince] of [['Toscana', true], ['Sicilia', true]]) {
     const place = PLACES[regionName];
@@ -142,6 +143,7 @@ for (const [index, [level, regionName]] of CASES.entries()) {
 }
 
 // ---------- 3. la partita vera: otto anni sul motore completo ----------
+console.error(`[calendar-years ${new Date().toISOString().slice(11, 19)}] parte 3: tre carriere vere da otto anni`);
 for (const [level, regionName] of [['provinciale', 'Toscana'], ['regionale', 'Lombardia'], ['deputato', 'Campania']]) {
   const run = await startCareer({ seed: `anni-${level}`, level, region: regionName });
   const { store } = run;
@@ -150,6 +152,8 @@ for (const [level, regionName] of [['provinciale', 'Toscana'], ['regionale', 'Lo
   for (let week = 0; week < 52 * 8; week++) {
     playWeek(run);
     const state = store.getState();
+    // Progress for whoever watches the run (diagnostics only): a line every year of game time.
+    if (week % 52 === 51) console.error(`[calendar-years ${new Date().toISOString().slice(11, 19)}] partita vera ${level}: anno ${Math.round((week + 1) / 52)}/8 (${state.clock.currentDate})`);
     if (state.game.status === 'ended') state.game.status = 'active';
     watch(state.game, seen);
     const ahead = nextAhead(state.game, state.clock.currentDate);
