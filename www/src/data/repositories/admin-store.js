@@ -18,7 +18,9 @@ export const ADMIN_FIELDS = Object.freeze({
     { key: 'geographicArea', label: 'Area geografica', max: 160 },
     { key: 'foundedAt', label: 'Data di fondazione', type: 'date' },
     { key: 'politicalPosition', label: 'Collocazione', type: 'position' },
-    { key: 'color', label: 'Colore identificativo', type: 'color' }
+    { key: 'color', label: 'Colore identificativo', type: 'color' },
+    // Optional: without it the second tone is derived from the primary one (src/ui/party-identity.js), never taken from somewhere that could clash with it.
+    { key: 'color2', label: 'Secondo colore', type: 'color' }
   ],
   politicians: [
     { key: 'fullName', label: 'Nome completo', max: 160, required: true },
@@ -33,7 +35,8 @@ export const ADMIN_FIELDS = Object.freeze({
     { key: 'partyId', label: 'Partito collegato', type: 'party' }
   ]
 });
-const COLLECTION_OF = Object.freeze({ parties: 'parties', politicalMovements: 'parties', politicians: 'politicians' });
+// The coalitions that stand as one list (Alleanza Verdi e Sinistra) are political forces of the game: the owner corrects their name, colour, position and logo like a party's.
+const COLLECTION_OF = Object.freeze({ parties: 'parties', politicalMovements: 'parties', coalitions: 'parties', politicians: 'politicians' });
 export const POSITIONS = Object.freeze(['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra']);
 
 // addedParties: parties created by the owner; hidden: records the owner hid (or deleted, for added ones).
@@ -100,8 +103,9 @@ export function saveRecordOverride(collection, id, values, original = {}) {
   const archive = loadAdminArchive();
   const fields = {};
   for (const field of ADMIN_FIELDS[kind]) {
-    if (!(field.key in values)) continue;
-    const value = cleanValue(field, values[field.key]);
+    if (!(field.key in values) && !(`${field.key}__off` in values)) continue;
+    // A colour picker always holds a colour: «nessun colore» (the `__off` box) is how the owner says there is none, so an untouched form never invents one.
+    const value = field.type === 'color' && values[`${field.key}__off`] ? null : cleanValue(field, values[field.key]);
     if (field.required && !value) throw new Error(`${field.label} è obbligatorio.`);
     if (value !== (original[field.key] ?? null)) fields[field.key] = value;
   }
@@ -160,11 +164,11 @@ export function overrideFor(collection, id) {
 // ---------- parties added, hidden or deleted by the owner (never written into the real files) ----------
 const nameKey = value => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('it-IT').replace(/[^a-z0-9]/g, '');
 const slug = value => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('it-IT').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'partito';
-const PARTY_FIELDS = ['officialName', 'abbreviation', 'factualDescription', 'website', 'politicalPosition', 'color'];
+const PARTY_FIELDS = ['officialName', 'abbreviation', 'factualDescription', 'website', 'politicalPosition', 'color', 'color2'];
 // existing: every party and movement in use (real and added), to refuse duplicates of names, aliases and initials.
 export function addAdminParty(values, existing = []) {
   const clean = {};
-  for (const key of PARTY_FIELDS) clean[key] = cleanValue(ADMIN_FIELDS.parties.find(field => field.key === key), values[key]);
+  for (const key of PARTY_FIELDS) { const field = ADMIN_FIELDS.parties.find(item => item.key === key); clean[key] = field.type === 'color' && values[`${key}__off`] ? null : cleanValue(field, values[key]); }
   if (!clean.officialName) throw new Error('Il nome ufficiale è obbligatorio.');
   const names = new Set(existing.flatMap(item => [item.officialName, item.name, ...(item.aliases ?? []).map(alias => alias.name)]).filter(Boolean).map(nameKey));
   if (names.has(nameKey(clean.officialName))) throw new Error('Esiste già un partito o movimento con questo nome.');
@@ -182,7 +186,7 @@ export function setRecordHidden(id, hidden, { deleted = false } = {}) {
   return persist(archive);
 }
 const addedRecord = (id, party) => ({
-  id, entityType: 'party', officialName: party.officialName, abbreviation: party.abbreviation ?? null, factualDescription: party.factualDescription ?? null, color: party.color ?? null,
+  id, entityType: 'party', officialName: party.officialName, abbreviation: party.abbreviation ?? null, factualDescription: party.factualDescription ?? null, color: party.color ?? null, color2: party.color2 ?? null,
   website: party.website ?? null, politicalPosition: party.politicalPosition ?? null, level: null, geographicArea: null, regionId: null, status: 'active', parliamentaryPresence: null, regionalPresence: null, localPresence: null,
   foundedAt: null, registeredAt: null, leadership: [], logoUrl: null, logoAsset: null, logoSource: null, logoVerified: null, logoAlt: `Logo di ${party.officialName}`,
   source: 'user', verified: false, sourceUrl: party.website ?? null, sourceName: 'Aggiunto dall’amministratore del gioco', adminCreated: { createdAt: party.createdAt ?? null, updatedAt: party.updatedAt ?? null, source: 'user' }

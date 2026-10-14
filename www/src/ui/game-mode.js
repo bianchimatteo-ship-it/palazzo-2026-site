@@ -1,24 +1,31 @@
-import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20260926-6';
-import { playerRoles } from '../core/roles.js?v=20260926-6';
-import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20260926-6';
-import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20260926-6';
-import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260926-6';
-import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20260926-6';
-import { careerLevelLabel } from '../data/regions.js?v=20260926-6';
-import { formatDate } from '../core/time.js?v=20260926-6';
-import { renderBarometerPanel } from './polls-mode.js?v=20260926-6';
-import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20260926-6';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20260926-6';
-import { societyMood } from '../core/society-engine.js?v=20260926-6';
-import { financeOutlook } from '../core/finance-engine.js?v=20260926-6';
-import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20260926-6';
-import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20260926-6';
-import { renderFinanceCard } from './finance-mode.js?v=20260926-6';
-import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20260926-6';
-import { stateBadge } from './charts.js?v=20260926-6';
-import { illustration } from './illustrations.js?v=20260926-6';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20260926-6';
-import { regionPriorities } from '../core/society-engine.js?v=20260926-6';
+import { endedHeadline } from './hall-view.js?v=20261014-1';
+import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261014-1';
+import { playerRoles } from '../core/roles.js?v=20261014-1';
+import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20261014-1';
+import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261014-1';
+import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261014-1';
+import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20261014-1';
+import { careerLevelLabel } from '../data/regions.js?v=20261014-1';
+import { advanceDays, formatDate } from '../core/time.js?v=20261014-1';
+import { renderBarometerPanel } from './polls-mode.js?v=20261014-1';
+import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20261014-1';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261014-1';
+import { societyMood } from '../core/society-engine.js?v=20261014-1';
+import { financeOutlook } from '../core/finance-engine.js?v=20261014-1';
+import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20261014-1';
+import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20261014-1';
+import { activeInstitutions, institutionLabel } from './local-mode.js?v=20261014-1';
+import { renderFinanceCard } from './finance-mode.js?v=20261014-1';
+import { renderStaffBand } from './staff-view.js?v=20261014-1';
+import { planAddButton } from './plan-view.js?v=20261014-1';
+import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20261014-1';
+import { stateBadge, statusChip } from './charts.js?v=20261014-1';
+import { articleHtml, newsMedia, renderNewsroomTabs } from './news-view.js?v=20261014-1';
+import { relevantArticles } from '../core/news-engine.js?v=20261014-1';
+import { identityMark, kindChip } from './party-identity.js?v=20261014-1';
+import { illustration } from './illustrations.js?v=20261014-1';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261014-1';
+import { regionPriorities } from '../core/society-engine.js?v=20261014-1';
 
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -35,7 +42,7 @@ export function gameContext(state) {
   const stats = Object.fromEntries(state.dataset.statistics.filter(item => item.subjectId === player?.id).map(item => [item.metric, item.value]));
   const units = Object.fromEntries(state.dataset.statistics.filter(item => item.subjectId === player?.id).map(item => [item.metric, item.unit]));
   const ctx = { game: state.game, stats, parliament: state.parliament };
-  const env = { career: state.career, offices: state.dataset.offices, campaign: state.campaign, player, currentDate: state.clock.currentDate };
+  const env = { career: state.career, offices: state.dataset.offices, campaign: state.campaign, player, currentDate: state.clock.currentDate, institutions: state.local?.institutions ?? [], presidency: state.presidency?.incumbent ? { kind: state.presidency.incumbent.kind, credit: state.presidency.incumbent.credit ?? 0 } : null };
   return { player, stats, units, ctx, env, sit: situation(ctx, env) };
 }
 function costChips(cost = {}) {
@@ -49,58 +56,239 @@ function meter(value, tone = '') {
   return `<b class="hq-bar ${tone}"><i style="width:${Math.max(0, Math.min(100, Number(value) || 0))}%"></i></b>`;
 }
 
-function hero(state, gc, options) {
-  const { player, stats, units } = gc;
+// ---------- Home: the command centre ----------
+// Who the player is, as a compact identity: avatar and party logo, name, office, territory and status.
+// The councils (and the European Parliament) where the player holds a seat: one tap from the Home.
+const institutionLinks = state => { const active = activeInstitutions(state); return active.length ? `<p class="hq-institutions">${active.map(inst => `<button class="text-link" data-nav="territori" data-scroll="istituzione-${esc(inst.kind)}">${glyph(inst.kind === 'europa' ? 'globe' : inst.kind === 'regione' || inst.kind === 'provincia' ? 'map' : 'town', 14)} ${esc(institutionLabel(inst))} →</button>`).join('')}</p>` : ''; };
+function identity(state, gc, options) {
+  const { player, stats } = gc;
   const game = state.game;
   const office = state.dataset.offices.find(item => item.id === player?.roleId);
   const territory = state.dataset.territories.find(item => item.id === player?.territoryId)?.name ?? player?.region ?? 'Italia';
+  const status = game.flags?.comebackFrom ? ['Traversata nel deserto', 'danger'] : (stats.reputation ?? 50) < 20 || (game.party && game.party.support < 25) ? ['Carriera in pericolo', 'danger'] : ['Carriera attiva', 'ok'];
+  // What each chip speaks of, with the glyph of its kind: the party (in the colour of the career), the parliamentary group, the institution. The party is the one of the game, with its
+  // logo or its mark; an independent has the neutral one.
+  const mine = options.identity ?? null;
+  const partyLabel = game.party ? `${options.partyName || game.party.label || 'Partito'} · ${game.party.rankTitle}${game.party.org ? ` · ${organOf(game.party).label}` : ''}` : 'Indipendente';
+  const seat = state.parliament?.player;
+  const group = seat ? state.parliament.chambers?.[seat.chamber]?.groups.find(item => item.groupId === seat.groupId) : null;
+  const chips = [
+    kindChip(game.party ? 'partito' : 'indipendente', partyLabel),
+    group ? kindChip('gruppo', group.officialName) : '',
+    seat ? kindChip('istituzione', CHAMBERS[seat.chamber].label) : ''
+  ].filter(Boolean).join('');
+  const logo = options.partyLogo ? `<img class="hero-party-logo" src="${esc(options.partyLogo)}" alt="${esc(`Logo di ${options.partyName ?? 'partito'}`)}" />` : (mine?.kind === 'partito' ? identityMark(mine, 'lg') : '');
+  return `<div class="hq-identity"><span class="section-kicker">IL TUO POLITICO · SETTIMANA ${game.week.index}</span><div class="hq-identity-row"><div class="hero-avatar">${player ? esc(player.firstName[0] + player.lastName[0]) : 'P'}</div>${logo}<div><h1>${player ? esc(player.displayName) : 'Nessun politico'}</h1><p>${office ? `<span class="hq-office">${glyph(officeIcon(office), 15)}</span>${esc(office.endDate ? `${office.title} · concluso` : office.title)}` : 'Nessun incarico'} <span>·</span> ${esc(territory)}</p><div class="hq-chips">${chips}<span>${esc(careerLevelLabel(state.career.currentLevel ?? state.career.initialLevel) ?? 'Percorso')}</span><span title="Difficoltà scelta all’inizio">Difficoltà: ${esc(({ facile: 'Facile', normale: 'Normale', difficile: 'Difficile' })[game.difficulty] ?? 'Normale')}</span><span class="hq-status ${status[1]}">${status[0]}</span></div>${institutionLinks(state)}</div></div></div>`;
+}
+// The personal indicators, with their change this week.
+function statMeters(state, gc) {
+  const { stats } = gc;
+  const game = state.game;
   const deltas = game.lastReport?.deltas ?? {};
   const live = Object.fromEntries(Object.keys(STAT_LABELS).map(metric => [metric, (stats[metric] ?? 0) - (game.weekStartStats?.[metric] ?? stats[metric] ?? 0)]));
   const delta = metric => live[metric] || deltas[metric] || 0;
-  const partyChip = game.party ? `${esc(options.partyName || game.party.label || 'Partito')} · ${esc(game.party.rankTitle)}${game.party.org ? ` · ${esc(organOf(game.party).label)}` : ''}` : 'Indipendente';
-  const status = game.flags?.comebackFrom ? ['Traversata nel deserto', 'danger'] : (stats.reputation ?? 50) < 20 || (game.party && game.party.support < 25) ? ['Carriera in pericolo', 'danger'] : ['Carriera attiva', 'ok'];
-  const meters = STAT_ORDER.map(metric => `<div class="hq-meter"><span>${STAT_LABELS[metric]}</span><strong>${num(stats[metric] ?? 0)}</strong>${meter(stats[metric])}<em class="${delta(metric) > 0 ? 'up' : delta(metric) < 0 ? 'down' : ''}">${delta(metric) ? `${signed(delta(metric))} in settimana` : 'stabile'}</em></div>`).join('');
-  // Careers that only track party-level consensus fall back to it, labelled as such.
+  return `<div class="hq-meters">${STAT_ORDER.map(metric => `<div class="hq-meter"><span>${STAT_LABELS[metric]}</span><strong>${num(stats[metric] ?? 0)}</strong>${meter(stats[metric])}<em class="${delta(metric) > 0 ? 'up' : delta(metric) < 0 ? 'down' : ''}">${delta(metric) ? `${signed(delta(metric))} in settimana` : 'stabile'}</em></div>`).join('')}</div>`;
+}
+// The consensus shown on the Home: the player's own, or the party's when the career only tracks that one.
+function consensusOf(state, gc) {
+  const { player, stats, units } = gc;
+  const game = state.game;
   const partyConsensus = !('consensus' in stats) ? state.dataset.statistics.find(item => item.metric === 'consensus' && item.subjectId === (player?.partyId ?? state.career.partyId)) : null;
-  const consensus = partyConsensus?.value ?? stats.consensus ?? 0;
-  const consensusUnit = partyConsensus?.unit ?? units.consensus;
-  return `<section class="hq-hero">
+  const change = (stats.consensus ?? 0) - (game.weekStartStats?.consensus ?? stats.consensus ?? 0) || game.lastReport?.deltas?.consensus || 0;
+  return { value: partyConsensus?.value ?? stats.consensus ?? 0, unit: partyConsensus?.unit ?? units.consensus, note: partyConsensus ? 'consenso del partito' : change ? `${signed(change)} questa settimana` : 'stabile questa settimana' };
+}
+// The main action of the moment: the one thing to do first, with the reason, and closing the week always at hand.
+function mainAction(state) {
+  const game = state.game;
+  const advance = primary => `<button class="${primary ? 'primary-button' : 'secondary-button'} hq-close-week" data-action="advance" ${game.status === 'ended' ? 'disabled' : ''}>${state.campaign?.status === 'active' ? 'Avanza la campagna' : 'Chiudi la settimana'} ${arrow}</button>`;
+  const button = (attrs, label) => `<button class="primary-button" ${attrs}>${label} ${arrow}</button>`;
+  const urgent = game.inbox.filter(item => ['urgente', 'situazione'].includes(item.kind));
+  const open = upcomingElections(game).find(item => item.status === 'open');
+  let next;
+  if (game.status === 'ended') next = endedHeadline(state) ?? ['CARRIERA CONCLUSA', 'La partita è ferma', 'Dal menu principale puoi caricare un salvataggio o iniziare una nuova carriera.', ''];
+  else if (state.campaign?.status === 'active') next = ['CAMPAGNA IN CORSO', state.campaign.electionLabel ?? 'Campagna elettorale', 'Ogni giorno di campagna conta: attività, alleanze ed eventi si decidono nella centrale elettorale.', button('data-nav="elezioni"', 'Vai alla campagna')];
+  else if (urgent.length) next = ['DA DECIDERE SUBITO', urgent[0].title, urgent.length > 1 ? `E altre ${urgent.length - 1} decisioni urgenti: se non scegli entro fine settimana si applica la scelta più passiva.` : 'Se non scegli entro fine settimana si applica la scelta più passiva.', button('data-scroll="hq-inbox"', 'Decidi ora')];
+  else if (open) next = ['CANDIDATURE APERTE', open.label, `La finestra si chiude il ${shortDate(open.windowClosesAt)}: fondi, preparazione e sostegno del partito entrano nella campagna.`, button('data-nav="elezioni"', 'Candidati')];
+  else if (game.inbox.length) next = ['DECISIONI DELLA SETTIMANA', `${game.inbox.length} ${game.inbox.length === 1 ? 'decisione' : 'decisioni'} da prendere`, 'Ogni scelta ha costi ed effetti diversi; senza scelta vale quella indicata sotto ciascuna.', button('data-scroll="hq-inbox"', 'Rivedi le decisioni')];
+  else if (game.week.ap > 0) next = ['GIORNI DA USARE', `Hai ancora ${game.week.ap} ${game.week.ap === 1 ? 'giorno' : 'giorni'} questa settimana`, 'Territorio, media, partito e Parlamento: ogni attività costa giorni e fondi e muove i tuoi numeri.', button('data-scroll="hq-planner"', 'Pianifica la settimana')];
+  else next = ['SETTIMANA COMPLETA', 'Hai usato tutti i giorni', 'Chiudi la settimana per vedere cosa è cambiato: sondaggi, eventi e conseguenze arrivano con la nuova settimana.', ''];
+  const [kicker, title, why, primary] = next;
+  return `<div class="hqc-action"><span class="section-kicker">${glyph('target', 14)} ${esc(kicker)}</span><strong>${esc(title)}</strong><p>${esc(why)}</p><div class="hqc-action-buttons">${primary}${game.status === 'ended' ? '' : advance(!primary)}</div></div>`;
+}
+// 1. Where you are: the politician, the country this week and the main action.
+function commandHeader(state, gc, options) {
+  return `<section class="hqc-head" aria-label="La tua situazione">
     ${illustration('palazzo', 'hq-hero-art')}
-    <div class="hq-identity"><span class="section-kicker">IL TUO POLITICO · SETTIMANA ${game.week.index}</span><div class="hq-identity-row"><div class="hero-avatar">${player ? esc(player.firstName[0] + player.lastName[0]) : 'P'}</div>${options.partyLogo ? `<img class="hero-party-logo" src="${esc(options.partyLogo)}" alt="${esc(`Logo di ${options.partyName ?? 'partito'}`)}" />` : ''}<div><h1>${player ? esc(player.displayName) : 'Nessun politico'}</h1><p>${office ? `<span class="hq-office">${glyph(officeIcon(office), 15)}</span>${esc(office.endDate ? `${office.title} · concluso` : office.title)}` : 'Nessun incarico'} <span>·</span> ${esc(territory)}</p><div class="hq-chips"><span>${partyChip}</span><span>${esc(careerLevelLabel(state.career.currentLevel ?? state.career.initialLevel) ?? 'Percorso')}</span><span title="Difficoltà scelta all’inizio">Difficoltà: ${esc(({ facile: 'Facile', normale: 'Normale', difficile: 'Difficile' })[game.difficulty] ?? 'Normale')}</span><span class="hq-status ${status[1]}">${status[0]}</span></div></div></div></div>
-    <div class="hq-consensus"><span>CONSENSO</span><strong>${num(consensus)}${consensusUnit === '%' ? '%' : ''}</strong><small>${partyConsensus ? 'Consenso del partito' : delta('consensus') ? `${signed(delta('consensus'))} questa settimana` : 'Stabile questa settimana'}</small></div>
-    <div class="hq-meters">${meters}</div>
+    <div class="hqc-who">${identity(state, gc, options)}${situationBar(state)}</div>
+    ${mainAction(state)}
   </section>`;
 }
-function weekBar(state) {
+// 2. The resources of the week, at a glance: days, funds, political capital and consensus (the preparation for the next vote is with the elections).
+function resourcesBar(state, gc) {
   const game = state.game;
   const dots = Array.from({ length: game.week.maxAp }, (_, index) => `<i class="${index < game.week.ap ? 'on' : ''}"></i>`).join('');
-  const campaign = state.campaign?.status === 'active';
-  return `<section class="hq-week">
-    <div class="hq-days"><small>GIORNI DISPONIBILI</small><span class="hq-dots" aria-label="${game.week.ap} giorni su ${game.week.maxAp}">${dots}</span><strong>${game.week.ap} / ${game.week.maxAp}</strong></div>
-    <div><small>FONDI</small><strong>${euro(game.resources.funds)}</strong>${game.finance ? `<em class="hq-sub ${financeOutlook(game).net < 0 ? 'down' : 'up'}">${financeOutlook(game).net >= 0 ? '+' : '−'}${euro(Math.abs(financeOutlook(game).net))}/sett.</em>` : ''}</div>
-    <div><small>CAPITALE POLITICO</small><strong>${num(game.resources.politicalCapital, 0)}<i>/100</i></strong></div>
-    <div><small>PREPARAZIONE ELETTORALE</small><strong>${num(game.prep, 0)}%</strong>${meter(game.prep, 'gold')}</div>
-    <button class="primary-button hq-close-week" data-action="advance" ${game.status === 'ended' ? 'disabled' : ''}>${campaign ? 'Avanza la campagna' : 'Chiudi la settimana'} ${arrow}</button>
+  const outlook = game.finance ? financeOutlook(game) : null;
+  const consensus = consensusOf(state, gc);
+  const tile = (label, value, note, extra = '', page = '') => `<div class="hqc-resource">${page ? `<button class="hqc-resource-link" data-nav="${page}" aria-label="Apri ${esc(label.toLowerCase())}">` : '<div class="hqc-resource-link">'}<small>${esc(label)}</small><strong>${value}</strong>${extra}<em>${note}</em>${page ? '</button>' : '</div>'}</div>`;
+  return `<section class="hqc-resources" aria-label="Risorse della settimana">
+    ${tile('Giorni disponibili', `${game.week.ap}<i>/${game.week.maxAp}</i>`, 'ogni attività o decisione ne usa', `<span class="hq-dots" aria-label="${game.week.ap} giorni su ${game.week.maxAp}">${dots}</span>`, 'calendario')}
+    ${tile('Fondi', euro(game.resources.funds), outlook ? `<b class="${outlook.net < 0 ? 'down' : 'up'}">${outlook.net >= 0 ? '+' : '−'}${euro(Math.abs(outlook.net))}/sett.</b>` : 'per attività e campagne', '', 'finanze')}
+    ${tile('Capitale politico', `${num(game.resources.politicalCapital, 0)}<i>/100</i>`, 'per trattative, incarichi e decisioni', meter(game.resources.politicalCapital, 'gold'), 'carriera')}
+    ${tile('Consenso', `${num(consensus.value)}${consensus.unit === '%' ? '%' : ''}`, esc(consensus.note), '', 'sondaggi')}
   </section>`;
 }
+// A block of the Home with its heading: what it is and, in one line, what the player can do there.
+function band(kicker, title, lead, body, { id = '', className = '', extra = '' } = {}) {
+  return `<section class="hqc-band ${className}" ${id ? `id="${id}"` : ''}><header class="hqc-band-head"><div><span class="section-kicker">${esc(kicker)}</span><h2>${esc(title)}</h2>${lead ? `<p>${esc(lead)}</p>` : ''}</div>${extra}</header>${body}</section>`;
+}
+// On phones the longest lists show their first items; “Mostra tutte” opens the rest (the choice is remembered).
+// Computers always show everything. fold: the list's opening tag gets the classes, the button follows the list.
+function folded(html, listClass, key, count, limit, noun, expanded = {}) {
+  if (count <= limit) return html;
+  const open = Boolean(expanded[key]);
+  return html.replace(`class="${listClass}"`, `class="${listClass} hqc-fold fold-${limit}${open ? '' : ' is-folded'}"`) + `<button type="button" class="hqc-more" data-home-expand="${esc(key)}" aria-expanded="${open}">${open ? 'Mostra meno' : `Mostra ${noun} (${count})`}</button>`;
+}
+// 2b. The staff's priorities, right under the resources: the few things that matter most this week, with the place to act.
+function prioritiesBand(state, gc, expanded) {
+  const priorities = briefing(state, gc, { bare: true });
+  const count = (priorities.match(/class="briefing-item /g) ?? []).length;
+  return band('PRIORITÀ DELLO STAFF', 'Cosa conta di più', 'Le questioni più urgenti della settimana, in ordine di importanza, con il posto dove agire.', priorities ? folded(priorities, 'briefing-grid', 'priorita', count, 2, 'tutte le priorità', expanded) : '<p class="quiet-copy">Nessuna emergenza: puoi dedicare la settimana a costruire consenso e rapporti.</p>', { className: 'hqc-priorities' });
+}
+// 3. What to do, side by side: the decisions of the week and the activities that use the days that are left (the same planner that was a folded detail).
+function decisionsBand(state, expanded) {
+  const game = state.game;
+  return band('DECISIONI DELLA SETTIMANA', 'Da decidere', 'Ogni scelta mostra costo ed effetti; entro fine settimana, senza scelta, si applica quella indicata.', folded(renderInbox(state), 'hq-inbox-list', 'decisioni', game.inbox.length, 2, 'tutte le decisioni', expanded), { id: 'hq-inbox', className: 'hqc-decisions', extra: `<span class="hq-count" title="Decisioni in attesa">${game.inbox.length}</span>` });
+}
+function activitiesBand(state, gc) {
+  const game = state.game;
+  const available = WEEKLY_ACTIVITIES.filter(activity => !activityProblem(gc.ctx, gc.env, activity)).length;
+  return band('ATTIVITÀ DELLA SETTIMANA', 'Come usi i giorni', 'Territorio, media, partito, Parlamento: ogni attività costa giorni, fondi o capitale, ha effetti che restano e un rischio dichiarato.', planner(state, gc, { openLimit: 1 }), { id: 'hq-planner', className: 'hqc-activities', extra: `<span class="hq-count" title="Giorni e attività disponibili">${game.week.ap} giorni · ${available} attività</span>` });
+}
+// 4. What is coming: the elections in the calendar (the first is the one that matters most), deadlines, next goal.
+// 2b. The deadlines: congresses, promises made, laws in the Chamber, consequences on their way (with the way to the agenda).
+// 4. What is coming: the elections in the calendar (the first is the one that matters most), the next goal.
+function comingParts(state, gc, expanded) {
+  const game = state.game;
+  const rows = [];
+  const party = game.party;
+  if (party?.org && !party.org.founder) rows.push(['crown', 'Congresso del partito', `tra ${weeks(Math.max(0, party.org.congress.nextWeek - game.week.index))}`, 'partito']);
+  for (const promise of (game.promises ?? []).filter(item => item.status === 'open').slice(0, 2)) rows.push(['target', `Promessa: ${promise.topic} in ${promise.region}`, `verifica tra ${weeks(Math.max(0, promise.dueWeek - game.week.index))}`, 'territori']);
+  for (const law of (state.parliament?.laws ?? []).filter(item => !['approved', 'rejected', 'lapsed'].includes(item.stage)).slice(0, 2)) rows.push(['law', law.title, 'iter parlamentare in corso', 'leggi']);
+  const pending = (game.pending ?? []).length;
+  if (pending) rows.push(['clock', `${pending} ${pending === 1 ? 'conseguenza' : 'conseguenze'} in arrivo`, 'effetti ritardati di scelte passate', '']);
+  const deadlines = rows.length ? folded(`<ul class="hqc-deadlines">${rows.map(([icon, title, when, page]) => `<li>${glyph(icon, 16)}<span><strong>${esc(title)}</strong><small>${esc(when)}</small></span>${page ? `<button class="text-link" data-nav="${page}" aria-label="Apri ${esc(title)}">${arrow}</button>` : `<button class="text-link" data-scroll="hq-consequences" aria-label="Vedi le conseguenze">${arrow}</button>`}</li>`).join('')}</ul>`, 'hqc-deadlines', 'scadenze', rows.length, 2, 'tutte le scadenze', expanded) : '<p class="quiet-copy">Nessun congresso, promessa o legge in scadenza.</p>';
+  const goals = objectiveProgress(gc.ctx, gc.env).filter(item => item.available);
+  const done = goals.filter(item => item.done).length;
+  const next = nextGoal(goals);
+  const goal = `<div class="hqc-goal"><div class="hq-objective-head"><strong>${done} / ${goals.length}</strong>${meter(goals.length ? done / goals.length * 100 : 0, 'gold')}</div>${next ? goalLine(next) : '<p class="hq-next-goal"><strong>Tutti i traguardi raggiunti.</strong></p>'}<button class="text-link" data-nav="carriera" data-section-tab="carriera" data-section-tab-value="obiettivi">Tutti gli obiettivi ${arrow}</button></div>`;
+  const calendar = renderElectionCalendar(state);
+  const elections = (calendar.match(/class="hq-election /g) ?? []).length;
+  const electionsBand = band('ELEZIONI IN CALENDARIO', 'Il prossimo voto', 'La prima è la più vicina: quando si aprono le candidature puoi candidarti dalla centrale elettorale.', folded(calendar, 'hq-elections', 'elezioni', elections, 1, 'tutte le elezioni', expanded), { className: 'hqc-elections', extra: '<button class="text-link" data-nav="elezioni">Elezioni</button>' });
+  const deadlineBand = band('SCADENZE', 'In arrivo', 'Congressi, promesse fatte ai cittadini, leggi in Aula e conseguenze delle scelte passate.', deadlines, { className: 'hqc-deadline-band', extra: '<button class="text-link" data-nav="calendario">Agenda</button>' });
+  const goalsBand = band('TRAGUARDI', 'Obiettivi della carriera', 'Le tappe che misurano la tua crescita politica.', goal, { className: 'hqc-goals' });
+  return { deadlineBand, electionsBand, goalsBand };
+}
+// 5. The whole picture: one card per area, a few numbers each, and the way into the section with every detail.
+function summaryCard({ kicker, title, icon, color, lead, body, page, cta, more = '' }) {
+  return `<article class="dash-card hqc-card" style="--dash:${color}"><header>${artTile(icon, color, 'sm')}<div><span class="section-kicker">${esc(kicker)}</span><h3>${title}</h3></div></header><p class="hqc-card-lead">${esc(lead)}</p><div class="hqc-card-body">${body}</div><footer>${page ? `<button class="secondary-button" data-nav="${page}">${esc(cta)} ${arrow}</button>` : ''}${more}</footer></article>`;
+}
+// The area cards, by name: the Home puts the ones that say where the player stands first (consensus, relations, offices, majority, party, resources) and the secondary ones last.
+function summaryCards(state, gc) {
+  const game = state.game;
+  const parliament = state.parliament;
+  const seat = parliament?.player;
+  const government = parliament?.government;
+  const governing = ['active', 'crisis'].includes(government?.status);
+  const openLaws = (parliament?.laws ?? []).filter(law => !['approved', 'rejected', 'lapsed'].includes(law.stage)).length;
+  const group = seat ? parliament.chambers?.[seat.chamber]?.groups.find(item => item.groupId === seat.groupId) : null;
+  const facts = rows => `<dl class="hqc-facts">${rows.filter(Boolean).map(([label, value]) => `<div><dt>${esc(label)}</dt><dd>${value}</dd></div>`).join('')}</dl>`;
+  const parliamentBody = facts([
+    ['Governo', governing ? `${government.status === 'crisis' ? 'In crisi' : 'In carica'} · stabilità ${num(government.stability ?? 50, 0)}` : government?.status === 'awaiting-confidence' ? 'In attesa della fiducia' : government?.status === 'caretaker' ? 'Affari correnti' : government?.status === 'fallen' ? 'Caduto' : 'Nessun governo'],
+    ['Il tuo seggio', seat ? esc(`${CHAMBERS[seat.chamber].shortLabel} · ${group?.officialName ?? 'gruppo da scegliere'}`) : 'Non siedi in Parlamento'],
+    ['Leggi in corso', String(openLaws)]
+  ]);
+  const poll = state.world?.polls?.at(-1);
+  const mine = state.world?.parties?.find(item => item.isPlayer);
+  const share = mine ? poll?.results?.find(item => item.partyId === mine.id) : null;
+  const election = upcomingElections(game)[0];
+  const electionsBody = facts([
+    share ? ['Il tuo partito', `${num(share.share, 1)}% <b class="${share.delta >= 0 ? 'up' : 'down'}">${share.delta >= 0 ? '+' : '−'}${num(Math.abs(share.delta), 1)}</b>`] : ['Sondaggi', poll ? `${esc(poll.institute)} · ${esc(shortDate(poll.date))}` : 'Nessun sondaggio'],
+    election ? ['Prossimo voto', esc(`${election.label} · ${formatDate(election.electionDate)}`)] : ['Prossimo voto', 'Nessuna elezione in calendario'],
+    ['Campagna', state.campaign?.status === 'active' ? 'In corso' : 'Nessuna campagna aperta']
+  ]);
+  const { roles, powers } = playerRoles(state);
+  const goals = objectiveProgress(gc.ctx, gc.env).filter(item => item.available);
+  const careerBody = `<div class="role-chips">${roles.slice(0, 3).map(([, label]) => `<span class="role-chip">${esc(label)}</span>`).join('')}</div>${facts([['Poteri disponibili', `${powers.filter(power => power.enabled).length} su ${powers.length}`], ['Traguardi', `${goals.filter(item => item.done).length} su ${goals.length}`]])}`;
+  const media = state.society?.media;
+  const headline = media?.coverage?.[0];
+  const mediaBody = media ? facts([['Visibilità', `${num(media.visibility, 0)}/100`], ['Tono della stampa', `${media.sentiment > 5 ? 'Favorevole' : media.sentiment < -5 ? 'Ostile' : 'Neutro'} (${signed(media.sentiment)})`], headline ? ['Ultimo titolo', esc(headline.headline)] : null]) : '<p class="quiet-copy">Nessuna copertura.</p>';
+  const relations = [...game.relations].sort((a, b) => a.value - b.value).slice(0, 3);
+  const relationsBody = `<div class="hq-relations">${relations.map(item => `<div class="hq-relation"><span><strong>${esc(item.label)}</strong><small>${esc(item.kind)}</small></span><b>${num(item.value, 0)}</b>${meter(item.value, item.value < 30 ? 'danger' : item.value >= 65 ? 'good' : '')}</div>`).join('')}</div>`;
+  const memory = memoryBalance(game);
+  const memoryBody = memory.highlights.length ? facts([['Bilancio', `<b class="${memory.net >= 0 ? 'up' : 'down'}">${memory.net >= 0 ? '+' : '−'}${num(Math.abs(memory.net), 1)}</b> ${memory.net >= 0 ? 'a tuo favore' : 'contro di te'}`], ['Ricordo più pesante', esc(memory.highlights[0].text)]]) : '<p class="quiet-copy">Ancora nessun ricordo: leggi, promesse, crisi e rotture resteranno qui per anni.</p>';
+  const cards = {
+    paese: summaryCard({ kicker: 'PAESE', title: 'Cittadini ed economia', icon: 'globe', color: '#3C7C95', lead: 'Umore, fiducia ed economia: cambiano con leggi, eventi e governo.', body: renderCountryCard(state), page: 'territori', cta: 'Territori e cittadini' }),
+    parlamento: summaryCard({ kicker: 'PARLAMENTO E GOVERNO', title: seat ? 'La tua posizione in Aula' : 'Le Camere', icon: 'dome', color: '#8e6cf0', lead: seat ? 'Voti, leggi, trattative e fiducia al governo.' : 'Osserva gruppi, governo e leggi; con un seggio puoi votare e proporre.', body: parliamentBody, page: 'parlamento', cta: 'Apri il Parlamento', more: governing || government ? '<button class="text-link" data-nav="governo">Governo</button>' : '' }),
+    partito: summaryCard({ kicker: 'PARTITO', title: game.party ? esc(game.party.label) : 'Indipendente', icon: 'flag', color: 'var(--party-accent)', lead: game.party ? 'Sostegno interno, correnti, sezioni e tesoreria.' : 'Aderisci a un partito per candidature di lista e incarichi interni.', body: renderPartyCard(state), page: 'partito', cta: 'Apri il partito' }),
+    elezioni: summaryCard({ kicker: 'ELEZIONI E SONDAGGI', title: 'Voto e consenso', icon: 'ballot', color: '#D6853F', lead: 'Candidature, campagne, risultati e l’andamento dei partiti.', body: electionsBody, page: 'elezioni', cta: 'Centrale elettorale', more: '<button class="text-link" data-nav="sondaggi">Sondaggi</button>' }),
+    carriera: summaryCard({ kicker: 'CARRIERA', title: 'Ruoli e traguardi', icon: 'route', color: '#C4A66A', lead: 'I tuoi incarichi, cosa ti permettono e il prossimo passo.', body: careerBody, page: 'carriera', cta: 'Apri la carriera' }),
+    territorio: summaryCard({ kicker: 'TERRITORIO', title: esc(game.place.region || 'Territorio'), icon: 'map', color: '#4C8F6B', lead: 'Servizi, problemi e soddisfazione nella tua regione.', body: renderTerritoryCard(state), page: 'territori', cta: 'Apri il territorio' }),
+    media: summaryCard({ kicker: 'MEDIA', title: 'Stampa e visibilità', icon: 'news', color: '#C4574A', lead: 'Come ti raccontano: pesa su reputazione e notorietà ogni settimana.', body: mediaBody, page: 'sondaggi', cta: 'Media e sondaggi', more: '<button class="text-link" data-scroll="hq-news">Notizie</button>' }),
+    finanze: summaryCard({ kicker: 'FINANZE', title: 'Il tuo comitato', icon: 'wallet', color: '#D6A54C', lead: 'Entrate, spese fisse, investimenti e fondo elettorale.', body: renderFinanceCard(state), page: 'finanze', cta: 'Apri le finanze' }),
+    relazioni: summaryCard({ kicker: 'RELAZIONI', title: 'Chi conta per te', icon: 'users', color: '#2fa39a', lead: 'I rapporti più fragili: pesano su candidature, incarichi e voti.', body: relationsBody, page: '', cta: '', more: '<button class="secondary-button" data-scroll="hq-relations">Tutte le relazioni ' + arrow + '</button>' }),
+    memoria: summaryCard({ kicker: 'MEMORIA POLITICA', title: 'Quello che non si dimentica', icon: 'book', color: '#9aa7a1', lead: 'Scelte che pesano ancora su elezioni, alleanze e rapporti.', body: memoryBody, page: 'carriera', cta: 'Memoria e cronologia' })
+  };
+  return cards;
+}
+// A group of area cards in the board's columns; on phones only the first ones show, “Mostra …” opens the rest (the choice is remembered).
+function cardGroup(cards, { key, limit, kicker, title, lead, noun, className, expanded }) {
+  const open = Boolean(expanded[key]);
+  return `<header class="hqc-overview hqc-band-head ${className}"><div><span class="section-kicker">${esc(kicker)}</span><h2>${esc(title)}</h2><p>${esc(lead)}</p></div></header>${cards.map((card, index) => index >= limit && !open ? card.replace('class="dash-card hqc-card"', 'class="dash-card hqc-card is-folded-card"') : card).join('')}${cards.length > limit ? `<button type="button" class="hqc-more hqc-more-cards" data-home-expand="${esc(key)}" aria-expanded="${open}">${open ? `Mostra meno ${noun}` : `Mostra ${noun} (${cards.length})`}</button>` : ''}`;
+}
+// Details of the week kept on the Home, folded: open one to read or act without leaving the page.
+function drawer(id, kicker, title, lead, body, { badge = '', wide = false, open = false } = {}) {
+  return `<details class="hqc-drawer ${wide ? 'is-wide' : ''}" id="${id}" data-remember="home-${id}" ${open ? 'open' : ''}><summary><span class="hqc-drawer-title"><span class="section-kicker">${esc(kicker)}</span><strong>${esc(title)}</strong><small>${esc(lead)}</small></span>${badge ? `<span class="hq-count">${esc(badge)}</span>` : ''}<span class="hqc-drawer-toggle" aria-hidden="true">${arrow}</span></summary><div class="hqc-drawer-body">${body}</div></details>`;
+}
+function detailsBlock(state, gc, options) {
+  const game = state.game;
+  const drawers = [
+    drawer('hq-status', 'DOVE SEI', 'Consenso, relazioni, cariche, maggioranza e partito', 'Gli indicatori personali e un riepilogo per area: apri la sezione per i dettagli e per agire.', `<section class="hqc-indicators" aria-label="Indicatori personali">${statMeters(state, gc)}</section><div class="hqc-board hqc-board-status">${options.status ?? ''}</div>`, { wide: true, open: true }),
+    drawer('hq-secondary', 'ALTRE AREE', 'Paese, territorio, stampa e memoria', 'Il contesto in cui si svolge la carriera.', `<div class="hqc-board hqc-board-secondary">${options.secondary ?? ''}</div>`, { wide: true }),
+    drawer('hq-news', 'REDAZIONE · SIMULATA', 'Notizie della settimana', 'Cronaca politica, titoli dei giornali e il tuo diario, con filtri.', renderNewsroom(state, options.newsFilter, options), { wide: true }),
+    drawer('hq-consequences', 'CAUSE ED EFFETTI', 'Le conseguenze delle scelte', 'Catene di eventi, conseguenze in arrivo e bilancio della settimana.', consequencesPanel(state)),
+    drawer('hq-why', 'PERCHÉ È CAMBIATO', 'Da dove vengono i tuoi numeri', 'Le cause di ogni variazione di consenso e indicatori.', renderWhyPanel(state)),
+    drawer('hq-roles', 'RUOLI E POTERI', 'Cosa puoi fare adesso', 'Ogni potere sbloccato dai tuoi incarichi e cosa serve per gli altri.', renderRolesPanel(state)),
+    state.world ? drawer('hq-polls', 'SONDAGGI · SIMULATI', 'Barometro e cronaca', 'L’ultimo sondaggio del tuo partito e i fatti della settimana.', `${renderBarometerPanel(state)}<button class="text-link" data-nav="sondaggi">Tutti i sondaggi ${arrow}</button>`) : '',
+    drawer('hq-parliament', 'PARLAMENTO E GOVERNO', gc.sit.seat ? 'La tua posizione in Aula' : 'Le Camere', 'Gruppo, posizione, sostegno, governo e leggi in corso.', parliamentPanel(state)),
+    drawer('hq-deadlines', 'SCADENZE E OBIETTIVI', 'Elezioni, congressi, promesse', 'Il calendario elettorale completo, le scadenze e tutti i traguardi.', `${deadlinesPanel(state, gc)}<button class="text-link" data-nav="calendario">Apri l’agenda ${arrow}</button>`),
+    drawer('hq-memory', 'MEMORIA POLITICA', 'Quello che non si dimentica', 'I ricordi che pesano ancora e quanto a lungo.', renderMemoryPanel(state)),
+    drawer('hq-relations', 'RELAZIONI', 'Chi conta per te', 'Rapporti con leadership, rivali, alleati e parlamentari reali.', relationsPanel(state) + `<div class="home-section-heading hq-sub-heading"><div><span class="section-kicker">PARLAMENTARI REALI</span></div><button class="text-link" data-nav="parlamento">Tutti</button></div>${renderContactsPanel(state, { compact: true })}`)
+  ].filter(Boolean);
+  return band('APPROFONDIMENTI', 'Dettagli della settimana', 'Aprili quando ti servono: restano aperti come li lasci.', `<div class="hqc-drawers">${drawers.join('')}</div>`, { className: 'hqc-details' });
+}
 
+// What each kind of decision is, as a functional state (urgent, to watch, an appointment is information, an event can be an opportunity).
+const STATUS_OF_INBOX = Object.freeze({ urgente: 'urgente', situazione: 'attenzione', appuntamento: 'informazione', evento: 'opportunita' });
 export function renderInbox(state, { compact = false } = {}) {
   const game = state.game;
   if (!game.inbox.length) return `<p class="quiet-copy">Nessuna decisione in sospeso. Usa i giorni della settimana oppure chiudila.</p>`;
   const kinds = { evento: 'EVENTO', appuntamento: 'APPUNTAMENTO', urgente: 'URGENTE', situazione: 'DALLA SITUAZIONE' };
-  return `<div class="hq-inbox-list">${game.inbox.map(item => {
+  // The decisions of the situation come first; appointments and events follow in the order of the days of the week.
+  const ordered = game.inbox.map((item, index) => ({ item, index })).sort((a, b) => (a.item.day ?? -1) - (b.item.day ?? -1) || a.index - b.index).map(entry => entry.item);
+  const dayLabel = item => Number.isInteger(item.day) && game.week?.startedAt ? new Intl.DateTimeFormat('it-IT', { weekday: 'long', day: 'numeric', month: 'short' }).format(new Date(`${advanceDays(game.week.startedAt, item.day)}T12:00:00`)) : '';
+  return `<div class="hq-inbox-list">${ordered.map(item => {
     const fallback = item.choices.find(choice => choice.id === item.defaultChoice)?.label ?? '';
     const choices = item.choices.map(choice => {
       const info = describeChoice(item, choice.id);
       const problem = costProblem(game, choice.cost ?? {}) || (choice.requires === 'seat' && !state.parliament?.player?.groupId ? 'Serve un seggio con un gruppo parlamentare.' : choice.requires === 'party' && !game.party ? 'Serve un partito.' : null);
       return `<button class="hq-choice" data-agenda-item="${esc(item.id)}" data-agenda-choice="${esc(choice.id)}" ${problem || game.status === 'ended' ? `disabled title="${esc(problem)}"` : ''}><strong>${esc(choice.label)}</strong><span class="hq-cost">${costChips(choice.cost ?? {})}</span>${info.effects || info.risk ? `<small>${esc([info.effects, info.risk].filter(Boolean).join(' · '))}</small>` : ''}${problem ? `<em>${esc(problem)}</em>` : ''}</button>`;
     }).join('');
-    const tone = item.kind === 'urgente' ? '#e34948' : item.kind === 'situazione' ? '#eb6834' : item.kind === 'evento' ? '#c0a166' : '#1baf7a';
-    return `<article class="hq-card kind-${esc(item.kind)}"><div class="hq-card-head">${artTile(EVENT_ICONS[item.templateId] ?? 'star', tone)}<div><header><span class="hq-tag">${kinds[item.kind] ?? 'DECISIONE'}</span><small>Entro fine settimana · senza scelta: “${esc(fallback)}”</small></header><h3>${esc(item.title)}</h3>${compact ? '' : `<p>${esc(item.body)}</p>`}</div></div><div class="hq-choices">${choices}</div></article>`;
+    const tone = item.kind === 'urgente' ? '#C4574A' : item.kind === 'situazione' ? '#D6853F' : item.kind === 'evento' ? '#C4A66A' : '#4C8F6B';
+    return `<article class="hq-card kind-${esc(item.kind)}"><div class="hq-card-head">${artTile(EVENT_ICONS[item.templateId] ?? CATEGORY_VISUALS[item.category]?.icon ?? 'star', tone)}<div><header>${statusChip(STATUS_OF_INBOX[item.kind] ?? 'informazione', kinds[item.kind] ?? 'DECISIONE', 'hq-tag')}${dayLabel(item) ? `<span class="hq-day">${esc(dayLabel(item))}</span>` : ''}<small>Entro fine settimana · senza scelta: “${esc(fallback)}”</small></header><h3>${esc(item.title)}</h3>${compact ? '' : `<p>${esc(item.body)}</p>`}</div></div><div class="hq-choices">${choices}</div></article>`;
   }).join('')}</div>`;
 }
 
-function planner(state, gc) {
+function planner(state, gc, { openLimit = Infinity } = {}) {
   const { ctx, env } = gc;
   const game = state.game;
   const parliament = state.parliament;
@@ -110,16 +298,24 @@ function planner(state, gc) {
     group: parliament?.player ? (parliament.chambers[parliament.player.chamber]?.groups ?? []).filter(group => group.groupId !== parliament.player.groupId).map(group => [group.groupId, `${group.officialName} · ${num(parliament.relations?.[group.groupId]?.value ?? 50, 0)}`]) : [],
     region: [...ITALIAN_REGIONS].sort((a, b) => (b === game.place.region) - (a === game.place.region)).map(name => [name, `${name}${game.party?.org?.sections.some(section => section.region === name) ? ' · rilancia la sezione' : ' · nuova sezione'}`]),
     contact: (game.contacts ?? []).map(item => [item.person.id, `${item.person.fullName} · ${num(item.relation, 0)}`]),
+    // A visit to a region that is not the player's: how much that region trusts the institutions now, so the visit goes where it is needed.
+    'region-away': [...ITALIAN_REGIONS].filter(name => name !== game.place.region).map(name => [name, `${name} · fiducia ${num(state.society?.regions?.[name]?.trust ?? 50, 0)}`]),
     segment: SEGMENTS.map(segment => [segment.id, `${segment.label} · soddisfazione ${num(state.society?.segments.find(item => item.id === segment.id)?.satisfaction ?? 50, 0)}`])
   };
+  let opened = 0;
   const groups = Object.entries(ACTIVITY_CATEGORIES).map(([category, label]) => {
-    const rows = WEEKLY_ACTIVITIES.filter(activity => activity.category === category).map(activity => {
+    // The activities of the local offices appear only to those who hold one (the others would see a long list of blocked ones).
+    const entries = WEEKLY_ACTIVITIES.filter(activity => activity.category === category && !(activity.local && activityProblem(ctx, env, activity))).map(activity => {
       const problem = activityProblem(ctx, env, activity);
       const target = activity.target && targets[activity.target]?.length ? `<select data-activity-target="${esc(activity.id)}" aria-label="Destinatario">${targets[activity.target].map(([id, text]) => `<option value="${esc(id)}">${esc(text)}</option>`).join('')}</select>` : '';
-      return `<div class="hq-activity ${problem ? 'is-blocked' : ''}"><div class="hq-activity-copy"><strong>${esc(activity.label)}</strong><small>${esc(activity.detail)}</small><span><b>Effetti</b> ${esc(describeEffects(activity.effects) || 'vedi descrizione')}</span>${activity.risk || activity.later ? `<span class="hq-risk"><b>Rischio</b> ${activity.risk ? `${Math.round(activity.risk.chance * 100)}%: ${esc(activity.risk.label.toLowerCase())}` : ''}${activity.later ? `${activity.risk ? ' · ' : ''}${esc(activity.later.hint.toLowerCase())}` : ''}</span>` : ''}</div><div class="hq-cost">${costChips(activity.cost)}</div><div class="hq-activity-action">${target}<button class="secondary-button" data-game-activity="${esc(activity.id)}" ${problem ? 'disabled' : ''}>Fai</button>${problem ? `<em>${esc(problem)}</em>` : ''}</div></div>`;
-    }).join('');
+      return { problem, html: `<div class="hq-activity ${problem ? 'is-blocked' : ''}"><div class="hq-activity-copy"><strong>${esc(activity.label)}</strong><small>${esc(activity.detail)}</small><span><b>Effetti</b> ${esc(describeEffects(activity.effects) || 'vedi descrizione')}</span>${activity.requiresLabel ? `<span class="hq-req"><b>Serve</b> ${esc(activity.requiresLabel)}${activity.weekly === 1 ? ' Una volta a settimana.' : ''}</span>` : activity.weekly === 1 ? '<span class="hq-req"><b>Serve</b> Una volta a settimana.</span>' : ''}${activity.risk || activity.later ? `<span class="hq-risk"><b>Rischio</b> ${activity.risk ? `${Math.round(activity.risk.chance * 100)}%: ${esc(activity.risk.label.toLowerCase())}` : ''}${activity.later ? `${activity.risk ? ' · ' : ''}${esc((activity.later.hint ?? activity.later.label ?? 'conseguenze in arrivo').toLowerCase())}` : ''}</span>` : ''}</div><div class="hq-cost">${costChips(activity.cost)}</div><div class="hq-activity-action">${target}<button class="secondary-button" data-game-activity="${esc(activity.id)}" ${problem ? 'disabled' : ''}>Fai</button>${problem ? '' : planAddButton({ kind: 'activity', id: activity.id })}${problem ? `<em>${esc(problem)}</em>` : ''}</div></div>` };
+    });
+    // The ones that can be done now come first; the others, with what they ask for, are folded under them (they stay one tap away: they say what to become or wait for).
+    const open = entries.filter(entry => !entry.problem).map(entry => entry.html).join('');
+    const closed = entries.filter(entry => entry.problem);
+    const rows = `${open || '<p class="quiet-copy hq-none">Nessuna attività disponibile in questa categoria adesso.</p>'}${closed.length ? `<details class="hq-blocked" data-remember="attivita-bloccate-${category}"><summary>${glyph('clock', 14)} Non disponibili ora (${closed.length}) <small>servono un ruolo, una finestra o altri giorni</small></summary>${closed.map(entry => entry.html).join('')}</details>` : ''}`;
     const visual = CATEGORY_VISUALS[category];
-    return `<details class="hq-category" data-remember="attivita-${category}" style="--cat:${visual.color}" ${['territorio', 'media', 'partito'].includes(category) || (category === 'parlamento' && gc.sit.seat) || (category === 'elezioni' && game.elections.some(item => item.status === 'open')) ? 'open' : ''}><summary><span class="cat-icon">${glyph(visual.icon, 16)}</span><span>${esc(label)}</span><small>${WEEKLY_ACTIVITIES.filter(activity => activity.category === category && !activityProblem(ctx, env, activity)).length} disponibili</small></summary>${rows}</details>`;
+    return `<details class="hq-category" data-remember="attivita-${category}" style="--cat:${visual.color}" ${(['territorio', 'media', 'partito'].includes(category) || (category === 'parlamento' && gc.sit.seat) || (category === 'elezioni' && game.elections.some(item => item.status === 'open'))) && opened++ < openLimit ? 'open' : ''}><summary><span class="cat-icon">${glyph(visual.icon, 16)}</span><span>${esc(label)}</span><small>${WEEKLY_ACTIVITIES.filter(activity => activity.category === category && !activityProblem(ctx, env, activity)).length} disponibili</small></summary>${rows}</details>`;
   }).join('');
   const campaignNote = state.campaign?.status === 'active' ? '<div class="hq-note">Sei in campagna elettorale: le attività sul territorio e sui media si decidono nella sezione Elezioni. Parlamento e decisioni restano disponibili.</div>' : '';
   return `${campaignNote}<div class="hq-planner">${groups}</div>`;
@@ -132,22 +328,28 @@ function reportPanel(state) {
   return `${report ? `<div class="hq-report"><strong>Bilancio della settimana ${report.week}</strong>${report.lines.map(line => `<span>${esc(line)}</span>`).join('')}${Object.keys(report.deltas ?? {}).length ? `<span>${Object.entries(report.deltas).map(([metric, value]) => `${STAT_LABELS[metric]} ${signed(value)}`).join(' · ')}</span>` : ''}</div>` : ''}<div class="hq-log-list">${log || '<p class="quiet-copy">Il diario si riempirà con le tue scelte.</p>'}</div>`;
 }
 
+// The goal closest to being reached (among those whose predecessors are done), with how far each measure is.
+function nextGoal(items) {
+  const open = items.filter(item => !item.done);
+  return [...open.filter(item => !item.waiting.length)].sort((a, b) => b.progress - a.progress)[0] ?? open[0] ?? null;
+}
+const goalLine = item => `<p class="hq-next-goal"><small>PROSSIMO TRAGUARDO${item.ambitionActive ? ' · DICHIARATO' : ''}</small><strong>${esc(item.label)}</strong><span>${esc(item.detail)}</span><small>${esc(item.rows.map(row => `${row.label} ${num(Math.min(row.value, row.target), row.target % 1 || row.value % 1 ? 1 : 0)}/${num(row.target, row.target % 1 ? 1 : 0)}`).join(' · '))}</small></p>`;
 function objectivesPanel(gc) {
   const items = objectiveProgress(gc.ctx, gc.env).filter(item => item.available);
   const done = items.filter(item => item.done).length;
-  const next = items.find(item => !item.done);
-  return `<div class="hq-objective-head"><strong>${done} / ${items.length}</strong>${meter(done / items.length * 100, 'gold')}</div>${next ? `<p class="hq-next-goal"><small>PROSSIMO TRAGUARDO</small><strong>${esc(next.label)}</strong><span>${esc(next.detail)}</span></p>` : '<p class="hq-next-goal"><strong>Tutti i traguardi raggiunti.</strong></p>'}<ol class="hq-objectives">${items.map(item => `<li class="${item.done ? 'done' : ''}"><i>${item.done ? '✓' : ''}</i><span>${esc(item.label)}</span>${item.completedAt ? `<small>${esc(shortDate(item.completedAt))}</small>` : ''}</li>`).join('')}</ol>`;
+  const next = nextGoal(items);
+  return `<div class="hq-objective-head"><strong>${done} / ${items.length}</strong>${meter(items.length ? done / items.length * 100 : 0, 'gold')}</div>${next ? goalLine(next) : '<p class="hq-next-goal"><strong>Tutti i traguardi raggiunti.</strong></p>'}<ol class="hq-objectives">${items.map(item => `<li class="${item.done ? 'done' : ''}"><i>${item.done ? '✓' : ''}</i><span>${esc(item.label)}</span>${item.completedAt ? `<small>${esc(shortDate(item.completedAt))}</small>` : item.progress > 0 ? `<small>${Math.round(item.progress * 100)}%</small>` : ''}</li>`).join('')}</ol>`;
 }
 
 export function renderElectionCalendar(state, { detailed = false } = {}) {
   const game = state.game;
   const today = state.clock.currentDate;
   const rows = upcomingElections(game).slice(0, detailed ? 6 : 3).map(entry => {
-    const status = entry.status === 'open' ? `<b class="hq-open">Candidature aperte fino al ${esc(shortDate(entry.windowClosesAt))}</b>` : entry.status === 'running' ? '<b class="hq-open">Campagna in corso</b>' : entry.status === 'missed' ? `<b class="hq-missed">Candidature chiuse · voto il ${esc(shortDate(entry.electionDate))}</b>` : `<span>Candidature dal ${esc(shortDate(entry.windowOpensAt))} · tra ${weeks(weeksUntil(today, entry.windowOpensAt))}</span>`;
+    const status = entry.status === 'open' ? statusChip('opportunita', `Candidature aperte fino al ${shortDate(entry.windowClosesAt)}`, 'hq-open') : entry.status === 'running' ? statusChip('attenzione', 'Campagna in corso', 'hq-open') : entry.status === 'missed' ? statusChip('attenzione', `Candidature chiuse · voto il ${shortDate(entry.electionDate)}`, 'hq-missed') : `<span>Candidature dal ${esc(shortDate(entry.windowOpensAt))} · tra ${weeks(weeksUntil(today, entry.windowOpensAt))}</span>`;
     const action = entry.status === 'open' && state.campaign?.status !== 'active' ? `<button class="text-link" data-nav="elezioni">Candidati ${arrow}</button>` : entry.status === 'upcoming' && state.campaign?.status !== 'active' && game.status !== 'ended' ? `<button class="text-link" data-game-fastforward="${esc(entry.type)}" data-fastforward-label="${esc(entry.label)}" data-fastforward-date="${esc(entry.windowOpensAt)}" data-fastforward-weeks="${weeksUntil(today, entry.windowOpensAt)}">Avanza fino alle candidature ${arrow}</button>` : '';
     return `<div class="hq-election ${entry.status}"><div><strong>${esc(entry.label)}${entry.early ? ' · anticipate' : ''}</strong>${status}<small>Voto il ${esc(formatDate(entry.electionDate))}</small></div>${action}</div>`;
   }).join('');
-  const note = detailed ? `<p class="parliament-note">Politiche ed europee seguono il calendario reale (fine della legislatura, europee 2029 e poi ogni cinque anni); comunali e regionali seguono il calendario reale del tuo comune e della tua regione (cinque anni dall’ultimo voto). Quando si aprono le candidature puoi avviare la campagna; se non ti candidi, un mandato dello stesso tipo si conclude. La preparazione accumulata (${num(game.prep, 0)}%), i fondi e il sostegno nel partito entrano nella campagna.</p>` : '';
+  const note = detailed ? `<p class="parliament-note">Politiche ed europee seguono il calendario reale (fine della legislatura, europee 2029 e poi ogni cinque anni); comunali e regionali seguono il calendario reale del tuo comune e della tua regione (cinque anni dall’ultimo voto); le provinciali, di secondo livello, un ciclo semplificato di quattro anni. Quando si aprono le candidature puoi avviare la campagna; se non ti candidi, un mandato dello stesso tipo si conclude. La preparazione accumulata (${num(game.prep, 0)}%), i fondi e il sostegno nel partito entrano nella campagna.</p>` : '';
   return `<div class="hq-elections">${rows || '<p class="quiet-copy">Nessuna elezione in calendario.</p>'}</div>${note}`;
 }
 
@@ -218,7 +420,7 @@ function situationBar(state) {
 }
 
 // The staff briefing: what matters most this week, why, and where to act.
-function briefing(state, gc) {
+function briefing(state, gc, { bare = false } = {}) {
   const game = state.game;
   if (game.status === 'ended') return '';
   const items = [];
@@ -251,6 +453,8 @@ function briefing(state, gc) {
   if (game.week.ap === game.week.maxAp) add(30, 'stabile', 'clock', `Hai ancora ${game.week.ap} giorni questa settimana`, 'Territorio, media e partito aspettano: ogni giorno non usato è un’occasione persa.', `<button class="secondary-button" data-scroll="hq-planner">Pianifica ${arrow}</button>`);
   const top = items.sort((a, b) => b.priority - a.priority).slice(0, 4);
   if (!top.length) return '';
+  // On the Home the priorities sit in their own block, which already has the heading.
+  if (bare) return `<div class="briefing briefing-bare"><div class="briefing-grid">${top.map(item => `<article class="briefing-item state-${item.kind}"><span class="briefing-icon">${glyph(item.icon, 18)}</span><div><strong>${esc(item.title)}</strong><small>${esc(item.why)}</small></div>${item.action}</article>`).join('')}</div></div>`;
   return `<section class="briefing"><header>${glyph('target', 18)}<div><span class="section-kicker">BRIEFING DELLO STAFF · SETTIMANA ${game.week.index}</span><h2>Le priorità di questa settimana</h2></div></header><div class="briefing-grid">${top.map(item => `<article class="briefing-item state-${item.kind}"><span class="briefing-icon">${glyph(item.icon, 18)}</span><div><strong>${esc(item.title)}</strong><small>${esc(item.why)}</small></div>${item.action}</article>`).join('')}</div></section>`;
 }
 
@@ -267,10 +471,14 @@ function consequencesPanel(state) {
 }
 
 // What the player's offices allow: every locked power says what it takes.
+// The icon of every role the game can give: the Quirinale and the party leadership are crowns, the councils a town.
+const ROLE_ICONS = Object.freeze({ premier: 'crown', segretario: 'crown', fondatore: 'crown', presidente: 'crown', 'ex-presidente': 'crown', ministro: 'ministry', vicepremier: 'crown', sottosegretario: 'ministry', assessore: 'town', capogruppo: 'dome', parlamentare: 'dome', commissione: 'dome', 'esecutivo-locale': 'town', consigliere: 'town', 'commissione-ue': 'globe', concluso: 'flag' });
 export function renderRolesPanel(state) {
-  const { roles, powers } = playerRoles(state);
-  return `<div class="role-chips">${roles.map(([id, label]) => `<span class="role-chip role-${esc(id)}">${glyph(id === 'premier' || id === 'segretario' || id === 'fondatore' ? 'crown' : id === 'ministro' || id === 'sottosegretario' ? 'ministry' : id === 'parlamentare' || id === 'commissione' ? 'dome' : 'user', 14)}${esc(label)}</span>`).join('')}</div>
-    <ul class="power-list">${powers.map(power => `<li class="${power.enabled ? 'on' : 'off'}">${glyph(power.enabled ? 'shield' : 'clock', 14)}<span><strong>${esc(power.label)}</strong>${power.enabled ? '' : `<small>${esc(power.reason)}</small>`}</span></li>`).join('')}</ul>`;
+  const { roles, powers, offices } = playerRoles(state);
+  // What each office held asks of the player and what it risks (office-rules): the same word, “consigliere” or “assessore”, is not the same job in a comune, a province and a region.
+  const sheets = offices.filter(office => office.duties.length || office.risks.length).map(office => `<details class="office-sheet"><summary>${esc(office.label)}</summary><div class="office-sheet-body">${office.duties.length ? `<strong>Cosa comporta</strong><ul>${office.duties.map(item => `<li>${esc(item)}</li>`).join('')}</ul>` : ''}${office.risks.length ? `<strong>Rischi</strong><ul>${office.risks.map(item => `<li>${esc(item)}</li>`).join('')}</ul>` : ''}</div></details>`).join('');
+  return `<div class="role-chips">${roles.map(([id, label]) => `<span class="role-chip role-${esc(id)}">${glyph(ROLE_ICONS[id] ?? 'user', 14)}${esc(label)}</span>`).join('')}</div>
+    <ul class="power-list">${powers.map(power => `<li class="${power.enabled ? 'on' : 'off'}">${glyph(power.enabled ? 'shield' : 'clock', 14)}<span><strong>${esc(power.label)}</strong>${power.enabled ? '' : `<small>${esc(power.reason)}</small>`}</span></li>`).join('')}</ul>${sheets ? `<div class="office-sheets">${sheets}</div>` : ''}`;
 }
 
 // Why the indicators moved: the attributed causes of this week and of the last one.
@@ -309,19 +517,24 @@ export function renderWhyPanel(state) {
 }
 
 // The newsroom: political chronicle, headlines and the career diary in one feed.
-const NEWS_FILTERS = [['tutto', 'Tutto'], ['cronaca', 'Cronaca'], ['media', 'Titoli'], ['diario', 'Il tuo diario']];
-export function renderNewsroom(state, filter = 'tutto') {
+const NEWS_FILTERS = [['giornale', 'Il giornale'], ['radio', 'La radio'], ['tutto', 'Tutto'], ['articoli', 'Articoli'], ['storie', 'Storie'], ['testate', 'Testate'], ['cronaca', 'Cronaca'], ['media', 'Titoli'], ['diario', 'Il tuo diario']];
+export function renderNewsroom(state, filter = 'tutto', extras = {}) {
   const game = state.game;
+  const media = newsMedia(state);
+  const tabs = `<div class="segmented news-filter" role="group" aria-label="Filtra le notizie">${NEWS_FILTERS.map(([id, label]) => `<button data-news-filter="${id}" class="${filter === id ? 'active' : ''}" aria-pressed="${filter === id}">${label}</button>`).join('')}</div>`;
+  if (media && ['giornale', 'radio', 'articoli', 'storie', 'testate'].includes(filter)) return `${tabs}${renderNewsroomTabs(state, { filter, category: extras.newsCategory, outlet: extras.newsOutlet })}<p class="poll-footnote">Articoli, storie e testate sono simulati dai fatti della partita: nessuna dichiarazione o fatto è attribuito a persone reali.</p>`;
+  // The world events that already have a full article are not repeated in the chronicle.
+  const written = new Set(media?.seen ?? []);
   const items = [
-    ...(state.world?.events ?? []).map(event => ({ kind: 'cronaca', week: event.week, icon: event.icon ?? 'news', tone: event.tone, title: event.title, body: event.body, label: event.chain?.step ? `Sviluppi · ${event.chain.rootTitle ?? 'vicenda in corso'}` : 'Cronaca politica' })),
+    ...(state.world?.events ?? []).filter(event => !written.has(`mondo:${event.id}`)).map(event => ({ kind: 'cronaca', week: event.week, icon: event.icon ?? 'news', tone: event.tone, title: event.title, body: event.body, label: event.chain?.step ? `Sviluppi · ${event.chain.rootTitle ?? 'vicenda in corso'}` : 'Cronaca politica' })),
     ...(state.society?.media?.coverage ?? []).map(item => ({ kind: 'media', week: item.week, icon: 'news', tone: item.tone, title: item.headline, body: '', label: item.outlet })),
     ...game.log.map(entry => ({ kind: 'diario', week: entry.week, icon: entry.kind === 'partito' ? 'flag' : entry.kind === 'conseguenza' ? 'route' : 'pin', tone: entry.tone, title: entry.title, body: (entry.lines ?? []).slice(0, 2).join(' · '), label: 'Diario' }))
   ].filter(item => filter === 'tutto' || item.kind === filter).sort((a, b) => b.week - a.week).slice(0, 10);
-  const tabs = `<div class="segmented news-filter" role="group" aria-label="Filtra le notizie">${NEWS_FILTERS.map(([id, label]) => `<button data-news-filter="${id}" class="${filter === id ? 'active' : ''}" aria-pressed="${filter === id}">${label}</button>`).join('')}</div>`;
   // Stories still open: something will follow, the outcome is not known in advance.
   const open = [...new Map((state.world?.chains ?? []).map(chain => [chain.root, chain])).values()].filter(chain => chain.rootTitle);
   const threads = open.length && filter !== 'diario' && filter !== 'media' ? `<p class="news-threads">${glyph('route', 14)} Vicende aperte: ${open.slice(0, 4).map(chain => `<b>${esc(chain.rootTitle)}</b>`).join(' · ')} — gli sviluppi arrivano nelle prossime settimane.</p>` : '';
-  return `${tabs}${threads}<div class="newsroom">${items.map(item => `<article class="news-item tone-${esc(item.tone ?? 'neutral')}">${glyph(item.icon, 16)}<div><span class="news-meta">${esc(item.label)} · S${item.week}</span><strong>${esc(item.title)}</strong>${item.body ? `<small>${esc(item.body)}</small>` : ''}</div></article>`).join('') || '<p class="quiet-copy">Nessuna notizia per questo filtro.</p>'}</div><p class="poll-footnote">Cronaca, titoli e testate sono simulati: nessuna dichiarazione o fatto è attribuito a persone reali.</p>`;
+  const lead = media && filter === 'tutto' ? media.articles.slice(0, 3).map(item => articleHtml(item, media)).join('') : '';
+  return `${tabs}${threads}${lead ? `<div class="newsroom articles">${lead}</div>` : ''}<div class="newsroom">${items.map(item => `<article class="news-item tone-${esc(item.tone ?? 'neutral')}">${glyph(item.icon, 16)}<div><span class="news-meta">${esc(item.label)} · S${item.week}</span><strong>${esc(item.title)}</strong>${item.body ? `<small>${esc(item.body)}</small>` : ''}</div></article>`).join('') || '<p class="quiet-copy">Nessuna notizia per questo filtro.</p>'}</div><p class="poll-footnote">Cronaca, titoli e testate sono simulati: nessuna dichiarazione o fatto è attribuito a persone reali.</p>`;
 }
 
 // The career timeline: every milestone, week by week; what happened before shapes what comes next.
@@ -347,16 +560,6 @@ export function renderCareerTimeline(state, filter = 'tutto') {
     <p class="parliament-note">Le tappe restano: partiti lasciati, promesse tradite e cadute di governo pesano su fiducia, sostegno e rapporti negli anni successivi.</p>`;
 }
 
-function dashboard(state) {
-  const card = (kicker, title, body, page, icon, color) => `<article class="dash-card" style="--dash:${color}"><header>${artTile(icon, color, 'sm')}<div><span class="section-kicker">${kicker}</span><h3>${title}</h3></div><button class="text-link" data-nav="${page}" aria-label="Apri ${esc(title)}">${arrow}</button></header>${body}</article>`;
-  return `<section class="dash-grid">
-    ${card('STATO DEL PAESE', 'Cittadini ed economia', renderCountryCard(state), 'territori', 'globe', '#2a78d6')}
-    ${card('IL TUO TERRITORIO', esc(state.game.place.region || 'Territorio'), renderTerritoryCard(state), 'territori', 'map', '#1baf7a')}
-    ${card('PARTITO', state.game.party ? 'La tua organizzazione' : 'Indipendente', renderPartyCard(state), 'partito', 'flag', 'var(--party-accent)')}
-    ${card('FINANZE', 'Il tuo comitato', renderFinanceCard(state), 'finanze', 'wallet', '#eda100')}
-  </section>`;
-}
-
 function deadlinesPanel(state, gc) {
   const game = state.game;
   const rows = [];
@@ -368,35 +571,59 @@ function deadlinesPanel(state, gc) {
   return `${renderElectionCalendar(state)}${extra}<div class="home-section-heading hq-sub-heading"><div><span class="section-kicker">TRAGUARDI</span></div></div>${objectivesPanel(gc)}`;
 }
 
+// The Home is the command centre: 1. where you are and the main action; 2. the resources of the week; 3. priorities
+// and decisions; 4. what is coming; 5. every area in brief (each card opens its section); then the details, folded.
+// 5. The news that concern the career: the last articles and the stories still open, as the newsroom wrote them from the facts of the game. Nothing here when there are none.
+// The news that are new and about the career: recent, not read yet, the heaviest first, never the same event twice (closing the summary marks them as read; the archive keeps them).
+function newsBand(state) {
+  const media = newsMedia(state);
+  if (!media) return '';
+  const articles = relevantArticles(media, { week: state.game.week.index, region: state.game.place?.region ?? null, seat: Boolean(state.parliament?.player?.groupId), limit: 3 });
+  if (!articles.length) return '';
+  const stories = media.stories.filter(item => item.status === 'aperta').slice(0, 2);
+  const open = stories.length ? `<p class="news-threads">${glyph('route', 14)} Vicende aperte: ${stories.map(item => `<b>${esc(item.title)}</b>`).join(' · ')}</p>` : '';
+  const breaking = articles.some(item => item.breaking);
+  return band('LA POLITICA 24 · SIMULATA', breaking ? 'Ultima ora' : 'Dalla redazione', 'Le notizie nuove che riguardano la tua carriera o il tuo partito. Quando le hai lette chiudi il riepilogo: non tornano.', `${open}<div class="newsroom articles">${articles.map(item => articleHtml(item, media)).join('')}</div>`, { className: 'hqc-news', id: 'hq-news-band', extra: `<span class="hqc-news-actions"><button type="button" class="text-link" data-home-news-dismiss="${esc(articles.map(item => item.id).join(','))}">Segna come lette</button><button type="button" class="text-link" data-nav="notizie">Tutte le notizie</button></span>` });
+}
+// The Home reads from the top, in this order (the first four blocks are what a player needs on a phone):
+//   1. who you are and where: role, party (logo and colour), territory, institution, date, and the main action of the moment;
+//   2. what to do now: the staff's priorities, the decisions of the week and the deadlines;
+//   3. where you stand: the resources, the personal indicators, then consensus, relations, offices, majority and opposition, party and finances;
+//   4. what is coming: the elections in the calendar and the next goal;
+//   5. the news that concern the career;
+//   6. the secondary areas (the country, the territory, the press, memory) and the details, folded.
 export function renderHeadquarters(state, options = {}) {
   const gc = gameContext(state);
-  const game = state.game;
-  const panel = (kicker, title, body, extra = '', id = '') => `<section class="hq-panel" ${id ? `id="${id}"` : ''}><div class="home-section-heading"><div><span class="section-kicker">${kicker}</span><h2>${title}</h2></div>${extra}</div>${body}</section>`;
-  return `<div class="hq">${endedBanner(state, gc)}${situationBar(state)}${hero(state, gc, options)}${weekBar(state)}${briefing(state, gc)}${dashboard(state)}
-    <div class="hq-grid">
-      <div class="hq-main">
-        ${panel('QUESTA SETTIMANA', 'Da decidere', renderInbox(state), `<span class="hq-count">${game.inbox.length}</span>`, 'hq-inbox')}
-        ${panel('AGENDA DEL POLITICO', 'Come usi la settimana', planner(state, gc), `<span class="hq-count">${game.week.ap} giorni</span>`, 'hq-planner')}
-        ${panel('CAUSE ED EFFETTI', 'Le conseguenze delle scelte', consequencesPanel(state))}
-        ${panel('PERCHÉ È CAMBIATO', 'Da dove vengono i tuoi numeri', renderWhyPanel(state))}
-        ${panel('REDAZIONE · SIMULATA', 'Notizie della settimana', renderNewsroom(state, options.newsFilter), '<button class="text-link" data-nav="sondaggi">Media e sondaggi</button>', 'hq-news')}
-      </div>
-      <aside class="hq-side">
-        ${panel('RUOLI E POTERI', 'Cosa puoi fare adesso', renderRolesPanel(state))}
-        ${state.world ? panel('SONDAGGI · SIMULATI', 'Barometro e cronaca', renderBarometerPanel(state), '<button class="text-link" data-nav="sondaggi">Sondaggi</button>') : ''}
-        ${panel('PARLAMENTO E GOVERNO', gc.sit.seat ? 'La tua posizione in Aula' : 'Le Camere', parliamentPanel(state))}
-        ${panel('SCADENZE E OBIETTIVI', 'Elezioni, congressi, promesse', deadlinesPanel(state, gc), '<button class="text-link" data-nav="calendario">Agenda</button>')}
-        ${panel('MEMORIA POLITICA', 'Quello che non si dimentica', renderMemoryPanel(state))}
-        ${panel('RELAZIONI', 'Chi conta per te', relationsPanel(state) + `<div class="home-section-heading hq-sub-heading"><div><span class="section-kicker">PARLAMENTARI REALI</span></div><button class="text-link" data-nav="parlamento">Tutti</button></div>${renderContactsPanel(state, { compact: true })}`)}
-      </aside>
+  const expanded = options.expanded ?? {};
+  const { deadlineBand, electionsBand, goalsBand } = comingParts(state, gc, expanded);
+  const cards = summaryCards(state, gc);
+  // Read from the top: who you are and what to do first; the days, money, capital and consensus you have; the staff's priorities; the decisions and the activities of the week, side by side;
+  // what is coming (deadlines, the next vote, the goals); the news; then the details, folded: where you stand (consensus, relations, offices, majority, party, money) and the other areas.
+  const status = cardGroup([cards.elezioni, cards.relazioni, cards.carriera, cards.parlamento, cards.partito, cards.finanze], { key: 'aree', limit: 99, kicker: 'DOVE SEI', title: 'Consenso, relazioni e cariche', lead: 'Un riepilogo per area: apri la sezione per vedere i dettagli e agire.', noun: 'tutte le aree', className: 'hqc-status-head', expanded });
+  const secondary = cardGroup([cards.paese, cards.territorio, cards.media, cards.memoria], { key: 'altre', limit: 99, kicker: 'ALTRE AREE', title: 'Paese, territorio, stampa e memoria', lead: 'Il contesto in cui si svolge la carriera.', noun: 'le altre aree', className: 'hqc-secondary-head', expanded });
+  return `<div class="hq hqc">${endedBanner(state, gc)}
+    ${commandHeader(state, gc, options)}
+    ${resourcesBar(state, gc)}
+    ${prioritiesBand(state, gc, expanded)}
+    <div class="hqc-board hqc-board-act">
+      ${decisionsBand(state, expanded)}
+      ${activitiesBand(state, gc)}
     </div>
+    ${renderStaffBand(state)}
+    <div class="hqc-board hqc-board-next">
+      ${deadlineBand}
+      ${electionsBand}
+      ${goalsBand}
+    </div>
+    ${newsBand(state)}
+    ${detailsBlock(state, gc, { ...options, status, secondary })}
     <footer class="home-footer"><span>POLITICANDO 2026</span><span>Persone e dati istituzionali reali restano in sola lettura (dati verificati); carriera, cittadini, territori, economia, media e relazioni sono simulati.</span></footer></div>`;
 }
 
 // Pieces of the headquarters reused by the redesigned sections (Carriera, Partito, Agenda).
 export function renderPlanner(state) { return planner(state, gameContext(state)); }
 export function renderObjectivesPanel(state) { return objectivesPanel(gameContext(state)); }
-export function renderSecretaryDesk(state) { return secretaryPanel(state); }
+export function renderSecretaryDesk(state) { return state.game?.party ? secretaryPanel(state) : ''; }
 export function renderRelationsPanel(state) { return relationsPanel(state); }
 export function renderConsequencesPanel(state) { return consequencesPanel(state); }
 
@@ -416,7 +643,7 @@ export function renderPartyPosition(state, options = {}) {
   const ladder = party.affiliation === 'founder'
     ? `<ol class="party-ladder"><li class="current"><span>${esc(party.rankTitle)}</span></li></ol>`
     : `<ol class="party-ladder">${PARTY_RANKS.map(rank => `<li class="${rank.level < party.rank ? 'done' : rank.level === party.rank ? 'current' : ''}"><span>${esc(rank.title)}</span>${rank.threshold ? `<small>soglia ${rank.threshold}</small>` : ''}</li>`).join('')}</ol>`;
-  const currents = [...party.currents].sort((a, b) => b.strength - a.strength).map(current => `<div class="party-current ${party.alignedCurrentId === current.id ? 'aligned' : ''}"><div><strong>${esc(current.label)}${party.leaderCurrentId === current.id ? ' <em>guida il partito</em>' : ''}</strong><small>Peso interno ${current.strength}% · rapporto ${num(current.value ?? current.relation, 0)}/100</small>${meter(current.value ?? current.relation)}</div>${party.alignedCurrentId === current.id ? '<span class="hq-tag">LA TUA AREA</span>' : `<button class="secondary-button" data-party-current="${esc(current.id)}" ${costProblem(game, { ap: 1 }) ? 'disabled' : ''}>Schierati · 1 giorno</button>`}</div>`).join('');
+  const currents = [...party.currents].sort((a, b) => b.strength - a.strength).map(current => { const request = current.profile?.requests?.at(-1); return `<div class="party-current ${party.alignedCurrentId === current.id ? 'aligned' : ''}"><div><strong>${esc(current.label)}${party.leaderCurrentId === current.id ? ' <em>guida il partito</em>' : ''}</strong><small>Peso interno ${num(current.strength, 1)}% · rapporto ${num(current.value ?? current.relation, 0)}/100</small><small>${esc(current.profile?.objective ?? 'Obiettivo in definizione')} · ${esc(current.lastAction ?? 'In attesa di iniziativa')}${request?.status === 'open' ? ` · richiesta: ${esc(request.title)}` : ''}</small>${meter(current.value ?? current.relation)}</div>${party.alignedCurrentId === current.id ? '<span class="hq-tag">LA TUA AREA</span>' : `<button class="secondary-button" data-party-current="${esc(current.id)}" ${costProblem(game, { ap: 1 }) ? 'disabled' : ''}>Schierati · 1 giorno</button>`}</div>`; }).join('');
   const log = game.log.filter(entry => entry.kind === 'partito' || /congresso|partito/i.test(entry.title)).slice(0, 5).map(entry => `<article class="hq-log tone-${esc(entry.tone)}"><time>S${entry.week}</time><div><strong>${esc(entry.title)}</strong>${entry.lines?.length ? `<small>${esc(entry.lines.join(' · '))}</small>` : ''}</div></article>`).join('');
   return `<section class="party-position"><div class="home-section-heading"><div><span class="section-kicker">POSIZIONE NEL PARTITO · SIMULAZIONE</span><h2>${esc(party.rankTitle)}</h2></div><button class="text-link" data-party-action="leave">Lascia il partito</button></div>
     <div class="party-metrics"><div><small>SOSTEGNO INTERNO</small><strong>${num(party.support, 0)}</strong>${meter(party.support, party.support < 25 ? 'danger' : '')}</div>${leadership ? `<div><small>RAPPORTO CON LA LEADERSHIP</small><strong>${num(leadership.value, 0)}</strong>${meter(leadership.value)}</div>` : ''}<div><small>AREA DI RIFERIMENTO</small><strong class="small">${esc(party.currents.find(item => item.id === party.alignedCurrentId)?.label ?? 'Nessuna')}</strong></div></div>
@@ -441,19 +668,24 @@ function secretaryPanel(state) {
   const button = (attrs, label, problem, primary = false) => `<button class="${primary ? 'primary-button' : 'secondary-button'}" ${attrs} ${problem ? `disabled title="${esc(problem)}"` : ''}>${label}</button>${problem ? `<em class="decision-block">${esc(problem)}</em>` : ''}`;
   const current = party.line ?? 'autonoma';
   const lines = Object.entries(PARTY_LINES).map(([id, item]) => `<button class="line-option ${current === id ? 'active' : ''}" data-secretary="line" data-secretary-value="${id}" ${current === id || block({ ap: 1, capital: 3 }, 'line', 8) ? 'disabled' : ''} aria-pressed="${current === id}"><strong>${esc(item.label)}</strong><small>${esc(item.detail)}</small></button>`).join('');
-  const organs = party.currents.map(item => `<option value="${esc(item.id)}" ${party.organsCurrentId === item.id ? 'selected' : ''}>${esc(item.label)} · peso ${item.strength}%</option>`).join('');
+  const organs = party.currents.map(item => `<option value="${esc(item.id)}" ${party.organsCurrentId === item.id ? 'selected' : ''}>${esc(item.label)} · peso ${num(item.strength, 1)}%</option>`).join('');
   const rule = party.candidacyRule ?? 'segreteria';
   const rules = Object.entries(CANDIDACY_RULES).map(([id, item]) => `<option value="${id}" ${rule === id ? 'selected' : ''}>${esc(item.label)}</option>`).join('');
+  const isActive = id => (org?.investments ?? []).some(entry => entry.id === id && (!entry.untilWeek || entry.untilWeek >= week));
   const investments = PARTY_INVESTMENTS.map(item => {
-    const active = (org?.investments ?? []).some(entry => entry.id === item.id && (!entry.untilWeek || entry.untilWeek >= week));
-    return `<div class="secretary-investment"><div><strong>${esc(item.label)}</strong><small>${esc(item.effect)}</small></div>${active ? '<span class="hq-tag">IN CORSO</span>' : button(`data-secretary="investment" data-secretary-value="${esc(item.id)}"`, `${euro(item.cost)} dalla tesoreria`, costProblem(game, { treasury: item.cost }))}</div>`;
+    const active = isActive(item.id);
+    const base = item.requires ? PARTY_INVESTMENTS.find(entry => entry.id === item.requires) : null;
+    const missing = base && !isActive(item.requires) ? `Serve prima: ${base.label}` : '';
+    const entry = (org?.investments ?? []).find(candidate => candidate.id === item.id && (!candidate.untilWeek || candidate.untilWeek >= week));
+    const meta = [item.upkeep ? `${euro(item.upkeep)}/sett. di mantenimento` : '', item.weeks ? `${item.weeks} settimane` : item.oneOff ? 'una tantum' : 'permanente', base ? `potenzia: ${base.label}` : '', item.risk ? 'con un rischio' : ''].filter(Boolean).join(' · ');
+    return `<div class="secretary-investment"><div><strong>${esc(item.label)}</strong><small>${esc(item.effect)}</small><small class="invest-note">${esc(meta)}</small></div>${active ? `<span class="hq-tag">IN CORSO${entry?.untilWeek ? ` · fino alla ${entry.untilWeek}` : ''}</span>` : button(`data-secretary="investment" data-secretary-value="${esc(item.id)}"`, `${euro(item.cost)} dalla tesoreria`, missing || costProblem(game, { treasury: item.cost }))}</div>`;
   }).join('');
   const congressIn = org && !org.founder ? org.congress.nextWeek - week : null;
   return `<section class="party-position secretary-desk"><div class="home-section-heading"><div><span class="section-kicker">SEGRETERIA NAZIONALE · SIMULAZIONE</span><h2>Le decisioni del segretario</h2></div><span class="hq-tag">${esc(party.rankTitle)}</span></div>
     <p class="parliament-note">Ogni scelta costa giorni, capitale politico o fondi, cambia i rapporti con le aree interne e si ripercuote su sondaggi, iscritti e coesione. Le decisioni strategiche hanno un intervallo minimo prima di poter essere cambiate.</p>
     <div class="secretary-block"><h3>${glyph('route', 16)} Linea politica</h3><small>1 giorno · 3 capitale · ogni 8 settimane. Gli altri partiti la leggono come la tua strategia; ogni area interna ne preferisce una.</small><div class="line-options">${lines}</div>${wait('line', 8) ? `<em class="decision-block">Linea cambiata di recente: ${esc(wait('line', 8))}</em>` : ''}</div>
     <div class="secretary-grid">
-      <div class="secretary-block"><h3>${glyph('crown', 16)} Organi e incarichi</h3><small>Affida segreteria e direzione a un’area: quell’area si lega a te, le altre protestano. 1 giorno · 2 capitale · ogni 8 settimane.</small><div class="secretary-row"><select data-secretary-select="organs">${organs}</select>${button('data-secretary="organs"', 'Assegna', block({ ap: 1, capital: 2 }, 'organs', 8))}</div></div>
+      <div class="secretary-block"><h3>${glyph('crown', 16)} Organi e incarichi</h3><small>La scelta indica la guida, ma i portafogli vengono distribuiti considerando peso, lealtà, memoria e richieste delle correnti. 1 giorno · 2 capitale · ogni 8 settimane.</small><div class="secretary-row"><select data-secretary-select="organs">${organs}</select>${button('data-secretary="organs"', 'Assegna', block({ ap: 1, capital: 2 }, 'organs', 8))}</div>${org.currentPortfolios ? `<small>Portafogli: ${Object.entries(org.currentPortfolios.portfolios ?? {}).map(([role, id]) => `${esc(role)} → ${esc(party.currents.find(item => item.id === id)?.label ?? id)}`).join(' · ')}</small>` : ''}</div>
       <div class="secretary-block"><h3>${glyph('ballot', 16)} Candidature</h3><small>${esc(CANDIDACY_RULES[rule].detail)} 2 capitale · ogni 12 settimane.</small><div class="secretary-row"><select data-secretary-select="candidacy">${rules}</select>${button('data-secretary="candidacy"', 'Applica', block({ capital: 2 }, 'candidacy', 12))}</div></div>
       <div class="secretary-block"><h3>${glyph('dome', 16)} Disciplina dei parlamentari</h3><small>Il gruppo si compatta (+6 sostegno, +4 coesione), i contatti personali si raffreddano. 1 giorno · 3 capitale · ogni 6 settimane.</small>${button('data-secretary="discipline"', 'Richiama alla disciplina', block({ ap: 1, capital: 3 }, 'discipline', 6))}</div>
       <div class="secretary-block"><h3>${glyph('split', 16)} Dissidenti</h3><small>Coesione +10, ma il 2% degli iscritti se ne va, l’area rivale ti è ostile e la stampa ne parla. 4 capitale · ogni 16 settimane.</small>${button('data-secretary="expel"', 'Espelli i dissidenti', block({ capital: 4 }, 'expel', 16))}</div>
@@ -466,6 +698,6 @@ function secretaryPanel(state) {
       <div class="secretary-block"><h3>${glyph('megaphone', 16)} Comunicazione</h3><small>Lo stile agisce ogni settimana su reputazione, notorietà e tono della stampa. 1 capitale · ogni 6 settimane.</small><div class="line-options">${Object.entries(COMMUNICATION_STYLES).map(([id, item]) => `<button class="line-option ${party.communication === id ? 'active' : ''}" data-communication="${id}" ${party.communication === id || wait('communication', 6) ? 'disabled' : ''} aria-pressed="${party.communication === id}"><strong>${esc(item.label)}</strong><small>${esc(item.detail)}</small></button>`).join('')}</div></div>
     </div>
     ${org ? `<div class="secretary-block"><h3>${glyph('money', 16)} Investimenti del partito</h3><small>Tesoreria disponibile: ${euro(org.treasury.balance)}.</small><div class="secretary-investments">${investments}</div></div>` : ''}
-    <div class="hq-links"><button class="text-link" data-nav="sondaggi">Alleanze con gli altri partiti ${arrow}</button><button class="text-link" data-nav="finanze">Bilancio e priorità della tesoreria ${arrow}</button><button class="text-link" data-nav="territori">Territori e sezioni ${arrow}</button></div>
+    <div class="hq-links"><button class="text-link" data-nav="sondaggi" data-obs-view="forze">Alleanze con gli altri partiti ${arrow}</button><button class="text-link" data-nav="finanze">Bilancio e priorità della tesoreria ${arrow}</button><button class="text-link" data-nav="territori">Territori e sezioni ${arrow}</button></div>
   </section>`;
 }

@@ -1,9 +1,9 @@
-import { mountApp } from './ui/app.js?v=20261013-2';
-import { refreshSharedArchive } from './data/repositories/admin-sync.js?v=20261013-2';
-import { store } from './core/store.js?v=20261013-2';
-import { isRealCollectionLoaded, loadRealCollectionsSettled, loadRealDatabase, loadRealDocument, realDatabase, realDataUrls } from './data/repositories/real-data.js?v=20261013-2';
-import { PARTY_LINK_COLLECTIONS, governingEntityIds } from './data/repositories/party-links.js?v=20261013-2';
-import { referenceGovernmentSpec } from './data/repositories/government-reference.js?v=20261013-2';
+import { mountApp } from './ui/app.js?v=20261014-1';
+import { refreshSharedArchive } from './data/repositories/admin-sync.js?v=20261014-1';
+import { store } from './core/store.js?v=20261014-1';
+import { isRealCollectionLoaded, loadRealCollectionsSettled, loadRealDatabase, loadRealDocument, realDatabase, realDataUrls } from './data/repositories/real-data.js?v=20261014-1';
+import { PARTY_LINK_COLLECTIONS, governingEntityIds } from './data/repositories/party-links.js?v=20261014-1';
+import { referenceGovernmentSpec } from './data/repositories/government-reference.js?v=20261014-1';
 
 const BUILD = new URL(import.meta.url).searchParams.get('v');
 
@@ -41,7 +41,7 @@ const INSTITUTION_COLLECTIONS = ['government','politicians','politicalFigures','
 // The simulated world starts from the latest real poll (Supermedia), the documented collocazione of every force
 // and, once the government data is loaded, the parties of the real majority in office. A collection that could not be
 // loaded is simply empty here: the game starts anyway and says what is missing.
-const reference = (governingIds = []) => ({ twoPerThousand: realDatabase.twoPerThousand ?? [], parties: realDatabase.parties ?? [], movements: realDatabase.politicalMovements ?? [], coalitions: realDatabase.coalitions ?? [], polls: realDatabase.realPolls ?? [], electoralLists: realDatabase.electoralLists ?? [], governingIds, startDate: realDatabase.manifest?.snapshotDate ?? null });
+const reference = (governingIds = []) => ({ twoPerThousand: realDatabase.twoPerThousand ?? [], parties: realDatabase.parties ?? [], movements: realDatabase.politicalMovements ?? [], coalitions: realDatabase.coalitions ?? [], polls: realDatabase.realPolls ?? [], electoralLists: realDatabase.electoralLists ?? [], governingIds, startDate: realDatabase.manifest?.scenarioDate ?? realDatabase.manifest?.snapshotDate ?? null });
 const loaded = names => names.every(name => isRealCollectionLoaded(name));
 let app = null;
 const refresh = () => app?.refresh?.();

@@ -1,51 +1,54 @@
-import { fullDate, formatDate } from '../core/time.js?v=20261013-2';
-import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20261013-2';
-import { accountApiBase, commitRevision, currentAccount, probeAccountService, deleteCloudSave, downloadSave, knownRevision, listCloudSaves, login, logout, register, slotForCareer, uploadSave } from '../data/repositories/account-sync.js?v=20261013-2';
-import { setPartyLogoResolver } from './person-marks.js?v=20261013-2';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261013-2';
-import { isRealCollectionLoaded, loadRealCollections, loadRealCollectionsSettled, pristineRecord, realDataFailures, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20261013-2';
-import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20261013-2';
-import { renderAdminPanel } from './admin-panel.js?v=20261013-2';
-import { sharedLogos } from '../data/repositories/admin-store.js?v=20261013-2';
-import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, publishSharedArchive, refreshSharedArchive, sharedApiUrl, verifySharedSession } from '../data/repositories/admin-sync.js?v=20261013-2';
-import { deleteLocalLogo, exportLogoConfiguration, fetchLogoFromUrl, getLocalLogo, importLogoConfiguration, listLocalLogos, probeImage, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20261013-2';
-import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20261013-2';
-import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20261013-2';
-import { PARTY_LINK_COLLECTIONS, forceKind, isCoalitionList, politicalForces } from '../data/repositories/party-links.js?v=20261013-2';
-import { renderLogoAdmin } from './logo-admin.js?v=20261013-2';
-import { chosenPlace, makeCareerDraft, renderCareerWizard, wizardLogoPreview } from './career-wizard.js?v=20261013-2';
-import { userPartyLogo } from './party-logo.js?v=20261013-2';
-import { CAREER_STEPS, validateWizardStep } from '../core/career-rules.js?v=20261013-2';
-import { renderElectionsHub } from './elections-hub.js?v=20261013-2';
-import { renderCareerPage } from './career-page.js?v=20261013-2';
-import { renderPartyPage } from './party-page.js?v=20261013-2';
-import { renderAgendaPage } from './agenda-page.js?v=20261013-2';
-import { HEMICYCLE_DEFAULTS, renderHemicycle } from './hemicycle-view.js?v=20261013-2';
-import { drawLogoEditor, exportLogo, measureBackground, panFromDrag, renderLogoEditor } from './logo-editor-view.js?v=20261013-2';
-import { createEditorState } from '../core/logo-editor.js?v=20261013-2';
-import { renderParliamentPage } from './parliament-mode.js?v=20261013-2';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261013-2';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261013-2';
-import { chooseStart } from '../core/start-engine.js?v=20261013-2';
-import { renderHeadquarters, renderNewsroom } from './game-mode.js?v=20261013-2';
-import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20261013-2';
-import { playerRoles } from '../core/roles.js?v=20261013-2';
-import { accordWarning, budgetPreview, designFromForm, planFromForm, policyFields, policyPreview, projectPreview, rangeText, requestFromForm } from './policy-mode.js?v=20261013-2';
-import { areaOf } from '../data/simulation/policy-rules.js?v=20261013-2';
-import { attachChartInteractions, hideChartTip } from './polls-mode.js?v=20261013-2';
-import { renderObservatory } from './observatory-view.js?v=20261013-2';
-import { glyph } from './visuals.js?v=20261013-2';
-import { identityVars, partyChip, partyIdentity, topbarParty } from './party-identity.js?v=20261013-2';
-import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20261013-2';
-import { renderFinancePage } from './finance-mode.js?v=20261013-2';
-import { renderContactsPanel } from './organization-mode.js?v=20261013-2';
-import { renderRealLaws } from './real-laws.js?v=20261013-2';
-import { realLawArea } from '../core/society-engine.js?v=20261013-2';
-import { canManageParliament } from '../core/parliament-engine.js?v=20261013-2';
-import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, TOUR_STEPS } from './menu.js?v=20261013-2';
-import { MAX_SLOTS } from '../core/storage.js?v=20261013-2';
-import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20261013-2';
-import { playSound } from './sound.js?v=20261013-2';
+import { fullDate, formatDate } from '../core/time.js?v=20261014-1';
+import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20261014-1';
+import { accountApiBase, commitRevision, currentAccount, deleteAccount, probeAccountService, deleteCloudSave, downloadSave, knownRevision, listCloudSaves, login, logout, register, slotForCareer, uploadSave } from '../data/repositories/account-sync.js?v=20261014-1';
+import { setPartyLogoResolver } from './person-marks.js?v=20261014-1';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261014-1';
+import { isRealCollectionLoaded, loadRealCollections, loadRealCollectionsSettled, pristineRecord, realDataFailures, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20261014-1';
+import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20261014-1';
+import { renderAdminPanel } from './admin-panel.js?v=20261014-1';
+import { sharedLogos } from '../data/repositories/admin-store.js?v=20261014-1';
+import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, publishSharedArchive, refreshSharedArchive, sharedApiUrl, sharedSyncStatus, verifySharedSession } from '../data/repositories/admin-sync.js?v=20261014-1';
+import { deleteLocalLogo, exportLogoConfiguration, fetchLogoFromUrl, getLocalLogo, importLogoConfiguration, listLocalLogos, probeImage, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20261014-1';
+import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20261014-1';
+import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20261014-1';
+import { PARTY_LINK_COLLECTIONS, forceKind, isCoalitionList, politicalForces } from '../data/repositories/party-links.js?v=20261014-1';
+import { renderLogoAdmin } from './logo-admin.js?v=20261014-1';
+import { chosenPlace, makeCareerDraft, renderCareerWizard, wizardLogoPreview } from './career-wizard.js?v=20261014-1';
+import { userPartyLogo } from './party-logo.js?v=20261014-1';
+import { CAREER_STEPS, validateWizardStep } from '../core/career-rules.js?v=20261014-1';
+import { renderElectionsHub } from './elections-hub.js?v=20261014-1';
+import { renderCareerPage } from './career-page.js?v=20261014-1';
+import { renderPartyPage } from './party-page.js?v=20261014-1';
+import { renderAgendaPage } from './agenda-page.js?v=20261014-1';
+import { HEMICYCLE_DEFAULTS, renderHemicycle } from './hemicycle-view.js?v=20261014-1';
+import { renderFeaturedMembers } from './members-view.js?v=20261014-1';
+import { drawLogoEditor, exportLogo, measureBackground, panFromDrag, renderLogoEditor } from './logo-editor-view.js?v=20261014-1';
+import { createEditorState } from '../core/logo-editor.js?v=20261014-1';
+import { renderParliamentPage } from './parliament-mode.js?v=20261014-1';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261014-1';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261014-1';
+import { chooseStart } from '../core/start-engine.js?v=20261014-1';
+import { renderHeadquarters, renderNewsroom } from './game-mode.js?v=20261014-1';
+import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20261014-1';
+import { playerRoles } from '../core/roles.js?v=20261014-1';
+import { accordWarning, budgetPreview, designFromForm, planFromForm, policyFields, policyPreview, projectPreview, rangeText, requestFromForm } from './policy-mode.js?v=20261014-1';
+import { areaOf } from '../data/simulation/policy-rules.js?v=20261014-1';
+import { attachChartInteractions, hideChartTip } from './polls-mode.js?v=20261014-1';
+import { renderObservatory } from './observatory-view.js?v=20261014-1';
+import { glyph } from './visuals.js?v=20261014-1';
+import { identityVars, partyChip, partyIdentity, topbarParty } from './party-identity.js?v=20261014-1';
+import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20261014-1';
+import { renderFinancePage } from './finance-mode.js?v=20261014-1';
+import { PLAN_MAX, planConfirmLines, planKey, renderPlanTray } from './plan-view.js?v=20261014-1';
+import { STAFF_TASK_BY_ID } from '../data/simulation/staff-rules.js?v=20261014-1';
+import { renderContactsPanel } from './organization-mode.js?v=20261014-1';
+import { renderRealLaws } from './real-laws.js?v=20261014-1';
+import { realLawArea } from '../core/society-engine.js?v=20261014-1';
+import { canManageParliament } from '../core/parliament-engine.js?v=20261014-1';
+import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, TOUR_STEPS } from './menu.js?v=20261014-1';
+import { MAX_SLOTS } from '../core/storage.js?v=20261014-1';
+import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20261014-1';
+import { playSound } from './sound.js?v=20261014-1';
 
 // The destinations of the game, by theme. On computers the sidebar lists the eight and opens the pages of the current one; on phones the
 // bar below keeps Home · Elezioni · Sondaggi · Istituzioni one tap away and “Altro” gathers everything else (the same pages, nothing twice).
@@ -224,6 +227,20 @@ export function mountApp(root, store, { retryData = null } = {}) {
   // Confirmation of irreversible or far-reaching actions: a dialog in the game's style (never the browser's confirm).
   let pendingConfirm = null;
   let skipMultiWeekConfirm = false;
+  // The plan of the week (operations collected from the pages and done together after the confirmation): only in this window, never saved; the preview is recomputed when the game changes.
+  let plan = [];
+  let planCache = { key: '', value: null };
+  const planPreviewOf = state => {
+    if (!plan.length || !store.hasCareer() || !state.game) return null;
+    const game = state.game;
+    const key = `${JSON.stringify(plan)}|${game.week.index}|${game.week.ap}|${game.resources.funds}|${game.resources.politicalCapital}|${game.rngState}`;
+    if (planCache.key === key) return planCache.value;
+    let value;
+    try { value = store.planPreview(plan); } catch (error) { value = { ok: false, lines: [], error: error.message }; }
+    planCache = { key, value };
+    return value;
+  };
+  const markPlanned = () => { const planned = new Set(plan.map(planKey)); for (const button of root.querySelectorAll?.('[data-plan-add]') ?? []) { let on = false; try { on = planned.has(planKey(JSON.parse(button.dataset.planAdd))); } catch { /* not an operation */ } button.classList.toggle('is-planned', on); button.setAttribute('aria-pressed', String(on)); if (!button.dataset.planLabel) button.dataset.planLabel = button.textContent; button.textContent = on ? '✓ Nel piano' : button.dataset.planLabel; } };
   const askConfirm = options => new Promise(resolve => { pendingConfirm = { ...options, resolve }; render(store.getState(), store.getLastSaved()); });
   const settleConfirm = ok => {
     if (!pendingConfirm) return;
@@ -234,7 +251,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
     render(store.getState(), store.getLastSaved());
   };
   // Runs the action only after the confirmation; the click handler returns at once (the dialog stays open).
-  const confirmThen = (options, action) => { askConfirm(options).then(async answer => { if (!answer.ok) return; try { await action(answer); } catch (error) { menu.error = error.message; admin.message = error.message; } render(store.getState(), store.getLastSaved()); }); };
+  const confirmThen = (options, action) => { askConfirm(options).then(async answer => { if (!answer.ok) return; try { await action(answer); } catch (error) { menu.error = error.message; admin.message = error.message; if (store.hasCareer()) store.getState().ui.toast = error.message; } render(store.getState(), store.getLastSaved()); }); };
   // Advancing to a date goes on in pieces of 26 weeks, so the page stays alive; at every piece the store reads the state as it is (and stops before what needs the player unless it is delegated).
   let advancingToDate = false;
   const advanceToDate = async (target, delegate) => {
@@ -379,7 +396,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
     pendingScroll = null;
     target.scrollIntoView?.({ block: 'start' });
   };
-  const render = (state, lastSaved) => { renderFrame(state, lastSaved); paintLogoEditor(); restoreDetails(); persistViewState(); scrollPending(); };
+  const render = (state, lastSaved) => { renderFrame(state, lastSaved); paintLogoEditor(); restoreDetails(); markPlanned(); persistViewState(); scrollPending(); };
   const renderFrame = (state, lastSaved) => {
     hideChartTip();
     if (menu.open && !wizard) {
@@ -408,7 +425,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
         <nav class="mobile-tabbar" aria-label="Navigazione rapida">${MOBILE_BAR.map(id => { const section = SECTIONS.find(item => item.id === id); const on = mainSectionActive(id, state.ui.activePage); return `<button type="button" class="mobile-tab ${on ? 'active' : ''}" data-nav="${sectionTarget(section)}" aria-current="${on ? 'page' : 'false'}">${icon(section.glyph, 21)}<span>${section.short ?? section.label}</span></button>`; }).join('')}<button type="button" class="mobile-tab ${MOBILE_BAR.some(id => mainSectionActive(id, state.ui.activePage)) ? '' : 'active'}" data-mobile-more aria-expanded="false" aria-controls="mobile-sheet">${icon('menu', 21)}<span>Altro</span></button></nav>
         <div class="mobile-sheet" id="mobile-sheet" data-mobile-sheet hidden><div class="mobile-sheet-panel" role="dialog" aria-modal="true" aria-label="Tutte le sezioni"><div class="mobile-sheet-head"><strong>Tutte le sezioni</strong><button type="button" class="icon-button" data-mobile-close aria-label="Chiudi">×</button></div><div class="sheet-quick" role="group" aria-label="Gioco"><button type="button" class="sheet-item ${['profilo', 'politici'].includes(state.ui.activePage) ? 'active' : ''}" data-nav="profilo">Profilo</button><button type="button" class="sheet-item ${state.ui.activePage === 'impostazioni' ? 'active' : ''}" data-nav="impostazioni">Impostazioni</button><button type="button" class="sheet-item" data-action="menu">Menu</button><button type="button" class="sheet-item" data-action="account">Account</button></div>${SECTIONS.filter(section => !(MOBILE_BAR.includes(section.id) && sectionEntries(section, state).length < 2)).map(section => { const entries = sectionEntries(section, state); return `<section class="sheet-group"><h3>${icon(section.glyph, 15)}${section.label}</h3><div class="mobile-sheet-grid">${entries.map(entry => `<button type="button" class="sheet-item ${entryOn(entry, entries, state.ui.activePage, territory) ? 'active' : ''}" ${entryAttrs(entry)}>${entry.label}</button>`).join('')}</div></section>`; }).join('')}<div class="mobile-sheet-status"><span class="save-dot"></span>${lastSaved}</div></div></div>
         <main class="main-area">
-          <header class="topbar"><div class="topbar-title"><strong>${store.hasCareer() && state.game ? topbarParty(identity) : ''}${current.title}</strong><span>${current.intro}</span></div><div class="top-actions"><div class="top-tools"><button class="icon-button menu-button" data-action="menu" aria-label="Menu principale" title="Menu principale">${icon('menu', 17)}</button><button class="icon-button" aria-label="Salva carriera" title="Salva carriera" data-action="save">${icon('save', 17)}</button></div><div class="top-time"><div class="date-chip">${icon('calendar', 16)}<span>${fullDate(state.clock.currentDate)}</span></div><span class="week-chip">Settimana ${state.game.week.index} · ${state.game.week.ap}/${state.game.week.maxAp} giorni</span><button class="advance-button" data-action="advance" ${state.game.status === 'ended' ? 'disabled' : ''}>${state.campaign?.status === 'active' ? 'Avanza campagna' : 'Chiudi settimana'} ${icon('arrow', 17)}</button></div></div></header>
+          <header class="topbar"><div class="topbar-title"><strong>${store.hasCareer() && state.game ? topbarParty(identity) : ''}${current.title}</strong><span>${current.intro}</span></div><div class="top-actions"><div class="top-tools"><button class="icon-button menu-button" data-action="menu" aria-label="Torna alla schermata iniziale (menu principale)" title="Schermata iniziale: Nuova partita, Continua, Carica partita">${icon('home', 17)}</button><button class="icon-button" aria-label="Salva carriera" title="Salva carriera" data-action="save">${icon('save', 17)}</button></div><div class="top-time"><div class="date-chip">${icon('calendar', 16)}<span>${fullDate(state.clock.currentDate)}</span></div><span class="week-chip">Settimana ${state.game.week.index} · ${state.game.week.ap}/${state.game.week.maxAp} giorni</span><button class="advance-button" data-action="advance" ${state.game.status === 'ended' ? 'disabled' : ''}>${state.campaign?.status === 'active' ? 'Avanza campagna' : 'Chiudi settimana'} ${icon('arrow', 17)}</button></div></div></header>
           ${wizard ? '' : dataNotice()}<div class="page-wrap">${wizard ? '' : (state.ui.activePage === 'panoramica' ? renderHeadquarters(state, { identity, partyName: identity.kind === 'partito' ? identity.name : null, partyLogo: identity.logo, newsFilter: views.newsFilter, newsCategory: views.newsCategory, newsOutlet: views.newsOutlet, expanded: views.homeExpand ?? {} }) : subpage(state, current, player, party, eventList, catalog, { logoFor, homePlace: () => store.homePlace(), nationalOverview: () => store.nationalOverview(), presidencyView: () => store.presidencyView(), electoralGeography: () => store.electoralGeography?.() ?? null, campaignPicks: campaignChoices(state), parties:realParties(), selectable:selectableParties(), findParty, realLeader, admin, adminContext, territory, realLaws, archive, views, tabFor, settings, lastSaved, account, allianceOdds: id => { try { return store.allianceOdds(id); } catch { return null; } }, allianceWindow: () => store.allianceWindow(), raceOptions: id => { try { return store.raceCandidates(id, racePeople()); } catch { return null; } } }))}</div>
         </main>
         ${wizard ? renderCareerWizard(state, wizard, realParties(), logoFor, realDatabase.parliamentaryGroups ?? [], realDatabase.partyLeaderships ?? [], realDatabase.politicalFigures ?? [], realDatabase.politicians ?? [], wizardTerritoryView(), wizardDataStatus()) : ''}
@@ -416,6 +433,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
         ${catalog.selectedPoliticianId ? renderPoliticianProfile(catalog.selectedPoliticianId,{loading:catalog.profileLoading,logoFor}) : ''}
         ${catalog.selectedPartyId ? renderPartyProfile(catalog.selectedPartyId,logoFor) : ''}
         ${reportOpen ? renderWeeklyReport(state) : ''}
+        ${wizard || !store.hasCareer() || !state.game ? '' : renderPlanTray(state, plan, planPreviewOf(state))}
         ${renderConfirmDialog(pendingConfirm)}
         ${state.ui.toast && settings.toasts === 'on' ? `<div class="toast" role="status">${icon('spark', 17)}${esc(state.ui.toast)}</div>` : ''}
       </div>`;
@@ -642,7 +660,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
   };
   const openNewGame = async (legacyId = '') => {
     menu.open = false;
-    wizard = makeCareerDraft(store.getState().clock.currentDate, store.getState().dataset.parties, store.hallOfFame());
+    wizard = makeCareerDraft(store.startDate(), store.getState().dataset.parties, store.hallOfFame());
     // Starting from the legacy of a concluded career (the Hall of Fame keeps it).
     if (legacyId && wizard.hall.some(entry => entry.id === legacyId)) wizard.legacyId = legacyId;
     render(store.getState(), store.getLastSaved());
@@ -758,6 +776,52 @@ export function mountApp(root, store, { retryData = null } = {}) {
       return;
     }
     // Territorial committees: actions on a committee, new committees on the ISTAT map, the list of comuni on demand.
+    // The plan of the week, the treasury operations and the staff: real actions of the store (the plan and the mandates are shown and confirmed first).
+    // The news: closing the summary of the Home, going from a radio item to its article, the jingle of the radio.
+    const newsControl = event.target.closest('[data-home-news-dismiss],[data-news-goto],[data-radio-play]');
+    if (newsControl) {
+      const data = newsControl.dataset;
+      if (data.homeNewsDismiss) { store.dismissHomeNews(data.homeNewsDismiss.split(',').filter(Boolean)); playSound('click'); }
+      else if (data.radioPlay !== undefined) { playSound('radio'); newsControl.classList.add('is-on-air'); newsControl.textContent = 'In onda…'; setTimeout(() => { newsControl.classList.remove('is-on-air'); newsControl.textContent = 'Ascolta la sigla'; }, 1500); return; }
+      else if (data.newsGoto) {
+        views.newsFilter = 'articoli'; views.newsCategory = 'tutte'; views.newsOutlet = 'tutte';
+        render(store.getState(), store.getLastSaved());
+        const card = root.querySelector(`[data-article="${data.newsGoto}"]`);
+        if (card) { card.querySelector('details')?.setAttribute('open', ''); card.scrollIntoView?.({ block: 'center' }); }
+        return;
+      }
+      return;
+    }
+    const planControl = event.target.closest('[data-plan-add],[data-plan-remove],[data-plan-clear],[data-plan-run],[data-treasury-start],[data-staff-status]');
+    if (planControl) {
+      const data = planControl.dataset;
+      try {
+        if (data.planAdd !== undefined) {
+          const op = JSON.parse(data.planAdd);
+          if (op.kind === 'activity') op.target = root.querySelector(`[data-activity-target="${op.id}"]`)?.value ?? null;
+          const key = planKey(op), at = plan.findIndex(item => planKey(item) === key);
+          if (at >= 0) plan.splice(at, 1);
+          else if (plan.length >= PLAN_MAX) throw new Error(`Un piano può avere al massimo ${PLAN_MAX} operazioni.`);
+          else plan.push(op);
+        } else if (data.planRemove !== undefined) plan.splice(Number(data.planRemove), 1);
+        else if (planControl.matches('[data-plan-clear]')) plan = [];
+        else if (planControl.matches('[data-plan-run]')) {
+          const preview = store.planPreview(plan);
+          if (!preview.ok) throw new Error(`Il piano non si può eseguire: ${preview.lines.filter(line => !line.ok).map(line => line.problem).join(' ')}`);
+          const snapshot = [...plan];
+          confirmThen({ kicker: 'PIANO DELLA SETTIMANA', title: `Eseguire ${snapshot.length} ${snapshot.length === 1 ? 'operazione' : 'operazioni'}?`, body: 'Le operazioni si eseguono in questo ordine, una sola volta: se una non riesce, nessuna viene fatta.', details: planConfirmLines(store.getState(), snapshot, preview), confirmLabel: 'Esegui il piano' }, () => { const result = store.executePlan(snapshot); plan = []; playSound('confirm'); return result; });
+          return;
+        } else if (data.treasuryStart) { store.startTreasuryOperation(data.treasuryStart); playSound('confirm'); }
+        else if (data.staffStatus) {
+          const status = data.staffStatus, id = data.mandateId;
+          if (status === 'annullato') { confirmThen({ kicker: 'STAFF', title: 'Annullare l’incarico?', body: 'Lo staff smette di lavorarci: quanto già speso resta speso e non si riapre.', confirmLabel: 'Annulla l’incarico', tone: 'danger' }, () => store.setStaffMandate(id, 'annullato')); return; }
+          store.setStaffMandate(id, status); playSound('confirm');
+        }
+        planCache = { key: '', value: null };
+      } catch (error) { store.getState().ui.toast = error.message; }
+      render(store.getState(), store.getLastSaved());
+      return;
+    }
     const committeeControl = event.target.closest('[data-committee-action],[data-committee-found],[data-committee-load]');
     if (committeeControl) {
       const data = committeeControl.dataset;
@@ -782,7 +846,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
     if (hemi) {
       const data = hemi.dataset;
       const view = views.hemicycle;
-      if (data.hemiSeat) view.selected = view.selected === data.hemiSeat ? null : data.hemiSeat;
+      if (data.hemiSeat) { view.selected = view.selected === data.hemiSeat && !data.hemiScroll ? null : data.hemiSeat; if (data.hemiScroll) { saveViews(); render(store.getState(), store.getLastSaved()); root.querySelector?.('#hemicycle')?.scrollIntoView?.({ block: 'start' }); return; } }
       else if (data.hemiChamber) Object.assign(view, { chamber: data.hemiChamber, group: '', committee: '', vote: '', selected: null });
       else if (data.hemiColor) view.colorBy = data.hemiColor;
       else if (data.hemiFilterGroup) view.group = view.group === data.hemiFilterGroup ? '' : data.hemiFilterGroup;
@@ -802,6 +866,13 @@ export function mountApp(root, store, { retryData = null } = {}) {
     const viewFilterChoice = event.target.closest('[data-view-filter]');
     if (viewFilterChoice) {
       views.filters[viewFilterChoice.dataset.viewFilter] = viewFilterChoice.dataset.viewFilterValue;
+      if (viewFilterChoice.dataset.viewFilter === 'leggi') views.filters.leggiPage = 1;
+      saveViews(); render(store.getState(), store.getLastSaved()); return;
+    }
+    const billMore = event.target.closest('[data-bill-more]');
+    if (billMore) {
+      const key = billMore.dataset.billMore === 'archive' ? 'leggiArchivio' : 'leggiPage';
+      views.filters[key] = (Number(views.filters[key]) || 1) + 1;
       saveViews(); render(store.getState(), store.getLastSaved()); return;
     }
     const sectionTab = event.target.closest('[data-section-tab]');
@@ -1044,7 +1115,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
     if (sharedAction) {
       try {
         if (sharedAction === 'publish') { const result = await publishSharedArchive(); admin.message = `Archivio pubblicato: ${result.parties} partiti, ${result.politicians} politici, ${result.logos} loghi.`; }
-        else if (sharedAction === 'refresh') { await refreshSharedArchive(); refreshAdminOverrides(); admin.message = 'Archivio condiviso aggiornato.'; }
+        else if (sharedAction === 'refresh') { await refreshSharedArchive(); refreshAdminOverrides(); const sync = sharedSyncStatus(); admin.message = sync.ok ? 'Archivio condiviso aggiornato.' : `Archivio condiviso non raggiungibile (${sync.error}): resta la copia salvata${sync.copyUpdatedAt ? ` il ${String(sync.copyUpdatedAt).slice(0, 10)}` : ''}, che potrebbe non essere aggiornata.`; }
         else if (sharedAction === 'logout') { closeSharedSession(); admin.message = 'Browser scollegato dall’archivio condiviso.'; }
       } catch (error) { admin.message = error.message; }
       render(store.getState(), store.getLastSaved()); return;
@@ -1395,11 +1466,39 @@ export function mountApp(root, store, { retryData = null } = {}) {
   });
   root.addEventListener('submit', async event => {
     const form = event.target;
+    if (form.matches('[data-staff-form],[data-staff-edit-form]')) {
+      event.preventDefault();
+      const data = Object.fromEntries(new FormData(form));
+      const editing = form.matches('[data-staff-edit-form]');
+      try {
+        const spec = { weeks: Number(data.weeks), weeklyBudget: Number(data.weeklyBudget), budgetMax: Number(data.budgetMax), objective: Number(data.objective), target: data.target || null };
+        if (editing) { store.changeStaffMandate(form.dataset.mandateId, spec); playSound('confirm'); }
+        else {
+          const task = STAFF_TASK_BY_ID[form.dataset.task];
+          confirmThen({ kicker: 'STAFF', title: `Affidare «${task.label}» allo staff?`, body: 'Lo staff lavorerà da solo a ogni chiusura di settimana, con il budget che indichi; potrai modificare, sospendere o annullare l’incarico in qualsiasi momento. Non include mai voti, candidature, accordi o scelte irreversibili.',
+            details: [`Durata: ${spec.weeks === 1 ? 'una volta' : `${spec.weeks} settimane`}.`, `Budget: ${spec.weeklyBudget} € a settimana, fino a ${spec.budgetMax} € in totale (si paga solo quando lo staff lavora).`, `Obiettivo: ${spec.objective} ${task.unit}.`, `Competenza richiesta: ${task.skill} (almeno ${task.minSkill}/100).`, 'Il risultato non è garantito: dipende dalle competenze dello staff e dal caso.'], confirmLabel: 'Affida l’incarico' },
+            () => { store.giveStaffMandate({ ...spec, task: task.id, approved: true }); playSound('confirm'); });
+          return;
+        }
+      } catch (error) { store.getState().ui.toast = error.message; }
+      render(store.getState(), store.getLastSaved());
+      return;
+    }
     if (form.matches('[data-account-form]')) {
       event.preventDefault();
       const data = Object.fromEntries(new FormData(form));
       const mode = form.dataset.accountForm;
       account.error = ''; account.message = ''; account.unreachable = false;
+      if (mode === 'delete') {
+        account.busy = 'delete'; render(store.getState(), store.getLastSaved());
+        try {
+          const result = await deleteAccount(data.password, data.confirm);
+          account.user = null; account.saves = []; account.conflict = null; account.currentSlot = null;
+          account.message = `Account eliminato: online non resta nulla (${result.deleted?.saves ?? 0} salvataggi e ${result.deleted?.sessions ?? 0} sessioni rimossi). Le partite salvate in questo browser restano sul dispositivo.`;
+        } catch (error) { account.error = error.message; if (['offline', 'timeout'].includes(error.code) || error.status >= 500) setAccountStatus('unreachable'); }
+        account.busy = false;
+        render(store.getState(), store.getLastSaved()); return;
+      }
       if (mode === 'register' && data.password !== data.confirm) { account.error = 'Le due password non coincidono.'; render(store.getState(), store.getLastSaved()); return; }
       account.busy = mode; render(store.getState(), store.getLastSaved());
       try {
@@ -1540,6 +1639,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
   root.addEventListener('pointercancel', endLogoDrag);
   root.addEventListener('input', event => {
     const field = event.target;
+    if (field.matches?.('.admin-color input[type="color"]')) { const off = field.closest('.admin-color')?.querySelector('input[type="checkbox"]'); if (off) off.checked = false; return; }
     if (logoEditor && field.matches?.('input[type="range"][data-logo-edit]')) { logoEditor[field.dataset.logoEdit] = Number(field.value); drawLogoEditor(root, logoEditor, logoEditorImage); return; }
     if (field.closest?.('[data-policy-fields]') || field.closest?.('[data-budget-form]') || field.closest?.('[data-project-form]') || field.closest?.('[data-project-funding-form]')) { refreshPolicyPreview(field.closest('form'), field); return; }
     if (field.matches('[data-catalog-filter]')) {
@@ -1761,10 +1861,10 @@ function subpage(state, page, player, party, events, catalog, options = {}) {
     amministrazione: renderAdminPanel(options.admin, options.adminContext()),
     territori: renderTerritoriesPage(state, { ...options.territory, deputies: deputiesByRegion(realDatabase.politicians ?? []) }),
     finanze: renderFinancePage(state),
-    parlamento: renderParliamentPage('parlamento', state, { party, player, status: catalogStatus, politicians: realDatabase.politicians ?? [], hemicycle: state.parliament ? renderHemicycle(state, { politicians: realDatabase.politicians ?? [], db: realDatabase, view: options.views?.hemicycle, logoFor: options.logoFor }) : '' }) + `<section class="hq-panel contacts-panel"><div class="home-section-heading"><div><span class="section-kicker">${state.parliament?.legislature?.reference === 'simulation' ? 'PARLAMENTARI DELLA XIX LEGISLATURA (REALE) · RAPPORTI SIMULATI' : 'PARLAMENTARI REALI · RAPPORTI SIMULATI'}</span><h2>${state.parliament?.legislature?.reference === 'simulation' ? 'I tuoi contatti della legislatura reale' : 'I tuoi interlocutori in Parlamento'}</h2></div></div>${state.parliament?.legislature?.reference === 'simulation' ? '<p class="sx-note">Dopo il voto della partita le Camere sono simulate: queste persone reali non vi siedono e non intervengono sulle tue proposte; restano contatti politici con i dati della XIX legislatura.</p>' : ''}${renderContactsPanel(state)}</section>`,
+    parlamento: renderParliamentPage('parlamento', state, { party, player, status: catalogStatus, politicians: realDatabase.politicians ?? [], hemicycle: state.parliament ? renderHemicycle(state, { politicians: realDatabase.politicians ?? [], db: realDatabase, view: options.views?.hemicycle, logoFor: options.logoFor }) : '', featured: state.parliament ? renderFeaturedMembers(state, realDatabase, options.views?.hemicycle) : '' }) + `<section class="hq-panel contacts-panel"><div class="home-section-heading"><div><span class="section-kicker">${state.parliament?.legislature?.reference === 'simulation' ? 'PARLAMENTARI DELLA XIX LEGISLATURA (REALE) · RAPPORTI SIMULATI' : 'PARLAMENTARI REALI · RAPPORTI SIMULATI'}</span><h2>${state.parliament?.legislature?.reference === 'simulation' ? 'I tuoi contatti della legislatura reale' : 'I tuoi interlocutori in Parlamento'}</h2></div></div>${state.parliament?.legislature?.reference === 'simulation' ? '<p class="sx-note">Dopo il voto della partita le Camere sono simulate: queste persone reali non vi siedono e non intervengono sulle tue proposte; restano contatti politici con i dati della XIX legislatura.</p>' : ''}${renderContactsPanel(state)}</section>`,
     governo: renderParliamentPage('governo', state, { party, player, status: catalogStatus, politicians: realDatabase.politicians ?? [], secretary: playerRoles(state).secretary }) + realGovernmentCard(),
     archivio: renderArchiveHub(options.archive, { catalog, status: catalogStatus, logoFor: options.logoFor, realLaws: options.realLaws }),
-    leggi: renderParliamentPage('leggi', state, { party, player, status: catalogStatus, politicians: realDatabase.politicians ?? [], lawFilter: options.views?.filters?.leggi, committees: realDatabase.committees ?? [], realLaws: renderRealLaws(realDatabase.laws ?? [], options.realLaws, { canPropose: canManageParliament(state.parliament), loading: catalogStatus.loading && !(realDatabase.laws ?? []).length, error: catalogStatus.error }) }),
+    leggi: renderParliamentPage('leggi', state, { party, player, status: catalogStatus, politicians: realDatabase.politicians ?? [], lawFilter: options.views?.filters?.leggi, billPage: options.views?.filters?.leggiPage, archivePage: options.views?.filters?.leggiArchivio, committees: realDatabase.committees ?? [], realLaws: renderRealLaws(realDatabase.laws ?? [], options.realLaws, { canPropose: canManageParliament(state.parliament), loading: catalogStatus.loading && !(realDatabase.laws ?? []).length, error: catalogStatus.error }) }),
     calendario: state.game ? renderAgendaPage(state, { tab: options.tabFor?.('agenda', state), filter: options.views?.filters?.agenda, advanceDate: options.views?.filters?.advanceDate, events }) : `<div class="agenda-list">${events.map(e => `<div class="agenda-row"><div class="agenda-date"><strong>${formatDate(e.date, { day: '2-digit' })}</strong><span>${formatDate(e.date, { month: 'short' })}</span></div><div class="agenda-row-text"><span class="event-tag">${esc(e.category)}</span><strong>${esc(e.title)}</strong><small>${esc(e.status)}</small></div><span class="source-pill">${sourceLabel(e.source)}</span></div>`).join('') || '<div class="empty-state">La tua agenda è libera. Avanza il tempo per generare i primi appuntamenti.</div>'}</div>`,
     politici: `<div class="catalog-body" data-catalog-body>${renderPoliticianArchive(catalog,{status:catalogStatus,logoFor:options.logoFor})}</div>`,
     'partiti-lista': `<div class="catalog-body" data-catalog-body>${renderPartyArchive(catalog,{status:catalogStatus,logoFor:options.logoFor})}</div>`,

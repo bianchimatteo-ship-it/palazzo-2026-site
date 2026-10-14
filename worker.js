@@ -7,7 +7,8 @@ const MAX_BYTES = 1_500_000;
 const MAX_LOGO_BYTES = 420_000;
 const SESSION_SECONDS = 12 * 3600;
 const MAX_FAILURES = 8;
-const ALLOWED_ORIGINS = ['https://bianchimatteo-ship-it.github.io', 'https://palazzo-2026-site.bianchimatteo657.workers.dev', 'http://127.0.0.1:8791', 'http://localhost:8791'];
+// The web sites of the game and, for the installed app (Capacitor), its own origins: iOS capacitor://localhost, Android https://localhost. Credentials travel in the Authorization header, never in cookies.
+const ALLOWED_ORIGINS = ['https://bianchimatteo-ship-it.github.io', 'https://palazzo-2026-site.bianchimatteo657.workers.dev', 'http://127.0.0.1:8791', 'http://localhost:8791', 'capacitor://localhost', 'https://localhost'];
 
 const encoder = new TextEncoder();
 const toHex = buffer => [...new Uint8Array(buffer)].map(byte => byte.toString(16).padStart(2, '0')).join('');
@@ -47,6 +48,7 @@ function cleanAddedParty(id, input) {
     website: website && /^https?:\/\/[^\s"'<>]+$/i.test(website) ? website : null,
     politicalPosition: POSITIONS.includes(input.politicalPosition) ? input.politicalPosition : null,
     color: /^#[\da-f]{6}$/i.test(input.color ?? '') ? input.color : null,
+    color2: /^#[\da-f]{6}$/i.test(input.color2 ?? '') ? input.color2 : null,
     createdAt: cleanText(input.createdAt, 40), updatedAt: cleanText(input.updatedAt, 40)
   };
 }
@@ -104,6 +106,8 @@ async function proofHash(proof, salt, iterations) {
 async function accountGuard(db, request, scope) {
   const key = `${scope}:${request.headers.get('cf-connecting-ip') ?? 'locale'}`;
   const now = Date.now();
+  // The attempts table keeps the connecting address only for the rate limit: whatever is older than a day is dropped.
+  await db.prepare('DELETE FROM attempts WHERE window_start < ?').bind(now - 86_400_000).run();
   const row = await db.prepare('SELECT count, window_start FROM attempts WHERE key = ?').bind(key).first();
   const fresh = !row || now - row.window_start > 15 * 60_000;
   return {
@@ -135,7 +139,7 @@ async function handleAccounts(request, env, url) {
   await ensureSchema(db);
   const path = url.pathname.replace(/\/+$/, '');
   // The game asks whether the service answers before offering the account (no data, no session needed).
-  if (path === '/api/account/status' && request.method === 'GET') return json(request, { ok: true, service: 'accounts' });
+  if (path === '/api/account/status' && request.method === 'GET') return json(request, { ok: true, service: 'accounts', features: ['account-delete'] });
   if ((path === '/api/account/register' || path === '/api/account/login') && request.method === 'POST') {
     const guard = await accountGuard(db, request, path.endsWith('register') ? 'registrazione' : 'accesso');
     if (guard.blocked) return json(request, { error: 'Troppi tentativi: riprova tra 15 minuti.' }, 429);
@@ -166,6 +170,26 @@ async function handleAccounts(request, env, url) {
   if (path === '/api/account/me' && request.method === 'GET') {
     const count = await db.prepare('SELECT COUNT(*) AS saves FROM saves WHERE user_id = ?').bind(account.id).first();
     return json(request, { username: account.username, createdAt: account.createdAt, saves: count?.saves ?? 0, maxSaves: MAX_SAVES });
+  }
+  // Deletion of the account: the player proves the password again (a stolen session alone cannot do it) and types the confirmation word. The account is found through the session
+  // alone, so nobody can delete another account. Saves, sessions and the account go in one D1 batch (all or nothing); nothing of the player stays in the tables.
+  if (path === '/api/account' && request.method === 'DELETE') {
+    const guard = await accountGuard(db, request, 'cancellazione');
+    if (guard.blocked) return json(request, { error: 'Troppi tentativi: riprova tra 15 minuti.' }, 429);
+    const body = await request.json().catch(() => ({}));
+    if (body.confirm !== 'ELIMINA') return json(request, { error: 'Per confermare scrivi ELIMINA: l’account non è stato eliminato.' }, 400);
+    if (!/^[\da-f]{64}$/.test(String(body.proof ?? ''))) return json(request, { error: 'Inserisci la password per confermare.' }, 400);
+    const user = await db.prepare('SELECT id, salt, hash, iterations FROM users WHERE id = ?').bind(account.id).first();
+    if (!user || !equalStrings(await proofHash(body.proof, user.salt, user.iterations), user.hash)) { await guard.fail(); return json(request, { error: 'Password non corretta: l’account non è stato eliminato.' }, 403); }
+    const saves = await db.prepare('SELECT COUNT(*) AS n FROM saves WHERE user_id = ?').bind(account.id).first();
+    const sessions = await db.prepare('SELECT COUNT(*) AS n FROM sessions WHERE user_id = ?').bind(account.id).first();
+    await db.batch([
+      db.prepare('DELETE FROM saves WHERE user_id = ?').bind(account.id),
+      db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(account.id),
+      db.prepare('DELETE FROM users WHERE id = ?').bind(account.id)
+    ]);
+    await guard.clear();
+    return json(request, { ok: true, deleted: { account: 1, saves: saves?.n ?? 0, sessions: sessions?.n ?? 0 } });
   }
   if (path === '/api/saves' && request.method === 'GET') {
     const { results } = await db.prepare('SELECT slot, name, meta, revision, size, updated_at AS updatedAt FROM saves WHERE user_id = ? ORDER BY updated_at DESC').bind(account.id).all();

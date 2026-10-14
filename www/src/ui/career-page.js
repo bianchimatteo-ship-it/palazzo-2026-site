@@ -1,13 +1,17 @@
 // CARRIERA — the path and the progression: four tracks (institutions, party, Parliament, Government), the odds of
 // every next step with the factors that decide them, offices and powers, the timeline and the goals.
-import { careerOverview } from '../core/career-overview.js?v=20260926-6';
-import { ADVANCEMENT_OUTCOMES } from '../core/progression-engine.js?v=20260926-6';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20260926-6';
-import { careerLevelLabel } from '../data/regions.js?v=20260926-6';
-import { formatDate } from '../core/time.js?v=20260926-6';
-import { glyph, officeIcon } from './visuals.js?v=20260926-6';
-import { renderCareerTimeline, renderMemoryPanel, renderObjectivesPanel, renderRolesPanel, renderWhyPanel } from './game-mode.js?v=20260926-6';
-import { arrow, badge, bar, card, empty, esc, num, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20260926-6';
+import { careerOverview } from '../core/career-overview.js?v=20261014-1';
+import { ADVANCEMENT_OUTCOMES } from '../core/progression-engine.js?v=20261014-1';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261014-1';
+import { careerLevelLabel } from '../data/regions.js?v=20261014-1';
+import { formatDate } from '../core/time.js?v=20261014-1';
+import { startOverview } from '../core/start-engine.js?v=20261014-1';
+import { renderGoals } from './goals-view.js?v=20261014-1';
+import { renderRetirement } from './hall-view.js?v=20261014-1';
+import { glyph, officeIcon } from './visuals.js?v=20261014-1';
+import { REPUTATIONS, REPUTATION_IDS } from '../data/simulation/standing-rules.js?v=20261014-1';
+import { renderCareerTimeline, renderMemoryPanel, renderRolesPanel, renderWhyPanel } from './game-mode.js?v=20261014-1';
+import { arrow, badge, bar, card, empty, esc, num, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261014-1';
 
 export const CAREER_TABS = Object.freeze([['percorso', 'Percorso'], ['progressione', 'Progressione'], ['incarichi', 'Incarichi e poteri'], ['cronologia', 'Cronologia'], ['obiettivi', 'Obiettivi']]);
 const STAT_ORDER = ['popularity', 'reputation', 'influence', 'experience', 'notoriety'];
@@ -55,15 +59,29 @@ function trackCard(track) {
 function origin(state, player) {
   const territory = state.dataset.territories.find(item => item.id === state.career.territoryId)?.name ?? player?.region ?? 'Italia';
   const start = (state.game.timeline ?? [])[0];
+  const directPresidency = state.career.startingOffice === 'presidenteRepubblica';
   const rows = [
-    ['Livello iniziale', esc(careerLevelLabel(state.career.initialLevel) ?? 'Da definire')],
+    [directPresidency ? 'Percorso iniziale' : 'Livello iniziale', esc(directPresidency ? 'Presidente della Repubblica' : careerLevelLabel(state.career.initialLevel) ?? 'Da definire')],
     ['Territorio', esc(territory)],
     ['Professione precedente', esc(player?.previousProfession ?? '—')],
     ['Inizio della carriera', start?.date ? esc(formatDate(start.date)) : '—'],
     ['Settimane di carriera', num(state.game.week.index, 0)],
     ['Partiti cambiati', num((state.game.pastParties ?? []).length, 0)]
   ];
-  return `<dl class="cp-facts">${rows.map(([label, value]) => `<div><dt>${esc(label)}</dt><dd>${value}</dd></div>`).join('')}</dl>`;
+  return `<dl class="cp-facts">${rows.map(([label, value]) => `<div><dt>${esc(label)}</dt><dd>${value}</dd></div>`).join('')}</dl>${startConditions(state)}`;
+}
+
+// The conditions the career started with, and how they stand now: debts to repay, an outsider's integration, a divided
+// party, enemies, the past, expectations. They keep producing consequences, so they stay on the page.
+const DEBT_STATUS = { aperto: 'da onorare', saldato: 'saldato', tradito: 'tradito: è diventato un nemico' };
+function startConditions(state) {
+  const view = startOverview(state.game);
+  if (!view) return '';
+  const rows = view.conditions.map(item => `<div class="cp-start-row"><strong>${esc(item.label)} · ${item.now}/3${item.now !== item.level ? ` <small>(alla partenza ${item.level}/3)</small>` : ''}</strong>${item.status ? `<small class="${item.id === 'debiti' && /aperti/.test(item.status) && !/^0 aperti/.test(item.status) ? 'tone-bad' : ''}">${esc(item.status)}</small>` : ''}<small>${esc(item.lines.join(' · '))}</small></div>`).join('');
+  const debts = view.debts.length ? `<h4 class="cp-sub">Debiti politici</h4>${view.debts.map(item => `<div class="cp-start-row"><strong>${esc(item.favor.charAt(0).toUpperCase() + item.favor.slice(1))}</strong><small>${esc(item.creditor)} · ${esc(DEBT_STATUS[item.status] ?? item.status)}${item.status === 'aperto' ? ` · ${item.weeksLeft > 0 ? `scade tra ${item.weeksLeft} settimane` : item.weeksLeft === 0 ? 'scade questa settimana' : `scaduto da ${-item.weeksLeft} settimane`}${item.deferred ? ` · rinviato ${item.deferred} ${item.deferred === 1 ? 'volta' : 'volte'}` : ''}` : ''}</small></div>`).join('')}` : '';
+  const history = view.history.length > 1 ? `<h4 class="cp-sub">Cosa è successo</h4><ul class="cp-start-history">${view.history.map(item => `<li><small>settimana ${item.week}</small> ${esc(item.text)}</li>`).join('')}</ul>` : '';
+  const heir = view.legacy ? `<p class="sx-note">Hai raccolto l’eredità politica di <b>${esc(view.legacy.name)}</b> (${esc(view.legacy.tier)}, ${view.legacy.score}/100): le condizioni qui sotto vengono anche da lì.</p>` : '';
+  return `<div class="cp-start"><h4 class="cp-sub">${esc(view.label)}${view.custom ? ' · scenario personalizzato' : ''}</h4>${heir}${rows}${debts}${history}<p class="sx-note">Le condizioni di partenza sono simulate: cambiano rapporti, risorse e promozioni, e producono nuove decisioni nell’agenda.</p></div>`;
 }
 
 function factorTable(odds) {
@@ -84,6 +102,29 @@ export function renderOddsCard(track) {
   return card({ kicker: `${track.label.toUpperCase()} · PROBABILITÀ SIMULATA`, title: track.next?.title ?? track.position, body, tone: chanceTone(track.odds.chance) === 'good' ? 'good' : '' });
 }
 
+// How the player stands: the capital, the notoriety and the influence, the four reputations (and what each is made of) and the
+// influence in each sector of public policy. Nothing here is granted: it is what the promotions weigh.
+export function renderStandingPanel(view) {
+  if (!view) return '';
+  const tone = value => value >= 60 ? 'good' : value < 40 ? 'bad' : '';
+  const reps = REPUTATION_IDS.map(id => {
+    const item = view.reputation[id];
+    const meta = REPUTATIONS[id];
+    if (item.value === null) return `<li class="cp-rep is-none"><span><strong>${esc(meta.label)}</strong><small>${esc(meta.detail)}</small></span><b>—</b></li>`;
+    const parts = item.parts.map(part => `<li><span>${esc(part.label)}</span><b class="${part.label === 'Reputazione generale' ? '' : part.value >= 0 ? 'tone-good' : 'tone-bad'}">${part.label === 'Reputazione generale' ? num(part.value, 0) : signed(part.value, 1)}</b></li>`).join('');
+    return `<li class="cp-rep"><span><strong>${esc(meta.label)}</strong><small>${esc(meta.drivers)}</small></span><b>${num(item.value, 0)}</b>${bar(item.value, tone(item.value))}<details><summary>Da cosa dipende</summary><ul class="cp-rep-parts">${parts}</ul></details></li>`;
+  }).join('');
+  const sectors = view.sectors.map(item => `<li class="cp-sector"><span>${esc(item.label)}</span><b>${num(item.value, 0)}</b>${bar(item.value, item.value >= 50 ? 'good' : '')}${item.floor > item.earned ? '<small>dall’incarico</small>' : ''}</li>`).join('');
+  const recent = (view.log ?? []).slice(0, 5).map(item => `<li><small>sett. ${item.week}</small> ${item.kind === 'settore' ? `Influenza ${esc((view.sectors.find(row => row.id === item.target)?.label ?? item.target).toLowerCase())}` : esc(REPUTATIONS[item.target]?.label ?? item.target)} <b class="tone-${item.delta >= 0 ? 'good' : 'bad'}">${signed(item.delta, 1)}</b>${item.cause ? ` · ${esc(item.cause)}` : ''}</li>`).join('');
+  return `<div class="cp-profile">
+    <dl class="cp-capital"><div><dt>Capitale politico</dt><dd>${num(view.capital, 0)}</dd></div><div><dt>Notorietà</dt><dd>${num(view.notoriety, 0)}</dd></div><div><dt>Influenza</dt><dd>${num(view.influence, 0)}</dd></div><div><dt>Reputazione generale</dt><dd>${num(view.base, 0)}</dd></div></dl>
+    <h4 class="cp-sub">Le quattro reputazioni</h4><ul class="cp-reps">${reps}</ul>
+    <h4 class="cp-sub">Influenza per settore</h4><ul class="cp-sectors">${sectors}</ul>
+    ${recent ? `<h4 class="cp-sub">Cosa l’ha mossa di recente</h4><ul class="cp-start-history">${recent}</ul>` : ''}
+    <p class="sx-note">La reputazione generale è una; le altre dicono chi ti stima: il partito, i cittadini, le redazioni, le istituzioni. L’influenza in un settore nasce da atti, leggi e deleghe su quei temi e svanisce se non la mantieni: pesa sulla competenza che ti riconoscono per ministeri ed emendamenti.</p>
+  </div>`;
+}
+
 function contestsTable(contests) {
   const rows = contests.map(item => ({
     date: item.date ? esc(formatDate(item.date, { day: 'numeric', month: 'short', year: 'numeric' })) : item.week ? `S${item.week}` : '—',
@@ -99,7 +140,7 @@ function officesCard(state, player) {
   const offices = state.dataset.offices.filter(item => item.politicianId === player?.id).sort((a, b) => String(b.startDate).localeCompare(String(a.startDate)));
   const current = offices.filter(item => !item.endDate);
   const past = offices.filter(item => item.endDate);
-  const row = item => `<li><span class="cp-office-icon">${glyph(officeIcon(item), 16)}</span><span><strong>${esc(item.title)}</strong><small>${esc(item.institution ?? '')} · dal ${esc(formatDate(item.startDate, { day: 'numeric', month: 'short', year: 'numeric' }))}${item.endDate ? ` al ${esc(formatDate(item.endDate, { day: 'numeric', month: 'short', year: 'numeric' }))}` : ''}</small></span>${item.endDate ? badge('Concluso', 'neutral') : badge('In corso', 'good')}</li>`;
+  const row = item => `<li><span class="cp-office-icon">${glyph(officeIcon(item), 16)}</span><span><strong>${esc(item.title)}</strong><small>${esc(item.institution ?? '')} · dal ${esc(formatDate(item.startDate, { day: 'numeric', month: 'short', year: 'numeric' }))}${item.endDate ? ` al ${esc(formatDate(item.endDate, { day: 'numeric', month: 'short', year: 'numeric' }))}${item.endReason ? ` · ${esc(item.endReason)}` : ''}` : ''}</small></span>${item.endDate ? badge('Concluso', 'neutral') : badge('In corso', 'good')}</li>`;
   const minor = state.game.party?.minorRoles ?? [];
   return `${current.length ? `<ul class="cp-offices">${current.map(row).join('')}</ul>` : '<p class="sx-empty">Nessun incarico in corso: si conquistano alle elezioni, nel partito e in Parlamento.</p>'}
     ${minor.length ? `<h4 class="cp-sub">Incarichi minori ottenuti</h4><ul class="cp-offices is-minor">${minor.map(item => `<li><span class="cp-office-icon">${glyph('flag', 16)}</span><span><strong>${esc(item.title)}</strong><small>settimana ${item.week} · simulazione</small></span></li>`).join('')}</ul>` : ''}
@@ -135,11 +176,12 @@ export function renderCareerPage(state, { tab = null, timelineFilter = 'tutto' }
   let body = '';
   if (active === 'percorso') {
     body = `<div class="cp-tracks">${overview.tracks.map(trackCard).join('')}</div>
-      <div class="sx-grid two">${card({ kicker: 'PUNTO DI PARTENZA', title: 'Da dove sei partito', body: origin(state, player) })}${card({ kicker: 'TENTATIVI RECENTI', title: 'Promozioni tentate', body: contestsTable(overview.contests.slice(0, 5)), action: overview.contests.length ? `<button class="text-link" data-section-tab="carriera" data-section-tab-value="progressione">Tutti ${arrow}</button>` : '' })}</div>`;
+      <div class="sx-grid two">${card({ kicker: 'PUNTO DI PARTENZA', title: 'Da dove sei partito', body: origin(state, player) })}${card({ kicker: 'TENTATIVI RECENTI', title: 'Promozioni tentate', body: contestsTable(overview.contests.slice(0, 5)), action: overview.contests.length ? `<button class="text-link" data-section-tab="carriera" data-section-tab-value="progressione">Tutti ${arrow}</button>` : '' })}</div>
+      ${card({ kicker: state.game.status === 'ended' ? 'CARRIERA CONCLUSA' : 'FINE DELLA CARRIERA', title: 'Eredità politica', body: renderRetirement(state) })}`;
   } else if (active === 'progressione') {
     const withOdds = overview.tracks.filter(track => track.odds);
     const blocked = overview.tracks.filter(track => !track.odds && track.next);
-    body = `<div class="sx-card cp-explainer"><span class="section-kicker">COME FUNZIONA</span><p>Nessun incarico arriva da solo. Ogni tentativo pesa <b>consenso, reputazione, esperienza, influenza, risultati elettorali, rapporti interni, forza della tua area, salute del partito, territorio, risorse e momento politico</b>. Superare la soglia rende la promozione probabile, mai certa: puoi ottenere l’incarico, uno minore, un rinvio, perdere contro un altro nome o, se sei molto sotto, perdere quello che hai.</p></div>
+    body = `${card({ kicker: 'PROFILO POLITICO · SIMULAZIONE', title: 'Come ti vedono', body: renderStandingPanel(overview.standing) })}<div class="sx-card cp-explainer"><span class="section-kicker">COME FUNZIONA</span><p>Nessun incarico arriva da solo. Ogni tentativo pesa <b>consenso, reputazione, esperienza, influenza, risultati elettorali, rapporti interni, forza della tua area, salute del partito, territorio, risorse e momento politico</b>. Superare la soglia rende la promozione probabile, mai certa: puoi ottenere l’incarico, uno minore, un rinvio, perdere contro un altro nome o, se sei molto sotto, perdere quello che hai.</p></div>
       ${withOdds.length ? `<div class="sx-grid two">${withOdds.map(renderOddsCard).join('')}</div>` : ''}
       ${blocked.length ? card({ kicker: 'NON ANCORA A PORTATA', title: 'Cosa manca', body: `<ul class="cp-blocked">${blocked.map(track => `<li><span class="cp-track-icon">${glyph(track.icon, 16)}</span><span><strong>${esc(track.label)}: ${esc(track.next.title)}</strong><small>${esc(track.problems?.length ? track.problems.join(' ') : track.blocker ?? track.requirement)}</small></span>${actionButton(track.action, null, false)}</li>`).join('')}</ul>` }) : ''}
       ${card({ kicker: 'STORICO DEI TENTATIVI · SIMULAZIONE', title: `${overview.contests.length} ${overview.contests.length === 1 ? 'tentativo' : 'tentativi'}`, body: contestsTable(overview.contests) })}`;
@@ -148,7 +190,7 @@ export function renderCareerPage(state, { tab = null, timelineFilter = 'tutto' }
   } else if (active === 'cronologia') {
     body = `<div class="cp-two-col">${card({ kicker: 'CRONOLOGIA · SIMULAZIONE', title: 'La tua carriera, tappa per tappa', body: renderCareerTimeline(state, timelineFilter), className: 'career-timeline-panel' })}${card({ kicker: 'MEMORIA POLITICA', title: 'Quello che non si dimentica', body: renderMemoryPanel(state) })}</div>`;
   } else {
-    body = `<div class="sx-grid two">${card({ kicker: 'TRAGUARDI', title: 'Obiettivi della carriera', body: renderObjectivesPanel(state) })}${card({ kicker: 'PERCHÉ È CAMBIATO', title: 'Da dove vengono i tuoi numeri', body: renderWhyPanel(state) })}</div>`;
+    body = `${renderGoals(state)}${card({ kicker: 'PERCHÉ È CAMBIATO', title: 'Da dove vengono i tuoi numeri', body: renderWhyPanel(state) })}`;
   }
   return `<div class="career-page">${hero(state, player, overview)}${sectionTabs('carriera', CAREER_TABS.map(([id, label]) => [id, label, counts[id]]), active)}<div class="sx-body" role="tabpanel">${body}</div></div>`;
 }

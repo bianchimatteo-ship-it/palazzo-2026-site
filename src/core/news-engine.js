@@ -1,8 +1,8 @@
 // Simulated newsroom: headlines tied to what happens in the career, written with different structures
 // (fact, question, number, local angle, quote-like, analysis) and never the same template twice in a row.
 // Headlines speak of the player's own character and of the simulated world: no statement is put in the mouth of real people.
-import { ARTICLE_CATEGORIES, NEWSROOM_OUTLETS, NEWS_RULES as RULES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261013-2';
-import { WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20261013-2';
+import { ARTICLE_CATEGORIES, NEWSROOM_OUTLETS, NEWS_RULES as RULES, RADIO_PROGRAMMES, RADIO_RULES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261014-1';
+import { WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20261014-1';
 const RECENT = 18;
 // A template not used recently; when every template of the kind has been used, the least recently used one.
 const pick = (list, seed, recent) => {
@@ -92,7 +92,7 @@ export function normalizeMedia(input) {
     const identity = NEWSROOM_OUTLETS[outlet.id];
     return identity ? { ...outlet, name: identity.name, tagline: identity.tagline, leaning: identity.leaning, baseCredibility: identity.credibility, credibility: Number.isFinite(outlet.credibility) ? outlet.credibility : identity.credibility } : outlet;
   });
-  return { ...media, outlets, articles: Array.isArray(media.articles) ? media.articles : [], stories: Array.isArray(media.stories) ? media.stories : [], seen: Array.isArray(media.seen) ? media.seen : [], pending: Array.isArray(media.pending) ? media.pending : [], cursor: { historyId: null, lawWeek: 0, ...(media.cursor ?? {}) }, seq: Number.isFinite(media.seq) ? media.seq : 0 };
+  return { ...media, outlets, articles: Array.isArray(media.articles) ? media.articles : [], stories: Array.isArray(media.stories) ? media.stories : [], seen: Array.isArray(media.seen) ? media.seen : [], pending: Array.isArray(media.pending) ? media.pending : [], cursor: { historyId: null, lawWeek: 0, ...(media.cursor ?? {}) }, seq: Number.isFinite(media.seq) ? media.seq : 0, radio: { seq: 0, ...(media.radio ?? {}), bulletins: Array.isArray(media.radio?.bulletins) ? media.radio.bulletins : [] } };
 }
 // How an outlet frames the Government: against it when its leaning is opposite to the premier's side, with it when it is the same.
 export function edgeOf(outlet, govAxis = 0) {
@@ -182,6 +182,14 @@ const BUILDERS = {
     const d = fact.data;
     return { headline: { neutral: d.headline, critical: d.critical ?? d.headline, friendly: d.friendly ?? d.headline }, deck: d.deck, paragraphs: d.paragraphs, facts: d.facts };
   },
+  elezione(fact) {
+    const d = fact.data;
+    const pct = Number.isFinite(d.percent) ? `${String(Math.round(d.percent * 10) / 10).replace('.', ',')}%` : null;
+    const won = d.personalMandate;
+    const what = d.national ? 'Elezioni politiche' : d.label ?? 'Elezioni';
+    const head = won ? { neutral: `${what}: il tuo risultato${pct ? ` è del ${pct}` : ''} vale un mandato`, critical: `${what}: ${pct ? `${pct} e ` : ''}un mandato conquistato, ma restano le divisioni`, friendly: `${what}: successo${pct ? ` al ${pct}` : ''}, mandato conquistato` } : { neutral: `${what}: ${pct ? `${pct}, ` : ''}nessun mandato`, critical: `${what}: ${pct ? `${pct}, ` : ''}la candidatura non basta`, friendly: `${what}: ${pct ? `${pct}, ` : ''}il risultato non basta per il mandato` };
+    return { headline: head, deck: d.outcomeLabel ?? fact.text, paragraphs: [`${d.label ?? 'Il voto'} si chiude${pct ? ` con il ${pct} per la tua candidatura` : ''}${d.seats ? ` e ${d.seats} ${d.seats === 1 ? 'seggio' : 'seggi'}` : ''}. ${won ? 'Il mandato personale è conquistato.' : 'Il mandato personale non è raggiunto.'}`, d.outcomeLabel ? `Esito: ${lower(d.outcomeLabel)}.` : '', d.objectiveMet === true ? 'L’obiettivo che ti eri dato è stato raggiunto.' : d.objectiveMet === false ? 'L’obiettivo che ti eri dato non è stato raggiunto.' : ''].filter(Boolean), facts: [['Elezione', d.label ?? '—'], ...(pct ? [['Risultato', pct]] : []), ...(d.seats ? [['Seggi', d.seats]] : []), ['Mandato', won ? 'conquistato' : 'non raggiunto']] };
+  },
   attivita(fact) {
     const d = fact.data;
     const how = d.tone === 'bad' ? 'una prova difficile' : d.tone === 'good' ? 'una prova convincente' : 'una prova senza scossoni';
@@ -262,6 +270,12 @@ function collectFacts(media, ctx) {
   facts.push(...financeFacts(ctx));
   for (const survey of ctx.surveys ?? []) facts.push(surveyFact(survey, media));
   for (const fact of ctx.extraFacts ?? []) facts.push(fact);
+  // The votes the player took part in: the result of every election is news, a general election is breaking news.
+  for (const election of ctx.elections ?? []) {
+    if (!election?.key) continue;
+    const national = election.type === 'politiche';
+    facts.push({ key: `elezione:${election.key}`, kind: 'elezione', category: 'elezioni', importance: national ? RULES.breakingMin : 4, tone: election.personalMandate ? 'good' : 'bad', week: ctx.week, date: election.date ?? ctx.date, text: `Risultato: ${election.label}.`, data: { ...election, national } });
+  }
   return facts.filter(Boolean);
 }
 // A survey on a law in force: the article, and a development of the law's story (opened when the verdict is against and nobody had contested it yet).
@@ -355,7 +369,9 @@ export function publishFact(mediaIn, fact, ctx) {
   const story = fact.story ? touchStory(media, fact.story, fact.week, fact.date, outlet.id) : null;
   const paragraphs = []; let used = 0;
   for (const paragraph of built.paragraphs) { if (used + paragraph.length > RULES.bodyMax && paragraphs.length) break; paragraphs.push(paragraph); used += paragraph.length; }
-  const article = { id: `articolo-${fact.week}-${media.seq}`, key: fact.key, week: fact.week, date: fact.date, outletId: outlet.id, outlet: outlet.name, category: fact.category, headline: pickVariant(built.headline, edge), deck: built.deck, body: paragraphs, facts: built.facts.map(([label, value]) => ({ label, value: String(value) })), tone: fact.tone, importance: fact.importance, edge, storyId: story?.id ?? null, source: RULES.source };
+  // Breaking news is rare: only a fact that weighs enough, and one a week.
+  const breaking = (fact.importance ?? 0) >= RULES.breakingMin && !media.articles.some(item => item.breaking && item.week === fact.week);
+  const article = { id: `articolo-${fact.week}-${media.seq}`, key: fact.key, week: fact.week, date: fact.date, outletId: outlet.id, outlet: outlet.name, category: fact.category, headline: pickVariant(built.headline, edge), deck: built.deck, body: paragraphs, facts: built.facts.map(([label, value]) => ({ label, value: String(value) })), tone: fact.tone, importance: fact.importance, edge, storyId: story?.id ?? null, kind: fact.kind, region: fact.data?.region ?? fact.region ?? null, breaking, source: RULES.source };
   media.articles = [article, ...media.articles].slice(0, RULES.articlesKept);
   media.seen = [...media.seen, fact.key].slice(-RULES.seenKept);
   if (story) {
@@ -385,6 +401,7 @@ export function newsroomWeek(societyIn, ctx) {
   if (history.length) media.cursor.historyId = history.at(-1).id;
   media.cursor.lawWeek = Math.max(media.cursor.lawWeek, ctx.week);
   storiesWeek(media, ctx);
+  radioWeek(media, ctx);
   return { ...societyIn, media };
 }
 function storiesWeek(media, ctx) {
@@ -414,5 +431,48 @@ export function activityArticle(societyIn, data, ctx) {
   const media = normalizeMedia(copy(societyIn.media));
   media.coverage = societyIn.media.coverage;
   publishFact(media, { key: `attivita:${data.activity}:${data.week}:${data.name}:${data.topic}`, kind: 'attivita', category: 'politica', importance: 2, tone: data.tone ?? 'neutral', week: data.week, date: data.date, text: '', outletHint: data.outletId, data }, ctx);
+  return { ...societyIn, media };
+}
+
+// ---------- the radio of LA POLITICA 24 ----------
+// Every week a bulletin and the columns that have something to say, written from the articles of the week (and, for the polls, from the figures the game has): nothing is invented, every
+// item points to the article it comes from. A week with nothing to say has no bulletin.
+function radioWeek(media, ctx) {
+  const week = ctx.week;
+  media.radio ??= { seq: 0, bulletins: [] };
+  if (media.radio.bulletins.some(item => item.week === week)) return;
+  const articles = media.articles.filter(item => item.week === week).sort((a, b) => (b.breaking ? 1 : 0) - (a.breaking ? 1 : 0) || (b.importance ?? 0) - (a.importance ?? 0) || compareText(a.id, b.id));
+  const item = article => ({ articleId: article.id, headline: article.headline, outlet: article.outlet, category: article.category, storyId: article.storyId ?? null, breaking: Boolean(article.breaking), tone: article.tone });
+  const make = (programme, items, intro, extra = {}) => { media.radio.seq += 1; media.radio.bulletins.unshift({ id: `radio-${week}-${programme}`, seq: media.radio.seq, week, date: ctx.date, programme, label: RADIO_PROGRAMMES[programme].label, slot: RADIO_PROGRAMMES[programme].slot, intro, items, ...extra, source: RULES.source }); };
+  if (articles.length) make('notiziario', articles.slice(0, RADIO_RULES.itemsPerBulletin).map(item), articles.some(entry => entry.breaking) ? 'Edizione straordinaria in apertura, poi le altre notizie della settimana.' : `Ecco le notizie della settimana ${week}.`);
+  const poll = ctx.pollLine;
+  if (poll && Number.isFinite(poll.share)) make('sondaggi', [], `${poll.label}: ${String(Math.round(poll.share * 10) / 10).replace('.', ',')}% nell’ultima rilevazione${Number.isFinite(poll.delta) && poll.delta ? `, ${poll.delta > 0 ? 'in crescita di' : 'in calo di'} ${String(Math.abs(Math.round(poll.delta * 10) / 10)).replace('.', ',')} punti` : ', in linea con la settimana scorsa'}.`, { figures: [{ label: poll.label, share: poll.share, delta: poll.delta ?? 0 }], pollWeek: poll.week ?? week });
+  const local = articles.filter(entry => ['territorio', 'opere'].includes(entry.category)).slice(0, RADIO_RULES.itemsPerColumn);
+  if (local.length) make('territorio', local.map(item), 'Dai territori e dai cantieri.');
+  const palace = articles.filter(entry => ['parlamento', 'governo', 'elezioni'].includes(entry.category)).slice(0, RADIO_RULES.itemsPerColumn);
+  if (palace.length) make('palazzo', palace.map(item), 'Dal Parlamento, dal Governo e dalle urne.');
+  media.radio.bulletins = media.radio.bulletins.slice(0, RADIO_RULES.bulletinsKept);
+}
+// The articles the Home may show: recent, not yet read, and about the career (the player's own work, the party, the elections, the territory, the Parliament for those who sit in it).
+export function relevantArticles(media, { week, region = null, seat = false, limit = 3 } = {}) {
+  if (!media) return [];
+  const score = article => {
+    let value = article.importance ?? 1;
+    if (article.breaking) value += 3;
+    if (article.kind === 'attivita') value += 3;
+    if (['elezioni', 'partito', 'sondaggi'].includes(article.category)) value += 2;
+    if (['territorio', 'opere'].includes(article.category)) value += region && article.region === region ? 2 : 0;
+    if (seat && ['parlamento', 'governo'].includes(article.category)) value += 1;
+    return value;
+  };
+  return media.articles.filter(item => !item.homeSeen && item.week >= week - 2).map(item => ({ item, value: score(item) })).filter(entry => entry.value >= 4).sort((a, b) => b.value - a.value || b.item.week - a.item.week || compareText(a.item.id, b.item.id)).slice(0, limit).map(entry => entry.item);
+}
+// Marks articles as read on the Home (they are not shown there again); the archive keeps them.
+export function markHomeSeen(societyIn, ids) {
+  if (!societyIn?.media) return societyIn;
+  const wanted = new Set(ids);
+  const media = normalizeMedia(copy(societyIn.media));
+  media.coverage = societyIn.media.coverage;
+  media.articles = media.articles.map(item => wanted.has(item.id) ? { ...item, homeSeen: true } : item);
   return { ...societyIn, media };
 }

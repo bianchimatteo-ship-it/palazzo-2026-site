@@ -147,12 +147,18 @@ assert.deepEqual(destinations, [['panoramica', 'Panoramica'], ['carriera', 'Carr
 assert.ok(!sidebar.includes('nav-group-label'), 'Nessun gruppo “Altro” in più: ogni pagina è sotto la sua destinazione.');
 // A destination with several pages opens them as a menu under it; the other destinations stay shut.
 assert.ok(sidebar.includes('class="nav-sub"') === false, 'La Panoramica non apre nessun menu secondario.');
-// The Home as a command centre, in this order: identity and main action, resources, priorities and decisions,
-// what is coming, every area in brief, then the details folded.
-// 1. who you are and the main action; 2. what to do now (priorities, decisions, deadlines); 3. where you stand (resources, personal indicators, then the cards of consensus, relations,
-// offices, majority, party and money); 4. what is coming (elections, goals); 5. the news that concern the career (only when the newsroom has written something); 6. the secondary areas; the details.
-const order = ['hqc-head', 'hqc-action', 'hqc-priorities', 'id="hq-inbox"', 'hqc-deadline-band', 'hqc-resources', 'hqc-indicators', 'hqc-status-head', 'hqc-elections', 'hqc-secondary-head', 'hqc-details'].map(marker => home.indexOf(marker));
+// The Home as a command centre, in this order: 1. who you are, the role, party and territory, and the main action; 2. the days, funds, capital and consensus you have and the staff's priorities;
+// 3. the decisions of the week and the activities to do, side by side; 4. what is coming (deadlines, the next vote, goals); 5. the news that concern the career (only when the newsroom has written
+// something); 6. the details, folded: where you stand (personal indicators and the cards of consensus, relations, offices, majority, party, money) and the other areas.
+const order = ['hqc-head', 'hqc-action', 'hqc-resources', 'hqc-priorities', 'id="hq-inbox"', 'id="hq-planner"', 'hqc-deadline-band', 'hqc-elections', 'hqc-details', 'id="hq-status"', 'hqc-secondary-head'].map(marker => home.indexOf(marker));
 assert.ok(order.every((position, index) => position > 0 && (index === 0 || position > order[index - 1])), `Home: blocchi nell’ordine previsto (${order.join(', ')}).`);
+{
+  const board = home.slice(home.indexOf('hqc-board hqc-board-act'), home.indexOf('hqc-board hqc-board-next'));
+  assert.ok(board.includes('id="hq-inbox"') && board.includes('id="hq-planner"'), 'Home: le decisioni e le attività della settimana sono vicine, nello stesso blocco.');
+  assert.equal((home.match(/class="hq-planner"/g) ?? []).length, 1, 'Home: l’elenco delle attività c’è una volta sola (non ripetuto negli approfondimenti).');
+  assert.equal((home.match(/class="hq-meters"/g) ?? []).length, 1, 'Home: gli indicatori personali non sono ripetuti.');
+  assert.ok((home.match(/class="hqc-resource"/g) ?? []).length === 4 && ['Giorni disponibili', 'Fondi', 'Capitale politico', 'Consenso'].every(label => home.includes(`<small>${label}</small>`)), 'Home: il riepilogo delle risorse ha giorni, fondi, capitale politico e consenso.');
+}
 {
   const cardOrder = ['ELEZIONI E SONDAGGI', 'RELAZIONI', 'CARRIERA', 'PARLAMENTO E GOVERNO', 'PARTITO', 'FINANZE'].map(area => home.indexOf(`<span class="section-kicker">${area}</span>`));
   assert.ok(cardOrder.every((position, index) => position > 0 && (index === 0 || position > cardOrder[index - 1])), `Home: le schede dello stato (consenso, relazioni, cariche, maggioranza, partito, risorse) nell’ordine previsto (${cardOrder.join(', ')}).`);
@@ -160,10 +166,10 @@ assert.ok(order.every((position, index) => position > 0 && (index === 0 || posit
   assert.ok(secondaryOrder.every((position, index) => position > cardOrder.at(-1) && (index === 0 || position > secondaryOrder[index - 1])), 'Home: le aree secondarie vengono dopo quelle dello stato.');
   assert.ok(home.includes('class="hq-meters"') && !home.slice(home.indexOf('hqc-head'), home.indexOf('hqc-board')).includes('hq-meters'), 'Home: gli indicatori personali sono un blocco a sé, non nell’intestazione.');
   assert.ok(home.includes('kind-partito') || home.includes('kind-indipendente'), 'Home: il partito nell’intestazione è un’etichetta con il suo glifo.');
-  if (home.includes('hqc-news')) assert.ok(home.indexOf('hqc-elections') < home.indexOf('hqc-news') && home.indexOf('hqc-news') < home.indexOf('hqc-secondary-head') && home.includes('NOTIZIE · SIMULATE'), 'Home: le notizie rilevanti stanno dopo gli appuntamenti e prima delle aree secondarie, dichiarate simulate.');
+  if (home.includes('hqc-news')) assert.ok(home.indexOf('hqc-elections') < home.indexOf('hqc-news') && home.indexOf('hqc-news') < home.indexOf('hq-status') && home.includes('LA POLITICA 24 · SIMULATA'), 'Home: le notizie rilevanti stanno dopo gli appuntamenti e prima delle aree secondarie, dichiarate simulate.');
 }
 for (const area of ['PAESE', 'PARLAMENTO E GOVERNO', 'PARTITO', 'ELEZIONI E SONDAGGI', 'CARRIERA', 'TERRITORIO', 'MEDIA', 'FINANZE', 'RELAZIONI', 'MEMORIA POLITICA']) assert.ok(home.includes(`<span class="section-kicker">${area}</span>`), `Home: manca il riepilogo ${area}.`);
-assert.ok((home.match(/class="hqc-drawer /g) ?? []).length >= 9 && home.includes('data-remember="home-hq-planner"'), 'Home: approfondimenti richiudibili e ricordati.');
+assert.ok((home.match(/class="hqc-drawer /g) ?? []).length >= 9 && home.includes('data-remember="home-hq-status"'), 'Home: approfondimenti richiudibili e ricordati.');
 assert.ok(home.includes('data-mobile-sheet hidden') && ['calendario', 'eventi', 'carriera', 'partito', 'finanze', 'partiti-lista', 'parlamento', 'governo', 'leggi', 'territori', 'notizie', 'archivio', 'politici', 'profilo', 'impostazioni'].every(id => home.includes(`class="sheet-item " data-nav="${id}"`) || home.includes(`class="sheet-item active" data-nav="${id}"`)), 'Il pannello “Altro” raggiunge tutte le sezioni.');
 // Branding: the party created in the wizard has a real identity used across the game.
 const userParty = store.getState().dataset.parties.find(party => party.source === 'user');

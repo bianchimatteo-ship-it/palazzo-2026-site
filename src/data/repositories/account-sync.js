@@ -13,9 +13,16 @@ const read = key => { try { return JSON.parse(globalThis.localStorage?.getItem(k
 const write = (key, value) => { try { if (value === null) globalThis.localStorage?.removeItem(key); else globalThis.localStorage?.setItem(key, JSON.stringify(value)); } catch { /* storage unavailable */ } };
 
 // Where the API lives: on the Worker (and its local preview) it is the same site; GitHub Pages uses the Worker.
+// The installed app (Capacitor) runs on its own origin (capacitor://localhost, https://localhost): the account service is always the published Worker.
+const isNativeApp = () => globalThis.Capacitor?.isNativePlatform?.() === true || globalThis.location?.protocol === 'capacitor:';
+// Where the public pages of the game live (privacy, terms, account deletion): the same site on the web, the published site inside the app.
+export function publicSiteBase() {
+  const location = globalThis.location;
+  return !location || location.protocol === 'file:' || isNativeApp() ? `${PRODUCTION_ORIGIN}/` : '';
+}
 export function accountApiBase() {
   const location = globalThis.location;
-  if (!location) return PRODUCTION_ORIGIN;
+  if (!location || isNativeApp()) return PRODUCTION_ORIGIN;
   if (/workers\.dev$/.test(location.hostname) || location.port === '8791' || location.hostname === '127.0.0.1') return location.origin;
   if (/github\.io$/.test(location.hostname)) return PRODUCTION_ORIGIN;
   return null;
@@ -91,6 +98,22 @@ export async function login(username, password) {
 export async function logout() {
   try { if (currentAccount()) await call('/api/account/logout', { method: 'POST' }); }
   finally { write(ACCOUNT_KEY, null); }
+}
+// Deletes the account and everything kept online for it (saves, sessions). The password is proved again and the word ELIMINA typed; what stays on this device (the saves of
+// the browser) is not touched. Nothing is forgotten locally unless the server confirmed the deletion.
+export async function deleteAccount(password, confirm) {
+  const account = currentAccount();
+  if (!account) throw new Error('Accedi per eliminare l’account.');
+  if (String(password ?? '').length < PASSWORD_MIN) throw new Error(`Inserisci la password dell’account (almeno ${PASSWORD_MIN} caratteri).`);
+  if (String(confirm ?? '').trim() !== 'ELIMINA') throw new Error('Per confermare scrivi ELIMINA.');
+  const body = await call('/api/account', { method: 'DELETE', body: { proof: await passwordProof(account.username, password), confirm: 'ELIMINA' } });
+  write(ACCOUNT_KEY, null); write(REVISIONS_KEY, null);
+  return body;
+}
+// After the account of `username` was deleted elsewhere (the public deletion page): this browser forgets its session if it was the same account.
+export function forgetAccountIf(username) {
+  if (currentAccount()?.username === normalizeUsername(username)) { write(ACCOUNT_KEY, null); write(REVISIONS_KEY, null); return true; }
+  return false;
 }
 export const accountInfo = () => call('/api/account/me');
 export async function listCloudSaves() {

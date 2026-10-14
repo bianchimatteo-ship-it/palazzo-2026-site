@@ -1,19 +1,19 @@
-import { activeMinisters, canManageParliament, CHAMBERS, CONTEST_COST, CONTEST_WINDOW_DAYS, GOVERNMENT_POST_REQUIREMENTS, governingGroupIds, governmentPostProblems, MINISTERIAL_PORTFOLIOS, nextParliamentaryRole, parliamentGroupFacts, playerInMajority } from '../core/parliament-engine.js?v=20261013-2';
-import { amendmentOdds, forecastVote, LAW_SPONSORS, PLAYER_VOTE_CHOICES } from '../core/lawmaking-engine.js?v=20261013-2';
-import { competenceIn } from '../core/standing-engine.js?v=20261013-2';
-import { heldOfficesOf } from '../core/roles.js?v=20261013-2';
-import { AREA_BY_ID, FINANCING, GOVERNMENT_LINES, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261013-2';
+import { activeMinisters, canManageParliament, CHAMBERS, CONTEST_COST, CONTEST_WINDOW_DAYS, GOVERNMENT_POST_REQUIREMENTS, governingGroupIds, governmentPostProblems, MINISTERIAL_PORTFOLIOS, nextParliamentaryRole, parliamentGroupFacts, playerInMajority } from '../core/parliament-engine.js?v=20261014-1';
+import { amendmentOdds, forecastVote, LAW_SPONSORS, PLAYER_VOTE_CHOICES } from '../core/lawmaking-engine.js?v=20261014-1';
+import { competenceIn } from '../core/standing-engine.js?v=20261014-1';
+import { heldOfficesOf } from '../core/roles.js?v=20261014-1';
+import { AREA_BY_ID, FINANCING, GOVERNMENT_LINES, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261014-1';
 const GOVERNMENT_LINE_LABELS = Object.fromEntries(Object.entries(GOVERNMENT_LINES).map(([id, item]) => [id, item.label]));
-import { AMENDMENT_CAPITAL_COST } from '../data/simulation/career-rules.js?v=20261013-2';
-import { DATA_SOURCES } from '../data/schema.js?v=20261013-2';
-import { careerOverview } from '../core/career-overview.js?v=20261013-2';
-import { voteSummary } from '../core/vote-engine.js?v=20261013-2';
-import { artTile, glyph, LAW_ICONS } from './visuals.js?v=20261013-2';
-import { measureDesign, projectLaw } from '../core/society-engine.js?v=20261013-2';
-import { dossierPanel } from './dossier-view.js?v=20261013-2';
-import { accordPanel, governmentDesk, lawContent, policyFields, policyPreview } from './policy-mode.js?v=20261013-2';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261013-2';
-import { legislatureLabel } from '../core/legislature-engine.js?v=20261013-2';
+import { AMENDMENT_CAPITAL_COST } from '../data/simulation/career-rules.js?v=20261014-1';
+import { DATA_SOURCES } from '../data/schema.js?v=20261014-1';
+import { careerOverview } from '../core/career-overview.js?v=20261014-1';
+import { voteSummary } from '../core/vote-engine.js?v=20261014-1';
+import { artTile, glyph, LAW_ICONS } from './visuals.js?v=20261014-1';
+import { measureDesign, projectLaw } from '../core/society-engine.js?v=20261014-1';
+import { dossierPanel } from './dossier-view.js?v=20261014-1';
+import { accordPanel, governmentDesk, lawContent, policyFields, policyPreview } from './policy-mode.js?v=20261014-1';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261014-1';
+import { legislatureLabel } from '../core/legislature-engine.js?v=20261014-1';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const icon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
@@ -85,9 +85,9 @@ function rolePanel(parliament, currentDate, odds = null) {
   const chance = next && odds && Number.isFinite(odds.chance) ? ' · probabilità stimata <b>' + Math.round(odds.chance * 100) + '%</b>' : '';
   return '<section class="parliament-role-panel"><div><span class="section-kicker">INCARICHI PARLAMENTARI</span><h3>' + esc(standing.committeeRole?.title || 'Nessun incarico interno') + '</h3><p>Sostegno nel gruppo <b>' + whole(standing.partySupport) + ' / 100</b>' + (next ? ' · Prossimo obiettivo: <b>' + esc(next.title) + '</b> (soglia ' + whole(standing.competitionStrength ?? next.threshold) + ')' + chance : '') + '</p>' + last + (roles ? '<div class="parliament-role-list">' + roles + '</div>' : '') + '</div><div class="parliament-role-action"><button class="secondary-button" data-parliament-action="contest-role" ' + (blocker ? 'disabled' : '') + '>Candidati all’incarico</button><small>' + esc(blocker || `Costo ${CONTEST_COST} di capitale politico. Superare la soglia rende la nomina probabile, non certa: contano influenza, reputazione, esperienza, sostegno nel gruppo, anzianità e risultati. Può finire anche con un incarico minore, un rinvio o un altro nome.`) + '</small><button class="text-link" data-section-tab="carriera" data-section-tab-value="progressione">Fattori e probabilità</button></div></section>';
 }
-function timeline(parliament) {
+function timeline(parliament, bare = false) {
   const entries = [...(parliament.history ?? [])].filter(item => !item.details?.auto).slice(-6).reverse();
-  return '<section class="parliament-timeline"><div class="home-section-heading"><div><span class="section-kicker">STORICO DELLA CARRIERA</span><h2>Decisioni a Palazzo</h2></div></div>' + (entries.map(item => '<article class="parliament-timeline-item"><time>' + esc(item.date) + '</time><span class="timeline-mark"></span><div><strong>' + esc(item.text) + '</strong><small>' + esc(item.type.replaceAll('-', ' ')) + ' · source: simulation</small></div></article>').join('') || '<p class="quiet-copy">Le attività parlamentari appariranno qui e nello storico della carriera.</p>') + '</section>';
+  return '<section class="parliament-timeline">' + (bare ? '' : '<div class="home-section-heading"><div><span class="section-kicker">STORICO DELLA CARRIERA</span><h2>Decisioni a Palazzo</h2></div></div>') + (entries.map(item => '<article class="parliament-timeline-item"><time>' + esc(item.date) + '</time><span class="timeline-mark"></span><div><strong>' + esc(item.text) + '</strong><small>' + esc(item.type.replaceAll('-', ' ')) + ' · source: simulation</small></div></article>').join('') || '<p class="quiet-copy">Le attività parlamentari appariranno qui e nello storico della carriera.</p>') + '</section>';
 }
 function accessNote(parliament) {
   if (canManageParliament(parliament)) return '';
@@ -332,6 +332,11 @@ function billCard(law, parliament, extras = {}) {
   const impact = extras.society?.lawsApplied?.find(item => item.lawId === law.id);
   return '<article class="law-card bill-card stage-' + esc(law.stage) + ' side-' + esc(side) + '"><header>' + artTile(LAW_ICONS[law.category] ?? 'law', side === 'governo' ? '#3C7C95' : side === 'maggioranza' ? '#4C8F6B' : side === 'opposizione' ? '#e3a348' : '#8f7ad6') + '<div class="law-card-title"><span class="section-kicker">' + esc(kindLabel.toUpperCase()) + ' · ' + esc(law.category.toUpperCase()) + ' · ' + esc(chamber.toUpperCase()) + '</span><h3>' + esc(law.title) + '</h3><span class="bill-sponsor"><b class="sponsor-' + esc(side) + '">' + esc(LAW_SPONSORS[side]?.label ?? side) + '</b> ' + esc(side === 'governo' ? 'Consiglio dei ministri (simulato)' : law.sponsor?.label ?? '') + '</span></div>' + dataMarker(DATA_SOURCES.SIMULATION, statusNames[law.stage] || law.stage) + '</header><p>' + esc(law.summary) + '</p>' + billSteps(law) + '<div class="bill-meta">' + (committee ? '<span>' + glyph('users', 13) + ' ' + esc(committee.number) + ' Commissione · ' + esc(committee.shortName ?? committee.name) + ' <small>(reale)</small></span>' : '') + next + decree + confidence + stance + amendments + '</div>' + billForecast(law, parliament, extras.world) + billActions(law, parliament, extras) + (journal ? '<ul class="bill-journal">' + journal + '</ul>' : '') + (impact ? '<p class="law-impact ' + (impact.covered ? 'good' : 'bad') + '">' + glyph('map', 13) + ' Effetti sul Paese: ' + (impact.covered ? 'coperture trovate' : 'coperture insufficienti') + (impact.topRegions?.length ? ' · più visibili in ' + impact.topRegions.map(item => esc(item.name)).join(', ') : '') + '</p>' : '') + votes + '</article>';
 }
+const BILL_PAGE = 6;
+const ARCHIVE_PAGE = 10;
+function fold(key, kicker, title, meta, body, open = true) {
+  return '<details class="law-fold" data-remember="' + key + '" ' + (open ? 'open' : '') + '><summary><span><span class="section-kicker">' + kicker + '</span><strong>' + title + '</strong></span>' + (meta ? '<small>' + meta + '</small>' : '') + '</summary><div class="law-fold-body">' + body + '</div></details>';
+}
 function billsBoard(parliament, extras = {}) {
   const governing = governingGroupIds(parliament);
   const bills = (parliament.laws ?? []).filter(law => law.auto);
@@ -344,14 +349,23 @@ function billsBoard(parliament, extras = {}) {
   const approvedYear = [...bills, ...(parliament.lawArchive ?? [])].filter(law => law.stage === 'approved' && String(law.updatedAt ?? law.closedAt ?? '').startsWith(year)).length;
   const toVote = open.filter(law => law.currentChamber === parliament.player?.chamber && ['amendments', 'final-vote'].includes(law.stage)).length;
   const filters = '<div class="ag-filters bill-filters" role="group" aria-label="Filtra le proposte">' + BILL_FILTERS.filter(([id]) => id !== 'aula' || parliament.player?.groupId).map(([id, label]) => '<button type="button" data-view-filter="leggi" data-view-filter-value="' + id + '" class="' + (filter === id ? 'active' : '') + '" aria-pressed="' + (filter === id) + '">' + esc(label) + (counts[id] ? ' · ' + counts[id] : '') + '</button>').join('') + '</div>';
-  const archive = (parliament.lawArchive ?? []).slice(0, 8).map(item => '<li><span class="bill-flag ' + (item.stage === 'approved' ? 'good' : 'bad') + '">' + esc(item.stage === 'approved' ? 'Approvata' : item.status === 'arenata' ? 'Ferma' : item.stage === 'lapsed' ? 'Decaduta' : 'Respinta') + '</span> ' + esc(item.title) + ' <small>' + esc(item.sponsor?.kind === 'governo' ? 'Governo' : item.sponsor?.label ?? '') + ' · ' + esc(item.closedAt ?? '') + '</small></li>').join('');
-  return '<section class="law-board bill-board"><div class="home-section-heading"><div><span class="section-kicker">IN PARLAMENTO · SIMULAZIONE</span><h2>Le proposte di governo, gruppi e commissioni</h2></div><span>' + whole(open.length) + ' in discussione · ' + whole(approvedYear) + ' approvate nel ' + esc(year) + (toVote ? ' · ' + whole(toVote) + ' al voto nella tua Camera' : '') + '</span></div><p class="parliament-note">Ogni settimana il governo, i gruppi di maggioranza e di opposizione e le commissioni presentano e portano avanti le loro proposte. ' + (canManageParliament(parliament) ? 'Puoi intervenire, presentare emendamenti e decidere il tuo voto: votare contro la linea del gruppo si nota.' : 'Senza un seggio le segui dall’esterno: le leggi approvate cambiano il Paese e i sondaggi.') + '</p>' + filters + (shown.map(law => billCard(law, parliament, { ...extras, governing })).join('') || '<p class="quiet-copy">Nessuna proposta in questo filtro.</p>') + (archive ? '<details class="bill-archive"><summary>Archivio delle proposte concluse</summary><ul>' + archive + '</ul></details>' : '') + '</section>';
+  const page = Math.max(1, Number(extras.billPage) || 1);
+  const visible = shown.slice(0, page * BILL_PAGE);
+  const moreBills = shown.length > visible.length ? '<button type="button" class="secondary-button bill-more" data-bill-more="bills">Mostra altre ' + Math.min(BILL_PAGE, shown.length - visible.length) + ' proposte (' + (shown.length - visible.length) + ' nascoste)</button>' : '';
+  const archivePage = Math.max(1, Number(extras.archivePage) || 1);
+  const archived = parliament.lawArchive ?? [];
+  const moreArchive = archived.length > archivePage * ARCHIVE_PAGE ? '<button type="button" class="secondary-button bill-more" data-bill-more="archive">Mostra altre ' + Math.min(ARCHIVE_PAGE, archived.length - archivePage * ARCHIVE_PAGE) + ' concluse (' + (archived.length - archivePage * ARCHIVE_PAGE) + ' nascoste)</button>' : '';
+  const archive = archived.slice(0, archivePage * ARCHIVE_PAGE).map(item => '<li><span class="bill-flag ' + (item.stage === 'approved' ? 'good' : 'bad') + '">' + esc(item.stage === 'approved' ? 'Approvata' : item.status === 'arenata' ? 'Ferma' : item.stage === 'lapsed' ? 'Decaduta' : 'Respinta') + '</span> ' + esc(item.title) + ' <small>' + esc(item.sponsor?.kind === 'governo' ? 'Governo' : item.sponsor?.label ?? '') + ' · ' + esc(item.closedAt ?? '') + '</small></li>').join('');
+  return '<section class="law-board bill-board"><div class="home-section-heading"><div><span class="section-kicker">IN PARLAMENTO · SIMULAZIONE</span><h2>Le proposte di governo, gruppi e commissioni</h2></div><span>' + whole(open.length) + ' in discussione · ' + whole(approvedYear) + ' approvate nel ' + esc(year) + (toVote ? ' · ' + whole(toVote) + ' al voto nella tua Camera' : '') + '</span></div><p class="parliament-note">Ogni settimana il governo, i gruppi di maggioranza e di opposizione e le commissioni presentano e portano avanti le loro proposte. ' + (canManageParliament(parliament) ? 'Puoi intervenire, presentare emendamenti e decidere il tuo voto: votare contro la linea del gruppo si nota.' : 'Senza un seggio le segui dall’esterno: le leggi approvate cambiano il Paese e i sondaggi.') + '</p>' + filters + (visible.map(law => billCard(law, parliament, { ...extras, governing })).join('') || '<p class="quiet-copy">Nessuna proposta in questo filtro.</p>') + moreBills + (archive ? '<details class="bill-archive" data-remember="leggi-archivio"><summary>Archivio delle proposte concluse · ' + whole(archived.length) + '</summary><ul>' + archive + '</ul>' + moreArchive + '</details>' : '') + '</section>';
+}
+function lawLegend() {
+  return '<p class="law-legend" role="note">' + dataMarker(DATA_SOURCES.SIMULATION, 'SIMULATA') + ' proposte e voti della partita · ' + dataMarker(DATA_SOURCES.REAL, 'REALE') + ' atti del Senato, con fonte. Un atto reale non cambia per effetto delle tue scelte.</p>';
 }
 function lawsView(parliament, extras = {}) {
   const playerCanAct = canManageParliament(parliament);
   const proposals = [...(parliament.laws ?? [])].filter(law => !law.auto).reverse().map(law => lawCard(law, parliament, extras.society, extras.state)).join('');
   const form = '<form class="law-proposal-form" data-law-proposal-form><div class="law-proposal-heading"><div><span class="section-kicker">NUOVA INIZIATIVA</span><h2>Scrivi una proposta.</h2></div>' + dataMarker(DATA_SOURCES.SIMULATION, 'PROPOSTA DEL GIOCATORE') + '</div><div class="law-form-grid"><label>Titolo<input name="title" required minlength="5" maxlength="90" placeholder="Dai un nome alla proposta" /></label><div class="law-policy-field">' + policyFields({ area: 'sanita' }) + '</div><div class="law-policy-preview" data-policy-preview>' + (extras.society ? policyPreview(extras.society, measureDesign({ area: 'sanita' })) : '') + '</div><label class="law-summary-field">Contenuto<textarea name="summary" required minlength="12" maxlength="800" rows="3" placeholder="Quale cambiamento vuoi introdurre?"></textarea></label><input type="hidden" name="realReference" value="" /><p class="law-real-draft" data-law-real-draft hidden></p></div><button class="primary-button" type="submit" ' + (!playerCanAct ? 'disabled' : '') + '>Presenta la legge ' + icon + '</button><p>Le proposte attraversano commissione, emendamenti, prima votazione, seconda Camera e voto finale. Ogni esito è source: simulation.</p></form>';
-  return '<div class="parliament-mode laws-mode"><section class="parliament-mode-hero"><div><span class="section-kicker">ITER LEGISLATIVO</span><h2>Una proposta alla volta.</h2><p>Governo, maggioranza, opposizione e commissioni legiferano ogni settimana. Le tue proposte le porti avanti tu: costruisci consenso, negozia e scegli quando portarle al voto.</p></div>' + dataMarker(DATA_SOURCES.SIMULATION, 'LEGISLAZIONE DELLA PARTITA') + '</section>' + accessNote(parliament) + form + '<section class="law-board"><div class="home-section-heading"><div><span class="section-kicker">LE TUE INIZIATIVE</span><h2>Proposte e votazioni</h2></div><span>' + (parliament.laws ?? []).filter(law => !law.auto).length + ' iniziative</span></div>' + (proposals || '<p class="quiet-copy">Non hai ancora presentato una proposta.</p>') + '</section>' + billsBoard(parliament, extras) + (extras.realLaws ? '<section class="law-board real-law-board"><div class="home-section-heading"><div><span class="section-kicker">XIX LEGISLATURA · DATI REALI VERIFICATI</span><h2>Leggi e disegni di legge reali</h2></div></div>' + extras.realLaws + '</section>' : '') + timeline(parliament) + '</div>';
+  return '<div class="parliament-mode laws-mode"><section class="parliament-mode-hero"><div><span class="section-kicker">ITER LEGISLATIVO</span><h2>Una proposta alla volta.</h2><p>Governo, maggioranza, opposizione e commissioni legiferano ogni settimana. Le tue proposte le porti avanti tu: costruisci consenso, negozia e scegli quando portarle al voto.</p></div>' + dataMarker(DATA_SOURCES.SIMULATION, 'LEGISLAZIONE DELLA PARTITA') + '</section>' + accessNote(parliament) + lawLegend() + form + fold('leggi-mie', 'LE TUE INIZIATIVE · SIMULAZIONE', 'Proposte e votazioni', (parliament.laws ?? []).filter(law => !law.auto).length + ' iniziative', '<section class="law-board">' + (proposals || '<p class="quiet-copy">Non hai ancora presentato una proposta.</p>') + '</section>') + fold('leggi-proposte', 'PARLAMENTO DELLA PARTITA · SIMULAZIONE', 'Proposte di governo, gruppi e commissioni', '', billsBoard(parliament, extras)) + (extras.realLaws ? fold('leggi-reali', 'XIX LEGISLATURA · DATI REALI VERIFICATI', 'Leggi e disegni di legge reali', 'Senato — dati aperti', '<section class="law-board real-law-board">' + extras.realLaws + '</section>') : '') + fold('leggi-cronologia', 'CRONOLOGIA · SIMULAZIONE', 'Decisioni a Palazzo', '', timeline(parliament, true), false) + '</div>';
 }
 
 export function renderParliamentPage(page, state, options = {}) {
@@ -367,9 +381,9 @@ export function renderParliamentPage(page, state, options = {}) {
   }
   if (page === 'leggi') {
     const influence = (state.dataset?.statistics ?? []).find(item => item.subjectId === state.career?.playerId && item.metric === 'influence')?.value ?? 50;
-    return days + lawsView(parliament, { society: state.society, realLaws: options.realLaws, state, world: state.world, filter: options.lawFilter, committees: options.committees ?? [], currentDate: state.clock?.currentDate, influence });
+    return days + lawsView(parliament, { society: state.society, realLaws: options.realLaws, state, world: state.world, filter: options.lawFilter, billPage: options.billPage, archivePage: options.archivePage, committees: options.committees ?? [], currentDate: state.clock?.currentDate, influence });
   }
   const player = options.player ?? state.dataset?.politicians?.find(item => item.id === state.career?.playerId) ?? null;
   const odds = state.game ? careerOverview(state)?.tracks.find(track => track.id === 'parlamento')?.odds ?? null : null;
-  return days + (options.hemicycle ?? '') + renderParliament(parliament, options.party, options.politicians ?? [], player, state.clock?.currentDate ?? parliament.createdAt, odds);
+  return days + (options.hemicycle ?? '') + (options.featured ?? '') + renderParliament(parliament, options.party, options.politicians ?? [], player, state.clock?.currentDate ?? parliament.createdAt, odds);
 }

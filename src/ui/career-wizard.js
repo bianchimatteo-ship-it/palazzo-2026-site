@@ -1,13 +1,13 @@
-import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261013-2';
-import { LOGO_SHAPES, LOGO_SYMBOLS, partyLogoDataUrl } from './party-logo.js?v=20261013-2';
-import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261013-2';
-import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261013-2';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261013-2';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261013-2';
-import { startStep, startSummary } from './start-wizard.js?v=20261013-2';
-import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261013-2';
-import { normalizeStart } from '../core/start-engine.js?v=20261013-2';
-import { legacyBanner } from './hall-view.js?v=20261013-2';
+import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261014-1';
+import { LOGO_SHAPES, LOGO_SYMBOLS, partyLogoDataUrl } from './party-logo.js?v=20261014-1';
+import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261014-1';
+import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261014-1';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261014-1';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261014-1';
+import { startStep, startSummary } from './start-wizard.js?v=20261014-1';
+import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261014-1';
+import { normalizeStart } from '../core/start-engine.js?v=20261014-1';
+import { legacyBanner } from './hall-view.js?v=20261014-1';
 
 const POSITIONS = ['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra'];
 
@@ -64,7 +64,7 @@ export function renderCareerWizard(state, draft, realParties = [], logoFor = () 
     <aside class="wizard-aside"><div class="wizard-brand"><img class="brand-logo wizard-logo" src="icons/logo-politicando-640.webp" srcset="icons/logo-politicando-240.webp 240w, icons/logo-politicando-640.webp 640w" sizes="88px" width="88" height="88" alt="POLITICANDO 2026" decoding="async" /></div><span class="wizard-aside-label">NUOVA CARRIERA</span><h2>Una storia<br/>da scrivere.</h2><p>Chi sei, da dove parti, con quale partito e con quali regole: cinque passaggi, dal più importante al dettaglio.</p><div class="wizard-steps">${steps.map((s, i) => `<div class="wizard-step ${draft.step === i + 1 ? 'current' : ''} ${draft.step > i + 1 ? 'complete' : ''}"><span class="wizard-step-icon">${draft.step > i + 1 ? '✓' : ico(s[2], 16)}</span><span><small>PASSAGGIO ${String(i + 1).padStart(2, '0')}</small><strong>${s[0]}</strong></span></div>`).join('')}</div><div class="wizard-aside-foot"><span class="live-dot"></span><span>Il salvataggio avviene solo quando inizi la carriera.</span></div></aside>
     <div class="wizard-main"><header class="wizard-header"><div><div class="wizard-progress" role="progressbar" aria-label="Avanzamento" aria-valuemin="1" aria-valuemax="${LAST_STEP}" aria-valuenow="${draft.step}">${steps.map((_, i) => `<i class="${draft.step > i + 1 ? 'done' : draft.step === i + 1 ? 'current' : ''}"></i>`).join('')}</div><span class="wizard-kicker">PASSAGGIO ${String(draft.step).padStart(2, '0')} <i>/</i> ${String(LAST_STEP).padStart(2, '0')}</span><h1 id="wizard-title">${activeStep[1]}</h1><p>${stepIntro(draft.step)}</p></div><button class="wizard-x" type="button" aria-label="Annulla nuova carriera" data-wizard-action="cancel">×</button></header>
       <div class="wizard-body">${legacyBanner(draft)}${errorBox}${dataBox}${body}</div>
-      <footer class="wizard-footer">${backButton}<span class="wizard-footer-note">${draft.step < LAST_STEP ? 'Puoi tornare indietro e modificare ogni scelta.' : `Avvio della carriera il ${esc(state.clock.currentDate)}.`}</span>${actionButton}</footer>
+      <footer class="wizard-footer">${backButton}<span class="wizard-footer-note">${draft.step < LAST_STEP ? 'Puoi tornare indietro e modificare ogni scelta.' : `Avvio della carriera il ${esc(draft.currentDate ?? state.clock.currentDate)}.`}</span>${actionButton}</footer>
     </div>
   </section></div>`;
 }
@@ -138,7 +138,7 @@ function profileStep(state, d) {
   return `<section class="summary-section wizard-profile"><div class="summary-section-heading"><div><span>CHI SEI</span><strong>Il tuo politico</strong></div></div><div class="wizard-form-grid">
     <label>Nome<input name="firstName" value="${val(d, 'firstName')}" autocomplete="given-name" maxlength="40" placeholder="Il tuo nome" /></label>
     <label>Cognome<input name="lastName" value="${val(d, 'lastName')}" autocomplete="family-name" maxlength="50" placeholder="Il tuo cognome" /></label>
-    <label>Data di nascita<input type="date" name="birthDate" value="${val(d, 'birthDate')}" max="${esc(state.clock.currentDate)}" /></label>
+    <label>Data di nascita<input type="date" name="birthDate" value="${val(d, 'birthDate')}" max="${esc(d.currentDate ?? state.clock.currentDate)}" /></label>
     <label>Genere<select name="gender"><option value="preferisco-non-specificare" ${d.gender === 'preferisco-non-specificare' ? 'selected' : ''}>Preferisco non specificare</option><option value="donna" ${d.gender === 'donna' ? 'selected' : ''}>Donna</option><option value="uomo" ${d.gender === 'uomo' ? 'selected' : ''}>Uomo</option><option value="non-binario" ${d.gender === 'non-binario' ? 'selected' : ''}>Non binario</option></select></label>
     <label class="wizard-full-field">Professione precedente<input name="previousProfession" value="${val(d, 'previousProfession')}" autocomplete="organization-title" maxlength="100" placeholder="Es. insegnante, avvocata, imprenditore" /></label>
   </div><small>I dati anagrafici sono usati solo per questa carriera (source: user).</small></section>`;

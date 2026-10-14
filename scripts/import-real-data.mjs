@@ -3,6 +3,8 @@ import { mkdir, writeFile } from 'node:fs/promises';
 // Rebuilds the bundled real-data snapshot from primary Italian institutional sources.
 // No simulation or user records are touched. Unknown fields deliberately remain null.
 const AS_OF = '2026-09-22';
+// The day new careers start (a Monday, not before the snapshot); `npm run scenario:date` sets it on the files already written.
+const SCENARIO_DATE = '2026-10-12';
 const ROOT = new URL('../src/data/real/', import.meta.url);
 const urls = {
   cameraRoster: 'https://www.camera.it/deputati/ws/elenco_deputati?_format=json&leg=19',
@@ -376,7 +378,7 @@ const elections = [
   { id:'election-it-europee-2024', officialName:'Elezioni europee 2024 — Italia', level:'nazionale', electionDate:'2024-06-08', electionType:'europee', sourceUrl:urls.interiorEuropeanTransparency, sourceName:'Ministero dell’Interno — Trasparenza, elezioni europee 2024', source:SOURCE, verified:true, verifiedAt:AS_OF, validFrom:'2024-06-08', validTo:'2024-06-09' }
 ];
 const manifest = {
-  datasetVersion:'2026-09-22.3', snapshotDate:AS_OF, publisher:'POLITICANDO 2026 — importatore open data', sourcePolicy:'Primary institutional sources only; unknown values are null. Registry entries are sourced to registration deliberations; only explicit deregistration notices set historical status. MEF 2‰ evidence is dated to its reporting year.',
+  datasetVersion:'2026-09-22.3', snapshotDate:AS_OF, scenarioDate:SCENARIO_DATE, scenarioNote:'La carriera inizia alla data dello scenario; i dati reali (Parlamento, governo, partiti, sondaggio) sono quelli verificati alla data dello snapshot. Nessuna fonte pubblicata dopo la data dello scenario è stata usata.', publisher:'POLITICANDO 2026 — importatore open data', sourcePolicy:'Primary institutional sources only; unknown values are null. Registry entries are sourced to registration deliberations; only explicit deregistration notices set historical status. MEF 2‰ evidence is dated to its reporting year.',
   sourceUrls:urls,
   collections:{parties:parties.length,politicalMovements:politicalMovements.length,politicalFigures:politicalFigures.length,partyLeaderships:partyLeaderships.length,parliamentaryGroups:parliamentaryGroups.length,coalitions:0,electoralLists:electionLists.length,politicians:politicians.length,offices:offices.length,partyMemberships:0,groupMemberships:groupMemberships.length,electionParticipations:electionParticipations.length,partyMembershipHistory:0,officeHistory:officeHistory.length,territories:territories.length,elections:elections.length},
   warnings:['Il Registro nazionale Parlamento include le iscrizioni storiche ancora visibili; lo stato historical è valorizzato solo quando il registro documenta cancellazione. La registrazione non certifica automaticamente attività politica sul territorio.','La Camera espone anagrafica, collegio e lista di elezione nelle schede individuali; tali campi sono importati separatamente dai gruppi.','Dati Senato corrente via open data per il 22/09/2026; i gruppi e le appartenenze sono esportati separatamente e non diventano partiti.','Sono importati i mandati di deputato/senatore e i presidenti di gruppo restituiti dal dataset ufficiale del Senato; altre cariche sono lasciate non assegnate finché non vengono importate da fonti specifiche.']

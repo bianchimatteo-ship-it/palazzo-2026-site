@@ -13,12 +13,36 @@ const read = key => { try { return JSON.parse(globalThis.localStorage?.getItem(k
 const write = (key, value) => { try { if (value === null) globalThis.localStorage?.removeItem(key); else globalThis.localStorage?.setItem(key, JSON.stringify(value)); } catch { /* storage unavailable */ } };
 
 // Where the API lives: on the Worker (and its local preview) it is the same site; GitHub Pages uses the Worker.
+// The installed app (Capacitor) runs on its own origin (capacitor://localhost, https://localhost): the account service is always the published Worker.
+const isNativeApp = () => globalThis.Capacitor?.isNativePlatform?.() === true || globalThis.location?.protocol === 'capacitor:';
+// Where the public pages of the game live (privacy, terms, account deletion): the same site on the web, the published site inside the app.
+export function publicSiteBase() {
+  const location = globalThis.location;
+  return !location || location.protocol === 'file:' || isNativeApp() ? `${PRODUCTION_ORIGIN}/` : '';
+}
 export function accountApiBase() {
   const location = globalThis.location;
-  if (!location) return PRODUCTION_ORIGIN;
-  if (/workers\.dev$/.test(location.hostname) || location.port === '8791') return location.origin;
+  if (!location || isNativeApp()) return PRODUCTION_ORIGIN;
+  if (/workers\.dev$/.test(location.hostname) || location.port === '8791' || location.hostname === '127.0.0.1') return location.origin;
   if (/github\.io$/.test(location.hostname)) return PRODUCTION_ORIGIN;
   return null;
+}
+// Is the account service really there? A short request to the Worker's status route: an answer from the service
+// (even “not signed in”, from an older Worker) means available; no answer, a timeout, a server error or a page that is
+// not the service (a static host without the Worker) means unreachable. Without an address: 'none'.
+export async function probeAccountService({ timeout = 5000 } = {}) {
+  const base = accountApiBase();
+  if (!base) return 'none';
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeout);
+  try {
+    const response = await fetch(`${base}/api/account/status`, { signal: controller.signal, cache: 'no-store' });
+    const type = response.headers?.get?.('content-type') ?? '';
+    if (response.status >= 500 || !type.includes('application/json')) return 'unreachable';
+    await response.json();
+    return 'available';
+  } catch { return 'unreachable'; }
+  finally { clearTimeout(timer); }
 }
 export const currentAccount = () => { const value = read(ACCOUNT_KEY); return value?.username && value?.token ? value : null; };
 // Revisions known on this device, per account: they tell whether another device saved a newer version meanwhile.
@@ -26,6 +50,8 @@ const revisionStore = () => { const value = read(REVISIONS_KEY); return value?.u
 const revisions = () => revisionStore().slots;
 const setRevision = (slot, revision) => { const store = revisionStore(); write(REVISIONS_KEY, { ...store, slots: { ...store.slots, [slot]: revision } }); };
 export const knownRevision = slot => revisions()[slot] ?? null;
+// The revision this device has is the one of the game it really holds: it moves only when a game was uploaded, or when a downloaded one was actually put in its place.
+export const commitRevision = (slot, revision) => { if (Number.isFinite(revision)) setRevision(slot, revision); };
 export const normalizeUsername = value => String(value ?? '').trim().toLowerCase();
 export const slotForCareer = careerId => `c-${String(careerId ?? 'carriera').toLowerCase().replace(/[^a-z0-9]/g, '')}`.slice(0, 40);
 
@@ -73,6 +99,22 @@ export async function logout() {
   try { if (currentAccount()) await call('/api/account/logout', { method: 'POST' }); }
   finally { write(ACCOUNT_KEY, null); }
 }
+// Deletes the account and everything kept online for it (saves, sessions). The password is proved again and the word ELIMINA typed; what stays on this device (the saves of
+// the browser) is not touched. Nothing is forgotten locally unless the server confirmed the deletion.
+export async function deleteAccount(password, confirm) {
+  const account = currentAccount();
+  if (!account) throw new Error('Accedi per eliminare l’account.');
+  if (String(password ?? '').length < PASSWORD_MIN) throw new Error(`Inserisci la password dell’account (almeno ${PASSWORD_MIN} caratteri).`);
+  if (String(confirm ?? '').trim() !== 'ELIMINA') throw new Error('Per confermare scrivi ELIMINA.');
+  const body = await call('/api/account', { method: 'DELETE', body: { proof: await passwordProof(account.username, password), confirm: 'ELIMINA' } });
+  write(ACCOUNT_KEY, null); write(REVISIONS_KEY, null);
+  return body;
+}
+// After the account of `username` was deleted elsewhere (the public deletion page): this browser forgets its session if it was the same account.
+export function forgetAccountIf(username) {
+  if (currentAccount()?.username === normalizeUsername(username)) { write(ACCOUNT_KEY, null); write(REVISIONS_KEY, null); return true; }
+  return false;
+}
 export const accountInfo = () => call('/api/account/me');
 export async function listCloudSaves() {
   const body = await call('/api/saves');
@@ -102,9 +144,11 @@ export async function uploadSave(slot, state, { name = null, meta = {}, force = 
   setRevision(slot, body.revision);
   return body;
 }
-export async function downloadSave(slot) {
+// commit: false leaves the known revision as it is, for who commits it (commitRevision) only once the game has really replaced the running one: a download that
+// is refused (a newer version, a backup that failed) must not make this device believe it holds a revision it does not.
+export async function downloadSave(slot, { commit = true } = {}) {
   const body = await call(`/api/saves/${encodeURIComponent(slot)}`);
-  setRevision(slot, body.revision);
+  if (commit) setRevision(slot, body.revision);
   return { state: await unpack(body), revision: body.revision, updatedAt: body.updatedAt, name: body.name, meta: body.meta };
 }
 export async function deleteCloudSave(slot) {

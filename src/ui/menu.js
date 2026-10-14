@@ -1,13 +1,14 @@
 // Main menu, how-to-play, settings, save slots and the end-of-week report.
-import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261013-2';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261013-2';
-import { formatDate } from '../core/time.js?v=20261013-2';
-import { illustration } from './illustrations.js?v=20261013-2';
-import { glyph } from './visuals.js?v=20261013-2';
-import { identityMark, identityVars } from './party-identity.js?v=20261013-2';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261013-2';
-import { hallView } from './hall-view.js?v=20261013-2';
-import { esc, signed } from './charts.js?v=20261013-2';
+import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261014-1';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261014-1';
+import { formatDate } from '../core/time.js?v=20261014-1';
+import { illustration } from './illustrations.js?v=20261014-1';
+import { glyph } from './visuals.js?v=20261014-1';
+import { identityMark, identityVars } from './party-identity.js?v=20261014-1';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261014-1';
+import { hallView } from './hall-view.js?v=20261014-1';
+import { esc, signed } from './charts.js?v=20261014-1';
+import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261014-1';
 
 const when = iso => { try { return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch { return ''; } };
 // The actions of the opening screen, in order of importance: starting a career and resuming one are the two main ones (drawn apart, below); then what concerns the
@@ -84,6 +85,8 @@ function loadView({ hasCareer, meta, slots, error, identity, identityOf }) {
 }
 
 // Account: sign up or sign in, then every career is also kept online and can be resumed on another device.
+// The public pages (also reachable without the game): privacy notice, terms and the page to ask for the deletion of the account.
+export const legalLinks = () => { const base = publicSiteBase(); return `<nav class="legal-links" aria-label="Informazioni legali"><a href="${base}privacy.html" target="_blank" rel="noopener">Informativa sulla privacy</a><a href="${base}termini.html" target="_blank" rel="noopener">Termini di utilizzo</a><a href="${base}elimina-account.html" target="_blank" rel="noopener">Elimina l’account</a></nav>`; };
 function accountView(account = {}) {
   const note = account.error ? `<p class="menu-error" role="alert">${esc(account.error)}</p>` : account.message ? `<p class="account-message" role="status">${esc(account.message)}</p>` : '';
   if (account.status === 'none' || (!account.status && !account.available)) return `<h2>Account e salvataggi online</h2><p class="section-subtitle">Gli account funzionano sul sito pubblicato. Da qui la partita resta salvata in questo browser: puoi esportarla su file dal menu Carica partita.</p>${note}`;
@@ -94,13 +97,17 @@ function accountView(account = {}) {
     <div class="account-forms ${account.mode ? `focus-${esc(account.mode)}` : ''}">
       <form class="account-form" data-account-form="login"><h3>Accedi</h3><label>Nome utente<input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required minlength="3" maxlength="24" /></label><label>Password<input name="password" type="password" autocomplete="current-password" required minlength="8" /></label><button class="${account.mode === 'register' ? 'secondary-button' : 'primary-button'}" type="submit" ${account.busy ? 'disabled' : ''}>${account.busy === 'login' ? 'Accesso in corso…' : 'Accedi'}</button></form>
       <form class="account-form" data-account-form="register"><h3>Crea un account</h3><label>Nome utente<input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required minlength="3" maxlength="24" placeholder="3–24 caratteri: a-z, 0-9, . _ -" /></label><label>Password<input name="password" type="password" autocomplete="new-password" required minlength="8" placeholder="Almeno 8 caratteri" /></label><label>Ripeti la password<input name="confirm" type="password" autocomplete="new-password" required minlength="8" /></label><button class="${account.mode === 'register' ? 'primary-button' : 'secondary-button'}" type="submit" ${account.busy ? 'disabled' : ''}>${account.busy === 'register' ? 'Creazione in corso…' : 'Crea l’account'}</button><small>Non serve un indirizzo email. La password non lascia mai il tuo browser in chiaro: conservala con cura, non può essere recuperata.</small></form>
-    </div>${note}`;
+    </div>${note}${legalLinks()}`;
   const rows = (account.saves ?? []).map(save => `<article class="slot-row ${save.slot === account.currentSlot ? 'is-current' : ''}"><div><strong>${esc(save.name || save.meta?.player || 'Carriera')}</strong><span>${esc(save.meta?.role ?? 'Senza incarico')} · ${esc(save.meta?.party ?? '')}${save.meta?.difficulty ? ` · ${esc(save.meta.difficulty)}` : ''}</span><small>Settimana ${esc(save.meta?.week ?? '—')} · ${esc(save.meta?.gameDate ? formatDate(save.meta.gameDate) : '')} · online dal ${esc(when(save.updatedAt))} · revisione ${esc(save.revision)}</small></div><button class="primary-button" data-cloud-load="${esc(save.slot)}">Carica</button><button class="icon-text-button" data-cloud-delete="${esc(save.slot)}" aria-label="Elimina online ${esc(save.name || 'carriera')}">${glyph('alert', 15)} Elimina</button></article>`).join('');
   const conflict = account.conflict ? `<div class="account-conflict" role="alert"><strong>Su un altro dispositivo c’è una versione più recente di questa carriera</strong><small>Online: revisione ${esc(account.conflict.remote?.revision)} del ${esc(when(account.conflict.remote?.updatedAt))}. Scegli quale tenere.</small><div class="setting-actions"><button class="primary-button" data-conflict="download">Usa la versione online</button><button class="secondary-button" data-conflict="overwrite">Sovrascrivi con questa</button></div></div>` : '';
   return `<h2>Account e salvataggi online</h2><p class="section-subtitle">Connesso come <strong>${esc(account.user.username)}</strong>. La carriera in corso si sincronizza da sola dopo ogni salvataggio${account.lastSync ? ` · ultima sincronizzazione ${esc(when(account.lastSync))}` : ''}.</p>
     ${conflict}
     <div class="setting-actions"><button class="primary-button" data-account-action="sync" ${account.busy ? 'disabled' : ''}>${account.busy === 'sync' ? 'Sincronizzazione…' : 'Salva ora online'}</button><button class="secondary-button" data-account-action="refresh">Aggiorna elenco</button><button class="secondary-button" data-account-action="logout">Esci</button></div>
-    <div class="slot-list">${rows || '<p class="quiet-copy">Nessuna carriera salvata online: la prossima volta che salvi, la carriera in corso comparirà qui.</p>'}</div>${note}`;
+    <div class="slot-list">${rows || '<p class="quiet-copy">Nessuna carriera salvata online: la prossima volta che salvi, la carriera in corso comparirà qui.</p>'}</div>${note}
+    <details class="account-delete" data-remember="account-delete"><summary>Elimina il mio account</summary>
+      <p class="parliament-note">Vengono eliminati subito l’account, le carriere salvate online e le sessioni aperte. Non si può annullare. Le partite salvate in questo browser restano sul dispositivo: si eliminano dal menu Carica partita.</p>
+      <form class="account-form" data-account-form="delete"><label>Password<input name="password" type="password" autocomplete="current-password" required minlength="8" /></label><label>Scrivi ELIMINA per confermare<input name="confirm" autocomplete="off" autocapitalize="characters" spellcheck="false" required pattern="ELIMINA" /></label><button class="secondary-button danger" type="submit" ${account.busy ? 'disabled' : ''}>${account.busy === 'delete' ? 'Eliminazione in corso…' : 'Elimina definitivamente l’account'}</button></form>
+    </details>${legalLinks()}`;
 }
 
 function guideView() {

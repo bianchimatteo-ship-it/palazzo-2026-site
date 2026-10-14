@@ -1,9 +1,9 @@
-import { realDatabase } from '../data/repositories/real-data.js?v=20260926-6';
-import { BASIS_LABELS, POLITICAL_POSITIONS, electedOnListsOf, linkedPoliticians, politicianAffiliation } from '../data/repositories/party-links.js?v=20260926-6';
-import { personMark } from './visuals.js?v=20260926-6';
+import { realDatabase } from '../data/repositories/real-data.js?v=20261014-1';
+import { BASIS_LABELS, ENTITY_KIND_LABELS, POLITICAL_POSITIONS, electedOnListsOf, entityKind, linkedPoliticians, politicianAffiliation } from '../data/repositories/party-links.js?v=20261014-1';
+import { personMark } from './visuals.js?v=20261014-1';
 
-const KIND_LABELS = { party: 'Partito politico', politicalMovement: 'Movimento politico', coalition: 'Coalizione / lista comune', electoralList: 'Lista elettorale' };
-const kindOf = entity => entity.entityType ?? (entity.electionId ? 'electoralList' : 'party');
+const KIND_LABELS = ENTITY_KIND_LABELS;
+const kindOf = entityKind;
 // Partiti, movimenti, coalizioni e liste restano entità distinte; i nomi usati dal MEF per il 2‰ non diventano un secondo partito.
 export const archiveEntities = () => [
   ...(realDatabase.parties ?? []), ...(realDatabase.politicalMovements ?? []), ...(realDatabase.coalitions ?? []),

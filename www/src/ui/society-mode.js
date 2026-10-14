@@ -1,12 +1,12 @@
 // Country, territories, citizens and media: the simulated society as the player sees it.
-import { INDICATORS, MEDIA_OUTLETS, SEGMENTS } from '../data/simulation/society-rules.js?v=20260926-6';
-import { nationalIndicators, regionPriorities, societyMood } from '../core/society-engine.js?v=20260926-6';
-import { illustration } from './illustrations.js?v=20260926-6';
-import { artTile, glyph } from './visuals.js?v=20260926-6';
+import { INDICATORS, MEDIA_OUTLETS, SEGMENTS } from '../data/simulation/society-rules.js?v=20261014-1';
+import { nationalIndicators, regionPriorities, societyMood } from '../core/society-engine.js?v=20261014-1';
+import { illustration } from './illustrations.js?v=20261014-1';
+import { artTile, glyph } from './visuals.js?v=20261014-1';
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
-import { breakdown, esc, levelState, lineChart, meter, num, rampColor, SERIES, signed, sparkline, stateBadge, trendState, GREEN_RAMP } from './charts.js?v=20260926-6';
-import { areasPanel, publicFinancePanel, securityPanel } from './policy-mode.js?v=20260926-6';
-import { renderInstitutions } from './local-mode.js?v=20260926-6';
+import { breakdown, esc, levelState, lineChart, meter, num, rampColor, SERIES, signed, sparkline, stateBadge, trendState, GREEN_RAMP } from './charts.js?v=20261014-1';
+import { areasPanel, publicFinancePanel, securityPanel } from './policy-mode.js?v=20261014-1';
+import { renderInstitutions } from './local-mode.js?v=20261014-1';
 
 // Tile cartogram of the regions: a recognisable boot, one tile per region.
 const TILES = Object.freeze({
@@ -85,12 +85,12 @@ function lawsApplied(society) {
   const rows = society.lawsApplied.slice(0, 8);
   if (!rows.length) return '<p class="quiet-copy">Nessuna misura ancora in vigore: le leggi approvate in Parlamento e i provvedimenti dell’esecutivo compariranno qui con i loro effetti.</p>';
   const segment = id => SEGMENTS.find(item => item.id === id)?.label ?? id;
-  return `<div class="measure-list">${rows.map(item => `<article class="measure-row">${artTile(item.origin === 'esecutivo' ? 'ministry' : 'law', item.covered ? '#1baf7a' : '#e34948', 'sm')}<div><strong>${esc(item.title)}</strong><small>${item.origin === 'esecutivo' ? 'Esecutivo di scenario' : 'Legge approvata in Parlamento'} · settimana ${item.week} · ${esc(item.category)}</small><span>${item.covered ? 'Coperture trovate' : 'Coperture insufficienti: effetti ridotti'} · costo ${num(item.cost, 1)} punti di margine · più effetti in ${item.topRegions.map(region => esc(region.name)).join(', ')}</span>${item.pleased.length || item.displeased.length ? `<em>${item.pleased.length ? `Soddisfatti: ${item.pleased.map(segment).join(', ')}` : ''}${item.displeased.length ? ` · Scontenti: ${item.displeased.map(segment).join(', ')}` : ''}</em>` : ''}</div></article>`).join('')}</div>`;
+  return `<div class="measure-list">${rows.map(item => `<article class="measure-row">${artTile(item.origin === 'esecutivo' ? 'ministry' : 'law', item.covered ? '#4C8F6B' : '#C4574A', 'sm')}<div><strong>${esc(item.title)}</strong><small>${item.origin === 'esecutivo' ? 'Esecutivo di scenario' : 'Legge approvata in Parlamento'} · settimana ${item.week} · ${esc(item.category)}</small><span>${item.covered ? 'Coperture trovate' : 'Coperture insufficienti: effetti ridotti'} · costo ${num(item.cost, 1)} punti di margine · più effetti in ${item.topRegions.map(region => esc(region.name)).join(', ')}</span>${item.pleased.length || item.displeased.length ? `<em>${item.pleased.length ? `Soddisfatti: ${item.pleased.map(segment).join(', ')}` : ''}${item.displeased.length ? ` · Scontenti: ${item.displeased.map(segment).join(', ')}` : ''}</em>` : ''}</div></article>`).join('')}</div>`;
 }
 
 export function renderTerritoriesPage(state, ui = {}) {
   const society = state.society;
-  if (!society) return '<p class="quiet-copy">La simulazione del Paese si attiva alla prossima settimana.</p>';
+  if (!society) return `${renderInstitutions(state, ui)}<p class="quiet-copy">La simulazione del Paese si attiva alla prossima settimana.</p>`;
   const home = state.game?.place?.region ?? null;
   const measure = MAP_MEASURES.some(item => item.id === ui.measure) ? ui.measure : 'satisfaction';
   const selected = society.regions[ui.region] ? ui.region : society.regions[home] ? home : Object.keys(society.regions)[0];
@@ -101,8 +101,8 @@ export function renderTerritoriesPage(state, ui = {}) {
   const executive = society.executive;
   const governing = ['active', 'crisis'].includes(state.parliament?.government?.status);
   return `<div class="society-page">
-    ${renderInstitutions(state)}
-    <section class="society-hero">
+    ${renderInstitutions(state, ui)}
+    <section class="society-hero" id="il-paese">
       ${illustration('borgo', 'hero-art')}<div class="society-hero-main"><span class="section-kicker">IL PAESE · SETTIMANA ${society.week}</span><h2>Umore del Paese: ${num(mood, 0)}/100</h2><p class="section-subtitle">Cittadini, territori ed economia si muovono ogni settimana, con o senza di te: leggi, crisi, media e scelte del governo cambiano i numeri qui sotto.</p></div>
       <div class="society-kpis">${kpi('Soddisfazione dei cittadini', num(society.satisfaction, 1), change(society, 'satisfaction'), historyOf(society, 'satisfaction'))}${kpi('Fiducia nelle istituzioni', num(society.trust, 1), change(society, 'trust'), historyOf(society, 'trust'))}${kpi('Partecipazione attesa', num(society.participation, 1), change(society, 'participation'), historyOf(society, 'participation'), '', { unit: '%' })}</div>
       ${economyStrip(society)}
@@ -159,7 +159,7 @@ export function renderMediaPanel(state, { compact = false } = {}) {
   const coverage = media.coverage.slice(0, compact ? 3 : 8).map(item => `<article class="coverage-row tone-${esc(item.tone)}">${glyph(MEDIA_OUTLETS.find(outlet => outlet.id === item.outletId)?.icon ?? 'news', 16)}<div><strong>${esc(item.headline)}</strong><small>${esc(item.outlet)} · S${item.week}</small></div></article>`).join('');
   if (compact) return coverage ? `<div class="coverage-list">${coverage}</div>` : '';
   return `<div class="media-summary"><div class="media-gauge"><small>VISIBILITÀ</small><strong>${num(media.visibility, 0)}<i>/100</i></strong>${meter(media.visibility, 'gold')}</div><div class="media-gauge"><small>TONO DELLA COPERTURA</small><strong>${signed(sentiment, 0)}</strong><span class="sentiment-scale"><i style="left:${(sentiment + 100) / 2}%"></i></span>${stateBadge(tone[0], tone[1])}</div></div>
-    <div class="outlet-list">${outlets.map(outlet => `<div class="outlet-row" data-tip="${esc(`${outlet.label}: attenzione ${num(outlet.attention, 0)}, orientamento ${signed(outlet.stance, 0)}`)}" tabindex="0">${glyph(outlet.icon, 16)}<span><strong>${esc(outlet.label)}</strong><small>Pubblico potenziale ${outlet.reach}/100 · ${outlet.stance > 5 ? 'favorevole' : outlet.stance < -5 ? 'critico' : 'neutrale'}</small></span>${meter(outlet.attention)}<b>${num(outlet.attention, 0)}</b></div>`).join('')}</div>
+    <div class="outlet-list">${outlets.map(outlet => `<div class="outlet-row" data-tip="${esc(`${outlet.label}: attenzione ${num(outlet.attention, 0)}, orientamento ${signed(outlet.stance, 0)}`)}" tabindex="0">${glyph(outlet.icon, 16)}<span><strong>${esc(outlet.name ? `${outlet.name} · ${outlet.label}` : outlet.label)}</strong><small>Pubblico potenziale ${outlet.reach}/100 · ${outlet.stance > 5 ? 'favorevole' : outlet.stance < -5 ? 'critico' : 'neutrale'}${Number.isFinite(outlet.credibility) ? ` · credibilità ${Math.round(outlet.credibility)}` : ''}</small></span>${meter(outlet.attention)}<b>${num(outlet.attention, 0)}</b></div>`).join('')}</div>
     <div class="home-section-heading"><div><span class="section-kicker">TITOLI RECENTI</span></div></div>${coverage ? `<div class="coverage-list">${coverage}</div>` : '<p class="quiet-copy">Nessun titolo ancora: interviste, social, talk e iniziative sul territorio finiscono qui.</p>'}
     <p class="poll-footnote">Canali generici e titoli simulati: nessuna testata reale. La visibilità segue la notorietà, il tono della copertura pesa sulla reputazione e sui sondaggi del partito.</p>`;
 }

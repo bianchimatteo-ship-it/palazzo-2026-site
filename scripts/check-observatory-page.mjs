@@ -105,11 +105,11 @@ assert.ok(page('istituti').includes('Come lavora ciascun istituto') && page('ist
   assert.ok(map.includes('is-selected') && map.includes('is-compared') && map.includes('is-home'), 'Selezionata, a confronto e propria.');
   assert.equal((charts.italyMap(items.map(item => ({ ...item, share: null })), {}).match(/itmap-tile/g) ?? []).length, 0, 'Senza nessun dato non si disegna una cartina.');
   const zero = charts.regionBars([{ region: 'Molise', share: 0, gap: -3, change: 0 }, { region: 'Lazio', share: 4, gap: 1, change: 0.5 }], { mode: 'quota', national: 3 });
-  assert.ok(zero.includes('>0%<') && zero.includes('Dato nazionale'), 'Lo zero è uno zero, con il dato nazionale accanto.');
+  assert.ok(zero.includes('>0,0%<') && zero.includes('Dato nazionale'), 'Lo zero è uno zero, con il dato nazionale accanto.');
   assert.equal(charts.divergingColor(null, 3), charts.divergingColor(undefined, 3), 'Il dato mancante ha il colore neutro.');
   assert.notEqual(charts.divergingColor(2, 3), charts.divergingColor(-2, 3), 'Sopra e sotto il dato nazionale hanno colori diversi.');
   const heat = charts.heatmap({ columns: [{ label: 'Lazio', short: 'LAZ' }, { label: 'Molise', short: 'MOL' }], rows: [{ label: 'Forza', color: '#336699', national: 10, cells: [{ region: 'Lazio', share: 12, gap: 2 }, { region: 'Molise', share: null, gap: null }] }] });
-  assert.ok(heat.includes('>12<') && heat.includes('>—<') && !/NaN|undefined/.test(heat), 'La mappa di calore mostra il trattino dove non c’è il dato.');
+  assert.ok(heat.includes('>12,0<') && heat.includes('>—<') && !/NaN|undefined/.test(heat), 'La mappa di calore mostra il trattino dove non c’è il dato.');
   assert.ok(charts.regionAbbreviation('Valle d’Aosta') === 'VDA' && Object.keys(charts.REGION_TILES).length === 20 && new Set(Object.values(charts.REGION_TILES).map(([row, col]) => `${row}:${col}`)).size === 20, 'Venti tessere in venti posti diversi.');
 }
 

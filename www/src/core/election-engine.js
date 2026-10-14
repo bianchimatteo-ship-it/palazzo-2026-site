@@ -1,4 +1,4 @@
-import { ELECTION_MODELS, EUROPEAN_CONSTITUENCIES, EUROPEAN_THRESHOLD, OUTCOME_LABELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20260926-6';
+import { ELECTION_MODELS, EUROPEAN_CONSTITUENCIES, EUROPEAN_THRESHOLD, OUTCOME_LABELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261014-1';
 
 const clamp = (value,min=0,max=100) => Math.min(max,Math.max(min,value));
 const rounded = value => Math.round(value*100)/100;
@@ -8,6 +8,21 @@ const hash = value => [...String(value)].reduce((n, char) => (n * 31 + char.char
 function seeded(seed) {
   let state = seed >>> 0 || 1;
   return () => { state = (Math.imul(state, 1664525) + 1013904223) >>> 0; return state / 4294967296; };
+}
+function ballotsOf(campaign) {
+  const electorate = campaign.electorate ?? {};
+  const realElectors = Number(electorate.electors);
+  const normalized = !Number.isFinite(realElectors) || realElectors <= 0;
+  const electors = normalized ? null : Math.round(realElectors);
+  const sampleElectors = electors ?? 100000;
+  const turnout = clamp(Number(campaign.electionDays?.at(-1)?.turnout ?? 61), 0, 100);
+  const validRatio = Number(electorate.validRatio) > 0 && Number(electorate.validRatio) <= 1 ? Number(electorate.validRatio) : .99;
+  const random = seeded(hash(`${campaign.id}|${campaign.seed}|${campaign.stage}|${campaign.electionDays?.length ?? 0}|schede`));
+  const normal = () => Math.sqrt(-2 * Math.log(Math.max(Number.EPSILON, random()))) * Math.cos(2 * Math.PI * random());
+  const turnoutShare = turnout / 100;
+  const voters = normalized ? 100000 : clamp(Math.round(sampleElectors * turnoutShare + normal() * Math.sqrt(sampleElectors * turnoutShare * (1 - turnoutShare))), 0, sampleElectors);
+  const ballots = normalized ? 100000 : clamp(Math.round(voters * validRatio + normal() * Math.sqrt(voters * validRatio * (1 - validRatio))), 0, voters);
+  return { electors, voters, ballots, turnout, validRatio, normalized, basis: normalized ? 'elettorato simulato normalizzato su 100.000' : electorate.basis ?? 'elettori iscritti', source: 'simulation' };
 }
 
 function allianceLeader(candidate,candidates) {
@@ -91,11 +106,13 @@ function resultRow(group,share,totalBallots,seats=0,extra={}) {
   };
 }
 
-function areaResults(campaign,totalBallots=100000) {
+function areaResults(campaign,totalBallots=100000,finalistIds=null) {
   const weight = territories(campaign).reduce((sum,item)=>sum+item.weight,0) || 1;
   return territories(campaign).map(area=>{
     let groups=sharesByGroup(campaign,area.id);
-    if(campaign.stage==='ballottaggio') {
+    if(finalistIds) {
+      const finalists=new Set(finalistIds);
+      groups=groups.filter(group=>finalists.has(group.id));
       const retained=groups.reduce((sum,group)=>sum+group.share,0)||1;
       groups=groups.map(group=>({...group,share:rounded(group.share*100/retained)}));
     }
@@ -110,6 +127,12 @@ function municipalSeats(campaign,groups,winnerId) {
   const rule = SEAT_RULES.comunale;
   // Council size and seat distribution are deliberately simplified game rules.
   return allocateWithBonus(groups,count,winnerId ?? groups[0]?.id,rule.majorityBonus[campaign.municipalityBand ?? 'fino-15000'],campaign.municipalityBand==='oltre-15000'?rule.threshold:0);
+}
+
+// The council of a province: seats in proportion to the weighted votes of the mayors and municipal councillors, with the
+// coalition of the winner holding the majority (the game's executive governs with a majority).
+function provincialSeats(campaign,groups) {
+  return allocateWithBonus(groups,ELECTION_MODELS.provinciale.seatCount,groups[0]?.id,SEAT_RULES.provinciale.majorityBonus,SEAT_RULES.provinciale.threshold);
 }
 
 function allocateRegional(campaign,groups) {
@@ -169,15 +192,16 @@ export function runFirstRound(campaign) {
   const groups=aggregateShares(campaign);
   const leader=groups[0];
   const playerGroup=groups.find(item=>item.id===campaign.playerCandidateId);
+  const count=ballotsOf(campaign);
   const result={
     stage:'primo-turno',model:ELECTION_MODELS[campaign.electionType].model,electionType:campaign.electionType,
-    totalBallots:100000,groups:groups.map(group=>resultRow(group,group.share,100000)),
+    totalBallots:count.ballots,electorate:count,groups:groups.map(group=>resultRow(group,group.share,count.ballots)),
     territories:areaResults(campaign),playerShare:playerGroup?.share??0,source:'simulation',simulated:true
   };
   if(campaign.electionType==='comunale'&&campaign.municipalityBand==='oltre-15000'&&leader?.share<50&&groups.length>1) {
     result.requiresRunoff=true;
     result.runoffCandidateIds=groups.slice(0,2).map(item=>item.id);
-    result.runoffShares=normalizedTwoRound(campaign,result.runoffCandidateIds).map(group=>resultRow(group,group.share,100000));
+    result.runoffShares=normalizedTwoRound(campaign,result.runoffCandidateIds).map(group=>resultRow(group,group.share,count.ballots));
   } else {
     result.requiresRunoff=false;
     result.winnerGroupId=leader?.id??null;
@@ -188,7 +212,9 @@ export function runFirstRound(campaign) {
 export function runFinalElection(campaign,firstRound=null) {
   const rules=ELECTION_MODELS[campaign.electionType];
   const aggregate=aggregateShares(campaign);
-  const totalBallots=100000;
+  // In the runoff far fewer people vote: the count uses the turnout of that round.
+  const count=ballotsOf(campaign);
+  const totalBallots=count.ballots;
   let rows;
   let runoffRows=null;
   let runoffWinnerId=null;
@@ -197,11 +223,17 @@ export function runFinalElection(campaign,firstRound=null) {
     const finalShares=normalizedTwoRound(campaign,firstRound.runoffCandidateIds);
     runoffRows=finalShares.map(group=>resultRow(group,group.share,totalBallots));
     runoffWinnerId=runoffRows[0]?.candidateId??null;
-    const firstGroups=firstRound.groups.map(row=>({id:row.candidateId,share:row.percent,label:row.label,partyIds:row.partyIds,members:row.memberCandidateIds,leaderCandidateId:row.candidateId}));
-    seatRows=municipalSeats(campaign,firstGroups,runoffWinnerId);
-    rows=firstRound.groups.map(row=>{const group=firstGroups.find(item=>item.id===row.candidateId);const scored=resultRow(group,row.percent,totalBallots,seatRows.find(item=>item.id===group.id)?.seats??0);const final=runoffRows.find(item=>item.candidateId===row.candidateId);return {...scored,runoffPercent:final?.percent??null,runoffVotes:final?.votes??null};});
+    seatRows=municipalSeats(campaign,finalShares,runoffWinnerId);
+    rows=finalShares.map(group=>{
+      const first=firstRound.groups.find(item=>item.candidateId===group.id);
+      const seats=seatRows.find(item=>item.id===group.id)?.seats??0;
+      return resultRow(group,group.share,totalBallots,seats,{firstRoundPercent:first?.percent??null,runoffPercent:group.share,runoffVotes:Math.round(totalBallots*group.share/100)});
+    });
   } else if(campaign.electionType==='comunale') {
     seatRows=municipalSeats(campaign,aggregate,aggregate[0]?.id);
+    rows=aggregate.map(group=>resultRow(group,group.share,totalBallots,seatRows.find(row=>row.id===group.id)?.seats??0));
+  } else if(campaign.electionType==='provinciale') {
+    seatRows=provincialSeats(campaign,aggregate);
     rows=aggregate.map(group=>resultRow(group,group.share,totalBallots,seatRows.find(row=>row.id===group.id)?.seats??0));
   } else if(campaign.electionType==='regionale') {
     seatRows=allocateRegional(campaign,aggregate);
@@ -220,11 +252,12 @@ export function runFinalElection(campaign,firstRound=null) {
   const personal=personalResult(campaign,playerRow,winner,rows);
   const previous=campaign.firstRoundResult;
   const result = {
-    stage:'risultato-finale',model:rules.model,electionType:campaign.electionType,totalBallots,
-    ballotLabel:'Schede normalizzate su 100.000 elettori simulati',groups:rows,
-    territories:areaResults(campaign,totalBallots),firstRound:previous??firstRound??null,
+    stage:'risultato-finale',model:rules.model,electionType:campaign.electionType,totalBallots,electorate:count,
+    ballotLabel:count.normalized ? 'Schede normalizzate su 100.000 elettori simulati' : `Schede valide stimate su ${count.electors.toLocaleString('it-IT')} elettori`,groups:rows,
+    territories:areaResults(campaign,totalBallots,campaign.stage==='ballottaggio'?firstRound?.runoffCandidateIds??null:null),firstRound:previous??firstRound??null,
     winnerGroupId:winnerId,playerShare:runoffRows?.find(row=>row.candidateId===campaign.playerCandidateId)?.percent??playerRow?.percent??0,playerVotes:runoffRows?.find(row=>row.candidateId===campaign.playerCandidateId)?.votes??playerRow?.votes??0,runoffResults:runoffRows,
     playerSeats:playerRow?.seats??0,personalMandate:personal.mandate,personal,source:'simulation',simulated:true,
+    runoffDetail:campaign.runoff?{transfers:campaign.runoff.transfers??[],pacts:campaign.runoff.pacts??[],appeal:campaign.runoff.appeal??0}:null,
     objectiveMet:objectiveMet(campaign,playerRow,personal.mandate),
     turnout:campaign.electionDays?.at(-1)?.turnout ?? Math.round(clamp(61+(campaign.candidateStats.reputation-50)*.16+(campaign.candidateStats.notoriety-40)*.08+((campaign.context?.participation??60)-60)*.5,38,78)*100)/100,
     seatRule:SEAT_RULES[campaign.electionType]?.note ?? null
@@ -233,20 +266,36 @@ export function runFinalElection(campaign,firstRound=null) {
   return result;
 }
 
+// The strength of a name on the list for the preferences and for the places: its own pull, the push of the faction it comes from
+// (the leaders back theirs, the territory backs its local names, the young are worth more when the country is restless).
+export function mateForce(campaign, mate) {
+  const ctx = campaign.listContext ?? {};
+  const mood = campaign.nationalContext?.moodIndex ?? 50;
+  return mate.strength
+    + (mate.faction === 'dirigenti' ? 3 - (ctx.aligned ? 1.5 : 0) : 0)
+    + (mate.faction === 'territorio' && mate.areaId === campaign.candidacy?.territoryId ? 4 : 0)
+    + (mate.faction === 'giovani' && mood < 48 ? 2 : 0)
+    + (mate.faction === 'liste-civiche' && ['comunale', 'provinciale'].includes(campaign.electionType) ? 1.5 : 0);
+}
 // Preference votes: inside a list the seats go to the candidates with the most preferences. The player's pull
-// (notoriety, reputation, local roots, campaign on the ground) competes with the list mates'.
+// (notoriety, reputation, local roots, campaign on the ground) competes with the list mates': the names of the list, with the faction
+// they come from and the places they hold, when the campaign carries the list (otherwise a generic field).
 export function preferenceStanding(campaign, listSeats) {
   const rand = seeded(hash(`${campaign.id}|preferenze`));
   const stats = campaign.candidateStats ?? {};
   const player = campaign.candidates.find(item => item.isPlayer);
   const ground = ['door_to_door', 'citizen_meeting', 'local_visit', 'local_life', 'territory_campaign', 'associations'].reduce((sum, id) => sum + (campaign.activityUses?.[id] ?? 0), 0);
-  const own = 30 + (stats.notoriety ?? 20) * .5 + (stats.reputation ?? 50) * .2 + (stats.popularity ?? 40) * .2 + Math.min(14, ground * 1.5) + (player?.resources?.organization ?? 30) * .06 + Math.min(10, campaign.nomination?.internalSupport ?? 5) * 1.2 + (rand() - .5) * 16;
+  const ctx = campaign.listContext ?? {};
+  const roots = campaign.list ? (Number(ctx.territorial ?? 50) - 50) * .1 + (campaign.candidacy?.incumbent ? 3 : 0) + clamp((5 - Number(campaign.candidacy?.listPosition ?? 5)) * .8, -3, 3) : 0;
+  const own = 30 + (stats.notoriety ?? 20) * .5 + (stats.reputation ?? 50) * .2 + (stats.popularity ?? 40) * .2 + Math.min(14, ground * 1.5) + (player?.resources?.organization ?? 30) * .06 + Math.min(10, campaign.nomination?.internalSupport ?? 5) * 1.2 + roots + (rand() - .5) * 16;
   const mates = Math.max(listSeats + 3, 6);
   // List mates: a few well-known names at the top, then candidates with less pull.
-  const others = Array.from({ length: mates }, (_, index) => 66 + (rand() - .5) * 30 - index * 1.6);
+  const others = campaign.list?.mates?.length
+    ? campaign.list.mates.filter(item => item.status !== 'ritirato').map(item => mateForce(campaign, item) + (rand() - .5) * 6).sort((a, b) => b - a).slice(0, mates)
+    : Array.from({ length: mates }, (_, index) => 66 + (rand() - .5) * 30 - index * 1.6);
   const rank = 1 + others.filter(value => value > own).length;
   const votes = Math.max(40, Math.round(own * 42 * (campaign.electionType === 'europee' ? 30 : campaign.electionType === 'regionale' ? 4 : 1)));
-  return { rank, votes, listCandidates: mates + 1, seats: listSeats };
+  return { rank, votes, listCandidates: others.length + 1, seats: listSeats };
 }
 // Inside a coalition every list keeps its own seats: the player's list counts for its own share of the total.
 function ownListRatio(campaign, playerRow) {
@@ -312,8 +361,9 @@ function personalResult(campaign,playerRow,winner,rows) {
     const districtInfo = { name:district?.name ?? null, position:districtPosition || null, share:ranking.find(group => group.id === campaign.playerCandidateId)?.share ?? 0, winnerId:ranking[0]?.id ?? null, margin:rounded((ranking[0]?.share ?? 0) - (ranking[1]?.share ?? 0)) };
     if (districtPosition === 1) return { ...base, mandate:true, via:'collegio', code:'vittoria', district:districtInfo };
     // Candidates in a single-member district also head a proportional list: losing the district is not the end.
+    // Losing the district is not the end only for who also heads (first place, closed list) a proportional list: a single-member candidate has no other place on a list.
     const constituency = base.belowThreshold ? { seats:0 } : constituencySeats(campaign, playerRow);
-    if (constituency.seats >= Math.max(1, campaign.candidacy.listPosition)) return { ...base, mandate:true, via:'proporzionale', code:'eletto-proporzionale', district:districtInfo, constituency:{ seats:constituency.seats, name:constituency.area?.name ?? null } };
+    if (constituency.seats >= 1) return { ...base, mandate:true, via:'proporzionale', code:'eletto-proporzionale', district:districtInfo, constituency:{ seats:constituency.seats, name:constituency.area?.name ?? null } };
     return { ...base, code:base.belowThreshold ? 'sotto-soglia' : 'sconfitta', district:districtInfo };
   }
   return { ...base, mandate:playerRow.percent>0, code:'eletto' };
@@ -336,11 +386,13 @@ export function classifyOutcome(campaign, result) {
   const next = rows.find(row => row.id !== campaign.playerCandidateId && row !== winner) ?? null;
   // After a runoff the comparison with expectations uses the first round (the runoff share is between two only).
   const share = result.runoffResults?.length ? (playerRow?.percent ?? result.playerShare ?? 0) : (result.playerShare ?? 0);
-  const expected = campaign.expectation?.share ?? campaign.consensusHistory?.[0]?.value ?? share;
+  // A career that starts with high expectations (a consolidated name, an outsider's hopes) raises the bar the result is judged against.
+  const expected = (campaign.expectation?.share ?? campaign.consensusHistory?.[0]?.value ?? share) + (campaign.expectation?.pressure ?? 0);
   const band = Math.max(1.5, expected * .12);
   const diff = rounded(share - expected);
   const expectation = diff >= band ? 'sopra' : diff <= -band ? 'sotto' : 'in-linea';
-  const poll = campaign.preparation?.pollShare ?? campaign.expectation?.pollShare ?? null;
+  const currentPoll = campaign.polls?.at(-1)?.results?.find(item => item.candidateId === campaign.playerCandidateId)?.share;
+  const poll = campaign.polls?.length ? (Number.isFinite(currentPoll) ? currentPoll : null) : (campaign.preparation?.pollShare ?? campaign.expectation?.pollShare ?? null);
   const position = personal.position ?? (playerRow ? rows.indexOf(playerRow) + 1 : null);
   const positionLabel = position === 1 ? 'primo posto' : position === 2 ? 'secondo posto' : position === 3 ? 'terzo posto' : position ? `${position}º posto` : 'fuori corsa';
   const margin = playerRow && winner ? rounded(winner.id === playerRow.id ? playerRow.percent - (next?.percent ?? 0) : playerRow.percent - winner.percent) : null;
@@ -365,7 +417,7 @@ export function resultDescription(campaign,result) {
   const outcome = result.outcome ?? classifyOutcome(campaign, result);
   const winnerLabel = result.groups.find(item=>item.id===result.winnerGroupId)?.label??'un’altra lista';
   const texts = {
-    vittoria: campaign.electionType==='comunale' ? 'Hai vinto la competizione per l’incarico comunale nello scenario simulato.' : campaign.electionType==='regionale'&&campaign.candidacy.role==='presidente' ? 'La tua candidatura alla presidenza è arrivata prima.' : campaign.candidacy.role==='uninominale' ? 'Hai vinto il collegio uninominale.' : `Hai conquistato un mandato. La lista collegata ha ottenuto ${row.seats} seggi.`,
+    vittoria: campaign.electionType==='comunale' ? 'Hai vinto la competizione per l’incarico comunale nello scenario simulato.' : campaign.electionType==='provinciale' ? (campaign.candidacy.role==='presidente' ? 'I sindaci e i consiglieri comunali ti hanno eletto Presidente della Provincia.' : 'La tua lista ha vinto il voto degli amministratori della provincia.') : campaign.electionType==='regionale'&&campaign.candidacy.role==='presidente' ? 'La tua candidatura alla presidenza è arrivata prima.' : campaign.candidacy.role==='uninominale' ? 'Hai vinto il collegio uninominale.' : `Hai conquistato un mandato. La lista collegata ha ottenuto ${row.seats} seggi.`,
     'ballottaggio-vinto':'Hai vinto al ballottaggio: il secondo turno ha ribaltato o confermato il primo.',
     'eletto-lista':`Eletto grazie alla lista: ${row.seats} seggi e una posizione utile${outcome.preference ? ` (${outcome.preference.rank}º per preferenze)` : ''}.`,
     'eletto-coalizione':`Eletto grazie alla coalizione: i voti degli alleati hanno portato ${row.seats} seggi.`,

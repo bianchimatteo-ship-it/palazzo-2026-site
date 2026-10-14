@@ -971,3 +971,57 @@ html body .hq-activity-action select:not([multiple]) { width: 100%; max-width: 2
 .start-scenario-lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; font-size: 13px; line-height: 1.4; }
 .start-scenario-lines li strong { margin-right: 6px; }
 .start-scenario .start-note { margin: 0; font-size: 13px; }
+
+/* ---------- the territory, compact and coloured by level (Comune, Provincia, Regione, Parlamento europeo, comitati, dirigenti locali) ---------- */
+.cm-card.cm-compact { gap: 8px; padding: 12px; border-top: 3px solid var(--lv, var(--line)); }
+.cm-card.cm-compact > header { align-items: center; }
+.cm-card.cm-compact > header .art-tile { flex: none; }
+.cm-card.cm-compact .cm-lead { display: block; margin-top: 2px; color: var(--ink-2); font-size: 12.5px; overflow-wrap: anywhere; }
+.cm-card.cm-compact .cm-badges { margin-left: auto; }
+.cm-details { border-top: 1px dashed var(--line); padding-top: 6px; }
+.cm-details > summary { cursor: pointer; color: var(--ink-2); font: 700 12.5px var(--font-head, Manrope, sans-serif); list-style: none; padding: 4px 0; }
+.cm-details > summary::-webkit-details-marker { display: none; }
+.cm-details > summary::after { content: " +"; color: var(--gold-soft, #bba880); }
+.cm-details[open] > summary::after { content: " −"; }
+.cm-details[open] > :not(summary) { margin-top: 8px; }
+.pl-level { border: 1px solid var(--line); border-left: 4px solid var(--lv, var(--line-strong)); border-radius: 10px; background: color-mix(in srgb, var(--panel-2) 92%, transparent); }
+.pl-level > summary { display: flex; align-items: center; gap: 10px; padding: 10px 12px; cursor: pointer; list-style: none; }
+.pl-level > summary::-webkit-details-marker { display: none; }
+.pl-level > summary small { display: block; color: var(--ink-2); font-size: 12.5px; }
+.pl-level > summary strong { color: var(--ink); font-size: 14.5px; }
+.pl-level-list { display: grid; gap: 8px; padding: 0 10px 10px; }
+.pl-cadre.pl-compact { padding: 10px 12px; gap: 6px; }
+.pl-cadre.pl-compact .pl-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.pl-details > summary { cursor: pointer; color: var(--ink-2); font-size: 12.5px; font-weight: 700; padding: 3px 0; }
+.pl-details[open] > :not(summary) { margin-top: 6px; }
+.local-institution { border-top: 3px solid var(--lv, var(--line)); }
+.local-heading { display: flex; align-items: center; gap: 14px; }
+.local-heading > .art-tile { flex: none; }
+.local-jump .sx-tab { display: inline-flex; align-items: center; gap: 6px; }
+.local-jump .sx-tab .glyph, .local-jump .sx-tab svg { color: var(--lv, currentColor); }
+
+/* Laws page: collapsible blocks, provenance legend, "Mostra altre" and the featured parliamentarians. */
+.law-fold { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); margin: 12px 0; }
+.law-fold > summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; padding: 12px 14px; cursor: pointer; list-style: none; min-height: 44px; }
+.law-fold > summary::-webkit-details-marker { display: none; }
+.law-fold > summary > span { display: grid; gap: 2px; min-width: 0; }
+.law-fold > summary strong { font-size: 16px; color: var(--ink, #ece8de); }
+.law-fold > summary small { color: var(--muted); font-size: 12px; }
+.law-fold > summary::after { content: '▾'; margin-left: auto; color: var(--muted); transition: transform .15s; }
+.law-fold:not([open]) > summary::after { transform: rotate(-90deg); }
+.law-fold-body { padding: 0 14px 14px; }
+.law-fold-body > .law-board, .law-fold-body > .parliament-timeline { margin: 0; padding: 0; border: 0; background: transparent; }
+.law-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 10px 0 0; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+.bill-more { margin: 8px 0 4px; width: 100%; }
+.bill-archive .bill-more { margin-top: 10px; }
+.featured-members { margin: 14px 0; }
+.featured-members .contact-grid { grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr)); }
+.featured-card footer .text-link { margin-left: auto; }
+@media (max-width: 480px) { .law-fold > summary { padding: 11px 12px; } .law-fold-body { padding: 0 12px 12px; } }
+
+/* Account: deletion and public legal links. */
+.account-delete { margin-top: 16px; border: 1px solid var(--line); border-radius: 8px; padding: 10px 14px; }
+.account-delete > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 700; color: var(--critical-ink, #e08a7a); }
+.account-delete .account-form { max-width: 420px; }
+.legal-links { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 16px; font-size: 13px; }
+.legal-links a { color: var(--muted); min-height: 44px; display: inline-flex; align-items: center; }

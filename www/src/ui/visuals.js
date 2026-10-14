@@ -60,9 +60,21 @@ export const EVENT_ICONS = Object.freeze({
   audizione: 'dome', 'riunione-gruppo': 'users', 'dossier-ministero': 'ministry'
 });
 export const CATEGORY_VISUALS = Object.freeze({
-  territorio: { icon: 'pin', color: '#1baf7a' }, media: { icon: 'mic', color: '#2a78d6' }, partito: { icon: 'flag', color: 'var(--party-accent)' },
-  parlamento: { icon: 'dome', color: '#c0a166' }, relazioni: { icon: 'link', color: '#4a3aa7' }, risorse: { icon: 'money', color: '#eda100' }, elezioni: { icon: 'ballot', color: '#e34948' }
+  territorio: { icon: 'pin', color: '#4C8F6B' }, media: { icon: 'mic', color: '#3C7C95' }, partito: { icon: 'flag', color: 'var(--party-accent)' },
+  parlamento: { icon: 'dome', color: '#C4A66A' }, relazioni: { icon: 'link', color: '#4a3aa7' }, risorse: { icon: 'money', color: '#D6A54C' }, elezioni: { icon: 'ballot', color: '#C4574A' }
 });
+// The levels of the territory and what lives on them, each with one glyph and one tone, everywhere they appear (institutions, committees, local leaders): Comune, Provincia, Regione, the
+// European Parliament, the party's committees and the institutions in general. Tones are tints for tiles and bars, never for text.
+export const TERRITORY_VISUALS = Object.freeze({
+  comune: { label: 'Comune', icon: 'town', color: '#6FA982' },
+  provincia: { label: 'Provincia', icon: 'map', color: '#5FA5C2' },
+  regione: { label: 'Regione', icon: 'pin', color: '#C4A66A' },
+  europa: { label: 'Parlamento europeo', icon: 'globe', color: '#8F95D8' },
+  comitato: { label: 'Comitato', icon: 'users', color: '#B98CC4' },
+  istituzione: { label: 'Istituzione', icon: 'ministry', color: '#7FBF99' }
+});
+export const territoryVisual = kind => TERRITORY_VISUALS[kind] ?? TERRITORY_VISUALS.istituzione;
+export const territoryTile = (kind, size = 'md') => artTile(territoryVisual(kind).icon, territoryVisual(kind).color, size);
 export const LAW_ICONS = Object.freeze({
   Economia: 'money', Lavoro: 'briefcase', Sanità: 'cross', Scuola: 'book', Sicurezza: 'shield', Ambiente: 'leaf', Infrastrutture: 'bridge',
   Giustizia: 'scales', Welfare: 'heart', 'Pubblica amministrazione': 'ministry'
@@ -84,14 +96,16 @@ export function artTile(icon, color = 'var(--party-accent)', size = 'md') {
   return `<span class="art-tile art-${size}" style="--art:${esc(color)}" aria-hidden="true"><svg class="art-rings" viewBox="0 0 64 64"><circle cx="54" cy="10" r="18"/><circle cx="54" cy="10" r="28"/><circle cx="54" cy="10" r="38"/></svg>${glyph(icon, size === 'lg' ? 30 : size === 'sm' ? 18 : 24, 1.6)}</span>`;
 }
 
-// Ink that stays readable on a given fill.
+// Ink that stays readable on a given fill: whichever of the two inks has the higher contrast (WCAG), never the one below 4.5:1 that the old fixed threshold gave on mid tones.
+const INK_DARK = '#000000', INK_LIGHT = '#ffffff';
+const channelLuminance = hex => [1, 3, 5].map(index => { const channel = parseInt(hex.slice(index, index + 2), 16) / 255; return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4; });
+const luminanceOf = hex => { const [r, g, b] = channelLuminance(hex); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+const expandHex = hex => /^#[\da-f]{3}$/i.test(hex ?? '') ? `#${[...hex.slice(1)].map(char => char + char).join('')}` : hex;
+export const contrastRatio = (hexA, hexB) => { const [x, y] = [luminanceOf(expandHex(hexA)), luminanceOf(expandHex(hexB))]; return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
 export function inkOn(hex) {
-  if (!/^#[\da-f]{6}$/i.test(hex ?? '')) return '#fffdf7';
-  const [r, g, b] = [1, 3, 5].map(index => {
-    const channel = parseInt(hex.slice(index, index + 2), 16) / 255;
-    return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
-  });
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.36 ? '#1f2a24' : '#fffdf7';
+  hex = expandHex(hex);
+  if (!/^#[\da-f]{6}$/i.test(hex ?? '')) return INK_LIGHT;
+  return contrastRatio(hex, INK_DARK) >= contrastRatio(hex, INK_LIGHT) ? INK_DARK : INK_LIGHT;
 }
 
 // A real politician's mark: the logo of the party the database links them to; without a logo, that party's
@@ -103,9 +117,16 @@ export function personMark({ chamber, link = null, logo = null } = {}, size = 's
 }
 
 // Party mark: the verified logo when available, otherwise initials on the party colour.
+// The short text of a party everywhere it has no room for its name: its abbreviation, otherwise the initials of its name (3 letters at most).
+export function partyMarkText({ label, abbreviation } = {}) {
+  // Connectors in lower case (e, di, per, del…) are not part of the initials: «Alleanza Verdi e Sinistra» is AVS, not AVE.
+  const words = String(label ?? 'P').split(/[\s\-–—/]+/).map(word => word.replace(/[^\p{L}\p{N}]/gu, '')).filter(Boolean);
+  const main = words.filter(word => !(word.length <= 3 && word === word.toLowerCase() && /\p{L}/u.test(word)));
+  const initials = (main.length ? main : words).map(word => word[0]).join('');
+  return (abbreviation || initials || 'P').slice(0, 3).toUpperCase();
+}
 export function emblem({ label, abbreviation, color, logo = null }, size = 'md') {
-  const initials = String(label ?? 'P').split(/[\s\-–—/]+/).map(word => word.replace(/[^\p{L}\p{N}]/gu, '')[0]).filter(Boolean).join('');
-  const text = (abbreviation || initials || 'P').slice(0, 3).toUpperCase();
+  const text = partyMarkText({ label, abbreviation });
   const fill = color || '#8c988b';
   return logo
     ? `<span class="emblem emblem-${size} has-logo" style="--emblem:${esc(fill)}"><img src="${esc(logo)}" alt="" loading="lazy" /></span>`

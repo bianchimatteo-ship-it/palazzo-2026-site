@@ -244,8 +244,8 @@
 .bill-actions{display:grid;gap:10px;margin:10px 0;padding:10px 0;border-top:1px solid var(--line)}
 .bill-speak{display:flex;flex-wrap:wrap;gap:8px}
 .bill-amend{display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px}
-.bill-amend label{display:grid;gap:4px;flex:1 1 240px;color:var(--muted);font-size:12px}
-.bill-amend select{min-height:38px;padding:6px 8px;border-radius:6px}
+.bill-amend label{display:grid;gap:4px;flex:1 1 240px;min-width:0;max-width:100%;color:var(--muted);font-size:12px}
+.bill-amend select{min-height:38px;padding:6px 8px;border-radius:6px;width:100%;min-width:0;max-width:100%}
 .bill-vote{display:grid;gap:6px}
 .bill-vote>span{color:var(--muted);font-size:12px}
 .bill-vote-choices{display:flex;flex-wrap:wrap;gap:6px}

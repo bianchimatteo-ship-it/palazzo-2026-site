@@ -61729,6 +61729,8 @@
         "§4 nuove entità",
         "§6 collegamento liste → partiti"
       ]
-    }
+    },
+    "scenarioDate": "2026-10-12",
+    "scenarioNote": "La carriera inizia alla data dello scenario; i dati reali (Parlamento, governo, partiti, sondaggio) sono quelli verificati alla data dello snapshot. Nessuna fonte pubblicata dopo la data dello scenario è stata usata."
   }
 }

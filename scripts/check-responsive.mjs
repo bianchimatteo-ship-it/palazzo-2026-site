@@ -67,7 +67,10 @@ try {
     ...['percorso', 'progressione', 'incarichi', 'cronologia', 'obiettivi'].map(tab => ['carriera', 'carriera', tab]),
     ...['panoramica', 'ruoli', 'organizzazione', 'vita', 'territorio', 'storico'].map(tab => ['partito', 'partito', tab]),
     ...['settimana', 'calendario', 'attivita', 'registro'].map(tab => ['calendario', 'agenda', tab]),
-    ['parlamento'], ['parlamento', 'hemi', 'commissione'], ['parlamento', 'hemi', 'senato']
+    ['parlamento'], ['parlamento', 'hemi', 'commissione'], ['parlamento', 'hemi', 'senato'],
+    // The newsroom (paper, radio, the rest), the Government desk with the projects, the Laws page with its folds open, and the Admin area.
+    ...['giornale', 'radio', 'tutto', 'testate', 'diario'].map(tab => ['notizie', 'news', tab]),
+    ['leggi', 'leggi-aperte'], ['amministrazione', 'hash']
   ];
   const audit = `(() => {
     const vw = document.documentElement.clientWidth;
@@ -98,6 +101,9 @@ try {
       ${section === 'hemi' ? `
       ${tab === 'senato' ? 'document.querySelector("[data-hemi-chamber=senato]")?.click();' : ''}
       ${tab === 'commissione' ? 'const select = document.querySelector("[data-hemi-filter=committee]"); if (select && select.options.length > 1) { select.value = select.options[1].value; select.dispatchEvent(new Event("change", { bubbles: true })); } await new Promise(resolve => setTimeout(resolve, 300)); document.querySelector(".hemi-members button")?.click();' : ''}` : section ? `document.querySelector('[data-section-tab="${section}"][data-section-tab-value="${tab}"]')?.click();` : ''}
+      ${section === 'news' ? `document.querySelector('[data-news-filter="${tab}"]')?.click();` : ''}
+      ${section === 'leggi-aperte' ? `for (const fold of document.querySelectorAll('.law-fold, .bill-archive')) fold.open = true;` : ''}
+      ${section === 'hash' ? `location.hash = '${page}'; await new Promise(resolve => setTimeout(resolve, 900));` : ''}
       await new Promise(resolve => setTimeout(resolve, 450));
       // The Home keeps its details folded: they are opened here so that their content is audited too.
       if ('${page}' === 'panoramica') { for (const drawer of document.querySelectorAll('.hqc-drawer')) drawer.open = true; await new Promise(resolve => setTimeout(resolve, 250)); }
@@ -111,7 +117,7 @@ try {
     ['resoconto settimanale', 'document.querySelector(".topbar [data-action=advance], [data-action=advance]")?.click(); await new Promise(resolve => setTimeout(resolve, 500)); document.querySelector("[data-confirm=ok]")?.click()', 'document.querySelector("[data-report-close]")?.click()', '.report-modal'],
     ['nuova carriera', 'document.querySelector("[data-nav=impostazioni]")?.click(); await new Promise(resolve => setTimeout(resolve, 600)); document.querySelector("[data-action=new-career]")?.click(); await new Promise(resolve => setTimeout(resolve, 600)); document.querySelector("[data-menu-action=start-local]")?.click()', 'document.querySelector("[data-wizard-action=cancel]")?.click(); await new Promise(resolve => setTimeout(resolve, 400)); document.querySelector("[data-menu=continua]")?.click()', '.career-wizard']
   ];
-  const widths = [[320, 640, true, 'telefono 320'], [375, 812, true, 'telefono'], [390, 844, true, 'telefono 390'], [430, 932, true, 'telefono 430'], [768, 1024, true, 'tablet'], [1024, 768, false, 'desktop 1024'], [1280, 800, false, 'desktop']];
+  const widths = [[320, 640, true, 'telefono 320'], [360, 800, true, 'telefono 360'], [375, 812, true, 'telefono'], [390, 844, true, 'telefono 390'], [430, 932, true, 'telefono 430'], [768, 1024, true, 'tablet'], [1024, 768, false, 'desktop 1024'], [1280, 800, false, 'desktop']];
   const report = [];
   const opened = new Set();
   const missing = new Set();
@@ -127,9 +133,9 @@ try {
       if (view[1]?.startsWith('osservatorio') && !(await evaluate('Boolean(document.querySelector(".polls-page.observatory"))'))) report.push(`${label} · ${view.join(' › ')} · l’osservatorio non si apre`);
       // The Home as a command centre: who you are and the main action on the first screen, the resources right after.
       if (view[0] === 'panoramica') {
-        const home = await evaluate(`(() => { const top = selector => { const el = document.querySelector(selector); return el ? el.getBoundingClientRect().top + scrollY : null; }; return { action: top('.hqc-action'), priorities: top('.hqc-priorities'), resources: top('.hqc-resources'), overview: top('.hqc-board-status'), screen: innerHeight, tabs: [...document.querySelectorAll('.mobile-tab')].filter(tab => getComputedStyle(tab).display !== 'none').length }; })()`);
+        const home = await evaluate(`(() => { const top = selector => { const el = document.querySelector(selector); return el ? el.getBoundingClientRect().top + scrollY : null; }; return { action: top('.hqc-action'), resources: top('.hqc-resources'), priorities: top('.hqc-priorities'), decisions: top('.hqc-decisions'), activities: top('.hqc-activities'), deadlines: top('.hqc-deadline-band'), screen: innerHeight, tabs: [...document.querySelectorAll('.mobile-tab')].filter(tab => getComputedStyle(tab).display !== 'none').length }; })()`);
         if (home.action === null || home.action > home.screen * 1.05) report.push(`${label} · Home: l’azione principale non è nella prima schermata (${home.action} px su ${home.screen})`);
-        if (!(home.priorities > home.action && home.resources > home.priorities && home.overview > home.resources)) report.push(`${label} · Home: ordine dei blocchi non rispettato`);
+        if (!(home.resources > home.action && home.priorities > home.resources && home.decisions > home.priorities && home.activities > home.decisions - 1 && home.deadlines > home.decisions)) report.push(`${label} · Home: ordine dei blocchi non rispettato (${JSON.stringify(home)})`);
         if (width <= 600 && home.tabs !== 5) report.push(`${label} · barra inferiore con ${home.tabs} tasti invece di 5`);
       }
     }
@@ -248,6 +254,20 @@ try {
     for (const issue of issues) report.push(`${label} · Candidatura con le corse territoriali · ${issue.kind}: ${issue.el} (${issue.detail})`);
   }
   if (missing.size) report.push(`finestre non aperte durante il controllo: ${[...missing].join(', ')}`);
+  // The public pages (privacy, terms, account deletion): readable and without horizontal scroll at every width.
+  for (const [width, height, mobile, label] of widths) {
+    await viewport(width, height, mobile);
+    for (const path of ['privacy.html', 'termini.html', 'elimina-account.html']) {
+      await send('Page.navigate', { url: base + path });
+      await pause(500);
+      const page = await evaluate(`(() => ({ over: document.documentElement.scrollWidth - document.documentElement.clientWidth, small: [...document.querySelectorAll('.legal p, .legal li, .legal td, .legal label, .legal button')].filter(el => parseFloat(getComputedStyle(el).fontSize) < 14).length, form: Boolean(document.querySelector('#delete-form')), title: document.title }))()`);
+      checked++;
+      if (page.over > 1) report.push(`${label} · ${path} · scorrimento orizzontale di ${page.over} px`);
+      if (page.small) report.push(`${label} · ${path} · ${page.small} testi sotto 14 px`);
+      if (path === 'elimina-account.html' && !page.form) report.push(`${label} · ${path} · modulo mancante`);
+      if (!/POLITICANDO 2026/.test(page.title)) report.push(`${label} · ${path} · titolo inatteso (${page.title})`);
+    }
+  }
   if (report.length) {
     exitCode = 1;
     console.error(`Controllo responsive: ${report.length} problemi su ${checked} schermate.\n- ${report.slice(0, 80).join('\n- ')}${report.length > 80 ? `\n… e altri ${report.length - 80}` : ''}`);

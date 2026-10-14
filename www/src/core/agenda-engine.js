@@ -1,9 +1,10 @@
 // The political agenda: every dated commitment of the career in one calendar — votes and candidacy windows,
 // candidate selection, congresses, promises to verify, pending consequences, decrees to convert, allies' demands,
 // investments that expire and decisions held until a date. Read-only: it derives everything from the state.
-import { advanceDays, formatDate } from './time.js?v=20260926-6';
-import { upcomingElections } from './career-engine.js?v=20260926-6';
-import { SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20260926-6';
+import { advanceDays, formatDate } from './time.js?v=20261014-1';
+import { upcomingElections, upcomingRounds } from './career-engine.js?v=20261014-1';
+import { SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20261014-1';
+import { presidencySchedule, termEndOf, whiteSemester } from './presidency-engine.js?v=20261014-1';
 
 export const AGENDA_KINDS = Object.freeze({
   elezione: { label: 'Elezioni', icon: 'ballot' },
@@ -17,7 +18,8 @@ export const AGENDA_KINDS = Object.freeze({
   alleato: { label: 'Richiesta di un alleato', icon: 'link' },
   investimento: { label: 'Investimento', icon: 'money' },
   decisione: { label: 'Decisione', icon: 'alert' },
-  legislatura: { label: 'Legislatura e governo', icon: 'dome' }
+  legislatura: { label: 'Legislatura e governo', icon: 'dome' },
+  quirinale: { label: 'Quirinale', icon: 'dome' }
 });
 const CLOSED = ['approved', 'rejected', 'lapsed'];
 const daysBetween = (from, to) => Math.round((Date.parse(`${to}T12:00:00`) - Date.parse(`${from}T12:00:00`)) / 86400000);
@@ -51,6 +53,11 @@ export function agendaCalendar(state, { horizonDays = 730 } = {}) {
     if (entry.status === 'open') add({ id: `${entry.id}-chiusura`, date: entry.windowClosesAt, kind: 'candidature', title: `Ultimo giorno per candidarti: ${entry.label}`, detail: 'Se non ti candidi, un mandato dello stesso tipo si conclude.', tone: 'warn', urgent: true, action: { type: 'tab', section: 'elezioni', tab: 'campagna' } });
     if (entry.status !== 'missed') add({ id: `${entry.id}-voto`, date: entry.electionDate, kind: 'elezione', title: `Si vota: ${entry.label}`, detail: entry.status === 'running' ? 'Sei in campagna.' : entry.status === 'open' ? 'Candidature aperte.' : 'In calendario.', tone: entry.status === 'running' ? 'warn' : 'neutral', action: { type: 'nav', page: 'elezioni' } });
   }
+  // The yearly round (a year without a vote of the player's own): the campaign in the comuni at the polls.
+  for (const round of upcomingRounds(game)) {
+    if (round.status === 'upcoming') add({ id: `${round.id}-campagna`, date: round.windowOpensAt, kind: 'campagna', title: `${round.label}: ${party ? 'il partito chiede' : 'le liste civiche chiedono'} il tuo impegno`, detail: 'Nessun voto tuo quest’anno: si vota nei comuni e puoi fare campagna per i candidati.' });
+    add({ id: `${round.id}-voto`, date: round.electionDate, kind: 'elezione', title: `Si vota: ${round.label}`, detail: `${round.comuni ? `${round.comuni} comuni al voto` : 'Comuni al voto'} · non sei candidato.`, action: { type: 'nav', page: 'elezioni' } });
+  }
   // The campaign in progress: the internal nomination deadline and the vote (with the runoff, if any).
   if (campaign?.status === 'active') {
     const start = advanceDays(campaign.currentDate ?? today, -(campaign.day ?? 0));
@@ -76,6 +83,11 @@ export function agendaCalendar(state, { horizonDays = 730 } = {}) {
     const group = Object.values(parliament.chambers ?? {}).flatMap(chamber => chamber.groups ?? []).find(item => item.groupId === groupId);
     add({ id: `richiesta-${groupId}-${partner.demand.deadline}`, date: partner.demand.deadline, kind: 'alleato', title: `${group?.officialName ?? 'Un alleato'} chiede ${partner.demand.label}`, detail: 'Se la richiesta resta senza risposta, il sostegno al governo vacilla.', tone: 'warn', action: { type: 'nav', page: 'governo' } });
   }
+  // The commitments of the coalition accord with a term: kept or postponed (once) or betrayed when it passes.
+  for (const c of (parliament?.government?.accord?.commitments ?? []).filter(item => ['aperto', 'rinviato'].includes(item.status) && item.due)) {
+    const group = Object.values(parliament.chambers ?? {}).flatMap(chamber => chamber.groups ?? []).find(item => item.groupId === c.groupId);
+    add({ id: `impegno-${c.id}`, date: c.due, kind: 'alleato', title: `Accordo di governo — ${group?.officialName ?? 'un alleato'}: ${c.label}`, detail: c.status === 'rinviato' ? 'Già rinviato una volta: se non viene mantenuto è un tradimento.' : 'Se la scadenza passa senza il provvedimento, l’impegno viene rinviato una volta e poi tradito.' });
+  }
   // The national cycle: lists filed for the general election, the steps of the formation of the Government, the end
   // of the legislature.
   const national = state.national;
@@ -90,12 +102,25 @@ export function agendaCalendar(state, { horizonDays = 730 } = {}) {
     if (formation.deadline) add({ id: `formazione-${formation.resultId}-scadenza`, date: formation.deadline, kind: 'legislatura', title: 'Termine per formare il governo', detail: 'Senza una maggioranza le Camere vengono sciolte.' });
   }
   if (national?.legislature?.naturalEnd) add({ id: `fine-legislatura-${national.legislature.number}`, date: national.legislature.naturalEnd, kind: 'legislatura', title: `Scadenza della ${national.legislature.label}`, detail: 'Le Camere scadono cinque anni dopo la prima seduta.' });
+  // The Quirinale: the election of the President (negotiations, first ballot, end of the term), the white semester.
+  const presidency = state.presidency;
+  if (presidency?.incumbent) {
+    const schedule = presidencySchedule(presidency.incumbent);
+    const mine = presidency.incumbent.kind === 'giocatore';
+    if (presidency.election && presidency.election.phase !== 'conclusa') {
+      if (presidency.election.phase === 'trattative') add({ id: `quirinale-${presidency.election.id}-scrutinio`, date: presidency.election.firstBallot, kind: 'quirinale', title: 'Primo scrutinio per il Presidente della Repubblica', detail: `Parlamento in seduta comune e delegati regionali: ${presidency.election.assembly.twoThirds} voti nei primi tre scrutini, poi ${presidency.election.assembly.absolute}.`, tone: 'warn', action: { type: 'tab', section: 'elezioni', tab: 'quirinale' } });
+    } else {
+      add({ id: `quirinale-trattative-${presidency.incumbent.number}`, date: schedule.opensAt, kind: 'quirinale', title: mine ? 'Si apre la corsa al tuo successore (o alla tua rielezione)' : 'Si apre la corsa al Quirinale', detail: `Il mandato del Presidente scade il ${formatDate(schedule.termEnds)}: il Parlamento in seduta comune elegge il successore a scrutinio segreto.`, action: { type: 'tab', section: 'elezioni', tab: 'quirinale' } });
+      add({ id: `quirinale-scadenza-${presidency.incumbent.number}`, date: schedule.termEnds, kind: 'quirinale', title: mine ? 'Scade il tuo mandato da Presidente della Repubblica' : 'Scade il mandato del Presidente della Repubblica', detail: 'Sette anni dal giuramento.', action: { type: 'tab', section: 'elezioni', tab: 'quirinale' } });
+    }
+    if (mine) { const semester = whiteSemester(presidency.incumbent, today, state.national?.legislature?.naturalEnd ?? null); if (!semester.active) add({ id: `quirinale-semestre-${presidency.incumbent.number}`, date: semester.since, kind: 'quirinale', title: 'Inizia il semestre bianco', detail: 'Negli ultimi sei mesi del mandato il Presidente non può sciogliere le Camere.', action: { type: 'tab', section: 'elezioni', tab: 'quirinale' } }); }
+  }
   // Money: investments that expire.
   for (const asset of (game.finance?.assets ?? []).filter(item => item.untilWeek)) add({ id: `asset-${asset.id}-${asset.untilWeek}`, date: weekDate(game, asset.untilWeek + 1), kind: 'investimento', title: `Scade: ${asset.label}`, detail: 'Dopo la scadenza l’effetto si esaurisce.', action: { type: 'nav', page: 'finanze' } });
   for (const investment of (party?.org?.investments ?? []).filter(item => item.untilWeek && item.untilWeek >= game.week.index)) add({ id: `partito-${investment.id}-${investment.untilWeek}`, date: weekDate(game, investment.untilWeek + 1), kind: 'investimento', title: `Scade l’investimento del partito: ${investment.label ?? investment.id}`, detail: 'Tesoreria del partito.', action: { type: 'nav', page: 'finanze' } });
   // Decisions on the desk: the ones held until a date (after a vote) and the ones due at the end of the week.
   const weekEnd = advanceDays(game.week.startedAt ?? today, 6);
-  for (const item of game.inbox ?? []) add({ id: `decisione-${item.id}`, date: item.holdUntilDate && item.holdUntilDate > weekEnd ? item.holdUntilDate : weekEnd > today ? weekEnd : today, kind: 'decisione', title: item.title, detail: item.holdUntilDate && item.holdUntilDate > weekEnd ? 'In attesa: la decisione si chiude dopo questa data.' : `Entro fine settimana, altrimenti: “${item.choices?.find(choice => choice.id === item.defaultChoice)?.label ?? 'scelta predefinita'}”.`, tone: ['urgente', 'situazione'].includes(item.kind) ? 'bad' : 'neutral', urgent: ['urgente', 'situazione'].includes(item.kind), action: { type: 'tab', section: 'agenda', tab: 'settimana' } });
+  for (const item of game.inbox ?? []) add({ id: `decisione-${item.id}`, date: item.holdUntilDate && item.holdUntilDate > weekEnd ? item.holdUntilDate : Number.isInteger(item.day) ? (advanceDays(game.week.startedAt ?? today, item.day) > today ? advanceDays(game.week.startedAt ?? today, item.day) : today) : weekEnd > today ? weekEnd : today, kind: 'decisione', title: item.title, detail: item.holdUntilDate && item.holdUntilDate > weekEnd ? 'In attesa: la decisione si chiude dopo questa data.' : `Entro fine settimana, altrimenti: “${item.choices?.find(choice => choice.id === item.defaultChoice)?.label ?? 'scelta predefinita'}”.`, tone: ['urgente', 'situazione'].includes(item.kind) ? 'bad' : 'neutral', urgent: ['urgente', 'situazione'].includes(item.kind), action: { type: 'tab', section: 'agenda', tab: 'settimana' } });
   return items.sort((a, b) => a.date.localeCompare(b.date) || Number(b.urgent) - Number(a.urgent) || a.title.localeCompare(b.title));
 }
 

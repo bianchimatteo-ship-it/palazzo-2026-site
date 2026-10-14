@@ -49,7 +49,7 @@
 .hqc-indicators .hq-meter { padding: 12px 16px; }
 
 /* 2. resources of the week: each tile opens the section that explains it */
-.hqc-resources { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.hqc-resources { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
 .hqc-resource { min-width: 0; }
 .hqc-resource-link { display: grid; align-content: start; gap: 4px; width: 100%; height: 100%; min-width: 0; padding: 13px 15px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); color: var(--ink); text-align: left; font: inherit; }
 button.hqc-resource-link { cursor: pointer; transition: border-color .15s ease, transform .15s ease; }
@@ -77,8 +77,17 @@ button.hqc-resource-link:hover { border-color: var(--accent); transform: transla
 .hqc-board > .hqc-card { display: grid; height: auto; grid-template-rows: none; }
 /* On computers the cards speak for themselves inside the board; the heading and the fold buttons are for phones. */
 .hqc-board > .hqc-overview, .hqc-more { display: none; }
+.hqc-board-act { columns: auto; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
+.hqc-board-act > * { margin: 0; }
+.hqc-drawer .hqc-overview { display: none; }
+.hqc-activities .hq-planner { display: grid; gap: 8px; }
+/* In the half-width column an activity is read top to bottom: what it is, then what it costs and the button. */
+.hqc-activities .hq-activity { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.hqc-activities .hq-activity-action { grid-template-columns: minmax(0, 1fr) auto; justify-items: stretch; align-items: center; }
+.hqc-activities .hq-activity-action select { width: 100%; max-width: none; }
+.hqc-activities .hq-activity-action em { grid-column: 1 / -1; }
 .hqc-priorities .briefing-bare { padding: 0; border: 0; background: none; }
-.hqc-priorities .briefing-grid { grid-template-columns: 1fr; }
+.hqc-priorities .briefing-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); }
 .hqc-decisions .hq-inbox-list { display: grid; gap: 12px; }
 
 /* 4. what is coming: the first election is the one that matters most */
@@ -135,7 +144,8 @@ html[data-motion="reduced"] .hqc-drawer-toggle, html[data-motion="reduced"] butt
 @media (max-width: 1180px) {
   .hqc-head { grid-template-columns: minmax(0, 1fr); grid-template-areas: "who" "action"; }
   .hqc-action { margin: 0 16px 16px; }
-  .hqc-resources { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .hqc-resources { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hqc-board-act { grid-template-columns: minmax(0, 1fr); }
   .top-time .date-chip { display: none; }
 }
 @media (max-width: 850px) {
@@ -186,9 +196,7 @@ html[data-motion="reduced"] .hqc-drawer-toggle, html[data-motion="reduced"] butt
   .hqc-indicators .hq-meters .hq-meter em { display: none; }
   .hqc-indicators .hq-meters .hq-meter > span { font-size: 12px; overflow-wrap: anywhere; }
   .hqc-indicators .hq-meters .hq-meter > strong { font-size: 15px; }
-  .hqc-resources { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-  .hqc-resources > .hqc-resource { grid-column: span 2; }
-  .hqc-resources > .hqc-resource:nth-child(n+4), .hqc-resources > .hqc-resource:last-child { grid-column: span 3; }
+  .hqc-resources { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hqc-resource small { font-size: 12px; letter-spacing: .05em; }
   .hqc-resource strong { font-size: 17px; }
   .hqc-card .sparkline, .hqc-card .hqc-card-lead { display: none; }
@@ -220,3 +228,102 @@ html[data-motion="reduced"] .hqc-drawer-toggle, html[data-motion="reduced"] butt
 @media (max-width: 600px) {
   .hqc-head .hero-party-logo, .hqc-head .emblem-lg { width: 46px; height: 46px; }
 }
+
+/* ---------- the plan of the week, the staff, the treasury operations ---------- */
+.plan-add { min-height: 30px; padding: 0 10px; border: 1px dashed var(--line-strong); border-radius: 6px; background: transparent; color: var(--ink-2); font: 700 12px var(--font-head, Manrope, sans-serif); cursor: pointer; white-space: nowrap; }
+.plan-add:hover { border-color: var(--party-accent); color: var(--ink); }
+.plan-add.is-planned { border-style: solid; border-color: var(--party-accent); background: var(--party-accent-soft); color: var(--ink); }
+.plan-pair { display: flex; gap: 4px; align-items: stretch; min-width: 0; }
+.plan-pair > .secondary-button { flex: 1 1 auto; min-width: 0; }
+.plan-tray { position: fixed; right: 18px; bottom: 18px; z-index: 40; display: grid; gap: 8px; width: min(420px, calc(100vw - 24px)); padding: 12px 14px; border: 1px solid var(--party-accent-line, var(--line-strong)); border-top: 3px solid var(--party-accent, var(--gold)); border-radius: 12px; background: var(--panel-2, #1d1e1a); box-shadow: 0 14px 40px rgba(0, 0, 0, .5); }
+.plan-tray.is-blocked { border-top-color: var(--status-urgent, #c4574a); }
+.plan-details > summary { display: flex; justify-content: space-between; align-items: center; gap: 10px; cursor: pointer; list-style: none; }
+.plan-details > summary::-webkit-details-marker { display: none; }
+.plan-title { display: inline-flex; align-items: center; gap: 6px; font: 800 13.5px var(--font-head, Manrope, sans-serif); color: var(--ink-hi, var(--ink)); }
+.plan-summary { color: var(--ink-2); font-size: 12.5px; text-align: right; overflow-wrap: anywhere; }
+.plan-list { display: grid; gap: 6px; margin: 10px 0 0; padding: 0; list-style: none; max-height: 40vh; overflow: auto; }
+.plan-list li { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; padding: 7px 8px; border: 1px solid var(--line); border-radius: 8px; }
+.plan-list li.is-blocked { border-color: var(--status-urgent, #c4574a); }
+.plan-list li > span { display: grid; min-width: 0; }
+.plan-list li strong { font-size: 13px; overflow-wrap: anywhere; }
+.plan-list li small { color: var(--ink-2); font-size: 12px; overflow-wrap: anywhere; }
+.plan-list li button { flex: none; width: 28px; height: 28px; border: 1px solid var(--line-strong); border-radius: 6px; background: transparent; color: var(--ink-2); cursor: pointer; }
+.plan-after { margin: 8px 0 0; color: var(--ink-2); font-size: 12.5px; }
+.plan-actions { display: flex; gap: 8px; }
+.plan-actions .primary-button { flex: 1 1 auto; }
+@media (max-width: 600px) { .plan-tray { right: 8px; left: 8px; width: auto; bottom: calc(72px + env(safe-area-inset-bottom)); } }
+.hqc-staff .staff-skills { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px 14px; margin: 0 0 12px; padding: 0; list-style: none; }
+.staff-skills li { display: grid; grid-template-columns: minmax(0, 1fr) 60px auto; align-items: center; gap: 6px; font-size: 12.5px; }
+.staff-mandate, .staff-task { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2, transparent); margin-bottom: 10px; }
+.staff-mandate.is-attivo { border-left: 4px solid var(--party-accent); }
+.staff-mandate.is-sospeso { border-left: 4px solid var(--status-attention, #d6853f); }
+.staff-mandate > header, .staff-task > header { display: flex; align-items: center; gap: 10px; }
+.staff-mandate > header > div, .staff-task > header > div { min-width: 0; flex: 1; }
+.staff-mandate small, .staff-task small { display: block; color: var(--ink-2); font-size: 12.5px; }
+.staff-report { margin: 0; font-size: 13px; }
+.staff-report.is-warn, .staff-log li.is-warn { color: var(--status-attention, #d6853f); }
+.staff-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.staff-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 8px; margin-top: 8px; }
+.staff-form label { display: grid; gap: 3px; color: var(--ink-2); font-size: 12.5px; min-width: 0; }
+.staff-form input, .staff-form select { min-height: 36px; width: 100%; min-width: 0; max-width: 100%; }
+.staff-form button { align-self: end; }
+.staff-tasks { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 10px; margin-top: 10px; }
+.staff-new > summary, .staff-limits > summary, .staff-closed > summary, .staff-edit > summary, .staff-give > summary { cursor: pointer; font: 700 13px var(--font-head, Manrope, sans-serif); color: var(--ink-2); padding: 6px 0; }
+.staff-problem { display: flex; gap: 6px; align-items: flex-start; margin: 0; color: var(--status-attention, #d6853f); font-size: 12.5px; }
+.staff-limits ul { display: grid; gap: 6px; margin: 6px 0 0; padding-left: 18px; }
+.staff-log { display: grid; gap: 4px; margin: 8px 0; padding: 0; list-style: none; font-size: 13px; }
+.invest-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
+.invest-actions em { color: #d6a391; font-size: 12px; font-style: normal; }
+
+/* ---------- LA POLITICA 24: the paper, the radio, the news cards ---------- */
+.lp24-masthead { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; padding: 12px 14px; border: 1px solid #2c4a54; border-radius: 12px; background: linear-gradient(135deg, #0f2f3a, #13242b); color: #f4efe2; }
+.lp24-masthead .lp24-logo { flex: none; width: 92px; height: auto; }
+.lp24-masthead h2 { margin: 2px 0; color: #f4efe2; font-size: 22px; letter-spacing: .05em; }
+.lp24-masthead p { margin: 0; color: #cfd8d3; font-size: 13px; }
+.lp24-masthead .section-kicker { color: #e0b04a; }
+.news-card { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 14px; margin-bottom: 12px; padding: 12px; border: 1px solid var(--line); border-left: 4px solid var(--cat, var(--line-strong)); border-radius: 10px; background: var(--panel-2, transparent); }
+.news-card.is-lead { grid-template-columns: minmax(0, 300px) minmax(0, 1fr); border-width: 1px 1px 1px 6px; }
+.news-card.is-breaking { border-color: #c4574a; }
+.news-art { align-self: start; margin: 0; overflow: hidden; border-radius: 8px; color: var(--cat, #6aa9c4); background: color-mix(in srgb, var(--cat, #6aa9c4) 12%, transparent); }
+.news-art svg { display: block; width: 100%; height: auto; }
+.news-card-body { min-width: 0; display: grid; gap: 6px; align-content: start; }
+.news-card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 0; color: var(--ink-2); font-size: 12.5px; }
+.news-card-meta .news-cat { display: inline-flex; align-items: center; gap: 4px; color: var(--ink); font-weight: 700; }
+.news-card-meta .news-outlet { font-style: italic; }
+.breaking-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; background: #b3392c; color: #fff; font: 800 12px var(--font-head, Manrope, sans-serif); letter-spacing: .08em; text-transform: uppercase; }
+.news-headline { margin: 0; color: var(--ink-hi, var(--ink)); font: 750 17px/1.25 var(--font-head, Manrope, sans-serif); overflow-wrap: anywhere; }
+.news-card.is-lead .news-headline { font-size: 22px; }
+.news-summary { margin: 0; color: var(--ink-2); font-size: 14px; line-height: 1.45; }
+.news-card details.news-article { border: 0; background: none; padding: 0; margin: 0; }
+.news-card details.news-article > summary { cursor: pointer; color: var(--party-accent-text, var(--gold-soft)); font: 700 13px var(--font-head, Manrope, sans-serif); padding: 4px 0; }
+.paper-front { display: grid; gap: 14px; }
+.paper-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 0 12px; }
+.radio-deck { display: grid; grid-template-columns: 170px minmax(0, 1fr) auto; gap: 14px; align-items: center; margin-bottom: 14px; }
+.radio-deck p { margin: 0; color: var(--ink-2); font-size: 13.5px; }
+.radio-art { width: 170px; height: auto; color: #6aa9c4; }
+.radio-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 12px; }
+.radio-bulletin { display: grid; gap: 8px; padding: 12px; border: 1px solid var(--line); border-top: 3px solid #e0b04a; border-radius: 10px; background: var(--panel-2, transparent); }
+.radio-bulletin header { display: grid; gap: 2px; }
+.radio-bulletin h3 { margin: 0; font-size: 16px; }
+.radio-slot { display: inline-flex; align-items: center; gap: 4px; color: #e0b04a; font: 700 12px var(--font-head, Manrope, sans-serif); letter-spacing: .06em; text-transform: uppercase; }
+.radio-bulletin time, .radio-items small { color: var(--ink-2); font-size: 12.5px; }
+.radio-intro { margin: 0; font-size: 13.5px; }
+.radio-items { display: grid; gap: 8px; margin: 0; padding-left: 18px; }
+.radio-items li { display: grid; gap: 2px; }
+.radio-figures { margin: 0; padding: 0; list-style: none; font-size: 14px; }
+[data-radio-play].is-on-air { border-color: #e0b04a; color: #e0b04a; }
+.hqc-news-actions { display: inline-flex; gap: 12px; flex-wrap: wrap; }
+@media (max-width: 640px) {
+  .news-card, .news-card.is-lead { grid-template-columns: minmax(0, 1fr); }
+  .news-art svg { max-height: 120px; }
+  .news-card.is-lead .news-headline { font-size: 19px; }
+  .radio-deck { grid-template-columns: minmax(0, 1fr); justify-items: start; }
+  .radio-art { width: 130px; }
+  .lp24-masthead .lp24-logo { width: 72px; }
+  .lp24-masthead h2 { font-size: 18px; }
+}
+@media (prefers-reduced-motion: no-preference) { .breaking-badge { animation: breaking-blink 2.4s ease-in-out 3; } }
+@keyframes breaking-blink { 50% { opacity: .72; } }
+.article-edge small, .article-story small, .article-body small { font-size: inherit; }
+.radio-bulletin small, .news-card small, .lp24-masthead small { font-size: 12.5px; }
+.radio-items .text-link { justify-self: start; font-size: 12.5px; min-height: 32px; }

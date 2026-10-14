@@ -924,3 +924,8 @@ select option, select optgroup { background: var(--panel); color: var(--ink); fo
 .hq-blocked > summary small { color: var(--ink-3); font-size: 12px; font-weight: 500; }
 .hq-blocked[open] > summary { color: var(--ink-2); }
 .hq-none { margin: 6px 0; }
+
+.project-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr)); gap: 6px 14px; margin: 0; }
+.project-facts > div { min-width: 0; }
+.project-facts dt { font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.project-facts dd { margin: 2px 0 0; font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; }

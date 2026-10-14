@@ -25,3 +25,13 @@ export function nextRegionalVote(lastDate, after) {
   while (date <= after) date = shift(date);
   return date;
 }
+
+// The provincial elections (law 56/2014) are of the second level: the mayors and the municipal councillors of the province
+// elect the council and the President. For the game the two renew together every four years (the law gives the council two
+// years and the President four); the game votes on the last Sunday of November.
+const lastSundayOfNovember = year => sundayOnOrBeforeDate(`${year}-11-30`);
+export function nextProvincialVote(lastDate, after) {
+  let date = lastSundayOfNovember(Number(String(lastDate).slice(0, 4)) + 4);
+  while (date <= after) date = lastSundayOfNovember(Number(date.slice(0, 4)) + 4);
+  return date;
+}

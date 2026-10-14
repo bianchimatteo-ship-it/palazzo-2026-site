@@ -1,7 +1,7 @@
 // Shared building blocks for the simulation screens: numbers, state badges, meters and charts.
 // Charts follow the same rules as the polls page: thin marks, one axis, legend + direct labels,
 // hover tooltips through data-trend / data-tip, text in ink rather than in the series colour.
-import { glyph } from './visuals.js?v=20260926-6';
+import { glyph } from './visuals.js?v=20261014-1';
 
 export const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const num = (value, digits = 1) => value === null || value === undefined || Number.isNaN(Number(value)) ? '—' : Number(value).toLocaleString('it-IT', { maximumFractionDigits: digits });
@@ -9,17 +9,30 @@ export const euro = value => `${Math.round(Number(value) || 0).toLocaleString('i
 export const signed = (value, digits = 1) => `${value > 0 ? '+' : value < 0 ? '−' : '±'}${Math.abs(Number(value) || 0).toLocaleString('it-IT', { maximumFractionDigits: digits })}`;
 
 // Validated categorical slots (same order as the polls) and a single-hue sequential ramp.
-export const SERIES = Object.freeze(['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767']);
-export const INCOME_COLOR = '#199e70';
-export const EXPENSE_COLOR = '#d95926';
+export const SERIES = Object.freeze(['#4A9DB8', '#C4A66A', '#D0805F', '#6FAE8A', '#8E86D8', '#D98BA6', '#B9C2A0', '#7FB8D6']);
+export const INCOME_COLOR = '#4C8F6B';
+export const EXPENSE_COLOR = '#C4684B';
 // Sequential ramp for the dark surface: low values recede toward the background, high values light up.
-export const GREEN_RAMP = Object.freeze(['#0b4f2c', '#136339', '#1f7749', '#318a5b', '#479c6e', '#61ad83', '#7dbd99', '#99ccaf', '#b5dac4', '#cfe7d8', '#e6f2ea']);
+export const GREEN_RAMP = Object.freeze(['#1e382a', '#2c503d', '#3a674f', '#487f61', '#569574', '#6aa786', '#82b499', '#9ac2ac', '#b1cfbf', '#c9ddd2', '#e0ebe5']);
 export const rampColor = (value, min = 0, max = 100) => GREEN_RAMP[Math.max(0, Math.min(GREEN_RAMP.length - 1, Math.round((value - min) / ((max - min) || 1) * (GREEN_RAMP.length - 1))))];
 
 // Visual states shared by every system: growth, decline, risk, crisis, stable.
 const STATE_ICONS = { crescita: 'trendUp', calo: 'trendDown', rischio: 'alert', crisi: 'alert', stabile: 'steady', solida: 'shield' };
 export function stateBadge(kind, label) {
   return `<span class="state-badge state-${esc(kind)}">${glyph(STATE_ICONS[kind] ?? 'steady', 13, 2)}${esc(label)}</span>`;
+}
+// Functional states, the same everywhere: what needs the player now (urgent), what to watch (attention), what is on offer (opportunity), what is done (done), what is just information.
+// The colour comes with a glyph and a word: never the colour alone (the tokens are --status-* in styles.css).
+export const STATUS_KINDS = Object.freeze({
+  urgente: { icon: 'alert', label: 'Urgente' },
+  attenzione: { icon: 'clock', label: 'Da seguire' },
+  opportunita: { icon: 'star', label: 'Opportunità' },
+  completato: { icon: 'trophy', label: 'Fatto' },
+  informazione: { icon: 'news', label: 'Informazione' }
+});
+export function statusChip(kind, text = null, extraClass = '') {
+  const status = STATUS_KINDS[kind] ?? STATUS_KINDS.informazione;
+  return `<span class="status-chip is-${esc(kind in STATUS_KINDS ? kind : 'informazione')} ${esc(extraClass)}">${glyph(status.icon, 13, 2)}<b>${esc(text ?? status.label)}</b></span>`;
 }
 export function trendState(delta, { threshold = 0.3, invert = false } = {}) {
   const value = invert ? -delta : delta;
@@ -72,35 +85,58 @@ function niceStep(raw) {
   return (normal <= 1 ? 1 : normal <= 2 ? 2 : normal <= 5 ? 5 : 10) * magnitude;
 }
 const compact = value => Math.abs(value) >= 10000 ? `${num(value / 1000, 1)}k` : num(value, 1);
-// Multi-series line chart with legend, direct end labels and a crosshair tooltip.
-export function lineChart({ series: input, labels, tips = labels, unit = '', min = null, max = null, height = 230, ariaLabel = 'Andamento', digits = 1 }) {
-  const series = distinctSeries(input);
-  const length = labels.length;
-  if (length < 2) return '<p class="quiet-copy">Il grafico compare dalla seconda settimana: chiudi la settimana per vedere l’andamento.</p>';
-  const W = 660, H = height, L = 40, R = 150, T = 14, B = 28;
+// Multi-series line chart with legend, direct end labels and a crosshair tooltip. It is drawn three times, at three widths, and the stylesheet shows the one that fits the block:
+// narrow (300 units, up to 380 px), medium (440 units, up to 600 px) and wide (640 units, the end labels in a column on the right). A single drawing scaled to a phone would shrink
+// its text to 5 px (and scaled up to a tablet it would swell): each one is shown at a scale between 0.85 and 1.4, so the ticks stay between 11.5 and 19 px. The legend (HTML) carries the
+// names and, in the narrow and medium drawings, the last value of each series.
+const CHART_VARIANTS = Object.freeze({
+  wide: { W: 640, L: 40, T: 14, B: 30, ticks: 6 },
+  mid: { W: 440, L: 38, R: 16, T: 14, B: 30, ticks: 5 },
+  narrow: { W: 300, L: 34, R: 12, T: 14, B: 30, ticks: 4 }
+});
+function lineSvg(variant, { series, labels, height, right, low, high, step, digits, unit }) {
+  const geometry = CHART_VARIANTS[variant];
+  const { W, L, T, B } = geometry;
+  const R = variant === 'wide' ? right : geometry.R;
+  const H = height, length = labels.length;
   const plotW = W - L - R, plotH = H - T - B;
-  const values = series.flatMap(item => item.values.filter(Number.isFinite));
-  const low = min ?? Math.floor(Math.min(...values) - 2);
-  const high = max ?? Math.ceil(Math.max(...values) + 2);
   const span = high - low || 1;
-  const step = niceStep(span / 5);
   const x = i => L + i * plotW / (length - 1);
   const y = v => T + (1 - (v - low) / span) * plotH;
   const ticks = [];
   for (let v = Math.ceil(low / step) * step; v <= high; v += step) ticks.push(v);
-  const grid = ticks.map(v => `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 3.5}" text-anchor="end">${compact(v)}</text>`).join('');
-  const every = Math.max(1, Math.ceil(length / 6));
-  const xTicks = labels.map((label, i) => i % every === 0 || i === length - 1 ? `<text class="tick" x="${x(i)}" y="${H - 8}" text-anchor="middle">${esc(label)}</text>` : '').join('');
-  const lines = series.map(item => `<path class="series ${item.emphasis ? 'is-player' : ''}" d="${item.values.map((v, i) => Number.isFinite(v) ? `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}` : '').join(' ')}" style="stroke:${esc(item.color)}"/>`).join('');
-  const ends = series.map(item => ({ ...item, endY: y(item.values.at(-1) ?? low) })).sort((a, b) => a.endY - b.endY);
-  let cursor = T;
-  for (const item of ends) { item.labelY = Math.max(item.endY, cursor); cursor = item.labelY + 16; }
-  const overflow = cursor - 16 - (H - B);
-  if (overflow > 0) for (const item of ends) item.labelY -= overflow;
-  const endLabels = ends.map(item => `<circle class="end-dot" cx="${x(length - 1)}" cy="${item.endY}" r="4" style="fill:${esc(item.color)}"/><line class="leader" x1="${x(length - 1) + 6}" y1="${item.endY}" x2="${W - R + 10}" y2="${item.labelY}"/><text class="end-label ${item.emphasis ? 'is-player' : ''}" x="${W - R + 14}" y="${item.labelY + 4}">${esc(item.short ?? item.label)} ${num(item.values.at(-1), digits)}${esc(unit)}</text>`).join('');
-  const payload = { x: labels.map((_, i) => x(i) / W), weeks: tips, unit, series: series.map(item => ({ label: item.label, color: item.color, values: item.values })) };
-  const legend = series.length > 1 ? `<div class="trend-legend">${series.map(item => `<span class="legend-item ${item.emphasis ? 'is-player' : ''}"><i style="background:${esc(item.color)}"></i>${esc(item.label)}</span>`).join('')}</div>` : '';
-  return `${legend}<div class="trend-chart" data-trend="${esc(JSON.stringify(payload))}" tabindex="0" aria-label="${esc(ariaLabel)}"><svg viewBox="0 0 ${W} ${H}" role="img" aria-hidden="true">${grid}${xTicks}${lines}${endLabels}<line class="crosshair" x1="0" x2="0" y1="${T}" y2="${H - B}" visibility="hidden"/></svg></div>`;
+  const grid = ticks.map(v => `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}"/><text class="tick" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${compact(v)}</text>`).join('');
+  const every = Math.max(1, Math.ceil(length / geometry.ticks));
+  const xTicks = labels.map((label, i) => i % every === 0 || i === length - 1 ? `<text class="tick" x="${x(i)}" y="${H - 8}" text-anchor="${i === 0 ? 'start' : i === length - 1 ? 'end' : 'middle'}">${esc(label)}</text>` : '').join('');
+  // A force that enters or leaves the survey has gaps: every stretch starts with its own move.
+  const lines = series.map(item => `<path class="series ${item.emphasis ? 'is-player' : ''}" d="${item.values.map((v, i) => Number.isFinite(v) ? `${i === 0 || !Number.isFinite(item.values[i - 1]) ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)}` : '').join(' ')}" style="stroke:${esc(item.color)}"/>`).join('');
+  const last = item => { for (let i = item.values.length - 1; i >= 0; i--) if (Number.isFinite(item.values[i])) return [i, item.values[i]]; return null; };
+  const ends = series.map(item => ({ ...item, end: last(item) })).filter(item => item.end).map(item => ({ ...item, endX: x(item.end[0]), endY: y(item.end[1]) })).sort((a, b) => a.endY - b.endY);
+  let endLabels = '';
+  if (variant === 'wide') {
+    let cursor = T;
+    for (const item of ends) { item.labelY = Math.max(item.endY, cursor); cursor = item.labelY + 16; }
+    const overflow = cursor - 16 - (H - B);
+    if (overflow > 0) for (const item of ends) item.labelY -= overflow;
+    endLabels = ends.map(item => `<circle class="end-dot" cx="${item.endX}" cy="${item.endY}" r="4" style="fill:${esc(item.color)}"/><line class="leader" x1="${item.endX + 6}" y1="${item.endY}" x2="${W - R + 10}" y2="${item.labelY}"/><text class="end-label ${item.emphasis ? 'is-player' : ''}" x="${W - R + 14}" y="${item.labelY + 4}">${esc(item.short ?? item.label)} ${num(item.end[1], digits)}${esc(unit)}</text>`).join('');
+  } else endLabels = ends.map(item => `<circle class="end-dot" cx="${item.endX}" cy="${item.endY}" r="4" style="fill:${esc(item.color)}"/>`).join('');
+  return { svg: `<svg class="lc-${variant}" viewBox="0 0 ${W} ${H}" role="img" aria-hidden="true">${grid}${xTicks}${lines}${endLabels}<line class="crosshair" x1="0" x2="0" y1="${T}" y2="${H - B}" visibility="hidden"/></svg>`, fractions: labels.map((_, i) => x(i) / W) };
+}
+export function lineChart({ series: input, labels, tips = labels, unit = '', min = null, max = null, height = 230, ariaLabel = 'Andamento', digits = 1, right = 150 }) {
+  const series = distinctSeries(input);
+  const length = labels.length;
+  if (length < 2) return '<p class="quiet-copy">Il grafico compare dalla seconda settimana: chiudi la settimana per vedere l’andamento.</p>';
+  const values = series.flatMap(item => item.values.filter(Number.isFinite));
+  if (!values.length) return '<p class="quiet-copy">Nessun dato disponibile per questo grafico.</p>';
+  const low = min ?? Math.floor(Math.min(...values) - 2);
+  const high = max ?? Math.ceil(Math.max(...values) + 2);
+  const step = niceStep((high - low || 1) / 5);
+  const options = { series, labels, height, right, low, high, step, digits, unit };
+  const wide = lineSvg('wide', options), mid = lineSvg('mid', options), narrow = lineSvg('narrow', options);
+  const payload = { x: wide.fractions, xm: mid.fractions, xn: narrow.fractions, weeks: tips, unit, series: series.map(item => ({ label: item.label, color: item.color, values: item.values })) };
+  const lastOf = item => { for (let i = item.values.length - 1; i >= 0; i--) if (Number.isFinite(item.values[i])) return item.values[i]; return null; };
+  const legend = series.length > 1 ? `<div class="trend-legend">${series.map(item => { const value = lastOf(item); return `<span class="legend-item ${item.emphasis ? 'is-player' : ''}"><i style="background:${esc(item.color)}"></i>${esc(item.label)}${value === null ? '' : ` <b class="legend-value">${num(value, digits)}${esc(unit)}</b>`}</span>`; }).join('')}</div>` : '';
+  return `<div class="trend-block">${legend}<div class="trend-chart" data-trend="${esc(JSON.stringify(payload))}" tabindex="0" aria-label="${esc(ariaLabel)}">${wide.svg}${mid.svg}${narrow.svg}</div></div>`;
 }
 
 // Income above the baseline, spending below: one € axis, thin bars with rounded data ends.

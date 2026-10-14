@@ -3,9 +3,10 @@
 // numbers are thin, and in a crisis tries to save itself — a "verifica" with a new programme and attention to the
 // allies, new supporters — before going back to the Chambers, or resigns when the numbers are gone. It works with the
 // primitives of parliament-engine (programme, reshuffle, appointments, majority); everything here is simulation.
-import { DATA_SOURCES } from '../data/schema.js?v=20260926-6';
-import { AREA_BY_ID, GOVERNMENT_LINES, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260926-6';
-import { activeMinisters, assignMinister, campOfAxis, governingGroupIds, groupProfile, leaveMajority, parliamentInternals, reshuffleMinister, setGovernmentProgram } from './parliament-engine.js?v=20260926-6';
+import { DATA_SOURCES } from '../data/schema.js?v=20261014-1';
+import { DOSSIER_RULES } from '../data/simulation/dossier-rules.js?v=20261014-1';
+import { AREA_BY_ID, GOVERNMENT_LINES, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261014-1';
+import { activeMinisters, assignMinister, campOfAxis, governingGroupIds, groupProfile, leaveMajority, parliamentInternals, reshuffleMinister, setGovernmentProgram } from './parliament-engine.js?v=20261014-1';
 
 const { getGroup, allGroups, record, majority, setRelation } = parliamentInternals;
 const SIM = DATA_SOURCES.SIMULATION;
@@ -119,7 +120,7 @@ export function advanceCabinetWeek(input, { date, rand = Math.random, world = nu
   }
   // 3. A minister falls and is replaced by the same group (a new simulated minister, never a real person).
   if (next.government.status === 'active') for (const minister of activeMinisters(next.government).filter(item => !item.playerAppointed && item.groupId)) {
-    if (rand() >= CABINET_RULES.ministerTroubleChance * (1 + (60 - (minister.competence ?? 60)) / 40)) continue;
+    if (rand() >= CABINET_RULES.ministerTroubleChance * (1 + (60 - (minister.competence ?? 60)) / 40) * (1 + (minister.pressure ?? 0) * DOSSIER_RULES.pressure.trouble)) continue;
     next = withGovernment(next, { ministers: next.government.ministers.map(item => item.id === minister.id ? { ...item, endedAt: date, endReason: 'Dimissioni' } : item), stability: clamp((next.government.stability ?? 50) - 3, 0, 100) });
     try { next = assignMinister(next, minister.portfolio, minister.groupId, date); } catch { /* the group left meanwhile */ }
     next = record(next, date, 'nuovo-ministro', `Si dimette il ministro ${minister.portfolio} (${minister.groupName}): giura un nuovo ministro dello stesso gruppo (figura simulata).`, { governmentId: next.government.id, portfolio: minister.portfolio, groupId: minister.groupId, auto: true });

@@ -10,8 +10,8 @@
 //
 // The party is not the coalition, the parliamentary group or the institution: those have their own tones (KIND_TONES) and their own glyph, whatever the party colour is,
 // so that a chip says at a glance whether it speaks of the party, of the list it stands in with others, of the group in the Chamber or of the institution.
-import { LOGO_BRAND } from '../data/party-brand.js?v=20261013-2';
-import { contrastRatio, emblem, glyph, inkOn, partyMarkText } from './visuals.js?v=20261013-2';
+import { LOGO_BRAND } from '../data/party-brand.js?v=20261014-1';
+import { contrastRatio, emblem, glyph, inkOn, partyMarkText } from './visuals.js?v=20261014-1';
 
 export const NEUTRAL_ACCENT = '#9fb0a2';
 // What a party colour must stand out from: the lightest panel of the app (for text), and the shell and the second panel (for lines, bars and fills).
@@ -44,6 +44,11 @@ function liftContrast(color, surfaces, minimum) {
   }
   return '#ffffff';
 }
+// A second tone for a party that has only one colour: the same hue, lighter on a dark primary and deeper on a light one. Pure, and only a presentation: nothing is saved.
+export function deriveSecondary(hex) {
+  const [h, s, l] = toHsl(hex);
+  return fromHsl([h, s * 0.85, l < 0.5 ? Math.min(0.78, l + 0.28) : Math.max(0.22, l - 0.28)]);
+}
 // The accent as written text on the panels: 4.5:1.
 export const accentAsText = accent => liftContrast(accent, [TEXT_SURFACE], 4.5);
 // The accent as a line, a bar or a fill (non-text graphics): 3:1 against the shell and the panels.
@@ -68,10 +73,14 @@ export function partyIdentity({ party = null, force = null, logo = null } = {}) 
   const base = own ?? hexOf(brand?.primary) ?? chart ?? null;
   const source = own ? 'scelto' : brand?.primary ? 'logo' : chart ? 'grafico' : 'neutro';
   const accent = base ? accentAsGraphic(base) : NEUTRAL_ACCENT;
-  const second = hexOf(party?.color2) ?? hexOf(brand?.secondary) ?? null;
+  // The second tone: the one configured (`color2`); else, only when the primary comes from the logo, the logo's own second colour; else a tone derived from the primary,
+  // so a primary the owner chose is never paired with a colour from somewhere else that could clash with it.
+  const chosenSecond = hexOf(party?.color2);
+  const second = chosenSecond ?? (source === 'logo' ? hexOf(brand?.secondary) : null) ?? (base ? deriveSecondary(base) : null);
+  const secondSource = chosenSecond ? 'scelto' : second && source === 'logo' && hexOf(brand?.secondary) ? 'logo' : second ? 'derivato' : null;
   const name = party?.officialName ?? party?.name ?? party?.label ?? force?.label ?? 'Partito';
   const abbreviation = party?.abbreviation ?? force?.abbreviation ?? null;
-  return { kind: 'partito', id, name, abbreviation, mark: partyMarkText({ label: name, abbreviation }), logo: logo ?? null, accent, accentText: accentAsText(accent), accentInk: inkOn(accent), accent2: second ? accentAsGraphic(second) : null, source, sourceLabel: SOURCE_LABELS[source] };
+  return { kind: 'partito', id, name, abbreviation, mark: partyMarkText({ label: name, abbreviation }), logo: logo ?? null, accent, accentText: accentAsText(accent), accentInk: inkOn(accent), accent2: second ? accentAsGraphic(second) : null, colors: { primary: base, secondary: second }, secondSource, source, sourceLabel: SOURCE_LABELS[source] };
 }
 
 // The CSS variables of an identity, for the style attribute of the application shell: the accent, the ink on it, the second colour, a tint and a line made of it.

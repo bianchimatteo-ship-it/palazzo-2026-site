@@ -1,4 +1,5 @@
-import { BUDGET_LINES, DEBT_CRISIS_THRESHOLD, DEBT_WEEKLY_INTEREST, ELECTION_FUND_MATCH, FINANCE_CATEGORIES, FINANCE_SHOCKS, HISTORY_WEEKS, INVESTMENTS, LEDGER_SIZE, RESERVE, RESERVE_BEFORE_REPAYING, ROLE_COST_SHARE } from '../data/simulation/finance-rules.js?v=20261013-2';
+import { TREASURY_OPERATIONS, TREASURY_OPERATIONS_KEPT } from '../data/simulation/finance-rules.js?v=20261014-1';
+import { BUDGET_LINES, DEBT_CRISIS_THRESHOLD, DEBT_WEEKLY_INTEREST, ELECTION_FUND_MATCH, FINANCE_CATEGORIES, FINANCE_SHOCKS, HISTORY_WEEKS, INVESTMENTS, LEDGER_SIZE, RESERVE, RESERVE_BEFORE_REPAYING, ROLE_COST_SHARE } from '../data/simulation/finance-rules.js?v=20261014-1';
 
 const SIM = 'simulation';
 const blankPeriod = () => ({ income: 0, expense: 0, byCategory: {} });
@@ -6,7 +7,7 @@ const blankPeriod = () => ({ income: 0, expense: 0, byCategory: {} });
 export function createFinance({ week = 1, date = null, funds = 0 } = {}) {
   return {
     version: 1, source: SIM, budget: { personale: 0, comunicazione: 0, territorio: 0, sede: 0, formazione: 0, digitale: 0, raccolta: 0, logistica: 0 }, debt: 0, assets: [], electionFund: 0, reserve: 0, programs: {}, perks: {},
-    ledger: [], current: { week, ...blankPeriod() }, history: [], year: date ? date.slice(0, 4) : null, yearTotals: blankPeriod(), annual: [], openingFunds: funds
+    ledger: [], operations: [], current: { week, ...blankPeriod() }, history: [], year: date ? date.slice(0, 4) : null, yearTotals: blankPeriod(), annual: [], openingFunds: funds
   };
 }
 export function normalizeFinance(finance, { week = 1, date = null, funds = 0 } = {}) {
@@ -222,4 +223,59 @@ export function financeOutlook(game) {
   const reserve = finance.reserve ?? 0;
   return { net, expense, income: Math.round(average('income')), runway: runway === null ? null : Math.floor((game.resources.funds + reserve) / Math.max(1, expense)), debt: finance.debt, recurring: budgetCost(finance.budget, finance), upkeep, assets, fund: finance.electionFund ?? 0, reserve, netWorth: game.resources.funds + assets + (finance.electionFund ?? 0) + reserve - finance.debt, status: status[0], statusLabel: status[1] };
 }
-export { BUDGET_LINES, FINANCE_CATEGORIES, INVESTMENTS, RESERVE };
+export { BUDGET_LINES, FINANCE_CATEGORIES, INVESTMENTS, RESERVE, TREASURY_OPERATIONS };
+
+// ---------- treasury operations: cost now, outcome later, benefit not guaranteed ----------
+export const treasuryOperation = id => TREASURY_OPERATIONS.find(item => item.id === id) ?? null;
+// The range of what an operation can bring, for the screen that asks the player (the outcome itself is drawn only when it falls due).
+export function operationRange(spec, notoriety = 30) {
+  const key = spec.outcomes.some(item => item.income) ? 'income' : 'members';
+  const factor = spec.scale === 'notoriety' ? 0.5 + Math.max(0, notoriety) / 60 : 1;
+  const low = Math.round(Math.min(...spec.outcomes.map(item => item[key][0])) * factor), high = Math.round(Math.max(...spec.outcomes.map(item => item[key][1])) * factor);
+  return { key, low, high };
+}
+// Starts it: the player pays (the caller charges days and funds), the operation is recorded as in progress with the week it falls due.
+export function beginOperation(game, id, { week, date }) {
+  const spec = treasuryOperation(id);
+  if (!spec) throw new Error('Operazione di tesoreria non riconosciuta.');
+  if (spec.requiresParty && !game.party?.org) throw new Error('Serve un partito: questa operazione è del partito.');
+  game.finance ??= createFinance({ week, date, funds: game.resources.funds });
+  game.finance.operations ??= [];
+  if (game.finance.operations.some(item => item.opId === id && item.status === 'in-corso')) throw new Error('Questa operazione è già in corso: aspetta l’esito prima di ripeterla.');
+  const entry = { id: `op-${week}-${id}`, opId: id, label: spec.label, startWeek: week, dueWeek: week + spec.weeks, status: 'in-corso', cost: spec.cost.funds, result: null, source: SIM };
+  game.finance.operations = [entry, ...game.finance.operations].slice(0, TREASURY_OPERATIONS_KEPT);
+  return entry;
+}
+// At the weekly close: every operation that falls due draws its outcome (income, new members, a risk that costs), books the money and leaves the result in the register.
+export function settleOperations(game, { week, date, rand, notoriety = 30 }) {
+  const finance = game.finance;
+  const results = [];
+  const effects = { stats: {}, party: 0 };
+  for (const entry of finance?.operations ?? []) {
+    if (entry.status !== 'in-corso' || entry.dueWeek > week) continue;
+    const spec = treasuryOperation(entry.opId);
+    if (!spec) { entry.status = 'concluso'; continue; }
+    let roll = rand(), outcome = spec.outcomes.at(-1);
+    for (const item of spec.outcomes) { if (roll < item.chance) { outcome = item; break; } roll -= item.chance; }
+    const factor = spec.scale === 'notoriety' ? 0.5 + Math.max(0, notoriety) / 60 : 1;
+    const within = range => Math.round((range[0] + (range[1] - range[0]) * rand()) * factor);
+    let income = outcome.income ? within(outcome.income) : 0;
+    const members = outcome.members ? within(outcome.members) : 0;
+    let text = `${spec.label}: ${outcome.label.toLowerCase()}`;
+    if (income) { book(game, income, 'donazioni', `${spec.label}: incasso`, date); text += `, incassati ${income} € (spesi ${entry.cost} €)`; }
+    if (members) text += `, ${members} nuovi iscritti`;
+    let extraCost = 0;
+    if (spec.risk && rand() < spec.risk.chance) {
+      extraCost = spec.risk.cost ?? 0;
+      if (extraCost) book(game, -extraCost, 'imprevisti', `${spec.label}: ${spec.risk.label}`, date);
+      for (const [key, value] of Object.entries(spec.risk.stats ?? {})) effects.stats[key] = Math.round(((effects.stats[key] ?? 0) + value) * 100) / 100;
+      text += ` · ${spec.risk.label}${extraCost ? ` (−${extraCost} €)` : ''}`;
+    }
+    if (outcome.tone !== 'warn') for (const [key, value] of Object.entries(spec.effects?.stats ?? {})) effects.stats[key] = Math.round(((effects.stats[key] ?? 0) + value) * 100) / 100;
+    if (spec.effects?.party) effects.party += spec.effects.party;
+    entry.status = 'concluso';
+    entry.result = { week, outcome: outcome.label, tone: outcome.tone, income, members, extraCost, net: income - entry.cost - extraCost, text };
+    results.push({ entry, spec, members, text, tone: outcome.tone });
+  }
+  return { results, effects };
+}

@@ -13,9 +13,11 @@ export const chromeAvailable = Boolean(CHROME);
 export const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
 export const waitFor = async (check, timeout = 25000) => { const start = Date.now(); for (;;) { try { const value = await check(); if (value) return value; } catch { /* not yet */ } if (Date.now() - start > timeout) throw new Error('Tempo scaduto'); await pause(150); } };
 
-export async function withBrowser(callback, { root = fileURLToPath(new URL('../..', import.meta.url)) } = {}) {
-  const port = 4600 + Math.floor(Math.random() * 300), debug = 9700 + Math.floor(Math.random() * 300);
-  const server = spawn(process.execPath, ['server.mjs'], { cwd: root, env: { ...process.env, PORT: String(port) }, stdio: 'ignore' });
+// `serverPort`: the game is already served there (a test that runs its own server, such as the local Worker of scripts/lib/local-worker.mjs); then no server.mjs is started.
+// `fresh`: a new clean Chrome profile is the default; two calls of withBrowser are two browsers that share nothing (no cache, no storage).
+export async function withBrowser(callback, { root = fileURLToPath(new URL('../..', import.meta.url)), serverPort = null } = {}) {
+  const port = serverPort ?? 4600 + Math.floor(Math.random() * 300), debug = 9700 + Math.floor(Math.random() * 300);
+  const server = serverPort ? { kill() {} } : spawn(process.execPath, ['server.mjs'], { cwd: root, env: { ...process.env, PORT: String(port) }, stdio: 'ignore' });
   const profile = await mkdtemp(join(tmpdir(), 'politicando-browser-'));
   // Chrome refuses to start its sandbox as root (containers, CI): there it runs without it.
   const chrome = spawn(CHROME, ['--headless=new', `--remote-debugging-port=${debug}`, `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--disable-extensions', '--hide-scrollbars', '--mute-audio', ...(process.getuid?.() === 0 ? ['--no-sandbox'] : []), 'about:blank'], { stdio: 'ignore' });

@@ -1,6 +1,6 @@
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261013-2';
-import { CONGRESS_CYCLE_WEEKS, FIRST_CONGRESS_WEEKS, MEMBERSHIP_FEE, ORGANS, PARTY_PRIORITIES, SECTION_WEEKLY_COST, TREASURY_LABELS } from '../data/simulation/organization-rules.js?v=20261013-2';
-import { PARTY_INVESTMENTS } from '../data/simulation/career-rules.js?v=20261013-2';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261014-1';
+import { CONGRESS_CYCLE_WEEKS, FIRST_CONGRESS_WEEKS, MEMBERSHIP_FEE, ORGANS, PARTY_PRIORITIES, SECTION_WEEKLY_COST, TREASURY_LABELS } from '../data/simulation/organization-rules.js?v=20261014-1';
+import { PARTY_INVESTMENTS } from '../data/simulation/career-rules.js?v=20261014-1';
 
 // The party as an organisation: members, sections, bodies, cohesion, conflicts and treasury.
 // Everything is simulated and lives inside the career state (game.party.org).
@@ -196,6 +196,14 @@ export function treasuryBook(org, amount, category, label = null) {
 }
 function recount(org) {
   org.members = org.sections.reduce((sum, item) => sum + item.members, 0);
+}
+
+// A given number of new members, spread over the sections by their vitality (a membership drive of the treasury operations).
+export function addMembers(org, count) {
+  const pool = org.sections.reduce((sum, item) => sum + item.vitality, 0) || 1;
+  for (const section of org.sections) section.members += Math.round(count * section.vitality / pool);
+  recount(org);
+  return count;
 }
 
 // Direct effects of the player's work in the party.

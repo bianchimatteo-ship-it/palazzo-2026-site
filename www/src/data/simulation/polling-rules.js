@@ -6,16 +6,56 @@
 // Categorical slots stepped for the dark game surface (validated set: same hues, dark steps).
 export const CHART_SLOTS = Object.freeze(['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#008300', '#9085e9', '#e66767']);
 
-// Simulated pollsters: explicit labels, not names that could pass for real institutes.
+// Simulated pollsters: explicit labels, not names that could pass for real institutes. Mode, fieldwork and weighting are
+// generic descriptions of a simulated panel (they do not copy the method of any real institute). `fieldworkDays` is how
+// long the interviews last, `lag` the days between the end of the fieldwork and the publication.
 export const POLL_INSTITUTES = Object.freeze([
-  { id: 'a', name: 'Rilevazione simulata A', sample: [900, 1500] },
-  { id: 'b', name: 'Rilevazione simulata B', sample: [700, 1100] },
-  { id: 'c', name: 'Rilevazione simulata C', sample: [1000, 1600] },
-  { id: 'd', name: 'Rilevazione simulata D', sample: [800, 1200] }
+  { id: 'a', name: 'Rilevazione simulata A', sample: [900, 1500], mode: 'Panel online', fieldworkDays: 3, lag: 1, weighting: 'età, area geografica e titolo di studio', note: 'Campione di un panel simulato di iscritti, ricontattato ogni settimana.' },
+  { id: 'b', name: 'Rilevazione simulata B', sample: [700, 1100], mode: 'Telefono', fieldworkDays: 4, lag: 2, weighting: 'area geografica, età e dimensione del comune', note: 'Interviste telefoniche simulate su numeri generati: più lente, campione più piccolo.' },
+  { id: 'c', name: 'Rilevazione simulata C', sample: [1000, 1600], mode: 'Telefono e online', fieldworkDays: 5, lag: 1, weighting: 'voto dichiarato alle ultime elezioni, età e area', note: 'Metodo misto: due campioni (telefono e web) ponderati insieme.' },
+  { id: 'd', name: 'Rilevazione simulata D', sample: [800, 1200], mode: 'Panel online e interviste in strada', fieldworkDays: 3, lag: 2, weighting: 'condizione professionale, età e area', note: 'Panel online integrato da interviste nei quartieri: più attenzione ai giovani e ai lavoratori.' }
 ]);
+
+// The observatory (poll-observatory.js): what every institute keeps week after week and how the segments, the flows and the
+// insights are drawn from the state of the game. Nothing here moves the votes: it only measures them.
+export const OBSERVATORY_RULES = Object.freeze({
+  // Weeks of readings kept for every institute, for the average, and weeks of segment snapshots (trends need a few).
+  history: 26, averageHistory: 52, segmentHistory: 14,
+  // The error of an institute persists from one week to the next, and is a quarter of the nominal sampling error (as in the headline poll).
+  errorMemory: 0.7, errorScale: 0.25,
+  // How much the programme of a force (its agenda), and the mood of a segment towards who governs or opposes, tilt its support among segments.
+  segment: { spread: 0.34, agenda: 1.1, mood: 0.7, min: 0.45, max: 1.8, undecided: 0.9 },
+  // Thresholds of the insights (ratio to the national average, points of change, weeks of comparison, undecided share).
+  insight: { strong: 1.12, weak: 0.88, growth: 0.4, weeks: 8, pool: 26, territory: 1.5 },
+  // Second choice: how much closeness (collocazione, relations) and size weigh.
+  secondChoice: { distance: 0.9, ties: 0.25, size: 0.5, abstain: 0.12 }
+});
+
+// What the observatory adds to the voting intentions: approval of the Government and of the leader over time (a different thing from the vote: who approves may vote
+// for someone else), the regional trend of each force, the approval of single laws, and what a coalition would be worth against running alone.
+export const POLL_EXTENSIONS = Object.freeze({
+  // Weeks of approval kept, regional snapshots (one every `every` weeks, kept `kept`) and the forces they hold (the largest ones, plus the player's).
+  approvalKept: 104, regional: { every: 4, kept: 26, forces: 8 },
+  // Laws: a survey `after` weeks from the application, and again at the balance. Kept laws, and what each survey reads.
+  laws: { stages: [{ id: 'primo', after: 1, label: 'Prima rilevazione' }, { id: 'bilancio', after: 9, label: 'Dopo due mesi' }], kept: 12, undecided: { base: 14, perControversy: 4 }, scale: 11, partisan: 18, uncovered: 4, perDeficit: 20, deficitCap: 6, fatigue: 3, floor: 6, ceiling: 94, model: 3 },
+  // A reading this clear (share of those who approve) has consequences once: against below, for above.
+  clear: { against: 38, for: 58 },
+  // What a clear reading does, once per survey and only for a law of the Government: the first survey moves the stability of the Government (points) and the standing of the majority
+  // (an effect of this size, for this many weeks: it fades by itself); the balance, two months on, only a smaller effect and only if the opinion turned.
+  // A verdict against is felt by any Government; a verdict for is a merit only of a Government the player leads (the others do not get a bonus for the opinion of the citizens).
+  // The effects of the surveys together never move the majority by more than `cap` points.
+  consequence: { primo: { stability: 1, effect: 0.25, weeks: 4 }, bilancio: { stability: 0, effect: 0.15, weeks: 4 }, cap: 0.5 },
+  // A coalition: the share each member loses on the way (it does not vote for the list of another force), growing with the distance on the axis, softened by good relations.
+  coalition: { leak: 0.035, perAxis: 0.03, badTies: 0.03, goodTies: 0.015, min: 0.01, max: 0.25, spread: 0.5, widest: 4 }
+});
 
 // How many real parties enter the world besides the player's: the ones with the most 2x1000 choices (MEF, real).
 export const WORLD_PARTY_COUNT = 7;
+
+// The approval of a government at mid stability with the citizens' mood at 50 (world-engine, publishPoll): the level
+// at which the parties backing or fighting the executive neither gain nor lose. Above it the majority gains, below it
+// the opposition does; no force gains or loses just for its role.
+export const APPROVAL_NEUTRAL = 44;
 
 // Strategies the parties choose and change on their own during the game.
 export const STRATEGIES = Object.freeze({
@@ -28,17 +68,26 @@ export const STRATEGIES = Object.freeze({
 export const CIVIC_FIGURE_LABEL = 'Volto civico simulato';
 
 // National and territorial events. `executive` moves the parties that back the executive,
-// `challengers` those in hard opposition, `small` the parties under 5%; `majority`/`opposition`
-// concern the player's side in Parliament; `stability` touches the government of the simulation.
+// `challengers` those in hard opposition, `small` the parties under 5% (the pool is balanced: what helps the small
+// forces in one event squeezes them in another); `stability` touches the government of the simulation.
+// `majority`/`opposition` and `regionalPlayer`/`localPlayer` say how the event reads for the player's side and
+// territory (the tone of the chronicle): they do not move the player's party, which moves only with the player's
+// actions (the reactions to the event) and standing.
 export const WORLD_EVENTS = Object.freeze([
   { id: 'rincari', icon: 'energy', scope: 'nazionale', weight: 3, title: 'Rincari energetici', body: 'Bollette in aumento: famiglie e imprese chiedono misure immediate.', executive: -0.5, challengers: 0.8, majority: -0.6, stability: -4, duration: 6, reactable: true },
   { id: 'dati-economia', icon: 'chart', scope: 'nazionale', weight: 2, title: 'Dati economici sopra le attese', body: 'Crescita e occupazione migliorano nelle stime diffuse questa settimana (scenario).', executive: 0.6, challengers: -0.3, majority: 0.8, stability: 4, duration: 5 },
   { id: 'sciopero', icon: 'megaphone', scope: 'nazionale', weight: 2, title: 'Sciopero generale', body: 'Trasporti e scuole si fermano per una giornata di mobilitazione nazionale (scenario).', executive: -0.3, challengers: 0.5, stability: -2, duration: 3, reactable: true },
   { id: 'scandalo-ministero', icon: 'scandal', scope: 'nazionale', weight: 2, title: 'Inchiesta su un ministero dello scenario', body: 'Un’inchiesta giornalistica simulata coinvolge gli uffici di un dicastero del governo di gioco.', executive: -0.8, challengers: 0.6, majority: -1, opposition: 0.6, stability: -6, duration: 5 },
-  { id: 'vertice-ue', icon: 'globe', scope: 'nazionale', weight: 2, title: 'Vertice europeo decisivo', body: 'Il negoziato su bilancio e transizione occupa l’agenda (scenario).', executive: 0.3, small: -0.1, duration: 3 },
+  { id: 'vertice-ue', icon: 'globe', scope: 'nazionale', weight: 2, title: 'Vertice europeo decisivo', body: 'Il negoziato su bilancio e transizione occupa l’agenda (scenario).', executive: 0.3, small: -0.4, duration: 3 },
   { id: 'sicurezza', icon: 'shield', scope: 'nazionale', weight: 2, title: 'Allarme sicurezza nelle città', body: 'Una serie di episodi di cronaca riaccende il dibattito sulla sicurezza (scenario).', challengers: 0.6, executive: -0.2, duration: 4, reactable: true },
   { id: 'clima', icon: 'leaf', scope: 'nazionale', weight: 2, title: 'Ondata di calore record', body: 'Siccità e caldo estremo portano l’ambiente al centro della discussione (scenario).', small: 0.3, executive: -0.2, duration: 4 },
   { id: 'riforma-pensioni', icon: 'scales', scope: 'nazionale', weight: 1, title: 'Riforma delle pensioni', body: 'Il dibattito sulla riforma divide maggioranza e opposizione (scenario).', challengers: 0.5, executive: -0.3, majority: -0.5, stability: -3, duration: 6, reactable: true },
+  // The good weeks of the executive: without them the catalogue would only wear the Government down and favour its challengers (the neutrality test of the polls reads the sum of what every event gives to each camp over a long run).
+  { id: 'occupazione', icon: 'chart', scope: 'nazionale', weight: 2, title: 'Occupazione in crescita', body: 'Nuovi contratti e meno disoccupati nei dati della settimana (scenario).', executive: 0.6, challengers: -0.8, majority: 0.6, stability: 3, duration: 5 },
+  { id: 'bollette-in-calo', icon: 'energy', scope: 'nazionale', weight: 2, title: 'Le bollette scendono', body: 'Il costo dell’energia cala: famiglie e imprese respirano (scenario).', executive: 0.5, challengers: -0.7, majority: 0.5, stability: 2, duration: 4 },
+  { id: 'accordo-sociale', icon: 'users', scope: 'nazionale', weight: 2, title: 'Accordo con le parti sociali', body: 'Governo, sindacati e imprese firmano un’intesa sul lavoro (scenario).', executive: 0.4, challengers: -0.6, majority: 0.4, stability: 3, duration: 4 },
+  { id: 'successo-diplomatico', icon: 'globe', scope: 'nazionale', weight: 2, title: 'Successo diplomatico', body: 'Un negoziato internazionale si chiude con un risultato per il Paese (scenario).', executive: 0.5, challengers: -0.7, stability: 2, duration: 4 },
+  { id: 'cantieri-aperti', icon: 'factory', scope: 'nazionale', weight: 2, title: 'Aprono i cantieri attesi', body: 'Partono opere ferme da anni: tempi e fondi sono in regola (scenario).', executive: 0.4, challengers: -0.6, majority: 0.4, stability: 2, duration: 4 },
   { id: 'alluvione', icon: 'storm', scope: 'regionale', weight: 2, title: 'Alluvione in {region}', body: 'Danni gravi e comunità isolate: la regione chiede lo stato di emergenza (scenario).', regionalPlayer: 1.2, stability: -1, duration: 4, reactable: true },
   { id: 'ospedale', icon: 'cross', scope: 'regionale', weight: 2, title: 'Pronto soccorso sotto pressione in {region}', body: 'Attese lunghe e personale ridotto: la sanità regionale finisce sui giornali (scenario).', regionalPlayer: -0.6, challengers: 0.2, duration: 3, reactable: true },
   { id: 'fabbrica', icon: 'factory', scope: 'locale', weight: 2, title: 'Chiude uno stabilimento vicino a {municipality}', body: 'Centinaia di posti di lavoro a rischio: il territorio chiede risposte (scenario).', localPlayer: -0.8, challengers: 0.3, duration: 4, reactable: true },

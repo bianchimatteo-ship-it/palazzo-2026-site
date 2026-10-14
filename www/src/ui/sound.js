@@ -1,5 +1,5 @@
 // Interface sounds synthesised with the Web Audio API: no audio file is downloaded.
-import { loadSettings } from '../core/settings.js?v=20260926-6';
+import { loadSettings } from '../core/settings.js?v=20261014-1';
 
 let context = null;
 const TONES = Object.freeze({
@@ -8,7 +8,10 @@ const TONES = Object.freeze({
   week: [[392, 0.09], [523, 0.09], [659, 0.14]],
   success: [[523, 0.08], [659, 0.08], [784, 0.16]],
   failure: [[330, 0.12], [247, 0.2]],
-  alert: [[880, 0.08], [660, 0.08], [880, 0.12]]
+  alert: [[880, 0.08], [660, 0.08], [880, 0.12]],
+  // The jingle of the radio of LA POLITICA 24 and the sting of a breaking news: two short phrases, no file.
+  radio: [[523, 0.09], [659, 0.09], [784, 0.09], [1047, 0.22]],
+  breaking: [[988, 0.07], [988, 0.07], [740, 0.12], [988, 0.16]]
 });
 
 export function playSound(kind) {

@@ -1,9 +1,11 @@
 // Money of the career and of the party: balance, flows, budget, reports and sustainability.
-import { BUDGET_LINES, FINANCE_CATEGORIES, financeOutlook, hasAsset, INVESTMENTS, RESERVE } from '../core/finance-engine.js?v=20261013-2';
-import { isPartyLeader, PARTY_PRIORITIES, TREASURY_LABELS, treasuryOutlook } from '../core/organization-engine.js?v=20261013-2';
-import { artTile } from './visuals.js?v=20261013-2';
-import { illustration } from './illustrations.js?v=20261013-2';
-import { breakdown, esc, euro, EXPENSE_COLOR, flowChart, INCOME_COLOR, lineChart, num, SERIES, signed, sparkline, stateBadge } from './charts.js?v=20261013-2';
+import { BUDGET_LINES, FINANCE_CATEGORIES, financeOutlook, hasAsset, INVESTMENTS, operationRange, RESERVE, TREASURY_OPERATIONS } from '../core/finance-engine.js?v=20261014-1';
+import { costProblem } from '../core/career-engine.js?v=20261014-1';
+import { costText, planAddButton } from './plan-view.js?v=20261014-1';
+import { isPartyLeader, PARTY_PRIORITIES, TREASURY_LABELS, treasuryOutlook } from '../core/organization-engine.js?v=20261014-1';
+import { artTile } from './visuals.js?v=20261014-1';
+import { illustration } from './illustrations.js?v=20261014-1';
+import { breakdown, esc, euro, EXPENSE_COLOR, flowChart, INCOME_COLOR, lineChart, num, SERIES, signed, sparkline, stateBadge } from './charts.js?v=20261014-1';
 
 const STATUS_KIND = { solida: 'solida', calo: 'calo', rischio: 'rischio', crisi: 'crisi' };
 
@@ -22,6 +24,36 @@ function budgetControls(game) {
     const level = budget[line.id] ?? 0;
     return `<article class="budget-line"><header>${artTile(line.icon, level ? 'var(--party-accent)' : '#8c988b', 'sm')}<div><strong>${esc(line.label)}</strong><small>${esc(line.levels[level].effect)}</small></div><b>${line.levels[level].cost ? `${euro(line.levels[level].cost)}<i>/sett.</i>` : 'Nessuna spesa'}</b></header><div class="segmented" role="group" aria-label="${esc(line.label)}">${line.levels.map((option, index) => `<button class="${index === level ? 'active' : ''}" data-budget-line="${esc(line.id)}" data-budget-level="${index}" aria-pressed="${index === level}" ${disabled}>${esc(option.label)}<small>${option.cost ? euro(option.cost) : '0 €'}</small></button>`).join('')}</div></article>`;
   }).join('')}</div>`;
+}
+
+// Fundraising dinners, membership drives, party events and online appeals: each costs days and money now, takes weeks and brings a result that is not guaranteed. The register under them
+// compares what was spent with what came back, operation by operation.
+function operationsPanel(game, state) {
+  const ended = game.status === 'ended';
+  const notoriety = state.dataset.statistics.find(item => item.subjectId === state.career.playerId && item.metric === 'notoriety')?.value ?? 30;
+  const running = new Set((game.finance.operations ?? []).filter(item => item.status === 'in-corso').map(item => item.opId));
+  const cards = TREASURY_OPERATIONS.map(spec => {
+    const range = operationRange(spec, notoriety);
+    const problem = ended ? 'Carriera conclusa.' : running.has(spec.id) ? 'È già in corso: aspetta l’esito.' : spec.requiresParty && !game.party?.org ? 'Serve un partito.' : costProblem(game, spec.cost);
+    const benefit = range.key === 'income' ? `${euro(range.low)}–${euro(range.high)} di incasso` : `${range.low}–${range.high} nuovi iscritti${spec.incomePerMember ? ` (${euro(spec.incomePerMember)} di quota ciascuno)` : ''}`;
+    const risk = spec.risk ? `${Math.round(spec.risk.chance * 100)}%: ${spec.risk.label.toLowerCase()}${spec.risk.cost ? ` (−${euro(spec.risk.cost)})` : ''}` : 'nessun rischio particolare';
+    return `<article class="invest-card ${problem ? '' : 'is-ready'}">${artTile(spec.icon, 'var(--party-accent)', 'sm')}<div><strong>${esc(spec.label)}</strong><small>${esc(spec.detail)}</small>
+      <small class="invest-note"><b>Costo</b> ${esc(costText(spec.cost))} · <b>Tempi</b> esito tra ${spec.weeks} settimane</small>
+      <small class="invest-note"><b>Può rendere</b> ${esc(benefit)} — non è garantito: l’esito più debole può restare sotto la spesa · <b>Rischio</b> ${esc(risk)}</small>
+      <div class="invest-actions"><button class="secondary-button" data-treasury-start="${esc(spec.id)}" ${problem ? `disabled title="${esc(problem)}"` : ''}>Avvia</button>${problem ? '' : planAddButton({ kind: 'treasury', id: spec.id })}${problem ? `<em>${esc(problem)}</em>` : ''}</div></div></article>`;
+  }).join('');
+  const operations = game.finance.operations ?? [];
+  const done = operations.filter(item => item.status === 'concluso' && item.result);
+  const register = operations.length ? `<div class="ledger operations-register">${operations.slice(0, 10).map(item => `<div class="ledger-row"><time>S${item.startWeek}</time><span><strong>${esc(item.label)}</strong><small>${item.status === 'in-corso' ? `in corso: esito alla settimana ${item.dueWeek}, speso ${euro(item.cost)}` : esc(item.result.text)}</small></span><b class="${item.status === 'in-corso' ? '' : item.result.net >= 0 ? 'in' : 'out'}">${item.status === 'in-corso' ? '…' : `${item.result.net >= 0 ? '+' : '−'}${euro(Math.abs(item.result.net))}`}</b></div>`).join('')}</div>` : '<p class="quiet-copy">Nessuna operazione ancora: gli esiti compaiono qui, con quanto hai speso e quanto è tornato.</p>';
+  const spent = done.reduce((sum, item) => sum + item.cost + (item.result.extraCost ?? 0), 0), back = done.reduce((sum, item) => sum + item.result.income, 0);
+  const members = done.reduce((sum, item) => sum + (item.result.members ?? 0), 0);
+  const summary = done.length ? `<p class="parliament-note">Finora ${done.length} ${done.length === 1 ? 'operazione conclusa' : 'operazioni concluse'}: spesi ${euro(spent)}, incassati ${euro(back)}${members ? `, ${members} nuovi iscritti` : ''}. Risultato netto ${back - spent >= 0 ? '+' : '−'}${euro(Math.abs(back - spent))}.</p>` : '';
+  return `<div class="invest-grid">${cards}</div>${summary}${register}<p class="parliament-note">Importi e adesioni sono esiti simulati, tirati a sorte alla scadenza dentro gli intervalli indicati: nessuna donazione, quota o transazione è reale.</p>`;
+}
+// Where the weekly budget goes, line by line (the same lines as the controls above).
+function allocationPanel(game) {
+  const rows = BUDGET_LINES.map(line => ({ label: line.label, value: line.levels[game.finance.budget[line.id] ?? 0].cost ?? 0, color: INCOME_COLOR })).filter(row => row.value > 0);
+  return rows.length ? breakdown(rows, { format: euro }) : '<p class="quiet-copy">Nessuna spesa ricorrente: scegli un livello nelle voci qui sopra.</p>';
 }
 
 // Lasting investments, the election fund and the balance sheet.
@@ -66,7 +98,9 @@ export function renderFinancePage(state) {
       ${panel('SALDO', 'Cassa nel tempo', lineChart({ series: [{ label: 'Saldo in cassa', short: 'Saldo', color: SERIES[0], values: history.map(item => item.balance), emphasis: true }, ...(history.some(item => item.debt) ? [{ label: 'Debito', color: SERIES[7], values: history.map(item => item.debt) }] : [])], labels: history.map(item => `S${item.week}`), tips: history.map(item => `Settimana ${item.week}`), unit: ' €', digits: 0, min: 0, ariaLabel: 'Saldo in cassa per settimana' }))}
     </div>
     ${panel('BILANCIO SETTIMANALE', 'Le tue spese ricorrenti', budgetControls(game) + '<p class="parliament-note">Le scelte valgono dalla prossima chiusura di settimana. Se la cassa non basta, la differenza diventa debito; oltre 2.500 € scatta una crisi finanziaria.</p>', `<span class="hq-count">${euro(outlook.recurring)}/sett.</span>`)}
+    ${panel('RACCOLTE FONDI ED EVENTI', 'Operazioni con un costo oggi e un esito domani', operationsPanel(game, state))}
     <div class="society-grid">
+      ${panel('RIPARTIZIONE DEL BUDGET', 'Come si divide la spesa settimanale', allocationPanel(game))}
       ${panel('INVESTIMENTI E PATRIMONIO', 'Cosa possiedi e dove investire', investmentsPanel(game, outlook))}
     ${panel(`ANNO ${esc(finance.year ?? '')}`, 'Da dove arrivano e dove vanno', `<div class="split-breakdown"><div><small>ENTRATE</small>${year.income.length ? breakdown(year.income, { format: euro }) : '<p class="quiet-copy">—</p>'}</div><div><small>USCITE</small>${year.expense.length ? breakdown(year.expense, { format: euro }) : '<p class="quiet-copy">—</p>'}</div></div>`)}
       ${panel('MOVIMENTI', 'Registro contabile', `<div class="ledger">${ledger || '<p class="quiet-copy">Nessun movimento.</p>'}</div>`)}

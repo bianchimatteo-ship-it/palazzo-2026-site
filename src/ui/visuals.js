@@ -63,6 +63,18 @@ export const CATEGORY_VISUALS = Object.freeze({
   territorio: { icon: 'pin', color: '#4C8F6B' }, media: { icon: 'mic', color: '#3C7C95' }, partito: { icon: 'flag', color: 'var(--party-accent)' },
   parlamento: { icon: 'dome', color: '#C4A66A' }, relazioni: { icon: 'link', color: '#4a3aa7' }, risorse: { icon: 'money', color: '#D6A54C' }, elezioni: { icon: 'ballot', color: '#C4574A' }
 });
+// The levels of the territory and what lives on them, each with one glyph and one tone, everywhere they appear (institutions, committees, local leaders): Comune, Provincia, Regione, the
+// European Parliament, the party's committees and the institutions in general. Tones are tints for tiles and bars, never for text.
+export const TERRITORY_VISUALS = Object.freeze({
+  comune: { label: 'Comune', icon: 'town', color: '#6FA982' },
+  provincia: { label: 'Provincia', icon: 'map', color: '#5FA5C2' },
+  regione: { label: 'Regione', icon: 'pin', color: '#C4A66A' },
+  europa: { label: 'Parlamento europeo', icon: 'globe', color: '#8F95D8' },
+  comitato: { label: 'Comitato', icon: 'users', color: '#B98CC4' },
+  istituzione: { label: 'Istituzione', icon: 'ministry', color: '#7FBF99' }
+});
+export const territoryVisual = kind => TERRITORY_VISUALS[kind] ?? TERRITORY_VISUALS.istituzione;
+export const territoryTile = (kind, size = 'md') => artTile(territoryVisual(kind).icon, territoryVisual(kind).color, size);
 export const LAW_ICONS = Object.freeze({
   Economia: 'money', Lavoro: 'briefcase', Sanità: 'cross', Scuola: 'book', Sicurezza: 'shield', Ambiente: 'leaf', Infrastrutture: 'bridge',
   Giustizia: 'scales', Welfare: 'heart', 'Pubblica amministrazione': 'ministry'

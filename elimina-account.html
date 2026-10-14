@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Elimina l’account · POLITICANDO 2026</title>
+<meta name="description" content="Elimina il tuo account POLITICANDO 2026 e i salvataggi online, senza installare nulla." />
+<meta name="robots" content="noindex" />
+<link rel="icon" href="./favicon.ico" sizes="16x16 32x32 48x48" />
+<link rel="stylesheet" href="./src/legal.css" />
+</head>
+<body>
+<main class="legal">
+<header><a class="back" href="./">← Torna al gioco</a><span class="meta">POLITICANDO 2026 · simulazione</span></header>
+
+<h1>Elimina l’account</h1>
+<p class="meta">Pagina pubblica: non serve aprire il gioco.</p>
+<p>Inserisci nome utente e password dell’account. Verranno eliminati subito e in modo definitivo l’account, le carriere salvate online e le sessioni aperte. <strong>Non si può annullare.</strong> Le partite salvate nel browser del tuo dispositivo non sono toccate.</p>
+<form id="delete-form" novalidate>
+<label>Nome utente<input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required minlength="3" maxlength="24" /></label>
+<label>Password<input name="password" type="password" autocomplete="current-password" required minlength="8" /></label>
+<label>Scrivi ELIMINA per confermare<input name="confirm" autocomplete="off" autocapitalize="characters" spellcheck="false" required /></label>
+<button type="submit" id="delete-submit">Elimina definitivamente l’account</button>
+</form>
+<div id="delete-result" class="result" role="status" aria-live="polite" hidden></div>
+<h2>Non ricordi la password?</h2>
+<p>Il gioco non conserva la password e non può recuperarla: senza di essa l’account non si può verificare da qui.</p>
+<div class="todo" data-controller-todo="verifica-identita">Da definire a cura del titolare: il canale e la procedura per verificare l’identità di chi chiede la cancellazione senza password.  Recapito: <strong>[da inserire a cura del titolare]</strong></div>
+<script type="module" src="./src/legal/delete-account.js"></script>
+<nav class="legal-nav" aria-label="Informazioni legali"><a href="privacy.html">Informativa sulla privacy</a><a href="termini.html">Termini di utilizzo</a><a href="elimina-account.html">Elimina l’account</a></nav>
+</main>
+</body>
+</html>

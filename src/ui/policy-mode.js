@@ -1,14 +1,14 @@
 // Public policy in the interface: designing a measure, its projected bill, the Government's desk,
 // the budget law and the state of the country's policy areas, security and accounts.
-import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, FINANCING, GOVERNMENT_LINES, INSTRUMENT_KINDS, INTENSITY, MINISTRIES, POLICY_AREAS, TERRITORIAL_TARGETS } from '../data/simulation/policy-rules.js?v=20261013-2';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261013-2';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261013-2';
-import { areaTable, budgetImpact, measureDesign, normalizeBudgetPlan, projectMeasure } from '../core/society-engine.js?v=20261013-2';
-import { BUDGET_SECTORS, EU_CALLS, FISCAL_LEVERS, PROJECT_RULES, PROJECT_TYPES } from '../data/simulation/project-rules.js?v=20261013-2';
-import { callRequirement, euView, isActive, projectQuote, projectView } from '../core/project-engine.js?v=20261013-2';
-import { accordCriterion, accordKindLabel, activeMinisters, budgetReactions, groupProfile, partnerSatisfaction, stageWait } from '../core/parliament-engine.js?v=20261013-2';
-import { glyph } from './visuals.js?v=20261013-2';
-import { esc, stateBadge } from './charts.js?v=20261013-2';
+import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, FINANCING, GOVERNMENT_LINES, INSTRUMENT_KINDS, INTENSITY, MINISTRIES, POLICY_AREAS, TERRITORIAL_TARGETS } from '../data/simulation/policy-rules.js?v=20261014-1';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261014-1';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261014-1';
+import { areaTable, budgetImpact, measureDesign, normalizeBudgetPlan, projectMeasure } from '../core/society-engine.js?v=20261014-1';
+import { BUDGET_SECTORS, EU_CALLS, FISCAL_LEVERS, PROJECT_RULES, PROJECT_TYPES } from '../data/simulation/project-rules.js?v=20261014-1';
+import { callRequirement, euView, isActive, projectQuote, projectView } from '../core/project-engine.js?v=20261014-1';
+import { accordCriterion, accordKindLabel, activeMinisters, budgetReactions, groupProfile, partnerSatisfaction, stageWait } from '../core/parliament-engine.js?v=20261014-1';
+import { glyph } from './visuals.js?v=20261014-1';
+import { esc, stateBadge } from './charts.js?v=20261014-1';
 
 const num = (value, digits = 1) => Number(value ?? 0).toLocaleString('it-IT', { maximumFractionDigits: digits });
 const signed = (value, digits = 1) => `${value > 0 ? '+' : value < 0 ? '−' : '±'}${num(Math.abs(value ?? 0), digits)}`;
@@ -146,6 +146,17 @@ export function projectPreview(state, request) {
     <p class="parliament-note">Ministero ${esc(q.ministry)} · competenza ${num(q.competence, 0)}. ${esc(type.stages)}. Un budget sotto il 100% allunga i tempi e fa sforare; sopra il 100% accelera.</p>
     ${q.problems.map(text => `<p class="parliament-note danger">${glyph('alert', 14)} ${esc(text)}</p>`).join('')}`;
 }
+const segmentLabel = id => SEGMENTS.find(item => item.id === id)?.label ?? id;
+// What an active or finished public work stands for: how it is covered, who runs it, where it lands and what it means politically.
+function projectFacts(project) {
+  const type = PROJECT_TYPES[project.type];
+  if (!type) return '';
+  const cover = project.financing === 'ue' ? `Stato ${num(project.cost - (project.euShare ?? 0), 1)} + fondi UE ${num(project.euShare ?? 0, 1)} punti` : 'Bilancio dello Stato';
+  const gains = Object.entries(type.regional).map(([indicator, weight]) => `${indicator} +${num(type.gain * weight, 0)}`).join(' · ');
+  const pleased = (type.pleased ?? []).map(segmentLabel).join(', ');
+  const late = project.delayWeeks ? ` · ${project.delayWeeks} sett. di ritardo già pesano` : '';
+  return `<dl class="project-facts"><div><dt>Copertura</dt><dd>${esc(cover)}</dd></div><div><dt>Ministero</dt><dd>${esc(project.minister ?? '—')}</dd></div><div><dt>Territorio</dt><dd>${esc(project.region)} · ${esc(gains)} a opera finita</dd></div><div><dt>Conseguenze politiche</dt><dd>${pleased ? `Piace a ${esc(pleased)}` : 'Nessun gruppo in particolare'}${esc(late)}; ritardi e sforamenti abbassano la qualità finale e con essa il consenso che l’opera porta</dd></div></dl>`;
+}
 const PROJECT_TONE = { progettazione: 'stabile', gara: 'stabile', cantiere: 'stabile', collaudo: 'crescita', completato: 'solida', sospeso: 'calo' };
 function projectRow(state, project, { canAct }) {
   const week = state.game?.week?.index ?? 0;
@@ -156,6 +167,7 @@ function projectRow(state, project, { canAct }) {
     ? `<form data-project-funding-form data-project-id="${esc(project.id)}" class="project-funding">${slider({ name: 'funding', label: 'Budget', min: PROJECT_RULES.fundingMin, max: PROJECT_RULES.fundingMax, step: PROJECT_RULES.fundingStep, value: project.funding, low: `${PROJECT_RULES.fundingMin}%`, high: `${PROJECT_RULES.fundingMax}%` })}<button class="secondary-button" type="submit">Cambia budget · 1 giorno · 1 cap.</button></form>` : '';
   const result = project.result ? `<small>Qualità finale ${num(project.result.quality * 100, 0)}/100${project.result.late ? ` · ${project.result.late} settimane di ritardo` : ''} · ${Object.entries(project.result.gains).map(([indicator, value]) => `${esc(indicator)} +${num(value, 1)}`).join(', ')}</small>` : '';
   return `<li class="project-row ${project.stage}"><div class="project-head">${glyph(project.icon, 18)}<div><strong>${esc(project.title)}</strong><small>${esc(project.stageLabel)} · ${num(project.cost, 1)} punti (${num(project.billions, 1)} mld) · budget ${project.funding}% · ${project.financing === 'ue' ? 'cofinanziata UE' : 'bilancio'}</small></div>${stateBadge(PROJECT_TONE[project.stage] ?? 'stabile', active ? `${num(project.progress, 0)}%` : project.stageLabel)}</div>
+    ${projectFacts(project)}
     ${active ? `<div class="project-progress">${meterBar(project.progress)}<small>${project.weeksLeft} settimane alla fine, a ritmo attuale (circa ${weekDate(state, project.weeksLeft)})</small></div>` : ''}${flags.length ? `<small class="project-flags">${esc(flags.join(' · '))}</small>` : ''}${result}${funding}
     ${active && canAct ? `<div class="project-actions"><button class="text-link" data-project-stop="${esc(project.id)}">Sospendi l’opera · 1 giorno · 2 cap.</button></div>` : ''}</li>`;
 }

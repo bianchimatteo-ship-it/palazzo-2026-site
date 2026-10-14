@@ -1,5 +1,5 @@
 // Network side of the shared admin archive: read it for every player, write it with the owner's session.
-import { loadAdminArchive, loadSharedArchive, setSharedSessionToken, sharedSessionToken, storeSharedArchive } from './admin-store.js?v=20261013-2';
+import { loadAdminArchive, loadSharedArchive, setSharedSessionToken, sharedSessionToken, storeSharedArchive } from './admin-store.js?v=20261014-1';
 
 const PRODUCTION_API = 'https://palazzo-2026-site.bianchimatteo657.workers.dev/api/admin';
 // On the Worker (and its local preview) the API is on the same site; GitHub Pages reads it from the Worker.
@@ -26,12 +26,17 @@ async function call(path = '', options = {}, timeout = 5000) {
   } finally { clearTimeout(timer); }
 }
 // Reads the published archive and keeps a copy for offline play. Returns true when something changed.
+// How the last attempt to read the published archive went: `ok` true only when the server answered. When it did not, the copy kept in this browser is in use and it may be
+// out of date: nothing should call it "updated" (sharedSyncStatus tells the screens which of the two it is).
+let syncStatus = { ok: null, at: null, error: null };
+export const sharedSyncStatus = () => ({ ...syncStatus, copyUpdatedAt: loadSharedArchive()?.updatedAt ?? null, hasCopy: Boolean(loadSharedArchive()) });
 export async function refreshSharedArchive() {
   const before = JSON.stringify(loadSharedArchive() ?? null);
   try {
     const archive = await call('', { method: 'GET', cache: 'no-store' });
     storeSharedArchive(archive);
-  } catch { return false; }
+    syncStatus = { ok: true, at: new Date().toISOString(), error: null };
+  } catch (error) { syncStatus = { ok: false, at: new Date().toISOString(), error: error.message || 'Archivio condiviso non raggiungibile.' }; return false; }
   const after = loadSharedArchive();
   return JSON.stringify({ ...after, fetchedAt: null }) !== JSON.stringify({ ...(JSON.parse(before) ?? {}), fetchedAt: null });
 }

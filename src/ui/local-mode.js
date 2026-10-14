@@ -3,17 +3,17 @@
 // decides, the majority it needs, what it changes, the forecast and the player's vote), what the player can do
 // (propose, question, negotiate, govern), the chronicle of the council. Everything here is simulation, except the size
 // of the European groups at the constitutive session of 2024 (real, with its source).
-import { DELEGA_FORBIDDEN, EP_COMMITTEES, EP_COSTS, EP_GROUPS_2024, committeeById, compactVote, coverageGap, europeanOdds, forecastAct, inCommittee, INSTITUTIONS, isClosedAct, LOCAL_VOTE_CHOICES, localAreas, majorityMargin, mandateRecord, measureOf, actorOf, delegaScore, nextEuropeanRole, typeOfAct, voteRule, weakCityAreas, withEuropeanSeat, withLocalState } from '../core/local-engine.js?v=20261013-2';
-import { ACT_TYPES, CITY_INDICATORS, PROVINCE_INDICATORS, QUORUMS, actTypeOf, neededYes, proposableTypes } from '../data/simulation/local-acts.js?v=20261013-2';
-import { COFIN_TERMS, WORK_PRIORITIES, WORK_RULES, WORK_SITE_LIST, WORK_TYPES, siteLabel, workTypesFor } from '../data/simulation/local-works.js?v=20261013-2';
-import { activeWorks, agedUpkeepOf, archiveOf, canManageWorks, cofinPartners, euroOf, externalOf, isActiveWork, planWork, workGap, workView, worksLedger } from '../core/local-works-engine.js?v=20261013-2';
-import { INDICATORS } from '../data/simulation/society-rules.js?v=20261013-2';
-import { DELEGA_RULES } from '../data/simulation/office-rules.js?v=20261013-2';
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261013-2';
-import { esc, meter, num, signed } from './charts.js?v=20261013-2';
-import { glyph } from './visuals.js?v=20261013-2';
-import { fallbackTones, forceColorResolver, hemicycleLayout, seatColor } from '../core/hemicycle.js?v=20261013-2';
-import { SEAT_ROLES, rosterSeats } from '../core/seat-roster.js?v=20261013-2';
+import { DELEGA_FORBIDDEN, EP_COMMITTEES, EP_COSTS, EP_GROUPS_2024, committeeById, compactVote, coverageGap, europeanOdds, forecastAct, inCommittee, INSTITUTIONS, isClosedAct, LOCAL_VOTE_CHOICES, localAreas, majorityMargin, mandateRecord, measureOf, actorOf, delegaScore, nextEuropeanRole, typeOfAct, voteRule, weakCityAreas, withEuropeanSeat, withLocalState } from '../core/local-engine.js?v=20261014-1';
+import { ACT_TYPES, CITY_INDICATORS, PROVINCE_INDICATORS, QUORUMS, actTypeOf, neededYes, proposableTypes } from '../data/simulation/local-acts.js?v=20261014-1';
+import { COFIN_TERMS, WORK_PRIORITIES, WORK_RULES, WORK_SITE_LIST, WORK_TYPES, siteLabel, workTypesFor } from '../data/simulation/local-works.js?v=20261014-1';
+import { activeWorks, agedUpkeepOf, archiveOf, canManageWorks, cofinPartners, euroOf, externalOf, isActiveWork, planWork, workGap, workView, worksLedger } from '../core/local-works-engine.js?v=20261014-1';
+import { INDICATORS } from '../data/simulation/society-rules.js?v=20261014-1';
+import { DELEGA_RULES } from '../data/simulation/office-rules.js?v=20261014-1';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261014-1';
+import { esc, meter, num, signed } from './charts.js?v=20261014-1';
+import { glyph, territoryTile, territoryVisual } from './visuals.js?v=20261014-1';
+import { fallbackTones, forceColorResolver, hemicycleLayout, seatColor } from '../core/hemicycle.js?v=20261014-1';
+import { SEAT_ROLES, rosterSeats } from '../core/seat-roster.js?v=20261014-1';
 
 const STAGES = Object.freeze({ commissione: 'In commissione', giunta: 'In Giunta', aula: 'In aula', osservazioni: 'Osservazioni dei cittadini', 'seconda-lettura': 'Attesa della seconda deliberazione', risposta: 'In attesa di risposta', approvato: 'Approvato', respinto: 'Respinto', ritirato: 'Ritirato', risposto: 'Risposta data' });
 const SIDE_LABELS = Object.freeze({ maggioranza: 'Maggioranza', opposizione: 'Opposizione' });
@@ -417,7 +417,7 @@ function institutionCard(input, capital, context, state, ui = {}) {
   else if (section === 'atti') body = `<h3 class="local-h">Cosa puoi fare</h3>${roleBox(inst, state)}${actionsPanel(inst, capital)}<h3 class="local-h">In discussione (${open.length})</h3>${open.map(act => actCard(inst, act, capital, context)).join('') || '<p class="quiet-copy">Nessun atto in calendario: la giunta e i gruppi ne presentano di nuovi ogni settimana.</p>'}${archive ? `<details class="bill-archive"><summary>Atti conclusi</summary><ul>${archive}</ul></details>` : ''}${inst.kind !== 'europa' ? actsGuide(inst) : ''}`;
   else if (section === 'cronologia') body = `${inst.kind !== 'europa' ? `<h3 class="local-h">Risultati del mandato</h3>${resultsSection(inst, state)}` : ''}<h3 class="local-h">Cronaca del ${esc(rules.label.toLowerCase())}</h3>${history ? `<ul class="bill-journal">${history}</ul>` : '<p class="quiet-copy">La cronaca si riempie con le decisioni del consiglio.</p>'}`;
   else body = `<div class="local-grid"><div><h3 class="local-h">Composizione</h3>${composition(inst, state, ui)}</div><div><h3 class="local-h">${esc(inst.ep ? 'Le tue commissioni' : rules.executive)}</h3>${inst.ep ? europeanPanel(inst, context) : executivePanel(inst)}</div></div>${inst.ep ? `<h3 class="local-h">${esc(rules.executive)}</h3>${executivePanel(inst)}` : ''}<h3 class="local-h">Il tuo ruolo</h3>${roleBox(inst, state)}`;
-  return `<section class="hq-panel local-institution" id="istituzione-${esc(inst.kind)}"><div class="home-section-heading"><div><span class="section-kicker">${esc(rules.label.toUpperCase())} · SIMULAZIONE</span><h2>${esc(inst.name)}</h2><p class="section-subtitle">${esc(roleLine(inst))}${inst.until ? ` · mandato fino al voto del ${esc(date(inst.until))}` : ''}</p></div><span class="parliament-provenance simulated">SCENARIO SIMULATO</span></div>
+  return `<section class="hq-panel local-institution" id="istituzione-${esc(inst.kind)}" style="--lv:${esc(territoryVisual(inst.kind).color)}" data-level="${esc(inst.kind)}"><div class="home-section-heading local-heading">${territoryTile(inst.kind)}<div><span class="section-kicker">${esc(rules.label.toUpperCase())} · SIMULAZIONE</span><h2>${esc(inst.name)}</h2><p class="section-subtitle">${esc(roleLine(inst))}${inst.until ? ` · mandato fino al voto del ${esc(date(inst.until))}` : ''}</p></div><span class="parliament-provenance simulated">SCENARIO SIMULATO</span></div>
     ${tabs}<div class="local-section" role="tabpanel" id="panel-${esc(inst.kind)}" aria-labelledby="tab-${esc(inst.kind)}-${section}">${body}</div></section>`;
 }
 // The player's active institutions (none: an empty string, the page stays as it was). One mandate is shown at a time (a selector when there are several); each has its sections.
@@ -428,7 +428,7 @@ export function renderInstitutions(state, ui = {}) {
   const influence = state.dataset?.statistics?.find(item => item.subjectId === state.career?.playerId && item.metric === 'influence')?.value ?? 30;
   const context = { capital, influence, today: state.clock?.currentDate ?? null };
   const selected = active.find(inst => inst.kind === ui.localInst) ?? active[0];
-  const jump = active.length > 1 ? `<nav class="sx-tabs local-jump" role="tablist" aria-label="I tuoi mandati">${active.map(inst => `<button type="button" role="tab" class="sx-tab${inst.id === selected.id ? ' active' : ''}" data-local-inst="${esc(inst.kind)}" aria-selected="${inst.id === selected.id}" tabindex="${inst.id === selected.id ? 0 : -1}">${esc(institutionLabel(inst))}</button>`).join('')}</nav>` : '';
+  const jump = active.length > 1 ? `<nav class="sx-tabs local-jump" role="tablist" aria-label="I tuoi mandati">${active.map(inst => `<button type="button" role="tab" class="sx-tab${inst.id === selected.id ? ' active' : ''}" data-local-inst="${esc(inst.kind)}" aria-selected="${inst.id === selected.id}" tabindex="${inst.id === selected.id ? 0 : -1}" style="--lv:${esc(territoryVisual(inst.kind).color)}">${glyph(territoryVisual(inst.kind).icon, 15)} ${esc(institutionLabel(inst))}</button>`).join('')}</nav>` : '';
   return `<div class="local-institutions" id="istituzioni"><div class="home-section-heading local-intro"><div><span class="section-kicker">LE TUE ISTITUZIONI</span><h2>Dove eserciti il tuo mandato</h2><p class="section-subtitle">Un mandato alla volta: panoramica, bilancio, opere e cantieri, servizi del territorio, atti e cronologia. Ogni atto approvato e ogni opera finita cambiano i servizi del territorio.</p></div></div>${jump}${institutionCard(selected, capital, context, state, ui)}<p class="poll-footnote">Consigli, giunte, gruppi, atti, voti, opere ed effetti sono simulati (source: simulation); sindaci, presidenti e assessori non giocanti sono figure simulate, non persone reali.</p></div>`;
 }
 export const activeInstitutions = state => (state?.local?.institutions ?? []).filter(item => item.status === 'active');

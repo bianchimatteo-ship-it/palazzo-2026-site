@@ -476,6 +476,10 @@
 .rbar-row { display: grid; grid-template-columns: minmax(110px, 190px) minmax(0, 1fr) 64px; align-items: center; gap: 4px 12px; width: 100%; padding: 7px 8px; border: 0; border-radius: var(--radius-sm); background: transparent; color: var(--ink); font: 500 14px var(--font-ui); text-align: left; cursor: pointer; overflow-wrap: anywhere; }
 .rbar-row:hover { background: var(--panel-3); }
 .rbar-row.is-selected { background: var(--info-soft); color: var(--ink-hi); }
+.rbar-row.is-missing { color: var(--ink-2); }
+.rbar-track.is-empty { background: transparent; border: 1px dashed var(--line); height: 14px; }
+.rbar-why { grid-column: 1 / -1; color: var(--ink-3); font-size: 12px; line-height: 1.3; }
+.rbar-count { margin-top: 6px; }
 .rbar-name small { margin-left: 4px; color: var(--gold-soft); font-size: 12px; }
 .rbar-track { position: relative; display: block; height: 14px; min-width: 0; border-radius: 3px; background: rgba(181, 189, 169, .08); }
 .rbar-track i { position: absolute; left: 0; top: 0; bottom: 0; min-width: 2px; border-radius: 3px; }

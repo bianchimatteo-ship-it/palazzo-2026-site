@@ -6,6 +6,12 @@ const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value))
 const key = value => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('it-IT').replace(/[^a-z]/g, '');
 const rankOf = (seedText, id) => [...`${seedText}|${id}`].reduce((n, char) => (n * 31 + char.charCodeAt(0)) >>> 0, 11);
 export const CONTACT_LIMIT = 8;
+const OBJECTIVES = ['influenzare il programma', 'difendere il territorio', 'rafforzare il gruppo', 'ottenere un incarico'];
+const INTERESTS = ['welfare', 'infrastrutture', 'sicurezza', 'ambiente'];
+const profileFor = (seedText, id) => {
+  const seed = rankOf(seedText, id);
+  return { objective: OBJECTIVES[seed % OBJECTIVES.length], interest: INTERESTS[(seed >>> 3) % INTERESTS.length], loyalty: 35 + (seed % 55), initiativeBias: (seed % 100) / 100 };
+};
 
 function identity(person, groups, role = null) {
   const group = groups.find(item => item.id === person.groupId);
@@ -50,7 +56,9 @@ export function syncContacts(existing = [], selection = [], { week = 1, rand = M
   const known = new Map(existing.map(item => [item.person.id, item]));
   const next = selection.map(({ person, reason }) => {
     const previous = known.get(person.id);
-    return previous ? { ...previous, person, reason } : { person, reason, relation: Math.round(42 + rand() * 16), lastMetWeek: null, since: week, history: [], cosigned: [], source: SIM };
+    if (previous) return { ...previous, person, reason, profile: previous.profile ?? profileFor(person.id, person.id), memory: previous.memory ?? [] };
+    const profile = profileFor(person.id, person.id);
+    return { person, reason, relation: Math.round(42 + rand() * 16), lastMetWeek: null, since: week, history: [], memory: [], cosigned: [], profile, source: SIM };
   });
   // People met before stay in the address book even when they are no longer pertinent.
   for (const item of existing) if (!next.some(entry => entry.person.id === item.person.id) && item.lastMetWeek) next.push(item);
@@ -61,7 +69,11 @@ export function changeContact(contacts, personId, delta, note = null, week = nul
   const contact = contacts.find(item => item.person.id === personId);
   if (!contact || !delta) return null;
   contact.relation = Math.round(clamp(contact.relation + delta));
-  if (note) contact.history = [{ week, note, delta, source: SIM }, ...(contact.history ?? [])].slice(0, 8);
+  if (note) {
+    const entry = { week, note, delta, source: SIM };
+    contact.history = [entry, ...(contact.history ?? [])].slice(0, 8);
+    contact.memory = [entry, ...(contact.memory ?? [])].slice(0, 12);
+  }
   return contact;
 }
 
@@ -74,17 +86,20 @@ export function contactStance(relation) {
 
 // Weekly drift and, now and then, an initiative that comes from the concrete situation.
 export function advanceContacts(contacts = [], { rand, openLaw = null, seat = false, region = null }) {
+  rand ??= Math.random;
   for (const contact of contacts) contact.relation = Math.round((contact.relation + (50 - contact.relation) * 0.03) * 10) / 10;
   if (!contacts.length || rand() > 0.14) return null;
-  const allies = contacts.filter(item => item.relation >= 68);
-  const hostile = contacts.filter(item => item.relation <= 32);
-  const local = contacts.filter(item => item.reason === 'territorio');
+  const profile = item => item.profile ?? (item.profile = profileFor(item.person?.id, item.person?.id));
+  const allies = contacts.filter(item => item.relation >= 68 && profile(item).loyalty >= 45);
+  const hostile = contacts.filter(item => item.relation <= 32 || profile(item).loyalty < 35);
+  const local = contacts.filter(item => item.reason === 'territorio' || profile(item).objective === 'difendere il territorio');
+  const byInitiative = list => list.sort((a, b) => (profile(b).initiativeBias + b.relation / 200) - (profile(a).initiativeBias + a.relation / 200))[0];
   if (openLaw && allies.length && rand() < 0.6) {
-    const contact = allies[Math.floor(rand() * allies.length)];
-    if (!(contact.cosigned ?? []).includes(openLaw.id)) return { templateId: 'sostegno-parlamentare', contact, law: openLaw };
+    const contact = byInitiative(allies);
+    if (!(contact.cosigned ?? []).includes(openLaw.id)) return { templateId: 'sostegno-parlamentare', contact, law: openLaw, autonomous: true, reason: profile(contact).objective };
   }
-  if (openLaw && hostile.length) return { templateId: 'emendamenti-contrari', contact: hostile[Math.floor(rand() * hostile.length)], law: openLaw };
-  if (!seat && local.length) return { templateId: 'richiesta-territorio', contact: local[Math.floor(rand() * local.length)], region };
+  if (openLaw && hostile.length) return { templateId: 'emendamenti-contrari', contact: byInitiative(hostile), law: openLaw, autonomous: true, reason: profile(byInitiative(hostile)).interest };
+  if (!seat && local.length) return { templateId: 'richiesta-territorio', contact: byInitiative(local), region, autonomous: true, reason: profile(byInitiative(local)).interest };
   return null;
 }
 export const contactLabel = contact => `${contact.person.fullName}${contact.person.groupName ? ` (${contact.person.groupName})` : ''}`;

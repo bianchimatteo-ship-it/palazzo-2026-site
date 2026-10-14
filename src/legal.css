@@ -1,0 +1,29 @@
+/* Public pages of the game (privacy, terms, account deletion): readable on their own, no game code. DM Sans is served from this site. */
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:400;font-display:swap;src:url('./fonts/dm-sans-latin-400-normal.woff2') format('woff2')}
+@font-face{font-family:'DM Sans';font-style:normal;font-weight:700;font-display:swap;src:url('./fonts/dm-sans-latin-700-normal.woff2') format('woff2')}
+:root{--bg:#10150f;--panel:#171e16;--line:#2c382b;--ink:#ece8de;--muted:#aab3a3;--accent:#7fbf99;--warn:#e0b45a;--bad:#e08a7a;color-scheme:dark}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#f6f4ee;--panel:#fff;--line:#d8d4c6;--ink:#1d2419;--muted:#4f5a4a;--accent:#1f6a43;--warn:#7a5200;--bad:#a23b2a;color-scheme:light}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.6 'DM Sans',system-ui,sans-serif;min-width:320px}
+.legal{max-width:760px;margin:0 auto;padding:20px 16px 56px}
+.legal header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px;padding-bottom:14px;border-bottom:1px solid var(--line);margin-bottom:18px}
+.legal header a.back{color:var(--accent);font-weight:700;text-decoration:none;min-height:44px;display:inline-flex;align-items:center}
+.legal h1{font-size:clamp(26px,5vw,36px);line-height:1.15;margin:0 0 6px}
+.legal h2{font-size:20px;margin:28px 0 8px}
+.legal p,.legal li{color:var(--ink)}
+.legal .meta{color:var(--muted);font-size:14px;margin:0 0 16px}
+.legal table{width:100%;border-collapse:collapse;margin:10px 0;font-size:15px}
+.legal th,.legal td{text-align:left;vertical-align:top;padding:8px 10px;border:1px solid var(--line)}
+.legal th{background:var(--panel);font-weight:700}
+.legal .wide{overflow-x:auto}
+.legal .notice{border:1px solid var(--warn);border-left-width:4px;border-radius:6px;padding:10px 14px;margin:14px 0;background:var(--panel)}
+.legal .todo{border:1px dashed var(--warn);border-radius:6px;padding:8px 12px;margin:10px 0;color:var(--warn);background:transparent}
+.legal a{color:var(--accent)}
+.legal nav.legal-nav{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:30px;padding-top:14px;border-top:1px solid var(--line)}
+.legal label{display:grid;gap:4px;margin:12px 0;font-weight:700}
+.legal input{font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink);min-height:44px;width:100%}
+.legal button{font:inherit;font-weight:700;min-height:44px;padding:10px 18px;border-radius:6px;border:1px solid var(--bad);background:transparent;color:var(--bad);cursor:pointer}
+.legal button[disabled]{opacity:.55;cursor:default}
+.legal .result{margin-top:14px;padding:10px 14px;border-radius:6px;border:1px solid var(--line);background:var(--panel)}
+.legal .result.ok{border-color:var(--accent)}
+.legal .result.error{border-color:var(--bad);color:var(--bad)}

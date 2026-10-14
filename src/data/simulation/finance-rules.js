@@ -97,3 +97,26 @@ export const DEBT_CRISIS_THRESHOLD = 2500;
 export const RESERVE_BEFORE_REPAYING = 1500;
 export const LEDGER_SIZE = 80;
 export const HISTORY_WEEKS = 52;
+
+// One-off treasury operations: fundraising dinners, membership drives, party events, an online appeal. Each costs days and money NOW, takes weeks, and what it brings is NOT guaranteed: the
+// outcome is drawn when it falls due (one of `outcomes`, with its chance), and a risk can make it cost more. Game values and simulated outcomes: no real money, donation or transaction.
+// income / members are [min, max] ranges; `scale: 'notoriety'` makes the income grow with how well known the politician is. The cost is paid at the start and booked in `category`.
+export const TREASURY_OPERATIONS = Object.freeze([
+  { id: 'cena-raccolta', label: 'Cena di raccolta fondi', icon: 'wallet', category: 'eventi', cost: { ap: 1, funds: 300 }, weeks: 2, requiresParty: false,
+    detail: 'Una cena con sostenitori e piccoli imprenditori: l’incasso arriva dopo due settimane e non è garantito.',
+    outcomes: [{ chance: 0.2, label: 'Serata fiacca', tone: 'warn', income: [150, 450] }, { chance: 0.55, label: 'Buon incasso', tone: 'good', income: [600, 1300] }, { chance: 0.25, label: 'Serata riuscita', tone: 'good', income: [1400, 2400] }],
+    effects: { stats: { notoriety: 0.3 } }, risk: { chance: 0.07, label: 'Un invitato fa discutere e ne parlano i giornali', stats: { reputation: -0.8 } } },
+  { id: 'campagna-adesioni', label: 'Campagna di adesioni', icon: 'users', category: 'partito', cost: { ap: 1, funds: 250 }, weeks: 3, requiresParty: true,
+    detail: 'Banchetti, passaparola e moduli online: nuovi iscritti e le loro quote di tessera, ma quanti sono non è garantito.',
+    outcomes: [{ chance: 0.25, label: 'Poche adesioni', tone: 'warn', members: [10, 40] }, { chance: 0.5, label: 'Adesioni nella media', tone: 'good', members: [60, 150] }, { chance: 0.25, label: 'Adesioni oltre le attese', tone: 'good', members: [160, 320] }],
+    incomePerMember: 12, effects: { party: 0.2 }, risk: null },
+  { id: 'evento-partito', label: 'Festa o evento del partito', icon: 'megaphone', category: 'eventi', cost: { ap: 2, funds: 600 }, weeks: 4, requiresParty: true,
+    detail: 'Una festa con stand, dibattiti e ospiti: notorietà, volontari e qualche incasso; con il maltempo o un ospite sbagliato può costare più di quanto rende.',
+    outcomes: [{ chance: 0.25, label: 'Poca affluenza', tone: 'warn', income: [100, 400] }, { chance: 0.5, label: 'Buona partecipazione', tone: 'good', income: [500, 1100] }, { chance: 0.25, label: 'Grande successo', tone: 'good', income: [1200, 2200] }],
+    effects: { stats: { notoriety: 0.8, popularity: 0.4 } }, risk: { chance: 0.15, label: 'Maltempo e organizzazione in affanno: costi in più', cost: 300, stats: {} } },
+  { id: 'raccolta-online', label: 'Raccolta fondi online (simulata)', icon: 'chart', category: 'comunicazione', cost: { ap: 1, funds: 120 }, weeks: 4, requiresParty: false, scale: 'notoriety',
+    detail: 'Un appello online: rende di più se sei conosciuto e meno se non lo sei, e può restare sotto la spesa. Nessuna donazione è reale.',
+    outcomes: [{ chance: 0.3, label: 'Appello ignorato', tone: 'warn', income: [20, 120] }, { chance: 0.5, label: 'Risposta discreta', tone: 'good', income: [200, 600] }, { chance: 0.2, label: 'Appello virale', tone: 'good', income: [700, 1500] }],
+    effects: { stats: { notoriety: 0.2 } }, risk: { chance: 0.05, label: 'Una polemica sui toni dell’appello', stats: { reputation: -0.4 } } }
+]);
+export const TREASURY_OPERATIONS_KEPT = 24;

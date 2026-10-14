@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const DEFAULT_URL = 'https://bianchimatteo-ship-it.github.io/palazzo-2026-site/';
@@ -22,6 +23,17 @@ const files = {
 };
 const failures = [];
 const assert = (condition, message) => { if (!condition) failures.push(message); };
+// Which commit is online? The site is checked byte by byte against the local files; this ties those files to a commit: the publishable files must be exactly the ones of HEAD (clean tree),
+// and `--expect-commit <sha>` asserts which commit that is. `--allow-dirty` skips the clean tree rule (a trial before committing). The version Cloudflare itself holds (Wrangler's deployment id)
+// is not visible without credentials: it is reported by the deploy, not verified here.
+const git = args => { try { return execFileSync('git', args, { cwd: fileURLToPath(new URL('../', import.meta.url)), encoding: 'utf8' }).trim(); } catch { return null; } };
+const PUBLISHABLE = ['index.html', 'sw.js', 'favicon.ico', 'favicon.svg', 'site.webmanifest', 'privacy.html', 'termini.html', 'elimina-account.html', 'icons', 'src', 'worker.js', 'wrangler.jsonc'];
+const headCommit = git(['rev-parse', 'HEAD']);
+const uncommitted = git(['status', '--porcelain', '--', ...PUBLISHABLE]);
+const expectedCommit = process.argv.includes('--expect-commit') ? process.argv[process.argv.indexOf('--expect-commit') + 1] : null;
+if (expectedCommit) assert(headCommit && headCommit.startsWith(expectedCommit), `Il commit locale è ${headCommit ?? 'sconosciuto'}, atteso ${expectedCommit}`);
+if (uncommitted && !process.argv.includes('--allow-dirty')) assert(false, `I file pubblicabili hanno modifiche non committate: ciò che è online non corrisponde a nessun commit.\n${uncommitted.split('\n').slice(0, 8).join('\n')}`);
+
 const SPECIFIER = /(?:from\s+|import\s*\(\s*)['"](\.{1,2}\/[^'"]+?\.js)(?:\?v=([^'"]*))?['"]/g;
 
 // Local consistency first: every module and stylesheet must carry the version index.html asks for.
@@ -153,24 +165,42 @@ try {
     assert(/javascript/.test(response.headers.get('content-type') ?? ''), 'sw.js non è servito come JavaScript');
   } catch (error) { failures.push(`sw.js non disponibile (${error.message})`); }
   // Favicon and web app manifest: the POLITICANDO mark in every browser.
-  for (const asset of ['favicon.ico', 'favicon.svg', 'site.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png', 'icons/favicon-32.png']) {
+  const fontFiles = (await readdir(new URL('../src/fonts/', import.meta.url))).map(name => `src/fonts/${name}`);
+  for (const asset of ['favicon.ico', 'favicon.svg', 'site.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png', 'icons/favicon-32.png', 'privacy.html', 'termini.html', 'elimina-account.html', 'src/legal.css', 'src/legal/delete-account.js', ...fontFiles]) {
     try {
       const [{ bytes }, expected] = await Promise.all([get(new URL(asset, pageUrl)), readFile(new URL(`../${asset}`, import.meta.url))]);
       assert(hash(bytes) === hash(expected), `${asset} live diverso dal file locale`);
     } catch (error) { failures.push(`${asset} non disponibile (${error.message})`); }
   }
+  // The fonts come from this site, never from Google; the public pages say what they must.
+  assert(!/fonts\.(googleapis|gstatic)\.com/.test(html), 'index.html live carica i caratteri da Google Fonts');
+  try {
+    const { bytes: privacyBytes } = await get(new URL('privacy.html', pageUrl));
+    assert(/Informativa sulla privacy/.test(privacyBytes.toString('utf8')) && /Elimina l’account/.test(privacyBytes.toString('utf8')), 'privacy.html live non è l’informativa');
+    const { bytes: deleteBytes, response: deleteResponse } = await get(new URL('elimina-account.html', pageUrl));
+    assert(/id="delete-form"/.test(deleteBytes.toString('utf8')) && /html/.test(deleteResponse.headers.get('content-type') ?? ''), 'elimina-account.html live non ha il modulo di cancellazione');
+    const { response: fontResponse } = await get(new URL('src/fonts/dm-sans-latin-400-normal.woff2', pageUrl));
+    assert(/font|woff|octet-stream/.test(fontResponse.headers.get('content-type') ?? ''), `Carattere servito con tipo ${fontResponse.headers.get('content-type')}`);
+  } catch (error) { failures.push(`Pagine pubbliche o caratteri non disponibili (${error.message})`); }
   // On Workers, the shared admin archive answers (read-only for everyone).
   if (!/github\.io$/.test(pageUrl.host)) {
     const response = await fetch(new URL('api/admin', pageUrl), { signal: AbortSignal.timeout(30000) }).catch(() => null);
     const body = response?.ok ? await response.json().catch(() => null) : null;
     assert(body && typeof body.parties === 'object' && typeof body.logos === 'object' && 'configured' in body, 'Archivio condiviso /api/admin non disponibile sul Worker');
+    // The Worker that is online is the one with account deletion: the status route lists its features (an older Worker does not).
+    const status = await fetch(new URL('api/account/status', pageUrl), { signal: AbortSignal.timeout(30000) }).catch(() => null);
+    const statusBody = status?.ok ? await status.json().catch(() => null) : null;
+    assert(Array.isArray(statusBody?.features) && statusBody.features.includes('account-delete'), 'Il Worker pubblicato non offre la cancellazione dell’account (versione vecchia?)');
+    // Deleting without a session is refused (and nothing is deleted).
+    const refused = await fetch(new URL('api/account', pageUrl), { method: 'DELETE', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ proof: '0'.repeat(64), confirm: 'ELIMINA' }), signal: AbortSignal.timeout(30000) }).catch(() => null);
+    assert(refused?.status === 401, `DELETE /api/account senza sessione: ${refused?.status ?? 'nessuna risposta'}, atteso 401`);
     // The account service is wired to its database: without a session it answers 401 (no account is created here).
     const account = await fetch(new URL('api/account/me', pageUrl), { signal: AbortSignal.timeout(30000) }).catch(() => null);
     const accountBody = account ? await account.json().catch(() => null) : null;
     assert(account?.status === 401 && /Sessione/.test(accountBody?.error ?? ''), `Servizio account non pronto sul Worker (${account?.status} ${accountBody?.error ?? ''})`);
   }
   // Files that must never be published: the archive is never committed; Workers also skips the tooling.
-  const unpublished = ['Archivio.zip', ...(/github\.io$/.test(pageUrl.host) ? [] : ['package.json', 'scripts/check-ui.mjs', 'wrangler.jsonc', 'worker.js', 'migrations/0001_accounts.sql', 'capacitor.config.json', 'docs/audit-2026-10-12.md', 'www/index.html', 'ios/App/App/AppDelegate.swift'])];
+  const unpublished = ['Archivio.zip', ...(/github\.io$/.test(pageUrl.host) ? [] : ['package.json', 'scripts/check-ui.mjs', 'wrangler.jsonc', 'worker.js', 'migrations/0001_accounts.sql', 'capacitor.config.json', 'docs/audit-2026-10-12.md', 'docs/privacy-e-asset.md', 'docs/app-stato.md', 'scripts/build-www.mjs', 'www/index.html', 'ios/App/App/AppDelegate.swift'])];
   for (const path of unpublished) {
     const response = await fetch(new URL(path, pageUrl), { signal: AbortSignal.timeout(30000) }).catch(() => null);
     assert(!response?.ok, `${path} non dovrebbe essere pubblicato`);
@@ -185,6 +215,7 @@ try {
   }
   if (failures.length) throw new Error(`Verifica Pages fallita:\n- ${failures.join('\n- ')}`);
   console.log(`Sito pubblicato verificato: ${pageUrl.href}`);
+  console.log(`Commit locale ${headCommit?.slice(0, 12) ?? 'sconosciuto'}${uncommitted ? ' (con modifiche non committate)' : ' (albero pulito sui file pubblicabili)'}${expectedCommit ? `, atteso ${expectedCommit}: ok` : ''}.`);
   console.log(`Snapshot ${liveManifest.snapshotDate}; ${db.parties.length} partiti, ${db.politicalMovements.length} movimenti, ${db.politicians.length} parlamentari, ${db.parliamentaryGroups.length} gruppi.`);
   console.log(`${Object.keys(files).length} collezioni live, ${localModules.size} moduli JS e ${stylesheets.length} fogli di stile verificati con la versione ${indexVersion}; hash remoti uguali ai file locali.`);
 } catch (error) {

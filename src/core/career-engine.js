@@ -1,38 +1,39 @@
-import { uniqueId } from './ids.js?v=20261013-2';
-import { advanceDays, formatDate, nextMunicipalVote, nextProvincialVote, nextRegionalVote } from './time.js?v=20261013-2';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261013-2';
-import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20261013-2';
+import { uniqueId } from './ids.js?v=20261014-1';
+import { advanceDays, formatDate, nextMunicipalVote, nextProvincialVote, nextRegionalVote } from './time.js?v=20261014-1';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261014-1';
+import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20261014-1';
 import {
   APPOINTMENTS, BASE_WEEKLY_INCOME, CAREER_EVENTS, CURRENT_TEMPLATES, EARLY_ELECTION_AFTER_WEEKS, ELECTION_SCHEDULE,
   FORCED_EVENTS, LEGACY_RIVAL_NAMES, SIMULATED_RIVAL_LABEL, FOUNDER_RANK, LEVEL_FIRST_ELECTION, OFFICE_INCOME, PARTY_RANKS, RELATION_TEMPLATES, STAT_LABELS,
-  AGENDA_CAPS, SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS, ROUND_RULES } from '../data/simulation/career-rules.js?v=20261013-2';
-import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20261013-2';
-import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20261013-2';
-import { ITALIAN_REGIONS, hasProvincialLevel } from '../data/regions.js?v=20261013-2';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261013-2';
-import { book, buyInvestment, createFinance, depositElectionFund, depositReserve, hasAsset, normalizeFinance, releaseReserve, settleFinanceWeek } from './finance-engine.js?v=20261013-2';
-import { advanceOrganization, allocateCurrentPortfolios, applyOrgEffects, createOrganization, isPartyLeader, normalizeCurrentProfiles, normalizeOrganization, rememberCurrent, treasuryBook } from './organization-engine.js?v=20261013-2';
-import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20261013-2';
-import { HARD_CATEGORIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261013-2';
-import { AREA_GROUPS, macroAreaOf } from '../data/simulation/policy-rules.js?v=20261013-2';
-import { advancementOdds, evaluateAdvancement, progressionFactors } from './progression-engine.js?v=20261013-2';
-import { advanceCommittees, applyCommitteeAction, applyLocalEvent, COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, committeeActionCost, foundCommittee, leaderStance, scaleOf, territorialControl } from './committee-engine.js?v=20261013-2';
-import { europeanElectionDate, legislatureTerm, LEGISLATURE_RULES, sundayOnOrBefore } from './legislature-engine.js?v=20261013-2';
-import { CADRE_ACTIONS, LIFE_MEMORY_KINDS, LIFE_SITUATIONS, SPLINTER_NAMES } from '../data/simulation/party-life-rules.js?v=20261013-2';
-import { DAILY_EVENTS } from '../data/simulation/daily-events.js?v=20261013-2';
-import { eventDay, pickWeighted, reactionRelevance } from './event-engine.js?v=20261013-2';
-import { heldOffices, localOffices } from './office-engine.js?v=20261013-2';
-import { worksSignals } from './local-works-engine.js?v=20261013-2';
-import { SECTOR_GAINS, advanceStanding, applyStandingEffects, createStanding, gainSector, normalizeStanding, sectorValue, standingOf } from './standing-engine.js?v=20261013-2';
-import { EVENT_SECTORS } from '../data/simulation/standing-rules.js?v=20261013-2';
-import { affiliationOf, scenarioCapitalGain, scenarioGrowth, scenarioInit, scenarioOf } from './scenario-engine.js?v=20261013-2';
-import { PRESIDENCY_SITUATIONS } from '../data/simulation/presidency-rules.js?v=20261013-2';
-import { START_SITUATIONS } from '../data/simulation/start-rules.js?v=20261013-2';
-import { AMBITION_BROKEN, AMBITION_COST, AMBITION_KEPT, OBJECTIVE_BY_ID, OBJECTIVE_SITUATIONS } from '../data/simulation/objective-rules.js?v=20261013-2';
-import { ambitionProblem, bump, bumpAmbition, bumpDecision, expiredAmbitions, isClassicObjective, objectiveBase, objectiveStatus } from './objective-engine.js?v=20261013-2';
-import { advanceStart, hasStart, startBase, startFundsFactor, startInit, startSpecial } from './start-engine.js?v=20261013-2';
-import { advanceLife, breakPact, cadreAction, cadreDecision, congressWork, createLife, honourCadrePromises, honourListPacts, lapseAnswer, lifeOverview, normalizeLife, resolveCongress, respondRequest, startRebuild } from './party-life-engine.js?v=20261013-2';
-import { enterNewParty, foundParty, mergeParties, OP_COSTS, partyOpsAvailability, renameParty, splitOff } from './party-ops-engine.js?v=20261013-2';
+  AGENDA_CAPS, SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS, ROUND_RULES } from '../data/simulation/career-rules.js?v=20261014-1';
+import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20261014-1';
+import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20261014-1';
+import { ITALIAN_REGIONS, hasProvincialLevel } from '../data/regions.js?v=20261014-1';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261014-1';
+import { createMandate, setMandateStatus, staffWeek, updateMandate } from './staff-engine.js?v=20261014-1';
+import { beginOperation, book, buyInvestment, createFinance, depositElectionFund, depositReserve, hasAsset, normalizeFinance, releaseReserve, settleFinanceWeek, settleOperations, treasuryOperation } from './finance-engine.js?v=20261014-1';
+import { addMembers, advanceOrganization, allocateCurrentPortfolios, applyOrgEffects, createOrganization, isPartyLeader, normalizeCurrentProfiles, normalizeOrganization, rememberCurrent, treasuryBook } from './organization-engine.js?v=20261014-1';
+import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20261014-1';
+import { HARD_CATEGORIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261014-1';
+import { AREA_GROUPS, macroAreaOf } from '../data/simulation/policy-rules.js?v=20261014-1';
+import { advancementOdds, evaluateAdvancement, progressionFactors } from './progression-engine.js?v=20261014-1';
+import { advanceCommittees, applyCommitteeAction, applyLocalEvent, COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, committeeActionCost, foundCommittee, leaderStance, scaleOf, territorialControl } from './committee-engine.js?v=20261014-1';
+import { europeanElectionDate, legislatureTerm, LEGISLATURE_RULES, sundayOnOrBefore } from './legislature-engine.js?v=20261014-1';
+import { CADRE_ACTIONS, LIFE_MEMORY_KINDS, LIFE_SITUATIONS, SPLINTER_NAMES } from '../data/simulation/party-life-rules.js?v=20261014-1';
+import { DAILY_EVENTS } from '../data/simulation/daily-events.js?v=20261014-1';
+import { eventDay, pickWeighted, reactionRelevance } from './event-engine.js?v=20261014-1';
+import { heldOffices, localOffices } from './office-engine.js?v=20261014-1';
+import { worksSignals } from './local-works-engine.js?v=20261014-1';
+import { SECTOR_GAINS, advanceStanding, applyStandingEffects, createStanding, gainSector, normalizeStanding, sectorValue, standingOf } from './standing-engine.js?v=20261014-1';
+import { EVENT_SECTORS } from '../data/simulation/standing-rules.js?v=20261014-1';
+import { affiliationOf, scenarioCapitalGain, scenarioGrowth, scenarioInit, scenarioOf } from './scenario-engine.js?v=20261014-1';
+import { PRESIDENCY_SITUATIONS } from '../data/simulation/presidency-rules.js?v=20261014-1';
+import { START_SITUATIONS } from '../data/simulation/start-rules.js?v=20261014-1';
+import { AMBITION_BROKEN, AMBITION_COST, AMBITION_KEPT, OBJECTIVE_BY_ID, OBJECTIVE_SITUATIONS } from '../data/simulation/objective-rules.js?v=20261014-1';
+import { ambitionProblem, bump, bumpAmbition, bumpDecision, expiredAmbitions, isClassicObjective, objectiveBase, objectiveStatus } from './objective-engine.js?v=20261014-1';
+import { advanceStart, hasStart, startBase, startFundsFactor, startInit, startSpecial } from './start-engine.js?v=20261014-1';
+import { advanceLife, breakPact, cadreAction, cadreDecision, congressWork, createLife, honourCadrePromises, honourListPacts, lapseAnswer, lifeOverview, normalizeLife, resolveCongress, respondRequest, startRebuild } from './party-life-engine.js?v=20261014-1';
+import { enterNewParty, foundParty, mergeParties, OP_COSTS, partyOpsAvailability, renameParty, splitOff } from './party-ops-engine.js?v=20261014-1';
 // The decisions of the party's internal life join the situation events; the daily events join the procedural ones.
 const SITUATIONS = { ...SITUATION_EVENTS, ...LIFE_SITUATIONS, ...PRESIDENCY_SITUATIONS, ...START_SITUATIONS, ...OBJECTIVE_SITUATIONS };
 const EVENT_POOL = [...CAREER_EVENTS, ...DAILY_EVENTS];
@@ -1762,6 +1763,40 @@ export function lifeBreakPact(input, env, pactId) {
   addLog(ctx.game, env.currentDate, 'partito', 'Denunci un accordo interno', lines, 'bad');
   return { ctx, lines };
 }
+// A treasury operation: days and funds now, the outcome when it falls due (weeks later), the benefit not guaranteed.
+export function startTreasuryOperation(input, env, id) {
+  const spec = treasuryOperation(id);
+  if (!spec) throw new Error('Operazione di tesoreria non riconosciuta.');
+  const ctx = start(input);
+  const problem = costProblem(ctx.game, spec.cost);
+  if (problem) throw new Error(problem);
+  const entry = beginOperation(ctx.game, id, { week: ctx.game.week.index, date: env.currentDate });
+  pay(ctx.game, spec.cost, spec.category, spec.label, env.currentDate);
+  if (spec.cost.ap) ctx.game.week.categoriesUsed = [...new Set([...ctx.game.week.categoriesUsed, 'risorse'])];
+  addLog(ctx.game, env.currentDate, 'tesoreria', spec.label, [`Costo ${spec.cost.funds} € e ${spec.cost.ap} ${spec.cost.ap === 1 ? 'giorno' : 'giorni'}; l’esito arriva alla settimana ${entry.dueWeek} e non è garantito.`], 'neutral');
+  return { ctx, entry, report: { title: spec.label, tone: 'neutral', lines: [`Avviata: esito alla settimana ${entry.dueWeek}.`] } };
+}
+// ---------- the staff: the player's decisions (the weekly work is in weeklySystems) ----------
+export function staffGive(input, env, spec) {
+  const ctx = start(input);
+  const { game, mandate } = createMandate(ctx.game, ctx.stats, spec, { week: ctx.game.week.index, date: env.currentDate });
+  ctx.game = game;
+  addLog(ctx.game, env.currentDate, 'staff', `Incarico allo staff: ${mandate.task}`, [`Budget ${mandate.weeklyBudget} € a settimana, tetto ${mandate.budgetMax} €, ${mandate.weeks === 1 ? 'una volta' : `${mandate.weeks} settimane`}.`], 'neutral');
+  return { ctx, mandate };
+}
+export function staffChange(input, env, id, patch) {
+  const ctx = start(input);
+  const { game, mandate } = updateMandate(ctx.game, ctx.stats, id, patch);
+  ctx.game = game;
+  return { ctx, mandate };
+}
+export function staffSetStatus(input, env, id, status) {
+  const ctx = start(input);
+  const { game, mandate } = setMandateStatus(ctx.game, ctx.stats, id, status, { week: ctx.game.week.index });
+  ctx.game = game;
+  addLog(ctx.game, env.currentDate, 'staff', `Incarico allo staff ${status === 'annullato' ? 'annullato' : status === 'sospeso' ? 'sospeso' : 'ripreso'}`, [mandate.task], 'neutral');
+  return { ctx, mandate };
+}
 export function lifeCadre(input, env, { action, cadreId = null, committeeId = null }) {
   const spec = CADRE_ACTIONS[action];
   if (!spec) throw new Error('Azione non disponibile.');
@@ -2069,12 +2104,23 @@ function weeklySystems(ctx, env, date, closing, lines, specials) {
   const total = incomes.reduce((sum, item) => sum + item.amount, 0);
   const indemnity = incomes.find(item => item.category === 'indennita')?.amount ?? 0;
   const contribution = game.party?.org ? Math.round(indemnity * ELECTED_CONTRIBUTION) : 0;
+  // The treasury operations that fall due draw their outcome first, so that what they bring is in the week's accounts.
+  const treasury = settleOperations(game, { week: closing, date, rand: () => draw(game), notoriety: ctx.stats.notoriety ?? 30 });
   const finance = settleFinanceWeek(game, { week: closing, date, incomes, partyContribution: contribution, rand: () => draw(game) });
   if (contribution) treasuryBook(game.party.org, contribution, 'contributi', 'Contributo degli eletti');
   const budget = finance.effects;
   applyEffects(ctx, { stats: budget.stats, relations: budget.relations, prep: budget.prep, capital: budget.capital, party: budget.party ? { support: budget.party } : undefined }, null, [], { source: 'Spese ricorrenti del comitato' });
   if (budget.territory) game.week.categoriesUsed = [...new Set([...game.week.categoriesUsed, 'territorio'])];
   lines.unshift(`Entrate della settimana: ${total} €${contribution ? ` (di cui ${contribution} € versati al partito)` : ''}`, ...finance.lines.slice(0, 2));
+  // The staff carries out the mandates the player gave (each with its own budget): committees, local leaders and funds change in place, the stats and the preparation are applied here.
+  for (const result of treasury.results) {
+    if (result.members && game.party?.org) { addMembers(game.party.org, result.members); treasuryBook(game.party.org, Math.round(result.members * (result.spec.incomePerMember ?? 0)), 'contributi', `Quote di tessera: ${result.spec.label}`); }
+    lines.push(result.text);
+  }
+  if (Object.keys(treasury.effects.stats).length || treasury.effects.party) applyEffects(ctx, { stats: treasury.effects.stats, party: treasury.effects.party ? { support: treasury.effects.party } : undefined }, null, [], { source: 'Operazioni di tesoreria' });
+  const staffRun = staffWeek(game, ctx.stats, { week: closing, date, rand: () => draw(game) });
+  if (staffRun.effects) applyEffects(ctx, staffRun.effects, null, [], { source: 'Incarichi allo staff' });
+  lines.push(...staffRun.lines.slice(0, 4));
   if (finance.crisis) raiseSituation(ctx, 'crisi-finanziaria', {}, true);
   const party = game.party;
   if (party?.org) {

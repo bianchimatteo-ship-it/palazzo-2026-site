@@ -5,10 +5,10 @@
 // it needs or puts the question of confidence; the bills of the opposition often never reach the floor. The player sits
 // in one Chamber: speaks, amends and casts a personal vote on every bill there — and the vote has consequences.
 // Everything here is simulation (source: simulation); the groups of the real XIX legislature keep their real reference.
-import { DATA_SOURCES } from '../data/schema.js?v=20260926-6';
-import { AREA_BY_ID, DECREE_RULES, FINANCING, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20260926-6';
-import { amendLawPolicy, campOfAxis, cohesiveShare, governingGroupIds, groupProfile, parliamentInternals } from './parliament-engine.js?v=20260926-6';
-import { groupLine, splitGroupVote } from './vote-engine.js?v=20260926-6';
+import { DATA_SOURCES } from '../data/schema.js?v=20261014-1';
+import { AREA_BY_ID, DECREE_RULES, FINANCING, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261014-1';
+import { amendLawPolicy, campOfAxis, cohesiveShare, governingGroupIds, groupProfile, parliamentInternals } from './parliament-engine.js?v=20261014-1';
+import { groupLine, splitGroupVote } from './vote-engine.js?v=20261014-1';
 
 const { getGroup, allGroups, record, replaceLaw, demandFor, contentAffinity, setRelation } = parliamentInternals;
 const SIM = DATA_SOURCES.SIMULATION;
@@ -37,6 +37,9 @@ export const LEGISLATIVE_RULES = Object.freeze({
   // opposition's reach the floor now and then, the majority's more often, the committees' texts almost always; the
   // others wait (a few are picked up later) and lapse in committee.
   calendarChance: { opposizione: 0.3, maggioranza: 0.7, commissione: 0.85 }, lateCalendarChance: 0.06, calendarRetryWeeks: 3, stallWeeks: 26,
+  // A bill paused by a prolonged government crisis cannot remain indefinitely in the calendar.
+  // After this grace period it lapses, leaving a fresh Parliament free to reintroduce it.
+  maxPausedWeeks: 40,
   // The budget law of the Government: presented in October, to be approved by 31 December.
   budgetMonth: 10,
   // Saves stay light: bills closed long ago keep only their outcome.
@@ -126,7 +129,10 @@ function governmentArea(government, premier, society, rand) {
   const issues = (society?.issues ?? []).map(issue => issue.area ?? POLICY_AREAS.find(item => item.label === issue.topic)?.id).filter(id => AREA_BY_ID[id]);
   if (issues.length && rand() < 0.5) return issues[Math.floor(rand() * Math.min(3, issues.length))];
   const own = government.program?.priorities?.length && rand() < 0.6 ? government.program.priorities : groupProfile(premier ?? 'governo').likes;
-  return own[Math.floor(rand() * own.length)];
+  // The reforms the ministers have taken on come first: the Government legislates where its dossiers are open.
+  const reforms = (government.dossiers ?? []).filter(item => item.kind === 'riforma' && ['aperto', 'rinviato'].includes(item.status) && !item.drafted && AREA_BY_ID[item.area]).map(item => item.area);
+  const pool = reforms.length ? [...reforms, ...own] : own;
+  return pool[Math.floor(rand() * pool.length)];
 }
 function generateBills(parliament, { date, rand, society, world }) {
   const created = [];
@@ -227,14 +233,15 @@ export function autoVote(parliament, law, chamber, { date, world = null, playerC
     const others = own ? Math.max(0, group.simulatedSeats - 1) : group.simulatedSeats;
     let votes = Math.round(others * cohesiveShare(support));
     const split = splitGroupVote({ seats: others, yes: votes, confidence: Boolean(law.confidence), seed: `${law.id}|${chamber}|${(law.votes ?? []).length}|${group.groupId}` });
-    let no = split.no, abstain = split.abstain;
+    let no = split.no, abstain = split.abstain, absent = 0;
     if (own) {
       groupLineBefore = line;
       choice = !playerChoice || playerChoice === 'linea' ? line : playerChoice;
-      if (choice === 'favorevole') votes += 1; else if (choice === 'contrario') no += 1; else if (choice === 'astenuto') abstain += 1;
+      // The player who does not take part is counted as absent (every seat is accounted for).
+      if (choice === 'favorevole') votes += 1; else if (choice === 'contrario') no += 1; else if (choice === 'astenuto') abstain += 1; else absent += 1;
     }
     yes += votes;
-    return { groupId: group.groupId, yesVotes: votes, noVotes: no, abstainVotes: abstain, line: groupLine({ yes: votes, no, abstain }), governing: governing.has(group.groupId), simulatedSeats: group.simulatedSeats, ...(own ? { playerChoice: choice } : {}) };
+    return { groupId: group.groupId, yesVotes: votes, noVotes: no, abstainVotes: abstain, ...(absent ? { absentVotes: absent } : {}), line: groupLine({ yes: votes, no, abstain }), governing: governing.has(group.groupId), simulatedSeats: group.simulatedSeats, ...(own ? { playerChoice: choice } : {}) };
   });
   const total = rows.reduce((sum, group) => sum + group.simulatedSeats, 0);
   const needed = Math.floor(total / 2) + 1;
@@ -243,7 +250,7 @@ export function autoVote(parliament, law, chamber, { date, world = null, playerC
   const decisive = Boolean(choice) && (choice === 'favorevole' ? passed && yes === needed : !passed && yes === needed - 1);
   return {
     id: `${law.id}-${chamber}-${(law.votes ?? []).length + 1}`, date, kind: law.kind === 'decreto' ? 'decreto' : law.kind === 'manovra' ? 'manovra' : 'legge', label: law.title, chamber,
-    yes, no: total - yes, against: byGroup.reduce((sum, row) => sum + row.noVotes, 0), abstain: byGroup.reduce((sum, row) => sum + row.abstainVotes, 0), total, needed, passed,
+    yes, no: total - yes, against: byGroup.reduce((sum, row) => sum + row.noVotes, 0), abstain: byGroup.reduce((sum, row) => sum + row.abstainVotes, 0), absent: byGroup.reduce((sum, row) => sum + (row.absentVotes ?? 0), 0), total, needed, passed,
     forced: false, confidence: Boolean(law.confidence), secret: false, snipers: 0, byGroup, playerChoice: choice, playerLine: groupLineBefore, decisive, source: SIM
   };
 }
@@ -369,18 +376,18 @@ export function speakOnLaw(parliament, lawId, stance, date) {
 // The odds that the sponsor accepts an amendment of the player: relations, the same side, the player's weight and a
 // role in committee, and the player's vote offered in exchange (a deal: breaking it later costs dearly); nothing passes
 // on a text under a question of confidence.
-export function amendmentOdds(parliament, law, { influence = 50, committeeRole = false, offerVote = false } = {}) {
+export function amendmentOdds(parliament, law, { influence = 50, committeeRole = false, offerVote = false, competence = 50 } = {}) {
   if (law.confidence) return 0;
   const governing = governingGroupIds(parliament);
   const relation = law.sponsor?.groupId ? parliament.relations?.[law.sponsor.groupId]?.value ?? 50 : 55;
   const sameSide = governing.has(parliament.player?.groupId) === sponsorGoverns(parliament, law, governing);
-  return round2(clamp(0.22 + (relation - 50) / 110 + (committeeRole ? 0.15 : 0) + (sameSide ? 0.12 : -0.05) + (influence - 50) / 250 + (offerVote ? 0.15 : 0), 0.03, 0.9));
+  return round2(clamp(0.22 + (relation - 50) / 110 + (committeeRole ? 0.15 : 0) + (sameSide ? 0.12 : -0.05) + (influence - 50) / 250 + (competence - 50) / 400 + (offerVote ? 0.15 : 0), 0.03, 0.9));
 }
-export function amendOthersLaw(parliament, lawId, patch, date, { influence = 50, committeeRole = false, roll = 0.5, offerVote = false } = {}) {
+export function amendOthersLaw(parliament, lawId, patch, date, { influence = 50, committeeRole = false, roll = 0.5, offerVote = false, competence = 50 } = {}) {
   const law = openLawIn(parliament, lawId);
   if (!['commission', 'amendments'].includes(law.stage)) throw new Error('Gli emendamenti si presentano in commissione, prima del voto.');
   if ((law.playerAmendments ?? []).filter(item => item.chamber === law.currentChamber).length >= 2) throw new Error('Hai già presentato due emendamenti a questo testo in questa Camera.');
-  const chance = amendmentOdds(parliament, law, { influence, committeeRole, offerVote });
+  const chance = amendmentOdds(parliament, law, { influence, committeeRole, offerVote, competence });
   const entry = { date, patch, chamber: law.currentChamber, chance, offerVote: Boolean(offerVote) };
   if (roll >= chance) {
     const next = replaceLaw(parliament, lawId, current => note({ ...current, playerAmendments: [...(current.playerAmendments ?? []), { ...entry, accepted: false }] }, date, 'Respinto un tuo emendamento.'));
@@ -396,6 +403,13 @@ export function amendOthersLaw(parliament, lawId, patch, date, { influence = 50,
 export const PLAYER_VOTE_CHOICES = Object.freeze({ linea: 'Segui la linea del gruppo', favorevole: 'Favorevole', contrario: 'Contrario', astenuto: 'Astenuto', assente: 'Non partecipi al voto' });
 export function setPlayerVote(parliament, lawId, choice) {
   if (!PLAYER_VOTE_CHOICES[choice]) throw new Error('Scelta di voto non valida.');
+  const own = parliament.laws.find(item => item.id === lawId && !item.auto);
+  // The player's own bill: the vote counts in the player's Chamber, the one where the bill is voted first.
+  if (own) {
+    if (CLOSED.includes(own.stage) || !['proposal', 'commission', 'amendments'].includes(own.stage)) throw new Error('La tua proposta è già stata votata nella tua Camera.');
+    if (!parliament.player?.groupId || own.currentChamber !== parliament.player.chamber) throw new Error('Voti la tua proposta quando è all’esame della tua Camera.');
+    return replaceLaw(parliament, lawId, current => ({ ...current, pendingPlayerVote: choice }));
+  }
   const law = openLawIn(parliament, lawId);
   if (!['commission', 'amendments', 'final-vote'].includes(law.stage)) throw new Error('Il voto in Aula arriva dopo l’esame in commissione.');
   return replaceLaw(parliament, lawId, current => ({ ...current, pendingPlayerVote: choice }));
@@ -432,6 +446,12 @@ export function advanceLegislativeWeek(input, ctx) {
     const current = parliament.laws.find(item => item.id === law.id);
     if (!current || CLOSED.includes(current.stage)) continue;
     if (paused && current.kind === 'ddl' && ['amendments', 'final-vote'].includes(current.stage)) {
+      const pausedWeeks = weeksBetween(current.pausedAt ?? ctx.date, ctx.date);
+      if (pausedWeeks >= LEGISLATIVE_RULES.maxPausedWeeks) {
+        parliament = replaceLaw(parliament, current.id, item => note({ ...item, stage: 'lapsed', status: 'arenata', nextStepAt: null, updatedAt: ctx.date, stageSince: ctx.date }, ctx.date, 'Iter sospeso troppo a lungo durante la crisi di governo: la proposta decade e può essere ripresentata.'));
+        parliament = record(parliament, ctx.date, 'legge-arenata', `“${current.title}” decade dopo una sospensione prolungata della crisi di governo.`, { lawId: current.id, auto: true });
+        continue;
+      }
       parliament = replaceLaw(parliament, current.id, item => note({ ...item, nextStepAt: addDays(ctx.date, 7) }, ctx.date, item.pausedAt ? '' : 'Voto rinviato: il governo non ha la fiducia delle Camere.'));
       parliament = replaceLaw(parliament, current.id, item => ({ ...item, pausedAt: item.pausedAt ?? ctx.date }));
       continue;

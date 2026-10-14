@@ -3,8 +3,8 @@
 // checkInvariants(state, context) → { ok, issues: [{ code, path, message }] }
 // context (optional): the real reference the state may point to — realPartyIds, realGroupIds (Sets or arrays).
 
-import { LEVER_BY_ID } from '../data/simulation/start-rules.js?v=20261013-2';
-import { AMBITION_LIMIT, OBJECTIVE_BY_ID } from '../data/simulation/objective-rules.js?v=20261013-2';
+import { LEVER_BY_ID } from '../data/simulation/start-rules.js?v=20261014-1';
+import { AMBITION_LIMIT, OBJECTIVE_BY_ID } from '../data/simulation/objective-rules.js?v=20261014-1';
 
 const SEATS = { camera: 400, senato: 200 };
 // The Senate also has the senators for life (and, in the real XIX legislature, a few vacancies may appear in either
@@ -497,6 +497,17 @@ function checkStructures(state, report) {
     for (const key of ['quality', 'fatigue', 'activity', 'autonomy']) if (committee[key] !== undefined && !(committee[key] >= 0 && committee[key] <= 100)) report('valore-impossibile', `${path}.${key}`, `Comitato ${committee.name}: ${key} = ${committee[key]} fuori da 0–100`);
     if (committee.seat !== undefined && !(Number.isInteger(committee.seat) && committee.seat >= 0 && committee.seat <= 3)) report('valore-impossibile', `${path}.seat`, `Comitato ${committee.name}: sede ${committee.seat} sconosciuta`);
     if (committee.raised !== undefined && !(committee.raised >= 0)) report('valore-impossibile', `${path}.raised`, `Comitato ${committee.name}: raccolta negativa`);
+  });
+  // The staff: unique mandates, a valid status, money spent within the ceiling the player set, weeks that make sense, an approval on every one.
+  const mandates = records(game?.staff?.mandates);
+  const mandateIds = new Set();
+  mandates.forEach((mandate, index) => {
+    const path = `game.staff.mandates[${index}]`;
+    if (mandateIds.has(mandate.id)) report('coerenza', path, `Incarico dello staff ${mandate.id} ripetuto`); mandateIds.add(mandate.id);
+    if (!['attivo', 'sospeso', 'concluso', 'annullato'].includes(mandate.status)) report('valore-impossibile', `${path}.status`, `Incarico ${mandate.id}: stato ${mandate.status} sconosciuto`);
+    if (!(mandate.spent >= 0 && mandate.spent <= mandate.budgetMax)) report('valore-impossibile', `${path}.spent`, `Incarico ${mandate.id}: speso ${mandate.spent} € contro un tetto di ${mandate.budgetMax} €`);
+    if (!(mandate.weeksLeft >= 0 && mandate.weeksDone >= 0)) report('valore-impossibile', `${path}.weeksLeft`, `Incarico ${mandate.id}: settimane negative`);
+    if (mandate.approvedWeek === undefined) report('coerenza', `${path}.approvedWeek`, `Incarico ${mandate.id}: manca l’approvazione del giocatore`);
   });
   const finance = game?.finance;
   if (finance) {

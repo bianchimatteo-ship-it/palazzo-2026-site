@@ -2,10 +2,10 @@
 // figure as the reference, the parties of a territory against the national picture, and a parties × regions heatmap. Pure functions on numbers that the game already has
 // (the regional picture of the observatory, and the real vote of 2022 by region): they invent nothing. A missing value is drawn as missing (a dashed tile, a dash), a
 // zero as a zero, and every chart says which measure it shows, in which unit, from which source (a simulated estimate or a real figure) and for which date.
-import { esc, num, signed } from './charts.js?v=20261013-2';
-import { SEQUENTIAL } from './polls-mode.js?v=20261013-2';
-import { formatDate } from '../core/time.js?v=20261013-2';
-import { inkOn } from './visuals.js?v=20261013-2';
+import { esc } from './charts.js?v=20261014-1';
+import { SEQUENTIAL } from './polls-mode.js?v=20261014-1';
+import { formatDate } from '../core/time.js?v=20261014-1';
+import { inkOn } from './visuals.js?v=20261014-1';
 
 // Row and column of each region on a tile map of five columns (north up). It is a cartogram: it keeps neighbours near, not the shapes or the sizes.
 export const REGION_TILES = Object.freeze({
@@ -29,7 +29,13 @@ export const MACRO_AREAS = Object.freeze([
 export const regionsOfArea = id => (MACRO_AREAS.find(([key]) => key === id) ?? MACRO_AREAS[0])[2];
 
 const finite = value => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
-const pct = (value, digits = 1) => finite(value) ? `${num(value, digits)}%` : '—';
+// Fixed decimals, so that a column of figures reads as one («9,0%» next to «9,1%», never «9%» next to «9,1%»); a sign never goes with a figure that rounds to zero (no «−0»).
+const fixed = (value, digits) => Number(value).toLocaleString('it-IT', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+const num = (value, digits = 1) => finite(value) ? fixed(value, digits) : '—';
+const signed = (value, digits = 1) => { const rounded = Number(Number(value).toFixed(digits)); return `${rounded > 0 ? '+' : rounded < 0 ? '−' : '±'}${fixed(Math.abs(rounded), digits)}`; };
+const pct = (value, digits = 1) => finite(value) ? `${fixed(value, digits)}%` : '—';
+// The decimals of a gap or a change: one, two when the whole range is under a point (small changes would all read «±0,0»).
+const gapDigits = limit => limit < 1 ? 2 : 1;
 const hex = ([r, g, b]) => `#${[r, g, b].map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('')}`;
 const rgb = color => [1, 3, 5].map(index => parseInt(color.slice(index, index + 2), 16));
 const mix = (from, to, t) => { const a = rgb(from), b = rgb(to); return hex(a.map((v, i) => v + (b[i] - v) * t)); };
@@ -44,14 +50,14 @@ export const sequentialColor = (value, min, max) => !finite(value) ? NEUTRAL : S
 export const TERRITORY_MEASURES = Object.freeze([['quota', 'Consenso'], ['scarto', 'Scarto dal dato nazionale'], ['variazione', 'Variazione nel tempo'], ['reale', 'Voto reale 2022']]);
 const SHARE_MODES = new Set(['quota', 'reale']);
 const valueOf = (item, mode) => mode === 'reale' ? item.real : mode === 'quota' ? item.share : mode === 'scarto' ? item.gap : item.change;
-const measureText = (mode, value, digits) => !finite(value) ? '—' : SHARE_MODES.has(mode) ? pct(value, digits) : signed(value, digits);
+const measureText = (mode, value, digits, gap = 1) => !finite(value) ? '—' : SHARE_MODES.has(mode) ? pct(value, digits) : signed(value, gap);
 const MEASURE_NAME = Object.fromEntries(TERRITORY_MEASURES);
 // What a tile says when pointed at or read aloud: territory, force, value with its unit and the reference.
-const measureTip = (mode, item, force, digits, national) => {
+const measureTip = (mode, item, force, digits, national, gap = 1) => {
   if (mode === 'reale') return `${item.region} · ${force}: ${finite(item.real) ? `${pct(item.real, digits)} dei voti validi alle politiche 2022 (voto reale)` : 'nessun dato reale'}`;
-  if (mode === 'quota') return `${item.region} · ${force}: ${finite(item.share) ? pct(item.share, digits) : 'dato non disponibile'}${finite(item.gap) ? ` (${signed(item.gap, 1)} punti dal dato nazionale${finite(national) ? ` ${pct(national, digits)}` : ''})` : ''} · stima simulata`;
-  if (mode === 'scarto') return `${item.region} · ${force}: ${finite(item.gap) ? `${signed(item.gap, 1)} punti rispetto al dato nazionale (${pct(item.share, digits)} contro ${pct(national, digits)})` : 'dato non disponibile'} · stima simulata`;
-  return `${item.region} · ${force}: ${finite(item.change) ? `${signed(item.change, 1)} punti dal primo quadro regionale` : 'serve almeno un secondo quadro regionale'} · stima simulata`;
+  if (mode === 'quota') return `${item.region} · ${force}: ${finite(item.share) ? pct(item.share, digits) : 'dato non disponibile'}${finite(item.gap) ? ` (${signed(item.gap, gap)} punti dal dato nazionale${finite(national) ? ` ${pct(national, digits)}` : ''})` : ''} · stima simulata`;
+  if (mode === 'scarto') return `${item.region} · ${force}: ${finite(item.gap) ? `${signed(item.gap, gap)} punti rispetto al dato nazionale (${pct(item.share, digits)} contro ${pct(national, digits)})` : 'dato non disponibile'} · stima simulata`;
+  return `${item.region} · ${force}: ${finite(item.change) ? `${signed(item.change, gap)} punti dal primo quadro regionale` : 'serve almeno un secondo quadro regionale'} · stima simulata`;
 };
 const SELECT = region => `data-view-filter="obsRegion" data-view-filter-value="${esc(region)}"`;
 
@@ -66,18 +72,18 @@ export function italyMap(items, { mode = 'quota', selected = null, compare = [],
   const byRegion = new Map(items.map(item => [item.region, item]));
   const values = items.map(item => valueOf(item, mode)).filter(finite);
   if (!values.length) return `<p class="quiet-copy">${mode === 'reale' ? 'Questa forza non si è presentata alle politiche del 2022: non c’è un dato reale per regione.' : 'Per questa misura non c’è ancora nessun dato regionale.'}</p>`;
-  const min = Math.min(...values), max = Math.max(...values), limit = Math.max(...values.map(Math.abs), 0.1);
+  const min = Math.min(...values), max = Math.max(...values), limit = Math.max(...values.map(Math.abs), 0.1), gap = gapDigits(limit);
   const tiles = Object.entries(REGION_TILES).map(([region, [row, col, abbreviation]]) => {
     const item = byRegion.get(region) ?? { region, share: null, gap: null, change: null, real: null };
     const value = valueOf(item, mode);
     const fill = SHARE_MODES.has(mode) ? sequentialColor(value, min, max) : divergingColor(value, limit);
     const missing = !finite(value);
-    const text = measureText(mode, value, digits);
-    return `<button type="button" class="itmap-tile ${region === selected ? 'is-selected' : ''} ${compare.includes(region) ? 'is-compared' : ''} ${region === home ? 'is-home' : ''} ${missing ? 'is-missing' : ''}" style="grid-row:${row + 1};grid-column:${col + 1};background:${fill};color:${missing ? 'var(--muted)' : inkOn(fill)}" ${SELECT(region)} data-tip="${esc(measureTip(mode, item, force, digits, national))}" aria-pressed="${region === selected}" aria-label="${esc(`${region}: ${missing ? 'dato non disponibile' : text}`)}"><small>${esc(abbreviation)}</small><strong>${esc(text)}</strong></button>`;
+    const text = measureText(mode, value, digits, gap);
+    return `<button type="button" class="itmap-tile ${region === selected ? 'is-selected' : ''} ${compare.includes(region) ? 'is-compared' : ''} ${region === home ? 'is-home' : ''} ${missing ? 'is-missing' : ''}" style="grid-row:${row + 1};grid-column:${col + 1};background:${fill};color:${missing ? 'var(--muted)' : inkOn(fill)}" ${SELECT(region)} data-tip="${esc(measureTip(mode, item, force, digits, national, gap))}" aria-pressed="${region === selected}" aria-label="${esc(`${region}: ${missing ? 'dato non disponibile' : text}`)}"><small>${esc(abbreviation)}</small><strong>${esc(text)}</strong></button>`;
   }).join('');
   const share = SHARE_MODES.has(mode);
   const scale = share ? `<i style="background:linear-gradient(90deg,${SEQUENTIAL.join(',')})"></i>` : `<i style="background:linear-gradient(90deg,${BELOW},${NEUTRAL},${ABOVE})"></i>`;
-  const ends = share ? [pct(min, digits), pct((min + max) / 2, digits), pct(max, digits)] : [signed(-limit, 1), '0', signed(limit, 1)];
+  const ends = share ? [pct(min, digits), pct((min + max) / 2, digits), pct(max, digits)] : [signed(-limit, gap), '0', signed(limit, gap)];
   const meaning = {
     quota: `Quota di consenso di ${esc(force)} nella regione, in % dei voti validi: stima simulata. Più chiaro = più consenso.`,
     scarto: `Punti percentuali di differenza tra la regione e il dato nazionale di ${esc(force)}${finite(national) ? ` (Italia: ${pct(national, digits)})` : ''}. Petrolio = sopra, terracotta = sotto, grigio = come l’Italia.`,
@@ -91,20 +97,29 @@ export function italyMap(items, { mode = 'quota', selected = null, compare = [],
 
 // Horizontal bars of the regions, sorted, with the national figure as a marker (share) or a centre axis (gap and change). Each row opens its territory.
 export function regionBars(items, { mode = 'quota', selected = null, home = null, national = null, color = 'var(--teal-soft)', digits = 1 } = {}) {
-  const rows = items.filter(item => finite(valueOf(item, mode))).sort((a, b) => valueOf(b, mode) - valueOf(a, mode));
+  // Every region is listed: those with a figure sorted by it, then those without one (a force that did not run there in 2022, a measure that needs a second picture), marked
+  // «—» and said so in words. A region is never dropped to make the chart look complete.
+  const byName = (a, b) => a.region.localeCompare(b.region, 'it');
+  const rows = items.filter(item => finite(valueOf(item, mode))).sort((a, b) => valueOf(b, mode) - valueOf(a, mode) || byName(a, b));
+  const missing = items.filter(item => !finite(valueOf(item, mode))).sort(byName);
   if (!rows.length) return '<p class="quiet-copy">Nessun dato regionale per questa misura.</p>';
   const diverging = !SHARE_MODES.has(mode);
   const limit = Math.max(...rows.map(item => Math.abs(valueOf(item, mode))), 0.1);
+  const gap = gapDigits(limit);
   const max = Math.max(...rows.map(item => valueOf(item, mode)), finite(national) ? national : 0, 1);
-  const body = rows.map(item => {
+  const name = item => `<span class="rbar-name">${esc(item.region)}${item.region === home ? ' <small>la tua regione</small>' : ''}</span>`;
+  const body = rows.map((item, index) => {
     const value = valueOf(item, mode);
     const track = diverging
       ? `<span class="rbar-track is-diverging"><i class="${value >= 0 ? 'up' : 'down'}" style="${value >= 0 ? 'left:50%' : 'right:50%'};width:${Math.abs(value) / limit * 50}%"></i></span>`
       : `<span class="rbar-track"><i style="width:${value / max * 100}%;background:${color}"></i>${finite(national) ? `<s style="left:${national / max * 100}%" title="Dato nazionale ${esc(pct(national, digits))}"></s>` : ''}</span>`;
-    return `<button type="button" class="rbar-row ${item.region === selected ? 'is-selected' : ''} ${item.region === home ? 'is-home' : ''}" ${SELECT(item.region)} aria-pressed="${item.region === selected}"><span class="rbar-name">${esc(item.region)}${item.region === home ? ' <small>la tua regione</small>' : ''}</span>${track}<b class="rbar-value">${esc(measureText(mode, value, digits))}</b></button>`;
+    return `<button type="button" class="rbar-row ${item.region === selected ? 'is-selected' : ''} ${item.region === home ? 'is-home' : ''}" ${SELECT(item.region)} data-rank="${index + 1}" aria-pressed="${item.region === selected}">${name(item)}${track}<b class="rbar-value">${esc(measureText(mode, value, digits, gap))}</b></button>`;
   }).join('');
-  const note = diverging ? '<p class="rbar-key"><i class="axis"></i> asse centrale = dato nazionale: a destra sopra (petrolio), a sinistra sotto (terracotta), in punti percentuali</p>' : (finite(national) ? `<p class="rbar-key"><s></s> dato nazionale ${esc(pct(national, digits))}</p>` : '');
-  return `<div class="rbars" role="list">${body}</div>${note}`;
+  const why = mode === 'reale' ? 'nessuna lista alle politiche 2022' : mode === 'variazione' ? 'serve un secondo quadro regionale' : 'dato non disponibile';
+  const absent = missing.map(item => `<button type="button" class="rbar-row is-missing ${item.region === selected ? 'is-selected' : ''} ${item.region === home ? 'is-home' : ''}" ${SELECT(item.region)} aria-pressed="${item.region === selected}">${name(item)}<span class="rbar-track is-empty" aria-hidden="true"></span><b class="rbar-value" aria-label="${esc(why)}">—</b><small class="rbar-why">${esc(why)}</small></button>`).join('');
+  const count = missing.length ? `<p class="rbar-key rbar-count">${rows.length} regioni con il dato, ${missing.length} senza (in fondo, con «—»).</p>` : '';
+  const note = diverging ? `<p class="rbar-key"><i class="axis"></i> asse centrale = dato nazionale: a destra sopra (petrolio), a sinistra sotto (terracotta), in punti percentuali</p>` : (finite(national) ? `<p class="rbar-key"><s></s> dato nazionale ${esc(pct(national, digits))}</p>` : '');
+  return `<div class="rbars" role="list" data-regions="${items.length}" data-with-value="${rows.length}">${body}${absent}</div>${count}${note}`;
 }
 
 // The parties of one territory: each in its own colour, the national figure of the same party as a marker, and the gap in words.

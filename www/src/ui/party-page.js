@@ -1,23 +1,24 @@
 // PARTITO — the organisation seen from inside: identity, the player's role and odds, internal areas, members and
 // sections, the secretary's desk and the history. The real party stays a reference; everything inside is simulated.
-import { careerOverview } from '../core/career-overview.js?v=20260926-6';
-import { organOf, treasuryOutlook } from '../core/organization-engine.js?v=20260926-6';
-import { playerRoles } from '../core/roles.js?v=20260926-6';
-import { formatDate } from '../core/time.js?v=20260926-6';
-import { lineChart, SERIES } from './charts.js?v=20260926-6';
-import { glyph } from './visuals.js?v=20260926-6';
-import { renderPartyPosition, renderSecretaryDesk } from './game-mode.js?v=20260926-6';
-import { renderOrganizationPanel } from './organization-mode.js?v=20260926-6';
-import { renderOddsCard } from './career-page.js?v=20260926-6';
-import { renderCommitteesPanel } from './committees-view.js?v=20260926-6';
-import { arrow, badge, bar, card, esc, euro, num, pct, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20260926-6';
+import { careerOverview } from '../core/career-overview.js?v=20261014-1';
+import { organOf, treasuryOutlook } from '../core/organization-engine.js?v=20261014-1';
+import { playerRoles } from '../core/roles.js?v=20261014-1';
+import { formatDate } from '../core/time.js?v=20261014-1';
+import { lineChart, SERIES } from './charts.js?v=20261014-1';
+import { glyph } from './visuals.js?v=20261014-1';
+import { renderPartyPosition, renderSecretaryDesk } from './game-mode.js?v=20261014-1';
+import { renderOrganizationPanel } from './organization-mode.js?v=20261014-1';
+import { renderOddsCard } from './career-page.js?v=20261014-1';
+import { renderCommitteesPanel } from './committees-view.js?v=20261014-1';
+import { renderPartyLife } from './party-life-view.js?v=20261014-1';
+import { arrow, badge, bar, card, esc, euro, num, pct, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261014-1';
 
 const SOURCE_LABELS = { real: 'Dato reale verificato', user: 'Creato da te', simulation: 'Simulazione' };
 const partyName = party => party?.officialName ?? party?.name ?? 'Partito';
 export function partyTabs(state) {
   const party = state.game?.party;
   if (!party) return [['panoramica', 'Panoramica']];
-  const tabs = [['panoramica', 'Panoramica'], ['ruoli', 'Ruoli e correnti'], ['organizzazione', 'Organizzazione'], ['territorio', 'Territorio']];
+  const tabs = [['panoramica', 'Panoramica'], ['ruoli', 'Ruoli e correnti'], ['vita', 'Vita interna'], ['organizzazione', 'Organizzazione'], ['territorio', 'Territorio']];
   if (playerRoles(state).secretary) tabs.push(['segreteria', 'Segreteria']);
   tabs.push(['storico', 'Storico']);
   return tabs;
@@ -41,7 +42,7 @@ function identity(party, record, logoFor) {
 }
 
 function currentsCard(party) {
-  const rows = [...(party.currents ?? [])].sort((a, b) => b.strength - a.strength).map(current => `<li class="${party.alignedCurrentId === current.id ? 'is-mine' : ''}"><span><strong>${esc(current.label)}</strong><small>${party.leaderCurrentId === current.id ? 'guida il partito · ' : ''}rapporto con te ${num(current.value ?? current.relation, 0)}/100</small></span><b>${num(current.strength, 0)}%</b>${bar(current.strength, party.alignedCurrentId === current.id ? 'good' : '')}</li>`).join('');
+  const rows = [...(party.currents ?? [])].sort((a, b) => b.strength - a.strength).map(current => { const request = current.profile?.requests?.at(-1); return `<li class="${party.alignedCurrentId === current.id ? 'is-mine' : ''}"><span><strong>${esc(current.label)}</strong><small>${party.leaderCurrentId === current.id ? 'guida il partito · ' : ''}rapporto con te ${num(current.value ?? current.relation, 0)}/100</small><small>${esc(current.profile?.objective ?? 'Obiettivo in definizione')} · ${esc(current.lastAction ?? 'Iniziativa non ancora registrata')}${request?.status === 'open' ? ` · richiesta: ${esc(request.title)}` : ''}</small></span><b>${num(current.strength, 1)}%</b>${bar(current.strength, party.alignedCurrentId === current.id ? 'good' : '')}</li>`; }).join('');
   return `<ul class="pp-currents">${rows}</ul>${party.alignedCurrentId ? '' : '<p class="sx-note">Non sei schierato: al congresso e nelle nomine chi resta neutrale conta meno.</p>'}<div class="sx-actions"><button class="secondary-button" data-section-tab="partito" data-section-tab-value="ruoli">Schierati o cambia area ${arrow}</button></div>`;
 }
 
@@ -75,7 +76,7 @@ function countryCard(state) {
   const chart = values.length > 2 ? lineChart({ series: [{ label: poll.force.label, color: SERIES[0], values: poll.history, emphasis: true }], labels: poll.history.map((_, index) => `${index + 1}`), unit: '%', height: 150, ariaLabel: `${poll.force.label} negli ultimi sondaggi` }) : '';
   const world = state.world;
   const allies = (world.alliances ?? []).filter(item => item.status === 'active' && item.partyIds.includes(poll.force.id)).flatMap(item => item.partyIds.filter(id => id !== poll.force.id)).map(id => world.parties.find(party => party.id === id)?.label ?? id);
-  return `<div class="pp-poll"><strong>${pct(poll.share)}</strong><span class="tone-${poll.delta > 0 ? 'good' : poll.delta < 0 ? 'bad' : 'neutral'}">${signed(poll.delta)} nell’ultima rilevazione</span></div>${chart}<p class="sx-note">Alleanze attive: ${allies.length ? esc(allies.join(', ')) : 'nessuna'}. Sondaggi ${poll.source === 'real' ? 'di riferimento reali' : 'simulati dal gioco'}.</p><button class="text-link" data-nav="sondaggi">Sondaggi e alleanze ${arrow}</button>`;
+  return `<div class="pp-poll"><strong>${pct(poll.share)}</strong><span class="tone-${poll.delta > 0 ? 'good' : poll.delta < 0 ? 'bad' : 'neutral'}">${signed(poll.delta)} nell’ultima rilevazione</span></div>${chart}<p class="sx-note">Alleanze attive: ${allies.length ? esc(allies.join(', ')) : 'nessuna'}. Sondaggi ${poll.source === 'real' ? 'di riferimento reali' : 'simulati dal gioco'}.</p><button class="text-link" data-nav="sondaggi" data-obs-view="forze">Sondaggi e alleanze ${arrow}</button>`;
 }
 
 function historyTab(state) {
@@ -128,11 +129,13 @@ export function renderPartyPage(state, { tab = null, record = null, logoFor = ()
   if (!party) body = `${renderPartyPosition(state, { parties: selectable })}<p class="sx-note">Il partito reale resta un riferimento: la tua posizione interna, le correnti e l’organizzazione sono simulate.</p>`;
   else if (active === 'panoramica') body = `${alerts(state)}<div class="sx-grid two">${card({ kicker: 'IDENTITÀ', title: partyName(record) || party.label, body: identity(party, record, logoFor) })}${card({ kicker: 'LA TUA POSIZIONE · SIMULAZIONE', title: party.rankTitle, body: positionCard(state, track) })}</div><div class="sx-grid two">${card({ kicker: 'EQUILIBRI INTERNI · SIMULATI', title: 'Le aree del partito', body: currentsCard(party) })}${card({ kicker: 'NEL PAESE', title: 'Il partito nei sondaggi', body: countryCard(state) })}</div>`;
   else if (active === 'ruoli') body = `${track?.odds ? renderOddsCard(track) : ''}${renderPartyPosition(state, { parties: selectable, withSecretary: false })}`;
+  else if (active === 'vita') body = renderPartyLife(state);
   else if (active === 'organizzazione') body = party.org ? `<section class="sx-card pp-org">${renderOrganizationPanel(state)}</section>` : '<p class="sx-empty">Organizzazione non disponibile.</p>';
   else if (active === 'territorio') body = renderCommitteesPanel(state, territory);
   else if (active === 'segreteria') body = renderSecretaryDesk(state);
   else body = historyTab(state);
   const troubled = (party?.org?.committees ?? []).filter(item => ['crisi', 'perdita-controllo'].includes(item.status)).length;
-  const counts = { storico: ((party?.contests ?? []).length + (party?.history ?? []).length) || '', territorio: troubled ? `${troubled}!` : '' };
+  const openRequests = (party?.life?.requests ?? []).filter(item => ['aperta', 'trattativa'].includes(item.stage)).length;
+  const counts = { storico: ((party?.contests ?? []).length + (party?.history ?? []).length) || '', territorio: troubled ? `${troubled}!` : '', vita: openRequests || '' };
   return `<div class="party-page">${hero(state, record, logoFor, track)}${tabs.length > 1 ? sectionTabs('partito', tabs.map(([id, label]) => [id, label, counts[id]]), active) : ''}<div class="sx-body" role="tabpanel">${body}</div></div>`;
 }
