@@ -150,7 +150,7 @@ html[data-motion="reduced"] .hqc-drawer-toggle, html[data-motion="reduced"] butt
   .top-actions { display: contents; }
   .top-tools { grid-column: 2; grid-row: 1; padding: 0; border: 0; gap: 6px; }
   .top-time { grid-column: 1 / -1; grid-row: 2; gap: 8px; }
-  .top-time .date-chip { display: inline-flex; flex: 1 1 auto; min-width: 0; font-size: 11px; }
+  .top-time .date-chip { display: inline-flex; flex: 1 1 auto; min-width: 0; font-size: 12px; }
   .top-time .date-chip span { overflow-wrap: anywhere; }
   .top-time .advance-button { flex: none; height: 36px; min-height: 36px; padding: 0 12px; font-size: 12px; }
   .hqc { gap: 14px; }
@@ -160,7 +160,7 @@ html[data-motion="reduced"] .hqc-drawer-toggle, html[data-motion="reduced"] butt
   .hqc-who .situation-bar > div > .glyph { display: none; }
   .hqc-who .situation-bar em { display: none; }
   .hqc-who .situation-bar strong { font-size: 12.5px; }
-  .hqc-who .situation-bar small { font-size: 11.5px; letter-spacing: .06em; }
+  .hqc-who .situation-bar small { font-size: 12px; letter-spacing: .06em; }
   .hqc-action { margin: 0 12px 12px; padding: 14px; }
   .hqc-action > strong { font-size: 17px; }
 
@@ -189,7 +189,7 @@ html[data-motion="reduced"] .hqc-drawer-toggle, html[data-motion="reduced"] butt
   .hqc-resources { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .hqc-resources > .hqc-resource { grid-column: span 2; }
   .hqc-resources > .hqc-resource:nth-child(n+4), .hqc-resources > .hqc-resource:last-child { grid-column: span 3; }
-  .hqc-resource small { font-size: 11.5px; letter-spacing: .05em; }
+  .hqc-resource small { font-size: 12px; letter-spacing: .05em; }
   .hqc-resource strong { font-size: 17px; }
   .hqc-card .sparkline, .hqc-card .hqc-card-lead { display: none; }
   .hqc-priorities .briefing-item { grid-template-columns: auto minmax(0, 1fr); }

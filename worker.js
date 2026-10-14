@@ -31,7 +31,7 @@ function cors(request) {
   return { 'access-control-allow-origin': allowed, 'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS', 'access-control-allow-headers': 'content-type, authorization', 'access-control-max-age': '86400', vary: 'origin' };
 }
 function json(request, body, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...cors(request) } });
+  return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', ...cors(request) } });
 }
 const emptyArchive = () => ({ version: 1, updatedAt: null, parties: {}, politicians: {}, logos: {}, addedParties: {}, hidden: {} });
 const POSITIONS = ['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra'];
@@ -127,7 +127,7 @@ async function accountOf(db, request) {
 const cleanMeta = meta => {
   const value = meta && typeof meta === 'object' ? meta : {};
   const text = key => typeof value[key] === 'string' ? value[key].slice(0, 120) : null;
-  return { player: text('player'), role: text('role'), party: text('party'), gameDate: text('gameDate'), status: text('status'), difficulty: text('difficulty'), week: Number.isFinite(value.week) ? value.week : null };
+  return { player: text('player'), role: text('role'), party: text('party'), partyId: text('partyId'), gameDate: text('gameDate'), status: text('status'), difficulty: text('difficulty'), week: Number.isFinite(value.week) ? value.week : null };
 };
 async function handleAccounts(request, env, url) {
   const db = env.ACCOUNTS;
@@ -192,12 +192,23 @@ async function handleAccounts(request, env, url) {
       const count = await db.prepare('SELECT COUNT(*) AS saves FROM saves WHERE user_id = ?').bind(account.id).first();
       if ((count?.saves ?? 0) >= MAX_SAVES) return json(request, { error: `Puoi conservare online al massimo ${MAX_SAVES} salvataggi: eliminane uno.` }, 409);
     }
-    // Another device saved in the meantime: the newer save is not overwritten unless the player chooses so.
-    if (current && !body.force && Number.isFinite(body.baseRevision) && body.baseRevision < current.revision) return json(request, { error: 'Questo salvataggio è stato aggiornato da un altro dispositivo.', conflict: true, remote: { revision: current.revision, updatedAt: current.updatedAt, meta: JSON.parse(current.meta ?? '{}') } }, 409);
+    // Another device saved in the meantime: the newer save is not overwritten unless the player chooses so. A request that does not say which revision it started from cannot know
+    // whether it is older than what is stored, so it is refused (never a silent overwrite); `force` is the player's explicit choice.
+    if (current && !body.force) {
+      if (!Number.isInteger(body.baseRevision) || body.baseRevision < 0) return json(request, { error: 'Revisione di partenza mancante: aggiorna l’elenco dei salvataggi e riprova.' }, 400);
+      if (body.baseRevision < current.revision) return json(request, { error: 'Questo salvataggio è stato aggiornato da un altro dispositivo.', conflict: true, remote: { revision: current.revision, updatedAt: current.updatedAt, meta: JSON.parse(current.meta ?? '{}') } }, 409);
+    }
     const revision = (current?.revision ?? 0) + 1;
     const updatedAt = new Date().toISOString();
-    await db.prepare('INSERT INTO saves (user_id, slot, name, meta, data, encoding, revision, size, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id, slot) DO UPDATE SET name = excluded.name, meta = excluded.meta, data = excluded.data, encoding = excluded.encoding, revision = excluded.revision, size = excluded.size, updated_at = excluded.updated_at')
-      .bind(account.id, slot, String(body.name ?? '').slice(0, 80) || null, JSON.stringify(cleanMeta(body.meta)), body.data, body.encoding, revision, body.data.length, updatedAt).run();
+    const name = String(body.name ?? '').slice(0, 80) || null, meta = JSON.stringify(cleanMeta(body.meta));
+    // The write itself checks the revision it read (compare and swap): two devices that read the same revision at the same moment cannot both win; the loser gets the conflict.
+    const written = current
+      ? await db.prepare('UPDATE saves SET name = ?, meta = ?, data = ?, encoding = ?, revision = ?, size = ?, updated_at = ? WHERE user_id = ? AND slot = ? AND revision = ?').bind(name, meta, body.data, body.encoding, revision, body.data.length, updatedAt, account.id, slot, current.revision).run()
+      : await db.prepare('INSERT INTO saves (user_id, slot, name, meta, data, encoding, revision, size, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(user_id, slot) DO NOTHING').bind(account.id, slot, name, meta, body.data, body.encoding, revision, body.data.length, updatedAt).run();
+    if (!(written?.meta?.changes > 0)) {
+      const now = await db.prepare('SELECT revision, updated_at AS updatedAt, meta FROM saves WHERE user_id = ? AND slot = ?').bind(account.id, slot).first();
+      return json(request, { error: 'Questo salvataggio è stato aggiornato da un altro dispositivo.', conflict: true, remote: { revision: now?.revision ?? current?.revision ?? 0, updatedAt: now?.updatedAt ?? null, meta: JSON.parse(now?.meta ?? current?.meta ?? '{}') } }, 409);
+    }
     return json(request, { ok: true, slot, revision, updatedAt });
   }
   return json(request, { error: 'Richiesta non riconosciuta.' }, 404);

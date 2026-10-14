@@ -62,10 +62,25 @@ assert.equal(result.status, 409, 'Un dispositivo con una versione vecchia non so
 assert.equal(result.body.remote.revision, 2);
 result = await api('/api/saves/c-carriera1', { method: 'PUT', token, body: save({ week: 5 }, { baseRevision: 1, force: true }) });
 assert.equal(result.body.revision, 3, 'Solo su scelta esplicita si sovrascrive.');
+// A request that does not say which revision it started from cannot know whether it is older than what is stored: it is refused, never a silent overwrite.
+result = await api('/api/saves/c-carriera1', { method: 'PUT', token, body: save({ week: 9 }) });
+assert.equal(result.status, 400, 'Senza la revisione di partenza un salvataggio esistente non si sovrascrive.');
+assert.equal(JSON.parse((await api('/api/saves/c-carriera1', { token })).body.data).week, 5, 'Il salvataggio online è rimasto quello di prima.');
+// Two devices that start from the same revision at the same moment: one wins, the other gets the conflict (the write checks the revision it read).
+const race = await Promise.all([1, 2].map(n => api('/api/saves/c-carriera1', { method: 'PUT', token, body: save({ week: 10 + n }, { baseRevision: 3 }) })));
+assert.deepEqual(race.map(item => item.status).sort(), [200, 409], 'Due scritture simultanee dalla stessa revisione: una passa, l’altra è un conflitto.');
+const winner = race.find(item => item.status === 200), loser = race.find(item => item.status === 409);
+assert.equal(winner.body.revision, 4); assert.equal(loser.body.conflict, true); assert.equal(loser.body.remote.revision, 4, 'Il conflitto dice quale revisione è online.');
+assert.equal(JSON.parse((await api('/api/saves/c-carriera1', { token })).body.data).week, 10 + race.indexOf(winner) + 1, 'Online resta la versione di chi ha vinto.');
+result = await api('/api/saves/c-carriera1', { method: 'PUT', token, body: save({ week: 20 }, { baseRevision: 4, meta: { player: 'Profilo di prova', party: 'Futuro Nazionale', partyId: 'party-futuro-nazionale', week: 20 } }) });
+assert.equal(result.body.revision, 5);
+assert.equal((await api('/api/saves', { token })).body.saves[0].meta.partyId, 'party-futuro-nazionale', 'Il partito della carriera (per il logo) resta nei dati del salvataggio online.');
+result = await api('/api/saves/c-carriera1', { method: 'PUT', token, body: save({ week: 21 }, { baseRevision: 5, force: true }) });
+assert.equal(result.body.revision, 6, 'Con force si sovrascrive ancora, su scelta esplicita.');
 result = await api('/api/saves', { token });
 assert.equal(result.body.saves.length, 1);
 assert.equal(result.body.saves[0].meta.player, 'Profilo di prova');
-assert.equal(JSON.parse((await api('/api/saves/c-carriera1', { token })).body.data).week, 5);
+assert.equal(JSON.parse((await api('/api/saves/c-carriera1', { token })).body.data).week, 21);
 assert.equal((await api('/api/saves/c-carriera1')).status, 401, 'Senza accesso i salvataggi non si leggono.');
 assert.equal((await api('/api/saves/..%2Faltro', { token })).status, 404, 'Nomi di slot non validi rifiutati.');
 assert.equal((await api('/api/saves/c-grande', { method: 'PUT', token, body: save({}, { data: 'x'.repeat(1_950_000) }) })).status, 413, 'Salvataggi troppo grandi rifiutati.');
@@ -85,7 +100,7 @@ assert.match(result.headers.get('access-control-allow-methods'), /DELETE/);
 // A new deploy: accounts and saves are still there.
 worker = (await import('../worker.js?deploy=accounts-2')).default;
 assert.equal((await api('/api/account/me', { token })).body.username, 'giocatore.uno', 'Account e sessioni sopravvivono a un nuovo deploy.');
-assert.equal((await api('/api/saves', { token })).body.saves[0].revision, 3);
+assert.equal((await api('/api/saves', { token })).body.saves[0].revision, 6);
 
 // ---------- 3. the browser client, two devices ----------
 const device = () => { const map = new Map(); return { getItem: key => map.get(key) ?? null, setItem: (key, value) => map.set(key, String(value)), removeItem: key => map.delete(key), map }; };

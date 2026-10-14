@@ -57,7 +57,7 @@
 .poll-stat strong { color:var(--ink-hi); font:750 26px/1 Manrope,sans-serif; letter-spacing:-.03em; }
 .poll-stat .delta { justify-self:end; }
 .poll-stat .sparkline { grid-column:1/-1; width:100%; height:32px; }
-.poll-stat small { grid-column:1/-1; color:var(--sage); font-size:11.5px; }
+.poll-stat small { grid-column:1/-1; color:var(--sage); font-size:12px; }
 .poll-tiles.secondary .poll-stat { background:rgba(0,0,0,0.08); }
 .sparkline polyline { fill:none; stroke:rgba(44,52,48,0.5); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
 .sparkline circle { stroke:#244332; stroke-width:2; }
@@ -72,7 +72,7 @@
 .poll-bar-name>span:last-child { display:grid; min-width:0; }
 .poll-bar-name strong { overflow:hidden; color:#dcd9cf; font-size:13.5px; text-overflow:ellipsis; white-space:nowrap; }
 .is-player .poll-bar-name strong { font-weight:800; }
-.poll-bar-name small { overflow:hidden; color:var(--muted); font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
+.poll-bar-name small { overflow:hidden; color:var(--muted); font-size:12px; text-overflow:ellipsis; white-space:nowrap; }
 .poll-bar-track { position:relative; height:20px; }
 .poll-bar-fill { position:absolute; left:0; top:2px; height:16px; border-radius:0 4px 4px 0; }
 .poll-bar-whisker { position:absolute; top:9px; height:2px; background:rgba(31,42,36,0.55); }
@@ -122,7 +122,7 @@
 
 .region-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:5px; }
 .region-tile { display:grid; gap:2px; min-width:0; padding:8px 9px; border-radius:6px; outline:none; }
-.region-tile small { overflow:hidden; font-size:11px; text-overflow:ellipsis; white-space:nowrap; opacity:.92; }
+.region-tile small { overflow:hidden; font-size:12px; text-overflow:ellipsis; white-space:nowrap; opacity:.92; }
 .region-tile strong { font:750 15px Manrope,sans-serif; font-variant-numeric:tabular-nums; }
 .region-tile.is-home { box-shadow:inset 0 0 0 3px #ae9255; }
 .region-tile:focus-visible { box-shadow:0 0 0 3px #5da0bd; }
@@ -150,7 +150,7 @@
 .force-card dt { color:var(--muted);  }
 .force-card dd { margin:0; color:#dbd8ce; font-size:12.5px; font-weight:600; }
 .force-badges { display:flex; flex-wrap:wrap; gap:5px; }
-.badge { display:inline-flex; align-items:center; gap:5px; padding:3px 8px; border-radius:20px; background:var(--panel-3); color:var(--ink-2); font-size:11px; font-weight:650; }
+.badge { display:inline-flex; align-items:center; gap:5px; padding:3px 8px; border-radius:20px; background:var(--panel-3); color:var(--ink-2); font-size:12px; font-weight:650; }
 
 .force-card .secondary-button { min-height:34px; height:auto; padding:7px 10px; font-size:12px; white-space:normal; }
 .alliance-row,.figure-row { display:grid; grid-template-columns:24px minmax(0,1fr) 90px; align-items:center; gap:10px; padding:9px 0; border-top:1px solid var(--line); color:#b2ddc5; }
@@ -170,7 +170,7 @@
 .law-card.stage-approved { border-color:var(--line); }
 .law-card.stage-rejected,.law-card.stage-lapsed { border-color:var(--line-strong); }
 .government-approval { display:grid; gap:2px; min-width:170px; padding:12px 16px; border-left:1px solid rgba(44,52,48,0.2); }
-.government-approval small { color:var(--gold-soft); font-size:10px; font-weight:750; letter-spacing:.1em; }
+.government-approval small { color:var(--gold-soft); font-size:12px; font-weight:750; letter-spacing:.1em; }
 .government-approval strong { color:var(--ink-hi); font:750 32px/1 Manrope,sans-serif; }
 .government-approval span { color:var(--ink-2); font-size:12px; }
 
@@ -180,7 +180,7 @@
 /* Presence in the polls: estimates, forces under observation, entries and exits */
 .poll-bar-row.is-estimate .poll-bar-fill { background-image:repeating-linear-gradient(135deg, rgba(12,17,15,.5) 0 4px, transparent 4px 8px); outline:1px dashed rgba(215,223,219,.6); outline-offset:-1px; }
 .poll-bar-row.is-estimate .poll-bar-name small { color:var(--gold-light); }
-.poll-bars-divider { display:flex; align-items:center; gap:10px; margin:10px 0 4px; color:var(--muted); font-size:11px; font-weight:750; letter-spacing:.05em; text-transform:uppercase; }
+.poll-bars-divider { display:flex; align-items:center; gap:10px; margin:10px 0 4px; color:var(--muted); font-size:12px; font-weight:750; letter-spacing:.05em; text-transform:uppercase; }
 .poll-bars-divider::before,.poll-bars-divider::after { content:""; flex:1; border-top:1px dashed var(--line-strong); }
 .delta-new { background:#1b333d; color:#add3e4; }
 .poll-watch,.poll-moves { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:10px; }
@@ -202,7 +202,7 @@
 .presence-non-rilevato { border-top:4px dotted #5d6254; }
 .presence-chips { display:flex; flex-wrap:wrap; gap:5px; }
 .presence-chips em { color:#979b88; font-size:12px; }
-.presence-chip { padding:3px 8px; border-radius:20px; background:var(--panel-3); color:#e1ded5; font-size:11.5px; font-weight:650; outline:none; }
+.presence-chip { padding:3px 8px; border-radius:20px; background:var(--panel-3); color:#e1ded5; font-size:12px; font-weight:650; outline:none; }
 .presence-chip.is-player { box-shadow:inset 0 0 0 1px var(--party-accent); }
 .presence-chip.is-emerging { border:1px dashed #977732; background:transparent; }
 .presence-chip.is-out { background:transparent; border:1px dotted #767a65; color:var(--muted); }
@@ -267,7 +267,7 @@
 .admin-list-item { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:10px; padding:8px 10px; border:1px solid transparent; border-radius:6px; background:var(--panel); text-align:left; color:#dcd9cf; }
 .admin-list-item span:nth-child(2) { display:grid; min-width:0; }
 .admin-list-item strong { overflow:hidden; font-size:13px; text-overflow:ellipsis; white-space:nowrap; }
-.admin-list-item small { overflow:hidden; color:var(--muted); font-size:11.5px; text-overflow:ellipsis; white-space:nowrap; }
+.admin-list-item small { overflow:hidden; color:var(--muted); font-size:12px; text-overflow:ellipsis; white-space:nowrap; }
 .admin-list-item.is-selected { border-color:var(--line-strong); background:var(--panel-3); }
 .admin-chamber,.admin-avatar { display:grid; place-items:center; width:30px; height:30px; border-radius:50%; background:#244332; color:var(--gold-light); font:800 12px Manrope,sans-serif; }
 .admin-avatar { width:56px; height:56px; font-size:18px; }
@@ -281,7 +281,7 @@
 .admin-field { display:grid; gap:5px; color:var(--ink-2); font-size:12.5px; font-weight:700; }
 .admin-field.is-wide { grid-column:1/-1; }
 .admin-field.is-edited input,.admin-field.is-edited select,.admin-field.is-edited textarea { border-color:#80652b; background:var(--panel-2); }
-.admin-field small { color:#d0b478; font-size:11.5px; font-weight:500; }
+.admin-field small { color:#d0b478; font-size:12px; font-weight:500; }
 .admin-field small .text-link { min-height:0; padding:0 4px; font-size:11.5px; }
 .admin-actions { display:flex; flex-wrap:wrap; gap:10px; }
 .admin-block h4 { display:flex; align-items:center; gap:8px; margin:0; color:#dcd9cf; font:750 15px Manrope,sans-serif; }
@@ -331,7 +331,7 @@
 .obs-insight-head { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; }
 .obs-insight-head .obs-force { flex:1 1 180px; }
 .obs-insight-head b { color:var(--ink); font:750 17px Manrope,sans-serif; }
-.obs-insight-head small { color:var(--muted); font-size:11.5px; }
+.obs-insight-head small { color:var(--muted); font-size:12px; }
 .obs-chips-line { display:flex; flex-wrap:wrap; gap:6px; }
 .obs-list { display:grid; gap:8px; }
 .obs-list li { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:4px 12px; padding:9px 11px; border-radius:8px; background:var(--panel-2); color:var(--ink-2); font-size:13.5px; }
@@ -350,7 +350,7 @@
 .obs-segment-themes strong { color:var(--ink); }
 .obs-segment-themes span { color:var(--ink-2); }
 .obs-facts { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(200px, 100%),1fr)); gap:10px 18px; }
-.obs-facts small { display:block; color:#bba880; font-size:11px; font-weight:750; letter-spacing:.06em; text-transform:uppercase; }
+.obs-facts small { display:block; color:#bba880; font-size:12px; font-weight:750; letter-spacing:.06em; text-transform:uppercase; }
 .obs-facts strong { display:block; margin-top:3px; color:var(--ink); font-size:14px; line-height:1.4; }
 .obs-heat { display:inline-block; min-width:52px; padding:3px 8px; border-radius:6px; background:var(--panel-3); text-align:center; font-variant-numeric:tabular-nums; outline:none; }
 .obs-heat.tone-good { background:var(--night); color:var(--good-ink); }
@@ -369,7 +369,7 @@
 .obs-two small { margin-top:1px; color:var(--muted); font-size:12px; font-weight:500; line-height:1.35; }
 .obs-avg { display:inline-flex; flex-wrap:wrap; align-items:baseline; gap:1px 8px; }
 .obs-avg b { color:var(--ink); font:700 14.5px 'DM Sans',sans-serif; }
-.obs-avg small { flex-basis:100%; color:var(--muted); font-size:11.5px; }
+.obs-avg small { flex-basis:100%; color:var(--muted); font-size:12px; }
 /* The average of the institutes as coloured bars, with the reading of each institute beside it (the quadro) */
 .obs-bars-wrap { container-type:inline-size; }
 .obs-bars { display:grid; gap:2px; }
@@ -403,7 +403,7 @@
 .obs-read-value > b:first-child { color:var(--ink); font:700 15px 'DM Sans',sans-serif; text-align:right; }
 .obs-read-meta { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:4px 18px; color:var(--ink-2); font-size:13px; }
 .obs-read-meta span { display:grid; justify-items:end; gap:1px; }
-.obs-read-meta small { color:#bba880; font-size:10.5px; font-weight:750; letter-spacing:.05em; text-transform:uppercase; }
+.obs-read-meta small { color:#bba880; font-size:12px; font-weight:750; letter-spacing:.05em; text-transform:uppercase; }
 @container (max-width: 560px) {
   .obs-read { grid-template-columns:minmax(0,1fr); gap:6px; padding:11px 8px; }
   .obs-read-value > b:first-child { text-align:left; }
@@ -538,7 +538,7 @@
 /* where a figure comes from, what a scale and a colour mean, and the heatmap on a narrow screen */
 .obs-source { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin: 12px 0 0; padding-top: 10px; border-top: 1px solid var(--line); color: var(--ink-2); font-size: 12.5px; line-height: 1.5; }
 .obs-source b { color: var(--muted); font-weight: 650; }
-.src-badge { padding: 2px 9px; border-radius: 999px; font: 800 11.5px var(--font-head); letter-spacing: .06em; }
+.src-badge { padding: 2px 9px; border-radius: 999px; font: 800 12px var(--font-head); letter-spacing: .06em; }
 .src-badge.is-sim { background: var(--info-soft); color: var(--info-ink); }
 .src-badge.is-real { background: rgba(196, 166, 106, .2); color: var(--gold-light); }
 .obs-note { margin: 4px 0 8px; color: var(--ink-2); font-size: 13px; }

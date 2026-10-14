@@ -1,0 +1,9 @@
+# Security headers for the static assets served by Cloudflare Workers (wrangler.jsonc: assets). They change nothing of how the game loads: no inline script, no embedding, no sensor.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  X-Frame-Options: DENY
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+# The service worker must always be checked for a new version.
+/sw.js
+  Cache-Control: no-cache

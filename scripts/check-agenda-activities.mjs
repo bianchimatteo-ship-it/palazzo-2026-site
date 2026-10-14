@@ -80,9 +80,10 @@ const stat = (state, metric) => state.dataset.statistics.find(item => item.subje
 const rich = saved => { saved.game.resources.funds = 50000; saved.game.resources.politicalCapital = 80; saved.game.week.ap = 6; };
 const fresh = async mutate => { store = await reload(saved => { rich(saved); mutate?.(saved); }); return store.getState(); };
 
-// corso-politiche: always available, once a week, persistent
+// corso-politiche: always available, once a week, persistent (on a save made before the weekly count existed: the field is not there, nothing breaks)
 {
-  const before = await fresh();
+  const before = await fresh(saved => { delete saved.game.week.activityUses; });
+  assert.equal(before.game.week.activityUses, undefined, 'Un salvataggio precedente non ha il conteggio settimanale.');
   const funds = before.game.resources.funds, ap = before.game.week.ap, exp = stat(before, 'experience'), sector = before.game.standing?.sectors?.istituzioni ?? 0;
   const result = store.performWeeklyActivity('corso-politiche');
   const after = store.getState();

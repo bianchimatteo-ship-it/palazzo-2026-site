@@ -170,7 +170,7 @@ try {
     assert(account?.status === 401 && /Sessione/.test(accountBody?.error ?? ''), `Servizio account non pronto sul Worker (${account?.status} ${accountBody?.error ?? ''})`);
   }
   // Files that must never be published: the archive is never committed; Workers also skips the tooling.
-  const unpublished = ['Archivio.zip', ...(/github\.io$/.test(pageUrl.host) ? [] : ['package.json', 'scripts/check-ui.mjs', 'wrangler.jsonc', 'worker.js', 'migrations/0001_accounts.sql'])];
+  const unpublished = ['Archivio.zip', ...(/github\.io$/.test(pageUrl.host) ? [] : ['package.json', 'scripts/check-ui.mjs', 'wrangler.jsonc', 'worker.js', 'migrations/0001_accounts.sql', 'capacitor.config.json', 'docs/audit-2026-10-12.md', 'www/index.html', 'ios/App/App/AppDelegate.swift'])];
   for (const path of unpublished) {
     const response = await fetch(new URL(path, pageUrl), { signal: AbortSignal.timeout(30000) }).catch(() => null);
     assert(!response?.ok, `${path} non dovrebbe essere pubblicato`);

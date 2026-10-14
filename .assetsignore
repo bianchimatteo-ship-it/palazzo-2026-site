@@ -20,3 +20,8 @@ src/data/real/database.json
 .assetsignore
 worker.js
 migrations
+# Not part of the web game: the mobile (Capacitor) build copy and project, and the working notes.
+www
+ios
+docs
+capacitor.config.json
