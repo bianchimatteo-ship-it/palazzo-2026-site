@@ -172,4 +172,80 @@ for (const [level, regionName] of [['provinciale', 'Toscana'], ['regionale', 'Lo
   assert.ok(result.ok, `${level}: invarianti dopo otto anni ${JSON.stringify(result.issues?.slice(0, 2))}`);
 }
 
+// ---------- 4. il ritmo delle candidature personali ----------
+// The calendar keeps the real dates; the player stands in one main competition a year and never in two campaigns that touch. A greedy player tries every window as soon as it opens, in every
+// order of preference: what the rule lets through never has two candidacies in a calendar year (but for an explicit early vote) nor two votes closer than the gap.
+console.error(`[calendar-years ${new Date().toISOString().slice(11, 19)}] parte 4: ritmo delle candidature`);
+{
+  const { rhythmBlock, candidacyBlock, personalCandidacies, candidacyRecord, CANDIDACY_GAP_DAYS } = await import(`../src/core/office-engine.js${v}`);
+  // the rule itself
+  const rec = (id, date, extra = {}) => candidacyRecord({ id, type: 'regionale', label: id, electionDate: date, ...extra });
+  assert.equal(rhythmBlock({ candidacies: [], electionDate: '2028-05-28' }), null, 'Nessuna candidatura: via libera.');
+  assert.match(rhythmBlock({ candidacies: [rec('a', '2028-02-27')], electionDate: '2028-05-28', candidacyId: 'b' }) ?? '', /almeno 150 giorni/, 'Voti a meno di 150 giorni: due campagne che si toccano.');
+  assert.match(rhythmBlock({ candidacies: [rec('a', '2028-01-16')], electionDate: '2028-10-29', candidacyId: 'b' }) ?? '', /Una sola candidatura personale all’anno/, 'Stesso anno civile anche a nove mesi di distanza.');
+  assert.equal(rhythmBlock({ candidacies: [rec('a', '2028-02-27')], electionDate: '2029-02-26', candidacyId: 'b' }), null, 'Anni diversi e più di 150 giorni: via libera.');
+  assert.equal(rhythmBlock({ candidacies: [rec('a', '2028-02-27')], electionDate: '2028-02-27', candidacyId: 'a' }), null, 'La stessa candidatura non confligge con se stessa.');
+  assert.equal(rhythmBlock({ candidacies: [rec('a', '2028-01-16')], electionDate: '2028-10-29', candidacyId: 'b', early: true }), null, 'Eccezione esplicita: elezione anticipata, a più di 60 giorni da un’altra, nello stesso anno.');
+  assert.ok(rhythmBlock({ candidacies: [rec('a', '2028-10-01')], electionDate: '2028-10-29', candidacyId: 'b', early: true }), 'Anche anticipata, a meno di 60 giorni da un’altra campagna: no.');
+  assert.ok(candidacyBlock({ held: [], electionType: 'regionale', role: 'consigliere', electionDate: '2028-05-28', candidacies: [rec('a', '2028-02-27')], candidacyId: 'b' }), 'candidacyBlock applica il ritmo.');
+  assert.deepEqual(personalCandidacies({ candidacies: [] }, [{ id: 'g1', level: 'comunale', label: 'Comune X', electionDate: '2028-05-28', status: 'planned', candidacy: { kind: 'player' } }, { id: 'g2', level: 'comunale', label: 'Comune Y', electionDate: '2029-05-28', status: 'confirmed', candidacy: { kind: 'cadre' } }, { id: 'g3', level: 'comunale', label: 'Comune Z', electionDate: '2030-05-28', status: 'confirmed', candidacy: { kind: 'player' } }]).map(item => item.id), ['g3'], 'Contano le corse con il giocatore candidato e confermate, non quelle degli altri né quelle solo in programma.');
+
+  // a greedy player on many calendars
+  const VARIANTS = [
+    ['comunale', 'Toscana', '2026-10-05', 'a'], ['comunale', 'Lombardia', '2027-03-15', 'b'], ['provinciale', 'Toscana', '2026-10-12', 'c'], ['provinciale', 'Sicilia', '2028-09-01', 'd'],
+    ['regionale', 'Lombardia', '2026-10-12', 'e'], ['regionale', 'Campania', '2027-06-07', 'f'], ['deputato', 'Lazio', '2026-10-12', 'g'], ['senatore', 'Toscana', '2029-01-08', 'h'], ['europeo', 'Lombardia', '2026-10-12', 'i']
+  ];
+  let accepted = 0, refused = 0, years = 0;
+  for (const [level, regionName, start, tag] of VARIANTS) for (const order of ['prima-il-proprio-livello', 'prima-il-nazionale', 'ultima-finestra']) {
+    const place = PLACES[regionName];
+    const localCalendar = C.localCalendarOf(calendar, { municipalityCode: place.municipalityCode, region: place.region, seed: place.municipality, provinceCode: place.provinceCode });
+    let game = C.createGameState({ seedText: `ritmo|${tag}|${order}`, currentDate: start, level, place, localCalendar, stats: STATS });
+    let date = start, stats = { ...STATS };
+    const books = [];
+    const label = `${level}/${regionName}/${start}/${order}`;
+    for (let week = 0; week < 52 * 12; week++) {
+      date = T.advanceDays(date, 7);
+      if (level === 'comunale' && date >= '2031-07-01' && date < '2031-07-08') game = C.scheduleEarlyLocalElection(game, 'comunale', date);
+      const out = C.advanceWeek({ game, stats, parliament: date >= '2030-03-01' && date <= '2030-04-20' ? { government: { status: 'fallen' }, chambers: {}, laws: [] } : null }, { currentDate: date, pollDelta: 0 });
+      game = out.ctx.game; stats = out.ctx.stats; game.status = 'active';
+      // the player looks at the open windows in the order of the preference
+      const lastWeek = item => T.advanceDays(date, 7) > item.windowClosesAt;
+      const open = game.elections.filter(item => item.status === 'open' && date >= item.windowOpensAt && date <= item.windowClosesAt && !books.some(book => book.id === item.id) && (order !== 'ultima-finestra' || lastWeek(item)));
+      const own = level === 'deputato' || level === 'senatore' ? 'politiche' : level === 'europeo' ? 'europee' : level;
+      const rank = item => order === 'prima-il-nazionale' ? (['politiche', 'europee'].includes(item.type) ? 0 : 1) : order === 'prima-il-proprio-livello' ? (item.type === own ? 0 : 1) : 0;
+      for (const item of open.sort((a, b) => rank(a) - rank(b) || a.electionDate.localeCompare(b.electionDate))) {
+        const block = candidacyBlock({ held: [], electionType: item.type, role: 'consigliere', electionDate: item.electionDate, candidacies: books, candidacyId: item.id, early: Boolean(item.early) });
+        if (block) { refused++; continue; }
+        books.push(candidacyRecord({ id: item.id, type: item.type, label: item.label, windowOpensAt: item.windowOpensAt, electionDate: item.electionDate, early: item.early })); accepted++;
+      }
+      // the spring rounds are support campaigns: they never become a personal candidacy
+      assert.ok((game.rounds ?? []).every(round => !('candidacy' in round) && !books.some(book => book.id === round.id)), `${label}: le tornate amministrative non diventano candidature personali`);
+    }
+    const sorted = [...books].sort((a, b) => a.electionDate.localeCompare(b.electionDate));
+    for (let i = 1; i < sorted.length; i++) {
+      const apart = days(sorted[i - 1].electionDate, sorted[i].electionDate);
+      const sameYear = sorted[i - 1].electionDate.slice(0, 4) === sorted[i].electionDate.slice(0, 4);
+      assert.ok(apart >= (sorted[i].early ? 60 : CANDIDACY_GAP_DAYS), `${label}: ${sorted[i - 1].label} (${sorted[i - 1].electionDate}) e ${sorted[i].label} (${sorted[i].electionDate}) a ${apart} giorni`);
+      assert.ok(!sameYear || sorted[i].early || sorted[i - 1].early, `${label}: due candidature nel ${sorted[i].electionDate.slice(0, 4)} senza un’elezione anticipata`);
+    }
+    // and the extra is rare: an early vote that lets a second candidacy into a year
+    const doubled = new Set(sorted.filter((item, i) => i && item.electionDate.slice(0, 4) === sorted[i - 1].electionDate.slice(0, 4)).map(item => item.electionDate.slice(0, 4)));
+    assert.ok(doubled.size <= 2, `${label}: le eccezioni per anno sono rare (${[...doubled].join(', ')})`);
+    // most years do offer a personal candidacy; none is left without an appointment (part 1 checks the calendar itself)
+    const yearsWith = new Set(sorted.map(item => item.electionDate.slice(0, 4))).size;
+    assert.ok(yearsWith >= 8, `${label}: almeno otto anni su dodici con una candidatura possibile (${yearsWith})`);
+    years += yearsWith;
+  }
+  // the books survive a save and an old save has none
+  const place = PLACES.Toscana;
+  let game = C.createGameState({ seedText: 'libro', currentDate: START, level: 'comunale', place, localCalendar: C.localCalendarOf(calendar, { municipalityCode: place.municipalityCode, region: place.region, seed: place.municipality, provinceCode: place.provinceCode }), stats: STATS });
+  assert.deepEqual(personalCandidacies(game, []), [], 'Una carriera nuova non ha candidature.');
+  game.candidacies = [candidacyRecord({ id: 'x', type: 'comunale', label: 'Comune', electionDate: '2028-05-28' })];
+  const back = C.normalizeGameState(JSON.parse(JSON.stringify(game)));
+  assert.deepEqual(back.candidacies.map(item => item.id), ['x'], 'Le candidature sul libro sopravvivono al salvataggio.');
+  const old = JSON.parse(JSON.stringify(game)); delete old.candidacies;
+  assert.deepEqual(personalCandidacies(C.normalizeGameState(old), []), [], 'Un vecchio salvataggio non ha il libro: nessun blocco.');
+  console.error(`[calendar-years] ritmo: ${accepted} candidature accettate, ${refused} rifiutate dalla regola, ${years} anni con candidatura su ${VARIANTS.length * 3} carriere da dodici anni`);
+}
+
 console.log(`Calendario negli anni verificato: ${CASES.length} carriere di livelli e regioni diversi per quattordici anni (${totalVotes} voti, ${totalRounds} tornate amministrative al posto degli anni vuoti), sempre un voto previsto entro ${worstGap} giorni e un appuntamento giocabile ogni anno; cicli di cinque anni (provinciali quattro), politiche anticipate e cambio di legislatura, comuni e province sciolti che votano di nuovo, vecchi salvataggi e tre partite vere di otto anni.`);

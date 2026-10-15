@@ -3,7 +3,8 @@
 //     session alone, and another account's password does not open it);
 //   - account, saves and sessions go together, nothing of the player stays in the tables (no orphan rows), the other accounts are untouched;
 //   - afterwards the old session and the password stop working; a wrong password or a missing confirmation delete nothing; repeated wrong attempts are rate limited;
-//   - a failing database answers with an error and the data stays; the attempts table (it holds the connecting address) drops what is older than a day;
+//   - a failing database answers with an error and the data stays; the attempts table (it holds the connecting address) drops what is older than a day; a registration that works is booked as a new account (its own limit),
+//     never as a failed attempt; sessions that have expired are removed for everybody on the next login/registration/deletion and by the daily schedule; every API answer carries the security headers;
 //   - the browser client (deleteAccount) clears the local session only after the server confirmed;
 //   - the in-game account panel and the public pages (privacy, terms, deletion) exist, are static, call no external host, and the open points for the controller are listed.
 // `node scripts/check-account-deletion.mjs --release` also fails while the pages still carry the controller's open points (the gate before a store release).
@@ -104,6 +105,67 @@ await api('/api/account/login', { method: 'POST', body: { username: B.name, proo
 assert.equal(count('SELECT COUNT(*) AS n FROM attempts WHERE key = ?', 'accesso:vecchio'), 0, 'I tentativi più vecchi di un giorno vengono eliminati.');
 assert.equal(count('SELECT COUNT(*) AS n FROM attempts WHERE key = ?', 'accesso:recente'), 1, 'Quelli recenti restano per il limite.');
 
+// ---------- 4b. registrations are not "failed attempts"; expired sessions go away for everybody, on request and on schedule ----------
+{
+  const ip = '192.0.2.40';
+  const attemptsOf = key => sqlite.prepare('SELECT count FROM attempts WHERE key = ?').get(key)?.count ?? 0;
+  // a successful registration books a new account (its own counter), never a wrong attempt
+  const made = await api('/api/account/register', { method: 'POST', body: { username: 'nuovo.uno', proof: proofOf('nuovo-uno') }, ip });
+  assert.equal(made.status, 201);
+  assert.equal(attemptsOf(`registrazione:${ip}`), 0, 'Una registrazione riuscita non conta come tentativo sbagliato.');
+  assert.equal(attemptsOf(`creazione:${ip}`), 1, 'Conta come creazione di un account, con il suo contatore.');
+  // a name already taken is a failed attempt, and nine of them do not block a registration that works
+  for (let i = 0; i < 9; i++) assert.equal((await api('/api/account/register', { method: 'POST', body: { username: 'nuovo.uno', proof: proofOf(`altro${i}`) }, ip })).status, 409);
+  assert.equal(attemptsOf(`registrazione:${ip}`), 9);
+  assert.equal((await api('/api/account/register', { method: 'POST', body: { username: 'nuovo.due', proof: proofOf('nuovo-due') }, ip })).status, 201, 'Nove nomi già presi non bloccano chi si registra con un nome libero.');
+  assert.equal(attemptsOf(`registrazione:${ip}`), 9, 'Né la registrazione riuscita aggiunge un tentativo sbagliato.');
+  await api('/api/account/register', { method: 'POST', body: { username: 'nuovo.uno', proof: proofOf('decimo') }, ip });
+  assert.equal((await api('/api/account/register', { method: 'POST', body: { username: 'nuovo.tre', proof: proofOf('nuovo-tre') }, ip })).status, 429, 'Dieci tentativi sbagliati di registrazione: sospesa per 15 minuti.');
+  // ...and accounts created in bulk from one address are limited by their own counter, not by the failures
+  const bulk = '192.0.2.41';
+  for (let i = 0; i < 10; i++) assert.equal((await api('/api/account/register', { method: 'POST', body: { username: `massa.${i}`, proof: proofOf(`massa${i}`) }, ip: bulk })).status, 201);
+  assert.equal(attemptsOf(`registrazione:${bulk}`), 0);
+  assert.equal((await api('/api/account/register', { method: 'POST', body: { username: 'massa.10', proof: proofOf('massa10') }, ip: bulk })).status, 429, 'Dieci account nuovi da uno stesso indirizzo in 15 minuti: l’undicesimo aspetta.');
+  assert.equal(count('SELECT COUNT(*) AS n FROM users WHERE username = ?', 'massa.10'), 0, 'E non viene creato.');
+  assert.equal((await api('/api/account/login', { method: 'POST', body: { username: 'massa.3', proof: proofOf('massa3') }, ip: bulk })).status, 200, 'L’accesso di chi ha già un account non è toccato dal limite delle creazioni.');
+
+  // sessions: the ones expired for an account that never comes back are removed as soon as anybody logs in, registers or deletes; the valid ones stay
+  const now = Date.now();
+  const idOf = name => sqlite.prepare('SELECT id FROM users WHERE username = ?').get(name).id;
+  const insert = (hash, user, expires) => sqlite.prepare('INSERT INTO sessions (token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)').run(hash, user, new Date(now - 40 * 86_400_000).toISOString(), expires);
+  insert('e'.repeat(64), idOf('massa.1'), now - 86_400_000); insert('d'.repeat(64), idOf('massa.2'), now - 10 * 86_400_000); insert('f'.repeat(64), idOf('massa.2'), now + 20 * 86_400_000);
+  const left = hash => count('SELECT COUNT(*) AS n FROM sessions WHERE token_hash = ?', hash);
+  await api('/api/account/login', { method: 'POST', body: { username: 'nuovo.uno', proof: proofOf('nuovo-uno') }, ip: '203.0.113.90' });
+  assert.deepEqual([left('e'.repeat(64)), left('d'.repeat(64)), left('f'.repeat(64))], [0, 0, 1], 'Le sessioni scadute di chiunque sono eliminate alla richiesta di un altro; quella ancora valida resta.');
+  assert.equal(count('SELECT COUNT(*) AS n FROM sessions WHERE expires_at < ?', Date.now()), 0, 'Nessuna sessione scaduta resta nella tabella.');
+  // the daily schedule does the same with nobody asking, for the sessions and for the old rows of the attempts
+  insert('c'.repeat(64), idOf('massa.4'), now - 2 * 86_400_000);
+  sqlite.prepare('INSERT INTO attempts (key, count, window_start) VALUES (?, 1, ?)').run('accesso:fermo', now - 3 * 86_400_000);
+  const waited = [];
+  await worker.scheduled({ cron: '37 3 * * *' }, env, { waitUntil: promise => waited.push(promise) });
+  await Promise.all(waited);
+  assert.equal(left('c'.repeat(64)), 0, 'La pulizia giornaliera elimina le sessioni scadute.');
+  assert.equal(count('SELECT COUNT(*) AS n FROM attempts WHERE key = ?', 'accesso:fermo'), 0, 'E gli indirizzi dei tentativi più vecchi di un giorno.');
+  assert.equal(left('f'.repeat(64)), 1, 'Mai una sessione valida.');
+  await worker.scheduled({}, { ...env, ACCOUNTS: undefined }, { waitUntil: promise => waited.push(promise) });
+  const wrangler = await readFile(new URL('../wrangler.jsonc', import.meta.url), 'utf8');
+  assert.ok(/"crons":\s*\[\s*"[^"]+"\s*\]/.test(wrangler), 'La pulizia giornaliera è dichiarata in wrangler.jsonc.');
+  const migrations = await readFile(new URL('../migrations/0002_session_expiry.sql', import.meta.url), 'utf8');
+  assert.ok(/sessions_expiry ON sessions \(expires_at\)/.test(migrations), 'L’indice sulla scadenza è anche in una migrazione.');
+  // every answer of the API, preflight and errors included, says what a browser must not do with it
+  for (const response of [await api('/api/account/status'), await api('/api/account/me'), await api('/api/nonesiste'), await api('/api/admin')]) {
+    assert.equal(response.headers.get('x-content-type-options'), 'nosniff');
+    assert.match(response.headers.get('content-security-policy') ?? '', /default-src 'none'/, 'Una risposta JSON non esegue né incorpora nulla.');
+    assert.match(response.headers.get('content-security-policy') ?? '', /frame-ancestors 'none'/);
+    assert.equal(response.headers.get('referrer-policy'), 'no-referrer');
+    assert.match(response.headers.get('strict-transport-security') ?? '', /max-age=\d{7,}/);
+    assert.equal(response.headers.get('cache-control'), 'no-store');
+  }
+  const preflight = await worker.fetch(new Request(ORIGIN + '/api/account/login', { method: 'OPTIONS', headers: { origin: 'capacitor://localhost', 'access-control-request-method': 'POST' } }), env);
+  assert.equal(preflight.status, 204); assert.equal(preflight.headers.get('access-control-allow-origin'), 'capacitor://localhost', 'L’app installata (Capacitor) può ancora parlare con l’API.');
+  assert.equal(preflight.headers.get('x-content-type-options'), 'nosniff');
+}
+
 // ---------- 5. a failing database ----------
 const broken = { ...env, ACCOUNTS: { ...d1, batch: async () => { throw new Error('D1 non disponibile'); } } };
 tokenB = (await api('/api/account/login', { method: 'POST', body: { username: B.name, proof: B.proof }, ip: '203.0.113.78' })).body.token;
@@ -151,7 +213,8 @@ const todo = [];
 for (const name of ['privacy.html', 'termini.html', 'elimina-account.html']) {
   const html = await page(name);
   assert.ok(/<html lang="it">/.test(html) && /<title>[^<]+<\/title>/.test(html) && /name="viewport"/.test(html), `${name}: pagina completa.`);
-  assert.ok(!/https?:\/\/(?!palazzo-2026-site)/.test(html.replace(/https?:\/\/openfontlicense\.org/g, '')), `${name}: nessun host esterno.`);
+  // (the policy of the <meta> names the game's own Worker and the local preview: check-security audits it)
+  assert.ok(!/https?:\/\/(?!palazzo-2026-site)/.test(html.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/, '').replace(/https?:\/\/openfontlicense\.org/g, '')), `${name}: nessun host esterno.`);
   assert.ok(!/<script(?![^>]*src=)[^>]*>/.test(html), `${name}: nessuno script incorporato.`);
   assert.ok(!/(undefined|NaN|\[object Object\])/.test(html), `${name}: nessun valore non valido.`);
   for (const match of html.matchAll(/data-controller-todo="([^"]+)"/g)) todo.push(`${name}:${match[1]}`);
@@ -165,7 +228,7 @@ assert.ok((await readFile(new URL('../.assetsignore', import.meta.url), 'utf8'))
 // every external host of the game: none (the fonts are served from src/fonts)
 const index = await page('index.html');
 assert.ok(!/fonts\.(googleapis|gstatic)\.com/.test(index), 'Nessun carattere caricato da Google Fonts.');
-assert.ok(!/https?:\/\//.test(index.replace(/<!--[\s\S]*?-->/g, '').replace(/https?:\/\/(www\.)?w3\.org[^"']*/g, '')), 'index.html non chiama host esterni.');
+assert.ok(!/https?:\/\//.test(index.replace(/<!--[\s\S]*?-->/g, '').replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/, '').replace(/https?:\/\/(www\.)?w3\.org[^"']*/g, '')), 'index.html non chiama host esterni.');
 
 // ---------- 8. the public page in Chrome, against the local Worker (isolated stand-ins) ----------
 const { chromeAvailable, withBrowser, waitFor } = await import('./lib/browser.mjs');

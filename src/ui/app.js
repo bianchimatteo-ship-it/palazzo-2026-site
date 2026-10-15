@@ -13,10 +13,11 @@ import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=202
 import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20261014-1';
 import { PARTY_LINK_COLLECTIONS, forceKind, isCoalitionList, politicalForces } from '../data/repositories/party-links.js?v=20261014-1';
 import { renderLogoAdmin } from './logo-admin.js?v=20261014-1';
-import { chosenPlace, makeCareerDraft, renderCareerWizard, wizardLogoPreview } from './career-wizard.js?v=20261014-1';
+import { chosenPlace, makeCareerDraft, pollScenarioOf, renderCareerWizard, wizardLogoPreview } from './career-wizard.js?v=20261014-1';
 import { userPartyLogo } from './party-logo.js?v=20261014-1';
 import { CAREER_STEPS, validateWizardStep } from '../core/career-rules.js?v=20261014-1';
 import { renderElectionsHub } from './elections-hub.js?v=20261014-1';
+import { renderQuirinale } from './presidency-view.js?v=20261014-1';
 import { renderCareerPage } from './career-page.js?v=20261014-1';
 import { renderPartyPage } from './party-page.js?v=20261014-1';
 import { renderAgendaPage } from './agenda-page.js?v=20261014-1';
@@ -29,6 +30,8 @@ import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261014
 import { CAREER_LEVELS } from '../data/regions.js?v=20261014-1';
 import { chooseStart } from '../core/start-engine.js?v=20261014-1';
 import { renderHeadquarters, renderNewsroom } from './game-mode.js?v=20261014-1';
+import { newsMedia, newsPopupHtml, popupItem } from './news-view.js?v=20261014-1';
+import { articleScript, bulletinScript, onVoiceChange, speakLines, stopVoice, syncVoiceDom, voiceStatus, voiceTarget } from './radio-voice.js?v=20261014-1';
 import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20261014-1';
 import { playerRoles } from '../core/roles.js?v=20261014-1';
 import { accordWarning, budgetPreview, designFromForm, planFromForm, policyFields, policyPreview, projectPreview, rangeText, requestFromForm } from './policy-mode.js?v=20261014-1';
@@ -59,7 +62,7 @@ const SECTIONS = Object.freeze([
   { id: 'partito', label: 'Partito', glyph: 'party', pages: [['partito', 'Il tuo partito'], ['finanze', 'Finanze'], ['partiti-lista', 'Tutti i partiti']] },
   { id: 'elezioni', label: 'Elezioni', glyph: 'ballot', pages: [['elezioni', 'Centrale elettorale']] },
   { id: 'sondaggi', label: 'Sondaggi', glyph: 'chart', pages: [['sondaggi', 'Osservatorio']] },
-  { id: 'istituzioni', label: 'Istituzioni', glyph: 'building', pages: [['parlamento', 'Camere'], ['governo', 'Governo'], ['leggi', 'Leggi']] },
+  { id: 'istituzioni', label: 'Istituzioni', glyph: 'building', pages: [['parlamento', 'Camere'], ['governo', 'Governo'], ['quirinale', 'Quirinale'], ['leggi', 'Leggi']] },
   { id: 'territori', label: 'Territori', glyph: 'map', pages: [['territori', 'Il Paese']], locals: true },
   { id: 'informazione', label: 'Informazione', glyph: 'news', pages: [['notizie', 'Notizie'], ['archivio', 'Archivio'], ['politici', 'Politici']] }
 ]);
@@ -91,6 +94,7 @@ const pages = {
   finanze: { title: 'Finanze', eyebrow: 'BILANCI E RISORSE', intro: 'Entrate, spese, budget e tesoreria del partito.' },
   parlamento: { title: 'Parlamento', eyebrow: 'ISTITUZIONI · LE CAMERE', intro: 'Seggi, gruppi e lavori parlamentari.' },
   governo: { title: 'Governo', eyebrow: 'PALAZZO CHIGI', intro: 'Composizione, agenda e approvazione dell’esecutivo.' },
+  quirinale: { title: 'Quirinale', eyebrow: 'ISTITUZIONI · PRESIDENTE DELLA REPUBBLICA', intro: 'Il Colle: chi lo occupa, quanto credito ha, che cosa può fare e come si elegge il successore.' },
   leggi: { title: 'Leggi', eyebrow: 'ITER LEGISLATIVO', intro: 'Proposte, commissioni e provvedimenti.' },
   eventi: { title: 'Eventi', eyebrow: 'CRONACA POLITICA', intro: 'Gli eventi che scandiscono la vita pubblica.' },
   notizie: { title: 'Notizie', eyebrow: 'REDAZIONE · SIMULATA', intro: 'Cronaca politica, articoli, storie e testate, con il tuo diario.' },
@@ -159,7 +163,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
     logoQuery:'', logoPage:1
   };
   const admin = { tab: 'partiti', query: '', linkQuery: '', chamber: 'all', partyId: null, politicianId: null, message: '', listPage: 1, partyFilter: 'tutti', creating: false, checking: false };
-  const territory = { measure: 'satisfaction', region: null, localSeat: null, localInst: null, localSection: null };
+  const territory = { measure: 'satisfaction', region: null, localSeat: null, localQuery: '', localInst: null, localSection: null };
   const archive = { tab: 'partiti' };
   // Tabs and filters of the sections survive redraws and navigation; they are kept in this browser (per viewer).
   const VIEWS_KEY = 'politicando.views.v1';
@@ -224,6 +228,10 @@ export function mountApp(root, store, { retryData = null } = {}) {
   };
   const scheduleSync = () => { if (!account.user) return; clearTimeout(syncTimer); syncTimer = setTimeout(() => { syncCareer().then(() => { if (menu.open) render(store.getState(), store.getLastSaved()); }); }, 6000); };
   let reportOpen = false;
+  // The weekly pop-up of the newsroom (at most one a week, at most three news; closed with a button or Escape; it is not saved, the save only remembers the week).
+  let newsPopup = null;
+  // An article the pop-up pointed at: opened (and brought into view) once the newsroom is drawn.
+  let pendingArticle = null;
   // Confirmation of irreversible or far-reaching actions: a dialog in the game's style (never the browser's confirm).
   let pendingConfirm = null;
   let skipMultiWeekConfirm = false;
@@ -233,7 +241,9 @@ export function mountApp(root, store, { retryData = null } = {}) {
   const planPreviewOf = state => {
     if (!plan.length || !store.hasCareer() || !state.game) return null;
     const game = state.game;
-    const key = `${JSON.stringify(plan)}|${game.week.index}|${game.week.ap}|${game.resources.funds}|${game.resources.politicalCapital}|${game.rngState}`;
+    // The preview runs the real operations on a copy of the whole state, so it is valid only while the state has not changed (treasury, committees, staff, objectives, calendar...): the
+    // store's revision moves with every change, never with the preview itself.
+    const key = `${JSON.stringify(plan)}|${store.revision()}`;
     if (planCache.key === key) return planCache.value;
     let value;
     try { value = store.planPreview(plan); } catch (error) { value = { ok: false, lines: [], error: error.message }; }
@@ -310,7 +320,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
   // are kept in this browser like the tabs: they survive redraws, navigation and a reload.
   const VIEW_FIELDS = Object.freeze({
     catalog: ['partyQuery', 'partyPresence', 'partyType', 'partyLevel', 'partyRegion', 'partyStatus', 'partyElection', 'partySort', 'partyPage', 'politicianQuery', 'politicianChamber', 'politicianParty', 'politicianGroup', 'politicianPage'],
-    admin: ['tab', 'chamber', 'partyFilter'], territory: ['measure', 'region', 'localSeat', 'localInst', 'localSection'], archive: ['tab'], realLaws: ['query', 'outcome', 'area', 'page']
+    admin: ['tab', 'chamber', 'partyFilter'], territory: ['measure', 'region', 'localSeat', 'localQuery', 'localInst', 'localSection'], archive: ['tab'], realLaws: ['query', 'outcome', 'area', 'page']
   });
   const viewTargets = { catalog, admin, territory, archive, realLaws };
   for (const [name, fields] of Object.entries(VIEW_FIELDS)) for (const field of fields) {
@@ -396,7 +406,19 @@ export function mountApp(root, store, { retryData = null } = {}) {
     pendingScroll = null;
     target.scrollIntoView?.({ block: 'start' });
   };
-  const render = (state, lastSaved) => { renderFrame(state, lastSaved); paintLogoEditor(); restoreDetails(); markPlanned(); persistViewState(); scrollPending(); };
+  const render = (state, lastSaved) => { renderFrame(state, lastSaved); paintLogoEditor(); restoreDetails(); markPlanned(); persistViewState(); scrollPending(); settleRadioVoice(); openPendingArticle(); };
+  // The radio reads only while its page is on screen: leaving it (or drawing a page without the bulletin) stops the voice; the buttons and the highlighted sentence follow the reading.
+  // (armed for a moment, not consumed by the first redraw: the page change draws the newsroom more than once)
+  const openPendingArticle = () => {
+    if (!pendingArticle) return;
+    if (Date.now() > pendingArticle.until) { pendingArticle = null; return; }
+    const card = [...(root.querySelectorAll?.('[data-article]') ?? [])].find(item => item.dataset.article === pendingArticle.id);
+    if (!card) return;
+    card.querySelector('details')?.setAttribute('open', '');
+    if (!pendingArticle.shown) { pendingArticle.shown = true; card.scrollIntoView?.({ block: 'center' }); }
+  };
+  const settleRadioVoice = () => { const what = voiceTarget(); if (what && ![...(root.querySelectorAll?.('[data-voice-target]') ?? [])].some(button => button.dataset.voiceTarget === what)) stopVoice(); syncVoiceDom(root); };
+  onVoiceChange(() => syncVoiceDom(root));
   const renderFrame = (state, lastSaved) => {
     hideChartTip();
     if (menu.open && !wizard) {
@@ -405,6 +427,11 @@ export function mountApp(root, store, { retryData = null } = {}) {
       // First-run steps: on a phone the panel sits below the menu list, so it is brought into view.
       if (menu.reveal) { menu.reveal = false; if (globalThis.matchMedia?.('(max-width: 900px)')?.matches) root.querySelector?.('.menu-panel')?.scrollIntoView?.({ block: 'start' }); }
       return;
+    }
+    // The weekly pop-up of the newsroom: the week is looked at once (the save remembers it), never while something else asks for the player's attention and never if the player turned it off.
+    if (!newsPopup && !wizard && !reportOpen && !pendingConfirm && state.game) {
+      const items = store.weeklyNewsPopup({ enabled: settings.newsPopup === 'on' });
+      if (items.length) newsPopup = { items: items.map(popupItem) };
     }
     const player = state.dataset.politicians.find(p => p.id === state.career.playerId);
     const partyId = player ? player.partyId : state.career.partyId;
@@ -428,11 +455,12 @@ export function mountApp(root, store, { retryData = null } = {}) {
           <header class="topbar"><div class="topbar-title"><strong>${store.hasCareer() && state.game ? topbarParty(identity) : ''}${current.title}</strong><span>${current.intro}</span></div><div class="top-actions"><div class="top-tools"><button class="icon-button menu-button" data-action="menu" aria-label="Torna alla schermata iniziale (menu principale)" title="Schermata iniziale: Nuova partita, Continua, Carica partita">${icon('home', 17)}</button><button class="icon-button" aria-label="Salva carriera" title="Salva carriera" data-action="save">${icon('save', 17)}</button></div><div class="top-time"><div class="date-chip">${icon('calendar', 16)}<span>${fullDate(state.clock.currentDate)}</span></div><span class="week-chip">Settimana ${state.game.week.index} · ${state.game.week.ap}/${state.game.week.maxAp} giorni</span><button class="advance-button" data-action="advance" ${state.game.status === 'ended' ? 'disabled' : ''}>${state.campaign?.status === 'active' ? 'Avanza campagna' : 'Chiudi settimana'} ${icon('arrow', 17)}</button></div></div></header>
           ${wizard ? '' : dataNotice()}<div class="page-wrap">${wizard ? '' : (state.ui.activePage === 'panoramica' ? renderHeadquarters(state, { identity, partyName: identity.kind === 'partito' ? identity.name : null, partyLogo: identity.logo, newsFilter: views.newsFilter, newsCategory: views.newsCategory, newsOutlet: views.newsOutlet, expanded: views.homeExpand ?? {} }) : subpage(state, current, player, party, eventList, catalog, { logoFor, homePlace: () => store.homePlace(), nationalOverview: () => store.nationalOverview(), presidencyView: () => store.presidencyView(), electoralGeography: () => store.electoralGeography?.() ?? null, campaignPicks: campaignChoices(state), parties:realParties(), selectable:selectableParties(), findParty, realLeader, admin, adminContext, territory, realLaws, archive, views, tabFor, settings, lastSaved, account, allianceOdds: id => { try { return store.allianceOdds(id); } catch { return null; } }, allianceWindow: () => store.allianceWindow(), raceOptions: id => { try { return store.raceCandidates(id, racePeople()); } catch { return null; } } }))}</div>
         </main>
-        ${wizard ? renderCareerWizard(state, wizard, realParties(), logoFor, realDatabase.parliamentaryGroups ?? [], realDatabase.partyLeaderships ?? [], realDatabase.politicalFigures ?? [], realDatabase.politicians ?? [], wizardTerritoryView(), wizardDataStatus()) : ''}
+        ${wizard ? renderCareerWizard(state, wizard, realParties(), logoFor, realDatabase.parliamentaryGroups ?? [], realDatabase.partyLeaderships ?? [], realDatabase.politicalFigures ?? [], realDatabase.politicians ?? [], wizardTerritoryView(), wizardDataStatus(), store.pollScenarioView(pollScenarioOf(wizard))) : ''}
         ${logoAdminOpen ? renderLogoAdmin({shared:sharedLogos(),selectedId:selectedLogoPartyId,query:catalog.logoQuery,page:catalog.logoPage,metadata:[...logoMetadata.values()],entities:[...realParties(),...state.dataset.parties],logoFor,error:logoAdminError,pendingPreview:pendingLogoUrl ?? pendingRemoteUrl,pendingRemote:Boolean(pendingRemoteUrl && !pendingLogo),urlDraft:logoUrlDraft,urlLoading:logoUrlLoading,editorHtml:logoEditor?.context === 'admin' ? renderLogoEditor(logoEditor, { context: 'admin' }) : ''}) : ''}
         ${catalog.selectedPoliticianId ? renderPoliticianProfile(catalog.selectedPoliticianId,{loading:catalog.profileLoading,logoFor}) : ''}
         ${catalog.selectedPartyId ? renderPartyProfile(catalog.selectedPartyId,logoFor) : ''}
         ${reportOpen ? renderWeeklyReport(state) : ''}
+        ${newsPopup && !reportOpen ? newsPopupHtml(newsPopup) : ''}
         ${wizard || !store.hasCareer() || !state.game ? '' : renderPlanTray(state, plan, planPreviewOf(state))}
         ${renderConfirmDialog(pendingConfirm)}
         ${state.ui.toast && settings.toasts === 'on' ? `<div class="toast" role="status">${icon('spark', 17)}${esc(state.ui.toast)}</div>` : ''}
@@ -441,6 +469,8 @@ export function mountApp(root, store, { retryData = null } = {}) {
     // When a notice ends only the notice goes: drawing the page again would rebuild its selects under the player.
     if (state.ui.toast) { clearTimeout(toastTimer); toastTimer = setTimeout(() => { const s = store.getState(); if (s.ui.toast) { s.ui.toast = null; root.querySelector?.('.toast')?.remove?.(); } }, { short: 1600, normal: 2600, long: 4500 }[settings.toastLength] ?? 2600); }
   };
+  // (the only place where the scenario meets chance: the engine itself only ever works from the seed it is given)
+  const newPollSeed = () => Math.random().toString(36).slice(2, 8).toUpperCase();
   const syncWizardDraft = () => {
     if (!wizard) return;
     const fields = [...root.querySelectorAll('.career-wizard [name]')];
@@ -449,6 +479,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
       if (field.name === 'partyProgram' || field.type === 'file') continue;
       if (field.type === 'radio' && !field.checked) continue;
       if (field.name.startsWith('policy_')) wizard.policyPositions[field.name.slice(7)] = Number(field.value);
+      else if (field.name.startsWith('poll_')) (wizard.pollCustom ??= {})[field.name.slice(5)] = field.value;
       else wizard[field.name] = field.value;
     }
   };
@@ -466,8 +497,10 @@ export function mountApp(root, store, { retryData = null } = {}) {
     next?.focus();
     if (typeof start === 'number' && next?.setSelectionRange) next.setSelectionRange(start,end);
   };
+  // The checks of a step, and (step 4) a written opening poll that does not add up.
+  const wizardStepErrors = step => [...validateWizardStep(wizard, step, selectableParties(), realDatabase.parliamentaryGroups ?? [], wizardTerritory(), { requireTerritory: true }), ...(step === 4 ? store.pollScenarioView(pollScenarioOf(wizard)).problems : [])];
   const failStep = () => {
-    wizard.errors = validateWizardStep(wizard, wizard.step, selectableParties(), realDatabase.parliamentaryGroups ?? [], wizardTerritory(), { requireTerritory: true });
+    wizard.errors = wizardStepErrors(wizard.step);
     return wizard.errors.length > 0;
   };
   const collectionsForPage = page => page === 'partiti-lista'
@@ -477,6 +510,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
     : page === 'territori' ? ['politicians']
     : page === 'parlamento' ? ['parliamentaryGroups','groupMemberships','chambers','politicians','government','offices','committees','committeeMemberships','partyLeaderships','politicalFigures',...PARTY_LINK_COLLECTIONS]
     : page === 'governo' ? ['parliamentaryGroups','groupMemberships','chambers','politicians','government']
+    : page === 'quirinale' ? ['politicians','parliamentaryGroups']
     : page === 'archivio' ? ARCHIVE_COLLECTIONS[archive.tab] ?? ARCHIVE_COLLECTIONS.partiti
     : page === 'elezioni' ? ['politicians','parliamentaryGroups','territorialUnits','municipalities',...PARTY_LINK_COLLECTIONS]
     : page === 'sondaggi' ? ['partyLeaderships','politicalFigures',...PARTY_LINK_COLLECTIONS]
@@ -778,6 +812,26 @@ export function mountApp(root, store, { retryData = null } = {}) {
     // Territorial committees: actions on a committee, new committees on the ISTAT map, the list of comuni on demand.
     // The plan of the week, the treasury operations and the staff: real actions of the store (the plan and the mandates are shown and confirmed first).
     // The news: closing the summary of the Home, going from a radio item to its article, the jingle of the radio.
+    // The pop-up of the week: any of its buttons closes it (the one that opens Informazione also navigates, below).
+    if (event.target.closest('[data-news-popup-close]')) { newsPopup = null; if (!event.target.closest('[data-nav]')) { render(store.getState(), store.getLastSaved()); return; } }
+    // The pop-up's «Leggi la storia»: closes it and opens that article in the newsroom.
+    const popupOpen = event.target.closest('[data-news-popup-open]');
+    if (popupOpen) {
+      newsPopup = null; views.newsFilter = 'articoli'; views.newsCategory = 'tutte'; views.newsOutlet = 'tutte'; pendingArticle = { id: popupOpen.dataset.newsPopupOpen, until: Date.now() + 2500 }; saveViews();
+      setHash('notizie'); await ensurePageData('notizie'); render(store.getState(), store.getLastSaved()); return;
+    }
+    // The bulletin or an article read aloud by the device's own voice (start / stop): the text is on the page whatever happens.
+    const speakButton = event.target.closest('[data-voice-target]');
+    if (speakButton) {
+      const what = speakButton.dataset.voiceTarget;
+      if (voiceTarget() === what) stopVoice();
+      else {
+        const media = newsMedia(store.getState());
+        const lines = what === 'bulletin' ? bulletinScript(media?.radio?.bulletins ?? []) : articleScript(media?.articles?.find(item => `article:${item.id}` === what));
+        if (!speakLines(lines, { volume: Number(settings.volume) / 100, what })) { speakButton.disabled = true; const label = speakButton.querySelector('[data-voice-label]'); if (label) label.textContent = 'Voce non disponibile'; }
+      }
+      return;
+    }
     const newsControl = event.target.closest('[data-home-news-dismiss],[data-news-goto],[data-radio-play]');
     if (newsControl) {
       const data = newsControl.dataset;
@@ -842,16 +896,19 @@ export function mountApp(root, store, { retryData = null } = {}) {
       return;
     }
     // The hemicycle: seats, chamber, colours, legend filters and the vote to show; the view is kept across redraws.
-    const hemi = event.target.closest('[data-hemi-seat],[data-hemi-chamber],[data-hemi-color],[data-hemi-filter-group],[data-hemi-filter-party],[data-hemi-reset],[data-hemi-close],[data-hemi-vote]');
+    const hemi = event.target.closest('[data-hemi-seat],[data-hemi-chamber],[data-hemi-color],[data-hemi-filter-group],[data-hemi-filter-party],[data-hemi-reset],[data-hemi-close],[data-hemi-vote],[data-hemi-more],[data-hemi-locate]');
     if (hemi) {
       const data = hemi.dataset;
       const view = views.hemicycle;
-      if (data.hemiSeat) { view.selected = view.selected === data.hemiSeat && !data.hemiScroll ? null : data.hemiSeat; if (data.hemiScroll) { saveViews(); render(store.getState(), store.getLastSaved()); root.querySelector?.('#hemicycle')?.scrollIntoView?.({ block: 'start' }); return; } }
-      else if (data.hemiChamber) Object.assign(view, { chamber: data.hemiChamber, group: '', committee: '', vote: '', selected: null });
+      // A seat chosen in the list (scroll: card) shows its card; one chosen from the cards of the week (scroll: 1) brings the hemicycle into view.
+      if (data.hemiSeat) { view.selected = view.selected === data.hemiSeat && !data.hemiScroll ? null : data.hemiSeat; if (data.hemiScroll) { saveViews(); render(store.getState(), store.getLastSaved()); root.querySelector?.(data.hemiScroll === 'card' ? '.hemi-card' : '#hemicycle')?.scrollIntoView?.({ block: data.hemiScroll === 'card' ? 'nearest' : 'start' }); return; } }
+      else if (hemi.matches('[data-hemi-more]')) view.limit = (Number(view.limit) || 40) + 40;
+      else if (hemi.matches('[data-hemi-locate]')) { saveViews(); render(store.getState(), store.getLastSaved()); root.querySelector?.('.hemi-roster-list .active')?.scrollIntoView?.({ block: 'center' }); return; }
+      else if (data.hemiChamber) Object.assign(view, { chamber: data.hemiChamber, group: '', committee: '', vote: '', territory: '', limit: 40, selected: null });
       else if (data.hemiColor) view.colorBy = data.hemiColor;
       else if (data.hemiFilterGroup) view.group = view.group === data.hemiFilterGroup ? '' : data.hemiFilterGroup;
       else if (data.hemiFilterParty) view.party = view.party === data.hemiFilterParty ? '' : data.hemiFilterParty;
-      else if (hemi.matches('[data-hemi-reset]')) Object.assign(view, { party: '', group: '', committee: '', vote: '' });
+      else if (hemi.matches('[data-hemi-reset]')) Object.assign(view, { party: '', group: '', committee: '', vote: '', q: '', territory: '', limit: 40 });
       else if (hemi.matches('[data-hemi-close]')) view.selected = null;
       else if (data.hemiVote) {
         Object.assign(view, { vote: data.hemiVote, chamber: data.hemiVoteChamber || view.chamber, selected: null, group: '', committee: '' });
@@ -942,8 +999,8 @@ export function mountApp(root, store, { retryData = null } = {}) {
       try {
         if (data.lifeRequest) store.respondPartyRequest(data.lifeRequest, data.lifeChoice);
         else if (data.lifePactBreak) { const id = data.lifePactBreak; confirmThen({ kicker: 'ACCORDO INTERNO', title: 'Denunciare l’accordo?', body: 'L’area che lo aveva ottenuto perde fiducia in te e lo ricorderà: costa un punto di capitale politico.', confirmLabel: 'Denuncia', tone: 'danger' }, () => store.breakPartyPact(id)); return; }
-        else if (data.lifeCadre) store.partyCadreAction({ action: data.lifeCadre, cadreId: data.cadreId ?? null, committeeId: data.lifeCadre === 'recluta' ? root.querySelector('[data-life-recruit-select]')?.value : null });
-        else if (data.lifeCongress) store.partyCongressWork(data.lifeCongress);
+        else if (data.lifeCadre) store.partyCadreAction({ action: data.lifeCadre, cadreId: data.cadreId ?? null, committeeId: data.lifeCadre === 'recluta' ? (data.committeeId ?? null) : null });
+        else if (data.lifeCongress) store.partyCongressWork(data.lifeCongress, value(`congress-${data.lifeCongress}`) || null);
         else if (data.lifeRebuild) store.rebuildParty(data.lifeRebuild);
         else if ('lifeFound' in data) {
           const args = { label: value('found-label'), abbreviation: value('found-abbr') || null, followerIds: [...(root.querySelectorAll('[data-life-follower]') ?? [])].filter(item => item.checked).map(item => item.value) };
@@ -1280,7 +1337,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
       else if (wizardAction === 'next') { if (!failStep()) wizard.step = Math.min(CAREER_STEPS,wizard.step+1); }
       else if (goto >= 1 && goto < CAREER_STEPS) wizard.step = goto;
       else if (wizardAction === 'finish') {
-        const failing = Array.from({ length: CAREER_STEPS }, (_, index) => index + 1).map(step => [step, validateWizardStep(wizard,step,selectableParties(),realDatabase.parliamentaryGroups ?? [],wizardTerritory(),{ requireTerritory: true })]).find(([, errors]) => errors.length);
+        const failing = Array.from({ length: CAREER_STEPS }, (_, index) => index + 1).map(step => [step, wizardStepErrors(step)]).find(([, errors]) => errors.length);
         if (failing) { wizard.step = failing[0]; wizard.errors = failing[1]; }
         else if (store.hasCareer() && !wizard.confirmedReplace) {
           const full = store.listSlots().length >= MAX_SLOTS;
@@ -1292,6 +1349,9 @@ export function mountApp(root, store, { retryData = null } = {}) {
       }
       render(store.getState(),store.getLastSaved()); return;
     }
+    if (wizard && event.target.closest('[data-poll-new-seed]')) { wizard.pollSeed = newPollSeed(); render(store.getState(), store.getLastSaved()); return; }
+    if (wizard && event.target.closest('[data-poll-fit]')) { syncWizardDraft(); wizard.pollCustom = store.fitPollScenario(pollScenarioOf(wizard)); render(store.getState(), store.getLastSaved()); return; }
+    if (wizard && event.target.closest('[data-poll-reset]')) { wizard.pollCustom = {}; render(store.getState(), store.getLastSaved()); return; }
     const suggestedParty = event.target.closest('[data-admin-suggest-party]');
     if (suggestedParty) {
       const select = suggestedParty.closest('form')?.querySelector('select[name="partyId"]');
@@ -1657,9 +1717,13 @@ export function mountApp(root, store, { retryData = null } = {}) {
     if (field.name === 'partyProgram' || field.name === 'partyLogoMode') { syncWizardDraft(); if (field.name === 'partyLogoMode') render(store.getState(), store.getLastSaved()); return; }
     if (field.type === 'file') return;
     if (field.name.startsWith('policy_')) wizard.policyPositions[field.name.slice(7)] = Number(field.value);
+    else if (field.name.startsWith('poll_')) (wizard.pollCustom ??= {})[field.name.slice(5)] = field.value;
     else wizard[field.name] = field.value;
     if (/^partyLogo|^partyColor|^partyAbbreviation/.test(field.name)) updateWizardLogo();
     if (field.name === 'difficulty') { render(store.getState(), store.getLastSaved()); return; }
+    // The opening poll: a mode (a random mode always has a seed), a seed typed or a written share redraw the table, keeping the focus where it was.
+    if (field.name === 'pollMode') { if (field.value === 'casuale' && !wizard.pollSeed) wizard.pollSeed = newPollSeed(); wizard.open = { ...(wizard.open ?? {}), poll: field.value !== 'realistico' }; render(store.getState(), store.getLastSaved()); return; }
+    if (field.name === 'pollSeed' || field.name.startsWith('poll_')) { preserveFocusRender(`[name="${field.name.replace(/"/g, '')}"]`); return; }
     const output = field.closest('.policy-slider')?.querySelector('output');
     if (output) output.textContent=field.value;
     if (field.name === 'partyColor') { const caption=field.parentElement?.querySelector('span'); if(caption) caption.textContent=field.value; }
@@ -1699,8 +1763,10 @@ export function mountApp(root, store, { retryData = null } = {}) {
       refreshWizardLogoPreview();
       return;
     }
+    if (field.matches('[data-view-filter-text]')) { views.filters[field.dataset.viewFilterText] = field.value.slice(0, 60); saveViews(); render(store.getState(), store.getLastSaved()); return; }
     if (field.matches('[data-view-filter-select]')) { views.filters[field.dataset.viewFilterSelect] = field.value; saveViews(); render(store.getState(), store.getLastSaved()); return; }
-    if (field.matches('[data-hemi-filter]')) { views.hemicycle[field.dataset.hemiFilter] = field.value; if (field.dataset.hemiFilter === 'vote') views.hemicycle.selected = null; saveViews(); render(store.getState(), store.getLastSaved()); return; }
+    if (field.matches('[data-local-search]')) { territory.localQuery = field.value.slice(0, 60); saveViews(); render(store.getState(), store.getLastSaved()); return; }
+    if (field.matches('[data-hemi-filter]')) { views.hemicycle[field.dataset.hemiFilter] = field.dataset.hemiFilter === 'q' ? field.value.slice(0, 60) : field.value; views.hemicycle.limit = 40; if (field.dataset.hemiFilter === 'vote') views.hemicycle.selected = null; saveViews(); render(store.getState(), store.getLastSaved()); return; }
     if (field.matches('[data-admin-chamber]')) { admin.chamber = field.value; admin.listPage = 1; render(store.getState(), store.getLastSaved()); return; }
     if (field.matches('[data-real-law-filter]') && field.dataset.realLawFilter !== 'query') { realLaws[field.dataset.realLawFilter] = field.value; realLaws.page = 1; render(store.getState(), store.getLastSaved()); return; }
     if (field.matches('[data-wizard-logo-upload]') && wizard) {
@@ -1778,7 +1844,7 @@ export function mountApp(root, store, { retryData = null } = {}) {
   // The account service is asked once at the opening (players already signed in find out at their first sync).
   if (account.status === 'checking') probeAccount();
   // Escape closes the confirmation dialog (it means “Annulla”).
-  globalThis.addEventListener?.('keydown', event => { if (event.key === 'Escape' && pendingConfirm) settleConfirm(false); });
+  globalThis.addEventListener?.('keydown', event => { if (event.key === 'Escape' && pendingConfirm) settleConfirm(false); else if (event.key === 'Escape' && newsPopup) { newsPopup = null; render(store.getState(), store.getLastSaved()); } });
   // The tabs of the institutions (mandates and sections) move with the arrow keys, as tabs do.
   root.addEventListener?.('keydown', event => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
@@ -1862,6 +1928,7 @@ function subpage(state, page, player, party, events, catalog, options = {}) {
     territori: renderTerritoriesPage(state, { ...options.territory, deputies: deputiesByRegion(realDatabase.politicians ?? []) }),
     finanze: renderFinancePage(state),
     parlamento: renderParliamentPage('parlamento', state, { party, player, status: catalogStatus, politicians: realDatabase.politicians ?? [], hemicycle: state.parliament ? renderHemicycle(state, { politicians: realDatabase.politicians ?? [], db: realDatabase, view: options.views?.hemicycle, logoFor: options.logoFor }) : '', featured: state.parliament ? renderFeaturedMembers(state, realDatabase, options.views?.hemicycle) : '' }) + `<section class="hq-panel contacts-panel"><div class="home-section-heading"><div><span class="section-kicker">${state.parliament?.legislature?.reference === 'simulation' ? 'PARLAMENTARI DELLA XIX LEGISLATURA (REALE) · RAPPORTI SIMULATI' : 'PARLAMENTARI REALI · RAPPORTI SIMULATI'}</span><h2>${state.parliament?.legislature?.reference === 'simulation' ? 'I tuoi contatti della legislatura reale' : 'I tuoi interlocutori in Parlamento'}</h2></div></div>${state.parliament?.legislature?.reference === 'simulation' ? '<p class="sx-note">Dopo il voto della partita le Camere sono simulate: queste persone reali non vi siedono e non intervengono sulle tue proposte; restano contatti politici con i dati della XIX legislatura.</p>' : ''}${renderContactsPanel(state)}</section>`,
+    quirinale: state.game ? renderQuirinale(state, options.presidencyView?.() ?? null) : '',
     governo: renderParliamentPage('governo', state, { party, player, status: catalogStatus, politicians: realDatabase.politicians ?? [], secretary: playerRoles(state).secretary }) + realGovernmentCard(),
     archivio: renderArchiveHub(options.archive, { catalog, status: catalogStatus, logoFor: options.logoFor, realLaws: options.realLaws }),
     leggi: renderParliamentPage('leggi', state, { party, player, status: catalogStatus, politicians: realDatabase.politicians ?? [], lawFilter: options.views?.filters?.leggi, billPage: options.views?.filters?.leggiPage, archivePage: options.views?.filters?.leggiArchivio, committees: realDatabase.committees ?? [], realLaws: renderRealLaws(realDatabase.laws ?? [], options.realLaws, { canPropose: canManageParliament(state.parliament), loading: catalogStatus.loading && !(realDatabase.laws ?? []).length, error: catalogStatus.error }) }),
@@ -1870,7 +1937,7 @@ function subpage(state, page, player, party, events, catalog, options = {}) {
     'partiti-lista': `<div class="catalog-body" data-catalog-body>${renderPartyArchive(catalog,{status:catalogStatus,logoFor:options.logoFor})}</div>`,
     sondaggi: renderObservatory(state, observatoryOptions(state, options)),
     elezioni: renderElectionsHub(state, { parties: options.parties ?? [], logoFor: options.logoFor, tab: options.tabFor?.('elezioni', state), national: options.nationalOverview, geography: options.electoralGeography?.() ?? null, nationalView: options.views?.filters?.nazionali, campaignPicks: options.campaignPicks, presidency: options.presidencyView, polls: observatoryOptions(state, options), races: { raceOptions: options.raceOptions } }),
-    partito: state.game ? renderPartyPage(state, { tab: options.tabFor?.('partito', state), record: party, logoFor: options.logoFor, selectable: options.selectable ?? [], territory: { units: realDatabase.territorialUnits ?? [], municipalities: isRealCollectionLoaded('municipalities') ? realDatabase.municipalities : null, home: options.homePlace?.() ?? {}, filter: options.views?.filters?.comitati ?? 'tutti', region: options.views?.filters?.['comitati-regione'] ?? '' } }) : `<div class="feature-card party-detail-card"><span class="feature-icon">◇</span><div class="eyebrow">${party ? 'AFFILIAZIONE ATTUALE' : 'PROFILO INDIPENDENTE'}</div><div class="party-detail-heading">${party && options.logoFor?.(party) ? `<img src="${esc(options.logoFor(party))}" alt="${esc(party.logoAlt || `Logo di ${party.officialName || party.name}`)}" />` : ''}<h2>${party ? esc(party.officialName || party.name) : 'Nessuna affiliazione'}</h2></div><p>${party ? esc(party.source === DATA_SOURCES.REAL ? party.factualDescription || 'Descrizione non disponibile nelle fonti consultate.' : party.description || 'Partito pronto a essere configurato.') : 'Sei indipendente. Qui sotto puoi aderire a un partito oppure continuare senza affiliazione.'}</p><div class="party-detail-meta">${party ? `<span class="source-pill">${sourceLabel(party.source)}${party.source === DATA_SOURCES.REAL ? ' verificato' : ''}</span>${party.abbreviation ? `<span>${esc(party.abbreviation)}</span>` : ''}${party.orientation ? `<span><small>ORIENTAMENTO</small><strong>${esc(party.orientation)}</strong></span>` : ''}${party.status ? `<span>${esc(party.status)}</span>` : ''}` : '<span class="source-pill">Nessuna affiliazione</span>'}</div>${party?.source === DATA_SOURCES.REAL && party.sourceUrl ? `<a class="catalog-source" href="${esc(party.sourceUrl)}" target="_blank" rel="noopener noreferrer">Fonte ufficiale ↗</a>` : ''}${party?.policyPositions ? `<div class="policy-summary">${[['economia','Economia'],['welfare','Welfare'],['ambiente','Ambiente'],['europa','Europa']].map(([key,label]) => `<span><small>${label}</small><strong>${Number(party.policyPositions[key] ?? 3)} <i>/ 5</i></strong><b><i style="width:${Number(party.policyPositions[key] ?? 3)*20}%"></i></b></span>`).join('')}</div>` : ''}</div>`,
+    partito: state.game ? renderPartyPage(state, { filters: options.views?.filters ?? {}, tab: options.tabFor?.('partito', state), record: party, logoFor: options.logoFor, selectable: options.selectable ?? [], territory: { units: realDatabase.territorialUnits ?? [], municipalities: isRealCollectionLoaded('municipalities') ? realDatabase.municipalities : null, home: options.homePlace?.() ?? {}, filter: options.views?.filters?.comitati ?? 'tutti', region: options.views?.filters?.['comitati-regione'] ?? '' } }) : `<div class="feature-card party-detail-card"><span class="feature-icon">◇</span><div class="eyebrow">${party ? 'AFFILIAZIONE ATTUALE' : 'PROFILO INDIPENDENTE'}</div><div class="party-detail-heading">${party && options.logoFor?.(party) ? `<img src="${esc(options.logoFor(party))}" alt="${esc(party.logoAlt || `Logo di ${party.officialName || party.name}`)}" />` : ''}<h2>${party ? esc(party.officialName || party.name) : 'Nessuna affiliazione'}</h2></div><p>${party ? esc(party.source === DATA_SOURCES.REAL ? party.factualDescription || 'Descrizione non disponibile nelle fonti consultate.' : party.description || 'Partito pronto a essere configurato.') : 'Sei indipendente. Qui sotto puoi aderire a un partito oppure continuare senza affiliazione.'}</p><div class="party-detail-meta">${party ? `<span class="source-pill">${sourceLabel(party.source)}${party.source === DATA_SOURCES.REAL ? ' verificato' : ''}</span>${party.abbreviation ? `<span>${esc(party.abbreviation)}</span>` : ''}${party.orientation ? `<span><small>ORIENTAMENTO</small><strong>${esc(party.orientation)}</strong></span>` : ''}${party.status ? `<span>${esc(party.status)}</span>` : ''}` : '<span class="source-pill">Nessuna affiliazione</span>'}</div>${party?.source === DATA_SOURCES.REAL && party.sourceUrl ? `<a class="catalog-source" href="${esc(party.sourceUrl)}" target="_blank" rel="noopener noreferrer">Fonte ufficiale ↗</a>` : ''}${party?.policyPositions ? `<div class="policy-summary">${[['economia','Economia'],['welfare','Welfare'],['ambiente','Ambiente'],['europa','Europa']].map(([key,label]) => `<span><small>${label}</small><strong>${Number(party.policyPositions[key] ?? 3)} <i>/ 5</i></strong><b><i style="width:${Number(party.policyPositions[key] ?? 3)*20}%"></i></b></span>`).join('')}</div>` : ''}</div>`,
     carriera: renderCareerPage(state, { tab: options.tabFor?.('carriera', state), timelineFilter: options.views?.timelineFilter }),
     profilo: `<div class="profile-page"><section class="profile-page-lead"><div class="hero-avatar">${player ? esc(player.firstName[0] + player.lastName[0]) : 'P'}</div><div><span class="section-kicker">IL TUO POLITICO</span><h2>${player ? esc(player.displayName) : 'Nessun profilo creato'}</h2><p>${player ? `${esc(player.previousProfession)} · residente a ${esc(player.municipality)}, ${esc(player.region)}` : 'Crea una carriera per definire il tuo profilo.'}</p></div>${player ? '' : '<button class="primary-button" data-action="new-career">Nuova carriera ' + icon('arrow', 16) + '</button>'}</section><div class="profile-page-facts"><div><span>INCARICO</span><strong>${player?.roleId && state.dataset.offices.some(item => item.id === player.roleId) ? esc(officeLabel(state.dataset.offices.find(item => item.id === player.roleId))) : 'Da assegnare'}</strong></div><div><span>TERRITORIO</span><strong>${esc(state.dataset.territories.find(item => item.id === player?.territoryId)?.name ?? player?.region ?? 'Italia')}</strong></div><div><span>PARTITO</span><strong>${party ? esc(partyName(party)) : 'Indipendente'}</strong></div></div><section class="profile-metrics"><h3>Statistiche</h3>${profileMetrics}</section><button class="text-link" data-nav="politici">Esplora i profili politici ${icon('arrow', 16)}</button></div>`,
     notizie: `<section class="hq-panel news-page">${renderNewsroom(state, options.views?.newsFilter, options.views ?? {})}</section>`,

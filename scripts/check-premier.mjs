@@ -40,7 +40,8 @@ const run = await premierCareer('premier-bilancio');
 const { store } = run;
 const st = () => store.getState();
 // The Government holds through the weeks (the test is about the money, not about the majority).
-const advance = () => { edit(store, save => { Object.assign(save.parliament.government, { stability: 95, crisisSeverity: 0, status: 'active' }); }); store.advance(7); };
+// (the allies stay content too: an ally whose demand is ignored for weeks leaves the majority, which is the engine working, not what this test is about)
+const advance = () => { edit(store, save => { Object.assign(save.parliament.government, { stability: 95, crisisSeverity: 0, status: 'active' }); for (const partner of Object.values(save.parliament.government.partners ?? {})) { partner.satisfaction = Math.max(partner.satisfaction, 70); partner.demand = null; } }); store.advance(7); };
 const api = Object.fromEntries(['proposeProject', 'setProjectFunding', 'stopProject', 'applyEuCall', 'reportEuCall', 'presentBudget'].map(name => [name, (...args) => { edit(store, save => { save.game.week.ap = 12; save.game.resources.politicalCapital = 90; }); return store[name](...args); }]));
 const sentence = text => text.replace(/data-[a-z-]+="[^"]*"/g, '');
 

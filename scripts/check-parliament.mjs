@@ -182,7 +182,7 @@ module = await import('../src/core/store.js?parliament-reload-save=' + Date.now(
 assert.equal(module.store.getState().parliament.player.groupId, 'senato-xix-gruppo-85');
 assert.equal(module.store.getState().parliament.laws.length, 0);
 assert.equal(module.store.getState().version, 10);
-assert.ok(renderParliamentPage('leggi', module.store.getState()).includes('Scrivi una proposta.'));
+assert.ok(renderParliamentPage('leggi', module.store.getState()).includes('Scrivi una proposta'));
 
 const unique = list => new Set(list.map(item => item.id)).size === list.length;
 const references = [party];

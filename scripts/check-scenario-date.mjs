@@ -23,7 +23,14 @@ assert.ok(/startDate: realDatabase\.manifest\?\.scenarioDate \?\? realDatabase\.
 const politicians = await read('politicians.json');
 const inOffice = politicians.filter(item => !item.termEnd || item.termEnd > SCENARIO);
 assert.ok(inOffice.length === manifest.politiciansInOffice, `I parlamentari in carica al ${SCENARIO} sono quelli del manifesto (${inOffice.length} / ${manifest.politiciansInOffice}).`);
-assert.ok(politicians.every(item => !item.termEnd || item.termEnd <= SCENARIO || item.termEnd > SCENARIO), 'Nessun mandato con data incoerente.');
+// every mandate has a real calendar date for its start, which is not after the scenario date, and an end (when there is one) that follows the start; whoever ended on or before the scenario date is not in office
+const isDate = value => typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && new Date(`${value}T00:00:00Z`).toISOString().startsWith(value);
+assert.ok(politicians.every(item => isDate(item.termStart) && item.termStart <= SCENARIO), 'Ogni mandato ha una data di inizio valida e non successiva alla data dello scenario.');
+assert.ok(politicians.every(item => !item.termEnd || (isDate(item.termEnd) && item.termEnd >= item.termStart)), 'La fine di un mandato è una data valida e non precede l’inizio.');
+const ended = politicians.filter(item => item.termEnd && item.termEnd <= SCENARIO);
+assert.ok(ended.every(item => !inOffice.includes(item)), 'Chi ha il mandato concluso entro la data dello scenario non è tra i parlamentari in carica.');
+assert.equal(ended.length + inOffice.length, politicians.length, 'Ogni parlamentare del dataset è in carica o ha concluso il mandato: nessuno è in uno stato indefinito.');
+assert.ok(ended.every(item => item.validTo === item.termEnd), 'La data di fine validità del dato coincide con la fine del mandato.');
 
 if (!chromeAvailable) console.log('Parte nel browser saltata: Chrome non trovato (imposta CHROME_PATH per eseguirla).');
 else await withBrowser(async browser => {

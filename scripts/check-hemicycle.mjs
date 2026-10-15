@@ -259,6 +259,80 @@ const voting = { ...simState, parliament: { ...gamePar, laws: [{ id: 'legge-prov
 html = renderHemicycle(voting, { view: { vote: 'voto-prova', chamber: 'camera' } });
 assert.ok(html.includes('VOTAZIONE SIMULATA') && html.includes(votes.VOTE_CHOICES.favorevole.color) && !Object.values(TONES).some(tone => html.includes(`fill="${tone}"`)) && clean(html), 'Durante una votazione i punti hanno i colori del voto, non quelli delle forze.');
 
+// ---------- 7. every seat is in a searchable list, with its id and a badge; search and territory narrow the list and fade the dots ----------
+{
+  const { placeholderPerson } = await import(`../src/core/seat-roster.js${v}`);
+  const rowsOf = markup => [...markup.matchAll(/<li><button type="button" class="[^"]*" data-hemi-seat="([^"]+)" data-hemi-scroll="card"/g)].map(item => item[1]);
+  const dotsOf = markup => [...markup.matchAll(/<circle class="hemi-seat[^>]*data-hemi-seat="([^"]+)"/g)].map(item => item[1]);
+  const dimmed = markup => (markup.match(/<circle class="hemi-seat[^"]*is-dim/g) ?? []).length;
+  for (const chamber of ['camera', 'senato']) {
+    html = renderHemicycle(baseState, { politicians: db.politicians, db, view: { chamber, limit: 1000 } });
+    const rows = rowsOf(html), dots = dotsOf(html);
+    assert.equal(rows.length, rosters[chamber].total, `${chamber}: una riga per ogni seggio (${rows.length}).`);
+    assert.equal(new Set(rows).size, rows.length, `${chamber}: nessuna riga doppia.`);
+    assert.deepEqual([...rows].sort(), [...dots].sort(), `${chamber}: ogni punto dell’emiciclo ha la sua riga e ogni riga il suo punto (due modi di scegliere lo stesso seggio).`);
+    assert.ok(html.includes('data-hemi-filter="q"') && html.includes('data-hemi-filter="territory"') && html.includes('ELENCO DEI COMPONENTI'), 'Ricerca, territorio ed elenco ci sono.');
+    // the page of 40 grows with "show more", and the card's "show in the list" brings the selected one in
+    html = renderHemicycle(baseState, { politicians: db.politicians, db, view: { chamber } });
+    assert.equal(rowsOf(html).length, 40, 'Un’elenco di 40 per volta.');
+    assert.ok(html.includes('data-hemi-more') && html.includes('Mostra altri 40'), 'E il pulsante per vedere gli altri.');
+  }
+  const sample = rosters.camera.seats.find(seat => seat.person && seat.person.circoscription);
+  const words = sample.person.fullName.split(/\s+/);
+  const matchesName = seat => (seat.person?.fullName ?? '').toLowerCase().includes(words.at(-1).toLowerCase());
+  html = renderHemicycle(baseState, { politicians: db.politicians, db, view: { q: words.at(-1).toUpperCase(), limit: 1000 } });
+  const found = rowsOf(html);
+  assert.ok(found.includes(sample.person.id), 'La ricerca per cognome (anche in maiuscolo) trova la persona.');
+  assert.equal(found.length, rosters.camera.seats.filter(matchesName).length, 'E solo chi corrisponde.');
+  assert.equal(dimmed(html), rosters.camera.total - found.length, 'I seggi che non corrispondono si attenuano nell’emiciclo.');
+  html = renderHemicycle(baseState, { politicians: db.politicians, db, view: { q: sample.person.fullName.toLowerCase(), limit: 1000 } });
+  assert.deepEqual(rowsOf(html).filter(key => key === sample.person.id), [sample.person.id], 'Nome e cognome insieme trovano la persona.');
+  html = renderHemicycle(baseState, { politicians: db.politicians, db, view: { q: 'zzzzqq' } });
+  assert.ok(html.includes('Nessun seggio corrisponde') && rowsOf(html).length === 0 && dimmed(html) === rosters.camera.total && clean(html), 'Nessun risultato: lo dice, nessuna riga.');
+  const groupWord = rosters.camera.groups.find(group => group.seats > 5).shortName.split(/\s+/)[0];
+  html = renderHemicycle(baseState, { politicians: db.politicians, db, view: { q: groupWord, limit: 1000 } });
+  assert.ok(rowsOf(html).length >= 5, `La ricerca per gruppo («${groupWord}») trova i suoi componenti.`);
+  const territory = sample.person.circoscription;
+  html = renderHemicycle(baseState, { politicians: db.politicians, db, view: { territory, limit: 1000 } });
+  assert.equal(rowsOf(html).length, rosters.camera.seats.filter(seat => seat.person?.circoscription === territory).length, `Il territorio «${territory}» restringe l’elenco ai suoi eletti.`);
+  assert.ok(html.includes(`<option value="${territory}" selected>`), 'E resta selezionato nel filtro.');
+  html = renderHemicycle(baseState, { politicians: db.politicians, db, view: { territory, q: words.at(-1), limit: 1000 } });
+  assert.ok(rowsOf(html).length <= rosters.camera.seats.filter(seat => seat.person?.circoscription === territory).length && rowsOf(html).includes(sample.person.id), 'Ricerca e territorio si sommano.');
+  // selecting: the dot and the row of the same seat are marked, the card has a way back to its row
+  html = renderHemicycle(baseState, { politicians: db.politicians, db, view: { selected: sample.person.id } });
+  assert.ok(html.includes(`is-selected" cx`) || /class="hemi-seat[^"]*is-selected"[^>]*data-hemi-seat="[^"]+"/.test(html), 'Il punto del seggio scelto è evidenziato.');
+  assert.ok(new RegExp(`class="active" data-hemi-seat="${sample.person.id}"`).test(html) && html.includes('data-hemi-locate'), 'La sua riga è evidenziata e la scheda ha «Mostra nell’elenco».');
+  // a seat far down the alphabet is brought into the first page of the list when it is selected
+  const lastKey = rowsOf(renderHemicycle(baseState, { politicians: db.politicians, db, view: { limit: 1000 } })).at(-1);
+  html = renderHemicycle(baseState, { politicians: db.politicians, db, view: { selected: lastKey } });
+  assert.ok(rowsOf(html).includes(lastKey) && new RegExp(`class="active" data-hemi-seat="${lastKey.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}"`).test(html), 'Scegliendo un seggio in fondo all’elenco, l’elenco si allarga fino a mostrarlo.');
+  // a Senate seat of the scenario that the verified archive has no member for: a person of the simulation, with a full name, a persistent id and a badge
+  html = renderHemicycle(baseState, { politicians: db.politicians, db, view: { chamber: 'senato', limit: 1000 } });
+  const ghosts = rowsOf(html).filter(key => key.startsWith('posto:'));
+  assert.ok(ghosts.length === rosters.senato.seats.filter(seat => seat.placeholder).length && ghosts.length > 0, `I seggi senza componente nell’archivio (${ghosts.length}) sono selezionabili e hanno una riga.`);
+  for (const key of ghosts) {
+    const [, groupId, index] = key.split(':');
+    const expected = placeholderPerson({ chamber: 'senato', groupId, index: Number(index) });
+    assert.match(expected.id, /^persona-seggio-[\da-z]+$/);
+    assert.ok(/^\S+ \S+/.test(expected.fullName) && !/simulat|seggio|figura|n\./i.test(expected.fullName), `Nome e cognome veri, non un segnaposto: ${expected.fullName}.`);
+    assert.equal(placeholderPerson({ chamber: 'senato', groupId, index: Number(index) }).id, expected.id, 'Lo stesso identificativo ogni volta.');
+    assert.ok(!db.politicians.some(person => person.id === expected.id), 'L’identificativo non è mai quello di una persona reale.');
+    html = renderHemicycle(baseState, { politicians: db.politicians, db, view: { chamber: 'senato', selected: key } });
+    assert.ok(html.includes(expected.fullName) && html.includes(expected.id) && html.includes('SIMULATO') && html.includes('Identificativo') && html.includes('non sostituisce nessun parlamentare reale') && clean(html), 'La scheda dice nome, identificativo, SIMULATO e che non sostituisce nessuno.');
+  }
+  // the Chambers born from a vote: every row is a person with a full name and an id, badge "Simulato" (and "Tu" for the player)
+  html = renderHemicycle(simState, { view: { limit: 1000 } });
+  const simRows = rowsOf(html);
+  assert.equal(simRows.length, total, 'Camera simulata: una riga per persona.');
+  assert.ok(html.includes('Tu</span>') && (html.match(/tone-warn">Simulato</g) ?? []).length >= total - 3, 'Ogni eletto simulato ha il suo distintivo.');
+  html = renderHemicycle(simState, { view: { selected: person.id } });
+  assert.ok(html.includes(`<code>${person.id}</code>`) && html.includes('SIMULATO') && html.includes(person.displayName) && !/eletto simulato|figura/i.test(html), 'La scheda di un eletto simulato ha il suo identificativo fisso e il distintivo.');
+  html = renderHemicycle(simState, { view: { q: person.lastName ?? person.displayName.split(' ').at(-1), limit: 1000 } });
+  assert.ok(rowsOf(html).includes(person.id), 'Anche gli eletti simulati si cercano per nome.');
+  html = renderHemicycle(simState, { view: { q: person.id } });
+  assert.ok(rowsOf(html).includes(person.id), 'E per identificativo.');
+}
+
 assert.equal(JSON.stringify(db.politicians) + JSON.stringify(db.committees) + JSON.stringify(db.committeeMemberships), snapshot, 'I dati reali non cambiano.');
 
-console.log(`Parlamento interattivo verificato: ${db.committees.length} commissioni permanenti reali (${db.committeeMemberships.length} componenti), emiciclo Camera ${rosters.camera.total} e Senato ${rosters.senato.total} seggi senza sovrapposizioni, gruppi contigui da sinistra a destra con colori coerenti tra le Camere, voto segreto (${secret.snipers} franchi tiratori stimati, nessun nome), voto palese con ${seatsVotes.dissenters.length} discordanti su ${open.total} coerenti coi totali di gruppo, fiducia con dettaglio per gruppo, vecchi salvataggi leggibili; Camere nate dal voto della partita con una persona della simulazione per ogni seggio (mai reale, mai due volte, il giocatore al suo posto, scissione e nuova legislatura che portano le persone) e punti nel colore della forza, Misto distinto, colori del voto solo durante le votazioni.`);
+console.log(`Parlamento interattivo verificato: ${db.committees.length} commissioni permanenti reali (${db.committeeMemberships.length} componenti), emiciclo Camera ${rosters.camera.total} e Senato ${rosters.senato.total} seggi senza sovrapposizioni, gruppi contigui da sinistra a destra con colori coerenti tra le Camere, voto segreto (${secret.snipers} franchi tiratori stimati, nessun nome), voto palese con ${seatsVotes.dissenters.length} discordanti su ${open.total} coerenti coi totali di gruppo, fiducia con dettaglio per gruppo, vecchi salvataggi leggibili; Camere nate dal voto della partita con una persona della simulazione per ogni seggio (mai reale, mai due volte, il giocatore al suo posto, scissione e nuova legislatura che portano le persone) e punti nel colore della forza, Misto distinto, colori del voto solo durante le votazioni; ogni seggio di Camera e Senato è anche in un elenco ricercabile (nome, gruppo, partito, territorio, identificativo) con filtro per territorio, le righe e i punti dello stesso seggio si corrispondono, i seggi senza componente nell’archivio hanno una persona simulata con nome, identificativo fisso e distintivo, e gli eletti simulati hanno identificativo e distintivo`);

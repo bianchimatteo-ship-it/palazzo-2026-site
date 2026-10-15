@@ -65,6 +65,17 @@ export const CONGRESS_PHASES = Object.freeze([
   { id: 'voto', label: 'Voto', weeks: 0, detail: 'Il congresso vota: i delegati decidono la leadership.' }
 ]);
 export const CONGRESS_DELEGATES = Object.freeze({ founder: 60, member: 240 });
+// The work the player can do on the way to the vote. Each belongs to some phases, needs an area to back, costs days, money (his own or the party's treasury) or capital, and some can go wrong; what it
+// does is written in the congress itself (so it is saved with the game) and the delegates and the vote use it. `once`: one time per congress. `needs`: what the action must be pointed at.
+const WORKING = ['preparazione', 'delegati', 'alleanze', 'trattative', 'mozioni'];
+export const CONGRESS_ACTIONS = Object.freeze({
+  mobilita: { label: 'Mobilita i quadri', phases: ['forza', ...WORKING], cost: { ap: 1 }, needs: null, once: false, detail: 'I tuoi quadri riempiono le assemblee: +8 punti di mobilitazione per la tua area (al massimo 40), più delegati dalle federazioni.', risk: null },
+  federazioni: { label: 'Giro delle federazioni', phases: ['preparazione', 'delegati'], cost: { ap: 2, treasury: 400 }, needs: null, once: true, detail: 'Due giorni nelle federazioni, a spese del partito: la tua area arriva più preparata (circa +7% di peso nei delegati, per tutto il congresso).', risk: { chance: 0.25, text: 'Rischio 25%: la trasferta fa rumore, il vantaggio si dimezza e l’area dominante si sente scavalcata (rapporto −3).' } },
+  delegati: { label: 'Campagna sui delegati di una regione', phases: ['delegati'], cost: { ap: 1, funds: 300 }, needs: 'regione', once: false, detail: 'Una campagna mirata in una federazione, pagata di tasca tua: la tua area pesa il 25% in più nei delegati di quella regione.', risk: { chance: 0.3, text: 'Rischio 30% se il comitato regionale è guidato da un’altra area: la tua mossa è vista come un’invasione, il vantaggio si dimezza e il suo responsabile perde fiducia.' } },
+  mozione: { label: 'Scrivi la mozione', phases: WORKING.filter(id => id !== 'forza'), cost: { ap: 2, capital: 1 }, needs: null, once: true, detail: 'Un testo con la tua linea, da portare in congresso: se è solido vale circa il 3% dei delegati in più per la tua area; un testo debole non porta nulla e apre uno scontro.', risk: { chance: 0.3, text: 'Rischio 30% (più alto se il partito è poco compatto): la mozione è debole, non pesa e le altre aree si irrigidiscono (malcontento +3).' } },
+  trattativa: { label: 'Tratta con un’altra area', phases: ['alleanze', 'trattative'], cost: { ap: 1, capital: 1 }, needs: 'area', once: false, detail: 'Scegli tu l’area con cui trattare: se si accorda, le due mozioni corrono insieme e i delegati si sommano.', risk: { chance: null, text: 'La probabilità dipende dal rapporto, dalla lealtà e dal malcontento dell’area; se rifiuta il rapporto scende (−3) e il malcontento sale.' } },
+  alleanza: { label: 'Lavora alle alleanze', phases: ['alleanze', 'trattative'], cost: { capital: 2 }, needs: null, once: false, detail: 'La tua area tesse un’intesa con quella più vicina: le mozioni si sommano.', risk: null }
+});
 
 // ---------- local leaders ----------
 export const CADRE_INTERESTS = Object.freeze({

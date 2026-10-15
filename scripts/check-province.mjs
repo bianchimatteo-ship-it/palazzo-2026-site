@@ -205,8 +205,12 @@ for (const place of places) {
   const sitting = s.local.institutions.filter(inst => inst.status === 'active');
   for (const inst of sitting) assert.equal(R.rosterSize(inst.roster), inst.seats, `${inst.name}: i seggi hanno tutti la loro persona dopo il voto`);
   assert.ok(s.local.institutions.filter(inst => inst.status !== 'active').every(inst => !inst.roster), 'I consigli conclusi non tengono i seggi.');
-  const live = new Set(sitting.flatMap(inst => R.rosterPeople(inst.roster)));
-  assert.ok(s.dataset.politicians.filter(item => item.origin === 'seggio').every(item => live.has(item.id)), 'Le persone dei consigli conclusi escono dal registro: restano solo quelle che siedono.');
+  // (the persons of the Chambers of a legislature born from a vote of the game sit too: if a general election came before this vote, they are in the registry as long as they sit)
+  const live = new Set([...sitting.flatMap(inst => R.rosterPeople(inst.roster)), ...['camera', 'senato'].flatMap(chamber => s.parliament?.chambers?.[chamber]?.roster ? R.rosterPeople(s.parliament.chambers[chamber].roster) : [])]);
+  // (the game keeps the identity of the latest members who resigned or lost a seat of a Chamber of its own legislature: they may be named again, never seated twice)
+  const strays = s.dataset.politicians.filter(item => item.origin === 'seggio' && !live.has(item.id));
+  assert.ok(strays.every(item => item.member?.until), 'Le persone dei consigli conclusi escono dal registro: restano solo quelle che siedono (e, con la loro storia, le ultime che hanno lasciato un seggio).');
+  assert.ok(strays.length <= 40, `Le persone uscite che si ricordano sono poche (${strays.length}).`);
   noIssues(s, 'dopo il voto provinciale');
 }
 

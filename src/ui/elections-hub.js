@@ -264,7 +264,7 @@ export function renderElectionsHub(state, { parties = [], logoFor = () => null, 
   else if (active === 'campagna') body = `<div class="eh-campaign">${renderCampaignPage(state, parties, logoFor, campaignPicks)}</div>`;
   else if (active === 'avversari') body = renderCampaignObservatory(state, polls);
   else if (active === 'risultati') body = renderElectionReport(state.career.lastElectionReport, { place: mandatePlace(state, state.career.lastElectionReport) });
-  else if (active === 'quirinale') body = presidency ? renderQuirinale(state, presidency()) : empty('Il Quirinale si apre con i dati della partita.');
+  else if (active === 'quirinale') body = presidency ? `<p class="sx-note quirinale-pointer">Il Quirinale ha una sezione propria: <button type="button" class="text-link" data-nav="quirinale">Istituzioni → Quirinale</button>. Qui resta la scheda dell’elezione del Presidente, con i suoi passaggi.</p>${renderQuirinale(state, presidency())}` : empty('Il Quirinale si apre con i dati della partita.');
   else if (active === 'nazionali') body = national ? renderNationalView(state, national(), { geography, view: nationalView }) : empty('Il ciclo nazionale si apre con i dati della partita: calendario, coalizioni e proiezione dei seggi.');
   else body = history(state);
   return `<div class="elections-hub">${hero(state, summary)}${sectionTabs('elezioni', ELECTION_TABS.map(([id, label]) => [id, label, counts[id]]), active)}<div class="sx-body" role="tabpanel">${body}</div></div>`;

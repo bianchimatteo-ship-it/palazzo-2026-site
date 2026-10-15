@@ -77,9 +77,20 @@ export function loadAdminArchive() {
   };
   return { ...local, parties: merge('parties'), politicians: merge('politicians'), addedParties: merge('addedParties'), hidden: merge('hidden'), updatedAt: [local.updatedAt, shared.updatedAt].filter(Boolean).sort().at(-1) ?? null };
 }
+// The archive in use is the shared copy with this browser's edits on top, so a record the owner deletes (a reset, an edit back to the original values, «cancella tutto») must go from the shared copy too:
+// otherwise the merge brings it back and the next publication sends it to the server again, with the page saying it was restored.
+const ARCHIVE_KINDS = ['parties', 'politicians', 'addedParties', 'hidden'];
+function pruneShared(archive) {
+  const shared = loadSharedArchive();
+  if (!shared) return;
+  let changed = false;
+  for (const kind of ARCHIVE_KINDS) for (const id of Object.keys(shared[kind] ?? {})) if (!(id in (archive[kind] ?? {}))) { delete shared[kind][id]; changed = true; }
+  if (changed) storeSharedArchive(shared);
+}
 function persist(archive) {
   archive.updatedAt = new Date().toISOString();
   localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archive));
+  pruneShared(archive);
   return archive;
 }
 
@@ -102,6 +113,8 @@ export function saveRecordOverride(collection, id, values, original = {}) {
   if (!kind) throw new Error('Collezione non gestita.');
   const archive = loadAdminArchive();
   const fields = {};
+  // A party the owner added has no dataset record to compare with: what it was saved with is its original, so clearing a field (a colour, a sigla) is a change like any other.
+  if (collection === 'parties' && archive.addedParties?.[id]) original = addedRecord(id, archive.addedParties[id]);
   for (const field of ADMIN_FIELDS[kind]) {
     if (!(field.key in values) && !(`${field.key}__off` in values)) continue;
     // A colour picker always holds a colour: «nessun colore» (the `__off` box) is how the owner says there is none, so an untouched form never invents one.
@@ -221,9 +234,12 @@ export function importAdminArchive(text) {
   if (parsed?.format !== 'politicando-admin-overrides' || typeof parsed.parties !== 'object' || typeof parsed.politicians !== 'object') throw new Error('Il file non è un archivio amministrativo di POLITICANDO.');
   return persist({ ...empty(), parties: parsed.parties, politicians: parsed.politicians, addedParties: parsed.addedParties ?? {}, hidden: parsed.hidden ?? {} });
 }
+// «Cancella tutto»: the corrections, the links, the added and the hidden records go, in this browser and in the shared copy (the next publication then empties them on the server); the logos stay,
+// they have their own area and the owner did not ask to lose them.
 export function clearAdminArchive() {
   localStorage.removeItem(ARCHIVE_KEY);
-  localStorage.removeItem(SHARED_KEY);
+  const shared = loadSharedArchive();
+  if (shared) storeSharedArchive({ ...shared, parties: {}, politicians: {}, addedParties: {}, hidden: {} });
   return empty();
 }
 

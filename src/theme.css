@@ -929,3 +929,19 @@ select option, select optgroup { background: var(--panel); color: var(--ink); fo
 .project-facts > div { min-width: 0; }
 .project-facts dt { font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
 .project-facts dd { margin: 2px 0 0; font-size: 13px; line-height: 1.4; overflow-wrap: anywhere; }
+
+/* Semantic tones: the colours that were repeated as literals all over the stylesheets, named once. Values kept (or merged with their one-or-two-step neighbours, imperceptibly), so the pages look as before. */
+:root {
+  --label: #bba880;       /* small gold labels on the dark panels */
+  --ink-soft: #dcd9cf;    /* soft body ink on the panels */
+  --ink-quiet: #acafa0;   /* quiet secondary ink */
+  --bad-ink: #dcb1a2;     /* text of a negative state, on --bad-tint */
+  --bad-tint: #352019;
+  --good-tint: #244332;
+  --warn-tint: #271f0d;
+  --info-tint: #1b333d;
+  --good-line: #469d6c;   /* accent lines and rings */
+  --gold-line: #c09943;
+  --bad-line: #ba6445;
+  --gold-dim: #80652b;
+}

@@ -590,6 +590,10 @@ export function declareCandidacy(presidency, { date, standing, label, sponsored 
   const next = copy(presidency);
   next.election.candidates = existing ? next.election.candidates.map(item => item.isPlayer ? { ...candidate, id: existing.id, failures: 0 } : item) : [...next.election.candidates, candidate];
   next.election.player.declared = true;
+  // A leader who puts the own name in the field with the own force behind it votes for it: a line given earlier to another name (the group's secret ballots follow the line) gives way to the candidacy.
+  const mine = next.election.blocs.find(item => item.id === bloc?.id);
+  const ownId = existing?.id ?? candidate.id;
+  if (sponsored && mine?.playerLine?.kind === 'candidato' && mine.playerLine.candidateId !== ownId) mine.playerLine = { kind: 'candidato', candidateId: ownId };
   return logLine(next, date, 'candidatura', `${candidate.label} entra tra i nomi per il Quirinale${candidate.sponsors.length ? ` con il sostegno di ${candidate.sponsors.length > 1 ? `${candidate.sponsors.length} forze` : election.blocs.find(item => item.id === candidate.sponsors[0])?.label ?? bloc?.label}` : ' senza uno sponsor'}.`);
 }
 export function withdrawCandidacy(presidency, { date }) {

@@ -91,7 +91,31 @@ const monthsBetween = (from, to) => from && to ? (Date.parse(`${to}T12:00:00Z`) 
 // municipalVote (the date of the next communal vote of the player's comune) }. The second-level provincial vote needs a seat
 // in a comune; the president is a mayor with at least eighteen months of the term ahead (law 56/2014); a member of the
 // Government does not run for a territorial office; the President of the Republic does not run at all.
-export function candidacyBlock({ held = [], electionType, role, electionDate = null, municipalVote = null } = {}) {
+// The rhythm of the personal candidacies: the calendar keeps its real dates, but the player stands in one main competition a year and not in two campaigns that touch. A candidacy that
+// is already on the books (a campaign started, or a race with the player as candidate) rules out another one in the same calendar year or closer than CANDIDACY_GAP_DAYS between votes.
+// Early elections are the one explicit exception to the calendar-year rule (never to the gap between campaigns that overlap: two candidacies cannot run at once).
+export const CANDIDACY_GAP_DAYS = 150;
+const dayNumber = date => Math.round(Date.parse(`${date}T12:00:00Z`) / 86400000);
+export function rhythmBlock({ candidacies = [], candidacyId = null, electionDate = null, early = false } = {}) {
+  if (!electionDate) return null;
+  for (const other of candidacies) {
+    if (!other?.electionDate || other.id === candidacyId) continue;
+    const apart = Math.abs(dayNumber(electionDate) - dayNumber(other.electionDate));
+    const label = other.label ?? 'un’altra elezione';
+    if (apart < CANDIDACY_GAP_DAYS && !(early && apart >= 60)) return `Hai già una candidatura per ${label} (voto del ${other.electionDate}): tra due campagne servono almeno ${CANDIDACY_GAP_DAYS} giorni tra un voto e l’altro.`;
+    if (!early && !other.early && String(electionDate).slice(0, 4) === String(other.electionDate).slice(0, 4)) return `Una sola candidatura personale all’anno: nel ${String(electionDate).slice(0, 4)} hai già scelto ${label}. Qui puoi sostenere il partito, non candidarti.`;
+  }
+  return null;
+}
+// What goes on the books when a campaign (or a race led by the player) starts.
+export function personalCandidacies(game, races = []) {
+  const byId = new Map((game?.candidacies ?? []).map(item => [item.id, item]));
+  for (const race of races) if (race.candidacy?.kind === 'player' && ['confirmed', 'running', 'held'].includes(race.status) && !byId.has(race.id)) byId.set(race.id, candidacyRecord({ id: race.id, type: race.level, label: race.label, windowOpensAt: race.windowOpensAt, electionDate: race.electionDate, kind: 'gara' }));
+  return [...byId.values()];
+}
+export const candidacyRecord = ({ id, type, label, windowOpensAt = null, electionDate, early = false, kind = 'elezione' }) => ({ id, type, label, windowOpensAt, electionDate, early: Boolean(early), kind });
+
+export function candidacyBlock({ held = [], electionType, role, electionDate = null, municipalVote = null, candidacies = [], candidacyId = null, early = false } = {}) {
   if (held.includes('presidente-repubblica')) return 'Il Presidente della Repubblica sta sopra le parti: non si candida a nessun’altra carica.';
   if (GOVERNMENT_CANDIDACY_BLOCK.includes(electionType) && held.some(id => OFFICES[id]?.scope === 'governo')) return 'Chi ha un incarico di governo non si candida a un ente territoriale o al Parlamento europeo: prima lascia l’incarico (regola di gioco).';
   const office = officeOfCandidacy(electionType, role);
@@ -100,7 +124,7 @@ export function candidacyBlock({ held = [], electionType, role, electionDate = n
     if (base) return base;
     if (office === 'presidente-provincia' && municipalVote && electionDate && monthsBetween(electionDate, municipalVote) < PROVINCIAL_PRESIDENT_MIN_MONTHS) return `Il Presidente della Provincia deve avere ancora almeno ${PROVINCIAL_PRESIDENT_MIN_MONTHS} mesi di mandato da sindaco (legge 56/2014): il tuo scade prima.`;
   }
-  return null;
+  return rhythmBlock({ candidacies, candidacyId, electionDate, early });
 }
 
 // What winning the candidacy would cost, to say it before the campaign starts: the offices that lapse and the rule.

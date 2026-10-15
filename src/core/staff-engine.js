@@ -157,8 +157,8 @@ function runTask(game, stats, mandate, task, quality, rand, week, date) {
       cadre.grievance = Math.round(clamp(cadre.grievance - 6 * scale));
       cadre.loyalty = Math.round(clamp(cadre.loyalty + 3 * scale));
       points = 1;
-      text = `Colloquio con ${cadre.name}: malcontento ${cadre.grievance}, lealtà ${cadre.loyalty}.`;
-    } else { cadre.grievance = Math.round(clamp(cadre.grievance + 2)); text = `Colloquio con ${cadre.name} andato male: il malcontento sale a ${cadre.grievance}.`; }
+      text = `Colloquio con ${cadre.person?.displayName ?? cadre.name}: malcontento ${cadre.grievance}, lealtà ${cadre.loyalty}.`;
+    } else { cadre.grievance = Math.round(clamp(cadre.grievance + 2)); text = `Colloquio con ${cadre.person?.displayName ?? cadre.name} andato male: il malcontento sale a ${cadre.grievance}.`; }
   } else if (task.id === 'raccolta') {
     if (ok) {
       const amount = Math.round((50 + 170 * quality) * (0.7 + 0.6 * rand()));

@@ -231,8 +231,13 @@ assert.deepEqual(await again(), first, 'Stessa partita, stessi risultati: la sim
   const all = long.store.races();
   for (const year of ['2027', '2028', '2029', '2030', '2031', '2032']) assert.ok((offered.get(year)?.size ?? 0) >= 1, `${year}: almeno una corsa che il giocatore può giocare.`);
   const played = all.filter(race => race.candidacy?.kind === 'player' && race.status !== 'planned').sort((a, b) => a.electionDate.localeCompare(b.electionDate));
-  assert.ok(played.length >= 3, `Il giocatore sceglie sé stesso in più corse (${played.length}).`);
-  for (let index = 1; index < played.length; index++) assert.ok(days(played[index - 1].electionDate, played[index].electionDate) >= rules.playableGapDays, `Tra ${played[index - 1].label} e ${played[index].label} ci sono almeno ${rules.playableGapDays} giorni.`);
+  assert.ok(played.length >= 2, `Il giocatore sceglie sé stesso in più corse (${played.length}).`);
+  // The rhythm of the candidacies: one a year and never two votes closer than the gap (stricter than the 89 days between two races, which stay the floor of the engine).
+  for (let index = 1; index < played.length; index++) {
+    const apart = days(played[index - 1].electionDate, played[index].electionDate);
+    assert.ok(apart >= rules.playableGapDays && apart >= 150, `Tra ${played[index - 1].label} e ${played[index].label} ci sono almeno 150 giorni (${apart}).`);
+    assert.notEqual(played[index - 1].electionDate.slice(0, 4), played[index].electionDate.slice(0, 4), `${played[index - 1].label} e ${played[index].label}: due candidazioni personali nello stesso anno.`);
+  }
   assert.ok(all.filter(race => race.status === 'held').length >= 8, 'Le altre corse si svolgono da sole, anno dopo anno.');
   const archived = long.store.getState().races.archive;
   assert.ok(archived.length > 0, 'Le candidature restano nello storico dopo l’uscita dalla slate attiva.');

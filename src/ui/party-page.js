@@ -119,7 +119,7 @@ function hero(state, record, logoFor, track) {
   });
 }
 
-export function renderPartyPage(state, { tab = null, record = null, logoFor = () => null, selectable = [], territory = {} } = {}) {
+export function renderPartyPage(state, { tab = null, record = null, logoFor = () => null, selectable = [], territory = {}, filters = {} } = {}) {
   if (!state.game) return '';
   const party = state.game.party;
   const tabs = partyTabs(state);
@@ -129,7 +129,7 @@ export function renderPartyPage(state, { tab = null, record = null, logoFor = ()
   if (!party) body = `${renderPartyPosition(state, { parties: selectable })}<p class="sx-note">Il partito reale resta un riferimento: la tua posizione interna, le correnti e l’organizzazione sono simulate.</p>`;
   else if (active === 'panoramica') body = `${alerts(state)}<div class="sx-grid two">${card({ kicker: 'IDENTITÀ', title: partyName(record) || party.label, body: identity(party, record, logoFor) })}${card({ kicker: 'LA TUA POSIZIONE · SIMULAZIONE', title: party.rankTitle, body: positionCard(state, track) })}</div><div class="sx-grid two">${card({ kicker: 'EQUILIBRI INTERNI · SIMULATI', title: 'Le aree del partito', body: currentsCard(party) })}${card({ kicker: 'NEL PAESE', title: 'Il partito nei sondaggi', body: countryCard(state) })}</div>`;
   else if (active === 'ruoli') body = `${track?.odds ? renderOddsCard(track) : ''}${renderPartyPosition(state, { parties: selectable, withSecretary: false })}`;
-  else if (active === 'vita') body = renderPartyLife(state);
+  else if (active === 'vita') body = renderPartyLife(state, filters);
   else if (active === 'organizzazione') body = party.org ? `<section class="sx-card pp-org">${renderOrganizationPanel(state)}</section>` : '<p class="sx-empty">Organizzazione non disponibile.</p>';
   else if (active === 'territorio') body = renderCommitteesPanel(state, territory);
   else if (active === 'segreteria') body = renderSecretaryDesk(state);

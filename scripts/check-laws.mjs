@@ -167,7 +167,7 @@ for (const [index, [level, groupId, name]] of [['deputato', 'cam-xix-01', 'Maggi
   // The page.
   const html = renderParliamentPage('leggi', s, { committees: db.committees, lawFilter: 'tutte' });
   clean(html, `Leggi (${name})`);
-  for (const text of ['Scrivi una proposta.', 'Le proposte di governo, gruppi e commissioni', 'data-view-filter="leggi"', 'bill-steps']) assert.ok(html.includes(text), `Leggi (${name}): manca ${text}`);
+  for (const text of ['Scrivi una proposta', 'Le proposte di governo, gruppi e commissioni', 'data-view-filter="leggi"', 'bill-steps']) assert.ok(html.includes(text), `Leggi (${name}): manca ${text}`);
   if (s.parliament.laws.some(law => law.auto && ['commission', 'amendments', 'final-vote'].includes(law.stage))) assert.ok(html.includes('PREVISIONE IN AULA'), `Leggi (${name}): manca la previsione del voto.`);
   const governo = renderParliamentPage('leggi', s, { committees: db.committees, lawFilter: 'governo' });
   clean(governo, 'Leggi · filtro governo');

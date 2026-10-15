@@ -19,7 +19,7 @@ import { AREA_GROUPS, macroAreaOf } from '../data/simulation/policy-rules.js?v=2
 import { advancementOdds, evaluateAdvancement, progressionFactors } from './progression-engine.js?v=20261014-1';
 import { advanceCommittees, applyCommitteeAction, applyLocalEvent, COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, committeeActionCost, foundCommittee, leaderStance, scaleOf, territorialControl } from './committee-engine.js?v=20261014-1';
 import { europeanElectionDate, legislatureTerm, LEGISLATURE_RULES, sundayOnOrBefore } from './legislature-engine.js?v=20261014-1';
-import { CADRE_ACTIONS, LIFE_MEMORY_KINDS, LIFE_SITUATIONS, SPLINTER_NAMES } from '../data/simulation/party-life-rules.js?v=20261014-1';
+import { CADRE_ACTIONS, CONGRESS_ACTIONS, LIFE_MEMORY_KINDS, LIFE_SITUATIONS, SPLINTER_NAMES } from '../data/simulation/party-life-rules.js?v=20261014-1';
 import { DAILY_EVENTS } from '../data/simulation/daily-events.js?v=20261014-1';
 import { eventDay, pickWeighted, reactionRelevance } from './event-engine.js?v=20261014-1';
 import { heldOffices, localOffices } from './office-engine.js?v=20261014-1';
@@ -32,7 +32,7 @@ import { START_SITUATIONS } from '../data/simulation/start-rules.js?v=20261014-1
 import { AMBITION_BROKEN, AMBITION_COST, AMBITION_KEPT, OBJECTIVE_BY_ID, OBJECTIVE_SITUATIONS } from '../data/simulation/objective-rules.js?v=20261014-1';
 import { ambitionProblem, bump, bumpAmbition, bumpDecision, expiredAmbitions, isClassicObjective, objectiveBase, objectiveStatus } from './objective-engine.js?v=20261014-1';
 import { advanceStart, hasStart, startBase, startFundsFactor, startInit, startSpecial } from './start-engine.js?v=20261014-1';
-import { advanceLife, breakPact, cadreAction, cadreDecision, congressWork, createLife, honourCadrePromises, honourListPacts, lapseAnswer, lifeOverview, normalizeLife, resolveCongress, respondRequest, startRebuild } from './party-life-engine.js?v=20261014-1';
+import { advanceLife, breakPact, cadreAction, cadreDecision, congressActionsOf, congressWork, createLife, honourCadrePromises, honourListPacts, lapseAnswer, lifeOverview, normalizeLife, resolveCongress, respondRequest, startRebuild } from './party-life-engine.js?v=20261014-1';
 import { enterNewParty, foundParty, mergeParties, OP_COSTS, partyOpsAvailability, renameParty, splitOff } from './party-ops-engine.js?v=20261014-1';
 // The decisions of the party's internal life join the situation events; the daily events join the procedural ones.
 const SITUATIONS = { ...SITUATION_EVENTS, ...LIFE_SITUATIONS, ...PRESIDENCY_SITUATIONS, ...START_SITUATIONS, ...OBJECTIVE_SITUATIONS };
@@ -1352,8 +1352,8 @@ function handleLifeSpecial(ctx, env, special, item, lines, specials) {
   else if (special === 'life-negotiate') reply('tratta');
   else if (special === 'life-refuse') reply('rifiuta');
   else if (special === 'life-delay') { lapseAnswer(game, api, { requestId: item.params.requestId, week, date }); }
-  else if (special === 'life-congress-mobilize') lines.push(...congressWork(game, api, { kind: 'mobilita', week }));
-  else if (special === 'life-congress-ally') lines.push(...congressWork(game, api, { kind: 'alleanza', week }));
+  else if (special === 'life-congress-mobilize') lines.push(...congressWork(game, api, { kind: 'mobilita', week, rand }));
+  else if (special === 'life-congress-ally') lines.push(...congressWork(game, api, { kind: 'alleanza', week, rand }));
   else if (special.startsWith('life-rebuild-')) lines.push(...startRebuild(game, api, { focus: special.slice(13), week, date }));
   else if (['life-cadre-keep', 'life-cadre-meet', 'life-cadre-leave', 'life-cadre-tessere', 'life-cadre-verifica', 'life-cadre-rifiuta'].includes(special)) lines.push(...cadreDecision(game, api, { cadreId: item.params.cadreId, choice: special.slice(11), week, date, rand }));
   else if (special === 'life-split-stay' || special === 'life-split-hold' || special === 'life-split-follow') {
@@ -1810,16 +1810,20 @@ export function lifeCadre(input, env, { action, cadreId = null, committeeId = nu
   addLog(ctx.game, env.currentDate, 'partito', spec.label, lines, 'neutral');
   return { ctx, lines };
 }
-export function lifeCongress(input, env, kind) {
-  const cost = kind === 'mobilita' ? { ap: 1 } : kind === 'alleanza' ? { capital: 2 } : null;
-  if (!cost) throw new Error('Azione non disponibile.');
+export function lifeCongress(input, env, kind, target = null) {
+  const spec = CONGRESS_ACTIONS[kind];
+  if (!spec) throw new Error('Azione non disponibile.');
   const ctx = start(input);
   if (!ctx.game.party?.life?.congress) throw new Error('Nessun congresso in preparazione.');
-  const problem = costProblem(ctx.game, cost);
+  const available = congressActionsOf(ctx.game).find(item => item.id === kind);
+  if (!available?.available) throw new Error(available?.reason ?? 'Azione non disponibile.');
+  if (spec.needs === 'regione' && !(ctx.game.party.org?.sections ?? []).some(item => item.region === target)) throw new Error('Scegli una regione dove il partito ha una federazione.');
+  if (spec.needs === 'area' && !ctx.game.party.currents.some(item => item.id === target && item.id !== ctx.game.party.alignedCurrentId)) throw new Error('Scegli un’area con cui trattare.');
+  const problem = costProblem(ctx.game, spec.cost);
   if (problem) throw new Error(problem);
-  pay(ctx.game, cost, 'partito', 'Lavoro per il congresso', env.currentDate);
-  const lines = congressWork(ctx.game, lifeApi(), { kind, week: ctx.game.week.index });
-  addLog(ctx.game, env.currentDate, 'partito', kind === 'mobilita' ? 'Mobiliti i quadri per il congresso' : 'Tessi le alleanze del congresso', lines, 'neutral');
+  pay(ctx.game, spec.cost, 'partito', `Congresso: ${spec.label.toLowerCase()}`, env.currentDate);
+  const lines = congressWork(ctx.game, lifeApi(), { kind, week: ctx.game.week.index, rand: () => draw(ctx.game), target });
+  addLog(ctx.game, env.currentDate, 'partito', spec.label, lines, 'neutral');
   return { ctx, lines };
 }
 export function lifeRebuild(input, env, focus) {

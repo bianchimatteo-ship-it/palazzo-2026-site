@@ -7,6 +7,8 @@
   "main": "worker.js",
   "compatibility_date": "2026-09-01",
   "workers_dev": true,
+  // Once a day the Worker drops expired sessions and old rate-limit rows (scheduled() in worker.js), as the privacy text says.
+  "triggers": { "crons": ["37 3 * * *"] },
   "preview_urls": false,
   "assets": {
     "directory": ".",

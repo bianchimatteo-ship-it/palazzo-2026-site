@@ -133,9 +133,9 @@ export function candidateOptions({ race, items = [], today, player = null, cadre
   const out = { player: null, cadres: [], politicians: [], simulation: null };
   if (player) {
     const spacing = playerSpacing(items, race, homeVotes);
-    out.player = { kind: 'player', id: player.id, label: player.label, source: 'user', rooting: rooted({ ...from, isPlayer: true }), available: !player.block && !spacing, reason: player.block ?? spacing ?? null };
+    out.player = { kind: 'player', id: player.id, label: player.label, source: 'user', rooting: rooted({ ...from, isPlayer: true }), available: !player.block && !spacing, reason: spacing ?? player.block ?? null };
   }
-  out.cadres = cadres.filter(item => item.id && item.status !== 'uscito' && !item.player).map(item => ({ kind: 'cadre', id: item.id, label: item.label, source: 'simulation', region: item.region ?? null, municipality: item.municipality ?? null, municipalityCode: item.municipalityCode ?? null, provinceCode: item.provinceCode ?? null, rooting: rooted(item), available: !busy(item.personId ?? item.id), reason: busy(item.personId ?? item.id) }));
+  out.cadres = cadres.filter(item => item.id && item.status !== 'uscito' && !item.player).map(item => ({ kind: 'cadre', id: item.id, personId: item.personId ?? null, personName: item.personName ?? null, label: item.label, source: 'simulation', region: item.region ?? null, municipality: item.municipality ?? null, municipalityCode: item.municipalityCode ?? null, provinceCode: item.provinceCode ?? null, rooting: rooted(item), available: !busy(item.personId ?? item.id), reason: busy(item.personId ?? item.id) }));
   const known = politicians.filter(item => item.id).map(item => ({ kind: 'politician', id: item.id, label: item.label, source: item.source ?? 'real', region: item.region ?? null, rooting: rooted(item), available: !busy(item.id), reason: busy(item.id) }));
   const ranked = known.sort((a, b) => b.rooting.points - a.rooting.points || String(a.label).localeCompare(String(b.label), 'it'));
   const top = ranked.slice(0, RACE_RULES.maxPoliticians);
@@ -162,7 +162,10 @@ function playerSpacing(items, race, homeVotes) {
 
 // A person of the simulation (a row of the persons of the game): never a real one.
 export function simulatedPerson({ id, label, region = null, municipality = null, partyId = null, date }) {
-  return { id, firstName: 'Figura', lastName: 'simulata', displayName: label, birthDate: null, gender: null, region, municipality, previousProfession: null, partyId, territoryId: null, roleId: null, source: SIM, createdAt: date };
+  // A named person ("Anna Rossi", or "Anna Rossi · Responsabile…") keeps first and last name; otherwise the generic placeholder of the first rounds.
+  const named = String(label ?? '').split(' · ')[0].trim().split(/\s+/);
+  const hasName = named.length >= 2 && /^[A-ZÀ-Ý]/.test(named[0]) && !/^(Figura|Dirigente|Coordinamento|Tu)$/i.test(named[0]);
+  return { id, firstName: hasName ? named[0] : 'Figura', lastName: hasName ? named.slice(1).join(' ') : 'simulata', displayName: label, birthDate: null, gender: null, region, municipality, previousProfession: null, partyId, territoryId: null, roleId: null, source: SIM, createdAt: date };
 }
 const idOfSimulation = (careerId, raceId) => `persona-gara-${hash(`${careerId}|${raceId}|candidato`).toString(36)}`;
 const idOfCadre = (careerId, cadreId) => `persona-${slug(cadreId)}-${hash(`${careerId}|${cadreId}`).toString(36)}`;
@@ -195,8 +198,9 @@ export function chooseCandidate(items, raceId, choice, ctx) {
     const cadre = options.cadres.find(item => item.id === choice.id);
     if (!cadre) throw new Error('Questo dirigente non è disponibile.');
     if (!cadre.available) throw new Error(cadre.reason);
-    const id = idOfCadre(ctx.career.id, cadre.id);
-    person = (ctx.people ?? []).some(item => item.id === id) ? null : simulatedPerson({ id, label: cadre.label, region: cadre.region, partyId: ctx.career.partyId, date: ctx.today });
+    // The leader is a person of the game with his own name and id: the candidate keeps both (an old cadre with no person keeps the id derived from the career).
+    const id = cadre.personId ?? idOfCadre(ctx.career.id, cadre.id);
+    person = (ctx.people ?? []).some(item => item.id === id) ? null : simulatedPerson({ id, label: cadre.personName ?? cadre.label, region: cadre.region, partyId: ctx.career.partyId, date: ctx.today });
     chosen = { ...cadre, personId: id, cadreId: cadre.id, personRef: { collection: 'politicians', id, source: SIM } };
   } else if (choice.kind === 'politician') {
     const known = options.politicians.find(item => item.id === choice.id);

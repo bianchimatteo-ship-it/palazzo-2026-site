@@ -91,7 +91,7 @@ function averageBlock(ctx, { limit = 12 } = {}) {
   body.push({ pos: '', name: '<span class="obs-force"><span><strong>Altri</strong><small>liste minori e forze non rilevate</small></span></span>', avg: `<b>${pct(average.others)}</b>` });
   const seeded = !average.institutes;
   const note = seeded
-    ? `Questa è la media reale con cui parte la carriera${average.label ? ` (${esc(average.label)})` : ''}: gli istituti simulati iniziano a pubblicare dalla prima settimana.`
+    ? average.scenario ? `Questo è il quadro iniziale simulato che hai scelto${average.label ? ` (${esc(average.label)})` : ''}, non la media reale della fonte: gli istituti simulati iniziano a pubblicare dalla prima settimana.` : `Questa è la media reale con cui parte la carriera${average.label ? ` (${esc(average.label)})` : ''}: gli istituti simulati iniziano a pubblicare dalla prima settimana.`
     : `Media pesata sul campione degli ${average.institutes} istituti (${num(average.sample, 0)} interviste in tutto). La forbice è la distanza tra la lettura più alta e la più bassa. Il campione è l’insieme degli intervistati: l’elettorato simulato che vota è un’altra cosa.`;
   return `${table(columns, body, { className: 'obs-average' })}<p class="poll-footnote">${note}</p>`;
 }
@@ -134,7 +134,7 @@ function instituteBars(ctx, { limit = 9 } = {}) {
   }).join('');
   const others = `<div class="obs-bar-row is-others"><span class="obs-force"><span><strong>Altri</strong><small>liste minori e forze non rilevate</small></span></span><span class="obs-bar-track"><i style="width:${average.others / max * 100}%;background-color:#4d5752"></i></span><span class="obs-bar-avg"><b>${pct(average.others)}</b></span>${seeded ? '' : '<span class="obs-bars-readings" aria-hidden="true"></span>'}</div>`;
   const note = seeded
-    ? `Questa è la media reale con cui parte la carriera${average.label ? ` (${esc(average.label)})` : ''}: gli istituti simulati iniziano a pubblicare dalla prima settimana.`
+    ? average.scenario ? `Questo è il quadro iniziale simulato che hai scelto${average.label ? ` (${esc(average.label)})` : ''}, non la media reale della fonte: gli istituti simulati iniziano a pubblicare dalla prima settimana.` : `Questa è la media reale con cui parte la carriera${average.label ? ` (${esc(average.label)})` : ''}: gli istituti simulati iniziano a pubblicare dalla prima settimana.`
     : `Le barre sono la media pesata dei ${average.institutes} istituti simulati (${num(average.sample, 0)} interviste in tutto), nel colore di ogni forza; a destra la lettura di ciascun istituto (A–D). Passando sulla riga si legge la forbice, cioè la distanza tra la lettura più alta e la più bassa. Il campione è l’insieme degli intervistati: l’elettorato simulato che vota è un’altra cosa.`;
   return `<div class="obs-bars-wrap"><div class="obs-bars ${seeded ? 'no-readings' : ''}">${head}${body}${others}</div></div><p class="poll-footnote">${note}</p>`;
 }

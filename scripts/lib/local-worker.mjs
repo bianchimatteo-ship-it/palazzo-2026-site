@@ -28,7 +28,7 @@ export function createStandIns() {
   return { kv, kvData, sqlite, d1 };
 }
 
-// Serves the project folder and the Worker on `port` (127.0.0.1). Returns { origin, env, kvData, sqlite, close }.
+// Serves the project folder (with the headers of `_headers`, as Cloudflare would) and the Worker on `port` (127.0.0.1). Returns { origin, env, kvData, sqlite, close }.
 export async function startLocalWorker({ port = 8791, root = fileURLToPath(new URL('../..', import.meta.url)), setupCode = 'attivazione-di-prova' } = {}) {
   const { kv, kvData, sqlite, d1 } = createStandIns();
   const worker = (await import(`../../worker.js?local=${port}-${Date.now()}`)).default;
@@ -43,13 +43,28 @@ export async function startLocalWorker({ port = 8791, root = fileURLToPath(new U
       return pathname.replace(/^\//, '') === name || pathname.replace(/^\//, '').startsWith(`${name}/`);
     });
   };
+  // The headers Workers static assets add from `_headers` (Cloudflare format: a path pattern, then indented `Name: value` lines; `/*` is every path; the values of rules that match merge in order).
+  const headerRules = [];
+  for (const line of (await readFile(join(root, '_headers'), 'utf8').catch(() => '')).split('\n')) {
+    if (!line.trim() || line.trim().startsWith('#')) continue;
+    if (!/^\s/.test(line)) headerRules.push({ pattern: line.trim(), headers: [] });
+    else { const index = line.indexOf(':'); if (headerRules.length && index > 0) headerRules.at(-1).headers.push([line.slice(0, index).trim(), line.slice(index + 1).trim()]); }
+  }
+  const publishedHeaders = pathname => {
+    const out = {};
+    for (const rule of headerRules) {
+      const matches = rule.pattern === '/*' || rule.pattern === pathname || (rule.pattern.endsWith('/*') && pathname.startsWith(rule.pattern.slice(0, -1)));
+      if (matches) for (const [name, value] of rule.headers) out[name.toLowerCase()] = out[name.toLowerCase()] ? `${out[name.toLowerCase()]}, ${value}` : value;
+    }
+    return out;
+  };
   const readAsset = async pathname => {
     if (ignored(pathname)) return null;
     const path = normalize(join(root, pathname === '/' ? 'index.html' : pathname));
     if (!path.startsWith(root)) return null;
     const info = await stat(path).catch(() => null);
     if (!info?.isFile()) return null;
-    return new Response(await readFile(path), { headers: { 'content-type': MIME[extname(path)] ?? 'application/octet-stream', 'cache-control': 'no-store' } });
+    return new Response(await readFile(path), { headers: { 'content-type': MIME[extname(path)] ?? 'application/octet-stream', 'cache-control': 'no-store', ...publishedHeaders(pathname === '/' ? '/index.html' : pathname) } });
   };
   const env = {
     ADMIN_ARCHIVE: kv, ACCOUNTS: d1, ADMIN_SETUP_CODE: setupCode,

@@ -31,8 +31,10 @@ function cors(request) {
   const allowed = origin && (ALLOWED_ORIGINS.includes(origin) || origin === new URL(request.url).origin) ? origin : ALLOWED_ORIGINS[0];
   return { 'access-control-allow-origin': allowed, 'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS', 'access-control-allow-headers': 'content-type, authorization', 'access-control-max-age': '86400', vary: 'origin' };
 }
+// Every answer of the API: nothing to sniff, nothing to frame or to run (it only ever returns JSON), no referrer, HTTPS only. The static assets get theirs from _headers.
+const API_SECURITY_HEADERS = { 'x-content-type-options': 'nosniff', 'content-security-policy': "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'", 'x-frame-options': 'DENY', 'referrer-policy': 'no-referrer', 'strict-transport-security': 'max-age=31536000', 'cross-origin-resource-policy': 'cross-origin', 'permissions-policy': 'camera=(), microphone=(), geolocation=(), payment=()' };
 function json(request, body, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff', ...cors(request) } });
+  return new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...API_SECURITY_HEADERS, ...cors(request) } });
 }
 const emptyArchive = () => ({ version: 1, updatedAt: null, parties: {}, politicians: {}, logos: {}, addedParties: {}, hidden: {} });
 const POSITIONS = ['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra'];
@@ -87,6 +89,8 @@ const ACCOUNT_SESSION_DAYS = 30;
 const MAX_SAVE_CHARS = 1_900_000;
 const MAX_SAVES = 12;
 const ACCOUNT_FAILURES = 10;
+// New accounts from one address in 15 minutes: counted on their own, so that creating an account is never booked as a failed attempt.
+const ACCOUNT_CREATIONS = 10;
 const USERNAME = /^[a-z0-9][a-z0-9._-]{2,23}$/;
 const SLOT = /^[a-z0-9-]{1,40}$/;
 const SCHEMA = [
@@ -94,7 +98,8 @@ const SCHEMA = [
   'CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL, created_at TEXT NOT NULL, expires_at INTEGER NOT NULL)',
   'CREATE TABLE IF NOT EXISTS saves (user_id TEXT NOT NULL, slot TEXT NOT NULL, name TEXT, meta TEXT, data TEXT NOT NULL, encoding TEXT NOT NULL, revision INTEGER NOT NULL, size INTEGER NOT NULL, updated_at TEXT NOT NULL, PRIMARY KEY (user_id, slot))',
   'CREATE TABLE IF NOT EXISTS attempts (key TEXT PRIMARY KEY, count INTEGER NOT NULL, window_start INTEGER NOT NULL)',
-  'CREATE INDEX IF NOT EXISTS sessions_user ON sessions (user_id)'
+  'CREATE INDEX IF NOT EXISTS sessions_user ON sessions (user_id)',
+  'CREATE INDEX IF NOT EXISTS sessions_expiry ON sessions (expires_at)'
 ];
 let schemaReady = null;
 const ensureSchema = db => (schemaReady ??= db.batch(SCHEMA.map(sql => db.prepare(sql))).catch(error => { schemaReady = null; throw error; }));
@@ -103,22 +108,26 @@ async function proofHash(proof, salt, iterations) {
   const key = await crypto.subtle.importKey('raw', encoder.encode(String(proof)), 'PBKDF2', false, ['deriveBits']);
   return toHex(await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: encoder.encode(salt), iterations }, key, 256));
 }
-async function accountGuard(db, request, scope) {
+// What the service keeps only to work, and for as short a time as it needs: the connecting address of the attempts (a day at most, the window is 15 minutes) and the sessions
+// once they have expired (the 30 days of the privacy text). Whoever asks for a login, a registration or a deletion triggers it for everybody, and the daily schedule (wrangler.jsonc, triggers) does
+// it even when nobody asks.
+async function cleanupExpired(db, now = Date.now()) {
+  const attempts = await db.prepare('DELETE FROM attempts WHERE window_start < ?').bind(now - 86_400_000).run();
+  const sessions = await db.prepare('DELETE FROM sessions WHERE expires_at < ?').bind(now).run();
+  return { attempts: attempts?.meta?.changes ?? 0, sessions: sessions?.meta?.changes ?? 0 };
+}
+// The limit of one kind of request from one address: `fail()` books a wrong attempt, `record()` an event that succeeded and is limited anyway (a new account); `clear()` forgets the address.
+async function accountGuard(db, request, scope, limit = ACCOUNT_FAILURES, clean = true) {
   const key = `${scope}:${request.headers.get('cf-connecting-ip') ?? 'locale'}`;
   const now = Date.now();
-  // The attempts table keeps the connecting address only for the rate limit: whatever is older than a day is dropped.
-  await db.prepare('DELETE FROM attempts WHERE window_start < ?').bind(now - 86_400_000).run();
+  if (clean) await cleanupExpired(db, now);
   const row = await db.prepare('SELECT count, window_start FROM attempts WHERE key = ?').bind(key).first();
   const fresh = !row || now - row.window_start > 15 * 60_000;
-  return {
-    blocked: !fresh && row.count >= ACCOUNT_FAILURES,
-    fail: () => db.prepare('INSERT INTO attempts (key, count, window_start) VALUES (?, 1, ?) ON CONFLICT(key) DO UPDATE SET count = CASE WHEN ? - window_start > 900000 THEN 1 ELSE count + 1 END, window_start = CASE WHEN ? - window_start > 900000 THEN ? ELSE window_start END').bind(key, now, now, now, now).run(),
-    clear: () => db.prepare('DELETE FROM attempts WHERE key = ?').bind(key).run()
-  };
+  const count = () => db.prepare('INSERT INTO attempts (key, count, window_start) VALUES (?, 1, ?) ON CONFLICT(key) DO UPDATE SET count = CASE WHEN ? - window_start > 900000 THEN 1 ELSE count + 1 END, window_start = CASE WHEN ? - window_start > 900000 THEN ? ELSE window_start END').bind(key, now, now, now, now).run();
+  return { blocked: !fresh && row.count >= limit, fail: count, record: count, clear: () => db.prepare('DELETE FROM attempts WHERE key = ?').bind(key).run() };
 }
 async function openSession(db, userId) {
   const token = randomToken(32);
-  await db.prepare('DELETE FROM sessions WHERE user_id = ? AND expires_at < ?').bind(userId, Date.now()).run();
   await db.prepare('INSERT INTO sessions (token_hash, user_id, created_at, expires_at) VALUES (?, ?, ?, ?)').bind(await sha256(token), userId, new Date().toISOString(), Date.now() + ACCOUNT_SESSION_DAYS * 86_400_000).run();
   return token;
 }
@@ -141,8 +150,10 @@ async function handleAccounts(request, env, url) {
   // The game asks whether the service answers before offering the account (no data, no session needed).
   if (path === '/api/account/status' && request.method === 'GET') return json(request, { ok: true, service: 'accounts', features: ['account-delete'] });
   if ((path === '/api/account/register' || path === '/api/account/login') && request.method === 'POST') {
-    const guard = await accountGuard(db, request, path.endsWith('register') ? 'registrazione' : 'accesso');
-    if (guard.blocked) return json(request, { error: 'Troppi tentativi: riprova tra 15 minuti.' }, 429);
+    const registering = path.endsWith('register');
+    const guard = await accountGuard(db, request, registering ? 'registrazione' : 'accesso');
+    const creations = registering ? await accountGuard(db, request, 'creazione', ACCOUNT_CREATIONS, false) : null;
+    if (guard.blocked || creations?.blocked) return json(request, { error: 'Troppi tentativi: riprova tra 15 minuti.' }, 429);
     const body = await request.json().catch(() => ({}));
     const username = String(body.username ?? '').trim().toLowerCase();
     const proof = String(body.proof ?? '');
@@ -153,7 +164,7 @@ async function handleAccounts(request, env, url) {
       const salt = randomToken(16);
       const id = crypto.randomUUID();
       await db.prepare('INSERT INTO users (id, username, salt, hash, iterations, created_at) VALUES (?, ?, ?, ?, ?, ?)').bind(id, username, salt, await proofHash(proof, salt, 5000), 5000, new Date().toISOString()).run();
-      await guard.fail();
+      await creations.record();
       return json(request, { username, token: await openSession(db, id), expiresInDays: ACCOUNT_SESSION_DAYS }, 201);
     }
     const user = await db.prepare('SELECT id, username, salt, hash, iterations FROM users WHERE username = ?').bind(username).first();
@@ -240,7 +251,7 @@ async function handleAccounts(request, env, url) {
 
 async function handleApi(request, env) {
   const url = new URL(request.url);
-  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(request) });
+  if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { ...API_SECURITY_HEADERS, ...cors(request) } });
   if (url.pathname.startsWith('/api/account') || url.pathname.startsWith('/api/saves')) return handleAccounts(request, env, url);
   if (!env.ADMIN_ARCHIVE) return json(request, { error: 'Archivio condiviso non configurato.' }, 503);
   if (url.pathname === '/api/admin' && request.method === 'GET') {
@@ -289,5 +300,10 @@ export default {
       catch (error) { return json(request, { error: url.pathname.startsWith('/api/admin') ? 'Errore interno dell’archivio condiviso.' : 'Errore interno del servizio account.' }, 500); }
     }
     return env.ASSETS.fetch(request);
+  },
+  // Daily (wrangler.jsonc, triggers.crons): expired sessions and old attempts go even when nobody logs in.
+  async scheduled(event, env, ctx) {
+    if (!env.ACCOUNTS) return;
+    ctx.waitUntil((async () => { await ensureSchema(env.ACCOUNTS); await cleanupExpired(env.ACCOUNTS); })());
   }
 };

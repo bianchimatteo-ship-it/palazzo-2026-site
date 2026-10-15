@@ -96,6 +96,12 @@ if (new Set(membershipKeys).size !== membershipKeys.length) fail('Iscrizioni a p
 // The opening poll: a real, sourced snapshot linked to entities of the dataset.
 const polls = JSON.parse(await readFile(new URL('../src/data/real/polls.json', import.meta.url), 'utf8'));
 if (lawsManifest.collections.realPolls !== polls.length) fail('Conteggio dei sondaggi reali nel manifest non coerente');
+{
+  // The stamp of the data files in the loader follows their content: new data under an old stamp would be served from a stale cache.
+  const { computeDataVersion, currentDataVersion } = await import('./lib/data-version.mjs');
+  const expected = await computeDataVersion(), found = await currentDataVersion();
+  if (found !== expected) fail(`REAL_DATA_ASSET_VERSION è ${found}, i dati chiedono ${expected}: esegui «npm run version:build».`);
+}
 for (const poll of polls) {
   if (poll.source !== 'real' || poll.verified !== true || !/^https:\/\//.test(poll.sourceUrl) || !poll.publishedAt) fail(`Sondaggio ${poll.id}: provenienza incompleta`);
   const total = poll.results.reduce((sum, row) => sum + row.share, 0);

@@ -2,7 +2,7 @@
 // Plan: the preview runs the real operations on a copy and puts the game back (nothing changes), its totals are exactly what is charged, a step that cannot be done is named with the reason and
 // the plan will not run, a duplicate is refused, carrying it out is one save and charges each operation once, a failure leaves nothing half done, and the same operations one by one give the
 // same game. Treasury: the cost is paid at the start, the outcome is drawn when it falls due within the declared ranges and with the declared odds, the money goes through book() (the ledger
-// agrees with the cash), a membership drive adds members and their fees, a repeat while one is in progress is refused, an independent cannot run the party's; invariants hold.
+// agrees with the cash), a membership drive adds members and their fees, a repeat while one is in progress is refused, an independent cannot run the party's; invariants hold. The store's revision (the key of the preview's cache in the page) does not move for a preview and does move for every real change.
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
@@ -130,6 +130,29 @@ const plan = [{ kind: 'activity', id: 'ascolto' }, { kind: 'committee', action: 
   assert.ok(!store.planPreview([{ kind: 'activity', id: 'corso-politiche' }]).ok, 'Una volta a settimana vale anche nel piano.');
 }
 
+// the revision that keys the cache of the preview in the page: a preview never moves it, every real change does, and the preview computed before a change is not the one after it
+{
+  store = await fresh();
+  const revision0 = store.revision();
+  const first = store.planPreview(plan);
+  assert.equal(store.revision(), revision0, 'L’anteprima lavora su una copia: la revisione non si muove.');
+  assert.equal(JSON.stringify(store.planPreview(plan)), JSON.stringify(first), 'Con lo stesso gioco l’anteprima è la stessa.');
+  assert.equal(store.revision(), revision0);
+  store.startTreasuryOperation('cena-raccolta');
+  assert.ok(store.revision() > revision0, 'Un’operazione vera sposta la revisione: la chiave della cache cambia.');
+  const keyBefore = `${JSON.stringify(plan)}|${revision0}`, keyAfter = `${JSON.stringify(plan)}|${store.revision()}`;
+  assert.notEqual(keyBefore, keyAfter);
+  const second = store.planPreview(plan);
+  assert.notEqual(JSON.stringify(second), JSON.stringify(first), 'Dopo l’operazione l’anteprima è un’altra (fondi e giorni di partenza diversi, e la cena è già in corso).');
+  assert.ok(second.start.funds < first.start.funds, 'La partenza dell’anteprima è la cassa di adesso, non quella di prima.');
+  const revision1 = store.revision();
+  store.performWeeklyActivity('ascolto');
+  assert.ok(store.revision() > revision1, 'Anche un’attività della settimana sposta la revisione.');
+  const revision2 = store.revision();
+  store.advance(1);
+  assert.ok(store.revision() > revision2, 'Anche il passare dei giorni.');
+}
+
 // treasury operations through a week: the cost now, the outcome later
 {
   store = await fresh();
@@ -152,4 +175,4 @@ const plan = [{ kind: 'activity', id: 'ascolto' }, { kind: 'committee', action: 
   const independent = await reload(saved => { rich(saved); saved.game.party = null; });
   assert.throws(() => independent.startTreasuryOperation('evento-partito'), /Serve un partito|tesoreria/, 'Un indipendente non organizza eventi del partito.');
 }
-console.log('Piano e tesoreria verificati: l’anteprima esegue le operazioni vere su una copia e rimette tutto com’era; i totali mostrati sono quelli addebitati (giorni, fondi, capitale), un solo salvataggio, ogni operazione una volta, lo stesso risultato che si avrebbe una per una; un piano impossibile, vuoto, con doppioni o con operazioni non previste (voti, candidature, accordi) non parte e non lascia nulla a metà; quattro operazioni di tesoreria con costo subito, esito alla scadenza con le probabilità e gli intervalli dichiarati su 16.000 estrazioni, cassa e registro in accordo, iscritti e quote, una alla volta, solo con un partito dove serve.');
+console.log('Piano e tesoreria verificati: l’anteprima esegue le operazioni vere su una copia e rimette tutto com’era; i totali mostrati sono quelli addebitati (giorni, fondi, capitale), un solo salvataggio, ogni operazione una volta, lo stesso risultato che si avrebbe una per una; un piano impossibile, vuoto, con doppioni o con operazioni non previste (voti, candidature, accordi) non parte e non lascia nulla a metà; quattro operazioni di tesoreria con costo subito, esito alla scadenza con le probabilità e gli intervalli dichiarati su 16.000 estrazioni, cassa e registro in accordo, iscritti e quote, una alla volta, solo con un partito dove serve; la revisione dello store (la chiave della cache dell’anteprima nella pagina) non si muove per un’anteprima e si muove per ogni cambiamento vero.');

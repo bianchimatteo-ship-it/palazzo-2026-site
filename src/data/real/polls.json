@@ -134,5 +134,102 @@
         "validTo": null
       }
     ]
+  },
+  {
+    "id": "poll-supermedia-youtrend-agi-2026-10-01",
+    "kind": "supermedia",
+    "label": "Supermedia YouTrend/Agi",
+    "referenceDate": "2026-10-01",
+    "publishedAt": "2026-10-07",
+    "fieldworkFrom": "2026-09-17",
+    "fieldworkTo": "2026-09-30",
+    "method": "Media ponderata dei sondaggi nazionali sulle intenzioni di voto (per numerosità del campione, data di realizzazione e metodo di raccolta)",
+    "includedPolls": null,
+    "results": [
+      {
+        "label": "Fratelli d’Italia",
+        "entityId": "party-registro-p1-2014-04-ir",
+        "share": 26.8,
+        "delta": 0.2
+      },
+      {
+        "label": "Partito Democratico",
+        "entityId": "party-registro-p1-2015-29-ir",
+        "share": 20.4,
+        "delta": -0.7
+      },
+      {
+        "label": "Movimento 5 Stelle",
+        "entityId": "party-registro-p1-2022-63-ir",
+        "share": 12.8,
+        "delta": 0.3
+      },
+      {
+        "label": "Futuro Nazionale",
+        "entityId": "party-futuro-nazionale",
+        "share": 7.7,
+        "delta": 0
+      },
+      {
+        "label": "Forza Italia",
+        "entityId": "party-registro-p1-2015-20-ir",
+        "share": 7.4,
+        "delta": 0
+      },
+      {
+        "label": "Alleanza Verdi e Sinistra",
+        "entityId": "coalition-alleanza-verdi-sinistra",
+        "share": 6.3,
+        "delta": -0.1
+      },
+      {
+        "label": "Lega",
+        "entityId": "party-registro-p1-2017-41-ir",
+        "share": 5.7,
+        "delta": 0.1
+      },
+      {
+        "label": "Azione",
+        "entityId": "party-registro-p1-2019-51-ir",
+        "share": 3.2,
+        "delta": -0.1
+      },
+      {
+        "label": "Italia Viva",
+        "entityId": "party-registro-p1-2019-52-ir",
+        "share": 2.2,
+        "delta": -0.1
+      },
+      {
+        "label": "+Europa",
+        "entityId": "party-registro-p1-2018-47-ir",
+        "share": 1.7,
+        "delta": 0.2
+      },
+      {
+        "label": "Partito Liberaldemocratico",
+        "entityId": "party-registro-p1-2024-74-ir",
+        "share": 1.3,
+        "delta": -0.1
+      },
+      {
+        "label": "Noi Moderati",
+        "entityId": "party-registro-p1-2020-56-ir",
+        "share": 1.1,
+        "delta": 0
+      }
+    ],
+    "others": 3.4,
+    "othersNote": "Altri: 100 meno la somma delle dodici forze indicate dalla fonte (96,6): non è un dato che la fonte pubblichi esplicitamente",
+    "deltaNote": "Variazioni come pubblicate dalla fonte rispetto alla sua Supermedia precedente; non sono la differenza con la rilevazione del 24/09/2026 conservata nello storico",
+    "coalitions": null,
+    "source": "real",
+    "verified": true,
+    "sourceUrl": "https://www.youtrend.it/2026/10/07/supermedia-youtrend-agi-il-pd-scende-al-204/",
+    "sourceName": "YouTrend — Supermedia YouTrend/Agi del 1° ottobre 2026 (articolo del 7 ottobre)",
+    "verifiedAt": "2026-10-14",
+    "verificationNote": "Valori trascritti dalla tabella dell’articolo indicata dal committente del progetto; la pagina non era raggiungibile dall’ambiente di lavoro e non è stata riletta: da riconfermare alla prima occasione.",
+    "validFrom": "2026-10-01",
+    "validTo": null
   }
 ]

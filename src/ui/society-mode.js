@@ -2,7 +2,7 @@
 import { INDICATORS, MEDIA_OUTLETS, SEGMENTS } from '../data/simulation/society-rules.js?v=20261014-1';
 import { nationalIndicators, regionPriorities, societyMood } from '../core/society-engine.js?v=20261014-1';
 import { illustration } from './illustrations.js?v=20261014-1';
-import { artTile, glyph } from './visuals.js?v=20261014-1';
+import { artTile, contrastRatio, glyph } from './visuals.js?v=20261014-1';
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
 import { breakdown, esc, levelState, lineChart, meter, num, rampColor, SERIES, signed, sparkline, stateBadge, trendState, GREEN_RAMP } from './charts.js?v=20261014-1';
 import { areasPanel, publicFinancePanel, securityPanel } from './policy-mode.js?v=20261014-1';
@@ -34,9 +34,10 @@ export function territoryMap(society, { measure = 'satisfaction', selected = nul
     const [col, row, code] = TILES[region.name] ?? [0, 0, region.name.slice(0, 3).toUpperCase()];
     const value = regionValue(region, measure);
     const fill = rampColor(value, low, high);
-    const dark = GREEN_RAMP.indexOf(fill) < 5;
+    // the ink with the better contrast on this very fill: over the whole ramp the worse tone still has 4.6:1 (a fixed cut-off in the ramp left two tones under 4:1)
+    const ink = contrastRatio(fill, '#ffffff') >= contrastRatio(fill, '#08140c') ? '#ffffff' : '#08140c';
     const tip = `${region.name}: ${MAP_MEASURES.find(item => item.id === measure)?.label ?? ''} ${num(value, 0)}/100${issues.has(region.name) ? ' · problema aperto' : ''}`;
-    return `<button class="map-tile ${region.name === selected ? 'is-selected' : ''} ${region.name === home ? 'is-home' : ''}" style="grid-column:${col + 1};grid-row:${row + 1};background:${fill};color:${dark ? '#fffdf7' : '#17301f'}" ${compact ? 'tabindex="-1"' : `data-territory-region="${esc(region.name)}"`} data-tip="${esc(tip)}" aria-label="${esc(tip)}"><b>${code}</b>${compact ? '' : `<small>${num(value, 0)}</small>`}${issues.has(region.name) ? `<i class="map-alert" aria-hidden="true">${glyph('alert', 11, 2.4)}</i>` : ''}</button>`;
+    return `<button class="map-tile ${region.name === selected ? 'is-selected' : ''} ${region.name === home ? 'is-home' : ''}" style="grid-column:${col + 1};grid-row:${row + 1};background:${fill};color:${ink}" ${compact ? 'tabindex="-1"' : `data-territory-region="${esc(region.name)}"`} data-tip="${esc(tip)}" aria-label="${esc(tip)}"><b>${code}</b>${compact ? '' : `<small>${num(value, 0)}</small>`}${issues.has(region.name) ? `<i class="map-alert" aria-hidden="true">${glyph('alert', 11, 2.4)}</i>` : ''}</button>`;
   }).join('');
   const scale = compact ? '' : `<div class="region-scale"><span>${low}</span><i style="background:linear-gradient(90deg,${GREEN_RAMP.join(',')})"></i><span>${high}</span></div>`;
   return `<div class="tile-map ${compact ? 'is-compact' : ''}">${tiles}</div>${scale}`;

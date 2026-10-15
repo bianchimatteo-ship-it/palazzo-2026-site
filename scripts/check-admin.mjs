@@ -117,5 +117,41 @@ local.clear(); session.clear();
 await sync.refreshSharedArchive();
 realData.refreshAdminOverrides();
 assert.ok(realData.realDatabase.parties.find(item => item.id === addedId)?.adminDeleted, 'Un nuovo giocatore riceve lo stesso stato dell’archivio.');
+// ---------- 6. what the owner deletes leaves the shared copy and the server too ----------
+{
+  await sync.openSharedSession('pin-del-proprietario');
+  const target = realData.realDatabase.parties.find(item => !item.adminCreated && !item.adminHidden && item.id !== addedId);
+  const other = realData.realDatabase.parties.find(item => !item.adminCreated && !item.adminHidden && item.id !== target.id && item.id !== addedId);
+  store.saveRecordOverride('parties', target.id, { officialName: `${target.officialName} (prova)`, color: '#336699' }, realData.pristineRecord('parties', target.id) ?? {});
+  store.saveRecordOverride('parties', other.id, { abbreviation: 'PRV' }, realData.pristineRecord('parties', other.id) ?? {});
+  await sync.publishSharedArchive({ [target.id]: { kind: 'data', dataUrl: 'data:image/png;base64,iVBORw0KGgo=', alt: 'Logo di prova' } });
+  let server = (await call('/api/admin')).body;
+  assert.ok(server.parties[target.id] && server.parties[other.id] && server.logos[target.id], 'Le correzioni e il logo sono sul server.');
+  // a reset: the record is gone from the archive in use, from the shared copy and, after the publication, from the server; the other correction and the logo stay
+  store.resetRecordOverride('parties', target.id);
+  assert.ok(!store.loadAdminArchive().parties[target.id], 'Dopo il ripristino la correzione non torna dalla copia condivisa.');
+  assert.ok(!store.loadSharedArchive().parties[target.id] && store.loadSharedArchive().parties[other.id], 'Dalla copia condivisa va via solo quella.');
+  await sync.publishSharedArchive();
+  server = (await call('/api/admin')).body;
+  assert.ok(!server.parties[target.id] && server.parties[other.id], 'Sul server il ripristino arriva davvero (la pagina non lo dice soltanto).');
+  assert.ok(server.logos[target.id], 'Il logo resta: ha la sua area.');
+  // an edit brought back to the original values is a deletion as well
+  store.saveRecordOverride('parties', other.id, { abbreviation: realData.pristineRecord('parties', other.id)?.abbreviation ?? null }, realData.pristineRecord('parties', other.id) ?? {});
+  assert.ok(!store.loadAdminArchive().parties[other.id], 'Un campo riportato al valore originale non lascia nulla.');
+  await sync.publishSharedArchive();
+  assert.ok(!(await call('/api/admin')).body.parties[other.id], 'Nemmeno sul server.');
+  // «cancella tutto»: corrections, added and hidden records go from here and from the server; the logos stay
+  store.saveRecordOverride('parties', target.id, { color: '#aa2255' }, realData.pristineRecord('parties', target.id) ?? {});
+  await sync.publishSharedArchive();
+  assert.ok(Object.keys((await call('/api/admin')).body.addedParties).length >= 1 && Object.keys((await call('/api/admin')).body.hidden).length >= 1, 'Prima c’è di che cancellare.');
+  store.clearAdminArchive();
+  await sync.publishSharedArchive();
+  server = (await call('/api/admin')).body;
+  assert.deepEqual([Object.keys(server.parties), Object.keys(server.politicians), Object.keys(server.addedParties), Object.keys(server.hidden)], [[], [], [], []], '«Cancella tutto» svuota davvero anche il server.');
+  assert.ok(server.logos[target.id], 'E non porta via i loghi, che il proprietario non ha chiesto di perdere.');
+  realData.refreshAdminOverrides();
+  assert.equal(realData.realDatabase.parties.find(item => item.id === target.id).adminEdited, undefined, 'Nel gioco tornano i dati del dataset.');
+  assert.ok(!realData.realDatabase.parties.some(item => item.id === addedId), 'E il partito aggiunto non c’è più.');
+}
 assert.equal(await hashOf(['parties.json', 'political-movements.json', 'politicians.json']), before, 'I file dei dati reali non vengono mai modificati.');
 console.log('Area amministrativa verificata: accesso solo con sessione confermata dal server (nessun PIN creabile dal giocatore, token falsi rifiutati), porta senza dati per gli altri, ricerca su tutti i 81 partiti/movimenti e i 604 parlamentari con “Mostra altri”, aggiunta con controllo dei doppioni, nascondi/elimina/ripristina, filtri e riepilogo, pubblicazione persistente per tutti, dati reali intatti.');

@@ -1,7 +1,7 @@
 import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261014-1';
 import { formatDate } from '../core/time.js?v=20261014-1';
 import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261014-1';
-import { distinctSeries } from './charts.js?v=20261014-1';
+import { distinctSeries, sparkline } from './charts.js?v=20261014-1';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const pct = (value, digits = 1) => value === null || value === undefined ? '—' : `${Number(value).toLocaleString('it-IT', { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
@@ -16,24 +16,25 @@ const SCOPE_LABELS = { nazionale: 'Nazionale', regionale: 'Regionale', locale: '
 
 // The first poll of a career is real (with its source); every following one is simulated.
 const isReal = poll => poll?.source === 'real' && poll.real;
+// A career that chose a scenario opens with an invented picture over the same forces (never passed off as the source's): no sample, no margin, its own wording.
+const isScenario = poll => Boolean(poll?.scenario) && poll.source !== 'real';
+const scenarioName = poll => `scenario ${String(poll.scenario?.label ?? '').toLowerCase()}`;
+// Three dates, never mixed: the day the Supermedia refers to, the window of the polls it averages and the day the source published it.
+export const realPollDates = real => {
+  const reference = real.referenceDate ?? real.publishedAt;
+  const parts = [real.fieldworkFrom ? `sondaggi dal ${shortDate(real.fieldworkFrom)} al ${shortDate(real.fieldworkTo)}` : '', real.referenceDate && real.publishedAt && real.publishedAt !== real.referenceDate ? `pubblicata il ${formatDate(real.publishedAt)}` : ''].filter(Boolean);
+  return `del ${formatDate(reference)}${parts.length ? ` (${parts.join(' · ')})` : ''}`;
+};
 function pollSourceLine(poll) {
-  if (isReal(poll)) return `<span class="poll-source-real">DATO REALE</span> ${esc(poll.real.label)} del ${esc(formatDate(poll.real.publishedAt))}${poll.real.fieldworkFrom ? ` (sondaggi dal ${esc(shortDate(poll.real.fieldworkFrom))} al ${esc(shortDate(poll.real.fieldworkTo))})` : ''} · <a href="${esc(poll.real.sourceUrl)}" target="_blank" rel="noopener noreferrer">${esc(poll.real.sourceName)} ↗</a> · dalla prima settimana i sondaggi sono simulati`;
+  if (isScenario(poll)) return `<span class="poll-source-scenario">${esc(scenarioName(poll).toUpperCase())}</span> quadro iniziale simulato sulle forze della ${esc(poll.scenario.basedOn?.label ?? 'Supermedia reale')}${poll.scenario.mode === 'casuale' ? ` (seme «${esc(poll.scenario.seed)}»)` : ''} · non sono le percentuali della fonte · dalla prima settimana i sondaggi sono simulati`;
+  if (isReal(poll)) return `<span class="poll-source-real">DATO REALE</span> ${esc(poll.real.label)} ${esc(realPollDates(poll.real))} · <a href="${esc(poll.real.sourceUrl)}" target="_blank" rel="noopener noreferrer">${esc(poll.real.sourceName)} ↗</a> · dalla prima settimana i sondaggi sono simulati`;
   return `${esc(poll.institute)} · ${Number(poll.sample).toLocaleString('it-IT')} interviste · ${esc(formatDate(poll.date))} · istituto e sondaggio simulati`;
 }
-export const marginText = poll => poll?.margin ? `±${String(poll.margin).replace('.', ',')}` : 'dato reale';
+export const marginText = poll => poll?.margin ? `±${String(poll.margin).replace('.', ',')}` : isScenario(poll) ? 'scenario simulato' : 'dato reale';
 export function partyIndex(world) { return Object.fromEntries(world.parties.map(party => [party.id, party])); }
 export function deltaChip(value, emphasis = false) {
   const tone = !emphasis || !value ? 'flat' : value > 0 ? 'up' : 'down';
   return `<span class="delta delta-${tone}">${signed(value)}</span>`;
-}
-
-function sparkline(values, color = 'var(--party-accent)') {
-  const points = values.filter(value => Number.isFinite(value));
-  if (points.length < 2) return '';
-  const min = Math.min(...points), max = Math.max(...points), span = max - min || 1;
-  const coords = points.map((value, index) => [4 + index * 112 / (points.length - 1), 28 - (value - min) / span * 22]);
-  const [lx, ly] = coords.at(-1);
-  return `<svg class="sparkline" viewBox="0 0 120 32" aria-hidden="true"><polyline points="${coords.map(point => point.join(',')).join(' ')}" /><circle cx="${lx}" cy="${ly}" r="3.5" style="fill:${esc(color)}" /></svg>`;
 }
 
 function statTile(label, value, delta, series, note = '', emphasis = true) {
@@ -83,6 +84,7 @@ function moveText(move) {
 }
 export function nationalBars(world, poll, index, logo) {
   const real = isReal(poll);
+  const fixed = real || isScenario(poll);   // (a snapshot with no sample: the real Supermedia or the opening scenario)
   const rows = poll.results.filter(row => !row.outsideSource && index[row.partyId]).sort((a, b) => b.share - a.share);
   const estimates = poll.results.filter(row => row.outsideSource && index[row.partyId]);
   const others = Number.isFinite(poll.others) ? poll.others : Math.round((100 - rows.reduce((sum, row) => sum + row.share, 0)) * 10) / 10;
@@ -96,18 +98,20 @@ export function nationalBars(world, poll, index, logo) {
     const width = row.share / max * 100;
     const estimate = row.outsideSource || row.internal;
     const status = row.outsideSource ? 'stima simulata: il partito non è nella fonte reale' : row.internal ? 'non ancora rilevato dagli istituti: stima interna simulata' : null;
-    const tip = poll.sample ? `${party.label}: ${pct(row.share)} (${signed(row.delta)} punti) · intervallo ${pct(Math.max(0, row.share - margin))}–${pct(row.share + margin)}${status ? ` · ${status}` : ''}` : `${party.label}: ${pct(row.share)} · ${status ?? `dato reale, ${poll.real?.label ?? 'fonte reale'}`}`;
+    const tip = poll.sample ? `${party.label}: ${pct(row.share)} (${signed(row.delta)} punti) · intervallo ${pct(Math.max(0, row.share - margin))}–${pct(row.share + margin)}${status ? ` · ${status}` : ''}` : `${party.label}: ${pct(row.share)} · ${status ?? (isScenario(poll) ? `${scenarioName(poll)}, percentuale simulata` : `dato reale, ${poll.real?.label ?? 'fonte reale'}`)}`;
     const note = row.outsideSource ? 'Stima simulata · non nella fonte reale' : row.internal ? 'Non ancora rilevato · stima interna' : party.isPlayer ? 'Il tuo partito' : `${party.position ? `${party.position} · ` : ''}${STRATEGIES[party.strategy]?.label ?? 'autonoma'}`;
     const change = entered.has(row.partyId) ? '<span class="delta delta-new">nuovo</span>' : deltaChip(row.delta, party.isPlayer);
     return `<div class="poll-bar-row ${party.isPlayer ? 'is-player' : ''} ${estimate ? 'is-estimate' : ''}" data-tip="${esc(tip)}" tabindex="0"><span class="poll-bar-name">${emblem({ label: party.label, abbreviation: party.abbreviation, color: party.color, logo: logo?.(party.id) }, 'sm')}<span><strong>${esc(party.label)}</strong><small>${esc(note)}</small></span></span><span class="poll-bar-track"><i class="poll-bar-fill" style="width:${width}%;background-color:${esc(party.color)}"></i>${margin ? `<i class="poll-bar-whisker" style="left:${Math.max(0, (row.share - margin) / max * 100)}%;width:${Math.min(100, 2 * margin / max * 100)}%"></i>` : ''}</span><span class="poll-bar-value">${pct(row.share)}</span>${change}</div>`;
   };
-  const othersRow = `<div class="poll-bar-row is-others" data-tip="${esc(real ? `Altri: ${pct(others)} · come nella fonte reale (liste minori non indicate)` : `Altri: ${pct(others)} · liste minori e forze non rilevate dagli istituti`)}" tabindex="0"><span class="poll-bar-name"><span class="emblem emblem-sm emblem-ghost" aria-hidden="true">…</span><span><strong>Altri</strong><small>${real ? 'Liste minori · dato della fonte' : 'Liste minori e forze non rilevate'}</small></span></span><span class="poll-bar-track"><i class="poll-bar-fill" style="width:${others / max * 100}%;background-color:#4d5752"></i></span><span class="poll-bar-value">${pct(others)}</span><span></span></div>`;
-  const outside = estimates.length ? `<div class="poll-bars-divider" role="separator"><span>Fuori dalla fonte reale</span></div>${estimates.map(bar).join('')}` : '';
+  const othersRow = `<div class="poll-bar-row is-others" data-tip="${esc(real ? `Altri: ${pct(others)} · come nella fonte reale (liste minori non indicate)` : fixed ? `Altri: ${pct(others)} · ${scenarioName(poll)}: quel che resta alle liste minori` : `Altri: ${pct(others)} · liste minori e forze non rilevate dagli istituti`)}" tabindex="0"><span class="poll-bar-name"><span class="emblem emblem-sm emblem-ghost" aria-hidden="true">…</span><span><strong>Altri</strong><small>${real ? 'Liste minori · dato della fonte' : fixed ? 'Liste minori · scenario simulato' : 'Liste minori e forze non rilevate'}</small></span></span><span class="poll-bar-track"><i class="poll-bar-fill" style="width:${others / max * 100}%;background-color:#4d5752"></i></span><span class="poll-bar-value">${pct(others)}</span><span></span></div>`;
+  const outside = estimates.length ? `<div class="poll-bars-divider" role="separator"><span>${isScenario(poll) ? 'Fuori dallo scenario' : 'Fuori dalla fonte reale'}</span></div>${estimates.map(bar).join('')}` : '';
   const watch = (poll.emerging ?? []).length ? `<div class="poll-watch"><strong>In osservazione</strong>${poll.emerging.map(item => `<span class="poll-watch-item" data-tip="${esc(`${item.label}: forza emergente, circa ${pct(item.share)} (stima simulata, ancora dentro “Altri”)`)}" tabindex="0">${esc(item.abbreviation || item.label)} · ~${pct(item.share)}</span>`).join('')}</div>` : '';
   const moves = (poll.moves ?? []).length ? `<div class="poll-moves">${poll.moves.map(move => `<span class="poll-move poll-move-${esc(move.to)}">${esc(moveText(move))}: <strong>${esc(move.label)}</strong></span>`).join('')}</div>` : '';
-  const footnote = poll.sample
+  const footnote = isScenario(poll)
+    ? `Scenario ${esc(poll.scenario.label.toLowerCase())}: quadro iniziale inventato sulle forze della ${esc(poll.scenario.basedOn?.label ?? 'Supermedia reale')}${poll.scenario.mode === 'casuale' ? `, estratto dal seme «${esc(poll.scenario.seed)}» (lo stesso seme dà sempre lo stesso quadro)` : ', con le percentuali scritte dal giocatore'}. Non sono i dati della fonte, che restano quelli pubblicati. “Altri” è quel che resta alle liste minori. Dalla prossima settimana i sondaggi sono simulati e reagiscono alla tua carriera.`
+  : poll.sample
     ? 'Barre = stima del sondaggio; la linea sottile indica l’intervallo del margine d’errore al 95%. Percentuali sui voti validi. Barre tratteggiate = stima interna di una forza non ancora rilevata.'
-    : `Dato reale: ${esc(poll.real?.label ?? 'fonte reale')} del ${esc(formatDate(poll.real?.publishedAt ?? poll.date))}, media di più istituti (nessun margine d’errore unico). Sono mostrate solo le forze presenti nella fonte, con “Altri” come nella fonte${estimates.length ? '; la barra tratteggiata è una stima simulata del tuo partito, fuori dal totale reale' : ''}. Dalla prossima settimana i sondaggi sono simulati e reagiscono alla tua carriera.`;
+    : `Dato reale: ${esc(poll.real?.label ?? 'fonte reale')} ${esc(poll.real ? realPollDates(poll.real) : `del ${formatDate(poll.date)}`)}, media di più istituti (nessun margine d’errore unico).${poll.real?.deltaNote ? ` Le variazioni sono quelle pubblicate dalla fonte, rispetto alla sua Supermedia precedente.` : ''} Sono mostrate solo le forze presenti nella fonte, con “Altri” come nella fonte${estimates.length ? '; la barra tratteggiata è una stima simulata del tuo partito, fuori dal totale reale' : ''}. Dalla prossima settimana i sondaggi sono simulati e reagiscono alla tua carriera.`;
   return `<div class="poll-bars">${rows.map(bar).join('')}${othersRow}${outside}</div>${moves}${watch}<p class="poll-footnote">${footnote}</p>`;
 }
 
@@ -142,7 +146,7 @@ export function trendChart(world, index) {
   const overflow = cursor - 16 - (H - B);
   if (overflow > 0) for (const item of ends) item.labelY -= overflow;
   const labels = ends.map(item => `<circle class="end-dot" cx="${x(polls.length - 1)}" cy="${item.endY}" r="4" style="fill:${esc(item.color)}"/><line class="leader" x1="${x(polls.length - 1) + 6}" y1="${item.endY}" x2="${W - R + 10}" y2="${item.labelY}"/><text class="end-label ${item.player ? 'is-player' : ''}" x="${W - R + 14}" y="${item.labelY + 4}">${esc(shortLabel(item))} ${pct(item.values.at(-1))}</text>`).join('');
-  const payload = { x: polls.map((_, i) => x(i) / W), weeks: polls.map(poll => `Settimana ${poll.week} · ${poll.institute}${isReal(poll) ? ' (dato reale)' : ''}`), series: series.map(item => ({ label: item.label, color: item.color, values: item.values })) };
+  const payload = { x: polls.map((_, i) => x(i) / W), weeks: polls.map(poll => `Settimana ${poll.week} · ${poll.institute}${isReal(poll) ? ' (dato reale)' : isScenario(poll) ? ' (scenario simulato)' : ''}`), series: series.map(item => ({ label: item.label, color: item.color, values: item.values })) };
   const legend = series.map(item => `<span class="legend-item ${item.player ? 'is-player' : ''}"><i style="background:${esc(item.color)}"></i>${esc(item.label)}</span>`).join('');
   return `<div class="trend-legend">${legend}</div><div class="trend-chart" data-trend="${esc(JSON.stringify(payload))}" tabindex="0" aria-label="Andamento dei sondaggi nelle ultime ${polls.length} settimane"><svg viewBox="0 0 ${W} ${H}" role="img" aria-hidden="true">${grid}${xTicks}${lines}${labels}<line class="crosshair" x1="0" x2="0" y1="${T}" y2="${H - B}" visibility="hidden"/></svg></div>`;
 }

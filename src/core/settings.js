@@ -7,6 +7,7 @@ export const SETTINGS_SCHEMA = Object.freeze({
   motion: { label: 'Animazioni', options: [['full', 'Complete'], ['reduced', 'Ridotte'], ['off', 'Disattivate']], default: 'full' },
   toasts: { label: 'Messaggi a comparsa', options: [['on', 'Mostra'], ['off', 'Nascondi']], default: 'on' },
   toastLength: { label: 'Durata dei messaggi', options: [['short', 'Breve'], ['normal', 'Normale'], ['long', 'Lunga']], default: 'normal' },
+  newsPopup: { label: 'Notizie della settimana a comparsa', options: [['on', 'Mostra'], ['off', 'Non mostrare']], default: 'on' },
   weeklyReport: { label: 'Resoconto a fine settimana', options: [['on', 'Mostra'], ['off', 'Non mostrare']], default: 'on' },
   autosave: { label: 'Salvataggio automatico', options: [['action', 'Dopo ogni azione'], ['week', 'A fine settimana'], ['manual', 'Solo manuale']], default: 'action' },
   weeksPerTurn: { label: 'Velocità della simulazione', options: [['1', '1 settimana per turno'], ['2', '2 settimane per turno'], ['4', '4 settimane per turno']], default: '1' },

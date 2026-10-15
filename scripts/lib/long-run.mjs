@@ -69,7 +69,7 @@ const PLACES = [
 
 // Starts the engine and a career for the seed. Returns the store, the real reference and the decision maker.
 // The engine of the game as the long runs use it: the environment, the real data and the references the store needs (the same for a new career and for one resumed from a save).
-async function prepareStore({ seed, keepStorage = false, fast = false }) {
+async function prepareStore({ seed, keepStorage = false, fast = false, startDate = null }) {
   const env = await environment(seed, { keepStorage, fast });
   // The modules as the game loads them (with the build stamp of index.html): one instance of each, shared with the
   // engine's own imports, so the real data loaded here are the ones the reference Government and majority read.
@@ -82,7 +82,7 @@ async function prepareStore({ seed, keepStorage = false, fast = false }) {
   const { store } = await module('src/core/store.js');
   const { governingEntityIds } = await module('src/data/repositories/party-links.js');
   const { referenceGovernmentSpec } = await module('src/data/repositories/government-reference.js');
-  store.setRealReference({ twoPerThousand: db.twoPerThousand, parties: db.parties, movements: db.politicalMovements, coalitions: db.coalitions, polls: db.realPolls, governingIds: governingEntityIds(), startDate: db.manifest.snapshotDate });
+  store.setRealReference({ twoPerThousand: db.twoPerThousand, parties: db.parties, movements: db.politicalMovements, coalitions: db.coalitions, polls: db.realPolls, governingIds: governingEntityIds(), startDate: startDate ?? db.manifest.scenarioDate ?? db.manifest.snapshotDate });
   const spec = referenceGovernmentSpec();
   if (!spec?.groupIds?.length) throw new Error('Governo di riferimento non ricavato dai dati reali.');
   store.setReferenceGovernment(spec);
@@ -94,8 +94,8 @@ async function prepareStore({ seed, keepStorage = false, fast = false }) {
 }
 
 // Starts the engine and a career for the seed. Returns the store, the real reference and the decision maker.
-export async function startCareer({ seed = 'a', level = 'deputato', partyId = 'party-registro-p1-2017-41-ir', region = null, draft = {}, keepStorage = false, fast = false } = {}) {
-  const { store, db, context, env } = await prepareStore({ seed, keepStorage, fast });
+export async function startCareer({ seed = 'a', level = 'deputato', partyId = 'party-registro-p1-2017-41-ir', region = null, draft = {}, keepStorage = false, fast = false, startDate = null } = {}) {
+  const { store, db, context, env } = await prepareStore({ seed, keepStorage, fast, startDate });
   const pick = seeded(`profilo|${seed}`);
   const drawn = PLACES[Math.floor(pick() * PLACES.length)];
   const place = PLACES.find(item => item.region === region) ?? drawn;

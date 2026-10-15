@@ -177,7 +177,7 @@ for (const title of sections) assert.ok(page.includes(`<strong>${title}</strong>
 assert.equal((page.match(/class="guide-card"/g) ?? []).length, sections.length);
 assert.equal((page.match(/class="guide-example"/g) ?? []).length, sections.length, 'Ogni sezione ha un esempio concreto.');
 assert.ok(page.includes('guide-index') && page.includes('data-guide-jump="guida-0"'), 'Indice delle sezioni.');
-for (const text of ['Regione e Comune', 'difficoltà', '6 giorni', 'Chiudi la settimana', 'scelta più passiva', 'commissione', 'sondaggio della carriera è reale', 'simulati', 'fondi', 'candidatura', 'copia online']) assert.ok(page.includes(text), `Come giocare: manca «${text}».`);
+for (const text of ['Regione e Comune', 'difficoltà', '6 giorni', 'Chiudi la settimana', 'scelta più passiva', 'commissione', 'Supermedia YouTrend/Agi del 1° ottobre 2026', 'simulati', 'fondi', 'candidatura', 'copia online']) assert.ok(page.includes(text), `Come giocare: manca «${text}».`);
 await game.click({ guideJump: 'guida-3' });
 
 // ---------- 8. the confirmation dialog ----------

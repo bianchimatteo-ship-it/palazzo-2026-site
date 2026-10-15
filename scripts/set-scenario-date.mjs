@@ -3,6 +3,7 @@
 // The date must be a Monday (game weeks start on Monday) and cannot be before the snapshot. Nothing else in the real data changes.
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { writeDataVersion } from './lib/data-version.mjs';
 
 const date = process.argv[2] ?? '2026-10-12';
 if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || new Date(`${date}T00:00:00Z`).getUTCDay() !== 1) { console.error(`${date}: serve un lunedì in formato AAAA-MM-GG.`); process.exit(1); }
@@ -19,3 +20,4 @@ for (const file of ['manifest.json', 'database.json']) {
   await writeFile(path, `${JSON.stringify(json, null, 2)}\n`);
 }
 console.log(`Data dello scenario: ${date}.`);
+console.log(`Dati reali: versione ${(await writeDataVersion()).version}.`);
