@@ -1,4 +1,4 @@
-import { ELECTION_MODELS, EUROPEAN_CONSTITUENCIES, EUROPEAN_THRESHOLD, OUTCOME_LABELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261015-1';
+import { ELECTION_MODELS, EUROPEAN_CONSTITUENCIES, EUROPEAN_THRESHOLD, OUTCOME_LABELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261015-2';
 
 const clamp = (value,min=0,max=100) => Math.min(max,Math.max(min,value));
 const rounded = value => Math.round(value*100)/100;
@@ -64,7 +64,7 @@ export function sharesByGroup(campaign, territoryId) {
     const group = totals.get(leader.id);
     if (group) group.share += Number(value)||0;
   }
-  return [...totals.values()].map(group => ({...group,share:rounded(group.share)})).sort((a,b)=>b.share-a.share);
+  return [...totals.values()].map(group => ({...group,share:clamp(rounded(group.share))})).sort((a,b)=>b.share-a.share);
 }
 
 export function aggregateShares(campaign) {
@@ -76,7 +76,7 @@ export function aggregateShares(campaign) {
       if (row) row.share += group.share*(area.weight/totalWeight);
     }
   }
-  return [...groups.values()].map(group=>({...group,share:rounded(group.share)})).sort((a,b)=>b.share-a.share);
+  return [...groups.values()].map(group=>({...group,share:clamp(rounded(group.share))})).sort((a,b)=>b.share-a.share);
 }
 
 function allocateDHondt(groups,seatCount,threshold=0) {
@@ -101,7 +101,7 @@ function allocateWithBonus(groups, seatCount, winnerId, bonus, threshold = 0) {
 function resultRow(group,share,totalBallots,seats=0,extra={}) {
   return {
     id:group.id,candidateId:group.leaderCandidateId,partyIds:group.partyIds,memberCandidateIds:group.members,
-    label:group.label,percent:rounded(share),votes:Math.round(totalBallots*share/100),seats,
+    label:group.label,percent:clamp(rounded(share)),votes:Math.round(totalBallots*share/100),seats,
     source:'simulation',...extra
   };
 }

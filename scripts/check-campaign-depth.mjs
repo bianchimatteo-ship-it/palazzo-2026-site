@@ -398,6 +398,16 @@ const toRunoff = (seedId, values) => { let c = splitField(approved(make('comunal
   const registry = engine.mergeRivalRegistry([], ledger, first.currentDate);
   assert.ok(registry.length === ledger.length && registry.every(item => item.meetings === 1 && item.firstMet === first.currentDate && item.personality), 'Il registro tiene un record per rivale.');
   assert.ok(engine.mergeRivalRegistry(registry, ledger, first.currentDate).every(item => item.meetings === 2), 'Rivedersi aumenta gli incontri.');
+  // Found by the 30-year run: supports that add up to a hundredth over 100 (rounding) must never give a share above 100, nor leave one in the rivals' record.
+  {
+    const drift = JSON.parse(JSON.stringify(first));
+    const lead = drift.candidates[0].id;
+    for (const area of drift.territories) { area.supportByCandidate = Object.fromEntries(drift.candidates.map(item => [item.id, 0])); area.supportByCandidate[lead] = 100.012; }
+    assert.ok(elections.sharesByGroup(drift, drift.territories[0].id).every(row => row.share <= 100 && row.share >= 0), 'Una quota per territorio non supera 100.');
+    assert.ok(elections.aggregateShares(drift).every(row => row.share <= 100 && row.share >= 0), 'Una quota complessiva non supera 100.');
+    drift.result = { ...drift.result, groups: drift.result.groups.map(row => ({ ...row, percent: 100.01 })) };
+    assert.ok(engine.rivalLedger(drift).every(item => item.share <= 100), 'Nel registro dei rivali la quota resta tra 0 e 100.');
+  }
   // Time fades it: weights halve in about eighteen months, the rapport goes back towards neutral, in the end the rival forgets.
   const remembered = registry.find(item => item.memory.some(entry => entry.type === 'attack'));
   const faded = engine.decayRivalRegistry(registry, '2028-03-25').find(item => item.key === remembered.key);

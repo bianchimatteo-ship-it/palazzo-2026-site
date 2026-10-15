@@ -1,11 +1,11 @@
-import { advanceDays } from './time.js?v=20261015-1';
-import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261015-1';
-import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261015-1';
-import { aggregateShares, mateForce, runFinalElection, runFirstRound } from './election-engine.js?v=20261015-1';
-import { houseEffect } from './world-engine.js?v=20261015-1';
-import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261015-1';
-import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261015-1';
-import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261015-1';
+import { advanceDays } from './time.js?v=20261015-2';
+import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261015-2';
+import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261015-2';
+import { aggregateShares, mateForce, runFinalElection, runFirstRound } from './election-engine.js?v=20261015-2';
+import { houseEffect } from './world-engine.js?v=20261015-2';
+import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261015-2';
+import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261015-2';
+import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261015-2';
 
 const SOURCE = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
@@ -229,7 +229,7 @@ export function rivalLedger(campaign) {
       personality:profile.personality ?? null, objectives:profile.objectives ?? [], interests:profile.interests ?? [], loyalty:profile.loyalty ?? 50, initiative:profile.initiative ?? .6,
       relation:round(Number(profile.relationships?.[playerId] ?? Number(rival.relationship ?? .5) * 100)), memory,
       flags:{ beatPlayer:!together && ahead, lostToPlayer:!together && !ahead, allied:has('agreement') || rival.status === 'allied', betrayed:has('betrayal'), attacked:has('attack', PLAYER_ATTACKS), aided:has('aid') },
-      share:round(Number(rivalRow?.percent ?? weightedShare(campaign, rival.id))), ahead, date:campaign.currentDate, campaignId:campaign.id, source:SOURCE
+      share:round(clamp(Number(rivalRow?.percent ?? weightedShare(campaign, rival.id)))), ahead, date:campaign.currentDate, campaignId:campaign.id, source:SOURCE
     };
   });
 }

@@ -2,10 +2,10 @@
 // figure as the reference, the parties of a territory against the national picture, and a parties × regions heatmap. Pure functions on numbers that the game already has
 // (the regional picture of the observatory, and the real vote of 2022 by region): they invent nothing. A missing value is drawn as missing (a dashed tile, a dash), a
 // zero as a zero, and every chart says which measure it shows, in which unit, from which source (a simulated estimate or a real figure) and for which date.
-import { esc } from './charts.js?v=20261015-1';
-import { SEQUENTIAL } from './polls-mode.js?v=20261015-1';
-import { formatDate } from '../core/time.js?v=20261015-1';
-import { inkOn } from './visuals.js?v=20261015-1';
+import { esc } from './charts.js?v=20261015-2';
+import { SEQUENTIAL } from './polls-mode.js?v=20261015-2';
+import { formatDate } from '../core/time.js?v=20261015-2';
+import { inkOn } from './visuals.js?v=20261015-2';
 
 // Row and column of each region on a tile map of five columns (north up). It is a cartogram: it keeps neighbours near, not the shapes or the sizes.
 export const REGION_TILES = Object.freeze({
