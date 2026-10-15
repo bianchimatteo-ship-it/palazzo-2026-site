@@ -63,7 +63,8 @@ const date0 = state().clock.currentDate;
 store.advance(7);
 for (const name of CHAMBERS) {
   const ch = chamber(name);
-  assert.equal(total(name), full(name), `${name}: tutti i seggi assegnati.`);
+  // (a seat can be vacant for a week: a member who died or resigned; seats held plus seats vacant are all the seats)
+  assert.equal(total(name) + R.vacanciesOf(ch.roster).length, full(name), `${name}: tutti i seggi assegnati o vacanti.`);
   for (const seat of R.rosterSeats(ch.roster)) {
     const who = person(seat.personId);
     assert.ok(who, `${seat.personId}: persona nel registro.`);

@@ -264,7 +264,8 @@ for (const [role, chamber, region] of [['deputato', 'camera', 'Lombardia'], ['se
   assert.ok(after.dataset.offices.find(item => item.id === office.id).endDate, 'Il mandato da presidente si chiude');
   assert.equal(after.dataset.offices.find(item => item.id === office.id).endReason, 'decadenza', 'La chiusura per scioglimento conserva una causa coerente.');
   const shown = after.dataset.offices.find(item => item.id === after.dataset.politicians.find(item => item.id === after.career.playerId).roleId);
-  assert.ok(shown && !shown.endDate && shown.level === 'comunale', `La carica mostrata passa a quella ancora aperta (${shown?.title})`);
+  // (the offices still open are the seat in the comune and, if the party gave one on the way, its local role: the one shown is any of them, never the one that closed)
+  assert.ok(shown && !shown.endDate && shown.id !== office.id && ['comunale', 'partito'].includes(shown.level), `La carica mostrata passa a quella ancora aperta (${shown?.title})`);
   assert.equal(after.career.currentLevel, 'comunale');
   const early = after.game.elections.find(item => item.type === 'regionale' && item.status === 'upcoming');
   assert.ok(early?.early, 'Regionali anticipate in calendario');

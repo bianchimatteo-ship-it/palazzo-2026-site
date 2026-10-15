@@ -222,8 +222,8 @@ assert.deepEqual(await again(), first, 'Stessa partita, stessi risultati: la sim
       const playable = options.player?.available;
       const year = race.electionDate.slice(0, 4);
       if (playable) offered.set(year, new Set([...(offered.get(year) ?? []), race.id]));
-      // The leader plays the first race he can (the rule keeps the distance), the others he leaves to the party.
-      try { long.store.chooseRaceCandidate(race.id, playable && week % 2 === 0 ? { kind: 'player' } : { kind: 'simulation' }, people); } catch { /* not possible: the next race */ }
+      // The leader plays every race he is offered (the rule of the engine keeps one a year and the distance between them: a second one in the same year, or too close, is refused), the others he leaves to the party.
+      try { long.store.chooseRaceCandidate(race.id, playable ? { kind: 'player' } : { kind: 'simulation' }, people); } catch { /* not possible: the next race */ }
     }
     if (now.campaign?.status === 'active') { try { long.store.performCampaignActivity('citizen_meeting', { territoryId: now.campaign.territories[0].id }); } catch { /* wait */ } }
     long.store.advance(7);

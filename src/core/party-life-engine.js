@@ -178,6 +178,9 @@ function syncCadres(game, life, week) {
     cadre.label = cadre.player ? 'Tu' : committee.leader?.label ?? cadre.label;
   }
   life.cadres = life.cadres.filter(item => item.status !== 'uscito' || week - (item.leftWeek ?? week) < 26);
+  // A request of a leader who is no longer on record (left more than half a year ago) goes with him: no request points at a person that does not exist.
+  const known = new Set(life.cadres.map(item => item.id));
+  if (life.requests.some(request => request.from === 'cadre' && !known.has(request.refId))) life.requests = life.requests.filter(request => request.from !== 'cadre' || known.has(request.refId));
 }
 function renewCadre(cadre, committee, game, week, key, life = null) {
   const seed = hash(`${committee.id}|${key}|${week}|${game.seed ?? 1}`);

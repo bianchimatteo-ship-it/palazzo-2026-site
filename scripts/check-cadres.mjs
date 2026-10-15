@@ -94,7 +94,7 @@ for (const [level, region] of [['comunale', 'Toscana'], ['provinciale', 'Lombard
   }
   // ----- refusals -----
   const free = lifeOverview(store.getState().game).committees.find(item => !item.player && item.cadreId);
-  edit(store, save => { const found = save.game.party.org.committees.find(item => item.id === free.id); save.game.party.life.cadres = save.game.party.life.cadres.filter(item => item.committeeId !== free.id); found.status = 'dissoluzione'; });
+  edit(store, save => { const found = save.game.party.org.committees.find(item => item.id === free.id); const gone = new Set(save.game.party.life.cadres.filter(item => item.committeeId === free.id).map(item => item.id)); save.game.party.life.cadres = save.game.party.life.cadres.filter(item => item.committeeId !== free.id); save.game.party.life.requests = save.game.party.life.requests.filter(item => !(item.from === 'cadre' && gone.has(item.refId))); found.status = 'dissoluzione'; });
   assert.throws(() => store.partyCadreAction({ action: 'recluta', committeeId: free.id }), /comitato attivo/, `${label}: niente incarichi su un comitato sciolto.`);
   assert.ok(!lifeOverview(store.getState().game).committees.some(item => item.id === free.id), `${label}: il comitato sciolto non è più nell’elenco.`);
   assert.throws(() => store.partyCadreAction({ action: 'recluta', committeeId: 'comitato-che-non-esiste' }), /comitato attivo/, `${label}: un comitato che non esiste è rifiutato.`);
