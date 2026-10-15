@@ -1,7 +1,8 @@
 // Shared building blocks for the simulation screens: numbers, state badges, meters and charts.
 // Charts follow the same rules as the polls page: thin marks, one axis, legend + direct labels,
 // hover tooltips through data-trend / data-tip, text in ink rather than in the series colour.
-import { glyph } from './visuals.js?v=20261014-1';
+import { glyph } from './visuals.js?v=20261015-1';
+import { accentAsGraphic } from './party-identity.js?v=20261015-1';
 
 export const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const num = (value, digits = 1) => value === null || value === undefined || Number.isNaN(Number(value)) ? '—' : Number(value).toLocaleString('it-IT', { maximumFractionDigits: digits });
@@ -17,7 +18,7 @@ export const GREEN_RAMP = Object.freeze(['#1e382a', '#2c503d', '#3a674f', '#487f
 export const rampColor = (value, min = 0, max = 100) => GREEN_RAMP[Math.max(0, Math.min(GREEN_RAMP.length - 1, Math.round((value - min) / ((max - min) || 1) * (GREEN_RAMP.length - 1))))];
 
 // Visual states shared by every system: growth, decline, risk, crisis, stable.
-const STATE_ICONS = { crescita: 'trendUp', calo: 'trendDown', rischio: 'alert', crisi: 'alert', stabile: 'steady', solida: 'shield' };
+const STATE_ICONS = { crescita: 'trendUp', calo: 'trendDown', rischio: 'alert', crisi: 'alert', stabile: 'steady', solida: 'shield', maggioranza: 'users', opposizione: 'flag' };
 export function stateBadge(kind, label) {
   return `<span class="state-badge state-${esc(kind)}">${glyph(STATE_ICONS[kind] ?? 'steady', 13, 2)}${esc(label)}</span>`;
 }
@@ -56,7 +57,10 @@ export function sparkline(values, color = 'var(--party-accent)') {
   const min = Math.min(...points), max = Math.max(...points), span = max - min || 1;
   const coords = points.map((value, index) => [4 + index * 112 / (points.length - 1), 28 - (value - min) / span * 22]);
   const [lx, ly] = coords.at(-1);
-  return `<svg class="sparkline" viewBox="0 0 120 32" aria-hidden="true"><polyline points="${coords.map(point => point.join(',')).join(' ')}" /><circle cx="${lx}" cy="${ly}" r="3.5" style="fill:${esc(color)}" /></svg>`;
+  // The line is drawn in the light stroke of the interface (--spark-line), the last point in the colour of the series lifted to 3:1 against the dark cards, with a ring of the card's colour.
+  // A colour given as a CSS variable (the party accent) cannot be measured here: it is lightened towards white in CSS, which keeps its hue and clears 3:1 on the dark cards.
+  const dot = /^#[\da-f]{6}$/i.test(color) ? accentAsGraphic(color) : `${color};fill:color-mix(in srgb, ${color} 55%, #ffffff)`;
+  return `<svg class="sparkline" viewBox="0 0 120 32" aria-hidden="true"><polyline points="${coords.map(point => point.join(',')).join(' ')}" /><circle cx="${lx}" cy="${ly}" r="3.5" style="fill:${esc(dot)}" /></svg>`;
 }
 
 // Lines drawn together must be told apart: when two series have colours too close to read, the later one takes

@@ -1,19 +1,19 @@
 // VITA INTERNA — the people behind the currents, what they ask, the agreements, the congress, the local leaders, the
 // rebuilding of the party and the way it is founded, merged or renamed. All simulated: no real person appears here.
-import { lifeOverview, partyOpsAvailability } from '../core/career-engine.js?v=20261014-1';
-import { mergeCandidates } from '../core/world-engine.js?v=20261014-1';
-import { OP_COSTS } from '../core/party-ops-engine.js?v=20261014-1';
-import { CADRE_ACTIONS, REBUILD_FOCUS, RENAME_STYLES } from '../data/simulation/party-life-rules.js?v=20261014-1';
-import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20261014-1';
-import { badge, bar, card, empty, esc, euro, num, weeksLabel } from './sections-kit.js?v=20261014-1';
-import { territoryTile, territoryVisual } from './visuals.js?v=20261014-1';
-import { planAddButton } from './plan-view.js?v=20261014-1';
+import { costProblem, lifeOverview, partyOpsAvailability } from '../core/career-engine.js?v=20261015-1';
+import { mergeCandidates } from '../core/world-engine.js?v=20261015-1';
+import { OP_COSTS } from '../core/party-ops-engine.js?v=20261015-1';
+import { CADRE_ACTIONS, REBUILD_FOCUS, RENAME_STYLES } from '../data/simulation/party-life-rules.js?v=20261015-1';
+import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20261015-1';
+import { badge, bar, card, empty, esc, euro, num, weeksLabel } from './sections-kit.js?v=20261015-1';
+import { territoryTile, territoryVisual } from './visuals.js?v=20261015-1';
+import { planAddButton } from './plan-view.js?v=20261015-1';
 
 const STANCE = { alleata: ['good', 'Alleata'], neutrale: ['neutral', 'Neutrale'], ostile: ['bad', 'Ostile'] };
 const PACT_STATUS = { attivo: ['good', 'In vigore'], scaduto: ['neutral', 'Scaduto'], rotto: ['bad', 'Rotto'], rinnovato: ['good', 'Rinnovato'] };
 const TREND = { crescita: ['good', 'In crescita'], stabile: ['neutral', 'Stabile'], declino: ['bad', 'In declino'], volatile: ['warn', 'Volatile'] };
 const tone = (value, low, high, invert = false) => { const good = invert ? value <= low : value >= high; const bad = invert ? value >= high : value <= low; return good ? 'good' : bad ? 'bad' : ''; };
-const costChips = cost => Object.entries(cost ?? {}).map(([key, value]) => `<span class="hq-cost-chip">${key === 'ap' ? `${value} giorn${value === 1 ? 'o' : 'i'}` : key === 'capital' ? `${value} cap. politico` : key === 'funds' ? euro(value) : `${value} ${esc(key)}`}</span>`).join(' ');
+const costChips = cost => Object.entries(cost ?? {}).map(([key, value]) => `<span class="hq-cost-chip">${key === 'ap' ? `${value} giorn${value === 1 ? 'o' : 'i'}` : key === 'capital' ? `${value} cap. politico` : key === 'funds' ? euro(value) : key === 'treasury' ? `${euro(value)} dal partito` : `${value} ${esc(key)}`}</span>`).join(' ');
 const meterRow = (label, value, toneName = '') => `<div class="pl-meter"><span>${esc(label)}</span>${bar(value, toneName)}<b>${num(value, 0)}</b></div>`;
 
 function vitalsCard(view) {
@@ -66,7 +66,25 @@ function table(columns, rows, emptyText) {
   return `<div class="sx-table-wrap"><table class="sx-table"><thead><tr>${columns.map(([, label]) => `<th scope="col">${esc(label)}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${columns.map(([key, label]) => `<td data-label="${esc(label)}">${row[key] ?? ''}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
 }
 
-function congressCard(view, party) {
+// What the player can do about the congress now: every action with its cost (days, his money, the party's treasury, capital), what it does, what can go wrong and, when it cannot be done, why.
+// The ones that are pointed at something (a region, an area) have their choice next to the button.
+function congressWork(view, congress, party, state) {
+  if (!party.alignedCurrentId) return '<p class="sx-note">Non hai un’area di riferimento: schierati per pesare al congresso.</p>';
+  const mine = view.currents.find(item => item.id === party.alignedCurrentId);
+  const others = view.currents.filter(item => item.id !== party.alignedCurrentId);
+  const marks = congress.marks ?? {};
+  const placed = [marks.mobilization ? `mobilitazione ${marks.mobilization}/40` : null, marks.tours ? `${marks.tours} giro delle federazioni` : null, marks.pushes?.length ? `campagna in ${marks.pushes.join(', ')}` : null, marks.motion ? (marks.motion.weak ? 'mozione debole' : `mozione solida (${Math.round(marks.motion.quality * 100)}%)`) : null].filter(Boolean);
+  const rows = (congress.actions ?? []).map(action => {
+    const gap = action.available ? costProblem(state.game, action.cost) : null;
+    const reason = action.reason ?? gap;
+    const pick = action.needs === 'regione' ? `<label class="pl-ca-pick">Regione<select data-life-field="congress-${action.id}">${(congress.regions ?? []).map(region => `<option value="${esc(region)}">${esc(region)}</option>`).join('')}</select></label>`
+      : action.needs === 'area' ? `<label class="pl-ca-pick">Area<select data-life-field="congress-${action.id}">${others.map(item => `<option value="${esc(item.id)}">${esc(item.label)}</option>`).join('')}</select></label>` : '';
+    return `<li class="pl-ca${reason ? ' is-off' : ''}"><div class="pl-ca-head"><strong>${esc(action.label)}</strong><span>${costChips(action.cost)}</span>${action.done ? badge('Fatto', 'good') : ''}</div><p>${esc(action.detail)}</p>${action.risk ? `<small class="pl-ca-risk">${esc(action.risk)}</small>` : ''}${pick}<div class="pl-ca-foot"><button type="button" class="secondary-button" data-life-congress="${esc(action.id)}" ${reason ? `disabled title="${esc(reason)}"` : ''}>${esc(action.label)}</button>${reason ? `<small class="pl-ca-reason">${esc(reason)}</small>` : ''}</div></li>`;
+  }).join('');
+  return `<div class="pl-congress-work"><h4>Che cosa puoi fare ora per ${esc(mine?.label ?? 'la tua area')}</h4>${placed.length ? `<p class="sx-note">Già messo in campo: ${esc(placed.join(' · '))}.</p>` : ''}<ul class="pl-congress-actions">${rows}</ul></div>`;
+}
+
+function congressCard(view, party, state) {
   const congress = view.congress;
   const lastRows = view.lastCongress ? `<h4>Ultimo congresso (settimana ${view.lastCongress.week})</h4><ul class="pl-rank">${view.lastCongress.ranked.map(row => `<li><span>${esc(row.label)}</span>${bar(row.pct, row.id === view.lastCongress.winnerId ? 'good' : '')}<b>${num(row.pct, 1)}%</b></li>`).join('')}</ul>` : '';
   if (!congress) return card({ kicker: 'CONGRESSO', title: party.affiliation === 'founder' ? 'Guidi il partito da fondatore: nessun congresso' : `Prossimo congresso: settimana ${view.nextCongressWeek ?? '—'}`, body: `<p class="sx-note">${party.affiliation === 'founder' ? 'Un partito appena fondato non ha congressi: li avrà quando sarà cresciuto.' : 'La stagione congressuale si apre circa otto mesi prima del voto: forza delle aree → preparazione → delegati → alleanze → trattative → mozioni → voto.'}</p>${lastRows}` });
@@ -77,30 +95,44 @@ function congressCard(view, party) {
     <div class="sx-grid two"><div><h4>Delegati (${congress.delegates?.total ?? '—'}${congress.delegates?.player ? ` · ${congress.delegates.player} legati a te` : ''})</h4><ul class="pl-rank">${delegates}</ul></div><div><h4>Se si votasse oggi</h4><ul class="pl-rank">${projection || '<li>Stima non disponibile.</li>'}</ul></div></div>
     ${congress.alliances.length ? `<h4>Alleanze di mozioni</h4><ul class="pl-notes">${congress.alliances.map(al => `<li>${esc(al.labels.join(' + '))} <small>(${esc(al.origin)})</small></li>`).join('')}</ul>` : ''}
     ${congress.notes.length ? `<ul class="pl-notes">${congress.notes.map(item => `<li><small>sett. ${item.week}</small> ${esc(item.text)}</li>`).join('')}</ul>` : ''}
-    ${party.alignedCurrentId ? `<div class="pl-actions"><button type="button" class="secondary-button" data-life-congress="mobilita">Mobilita i quadri <small>${costChips({ ap: 1 }).replace(/<[^>]+>/g, '')}</small></button><button type="button" class="secondary-button" data-life-congress="alleanza">Lavora alle alleanze <small>2 cap.</small></button></div>` : '<p class="sx-note">Non hai un’area di riferimento: schierati per pesare al congresso.</p>'}
+    ${congressWork(view, congress, party, state)}
     <p class="sx-note">I delegati nascono dalle federazioni: contano gli iscritti, la vitalità, chi guida il comitato e quanto l’area si è mobilitata. Le tue scelte passate (comitati, fondi, accordi, schieramenti) cambiano i numeri.</p>${lastRows}` });
 }
 
-function cadresCard(view, party) {
-  const recruitable = (party.org?.committees ?? []).filter(item => item.status !== 'dissoluzione' && !item.leader?.player && !view.cadres.some(cadre => cadre.committeeId === item.id));
+// The local leaders: people (first and last name, a «simulated person» badge) apart from the committees they lead. Filters by level and territory; every committee without a leader of its own
+// has its own row with the button to recruit one. The committee keeps its name; the leader keeps his.
+const LEVELS = ['regione', 'provincia', 'comune'];
+const LEVEL_ONE = { regione: 'Comitato regionale', provincia: 'Comitato provinciale', comune: 'Comitato comunale' };
+const LEVEL_NOUN = { regione: 'regionali', provincia: 'provinciali', comune: 'comunali', comitato: 'di altri comitati' };
+const norm = text => String(text ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+function cadresCard(view, party, filters = {}) {
+  const level = ['regione', 'provincia', 'comune'].includes(filters.cadreLevel) ? filters.cadreLevel : '';
+  const query = norm(filters.cadreQuery).trim();
   const committeeOf = id => (party.org?.committees ?? []).find(item => item.id === id) ?? null;
-  const LEVELS = ['regione', 'provincia', 'comune'];
-  const levelOf = item => { const level = committeeOf(item.committeeId)?.level; return LEVELS.includes(level) ? level : 'comitato'; };
-  const actionButton = (item, action) => `<button type="button" class="secondary-button" data-life-cadre="${action}" data-cadre-id="${esc(item.id)}" title="${esc(CADRE_ACTIONS[action].detail)}">${esc(CADRE_ACTIONS[action].label.replace(' il dirigente', ''))} <small>${costChips(CADRE_ACTIONS[action].cost).replace(/<[^>]+>/g, '')}</small></button>${['incontra', 'promuovi'].includes(action) ? planAddButton({ kind: 'cadre', action, cadreId: item.id, committeeId: item.committeeId }, '+ Piano') : ''}`;
-  // One line each: who, where, in which state and what to do first (meet, promote). The interests, the loyalty and grievance meters, the notes and the replacement fold under «Dettagli».
+  const levelOf = item => (LEVELS.includes(item.level) ? item.level : 'comitato');
+  const matches = (item, text) => (!level || item.level === level) && (!query || norm(text).includes(query));
+  const actionButton = (item, action) => `<button type="button" class="secondary-button" data-life-cadre="${action}" data-cadre-id="${esc(item.id)}" title="${esc(CADRE_ACTIONS[action].detail)}">${esc(CADRE_ACTIONS[action].label.replace(' il dirigente', ''))} <small>${costChips(CADRE_ACTIONS[action].cost).replace(/<[^>]+>/g, '')}</small></button>${planAddButton({ kind: 'cadre', action, cadreId: item.id, label: `${CADRE_ACTIONS[action].label.replace(' il dirigente', '')}: ${item.personName ?? item.name}` })}`;
+  const SIM_BADGE = badge('Personaggio simulato', 'neutral');
+  // One card per person: his name first, then role and place, the committee he leads on its own line, the state and the first actions; the rest folds under «Dettagli».
   const row = item => {
     const committee = committeeOf(item.committeeId);
-    const where = committee ? `${committee.region}${committee.level === 'regione' ? '' : ` · ${committee.name}`}` : item.name;
-    const badges = `<span class="cm-badges">${badge(item.player ? 'Guidato da te' : item.status === 'in-uscita' ? 'Sta per andarsene' : item.status === 'critico' ? 'Critico' : 'Attivo', item.player ? 'good' : item.status === 'in-uscita' ? 'bad' : item.status === 'critico' ? 'warn' : 'neutral')}${item.stance && !item.player ? badge(item.stance.label, item.stance.tone) : ''}</span>`;
-    const details = item.player ? '' : `<details class="pl-details"><summary>Dettagli</summary><p class="pl-trait">${item.area ? `Area: ${esc(item.area)} · ` : 'Nome scelto da te · '}Vuole: ${esc(item.interest ?? '—')}</p>${meterRow('Lealtà', item.loyalty, tone(item.loyalty, 35, 65))}${meterRow('Malcontento', item.grievance, tone(item.grievance, 35, 65, true))}<p class="sx-note" title="${esc((item.stance?.reasons ?? []).join(' · '))}">${item.stance ? `Peso politico ${Math.round(item.stance.weight * 100)}/100 · ` : ''}autonomia ${item.autonomy ?? '—'}/100 · organizzazione ${item.organization ?? '—'}/100${item.promise ? ` · candidatura promessa (${weeksLabel(item.promise.weeksLeft)})` : ''}</p><div class="pl-actions">${actionButton(item, 'sostituisci')}</div></details>`;
-    return `<article class="pl-cadre pl-compact ${item.status !== 'attivo' ? `is-${item.status}` : ''}"><header><div><strong>${esc(item.name)}</strong><small>${esc(item.label)} · ${esc(where)}</small></div>${badges}</header>${item.player ? '' : `<div class="pl-actions">${['incontra', 'promuovi'].map(action => actionButton(item, action)).join('')}</div>`}${details}</article>`;
+    const place = committee ? `${committee.level === 'regione' ? committee.region : `${committee.name}${committee.level === 'provincia' ? ' (provincia)' : ''} · ${committee.region}`}` : item.name;
+    const stateBadge = badge(item.player ? 'Guidato da te' : item.status === 'in-uscita' ? 'Sta per andarsene' : item.status === 'critico' ? 'Critico' : 'In carica', item.player ? 'good' : item.status === 'in-uscita' ? 'bad' : item.status === 'critico' ? 'warn' : 'neutral');
+    const stance = item.stance && !item.player ? badge(item.stance.label, item.stance.tone) : '';
+    const details = item.player ? '' : `<details class="pl-details"><summary>Dettagli</summary><p class="pl-trait">${item.area ? `Area: ${esc(item.area)} · ` : ''}${esc(item.mode)} · in carica dalla settimana ${esc(item.since ?? '—')} · vuole: ${esc(item.interest ?? '—')}</p>${meterRow('Lealtà', item.loyalty, tone(item.loyalty, 35, 65))}${meterRow('Malcontento', item.grievance, tone(item.grievance, 35, 65, true))}<p class="sx-note" title="${esc((item.stance?.reasons ?? []).join(' · '))}">${item.stance ? `Peso politico ${Math.round(item.stance.weight * 100)}/100 · ` : ''}autonomia ${item.autonomy ?? '—'}/100 · organizzazione ${item.organization ?? '—'}/100${item.promise ? ` · candidatura promessa (${weeksLabel(item.promise.weeksLeft)})` : ''}</p><div class="pl-actions">${actionButton(item, 'sostituisci')}</div></details>`;
+    return `<article class="pl-cadre pl-compact ${item.status !== 'attivo' ? `is-${item.status}` : ''}" data-cadre="${esc(item.id)}" data-person="${esc(item.personId ?? '')}"><header><div><strong class="pl-person-name">${esc(item.player ? 'Tu' : item.personName)}</strong><small>${esc(item.roleLabel)} · ${esc(place)}</small><small class="pl-committee-line">Comitato: ${esc(committee?.name ?? item.name)}</small></div><span class="cm-badges">${stateBadge}${stance}${item.player ? '' : SIM_BADGE}</span></header>${item.player ? '' : `<div class="pl-actions">${['incontra', 'promuovi'].map(action => actionButton(item, action)).join('')}</div>`}${details}</article>`;
   };
-  const groups = [...LEVELS, 'comitato'].map(level => ({ level, items: view.cadres.filter(item => levelOf(item) === level).sort((a, b) => String(committeeOf(a.committeeId)?.region ?? '').localeCompare(String(committeeOf(b.committeeId)?.region ?? ''), 'it') || String(a.name).localeCompare(String(b.name), 'it')) })).filter(group => group.items.length);
-  const rows = groups.map(({ level, items }) => { const visual = territoryVisual(level); const noun = { regione: 'regionali', provincia: 'provinciali', comune: 'comunali', comitato: 'di altri comitati' }[level]; return `<details class="pl-level" open style="--lv:${esc(visual.color)}" data-level="${esc(level)}"><summary>${territoryTile(level, 'sm')}<span><strong>Dirigenti ${esc(noun)}</strong><small>${items.length} ${items.length === 1 ? 'dirigente' : 'dirigenti'}${items.some(item => item.status === 'critico' || item.status === 'in-uscita') ? ` · ${items.filter(item => item.status === 'critico' || item.status === 'in-uscita').length} da seguire` : ''}</small></span></summary><div class="pl-level-list">${items.map(row).join('')}</div></details>`; }).join('');
-  const recruit = recruitable.length ? `<div class="pl-form"><label>Comitato senza un tuo dirigente<select data-life-recruit-select>${recruitable.map(item => `<option value="${esc(item.id)}">${esc(item.name)} (${esc(item.level)})</option>`).join('')}</select></label><button type="button" class="secondary-button" data-life-cadre="recluta">${esc(CADRE_ACTIONS.recluta.label)} <small>${costChips(CADRE_ACTIONS.recluta.cost).replace(/<[^>]+>/g, '')}</small></button></div>` : '';
+  const people = view.cadres.filter(item => matches(item, `${item.personName} ${item.name} ${item.region} ${item.roleLabel}`));
+  const groups = [...LEVELS, 'comitato'].map(key => ({ key, items: people.filter(item => levelOf(committeeOf(item.committeeId) ?? item) === key).sort((a, b) => String(a.region ?? '').localeCompare(String(b.region ?? ''), 'it') || String(a.personName).localeCompare(String(b.personName), 'it')) })).filter(group => group.items.length);
+  const rows = groups.map(({ key, items }) => { const visual = territoryVisual(key); return `<details class="pl-level" open style="--lv:${esc(visual.color)}" data-level="${esc(key)}"><summary>${territoryTile(key, 'sm')}<span>Dirigenti ${LEVEL_NOUN[key]}</span><small>${items.length}</small></summary><div class="pl-level-list">${items.map(row).join('')}</div></details>`; }).join('');
+  // The committees that have nobody of their own: who to appoint, and where. Level and territory are on every row.
+  const vacant = (view.committees ?? []).filter(item => item.vacant && matches(item, `${item.name} ${item.region}`)).sort((a, b) => LEVELS.indexOf(a.level) - LEVELS.indexOf(b.level) || String(a.region).localeCompare(String(b.region), 'it') || String(a.name).localeCompare(String(b.name), 'it'));
+  const vacantRows = vacant.map(item => { const visual = territoryVisual(item.level); return `<li class="pl-vacant" style="--lv:${esc(visual.color)}" data-committee="${esc(item.id)}">${territoryTile(item.level, 'sm')}<div><strong>${esc(item.name)}</strong><small>${esc(LEVEL_ONE[item.level])} · ${esc(item.region)} · ${esc(item.status)}</small><small class="pl-reason">Nessun responsabile</small></div><div class="pl-actions"><button type="button" class="secondary-button" data-life-cadre="recluta" data-committee-id="${esc(item.id)}" title="${esc(CADRE_ACTIONS.recluta.detail)}">Recluta un responsabile <small>${costChips(CADRE_ACTIONS.recluta.cost).replace(/<[^>]+>/g, '')}</small></button>${planAddButton({ kind: 'cadre', action: 'recluta', committeeId: item.id, label: `Recluta un responsabile: ${item.name}` })}</div></li>`; }).join('');
+  const filterBar = `<div class="pl-filters" role="group" aria-label="Filtra dirigenti e comitati"><label>Livello<select data-view-filter-select="cadreLevel"><option value="">Tutti</option>${LEVELS.map(key => `<option value="${key}" ${level === key ? 'selected' : ''}>${esc(LEVEL_NOUN[key].replace(/^./, c => c.toUpperCase()))}</option>`).join('')}</select></label><label>Territorio o nome<input type="search" data-view-filter-text="cadreQuery" value="${esc(filters.cadreQuery ?? '')}" placeholder="Es. Siena, Toscana, Rossi" autocomplete="off" /></label></div>`;
   const control = view.control;
-  const controlBlock = control ? `<div class="pl-control"><div class="pl-meter"><span>Controllo del territorio · ${esc(control.region ?? 'il tuo territorio')}</span>${bar(control.index, tone(control.index, 40, 65))}<b>${control.index}/100</b></div><p class="sx-note">${control.byStance.tuo + control.byStance['con-te']} con te · ${control.byStance['da-convincere']} da convincere · ${control.byStance.distante + control.byStance.contro} distanti o contro, su ${control.count} comitati. Chi controlla i comitati porta volontari e preferenze alle candidature, pesa sui delegati del congresso e conta nelle promozioni.</p></div>` : '';
-  return card({ kicker: 'DIRIGENTI LOCALI · INTERESSI PROPRI', title: view.cadres.length ? `${view.cadres.length} dirigenti dei comitati` : 'Nessun dirigente locale ancora', body: `${controlBlock}<div class="pl-cadres">${rows || '<p class="sx-empty">I dirigenti compaiono quando il partito ha i suoi comitati sul territorio (scheda Territorio).</p>'}</div>${recruit}<p class="sx-note">Un dirigente scontento chiede mezzi, una candidatura o autonomia; se non lo ascolti se ne va e porta via iscritti e volontari. Una candidatura promessa si mantiene quando si compilano le liste, altrimenti si rompe.</p>` });
+  const controlBlock = control ? `<div class="pl-control"><div class="pl-meter"><span>Controllo del territorio · ${esc(control.region ?? 'il tuo territorio')}</span>${bar(control.index, tone(control.index, 40, 65))}<b>${control.index}/100</b></div><p class="sx-note">${control.byStance.tuo + control.byStance['con-te']} con te · ${control.byStance.distante} distanti · ${control.byStance.contro} contro${control.critical ? ` · ${control.critical} in crisi` : ''}.</p></div>` : '';
+  const vacantTotal = (view.committees ?? []).filter(item => item.vacant).length;
+  return card({ kicker: 'DIRIGENTI LOCALI · PERSONE SIMULATE', title: `${view.cadres.length} ${view.cadres.length === 1 ? 'dirigente' : 'dirigenti'} · ${vacantTotal} ${vacantTotal === 1 ? 'comitato senza responsabile' : 'comitati senza responsabile'}`, body: `${controlBlock}${filterBar}<div class="pl-cadres">${rows || '<p class="sx-empty">Nessun dirigente corrisponde ai filtri: i dirigenti compaiono quando il partito ha i suoi comitati sul territorio (scheda Territorio).</p>'}</div>${vacant.length ? `<h4 class="pl-subhead">Comitati senza responsabile</h4><ul class="pl-vacancies">${vacantRows}</ul><p class="sx-note">Reclutare dà un volto e un nome a un comitato senza guida: il responsabile è una persona simulata con un nome tuo e una fedeltà alta; il comitato non cambia nome.</p>` : `<p class="sx-note">${vacantTotal ? 'Nessun comitato senza responsabile corrisponde ai filtri.' : 'Ogni comitato ha il suo responsabile.'}</p>`}` });
 }
 
 function rebuildCard(view, secretary) {
@@ -125,12 +157,12 @@ function chronicleCard(view) {
   return card({ kicker: 'MEMORIA INTERNA', title: 'Cosa è successo di recente', body: `<ul class="pl-notes">${items.slice(0, 14).join('')}</ul>` });
 }
 
-export function renderPartyLife(state) {
+export function renderPartyLife(state, filters = {}) {
   const game = state.game;
   const party = game?.party;
   const view = party ? lifeOverview(game) : null;
   if (!view) return empty('La vita interna del partito compare quando fai parte di un partito.');
   const neighbours = state.world ? mergeCandidates(state.world) : [];
   const ops = partyOpsAvailability(game, { neighbours });
-  return `<div class="pl-page">${vitalsCard(view)}${requestsCard(view)}<div class="sx-grid two">${areasCard(view, party)}${pactsCard(view)}</div>${congressCard(view, party)}${cadresCard(view, party)}${rebuildCard(view, view.secretary)}${opsCard(state, view, party, neighbours, ops)}${chronicleCard(view)}</div>`;
+  return `<div class="pl-page">${vitalsCard(view)}${requestsCard(view)}<div class="sx-grid two">${areasCard(view, party)}${pactsCard(view)}</div>${congressCard(view, party, state)}${cadresCard(view, party, filters)}${rebuildCard(view, view.secretary)}${opsCard(state, view, party, neighbours, ops)}${chronicleCard(view)}</div>`;
 }

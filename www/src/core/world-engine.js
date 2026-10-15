@@ -1,9 +1,9 @@
-import { uniqueId } from './ids.js?v=20261014-1';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261014-1';
-import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261014-1';
-import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261014-1';
-import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261014-1';
-import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261014-1';
+import { uniqueId } from './ids.js?v=20261015-1';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261015-1';
+import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261015-1';
+import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261015-1';
+import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261015-1';
+import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261015-1';
 export { houseEffect };
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
@@ -484,7 +484,7 @@ function publishPoll(world, { date, stats = {}, parliament = null, game = null, 
   // A force that has just entered the survey has no previous figure: its change starts from the next poll. The first simulated
   // poll starts from the real one: it may move less than an ordinary week. A force entering the survey takes only the room the
   // others leave, and the total is brought back to 100 within the weekly change of each force (settleReading).
-  const results = settleReading(sampleShares(world, trueRows, sample, institute.id), previous?.results, { damp: previous?.source === 'real' ? 0.6 : 1 })
+  const results = settleReading(sampleShares(world, trueRows, sample, institute.id), previous?.results, { damp: previous?.source === 'real' || previous?.scenario ? 0.6 : 1 })
     .map(row => ({ ...row, ...(row.partyId === player && !playerSurveyed ? { internal: true } : {}) }));
   const regional = player ? Object.fromEntries(ITALIAN_REGIONS.map(region => [region, round1(regionalShares(world, region, boosts.regional).find(row => row.partyId === player)?.share ?? 0)])) : {};
   const local = player ? round1(localShares(world, boosts.regional, boosts.local).find(row => row.partyId === player)?.share ?? 0) : null;
@@ -536,23 +536,29 @@ function presenceSnapshot(world, results) {
 // The career opens with a snapshot of the real source: only the forces it measures, with its figures, and "Altri" as
 // the source leaves it. No other force of the database gets a figure. The player's party, when the source does not
 // measure it, is a simulated estimate outside the real total, marked as such.
+// A career that chose a scenario in the wizard (real.scenario: { mode, seed, label, basedOn }) opens with an invented picture over the same forces, marked as a simulation: it never
+// passes for the source's figures (source 'simulation', no `real` block) and says which real poll it started from.
 function publishRealPoll(world, real, { date, stats = {} }) {
   const player = world.playerPartyId;
+  const scenario = real.scenario ?? null;
   const measured = new Set(real.results.map(row => row.partyId));
-  const results = real.results.filter(row => world.parties.some(party => party.id === row.partyId)).map(row => ({ partyId: row.partyId, share: row.share, delta: 0, real: true }));
+  // The variations are the ones the source published (zero where it published none): the game invents no change for the first poll.
+  const results = real.results.filter(row => world.parties.some(party => party.id === row.partyId)).map(row => ({ partyId: row.partyId, share: row.share, delta: Number.isFinite(row.delta) ? row.delta : 0, ...(scenario ? { scenario: true } : { real: true }) }));
   const others = round1(Math.max(0, 100 - results.reduce((sum, row) => sum + row.share, 0)));
   if (player && !measured.has(player)) results.push({ partyId: player, share: round1(nationalShares(world).find(row => row.partyId === player)?.share ?? 0), delta: 0, simulated: true, outsideSource: true });
   const regional = player ? Object.fromEntries(ITALIAN_REGIONS.map(region => [region, round1(regionalShares(world, region).find(row => row.partyId === player)?.share ?? 0)])) : {};
   const poll = {
-    id: `sondaggio-reale-${real.id}`, week: world.week, date: real.publishedAt ?? date, institute: real.label, sample: null, margin: null, undecided: world.undecided, results, regional,
+    id: scenario ? `sondaggio-scenario-${scenario.mode}-${scenario.seed}` : `sondaggio-reale-${real.id}`, week: world.week, date: scenario ? date : real.referenceDate ?? real.publishedAt ?? date, institute: scenario ? `Quadro iniziale · scenario ${scenario.label.toLowerCase()}` : real.label, sample: null, margin: null, undecided: world.undecided, results, regional,
     local: player ? round1(localShares(world).find(row => row.partyId === player)?.share ?? 0) : null, regionalHome: player ? regional[world.place.region] ?? null : null,
     personal: { approval: round1(clamp((stats.popularity ?? 45) * 0.55 + (stats.reputation ?? 50) * 0.45, 0, 100)), popularity: stats.popularity ?? null, notoriety: stats.notoriety ?? null },
-    government: null, executive: null, mood: null, why: [], others, othersSource: 'real', emerging: [], moves: [],
-    source: 'real', real: { id: real.id, label: real.label, publishedAt: real.publishedAt, fieldworkFrom: real.fieldworkFrom ?? null, fieldworkTo: real.fieldworkTo ?? null, sourceUrl: real.sourceUrl, sourceName: real.sourceName, method: real.method ?? null }
+    government: null, executive: null, mood: null, why: [], others, othersSource: scenario ? 'scenario' : 'real', emerging: [], moves: [],
+    ...(scenario
+      ? { source: SIM, scenario }
+      : { source: 'real', real: { id: real.id, label: real.label, publishedAt: real.publishedAt, referenceDate: real.referenceDate ?? null, deltaNote: real.deltaNote ?? null, fieldworkFrom: real.fieldworkFrom ?? null, fieldworkTo: real.fieldworkTo ?? null, sourceUrl: real.sourceUrl, sourceName: real.sourceName, method: real.method ?? null } })
   };
   world.polls = [...world.polls, poll].slice(-HISTORY);
   // The average of the observatory starts from the real one; the institutes begin to publish from the first simulated week.
-  world.observatory = seedObservatory(world.observatory, { week: world.week, date: poll.date, rows: results.filter(row => !row.outsideSource), others, label: real.label });
+  world.observatory = seedObservatory(world.observatory, { week: world.week, date: poll.date, rows: results.filter(row => !row.outsideSource), others, label: scenario ? poll.institute : real.label, scenario: Boolean(scenario) });
   return poll;
 }
 // Why the player's party moved: its own drivers, the effects in force (by cause), and the rest (rivals and sampling).

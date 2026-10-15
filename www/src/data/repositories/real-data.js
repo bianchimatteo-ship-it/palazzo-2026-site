@@ -1,9 +1,9 @@
 // The immutable real snapshot is fetched by collection. The 2 MB aggregate is
 // retained for exports and validation, but the browser never downloads it.
-export const REAL_DATA_ASSET_VERSION = '20260926-4';
+export const REAL_DATA_ASSET_VERSION = '2026-10-14.1-bf850d4413';
 
-import { applyAdminOverrides } from './admin-store.js?v=20261014-1';
-import { displayCase, withDisplayNames } from './name-case.js?v=20261014-1';
+import { applyAdminOverrides } from './admin-store.js?v=20261015-1';
+import { displayCase, withDisplayNames } from './name-case.js?v=20261015-1';
 
 export let realDatabase = Object.freeze({});
 // Untouched copies of what the files contain, so owner overrides can be re-layered or reverted.

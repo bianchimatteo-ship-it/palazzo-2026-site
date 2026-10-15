@@ -6,7 +6,7 @@
 // A roster is kept compact (it is saved with the game): blocks of seats by group and party, each seat being the id of its person; `rosterSeats` gives them back as
 // records (seat, person, group, party or list, who put him there, whether he leads the executive). Pure functions on plain data: the store gives them the groups,
 // the persons and the player, and keeps what they return.
-import { simulatedPerson } from './race-engine.js?v=20261014-1';
+import { simulatedPerson } from './race-engine.js?v=20261015-1';
 
 export const SEAT_PERSON = 'seggio';
 const SEAT_ID = 'persona-seggio-';
@@ -17,7 +17,7 @@ export const RE_ELECTION_SHARE = 0.6;
 const hash = value => [...String(value)].reduce((n, char) => (n * 31 + char.charCodeAt(0)) >>> 0, 2166136261) || 1;
 const FIRST_NAMES = Object.freeze(['Alessandro', 'Alessia', 'Andrea', 'Anna', 'Beatrice', 'Carlo', 'Chiara', 'Davide', 'Elena', 'Federico', 'Francesca', 'Giorgio', 'Giulia', 'Lorenzo', 'Luca', 'Marco', 'Marta', 'Mattia', 'Paola', 'Roberto', 'Sara', 'Sofia', 'Stefano', 'Valentina']);
 const LAST_NAMES = Object.freeze(['Bassi', 'Bellini', 'Bernardi', 'Caruso', 'Conti', 'Costa', 'De Luca', 'Esposito', 'Ferri', 'Fontana', 'Galli', 'Greco', 'Leone', 'Lombardi', 'Marino', 'Marini', 'Moretti', 'Pellegrini', 'Ricci', 'Rinaldi', 'Romano', 'Rossi', 'Santoro', 'Serra', 'Villa', 'Vitale']);
-function italianSeatName(id) {
+export function italianSeatName(id) {
   const first = FIRST_NAMES[hash(id) % FIRST_NAMES.length];
   const last = LAST_NAMES[hash(`${id}|cognome`) % LAST_NAMES.length].trim();
   return { firstName: first, lastName: last, displayName: `${first} ${last}` };
@@ -31,6 +31,13 @@ const seatPerson = ({ assembly, number, kind, label, place, partyId, date }) => 
   const id = personIdOf(assembly, number);
   return compact({ ...simulatedPerson({ id, ...italianSeatName(id), region: place?.region ?? null, municipality: kind === 'comune' ? place?.municipality ?? null : null, partyId, date }), ...italianSeatName(id), origin: SEAT_PERSON });
 };
+// A seat of the verified archive's Chamber that has no member in it (the group has more seats than known members): a person of the simulation, the same every time (the id depends on the Chamber,
+// the group and the number of the seat), never a real one.
+export function placeholderPerson({ chamber, groupId, index }) {
+  const id = personIdOf(`${chamber}|${groupId}`, index);
+  const names = italianSeatName(id);
+  return { id, ...names, fullName: names.displayName, origin: SEAT_PERSON, source: 'simulation', simulated: true };
+}
 // Older saves used placeholders; stabilize them from their already-persistent seat ID without touching real people.
 export function normalizeSeatPerson(person) {
   if (!isSeatPerson(person) && !String(person?.id ?? '').startsWith(SEAT_ID)) return person;

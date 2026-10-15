@@ -1,8 +1,8 @@
 // Simulated newsroom: headlines tied to what happens in the career, written with different structures
 // (fact, question, number, local angle, quote-like, analysis) and never the same template twice in a row.
 // Headlines speak of the player's own character and of the simulated world: no statement is put in the mouth of real people.
-import { ARTICLE_CATEGORIES, NEWSROOM_OUTLETS, NEWS_RULES as RULES, RADIO_PROGRAMMES, RADIO_RULES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261014-1';
-import { WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20261014-1';
+import { ARTICLE_CATEGORIES, NEWSROOM_OUTLETS, NEWS_RULES as RULES, RADIO_PROGRAMMES, RADIO_RULES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261015-1';
+import { WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20261015-1';
 const RECENT = 18;
 // A template not used recently; when every template of the kind has been used, the least recently used one.
 const pick = (list, seed, recent) => {
@@ -466,6 +466,26 @@ export function relevantArticles(media, { week, region = null, seat = false, lim
     return value;
   };
   return media.articles.filter(item => !item.homeSeen && item.week >= week - 2).map(item => ({ item, value: score(item) })).filter(entry => entry.value >= 4).sort((a, b) => b.value - a.value || b.item.week - a.item.week || compareText(a.item.id, b.item.id)).slice(0, limit).map(entry => entry.item);
+}
+// The weekly pop-up of the newsroom: at most one a week (media.popup.week remembers the week already looked at, whether or not there was anything to say), at most three articles, only recent news
+// about the career that were never in a pop-up before and that do not repeat each other (one per story, one per headline). Returns { week, articles } and the media to keep, or null when the week was
+// already looked at. The articles stay in the archive and on the Home; the pop-up only points at them.
+export const POPUP_RULES = Object.freeze({ limit: 3, keep: 80 });
+export function weeklyPopup(societyIn, { week, region = null, seat = false } = {}) {
+  if (!societyIn?.media || !Number.isFinite(week) || societyIn.media.popup?.week === week) return null;
+  const media = normalizeMedia(copy(societyIn.media));
+  const shown = new Set(media.popup?.ids ?? []);
+  const fresh = relevantArticles({ ...media, articles: media.articles.filter(item => !shown.has(item.id)) }, { week, region, seat, limit: 12 });
+  const taken = new Set(), articles = [];
+  for (const item of fresh) {
+    const keys = [item.storyId ? `storia:${item.storyId}` : null, `titolo:${String(item.headline ?? '').trim().toLowerCase()}`].filter(Boolean);
+    if (keys.some(key => taken.has(key))) continue;
+    keys.forEach(key => taken.add(key));
+    articles.push(item);
+    if (articles.length >= POPUP_RULES.limit) break;
+  }
+  media.popup = { week, ids: [...(media.popup?.ids ?? []), ...articles.map(item => item.id)].slice(-POPUP_RULES.keep) };
+  return { week, articles, society: { ...societyIn, media } };
 }
 // Marks articles as read on the Home (they are not shown there again); the archive keeps them.
 export function markHomeSeen(societyIn, ids) {

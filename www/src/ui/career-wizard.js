@@ -1,13 +1,15 @@
-import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261014-1';
-import { LOGO_SHAPES, LOGO_SYMBOLS, partyLogoDataUrl } from './party-logo.js?v=20261014-1';
-import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261014-1';
-import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261014-1';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261014-1';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261014-1';
-import { startStep, startSummary } from './start-wizard.js?v=20261014-1';
-import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261014-1';
-import { normalizeStart } from '../core/start-engine.js?v=20261014-1';
-import { legacyBanner } from './hall-view.js?v=20261014-1';
+import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261015-1';
+import { LOGO_SHAPES, LOGO_SYMBOLS, partyLogoDataUrl } from './party-logo.js?v=20261015-1';
+import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261015-1';
+import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261015-1';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261015-1';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261015-1';
+import { POLL_SCENARIOS, SCENARIO_LIMITS } from '../core/poll-scenario.js?v=20261015-1';
+import { startStep, startSummary } from './start-wizard.js?v=20261015-1';
+import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261015-1';
+import { normalizeStart } from '../core/start-engine.js?v=20261015-1';
+import { legacyBanner } from './hall-view.js?v=20261015-1';
+import { formatDate } from '../core/time.js?v=20261015-1';
 
 const POSITIONS = ['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra'];
 
@@ -38,19 +40,20 @@ export function makeCareerDraft(currentDate, parties = [], hall = []) {
     partyName: '', partyAbbreviation: '', partyDescription: '', partyColor: '#264d82', partyColor2: '#f2c14e', partyOrientation: 'Centrismo civico',
     partyProgram: [], partyLogoMode: 'builder', partyLogoShape: 'cerchio', partyLogoSymbol: 'freccia', partyLogoUrl: '',
     partyPosition: 'centro', difficulty: 'normale', start: { profile: 'ordinaria', levels: {} }, hall, legacyId: '',
+    pollMode: 'realistico', pollSeed: '', pollCustom: {},
     policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 }, currentDate
   };
 }
 
 // territory: { units, municipalities, source } — the ISTAT list (territorial-units.json, municipalities.json), or
 // { status: 'loading' | 'error', error } while it is missing. data: { loading, failed } — the other real data.
-export function renderCareerWizard(state, draft, realParties = [], logoFor = () => null, parliamentaryGroups = [], partyLeaderships = [], politicalFigures = [], realPoliticians = [], territory = null, data = null) {
+export function renderCareerWizard(state, draft, realParties = [], logoFor = () => null, parliamentaryGroups = [], partyLeaderships = [], politicalFigures = [], realPoliticians = [], territory = null, data = null, pollView = null) {
   const steps = WIZARD_STEPS;
   const level = CAREER_LEVELS[draft.initialLevel];
   const parties = [...state.dataset.parties.filter(isSelectableParty), ...realParties.filter(isSelectableParty)];
   const activeStep = steps[draft.step - 1];
   const place = chosenPlace(draft, territory);
-  const body = draft.step === 1 ? profileStep(state, draft) : draft.step === 2 ? startingPoint(draft, territory, place, parliamentaryGroups, realPoliticians) : draft.step === 3 ? partyStep(draft, parties, logoFor, parliamentaryGroups, partyLeaderships, politicalFigures) : draft.step === 4 ? advancedStep(draft) : summaryStep(draft, parties, level, parliamentaryGroups, place);
+  const body = draft.step === 1 ? profileStep(state, draft) : draft.step === 2 ? startingPoint(draft, territory, place, parliamentaryGroups, realPoliticians) : draft.step === 3 ? partyStep(draft, parties, logoFor, parliamentaryGroups, partyLeaderships, politicalFigures) : draft.step === 4 ? advancedStep(draft, pollView) : summaryStep(draft, parties, level, parliamentaryGroups, place, pollView);
   const backButton = draft.step > 1
     ? `<button type="button" class="secondary-button wizard-back" data-wizard-action="back">${ico('back', 16)} Indietro</button>`
     : `<button type="button" class="wizard-cancel" data-wizard-action="cancel">Annulla</button>`;
@@ -98,9 +101,9 @@ function startingPoint(d, territory, place, parliamentaryGroups, realPoliticians
   return block('DOVE', 'Il territorio da cui parti', whereStep(d, territory)) + block('RUOLO E SCENARIO', 'La carica o il percorso', levelStep(d, parliamentaryGroups, realPoliticians, place));
 }
 // Step 4: difficulty (three cards, one chosen) and the starting conditions, shut under their current choice.
-function advancedStep(d) {
+function advancedStep(d, pollView) {
   const start = START_PROFILES[normalizeStart(d.start).profile];
-  return difficultyStep(d) + more(d, 'start', 'Condizioni di partenza', `${esc(start?.label ?? 'Ordinaria')} · outsider, debiti, partito diviso, carriera consolidata o scenario tuo`, startStep(d));
+  return difficultyStep(d) + pollStep(d, pollView) + more(d, 'start', 'Condizioni di partenza', `${esc(start?.label ?? 'Ordinaria')} · outsider, debiti, partito diviso, carriera consolidata o scenario tuo`, startStep(d));
 }
 function whereStep(d, territory) {
   const regionSelect = `<label>Regione<select name="region" data-wizard-region><option value="">Scegli la regione</option>${ITALIAN_REGIONS.map(region => `<option value="${esc(region)}" ${d.region === region ? 'selected' : ''}>${esc(region)}</option>`).join('')}</select></label>`;
@@ -129,6 +132,32 @@ function whereStep(d, territory) {
     ${more(d, 'province', 'Filtra per provincia o città metropolitana', unitChosen ? esc(unitLabel(unitChosen)) : `tutte (${units.length})`, `<div class="wizard-form-grid">${unitSelect}</div>`, Boolean(d.territorialUnit))}
     ${chosen}
     ${more(d, 'comuni', place ? 'Cambia comune' : 'Elenco dei comuni', esc(count), list, !place)}${note}`;
+}
+// ---------- the opening poll: the real Supermedia, an invented but plausible picture drawn from a seed, or the numbers the player writes ----------
+const fmt1 = value => (Math.round(Number(value) * 10) / 10).toFixed(1).replace('.', ',');
+export const pollScenarioOf = d => ({ mode: d.pollMode ?? 'realistico', seed: d.pollSeed ?? '', custom: d.pollCustom ?? {} });
+function pollStep(d, view) {
+  const mode = view?.mode ?? d.pollMode ?? 'realistico';
+  const heading = `<div class="summary-section-heading"><div><span>SONDAGGIO INIZIALE</span><strong>${esc(POLL_SCENARIOS[mode]?.label ?? 'Realistico')}</strong></div></div>`;
+  if (!view?.available) return `<section class="summary-section poll-scenario">${heading}<small>La Supermedia reale non è ancora stata caricata: la partita partirà dai dati disponibili.</small></section>`;
+  const cards = Object.entries(POLL_SCENARIOS).map(([id, item]) => `<label class="difficulty-card ${mode === id ? 'selected' : ''}"><input type="radio" name="pollMode" value="${id}" ${mode === id ? 'checked' : ''} /><strong>${esc(item.label)}</strong><small>${esc(item.detail)}</small></label>`).join('');
+  const base = view.base ? `${esc(view.base.label)} del ${esc(formatDate(view.base.referenceDate ?? view.base.publishedAt))}` : 'Supermedia reale';
+  const custom = mode === 'personalizzato';
+  const rows = view.rows.map(row => {
+    const cell = custom
+      ? `<input type="number" inputmode="decimal" step="0.1" min="${SCENARIO_LIMITS.minShare}" max="${SCENARIO_LIMITS.maxShare}" name="poll_${esc(row.partyId)}" value="${esc(d.pollCustom?.[row.partyId] ?? row.share)}" aria-label="${esc(row.label)}: percentuale nel sondaggio iniziale" />`
+      : `<b>${fmt1(row.share)}%</b>`;
+    return `<li class="poll-scenario-row"><span class="poll-scenario-name">${esc(row.label)}</span><span class="poll-scenario-real" title="Supermedia reale">${fmt1(row.real)}%</span><span class="poll-scenario-new">${cell}</span></li>`;
+  }).join('');
+  const table = `<ul class="poll-scenario-table" aria-label="Sondaggio iniziale: reale e della partita"><li class="poll-scenario-row is-head"><span>Forza</span><span>Reale</span><span>In partita</span></li>${rows}<li class="poll-scenario-row is-others"><span class="poll-scenario-name">Altri</span><span class="poll-scenario-real">${fmt1(view.realOthers)}%</span><span class="poll-scenario-new"><b>${fmt1(view.others)}%</b></span></li></ul>`;
+  const seed = mode === 'casuale' ? `<div class="poll-scenario-seed"><label>Seme<input name="pollSeed" data-poll-seed value="${esc(d.pollSeed ?? '')}" maxlength="40" autocomplete="off" spellcheck="false" placeholder="Un testo qualsiasi" /></label><button type="button" class="secondary-button" data-poll-new-seed>Nuovo seme</button></div>` : '';
+  const tools = custom ? `<div class="poll-scenario-seed"><button type="button" class="secondary-button" data-poll-fit>Porta a 100</button><button type="button" class="secondary-button" data-poll-reset>Rimetti i valori reali</button></div>` : '';
+  const problems = view.problems?.length ? `<ul class="poll-problems" role="alert">${view.problems.map(item => `<li>${esc(item)}</li>`).join('')}</ul>` : '';
+  const total = `<p class="poll-scenario-total ${view.problems?.length ? 'is-bad' : ''}" role="status">Totale <b>${fmt1(view.partiesTotal + view.others)}%</b> · partiti ${fmt1(view.partiesTotal)}% + Altri ${fmt1(view.others)}%</p>`;
+  const note = mode === 'realistico'
+    ? `Parti dal sondaggio reale: ${base} (${esc(view.base?.sourceName ?? 'fonte')}).`
+    : `Quadro simulato sulle stesse forze di ${base}: i dati reali restano intatti e il sondaggio è segnato ovunque come «scenario», mai come dato della fonte. Dalla prima settimana i sondaggi sono comunque simulati.`;
+  return `<section class="summary-section poll-scenario">${heading}<div class="difficulty-grid" role="radiogroup" aria-label="Sondaggio iniziale">${cards}</div>${seed}${more(d, 'poll', mode === 'realistico' ? 'Vedi le percentuali di partenza' : 'Le percentuali di partenza', `${fmt1(view.total)}% con Altri`, table + tools + total + problems, mode !== 'realistico')}<small>${note}</small></section>`;
 }
 function difficultyStep(d) {
   const setting = DIFFICULTIES[d.difficulty] ?? DIFFICULTIES.normale;
@@ -252,7 +281,7 @@ function logoBuilder(d) {
   const upload = mode === 'upload' ? '<label class="wizard-full-field logo-admin-upload">File SVG, PNG, JPEG o WebP (resta in questo browser)<input type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp" data-wizard-logo-upload /></label>' + (d.partyLogoError ? '<small class="menu-error">' + esc(d.partyLogoError) + '</small>' : '') + '<div class="wizard-full-field" data-logo-editor-slot></div>' : '';
   return '<div class="wizard-logo"><div class="wizard-logo-preview" data-wizard-logo-preview>' + (preview ? '<img src="' + esc(preview) + '" alt="Anteprima del logo" />' : '<span>Logo</span>') + '</div><div class="wizard-logo-controls"><div class="segmented" role="group" aria-label="Tipo di logo">' + modes + '</div><div class="wizard-form-grid">' + builder + url + upload + '</div><small>I simboli disponibili sono segni grafici generici, diversi dagli emblemi dei partiti esistenti. Il logo è un dato dell’utente.</small></div></div>';
 }
-function summaryStep(d, parties, level, parliamentaryGroups, place = null) {
+function summaryStep(d, parties, level, parliamentaryGroups, place = null, pollView = null) {
   const party = d.partyMode === 'existing' ? parties.find(p => p.id === d.partyId) : null;
   const parliamentaryGroup = parliamentaryGroups.find(group => group.id === d.parliamentaryGroupId);
   const partySummary = d.partyMode === 'independent' ? 'Indipendente'
@@ -268,6 +297,8 @@ function summaryStep(d, parties, level, parliamentaryGroups, place = null) {
   const chamber = directPresident || externalPremier ? null : CAREER_LEVELS[d.initialLevel]?.chamber;
   // Difficulty: chosen once (step 4), it changes resources, events, outcomes, relations, candidacies and Parliament.
   const difficulty = '<section class="summary-section"><div class="summary-section-heading"><div><span>04 · DIFFICOLTÀ</span><strong>' + esc(setting.label) + '</strong></div><button type="button" data-wizard-goto="4">Modifica</button></div><small>' + esc(setting.short) + '</small></section>';
+  const pollMode = pollView?.available ? pollView.mode : 'realistico';
+  const pollSummary = pollView?.available ? '<section class="summary-section"><div class="summary-section-heading"><div><span>04 · SONDAGGIO INIZIALE</span><strong>' + esc(POLL_SCENARIOS[pollMode]?.label ?? 'Realistico') + '</strong></div><button type="button" data-wizard-goto="4">Modifica</button></div><small>' + (pollMode === 'realistico' ? 'Supermedia reale ' + esc(pollView.base ? formatDate(pollView.base.referenceDate ?? pollView.base.publishedAt) : '') : pollMode === 'casuale' ? 'Quadro simulato dal seme «' + esc(d.pollSeed || '—') + '» · Altri ' + fmt1(pollView.others) + '%' : 'Percentuali scritte da te · Altri ' + fmt1(pollView.others) + '%') + '</small></section>' : '';
   const pathLabel = directPresident ? 'Presidente della Repubblica — scenario alternativo' : d.startingOffice === 'presidenteConsiglio' ? 'Presidente del Consiglio' : level.label;
   const territorySummary = directPresident ? 'Scenario nazionale alternativo · nessuna carica territoriale personale'
     : externalPremier ? 'Governo nazionale · senza seggio parlamentare personale'
@@ -280,5 +311,5 @@ function summaryStep(d, parties, level, parliamentaryGroups, place = null) {
   const affiliation = '<section class="summary-section"><div class="summary-section-heading"><div><span>03 · APPARTENENZA</span><strong>' + esc(partySummary) + '</strong></div><button type="button" data-wizard-goto="3">Modifica</button></div>' + (party?.source === DATA_SOURCES.REAL && party.sourceUrl ? '<a class="catalog-source" href="' + esc(party.sourceUrl) + '" target="_blank" rel="noopener noreferrer">Fonte del partito ↗</a>' : '') + (d.partyMode === 'new' ? '<small>' + esc(d.partyOrientation) + ' · ' + esc(d.partyPosition ?? 'centro') + ' · Colore <i class="summary-color" style="--party:' + esc(d.partyColor) + '"></i></small>' : '') + '</section>';
   const initialStatus = directPresident ? 'Presidente della Repubblica · nessun seggio personale' : externalPremier ? 'Presidente del Consiglio · esterno al Parlamento' : chamber ? 'componente del gruppo nello scenario' : 'carriera territoriale in avvio';
   const identity = '<section class="summary-section"><div class="summary-section-heading"><div><span>01 · IDENTITÀ</span><strong>' + esc([d.firstName, d.lastName].filter(Boolean).join(' ') || 'Nome da inserire') + '</strong></div><button type="button" data-wizard-goto="1">Modifica</button></div><small>' + esc([d.birthDate, d.previousProfession].filter(Boolean).join(' · ') || 'Data di nascita e professione da inserire') + '</small></section>';
-  return '<div class="summary-sheet">' + identity + where + '<section class="summary-section"><div class="summary-section-heading"><div><span>02 · PERCORSO ISTITUZIONALE</span><strong>' + esc(pathLabel) + '</strong></div><button type="button" data-wizard-goto="2">Modifica</button></div><small>' + esc(territorySummary) + '</small></section>' + scenario + parliamentary + affiliation + position + '<section class="summary-section"><div class="summary-section-heading"><div><span>STATISTICHE INIZIALI</span><strong>Valori di gioco simulati · base bilanciata per percorso</strong></div></div><div class="summary-stat-grid">' + metrics.map(([label, value]) => '<span><small>' + label + '</small><strong>' + value + '<i>/100</i></strong></span>').join('') + '</div><small>Posizione iniziale: ' + initialStatus + ' · situazione politica non garantita.</small></section>' + difficulty + startSummary(d) + '<div class="summary-disclaimer">Il giocatore è un personaggio creato da te (source: user). I valori, la posizione e gli eventi di questa carriera sono source: simulation. Le fonti istituzionali restano in sola lettura.</div></div>';
+  return '<div class="summary-sheet">' + identity + where + '<section class="summary-section"><div class="summary-section-heading"><div><span>02 · PERCORSO ISTITUZIONALE</span><strong>' + esc(pathLabel) + '</strong></div><button type="button" data-wizard-goto="2">Modifica</button></div><small>' + esc(territorySummary) + '</small></section>' + scenario + parliamentary + affiliation + position + '<section class="summary-section"><div class="summary-section-heading"><div><span>STATISTICHE INIZIALI</span><strong>Valori di gioco simulati · base bilanciata per percorso</strong></div></div><div class="summary-stat-grid">' + metrics.map(([label, value]) => '<span><small>' + label + '</small><strong>' + value + '<i>/100</i></strong></span>').join('') + '</div><small>Posizione iniziale: ' + initialStatus + ' · situazione politica non garantita.</small></section>' + difficulty + pollSummary + startSummary(d) + '<div class="summary-disclaimer">Il giocatore è un personaggio creato da te (source: user). I valori, la posizione e gli eventi di questa carriera sono source: simulation. Le fonti istituzionali restano in sola lettura.</div></div>';
 }

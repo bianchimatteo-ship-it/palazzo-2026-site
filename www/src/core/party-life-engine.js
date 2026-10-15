@@ -4,18 +4,20 @@
 // rebuilding of a party in opposition. Everything lives in game.party.life and is simulated: no real person or
 // real organisation is described. The career engine owns the calendar and hands in the helpers it already has
 // (memory, relations, diary) through `api`, so nothing here imports the career engine.
-import { uniqueId } from './ids.js?v=20261014-1';
+import { uniqueId } from './ids.js?v=20261015-1';
 import {
-  ACTOR_PERSONAS, CADRE_ACTIONS, CADRE_INTERESTS, CONGRESS_DELEGATES, CONGRESS_PHASES, EMERGING_AREAS, PACT_KINDS, PERSONAS_BY_CURRENT, PERSONA_FALLBACK,
+  ACTOR_PERSONAS, CADRE_ACTIONS, CADRE_INTERESTS, CONGRESS_ACTIONS, CONGRESS_DELEGATES, CONGRESS_PHASES, EMERGING_AREAS, PACT_KINDS, PERSONAS_BY_CURRENT, PERSONA_FALLBACK,
   REBUILD_FOCUS, REBUILD_WEEKS, REQUEST_KINDS, SPLIT_RULES
-} from '../data/simulation/party-life-rules.js?v=20261014-1';
-import { CURRENT_AREAS, CURRENT_LINES, PARTY_LINES } from '../data/simulation/career-rules.js?v=20261014-1';
-import { LEADER_RULES } from '../data/simulation/committee-rules.js?v=20261014-1';
-import { leaderKeyOf, leaderStance, territorialControl } from './committee-engine.js?v=20261014-1';
+} from '../data/simulation/party-life-rules.js?v=20261015-1';
+import { CURRENT_AREAS, CURRENT_LINES, PARTY_LINES } from '../data/simulation/career-rules.js?v=20261015-1';
+import { LEADER_RULES } from '../data/simulation/committee-rules.js?v=20261015-1';
+import { leaderKeyOf, leaderStance, territorialControl } from './committee-engine.js?v=20261015-1';
+import { italianSeatName } from './seat-roster.js?v=20261015-1';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
 const round1 = value => Math.round(value * 10) / 10;
+const round2 = value => Math.round(value * 100) / 100;
 const hash = value => [...String(value)].reduce((n, char) => (n * 31 + char.charCodeAt(0)) >>> 0, 2166136261) || 1;
 const cap = text => String(text).charAt(0).toUpperCase() + String(text).slice(1);
 const rel = current => current?.value ?? current?.relation ?? 50;
@@ -23,6 +25,33 @@ const OPEN = ['aperta', 'trattativa'];
 const MAX_OPEN = 2;
 const HISTORY_LIMIT = 40;
 const CLOSED_LIMIT = 16;
+
+// ---------- the person behind a local leader ----------
+// Every local leader is a simulated person with a first and last name and a stable id (the same for the same career: it follows the seed of the game, the committee and who holds it);
+// the committee keeps its own name. A new leader (a replacement, a recruit, a change of hands) is a new person.
+export const LOCAL_ROLES = Object.freeze({ regione: 'Segretario regionale', provincia: 'Segretario provinciale', comune: 'Responsabile comunale' });
+const slugOf = value => String(value ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+export const cadreName = cadre => cadre?.person?.displayName ?? cadre?.label ?? 'Dirigente locale';
+function makePerson(seed, committee, key, life, nth = 0) {
+  const taken = new Set((life?.cadres ?? []).filter(item => item.status !== 'uscito' && item.person).map(item => item.person.displayName));
+  const takenIds = new Set((life?.cadres ?? []).map(item => item.person?.id).filter(Boolean));
+  for (let salt = 0; salt < 60; salt++) {
+    const base = `${seed}|${committee.id}|${key}|${nth}|${salt}`;
+    const name = italianSeatName(base);
+    const id = `persona-quadro-${slugOf(committee.id)}-${hash(base).toString(36)}`;
+    if (taken.has(name.displayName) || takenIds.has(id)) continue;
+    return { id, firstName: name.firstName, lastName: name.lastName, displayName: name.displayName, source: SIM, simulated: true };
+  }
+  const base = `${seed}|${committee.id}|${key}|${nth}`;
+  const name = italianSeatName(base);
+  return { id: `persona-quadro-${slugOf(committee.id)}-${hash(base).toString(36)}`, firstName: name.firstName, lastName: name.lastName, displayName: name.displayName, source: SIM, simulated: true };
+}
+// Everything that holds a leader gives him the same person: the cadre, the committee's leader record.
+function seatPerson(life, cadre, committee, seed, key, nth = 0) {
+  cadre.person = makePerson(seed, committee, key, life, nth);
+  committee.leader = { ...(committee.leader ?? {}), person: { id: cadre.person.id, displayName: cadre.person.displayName } };
+  return cadre.person;
+}
 
 // ---------- reading the party ----------
 const currentsOf = party => party?.currents ?? [];
@@ -70,6 +99,12 @@ export function normalizeLife(party, { seed = 1, week = 1 } = {}) {
   life.organs ??= { total: 9, seats: {} };
   life.splitWatch ??= {}; life.cooldowns ??= {}; life.counters ??= { requests: 0, pacts: 0 };
   syncActors(party, life, seed, week);
+  // A save from before the leaders had names: each one gets a person, the same one every time it is loaded.
+  for (const cadre of life.cadres) {
+    if (cadre.person || cadre.player) continue;
+    const committee = (party.org?.committees ?? []).find(item => item.id === cadre.committeeId);
+    if (committee) seatPerson(life, cadre, committee, seed, leaderKeyOf(committee), 0);
+  }
   return life;
 }
 
@@ -125,6 +160,9 @@ function syncCadres(game, life, week) {
       interest: INTERESTS[seed % INTERESTS.length], ambition: 35 + (seed >>> 3) % 55, loyalty: committee.loyalty ?? 55, grievance: committee.leader?.player ? 5 : 20 + (seed >>> 5) % 20,
       status: 'attivo', sinceWeek: week, lastActWeek: null, nextActWeek: week + 6 + (seed >>> 7) % 8, source: SIM
     });
+    const created = life.cadres.at(-1);
+    created.leaderKey = leaderKeyOf(committee);
+    if (!created.player) seatPerson(life, created, committee, game.seed ?? 1, created.leaderKey, 0);
   }
   // A cadre follows its committee: a dissolved committee has no leader any more.
   for (const cadre of life.cadres) {
@@ -134,19 +172,23 @@ function syncCadres(game, life, week) {
     // ambition, his mood and the promises made to the old one are not carried over. A save from before keeps the one on record.
     const key = leaderKeyOf(committee);
     if (cadre.leaderKey === undefined) cadre.leaderKey = key;
-    else if (cadre.leaderKey !== key && cadre.status !== 'uscito') renewCadre(cadre, committee, game, week, key);
+    else if (cadre.leaderKey !== key && cadre.status !== 'uscito') renewCadre(cadre, committee, game, week, key, life);
     cadre.player = Boolean(committee.leader?.player);
     cadre.currentId = committee.leader?.currentId ?? null;
     cadre.label = cadre.player ? 'Tu' : committee.leader?.label ?? cadre.label;
   }
   life.cadres = life.cadres.filter(item => item.status !== 'uscito' || week - (item.leftWeek ?? week) < 26);
+  // A request of a leader who is no longer on record (left more than half a year ago) goes with him: no request points at a person that does not exist.
+  const known = new Set(life.cadres.map(item => item.id));
+  if (life.requests.some(request => request.from === 'cadre' && !known.has(request.refId))) life.requests = life.requests.filter(request => request.from !== 'cadre' || known.has(request.refId));
 }
-function renewCadre(cadre, committee, game, week, key) {
+function renewCadre(cadre, committee, game, week, key, life = null) {
   const seed = hash(`${committee.id}|${key}|${week}|${game.seed ?? 1}`);
   Object.assign(cadre, {
     interest: INTERESTS[seed % INTERESTS.length], ambition: 35 + (seed >>> 3) % 55, loyalty: Math.round(clamp(committee.loyalty ?? 55)), grievance: committee.leader?.player ? 5 : 12 + (seed >>> 5) % 12,
     status: 'attivo', sinceWeek: week, lastActWeek: null, nextActWeek: week + 8 + (seed >>> 7) % 8, promise: null, leaderKey: key
   });
+  if (life && !cadre.player) seatPerson(life, cadre, committee, game.seed ?? 1, key, week);
 }
 // A promise of a candidacy to a local leader breaks when its time runs out or the vote has gone by without the lists being drawn up by the
 // player: the leader remembers it, his area too.
@@ -212,7 +254,7 @@ function tickCadres(game, life, api, week, rand, lines) {
     if (open.length >= MAX_OPEN) continue;
     if (cadre.status === 'in-uscita' && cadre.loyalty <= 30 && rand() < 0.5) {
       cadre.nextActWeek = week + 6;
-      raises.push({ id: 'dirigente-lascia', params: { dedupe: cadre.id, cadreId: cadre.id, title: `${committee.name}: il dirigente locale minaccia di andarsene`, body: `${cadre.label} guida il comitato di ${committee.name} (${committee.status === 'crisi' ? 'in crisi' : 'stato: ' + committee.status}) e ${CADRE_INTERESTS[cadre.interest].detail}. Il malcontento è a ${cadre.grievance}/100 e la fedeltà a ${cadre.loyalty}/100: se se ne va porta via iscritti e volontari.` }, urgent: false });
+      raises.push({ id: 'dirigente-lascia', params: { dedupe: cadre.id, cadreId: cadre.id, title: `${committee.name}: ${cadreName(cadre)} minaccia di andarsene`, body: `${cadre.label} guida il comitato di ${committee.name} (${committee.status === 'crisi' ? 'in crisi' : 'stato: ' + committee.status}) e ${CADRE_INTERESTS[cadre.interest].detail}. Il malcontento è a ${cadre.grievance}/100 e la fedeltà a ${cadre.loyalty}/100: se se ne va porta via iscritti e volontari.` }, urgent: false });
       continue;
     }
     // A leader with a following and a committee that works brings a package of memberships: the territory grows at once, with the risk that comes with it.
@@ -220,7 +262,7 @@ function tickCadres(game, life, api, week, rand, lines) {
     if (cadre.status === 'attivo' && cadre.ambition >= 60 && cadre.loyalty >= 55 && committee.level !== 'regione' && (committee.organization ?? 0) >= 40 && week - (cadre.lastTesseraWeek ?? -99) >= gaps.cadreGapWeeks && week - (life.lastTesseraWeek ?? -99) >= gaps.partyGapWeeks && !game.inbox.some(item => item.templateId === 'capobastone-tessere') && rand() < gaps.chance) {
       cadre.lastTesseraWeek = week; life.lastTesseraWeek = week; cadre.nextActWeek = week + 8;
       const bulk = Math.max(12, Math.round(committee.members * 0.25));
-      raises.push({ id: 'capobastone-tessere', params: { dedupe: `${cadre.id}-${week}`, cadreId: cadre.id, title: `${committee.name}: il responsabile ti porta un pacchetto di tessere`, body: `${cadre.label.replace(' (figura simulata)', '')} guida il comitato di ${committee.name} e ha un seguito: propone ${bulk} nuove iscrizioni in blocco e, in cambio, ${CADRE_INTERESTS[cadre.interest].detail}. Il comitato crescerebbe subito e lui si sentirebbe in credito; ma le iscrizioni in blocco sono il genere di cosa che le altre aree contestano e che i giornali raccontano.` }, urgent: false });
+      raises.push({ id: 'capobastone-tessere', params: { dedupe: `${cadre.id}-${week}`, cadreId: cadre.id, title: `${committee.name}: ${cadreName(cadre)} ti porta un pacchetto di tessere`, body: `${cadreName(cadre)} guida il comitato di ${committee.name} e ha un seguito: propone ${bulk} nuove iscrizioni in blocco e, in cambio, ${CADRE_INTERESTS[cadre.interest].detail}. Il comitato crescerebbe subito e lui si sentirebbe in credito; ma le iscrizioni in blocco sono il genere di cosa che le altre aree contestano e che i giornali raccontano.` }, urgent: false });
       continue;
     }
     // What a local leader asks follows what he wants and where his committee stands: a committee that already decides for itself asks for more room, one with no seat or little activity asks for means.
@@ -244,13 +286,17 @@ export function cadreAction(game, api, { action, cadreId = null, committeeId = n
     if (committee.leader?.player) throw new Error('Questo comitato lo guidi già tu.');
     if (life.cadres.some(item => item.committeeId === committee.id && item.status !== 'uscito' && !item.player)) throw new Error('Il comitato ha già un dirigente: puoi incontrarlo o sostituirlo.');
     const seed = hash(`${committee.id}|recluta|${week}`);
+    // A leader who left earlier leaves his record: the new one takes the place without a second row with the same id.
+    life.cadres = life.cadres.filter(item => !(item.committeeId === committee.id && item.status === 'uscito'));
     life.cadres.push({ id: `quadro-${committee.id}`, committeeId: committee.id, region: committee.region, level: committee.level, name: committee.name, label: 'Dirigente reclutato da te (figura simulata)', currentId: null, player: false, interest: INTERESTS[seed % INTERESTS.length], ambition: 40 + seed % 40, loyalty: 72, grievance: 8, status: 'attivo', sinceWeek: week, lastActWeek: null, nextActWeek: week + 12, recruitedBy: 'player', source: SIM });
     committee.leader = { label: 'Dirigente reclutato da te (figura simulata)', currentId: null, player: false, since: week };
     life.cadres.at(-1).leaderKey = leaderKeyOf(committee);
+    life.cadres.at(-1).recruitedBy = 'player';
+    const person = seatPerson(life, life.cadres.at(-1), committee, game.seed ?? 1, `recluta|${week}`, week);
     committee.loyalty = Math.round(clamp(Math.max(committee.loyalty, 70)));
     org.cadres = (org.cadres ?? 0) + 1;
     note(life, week, 'quadro', `Reclutato un dirigente per ${committee.name}`);
-    return [`${committee.name}: nuovo dirigente, fedeltà 72`];
+    return [`${committee.name}: ${person.displayName} è il nuovo dirigente, fedeltà 72`];
   }
   const cadre = life.cadres.find(item => item.id === cadreId && item.status !== 'uscito');
   if (!cadre) throw new Error('Dirigente non disponibile.');
@@ -276,12 +322,14 @@ export function cadreAction(game, api, { action, cadreId = null, committeeId = n
     const seed = hash(`${committee.id}|sostituisci|${week}|${game.seed ?? 1}`);
     cadre.label = 'Dirigente scelto da te (figura simulata)'; cadre.currentId = null; cadre.loyalty = 72; cadre.grievance = 10; cadre.recruitedBy = 'player';
     cadre.interest = INTERESTS[seed % INTERESTS.length]; cadre.ambition = 35 + (seed >>> 3) % 55; cadre.promise = null; cadre.status = 'attivo';
+    const outgoingName = cadreName(cadre);
     committee.leader = { label: cadre.label, currentId: null, player: false, since: week };
     cadre.leaderKey = leaderKeyOf(committee);
+    const successor = seatPerson(life, cadre, committee, game.seed ?? 1, `sostituisci|${week}`, week);
     committee.loyalty = Math.round(clamp(Math.max(committee.loyalty, 70)));
     committee.organization = Math.round(clamp(committee.organization - 4));
     if (outgoing) { outgoing.grievance = Math.round(clamp(outgoing.grievance + 8)); outgoing.loyalty = Math.round(clamp(outgoing.loyalty - 5)); api.changeRelation(game, outgoing.id, -3); lines.push(`${outgoing.leaderLabel}: non gradisce il cambio`); }
-    lines.push(`${committee.name}: nuovo dirigente vicino a te, organizzazione −4`);
+    lines.push(`${committee.name}: ${successor.displayName} al posto di ${outgoingName}, organizzazione −4`);
   }
   note(life, week, 'quadro', `${CADRE_ACTIONS[action].label}: ${committee.name}`);
   return lines;
@@ -422,11 +470,11 @@ function buildRequest(kind, context) {
   }
   if (kind === 'risorse-locali') {
     const amount = Math.round(clamp(300 + (60 - committee.organization) * 12, 300, 1200) / 50) * 50;
-    return { title: `${committee.name}: ${cadre.label.replace(' (figura simulata)', '')} chiede mezzi`, body: `Il comitato di ${committee.name} (${committee.status}, organizzazione ${committee.organization}/100) chiede ${amount.toLocaleString('it-IT')} € per sede e iniziative; il dirigente ${CADRE_INTERESTS[cadre.interest].detail}.`, acceptLabel: `${amount.toLocaleString('it-IT')} € al comitato`, ask: { amount }, dueWeek: week + 5 };
+    return { title: `${committee.name}: ${cadreName(cadre)} chiede mezzi`, body: `Il comitato di ${committee.name} (${committee.status}, organizzazione ${committee.organization}/100) chiede ${amount.toLocaleString('it-IT')} € per sede e iniziative; il dirigente ${CADRE_INTERESTS[cadre.interest].detail}.`, acceptLabel: `${amount.toLocaleString('it-IT')} € al comitato`, ask: { amount }, dueWeek: week + 5 };
   }
   if (kind === 'candidatura-locale') {
     const election = electionSoon(game, date, 120);
-    return { title: `${committee.name}: il dirigente chiede una candidatura`, body: `${cadre.label.replace(' (figura simulata)', '')} guida il comitato di ${committee.name} e chiede di essere candidato${election ? ` a ${election.label}` : ' alle prossime elezioni'}: ha ambizione ${cadre.ambition}/100 e fedeltà ${cadre.loyalty}/100.`, acceptLabel: isSecretary(party) ? 'promettigli una candidatura' : 'promettigli il tuo sostegno', ask: { electionId: election?.id ?? null }, dueWeek: week + 6 };
+    return { title: `${committee.name}: ${cadreName(cadre)} chiede una candidatura`, body: `${cadreName(cadre)} guida il comitato di ${committee.name} e chiede di essere candidato${election ? ` a ${election.label}` : ' alle prossime elezioni'}: ha ambizione ${cadre.ambition}/100 e fedeltà ${cadre.loyalty}/100.`, acceptLabel: isSecretary(party) ? 'promettigli una candidatura' : 'promettigli il tuo sostegno', ask: { electionId: election?.id ?? null }, dueWeek: week + 6 };
   }
   if (kind === 'autonomia') {
     return { title: `${committee.name}: il dirigente chiede autonomia`, body: `Il dirigente del comitato di ${committee.name} vuole decidere da solo su sede, volontari e candidati locali. Dargli mano libera rafforza la lealtà ma la coesione ne soffre.`, acceptLabel: 'mano libera sul territorio', ask: {}, dueWeek: week + 6 };
@@ -810,9 +858,12 @@ export const congressPhaseOf = (congress, week) => [...congress.schedule].revers
 // The area that prepared the congress on its own (a plan with the federations, a motion, an agreement) arrives with more delegates.
 function preparedBonus(current, congress) {
   const plan = current.profile?.congressPlan;
-  if (!plan || (congress.voteWeek ?? 0) - (plan.week ?? 0) > 60) return 1;
-  return 1 + (plan.action === 'endorsement-territoriale' ? 0.12 : 0.08);
+  const tours = (congress.tours ?? []).filter(item => item.currentId === current.id).reduce((sum, item) => sum + item.bonus, 0);
+  if (!plan || (congress.voteWeek ?? 0) - (plan.week ?? 0) > 60) return 1 + tours;
+  return 1 + tours + (plan.action === 'endorsement-territoriale' ? 0.12 : 0.08);
 }
+// The campaign of the player in one region (the delegates action): the area he backs weighs more among that federation's delegates.
+const regionalPush = (congress, region, currentId) => (congress.pushes ?? []).filter(item => item.region === region && item.currentId === currentId).reduce((sum, item) => sum + item.bonus, 0);
 // The agreements the areas reached by themselves count as alliances of the vote (the pairs stay apart).
 function adoptAgreements(party, congress, week) {
   for (const current of party.currents) for (const pact of current.profile?.agreements ?? []) {
@@ -852,7 +903,7 @@ function regionalDelegates(party, life, congress) {
       const noise = 0.85 + (hash(`${congress.id}|${section.region}|${current.id}`) % 31) / 100;
       const lead = 1 + (committee?.leader?.currentId === current.id ? 1.2 : 0) + 0.8 * localLead(party, section.region, current.id);
       const mobilized = 1 + (congress.mobilization?.[current.id] ?? 0) / 100;
-      return Math.max(0.1, (current.strength ?? 1) * noise * lead * mobilized * (1 + (actor?.momentum ?? 0) / 100) * preparedBonus(current, congress) * (0.6 + section.vitality / 100));
+      return Math.max(0.1, (current.strength ?? 1) * noise * lead * mobilized * (1 + (actor?.momentum ?? 0) / 100) * preparedBonus(current, congress) * (1 + regionalPush(congress, section.region, current.id)) * (0.6 + section.vitality / 100));
     });
     const sum = weights.reduce((a, b) => a + b, 0);
     const own = committee?.leader?.player ? Math.round(delegates * 0.6) : 0;
@@ -949,6 +1000,9 @@ function tally(party, life, congress, { mode, backedId, unity = false, rand = nu
   // The player's own people (committees led by the player) follow the area the player backs.
   const bloc = delegates.player ?? 0;
   if (bloc) { if (backedId && byId[backedId]) byId[backedId].delegates += bloc; else for (const item of motions) item.delegates += bloc * (item.delegates / (delegates.total - bloc || 1)); }
+  // The motion the player wrote: a solid text brings delegates to the area it was written for.
+  const motion = congress.playerMotion;
+  if (motion && byId[motion.currentId] && motion.quality >= 0.4) byId[motion.currentId].delegates += Math.round(delegates.total * 0.03 * motion.quality);
   // Pacts for the support of the congress: whoever the player is tied to gets the weight of the agreement.
   for (const pact of life.pacts.filter(item => item.status === 'attivo' && item.kind === 'sostegno-congresso')) if (byId[pact.actorId] && backedId === pact.actorId) byId[pact.actorId].delegates += Math.round(delegates.total * 0.03);
   const ruling = party.leaderCurrentId;
@@ -1049,17 +1103,106 @@ function applyCongressOutcome(game, life, api, outcome, { week, date, rand, mode
   life.congress = null;
   return lines;
 }
-// The player works for an area before the vote: quadri in movement or alliances woven.
-export function congressWork(game, api, { kind, week }) {
+// What the player can do about the congress right now, with why not when it cannot be done (phase, area, one time only, the target it needs); the costs are checked where they are paid.
+export function congressActionsOf(game, life = game.party?.life) {
+  const party = game.party;
+  const congress = life?.congress;
+  if (!congress) return [];
+  const phase = congressPhaseOf(congress, game.week.index);
+  const aligned = party.alignedCurrentId;
+  const done = { federazioni: (congress.tours ?? []).some(item => item.currentId === aligned), mozione: Boolean(congress.playerMotion) };
+  return Object.entries(CONGRESS_ACTIONS).map(([id, spec]) => {
+    let reason = null;
+    if (!aligned) reason = 'Non hai un’area di riferimento: scegli da che parte stare.';
+    else if (!spec.phases.includes(phase)) reason = `Si può fare ${spec.phases.length > 3 ? 'prima del voto' : `solo in ${spec.phases.map(item => CONGRESS_PHASES.find(entry => entry.id === item)?.label.toLowerCase()).join(' e ')}`}: ora siamo in «${CONGRESS_PHASES.find(entry => entry.id === phase)?.label.toLowerCase()}».`;
+    else if (spec.once && done[id]) reason = id === 'mozione' ? 'Hai già depositato la tua mozione.' : 'L’hai già fatto per questo congresso.';
+    else if (id === 'alleanza' && congress.alliances.some(al => al.ids.includes(aligned))) reason = 'La tua area ha già un’alleanza.';
+    else if (id === 'trattativa' && party.currents.filter(item => item.id !== aligned).every(item => congress.alliances.some(al => al.ids.includes(aligned) && al.ids.includes(item.id)))) reason = 'Hai già un’intesa con tutte le altre aree.';
+    return { id, label: spec.label, detail: spec.detail, cost: spec.cost, phases: spec.phases, needs: spec.needs, once: spec.once, risk: spec.risk?.text ?? null, riskChance: spec.risk?.chance ?? null, available: !reason, reason, done: Boolean(done[id]) };
+  });
+}
+// The player works for an area before the vote. Every action leaves a mark in the congress (mobilisation, tours, pushes, the motion, alliances): it is saved with the game and the delegates and the vote read it.
+// `rand` decides what can go wrong; `target` is the region (delegati) or the area (trattativa) the action is pointed at.
+export function congressWork(game, api, { kind, week, rand = () => 0.5, target = null }) {
   const party = game.party;
   const life = normalizeLife(party, { seed: game.seed ?? 1, week });
   const congress = life.congress;
   if (!congress) return ['Nessun congresso in preparazione.'];
   const aligned = party.alignedCurrentId;
   if (!aligned) return ['Non hai un’area di riferimento: nessuno da sostenere.'];
-  if (kind === 'mobilita') { congress.mobilization[aligned] = round1(clamp((congress.mobilization[aligned] ?? 0) + 8, 0, 40)); congress.delegates = regionalDelegates(party, life, congress); return [`Mobiliti i quadri: ${party.currents.find(item => item.id === aligned)?.label} guadagna peso nelle federazioni`]; }
+  const mine = party.currents.find(item => item.id === aligned);
+  const labelOf = id => party.currents.find(item => item.id === id)?.label ?? id;
+  const refresh = () => { congress.delegates = regionalDelegates(party, life, congress); };
+  if (kind === 'mobilita') { congress.mobilization[aligned] = round1(clamp((congress.mobilization[aligned] ?? 0) + 8, 0, 40)); refresh(); return [`Mobiliti i quadri: ${mine?.label} guadagna peso nelle federazioni`]; }
+  if (kind === 'federazioni') {
+    const spec = CONGRESS_ACTIONS.federazioni;
+    congress.tours = congress.tours ?? [];
+    if (congress.tours.some(item => item.currentId === aligned)) return ['Il giro delle federazioni per questo congresso è già stato fatto.'];
+    const noisy = rand() < spec.risk.chance;
+    congress.tours.push({ currentId: aligned, week, bonus: noisy ? 0.035 : 0.07, noisy });
+    refresh();
+    const lines = [`Giro delle federazioni: ${mine?.label} arriva al congresso più preparata`];
+    if (noisy) {
+      const rival = party.currents.find(item => item.id === party.leaderCurrentId && item.id !== aligned) ?? [...party.currents].filter(item => item.id !== aligned).sort((a, b) => b.strength - a.strength)[0];
+      if (rival) { api.changeRelation(game, rival.id, -3); lines.push(`La trasferta ha fatto rumore: ${rival.label} si sente scavalcata`); }
+      congress.notes.push({ week, phase: congress.phase, text: 'Il giro delle federazioni ha fatto rumore: il vantaggio è dimezzato.' });
+    }
+    return lines;
+  }
+  if (kind === 'delegati') {
+    const spec = CONGRESS_ACTIONS.delegati;
+    const region = String(target ?? '');
+    const section = (party.org.sections ?? []).find(item => item.region === region);
+    if (!section) return ['Scegli una regione dove il partito ha una federazione.'];
+    const committee = (party.org.committees ?? []).find(item => item.level === 'regione' && item.region === region && item.status !== 'dissoluzione');
+    const hostile = Boolean(committee?.leader?.currentId && committee.leader.currentId !== aligned && !committee.leader.player);
+    const backlash = hostile && rand() < spec.risk.chance;
+    congress.pushes = congress.pushes ?? [];
+    congress.pushes.push({ region, currentId: aligned, week, bonus: backlash ? 0.125 : 0.25, backlash });
+    refresh();
+    const lines = [`Campagna in ${region}: ${mine?.label} pesa di più tra i delegati della federazione`];
+    if (backlash) {
+      const cadre = (party.life?.cadres ?? life.cadres).find(item => item.committeeId === committee.id && item.status !== 'uscito');
+      if (cadre) cadre.loyalty = Math.round(clamp(cadre.loyalty - 4));
+      lines.push(`In ${region} la mossa è vista come un’invasione: il vantaggio si dimezza e il responsabile del comitato perde fiducia in te`);
+    }
+    return lines;
+  }
+  if (kind === 'mozione') {
+    const spec = CONGRESS_ACTIONS.mozione;
+    if (congress.playerMotion) return ['Hai già depositato la tua mozione.'];
+    const weak = rand() < clamp(spec.risk.chance + (55 - (party.org?.cohesion ?? 55)) / 250, 0.1, 0.6);
+    const quality = round2(clamp(weak ? 0.2 + rand() * 0.18 : 0.55 + (party.support - 50) / 200 + rand() * 0.25, 0.1, 0.95));
+    congress.playerMotion = { currentId: aligned, week, quality, weak };
+    if (weak) {
+      for (const current of party.currents.filter(item => item.id !== aligned)) { const actor = life.actors[current.id]; if (actor) actor.grievance = Math.round(clamp(actor.grievance + 3)); }
+      congress.notes.push({ week, phase: congress.phase, text: 'La mozione del segretario in pectore è debole: nessuno la prende sul serio.' });
+      return ['Depositi la mozione: il testo è debole, non porta delegati e le altre aree si irrigidiscono'];
+    }
+    refresh();
+    congress.notes.push({ week, phase: congress.phase, text: `${mine?.label} presenta una mozione solida.` });
+    return [`Depositi la mozione: ${mine?.label} guadagna circa ${round1(0.03 * quality * 100)}% dei delegati`];
+  }
+  if (kind === 'trattativa') {
+    const partner = party.currents.find(item => item.id === target && item.id !== aligned);
+    if (!partner) return ['Scegli un’area con cui trattare.'];
+    if (congress.alliances.some(al => al.ids.includes(aligned) && al.ids.includes(partner.id))) return [`Hai già un’intesa con ${partner.label}.`];
+    if (congress.alliances.some(al => al.ids.includes(partner.id) && !al.ids.includes(aligned))) return [`${partner.label} ha già un’intesa con un’altra area.`];
+    const actor = life.actors[partner.id];
+    const chance = clamp(0.3 + rel(partner) / 160 + (actor?.loyalty ?? 50) / 400 - (actor?.grievance ?? 30) / 300, 0.1, 0.85);
+    if (rand() < chance) {
+      congress.alliances = congress.alliances.filter(al => !al.ids.includes(aligned));
+      congress.alliances.push({ ids: [aligned, partner.id], week, origin: 'trattativa' });
+      api.changeRelation(game, partner.id, 4);
+      congress.notes.push({ week, phase: congress.phase, text: `${mine?.label} e ${partner.label} si accordano: corrono insieme.` });
+      return [`Trattativa riuscita: ${mine?.label} e ${partner.label} corrono insieme`];
+    }
+    api.changeRelation(game, partner.id, -3);
+    if (actor) actor.grievance = Math.round(clamp(actor.grievance + 4));
+    return [`${partner.label} rifiuta: il rapporto si raffredda`];
+  }
   const partner = [...party.currents].filter(item => item.id !== aligned).sort((a, b) => rel(b) - rel(a))[0];
-  if (partner && !congress.alliances.some(al => al.ids.includes(aligned))) { congress.alliances.push({ ids: [aligned, partner.id], week, origin: 'giocatore' }); api.changeRelation(game, partner.id, 3); return [`Tessi un’intesa: ${party.currents.find(item => item.id === aligned)?.label} e ${partner.label} corrono insieme`]; }
+  if (partner && !congress.alliances.some(al => al.ids.includes(aligned))) { congress.alliances.push({ ids: [aligned, partner.id], week, origin: 'giocatore' }); api.changeRelation(game, partner.id, 3); return [`Tessi un’intesa: ${mine?.label} e ${partner.label} corrono insieme`]; }
   return ['L’area ha già un’alleanza: non resta altro da tessere per ora.'];
 }
 
@@ -1217,17 +1360,23 @@ export function lifeOverview(game) {
     secretary, currents, vitals: life.vitals, organs: life.organs,
     requests: life.requests.filter(item => OPEN.includes(item.stage)).map(item => ({ id: item.id, kind: item.kind, label: REQUEST_KINDS[item.kind]?.label ?? item.kind, title: item.title, body: item.counter?.body ?? item.body, stage: item.stage, dueWeek: item.dueWeek, weeksLeft: Math.max(0, item.dueWeek - game.week.index), refId: item.refId, from: item.from })),
     pacts: life.pacts.map(pact => ({ id: pact.id, kind: pact.kind, title: pact.title, actor: party.currents.find(item => item.id === pact.actorId)?.label ?? pact.actorId, status: pact.status, since: pact.since, until: pact.until, weeksLeft: Math.max(0, pact.until - game.week.index), gives: PACT_KINDS[pact.kind]?.gives, asks: PACT_KINDS[pact.kind]?.asks, renewals: pact.renewals, settled: pact.settled ?? null })),
-    congress: life.congress ? { id: life.congress.id, voteWeek: life.congress.voteWeek, weeksLeft: Math.max(0, life.congress.voteWeek - game.week.index), phase: phaseSpec?.id, phaseLabel: phaseSpec?.label, phaseDetail: phaseSpec?.detail, schedule: life.congress.schedule.map(item => ({ ...item, label: CONGRESS_PHASES.find(spec => spec.id === item.id)?.label })), delegates: life.congress.delegates ? { total: life.congress.delegates.total, byCurrent: life.congress.delegates.byCurrent, player: life.congress.delegates.player } : null, alliances: life.congress.alliances.map(al => ({ ids: al.ids, labels: al.ids.map(id => party.currents.find(item => item.id === id)?.label ?? id), origin: al.origin })), notes: life.congress.notes.slice(-4), projection: projectCongress(game, { mode: secretary ? 'incumbent' : 'support' }) } : null,
+    congress: life.congress ? { id: life.congress.id, voteWeek: life.congress.voteWeek, weeksLeft: Math.max(0, life.congress.voteWeek - game.week.index), phase: phaseSpec?.id, phaseLabel: phaseSpec?.label, phaseDetail: phaseSpec?.detail, schedule: life.congress.schedule.map(item => ({ ...item, label: CONGRESS_PHASES.find(spec => spec.id === item.id)?.label })), delegates: life.congress.delegates ? { total: life.congress.delegates.total, byCurrent: life.congress.delegates.byCurrent, player: life.congress.delegates.player } : null, alliances: life.congress.alliances.map(al => ({ ids: al.ids, labels: al.ids.map(id => party.currents.find(item => item.id === id)?.label ?? id), origin: al.origin })), notes: life.congress.notes.slice(-4), projection: projectCongress(game, { mode: secretary ? 'incumbent' : 'support' }), actions: congressActionsOf(game, life), regions: (party.org?.sections ?? []).map(item => item.region), marks: { tours: (life.congress.tours ?? []).length, pushes: (life.congress.pushes ?? []).map(item => item.region), motion: life.congress.playerMotion ? { quality: life.congress.playerMotion.quality, weak: life.congress.playerMotion.weak } : null, mobilization: Math.round(life.congress.mobilization?.[party.alignedCurrentId] ?? 0) } } : null,
     nextCongressWeek: party.org?.congress?.nextWeek ?? null, lastCongress: life.lastCongress,
     cadres: life.cadres.filter(item => item.status !== 'uscito').map(item => {
       const committee = party.org?.committees?.find(entry => entry.id === item.committeeId) ?? null;
       const stance = committee ? leaderStance(committee, { party, cadre: item }) : null;
       return {
-        id: item.id, name: item.name, level: item.level, region: item.region, label: item.label, interest: CADRE_INTERESTS[item.interest]?.label, loyalty: Math.round(item.loyalty), grievance: Math.round(item.grievance), ambition: Math.round(item.ambition ?? 50), status: item.status, player: item.player, committeeId: item.committeeId,
+        id: item.id, name: item.name, level: item.level, region: item.region, label: item.label, personId: item.person?.id ?? null, personName: cadreName(item), simulated: true, roleLabel: LOCAL_ROLES[item.level] ?? 'Dirigente locale', since: item.sinceWeek ?? null,
+        mode: item.player ? 'Guidato da te' : item.recruitedBy === 'player' ? 'Scelto da te' : item.currentId ? 'Espressione di un’area del partito' : 'Responsabile locale autonomo', interest: CADRE_INTERESTS[item.interest]?.label, loyalty: Math.round(item.loyalty), grievance: Math.round(item.grievance), ambition: Math.round(item.ambition ?? 50), status: item.status, player: item.player, committeeId: item.committeeId,
         area: item.currentId ? party.currents.find(entry => entry.id === item.currentId)?.label ?? null : null, stance: stance ? { id: stance.id, label: stance.label, tone: stance.tone, weight: stance.weight, reasons: stance.reasons } : null,
         autonomy: committee ? Math.round(committee.autonomy ?? 50) : null, organization: committee ? Math.round(committee.organization ?? 0) : null,
         promise: item.promise ? { electionId: item.promise.electionId ?? null, weeksLeft: Math.max(0, item.promise.until - game.week.index) } : null
       };
+    }),
+    // Every committee of the local levels with who leads it: the list to recruit from (a committee without a leader of its own has `vacant`).
+    committees: committeesOf(party.org).filter(item => ['regione', 'provincia', 'comune'].includes(item.level)).map(item => {
+      const holder = life.cadres.find(entry => entry.committeeId === item.id && entry.status !== 'uscito') ?? null;
+      return { id: item.id, name: item.name, level: item.level, region: item.region, status: item.status, leaderName: item.leader?.player ? 'Tu' : holder ? cadreName(holder) : null, cadreId: holder?.id ?? null, player: Boolean(item.leader?.player), vacant: !holder && !item.leader?.player };
     }),
     control: territorialControl(party, { region: game.place?.region ?? null }),
     rebuild: life.rebuild ? { ...life.rebuild, label: REBUILD_FOCUS[life.rebuild.focus]?.label, weeksLeft: Math.max(0, life.rebuild.since + REBUILD_WEEKS - game.week.index) } : null,

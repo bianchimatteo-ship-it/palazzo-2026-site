@@ -1,5 +1,5 @@
-import { OBSERVATORY_RULES as RULES, POLL_EXTENSIONS as EXT, POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261014-1';
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261014-1';
+import { OBSERVATORY_RULES as RULES, POLL_EXTENSIONS as EXT, POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261015-1';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261015-1';
 
 // The poll observatory: what each simulated institute measures week after week, the average of the institutes, the segments
 // of the electorate, the flows between the forces and the insights drawn from them.
@@ -210,10 +210,10 @@ export function normalizeObservatory(input) {
 const pack = rows => rows.map(row => [row.partyId, row.share, row.delta ?? 0]);
 const unpack = rows => (rows ?? []).map(([partyId, share, delta]) => ({ partyId, share, delta }));
 export const readingRows = reading => unpack(reading?.rows);
-// Starts the series from a real poll: the average is the real average, the institutes have nothing yet.
-export function seedObservatory(observatory, { week, date, rows, others, label = null }) {
+// Starts the series from the opening poll: the real average (or, `scenario`, the invented opening picture the player chose), the institutes have nothing yet.
+export function seedObservatory(observatory, { week, date, rows, others, label = null, scenario = false }) {
   const next = normalizeObservatory(observatory);
-  next.average = [{ week, date, sample: null, institutes: 0, label, rows: pack(rows), others }];
+  next.average = [{ week, date, sample: null, institutes: 0, label, ...(scenario ? { scenario: true } : {}), rows: pack(rows), others }];
   return next;
 }
 // The week of the observatory: every institute publishes (the one of the headline poll with the very figures of that poll, the others
@@ -222,7 +222,7 @@ export function seedObservatory(observatory, { week, date, rows, others, label =
 // previous: the poll before (its rows are the starting point of an institute with no history).
 export function advanceObservatory(input, { week, date, seed, trueRows, headline, previous = null, noise = 1, society = null, entries = [], undecided = 27 }) {
   const obs = normalizeObservatory(input);
-  const damp = previous?.source === 'real' ? 0.6 : 1;
+  const damp = previous?.source === 'real' || previous?.scenario ? 0.6 : 1;
   const readings = [];
   for (const profile of POLL_INSTITUTES) {
     const slot = obs.institutes[profile.id];

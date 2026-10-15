@@ -31,10 +31,10 @@
 .wizard-party-count{margin:7px 0;color:var(--ink-3);font-size:12px}
 .wizard-data-note{font-size:12px;line-height:1.55}
 
-.parliament-mode{display:grid;gap:21px;color:#dbd8ce}
-.parliament-mode-hero{display:flex;justify-content:space-between;align-items:center;gap:22px;padding:22px 25px;border-radius:5px;background:#244332;color:var(--ink-hi)}
+.parliament-mode{display:grid;gap:21px;color:var(--ink-soft)}
+.parliament-mode-hero{display:flex;justify-content:space-between;align-items:center;gap:22px;padding:22px 25px;border-radius:5px;background:var(--good-tint);color:var(--ink-hi)}
 .parliament-mode-hero h2{margin:5px 0 7px;color:var(--ink-hi);font:700 clamp(23px,3vw,32px)/1.1 Manrope,sans-serif;letter-spacing:-.045em}
-.parliament-mode-hero p{max-width:710px;margin:0;color:#dbd8ce;font-size:12.5px;line-height:1.6}
+.parliament-mode-hero p{max-width:710px;margin:0;color:var(--ink-soft);font-size:12.5px;line-height:1.6}
 .parliament-mode-hero .section-kicker{color:var(--gold-soft)}
 .parliament-provenance{display:inline-flex;align-items:center;width:max-content;max-width:100%;min-height:24px;padding:2px 8px;border:1px solid var(--line);border-radius:3px;color:var(--sage);font-size:12px;font-weight:750;letter-spacing:.04em;white-space:normal;overflow-wrap:anywhere}
 .parliament-mode-hero .parliament-provenance{border-color:rgba(44,52,48,0.23);color:var(--ink)}
@@ -42,7 +42,7 @@
 .parliament-provenance.simulated{border-color:#4d3c1a;background:#29200e;color:#d0b478}
 .parliament-player{display:flex;align-items:center;gap:11px;min-width:230px;padding:12px 0 12px 17px;border-left:1px solid rgba(44,52,48,0.2)}
 .parliament-player>span:last-child{display:grid;gap:4px}
-.parliament-player small{color:#dbd8ce;font-size:12px}
+.parliament-player small{color:var(--ink-soft);font-size:12px}
 .parliament-player strong{max-width:260px;color:var(--ink-hi);font-size:12px;line-height:1.4}
 .player-avatar{width:37px;height:37px;display:grid;place-items:center;border:1px solid var(--gold-deep);border-radius:50%;background:var(--line-strong);color:var(--gold-light);font:700 14px Manrope,sans-serif}
 .parliament-party-banner{display:flex;align-items:center;gap:11px;min-height:54px;padding:7px 12px;border-left:4px solid var(--party-color,#5d6254);background:var(--panel-3)}
@@ -78,9 +78,9 @@
 .parliament-source{display:inline-block;margin:5px 0 0 31px;color:var(--sage);font-size:12px;text-decoration:none}
 .parliament-source:hover{text-decoration:underline}
 .parliament-note{margin:8px 0 0;color:var(--ink-3);font-size:12px;line-height:1.5}
-.parliament-access-note{padding:12px 14px;border-left:3px solid #80652b;background:var(--panel-3);color:var(--sage);font-size:12px;line-height:1.55}
+.parliament-access-note{padding:12px 14px;border-left:3px solid var(--gold-dim);background:var(--panel-3);color:var(--sage);font-size:12px;line-height:1.55}
 .parliament-callout h3,.government-start h2,.law-proposal-form h2{margin:5px 0;color:var(--ink-2);font:700 19px Manrope,sans-serif}
-.parliament-callout p,.government-start>p,.law-proposal-form>p{color:#acafa0;font-size:12px;line-height:1.6}
+.parliament-callout p,.government-start>p,.law-proposal-form>p{color:var(--ink-quiet);font-size:12px;line-height:1.6}
 .parliament-choice-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:12px 0}
 .parliament-choice{display:grid;grid-template-columns:18px minmax(0,1fr) auto;align-items:center;gap:8px;padding:9px;border:1px solid var(--line);background:var(--panel)}
 .parliament-choice>span{display:grid;gap:3px}
@@ -123,7 +123,7 @@
 .minister-line strong{color:var(--ink-2);font-size:12px}
 .minister-line small{color:var(--ink-3);font-size:12px}
 .minister-form,.government-actions{display:flex;align-items:end;flex-wrap:wrap;gap:9px;margin:13px 0;padding-top:11px;border-top:1px solid var(--line)}
-.minister-form label,.government-actions label{display:grid;gap:5px;min-width:150px;color:#abae9f;font-size:12px}
+.minister-form label,.government-actions label{display:grid;gap:5px;min-width:150px;color:var(--ink-quiet);font-size:12px}
 .minister-form select,.government-actions select,.law-negotiation select{height:34px;padding:0 8px;border:1px solid var(--line);border-radius:3px;background:var(--panel);color:var(--ink-2);font-size:12px}
 .coalition-edit{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
 .coalition-edit summary{color:var(--sage);font-size:12px;cursor:pointer}
@@ -163,9 +163,9 @@
 .parliament-group-meta b{color:#cdc8b9}
 .parliament-group-meta .parliament-source{margin:0}
 .parliament-group-name>strong em.group-position{color:#d0b478}
-.parliament-role-panel{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;padding:16px 20px;border:1px solid var(--line-strong);border-left:3px solid #80652b;border-radius:5px;background:var(--panel-2)}
+.parliament-role-panel{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;padding:16px 20px;border:1px solid var(--line-strong);border-left:3px solid var(--gold-dim);border-radius:5px;background:var(--panel-2)}
 .parliament-role-panel h3{margin:5px 0 4px;color:var(--ink-2);font:700 17px Manrope,sans-serif}
-.parliament-role-panel p{margin:0 0 5px;color:#acafa0;font-size:12px;line-height:1.55}
+.parliament-role-panel p{margin:0 0 5px;color:var(--ink-quiet);font-size:12px;line-height:1.55}
 .parliament-role-panel b{color:#badcc9}
 .parliament-role-panel small{color:#90947f;font-size:12px}
 .parliament-role-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
@@ -182,7 +182,7 @@
 .parliament-time-note{margin-bottom:14px;border-left-color:var(--line-strong);background:var(--panel-3);color:var(--ink-2)}
 .parliament-empty{padding:38px 5px;color:var(--ink-2)}
 .parliament-empty h2{font:700 25px Manrope,sans-serif}
-.parliament-empty p{color:#abae9f;font-size:12px}
+.parliament-empty p{color:var(--ink-quiet);font-size:12px}
 
 @media(max-width:900px){.parliament-chamber-grid{grid-template-columns:1fr}.government-chamber{grid-template-columns:1fr 1fr}}
 @media(max-width:600px){.parliament-mode{gap:14px}.parliament-mode-hero{align-items:flex-start;flex-direction:column;padding:18px}.parliament-player{min-width:0;width:100%;padding:10px 0 0;border-left:0;border-top:1px solid rgba(44,52,48,0.2)}.chamber-panel,.government-start,.government-current,.law-proposal-form,.parliament-callout,.parliament-timeline{padding:15px}.parliament-choice-list,.coalition-checks{grid-template-columns:1fr}.government-chamber{grid-template-columns:1fr 1fr}.law-form-grid{grid-template-columns:1fr}.law-summary-field{grid-column:auto}.law-negotiation form{align-items:stretch;flex-direction:column}.parliament-role-panel{flex-direction:column;padding:15px}.parliament-role-action{justify-items:start;max-width:none;text-align:left}.parliament-group-meta{margin-left:0}.minister-line{grid-template-columns:1fr 1fr}.minister-line small{grid-column:1/-1}.parliament-choice{grid-template-columns:18px minmax(0,1fr)}.parliament-choice .parliament-source{grid-column:2}.wizard-parliament-title{align-items:flex-start;flex-direction:column}.wizard-party-entry{grid-template-columns:minmax(0,1fr) auto}.wizard-party-entry .demo-party{grid-column:1/-1}.wizard-party-source{padding:0 10px 9px}.wizard-party-entry .source-pill{display:none}}
@@ -200,7 +200,7 @@
 .municipality-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:6px;max-height:320px;overflow:auto;padding-right:3px}
 .municipality-option{display:grid;gap:2px;min-width:0;padding:8px 10px;border:1px solid var(--line);border-radius:5px;background:var(--panel);color:inherit;text-align:left;cursor:pointer}
 .municipality-option:hover{background:var(--panel-3)}
-.municipality-option.selected{border-color:var(--party-accent,#acaf9f);background:var(--panel-3);box-shadow:inset 0 0 0 1px var(--party-accent,#acaf9f)}
+.municipality-option.selected{border-color:var(--party-accent,var(--ink-quiet));background:var(--panel-3);box-shadow:inset 0 0 0 1px var(--party-accent,var(--ink-quiet))}
 .municipality-option strong{overflow:hidden;color:#e0ded5;font-size:13px;text-overflow:ellipsis;white-space:nowrap}
 .municipality-option strong em{color:var(--ink-3);font-style:normal;font-weight:600}
 .municipality-option small{overflow:hidden;color:var(--ink-3);font-size:12px;text-overflow:ellipsis;white-space:nowrap}
@@ -223,22 +223,22 @@
 .bill-steps li.done{color:var(--ink-2);background:var(--panel-3)}
 .bill-steps li.current{color:var(--accent-ink);background:var(--accent)}
 .bill-steps li.outcome{padding-left:10px}.bill-steps li.outcome::before{content:''}
-.bill-steps li.outcome.good{background:var(--night);color:var(--good-ink)}.bill-steps li.outcome.bad{background:#352019;color:#dcb1a2}
+.bill-steps li.outcome.good{background:var(--night);color:var(--good-ink)}.bill-steps li.outcome.bad{background:var(--bad-tint);color:var(--bad-ink)}
 .bill-meta{display:flex;flex-wrap:wrap;gap:6px 12px;margin:6px 0;color:var(--muted);font-size:12px}
 .bill-meta span{display:inline-flex;align-items:center;gap:5px}
 .bill-flag{display:inline-flex;align-items:center;padding:2px 9px;border-radius:20px;background:var(--panel-3);color:var(--ink-2);font:650 12px 'DM Sans',sans-serif}
-.bill-flag.good{background:var(--night);color:var(--good-ink)}.bill-flag.bad{background:#352019;color:#dcb1a2}.bill-flag.warn{background:#271f0d;color:var(--gold-soft)}
+.bill-flag.good{background:var(--night);color:var(--good-ink)}.bill-flag.bad{background:var(--bad-tint);color:var(--bad-ink)}.bill-flag.warn{background:var(--warn-tint);color:var(--gold-soft)}
 .bill-forecast{margin:10px 0;padding:10px 12px;border-radius:8px;background:var(--panel-2)}
 .bill-forecast-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px;align-items:baseline}
 .bill-forecast-head strong{font:700 12.5px 'DM Sans',sans-serif}
-.bill-forecast-head strong.good{color:var(--good-ink)}.bill-forecast-head strong.bad{color:#dcb1a2}
+.bill-forecast-head strong.good{color:var(--good-ink)}.bill-forecast-head strong.bad{color:var(--bad-ink)}
 .bill-meter{position:relative;height:8px;margin:8px 0;border-radius:6px;background:var(--line);overflow:visible}
 .bill-meter i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#408e62,#72c094)}
 .bill-meter b{position:absolute;top:-4px;width:2px;height:16px;background:var(--accent);transform:translateX(-1px)}
 .bill-positions{display:flex;flex-wrap:wrap;gap:5px;margin:6px 0}
 .bill-pos{padding:3px 8px;border-radius:14px;border:1px solid var(--line-strong);font-size:12px;color:var(--ink-2);background:var(--panel)}
 .bill-pos b{font-weight:750}
-.bill-pos.pos-favorevole{border-color:#306a49;background:var(--night)}.bill-pos.pos-contrario{border-color:#6b3c2b;background:#2a1812}.bill-pos.pos-astenuto{border-color:var(--line-strong);background:var(--panel-2)}
+.bill-pos.pos-favorevole{border-color:#306a49;background:var(--night)}.bill-pos.pos-contrario{border-color:#6b3c2b;background:var(--bad-tint)}.bill-pos.pos-astenuto{border-color:var(--line-strong);background:var(--panel-2)}
 .bill-pos.own{outline:2px solid var(--accent);outline-offset:1px}
 .bill-forecast small{color:var(--muted);font-size:12px}
 .bill-actions{display:grid;gap:10px;margin:10px 0;padding:10px 0;border-top:1px solid var(--line)}
@@ -264,7 +264,7 @@
   .bill-forecast-head{flex-direction:column}
 }
 .bill-key{display:inline-block;width:9px;height:9px;margin:0 3px 0 6px;border-radius:50%;vertical-align:-1px;border:1px solid var(--line-strong)}
-.bill-key.pos-favorevole{background:#408e62;border-color:#72c094}.bill-key.pos-contrario{background:var(--terracotta-deep);border-color:#dcb1a2}.bill-key.pos-astenuto{background:var(--line-strong);border-color:var(--ink-3)}
+.bill-key.pos-favorevole{background:#408e62;border-color:#72c094}.bill-key.pos-contrario{background:var(--terracotta-deep);border-color:var(--bad-ink)}.bill-key.pos-astenuto{background:var(--line-strong);border-color:var(--ink-3)}
 .bill-deal{display:flex;align-items:flex-start;gap:8px;flex:1 1 100%;color:var(--muted);font-size:12px;line-height:1.4}
 .bill-deal input{margin-top:2px}
 /* The life of a Government led by others (cabinet-engine). */
@@ -276,7 +276,7 @@
 .cabinet-program small{color:var(--muted);font-size:12px}
 .cabinet-life{margin:0;padding:0;list-style:none;display:grid;gap:5px;color:var(--ink-2);font-size:12.5px;line-height:1.45}
 .cabinet-life time{color:var(--muted);font-weight:650;margin-right:4px}
-.cabinet-life .cabinet-dimissioni-governo,.cabinet-life .cabinet-fiducia-negata,.cabinet-life .cabinet-cambio-maggioranza{color:#dcb1a2}
+.cabinet-life .cabinet-dimissioni-governo,.cabinet-life .cabinet-fiducia-negata,.cabinet-life .cabinet-cambio-maggioranza{color:var(--bad-ink)}
 .cabinet-life .cabinet-sostegno-esterno,.cabinet-life .cabinet-fiducia-ottenuta{color:var(--good-ink)}
 .confidence-vote{margin:10px 0;padding:10px 12px;border-radius:8px;border:1px solid var(--line-strong)}
 .campaign-rival.is-withdrawn{opacity:.55}
@@ -292,7 +292,7 @@
 .local-seats i.side-maggioranza,.local-dot.side-maggioranza{background:#3f8b60}
 .local-seats i.side-opposizione,.local-dot.side-opposizione{background:var(--gold)}
 .local-seats i.own{box-shadow:inset 0 0 0 2px var(--accent)}
-.local-margin{margin:0 0 8px;color:var(--muted);font-size:12px}.local-margin .bad{color:#dcb1a2}
+.local-margin{margin:0 0 8px;color:var(--muted);font-size:12px}.local-margin .bad{color:var(--bad-ink)}
 .local-groups{display:grid;gap:4px;margin:0;padding:0;list-style:none}
 .local-groups li{display:grid;grid-template-columns:10px minmax(0,1fr) auto 70px;grid-template-areas:"dot name seats coh" "dot side seats coh";align-items:center;gap:0 8px;padding:5px 8px;border-radius:6px;background:var(--panel-2)}
 .local-groups li.own{outline:2px solid var(--accent);outline-offset:-2px}
@@ -315,7 +315,7 @@
 .local-explain summary{cursor:pointer;color:var(--ink-2);font-size:12.5px;font-weight:700}
 .local-explain .hq-facts{margin-top:6px}
 .local-measure{margin:6px 0 0;color:var(--ink-2);font-size:12px;line-height:1.45}
-.local-warning{margin:6px 0 0;color:#dcb1a2;font-size:12px;line-height:1.45}
+.local-warning{margin:6px 0 0;color:var(--bad-ink);font-size:12px;line-height:1.45}
 .local-warning .glyph{vertical-align:-2px;margin-right:3px}
 .local-territory small{color:var(--muted);font-size:12px;font-weight:600}
 .local-commitments{margin:10px 0 0;color:var(--ink-2);font-size:12.5px}

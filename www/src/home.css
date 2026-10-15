@@ -273,7 +273,7 @@ html[data-motion="reduced"] .hqc-drawer-toggle, html[data-motion="reduced"] butt
 .staff-limits ul { display: grid; gap: 6px; margin: 6px 0 0; padding-left: 18px; }
 .staff-log { display: grid; gap: 4px; margin: 8px 0; padding: 0; list-style: none; font-size: 13px; }
 .invest-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 6px; }
-.invest-actions em { color: #d6a391; font-size: 12px; font-style: normal; }
+.invest-actions em { color: var(--bad-ink); font-size: 12px; font-style: normal; }
 
 /* ---------- LA POLITICA 24: the paper, the radio, the news cards ---------- */
 .lp24-masthead { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; padding: 12px 14px; border: 1px solid #2c4a54; border-radius: 12px; background: linear-gradient(135deg, #0f2f3a, #13242b); color: #f4efe2; }

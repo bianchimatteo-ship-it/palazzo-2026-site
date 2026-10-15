@@ -243,7 +243,7 @@ for (const [reason, status] of [['decadenza', 'decaduto'], ['incompatibilita', '
 
 // ---------- 6. the Misto when it is foreseen: a group that falls below the minimum sits there as a component ----------
 const minimum = LEGISLATURE_RULES.groups.cameraWaiver;
-const small = chamber('camera').groups.filter(group => !group.component && !group.independent && group.partyId && group.simulatedSeats >= minimum && group.simulatedSeats <= minimum + 4).sort((a, b) => a.simulatedSeats - b.simulatedSeats)[0];
+const small = chamber('camera').groups.filter(group => !group.component && !group.independent && group.partyId && group.simulatedSeats >= minimum).sort((a, b) => a.simulatedSeats - b.simulatedSeats)[0];   // (the smallest group that still has the minimum, whatever the vote left: its members leave one by one)
 assert.ok(small, 'Un gruppo piccolo.');
 const smallId = small.groupId, smallLabel = small.officialName;
 const wasInMajority = majorityIds().has(smallId);

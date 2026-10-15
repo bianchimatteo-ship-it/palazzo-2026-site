@@ -2,38 +2,27 @@
 // elections, coalitions and national campaign, the seats projected on the real map of 2022, the last votes, the new
 // Chambers and the formation of the Government. The map, the seats and the results of 2022 are real data (Eligendo);
 // polls, coalitions, votes, seats and Governments of the game are simulation, and every block says which is which.
-import { districtRows } from '../core/legislature-engine.js?v=20261014-1';
-import { formatDate } from '../core/time.js?v=20261014-1';
-import { SERIES } from './charts.js?v=20261014-1';
-import { glyph } from './visuals.js?v=20261014-1';
-import { arrow, badge, bar, card, esc, euro, kpi, num, pct, table } from './sections-kit.js?v=20261014-1';
+import { districtRows } from '../core/legislature-engine.js?v=20261015-1';
+import { formatDate } from '../core/time.js?v=20261015-1';
+import { ALLIANCE_COLORS, NEUTRAL_COLOR, coalitionColor, forceColor } from './political-colors.js?v=20261015-1';
+import { glyph } from './visuals.js?v=20261015-1';
+import { arrow, badge, bar, card, esc, euro, kpi, num, pct, table } from './sections-kit.js?v=20261015-1';
 
 export const NATIONAL_MAP_VIEWS = Object.freeze([['proiezione', 'Proiezione di oggi'], ['2022', 'Vincitori 2022 (reale)'], ['voto', 'Ultimo voto della partita']]);
-const NEUTRAL = '#8d9791';
-const CAMP_COLORS = { destra: SERIES[0], sinistra: SERIES[7], centro: SERIES[6] };
-const ALLIANCES_2022 = { cdx: ['Centrodestra', SERIES[0]], csx: ['Centrosinistra', SERIES[7]], m5s: ['Movimento 5 Stelle', SERIES[3]], 'azione-iv': ['Azione – Italia Viva', SERIES[6]] };
+const NEUTRAL = NEUTRAL_COLOR;
+const ALLIANCES_2022 = { cdx: ['Centrodestra', ALLIANCE_COLORS.cdx], csx: ['Centrosinistra', ALLIANCE_COLORS.csx], m5s: ['Movimento 5 Stelle', ALLIANCE_COLORS.m5s], 'azione-iv': ['Azione – Italia Viva', ALLIANCE_COLORS['azione-iv']] };
 const FORMATION_ORDER = ['insediamento', 'consultazioni', 'incarico', 'fiducia', 'completata'];
 const day = date => date ? formatDate(date) : '—';
 const shortDay = date => date ? formatDate(date, { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
 const daysUntil = (from, to) => Math.round((Date.parse(`${to}T12:00:00`) - Date.parse(`${from}T12:00:00`)) / 86400000);
 
-// Colours of the blocs: the camp of a coalition (centre-right blue, centre-left red, centre violet), the forces that
-// run alone with the other validated series, the territorial lists neutral. Identity is never colour alone.
-function palette(overview, result = null) {
-  const colors = new Map();
-  const coalitions = [...(result?.coalitions ?? []), ...(overview.coalitions ?? [])];
-  for (const coalition of coalitions) if (!colors.has(coalition.id)) colors.set(coalition.id, CAMP_COLORS[coalition.camp] ?? SERIES[2]);
-  const spare = [SERIES[3], SERIES[2], SERIES[4], SERIES[5], SERIES[1]];
-  let next = 0;
-  const forceColor = id => {
-    if (colors.has(id)) return colors.get(id);
-    if (String(id).startsWith('lista:')) return NEUTRAL;
-    const color = spare[next++ % spare.length];
-    colors.set(id, color);
-    return color;
-  };
-  return { of: id => id ? forceColor(id) : NEUTRAL };
+// Colours of the blocs, fixed by id (see political-colors.js): a force and the coalition it leads have their own colour in every view and every legislature; the territorial lists are neutral.
+// Identity is never colour alone: every swatch has its label.
+export function nationalPalette(overview, result = null) {
+  const coalitions = new Map([...(overview.coalitions ?? []), ...(result?.coalitions ?? [])].map(item => [item.id, item]));
+  return { of: id => !id ? NEUTRAL : String(id).startsWith('lista:') ? NEUTRAL : coalitions.has(id) ? coalitionColor(coalitions.get(id)) : forceColor(id) };
 }
+const palette = nationalPalette;
 const labelOf = (overview, result = null) => id => {
   if (!id) return '—';
   return result?.coalitions?.find(item => item.id === id)?.label ?? overview.coalitions.find(item => item.id === id)?.label ?? result?.camera?.parties?.find(row => row.id === id)?.label ?? result?.national?.find(row => row.id === id)?.label ?? overview.forces.forces.find(force => force.id === id)?.label ?? String(id).replace(/^lista:/, '');

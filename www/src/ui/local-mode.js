@@ -3,17 +3,17 @@
 // decides, the majority it needs, what it changes, the forecast and the player's vote), what the player can do
 // (propose, question, negotiate, govern), the chronicle of the council. Everything here is simulation, except the size
 // of the European groups at the constitutive session of 2024 (real, with its source).
-import { DELEGA_FORBIDDEN, EP_COMMITTEES, EP_COSTS, EP_GROUPS_2024, committeeById, compactVote, coverageGap, europeanOdds, forecastAct, inCommittee, INSTITUTIONS, isClosedAct, LOCAL_VOTE_CHOICES, localAreas, majorityMargin, mandateRecord, measureOf, actorOf, delegaScore, nextEuropeanRole, typeOfAct, voteRule, weakCityAreas, withEuropeanSeat, withLocalState } from '../core/local-engine.js?v=20261014-1';
-import { ACT_TYPES, CITY_INDICATORS, PROVINCE_INDICATORS, QUORUMS, actTypeOf, neededYes, proposableTypes } from '../data/simulation/local-acts.js?v=20261014-1';
-import { COFIN_TERMS, WORK_PRIORITIES, WORK_RULES, WORK_SITE_LIST, WORK_TYPES, siteLabel, workTypesFor } from '../data/simulation/local-works.js?v=20261014-1';
-import { activeWorks, agedUpkeepOf, archiveOf, canManageWorks, cofinPartners, euroOf, externalOf, isActiveWork, planWork, workGap, workView, worksLedger } from '../core/local-works-engine.js?v=20261014-1';
-import { INDICATORS } from '../data/simulation/society-rules.js?v=20261014-1';
-import { DELEGA_RULES } from '../data/simulation/office-rules.js?v=20261014-1';
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261014-1';
-import { esc, meter, num, signed } from './charts.js?v=20261014-1';
-import { glyph, territoryTile, territoryVisual } from './visuals.js?v=20261014-1';
-import { fallbackTones, forceColorResolver, hemicycleLayout, seatColor } from '../core/hemicycle.js?v=20261014-1';
-import { SEAT_ROLES, rosterSeats } from '../core/seat-roster.js?v=20261014-1';
+import { DELEGA_FORBIDDEN, EP_COMMITTEES, EP_COSTS, EP_GROUPS_2024, committeeById, compactVote, coverageGap, europeanOdds, forecastAct, inCommittee, INSTITUTIONS, isClosedAct, LOCAL_VOTE_CHOICES, localAreas, majorityMargin, mandateRecord, measureOf, actorOf, delegaScore, nextEuropeanRole, typeOfAct, voteRule, weakCityAreas, withEuropeanSeat, withLocalState } from '../core/local-engine.js?v=20261015-1';
+import { ACT_TYPES, CITY_INDICATORS, PROVINCE_INDICATORS, QUORUMS, actTypeOf, neededYes, proposableTypes } from '../data/simulation/local-acts.js?v=20261015-1';
+import { COFIN_TERMS, WORK_PRIORITIES, WORK_RULES, WORK_SITE_LIST, WORK_TYPES, siteLabel, workTypesFor } from '../data/simulation/local-works.js?v=20261015-1';
+import { activeWorks, agedUpkeepOf, archiveOf, canManageWorks, cofinPartners, euroOf, externalOf, isActiveWork, planWork, workGap, workView, worksLedger } from '../core/local-works-engine.js?v=20261015-1';
+import { INDICATORS } from '../data/simulation/society-rules.js?v=20261015-1';
+import { DELEGA_RULES } from '../data/simulation/office-rules.js?v=20261015-1';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261015-1';
+import { esc, meter, num, signed } from './charts.js?v=20261015-1';
+import { glyph, territoryTile, territoryVisual } from './visuals.js?v=20261015-1';
+import { fallbackTones, forceColorResolver, hemicycleLayout, seatColor } from '../core/hemicycle.js?v=20261015-1';
+import { SEAT_ROLES, rosterSeats } from '../core/seat-roster.js?v=20261015-1';
 
 const STAGES = Object.freeze({ commissione: 'In commissione', giunta: 'In Giunta', aula: 'In aula', osservazioni: 'Osservazioni dei cittadini', 'seconda-lettura': 'Attesa della seconda deliberazione', risposta: 'In attesa di risposta', approvato: 'Approvato', respinto: 'Respinto', ritirato: 'Ritirato', risposto: 'Risposta data' });
 const SIDE_LABELS = Object.freeze({ maggioranza: 'Maggioranza', opposizione: 'Opposizione' });
@@ -68,11 +68,24 @@ function seatDots(inst, state, ui) {
     const force = picked.partyId ? forceName(picked.partyId) : null;
     const leads = picked.leader || (picked.origin === 'player' && inst.executive?.leader === 'player');
     return `<div class="local-seat-card"><span class="section-kicker">${esc(picked.origin === 'player' ? 'IL TUO SEGGIO · SIMULAZIONE' : `${(SEAT_ROLES[inst.kind] ?? 'Eletto').toUpperCase()} · PERSONA DELLA SIMULAZIONE`)}</span><strong>${esc(picked.origin === 'player' ? person?.displayName ?? 'Il tuo politico' : person?.displayName ?? 'Seggio')}</strong>
-      <dl class="hq-facts"><div><dt>Gruppo</dt><dd>${esc(group?.label ?? '—')} · ${esc(SIDE_LABELS[group?.side] ?? '')}</dd></div><div><dt>Partito</dt><dd>${force ? esc(force) : inst.kind === 'europa' ? 'Delegazione di un altro Paese: il suo partito non è tra le forze del gioco' : 'Nessuna forza: lista civica o territoriale'}</dd></div>${leads ? `<div><dt>Incarico</dt><dd>${esc(INSTITUTIONS[inst.kind]?.leader ?? 'Guida l’esecutivo')}</dd></div>` : ''}<div><dt>Eletto</dt><dd>${esc(inst.name)} · dal ${esc(date(inst.roster?.date ?? inst.since))}${inst.region ? ` · ${esc(inst.region)}` : ''}</dd></div>${(person?.terms ?? []).length ? `<div><dt>Mandati precedenti</dt><dd>${person.terms.map(term => `${esc(term.assembly)} · ${esc(date(term.since))} – ${esc(date(term.until))}`).join('<br>')}</dd></div>` : ''}</dl></div>`;
+      <p class="hemi-badges"><span class="sx-badge tone-${picked.origin === 'player' ? 'good' : 'warn'}">${picked.origin === 'player' ? 'TU' : 'SIMULATO'}</span></p>
+      <dl class="hq-facts"><div><dt>Identificativo</dt><dd><code>${esc(picked.personId)}</code><small>sempre lo stesso per tutto il mandato</small></dd></div><div><dt>Gruppo</dt><dd>${esc(group?.label ?? '—')} · ${esc(SIDE_LABELS[group?.side] ?? '')}</dd></div><div><dt>Partito</dt><dd>${force ? esc(force) : inst.kind === 'europa' ? 'Delegazione di un altro Paese: il suo partito non è tra le forze del gioco' : 'Nessuna forza: lista civica o territoriale'}</dd></div>${leads ? `<div><dt>Incarico</dt><dd>${esc(INSTITUTIONS[inst.kind]?.leader ?? 'Guida l’esecutivo')}</dd></div>` : ''}<div><dt>Eletto</dt><dd>${esc(inst.name)} · dal ${esc(date(inst.roster?.date ?? inst.since))}${inst.region ? ` · ${esc(inst.region)}` : ''}</dd></div>${(person?.terms ?? []).length ? `<div><dt>Mandati precedenti</dt><dd>${person.terms.map(term => `${esc(term.assembly)} · ${esc(date(term.since))} – ${esc(date(term.until))}`).join('<br>')}</dd></div>` : ''}</dl></div>`;
   })() : '<p class="local-seat-hint">Tocca un punto per vedere chi siede in quel seggio.</p>';
-  // The accessible alternative to the drawing (keyboard, screen readers): the members as a list of buttons; for the European Parliament the Italian delegation and the player's seat.
-  const listed = ordered.filter(seat => inst.kind !== 'europa' || seat.partyId || seat.origin === 'player');
-  const list = listed.length && listed.length <= 90 ? `<details class="local-roster-list" data-remember="local-roster-${esc(inst.kind)}"><summary>${inst.kind === 'europa' ? 'Delegazione italiana' : 'Elenco degli eletti'} (${listed.length})</summary><ul class="hemi-members">${listed.map(seat => `<li><button type="button" class="${ui.localSeat === key(seat) ? 'active' : ''}" data-local-seat="${esc(key(seat))}"><i style="background:${esc(colorOf(seat))}"></i><span>${esc(labelOf(seat))}</span><small>${esc(byGroup.get(seat.groupId)?.label ?? '')}</small></button></li>`).join('')}</ul></details>` : '';
+  // The members as a searchable list (the same seats as the dots; also the alternative to the drawing for the keyboard and the screen readers). A council shows all its members; the European
+  // Parliament its Italian delegation and the player, and any of the 720 seats once a search is typed. A row selects the seat (card and highlighted dot), the card's seat is marked in the list.
+  const plain = value => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const tokens = plain(ui.localQuery).split(/\s+/).filter(Boolean);
+  const textOf = seat => plain([labelOf(seat), seat.personId, byGroup.get(seat.groupId)?.label, seat.partyId ? forceName(seat.partyId) : ''].join(' '));
+  const base = ordered.filter(seat => tokens.length || inst.kind !== 'europa' || seat.partyId || seat.origin === 'player');
+  const listed = tokens.length ? base.filter(seat => tokens.every(token => textOf(seat).includes(token))) : base;
+  const LIST_MAX = 60;
+  const shown = listed.slice(0, LIST_MAX);
+  const row = seat => `<li><button type="button" class="${ui.localSeat === key(seat) ? 'active' : ''}" data-local-seat="${esc(key(seat))}" aria-pressed="${ui.localSeat === key(seat)}"><i style="background:${esc(colorOf(seat))}"></i><span><strong>${esc(labelOf(seat))}</strong><small>${esc(byGroup.get(seat.groupId)?.label ?? '')}${seat.partyId && forceName(seat.partyId) ? ` · ${esc(forceName(seat.partyId))}` : ''}</small></span><span class="sx-badge tone-${seat.origin === 'player' ? 'good' : 'warn'}">${seat.origin === 'player' ? 'Tu' : 'Simulato'}</span></button></li>`;
+  const pickedListed = picked && !shown.some(seat => key(seat) === ui.localSeat) && listed.some(seat => key(seat) === ui.localSeat) ? picked : null;
+  const searchable = ordered.length > 0;
+  const list = searchable ? `<details class="local-roster-list" data-remember="local-roster-${esc(inst.kind)}"><summary>${inst.kind === 'europa' ? 'Delegazione italiana e ricerca' : 'Elenco degli eletti'} (${base.length === ordered.length ? ordered.length : `${listed.length} di ${ordered.length}`})</summary>
+    <label class="local-roster-search">Cerca per nome, gruppo o partito<input type="search" data-local-search value="${esc(ui.localQuery ?? '')}" placeholder="Nome, gruppo o partito" autocomplete="off" maxlength="60" /></label>
+    ${listed.length ? `<ul class="hemi-members hemi-roster-list">${shown.map(row).join('')}${pickedListed ? row(pickedListed) : ''}</ul>${listed.length > LIST_MAX ? `<p class="poll-footnote">Primi ${LIST_MAX} di ${listed.length}: restringi la ricerca per gli altri.</p>` : ''}` : '<p class="poll-footnote">Nessun seggio corrisponde alla ricerca.</p>'}</details>` : '';
   return `<div class="local-hemi"><svg class="hemi-svg" viewBox="${-pad} ${-pad} ${layout.width + 2 * pad} ${Math.round(layout.height) + 2 * pad}" role="img" aria-label="${esc(`${inst.name}: ${ordered.length} seggi, uno per persona; ${[...entries.values()].map(entry => `${entry.label} ${entry.count}`).join(', ')}`)}"><g class="hemi-seats">${circles}</g></svg><ul class="local-legend">${legend}</ul>${card}${list}</div>`;
 }
 function composition(inst, state = {}, ui = {}) {

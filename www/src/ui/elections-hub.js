@@ -1,20 +1,20 @@
 // The electoral centre: next vote, calendar, context, candidacy, campaign, polls and rivals, results and history.
-import { isSecretary, upcomingElections, upcomingRounds } from '../core/career-engine.js?v=20261014-1';
-import { RACE_RULES } from '../data/simulation/race-rules.js?v=20261014-1';
-import { campaignSummary, strategyOf } from '../core/campaign-engine.js?v=20261014-1';
-import { CAMPAIGN_PHASES, ELECTION_MODELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261014-1';
-import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261014-1';
-import { formatDate } from '../core/time.js?v=20261014-1';
-import { societyMood } from '../core/society-engine.js?v=20261014-1';
-import { renderCampaignPage } from './campaign-mode.js?v=20261014-1';
-import { politicalPhase } from './game-mode.js?v=20261014-1';
-import { lineChart, SERIES } from './charts.js?v=20261014-1';
-import { glyph } from './visuals.js?v=20261014-1';
-import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, sectionTabs, signed, table, weeksLabel } from './sections-kit.js?v=20261014-1';
-import { mandatePlace, renderElectionReport } from './election-report.js?v=20261014-1';
-import { renderNationalView } from './national-view.js?v=20261014-1';
-import { renderQuirinale } from './presidency-view.js?v=20261014-1';
-import { renderCampaignObservatory } from './observatory-view.js?v=20261014-1';
+import { isSecretary, upcomingElections, upcomingRounds } from '../core/career-engine.js?v=20261015-1';
+import { RACE_RULES } from '../data/simulation/race-rules.js?v=20261015-1';
+import { campaignSummary, strategyOf } from '../core/campaign-engine.js?v=20261015-1';
+import { CAMPAIGN_PHASES, ELECTION_MODELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261015-1';
+import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261015-1';
+import { formatDate } from '../core/time.js?v=20261015-1';
+import { societyMood } from '../core/society-engine.js?v=20261015-1';
+import { renderCampaignPage } from './campaign-mode.js?v=20261015-1';
+import { politicalPhase } from './game-mode.js?v=20261015-1';
+import { lineChart, SERIES } from './charts.js?v=20261015-1';
+import { glyph } from './visuals.js?v=20261015-1';
+import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, sectionTabs, signed, table, weeksLabel } from './sections-kit.js?v=20261015-1';
+import { mandatePlace, renderElectionReport } from './election-report.js?v=20261015-1';
+import { renderNationalView } from './national-view.js?v=20261015-1';
+import { renderQuirinale } from './presidency-view.js?v=20261015-1';
+import { renderCampaignObservatory } from './observatory-view.js?v=20261015-1';
 export { renderElectionReport };
 
 export const ELECTION_TABS = Object.freeze([['panoramica', 'Panoramica'], ['nazionali', 'Nazionali'], ['quirinale', 'Quirinale'], ['candidatura', 'Candidatura'], ['campagna', 'Campagna'], ['avversari', 'Sondaggi e avversari'], ['risultati', 'Risultati'], ['storico', 'Storico']]);
@@ -264,7 +264,7 @@ export function renderElectionsHub(state, { parties = [], logoFor = () => null, 
   else if (active === 'campagna') body = `<div class="eh-campaign">${renderCampaignPage(state, parties, logoFor, campaignPicks)}</div>`;
   else if (active === 'avversari') body = renderCampaignObservatory(state, polls);
   else if (active === 'risultati') body = renderElectionReport(state.career.lastElectionReport, { place: mandatePlace(state, state.career.lastElectionReport) });
-  else if (active === 'quirinale') body = presidency ? renderQuirinale(state, presidency()) : empty('Il Quirinale si apre con i dati della partita.');
+  else if (active === 'quirinale') body = presidency ? `<p class="sx-note quirinale-pointer">Il Quirinale ha una sezione propria: <button type="button" class="text-link" data-nav="quirinale">Istituzioni → Quirinale</button>. Qui resta la scheda dell’elezione del Presidente, con i suoi passaggi.</p>${renderQuirinale(state, presidency())}` : empty('Il Quirinale si apre con i dati della partita.');
   else if (active === 'nazionali') body = national ? renderNationalView(state, national(), { geography, view: nationalView }) : empty('Il ciclo nazionale si apre con i dati della partita: calendario, coalizioni e proiezione dei seggi.');
   else body = history(state);
   return `<div class="elections-hub">${hero(state, summary)}${sectionTabs('elezioni', ELECTION_TABS.map(([id, label]) => [id, label, counts[id]]), active)}<div class="sx-body" role="tabpanel">${body}</div></div>`;

@@ -2,9 +2,9 @@
 // state of a career (the caller passes a copy): nothing is applied that the player did not approve, and what the staff does has true effects — on the committees, on the local leaders, on the
 // funds (through book()), and on the stats and the preparation the career applies like any other effect. Reports are kept for every week of work.
 // The skill of the staff is not a number of its own: it is read from what the player has built (the budget lines, the committees and their strength, the stats).
-import { book } from './finance-engine.js?v=20261014-1';
-import { committeeStrength } from './committee-engine.js?v=20261014-1';
-import { MANDATE_STATUS, NON_DELEGABLE, STAFF_DURATIONS, STAFF_MAX_MANDATES, STAFF_REPORTS_KEPT, STAFF_SKILLS, STAFF_TASKS, STAFF_TASK_BY_ID } from '../data/simulation/staff-rules.js?v=20261014-1';
+import { book } from './finance-engine.js?v=20261015-1';
+import { committeeStrength } from './committee-engine.js?v=20261015-1';
+import { MANDATE_STATUS, NON_DELEGABLE, STAFF_DURATIONS, STAFF_MAX_MANDATES, STAFF_REPORTS_KEPT, STAFF_SKILLS, STAFF_TASKS, STAFF_TASK_BY_ID } from '../data/simulation/staff-rules.js?v=20261015-1';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -157,8 +157,8 @@ function runTask(game, stats, mandate, task, quality, rand, week, date) {
       cadre.grievance = Math.round(clamp(cadre.grievance - 6 * scale));
       cadre.loyalty = Math.round(clamp(cadre.loyalty + 3 * scale));
       points = 1;
-      text = `Colloquio con ${cadre.name}: malcontento ${cadre.grievance}, lealtà ${cadre.loyalty}.`;
-    } else { cadre.grievance = Math.round(clamp(cadre.grievance + 2)); text = `Colloquio con ${cadre.name} andato male: il malcontento sale a ${cadre.grievance}.`; }
+      text = `Colloquio con ${cadre.person?.displayName ?? cadre.name}: malcontento ${cadre.grievance}, lealtà ${cadre.loyalty}.`;
+    } else { cadre.grievance = Math.round(clamp(cadre.grievance + 2)); text = `Colloquio con ${cadre.person?.displayName ?? cadre.name} andato male: il malcontento sale a ${cadre.grievance}.`; }
   } else if (task.id === 'raccolta') {
     if (ok) {
       const amount = Math.round((50 + 170 * quality) * (0.7 + 0.6 * rand()));
