@@ -1,11 +1,11 @@
-import { advanceDays } from './time.js?v=20261016-1';
-import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261016-1';
-import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261016-1';
-import { aggregateShares, mateForce, runFinalElection, runFirstRound } from './election-engine.js?v=20261016-1';
-import { houseEffect } from './world-engine.js?v=20261016-1';
-import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261016-1';
-import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261016-1';
-import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261016-1';
+import { advanceDays } from './time.js?v=20261016-2';
+import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261016-2';
+import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261016-2';
+import { aggregateShares, mateForce, runFinalElection, runFirstRound } from './election-engine.js?v=20261016-2';
+import { houseEffect } from './world-engine.js?v=20261016-2';
+import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261016-2';
+import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261016-2';
+import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261016-2';
 
 const SOURCE = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
@@ -306,7 +306,7 @@ function recognizeRival(campaign, rival, record) {
   addHistory(campaign, 'rivali', `Ritrovi ${rival.realReference?.fullName ?? candidateLabel(rival)}: non è la prima volta (${record.meetings === 1 ? 'vi siete già incontrati' : `${record.meetings} incontri`}${note.length ? `, ${note.join(', ')}` : ''}). Il rapporto è ${stance}.`, { source:SOURCE });
 }
 
-function campaignTerritories(type, player, userTerritories) {
+function campaignTerritories(type, player, userTerritories, weights = null, role = null) {
   const playerMunicipality = userTerritories.find(item => item.id === player.territoryId)?.name ?? player.municipality ?? 'Territorio locale';
   if (type === 'comunale') return [{ id:`sim-territory-comune-${hash(playerMunicipality).toString(36)}`, name:playerMunicipality, kind:'comune', weight:100, source:SOURCE, scope:'territorio comunale', organization:30 }];
   // The electorate of a second-level vote: the mayors and the municipal councillors of the province, by the weight of the
@@ -318,11 +318,13 @@ function campaignTerritories(type, player, userTerritories) {
     ['area-capoluogo', 'Capoluogo e area urbana', 27], ['area-nord', 'Area regionale settentrionale', 25],
     ['area-centro', 'Area regionale centrale', 25], ['area-sud', 'Area regionale meridionale', 23]
   ].map(([id,name,weight], index) => ({ id:`sim-${player.region.toLocaleLowerCase('it-IT').replace(/[^a-z0-9]+/g,'-')}-${id}`, name, kind:'area-regionale-simulata', urban:index === 0, region:player.region, weight, source:SOURCE, organization:Math.max(8, 28 - index * 3) }));
-  if (type === 'europee') return [
+  if (type === 'europee') { const real = weights?.europee ?? null; return [
     ['nord-occidentale','Italia nord-occidentale',26], ['nord-orientale','Italia nord-orientale',20],
     ['centrale','Italia centrale',20], ['meridionale','Italia meridionale',24], ['insulare','Italia insulare',10]
-  ].map(([id,name,weight], index) => ({ id:`sim-circoscrizione-${id}`, name, kind:'circoscrizione-di-simulazione', constituency:id, weight, source:SOURCE, organization:Math.max(9,27-index*2) }));
-  return ITALIAN_REGIONS.map((name,index) => ({ id:`sim-regione-${index+1}`, name, region:name, kind:'regione', weight:100/ITALIAN_REGIONS.length, source:SOURCE, organization:20 }));
+  ].map(([id,name,weight], index) => ({ id:`sim-circoscrizione-${id}`, name, kind:'circoscrizione-di-simulazione', constituency:id, weight:real?.weights?.[id] ?? weight, weightBasis:real ? real.basis : 'regola-di-gioco', source:SOURCE, organization:Math.max(9,27-index*2) })); }
+  // The general election: every region weighs what it weighed at the last real one (valid votes of the chamber voted); only without the data is the weight uniform, and it says so.
+  const real = weights?.[role === 'senatore' ? 'senato' : 'camera'] ?? null;
+  return ITALIAN_REGIONS.map((name,index) => ({ id:`sim-regione-${index+1}`, name, region:name, kind:'regione', weight:real?.weights?.[name] ?? 100/ITALIAN_REGIONS.length, weightBasis:real ? real.basis : 'uniforme-dati-mancanti', source:SOURCE, organization:20 }));
 }
 
 function createCandidate({ id, player = false, partyId = null, displayName, seed, stats = {} }) {
@@ -1755,7 +1757,7 @@ export function createCampaign({career,player,statistics=[],offices=[],territori
   const validRoles={comunale:['sindaco','consigliere'],provinciale:['presidente','consigliere'],regionale:['presidente','consigliere'],politiche:['deputato','senatore','uninominale'],europee:['eurodeputato']};
   const role=config.role ?? (type==='comunale'?'sindaco':type==='provinciale'?'consigliere':type==='regionale'?'presidente':type==='politiche'?'deputato':'eurodeputato');
   if(!validRoles[type].includes(role)) throw new Error('Il ruolo selezionato non è compatibile con il tipo di elezione.');
-  const campaignAreas=campaignTerritories(type,player,userTerritories);
+  const campaignAreas=campaignTerritories(type,player,userTerritories,config.territoryWeights??null,config.role??null);
   const localTrendRandom=randomFrom(seed ^ 0x27d4eb2f);
   campaignAreas.forEach(area=>{area.localTrend=round((localTrendRandom()-.5)*3);});
   if (type==='comunale') campaignAreas[0].region=player.region;
@@ -1835,6 +1837,7 @@ export function createCampaign({career,player,statistics=[],offices=[],territori
     modelSource:model.source,modelReference:{source:'real',verified:model.referenceVerified!==false,sourceUrl:model.referenceUrl,sourceName:model.referenceName,verifiedAt:'2026-09-22',validFrom:null,validTo:null},
     ruleFacts:type==='europee'?{threshold:EUROPEAN_THRESHOLD}:null,
     municipalityBand:type==='comunale'?(config.municipalityBand==='oltre-15000'?'oltre-15000':'fino-15000'):null,
+    municipalityBandInfo:type==='comunale'?(config.municipalityBandInfo??null):null,
     objective:config.objective??'build',playerCandidateId,partyId,independent:userOrIndependent && !partyId,partyReferences:allPartyRefs,
     initialLevel:career.initialLevel,territoryId:career.territoryId,homeRegion:player.region ?? null,territories:campaignAreas,candidates,resources:initialResources,
     candidateStats:playerStats,startingStats:{...playerStats},nomination,internalCandidates,candidacy:{role,listPosition:role==='uninominale'?null:6,territoryId:focus,incumbent:incumbency||governingIncumbent},incumbency:incumbencyRecord,list:buildList({seed,type,role,areas:campaignAreas}),listContext:config.listContext?{...config.listContext,source:SOURCE}:null,obligations:[],

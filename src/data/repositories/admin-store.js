@@ -18,9 +18,8 @@ export const ADMIN_FIELDS = Object.freeze({
     { key: 'geographicArea', label: 'Area geografica', max: 160 },
     { key: 'foundedAt', label: 'Data di fondazione', type: 'date' },
     { key: 'politicalPosition', label: 'Collocazione', type: 'position' },
-    { key: 'color', label: 'Colore identificativo', type: 'color' },
-    // Optional: without it the second tone is derived from the primary one (src/ui/party-identity.js), never taken from somewhere that could clash with it.
-    { key: 'color2', label: 'Secondo colore', type: 'color' }
+    // The only colour of a party: the one set here is the colour of the party everywhere (wizard, polls, campaigns, results, hemicycles). `color2` stays in old records as legacy data and is never shown or used.
+    { key: 'color', label: 'Colore del partito', type: 'color' }
   ],
   politicians: [
     { key: 'fullName', label: 'Nome completo', max: 160, required: true },
@@ -177,11 +176,12 @@ export function overrideFor(collection, id) {
 // ---------- parties added, hidden or deleted by the owner (never written into the real files) ----------
 const nameKey = value => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('it-IT').replace(/[^a-z0-9]/g, '');
 const slug = value => String(value ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('it-IT').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'partito';
-const PARTY_FIELDS = ['officialName', 'abbreviation', 'factualDescription', 'website', 'politicalPosition', 'color', 'color2'];
+const PARTY_FIELDS = ['officialName', 'abbreviation', 'factualDescription', 'website', 'politicalPosition', 'color'];
 // existing: every party and movement in use (real and added), to refuse duplicates of names, aliases and initials.
 export function addAdminParty(values, existing = []) {
   const clean = {};
   for (const key of PARTY_FIELDS) { const field = ADMIN_FIELDS.parties.find(item => item.key === key); clean[key] = field.type === 'color' && values[`${key}__off`] ? null : cleanValue(field, values[key]); }
+  clean.color2 = null; // the only colour of a party is the primary one (legacy field kept empty in the data)
   if (!clean.officialName) throw new Error('Il nome ufficiale è obbligatorio.');
   const names = new Set(existing.flatMap(item => [item.officialName, item.name, ...(item.aliases ?? []).map(alias => alias.name)]).filter(Boolean).map(nameKey));
   if (names.has(nameKey(clean.officialName))) throw new Error('Esiste già un partito o movimento con questo nome.');

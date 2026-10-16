@@ -10,8 +10,8 @@
 //
 // The party is not the coalition, the parliamentary group or the institution: those have their own tones (KIND_TONES) and their own glyph, whatever the party colour is,
 // so that a chip says at a glance whether it speaks of the party, of the list it stands in with others, of the group in the Chamber or of the institution.
-import { LOGO_BRAND } from '../data/party-brand.js?v=20261016-1';
-import { contrastRatio, emblem, glyph, inkOn, partyMarkText } from './visuals.js?v=20261016-1';
+import { LOGO_BRAND } from '../data/party-brand.js?v=20261016-2';
+import { contrastRatio, emblem, glyph, inkOn, partyMarkText } from './visuals.js?v=20261016-2';
 
 export const NEUTRAL_ACCENT = '#9fb0a2';
 // What a party colour must stand out from: the lightest panel of the app (for text), and the shell and the second panel (for lines, bars and fills).
@@ -73,11 +73,9 @@ export function partyIdentity({ party = null, force = null, logo = null } = {}) 
   const base = own ?? hexOf(brand?.primary) ?? chart ?? null;
   const source = own ? 'scelto' : brand?.primary ? 'logo' : chart ? 'grafico' : 'neutro';
   const accent = base ? accentAsGraphic(base) : NEUTRAL_ACCENT;
-  // The second tone: the one configured (`color2`); else, only when the primary comes from the logo, the logo's own second colour; else a tone derived from the primary,
-  // so a primary the owner chose is never paired with a colour from somewhere else that could clash with it.
-  const chosenSecond = hexOf(party?.color2);
-  const second = chosenSecond ?? (source === 'logo' ? hexOf(brand?.secondary) : null) ?? (base ? deriveSecondary(base) : null);
-  const secondSource = chosenSecond ? 'scelto' : second && source === 'logo' && hexOf(brand?.secondary) ? 'logo' : second ? 'derivato' : null;
+  // The only colour of a party is its primary one. The second tone (a decoration of the shell) is always derived from it: `color2` of old records and the secondary of a logo are never used.
+  const second = base ? deriveSecondary(base) : null;
+  const secondSource = second ? 'derivato' : null;
   const name = party?.officialName ?? party?.name ?? party?.label ?? force?.label ?? 'Partito';
   const abbreviation = party?.abbreviation ?? force?.abbreviation ?? null;
   return { kind: 'partito', id, name, abbreviation, mark: partyMarkText({ label: name, abbreviation }), logo: logo ?? null, accent, accentText: accentAsText(accent), accentInk: inkOn(accent), accent2: second ? accentAsGraphic(second) : null, colors: { primary: base, secondary: second }, secondSource, source, sourceLabel: SOURCE_LABELS[source] };

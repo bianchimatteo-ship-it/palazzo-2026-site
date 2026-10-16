@@ -182,7 +182,7 @@ assert.ok((home.match(/class="hqc-drawer /g) ?? []).length >= 9 && home.includes
 }
 // Branding: the party created in the wizard has a real identity used across the game.
 const userParty = store.getState().dataset.parties.find(party => party.source === 'user');
-assert.ok(userParty.logo?.kind === 'builder' && userParty.color2 === '#f2c14e' && userParty.program.includes('scuola') && userParty.officialName === 'Lista Civica Neri', 'Il partito creato ha logo, colori, programma e scheda completa (source: user).');
+assert.ok(userParty.logo?.kind === 'builder' && userParty.color2 === null && userParty.program.includes('scuola') && userParty.officialName === 'Lista Civica Neri', 'Il partito creato ha logo, colori, programma e scheda completa (source: user).');
 assert.deepEqual(store.getState().game.party.program.areas, ['scuola', 'cultura'], 'Il programma del partito entra nella partita.');
 assert.ok(home.includes('class="party-identity"') && home.includes('data:image/svg+xml') && home.includes('hero-party-logo'), 'Logo e identità del partito compaiono nelle schermate.');
 assert.ok(home.includes('--party-accent:#3a6ea5'), 'Il colore del partito guida l’interfaccia.');

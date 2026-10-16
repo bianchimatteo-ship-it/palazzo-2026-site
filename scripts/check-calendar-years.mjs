@@ -21,6 +21,7 @@ const T = await import(`../src/core/time.js${v}`);
 const C = await import(`../src/core/career-engine.js${v}`);
 const { hasProvincialLevel } = await import(`../src/data/regions.js${v}`);
 const { checkInvariants } = await import(`../src/core/invariants.js${v}`);
+const { CALENDAR_RULES, distinctRounds } = await import(`../src/core/calendar-planner.js${v}`);
 
 const START = '2026-10-05';
 const STATS = { popularity: 50, reputation: 50, notoriety: 30, influence: 30, consensus: 5, experience: 20 };
@@ -68,9 +69,21 @@ for (const [index, [level, regionName]] of CASES.entries()) {
     assert.ok(ahead, `${label}: il ${date} non c’è nessun voto previsto`);
     const gap = days(date, ahead);
     worstGap = Math.max(worstGap, gap);
-    assert.ok(gap <= 410, `${label}: il ${date} il prossimo voto previsto è tra ${gap} giorni`);
+    assert.ok(gap <= 365, `${label}: il ${date} il prossimo voto previsto è tra ${gap} giorni`);
   }
-  const rows = [...seen.values()].sort((a, b) => a.date.localeCompare(b.date));
+  // The rounds that were planned and then dropped (a vote brought forward made them useless) never took place: only what stood in the calendar counts.
+  const standing = new Set([...game.elections.map(item => item.id), ...(game.rounds ?? []).map(item => item.id)]);
+  const rows = [...seen.values()].filter(row => !(row.statuses.size === 1 && row.statuses.has('upcoming')) || standing.has(row.id)).sort((a, b) => a.date.localeCompare(b.date));
+  // The rule of the calendar: two different rounds of voting are at least 100 days apart (the same day is one round), never more than a year passes without a vote to play
+  // (from the first day of the career on) and no calendar year is left without one.
+  {
+    const closest = distinctRounds(rows.map(row => row.date));
+    assert.ok(!closest.closest || closest.closest.days >= CALENDAR_RULES.minGapDays, `${label}: due tornate a ${closest.closest?.days} giorni (${closest.closest?.from} e ${closest.closest?.to})`);
+    assert.ok(game.elections.every(item => !item.calendarConflict), `${label}: voto che non trova una data a distanza: ${game.elections.filter(item => item.calendarConflict).map(item => `${item.type} ${item.electionDate}`).join(', ')}`);
+    const playableDates = rows.filter(playable).map(row => row.date);
+    let from = START;
+    for (const day of [...playableDates, ...(standing.size ? [] : [])]) { assert.ok(days(from, day) <= 365, `${label}: ${days(from, day)} giorni tra ${from} e il voto giocabile del ${day}`); from = day; }
+  }
   for (let year = 2027; year <= 2039; year++) {
     const ofYear = rows.filter(row => row.date.startsWith(String(year)));
     assert.ok(ofYear.length > 0, `${label}: nessun voto nel ${year}`);
@@ -79,7 +92,8 @@ for (const [index, [level, regionName]] of CASES.entries()) {
   totalRounds += rows.filter(row => row.kind === 'tornata').length;
   totalVotes += rows.filter(row => row.kind === 'voto' && row.statuses.has('held')).length;
   // Every kind of vote keeps its own cycle: comuni and regions five years, provinces four, Europe five; early votes are shorter.
-  const cycle = { comunale: [4.8, 5.15], provinciale: [3.8, 4.15], regionale: [4.8, 5.15], politiche: [0.4, 5.15], europee: [4.8, 5.15] };
+  // (a vote that moves to keep its distance from another stays within its legal window: a month for the comuni, two for the regions, three for the provinces)
+  const cycle = { comunale: [4.65, 5.3], provinciale: [3.6, 4.4], regionale: [4.6, 5.4], politiche: [0.4, 5.15], europee: [4.8, 5.15] };
   for (const [type, [low, high]] of Object.entries(cycle)) {
     const dates = rows.filter(row => row.type === type);
     for (let i = 1; i < dates.length; i++) {
@@ -167,7 +181,7 @@ for (const [level, regionName] of [['provinciale', 'Toscana'], ['regionale', 'Lo
     const ofYear = rows.filter(row => row.date.startsWith(String(year)));
     assert.ok(ofYear.some(playable), `${level}: partita vera, nel ${year} nessun appuntamento giocabile (${ofYear.map(row => `${row.type} ${row.date} [${[...row.statuses].join('>')}]`).join('; ')})`);
   }
-  assert.ok(worst <= 410, `${level}: partita vera, mai oltre tredici mesi dal prossimo voto previsto (${worst} giorni)`);
+  assert.ok(worst <= 365, `${level}: partita vera, mai oltre un anno dal prossimo voto previsto (${worst} giorni)`);
   const result = checkInvariants(store.getState());
   assert.ok(result.ok, `${level}: invarianti dopo otto anni ${JSON.stringify(result.issues?.slice(0, 2))}`);
 }

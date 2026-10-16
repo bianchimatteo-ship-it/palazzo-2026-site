@@ -10,7 +10,7 @@ import { chromeAvailable, createCareerInPage, openCareer, withBrowser } from './
 
 const build = (await readFile(new URL('../index.html', import.meta.url), 'utf8')).match(/main\.js\?v=([^"']+)/)?.[1];
 const module = path => import(new URL(`../${path}${build ? `?v=${build}` : ''}`, import.meta.url).href);
-const { KIND_TONES, NEUTRAL_ACCENT, PANEL_SURFACE, SHELL_SURFACE, TEXT_SURFACE, accentAsGraphic, accentAsText, identityMark, identityVars, kindChip, partyChip, partyIdentity, topbarParty } = await module('src/ui/party-identity.js');
+const { KIND_TONES, NEUTRAL_ACCENT, PANEL_SURFACE, SHELL_SURFACE, TEXT_SURFACE, accentAsGraphic, accentAsText, deriveSecondary, identityMark, identityVars, kindChip, partyChip, partyIdentity, topbarParty } = await module('src/ui/party-identity.js');
 const { LOGO_BRAND } = await module('src/data/party-brand.js');
 const { contrastRatio, inkOn } = await module('src/ui/visuals.js');
 const json = async name => JSON.parse(await readFile(new URL(`../src/data/real/${name}.json`, import.meta.url), 'utf8'));
@@ -28,12 +28,12 @@ const fn = partyIdentity({ party: fnRecord, force: { color: '#c98500', label: 'F
 assert.equal(fn.kind, 'partito'); assert.equal(fn.source, 'logo', 'Senza colore nel database né scelto dal giocatore, Futuro Nazionale prende il colore del suo logo.');
 assert.equal(fn.accent, accentAsGraphic(LOGO_BRAND[FN].primary), 'L’accento è il colore del logo reso leggibile sullo sfondo scuro.');
 assert.notEqual(fn.accent, '#c98500', 'Non il colore assegnato dal gioco alla linea nei grafici.');
-assert.equal(fn.mark, 'FN'); assert.equal(fn.logo, 'logo.png'); assert.ok(fn.accent2 && fn.accent2 !== fn.accent, 'Il secondo colore (il giallo del logo) c’è.');
+assert.equal(fn.mark, 'FN'); assert.equal(fn.logo, 'logo.png'); assert.ok(fn.accent2 && fn.accent2 !== fn.accent, 'Il secondo tono (derivato dal primo) c’è.');
 assert.ok(contrastRatio(fn.accentInk, fn.accent) >= 4.5, 'Il testo sul colore del partito ha almeno 4,5:1.');
 assert.ok(contrastRatio(fn.accentText, TEXT_SURFACE) >= 4.5, 'Il colore del partito usato come testo sui pannelli ha almeno 4,5:1.');
 assert.ok(contrastRatio(fn.accent, SHELL_SURFACE) >= 3 && contrastRatio(fn.accent, PANEL_SURFACE) >= 3, 'L’accento come elemento grafico si distingue dal verde istituzionale (almeno 3:1).');
 const chosen = partyIdentity({ party: { id: 'user-1', name: 'Alba Civica', color: '#2a9d8f', color2: '#e9c46a', abbreviation: 'AC' }, force: { color: '#c98500' } });
-assert.equal(chosen.source, 'scelto', 'Il colore scelto dal partito vince su tutto.'); assert.equal(partyIdentity({ party: { id: 'u2', name: 'Lista', color: '#3a6ea5' } }).accent, '#3a6ea5', 'Un colore scelto che si legge sul fondo scuro è mostrato com’è, senza ritocchi.'); assert.equal(chosen.accent, accentAsGraphic('#2a9d8f')); assert.equal(chosen.mark, 'AC'); assert.equal(chosen.accent2, accentAsGraphic('#e9c46a'));
+assert.equal(chosen.source, 'scelto', 'Il colore scelto dal partito vince su tutto.'); assert.equal(chosen.accent2, accentAsGraphic(deriveSecondary('#2a9d8f')), 'Il vecchio secondo colore dei dati non si usa: il secondo tono si deriva dal primo.'); assert.equal(partyIdentity({ party: { id: 'u2', name: 'Lista', color: '#3a6ea5' } }).accent, '#3a6ea5', 'Un colore scelto che si legge sul fondo scuro è mostrato com’è, senza ritocchi.'); assert.equal(chosen.accent, accentAsGraphic('#2a9d8f')); assert.equal(chosen.mark, 'AC'); 
 assert.equal(partyIdentity({ party: { id: 'x', officialName: 'Forza Nuova Italiana' }, force: { color: '#d95926', brandColor: '#228833' } }).source, 'scelto', 'Il colore di correzione del proprietario (brandColor della forza) conta come scelto.');
 const chart = partyIdentity({ party: { id: 'party-registro-p1-2017-41-ir', officialName: 'Lega per Salvini Premier', abbreviation: 'Lega' }, force: { color: '#9085e9' } });
 assert.equal(chart.source, 'grafico', 'Un partito senza colore proprio, scelta o logo prende il colore del grafico assegnato dal gioco.'); assert.equal(chart.accent, accentAsGraphic('#9085e9'), 'Il colore del grafico, reso leggibile.');

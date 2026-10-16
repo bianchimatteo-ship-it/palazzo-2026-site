@@ -47,7 +47,9 @@ const local = C.localCalendarOf(calendar, { municipalityCode: '048017', region: 
 assert.ok(local.comunaleReal && local.regionaleReal && local.comunale === '2024-06-09' && local.regionale === '2025-10-12');
 const game = C.createGameState({ seedText: 'firenze', currentDate: '2026-09-26', level: 'comunale', place: { region: 'Toscana', municipality: 'Firenze' }, localCalendar: local });
 const dateOf = type => game.elections.find(item => item.type === type).electionDate;
-assert.equal(dateOf('comunale'), '2029-05-27', 'Le comunali di Firenze nel 2029.');
+// The natural date (last Sunday of May) is 14 days from the European elections: two rounds closer than 100 days are not allowed, so the comuni vote together with Europe (as in 2024).
+assert.equal(game.elections.find(item => item.type === 'comunale').baseDate, '2029-05-27', 'Le comunali di Firenze: la data naturale è l’ultima domenica di maggio 2029.');
+assert.equal(dateOf('comunale'), dateOf('europee'), 'Le comunali di Firenze nel 2029 si tengono con le europee (stessa tornata).');
 assert.equal(dateOf('regionale'), '2030-10-27', 'Le regionali toscane nel 2030.');
 assert.equal(dateOf('politiche'), '2027-09-26', 'Le politiche alla fine della legislatura.');
 assert.ok(new Set(game.elections.map(item => item.electionDate.slice(0, 4))).size >= 3, 'Le elezioni della carriera cadono in anni diversi.');
@@ -74,7 +76,8 @@ for (let week = 0; week < 170; week++) {
   const out = store.getState();
   if (out.game.status === 'ended') out.game.status = 'active';
   // The yearly round: when the request arrives, the player campaigns in the comuni at the polls.
-  const request = out.game.inbox.find(item => item.templateId === 'tornata-amministrativa');
+  // (a round of spring 2027 also stands in the calendar: the first vote of Firenze is a year away, and no more than a year may pass; the player takes part in the one of 2028)
+  const request = out.game.inbox.find(item => item.templateId === 'tornata-amministrativa' && item.params.roundId === 'tornata-2028-05-28');
   if (request && !engaged) { out.game.week.ap = Math.max(out.game.week.ap, 2); out.game.resources.funds = Math.max(out.game.resources.funds, 1000); store.resolveAgendaItem(request.id, 'giro'); engaged = request.params.roundId; }
   store.advance(7);
   logged ||= store.getState().game.log.some(item => item.title.startsWith('Amministrative 2028:'));
@@ -130,14 +133,14 @@ console.log(`  Tre anni: regionali in ${heldRegions.map(([region, entry]) => `${
       const dates = list.filter(item => item.type === type);
       for (let i = 1; i < dates.length; i++) {
         const years = (Date.parse(dates[i].date) - Date.parse(dates[i - 1].date)) / (365.25 * 86400000);
-        if (!dates[i].early) assert.ok(years > 4.8 && years < 5.15, `${region}: ${type} ${dates[i - 1].date} → ${dates[i].date} (${years.toFixed(2)} anni).`);
+        if (!dates[i].early) assert.ok(years > 4.6 && years < 5.4, `${region}: ${type} ${dates[i - 1].date} → ${dates[i].date} (${years.toFixed(2)} anni).`);
         else assert.ok(years < 5, `${region}: voto anticipato ${type} il ${dates[i].date}.`);
       }
     }
     assert.ok(list.some(item => item.type === 'politiche' && item.early && item.date.startsWith('2030')), `${region}: politiche anticipate dopo la caduta del governo.`);
-    if (index % 2 === 0) assert.ok(list.some(item => item.type === 'comunale' && item.date === '2032-05-30'), `${region}: comune sciolto, si vota alla primavera successiva.`);
+    if (index % 2 === 0) assert.ok(list.some(item => item.type === 'comunale' && item.date >= '2032-04-15' && item.date <= '2032-06-15'), `${region}: comune sciolto, si vota alla primavera successiva.`);
   }
-  assert.ok(worst <= 400, `Mai più di tredici mesi senza un voto (massimo ${worst} giorni).`);
+  assert.ok(worst <= 365, `Mai più di un anno senza un voto (massimo ${worst} giorni).`);
   console.log(`  Vent’anni in 6 calendari reali: un voto ogni anno (al massimo ${worst} giorni senza), ${rounds} tornate amministrative al posto degli anni vuoti, mandati di cinque anni anche dopo politiche e comunali anticipate.`);
 }
 

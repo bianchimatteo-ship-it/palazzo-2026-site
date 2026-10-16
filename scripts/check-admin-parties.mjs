@@ -2,10 +2,10 @@
 // local preview; nothing of the production archive, of the real accounts or of the saves of a player is touched):
 //   - the list holds every political force of the game (parties, movements, coalition lists) once, paginated, with the same count as the data; aliases of the same entity are not separate rows;
 //   - every one of them is found by its name (also in capitals and without accents) and, where it has one, by its abbreviation; the filters (hidden, added, with/without logo) agree with the records;
-//   - the editor of any of them opens and has the colour AND the second colour with «nessun colore»; a party, a movement and a coalition list are edited through the form, saved, published, and
+//   - the editor of any of them opens and has one colour (with «nessun colore») and no second colour; a party, a movement and a coalition list are edited through the form, saved, published, and
 //     still there after the page is loaded again, while the dataset files and the pristine record stay as they were; «Ripristina» gives the original back;
-//   - the priority of the colours: primary and secondary both written are both used, only the primary gives a secondary derived from it, none gives the default; never a colour taken from elsewhere;
-//   - an added party: created with both colours, listed with its badge, edited, deleted (and kept out of the "active" filter) and restored; a real one hidden and restored; everything on the server's archive too.
+//   - the colour of a party is its primary one: a legacy second colour in an old record is never used, the second tone is always derived from the primary, none gives the default;
+//   - an added party: created with its colour, listed with its badge, edited, deleted (and kept out of the "active" filter) and restored; a real one hidden and restored; everything on the server's archive too.
 // Skipped without Chrome.
 import assert from 'node:assert/strict';
 import { chromeAvailable, createCareerInPage, withBrowser } from './lib/browser.mjs';
@@ -83,15 +83,15 @@ try {
     // ---------- 3. the editor of any of them, and an edit that stays ----------
     const sample = ['parties', 'politicalMovements', 'coalitions'].map(collection => records.find(item => item.collection === collection)).filter(Boolean);
     assert.ok(sample.length >= 2, 'Ci sono almeno un partito e un movimento (o una lista) da modificare.');
-    const colors = [['#aa2255', '#33aa88'], ['#116699', null], ['#cc7722', '#445566']];
+    const colors = [['#aa2255', null], ['#116699', null], ['#cc7722', null]];
     const edited = [];
     for (const [index, record] of sample.entries()) {
       await setField('[data-admin-query]', record.name);
       await click(`[data-admin-select-party="${record.id}"]`);
       const form = await evaluate(`(() => { const form = document.querySelector('[data-admin-form]'); return form ? { id: form.dataset.adminId, collection: form.dataset.adminCollection, color: Boolean(form.querySelector('input[name=color]')), colorOff: Boolean(form.querySelector('input[name=color__off]')), color2: Boolean(form.querySelector('input[name=color2]')), color2Off: Boolean(form.querySelector('input[name=color2__off]')), name: form.querySelector('input[name=officialName]')?.value } : null; })()`);
-      check(form && form.id === record.id && form.color && form.colorOff && form.color2 && form.color2Off, `${record.name}: il modulo ha colore e secondo colore con «nessun colore» (${JSON.stringify(form)}).`);
+      check(form && form.id === record.id && form.color && form.colorOff && !form.color2 && !form.color2Off, `${record.name}: il modulo ha un solo colore, con «nessun colore» (${JSON.stringify(form)}).`);
       const [primary, secondary] = colors[index];
-      await setColor('color', primary); await setColor('color2', secondary);
+      await setColor('color', primary);
       await evaluate(`(() => { const input = document.querySelector('[data-admin-form] input[name=officialName]'); input.value = input.value + ' · prova'; return true; })()`);
       await submitForm('[data-admin-form]');
       await waitFor(() => evaluate(`document.querySelector('.admin-message, .admin-note')?.textContent?.includes('Pubblicato') || document.body.textContent.includes('Pubblicato per tutti')`), 15000).catch(() => null);
@@ -101,7 +101,7 @@ try {
     for (const item of edited) {
       const fields = archive?.parties?.[item.id]?.fields ?? {};
       check(fields.color === item.primary, `${item.name}: il server ha il colore ${item.primary} (${fields.color}).`);
-      check(item.secondary ? fields.color2 === item.secondary : (fields.color2 ?? null) === null, `${item.name}: il server ha il secondo colore ${item.secondary} (${fields.color2}).`);
+      check((fields.color2 ?? null) === null, `${item.name}: il modulo non scrive nessun secondo colore (${fields.color2}).`);
       check(fields.officialName === item.name, `${item.name}: il nome corretto è sul server.`);
     }
     // the page again, nothing kept in memory: the same values, the original data untouched
@@ -116,8 +116,8 @@ try {
     for (const item of edited) {
       await setField('[data-admin-query]', item.name);
       await click(`[data-admin-select-party="${item.id}"]`);
-      const shown = await evaluate(`(() => { const form = document.querySelector('[data-admin-form]'); const read = name => { const input = form.querySelector('input[name=' + name + ']'); const off = form.querySelector('input[name=' + name + '__off]'); return off?.checked ? null : input.value; }; return { name: form.querySelector('input[name=officialName]').value, color: read('color'), color2: read('color2'), edited: Boolean(form.querySelector('.is-edited')), reset: Boolean(document.querySelector('[data-admin-reset-record]')) }; })()`);
-      check(shown.name === item.name && shown.color === item.primary && shown.color2 === item.secondary, `${item.name}: dopo aver ricaricato la pagina i valori sono gli stessi (${JSON.stringify(shown)}).`);
+      const shown = await evaluate(`(() => { const form = document.querySelector('[data-admin-form]'); const read = name => { const input = form.querySelector('input[name=' + name + ']'); const off = form.querySelector('input[name=' + name + '__off]'); return off?.checked ? null : input.value; }; return { name: form.querySelector('input[name=officialName]').value, color: read('color'), edited: Boolean(form.querySelector('.is-edited')), reset: Boolean(document.querySelector('[data-admin-reset-record]')) }; })()`);
+      check(shown.name === item.name && shown.color === item.primary, `${item.name}: dopo aver ricaricato la pagina i valori sono gli stessi (${JSON.stringify(shown)}).`);
       check(shown.edited && shown.reset, `${item.name}: i campi modificati sono segnati e c’è «Ripristina».`);
     }
     const files = await evaluate(`(async () => { const read = async name => (await (await fetch('/src/data/real/' + name + '.json?check=' + Date.now())).json()); const parties = await read('parties'), movements = await read('political-movements'); const all = [...parties, ...movements]; return ${JSON.stringify(edited.filter(item => item.collection !== 'coalitions').map(item => item.id))}.map(id => { const record = all.find(entry => entry.id === id); return { id, name: record?.officialName, color: record?.color ?? null }; }); })()`);
@@ -136,21 +136,18 @@ try {
     await click('[data-admin-new-party]');
     await waitFor(() => evaluate('Boolean(document.querySelector("[data-admin-new-party-form]"))'), 10000);
     await evaluate(`(() => { const form = document.querySelector('[data-admin-new-party-form]'); form.querySelector('input[name=officialName]').value = 'Lista Civica Nuova Prova'; form.querySelector('input[name=abbreviation]').value = 'LCNP'; return true; })()`);
-    await setColor('color', '#2a9d8f'); await setColor('color2', '#e9c46a');
+    await setColor('color', '#2a9d8f');
     await submitForm('[data-admin-new-party-form]');
     await waitFor(() => evaluate(`Boolean(document.querySelector('[data-admin-form]'))`), 15000);
     await setField('[data-admin-query]', 'Nuova Prova');
     const added = await evaluate(`[...document.querySelectorAll('.admin-list-item')].map(item => ({ id: item.dataset.adminSelectParty, text: item.textContent }))`);
     check(added.length === 1 && /Aggiunto/.test(added[0].text), `Il partito aggiunto è nell’elenco, con il suo distintivo (${JSON.stringify(added)}).`);
     const addedId = added[0]?.id;
-    check(await serverHas(archive => archive?.addedParties?.[addedId]?.color === '#2a9d8f' && archive.addedParties[addedId].color2 === '#e9c46a' && archive.addedParties[addedId].abbreviation === 'LCNP'), 'Il partito aggiunto è sul server con i due colori.');
+    check(await serverHas(archive => archive?.addedParties?.[addedId]?.color === '#2a9d8f' && (archive.addedParties[addedId].color2 ?? null) === null && archive.addedParties[addedId].abbreviation === 'LCNP'), 'Il partito aggiunto è sul server con il suo colore e senza secondo colore.');
     await click(`[data-admin-select-party="${addedId}"]`);
-    await setColor('color2', null);
     await submitForm('[data-admin-form]');
-    // the second colour is taken off: on the server the correction says «none» over what the party was added with, and the party in the game has no second colour
-    check(await serverHas(archive => archive?.parties?.[addedId]?.fields && archive.parties[addedId].fields.color2 === null), 'Il secondo colore del partito aggiunto si toglie, anche sul server.');
-    const addedNow = await evaluate(`(async () => { const real = ${mod(version, 'data/repositories/real-data.js')}; const record = real.realDatabase.parties.find(item => item.id === ${JSON.stringify(addedId)}); return record ? { color: record.color, color2: record.color2 ?? null, edited: Boolean(record.adminEdited) } : null; })()`);
-    check(addedNow && addedNow.color === '#2a9d8f' && addedNow.color2 === null && addedNow.edited, `Nel gioco il partito aggiunto ha il primo colore e non più il secondo (${JSON.stringify(addedNow)}).`);
+    const addedNow = await evaluate(`(async () => { const real = ${mod(version, 'data/repositories/real-data.js')}; const record = real.realDatabase.parties.find(item => item.id === ${JSON.stringify(addedId)}); return record ? { color: record.color, color2: record.color2 ?? null } : null; })()`);
+    check(addedNow && addedNow.color === '#2a9d8f' && addedNow.color2 === null, `Nel gioco il partito aggiunto ha il suo colore e nessun secondo colore (${JSON.stringify(addedNow)}).`);
     const filterTo = async value => { await evaluate(`(() => { const filter = document.querySelector('[data-admin-filter]'); filter.value = ${JSON.stringify(value)}; filter.dispatchEvent(new Event('input', { bubbles: true })); filter.dispatchEvent(new Event('change', { bubbles: true })); return true; })()`); await pause(500); };
     // an added party is deleted (not hidden) and can be brought back; a real one is hidden and restored
     await click(`[data-admin-select-party="${addedId}"]`);
@@ -188,14 +185,14 @@ try {
 // ---------- the priority of the colours (the presentation of a party: pure code, no browser) ----------
 {
   const base = { id: 'party-prova', officialName: 'Prova', abbreviation: 'PRV' };
-  const both = partyIdentity({ party: { ...base, color: '#aa2255', color2: '#33aa88' } });
+  const legacy = partyIdentity({ party: { ...base, color: '#aa2255', color2: '#33aa88' } });
   const onlyPrimary = partyIdentity({ party: { ...base, color: '#aa2255' } });
   const swapped = partyIdentity({ party: { ...base, color: '#33aa88', color2: '#aa2255' } });
   const none = partyIdentity({ party: { ...base } });
-  assert.equal(both.accent, accentAsGraphic('#aa2255')); assert.equal(both.accent2, accentAsGraphic('#33aa88'), 'Primo e secondo colore scritti: valgono entrambi, così come sono.');
-  assert.equal(onlyPrimary.accent2, accentAsGraphic(deriveSecondary('#aa2255')), 'Solo il primo: il secondo è derivato da quello, mai preso da altrove.');
-  assert.notEqual(onlyPrimary.accent2, both.accent2);
-  assert.equal(swapped.accent, accentAsGraphic('#33aa88')); assert.equal(swapped.accent2, accentAsGraphic('#aa2255'), 'Il primo resta il primo: scambiarli scambia i ruoli.');
+  assert.equal(legacy.accent, accentAsGraphic('#aa2255'));
+  assert.equal(legacy.accent2, accentAsGraphic(deriveSecondary('#aa2255')), 'Un vecchio secondo colore non si usa: il secondo tono si deriva dal primo.');
+  assert.equal(legacy.accent2, onlyPrimary.accent2, 'Con o senza il vecchio secondo colore l’identità è la stessa.');
+  assert.equal(swapped.accent, accentAsGraphic('#33aa88')); assert.equal(swapped.accent2, accentAsGraphic(deriveSecondary('#33aa88')), 'Il primo resta il primo e decide tutto.');
   assert.equal(none.accent2, null, 'Nessun colore: né accento né secondo colore (l’identità neutra).');
   const logoParty = partyIdentity({ party: { id: 'party-futuro-nazionale', officialName: 'Futuro Nazionale' } });
   const chosen = partyIdentity({ party: { id: 'party-futuro-nazionale', officialName: 'Futuro Nazionale', color: '#aa2255' } });

@@ -211,4 +211,28 @@ assert.ok(page('istituti').includes('Come lavora ciascun istituto') && page('ist
   assert.ok(compare.includes('hm-mark') && compare.includes('hm-names'), 'Le righe della mappa di calore hanno sigla e, a parte, l’elenco dei nomi.');
 }
 
+// ---------- every force of the poll, at once, in the quadro and in the full page ----------
+{
+  const report = observatoryReport(state.world);
+  const forces = report.latestAverage.rows.filter(row => state.world.parties.some(party => party.id === row.partyId));
+  assert.ok(forces.length >= 12, `Il panorama ha almeno dodici forze (${forces.length}).`);
+  const quadro = page('quadro');
+  const rowsIn = html => [...html.matchAll(/<div class="obs-bar-row[^"]*"[^>]*data-tip="([^"]*)"/g)].map(match => match[1]);
+  const shown = rowsIn(quadro).filter(tip => !/^Altri/.test(tip));
+  assert.equal(shown.length, forces.length, `Il quadro mostra tutte le ${forces.length} forze della rilevazione, nessun taglio (${shown.length}).`);
+  assert.ok(/obs-bar-row is-others/.test(quadro) && quadro.includes('<strong>Altri</strong>'), 'E la riga «Altri».');
+  // the same forces, in the same order and with the same values, in the full page of the institutes
+  const full = page('istituti');
+  const nameOf = id => state.world.parties.find(party => party.id === id).label;
+  const sorted = [...forces].sort((a, b) => b.share - a.share);
+  for (const row of sorted) {
+    assert.ok(quadro.includes(nameOf(row.partyId).replace(/&/g, '&amp;')) || quadro.includes(nameOf(row.partyId)), `Nel quadro c’è ${nameOf(row.partyId)}.`);
+    assert.ok(full.includes(nameOf(row.partyId).replace(/&/g, '&amp;')) || full.includes(nameOf(row.partyId)), `Nella pagina completa c’è ${nameOf(row.partyId)}.`);
+  }
+  const unescape = text => text.replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&quot;/g, '"');
+  const labelsShown = shown.map(tip => unescape(tip.split(': media')[0]));
+  assert.deepEqual(labelsShown, sorted.map(row => nameOf(row.partyId)), 'Nel quadro le forze sono in ordine di percentuale, come nella pagina completa.');
+  assert.ok(!/obs-more|Mostra altre|altre forze/i.test(quadro), 'Nessun «mostra altre»: niente è nascosto in un altro tab, in una paginazione o in una sezione chiusa.');
+}
+
 console.log('Pagina Sondaggi verificata: cinque aree con le nove viste, cartina a tessere delle venti regioni, classifica e barre divergenti, scheda del territorio, confronto fino a quattro regioni, mappa di calore, coalizioni, movimenti, periodo dei grafici, dati mancanti dichiarati (province e confini) e pagina in sola lettura.');

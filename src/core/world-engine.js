@@ -1,9 +1,9 @@
-import { uniqueId } from './ids.js?v=20261016-1';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261016-1';
-import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261016-1';
-import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261016-1';
-import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261016-1';
-import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261016-1';
+import { uniqueId } from './ids.js?v=20261016-2';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261016-2';
+import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261016-2';
+import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261016-2';
+import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261016-2';
+import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261016-2';
 export { houseEffect };
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
@@ -303,7 +303,7 @@ export function createWorld({ seedText, date, week = 1, place = {}, playerParty 
   };
   const included = forces.reduce((sum, force) => sum + force.share, 0);
   world.others = round2(Math.max(realPoll ? 1 : 4, 100 - included));
-  for (const force of forces) addParty(world, { id: force.id, label: force.label, officialName: force.officialName, abbreviation: force.abbreviation, baseline: force.share, reference: force.reference, pollReference: force.pollReference, position: force.position, governing: force.governing, refSource: force.refSource ?? 'real' }, week);
+  for (const force of forces) addParty(world, { id: force.id, label: force.label, officialName: force.officialName, abbreviation: force.abbreviation, baseline: force.share, reference: force.reference, pollReference: force.pollReference, position: force.position, governing: force.governing, brandColor: force.brandColor ?? null, refSource: force.refSource ?? 'real' }, week);
   if (playerParty) attachPlayerParty(world, playerParty, week);
   for (let i = 0; i < world.parties.length; i++) for (let j = i + 1; j < world.parties.length; j++) world.ties[tieKey(world.parties[i].id, world.parties[j].id)] = initialTie(world, world.parties[i], world.parties[j]);
   world.residual = world.others;
