@@ -1,14 +1,15 @@
 // Main menu, how-to-play, settings, save slots and the end-of-week report.
-import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261015-2';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261015-2';
-import { formatDate } from '../core/time.js?v=20261015-2';
-import { illustration } from './illustrations.js?v=20261015-2';
-import { glyph } from './visuals.js?v=20261015-2';
-import { identityMark, identityVars } from './party-identity.js?v=20261015-2';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261015-2';
-import { hallView } from './hall-view.js?v=20261015-2';
-import { esc, signed } from './charts.js?v=20261015-2';
-import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261015-2';
+import { renderTutorialInvite } from './tutorial.js?v=20261016-3';
+import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261016-3';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261016-3';
+import { formatDate } from '../core/time.js?v=20261016-3';
+import { illustration } from './illustrations.js?v=20261016-3';
+import { glyph } from './visuals.js?v=20261016-3';
+import { identityMark, identityVars } from './party-identity.js?v=20261016-3';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261016-3';
+import { hallView } from './hall-view.js?v=20261016-3';
+import { esc, signed } from './charts.js?v=20261016-3';
+import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261016-3';
 
 const when = iso => { try { return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch { return ''; } };
 // The actions of the opening screen, in order of importance: starting a career and resuming one are the two main ones (drawn apart, below); then what concerns the
@@ -111,7 +112,7 @@ function accountView(account = {}) {
 }
 
 function guideView() {
-  return `<h2>Come giocare</h2><p class="section-subtitle">Le regole essenziali, sezione per sezione, con un esempio per ciascuna.</p><nav class="guide-index" aria-label="Sezioni della guida">${HOW_TO.map(([title], index) => `<a href="#guida-${index}" data-guide-jump="guida-${index}">${esc(title)}</a>`).join('')}</nav><div class="guide-grid">${HOW_TO.map(([title, icon, text, example], index) => `<article class="guide-card" id="guida-${index}">${glyph(icon, 20)}<div><strong>${esc(title)}</strong><p>${esc(text)}</p>${example ? `<p class="guide-example"><b>Esempio</b> ${esc(example)}</p>` : ''}</div></article>`).join('')}</div>`;
+  return `<h2>Come giocare</h2><p class="section-subtitle">Le regole essenziali, sezione per sezione, con un esempio per ciascuna.</p>${renderTutorialInvite()}<label class="guide-search"><span class="visually-hidden">Cerca nella guida</span><input type="search" data-guide-search placeholder="Cerca un argomento (es. sondaggi, fondi, ballottaggio)…" autocomplete="off" /></label><p class="sheet-empty" data-guide-empty hidden>Nessun argomento corrisponde.</p><nav class="guide-index" aria-label="Sezioni della guida">${HOW_TO.map(([title], index) => `<a href="#guida-${index}" data-guide-jump="guida-${index}" data-guide-index="${index}">${esc(title)}</a>`).join('')}</nav><div class="guide-grid">${HOW_TO.map(([title, icon, text, example], index) => `<article class="guide-card" id="guida-${index}" data-guide-card="${index}">${glyph(icon, 20)}<div><strong>${esc(title)}</strong><p>${esc(text)}</p>${example ? `<p class="guide-example"><b>Esempio</b> ${esc(example)}</p>` : ''}</div></article>`).join('')}</div>`;
 }
 // First opening without an account: the account first, then the first career.
 function welcomeView(account = {}, menu = {}) {
@@ -130,7 +131,7 @@ function tourView(step = 0) {
   const index = Math.max(0, Math.min(TOUR_STEPS.length - 1, Number(step) || 0));
   const [icon, title, text] = TOUR_STEPS[index];
   const last = index === TOUR_STEPS.length - 1;
-  return `<span class="section-kicker">COME FUNZIONA · ${index + 1} DI ${TOUR_STEPS.length}</span><div class="tour-card"><span class="tour-icon">${glyph(icon, 34)}</span><h2>${esc(title)}</h2><p>${esc(text)}</p></div><div class="tour-dots" aria-hidden="true">${TOUR_STEPS.map((_, dot) => `<i class="${dot === index ? 'active' : ''}"></i>`).join('')}</div><div class="setting-actions tour-actions">${index ? '<button class="secondary-button" data-tour="prev">Indietro</button>' : ''}${last ? '<button class="primary-button" data-tour="finish">Inizia nuova carriera</button>' : '<button class="primary-button" data-tour="next">Avanti</button>'}<button class="text-link" data-tour="skip">Salta</button></div>`;
+  return `<span class="section-kicker">COME FUNZIONA · ${index + 1} DI ${TOUR_STEPS.length}</span><div class="tour-card"><span class="tour-icon">${glyph(icon, 34)}</span><h2>${esc(title)}</h2><p>${esc(text)}</p></div><div class="tour-dots" aria-hidden="true">${TOUR_STEPS.map((_, dot) => `<i class="${dot === index ? 'active' : ''}"></i>`).join('')}</div><div class="setting-actions tour-actions">${index ? '<button class="secondary-button" data-tour="prev">Indietro</button>' : ''}${last ? '<button class="primary-button" data-tour="finish">Inizia nuova carriera</button><button class="secondary-button" data-tour="finish" data-tutorial-also="start">Inizia con il tutorial guidato</button>' : '<button class="primary-button" data-tour="next">Avanti</button>'}<button class="text-link" data-tour="skip">Salta</button></div>`;
 }
 // Confirmation of an irreversible or far-reaching action, in the game's own style.
 export function renderConfirmDialog(pending) {

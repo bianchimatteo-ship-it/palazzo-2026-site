@@ -186,7 +186,7 @@ const throwsWith = (fn, pattern, message) => assert.throws(fn, pattern, message)
   const own = granted.playerDelega.areas[0];
   const withAct = L.proposeLocalAct(granted, own, date);
   assert.ok(withAct.acts.at(-1).byDelega && withAct.acts.at(-1).sponsor.kind === 'executive', 'L’atto dell’assessore è un atto dell’esecutivo, a suo nome');
-  throwsWith(() => L.proposeLocalAct(withAct, own, date), /già una proposta/, 'Una proposta alla volta');
+  throwsWith(() => L.proposeLocalAct(withAct, own, date), /già un atto di questo tipo/, 'Lo stesso atto sullo stesso tema non si ripete');
   throwsWith(() => L.proposeLocalAct(granted, 'cultura', date), /La tua delega/, 'Sui temi altrui decide la giunta');
   throwsWith(() => L.proposeLocalAct(granted, own, date, { category: 'tributi' }), /delega/, 'Le aliquote non sono di una delega');
   throwsWith(() => L.proposeLocalAct(granted, own, date, { category: 'bilancio' }), /delega|propone/, 'Il bilancio non è di una delega');

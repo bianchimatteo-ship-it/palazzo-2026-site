@@ -75,7 +75,19 @@ const groups = [
   assert.ok(own || inst.archive.length, 'Il voto scelto dal giocatore entra nel conteggio.');
   // A proposal of the player, a question to the executive.
   inst = L.proposeLocalAct(inst, 'casa', date);
-  assert.throws(() => L.proposeLocalAct(inst, 'scuola', date), /già una proposta/, 'Una proposta alla volta.');
+  // Several acts at once up to a visible capacity (no global lock); the same theme twice is refused; withdrawing frees a place.
+  const cap = L.actCapacity(inst);
+  assert.equal(cap.max, L.ACT_CAPACITY.consigliere, 'Un consigliere segue due atti.');
+  assert.equal(cap.open, 1, 'Un atto in corso.');
+  assert.throws(() => L.proposeLocalAct(inst, 'casa', date), /già un atto di questo tipo/, 'Stesso tipo e tema: rifiutato.');
+  inst = L.proposeLocalAct(inst, 'scuola', date);
+  assert.equal(L.actCapacity(inst).free, 0, 'Capacità esaurita con due atti.');
+  assert.throws(() => L.proposeLocalAct(inst, 'sicurezza', date), /atti|capacit|limite/i, 'Oltre la capacità: rifiutato con motivo.');
+  const mine = inst.acts.find(item => item.sponsor.kind === 'player' && item.area === 'scuola' && !['approvato', 'respinto', 'ritirato'].includes(item.stage));
+  inst = L.withdrawLocalAct(inst, mine.id, date);
+  assert.equal(inst.acts.find(item => item.id === mine.id).stage, 'ritirato', 'Atto ritirato.');
+  assert.equal(L.actCapacity(inst).free, 1, 'Il ritiro libera un posto.');
+  assert.throws(() => L.withdrawLocalAct(inst, mine.id, date), /ritirare solo/, 'Non si ritira due volte.');
   const pressure = inst.pressure;
   inst = L.questionExecutive(inst, date);
   assert.ok(inst.pressure > pressure, 'L’interrogazione mette pressione alla giunta.');
@@ -504,7 +516,15 @@ const groups = [
   assert.ok(inst.until, 'Il mandato dura fino alle prossime comunali.');
   store.proposeLocalAct(inst.id, 'casa');
   const proposalId = store.getState().local.institutions.find(item => item.id === inst.id).acts.at(-1).id;
-  assert.throws(() => store.proposeLocalAct(inst.id, 'scuola'), /già una proposta/);
+  assert.throws(() => store.proposeLocalAct(inst.id, 'casa'), /già un atto di questo tipo/, 'Lo stesso atto sullo stesso tema non si presenta due volte.');
+  // Capacity through the store: a second act on another theme is accepted, the withdrawal closes the first and survives a save/reload.
+  store.proposeLocalAct(inst.id, 'scuola');
+  assert.equal(L.actCapacity(store.getState().local.institutions.find(item => item.id === inst.id)).open, 2, 'Due atti in corso insieme.');
+  store.withdrawLocalAct(inst.id, proposalId);
+  const afterWithdraw = store.getState().local.institutions.find(item => item.id === inst.id);
+  assert.equal(afterWithdraw.acts.find(item => item.id === proposalId).stage, 'ritirato', 'Il ritiro chiude l’atto.');
+  const reloaded = JSON.parse(JSON.stringify(store.getState()));
+  assert.equal(reloaded.local.institutions.find(item => item.id === inst.id).acts.find(item => item.id === proposalId).stage, 'ritirato', 'Il ritiro sopravvive al salvataggio.');
   let asked = null;
   for (let week = 0; week < 20; week++) {
     s = store.getState();

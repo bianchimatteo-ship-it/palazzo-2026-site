@@ -1,11 +1,10 @@
-import { advanceDays } from './time.js?v=20261015-2';
-import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261015-2';
-import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261015-2';
-import { aggregateShares, mateForce, runFinalElection, runFirstRound } from './election-engine.js?v=20261015-2';
-import { houseEffect } from './world-engine.js?v=20261015-2';
-import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261015-2';
-import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261015-2';
-import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261015-2';
+import { advanceDays } from './time.js?v=20261016-3';
+import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261016-3';
+import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261016-3';
+import { aggregateShares, mateForce, runFinalElection, runFirstRound } from './election-engine.js?v=20261016-3';
+import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261016-3';
+import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261016-3';
+import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261016-3';
 
 const SOURCE = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
@@ -26,39 +25,21 @@ function gaussian(campaign) {
   const v = draw(campaign);
   return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
-function pollDraw(campaign) {
-  campaign.pollRngState = (Math.imul(campaign.pollRngState ?? hash(`${campaign.seed}|campaign-polls`), 1664525) + 1013904223) >>> 0;
-  return campaign.pollRngState / 4294967296;
-}
-function pollGaussian(campaign) {
-  const u = Math.max(1e-9, pollDraw(campaign));
-  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * pollDraw(campaign));
-}
-function recordCampaignPoll(campaign) {
+// The poll the campaign publishes is the average of the institutes of the observatory (pollWave): one series for the whole game, so that the campaign page, the observatory and the
+// final report never say two different things about the same race. The sample is the one of all the institutes together and the margin the one of that sample; the readings are
+// pure functions of the seed, the day, the institute and the candidacy (never the sequence of the campaign). A save made before keeps the poll it had.
+function recordCampaignPoll(campaign, label = null) {
   if (!Array.isArray(campaign.polls)) campaign.polls = [];
-  if (campaign.polls?.at(-1)?.day === campaign.day) return campaign.polls.at(-1);
-  const groups = aggregateShares(campaign);
-  if (!groups.length) return null;
-  const institute = POLL_INSTITUTES[Math.floor(pollDraw(campaign) * POLL_INSTITUTES.length)];
-  const sample = Math.round((institute.sample[0] + pollDraw(campaign) * (institute.sample[1] - institute.sample[0])) / 10) * 10;
-  const margin = round(1.96 * Math.sqrt(.25 / sample) * 100);
-  campaign.pollErrors ??= {};
-  const raw = groups.map(group => {
-    const share = clamp(Number(group.share) || 0, 0, 100);
-    const p = share / 100;
-    const sigma = Math.sqrt(Math.max(.0004, p * (1 - p)) / sample) * 100;
-    const error = Number(campaign.pollErrors[group.id] ?? 0) * .7 + pollGaussian(campaign) * sigma;
-    campaign.pollErrors[group.id] = round(error);
-    return Math.max(.2, share + error + houseEffect(institute.id, group.id, share));
-  });
-  const shares = normalized(raw);
-  const previous = campaign.polls?.at(-1);
-  const results = groups.map((group, index) => {
-    const previousShare = previous?.results?.find(item => item.candidateId === group.id)?.share;
-    return { candidateId:group.id,label:group.label,share:shares[index],delta:Number.isFinite(previousShare)?round(shares[index]-previousShare):null,source:SOURCE };
-  });
-  const poll = { id:`${campaign.id}-poll-${campaign.day}`,day:campaign.day,date:campaign.currentDate,stage:campaign.stage,institute:{id:institute.id,name:institute.name},sample,margin,results,source:SOURCE };
-  campaign.polls = [...(campaign.polls ?? []),poll].slice(-24);
+  const last = campaign.polls.at(-1);
+  if (last?.day === campaign.day && last?.stage === campaign.stage) return last;
+  const wave = pollWave(campaign, label);
+  if (!wave?.average?.length) return null;
+  const sample = Object.values(wave.institutes ?? {}).reduce((sum, institute) => sum + (Number(institute.sample) || 0), 0);
+  const margin = sample > 0 ? round(1.96 * Math.sqrt(.25 / sample) * 100) : null;
+  const labels = new Map(aggregateShares(campaign).map(group => [group.id, group.label]));
+  const results = wave.average.map(([candidateId, share, delta]) => ({ candidateId, label: labels.get(candidateId) ?? candidateId, share, delta: Number.isFinite(delta) ? round(delta) : null, source: SOURCE }));
+  const poll = { id: `${campaign.id}-poll-${campaign.day}-${campaign.stage}`, day: campaign.day, date: campaign.currentDate, stage: campaign.stage, institute: { id: 'media', name: 'Media degli istituti' }, institutes: Object.keys(wave.institutes ?? {}).length, sample, margin, results, source: SOURCE };
+  campaign.polls = [...campaign.polls, poll].slice(-24);
   return poll;
 }
 function withinDays(date, count) { return advanceDays(date, count); }
@@ -306,7 +287,7 @@ function recognizeRival(campaign, rival, record) {
   addHistory(campaign, 'rivali', `Ritrovi ${rival.realReference?.fullName ?? candidateLabel(rival)}: non è la prima volta (${record.meetings === 1 ? 'vi siete già incontrati' : `${record.meetings} incontri`}${note.length ? `, ${note.join(', ')}` : ''}). Il rapporto è ${stance}.`, { source:SOURCE });
 }
 
-function campaignTerritories(type, player, userTerritories) {
+function campaignTerritories(type, player, userTerritories, weights = null, role = null) {
   const playerMunicipality = userTerritories.find(item => item.id === player.territoryId)?.name ?? player.municipality ?? 'Territorio locale';
   if (type === 'comunale') return [{ id:`sim-territory-comune-${hash(playerMunicipality).toString(36)}`, name:playerMunicipality, kind:'comune', weight:100, source:SOURCE, scope:'territorio comunale', organization:30 }];
   // The electorate of a second-level vote: the mayors and the municipal councillors of the province, by the weight of the
@@ -318,11 +299,13 @@ function campaignTerritories(type, player, userTerritories) {
     ['area-capoluogo', 'Capoluogo e area urbana', 27], ['area-nord', 'Area regionale settentrionale', 25],
     ['area-centro', 'Area regionale centrale', 25], ['area-sud', 'Area regionale meridionale', 23]
   ].map(([id,name,weight], index) => ({ id:`sim-${player.region.toLocaleLowerCase('it-IT').replace(/[^a-z0-9]+/g,'-')}-${id}`, name, kind:'area-regionale-simulata', urban:index === 0, region:player.region, weight, source:SOURCE, organization:Math.max(8, 28 - index * 3) }));
-  if (type === 'europee') return [
+  if (type === 'europee') { const real = weights?.europee ?? null; return [
     ['nord-occidentale','Italia nord-occidentale',26], ['nord-orientale','Italia nord-orientale',20],
     ['centrale','Italia centrale',20], ['meridionale','Italia meridionale',24], ['insulare','Italia insulare',10]
-  ].map(([id,name,weight], index) => ({ id:`sim-circoscrizione-${id}`, name, kind:'circoscrizione-di-simulazione', constituency:id, weight, source:SOURCE, organization:Math.max(9,27-index*2) }));
-  return ITALIAN_REGIONS.map((name,index) => ({ id:`sim-regione-${index+1}`, name, region:name, kind:'regione', weight:100/ITALIAN_REGIONS.length, source:SOURCE, organization:20 }));
+  ].map(([id,name,weight], index) => ({ id:`sim-circoscrizione-${id}`, name, kind:'circoscrizione-di-simulazione', constituency:id, weight:real?.weights?.[id] ?? weight, weightBasis:real ? real.basis : 'regola-di-gioco', source:SOURCE, organization:Math.max(9,27-index*2) })); }
+  // The general election: every region weighs what it weighed at the last real one (valid votes of the chamber voted); only without the data is the weight uniform, and it says so.
+  const real = weights?.[role === 'senatore' ? 'senato' : 'camera'] ?? null;
+  return ITALIAN_REGIONS.map((name,index) => ({ id:`sim-regione-${index+1}`, name, region:name, kind:'regione', weight:real?.weights?.[name] ?? 100/ITALIAN_REGIONS.length, weightBasis:real ? real.basis : 'uniforme-dati-mancanti', source:SOURCE, organization:20 }));
 }
 
 function createCandidate({ id, player = false, partyId = null, displayName, seed, stats = {} }) {
@@ -1667,7 +1650,8 @@ export function pollWave(campaign, label = null) {
   if (box.waves.at(-1)?.day === campaign.day && box.waves.at(-1)?.stage === campaign.stage) return box.waves.at(-1);
   const scale = CAMPAIGN_POLL_RULES.sampleScale[pollKey(campaign)] ?? 1;
   const trueRows = groups.map(group => ({ partyId: group.id, share: group.share }));
-  const last = box.waves.at(-1);
+  // (the runoff is another question – the two finalists head to head – so its first reading does not start from the readings of the first round)
+  const last = box.waves.at(-1)?.stage === campaign.stage ? box.waves.at(-1) : null;
   const wave = { id: ids('onda', campaign.seed, campaign.day), day: campaign.day, date: campaign.currentDate, stage: campaign.stage, label, institutes: {}, source: SOURCE };
   const readings = [];
   for (const profile of POLL_INSTITUTES) {
@@ -1755,7 +1739,7 @@ export function createCampaign({career,player,statistics=[],offices=[],territori
   const validRoles={comunale:['sindaco','consigliere'],provinciale:['presidente','consigliere'],regionale:['presidente','consigliere'],politiche:['deputato','senatore','uninominale'],europee:['eurodeputato']};
   const role=config.role ?? (type==='comunale'?'sindaco':type==='provinciale'?'consigliere':type==='regionale'?'presidente':type==='politiche'?'deputato':'eurodeputato');
   if(!validRoles[type].includes(role)) throw new Error('Il ruolo selezionato non è compatibile con il tipo di elezione.');
-  const campaignAreas=campaignTerritories(type,player,userTerritories);
+  const campaignAreas=campaignTerritories(type,player,userTerritories,config.territoryWeights??null,config.role??null);
   const localTrendRandom=randomFrom(seed ^ 0x27d4eb2f);
   campaignAreas.forEach(area=>{area.localTrend=round((localTrendRandom()-.5)*3);});
   if (type==='comunale') campaignAreas[0].region=player.region;
@@ -1835,6 +1819,7 @@ export function createCampaign({career,player,statistics=[],offices=[],territori
     modelSource:model.source,modelReference:{source:'real',verified:model.referenceVerified!==false,sourceUrl:model.referenceUrl,sourceName:model.referenceName,verifiedAt:'2026-09-22',validFrom:null,validTo:null},
     ruleFacts:type==='europee'?{threshold:EUROPEAN_THRESHOLD}:null,
     municipalityBand:type==='comunale'?(config.municipalityBand==='oltre-15000'?'oltre-15000':'fino-15000'):null,
+    municipalityBandInfo:type==='comunale'?(config.municipalityBandInfo??null):null,
     objective:config.objective??'build',playerCandidateId,partyId,independent:userOrIndependent && !partyId,partyReferences:allPartyRefs,
     initialLevel:career.initialLevel,territoryId:career.territoryId,homeRegion:player.region ?? null,territories:campaignAreas,candidates,resources:initialResources,
     candidateStats:playerStats,startingStats:{...playerStats},nomination,internalCandidates,candidacy:{role,listPosition:role==='uninominale'?null:6,territoryId:focus,incumbent:incumbency||governingIncumbent},incumbency:incumbencyRecord,list:buildList({seed,type,role,areas:campaignAreas}),listContext:config.listContext?{...config.listContext,source:SOURCE}:null,obligations:[],
@@ -1861,7 +1846,7 @@ export function createCampaign({career,player,statistics=[],offices=[],territori
     const withStrategy = setCampaignStrategy(campaign, strategy, CAMPAIGN_STRATEGIES[strategy].needsTopic && !opts.topicId ? { ...opts, topicId: campaign.nationalContext.salientTopic } : opts);
     Object.assign(campaign, withStrategy);
   }
-  recordCampaignPoll(campaign);
+  recordCampaignPoll(campaign, 'Apertura della campagna');
   return campaign;
 }
 // What the player may reasonably expect, set once the campaign starts from the polls and the opening projection.

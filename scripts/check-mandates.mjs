@@ -92,6 +92,20 @@ function ui(s, kind, { present = [], absent = [] } = {}) {
   assert.ok(inbox(s).includes('giunta-composizione'), 'Dopo il voto: la scelta della giunta in agenda');
   assert.match(renderInstitutions(s, { localSection: 'bilancio' }), /data-local-tax/, 'La pagina Territori mostra il comune con le leve del sindaco');
   ui(s, 'comune', { present: ['data-local-tax', 'data-local-reshuffle-form', 'data-local-propose-form'], absent: ['data-local-question', 'data-ep-'] });
+  // Several acts of the mayor at once (capacity 4), visible and withdrawable from the page; the same theme twice is refused.
+  {
+    const areas = inst.executive.members.length ? ['casa', 'scuola', 'sicurezza'] : [];
+    for (const area of areas) store.proposeLocalAct(inst.id, area);
+    const withActs = store.getState();
+    const mine = active(withActs, 'comune').acts.filter(item => item.kind === 'player' && item.category !== 'interrogazione' && !['approvato', 'respinto', 'ritirato'].includes(item.stage));
+    assert.ok(mine.length >= 3, 'Il sindaco segue più atti insieme.');
+    const page = renderTerritoriesPage(withActs, { localInst: 'comune', localSection: 'atti' });
+    assert.match(page, /data-local-withdraw/, 'Ogni atto proprio si può ritirare dalla pagina.');
+    assert.match(page, /Atti in corso: <b>\d+ su 4<\/b>/, 'La capacità è dichiarata: il sindaco ne segue quattro.');
+    assert.throws(() => store.proposeLocalAct(inst.id, 'casa'), /già un atto di questo tipo/);
+    store.withdrawLocalAct(inst.id, mine[0].id);
+    assert.equal(active(store.getState(), 'comune').acts.find(item => item.id === mine[0].id).stage, 'ritirato', 'Atto ritirato dal sindaco.');
+  }
   const member = inst.executive.members[0];
   const other = inst.groups.find(group => group.side === 'maggioranza' && group.id !== member.groupId);
   if (other) store.reshuffleLocalGiunta(inst.id, member.portfolio, other.id);

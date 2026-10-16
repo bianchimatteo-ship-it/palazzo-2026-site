@@ -2,8 +2,8 @@
 // retained for exports and validation, but the browser never downloads it.
 export const REAL_DATA_ASSET_VERSION = '2026-10-14.1-bf850d4413';
 
-import { applyAdminOverrides } from './admin-store.js?v=20261015-2';
-import { displayCase, withDisplayNames } from './name-case.js?v=20261015-2';
+import { applyAdminOverrides } from './admin-store.js?v=20261016-3';
+import { displayCase, withDisplayNames } from './name-case.js?v=20261016-3';
 
 export let realDatabase = Object.freeze({});
 // Untouched copies of what the files contain, so owner overrides can be re-layered or reverted.
@@ -46,6 +46,9 @@ const documentFiles = Object.freeze({
   // Last municipal election of every comune and last regional election of every region (Eligendo; verified sources).
   localElections: 'local-elections.json'
 });
+// Documents that may legitimately be missing: the game works without them and says so (loadOptionalRealDocument returns null, nothing is listed among the failures).
+// municipalPopulation: population of the comuni (ISTAT), imported by scripts/import-istat-popolazione-comuni.mjs from the official files.
+const optionalDocumentFiles = Object.freeze({ municipalPopulation: 'municipal-population.json' });
 const loadingDocuments = new Map();
 let manifestPromise;
 // What could not be loaded (a collection, a document or the manifest) and why: the game starts with the rest and
@@ -150,6 +153,21 @@ export async function loadRealDocument(name) {
     }));
   }
   return loadingDocuments.get(name);
+}
+
+// An optional real document (see optionalDocumentFiles): the document, or null when the file is not there or is not an import (status 'non-importato').
+export async function loadOptionalRealDocument(name) {
+  if (!optionalDocumentFiles[name]) throw new Error(`Documento opzionale sconosciuto: ${name}`);
+  if (Object.hasOwn(realDatabase, name)) return realDatabase[name];
+  // (the manifest says whether the file was imported: without the entry nothing is requested)
+  try { await loadRealDatabase(); } catch { return null; }
+  if (!realDatabase.manifest?.documents?.[name]) return null;
+  try {
+    const document = await fetchJson(optionalDocumentFiles[name]);
+    if (!document || typeof document !== 'object' || Array.isArray(document) || document.source !== 'real' || document.status === 'non-importato' || !Array.isArray(document.records)) return null;
+    realDatabase = Object.freeze({ ...realDatabase, [name]: freezeDeep(document) });
+    return realDatabase[name];
+  } catch { return null; }
 }
 
 // Re-applies the owner archive after an edit, without reloading the files.

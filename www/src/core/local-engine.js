@@ -5,17 +5,17 @@
 // deadline, votes with individual dissent, and a player who proposes, votes, negotiates or governs. A council that loses
 // its majority is dissolved and votes early. Everything is simulation; the European groups start from their real size
 // at the constitutive session of 2024 (europarl), then evolve in the game.
-import { uniqueId } from './ids.js?v=20261015-2';
-import { DATA_SOURCES } from '../data/schema.js?v=20261015-2';
-import { AREA_BY_ID, CAMP_PRIORITIES, INTENSITY } from '../data/simulation/policy-rules.js?v=20261015-2';
-import { ACT_TYPES, AREA_BREADTH, AREA_LEANS, CITY_INDICATORS, CITY_SHARE_OF_REGION, PROVINCE_SHARE_OF_REGION, actTitle, actTypeOf, legalNumber, naturalType, neededYes, regionalWeights, proposableTypes, serviceIndicatorOf, serviceIndicatorsOf, typeFitsArea } from '../data/simulation/local-acts.js?v=20261015-2';
-import { activeWorks, advanceWorks, applyWorkActivity, availableWorkTypes, cofinRequest, emptyWorksRecord, executiveWorkChoice, planWork, startWork, workGap, worksOf } from './local-works-engine.js?v=20261015-2';
-import { WORK_RULES } from '../data/simulation/local-works.js?v=20261015-2';
-import { DELEGA_RULES, PORTFOLIO_AREAS } from '../data/simulation/office-rules.js?v=20261015-2';
-import { cohesiveShare } from './parliament-engine.js?v=20261015-2';
-import { groupLine, seededRandom, splitGroupVote } from './vote-engine.js?v=20261015-2';
-import { advanceDays } from './time.js?v=20261015-2';
-import { INCUMBENCY_RULES } from '../data/simulation/campaign-rules.js?v=20261015-2';
+import { uniqueId } from './ids.js?v=20261016-3';
+import { DATA_SOURCES } from '../data/schema.js?v=20261016-3';
+import { AREA_BY_ID, CAMP_PRIORITIES, INTENSITY } from '../data/simulation/policy-rules.js?v=20261016-3';
+import { ACT_TYPES, AREA_BREADTH, AREA_LEANS, CITY_INDICATORS, CITY_SHARE_OF_REGION, PROVINCE_SHARE_OF_REGION, actTitle, actTypeOf, legalNumber, naturalType, neededYes, regionalWeights, proposableTypes, serviceIndicatorOf, serviceIndicatorsOf, typeFitsArea } from '../data/simulation/local-acts.js?v=20261016-3';
+import { activeWorks, advanceWorks, applyWorkActivity, availableWorkTypes, cofinRequest, emptyWorksRecord, executiveWorkChoice, planWork, startWork, workGap, worksOf } from './local-works-engine.js?v=20261016-3';
+import { WORK_RULES } from '../data/simulation/local-works.js?v=20261016-3';
+import { DELEGA_RULES, PORTFOLIO_AREAS } from '../data/simulation/office-rules.js?v=20261016-3';
+import { cohesiveShare } from './parliament-engine.js?v=20261016-3';
+import { groupLine, seededRandom, splitGroupVote } from './vote-engine.js?v=20261016-3';
+import { advanceDays } from './time.js?v=20261016-3';
+import { INCUMBENCY_RULES } from '../data/simulation/campaign-rules.js?v=20261016-3';
 
 const SIM = DATA_SOURCES.SIMULATION;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -475,7 +475,9 @@ export function proposeLocalAct(inst, area, date, { category = null, variant = n
   const actor = actorOf(inst);
   const leads = actor === 'leader';
   const delegated = actor === 'assessore' || actor === 'delegato';
-  if (inst.acts.some(item => (item.sponsor.kind === 'player' || item.byDelega) && item.category !== 'interrogazione' && !CLOSED.includes(item.stage))) throw new Error('Hai già una proposta in discussione: aspetta il voto.');
+  // Several acts can be followed together; how many depends on the office (see ACT_CAPACITY) and nothing else: a transparent limit of capacity, not a technical lock.
+  const capacity = actCapacity(inst);
+  if (capacity.free <= 0) throw new Error(`Stai già seguendo ${capacity.open} atti (${capacity.rule}): ${capacity.max === 1 ? 'aspetta il voto' : `ne puoi seguire al massimo ${capacity.max} insieme. Aspetta un voto o ritira un atto`}.`);
   // An assessore (or a consigliere delegato) proposes only on the theme of the own delega, and never on the budget, the taxes or the statute.
   if (delegated && !(inst.playerDelega?.areas ?? []).includes(area)) throw new Error(`La tua delega (${inst.playerDelega?.portfolio}) riguarda ${(inst.playerDelega?.areas ?? []).map(id => AREA_BY_ID[id]?.label.toLowerCase() ?? id).join(', ')}: gli altri temi li governa la giunta.`);
   let type = inst.kind === 'europa' ? actTypeOf('europa', 'ue-relazione') : category ? actTypeOf(inst.kind, category) : naturalType(inst.kind, area, leads || delegated);
@@ -483,6 +485,8 @@ export function proposeLocalAct(inst, area, date, { category = null, variant = n
   if (delegated && type && DELEGA_FORBIDDEN.has(type.id)) throw new Error('Bilancio, tributi e statuto non sono atti di una delega: li propone chi guida l’esecutivo.');
   if (!type || (inst.kind !== 'europa' && !type.player.includes(leads || delegated ? 'leader' : 'consigliere'))) throw new Error(leads || delegated ? 'Questo atto non lo propone chi ha una delega o guida l’esecutivo.' : 'Questo atto lo propone solo chi guida l’esecutivo o ha una delega.');
   if (type.id === 'tributi' && inst.acts.some(item => item.category === 'tributi' && !CLOSED.includes(item.stage))) throw new Error('C’è già una proposta sulle aliquote in discussione.');
+  // The same kind of act on the same theme is not presented twice while the first is still open.
+  if (inst.acts.some(item => isOwnOpenAct(item) && item.category === type.id && item.area === (type.areas && !type.areas.includes(area) ? type.areas[0] : area) && type.id !== 'opere')) throw new Error('Hai già un atto di questo tipo su questo tema in discussione: presenta un altro tema o aspetta il voto.');
   // A public work: its plan decides the theme; the institution can only propose what its level builds, with the money and the sites it has.
   const plan = type.id === 'opere' && inst.kind !== 'europa' ? planWork(inst, { typeId: work?.typeId ?? null, area, funding: work?.funding ?? null, site: work?.site ?? 'periferia' }) : null;
   if (plan) {
@@ -557,6 +561,24 @@ export function setLocalTax(inst, level, date) {
 // ---------- the delega: an assessore (or a consigliere delegato) answers for one service of the executive ----------
 // Who the player is in the institution: the head of the executive, an assessore (a portfolio of the giunta), a consigliere
 // with a delega, or a councillor. The powers of the office follow from it (see office-rules).
+// How many acts of his own the player can follow at the same time: a consigliere two, whoever has a delega three, whoever leads the executive four, a member of the European Parliament two.
+// The questions to the executive do not count (they are answered, not voted). The limit is the capacity of the office, shown to the player; funds are checked act by act.
+export const ACT_CAPACITY = Object.freeze({ consigliere: 2, delegato: 3, assessore: 3, leader: 4, europa: 2 });
+const isOwnOpenAct = item => (item.kind === 'player' || item.sponsor?.kind === 'player' || item.byDelega) && item.category !== 'interrogazione' && !CLOSED.includes(item.stage);
+export function actCapacity(inst) {
+  const actor = actorOf(inst);
+  const key = inst?.kind === 'europa' ? 'europa' : ACT_CAPACITY[actor] ? actor : 'consigliere';
+  const max = ACT_CAPACITY[key];
+  const open = (inst?.acts ?? []).filter(isOwnOpenAct).length;
+  const rule = { consigliere: 'un consigliere ne segue due', delegato: 'chi ha una delega ne segue tre', assessore: 'chi ha una delega ne segue tre', leader: 'chi guida l’esecutivo ne segue quattro', europa: 'un eurodeputato ne segue due' }[key];
+  return { max, open, free: Math.max(0, max - open), rule };
+}
+// The player takes back an act of his own that has not been decided yet: it closes as withdrawn and frees a place (the day spent to present it is not given back).
+export function withdrawLocalAct(inst, actId, date) {
+  const act = inst.acts.find(item => item.id === actId);
+  if (!act || !isOwnOpenAct(act)) throw new Error('Puoi ritirare solo un atto tuo ancora in discussione.');
+  return record(setAct(inst, actId, { stage: 'ritirato', closedAt: date, pendingPlayerVote: null, withdrawn: 'ritirato da te' }), date, `Ritiri “${act.title}”.`, 'ritirato');
+}
 export const actorOf = inst => inst?.executive?.leader === 'player' ? 'leader' : inst?.playerDelega && inst.playerRole === 'assessore' ? 'assessore' : inst?.playerDelega && inst.playerRole === 'delegato' ? 'delegato' : 'consigliere';
 export const DELEGA_FORBIDDEN = new Set(['tributi', 'bilancio', 'variazione', 'statuto', 'sfiducia']);
 export const delegaAreasOf = (kind, portfolio) => PORTFOLIO_AREAS[kind]?.[portfolio] ?? [];

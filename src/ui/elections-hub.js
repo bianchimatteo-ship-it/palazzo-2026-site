@@ -1,20 +1,20 @@
 // The electoral centre: next vote, calendar, context, candidacy, campaign, polls and rivals, results and history.
-import { isSecretary, upcomingElections, upcomingRounds } from '../core/career-engine.js?v=20261016-2';
-import { RACE_RULES } from '../data/simulation/race-rules.js?v=20261016-2';
-import { campaignSummary, strategyOf } from '../core/campaign-engine.js?v=20261016-2';
-import { CAMPAIGN_PHASES, ELECTION_MODELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261016-2';
-import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261016-2';
-import { formatDate } from '../core/time.js?v=20261016-2';
-import { societyMood } from '../core/society-engine.js?v=20261016-2';
-import { renderCampaignPage } from './campaign-mode.js?v=20261016-2';
-import { politicalPhase } from './game-mode.js?v=20261016-2';
-import { lineChart, SERIES } from './charts.js?v=20261016-2';
-import { glyph } from './visuals.js?v=20261016-2';
-import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, sectionTabs, signed, table, weeksLabel } from './sections-kit.js?v=20261016-2';
-import { mandatePlace, renderElectionReport } from './election-report.js?v=20261016-2';
-import { renderNationalView } from './national-view.js?v=20261016-2';
-import { renderQuirinale } from './presidency-view.js?v=20261016-2';
-import { renderCampaignObservatory } from './observatory-view.js?v=20261016-2';
+import { isSecretary, upcomingElections, upcomingRounds } from '../core/career-engine.js?v=20261016-3';
+import { RACE_RULES } from '../data/simulation/race-rules.js?v=20261016-3';
+import { campaignSummary, strategyOf } from '../core/campaign-engine.js?v=20261016-3';
+import { CAMPAIGN_PHASES, ELECTION_MODELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261016-3';
+import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261016-3';
+import { formatDate } from '../core/time.js?v=20261016-3';
+import { societyMood } from '../core/society-engine.js?v=20261016-3';
+import { renderCampaignPage } from './campaign-mode.js?v=20261016-3';
+import { politicalPhase } from './game-mode.js?v=20261016-3';
+import { lineChart, SERIES } from './charts.js?v=20261016-3';
+import { glyph } from './visuals.js?v=20261016-3';
+import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, sectionTabs, signed, table, weeksLabel } from './sections-kit.js?v=20261016-3';
+import { mandatePlace, renderElectionReport } from './election-report.js?v=20261016-3';
+import { renderNationalView } from './national-view.js?v=20261016-3';
+import { renderQuirinale } from './presidency-view.js?v=20261016-3';
+import { renderCampaignObservatory } from './observatory-view.js?v=20261016-3';
 export { renderElectionReport };
 
 export const ELECTION_TABS = Object.freeze([['panoramica', 'Panoramica'], ['nazionali', 'Nazionali'], ['quirinale', 'Quirinale'], ['candidatura', 'Candidatura'], ['campagna', 'Campagna'], ['avversari', 'Sondaggi e avversari'], ['risultati', 'Risultati'], ['storico', 'Storico']]);
@@ -233,7 +233,7 @@ function rivals(state, parties, logoFor) {
     const chart = trend.length > 1 ? lineChart({ series: [{ label: 'Proiezione', color: SERIES[0], values: trend.map(item => item.value), emphasis: true }, ...(campaign.expectation ? [{ label: 'Attesa iniziale', color: SERIES[3], values: trend.map(() => campaign.expectation.share) }] : [])], labels: trend.map(item => `G${item.day}`), unit: '%', height: 170, ariaLabel: 'Andamento della proiezione della campagna' }) : '';
     const latestPoll=campaign.polls?.at(-1);
     const playerPoll=latestPoll?.results?.find(item=>item.candidateId===campaign.playerCandidateId);
-    const pollNote=latestPoll&&playerPoll?`Ultimo sondaggio simulato (${esc(formatDate(latestPoll.date))}): tua candidatura ${pct(playerPoll.share)} ±${latestPoll.margin.toFixed(1).replace('.',',')} · ${num(latestPoll.sample)} interviste.`:'Nessun sondaggio di campagna disponibile.';
+    const pollNote=latestPoll&&playerPoll?`${latestPoll.institutes>1?'Media dei sondaggi simulati':'Ultimo sondaggio simulato'} (${esc(formatDate(latestPoll.date))}): tua candidatura ${pct(playerPoll.share)} ±${latestPoll.margin.toFixed(1).replace('.',',')} · ${num(latestPoll.sample)} interviste${latestPoll.institutes>1?` in ${latestPoll.institutes} istituti`:''}. Sono le stesse rilevazioni dell’Osservatorio.`:'Nessun sondaggio di campagna disponibile.';
     return card({ kicker: campaign.status === 'active' ? 'CORSA IN TEMPO REALE · CONSENSO SIMULATO' : 'CLASSIFICA FINALE · SIMULAZIONE', title: 'Chi è in corsa', body: `${table([['pos', 'Pos.'], ['name', 'Candidatura'], ['share', 'Consenso', 'num'], ['action', 'Ultima mossa']], rows)}${chart ? `<div class="eh-chart">${chart}</div>` : ''}<p class="sx-note">La tabella e il grafico mostrano la base di consenso; il sondaggio è una stima rumorosa della stessa base. ${pollNote} Le persone reali mostrano solo dati verificati, i numeri sono simulati.</p>` });
   }
   const poll = state.world?.polls?.at(-1);

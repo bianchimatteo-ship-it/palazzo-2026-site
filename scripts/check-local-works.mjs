@@ -136,6 +136,10 @@ assert.ok(W.euroOf(make('regione'), 1) > W.euroOf(make('provincia'), 1) && W.eur
   const stuck = { ...inst, works: inst.works.map(work => ({ ...work, stage: 'cantiere', progress: 50, drawn: work.cost * 0.7, pending: { kind: 'sforamento', amount: 2, raised: true, waited: 0, waits: 0 } })) };
   const paid = W.settleWorkIssue(stuck, id, 'integra');
   assert.ok(paid.work.cost === stuck.works[0].cost + 2 && !paid.work.pending && paid.inst.budget.margin < stuck.budget.margin && Math.abs((stuck.budget.margin - paid.inst.budget.margin) - (paid.work.drawn - stuck.works[0].drawn)) < 0.11, 'Integrare i fondi: il costo sale e il margine paga una volta');
+  // A late overrun (83 % done) keeps the money drawn in line with the work done (regression: 8 → 9,6 points left 7,7 drawn for 83,2 % of 9,6), also when the executive settles it by itself.
+  const late = { ...inst, budget: { ...inst.budget, margin: 90 }, works: inst.works.map(work => ({ ...work, stage: 'cantiere', progress: 83.2, drawn: work.cost * 0.832, pending: { kind: 'sforamento', amount: work.cost * 0.2, raised: true, waited: 0, waits: 0 } })) };
+  const latePaid = W.settleWorkIssue(late, id, 'integra');
+  assert.ok(latePaid.work.drawn + 0.11 >= latePaid.work.cost * latePaid.work.progress / 100, `Sforamento a fine lavori: prelevato ${latePaid.work.drawn} per ${latePaid.work.cost * latePaid.work.progress / 100} di lavori fatti.`);
   const scaled = W.settleWorkIssue(stuck, id, 'ridimensiona');
   assert.ok(scaled.work.cost < stuck.works[0].cost && scaled.work.scope < 1 && !scaled.work.pending, 'Ridimensionare: costa meno e rende meno');
   throwsWith(() => W.settleWorkIssue({ ...stuck, budget: { ...stuck.budget, margin: 0.2 } }, id, 'integra'), /margine/, 'Senza margine non si integra');

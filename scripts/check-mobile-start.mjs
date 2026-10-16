@@ -191,7 +191,7 @@ try {
   await tap('[data-mobile-more]');
   ok(await evaluate('!document.querySelector("[data-mobile-sheet]").hidden'), 'Il foglio “Altro” si apre.');
   await tap('.mobile-sheet [data-sheet-group="gestione"] > summary');
-  await tap('.mobile-sheet [data-nav="impostazioni"]');
+  await tap('.mobile-sheet [data-nav="impostazioni"]', { scroll: true });
   await waitFor(() => has('[data-action="new-career"]'), 10000, 'Impostazioni');
   await tap('[data-action="new-career"]', { scroll: true });
   await waitFor(() => has('.career-wizard'), 10000, 'wizard dalla partita');

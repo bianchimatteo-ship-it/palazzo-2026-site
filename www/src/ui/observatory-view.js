@@ -4,19 +4,19 @@
 // of the campaign (renderCampaignObservatory): what `campaignObservatory()` reads from a valid campaign, and nothing when there is none.
 // Everything here is read from what the game has saved (the world, its observatory, the campaign) and measures the simulation: no number on these
 // pages gives a bonus, and the real parties stay real (their candidates, voters and readings are simulated, source: simulation).
-import { latestPoll, observatoryReport } from '../core/world-engine.js?v=20261015-2';
-import { campaignObservatory } from '../core/campaign-engine.js?v=20261015-2';
-import { coalitionScenario } from '../core/poll-observatory.js?v=20261015-2';
-import { POLL_EXTENSIONS } from '../data/simulation/polling-rules.js?v=20261015-2';
-import { observatorySociety } from '../core/society-engine.js?v=20261015-2';
-import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261015-2';
-import { formatDate } from '../core/time.js?v=20261015-2';
-import { lineChart, SERIES } from './charts.js?v=20261015-2';
-import { emblem, glyph, partyMarkText } from './visuals.js?v=20261015-2';
-import { arrow, bar, card, empty, esc, kpi, num, table } from './sections-kit.js?v=20261015-2';
-import { alliancesList, barometer, chronicle, dataTable, forcesGrid, partyIndex, pct, pollPanel, presencePanel, shortDate, signed, strategyList } from './polls-mode.js?v=20261015-2';
-import { heatmap, italyMap, MACRO_AREAS, partyBars, provenance, regionAbbreviation, regionBars, regionsOfArea, TERRITORY_MEASURES } from './territory-charts.js?v=20261015-2';
-import { forceRegionalVote2022 } from '../core/regional-vote.js?v=20261015-2';
+import { latestPoll, observatoryReport } from '../core/world-engine.js?v=20261016-3';
+import { campaignObservatory } from '../core/campaign-engine.js?v=20261016-3';
+import { coalitionScenario } from '../core/poll-observatory.js?v=20261016-3';
+import { POLL_EXTENSIONS } from '../data/simulation/polling-rules.js?v=20261016-3';
+import { observatorySociety } from '../core/society-engine.js?v=20261016-3';
+import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261016-3';
+import { formatDate } from '../core/time.js?v=20261016-3';
+import { lineChart, SERIES } from './charts.js?v=20261016-3';
+import { emblem, glyph, partyMarkText } from './visuals.js?v=20261016-3';
+import { arrow, bar, card, empty, esc, kpi, num, table } from './sections-kit.js?v=20261016-3';
+import { alliancesList, barometer, chronicle, dataTable, forcesGrid, partyIndex, pct, pollPanel, presencePanel, shortDate, signed, strategyList } from './polls-mode.js?v=20261016-3';
+import { heatmap, italyMap, MACRO_AREAS, partyBars, provenance, regionAbbreviation, regionBars, regionsOfArea, TERRITORY_MEASURES } from './territory-charts.js?v=20261016-3';
+import { forceRegionalVote2022 } from '../core/regional-vote.js?v=20261016-3';
 
 export const OBSERVATORY_VIEWS = Object.freeze([['quadro', 'Quadro'], ['istituti', 'Istituti'], ['segmenti', 'Segmenti e temi'], ['territori', 'Territori'], ['forze', 'Forze e alleanze'], ['candidati', 'Candidati e rivali'], ['flussi', 'Indecisi e flussi'], ['gradimento', 'Gradimento e leggi'], ['scenari', 'Scenari e coalizioni']]);
 // The page has five areas; the nine views of the observatory are gathered in them (an area with several views shows them as a second row of tabs).
@@ -72,7 +72,7 @@ const readingOf = (institute, partyId) => institute.latest?.rows.find(row => row
 const readList = rows => `<div class="obs-reads-wrap"><ul class="obs-reads">${rows.map(row => `<li class="obs-read ${row.player ? 'is-player' : ''}">${row.cell}<span class="obs-read-value"><b>${row.value}</b>${row.bar === undefined ? '' : bar(row.bar, row.tone ?? (row.player ? 'good' : ''), row.max ?? 100)}</span><span class="obs-read-meta">${(row.meta ?? []).map(([label, text]) => `<span><small>${esc(label)}</small>${text}</span>`).join('')}</span></li>`).join('')}</ul></div>`;
 
 // ---------- the average of the institutes ----------
-function averageBlock(ctx, { limit = 12 } = {}) {
+function averageBlock(ctx, { limit = Infinity } = {}) {
   const { report } = ctx;
   const average = report?.latestAverage;
   if (!average) return '<p class="quiet-copy">La prima media compare con il primo sondaggio.</p>';
@@ -111,7 +111,7 @@ function averageTrend(ctx) {
 // ---------- the quadro ----------
 // The average and the readings of the institutes in one block: a coloured bar for each force (the average of the institutes A, B, C and D, in the
 // colour of the force) and, beside it, what each institute read. Nothing of this is repeated elsewhere in the quadro.
-function instituteBars(ctx, { limit = 9 } = {}) {
+function instituteBars(ctx, { limit = Infinity } = {}) {
   const { report } = ctx;
   const average = report?.latestAverage;
   if (!average) return '<p class="quiet-copy">La prima media compare con il primo sondaggio.</p>';
@@ -178,7 +178,7 @@ function quadro(ctx) {
   const { state, world, poll, report, index, logo, options } = ctx;
   const media = options.media ? pollPanel('MEDIA · SIMULATI', 'Come ti raccontano', options.media()) : '';
   return `${barometer(state, world, poll, { logo })}
-    ${pollPanel('INTENZIONI DI VOTO · SIMULAZIONE', 'La media degli istituti e le loro rilevazioni', instituteBars(ctx, { limit: 9 }), `<span class="hq-count">${report.latestAverage?.institutes ? `${report.latestAverage.institutes} istituti` : 'dato reale'}</span>`)}
+    ${pollPanel('INTENZIONI DI VOTO · SIMULAZIONE', 'La media degli istituti e le loro rilevazioni', instituteBars(ctx), `<span class="hq-count">${report.latestAverage?.institutes ? `${report.latestAverage.institutes} istituti` : 'dato reale'}</span>`)}
     ${coalitionBlock(ctx)}
     ${pollPanel('TREND', 'Come cambiano i consensi', `${periodChips(ctx)}${averageTrend(ctx)}`)}
     ${pollPanel('PRINCIPALI MOVIMENTI', 'Chi sale e chi scende', moversBlock(ctx))}
@@ -238,7 +238,7 @@ function institutes(ctx) {
   const filters = `<div class="obs-filters">${chips}${periodChips(ctx)}</div>`;
   if (selected !== 'confronto') return `${filters}${instituteDetail(ctx, selected)}`;
   return `${filters}
-    ${pollPanel('MEDIA E ISTITUTI · SIMULAZIONE', 'La media e le letture di ciascun istituto', averageBlock(ctx, { limit: 14 }))}
+    ${pollPanel('MEDIA E ISTITUTI · SIMULAZIONE', 'La media e le letture di ciascun istituto', averageBlock(ctx))}
     ${ctx.force ? pollPanel('CONFRONTO NEL TEMPO', `${esc(ctx.force.label)}: ogni istituto e la media`, `${forceChips(ctx)}${comparisonChart(ctx)}`) : ''}
     ${pollPanel('METODI', 'Come lavora ciascun istituto', methodTable(ctx))}`;
 }
@@ -458,7 +458,7 @@ function candidates(ctx) {
   const race = campaign && campaign.status !== 'idle' ? ctx.race() : null;
   if (!race || !race.rows.length) {
     return `${card({ kicker: 'CORSA · SIMULAZIONE', title: 'Nessuna campagna in corso', body: '<p class="sx-note">Gli avversari diretti si conoscono all’avvio della campagna: in un voto politico o europeo sono le forze che davvero si presentano, in uno locale cambiano da territorio a territorio. Intanto, le forze nazionali:</p>' })}
-      ${pollPanel('FORZE NAZIONALI', 'La media dei sondaggi', averageBlock(ctx, { limit: 10 }))}`;
+      ${pollPanel('FORZE NAZIONALI', 'La media dei sondaggi', averageBlock(ctx))}`;
   }
   const phase = campaign.status === 'active' ? (campaign.stage === 'ballottaggio' ? 'Ballottaggio in corso: i sondaggi chiedono il testa a testa' : 'Campagna in corso') : 'Corsa conclusa';
   const trendPoints = race.average;

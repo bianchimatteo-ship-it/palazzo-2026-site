@@ -1,13 +1,13 @@
 // VITA INTERNA — the people behind the currents, what they ask, the agreements, the congress, the local leaders, the
 // rebuilding of the party and the way it is founded, merged or renamed. All simulated: no real person appears here.
-import { costProblem, lifeOverview, partyOpsAvailability } from '../core/career-engine.js?v=20261015-2';
-import { mergeCandidates } from '../core/world-engine.js?v=20261015-2';
-import { OP_COSTS } from '../core/party-ops-engine.js?v=20261015-2';
-import { CADRE_ACTIONS, REBUILD_FOCUS, RENAME_STYLES } from '../data/simulation/party-life-rules.js?v=20261015-2';
-import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20261015-2';
-import { badge, bar, card, empty, esc, euro, num, weeksLabel } from './sections-kit.js?v=20261015-2';
-import { territoryTile, territoryVisual } from './visuals.js?v=20261015-2';
-import { planAddButton } from './plan-view.js?v=20261015-2';
+import { costProblem, lifeOverview, partyOpsAvailability } from '../core/career-engine.js?v=20261016-3';
+import { mergeCandidates } from '../core/world-engine.js?v=20261016-3';
+import { OP_COSTS } from '../core/party-ops-engine.js?v=20261016-3';
+import { CADRE_ACTIONS, REBUILD_FOCUS, RENAME_STYLES } from '../data/simulation/party-life-rules.js?v=20261016-3';
+import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20261016-3';
+import { badge, bar, card, empty, esc, euro, num, weeksLabel } from './sections-kit.js?v=20261016-3';
+import { territoryTile, territoryVisual } from './visuals.js?v=20261016-3';
+import { planAddButton } from './plan-view.js?v=20261016-3';
 
 const STANCE = { alleata: ['good', 'Alleata'], neutrale: ['neutral', 'Neutrale'], ostile: ['bad', 'Ostile'] };
 const PACT_STATUS = { attivo: ['good', 'In vigore'], scaduto: ['neutral', 'Scaduto'], rotto: ['bad', 'Rotto'], rinnovato: ['good', 'Rinnovato'] };

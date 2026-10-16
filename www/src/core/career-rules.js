@@ -1,8 +1,8 @@
-import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel } from '../data/regions.js?v=20261015-2';
-import { isSelectableParty } from '../data/schema.js?v=20261015-2';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261015-2';
-import { startAgeProblems, startProblems } from './start-engine.js?v=20261015-2';
-import { presidentialEligibility } from './presidency-engine.js?v=20261015-2';
+import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel } from '../data/regions.js?v=20261016-3';
+import { isSelectableParty } from '../data/schema.js?v=20261016-3';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261016-3';
+import { startAgeProblems, startProblems } from './start-engine.js?v=20261016-3';
+import { presidentialEligibility } from './presidency-engine.js?v=20261016-3';
 
 const genders = new Set(['preferisco-non-specificare', 'donna', 'uomo', 'non-binario']);
 const orientations = new Set(['Centrismo civico', 'Progressista', 'Conservatore', 'Liberale', 'Socialdemocratico', 'Ecologista', 'Popolare', 'Autonomista', 'Altro']);
@@ -88,7 +88,6 @@ export function validateCareerStep(draft, step, selectableParties, parliamentary
       if (!draft.partyDescription?.trim()) errors.push('Inserisci una descrizione.');
       if (!orientations.has(draft.partyOrientation)) errors.push('Scegli un orientamento generale.');
       if (!/^#[\da-f]{6}$/i.test(draft.partyColor || '')) errors.push('Scegli un colore valido.');
-      if (draft.partyColor2 && !/^#[\da-f]{6}$/i.test(draft.partyColor2)) errors.push('Scegli un secondo colore valido.');
       if ((draft.partyProgram ?? []).length > 4) errors.push('Il programma ha al massimo quattro priorità.');
       if (draft.partyLogoMode === 'url' && !/^https?:\/\/\S+$/i.test(draft.partyLogoUrl || '')) errors.push('Incolla un indirizzo del logo che inizi con https://, oppure scegli un altro tipo di logo.');
       for (const [key, label] of [['economia','economia'], ['welfare','welfare'], ['ambiente','ambiente'], ['europa','integrazione europea']]) {

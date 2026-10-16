@@ -5,11 +5,11 @@
 // fixed contribution (`cofin`), agreed in simulated euros and paid once from its own margin; what it pays is not drawn again from the owner's.
 // Benefits arrive only when the work is finished, in proportion to its quality; a work never delivers what it has not built. The national projects (project-engine) are another thing: they live in society.projects
 // and use the national budget. Pure functions on plain data; the store keeps what they return.
-import { uniqueId } from './ids.js?v=20261015-2';
-import { fundingOf, stageOf } from './project-engine.js?v=20261015-2';
-import { PORTFOLIO_AREAS } from '../data/simulation/office-rules.js?v=20261015-2';
-import { CITY_SHARE_OF_REGION, PROVINCE_SHARE_OF_REGION, serviceIndicatorsOf } from '../data/simulation/local-acts.js?v=20261015-2';
-import { ACTIVE_WORK_STAGES, COFIN_LEVEL, WORK_BY_ID, WORK_RULES, WORK_SITES, WORK_STAGE_LABEL, defaultWorkFor, workTypesFor } from '../data/simulation/local-works.js?v=20261015-2';
+import { uniqueId } from './ids.js?v=20261016-3';
+import { fundingOf, stageOf } from './project-engine.js?v=20261016-3';
+import { PORTFOLIO_AREAS } from '../data/simulation/office-rules.js?v=20261016-3';
+import { CITY_SHARE_OF_REGION, PROVINCE_SHARE_OF_REGION, serviceIndicatorsOf } from '../data/simulation/local-acts.js?v=20261016-3';
+import { ACTIVE_WORK_STAGES, COFIN_LEVEL, WORK_BY_ID, WORK_RULES, WORK_SITES, WORK_STAGE_LABEL, defaultWorkFor, workTypesFor } from '../data/simulation/local-works.js?v=20261016-3';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -199,7 +199,7 @@ export function settleWorkIssue(input, workId, choice, date = null) {
   const work = find(input, workId);
   const pending = work.pending;
   if (choice === 'integra' && pending?.kind === 'sforamento') {
-    const pay = round1(pending.amount * WORK_RULES.commit + pending.amount * 0.2);
+    const pay = overrunPay(work, pending.amount);
     if ((input.budget?.margin ?? 0) < pay) throw new Error(`Il margine di bilancio (${round1(input.budget.margin)}) non basta: servono ${pay} punti.`);
     let inst = withMargin(input, -pay);
     inst = setWork(inst, workId, { cost: round1(work.cost + pending.amount), committed: round1(work.committed + pay), drawn: round1(work.drawn + pay), pending: null, stall: 0 });
@@ -269,11 +269,13 @@ function finish(inst, work, date, events) {
   return next;
 }
 // Who decides when the player does not: the executive settles an overrun by itself (pays if it can, scales down if not).
+// What an overrun costs the margin now: the share already committed plus a reserve, and never less than the part of the extra cost that the work already done has used (otherwise a late overrun leaves the work with more progress than money drawn).
+const overrunPay = (work, amount) => round1(Math.max(amount * WORK_RULES.commit + amount * 0.2, amount * (work.progress ?? 0) / 100));
 function autoSettle(inst, work) {
-  const pay = round1(work.pending.amount * WORK_RULES.commit + work.pending.amount * 0.2);
+  const pay = overrunPay(work, work.pending.amount);
   if ((inst.budget?.margin ?? 0) >= pay * 1.5) {
     let next = withMargin(inst, -pay);
-    next = setWork(next, work.id, { cost: round1(work.cost + work.pending.amount), committed: round1(work.committed + work.pending.amount * WORK_RULES.commit + work.pending.amount * 0.2), drawn: round1(work.drawn + pay), pending: null, stall: 0 });
+    next = setWork(next, work.id, { cost: round1(work.cost + work.pending.amount), committed: round1(work.committed + pay), drawn: round1(work.drawn + pay), pending: null, stall: 0 });
     return withRecord(next, record => ({ budgeted: round1(record.budgeted + work.pending.amount) }));
   }
   const cost = round1(Math.max(spentOf(work), externalOf(work), work.cost * 0.88));
