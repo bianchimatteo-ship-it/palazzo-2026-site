@@ -10,6 +10,8 @@ Stato al 14 ottobre 2026, ricavato dal codice del progetto. **Non è un parere l
 | D1 `users` | Nome utente scelto, impronta della password (PBKDF2 nel browser + secondo hash con sale casuale sul server), data di creazione | Account | Finché l'account esiste |
 | D1 `sessions` | Impronta SHA-256 del codice di sessione, data di creazione, scadenza | Tenere l'accesso | 30 giorni, oppure fino a «Esci» / cancellazione dell'account |
 | D1 `saves` | Stato completo della partita, nome, riepilogo (personaggio, ruolo, partito, data di gioco, stato, difficoltà, settimana), revisione, dimensione, data | Carriere online (max 12 per account) | Finché l'account esiste o il salvataggio viene eliminato |
+| D1 `save_history`, `save_state` | Le ultime versioni sostituite di ogni carriera (stato completo), il contatore delle revisioni e l'avanzamento letto dal contenuto | Recuperare una carriera sostituita o eliminata | Ultime 6 per carriera + quelle sostituite da un ripristino; eliminate con l'account |
+| D1 `user_emails`, `email_tokens` | Indirizzo email facoltativo (verificato o no) e impronta dei collegamenti monouso (48 h verifica, 30 min recupero) | Recuperare la password | Finché l'account esiste; token scaduti o usati eliminati dalla pulizia giornaliera |
 | D1 `attempts` | Chiave `scopo:indirizzo IP`, contatore, inizio finestra | Limite ai tentativi ripetuti | Finestra di 15 minuti; le righe più vecchie di 24 ore vengono eliminate alla successiva richiesta di accesso/registrazione/cancellazione |
 | KV `archivio-condiviso` | Correzioni e loghi del proprietario (nessun dato dei giocatori) | Area amministrativa | Fino a modifica del proprietario |
 

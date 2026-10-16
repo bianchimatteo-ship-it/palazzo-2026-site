@@ -689,6 +689,16 @@ select option, select optgroup { background: var(--panel); color: var(--ink); fo
 .account-form input { min-height: 42px; padding: 8px 11px; border: 1px solid var(--line-strong); border-radius: 8px; }
 .account-form small { color: var(--muted); font-size: 12px; line-height: 1.45; }
 .account-message { color: #a3d5b9; }
+/* State of the online copy of the career: saved here, waiting, synced, conflict, error (always with words, never colour alone). */
+.sync-status { margin: 10px 0; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line, rgba(255, 255, 255, .18)); background: rgba(255, 255, 255, .04); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; }
+.sync-status small { opacity: .85; }
+.sync-status.sync-synced { border-color: #4f9c6a; }
+.sync-status.sync-pending, .sync-status.sync-unsaved, .sync-status.sync-unlinked, .sync-status.sync-foreign { border-color: #a78438; }
+.sync-status.sync-conflict, .sync-status.sync-error { border-color: #c0614f; }
+.history-list { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 6px; }
+.history-list li { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, .12); }
+.history-list li small { display: block; opacity: .8; }
+.account-email { margin: 12px 0; }
 .account-conflict { display: grid; gap: 8px; margin: 12px 0; padding: 14px; border: 1px solid #a78438; border-radius: 12px; background: rgba(176, 132, 47, .1); }
 .alliance-odds { margin: 8px 0; border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font-size: 12.5px; }
 .alliance-odds summary { cursor: pointer; color: var(--ink-2); }
@@ -960,3 +970,21 @@ select option, select optgroup { background: var(--panel); color: var(--ink); fo
   --bad-line: #ba6445;
   --gold-dim: #80652b;
 }
+
+/* Projected bill of a measure: cost and coverage first, then every figure as «label · before → after · verdict», in a single column on a phone. */
+.preview-headline { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 8px; }
+.preview-headline > div { padding: 10px 12px; border-radius: 8px; background: var(--panel); border: 1px solid var(--line); border-top: 2px solid var(--line-strong); min-width: 0; }
+.preview-headline .preview-cover.good { border-top-color: var(--good); }
+.preview-headline .preview-cover.bad { border-top-color: var(--critical); }
+.preview-headline small { display: block; color: var(--muted); font-size: 12px; letter-spacing: .08em; }
+.preview-headline strong { display: block; font: 800 20px/1.25 Manrope, sans-serif; font-variant-numeric: tabular-nums; }
+.preview-headline span { color: var(--ink-2); font-size: 13px; overflow-wrap: anywhere; }
+.preview-ba { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.preview-ba li { display: grid; grid-template-columns: minmax(0, 1.3fr) auto auto; align-items: baseline; gap: 2px 12px; padding: 8px 10px; border-radius: 8px; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--line-strong); }
+.preview-ba li.good { border-left-color: var(--good); }
+.preview-ba li.bad { border-left-color: var(--critical); }
+.preview-ba .ba-label { font-weight: 700; overflow-wrap: anywhere; }
+.preview-ba .ba-values { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.preview-ba .ba-verdict { font-size: 12px; white-space: nowrap; color: var(--ink-2); }
+.preview-ba .ba-note { grid-column: 1 / -1; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+@media (max-width: 520px) { .preview-ba li { grid-template-columns: minmax(0, 1fr) auto; } .preview-ba .ba-label { grid-column: 1 / -1; } .preview-ba .ba-values { font-size: 16px; } }

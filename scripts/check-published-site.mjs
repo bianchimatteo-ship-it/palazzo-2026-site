@@ -133,6 +133,8 @@ try {
   assert(db.municipalities.length === localManifest.collections.municipalities && localManifest.territorialSource?.validFrom === '2026-02-21', 'Elenco ISTAT dei comuni pubblicato incompleto');
   for (const [name,records] of Object.entries(db)) for (const record of records) {
     if (name === 'municipalities') assert(record.source === 'real' && record.verified === true && /^\d{6}$/.test(record.code) && istatUnits.get(record.unit)?.sourceUrl, `${name}/${record.id}: provenienza non verificata`);
+    // A poll transcribed from a source that could not be read again is declared as such (never verified without a reading): source, link and the date it was transcribed are still required.
+    else if (name === 'realPolls' && record.verified !== true) assert(record.source === 'real' && record.verificationStatus === 'in-attesa-di-conferma' && record.verifiedAt === null && record.transcribedAt && record.sourceUrl && record.sourceName, `${name}/${record.id}: dichiarato ma senza lo stato di attesa di conferma`);
     else assert(record.source === 'real' && record.verified === true && record.sourceUrl && record.sourceName && record.verifiedAt, `${name}/${record.id}: provenienza non verificata`);
   }
   const partyIds = new Set(parties.map(item => item.id));

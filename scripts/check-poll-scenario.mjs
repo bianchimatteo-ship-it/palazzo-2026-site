@@ -19,7 +19,7 @@ const tenths = value => Math.round(value * 10);
 
 // ---------- 1. the engine ----------
 const polls = JSON.parse(await readFile(new URL('../src/data/real/polls.json', import.meta.url), 'utf8'));
-const supermedia = polls.filter(poll => poll.source === 'real' && poll.verified === true).sort((a, b) => String(b.publishedAt).localeCompare(String(a.publishedAt)))[0];
+const supermedia = polls.filter(poll => poll.source === 'real' && (poll.verified === true || poll.verificationStatus === 'in-attesa-di-conferma')).sort((a, b) => String(b.publishedAt).localeCompare(String(a.publishedAt)))[0];
 const rows = supermedia.results.map(row => ({ partyId: row.entityId, share: row.share, delta: row.delta ?? 0 }));
 assert.ok(rows.length >= 8, `La Supermedia ha le sue forze (${rows.length}).`);
 const realSum = rows.reduce((sum, row) => sum + tenths(row.share), 0);

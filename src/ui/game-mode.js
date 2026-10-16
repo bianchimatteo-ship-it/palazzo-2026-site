@@ -1,31 +1,31 @@
-import { endedHeadline } from './hall-view.js?v=20261016-3';
-import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261016-3';
-import { playerRoles } from '../core/roles.js?v=20261016-3';
-import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20261016-3';
-import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261016-3';
-import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261016-3';
-import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20261016-3';
-import { careerLevelLabel } from '../data/regions.js?v=20261016-3';
-import { advanceDays, formatDate } from '../core/time.js?v=20261016-3';
-import { renderBarometerPanel } from './polls-mode.js?v=20261016-3';
-import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20261016-3';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261016-3';
-import { societyMood } from '../core/society-engine.js?v=20261016-3';
-import { financeOutlook } from '../core/finance-engine.js?v=20261016-3';
-import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20261016-3';
-import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20261016-3';
-import { activeInstitutions, institutionLabel } from './local-mode.js?v=20261016-3';
-import { renderFinanceCard } from './finance-mode.js?v=20261016-3';
-import { renderStaffBand } from './staff-view.js?v=20261016-3';
-import { planAddButton } from './plan-view.js?v=20261016-3';
-import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20261016-3';
-import { stateBadge, statusChip } from './charts.js?v=20261016-3';
-import { articleHtml, newsMedia, renderNewsroomTabs } from './news-view.js?v=20261016-3';
-import { relevantArticles } from '../core/news-engine.js?v=20261016-3';
-import { identityMark, kindChip } from './party-identity.js?v=20261016-3';
-import { illustration } from './illustrations.js?v=20261016-3';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261016-3';
-import { regionPriorities } from '../core/society-engine.js?v=20261016-3';
+import { endedHeadline } from './hall-view.js?v=20261016-6';
+import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261016-6';
+import { playerRoles } from '../core/roles.js?v=20261016-6';
+import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20261016-6';
+import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261016-6';
+import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261016-6';
+import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20261016-6';
+import { careerLevelLabel } from '../data/regions.js?v=20261016-6';
+import { advanceDays, formatDate } from '../core/time.js?v=20261016-6';
+import { renderBarometerPanel } from './polls-mode.js?v=20261016-6';
+import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20261016-6';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261016-6';
+import { societyMood } from '../core/society-engine.js?v=20261016-6';
+import { financeOutlook } from '../core/finance-engine.js?v=20261016-6';
+import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20261016-6';
+import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20261016-6';
+import { activeInstitutions, institutionLabel } from './local-mode.js?v=20261016-6';
+import { renderFinanceCard } from './finance-mode.js?v=20261016-6';
+import { renderStaffBand } from './staff-view.js?v=20261016-6';
+import { planAddButton } from './plan-view.js?v=20261016-6';
+import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20261016-6';
+import { stateBadge, statusChip } from './charts.js?v=20261016-6';
+import { articleHtml, newsMedia, renderNewsroomTabs } from './news-view.js?v=20261016-6';
+import { relevantArticles } from '../core/news-engine.js?v=20261016-6';
+import { identityMark, kindChip } from './party-identity.js?v=20261016-6';
+import { illustration } from './illustrations.js?v=20261016-6';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261016-6';
+import { regionPriorities } from '../core/society-engine.js?v=20261016-6';
 
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -550,11 +550,21 @@ export function renderCareerTimeline(state, filter = 'tutto') {
     ['Promesse mantenute', all.filter(item => item.kind === 'promessa' && item.tone === 'good').length], ['Partiti cambiati', (game.pastParties ?? []).length]
   ];
   const kinds = ['tutto', ...Object.keys(TIMELINE_KINDS).filter(kind => all.some(item => item.kind === kind))];
-  const items = all.filter(item => filter === 'tutto' || item.kind === filter).reverse();
+  // Newest first by the date of the event (then by the order it was recorded in): the order never depends on when the entry happened to be written.
+  const items = all.map((item, index) => ({ item, index })).filter(({ item }) => filter === 'tutto' || item.kind === filter).sort((a, b) => String(b.item.date ?? '').localeCompare(String(a.item.date ?? '')) || b.index - a.index).map(({ item }) => item);
   const years = new Map();
   for (const item of items) { const year = String(item.date ?? '').slice(0, 4) || '—'; years.set(year, [...(years.get(year) ?? []), item]); }
   const body = [...years.entries()].map(([year, entries]) => `<section class="timeline-year"><h3>${esc(year)}</h3><ol>${entries.map(item => { const [icon, label] = TIMELINE_KINDS[item.kind] ?? ['pin', 'Evento']; return `<li class="timeline-entry tone-${esc(item.tone)}"><span class="timeline-icon">${glyph(icon, 15)}</span><div><span class="news-meta">${esc(label)} · S${item.week} · ${esc(formatDate(item.date))}</span><strong>${esc(item.title)}</strong>${item.detail ? `<small>${esc(item.detail)}</small>` : ''}</div></li>`; }).join('')}</ol></section>`).join('');
+  // Three different things, kept apart: what is held now (offices in progress), what is expected (election dates already in the calendar, not yet happened) and what happened (the list below).
+  const player = state.dataset?.politicians?.find?.(item => item.id === state.career?.playerId);
+  const held = (state.dataset?.offices ?? []).filter(item => item.politicianId === player?.id && !item.endDate);
+  const expected = upcomingElections(game).slice(0, 3);
+  const now = `<div class="timeline-now" data-timeline-now>
+      <section aria-label="Incarichi in corso"><h3>In corso adesso</h3>${held.length ? `<ul>${held.map(item => `<li><b>${esc(item.title)}</b><small>${esc(item.institution ?? '')} · dal ${esc(formatDate(item.startDate))}</small></li>`).join('')}</ul>` : '<p class="quiet-copy">Nessun incarico in corso.</p>'}</section>
+      <section aria-label="Prossime scadenze"><h3>Previsto</h3>${expected.length ? `<ul>${expected.map(item => `<li><b>${esc(item.label)}${item.early ? ' · anticipate' : ''}</b><small>voto il ${esc(formatDate(item.electionDate))} · non ancora avvenuto</small></li>`).join('')}</ul>` : '<p class="quiet-copy">Nessuna elezione in calendario.</p>'}</section>
+    </div><h3 class="timeline-past-title">Accaduto</h3>`;
   return `<div class="track-record">${record.map(([label, value]) => `<div><small>${esc(label)}</small><strong>${esc(value)}</strong></div>`).join('')}</div>
+    ${now}
     <div class="segmented timeline-filter" role="group" aria-label="Filtra la cronologia">${kinds.map(kind => `<button data-timeline-filter="${kind}" class="${filter === kind ? 'active' : ''}" aria-pressed="${filter === kind}">${kind === 'tutto' ? 'Tutto' : esc(TIMELINE_KINDS[kind][1])}</button>`).join('')}</div>
     <div class="career-timeline">${body || '<p class="quiet-copy">Nessuna tappa per questo filtro.</p>'}</div>
     <p class="parliament-note">Le tappe restano: partiti lasciati, promesse tradite e cadute di governo pesano su fiducia, sostegno e rapporti negli anni successivi.</p>`;

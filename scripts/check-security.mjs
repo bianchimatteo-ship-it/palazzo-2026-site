@@ -80,6 +80,14 @@ assert.ok(/15 \* 60_000/.test(workerCode) && /finestra di 15 minuti/.test(privac
 assert.ok(/DELETE FROM sessions WHERE expires_at < \?/.test(workerCode) && /scheduled\(event, env, ctx\)/.test(workerCode) && /"crons"/.test(wrangler), 'Il Worker elimina le sessioni scadute (a richiesta e ogni giorno).');
 assert.ok(/sessioni scadute[^.]*eliminate|eliminate[^.]*sessioni scadute|una volta scadute[^.]*elimin/i.test(privacy), 'L’informativa dice che le sessioni scadute vengono eliminate, non solo che “scadono”.');
 assert.ok(/ogni giorno|pulizia automatica/i.test(privacy), 'E che c’è una pulizia automatica giornaliera.');
+// E-mail and recovery: the privacy text says what the Worker does (the validity of the links, the hash of the tokens, the history of the saves), and the Worker has no way around its checks.
+const verifyHours = Number(/VERIFY_TOKEN_HOURS = (\d+)/.exec(workerCode)?.[1]), resetMinutes = Number(/RESET_TOKEN_MINUTES = (\d+)/.exec(workerCode)?.[1]);
+assert.ok(verifyHours > 0 && resetMinutes > 0 && new RegExp(`${verifyHours} ore per la verifica, ${resetMinutes} minuti per il recupero`).test(privacy), 'L’informativa dice quanto valgono i collegamenti del messaggio, come il Worker.');
+assert.ok(/e-mail \(facoltativo\)/i.test(privacy) && /Senza e-mail verificata la password non si può recuperare/.test(privacy), 'L’informativa dice che l’e-mail è facoltativa e a cosa serve.');
+assert.ok(/token_hash TEXT PRIMARY KEY/.test(workerCode) && /sha256\(token\)/.test(workerCode) && !/INSERT INTO email_tokens \(token_hash[^)]*\) VALUES \(\?, \?, \?, \?, \?, \?, NULL\)'\)\.bind\(token,/.test(workerCode), 'I token delle e-mail si conservano come impronta.');
+assert.ok(/RESEND_API_KEY/.test(workerCode) && !/re_[A-Za-z0-9]{20,}/.test(workerCode + await text('wrangler.jsonc')), 'Il provider si configura con un segreto del Worker, nessun segreto nel repository.');
+assert.ok(!/body\.force|\bforce\b[^.\n]*skip/i.test(workerCode.replace(/\/\/[^\n]*/g, '')), 'Il Worker non ha nessuna scorciatoia `force` per saltare i controlli sui salvataggi.');
+assert.ok(/versioni precedenti/.test(privacy) && /DELETE FROM save_history WHERE user_id = \?'\)\.bind\(account\.id\)/.test(workerCode), 'La cronologia dei salvataggi è nell’informativa e la cancellazione dell’account la elimina.');
 const logoFromUrl = (await text('src/ui/party-logo.js')).includes("logo.kind === 'url'");
 assert.ok(logoFromUrl, 'Il gioco può mostrare il logo di un partito da un indirizzo esterno.');
 assert.ok(!/non carica caratteri o altre risorse da server esterni\./.test(privacy), 'L’informativa non afferma più, senza eccezioni, che nulla viene caricato da server esterni.');

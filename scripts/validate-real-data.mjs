@@ -103,7 +103,10 @@ if (lawsManifest.collections.realPolls !== polls.length) fail('Conteggio dei son
   if (found !== expected) fail(`REAL_DATA_ASSET_VERSION è ${found}, i dati chiedono ${expected}: esegui «npm run version:build».`);
 }
 for (const poll of polls) {
-  if (poll.source !== 'real' || poll.verified !== true || !/^https:\/\//.test(poll.sourceUrl) || !poll.publishedAt) fail(`Sondaggio ${poll.id}: provenienza incompleta`);
+  if (poll.source !== 'real' || !/^https:\/\//.test(poll.sourceUrl) || !poll.publishedAt) fail(`Sondaggio ${poll.id}: provenienza incompleta`);
+  // A poll is either verified (read on its source, with the date of that reading) or declared and waiting for confirmation (with the date it was transcribed and what is missing): never verified without a reading.
+  if (poll.verified === true) { if (!poll.verifiedAt || /non (era|è) (raggiungibile|stata riletta)|NON riscontrat/i.test(poll.verificationNote ?? '')) fail(`Sondaggio ${poll.id}: segnato come verificato ma senza lettura della fonte`); }
+  else if (poll.verificationStatus !== 'in-attesa-di-conferma' || poll.verifiedAt !== null || !poll.transcribedAt || !poll.verificationNote) fail(`Sondaggio ${poll.id}: non verificato ma senza stato «in-attesa-di-conferma», data di trascrizione e nota`);
   const total = poll.results.reduce((sum, row) => sum + row.share, 0);
   if (total > 100 || total < 80) fail(`Sondaggio ${poll.id}: totale non plausibile (${total})`);
   for (const row of poll.results) if (!partyIds.has(row.entityId) && !coalitionIds.has(row.entityId)) fail(`Sondaggio ${poll.id}: forza senza entità ${row.entityId}`);

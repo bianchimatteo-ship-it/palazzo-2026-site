@@ -37,8 +37,24 @@ assert.equal(Math.round((total + october.others) * 10) / 10, 100, 'Forze e resid
 assert.equal(october.referenceDate, '2026-10-01', 'Data di riferimento.');
 assert.deepEqual([october.fieldworkFrom, october.fieldworkTo], ['2026-09-17', '2026-09-30'], 'Finestra dei sondaggi considerati.');
 assert.equal(october.publishedAt, '2026-10-07', 'Pubblicazione dell’articolo.');
-assert.ok(october.verifiedAt >= october.publishedAt && october.verifiedAt !== october.referenceDate, 'La data di verifica del progetto è un’altra data.');
-assert.ok(october.source === 'real' && october.verified === true && /youtrend\.it\/2026\/10\/07\/supermedia-youtrend-agi-il-pd-scende-al-204/.test(october.sourceUrl) && /YouTrend/.test(october.sourceName), 'Fonte: l’articolo di YouTrend.');
+// The state of the verification is told as it is: a poll is verified only if it was read on its source (and the file says when), otherwise it is declared and waiting for confirmation.
+for (const poll of polls) {
+  const contradictory = /non (era|è) (raggiungibile|stata riletta)|NON riscontrat/i.test(poll.verificationNote ?? '');
+  if (poll.verified === true) {
+    assert.ok(/^\d{4}-\d{2}-\d{2}$/.test(poll.verifiedAt ?? '') && poll.verifiedAt >= poll.publishedAt, `${poll.id}: verificato con la data della lettura della fonte, mai prima della pubblicazione.`);
+    assert.ok(!contradictory, `${poll.id}: segnato come verificato ma la nota dice che la fonte non è stata riletta.`);
+    assert.notEqual(poll.verificationStatus, 'in-attesa-di-conferma');
+  } else {
+    assert.equal(poll.verificationStatus, 'in-attesa-di-conferma', `${poll.id}: non verificato = in attesa di conferma.`);
+    assert.equal(poll.verifiedAt, null, `${poll.id}: nessuna data di verifica inventata.`);
+    assert.ok(/^\d{4}-\d{2}-\d{2}$/.test(poll.transcribedAt ?? '') && poll.transcribedAt >= poll.publishedAt, `${poll.id}: la data di trascrizione è un’altra cosa dalla verifica.`);
+    assert.ok(contradictory || /da (riconfermare|riverificare)|rileggere/i.test(poll.verificationNote ?? ''), `${poll.id}: la nota dice che cosa manca.`);
+  }
+  // Four dates, never mixed: reference, window of the polls, publication, then the day of the project (transcription or reading).
+  if (poll.fieldworkTo && poll.referenceDate) assert.ok(poll.referenceDate >= poll.fieldworkTo && poll.referenceDate <= poll.publishedAt, `${poll.id}: finestra ≤ riferimento ≤ pubblicazione.`);
+}
+assert.equal(october.verified, false, 'La Supermedia di ottobre non è stata riletta sulla fonte: non è dichiarata verificata.');
+assert.ok(october.source === 'real' && /youtrend\.it\/2026\/10\/07\/supermedia-youtrend-agi-il-pd-scende-al-204/.test(october.sourceUrl) && /YouTrend/.test(october.sourceName), 'Fonte: l’articolo di YouTrend.');
 assert.ok(/non era raggiungibile|non è stata riletta/.test(october.verificationNote ?? ''), 'La nota dice come è stata registrata.');
 assert.ok(october.results.every(row => row.entityId && !/Altri/i.test(row.label)), 'Nessuna riga «Altri» tra le forze.');
 assert.ok(/non sono la differenza con la rilevazione del 24\/09/.test(october.deltaNote), 'Le variazioni sono dichiarate come pubblicate.');
@@ -56,6 +72,8 @@ const { store } = run;
 let world = store.getState().world;
 const first = opening(world);
 assert.ok(first && first.real.id === october.id, 'La prima rilevazione è la Supermedia del 1° ottobre.');
+assert.equal(first.real.verificationStatus, 'in-attesa-di-conferma', 'E nel gioco resta un dato reale dichiarato, non verificato.');
+assert.equal(first.real.verifiedAt, null);
 assert.equal(first.date, '2026-10-01', 'Con la data di riferimento.');
 assert.deepEqual([first.real.referenceDate, first.real.publishedAt, first.real.fieldworkFrom, first.real.fieldworkTo], ['2026-10-01', '2026-10-07', '2026-09-17', '2026-09-30'], 'Le tre date restano distinte.');
 assert.ok(/youtrend\.it/.test(first.real.sourceUrl) && /YouTrend/.test(first.real.sourceName), 'Provenienza.');
@@ -106,4 +124,4 @@ assert.ok(world.polls.filter(item => item.source === 'real').length === 1, 'Un s
 }
 
 assert.equal(await digest(), before, 'I JSON reali sono identici prima e dopo: nulla di simulato vi è confluito.');
-console.log('Supermedia del 01/10/2026 verificata: dodici valori e variazioni esatti, totale 96,6 e Altri 3,4, tre date distinte con la verifica del progetto, storico di settembre intatto, prima rilevazione reale con provenienza e passaggio graduale alla simulazione, JSON reali invariati.');
+console.log('Supermedia del 01/10/2026 (metadati coerenti: la rilevazione risulta DICHIARATA e in attesa di conferma sulla fonte, non verificata): dodici valori e variazioni esatti, totale 96,6 e Altri 3,4, tre date distinte con la verifica del progetto, storico di settembre intatto, prima rilevazione reale con provenienza e passaggio graduale alla simulazione, JSON reali invariati.');

@@ -1,7 +1,7 @@
-import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261016-3';
-import { formatDate } from '../core/time.js?v=20261016-3';
-import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261016-3';
-import { distinctSeries, sparkline } from './charts.js?v=20261016-3';
+import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261016-6';
+import { formatDate } from '../core/time.js?v=20261016-6';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261016-6';
+import { distinctSeries, sparkline } from './charts.js?v=20261016-6';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const pct = (value, digits = 1) => value === null || value === undefined ? '—' : `${Number(value).toLocaleString('it-IT', { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
@@ -27,7 +27,7 @@ export const realPollDates = real => {
 };
 function pollSourceLine(poll) {
   if (isScenario(poll)) return `<span class="poll-source-scenario">${esc(scenarioName(poll).toUpperCase())}</span> quadro iniziale simulato sulle forze della ${esc(poll.scenario.basedOn?.label ?? 'Supermedia reale')}${poll.scenario.mode === 'casuale' ? ` (seme «${esc(poll.scenario.seed)}»)` : ''} · non sono le percentuali della fonte · dalla prima settimana i sondaggi sono simulati`;
-  if (isReal(poll)) return `<span class="poll-source-real">DATO REALE</span> ${esc(poll.real.label)} ${esc(realPollDates(poll.real))} · <a href="${esc(poll.real.sourceUrl)}" target="_blank" rel="noopener noreferrer">${esc(poll.real.sourceName)} ↗</a> · dalla prima settimana i sondaggi sono simulati`;
+  if (isReal(poll)) return `<span class="poll-source-real">DATO REALE</span>${poll.real.verificationStatus === 'in-attesa-di-conferma' ? ' <span class="poll-source-pending" title="Valori trascritti da una fonte indicata dal committente, non ancora riletti sulla pagina originale">· in attesa di conferma sulla fonte</span>' : ''} ${esc(poll.real.label)} ${esc(realPollDates(poll.real))} · <a href="${esc(poll.real.sourceUrl)}" target="_blank" rel="noopener noreferrer">${esc(poll.real.sourceName)} ↗</a> · dalla prima settimana i sondaggi sono simulati`;
   return `${esc(poll.institute)} · ${Number(poll.sample).toLocaleString('it-IT')} interviste · ${esc(formatDate(poll.date))} · istituto e sondaggio simulati`;
 }
 export const marginText = poll => poll?.margin ? `±${String(poll.margin).replace('.', ',')}` : isScenario(poll) ? 'scenario simulato' : 'dato reale';

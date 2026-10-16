@@ -10,6 +10,9 @@
   // Once a day the Worker drops expired sessions and old rate-limit rows (scheduled() in worker.js), as the privacy text says.
   "triggers": { "crons": ["37 3 * * *"] },
   "preview_urls": false,
+  // E-mail of the accounts (verification and recovery of the password): the sending provider is Resend, switched on by the secret RESEND_API_KEY (npx wrangler secret put RESEND_API_KEY) and by EMAIL_FROM below.
+  // Until both exist nothing is sent and the service says so (docs/account-email.md). PUBLIC_BASE_URL is where the links of the messages lead; ACCOUNT_EMAIL_REQUIRED "1" makes the address mandatory at registration.
+  "vars": { "EMAIL_FROM": "", "PUBLIC_BASE_URL": "https://palazzo-2026-site.bianchimatteo657.workers.dev", "ACCOUNT_EMAIL_REQUIRED": "0" },
   "assets": {
     "directory": ".",
     "binding": "ASSETS",

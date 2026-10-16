@@ -224,11 +224,13 @@
     "deltaNote": "Variazioni come pubblicate dalla fonte rispetto alla sua Supermedia precedente; non sono la differenza con la rilevazione del 24/09/2026 conservata nello storico",
     "coalitions": null,
     "source": "real",
-    "verified": true,
+    "verified": false,
+    "verificationStatus": "in-attesa-di-conferma",
     "sourceUrl": "https://www.youtrend.it/2026/10/07/supermedia-youtrend-agi-il-pd-scende-al-204/",
     "sourceName": "YouTrend — Supermedia YouTrend/Agi del 1° ottobre 2026 (articolo del 7 ottobre)",
-    "verifiedAt": "2026-10-14",
-    "verificationNote": "Valori trascritti dalla tabella dell’articolo indicata dal committente del progetto; la pagina non era raggiungibile dall’ambiente di lavoro e non è stata riletta: da riconfermare alla prima occasione.",
+    "transcribedAt": "2026-10-14",
+    "verifiedAt": null,
+    "verificationNote": "Valori trascritti il 14/10/2026 dalla tabella dell’articolo indicata dal committente del progetto. La pagina di YouTrend non era raggiungibile dall’ambiente di lavoro (neanche il 16/10/2026: la rete lo blocca) e non è stata riletta, né è stata trovata una copia attendibile: i valori sono dichiarati dal committente, NON riscontrati sulla fonte. Per chiudere la verifica: rileggere la tabella, confrontare i dodici valori e le variazioni, poi impostare verified=true, verificationStatus=\"verificato\" e verifiedAt alla data di quella lettura.",
     "validFrom": "2026-10-01",
     "validTo": null
   }

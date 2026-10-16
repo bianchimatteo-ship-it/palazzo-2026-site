@@ -1,59 +1,61 @@
-import { fullDate, formatDate } from '../core/time.js?v=20261016-3';
-import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20261016-3';
-import { accountApiBase, commitRevision, currentAccount, deleteAccount, probeAccountService, deleteCloudSave, downloadSave, knownRevision, listCloudSaves, login, logout, register, slotForCareer, uploadSave } from '../data/repositories/account-sync.js?v=20261016-3';
-import { setPartyLogoResolver } from './person-marks.js?v=20261016-3';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261016-3';
-import { isRealCollectionLoaded, loadRealCollections, loadRealCollectionsSettled, pristineRecord, realDataFailures, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20261016-3';
-import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20261016-3';
-import { renderAdminPanel } from './admin-panel.js?v=20261016-3';
-import { sharedLogos } from '../data/repositories/admin-store.js?v=20261016-3';
-import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, publishSharedArchive, refreshSharedArchive, sharedApiUrl, sharedSyncStatus, verifySharedSession } from '../data/repositories/admin-sync.js?v=20261016-3';
-import { deleteLocalLogo, exportLogoConfiguration, fetchLogoFromUrl, getLocalLogo, importLogoConfiguration, listLocalLogos, probeImage, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20261016-3';
-import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20261016-3';
-import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20261016-3';
-import { PARTY_LINK_COLLECTIONS, forceKind, isCoalitionList, politicalForces } from '../data/repositories/party-links.js?v=20261016-3';
-import { renderLogoAdmin } from './logo-admin.js?v=20261016-3';
-import { chosenPlace, makeCareerDraft, pollScenarioOf, renderCareerWizard, wizardLogoPreview } from './career-wizard.js?v=20261016-3';
-import { userPartyLogo } from './party-logo.js?v=20261016-3';
-import { CAREER_STEPS, validateWizardStep } from '../core/career-rules.js?v=20261016-3';
-import { renderElectionsHub } from './elections-hub.js?v=20261016-3';
-import { renderQuirinale } from './presidency-view.js?v=20261016-3';
-import { renderCareerPage } from './career-page.js?v=20261016-3';
-import { renderPartyPage } from './party-page.js?v=20261016-3';
-import { renderAgendaPage } from './agenda-page.js?v=20261016-3';
-import { HEMICYCLE_DEFAULTS, renderHemicycle } from './hemicycle-view.js?v=20261016-3';
-import { renderFeaturedMembers } from './members-view.js?v=20261016-3';
-import { drawLogoEditor, exportLogo, measureBackground, panFromDrag, renderLogoEditor } from './logo-editor-view.js?v=20261016-3';
-import { createEditorState } from '../core/logo-editor.js?v=20261016-3';
-import { renderParliamentPage } from './parliament-mode.js?v=20261016-3';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261016-3';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261016-3';
-import { chooseStart } from '../core/start-engine.js?v=20261016-3';
-import { renderHeadquarters, renderNewsroom } from './game-mode.js?v=20261016-3';
-import { newsMedia, newsPopupHtml, popupItem } from './news-view.js?v=20261016-3';
-import { articleScript, bulletinScript, onVoiceChange, speakLines, stopVoice, syncVoiceDom, voiceStatus, voiceTarget } from './radio-voice.js?v=20261016-3';
-import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20261016-3';
-import { playerRoles } from '../core/roles.js?v=20261016-3';
-import { accordWarning, budgetPreview, designFromForm, planFromForm, policyFields, policyPreview, projectPreview, rangeText, requestFromForm } from './policy-mode.js?v=20261016-3';
-import { areaOf } from '../data/simulation/policy-rules.js?v=20261016-3';
-import { attachChartInteractions, hideChartTip } from './polls-mode.js?v=20261016-3';
-import { renderObservatory } from './observatory-view.js?v=20261016-3';
-import { glyph } from './visuals.js?v=20261016-3';
-import { identityVars, partyChip, partyIdentity, topbarParty } from './party-identity.js?v=20261016-3';
-import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20261016-3';
-import { renderFinancePage } from './finance-mode.js?v=20261016-3';
-import { PLAN_MAX, planConfirmLines, planKey, renderPlanTray } from './plan-view.js?v=20261016-3';
-import { STAFF_TASK_BY_ID } from '../data/simulation/staff-rules.js?v=20261016-3';
-import { renderContactsPanel } from './organization-mode.js?v=20261016-3';
-import { renderRealLaws } from './real-laws.js?v=20261016-3';
-import { realLawArea } from '../core/society-engine.js?v=20261016-3';
-import { canManageParliament } from '../core/parliament-engine.js?v=20261016-3';
-import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, TOUR_STEPS } from './menu.js?v=20261016-3';
-import { setForceColorOverrides } from './political-colors.js?v=20261016-3';
-import { renderTutorialCard, tutorialAction, tutorialContext, tutorialState, TUTORIAL_STEPS } from './tutorial.js?v=20261016-3';
-import { MAX_SLOTS } from '../core/storage.js?v=20261016-3';
-import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20261016-3';
-import { playSound } from './sound.js?v=20261016-3';
+import { fullDate, formatDate } from '../core/time.js?v=20261016-6';
+import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20261016-6';
+import * as accountApi from '../data/repositories/account-sync.js?v=20261016-6';
+import { accountApiBase, commitRevision, currentAccount, deleteAccount, probeAccountService, deleteCloudSave, downloadSave, listCloudSaves, login, logout, register, slotForCareer } from '../data/repositories/account-sync.js?v=20261016-6';
+import { createSyncEngine } from '../data/repositories/sync-queue.js?v=20261016-6';
+import { setPartyLogoResolver } from './person-marks.js?v=20261016-6';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261016-6';
+import { isRealCollectionLoaded, loadRealCollections, loadRealCollectionsSettled, pristineRecord, realDataFailures, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20261016-6';
+import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20261016-6';
+import { renderAdminPanel } from './admin-panel.js?v=20261016-6';
+import { sharedLogos } from '../data/repositories/admin-store.js?v=20261016-6';
+import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, publishSharedArchive, refreshSharedArchive, sharedApiUrl, sharedSyncStatus, verifySharedSession } from '../data/repositories/admin-sync.js?v=20261016-6';
+import { deleteLocalLogo, exportLogoConfiguration, fetchLogoFromUrl, getLocalLogo, importLogoConfiguration, listLocalLogos, probeImage, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20261016-6';
+import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20261016-6';
+import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20261016-6';
+import { PARTY_LINK_COLLECTIONS, forceKind, isCoalitionList, politicalForces } from '../data/repositories/party-links.js?v=20261016-6';
+import { renderLogoAdmin } from './logo-admin.js?v=20261016-6';
+import { chosenPlace, makeCareerDraft, pollScenarioOf, renderCareerWizard, wizardLogoPreview } from './career-wizard.js?v=20261016-6';
+import { userPartyLogo } from './party-logo.js?v=20261016-6';
+import { CAREER_STEPS, validateWizardStep } from '../core/career-rules.js?v=20261016-6';
+import { renderElectionsHub } from './elections-hub.js?v=20261016-6';
+import { renderQuirinale } from './presidency-view.js?v=20261016-6';
+import { renderCareerPage } from './career-page.js?v=20261016-6';
+import { renderPartyPage } from './party-page.js?v=20261016-6';
+import { renderAgendaPage } from './agenda-page.js?v=20261016-6';
+import { HEMICYCLE_DEFAULTS, renderHemicycle } from './hemicycle-view.js?v=20261016-6';
+import { renderFeaturedMembers } from './members-view.js?v=20261016-6';
+import { drawLogoEditor, exportLogo, measureBackground, panFromDrag, renderLogoEditor } from './logo-editor-view.js?v=20261016-6';
+import { createEditorState } from '../core/logo-editor.js?v=20261016-6';
+import { renderParliamentPage } from './parliament-mode.js?v=20261016-6';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261016-6';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261016-6';
+import { chooseStart } from '../core/start-engine.js?v=20261016-6';
+import { renderHeadquarters, renderNewsroom } from './game-mode.js?v=20261016-6';
+import { newsMedia, newsPopupHtml, popupItem } from './news-view.js?v=20261016-6';
+import { articleScript, bulletinScript, onVoiceChange, speakLines, stopVoice, syncVoiceDom, voiceStatus, voiceTarget } from './radio-voice.js?v=20261016-6';
+import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20261016-6';
+import { playerRoles } from '../core/roles.js?v=20261016-6';
+import { accordWarning, budgetPreview, designFromForm, planFromForm, policyFields, policyPreview, projectPreview, rangeText, requestFromForm } from './policy-mode.js?v=20261016-6';
+import { areaOf } from '../data/simulation/policy-rules.js?v=20261016-6';
+import { attachChartInteractions, hideChartTip } from './polls-mode.js?v=20261016-6';
+import { renderObservatory } from './observatory-view.js?v=20261016-6';
+import { glyph } from './visuals.js?v=20261016-6';
+import { identityVars, partyChip, partyIdentity, topbarParty } from './party-identity.js?v=20261016-6';
+import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20261016-6';
+import { renderFinancePage } from './finance-mode.js?v=20261016-6';
+import { PLAN_MAX, planConfirmLines, planKey, renderPlanTray } from './plan-view.js?v=20261016-6';
+import { STAFF_TASK_BY_ID } from '../data/simulation/staff-rules.js?v=20261016-6';
+import { renderContactsPanel } from './organization-mode.js?v=20261016-6';
+import { renderRealLaws } from './real-laws.js?v=20261016-6';
+import { realLawArea } from '../core/society-engine.js?v=20261016-6';
+import { canManageParliament } from '../core/parliament-engine.js?v=20261016-6';
+import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, TOUR_STEPS } from './menu.js?v=20261016-6';
+import { setForceColorOverrides } from './political-colors.js?v=20261016-6';
+import { renderTutorialCard, tutorialAction, tutorialContext, tutorialState, TUTORIAL_STEPS } from './tutorial.js?v=20261016-6';
+import { MAX_SLOTS, storage as localStorageApi } from '../core/storage.js?v=20261016-6';
+import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20261016-6';
+import { playSound } from './sound.js?v=20261016-6';
 
 // The destinations of the game, by theme. On computers the sidebar lists the eight and opens the pages of the current one; on phones the
 // bar below keeps Home · Elezioni · Sondaggi · Istituzioni one tap away and “Altro” gathers everything else (the same pages, nothing twice).
@@ -215,28 +217,72 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   // Player account: the running career is kept online after each save and can be recovered on any device.
   // status: 'none' (no service for this copy of the game), 'checking', 'available' or 'unreachable'. An address alone
   // is not enough: the service is asked (probeAccount) before it is offered as available.
-  const account = { user: currentAccount(), saves: [], message: '', error: '', busy: false, lastSync: null, conflict: null, status: accountApiBase() ? (currentAccount() ? 'available' : 'checking') : 'none', currentSlot: null };
+  const account = { user: currentAccount(), saves: [], message: '', error: '', busy: false, lastSync: null, conflict: null, conflicts: [], status: accountApiBase() ? (currentAccount() ? 'available' : 'checking') : 'none', currentSlot: null, history: null, info: null, service: { email: false, emailRequired: false }, reset: null };
   Object.defineProperty(account, 'available', { enumerable: true, get: () => account.status === 'available' });
   const setAccountStatus = status => { account.status = status; account.unreachable = status === 'unreachable'; };
   const probeAccount = async () => {
     if (account.status === 'none') return;
     setAccountStatus('checking');
-    setAccountStatus(await probeAccountService());
+    const details = {};
+    setAccountStatus(await probeAccountService({ details }));
+    if (account.status === 'available') { account.service = { email: details.email === true, emailRequired: details.emailRequired === true }; accountApi.flushRevocations().catch(() => {}); }
     // Unreachable at the first opening: the player is not kept on the account screen, the local start is offered.
     render(store.getState(), store.getLastSaved());
   };
-  let syncTimer = null;
   const careerMeta = () => { const meta = store.currentMeta(); return { player: meta.player, role: meta.role, party: meta.party, week: meta.week, gameDate: meta.gameDate, status: meta.status, difficulty: store.getState().career?.difficulty ?? 'normale' }; };
-  const refreshCloud = async () => {
-    if (!account.user) return;
-    try { account.saves = await listCloudSaves(); account.error = ''; }
-    catch (error) { account.error = error.message; account.user = currentAccount(); }
+  // The meta of a saved copy that is not the one being played (the queue works on what is saved in this browser, whichever career it is).
+  const metaOfSnapshot = snapshot => {
+    if (snapshot?.career?.id && snapshot.career.id === store.getState().career?.id) return careerMeta();
+    const player = snapshot?.dataset?.politicians?.find?.(item => item.id === snapshot?.career?.playerId);
+    return { player: player?.displayName ?? 'Carriera', role: null, party: snapshot?.game?.party?.label ?? null, week: snapshot?.game?.week?.index ?? null, gameDate: snapshot?.clock?.currentDate ?? null, status: snapshot?.game?.status ?? null, difficulty: snapshot?.career?.difficulty ?? 'normale' };
   };
-  // One upload at a time (a second one would meet the revision of the first and be taken for a conflict).
-  let syncing = Promise.resolve();
-  const syncCareer = (options = {}) => { const run = syncing.then(() => syncOnce(options)); syncing = run.catch(() => {}); return run; };
-  const syncOnce = async ({ force = false, silent = true } = {}) => {
-    clearTimeout(syncTimer); syncTimer = null;
+  // The sync of the online saves: a queue written down in the browser (see sync-queue.js), not a timer. A change of its state redraws the account screen.
+  const syncEngine = createSyncEngine({
+    store: globalThis.localStorage ?? { getItem: () => null, setItem() {}, removeItem() {} }, account: accountApi,
+    getSnapshot: careerId => localStorageApi.bestForCareer(careerId),
+    metaOf: metaOfSnapshot, nameOf: snapshot => { const meta = metaOfSnapshot(snapshot); return `${meta.player} · ${snapshot.career?.name?.split(' — ')[1] ?? 'carriera'}`; },
+    onChange: () => { refreshSyncView(); if (menu.open && menu.view === 'account') render(store.getState(), store.getLastSaved()); }
+  });
+  // Careers the player chose to keep on this device only (asked once, not again).
+  const DECLINED_KEY = 'politicando.sync.declined.v1';
+  const declinedList = () => { try { return JSON.parse(globalThis.localStorage?.getItem(DECLINED_KEY) ?? '[]'); } catch { return []; } };
+  const isDeclined = careerId => declinedList().includes(`${account.user?.username}|${careerId}`);
+  const setDeclined = (careerId, value) => { try { const next = declinedList().filter(item => item !== `${account.user?.username}|${careerId}`); if (value) next.push(`${account.user?.username}|${careerId}`); globalThis.localStorage?.setItem(DECLINED_KEY, JSON.stringify(next)); } catch { /* the choice is asked again */ } };
+  const careerIdNow = () => store.hasCareer() ? store.getState().career?.id ?? null : null;
+  // The states the player sees: saved in the browser, waiting to be synced, synced, conflict, error (and the isolation of a career that is not this account's).
+  const syncViewOf = () => {
+    const careerId = careerIdNow();
+    if (!careerId) return null;
+    const saving = store.saveStatus();
+    if (!saving.ok || saving.dirty) return { kind: 'unsaved', label: 'Modifiche non salvate in questo browser', detail: saving.error ? `Il salvataggio locale non è riuscito: ${saving.error}` : 'Salva la partita per poterla portare online.' };
+    if (!account.user) return { kind: 'local', label: 'Salvata in questo browser', detail: 'Accedi per tenerne una copia online.' };
+    const owner = accountApi.ownerOf(careerId);
+    if (owner && owner !== account.user.username) return { kind: 'foreign', label: `Collegata all’account «${owner}»`, detail: 'Non viene mai caricata nell’account con cui hai effettuato l’accesso senza una tua scelta.', owner };
+    const current = syncEngine.status(careerId);
+    const when = current.at ? ` (${fullDate(current.at.slice(0, 10))})` : '';
+    if (current.state === 'conflict') return { kind: 'conflict', label: 'Conflitto con la versione online', detail: 'Scegli quale versione tenere: nulla è stato sovrascritto.', op: current.op };
+    if (current.state === 'error') return { kind: 'error', label: 'Errore di sincronizzazione', detail: current.op?.error ?? 'Riprova da «Salva ora online».', op: current.op };
+    if (current.state === 'session') return { kind: 'error', label: 'Sessione scaduta', detail: 'Accedi di nuovo: la carriera resta salvata in questo browser.', op: current.op };
+    if (current.state === 'retry') return { kind: 'pending', label: 'Salvata qui · sincronizzazione in attesa', detail: current.op?.error ?? 'Nuovo tentativo a breve.', op: current.op };
+    if (current.state === 'pending' || current.state === 'paused') return { kind: 'pending', label: 'Salvata qui · sincronizzazione in attesa', detail: 'Parte appena possibile.', op: current.op };
+    if (current.state === 'synced') return { kind: 'synced', label: `Salvata qui e online${when}`, detail: `Revisione online ${current.revision}.` };
+    return { kind: 'unlinked', label: 'Solo su questo dispositivo', detail: isDeclined(careerId) ? 'Hai scelto di tenerla soltanto qui.' : 'Non è collegata al tuo account: portala online quando vuoi.' };
+  };
+  const refreshSyncView = () => {
+    const mine = account.user ? syncEngine.operations().filter(op => op.status === 'conflict') : [];
+    account.conflicts = mine.map(op => ({ careerId: op.careerId, slot: op.slot, kind: op.kind, remote: op.remote }));
+    account.conflict = account.conflicts.find(item => item.careerId === careerIdNow()) ?? account.conflicts[0] ?? null;
+  };
+  Object.defineProperty(account, 'sync', { enumerable: true, get: () => syncViewOf() });
+  const refreshCloud = async ({ info = false } = {}) => {
+    if (!account.user) return;
+    try { account.saves = await listCloudSaves(); account.error = ''; if (info) account.info = await accountApi.accountInfo().catch(() => account.info); }
+    catch (error) { if (error.status !== 401) account.error = error.message; account.user = currentAccount(); }
+    refreshSyncView();
+  };
+  // The player asks to put the running career online: an explicit association with this account (never done on its own for a career that is not linked to it). A career linked to
+  // another account is not touched: the isolation panel asks what to do.
+  const syncCareer = async ({ silent = true, explicit = false } = {}) => {
     if (!account.user || !store.hasCareer()) return false;
     // Only a game that is saved here goes online: changes not saved (manual or end-of-week autosave, a write that failed) stay in this browser.
     const state = store.cloudSnapshot();
@@ -245,22 +291,57 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       if (!silent) account.error = error ? `Il salvataggio in questo browser non è riuscito (${error}): la partita non va online.` : 'Ci sono modifiche non salvate in questo browser: salva la partita prima di portarla online.';
       return false;
     }
-    const slot = slotForCareer(state.career.id);
-    account.currentSlot = slot;
-    try {
-      await uploadSave(slot, state, { name: `${careerMeta().player} · ${state.career.name?.split(' — ')[1] ?? 'carriera'}`, meta: careerMeta(), force });
-      account.lastSync = new Date().toISOString(); account.conflict = null; account.error = '';
-      if (!silent) account.message = 'Carriera salvata online.';
-      await refreshCloud();
-      return true;
-    } catch (error) {
-      if (error.status === 409 && error.data?.conflict) { account.conflict = { slot, remote: error.data.remote }; if (!silent) account.error = ''; }
-      else if (!silent || error.status === 401) account.error = error.message;
-      account.user = currentAccount();
-      return false;
-    }
+    const careerId = state.career.id, owner = accountApi.ownerOf(careerId);
+    if (owner && owner !== account.user.username) { if (!silent) account.error = `Questa carriera è collegata all’account «${owner}»: scegli prima se associarla a «${account.user.username}».`; return false; }
+    account.currentSlot = slotForCareer(careerId);
+    if (explicit) setDeclined(careerId, false);
+    syncEngine.enqueue(state, { explicit });
+    const summary = await syncEngine.flush({ manual: !silent });
+    account.error = '';
+    refreshSyncView();
+    const now = syncEngine.status(careerId);
+    if (now.state === 'synced') { account.lastSync = new Date().toISOString(); if (!silent) account.message = 'Carriera salvata online.'; await refreshCloud(); }
+    else if (!silent && now.state === 'retry') account.message = 'Non è stato possibile ora: la sincronizzazione riprova da sola.';
+    return now.state === 'synced' && summary !== null;
   };
-  const scheduleSync = () => { if (!account.user) return; clearTimeout(syncTimer); syncTimer = setTimeout(() => { syncCareer().then(() => { if (menu.open) render(store.getState(), store.getLastSaved()); }); }, 6000); };
+  // After every local save that went through: if this career belongs to the signed-in account (or the player asked for it) its save is written down in the queue.
+  const queueAfterSave = () => {
+    if (!account.user || !store.hasCareer()) return;
+    const state = store.cloudSnapshot();
+    if (!state) return;
+    const careerId = state.career.id, pendingOp = syncEngine.read().ops[careerId];
+    const mine = accountApi.linkOf(careerId) || (pendingOp && pendingOp.username === account.user.username && pendingOp.explicit);
+    if (!mine) return;
+    syncEngine.enqueue(state);
+    syncEngine.arm(1500);
+  };
+  const scheduleSync = queueAfterSave;
+  // The session ended (expired, ended in another tab, logout): nothing of the account is used until a new sign-in; what is saved in this browser stays.
+  accountApi.onAccountEnd(reason => {
+    syncEngine.stop();
+    account.user = currentAccount(); account.saves = []; account.conflict = null; account.conflicts = []; account.info = null; account.history = null; account.currentSlot = null;
+    if (reason === 'session-expired') { account.error = 'La sessione è scaduta: accedi di nuovo. Le carriere restano salvate in questo browser e la sincronizzazione riprenderà dopo l’accesso.'; menu.open = true; menu.view = 'account'; }
+    render(store.getState(), store.getLastSaved());
+  });
+  // A game downloaded from the account takes the place of the running one: the link to the online version follows only now, from the game that really is running.
+  const adoptCloud = (slot, remote, toast) => {
+    const loaded = store.loadGame(remote.state, toast);
+    commitRevision(slot, remote.revision, loaded);
+    setDeclined(loaded.career.id, false);
+    return loaded;
+  };
+  // The player's explicit choice: the copy saved in this browser replaces the online one (the server keeps the one it replaces).
+  const replaceOnline = async item => {
+    const snapshot = localStorageApi.bestForCareer(item.careerId);
+    if (!snapshot) { account.error = 'Non c’è una copia salvata di questa carriera in questo browser.'; return; }
+    try {
+      const meta = metaOfSnapshot(snapshot);
+      await accountApi.restoreSave(item.slot, snapshot, { expectedRevision: item.remote?.revision ?? 0, name: `${meta.player} · ${snapshot.career?.name?.split(' — ')[1] ?? 'carriera'}`, meta });
+      syncEngine.resolve(item.careerId); setDeclined(item.careerId, false);
+      account.message = 'Versione online sostituita con quella di questo browser. La precedente è tra le versioni precedenti.'; account.error = '';
+      await refreshCloud();
+    } catch (error) { account.error = error.status === 409 ? 'La versione online è cambiata mentre decidevi: aggiorna e riprova, nulla è stato sostituito.' : error.message; await syncEngine.flush({ manual: true }).catch(() => {}); }
+  };
   let reportOpen = false;
   // The weekly pop-up of the newsroom (at most one a week, at most three news; closed with a button or Escape; it is not saved, the save only remembers the week).
   let newsPopup = null;
@@ -714,7 +795,10 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
         await saveLocalLogo(player.partyId, { blob: edited?.blob ?? wizard.partyLogoBlob, fileName: wizard.partyLogoBlob.name || 'logo', source: '', verified: false, alt: `Logo di ${wizard.partyName}`, editor: edited?.editor ?? null }).then(refreshLocalLogos).catch(() => {});
         closeLogoEditor();
       }
-      wizard = null; playSound('success'); refreshContacts(); await enterHome();
+      wizard = null; playSound('success'); refreshContacts();
+      // A career created while an account is signed in belongs to that account from the start (the one case in which it is linked without a further question).
+      if (account.user && store.hasCareer()) { const saved = store.save(); if (saved.ok) syncCareer({ explicit: true }).catch(() => {}); }
+      await enterHome();
     } catch (error) { if (wizard) wizard.errors = [error.message || 'Impossibile creare la carriera.']; }
   };
   // Every collection the wizard needs is loaded on its own: one that fails does not block the others, and the
@@ -766,7 +850,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       root.querySelector?.(`#${guideJump}`)?.scrollIntoView?.({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
       return;
     }
-    const menuTarget =event.target.closest('[data-menu],[data-menu-action],[data-slot-load],[data-slot-delete],[data-setting-key],[data-report-close],[data-account-action],[data-cloud-load],[data-cloud-delete],[data-conflict]');
+    const menuTarget =event.target.closest('[data-menu],[data-menu-action],[data-slot-load],[data-slot-delete],[data-setting-key],[data-report-close],[data-account-action],[data-cloud-load],[data-cloud-delete],[data-conflict],[data-history-open],[data-history-restore]');
     if (menuTarget) {
       const data = menuTarget.dataset;
       if (menuTarget.matches('.report-backdrop') && event.target.closest('.report-modal')) return;
@@ -778,7 +862,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
         else if (data.menu === 'nuova' && account.status !== 'none' && !account.user && !menu.localStart) { menu.view = 'benvenuto'; menu.needAccount = true; menu.reveal = true; playSound('click'); }
         else if (data.menu === 'nuova') { playSound('confirm'); await openNewGame(); return; }
         else if (data.menu === 'account' && data.accountMode) { menu.view = 'account'; account.mode = data.accountMode; account.error = ''; account.message = ''; menu.reveal = true; playSound('click'); }
-        else if (data.menu) { menu.view = menu.view === data.menu ? 'home' : data.menu; playSound('click'); }
+        else if (data.menu) { menu.view = menu.view === data.menu ? 'home' : data.menu; playSound('click'); if (menu.view === 'account' && account.user && !account.info) await refreshCloud({ info: true }); }
         else if (data.menuAction === 'start-local') { menu.localStart = true; markOnboarding({ localStart: true }); playSound('confirm'); await openNewGame(); return; }
         else if (data.menuAction === 'save-slot') { store.saveToSlot(); playSound('success'); }
         else if (data.menuAction === 'export') { download(store.exportSave(), `politicando-partita-${new Date().toISOString().slice(0, 10)}.json`); }
@@ -792,23 +876,59 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
         else if (data.slotDelete) { const slot = store.listSlots().find(item => item.id === data.slotDelete); confirmThen({ title: 'Eliminare questo salvataggio?', body: `«${slot?.name ?? 'Salvataggio'}» verrà eliminato da questo browser. L’operazione non si può annullare.`, confirmLabel: 'Elimina salvataggio', tone: 'danger' }, () => store.deleteSlot(data.slotDelete)); return; }
         else if (data.settingKey) { settings = saveSetting(data.settingKey, data.settingValue); applySettings(); playSound('click'); }
         else if ('reportClose' in data) reportOpen = false;
-        else if (data.accountAction === 'logout') { await logout(); account.user = null; account.saves = []; account.conflict = null; account.message = 'Sei uscito: le carriere restano online e nel browser.'; }
-        else if (data.accountAction === 'refresh') { await refreshCloud(); }
+        else if (data.accountAction === 'logout') { const outcome = await logout(); account.user = null; account.saves = []; account.conflict = null; account.conflicts = []; account.info = null; account.history = null; account.message = outcome.server === false ? 'Sei uscito da questo dispositivo. La sessione sul server verrà chiusa appena possibile. Le carriere restano nel browser e online.' : 'Sei uscito: le carriere restano nel browser e online. Questa copia non verrà più sincronizzata con l’account finché non accedi di nuovo.'; }
+        else if (data.accountAction === 'refresh') { await refreshCloud({ info: true }); }
         else if (data.accountAction === 'probe') { await probeAccount(); }
         else if (data.accountAction === 'sync') {
           account.busy = 'sync'; render(store.getState(), store.getLastSaved());
           const saved = store.save();
-          if (saved.ok) await syncCareer({ silent: false }); else account.error = `Il salvataggio in questo browser non è riuscito (${saved.error}): la partita non va online.`;
+          if (saved.ok) await syncCareer({ silent: false, explicit: true }); else account.error = `Il salvataggio in questo browser non è riuscito (${saved.error}): la partita non va online.`;
           account.busy = false;
         }
         else if (data.cloudLoad) {
-          const load = async () => { const remote = await downloadSave(data.cloudLoad, { commit: false }); store.loadGame(remote.state, 'Carriera recuperata dal tuo account'); commitRevision(data.cloudLoad, remote.revision); account.currentSlot = data.cloudLoad; menu.open = false; playSound('success'); await enterHome(); };
+          const load = async () => { const remote = await downloadSave(data.cloudLoad, { commit: false }); adoptCloud(data.cloudLoad, remote, 'Carriera recuperata dal tuo account'); account.currentSlot = data.cloudLoad; menu.open = false; playSound('success'); await enterHome(); };
           if (store.hasCareer() && store.hasUnsavedChanges()) { confirmThen({ title: 'Caricare la carriera online?', body: 'La partita in corso ha modifiche non salvate: verrà salvata in uno slot prima di caricare la carriera dal tuo account.', confirmLabel: 'Carica' }, load); return; }
           await load();
         }
-        else if (data.cloudDelete) { confirmThen({ title: 'Eliminare la copia online?', body: 'Questa carriera verrà eliminata dall’archivio del tuo account. La copia nel browser resta.', confirmLabel: 'Elimina online', tone: 'danger' }, async () => { await deleteCloudSave(data.cloudDelete); await refreshCloud(); }); return; }
-        else if (data.conflict === 'download' && account.conflict) { const remote = await downloadSave(account.conflict.slot, { commit: false }); store.loadGame(remote.state, 'Versione online caricata'); commitRevision(account.conflict.slot, remote.revision); account.conflict = null; if (!menu.open) await enterHome(); }
-        else if (data.conflict === 'overwrite' && account.conflict) { confirmThen({ title: 'Sovrascrivere la versione online?', body: 'La versione più recente salvata da un altro dispositivo verrà sostituita da quella di questo browser.', confirmLabel: 'Sovrascrivi', tone: 'danger' }, () => syncCareer({ force: true, silent: false })); return; }
+        else if (data.cloudDelete) { confirmThen({ title: 'Eliminare la copia online?', body: 'Questa carriera verrà eliminata dall’archivio del tuo account. La copia nel browser resta e la versione eliminata si può recuperare dalle versioni precedenti.', confirmLabel: 'Elimina online', tone: 'danger' }, async () => { await deleteCloudSave(data.cloudDelete); await refreshCloud(); }); return; }
+        // The conflicts: the online copy is the one the account holds; the copy of this browser is the one saved here. Nothing is replaced without a choice.
+        else if (data.conflict === 'download') {
+          const item = account.conflicts.find(entry => entry.careerId === data.conflictCareer) ?? account.conflict;
+          if (item) { const remote = await downloadSave(item.slot, { commit: false }); const loaded = adoptCloud(item.slot, remote, 'Versione online caricata'); syncEngine.resolve(item.careerId); if (accountApi.compareProgress(accountApi.progressOf(loaded), accountApi.progressOf(remote.state)) !== 0) syncEngine.enqueue(loaded); account.message = 'Versione online caricata.'; refreshSyncView(); if (!menu.open) await enterHome(); }
+        }
+        else if (data.conflict === 'keep') {
+          const item = account.conflicts.find(entry => entry.careerId === data.conflictCareer) ?? account.conflict;
+          if (item) confirmThen({ title: 'Sostituire la versione online con questa?', body: 'La versione online verrà sostituita dalla copia salvata in questo browser. Quella sostituita resta recuperabile dalle versioni precedenti della carriera.', details: item.remote ? [`Online ora: revisione ${item.remote.revision}${item.remote.updatedAt ? ` del ${formatDate(String(item.remote.updatedAt).slice(0, 10))}` : ''}.`] : [], confirmLabel: 'Sostituisci online', tone: 'danger' }, async () => { await replaceOnline(item); render(store.getState(), store.getLastSaved()); });
+          if (item) return;
+        }
+        else if (data.conflict === 'apart') { const item = account.conflicts.find(entry => entry.careerId === data.conflictCareer) ?? account.conflict; if (item) { setDeclined(item.careerId, true); syncEngine.resolve(item.careerId); account.message = 'Questa carriera resta solo su questo dispositivo: la versione online non è stata toccata.'; refreshSyncView(); } }
+        else if (data.accountAction === 'keep-local') { const id = careerIdNow(); if (id) { setDeclined(id, true); syncEngine.resolve(id); account.message = 'Questa carriera resta solo su questo dispositivo.'; } }
+        else if (data.accountAction === 'link') {
+          const id = careerIdNow();
+          const owner = id ? accountApi.ownerOf(id) : null;
+          if (owner && owner !== account.user?.username) confirmThen({ title: `Collegare la carriera a «${account.user.username}»?`, body: `Questa carriera era collegata all’account «${owner}». Verrà creata una copia nel tuo account; la copia di «${owner}» non viene toccata.`, confirmLabel: 'Collega', tone: 'danger' }, async () => { accountApi.unlinkCareer(id); await syncCareer({ silent: false, explicit: true }); render(store.getState(), store.getLastSaved()); });
+          else { account.busy = 'sync'; render(store.getState(), store.getLastSaved()); store.save(); await syncCareer({ silent: false, explicit: true }); account.busy = false; }
+          if (owner && owner !== account.user?.username) return;
+        }
+        else if (data.historyOpen) {
+          account.history = account.history?.slot === data.historyOpen ? null : { slot: data.historyOpen, items: null };
+          if (account.history) { render(store.getState(), store.getLastSaved()); try { account.history.items = await accountApi.listSaveHistory(data.historyOpen); } catch (error) { account.history.error = error.message; } }
+        }
+        else if (data.historyRestore) {
+          const slot = data.historySlot, id = Number(data.historyRestore);
+          const remote = account.saves.find(item => item.slot === slot);
+          confirmThen({ title: 'Ripristinare questa versione?', body: 'La versione online diventerà questa. Quella attuale resta tra le versioni precedenti.', confirmLabel: 'Ripristina', tone: 'danger' }, async () => {
+            try {
+              const done = await accountApi.restoreFromHistory(slot, id, remote?.revision ?? 0);
+              const fetched = await downloadSave(slot, { commit: false });
+              const loaded = adoptCloud(slot, { ...fetched, revision: done.revision }, 'Versione ripristinata');
+              account.message = accountApi.compareProgress(accountApi.progressOf(loaded), accountApi.progressOf(fetched.state)) === 0 ? 'Versione online ripristinata e caricata.' : 'Versione online ripristinata. In questo browser c’è una copia più avanzata della stessa carriera: resta quella in uso e al prossimo salvataggio la sostituirà online.';
+              account.history = null; await refreshCloud();
+            } catch (error) { account.error = error.status === 409 ? 'La versione online è cambiata nel frattempo: aggiorna l’elenco e riprova.' : error.message; }
+            render(store.getState(), store.getLastSaved());
+          });
+          return;
+        }
       } catch (error) { menu.error = error.message; }
       render(store.getState(), store.getLastSaved());
       return;
@@ -1514,7 +1634,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     }
     else if (action === 'menu') { menu.open = true; menu.view = 'home'; render(store.getState(), store.getLastSaved()); }
     else if (action === 'hall') { menu.open = true; menu.view = 'hall'; render(store.getState(), store.getLastSaved()); }
-    else if (action === 'account') { menu.open = true; menu.view = 'account'; await refreshCloud(); render(store.getState(), store.getLastSaved()); }
+    else if (action === 'account') { menu.open = true; menu.view = 'account'; await refreshCloud({ info: true }); render(store.getState(), store.getLastSaved()); }
     else if (action === 'save') store.save();
     else if (action === 'campaign-start') {
       try {
@@ -1599,28 +1719,50 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
         account.busy = 'delete'; render(store.getState(), store.getLastSaved());
         try {
           const result = await deleteAccount(data.password, data.confirm);
-          account.user = null; account.saves = []; account.conflict = null; account.currentSlot = null;
+          syncEngine.forget(result?.username ?? account.user?.username); account.user = null; account.saves = []; account.conflict = null; account.conflicts = []; account.currentSlot = null;
           account.message = `Account eliminato: online non resta nulla (${result.deleted?.saves ?? 0} salvataggi e ${result.deleted?.sessions ?? 0} sessioni rimossi). Le partite salvate in questo browser restano sul dispositivo.`;
         } catch (error) { account.error = error.message; if (['offline', 'timeout'].includes(error.code) || error.status >= 500) setAccountStatus('unreachable'); }
         account.busy = false;
         render(store.getState(), store.getLastSaved()); return;
       }
-      if (mode === 'register' && data.password !== data.confirm) { account.error = 'Le due password non coincidono.'; render(store.getState(), store.getLastSaved()); return; }
+      if ((mode === 'register' || mode === 'reset') && data.password !== data.confirm) { account.error = 'Le due password non coincidono.'; render(store.getState(), store.getLastSaved()); return; }
       account.busy = mode; render(store.getState(), store.getLastSaved());
       try {
-        if (mode === 'register') await register(data.username, data.password); else await login(data.username, data.password);
-        account.user = currentAccount();
-        setAccountStatus('available');
-        account.message = mode === 'register' ? 'Account creato: da ora le tue carriere si salvano anche online.' : `Bentornato, ${account.user.username}.`;
-        markOnboarding({ account: true });
-        await refreshCloud();
-        // The running career joins the account at once (never overwriting a newer version saved elsewhere).
-        if (store.hasCareer()) { await syncCareer(); if (store.saveStatus().dirty) account.message += ' La partita in corso ha modifiche non salvate: salvala per portarla online.'; }
-        const wanted = menu.needAccount;
-        menu.needAccount = false;
-        account.busy = false;
-        if (mode === 'register' && onboarding().tour !== 'done') { menu.view = 'tour'; menu.tourStep = 0; menu.reveal = true; }
-        else if (wanted) { await openNewGame(); return; }
+        if (mode === 'recover') {
+          const answer = await accountApi.requestPasswordRecovery(data.email);
+          account.message = answer.message ?? 'Se l’indirizzo è collegato a un account con email verificata, riceverai un messaggio.';
+        } else if (mode === 'reset') {
+          if (!account.reset) throw new Error('Il collegamento non è più valido: chiedine uno nuovo.');
+          await accountApi.resetPassword(account.reset.token, account.reset.username, data.password);
+          account.message = 'Password cambiata: accedi con la nuova password. Le sessioni aperte sono state chiuse.'; account.reset = null; account.mode = 'login';
+        } else if (mode === 'email') {
+          const answer = await accountApi.addEmail(data.email, data.password);
+          account.message = answer.message ?? 'Indirizzo salvato.'; account.info = await accountApi.accountInfo().catch(() => account.info);
+        } else if (mode === 'resend') {
+          const answer = await accountApi.resendVerification(data.password);
+          account.message = answer.message ?? 'Messaggio inviato.';
+        } else {
+          if (mode === 'register') await register(data.username, data.password, { email: data.email }); else await login(data.username, data.password);
+          account.user = currentAccount();
+          setAccountStatus('available');
+          account.message = mode === 'register' ? 'Account creato: le carriere che collegherai a questo account si salvano anche online.' : `Bentornato, ${account.user.username}.`;
+          markOnboarding({ account: true });
+          await refreshCloud({ info: true });
+          // The career being played is NOT put online here: it joins the account only if it already belongs to it, or if the player chooses (the account screen asks). What was left
+          // by the previous session never goes into the account that has just signed in.
+          if (store.hasCareer()) {
+            const careerId = careerIdNow(), owner = accountApi.ownerOf(careerId);
+            if (owner === account.user.username) { queueAfterSave(); }
+            else account.message += owner ? ` La carriera in corso è collegata all’account «${owner}»: non è stata caricata qui.` : ' La carriera in corso è solo su questo dispositivo: la porti online tu, dall’account.';
+            if (store.saveStatus().dirty) account.message += ' La partita in corso ha modifiche non salvate: salvala per portarla online.';
+          }
+          syncEngine.resume();
+          const wanted = menu.needAccount;
+          menu.needAccount = false;
+          account.busy = false;
+          if (mode === 'register' && onboarding().tour !== 'done') { menu.view = 'tour'; menu.tourStep = 0; menu.reveal = true; }
+          else if (wanted) { await openNewGame(); return; }
+        }
       } catch (error) { account.error = error.message; if (['offline', 'timeout'].includes(error.code) || error.status >= 500) setAccountStatus('unreachable'); else if (error.status) setAccountStatus('available'); }
       account.busy = false;
       render(store.getState(), store.getLastSaved()); return;
@@ -1948,14 +2090,31 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   // save really stands (a write that succeeded, nothing left unsaved), never the message on screen.
   let savedSeen = store.saveStatus().seq;
   store.subscribe(() => { const status = store.saveStatus(); if (status.seq !== savedSeen) { savedSeen = status.seq; if (status.ok && !status.dirty) scheduleSync(); } });
-  globalThis.addEventListener?.('online', () => { if (account.user) syncCareer(); });
-  if (account.user) refreshCloud().then(() => {
-    // Another device may have a newer version of the career open here: say so instead of overwriting it.
-    const slot = store.hasCareer() ? slotForCareer(store.getState().career.id) : null;
-    const remote = slot ? account.saves.find(item => item.slot === slot) : null;
-    if (remote && (knownRevision(slot) ?? 0) < remote.revision) account.conflict = { slot, remote };
-    render(store.getState(), store.getLastSaved());
+  // The network is back, the page is shown again, another tab signed in or out: the queue takes up what is written down (always after reading the version online again).
+  globalThis.addEventListener?.('online', () => { if (account.user) syncEngine.flush(); });
+  globalThis.document?.addEventListener?.('visibilitychange', () => { if (!globalThis.document.hidden && account.user) syncEngine.resume(); });
+  globalThis.addEventListener?.('storage', event => {
+    if (event.key !== 'politicando.account.v1') return;
+    const before = account.user?.username ?? null;
+    account.user = currentAccount();
+    if ((account.user?.username ?? null) !== before) { syncEngine.stop(); account.saves = []; account.conflicts = []; account.conflict = null; account.info = null; account.history = null; account.currentSlot = null; account.message = account.user ? `In un’altra scheda hai effettuato l’accesso come ${account.user.username}.` : 'In un’altra scheda sei uscito dall’account.'; if (account.user) { refreshCloud().then(() => render(store.getState(), store.getLastSaved())); syncEngine.resume(); } render(store.getState(), store.getLastSaved()); }
   });
+  if (account.user) {
+    refreshCloud().then(() => { render(store.getState(), store.getLastSaved()); });
+    // What was written down before the page was closed: taken up now, after the version online has been read again.
+    syncEngine.resume();
+  }
+  // The links of the messages (confirm the address, choose a new password) open the game on the account screen; the code in the address is taken out of the URL at once.
+  {
+    const params = new URLSearchParams(globalThis.location?.search ?? '');
+    const resetToken = params.get('reimposta-password'), verifyToken = params.get('verifica-email');
+    if (resetToken || verifyToken) {
+      try { globalThis.history?.replaceState?.(null, '', `${globalThis.location.pathname}${globalThis.location.hash ?? ''}`); } catch { /* the code stays in the address; it works once anyway */ }
+      menu.open = true; menu.view = 'account'; account.mode = resetToken ? 'reset' : 'login';
+      if (resetToken) accountApi.checkResetToken(resetToken).then(answer => { account.reset = { token: resetToken, username: answer.username }; render(store.getState(), store.getLastSaved()); }).catch(error => { account.error = error.message; account.mode = 'recover'; render(store.getState(), store.getLastSaved()); });
+      else accountApi.verifyEmail(verifyToken).then(answer => { account.message = answer.message ?? 'Indirizzo email verificato.'; return account.user ? accountApi.accountInfo().then(info => { account.info = info; }) : null; }).catch(error => { account.error = error.message; }).finally(() => render(store.getState(), store.getLastSaved()));
+    }
+  }
   attachChartInteractions(root);
   // The URL hash mirrors the section, so links and the back button land on the same page; opening the game (behind
   // the main menu) starts from the Home, never from the last page visited.

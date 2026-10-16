@@ -1,15 +1,15 @@
 // Main menu, how-to-play, settings, save slots and the end-of-week report.
-import { renderTutorialInvite } from './tutorial.js?v=20261016-3';
-import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261016-3';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261016-3';
-import { formatDate } from '../core/time.js?v=20261016-3';
-import { illustration } from './illustrations.js?v=20261016-3';
-import { glyph } from './visuals.js?v=20261016-3';
-import { identityMark, identityVars } from './party-identity.js?v=20261016-3';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261016-3';
-import { hallView } from './hall-view.js?v=20261016-3';
-import { esc, signed } from './charts.js?v=20261016-3';
-import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261016-3';
+import { renderTutorialInvite } from './tutorial.js?v=20261016-6';
+import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261016-6';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261016-6';
+import { formatDate } from '../core/time.js?v=20261016-6';
+import { illustration } from './illustrations.js?v=20261016-6';
+import { glyph } from './visuals.js?v=20261016-6';
+import { identityMark, identityVars } from './party-identity.js?v=20261016-6';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261016-6';
+import { hallView } from './hall-view.js?v=20261016-6';
+import { esc, signed } from './charts.js?v=20261016-6';
+import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261016-6';
 
 const when = iso => { try { return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch { return ''; } };
 // The actions of the opening screen, in order of importance: starting a career and resuming one are the two main ones (drawn apart, below); then what concerns the
@@ -88,25 +88,71 @@ function loadView({ hasCareer, meta, slots, error, identity, identityOf }) {
 // Account: sign up or sign in, then every career is also kept online and can be resumed on another device.
 // The public pages (also reachable without the game): privacy notice, terms and the page to ask for the deletion of the account.
 export const legalLinks = () => { const base = publicSiteBase(); return `<nav class="legal-links" aria-label="Informazioni legali"><a href="${base}privacy.html" target="_blank" rel="noopener">Informativa sulla privacy</a><a href="${base}termini.html" target="_blank" rel="noopener">Termini di utilizzo</a><a href="${base}elimina-account.html" target="_blank" rel="noopener">Elimina l’account</a></nav>`; };
+const SYNC_KIND_LABEL = { local: 'Salvata in questo browser', unsaved: 'Modifiche non salvate', pending: 'Sincronizzazione in attesa', synced: 'Sincronizzata', conflict: 'Conflitto', error: 'Errore', foreign: 'Di un altro account', unlinked: 'Solo su questo dispositivo' };
+// The state of the online copy of the career being played, in words: saved here, waiting, synced, conflict, error.
+export function syncStatusLine(sync) {
+  if (!sync) return '';
+  return `<p class="sync-status sync-${esc(sync.kind)}" role="status" data-sync-status="${esc(sync.kind)}"><b>${esc(sync.label ?? SYNC_KIND_LABEL[sync.kind])}</b>${sync.detail ? ` <small>${esc(sync.detail)}</small>` : ''}</p>`;
+}
+const CONFLICT_TEXT = {
+  'remote-changed': ['Su un altro dispositivo c’è una versione più recente di questa carriera', 'Nulla è stato sovrascritto. Scegli quale tenere.'],
+  'unlinked-remote': ['Nel tuo account c’è già una carriera con questo identificativo', 'Questa copia non è collegata a quella online e non si può sapere quale sia la più avanzata: scegli tu.'],
+  'remote-missing': ['La copia online di questa carriera non c’è più', 'È stata eliminata dal tuo account. Puoi rimettere online questa copia o tenerla soltanto qui.'],
+  'stale-copy': ['Questa copia è più indietro di quella online', 'Non è stata caricata. Puoi usare la versione online, oppure sostituirla (resta tra le versioni precedenti).'],
+  'behind-online': ['Questa copia è più indietro della carriera online', 'Il server l’ha rifiutata per non cancellare i progressi. Scegli quale tenere.'],
+  'base-ahead': ['Non si può verificare da quale versione online deriva questa copia', 'Per sicurezza non è stata caricata. Scegli quale tenere.'],
+  'slot-mismatch': ['Online c’è un’altra carriera in questo spazio', 'Non è stato toccato nulla.']
+};
+function conflictCard(item) {
+  const [title, hint] = CONFLICT_TEXT[item.kind] ?? CONFLICT_TEXT['remote-changed'];
+  const remote = item.remote ? `Online: revisione ${esc(item.remote.revision)}${item.remote.updatedAt ? ` del ${esc(when(item.remote.updatedAt))}` : ''}. ` : '';
+  const ref = `data-conflict-career="${esc(item.careerId)}"`;
+  return `<div class="account-conflict" role="alert" data-conflict-kind="${esc(item.kind)}"><strong>${esc(title)}</strong><small>${remote}${esc(hint)}</small><div class="setting-actions">${item.remote ? `<button class="primary-button" data-conflict="download" ${ref}>Usa la versione online</button>` : ''}<button class="secondary-button" data-conflict="keep" ${ref}>${item.remote ? 'Sostituisci online con questa' : 'Rimetti online questa copia'}</button><button class="secondary-button" data-conflict="apart" ${ref}>Tieni solo qui</button></div></div>`;
+}
+function isolationCard(sync) {
+  if (!sync || !['foreign', 'unlinked'].includes(sync.kind)) return '';
+  const foreign = sync.kind === 'foreign';
+  return `<div class="account-conflict account-isolation" role="status" data-isolation="${esc(sync.kind)}"><strong>${foreign ? `La carriera in corso è collegata all’account «${esc(sync.owner)}»` : 'La carriera in corso è solo su questo dispositivo'}</strong><small>${foreign ? 'Non viene caricata in questo account senza una tua scelta. La copia dell’altro account non viene toccata.' : 'Non viene portata online da sola: decidi tu se collegarla a questo account.'}</small><div class="setting-actions"><button class="primary-button" data-account-action="link">${foreign ? 'Collega a questo account' : 'Porta online su questo account'}</button><button class="secondary-button" data-account-action="keep-local">Tieni solo qui</button></div></div>`;
+}
+function historyList(account, slot) {
+  if (account.history?.slot !== slot) return '';
+  if (account.history.error) return `<p class="menu-error" role="alert">${esc(account.history.error)}</p>`;
+  if (!account.history.items) return '<p class="parliament-note" role="status">Caricamento delle versioni precedenti…</p>';
+  if (!account.history.items.length) return '<p class="quiet-copy">Nessuna versione precedente: compaiono quando una versione online viene sostituita.</p>';
+  return `<ul class="history-list" aria-label="Versioni precedenti">${account.history.items.map(item => `<li><span><b>Revisione ${esc(item.revision)}</b> · settimana ${esc(item.meta?.week ?? item.progress?.[1] ?? '—')} · ${esc(item.meta?.gameDate ? formatDate(item.meta.gameDate) : item.progress?.[0] ? formatDate(item.progress[0]) : '')}<small> · sostituita il ${esc(when(item.archivedAt))}${item.reason === 'ripristino' ? ' · conservata da un ripristino' : ''}</small></span><button class="secondary-button" data-history-restore="${esc(item.id)}" data-history-slot="${esc(slot)}">Ripristina</button></li>`).join('')}</ul>`;
+}
+function emailSection(account) {
+  const info = account.info?.email ?? null;
+  const service = account.service ?? {};
+  const note = service.email ? '' : '<small>L’invio delle email non è ancora attivo su questo sito: l’indirizzo viene salvato e il messaggio di verifica partirà quando il servizio sarà configurato.</small>';
+  if (info?.verified) return `<div class="account-email" data-account-email="verified"><strong>Email verificata</strong><small>${esc(info.masked)} · serve a recuperare la password se la dimentichi.</small></div>`;
+  const form = `<form class="account-form" data-account-form="email"><label>Indirizzo email<input name="email" type="email" autocomplete="email" required maxlength="254" ${info ? `placeholder="${esc(info.masked)}"` : ''} /></label><label>Password dell’account<input name="password" type="password" autocomplete="current-password" required minlength="8" /></label><button class="secondary-button" type="submit" ${account.busy ? 'disabled' : ''}>${info ? 'Cambia indirizzo e invia la verifica' : 'Collega l’email'}</button></form>`;
+  const resend = info ? `<form class="account-form" data-account-form="resend"><label>Password dell’account<input name="password" type="password" autocomplete="current-password" required minlength="8" /></label><button class="secondary-button" type="submit" ${account.busy ? 'disabled' : ''}>Invia di nuovo il messaggio di verifica</button></form>` : '';
+  return `<details class="account-email" data-remember="account-email" data-account-email="${info ? 'unverified' : 'none'}" ${info ? 'open' : ''}><summary>${info ? `Email da verificare · ${esc(info.masked)}` : 'Email per recuperare la password (facoltativa)'}</summary><p class="parliament-note">Senza un’email verificata la password non si può recuperare. L’indirizzo serve soltanto a questo e non è mostrato ad altri.</p>${note}${form}${resend}</details>`;
+}
 function accountView(account = {}) {
   const note = account.error ? `<p class="menu-error" role="alert">${esc(account.error)}</p>` : account.message ? `<p class="account-message" role="status">${esc(account.message)}</p>` : '';
   if (account.status === 'none' || (!account.status && !account.available)) return `<h2>Account e salvataggi online</h2><p class="section-subtitle">Gli account funzionano sul sito pubblicato. Da qui la partita resta salvata in questo browser: puoi esportarla su file dal menu Carica partita.</p>${note}`;
   // The service did not answer: said at once, with a new attempt and the local start (never a dead end).
   const down = !account.user && account.status === 'unreachable' ? `<div class="account-unreachable" role="status"><strong>Il servizio account non risponde in questo momento</strong><small>Puoi iniziare subito senza account: la partita resta salvata in questo browser e potrai collegarla al tuo account quando il servizio torna raggiungibile.</small><div class="setting-actions"><button class="primary-button" data-menu-action="start-local">Inizia senza account</button><button class="secondary-button" data-account-action="probe">Riprova</button></div></div>` : '';
   const checking = !account.user && account.status === 'checking' ? '<p class="parliament-note" role="status">Verifica del servizio account in corso…</p>' : '';
+  const service = account.service ?? {};
+  if (!account.user && account.mode === 'reset') return `<h2>Scegli una nuova password</h2>${account.reset ? `<p class="section-subtitle">Per l’account <strong>${esc(account.reset.username)}</strong>. La password non lascia il tuo browser in chiaro.</p><form class="account-form" data-account-form="reset"><label>Nuova password<input name="password" type="password" autocomplete="new-password" required minlength="8" placeholder="Almeno 8 caratteri" /></label><label>Ripeti la nuova password<input name="confirm" type="password" autocomplete="new-password" required minlength="8" /></label><button class="primary-button" type="submit" ${account.busy ? 'disabled' : ''}>${account.busy === 'reset' ? 'Salvataggio…' : 'Cambia la password'}</button></form>` : '<p class="section-subtitle">Il collegamento non è valido o è scaduto.</p>'}${note}<div class="setting-actions"><button class="secondary-button" data-menu="account" data-account-mode="recover">Chiedi un nuovo collegamento</button><button class="secondary-button" data-menu="account" data-account-mode="login">Torna all’accesso</button></div>${legalLinks()}`;
+  if (!account.user && account.mode === 'recover') return `<h2>Recupero della password</h2><p class="section-subtitle">Scrivi l’indirizzo email collegato all’account: se è verificato ti arriva un messaggio con il collegamento per scegliere una nuova password.</p>${service.email ? '' : '<p class="parliament-note" role="status">L’invio delle email non è ancora attivo su questo sito: per ora il recupero non può partire.</p>'}<form class="account-form" data-account-form="recover"><label>Indirizzo email<input name="email" type="email" autocomplete="email" required maxlength="254" /></label><button class="primary-button" type="submit" ${account.busy || !service.email ? 'disabled' : ''}>${account.busy === 'recover' ? 'Invio…' : 'Invia il collegamento'}</button></form>${note}<p class="parliament-note">Gli account creati senza email non possono usare il recupero: la password non può essere ricostruita da nessuno.</p><div class="setting-actions"><button class="secondary-button" data-menu="account" data-account-mode="login">Torna all’accesso</button></div>${legalLinks()}`;
   if (!account.user) return `<h2>Account e salvataggi online</h2><p class="section-subtitle">Con un account le tue carriere si salvano online e le ritrovi su qualsiasi dispositivo. Il browser ne conserva comunque una copia per giocare anche senza connessione.</p>${down}${checking}
     <div class="account-forms ${account.mode ? `focus-${esc(account.mode)}` : ''}">
-      <form class="account-form" data-account-form="login"><h3>Accedi</h3><label>Nome utente<input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required minlength="3" maxlength="24" /></label><label>Password<input name="password" type="password" autocomplete="current-password" required minlength="8" /></label><button class="${account.mode === 'register' ? 'secondary-button' : 'primary-button'}" type="submit" ${account.busy ? 'disabled' : ''}>${account.busy === 'login' ? 'Accesso in corso…' : 'Accedi'}</button></form>
-      <form class="account-form" data-account-form="register"><h3>Crea un account</h3><label>Nome utente<input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required minlength="3" maxlength="24" placeholder="3–24 caratteri: a-z, 0-9, . _ -" /></label><label>Password<input name="password" type="password" autocomplete="new-password" required minlength="8" placeholder="Almeno 8 caratteri" /></label><label>Ripeti la password<input name="confirm" type="password" autocomplete="new-password" required minlength="8" /></label><button class="${account.mode === 'register' ? 'primary-button' : 'secondary-button'}" type="submit" ${account.busy ? 'disabled' : ''}>${account.busy === 'register' ? 'Creazione in corso…' : 'Crea l’account'}</button><small>Non serve un indirizzo email. La password non lascia mai il tuo browser in chiaro: conservala con cura, non può essere recuperata.</small></form>
+      <form class="account-form" data-account-form="login"><h3>Accedi</h3><label>Nome utente<input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required minlength="3" maxlength="24" /></label><label>Password<input name="password" type="password" autocomplete="current-password" required minlength="8" /></label><button class="${account.mode === 'register' ? 'secondary-button' : 'primary-button'}" type="submit" ${account.busy ? 'disabled' : ''}>${account.busy === 'login' ? 'Accesso in corso…' : 'Accedi'}</button><button type="button" class="text-link" data-menu="account" data-account-mode="recover">Password dimenticata?</button></form>
+      <form class="account-form" data-account-form="register"><h3>Crea un account</h3><label>Nome utente<input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required minlength="3" maxlength="24" placeholder="3–24 caratteri: a-z, 0-9, . _ -" /></label><label>Email ${service.emailRequired ? '' : '(facoltativa)'}<input name="email" type="email" autocomplete="email" maxlength="254" ${service.emailRequired ? 'required' : ''} placeholder="Per recuperare la password" /></label><label>Password<input name="password" type="password" autocomplete="new-password" required minlength="8" placeholder="Almeno 8 caratteri" /></label><label>Ripeti la password<input name="confirm" type="password" autocomplete="new-password" required minlength="8" /></label><button class="${account.mode === 'register' ? 'primary-button' : 'secondary-button'}" type="submit" ${account.busy ? 'disabled' : ''}>${account.busy === 'register' ? 'Creazione in corso…' : 'Crea l’account'}</button><small>L’email serve soltanto a recuperare la password e va confermata con un collegamento. Senza email la password non può essere recuperata. La password non lascia mai il tuo browser in chiaro: conservala con cura.</small></form>
     </div>${note}${legalLinks()}`;
-  const rows = (account.saves ?? []).map(save => `<article class="slot-row ${save.slot === account.currentSlot ? 'is-current' : ''}"><div><strong>${esc(save.name || save.meta?.player || 'Carriera')}</strong><span>${esc(save.meta?.role ?? 'Senza incarico')} · ${esc(save.meta?.party ?? '')}${save.meta?.difficulty ? ` · ${esc(save.meta.difficulty)}` : ''}</span><small>Settimana ${esc(save.meta?.week ?? '—')} · ${esc(save.meta?.gameDate ? formatDate(save.meta.gameDate) : '')} · online dal ${esc(when(save.updatedAt))} · revisione ${esc(save.revision)}</small></div><button class="primary-button" data-cloud-load="${esc(save.slot)}">Carica</button><button class="icon-text-button" data-cloud-delete="${esc(save.slot)}" aria-label="Elimina online ${esc(save.name || 'carriera')}">${glyph('alert', 15)} Elimina</button></article>`).join('');
-  const conflict = account.conflict ? `<div class="account-conflict" role="alert"><strong>Su un altro dispositivo c’è una versione più recente di questa carriera</strong><small>Online: revisione ${esc(account.conflict.remote?.revision)} del ${esc(when(account.conflict.remote?.updatedAt))}. Scegli quale tenere.</small><div class="setting-actions"><button class="primary-button" data-conflict="download">Usa la versione online</button><button class="secondary-button" data-conflict="overwrite">Sovrascrivi con questa</button></div></div>` : '';
-  return `<h2>Account e salvataggi online</h2><p class="section-subtitle">Connesso come <strong>${esc(account.user.username)}</strong>. La carriera in corso si sincronizza da sola dopo ogni salvataggio${account.lastSync ? ` · ultima sincronizzazione ${esc(when(account.lastSync))}` : ''}.</p>
-    ${conflict}
+  const rows = (account.saves ?? []).map(save => `<article class="slot-row ${save.slot === account.currentSlot ? 'is-current' : ''}"><div><strong>${esc(save.name || save.meta?.player || 'Carriera')}</strong><span>${esc(save.meta?.role ?? 'Senza incarico')} · ${esc(save.meta?.party ?? '')}${save.meta?.difficulty ? ` · ${esc(save.meta.difficulty)}` : ''}</span><small>Settimana ${esc(save.meta?.week ?? '—')} · ${esc(save.meta?.gameDate ? formatDate(save.meta.gameDate) : '')} · online dal ${esc(when(save.updatedAt))} · revisione ${esc(save.revision)}</small></div><button class="primary-button" data-cloud-load="${esc(save.slot)}">Carica</button><button class="secondary-button" data-history-open="${esc(save.slot)}" aria-expanded="${account.history?.slot === save.slot}">Versioni precedenti</button><button class="icon-text-button" data-cloud-delete="${esc(save.slot)}" aria-label="Elimina online ${esc(save.name || 'carriera')}">${glyph('alert', 15)} Elimina</button></article>${historyList(account, save.slot)}`).join('');
+  const conflicts = (account.conflicts ?? (account.conflict ? [account.conflict] : [])).map(conflictCard).join('');
+  return `<h2>Account e salvataggi online</h2><p class="section-subtitle">Connesso come <strong>${esc(account.user.username)}</strong>. Ogni salvataggio nel browser viene messo in coda e sincronizzato quando è possibile${account.lastSync ? ` · ultima sincronizzazione ${esc(when(account.lastSync))}` : ''}.</p>
+    ${syncStatusLine(account.sync)}${conflicts}${conflicts ? '' : isolationCard(account.sync)}
     <div class="setting-actions"><button class="primary-button" data-account-action="sync" ${account.busy ? 'disabled' : ''}>${account.busy === 'sync' ? 'Sincronizzazione…' : 'Salva ora online'}</button><button class="secondary-button" data-account-action="refresh">Aggiorna elenco</button><button class="secondary-button" data-account-action="logout">Esci</button></div>
-    <div class="slot-list">${rows || '<p class="quiet-copy">Nessuna carriera salvata online: la prossima volta che salvi, la carriera in corso comparirà qui.</p>'}</div>${note}
+    <div class="slot-list">${rows || '<p class="quiet-copy">Nessuna carriera salvata online: la carriera in corso comparirà qui quando la colleghi a questo account.</p>'}</div>${note}
+    ${emailSection(account)}
     <details class="account-delete" data-remember="account-delete"><summary>Elimina il mio account</summary>
-      <p class="parliament-note">Vengono eliminati subito l’account, le carriere salvate online e le sessioni aperte. Non si può annullare. Le partite salvate in questo browser restano sul dispositivo: si eliminano dal menu Carica partita.</p>
+      <p class="parliament-note">Vengono eliminati subito l’account, le carriere salvate online con le loro versioni precedenti, l’email e le sessioni aperte. Non si può annullare. Le partite salvate in questo browser restano sul dispositivo: si eliminano dal menu Carica partita.</p>
       <form class="account-form" data-account-form="delete"><label>Password<input name="password" type="password" autocomplete="current-password" required minlength="8" /></label><label>Scrivi ELIMINA per confermare<input name="confirm" autocomplete="off" autocapitalize="characters" spellcheck="false" required pattern="ELIMINA" /></label><button class="secondary-button danger" type="submit" ${account.busy ? 'disabled' : ''}>${account.busy === 'delete' ? 'Eliminazione in corso…' : 'Elimina definitivamente l’account'}</button></form>
     </details>${legalLinks()}`;
 }
@@ -168,7 +214,7 @@ export function renderMainMenu(menu, context) {
       <h1 class="menu-brand"><img class="brand-logo menu-logo" src="icons/logo-politicando-640.webp" srcset="icons/logo-politicando-240.webp 240w, icons/logo-politicando-640.webp 640w" sizes="(max-width:700px) 120px, 200px" width="200" height="200" alt="POLITICANDO 2026" decoding="async" /></h1>
       <p class="menu-tagline">Una carriera nella politica italiana</p>
       ${newCareerCard()}
-      ${hasCareer ? continueCard(meta, lastSaved, unsaved, identity) : ''}
+      ${hasCareer ? continueCard(meta, lastSaved, unsaved, identity) : ''}${hasCareer && context.account?.sync ? syncStatusLine(context.account.sync) : ''}
       ${MENU_GROUPS.map(group).join('')}
       <p class="menu-footnote">Dati reali verificati · simulazione dichiarata · ${context.account?.user ? `salvataggi online come ${esc(context.account.user.username)}` : 'salvataggi nel browser, online con un account'}</p>
     </div>

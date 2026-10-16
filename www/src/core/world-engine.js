@@ -1,9 +1,9 @@
-import { uniqueId } from './ids.js?v=20261016-3';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261016-3';
-import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261016-3';
-import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261016-3';
-import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261016-3';
-import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261016-3';
+import { uniqueId } from './ids.js?v=20261016-6';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261016-6';
+import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261016-6';
+import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261016-6';
+import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261016-6';
+import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261016-6';
 export { houseEffect };
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
@@ -554,7 +554,7 @@ function publishRealPoll(world, real, { date, stats = {} }) {
     government: null, executive: null, mood: null, why: [], others, othersSource: scenario ? 'scenario' : 'real', emerging: [], moves: [],
     ...(scenario
       ? { source: SIM, scenario }
-      : { source: 'real', real: { id: real.id, label: real.label, publishedAt: real.publishedAt, referenceDate: real.referenceDate ?? null, deltaNote: real.deltaNote ?? null, fieldworkFrom: real.fieldworkFrom ?? null, fieldworkTo: real.fieldworkTo ?? null, sourceUrl: real.sourceUrl, sourceName: real.sourceName, method: real.method ?? null } })
+      : { source: 'real', real: { id: real.id, label: real.label, publishedAt: real.publishedAt, verificationStatus: real.verificationStatus ?? 'verificato', verifiedAt: real.verifiedAt ?? null, transcribedAt: real.transcribedAt ?? null, referenceDate: real.referenceDate ?? null, deltaNote: real.deltaNote ?? null, fieldworkFrom: real.fieldworkFrom ?? null, fieldworkTo: real.fieldworkTo ?? null, sourceUrl: real.sourceUrl, sourceName: real.sourceName, method: real.method ?? null } })
   };
   world.polls = [...world.polls, poll].slice(-HISTORY);
   // The average of the observatory starts from the real one; the institutes begin to publish from the first simulated week.

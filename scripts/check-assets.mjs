@@ -89,8 +89,11 @@ const worker = await readFile(join(root, 'worker.js'), 'utf8');
 assert.ok(files.includes(wrangler.main), 'Il Worker principale esiste.');
 assert.equal(wrangler.assets?.directory, '.', 'Gli asset sono la radice del progetto (filtrata da .assetsignore).');
 assert.equal(wrangler.assets?.binding, 'ASSETS'); assert.deepEqual(wrangler.assets?.run_worker_first, ['/api/*'], 'Il Worker risponde solo a /api/*: il resto sono asset.');
-const bindings = new Set([...(wrangler.kv_namespaces ?? []).map(item => item.binding), ...(wrangler.d1_databases ?? []).map(item => item.binding), wrangler.assets?.binding]);
-for (const used of new Set([...worker.matchAll(/\benv\.([A-Z_]+)\b/g)].map(match => match[1]))) assert.ok(bindings.has(used) || used === 'ADMIN_SETUP_CODE', `env.${used} è letto dal Worker ma non è dichiarato in wrangler.jsonc.`);
+const bindings = new Set([...(wrangler.kv_namespaces ?? []).map(item => item.binding), ...(wrangler.d1_databases ?? []).map(item => item.binding), wrangler.assets?.binding, ...Object.keys(wrangler.vars ?? {})]);
+// Secrets of the Worker (never in the project) and the one hook for tests (a function: a Worker's variables are strings, so it cannot exist in production).
+const WORKER_SECRETS = new Set(['ADMIN_SETUP_CODE', 'RESEND_API_KEY', 'EMAIL_SEND']);
+assert.ok(['EMAIL_FROM', 'PUBLIC_BASE_URL', 'ACCOUNT_EMAIL_REQUIRED'].every(name => name in (wrangler.vars ?? {})) && !('RESEND_API_KEY' in (wrangler.vars ?? {})), 'Le impostazioni dell’email sono dichiarate; la chiave del provider è un secret, non una variabile.');
+for (const used of new Set([...worker.matchAll(/\benv\.([A-Z_]+)\b/g)].map(match => match[1]))) assert.ok(bindings.has(used) || WORKER_SECRETS.has(used), `env.${used} è letto dal Worker ma non è dichiarato in wrangler.jsonc.`);
 assert.ok(worker.includes('ADMIN_SETUP_CODE') && !/ADMIN_SETUP_CODE['"]?\s*[:=]\s*['"][^'"]{3,}/.test(worker + stripped), 'Il codice di attivazione è un secret del Worker, non scritto nel progetto.');
 assert.ok(files.includes('migrations/0001_accounts.sql') && wrangler.d1_databases?.every(item => item.migrations_dir && files.some(path => path.startsWith(`${item.migrations_dir}/`))), 'Le migrazioni D1 ci sono.');
 for (const route of ['/api/admin', '/api/admin/session', '/api/account/register', '/api/account/login', '/api/saves']) assert.ok(worker.includes(route), `Il Worker gestisce ${route}.`);

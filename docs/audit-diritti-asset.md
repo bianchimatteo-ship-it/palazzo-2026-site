@@ -1,0 +1,24 @@
+# Diritti degli asset — verifiche e azioni ancora necessarie (16/10/2026)
+
+Integra `docs/privacy-e-asset.md` (inventario di partenza, non rifatto). **Non è un parere legale.** Qui sono elencate soltanto le verifiche ancora aperte; nessun asset è stato rimosso né dichiarato lecito. «Licenza documentata» = esiste nel repository un testo di licenza che copre l'asset; «da confermare» = serve una dichiarazione o un documento del titolare.
+
+| Asset | Dove | Licenza documentata? | Che cosa manca | Chi |
+|---|---|---|---|---|
+| Marchio e icone «POLITICANDO» | `icons/*`, `favicon.*`, `src/ui/illustrations.js` (logo) | **No** | Dichiarazione di titolarità e licenza (autore, data, se generati con strumenti di terzi); ricerca di anteriorità sul nome «Politicando» per le classi pertinenti prima di un deposito o di una pubblicazione negli store | Titolare |
+| Logo di Futuro Nazionale | `src/data/real/assets/logos/futuro-nazionale.png`, fonte indicata `futuronazionale.it/il-logo/` | **No** (`logoVerified: true` dice solo che è il logo ufficiale) | Permesso scritto del partito all'uso nel gioco, anche commerciale e negli store, oppure sostituzione con un segno generato come per gli altri 74 partiti. Il gioco non lo rimuove da solo | Titolare / partito |
+| Loghi caricati o modificati in Admin | KV `archivio-condiviso` (`logos`, con `sourceUrl`, `origin: 'admin'`), `logo-store.js` nel browser | **No** (nessun campo di licenza) | Per ogni logo: chi detiene i diritti, base dell'uso, fonte. Oggi l'Admin accetta un logo per URL o file senza chiedere né registrare la licenza: **azione consigliata** (non eseguita qui, per non cambiare un flusso funzionante) aggiungere i campi `licence`/`rightsHolder` e mostrarli in Admin; i loghi caricati dai giocatori restano nel loro browser e sono responsabilità di chi li carica (l'informativa lo dice) | Titolare |
+| Marchi degli altri partiti/movimenti | — | n.a. | Nessun logo di terzi incluso: segno generato da sigla e colori. Da non cambiare senza permessi. Il colore primario assegnato a un partito reale non è un marchio ma resta una scelta di rappresentazione da non presentare come ufficiale | — |
+| «LA POLITICA 24» (testata e logo) | `src/ui/illustrations.js` (`lp24Logo`), `src/data/simulation/news-rules.js` | **No** | Verifica di disponibilità del nome (testate e marchi) e dichiarazione che il logo è originale. Se ci fosse omonimia con una testata reale va rinominata | Titolare |
+| Illustrazioni generate nel codice (SVG) | `src/ui/illustrations.js`, `src/ui/visuals.js`, icone in `visuals.js` | **No** (originali, ma senza dichiarazione) | Dichiarazione che sono opere del progetto e con quale licenza si distribuiscono; verifica che nessun glifo derivi da un set con licenza (la sorgente è nel codice, non in file di terzi) | Titolare |
+| Caratteri DM Sans, Manrope, Newsreader | `src/fonts/*.woff2` | **Sì** — SIL OFL 1.1, testo in `src/fonts/LICENSES.txt` | Nessuna azione. Alla ridistribuzione nell'app mantenere il file delle licenze nella build | — |
+| Dati reali (testi e numeri) | `src/data/real/*.json` | Parziale (fonti istituzionali con URL) | Condizioni di riutilizzo di ciascuna fonte (non verificabili da questo ambiente: rete bloccata); per la Supermedia YouTrend/AGI l'autorizzazione a riportare i numeri, oltre alla verifica sul testo (vedi `docs/audit-finale.md`) | Titolare |
+| Fotografie di persone | — | n.a. | Nessuna inclusa | — |
+
+## Informativa privacy: campi che richiedono dati reali del titolare
+Non sono stati inventati. Restano `data-controller-todo` in `privacy.html`/`termini.html`/`elimina-account.html` (verificabili con `node scripts/check-account-deletion.mjs --release`): `titolare` (denominazione e recapito), `infrastruttura` (ruolo di Cloudflare, accordi, trasferimenti extra-SEE, base giuridica, età minima), `email` (**nuovo**: fornitore dell'invio email, ruolo, trasferimenti), `conservazione` (account inattivi), `asset`, `foro`, `verifica-identita`.
+
+## Azioni raccomandate in ordine
+1. Permesso del partito per il logo di Futuro Nazionale, oppure togliere l'asset (decisione del titolare).
+2. Campi licenza/titolare per i loghi dell'Admin (piccola modifica all'Admin, da pianificare).
+3. Dichiarazioni di titolarità per marchio, icone, illustrazioni e testata.
+4. Compilare i campi del titolare nell'informativa e rieseguire `check-account-deletion --release`.

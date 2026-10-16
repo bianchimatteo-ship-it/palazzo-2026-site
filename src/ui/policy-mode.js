@@ -1,15 +1,15 @@
 // Public policy in the interface: designing a measure, its projected bill, the Government's desk,
 // the budget law and the state of the country's policy areas, security and accounts.
-import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, FINANCING, GOVERNMENT_LINES, INSTRUMENT_KINDS, INTENSITY, MINISTRIES, POLICY_AREAS, TERRITORIAL_TARGETS } from '../data/simulation/policy-rules.js?v=20261016-3';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261016-3';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261016-3';
-import { areaTable, budgetImpact, measureDesign, normalizeBudgetPlan, projectMeasure } from '../core/society-engine.js?v=20261016-3';
-import { BUDGET_SECTORS, EU_CALLS, FISCAL_LEVERS, PROJECT_RULES, PROJECT_TYPES } from '../data/simulation/project-rules.js?v=20261016-3';
-import { callRequirement, euView, isActive, projectQuote, projectView } from '../core/project-engine.js?v=20261016-3';
-import { accordCriterion, accordKindLabel, activeMinisters, budgetReactions, groupProfile, partnerSatisfaction, stageWait } from '../core/parliament-engine.js?v=20261016-3';
-import { GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20261016-3';
-import { glyph } from './visuals.js?v=20261016-3';
-import { esc, stateBadge } from './charts.js?v=20261016-3';
+import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, FINANCING, GOVERNMENT_LINES, INSTRUMENT_KINDS, INTENSITY, MINISTRIES, POLICY_AREAS, TERRITORIAL_TARGETS } from '../data/simulation/policy-rules.js?v=20261016-6';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261016-6';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261016-6';
+import { areaTable, budgetImpact, measureDesign, normalizeBudgetPlan, projectMeasure } from '../core/society-engine.js?v=20261016-6';
+import { BUDGET_SECTORS, EU_CALLS, FISCAL_LEVERS, PROJECT_RULES, PROJECT_TYPES } from '../data/simulation/project-rules.js?v=20261016-6';
+import { callRequirement, euView, isActive, projectQuote, projectView } from '../core/project-engine.js?v=20261016-6';
+import { accordCriterion, accordKindLabel, activeMinisters, budgetReactions, groupProfile, partnerSatisfaction, stageWait } from '../core/parliament-engine.js?v=20261016-6';
+import { GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20261016-6';
+import { glyph } from './visuals.js?v=20261016-6';
+import { esc, stateBadge } from './charts.js?v=20261016-6';
 
 const num = (value, digits = 1) => Number(value ?? 0).toLocaleString('it-IT', { maximumFractionDigits: digits });
 const signed = (value, digits = 1) => `${value > 0 ? '+' : value < 0 ? '−' : '±'}${num(Math.abs(value ?? 0), digits)}`;
@@ -56,6 +56,11 @@ export function designFromForm(form) {
   const data = new FormData(form);
   return measureDesign({ area: data.get('area'), instrument: data.get('instrument'), intensity: data.get('intensity'), financing: data.get('financing'), cutArea: data.get('cutArea'), target: data.get('target'), segment: data.get('segment') });
 }
+// One line of the projected bill: what it is, the value before and after the measure, and in words whether it gets better or worse (never the colour alone).
+const beforeAfter = (label, before, after, delta, higherIsBetter, note = '', alert = false) => {
+  const better = Math.abs(delta) < 0.005 ? 0 : (delta > 0) === higherIsBetter ? 1 : -1;
+  return `<li class="${alert || better < 0 ? 'bad' : better > 0 ? 'good' : ''}"><span class="ba-label">${esc(label)}</span><span class="ba-values">${esc(before)} <i aria-hidden="true">→</i> <b>${esc(after)}</b></span><span class="ba-verdict">${better > 0 ? '▲ migliora' : better < 0 ? '▼ peggiora' : '● invariato'}</span>${note ? `<small class="ba-note">${esc(note)}</small>` : ''}</li>`;
+};
 // The projected bill of a design, readable before any vote.
 export function policyPreview(society, design) {
   if (!society || !design) return '';
@@ -68,14 +73,17 @@ export function policyPreview(society, design) {
   const people = (list, tone) => list.length ? list.map(item => `<li class="${tone}"><strong>${esc(item.label)}</strong><span>${esc(item.reason ?? '')}</span><b>${signed(item.delta)}</b></li>`).join('') : `<li class="quiet">${tone === 'good' ? 'Nessun gruppo ne beneficia in modo evidente' : 'Nessun gruppo penalizzato in modo evidente'}</li>`;
   const security = p.security ? `<div class="preview-security">${glyph('shield', 14)} Sicurezza a regime: criminalità ${num(society.security.crime, 0)} → <b>${num(p.crimeAfter, 0)}</b> · sicurezza percepita ${num(society.security.perceived, 0)} → <b>${num(p.perceivedAfter, 0)}</b></div>` : '';
   return `<div class="policy-preview">
-    <div class="preview-kpis">
-      <div><small>COSTO</small><strong>${num(p.billions)} mld</strong><span>${num(p.cost)} punti di margine</span></div>
-      <div class="${p.covered ? '' : 'bad'}"><small>MARGINE DI BILANCIO</small><strong>${num(finance.headroom, 0)} → ${num(p.headroomAfter, 0)}</strong><span>${p.covered ? 'coperture trovate' : 'senza coperture: effetti ridotti'}</span></div>
-      <div class="${over ? 'bad' : ''}"><small>DEFICIT</small><strong>${num(society.economy.deficit, 2)}% → ${num(p.deficitAfter, 2)}%</strong><span>${over ? 'oltre il 3%: rischio richiamo europeo' : 'entro la soglia europea'}</span></div>
-      <div><small>SPREAD</small><strong>${num(finance.spread, 0)} → ${num(p.spreadAfter, 0)}</strong><span>punti base (simulati)</span></div>
-      <div class="${p.satisfactionDelta < 0 ? 'bad' : 'good'}"><small>CITTADINI A REGIME</small><strong>${signed(p.satisfactionDelta)}</strong><span>soddisfazione media</span></div>
-      <div><small>${esc(p.areaLabel.toUpperCase())}</small><strong>${num(p.areaBefore, 0)} → ${num(p.areaAfter, 0)}</strong><span>in ${p.phaseIn} settimane${p.lasting ? '' : ', poi svanisce in parte'}</span></div>
+    <div class="preview-headline">
+      <div class="preview-cost"><small>COSTO</small><strong>${num(p.billions)} mld</strong><span>${num(p.cost)} punti di margine</span></div>
+      <div class="preview-cover ${p.covered ? 'good' : 'bad'}"><small>COPERTURA</small><strong>${p.covered ? 'Trovata' : 'Mancante'}</strong><span>${p.covered ? esc(FINANCING[p.design.financing].detail) : 'senza coperture gli effetti si riducono'}</span></div>
     </div>
+    <ul class="preview-ba" aria-label="Prima e dopo la misura">
+      ${beforeAfter('Margine di bilancio', num(finance.headroom, 0), num(p.headroomAfter, 0), p.headroomAfter - finance.headroom, true, 'punti di margine')}
+      ${beforeAfter('Deficit', `${num(society.economy.deficit, 2)}%`, `${num(p.deficitAfter, 2)}%`, p.deficitAfter - society.economy.deficit, false, over ? 'oltre il 3%: rischio richiamo europeo' : 'entro la soglia europea', over)}
+      ${beforeAfter('Spread', num(finance.spread, 0), num(p.spreadAfter, 0), p.spreadAfter - finance.spread, false, 'punti base (simulati)')}
+      ${beforeAfter(p.areaLabel, num(p.areaBefore, 0), num(p.areaAfter, 0), p.areaAfter - p.areaBefore, true, `a regime in ${p.phaseIn} settimane${p.lasting ? '' : ', poi svanisce in parte'}`)}
+      <li class="${p.satisfactionDelta < 0 ? 'bad' : 'good'}"><span class="ba-label">Cittadini a regime</span><span class="ba-values"><b>${signed(p.satisfactionDelta)}</b> <small>soddisfazione media</small></span><span class="ba-verdict">${p.satisfactionDelta < 0 ? '▼ peggiora' : p.satisfactionDelta > 0 ? '▲ migliora' : '● invariata'}</span></li>
+    </ul>
     ${security}
     <div class="preview-people"><div><span class="section-kicker">CHI CI GUADAGNA</span><ul>${people(p.winners, 'good')}</ul></div><div><span class="section-kicker">CHI CI PERDE</span><ul>${people(p.losers, 'bad')}</ul></div></div>
     <div class="preview-regions"><span>${glyph('map', 14)} Più beneficiate: ${best.map(([name, delta]) => `<b>${esc(name)}</b> ${signed(delta)}`).join(' · ')}</span><span>${glyph('map', 14)} Meno toccate: ${worst.map(([name, delta]) => `<b>${esc(name)}</b> ${signed(delta)}`).join(' · ')}</span></div>
@@ -125,11 +133,15 @@ export function budgetPreview(society, plan, parliament = null) {
   const reactions = parliament ? budgetReactions(parliament, b.plan) : [];
   const against = reactions.filter(item => item.score <= -0.15).slice(0, 3), favour = reactions.filter(item => item.score >= 0.15).slice(0, 3);
   const eco = (name, value, digits = 2) => `<span>${esc(name)} <b class="${value > 0.005 ? 'good' : value < -0.005 ? 'bad' : ''}">${signed(value, digits)}</b></span>`;
-  return `<div class="policy-preview"><div class="preview-kpis">
-    <div class="${b.overLimit ? 'bad' : ''}"><small>DEFICIT</small><strong>${num(society.economy.deficit, 2)}% → ${num(b.deficitAfter, 2)}%</strong><span>${b.overLimit ? 'oltre il 3%: Bruxelles chiederà correzioni' : 'entro la soglia europea'}</span></div>
-    <div><small>MARGINE PER L’ANNO</small><strong>${num(society.publicFinance.headroom, 0)} → ${num(b.headroomAfter, 0)}</strong><span>spazio per nuove misure e opere</span></div>
-    <div><small>SPESA NETTA</small><strong>${signed(b.spending, 2)}</strong><span>unità di spesa · gettito ${signed(b.revenue, 2)}</span></div>
-    <div><small>ECONOMIA</small><strong class="eco-line">${eco('crescita', b.economy.growth)}${eco('prezzi', b.economy.inflation)}${eco('disoccupazione', b.economy.unemployment)}</strong><span>effetto della manovra (punti)</span></div></div>
+  const ecoRow = (name, value) => `<li class="${value > 0.005 ? (name === 'crescita' ? 'good' : 'bad') : value < -0.005 ? (name === 'crescita' ? 'bad' : 'good') : ''}"><span class="ba-label">${esc(name[0].toUpperCase() + name.slice(1))}</span><span class="ba-values"><b>${signed(value, 2)}</b> <small>punti</small></span><span class="ba-verdict">${Math.abs(value) < 0.005 ? '● invariata' : (value > 0) === (name === 'crescita') ? '▲ migliora' : '▼ peggiora'}</span></li>`;
+  return `<div class="policy-preview"><div class="preview-headline">
+    <div class="preview-cost"><small>SPESA NETTA</small><strong>${signed(b.spending, 2)}</strong><span>unità di spesa · gettito ${signed(b.revenue, 2)}</span></div>
+    <div class="preview-cover ${b.overLimit ? 'bad' : 'good'}"><small>DEFICIT</small><strong>${b.overLimit ? 'Oltre il 3%' : 'Entro la soglia'}</strong><span>${b.overLimit ? 'Bruxelles chiederà correzioni' : 'entro la soglia europea'}</span></div></div>
+    <ul class="preview-ba" aria-label="Prima e dopo la manovra">
+      ${beforeAfter('Deficit', `${num(society.economy.deficit, 2)}%`, `${num(b.deficitAfter, 2)}%`, b.deficitAfter - society.economy.deficit, false, b.overLimit ? 'oltre il 3%' : '', b.overLimit)}
+      ${beforeAfter('Margine per l’anno', num(society.publicFinance.headroom, 0), num(b.headroomAfter, 0), b.headroomAfter - society.publicFinance.headroom, true, 'spazio per nuove misure e opere')}
+      ${ecoRow('crescita', b.economy.growth)}${ecoRow('prezzi', b.economy.inflation)}${ecoRow('disoccupazione', b.economy.unemployment)}
+    </ul>
     <div class="preview-people"><div><span class="section-kicker">PIÙ SODDISFATTI</span><ul>${b.winners.map(id => `<li class="good"><strong>${esc(label(id))}</strong><span>più risorse o meno oneri</span></li>`).join('') || '<li class="quiet">Nessuno in particolare</li>'}</ul></div><div><span class="section-kicker">PROTESTERANNO</span><ul>${b.losers.map(id => `<li class="bad"><strong>${esc(label(id))}</strong><span>tagli o più oneri</span></li>`).join('') || '<li class="quiet">Nessuno in particolare</li>'}</ul></div></div>
     ${parliament ? `<div class="preview-people"><div><span class="section-kicker">IN PARLAMENTO, A FAVORE</span><ul>${favour.map(item => `<li class="good"><strong>${esc(item.name)}</strong><span>${esc(item.reason)}</span></li>`).join('') || '<li class="quiet">Nessun gruppo particolarmente favorevole</li>'}</ul></div><div><span class="section-kicker">IN PARLAMENTO, CONTRARI</span><ul>${against.map(item => `<li class="bad"><strong>${esc(item.name)}</strong><span>${esc(item.reason)}</span></li>`).join('') || '<li class="quiet">Nessun gruppo particolarmente contrario</li>'}</ul></div></div>` : ''}
     <p class="parliament-note">Stime della simulazione, non previsioni reali: gli effetti arrivano settimana dopo settimana su aree, territori e cittadini.</p></div>`;

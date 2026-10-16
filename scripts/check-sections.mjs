@@ -113,6 +113,19 @@ for (const [tab] of CAREER_TABS) {
   assert.ok(html.includes('career-page') && html.includes(`data-section-tab-value="${tab}" aria-selected="true"`), `Carriera: la scheda ${tab} si apre.`);
   assert.ok(clean(html), `Carriera/${tab}: valori non validi.`);
 }
+// The timeline: held now / expected / happened are three separate blocks; the happened ones follow the date of the event, newest first, whatever the order they were recorded in; only what is in the career.
+{
+  const shuffled = { ...state, game: { ...state.game, timeline: [{ id: 'a', kind: 'incarico', tone: 'good', week: 2, date: '2026-10-26', title: 'Evento recente' }, { id: 'b', kind: 'elezione', tone: 'neutral', week: 1, date: '2026-10-12', title: 'Evento antico' }, { id: 'c', kind: 'legge', tone: 'good', week: 3, date: '2026-11-02', title: 'Evento registrato per ultimo ma di mezzo' }].reverse() } };
+  const html = renderCareerPage(shuffled, { tab: 'cronologia' });
+  assert.ok(html.includes('data-timeline-now') && html.includes('In corso adesso') && html.includes('Previsto') && html.includes('Accaduto'), 'Cronologia: incarichi in corso, previsto e accaduto sono blocchi distinti.');
+  const order = ['Evento registrato per ultimo ma di mezzo', 'Evento recente', 'Evento antico'].map(title => html.indexOf(title));
+  assert.ok(order.every(at => at > 0) && order[0] < order[1] && order[1] < order[2], 'Cronologia: dal più recente al più antico per data dell’evento.');
+  assert.ok(!/undefined|NaN/.test(html.replace(/data-[a-z-]+="[^"]*"/g, '')), 'Cronologia: nessun valore non valido.');
+  const reloaded = JSON.parse(JSON.stringify(shuffled));
+  assert.equal(renderCareerPage(reloaded, { tab: 'cronologia' }), html, 'Cronologia identica dopo salvataggio e ricaricamento.');
+  const held = (state.dataset.offices ?? []).filter(item => item.politicianId === state.career.playerId && !item.endDate);
+  for (const office of held) assert.ok(html.includes(office.title.replace(/&/g, '&amp;')), `Cronologia: l’incarico in corso «${office.title}» è nel blocco «In corso».`);
+}
 assert.ok(renderCareerPage(state, { tab: 'inesistente' }).includes('data-section-tab-value="percorso" aria-selected="true"'), 'Una scheda sconosciuta torna al Percorso.');
 for (const [tab] of partyTabs(state)) {
   const html = renderPartyPage(state, { tab, record, logoFor: () => null });

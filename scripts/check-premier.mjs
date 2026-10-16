@@ -78,8 +78,14 @@ const cuts = parliamentEngine.budgetReactions(st().parliament, societyEngine.nor
 const boosts = parliamentEngine.budgetReactions(st().parliament, societyEngine.normalizeBudgetPlan({ sectors: Object.fromEntries(rules.BUDGET_SECTORS.map(sector => [sector.id, 3])) }));
 assert.ok(boosts.reduce((sum, item) => sum + item.score, 0) > cuts.reduce((sum, item) => sum + item.score, 0), 'Più risorse piacciono ai gruppi più dei tagli a tutto.');
 // The preview and the form: sliders with value and unit, no placeholders.
+const designs = [];
 const preview = policyUi.budgetPreview(society, plan, st().parliament);
-assert.ok(/DEFICIT/.test(preview) && /ECONOMIA/.test(preview) && /IN PARLAMENTO/.test(preview) && !/undefined|NaN|\[object/.test(preview), 'L’anteprima mostra deficit, economia e Parlamento.');
+assert.ok(/Deficit/.test(preview) && /Crescita/.test(preview) && /IN PARLAMENTO/.test(preview) && !/undefined|NaN|\[object/.test(preview), 'L’anteprima mostra deficit, economia e Parlamento.');
+// Cost and coverage come first, then each figure as before → after with the verdict in words (the colour never carries it alone).
+assert.ok(preview.indexOf('preview-headline') < preview.indexOf('preview-ba') && /Prima e dopo la manovra/.test(preview), 'Prima costo e copertura, poi prima/dopo.');
+assert.ok((preview.match(/<li class="[^"]*"><span class="ba-label">/g) ?? []).length >= 5 && ((preview.match(/▲ migliora|▼ peggiora|● invariat[ao]/g) ?? []).length === (preview.match(/class="ba-verdict"/g) ?? []).length), 'Ogni riga dice a parole se migliora o peggiora.');
+const lawPreview = policyUi.policyPreview(society, designs[0] ?? { area: 'sanita', instrument: 'spesa', intensity: 2, financing: 'bilancio', target: 'nazionale', segment: 'tutti' });
+assert.ok(/Prima e dopo la misura/.test(lawPreview) && /COSTO/.test(lawPreview) && /COPERTURA/.test(lawPreview) && !/undefined|NaN|\[object/.test(lawPreview), 'L’anteprima di una misura: costo, copertura, prima/dopo.');
 const fields = policyUi.budgetFields(plan);
 assert.equal((fields.match(/type="range"/g) ?? []).length, rules.BUDGET_SECTORS.length + rules.FISCAL_LEVERS.length, 'Un cursore per ogni settore e leva.');
 assert.ok(/aria-valuetext="\+3 · \+\d/.test(fields) && /<output[^>]*data-range-out>Invariato/.test(fields), 'Ogni cursore dice il suo valore (e il costo) a chi lo usa e a chi lo ascolta.');

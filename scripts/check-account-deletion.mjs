@@ -36,7 +36,9 @@ const rows = username => ({
   saves: count('SELECT COUNT(*) AS n FROM saves WHERE user_id = (SELECT id FROM users WHERE username = ?)', username),
   sessions: count('SELECT COUNT(*) AS n FROM sessions WHERE user_id = (SELECT id FROM users WHERE username = ?)', username)
 });
-const save = (token, slot, data = '{"x":1}') => api(`/api/saves/${slot}`, { method: 'PUT', token, body: { data, encoding: 'json', name: `Carriera ${slot}`, meta: { player: 'Prova', role: 'Deputato' }, baseRevision: 0 } });
+// A save is a real career of its slot (the server reads the content).
+const careerFor = slot => JSON.stringify({ career: { id: slot.replace(/^c-/, ''), electionHistory: [] }, clock: { currentDate: '2026-10-12' }, game: { week: { index: 1, number: 1 } } });
+const save = (token, slot, data = careerFor(slot)) => api(`/api/saves/${slot}`, { method: 'PUT', token, body: { data, encoding: 'json', name: `Carriera ${slot}`, meta: { player: 'Prova', role: 'Deputato' }, baseRevision: 0 } });
 
 // ---------- 1. two players with saves ----------
 const A = { name: 'giocatore.a', proof: proofOf('segreto-a') }, B = { name: 'giocatore.b', proof: proofOf('segreto-b') };
@@ -245,7 +247,7 @@ else {
       const response = await local.worker.fetch(new Request(`${local.origin}/api/account/register`, { method: 'POST', headers: { 'content-type': 'application/json', 'cf-connecting-ip': '203.0.113.201' }, body: JSON.stringify({ username, proof }) }), local.env);
       assert.equal(response.status, 201, 'Account di prova registrato nel Worker locale.');
       const token = (await response.json()).token;
-      await local.worker.fetch(new Request(`${local.origin}/api/saves/c-prova`, { method: 'PUT', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ data: '{"x":1}', encoding: 'json', name: 'Prova', meta: {}, baseRevision: 0 }) }), local.env);
+      await local.worker.fetch(new Request(`${local.origin}/api/saves/c-prova`, { method: 'PUT', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ data: careerFor('c-prova'), encoding: 'json', name: 'Prova', meta: {}, baseRevision: 0 }) }), local.env);
       return token;
     };
     const users = name => local.sqlite.prepare('SELECT COUNT(*) AS n FROM users WHERE username = ?').get(name).n;

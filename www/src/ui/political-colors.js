@@ -1,7 +1,7 @@
 // The colours of the political forces in the national view, fixed by id: a force, or a coalition led by it, has the same colour in every legislature, every vote, every week and every view
 // (Calendario, Coalizioni, Proiezione, Camere), whatever else is on the page. The colours come from the validated series of the charts; the camps keep their sense (the centre-right is blue, the
 // centre-left coral, the M5S green, the centre violet) and what has no entry here takes a colour from a fixed pool by a hash of its own id, never by the order in which it happens to be drawn.
-import { SERIES } from './charts.js?v=20261016-3';
+import { SERIES } from './charts.js?v=20261016-6';
 
 const BLUE = SERIES[0], GOLD = SERIES[1], CORAL = SERIES[2], GREEN = SERIES[3], VIOLET = SERIES[4], PINK = SERIES[5], SAGE = SERIES[6], SKY = SERIES[7];
 export const NEUTRAL_COLOR = '#8d9791';

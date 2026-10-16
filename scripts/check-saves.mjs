@@ -271,49 +271,64 @@ assert.equal(JSON.parse(mem.get(KEY)).clock.currentDate, older.clock.currentDate
 failing.clear();
 assert.ok(upgraded.save().ok && JSON.parse(mem.get(KEY)).version === 10 && JSON.parse(mem.get(`${KEY}.backup`)).payload, 'Con la copia riuscita, il salvataggio si aggiorna.');
 
-// ---------- 5. online: the revision follows the game ----------
+// ---------- 5. online: the revision follows the game (the real Worker on an in-memory D1, nothing else) ----------
+// The account service needs the real Web Crypto (the harness gives the game a seeded stand-in): here it is the real one for the Worker and the client.
+const { webcrypto } = await import('node:crypto');
+const harnessCrypto = globalThis.crypto;
+Object.defineProperty(globalThis, 'crypto', { value: { subtle: webcrypto.subtle, getRandomValues: array => webcrypto.getRandomValues(array), randomUUID: () => harnessCrypto.randomUUID() }, configurable: true, writable: true });
 const account = await import(`../src/data/repositories/account-sync.js${v}`);
-const server = new Map();
+const { createStandIns } = await import('./lib/local-worker.mjs');
+const stand = createStandIns();
+const cloudWorker = (await import(`../worker.js?saves=${Date.now()}`)).default;
+const cloudEnv = { ACCOUNTS: stand.d1, ADMIN_ARCHIVE: stand.kv, ASSETS: { fetch: async () => new Response('asset') } };
 globalThis.location = new URL('http://127.0.0.1:8791/');
+const nativeFetch = globalThis.fetch;
 globalThis.fetch = async (url, init = {}) => {
-  const path = new URL(url).pathname;
-  const json = (body, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
-  const slot = decodeURIComponent(path.split('/').pop());
-  if (init.method === 'PUT') {
-    const body = JSON.parse(init.body);
-    const current = server.get(slot);
-    if (current && !body.force && body.baseRevision !== current.revision) return json({ error: 'Versione più recente online.', conflict: true, remote: { revision: current.revision } }, 409);
-    const revision = (current?.revision ?? 0) + 1;
-    server.set(slot, { ...body, revision, updatedAt: new Date().toISOString() });
-    return json({ revision });
-  }
-  const current = server.get(slot);
-  return current ? json(current) : json({ error: 'Non trovata.' }, 404);
+  const address = String(url);
+  if (new URL(address).pathname.startsWith('/api/')) return cloudWorker.fetch(new Request(address, init), cloudEnv);
+  return nativeFetch(url, init);
 };
-mem.set('politicando.account.v1', JSON.stringify({ username: 'prova', token: 'token' }));
+await account.register('prova.salvataggi', 'password-di-prova');
 const slotOnline = account.slotForCareer(store.getState().career.id);
-await account.uploadSave(slotOnline, store.cloudSnapshot());
+// What another device does / what is on the server: the same career, written through the API with the token of the account.
+const sendFromAnotherDevice = async (state, baseRevision) => (await cloudWorker.fetch(new Request(`http://127.0.0.1:8791/api/saves/${slotOnline}`, { method: 'PUT', headers: { 'content-type': 'application/json', authorization: `Bearer ${account.currentAccount().token}` }, body: JSON.stringify({ data: JSON.stringify(state), encoding: 'json', baseRevision, meta: {} }) }), cloudEnv)).json();
+// Changes the content kept online as a test double of "what a device found there" (the kept state follows, as it would after a write).
+const serverSet = (state, extra = {}) => {
+  const row = stand.sqlite.prepare('SELECT revision FROM saves WHERE slot = ?').get(slotOnline);
+  stand.sqlite.prepare('UPDATE saves SET data = ?, encoding = ?, revision = ? WHERE slot = ?').run(JSON.stringify(state), 'json', extra.revision ?? row.revision, slotOnline);
+  stand.sqlite.prepare('UPDATE save_state SET progress = ?, career_id = ?, last_revision = MAX(last_revision, ?) WHERE slot = ?').run(JSON.stringify(account.progressOf(state)), state.career.id, extra.revision ?? row.revision, slotOnline);
+};
+const onlineRow = () => stand.sqlite.prepare('SELECT revision, data FROM saves WHERE slot = ?').get(slotOnline);
+await account.uploadSave(slotOnline, store.cloudSnapshot(), { create: true });
 assert.equal(account.knownRevision(slotOnline), 1, 'Caricata online: questa copia ha la revisione 1.');
-// Another device saves a newer version.
-server.set(slotOnline, { ...server.get(slotOnline), revision: 2 });
+// Another device saves a newer version of the same career.
+const newer = { ...JSON.parse(JSON.stringify(store.getState())), clock: { ...store.getState().clock, currentDate: '2099-01-01' } };
+assert.equal((await sendFromAnotherDevice(newer, 1)).revision, 2);
 await assert.rejects(account.uploadSave(slotOnline, store.cloudSnapshot()), error => error.status === 409 && error.data.remote.revision === 2, 'La versione più recente online non si sovrascrive per sbaglio.');
+assert.equal(account.knownRevision(slotOnline), 1, 'Un conflitto non cambia la revisione conosciuta.');
 // The newer game is downloaded, but refused (a newer version of the game): the revision of this copy does not move.
-server.set(slotOnline, { ...server.get(slotOnline), data: JSON.stringify(future), encoding: 'json' });
+serverSet({ ...newer, version: 99 });
 const remote = await account.downloadSave(slotOnline, { commit: false });
 assert.throws(() => store.loadGame(remote.state), /versione più recente/);
 assert.equal(account.knownRevision(slotOnline), 1, 'Un download rifiutato non cambia la revisione conosciuta.');
 await assert.rejects(account.uploadSave(slotOnline, store.cloudSnapshot()), error => error.status === 409, 'E il gioco di prima non sovrascrive la copia online.');
-// Downloaded and really put in its place: the revision follows.
-server.set(slotOnline, { ...server.get(slotOnline), data: JSON.stringify(old), encoding: 'json' });
+// Downloaded and really put in its place: the revision follows the game that is running, not the downloaded one.
+serverSet(old);
 const good = await account.downloadSave(slotOnline, { commit: false });
-store.loadGame(good.state);
-account.commitRevision(slotOnline, good.revision);
+const loadedGame = store.loadGame(good.state);
+account.commitRevision(slotOnline, good.revision, loadedGame);
 assert.equal(account.knownRevision(slotOnline), 2, 'Con il gioco scaricato al suo posto la revisione è quella online.');
 assert.equal((await account.uploadSave(slotOnline, store.cloudSnapshot())).revision, 3, 'E da lì si carica la successiva.');
-await account.uploadSave(slotOnline, store.cloudSnapshot(), { force: true });
-assert.equal(account.knownRevision(slotOnline), 4, 'Sovrascrivere online (scelta esplicita) porta alla revisione nuova.');
+// A copy older than the one synced is not uploaded, whatever the name of its slot: the revision belongs to the copy it was synced with.
+const olderCopy = { ...JSON.parse(JSON.stringify(store.getState())), clock: { ...store.getState().clock, currentDate: '2026-01-01' } };
+await assert.rejects(account.uploadSave(slotOnline, olderCopy), error => error.data.code === 'stale-copy', 'Un salvataggio vecchio dello stesso slot non eredita la revisione corrente.');
+assert.equal(onlineRow().revision, 3);
+// Replacing the online version on purpose is another operation: it names the revision seen and keeps the one it replaces.
+const replacedOnline = onlineRow().data;
+await account.restoreSave(slotOnline, store.cloudSnapshot(), { expectedRevision: 3 });
+assert.equal(account.knownRevision(slotOnline), 4, 'Sostituire online (scelta esplicita) porta alla revisione nuova.');
+assert.equal(stand.sqlite.prepare("SELECT data FROM save_history WHERE slot = ? AND reason = 'ripristino'").get(slotOnline).data, replacedOnline, 'La versione sostituita è conservata.');
 assert.equal((await account.downloadSave(slotOnline)).revision, 4, 'Il download di sempre registra la revisione.');
-
 
 // ---------- 6. the app: nothing goes online from a game that is not saved, and a refused download moves no revision ----------
 {
@@ -333,8 +348,6 @@ assert.equal((await account.downloadSave(slotOnline)).revision, 4, 'Il download 
     if (address.startsWith('file:')) { const body = await readFile(fileURLToPath(address), 'utf8'); return { ok: true, status: 200, json: async () => JSON.parse(body), text: async () => body }; }
     const path = new URL(address).pathname;
     requests.push({ method: init.method ?? 'GET', path });
-    if (path === '/api/account/status') return new Response(JSON.stringify({ signedIn: true }), { status: 200, headers: { 'content-type': 'application/json' } });
-    if (path === '/api/saves') return new Response(JSON.stringify({ saves: [...server].map(([slot, item]) => ({ slot, revision: item.revision, name: item.name, meta: item.meta, updatedAt: item.updatedAt })) }), { status: 200, headers: { 'content-type': 'application/json' } });
     return api(url, init);
   };
   const listeners = {};
@@ -349,8 +362,8 @@ assert.equal((await account.downloadSave(slotOnline)).revision, 4, 'Il download 
   await new Promise(resolve => setTimeout(resolve, 50));
   const puts = () => requests.filter(item => item.method === 'PUT').length;
   const slot = account.slotForCareer(store.getState().career.id);
-  server.delete(slot);
-  mem.delete('politicando.account.revisions.v1');
+  for (const table of ['saves', 'save_state', 'save_history']) stand.sqlite.prepare(`DELETE FROM ${table} WHERE slot = ?`).run(slot);
+  for (const key of ['politicando.sync.links.v2', 'politicando.sync.queue.v1', 'politicando.sync.declined.v1']) mem.delete(key);
   saveSetting('autosave', 'action');
   store.save();
   // Saved: the manual sync goes online.
@@ -381,27 +394,42 @@ assert.equal((await account.downloadSave(slotOnline)).revision, 4, 'Il download 
   saveSetting('autosave', 'action');
   // Another device saves a newer version: the conflict is shown, the revision does not move, the newer one is not overwritten.
   const known = account.knownRevision(slot);
-  server.set(slot, { ...server.get(slot), revision: known + 1 });
+  const remoteAhead = { ...JSON.parse(JSON.stringify(store.getState())), clock: { ...store.getState().clock, currentDate: '2099-02-01' } };
+  serverSet(remoteAhead, { revision: known + 1 });
   store.advance(7);
+  const putsBeforeConflict = puts();
   await click({ accountAction: 'sync' });
   assert.equal(account.knownRevision(slot), known, 'Un conflitto non cambia la revisione conosciuta.');
+  assert.equal(puts(), putsBeforeConflict, 'Prima di caricare si rilegge la versione online: con una versione diversa non parte nessun salvataggio.');
   assert.ok(/Su un altro dispositivo c’è una versione più recente/.test(root.innerHTML), 'Il conflitto si vede.');
+  assert.ok(/data-sync-status="conflict"/.test(root.innerHTML), 'E lo stato di sincronizzazione dice «conflitto».');
+  assert.deepEqual(JSON.parse(onlineRow().data).clock, remoteAhead.clock, 'La versione online è intatta.');
   // The newer game is of a newer version of this game: “load” refuses, the revision stays, the conflict stays.
-  server.set(slot, { ...server.get(slot), data: JSON.stringify({ ...JSON.parse(JSON.stringify(store.getState())), version: 99 }), encoding: 'json' });
+  serverSet({ ...remoteAhead, version: 99 });
   const running = store.getState().career.id;
   await click({ conflict: 'download' });
   assert.ok(/versione più recente/.test(root.innerHTML) && store.getState().career.id === running, 'Una versione online di un gioco più recente non si carica.');
   assert.equal(account.knownRevision(slot), known, 'E non sposta la revisione.');
+  assert.ok(/Su un altro dispositivo c’è una versione più recente/.test(root.innerHTML), 'Il conflitto resta.');
   // A readable newer game is loaded: only then does the revision follow.
-  server.set(slot, { ...server.get(slot), data: JSON.stringify(old), encoding: 'json' });
+  serverSet(old);
   await click({ conflict: 'download' });
-  assert.equal(account.knownRevision(slot), server.get(slot).revision, 'Caricata la versione online, la revisione è la sua.');
+  assert.equal(account.knownRevision(slot), onlineRow().revision, 'Caricata la versione online, la revisione è la sua.');
   assert.equal(store.getState().career.id, career, 'Ora si gioca la carriera scaricata.');
   const cloudBefore = account.knownRevision(slot);
   // A career recovered from the account that cannot be loaded leaves the revision alone too.
-  server.set(slot, { ...server.get(slot), revision: cloudBefore + 1, data: JSON.stringify({ ...old, version: 99 }), encoding: 'json' });
+  serverSet({ ...old, version: 99 }, { revision: cloudBefore + 1 });
   await click({ cloudLoad: slot });
   assert.equal(account.knownRevision(slot), cloudBefore, 'Anche dal tuo account: una carriera rifiutata non cambia la revisione.');
+  // The player keeps the copy of this browser: it replaces the online one only after the confirmation, and the replaced one is kept.
+  serverSet(remoteAhead, { revision: cloudBefore + 2 });
+  store.save();
+  await click({ accountAction: 'sync' });
+  assert.ok(/data-conflict="keep"/.test(root.innerHTML), 'Il conflitto offre di tenere la copia di questo browser.');
+  const historyBefore = stand.sqlite.prepare('SELECT COUNT(*) AS n FROM save_history WHERE slot = ?').get(slot).n;
+  await click({ conflict: 'keep' });
+  assert.ok(/Sostituire la versione online con questa/.test(root.innerHTML), 'Prima chiede conferma, e dice che la versione sostituita resta recuperabile.');
+  assert.equal(stand.sqlite.prepare('SELECT COUNT(*) AS n FROM save_history WHERE slot = ?').get(slot).n, historyBefore, 'Senza conferma non cambia nulla.');
 }
 
 // ---------- 7. recover the most advanced local career and reject stale tabs/slots ----------
