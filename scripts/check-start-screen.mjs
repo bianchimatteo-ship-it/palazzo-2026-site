@@ -96,6 +96,44 @@ await withBrowser(async browser => {
   const loaded = await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); const s = store.getState(); return { week: s.game.week.index, date: s.clock.currentDate }; })()`);
   check(loaded.week === before.week && loaded.date === before.date, 'Il salvataggio caricato è la stessa partita (nessun progresso perso).');
 
+  // ---------- 2b. cancelling a new game goes back to the opening screen and leaves the career as it was ----------
+  const snapshot = () => evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); const s = store.getState(); return JSON.stringify({ id: s.career.id, revision: store.revision(), week: s.game.week.index, date: s.clock.currentDate, slots: store.listSlots().map(item => [item.slot ?? item.id, item.savedAt ?? item.updatedAt ?? null]), meta: store.currentMeta() }); })()`);
+  const setValue = (selector, value) => evaluate(`(() => { const el = document.querySelector(${JSON.stringify(selector)}); el.value = ${JSON.stringify(value)}; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); return true; })()`);
+  let snap0 = null;
+  const cancelledAt = async (step, how) => {
+    state = await menu();
+    check(!state.wizard && state.order[0] === 'nuova' && Boolean(state.continueCard), `${how}, passaggio ${step}: annullando si torna alla Home iniziale con «Continua» (ordine: ${state.order.join(', ')}).`);
+    const now = await evaluate('Boolean(document.querySelector(".page-wrap .hq-panel, .page-wrap .hq-home")) && !document.querySelector(".main-menu")');
+    check(!now, `${how}, passaggio ${step}: non si resta sulla schermata dell'ultima carriera.`);
+    check(await snapshot() === snap0, `${how}, passaggio ${step}: la carriera precedente non cambia (revisione, data, settimana, slot e metadati uguali).`);
+  };
+  for (const [how, open] of [['dal menu', async () => { if (!await evaluate('Boolean(document.querySelector(".main-menu"))')) await click('[data-action=menu]'); await click('[data-menu=nuova]'); }], ['dalle impostazioni', async () => { if (await evaluate('Boolean(document.querySelector(".main-menu"))')) { await click('[data-menu=continua]'); await waitFor(() => evaluate('Boolean(document.querySelector(".page-wrap"))')); } await evaluate(`location.hash = '#impostazioni'; true`); await pause(600); await click('[data-action=new-career]'); }]]) {
+    for (const step of [1, 2, 3]) {
+      await open();
+      await waitFor(() => evaluate('Boolean(document.querySelector(".career-wizard"))'));
+      snap0 = await snapshot();
+      if (step >= 2) {
+        await setValue('.career-wizard [name="firstName"]', 'Anna'); await setValue('.career-wizard [name="lastName"]', 'Annullo'); await setValue('.career-wizard [name="birthDate"]', '1985-02-11'); await setValue('.career-wizard [name="previousProfession"]', 'Insegnante');
+        await click('.wizard-footer [data-wizard-action="next"]');
+        await waitFor(() => evaluate(`Boolean(document.querySelector('[data-wizard-region]'))`), 10000);
+      }
+      if (step >= 3) {
+        await evaluate(`(() => { const r = document.querySelector('[data-wizard-region]'); r.value = 'Toscana'; r.dispatchEvent(new Event('change', { bubbles: true })); return true; })()`);
+        await waitFor(() => evaluate(`Boolean(document.querySelector('[data-wizard-municipality-search]'))`), 20000);
+        await setValue('[data-wizard-municipality-search]', 'Siena');
+        await waitFor(() => evaluate(`Boolean(document.querySelector('[data-municipality-code="052032"]'))`), 10000);
+        await click('[data-municipality-code="052032"]'); await pause(400);
+        await click('.wizard-footer [data-wizard-action="next"]'); await pause(500);
+      }
+      await click('[data-wizard-action=cancel]');
+      await cancelledAt(step, how);
+    }
+  }
+  // the previous career is loaded again only on request, and it is the same one
+  await click('[data-menu=continua]');
+  await waitFor(() => evaluate('Boolean(document.querySelector(".page-wrap"))'));
+  { const was = JSON.parse(snap0), now = JSON.parse(await snapshot()); check(was.id === now.id && was.week === now.week && was.date === now.date, 'Riprendere con «Continua» dopo gli annullamenti carica la stessa carriera.'); }
+
   // ---------- 3. an independent: neutral, no invented symbol ----------
   await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); store.leaveParty(); return true; })()`);
   await click('[data-action=menu]');

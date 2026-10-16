@@ -95,7 +95,9 @@ assert.ok(!page.includes('Partito di esempio'), 'Il segnaposto non è tra i part
 const groups = realData.realDatabase.parliamentaryGroups;
 const founder = { firstName: 'Marta', lastName: 'Neri', birthDate: '1985-02-11', gender: 'donna', region: 'Toscana', municipality: 'Siena', previousProfession: 'Architetta', initialLevel: 'deputato', parliamentaryGroupId: 'cam-xix-04', parliamentStartMode: 'real-context', partyMode: 'new', partyName: 'Lista Civica Neri', partyAbbreviation: 'LCN', partyColor: '#3a6ea5', partyColor2: '#f2c14e', partyDescription: 'Partito fondato dal giocatore.', partyOrientation: 'Altro', partyProgram: ['scuola', 'cultura'], partyLogoMode: 'builder', partyLogoShape: 'scudo', partyLogoSymbol: 'ponte', policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 } };
 store.createCareer(founder, realData.realDatabase.parties, groups);
-await click({ wizardAction: 'cancel' });
+page = await click({ wizardAction: 'cancel' });
+assert.ok(store.hasCareer() && page.includes('main-menu') && !page.includes('career-wizard'), 'Annullare i passaggi riporta sempre alla Home iniziale, anche con una carriera già avviata.');
+await click({ menu: 'continua' });
 assert.ok(store.hasCareer() && !root.innerHTML.includes('main-menu'), 'Dopo la creazione si entra in partita');
 const world = store.getState().world;
 const verified = new Set([...realData.realDatabase.parties, ...realData.realDatabase.politicalMovements].filter(item => item.source === 'real' && item.verified === true).map(item => item.id));
@@ -170,7 +172,14 @@ assert.ok(order.every((position, index) => position > 0 && (index === 0 || posit
 }
 for (const area of ['PAESE', 'PARLAMENTO E GOVERNO', 'PARTITO', 'ELEZIONI E SONDAGGI', 'CARRIERA', 'TERRITORIO', 'MEDIA', 'FINANZE', 'RELAZIONI', 'MEMORIA POLITICA']) assert.ok(home.includes(`<span class="section-kicker">${area}</span>`), `Home: manca il riepilogo ${area}.`);
 assert.ok((home.match(/class="hqc-drawer /g) ?? []).length >= 9 && home.includes('data-remember="home-hq-status"'), 'Home: approfondimenti richiudibili e ricordati.');
-assert.ok(home.includes('data-mobile-sheet hidden') && ['calendario', 'eventi', 'carriera', 'partito', 'finanze', 'partiti-lista', 'parlamento', 'governo', 'leggi', 'territori', 'notizie', 'archivio', 'politici', 'profilo', 'impostazioni'].every(id => home.includes(`class="sheet-item " data-nav="${id}"`) || home.includes(`class="sheet-item active" data-nav="${id}"`)), 'Il pannello “Altro” raggiunge tutte le sezioni.');
+{
+  const sheetStart = home.indexOf('data-mobile-sheet hidden'), sheet = home.slice(sheetStart, home.indexOf('mobile-sheet-status', sheetStart));
+  const groups = [...sheet.matchAll(/data-sheet-group="([a-z]+)"/g)].map(match => match[1]);
+  assert.ok(sheet.length > 0 && home.includes('data-mobile-sheet hidden') && groups.length === 7 && new Set(groups).size === 7, 'Il pannello “Altro” ha sette categorie, senza doppioni.');
+  const ids = ['calendario', 'eventi', 'carriera', 'partito', 'finanze', 'partiti-lista', 'parlamento', 'governo', 'quirinale', 'leggi', 'elezioni', 'sondaggi', 'territori', 'notizie', 'archivio', 'politici', 'profilo', 'impostazioni'];
+  assert.ok(ids.every(id => sheet.split(`data-nav="${id}"`).length - 1 === 1), 'Il pannello “Altro” raggiunge tutte le pagine, ciascuna una sola volta.');
+  assert.ok(sheet.includes('data-sheet-search') && !/<details class="sheet-group"[^>]* open>/.test(sheet.replace(/<details class="sheet-group" data-sheet-group="[a-z]+" data-remember="sheet-[a-z]+" open>/, '')), 'Con la ricerca e al più una categoria aperta.');
+}
 // Branding: the party created in the wizard has a real identity used across the game.
 const userParty = store.getState().dataset.parties.find(party => party.source === 'user');
 assert.ok(userParty.logo?.kind === 'builder' && userParty.color2 === '#f2c14e' && userParty.program.includes('scuola') && userParty.officialName === 'Lista Civica Neri', 'Il partito creato ha logo, colori, programma e scheda completa (source: user).');
@@ -396,6 +405,7 @@ await click({ menu: 'nuova' });
 const member = { ...founder, firstName: 'Luca', lastName: 'Bassi', partyMode: 'existing', partyId: 'party-registro-p1-2015-29-ir', initialLevel: 'comunale', parliamentaryGroupId: '' };
 store.createCareer(member, realData.realDatabase.parties, groups);
 await click({ wizardAction: 'cancel' });
+await click({ menu: 'continua' });
 assert.ok(store.listSlots().some(slot => slot.player === 'Marta Neri'), 'La partita precedente resta in uno slot');
 const keptSlot = store.listSlots()[0];
 page = await click({ slotDelete: keptSlot.id });
