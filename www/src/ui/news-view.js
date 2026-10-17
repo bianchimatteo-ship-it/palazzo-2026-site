@@ -1,13 +1,13 @@
 // The newsroom as the player reads it: full articles (with the facts behind them), the stories that last (timeline, reactions, heat) and the
 // outlets with their identity. Everything shown here was written by the engine from a fact of the game; nothing is attributed to real people.
-import { ARTICLE_CATEGORIES, LP24, NEWSROOM_OUTLETS, RADIO_PROGRAMMES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261017-1';
-import { formatDate } from '../core/time.js?v=20261017-1';
-import { illustration, lp24Logo } from './illustrations.js?v=20261017-1';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261017-1';
-import { normalizeMedia } from '../core/news-engine.js?v=20261017-1';
-import { esc, meter } from './charts.js?v=20261017-1';
-import { glyph } from './visuals.js?v=20261017-1';
-import { bulletinScript, voiceAvailable, voiceLine, voiceStatus, voiceTarget } from './radio-voice.js?v=20261017-1';
+import { ARTICLE_CATEGORIES, LP24, NEWSROOM_OUTLETS, RADIO_PROGRAMMES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261017-2';
+import { formatDate } from '../core/time.js?v=20261017-2';
+import { illustration, lp24Logo } from './illustrations.js?v=20261017-2';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261017-2';
+import { normalizeMedia } from '../core/news-engine.js?v=20261017-2';
+import { esc, meter } from './charts.js?v=20261017-2';
+import { glyph } from './visuals.js?v=20261017-2';
+import { bulletinScript, voiceAvailable, voiceLine, voiceStatus, voiceTarget } from './radio-voice.js?v=20261017-2';
 
 const TONE = { good: 'tone-good', bad: 'tone-bad', neutral: 'tone-neutral' };
 export const leaningLabel = value => value <= -1.5 ? 'sinistra' : value <= -0.5 ? 'centro-sinistra' : value < 0.5 ? 'equidistante' : value < 1.5 ? 'centro-destra' : 'destra';
