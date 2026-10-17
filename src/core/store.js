@@ -3505,7 +3505,12 @@ export const store = {
   // (which the game would always prefer: a save never goes back) comes back as a career of its own, with a new identity; the more advanced one is not touched.
   restoreLocalVersion(id) { return restoreOlderOrSame(storage.localVersion(id), 'Versione precedente ripristinata'); },
   exportLocalVersion(id) { return JSON.stringify({ ...storage.localVersion(id), exportedAt: new Date().toISOString(), exportedBy: 'POLITICANDO 2026' }); },
-  deleteSlot(id) { storage.deleteSlot(id); emit(); },
+  deleteSlot(id) {
+    const removed = storage.deleteSlot(id);
+    emit();
+    // if the copy in the browser's database could not be removed, the slot could come back: the player is told
+    removed.confirm.then(ok => { if (!ok) { state = { ...state, ui: { ...state.ui, toast: 'Slot eliminato, ma la copia nel database del browser non è stata rimossa: potrebbe ricomparire.' } }; emit(); } });
+  },
   // A game from a slot or a file replaces the running one (which is kept in a slot first).
   loadGame(payload, toast = 'Partita caricata') {
     let saved = typeof payload === 'string' ? JSON.parse(payload) : payload;
@@ -3526,7 +3531,9 @@ export const store = {
   },
   exportSave() { return JSON.stringify({ ...state, exportedAt: new Date().toISOString(), exportedBy: 'POLITICANDO 2026' }); },
   clearAllSaves() {
-    storage.clearAll();
+    const removed = storage.clearAll();
+    // a copy that stays in the browser's database would come back at the next opening: the player is told
+    removed.confirm.then(ok => { if (!ok) { state = { ...state, ui: { ...state.ui, toast: 'Salvataggi eliminati, ma una copia nel database del browser non è stata rimossa: potrebbe ricomparire.' } }; emit(); } });
     // Everything is gone (also a save of a newer version that stopped the saving): the game saves again.
     saveLock = null; unsaved = false; saveFailure = null;
     state = prepareState(makeDemoState());

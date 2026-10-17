@@ -16,6 +16,7 @@ const { saveSetting } = await import(`../src/core/settings.js${v}`);
 const mem = globalThis.localStorage.__mem;
 const failing = new Set();   // keys (or key prefixes ending in *) whose writes fail, as when the quota is spent
 let quotaLimit = null;
+let rejectCompressed = false;
 const quotaFailures = [];
 const storageBytes = () => [...mem].reduce((sum, [key, value]) => sum + 2 * (String(key).length + String(value).length), 0);
 const fails = key => [...failing].some(rule => rule === key || (rule.endsWith('*') && key.startsWith(rule.slice(0, -1))))
@@ -30,6 +31,8 @@ globalThis.localStorage = {
     const used = storageBytes();
     const previous = mem.get(key);
     const attempted = used - (previous === undefined ? 0 : 2 * (String(key).length + String(previous).length)) + 2 * (String(key).length + serialized.length);
+    // the last resort of the saves is a compressed copy: this check can say that there is no room even for that
+    if (rejectCompressed && serialized.startsWith('\u0001lz1:')) throw Object.assign(new Error('QuotaExceededError'), { name: 'QuotaExceededError' });
     if (fails(key) || (quotaLimit !== null && attempted > quotaLimit)) {
       quotaFailures.push({ key, used, attempted, limit: quotaLimit });
       throw Object.assign(new Error('QuotaExceededError'), { name: 'QuotaExceededError' });
@@ -175,6 +178,7 @@ const slotSnapshot = store.getState();
 const slotState = { ...slotSnapshot, saveMeta: { ...(slotSnapshot.saveMeta ?? {}), careerId: slotSnapshot.career.id, revision: slotSnapshot.saveMeta?.revision ?? 0 } };
 const minimumAfterRedundantBackupPrune = storageBytes() - backupBytes + 2 * (`${SLOT}slot-xxxxxxxx`.length + JSON.stringify(slotState).length);
 quotaLimit = minimumAfterRedundantBackupPrune - 1; // lock and redundant backup fit; the durable automatic copy does not
+rejectCompressed = true; // (and not even its compressed copy: the last resort of the saves)
 let quotaError;
 assert.throws(() => store.createCareer(draft('Spazio finito'), db.parties, db.parliamentaryGroups), error => {
   quotaError = error;
@@ -187,7 +191,7 @@ assert.equal(store.getState().career.id, career, 'La quota esaurita non sostitui
 const blockedSlotWrite = quotaFailures.find(item => item.key.startsWith(SLOT));
 assert.ok(blockedSlotWrite && blockedSlotWrite.attempted > blockedSlotWrite.limit, 'La copia automatica eccede davvero la quota residua.');
 assert.ok(storage.listSlots().some(entry => entry.id === manualQuotaSlot && !entry.autoPreserve), 'Lo slot manuale è ancora presente prima dell’intervento del giocatore.');
-quotaLimit = null; // spazio nuovamente disponibile dopo l’intervento del giocatore
+quotaLimit = null; rejectCompressed = false; // spazio nuovamente disponibile dopo l’intervento del giocatore
 storage.deleteSlot(manualQuotaSlot); // libera solo lo slot manuale scelto esplicitamente
 store.loadGame(recoveryFile, 'Partita recuperata dal file');
 assert.equal(store.getState().career.id, career, 'Il file esportato ricarica la carriera dopo aver liberato spazio.');
@@ -199,6 +203,8 @@ assert.equal(autoSlotCount, 1);
 const reusedAutoSlot = store.saveToSlot('Seconda conservazione automatica', null, { autoPreserve: true });
 assert.equal(reusedAutoSlot, firstAutoSlot, 'La stessa carriera riusa il suo slot automatico invece di duplicarlo.');
 assert.equal(storage.listSlots().filter(entry => entry.autoPreserve && storage.loadSlot(entry.id).career.id === career).length, autoSlotCount, 'Una seconda conservazione non crea slot automatici duplicati.');
+// (the game moves on first: a copy that already holds exactly this game is not written again, so there is something new to keep)
+store.advance(7);
 failing.add(`${SLOT}*`);
 assert.throws(() => store.createCareer(draft('Altra'), db.parties, db.parliamentaryGroups), /non può essere conservata/);
 assert.equal(store.getState().career.id, career, 'Se la partita in corso non si può conservare, la nuova carriera non parte.');
@@ -476,12 +482,18 @@ mem.set(liveLock, JSON.stringify({ token: 'altra-scheda', expiresAt: Date.now() 
 assert.throws(() => storage.save(snapshot('2033-06-01', 365, at2032.saveMeta.revision)), /in corso in un’altra scheda/);
 assert.equal(JSON.parse(mem.get(KEY)).clock.currentDate, '2032-06-01', 'La scheda concorrente non scrive durante il lock.');
 mem.delete(liveLock);
-// A stale manual slot remains a recoverable copy, but loading it selects the advanced save for the same career.
+// A stale manual slot remains a recoverable copy: a save never goes back, so opening it brings it back as a career of its own (a new identity); the advanced career is untouched and kept.
 mem.set(`${SLOT}slot-2028`, JSON.stringify(at2028));
 mem.set(INDEX, JSON.stringify([...storage.listSlots(), { id: 'slot-2028', savedAt: '2028-06-01', name: 'Copia vecchia' }]));
 const recoveredStore = (await import(`../src/core/store.js${v}&phase1-recovered-slot`)).store;
 recoveredStore.loadSlot('slot-2028');
-assert.equal(recoveredStore.getState().clock.currentDate, '2032-06-01', 'Aprire lo slot vecchio ricarica la versione avanzata della stessa carriera.');
+assert.equal(recoveredStore.getState().clock.currentDate, '2028-06-01', 'Aprire lo slot vecchio riporta quella data…');
+assert.notEqual(recoveredStore.getState().career.id, careerId, '…come carriera separata, con una nuova identità.');
+assert.ok(storage.listSlots().some(item => storage.loadSlot(item.id).career.id === careerId && storage.loadSlot(item.id).clock.currentDate === '2032-06-01'), 'La carriera avanzata è conservata in uno slot, intera.');
+assert.equal(storage.bestForCareer(careerId).clock.currentDate, '2032-06-01', 'E per la sua identità la versione più avanzata resta quella del 2032.');
+// back on the advanced career for what follows
+recoveredStore.loadGame(storage.bestForCareer(careerId), 'Ritorno alla carriera avanzata');
+assert.equal(recoveredStore.getState().clock.currentDate, '2032-06-01');
 assert.equal(JSON.parse(mem.get(KEY)).clock.currentDate, '2032-06-01');
 assert.ok(storage.listSlots().some(item => storage.loadSlot(item.id).career.id === careerId), 'Anche aprire uno slot pulito conserva la carriera corrente in uno slot.');
 // A migration changes the schema but cannot change the progress or the stable career ID.

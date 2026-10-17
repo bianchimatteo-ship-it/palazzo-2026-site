@@ -96,6 +96,36 @@ await withBrowser(async ({ evaluate, send, goto, waitFor: wait, pause, errors, v
   await evaluate(`(async () => { const { store } = await ${mod}; store.save(); return true; })()`);
   await wait(async () => (await evaluate(`(async () => (await ${mod}).store.saveStatus())()`)).ok);
   assert.equal(await has('[data-save-alert="failed"]'), false, 'Tornata la possibilità di scrivere, l’avviso sparisce.');
+
+  // ---------- 5. a browser with no IndexedDB (a private window, an in-app browser) and a localStorage that spends its quota: the error of the report, and the last resort ----------
+  await send('Page.addScriptToEvaluateOnNewDocument', { source: "Object.defineProperty(window, 'indexedDB', { value: undefined, configurable: true }); (() => { const real = Storage.prototype.setItem; window.__limit = Infinity; Storage.prototype.setItem = function (key, value) { if (/^(palazzo-2026\\.career\\.v1|politicando\\.slot\\.)/.test(key) && String(value).length > window.__limit) throw new DOMException(\"Failed to execute 'setItem' on 'Storage': Setting the value of '\" + key + \"' exceeded the quota.\", 'QuotaExceededError'); return real.call(this, key, value); }; })();" });
+  await reload();
+  assert.equal(await evaluate('typeof indexedDB'), 'undefined', 'Senza IndexedDB.');
+  await click('[data-menu="continua"]'); await wait(() => has('.page-wrap'));
+  const plainSize = await evaluate(`localStorage.getItem('palazzo-2026.career.v1').length`);
+  await evaluate(`window.__limit = Math.round(localStorage.getItem('palazzo-2026.career.v1').length * 0.7)`);
+  await advance();
+  const compressedStatus = await evaluate(`(async () => (await ${mod}).store.saveStatus())()`);
+  assert.equal(compressedStatus.ok, true, 'Con la quota stretta ma la copia compressa che ci sta, il salvataggio riesce senza IndexedDB.');
+  assert.equal(compressedStatus.dirty, false); assert.equal(compressedStatus.pending, false, 'Ed è al sicuro subito (è in localStorage).');
+  const packed = await evaluate(`localStorage.getItem('palazzo-2026.career.v1').startsWith('\\u0001lz1:')`);
+  assert.equal(packed, true, 'La copia principale è compressa.');
+  assert.ok(plainSize > 100000, 'La carriera di prova è grande abbastanza da non entrare così com’è.');
+  const compressedWeek = await week();
+  await reload();
+  await click('[data-menu="continua"]'); await wait(() => has('.page-wrap'));
+  assert.equal(await week(), compressedWeek, 'Dopo il ricaricamento la carriera compressa si legge: stessa settimana.');
+  // no room even for the compressed copy: the error of the report, the state in memory, the file
+  await evaluate(`window.__limit = 1; window.__downloads = []; const make = URL.createObjectURL.bind(URL); URL.createObjectURL = blob => { blob.text().then(text => window.__downloads.push(text)); return make(blob); }; true`);
+  await advance();
+  const refused = await evaluate(`(async () => (await ${mod}).store.saveStatus())()`);
+  assert.equal(refused.ok, false, 'Senza posto per niente il salvataggio non riesce, e non è dato per riuscito.');
+  assert.match(refused.error ?? '', /exceeded the quota/, 'È l’errore del browser della segnalazione, mostrato al giocatore.');
+  await wait(() => has('[data-save-alert="failed"]'));
+  const lastWeek = await week();
+  await click('[data-save-alert] [data-action="export-save"]');
+  await wait(() => evaluate('window.__downloads.length > 0'));
+  assert.equal(JSON.parse(await evaluate('window.__downloads[0]')).game.week.index, lastWeek, 'Il file contiene l’ultimo stato.');
   assert.deepEqual(errors.filter(error => !/prova: scrittura rifiutata/.test(error)), [], 'Nessun errore imprevisto in pagina.');
 });
-console.log('Salvataggi verificati in Chrome con IndexedDB reale: la carriera salvata solo in localStorage è copiata, riletta e controllata senza cancellare nulla e senza ripetersi; con localStorage pieno il salvataggio passa da IndexedDB ed è «al sicuro» solo a conferma avvenuta, e dopo il ricaricamento c’è lo stato più recente; una seconda scheda lo legge; se nessuno accetta la scrittura la pagina lo dice, tiene lo stato in memoria, permette di esportare l’ultimo stato e non sostituisce la carriera in corso.');
+console.log('Salvataggi verificati in Chrome con IndexedDB reale: la carriera salvata solo in localStorage è copiata, riletta e controllata senza cancellare nulla e senza ripetersi; con localStorage pieno il salvataggio passa da IndexedDB ed è «al sicuro» solo a conferma avvenuta, e dopo il ricaricamento c’è lo stato più recente; una seconda scheda lo legge; se nessuno accetta la scrittura la pagina lo dice, tiene lo stato in memoria, permette di esportare l’ultimo stato e non sostituisce la carriera in corso; senza IndexedDB e con la quota stretta la copia compressa salva (si rilegge dopo il ricaricamento), senza posto per nulla l’errore del browser è mostrato, lo stato resta in memoria e si esporta.');

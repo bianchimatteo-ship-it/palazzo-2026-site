@@ -10,6 +10,7 @@
 //   - at start copies what localStorage holds into IndexedDB (idempotent: what is already there and equal is skipped), reads it back to check it, and takes back into memory what only
 //     IndexedDB has. Nothing is ever deleted from localStorage by this code: the old copies stay where they were.
 // The small keys (lock, slot index, Hall of Fame, settings, sync queue) never leave localStorage.
+import { LZ_MARK, compress, decompress } from './lz.js?v=20261017-2';
 const DB_NAME = 'politicando-vault';
 const STORE = 'entries';
 const META_KEY = '__meta__';
@@ -42,6 +43,8 @@ export function idbBackend(factory = globalThis.indexedDB) {
   };
   return {
     name: 'indexeddb',
+    // a connection that went away (the browser closed it, another tab upgraded it) is opened again on the next use
+    reset() { dbPromise = null; },
     open: async () => { await open(); },
     getAll: () => run('readonly', store => store.getAll()),
     put: record => run('readwrite', store => store.put(record)),
@@ -51,11 +54,11 @@ export function idbBackend(factory = globalThis.indexedDB) {
 export function memoryBackend() {
   const data = new Map();
   const backend = {
-    name: 'memory', data, failures: { open: null, put: null, remove: null, getAll: null }, delay: 0,
+    name: 'memory', data, failures: { open: null, put: null, remove: null, getAll: null }, delay: 0, flaky: 0, resets: 0, reset() { backend.resets++; },
     wait: () => backend.delay ? new Promise(resolve => setTimeout(resolve, backend.delay)) : Promise.resolve(),
     async open() { await backend.wait(); if (backend.failures.open) throw backend.failures.open; },
     async getAll() { await backend.wait(); if (backend.failures.getAll) throw backend.failures.getAll; return [...data.values()].map(record => ({ ...record })); },
-    async put(record) { await backend.wait(); if (backend.failures.put) throw backend.failures.put; data.set(record.key, { ...record }); },
+    async put(record) { await backend.wait(); if (backend.flaky > 0) { backend.flaky--; throw Object.assign(new Error('La connessione si sta chiudendo'), { name: 'InvalidStateError' }); } if (backend.failures.put) throw backend.failures.put; data.set(record.key, { ...record }); },
     async remove(key) { await backend.wait(); if (backend.failures.remove) throw backend.failures.remove; data.delete(key); }
   };
   return backend;
@@ -63,13 +66,16 @@ export function memoryBackend() {
 
 // ---------- the tier ----------
 // real: () => the localStorage in use; isBulk(key): does this key hold a save; backend: IndexedDB (or null); channel: () => a BroadcastChannel (or null).
-export function createTier({ real = () => globalThis.localStorage, isBulk = () => false, backend = idbBackend(), channel = name => (typeof BroadcastChannel === 'function' ? new BroadcastChannel(name) : null), now = () => Date.now(), budget = LOCAL_BUDGET, openTimeout = 4000, deferMs = 600 } = {}) {
+export function createTier({ real = () => globalThis.localStorage, isBulk = () => false, backend = idbBackend(), channel = name => (typeof BroadcastChannel === 'function' ? new BroadcastChannel(name) : null), now = () => Date.now(), budget = LOCAL_BUDGET, openTimeout = 4000, deferMs = 600, attachWaits = [1500, 4000, 10000, 30000] } = {}) {
   const memory = new Map();          // key -> { value, at }  (the values that live outside localStorage, and what was hydrated)
   const ahead = new Set();           // keys whose current value is NOT in localStorage (read from memory)
   const confirmed = new Map();       // key -> at of the last write confirmed by the backend
   const mirrors = new Map();         // key -> promise of the last write to the backend
   const failures = new Map();        // key -> message of the last backend write that failed
   const pending = new Set();
+  let exhausted = false;             // the database could not be opened after every retry: from now on a refused write is an error, as before
+  let attaching = null;
+  let startCompare = null;
   const status = { backend: backend?.name ?? 'none', available: false, error: null, hydrated: 0, migrated: { done: false, at: null, keys: [], verified: [], mismatches: [], skipped: [] } };
   const storage = () => { try { return real(); } catch { return null; } };
   const tabId = `${now()}-${Math.round((globalThis.performance?.now?.() ?? 0) * 1000)}-${Math.round((globalThis.performance?.timeOrigin ?? 0))}`;
@@ -79,7 +85,16 @@ export function createTier({ real = () => globalThis.localStorage, isBulk = () =
   const post = message => { try { bus?.postMessage({ from: tabId, ...message }); } catch { /* a tab that cannot be told reads again when it is shown */ } };
   const tell = (promise) => { pending.add(promise); promise.finally(() => pending.delete(promise)).catch(() => {}); return promise; };
 
-  const lsGet = key => { try { return storage()?.getItem(key) ?? null; } catch { return null; } };
+  // A save that had to be written compressed (the last resort when localStorage is full) is read back as the text it was.
+  const decoded = new Map();
+  const lsGet = key => {
+    let raw;
+    try { raw = storage()?.getItem(key) ?? null; } catch { return null; }
+    if (raw === null || !raw.startsWith(LZ_MARK)) return raw;
+    const known = decoded.get(key);
+    if (known?.raw === raw) return known.text;
+    try { const text = decompress(raw); decoded.set(key, { raw, text }); return text; } catch { return null; }
+  };
   // The characters the saves already take in localStorage: counted once at start, then kept up to date by this tab's own writes (a heuristic for the budget, never a limit that is trusted).
   const sizes = new Map();
   const bulkInLocal = except => { let total = 0; for (const [key, size] of sizes) if (key !== except) total += size; return total; };
@@ -91,9 +106,21 @@ export function createTier({ real = () => globalThis.localStorage, isBulk = () =
   // intermediate value would only queue megabytes the next write replaces). A caller whose value was replaced is answered by the write of the newer one.
   const writers = new Map(); // key -> { inflight, queued: { record, promise, resolve } | null }
   const writeRecord = record => record.remove ? backend.remove(record.key) : backend.put(record);
+  const TRANSIENT = error => ['InvalidStateError', 'AbortError', 'TransactionInactiveError', 'UnknownError'].includes(error?.name) || /closing|closed|connection/i.test(String(error?.message ?? ''));
+  const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+  // A write that fails because the connection went away is tried again (three times, with growing waits, after opening the database again); a refusal for lack of space is not.
+  const attemptWrite = async (record, attempt = 0) => {
+    try { await writeRecord(record); }
+    catch (error) {
+      if (attempt >= 3 || !TRANSIENT(error)) throw error;
+      try { backend.reset?.(); } catch { /* the next attempt opens it */ }
+      await sleep(120 * 2 ** attempt);
+      await attemptWrite(record, attempt + 1);
+    }
+  };
   const run = (key, record) => {
     const writer = writers.get(key);
-    const done = writeRecord(record).then(() => { if (record.remove) confirmed.delete(key); else confirmed.set(key, record.at); failures.delete(key); return true; }, error => { failures.set(key, error?.message || String(error)); return false; });
+    const done = attemptWrite(record).then(() => { if (record.remove) confirmed.delete(key); else confirmed.set(key, record.at); failures.delete(key); return true; }, error => { failures.set(key, error?.message || String(error)); return false; });
     writer.inflight = done.then(ok => {
       writer.inflight = null;
       const next = writer.queued;
@@ -161,12 +188,17 @@ export function createTier({ real = () => globalThis.localStorage, isBulk = () =
       if (ls && (room || !status.available)) {
         try { ls.setItem(key, text); lsOk = true; sizes.set(key, text.length); } catch (error) { failure = error; }
       }
+      // Last resort for localStorage: the same save, compressed (it often fits where the plain text does not). It is as safe as any write to localStorage.
+      if (!lsOk && ls && text.length > 4096) {
+        try { const packed = compress(text); ls.setItem(key, packed); lsOk = true; sizes.set(key, packed.length); } catch (error) { failure = failure ?? error; }
+      }
       if (lsOk) { ahead.delete(key); memory.delete(key); }
-      else {
-        if (!status.available) throw failure ?? new Error('Archivio del browser non disponibile');
+      else if (status.available || (backend && !exhausted)) {
+        // Kept in memory and written to the database: safe only when the database confirms (`durability`). If the database is not open yet (it was slow, or refused) it is tried again in the background.
         memory.set(key, { value: text, at });
         ahead.add(key);
-      }
+        if (!status.available) retryAttach();
+      } else throw failure ?? new Error('Archivio del browser non disponibile');
       mirror(key, text, at, lsOk);
       post({ t: 'set', key, at, lsOk, value: lsOk ? undefined : text });
     },
@@ -198,14 +230,37 @@ export function createTier({ real = () => globalThis.localStorage, isBulk = () =
     if (typeof verdict === 'number' && verdict !== 0) return verdict > 0 ? 'local' : 'backend';
     return record.lsOk === false ? 'backend' : 'local';
   };
-  async function start({ compare = null } = {}) {
-    if (!backend) { status.error = 'IndexedDB non disponibile in questo browser'; return status; }
+  const tryOpen = async ms => {
     let timer;
-    try {
-      await Promise.race([backend.open(), new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('IndexedDB non risponde')), openTimeout); })]);
-      status.available = true;
-    } catch (error) { status.error = error?.message || String(error); return status; }
+    try { await Promise.race([backend.open(), new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('IndexedDB non risponde')), ms); })]); return true; }
+    catch (error) { status.error = error?.message || String(error); return false; }
     finally { clearTimeout(timer); }
+  };
+  async function start({ compare = null } = {}) {
+    startCompare = compare;
+    if (!backend) { status.error = 'IndexedDB non disponibile in questo browser'; exhausted = true; return status; }
+    if (!(await tryOpen(openTimeout))) { retryAttach(); return status; }
+    return hydrate();
+  }
+  // The database did not open in time (a slow device, a locked database): the game starts on localStorage and tries again in the background; a save that localStorage refuses meanwhile waits in
+  // memory for it. After the last attempt (about 45 seconds) a refused write is an error again.
+  function retryAttach() {
+    if (!backend || status.available || exhausted) return attaching;
+    if (attaching) return attaching;
+    attaching = (async () => {
+      for (const wait of attachWaits) {
+        await sleep(wait);
+        try { backend.reset?.(); } catch { /* opened again below */ }
+        if (await tryOpen(openTimeout)) { await hydrate(); if (status.available) return true; }
+      }
+      exhausted = true;
+      return false;
+    })().finally(() => { attaching = null; });
+    return attaching;
+  }
+  async function hydrate() {
+    const compare = startCompare;
+    status.available = true; status.error = null;
     scanSizes();
     let records = [];
     try { records = await backend.getAll(); } catch (error) { status.error = error?.message || String(error); status.available = false; return status; }
@@ -214,6 +269,8 @@ export function createTier({ real = () => globalThis.localStorage, isBulk = () =
     // 1. what the backend has
     for (const record of records) {
       if (record.key === META_KEY || !isBulk(record.key)) continue;
+      // a value written while the database was not open is newer than whatever it holds: it stays, and is written below
+      if (ahead.has(record.key)) continue;
       const local = lsGet(record.key);
       if (local === record.value) { confirmed.set(record.key, record.at); continue; }
       if (local === null || mostAdvanced(record.key, local, record, compare) === 'backend') {
@@ -259,6 +316,8 @@ export function createTier({ real = () => globalThis.localStorage, isBulk = () =
         busId++;
       }
     };
+    // what was written while the database was not open goes in now
+    for (const key of ahead) { const item = memory.get(key); if (item && confirmed.get(key) !== item.at) mirror(key, item.value, item.at, false); }
     return status;
   }
 
@@ -280,16 +339,19 @@ export function createTier({ real = () => globalThis.localStorage, isBulk = () =
   function durability(key) {
     if (!ahead.has(key)) return { durable: true, confirm: Promise.resolve(true) };
     const at = memory.get(key)?.at;
+    if (!status.available) return { durable: false, confirm: attaching ? attaching.then(async ok => { if (!ok) return false; await settled(); return confirmed.get(key) >= at; }) : Promise.resolve(false) };
     if (confirmed.get(key) >= at) return { durable: true, confirm: Promise.resolve(true) };
     const write = mirrors.get(key);
     return { durable: false, confirm: write ? write.then(ok => ok && confirmed.get(key) >= at) : Promise.resolve(false) };
   }
   // Where a key's current value lives: in localStorage, or only in the browser's database (IndexedDB) because localStorage had no room.
   const where = key => ahead.has(key) ? 'database' : 'local';
+  // Has the removal of a key reached the database? (a slot that is deleted must not come back at the next opening)
+  const confirmRemoval = key => mirrors.get(key) ? mirrors.get(key).then(ok => Boolean(ok)) : Promise.resolve(true);
   const settled = async () => { flushDeferred(); await Promise.allSettled([...pending]); };
   const report = () => ({
     backend: status.backend, available: status.available, error: status.error, hydrated: status.hydrated, migrated: { ...status.migrated },
     ahead: [...ahead], pending: pending.size, failed: [...failures].map(([key, message]) => ({ key, message })), messages: busId
   });
-  return { facade, start, refresh, flush: flushDeferred, durability, where, settled, report, setPrimaryKey, close() { try { bus?.close(); } catch { /* closed */ } }, _memory: memory, _ahead: ahead };
+  return { facade, start, refresh, flush: flushDeferred, durability, confirmRemoval, where, settled, report, setPrimaryKey, close() { try { bus?.close(); } catch { /* closed */ } }, _memory: memory, _ahead: ahead };
 }

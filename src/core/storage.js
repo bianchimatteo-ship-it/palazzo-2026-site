@@ -224,6 +224,7 @@ export const storage = {
   // Is the current value of a key already safe? `durable` at once when it is in localStorage; otherwise `confirm` says whether IndexedDB took it.
   durability: key => tier.durability(key),
   slotDurability: id => tier.durability(SLOT_PREFIX + id),
+  slotRemoval: id => tier.confirmRemoval(SLOT_PREFIX + id),
   // What the list of saves says of a slot: where it is kept (localStorage, or the browser's database when localStorage had no room), how big it is, whether the browser has confirmed it.
   slotInfo(id) {
     const key = SLOT_PREFIX + id;
@@ -403,12 +404,14 @@ export const storage = {
     return payload;
   },
   // The index first (a failure there changes nothing), then the slot.
+  // `confirm` resolves false when the copy in the browser's database could not be removed too (it would come back at the next opening).
   deleteSlot(id) {
-    return withWriteLock(assertOwner => {
+    withWriteLock(assertOwner => {
       assertOwner();
       writeWithHistoryPrune(SLOT_INDEX, JSON.stringify(storage.listSlots().filter(entry => entry.id !== id)));
       localStorage.removeItem(SLOT_PREFIX + id);
     });
+    return { confirm: tier.confirmRemoval(SLOT_PREFIX + id) };
   },
   // ---------- the Hall of Fame ----------
   hall() { const list = readJson(HALL_KEY); return Array.isArray(list) ? list.filter(entry => entry?.id) : []; },
@@ -418,10 +421,12 @@ export const storage = {
   },
   // Every save of this browser goes: the running game, the slots (also the ones the index no longer lists) and the copy kept aside. The Hall of Fame stays.
   clearAll() {
-    return withWriteLock(assertOwner => {
+    const keys = [];
+    withWriteLock(assertOwner => {
       assertOwner();
-      for (const key of new Set([...slotKeys(), ...storage.listSlots().map(entry => SLOT_PREFIX + entry.id)])) localStorage.removeItem(key);
-      for (const key of [SLOT_INDEX, STORAGE_KEY, BACKUP_KEY, HISTORY_KEY]) localStorage.removeItem(key);
+      for (const key of new Set([...slotKeys(), ...storage.listSlots().map(entry => SLOT_PREFIX + entry.id)])) { localStorage.removeItem(key); keys.push(key); }
+      for (const key of [SLOT_INDEX, STORAGE_KEY, BACKUP_KEY, HISTORY_KEY]) { localStorage.removeItem(key); if (isBulkKey(key)) keys.push(key); }
     });
+    return { confirm: Promise.all(keys.map(key => tier.confirmRemoval(key))).then(results => results.every(Boolean)) };
   }
 };

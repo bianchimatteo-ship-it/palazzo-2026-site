@@ -134,5 +134,100 @@ assert.ok(crowded.listSlots().length >= 1 && crowded.listSlots().length <= 5, 'G
 await Promise.all(crowded.listSlots().map(async slot => assert.equal(await crowded.slotDurability(slot.id).confirm, true, 'Ogni slot è confermato.')));
 const afterReload = await open(createFakeIndexedDB().factory);
 assert.equal(afterReload.load().game.week.index, 5, 'Con un IndexedDB nuovo e lo stesso localStorage, la carriera è quella di prima.');
+
+// ---------- 7. the last resorts, on the tier itself (a fast clock): compressed copy, a database that opens late, a write that fails once, a removal that fails ----------
+{
+  const { createTier, memoryBackend } = await import(`../src/core/tiered-storage.js${v}`);
+  const { LZ_MARK, compress, decompress } = await import(`../src/core/lz.js${v}`);
+  const store = new Map();
+  let maxValue = Infinity, allFull = false;
+  const ls = { get length() { return store.size; }, key: index => [...store.keys()][index] ?? null, getItem: key => store.get(key) ?? null, removeItem: key => store.delete(key),
+    setItem(key, value) { const text = String(value); if (allFull || text.length > maxValue) throw Object.assign(new Error('The quota has been exceeded.'), { name: 'QuotaExceededError' }); store.set(key, text); } };
+  const bulk = key => key.startsWith('save.');
+  const build = (options = {}) => createTier({ real: () => ls, isBulk: bulk, channel: () => null, deferMs: 0, attachWaits: [20, 20, 20], openTimeout: 50, ...options });
+  const payload = JSON.stringify({ rows: Array.from({ length: 4000 }, (_, i) => ({ id: `riga-${i}`, nome: 'Prova di compressione', valore: i % 17 })) });
+
+  // the compressor: exact round trip, no lone surrogate, smaller
+  const z = compress(payload);
+  assert.equal(decompress(z), payload, 'La compressione è senza perdite.');
+  assert.ok(z.length < payload.length / 4 && z.startsWith(LZ_MARK), `La copia compressa è molto più piccola (${z.length} contro ${payload.length}).`);
+  assert.ok([...z].every(char => { const code = char.charCodeAt(0); return code < 0xd800 || code >= 0xe000; }), 'Nessun surrogato spaiato.');
+  assert.equal(decompress('testo normale'), 'testo normale', 'Un testo non compresso passa com’è.');
+
+  // 7a. localStorage refuses the plain text but has room for the compressed one: safe at once, no database needed
+  {
+    store.clear(); maxValue = Math.round(payload.length / 2);
+    const tier = build({ backend: null }); await tier.start();
+    tier.facade.setItem('save.main', payload);
+    assert.equal(tier.durability('save.main').durable, true, 'Compressa in localStorage: al sicuro subito.');
+    assert.ok(store.get('save.main').startsWith(LZ_MARK), 'Nel browser c’è la copia compressa…');
+    assert.equal(tier.facade.getItem('save.main'), payload, '…e si rilegge identica.');
+    const again = build({ backend: null }); await again.start();
+    assert.equal(again.facade.getItem('save.main'), payload, 'Anche dopo un ricaricamento (una nuova pagina).');
+    tier.facade.setItem('save.main', 'x'.repeat(100)); assert.equal(store.get('save.main'), 'x'.repeat(100), 'Appena c’è spazio si riscrive il testo normale.');
+    maxValue = Infinity;
+  }
+  // 7b. no room at all and no database: an error, as before (the game keeps the state in memory and offers the file)
+  {
+    store.clear(); allFull = true;
+    const tier = build({ backend: null }); await tier.start();
+    assert.throws(() => tier.facade.setItem('save.main', payload), /quota/i, 'Senza nessun posto la scrittura è un errore, mai un finto successo.');
+    allFull = false;
+  }
+  // 7c. the database opens late: the write waits in memory, then goes in, and only then is it called safe
+  {
+    store.clear(); allFull = true;
+    const backend = memoryBackend(); backend.failures.open = new Error('IndexedDB non risponde');
+    const tier = build({ backend }); await tier.start();
+    tier.facade.setItem('save.main', payload);
+    const wait = tier.durability('save.main');
+    assert.equal(wait.durable, false, 'Con il database non ancora aperto la scrittura non è al sicuro.');
+    assert.equal(tier.facade.getItem('save.main'), payload, 'Ma lo stato è letto dalla memoria.');
+    setTimeout(() => { backend.failures.open = null; }, 30);
+    assert.equal(await wait.confirm, true, 'Aperto il database (dopo un nuovo tentativo) la scrittura è confermata.');
+    assert.equal(backend.data.get('save.main').value, payload);
+    allFull = false;
+  }
+  // 7d. the database never opens: after the last attempt the answer is no, and a later refused write is an error
+  {
+    store.clear(); allFull = true;
+    const backend = memoryBackend(); backend.failures.open = new Error('IndexedDB bloccato');
+    const tier = build({ backend }); await tier.start();
+    tier.facade.setItem('save.main', payload);
+    assert.equal(await tier.durability('save.main').confirm, false, 'Dopo l’ultimo tentativo: non confermata (il gioco lo mostra e offre il file).');
+    assert.throws(() => tier.facade.setItem('save.main', payload + ' '), /quota/i, 'E da lì in poi una scrittura rifiutata è un errore.');
+    allFull = false;
+  }
+  // 7e. a write that fails because the connection went away is tried again
+  {
+    store.clear(); allFull = true;
+    const backend = memoryBackend();
+    const tier = build({ backend }); await tier.start();
+    backend.flaky = 2; // (after the start: the first writes of the database belong to it)
+    tier.facade.setItem('save.main', payload);
+    assert.equal(await tier.durability('save.main').confirm, true, 'Un errore passeggero della connessione non perde il salvataggio.');
+    assert.ok(backend.resets >= 2, 'Il database è stato riaperto prima di ritentare.');
+    // a refusal for lack of space is not tried again
+    backend.failures.put = Object.assign(new Error('piena'), { name: 'QuotaExceededError' });
+    tier.facade.setItem('save.main', payload + ' ');
+    assert.equal(await tier.durability('save.main').confirm, false, 'Un rifiuto per mancanza di spazio è definitivo.');
+    allFull = false;
+  }
+  // 7f. a removal that the database refuses is reported (the copy would come back)
+  {
+    store.clear();
+    const backend = memoryBackend();
+    const tier = build({ backend }); await tier.start();
+    tier.facade.setItem('save.slot', payload); await tier.settled();
+    backend.failures.remove = new Error('rifiutata');
+    tier.facade.removeItem('save.slot');
+    assert.equal(await tier.confirmRemoval('save.slot'), false, 'La cancellazione non riuscita nel database è segnalata.');
+    backend.failures.remove = null;
+    tier.facade.setItem('save.slot2', payload); await tier.settled();
+    tier.facade.removeItem('save.slot2');
+    assert.equal(await tier.confirmRemoval('save.slot2'), true, 'Quella riuscita è confermata.');
+    assert.equal(backend.data.has('save.slot2'), false);
+  }
+}
 console.log('Salvataggi su due livelli verificati (localStorage + IndexedDB, simulati): ciò che localStorage già aveva è copiato in IndexedDB, riletto e controllato senza cancellare nulla e senza ripetersi; con localStorage pieno il salvataggio vive in memoria e IndexedDB ed è «al sicuro» solo a conferma avvenuta; dopo il ricaricamento si ritrova la carriera più recente; una scrittura che nessuno può accettare è segnalata e lo stato resta esportabile; due schede si vedono; senza spazio per il blocco il salvataggio prosegue; con molti slot i salvataggi restano nel budget e lasciano spazio alle chiavi piccole; senza IndexedDB tutto funziona come prima.');
 process.exit(0);
