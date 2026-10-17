@@ -16,8 +16,19 @@ let leaseSequence = 0;
 const RETRYABLE = error => ['offline', 'timeout'].includes(error?.code) || error?.status >= 500 || error?.status === 429;
 
 export function createSyncEngine({ store, account, getSnapshot, now = () => Date.now(), schedule = (fn, ms) => setTimeout(fn, ms), cancel = handle => clearTimeout(handle), onChange = () => {}, metaOf = () => ({}), nameOf = () => null } = {}) {
-  const read = () => { try { const value = JSON.parse(store.getItem(QUEUE_KEY) ?? 'null'); return value?.ops ? value : { ops: {}, done: {} }; } catch { return { ops: {}, done: {} }; } };
-  const write = value => { try { store.setItem(QUEUE_KEY, JSON.stringify(value)); } catch { /* without space the queue lives in memory only until the next write */ } };
+  // The queue is written down in the browser's storage. When the storage refuses (no room, disabled) the queue lives in memory for this page only, and says so: `persistFailure` is set
+  // and the request shows as an error ("non registrata") instead of waiting as if it were safe. The next write that the storage takes clears it.
+  let memoryState = null;
+  let persistFailure = null;
+  const read = () => {
+    if (persistFailure && memoryState) return memoryState;
+    try { const value = JSON.parse(store.getItem(QUEUE_KEY) ?? 'null'); return value?.ops ? value : (memoryState ?? { ops: {}, done: {} }); } catch { return memoryState ?? { ops: {}, done: {} }; }
+  };
+  const write = value => {
+    memoryState = value;
+    try { store.setItem(QUEUE_KEY, JSON.stringify(value)); persistFailure = null; return true; }
+    catch (error) { persistFailure = /quota|exceed|full/i.test(`${error?.name} ${error?.message}`) ? 'Spazio del browser esaurito: la richiesta di sincronizzazione non è stata registrata e andrà persa se chiudi la pagina.' : `La richiesta di sincronizzazione non è stata registrata (${error?.message || 'archivio non disponibile'}).`; return false; }
+  };
   let timer = null;
   let running = null;
   const owner = () => account.currentAccount()?.username ?? null;
@@ -66,6 +77,7 @@ export function createSyncEngine({ store, account, getSnapshot, now = () => Date
   function forget(username) { const queue = read(); for (const [id, op] of Object.entries(queue.ops)) if (op.username === username) delete queue.ops[id]; write(queue); emit(); }
   function status(careerId) {
     const op = read().ops[careerId];
+    if (op && persistFailure) return { state: 'error', op: { ...op, status: 'error', error: persistFailure }, unpersisted: true };
     if (op) return { state: op.status === 'session' ? 'session' : op.username !== owner() ? 'paused' : op.status, op };
     const link = account.linkOf(careerId);
     const done = read().done[careerId];
@@ -136,7 +148,7 @@ export function createSyncEngine({ store, account, getSnapshot, now = () => Date
     })().finally(() => { running = null; });
     return running;
   }
-  const summary = () => ({ pending: waiting().length, conflicts: operations().filter(op => op.status === 'conflict').length, errors: operations().filter(op => op.status === 'error').length });
+  const summary = () => ({ pending: waiting().length, conflicts: operations().filter(op => op.status === 'conflict').length, errors: operations().filter(op => op.status === 'error').length + (persistFailure && Object.keys(read().ops).length ? 1 : 0), persistFailure });
   function cancelTimer() { if (timer !== null) { cancel(timer); timer = null; } }
   function arm(ms) { cancelTimer(); timer = schedule(() => { timer = null; flush(); }, Math.max(250, ms)); }
   // The next due entry sets the next wake-up.
@@ -147,5 +159,5 @@ export function createSyncEngine({ store, account, getSnapshot, now = () => Date
   // The page was (re)opened, the network came back, the account signed in: take up what is written down.
   function resume() { if (owner() && waiting().length) arm(250); }
   function stop() { cancelTimer(); }
-  return { enqueue, resolve, forget, status, operations, flush, resume, stop, summary, rearm, arm, read };
+  return { enqueue, resolve, forget, status, operations, flush, resume, stop, summary, rearm, arm, read, persistFailure: () => persistFailure };
 }

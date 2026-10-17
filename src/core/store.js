@@ -4,7 +4,7 @@ import { uniqueId } from './ids.js?v=20261016-6';
 import { DATA_SOURCES, emptyDataset, isSelectableParty } from '../data/schema.js?v=20261016-6';
 import { makeDemoState } from '../data/demo.js?v=20261016-6';
 import { CAREER_LEVELS, ITALIAN_REGIONS, hasProvincialLevel, initialCareerStatistics, regionIdOf } from '../data/regions.js?v=20261016-6';
-import { MAX_SLOTS, storage } from './storage.js?v=20261016-6';
+import { MAX_SLOTS, compareSaveProgress, storage } from './storage.js?v=20261016-6';
 import { loadSettings } from './settings.js?v=20261016-6';
 import { advanceDays, formatDate } from './time.js?v=20261016-6';
 import { STARTING_OFFICES, STARTING_ROLES, validateNewCareerDraft } from './career-rules.js?v=20261016-6';
@@ -448,8 +448,12 @@ function recordTimeline() {
   if (timelineBase) state = addTimeline(state, timelineDiff(timelineBase, state));
   timelineBase = state;
 }
+let durablePending = false;
+// Each call of persist() is one more step; the late confirmation of a copy speaks only if nothing was saved or changed since (a newer save speaks for itself).
+let persistEpoch = 0;
 function persist({ force = false } = {}) {
   if (batchDepth) return null;
+  const epoch = ++persistEpoch;
   recordTimeline();
   const mode = loadSettings().autosave;
   if (!force && (mode === 'manual' || (mode === 'week' && !weekClosed))) { unsaved = true; lastSaved = mode === 'manual' ? 'Modifiche non salvate' : 'Salvataggio a fine settimana'; return saveOutcome(false); }
@@ -459,7 +463,21 @@ function persist({ force = false } = {}) {
     const saved = storage.save(state);
     state = saved.state;
     timelineBase = state;
-    unsaved = false; saveFailure = null; saveSeq++;
+    if (saved.durable === false) {
+      // The copy is not in localStorage (no room): it lives in memory until IndexedDB confirms it. The game does not say "saved" before: the state stays unsaved, with the reason, and the
+      // confirmation (or the failure) arrives later.
+      unsaved = true; saveFailure = null; saveSeq++; durablePending = true;
+      lastSaved = 'Salvataggio nel database del browser in corso…';
+      saved.confirm.then(ok => {
+        if (epoch !== persistEpoch) return; // saved or changed since: the next save speaks
+        durablePending = false;
+        if (ok) { unsaved = false; saveFailure = null; lastSaved = `Salvato alle ${new Intl.DateTimeFormat('it-IT', { hour: '2-digit', minute: '2-digit' }).format(new Date())}`; }
+        else { unsaved = true; weekClosed = true; saveFailure = 'Il browser non ha confermato la scrittura: la carriera è solo in memoria. Esportala su file prima di chiudere la pagina.'; lastSaved = 'Salvataggio non confermato'; }
+        emit();
+      });
+      return saveOutcome(true);
+    }
+    unsaved = false; saveFailure = null; saveSeq++; durablePending = false;
     lastSaved = `Salvato alle ${new Intl.DateTimeFormat('it-IT', { hour: '2-digit', minute: '2-digit' }).format(new Date())}`;
   } catch (error) {
     unsaved = true; weekClosed = true; saveFailure = error?.message || 'Salvataggio non disponibile';
@@ -468,13 +486,16 @@ function persist({ force = false } = {}) {
   return saveOutcome(!saveFailure);
 }
 // The game about to be replaced (by another one loaded or a new career) is kept in a slot first; if it cannot be kept, nothing is replaced.
-function keepCurrent(name) {
+function keepCurrent(name, { requireDurable = true } = {}) {
   try {
     const existing = storage.listSlots().find(entry => {
       if (!entry.autoPreserve) return false;
       try { return storage.loadSlot(entry.id)?.career?.id === state.career.id; } catch { return false; }
     });
-    return store.saveToSlot(name, existing?.id ?? null, { autoPreserve: true });
+    const slotId = store.saveToSlot(name, existing?.id ?? null, { autoPreserve: true });
+    // A copy that is only in memory (no room in localStorage) is not "kept" until IndexedDB has confirmed it: `store.preserveCurrent()` waits for that before the career is replaced.
+    if (requireDurable && !storage.slotDurability(slotId).durable) throw new Error('La copia non è ancora confermata dal browser. Riprova tra un istante.');
+    return slotId;
   } catch (error) {
     const recovery = /spazio del browser esaurito/i.test(error.message)
       ? ' Annulla la nuova carriera, poi apri Menu → Carica partita → Esporta su file; puoi quindi liberare spazio eliminando uno slot manuale e riprovare.'
@@ -3409,7 +3430,7 @@ export const store = {
     return state;
   },
   // How saving stands, as facts: seq goes up at every write that succeeded; dirty = changes not saved here; error = why the last write failed.
-  saveStatus: () => ({ seq: saveSeq, ok: !saveFailure, dirty: unsaved, error: saveFailure }),
+  saveStatus: () => ({ seq: saveSeq, ok: !saveFailure, dirty: unsaved, error: saveFailure, pending: durablePending }),
   // What may go online: the career as it was last saved here, never a game with changes that were not saved (or a save that failed).
   cloudSnapshot: () => store.hasCareer() && !unsaved && !saveFailure ? state : null,
   // ---------- games and save slots ----------
@@ -3428,16 +3449,43 @@ export const store = {
     if (own || slots.length < MAX_SLOTS) return { ok: true };
     return { ok: false, reason: 'full', message: `Gli slot sono pieni (${MAX_SLOTS}): la carriera in corso non può essere conservata e per questo la nuova carriera non parte. Esportala su file, poi libera uno slot dal menu Carica partita (nessuno slot viene eliminato da sé).` };
   },
+  // Before another career takes the place of the running one: its copy is written and waited for until the browser has confirmed it. Resolves true; throws (and nothing is replaced) when it cannot be kept.
+  async preserveCurrent(name = 'Partita precedente (salvataggio automatico)') {
+    if (!store.hasCareer()) return true;
+    let slotId;
+    try { slotId = keepCurrent(name, { requireDurable: false }); }
+    catch (error) { throw error; }
+    const safety = storage.slotDurability(slotId);
+    if (!safety.durable && !(await safety.confirm)) throw new Error('La partita in corso non può essere conservata e resta intatta: il browser non ha confermato la copia. Esporta la carriera su file, poi libera spazio dal menu Carica partita.');
+    return true;
+  },
   saveToSlot(name = null, id = null, extraMeta = {}) {
     if (!store.hasCareer()) throw new Error('Non c’è una partita da salvare.');
     const meta = slotMeta(state);
     const slotId = storage.saveSlot(state, { ...meta, ...extraMeta, name: name?.trim() || `${meta.player} · settimana ${meta.week}` }, id);
     state = { ...state, saveMeta: { ...(state.saveMeta ?? {}), careerId: state.career.id, revision: storage.latestRevision(state.career.id) } };
-    state = { ...state, ui: { ...state.ui, toast: 'Partita salvata nello slot' } };
+    const safety = storage.slotDurability(slotId);
+    state = { ...state, ui: { ...state.ui, toast: safety.durable ? 'Partita salvata nello slot' : 'Salvataggio dello slot in corso…' } };
     emit();
+    if (!safety.durable) safety.confirm.then(ok => { state = { ...state, ui: { ...state.ui, toast: ok ? 'Partita salvata nello slot' : 'Lo slot NON è stato salvato: il browser non ha confermato la scrittura.' } }; emit(); });
     return slotId;
   },
   loadSlot(id) { return store.loadGame(storage.loadSlot(id), 'Partita caricata'); },
+  // The text of a slot as a file (the same format as the export of the running game).
+  exportSlot(id) { return JSON.stringify({ ...storage.loadSlot(id), exportedAt: new Date().toISOString(), exportedBy: 'POLITICANDO 2026' }); },
+  slotInfo: id => storage.slotInfo(id),
+  localVersions: () => storage.localVersions(),
+  // A copy kept aside by the game comes back as the running game (the running one is kept in a slot first, or nothing happens). A copy that is behind another one of the same career
+  // (which the game would always prefer: a save never goes back) comes back as a career of its own, with a new identity; the more advanced one is not touched.
+  restoreLocalVersion(id) {
+    const payload = storage.localVersion(id);
+    const newest = storage.bestForCareer(payload.career.id, null);
+    if (!newest || compareSaveProgress(newest, payload) <= 0) return store.loadGame(payload, 'Versione precedente ripristinata');
+    const careerId = makeId('carriera');
+    const fork = { ...structuredClone(payload), career: { ...payload.career, id: careerId, restoredFromCareerId: payload.career.id }, saveMeta: { careerId, revision: 0, switchFromCareerId: null, switchIntent: null } };
+    return store.loadGame(fork, 'Copia ripristinata come nuova carriera');
+  },
+  exportLocalVersion(id) { return JSON.stringify({ ...storage.localVersion(id), exportedAt: new Date().toISOString(), exportedBy: 'POLITICANDO 2026' }); },
   deleteSlot(id) { storage.deleteSlot(id); emit(); },
   // A game from a slot or a file replaces the running one (which is kept in a slot first).
   loadGame(payload, toast = 'Partita caricata') {

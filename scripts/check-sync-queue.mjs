@@ -180,4 +180,22 @@ const errorPuts = puts();
 clock += 3_600_000;
 await tabOne.flush();
 assert.equal(puts(), errorPuts, 'E non viene ritentato all’infinito.');
+// A queue the browser cannot write down says so: the request is shown as an error ("non registrata"), never as waiting, and it is written again when the storage takes it.
+{
+  const full = device();
+  let refuse = false;
+  const refusing = { getItem: key => full.getItem(key), removeItem: key => full.removeItem(key), setItem(key, value) { if (refuse) throw Object.assign(new Error('The quota has been exceeded.'), { name: 'QuotaExceededError' }); full.setItem(key, value); } };
+  const engine = makeEngine(refusing);
+  saved.set('coda-uno', at(12));
+  refuse = true;
+  engine.enqueue(at(12));
+  const shown = engine.status('coda-uno');
+  assert.equal(shown.state, 'error', 'Una richiesta che il browser non riesce a scrivere è un errore, non un’attesa.');
+  assert.match(shown.op.error, /non è stata registrata/, 'Con il motivo.');
+  assert.ok(engine.summary().errors >= 1 && engine.summary().persistFailure, 'Anche il riepilogo lo dice.');
+  refuse = false;
+  engine.enqueue(at(12));
+  assert.equal(engine.status('coda-uno').state, 'pending', 'Appena il browser la scrive, torna in coda normale.');
+  assert.equal(engine.persistFailure(), null);
+}
 console.log('Coda di sincronizzazione verificata sul Worker reale: richieste scritte nel browser e riprese alla riapertura, attese crescenti senza rete e ripresa alla riconnessione, versione online riletta prima di ogni invio (con conflitto invece di sovrascrittura), copie senza provenienza ferme finché il giocatore non decide, nessun invio sotto un altro account, una sola scheda alla volta, sessione scaduta e rifiuti definitivi mostrati.');
