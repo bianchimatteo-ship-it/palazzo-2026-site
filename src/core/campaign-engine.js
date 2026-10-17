@@ -1263,7 +1263,7 @@ function electorateOf(config, type) {
   const given = config.electorate && typeof config.electorate === 'object' ? config.electorate : {};
   const electors = Number(given.electors);
   const sizeClass = type === 'comunale' ? (config.municipalityBand === 'oltre-15000' ? 'medio' : 'piccolo') : type === 'provinciale' ? 'secondo-livello' : null;
-  return { electors: Number.isFinite(electors) && electors > 0 ? Math.round(electors) : null, validRatio: given.validRatio !== null && given.validRatio !== undefined && Number(given.validRatio) > 0 && Number(given.validRatio) <= 1 ? Number(given.validRatio) : null, sizeClass, basis: given.basis ?? (sizeClass === 'piccolo' || sizeClass === 'medio' ? 'fascia demografica del comune (fino o oltre 15.000 abitanti)' : null), source:SOURCE };
+  return { place: config.place ? { municipalityCode: config.place.municipalityCode ?? null, region: config.place.region ?? null } : null, electors: Number.isFinite(electors) && electors > 0 ? Math.round(electors) : null, validRatio: given.validRatio !== null && given.validRatio !== undefined && Number(given.validRatio) > 0 && Number(given.validRatio) <= 1 ? Number(given.validRatio) : null, sizeClass, basis: given.basis ?? (sizeClass === 'piccolo' || sizeClass === 'medio' ? 'fascia demografica del comune (fino o oltre 15.000 abitanti)' : null), source:SOURCE };
 }
 // The day of the vote: late deciders, turnout and the error of every projection move the final result a little.
 // How much depends on the strategy (more when looking for new voters, less when consolidating), on the climate and on the turnout

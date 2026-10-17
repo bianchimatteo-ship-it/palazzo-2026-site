@@ -4,6 +4,7 @@ import { uniqueId } from './ids.js?v=20261017-2';
 import { DATA_SOURCES, emptyDataset, isSelectableParty } from '../data/schema.js?v=20261017-2';
 import { makeDemoState } from '../data/demo.js?v=20261017-2';
 import { CAREER_LEVELS, ITALIAN_REGIONS, hasProvincialLevel, initialCareerStatistics, regionIdOf } from '../data/regions.js?v=20261017-2';
+import { withVotes } from './electorate.js?v=20261017-2';
 import { MAX_SLOTS, compareSaveProgress, storage } from './storage.js?v=20261017-2';
 import { loadSettings } from './settings.js?v=20261017-2';
 import { advanceDays, formatDate } from './time.js?v=20261017-2';
@@ -2539,8 +2540,11 @@ function voteSummary(result, labelOf) {
   };
 }
 
-// The votes of a list: its share of the valid ballots of the electorate of the map, or, without the map, of 100,000 normalised ballots.
-const voteCount = (vote, share) => vote?.electorate?.valid ? Math.round(vote.electorate.valid * share / 100) : Math.round(share * 1000);
+// The votes of the lists: the valid ballots of the electorate of the map shared by percentage in whole numbers that add up to them (a row «Altre liste» holds the lists not shown); without the map, a declared scale of 100,000.
+// The line under a national count: valid votes, voters, electors and residents (four different numbers); without the map, the declared scale.
+const ballotLabelOf = vote => vote?.electorate && !vote.electorate.normalized
+  ? `Voti validi: ${vote.electorate.valid.toLocaleString('it-IT')} su ${vote.electorate.voters.toLocaleString('it-IT')} votanti (affluenza ${vote.turnout.toLocaleString('it-IT')}%; iscritti ${vote.electorate.electors.toLocaleString('it-IT')}${vote.electorate.residents ? `; residenti ${vote.electorate.residents.toLocaleString('it-IT')}` : ''})`
+  : 'Dati della mappa elettorale non disponibili: percentuali su una scala di 100.000 schede, non sono elettori';
 // The player's campaign in the general election: the seats come from the vote on the real map, so the campaign's own
 // count is replaced by the national one (lists, regions, the player's district and constituency). null: keep it.
 function politicheCampaignResult(campaign, vote, { outcome, regions, forceId, chamber, labelOf }) {
@@ -2552,7 +2556,8 @@ function politicheCampaignResult(campaign, vote, { outcome, regions, forceId, ch
   const ids = [...new Set([...Object.keys(data.shares).filter(id => id !== 'altri'), ...data.parties.map(row => row.id)])];
   const rows = ids.map(id => ({ id, share: data.shares[id] ?? 0, row: data.parties.find(item => item.id === id) ?? null }))
     .filter(item => item.id === forceId || item.row?.seats || item.share >= 0.5).sort((a, b) => b.share - a.share || (b.row?.seats ?? 0) - (a.row?.seats ?? 0));
-  result.groups = rows.map(item => ({ id: idOf(item.id), candidateId: item.id === forceId ? player : null, label: labelOf(item.id), percent: item.share, votes: voteCount(vote, item.share), seats: item.row?.seats ?? 0, districtSeats: item.row?.uni ?? 0, proportionalSeats: (item.row?.prop ?? 0) + (item.row?.estero ?? 0), partyIds: [item.id], coalitionId: vote.coalitions.find(coalition => coalition.partyIds.includes(item.id))?.id ?? null }));
+  result.groups = rows.map(item => ({ id: idOf(item.id), candidateId: item.id === forceId ? player : null, label: labelOf(item.id), percent: item.share, votes: 0, seats: item.row?.seats ?? 0, districtSeats: item.row?.uni ?? 0, proportionalSeats: (item.row?.prop ?? 0) + (item.row?.estero ?? 0), partyIds: [item.id], coalitionId: vote.coalitions.find(coalition => coalition.partyIds.includes(item.id))?.id ?? null }));
+  result.groups = withVotes(result.groups, vote?.electorate?.valid ?? 100000);
   result.territories = regions.map(region => {
     const groups = region.ranking.slice(0, 5).map(([id, share]) => ({ id: idOf(id), candidateId: id === forceId ? player : null, label: labelOf(id), percent: share }));
     if (!groups.some(item => item.candidateId === player)) groups.push({ id: player, candidateId: player, label: labelOf(forceId), percent: region.shares[forceId] ?? 0 });
@@ -2563,7 +2568,7 @@ function politicheCampaignResult(campaign, vote, { outcome, regions, forceId, ch
   const share = data.shares[forceId] ?? 0;
   const uninominale = campaign.candidacy?.role === 'uninominale' && outcome.district;
   Object.assign(result, {
-    playerShare: share, playerVotes: own.votes, playerSeats: own.seats, winnerGroupId: result.groups[0]?.id ?? null, turnout: vote.turnout, electorate: vote.electorate ?? null, totalBallots: vote.electorate?.valid ?? 100000, ballotLabel: vote.electorate && !vote.electorate.normalized ? `Voti validi su ${vote.electorate.electors.toLocaleString('it-IT')} elettori (affluenza ${vote.turnout.toLocaleString('it-IT')}%)` : 'Schede normalizzate su 100.000 elettori simulati', model: vote.model, seatRule: SEAT_RULE_2022, runoffResults: null, firstRound: null,
+    playerShare: share, playerVotes: own.votes, playerSeats: own.seats, winnerGroupId: result.groups[0]?.id ?? null, turnout: vote.turnout, electorate: vote.electorate ?? null, totalBallots: vote.electorate?.valid ?? 100000, ballotLabel: ballotLabelOf(vote), model: vote.model, seatRule: SEAT_RULE_2022, runoffResults: null, firstRound: null,
     personal: {
       code: outcome.code, mandate: outcome.mandate, via: outcome.via ?? null, side: null, position: uninominale ? outcome.district.position : rows.findIndex(item => item.id === forceId) + 1,
       threshold: outcome.threshold, belowThreshold: outcome.belowThreshold, constituency: outcome.constituency ? { seats: outcome.constituency.seats, name: outcome.constituency.name, localShare: null } : null,
@@ -2584,7 +2589,8 @@ function europeanCampaignResult(campaign, vote, { forceId, region, labelOf }) {
   const result = deepCopy(campaign.result);
   const player = campaign.playerCandidateId;
   const idOf = id => id === forceId ? player : id;
-  result.groups = vote.national.filter(item => item.id === forceId || item.seats || item.share >= 0.5).map(item => ({ id: idOf(item.id), candidateId: item.id === forceId ? player : null, label: item.label, percent: item.share, votes: voteCount(vote, item.share), seats: item.seats, partyIds: [item.id] }));
+  result.groups = vote.national.filter(item => item.id === forceId || item.seats || item.share >= 0.5).map(item => ({ id: idOf(item.id), candidateId: item.id === forceId ? player : null, label: item.label, percent: item.share, votes: 0, seats: item.seats, partyIds: [item.id] }));
+  result.groups = withVotes(result.groups, vote?.electorate?.valid ?? 100000);
   result.territories = vote.areas.map(area => {
     const shares = area.shares ?? Object.fromEntries(vote.national.map(item => [item.id, item.share]));
     const ranking = Object.entries(shares).sort((a, b) => b[1] - a[1]);
@@ -2600,7 +2606,7 @@ function europeanCampaignResult(campaign, vote, { forceId, region, labelOf }) {
   const mandate = code === 'eletto-lista';
   const own = result.groups.find(item => item.id === player);
   Object.assign(result, {
-    playerShare: row.share, playerVotes: own.votes, playerSeats: row.seats, winnerGroupId: result.groups[0]?.id ?? null, turnout: vote.turnout, electorate: vote.electorate ?? null, totalBallots: vote.electorate?.valid ?? 100000, ballotLabel: vote.electorate && !vote.electorate.normalized ? `Voti validi su ${vote.electorate.electors.toLocaleString('it-IT')} elettori (affluenza ${vote.turnout.toLocaleString('it-IT')}%)` : 'Schede normalizzate su 100.000 elettori simulati', model: vote.model, seatRule: SEAT_RULE_EU, runoffResults: null, firstRound: null,
+    playerShare: row.share, playerVotes: own.votes, playerSeats: row.seats, winnerGroupId: result.groups[0]?.id ?? null, turnout: vote.turnout, electorate: vote.electorate ?? null, totalBallots: vote.electorate?.valid ?? 100000, ballotLabel: ballotLabelOf(vote), model: vote.model, seatRule: SEAT_RULE_EU, runoffResults: null, firstRound: null,
     personal: { code, mandate, via: mandate ? 'lista' : null, side: null, position: vote.national.findIndex(item => item.id === forceId) + 1, threshold, belowThreshold, preference: { ...preference, area: EU_AREA_LABELS[home.area] ?? home.area } },
     personalMandate: mandate,
     national: { resultId: vote.id, forceId, source: DATA_SOURCES.SIMULATION }
@@ -5119,7 +5125,7 @@ function electionReport(campaign, result, aftermath) {
   return {
     campaignId: campaign.id, electionId: campaign.electionId ?? null, electionType: campaign.electionType, electionLabel: campaign.electionLabel, role: campaign.candidacy?.role ?? null, date: campaign.currentDate,
     outcome: { code: outcome.code ?? null, label: outcome.label ?? null, tone: outcome.tone ?? null, position: outcome.position ?? null, positionLabel: outcome.positionLabel ?? null, margin: outcome.margin ?? null, expected: outcome.expected ?? null, expectation: outcome.expectation ?? null, expectationLabel: outcome.expectationLabel ?? null, via: outcome.via ?? null, side: outcome.side ?? null, preference: outcome.preference ?? null, district: outcome.district ?? null, constituency: outcome.constituency ?? null, threshold: outcome.threshold ?? null, belowThreshold: Boolean(outcome.belowThreshold) },
-    playerShare: result.playerShare, playerVotes: result.playerVotes, playerSeats: result.playerSeats, personalMandate: result.personalMandate, turnout: result.turnout ?? null, pollShare: latestPoll?(Number.isFinite(playerPollShare)?playerPollShare:null):(campaign.preparation?.pollShare??null),
+    playerShare: result.playerShare, playerVotes: result.playerVotes, playerSeats: result.playerSeats, personalMandate: result.personalMandate, turnout: result.turnout ?? null, count: result.electorate ?? null, ballotLabel: result.ballotLabel ?? null, pollShare: latestPoll?(Number.isFinite(playerPollShare)?playerPollShare:null):(campaign.preparation?.pollShare??null),
     poll:latestPoll?{date:latestPoll.date,stage:latestPoll.stage,institute:latestPoll.institute,sample:latestPoll.sample,margin:latestPoll.margin,playerShare:Number.isFinite(playerPollShare)?playerPollShare:null,source:DATA_SOURCES.SIMULATION}:null,
     candidates:campaign.candidates.map(candidate=>({ ...candidateIdentity(candidate),displayName:candidate.realReference?.fullName??candidate.displayLabel??candidate.displayName })),
     groups: (result.groups ?? []).map(row => ({ candidateId:row.candidateId,memberCandidateIds:row.memberCandidateIds??[],identity:candidateIdentity(campaign.candidates.find(item=>item.id===row.candidateId)??{id:row.candidateId}),label: candidateLabel(row), percent: row.percent, votes: row.votes, seats: row.seats, player: row.candidateId === campaign.playerCandidateId, partyIds: row.partyIds ?? [], runoffPercent: row.runoffPercent ?? null })),

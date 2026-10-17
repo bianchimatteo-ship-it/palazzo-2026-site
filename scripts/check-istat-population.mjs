@@ -143,7 +143,7 @@ else {
   const codes = new Set(municipalities.map(item => item.code));
   assert.ok(imported.records.every(item => codes.has(item.municipalityCode)), 'Ogni record dei dati demografici ha un comune dei dati ISTAT del gioco.');
   assert.equal(new Set(imported.records.map(item => item.municipalityCode)).size, imported.records.length, 'Nessun comune doppio.');
-  assert.ok(imported.records.every(item => (item.populationResident === null || Number.isInteger(item.populationResident)) && (item.electoralPopulationReference === null || Number.isInteger(item.electoralPopulationReference))), 'Solo numeri interi o null.');
+  assert.ok(imported.records.every(item => (item.populationResident == null || Number.isInteger(item.populationResident)) && (item.electoralPopulationReference == null || Number.isInteger(item.electoralPopulationReference))), 'Solo numeri interi o null.');
   shipped = `${imported.records.length} comuni importati`;
 }
 console.log(`Popolazione dei comuni e pesi verificati: lettura dei file ISTAT su fixture (due formati, ZIP, codifica, accenti, codici con zero iniziale, popolazione legale distinta dalla residente, duplicati, negativi, zeri, codici non abbinati, copertura), fascia di 15.000 abitanti ai bordi (15.000 fino, 15.001 oltre) col riferimento legale prima del residente e ripiego dichiarato, campagna e corse del calendario con la stessa regola, pesi delle regioni dai voti validi reali (Camera, Senato, circoscrizioni europee) con somma 100 e nessun 5% uniforme; ${shipped}.`);

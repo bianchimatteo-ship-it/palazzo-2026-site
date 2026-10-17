@@ -1,0 +1,21 @@
+Voce,Dettaglio
+Misura,"Popolazione residente; non popolazione legale del censimento e non aventi diritto al voto."
+Data di riferimento dichiarata,1 gennaio 2026.
+Fonte statistica di riferimento,"ISTAT POSAS 2026 — popolazione residente per età, sesso e stato civile; si usa il totale comunale (Età=999, colonna Totale)."
+Pagina ufficiale ISTAT,https://demo.istat.it/app/?a=2026&i=POS&l=it
+Archivio ufficiale da confrontare,https://demo.istat.it/data/posas/POSAS_2026_it_Comuni.zip
+Tabella numerica materialmente usata,"RP92/comuni-italiani/data/comuni.csv; la configurazione sources.toml dichiara l'uso del più recente ZIP POSAS e il filtro Età=999, colonna Totale."
+URL della tabella usata,https://github.com/RP92/comuni-italiani/blob/main/data/comuni.csv
+Identificativo blob della tabella usata,7ab90f19476c18a9a90df246dfe38f0fbee317fd
+Registro comuni Politicando controllato,"src/data/real/municipalities.json (branch claude/nifty-johnson-a8x5cv); 7.894 codici correnti."
+Identificativo blob registro comuni,369ced15feeb475ee6613963b54296bdbadce42a
+Limite di verifica,"Il file binario POSAS ufficiale non è stato scaricato/ispezionato direttamente qui. Dati da derivazione pubblica documentata; confrontare con ZIP ufficiale prima della pubblicazione definitiva."
+Licenza/attribuzione,La copia pubblica dichiara CC BY 4.0 e attribuzione a ISTAT. Indicare chiaramente che il dataset è trasformato e riconciliato.
+Riconciliazione Lirio → Montalto Pavese,Montalto Pavese (codice corrente 018094): 804 + Lirio (018082): 122 = 926 residenti.
+Riconciliazione Castegnero + Nanto,Castegnero Nanto (codice corrente 024129): 2.801 + 3.052 = 5.853 residenti.
+Ricodifica Sardegna,I codici correnti sono stati riconciliati con i record precedenti tramite nome normalizzato univoco nella stessa regione. La CSV conserva l'indicazione del metodo e i riferimenti disponibili.
+Differenze di denominazione a codice stabile,"006113 Murisengo Monferrato/Murisengo; 083100 Tripi - Abakainon/Tripi; 102017 Jonadi/Ionadi."
+Esito controlli automatici,"7.894 comuni, 20 regioni, zero codici duplicati, zero popolazioni mancanti, nessun record sorgente inutilizzato dopo le riconciliazioni."
+Popolazione nazionale aggregata,"58.942.828; somma delle popolazioni comunali nel dataset."
+Regola di gioco,"I votanti simulati non devono superare la popolazione residente aggregata dell'area elettorale; voti validi ≤ votanti. Popolazione residente, votanti simulati, affluenza e voti validi restano grandezze distinte."
+Data preparazione documento,17 ottobre 2026.

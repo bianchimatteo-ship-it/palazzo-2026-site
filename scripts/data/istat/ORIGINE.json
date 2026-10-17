@@ -1,0 +1,10 @@
+{
+ "derivedFrom": "d94792cd-POLITICANDO_ISTAT_COMUNI_REGIONI_2026_COMPLETO.xlsx",
+ "xlsxSha256": "638ece8231f8b7921d2362dee087db46eae1ac84a315b2afba4c4f8946edb889",
+ "sheets": {
+  "Comuni": 7894,
+  "Regioni": 21,
+  "Fonti e metodo": 20
+ },
+ "note": "CSV derivati dal solo foglio Excel allegato: il pacchetto CSV originale e il LEGGIMI non erano nel filesystem. Nessun valore aggiunto, stimato o corretto."
+}

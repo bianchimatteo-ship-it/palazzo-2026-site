@@ -1,0 +1,22 @@
+Codice regione ISTAT,Regione,Numero comuni,Popolazione residente totale,Data riferimento,Metodo,Fonte
+01,Piemonte,1180,4255006,2026-01-01,Somma dei comuni correnti senza duplicati,ISTAT POSAS 2026 via tabella derivata pubblica
+02,Valle d'Aosta/Vallée d'Aoste,74,122554,2026-01-01,Somma dei comuni correnti senza duplicati,ISTAT POSAS 2026 via tabella derivata pubblica
+03,Lombardia,1501,10065694,2026-01-01,Somma dei comuni correnti senza duplicati,ISTAT POSAS 2026 via tabella derivata pubblica
+04,Trentino-Alto Adige/Südtirol,282,1090818,2026-01-01,Somma dei comuni correnti senza duplicati,ISTAT POSAS 2026 via tabella derivata pubblica
+05,Veneto,559,4857460,2026-01-01,Somma dei comuni correnti senza duplicati,ISTAT POSAS 2026 via tabella derivata pubblica
+06,Friuli-Venezia Giulia,215,1193496,2026-01-01,Somma dei comuni correnti senza duplicati,ISTAT POSAS 2026 via tabella derivata pubblica
+07,Liguria,234,1511988,2026-01-01,Somma dei comuni correnti senza duplicati,ISTAT POSAS 2026 via tabella derivata pubblica
+08,Emilia-Romagna,330,4477009,2026-01-01,Somma dei comuni correnti senza duplicati,ISTAT POSAS 2026 via tabella derivata pubblica
+09,Toscana,273,3659222,2026-01-01,Somma dei comuni correnti senza duplicati,ISTAT POSAS 2026 via tabella derivata pubblica
+10,Umbria,92,850627,2026-01-01,Somma dei comuni correnti senza duplicati,ISTAT POSAS 2026 via tabella derivata pubblica
+11,Marche,225,1479832,2026-01-01,Somma dei comuni correnti senza duplicati,ISTAT POSAS 2026 via tabella derivata pubblica
+12,Lazio,378,5709444,2026-01-01,Somma dei comuni correnti senza duplicati,ISTAT POSAS 2026 via tabella derivata pubblica
+13,Abruzzo,305,1267222,2026-01-01,Somma dei comuni correnti senza duplicati,ISTAT POSAS 2026 via tabella derivata pubblica
+14,Molise,136,285940,2026-01-01,Somma dei comuni correnti senza duplicati,ISTAT POSAS 2026 via tabella derivata pubblica
+15,Campania,550,5568703,2026-01-01,Somma dei comuni correnti senza duplicati,ISTAT POSAS 2026 via tabella derivata pubblica
+16,Puglia,257,3865277,2026-01-01,Somma dei comuni correnti senza duplicati,ISTAT POSAS 2026 via tabella derivata pubblica
+17,Basilicata,131,525281,2026-01-01,Somma dei comuni correnti senza duplicati,ISTAT POSAS 2026 via tabella derivata pubblica
+18,Calabria,404,1827571,2026-01-01,Somma dei comuni correnti senza duplicati,ISTAT POSAS 2026 via tabella derivata pubblica
+19,Sicilia,391,4775194,2026-01-01,Somma dei comuni correnti senza duplicati,ISTAT POSAS 2026 via tabella derivata pubblica
+20,Sardegna,377,1554490,2026-01-01,Somma dei comuni correnti senza duplicati,ISTAT POSAS 2026 via tabella derivata pubblica
+TOTALE,Italia,7894,58942828,2026-01-01,Somma dei 7.894 comuni correnti,ISTAT POSAS 2026 via tabella derivata pubblica
