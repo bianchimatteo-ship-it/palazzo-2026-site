@@ -1,5 +1,9 @@
-import { ELECTION_MODELS, EUROPEAN_CONSTITUENCIES, EUROPEAN_THRESHOLD, OUTCOME_LABELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261017-2';
+import { countBallots, distributeVotes, withVotes } from './electorate.js?v=20261017-3';
+import { ELECTION_MODELS, EUROPEAN_CONSTITUENCIES, EUROPEAN_THRESHOLD, OUTCOME_LABELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261017-3';
 
+const SCALE_FALLBACK = 100000;
+// every candidate of a local or regional race is a row: the shares add up to 100 (up to rounding), so no «other lists» row is made
+const withVotesOf = (rows,valid) => withVotes(rows,valid,{others:false});
 const clamp = (value,min=0,max=100) => Math.min(max,Math.max(min,value));
 const rounded = value => Math.round(value*100)/100;
 const territories = campaign => campaign.territories ?? [];
@@ -10,19 +14,11 @@ function seeded(seed) {
   return () => { state = (Math.imul(state, 1664525) + 1013904223) >>> 0; return state / 4294967296; };
 }
 function ballotsOf(campaign) {
-  const electorate = campaign.electorate ?? {};
-  const realElectors = Number(electorate.electors);
-  const normalized = !Number.isFinite(realElectors) || realElectors <= 0;
-  const electors = normalized ? null : Math.round(realElectors);
-  const sampleElectors = electors ?? 100000;
   const turnout = clamp(Number(campaign.electionDays?.at(-1)?.turnout ?? 61), 0, 100);
-  const validRatio = Number(electorate.validRatio) > 0 && Number(electorate.validRatio) <= 1 ? Number(electorate.validRatio) : .99;
   const random = seeded(hash(`${campaign.id}|${campaign.seed}|${campaign.stage}|${campaign.electionDays?.length ?? 0}|schede`));
   const normal = () => Math.sqrt(-2 * Math.log(Math.max(Number.EPSILON, random()))) * Math.cos(2 * Math.PI * random());
-  const turnoutShare = turnout / 100;
-  const voters = normalized ? 100000 : clamp(Math.round(sampleElectors * turnoutShare + normal() * Math.sqrt(sampleElectors * turnoutShare * (1 - turnoutShare))), 0, sampleElectors);
-  const ballots = normalized ? 100000 : clamp(Math.round(voters * validRatio + normal() * Math.sqrt(voters * validRatio * (1 - validRatio))), 0, voters);
-  return { electors, voters, ballots, turnout, validRatio, normalized, basis: normalized ? 'elettorato simulato normalizzato su 100.000' : electorate.basis ?? 'elettori iscritti', source: 'simulation' };
+  // residents, electors, voters and valid ballots are four different numbers (src/core/electorate.js); without demographic data the count is a declared scale, never presented as voters
+  return countBallots(campaign, { turnout, normal });
 }
 
 function allianceLeader(candidate,candidates) {
@@ -101,14 +97,16 @@ function allocateWithBonus(groups, seatCount, winnerId, bonus, threshold = 0) {
 function resultRow(group,share,totalBallots,seats=0,extra={}) {
   return {
     id:group.id,candidateId:group.leaderCandidateId,partyIds:group.partyIds,memberCandidateIds:group.members,
-    label:group.label,percent:clamp(rounded(share)),votes:Math.round(totalBallots*share/100),seats,
+    label:group.label,percent:clamp(rounded(share)),votes:0,seats,
     source:'simulation',...extra
   };
 }
 
-function areaResults(campaign,totalBallots=100000,finalistIds=null) {
+function areaResults(campaign,totalBallots=SCALE_FALLBACK,finalistIds=null) {
   const weight = territories(campaign).reduce((sum,item)=>sum+item.weight,0) || 1;
-  return territories(campaign).map(area=>{
+  // the ballots of the vote are shared among the areas by weight in whole numbers that add up to them
+  const perArea = distributeVotes(territories(campaign).map(item=>item.weight),totalBallots);
+  return territories(campaign).map((area,index)=>{
     let groups=sharesByGroup(campaign,area.id);
     if(finalistIds) {
       const finalists=new Set(finalistIds);
@@ -116,9 +114,9 @@ function areaResults(campaign,totalBallots=100000,finalistIds=null) {
       const retained=groups.reduce((sum,group)=>sum+group.share,0)||1;
       groups=groups.map(group=>({...group,share:rounded(group.share*100/retained)}));
     }
-    const rows = groups.map(group=>resultRow(group,group.share,Math.round(totalBallots*area.weight/weight)));
+    const rows = withVotesOf(groups.map(group=>resultRow(group,group.share,0)),perArea[index]);
     const player = rows.find(row => row.candidateId === campaign.playerCandidateId);
-    return {territoryId:area.id,name:area.name,weight:area.weight,groups:rows,winnerId:rows[0]?.candidateId ?? null,playerPosition:player ? rows.indexOf(player) + 1 : null};
+    return {territoryId:area.id,name:area.name,weight:area.weight,ballots:perArea[index],groups:rows,winnerId:rows[0]?.candidateId ?? null,playerPosition:player ? rows.indexOf(player) + 1 : null};
   });
 }
 
@@ -195,13 +193,13 @@ export function runFirstRound(campaign) {
   const count=ballotsOf(campaign);
   const result={
     stage:'primo-turno',model:ELECTION_MODELS[campaign.electionType].model,electionType:campaign.electionType,
-    totalBallots:count.ballots,electorate:count,groups:groups.map(group=>resultRow(group,group.share,count.ballots)),
+    totalBallots:count.ballots,electorate:count,groups:withVotesOf(groups.map(group=>resultRow(group,group.share,count.ballots)),count.ballots),
     territories:areaResults(campaign),playerShare:playerGroup?.share??0,source:'simulation',simulated:true
   };
   if(campaign.electionType==='comunale'&&campaign.municipalityBand==='oltre-15000'&&leader?.share<50&&groups.length>1) {
     result.requiresRunoff=true;
     result.runoffCandidateIds=groups.slice(0,2).map(item=>item.id);
-    result.runoffShares=normalizedTwoRound(campaign,result.runoffCandidateIds).map(group=>resultRow(group,group.share,count.ballots));
+    result.runoffShares=withVotesOf(normalizedTwoRound(campaign,result.runoffCandidateIds).map(group=>resultRow(group,group.share,count.ballots)),count.ballots);
   } else {
     result.requiresRunoff=false;
     result.winnerGroupId=leader?.id??null;
@@ -221,29 +219,30 @@ export function runFinalElection(campaign,firstRound=null) {
   let seatRows=[];
   if(campaign.stage==='ballottaggio'&&firstRound?.runoffCandidateIds) {
     const finalShares=normalizedTwoRound(campaign,firstRound.runoffCandidateIds);
-    runoffRows=finalShares.map(group=>resultRow(group,group.share,totalBallots));
+    runoffRows=withVotesOf(finalShares.map(group=>resultRow(group,group.share,totalBallots)),totalBallots);
     runoffWinnerId=runoffRows[0]?.candidateId??null;
     seatRows=municipalSeats(campaign,finalShares,runoffWinnerId);
-    rows=finalShares.map(group=>{
+    rows=withVotesOf(finalShares.map(group=>{
       const first=firstRound.groups.find(item=>item.candidateId===group.id);
       const seats=seatRows.find(item=>item.id===group.id)?.seats??0;
-      return resultRow(group,group.share,totalBallots,seats,{firstRoundPercent:first?.percent??null,runoffPercent:group.share,runoffVotes:Math.round(totalBallots*group.share/100)});
-    });
+      return resultRow(group,group.share,totalBallots,seats,{firstRoundPercent:first?.percent??null,runoffPercent:group.share});
+    }),totalBallots);
+    for(const row of rows) row.runoffVotes=row.votes;
   } else if(campaign.electionType==='comunale') {
     seatRows=municipalSeats(campaign,aggregate,aggregate[0]?.id);
-    rows=aggregate.map(group=>resultRow(group,group.share,totalBallots,seatRows.find(row=>row.id===group.id)?.seats??0));
+    rows=withVotesOf(aggregate.map(group=>resultRow(group,group.share,totalBallots,seatRows.find(row=>row.id===group.id)?.seats??0)),totalBallots);
   } else if(campaign.electionType==='provinciale') {
     seatRows=provincialSeats(campaign,aggregate);
-    rows=aggregate.map(group=>resultRow(group,group.share,totalBallots,seatRows.find(row=>row.id===group.id)?.seats??0));
+    rows=withVotesOf(aggregate.map(group=>resultRow(group,group.share,totalBallots,seatRows.find(row=>row.id===group.id)?.seats??0)),totalBallots);
   } else if(campaign.electionType==='regionale') {
     seatRows=allocateRegional(campaign,aggregate);
-    rows=aggregate.map(group=>resultRow(group,group.share,totalBallots,seatRows.find(row=>row.id===group.id)?.seats??0));
+    rows=withVotesOf(aggregate.map(group=>resultRow(group,group.share,totalBallots,seatRows.find(row=>row.id===group.id)?.seats??0)),totalBallots);
   } else if(campaign.electionType==='politiche') {
     seatRows=nationalSeats(campaign,aggregate);
-    rows=aggregate.map(group=>{const seat=seatRows.find(row=>row.id===group.id);return resultRow(group,group.share,totalBallots,seat?.seats??0,{districtSeats:seat?.districtSeats??0,proportionalSeats:seat?.proportionalSeats??0,districtsWon:seat?.districtsWon??[]});});
+    rows=withVotesOf(aggregate.map(group=>{const seat=seatRows.find(row=>row.id===group.id);return resultRow(group,group.share,totalBallots,seat?.seats??0,{districtSeats:seat?.districtSeats??0,proportionalSeats:seat?.proportionalSeats??0,districtsWon:seat?.districtsWon??[]});}),totalBallots);
   } else {
     seatRows=europeanSeats(campaign,aggregate);
-    rows=aggregate.map(group=>{const seat=seatRows.find(row=>row.id===group.id);return resultRow(group,group.share,totalBallots,seat?.seats??0,{circumscriptions:seat?.circumscriptions??[]});});
+    rows=withVotesOf(aggregate.map(group=>{const seat=seatRows.find(row=>row.id===group.id);return resultRow(group,group.share,totalBallots,seat?.seats??0,{circumscriptions:seat?.circumscriptions??[]});}),totalBallots);
   }
   rows.sort((a,b)=>b.percent-a.percent||b.seats-a.seats);
   const winnerId=runoffWinnerId??rows[0]?.id??null;
@@ -253,7 +252,7 @@ export function runFinalElection(campaign,firstRound=null) {
   const previous=campaign.firstRoundResult;
   const result = {
     stage:'risultato-finale',model:rules.model,electionType:campaign.electionType,totalBallots,electorate:count,
-    ballotLabel:count.normalized ? 'Schede normalizzate su 100.000 elettori simulati' : `Schede valide stimate su ${count.electors.toLocaleString('it-IT')} elettori`,groups:rows,
+    ballotLabel:count.normalized ? count.basis : `Voti validi: ${count.ballots.toLocaleString('it-IT')} su ${count.voters.toLocaleString('it-IT')} votanti (elettorato ${count.electorsSource==='simulato'?'simulato':'iscritto'}: ${count.electors.toLocaleString('it-IT')}${count.residents?`; residenti: ${count.residents.toLocaleString('it-IT')}`:''})`,groups:rows,
     territories:areaResults(campaign,totalBallots,campaign.stage==='ballottaggio'?firstRound?.runoffCandidateIds??null:null),firstRound:previous??firstRound??null,
     winnerGroupId:winnerId,playerShare:runoffRows?.find(row=>row.candidateId===campaign.playerCandidateId)?.percent??playerRow?.percent??0,playerVotes:runoffRows?.find(row=>row.candidateId===campaign.playerCandidateId)?.votes??playerRow?.votes??0,runoffResults:runoffRows,
     playerSeats:playerRow?.seats??0,personalMandate:personal.mandate,personal,source:'simulation',simulated:true,

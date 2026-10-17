@@ -1,15 +1,16 @@
-import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261017-2';
-import { LOGO_SHAPES, LOGO_SYMBOLS, partyLogoDataUrl } from './party-logo.js?v=20261017-2';
-import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261017-2';
-import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261017-2';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261017-2';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261017-2';
-import { POLL_SCENARIOS, SCENARIO_LIMITS } from '../core/poll-scenario.js?v=20261017-2';
-import { startStep, startSummary } from './start-wizard.js?v=20261017-2';
-import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261017-2';
-import { normalizeStart } from '../core/start-engine.js?v=20261017-2';
-import { legacyBanner } from './hall-view.js?v=20261017-2';
-import { formatDate } from '../core/time.js?v=20261017-2';
+import { residentsText } from '../core/municipal-rules.js?v=20261017-3';
+import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261017-3';
+import { LOGO_SHAPES, LOGO_SYMBOLS, partyLogoDataUrl } from './party-logo.js?v=20261017-3';
+import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261017-3';
+import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261017-3';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261017-3';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261017-3';
+import { POLL_SCENARIOS, SCENARIO_LIMITS } from '../core/poll-scenario.js?v=20261017-3';
+import { startStep, startSummary } from './start-wizard.js?v=20261017-3';
+import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261017-3';
+import { normalizeStart } from '../core/start-engine.js?v=20261017-3';
+import { legacyBanner } from './hall-view.js?v=20261017-3';
+import { formatDate } from '../core/time.js?v=20261017-3';
 
 const POSITIONS = ['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra'];
 
@@ -123,9 +124,9 @@ function whereStep(d, territory) {
     .sort(([a, keyA], [b, keyB]) => (query ? Number(!keyB.startsWith(query)) - Number(!keyA.startsWith(query)) : 0) || a.name.localeCompare(b.name, 'it')).map(([item]) => item);
   const limit = Math.max(40, Number(d.municipalityLimit) || 40);
   const unitByCode = new Map(units.map(unit => [unit.code, unit]));
-  const options = matches.slice(0, limit).map(item => `<button type="button" class="municipality-option ${d.municipalityCode === item.code ? 'selected' : ''}" data-municipality-code="${esc(item.code)}" aria-pressed="${d.municipalityCode === item.code}"><strong>${esc(item.name)}${item.alt ? ` <em>/ ${esc(item.alt)}</em>` : ''}</strong><small>${esc(unitLabel(unitByCode.get(item.unit) ?? { name: '' }))}${item.capital ? ' · capoluogo' : ''}</small></button>`).join('');
+  const options = matches.slice(0, limit).map(item => `<button type="button" class="municipality-option ${d.municipalityCode === item.code ? 'selected' : ''}" data-municipality-code="${esc(item.code)}" aria-pressed="${d.municipalityCode === item.code}"><strong>${esc(item.name)}${item.alt ? ` <em>/ ${esc(item.alt)}</em>` : ''}</strong><small>${esc(unitLabel(unitByCode.get(item.unit) ?? { name: '' }))}${item.capital ? ' · capoluogo' : ''} · ${esc(residentsText(item.code))}</small></button>`).join('');
   const place = chosenPlace(d, territory);
-  const chosen = place ? `<div class="wizard-place-selected"><span class="source-pill">DATO REALE · ISTAT</span><strong>Comune di ${esc(place.municipality.name)}${place.municipality.alt ? ` / ${esc(place.municipality.alt)}` : ''}</strong><small>${esc(place.unit.type)} di ${esc(unitLabel(place.unit))} · ${esc(place.region)} · codice ISTAT ${esc(place.municipality.code)}</small><small>Sarà il territorio iniziale della tua carriera.</small></div>` : '<div class="wizard-place-selected is-empty">Nessun comune scelto: cercalo nell’elenco.</div>';
+  const chosen = place ? `<div class="wizard-place-selected"><span class="source-pill">DATO REALE · ISTAT</span><strong>Comune di ${esc(place.municipality.name)}${place.municipality.alt ? ` / ${esc(place.municipality.alt)}` : ''}</strong><small>${esc(place.unit.type)} di ${esc(unitLabel(place.unit))} · ${esc(place.region)} · codice ISTAT ${esc(place.municipality.code)}</small><small class="wizard-residents" data-residents="${esc(place.municipality.code)}">${esc(residentsText(place.municipality.code))}</small><small>Sarà il territorio iniziale della tua carriera.</small></div>` : '<div class="wizard-place-selected is-empty">Nessun comune scelto: cercalo nell’elenco.</div>';
   const unitChosen = units.find(unit => unit.code === d.territorialUnit);
   const count = matches.length ? `Mostrati ${Math.min(limit, matches.length).toLocaleString('it-IT')} di ${matches.length.toLocaleString('it-IT')} comuni` : 'Nessun comune corrisponde alla ricerca.';
   const list = `<div class="wizard-party-count">${count}</div><div class="municipality-list">${options}</div>${matches.length > limit ? '<button type="button" class="wizard-show-more" data-wizard-show-municipalities>Mostra altri comuni</button>' : ''}`;
@@ -304,7 +305,7 @@ function summaryStep(d, parties, level, parliamentaryGroups, place = null, pollV
   const territorySummary = directPresident ? 'Scenario nazionale alternativo · nessuna carica territoriale personale'
     : externalPremier ? 'Governo nazionale · senza seggio parlamentare personale'
       : d.initialLevel === 'comunale' ? 'Comune di ' + (d.municipality || 'da scegliere') + ' · ' + (d.region || 'Regione') : d.initialLevel === 'provinciale' ? 'Provincia di ' + (d.provinceName || 'da scegliere') + ' · Comune di ' + (d.municipality || 'da scegliere') : d.initialLevel === 'regionale' ? (d.region || 'Regione da scegliere') : (chamber === 'camera' ? 'Camera dei deputati' : chamber === 'senato' ? 'Senato della Repubblica' : 'Territorio nazionale') + ' · ' + (d.region || 'territorio da selezionare');
-  const where = '<section class="summary-section"><div class="summary-section-heading"><div><span>02 · DOVE INIZI</span><strong>' + esc(place ? 'Comune di ' + place.municipality.name : d.municipality || 'Comune da scegliere') + '</strong></div><button type="button" data-wizard-goto="2">Modifica</button></div><small>' + esc(place ? place.unit.type + ' di ' + unitLabel(place.unit) + ' · ' + place.region + ' · codice ISTAT ' + place.municipality.code : d.region || 'Regione da scegliere') + '</small></section>';
+  const where = '<section class="summary-section"><div class="summary-section-heading"><div><span>02 · DOVE INIZI</span><strong>' + esc(place ? 'Comune di ' + place.municipality.name : d.municipality || 'Comune da scegliere') + '</strong></div><button type="button" data-wizard-goto="2">Modifica</button></div><small>' + esc(place ? place.unit.type + ' di ' + unitLabel(place.unit) + ' · ' + place.region + ' · codice ISTAT ' + place.municipality.code + ' · ' + residentsText(place.municipality.code) : d.region || 'Regione da scegliere') + '</small></section>';
   const metrics = [['Popolarità', stats.popularity], ['Reputazione', stats.reputation], ['Consenso', stats.consensus], ['Esperienza', stats.experience], ['Influenza', stats.influence], ['Notorietà', stats.notoriety]];
   const parliamentary = directPresident || externalPremier || chamber ? '<section class="summary-section"><div class="summary-section-heading"><div><span>CONTESTO PARLAMENTARE</span><strong>' + (directPresident ? 'Nessun seggio o gruppo personale' : externalPremier ? 'Esterno al Parlamento' : chamber === 'camera' ? 'Camera dei deputati' : 'Senato della Repubblica') + '</strong></div><button type="button" data-wizard-goto="2">Modifica</button></div>' + (chamber ? '<div class="summary-facts"><span>Seggio personale simulato · gruppo: ' + esc(parliamentaryGroup?.officialName || 'Da selezionare') + '</span><span>Territorio di riferimento: ' + esc(d.region || 'Non definito') + '</span></div><small>Il riferimento istituzionale è reale; il seggio del tuo personaggio appartiene solo allo scenario simulato.</small>' : '<small>' + (directPresident ? 'Le Camere esistono nello scenario, ma non hai un seggio o un gruppo personale.' : 'Il Governo usa un gruppo solo come riferimento di coalizione, senza attribuirlo al giocatore.') + '</small>') + '</section>' : '';
   const scenario = d.startingOffice ? '<section class="summary-section"><div class="summary-section-heading"><div><span>SCENARIO ISTITUZIONALE</span><strong>' + (directPresident ? 'Mandato presidenziale simulato · scenario alternativo' : 'Governo attivo formato dal giocatore') + '</strong></div></div><small>' + (directPresident ? 'Poteri del Quirinale attivi; nessuna carica parlamentare, governativa o di partito.' : externalPremier ? 'PdC esterno al Parlamento, senza seggio né gruppo personale.' : 'PdC con il seggio e il gruppo selezionati.') + '</small></section>' : '';
