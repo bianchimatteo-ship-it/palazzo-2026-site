@@ -134,3 +134,43 @@ Misurato: 140 moduli, 4,26 MiB, di cui 2,3 MiB sono motori (`core`) importati in
 
 ## H. Non eseguito per istruzione
 Build o modifiche native Android/iOS e AdMob: non toccati.
+
+---
+
+# Aggiornamento del 17/10/2026 — salvataggi, nuova partita, colori dell'Admin
+
+Branch `claude/nifty-johnson-a8x5cv`. Stati: **codice corretto** · **test locale superato** (Node, Chrome headless su profilo pulito, Worker/D1/KV di prova in memoria) · **provato nel browser** (Chrome headless: non è un browser di un giocatore, né Safari/Firefox) · **produzione verificata** (non è stata toccata né letta: il sito pubblicato non è raggiungibile da questo ambiente).
+
+## 1. Salvataggi (P0)
+**Misura** (Chrome, profilo pulito, carriera di prova; localStorage ≈ 5,2 milioni di caratteri prima del `QuotaExceededError`):
+
+| Carriera | principale | copia | cronologia | 3 slot | totale |
+|---|---|---|---|---|---|
+| 3 settimane | 219 K | 245 K | 797 K | 388 K | 1,65 M |
+| 30 settimane | 618 K | 687 K | 1.942 K | 1.396 K | **4,64 M** (89 % del limite) |
+
+Con 5 slot la quota si esaurisce già dopo poche decine di settimane: il problema era reale. Prima, con quota esaurita, il salvataggio falliva (corretto: mai «salvato» falso) ma il giocatore non aveva dove mettere i dati.
+
+**Correzione** (`src/core/tiered-storage.js`, usato da `src/core/storage.js`): due livelli. localStorage resta il primo (sincrono, letto dalle altre schede), con un **budget** di 3 milioni di caratteri per i salvataggi (principale, copia, cronologia, slot) che lascia spazio alle chiavi piccole (blocco, indici, coda, impostazioni). Ciò che non entra va in **IndexedDB** (`politicando-vault`), tenuto in memoria e riletto dal ricaricamento. Ogni scrittura è anche specchiata in IndexedDB.
+- **Migrazione idempotente e verificata**: all'avvio le chiavi di localStorage non ancora in IndexedDB vengono copiate, **riletta** da IndexedDB e confrontate; l'esito (copiate / verificate / differenze / saltate) è nel rapporto `storage.vaultReport()` e in un registro `__meta__`. **Nessuna chiave di localStorage viene cancellata o riscritta dal codice di migrazione.** Riaprendo non si copia di nuovo nulla.
+- **Nessun falso «salvato»**: se la copia non è in localStorage, `storage.save` restituisce `durable:false` e una promessa `confirm`; il gioco mostra «Salvataggio nel database del browser in corso…» (stato non salvato) e dichiara «Salvato» solo a conferma di IndexedDB. Se nessuno dei due accetta la scrittura: errore visibile («Il browser non ha confermato la scrittura: la carriera è solo in memoria»), lo stato resta in memoria, compare in ogni schermata un avviso con «Esporta la carriera su file» (ultimo stato, non quello vecchio) e il gioco chiede al browser di domandare conferma prima di chiudere la pagina (`beforeunload`: nel codice, non provato nel browser automatico).
+- **Operazioni rischiose bloccate**: prima di sostituire la carriera (nuova partita, carica slot, importa file, carica o ripristina dall'account, ripristino di una copia) `store.preserveCurrent()` scrive la copia in uno slot automatico **e ne attende la conferma**; se non è confermata non si sostituisce nulla e si spiega come esportare. Nessuno slot manuale viene eliminato da sé.
+- **Schede**: lo stato che vive solo fuori da localStorage è annunciato alle altre schede (BroadcastChannel) e riletto da IndexedDB quando la scheda torna visibile. Con quota esaurita anche per il blocco, il salvataggio prosegue senza blocco (resta il controllo sul progresso della carriera, che rifiuta un salvataggio obsoleto).
+- **Coda di sincronizzazione**: se il browser non riesce a scrivere la coda, la richiesta compare come **errore** («non è stata registrata»), non come attesa.
+- **Limiti residui**: IndexedDB non c'è/è disabilitato (modalità privata di alcuni browser) → tutto torna come prima (solo localStorage, con gli stessi errori); due schede con localStorage pieno si vedono via BroadcastChannel (non c'è in Safari < 15.4); un eventuale «slot eliminato» può riapparire se la cancellazione in IndexedDB fallisce. Safari/Firefox non provati.
+
+Test: `check-tiered-storage` (Node, IndexedDB e localStorage simulati con quota e guasti: migrazione, idempotenza, quota, ricaricamento, due schede, assenza di spazio per il blocco, molti slot), `check-save-resilience` (Chrome, IndexedDB reale: migrazione di una carriera «all'antica», quota, ricaricamento, seconda scheda, scrittura rifiutata, avviso, esportazione, blocco della sostituzione), `check-sync-queue` (coda non scrivibile), `check-saves` (invariato).
+
+## 2. Nuova partita, × e «Annulla» (P0)
+**Riproduzione** (`check-new-game-flow`, Chrome): «Nuova partita» apriva la procedura **sopra** la schermata della carriera in corso (barra laterale, intestazione, pagina dietro un velo traslucido): da lì l'impressione di «riapre l'ultima carriera». Inoltre «Annulla» c'era solo al passaggio 1 e una risposta tardiva dei dati ricaricava la procedura.
+**Correzione**: la procedura è una schermata a sé (sfondo opaco, nulla della carriera disegnato dietro, né barra mobile); «Annulla» e × a ogni passaggio tornano al menu iniziale senza creare né caricare nulla; ogni caricamento dati ha un controllo di appartenenza (una risposta dopo l'annullamento non cambia schermata); con gli slot pieni «Inizia carriera» è bloccato con il motivo e l'esportazione della carriera in corso (prima il messaggio prometteva di perderla). Verificato da menu principale, pagina Carriera, Impostazioni, telefono (375 px) e a ogni passaggio 1–5: id, settimana e data della carriera restano identici.
+
+## 3. Colori dell'Admin (P0)
+Il modulo ha **un solo colore** (già dal commit precedente). Il sintomo online «due colori / colore non salvato» **non è riproducibile in locale** (il codice sorgente non ha mai avuto un secondo selettore su `main`; sul branch c'è stato solo tra il 14 e il 16/10): l'ipotesi più probabile è una pagina in cache di quella versione. Corretto comunque ciò che poteva fallire in silenzio: `persist()` ora **rifiuta** (con messaggio) una modifica che il browser non può tenere; la copia dell'archivio ricevuta dal server resta in uso anche se non si può scrivere in localStorage (prima il colore pubblicato poteva non arrivare in partita); il messaggio dell'Admin dice «Salvato in questo browser; pubblicazione in corso…» e **«Pubblicato … (confermato dal server)» solo con la risposta del server**, altrimenti «NON pubblicato»; il Worker non scrive più `color2` (né nei partiti aggiunti né nei record corretti; i vecchi archivi si leggono ancora); l'indirizzo dell'API vale anche per un dominio personalizzato.
+Test: `check-admin-storage` (nuovo), `check-admin-parties`, `check-admin-e2e` (selettore → modulo → archivio locale → KV del Worker → ricaricamento → nuova sessione → nuova carriera), `check-party-colors`.
+
+## 4. Carica partita (P1)
+Ogni slot: nome leggibile, giocatore, settimana, data di gioco, data di salvataggio, dove sta («In questo browser» / «Nel database del browser») e se il browser ha confermato; **esportazione per slot**; la partita in corso dice se è salvata, in scrittura, non salvata o non riuscita; **copie di sicurezza** (copia e cronologia locale) elencate con il motivo, esportabili e ripristinabili: una copia più vecchia della stessa carriera torna come **carriera separata** (nuova identità), perché il gioco non fa mai tornare indietro una carriera (la più avanzata non viene toccata). Test: `check-load-game`.
+
+## 5. Workers Builds rosso
+Il controllo `Workers Builds: palazzo-2026-site` è rosso su ogni commit del branch, anche su `1b78892` che ha `wrangler.jsonc` identico a quello della build verde di `main`. Da qui: `npm ci --dry-run`, `wrangler deploy --dry-run` e `wrangler versions upload --dry-run` **passano**; il dettaglio dell'errore è solo nella dashboard Cloudflare (il controllo non espone testo). **Causa non determinabile da questo ambiente**; la produzione serve `main` (cbaac63), quindi nulla di quanto è su questo branch è online.

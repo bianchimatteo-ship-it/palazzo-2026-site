@@ -53,14 +53,25 @@ function loadLocalArchive() {
   } catch { /* an unreadable archive is left untouched in storage */ }
   return empty();
 }
+// The last archive the server sent is also kept in memory: if this browser has no room to store it, the page in use still shows what the server published (the colours of the parties
+// among them) and the screens can say that the copy could not be kept.
+let memoryShared = null;
+let sharedStored = true;
 export function loadSharedArchive() {
-  if (!storageAvailable()) return null;
-  try { return JSON.parse(localStorage.getItem(SHARED_KEY) ?? 'null'); } catch { return null; }
+  let stored = null;
+  if (storageAvailable()) { try { stored = JSON.parse(localStorage.getItem(SHARED_KEY) ?? 'null'); } catch { stored = null; } }
+  if (memoryShared && (!stored || String(memoryShared.fetchedAt ?? '') >= String(stored.fetchedAt ?? ''))) return memoryShared;
+  return stored;
 }
+// Returns true when the copy is also written in the browser's storage.
 export function storeSharedArchive(archive) {
-  if (!archive || typeof archive !== 'object') return;
-  try { localStorage.setItem(SHARED_KEY, JSON.stringify({ version: 1, updatedAt: archive.updatedAt ?? null, parties: archive.parties ?? {}, politicians: archive.politicians ?? {}, logos: archive.logos ?? {}, addedParties: archive.addedParties ?? {}, hidden: archive.hidden ?? {}, configured: Boolean(archive.configured), fetchedAt: new Date().toISOString() })); } catch { /* the shared copy is only a cache */ }
+  if (!archive || typeof archive !== 'object') return false;
+  const copy = { version: 1, updatedAt: archive.updatedAt ?? null, parties: archive.parties ?? {}, politicians: archive.politicians ?? {}, logos: archive.logos ?? {}, addedParties: archive.addedParties ?? {}, hidden: archive.hidden ?? {}, configured: Boolean(archive.configured), fetchedAt: new Date().toISOString() };
+  memoryShared = copy;
+  try { localStorage.setItem(SHARED_KEY, JSON.stringify(copy)); sharedStored = true; } catch { sharedStored = false; }
+  return sharedStored;
 }
+export const sharedCopyStored = () => sharedStored;
 export const sharedLogos = () => loadSharedArchive()?.logos ?? {};
 export function sharedSessionToken() { try { return sessionStorage.getItem(SHARED_TOKEN_KEY); } catch { return null; } }
 export function setSharedSessionToken(token) { try { if (token) sessionStorage.setItem(SHARED_TOKEN_KEY, token); else sessionStorage.removeItem(SHARED_TOKEN_KEY); } catch { /* session only */ } }
@@ -88,7 +99,9 @@ function pruneShared(archive) {
 }
 function persist(archive) {
   archive.updatedAt = new Date().toISOString();
-  localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archive));
+  // A change is "saved" only if the browser took it: without room (or storage) nothing is kept, the archive stays as it was and the owner is told.
+  try { localStorage.setItem(ARCHIVE_KEY, JSON.stringify(archive)); }
+  catch (error) { throw new Error(/quota|exceed|full|spazio/i.test(`${error?.name} ${error?.message}`) ? 'Spazio del browser esaurito: la modifica non è stata salvata. Esporta l’archivio dell’Admin o libera spazio (le carriere non vengono toccate) e riprova.' : `La modifica non è stata salvata in questo browser (${error?.message || 'archivio non disponibile'}).`); }
   pruneShared(archive);
   return archive;
 }
@@ -237,7 +250,7 @@ export function importAdminArchive(text) {
 // «Cancella tutto»: the corrections, the links, the added and the hidden records go, in this browser and in the shared copy (the next publication then empties them on the server); the logos stay,
 // they have their own area and the owner did not ask to lose them.
 export function clearAdminArchive() {
-  localStorage.removeItem(ARCHIVE_KEY);
+  try { localStorage.removeItem(ARCHIVE_KEY); } catch { /* nothing was stored */ }
   const shared = loadSharedArchive();
   if (shared) storeSharedArchive({ ...shared, parties: {}, politicians: {}, addedParties: {}, hidden: {} });
   return empty();

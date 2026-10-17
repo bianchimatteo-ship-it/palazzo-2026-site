@@ -1,3 +1,4 @@
+import { createTier } from './tiered-storage.js?v=20261017-1';
 const STORAGE_KEY = 'palazzo-2026.career.v1';
 const BACKUP_KEY = `${STORAGE_KEY}.backup`;
 const HISTORY_KEY = `${STORAGE_KEY}.history`;
@@ -11,6 +12,13 @@ export const MAX_SLOTS = 5;
 // The Hall of Fame (the careers concluded and their legacy) belongs to the player: it is not part of any save and
 // outlives every career, every slot and “delete all saves”.
 const HALL_KEY = 'politicando.hall.v1';
+
+// The saves live in two tiers (see tiered-storage.js): localStorage as before, and IndexedDB for what localStorage cannot hold. From here on `localStorage` is that tier's surface:
+// the same getItem/setItem/removeItem/key/length, so everything below reads and writes as it always did.
+const isBulkKey = key => key === STORAGE_KEY || key === BACKUP_KEY || key === HISTORY_KEY || String(key).startsWith(SLOT_PREFIX);
+const tier = createTier({ real: () => globalThis.localStorage, isBulk: isBulkKey });
+tier.setPrimaryKey(STORAGE_KEY);
+const localStorage = tier.facade;
 
 const readJson = key => { try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; } catch { return null; } };
 const readRawJson = raw => { try { return raw ? JSON.parse(raw) : null; } catch { return null; } };
@@ -144,13 +152,16 @@ function withWriteLock(action) {
   if (occupied?.expiresAt > now) throw new Error('Salvataggio in corso in un’altra scheda: riprova tra qualche istante.');
   // The token tells this tab from another: the moment the tab started (to the microsecond) and a counter; no random numbers, so the seeded game is never touched.
   const token = `${now}-${globalThis.performance?.timeOrigin ?? 0}-${++lockSequence}`;
-  writeWithHistoryPrune(LOCK_KEY, JSON.stringify({ token, expiresAt: now + LOCK_TTL }));
-  if (readJson(LOCK_KEY)?.token !== token) throw new Error('Salvataggio in corso in un’altra scheda: riprova tra qualche istante.');
+  // Without room for even the lock the write goes on without it (the saves have IndexedDB to go to): the check on the progress of the career still refuses an obsolete save.
+  let degraded = false;
+  try { writeWithHistoryPrune(LOCK_KEY, JSON.stringify({ token, expiresAt: now + LOCK_TTL })); }
+  catch (error) { if (!isQuotaError(error)) throw error; degraded = true; }
+  if (!degraded && readJson(LOCK_KEY)?.token !== token) throw new Error('Salvataggio in corso in un’altra scheda: riprova tra qualche istante.');
   const assertOwner = () => {
-    if (readJson(LOCK_KEY)?.token !== token) throw new Error('Salvataggio interrotto da un’altra scheda; ricarica prima di riprovare.');
+    if (!degraded && readJson(LOCK_KEY)?.token !== token) throw new Error('Salvataggio interrotto da un’altra scheda; ricarica prima di riprovare.');
   };
   try { return action(assertOwner); }
-  finally { try { if (readJson(LOCK_KEY)?.token === token) localStorage.removeItem(LOCK_KEY); } catch { /* the lease expires if cleanup is unavailable */ } }
+  finally { try { if (!degraded && readJson(LOCK_KEY)?.token === token) localStorage.removeItem(LOCK_KEY); } catch { /* the lease expires if cleanup is unavailable */ } }
 }
 function backupLocked(payload, reason) {
   const rawPayload = payloadText(payload);
@@ -199,7 +210,51 @@ function repairSlotsUnlocked() {
   return true;
 }
 
+// At start: IndexedDB is opened, what localStorage holds is copied there (and read back), what only IndexedDB holds is taken back. Without IndexedDB nothing changes.
+const sameCareerVersion = (key, left, right) => {
+  const a = unwrap(readRawJson(left), key), b = unwrap(readRawJson(right), key);
+  return a && b && careerIdOf(a.state) === careerIdOf(b.state) ? compareSaveVersion(a.state, b.state) : null;
+};
+await tier.start({ compare: sameCareerVersion });
+if (typeof document !== 'undefined') document.addEventListener?.('visibilitychange', () => { if (document.visibilityState === 'visible') tier.refresh(); });
+
 export const storage = {
+  // Where the saves are kept and how safe the last writes are: IndexedDB state, the migration (keys copied, read back, differences), keys that live only outside localStorage, writes pending or failed.
+  vaultReport: () => tier.report(),
+  // Is the current value of a key already safe? `durable` at once when it is in localStorage; otherwise `confirm` says whether IndexedDB took it.
+  durability: key => tier.durability(key),
+  slotDurability: id => tier.durability(SLOT_PREFIX + id),
+  // What the list of saves says of a slot: where it is kept (localStorage, or the browser's database when localStorage had no room), how big it is, whether the browser has confirmed it.
+  slotInfo(id) {
+    const key = SLOT_PREFIX + id;
+    return { where: tier.where(key), chars: (localStorage.getItem(key) ?? '').length, durable: tier.durability(key).durable };
+  },
+  // The copies kept aside by the game: the backup and the history (the saves it replaced, the ones it refused as obsolete, the ones it recovered). Readable, never silently dropped.
+  localVersions() {
+    const items = [];
+    const backup = readJson(BACKUP_KEY);
+    const describe = (value, id) => {
+      const found = unwrap(value, id);
+      if (!found) return null;
+      const meta = metaOf(found.state);
+      // `older`: the career has a more advanced copy somewhere (the running game, a slot): going back to this one cannot replace that lineage, it is restored as a separate career.
+      const newest = bestCandidate(allSaveCandidates().filter(item => careerIdOf(item.state) === careerIdOf(found.state)));
+      return { id, reason: value?.reason ?? 'copia', savedAt: value?.savedAt ?? found.savedAt, careerId: careerIdOf(found.state), player: meta.player, party: meta.party, week: meta.week, gameDate: meta.gameDate, revision: revisionOf(found.state), older: Boolean(newest && compareSaveProgress(newest.state, found.state) > 0) };
+    };
+    const first = describe(backup, 'backup');
+    if (first) items.push(first);
+    const history = readJson(HISTORY_KEY);
+    for (const [index, entry] of (Array.isArray(history) ? history : []).entries()) { const item = describe(entry, `history:${index}`); if (item) items.push(item); }
+    return items.sort((a, b) => String(b.savedAt ?? '').localeCompare(String(a.savedAt ?? '')));
+  },
+  localVersion(id) {
+    const value = id === 'backup' ? readJson(BACKUP_KEY) : readJson(HISTORY_KEY)?.[Number(String(id).slice(8))];
+    const found = unwrap(value, id);
+    if (!found) throw new Error('Questa copia non è più disponibile o non è leggibile.');
+    return found.state;
+  },
+  settled: () => tier.settled(),
+  refresh: () => tier.refresh(),
   load() {
     const choose = () => {
       const candidates = allSaveCandidates();
@@ -269,7 +324,9 @@ export const storage = {
         archiveSnapshot(savedState, 'conflitto-scrittura-concorrente');
         throw new Error('Scrittura concorrente rilevata: il salvataggio persistito non coincide con questa versione.');
       }
-      return { savedAt: new Date().toISOString(), state: savedState, revision };
+      // `durable`: the copy is already safe (in localStorage). Otherwise it lives in memory until IndexedDB confirms: `confirm` resolves true when it has, false when it could not take it.
+      const safety = tier.durability(STORAGE_KEY);
+      return { savedAt: new Date().toISOString(), state: savedState, revision, durable: safety.durable, confirm: safety.confirm };
     });
   },
   // A save that cannot be restored is copied aside so a later autosave never erases it. True only when the copy is really there: whoever

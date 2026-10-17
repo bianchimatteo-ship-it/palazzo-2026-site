@@ -193,6 +193,10 @@ h1, h2, h3, h4 { color: var(--ink); }
   .wizard-footer { gap: 8px; flex-wrap: nowrap; padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); }
   .wizard-footer-note { display: none; }
 }
+/* the creator of a new career is a screen of its own: an opaque backdrop, the career in progress is not drawn behind it */
+.app-shell.wizard-only .wizard-backdrop { background: radial-gradient(900px 520px at 20% 10%, rgba(196,166,106,.12), transparent 60%), radial-gradient(900px 600px at 90% 90%, rgba(39,120,90,.14), transparent 60%), var(--paper); backdrop-filter: none; -webkit-backdrop-filter: none; }
+.wizard-footer .wizard-cancel { margin-right: auto; }
+.wizard-footer .wizard-back + .wizard-cancel { margin-right: 0; }
 /* the career creator is a full-screen dialog: while it is open the phone navigation is not shown, so it can neither cover nor take its taps */
 .app-shell.wizard-open > .mobile-tabbar, .app-shell.wizard-open > .mobile-sheet { display: none !important; }
 
@@ -988,3 +992,18 @@ select option, select optgroup { background: var(--panel); color: var(--ink); fo
 .preview-ba .ba-verdict { font-size: 12px; white-space: nowrap; color: var(--ink-2); }
 .preview-ba .ba-note { grid-column: 1 / -1; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
 @media (max-width: 520px) { .preview-ba li { grid-template-columns: minmax(0, 1fr) auto; } .preview-ba .ba-label { grid-column: 1 / -1; } .preview-ba .ba-values { font-size: 16px; } }
+
+/* a save that failed or is not confirmed yet: always visible, with the way to keep the career in a file */
+.save-alert { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin: 0 0 12px; padding: 10px 14px; border: 1px solid var(--bad, #b3261e); border-radius: var(--radius); background: color-mix(in srgb, var(--bad, #b3261e) 12%, var(--panel)); color: var(--ink-hi); font-size: 13px; line-height: 1.45; }
+.save-alert.is-pending { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 14%, var(--panel)); }
+.save-alert .secondary-button { flex: none; }
+
+.slot-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.slot-tag { display: inline-block; margin-top: 2px; padding: 1px 8px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink-3); font-size: 11px; }
+.save-state { display: block; margin-top: 2px; color: var(--ink-3); }
+.save-state.is-failed { color: var(--bad, #b3261e); font-weight: 600; }
+.save-state.is-pending, .save-state.is-dirty { color: var(--gold); }
+.slot-versions { margin: 14px 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); }
+.slot-versions summary { cursor: pointer; font-weight: 600; }
+.slot-versions li { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; padding: 8px 0; border-top: 1px solid var(--line); }
+.slot-versions li small { display: block; color: var(--ink-3); }
