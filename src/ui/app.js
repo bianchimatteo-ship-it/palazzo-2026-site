@@ -492,8 +492,11 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   // Every owner edit re-layers the archive over the real snapshot and redraws.
   const adminDone = message => {
     refreshAdminOverrides(); refreshReference?.(); admin.message = message; render(store.getState(), store.getLastSaved());
-    // Connected to the shared archive: the change is published for every player.
-    if (isAdminVerified()) publishSharedArchive().then(() => { admin.message = `${message} Pubblicato per tutti i giocatori.`; render(store.getState(), store.getLastSaved()); }).catch(error => { admin.message = `${message} Non pubblicato: ${error.message}`; render(store.getState(), store.getLastSaved()); });
+    // Connected to the shared archive: the change is published for every player, and the page says "published" only when the server has confirmed it.
+    if (isAdminVerified()) {
+      admin.message = `${message} Salvato in questo browser; pubblicazione in corso…`; render(store.getState(), store.getLastSaved());
+      publishSharedArchive().then(result => { admin.message = `${message} Pubblicato per tutti i giocatori (confermato dal server).${result.copyStored === false ? ' Questo browser non ha spazio per tenerne una copia: al prossimo avvio si rilegge dal server.' : ''}`; render(store.getState(), store.getLastSaved()); }).catch(error => { admin.message = `${message} NON pubblicato per i giocatori: ${error.message}`; render(store.getState(), store.getLastSaved()); });
+    } else { admin.message = `${message} Salvato solo in questo browser: non è pubblicato per i giocatori finché non si collega l’archivio condiviso.`; render(store.getState(), store.getLastSaved()); }
   };
   const adminSelected = () => admin.tab === 'politici'
     ? { collection: 'politicians', id: admin.politicianId }

@@ -50,7 +50,7 @@ function cleanAddedParty(id, input) {
     website: website && /^https?:\/\/[^\s"'<>]+$/i.test(website) ? website : null,
     politicalPosition: POSITIONS.includes(input.politicalPosition) ? input.politicalPosition : null,
     color: /^#[\da-f]{6}$/i.test(input.color ?? '') ? input.color : null,
-    color2: /^#[\da-f]{6}$/i.test(input.color2 ?? '') ? input.color2 : null,
+    color2: null, // the only colour of a party is the primary one: a second colour sent by an old page is dropped
     createdAt: cleanText(input.createdAt, 40), updatedAt: cleanText(input.updatedAt, 40)
   };
 }
@@ -69,7 +69,15 @@ function cleanArchive(input) {
   for (const [id, party] of Object.entries(records(input.addedParties)).slice(0, 300)) { const clean = cleanAddedParty(id, party); if (clean) addedParties[id] = clean; }
   const hidden = {};
   for (const [id, entry] of Object.entries(records(input.hidden)).slice(0, 800)) if (/^[\w.-]{1,120}$/.test(id) && entry && typeof entry === 'object') hidden[id] = { hidden: entry.hidden !== false, deleted: Boolean(entry.deleted), updatedAt: cleanText(entry.updatedAt, 40) };
-  return { version: 1, updatedAt: new Date().toISOString(), parties: records(input.parties), politicians: records(input.politicians), logos, addedParties, hidden };
+  return { version: 1, updatedAt: new Date().toISOString(), parties: withoutSecondColour(records(input.parties)), politicians: records(input.politicians), logos, addedParties, hidden };
+}
+// A record corrected by the owner keeps its primary colour; the old second colour is not written any more (records already published with one stay readable, the game ignores it).
+function withoutSecondColour(parties) {
+  const clean = {};
+  for (const [id, record] of Object.entries(parties)) {
+    if (record?.fields && typeof record.fields === 'object' && 'color2' in record.fields) { const { color2, ...fields } = record.fields; clean[id] = { ...record, fields }; } else clean[id] = record;
+  }
+  return clean;
 }
 async function tooManyFailures(env, request) {
   const key = `tentativi:${request.headers.get('cf-connecting-ip') ?? 'locale'}`;
