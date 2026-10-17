@@ -93,6 +93,46 @@ export function mergeSlate(items = [], fresh = [], today) {
   const held = kept.filter(race => ['held', 'missed'].includes(race.status)).sort((a, b) => a.electionDate.localeCompare(b.electionDate)).slice(-16);
   return [...held, ...kept.filter(race => !['held', 'missed'].includes(race.status))].sort((a, b) => a.electionDate.localeCompare(b.electionDate) || a.id.localeCompare(b.id));
 }
+// ---------- the round of the amministrative: a race that is there for every career ----------
+// A career does not always have a vote of its own in a year (five-year mandates): the round of the amministrative that fills the year (see the calendar of the game) is also a
+// race the player can stand in himself, in a comune of his region that votes that day. Whoever leads a party has the whole slate and fields whom he wants; for the others this is
+// the race they can run in: only their own candidacy ('player'), the same campaign engine, the same rooting, the same result.
+export const tornataRaceId = round => `gara-tornata-${round.id}`;
+export function roundRace({ round, territory }) {
+  const model = ELECTION_MODELS.comunale;
+  const windowOpensAt = advanceDays(round.electionDate, -model.campaignDays);
+  return {
+    id: tornataRaceId(round), level: 'comunale', territory, label: `${LEVEL_LABELS.comunale} · ${territory.name}`, round: round.id, roundLabel: round.label ?? null,
+    electionDate: round.electionDate, windowOpensAt, windowClosesAt: advanceDays(windowOpensAt, RACE_RULES.windowDays), nextVote: NEXT_VOTE.comunale(round.electionDate, advanceDays(round.electionDate, 1)),
+    status: 'planned', candidacy: null, campaignId: null, result: null, polls: null, office: null, history: [], source: SIM
+  };
+}
+// Keeps one race for each round of the amministrative that is still to come (inside the horizon of the slate): a new round gets its race, a round that moved moves the race that has
+// no campaign yet, a round withdrawn takes with it the race nobody stood in. Nothing that is running or held is touched. `territoryOf(round)` gives the comune (null: none yet).
+export function syncRoundRaces(items = [], rounds = [], { today, territoryOf } = {}) {
+  const next = copy(items);
+  const horizon = advanceDays(today, RACE_RULES.horizonDays);
+  const live = (rounds ?? []).filter(round => round.status !== 'held' && round.electionDate > today);
+  for (const round of live) {
+    const id = tornataRaceId(round);
+    const race = next.find(item => item.id === id);
+    if (race) {
+      if (['planned', 'confirmed'].includes(race.status) && race.electionDate !== round.electionDate) {
+        const moved = roundRace({ round, territory: race.territory });
+        Object.assign(race, { electionDate: moved.electionDate, windowOpensAt: moved.windowOpensAt, windowClosesAt: moved.windowClosesAt, nextVote: moved.nextVote });
+      }
+      continue;
+    }
+    const draft = roundRace({ round, territory: { kind: 'comune', name: '', region: null, code: null, provinceCode: null, municipalityCode: null } });
+    if (draft.windowClosesAt < today || draft.windowOpensAt > horizon) continue;
+    const territory = territoryOf?.(round);
+    if (!territory) continue;
+    next.push(roundRace({ round, territory }));
+  }
+  const ids = new Set(live.map(tornataRaceId));
+  const kept = next.filter(race => !race.round || ids.has(race.id) || race.candidacy || !['planned'].includes(race.status));
+  return kept.sort((a, b) => a.electionDate.localeCompare(b.electionDate) || a.id.localeCompare(b.id));
+}
 export const racesOpen = (items = [], today) => items.filter(race => ['planned', 'confirmed'].includes(race.status) && race.windowClosesAt >= today);
 
 // ---------- rooting ----------
@@ -174,10 +214,11 @@ const idOfCadre = (careerId, cadreId) => `persona-${slug(cadreId)}-${hash(`${car
 // choice: { kind: 'player'|'cadre'|'politician'|'simulation'|'none', id }. ctx: { today, leader, career: { id, playerId, playerLabel, partyId, partyLabel },
 // player: { block }, cadres, politicians, people (the persons of the game), homeVotes, from, committee(), standing }. Returns { items, person } (person: the row to add to the persons).
 export function chooseCandidate(items, raceId, choice, ctx) {
-  if (!ctx.leader) throw new Error('Solo chi guida il partito decide i candidati.');
   const next = copy(items);
   const race = next.find(item => item.id === raceId);
   if (!race) throw new Error('Questa corsa non è più in calendario.');
+  // Whoever does not lead a party decides only about himself, and only in the race of the round of the amministrative.
+  if (!ctx.leader && !(race.round && (!choice || choice.kind === 'none' || choice.kind === 'player'))) throw new Error('Solo chi guida il partito decide i candidati.');
   if (!['planned', 'confirmed'].includes(race.status)) throw new Error('Questa corsa è già in svolgimento o conclusa: il candidato non si cambia.');
   if (ctx.today > race.windowClosesAt) throw new Error('Le candidature per questa corsa sono chiuse.');
   const stamp = text => race.history.unshift({ date: ctx.today, text, source: SIM });

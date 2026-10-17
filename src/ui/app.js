@@ -1479,6 +1479,9 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
           const [kind, ...rest] = value.split(':');
           store.chooseRaceCandidate(raceId, kind === 'none' ? { kind: 'none' } : { kind, id: rest.join(':') || null }, racePeople());
           playSound('confirm');
+        } else if (raceAction.dataset.raceAction === 'stand' || raceAction.dataset.raceAction === 'withdraw') {
+          store.chooseRaceCandidate(raceId, raceAction.dataset.raceAction === 'stand' ? { kind: 'player' } : { kind: 'none' }, racePeople());
+          playSound('confirm');
         } else if (raceAction.dataset.raceAction === 'play') {
           store.startCampaign({ electionType: raceAction.dataset.raceLevel, raceId }, realParties(), racePeople());
           playSound('confirm');

@@ -6,6 +6,7 @@
 import { advanceDays } from './time.js?v=20261017-2';
 import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261017-2';
 import { ELECTION_SCHEDULE } from '../data/simulation/career-rules.js?v=20261017-2';
+import { CANDIDACY_GAP_DAYS } from './office-engine.js?v=20261017-2';
 
 export const CALENDAR_RULES = Object.freeze({
   minGapDays: 100,
@@ -23,6 +24,9 @@ export const CALENDAR_RULES = Object.freeze({
 });
 const dayNo = day => Math.round(Date.parse(`${day}T12:00:00Z`) / 86400000);
 export const daysApart = (a, b) => Math.abs(dayNo(a) - dayNo(b));
+// Can the player stand in the vote of `date` after standing in the one of `last` (null: he has not stood yet)? The rhythm of the personal candidacies (office-engine, rhythmBlock): at least
+// CANDIDACY_GAP_DAYS between two votes and one a calendar year; an early vote is the only exception to the calendar-year rule. A vote he cannot stand in does not fill the year for him.
+export const reachableFrom = (date, last, early = false) => !last || (daysApart(date, last) >= CANDIDACY_GAP_DAYS && (early || date.slice(0, 4) !== last.slice(0, 4)));
 // A date is free when it is another vote's own day (the same round) or at least minGapDays from every other.
 export const keepsDistance = (day, others, min = CALENDAR_RULES.minGapDays) => others.every(other => other === day || daysApart(other, day) >= min);
 // The votes of a list of dates grouped by round (same day), and the closest pair of different rounds.
@@ -59,7 +63,7 @@ export function harmonizeElections(game, today) {
   const fixed = [];
   const free = [];
   for (const entry of game.elections ?? []) (movable(entry, today) ? free : fixed).push(entry);
-  const anchors = [...fixed.map(entry => entry.electionDate), ...(game.rounds ?? []).filter(round => round.status !== 'upcoming').map(round => round.electionDate)];
+  const anchors = [...fixed.map(entry => entry.electionDate), ...(game.rounds ?? []).filter(round => round.status !== 'upcoming' || round.standing).map(round => round.electionDate)];
   free.sort((a, b) => CALENDAR_RULES.order.indexOf(a.type) - CALENDAR_RULES.order.indexOf(b.type) || String(a.baseDate ?? a.electionDate).localeCompare(String(b.baseDate ?? b.electionDate)));
   for (const entry of free) entry.baseDate ??= entry.electionDate;
   const options = free.map(entry => {
@@ -104,10 +108,10 @@ export function harmonizeElections(game, today) {
 
 // The Sunday for a round of the amministrative between `after` (exclusive) and `cap`: in the spring window of the law (15 April – 15 June, nearest the last Sunday of May), else in
 // the autumn one (15 September – 30 November), else any Sunday; always at least minGapDays from every other vote. Null when none fits.
-export function pickRoundDate({ after, cap, taken }) {
+export function pickRoundDate({ after, cap, taken, accept = () => true }) {
   const out = [];
   for (let day = advanceDays(after, 1); day <= cap; day = advanceDays(day, 1)) {
-    if (new Date(`${day}T12:00:00Z`).getUTCDay() !== 0 || !keepsDistance(day, taken) || taken.includes(day)) continue;
+    if (new Date(`${day}T12:00:00Z`).getUTCDay() !== 0 || !keepsDistance(day, taken) || taken.includes(day) || !accept(day)) continue;
     const mmdd = day.slice(5);
     const rank = mmdd >= '04-15' && mmdd <= '06-15' ? 0 : mmdd >= '09-15' && mmdd <= '11-30' ? 1 : 2;
     const anchor = rank === 0 ? `${day.slice(0, 4)}-05-31` : rank === 1 ? `${day.slice(0, 4)}-10-25` : day;
@@ -124,7 +128,7 @@ export function settleOpenRounds(game, today) {
   const kept = [];
   for (const round of game.rounds ?? []) {
     if (round.status !== 'open' || round.electionDate <= today || keepsDistance(round.electionDate, votes)) { kept.push(round); continue; }
-    const others = [...votes, ...(game.rounds ?? []).filter(item => item !== round && item.status !== 'upcoming').map(item => item.electionDate)];
+    const others = [...votes, ...(game.rounds ?? []).filter(item => item !== round && (item.status !== 'upcoming' || item.standing)).map(item => item.electionDate)];
     let target = null;
     for (let day = advanceDays(round.electionDate, 7); day <= advanceDays(round.electionDate, CALENDAR_RULES.roundPostponeDays) && !target; day = advanceDays(day, 7)) if (keepsDistance(day, others)) target = day;
     if (target) { round.originalDate ??= round.electionDate; round.electionDate = target; kept.push(round); }

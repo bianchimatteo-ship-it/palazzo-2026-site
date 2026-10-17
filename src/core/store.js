@@ -1,5 +1,5 @@
 import { territoryWeightsOf } from './territory-weights.js?v=20261017-2';
-import { bandOfMunicipality, indexMunicipalPopulation, setMunicipalPopulationIndex } from './municipal-rules.js?v=20261017-2';
+import { bandOfMunicipality, indexMunicipalPopulation, residentsOfMunicipality, setMunicipalPopulationIndex } from './municipal-rules.js?v=20261017-2';
 import { uniqueId } from './ids.js?v=20261017-2';
 import { DATA_SOURCES, emptyDataset, isSelectableParty } from '../data/schema.js?v=20261017-2';
 import { makeDemoState } from '../data/demo.js?v=20261017-2';
@@ -54,7 +54,7 @@ import { POLL_SCENARIOS, fitCustom, normalizePollScenario, scenarioPoll } from '
 import { NEWS_TEMPLATES, activityArticle, composeHeadline, markHomeSeen, newsroomWeek, weeklyNews, weeklyPopup } from './news-engine.js?v=20261017-2';
 import { macroAreaOf, MACRO_AREAS } from '../data/simulation/policy-rules.js?v=20261017-2';
 import { RACE_ROLES, RACE_RULES } from '../data/simulation/race-rules.js?v=20261017-2';
-import { buildSlate, candidateOptions, chooseCandidate, mergeSlate, profileStats, raceDue, raceOutcome, rootingOf, runRace } from './race-engine.js?v=20261017-2';
+import { buildSlate, candidateOptions, chooseCandidate, mergeSlate, profileStats, raceDue, raceOutcome, rootingOf, runRace, syncRoundRaces } from './race-engine.js?v=20261017-2';
 import { MEMBER_HISTORY_LIMIT, closeVacancy, drawMemberChange, fillSeat, inOffice, isSeatPerson, leaveSeat, moveSeat, newMember, normalizeSeatPerson, openVacancy, partsWithGuests, rosterInSync, rosterPeople, rosterSeats, seatOf, syncRoster, vacanciesOf, withMemberEntry } from './seat-roster.js?v=20261017-2';
 
 const STATE_VERSION = 10;
@@ -3809,6 +3809,8 @@ export const store = {
     let next = withRaces(state, result.items);
     if (result.person) next = { ...next, dataset: { ...next.dataset, politicians: [...next.dataset.politicians.filter(item => item.id !== result.person.id), result.person] } };
     const race = result.items.find(item => item.id === raceId);
+    // Standing in the race of a round of the amministrative is the commitment of that round (the party's result counts who campaigned); withdrawing takes it back.
+    if (race.round && next.game?.rounds) next = { ...next, game: { ...next.game, rounds: next.game.rounds.map(item => item.id !== race.round ? item : { ...item, standing: race.candidacy?.kind === 'player' }) } };
     state = { ...next, ui: { ...next.ui, toast: race.candidacy ? `Candidato scelto: ${race.candidacy.label} · ${race.label}` : `Candidatura ritirata · ${race.label}` } };
     persist(); emit();
     return race;
@@ -5242,16 +5244,32 @@ function raceChoiceContext(s, people = {}) {
   };
 }
 // The slate of the races in front of the leader: the real calendar of the votes, the territories the party weighs most in, the nearest first.
+// The comune where the round of the amministrative gives the player a race to stand in: one of his region (not his own, which has its own vote), drawn from the career and the round so
+// that it never changes; among those with residents on record the small and the very large ones are left out. Null while the list of the comuni is not loaded.
+function roundTerritoryOf(s, round) {
+  const home = homePlace(s);
+  const units = new Map(raceData.units.map(unit => [unit.code, unit]));
+  const named = raceData.municipalities.map(comune => ({ comune, unit: units.get(comune.unit) })).filter(item => item.unit && item.comune.code !== home.municipalityCode);
+  const inRegion = named.filter(item => (item.unit.gameRegion ?? item.unit.region) === home.region);
+  const fitting = list => { const sized = list.filter(item => { const residents = residentsOfMunicipality(item.comune.code); return residents !== null && residents >= 3000 && residents <= 120000; }); return sized.length ? sized : list; };
+  const pool = fitting(inRegion.length ? inRegion : named);
+  if (!pool.length) return null;
+  const pick = pool[hashText(`${s.career.id}|${round.id}`) % pool.length];
+  return { kind: 'comune', name: pick.comune.name, region: pick.unit.gameRegion ?? pick.unit.region, code: pick.comune.code, provinceCode: pick.unit.code, municipalityCode: pick.comune.code };
+}
 function refreshRaces(s, today = s.clock.currentDate) {
-  if (!s.game || s.game.status === 'ended' || !localElections || !raceLeader(s)) return s;
+  if (!s.game || s.game.status === 'ended') return s;
+  const leader = raceLeader(s);
+  if (!leader && !(s.game.rounds?.length && raceData.municipalities.length)) return s;
+  if (leader && !localElections && !(s.game.rounds?.length && raceData.municipalities.length)) return s;
   const home = homePlace(s);
   const world = s.world;
   const own = world?.playerPartyId ?? null;
   const weights = {};
   const weightOf = region => !world || !own ? 0 : (weights[region] ??= regionalShares(world, region).find(row => row.partyId === own)?.share ?? 0);
-  const fresh = buildSlate({ today, calendar: localElections, units: raceData.units, municipalities: raceData.municipalities, avoid: { regions: [home.region], provinceCodes: [home.provinceCode], municipalityCodes: [home.municipalityCode] }, weightOf, hasProvincial: hasProvincialLevel });
+  const fresh = leader && localElections ? buildSlate({ today, calendar: localElections, units: raceData.units, municipalities: raceData.municipalities, avoid: { regions: [home.region], provinceCodes: [home.provinceCode], municipalityCodes: [home.municipalityCode] }, weightOf, hasProvincial: hasProvincialLevel }) : [];
   const previous = racesOf(s);
-  const merged = mergeSlate(previous, fresh, today);
+  const merged = syncRoundRaces(mergeSlate(previous, fresh, today), s.game.rounds, { today, territoryOf: round => roundTerritoryOf(s, round) });
   const keptIds = new Set(merged.map(race => race.id));
   const archived = previous.filter(race => !keptIds.has(race.id) && (race.candidacy || race.result || ['held', 'missed'].includes(race.status)));
   const archiveById = new Map(raceArchiveOf(s).map(race => [race.id, race]));

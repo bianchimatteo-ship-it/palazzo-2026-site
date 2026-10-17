@@ -391,10 +391,15 @@ const savedWeek = store.getState().game.week.index;
 const exported = store.exportSave();
 store.advance(7);
 const advancedWeek = store.getState().game.week.index;
+const careerBeforeLoad = store.getState().career.id;
 assert.ok(advancedWeek > savedWeek, 'La partita avanza dopo aver creato lo slot');
 page = await click({ slotLoad: slots[0].id });
 if (page.includes('confirm-dialog')) { assert.ok(page.includes('Caricare questo salvataggio?'), 'Con modifiche non salvate il caricamento chiede conferma.'); await click({ confirm: 'ok' }); }
-assert.equal(store.getState().game.week.index, advancedWeek, 'Uno slot vecchio non può retrocedere la carriera più avanzata');
+// An older copy of a career that has gone further never takes its place: it comes back as a career of its own (new identity) and the more advanced one stays in a slot.
+assert.equal(store.getState().game.week.index, savedWeek, 'Lo slot scelto si carica (come carriera separata)');
+assert.notEqual(store.getState().career.id, careerBeforeLoad, 'Con un’altra identità: la carriera più avanzata non viene retrocessa.');
+assert.equal(store.getState().career.restoredFromCareerId, careerBeforeLoad);
+assert.ok(store.listSlots().some(slot => slot.week === advancedWeek), 'La partita più avanzata resta in uno slot (copia automatica).');
 assert.ok(!root.innerHTML.includes('main-menu'), 'Caricare chiude il menu');
 assert.equal(store.getState().ui.activePage, 'panoramica', 'Caricando un salvataggio si parte dalla Home.');
 store.loadGame(exported, 'Partita importata');

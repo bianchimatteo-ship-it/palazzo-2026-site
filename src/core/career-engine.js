@@ -1,7 +1,7 @@
 import { uniqueId } from './ids.js?v=20261017-2';
 import { advanceDays, formatDate, nextMunicipalVote, nextProvincialVote, nextRegionalVote } from './time.js?v=20261017-2';
 import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261017-2';
-import { CALENDAR_RULES, harmonizeElections, pickRoundDate, settleOpenRounds } from './calendar-planner.js?v=20261017-2';
+import { CALENDAR_RULES, harmonizeElections, pickRoundDate, reachableFrom, settleOpenRounds } from './calendar-planner.js?v=20261017-2';
 import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20261017-2';
 import {
   APPOINTMENTS, BASE_WEEKLY_INCOME, CAREER_EVENTS, CURRENT_TEMPLATES, EARLY_ELECTION_AFTER_WEEKS, ELECTION_SCHEDULE,
@@ -1964,22 +1964,34 @@ export function upcomingElections(game) {
 // asks for a campaign in the comuni at the polls and the result weighs on who took part, and on who stayed out.
 const springRound = year => sundayOnOrBefore(`${year}-05-31`);
 export const upcomingRounds = game => (game?.rounds ?? []).filter(item => item.status !== 'held').sort((a, b) => a.electionDate.localeCompare(b.electionDate));
-// The dates of the rounds needed from the last vote on (own votes and rounds already under way count as votes).
+// The dates of the rounds needed to keep the player in play: from the last vote he could stand in (the rhythm rule of the personal candidacies is part of "could": a vote that falls too
+// close to the one he stood in, or in the same calendar year, does not fill the year for him), no more than a year to the next vote he can stand in, taking every one he can. Own votes,
+// rounds already under way and rounds he stands in count as votes.
 export function roundPlan(game, today) {
-  const fixed = (game.rounds ?? []).filter(item => item.status !== 'upcoming').map(item => item.electionDate);
+  const committed = item => item.status !== 'upcoming' || item.standing;
+  const fixed = (game.rounds ?? []).filter(committed).map(item => item.electionDate);
+  const earlyDates = new Set((game.elections ?? []).filter(item => item.early).map(item => item.electionDate));
   const events = [...new Set([...(game.elections ?? []).map(item => item.electionDate), ...fixed])].filter(Boolean).sort();
+  const stood = new Set([...(game.candidacies ?? []).map(item => item.electionDate), ...(game.rounds ?? []).filter(item => item.standing).map(item => item.electionDate)]);
   const horizon = advanceDays(today, 400);
   const plan = [];
   const taken = [...events];
-  let last = [game.roundsFrom ?? today, ...events.filter(date => date <= today)].sort().at(-1);
+  // What has already happened: the votes he stood in, and the ones he could have (whatever he did about them) keep the year covered; the ones out of his reach do not.
+  let last = game.roundsFrom ?? today, personal = null;
+  for (const date of events.filter(day => day <= today)) {
+    if (stood.has(date)) { personal = date; if (date > last) last = date; }
+    else if (reachableFrom(date, personal, earlyDates.has(date)) && date > last) last = date;
+  }
   for (let guard = 0; last < horizon && guard < 80; guard++) {
-    // No more than a year between two votes: a round is added only when the next vote is further than that, in the first free Sunday the law allows (and 100 days from every other vote).
-    const cap = advanceDays(last, CALENDAR_RULES.maxPlayableGapDays);
-    const next = events.find(date => date > last);
-    if (next && next <= cap) { last = next; continue; }
-    const pick = pickRoundDate({ after: last, cap, taken });
+    // No more than a year between two votes the player can stand in: a round is added only when the next one is further than that, in the first free Sunday the law allows (and 100 days
+    // from every other vote). Votes already past are not planned again: a lapse is made up from today.
+    const from = last > today ? last : today;
+    const cap = advanceDays(last, CALENDAR_RULES.maxPlayableGapDays) < today ? advanceDays(today, 140) : advanceDays(last, CALENDAR_RULES.maxPlayableGapDays);
+    const next = events.find(date => date > from && reachableFrom(date, personal, earlyDates.has(date)));
+    if (next && next <= cap) { last = next; personal = next; continue; }
+    const pick = pickRoundDate({ after: from, cap, taken, accept: day => reachableFrom(day, personal) });
     if (!pick) break;
-    plan.push(pick); taken.push(pick); last = pick;
+    plan.push(pick); taken.push(pick); last = pick; personal = pick;
   }
   return plan;
 }
@@ -1988,7 +2000,7 @@ function planRounds(game, today, localRounds = null) {
   settleOpenRounds(game, today);
   const plan = roundPlan(game, today);
   // A round no longer needed (an early vote has filled the year) leaves the calendar until its campaign has started.
-  const rounds = (game.rounds ?? []).filter(item => item.status !== 'upcoming' || plan.includes(item.electionDate));
+  const rounds = (game.rounds ?? []).filter(item => item.status !== 'upcoming' || item.standing || plan.includes(item.electionDate));
   for (const day of plan.filter(date => date > today && !rounds.some(item => item.electionDate === date))) {
     const year = Number(day.slice(0, 4));
     rounds.push({ id: `tornata-${day}`, type: 'amministrative', year, label: `Amministrative ${year}`, electionDate: day, windowOpensAt: advanceDays(day, -ROUND_RULES.leadDays), comuni: null, status: 'upcoming', engagement: null, outcome: null, source: SIM });
@@ -2010,7 +2022,7 @@ function updateRounds(ctx, env, date, lines) {
     if (round.status !== 'held' && date >= round.electionDate) {
       round.status = 'held';
       // The result: the party's course in the polls, chance and the campaign done.
-      const engagement = round.engagement ?? 'sostegno';
+      const engagement = round.standing ? 'giro' : round.engagement ?? 'sostegno';
       const score = clamp(env.pollDelta ?? 0, -1.5, 1.5) * 0.8 + (draw(game) - 0.5) * 2.4 + (ROUND_RULES.engagement[engagement] ?? 0);
       const code = score > 0.45 ? 'buono' : score < -0.45 ? 'deludente' : 'in-linea';
       const outcome = ROUND_RULES.outcomes[code];

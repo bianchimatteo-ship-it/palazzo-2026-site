@@ -77,7 +77,7 @@ async function prepareStore({ seed, keepStorage = false, fast = false, startDate
   const module = path => import(new URL(`${path}${build ? `?v=${build}` : ''}`, root).href);
   const real = await module('src/data/repositories/real-data.js');
   await real.loadRealDatabase();
-  await real.loadRealCollections(['parties', 'politicalMovements', 'coalitions', 'twoPerThousand', 'realPolls', 'parliamentaryGroups', 'politicians', 'government', 'politicalFigures', 'groupMemberships', 'partyMemberships', 'electionParticipations', 'electoralLists', 'territorialUnits', 'partyLeaderships', 'chambers', 'offices']);
+  await real.loadRealCollections(['parties', 'politicalMovements', 'coalitions', 'twoPerThousand', 'realPolls', 'parliamentaryGroups', 'politicians', 'government', 'politicalFigures', 'groupMemberships', 'partyMemberships', 'electionParticipations', 'electoralLists', 'territorialUnits', 'municipalities', 'partyLeaderships', 'chambers', 'offices']);
   const db = real.realDatabase;
   const { store } = await module('src/core/store.js');
   const { governingEntityIds } = await module('src/data/repositories/party-links.js');
@@ -94,8 +94,10 @@ async function prepareStore({ seed, keepStorage = false, fast = false, startDate
 }
 
 // Starts the engine and a career for the seed. Returns the store, the real reference and the decision maker.
-export async function startCareer({ seed = 'a', level = 'deputato', partyId = 'party-registro-p1-2017-41-ir', region = null, draft = {}, keepStorage = false, fast = false, startDate = null } = {}) {
-  const { store, db, context, env } = await prepareStore({ seed, keepStorage, fast, startDate });
+export async function startCareer({ seed = 'a', level = 'deputato', partyId = 'party-registro-p1-2017-41-ir', region = null, draft = {}, keepStorage = false, fast = false, startDate = null, territorial = false } = {}) {
+  const { store, db, context, env, real } = await prepareStore({ seed, keepStorage, fast, startDate });
+  // territorial: the page loads the ISTAT residents of the comuni as the game does at start (main.js); the plain long runs keep their baseline without them.
+  if (territorial) store.setMunicipalPopulation(await real.loadOptionalRealDocument('municipalPopulation'));
   const pick = seeded(`profilo|${seed}`);
   const drawn = PLACES[Math.floor(pick() * PLACES.length)];
   const place = PLACES.find(item => item.region === region) ?? drawn;
@@ -104,6 +106,8 @@ export async function startCareer({ seed = 'a', level = 'deputato', partyId = 'p
   if (['deputato', 'senatore'].includes(level)) store.initializeParliament(db.parliamentaryGroups);
   // The territorial committees are born when the ISTAT units are loaded, as in the game: the long run plays them too.
   if (db.territorialUnits?.length) store.initializeCommittees(db.territorialUnits);
+  // territorial: the player has opened Elezioni → Candidatura (the comuni and provinces of ISTAT are given to the game, which then lays out the races of the round).
+  if (territorial) store.setTerritorialData({ units: db.territorialUnits, municipalities: db.municipalities, parties: [...db.parties, ...db.politicalMovements] });
   return { store, db, context, env, decide: seeded(`decisioni|${seed}`) };
 }
 
