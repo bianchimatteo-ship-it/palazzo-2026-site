@@ -141,6 +141,20 @@
       "comuni": 6926,
       "regions": 20,
       "verifiedAt": "2026-09-26"
+    },
+    "municipalPopulation": {
+      "file": "municipal-population.json",
+      "records": 7894,
+      "regions": 20,
+      "residentReferenceDate": "2026-01-01",
+      "legalReferenceDate": null,
+      "verified": false,
+      "verificationStatus": "derivato-da-tabella-pubblica-non-verificato-su-zip-ufficiale",
+      "filesSha256": {
+        "comuni": "e6eb0525c765e27dd0e1fd15420f294dbb86c9a6328d2d2a5222c57ec536a375",
+        "regioni": "fc609b9a573ab1381ba7609a53a1167c5679f2e0eacc21c759e6a936ec9b40a9",
+        "metodo": "eedfff83ec0e2b96582fad1dffd640fcf918054dafd60c84557288bb8ac1f159"
+      }
     }
   },
   "scenarioDate": "2026-10-12",

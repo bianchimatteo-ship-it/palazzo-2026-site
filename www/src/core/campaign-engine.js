@@ -1,10 +1,10 @@
-import { advanceDays } from './time.js?v=20261017-2';
-import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261017-2';
-import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261017-2';
-import { aggregateShares, mateForce, runFinalElection, runFirstRound } from './election-engine.js?v=20261017-2';
-import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261017-2';
-import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261017-2';
-import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261017-2';
+import { advanceDays } from './time.js?v=20261017-3';
+import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261017-3';
+import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261017-3';
+import { aggregateShares, mateForce, runFinalElection, runFirstRound } from './election-engine.js?v=20261017-3';
+import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261017-3';
+import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261017-3';
+import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261017-3';
 
 const SOURCE = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
@@ -1263,7 +1263,7 @@ function electorateOf(config, type) {
   const given = config.electorate && typeof config.electorate === 'object' ? config.electorate : {};
   const electors = Number(given.electors);
   const sizeClass = type === 'comunale' ? (config.municipalityBand === 'oltre-15000' ? 'medio' : 'piccolo') : type === 'provinciale' ? 'secondo-livello' : null;
-  return { electors: Number.isFinite(electors) && electors > 0 ? Math.round(electors) : null, validRatio: given.validRatio !== null && given.validRatio !== undefined && Number(given.validRatio) > 0 && Number(given.validRatio) <= 1 ? Number(given.validRatio) : null, sizeClass, basis: given.basis ?? (sizeClass === 'piccolo' || sizeClass === 'medio' ? 'fascia demografica del comune (fino o oltre 15.000 abitanti)' : null), source:SOURCE };
+  return { place: config.place ? { municipalityCode: config.place.municipalityCode ?? null, region: config.place.region ?? null } : null, electors: Number.isFinite(electors) && electors > 0 ? Math.round(electors) : null, validRatio: given.validRatio !== null && given.validRatio !== undefined && Number(given.validRatio) > 0 && Number(given.validRatio) <= 1 ? Number(given.validRatio) : null, sizeClass, basis: given.basis ?? (sizeClass === 'piccolo' || sizeClass === 'medio' ? 'fascia demografica del comune (fino o oltre 15.000 abitanti)' : null), source:SOURCE };
 }
 // The day of the vote: late deciders, turnout and the error of every projection move the final result a little.
 // How much depends on the strategy (more when looking for new voters, less when consolidating), on the climate and on the turnout

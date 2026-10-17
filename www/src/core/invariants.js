@@ -3,8 +3,9 @@
 // checkInvariants(state, context) → { ok, issues: [{ code, path, message }] }
 // context (optional): the real reference the state may point to — realPartyIds, realGroupIds (Sets or arrays).
 
-import { LEVER_BY_ID } from '../data/simulation/start-rules.js?v=20261017-2';
-import { AMBITION_LIMIT, OBJECTIVE_BY_ID } from '../data/simulation/objective-rules.js?v=20261017-2';
+import { countProblems } from './electorate.js?v=20261017-3';
+import { LEVER_BY_ID } from '../data/simulation/start-rules.js?v=20261017-3';
+import { AMBITION_LIMIT, OBJECTIVE_BY_ID } from '../data/simulation/objective-rules.js?v=20261017-3';
 
 const SEATS = { camera: 400, senato: 200 };
 // The Senate also has the senators for life (and, in the real XIX legislature, a few vacancies may appear in either
@@ -306,6 +307,8 @@ function checkCampaign(state, report) {
   const candidates = campaign.candidates ?? [];
   if (campaign.playerCandidateId && !candidates.some(item => item.id === campaign.playerCandidateId)) report('riferimento', 'campaign.playerCandidateId', 'Il giocatore non è tra i candidati');
   if (campaign.status === 'finished' && !campaign.result) report('coerenza', 'campaign.result', 'Campagna conclusa senza risultato');
+  // the count of the vote: voters never above the residents or the electors, valid ballots never above the voters, the votes of the lists add up to the valid ballots
+  if (campaign.result?.electorate) for (const problem of countProblems(campaign.result.electorate, campaign.result.groups ?? [], { label: `campagna ${campaign.id}` })) report('coerenza', 'campaign.result.electorate', problem);
   if (campaign.electionId && state.game?.elections && !state.game.elections.some(item => item.id === campaign.electionId)) report('riferimento', 'campaign.electionId', `Elezione ${campaign.electionId} assente dal calendario`);
 }
 

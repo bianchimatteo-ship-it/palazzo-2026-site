@@ -3,10 +3,10 @@
 // the real calendar (the general and European elections are fixed; the local and regional ones are the real ones five years on, simulated); where two of them would fall too close,
 // the one that the law leaves room for moves by whole weeks inside its legal window, or joins the round of the other. Nothing is invented: a round of the amministrative is added
 // (spring, then autumn) only when no vote falls in the time the rule requires. Pure functions over the calendar of the game: the same calendar always gives the same dates.
-import { advanceDays } from './time.js?v=20261017-2';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261017-2';
-import { ELECTION_SCHEDULE } from '../data/simulation/career-rules.js?v=20261017-2';
-import { CANDIDACY_GAP_DAYS } from './office-engine.js?v=20261017-2';
+import { advanceDays } from './time.js?v=20261017-3';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261017-3';
+import { ELECTION_SCHEDULE } from '../data/simulation/career-rules.js?v=20261017-3';
+import { CANDIDACY_GAP_DAYS } from './office-engine.js?v=20261017-3';
 
 export const CALENDAR_RULES = Object.freeze({
   minGapDays: 100,
