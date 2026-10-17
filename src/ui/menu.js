@@ -224,6 +224,18 @@ export function settingsView(settings, { error = '' } = {}) {
     ${error ? `<p class="menu-error" role="alert">${esc(error)}</p>` : ''}`;
 }
 
+// Everything the main menu opens (saves, Hall of Fame, account, guide, settings, the first-run steps) is a dialog over the homepage, never a panel added under it. It closes with the
+// close button, «Annulla», Escape or a click on the backdrop (app.js); nothing behind it can be reached while it is open.
+const POPUP_TITLES = { carica: 'Carica partita', hall: 'Hall of Fame', account: 'Account e salvataggi online', guida: 'Come giocare', impostazioni: 'Impostazioni', benvenuto: 'Benvenuto', tour: 'Primo avvio' };
+function menuPopup(view, content) {
+  const title = POPUP_TITLES[view] ?? 'POLITICANDO 2026';
+  return `<div class="modal-backdrop report-backdrop menu-popup-backdrop" data-menu-close data-menu-popup="${esc(view)}"><section class="report-modal menu-popup" role="dialog" aria-modal="true" aria-label="${esc(title)}">
+    <header class="menu-popup-head"><span class="section-kicker">${esc(title.toUpperCase())}</span><button type="button" class="icon-button menu-popup-x" data-menu-close aria-label="Chiudi: ${esc(title)}">×</button></header>
+    <div class="menu-popup-body" tabindex="-1">${content}</div>
+    <footer class="menu-popup-foot"><button type="button" class="secondary-button" data-menu-close>Annulla</button></footer>
+  </section></div>`;
+}
+
 export function renderMainMenu(menu, context) {
   const { hasCareer, meta, lastSaved, unsaved, stats, settings, identity } = context;
   const facts = (stats ?? []).filter(([value]) => Number(value) > 0);
@@ -231,10 +243,11 @@ export function renderMainMenu(menu, context) {
     ${facts.length ? `<div class="menu-facts">${facts.map(([value, label]) => `<div><strong>${esc(value)}</strong><span>${esc(label)}</span></div>`).join('')}</div>` : ''}
     <ul class="menu-points"><li>${glyph('clock', 18)}<span><strong>Una settimana alla volta</strong> sei giorni da spendere, poi il mondo va avanti.</span></li><li>${glyph('route', 18)}<span><strong>Sei percorsi</strong> ${esc(Object.values(CAREER_LEVELS).map(level => level.shortLabel).join(', '))}.</span></li><li>${glyph('flag', 18)}<span><strong>Il tuo partito</strong> uno reale, uno fondato da te o nessuno: il gioco ne prende logo e colori.</span></li><li>${glyph('shield', 18)}<span><strong>Reale e simulato, sempre distinti</strong> i dati istituzionali sono verificati, il resto è dichiarato simulazione.</span></li></ul>`;
   const side = menu.view === 'benvenuto' ? welcomeView(context.account, menu) : menu.view === 'tour' ? tourView(menu.tourStep) : menu.view === 'carica' ? loadView(context) : menu.view === 'account' ? accountView(context.account) : menu.view === 'guida' ? guideView() : menu.view === 'hall' ? hallView(context.hall) : menu.view === 'impostazioni' ? settingsView(settings, context) : home;
+  const popup = menu.view !== 'home' ? menuPopup(menu.view, side) : '';
   const group = ([title, items]) => `<nav class="menu-group" aria-label="${esc(title)}"><h2 class="menu-group-title">${esc(title)}</h2><div class="menu-list">${items.map(([id, icon, label, detail]) => `<button class="menu-item ${menu.view === id ? 'active' : ''}" data-menu="${id}">${glyph(icon, 18)}<span><strong>${esc(label)}</strong><small>${esc(detail)}</small></span></button>`).join('')}</div></nav>`;
   return `<div class="main-menu ${hasCareer ? 'has-career' : ''}">
     ${illustration('palazzo', 'menu-art')}
-    <div class="menu-column">
+    <div class="menu-column"${popup ? ' inert' : ''}>
       <h1 class="menu-brand"><img class="brand-logo menu-logo" src="icons/logo-politicando-640.webp" srcset="icons/logo-politicando-240.webp 240w, icons/logo-politicando-640.webp 640w" sizes="(max-width:700px) 120px, 200px" width="200" height="200" alt="POLITICANDO 2026" decoding="async" /></h1>
       <p class="menu-tagline">Una carriera nella politica italiana</p>
       ${newCareerCard()}
@@ -242,7 +255,8 @@ export function renderMainMenu(menu, context) {
       ${MENU_GROUPS.map(group).join('')}
       <p class="menu-footnote">Dati reali verificati · simulazione dichiarata · ${context.account?.user ? `salvataggi online come ${esc(context.account.user.username)}` : 'salvataggi nel browser, online con un account'}</p>
     </div>
-    <section class="menu-panel" aria-live="polite">${side}</section>
+    <section class="menu-panel" aria-live="polite"${popup ? ' inert' : ''}>${home}</section>
+    ${popup}
   </div>`;
 }
 

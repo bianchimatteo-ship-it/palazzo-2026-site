@@ -254,6 +254,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   // path (the lists, the buttons and the handlers), keyed by the career's id (a slot is read for it: manual slots and automatic copies alike).
   const careerBlocked = careerId => Boolean(careerId) && Boolean(accountApi.careerGate(careerId, account.user?.username ?? null));
   const assertAvailable = careerId => { if (careerBlocked(careerId)) throw new Error(`Questa partita è collegata all’account «${accountApi.ownerOf(careerId)}»: accedi con quell’account, o usa la partita in corso con «Usa localmente».`); };
+  const cancelWizard = () => { wizard = null; wizardData.status = 'idle'; wizardData.failed = []; menu.open = true; menu.view = 'home'; menu.error = ''; };
+  const closeMenuPopup = () => { if (menu.view === 'home') return false; menu.view = 'home'; menu.error = ''; account.error = ''; account.message = ''; return true; };
   const gateOf = () => { const id = careerIdNow(); return id ? accountApi.careerGate(id, account.user?.username ?? null) : null; };
   // The states the player sees: saved in the browser, waiting to be synced, synced, conflict, error (and the isolation of a career that is not this account's).
   const syncViewOf = () => {
@@ -563,12 +565,14 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       root.innerHTML = `<div class="app-shell menu-shell">${saveAlert()}${dataNotice()}${renderMainMenu(menu, menuContext())}${renderConfirmDialog(pendingConfirm)}${state.ui.toast && settings.toasts === 'on' ? `<div class="toast" role="status">${icon('spark', 17)}${esc(state.ui.toast)}</div>` : ''}</div>`;
       if (pendingConfirm) root.querySelector?.('[data-confirm="cancel"]')?.focus?.();
       // First-run steps: on a phone the panel sits below the menu list, so it is brought into view.
-      if (menu.reveal) { menu.reveal = false; if (globalThis.matchMedia?.('(max-width: 900px)')?.matches) root.querySelector?.('.menu-panel')?.scrollIntoView?.({ block: 'start' }); }
+      // The steps and views open as a dialog over the homepage: nothing to scroll to; the dialog takes the focus.
+      if (menu.reveal) menu.reveal = false;
+      root.querySelector?.('.menu-popup-body')?.focus?.({ preventScroll: true });
       return;
     }
     // The creator of a new career is a screen of its own: the career in progress (menu, topbar, pages) is not drawn behind it, so it can never be taken for the career being opened.
     if (wizard) {
-      root.innerHTML = `<div class="app-shell menu-shell wizard-only">${renderCareerWizard(state, wizard, realParties(), logoFor, realDatabase.parliamentaryGroups ?? [], realDatabase.partyLeaderships ?? [], realDatabase.politicalFigures ?? [], realDatabase.politicians ?? [], wizardTerritoryView(), wizardDataStatus(), store.pollScenarioView(pollScenarioOf(wizard)))}${renderConfirmDialog(pendingConfirm)}${state.ui.toast && settings.toasts === 'on' ? `<div class="toast" role="status">${icon('spark', 17)}${esc(state.ui.toast)}</div>` : ''}</div>`;
+      root.innerHTML = `<div class="app-shell menu-shell wizard-only"><div class="wizard-under" inert aria-hidden="true">${renderMainMenu({ ...menu, view: 'home' }, menuContext())}</div>${renderCareerWizard(state, wizard, realParties(), logoFor, realDatabase.parliamentaryGroups ?? [], realDatabase.partyLeaderships ?? [], realDatabase.politicalFigures ?? [], realDatabase.politicians ?? [], wizardTerritoryView(), wizardDataStatus(), store.pollScenarioView(pollScenarioOf(wizard)))}${renderConfirmDialog(pendingConfirm)}${state.ui.toast && settings.toasts === 'on' ? `<div class="toast" role="status">${icon('spark', 17)}${esc(state.ui.toast)}</div>` : ''}</div>`;
       if (pendingConfirm) root.querySelector?.('[data-confirm="cancel"]')?.focus?.();
       return;
     }
@@ -860,6 +864,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       if (event.target.matches?.('[data-confirm-backdrop]')) { settleConfirm(false); return; }
       if (event.target.closest('.confirm-dialog')) return;
     }
+    // A click on the backdrop of the creator of a career is «Annulla» (a click inside the dialog never is).
+    if (wizard && event.target.matches?.('[data-wizard-backdrop]')) { cancelWizard(); playSound('click'); render(store.getState(), store.getLastSaved()); return; }
     const tutorialButton = event.target.closest('[data-tutorial]')?.dataset.tutorial;
     if (tutorialButton) {
       tutorialAction(tutorialButton);
@@ -884,10 +890,15 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       root.querySelector?.(`#${guideJump}`)?.scrollIntoView?.({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
       return;
     }
-    const menuTarget =event.target.closest('[data-menu],[data-menu-action],[data-slot-load],[data-slot-delete],[data-slot-export],[data-version-restore],[data-version-export],[data-setting-key],[data-report-close],[data-account-action],[data-cloud-load],[data-cloud-delete],[data-conflict],[data-history-open],[data-history-restore]');
+    const menuTarget =event.target.closest('[data-menu],[data-menu-close],[data-menu-action],[data-slot-load],[data-slot-delete],[data-slot-export],[data-version-restore],[data-version-export],[data-setting-key],[data-report-close],[data-account-action],[data-cloud-load],[data-cloud-delete],[data-conflict],[data-history-open],[data-history-restore]');
     if (menuTarget) {
       const data = menuTarget.dataset;
       if (menuTarget.matches('.report-backdrop') && event.target.closest('.report-modal')) return;
+      // The popups of the main menu: the backdrop closes only when it is the backdrop itself that is hit (a click inside the dialog never reaches it).
+      if (data.menuClose !== undefined) {
+        if (menuTarget.matches('.menu-popup-backdrop') && event.target !== menuTarget) return;
+        closeMenuPopup(); playSound('click'); render(store.getState(), store.getLastSaved()); return;
+      }
       menu.error = '';
       try {
         if (data.menu === 'continua' && gateOf()) { menu.view = 'account'; account.mode = 'login'; menu.reveal = true; playSound('click'); }
@@ -1550,7 +1561,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     const goto = Number(event.target.closest('[data-wizard-goto]')?.dataset.wizardGoto || 0);
     if (wizard && (wizardAction || goto)) {
       syncWizardDraft(); wizard.errors = [];
-      if (wizardAction === 'cancel') { wizard = null; wizardData.status = 'idle'; wizardData.failed = []; menu.open = true; menu.view = 'home'; menu.error = ''; }
+      if (wizardAction === 'cancel') cancelWizard();
       else if (wizardAction === 'export-current') { wizard.errors = wizard.lastErrors ?? []; if (store.hasCareer()) { download(store.exportSave(), `politicando-partita-${new Date().toISOString().slice(0, 10)}.json`); wizard.exported = true; } }
       else if (wizardAction === 'back') wizard.step = Math.max(1,wizard.step-1);
       else if (wizardAction === 'next') { if (!failStep()) wizard.step = Math.min(CAREER_STEPS,wizard.step+1); }
@@ -2130,7 +2141,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   // The account service is asked once at the opening (players already signed in find out at their first sync).
   if (account.status === 'checking') probeAccount();
   // Escape closes the confirmation dialog (it means “Annulla”).
-  globalThis.addEventListener?.('keydown', event => { if (event.key === 'Escape' && pendingConfirm) settleConfirm(false); else if (event.key === 'Escape' && newsPopup) { newsPopup = null; render(store.getState(), store.getLastSaved()); } });
+  globalThis.addEventListener?.('keydown', event => { if (event.key === 'Escape' && pendingConfirm) settleConfirm(false); else if (event.key === 'Escape' && wizard) { cancelWizard(); render(store.getState(), store.getLastSaved()); } else if (event.key === 'Escape' && menu.open && closeMenuPopup()) render(store.getState(), store.getLastSaved()); else if (event.key === 'Escape' && newsPopup) { newsPopup = null; render(store.getState(), store.getLastSaved()); } });
   // The tabs of the institutions (mandates and sections) move with the arrow keys, as tabs do.
   root.addEventListener?.('keydown', event => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;

@@ -63,6 +63,11 @@ assert.ok(root.innerHTML.includes('main-menu'), 'All’avvio compare il menu pri
 for (const label of ['Nuova partita', 'Carica partita', 'Come giocare', 'Impostazioni']) assert.ok(root.innerHTML.includes(label), `Menu: manca ${label}`);
 assert.ok(!root.innerHTML.includes('CONTINUA LA PARTITA'), 'Senza partita non c’è “Continua”');
 assert.ok((await click({ menu: 'guida' })).includes('guide-card') && root.innerHTML.includes('Ruoli e poteri'));
+// what the main menu opens is a modal dialog over the homepage (title, close button, «Annulla»), never a panel under it
+assert.ok(root.innerHTML.includes('class="modal-backdrop report-backdrop menu-popup-backdrop"') && root.innerHTML.includes('role="dialog" aria-modal="true" aria-label="Come giocare"') && root.innerHTML.includes('menu-popup-x') && root.innerHTML.includes('menu-popup-foot') && root.innerHTML.includes('La politica italiana, settimana dopo settimana'), 'Come giocare: popup modale sopra la homepage.');
+await click({ menuClose: '' });
+assert.ok(!root.innerHTML.includes('menu-popup-backdrop'), 'La chiusura del popup torna alla homepage.');
+await click({ menu: 'guida' });
 let menuHtml = await click({ menu: 'impostazioni' });
 for (const key of ['sound', 'volume', 'motion', 'toasts', 'autosave', 'weeksPerTurn', 'textSize', 'contrast', 'density']) assert.ok(menuHtml.includes(`data-setting-key="${key}"`), `Impostazione mancante: ${key}`);
 await click({ settingKey: 'motion', settingValue: 'reduced' });

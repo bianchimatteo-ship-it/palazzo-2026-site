@@ -203,6 +203,22 @@ try {
   await tap('.wizard-footer [data-wizard-action="cancel"]');
   await waitFor(async () => !(await has('.career-wizard')), 5000, 'chiusura wizard');
 
+  // ---------- 5b. what the main menu opens is a dialog over the homepage, also on a phone ----------
+  for (const [id, title] of [['carica', 'Carica partita'], ['account', 'Account e salvataggi online'], ['impostazioni', 'Impostazioni'], ['guida', 'Come giocare'], ['hall', 'Hall of Fame']]) {
+    await tap(`[data-menu="${id}"]`, { scroll: true });
+    await waitFor(() => has('.menu-popup'), 5000, `popup ${title}`);
+    const box = await evaluate(`(() => { const r = document.querySelector('.menu-popup').getBoundingClientRect(); const body = document.querySelector('.menu-popup-body'); const under = document.querySelector('.menu-column [data-menu="nuova"]'); const c = under.getBoundingClientRect(); const hit = document.elementFromPoint(c.left + c.width / 2, Math.max(2, Math.min(c.top + c.height / 2, innerHeight - 2))); return { w: Math.round(r.width), h: Math.round(r.height), vw: innerWidth, vh: innerHeight, sideways: document.documentElement.scrollWidth > innerWidth + 1, scroll: getComputedStyle(body).overflowY, label: document.querySelector('.menu-popup').getAttribute('aria-label'), covered: Boolean(hit?.closest('.menu-popup-backdrop')), hit: hit?.outerHTML.slice(0, 80) ?? null, c: [Math.round(c.left), Math.round(c.top)] }; })()`);
+    ok(box.label === title && box.w === box.vw && box.h <= box.vh && !box.sideways && ['auto', 'scroll'].includes(box.scroll), `Su telefono «${title}» è un popup che sta nello schermo, scorre da sé e non allarga la pagina (${JSON.stringify(box)}).`);
+    ok(box.covered, `Su telefono sotto il popup di «${title}» la homepage non riceve i tocchi (${JSON.stringify(box)}).`);
+    await tap('.menu-popup-foot [data-menu-close]');
+    await waitFor(async () => !(await has('.menu-popup')), 5000, `chiusura ${title}`);
+  }
+  await tap('[data-menu="account"]', { scroll: true });
+  await waitFor(() => has('.menu-popup'), 5000, 'popup account');
+  await evaluate(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })), true`);
+  await waitFor(async () => !(await has('.menu-popup')), 5000, 'Escape chiude il popup');
+  ok(true, 'Escape chiude il popup anche su telefono e riporta alla homepage.');
+
   // ---------- 6. service worker: only GET files of the site, never the API nor other methods ----------
   await send('Network.setBypassServiceWorker', { bypass: false });
   const sw = await waitFor(() => evaluate('navigator.serviceWorker?.controller ? true : navigator.serviceWorker?.ready.then(() => Boolean(navigator.serviceWorker.controller))'), 15000, 'service worker attivo').catch(() => false);
@@ -232,5 +248,5 @@ try {
 } finally {
   await cleanup();
 }
-if (!exitCode) console.log(`Primo avvio su telefono verificato in Chrome (375 px, tocchi reali): ${checks.length} controlli — boot con collezioni reali fallite e “Riprova”, servizio account non raggiungibile con “Inizia senza account” immediato, avvio locale persistente dopo il ricaricamento, wizard sopra la navigazione mobile con footer, “Continua” e “Inizia carriera” cliccabili (prima carriera e nuova carriera dal menu “Altro”), elenco ISTAT non caricato senza comuni inventati, service worker senza cache di POST/PUT/DELETE né dell’API.`);
+if (!exitCode) console.log(`Primo avvio su telefono verificato in Chrome (375 px, tocchi reali): ${checks.length} controlli — boot con collezioni reali fallite e “Riprova”, servizio account non raggiungibile con “Inizia senza account” immediato, avvio locale persistente dopo il ricaricamento, popup del menu a tutto schermo con chiusura, «Annulla» ed Escape, wizard sopra la navigazione mobile con footer, “Continua” e “Inizia carriera” cliccabili (prima carriera e nuova carriera dal menu “Altro”), elenco ISTAT non caricato senza comuni inventati, service worker senza cache di POST/PUT/DELETE né dell’API.`);
 process.exit(exitCode);

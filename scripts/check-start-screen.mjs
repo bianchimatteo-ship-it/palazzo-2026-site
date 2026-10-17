@@ -44,15 +44,35 @@ await withBrowser(async browser => {
   check(JSON.stringify(state.order.slice(1)) === JSON.stringify(['carica', 'hall', 'account', 'guida', 'impostazioni']), `Poi le carriere già fatte e l’aiuto: ${state.order.slice(1).join(', ')}.`);
   check(state.groups.join('|') === 'Le tue carriere|Aiuto e opzioni', `Gruppi: ${state.groups.join(' | ')}.`);
   check(state.facts.length > 0 && state.facts.every(value => Number(value.replace(/\D/g, '')) > 0), `I numeri del gioco sono quelli dei dati caricati, mai zero o vuoti (${state.facts.join(', ')}).`);
-  // every entry opens its own content in the panel, and the same button closes it again
+  // every entry opens its own content as a dialog centred over the homepage (never a panel added under it), and it closes with its close button, «Annulla», Escape or a click on the backdrop
   const titles = { carica: 'Carica partita', hall: 'Hall of Fame', account: 'Account e salvataggi online', guida: 'Come giocare', impostazioni: 'Impostazioni' };
+  const popup = () => evaluate(`(() => { const dialog = document.querySelector('.menu-popup'); if (!dialog) return null; const box = dialog.getBoundingClientRect(); const wrap = document.querySelector('.menu-popup-backdrop'); return { label: dialog.getAttribute('aria-label'), modal: dialog.getAttribute('aria-modal'), role: dialog.getAttribute('role'), centerX: Math.round(box.left + box.width / 2), centerY: Math.round(box.top + box.height / 2), width: innerWidth, height: innerHeight, fits: box.width <= innerWidth + 1 && box.height <= innerHeight + 1, scrolls: getComputedStyle(dialog.querySelector('.menu-popup-body')).overflowY, close: Boolean(dialog.querySelector('.menu-popup-x')), cancel: Boolean(dialog.querySelector('.menu-popup-foot [data-menu-close]')), backdrop: Boolean(wrap), text: dialog.textContent.replace(/\\s+/g, ' ').trim().slice(0, 200), homepage: Boolean(document.querySelector('.menu-column [data-menu=nuova]')), presentation: document.querySelector('.menu-panel')?.textContent.includes('La politica italiana, settimana dopo settimana') ?? false }; })()`);
+  const escape = async () => { await evaluate(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })), true`); await pause(400); };
+  const closers = {
+    'il pulsante di chiusura': async () => click('.menu-popup-x'),
+    '«Annulla»': async () => click('.menu-popup-foot [data-menu-close]'),
+    'Escape': escape,
+    'un clic sullo sfondo': async () => click('.menu-popup-backdrop')
+  };
   for (const [id, title] of Object.entries(titles)) {
     await click(`[data-menu=${id}]`);
+    const open = await popup();
+    check(open && open.label === title && open.role === 'dialog' && open.modal === 'true', `«${title}» si apre in un popup accessibile (dialog modale con titolo): ${JSON.stringify(open && { label: open.label, role: open.role, modal: open.modal })}.`);
+    check(open?.text.includes(title) || id === 'hall', `Il popup di «${title}» ha il suo contenuto (${open?.text.slice(0, 60)}).`);
+    check(open?.close && open?.cancel && open?.backdrop, `Il popup di «${title}» ha chiusura visibile, «Annulla» e sfondo.`);
+    check(open?.homepage && open?.presentation, `Sotto il popup di «${title}» la homepage resta, e il pannello non è sostituito.`);
+    check(open && Math.abs(open.centerX - open.width / 2) <= 2 && (open.width <= 700 || Math.abs(open.centerY - open.height / 2) <= 4) && open.fits, `Il popup di «${title}» è centrato e sta nello schermo (${open?.centerX},${open?.centerY} su ${open?.width}×${open?.height}).`);
+    check(open && ['auto', 'scroll'].includes(open.scrolls), `Il contenuto del popup di «${title}» scorre da sé.`);
+    // a click inside the dialog does not close it
+    await evaluate(`document.querySelector('.menu-popup-body')?.click(), true`); await pause(250);
+    check(Boolean(await popup()), `Un clic dentro il popup di «${title}» non lo chiude.`);
+    for (const [how, close] of Object.entries(closers)) {
+      if (!(await popup())) await click(`[data-menu=${id}]`);
+      await close();
+      check((await popup()) === null, `«${title}» si chiude con ${how}.`);
+    }
     state = await menu();
-    check(state.panel.includes(title), `«${title}» apre il suo pannello (${state.panel.slice(0, 60)}).`);
-    await click(`[data-menu=${id}]`);
-    state = await menu();
-    check(state.panel.includes('La politica italiana, settimana dopo settimana'), `Un secondo tocco su «${title}» torna alla presentazione.`);
+    check(state.panel.includes('La politica italiana, settimana dopo settimana') && !state.wizard && !state.home, `Chiuso «${title}» si torna alla homepage, senza avviare nulla.`);
   }
   await click('[data-menu=nuova]');
   state = await menu();
@@ -145,4 +165,4 @@ await withBrowser(async browser => {
   if (errors.length) problems.push(`Errori JavaScript: ${errors.slice(0, 3).join(' | ')}`);
 });
 if (problems.length) { console.error(`Schermata iniziale: ${problems.length} problemi.\n${[...new Set(problems)].slice(0, 60).join('\n')}`); process.exit(1); }
-console.log('Schermata iniziale verificata in Chrome: «Nuova partita» per prima, «Continua» (solo con una carriera) con logo e colore del partito, poi carriere già fatte e aiuto; ogni voce apre il suo pannello e lo richiude; Nuova partita apre i passaggi e annullare torna all’apertura; continuare e caricare uno slot riprendono la stessa partita; l’indipendente ha un segno neutro; a 320, 375, 390, 430, 768, 1024 e 1280 px nessuno scorrimento orizzontale, testi leggibili e le due azioni principali nella prima schermata del telefono.');
+console.log('Schermata iniziale verificata in Chrome: «Nuova partita» per prima, «Continua» (solo con una carriera) con logo e colore del partito, poi carriere già fatte e aiuto; ogni voce apre il suo popup centrato sopra la homepage e lo richiude con la chiusura, «Annulla», Escape o lo sfondo (un clic dentro non lo chiude); Nuova partita apre i passaggi e annullare torna all’apertura; continuare e caricare uno slot riprendono la stessa partita; l’indipendente ha un segno neutro; a 320, 375, 390, 430, 768, 1024 e 1280 px nessuno scorrimento orizzontale, testi leggibili e le due azioni principali nella prima schermata del telefono.');

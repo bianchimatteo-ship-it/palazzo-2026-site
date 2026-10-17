@@ -71,7 +71,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   const slotRows = () => evaluate(`document.querySelectorAll('[data-slot-row]').length`);
   const openLoad = async () => { if (!(await has('[data-slot-row], [data-protected-saves], .slot-list'))) { await click('[data-menu="carica"]'); await pause(200); } };
   // a slot button pressed by hand, as a script of the page could: the handler must refuse on its own
-  const forceSlotAction = attr => evaluate(`(() => { const host = document.querySelector('.menu-panel') ?? document.body; const button = document.createElement('button'); button.setAttribute(${JSON.stringify(attr)}, ${JSON.stringify(slotId)}); host.appendChild(button); button.click(); button.remove(); return true; })()`).then(() => pause(300));
+  const forceSlotAction = attr => evaluate(`(() => { const host = document.querySelector('.menu-popup-body') ?? document.body; const button = document.createElement('button'); button.setAttribute(${JSON.stringify(attr)}, ${JSON.stringify(slotId)}); host.appendChild(button); button.click(); button.remove(); return true; })()`).then(() => pause(300));
   const weekNow = () => evaluate(`JSON.parse(localStorage.getItem('palazzo-2026.career.v1') || 'null')?.career?.id ?? null`);
 
   // ---------- 2. logout: the session ends here and on the server; the career stays ----------
@@ -245,7 +245,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   await wait(() => has('[data-account-action="logout"]'));
   // The same link does not work twice.
   await goto(resetUrl.search);
-  await wait(async () => /non è valido|scaduto/.test(await text('.menu-error')), 12000).catch(async error => { console.error('DEBUG', await evaluate(`document.querySelector('.menu-panel')?.innerText.slice(0, 600)`)); throw error; });
+  await wait(async () => /non è valido|scaduto/.test(await text('.menu-error')));
   assert.equal(sessions('con.email') >= 0, true);
   assert.deepEqual(errors, [], 'Nessun errore in pagina.');
 }, { serverPort: 8791 });
