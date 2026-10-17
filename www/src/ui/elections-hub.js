@@ -1,20 +1,20 @@
 // The electoral centre: next vote, calendar, context, candidacy, campaign, polls and rivals, results and history.
-import { isSecretary, upcomingElections, upcomingRounds } from '../core/career-engine.js?v=20261017-2';
-import { RACE_RULES } from '../data/simulation/race-rules.js?v=20261017-2';
-import { campaignSummary, strategyOf } from '../core/campaign-engine.js?v=20261017-2';
-import { CAMPAIGN_PHASES, ELECTION_MODELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261017-2';
-import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261017-2';
-import { formatDate } from '../core/time.js?v=20261017-2';
-import { societyMood } from '../core/society-engine.js?v=20261017-2';
-import { renderCampaignPage } from './campaign-mode.js?v=20261017-2';
-import { politicalPhase } from './game-mode.js?v=20261017-2';
-import { lineChart, SERIES } from './charts.js?v=20261017-2';
-import { glyph } from './visuals.js?v=20261017-2';
-import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, sectionTabs, signed, table, weeksLabel } from './sections-kit.js?v=20261017-2';
-import { mandatePlace, renderElectionReport } from './election-report.js?v=20261017-2';
-import { renderNationalView } from './national-view.js?v=20261017-2';
-import { renderQuirinale } from './presidency-view.js?v=20261017-2';
-import { renderCampaignObservatory } from './observatory-view.js?v=20261017-2';
+import { isSecretary, upcomingElections, upcomingRounds } from '../core/career-engine.js?v=20261017-3';
+import { RACE_RULES } from '../data/simulation/race-rules.js?v=20261017-3';
+import { campaignSummary, strategyOf } from '../core/campaign-engine.js?v=20261017-3';
+import { CAMPAIGN_PHASES, ELECTION_MODELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261017-3';
+import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261017-3';
+import { formatDate } from '../core/time.js?v=20261017-3';
+import { societyMood } from '../core/society-engine.js?v=20261017-3';
+import { renderCampaignPage } from './campaign-mode.js?v=20261017-3';
+import { politicalPhase } from './game-mode.js?v=20261017-3';
+import { lineChart, SERIES } from './charts.js?v=20261017-3';
+import { glyph } from './visuals.js?v=20261017-3';
+import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, sectionTabs, signed, table, weeksLabel } from './sections-kit.js?v=20261017-3';
+import { mandatePlace, renderElectionReport } from './election-report.js?v=20261017-3';
+import { renderNationalView } from './national-view.js?v=20261017-3';
+import { renderQuirinale } from './presidency-view.js?v=20261017-3';
+import { renderCampaignObservatory } from './observatory-view.js?v=20261017-3';
 export { renderElectionReport };
 
 export const ELECTION_TABS = Object.freeze([['panoramica', 'Panoramica'], ['nazionali', 'Nazionali'], ['quirinale', 'Quirinale'], ['candidatura', 'Candidatura'], ['campagna', 'Campagna'], ['avversari', 'Sondaggi e avversari'], ['risultati', 'Risultati'], ['storico', 'Storico']]);
@@ -168,23 +168,28 @@ function raceRow(race, { state, leader, options }) {
     options.politicians.length ? `<optgroup label="Politici del partito">${options.politicians.map(item => optionRow(item, current === `politician:${item.id}`)).join('')}</optgroup>` : '',
     `<optgroup label="Una figura nuova">${optionRow(options.simulation, current === 'simulation')}</optgroup>`
   ].join('') : '';
+  const stand = !leader && race.round && ['planned', 'confirmed'].includes(race.status) && today <= race.windowClosesAt && options?.player
+    ? (candidacyOf?.kind === 'player'
+      ? `<button type="button" class="secondary-button" data-race-action="withdraw" data-race-id="${esc(race.id)}">Ritira la candidatura</button>`
+      : options.player.available ? `<button type="button" class="primary-button" data-race-action="stand" data-race-id="${esc(race.id)}">Mi candido</button>` : `<small class="sx-note">Non puoi candidarti: ${esc(options.player.reason ?? '')}</small>`) : '';
   const picker = choosing && options ? `<div class="eh-race-pick"><label><span>Candidato</span><select data-race-pick="${esc(race.id)}" aria-label="Candidato per ${esc(race.label)}"><option value="none" ${current === 'none' ? 'selected' : ''}>Nessun candidato</option>${groups}</select></label><button type="button" class="primary-button" data-race-action="confirm" data-race-id="${esc(race.id)}">Conferma</button></div>` : '';
   const play = race.status === 'confirmed' && candidacyOf?.kind === 'player' && open && state.campaign?.status !== 'active' ? `<button type="button" class="secondary-button" data-race-action="play" data-race-id="${esc(race.id)}" data-race-level="${esc(race.level)}">Guida la campagna ${arrow}</button>` : '';
   const who = candidacyOf ? `<span class="eh-race-who"><strong>${esc(candidacyOf.label)}</strong> ${badge(KIND_LABELS[candidacyOf.kind] ?? '', candidacyOf.kind === 'player' ? 'good' : 'neutral')} <small>${esc(rootingWord(candidacyOf.rooting))} · radicamento ${signedOne(candidacyOf.rooting)}</small></span>` : '<span class="eh-race-who"><small>Nessun candidato scelto</small></span>';
   const result = race.result ? `<p class="sx-note">${race.result.won ? 'Vince il candidato del partito' : race.result.mandate ? 'Il candidato del partito entra in consiglio all’opposizione' : 'Il candidato del partito non è eletto'} (${num(race.result.share, 1)}%${race.result.position ? `, ${race.result.position}º` : ''}).${race.result.winner && !race.result.won ? ` Primo: ${esc(race.result.winner.label)} (${num(race.result.winner.percent, 1)}%).` : ''}${race.office ? ` ${esc(race.office.title)}.` : ''}</p>` : '';
-  return `<li class="eh-race status-${esc(race.status)}"><div class="eh-race-head"><span class="eh-cal-icon">${glyph(RACE_ICONS[race.level] ?? 'ballot', 18)}</span><div><strong>${esc(race.label)}</strong><small>Voto ${esc(formatDate(race.electionDate))} · candidature ${esc(shortDate(race.windowOpensAt))} – ${esc(shortDate(race.windowClosesAt))}${open ? ' · aperte ora' : ''}</small></div>${badge(statusLabel, tone)}</div>${who}${picker}${play ? `<div class="sx-actions">${play}</div>` : ''}${result}</li>`;
+  return `<li class="eh-race status-${esc(race.status)}"><div class="eh-race-head"><span class="eh-cal-icon">${glyph(RACE_ICONS[race.level] ?? 'ballot', 18)}</span><div><strong>${esc(race.label)}</strong><small>Voto ${esc(formatDate(race.electionDate))} · candidature ${esc(shortDate(race.windowOpensAt))} – ${esc(shortDate(race.windowClosesAt))}${open ? ' · aperte ora' : ''}</small></div>${badge(statusLabel, tone)}</div>${who}${picker}${stand || play ? `<div class="sx-actions">${stand}${play}</div>` : ''}${result}</li>`;
 }
 function raceSection(state, { races = [], archive = [], raceOptions = () => null } = {}) {
   const game = state.game;
-  if (!game?.party && !archive.length) return '';
-  const leader = isSecretary(game.party);
+  const leader = Boolean(game?.party) && isSecretary(game.party);
+  const mine = race => leader || race.round || race.candidacy?.kind === 'player';
   const today = state.clock.currentDate;
-  const shown = races.filter(race => ['planned', 'confirmed', 'running'].includes(race.status)).slice(0, 16);
-  const closed = races.filter(race => ['held', 'missed'].includes(race.status)).slice(-4).reverse();
+  const shown = races.filter(race => mine(race) && ['planned', 'confirmed', 'running'].includes(race.status)).slice(0, 16);
+  const closed = races.filter(race => mine(race) && ['held', 'missed'].includes(race.status)).slice(-4).reverse();
+  if (!game?.party && !shown.length && !closed.length && !archive.length) return '';
   const intro = leader
     ? 'Da segretario decidi tu chi corre per il partito in ogni corsa: una scelta rapida, che non costa né giorni né soldi. Dove ti candidi tu, la campagna la giochi; per gli altri la porta avanti il partito, settimana per settimana, e il risultato arriva al voto. Il radicamento (il legame con il territorio e i comitati del partito) pesa sul risultato, non impedisce nessuna candidatura.'
-    : 'Solo il segretario o il fondatore decide i candidati del partito nelle corse territoriali: tu puoi seguirle da qui.';
-  const rows = shown.map(race => raceRow(race, { state, leader, options: leader && ['planned', 'confirmed'].includes(race.status) && today <= race.windowClosesAt ? raceOptions(race.id) : null })).join('');
+    : 'Solo il segretario o il fondatore decide i candidati del partito nelle corse territoriali. Ma ogni anno c’è una tornata di amministrative in cui puoi candidarti tu, in un comune della tua regione che vota quel giorno: la campagna la giochi con gli stessi strumenti delle altre elezioni.';
+  const rows = shown.map(race => raceRow(race, { state, leader, options: leader && ['planned', 'confirmed'].includes(race.status) && today <= race.windowClosesAt ? raceOptions(race.id) : leader ? null : (['planned', 'confirmed'].includes(race.status) && race.round && today <= race.windowClosesAt ? raceOptions(race.id) : null) })).join('');
   const past = closed.map(race => raceRow(race, { state, leader: false, options: null })).join('');
   const archived = [...archive].reverse().map(race => raceRow(race, { state, leader: false, options: null })).join('');
   const body = `<p class="sx-note">${esc(intro)}</p>${rows ? `<ol class="eh-races">${rows}</ol>` : '<p class="sx-empty">Nessuna corsa territoriale in calendario nei prossimi mesi: il calendario reale dei voti si carica con la pagina.</p>'}${past ? `<details class="eh-races-past"><summary>Ultime corse concluse</summary><ol class="eh-races">${past}</ol></details>` : ''}${archived ? `<details class="eh-races-past"><summary>Storico completo candidature (${archive.length})</summary><ol class="eh-races">${archived}</ol></details>` : ''}<p class="poll-footnote">Le date seguono il calendario reale dei voti (regioni, capoluoghi di provincia; per le province, un ciclo simulato). Candidati e risultati sono simulati: un politico reale resta quello dei dati, la sua candidatura no. Un candidato “figura simulata” non è mai una persona reale. Tra due voti che giochi di persona servono almeno ${RACE_RULES.playableGapDays} giorni.</p>`;

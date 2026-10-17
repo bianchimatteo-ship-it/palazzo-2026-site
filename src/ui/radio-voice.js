@@ -1,8 +1,8 @@
 // The bulletin of Radio La Politica 24 read aloud by the speech synthesis of the device itself (the Web Speech API): no audio file is downloaded and nothing is sent anywhere, the voice is whatever the
 // device has. Where the device has no speech synthesis (or no Italian voice) the control is not shown and the text of the bulletin stays on the page. The script is written from the bulletins the
 // engine already wrote (never invented here), and it says out loud that the radio is a simulation.
-import { LP24 } from '../data/simulation/news-rules.js?v=20261017-2';
-import { formatDate } from '../core/time.js?v=20261017-2';
+import { LP24 } from '../data/simulation/news-rules.js?v=20261017-3';
+import { formatDate } from '../core/time.js?v=20261017-3';
 
 export const voiceSupported = (scope = globalThis) => Boolean(scope.speechSynthesis) && typeof scope.SpeechSynthesisUtterance === 'function';
 const ITALIAN = /^it([-_]|$)/i;

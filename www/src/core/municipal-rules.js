@@ -18,7 +18,22 @@ const whole = value => Number.isInteger(value) && value >= 0 ? value : null;
 export function indexMunicipalPopulation(doc) {
   const index = new Map();
   for (const record of Array.isArray(doc?.records) ? doc.records : []) if (/^\d{6}$/.test(record?.municipalityCode ?? '')) index.set(record.municipalityCode, record);
+  // the totals ride on the same object: regions and provinces (sums of the comuni, computed by the importer), the country, and the source of it all
+  index.regions = Array.isArray(doc?.regions) ? doc.regions : [];
+  index.units = Array.isArray(doc?.units) ? doc.units : [];
+  index.total = doc?.totals ?? null;
+  index.provenance = doc ? { sourceName: doc.sourceName ?? null, sourceNote: doc.sourceNote ?? null, verified: doc.verified ?? null, verificationStatus: doc.verificationStatus ?? null, importedAt: doc.importedAt ?? null } : null;
   return index;
+}
+
+// The exact number of inhabitants, always: «1.234 abitanti · 01/01/2026» (never only the band under or over 15,000).
+const dateOf = iso => /^\d{4}-\d{2}-\d{2}$/.test(iso ?? '') ? `${iso.slice(8)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : 'data non indicata';
+export const residentsLabel = (population, referenceDate) => `${Number(population).toLocaleString('it-IT')} ${Number(population) === 1 ? 'abitante' : 'abitanti'} · ${dateOf(referenceDate)}`;
+// The text of a comune by its ISTAT code, from the data of the game (the same index the engines read).
+export function residentsText(code, index = null) {
+  const record = (index ?? shared).get(String(code ?? '')) ?? null;
+  const resident = whole(record?.populationResident);
+  return resident !== null ? residentsLabel(resident, record.populationReferenceDate) : 'popolazione non disponibile';
 }
 
 // { band, basis: 'riferimento-legale' | 'residente-indicativo' | 'nessun-dato', provisional, population, referenceDate, label, note }
@@ -27,7 +42,7 @@ export function municipalityBandInfo(code, index = new Map()) {
   const legal = whole(record?.electoralPopulationReference);
   if (legal !== null) return { band: bandOfPopulation(legal), basis: 'riferimento-legale', provisional: false, population: legal, referenceDate: record.electoralPopulationReferenceDate ?? null, label: `${legal.toLocaleString('it-IT')} abitanti (${record.electoralPopulationReferenceType ?? 'riferimento legale'})`, note: 'Fascia dedotta dalla popolazione di riferimento prevista per le regole elettorali.' };
   const resident = whole(record?.populationResident);
-  if (resident !== null) return { band: bandOfPopulation(resident), basis: 'residente-indicativo', provisional: true, population: resident, referenceDate: record.populationReferenceDate ?? null, label: `${resident.toLocaleString('it-IT')} residenti al ${record.populationReferenceDate ?? 'data non indicata'}`, note: 'La popolazione di riferimento legale non è ancora nei dati: la fascia usa la popolazione residente ISTAT, solo come indicazione.' };
+  if (resident !== null) return { band: bandOfPopulation(resident), basis: 'residente-indicativo', provisional: true, population: resident, referenceDate: record.populationReferenceDate ?? null, label: residentsLabel(resident, record.populationReferenceDate), note: 'La popolazione di riferimento legale non è ancora nei dati: la fascia usa la popolazione residente ISTAT, solo come indicazione.' };
   return { band: MUNICIPAL_BANDS.small, basis: 'nessun-dato', provisional: true, population: null, referenceDate: null, label: 'popolazione non disponibile', note: 'I dati demografici dei comuni non sono ancora stati importati (o questo comune non è nel file): si applicano le regole dei comuni fino a 15.000 abitanti, come ripiego dichiarato.' };
 }
 
@@ -35,3 +50,12 @@ export function municipalityBandInfo(code, index = new Map()) {
 let shared = new Map();
 export const setMunicipalPopulationIndex = index => { shared = index instanceof Map ? index : new Map(); };
 export const bandOfMunicipality = code => municipalityBandInfo(code, shared);
+
+// ---------- the resident population of a territory (always the sum of the comuni it includes, without duplicates): comune, province, region, Italy ----------
+// null while the data are not there: nothing is estimated and no number is invented.
+export const residentsOfMunicipality = (code, index = shared) => whole(index.get(String(code ?? ''))?.populationResident);
+export const residentsOfRegion = (name, index = shared) => whole((index.regions ?? []).find(item => item.gameRegion === name || item.name === name)?.populationResident);
+export const residentsOfUnit = (code, index = shared) => whole((index.units ?? []).find(item => item.code === String(code ?? ''))?.populationResident);
+export const residentsOfItaly = (index = shared) => whole(index.total?.populationResident ?? null);
+export const populationReferenceDate = (index = shared) => index.total?.referenceDate ?? null;
+export const populationProvenance = (index = shared) => index.provenance ?? null;
