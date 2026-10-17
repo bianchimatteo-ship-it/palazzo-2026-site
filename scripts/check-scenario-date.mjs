@@ -16,7 +16,7 @@ assert.equal(new Date(`${SCENARIO}T00:00:00Z`).getUTCDay(), 1, 'È un lunedì: l
 assert.ok(manifest.snapshotDate <= SCENARIO && /^\d{4}-\d{2}-\d{2}$/.test(manifest.snapshotDate), 'Lo snapshot dei dati reali non è successivo alla data dello scenario.');
 assert.ok(/data dello snapshot/.test(manifest.scenarioNote ?? ''), 'La differenza tra data dello scenario e data di verifica è dichiarata.');
 const polls = await read('polls.json');
-assert.ok(polls.length > 0 && polls.every(poll => poll.source === 'real' && poll.verified === true && poll.publishedAt <= SCENARIO && /^https?:\/\//.test(poll.sourceUrl)), 'Ogni sondaggio reale è verificato, con fonte, e pubblicato entro la data dello scenario.');
+assert.ok(polls.length > 0 && polls.every(poll => poll.source === 'real' && poll.publishedAt <= SCENARIO && /^https?:\/\//.test(poll.sourceUrl) && (poll.verified === true ? Boolean(poll.verifiedAt) : poll.verificationStatus === 'in-attesa-di-conferma')), 'Ogni sondaggio reale ha una fonte ed è pubblicato entro la data dello scenario; è «verificato» solo con la data di verifica, altrimenti dichiara «in attesa di conferma» (mai verificato a parole).');
 const newest = [...polls].sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))[0];
 const main = await readFile(new URL('../src/main.js', import.meta.url), 'utf8');
 assert.ok(/startDate: realDatabase\.manifest\?\.scenarioDate \?\? realDatabase\.manifest\?\.snapshotDate/.test(main), 'Il gioco parte dalla data dello scenario (e, se manca, da quella dello snapshot).');

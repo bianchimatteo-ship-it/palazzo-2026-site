@@ -63,7 +63,7 @@ export function memoryBackend() {
 
 // ---------- the tier ----------
 // real: () => the localStorage in use; isBulk(key): does this key hold a save; backend: IndexedDB (or null); channel: () => a BroadcastChannel (or null).
-export function createTier({ real = () => globalThis.localStorage, isBulk = () => false, backend = idbBackend(), channel = name => (typeof BroadcastChannel === 'function' ? new BroadcastChannel(name) : null), now = () => Date.now(), budget = LOCAL_BUDGET, openTimeout = 4000 } = {}) {
+export function createTier({ real = () => globalThis.localStorage, isBulk = () => false, backend = idbBackend(), channel = name => (typeof BroadcastChannel === 'function' ? new BroadcastChannel(name) : null), now = () => Date.now(), budget = LOCAL_BUDGET, openTimeout = 4000, deferMs = 600 } = {}) {
   const memory = new Map();          // key -> { value, at }  (the values that live outside localStorage, and what was hydrated)
   const ahead = new Set();           // keys whose current value is NOT in localStorage (read from memory)
   const confirmed = new Map();       // key -> at of the last write confirmed by the backend
@@ -80,24 +80,65 @@ export function createTier({ real = () => globalThis.localStorage, isBulk = () =
   const tell = (promise) => { pending.add(promise); promise.finally(() => pending.delete(promise)).catch(() => {}); return promise; };
 
   const lsGet = key => { try { return storage()?.getItem(key) ?? null; } catch { return null; } };
-  // The characters the saves already take in localStorage.
-  const bulkInLocal = except => {
-    let total = 0;
-    try { const ls = storage(); const length = ls?.length; if (ls && typeof ls.key === 'function' && Number.isFinite(length)) for (let index = 0; index < length; index++) { const key = ls.key(index); if (key && key !== except && isBulk(key)) total += (ls.getItem(key) ?? '').length; } } catch { /* unknown: the budget is not applied */ }
-    return total;
+  // The characters the saves already take in localStorage: counted once at start, then kept up to date by this tab's own writes (a heuristic for the budget, never a limit that is trusted).
+  const sizes = new Map();
+  const bulkInLocal = except => { let total = 0; for (const [key, size] of sizes) if (key !== except) total += size; return total; };
+  const scanSizes = () => {
+    sizes.clear();
+    try { const ls = storage(); const length = ls?.length; if (ls && typeof ls.key === 'function' && Number.isFinite(length)) for (let index = 0; index < length; index++) { const key = ls.key(index); if (key && isBulk(key)) sizes.set(key, (ls.getItem(key) ?? '').length); } } catch { /* unknown: the budget is not applied */ }
+  };
+  // The writes to the backend: one at a time for each key, and only the newest value waits behind the one being written (a long career saves many times a minute; writing every
+  // intermediate value would only queue megabytes the next write replaces). A caller whose value was replaced is answered by the write of the newer one.
+  const writers = new Map(); // key -> { inflight, queued: { record, promise, resolve } | null }
+  const writeRecord = record => record.remove ? backend.remove(record.key) : backend.put(record);
+  const run = (key, record) => {
+    const writer = writers.get(key);
+    const done = writeRecord(record).then(() => { if (record.remove) confirmed.delete(key); else confirmed.set(key, record.at); failures.delete(key); return true; }, error => { failures.set(key, error?.message || String(error)); return false; });
+    writer.inflight = done.then(ok => {
+      writer.inflight = null;
+      const next = writer.queued;
+      if (next) { writer.queued = null; run(key, next.record).then(next.resolve); }
+      return ok;
+    });
+    return writer.inflight;
+  };
+  const send = record => {
+    if (!status.available) return null;
+    const key = record.key;
+    if (!writers.has(key)) writers.set(key, { inflight: null, queued: null });
+    const writer = writers.get(key);
+    let promise;
+    if (!writer.inflight) promise = run(key, record);
+    else {
+      if (!writer.queued) { let resolve; const waiting = new Promise(done => { resolve = done; }); writer.queued = { record, promise: waiting, resolve }; } else writer.queued.record = record;
+      promise = writer.queued.promise;
+    }
+    mirrors.set(key, promise);
+    return tell(promise);
+  };
+  // A copy that is already safe in localStorage is only a mirror: writing it costs time on every save (the browser copies megabytes), so during a burst of saves only the newest value of
+  // a key is written, a little later. What is not safe elsewhere (localStorage refused it) and every removal go out at once.
+  const deferred = new Map(); // key -> { record, timer, promise, resolve }
+  const flushDeferred = () => {
+    for (const [key, item] of [...deferred]) { clearTimeout(item.timer); deferred.delete(key); send(item.record)?.then(item.resolve); }
   };
   const mirror = (key, value, at, lsOk) => {
     if (!status.available) return null;
-    const write = backend.put({ key, value, at, lsOk }).then(() => { confirmed.set(key, at); failures.delete(key); return true; }, error => { failures.set(key, error?.message || String(error)); return false; });
-    mirrors.set(key, write);
-    return tell(write);
+    const record = { key, value, at, lsOk };
+    if (!lsOk || !deferMs) { dropDeferred(key); return send(record); }
+    let item = deferred.get(key);
+    if (item) item.record = record;
+    else {
+      let resolve; const promise = new Promise(done => { resolve = done; });
+      item = { record, resolve, promise, timer: null };
+      item.timer = setTimeout(() => { deferred.delete(key); send(item.record)?.then(item.resolve); }, deferMs);
+      deferred.set(key, item);
+      tell(promise);
+    }
+    return item.promise;
   };
-  const mirrorRemove = key => {
-    if (!status.available) return null;
-    const write = backend.remove(key).then(() => { confirmed.delete(key); failures.delete(key); return true; }, error => { failures.set(key, error?.message || String(error)); return false; });
-    mirrors.set(key, write);
-    return tell(write);
-  };
+  function dropDeferred(key) { const item = deferred.get(key); if (item) { clearTimeout(item.timer); deferred.delete(key); item.resolve(true); } }
+  const mirrorRemove = key => { dropDeferred(key); return send({ key, remove: true, at: now() }); };
 
   // ---- the localStorage-shaped surface used by storage.js ----
   const facade = {
@@ -118,7 +159,7 @@ export function createTier({ real = () => globalThis.localStorage, isBulk = () =
       // The running game always tries localStorage first (it is what other tabs and the next opening read at once); the others go there while the saves stay under the budget.
       const room = key === primaryKey ? true : bulkInLocal(key) + text.length <= budget;
       if (ls && (room || !status.available)) {
-        try { ls.setItem(key, text); lsOk = true; } catch (error) { failure = error; }
+        try { ls.setItem(key, text); lsOk = true; sizes.set(key, text.length); } catch (error) { failure = error; }
       }
       if (lsOk) { ahead.delete(key); memory.delete(key); }
       else {
@@ -131,7 +172,7 @@ export function createTier({ real = () => globalThis.localStorage, isBulk = () =
     },
     removeItem(key) {
       if (!isBulk(key)) { storage()?.removeItem(key); return; }
-      ahead.delete(key); memory.delete(key);
+      ahead.delete(key); memory.delete(key); sizes.delete(key);
       try { storage()?.removeItem(key); } catch { /* a key that cannot be removed is overwritten by the next write */ }
       mirrorRemove(key);
       post({ t: 'del', key });
@@ -165,6 +206,7 @@ export function createTier({ real = () => globalThis.localStorage, isBulk = () =
       status.available = true;
     } catch (error) { status.error = error?.message || String(error); return status; }
     finally { clearTimeout(timer); }
+    scanSizes();
     let records = [];
     try { records = await backend.getAll(); } catch (error) { status.error = error?.message || String(error); status.available = false; return status; }
     const byKey = new Map(records.map(record => [record.key, record]));
@@ -177,7 +219,7 @@ export function createTier({ real = () => globalThis.localStorage, isBulk = () =
       if (local === null || mostAdvanced(record.key, local, record, compare) === 'backend') {
         // Only the backend has the newest value: it is read from memory, and a copy is tried back in localStorage when there is room for it.
         let back = false;
-        if (bulkInLocal(record.key) + record.value.length <= budget) { try { storage()?.setItem(record.key, record.value); back = true; } catch { back = false; } }
+        if (bulkInLocal(record.key) + record.value.length <= budget) { try { storage()?.setItem(record.key, record.value); back = true; sizes.set(record.key, record.value.length); } catch { back = false; } }
         if (!back) { memory.set(record.key, { value: record.value, at: record.at }); ahead.add(record.key); }
         confirmed.set(record.key, record.at);
         status.hydrated++;
@@ -238,16 +280,16 @@ export function createTier({ real = () => globalThis.localStorage, isBulk = () =
   function durability(key) {
     if (!ahead.has(key)) return { durable: true, confirm: Promise.resolve(true) };
     const at = memory.get(key)?.at;
-    if (confirmed.get(key) === at) return { durable: true, confirm: Promise.resolve(true) };
+    if (confirmed.get(key) >= at) return { durable: true, confirm: Promise.resolve(true) };
     const write = mirrors.get(key);
-    return { durable: false, confirm: write ? write.then(ok => ok && confirmed.get(key) === at) : Promise.resolve(false) };
+    return { durable: false, confirm: write ? write.then(ok => ok && confirmed.get(key) >= at) : Promise.resolve(false) };
   }
   // Where a key's current value lives: in localStorage, or only in the browser's database (IndexedDB) because localStorage had no room.
   const where = key => ahead.has(key) ? 'database' : 'local';
-  const settled = () => Promise.allSettled([...pending]);
+  const settled = async () => { flushDeferred(); await Promise.allSettled([...pending]); };
   const report = () => ({
     backend: status.backend, available: status.available, error: status.error, hydrated: status.hydrated, migrated: { ...status.migrated },
     ahead: [...ahead], pending: pending.size, failed: [...failures].map(([key, message]) => ({ key, message })), messages: busId
   });
-  return { facade, start, refresh, durability, where, settled, report, setPrimaryKey, close() { try { bus?.close(); } catch { /* closed */ } }, _memory: memory, _ahead: ahead };
+  return { facade, start, refresh, flush: flushDeferred, durability, where, settled, report, setPrimaryKey, close() { try { bus?.close(); } catch { /* closed */ } }, _memory: memory, _ahead: ahead };
 }

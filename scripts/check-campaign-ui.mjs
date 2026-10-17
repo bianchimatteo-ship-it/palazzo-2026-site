@@ -184,7 +184,7 @@ try {
   const slot = await inStore(`return store.saveToSlot('Prova dei select');`);
   const later = await pick(TOPIC, 1);
   ok(later !== topic, 'Dopo il salvataggio nello slot il giocatore sceglie un altro tema.');
-  await inStore(`store.loadSlot(${JSON.stringify(slot)}); return true;`);
+  await inStore(`return store.preserveCurrent().then(() => { store.loadSlot(${JSON.stringify(slot)}); return true; });`);
   await click('[data-nav=elezioni]');
   await waitFor(() => evaluate('Boolean(document.querySelector("[data-section-tab=elezioni][data-section-tab-value=campagna]"))'), 10000, 'scheda Campagna dopo lo slot');
   await click('[data-section-tab=elezioni][data-section-tab-value=campagna]');

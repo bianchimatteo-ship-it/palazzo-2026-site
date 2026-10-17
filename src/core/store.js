@@ -492,6 +492,15 @@ function keepCurrent(name, { requireDurable = true } = {}) {
       if (!entry.autoPreserve) return false;
       try { return storage.loadSlot(entry.id)?.career?.id === state.career.id; } catch { return false; }
     });
+    // The copy kept a moment ago holds exactly this game (what changes between the two calls is only the notice on screen and the save counter): it is not written again, so a copy that the
+    // browser has already confirmed stays confirmed.
+    if (existing) {
+      try {
+        const kept = storage.loadSlot(existing.id);
+        const content = value => JSON.stringify({ ...value, ui: null, saveMeta: null, exportedAt: null });
+        if (content(kept) === content(state) && storage.slotDurability(existing.id).durable) return existing.id;
+      } catch { /* a copy that cannot be compared is written again */ }
+    }
     const slotId = store.saveToSlot(name, existing?.id ?? null, { autoPreserve: true });
     // A copy that is only in memory (no room in localStorage) is not "kept" until IndexedDB has confirmed it: `store.preserveCurrent()` waits for that before the career is replaced.
     if (requireDurable && !storage.slotDurability(slotId).durable) throw new Error('La copia non è ancora confermata dal browser. Riprova tra un istante.');
@@ -502,6 +511,16 @@ function keepCurrent(name, { requireDurable = true } = {}) {
       : '';
     throw new Error(`La partita in corso non può essere conservata e resta intatta. ${error.message}${recovery}`);
   }
+}
+// A copy chosen by the player: if the career has a more advanced copy somewhere (the running game, a slot) the chosen one cannot replace that lineage (a save never goes back), so it comes
+// back as a career of its own, with a new identity; otherwise it loads as it is.
+function restoreOlderOrSame(payload, toast) {
+  if (!isRestorableSave(payload) || isFutureSave(payload)) return store.loadGame(payload, toast);
+  const newest = storage.bestForCareer(payload.career.id, null);
+  if (!newest || compareSaveProgress(newest, payload) <= 0) return store.loadGame(payload, toast);
+  const careerId = makeId('carriera');
+  const fork = { ...structuredClone(payload), career: { ...payload.career, id: careerId, restoredFromCareerId: payload.career.id }, saveMeta: { careerId, revision: 0, switchFromCareerId: null, switchIntent: null } };
+  return store.loadGame(fork, 'Copia caricata come carriera separata: quella più avanzata resta nel suo slot');
 }
 // What a save slot shows before it is opened.
 function slotMeta(s) {
@@ -3470,21 +3489,15 @@ export const store = {
     if (!safety.durable) safety.confirm.then(ok => { state = { ...state, ui: { ...state.ui, toast: ok ? 'Partita salvata nello slot' : 'Lo slot NON è stato salvato: il browser non ha confermato la scrittura.' } }; emit(); });
     return slotId;
   },
-  loadSlot(id) { return store.loadGame(storage.loadSlot(id), 'Partita caricata'); },
+  // A slot behind the career's most advanced copy comes back as a career of its own (the game never takes a career back); a slot that is the latest loads as it is.
+  loadSlot(id) { return restoreOlderOrSame(storage.loadSlot(id), 'Partita caricata'); },
   // The text of a slot as a file (the same format as the export of the running game).
   exportSlot(id) { return JSON.stringify({ ...storage.loadSlot(id), exportedAt: new Date().toISOString(), exportedBy: 'POLITICANDO 2026' }); },
   slotInfo: id => storage.slotInfo(id),
   localVersions: () => storage.localVersions(),
   // A copy kept aside by the game comes back as the running game (the running one is kept in a slot first, or nothing happens). A copy that is behind another one of the same career
   // (which the game would always prefer: a save never goes back) comes back as a career of its own, with a new identity; the more advanced one is not touched.
-  restoreLocalVersion(id) {
-    const payload = storage.localVersion(id);
-    const newest = storage.bestForCareer(payload.career.id, null);
-    if (!newest || compareSaveProgress(newest, payload) <= 0) return store.loadGame(payload, 'Versione precedente ripristinata');
-    const careerId = makeId('carriera');
-    const fork = { ...structuredClone(payload), career: { ...payload.career, id: careerId, restoredFromCareerId: payload.career.id }, saveMeta: { careerId, revision: 0, switchFromCareerId: null, switchIntent: null } };
-    return store.loadGame(fork, 'Copia ripristinata come nuova carriera');
-  },
+  restoreLocalVersion(id) { return restoreOlderOrSame(storage.localVersion(id), 'Versione precedente ripristinata'); },
   exportLocalVersion(id) { return JSON.stringify({ ...storage.localVersion(id), exportedAt: new Date().toISOString(), exportedBy: 'POLITICANDO 2026' }); },
   deleteSlot(id) { storage.deleteSlot(id); emit(); },
   // A game from a slot or a file replaces the running one (which is kept in a slot first).

@@ -236,6 +236,8 @@ if (chromeAvailable) {
     const overflow = () => evaluate(`document.documentElement.scrollWidth - window.innerWidth`);
     for (const [width, height] of [[390, 844], [1280, 800]]) {
       await viewport(width, height, width < 800);
+      // a clean browser has no IndexedDB copy of the saves either
+      await evaluate(`new Promise(resolve => { const done = () => resolve(true); const request = indexedDB.deleteDatabase('politicando-vault'); request.onsuccess = request.onerror = request.onblocked = done; })`);
       await evaluate(`localStorage.clear(), sessionStorage.clear(), localStorage.setItem('politicando.onboarding.v1', JSON.stringify({ account: true, tour: 'done', localStart: true })), true`);
       await goto();
       await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu=nuova]"))'));

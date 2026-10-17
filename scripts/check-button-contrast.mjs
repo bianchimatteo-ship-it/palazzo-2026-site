@@ -83,6 +83,8 @@ await withBrowser(async browser => {
   for (const [width, height] of [[390, 844], [1280, 800]]) {
     await viewport(width, height, width < 800);
     await evaluate(`localStorage.clear(), sessionStorage.clear(), true`);
+    // a clean browser has no IndexedDB copy of the saves either
+    await evaluate(`new Promise(resolve => { const done = () => resolve(true); const request = indexedDB.deleteDatabase('politicando-vault'); request.onsuccess = request.onerror = request.onblocked = done; })`);
     await browser.goto();
     await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu], .main-menu"))'));
     await pause(400);

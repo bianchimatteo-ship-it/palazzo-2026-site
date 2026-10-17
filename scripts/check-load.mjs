@@ -54,6 +54,8 @@ else {
       await send('Network.setCacheDisabled', { cacheDisabled: true });
       await send('Emulation.setCPUThrottlingRate', { rate: 4 });
       await evaluate('localStorage.clear(), sessionStorage.clear(), true');
+      // a clean browser has no IndexedDB copy of the saves either
+      await evaluate(`new Promise(resolve => { const done = () => resolve(true); const request = indexedDB.deleteDatabase('politicando-vault'); request.onsuccess = request.onerror = request.onblocked = done; })`);
       const start = Date.now();
       await goto(page);
       await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu], .main-menu"))'), 60000);

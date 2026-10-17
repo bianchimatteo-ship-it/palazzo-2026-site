@@ -216,7 +216,7 @@ const sameCareerVersion = (key, left, right) => {
   return a && b && careerIdOf(a.state) === careerIdOf(b.state) ? compareSaveVersion(a.state, b.state) : null;
 };
 await tier.start({ compare: sameCareerVersion });
-if (typeof document !== 'undefined') document.addEventListener?.('visibilitychange', () => { if (document.visibilityState === 'visible') tier.refresh(); });
+if (typeof document !== 'undefined') document.addEventListener?.('visibilitychange', () => { if (document.visibilityState === 'visible') tier.refresh(); else tier.flush(); });
 
 export const storage = {
   // Where the saves are kept and how safe the last writes are: IndexedDB state, the migration (keys copied, read back, differences), keys that live only outside localStorage, writes pending or failed.

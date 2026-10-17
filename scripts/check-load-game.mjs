@@ -87,6 +87,27 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   await wait(() => has('.menu-error'));
   assert.match(await text('.menu-error'), /al massimo 5 salvataggi/, 'Con gli slot pieni il salvataggio in uno slot è rifiutato con il motivo.');
   assert.deepEqual(await evaluate(`[...document.querySelectorAll('[data-slot-row] strong')].map(el => el.textContent)`), names, 'E nessuno slot è stato eliminato da sé.');
+
+  // ---------- 6. localStorage with no room for the saves: loading a slot still works (the running game is kept in the browser's database first and the browser's confirmation is waited for) ----------
+  await evaluate(`(() => { window.__realSet2 = Storage.prototype.setItem; Storage.prototype.setItem = function (key, value) { if (/^(palazzo-2026\\.career\\.v1|politicando\\.slot\\.)/.test(key)) throw new DOMException('The quota has been exceeded.', 'QuotaExceededError'); return window.__realSet2.call(this, key, value); }; return true; })()`);
+  // the slots are full: free one by hand (the player's choice), then the running game must be kept in the freed place
+  await click('[data-slot-delete]');
+  await wait(() => has('[data-confirm="ok"]')); await click('[data-confirm="ok"]'); await pause(400);
+  const chosen = await evaluate(`document.querySelector('[data-slot-load]').dataset.slotLoad`);
+  const chosenWeek = await run(`return store.slotInfo ? true : true;`).then(() => evaluate(`(async () => { const { store } = await ${mod}; const { storage } = await import('/src/core/storage.js?v=${version}'); return storage.loadSlot(${JSON.stringify(chosen)}).game.week.index; })()`));
+  const careerBefore = await run('return store.getState().career.id;');
+  await run('store.advanceTurn(1); return true;');
+  const latestWeek = await week();
+  await pause(300);
+  await click(`[data-slot-load="${chosen}"]`);
+  await pause(300);
+  if (await has('[data-confirm="ok"]')) await click('[data-confirm="ok"]');
+  await wait(() => has('.page-wrap'));
+  assert.equal(await week(), chosenWeek, 'Anche senza spazio in localStorage lo slot scelto si carica (la partita in corso era stata conservata e confermata prima).');
+  assert.notEqual(await run('return store.getState().career.id;'), careerBefore, 'Uno slot più vecchio della stessa carriera torna come carriera separata: la più avanzata non si tocca.');
+  const kept = await evaluate(`(async () => { const { storage } = await import('/src/core/storage.js?v=${version}'); return storage.listSlots().filter(slot => slot.autoPreserve).map(slot => storage.loadSlot(slot.id)).some(state => state.career.id === ${JSON.stringify(careerBefore)} && state.game.week.index === ${latestWeek}); })()`);
+  assert.ok(kept, 'La carriera più avanzata è nello slot automatico, con tutte le sue settimane.');
+  await evaluate(`(() => { Storage.prototype.setItem = window.__realSet2; return true; })()`);
   assert.deepEqual(errors, [], 'Nessun errore in pagina.');
 });
 console.log('Carica partita verificato in Chrome: ogni slot ha nome, settimana, data, posizione e conferma del browser, la partita in corso dice se è salvata, uno slot e una copia di sicurezza si esportano su file, una copia si ripristina (la partita in corso va prima in uno slot automatico), un’eliminazione che non riesce non cancella nulla, con gli slot pieni il salvataggio è rifiutato con il motivo e il gioco non elimina mai uno slot da sé.');
