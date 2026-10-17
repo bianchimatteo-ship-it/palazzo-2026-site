@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="EmulatorDisplays">
+    <option name="displayStateByAvdFolder">
+      <map>
+        <entry key="$USER_HOME$/.android/avd/Medium_Phone.avd">
+          <value>
+            <MultiDisplayState>
+              <option name="displayDescriptors">
+                <list>
+                  <display size="1080x2400" />
+                  <display displayId="1" size="2160x3840" />
+                  <display displayId="2" size="1080x1920" />
+                </list>
+              </option>
+              <option name="panelState">
+                <PanelState>
+                  <option name="splitPanel">
+                    <SplitPanelState>
+                      <option name="proportion" value="0.6719716787338257" />
+                      <option name="firstComponent">
+                        <PanelState>
+                          <option name="splitPanel">
+                            <SplitPanelState>
+                              <option name="proportion" value="0.4447368383407593" />
+                              <option name="firstComponent">
+                                <PanelState>
+                                  <option name="displayId" value="0" />
+                                </PanelState>
+                              </option>
+                              <option name="secondComponent">
+                                <PanelState>
+                                  <option name="displayId" value="1" />
+                                </PanelState>
+                              </option>
+                            </SplitPanelState>
+                          </option>
+                        </PanelState>
+                      </option>
+                      <option name="secondComponent">
+                        <PanelState>
+                          <option name="displayId" value="2" />
+                        </PanelState>
+                      </option>
+                    </SplitPanelState>
+                  </option>
+                </PanelState>
+              </option>
+            </MultiDisplayState>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+</project>
