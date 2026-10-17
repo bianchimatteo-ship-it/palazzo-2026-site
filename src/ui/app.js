@@ -250,6 +250,10 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   const setDeclined = (careerId, value) => { try { const next = declinedList().filter(item => item !== `${account.user?.username}|${careerId}`); if (value) next.push(`${account.user?.username}|${careerId}`); globalThis.localStorage?.setItem(DECLINED_KEY, JSON.stringify(next)); } catch { /* the choice is asked again */ } };
   const careerIdNow = () => store.hasCareer() ? store.getState().career?.id ?? null : null;
   // A career linked to an account that is not signed in (after a logout, or another account) is not continued as if nothing had happened: the player chooses (sign in, or use it locally).
+  // A career linked to an account that is not the one signed in is not an ordinary game of this browser: it is not listed, and no action loads, exports or restores it. One rule for every
+  // path (the lists, the buttons and the handlers), keyed by the career's id (a slot is read for it: manual slots and automatic copies alike).
+  const careerBlocked = careerId => Boolean(careerId) && Boolean(accountApi.careerGate(careerId, account.user?.username ?? null));
+  const assertAvailable = careerId => { if (careerBlocked(careerId)) throw new Error(`Questa partita è collegata all’account «${accountApi.ownerOf(careerId)}»: accedi con quell’account, o usa la partita in corso con «Usa localmente».`); };
   const gateOf = () => { const id = careerIdNow(); return id ? accountApi.careerGate(id, account.user?.username ?? null) : null; };
   // The states the player sees: saved in the browser, waiting to be synced, synced, conflict, error (and the isolation of a career that is not this account's).
   const syncViewOf = () => {
@@ -435,7 +439,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   const menuContext = () => {
     const collections = realDatabase.manifest?.collections ?? {};
     return {
-      hasCareer: store.hasCareer(), meta: store.currentMeta(), identity: store.hasCareer() ? careerIdentity(store.getState()) : null, identityOf: metaIdentity, hall: store.hallOfFame(), slots: store.listSlots().map(slot => menu.view === 'carica' ? { ...slot, info: store.slotInfo(slot.id) } : slot), versions: menu.view === 'carica' ? store.localVersions() : [], saving: store.saveStatus(), lastSaved: store.getLastSaved(), unsaved: store.hasUnsavedChanges(), settings, error: menu.error, account, gate: gateOf(),
+      hasCareer: store.hasCareer(), meta: store.currentMeta(), identity: store.hasCareer() ? careerIdentity(store.getState()) : null, identityOf: metaIdentity, hall: store.hallOfFame(), slots: store.listSlots().filter(slot => !careerBlocked(slot.careerId)).map(slot => menu.view === 'carica' ? { ...slot, info: store.slotInfo(slot.id) } : slot), versions: menu.view === 'carica' ? store.localVersions().filter(item => !careerBlocked(item.careerId)) : [], protectedCount: store.listSlots().filter(slot => careerBlocked(slot.careerId)).length + (menu.view === 'carica' ? store.localVersions().filter(item => careerBlocked(item.careerId)).length : 0), saving: store.saveStatus(), lastSaved: store.getLastSaved(), unsaved: store.hasUnsavedChanges(), settings, error: menu.error, account, gate: gateOf(),
       stats: [[realDatabase.manifest?.politiciansInOffice ?? collections.politicians ?? 0, 'parlamentari in carica'], [collections.laws ?? 0, 'atti della XIX legislatura'], [collections.twoPerThousand ?? 0, 'partiti reali nel 2×1000'], [collections.parliamentaryGroups ?? 0, 'gruppi parlamentari']]
     };
   };
@@ -900,23 +904,25 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
           const id = careerIdNow();
           if (id && gateOf()) confirmThen({ title: 'Continuare solo in questo browser?', body: `Questa carriera è collegata all’account «${accountApi.ownerOf(id)}». Continuando qui non verrà né caricata online né sincronizzata con nessun account; il collegamento e le copie online non vengono toccati.`, details: ['Potrai riportarla online in qualsiasi momento da «Salva ora online», con l’account a cui appartiene.', 'Nessun salvataggio viene eliminato.'], confirmLabel: 'Usa localmente' }, async () => { accountApi.useLocally(id); menu.open = false; playSound('confirm'); await enterHome(); });
         }
-        else if (data.menuAction === 'save-slot') { store.saveToSlot(); playSound('success'); }
-        else if (data.menuAction === 'export') { download(store.exportSave(), `politicando-partita-${new Date().toISOString().slice(0, 10)}.json`); }
+        else if (data.menuAction === 'save-slot') { assertAvailable(careerIdNow()); store.saveToSlot(); playSound('success'); }
+        else if (data.menuAction === 'export') { assertAvailable(careerIdNow()); download(store.exportSave(), `politicando-partita-${new Date().toISOString().slice(0, 10)}.json`); }
         else if (data.menuAction === 'reset-settings') { confirmThen({ title: 'Ripristinare le impostazioni?', body: 'Audio, animazioni, testo, contrasto, notifiche, velocità della simulazione e salvataggio automatico tornano ai valori iniziali. Le partite e i salvataggi non vengono toccati.', confirmLabel: 'Ripristina' }, () => { settings = resetSettings(); applySettings(); }); return; }
         else if (data.menuAction === 'clear-saves') { confirmThen({ title: 'Eliminare tutti i salvataggi?', body: 'La partita in corso e tutti i salvataggi di questo browser verranno cancellati. L’operazione non si può annullare.', details: [account.user ? 'Le copie online nel tuo account restano: potrai recuperarle dal menu Account.' : 'Senza account non resta nessuna copia: esporta prima su file ciò che vuoi tenere.', 'L’archivio dell’amministratore e i loghi non vengono toccati.'], confirmLabel: 'Elimina tutto', tone: 'danger' }, () => { store.clearAllSaves(); menu.open = true; menu.view = 'home'; }); return; }
         else if (data.slotLoad) {
+          assertAvailable(store.slotCareerId(data.slotLoad));
           const load = async () => { await store.preserveCurrent(); store.loadSlot(data.slotLoad); menu.open = false; playSound('success'); await enterHome(); };
           if (store.hasCareer() && store.hasUnsavedChanges()) { confirmThen({ title: 'Caricare questo salvataggio?', body: 'La partita in corso ha modifiche non salvate: verrà salvata in uno slot prima di caricare quella scelta.', confirmLabel: 'Carica' }, load); return; }
           await load();
         }
-        else if (data.slotExport) { download(store.exportSlot(data.slotExport), `politicando-slot-${data.slotExport}-${new Date().toISOString().slice(0, 10)}.json`); }
-        else if (data.versionExport) { download(store.exportLocalVersion(data.versionExport), `politicando-copia-${new Date().toISOString().slice(0, 10)}.json`); }
+        else if (data.slotExport) { assertAvailable(store.slotCareerId(data.slotExport)); download(store.exportSlot(data.slotExport), `politicando-slot-${data.slotExport}-${new Date().toISOString().slice(0, 10)}.json`); }
+        else if (data.versionExport) { assertAvailable(store.localVersions().find(item => item.id === data.versionExport)?.careerId); download(store.exportLocalVersion(data.versionExport), `politicando-copia-${new Date().toISOString().slice(0, 10)}.json`); }
         else if (data.versionRestore) {
           const version = store.localVersions().find(item => item.id === data.versionRestore);
+          assertAvailable(version?.careerId);
           confirmThen({ title: 'Ripristinare questa copia?', body: version ? `Torna la copia di ${version.player}, settimana ${version.week} (${formatDate(version.gameDate)}).` : 'Torna questa copia di sicurezza.', details: [...(version?.older ? ['Esiste una versione più avanzata di questa carriera: la copia torna come carriera separata, con una nuova identità. Quella più avanzata non viene toccata.'] : []), ...(store.hasCareer() ? ['La partita in corso viene prima messa in uno slot automatico: se non si riesce a conservarla, nulla viene sostituito.'] : [])], confirmLabel: version?.older ? 'Ripristina come nuova carriera' : 'Ripristina' }, async () => { await store.preserveCurrent(); store.restoreLocalVersion(data.versionRestore); menu.open = false; playSound('success'); await enterHome(); });
           return;
         }
-        else if (data.slotDelete) { const slot = store.listSlots().find(item => item.id === data.slotDelete); confirmThen({ title: 'Eliminare questo salvataggio?', body: `«${slot?.name ?? 'Salvataggio'}» verrà eliminato da questo browser. L’operazione non si può annullare.`, confirmLabel: 'Elimina salvataggio', tone: 'danger' }, () => store.deleteSlot(data.slotDelete)); return; }
+        else if (data.slotDelete) { const slot = store.listSlots().find(item => item.id === data.slotDelete); assertAvailable(slot?.careerId); confirmThen({ title: 'Eliminare questo salvataggio?', body: `«${slot?.name ?? 'Salvataggio'}» verrà eliminato da questo browser. L’operazione non si può annullare.`, confirmLabel: 'Elimina salvataggio', tone: 'danger' }, () => store.deleteSlot(data.slotDelete)); return; }
         else if (data.settingKey) { settings = saveSetting(data.settingKey, data.settingValue); applySettings(); playSound('click'); }
         else if ('reportClose' in data) reportOpen = false;
         else if (data.accountAction === 'logout') { const outcome = await logout(); account.user = null; account.saves = []; account.conflict = null; account.conflicts = []; account.info = null; account.history = null; account.message = outcome.server === false ? 'Sei uscito da questo dispositivo. La sessione sul server verrà chiusa appena possibile. Le carriere restano nel browser e online.' : 'Sei uscito: le carriere restano nel browser e online. Questa copia non verrà più sincronizzata con l’account finché non accedi di nuovo.'; }

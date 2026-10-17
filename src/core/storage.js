@@ -218,6 +218,7 @@ const sameCareerVersion = (key, left, right) => {
 await tier.start({ compare: sameCareerVersion });
 if (typeof document !== 'undefined') document.addEventListener?.('visibilitychange', () => { if (document.visibilityState === 'visible') tier.refresh(); else tier.flush(); });
 
+const slotCareerMemo = new Map();
 export const storage = {
   // Where the saves are kept and how safe the last writes are: IndexedDB state, the migration (keys copied, read back, differences), keys that live only outside localStorage, writes pending or failed.
   vaultReport: () => tier.report(),
@@ -355,6 +356,18 @@ export const storage = {
   // The index and the slots say the same thing: an entry whose slot is gone leaves the list, a slot the index lost (a write that stopped half way) comes back into it.
   repairSlots() {
     try { return withWriteLock(() => repairSlotsUnlocked()); } catch { return false; }
+  },
+  // The career a slot holds, read from the slot itself (the one reliable source: the index says nothing of it, and an automatic copy is a slot like the others). Null when the slot
+  // does not read. Kept in memory for as long as the slot is not rewritten.
+  slotCareerId(id) {
+    const entry = storage.listSlots().find(item => item.id === id);
+    const memo = `${id}|${entry?.savedAt ?? ''}`;
+    if (slotCareerMemo.has(memo)) return slotCareerMemo.get(memo);
+    const found = unwrap(readJson(SLOT_PREFIX + id), `slot:${id}`);
+    const careerId = found ? careerIdOf(found.state) || null : null;
+    if (slotCareerMemo.size > 64) slotCareerMemo.clear();
+    slotCareerMemo.set(memo, careerId);
+    return careerId;
   },
   listSlots() {
     const index = readJson(SLOT_INDEX);

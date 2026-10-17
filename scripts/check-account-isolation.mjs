@@ -62,6 +62,18 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   let aCopy = saves('legacy.a')[0];
   assert.ok(await has('[data-sync-status="synced"]'));
 
+  // a manual slot and an automatic copy of the career, both linked to the account through the career they hold
+  const slotId = await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); return store.saveToSlot('Prova isolamento', null, { manual: true }); })()`);
+  assert.ok(slotId, 'Lo slot manuale è stato creato.');
+  const slotCount = () => evaluate(`Object.keys(localStorage).filter(key => key.startsWith('politicando.slot.')).length`);
+  const slotsBefore = await slotCount();
+  assert.ok(slotsBefore >= 1);
+  const slotRows = () => evaluate(`document.querySelectorAll('[data-slot-row]').length`);
+  const openLoad = async () => { if (!(await has('[data-slot-row], [data-protected-saves], .slot-list'))) { await click('[data-menu="carica"]'); await pause(200); } };
+  // a slot button pressed by hand, as a script of the page could: the handler must refuse on its own
+  const forceSlotAction = attr => evaluate(`(() => { const host = document.querySelector('.menu-panel') ?? document.body; const button = document.createElement('button'); button.setAttribute(${JSON.stringify(attr)}, ${JSON.stringify(slotId)}); host.appendChild(button); button.click(); button.remove(); return true; })()`).then(() => pause(300));
+  const weekNow = () => evaluate(`JSON.parse(localStorage.getItem('palazzo-2026.career.v1') || 'null')?.career?.id ?? null`);
+
   // ---------- 2. logout: the session ends here and on the server; the career stays ----------
   const tokenA = (await stored('politicando.account.v1')).token;
   await click('[data-account-action="logout"]');
@@ -80,6 +92,20 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   assert.equal(await inGame(), false, 'La partita non si apre da sola.');
   assert.equal(await persisted(), careerWeek, 'Dopo il ricaricamento la carriera è sempre nel browser.');
   assert.equal(saves('legacy.a').length, 1, 'La copia online dell’account resta.');
+  // the protected career is in no ordinary list, and no action loads it
+  await click('[data-menu="carica"]'); await pause(250);
+  assert.equal(await slotRows(), 0, 'In «Carica partita» le partite protette non compaiono.');
+  assert.ok(await has('[data-protected-saves]'), 'Il gioco dice che ci sono partite protette, senza mostrarle.');
+  assert.equal(await has('[data-slot-load]'), false, 'Nessun pulsante per caricarle.');
+  const careerBefore = await weekNow();
+  await forceSlotAction('data-slot-load');
+  assert.equal(await weekNow(), careerBefore, 'Il gestore non carica uno slot protetto nemmeno se il pulsante viene forzato.');
+  assert.match(await text('.menu-error'), /collegata all’account «legacy\.a»/, 'E dice perché.');
+  await forceSlotAction('data-slot-export');
+  assert.equal(await inGame(), false, 'La partita non si apre.');
+  assert.equal(await slotCount(), slotsBefore, 'Lo slot locale è intatto.');
+  assert.equal(saves('legacy.a').length, 1, 'La copia online dell’account è ancora presente.');
+  assert.equal(await text('.account-message'), '', 'Nessuna informazione dell’account precedente resta nei pannelli.');
   // The same account signs in again: the career is normal to continue and nothing was lost.
   await click('[data-menu-action="gate-login"]');
   await wait(() => has('[data-account-form="login"]'));
@@ -88,6 +114,10 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   await goto('');
   await wait(() => plainContinue());
   assert.equal(await lockedCard('legacy.a'), false, 'Con lo stesso account la carriera è di nuovo «Continua la partita».');
+  await click('[data-menu="carica"]'); await pause(250);
+  assert.ok((await slotRows()) >= 1, 'Rientrando il proprietario le partite tornano negli elenchi.');
+  assert.equal(await has('[data-protected-saves]'), false);
+  await click('[data-menu="carica"]'); await pause(150);
   await pause(2500);
   assert.equal(saves('legacy.a').length, 1, 'Con il proprietario di nuovo collegato c’è sempre una sola copia online.');
   assert.ok(saves('legacy.a')[0].revision >= aCopy.revision, 'La copia online non è tornata indietro.');
@@ -106,6 +136,14 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   assert.ok(await lockedCard('legacy.a'), 'Con un altro account la carriera dell’account precedente non è «Continua la partita» normale.');
   assert.match(await text('.menu-continue.is-locked'), /legacy\.b/, 'Dice anche con quale account sei collegato.');
   assert.equal(await plainContinue(), false);
+  await click('[data-menu="carica"]'); await pause(250);
+  assert.equal(await slotRows(), 0, 'Con un secondo account le partite del primo non compaiono.');
+  assert.ok(await has('[data-protected-saves]'));
+  const secondBefore = await weekNow();
+  await forceSlotAction('data-slot-load');
+  assert.equal(await weekNow(), secondBefore, 'E non si caricano nemmeno forzando il pulsante.');
+  assert.deepEqual(saves('legacy.b'), [], 'Nulla è passato al secondo account.');
+  await click('[data-menu="carica"]'); await pause(150);
   await openAccount();
   // Playing on and saving does not change that.
   await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); store.advanceTurn(1); store.save(); return true; })()`);
@@ -151,6 +189,9 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   await goto('');
   await wait(() => plainContinue());
   assert.equal(await lockedCard('legacy.b'), false, 'Dopo «Usa localmente» e un ricaricamento non viene richiesto di nuovo.');
+  await click('[data-menu="carica"]'); await pause(250);
+  assert.ok((await slotRows()) >= 1, 'Con «Usa localmente» (scelta esplicita) le copie di quella carriera tornano nell’elenco.');
+  await click('[data-menu="carica"]'); await pause(150);
   // Signed in as another account, a locally used career is still not synced.
   await openAccount();
   await fill('login', { username: 'legacy.a', password: 'password-di-a' });

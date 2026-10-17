@@ -3464,7 +3464,8 @@ export const store = {
   startDate: () => realStartDate ?? state.clock.currentDate,
   hasUnsavedChanges: () => unsaved,
   currentMeta: () => slotMeta(state),
-  listSlots: () => storage.listSlots(),
+  listSlots: () => storage.listSlots().map(entry => ({ ...entry, careerId: storage.slotCareerId(entry.id) })),
+  slotCareerId: id => storage.slotCareerId(id),
   // Can the career in progress be kept before another one takes its place? It can if it already has its automatic slot (which is rewritten) or if a slot is free.
   preserveCheck() {
     if (!store.hasCareer()) return { ok: true };
