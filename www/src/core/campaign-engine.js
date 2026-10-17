@@ -1,10 +1,10 @@
-import { advanceDays } from './time.js?v=20261017-3';
-import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261017-3';
-import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261017-3';
-import { aggregateShares, mateForce, runFinalElection, runFirstRound } from './election-engine.js?v=20261017-3';
-import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261017-3';
-import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261017-3';
-import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261017-3';
+import { advanceDays } from './time.js?v=20261017-4';
+import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261017-4';
+import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261017-4';
+import { aggregateShares, mateForce, runFinalElection, runFirstRound } from './election-engine.js?v=20261017-4';
+import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261017-4';
+import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261017-4';
+import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261017-4';
 
 const SOURCE = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
@@ -1750,6 +1750,8 @@ export function createCampaign({career,player,statistics=[],offices=[],territori
   const candidate=createCandidate({id:playerCandidateId,player:true,partyId,displayName:player.displayName,seed,stats:playerStats});
   // What the player's own candidacy stands for: a party of the database, a party he founded (his own), or nobody.
   candidate.partyKind=!partyId?'indipendente':userOrIndependent?'utente':partyRecord?.source==='simulation'?'simulata':'reale';
+  // The list the player stands for (the label of the rows of a general or European result): the name of the party, kept apart from the name of the person.
+  if(partyRecord){candidate.partyLabel=partyRecord.officialName??partyRecord.name??null;candidate.partyAbbreviation=partyRecord.abbreviation??null;}
   // More forces in the field where more of them really run: a small comune, a big one, a region, the whole country.
   const rivals=RIVALS_BY_TYPE[type]?.[type==='comunale'&&config.municipalityBand!=='oltre-15000'?'small':'default'] ?? 3;
   // A local race is seeded by the place too, and some of its candidacies may stand without a party; a general or European one is the roster of the forces that stand.

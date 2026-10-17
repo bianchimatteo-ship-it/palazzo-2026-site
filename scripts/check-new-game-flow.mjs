@@ -63,11 +63,20 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   };
   for (const target of [1, 2, 3, 4, 5]) {
     await reach(target);
+    await evaluate(`document.querySelector('.career-wizard').click(), true`); await pause(200);
+    assert.ok(await has('.career-wizard'), `Un clic dentro il popup non annulla (passaggio ${target}).`);
     assert.ok(await has('.wizard-cancel'), `«Annulla» c’è al passaggio ${target}.`);
     assert.ok(await has('.wizard-x'), `× c’è al passaggio ${target}.`);
     await wizardIsAlone(`passaggio ${target}`);
-    await click(target % 2 ? '.wizard-cancel' : '.wizard-x');
-    assert.ok(await onMenu(), `Dal passaggio ${target} si torna al menu iniziale.`);
+    // the creator is a popup over the homepage (which stays, out of reach); every way out lands on the initial menu
+    assert.ok(await has('.wizard-under .menu-new'), `Al passaggio ${target} la homepage resta dietro il popup.`);
+    assert.equal(await evaluate(`document.querySelector('.wizard-under').hasAttribute('inert')`), true, 'E non si può toccare.');
+    const how = ['cancel', 'x', 'escape', 'backdrop', 'cancel'][target - 1];
+    if (how === 'cancel') await click('.wizard-cancel');
+    else if (how === 'x') await click('.wizard-x');
+    else if (how === 'escape') { await evaluate(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })), true`); await pause(300); }
+    else { await evaluate(`document.querySelector('.wizard-backdrop').click(), true`); await pause(300); }
+    assert.ok(await onMenu(), `Dal passaggio ${target} (${how}) si torna al menu iniziale.`);
     assert.equal(await snapshot(), before, `Dal passaggio ${target} la carriera non cambia (nessuna carriera creata o caricata).`);
   }
 
@@ -137,4 +146,4 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   assert.equal(await evaluate(`Object.keys(localStorage).filter(key => key.includes('slot')).length`), slotsBefore, 'Nessuno slot è stato eliminato da sé.');
   assert.deepEqual(errors, [], 'Nessun errore in pagina.');
 });
-console.log('Nuova partita verificata in Chrome: la creazione è una schermata a sé (la carriera in corso non è disegnata dietro), × e «Annulla» a ogni passaggio tornano al menu iniziale senza creare né caricare nulla, una risposta tardiva dei dati dopo l’annullamento non riapre nulla, dal menu, dalla pagina Carriera, dalle impostazioni e su telefono la carriera resta identica (id, settimana, data, revisione, byte), con gli slot pieni la nuova carriera è bloccata e nessuno slot viene eliminato.');
+console.log('Nuova partita verificata in Chrome: la creazione è un popup sopra la homepage (inerte; la carriera in corso non è disegnata), ×, «Annulla», Escape e lo sfondo tornano al menu iniziale (un clic dentro il popup non annulla) senza creare né caricare nulla, una risposta tardiva dei dati dopo l’annullamento non riapre nulla, dal menu, dalla pagina Carriera, dalle impostazioni e su telefono la carriera resta identica (id, settimana, data, revisione, byte), con gli slot pieni la nuova carriera è bloccata e nessuno slot viene eliminato.');

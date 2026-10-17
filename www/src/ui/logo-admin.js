@@ -1,4 +1,4 @@
-import { realDatabase } from '../data/repositories/real-data.js?v=20261017-3';
+import { realDatabase } from '../data/repositories/real-data.js?v=20261017-4';
 
 const esc = (value = '') => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const pageSize = 16;

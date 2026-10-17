@@ -1,7 +1,7 @@
 // The full report of a vote, shared by the electoral centre and the campaign page.
-import { formatDate } from '../core/time.js?v=20261017-3';
-import { glyph } from './visuals.js?v=20261017-3';
-import { arrow, badge, bar, card, empty, esc, kpi, num, pct, signed, table } from './sections-kit.js?v=20261017-3';
+import { formatDate } from '../core/time.js?v=20261017-4';
+import { glyph } from './visuals.js?v=20261017-4';
+import { arrow, badge, bar, card, empty, esc, kpi, num, pct, signed, table } from './sections-kit.js?v=20261017-4';
 
 const EVENT_LABELS = { 'dopo-voto-vittoria': 'Le prime mosse dopo il voto', 'dopo-voto-sconfitta': 'Come ripartire dopo il voto', 'giunta-offerta': 'La giunta valuta il tuo nome', 'giunta-composizione': 'La scelta della tua giunta', 'capogruppo-opposizione': 'Chi guida l’opposizione', 'ricorso-elettorale': 'Un possibile ricorso', 'resa-dei-conti': 'Resa dei conti nel partito', 'consultazioni-governo': 'La squadra di governo', 'impegni-elettorali': 'Gli impegni presi in campagna' };
 const STAT_NAMES = { reputation: 'Reputazione', influence: 'Influenza', notoriety: 'Notorietà', popularity: 'Popolarità' };
@@ -15,7 +15,7 @@ function countLine(report) {
   if (!count) return '';
   if (count.normalized) return `<p class="sx-note eh-count" data-count="scala">${esc(count.basis ?? 'Dati demografici non disponibili: percentuali su una scala di 100.000 schede.')}</p>`;
   const n = value => Number(value).toLocaleString('it-IT');
-  return `<p class="sx-note eh-count" data-count="completo"><b>Residenti</b> ${count.residents ? n(count.residents) : 'n.d.'} · <b>${count.electorsSource === 'simulato' ? 'Elettorato simulato' : 'Iscritti'}</b> ${n(count.electors)} · <b>Votanti</b> ${n(count.voters)} (${count.turnout !== null && count.turnout !== undefined ? `${Number(count.turnout).toLocaleString('it-IT', { maximumFractionDigits: 1 })}%` : 'n.d.'}) · <b>Voti validi</b> ${n(count.ballots ?? count.valid)} · <b>Schede non valide</b> ${n(count.invalid ?? 0)}</p>`;
+  return `<p class="sx-note eh-count" data-count="completo"><b>Residenti</b> ${count.residents ? n(count.residents) : 'n.d.'} · <b>${count.electorsSource === 'simulato' ? 'Elettorato simulato' : 'Iscritti'}</b> ${n(count.electors)} · <b>Votanti</b> ${n(count.voters)} (${(count.turnoutActual ?? count.turnout) !== null && (count.turnoutActual ?? count.turnout) !== undefined ? `${Number(count.turnoutActual ?? count.turnout).toLocaleString('it-IT', { maximumFractionDigits: 1 })}%${Number.isFinite(count.turnoutActual) && Number.isFinite(count.turnoutRequested) && Math.abs(count.turnoutActual - count.turnoutRequested) >= 0.05 ? ` · richiesta ${Number(count.turnoutRequested).toLocaleString('it-IT', { maximumFractionDigits: 1 })}%` : ''}` : 'n.d.'}) · <b>Voti validi</b> ${n(count.ballots ?? count.valid)} · <b>Schede non valide</b> ${n(count.invalid ?? 0)}</p>`;
 }
 export function mandatePlace(state, report) {
   if (!report?.personalMandate) return null;
@@ -34,7 +34,7 @@ export function renderElectionReport(report, { compact = false, place = null } =
   if (outcome.district) personal.push(kpi({ label: 'Collegio uninominale', value: outcome.district.position ? `${outcome.district.position}º posto` : '—', note: `${esc(outcome.district.name ?? '')} · ${pct(outcome.district.share)}${outcome.district.position === 1 ? ` · margine ${num(outcome.district.margin)} punti` : ''}`, tone: outcome.district.position === 1 ? 'good' : 'bad' }));
   if (outcome.constituency) personal.push(kpi({ label: 'Seggi nella tua circoscrizione', value: num(outcome.constituency.seats, 0), note: `${esc(outcome.constituency.name ?? '')} · lista bloccata: conta la posizione` }));
   if (outcome.threshold) personal.push(kpi({ label: 'Soglia di sbarramento', value: `${num(outcome.threshold)}%`, tone: outcome.belowThreshold ? 'bad' : 'good', note: outcome.belowThreshold ? 'non superata: nessun seggio' : 'superata' }));
-  const groups = (report.groups ?? []).map((row, index) => ({ _class: row.player ? 'is-player' : '', pos: `${index + 1}ª`, name: `<strong>${esc(row.label)}</strong>${row.partyIds?.length > 1 ? ` <small>${row.partyIds.length} liste in accordo</small>` : ''}`, share: `<span class="eh-share"><b>${pct(row.percent)}</b>${bar(row.percent, row.player ? 'good' : '')}</span>`, votes: num(row.votes, 0), seats: num(row.seats, 0), runoff: row.runoffPercent !== null && row.runoffPercent !== undefined ? pct(row.runoffPercent) : '—' }));
+  const groups = (report.groups ?? []).map((row, index) => ({ _class: row.player ? 'is-player' : '', pos: `${index + 1}ª`, name: `<strong>${esc(row.label)}</strong>${row.person ? ` <small>${esc(row.person)}</small>` : ''}${row.partyIds?.length > 1 ? ` <small>${row.partyIds.length} liste in accordo</small>` : ''}`, share: `<span class="eh-share"><b>${pct(row.percent)}</b>${bar(row.percent, row.player ? 'good' : '')}</span>`, votes: num(row.votes, 0), seats: num(row.seats, 0), runoff: row.runoffPercent !== null && row.runoffPercent !== undefined ? pct(row.runoffPercent) : '—' }));
   const hasRunoff = (report.runoff ?? []).length > 0;
   const territories = (report.territories ?? []).map(area => ({ area: `<strong>${esc(area.name)}</strong>`, share: `<span class="eh-share"><b>${pct(area.percent)}</b>${bar(area.percent, area.position === 1 ? 'good' : '')}</span>`, position: area.position ? `${area.position}ª` : '—', winner: area.position === 1 ? '<span class="tone-good">Tu</span>' : `${esc(area.winner ?? '—')} ${area.winnerPercent !== null ? `(${pct(area.winnerPercent)})` : ''}` }));
   const consequences = report.consequences ?? {};
