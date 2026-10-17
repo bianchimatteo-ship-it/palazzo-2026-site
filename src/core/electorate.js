@@ -11,6 +11,9 @@ import { residentsOfItaly, residentsOfMunicipality, residentsOfRegion, populatio
 
 export const ELIGIBLE_SHARE = 0.82;
 export const SCALE = 100000;
+// The turnout that really came out of a count: voters over electors, never over 100 and not defined without electors. The turnout asked of the simulation (`turnout`) is only a target: the
+// demographic ceilings (residents) and the noise of a small electorate can move the real one.
+export const actualTurnout = (electors, voters) => Number(electors) > 0 && Number.isFinite(Number(voters)) ? Math.min(100, Math.round(Number(voters) / Number(electors) * 10000) / 100) : null;
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
 // The resident population behind a campaign: { residents, referenceDate, scope } or null when the data do not hold it.
@@ -45,7 +48,7 @@ export function countBallots(campaign, { turnout, normal }) {
   const ballots = clamp(Math.round(voters * validRatio + normal() * Math.sqrt(voters * validRatio * (1 - validRatio))), 0, voters);
   return {
     kind: type, residents: population?.residents ?? null, populationReferenceDate: population?.referenceDate ?? null, electors, voters, ballots, valid: ballots, invalid: voters - ballots,
-    turnout, validRatio, normalized: false, basis: electorsBasis, electorsSource: registers ? 'registro' : 'simulato', source: 'simulation'
+    turnout, turnoutRequested: turnout, turnoutActual: actualTurnout(electors, voters), validRatio, normalized: false, basis: electorsBasis, electorsSource: registers ? 'registro' : 'simulato', source: 'simulation'
   };
 }
 

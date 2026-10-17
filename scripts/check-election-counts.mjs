@@ -125,6 +125,9 @@ for (let seed = 0; seed < 14; seed++) {
   assert.ok(result.territories.every(area => area.groups.reduce((sum, row) => sum + row.votes, 0) === area.ballots), 'Anche in ogni area i voti sommano alle schede.');
   assert.equal(result.territories.reduce((sum, area) => sum + area.ballots, 0), count.ballots, 'Le schede delle aree sommano a quelle del voto.');
   if (campaign.firstRoundResult) { runoffs++; const first = campaign.firstRoundResult.electorate; assert.deepEqual(electorate.countProblems(first, campaign.firstRoundResult.groups), [], 'Anche il primo turno è coerente.'); assert.ok(first.voters <= record.populationResident); assert.equal(first.electors, count.electors, 'Primo turno e ballottaggio hanno lo stesso elettorato.'); assert.ok(count.voters <= count.electors, 'Al ballottaggio non votano più elettori di quanti ce ne siano.'); }
+  // the first round too: the ballots of the areas add up to the ballots of the round (and the runoff, when there is one, has its own)
+  const firstRound = campaign.firstRoundResult;
+  if (firstRound) assert.equal(firstRound.territories.reduce((sum, area) => sum + area.ballots, 0), firstRound.electorate.ballots, `${record.name}: nel primo turno le schede delle aree sommano a quelle della tornata.`);
   finals++;
   // the invariants of the game state accept the result
   const state = { ...base, campaign };
@@ -143,6 +146,51 @@ for (const region of ['Valle d’Aosta', 'Molise', 'Lombardia']) {
   const campaign = play({ type: 'politiche', role: 'deputato', region: 'Lombardia', municipalityCode: null, band: null, seed: 4, registers: registersOf(null) });
   const count = campaign.result.electorate;
   assert.equal(count.residents, 58942828); assert.deepEqual(electorate.countProblems(count, campaign.result.groups, { label: 'politiche' }), []);
+}
+// the first round on its own, with a runoff in view: the areas hold the ballots of the round, not the scale of 100,000
+{
+  const record = bigComuni[11];
+  const where = place(record);
+  const player = { ...base.dataset.politicians[0], partyId: party.id, region: where.region };
+  const campaign = engine.createCampaign({ career: { ...base.career, id: 'conto-primo-turno', partyId: party.id }, player, statistics: base.dataset.statistics, partyCatalog: parties, currentDate: '2026-09-25', config: { electionType: 'comunale', role: 'sindaco', objective: 'win', municipalityBand: 'oltre-15000', place: where } });
+  const first = elections.runFirstRound(campaign);
+  assert.equal(first.electorate.normalized, false);
+  assert.equal(first.territories.reduce((sum, area) => sum + area.ballots, 0), first.totalBallots, 'Primo turno: le schede delle aree sommano al totale della tornata.');
+  assert.notEqual(first.totalBallots, 100000, 'E non sono la scala fittizia di 100.000.');
+  assert.ok(first.territories.every(area => area.groups.reduce((sum, row) => sum + row.votes, 0) === area.ballots), 'In ogni area i voti sommano alle schede.');
+}
+// a general election: the rows are lists, parties or coalitions; the name of the person stays in the detail; an independent keeps their own label
+{
+  const campaign = play({ type: 'politiche', role: 'deputato', region: 'Lombardia', municipalityCode: null, band: null, seed: 6, registers: registersOf(null) });
+  const byId = new Map(campaign.candidates.map(item => [item.id, item]));
+  let listed = 0;
+  for (const row of campaign.result.groups) {
+    const leader = byId.get(row.candidateId);
+    if (!leader?.partyLabel) continue;
+    listed++;
+    assert.ok(row.label.startsWith(leader.partyLabel), `Politiche: la riga è «${leader.partyLabel}», non «${row.label}».`);
+    if (leader.realReference?.fullName) { assert.notEqual(row.label, leader.realReference.fullName, 'Il nome della persona non è l’etichetta della riga.'); assert.equal(row.person, leader.realReference.fullName, 'Ma resta nel dettaglio.'); }
+    if ((row.memberCandidateIds ?? []).length > 1) assert.match(row.label, / e alleati$/, 'Una coalizione si dice tale.');
+  }
+  assert.ok(listed >= 3, 'Nelle politiche le righe con una lista sono almeno tre.');
+  assert.ok(campaign.result.groups.some(row => row.candidateId === campaign.playerCandidateId && row.label.startsWith(byId.get(campaign.playerCandidateId).partyLabel ?? '')), 'La lista del giocatore porta il nome del suo partito.');
+}
+// turnout asked and turnout that came out: with the electors and the voters known the real ratio is shown; 0%, 100%, a ceiling of residents and a scale are all handled
+{
+  const asked = (turnout, extra = {}) => electorate.countBallots(fake('regionale', { electorate: { electors: 500000, validRatio: .98, basis: 'prova', place: { region: 'Valle d’Aosta' }, ...extra } }), { turnout, normal: normalOf(seeded(11)) });
+  const capped = asked(100);
+  assert.equal(capped.turnoutRequested, 100);
+  assert.ok(capped.turnoutActual < 100 && capped.turnoutActual === Math.round(capped.voters / capped.electors * 10000) / 100, `Con il tetto dei residenti l’affluenza vera (${capped.turnoutActual}%) è diversa da quella chiesta (100%).`);
+  assert.equal(asked(0).turnoutActual, 0, 'Affluenza 0%: vera 0%.');
+  const zero = electorate.countBallots(fake('regionale', { electorate: { electors: 0, place: { region: 'Valle d’Aosta' } } }), { turnout: 50, normal: normalOf(seeded(12)) });
+  assert.ok(zero.normalized || zero.turnoutActual === null || Number.isFinite(zero.turnoutActual), 'Senza elettori non c’è una divisione per zero.');
+  assert.equal(electorate.actualTurnout(0, 0), null); assert.equal(electorate.actualTurnout(1000, 1000), 100); assert.equal(electorate.actualTurnout(1000, 1500), 100, 'Mai oltre il 100%.');
+  const small = electorate.countBallots(fake('comunale', { electorate: { place: { municipalityCode: tiny.municipalityCode } } }), { turnout: 100, normal: normalOf(seeded(13)) });
+  assert.equal(small.turnoutActual, 100, 'Affluenza richiesta 100% in un piccolo comune: vera 100%.');
+  const scaled = electorate.countBallots(fake('provinciale', { electorate: { place: { region: 'Toscana' } } }), { turnout: 60, normal: normalOf(seeded(14)) });
+  assert.equal(scaled.turnoutActual, undefined, 'Una scala non ha un’affluenza vera.');
+  const national = legislature.nationalElectorate(geography, 100);
+  assert.ok(national.turnoutRequested === 100 && national.turnoutActual <= 100 && national.turnoutActual === Math.round(national.voters / national.electors * 10000) / 100, 'Nazionali: richiesta e vera sono separate.');
 }
 // the national vote of the legislature engine
 for (const turnout of [0, 55, 100]) {

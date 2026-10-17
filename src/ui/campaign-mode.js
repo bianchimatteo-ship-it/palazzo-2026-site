@@ -15,6 +15,8 @@ const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;
 const roleLabels={sindaco:'Candidatura a sindaco',consigliere:'Candidato in lista per il consiglio',presidente:'Candidato alla presidenza (Regione o Provincia)',deputato:'Candidato alla Camera',senatore:'Candidato al Senato',uninominale:'Collegio uninominale simulato',eurodeputato:'Candidato al Parlamento europeo'};
 const ROLE_OPTIONS={comunale:[['sindaco','Sindaco'],['consigliere','Consigliere']],provinciale:[['presidente','Presidente della Provincia'],['consigliere','Consigliere provinciale']],regionale:[['presidente','Presidente di Regione'],['consigliere','Consigliere regionale']],politiche:[['deputato','Deputato (lista)'],['senatore','Senatore (lista)'],['uninominale','Collegio uninominale']],europee:[['eurodeputato','Eurodeputato']]};
 const number=value=>new Intl.NumberFormat('it-IT').format(Math.round(Number(value)||0));
+// The weight of an area in percent: the decimals a small positive weight needs to not read as 0% (the values themselves are not touched).
+const weightPercent=value=>{const weight=Number(value)||0;if(weight>0&&weight<1)return new Intl.NumberFormat('it-IT',{maximumSignificantDigits:2}).format(weight);return number(weight);};
 const pct=value=>`${Number(value??0).toLocaleString('it-IT',{maximumFractionDigits:1})}%`;
 const partyName=party=>party?.officialName??party?.name??'Indipendente';
 const partyDescription=party=>party?.source==='real'?party.factualDescription:party?.description;
@@ -136,7 +138,7 @@ function renderActive(campaign,parties,logoFor,picks={}) {
   const spark=historyPoints.map((value,index)=>`${historyPoints.length<=1?4:index*92/(historyPoints.length-1)+4},${27-(value-historyMin)/(historyMax-historyMin||1)*21}`).join(' ');
   const latestPoll=campaign.polls?.at(-1);
   const playerPoll=latestPoll?.results?.find(item=>item.candidateId===campaign.playerCandidateId);
-  const areas=summary.territories.map(area=>`<div class="campaign-area-row"><div><strong>${esc(area.name)}</strong><small>${number(area.weight)}% del peso · andamento ${area.localTrend>.35?'favorevole':area.localTrend<-.35?'in calo':'stabile'} · ${area.consensus>25?'forte presenza':area.consensus<11?'da recuperare':'area contendibile'}</small></div><strong>${pct(area.consensus)}</strong><div class="campaign-meter"><i style="width:${Math.max(3,area.consensus)}%"></i></div></div>`).join('');
+  const areas=summary.territories.map(area=>`<div class="campaign-area-row"><div><strong>${esc(area.name)}</strong><small>${weightPercent(area.weight)}% del peso · andamento ${area.localTrend>.35?'favorevole':area.localTrend<-.35?'in calo':'stabile'} · ${area.consensus>25?'forte presenza':area.consensus<11?'da recuperare':'area contendibile'}</small></div><strong>${pct(area.consensus)}</strong><div class="campaign-meter"><i style="width:${Math.max(3,area.consensus)}%"></i></div></div>`).join('');
   const rivals=campaign.candidates.filter(item=>!item.isPlayer).map(candidate=>{
     const affiliated=parties.find(item=>item.id===candidate.partyId);
     const support=summary.territories.reduce((sum,area)=>sum+Number(campaign.territories.find(t=>t.id===area.id)?.supportByCandidate[candidate.id]??0)*area.weight,0)/100;

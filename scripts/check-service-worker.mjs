@@ -31,7 +31,7 @@ const network = [];
 const listeners = {};
 const context = {
   self: { location: new URL(SCOPE), registration: { scope: SCOPE }, addEventListener: (type, fn) => { listeners[type] = fn; }, skipWaiting() {}, clients: { claim: async () => {} } },
-  fetch: async request => { network.push(`${request.method} ${new URL(request.url).pathname}`); if (!online) throw new TypeError('offline'); return new Response(`contenuto di ${request.url}`, { status: 200, headers: { 'content-type': 'text/plain' } }); },
+  fetch: async request => { network.push(`${request.method} ${new URL(request.url).pathname}`); if (!online) throw new TypeError('offline'); if (new URL(request.url).pathname.endsWith('/missing-optional.json')) return new Response('non trovato', { status: 404 }); return new Response(`contenuto di ${request.url}`, { status: 200, headers: { 'content-type': 'text/plain' } }); },
   URL, Request, Response
 };
 caches = makeCaches();
@@ -80,6 +80,13 @@ assert.ok(urls.every(url => url.startsWith('GET ')) && !urls.some(url => url.inc
 const waits = [];
 listeners.message({ data: { type: 'warm', urls: [new URL('src/ui/app.js?v=1', SCOPE).href, new URL('/api/admin', SCOPE).href, 'https://altro.example/x.json'] }, waitUntil: promise => waits.push(promise) });
 await Promise.all(waits);
+// An optional document that is not there (a 404, or the network failing for that file alone) is skipped: the files listed after it are still kept.
+const waitsMissing = [];
+listeners.message({ data: { type: 'warm', urls: [new URL('src/data/real/missing-optional.json?v=1', SCOPE).href, new URL('src/data/real/municipal-population.json?v=1', SCOPE).href] }, waitUntil: promise => waitsMissing.push(promise) });
+await Promise.all(waitsMissing);
+const afterMissing = await cachedUrls();
+assert.ok(!afterMissing.includes('GET /palazzo/src/data/real/missing-optional.json'), 'Un documento opzionale mancante (404) non entra in cache.');
+assert.ok(afterMissing.includes('GET /palazzo/src/data/real/municipal-population.json'), 'E non impedisce di conservare i file che lo seguono.');
 const warmed = await cachedUrls();
 assert.ok(warmed.includes('GET /palazzo/src/ui/app.js') && !warmed.some(url => url.includes('/api/') || url.includes('altro.example')), 'Il preriscaldamento conserva solo i file del gioco.');
 

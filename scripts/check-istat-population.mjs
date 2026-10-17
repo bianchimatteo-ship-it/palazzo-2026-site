@@ -147,3 +147,39 @@ else {
   shipped = `${imported.records.length} comuni importati`;
 }
 console.log(`Popolazione dei comuni e pesi verificati: lettura dei file ISTAT su fixture (due formati, ZIP, codifica, accenti, codici con zero iniziale, popolazione legale distinta dalla residente, duplicati, negativi, zeri, codici non abbinati, copertura), fascia di 15.000 abitanti ai bordi (15.000 fino, 15.001 oltre) col riferimento legale prima del residente e ripiego dichiarato, campagna e corse del calendario con la stessa regola, pesi delle regioni dai voti validi reali (Camera, Senato, circoscrizioni europee) con somma 100 e nessun 5% uniforme; ${shipped}.`);
+
+// The offline cache is asked for the optional documents too (the population of the comuni), next to the mandatory files.
+{
+  const urls = realData.realDataUrls().map(href => new URL(href).pathname.split('/').pop());
+  assert.ok(urls.includes('municipal-population.json') && urls.includes('manifest.json') && urls.includes('municipalities.json'), 'Il precaricamento offline include il documento opzionale della popolazione, oltre ai dati obbligatori.');
+}
+
+// The publication check: the one document that is not verified (this population) is accepted only when its provenance, status, manifest and integrity agree; every other document must be verified.
+{
+  const { documentProblems } = await import('./lib/document-provenance.mjs');
+  const manifest = JSON.parse(await readFile(new URL('../src/data/real/manifest.json', import.meta.url), 'utf8'));
+  const shipped = JSON.parse(await readFile(real('municipal-population.json'), 'utf8'));
+  const entry = manifest.documents.municipalPopulation;
+  assert.deepEqual(documentProblems('municipalPopulation', shipped, entry), [], 'Il documento che si pubblica oggi è accettato come «non verificato dichiarato».');
+  const broken = (change, manifestChange = {}) => { const copy = structuredClone(shipped); change(copy); return documentProblems('municipalPopulation', copy, { ...structuredClone(entry), ...manifestChange }); };
+  // refused: the same document if anything of what it declares does not agree
+  assert.ok(broken(copy => { delete copy.verificationStatus; }).some(item => /stato esplicito/.test(item)), 'Senza lo stato esplicito è rifiutato.');
+  assert.ok(broken(copy => { copy.sourceNote = 'copia ufficiale'; }).some(item => /nota/.test(item)), 'Senza la nota sulla copia non verificata è rifiutato.');
+  assert.ok(broken(copy => { copy.source = 'simulation'; }).some(item => /«real»/.test(item)), 'Con una fonte diversa da «real» è rifiutato.');
+  assert.ok(broken(copy => { copy.verified = undefined; }).some(item => /non è dichiarato/.test(item)), 'Senza verified: false dichiarato è rifiutato.');
+  assert.ok(broken(copy => { copy.records.pop(); }).some(item => /comuni non tornano/.test(item)), 'Se i comuni non tornano con manifest e totali è rifiutato.');
+  assert.ok(broken(copy => { copy.records[0].populationResident += 1; }).some(item => /totale dei residenti/.test(item)), 'Se il totale non è la somma dei comuni è rifiutato.');
+  assert.ok(broken(copy => { copy.records[1].municipalityCode = copy.records[0].municipalityCode; }).some(item => /duplicati/.test(item)), 'Con comuni duplicati è rifiutato.');
+  assert.ok(broken(() => {}, { verified: true }).some(item => /manifest non dice lo stesso/.test(item)), 'Se il manifest dice «verificato» mentre il documento no, è rifiutato.');
+  assert.ok(broken(() => {}, { residentReferenceDate: '2025-01-01' }).some(item => /data di riferimento/.test(item)), 'Se la data non torna col manifest è rifiutato.');
+  assert.ok(broken(() => {}, { filesSha256: { comuni: 'x' } }).some(item => /impronte/.test(item)), 'Se le impronte dei file non tornano col manifest è rifiutato.');
+  assert.ok(documentProblems('municipalPopulation', shipped, null).some(item => /manca nel manifest/.test(item)), 'Senza voce nel manifest è rifiutato.');
+  // every other document stays strict: unverified is refused, verified needs its source and date
+  const strict = { source: 'real', verified: true, sourceUrl: 'https://esempio.invalid', sourceName: 'Fonte', verifiedAt: '2026-09-26' };
+  assert.deepEqual(documentProblems('electoralGeography', strict, {}), [], 'Un documento verificato con fonte e data è accettato.');
+  assert.ok(documentProblems('electoralGeography', { ...shipped, records: undefined }, entry).length > 0, 'Un altro documento non verificato è rifiutato anche se imita questa eccezione.');
+  assert.ok(documentProblems('localElections', { ...strict, verifiedAt: undefined }, {}).length > 0, 'Un documento verificato senza data della verifica è rifiutato.');
+  assert.ok(documentProblems('localElections', { ...strict, verified: false }, {}).length > 0, 'Un documento con verified false è rifiutato se non è la popolazione.');
+  // and the documents of the manifest other than the population are all verified
+  for (const [name, doc] of Object.entries(manifest.documents)) if (name !== 'municipalPopulation') assert.ok(doc.verifiedAt || doc.verified !== false, `${name}: nel manifest non risulta non verificato.`);
+}

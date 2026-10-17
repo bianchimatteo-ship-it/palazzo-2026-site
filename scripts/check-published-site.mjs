@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { documentProblems } from './lib/document-provenance.mjs';
 
 const DEFAULT_URL = 'https://bianchimatteo-ship-it.github.io/palazzo-2026-site/';
 const defaultPageUrl = new URL(process.argv[2] || DEFAULT_URL);
@@ -119,7 +120,8 @@ try {
     const [{ bytes }, local] = await Promise.all([get(url), readFile(new URL(`../src/data/real/${document.file}`, import.meta.url))]);
     assert(hash(bytes) === hash(local), `${name}: documento live diverso dal file locale`);
     const live = JSON.parse(bytes.toString('utf8'));
-    assert(live.source === 'real' && live.verified === true && live.sourceUrl && live.sourceName && live.verifiedAt, `${name}: provenienza non verificata`);
+    const provenance = documentProblems(name, live, liveManifest.documents?.[name]);
+    assert(!provenance.length, provenance.join('; '));
     if (name === 'electoralGeography') assert(live.camera?.collegi?.length === 147 && live.senato?.collegi?.length === 74, `${name}: collegi pubblicati incompleti`);
   }
   const parties = [...db.parties,...db.politicalMovements];

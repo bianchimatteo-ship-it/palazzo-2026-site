@@ -1750,6 +1750,8 @@ export function createCampaign({career,player,statistics=[],offices=[],territori
   const candidate=createCandidate({id:playerCandidateId,player:true,partyId,displayName:player.displayName,seed,stats:playerStats});
   // What the player's own candidacy stands for: a party of the database, a party he founded (his own), or nobody.
   candidate.partyKind=!partyId?'indipendente':userOrIndependent?'utente':partyRecord?.source==='simulation'?'simulata':'reale';
+  // The list the player stands for (the label of the rows of a general or European result): the name of the party, kept apart from the name of the person.
+  if(partyRecord){candidate.partyLabel=partyRecord.officialName??partyRecord.name??null;candidate.partyAbbreviation=partyRecord.abbreviation??null;}
   // More forces in the field where more of them really run: a small comune, a big one, a region, the whole country.
   const rivals=RIVALS_BY_TYPE[type]?.[type==='comunale'&&config.municipalityBand!=='oltre-15000'?'small':'default'] ?? 3;
   // A local race is seeded by the place too, and some of its candidacies may stand without a party; a general or European one is the roster of the forces that stand.

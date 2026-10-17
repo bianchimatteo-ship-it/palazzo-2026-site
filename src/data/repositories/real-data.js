@@ -70,8 +70,8 @@ function freezeRecords(records) {
 }
 
 const dataUrl = file => { const url = new URL(`../real/${file}`, import.meta.url); url.searchParams.set('v', REAL_DATA_ASSET_VERSION); return url; };
-// Every real data file, for the offline cache.
-export const realDataUrls = () => ['manifest.json', ...Object.values(collectionFiles), ...Object.values(documentFiles)].map(file => dataUrl(file).href);
+// Every real data file, for the offline cache: the optional documents too (the cache asks for them one by one and a file that is not there is skipped, never an error for the rest).
+export const realDataUrls = () => ['manifest.json', ...Object.values(collectionFiles), ...Object.values(documentFiles), ...Object.values(optionalDocumentFiles)].map(file => dataUrl(file).href);
 async function fetchJson(file) {
   const url = dataUrl(file);
   const response = await fetch(url);

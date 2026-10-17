@@ -157,6 +157,17 @@ let campaign=store.getState().campaign;
 const activeHtml=renderCampaignPage(store.getState(),references,()=>null);
 assert.ok(activeHtml.includes('data-campaign-activity="rally"'));
 assert.ok(activeHtml.includes('Candidatura interna simulata'));
+// The weight of an area: a small positive weight keeps its decimals (never «0% del peso»); the values underneath are not touched.
+{
+  const probe=structuredClone(store.getState());
+  const weights=probe.campaign.territories.map(area=>area.weight);
+  probe.campaign.territories[0].weight=0.4;
+  if(probe.campaign.territories[1])probe.campaign.territories[1].weight=12.6;
+  const html=renderCampaignPage(probe,references,()=>null);
+  assert.ok(html.includes('0,4% del peso')&&!html.includes('>0% del peso'),'Un peso territoriale positivo e piccolo non si legge come 0%.');
+  if(probe.campaign.territories[1])assert.ok(html.includes('13% del peso'),'I pesi interi restano interi.');
+  assert.deepEqual(store.getState().campaign.territories.map(area=>area.weight),weights,'I valori sottostanti non cambiano.');
+}
 assert.ok(activeHtml.includes('SONDAGGIO DI CAMPAGNA')&&activeHtml.includes('interviste'),'Il sondaggio simulato con campione è visibile nel gameplay.');
 // Il tema delle attività resta quello scelto dal giocatore, non quello della strategia, anche dopo un cambio di strategia.
 const strategyTopic=campaign.strategy?.topicId??campaign.nationalContext.salientTopic;
