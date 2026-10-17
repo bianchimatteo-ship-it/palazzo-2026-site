@@ -65,7 +65,12 @@ export const TOUR_STEPS = Object.freeze([
 ]);
 
 // Resuming the career: the logo (or mark) and the colour of the party the player is in, who the player is, where, and when it was saved.
-function continueCard(meta, lastSaved, unsaved, identity) {
+function continueCard(meta, lastSaved, unsaved, identity, gate = null) {
+  if (gate) {
+    const mark = identity ? identityMark(identity, 'lg') : '';
+    const style = identity ? ` style="${esc(identityVars(identity))}"` : '';
+    return `<div class="menu-continue is-locked" data-career-gate="${esc(gate.owner)}"${style}>${mark}<span class="menu-continue-body"><span class="menu-continue-kicker">${glyph('shield', 16)} CARRIERA COLLEGATA A UN ACCOUNT</span><strong>${esc(meta.player)}</strong><span class="menu-continue-role">${esc(meta.role ?? 'Senza incarico')} · <b>${esc(meta.party)}</b></span><small>Appartiene all’account «${esc(gate.owner)}»${gate.signedIn ? `, tu sei collegato come «${esc(gate.signedIn)}»` : ': non hai effettuato l’accesso'}. Settimana ${meta.week} · ${esc(formatDate(meta.gameDate))}.</small><span class="slot-actions"><button class="primary-button" data-menu-action="gate-login">${gate.signedIn ? 'Cambia account' : `Accedi come «${esc(gate.owner)}»`}</button><button class="secondary-button" data-menu-action="gate-local">Usa localmente</button></span></span></div>`;
+  }
   const ended = meta.status === 'ended';
   const mark = identity ? identityMark(identity, 'lg') : '';
   const style = identity ? ` style="${esc(identityVars(identity))}"` : '';
@@ -232,7 +237,7 @@ export function renderMainMenu(menu, context) {
       <h1 class="menu-brand"><img class="brand-logo menu-logo" src="icons/logo-politicando-640.webp" srcset="icons/logo-politicando-240.webp 240w, icons/logo-politicando-640.webp 640w" sizes="(max-width:700px) 120px, 200px" width="200" height="200" alt="POLITICANDO 2026" decoding="async" /></h1>
       <p class="menu-tagline">Una carriera nella politica italiana</p>
       ${newCareerCard()}
-      ${hasCareer ? continueCard(meta, lastSaved, unsaved, identity) : ''}${hasCareer && context.account?.sync ? syncStatusLine(context.account.sync) : ''}
+      ${hasCareer ? continueCard(meta, lastSaved, unsaved, identity, context.gate) : ''}${hasCareer && !context.gate && context.account?.sync ? syncStatusLine(context.account.sync) : ''}
       ${MENU_GROUPS.map(group).join('')}
       <p class="menu-footnote">Dati reali verificati · simulazione dichiarata · ${context.account?.user ? `salvataggi online come ${esc(context.account.user.username)}` : 'salvataggi nel browser, online con un account'}</p>
     </div>

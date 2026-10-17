@@ -35,6 +35,11 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   const persisted = () => evaluate(`JSON.parse(localStorage.getItem('palazzo-2026.career.v1') || 'null')?.game?.week?.index ?? null`);
   const confirmOk = async () => { await wait(() => has('[data-confirm="ok"]')); await click('[data-confirm="ok"]'); await pause(300); };
 
+  const lockedCard = owner => has(`.menu-continue.is-locked[data-career-gate="${owner}"]`);
+  const plainContinue = () => has('button.menu-continue[data-menu="continua"]');
+  const inGame = () => has('.page-wrap');
+  const localUse = () => stored('politicando.sync.local-use.v1');
+
   // ---------- a career played without an account ----------
   await createCareerInPage({ evaluate, version }, { weeks: 2 });
   await goto('');
@@ -54,7 +59,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   await click('[data-account-action="link"]');
   await wait(() => has('[data-sync-status="synced"]'));
   assert.equal(saves('legacy.a').length, 1, 'Su scelta esplicita la carriera va online.');
-  const aCopy = saves('legacy.a')[0];
+  let aCopy = saves('legacy.a')[0];
   assert.ok(await has('[data-sync-status="synced"]'));
 
   // ---------- 2. logout: the session ends here and on the server; the career stays ----------
@@ -65,12 +70,43 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   const me = await local.worker.fetch(new Request(`${local.origin}/api/account/me`, { headers: { authorization: `Bearer ${tokenA}` } }), local.env);
   assert.equal(me.status, 401, 'E quella sul server è stata chiusa.');
   assert.equal(await persisted(), careerWeek, 'La carriera non è stata cancellata dal browser.');
+  // After the logout the career of that account is not «Continua la partita» as usual: the menu asks, and it does not go into the game on its own.
+  await goto('');
+  await wait(() => has('[data-menu="nuova"]'));
+  assert.ok(await lockedCard('legacy.a'), 'Dopo l’uscita la carriera collegata all’account non compare come «Continua la partita» normale.');
+  assert.equal(await plainContinue(), false, 'Nessun pulsante «Continua» che entri nella partita.');
+  assert.match(await text('.menu-continue.is-locked'), /legacy\.a/, 'Il gioco dice a quale account appartiene.');
+  assert.ok(await has('[data-menu-action="gate-login"]') && await has('[data-menu-action="gate-local"]'), 'Le due scelte: accedere o usare localmente.');
+  assert.equal(await inGame(), false, 'La partita non si apre da sola.');
+  assert.equal(await persisted(), careerWeek, 'Dopo il ricaricamento la carriera è sempre nel browser.');
+  assert.equal(saves('legacy.a').length, 1, 'La copia online dell’account resta.');
+  // The same account signs in again: the career is normal to continue and nothing was lost.
+  await click('[data-menu-action="gate-login"]');
+  await wait(() => has('[data-account-form="login"]'));
+  await fill('login', { username: 'legacy.a', password: 'password-di-a' });
+  await wait(() => has('[data-account-action="logout"]'));
+  await goto('');
+  await wait(() => plainContinue());
+  assert.equal(await lockedCard('legacy.a'), false, 'Con lo stesso account la carriera è di nuovo «Continua la partita».');
+  await pause(2500);
+  assert.equal(saves('legacy.a').length, 1, 'Con il proprietario di nuovo collegato c’è sempre una sola copia online.');
+  assert.ok(saves('legacy.a')[0].revision >= aCopy.revision, 'La copia online non è tornata indietro.');
+  aCopy = saves('legacy.a')[0];
+  await openAccount();
+  await click('[data-account-action="logout"]');
+  await wait(() => has('[data-account-form="login"]'));
 
   // ---------- 3. another account signs in: the career of the first one is not theirs ----------
   await fill('login', { username: 'legacy.b', password: 'password-di-b' });
   await wait(() => has('[data-isolation="foreign"]'));
   assert.match(await text('.account-message'), /legacy\.a/, 'Il gioco dice a quale account è collegata.');
   assert.equal(saves('legacy.b').length, 0, 'Nel secondo account non è arrivato nulla.');
+  await goto('');
+  await wait(() => has('[data-menu="nuova"]'));
+  assert.ok(await lockedCard('legacy.a'), 'Con un altro account la carriera dell’account precedente non è «Continua la partita» normale.');
+  assert.match(await text('.menu-continue.is-locked'), /legacy\.b/, 'Dice anche con quale account sei collegato.');
+  assert.equal(await plainContinue(), false);
+  await openAccount();
   // Playing on and saving does not change that.
   await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); store.advanceTurn(1); store.save(); return true; })()`);
   await pause(3000);
@@ -98,6 +134,46 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   await wait(() => has('[data-account-form="login"]'));
   assert.match(await text('.account-message'), /altra scheda/, 'Un’uscita fatta in un’altra scheda si vede.');
 
+  // ---------- 5b. «Usa localmente»: the career linked to an account goes on here without being synced; an anonymous career is never asked anything ----------
+  await goto('');
+  await wait(() => has('[data-menu="nuova"]'));
+  assert.ok(await lockedCard('legacy.b'), 'Da disconnesso la carriera ora collegata a legacy.b è bloccata.');
+  const bCopy = saves('legacy.b')[0];
+  await click('[data-menu-action="gate-local"]');
+  await confirmOk();
+  await wait(() => inGame());
+  assert.ok(Object.keys((await localUse()).careers).length === 1, 'La scelta «Usa localmente» è registrata.');
+  await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); store.advanceTurn(1); store.save(); return true; })()`);
+  await pause(2500);
+  assert.deepEqual(saves('legacy.b')[0], bCopy, 'Giocando in locale la copia online non cambia.');
+  assert.deepEqual(saves('legacy.a')[0], aCopy);
+  // Reopened: it stays usable here (no new question) and still belongs to nobody else.
+  await goto('');
+  await wait(() => plainContinue());
+  assert.equal(await lockedCard('legacy.b'), false, 'Dopo «Usa localmente» e un ricaricamento non viene richiesto di nuovo.');
+  // Signed in as another account, a locally used career is still not synced.
+  await openAccount();
+  await fill('login', { username: 'legacy.a', password: 'password-di-a' });
+  await wait(() => has('[data-account-action="logout"]'));
+  await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); store.advanceTurn(1); store.save(); return true; })()`);
+  await pause(2500);
+  assert.deepEqual(saves('legacy.b')[0], bCopy, 'Con un altro account non viene sincronizzata.');
+  assert.deepEqual(saves('legacy.a')[0], aCopy, 'E non finisce nell’account che ha appena fatto l’accesso.');
+  await click('[data-account-action="logout"]');
+  await wait(() => has('[data-account-form="login"]'));
+  // A career without an account: Continue as usual, signed out or in.
+  await createCareerInPage({ evaluate, version }, { weeks: 1 });
+  await goto('');
+  await wait(() => plainContinue());
+  assert.equal(await has('.menu-continue.is-locked'), false, 'Una carriera anonima non è mai bloccata.');
+  await click('[data-menu="continua"]');
+  await wait(() => inGame());
+  assert.equal(saves('legacy.b').length, 1, 'La carriera anonima non è andata online da sola.');
+  await evaluate(`(() => { location.hash = ''; return true; })()`);
+  await goto('');
+  await wait(() => has('[data-menu="account"]'));
+  await openAccount();
+
   // ---------- 6. e-mail verified by a link, then the password recovered ----------
   await fill('register', { username: 'con.email', email: 'con.email@example.org', password: 'prima-password', confirm: 'prima-password' });
   await wait(() => has('[data-account-action="logout"]') || has('.tour'));
@@ -114,6 +190,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   await wait(() => has('[data-account-form="recover"]'));
   await fill('recover', { email: 'con.email@example.org' });
   await wait(() => outbox.length === 2);
+  await wait(async () => /Se l’indirizzo/.test(await text('.account-message')));
   assert.match(await text('.account-message'), /Se l’indirizzo/, 'La risposta è neutra.');
   const resetUrl = new URL(/https?:\/\/\S+/.exec(outbox[1].text)[0]);
   await goto(resetUrl.search);
@@ -127,9 +204,9 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   await wait(() => has('[data-account-action="logout"]'));
   // The same link does not work twice.
   await goto(resetUrl.search);
-  await wait(async () => /non è valido|scaduto/.test(await text('.menu-error')));
+  await wait(async () => /non è valido|scaduto/.test(await text('.menu-error')), 12000).catch(async error => { console.error('DEBUG', await evaluate(`document.querySelector('.menu-panel')?.innerText.slice(0, 600)`)); throw error; });
   assert.equal(sessions('con.email') >= 0, true);
   assert.deepEqual(errors, [], 'Nessun errore in pagina.');
 }, { serverPort: 8791 });
 await local.close();
-console.log('Isolamento degli account verificato in Chrome sul Worker locale: dopo l’accesso la carriera del dispositivo non va in nessun account senza una scelta, una carriera collegata a un altro account non viene caricata né copiata senza conferma, l’uscita chiude la sessione sul server e lascia la carriera, sessione scaduta e uscita da un’altra scheda sono riconosciute, verifica email con collegamento monouso e recupero della password con messaggi catturati da un trasporto di prova.');
+console.log('Isolamento degli account verificato in Chrome sul Worker locale: dopo l’accesso la carriera del dispositivo non va in nessun account senza una scelta, una carriera collegata a un altro account non viene caricata né copiata senza conferma, l’uscita chiude la sessione sul server e lascia la carriera ma da disconnessi (o con un altro account) la carriera collegata a un account non è «Continua la partita» normale (accedere con lo stesso account la sblocca, «Usa localmente» la fa proseguire senza sincronizzarla né spostarla in altri account, una carriera anonima non viene mai bloccata), sessione scaduta e uscita da un’altra scheda sono riconosciute, verifica email con collegamento monouso e recupero della password con messaggi catturati da un trasporto di prova.');

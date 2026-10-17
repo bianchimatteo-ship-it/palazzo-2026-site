@@ -15,6 +15,7 @@ const ACCOUNT_KEY = 'politicando.account.v1';
 // The old record (revision per slot and per account, with no provenance): never trusted again to authorize an upload; kept only so that nothing is erased.
 const REVISIONS_KEY = 'politicando.account.revisions.v1';
 const LINKS_KEY = 'politicando.sync.links.v2';
+const LOCAL_USE_KEY = 'politicando.sync.local-use.v1';
 // Sessions that could not be ended on the server at logout (offline): ended at the next occasion.
 const REVOKE_KEY = 'politicando.account.revoke.v1';
 export const PASSWORD_MIN = 8;
@@ -90,6 +91,24 @@ export function setLink(state, revision, { slot = slotForCareer(careerIdOf(state
   const record = { username: normalizeUsername(username), slot, revision, localRevision: localRevisionOf(state), progress: progressOf(state), syncedAt: new Date().toISOString() };
   writeLinks({ ...links(), [careerIdOf(state)]: record });
   return record;
+}
+// «Use it locally»: the player chose to go on with a career that is linked to an account that is not signed in (or to another one) on this device only. Nothing is deleted and the link stays (it
+// says whose the online copy is); the career is simply never synced from here until the player takes it back (`stopUsingLocally`) or its owner signs in and links it again.
+const localUse = () => { const value = read(LOCAL_USE_KEY); return value?.careers && typeof value.careers === 'object' ? value.careers : {}; };
+export const usedLocally = careerId => Boolean(localUse()[String(careerId)]);
+export function useLocally(careerId) {
+  write(LOCAL_USE_KEY, { version: 1, careers: { ...localUse(), [String(careerId)]: { since: new Date().toISOString(), owner: ownerOf(careerId) } } });
+  // the choice counts only if the browser kept it
+  if (!usedLocally(careerId)) throw new Error('Il browser non ha registrato la scelta (spazio esaurito?): la carriera non è stata segnata come solo locale.');
+}
+export function stopUsingLocally(careerId) { const next = { ...localUse() }; delete next[String(careerId)]; write(LOCAL_USE_KEY, { version: 1, careers: next }); }
+// Is this career's link a question for the player now? A career linked to an account is normal to continue only for that account (signed in), or after the choice «use it locally».
+// Returns null (nothing to ask: an anonymous career, the owner is signed in, already used locally) or { owner, signedIn }.
+export function careerGate(careerId, username = currentAccount()?.username ?? null) {
+  const owner = ownerOf(careerId);
+  if (!owner || usedLocally(careerId)) return null;
+  if (username && owner === normalizeUsername(username)) return null;
+  return { owner, signedIn: username ? normalizeUsername(username) : null };
 }
 export function unlinkCareer(careerId) { const next = { ...links() }; delete next[String(careerId)]; writeLinks(next); }
 // The revision this device holds for a slot of the signed-in account, only if a copy was really linked to it (the old per-slot numbers prove nothing).

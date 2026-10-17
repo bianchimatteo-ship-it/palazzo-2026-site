@@ -219,6 +219,8 @@ h1, h2, h3, h4 { color: var(--ink); }
 .menu-new small { display: block; margin-top: 3px; font-size: 13px; line-height: 1.35; opacity: .9; }
 .menu-new-go, .menu-continue-go { flex: none; display: grid; place-items: center; }
 .menu-continue { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--party-accent-line, rgba(196,166,106,.6)); background: linear-gradient(135deg, var(--party-accent-soft, rgba(196,166,106,.16)), rgba(255,255,255,.02) 70%); color: var(--ink); box-shadow: 0 0 0 1px rgba(0,0,0,.2); transition: border-color .15s ease, background .15s ease; }
+.menu-continue.is-locked { cursor: default; flex-wrap: wrap; border-style: dashed; }
+.menu-continue.is-locked .slot-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .menu-continue:hover { border-color: var(--party-accent, var(--accent)); }
 .menu-continue .emblem-lg { width: 60px; height: 60px; font-size: 18px; box-shadow: 0 0 0 2px var(--party-accent-line, transparent); }
 .menu-continue-body { display: grid; gap: 3px; min-width: 0; flex: 1; }
