@@ -1,5 +1,5 @@
-import { countBallots, distributeVotes, withVotes } from './electorate.js?v=20261017-3';
-import { ELECTION_MODELS, EUROPEAN_CONSTITUENCIES, EUROPEAN_THRESHOLD, OUTCOME_LABELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261017-3';
+import { countBallots, distributeVotes, withVotes } from './electorate.js?v=20261017-4';
+import { ELECTION_MODELS, EUROPEAN_CONSTITUENCIES, EUROPEAN_THRESHOLD, OUTCOME_LABELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261017-4';
 
 const SCALE_FALLBACK = 100000;
 // every candidate of a local or regional race is a row: the shares add up to 100 (up to rounding), so no «other lists» row is made
@@ -27,6 +27,7 @@ function allianceLeader(candidate,candidates) {
 }
 
 export function electoralGroups(campaign) {
+  const national = ['politiche','europee'].includes(campaign.electionType);
   const candidates = campaign.candidates.filter(item => item.status !== 'eliminated' && item.status !== 'withdrawn');
   const grouped = new Map();
   for (const candidate of candidates) {
@@ -34,6 +35,9 @@ export function electoralGroups(campaign) {
     if (candidate.status === 'allied' && candidate.id !== leader.id) continue;
     const id = leader.id;
     const group = grouped.get(id) ?? {id,leaderCandidateId:leader.id,partyIds:[],members:[],label:leader.displayLabel};
+    // In a general or European election the rows are lists, parties or coalitions, never the person at their head: the name of the person stays in the detail. Independent and local
+    // candidacies (no list to name) keep their own label.
+    if(national&&!grouped.has(id)&&leader.partyLabel) { group.label=leader.partyLabel; group.person=leader.realReference?.fullName??(leader.isPlayer?leader.displayName:null); }
     group.members.push(candidate.id);
     if (candidate.partyId && !group.partyIds.includes(candidate.partyId)) group.partyIds.push(candidate.partyId);
     grouped.set(id,group);
@@ -44,6 +48,7 @@ export function electoralGroups(campaign) {
     const group = grouped.get(leader.id);
     if (group && !group.members.includes(candidate.id)) { group.members.push(candidate.id); if (candidate.partyId && !group.partyIds.includes(candidate.partyId)) group.partyIds.push(candidate.partyId); }
   }
+  if(national) for(const group of grouped.values()) if(group.members.length>1&&group.person!==undefined&&!/ e alleati$/.test(group.label)) group.label=`${group.label} e alleati`;
   return [...grouped.values()];
 }
 
@@ -97,7 +102,7 @@ function allocateWithBonus(groups, seatCount, winnerId, bonus, threshold = 0) {
 function resultRow(group,share,totalBallots,seats=0,extra={}) {
   return {
     id:group.id,candidateId:group.leaderCandidateId,partyIds:group.partyIds,memberCandidateIds:group.members,
-    label:group.label,percent:clamp(rounded(share)),votes:0,seats,
+    label:group.label,...(group.person?{person:group.person}:{}),percent:clamp(rounded(share)),votes:0,seats,
     source:'simulation',...extra
   };
 }
@@ -194,7 +199,7 @@ export function runFirstRound(campaign) {
   const result={
     stage:'primo-turno',model:ELECTION_MODELS[campaign.electionType].model,electionType:campaign.electionType,
     totalBallots:count.ballots,electorate:count,groups:withVotesOf(groups.map(group=>resultRow(group,group.share,count.ballots)),count.ballots),
-    territories:areaResults(campaign),playerShare:playerGroup?.share??0,source:'simulation',simulated:true
+    territories:areaResults(campaign,count.ballots),playerShare:playerGroup?.share??0,source:'simulation',simulated:true
   };
   if(campaign.electionType==='comunale'&&campaign.municipalityBand==='oltre-15000'&&leader?.share<50&&groups.length>1) {
     result.requiresRunoff=true;

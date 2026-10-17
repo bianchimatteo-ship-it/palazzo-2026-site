@@ -3,14 +3,15 @@
 // Chambers and their groups, the formation of the Government. Everything that happens is simulation: the real data are
 // the geography, the seats and the 2022 results the vote starts from; parties, coalitions, votes and seats of the game
 // are estimates of the game and never presented as real results.
-import { populationReferenceDate, residentsOfItaly } from './municipal-rules.js?v=20261017-3';
-import { uniqueId } from './ids.js?v=20261017-3';
-import { advanceDays, formatDate } from './time.js?v=20261017-3';
-import { axisOf, nationalShares } from './world-engine.js?v=20261017-3';
-import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20261017-3';
-import { archiveGovernment, voteGovernmentConfidence } from './parliament-engine.js?v=20261017-3';
-import { seededRandom } from './vote-engine.js?v=20261017-3';
-import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20261017-3';
+import { populationReferenceDate, residentsOfItaly } from './municipal-rules.js?v=20261017-4';
+import { actualTurnout } from './electorate.js?v=20261017-4';
+import { uniqueId } from './ids.js?v=20261017-4';
+import { advanceDays, formatDate } from './time.js?v=20261017-4';
+import { axisOf, nationalShares } from './world-engine.js?v=20261017-4';
+import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20261017-4';
+import { archiveGovernment, voteGovernmentConfidence } from './parliament-engine.js?v=20261017-4';
+import { seededRandom } from './vote-engine.js?v=20261017-4';
+import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20261017-4';
 
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -488,7 +489,7 @@ export function nationalElectorate(geography, turnout, chamber = 'camera') {
   // never more voters than the resident population of the country (the sum of the comuni), and the valid ballots are part of the voters
   const voters = Math.min(Math.round(electors * turnout / 100), residents ?? Infinity);
   const valid = Math.min(Math.round(voters * ratio), voters);
-  return { normalized: false, residents, populationReferenceDate: populationReferenceDate(), electors, voters, valid, ballots: valid, invalid: voters - valid, validRatio: Math.round(ratio * 10000) / 10000, turnout, basis: 'iscritti alle liste delle politiche 2022 (ultimo dato reale della mappa)', electorsSource: 'registro', source: SIM };
+  return { normalized: false, residents, populationReferenceDate: populationReferenceDate(), electors, voters, valid, ballots: valid, invalid: voters - valid, validRatio: Math.round(ratio * 10000) / 10000, turnout, turnoutRequested: turnout, turnoutActual: actualTurnout(electors, voters), basis: 'iscritti alle liste delle politiche 2022 (ultimo dato reale della mappa)', electorsSource: 'registro', source: SIM };
 }
 export function runNationalVote({ geography = null, world, coalitions = [], date, seed = 'politiche', player = null, noise = true, line = null, participation = 60 }) {
   const rand = random(hash(`${seed}|${date}|politiche`));
