@@ -53,7 +53,7 @@ import { canManageParliament } from '../core/parliament-engine.js?v=20261016-6';
 import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, TOUR_STEPS } from './menu.js?v=20261016-6';
 import { setForceColorOverrides } from './political-colors.js?v=20261016-6';
 import { renderTutorialCard, tutorialAction, tutorialContext, tutorialState, TUTORIAL_STEPS } from './tutorial.js?v=20261016-6';
-import { MAX_SLOTS, storage as localStorageApi } from '../core/storage.js?v=20261016-6';
+import { storage as localStorageApi } from '../core/storage.js?v=20261016-6';
 import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20261016-6';
 import { playSound } from './sound.js?v=20261016-6';
 
@@ -543,6 +543,12 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       if (menu.reveal) { menu.reveal = false; if (globalThis.matchMedia?.('(max-width: 900px)')?.matches) root.querySelector?.('.menu-panel')?.scrollIntoView?.({ block: 'start' }); }
       return;
     }
+    // The creator of a new career is a screen of its own: the career in progress (menu, topbar, pages) is not drawn behind it, so it can never be taken for the career being opened.
+    if (wizard) {
+      root.innerHTML = `<div class="app-shell menu-shell wizard-only">${renderCareerWizard(state, wizard, realParties(), logoFor, realDatabase.parliamentaryGroups ?? [], realDatabase.partyLeaderships ?? [], realDatabase.politicalFigures ?? [], realDatabase.politicians ?? [], wizardTerritoryView(), wizardDataStatus(), store.pollScenarioView(pollScenarioOf(wizard)))}${renderConfirmDialog(pendingConfirm)}${state.ui.toast && settings.toasts === 'on' ? `<div class="toast" role="status">${icon('spark', 17)}${esc(state.ui.toast)}</div>` : ''}</div>`;
+      if (pendingConfirm) root.querySelector?.('[data-confirm="cancel"]')?.focus?.();
+      return;
+    }
     // The weekly pop-up of the newsroom: the week is looked at once (the save remembers it), never while something else asks for the player's attention and never if the player turned it off.
     if (!newsPopup && !wizard && !reportOpen && !pendingConfirm && state.game) {
       const items = store.weeklyNewsPopup({ enabled: settings.newsPopup === 'on' });
@@ -799,17 +805,20 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       // A career created while an account is signed in belongs to that account from the start (the one case in which it is linked without a further question).
       if (account.user && store.hasCareer()) { const saved = store.save(); if (saved.ok) syncCareer({ explicit: true }).catch(() => {}); }
       await enterHome();
-    } catch (error) { if (wizard) wizard.errors = [error.message || 'Impossibile creare la carriera.']; }
+    } catch (error) { if (wizard) { wizard.errors = [error.message || 'Impossibile creare la carriera.']; wizard.lastErrors = wizard.errors; wizard.blocked = /non può essere conservata/.test(error.message ?? ''); } }
   };
   // Every collection the wizard needs is loaded on its own: one that fails does not block the others, and the
   // wizard says what is missing with a “Riprova” (the comune can never be typed freely instead of the ISTAT list).
+  // An answer that arrives after “Annulla” (or after another creator was opened) belongs to a draft that is gone: it changes nothing and draws nothing.
   const loadWizardData = async () => {
+    const draft = wizard;
     wizardData.status = 'loading'; wizardData.failed = [];
     if (wizard) render(store.getState(), store.getLastSaved());
     const { failed } = await loadRealCollectionsSettled(WIZARD_COLLECTIONS);
+    if (!draft || wizard !== draft) return;
     wizardData.failed = failed;
     wizardData.status = failed.length ? 'error' : 'ready';
-    if (wizard) render(store.getState(), store.getLastSaved());
+    render(store.getState(), store.getLastSaved());
   };
   const openNewGame = async (legacyId = '') => {
     menu.open = false;
@@ -1497,7 +1506,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     const goto = Number(event.target.closest('[data-wizard-goto]')?.dataset.wizardGoto || 0);
     if (wizard && (wizardAction || goto)) {
       syncWizardDraft(); wizard.errors = [];
-      if (wizardAction === 'cancel') { wizard = null; menu.open = true; menu.view = 'home'; menu.error = ''; }
+      if (wizardAction === 'cancel') { wizard = null; wizardData.status = 'idle'; wizardData.failed = []; menu.open = true; menu.view = 'home'; menu.error = ''; }
+      else if (wizardAction === 'export-current') { wizard.errors = wizard.lastErrors ?? []; if (store.hasCareer()) { download(store.exportSave(), `politicando-partita-${new Date().toISOString().slice(0, 10)}.json`); wizard.exported = true; } }
       else if (wizardAction === 'back') wizard.step = Math.max(1,wizard.step-1);
       else if (wizardAction === 'next') { if (!failStep()) wizard.step = Math.min(CAREER_STEPS,wizard.step+1); }
       else if (goto >= 1 && goto < CAREER_STEPS) wizard.step = goto;
@@ -1505,9 +1515,10 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
         const failing = Array.from({ length: CAREER_STEPS }, (_, index) => index + 1).map(step => [step, wizardStepErrors(step)]).find(([, errors]) => errors.length);
         if (failing) { wizard.step = failing[0]; wizard.errors = failing[1]; }
         else if (store.hasCareer() && !wizard.confirmedReplace) {
-          const full = store.listSlots().length >= MAX_SLOTS;
+          const kept = store.preserveCheck();
+          if (!kept.ok) { wizard.errors = [kept.message]; wizard.lastErrors = wizard.errors; wizard.blocked = true; render(store.getState(), store.getLastSaved()); return; }
           const meta = store.currentMeta();
-          confirmThen({ title: 'Iniziare una nuova carriera?', body: `La carriera in corso (${meta?.player ?? 'giocatore'}, settimana ${meta?.week ?? '—'}) non sarà più quella attiva.`, details: [full ? `Gli slot sono pieni (${MAX_SLOTS}): la carriera in corso non potrà essere salvata e andrà persa. Annulla ed esportala su file, oppure libera uno slot dal menu Carica partita.` : 'Verrà salvata automaticamente in uno slot: potrai ricaricarla dal menu Carica partita.', account.user ? 'Anche la copia online nel tuo account resta disponibile.' : ''], confirmLabel: 'Inizia la nuova carriera', tone: full ? 'danger' : 'primary' }, async () => { if (!wizard) return; wizard.confirmedReplace = true; await finishWizard(); });
+          confirmThen({ title: 'Iniziare una nuova carriera?', body: `La carriera in corso (${meta?.player ?? 'giocatore'}, settimana ${meta?.week ?? '—'}) non sarà più quella attiva.`, details: ['Verrà salvata automaticamente in uno slot: potrai ricaricarla dal menu Carica partita. Se non si riesce a conservarla, la nuova carriera non parte e questa resta intatta.', account.user ? 'Anche la copia online nel tuo account resta disponibile.' : ''], confirmLabel: 'Inizia la nuova carriera', tone: 'primary' }, async () => { if (!wizard) return; wizard.confirmedReplace = true; await finishWizard(); });
           return;
         }
         else await finishWizard();

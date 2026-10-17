@@ -196,7 +196,7 @@ try {
   await tap('[data-action="new-career"]', { scroll: true });
   await waitFor(() => has('.career-wizard'), 10000, 'wizard dalla partita');
   ok(!(await tabbarShown()) && await evaluate('!document.querySelector(".mobile-sheet") || getComputedStyle(document.querySelector(".mobile-sheet")).display === "none"'), 'Nuova carriera da telefono: barra e foglio mobile non coprono il wizard.');
-  const layering = await evaluate('Number(getComputedStyle(document.querySelector(".wizard-backdrop")).zIndex) > Math.max(Number(getComputedStyle(document.querySelector(".mobile-tabbar")).zIndex) || 0, Number(getComputedStyle(document.querySelector(".mobile-sheet")).zIndex) || 0)');
+  const layering = await evaluate('(() => { const z = selector => { const el = document.querySelector(selector); return el ? Number(getComputedStyle(el).zIndex) || 0 : 0; }; return Number(getComputedStyle(document.querySelector(".wizard-backdrop")).zIndex) > Math.max(z(".mobile-tabbar"), z(".mobile-sheet")); })()');
   ok(layering, 'Il wizard sta sopra barra e foglio mobile anche come livelli (z-index).');
   await tap('.wizard-footer [data-wizard-action="next"]');
   ok((await text()).includes('Inserisci il nome'), 'Il footer del wizard riceve il tocco anche dentro la partita.');

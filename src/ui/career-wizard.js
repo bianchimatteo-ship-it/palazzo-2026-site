@@ -54,13 +54,14 @@ export function renderCareerWizard(state, draft, realParties = [], logoFor = () 
   const activeStep = steps[draft.step - 1];
   const place = chosenPlace(draft, territory);
   const body = draft.step === 1 ? profileStep(state, draft) : draft.step === 2 ? startingPoint(draft, territory, place, parliamentaryGroups, realPoliticians) : draft.step === 3 ? partyStep(draft, parties, logoFor, parliamentaryGroups, partyLeaderships, politicalFigures) : draft.step === 4 ? advancedStep(draft, pollView) : summaryStep(draft, parties, level, parliamentaryGroups, place, pollView);
-  const backButton = draft.step > 1
-    ? `<button type="button" class="secondary-button wizard-back" data-wizard-action="back">${ico('back', 16)} Indietro</button>`
-    : `<button type="button" class="wizard-cancel" data-wizard-action="cancel">Annulla</button>`;
+  // «Annulla» is there at every step (and the × in the header): it always goes back to the initial menu, without creating or loading anything.
+  const backButton = `${draft.step > 1 ? `<button type="button" class="secondary-button wizard-back" data-wizard-action="back">${ico('back', 16)} Indietro</button>` : ''}<button type="button" class="wizard-cancel" data-wizard-action="cancel">Annulla</button>`;
   const actionButton = draft.step === LAST_STEP
     ? `<button type="button" class="primary-button" data-wizard-action="finish">Inizia carriera ${ico('arrow', 16)}</button>`
     : `<button type="button" class="primary-button" data-wizard-action="next">Continua ${ico('arrow', 16)}</button>`;
-  const errorBox = draft.errors?.length ? `<div class="wizard-errors" role="alert">${draft.errors.map(error => `<span>${esc(error)}</span>`).join('')}</div>` : '';
+  // When the career in progress cannot be kept, the new one does not start: the box says why and offers the file of the career in progress.
+  const exportBox = draft.blocked ? `<div class="wizard-errors wizard-blocked" role="alert"><button type="button" class="secondary-button" data-wizard-action="export-current">Esporta la carriera in corso su file</button>${draft.exported ? '<span>File scaricato: controlla che sia nella cartella dei download prima di liberare spazio.</span>' : ''}</div>` : '';
+  const errorBox = `${draft.errors?.length ? `<div class="wizard-errors" role="alert">${draft.errors.map(error => `<span>${esc(error)}</span>`).join('')}</div>` : ''}${exportBox}`;
   // Real data that did not arrive (parties, groups, people): the wizard goes on with the rest and offers a new attempt.
   const dataBox = data?.failed?.length ? `<div class="wizard-data-alert" role="alert"><span>Non è stato possibile caricare: ${esc(data.failed.join(', '))}. Le scelte che ne dipendono restano vuote finché i dati non arrivano.</span><button type="button" class="secondary-button" data-wizard-retry-data>Riprova</button></div>` : '';
   return `<div class="wizard-backdrop"><section class="career-wizard" role="dialog" aria-modal="true" aria-labelledby="wizard-title">

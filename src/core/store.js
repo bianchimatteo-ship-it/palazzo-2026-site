@@ -4,7 +4,7 @@ import { uniqueId } from './ids.js?v=20261016-6';
 import { DATA_SOURCES, emptyDataset, isSelectableParty } from '../data/schema.js?v=20261016-6';
 import { makeDemoState } from '../data/demo.js?v=20261016-6';
 import { CAREER_LEVELS, ITALIAN_REGIONS, hasProvincialLevel, initialCareerStatistics, regionIdOf } from '../data/regions.js?v=20261016-6';
-import { storage } from './storage.js?v=20261016-6';
+import { MAX_SLOTS, storage } from './storage.js?v=20261016-6';
 import { loadSettings } from './settings.js?v=20261016-6';
 import { advanceDays, formatDate } from './time.js?v=20261016-6';
 import { STARTING_OFFICES, STARTING_ROLES, validateNewCareerDraft } from './career-rules.js?v=20261016-6';
@@ -3419,6 +3419,15 @@ export const store = {
   hasUnsavedChanges: () => unsaved,
   currentMeta: () => slotMeta(state),
   listSlots: () => storage.listSlots(),
+  // Can the career in progress be kept before another one takes its place? It can if it already has its automatic slot (which is rewritten) or if a slot is free.
+  preserveCheck() {
+    if (!store.hasCareer()) return { ok: true };
+    let slots = [];
+    try { slots = storage.listSlots(); } catch (error) { return { ok: false, reason: 'unreadable', message: `Gli slot di questo browser non si leggono (${error.message}): la carriera in corso non può essere conservata.` }; }
+    const own = slots.some(entry => { if (!entry.autoPreserve) return false; try { return storage.loadSlot(entry.id)?.career?.id === state.career.id; } catch { return false; } });
+    if (own || slots.length < MAX_SLOTS) return { ok: true };
+    return { ok: false, reason: 'full', message: `Gli slot sono pieni (${MAX_SLOTS}): la carriera in corso non può essere conservata e per questo la nuova carriera non parte. Esportala su file, poi libera uno slot dal menu Carica partita (nessuno slot viene eliminato da sé).` };
+  },
   saveToSlot(name = null, id = null, extraMeta = {}) {
     if (!store.hasCareer()) throw new Error('Non c’è una partita da salvare.');
     const meta = slotMeta(state);
