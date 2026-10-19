@@ -173,6 +173,14 @@ function createPartyState(party, seed, context = {}) {
 }
 // National votes follow the real calendar: the general election at the natural end of the legislature (or early),
 // the European elections in 2029 and then every five years. The candidacy window opens a campaign before the vote.
+// A general election whose natural day has already gone by (the legislature of the dataset is over when the game starts late) is held at the first possible date, like one brought forward:
+// it carries `earliest` and the calendar places it with the same wait as an early vote.
+function nationalEntry(game, type, today, place) {
+  const entry = makeNationalElection(type, nationalElectionDate(game, type, today), place);
+  const earliest = advanceDays(today, 7 + ELECTION_MODELS[type].campaignDays);
+  if (type === 'politiche' && legislatureTerm(game.legislature ?? REAL_LEGISLATURE).plannedVote < earliest) Object.assign(entry, { earliest, baseDate: entry.electionDate });
+  return entry;
+}
 function nationalElectionDate(game, type, today) {
   const model = ELECTION_MODELS[type];
   const earliest = advanceDays(today, 7 + model.campaignDays);
@@ -262,7 +270,7 @@ export function createGameState({ seedText, currentDate, level, party = null, pl
   // National votes on the real national calendar, local votes on the calendar of the player's comune and region.
   // The provincial vote exists where the province has organs of its own (see hasProvincialLevel).
   const elections = Object.keys(ELECTION_SCHEDULE).filter(type => type !== 'provinciale' || hasProvincialLevel(place)).map(type => ['politiche', 'europee'].includes(type)
-    ? makeNationalElection(type, nationalElectionDate({ legislature: REAL_LEGISLATURE }, type, currentDate), place)
+    ? nationalEntry({ legislature: REAL_LEGISLATURE }, type, currentDate, place)
     : localCalendar ? makeLocalElection(type, localCalendar[type], currentDate, place, localCalendar[`${type}Real`])
     : makeElection(type, advanceDays(currentDate, 7 * (LEVEL_FIRST_ELECTION[level]?.[type] ?? ELECTION_SCHEDULE[type].firstWeeks)), place));
   // What the level (a council, a province, a region, the Chambers, Strasbourg) and the way of belonging start with.
@@ -328,7 +336,7 @@ function alignNationalCalendar(game) {
   const legislature = { ...REAL_LEGISLATURE, ...(game.legislature ?? {}), firstSitting: game.legislature?.firstSitting ?? (game.legislature?.since ? advanceDays(game.legislature.since, LEGISLATURE_RULES.firstSittingDays) : REAL_LEGISLATURE.firstSitting) };
   const elections = game.elections.map(entry => {
     if (!['politiche', 'europee'].includes(entry.type) || entry.status !== 'upcoming' || entry.early) return entry;
-    return { ...makeNationalElection(entry.type, nationalElectionDate({ legislature }, entry.type, today), game.place ?? {}), id: entry.id };
+    return { ...nationalEntry({ legislature }, entry.type, today, game.place ?? {}), id: entry.id };
   });
   return { ...game, legislature, elections, flags: { ...(game.flags ?? {}), nationalCalendar: 2 } };
 }
@@ -2103,7 +2111,7 @@ function updateElections(ctx, date, lines, specials) {
   const fellNow = government?.status === 'fallen' && (!government.fallenAt || !game.legislature?.since || government.fallenAt >= game.legislature.since);
   game.fallenWeeks = fellNow ? (game.fallenWeeks ?? 0) + 1 : 0;
   const politics = game.elections.find(item => item.type === 'politiche' && item.status === 'upcoming');
-  if (game.fallenWeeks >= EARLY_ELECTION_AFTER_WEEKS && politics && politics.windowOpensAt > advanceDays(date, 7)) {
+  if (game.fallenWeeks >= EARLY_ELECTION_AFTER_WEEKS && politics && politics.windowOpensAt > advanceDays(date, 7) && !(dissolutionWait(game, date) > CALENDAR_RULES.dissolveWithinDays)) {
     bringElectionForward(game, politics, date);
     lines.push('Nessuna maggioranza dopo la caduta del governo: si va alle politiche anticipate.');
   }
@@ -2115,6 +2123,17 @@ function bringElectionForward(game, politics, date) {
   delete politics.calendarConflict;
   Object.assign(politics, { ...early, id: politics.id, baseDate: early.electionDate, earliest });
   game.fallenWeeks = 0;
+}
+// How many days from `date` the general election would be held if the Chambers were dissolved now, after the calendar has found its date (null when the vote is already under way).
+export function dissolutionWait(input, date) {
+  const game = copy(input);
+  const politics = game.elections.find(item => item.type === 'politiche' && item.status === 'upcoming');
+  if (!politics || politics.windowOpensAt <= advanceDays(date, 7)) return null;
+  bringElectionForward(game, politics, date);
+  harmonizeElections(game, date);
+  // a calendar that does not fit (a declared conflict) is no way to call the country to vote
+  if (game.elections.some(item => item.calendarConflict)) return Infinity;
+  return Math.round((Date.parse(`${politics.electionDate}T12:00:00Z`) - Date.parse(`${date}T12:00:00Z`)) / 86400000);
 }
 // The Chambers are dissolved (no Government after the vote): the general election is brought forward, the
 // candidacies open in a week and the country votes after the campaign.

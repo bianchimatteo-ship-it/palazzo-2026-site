@@ -94,6 +94,15 @@ assert.ok(comuniCosenza.every(item => html.includes(`value="${item.code}"`)), `T
 assert.ok(html.includes('data-committee-level="provincia"') && html.includes(`data-committee-unit="${cosenza.code}"`) && html.includes('data-committee-region="Calabria"'), 'Senza comune scelto si fonda il comitato provinciale, con regione e codice ISTAT corretti');
 html = panel({ region: 'Calabria', unit: cosenza.code, municipality: comuniCosenza[0].code });
 assert.ok(html.includes('data-committee-level="comune"') && html.includes(`data-committee-municipality="${comuniCosenza[0].code}"`) && html.includes('data-committee-region="Calabria"'), 'Con il comune scelto si fonda il comitato comunale nella regione ISTAT del comune');
+// no tag of the founding screen repeats an HTML attribute (the second one would be ignored by the browser): every tag in every state of the screen
+for (const found of [{ region: 'Calabria', unit: '' }, { region: 'Calabria', unit: cosenza.code }, { region: 'Calabria', unit: cosenza.code, municipality: comuniCosenza[0].code }]) {
+  const section = panel(found).match(/<section class="cm-found"[\s\S]*?<\/section>/)?.[0] ?? '';
+  assert.ok(section, 'La schermata di fondazione c’è.');
+  for (const tag of section.match(/<[a-z][^>]*>/g) ?? []) {
+    const names = [...tag.matchAll(/\s([a-z][a-z0-9-]*)(?==")/g)].map(match => match[1]);
+    assert.equal(new Set(names).size, names.length, `Attributo ripetuto nella schermata di fondazione: ${names.filter((name, index) => names.indexOf(name) !== index)[0]} in ${tag.slice(0, 80)}…`);
+  }
+}
 html = panel({ region: 'Calabria', unit: '' });
 assert.ok(html.includes('data-committee-level="regione"') && !html.includes('data-view-filter-select="found-municipality"'), 'Senza provincia si fonda il comitato regionale');
 html = panel({ region: 'Calabria', unit: cosenza.code }, null);

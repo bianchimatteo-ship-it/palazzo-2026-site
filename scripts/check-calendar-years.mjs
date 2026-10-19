@@ -37,7 +37,7 @@ const PLACES = {
 
 // What a calendar leaves the player: every entry (election of the player or spring round) with the statuses it went through.
 function watch(game, seen) {
-  for (const entry of game.elections) { const row = seen.get(entry.id) ?? { id: entry.id, kind: 'voto', type: entry.type, date: entry.electionDate, early: Boolean(entry.early), statuses: new Set() }; row.date = entry.electionDate; row.short = row.short || Boolean(entry.shortGap); row.early = row.early || Boolean(entry.early); row.statuses.add(entry.status); seen.set(entry.id, row); }
+  for (const entry of game.elections) { const row = seen.get(entry.id) ?? { id: entry.id, kind: 'voto', type: entry.type, date: entry.electionDate, early: Boolean(entry.early), statuses: new Set() }; row.date = entry.electionDate; row.short = row.short || Object.hasOwn(entry, 'shortGap'); row.early = row.early || Boolean(entry.early); row.statuses.add(entry.status); seen.set(entry.id, row); }
   for (const round of game.rounds ?? []) { const row = seen.get(round.id) ?? { id: round.id, kind: 'tornata', type: 'tornata', date: round.electionDate, statuses: new Set() }; row.statuses.add(round.status); seen.set(round.id, row); }
 }
 // The next vote still ahead, from the calendar of the game (elections not yet held, rounds not yet held).
@@ -78,15 +78,15 @@ for (const [index, [level, regionName]] of CASES.entries()) {
   // (from the first day of the career on) and no calendar year is left without one.
   {
     const closest = distinctRounds(rows.map(row => row.date));
-    // the target distance is kept; under it only a vote brought forward by a crisis, a vote squeezed between two fixed by law (marked shortGap) or two national votes, never under the floor
-    const shortDays = new Set(rows.filter(row => row.early || row.short || ['politiche', 'europee'].includes(row.type)).map(row => row.date));
+    // two different rounds are at least 180 days apart: no exception for a vote brought forward by a crisis, for the national votes or for a vote squeezed by the law
     const rounds = closest.rounds ?? [];
-    for (let i = 1; i < rounds.length; i++) { const gap = days(rounds[i - 1], rounds[i]); assert.ok(gap >= CALENDAR_RULES.minGapDays || (gap >= CALENDAR_RULES.earlyFloorDays && (shortDays.has(rounds[i - 1]) || shortDays.has(rounds[i]))), `${label}: due tornate a ${gap} giorni (${rounds[i - 1]} e ${rounds[i]}) senza un motivo di legge`); }
-    assert.ok(!closest.closest || true, `${label}: due tornate a ${closest.closest?.days} giorni (${closest.closest?.from} e ${closest.closest?.to}) · in calendario: ${game.elections.filter(item => item.status !== 'held').map(item => `${item.type} ${item.electionDate}${item.early ? '*' : ''}${item.calendarConflict ? '!' : ''}${item.shortGap ? '~' : ''}`).join(', ')} · tornate: ${(game.rounds ?? []).map(item => `${item.electionDate}:${item.status}`).join(', ')} · viste: ${rows.filter(row => row.date >= '2038').map(row => `${row.type} ${row.date}${row.early ? '*' : ''} [${[...row.statuses].join('>')}]`).join('; ')}`);
+    for (let i = 1; i < rounds.length; i++) assert.ok(days(rounds[i - 1], rounds[i]) >= CALENDAR_RULES.minGapDays, `${label}: due tornate a ${days(rounds[i - 1], rounds[i])} giorni (${rounds[i - 1]} e ${rounds[i]}) · in calendario: ${game.elections.filter(item => item.status !== 'held').map(item => `${item.type} ${item.electionDate}${item.early ? '*' : ''}`).join(', ')}`);
+    assert.ok(!closest.closest || closest.closest.days >= CALENDAR_RULES.minGapDays, `${label}: la coppia di tornate più vicina è a ${closest.closest?.days} giorni (${closest.closest?.from} e ${closest.closest?.to})`);
+    assert.ok(rows.every(row => !row.short), `${label}: nessun voto è segnato come a distanza ridotta`);
     assert.ok(game.elections.every(item => !item.calendarConflict), `${label}: voto che non trova una data a distanza: ${game.elections.filter(item => item.calendarConflict).map(item => `${item.type} ${item.electionDate}`).join(', ')}`);
     const playableDates = rows.filter(playable).map(row => row.date);
     let from = START;
-    for (const day of [...playableDates, ...(standing.size ? [] : [])]) { assert.ok(days(from, day) <= 365, `${label}: ${days(from, day)} giorni tra ${from} e il voto giocabile del ${day}`); from = day; }
+    for (const day of [...playableDates, ...(standing.size ? [] : [])]) { assert.ok(days(from, day) <= CALENDAR_RULES.maxPlayableGapDays, `${label}: ${days(from, day)} giorni tra ${from} e il voto giocabile del ${day}`); from = day; }
   }
   for (let year = 2027; year <= 2039; year++) {
     const ofYear = rows.filter(row => row.date.startsWith(String(year)));
@@ -245,7 +245,7 @@ console.error(`[calendar-years ${new Date().toISOString().slice(11, 19)}] parte 
     for (let i = 1; i < sorted.length; i++) assert.ok(!campaignsOverlap(sorted[i - 1], sorted[i]), `${label}: ${sorted[i - 1].label} (${sorted[i - 1].electionDate}) e ${sorted[i].label} (${sorted[i].electionDate}) si sovrappongono`);
     // nothing else is refused: the votes of different rounds are apart by themselves
     const rounds = [...new Set(sorted.map(item => item.electionDate))];
-    for (let i = 1; i < rounds.length; i++) assert.ok(days(rounds[i - 1], rounds[i]) >= CALENDAR_RULES.earlyFloorDays, `${label}: due voti giocati a ${days(rounds[i - 1], rounds[i])} giorni`);
+    for (let i = 1; i < rounds.length; i++) assert.ok(days(rounds[i - 1], rounds[i]) >= CALENDAR_RULES.minGapDays, `${label}: due voti giocati a ${days(rounds[i - 1], rounds[i])} giorni`);
     // most years do offer a personal candidacy; none is left without an appointment (part 1 checks the calendar itself)
     const yearsWith = new Set(sorted.map(item => item.electionDate.slice(0, 4))).size;
     assert.ok(yearsWith >= 8, `${label}: almeno otto anni su dodici con una candidatura possibile (${yearsWith})`);

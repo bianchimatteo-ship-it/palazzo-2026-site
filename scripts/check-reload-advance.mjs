@@ -20,6 +20,8 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, version }) => {
   const start = await week();
   assert.equal(await storedWeek(), start, 'La carriera salvata è alla settimana corrente');
   const trail = [start];
+  // a slot saved now will be older than the career after the rounds below
+  await evaluate(`(async () => { (await ${mod}).store.saveToSlot('Copia vecchia', 'slot-vecchio-ricarica', { manual: true }); return true; })()`);
   for (let round = 1; round <= 3; round++) {
     await reload();
     await resume();
@@ -33,8 +35,29 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, version }) => {
   }
   assert.ok(trail.every((value, index) => index === 0 || value > trail[index - 1]), 'La settimana cresce sempre');
   // an older copy never takes the place of the advanced career: a slot saved earlier is restored as a separate career
-  const slots = await evaluate(`(async () => { const { storage } = await import('/src/core/storage.js?v=${version}'); return (storage.listSlots?.() ?? []).map(slot => ({ id: slot.id, week: slot.week ?? null })); })()`);
-  assert.ok(Array.isArray(slots), 'Gli slot si leggono');
+  const lastDate = await date();
+  const stale = await evaluate(`(async () => {
+    const { storage } = await import('/src/core/storage.js?v=${version}');
+    const { store } = await ${mod};
+    const old = storage.loadSlot('slot-vecchio-ricarica');
+    let refused = false;
+    try { storage.save(old); } catch (error) { refused = /obsoleto/.test(error.message); }
+    const kept = JSON.parse(localStorage.getItem('palazzo-2026.career.v1'));
+    const before = { id: kept.career.id, week: kept.game.week.index, date: kept.clock.currentDate };
+    store.loadSlot('slot-vecchio-ricarica');
+    const opened = { id: store.getState().career.id, week: store.getState().game.week.index };
+    const best = storage.bestForCareer(before.id);
+    return { oldWeek: old.game.week.index, oldCareer: old.career.id, refused, before, opened, bestWeek: best?.game.week.index ?? null, bestDate: best?.clock.currentDate ?? null };
+  })()`);
+  assert.equal(stale.oldCareer, id, 'Lo slot vecchio è della stessa carriera');
+  assert.ok(stale.oldWeek < trail.at(-1), `Lo slot è più vecchio della carriera (settimana ${stale.oldWeek} contro ${trail.at(-1)})`);
+  assert.ok(stale.refused, 'Scrivere la copia vecchia sul salvataggio principale è rifiutato');
+  assert.deepEqual(stale.before, { id, week: trail.at(-1), date: lastDate }, 'Il salvataggio principale è rimasto alla carriera avanzata');
+  assert.equal(stale.opened.week, stale.oldWeek, 'Aprire lo slot vecchio riporta alla sua settimana…');
+  assert.notEqual(stale.opened.id, id, '…come carriera separata, non al posto di quella avanzata');
+  assert.equal(stale.bestWeek, trail.at(-1), 'Per la sua identità la carriera più avanzata resta la settimana più alta');
+  assert.equal(stale.bestDate, lastDate, 'E alla sua data');
+  await evaluate(`(async () => { const { storage } = await import('/src/core/storage.js?v=${version}'); (await ${mod}).store.loadGame(storage.bestForCareer(${JSON.stringify(id)}), 'Ritorno'); return true; })()`);
   await reload();
   assert.equal(await storedWeek(), trail.at(-1), 'Dopo l’ultimo ricaricamento il salvataggio principale è ancora il più avanzato');
   void date;

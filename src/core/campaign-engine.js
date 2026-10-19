@@ -976,7 +976,9 @@ function contextualEvent(campaign, context) {
 // A condition of the events pool: what the campaign looks like right now.
 function eventCondition(campaign, when) {
   const player = campaign.candidates.find(item => item.isPlayer);
-  const trend = campaign.consensusHistory.length > 1 ? campaign.consensusHistory.at(-1).value - campaign.consensusHistory.at(-2).value : 0;
+  // the trend is read inside one stage: the first round (share among all the candidacies) and the runoff (head to head) are different measures, their difference is not a trend
+  const sameStage = campaign.consensusHistory.filter(item => (item.stage ?? 'campagna') === (campaign.stage ?? 'campagna'));
+  const trend = sameStage.length > 1 ? sameStage.at(-1).value - sameStage.at(-2).value : 0;
   if (!when) return true;
   if (when === 'notoriety') return (campaign.candidateStats.notoriety ?? 0) > 30;
   if (when === 'momentum') return trend > 0;
@@ -1845,7 +1847,7 @@ export function createCampaign({career,player,statistics=[],offices=[],territori
   if(alliedParties.size) for(const rival of campaign.candidates.filter(item=>!item.isPlayer&&item.partyId&&alliedParties.has(item.partyId))) addHistory(campaign,'alleanza',formPlayerAlliance(campaign,campaign.candidates.find(item=>item.isPlayer),rival,'Intesa già in vigore tra i due partiti',2,{existing:true}),{source:SOURCE});
   const openingWeight=campaignAreas.reduce((sum,item)=>sum+item.weight,0)||1;
   const openingConsensus=campaignAreas.reduce((sum,item)=>sum+Number(item.supportByCandidate[playerCandidateId]??0)*item.weight,0)/openingWeight;
-  campaign.consensusHistory.push({day:0,date:currentDate,value:round(openingConsensus),source:SOURCE});
+  campaign.consensusHistory.push({day:0,date:currentDate,value:round(openingConsensus),stage:'campagna',metric:'quota-primo-turno',source:SOURCE});
   if (strategy) {
     const opts = { topicId: config.topicId ?? null, targetId: config.targetId ?? null };
     const withStrategy = setCampaignStrategy(campaign, strategy, CAMPAIGN_STRATEGIES[strategy].needsTopic && !opts.topicId ? { ...opts, topicId: campaign.nationalContext.salientTopic } : opts);
@@ -2037,7 +2039,7 @@ export function performCampaignActivity(input,activityId,options={}) {
   for(let day=0;day<activity.days;day++) tick(campaign);
   if(activity.category!=='media'&&campaign.day>0&&campaign.day%7===0&&!campaign.pendingEvents.length) contextualEvent(campaign,activity.category);
   const own=campaign.status==='active'?playerShareNow(campaign):campaign.territories.reduce((sum,item)=>sum+Number(item.supportByCandidate[player.id]??0)*item.weight,0)/campaign.territories.reduce((sum,item)=>sum+item.weight,0);
-  campaign.consensusHistory.push({day:campaign.day,date:campaign.currentDate,value:round(own),source:SOURCE});
+  campaign.consensusHistory.push({day:campaign.day,date:campaign.currentDate,value:round(own),stage:campaign.stage,metric:campaign.stage==='ballottaggio'?'proiezione-ballottaggio':'quota-primo-turno',source:SOURCE});
   campaign.consensusHistory=campaign.consensusHistory.slice(-16);
   campaign.resources={...player.resources,visibility:campaign.resources.visibility,source:SOURCE};
   return campaign;
@@ -2200,7 +2202,7 @@ export function decideCampaignEvent(input,eventId,choiceId) {
 function passDays(campaign,days) {
   for(let day=0;day<days&&campaign.status==='active';day++) tick(campaign);
   const own=campaign.status==='active'?playerShareNow(campaign):weightedShare(campaign,campaign.playerCandidateId);
-  if(campaign.consensusHistory.at(-1)?.day!==campaign.day) campaign.consensusHistory.push({day:campaign.day,date:campaign.currentDate,value:round(own),source:SOURCE});
+  if(campaign.consensusHistory.at(-1)?.day!==campaign.day) campaign.consensusHistory.push({day:campaign.day,date:campaign.currentDate,value:round(own),stage:campaign.stage,metric:campaign.stage==='ballottaggio'?'proiezione-ballottaggio':'quota-primo-turno',source:SOURCE});
   campaign.consensusHistory=campaign.consensusHistory.slice(-16);
 }
 export function advanceCampaign(input,days=7) {
@@ -2212,10 +2214,40 @@ export function advanceCampaign(input,days=7) {
   }
   const player=campaign.candidates.find(item=>item.isPlayer);
   const average=campaign.status==='active'?playerShareNow(campaign):campaign.territories.reduce((sum,area)=>sum+Number(area.supportByCandidate[player.id]??0)*area.weight,0)/campaign.territories.reduce((sum,area)=>sum+area.weight,0);
-  if(campaign.consensusHistory.at(-1)?.day!==campaign.day) campaign.consensusHistory.push({day:campaign.day,date:campaign.currentDate,value:round(average),source:SOURCE});
+  if(campaign.consensusHistory.at(-1)?.day!==campaign.day) campaign.consensusHistory.push({day:campaign.day,date:campaign.currentDate,value:round(average),stage:campaign.stage,metric:campaign.stage==='ballottaggio'?'proiezione-ballottaggio':'quota-primo-turno',source:SOURCE});
   campaign.consensusHistory=campaign.consensusHistory.slice(-16);
   campaign.resources={...player.resources,visibility:campaign.resources.visibility,source:SOURCE};
   return campaign;
+}
+
+// The percentages of a campaign, each with its own name and what it measures. They are different things and are never shown as one number:
+//  - territorialConsensus: the support the player has on the territory, weighted by the area, as a share among ALL the candidacies of the first round (the base the campaign is simulated on);
+//  - poll: the last reading of the institutes of the stage that is running (institute, sample, margin of error), an estimate of that same base with sampling error;
+//  - runoffProjection: only in the runoff, the head-to-head projection of the two finalists once the votes of the eliminated have been shared (it is not the territorial consensus);
+//  - result: only when the campaign is over, the share of the stage that decided it (the first round for who was out after it, the runoff for a finalist).
+export function campaignMetrics(campaign) {
+  const stage = campaign.stage === 'ballottaggio' ? 'ballottaggio' : 'primo-turno';
+  const own = campaign.playerCandidateId;
+  const territorial = weightedShare(campaign, own);
+  const stagePoll = [...(campaign.polls ?? [])].reverse().find(item => (item.stage === 'ballottaggio') === (stage === 'ballottaggio')) ?? null;
+  const pollRow = stagePoll?.results?.find(item => item.candidateId === own) ?? null;
+  const projection = campaign.status === 'active' && stage === 'ballottaggio' ? runoffProjection(campaign) : null;
+  const history = (campaign.consensusHistory ?? []).filter(item => (item.stage ?? 'campagna') === (stage === 'ballottaggio' ? 'ballottaggio' : 'campagna'));
+  const result = campaign.result ? {
+    stage: campaign.result.eliminatedInFirstRound || !campaign.firstRoundResult ? 'primo-turno' : 'ballottaggio',
+    share: round(campaign.result.playerShare ?? 0),
+    firstRoundShare: campaign.firstRoundResult ? round(campaign.firstRoundResult.playerShare ?? 0) : null
+  } : null;
+  return {
+    stage,
+    territorialConsensus: { value: round(territorial), label: 'Consenso territoriale', scope: 'quota tra tutte le candidature del primo turno, base simulata sul territorio' },
+    poll: stagePoll && pollRow ? { share: pollRow.share, margin: stagePoll.margin ?? null, sample: stagePoll.sample ?? null, institute: stagePoll.institute?.name ?? null, institutes: stagePoll.institutes ?? null, day: stagePoll.day, date: stagePoll.date ?? null, stage: stagePoll.stage ?? 'campagna', label: stage === 'ballottaggio' ? 'Sondaggio di campagna · ballottaggio' : 'Sondaggio di campagna · primo turno' } : null,
+    runoffProjection: projection ? { share: projection[own] ?? null, finalist: own in projection, label: 'Proiezione del ballottaggio', scope: own in projection ? 'testa a testa tra i due finalisti, dopo i trasferimenti di voto' : 'non sei tra i finalisti: la proiezione riguarda gli altri due' } : null,
+    result,
+    // the variation is read inside the stage that is running: the first round and the runoff are different measures
+    variation: history.length > 1 ? round(history.at(-1).value - history[0].value) : null,
+    history
+  };
 }
 
 export function campaignSummary(campaign) {
