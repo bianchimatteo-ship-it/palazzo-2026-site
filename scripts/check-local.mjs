@@ -378,12 +378,22 @@ const groups = [
   assert.ok(rule.organ === 'consiglio' && rule.quorum === 'votanti' && rule.measure.indicators.sicurezza > 0, 'Un regolamento lo vota il consiglio e migliora la sicurezza urbana');
   let out = week(at(proposed, rule.id, 'aula', '2027-01-17'), '2027-01-17');
   assert.equal(out.inst.acts.find(item => item.id === rule.id).stage, 'approvato');
-  const shared = out.events.find(item => item.type === 'effetti' && item.actId === rule.id);
-  assert.ok(shared && shared.indicators.sicurezza > 0 && shared.indicators.sicurezza < rule.measure.indicators.sicurezza, 'Una parte dell’effetto arriva alla regione');
-  let withAct = out.inst, control = week(mayor, '2027-01-17').inst;
-  for (let day = 24; day <= 24 + 7 * 9; day += 7) { const date = advanceDays('2027-01-17', day - 17); withAct = week(withAct, date).inst; control = week(control, date).inst; }
+  // The vote is not the measure: nothing moves with the vote, the administration carries the measure out after a few weeks (see check-local-implementation for the late, ineffective and undone cases).
+  assert.ok(!out.events.some(item => item.type === 'effetti' && item.actId === rule.id) && out.inst.effects.length === mayor.effects.length, 'Il voto da solo non cambia i servizi');
+  const entry = out.inst.implementations.find(item => item.actId === rule.id);
+  assert.ok(entry && entry.status === 'in-attuazione' && entry.startsAt > '2027-01-17', 'La misura approvata va in attuazione, con una data di avvio');
+  let withAct = out.inst, control = week(mayor, '2027-01-17').inst, shared = null, done = null;
+  for (let step = 1; step <= 26; step++) {
+    const date = advanceDays('2027-01-17', step * 7);
+    const res = week(withAct, date); withAct = res.inst; control = week(control, date).inst;
+    shared ??= res.events.find(item => item.type === 'effetti' && item.actId === rule.id);
+    done ??= res.events.find(item => item.type === 'attuazione' && item.actId === rule.id && ['attuato', 'inefficace', 'non-attuato'].includes(item.status));
+  }
+  assert.ok(shared && shared.indicators.sicurezza > 0 && shared.indicators.sicurezza < rule.measure.indicators.sicurezza, 'Una parte (piccola) dell’effetto arriva alla regione, quando la misura è attuata');
+  assert.ok(done && ['attuato', 'inefficace'].includes(done.status), 'La misura viene attuata');
   const gain = withAct.indicators.sicurezza - control.indicators.sicurezza;
-  assert.ok(Math.abs(gain - rule.measure.indicators.sicurezza) < 0.4, `Il regolamento migliora la sicurezza urbana di ${gain.toFixed(1)} (previsti ${rule.measure.indicators.sicurezza})`);
+  const expected = rule.measure.indicators.sicurezza * (done.status === 'inefficace' ? 0.15 : done.efficacy);
+  assert.ok(Math.abs(gain - expected) < 0.4, `Il regolamento migliora la sicurezza urbana di ${gain.toFixed(1)} (previsti ${expected.toFixed(1)}, efficacia ${done.efficacy})`);
   // Public works: the vote approves the work and reserves a share of its cost, and nothing improves until the site is finished; taxes: the rates and the margin.
   proposed = L.proposeLocalAct(mayor, 'sport', '2027-01-10', { category: 'opere' });
   const works = proposed.acts.at(-1);
@@ -418,7 +428,9 @@ const groups = [
   assert.ok(step.stage === 'osservazioni' && step.adoptedAt === '2027-01-17' && !out.inst.effects.length, 'Il piano adottato aspetta le osservazioni');
   out = week(at(out.inst, plan.id, 'aula', '2027-03-14'), '2027-03-14');
   step = out.inst.acts.find(item => item.id === plan.id);
-  assert.ok(step.stage === 'approvato' && out.inst.effects.some(item => item.indicator === 'territorio' && item.perWeek > 0) && out.inst.effects.some(item => item.indicator === 'ambiente' && item.perWeek < 0), 'Approvato: più case e meno verde');
+  assert.ok(step.stage === 'approvato' && out.inst.implementations.some(item => item.actId === plan.id && item.status === 'in-attuazione'), 'Approvato: il piano va in attuazione, non cambia ancora nulla');
+  for (let k = 1; k <= 12 && !out.inst.effects.some(item => item.indicator === 'territorio'); k++) out = week(out.inst, advanceDays('2027-03-14', k * 7));
+  assert.ok(out.inst.effects.some(item => item.indicator === 'territorio' && item.perWeek > 0) && out.inst.effects.some(item => item.indicator === 'ambiente' && item.perWeek < 0), 'Attuato: più case e meno verde');
   // The statute of the comune needs two thirds (or, failing that, twice the absolute majority).
   proposed = L.proposeLocalAct(mayor, 'pa', '2027-01-10', { category: 'statuto' });
   const statute = proposed.acts.at(-1);
@@ -483,8 +495,10 @@ const groups = [
   const law = proposed.acts.at(-1);
   assert.ok(law.measure.indicators.sanita > 0 && law.label === 'Legge regionale', 'Una legge regionale sulla sanità muove l’indicatore della sanità');
   out = week(at(proposed, law.id, 'aula', '2027-01-17'), '2027-01-17', );
-  const health = out.events.find(item => item.type === 'effetti' && item.actId === law.id);
-  assert.ok(health && health.kind === 'regione' && health.region === 'Toscana' && health.indicators.sanita === law.measure.indicators.sanita, 'Approvata: gli effetti vanno alla regione');
+  assert.ok(!out.events.some(item => item.type === 'effetti' && item.actId === law.id), 'Approvata la legge, la regione non cambia ancora: la legge va attuata');
+  let health = null;
+  for (let k = 1; k <= 20 && !health; k++) { out = week(out.inst, advanceDays('2027-01-17', k * 7)); health = out.events.find(item => item.type === 'effetti' && item.actId === law.id); }
+  assert.ok(health && health.kind === 'regione' && health.region === 'Toscana' && health.indicators.sanita > 0 && health.indicators.sanita <= law.measure.indicators.sanita, 'Attuata: gli effetti vanno alla regione, nella misura in cui l’amministrazione la porta a termine');
   const society = S.createSociety({ seedText: 'atti-regione', date: '2027-01-10' });
   const before = society.regions.Toscana.indicators.sanita;
   let scheduled = S.scheduleRegionalEffects(society, { region: 'Toscana', indicators: health.indicators, phase: health.phase, lasting: health.lasting, cause: health.title });
@@ -537,7 +551,9 @@ const groups = [
   const after = s.local.institutions.find(item => item.id === inst.id);
   const voted = [...after.acts, ...after.archive].filter(item => ['approvato', 'respinto'].includes(item.stage));
   assert.ok(voted.length >= 3, `Il consiglio vota nelle settimane della partita (${voted.length} atti).`);
-  assert.ok(after.history.some(item => item.type === 'proposta') && [...after.acts, ...after.archive].some(item => item.id === proposalId), 'La proposta del giocatore fa il suo percorso.');
+  const proposed = [...after.acts, ...after.archive].find(item => item.id === proposalId);
+  // the council's record keeps the last 40 lines: in a busy council the line of the proposal can have rotated out, and then the act itself (closed, in the archive) is the trace
+  assert.ok(proposed && (after.history.some(item => item.type === 'proposta') || (after.history.length >= 40 && ['approvato', 'respinto', 'ritirato'].includes(proposed.stage))), 'La proposta del giocatore fa il suo percorso.');
   assert.ok(asked, 'Il consigliere riceve le richieste di voto in agenda.');
   store.questionLocalExecutive(inst.id);
   assert.ok(store.getState().local.institutions.find(item => item.id === inst.id).history.some(item => item.type === 'interrogazione'));

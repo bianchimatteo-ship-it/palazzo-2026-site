@@ -1,31 +1,32 @@
-import { endedHeadline } from './hall-view.js?v=20261017-4';
-import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261017-4';
-import { playerRoles } from '../core/roles.js?v=20261017-4';
-import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20261017-4';
-import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261017-4';
-import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261017-4';
-import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20261017-4';
-import { careerLevelLabel } from '../data/regions.js?v=20261017-4';
-import { advanceDays, formatDate } from '../core/time.js?v=20261017-4';
-import { renderBarometerPanel } from './polls-mode.js?v=20261017-4';
-import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20261017-4';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261017-4';
-import { societyMood } from '../core/society-engine.js?v=20261017-4';
-import { financeOutlook } from '../core/finance-engine.js?v=20261017-4';
-import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20261017-4';
-import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20261017-4';
-import { activeInstitutions, institutionLabel } from './local-mode.js?v=20261017-4';
-import { renderFinanceCard } from './finance-mode.js?v=20261017-4';
-import { renderStaffBand } from './staff-view.js?v=20261017-4';
-import { planAddButton } from './plan-view.js?v=20261017-4';
-import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20261017-4';
-import { stateBadge, statusChip } from './charts.js?v=20261017-4';
-import { articleHtml, newsMedia, renderNewsroomTabs } from './news-view.js?v=20261017-4';
-import { relevantArticles } from '../core/news-engine.js?v=20261017-4';
-import { identityMark, kindChip } from './party-identity.js?v=20261017-4';
-import { illustration } from './illustrations.js?v=20261017-4';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261017-4';
-import { regionPriorities } from '../core/society-engine.js?v=20261017-4';
+import { endedHeadline } from './hall-view.js?v=20261019-1';
+import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261019-1';
+import { playerRoles } from '../core/roles.js?v=20261019-1';
+import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20261019-1';
+import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261019-1';
+import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261019-1';
+import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20261019-1';
+import { careerLevelLabel } from '../data/regions.js?v=20261019-1';
+import { advanceDays, formatDate } from '../core/time.js?v=20261019-1';
+import { renderBarometerPanel } from './polls-mode.js?v=20261019-1';
+import { candidacyAccess } from './campaign-mode.js?v=20261019-1';
+import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20261019-1';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261019-1';
+import { societyMood } from '../core/society-engine.js?v=20261019-1';
+import { financeOutlook } from '../core/finance-engine.js?v=20261019-1';
+import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20261019-1';
+import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20261019-1';
+import { activeInstitutions, institutionLabel } from './local-mode.js?v=20261019-1';
+import { renderFinanceCard } from './finance-mode.js?v=20261019-1';
+import { renderStaffBand } from './staff-view.js?v=20261019-1';
+import { planAddButton } from './plan-view.js?v=20261019-1';
+import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20261019-1';
+import { stateBadge, statusChip } from './charts.js?v=20261019-1';
+import { articleHtml, newsMedia, renderNewsroomTabs } from './news-view.js?v=20261019-1';
+import { relevantArticles } from '../core/news-engine.js?v=20261019-1';
+import { identityMark, kindChip } from './party-identity.js?v=20261019-1';
+import { illustration } from './illustrations.js?v=20261019-1';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261019-1';
+import { regionPriorities } from '../core/society-engine.js?v=20261019-1';
 
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -346,7 +347,7 @@ export function renderElectionCalendar(state, { detailed = false } = {}) {
   const today = state.clock.currentDate;
   const rows = upcomingElections(game).slice(0, detailed ? 6 : 3).map(entry => {
     const status = entry.status === 'open' ? statusChip('opportunita', `Candidature aperte fino al ${shortDate(entry.windowClosesAt)}`, 'hq-open') : entry.status === 'running' ? statusChip('attenzione', 'Campagna in corso', 'hq-open') : entry.status === 'missed' ? statusChip('attenzione', `Candidature chiuse · voto il ${shortDate(entry.electionDate)}`, 'hq-missed') : `<span>Candidature dal ${esc(shortDate(entry.windowOpensAt))} · tra ${weeks(weeksUntil(today, entry.windowOpensAt))}</span>`;
-    const action = entry.status === 'open' && state.campaign?.status !== 'active' ? `<button class="text-link" data-nav="elezioni">Candidati ${arrow}</button>` : entry.status === 'upcoming' && state.campaign?.status !== 'active' && game.status !== 'ended' ? `<button class="text-link" data-game-fastforward="${esc(entry.type)}" data-fastforward-label="${esc(entry.label)}" data-fastforward-date="${esc(entry.windowOpensAt)}" data-fastforward-weeks="${weeksUntil(today, entry.windowOpensAt)}">Avanza fino alle candidature ${arrow}</button>` : '';
+    const action = entry.status === 'open' && state.campaign?.status !== 'active' ? candidateLink(state, entry) : entry.status === 'upcoming' && state.campaign?.status !== 'active' && game.status !== 'ended' ? `<button class="text-link" data-game-fastforward="${esc(entry.type)}" data-fastforward-label="${esc(entry.label)}" data-fastforward-date="${esc(entry.windowOpensAt)}" data-fastforward-weeks="${weeksUntil(today, entry.windowOpensAt)}">Avanza fino alle candidature ${arrow}</button>` : '';
     return `<div class="hq-election ${entry.status}"><div><strong>${esc(entry.label)}${entry.early ? ' · anticipate' : ''}</strong>${status}<small>Voto il ${esc(formatDate(entry.electionDate))}</small></div>${action}</div>`;
   }).join('');
   const note = detailed ? `<p class="parliament-note">Politiche ed europee seguono il calendario reale (fine della legislatura, europee 2029 e poi ogni cinque anni); comunali e regionali seguono il calendario reale del tuo comune e della tua regione (cinque anni dall’ultimo voto); le provinciali, di secondo livello, un ciclo semplificato di quattro anni. Quando si aprono le candidature puoi avviare la campagna; se non ti candidi, un mandato dello stesso tipo si conclude. La preparazione accumulata (${num(game.prep, 0)}%), i fondi e il sostegno nel partito entrano nella campagna.</p>` : '';
@@ -710,4 +711,10 @@ function secretaryPanel(state) {
     ${org ? `<div class="secretary-block"><h3>${glyph('money', 16)} Investimenti del partito</h3><small>Tesoreria disponibile: ${euro(org.treasury.balance)}.</small><div class="secretary-investments">${investments}</div></div>` : ''}
     <div class="hq-links"><button class="text-link" data-nav="sondaggi" data-obs-view="forze">Alleanze con gli altri partiti ${arrow}</button><button class="text-link" data-nav="finanze">Bilancio e priorità della tesoreria ${arrow}</button><button class="text-link" data-nav="territori">Territori e sezioni ${arrow}</button></div>
   </section>`;
+}
+
+// «Candidati» in the calendar: straight to the procedure of that vote, or the exact reason why the player cannot stand.
+function candidateLink(state, entry) {
+  const access = candidacyAccess(state, entry);
+  return access.ok ? `<button class="text-link" data-campaign-goto="${esc(entry.type)}" data-campaign-goto-id="${esc(entry.id)}">Candidati ${arrow}</button>` : `<span class="eh-blocked"><button class="text-link" disabled aria-disabled="true" title="${esc(access.reason)}">Candidati</button><small class="eh-block-reason" role="status">Non puoi candidarti: ${esc(access.reason)}</small></span>`;
 }

@@ -1,10 +1,10 @@
-import { advanceDays } from './time.js?v=20261017-4';
-import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261017-4';
-import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261017-4';
-import { aggregateShares, mateForce, runFinalElection, runFirstRound } from './election-engine.js?v=20261017-4';
-import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261017-4';
-import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261017-4';
-import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261017-4';
+import { advanceDays } from './time.js?v=20261019-1';
+import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261019-1';
+import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261019-1';
+import { aggregateShares, mateForce, runFinalElection, runFirstRound } from './election-engine.js?v=20261019-1';
+import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261019-1';
+import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261019-1';
+import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261019-1';
 
 const SOURCE = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
@@ -1221,7 +1221,8 @@ function mobilizationOf(campaign, candidate, round_ = 'primo-turno') {
   const rules = CREW_RULES.mobilization;
   const base = (Number(res.organization ?? 30) - 30) / 90 + (Number(res.volunteers ?? 10) - 10) / 70;
   // In the runoff the plan of the two weeks counts: a strategy built on the turnout (or on the appeals to the others) changes it.
-  const runoff = campaign.stage === 'ballottaggio' ? (candidate.isPlayer ? ((strategyOf(campaign).runoff?.turnout ?? 1) - 1) * .8 : .05) : 0;
+  // (only the plan of the player moves it: a rival has no free bonus in the runoff)
+  const runoff = campaign.stage === 'ballottaggio' && candidate.isPlayer ? ((strategyOf(campaign).runoff?.turnout ?? 1) - 1) * .8 : 0;
   if (!candidate.isPlayer) {
     const personality = candidate.aiProfile?.personality;
     return round(clamp(base * rules.rivals + (personality === 'territoriale' ? .12 : personality === 'ideologico' ? .06 : 0) + runoff, -.5, .9));
@@ -1597,6 +1598,8 @@ function tick(campaign) {
     const first=runFirstRound(campaign);
     if (first.requiresRunoff) {
       startRunoff(campaign, first);
+      // the question changes with the stage: the first reading of the runoff is taken at once, so that no reading of the first round (five candidacies) stands in for the two finalists
+      recordCampaignPoll(campaign, 'Ballottaggio');
     } else finish(campaign,first);
   }
 }

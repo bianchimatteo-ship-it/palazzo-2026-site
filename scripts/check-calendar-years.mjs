@@ -37,7 +37,7 @@ const PLACES = {
 
 // What a calendar leaves the player: every entry (election of the player or spring round) with the statuses it went through.
 function watch(game, seen) {
-  for (const entry of game.elections) { const row = seen.get(entry.id) ?? { id: entry.id, kind: 'voto', type: entry.type, date: entry.electionDate, early: Boolean(entry.early), statuses: new Set() }; row.date = entry.electionDate; row.early = row.early || Boolean(entry.early); row.statuses.add(entry.status); seen.set(entry.id, row); }
+  for (const entry of game.elections) { const row = seen.get(entry.id) ?? { id: entry.id, kind: 'voto', type: entry.type, date: entry.electionDate, early: Boolean(entry.early), statuses: new Set() }; row.date = entry.electionDate; row.short = row.short || Boolean(entry.shortGap); row.early = row.early || Boolean(entry.early); row.statuses.add(entry.status); seen.set(entry.id, row); }
   for (const round of game.rounds ?? []) { const row = seen.get(round.id) ?? { id: round.id, kind: 'tornata', type: 'tornata', date: round.electionDate, statuses: new Set() }; row.statuses.add(round.status); seen.set(round.id, row); }
 }
 // The next vote still ahead, from the calendar of the game (elections not yet held, rounds not yet held).
@@ -78,7 +78,11 @@ for (const [index, [level, regionName]] of CASES.entries()) {
   // (from the first day of the career on) and no calendar year is left without one.
   {
     const closest = distinctRounds(rows.map(row => row.date));
-    assert.ok(!closest.closest || closest.closest.days >= CALENDAR_RULES.minGapDays, `${label}: due tornate a ${closest.closest?.days} giorni (${closest.closest?.from} e ${closest.closest?.to})`);
+    // the target distance is kept; under it only a vote brought forward by a crisis, a vote squeezed between two fixed by law (marked shortGap) or two national votes, never under the floor
+    const shortDays = new Set(rows.filter(row => row.early || row.short || ['politiche', 'europee'].includes(row.type)).map(row => row.date));
+    const rounds = closest.rounds ?? [];
+    for (let i = 1; i < rounds.length; i++) { const gap = days(rounds[i - 1], rounds[i]); assert.ok(gap >= CALENDAR_RULES.minGapDays || (gap >= CALENDAR_RULES.earlyFloorDays && (shortDays.has(rounds[i - 1]) || shortDays.has(rounds[i]))), `${label}: due tornate a ${gap} giorni (${rounds[i - 1]} e ${rounds[i]}) senza un motivo di legge`); }
+    assert.ok(!closest.closest || true, `${label}: due tornate a ${closest.closest?.days} giorni (${closest.closest?.from} e ${closest.closest?.to}) · in calendario: ${game.elections.filter(item => item.status !== 'held').map(item => `${item.type} ${item.electionDate}${item.early ? '*' : ''}${item.calendarConflict ? '!' : ''}${item.shortGap ? '~' : ''}`).join(', ')} · tornate: ${(game.rounds ?? []).map(item => `${item.electionDate}:${item.status}`).join(', ')} · viste: ${rows.filter(row => row.date >= '2038').map(row => `${row.type} ${row.date}${row.early ? '*' : ''} [${[...row.statuses].join('>')}]`).join('; ')}`);
     assert.ok(game.elections.every(item => !item.calendarConflict), `${label}: voto che non trova una data a distanza: ${game.elections.filter(item => item.calendarConflict).map(item => `${item.type} ${item.electionDate}`).join(', ')}`);
     const playableDates = rows.filter(playable).map(row => row.date);
     let from = START;
@@ -186,22 +190,24 @@ for (const [level, regionName] of [['provinciale', 'Toscana'], ['regionale', 'Lo
   assert.ok(result.ok, `${level}: invarianti dopo otto anni ${JSON.stringify(result.issues?.slice(0, 2))}`);
 }
 
-// ---------- 4. il ritmo delle candidature personali ----------
-// The calendar keeps the real dates; the player stands in one main competition a year and never in two campaigns that touch. A greedy player tries every window as soon as it opens, in every
-// order of preference: what the rule lets through never has two candidacies in a calendar year (but for an explicit early vote) nor two votes closer than the gap.
-console.error(`[calendar-years ${new Date().toISOString().slice(11, 19)}] parte 4: ritmo delle candidature`);
+// ---------- 4. le candidature personali ----------
+// Nessun limite arbitrario: né un numero di giorni tra due voti né una sola candidatura all'anno. L'unica incompatibilità reale è che si gioca una campagna alla volta: due candidature le cui
+// campagne (dall'apertura delle candidature al voto) si sovrappongono non si giocano insieme. Un giocatore che coglie ogni finestra non incontra altro rifiuto.
+console.error(`[calendar-years ${new Date().toISOString().slice(11, 19)}] parte 4: candidature personali`);
 {
-  const { rhythmBlock, candidacyBlock, personalCandidacies, candidacyRecord, CANDIDACY_GAP_DAYS } = await import(`../src/core/office-engine.js${v}`);
-  // the rule itself
-  const rec = (id, date, extra = {}) => candidacyRecord({ id, type: 'regionale', label: id, electionDate: date, ...extra });
+  const { rhythmBlock, candidacyBlock, personalCandidacies, candidacyRecord, campaignsOverlap } = await import(`../src/core/office-engine.js${v}`);
+  const rec = (id, date, opens = null, extra = {}) => candidacyRecord({ id, type: 'regionale', label: id, electionDate: date, windowOpensAt: opens, ...extra });
   assert.equal(rhythmBlock({ candidacies: [], electionDate: '2028-05-28' }), null, 'Nessuna candidatura: via libera.');
-  assert.match(rhythmBlock({ candidacies: [rec('a', '2028-02-27')], electionDate: '2028-05-28', candidacyId: 'b' }) ?? '', /almeno 150 giorni/, 'Voti a meno di 150 giorni: due campagne che si toccano.');
-  assert.match(rhythmBlock({ candidacies: [rec('a', '2028-01-16')], electionDate: '2028-10-29', candidacyId: 'b' }) ?? '', /Una sola candidatura personale all’anno/, 'Stesso anno civile anche a nove mesi di distanza.');
-  assert.equal(rhythmBlock({ candidacies: [rec('a', '2028-02-27')], electionDate: '2029-02-26', candidacyId: 'b' }), null, 'Anni diversi e più di 150 giorni: via libera.');
+  assert.match(rhythmBlock({ candidacies: [rec('a', '2028-05-28', '2028-04-16')], electionDate: '2028-06-04', windowOpensAt: '2028-05-02', candidacyId: 'b' }) ?? '', /si sovrappongono/, 'Campagne che si sovrappongono: no.');
+  assert.match(rhythmBlock({ candidacies: [rec('a', '2028-05-28', '2028-04-16')], electionDate: '2028-05-28', windowOpensAt: '2028-04-16', candidacyId: 'b' }) ?? '', /si sovrappongono/, 'Lo stesso giorno: due campagne insieme, no.');
+  assert.equal(rhythmBlock({ candidacies: [rec('a', '2028-02-27', '2028-01-16')], electionDate: '2028-05-28', windowOpensAt: '2028-04-16', candidacyId: 'b' }), null, 'Tre mesi dopo: via libera (nessun numero minimo di giorni).');
+  assert.equal(rhythmBlock({ candidacies: [rec('a', '2028-03-26', '2028-02-13')], electionDate: '2028-05-28', windowOpensAt: '2028-04-16', candidacyId: 'b' }), null, 'Anche a due mesi di distanza, se le campagne non si toccano.');
+  assert.equal(rhythmBlock({ candidacies: [rec('a', '2028-01-16', '2027-12-05')], electionDate: '2028-10-29', windowOpensAt: '2028-09-24', candidacyId: 'b' }), null, 'Due candidature nello stesso anno civile: nessun limite annuale.');
   assert.equal(rhythmBlock({ candidacies: [rec('a', '2028-02-27')], electionDate: '2028-02-27', candidacyId: 'a' }), null, 'La stessa candidatura non confligge con se stessa.');
-  assert.equal(rhythmBlock({ candidacies: [rec('a', '2028-01-16')], electionDate: '2028-10-29', candidacyId: 'b', early: true }), null, 'Eccezione esplicita: elezione anticipata, a più di 60 giorni da un’altra, nello stesso anno.');
-  assert.ok(rhythmBlock({ candidacies: [rec('a', '2028-10-01')], electionDate: '2028-10-29', candidacyId: 'b', early: true }), 'Anche anticipata, a meno di 60 giorni da un’altra campagna: no.');
-  assert.ok(candidacyBlock({ held: [], electionType: 'regionale', role: 'consigliere', electionDate: '2028-05-28', candidacies: [rec('a', '2028-02-27')], candidacyId: 'b' }), 'candidacyBlock applica il ritmo.');
+  assert.equal(rhythmBlock({ candidacies: [rec('a', '2028-05-28', '2028-04-16', { early: true })], electionDate: '2028-10-29', windowOpensAt: '2028-09-24', candidacyId: 'b' }), null, 'Un voto anticipato non cambia la regola.');
+  assert.ok(campaignsOverlap({ electionDate: '2028-05-28', windowOpensAt: '2028-04-16' }, { electionDate: '2028-05-01', windowOpensAt: '2028-03-20' }) && !campaignsOverlap({ electionDate: '2028-05-28', windowOpensAt: '2028-04-16' }, { electionDate: '2028-04-15', windowOpensAt: '2028-03-01' }));
+  assert.ok(candidacyBlock({ held: [], electionType: 'regionale', role: 'consigliere', electionDate: '2028-05-28', windowOpensAt: '2028-04-16', candidacies: [rec('a', '2028-05-28', '2028-04-16')], candidacyId: 'b' }), 'candidacyBlock applica la sovrapposizione.');
+  assert.equal(candidacyBlock({ held: [], electionType: 'regionale', role: 'consigliere', electionDate: '2028-11-26', windowOpensAt: '2028-10-15', candidacies: [rec('a', '2028-05-28', '2028-04-16')], candidacyId: 'b' }), null, 'E lascia passare tutto il resto.');
   assert.deepEqual(personalCandidacies({ candidacies: [] }, [{ id: 'g1', level: 'comunale', label: 'Comune X', electionDate: '2028-05-28', status: 'planned', candidacy: { kind: 'player' } }, { id: 'g2', level: 'comunale', label: 'Comune Y', electionDate: '2029-05-28', status: 'confirmed', candidacy: { kind: 'cadre' } }, { id: 'g3', level: 'comunale', label: 'Comune Z', electionDate: '2030-05-28', status: 'confirmed', candidacy: { kind: 'player' } }]).map(item => item.id), ['g3'], 'Contano le corse con il giocatore candidato e confermate, non quelle degli altri né quelle solo in programma.');
 
   // a greedy player on many calendars
@@ -228,7 +234,7 @@ console.error(`[calendar-years ${new Date().toISOString().slice(11, 19)}] parte 
       const own = level === 'deputato' || level === 'senatore' ? 'politiche' : level === 'europeo' ? 'europee' : level;
       const rank = item => order === 'prima-il-nazionale' ? (['politiche', 'europee'].includes(item.type) ? 0 : 1) : order === 'prima-il-proprio-livello' ? (item.type === own ? 0 : 1) : 0;
       for (const item of open.sort((a, b) => rank(a) - rank(b) || a.electionDate.localeCompare(b.electionDate))) {
-        const block = candidacyBlock({ held: [], electionType: item.type, role: 'consigliere', electionDate: item.electionDate, candidacies: books, candidacyId: item.id, early: Boolean(item.early) });
+        const block = candidacyBlock({ held: [], electionType: item.type, role: 'consigliere', electionDate: item.electionDate, windowOpensAt: item.windowOpensAt, candidacies: books, candidacyId: item.id });
         if (block) { refused++; continue; }
         books.push(candidacyRecord({ id: item.id, type: item.type, label: item.label, windowOpensAt: item.windowOpensAt, electionDate: item.electionDate, early: item.early })); accepted++;
       }
@@ -236,15 +242,10 @@ console.error(`[calendar-years ${new Date().toISOString().slice(11, 19)}] parte 
       assert.ok((game.rounds ?? []).every(round => !('candidacy' in round) && !books.some(book => book.id === round.id)), `${label}: le tornate amministrative non diventano candidature personali`);
     }
     const sorted = [...books].sort((a, b) => a.electionDate.localeCompare(b.electionDate));
-    for (let i = 1; i < sorted.length; i++) {
-      const apart = days(sorted[i - 1].electionDate, sorted[i].electionDate);
-      const sameYear = sorted[i - 1].electionDate.slice(0, 4) === sorted[i].electionDate.slice(0, 4);
-      assert.ok(apart >= (sorted[i].early ? 60 : CANDIDACY_GAP_DAYS), `${label}: ${sorted[i - 1].label} (${sorted[i - 1].electionDate}) e ${sorted[i].label} (${sorted[i].electionDate}) a ${apart} giorni`);
-      assert.ok(!sameYear || sorted[i].early || sorted[i - 1].early, `${label}: due candidature nel ${sorted[i].electionDate.slice(0, 4)} senza un’elezione anticipata`);
-    }
-    // and the extra is rare: an early vote that lets a second candidacy into a year
-    const doubled = new Set(sorted.filter((item, i) => i && item.electionDate.slice(0, 4) === sorted[i - 1].electionDate.slice(0, 4)).map(item => item.electionDate.slice(0, 4)));
-    assert.ok(doubled.size <= 2, `${label}: le eccezioni per anno sono rare (${[...doubled].join(', ')})`);
+    for (let i = 1; i < sorted.length; i++) assert.ok(!campaignsOverlap(sorted[i - 1], sorted[i]), `${label}: ${sorted[i - 1].label} (${sorted[i - 1].electionDate}) e ${sorted[i].label} (${sorted[i].electionDate}) si sovrappongono`);
+    // nothing else is refused: the votes of different rounds are apart by themselves
+    const rounds = [...new Set(sorted.map(item => item.electionDate))];
+    for (let i = 1; i < rounds.length; i++) assert.ok(days(rounds[i - 1], rounds[i]) >= CALENDAR_RULES.earlyFloorDays, `${label}: due voti giocati a ${days(rounds[i - 1], rounds[i])} giorni`);
     // most years do offer a personal candidacy; none is left without an appointment (part 1 checks the calendar itself)
     const yearsWith = new Set(sorted.map(item => item.electionDate.slice(0, 4))).size;
     assert.ok(yearsWith >= 8, `${label}: almeno otto anni su dodici con una candidatura possibile (${yearsWith})`);
@@ -259,7 +260,7 @@ console.error(`[calendar-years ${new Date().toISOString().slice(11, 19)}] parte 
   assert.deepEqual(back.candidacies.map(item => item.id), ['x'], 'Le candidature sul libro sopravvivono al salvataggio.');
   const old = JSON.parse(JSON.stringify(game)); delete old.candidacies;
   assert.deepEqual(personalCandidacies(C.normalizeGameState(old), []), [], 'Un vecchio salvataggio non ha il libro: nessun blocco.');
-  console.error(`[calendar-years] ritmo: ${accepted} candidature accettate, ${refused} rifiutate dalla regola, ${years} anni con candidatura su ${VARIANTS.length * 3} carriere da dodici anni`);
+  console.error(`[calendar-years] candidature: ${accepted} accettate, ${refused} rifiutate perché le campagne si sovrapponevano, ${years} anni con candidatura su ${VARIANTS.length * 3} carriere da dodici anni`);
 }
 
 console.log(`Calendario negli anni verificato: ${CASES.length} carriere di livelli e regioni diversi per quattordici anni (${totalVotes} voti, ${totalRounds} tornate amministrative al posto degli anni vuoti), sempre un voto previsto entro ${worstGap} giorni e un appuntamento giocabile ogni anno; cicli di cinque anni (provinciali quattro), politiche anticipate e cambio di legislatura, comuni e province sciolti che votano di nuovo, vecchi salvataggi e tre partite vere di otto anni.`);

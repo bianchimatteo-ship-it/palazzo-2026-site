@@ -327,3 +327,18 @@ html[data-motion="reduced"] .hqc-drawer-toggle, html[data-motion="reduced"] butt
 .article-edge small, .article-story small, .article-body small { font-size: inherit; }
 .radio-bulletin small, .news-card small, .lp24-masthead small { font-size: 12.5px; }
 .radio-items .text-link { justify-self: start; font-size: 12.5px; min-height: 32px; }
+
+/* The mark of a real win: small, at the bottom, nothing blocking; the motion only when the person accepts motion. */
+.celebration { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 60; display: flex; align-items: center; gap: 10px; max-width: min(92vw, 460px); padding: 10px 12px 10px 14px; border: 1px solid var(--accent); border-radius: 12px; background: var(--panel-3, #1b2a22); color: var(--ink, #f2f5f1); box-shadow: 0 6px 22px rgba(0,0,0,.28); }
+.celebration strong { display: block; font-size: 14px; }
+.celebration small { display: block; color: var(--ink-2, #c8d0c9); font-size: 12.5px; line-height: 1.35; }
+.celebration-mark { display: grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: var(--accent-ink, #0e1a12); }
+.celebration-close { flex: none; width: 32px; height: 32px; margin-left: 2px; border: 0; border-radius: 8px; background: transparent; color: inherit; font-size: 20px; line-height: 1; cursor: pointer; }
+.celebration-close:hover, .celebration-close:focus-visible { background: rgba(255,255,255,.12); }
+@media (prefers-reduced-motion: no-preference) {
+  .celebration.is-new { animation: celebration-in .5s ease-out both; }
+  .celebration.is-new .celebration-mark { animation: celebration-pulse 1.2s ease-out 1; }
+}
+@keyframes celebration-in { from { opacity: 0; transform: translate(-50%, 14px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes celebration-pulse { 0% { box-shadow: 0 0 0 0 rgba(120,220,160,.55); } 100% { box-shadow: 0 0 0 14px rgba(120,220,160,0); } }
+@media (max-width: 700px) { .celebration { bottom: calc(76px + env(safe-area-inset-bottom)); } }

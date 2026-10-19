@@ -72,7 +72,7 @@ for (const collection of Object.keys(manifest.collections ?? {})) {
 }
 
 // ---------- 2. what is not the game is not published ----------
-const never = ['worker.js', 'wrangler.jsonc', 'package.json', 'package-lock.json', 'server.mjs', 'README.md', 'capacitor.config.json', '.assetsignore', 'src/data/real/database.json', ...files.filter(path => /^(scripts|migrations|docs|www|ios|\.github)\//.test(path))];
+const never = ['worker.js', 'wrangler.jsonc', 'package.json', 'package-lock.json', 'server.mjs', 'README.md', 'capacitor.config.json', '.assetsignore', 'src/data/real/database.json', ...files.filter(path => /^(scripts|migrations|docs|www|ios|android|\.github)\//.test(path))];
 for (const path of never) if (files.includes(path)) assert.ok(!isPublished(path), `${path}: non fa parte del gioco e non va pubblicato.`);
 assert.ok(published.every(path => !/\.(zip|swift|xcconfig|mjs)$/.test(path)), 'Nessun archivio, sorgente nativo o script tra gli asset.');
 assert.ok(published.every(path => !path.split('/').some(segment => segment.startsWith('.') && segment !== '.well-known')), 'Nessun file nascosto tra gli asset.');

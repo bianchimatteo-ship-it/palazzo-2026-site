@@ -109,24 +109,25 @@ assert.equal(store.getState().dataset.politicians.filter(item => item.id === idO
 assert.equal(store.getState().dataset.politicians.length, persons.length, 'Né si aggiungono persone se non serve.');
 // A person is in one race at a time; the player plays his campaigns apart.
 assert.throws(() => store.chooseRaceCandidate(campania.id, { kind: 'cadre', id: staff.id }, people), /Già candidato a/, 'Lo stesso quadro non corre in due corse a pochi giorni.');
-assert.throws(() => store.chooseRaceCandidate(lombardia.id, { kind: 'player' }, people), /Troppo vicina a Regionali · Piemonte/, 'Il giocatore non gioca due voti dello stesso giorno.');
-// The distance between two votes the player plays is 100 days (99 is too close, 100 is not); between two races of the same person it stays at 35 (34 is too close, 35 is not).
-assert.equal(rules.playableGapDays, 100, 'Tra due voti che il giocatore gioca passano almeno 100 giorni.');
-assert.equal(rules.personGapDays, 35, 'La distanza di una persona tra due corse non cambia.');
+assert.throws(() => store.chooseRaceCandidate(lombardia.id, { kind: 'player' }, people), /Si sovrappone a Regionali · Piemonte/, 'Il giocatore non gioca due voti dello stesso giorno.');
+// There is no number of days between two votes: two campaigns exclude each other only when they overlap (from the opening of the candidacies to the day of the vote); the same holds for a person.
+assert.equal(rules.playableGapDays, undefined, 'Nessuna distanza fissa tra i voti che il giocatore gioca.');
+assert.equal(rules.personGapDays, undefined, 'Nessuna distanza fissa per una persona tra due corse.');
 {
   const [base, other] = store.races();
   const held = candidacy => ({ ...base, status: 'confirmed', candidacy });
-  const probe = (gap, candidacy) => engine.candidateOptions({ race: { ...other, id: 'corsa-di-prova', electionDate: advanceDays(base.electionDate, gap) }, items: [held(candidacy)], today: state.clock.currentDate, player: { id: 'p-gioco', label: 'Tu', block: null }, cadres: [{ id: 'quadro-prova', label: 'Quadro di prova' }], politicians: [], homeVotes: [], from: {}, committee: 0, standing: null });
+  const length = (new Date(`${base.electionDate}T12:00:00Z`) - new Date(`${base.windowOpensAt}T12:00:00Z`)) / 86400000;
+  const probe = (gap, candidacy) => engine.candidateOptions({ race: { ...other, id: 'corsa-di-prova', electionDate: advanceDays(base.electionDate, gap), windowOpensAt: advanceDays(base.windowOpensAt, gap) }, items: [held(candidacy)], today: state.clock.currentDate, player: { id: 'p-gioco', label: 'Tu', block: null }, cadres: [{ id: 'quadro-prova', label: 'Quadro di prova' }], politicians: [], homeVotes: [], from: {}, committee: 0, standing: null });
   const own = { kind: 'player', personId: 'p-gioco' };
-  assert.equal(probe(99, own).player.available, false, 'A 99 giorni da un voto che giochi, un altro non si gioca.');
-  assert.match(probe(99, own).player.reason, /almeno 100 giorni/);
-  assert.equal(probe(100, own).player.available, true, 'A 100 giorni sì.');
-  assert.equal(probe(-99, own).player.available, false, 'Vale anche per un voto prima.');
-  assert.equal(probe(-100, own).player.available, true);
+  assert.equal(probe(length - 1, own).player.available, false, 'Una campagna che si sovrappone a quella che giochi: no.');
+  assert.match(probe(length - 1, own).player.reason, /si sovrappone/i);
+  assert.equal(probe(length + 1, own).player.available, true, 'Appena la prima è finita, la seconda si gioca: nessun numero minimo di giorni.');
+  assert.equal(probe(-(length - 1), own).player.available, false, 'Vale anche per un voto prima.');
+  assert.equal(probe(-(length + 1), own).player.available, true);
   const staffed = { kind: 'cadre', cadreId: 'quadro-prova', personId: 'quadro-prova' };
-  assert.equal(probe(34, staffed).cadres[0].available, false, 'Una persona non corre in due corse a 34 giorni.');
-  assert.equal(probe(35, staffed).cadres[0].available, true, 'A 35 sì: la distanza di una persona resta di 35 giorni.');
-  assert.equal(probe(34, staffed).player.available, true, 'Le corse affidate ad altri non contano per le campagne del giocatore.');
+  assert.equal(probe(length - 1, staffed).cadres[0].available, false, 'Una persona non corre in due corse che si sovrappongono.');
+  assert.equal(probe(length + 1, staffed).cadres[0].available, true, 'Senza sovrapposizione sì.');
+  assert.equal(probe(length - 1, staffed).player.available, true, 'Le corse affidate ad altri non contano per le campagne del giocatore.');
 }
 // Only the leader decides.
 const member = JSON.parse(JSON.stringify(store.getState().game.party));
@@ -222,7 +223,7 @@ assert.deepEqual(await again(), first, 'Stessa partita, stessi risultati: la sim
       const playable = options.player?.available;
       const year = race.electionDate.slice(0, 4);
       if (playable) offered.set(year, new Set([...(offered.get(year) ?? []), race.id]));
-      // The leader plays every race he is offered (the rule of the engine keeps one a year and the distance between them: a second one in the same year, or too close, is refused), the others he leaves to the party.
+      // The leader plays every race he is offered (the engine refuses only a campaign that overlaps another), the others he leaves to the party.
       try { long.store.chooseRaceCandidate(race.id, playable ? { kind: 'player' } : { kind: 'simulation' }, people); } catch { /* not possible: the next race */ }
     }
     if (now.campaign?.status === 'active') { try { long.store.performCampaignActivity('citizen_meeting', { territoryId: now.campaign.territories[0].id }); } catch { /* wait */ } }
@@ -232,11 +233,10 @@ assert.deepEqual(await again(), first, 'Stessa partita, stessi risultati: la sim
   for (const year of ['2027', '2028', '2029', '2030', '2031', '2032']) assert.ok((offered.get(year)?.size ?? 0) >= 1, `${year}: almeno una corsa che il giocatore può giocare.`);
   const played = all.filter(race => race.candidacy?.kind === 'player' && race.status !== 'planned').sort((a, b) => a.electionDate.localeCompare(b.electionDate));
   assert.ok(played.length >= 2, `Il giocatore sceglie sé stesso in più corse (${played.length}).`);
-  // The rhythm of the candidacies: one a year and never two votes closer than the gap (stricter than the 100 days between two races, which stay the floor of the engine).
+  // The candidacies of the player never overlap (one campaign at a time); there is no other quota: nor a number of days between two votes, nor one a year.
   for (let index = 1; index < played.length; index++) {
-    const apart = days(played[index - 1].electionDate, played[index].electionDate);
-    assert.ok(apart >= rules.playableGapDays && apart >= 150, `Tra ${played[index - 1].label} e ${played[index].label} ci sono almeno 150 giorni (${apart}).`);
-    assert.notEqual(played[index - 1].electionDate.slice(0, 4), played[index].electionDate.slice(0, 4), `${played[index - 1].label} e ${played[index].label}: due candidazioni personali nello stesso anno.`);
+    const [from, to] = [played[index].windowOpensAt, played[index - 1].electionDate];
+    assert.ok(from > to, `${played[index - 1].label} e ${played[index].label}: le campagne si sovrappongono.`);
   }
   assert.ok(all.filter(race => race.status === 'held').length >= 8, 'Le altre corse si svolgono da sole, anno dopo anno.');
   const archived = long.store.getState().races.archive;

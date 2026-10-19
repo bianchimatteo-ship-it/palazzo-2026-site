@@ -3,13 +3,16 @@
 // the real calendar (the general and European elections are fixed; the local and regional ones are the real ones five years on, simulated); where two of them would fall too close,
 // the one that the law leaves room for moves by whole weeks inside its legal window, or joins the round of the other. Nothing is invented: a round of the amministrative is added
 // (spring, then autumn) only when no vote falls in the time the rule requires. Pure functions over the calendar of the game: the same calendar always gives the same dates.
-import { advanceDays } from './time.js?v=20261017-4';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261017-4';
-import { ELECTION_SCHEDULE } from '../data/simulation/career-rules.js?v=20261017-4';
-import { CANDIDACY_GAP_DAYS } from './office-engine.js?v=20261017-4';
+import { advanceDays } from './time.js?v=20261019-1';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261019-1';
+import { ELECTION_SCHEDULE } from '../data/simulation/career-rules.js?v=20261019-1';
 
 export const CALENDAR_RULES = Object.freeze({
-  minGapDays: 100,
+  minGapDays: 180,
+  // The floor under the target distance. A vote brought forward by a crisis cannot wait (the Constitution asks for the election within seventy days of the dissolution of the Chambers), and
+  // a flexible vote can be squeezed between two votes fixed by law: then the distance goes down by steps, never under this many days (the campaigns never overlap), and the vote says so
+  // (shortGap) instead of being moved out of its legal window or hidden.
+  earlyFloorDays: 90,
   // Between two votes the player can play there are at most this many days (365 is the limit: one day of margin is kept).
   maxPlayableGapDays: 364,
   // How far, in days before and after its natural date, a vote may move (whole weeks, always a Sunday): the legal window of each kind.
@@ -24,9 +27,6 @@ export const CALENDAR_RULES = Object.freeze({
 });
 const dayNo = day => Math.round(Date.parse(`${day}T12:00:00Z`) / 86400000);
 export const daysApart = (a, b) => Math.abs(dayNo(a) - dayNo(b));
-// Can the player stand in the vote of `date` after standing in the one of `last` (null: he has not stood yet)? The rhythm of the personal candidacies (office-engine, rhythmBlock): at least
-// CANDIDACY_GAP_DAYS between two votes and one a calendar year; an early vote is the only exception to the calendar-year rule. A vote he cannot stand in does not fill the year for him.
-export const reachableFrom = (date, last, early = false) => !last || (daysApart(date, last) >= CANDIDACY_GAP_DAYS && (early || date.slice(0, 4) !== last.slice(0, 4)));
 // A date is free when it is another vote's own day (the same round) or at least minGapDays from every other.
 export const keepsDistance = (day, others, min = CALENDAR_RULES.minGapDays) => others.every(other => other === day || daysApart(other, day) >= min);
 // The votes of a list of dates grouped by round (same day), and the closest pair of different rounds.
@@ -75,18 +75,23 @@ export function harmonizeElections(game, today) {
   });
   const chosen = [];
   let nodes = 0;
-  const search = depth => {
+  const search = (depth, minOf) => {
     if (depth === free.length) return true;
     if (++nodes > 40000) return false;
     const taken = [...anchors, ...chosen.slice(0, depth)];
     for (const day of options[depth]) {
-      if (!keepsDistance(day, taken)) continue;
+      if (!keepsDistance(day, taken, minOf(free[depth]))) continue;
       chosen[depth] = day;
-      if (search(depth + 1)) return true;
+      if (search(depth + 1, minOf)) return true;
     }
     return false;
   };
-  const solved = free.length === 0 || search(0);
+  // The target distance first; when two fixed votes leave no room for it (a flexible vote squeezed between the general and the European election, for one), the distance goes down by steps
+  // to the floor for every vote together, so that each keeps as much as the law allows and is as near as possible to its natural date.
+  let used = CALENDAR_RULES.minGapDays;
+  let solved = free.length === 0 || search(0, () => used);
+  for (used = CALENDAR_RULES.minGapDays - 15; !solved && used >= CALENDAR_RULES.earlyFloorDays; used -= 15) { nodes = 0; solved = search(0, () => used); }
+  const relaxed = solved && free.length > 0 && used < CALENDAR_RULES.minGapDays;
   const placed = [];
   free.forEach((entry, index) => {
     const model = ELECTION_MODELS[entry.type];
@@ -97,6 +102,9 @@ export function harmonizeElections(game, today) {
       day = options[index].find(candidate => keepsDistance(candidate, taken)) ?? entry.baseDate;
       if (keepsDistance(day, taken)) delete entry.calendarConflict; else entry.calendarConflict = true;
     } else delete entry.calendarConflict;
+    // placed under the floor, not the target: said, so that nothing looks like an error
+    const others = [...anchors, ...placed];
+    if (relaxed && !entry.calendarConflict && !keepsDistance(day, others)) entry.shortGap = true; else delete entry.shortGap;
     placed.push(day);
     if (day !== entry.electionDate) {
       const opens = advanceDays(day, -model.campaignDays);
@@ -108,10 +116,10 @@ export function harmonizeElections(game, today) {
 
 // The Sunday for a round of the amministrative between `after` (exclusive) and `cap`: in the spring window of the law (15 April – 15 June, nearest the last Sunday of May), else in
 // the autumn one (15 September – 30 November), else any Sunday; always at least minGapDays from every other vote. Null when none fits.
-export function pickRoundDate({ after, cap, taken, accept = () => true }) {
+export function pickRoundDate({ after, cap, taken }) {
   const out = [];
   for (let day = advanceDays(after, 1); day <= cap; day = advanceDays(day, 1)) {
-    if (new Date(`${day}T12:00:00Z`).getUTCDay() !== 0 || !keepsDistance(day, taken) || taken.includes(day) || !accept(day)) continue;
+    if (new Date(`${day}T12:00:00Z`).getUTCDay() !== 0 || !keepsDistance(day, taken) || taken.includes(day)) continue;
     const mmdd = day.slice(5);
     const rank = mmdd >= '04-15' && mmdd <= '06-15' ? 0 : mmdd >= '09-15' && mmdd <= '11-30' ? 1 : 2;
     const anchor = rank === 0 ? `${day.slice(0, 4)}-05-31` : rank === 1 ? `${day.slice(0, 4)}-10-25` : day;

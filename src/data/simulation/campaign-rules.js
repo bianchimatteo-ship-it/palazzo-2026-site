@@ -307,7 +307,7 @@ export const OUTCOME_LABELS = Object.freeze({
 
 // Simplified seat rules of the game, inspired by the real systems (declared as simplifications in the results).
 export const SEAT_RULES = Object.freeze({
-  comunale:{threshold:3, majorityBonus:{'fino-15000':2/3,'oltre-15000':.6}, note:'Regola semplificata: soglia del 3% per le liste, premio di maggioranza alla lista del sindaco eletto (2/3 dei seggi fino a 15.000 abitanti, 60% oltre), i candidati sindaci sconfitti con seggi alla propria lista entrano in consiglio.'},
+  comunale:{threshold:3, majorityBonus:{'fino-15000':2/3,'oltre-15000':.6}, note:'Ripartizione dei seggi semplificata dal gioco, non il testo della legge: soglia del 3% per le liste e maggioranza alla lista del sindaco eletto (2/3 dei seggi fino a 15.000 abitanti, 60% oltre); i candidati sindaci sconfitti con seggi alla propria lista entrano in consiglio. Il ballottaggio, sopra i 15.000 abitanti, c’è solo se nessuno supera il 50% al primo turno.'},
   provinciale:{threshold:0, majorityBonus:.58, note:'Regola semplificata: seggi proporzionali ai voti ponderati di sindaci e consiglieri comunali, senza soglia; la coalizione del Presidente eletto ha almeno il 58% dei seggi, perché nel gioco la presidenza governa con una maggioranza.'},
   regionale:{threshold:3, majorityBonus:.55, note:'Regola semplificata: soglia del 3%, premio di maggioranza al 55% dei seggi per chi vince la presidenza, il secondo candidato presidente entra in consiglio.'},
   politiche:{threshold:3, note:'Regola semplificata: collegi uninominali (37% dei seggi) e riparto proporzionale con soglia del 3%; nel proporzionale le liste sono bloccate e conta la posizione in lista.'},

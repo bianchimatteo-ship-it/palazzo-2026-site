@@ -1,7 +1,7 @@
 // Un'elezione realmente giocabile ogni anno di carriera, sul motore completo (lo store, i dati reali da disco): per ogni percorso e per più seed la carriera viene giocata per
 // diversi anni di fila, e in ogni anno di carriera il giocatore deve avere almeno una campagna avviata dal gioco e conclusa con un risultato (un voto suo: un'elezione del
 // calendario oppure la corsa della tornata di amministrative che riempie l'anno, a cui può candidarsi anche chi non guida un partito). Nessun anno solo "segnato sul
-// calendario". Tra due tornate diverse almeno 100 giorni (le elezioni dello stesso giorno sono una tornata); il ballottaggio è parte della stessa campagna, non una seconda
+// calendario". Tra due tornate diverse almeno 180 giorni quando la legge lascia margine (le elezioni dello stesso giorno sono una tornata; un voto anticipato da una crisi o due voti nazionali fissati dalla legge possono stare più vicini, mai sotto i 90); il ballottaggio è parte della stessa campagna, non una seconda
 // elezione dell'anno (una sola voce nello storico per campagna). Ogni percorso gira in un processo a parte (CONC=n); ONLY=livello:seed per un solo caso, YEARS=n per la durata.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
@@ -9,7 +9,7 @@ import { fileURLToPath } from 'node:url';
 
 const YEARS = Number(process.env.YEARS ?? 5);
 const CASES = (process.env.ONLY ? process.env.ONLY.split(',').map(item => item.split(':')) : [['comunale', 'a'], ['comunale', 'b'], ['provinciale', 'a'], ['provinciale', 'b'], ['regionale', 'a'], ['regionale', 'b'], ['deputato', 'a'], ['deputato', 'b'], ['senatore', 'a'], ['europeo', 'a'], ['europeo', 'b']]);
-const MIN_GAP = 100;
+const MIN_GAP = 90; // the floor; the target of the calendar is 180 (checked on the calendar itself by check-calendar-gap)
 
 if (process.argv[2] === 'worker') {
   const { startCareer, playWeek } = await import('./lib/long-run.mjs');

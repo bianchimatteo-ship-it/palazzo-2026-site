@@ -1,18 +1,30 @@
-import { bandOfMunicipality } from '../core/municipal-rules.js?v=20261017-4';
-import { CAMPAIGN_OBJECTIVES, CAMPAIGN_PHASES, CAMPAIGN_STRATEGIES, DEBATE_TOPICS, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261017-4';
-import { affiliationOf, markForPerson } from './person-marks.js?v=20261017-4';
-import { campaignActivities, campaignSummary, listStanding, strategyAvailable, strategyFit, strategyOf, strategyStages } from '../core/campaign-engine.js?v=20261017-4';
-import { resultDescription } from '../core/election-engine.js?v=20261017-4';
-import { formatDate } from '../core/time.js?v=20261017-4';
-import { careerLevelLabel } from '../data/regions.js?v=20261017-4';
-import { upcomingElections } from '../core/career-engine.js?v=20261017-4';
-import { candidacyBlock, candidacyNotes, personalCandidacies } from '../core/office-engine.js?v=20261017-4';
-import { heldOfficesOf } from '../core/roles.js?v=20261017-4';
-import { mandatePlace, renderElectionReport } from './election-report.js?v=20261017-4';
-import { glyph } from './visuals.js?v=20261017-4';
+import { bandDescription, bandOfMunicipality, MUNICIPAL_LEGAL_REFERENCES } from '../core/municipal-rules.js?v=20261019-1';
+import { CAMPAIGN_OBJECTIVES, CAMPAIGN_PHASES, CAMPAIGN_STRATEGIES, DEBATE_TOPICS, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261019-1';
+import { affiliationOf, markForPerson } from './person-marks.js?v=20261019-1';
+import { campaignActivities, campaignSummary, listStanding, strategyAvailable, strategyFit, strategyOf, strategyStages } from '../core/campaign-engine.js?v=20261019-1';
+import { resultDescription } from '../core/election-engine.js?v=20261019-1';
+import { formatDate } from '../core/time.js?v=20261019-1';
+import { careerLevelLabel } from '../data/regions.js?v=20261019-1';
+import { upcomingElections } from '../core/career-engine.js?v=20261019-1';
+import { candidacyBlock, candidacyNotes, personalCandidacies } from '../core/office-engine.js?v=20261019-1';
+import { heldOfficesOf } from '../core/roles.js?v=20261019-1';
+import { mandatePlace, renderElectionReport } from './election-report.js?v=20261019-1';
+import { glyph } from './visuals.js?v=20261019-1';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const roleLabels={sindaco:'Candidatura a sindaco',consigliere:'Candidato in lista per il consiglio',presidente:'Candidato alla presidenza (Regione o Provincia)',deputato:'Candidato alla Camera',senatore:'Candidato al Senato',uninominale:'Collegio uninominale simulato',eurodeputato:'Candidato al Parlamento europeo'};
+// Who can stand in a vote of the calendar, and if not why: the same check the campaign setup and the start of the campaign make (offices held, the rhythm of the candidacies), asked
+// once for every role of that kind of vote. Used by the «Candidati» buttons, which take the player straight to the right procedure or say exactly what stands in the way.
+export function candidacyAccess(state,entry) {
+  const roles=ROLE_OPTIONS[entry.type]??[];
+  const held=heldOfficesOf(state);
+  const candidacies=personalCandidacies(state.game,state.races?.items??[]);
+  const municipalVote=upcomingElections(state.game??{elections:[]}).find(item=>item.type==='comunale')?.electionDate??null;
+  const blocks=roles.map(([id,label])=>({id,label,reason:candidacyBlock({held,electionType:entry.type,role:id,electionDate:entry.electionDate,windowOpensAt:entry.windowOpensAt??null,municipalVote,candidacies,candidacyId:entry.id,early:Boolean(entry.early)})}));
+  const available=blocks.filter(item=>!item.reason);
+  const reasons=[...new Set(blocks.map(item=>item.reason).filter(Boolean))];
+  return {ok:available.length>0,roles:blocks,available,reason:available.length?null:(reasons.length?reasons.join(' '):'Per questo voto non c’è un ruolo a cui puoi candidarti.'),partial:available.length>0&&available.length<blocks.length};
+}
 const ROLE_OPTIONS={comunale:[['sindaco','Sindaco'],['consigliere','Consigliere']],provinciale:[['presidente','Presidente della Provincia'],['consigliere','Consigliere provinciale']],regionale:[['presidente','Presidente di Regione'],['consigliere','Consigliere regionale']],politiche:[['deputato','Deputato (lista)'],['senatore','Senatore (lista)'],['uninominale','Collegio uninominale']],europee:[['eurodeputato','Eurodeputato']]};
 const number=value=>new Intl.NumberFormat('it-IT').format(Math.round(Number(value)||0));
 // The weight of an area in percent: the decimals a small positive weight needs to not read as 0% (the values themselves are not touched).
@@ -49,8 +61,8 @@ function strategyCards(selected='consolidare',name='campaign-strategy',stage='ca
 function bandNote(state) {
   const place=state.dataset.politicians.find(item=>item.id===state.career.playerId);
   const info=bandOfMunicipality(place?.municipalityCode??state.career.municipalityCode??state.game?.place?.municipalityCode??null);
-  const name=info.band==='oltre-15000'?'Oltre 15.000 abitanti: due turni e premio di maggioranza':'Fino a 15.000 abitanti: turno unico';
-  return `<div class="municipality-band-field" data-municipality-band="${esc(info.band)}" data-municipality-basis="${esc(info.basis)}"><span class="campaign-kicker">DIMENSIONE DEL COMUNE</span><strong>${esc(name)}</strong><small>${esc(info.label)}${info.provisional?' · provvisoria':''}</small><small>${esc(info.note)}</small></div>`;
+  const text=bandDescription(info);
+  return `<div class="municipality-band-field" data-municipality-band="${esc(info.band)}" data-municipality-basis="${esc(info.basis)}"><span class="campaign-kicker">DIMENSIONE DEL COMUNE</span><strong>${esc(text.title)}</strong><small>${esc(text.body)}</small><small>${esc(info.label)}${info.provisional?' · provvisoria':''} · ${esc(info.note)}</small><small class="campaign-legal-ref">Riferimenti: ${esc(MUNICIPAL_LEGAL_REFERENCES.law)}. ${esc(MUNICIPAL_LEGAL_REFERENCES.verification)}.</small></div>`;
 }
 function renderSetup(state,parties,logoFor,picks={}) {
   const player=state.dataset.politicians.find(item=>item.id===state.career.playerId);
@@ -66,20 +78,20 @@ function renderSetup(state,parties,logoFor,picks={}) {
   const municipalVote=upcomingElections(state.game??{elections:[]}).find(item=>item.type==='comunale')?.electionDate??null;
   const openEntry=open.find(item=>item.type===type)??null;
   const candidacies=personalCandidacies(state.game,state.races?.items??[]);
-  const blockOf=id=>candidacyBlock({held,electionType:type,role:id,electionDate,municipalVote,candidacies,candidacyId:openEntry?.id??null,early:Boolean(openEntry?.early)});
+  const blockOf=id=>candidacyBlock({held,electionType:type,role:id,electionDate,windowOpensAt:openEntry?.windowOpensAt??null,municipalVote,candidacies,candidacyId:openEntry?.id??null,early:Boolean(openEntry?.early)});
   const available=roles.filter(([id])=>!blockOf(id)).map(([id])=>id);
   // The rhythm of the candidacies (one a year, never two campaigns that touch) bars every role of the vote: said once, with the button off.
-  const rhythmReason=roles.length&&!available.length&&openEntry?candidacyBlock({held:[],electionType:type,role:roles[0][0],electionDate,candidacies,candidacyId:openEntry.id,early:Boolean(openEntry.early)}):null;
+  const rhythmReason=roles.length&&!available.length&&openEntry?candidacyBlock({held:[],electionType:type,role:roles[0][0],electionDate,windowOpensAt:openEntry.windowOpensAt??null,candidacies,candidacyId:openEntry.id,early:Boolean(openEntry.early)}):null;
   const choice={objective:picked(picks['setup.objective'],Object.keys(CAMPAIGN_OBJECTIVES),'build'),role:picked(picks['setup.role'],available.length?available:roles.map(([id])=>id),(available.length?available:roles.map(([id])=>id))[0]),topicId:picked(picks['setup.topicId'],DEBATE_TOPICS.map(topic=>topic.id),DEBATE_TOPICS[0].id),strategy:picked(picks['setup.strategy'],strategiesOf('campagna').map(([id])=>id),'consolidare')};
   const openList=open.length?`<div class="campaign-open-list">${open.map(item=>`<div class="campaign-open"><strong>${esc(item.label)}</strong><small>Candidature fino al ${esc(formatDate(item.windowClosesAt))} · voto il ${esc(formatDate(item.electionDate))}</small></div>`).join('')}</div>`:`<p class="campaign-real-note">Nessuna finestra di candidatura è aperta ora: puoi preparare la campagna e partire quando si apre (vedi il calendario nella Panoramica).</p>`;
   // Which vote the choice refers to: the one of the calendar, named with its place (“Regionali · Lombardia”), with its dates; or none yet.
   const target=openEntry??upcomingElections(state.game??{elections:[]}).find(item=>item.type===type)??null;
   const targetLine=target?`<p class="campaign-target" data-campaign-target="${esc(target.id)}"><strong>${esc(target.label)}</strong> · voto il ${esc(formatDate(target.electionDate))} · candidature ${esc(formatDate(target.windowOpensAt))} – ${esc(formatDate(target.windowClosesAt))}${target.early?' · anticipate':''}</p>`:`<p class="campaign-target" data-campaign-target="">Nessun voto di questo tipo in calendario.</p>`;
   return `<section class="campaign-intro"<div><span class="campaign-kicker">PREPARAZIONE ELETTORALE</span><h2>Ogni campagna è una scelta di priorità.</h2><p>Scegli elezione, ruolo, obiettivo e strategia. Tempo, risorse e consenso sono simulati sul territorio; nessuna strategia vince sempre e l’esito non è mai scritto in anticipo.</p></div><div class="campaign-source-note"><strong>Scenario di gioco</strong><span>Le proiezioni non sono sondaggi né previsioni ufficiali. Dati delle organizzazioni reali restano separati dalle variabili simulate.</span></div></section>
-  <section class="campaign-setup"><div class="campaign-section-head"><div><span class="campaign-kicker">LA SFIDA</span><h3>Imposta la campagna</h3></div><time>${esc(formatDate(state.clock.currentDate))}</time></div>${openList}${targetLine}${rhythmReason?`<p class="campaign-real-note" role="status"><strong>Candidatura non disponibile.</strong> ${esc(rhythmReason)}</p>`:''}<div class="campaign-setup-grid"><label>Tipo di elezione<select data-campaign-setup="electionType">${Object.keys(ROLE_OPTIONS).map(id=>`<option value="${id}" ${id===type?'selected':''}>${esc(ELECTION_MODELS[id].label)}${open.some(item=>item.type===id)?' · candidature aperte':''}</option>`).join('')}</select></label><label>Obiettivo<select data-campaign-setup="objective">${Object.entries(CAMPAIGN_OBJECTIVES).map(([id,item])=>`<option value="${id}" ${id===choice.objective?'selected':''}>${esc(item.label)}</option>`).join('')}</select></label><label>Ruolo in candidatura<select data-campaign-setup="role">${roles.map(([id,label])=>`<option value="${id}" ${id===choice.role?'selected':''} ${blockOf(id)?'disabled':''}>${esc(label)}${blockOf(id)?' · non disponibile':''}</option>`).join('')}</select></label>${type==='comunale'?bandNote(state):''}<label>Tema (per la strategia sui temi)<select data-campaign-setup="topicId">${DEBATE_TOPICS.map(topic=>`<option value="${topic.id}" ${topic.id===choice.topicId?'selected':''}>${esc(topic.label)}</option>`).join('')}</select></label></div>${[...roles.filter(([id])=>blockOf(id)).map(([id,label])=>`${label}: ${blockOf(id)}`),...candidacyNotes({held,electionType:type,role:choice.role})].map(text=>`<p class="campaign-real-note campaign-office-note">${esc(text)}</p>`).join('')}<p class="campaign-model-help" data-campaign-model-help>${esc(ELECTION_MODELS[type].strategy)} · <a href="${esc(ELECTION_MODELS[type].referenceUrl)}" target="_blank" rel="noopener noreferrer">${esc(ELECTION_MODELS[type].referenceName)} ↗</a></p>
+  <section class="campaign-setup" id="campaign-setup"><div class="campaign-section-head"><div><span class="campaign-kicker">LA SFIDA</span><h3>Imposta la campagna</h3></div><time>${esc(formatDate(state.clock.currentDate))}</time></div>${openList}${targetLine}${rhythmReason?`<p class="campaign-real-note" role="status"><strong>Candidatura non disponibile.</strong> ${esc(rhythmReason)}</p>`:''}<div class="campaign-setup-grid"><label>Tipo di elezione<select data-campaign-setup="electionType">${Object.keys(ROLE_OPTIONS).map(id=>`<option value="${id}" ${id===type?'selected':''}>${esc(ELECTION_MODELS[id].label)}${open.some(item=>item.type===id)?' · candidature aperte':''}</option>`).join('')}</select></label><label>Obiettivo<select data-campaign-setup="objective">${Object.entries(CAMPAIGN_OBJECTIVES).map(([id,item])=>`<option value="${id}" ${id===choice.objective?'selected':''}>${esc(item.label)}</option>`).join('')}</select></label><label>Ruolo in candidatura<select data-campaign-setup="role">${roles.map(([id,label])=>`<option value="${id}" ${id===choice.role?'selected':''} ${blockOf(id)?'disabled':''}>${esc(label)}${blockOf(id)?' · non disponibile':''}</option>`).join('')}</select></label>${type==='comunale'?bandNote(state):''}<label>Tema (per la strategia sui temi)<select data-campaign-setup="topicId">${DEBATE_TOPICS.map(topic=>`<option value="${topic.id}" ${topic.id===choice.topicId?'selected':''}>${esc(topic.label)}</option>`).join('')}</select></label></div>${[...roles.filter(([id])=>blockOf(id)).map(([id,label])=>`${label}: ${blockOf(id)}`),...candidacyNotes({held,electionType:type,role:choice.role})].map(text=>`<p class="campaign-real-note campaign-office-note">${esc(text)}</p>`).join('')}<p class="campaign-model-help" data-campaign-model-help>${esc(ELECTION_MODELS[type].strategy)} · <a href="${esc(ELECTION_MODELS[type].referenceUrl)}" target="_blank" rel="noopener noreferrer">${esc(ELECTION_MODELS[type].referenceName)} ↗</a></p>
   <div class="campaign-setup-strategy"><span class="campaign-kicker">STRATEGIA ELETTORALE</span><p class="campaign-real-note">La strategia cambia cosa rende di più, quanto rischi e quanto può oscillare il risultato. Si può cambiare durante la campagna, a un costo.</p>${strategyCards(choice.strategy)}</div>
   <div class="campaign-setup-party"><span class="campaign-kicker">PARTITO E CANDIDATURA</span>${partyCard}${party&&party.source!=='user'?`<p class="campaign-real-note">La candidatura in un partito esistente parte come <strong>da negoziare</strong>: superare la soglia di sostegno interno la rende probabile, non certa. Riunioni e costruzione della lista aumentano le probabilità; la ricandidatura parlamentare non è garantita.</p>`:''}</div><div class="campaign-setup-bottom"><div><strong>La tua base:</strong> ${esc(player?.municipality??'')} · ${esc(player?.region??'')}<span> · ${esc(careerLevelLabel(state.career.currentLevel??state.career.initialLevel)??'')}</span></div><button class="primary-button" data-action="campaign-start" ${rhythmReason?'disabled aria-disabled="true"':''}>Inizia la campagna →</button></div></section>
-  <section class="campaign-method"><strong>Modelli distinti</strong><span>Comunale: comune, premio di maggioranza e possibile ballottaggio.</span><span>Provinciale: elezione di secondo livello, votano sindaci e consiglieri della provincia.</span><span>Regionale: aree della regione e premio al vincitore.</span><span>Politiche: collegi, liste bloccate e soglia del 3%.</span><span>Europee: circoscrizioni, preferenze e soglia del 4%.</span></section>`;
+  <section class="campaign-method"><strong>Modelli distinti</strong><span>Comunale: comune e regole per fascia di popolazione; il ballottaggio c’è solo se nessuno supera la metà dei voti validi.</span><span>Provinciale: elezione di secondo livello, votano sindaci e consiglieri della provincia.</span><span>Regionale: aree della regione e premio al vincitore.</span><span>Politiche: collegi, liste bloccate e soglia del 3%.</span><span>Europee: circoscrizioni, preferenze e soglia del 4%.</span></section>`;
 }
 
 function phaseStrip(campaign,summary) {

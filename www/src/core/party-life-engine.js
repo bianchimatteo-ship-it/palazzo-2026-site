@@ -4,15 +4,16 @@
 // rebuilding of a party in opposition. Everything lives in game.party.life and is simulated: no real person or
 // real organisation is described. The career engine owns the calendar and hands in the helpers it already has
 // (memory, relations, diary) through `api`, so nothing here imports the career engine.
-import { uniqueId } from './ids.js?v=20261017-4';
+import { celebrate } from './celebration.js?v=20261019-1';
+import { uniqueId } from './ids.js?v=20261019-1';
 import {
   ACTOR_PERSONAS, CADRE_ACTIONS, CADRE_INTERESTS, CONGRESS_ACTIONS, CONGRESS_DELEGATES, CONGRESS_PHASES, EMERGING_AREAS, PACT_KINDS, PERSONAS_BY_CURRENT, PERSONA_FALLBACK,
   REBUILD_FOCUS, REBUILD_WEEKS, REQUEST_KINDS, SPLIT_RULES
-} from '../data/simulation/party-life-rules.js?v=20261017-4';
-import { CURRENT_AREAS, CURRENT_LINES, PARTY_LINES } from '../data/simulation/career-rules.js?v=20261017-4';
-import { LEADER_RULES } from '../data/simulation/committee-rules.js?v=20261017-4';
-import { leaderKeyOf, leaderStance, territorialControl } from './committee-engine.js?v=20261017-4';
-import { italianSeatName } from './seat-roster.js?v=20261017-4';
+} from '../data/simulation/party-life-rules.js?v=20261019-1';
+import { CURRENT_AREAS, CURRENT_LINES, PARTY_LINES } from '../data/simulation/career-rules.js?v=20261019-1';
+import { LEADER_RULES } from '../data/simulation/committee-rules.js?v=20261019-1';
+import { leaderKeyOf, leaderStance, territorialControl } from './committee-engine.js?v=20261019-1';
+import { italianSeatName } from './seat-roster.js?v=20261019-1';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -152,6 +153,8 @@ function syncCadres(game, life, week) {
   const committees = committeesOf(org).filter(item => ['regione', 'provincia', 'comune'].includes(item.level)).sort((a, b) => rank(b) - rank(a) || String(a.id).localeCompare(String(b.id)));
   for (const committee of committees) {
     if (life.cadres.some(item => item.committeeId === committee.id)) continue;
+    // A committee founded without a manager has no local leader on record until the player recruits one.
+    if (committee.leader?.vacant) continue;
     if (life.cadres.filter(item => item.status !== 'uscito').length >= 16) break;
     const seed = hash(`${committee.id}|${game.seed ?? 1}`);
     life.cadres.push({
@@ -1099,6 +1102,7 @@ function applyCongressOutcome(game, life, api, outcome, { week, date, rand, mode
   api.remember(game, { date, kind: 'congresso', text: `Congresso: vince ${outcome.playerWon ? 'la tua linea' : winner.label} (${outcome.winner.pct}%)`, weight: 1.1, subject: outcome.winnerCurrentId });
   note(life, week, 'congresso', `Congresso: ${outcome.winner.label} al ${outcome.winner.pct}% (scarto ${outcome.margin} punti)`);
   lines.push(`Congresso: ${outcome.winner.label} al ${outcome.winner.pct}% dei delegati, scarto ${outcome.margin} punti`);
+  if (outcome.playerWon) celebrate(game, { id: `congresso-${week}`, kind: 'congresso', title: 'Congresso vinto', body: `La tua linea vince con il ${outcome.winner.pct}% dei delegati.`, date });
   life.lastCongress = { week, winnerId: outcome.winnerCurrentId, playerWon: outcome.playerWon, margin: outcome.margin, ranked: outcome.ranked.map(row => ({ id: row.id, label: row.label, pct: row.pct, delegates: row.delegates })), mode, source: SIM };
   life.congress = null;
   return lines;

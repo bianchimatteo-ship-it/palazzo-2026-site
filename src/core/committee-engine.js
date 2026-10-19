@@ -1,8 +1,8 @@
 // Territorial committees of the player's party: Region → Province or metropolitan city → Comune. The geography is
 // ISTAT's (names and codes of the real territorial units and comuni); members, leaders, activists, strength and states
 // are a simulation of the game and never describe the real organisation of a real party.
-import { isPartyLeader, treasuryBook } from './organization-engine.js?v=20261017-4';
-import { COMMITTEE_RULES, LEADER_RULES, LOCAL_ACTIONS, LOCAL_EVENT_RULES, PARTY_SCALES, SEAT_LEVEL_FACTOR, SEAT_TIERS, scaleOf } from '../data/simulation/committee-rules.js?v=20261017-4';
+import { isPartyLeader, treasuryBook } from './organization-engine.js?v=20261019-1';
+import { COMMITTEE_RULES, LEADER_RULES, LOCAL_ACTIONS, LOCAL_EVENT_RULES, PARTY_SCALES, SEAT_LEVEL_FACTOR, SEAT_TIERS, scaleOf } from '../data/simulation/committee-rules.js?v=20261019-1';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -86,6 +86,7 @@ export function leaderStance(committee, { party = null, cadre = null } = {}) {
   const rules = LEADER_RULES.weight;
   if (!committee || committee.status === 'dissoluzione') return { id: 'contro', label: 'Sciolto', tone: 'bad', detail: 'Il comitato non esiste più.', weight: 0, reasons: ['comitato sciolto'] };
   if (committee.leader?.player) return { ...LEADER_RULES.player, weight: 1, reasons: ['lo guidi tu'] };
+  if (committee.leader?.vacant) { const weight = rules.min; const stance = stanceOf(weight); return { id: stance.id, label: stance.label, tone: stance.tone, detail: stance.detail, weight, reasons: ['nessun responsabile: nessuno risponde del comitato'] }; }
   const live = cadre && cadre.status !== 'uscito' ? cadre : null;
   const loyalty = live ? live.loyalty : committee.loyalty ?? 50;
   const grievance = live ? live.grievance : 25;
@@ -148,7 +149,7 @@ const leaderFor = (level, currents, rand, player = false) => {
 };
 function makeCommittee({ level, name, region, parentId = null, members, organization, loyalty, rand, week, currents, leadByPlayer = false, extra = {} }) {
   const committee = {
-    id: `comitato-${level}-${slug(extra.unitCode ?? extra.municipalityCode ?? name)}-${slug(region)}`, level, name, region, parentId, ...extra,
+    id: `comitato-${level}-${slug((level === 'comune' ? extra.municipalityCode : extra.unitCode) ?? extra.municipalityCode ?? extra.unitCode ?? name)}-${slug(region)}`, level, name, region, parentId, ...extra,
     status: initialStatus(organization), statusSince: week, foundedWeek: week,
     members: Math.max(5, Math.round(members)), activists: Math.max(1, Math.round(members * (0.05 + organization / 1200))),
     organization: Math.round(clamp(organization)), consensus: 50, loyalty: Math.round(clamp(leadByPlayer ? 85 : loyalty)),
@@ -192,17 +193,81 @@ export function createCommittees(org, { region, units = [], home = {}, currents 
 }
 
 // Founding a committee where there is none (or refounding a dissolved one).
-export function foundCommittee(org, { level, name, region, parentId = null, week, currents = [], rand = Math.random, extra = {} }) {
+// A committee is founded anywhere; the levels above it that the party does not have yet are founded with it (one action, one cost), always without a manager. The members are people
+// of the party, counted once: a new committee's members are added to the committees above it and to the section of the region, so the party total stays the sum of its sections.
+export const MIN_COMMITTEE_MEMBERS = Object.freeze({ regione: 14, provincia: 18, comune: 10 });
+export function foundCommittee(org, { level, name, region, parentId = null, week, currents = [], rand = Math.random, extra = {}, ancestors = [] }) {
   org.committees = org.committees ?? [];
-  const existing = org.committees.find(item => item.level === level && item.name === name && item.region === region);
+  org.sections = org.sections ?? [];
+  const existing = org.committees.find(item => item.level === level && item.region === region && (level === 'regione' ? item.name === name : level === 'provincia' ? item.unitCode === extra.unitCode : (item.municipalityCode && item.municipalityCode === extra.municipalityCode) || (!item.municipalityCode && item.name === name && item.unitCode === extra.unitCode)));
   if (existing && existing.status !== 'dissoluzione') throw new Error(`Esiste già il comitato di ${name}.`);
-  const committee = makeCommittee({ level, name, region, parentId, members: level === 'comune' ? 10 : 18, organization: 24, loyalty: 72, rand, week, currents, leadByPlayer: false, extra });
-  committee.status = 'fondazione';
-  committee.leader = { label: `${COMMITTEE_LEVELS[level].leader} (figura simulata, vicina a te)`, currentId: null, player: false, since: week };
-  log(committee, week, existing ? 'Rifondato dopo lo scioglimento' : 'Fondato');
-  if (existing) Object.assign(existing, committee, { id: existing.id, history: [...committee.history, ...(existing.history ?? [])].slice(0, 8) });
-  else org.committees.push(committee);
+  const make = (spec, parent) => {
+    const created = makeCommittee({ level: spec.level, name: spec.name, region, parentId: parent?.id ?? null, members: MIN_COMMITTEE_MEMBERS[spec.level], organization: 24, loyalty: 72, rand, week, currents, leadByPlayer: false, extra: spec.extra ?? {} });
+    created.status = 'fondazione';
+    // A new committee has no manager: a person comes only with a real recruitment (Vita interna, «Recluta un dirigente locale»); until then nobody answers for it.
+    created.leader = { label: 'Nessun responsabile', currentId: null, player: false, vacant: true, since: week };
+    log(created, week, 'Fondato');
+    return created;
+  };
+  const upper = parentId ? org.committees.find(item => item.id === parentId) ?? null : null;
+  const made = [];
+  let parent = upper;
+  for (const spec of ancestors) { const created = make(spec, parent); made.push(created); parent = created; }
+  const committee = make({ level, name, extra }, parent);
+  made.push(committee);
+  if (existing) log(committee, week, 'Rifondato dopo lo scioglimento');
+  // the people below are part of the levels above: a new level never has fewer members than what it contains
+  for (let i = made.length - 2; i >= 0; i--) made[i].members = Math.max(made[i].members, made[i + 1].members);
+  const top = made[0];
+  const section = org.sections.find(item => item.region === region) ?? null;
+  if (made.some(item => item.level === 'regione')) {
+    org.sections.push({ id: `sezione-${region}`, region, label: org.founder ? `Sezione ${region}` : `Federazione ${region}`, members: made.find(item => item.level === 'regione').members, vitality: 60, openedWeek: week, source: 'SIMULATION' });
+    org.cadres = (org.cadres ?? 0) + 1;
+  } else {
+    // the committees and the section that already exist receive the new people
+    for (let above = upper; above; above = above.parentId ? org.committees.find(item => item.id === above.parentId) ?? null : null) above.members += top.members;
+    if (section) section.members += top.members;
+  }
+  org.members = org.sections.reduce((sum, item) => sum + item.members, 0);
+  for (const created of made) {
+    if (existing && created === committee) { Object.assign(existing, created, { id: existing.id, history: [...created.history, ...(existing.history ?? [])].slice(0, 8) }); }
+    else org.committees.push(created);
+  }
   return existing ?? committee;
+}
+
+// ---------- members: one person counted once ----------
+// A comune is part of its province, a province of its region: the members and the volunteers of the committees below never exceed those of the committee above, and the regional committee
+// is the section of the party. This closes the gaps that the weekly drift of each committee opens.
+function capChildren(children, limit, field, floor) {
+  const total = children.reduce((sum, item) => sum + item[field], 0);
+  if (!children.length || total <= limit || limit < floor * children.length) return;
+  const factor = limit / total;
+  for (const item of children) item[field] = Math.max(floor, Math.floor(item[field] * factor));
+}
+export function reconcileMembers(org) {
+  const list = (org?.committees ?? []).filter(item => item.status !== 'dissoluzione');
+  for (const regional of list.filter(item => item.level === 'regione')) {
+    const section = (org.sections ?? []).find(item => item.region === regional.region);
+    const provinces = list.filter(item => item.level === 'provincia' && item.region === regional.region && (!item.parentId || item.parentId === regional.id));
+    capChildren(provinces, section?.members ?? regional.members, 'members', 3);
+    capChildren(provinces, regional.activists, 'activists', 0);
+  }
+  for (const province of list.filter(item => item.level === 'provincia')) {
+    const communes = list.filter(item => item.level === 'comune' && item.parentId === province.id);
+    capChildren(communes, province.members, 'members', 3);
+    capChildren(communes, province.activists, 'activists', 0);
+  }
+  for (const item of list) item.activists = Math.min(item.activists, item.members);
+  return org;
+}
+// New members (a membership drive) are people of the committee and of every level above it, and of the section of the region.
+export function addCommitteeMembers(org, committee, count) {
+  const byId = new Map((org.committees ?? []).map(item => [item.id, item]));
+  for (let at = committee, guard = 0; at && guard < 4; at = at.parentId ? byId.get(at.parentId) : null, guard++) at.members += count;
+  const section = (org.sections ?? []).find(item => item.region === committee.region);
+  if (section) section.members += count;
+  org.members = (org.sections ?? []).reduce((sum, item) => sum + item.members, 0);
 }
 
 // What a committee raises in a week before sharing it: the members and the volunteers (by their quality) in the measure of
@@ -247,7 +312,7 @@ export function applyCommitteeAction(org, committee, actionId, { week, rand = Ma
     if (committee.recruitUntil && committee.recruitUntil >= week) throw new Error('La campagna di tesseramento è già in corso.');
     committee.recruitUntil = week + 6;
     const added = Math.max(4, Math.round(committee.members * 0.03 * scale.recruit));
-    committee.members += added;
+    addCommitteeMembers(org, committee, added);
     committee.quality = Math.round(clamp(committee.quality - 2));
     committee.fatigue = Math.round(clamp(committee.fatigue + 4));
     committee.activity = Math.round(clamp(committee.activity + 6));
@@ -430,6 +495,7 @@ export function advanceCommittees(org, { rand = Math.random, week, regionalShare
     const first = committee.membersLog[0];
     committee.trend = first ? round1((committee.members - first) / first * 100) : 0;
   }
+  reconcileMembers(org);
   // The money of the week: the seats of the committees out, the local fundraising in.
   upkeep = Math.round(upkeep); raised = Math.round(raised);
   if (org.treasury && upkeep) treasuryBook(org, -upkeep, 'sedi', 'Sedi dei comitati');
@@ -520,8 +586,11 @@ export function committeeSummary(org) {
   const byStatus = Object.fromEntries(Object.keys(COMMITTEE_STATES).map(status => [status, list.filter(item => item.status === status).length]));
   const active = list.filter(item => item.status !== 'dissoluzione');
   const profiles = active.map(item => committeeProfile(ensureStructure(item)));
+  // each person once: the provinces (their comuni are inside them) and the comuni without an active province above; the regions are the sections of the party
+  const activeIds = new Set(active.filter(item => item.level === 'provincia').map(item => item.id));
+  const topLocal = active.filter(item => item.level === 'provincia' || (item.level === 'comune' && !activeIds.has(item.parentId)));
   return {
-    total: list.length, active: active.length, byStatus, members: active.filter(item => item.level !== 'regione').reduce((sum, item) => sum + item.members, 0), activists: active.reduce((sum, item) => sum + item.activists, 0),
+    total: list.length, active: active.length, byStatus, members: topLocal.reduce((sum, item) => sum + item.members, 0), activists: topLocal.reduce((sum, item) => sum + item.activists, 0),
     strength: active.length ? Math.round(active.reduce((sum, item) => sum + committeeStrength(item), 0) / active.length) : 0,
     strong: profiles.filter(item => item.tier === 'forte').length, fragile: profiles.filter(item => item.tier === 'fragile').length,
     growing: profiles.filter(item => item.trend === 'crescita').length, declining: profiles.filter(item => item.trend === 'declino').length,

@@ -326,6 +326,11 @@ const runC = playDays('giorni-beta', { founder: true });
   for (let week = 1; week <= 25; week++) { advanceLife(secretary, A, { week, date: addDays(START, week * 7), rand: rander(`s${week}`), env: { signals: signalsFor(START) } }); secretary.week.index = week; }
   const own = resolveCongress(secretary, A, { mode: 'incumbent', influence: 60, week: 26, date: START, rand: rander('seg') });
   assert.ok(typeof own.outcome.playerWon === 'boolean' && own.outcome.ranked.some(row => row.id === 'player'), 'Il segretario uscente ha la sua mozione tra le altre');
+  // a congress won is marked once (and only a win is); a congress lost is not
+  const marked = secretary.celebrations?.pending ?? null;
+  if (own.outcome.playerWon) assert.ok(marked && marked.kind === 'congresso' && marked.id === `congresso-26`, 'Un congresso vinto lascia un solo segno da mostrare');
+  else assert.ok(!marked, 'Un congresso perso non si festeggia');
+  assert.ok(!game.celebrations?.pending || game.celebrations.pending.kind !== 'congresso' || outcome.playerWon, 'Un congresso perso dal giocatore non lascia segni');
 }
 
 // ---------- 6. local leaders, rebuilding, vitals ----------

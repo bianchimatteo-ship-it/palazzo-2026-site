@@ -5,11 +5,12 @@
 // fixed contribution (`cofin`), agreed in simulated euros and paid once from its own margin; what it pays is not drawn again from the owner's.
 // Benefits arrive only when the work is finished, in proportion to its quality; a work never delivers what it has not built. The national projects (project-engine) are another thing: they live in society.projects
 // and use the national budget. Pure functions on plain data; the store keeps what they return.
-import { uniqueId } from './ids.js?v=20261017-4';
-import { fundingOf, stageOf } from './project-engine.js?v=20261017-4';
-import { PORTFOLIO_AREAS } from '../data/simulation/office-rules.js?v=20261017-4';
-import { CITY_SHARE_OF_REGION, PROVINCE_SHARE_OF_REGION, serviceIndicatorsOf } from '../data/simulation/local-acts.js?v=20261017-4';
-import { ACTIVE_WORK_STAGES, COFIN_LEVEL, WORK_BY_ID, WORK_RULES, WORK_SITES, WORK_STAGE_LABEL, defaultWorkFor, workTypesFor } from '../data/simulation/local-works.js?v=20261017-4';
+import { uniqueId } from './ids.js?v=20261019-1';
+import { fundingOf, stageOf } from './project-engine.js?v=20261019-1';
+import { PORTFOLIO_AREAS } from '../data/simulation/office-rules.js?v=20261019-1';
+import { regionShareOf } from './territory-share.js?v=20261019-1';
+import { serviceIndicatorsOf } from '../data/simulation/local-acts.js?v=20261019-1';
+import { ACTIVE_WORK_STAGES, COFIN_LEVEL, WORK_BY_ID, WORK_RULES, WORK_SITES, WORK_STAGE_LABEL, defaultWorkFor, workTypesFor } from '../data/simulation/local-works.js?v=20261019-1';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -256,7 +257,7 @@ function finish(inst, work, date, events) {
     next = { ...next, effects: [...(next.effects ?? []), { actId: work.id, title: work.title, indicator: type.indicator, perWeek: round2(total / 8), remaining: 8, delay: 0 }] };
     const list = serviceIndicatorsOf(next.kind);
     const region = list?.find(item => item.id === type.indicator)?.region;
-    if (region) events.push({ type: 'effetti', actId: work.id, title: work.title, kind: next.kind, region: next.region, indicators: { [region]: round2(total * (next.kind === 'provincia' ? PROVINCE_SHARE_OF_REGION : CITY_SHARE_OF_REGION)) }, phase: 8, lasting: true, segments });
+    if (region) events.push({ type: 'effetti', actId: work.id, title: work.title, kind: next.kind, region: next.region, indicators: { [region]: round2(total * regionShareOf(next)) }, phase: 8, lasting: true, segments });
   } else {
     gains = Object.fromEntries(Object.entries(type.regional ?? {}).map(([id, weight]) => [id, round2(total * weight)]));
     events.push({ type: 'effetti', actId: work.id, title: work.title, kind: next.kind, region: next.region, indicators: gains, phase: 8, lasting: true, segments });
@@ -441,7 +442,7 @@ function benefitShift(inst, work, sign, events, kind) {
   if (type.indicator && next.indicators) {
     next = { ...next, effects: [...(next.effects ?? []), { actId: work.id, title: `${work.title} (${kind})`, indicator: type.indicator, perWeek: round2(total / 8), remaining: 8, delay: 0 }] };
     const region = serviceIndicatorsOf(next.kind)?.find(item => item.id === type.indicator)?.region;
-    if (region) events.push({ type: 'effetti', actId: work.id, title: `${work.title} (${kind})`, kind: next.kind, region: next.region, indicators: { [region]: round2(total * (next.kind === 'provincia' ? PROVINCE_SHARE_OF_REGION : CITY_SHARE_OF_REGION)) }, phase: 8, lasting: true, segments: {} });
+    if (region) events.push({ type: 'effetti', actId: work.id, title: `${work.title} (${kind})`, kind: next.kind, region: next.region, indicators: { [region]: round2(total * regionShareOf(next)) }, phase: 8, lasting: true, segments: {} });
   } else events.push({ type: 'effetti', actId: work.id, title: `${work.title} (${kind})`, kind: next.kind, region: next.region, indicators: Object.fromEntries(Object.entries(type.regional ?? {}).map(([id, weight]) => [id, round2(total * weight)])), phase: 8, lasting: true, segments: {} });
   return next;
 }

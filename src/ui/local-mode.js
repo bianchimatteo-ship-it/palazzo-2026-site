@@ -3,17 +3,17 @@
 // decides, the majority it needs, what it changes, the forecast and the player's vote), what the player can do
 // (propose, question, negotiate, govern), the chronicle of the council. Everything here is simulation, except the size
 // of the European groups at the constitutive session of 2024 (real, with its source).
-import { DELEGA_FORBIDDEN, actCapacity, EP_COMMITTEES, EP_COSTS, EP_GROUPS_2024, committeeById, compactVote, coverageGap, europeanOdds, forecastAct, inCommittee, INSTITUTIONS, isClosedAct, LOCAL_VOTE_CHOICES, localAreas, majorityMargin, mandateRecord, measureOf, actorOf, delegaScore, nextEuropeanRole, typeOfAct, voteRule, weakCityAreas, withEuropeanSeat, withLocalState } from '../core/local-engine.js?v=20261017-4';
-import { ACT_TYPES, CITY_INDICATORS, PROVINCE_INDICATORS, QUORUMS, actTypeOf, neededYes, proposableTypes } from '../data/simulation/local-acts.js?v=20261017-4';
-import { COFIN_TERMS, WORK_PRIORITIES, WORK_RULES, WORK_SITE_LIST, WORK_TYPES, siteLabel, workTypesFor } from '../data/simulation/local-works.js?v=20261017-4';
-import { activeWorks, agedUpkeepOf, archiveOf, canManageWorks, cofinPartners, euroOf, externalOf, isActiveWork, planWork, workGap, workView, worksLedger } from '../core/local-works-engine.js?v=20261017-4';
-import { INDICATORS } from '../data/simulation/society-rules.js?v=20261017-4';
-import { DELEGA_RULES } from '../data/simulation/office-rules.js?v=20261017-4';
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261017-4';
-import { esc, meter, num, signed } from './charts.js?v=20261017-4';
-import { glyph, territoryTile, territoryVisual } from './visuals.js?v=20261017-4';
-import { fallbackTones, forceColorResolver, hemicycleLayout, seatColor } from '../core/hemicycle.js?v=20261017-4';
-import { SEAT_ROLES, rosterSeats } from '../core/seat-roster.js?v=20261017-4';
+import { DELEGA_FORBIDDEN, actCapacity, EP_COMMITTEES, EP_COSTS, EP_GROUPS_2024, committeeById, compactVote, coverageGap, europeanOdds, forecastAct, inCommittee, INSTITUTIONS, isClosedAct, LOCAL_VOTE_CHOICES, localAreas, majorityMargin, mandateRecord, measureOf, actorOf, delegaScore, nextEuropeanRole, typeOfAct, voteRule, weakCityAreas, withEuropeanSeat, withLocalState } from '../core/local-engine.js?v=20261019-1';
+import { ACT_TYPES, CITY_INDICATORS, PROVINCE_INDICATORS, QUORUMS, actTypeOf, neededYes, proposableTypes } from '../data/simulation/local-acts.js?v=20261019-1';
+import { COFIN_TERMS, WORK_PRIORITIES, WORK_RULES, WORK_SITE_LIST, WORK_TYPES, siteLabel, workTypesFor } from '../data/simulation/local-works.js?v=20261019-1';
+import { activeWorks, agedUpkeepOf, archiveOf, canManageWorks, cofinPartners, euroOf, externalOf, isActiveWork, planWork, workGap, workView, worksLedger } from '../core/local-works-engine.js?v=20261019-1';
+import { INDICATORS } from '../data/simulation/society-rules.js?v=20261019-1';
+import { DELEGA_RULES } from '../data/simulation/office-rules.js?v=20261019-1';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261019-1';
+import { esc, meter, num, signed } from './charts.js?v=20261019-1';
+import { glyph, territoryTile, territoryVisual } from './visuals.js?v=20261019-1';
+import { fallbackTones, forceColorResolver, hemicycleLayout, seatColor } from '../core/hemicycle.js?v=20261019-1';
+import { SEAT_ROLES, rosterSeats } from '../core/seat-roster.js?v=20261019-1';
 
 const STAGES = Object.freeze({ commissione: 'In commissione', giunta: 'In Giunta', aula: 'In aula', osservazioni: 'Osservazioni dei cittadini', 'seconda-lettura': 'Attesa della seconda deliberazione', risposta: 'In attesa di risposta', approvato: 'Approvato', respinto: 'Respinto', ritirato: 'Ritirato', risposto: 'Risposta data' });
 const SIDE_LABELS = Object.freeze({ maggioranza: 'Maggioranza', opposizione: 'Opposizione' });
@@ -167,7 +167,9 @@ function territoryPanel(inst, state) {
   const weakest = [...rows].sort((a, b) => a.value - b.value).slice(0, 3);
   const priorities = `<div class="local-commitments"><strong>Priorità del territorio</strong><ul>${weakest.map(row => `<li>${esc(row.label)}: ${num(row.value, 0)}/100${row.value < 45 ? ' · <b class="bad">in sofferenza</b>' : ''}</li>`).join('')}</ul></div>`;
   const commitments = (inst.commitments ?? []).filter(item => item.status === 'aperto').map(item => `<li>${esc(AREA_BY_ID[item.area]?.label ?? item.area)}: un atto entro il ${esc(date(item.dueAt))} <small>(${item.actId ? `mozione “${esc(item.title)}”` : esc(item.title)})</small></li>`).join('');
-  return `<dl class="hq-facts local-territory">${list}</dl>${priorities}${commitments ? `<div class="local-commitments"><strong>Impegni presi</strong><ul>${commitments}</ul></div>` : ''}<p class="poll-footnote">${inst.kind === 'comune' ? 'Servizi della città (simulazione): li muovono gli atti approvati e le opere finite, senza cura si consumano; una parte degli effetti arriva agli indicatori della regione.' : inst.kind === 'provincia' ? 'Servizi propri della Provincia (strade, scuole superiori, trasporto, ambiente, sviluppo, comuni): non sono la media della regione; le opere finite e gli atti li muovono e una quota arriva alla regione.' : 'Indicatori della regione nella simulazione del Paese: gli atti e le opere finite li muovono settimana dopo settimana.'}</p>`;
+  const IMPLEMENTATION_TEXT = { 'in-attuazione': 'in attuazione', 'in-ritardo': 'in ritardo', attuato: 'attuata', inefficace: 'attuata ma inefficace', 'non-attuato': 'non attuata' };
+  const measures = (inst.implementations ?? []).slice(-5).reverse().map(item => `<li>${esc(item.title)} <small>· ${esc(IMPLEMENTATION_TEXT[item.status] ?? item.status)}${['in-attuazione', 'in-ritardo'].includes(item.status) ? ` · avvio previsto il ${esc(date(item.startsAt))}` : item.efficacy != null && item.status !== 'non-attuato' ? ` · efficacia ${Math.round(item.efficacy * 100)}%` : ''}</small></li>`).join('');
+  return `<dl class="hq-facts local-territory">${list}</dl>${priorities}${measures ? `<div class="local-commitments"><strong>Misure approvate e loro attuazione</strong><ul>${measures}</ul><small>Il voto non cambia i servizi: lo fa la misura quando viene attuata.</small></div>` : ''}${commitments ? `<div class="local-commitments"><strong>Impegni presi</strong><ul>${commitments}</ul></div>` : ''}<p class="poll-footnote">${inst.kind === 'comune' ? 'Servizi della città (simulazione): li muovono gli atti approvati e le opere finite, senza cura si consumano; una parte degli effetti arriva agli indicatori della regione.' : inst.kind === 'provincia' ? 'Servizi propri della Provincia (strade, scuole superiori, trasporto, ambiente, sviluppo, comuni): non sono la media della regione; le opere finite e gli atti li muovono e una quota arriva alla regione.' : 'Indicatori della regione nella simulazione del Paese: gli atti e le opere finite li muovono settimana dopo settimana.'}</p>`;
 }
 // A European dossier in the own committees: the report can be asked, the text amended (odds shown before the choice).
 function dossierActions(inst, act, context) {

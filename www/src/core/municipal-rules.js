@@ -46,6 +46,22 @@ export function municipalityBandInfo(code, index = new Map()) {
   return { band: MUNICIPAL_BANDS.small, basis: 'nessun-dato', provisional: true, population: null, referenceDate: null, label: 'popolazione non disponibile', note: 'I dati demografici dei comuni non sono ancora stati importati (o questo comune non è nel file): si applicano le regole dei comuni fino a 15.000 abitanti, come ripiego dichiarato.' };
 }
 
+// What the class of the comune means, said without promises: the second round only exists if nobody passes half of the valid votes in the first, and how the seats of the council are shared is a
+// simplification of the game, not the full text of the law. The references are those of the law the classes come from; the text in force is to be checked on the official source.
+export const MUNICIPAL_LEGAL_REFERENCES = Object.freeze({
+  law: 'D.Lgs. 18 agosto 2000, n. 267 (TUEL), artt. 71, 72 e 73; L. 25 marzo 1993, n. 81',
+  threshold: 'Soglia di 15.000 abitanti: popolazione di riferimento prevista dalla legge per le regole elettorali (ultimo censimento), non la residente di oggi',
+  verification: 'Riferimento indicato; il testo vigente non è stato verificato su Normattiva in questo progetto',
+  document: 'docs/riferimenti-normativi-comunali.md'
+});
+export function bandDescription(info) {
+  const large = info?.band === MUNICIPAL_BANDS.large;
+  const population = Number.isFinite(info?.population) ? ` (${info.population.toLocaleString('it-IT')} abitanti)` : '';
+  return large
+    ? { title: `Oltre ${MUNICIPAL_RULES.threshold.toLocaleString('it-IT')} abitanti${population}`, body: 'Il sindaco è eletto al primo turno solo se supera la metà dei voti validi; altrimenti c’è il ballottaggio tra i due più votati. La ripartizione dei seggi in consiglio è semplificata nel gioco e non riproduce tutte le soglie di legge.' }
+    : { title: `Fino a ${MUNICIPAL_RULES.threshold.toLocaleString('it-IT')} abitanti${population}`, body: 'Il sindaco è eletto in un solo turno: vince chi ha più voti, senza ballottaggio. La ripartizione dei seggi in consiglio è semplificata nel gioco e non riproduce tutte le soglie di legge.' };
+}
+
 // The index the game works with (set once when the document is loaded): the engines and the views read the class of a comune through bandOfMunicipality.
 let shared = new Map();
 export const setMunicipalPopulationIndex = index => { shared = index instanceof Map ? index : new Map(); };

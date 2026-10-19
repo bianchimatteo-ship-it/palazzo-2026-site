@@ -1,5 +1,5 @@
-import { countBallots, distributeVotes, withVotes } from './electorate.js?v=20261017-4';
-import { ELECTION_MODELS, EUROPEAN_CONSTITUENCIES, EUROPEAN_THRESHOLD, OUTCOME_LABELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261017-4';
+import { countBallots, distributeVotes, withVotes } from './electorate.js?v=20261019-1';
+import { ELECTION_MODELS, EUROPEAN_CONSTITUENCIES, EUROPEAN_THRESHOLD, OUTCOME_LABELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261019-1';
 
 const SCALE_FALLBACK = 100000;
 // every candidate of a local or regional race is a row: the shares add up to 100 (up to rounding), so no «other lists» row is made
@@ -8,6 +8,9 @@ const clamp = (value,min=0,max=100) => Math.min(max,Math.max(min,value));
 const rounded = value => Math.round(value*100)/100;
 const territories = campaign => campaign.territories ?? [];
 const hash = value => [...String(value)].reduce((n, char) => (n * 31 + char.charCodeAt(0)) >>> 0, 2166136261) || 1;
+// A tie between two candidacies is broken by a fixed key drawn from the campaign and the id of the candidacy: never by the order of the list (where the player comes first).
+const tieKey = (campaign, id) => hash(`${campaign.seed}|${campaign.id}|${id}`);
+const byShare = campaign => (a, b) => b.share - a.share || tieKey(campaign, a.id) - tieKey(campaign, b.id);
 // A throwaway sequence for the count: it never disturbs the campaign's own random sequence.
 function seeded(seed) {
   let state = seed >>> 0 || 1;
@@ -65,7 +68,7 @@ export function sharesByGroup(campaign, territoryId) {
     const group = totals.get(leader.id);
     if (group) group.share += Number(value)||0;
   }
-  return [...totals.values()].map(group => ({...group,share:clamp(rounded(group.share))})).sort((a,b)=>b.share-a.share);
+  return [...totals.values()].map(group => ({...group,share:clamp(rounded(group.share))})).sort(byShare(campaign));
 }
 
 export function aggregateShares(campaign) {
@@ -77,7 +80,7 @@ export function aggregateShares(campaign) {
       if (row) row.share += group.share*(area.weight/totalWeight);
     }
   }
-  return [...groups.values()].map(group=>({...group,share:clamp(rounded(group.share))})).sort((a,b)=>b.share-a.share);
+  return [...groups.values()].map(group=>({...group,share:clamp(rounded(group.share))})).sort(byShare(campaign));
 }
 
 function allocateDHondt(groups,seatCount,threshold=0) {
@@ -188,7 +191,7 @@ function normalizedTwoRound(campaign,qualifiers) {
   const accepted=new Set(qualifiers);
   const retained=shares.filter(group=>accepted.has(group.id));
   const total=retained.reduce((sum,item)=>sum+item.share,0)||1;
-  return retained.map(group=>({...group,share:rounded(group.share*100/total)})).sort((a,b)=>b.share-a.share);
+  return retained.map(group=>({...group,share:rounded(group.share*100/total)})).sort(byShare(campaign));
 }
 
 export function runFirstRound(campaign) {
@@ -249,17 +252,23 @@ export function runFinalElection(campaign,firstRound=null) {
     seatRows=europeanSeats(campaign,aggregate);
     rows=withVotesOf(aggregate.map(group=>{const seat=seatRows.find(row=>row.id===group.id);return resultRow(group,group.share,totalBallots,seat?.seats??0,{circumscriptions:seat?.circumscriptions??[]});}),totalBallots);
   }
-  rows.sort((a,b)=>b.percent-a.percent||b.seats-a.seats);
+  rows.sort((a,b)=>b.percent-a.percent||b.seats-a.seats||tieKey(campaign,a.id)-tieKey(campaign,b.id));
   const winnerId=runoffWinnerId??rows[0]?.id??null;
   const winner=rows.find(row=>row.id===winnerId)??rows[0]??null;
   const playerRow=rows.find(row=>row.id===campaign.playerCandidateId)??null;
   const personal=personalResult(campaign,playerRow,winner,rows);
   const previous=campaign.firstRoundResult;
+  // Who did not reach the runoff is not at 0%: the result of his candidacy is what the first round gave him (the percentages of the two rounds are different questions and are never mixed).
+  const inRunoff=Boolean(runoffRows?.some(row=>row.candidateId===campaign.playerCandidateId));
+  const firstRow=(previous??firstRound)?.groups?.find(row=>row.candidateId===campaign.playerCandidateId||(row.memberCandidateIds??[]).includes(campaign.playerCandidateId))??null;
+  const eliminatedInFirstRound=Boolean(runoffRows)&&!inRunoff;
+  const playerShareOf=inRunoff?runoffRows.find(row=>row.candidateId===campaign.playerCandidateId).percent:eliminatedInFirstRound?(firstRow?.percent??0):(playerRow?.percent??0);
+  const playerVotesOf=inRunoff?runoffRows.find(row=>row.candidateId===campaign.playerCandidateId).votes:eliminatedInFirstRound?(firstRow?.votes??0):(playerRow?.votes??0);
   const result = {
     stage:'risultato-finale',model:rules.model,electionType:campaign.electionType,totalBallots,electorate:count,
     ballotLabel:count.normalized ? count.basis : `Voti validi: ${count.ballots.toLocaleString('it-IT')} su ${count.voters.toLocaleString('it-IT')} votanti (elettorato ${count.electorsSource==='simulato'?'simulato':'iscritto'}: ${count.electors.toLocaleString('it-IT')}${count.residents?`; residenti: ${count.residents.toLocaleString('it-IT')}`:''})`,groups:rows,
     territories:areaResults(campaign,totalBallots,campaign.stage==='ballottaggio'?firstRound?.runoffCandidateIds??null:null),firstRound:previous??firstRound??null,
-    winnerGroupId:winnerId,playerShare:runoffRows?.find(row=>row.candidateId===campaign.playerCandidateId)?.percent??playerRow?.percent??0,playerVotes:runoffRows?.find(row=>row.candidateId===campaign.playerCandidateId)?.votes??playerRow?.votes??0,runoffResults:runoffRows,
+    winnerGroupId:winnerId,playerShare:playerShareOf,playerVotes:playerVotesOf,eliminatedInFirstRound,runoffResults:runoffRows,
     playerSeats:playerRow?.seats??0,personalMandate:personal.mandate,personal,source:'simulation',simulated:true,
     runoffDetail:campaign.runoff?{transfers:campaign.runoff.transfers??[],pacts:campaign.runoff.pacts??[],appeal:campaign.runoff.appeal??0}:null,
     objectiveMet:objectiveMet(campaign,playerRow,personal.mandate),
@@ -389,13 +398,16 @@ export function classifyOutcome(campaign, result) {
   const winner = rows.find(row => row.id === result.winnerGroupId) ?? rows[0] ?? null;
   const next = rows.find(row => row.id !== campaign.playerCandidateId && row !== winner) ?? null;
   // After a runoff the comparison with expectations uses the first round (the runoff share is between two only).
-  const share = result.runoffResults?.length ? (playerRow?.percent ?? result.playerShare ?? 0) : (result.playerShare ?? 0);
+  const firstRoundRow = result.firstRound?.groups?.find(row => row.candidateId === campaign.playerCandidateId || (row.memberCandidateIds ?? []).includes(campaign.playerCandidateId)) ?? null;
+  const share = result.runoffResults?.length ? (firstRoundRow?.percent ?? playerRow?.firstRoundPercent ?? 0) : (result.playerShare ?? 0);
   // A career that starts with high expectations (a consolidated name, an outsider's hopes) raises the bar the result is judged against.
   const expected = (campaign.expectation?.share ?? campaign.consensusHistory?.[0]?.value ?? share) + (campaign.expectation?.pressure ?? 0);
   const band = Math.max(1.5, expected * .12);
   const diff = rounded(share - expected);
   const expectation = diff >= band ? 'sopra' : diff <= -band ? 'sotto' : 'in-linea';
-  const currentPoll = campaign.polls?.at(-1)?.results?.find(item => item.candidateId === campaign.playerCandidateId)?.share;
+  // the poll the result is compared with is the one of the same question: the last of the first round when the player was out after it, the last of the runoff for a finalist
+  const pollOfRound = result.runoffResults?.length && result.eliminatedInFirstRound ? [...(campaign.polls ?? [])].reverse().find(item => item.stage !== 'ballottaggio') : campaign.polls?.at(-1);
+  const currentPoll = pollOfRound?.results?.find(item => item.candidateId === campaign.playerCandidateId)?.share;
   const poll = campaign.polls?.length ? (Number.isFinite(currentPoll) ? currentPoll : null) : (campaign.preparation?.pollShare ?? campaign.expectation?.pollShare ?? null);
   const position = personal.position ?? (playerRow ? rows.indexOf(playerRow) + 1 : null);
   const positionLabel = position === 1 ? 'primo posto' : position === 2 ? 'secondo posto' : position === 3 ? 'terzo posto' : position ? `${position}º posto` : 'fuori corsa';

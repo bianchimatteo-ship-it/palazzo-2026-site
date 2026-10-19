@@ -9,10 +9,7 @@ export const RACE_RULES = Object.freeze({
   maxPerLevel: Object.freeze({ regionale: 5, provinciale: 5, comunale: 6 }),
   // How many of the party's known politicians are put in front of the leader for a race (the ones rooted where it is held come first; the one already chosen always stays).
   maxPoliticians: 16,
-  // Distances between two votes: a person stands in one race at a time (a campaign is a full-time job); the leader who plays two of
-  // his own campaigns needs the time to close the first and open the second, and to prepare the candidacy.
-  personGapDays: 35,
-  playableGapDays: 100,
+  // No number of days between two votes of a person: a person stands in one race at a time (a campaign is a full-time job), so only campaigns that overlap in time exclude each other.
   // What each kind of candidate brings to a campaign (the campaign stats), before the territory. The staff and the cadres are known
   // where they work, the politicians of the Parliament everywhere a little, a new figure is nobody yet.
   profiles: Object.freeze({

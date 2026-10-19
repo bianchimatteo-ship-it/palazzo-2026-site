@@ -1,4 +1,4 @@
-// The rule of the calendar under stress: two different rounds of voting at least 100 days apart (votes of the same day are one round), a vote to play within a year of the last one and in
+// The rule of the calendar under stress: two different rounds of voting at least 180 days apart (votes of the same day are one round), a vote to play within a year of the last one and in
 // every calendar year, whatever happens: a government that falls in any month of the year (early general election), a comune or a province dissolved, other starting dates and levels,
 // with different seeds. A vote that cannot find a free date is listed (calendarConflict); a vote is never moved into the past nor out of its legal window; the ballot of a round is one
 // competition (never two elections made out of one). Pure engine, no browser.
@@ -32,7 +32,7 @@ const LEVELS = ['comunale', 'provinciale', 'regionale', 'deputato', 'senatore', 
 const STARTS = ['2026-10-12', '2027-02-01', '2027-07-19', '2028-01-10'];
 const playable = row => row.statuses.has('open') || row.statuses.has('running') || (row.kind === 'voto' && row.statuses.has('held') && !row.statuses.has('missed') && row.statuses.size > 1);
 const problems = [];
-let runs = 0, worstGap = 0, closestRounds = 9999, moved = 0, joined = 0;
+let runs = 0, worstGap = 0, closestRounds = 9999, moved = 0, joined = 0, shortGaps = 0;
 
 // A month for the fall of the government (early general election) and for the dissolution of a comune: the whole year, one run each.
 const MONTHS = ['01-12', '02-09', '03-16', '04-13', '05-11', '06-15', '07-13', '08-17', '09-14', '10-12', '11-09', '12-14'];
@@ -57,7 +57,7 @@ for (const [index, month] of MONTHS.entries()) {
     const out = C.advanceWeek({ game, stats, parliament }, { currentDate: date, pollDelta: 0 });
     game = out.ctx.game; stats = out.ctx.stats; game.status = 'active';
     if (JSON.stringify(game.elections.map(item => [item.id, item.electionDate])) !== before) moved++;
-    for (const entry of game.elections) { const row = seen.get(entry.id) ?? { id: entry.id, kind: 'voto', type: entry.type, date: entry.electionDate, early: Boolean(entry.early), statuses: new Set() }; row.date = entry.electionDate; row.early = row.early || Boolean(entry.early); row.statuses.add(entry.status); seen.set(entry.id, row); }
+    for (const entry of game.elections) { const row = seen.get(entry.id) ?? { id: entry.id, kind: 'voto', type: entry.type, date: entry.electionDate, early: Boolean(entry.early), statuses: new Set() }; row.date = entry.electionDate; row.short = row.short || Boolean(entry.shortGap); row.early = row.early || Boolean(entry.early); row.statuses.add(entry.status); seen.set(entry.id, row); }
     for (const round of game.rounds ?? []) { const row = seen.get(round.id) ?? { id: round.id, kind: 'tornata', type: 'tornata', date: round.electionDate, statuses: new Set() }; row.statuses.add(round.status); seen.set(round.id, row); }
     // a vote is never in the past once its window is open, and its window never closes after the vote
     for (const entry of game.elections) if (!(entry.windowOpensAt <= entry.windowClosesAt && entry.windowClosesAt <= entry.electionDate)) problems.push(`${label}: finestra incoerente di ${entry.type} (${entry.windowOpensAt}–${entry.windowClosesAt} → ${entry.electionDate})`);
@@ -68,7 +68,14 @@ for (const [index, month] of MONTHS.entries()) {
   const standing = new Set([...game.elections.map(item => item.id), ...(game.rounds ?? []).map(item => item.id)]);
   const rows = [...seen.values()].filter(row => !(row.statuses.size === 1 && row.statuses.has('upcoming')) || standing.has(row.id)).sort((a, b) => a.date.localeCompare(b.date));
   const { closest, rounds } = distinctRounds(rows.map(row => row.date));
-  if (closest && closest.days < CALENDAR_RULES.minGapDays) problems.push(`${label}: due tornate a ${closest.days} giorni (${closest.from} e ${closest.to})`);
+  // every pair of distinct rounds keeps the target distance; the only pairs under it are those that include a vote brought forward by a crisis (it cannot wait), never under the floor
+  const earlyDays = new Set(rows.filter(row => row.early || row.short).map(row => row.date));
+  const nationalDays = new Set(rows.filter(row => ['politiche', 'europee'].includes(row.type)).map(row => row.date));
+  for (let i = 1; i < rounds.length; i++) {
+    const gap = days(rounds[i - 1], rounds[i]);
+    if (gap >= CALENDAR_RULES.minGapDays) continue;
+    if (!(earlyDays.has(rounds[i - 1]) || earlyDays.has(rounds[i]) || (nationalDays.has(rounds[i - 1]) && nationalDays.has(rounds[i]))) || gap < CALENDAR_RULES.earlyFloorDays) problems.push(`${label}: due tornate a ${gap} giorni (${rounds[i - 1]} e ${rounds[i]})`); else shortGaps++;
+  }
   if (closest) closestRounds = Math.min(closestRounds, closest.days);
   joined += rows.length - rounds.length;
   for (const entry of game.elections.filter(item => item.calendarConflict)) problems.push(`${label}: nessuna data a distanza per ${entry.type} (${entry.electionDate})`);
@@ -81,9 +88,9 @@ for (const [index, month] of MONTHS.entries()) {
 }
 
 // the rule itself, on made-up dates
-assert.ok(keepsDistance('2028-05-28', ['2028-05-28']) && keepsDistance('2028-05-28', ['2028-02-27']) === false && keepsDistance('2028-05-28', ['2028-02-18']), 'Stesso giorno: una sola tornata; 91 giorni: troppo vicini; 100: ammesso.');
+assert.ok(keepsDistance('2028-05-28', ['2028-05-28']) && keepsDistance('2028-05-28', ['2028-02-27']) === false && keepsDistance('2028-05-28', ['2027-12-01']) === false && keepsDistance('2028-05-28', ['2027-11-30']), 'Stesso giorno: una sola tornata; 91 e 179 giorni: troppo vicini; 180: ammesso.');
 const planned = C.createGameState({ seedText: 'x', currentDate: '2026-10-12', level: 'regionale', place: PLACES.Lombardia, localCalendar: C.localCalendarOf(calendar, { municipalityCode: PLACES.Lombardia.municipalityCode, region: 'Lombardia', seed: 'Bergamo', provinceCode: '016' }), stats: STATS });
-assert.ok(distinctRounds([...planned.elections.map(item => item.electionDate), ...planned.rounds.map(item => item.electionDate)]).closest.days >= 100, 'Il calendario di partenza rispetta già i 100 giorni.');
+assert.ok(distinctRounds([...planned.elections.map(item => item.electionDate), ...planned.rounds.map(item => item.electionDate)]).closest.days >= 180, 'Il calendario di partenza rispetta già i 180 giorni.');
 // idempotent: harmonizing again changes nothing
 const again = JSON.stringify(planned.elections);
 const { harmonizeElections } = await import(`../src/core/calendar-planner.js${v}`);
@@ -91,4 +98,4 @@ harmonizeElections(planned, '2026-10-12');
 assert.equal(JSON.stringify(planned.elections), again, 'Riarmonizzare non cambia nulla.');
 
 if (problems.length) { console.error(`Calendario sotto stress: ${problems.length} problemi.\n${[...new Set(problems)].slice(0, 40).join('\n')}`); process.exit(1); }
-console.log(`Calendario sotto stress verificato: ${runs} carriere di sei anni con la caduta del governo e lo scioglimento di comuni, province e regioni in ogni mese, partenze e livelli diversi; tornate sempre ad almeno ${CALENDAR_RULES.minGapDays} giorni (la più vicina a ${closestRounds}), mai più di ${worstGap} giorni tra due voti giocabili, nessun anno civile vuoto, nessun voto senza data libera.`);
+console.log(`Calendario sotto stress verificato: ${runs} carriere di sei anni con la caduta del governo e lo scioglimento di comuni, province e regioni in ogni mese, partenze e livelli diversi; tornate ad almeno ${CALENDAR_RULES.minGapDays} giorni (le uniche più vicine, ${shortGaps}, riguardano un voto anticipato da una crisi, un voto stretto tra due voti fissati dalla legge o due voti nazionali (politiche ed europee) e non scendono sotto ${CALENDAR_RULES.earlyFloorDays}; la più vicina a ${closestRounds}), mai più di ${worstGap} giorni tra due voti giocabili, nessun anno civile vuoto, nessun voto senza data libera.`);

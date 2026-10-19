@@ -94,7 +94,8 @@ assert.equal(finalPoll.stage,'ballottaggio','La rilevazione più recente è dell
 assert.deepEqual(finalPoll.results.map(row=>row.candidateId).sort(),runoffSeen.result.firstRound.runoffCandidateIds.slice().sort(),'Anche i sondaggi al ballottaggio considerano solo i finalisti.');
 const finalPlayerRow=runoffSeen.result.groups.find(row=>row.candidateId===runoffSeen.playerCandidateId);
 assert.equal(runoffSeen.result.personal.position,finalPlayerRow?runoffSeen.result.groups.indexOf(finalPlayerRow)+1:null,'La posizione del giocatore usa il risultato finale.');
-assert.equal(runoffSeen.result.outcome.pollShare,finalPoll.results.find(row=>row.candidateId===runoffSeen.playerCandidateId)?.share??null,'L’esito usa l’ultima stima della fase corretta.');
+const phasePoll=runoffSeen.result.eliminatedInFirstRound?[...runoffSeen.polls].reverse().find(item=>item.stage!=='ballottaggio'):finalPoll;
+assert.equal(runoffSeen.result.outcome.pollShare,phasePoll?.results.find(row=>row.candidateId===runoffSeen.playerCandidateId)?.share??null,'L’esito usa l’ultima stima della fase corretta (primo turno per chi è stato eliminato, ballottaggio per i finalisti).');
 assert.ok(['ballottaggio-vinto', 'ballottaggio-perso', 'eletto-opposizione', 'sconfitta', 'escluso'].includes(runoffSeen.result.outcome.code));
 assert.equal(runoffSeen.result.groups.reduce((sum, row) => sum + row.seats, 0), 16);
 
@@ -200,6 +201,7 @@ assert.equal(runoffSeen.result.groups.reduce((sum, row) => sum + row.seats, 0), 
   assert.ok(store.getState().game.inbox.some(item => afterEvents.some(event => event.id === item.id)) || store.getState().game.log.some(entry => /Dopo il voto/.test(entry.title)), 'Le mosse del dopo-voto non vengono decise in automatico nella stessa chiusura di settimana.');
   store.clearCampaign();
   assert.ok(store.getState().career.lastElectionReport, 'Il resoconto resta consultabile dopo aver chiuso la campagna.');
+  assert.ok(!store.getState().game.celebrations?.pending, 'Dopo una sconfitta nessuna celebrazione.');
 
   // A victory: office, side, giunta to compose; never an automatic Government post.
   store.fastForwardToElection('comunale');
@@ -211,6 +213,20 @@ assert.equal(runoffSeen.result.groups.reduce((sum, row) => sum + row.seats, 0), 
   store.advance(1);
   state = store.getState();
   assert.equal(state.campaign.result.outcome.code, 'vittoria');
+  {
+    // the win is marked once, discreetly: it waits in the game, survives a save and a reload, and leaves for good when seen
+    const pending = state.game.celebrations?.pending;
+    assert.ok(pending && pending.kind === 'elezione' && pending.id === `elezione-${state.campaign.id}` && pending.title, 'Una vittoria vera lascia un segno da mostrare una volta.');
+    assert.deepEqual(JSON.parse(JSON.stringify(state.game.celebrations)).pending, pending, 'Il segno sopravvive al salvataggio e al ricaricamento.');
+    store.advance(1);
+    assert.equal(store.getState().game.celebrations.pending?.id, pending.id, 'Le settimane che passano non lo duplicano né lo cancellano.');
+    assert.equal(store.dismissCelebration('altro-id'), false, 'Si chiude solo il segno giusto.');
+    assert.equal(store.dismissCelebration(pending.id), true);
+    assert.ok(!store.getState().game.celebrations.pending && store.getState().game.celebrations.seen.includes(pending.id), 'Visto, il segno non torna.');
+    assert.equal(store.dismissCelebration(pending.id), false, 'Chiuderlo due volte non fa nulla.');
+    const { celebrate } = await import(`../src/core/celebration.js${v}`);
+    assert.equal(celebrate(store.getState().game, { id: pending.id, kind: 'elezione', title: 'x' }), false, 'La stessa vittoria non viene celebrata una seconda volta.');
+  }
   const mayor = state.dataset.offices.find(item => item.title === 'Sindaco' && !item.endDate);
   assert.ok(mayor && mayor.side === 'maggioranza', 'Il sindaco eletto guida la maggioranza.');
   assert.ok(state.game.inbox.some(item => item.templateId === 'giunta-composizione'), 'Da sindaco scegli la giunta.');

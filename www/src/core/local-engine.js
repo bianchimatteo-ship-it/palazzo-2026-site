@@ -5,17 +5,18 @@
 // deadline, votes with individual dissent, and a player who proposes, votes, negotiates or governs. A council that loses
 // its majority is dissolved and votes early. Everything is simulation; the European groups start from their real size
 // at the constitutive session of 2024 (europarl), then evolve in the game.
-import { uniqueId } from './ids.js?v=20261017-4';
-import { DATA_SOURCES } from '../data/schema.js?v=20261017-4';
-import { AREA_BY_ID, CAMP_PRIORITIES, INTENSITY } from '../data/simulation/policy-rules.js?v=20261017-4';
-import { ACT_TYPES, AREA_BREADTH, AREA_LEANS, CITY_INDICATORS, CITY_SHARE_OF_REGION, PROVINCE_SHARE_OF_REGION, actTitle, actTypeOf, legalNumber, naturalType, neededYes, regionalWeights, proposableTypes, serviceIndicatorOf, serviceIndicatorsOf, typeFitsArea } from '../data/simulation/local-acts.js?v=20261017-4';
-import { activeWorks, advanceWorks, applyWorkActivity, availableWorkTypes, cofinRequest, emptyWorksRecord, executiveWorkChoice, planWork, startWork, workGap, worksOf } from './local-works-engine.js?v=20261017-4';
-import { WORK_RULES } from '../data/simulation/local-works.js?v=20261017-4';
-import { DELEGA_RULES, PORTFOLIO_AREAS } from '../data/simulation/office-rules.js?v=20261017-4';
-import { cohesiveShare } from './parliament-engine.js?v=20261017-4';
-import { groupLine, seededRandom, splitGroupVote } from './vote-engine.js?v=20261017-4';
-import { advanceDays } from './time.js?v=20261017-4';
-import { INCUMBENCY_RULES } from '../data/simulation/campaign-rules.js?v=20261017-4';
+import { uniqueId } from './ids.js?v=20261019-1';
+import { DATA_SOURCES } from '../data/schema.js?v=20261019-1';
+import { AREA_BY_ID, CAMP_PRIORITIES, INTENSITY } from '../data/simulation/policy-rules.js?v=20261019-1';
+import { regionShareOf } from './territory-share.js?v=20261019-1';
+import { ACT_TYPES, AREA_BREADTH, AREA_LEANS, CITY_INDICATORS, CITY_SHARE_OF_REGION, PROVINCE_SHARE_OF_REGION, actTitle, actTypeOf, legalNumber, naturalType, neededYes, regionalWeights, proposableTypes, serviceIndicatorOf, serviceIndicatorsOf, typeFitsArea } from '../data/simulation/local-acts.js?v=20261019-1';
+import { activeWorks, advanceWorks, applyWorkActivity, availableWorkTypes, cofinRequest, emptyWorksRecord, executiveWorkChoice, planWork, startWork, workGap, worksOf } from './local-works-engine.js?v=20261019-1';
+import { WORK_RULES } from '../data/simulation/local-works.js?v=20261019-1';
+import { DELEGA_RULES, PORTFOLIO_AREAS } from '../data/simulation/office-rules.js?v=20261019-1';
+import { cohesiveShare } from './parliament-engine.js?v=20261019-1';
+import { groupLine, seededRandom, splitGroupVote } from './vote-engine.js?v=20261019-1';
+import { advanceDays } from './time.js?v=20261019-1';
+import { INCUMBENCY_RULES } from '../data/simulation/campaign-rules.js?v=20261019-1';
 
 const SIM = DATA_SOURCES.SIMULATION;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -766,10 +767,61 @@ function cityEffects(act, measure) {
     ...(measure.lasting ? [] : [{ actId: act.id, title: `${act.title} (fine dell’effetto)`, indicator, perWeek: round2(-delta * 0.6 / 12), remaining: 12, delay: measure.phase }])
   ]);
 }
+// ---------- from the vote to the measure ----------
+// What the council decides is a vote; what the citizens meet is the measure carried out. An approved act with effects is entrusted to the administration, which starts it after a few weeks
+// (more for a heavier measure), carries it out with the strength its budget and its stability allow, and can delay it (provisional budget, no money) or leave it undone. A motion has no
+// measure at all: it commits the executive politically (commitments) and moves nothing in the services until the executive adopts an act on its theme.
+export const IMPLEMENTATION = Object.freeze({ lagWeeks: [2, 4, 6], regionLagWeeks: 2, postponeWeeks: 4, maxPostponements: 2, ineffective: 0.35, ineffectiveShare: 0.15 });
+export const IMPLEMENTATION_LABELS = Object.freeze({ 'in-attuazione': 'In attuazione', 'in-ritardo': 'In ritardo', attuato: 'Attuato', inefficace: 'Attuato ma inefficace', 'non-attuato': 'Non attuato' });
+// How well the administration carries a measure out (0–1): the margin of the budget and the stability of the executive; a little variance, always the same for the same act.
+function implementationStrength(inst, act) {
+  const margin = inst.budget?.margin ?? 50;
+  const stability = inst.executive?.stability ?? 60;
+  const rand = seededRandom(`${inst.id}|${act.id}|attuazione`);
+  return round2(clamp(0.3 + margin / 200 + stability / 250 + (rand() - 0.5) * 0.2, 0.05, 1));
+}
+function scheduleImplementation(inst, act, measure, date, events) {
+  const lag = IMPLEMENTATION.lagWeeks[clamp(Math.round(measure.intensity ?? 2), 1, 3) - 1] + (inst.kind === 'regione' ? IMPLEMENTATION.regionLagWeeks : 0);
+  const entry = { id: uniqueId(inst.implementations ?? [], `${act.id}-attuazione`), actId: act.id, title: act.title, area: act.area, category: categoryOf(inst, act), player: act.sponsor?.kind === 'player' || Boolean(act.byDelega), approvedAt: date, startsAt: advanceDays(date, lag * 7), status: 'in-attuazione', postponed: 0, measure: { indicators: measure.indicators, phase: measure.phase, lasting: measure.lasting, segments: measure.segments } };
+  events.push({ type: 'attuazione', actId: act.id, title: act.title, status: 'in-attuazione', startsAt: entry.startsAt, player: entry.player });
+  return { ...inst, implementations: [...(inst.implementations ?? []), entry].slice(-24) };
+}
+// A week: the measures whose time has come are carried out, postponed or dropped. The services (and, through the career, the region and the citizens) move here and only here.
+function advanceImplementations(input, date, events) {
+  let inst = input;
+  if (!(inst.implementations ?? []).some(item => ['in-attuazione', 'in-ritardo'].includes(item.status) && item.startsAt <= date)) return inst;
+  const out = [];
+  for (const item of inst.implementations) {
+    if (!['in-attuazione', 'in-ritardo'].includes(item.status) || item.startsAt > date) { out.push(item); continue; }
+    const blocked = inst.budget?.provisional || (inst.budget?.margin ?? 50) < 3;
+    if (blocked) {
+      if (item.postponed >= IMPLEMENTATION.maxPostponements) {
+        out.push({ ...item, status: 'non-attuato', closedAt: date, efficacy: 0 });
+        inst = record(inst, date, `Misura non attuata: “${item.title}” resta sulla carta, senza fondi.`, 'attuazione');
+        events.push({ type: 'attuazione', actId: item.actId, title: item.title, status: 'non-attuato', efficacy: 0, player: item.player });
+      } else {
+        out.push({ ...item, status: 'in-ritardo', postponed: item.postponed + 1, startsAt: advanceDays(date, IMPLEMENTATION.postponeWeeks * 7) });
+        if (item.postponed === 0) events.push({ type: 'attuazione', actId: item.actId, title: item.title, status: 'in-ritardo', efficacy: null, player: item.player });
+      }
+      continue;
+    }
+    const strength = implementationStrength(inst, item);
+    const status = strength < IMPLEMENTATION.ineffective ? 'inefficace' : 'attuato';
+    const scale = status === 'inefficace' ? IMPLEMENTATION.ineffectiveShare : strength;
+    const indicators = Object.fromEntries(Object.entries(item.measure.indicators).map(([id, delta]) => [id, round2(delta * scale)]));
+    const measure = { ...item.measure, indicators };
+    out.push({ ...item, status, closedAt: date, efficacy: strength });
+    if (inst.kind === 'comune' || inst.kind === 'provincia') inst = { ...inst, effects: [...(inst.effects ?? []), ...cityEffects({ id: item.actId, title: item.title }, measure)] };
+    // the council's record keeps the exceptions; a measure carried out as planned is in the list of measures (implementations), not in the 40 lines of the history
+    if (status === 'inefficace') inst = record(inst, date, `Misura attuata ma inefficace: “${item.title}” (efficacia ${Math.round(strength * 100)}%).`, 'attuazione');
+    events.push({ type: 'attuazione', actId: item.actId, title: item.title, status, efficacy: strength, player: item.player });
+    events.push({ type: 'effetti', actId: item.actId, title: item.title, kind: inst.kind, region: inst.region, indicators: inst.kind === 'regione' ? indicators : serviceShare(inst.kind, indicators, regionShareOf(inst)), phase: measure.phase, lasting: measure.lasting, segments: Object.fromEntries(Object.entries(measure.segments ?? {}).map(([id, delta]) => [id, round1(delta * scale)])) });
+  }
+  return { ...inst, implementations: out };
+}
 // What an act of a city or a province brings to its region: a share (the province's is larger), on the region's indicators.
-function serviceShare(kind, indicators) {
+function serviceShare(kind, indicators, share = kind === 'provincia' ? PROVINCE_SHARE_OF_REGION : CITY_SHARE_OF_REGION) {
   const out = {};
-  const share = kind === 'provincia' ? PROVINCE_SHARE_OF_REGION : CITY_SHARE_OF_REGION;
   for (const [id, delta] of Object.entries(indicators)) {
     const region = serviceIndicatorsOf(kind)?.find(item => item.id === id)?.region;
     if (region) out[region] = round2((out[region] ?? 0) + delta * share);
@@ -851,10 +903,8 @@ function applyApproved(inst, act, date, events) {
     const localTax = measure.tax ? TAX_STEPS[clamp(TAX_STEPS.indexOf(next.budget.localTax) + (measure.tax === 'su' ? 1 : -1), 0, 2)] : next.budget.localTax;
     next = { ...next, budget: { ...next.budget, margin: round1(clamp(next.budget.margin - measure.cost + measure.revenue, 0, 100)), localTax } };
   }
-  if (measure && Object.keys(measure.indicators).length && !deferred) {
-    if (next.kind === 'comune' || next.kind === 'provincia') next = { ...next, effects: [...(next.effects ?? []), ...cityEffects(act, measure)] };
-    events.push({ type: 'effetti', actId: act.id, title: act.title, kind: next.kind, region: next.region, indicators: next.kind === 'regione' ? measure.indicators : serviceShare(next.kind, measure.indicators), phase: measure.phase, lasting: measure.lasting, segments: measure.segments });
-  }
+  // The vote is not the measure: an approved act with effects goes to the administration, which carries it out later (and not always well); the services of the territory move only then (advanceImplementations).
+  if (measure && Object.keys(measure.indicators).length && !deferred) next = scheduleImplementation(next, act, measure, date, events);
   if (category === 'bilancio' && next.budget) {
     const year = Number(act.title.match(/(\d{4})$/)?.[1] ?? Number(date.slice(0, 4)) + 1);
     next = { ...next, budget: { ...next.budget, approvedYear: year, margin: round1(clamp(next.budget.margin + 24 + TAX_BONUS[next.budget.localTax], 0, 90)), provisional: false, failures: 0, retryAt: null } };
@@ -936,6 +986,7 @@ export function advanceInstitutionWeek(input, { date, rand = Math.random, issues
   if (['comune', 'provincia'].includes(inst.kind)) inst = cityWeek(inst, seededRandom(`${inst.id}|servizi|${date}`));
   // The public works of the institution: authorisations, design, tender, site, opening, upkeep; the money follows the work.
   { const out = advanceWorks(inst, { date, rand: seededRandom(`${inst.id}|opere|${date}`) }); inst = out.inst; events.push(...out.events); }
+  inst = advanceImplementations(inst, date, events);
   if (['regione', 'provincia'].includes(inst.kind) && inst.budget?.provisional) events.push({ type: 'effetti', title: 'Esercizio provvisorio', kind: inst.kind, region: inst.region, indicators: inst.kind === 'provincia' ? { servizi: -0.06, infrastrutture: -0.06 } : { servizi: -0.15, sanita: -0.15 }, phase: 1, lasting: true, immediate: true, segments: {} });
   // New acts. The budget: in autumn for the next year, or as soon as possible when a year runs without one.
   if (inst.budget && ((month >= 11 && inst.budget.approvedYear < year + 1) || inst.budget.approvedYear < year) && !inst.acts.some(item => item.budget && !CLOSED.includes(item.stage)) && (!inst.budget.retryAt || inst.budget.retryAt <= date)) {

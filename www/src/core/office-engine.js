@@ -3,7 +3,7 @@
 // progression and the incompatibilities. Pure functions: the callers pass in the facts they already have.
 import {
   GOVERNMENT_CANDIDACY_BLOCK, INCOMPATIBILITIES, OFFICES, OFFICE_BASES, OFFICE_OF_CANDIDACY, POWERS, PROVINCIAL_PRESIDENT_MIN_MONTHS
-} from '../data/simulation/office-rules.js?v=20261017-4';
+} from '../data/simulation/office-rules.js?v=20261019-1';
 
 // The office of the player in a local or European institution (see local-engine: kinds comune, provincia, regione, europa).
 export function institutionOffice(inst) {
@@ -91,19 +91,18 @@ const monthsBetween = (from, to) => from && to ? (Date.parse(`${to}T12:00:00Z`) 
 // municipalVote (the date of the next communal vote of the player's comune) }. The second-level provincial vote needs a seat
 // in a comune; the president is a mayor with at least eighteen months of the term ahead (law 56/2014); a member of the
 // Government does not run for a territorial office; the President of the Republic does not run at all.
-// The rhythm of the personal candidacies: the calendar keeps its real dates, but the player stands in one main competition a year and not in two campaigns that touch. A candidacy that
-// is already on the books (a campaign started, or a race with the player as candidate) rules out another one in the same calendar year or closer than CANDIDACY_GAP_DAYS between votes.
-// Early elections are the one explicit exception to the calendar-year rule (never to the gap between campaigns that overlap: two candidacies cannot run at once).
-export const CANDIDACY_GAP_DAYS = 150;
+// Candidacies of the player. There is no quota (not a number of days between two votes, not a number a year): the calendar plans coherent dates and the player can stand wherever he is
+// eligible. The one real incompatibility is that the game runs a single campaign at a time, so two candidacies whose campaigns overlap (from the opening of the candidacies to the day of the
+// vote) cannot both be played: votes of different rounds never overlap (the calendar keeps them apart), votes of the same round do.
 const dayNumber = date => Math.round(Date.parse(`${date}T12:00:00Z`) / 86400000);
-export function rhythmBlock({ candidacies = [], candidacyId = null, electionDate = null, early = false } = {}) {
+const campaignSpan = item => [dayNumber(item.windowOpensAt ?? item.electionDate), dayNumber(item.electionDate)];
+export const campaignsOverlap = (a, b) => { const [from, to] = campaignSpan(a), [otherFrom, otherTo] = campaignSpan(b); return from <= otherTo && otherFrom <= to; };
+export function rhythmBlock({ candidacies = [], candidacyId = null, electionDate = null, windowOpensAt = null } = {}) {
   if (!electionDate) return null;
+  const mine = { electionDate, windowOpensAt };
   for (const other of candidacies) {
     if (!other?.electionDate || other.id === candidacyId) continue;
-    const apart = Math.abs(dayNumber(electionDate) - dayNumber(other.electionDate));
-    const label = other.label ?? 'un’altra elezione';
-    if (apart < CANDIDACY_GAP_DAYS && !(early && apart >= 60)) return `Hai già una candidatura per ${label} (voto del ${other.electionDate}): tra due campagne servono almeno ${CANDIDACY_GAP_DAYS} giorni tra un voto e l’altro.`;
-    if (!early && !other.early && String(electionDate).slice(0, 4) === String(other.electionDate).slice(0, 4)) return `Una sola candidatura personale all’anno: nel ${String(electionDate).slice(0, 4)} hai già scelto ${label}. Qui puoi sostenere il partito, non candidarti.`;
+    if (campaignsOverlap(mine, other)) return `Hai già una candidatura per ${other.label ?? 'un’altra elezione'} (voto del ${other.electionDate}): le due campagne si sovrappongono e se ne gioca una alla volta.`;
   }
   return null;
 }
@@ -115,7 +114,7 @@ export function personalCandidacies(game, races = []) {
 }
 export const candidacyRecord = ({ id, type, label, windowOpensAt = null, electionDate, early = false, kind = 'elezione' }) => ({ id, type, label, windowOpensAt, electionDate, early: Boolean(early), kind });
 
-export function candidacyBlock({ held = [], electionType, role, electionDate = null, municipalVote = null, candidacies = [], candidacyId = null, early = false } = {}) {
+export function candidacyBlock({ held = [], electionType, role, electionDate = null, windowOpensAt = null, municipalVote = null, candidacies = [], candidacyId = null } = {}) {
   if (held.includes('presidente-repubblica')) return 'Il Presidente della Repubblica sta sopra le parti: non si candida a nessun’altra carica.';
   if (GOVERNMENT_CANDIDACY_BLOCK.includes(electionType) && held.some(id => OFFICES[id]?.scope === 'governo')) return 'Chi ha un incarico di governo non si candida a un ente territoriale o al Parlamento europeo: prima lascia l’incarico (regola di gioco).';
   const office = officeOfCandidacy(electionType, role);
@@ -124,7 +123,7 @@ export function candidacyBlock({ held = [], electionType, role, electionDate = n
     if (base) return base;
     if (office === 'presidente-provincia' && municipalVote && electionDate && monthsBetween(electionDate, municipalVote) < PROVINCIAL_PRESIDENT_MIN_MONTHS) return `Il Presidente della Provincia deve avere ancora almeno ${PROVINCIAL_PRESIDENT_MIN_MONTHS} mesi di mandato da sindaco (legge 56/2014): il tuo scade prima.`;
   }
-  return rhythmBlock({ candidacies, candidacyId, electionDate, early });
+  return rhythmBlock({ candidacies, candidacyId, electionDate, windowOpensAt });
 }
 
 // What winning the candidacy would cost, to say it before the campaign starts: the offices that lapse and the rule.

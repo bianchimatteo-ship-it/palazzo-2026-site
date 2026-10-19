@@ -1,40 +1,40 @@
-import { uniqueId } from './ids.js?v=20261017-4';
-import { advanceDays, formatDate, nextMunicipalVote, nextProvincialVote, nextRegionalVote } from './time.js?v=20261017-4';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261017-4';
-import { CALENDAR_RULES, harmonizeElections, pickRoundDate, reachableFrom, settleOpenRounds } from './calendar-planner.js?v=20261017-4';
-import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20261017-4';
+import { uniqueId } from './ids.js?v=20261019-1';
+import { advanceDays, formatDate, nextMunicipalVote, nextProvincialVote, nextRegionalVote } from './time.js?v=20261019-1';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261019-1';
+import { CALENDAR_RULES, harmonizeElections, pickRoundDate, settleOpenRounds } from './calendar-planner.js?v=20261019-1';
+import { activeMinisters, governingGroupIds, playerInMajority } from './parliament-engine.js?v=20261019-1';
 import {
   APPOINTMENTS, BASE_WEEKLY_INCOME, CAREER_EVENTS, CURRENT_TEMPLATES, EARLY_ELECTION_AFTER_WEEKS, ELECTION_SCHEDULE,
   FORCED_EVENTS, LEGACY_RIVAL_NAMES, SIMULATED_RIVAL_LABEL, FOUNDER_RANK, LEVEL_FIRST_ELECTION, OFFICE_INCOME, PARTY_RANKS, RELATION_TEMPLATES, STAT_LABELS,
-  AGENDA_CAPS, SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS, ROUND_RULES } from '../data/simulation/career-rules.js?v=20261017-4';
-import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20261017-4';
-import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20261017-4';
-import { ITALIAN_REGIONS, hasProvincialLevel } from '../data/regions.js?v=20261017-4';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261017-4';
-import { createMandate, setMandateStatus, staffWeek, updateMandate } from './staff-engine.js?v=20261017-4';
-import { beginOperation, book, buyInvestment, createFinance, depositElectionFund, depositReserve, hasAsset, normalizeFinance, releaseReserve, settleFinanceWeek, settleOperations, treasuryOperation } from './finance-engine.js?v=20261017-4';
-import { addMembers, advanceOrganization, allocateCurrentPortfolios, applyOrgEffects, createOrganization, isPartyLeader, normalizeCurrentProfiles, normalizeOrganization, rememberCurrent, treasuryBook } from './organization-engine.js?v=20261017-4';
-import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20261017-4';
-import { HARD_CATEGORIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261017-4';
-import { AREA_GROUPS, macroAreaOf } from '../data/simulation/policy-rules.js?v=20261017-4';
-import { advancementOdds, evaluateAdvancement, progressionFactors } from './progression-engine.js?v=20261017-4';
-import { advanceCommittees, applyCommitteeAction, applyLocalEvent, COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, committeeActionCost, foundCommittee, leaderStance, scaleOf, territorialControl } from './committee-engine.js?v=20261017-4';
-import { europeanElectionDate, legislatureTerm, LEGISLATURE_RULES, sundayOnOrBefore } from './legislature-engine.js?v=20261017-4';
-import { CADRE_ACTIONS, CONGRESS_ACTIONS, LIFE_MEMORY_KINDS, LIFE_SITUATIONS, SPLINTER_NAMES } from '../data/simulation/party-life-rules.js?v=20261017-4';
-import { DAILY_EVENTS } from '../data/simulation/daily-events.js?v=20261017-4';
-import { eventDay, pickWeighted, reactionRelevance } from './event-engine.js?v=20261017-4';
-import { heldOffices, localOffices } from './office-engine.js?v=20261017-4';
-import { worksSignals } from './local-works-engine.js?v=20261017-4';
-import { SECTOR_GAINS, advanceStanding, applyStandingEffects, createStanding, gainSector, normalizeStanding, sectorValue, standingOf } from './standing-engine.js?v=20261017-4';
-import { EVENT_SECTORS } from '../data/simulation/standing-rules.js?v=20261017-4';
-import { affiliationOf, scenarioCapitalGain, scenarioGrowth, scenarioInit, scenarioOf } from './scenario-engine.js?v=20261017-4';
-import { PRESIDENCY_SITUATIONS } from '../data/simulation/presidency-rules.js?v=20261017-4';
-import { START_SITUATIONS } from '../data/simulation/start-rules.js?v=20261017-4';
-import { AMBITION_BROKEN, AMBITION_COST, AMBITION_KEPT, OBJECTIVE_BY_ID, OBJECTIVE_SITUATIONS } from '../data/simulation/objective-rules.js?v=20261017-4';
-import { ambitionProblem, bump, bumpAmbition, bumpDecision, expiredAmbitions, isClassicObjective, objectiveBase, objectiveStatus } from './objective-engine.js?v=20261017-4';
-import { advanceStart, hasStart, startBase, startFundsFactor, startInit, startSpecial } from './start-engine.js?v=20261017-4';
-import { advanceLife, breakPact, cadreAction, cadreDecision, congressActionsOf, congressWork, createLife, honourCadrePromises, honourListPacts, lapseAnswer, lifeOverview, normalizeLife, resolveCongress, respondRequest, startRebuild } from './party-life-engine.js?v=20261017-4';
-import { enterNewParty, foundParty, mergeParties, OP_COSTS, partyOpsAvailability, renameParty, splitOff } from './party-ops-engine.js?v=20261017-4';
+  AGENDA_CAPS, SITUATION_EVENTS, WEEKLY_ACTION_POINTS, WEEKLY_ACTIVITIES, PARTY_LINES, CURRENT_LINES, PARTY_INVESTMENTS, COMMUNICATION_STYLES, CURRENT_AREAS, ROUND_RULES } from '../data/simulation/career-rules.js?v=20261019-1';
+import { ACTIVITY_FINANCE_CATEGORY } from '../data/simulation/finance-rules.js?v=20261019-1';
+import { ELECTED_CONTRIBUTION, SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20261019-1';
+import { ITALIAN_REGIONS, hasProvincialLevel } from '../data/regions.js?v=20261019-1';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261019-1';
+import { createMandate, setMandateStatus, staffWeek, updateMandate } from './staff-engine.js?v=20261019-1';
+import { beginOperation, book, buyInvestment, createFinance, depositElectionFund, depositReserve, hasAsset, normalizeFinance, releaseReserve, settleFinanceWeek, settleOperations, treasuryOperation } from './finance-engine.js?v=20261019-1';
+import { addMembers, advanceOrganization, allocateCurrentPortfolios, applyOrgEffects, createOrganization, isPartyLeader, normalizeCurrentProfiles, normalizeOrganization, rememberCurrent, treasuryBook } from './organization-engine.js?v=20261019-1';
+import { advanceContacts, changeContact, contactLabel } from './contacts-engine.js?v=20261019-1';
+import { HARD_CATEGORIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261019-1';
+import { AREA_GROUPS, macroAreaOf } from '../data/simulation/policy-rules.js?v=20261019-1';
+import { advancementOdds, evaluateAdvancement, progressionFactors } from './progression-engine.js?v=20261019-1';
+import { advanceCommittees, applyCommitteeAction, applyLocalEvent, COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, committeeActionCost, foundCommittee, leaderStance, scaleOf, territorialControl } from './committee-engine.js?v=20261019-1';
+import { europeanElectionDate, legislatureTerm, LEGISLATURE_RULES, sundayOnOrBefore } from './legislature-engine.js?v=20261019-1';
+import { CADRE_ACTIONS, CONGRESS_ACTIONS, LIFE_MEMORY_KINDS, LIFE_SITUATIONS, SPLINTER_NAMES } from '../data/simulation/party-life-rules.js?v=20261019-1';
+import { DAILY_EVENTS } from '../data/simulation/daily-events.js?v=20261019-1';
+import { eventDay, pickWeighted, reactionRelevance } from './event-engine.js?v=20261019-1';
+import { heldOffices, localOffices } from './office-engine.js?v=20261019-1';
+import { worksSignals } from './local-works-engine.js?v=20261019-1';
+import { SECTOR_GAINS, advanceStanding, applyStandingEffects, createStanding, gainSector, normalizeStanding, sectorValue, standingOf } from './standing-engine.js?v=20261019-1';
+import { EVENT_SECTORS } from '../data/simulation/standing-rules.js?v=20261019-1';
+import { affiliationOf, scenarioCapitalGain, scenarioGrowth, scenarioInit, scenarioOf } from './scenario-engine.js?v=20261019-1';
+import { PRESIDENCY_SITUATIONS } from '../data/simulation/presidency-rules.js?v=20261019-1';
+import { START_SITUATIONS } from '../data/simulation/start-rules.js?v=20261019-1';
+import { AMBITION_BROKEN, AMBITION_COST, AMBITION_KEPT, OBJECTIVE_BY_ID, OBJECTIVE_SITUATIONS } from '../data/simulation/objective-rules.js?v=20261019-1';
+import { ambitionProblem, bump, bumpAmbition, bumpDecision, expiredAmbitions, isClassicObjective, objectiveBase, objectiveStatus } from './objective-engine.js?v=20261019-1';
+import { advanceStart, hasStart, startBase, startFundsFactor, startInit, startSpecial } from './start-engine.js?v=20261019-1';
+import { advanceLife, breakPact, cadreAction, cadreDecision, congressActionsOf, congressWork, createLife, honourCadrePromises, honourListPacts, lapseAnswer, lifeOverview, normalizeLife, resolveCongress, respondRequest, startRebuild } from './party-life-engine.js?v=20261019-1';
+import { enterNewParty, foundParty, mergeParties, OP_COSTS, partyOpsAvailability, renameParty, splitOff } from './party-ops-engine.js?v=20261019-1';
 // The decisions of the party's internal life join the situation events; the daily events join the procedural ones.
 const SITUATIONS = { ...SITUATION_EVENTS, ...LIFE_SITUATIONS, ...PRESIDENCY_SITUATIONS, ...START_SITUATIONS, ...OBJECTIVE_SITUATIONS };
 const EVENT_POOL = [...CAREER_EVENTS, ...DAILY_EVENTS];
@@ -1649,6 +1649,14 @@ export function committeeAction(input, env, actionId, target = {}) {
   const org = party.org;
   const week = ctx.game.week.index;
   const rand = () => draw(ctx.game);
+  // A manager of a committee is one person, chosen in one place: the local leaders of the internal life (recruit, or replace the one in office), with a single cost.
+  if (actionId === 'responsabile') {
+    const committee = (org.committees ?? []).find(item => item.id === target.committeeId && item.status !== 'dissoluzione');
+    if (!committee) throw new Error('Comitato non trovato.');
+    const holder = (party.life?.cadres ?? []).find(item => item.committeeId === committee.id && item.status !== 'uscito' && !item.player) ?? null;
+    const out = lifeCadre(input, env, { action: holder ? 'sostituisci' : 'recluta', cadreId: holder?.id ?? null, committeeId: committee.id });
+    return { ...out, committee: (out.ctx.game.party.org.committees ?? []).find(item => item.id === committee.id) ?? committee };
+  }
   const target0 = (org.committees ?? []).find(item => item.id === target.committeeId);
   const cost = committeeActionCost(target0, actionId);
   const problem = costProblem(ctx.game, cost);
@@ -1657,10 +1665,30 @@ export function committeeAction(input, env, actionId, target = {}) {
   let committee;
   let lines;
   if (actionId === 'fonda') {
-    if (!['provincia', 'comune'].includes(target.level) || !target.name || !target.region) throw new Error('Scegli dove fondare il comitato.');
-    const parent = (org.committees ?? []).find(item => item.id === target.parentId) ?? (org.committees ?? []).find(item => item.level === (target.level === 'comune' ? 'provincia' : 'regione') && item.region === target.region && (target.level === 'provincia' || item.unitCode === target.unitCode));
-    committee = foundCommittee(org, { level: target.level, name: target.name, region: target.region, parentId: parent?.id ?? null, week, currents: party.currents, rand, extra: { unitCode: target.unitCode ?? null, unitType: target.unitType ?? null, municipalityCode: target.municipalityCode ?? null } });
-    lines = [`Nasce il ${COMMITTEE_LEVELS[committee.level].label.toLowerCase()} di ${committee.name}`];
+    if (!['regione', 'provincia', 'comune'].includes(target.level) || !target.name || !target.region) throw new Error('Scegli dove fondare il comitato.');
+    if (target.level === 'provincia' && !target.unitCode) throw new Error('Scegli la provincia.');
+    if (target.level === 'comune' && !target.unitCode) throw new Error('Scegli il comune.');
+    // The levels above that the party does not have yet are founded with it (one action, one cost); a dissolved one has to be refounded first.
+    const active = item => item.status !== 'dissoluzione';
+    const regional = (org.committees ?? []).find(item => item.level === 'regione' && item.region === target.region) ?? null;
+    const province = target.level === 'comune' ? (org.committees ?? []).find(item => item.level === 'provincia' && item.region === target.region && item.unitCode === target.unitCode) ?? null : null;
+    const ancestors = [];
+    if (target.level !== 'regione') {
+      if (regional && !active(regional)) throw new Error(`Prima rifonda il comitato regionale di ${target.region}.`);
+      if (!regional) ancestors.push({ level: 'regione', name: target.region });
+    }
+    if (target.level === 'comune') {
+      if (province && !active(province)) throw new Error(`Prima rifonda il comitato provinciale di ${province.name}.`);
+      if (!province) {
+        if (!target.unitName) throw new Error('Scegli la provincia.');
+        ancestors.push({ level: 'provincia', name: target.unitName, extra: { unitCode: target.unitCode, unitType: target.unitType ?? null } });
+      }
+    }
+    const parentId = ancestors.length ? (ancestors[0].level === 'regione' ? null : regional?.id ?? null) : target.level === 'comune' ? province?.id ?? null : target.level === 'provincia' ? regional?.id ?? null : null;
+    const before = (org.committees ?? []).length;
+    committee = foundCommittee(org, { level: target.level, name: target.name, region: target.region, parentId, week, currents: party.currents, rand, ancestors, extra: { unitCode: target.unitCode ?? null, unitType: target.unitType ?? null, municipalityCode: target.municipalityCode ?? null } });
+    const created = org.committees.length - before - 1;
+    lines = [`Nasce il ${COMMITTEE_LEVELS[committee.level].label.toLowerCase()} di ${committee.name}, senza responsabile${created > 0 ? ` (con ${created === 1 ? 'il livello superiore' : 'i livelli superiori'} che mancava${created === 1 ? '' : 'no'})` : ''}`];
   } else {
     committee = (org.committees ?? []).find(item => item.id === target.committeeId);
     if (!committee) throw new Error('Comitato non trovato.');
@@ -1964,34 +1992,23 @@ export function upcomingElections(game) {
 // asks for a campaign in the comuni at the polls and the result weighs on who took part, and on who stayed out.
 const springRound = year => sundayOnOrBefore(`${year}-05-31`);
 export const upcomingRounds = game => (game?.rounds ?? []).filter(item => item.status !== 'held').sort((a, b) => a.electionDate.localeCompare(b.electionDate));
-// The dates of the rounds needed to keep the player in play: from the last vote he could stand in (the rhythm rule of the personal candidacies is part of "could": a vote that falls too
-// close to the one he stood in, or in the same calendar year, does not fill the year for him), no more than a year to the next vote he can stand in, taking every one he can. Own votes,
-// rounds already under way and rounds he stands in count as votes.
+// The dates of the rounds needed from the last vote on: own votes, rounds already under way and rounds the player stands in count as votes. No more than a year between two votes (the player
+// is never left without one to play), each round at least minGapDays from every other vote and in the first free Sunday the law allows.
 export function roundPlan(game, today) {
   const committed = item => item.status !== 'upcoming' || item.standing;
   const fixed = (game.rounds ?? []).filter(committed).map(item => item.electionDate);
-  const earlyDates = new Set((game.elections ?? []).filter(item => item.early).map(item => item.electionDate));
   const events = [...new Set([...(game.elections ?? []).map(item => item.electionDate), ...fixed])].filter(Boolean).sort();
-  const stood = new Set([...(game.candidacies ?? []).map(item => item.electionDate), ...(game.rounds ?? []).filter(item => item.standing).map(item => item.electionDate)]);
   const horizon = advanceDays(today, 400);
   const plan = [];
   const taken = [...events];
-  // What has already happened: the votes he stood in, and the ones he could have (whatever he did about them) keep the year covered; the ones out of his reach do not.
-  let last = game.roundsFrom ?? today, personal = null;
-  for (const date of events.filter(day => day <= today)) {
-    if (stood.has(date)) { personal = date; if (date > last) last = date; }
-    else if (reachableFrom(date, personal, earlyDates.has(date)) && date > last) last = date;
-  }
+  let last = [game.roundsFrom ?? today, ...events.filter(date => date <= today)].sort().at(-1);
   for (let guard = 0; last < horizon && guard < 80; guard++) {
-    // No more than a year between two votes the player can stand in: a round is added only when the next one is further than that, in the first free Sunday the law allows (and 100 days
-    // from every other vote). Votes already past are not planned again: a lapse is made up from today.
-    const from = last > today ? last : today;
     const cap = advanceDays(last, CALENDAR_RULES.maxPlayableGapDays) < today ? advanceDays(today, 140) : advanceDays(last, CALENDAR_RULES.maxPlayableGapDays);
-    const next = events.find(date => date > from && reachableFrom(date, personal, earlyDates.has(date)));
-    if (next && next <= cap) { last = next; personal = next; continue; }
-    const pick = pickRoundDate({ after: from, cap, taken, accept: day => reachableFrom(day, personal) });
+    const next = events.find(date => date > last);
+    if (next && next <= cap) { last = next; continue; }
+    const pick = pickRoundDate({ after: last > today ? last : today, cap, taken });
     if (!pick) break;
-    plan.push(pick); taken.push(pick); last = pick; personal = pick;
+    plan.push(pick); taken.push(pick); last = pick;
   }
   return plan;
 }

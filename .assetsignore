@@ -9,6 +9,7 @@ scripts
 .DS_Store
 **/.DS_Store
 .gitignore
+.gitattributes
 .nojekyll
 README.md
 package.json
@@ -20,8 +21,9 @@ src/data/real/database.json
 .assetsignore
 worker.js
 migrations
-# Not part of the web game: the mobile (Capacitor) build copy and project, and the working notes.
+# Not part of the web game: the mobile (Capacitor) build copy and the native projects (iOS and Android: hidden files, gradle wrappers, native sources), and the working notes.
 www
 ios
+android
 docs
 capacitor.config.json

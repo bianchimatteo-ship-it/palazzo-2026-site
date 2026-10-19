@@ -4,10 +4,10 @@
 // Pure functions on plain data: the store gives them the calendar, the people and the state of the game, and keeps what they return.
 // Everything made here is simulation: the territories and the dates come from the real calendar of the votes, the candidates and the results are
 // simulated (a real politician stays real, his candidacy is not); a new figure is a person of the simulation, never a real one.
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261017-4';
-import { RACE_LEVELS, RACE_ROLES, RACE_RULES } from '../data/simulation/race-rules.js?v=20261017-4';
-import { advanceDays, nextMunicipalVote, nextProvincialVote, nextRegionalVote } from './time.js?v=20261017-4';
-import { advanceCampaign, campaignObservatory, createCampaign, decideCampaignEvent, performCampaignActivity, setExpectation } from './campaign-engine.js?v=20261017-4';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261019-1';
+import { RACE_LEVELS, RACE_ROLES, RACE_RULES } from '../data/simulation/race-rules.js?v=20261019-1';
+import { advanceDays, nextMunicipalVote, nextProvincialVote, nextRegionalVote } from './time.js?v=20261019-1';
+import { advanceCampaign, campaignObservatory, createCampaign, decideCampaignEvent, performCampaignActivity, setExpectation } from './campaign-engine.js?v=20261019-1';
 
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -184,20 +184,22 @@ export function candidateOptions({ race, items = [], today, player = null, cadre
   out.simulation = { kind: 'simulation', id: null, label: `Nuova figura simulata · ${race.territory.name}`, source: 'simulation', rooting: rooted({ region: race.territory.region, municipality: race.territory.kind === 'comune' ? race.territory.name : null, provinceCode: race.territory.provinceCode }), available: true, reason: null };
   return out;
 }
-// A person stands in one race at a time: another race of the party with the same person, too close in time, makes him busy.
+// A person stands in one race at a time: another race of the party with the same person whose campaign overlaps (from the opening of the candidacies to the vote) makes him busy. No
+// number of days between two votes: the calendar keeps different rounds apart, and races of the same round do not overlap in time only if they are different people.
+const span = race => [daysBetween('2000-01-01', race.windowOpensAt ?? race.electionDate), daysBetween('2000-01-01', race.electionDate)];
+const overlaps = (a, b) => { const [from, to] = span(a), [otherFrom, otherTo] = span(b); return from <= otherTo && otherFrom <= to; };
 function personBusy(items, race, personId) {
-  const other = items.find(item => item.id !== race.id && ['confirmed', 'running'].includes(item.status) && item.candidacy && (item.candidacy.personId === personId || item.candidacy.cadreId === personId) && Math.abs(daysBetween(item.electionDate, race.electionDate)) < RACE_RULES.personGapDays);
-  return other ? `Già candidato a ${other.label}: tra i due voti servono almeno ${RACE_RULES.personGapDays} giorni.` : null;
+  const other = items.find(item => item.id !== race.id && ['confirmed', 'running'].includes(item.status) && item.candidacy && (item.candidacy.personId === personId || item.candidacy.cadreId === personId) && overlaps(item, race));
+  return other ? `Già candidato a ${other.label}: le due campagne si sovrappongono.` : null;
 }
-// The player plays his campaigns one after the other: the votes he plays himself (the other races he chose and the votes of his own place) keep their distance.
+// The player plays his campaigns one after the other: the votes he plays himself (the other races he chose and the votes of his own place) must not overlap with this one.
 function playerSpacing(items, race, homeVotes) {
-  const gap = RACE_RULES.playableGapDays;
-  const dates = [
-    ...items.filter(item => item.id !== race.id && ['confirmed', 'running'].includes(item.status) && item.candidacy?.kind === 'player').map(item => [item.electionDate, item.label]),
-    ...homeVotes.filter(item => ['upcoming', 'open', 'running'].includes(item.status)).map(item => [item.electionDate, item.label])
+  const others = [
+    ...items.filter(item => item.id !== race.id && ['confirmed', 'running'].includes(item.status) && item.candidacy?.kind === 'player'),
+    ...homeVotes.filter(item => ['upcoming', 'open', 'running'].includes(item.status))
   ];
-  const near = dates.find(([date]) => Math.abs(daysBetween(date, race.electionDate)) < gap);
-  return near ? `Troppo vicina a ${near[1]} (${near[0]}): per giocare tutte e due servono almeno ${gap} giorni tra i voti.` : null;
+  const near = others.find(item => overlaps(item, race));
+  return near ? `Si sovrappone a ${near.label} (voto del ${near.electionDate}): la campagna è una alla volta.` : null;
 }
 
 // A person of the simulation (a row of the persons of the game): never a real one.
