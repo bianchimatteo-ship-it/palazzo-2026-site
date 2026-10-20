@@ -270,7 +270,7 @@ assert.equal(store.getState().parliament.government.status, 'active', 'La coaliz
 {
   assert.ok(playerRoles(store.getState()).primeMinister, 'Con la fiducia sei Presidente del Consiglio');
   let governo = await goto('governo');
-  for (const text of ['La guida del governo', 'data-government-program-form', 'data-government-action="summit"', 'data-policy-form', 'data-budget-form', 'Il governo propone, il Parlamento decide']) assert.ok(governo.includes(text), `Scrivania del PdC: manca ${text}`);
+  for (const text of ['La guida del governo', 'data-government-program-form', 'data-priority-counter', 'data-priority-error', 'data-program-submit', 'priorità</strong>', 'data-government-action="summit"', 'data-policy-form', 'data-budget-form', 'Il governo propone, il Parlamento decide']) assert.ok(governo.includes(text), `Scrivania del PdC: manca ${text}`);
   assert.ok(governo.includes('I Governo Meloni'), 'Il governo reale è mostrato come riferimento');
   assert.ok(!governo.includes('data-government-agenda-form'), 'Niente più decreti automatici del PdC');
   store.getState().game.week.ap = 6; store.getState().game.resources.politicalCapital = 40;

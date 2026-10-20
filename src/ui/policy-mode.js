@@ -309,6 +309,12 @@ export function accordPanel(state) {
 }
 
 // ---------- the Prime Minister's desk ----------
+// The counter of the national priorities (from two to five): the page keeps it up to date while the player ticks (syncProgramForm in app.js); with six or more it says so and asks which to drop.
+export const PRIORITY_LIMITS = Object.freeze({ min: 2, max: 5 });
+export function priorityCounter(ids = []) {
+  const n = ids.length, ok = n >= PRIORITY_LIMITS.min && n <= PRIORITY_LIMITS.max;
+  return `<div class="priority-counter ${n > PRIORITY_LIMITS.max ? 'is-over' : ok ? 'is-ok' : 'is-low'}" data-priority-counter role="status" aria-live="polite"><strong><span data-priority-count>${n}</span> di ${PRIORITY_LIMITS.max} priorità</strong><small>da ${PRIORITY_LIMITS.min} a ${PRIORITY_LIMITS.max}${n < PRIORITY_LIMITS.min ? ` · ne servono ancora ${PRIORITY_LIMITS.min - n}` : ''}</small></div><div class="priority-error" data-priority-error role="alert" hidden></div>`;
+}
 export function governmentDesk(state) {
   const parliament = state.parliament;
   const government = parliament?.government;
@@ -335,7 +341,7 @@ export function governmentDesk(state) {
   return `<section class="government-current pm-desk"><div class="home-section-heading"><div><span class="section-kicker">PRESIDENTE DEL CONSIGLIO · SIMULAZIONE</span><h2>La guida del governo</h2></div>${stateBadge(government.stability < 35 ? 'crisi' : government.stability < 50 ? 'rischio' : 'stabile', `Stabilità ${num(government.stability, 0)}`)}</div>
     <p class="parliament-note">Il governo propone, il Parlamento decide: nessun atto diventa legge senza il voto di entrambe le Camere. Ogni mossa costa giorni e capitale politico; alleati, opposizione, mercati e cittadini reagiscono.</p>
     <details class="pm-block pm-fold" data-remember="gov-program"><summary><span class="pm-fold-title">${glyph('route', 16)} <strong>Indirizzo politico e priorità nazionali</strong></span><small>${program ? esc(GOVERNMENT_LINES[program.line].label) : 'da definire'} · ${PARLIAMENT_TIME_COSTS.program} giorno · ${GOVERNMENT_CAPITAL_COSTS.program} cap.</small></summary>
-      <form data-government-program-form class="program-form"><div class="policy-lines">${lines}</div><div class="priority-groups">${priorities}</div><button class="primary-button" type="submit">Fissa il programma · 1 giorno · 2 cap.</button><small class="parliament-note">Da due a cinque priorità. Gli alleati le confrontano con le proprie; l’indirizzo sposta spread e gruppi di cittadini. Si può rivedere ogni 8 settimane.</small></form></details>
+      <form data-government-program-form class="program-form"><div class="policy-lines">${lines}</div><div class="priority-groups">${priorities}</div>${priorityCounter(program?.priorities ?? [])}<button class="primary-button" type="submit" data-program-submit>Fissa il programma · 1 giorno · 2 cap.</button><small class="parliament-note">Da due a cinque priorità. Gli alleati le confrontano con le proprie; l’indirizzo sposta spread e gruppi di cittadini. Si può rivedere ogni 8 settimane.</small></form></details>
     <div class="pm-grid">
       ${pmFold('gov-majority', 'users', 'Maggioranza', stateBadge(satisfactionKind(mood ?? 60), `soddisfazione media ${mood ?? '—'}`), `${partners}<button class="secondary-button" data-government-action="summit">Vertice di maggioranza · ${PARLIAMENT_TIME_COSTS.summit} giorni · ${GOVERNMENT_CAPITAL_COSTS.summit} cap.</button><small class="parliament-note">Un vertice può ricompattare gli alleati o trasformarsi in una lite pubblica. Un alleato ignorato a lungo lascia la maggioranza.</small>`)}
       ${pmFold('gov-cabinet', 'ministry', 'Consiglio dei ministri', `${activeMinisters(government).length} ministri · rimpasto ${PARLIAMENT_TIME_COSTS.reshuffle} giorno · ${GOVERNMENT_CAPITAL_COSTS.reshuffle} cap.`, `<div class="minister-list">${ministers}</div>${occupied ? `<form data-reshuffle-form class="reshuffle-form"><label>Rimpasto: ministero<select name="portfolio">${occupied}</select></label><label>Passa a<select name="groupId">${majority}</select></label><button class="secondary-button" type="submit">Rimpasto · ${PARLIAMENT_TIME_COSTS.reshuffle} giorno · ${GOVERNMENT_CAPITAL_COSTS.reshuffle} cap.</button></form><small class="parliament-note">Il gruppo che perde il ministero si risente; chi lo ottiene diventa più leale.</small>` : ''}`)}

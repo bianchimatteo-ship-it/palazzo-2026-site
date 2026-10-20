@@ -103,7 +103,21 @@ assert.equal(s.parliament.government.primeMinister, 'player', 'Con la fiducia se
 assert.ok(Object.keys(s.parliament.government.partners).length >= 3, 'Gli alleati hanno una loro soddisfazione.');
 give();
 const partnersBefore = structuredClone(s.parliament.government.partners);
-store.setGovernmentProgram({ line: 'equita', priorities: ['welfare', 'sanita', 'lavoro', 'casa'] });
+// National priorities: from two to five, validated in the engine as well as in the page; a sixth is refused with a message that asks which to drop, never cut in silence, and nothing is charged.
+{
+  const before = store.getState();
+  const six = ['welfare', 'sanita', 'lavoro', 'casa', 'scuola', 'fisco'];
+  assert.throws(() => store.setGovernmentProgram({ line: 'equita', priorities: six }), error => error.code === 'priorities-too-many' && error.excess === 1 && /massimo è 5/.test(error.message) && /rimuovere/.test(error.message), 'Sei priorità sono rifiutate chiedendo quale rimuovere.');
+  const after = store.getState();
+  assert.equal(after.parliament.government.program, before.parliament.government.program, 'Il programma non è né cambiato né troncato in silenzio.');
+  assert.equal(after.game.resources.politicalCapital, before.game.resources.politicalCapital, 'Nessun capitale addebitato per un tentativo rifiutato.');
+  assert.equal(after.clock.currentDate, before.clock.currentDate, 'Nessun giorno speso per un tentativo rifiutato.');
+  assert.throws(() => store.setGovernmentProgram({ line: 'equita', priorities: ['welfare'] }), /da due a cinque/, 'Una sola priorità non basta.');
+  assert.throws(() => store.setGovernmentProgram({ line: 'equita', priorities: ['welfare', 'sanita', 'inesistente'] }), /non riconosciuta/, 'Una priorità sconosciuta è rifiutata, non scartata.');
+  assert.throws(() => store.setGovernmentProgram({ line: 'equita', priorities: Array.from({ length: 9 }, (_, i) => `x${i}`) }), /non riconosciuta|massimo/, 'E nemmeno un elenco lungo passa.');
+}
+store.setGovernmentProgram({ line: 'equita', priorities: ['welfare', 'sanita', 'lavoro', 'casa', 'scuola'] });   // five are fine
+assert.equal(store.getState().parliament.government.program.priorities.length, 5, 'Cinque priorità sono accettate.');
 s = store.getState();
 assert.ok(Object.entries(s.parliament.government.partners).some(([id, item]) => item.satisfaction !== partnersBefore[id].satisfaction), 'Gli alleati reagiscono al programma.');
 assert.throws(() => { give(); store.setGovernmentProgram({ line: 'rigore', priorities: ['finanze', 'fisco'] }); }, /da poco/, 'Il programma non si cambia ogni settimana.');

@@ -50,7 +50,7 @@ import { ACTIVITY_MEDIA, INDICATORS, ISSUE_TOPICS, SEGMENTS } from '../data/simu
 import { book, hasAsset, releaseElectionFund, setBudgetLevel } from './finance-engine.js?v=20261020-1';
 import { BUDGET_SECTORS, EU_CALLS, PROJECT_TYPES } from '../data/simulation/project-rules.js?v=20261020-1';
 import { applyCall, projectQuote, proposeProject, reportCall, setProjectFunding, settleProjectIssue, suspendProject } from './project-engine.js?v=20261020-1';
-import { isPartyLeader, treasuryBook } from './organization-engine.js?v=20261020-1';
+import { isPartyLeader, setMembershipFee as applyMembershipFee, treasuryBook } from './organization-engine.js?v=20261020-1';
 import { selectContacts, syncContacts } from './contacts-engine.js?v=20261020-1';
 import { POLL_SCENARIOS, fitCustom, normalizePollScenario, scenarioPoll } from './poll-scenario.js?v=20261020-1';
 import { NEWS_TEMPLATES, activityArticle, composeHeadline, markHomeSeen, newsroomWeek, weeklyNews, weeklyPopup } from './news-engine.js?v=20261020-1';
@@ -3896,6 +3896,16 @@ export const store = {
     if (!['territorio', 'comunicazione', 'formazione'].includes(priorityId) || ![0, 1, 2].includes(value)) throw new Error('Priorità non valida.');
     state = { ...state, game: { ...state.game, party: { ...party, org: { ...party.org, priorities: { ...party.org.priorities, [priorityId]: value } } } }, ui: { ...state.ui, toast: 'Priorità del partito aggiornate' } };
     persist(); emit();
+  },
+  // The annual membership fee is set by the national leadership (once a quarter at most): it changes the income from the members and, week after week, how many join and how many leave.
+  setMembershipFee(fee) {
+    const party = state.game?.party;
+    if (!party?.org) throw new Error('Serve un partito.');
+    if (!isPartyLeader(party)) throw new Error('La quota di tesseramento si decide in direzione nazionale.');
+    const { membership, line } = applyMembershipFee(party.org, fee, { week: state.game.week.index });
+    state = { ...state, game: { ...state.game, party: { ...party, org: { ...party.org, membership } } }, ui: { ...state.ui, toast: `${line}: vale dalla prossima settimana` } };
+    persist(); emit();
+    return membership;
   },
   // National averages weigh each region by its verified number of Camera seats.
   calibrateSociety(weights = {}) {

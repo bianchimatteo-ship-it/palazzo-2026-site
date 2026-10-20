@@ -899,13 +899,19 @@ export function partnerSatisfaction(parliament) {
   const partners = Object.values(parliament?.government?.partners ?? {});
   return partners.length ? Math.round(partners.reduce((sum, item) => sum + item.satisfaction, 0) / partners.length) : null;
 }
+// How many national priorities the Government sets: from two to five (the same limit in the page and here, so it cannot be skipped).
+export const GOVERNMENT_PRIORITIES = Object.freeze({ min: 2, max: 5 });
 // The political direction and the national priorities of the Government: allies judge them against their own.
 export function setGovernmentProgram(parliament, { line, priorities = [] }, currentDate) {
   const government = parliament.government;
   if (!government || !['active', 'crisis'].includes(government.status)) throw new Error('Serve un governo in carica.');
   if (!GOVERNMENT_LINES[line]) throw new Error('Scegli un indirizzo politico.');
-  const areas = [...new Set(priorities)].filter(id => AREA_BY_ID[id]).slice(0, 5);
-  if (areas.length < 2) throw new Error('Scegli da due a cinque priorità nazionali.');
+  // From two to five priorities, and never a silent cut: a sixth is refused and the player is asked which one to drop; an unknown one is refused too.
+  const areas = [...new Set(priorities)];
+  const unknown = areas.filter(id => !AREA_BY_ID[id]);
+  if (unknown.length) throw new Error(`Priorità non riconosciuta: ${unknown.join(', ')}.`);
+  if (areas.length > GOVERNMENT_PRIORITIES.max) { const error = new Error(`Hai scelto ${areas.length} priorità: il massimo è ${GOVERNMENT_PRIORITIES.max}. Scegli quale rimuovere (${areas.map(id => AREA_BY_ID[id].label.toLowerCase()).join(', ')}): il programma non viene salvato finché non ne restano ${GOVERNMENT_PRIORITIES.max} o meno.`); error.code = 'priorities-too-many'; error.excess = areas.length - GOVERNMENT_PRIORITIES.max; throw error; }
+  if (areas.length < GOVERNMENT_PRIORITIES.min) throw new Error('Scegli da due a cinque priorità nazionali.');
   if (government.program?.setAt && weeksBetween(government.program.setAt, currentDate) < 8) throw new Error(`Il programma è stato fissato da poco: si può rivedere dal ${addDaysTo(government.program.setAt, 56)}.`);
   let next = { ...parliament, government: { ...government, program: { line, priorities: areas, setAt: currentDate, source: DATA_SOURCES.SIMULATION } } };
   const reactions = [];

@@ -481,3 +481,42 @@
 .news-art .illustration .ill-accent { stroke: var(--cat, var(--party-accent)); }
 .news-art .illustration .ill-accent-fill { fill: color-mix(in srgb, var(--cat, var(--party-accent)) 50%, transparent); stroke: var(--cat, var(--party-accent)); }
 .illustration .ill-back { stroke-width: 1.6; opacity: .4; }
+
+/* Party organisation: coloured indicators and the membership fee. */
+.org-kpis { gap: 8px; border: 0; }
+.org-kpis > div { border: 1px solid var(--line); border-top: 3px solid var(--k, var(--line-strong)); border-radius: 8px; background: color-mix(in srgb, var(--k, transparent) 7%, var(--panel)); }
+.org-kpis > div + div { border-left: 1px solid var(--line); }
+.org-kpis .k-members { --k: #3f9bc4; } .org-kpis .k-militants { --k: #5fae7e; } .org-kpis .k-cadres { --k: #9a8fd6; } .org-kpis .k-sections { --k: #d1a24a; } .org-kpis .k-discipline { --k: #c9794a; } .org-kpis .k-treasury { --k: #4aa38f; }
+.membership-card { display: grid; gap: 12px; padding: 14px 16px; border: 1px solid var(--line-strong); border-left: 5px solid #3f9bc4; border-radius: 10px; background: color-mix(in srgb, #3f9bc4 6%, var(--panel)); }
+.membership-card h3 { margin: 2px 0 0; font: 750 20px/1.2 var(--font-head, Manrope, sans-serif); }
+.membership-card > .home-section-heading { align-items: flex-start; margin: 0; }
+.fee-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.fee-kpis > div { display: grid; gap: 3px; align-content: start; padding: 9px 11px; border: 1px solid var(--line); border-top: 3px solid var(--k); border-radius: 8px; background: var(--panel); }
+.fee-kpis small { color: var(--label); font-size: 12px; font-weight: 750; letter-spacing: .08em; }
+.fee-kpis strong { font: 750 20px Manrope, sans-serif; letter-spacing: -.02em; }
+.fee-kpis strong.good { color: #6fc28f; } .fee-kpis strong.bad { color: #e0806f; }
+.fee-kpis span { color: var(--muted); font-size: 12.5px; }
+.fee-kpis .k-members { --k: #3f9bc4; } .fee-kpis .k-week { --k: #5fae7e; } .fee-kpis .k-income { --k: #d1a24a; } .fee-kpis .k-year { --k: #9a8fd6; }
+.fee-drivers { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.driver { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid var(--line-strong); border-radius: 14px; background: var(--panel); font-size: 12.5px; color: var(--ink-2); }
+.driver b { font-weight: 750; }
+.driver.up { border-color: #4c8f6b; background: color-mix(in srgb, #4c8f6b 14%, var(--panel)); } .driver.up b { color: #7fd1a0; }
+.driver.down { border-color: #c4574a; background: color-mix(in srgb, #c4574a 14%, var(--panel)); } .driver.down b { color: #f0907f; }
+.fee-heading { margin: 4px 0 0; font: 750 15px var(--font-head, Manrope, sans-serif); }
+.fee-options { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.fee-option { display: grid; gap: 6px; align-content: start; min-height: 44px; padding: 10px 11px; border: 1px solid var(--line-strong); border-radius: 9px; background: var(--panel); color: var(--ink-2); text-align: left; cursor: pointer; font: inherit; }
+.fee-option:hover:not(:disabled) { border-color: var(--accent); background: var(--panel-2); }
+.fee-option:disabled { cursor: default; opacity: .75; }
+.fee-option.is-current { border-color: #3f9bc4; box-shadow: inset 0 0 0 2px #3f9bc4; opacity: 1; }
+.fee-top { display: flex; align-items: center; gap: 6px; } .fee-top b { margin-left: auto; font: 750 16px Manrope, sans-serif; color: var(--ink); }
+.fee-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.fee-chip { padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 700; background: var(--panel-2); }
+.fee-chip.up { color: #7fd1a0; background: color-mix(in srgb, #4c8f6b 18%, transparent); } .fee-chip.down { color: #f0907f; background: color-mix(in srgb, #c4574a 18%, transparent); }
+.fee-money { font-size: 12.5px; } .fee-money.up { color: #e0c07a; } .fee-money.down { color: var(--muted); }
+.fee-custom { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+.fee-custom label { display: grid; gap: 4px; font-size: 12px; font-weight: 700; color: var(--label); }
+.fee-custom input { width: 120px; min-height: 40px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--panel); color: var(--ink); font: 600 15px 'DM Sans', sans-serif; }
+.fee-note { margin: 0; padding: 8px 12px; border-radius: 8px; background: color-mix(in srgb, #d1a24a 14%, var(--panel)); border: 1px solid #d1a24a; color: var(--ink); font-size: 13px; }
+@media (max-width: 900px) { .fee-options { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fee-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } .org-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 420px) { .fee-options { grid-template-columns: minmax(0, 1fr); } }
+.fee-members { font-size: 12.5px; font-weight: 650; } .fee-members.up { color: #7fd1a0; } .fee-members.down { color: #f0907f; }

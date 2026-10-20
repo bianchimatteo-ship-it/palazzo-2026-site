@@ -1285,3 +1285,14 @@ details.accord-panel.pm-fold { padding: 0; }
   .it-map { max-height: none; }
   .it-labels text { font-size: 21px; }
 }
+
+/* National priorities of the Government: counter and error. */
+.priority-counter { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line-strong); background: var(--panel-2); }
+.priority-counter strong { font-weight: 750; }
+.priority-counter small { color: var(--muted); }
+.priority-counter.is-ok { border-color: #4c8f6b; background: color-mix(in srgb, #4c8f6b 14%, var(--panel)); }
+.priority-counter.is-low { border-color: #d1a24a; background: color-mix(in srgb, #d1a24a 12%, var(--panel)); }
+.priority-counter.is-over { border-color: #c4574a; background: color-mix(in srgb, #c4574a 16%, var(--panel)); }
+.priority-error { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid #c4574a; border-left: 5px solid #c4574a; border-radius: 8px; background: color-mix(in srgb, #c4574a 12%, var(--panel)); }
+.priority-error[hidden] { display: none; }
+.priority-pick { display: flex; flex-wrap: wrap; gap: 6px; }

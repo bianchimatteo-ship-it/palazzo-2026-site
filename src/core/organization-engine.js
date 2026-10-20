@@ -1,5 +1,5 @@
 import { ITALIAN_REGIONS } from '../data/regions.js?v=20261020-1';
-import { CONGRESS_CYCLE_WEEKS, FIRST_CONGRESS_WEEKS, MEMBERSHIP_FEE, ORGANS, PARTY_PRIORITIES, SECTION_WEEKLY_COST, TREASURY_LABELS } from '../data/simulation/organization-rules.js?v=20261020-1';
+import { CONGRESS_CYCLE_WEEKS, FIRST_CONGRESS_WEEKS, MEMBERSHIP, MEMBERSHIP_FEE, ORGANS, PARTY_PRIORITIES, SECTION_WEEKLY_COST, TREASURY_LABELS } from '../data/simulation/organization-rules.js?v=20261020-1';
 import { PARTY_INVESTMENTS } from '../data/simulation/career-rules.js?v=20261020-1';
 
 // The party as an organisation: members, sections, bodies, cohesion, conflicts and treasury.
@@ -210,13 +210,63 @@ export function createOrganization({ rand, founder = false, region = null, share
     congress: { nextWeek: week + FIRST_CONGRESS_WEEKS, lastWeek: null, history: [], preparations: {} }, selections: {}, currentPolitics: { week: null, requests: [], alliances: [], source: SIM }, currentPortfolios: null,
     priorities: { territorio: 1, comunicazione: 1, formazione: 1 }, lastCommunicationWeek: null,
     treasury: { balance: founder ? 1500 : Math.round(members * 9), current: blankPeriod(), history: [], yearTotals: blankPeriod(), annual: [], year: date?.slice(0, 4) ?? null },
-    membersHistory: [{ week, members }], growth: 0
+    membersHistory: [{ week, members }], growth: 0,
+    membership: blankMembership()
   };
 }
 export function normalizeOrganization(org, context) {
   if (!org || typeof org !== 'object' || !Array.isArray(org.sections)) return createOrganization(context);
   const base = createOrganization({ ...context, rand: () => 0.5 });
   return { ...base, ...org, treasury: { ...base.treasury, ...(org.treasury ?? {}) }, congress: { ...base.congress, ...(org.congress ?? {}), preparations: { ...(base.congress.preparations ?? {}), ...(org.congress?.preparations ?? {}) } }, currentPolitics: { ...base.currentPolitics, ...(org.currentPolitics ?? {}) }, priorities: { ...base.priorities, ...(org.priorities ?? {}) } };
+}
+
+// ---------- the membership fee ----------
+export const blankMembership = () => ({ fee: MEMBERSHIP_FEE, changedWeek: null, previous: null, shock: 0, boost: 0, weekly: null, history: [], source: SIM });
+export const membershipOf = org => ({ ...blankMembership(), ...(org?.membership ?? {}) });
+const clampRange = (value, min, max) => Math.min(max, Math.max(min, value));
+// What the members are ready to pay, in € a year: the reference fee, more when the party is cohesive, its sections are alive and the climate is good.
+export function acceptedFee({ cohesion = 55, vitality = 50, climate = 0 } = {}) {
+  const t = MEMBERSHIP.tolerance;
+  return MEMBERSHIP.reference * clampRange(t.base + t.cohesion * clampRange(cohesion, 0, 100) / 100 + t.vitality * clampRange(vitality, 0, 100) / 100 + t.climate * clampRange(climate, -1, 1), t.min, t.max);
+}
+// What a fee does: how many more or fewer join and leave, how many of the members pay, what it brings in a year. Pure, used by the engine every week and by the page to preview a choice.
+export function feeEffects(fee, { members = 0, cohesion = 55, vitality = 50, climate = 0 } = {}) {
+  const accepted = acceptedFee({ cohesion, vitality, climate });
+  const index = fee / accepted;                     // 1 = exactly what the members accept
+  const { join, leave, collection } = MEMBERSHIP;
+  const joinMultiplier = clampRange(1 + join.slope * (1 - index), join.floor, join.ceiling);
+  const leaveMultiplier = clampRange(leave.base + leave.slope * index, leave.floor, leave.ceiling);
+  const collected = clampRange(1 - collection.overSlope * Math.max(0, index - 1) - 0.1 * Math.max(0, 0.5 - cohesion / 100), collection.min, 1);
+  const payers = Math.round(members * collected);
+  return { accepted, index, joinMultiplier, leaveMultiplier, collected, payers, weekly: payers * fee / 52, yearly: payers * fee };
+}
+// What, apart from the fee, makes members join (climate, living sections, cohesion, the territory priority) and leave (the opposites, an empty treasury, open conflicts).
+export function membershipFactors(org, { climate = 0, vitality = 50 } = {}) {
+  const vit = (vitality - 50) / 50, coh = ((org.cohesion ?? 55) - 55) / 45;
+  const hotConflict = (org.conflicts ?? []).some(item => item.intensity >= 70) ? 0.3 : 0;
+  return {
+    joinFactor: clampRange(1 + 0.6 * climate + 0.4 * vit + 0.3 * coh + ((org.priorities?.territorio ?? 1) - 1) * 0.15, 0.2, 2.2),
+    leaveFactor: clampRange(1 - 0.5 * climate - 0.35 * vit - 0.4 * coh + ((org.treasury?.balance ?? 0) < 0 ? 0.5 : 0) + hotConflict, 0.3, 2.5)
+  };
+}
+// The members a year from now if everything stayed as it is today (no shocks, no luck): a guide to compare fees, not a promise.
+export function projectMembers(org, fee, { climate = 0, vitality = 50, weeks = 52 } = {}) {
+  const effects = feeEffects(fee, { members: org.members, cohesion: org.cohesion, vitality, climate });
+  const { joinFactor, leaveFactor } = membershipFactors(org, { climate, vitality });
+  const weekly = MEMBERSHIP.baseJoin * joinFactor * effects.joinMultiplier - MEMBERSHIP.baseLeave * leaveFactor * effects.leaveMultiplier;
+  return Math.round(org.members * (1 + clampRange(weekly, -MEMBERSHIP.maxWeekly, MEMBERSHIP.maxWeekly)) ** weeks);
+}
+// The leader sets the annual fee (whole euros, within limits, once every cooldownWeeks). Returns the new membership record and the line that tells it.
+export function setMembershipFee(org, fee, { week }) {
+  const value = Math.round(Number(fee));
+  const rule = MEMBERSHIP;
+  if (!Number.isFinite(value) || value < rule.min || value > rule.max) throw new Error(`La quota annuale va da ${rule.min} a ${rule.max} €.`);
+  const current = membershipOf(org);
+  if (value === current.fee) throw new Error('È già la quota in vigore.');
+  if (current.changedWeek !== null && week - current.changedWeek < rule.cooldownWeeks) throw new Error(`La quota si può cambiare una volta ogni ${rule.cooldownWeeks} settimane: ancora ${rule.cooldownWeeks - (week - current.changedWeek)}.`);
+  const delta = (value - current.fee) / rule.reference;
+  const membership = { ...current, fee: value, previous: current.fee, changedWeek: week, shock: current.shock + Math.max(0, delta) * rule.shockPerReference, boost: current.boost + Math.max(0, -delta) * rule.boostPerReference, history: [...current.history, { week, from: current.fee, to: value }].slice(-12) };
+  return { membership, line: `Quota annuale di tesseramento: da ${current.fee} a ${value} €` };
 }
 
 export const organOf = party => party ? ORGANS[party.affiliation === 'founder' ? 4 : Math.min(4, party.rank ?? 0)] : null;
@@ -316,10 +366,28 @@ export function advanceOrganization(org, { rand, week, date, pollShare = null, p
   // The programmes the leadership has funded: they cost to keep, return slowly, improve the committees and the campaigns,
   // and may go wrong. What they give to the rest of the game is written in org.perks.
   const programmes = runProgrammes(org, { week, rand, lines, events });
-  const rate = clamp(pollDelta * 0.004 + (vitality - 50) / 50 * 0.002 + (org.priorities.territorio - 1) * 0.0015 + (org.cohesion - 55) / 45 * 0.001 + (mood - 50) / 50 * 0.0005 + (rand() - 0.5) * 0.002 + recentCommunication + digital + programmes.members - (org.treasury.balance < 0 ? 0.002 : 0), -0.03, 0.03);
+  // Members come and go, they do not "grow": the weekly joins and leaves depend on the climate (polls, mood), the life of the sections, the cohesion of the party, its money and, above all, on the fee
+  // measured against what the members accept. Small sections keep their fractions (a section of 12 does not stand still for a year).
+  const membership = membershipOf(org);
+  const climate = clamp(pollDelta * 0.6 + (mood - 50) / 50 * 0.4, -1, 1);
+  const vit = (vitality - 50) / 50, coh = (org.cohesion - 55) / 45;
+  const hotConflict = org.conflicts.some(item => item.intensity >= 70) ? 0.3 : 0;
+  const fee = feeEffects(membership.fee, { members: org.members, cohesion: org.cohesion, vitality, climate });
+  const { joinFactor, leaveFactor } = membershipFactors(org, { climate, vitality });
+  const extra = recentCommunication + digital + programmes.members;
+  const joinRate = MEMBERSHIP.baseJoin * joinFactor * fee.joinMultiplier + membership.boost + Math.max(0, extra);
+  const leaveRate = MEMBERSHIP.baseLeave * leaveFactor * fee.leaveMultiplier + membership.shock + Math.max(0, -extra);
+  const noise = (rand() - 0.5) * MEMBERSHIP.noise;
   const before = org.members;
+  let joined = 0;
   for (const section of org.sections) {
-    section.members = Math.max(5, Math.round(section.members * (1 + rate + (section.vitality - 50) / 50 * 0.001)));
+    const secVit = (section.vitality - 50) / 50;
+    const sectionJoin = joinRate * (1 + 0.3 * secVit), sectionLeave = leaveRate * (1 - 0.3 * secVit);
+    const exact = section.members * clamp(sectionJoin - sectionLeave + noise, -MEMBERSHIP.maxWeekly, MEMBERSHIP.maxWeekly) + (section.carry ?? 0);
+    const delta = Math.trunc(exact);
+    section.carry = Math.round((exact - delta) * 1000) / 1000;
+    joined += section.members * sectionJoin;
+    section.members = Math.max(5, section.members + delta);
     section.vitality = Math.round(clamp(section.vitality + (50 + (org.priorities.territorio - 1) * 8 - section.vitality) * 0.05 + (rand() - 0.5) * 5 - (org.treasury.balance < 0 ? 1.5 : 0)));
   }
   const closing = org.sections.filter(item => item.vitality < 12 && org.sections.length > 1);
@@ -330,6 +398,10 @@ export function advanceOrganization(org, { rand, week, date, pollShare = null, p
   }
   recount(org);
   org.growth = before ? round1((org.members - before) / before * 100) : 0;
+  // The week of the fee, told so that it adds up: joins - leaves = the change in members; the income is booked below.
+  const net = org.members - before, joins = Math.max(Math.round(joined), net, 0), leaves = Math.max(0, joins - net);
+  const fade = value => value * MEMBERSHIP.shockDecay < 0.0002 ? 0 : value * MEMBERSHIP.shockDecay;
+  org.membership = { ...membership, shock: fade(membership.shock), boost: fade(membership.boost), weekly: { week, joins, leaves, net, fee: membership.fee, payers: 0, income: 0, accepted: Math.round(fee.accepted * 10) / 10, drivers: { climate: Math.round(climate * 100) / 100, vitality: Math.round(vit * 100) / 100, cohesion: Math.round(coh * 100) / 100, treasuryRed: org.treasury.balance < 0, conflict: hotConflict > 0 } } };
   const targetMilitants = org.members * (0.07 + org.cohesion / 1500 + org.priorities.formazione * 0.01 + (founder ? 0.12 : 0));
   org.militants = Math.round(org.militants + (targetMilitants - org.militants) * 0.1);
   // Without money the staff leaves: the cadres shrink while the treasury is in the red, and grow back only when it is not.
@@ -337,15 +409,21 @@ export function advanceOrganization(org, { rand, week, date, pollShare = null, p
   org.cadres = org.treasury.balance < 0 ? Math.max(Math.round(minimum * 0.6), Math.round(org.cadres * 0.99)) : Math.max(org.cadres, minimum);
 
   // Treasury: fees, 2x1000 and elected members in, sections, staff and communication out.
-  const income = org.members * MEMBERSHIP_FEE / 52 + Math.max(0, (pollShare ?? 2) - 1) * 650;
-  treasuryBook(org, income * 0.8, 'quote');
-  treasuryBook(org, income * 0.2, 'duepermille');
+  // Money. The fee brings in what the members who pay bring (fee x payers / 52); the poll-driven share (2x1000 and donations of a party that is doing well) comes on top. The costs follow the size of the
+  // activity (the members at the reference fee and the same poll share), never the fee: raising the fee brings in more, it does not make the staff more expensive.
+  const feeNow = feeEffects(org.membership.fee, { members: org.members, cohesion: org.cohesion, vitality, climate });
+  const pollIncome = Math.max(0, (pollShare ?? 2) - 1) * 650;
+  const activity = org.members * MEMBERSHIP.reference / 52 + pollIncome;
+  const income = feeNow.weekly + pollIncome;
+  treasuryBook(org, feeNow.weekly, 'quote');
+  treasuryBook(org, pollIncome, 'duepermille');
+  org.membership.weekly = { ...org.membership.weekly, payers: feeNow.payers, income: Math.round(feeNow.weekly), collected: Math.round(feeNow.collected * 100) / 100 };
   treasuryBook(org, -org.sections.length * SECTION_WEEKLY_COST * (1 + 0.5 * org.priorities.territorio), 'sedi');
-  treasuryBook(org, -income * (0.72 + (rand() - 0.5) * 0.06) * (1 + programmes.staff), 'personale');
-  for (const priority of PARTY_PRIORITIES) if (priority.id !== 'territorio') treasuryBook(org, -income * priority.costPerLevel * org.priorities[priority.id], priority.id);
-  if (campaignActive) treasuryBook(org, -income * 0.5, 'campagne');
+  treasuryBook(org, -activity * (0.72 + (rand() - 0.5) * 0.06) * (1 + programmes.staff), 'personale');
+  for (const priority of PARTY_PRIORITIES) if (priority.id !== 'territorio') treasuryBook(org, -activity * priority.costPerLevel * org.priorities[priority.id], priority.id);
+  if (campaignActive) treasuryBook(org, -activity * 0.5, 'campagne');
   // A party does not hoard: reserves beyond half a year of income turn into staff and initiatives.
-  if (org.treasury.balance > income * 26) treasuryBook(org, -(org.treasury.balance - income * 26) * 0.03, 'formazione');
+  if (org.treasury.balance > activity * 26) treasuryBook(org, -(org.treasury.balance - activity * 26) * 0.03, 'formazione');
   const period = org.treasury.current;
   org.treasury.history = [...org.treasury.history, { week, income: Math.round(period.income), expense: Math.round(period.expense), balance: org.treasury.balance, source: SIM }].slice(-HISTORY);
   org.treasury.current = blankPeriod();

@@ -673,6 +673,22 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       else wizard[field.name] = field.value;
     }
   };
+  // The priorities of the Government (from two to five): the counter follows the ticks; with six or more the page says so, blocks the save and asks which one to remove (it removes nothing by itself).
+  const syncProgramForm = form => {
+    if (!form) return;
+    const boxes = [...form.querySelectorAll('input[name="priorities"]')], chosen = boxes.filter(box => box.checked), n = chosen.length;
+    const counter = form.querySelector('[data-priority-counter]'), error = form.querySelector('[data-priority-error]'), submit = form.querySelector('[data-program-submit]');
+    const ok = n >= 2 && n <= 5;
+    if (counter) { counter.classList.toggle('is-ok', ok); counter.classList.toggle('is-over', n > 5); counter.classList.toggle('is-low', n < 2); const count = counter.querySelector('[data-priority-count]'); if (count) count.textContent = String(n); const note = counter.querySelector('small'); if (note) note.textContent = `da 2 a 5${n < 2 ? ` · ne servono ancora ${2 - n}` : ''}`; }
+    if (error) {
+      if (n > 5) {
+        const label = box => box.closest('label')?.textContent.trim() ?? box.value;
+        error.hidden = false;
+        error.innerHTML = `<strong>Hai scelto ${n} priorità: il massimo è cinque.</strong><span>Scegli quale rimuovere (ne devi togliere ${n - 5}). Il programma non si salva finché sono più di cinque.</span><span class="priority-pick">${chosen.map(box => `<button type="button" class="secondary-button" data-priority-remove="${esc(box.value)}">Togli «${esc(label(box))}»</button>`).join('')}</span>`;
+      } else { error.hidden = true; error.innerHTML = ''; }
+    }
+    if (submit) { submit.disabled = !ok; submit.title = ok ? '' : n > 5 ? 'Più di cinque priorità: togline qualcuna.' : 'Servono almeno due priorità.'; }
+  };
   const updateWizardLogo = () => {
     const box = root.querySelector('[data-wizard-logo-preview]');
     const src = wizard ? wizardLogoPreview(wizard) : null;
@@ -1194,6 +1210,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       views.filters[key] = (Number(views.filters[key]) || 1) + 1;
       saveViews(); render(store.getState(), store.getLastSaved()); return;
     }
+    const priorityRemove = event.target.closest('[data-priority-remove]');
+    if (priorityRemove) { const form = priorityRemove.closest('form'); const box = [...(form?.querySelectorAll('input[name="priorities"]') ?? [])].find(item => item.value === priorityRemove.dataset.priorityRemove); if (box) { box.checked = false; syncProgramForm(form); } return; }
     const outcomeClose = event.target.closest('[data-outcome-dismiss]');
     if (outcomeClose) { store.dismissOutcome(outcomeClose.dataset.outcomeDismiss); return; }
     const celebrationClose = event.target.closest('[data-celebration-dismiss]');
@@ -1498,7 +1516,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       target?.scrollIntoView({ behavior: settings.motion === 'full' ? 'smooth' : 'auto', block: 'start' });
       return;
     }
-    const simulationControl = event.target.closest('[data-local-seat],[data-local-inst],[data-local-section],[data-territory-measure],[data-territory-region],[data-budget-line],[data-party-priority],[data-real-law-more],[data-real-law-amend],[data-invest],[data-election-fund],[data-reserve],[data-reserve-release]');
+    const simulationControl = event.target.closest('[data-local-seat],[data-local-inst],[data-local-section],[data-territory-measure],[data-territory-region],[data-budget-line],[data-party-priority],[data-membership-fee],[data-membership-apply],[data-real-law-more],[data-real-law-amend],[data-invest],[data-election-fund],[data-reserve],[data-reserve-release]');
     if (simulationControl) {
       const data = simulationControl.dataset;
       try {
@@ -1509,6 +1527,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
         else if (data.territoryRegion) { territory.region = data.territoryRegion; render(store.getState(), store.getLastSaved()); root.querySelector('.region-detail')?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' }); }
         else if (data.budgetLine) store.setBudget(data.budgetLine, Number(data.budgetLevel));
         else if (data.partyPriority) store.setPartyPriority(data.partyPriority, Number(data.partyPriorityLevel));
+        else if (data.membershipFee) store.setMembershipFee(Number(data.membershipFee));
+        else if ('membershipApply' in data) store.setMembershipFee(Number(root.querySelector('[data-membership-custom]')?.value));
         else if (data.invest) store.invest(data.invest);
         else if (data.electionFund) store.saveForElection(Number(data.electionFund));
         else if (data.reserve) store.saveReserve(Number(data.reserve));
@@ -1955,7 +1975,11 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       event.preventDefault();
       const data = new FormData(form);
       try {
-        if (form.matches('[data-government-program-form]')) store.setGovernmentProgram({ line: data.get('line'), priorities: data.getAll('priorities') });
+        if (form.matches('[data-government-program-form]')) {
+          const picked = data.getAll('priorities');
+          if (picked.length < 2 || picked.length > 5) { syncProgramForm(form); form.querySelector('[data-priority-error]')?.scrollIntoView?.({ block: 'nearest' }); return; }   // (the page says why; nothing is saved or removed)
+          store.setGovernmentProgram({ line: data.get('line'), priorities: picked });
+        }
         else if (form.matches('[data-policy-form]')) {
           const kind = event.submitter?.value ?? 'bill';
           const draft = { title: data.get('title'), policy: designFromForm(form) };
@@ -2091,6 +2115,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     // The dialog's option survives a redraw while the confirmation is open.
     if (pendingConfirm && event.target.matches?.('[data-confirm-option]')) { pendingConfirm.optionChecked = Boolean(event.target.checked); return; }
     const field=event.target;
+    if (field.matches?.('[data-government-program-form] input[name="priorities"]')) { syncProgramForm(field.form); return; }
     // The campaign's selects: the choice is kept for the next redraws (another electoral model restarts the roles).
     const campaignPick = field.matches?.('[data-campaign-setup]') ? `setup.${field.dataset.campaignSetup}` : CAMPAIGN_PICKS.find(([selector]) => field.matches?.(selector))?.[1];
     if (campaignPick) { const current = store.getState(); const values = { ...campaignChoices(current), [campaignPick]: field.value }; if (campaignPick === 'setup.electionType') delete values['setup.role']; store.setCampaignPicks({ key: campaignKey(current), values }); }
