@@ -214,6 +214,74 @@ function levelStep(d, parliamentaryGroups, realPoliticians, place = null) {
   const contextBlock = context ? more(d, 'group', 'Contesto parlamentare', esc(d.parliamentaryGroupId ? (parliamentaryGroups.find(group => group.id === d.parliamentaryGroupId)?.officialName ?? 'gruppo scelto') : 'scegli il gruppo di riferimento'), context, !d.parliamentaryGroupId) : '';
   return '<div class="level-cards">' + cards + pdcCard + presidentCard + '</div>' + pdcChambers + contextBlock + '<div class="wizard-data-note">La carriera parlamentare è uno scenario di gioco: non aggiunge il tuo personaggio agli elenchi dei parlamentari reali e non modifica le consistenze ufficiali.</div>';
 }
+// --- Party-selection filter: only criteria that exist in the data (orientation, kind, status, origin) plus name search. ---
+const KIND_LABELS = { party: 'Partito', politicalMovement: 'Movimento', coalition: 'Coalizione / lista' };
+const STATUS_LABELS = { active: 'In attività', historical: 'Storico' };
+const NO_VALUE = '__none__';
+const capital = text => text.charAt(0).toUpperCase() + text.slice(1);
+const orientationOf = party => POSITIONS.includes(party.politicalPosition) ? party.politicalPosition : NO_VALUE;
+const kindOf = party => party.entityType ?? NO_VALUE;
+const statusOf = party => party.status ?? NO_VALUE;
+const selectedOrientations = d => Array.isArray(d.partyOrient) ? d.partyOrient : [];
+const partyMatches = (party, d, skip) => {
+  const query = String(d.partyQuery ?? '').trim().toLocaleLowerCase('it-IT');
+  if (query && ![party.officialName, party.name, party.abbreviation].filter(Boolean).join(' ').toLocaleLowerCase('it-IT').includes(query)) return false;
+  if (d.partyFilter && d.partyFilter !== 'all' && party.source !== d.partyFilter) return false;
+  if (skip !== 'orient' && selectedOrientations(d).length && !selectedOrientations(d).includes(orientationOf(party))) return false;
+  if (skip !== 'kind' && d.partyKind && d.partyKind !== 'all' && kindOf(party) !== d.partyKind) return false;
+  if (skip !== 'status' && d.partyStatus && d.partyStatus !== 'all' && statusOf(party) !== d.partyStatus) return false;
+  return true;
+};
+export function filterWizardParties(parties, d) {
+  return parties.filter(party => partyMatches(party, d)).sort((a, b) => (a.officialName ?? a.name).localeCompare(b.officialName ?? b.name, 'it'));
+}
+// The criteria currently applied, as { key, value, label } — each can be removed on its own.
+export function activePartyCriteria(d) {
+  const out = [];
+  if (String(d.partyQuery ?? '').trim()) out.push({ key: 'query', value: '', label: '“' + String(d.partyQuery).trim() + '”' });
+  for (const value of selectedOrientations(d)) out.push({ key: 'orient', value, label: value === NO_VALUE ? 'Orientamento non indicato' : capital(value) });
+  if (d.partyKind && d.partyKind !== 'all') out.push({ key: 'kind', value: d.partyKind, label: KIND_LABELS[d.partyKind] ?? 'Tipo non indicato' });
+  if (d.partyStatus && d.partyStatus !== 'all') out.push({ key: 'status', value: d.partyStatus, label: STATUS_LABELS[d.partyStatus] ?? 'Stato non indicato' });
+  if (d.partyFilter && d.partyFilter !== 'all') out.push({ key: 'source', value: d.partyFilter, label: d.partyFilter === 'real' ? 'Dati reali verificati' : 'Creati da te' });
+  return out;
+}
+export function removePartyCriterion(d, key, value) {
+  if (key === 'query') d.partyQuery = '';
+  else if (key === 'orient') d.partyOrient = selectedOrientations(d).filter(item => item !== value);
+  else if (key === 'kind') d.partyKind = 'all';
+  else if (key === 'status') d.partyStatus = 'all';
+  else if (key === 'source') d.partyFilter = 'all';
+  else if (key === 'all') { d.partyQuery = ''; d.partyOrient = []; d.partyKind = 'all'; d.partyStatus = 'all'; d.partyFilter = 'all'; }
+  d.partyListLimit = 12;
+}
+export function togglePartyOrientation(d, value) {
+  const current = selectedOrientations(d);
+  d.partyOrient = current.includes(value) ? current.filter(item => item !== value) : [...current, value];
+  d.partyListLimit = 12;
+}
+function partyFilterControls(parties, d) {
+  const count = (skip, test) => parties.filter(party => partyMatches(party, d, skip) && test(party)).length;
+  const present = (get, order) => {
+    const values = [...new Set(parties.map(get))];
+    return order ? [...order.filter(value => values.includes(value)), ...(values.includes(NO_VALUE) ? [NO_VALUE] : [])] : values;
+  };
+  const chosen = selectedOrientations(d);
+  const chips = present(orientationOf, POSITIONS).map(value => {
+    const n = count('orient', party => orientationOf(party) === value);
+    const on = chosen.includes(value);
+    return '<button type="button" class="party-chip pos-' + esc(value === NO_VALUE ? 'nd' : value.replace(/\s+/g, '-')) + (on ? ' on' : '') + '" data-party-orient="' + esc(value) + '" aria-pressed="' + on + '"' + (!n && !on ? ' disabled' : '') + '>' + esc(value === NO_VALUE ? 'Non indicato' : capital(value)) + ' <b>' + n + '</b></button>';
+  }).join('');
+  const select = (name, label, skip, get, values, labels, current, nothing) => values.length < 2 ? '' :
+    '<label>' + label + '<select name="' + name + '" data-wizard-party-facet><option value="all">' + nothing + '</option>' + values.map(value => '<option value="' + esc(value) + '" ' + (current === value ? 'selected' : '') + '>' + esc(labels[value] ?? 'Non indicato') + ' (' + count(skip, party => get(party) === value) + ')</option>').join('') + '</select></label>';
+  const criteria = activePartyCriteria(d);
+  const removable = criteria.map(item => '<button type="button" class="party-criterion" data-party-criterion="' + esc(item.key) + '" data-value="' + esc(item.value) + '" aria-label="Rimuovi criterio: ' + esc(item.label) + '">' + esc(item.label) + ' <span aria-hidden="true">×</span></button>').join('');
+  const facets = select('partyKind', 'Tipo', 'kind', kindOf, present(kindOf), KIND_LABELS, d.partyKind, 'Tutti i tipi') + select('partyStatus', 'Stato', 'status', statusOf, present(statusOf), STATUS_LABELS, d.partyStatus, 'Tutti gli stati');
+  return '<div class="wizard-party-controls"><label>Cerca partito<input type="search" name="partyQuery" data-wizard-party-search value="' + val(d, 'partyQuery') + '" placeholder="Nome o sigla…" autocomplete="off" /></label>' +
+    '<label>Origine<select name="partyFilter" data-wizard-party-filter><option value="all" ' + (!d.partyFilter || d.partyFilter === 'all' ? 'selected' : '') + '>Tutte le origini</option><option value="real" ' + (d.partyFilter === 'real' ? 'selected' : '') + '>Dati reali verificati</option><option value="user" ' + (d.partyFilter === 'user' ? 'selected' : '') + '>Creati da te</option></select></label></div>' +
+    '<div class="party-orient" role="group" aria-label="Orientamento politico"><span class="party-orient-title">Orientamento politico <small>(puoi sceglierne più di uno)</small></span><div class="party-chip-row">' + chips + '</div></div>' +
+    (facets ? '<div class="wizard-party-controls wizard-party-facets">' + facets + '</div>' : '') +
+    (criteria.length ? '<div class="party-criteria" aria-label="Criteri applicati">' + removable + '<button type="button" class="party-criterion party-clear" data-party-criterion="all">Rimuovi tutti i filtri</button></div>' : '');
+}
 function partyStep(d, parties, logoFor, parliamentaryGroups, partyLeaderships, politicalFigures) {
   const modes = [
     ['independent', 'Indipendente', 'Comincia senza affiliazione.'],
@@ -222,12 +290,7 @@ function partyStep(d, parties, logoFor, parliamentaryGroups, partyLeaderships, p
   ];
   let detail = '';
   if (d.partyMode === 'existing') {
-    const query = String(d.partyQuery ?? '').trim().toLocaleLowerCase('it-IT');
-    const available = parties.filter(party => {
-      const sourceAllowed = !d.partyFilter || d.partyFilter === 'all' || party.source === d.partyFilter;
-      const searchText = [party.officialName, party.name, party.abbreviation].filter(Boolean).join(' ').toLocaleLowerCase('it-IT');
-      return sourceAllowed && (!query || searchText.includes(query));
-    }).sort((a, b) => (a.officialName ?? a.name).localeCompare(b.officialName ?? b.name, 'it'));
+    const available = filterWizardParties(parties, d);
     const limit = Math.max(12, Number(d.partyListLimit) || 12);
     const shown = available.slice(0, limit);
     const cards = shown.map(party => {
@@ -254,7 +317,7 @@ function partyStep(d, parties, logoFor, parliamentaryGroups, partyLeaderships, p
       const website = party.source === DATA_SOURCES.REAL && party.website ? '<a class="wizard-party-source" href="' + esc(party.website) + '" target="_blank" rel="noopener noreferrer">Sito ↗</a>' : '';
       return '<article class="wizard-party-entry ' + (d.partyId === party.id ? 'selected' : '') + '" style="' + (color ? '--party-color:' + esc(color) : '') + '"><button type="button" class="demo-party ' + (d.partyId === party.id ? 'selected' : '') + '" data-party-id="' + esc(party.id) + '" aria-pressed="' + (d.partyId === party.id) + '">' + mark + '<span class="demo-party-copy"><strong>' + esc(name) + '</strong><small>' + esc(party.abbreviation || 'Sigla non documentata') + ' · ' + esc(description || 'Descrizione non presente nelle fonti caricate.') + '</small><em>' + esc([sourceName, ...facts, ...leaders].join(' · ')) + '</em></span><span class="source-pill">' + sourceName + '</span></button>' + officialSource + website + '</article>';
     }).join('');
-    detail = '<div class="wizard-party-controls"><label>Cerca partito<input type="search" name="partyQuery" data-wizard-party-search value="' + val(d, 'partyQuery') + '" placeholder="Nome o sigla…" autocomplete="off" /></label><label>Origine<select name="partyFilter" data-wizard-party-filter><option value="all" ' + (!d.partyFilter || d.partyFilter === 'all' ? 'selected' : '') + '>Tutte le origini</option><option value="real" ' + (d.partyFilter === 'real' ? 'selected' : '') + '>Dati reali verificati</option><option value="user" ' + (d.partyFilter === 'user' ? 'selected' : '') + '>Creati da te</option></select></label></div><div class="wizard-party-count">' + (available.length ? 'Mostrati ' + shown.length + ' di ' + available.length : 'Nessun partito corrisponde alla ricerca.') + '</div><div class="demo-party-list">' + (cards || '<div class="empty-inline">Prova un altro nome o cambia il filtro.</div>') + '</div>' + (shown.length < available.length ? '<button type="button" class="wizard-show-more" data-wizard-show-parties>Mostra altri partiti</button>' : '') + '<div class="wizard-data-note">Mostriamo solo informazioni presenti nel dataset. Le appartenenze a gruppi non vengono dedotte dal nome del partito; il riferimento al gruppo resta una scelta separata dello scenario.</div>';
+    detail = partyFilterControls(parties, d) + '<div class="wizard-party-count">' + (available.length ? 'Mostrati ' + shown.length + ' di ' + available.length : 'Nessun partito corrisponde ai criteri scelti.') + '</div><div class="demo-party-list">' + (cards || '<div class="empty-inline">Rimuovi un criterio o prova un altro nome.</div>') + '</div>' + (shown.length < available.length ? '<button type="button" class="wizard-show-more" data-wizard-show-parties>Mostra altri partiti</button>' : '') + '<div class="wizard-data-note">Mostriamo solo informazioni presenti nel dataset. Le appartenenze a gruppi non vengono dedotte dal nome del partito; il riferimento al gruppo resta una scelta separata dello scenario.</div>';
   }
   if (d.partyMode === 'new') detail = '<div class="new-party-form"><div class="wizard-form-grid"><label>Nome del partito<input name="partyName" value="' + val(d, 'partyName') + '" maxlength="60" placeholder="Il nome del tuo partito" /></label><label>Abbreviazione<input name="partyAbbreviation" value="' + val(d, 'partyAbbreviation') + '" maxlength="8" placeholder="Sigla" /></label><label class="wizard-full-field">Descrizione<textarea name="partyDescription" maxlength="240" rows="2" placeholder="Qual è la ragione d’essere del partito?">' + val(d, 'partyDescription') + '</textarea></label><label>Orientamento generale<select name="partyOrientation">' + ['Centrismo civico', 'Progressista', 'Conservatore', 'Liberale', 'Socialdemocratico', 'Ecologista', 'Popolare', 'Autonomista', 'Altro'].map(option => '<option ' + (d.partyOrientation === option ? 'selected' : '') + '>' + esc(option) + '</option>').join('') + '</select></label><label>Collocazione<select name="partyPosition">' + POSITIONS.map(option => '<option value="' + option + '" ' + ((d.partyPosition ?? 'centro') === option ? 'selected' : '') + '>' + esc(option.charAt(0).toUpperCase() + option.slice(1)) + '</option>').join('') + '</select></label><label class="color-field">Colore principale<span class="color-input-wrap"><input type="color" name="partyColor" value="' + val(d, 'partyColor') + '" /><span>' + esc(d.partyColor || '#264d82') + '</span></span></label></div>' + logoBuilder(d) + '<section class="wizard-section wizard-program-section" aria-label="Programma del partito"><div class="policy-heading"><strong>Programma: fino a quattro priorità</strong><small>Le aree interne del partito le confrontano con i loro temi; da segretario potrai cambiarle.</small></div><div class="wizard-program">' + Object.entries(AREA_GROUPS).map(([group, label]) => '<fieldset><legend>' + esc(label) + '</legend>' + POLICY_AREAS.filter(item => item.group === group).map(item => '<label class="agenda-option"><input type="checkbox" name="partyProgram" value="' + esc(item.id) + '" ' + ((d.partyProgram ?? []).includes(item.id) ? 'checked' : '') + ' /><span>' + esc(item.label) + '</span></label>').join('') + '</fieldset>').join('') + '</div></section><section class="wizard-section" aria-label="Posizioni sulle grandi aree"><div class="policy-heading"><strong>Posizione sulle grandi aree</strong><small>1 = più prudente · 5 = più orientata al cambiamento</small></div><div class="policy-grid">' + [['economia', 'Economia'], ['welfare', 'Welfare e servizi'], ['ambiente', 'Ambiente'], ['europa', 'Integrazione europea']].map(([key, label]) => '<label class="policy-slider"><span>' + label + '</span><input type="range" name="policy_' + key + '" min="1" max="5" step="1" value="' + Number(d.policyPositions?.[key] ?? 3) + '" /><output>' + Number(d.policyPositions?.[key] ?? 3) + '</output></label>').join('') + '</div></section><div class="wizard-data-note">Il partito creato da te sarà marcato come dato utente e non sarà presentato come organizzazione reale.</div></div>';
   const group = parliamentaryGroups.find(item => item.id === d.parliamentaryGroupId);

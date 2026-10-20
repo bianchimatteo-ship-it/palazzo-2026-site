@@ -45,6 +45,7 @@
     "check:outcome-popup": "node scripts/check-outcome-popup.mjs",
     "check:agenda-races": "node scripts/check-agenda-races.mjs",
     "check:pacts-table": "node scripts/check-pacts-table.mjs",
+    "check:wizard-party-filter": "node scripts/check-wizard-party-filter.mjs",
     "check:campaign-ui": "node scripts/check-campaign-ui.mjs",
     "check:service-worker": "node scripts/check-service-worker.mjs",
     "check:elections": "node scripts/check-elections.mjs",

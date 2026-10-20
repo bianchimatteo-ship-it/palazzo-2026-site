@@ -16,7 +16,7 @@ import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=202
 import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20261020-1';
 import { PARTY_LINK_COLLECTIONS, forceKind, isCoalitionList, politicalForces } from '../data/repositories/party-links.js?v=20261020-1';
 import { renderLogoAdmin } from './logo-admin.js?v=20261020-1';
-import { chosenPlace, makeCareerDraft, pollScenarioOf, renderCareerWizard, wizardLogoPreview } from './career-wizard.js?v=20261020-1';
+import { chosenPlace, makeCareerDraft, pollScenarioOf, removePartyCriterion, renderCareerWizard, togglePartyOrientation, wizardLogoPreview } from './career-wizard.js?v=20261020-1';
 import { userPartyLogo } from './party-logo.js?v=20261020-1';
 import { CAREER_STEPS, validateWizardStep } from '../core/career-rules.js?v=20261020-1';
 import { renderElectionsHub } from './elections-hub.js?v=20261020-1';
@@ -1667,6 +1667,10 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     }
     if (wizard) {
       if (event.target.closest('[data-wizard-retry-data]')) { syncWizardDraft(); wizard.errors = []; await loadWizardData(); return; }
+      const orientChip = event.target.closest('[data-party-orient]');
+      if (orientChip) { syncWizardDraft(); togglePartyOrientation(wizard, orientChip.dataset.partyOrient); render(store.getState(),store.getLastSaved()); return; }
+      const criterion = event.target.closest('[data-party-criterion]');
+      if (criterion) { syncWizardDraft(); removePartyCriterion(wizard, criterion.dataset.partyCriterion, criterion.dataset.value); render(store.getState(),store.getLastSaved()); return; }
       if (event.target.closest('[data-wizard-show-parties]')) { syncWizardDraft(); wizard.partyListLimit = (Number(wizard.partyListLimit)||12)+12; render(store.getState(),store.getLastSaved()); return; }
       if (event.target.closest('[data-wizard-show-municipalities]')) { syncWizardDraft(); wizard.municipalityLimit = (Number(wizard.municipalityLimit)||40)+40; render(store.getState(),store.getLastSaved()); return; }
       // A comune picked from the ISTAT list becomes the starting territory (name, code, unit and region).
@@ -2180,6 +2184,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       confirmThen({ kicker: 'AREA AMMINISTRATIVA', title: 'Sostituire l’archivio amministrativo?', body: `Le correzioni di questo browser verranno sostituite da quelle del file «${file.name}»${isAdminVerified() ? ' e pubblicate per tutti i giocatori' : ''}. Esporta prima l’archivio attuale se vuoi conservarlo.`, confirmLabel: 'Importa e sostituisci', tone: 'danger' }, () => { try { importAdminArchive(text); adminDone('Archivio importato e applicato.'); } catch (error) { admin.message = error.message || 'Importazione non riuscita.'; } });
       return;
     }
+    if (field.matches('[data-wizard-party-facet]')) { syncWizardDraft(); wizard.partyListLimit=12; render(store.getState(),store.getLastSaved()); return; }
     if (field.matches('[data-wizard-party-filter]')) { syncWizardDraft(); wizard.partyListLimit=12; preserveFocusRender('[data-wizard-party-filter]'); return; }
     // Another region (or province) means another list of comuni: the choice starts again there.
     if (field.matches('[data-wizard-region]') && wizard) { Object.assign(wizard, { region: field.value, territorialUnit: '', municipality: '', municipalityCode: '', municipalityQuery: '', municipalityLimit: 40, provinceCode: '', provinceName: '', provinceType: '', errors: [] }); render(store.getState(), store.getLastSaved()); return; }
