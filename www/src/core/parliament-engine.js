@@ -1,8 +1,8 @@
-import { DATA_SOURCES } from '../data/schema.js?v=20261020-1';
-import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, STAGE_WEEKS, areaOf, governmentKindOf } from '../data/simulation/policy-rules.js?v=20261020-1';
-import { BUDGET_SECTORS } from '../data/simulation/project-rules.js?v=20261020-1';
-import { evaluateAdvancement } from './progression-engine.js?v=20261020-1';
-import { groupLine, splitGroupVote } from './vote-engine.js?v=20261020-1';
+import { DATA_SOURCES } from '../data/schema.js?v=20261020-2';
+import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, SPENDING_REVIEW, STAGE_WEEKS, areaOf, governmentKindOf } from '../data/simulation/policy-rules.js?v=20261020-2';
+import { BUDGET_SECTORS } from '../data/simulation/project-rules.js?v=20261020-2';
+import { evaluateAdvancement } from './progression-engine.js?v=20261020-2';
+import { groupLine, splitGroupVote } from './vote-engine.js?v=20261020-2';
 
 export const CHAMBERS = Object.freeze({
   camera: { label: 'Camera dei deputati', shortLabel: 'Camera', source: DATA_SOURCES.REAL },
@@ -899,13 +899,19 @@ export function partnerSatisfaction(parliament) {
   const partners = Object.values(parliament?.government?.partners ?? {});
   return partners.length ? Math.round(partners.reduce((sum, item) => sum + item.satisfaction, 0) / partners.length) : null;
 }
+// How many national priorities the Government sets: from two to five (the same limit in the page and here, so it cannot be skipped).
+export const GOVERNMENT_PRIORITIES = Object.freeze({ min: 2, max: 5 });
 // The political direction and the national priorities of the Government: allies judge them against their own.
 export function setGovernmentProgram(parliament, { line, priorities = [] }, currentDate) {
   const government = parliament.government;
   if (!government || !['active', 'crisis'].includes(government.status)) throw new Error('Serve un governo in carica.');
   if (!GOVERNMENT_LINES[line]) throw new Error('Scegli un indirizzo politico.');
-  const areas = [...new Set(priorities)].filter(id => AREA_BY_ID[id]).slice(0, 5);
-  if (areas.length < 2) throw new Error('Scegli da due a cinque priorità nazionali.');
+  // From two to five priorities, and never a silent cut: a sixth is refused and the player is asked which one to drop; an unknown one is refused too.
+  const areas = [...new Set(priorities)];
+  const unknown = areas.filter(id => !AREA_BY_ID[id]);
+  if (unknown.length) throw new Error(`Priorità non riconosciuta: ${unknown.join(', ')}.`);
+  if (areas.length > GOVERNMENT_PRIORITIES.max) { const error = new Error(`Hai scelto ${areas.length} priorità: il massimo è ${GOVERNMENT_PRIORITIES.max}. Scegli quale rimuovere (${areas.map(id => AREA_BY_ID[id].label.toLowerCase()).join(', ')}): il programma non viene salvato finché non ne restano ${GOVERNMENT_PRIORITIES.max} o meno.`); error.code = 'priorities-too-many'; error.excess = areas.length - GOVERNMENT_PRIORITIES.max; throw error; }
+  if (areas.length < GOVERNMENT_PRIORITIES.min) throw new Error('Scegli da due a cinque priorità nazionali.');
   if (government.program?.setAt && weeksBetween(government.program.setAt, currentDate) < 8) throw new Error(`Il programma è stato fissato da poco: si può rivedere dal ${addDaysTo(government.program.setAt, 56)}.`);
   let next = { ...parliament, government: { ...government, program: { line, priorities: areas, setAt: currentDate, source: DATA_SOURCES.SIMULATION } } };
   const reactions = [];
@@ -915,6 +921,27 @@ export function setGovernmentProgram(parliament, { line, priorities = [] }, curr
     if (delta) { next = changePartner(next, groupId, delta); reactions.push(`${getGroup(parliament, groupId)?.officialName ?? groupId} ${delta > 0 ? '+' : ''}${delta}`); }
   }
   return record(next, currentDate, 'programma-governo', `Programma di governo: ${GOVERNMENT_LINES[line].label.toLowerCase()} · priorità ${areas.map(id => AREA_BY_ID[id].label.toLowerCase()).join(', ')}.${reactions.length ? ` Reazioni degli alleati: ${reactions.join('; ')}.` : ''}`, { line, priorities: areas, source: DATA_SOURCES.SIMULATION });
+}
+// Spending review of the Prime Minister: the allies feel the cuts (less those who defend the protected area), the ministers lose some loyalty, the Government some stability. One a quarter.
+export function governmentSpendingReview(parliament, { level, protect = null } = {}, currentDate, week) {
+  const government = parliament.government;
+  if (!government || government.status !== 'active') throw new Error('La revisione della spesa si decide con un governo in carica.');
+  const spec = SPENDING_REVIEW.levels[level];
+  if (!spec) throw new Error('Scegli quanto tagliare: leggera, media o profonda.');
+  if (Number.isFinite(government.lastReviewWeek) && week - government.lastReviewWeek < SPENDING_REVIEW.cooldownWeeks) throw new Error(`Una revisione della spesa ogni ${SPENDING_REVIEW.cooldownWeeks} settimane: ancora ${SPENDING_REVIEW.cooldownWeeks - (week - government.lastReviewWeek)}.`);
+  let next = { ...parliament, government: { ...government, lastReviewWeek: week } };
+  const reactions = [];
+  for (const groupId of Object.keys(government.partners ?? {})) {
+    const profile = groupProfile(getGroup(parliament, groupId) ?? groupId);
+    const spared = Boolean(protect) && profile.likes.includes(protect);
+    const delta = -(spared ? Math.ceil(spec.partners / 2) : spec.partners);
+    next = changePartner(next, groupId, delta);
+    reactions.push(`${getGroup(parliament, groupId)?.officialName ?? groupId} ${delta}`);
+  }
+  const stability = level === 'profonda' ? -2 : level === 'media' ? -1 : 0;
+  next = { ...next, government: { ...next.government, stability: clamp((next.government.stability ?? 50) + stability, 0, 100), ministers: (next.government.ministers ?? []).map(item => item.endedAt || item.playerAppointed ? item : { ...item, loyalty: clamp(Math.round((item.loyalty ?? 60) - spec.partners * 0.75), 0, 100) }) } };
+  const where = protect && AREA_BY_ID[protect] ? ` risparmiando ${AREA_BY_ID[protect].label.toLowerCase()}` : '';
+  return record(next, currentDate, 'revisione-spesa', `Revisione della spesa ${spec.label.toLowerCase()}${where}.${reactions.length ? ` Reazioni degli alleati: ${reactions.slice(0, 4).join(', ')}.` : ''}`, { level, protect, source: DATA_SOURCES.SIMULATION });
 }
 // Summit of the majority: it can calm the allies, or make a quarrel public.
 export function majoritySummit(parliament, currentDate, roll = 0.5) {

@@ -1,9 +1,9 @@
 // The immutable real snapshot is fetched by collection. The 2 MB aggregate is
 // retained for exports and validation, but the browser never downloads it.
-export const REAL_DATA_ASSET_VERSION = '2026-10-14.1-572510cca1';
+export const REAL_DATA_ASSET_VERSION = '2026-10-14.1-0ca9616d6b';
 
-import { applyAdminOverrides } from './admin-store.js?v=20261020-1';
-import { displayCase, withDisplayNames } from './name-case.js?v=20261020-1';
+import { applyAdminOverrides } from './admin-store.js?v=20261020-2';
+import { displayCase, withDisplayNames } from './name-case.js?v=20261020-2';
 
 export let realDatabase = Object.freeze({});
 // Untouched copies of what the files contain, so owner overrides can be re-layered or reverted.
@@ -48,7 +48,8 @@ const documentFiles = Object.freeze({
 });
 // Documents that may legitimately be missing: the game works without them and says so (loadOptionalRealDocument returns null, nothing is listed among the failures).
 // municipalPopulation: population of the comuni (ISTAT), imported by scripts/import-istat-popolazione-comuni.mjs from the official files.
-const optionalDocumentFiles = Object.freeze({ municipalPopulation: 'municipal-population.json' });
+// italyBoundaries: outline of the regions and provinces for the geographic map (scripts/build-italy-boundaries.mjs, ISTAT via Openpolis, CC BY 4.0).
+const optionalDocumentFiles = Object.freeze({ municipalPopulation: 'municipal-population.json', italyBoundaries: 'italy-boundaries.json' });
 const loadingDocuments = new Map();
 let manifestPromise;
 // What could not be loaded (a collection, a document or the manifest) and why: the game starts with the rest and
@@ -164,7 +165,7 @@ export async function loadOptionalRealDocument(name) {
   if (!realDatabase.manifest?.documents?.[name]) return null;
   try {
     const document = await fetchJson(optionalDocumentFiles[name]);
-    if (!document || typeof document !== 'object' || Array.isArray(document) || document.source !== 'real' || document.status === 'non-importato' || !Array.isArray(document.records)) return null;
+    if (!document || typeof document !== 'object' || Array.isArray(document) || document.source !== 'real' || document.status === 'non-importato' || !(Array.isArray(document.records) || Array.isArray(document.regions))) return null;
     realDatabase = Object.freeze({ ...realDatabase, [name]: freezeDeep(document) });
     return realDatabase[name];
   } catch { return null; }

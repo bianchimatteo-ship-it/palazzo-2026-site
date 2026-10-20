@@ -1,13 +1,13 @@
 // VITA INTERNA — the people behind the currents, what they ask, the agreements, the congress, the local leaders, the
 // rebuilding of the party and the way it is founded, merged or renamed. All simulated: no real person appears here.
-import { costProblem, lifeOverview, partyOpsAvailability } from '../core/career-engine.js?v=20261020-1';
-import { mergeCandidates } from '../core/world-engine.js?v=20261020-1';
-import { OP_COSTS } from '../core/party-ops-engine.js?v=20261020-1';
-import { CADRE_ACTIONS, REBUILD_FOCUS, RENAME_STYLES } from '../data/simulation/party-life-rules.js?v=20261020-1';
-import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20261020-1';
-import { badge, bar, card, empty, esc, euro, num, weeksLabel } from './sections-kit.js?v=20261020-1';
-import { territoryTile, territoryVisual } from './visuals.js?v=20261020-1';
-import { planAddButton } from './plan-view.js?v=20261020-1';
+import { costProblem, lifeOverview, partyOpsAvailability } from '../core/career-engine.js?v=20261020-2';
+import { mergeCandidates } from '../core/world-engine.js?v=20261020-2';
+import { OP_COSTS } from '../core/party-ops-engine.js?v=20261020-2';
+import { CADRE_ACTIONS, REBUILD_FOCUS, RENAME_STYLES } from '../data/simulation/party-life-rules.js?v=20261020-2';
+import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20261020-2';
+import { badge, bar, card, empty, esc, euro, num, weeksLabel } from './sections-kit.js?v=20261020-2';
+import { territoryTile, territoryVisual } from './visuals.js?v=20261020-2';
+import { planAddButton } from './plan-view.js?v=20261020-2';
 
 const STANCE = { alleata: ['good', 'Alleata'], neutrale: ['neutral', 'Neutrale'], ostile: ['bad', 'Ostile'] };
 const PACT_STATUS = { attivo: ['good', 'In vigore'], scaduto: ['neutral', 'Scaduto'], rotto: ['bad', 'Rotto'], rinnovato: ['good', 'Rinnovato'] };
@@ -128,15 +128,7 @@ function cadresCard(view, party, filters = {}) {
   const rows = groups.map(({ key, items }) => { const visual = territoryVisual(key); return `<details class="pl-level" open style="--lv:${esc(visual.color)}" data-level="${esc(key)}"><summary>${territoryTile(key, 'sm')}<span>Dirigenti ${LEVEL_NOUN[key]}</span><small>${items.length}</small></summary><div class="pl-level-list">${items.map(row).join('')}</div></details>`; }).join('');
   // The committees that have nobody of their own: who to appoint, and where. Level and territory are on every row.
   const vacant = (view.committees ?? []).filter(item => item.vacant && matches(item, `${item.name} ${item.region}`)).sort((a, b) => LEVELS.indexOf(a.level) - LEVELS.indexOf(b.level) || String(a.region).localeCompare(String(b.region), 'it') || String(a.name).localeCompare(String(b.name), 'it'));
-  const recruitOpen = filters.recruitOpen ?? '';
-  const committeeLabel = item => `${item.name} · ${LEVEL_ONE[item.level] ?? item.level} · ${item.region}`;
-  const recruitCost = costChips(CADRE_ACTIONS.recluta.cost).replace(/<[^>]+>/g, '');
-  // The menu lists the committees without a leader (the only ones the engine lets the player staff); the choice is explicit and one confirmation does one recruitment.
-  const recruitMenu = item => {
-    const picked = vacant.some(entry => entry.id === filters.recruitPick) ? filters.recruitPick : item.id;
-    return `<div class="pl-recruit-menu" role="dialog" aria-label="Recluta un responsabile" data-recruit-menu><p class="sx-note">${esc(CADRE_ACTIONS.recluta.detail)}</p><label>Comitato da affidare<select data-view-filter-select="recruitPick" data-recruit-select>${vacant.map(entry => `<option value="${esc(entry.id)}" ${entry.id === picked ? 'selected' : ''}>${esc(committeeLabel(entry))}</option>`).join('')}</select></label><p class="sx-note">Costo: ${esc(recruitCost)}. Il nuovo responsabile è una persona simulata, lealtà iniziale 72: il nome lo assegna il gioco.</p><div class="pl-recruit-actions"><button type="button" class="primary-button" data-life-cadre-confirm="recluta" data-committee-id="${esc(picked)}">Conferma il reclutamento</button><button type="button" class="secondary-button" data-life-cadre-cancel>Annulla</button></div></div>`;
-  };
-  const vacantRows = vacant.map(item => { const visual = territoryVisual(item.level); const open = recruitOpen === item.id; return `<li class="pl-vacant${open ? ' is-menu-open' : ''}" style="--lv:${esc(visual.color)}" data-committee="${esc(item.id)}">${territoryTile(item.level, 'sm')}<div><strong>${esc(item.name)}</strong><small>${esc(LEVEL_ONE[item.level])} · ${esc(item.region)} · ${esc(item.status)}</small><small class="pl-reason">Nessun responsabile</small></div><div class="pl-actions"><button type="button" class="secondary-button" data-life-cadre="recluta" data-committee-id="${esc(item.id)}" aria-haspopup="dialog" aria-expanded="${open}" title="${esc(CADRE_ACTIONS.recluta.detail)}">Recluta un responsabile <small>${recruitCost}</small></button>${planAddButton({ kind: 'cadre', action: 'recluta', committeeId: item.id, label: `Recluta un responsabile: ${item.name}` })}</div>${open ? recruitMenu(item) : ''}</li>`; }).join('');
+  const vacantRows = vacant.map(item => { const visual = territoryVisual(item.level); return `<li class="pl-vacant" style="--lv:${esc(visual.color)}" data-committee="${esc(item.id)}">${territoryTile(item.level, 'sm')}<div><strong>${esc(item.name)}</strong><small>${esc(LEVEL_ONE[item.level])} · ${esc(item.region)} · ${esc(item.status)}</small><small class="pl-reason">Nessun responsabile</small></div><div class="pl-actions"><button type="button" class="secondary-button" data-life-cadre="recluta" data-committee-id="${esc(item.id)}" title="${esc(CADRE_ACTIONS.recluta.detail)}">Recluta un responsabile <small>${costChips(CADRE_ACTIONS.recluta.cost).replace(/<[^>]+>/g, '')}</small></button>${planAddButton({ kind: 'cadre', action: 'recluta', committeeId: item.id, label: `Recluta un responsabile: ${item.name}` })}</div></li>`; }).join('');
   const filterBar = `<div class="pl-filters" role="group" aria-label="Filtra dirigenti e comitati"><label>Livello<select data-view-filter-select="cadreLevel"><option value="">Tutti</option>${LEVELS.map(key => `<option value="${key}" ${level === key ? 'selected' : ''}>${esc(LEVEL_NOUN[key].replace(/^./, c => c.toUpperCase()))}</option>`).join('')}</select></label><label>Territorio o nome<input type="search" data-view-filter-text="cadreQuery" value="${esc(filters.cadreQuery ?? '')}" placeholder="Es. Siena, Toscana, Rossi" autocomplete="off" /></label></div>`;
   const control = view.control;
   const controlBlock = control ? `<div class="pl-control"><div class="pl-meter"><span>Controllo del territorio · ${esc(control.region ?? 'il tuo territorio')}</span>${bar(control.index, tone(control.index, 40, 65))}<b>${control.index}/100</b></div><p class="sx-note">${control.byStance.tuo + control.byStance['con-te']} con te · ${control.byStance.distante} distanti · ${control.byStance.contro} contro${control.critical ? ` · ${control.critical} in crisi` : ''}.</p></div>` : '';

@@ -4,9 +4,9 @@
 // brought forward by a crisis waits for the first date that fits, a round of the amministrative joins the gap) and a combination that still does not fit is declared (calendarConflict),
 // never accepted by lowering the distance. Nothing is invented: a round of the amministrative is added only when no vote falls in the time the rule requires. Pure functions over the
 // calendar of the game: the same calendar always gives the same dates.
-import { advanceDays } from './time.js?v=20261020-1';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261020-1';
-import { ELECTION_SCHEDULE } from '../data/simulation/career-rules.js?v=20261020-1';
+import { advanceDays } from './time.js?v=20261020-2';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261020-2';
+import { ELECTION_SCHEDULE } from '../data/simulation/career-rules.js?v=20261020-2';
 
 export const CALENDAR_RULES = Object.freeze({
   // The distance between two distinct rounds: one value, never lowered (no step, no floor, no exception).

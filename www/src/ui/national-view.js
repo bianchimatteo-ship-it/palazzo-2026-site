@@ -2,11 +2,12 @@
 // elections, coalitions and national campaign, the seats projected on the real map of 2022, the last votes, the new
 // Chambers and the formation of the Government. The map, the seats and the results of 2022 are real data (Eligendo);
 // polls, coalitions, votes, seats and Governments of the game are simulation, and every block says which is which.
-import { districtRows } from '../core/legislature-engine.js?v=20261020-1';
-import { formatDate } from '../core/time.js?v=20261020-1';
-import { ALLIANCE_COLORS, NEUTRAL_COLOR, coalitionColor, forceColor } from './political-colors.js?v=20261020-1';
-import { glyph } from './visuals.js?v=20261020-1';
-import { arrow, badge, bar, card, esc, euro, kpi, num, pct, table } from './sections-kit.js?v=20261020-1';
+import { districtRows } from '../core/legislature-engine.js?v=20261020-2';
+import { formatDate } from '../core/time.js?v=20261020-2';
+import { ALLIANCE_COLORS, NEUTRAL_COLOR, coalitionColor, forceColor } from './political-colors.js?v=20261020-2';
+import { glyph } from './visuals.js?v=20261020-2';
+import { arrow, badge, bar, card, esc, euro, kpi, num, pct, table } from './sections-kit.js?v=20261020-2';
+import { MAP_SCOPES, NO_DATA_COLOR, italyMapInfo, italyMapSvg, italyMapTable, territoryTallies } from './italy-map.js?v=20261020-2';
 
 export const NATIONAL_MAP_VIEWS = Object.freeze([['proiezione', 'Proiezione di oggi'], ['2022', 'Vincitori 2022 (reale)'], ['voto', 'Ultimo voto della partita']]);
 const NEUTRAL = NEUTRAL_COLOR;
@@ -165,6 +166,38 @@ function mapCard(overview, geography, view) {
   const kicker = mode === '2022' ? 'MAPPA DEI COLLEGI · VINCITORI 2022 · DATO REALE' : mode === 'voto' ? `MAPPA DEI COLLEGI · VOTO DEL ${shortDay(last.date).toUpperCase()} · SIMULAZIONE` : 'MAPPA DEI COLLEGI · PROIEZIONE · SIMULAZIONE';
   return card({ kicker, title: 'I collegi uninominali regione per regione', body: `${switcher}${legendHtml}<div class="nv-map-grid">${chambers}</div><p class="sx-note">Ogni quadrato è un collegio uninominale reale del 2022, nell’ordine ufficiale per regione (non è una carta geografica). Passa il puntatore per il nome del collegio. ${mode === '2022' ? 'Vincitori e alleanze: dati ufficiali Eligendo; in Trentino-Alto Adige il Senato 2022 non è nella copia dei dati.' : 'Vincitori simulati dal gioco.'}</p>` });
 }
+// The geographic map beside the squares: the same three readings (2022, projection, last vote), drawn on the real boundaries of regions and provinces. The squares map below stays as it is.
+function geoMapCard(overview, geography, view, map) {
+  const boundaries = map?.boundaries;
+  if (!geography || !boundaries) return card({ kicker: 'MAPPA GEOGRAFICA · REGIONI E PROVINCE', title: 'Mappa geografica in caricamento', body: '<p class="sx-empty">I confini di regioni e province si caricano in background (o non sono disponibili senza connessione): intanto resta la mappa dei collegi qui sotto.</p>' });
+  const last = overview.national.lastPolitiche;
+  const mode = view === 'voto' && last ? 'voto' : view === '2022' ? '2022' : overview.projection ? 'proiezione' : '2022';
+  const result = mode === 'voto' ? last : mode === 'proiezione' ? overview.projection : null;
+  const colors = palette(overview, result);
+  const label = labelOf(overview, result);
+  const byId = { camera: new Map(), senato: new Map() };
+  if (result) for (const chamber of ['camera', 'senato']) byId[chamber] = new Map(districtRows(result, chamber, geography).map(row => [row.id, row]));
+  const outcome = (chamber, district) => {
+    if (mode === '2022') return district.winner?.alliance ? { id: district.winner.alliance } : null;
+    const row = byId[chamber].get(district.id);
+    return row?.w ? { id: row.w, close: row.m < 4 } : null;
+  };
+  const colorOf = id => mode === '2022' ? (ALLIANCES_2022[id]?.[1] ?? NEUTRAL) : colors.of(id);
+  const nameOf = id => mode === '2022' ? (ALLIANCES_2022[id]?.[0] ?? String(id)) : label(id);
+  const scope = MAP_SCOPES.some(([id]) => id === map.scope) ? map.scope : 'regioni';
+  const tallies = territoryTallies(geography, boundaries, outcome);
+  const selected = String(map.selected ?? '');
+  const dataClass = mode === '2022' ? 'DATO STORICO REALE · politiche 2022 (Eligendo)' : mode === 'voto' ? `RISULTATO SIMULATO · voto del ${shortDay(last.date)}` : 'PROIEZIONE SIMULATA · sondaggi simulati di oggi';
+  const used = new Map();
+  for (const tally of [...tallies.regions.values(), ...(scope === 'province' ? tallies.provinces.values() : [])]) if (tally.leader) used.set(tally.leader, [nameOf(tally.leader), colorOf(tally.leader)]);
+  const legend = `<ul class="nv-legend">${[...used.values()].map(([name, color]) => `<li>${swatch(color)}<span>${esc(name)}</span></li>`).join('')}<li>${swatch(NO_DATA_COLOR)}<span>Pari o nessun dato</span></li></ul>`;
+  const modes = NATIONAL_MAP_VIEWS.filter(([id]) => id !== 'voto' || last).filter(([id]) => id !== 'proiezione' || overview.projection);
+  const switcher = `<div class="nv-map-switch" role="group" aria-label="Cosa mostra la mappa geografica">${modes.map(([id, text]) => `<button type="button" class="${mode === id ? 'active' : ''}" data-view-filter="nazionali" data-view-filter-value="${id}" aria-pressed="${mode === id}">${esc(text)}</button>`).join('')}</div>`;
+  const scopes = `<div class="nv-map-switch" role="group" aria-label="Livello territoriale">${MAP_SCOPES.map(([id, text]) => `<button type="button" class="${scope === id ? 'active' : ''}" data-view-filter="mapScope" data-view-filter-value="${id}" aria-pressed="${scope === id}">${esc(text)}</button>`).join('')}</div>`;
+  const common = { boundaries, tallies, labelOf: nameOf, colorOf };
+  const note = `<p class="sx-note">Confini: ISTAT, al 1 gennaio 2026, elaborati da Openpolis (CC BY 4.0), semplificati per lo schermo. ${mode === '2022' ? 'Vincitori dei collegi: dati ufficiali Eligendo.' : 'Vincitori dei collegi: simulazione della partita, non dato reale.'} Le regioni sommano i collegi uninominali di Camera e Senato; le province contano i collegi che comprendono almeno un loro comune (un collegio può toccare più province): è una lettura territoriale, non un risultato provinciale ufficiale. ${esc(boundaries.attribution ?? '')}</p>`;
+  return card({ kicker: `MAPPA GEOGRAFICA · ${scope === 'province' ? 'PROVINCE' : 'REGIONI'} · ${dataClass.split(' · ')[0]}`, title: 'Dove vince ogni schieramento', body: `<div class="it-controls">${switcher}${scopes}</div><p class="it-class-line"><span class="it-class">${esc(dataClass)}</span></p>${legend}<div class="it-layout"><div class="it-stage">${italyMapSvg({ ...common, scope, selected })}</div><div class="it-side" aria-live="polite">${italyMapInfo({ ...common, selected, dataClass })}</div></div>${italyMapTable(common)}${note}` });
+}
 function contestedCard(overview, geography) {
   const projection = overview.projection;
   if (!projection || !geography) return '';
@@ -223,7 +256,7 @@ function sourcesCard(overview) {
   return card({ kicker: 'FONTI E REGOLE', title: 'Cosa è reale e cosa è simulato', body: `${real}<ul class="nv-notes">${notes}</ul>` });
 }
 
-export function renderNationalView(state, overview, { geography = null, view = null } = {}) {
+export function renderNationalView(state, overview, { geography = null, view = null, map = null } = {}) {
   if (!overview) return '<p class="sx-empty">Ciclo nazionale non disponibile.</p>';
   const formationActive = overview.national.formation && !['completata'].includes(overview.national.formation.phase);
   return `<div class="national-view">
@@ -231,6 +264,7 @@ export function renderNationalView(state, overview, { geography = null, view = n
     ${formationActive ? formationCard(overview, state) : ''}
     ${campaignLineCard(overview, state)}
     <div class="sx-grid two">${projectionCard(overview)}<div class="nv-stack">${homeCard(overview)}${contestedCard(overview, geography)}</div></div>
+    ${geoMapCard(overview, geography, view, map)}
     ${mapCard(overview, geography, view)}
     ${lastVoteCard(overview, state)}
     ${!formationActive ? formationCard(overview, state) : ''}

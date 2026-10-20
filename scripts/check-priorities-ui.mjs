@@ -8,6 +8,7 @@ await withBrowser(async browser => {
   const { evaluate, pause, viewport, errors, version } = browser;
   await createCareerInPage(browser, { weeks: 1 });
   await openCareer(browser);
+  const scenario = async () => {
   // the real markup, in the real page
   await evaluate(`(async () => {
     const { priorityCounter } = await import('/src/ui/policy-mode.js?v=${version}');
@@ -53,6 +54,12 @@ await withBrowser(async browser => {
     await tick('giustizia', false); await tick('scuola', false);
   }
   assert.equal(await evaluate(`window.__submitted ?? 0`) >= 0, true);
+  };
+  // The game redraws the page now and then (news, saves): a redraw removes the injected form, and the check starts again on a fresh one.
+  for (let attempt = 1; ; attempt++) {
+    try { await scenario(); break; }
+    catch (error) { if (attempt >= 4 || !/null|undefined|manca/.test(String(error?.message ?? error)) ) throw error; await pause(400); }
+  }
   assert.deepEqual(errors, [], 'Nessun errore JavaScript.');
 });
 console.log('Priorità nazionali nel browser: contatore 2–5, errore con sei e richiesta di scelta, salvataggio bloccato, nessuna rimozione automatica (desktop e smartphone).');

@@ -366,3 +366,4 @@ html[data-motion="reduced"] .hqc-drawer-toggle, html[data-motion="reduced"] butt
 @media (prefers-reduced-motion: no-preference) { .outcome-popup.is-new { animation: outcome-in .35s ease-out both; } }
 @keyframes outcome-in { from { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); } to { opacity: 1; transform: translate(-50%, -50%); } }
 @media (max-width: 700px) { .outcome-popup { top: auto; bottom: calc(84px + env(safe-area-inset-bottom)); transform: translateX(-50%); max-height: 62vh; } @keyframes outcome-in { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } } }
+.news-kicker { margin: 0; color: var(--cat, var(--gold-soft)); font: 800 12px var(--font-head, Manrope, sans-serif); letter-spacing: .09em; text-transform: uppercase; }

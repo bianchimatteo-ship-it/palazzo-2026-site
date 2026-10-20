@@ -3,7 +3,7 @@
 // What is real and what is not: the boundaries and the winners of 2022 are real data (ISTAT, Eligendo); the projection and the vote of the game are simulation, and the card says which one is on the screen.
 // A region is read from the districts that belong to it; a province from the districts that include at least one of its comuni (a district can touch several provinces: it is a territorial reading,
 // never an official provincial result, and the card says so). No boundary and no winner is invented: where there is no district there is no colour.
-import { esc, num } from './sections-kit.js?v=20261020-1';
+import { esc, num } from './sections-kit.js?v=20261020-2';
 
 export const MAP_SCOPES = Object.freeze([['regioni', 'Regioni'], ['province', 'Province']]);
 const REGION_SHORT = { Piemonte: 'PIE', 'Valle d’Aosta': 'VDA', Lombardia: 'LOM', 'Trentino-Alto Adige': 'TAA', Veneto: 'VEN', 'Friuli-Venezia Giulia': 'FVG', Liguria: 'LIG', 'Emilia-Romagna': 'EMR', Toscana: 'TOS', Umbria: 'UMB', Marche: 'MAR', Lazio: 'LAZ', Abruzzo: 'ABR', Molise: 'MOL', Campania: 'CAM', Puglia: 'PUG', Basilicata: 'BAS', Calabria: 'CAL', Sicilia: 'SIC', Sardegna: 'SAR' };

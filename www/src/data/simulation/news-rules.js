@@ -13,6 +13,22 @@ export const NEWSROOM_OUTLETS = Object.freeze({
   radio: { name: 'Radio Terzo Piano', tagline: 'Dirette, interviste, ascoltatori in linea', leaning: 0.9, credibility: 56, public: { imprese: 1.3, famiglie: 1.2, anziani: 1.0 }, beat: ['politica', 'partito'], investigative: false }
 });
 
+// How each outlet writes (game mechanics, source: simulation). form: breve (few lines, the fact first), cronaca (the fact and its local setting), analisi (the fact, what it means and where it sits in the story),
+// diretta (what is said and by whom), social (one line and the numbers); paragraphs: how many paragraphs at most; chars: the length budget of the body.
+export const OUTLET_STYLE = Object.freeze({
+  'tv-nazionale': { form: 'breve', paragraphs: 2, chars: 380 },
+  'tv-locale': { form: 'cronaca', paragraphs: 3, chars: 460 },
+  quotidiani: { form: 'analisi', paragraphs: 5, chars: 760 },
+  'stampa-locale': { form: 'cronaca', paragraphs: 4, chars: 600 },
+  social: { form: 'social', paragraphs: 1, chars: 240 },
+  radio: { form: 'diretta', paragraphs: 2, chars: 400 }
+});
+// The occhiello (the small line above the headline): by kind of fact, and by form for the outlets that frame everything the same way. Labels only, never a statement.
+export const KICKERS = Object.freeze({
+  legge: ['Leggi e conti', 'Il provvedimento', 'Parlamento'], respinta: ['Parlamento', 'Il voto finale', 'Maggioranza'], governo: ['Palazzo', 'Governo', 'Maggioranza'], dossier: ['Ministeri', 'Il dossier', 'Governo'],
+  sondaggio: ['I numeri', 'Sondaggi', 'Opinione pubblica'], mondo: ['Il Paese', 'Attualità', 'Società'], opera: ['Cantieri', 'Opere e fondi', 'Territorio'], conti: ['Conti pubblici', 'Mercati', 'Economia'],
+  elezione: ['Elezioni', 'Il voto', 'Urne'], attivita: ['Politica', 'In primo piano', 'Il personaggio']
+});
 export const ARTICLE_CATEGORIES = Object.freeze([
   { id: 'politica', label: 'Politica', icon: 'news' },
   { id: 'governo', label: 'Governo', icon: 'ministry' },

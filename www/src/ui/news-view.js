@@ -1,13 +1,13 @@
 // The newsroom as the player reads it: full articles (with the facts behind them), the stories that last (timeline, reactions, heat) and the
 // outlets with their identity. Everything shown here was written by the engine from a fact of the game; nothing is attributed to real people.
-import { ARTICLE_CATEGORIES, LP24, NEWSROOM_OUTLETS, RADIO_PROGRAMMES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261020-1';
-import { formatDate } from '../core/time.js?v=20261020-1';
-import { illustration, lp24Logo } from './illustrations.js?v=20261020-1';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261020-1';
-import { normalizeMedia } from '../core/news-engine.js?v=20261020-1';
-import { esc, meter } from './charts.js?v=20261020-1';
-import { glyph } from './visuals.js?v=20261020-1';
-import { bulletinScript, voiceAvailable, voiceLine, voiceStatus, voiceTarget } from './radio-voice.js?v=20261020-1';
+import { ARTICLE_CATEGORIES, LP24, NEWSROOM_OUTLETS, RADIO_PROGRAMMES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261020-2';
+import { formatDate } from '../core/time.js?v=20261020-2';
+import { coverIllustration, illustration, lp24Logo, pickByHash } from './illustrations.js?v=20261020-2';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261020-2';
+import { normalizeMedia } from '../core/news-engine.js?v=20261020-2';
+import { esc, meter } from './charts.js?v=20261020-2';
+import { glyph } from './visuals.js?v=20261020-2';
+import { bulletinScript, voiceAvailable, voiceLine, voiceStatus, voiceTarget } from './radio-voice.js?v=20261020-2';
 
 const TONE = { good: 'tone-good', bad: 'tone-bad', neutral: 'tone-neutral' };
 export const leaningLabel = value => value <= -1.5 ? 'sinistra' : value <= -0.5 ? 'centro-sinistra' : value < 0.5 ? 'equidistante' : value < 1.5 ? 'centro-destra' : 'destra';
@@ -21,6 +21,16 @@ export const newsMedia = state => state.society?.media ? normalizeMedia(state.so
 const CATEGORY_SCENE = { politica: 'piazza', governo: 'palazzo', parlamento: 'emiciclo', economia: 'tesoro', territorio: 'borgo', opere: 'borgo', partito: 'piazza', sondaggi: 'podio', inchieste: 'crisi', elezioni: 'urna' };
 const CATEGORY_TONE = { politica: '#6aa9c4', governo: '#c4a66a', parlamento: '#8f95d8', economia: '#d6a54c', territorio: '#6fa982', opere: '#6fa982', partito: '#b98cc4', sondaggi: '#5fa5c2', inchieste: '#c4574a', elezioni: '#7fbf99' };
 export const newsScene = article => article.tone === 'bad' && (article.importance ?? 0) >= 5 && ['governo', 'economia', 'politica'].includes(article.category) ? 'crisi' : CATEGORY_SCENE[article.category] ?? 'giornale';
+// What each kind of article can show: a small pool of scenes per kind of fact (and per heading of the Government), chosen by the id of the article so the same article keeps its cover and two different news
+// of the same kind often have different ones. Without a kind the base scene of the category is used.
+const KIND_SCENES = { legge: ['emiciclo', 'decreto', 'fiducia'], respinta: ['emiciclo', 'fiducia', 'dimissioni'], governo: ['palazzo', 'tavolo', 'fiducia'], dossier: ['tavolo', 'palazzo', 'decreto'], sondaggio: ['sondaggio', 'podio', 'cittadini'], opera: ['cantiere', 'ponte', 'borgo'], conti: ['mercati', 'tesoro', 'fabbrica'], elezione: ['urna', 'podio', 'comizio'], attivita: ['comizio', 'piazza', 'radio', 'giornale'], mondo: null };
+const CATEGORY_POOLS = { politica: ['piazza', 'comizio', 'tavolo'], governo: ['palazzo', 'tavolo', 'fiducia'], parlamento: ['emiciclo', 'fiducia', 'decreto'], economia: ['tesoro', 'mercati', 'fabbrica'], territorio: ['borgo', 'cittadini', 'ponte'], opere: ['cantiere', 'ponte', 'borgo'], partito: ['piazza', 'comizio', 'tavolo'], sondaggi: ['sondaggio', 'podio'], inchieste: ['inchiesta', 'crisi', 'dimissioni'], elezioni: ['urna', 'podio', 'comizio'] };
+export const newsCoverScene = article => {
+  const base = newsScene(article);
+  if (base === 'crisi') return pickByHash(['crisi', 'dimissioni', 'crisi'], article.id ?? article.key ?? article.headline);
+  const pool = KIND_SCENES[article.kind] ?? CATEGORY_POOLS[article.category];
+  return pool ? pickByHash(pool, article.id ?? article.key ?? article.headline) : base;
+};
 const categoryOf = id => ARTICLE_CATEGORIES.find(item => item.id === id);
 const shortDate = date => { try { return formatDate(date, { day: 'numeric', month: 'short', year: 'numeric' }); } catch { return String(date ?? ''); } };
 const summaryOf = article => String(article.deck || article.body?.[0] || '').slice(0, 220);
@@ -35,10 +45,10 @@ export function articleHtml(article, media, { lead = false } = {}) {
   const reading = voiceTarget() === `article:${article.id}`;
   const listen = voiceAvailable() ? `<p class="article-listen"><button type="button" class="secondary-button ${reading ? 'is-on-air' : ''}" data-article-speak="${esc(article.id)}" data-voice-target="article:${esc(article.id)}" data-voice-idle="Ascolta l’articolo" data-voice-active="Ferma la lettura" aria-pressed="${reading}">${glyph('mic', 14)} <span data-voice-label>${reading ? 'Ferma la lettura' : 'Ascolta l’articolo'}</span></button></p>` : '';
   return `<article class="news-card ${lead ? 'is-lead' : ''} ${article.breaking ? 'is-breaking' : ''} ${TONE[article.tone] ?? TONE.neutral}" style="--cat:${esc(CATEGORY_TONE[article.category] ?? '#6aa9c4')}" data-article="${esc(article.id)}">
-    <figure class="news-art" aria-hidden="true">${illustration(newsScene(article))}</figure>
+    <figure class="news-art" aria-hidden="true">${coverIllustration(newsCoverScene(article), { seed: article.id ?? article.key ?? article.headline, tone: article.tone })}</figure>
     <div class="news-card-body">
       <p class="news-card-meta">${article.breaking ? '<span class="breaking-badge">BREAKING NEWS</span>' : ''}<span class="news-cat">${glyph(category?.icon ?? 'news', 13)} ${esc(category?.label ?? article.category)}</span><time datetime="${esc(article.date ?? '')}">${esc(shortDate(article.date))}</time><span class="news-outlet">${esc(article.outlet)}</span></p>
-      <h3 class="news-headline">${esc(article.headline)}</h3>
+      ${article.kicker ? `<p class="news-kicker">${esc(article.kicker)}</p>` : ''}<h3 class="news-headline">${esc(article.headline)}</h3>
       <p class="news-summary">${esc(summaryOf(article))}</p>
       <details class="news-article ${TONE[article.tone] ?? TONE.neutral}"><summary>Leggi la storia completa</summary>
         <div class="article-body">${listen}${article.body.map(paragraph => `<p>${esc(paragraph)}</p>`).join('')}${facts}${link}<p class="article-edge"><small>${esc(EDGE_LABEL[article.edge] ?? '')} · articolo simulato dai fatti della partita</small></p></div></details>

@@ -1,19 +1,19 @@
 // The electoral centre: next vote, calendar, context, candidacy, campaign, polls and rivals, results and history.
-import { isSecretary, upcomingElections, upcomingRounds } from '../core/career-engine.js?v=20261020-1';
-import { campaignSummary, strategyOf } from '../core/campaign-engine.js?v=20261020-1';
-import { CAMPAIGN_PHASES, ELECTION_MODELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261020-1';
-import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261020-1';
-import { formatDate } from '../core/time.js?v=20261020-1';
-import { societyMood } from '../core/society-engine.js?v=20261020-1';
-import { candidacyAccess, renderCampaignPage } from './campaign-mode.js?v=20261020-1';
-import { politicalPhase } from './game-mode.js?v=20261020-1';
-import { lineChart, SERIES } from './charts.js?v=20261020-1';
-import { glyph } from './visuals.js?v=20261020-1';
-import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, sectionTabs, signed, table, weeksLabel } from './sections-kit.js?v=20261020-1';
-import { mandatePlace, renderElectionReport } from './election-report.js?v=20261020-1';
-import { renderNationalView } from './national-view.js?v=20261020-1';
-import { renderQuirinale } from './presidency-view.js?v=20261020-1';
-import { renderCampaignObservatory } from './observatory-view.js?v=20261020-1';
+import { isSecretary, upcomingElections, upcomingRounds } from '../core/career-engine.js?v=20261020-2';
+import { campaignSummary, strategyOf } from '../core/campaign-engine.js?v=20261020-2';
+import { CAMPAIGN_PHASES, ELECTION_MODELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261020-2';
+import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261020-2';
+import { formatDate } from '../core/time.js?v=20261020-2';
+import { societyMood } from '../core/society-engine.js?v=20261020-2';
+import { candidacyAccess, renderCampaignPage } from './campaign-mode.js?v=20261020-2';
+import { politicalPhase } from './game-mode.js?v=20261020-2';
+import { lineChart, SERIES } from './charts.js?v=20261020-2';
+import { glyph } from './visuals.js?v=20261020-2';
+import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, sectionTabs, signed, table, weeksLabel } from './sections-kit.js?v=20261020-2';
+import { mandatePlace, renderElectionReport } from './election-report.js?v=20261020-2';
+import { renderNationalView } from './national-view.js?v=20261020-2';
+import { renderQuirinale } from './presidency-view.js?v=20261020-2';
+import { renderCampaignObservatory } from './observatory-view.js?v=20261020-2';
 export { renderElectionReport };
 
 export const ELECTION_TABS = Object.freeze([['panoramica', 'Panoramica'], ['nazionali', 'Nazionali'], ['quirinale', 'Quirinale'], ['candidatura', 'Candidatura'], ['campagna', 'Campagna'], ['avversari', 'Sondaggi e avversari'], ['risultati', 'Risultati'], ['storico', 'Storico']]);
@@ -203,8 +203,20 @@ function raceSection(state, { races = [], archive = [], raceOptions = () => null
   return card({ kicker: 'CANDIDATI DEL PARTITO · CORSE TERRITORIALI · SIMULAZIONE', title: 'Regionali, provinciali e comunali', body });
 }
 
+// When a candidacy is open the action to run is the first thing on the page, with the vote, its window and how long is left.
+function candidateNow(state) {
+  if (!state.game || state.campaign?.status === 'active' || state.game.status === 'ended') return '';
+  const open = upcomingElections(state.game).filter(entry => entry.status === 'open');
+  if (!open.length) return '';
+  const today = state.clock.currentDate;
+  const rows = open.map(entry => {
+    const left = Math.max(0, daysUntil(today, entry.windowClosesAt));
+    return `<li class="eh-now-item"><span class="eh-cal-icon">${glyph(TYPE_ICONS[entry.type] ?? 'ballot', 18)}</span><div><strong>${esc(entry.label)}</strong><small>Voto il ${esc(shortDate(entry.electionDate))} · candidature fino al ${esc(shortDate(entry.windowClosesAt))}</small><span class="eh-now-left ${left <= 7 ? 'is-urgent' : ''}">${glyph('clock', 13)} chiudono tra ${left} ${left === 1 ? 'giorno' : 'giorni'}</span></div><div class="eh-now-action">${candidateButton(state, entry, { primary: true, label: 'Candidati' })}</div></li>`;
+  }).join('');
+  return `<section class="eh-candidate-now" data-candidate-now aria-label="Candidature aperte"><span class="section-kicker">${glyph('target', 14)} CANDIDATURE APERTE ORA</span><ul>${rows}</ul></section>`;
+}
 function candidacy(state, options = {}) {
-  return `${candidacyCard(state)}${raceSection(state, options.races ?? {})}`;
+  return `${candidateNow(state)}${candidacyCard(state)}${raceSection(state, options.races ?? {})}`;
 }
 function candidacyCard(state) {
   const campaign = state.campaign;
@@ -264,7 +276,7 @@ function history(state) {
   return card({ kicker: 'STORICO ELETTORALE · SIMULAZIONE', title: `${entries.length} ${entries.length === 1 ? 'elezione' : 'elezioni'} · ${wins} con mandato`, body: table([['date', 'Data'], ['type', 'Elezione'], ['share', '%', 'num'], ['position', 'Pos.', 'num'], ['outcome', 'Esito'], ['expectation', 'Attese'], ['seats', 'Seggi lista', 'num']], rows, { empty: 'Nessuna elezione ancora disputata.' }) });
 }
 
-export function renderElectionsHub(state, { parties = [], logoFor = () => null, tab = null, national = null, geography = null, nationalView = null, campaignPicks = {}, presidency = null, polls = {}, races = {} } = {}) {
+export function renderElectionsHub(state, { parties = [], logoFor = () => null, tab = null, national = null, geography = null, nationalView = null, nationalMap = null, campaignPicks = {}, presidency = null, polls = {}, races = {} } = {}) {
   if (!state.game) return empty('Crea prima un politico per entrare nella centrale elettorale.', '<button class="primary-button" data-action="new-career">Crea il politico</button>');
   const active = ELECTION_TABS.some(([id]) => id === tab) ? tab : defaultElectionTab(state);
   const summary = state.campaign?.status === 'active' ? campaignSummary(state.campaign) : null;
@@ -277,7 +289,7 @@ export function renderElectionsHub(state, { parties = [], logoFor = () => null, 
   else if (active === 'avversari') body = renderCampaignObservatory(state, polls);
   else if (active === 'risultati') body = renderElectionReport(state.career.lastElectionReport, { place: mandatePlace(state, state.career.lastElectionReport) });
   else if (active === 'quirinale') body = presidency ? `<p class="sx-note quirinale-pointer">Il Quirinale ha una sezione propria: <button type="button" class="text-link" data-nav="quirinale">Istituzioni → Quirinale</button>. Qui resta la scheda dell’elezione del Presidente, con i suoi passaggi.</p>${renderQuirinale(state, presidency())}` : empty('Il Quirinale si apre con i dati della partita.');
-  else if (active === 'nazionali') body = national ? renderNationalView(state, national(), { geography, view: nationalView }) : empty('Il ciclo nazionale si apre con i dati della partita: calendario, coalizioni e proiezione dei seggi.');
+  else if (active === 'nazionali') body = national ? renderNationalView(state, national(), { geography, view: nationalView, map: nationalMap }) : empty('Il ciclo nazionale si apre con i dati della partita: calendario, coalizioni e proiezione dei seggi.');
   else body = history(state);
   return `<div class="elections-hub">${hero(state, summary)}${sectionTabs('elezioni', ELECTION_TABS.map(([id, label]) => [id, label, counts[id]]), active)}<div class="sx-body" role="tabpanel">${body}</div></div>`;
 }

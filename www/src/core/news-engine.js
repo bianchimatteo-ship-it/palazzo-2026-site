@@ -1,8 +1,8 @@
 // Simulated newsroom: headlines tied to what happens in the career, written with different structures
 // (fact, question, number, local angle, quote-like, analysis) and never the same template twice in a row.
 // Headlines speak of the player's own character and of the simulated world: no statement is put in the mouth of real people.
-import { ARTICLE_CATEGORIES, NEWSROOM_OUTLETS, NEWS_RULES as RULES, RADIO_PROGRAMMES, RADIO_RULES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261020-1';
-import { WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20261020-1';
+import { ARTICLE_CATEGORIES, KICKERS, NEWSROOM_OUTLETS, NEWS_RULES as RULES, OUTLET_STYLE, RADIO_PROGRAMMES, RADIO_RULES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261020-2';
+import { WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20261020-2';
 const RECENT = 18;
 // A template not used recently; when every template of the kind has been used, the least recently used one.
 const pick = (list, seed, recent) => {
@@ -221,6 +221,8 @@ const HISTORY = {
   'cambio-maggioranza': { cat: 'governo', imp: 3, tone: 'neutral', h: { neutral: 'Cambiano i numeri della maggioranza', critical: 'Maggioranza in bilico dopo i cambi di gruppo', friendly: 'La maggioranza ridisegna i numeri' } },
   'vertice-maggioranza': { cat: 'governo', imp: 2, tone: 'neutral', h: { neutral: 'Vertice di maggioranza', critical: 'Vertice di maggioranza: fumata grigia?', friendly: 'Vertice di maggioranza: gli alleati al tavolo' } },
   'programma-bilancio': { cat: 'governo', imp: 3, tone: 'neutral', h: { neutral: 'Il Governo fa il bilancio del suo programma', critical: 'Programma di governo: quanto è stato fatto davvero?', friendly: 'Programma di governo: il bilancio delle priorità' } },
+  'revisione-spesa': { cat: 'economia', imp: 3, tone: 'neutral', h: { neutral: 'Il Governo avvia una revisione della spesa', critical: 'Tagli ai ministeri: chi paga il conto della revisione?', friendly: 'Revisione della spesa: il Governo mette ordine nei conti' }, p: () => 'Il risparmio arriva subito sul bilancio; il costo si vede nei servizi e nell’umore dei cittadini che li usano.' },
+  'tavolo-parti-sociali': { cat: 'governo', imp: 2, tone: 'good', h: { neutral: 'Il Governo apre un tavolo con le parti sociali', critical: 'Tavolo con le parti sociali: basterà a ricucire?', friendly: 'Parti sociali al tavolo del Governo: si cerca un’intesa' } },
   'programma-governo': { cat: 'governo', imp: 2, tone: 'neutral', h: { neutral: 'Il Governo fissa il programma', critical: 'Il programma del Governo, tra priorità e promesse', friendly: 'Il Governo presenta le sue priorità' } }
 };
 const factFromHistory = (entry, ctx) => {
@@ -358,6 +360,43 @@ function closeStory(story, week, text) {
   story.status = 'chiusa'; story.closedWeek = week; story.heat = Math.min(story.heat, RULES.closeBelow);
   story.resolution = story.resolution ?? { week, text };
 }
+// ---------- the hand of the outlet: length, subtitle, framing ----------
+// The builders say what happened; this decides how each outlet tells it. Everything added here comes from the game itself (the Government's stability and margin, the story the fact belongs to):
+// no quotation, number or fact is invented, and the same fact always reads the same way for the same outlet (the choice follows the key of the fact, not chance).
+const firstSentence = text => { const match = String(text ?? '').match(/^.*?[.!?](?=\s|$)/); return (match ? match[0] : String(text ?? '')).trim(); };
+const clip = (text, max) => { const t = String(text ?? ''); return t.length <= max ? t : `${t.slice(0, max - 1).replace(/\s+\S*$/, '')}…`; };
+const NEEDS_GOV_LINE = new Set(['legge', 'respinta', 'governo', 'dossier']);
+function stateLine(fact, ctx, paragraphs) {
+  if (!NEEDS_GOV_LINE.has(fact.kind) || !ctx.gov || paragraphs.some(text => /stabilità a \d/.test(text))) return '';
+  const stability = Math.round(ctx.gov.stability);
+  if (stability < 40) return `Il passaggio arriva con la stabilità del Governo a ${stability}/100: il quadro resta fragile.`;
+  if (stability >= 70) return `Il Governo affronta il passaggio con una stabilità di ${stability}/100, tra le più solide del mandato.`;
+  if (Number.isFinite(ctx.gov.margin) && Math.abs(ctx.gov.margin) <= 5) return `Il margine alla Camera più stretta è di ${ctx.gov.margin >= 0 ? '+' : ''}${ctx.gov.margin} seggi: ogni voto conta.`;
+  return '';
+}
+function storyLine(story, fact) {
+  if (!story || (story.timeline?.length ?? 0) < 1) return '';
+  const steps = (story.timeline ?? []).filter(item => item.key !== fact.key).length;
+  if (!steps) return '';
+  return `Il fatto si inserisce nella vicenda «${story.title}», aperta alla settimana ${story.openedWeek} e arrivata al passaggio numero ${steps + 1}.`;
+}
+export function shapeArticle(built, { fact, outlet, story, ctx }) {
+  const style = OUTLET_STYLE[outlet.id] ?? OUTLET_STYLE.quotidiani;
+  const kickers = KICKERS[fact.kind] ?? KICKERS.attivita;
+  const kicker = kickers[Math.floor(unit(fact.key, outlet.id, 'occhiello') * kickers.length)];
+  let paragraphs = built.paragraphs.filter(Boolean);
+  const extra = [];
+  if (style.form === 'analisi') extra.push(storyLine(story, fact), stateLine(fact, ctx, paragraphs));
+  else if (style.form === 'cronaca') extra.push(storyLine(story, fact));
+  else if (style.form === 'diretta') extra.push(stateLine(fact, ctx, paragraphs));
+  paragraphs = [...paragraphs, ...extra.filter(Boolean)];
+  // Short forms keep the lead; the analysis puts the line that links the fact to the story before the Government's line.
+  paragraphs = paragraphs.slice(0, style.paragraphs);
+  const body = []; let used = 0;
+  for (const paragraph of paragraphs) { if (used + paragraph.length > style.chars && body.length) break; body.push(paragraph); used += paragraph.length; }
+  const deck = style.form === 'social' ? clip(firstSentence(built.deck), 110) : style.form === 'breve' ? clip(firstSentence(built.deck), 150) : style.form === 'analisi' && body[1] && !/^Il (fatto|passaggio)/.test(body[1]) ? clip(`${firstSentence(built.deck)} ${firstSentence(body[1])}`, 240) : built.deck;
+  return { kicker, form: style.form, deck, body };
+}
 export function publishFact(mediaIn, fact, ctx) {
   const media = mediaIn;
   if (media.seen.includes(fact.key)) return media;
@@ -367,11 +406,10 @@ export function publishFact(mediaIn, fact, ctx) {
   if (!built) return media;
   media.seq += 1;
   const story = fact.story ? touchStory(media, fact.story, fact.week, fact.date, outlet.id) : null;
-  const paragraphs = []; let used = 0;
-  for (const paragraph of built.paragraphs) { if (used + paragraph.length > RULES.bodyMax && paragraphs.length) break; paragraphs.push(paragraph); used += paragraph.length; }
+  const shaped = shapeArticle(built, { fact, outlet, story, ctx });
   // Breaking news is rare: only a fact that weighs enough, and one a week.
   const breaking = (fact.importance ?? 0) >= RULES.breakingMin && !media.articles.some(item => item.breaking && item.week === fact.week);
-  const article = { id: `articolo-${fact.week}-${media.seq}`, key: fact.key, week: fact.week, date: fact.date, outletId: outlet.id, outlet: outlet.name, category: fact.category, headline: pickVariant(built.headline, edge), deck: built.deck, body: paragraphs, facts: built.facts.map(([label, value]) => ({ label, value: String(value) })), tone: fact.tone, importance: fact.importance, edge, storyId: story?.id ?? null, kind: fact.kind, region: fact.data?.region ?? fact.region ?? null, breaking, source: RULES.source };
+  const article = { id: `articolo-${fact.week}-${media.seq}`, key: fact.key, week: fact.week, date: fact.date, outletId: outlet.id, outlet: outlet.name, category: fact.category, headline: pickVariant(built.headline, edge), kicker: shaped.kicker, form: shaped.form, deck: shaped.deck, body: shaped.body, facts: built.facts.map(([label, value]) => ({ label, value: String(value) })), tone: fact.tone, importance: fact.importance, edge, storyId: story?.id ?? null, kind: fact.kind, region: fact.data?.region ?? fact.region ?? null, breaking, source: RULES.source };
   media.articles = [article, ...media.articles].slice(0, RULES.articlesKept);
   media.seen = [...media.seen, fact.key].slice(-RULES.seenKept);
   if (story) {

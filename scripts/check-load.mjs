@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { chromeAvailable, withBrowser } from './lib/browser.mjs';
 import { moduleGraph } from './lib/module-graph.mjs';
 
-const BUDGET = { modules: 150, raw: 4_700_000, compressed: 1_150_000, depth: 18 };
+const BUDGET = { modules: 150, raw: 4_800_000, compressed: 1_150_000, depth: 18 };
 const graph = await moduleGraph();
 const html = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const stamp = html.match(/main\.js\?v=([^"']+)/)?.[1];

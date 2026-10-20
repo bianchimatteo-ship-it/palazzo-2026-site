@@ -234,7 +234,8 @@ store.reviseGovernmentCoalition(['cam-xix-10', 'senato-xix-gruppo-9']);
 store.voteGovernmentConfidence();
 assert.equal(store.getState().parliament.government.status, 'fallen');
 const scheduled = store.getState().game.elections.find(item => item.type === 'politiche' && item.status === 'upcoming').windowOpensAt;
-for (let week = 0; week < 5; week++) store.advance(7);
+// The calendar planner now spaces the dissolution out (consultations first, then the dates the law allows): wait for the early vote to be called, up to a bounded number of weeks.
+for (let week = 0; week < 40 && !store.getState().game.elections.some(item => item.type === 'politiche' && item.early); week++) store.advance(7);
 const early = store.getState().game.elections.find(item => item.type === 'politiche' && item.early);
 assert.ok(early && early.windowOpensAt < scheduled, 'Senza governo si va alle politiche anticipate.');
 
