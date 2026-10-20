@@ -130,6 +130,13 @@ for (const [index, level] of LEVELS.entries()) for (const [k, start] of STARTS.e
     for (const item of game.elections) {
       if (item.calendarConflict) problems.push(`${label} @${date}: conflitto dichiarato per ${item.type} ${item.electionDate}`);
       if ('shortGap' in item) problems.push(`${label} @${date}: ${item.type} segnato a distanza ridotta`);
+      // after every rescheduling the entry still tells the truth: the window of the candidacies opens the campaign's length before the vote and closes when the schedule says
+      if (item.status === 'upcoming' && ELECTION_MODELS[item.type]) {
+        if (item.windowOpensAt !== T.advanceDays(item.electionDate, -ELECTION_MODELS[item.type].campaignDays)) problems.push(`${label} @${date}: ${item.type} ${item.electionDate} con la finestra aperta il ${item.windowOpensAt}`);
+        if (item.windowClosesAt !== T.advanceDays(item.windowOpensAt, ELECTION_SCHEDULE[item.type].windowDays)) problems.push(`${label} @${date}: ${item.type} con la finestra chiusa il ${item.windowClosesAt}`);
+        if (item.windowClosesAt > item.electionDate) problems.push(`${label} @${date}: ${item.type} con le candidature chiuse dopo il voto`);
+      }
+      if (game.elections.filter(other => other.type === item.type && other.electionDate === item.electionDate && other.status !== 'held').length > 1) problems.push(`${label} @${date}: due ${item.type} lo stesso giorno (${item.electionDate})`);
       if (item.status === 'upcoming' && !sunday(item.electionDate) && item.type !== 'europee') problems.push(`${label} @${date}: ${item.type} non cade di domenica (${item.electionDate})`);
     }
     planChecks++;

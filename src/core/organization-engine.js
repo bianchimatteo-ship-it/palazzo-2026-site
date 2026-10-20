@@ -87,6 +87,40 @@ function currentAction(current, context, rand) {
   return { type: 'iniziativa-militanti', label: 'Mobilita i militanti su una priorità sociale', request: 'organizzazione' };
 }
 
+
+// ---------- the memory of internal conflicts ----------
+// A conflict that ends (it fades, a truce is signed, a congress settles it) is remembered by the pair of areas: the same pair does not quarrel again at once, nor on the same topic. A new conflict
+// between them needs a cause — the party in a bad way, the balance between the areas that changed, a broken truce — and a conflict that is simply the same one restarted is not born.
+export const CONFLICT_COOLDOWN = Object.freeze({ estinto: 14, tregua: 20, mediazione: 24, congresso: 20 });
+const CONFLICT_TOPIC_WEEKS = 30, LINE_DISPUTE_WEEKS = 10, HOT_NOTICE_WEEKS = 8, MEMORY_WEEKS = 80;
+export const pairKey = ids => [...ids].sort().join('+');
+export function closeConflicts(org, conflicts, week, how = 'estinto', { until = null, gaps = null } = {}) {
+  if (!org || !conflicts?.length) return;
+  org.conflictMemory ??= {};
+  for (const conflict of conflicts) {
+    const ids = conflict.currents ?? [];
+    const entry = { closedWeek: week, how, topic: conflict.topic ?? null, title: conflict.title ?? null, until: until ?? week + (CONFLICT_COOLDOWN[how] ?? CONFLICT_COOLDOWN.estinto), gap: gaps?.[pairKey(ids)] ?? conflict.gap ?? null };
+    org.conflictMemory[pairKey(ids)] = entry;
+    if (how === 'tregua' || how === 'mediazione') for (const id of ids) org.conflictMemory[`tregua:${id}`] = { closedWeek: week, how, until: entry.until };
+  }
+  for (const [key, entry] of Object.entries(org.conflictMemory)) if (week - (entry.closedWeek ?? 0) > MEMORY_WEEKS) delete org.conflictMemory[key];
+}
+// A broken truce reopens the quarrels of that area: its memory is cleared.
+export function reopenConflicts(org, currentId) {
+  if (!org?.conflictMemory) return;
+  for (const key of Object.keys(org.conflictMemory)) {
+    if (key === `tregua:${currentId}`) delete org.conflictMemory[key];
+    else if (key.split('+').includes(currentId)) { for (const id of key.split('+')) delete org.conflictMemory[`tregua:${id}`]; delete org.conflictMemory[key]; }
+  }
+}
+// May the pair quarrel (again) now? Not while the memory of the last quarrel or a truce holds, unless there is a real cause for it.
+export function mayQuarrel(org, ids, week, { gap = null, cohesion = 60, relations = [] } = {}) {
+  const memory = org.conflictMemory ?? {};
+  const held = [memory[pairKey(ids)], ...ids.map(id => memory[`tregua:${id}`])].filter(entry => entry && week < (entry.until ?? 0));
+  if (!held.length) return true;
+  const escalation = cohesion < 35 || relations.some(value => value < 25) || held.some(entry => Number.isFinite(entry.gap) && Number.isFinite(gap) && gap < entry.gap - 6);
+  return escalation;
+}
 export function advanceCurrentPolitics(currents = [], org, context = {}) {
   if (!currents.length) return { lines: [], events: [], requests: [], alliances: [] };
   const normalized = normalizeCurrentProfiles(currents, { seed: context.seed ?? 1, week: context.week ?? 1 });
@@ -109,7 +143,13 @@ export function advanceCurrentPolitics(currents = [], org, context = {}) {
     if (action.type === 'contestazione-linea') {
       current.value = Math.max(0, current.value - 2); current.relation = current.value; current.strength = Math.max(1, current.strength - .7);
       rememberCurrent(currents, current.id, { kind: 'linea-rifiutata', text: `La linea “${context.line ?? 'del partito'}” è contestata`, weight: 1, relationDelta: -2, targetId: 'segreteria' }, context);
-      events.push({ type: 'conflict', conflict: { id: `conflitto-${context.week}-${current.id}`, title: `${current.label} contesta la linea del partito`, currents: [current.id], intensity: 46, since: context.week ?? 0, source: SIM } });
+      // the same area disputing the same line is one dispute, not one every few weeks; a different line (or a long silence) is a new one
+      const memoryKey = `linea:${current.id}`, remembered = org.conflictMemory?.[memoryKey], week = context.week ?? 0;
+      if (!remembered || remembered.line !== (context.line ?? null) || week - remembered.closedWeek >= LINE_DISPUTE_WEEKS) {
+        org.conflictMemory ??= {};
+        org.conflictMemory[memoryKey] = { closedWeek: week, how: 'linea', line: context.line ?? null, until: week + LINE_DISPUTE_WEEKS };
+        events.push({ type: 'conflict', conflict: { id: `conflitto-${context.week}-${current.id}`, title: `${current.label} contesta la linea del partito`, currents: [current.id], intensity: 46, since: context.week ?? 0, source: SIM } });
+      }
     } else if (action.type === 'accordo-congressuale' || action.type === 'endorsement-territoriale' || action.type === 'mozione-identitaria') {
       current.profile.congressPlan = { week: context.week ?? 0, action: action.type, request: action.request, source: SIM };
     }
@@ -222,6 +262,7 @@ export function applyOrgEffects(org, effects = {}, lines = [], targetRegion = nu
     for (const conflict of org.conflicts) conflict.intensity = Math.round(clamp(conflict.intensity + effects.conflicts));
     const closed = org.conflicts.filter(item => item.intensity <= 5);
     org.conflicts = org.conflicts.filter(item => item.intensity > 5);
+    closeConflicts(org, closed, org.conflictWeek ?? 0, 'mediazione');
     lines.push(closed.length ? `Chiuso lo scontro: ${closed[0].title}` : `Tensione interna ${effects.conflicts > 0 ? 'in aumento' : 'in calo'}`);
   }
   if (effects.discipline) org.discipline = Math.round(clamp(org.discipline + effects.discipline));
@@ -333,19 +374,31 @@ export function advanceOrganization(org, { rand, week, date, pollShare = null, p
   const tension = org.conflicts.reduce((sum, item) => sum + item.intensity, 0);
   const target = 60 - tension * 0.25 + (org.priorities.formazione - 1) * 3 + (invested('scuola-politica') ? 5 : 0) + programmes.cohesion - (org.treasury.balance < 0 ? 10 : 0);
   org.cohesion = Math.round(clamp(org.cohesion + (target - org.cohesion) * 0.08 + (rand() - 0.5) * 2));
+  org.conflictWeek = week;
   for (const conflict of org.conflicts) conflict.intensity = Math.round(clamp(conflict.intensity - 2.5 + (org.cohesion < 40 ? 3 : 0) + (rand() - 0.5) * 4));
   const resolved = org.conflicts.filter(item => item.intensity <= 5);
   if (resolved.length) lines.push(`Si ricompone lo scontro: ${resolved[0].title.toLowerCase()}`);
   org.conflicts = org.conflicts.filter(item => item.intensity > 5);
   const sorted = [...currents].sort((a, b) => b.strength - a.strength);
+  closeConflicts(org, resolved, week, 'estinto', { gaps: sorted.length >= 2 ? { [pairKey(sorted.slice(0, 2).map(item => item.id))]: sorted[0].strength - sorted[1].strength } : null });
   if (sorted.length >= 2 && org.conflicts.length < 2 && rand() < 0.035 + Math.max(0, 60 - org.cohesion) / 500 + (sorted[0].strength - sorted[1].strength < 6 ? 0.03 : 0)) {
     const topics = ['sulle candidature', 'sulla linea economica', 'sulle alleanze', 'sulla gestione della tesoreria', 'sul rapporto con il governo'];
-    const conflict = { id: `conflitto-${week}`, title: `${sorted[0].label} contro ${sorted[1].label} ${topics[Math.floor(rand() * topics.length)]}`, currents: [sorted[0].id, sorted[1].id], intensity: Math.round(35 + rand() * 30), since: week, source: SIM };
-    org.conflicts.push(conflict);
-    lines.push(`Scontro interno: ${conflict.title}`);
+    const pair = [sorted[0].id, sorted[1].id];
+    const gap = sorted[0].strength - sorted[1].strength;
+    // the same pair does not quarrel again as soon as it has made peace, unless something real has changed (see mayQuarrel)
+    // the same pair is never in two conflicts at once: an open conflict between the two areas is the quarrel, not a new one
+    if (!org.conflicts.some(item => pairKey(item.currents ?? []) === pairKey(pair)) && mayQuarrel(org, pair, week, { gap, cohesion: org.cohesion, relations: [sorted[0], sorted[1]].map(item => item.value ?? item.relation ?? 50) })) {
+      const last = org.conflictMemory?.[pairKey(pair)];
+      let topicIndex = Math.floor(rand() * topics.length);
+      if (last?.topic !== undefined && last?.topic !== null && topics[topicIndex] === last.topic && week - last.closedWeek < CONFLICT_TOPIC_WEEKS) topicIndex = (topicIndex + 1) % topics.length;
+      const conflict = { id: `conflitto-${week}`, title: `${sorted[0].label} contro ${sorted[1].label} ${topics[topicIndex]}`, topic: topics[topicIndex], gap, currents: pair, intensity: Math.round(35 + rand() * 30), since: week, source: SIM };
+      org.conflicts.push(conflict);
+      lines.push(`Scontro interno: ${conflict.title}`);
+    }
   }
+  // a conflict that stays hot is told once in a while, not every week
   const hot = org.conflicts.find(item => item.intensity >= 70);
-  if (hot) events.push({ type: 'conflict', conflict: hot });
+  if (hot && week - (hot.noticeWeek ?? -99) >= HOT_NOTICE_WEEKS) { hot.noticeWeek = week; events.push({ type: 'conflict', conflict: hot }); }
   org.discipline = Math.round(clamp(org.discipline + 0.5));
 
   // Standing: a weak position costs the internal office.

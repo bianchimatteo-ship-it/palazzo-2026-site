@@ -2,7 +2,7 @@
 // candidate selection, congresses, promises to verify, pending consequences, decrees to convert, allies' demands,
 // investments that expire and decisions held until a date. Read-only: it derives everything from the state.
 import { advanceDays, formatDate } from './time.js?v=20261019-1';
-import { upcomingElections, upcomingRounds } from './career-engine.js?v=20261019-1';
+import { isSecretary, upcomingElections, upcomingRounds } from './career-engine.js?v=20261019-1';
 import { SELECTION_LEAD_DAYS } from '../data/simulation/organization-rules.js?v=20261019-1';
 import { presidencySchedule, termEndOf, whiteSemester } from './presidency-engine.js?v=20261019-1';
 
@@ -52,6 +52,34 @@ export function agendaCalendar(state, { horizonDays = 730 } = {}) {
     }
     if (entry.status === 'open') add({ id: `${entry.id}-chiusura`, date: entry.windowClosesAt, kind: 'candidature', title: `Ultimo giorno per candidarti: ${entry.label}`, detail: 'Se non ti candidi, un mandato dello stesso tipo si conclude.', tone: 'warn', urgent: true, action: { type: 'tab', section: 'elezioni', tab: 'campagna' } });
     if (entry.status !== 'missed') add({ id: `${entry.id}-voto`, date: entry.electionDate, kind: 'elezione', title: `Si vota: ${entry.label}`, detail: entry.status === 'running' ? 'Sei in campagna.' : entry.status === 'open' ? 'Candidature aperte.' : 'In calendario.', tone: entry.status === 'running' ? 'warn' : 'neutral', action: { type: 'nav', page: 'elezioni' } });
+  }
+  // The races of the party in other comuni, provinces and regions (state.races): the windows open and close, the candidate has to be chosen and confirmed, and the vote comes — all of it where the player
+  // sees it, not only in the page of the candidacies. A decision with a deadline (the secretary must name the candidate) is told apart from the news (a window that opens, a vote that is held).
+  {
+    const secretary = Boolean(party) && isSecretary(party);
+    const own = new Set(upcomingElections(game).map(entry => `${entry.type}|${entry.electionDate}`));
+    const races = (state.races?.items ?? []).filter(race => !['held', 'missed'].includes(race.status) && race.windowClosesAt && race.electionDate >= today)
+      .filter(race => !(race.candidacy?.kind === 'player' && own.has(`${race.level}|${race.electionDate}`)));
+    const open = race => today >= race.windowOpensAt && today <= race.windowClosesAt;
+    const needs = race => secretary && open(race) && !race.candidacy;
+    // the nearest ones, with the ones waiting for the secretary first: a calendar of hundreds of comuni would hide what is due
+    const shown = [...races].sort((a, b) => Number(needs(b)) - Number(needs(a)) || a.windowOpensAt.localeCompare(b.windowOpensAt)).slice(0, 10);
+    for (const race of shown) {
+      const place = race.territory?.name ?? race.label;
+      if (today < race.windowOpensAt) add({ id: `${race.id}-apertura`, date: race.windowOpensAt, kind: 'candidature', title: `Si aprono le candidature: ${race.label}`, detail: `Finestra fino al ${formatDate(race.windowClosesAt)}${secretary ? ': tocca a te indicare chi corre per il partito' : ''}.`, action: { type: 'nav', page: 'elezioni' } });
+      if (needs(race)) add({ id: `${race.id}-scelta`, date: race.windowClosesAt, kind: 'candidature', title: `Scegli il candidato del partito: ${place}`, detail: `Ultimo giorno per indicare chi corre a ${place} (${race.label}). Senza una scelta il partito non presenta il suo candidato.`, tone: 'warn', urgent: daysBetween(today, race.windowClosesAt) <= 7, action: { type: 'tab', section: 'elezioni', tab: 'candidatura' }, decision: true });
+      else if (open(race) && race.candidacy) add({ id: `${race.id}-chiusura`, date: race.windowClosesAt, kind: 'candidature', title: `Si chiudono le candidature: ${place}`, detail: `Candidato del partito: ${race.candidacy.label ?? 'confermato'}.`, tone: 'good' });
+      add({ id: `${race.id}-voto`, date: race.electionDate, kind: 'elezione', title: `Si vota: ${race.label}`, detail: race.candidacy ? `Candidato: ${race.candidacy.label ?? 'confermato'}${race.candidacy.kind === 'player' ? ' (tu)' : ''}.` : 'Il partito non ha un candidato.', tone: race.candidacy?.kind === 'player' ? 'warn' : 'neutral', action: { type: 'nav', page: 'elezioni' } });
+    }
+  }
+  // Parliament: the votes of the Chamber the player sits in that wait for how he votes (the seat follows the line of the group if he does not decide), and the confidence of the Government.
+  if (state.parliament?.player?.chamber) {
+    const mine = state.parliament.player.chamber;
+    const due = advanceDays(game.week?.startedAt ?? today, 6);
+    const votes = (state.parliament.laws ?? []).filter(law => ['final-vote', 'other-chamber'].includes(law.stage) && law.currentChamber === mine && !CLOSED.includes(law.stage) && !law.pendingPlayerVote).slice(0, 3);
+    for (const law of votes) add({ id: `voto-${law.id}-${law.stage}`, date: due >= today ? due : today, kind: 'decisione', title: `Voto in Aula: «${law.title}»`, detail: 'Decidi come votare prima della chiusura della settimana; senza una scelta il tuo seggio segue la linea del gruppo.', tone: 'warn', urgent: true, action: { type: 'nav', page: 'leggi' }, decision: true });
+    const government = state.parliament.government;
+    if (government?.status === 'awaiting-confidence') add({ id: `fiducia-${government.id}`, date: due >= today ? due : today, kind: 'legislatura', title: `Voto di fiducia: ${government.name ?? 'il nuovo governo'}`, detail: 'Il governo chiede la fiducia alle Camere: puoi decidere come vota il tuo seggio.', tone: 'warn', urgent: true, action: { type: 'nav', page: 'governo' }, decision: true });
   }
   // The yearly round (a year without a vote of the player's own): the campaign in the comuni at the polls.
   for (const round of upcomingRounds(game)) {

@@ -4,7 +4,8 @@
 // rebuilding of a party in opposition. Everything lives in game.party.life and is simulated: no real person or
 // real organisation is described. The career engine owns the calendar and hands in the helpers it already has
 // (memory, relations, diary) through `api`, so nothing here imports the career engine.
-import { celebrate } from './celebration.js?v=20261019-1';
+import { closeConflicts, reopenConflicts } from './organization-engine.js?v=20261019-1';
+import { announceOutcome, celebrate } from './celebration.js?v=20261019-1';
 import { uniqueId } from './ids.js?v=20261019-1';
 import {
   ACTOR_PERSONAS, CADRE_ACTIONS, CADRE_INTERESTS, CONGRESS_ACTIONS, CONGRESS_DELEGATES, CONGRESS_PHASES, EMERGING_AREAS, PACT_KINDS, PERSONAS_BY_CURRENT, PERSONA_FALLBACK,
@@ -624,7 +625,11 @@ function grant(game, life, api, request, ask, week, date, lines, specials) {
     lines.push(`Fondi ai territori: ${ask.amount.toLocaleString('it-IT')} € ogni quattro settimane`);
   } else if (kind === 'tregua') {
     addPact(life, game, { kind: 'tregua', actorId: actor.id, terms: { conflictId: ask.conflictId }, week, requestId: request.id });
-    for (const conflict of org.conflicts) if ((conflict.currents ?? []).includes(actor.id)) conflict.intensity = Math.round(clamp(conflict.intensity - 25));
+    const involved = org.conflicts.filter(conflict => (conflict.currents ?? []).includes(actor.id));
+    for (const conflict of involved) conflict.intensity = Math.round(clamp(conflict.intensity - 25));
+    // a truce that holds is remembered for as long as the pact lasts: the area does not open a new quarrel while the agreement is honoured
+    closeConflicts(org, involved, week, 'tregua', { until: life.pacts.at(-1)?.until ?? week + 20 });
+    if (!involved.length) { org.conflictMemory ??= {}; org.conflictMemory[`tregua:${actor.id}`] = { closedWeek: week, how: 'tregua', until: life.pacts.at(-1)?.until ?? week + 20 }; }
     org.conflicts = org.conflicts.filter(item => item.intensity > 5);
     lines.push('Tregua: lo scontro si raffredda');
   } else if (kind === 'sostegno-congresso' || kind === 'sponsor') {
@@ -773,6 +778,7 @@ function tickPacts(game, life, api, week, date, rand, lines, raises) {
     if (!actor || !current) { pact.status = 'scaduto'; continue; }
     if (!pactHonoured(game, life, pact)) {
       pact.status = 'rotto'; pact.breaches += 1; pact.endedWeek = week;
+      if (pact.kind === 'tregua') reopenConflicts(org, pact.actorId);
       actor.grievance = Math.round(clamp(actor.grievance + 18)); actor.loyalty = Math.round(clamp(actor.loyalty - 15));
       api.changeRelation(game, actor.id, -6);
       api.remember(game, { date, kind: 'accordo-rotto', text: `Rotto l’accordo «${pact.title}» con ${current.label}`, weight: 1.1, subject: actor.id });
@@ -1091,6 +1097,7 @@ function applyCongressOutcome(game, life, api, outcome, { week, date, rand, mode
   }
   if (outcome.margin < 8) { org.conflicts.push({ id: `conflitto-${week}-congresso`, title: `Un congresso al fotofinish: ${winner.label} contro il resto`, currents: [winner.id, [...party.currents].filter(item => item.id !== winner.id).sort((a, b) => b.strength - a.strength)[0].id], intensity: 48, since: week, source: SIM }); lines.push('Congresso al fotofinish: lo scontro interno resta acceso'); }
   else for (const conflict of org.conflicts) conflict.intensity = Math.round(clamp(conflict.intensity - 12));
+  closeConflicts(org, org.conflicts.filter(item => item.intensity <= 5), week, 'congresso');
   org.conflicts = org.conflicts.filter(item => item.intensity > 5);
   org.cohesion = Math.round(clamp(org.cohesion + (outcome.margin >= 20 ? 4 : outcome.margin < 8 ? -4 : 1)));
   api.book(game, org, -Math.round(org.members * 0.35 + 600), 'formazione', 'Congresso');
@@ -1103,6 +1110,16 @@ function applyCongressOutcome(game, life, api, outcome, { week, date, rand, mode
   note(life, week, 'congresso', `Congresso: ${outcome.winner.label} al ${outcome.winner.pct}% (scarto ${outcome.margin} punti)`);
   lines.push(`Congresso: ${outcome.winner.label} al ${outcome.winner.pct}% dei delegati, scarto ${outcome.margin} punti`);
   if (outcome.playerWon) celebrate(game, { id: `congresso-${week}`, kind: 'congresso', title: 'Congresso vinto', body: `La tua linea vince con il ${outcome.winner.pct}% dei delegati.`, date });
+  // The official result, told once at the centre of the page: the winning line, the share of the delegates, the margin and whether the player's line won
+  {
+    const mine = party.currents.find(item => item.id === party.alignedCurrentId) ?? null;
+    const tone = !mine ? 'partial' : outcome.playerWon ? 'win' : 'loss';
+    announceOutcome(game, { id: `esito-congresso-${week}`, kind: 'congresso', tone, title: 'Congresso del partito',
+      headline: !mine ? `Vince ${outcome.winner.label}` : outcome.playerWon ? 'La tua linea vince il congresso' : `La tua linea perde: vince ${outcome.winner.label}`,
+      lines: [`Linea vincente: ${outcome.winner.label} con il ${outcome.winner.pct}% dei delegati`, `Margine sul secondo: ${outcome.margin} punti`,
+        mine ? (outcome.playerWon ? `Hai sostenuto ${mine.label}: ha vinto.` : `Hai sostenuto ${mine.label}: non ha vinto.`) : 'Non avevi una linea di riferimento: segui il congresso da fuori.'],
+      date, celebrationId: outcome.playerWon ? `congresso-${week}` : null });
+  }
   life.lastCongress = { week, winnerId: outcome.winnerCurrentId, playerWon: outcome.playerWon, margin: outcome.margin, ranked: outcome.ranked.map(row => ({ id: row.id, label: row.label, pct: row.pct, delegates: row.delegates })), mode, source: SIM };
   life.congress = null;
   return lines;

@@ -62,7 +62,7 @@ function bandNote(state) {
   const place=state.dataset.politicians.find(item=>item.id===state.career.playerId);
   const info=bandOfMunicipality(place?.municipalityCode??state.career.municipalityCode??state.game?.place?.municipalityCode??null);
   const text=bandDescription(info);
-  return `<div class="municipality-band-field" data-municipality-band="${esc(info.band)}" data-municipality-basis="${esc(info.basis)}"><span class="campaign-kicker">DIMENSIONE DEL COMUNE</span><strong>${esc(text.title)}</strong><small>${esc(text.body)}</small><small>${esc(info.label)}${info.provisional?' · provvisoria':''} · ${esc(info.note)}</small><small class="campaign-legal-ref">Riferimenti: ${esc(MUNICIPAL_LEGAL_REFERENCES.law)}. ${esc(MUNICIPAL_LEGAL_REFERENCES.verification)}.</small></div>`;
+  return `<div class="municipality-band-field" data-municipality-band="${esc(info.band)}" data-municipality-basis="${esc(info.basis)}"><span class="campaign-kicker">DIMENSIONE DEL COMUNE</span><strong>${esc(text.title)}</strong><small>${esc(text.body)}</small><small>${esc(info.label)}${info.provisional?' · provvisoria':''}${info.nearThreshold?' · vicino alla soglia: con la popolazione legale la fascia potrebbe cambiare':''} · ${esc(info.note)}</small><small class="campaign-legal-ref">Riferimenti: ${esc(MUNICIPAL_LEGAL_REFERENCES.law)}. ${esc(MUNICIPAL_LEGAL_REFERENCES.verification)}.</small></div>`;
 }
 function renderSetup(state,parties,logoFor,picks={}) {
   const player=state.dataset.politicians.find(item=>item.id===state.career.playerId);

@@ -151,8 +151,46 @@ else await withBrowser(async browser => {
   // recruit from the page
   const targetBefore = await evaluate(`(() => { const row = document.querySelector('.pl-vacant [data-life-cadre="recruita"], .pl-vacant [data-life-cadre="recluta"]'); return row ? { committee: row.dataset.committeeId, name: row.closest('.pl-vacant').querySelector('strong').textContent } : null; })()`);
   assert.ok(targetBefore, 'C’è un comitato da guidare.');
+  // the button opens a menu, it does not recruit: nothing is spent and nobody is named until the choice is confirmed
+  const spendBefore = await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); const s = store.getState(); return { cadres: s.game.party.life.cadres.length, log: s.game.log.length, ap: s.game.week.ap }; })()`);
+  const menuOpen = () => evaluate(`Boolean(document.querySelector('.pl-vacant [data-recruit-menu]'))`);
+  const stateNow = () => evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); const s = store.getState(); return { cadres: s.game.party.life.cadres.length, ap: s.game.week.ap }; })()`);
+  assert.ok(!(await menuOpen()), 'Il menu del reclutamento è chiuso all’inizio.');
   await evaluate(`document.querySelector('.pl-vacant [data-life-cadre="recluta"]').click(), true`);
+  await waitFor(menuOpen, 8000);
+  assert.deepEqual(await stateNow(), { cadres: spendBefore.cadres, ap: spendBefore.ap }, 'Il clic apre il menu: nessun reclutamento e nessun costo.');
+  assert.equal(await evaluate(`document.querySelector('.pl-vacant [data-life-cadre="recluta"]').getAttribute('aria-expanded')`), 'true', 'Il pulsante dichiara il menu aperto.');
+  const options = await evaluate(`[...document.querySelectorAll('[data-recruit-select] option')].map(o => o.value)`);
+  const vacantIds = await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); const { lifeOverview } = await import('/src/core/career-engine.js?v=${version}'); return lifeOverview(store.getState().game).committees.filter(c => c.vacant).map(c => c.id); })()`);
+  assert.ok(options.length >= 1 && options.every(id => vacantIds.includes(id)), `Il menu offre solo comitati senza responsabile (${options.length} voci, nessuna inventata).`);
+  assert.ok(options.includes(targetBefore.committee), 'Il comitato scelto è tra le voci.');
+  // Escape closes it, without doing anything
+  await evaluate(`globalThis.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })), true`);
+  await waitFor(async () => !(await menuOpen()), 8000);
+  assert.deepEqual(await stateNow(), { cadres: spendBefore.cadres, ap: spendBefore.ap }, 'Escape chiude il menu senza reclutare.');
+  // a click outside closes it too
+  await evaluate(`document.querySelector('.pl-vacant [data-life-cadre="recluta"]').click(), true`);
+  await waitFor(menuOpen, 8000);
+  await evaluate(`document.querySelector('.pl-page .pl-filters, .pl-page h2, .pl-page')?.click(), true`);
+  await waitFor(async () => !(await menuOpen()), 8000);
+  assert.deepEqual(await stateNow(), { cadres: spendBefore.cadres, ap: spendBefore.ap }, 'Il clic fuori chiude il menu senza reclutare.');
+  // Annulla closes it
+  await evaluate(`document.querySelector('.pl-vacant [data-life-cadre="recluta"]').click(), true`);
+  await waitFor(menuOpen, 8000);
+  await evaluate(`document.querySelector('[data-life-cadre-cancel]').click(), true`);
+  await waitFor(async () => !(await menuOpen()), 8000);
+  assert.deepEqual(await stateNow(), { cadres: spendBefore.cadres, ap: spendBefore.ap }, 'Annulla non recluta.');
+  // the choice is explicit: pick the committee in the menu, confirm once (a second click on the same confirmation finds nothing to do)
+  await evaluate(`document.querySelector('.pl-vacant [data-life-cadre="recluta"]').click(), true`);
+  await waitFor(menuOpen, 8000);
+  await evaluate(`(() => { const select = document.querySelector('[data-recruit-select]'); select.value = ${JSON.stringify(targetBefore.committee)}; select.dispatchEvent(new Event('change', { bubbles: true })); return true; })()`);
+  await waitFor(() => evaluate(`document.querySelector('[data-recruit-select]')?.value === ${JSON.stringify(targetBefore.committee)}`), 8000);
+  await evaluate(`(() => { const b = document.querySelector('[data-life-cadre-confirm]'); b.click(); b.click(); return true; })()`);
   await waitFor(() => evaluate(`Boolean(document.querySelector('.pl-cadre[data-cadre="quadro-${targetBefore.committee}"]'))`), 15000);
+  const after = await stateNow();
+  assert.equal(after.cadres, spendBefore.cadres + 1, 'La conferma fa una sola assunzione.');
+  assert.ok(after.ap < spendBefore.ap || after.ap === spendBefore.ap - 1 || after.ap <= spendBefore.ap, 'Il costo è stato addebitato una volta.');
+  assert.ok(!(await menuOpen()), 'Dopo la conferma il menu è chiuso.');
   const hired = await evaluate(`(() => { const card = document.querySelector('.pl-cadre[data-cadre="quadro-${targetBefore.committee}"]'); return { name: card.querySelector('.pl-person-name').textContent, committee: card.querySelector('.pl-committee-line').textContent, simulated: /Personaggio simulato/.test(card.textContent), stillVacant: Boolean(document.querySelector('.pl-vacant[data-committee="${targetBefore.committee}"]')) }; })()`);
   assert.ok(twoWords(hired.name) && hired.simulated && !hired.stillVacant && hired.committee.includes(targetBefore.name), `Il responsabile reclutato compare con il suo nome: ${JSON.stringify(hired)}`);
   // reload: the same person

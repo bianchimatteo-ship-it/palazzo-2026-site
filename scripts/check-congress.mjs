@@ -275,6 +275,12 @@ const snapshot = game => JSON.stringify({ ap: game.week.ap, funds: game.resource
     assert.ok(outcome.margin === Math.round((outcome.ranked[0].pct - (outcome.ranked[1]?.pct ?? 0)) * 10) / 10, `${seed}: lo scarto è quello tra i primi due.`);
     if (mode === 'support') assert.ok(!outcome.ranked.some(row => row.id === 'player'), `${seed}: chi sostiene non è in lista.`); else assert.ok(outcome.ranked.some(row => row.id === 'player'), `${seed}: il candidato e il segretario uscente sono in lista.`);
     assert.equal(typeof outcome.playerWon, 'boolean');
+    // the official result is told once, at the centre of the page: the winning line, the share of the delegates, the margin, and whether the player's line won
+    const popup = game.celebrations?.outcome;
+    assert.ok(popup && popup.kind === 'congresso' && popup.id === 'esito-congresso-26', `${seed}: l'esito del congresso è annunciato.`);
+    assert.equal(popup.tone, outcome.playerWon ? 'win' : 'loss', `${seed}: vittoria o sconfitta della linea del giocatore dichiarata.`);
+    assert.ok(popup.lines.join(' ').includes(`${outcome.winner.pct}%`) && popup.lines.join(' ').includes(String(outcome.margin)) && popup.lines.join(' ').includes(outcome.winner.label), `${seed}: percentuale dei delegati, margine e linea vincente.`);
+    assert.ok(outcome.playerWon ? /vince il congresso/.test(popup.headline) : /perde/.test(popup.headline), `${seed}: il titolo dice se la linea ha vinto o perso.`);
     if (outcome.playerWon) won++; else lost++;
     margins.push(outcome.margin);
     if (outcome.margin < 8) { close++; assert.ok(game.party.org.conflicts.some(item => /fotofinish/.test(item.title)), `${seed}: un risultato al fotofinish apre un conflitto.`); }

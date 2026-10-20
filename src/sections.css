@@ -1218,3 +1218,43 @@ details.accord-panel.pm-fold { padding: 0; }
 @media (max-width: 480px) { .career-timeline .timeline-entry { gap: 8px; } .career-timeline .timeline-entry > div { min-width: 0; overflow-wrap: anywhere; } }
 
 .campaign-target { margin: 8px 0 0; padding: 8px 12px; border-radius: 8px; border: 1px dashed rgba(255, 255, 255, .25); overflow-wrap: anywhere; }
+
+/* Accordi del partito: una tabella con colonne proprie. Titolo, interlocutore, condizioni e contropartite non si mescolano, il testo non si spezza a lettere e il pulsante «Denuncia» ha sempre il suo spazio. */
+.pl-pacts .sx-table td { overflow-wrap: normal; word-break: normal; hyphens: manual; vertical-align: top; }
+.pl-pacts .sx-table td small { display: block; margin-top: 2px; }
+.pl-pacts .sx-table th:last-child, .pl-pacts .sx-table td:last-child { width: 1%; white-space: nowrap; text-align: right; }
+.pl-pacts .sx-table td:nth-child(1) { min-width: 9rem; }
+.pl-pacts .sx-table td:nth-child(2) { min-width: 7rem; }
+.pl-pacts .sx-table td:nth-child(3), .pl-pacts .sx-table td:nth-child(4) { min-width: 10rem; }
+.pl-pacts .pl-pact-break { min-width: 6.5rem; padding-inline: 12px; white-space: nowrap; word-break: keep-all; writing-mode: horizontal-tb; }
+@media (max-width: 760px) {
+  .pl-pacts .sx-table td:last-child { width: 100%; text-align: left; }
+  .pl-pacts .sx-table td:nth-child(n) { min-width: 0; }
+  .pl-pacts .sx-table td:last-child::before { display: none; }
+  .pl-pacts .pl-pact-break { width: 100%; }
+}
+
+/* Menu del reclutamento di un responsabile locale: sotto la riga del comitato, in colonna, mai oltre la larghezza della scheda. */
+.pl-vacant .pl-recruit-menu { grid-column: 1 / -1; }
+.pl-recruit-menu { display: grid; gap: 8px; margin-top: 8px; padding: 10px 12px; border: 1px solid var(--line-strong); border-left: 4px solid var(--lv, var(--accent)); border-radius: 9px; background: var(--panel-2); min-width: 0; }
+.pl-recruit-menu label { display: grid; gap: 4px; font-size: 12px; font-weight: 700; color: var(--label); }
+.pl-recruit-menu select { max-width: 100%; }
+.pl-recruit-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+/* Vita interna del partito: gerarchia e colore per categoria, con i token del gioco (nessun colore di partito: la pagina resta neutra). Ogni scheda ha un filo colorato in alto e un'etichetta della sua categoria. */
+.pl-page .sx-card { --cat: var(--blue); border-top: 3px solid var(--cat); }
+.pl-page .sx-card .section-kicker { font-weight: 800; }
+.pl-page .sx-card .section-kicker::before { content: ""; display: inline-block; width: 9px; height: 9px; margin-right: 7px; border-radius: 50%; background: var(--cat); vertical-align: 1px; }
+.pl-page .sx-card-head h3 { font-size: 18px; }
+.pl-page .pl-cat-stato { --cat: var(--green); }
+.pl-page .pl-cat-richieste { --cat: var(--amber); }
+.pl-page .pl-cat-aree { --cat: var(--violet); }
+.pl-page .pl-cat-accordi { --cat: var(--blue); }
+.pl-page .pl-cat-congresso { --cat: var(--terracotta); }
+.pl-page .pl-cat-quadri { --cat: var(--teal); }
+.pl-page .pl-cat-struttura { --cat: var(--sage-deep); }
+.pl-page .pl-cat-memoria { --cat: var(--muted); }
+.pl-page .sx-kpi strong { color: var(--ink); }
+.pl-page .sx-card.tone-good { border-top-color: var(--good-line); }
+.pl-page .sx-card.tone-bad { border-top-color: var(--bad-line); }
+.pl-page .sx-card.tone-warn { border-top-color: var(--gold-line); }

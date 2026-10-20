@@ -535,6 +535,10 @@ const candidateLabel = candidate => candidate.realReference?.fullName ?? (candid
 // `extra` are points per candidate (the record of an incumbent), `edges` the party weight, `roots` the strongholds of the rivals, `homeExtra`
 // what the roots of the player (his territorial reputation, the committees) add at home. All of them are zero-mean among the rivals, so
 // a field without data starts as it always did.
+// The personal consensus the player brings (the stat is read from the statistics of the game; the party's strength and the candidate's name are other things): the points above or below
+// what a newcomer with the default consensus has. Kept apart from popularity (how well liked) and from the party edge (what the party's weight gives).
+const DEFAULT_PERSONAL_CONSENSUS = 4;
+const personalConsensus = stats => clamp((Number(stats?.consensus ?? DEFAULT_PERSONAL_CONSENSUS) - DEFAULT_PERSONAL_CONSENSUS) * .09, -.5, 5);
 function initSupport(areas, candidates, player, seed, { extra = {}, edges = {}, roots = {}, homeExtra = 0, spread = 1.6, anchors = {}, rooted = false } = {}) {
   const rand = randomFrom(seed ^ 0x7f4a7c15);
   for (const area of areas) {
@@ -556,7 +560,7 @@ function initSupport(areas, candidates, player, seed, { extra = {}, edges = {}, 
         const quality = clamp((foundation - 20) / 100, -.25, .35);
         return Math.max(.03, anchor * (1 + quality) + size * (territoryBoost + stronghold + lean + Number(extra[candidate.id] ?? 0) + (candidate.campaignStats.momentum??0)*.55 + (area.localTrend??0)*.8 + (rand()*7 - 3.5)));
       }
-      return Math.max(4, foundation + territoryBoost + stronghold + lean + Number(extra[candidate.id] ?? 0) + Number(edges[candidate.id] ?? 0) + (candidate.campaignStats.momentum??0)*.55 + (area.localTrend??0)*.8 + rand()*7 + area.organization*.015);
+      return Math.max(4, foundation + (candidate.isPlayer ? personalConsensus(candidate.campaignStats) : 0) + territoryBoost + stronghold + lean + Number(extra[candidate.id] ?? 0) + Number(edges[candidate.id] ?? 0) + (candidate.campaignStats.momentum??0)*.55 + (area.localTrend??0)*.8 + rand()*7 + area.organization*.015);
     });
     const shares = normalized(strengths);
     area.supportByCandidate = Object.fromEntries(candidates.map((candidate,index) => [candidate.id,shares[index]]));
@@ -1801,7 +1805,7 @@ export function createCampaign({career,player,statistics=[],offices=[],territori
     const shareOf=id=>roster.participants.find(item=>item.id===id)?.share;
     for(const item of candidates) { const value=item.isPlayer?(partyId?shareOf(partyId):null):shareOf(item.partyId); anchors[item.id]=Number.isFinite(value)?value:item.isPlayer?.3:.3; }
   }
-  initSupport(campaignAreas,candidates,player,seed,{extra,edges:partyEdges(opponents,config.partyWeights??{}),roots:rivalRoots(opponents,campaignAreas,seed),homeExtra,spread:local?1.8:1.2,anchors,rooted});
+  initSupport(campaignAreas,candidates,player,seed,{extra,edges:partyEdges(candidates,config.partyWeights??{}),roots:rivalRoots(opponents,campaignAreas,seed),homeExtra,spread:local?1.8:1.2,anchors,rooted});
   const focus=campaignAreas.find(area=>area.name===player.municipality)?.id ?? campaignAreas.find(area=>area.region===player.region)?.id ?? campaignAreas.find(area=>area.constituency && (config.constituency === area.constituency))?.id ?? campaignAreas[0].id;
   const deadlineDay=model.nominationDays;
   const internalSupport=partyId && !userOrIndependent ? round(1.5+playerStats.influence*.035+(incumbency?1.5:0)) : 10;

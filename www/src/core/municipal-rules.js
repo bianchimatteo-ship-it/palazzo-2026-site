@@ -10,6 +10,8 @@ export const MUNICIPAL_RULES = Object.freeze({
   // 15,000 inhabitants is still “up to 15,000”: the double round starts above it.
   source: 'D.Lgs. 267/2000 (TUEL), art. 37 e disciplina elettorale dei comuni: la fascia dipende dalla popolazione del censimento ufficiale'
 });
+// A comune this close to the threshold (share of it) may change class with the population the law prescribes (the census), which the data set does not hold: the class is shown as uncertain.
+const NEAR_THRESHOLD = 0.1;
 export const MUNICIPAL_BANDS = Object.freeze({ small: 'fino-15000', large: 'oltre-15000' });
 export const bandOfPopulation = population => Number(population) > MUNICIPAL_RULES.threshold ? MUNICIPAL_BANDS.large : MUNICIPAL_BANDS.small;
 const whole = value => Number.isInteger(value) && value >= 0 ? value : null;
@@ -42,7 +44,7 @@ export function municipalityBandInfo(code, index = new Map()) {
   const legal = whole(record?.electoralPopulationReference);
   if (legal !== null) return { band: bandOfPopulation(legal), basis: 'riferimento-legale', provisional: false, population: legal, referenceDate: record.electoralPopulationReferenceDate ?? null, label: `${legal.toLocaleString('it-IT')} abitanti (${record.electoralPopulationReferenceType ?? 'riferimento legale'})`, note: 'Fascia dedotta dalla popolazione di riferimento prevista per le regole elettorali.' };
   const resident = whole(record?.populationResident);
-  if (resident !== null) return { band: bandOfPopulation(resident), basis: 'residente-indicativo', provisional: true, population: resident, referenceDate: record.populationReferenceDate ?? null, label: residentsLabel(resident, record.populationReferenceDate), note: 'La popolazione di riferimento legale non è ancora nei dati: la fascia usa la popolazione residente ISTAT, solo come indicazione.' };
+  if (resident !== null) return { band: bandOfPopulation(resident), basis: 'residente-indicativo', provisional: true, nearThreshold: Math.abs(resident - MUNICIPAL_RULES.threshold) <= MUNICIPAL_RULES.threshold * NEAR_THRESHOLD, population: resident, referenceDate: record.populationReferenceDate ?? null, label: residentsLabel(resident, record.populationReferenceDate), note: 'La popolazione di riferimento legale non è ancora nei dati: la fascia usa la popolazione residente ISTAT, solo come indicazione.' };
   return { band: MUNICIPAL_BANDS.small, basis: 'nessun-dato', provisional: true, population: null, referenceDate: null, label: 'popolazione non disponibile', note: 'I dati demografici dei comuni non sono ancora stati importati (o questo comune non è nel file): si applicano le regole dei comuni fino a 15.000 abitanti, come ripiego dichiarato.' };
 }
 

@@ -204,13 +204,17 @@ export function runFirstRound(campaign) {
     totalBallots:count.ballots,electorate:count,groups:withVotesOf(groups.map(group=>resultRow(group,group.share,count.ballots)),count.ballots),
     territories:areaResults(campaign,count.ballots),playerShare:playerGroup?.share??0,source:'simulation',simulated:true
   };
-  if(campaign.electionType==='comunale'&&campaign.municipalityBand==='oltre-15000'&&leader?.share<50&&groups.length>1) {
+  // The runoff is decided on the whole votes of the count, not on a rounded percentage: a candidate who has exactly half of the valid votes has not passed the absolute majority (more than half) and goes to
+  // the second round. The two finalists are the two with the most votes; a tie is broken by the fixed key of the campaign, never by the order of the list.
+  const ranked=[...result.groups].sort((a,b)=>b.votes-a.votes||tieKey(campaign,a.id)-tieKey(campaign,b.id));
+  const absoluteMajority=Boolean(ranked[0])&&ranked[0].votes*2>result.groups.reduce((sum,row)=>sum+row.votes,0);
+  if(campaign.electionType==='comunale'&&campaign.municipalityBand==='oltre-15000'&&!absoluteMajority&&groups.length>1) {
     result.requiresRunoff=true;
-    result.runoffCandidateIds=groups.slice(0,2).map(item=>item.id);
+    result.runoffCandidateIds=ranked.slice(0,2).map(item=>item.id);
     result.runoffShares=withVotesOf(normalizedTwoRound(campaign,result.runoffCandidateIds).map(group=>resultRow(group,group.share,count.ballots)),count.ballots);
   } else {
     result.requiresRunoff=false;
-    result.winnerGroupId=leader?.id??null;
+    result.winnerGroupId=(campaign.electionType==='comunale'&&campaign.municipalityBand==='oltre-15000'?ranked[0]?.id:leader?.id)??null;
   }
   return result;
 }

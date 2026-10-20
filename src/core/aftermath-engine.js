@@ -25,6 +25,8 @@ const EXECUTIVES = { comunale: 'il sindaco', provinciale: 'il Presidente della P
 const MEMBER_TITLE = { comunale: 'Consigliere comunale', provinciale: 'Consigliere provinciale', regionale: 'Consigliere regionale' };
 
 // electionAftermath({ campaign, result, game, player }) → consequences, applied by the store.
+// How much one result pulls the personal consensus toward itself: a council says less about a politician's standing than a general election.
+export const CONSENSUS_PULL = Object.freeze({ comunale: 0.15, provinciale: 0.15, regionale: 0.2, politiche: 0.25, europee: 0.2 });
 export function electionAftermath({ campaign, result, game = null, player = null }) {
   const outcome = result.outcome ?? { code: result.personalMandate ? 'eletto' : 'sconfitta', expectation: 'in-linea', margin: null };
   const base = { ...(BASE[outcome.code] ?? BASE.sconfitta) };
@@ -85,7 +87,9 @@ export function electionAftermath({ campaign, result, game = null, player = null
   return {
     code: outcome.code, label: outcome.label, tone: outcome.tone ?? (outcome.mandate ? 'good' : 'bad'),
     stats: { reputation: round2(base.reputation), influence: round2(base.influence), notoriety: round2(base.notoriety), popularity: round2(base.popularity) },
+    // The share of this vote is the result of this competition (it goes to the electoral history); the personal consensus of the politician only moves toward it, slowly and by level.
     consensus: result.playerShare,
+    consensusWeight: CONSENSUS_PULL[campaign.electionType] ?? 0.15,
     party: party ? { support: round2(base.support), leadership: round2(base.leadership), currents } : null,
     capital: base.capital, office, events, lines, government, narrowLoss,
     memory: { kind: outcome.mandate ? 'vittoria-elettorale' : 'sconfitta-elettorale', weight: round2((outcome.mandate ? (outcome.position === 1 ? 1.3 : 1.1) : outcome.code === 'sotto-soglia' ? 1.2 : .9) + memoryExtra) },

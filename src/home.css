@@ -350,3 +350,19 @@ html[data-motion="reduced"] .hqc-drawer-toggle, html[data-motion="reduced"] butt
 .campaign-metrics .campaign-metric strong { display: block; font-size: 22px; }
 .campaign-metrics .campaign-metric span { display: block; color: var(--muted); font-size: 12.5px; line-height: 1.35; overflow-wrap: anywhere; }
 .campaign-metrics svg { grid-column: 1 / -1; width: 100%; height: 34px; }
+
+/* L'esito ufficiale di un voto o di un congresso: una scheda al centro della pagina. Non blocca il gioco: nessun velo prende i clic, solo la scheda; si chiude con il pulsante o con Esc. */
+.outcome-popup { position: fixed; z-index: 70; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(92vw, 440px); max-height: min(86vh, 560px); overflow: auto; padding: 16px 18px; display: grid; gap: 10px; border: 1px solid var(--line-strong, var(--accent)); border-top: 5px solid var(--outcome-tone, var(--accent)); border-radius: 14px; background: var(--panel-3, #1b2a22); color: var(--ink, #f2f5f1); box-shadow: 0 14px 44px rgba(0,0,0,.38); }
+.outcome-popup.is-win { --outcome-tone: var(--good, #4cb782); }
+.outcome-popup.is-partial { --outcome-tone: var(--warn, #e0b45a); }
+.outcome-popup.is-loss { --outcome-tone: var(--bad, #e0685f); }
+.outcome-head { display: flex; align-items: center; gap: 12px; }
+.outcome-mark { display: grid; place-items: center; flex: none; width: 38px; height: 38px; border-radius: 50%; background: var(--outcome-tone); color: #0e1a12; }
+.outcome-kicker { display: block; color: var(--label, var(--ink-2, #c8d0c9)); font-size: 11.5px; font-weight: 750; letter-spacing: .06em; text-transform: uppercase; }
+.outcome-head strong { display: block; font-size: 17px; line-height: 1.25; }
+.outcome-popup ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; font-size: 14px; color: var(--ink-2, #c8d0c9); }
+.outcome-popup li::before { content: "•"; margin-right: 8px; color: var(--outcome-tone); }
+.outcome-actions { display: flex; justify-content: flex-end; }
+@media (prefers-reduced-motion: no-preference) { .outcome-popup.is-new { animation: outcome-in .35s ease-out both; } }
+@keyframes outcome-in { from { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); } to { opacity: 1; transform: translate(-50%, -50%); } }
+@media (max-width: 700px) { .outcome-popup { top: auto; bottom: calc(84px + env(safe-area-inset-bottom)); transform: translateX(-50%); max-height: 62vh; } @keyframes outcome-in { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } } }

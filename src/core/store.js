@@ -28,7 +28,7 @@ import { EP_COSTS, EP_GROUPS_2024, EP_ROLES, INSTITUTIONS, advanceInstitutionWee
 import { answerProtest, payUpkeep, planWork, refundWork, resizeWork, resumeWork, setWorkFunding, settleCofinance, settleWorkIssue, suspendWork, workGap, workRequestFor } from './local-works-engine.js?v=20261019-1';
 import { WORK_BY_ID, WORK_RULES } from '../data/simulation/local-works.js?v=20261019-1';
 import { cadreName, LOCAL_ROLES } from './party-life-engine.js?v=20261019-1';
-import { celebrate, dismissCelebration, electionWin } from './celebration.js?v=20261019-1';
+import { announceOutcome, celebrate, dismissCelebration, dismissOutcome, electionTone, electionWin } from './celebration.js?v=20261019-1';
 import { candidacyBlock, candidacyRecord, institutionOffice, lapsesFor, officeLabel, officeScope, personalCandidacies } from './office-engine.js?v=20261019-1';
 import { actTypeOf } from '../data/simulation/local-acts.js?v=20261019-1';
 import { SECTOR_GAINS, competenceIn, gainSector, sectorFloors, standingFactors } from './standing-engine.js?v=20261019-1';
@@ -3595,6 +3595,16 @@ export const store = {
     emit();
     return true;
   },
+  // The official result has been seen (or dismissed): it never comes back.
+  dismissOutcome(id) {
+    if (!state.game || !state.game.celebrations?.outcome) return false;
+    const game = deepCopy(state.game);
+    if (!dismissOutcome(game, id)) return false;
+    state = { ...state, game };
+    if (state.career.status !== 'demo') persist();
+    emit();
+    return true;
+  },
   setCampaignPicks(picks) {
     if (!picks || typeof picks.key !== 'string' || !picks.values || typeof picks.values !== 'object') return;
     state = { ...state, ui: { ...state.ui, campaignPicks: { key: picks.key, values: { ...picks.values } } } };
@@ -5464,7 +5474,9 @@ function applyCampaignResult(currentState,campaign) {
   if(vote&&!(vote.winner&&(vote.coalitions.find(item=>item.id===vote.winner)?.partyIds??[vote.winner]).includes(result.national.forceId))) aftermath.events=aftermath.events.filter(item=>item.id!=='consultazioni-governo');
   const current=metric=>Number(currentState.dataset.statistics.find(item=>item.subjectId===player.id&&item.metric===metric)?.value??50);
   const clamp100=value=>Math.max(0,Math.min(100,value));
-  const metricValues={consensus:result.playerShare,reputation:clamp100((campaign.candidateStats.reputation??50)+aftermath.stats.reputation),notoriety:clamp100((campaign.candidateStats.notoriety??20)+aftermath.stats.notoriety),influence:clamp100((campaign.candidateStats.influence??10)+aftermath.stats.influence),popularity:clamp100(current('popularity')+aftermath.stats.popularity)};
+  // The personal consensus moves toward the result of this vote (never replaced by it): the share of the single competition stays in the electoral history.
+  const personalConsensus=Number(campaign.candidateStats?.consensus??current('consensus'));
+  const metricValues={consensus:clamp100(personalConsensus+((Number.isFinite(result.playerShare)?result.playerShare:personalConsensus)-personalConsensus)*(aftermath.consensusWeight??0.15)),reputation:clamp100((campaign.candidateStats.reputation??50)+aftermath.stats.reputation),notoriety:clamp100((campaign.candidateStats.notoriety??20)+aftermath.stats.notoriety),influence:clamp100((campaign.candidateStats.influence??10)+aftermath.stats.influence),popularity:clamp100(current('popularity')+aftermath.stats.popularity)};
   let statistics=[...currentState.dataset.statistics];
   for(const [metric,value] of Object.entries(metricValues)) {
     const existing=statistics.find(item=>item.subjectId===player.id&&item.metric===metric);
@@ -5502,6 +5514,19 @@ function applyCampaignResult(currentState,campaign) {
     if(campaign.nomination.status==='approved') game.flags={...game.flags,candidacy:true};
     // a real win is marked once, discreetly (core/celebration.js); a defeat or a consolation seat is not
     if(electionWin(result,outcome)) celebrate(game,{id:`elezione-${campaign.id}`,kind:'elezione',title:outcome.label??'Eletto',body:`${campaign.electionLabel??'Elezione'}: ${Number.isFinite(result.playerShare)?`${String(Math.round(result.playerShare*10)/10).replace('.',',')}% dei voti`:'risultato confermato'}.`,date:campaign.currentDate});
+    // the official result, told once at the centre of the page (core/celebration.js): percentage, position and mandate won or missed
+    {
+      const tone=electionTone(result,outcome);
+      const pct=Number.isFinite(result.playerShare)?`${String(Math.round(result.playerShare*10)/10).replace('.',',')}%`:'n.d.';
+      const wonTitle=aftermath.office?.title??null;
+      announceOutcome(game,{id:`esito-elezione-${campaign.id}`,kind:'elezione',tone,
+        title:campaign.electionLabel??'Elezione',
+        headline:tone==='win'?(outcome.label??'Vittoria'):tone==='partial'?`${outcome.label??'Seggio ottenuto'}: non è una vittoria piena`:(outcome.label??'Sconfitta'),
+        lines:[`Risultato: ${pct} dei voti`,outcome.positionLabel?`Posizione: ${outcome.positionLabel}`:(outcome.position?`Posizione: ${outcome.position}ª`:null),
+          result.personalMandate?`Mandato conquistato${wonTitle?`: ${wonTitle}`:''}`:'Mandato mancato: non ottieni il seggio',
+          tone==='partial'?(outcome.code==='eletto-opposizione'?'Siedi all’opposizione: il seggio c’è, la corsa è persa.':'Il seggio c’è, ma non per la via di una vittoria.'):null].filter(Boolean),
+        date:campaign.currentDate,celebrationId:tone==='win'?`elezione-${campaign.id}`:null});
+    }
     if(game.party&&aftermath.party) {
       game.party={...game.party,support:Math.max(0,Math.min(100,game.party.support+aftermath.party.support))};
       const currents=aftermath.party.currents;

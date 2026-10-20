@@ -1439,6 +1439,8 @@ export function advanceWorld(input, { date, week, stats = {}, deltas = {}, game 
   return { world, parliament, lines, reactions, offers, shocks };
 }
 
+// How much the party's national standing reads in the result of one election of its candidate, by level.
+const ELECTION_PARTY_SCALE = Object.freeze({ comunale: 0.15, provinciale: 0.25, regionale: 0.5, politiche: 1, europee: 1 });
 // Career and institutional moves ripple into polls.
 export function applyWorldSignals(input, signals = [], date) {
   if (!input || !signals.length) return input;
@@ -1481,8 +1483,11 @@ export function applyWorldSignals(input, signals = [], date) {
       if (player.refSource !== 'real') { player.axis = clamp((player.axis ?? 0) + signal.direction * 0.5, -3, 3); player.position = positionOf(player.axis); }
     } else if (signal.type === 'chronicle') logEvent(world, date, { kind: signal.kind ?? 'cronaca', icon: signal.icon ?? 'pin', scope: signal.scope ?? 'nazionale', title: signal.title, body: signal.body ?? '', tone: signal.tone ?? 'neutral', chain: signal.chain ?? null });
     else if (signal.type === 'election') {
-      const gap = signal.pollShare === null ? 0 : clamp((signal.share - signal.pollShare) * 0.15, -2, 2);
-      push(signal.mandate ? 1 : -0.4, 4, `${signal.label}: ${String(Math.round(signal.share * 10) / 10).replace('.', ',')}%`, signal.mandate ? 'Il risultato elettorale dà slancio al partito.' : 'Il voto ridimensiona le ambizioni del partito.', signal.mandate ? 'good' : 'bad', 'ballot', round2(gap));
+      // What the vote says about the party depends on the level (a council is not the country) and on how it did against its own polls: a personal defeat above the polls is not a defeat of the party.
+      const scale = ELECTION_PARTY_SCALE[signal.electionType] ?? 0.25;
+      const gap = signal.pollShare === null ? 0 : clamp((signal.share - signal.pollShare) * 0.15, -2, 2) * scale;
+      const beat = signal.pollShare !== null && signal.share >= signal.pollShare;
+      push(round2((signal.mandate ? 1 : beat ? 0 : -0.4) * scale), 4, `${signal.label}: ${String(Math.round(signal.share * 10) / 10).replace('.', ',')}%`, signal.mandate ? 'Il risultato elettorale dà slancio al partito.' : beat ? 'Il candidato non è eletto ma fa meglio dei sondaggi: il partito non ne risente.' : 'Il voto ridimensiona le ambizioni del partito.', signal.mandate ? 'good' : beat ? 'neutral' : 'bad', 'ballot', round2(gap));
       // Elections give the forces outside the polls a stage: national votes the larger ones, local votes the rooted ones.
       const national = ['politiche', 'europee'].includes(signal.electionType);
       for (const force of outsideForces(world)) if (national ? (isLatent(force) ? force.support : force.baseline) >= 0.3 : force.regional) notice(force, national ? 8 : 6);
