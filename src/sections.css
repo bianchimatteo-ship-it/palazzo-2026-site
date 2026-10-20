@@ -1235,11 +1235,6 @@ details.accord-panel.pm-fold { padding: 0; }
 }
 
 /* Menu del reclutamento di un responsabile locale: sotto la riga del comitato, in colonna, mai oltre la larghezza della scheda. */
-.pl-vacant .pl-recruit-menu { grid-column: 1 / -1; }
-.pl-recruit-menu { display: grid; gap: 8px; margin-top: 8px; padding: 10px 12px; border: 1px solid var(--line-strong); border-left: 4px solid var(--lv, var(--accent)); border-radius: 9px; background: var(--panel-2); min-width: 0; }
-.pl-recruit-menu label { display: grid; gap: 4px; font-size: 12px; font-weight: 700; color: var(--label); }
-.pl-recruit-menu select { max-width: 100%; }
-.pl-recruit-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* Vita interna del partito: gerarchia e colore per categoria, con i token del gioco (nessun colore di partito: la pagina resta neutra). Ogni scheda ha un filo colorato in alto e un'etichetta della sua categoria. */
 .pl-page .sx-card { --cat: var(--blue); border-top: 3px solid var(--cat); }

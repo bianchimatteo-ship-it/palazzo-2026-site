@@ -1272,26 +1272,6 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       return;
     }
     // The internal life of the party: requests, agreements, congress, local leaders, rebuilding, founding, merging, renaming.
-    // The recruitment menu: the button opens it, the choice is explicit, one confirmation does one recruitment; outside the menu (or Escape) closes it without doing anything.
-    const recruitMenuOpen = Boolean(views.filters.recruitOpen);
-    if (recruitMenuOpen && !event.target.closest('[data-recruit-menu],[data-life-cadre="recluta"]')) { delete views.filters.recruitOpen; delete views.filters.recruitPick; saveViews(); render(store.getState(), store.getLastSaved()); }
-    const recruitCancel = event.target.closest('[data-life-cadre-cancel]');
-    if (recruitCancel) { delete views.filters.recruitOpen; delete views.filters.recruitPick; saveViews(); render(store.getState(), store.getLastSaved()); return; }
-    const recruitConfirm = event.target.closest('[data-life-cadre-confirm]');
-    if (recruitConfirm) {
-      const committeeId = root.querySelector('[data-recruit-select]')?.value || recruitConfirm.dataset.committeeId || null;
-      delete views.filters.recruitOpen; delete views.filters.recruitPick; saveViews();
-      try { store.partyCadreAction({ action: 'recluta', cadreId: null, committeeId }); playSound('confirm'); }
-      catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
-      return;
-    }
-    const recruitTrigger = event.target.closest('[data-life-cadre="recluta"]');
-    if (recruitTrigger) {
-      const id = recruitTrigger.dataset.committeeId;
-      if (views.filters.recruitOpen === id) { delete views.filters.recruitOpen; delete views.filters.recruitPick; } else { views.filters.recruitOpen = id; views.filters.recruitPick = id; }
-      saveViews(); render(store.getState(), store.getLastSaved());
-      return;
-    }
     const lifeControl = event.target.closest('[data-life-request],[data-life-pact-break],[data-life-cadre],[data-life-congress],[data-life-rebuild],[data-life-found],[data-life-merge],[data-life-rename]');
     if (lifeControl) {
       const data = lifeControl.dataset;
@@ -2227,7 +2207,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   // The account service is asked once at the opening (players already signed in find out at their first sync).
   if (account.status === 'checking') probeAccount();
   // Escape closes the confirmation dialog (it means “Annulla”).
-  globalThis.addEventListener?.('keydown', event => { if (event.key === 'Escape' && !pendingConfirm && !views.filters.recruitOpen && pendingOutcome(store.getState().game)) store.dismissOutcome(); else if (event.key === 'Escape' && !pendingConfirm && views.filters.recruitOpen) { delete views.filters.recruitOpen; delete views.filters.recruitPick; saveViews(); render(store.getState(), store.getLastSaved()); } else if (event.key === 'Escape' && pendingConfirm) settleConfirm(false); else if (event.key === 'Escape' && wizard) { cancelWizard(); render(store.getState(), store.getLastSaved()); } else if (event.key === 'Escape' && menu.open && closeMenuPopup()) render(store.getState(), store.getLastSaved()); else if (event.key === 'Escape' && newsPopup) { newsPopup = null; render(store.getState(), store.getLastSaved()); } });
+  globalThis.addEventListener?.('keydown', event => { if (event.key === 'Escape' && !pendingConfirm && pendingOutcome(store.getState().game)) store.dismissOutcome(); else if (event.key === 'Escape' && !pendingConfirm && views.filters.recruitOpen) { delete views.filters.recruitOpen; delete views.filters.recruitPick; saveViews(); render(store.getState(), store.getLastSaved()); } else if (event.key === 'Escape' && pendingConfirm) settleConfirm(false); else if (event.key === 'Escape' && wizard) { cancelWizard(); render(store.getState(), store.getLastSaved()); } else if (event.key === 'Escape' && menu.open && closeMenuPopup()) render(store.getState(), store.getLastSaved()); else if (event.key === 'Escape' && newsPopup) { newsPopup = null; render(store.getState(), store.getLastSaved()); } });
   // The tabs of the institutions (mandates and sections) move with the arrow keys, as tabs do.
   root.addEventListener?.('keydown', event => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
