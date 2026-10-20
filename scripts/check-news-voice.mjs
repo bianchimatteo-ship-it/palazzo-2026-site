@@ -130,6 +130,41 @@ const fakeScope = (voices = [{ name: 'Voce', lang: 'it-IT', localService: true }
   assert.ok(!/data-article-speak/.test(articleHtml({ id: 'a-y', headline: 'T', body: ['B'], outlet: 'O', category: 'governo', date: '2026-10-12', tone: 'neutral', facts: [], edge: 'neutral' }, normalizeMedia(structuredClone(society.media)))), 'Senza sintesi vocale l’articolo non ha il comando audio.');
 }
 
+// ---------- 2b. speed and voices: faster than the default, one Italian voice per reading, a different one the next time ----------
+{
+  const script = voice.bulletinScript(bulletins);
+  const voices = [{ name: 'Elsa', lang: 'it-IT', localService: true, voiceURI: 'elsa' }, { name: 'Luca', lang: 'it_IT', localService: true, voiceURI: 'luca' }, { name: 'Alice', lang: 'it-IT', localService: true, voiceURI: 'alice' }, { name: 'Daniel', lang: 'en-GB', localService: true, voiceURI: 'daniel' }];
+  const used = [];
+  for (let play = 0; play < 8; play++) {
+    const fake = fakeScope(voices);
+    let r = 0; const random = () => [0.05, 0.4, 0.8, 0.5][r++ % 4];
+    assert.equal(voice.speakLines(script, { scope: fake.scope, random }), true);
+    for (let i = 0; i < 4; i++) fake.finish();
+    assert.ok(fake.spoken.length >= 4);
+    assert.equal(new Set(fake.spoken.map(item => item.voice?.voiceURI)).size, 1, 'Una sola voce per tutta la lettura.');
+    assert.ok(fake.spoken.every(item => /^it/i.test(item.voice.lang) && item.lang === item.voice.lang), 'Solo voci italiane, mai l’inglese.');
+    assert.ok(fake.spoken.every(item => item.rate > 1 && item.rate <= 1.3), `Più veloce del normale ma ancora naturale (${fake.spoken[0].rate}).`);
+    used.push(fake.spoken[0].voice.voiceURI);
+    voice.stopVoice(fake.scope);
+  }
+  assert.ok(used.every((id, index) => index === 0 || id !== used[index - 1]), `Letture consecutive con voci diverse (${used.join(', ')}).`);
+  assert.ok(new Set(used).size >= 2, 'Le voci italiane disponibili si alternano.');
+  // a single voice: that one, every time
+  const single = fakeScope([{ name: 'Elsa', lang: 'it-IT', localService: true, voiceURI: 'elsa' }]);
+  for (let i = 0; i < 3; i++) { voice.speakLines(script, { scope: single.scope }); voice.stopVoice(single.scope); }
+  assert.ok(single.spoken.every(item => item.voice.voiceURI === 'elsa'), 'Con una sola voce si usa quella.');
+  // voices that arrive late: the list is empty at the start, the reading begins in Italian and takes the voice as soon as the device lists it
+  let loaded = false; const lateVoices = [{ name: 'Elsa', lang: 'it-IT', localService: true, voiceURI: 'elsa' }];
+  const late = fakeScope([]); late.scope.speechSynthesis.getVoices = () => loaded ? lateVoices : [];
+  assert.equal(voice.speakLines(script, { scope: late.scope }), true, 'Con l’elenco ancora vuoto la lettura parte.');
+  assert.equal(late.spoken[0].lang, 'it-IT', 'In italiano anche senza voce nota.');
+  loaded = true; late.finish();
+  assert.equal(late.spoken[1].voice?.voiceURI, 'elsa', 'Arrivate le voci, la lettura prende quella italiana.');
+  voice.stopVoice(late.scope);
+  assert.equal(voice.voiceSupported({}), false, 'Senza sintesi vocale: nessuna lettura, nessun errore.');
+  assert.equal(voice.speakLines(script, { scope: {} }), false);
+}
+
 // ---------- 3. the weekly pop-up (engine) ----------
 const article = (id, week, extra = {}) => ({ id, week, date: '2026-10-12', outletId: 'quotidiani', outlet: 'Il Meridiano', category: 'politica', kind: 'fatto', importance: 5, headline: `Titolo ${id}`, deck: 'D', body: ['B'], facts: [], tone: 'neutral', edge: 'neutral', storyId: null, breaking: false, source: 'simulation', ...extra });
 const socWith = (articles, popup) => ({ ...society, media: { ...normalizeMedia(structuredClone(society.media)), articles, ...(popup ? { popup } : {}) } });

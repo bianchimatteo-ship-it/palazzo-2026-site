@@ -14,8 +14,8 @@ const build = (await readFile(new URL('../index.html', import.meta.url), 'utf8')
 const module = path => import(new URL(`../${path}${build ? `?v=${build}` : ''}`, import.meta.url).href);
 const { LP24, NEWS_RULES, RADIO_PROGRAMMES, ARTICLE_CATEGORIES } = await module('src/data/simulation/news-rules.js');
 const { newsroomWeek, publishFact, relevantArticles, markHomeSeen, normalizeMedia } = await module('src/core/news-engine.js');
-const { illustration, lp24Logo } = await module('src/ui/illustrations.js');
-const { newsScene, articleHtml, radioHtml, paperHtml } = await module('src/ui/news-view.js');
+const { illustration, lp24Logo, coverIllustration, sceneNames } = await module('src/ui/illustrations.js');
+const { newsScene, newsCoverScene, articleHtml, radioHtml, paperHtml } = await module('src/ui/news-view.js');
 const { createSociety } = await module('src/core/society-engine.js');
 
 // ---------- 1. the brand and the scenes ----------
@@ -27,6 +27,20 @@ for (const category of ARTICLE_CATEGORIES) assert.ok(newsScene({ category: categ
 assert.equal(newsScene({ category: 'governo', tone: 'bad', importance: 5 }), 'crisi', 'Una crisi ha la sua scena.');
 assert.equal(newsScene({ category: 'parlamento', tone: 'neutral', importance: 2 }), 'emiciclo'); assert.equal(newsScene({ category: 'elezioni', tone: 'good', importance: 4 }), 'urna');
 assert.ok(ARTICLE_CATEGORIES.some(item => item.id === 'elezioni'), 'Le elezioni sono una categoria.');
+// Covers: a wide set of scenes, chosen by kind of article and by its id, with backdrop and orientation that follow from the article; the same article keeps the same cover on every drawing.
+assert.ok(sceneNames().length >= 20, `Almeno venti scene (${sceneNames().length}).`);
+for (const scene of sceneNames()) { const svg = coverIllustration(scene, { seed: 'x' }); assert.ok(svg.includes('<path') && svg.length > 400 && !/<image|href=|http/.test(svg), `Copertina «${scene}» in SVG, senza immagini esterne.`); }
+const kinds = ['legge', 'respinta', 'governo', 'dossier', 'sondaggio', 'opera', 'conti', 'elezione', 'attivita', 'mondo'];
+const sample = []; for (let i = 0; i < 60; i++) { const kind = kinds[i % kinds.length], category = ARTICLE_CATEGORIES[i % ARTICLE_CATEGORIES.length].id, tone = ['good', 'bad', 'neutral'][i % 3]; sample.push({ id: `articolo-${i}-${i * 7}`, kind, category, tone, importance: 2, headline: `T${i}` }); }
+const coverOf = article => { const svg = coverIllustration(newsCoverScene(article), { seed: article.id, tone: article.tone }); return svg.match(/data-cover-scene="(\w+)" data-cover-backdrop="(\w+)" data-cover-flip="(\w+)"/).slice(1).join('|'); };
+assert.deepEqual(sample.map(coverOf), sample.map(coverOf), 'Stesso articolo, stessa copertina a ogni ridisegno (nessuna casualità).');
+const distinct = new Set(sample.map(coverOf));
+assert.ok(distinct.size >= 25, `Copertine varie: ${distinct.size} combinazioni su ${sample.length} articoli.`);
+assert.ok(new Set(sample.map(article => newsCoverScene(article))).size >= 14, 'Molte scene diverse nell’uso.');
+for (const kind of ['legge', 'governo', 'opera']) assert.ok(new Set(Array.from({ length: 30 }, (_, i) => newsCoverScene({ id: `a-${i}`, kind, category: 'governo', tone: 'neutral', importance: 2 }))).size >= 2, `Notizie diverse di tipo «${kind}» non hanno tutte la stessa scena.`);
+assert.ok(sample.filter(article => article.tone === 'bad').every(article => ['nuvole', 'luna', 'trama'].includes(coverOf(article).split('|')[1])), 'Le cattive notizie hanno sfondi cupi, mai il sole.');
+const html = articleHtml({ id: 'a1', key: 'k', week: 1, date: '2026-10-12', outlet: 'Il Meridiano', category: 'governo', kind: 'governo', headline: 'Titolo', kicker: 'Palazzo', deck: 'Sottotitolo', body: ['Testo.'], facts: [], tone: 'neutral', importance: 2 }, normalizeMedia({}), {});
+assert.ok(/class="news-kicker">Palazzo</.test(html) && /data-cover-scene=/.test(html), 'L’articolo mostra occhiello e copertina.');
 
 // ---------- 2. breaking news, elections, radio, relevance ----------
 const society = createSociety({ seedText: 'redazione', date: '2026-10-12', homeRegion: 'Toscana', notoriety: 30 });

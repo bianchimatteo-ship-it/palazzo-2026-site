@@ -57,7 +57,15 @@ const only = id => news.newsroomWeek({ media: { ...base, outlets: base.outlets.f
 const [hard, mild, middle] = [only('quotidiani'), only('radio'), only('tv-nazionale')];
 assert.deepEqual([hard.edge, mild.edge, middle.edge], ['critical', 'friendly', 'neutral'], 'Con un Governo di destra il quotidiano di centro-sinistra è critico, la radio vicina, il telegiornale neutro.');
 assert.equal(new Set([hard.headline, mild.headline, middle.headline]).size, 3, 'Lo stesso fatto ha tre titoli, uno per ogni lato.');
-assert.ok(hard.body.join(' ') === mild.body.join(' ') && hard.facts.map(item => item.value).join() === mild.facts.map(item => item.value).join(), 'Cambia il taglio, non i fatti.');
+assert.ok(hard.body[0] === mild.body[0] && hard.facts.map(item => item.value).join() === mild.facts.map(item => item.value).join(), 'Cambia il taglio, non i fatti: stessa apertura e stessi dati.');
+// Each outlet tells the same fact in its own form: length, subtitle and occhiello differ, nothing is invented (every number of a short form is in the long one).
+const [social, tv, paper] = ['social', 'tv-nazionale', 'quotidiani'].map(only);
+assert.ok(social.body.length === 1 && tv.body.length <= 2 && paper.body.length >= tv.body.length && paper.body.length >= social.body.length, `Lunghezze diverse per testata (${social.body.length}/${tv.body.length}/${paper.body.length} paragrafi).`);
+assert.ok(social.kicker && tv.kicker && paper.kicker && [social, tv, paper].every(item => typeof item.form === 'string'), 'Ogni articolo ha occhiello e forma.');
+assert.ok(social.deck.length <= 112 && tv.deck.length <= 152, 'I sottotitoli brevi sono brevi.');
+const numbersOf = text => new Set(String(text).match(/\d+(?:,\d+)?/g) ?? []);
+for (const short of [social, tv]) for (const n of numbersOf(short.body.join(' '))) assert.ok(numbersOf(paper.body.join(' ') + ' ' + paper.facts.map(item => item.value).join(' ') + ' ' + paper.deck).has(n) || numbersOf(hard.body.join(' ')).has(n), `Nessun numero inventato nelle forme brevi (${n}).`);
+assert.deepEqual(only('quotidiani'), only('quotidiani'), 'Stesso fatto, stessa testata, stesso articolo: nessuna casualità nel taglio.');
 // Citing does not change anything: the same input with and without the newsroom leaves the climate as it was.
 assert.equal(soc.media.visibility, base.visibility, 'Scrivere un articolo non sposta la visibilità.');
 assert.equal(soc.media.sentiment, base.sentiment, 'Né il tono della copertura.');

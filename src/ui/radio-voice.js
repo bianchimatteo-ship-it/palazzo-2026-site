@@ -10,7 +10,24 @@ const voicesOf = scope => { try { return scope.speechSynthesis?.getVoices?.() ??
 // Some browsers list their voices late; an empty list is "not known yet", not "none". With a list and no Italian voice in it the reading would come out in the wrong language: no control then.
 export const italianVoiceMissing = (scope = globalThis) => { const voices = voicesOf(scope); return voices.length > 0 && !voices.some(voice => ITALIAN.test(voice.lang ?? '')); };
 export const voiceAvailable = (scope = globalThis) => voiceSupported(scope) && !italianVoiceMissing(scope);
-const pickVoice = scope => { const italian = voicesOf(scope).filter(voice => ITALIAN.test(voice.lang ?? '')); return italian.find(voice => voice.localService) ?? italian[0] ?? null; };
+export const italianVoices = (scope = globalThis) => voicesOf(scope).filter(voice => ITALIAN.test(voice.lang ?? ''));
+// A reading is a little faster than the default (which drags on a long bulletin) and still clear: 1.12 stays natural on every engine.
+export const READING_RATE = 1.12;
+// One Italian voice per reading, chosen at random among those the device really has (never the one of the reading before when there is another), the same for every sentence of that reading. Local voices come
+// first when there are some: a network voice may need a connection. With a single voice that is the voice; with none the language alone is set. The list may arrive late (voiceschanged): it is asked again at each sentence until a voice is found.
+let lastVoiceKey = null;
+const voiceKey = voice => `${voice.voiceURI ?? ''}|${voice.name ?? ''}|${voice.lang ?? ''}`;
+export function pickVoice(scope = globalThis, random = Math.random) {
+  const italian = italianVoices(scope);
+  if (!italian.length) return null;
+  const local = italian.filter(voice => voice.localService);
+  const pool = local.length ? local : italian;
+  const others = pool.filter(voice => voiceKey(voice) !== lastVoiceKey);
+  const from = others.length ? others : pool;
+  const voice = from[Math.min(from.length - 1, Math.floor(Math.max(0, Math.min(0.999999, Number(random()) || 0)) * from.length))];
+  lastVoiceKey = voiceKey(voice);
+  return voice;
+}
 
 const say = value => String(Math.round(Number(value) * 10) / 10).replace('.', ',');
 const ORDER = ['notiziario', 'sondaggi', 'territorio', 'palazzo'];
@@ -56,21 +73,23 @@ export function stopVoice(scope = globalThis) {
   if (status !== 'idle') change('idle');
 }
 // Reads the lines one after the other (a sentence at a time: long texts are cut off by some browsers). `volume`: 0–1.
-export function speakLines(lines, { volume = 1, rate = 1, scope = globalThis, what = 'bulletin' } = {}) {
+export function speakLines(lines, { volume = 1, rate = READING_RATE, scope = globalThis, what = 'bulletin', random = Math.random } = {}) {
   if (!voiceAvailable(scope) || !lines?.length) return false;
   stopVoice(scope);
   target = what;
-  const mine = ++token, synth = scope.speechSynthesis, voice = pickVoice(scope);
+  const mine = ++token, synth = scope.speechSynthesis;
+  let voice = pickVoice(scope, random);
   const next = index => {
     if (mine !== token) return;
     if (index >= lines.length) { change('idle'); return; }
     let utterance;
     try {
+      if (!voice) voice = pickVoice(scope, random);
       utterance = new scope.SpeechSynthesisUtterance(lines[index].text);
       utterance.lang = voice?.lang ?? 'it-IT';
       if (voice) utterance.voice = voice;
       utterance.volume = Math.max(0, Math.min(1, Number(volume)));
-      utterance.rate = rate;
+      utterance.rate = Math.max(0.5, Math.min(1.6, Number(rate) || READING_RATE));
       utterance.onstart = () => { if (mine === token && line !== index) change('speaking', index); };
       utterance.onend = () => next(index + 1);
       // A cancelled reading ends quietly; any other error stops it (the text stays on the page).

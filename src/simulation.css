@@ -477,3 +477,7 @@
   .party-org > .home-section-heading { padding-right: 0; }
   .region-facts { grid-template-columns: 1fr; gap: 6px; }
 }
+/* Covers of the newsroom: one editorial series, drawn in the colour of the category (not of the party). */
+.news-art .illustration .ill-accent { stroke: var(--cat, var(--party-accent)); }
+.news-art .illustration .ill-accent-fill { fill: color-mix(in srgb, var(--cat, var(--party-accent)) 50%, transparent); stroke: var(--cat, var(--party-accent)); }
+.illustration .ill-back { stroke-width: 1.6; opacity: .4; }
