@@ -17,7 +17,7 @@ import { hasStart, planLines, startMods, startPlan, startStatDeltas } from './st
 import { objectiveMods } from './objective-engine.js?v=20261020-1';
 import { END_KINDS, addToHall, careerFacts, hallEntry, legacyBoon, legacyScore, legacyTags, retirementProblem, sortedHall } from './legacy-engine.js?v=20261020-1';
 import { COMMITTEE_ACTIONS, committeeSupport, committeesAfterVote, createCommittees } from './committee-engine.js?v=20261020-1';
-import { accordApplies, accordConflicts, parliamentInternals, premierGroupOf, answerCommitment, ensureAccord, offerConcession, tickAccord, changeSeats, checkMajority, record as recordParliament, setConfidenceVote, createReferenceGovernment, neverHadGovernment, offerGroupSupport, requestGovernmentPost, withdrawGroupSupport, partnerSatisfaction, acceptLawDemand, activeMinisters, amendLawPolicy, askConfidenceOnLaw, groupProfile, issueDecree, majoritySummit, reshuffleMinister, setGovernmentProgram, settlePartnerDemand, withdrawLaw, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20261020-1';
+import { governmentSpendingReview, accordApplies, accordConflicts, parliamentInternals, premierGroupOf, answerCommitment, ensureAccord, offerConcession, tickAccord, changeSeats, checkMajority, record as recordParliament, setConfidenceVote, createReferenceGovernment, neverHadGovernment, offerGroupSupport, requestGovernmentPost, withdrawGroupSupport, partnerSatisfaction, acceptLawDemand, activeMinisters, amendLawPolicy, askConfidenceOnLaw, groupProfile, issueDecree, majoritySummit, reshuffleMinister, setGovernmentProgram, settlePartnerDemand, withdrawLaw, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20261020-1';
 import { dissolutionWait, situation, addProvincialCalendar, declareAmbition, scheduleEarlyLocalElection, alignLocalCalendar, localCalendarOf, committeeAction, startTreasuryOperation, staffChange, staffGive, staffSetStatus, setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, lifeBreakPact, lifeCadre, lifeCongress, lifeFound, lifeMerge, lifeOverview, lifeRebuild, lifeRename, lifeRespond, partyOpsAvailability, saveForElection, saveReserve, takeReserve, scheduleEarlyElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20261020-1';
 import { ADVANCE_RULES, AMENDMENT_CAPITAL_COST, COMMUNICATION_STYLES, GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS, PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261020-1';
 import { syncAgendas, advanceLegislativeWeek, amendOthersLaw, amendmentOdds, linkGroupsToParties, setPlayerVote, speakOnLaw } from './lawmaking-engine.js?v=20261020-1';
@@ -32,7 +32,7 @@ import { announceOutcome, celebrate, dismissCelebration, dismissOutcome, electio
 import { candidacyBlock, candidacyRecord, institutionOffice, lapsesFor, officeLabel, officeScope, personalCandidacies } from './office-engine.js?v=20261020-1';
 import { actTypeOf } from '../data/simulation/local-acts.js?v=20261020-1';
 import { SECTOR_GAINS, competenceIn, gainSector, sectorFloors, standingFactors } from './standing-engine.js?v=20261020-1';
-import { AREA_BY_ID, BILLION_PER_POINT, BUDGET_SESSION, GOVERNMENT_LINES, POLICY_AREAS, areaOf } from '../data/simulation/policy-rules.js?v=20261020-1';
+import { AREA_BY_ID, BILLION_PER_POINT, BUDGET_SESSION, GOVERNMENT_LINES, POLICY_AREAS, SOCIAL_TABLE, SPENDING_REVIEW, areaOf } from '../data/simulation/policy-rules.js?v=20261020-1';
 import { opinionEffect, recordAccordOutcome, settleElectoralTerms, allianceBlock, allianceOf, electionRoster, forceProfiles, mergeCandidates, mergeIntoPlayerForce, renamePlayerForce, setPlayerAgenda, splitPlayerForce, localShares, regionalShares, withRegionalLeans, withLocalCalendar, joinCoalition, acceptAlliance, addWorldEffects, advanceWorld, alignWorldToVote, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setGoverningForces, setPlayerParty, withCanonicalForces, withLatentForces, withPartyIdentities, withPositions } from './world-engine.js?v=20261020-1';
 import { candidacyQuotas, FORMATION_PHASES, LEGISLATURE_RULES, NATIONAL_LINES, acceptMandate, crisisFormation, seatResult, startFormation, buildCoalitions, campaignWeekEffects, coalitionOptions, compactResult, contestedDistricts, createNationalState, europeanListSeats, formationStep, groupOfParty, homeDistricts, legislatureGroups, legislatureTerm, nationalCalendar, nationalHistory, nationalProjection, normalizeNationalState, openLegislature, politicheOutcome, regionalBreakdown, runEuropeanVote, runNationalVote, seatPlayer, voteForces } from './legislature-engine.js?v=20261020-1';
 import { classifyOutcome, preferenceStanding } from './election-engine.js?v=20261020-1';
@@ -45,7 +45,7 @@ import { PRESIDENCY_RULES, PRESIDENT_ACTIVITIES, PRESIDENT_ACTS } from '../data/
 import { PARTY_LINES, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261020-1';
 import { CADRE_ACTIONS } from '../data/simulation/party-life-rules.js?v=20261020-1';
 import { TREASURY_OPERATIONS } from '../data/simulation/finance-rules.js?v=20261020-1';
-import { advanceSociety, applyBudgetPlan, applyLawToSociety, calibrateWeights, createSociety, explainMood, measureDesign, mediaEvent, normalizeSociety, provisionalBudget, publicBudgetChoice, regionAttention, revokeMeasure, scheduleRegionalEffects, segmentAttention, societyMood, societyShock, observatorySociety } from './society-engine.js?v=20261020-1';
+import { advanceSociety, applyBudgetPlan, applyLawToSociety, applySocialTable, applySpendingReview, calibrateWeights, createSociety, explainMood, measureDesign, mediaEvent, normalizeSociety, provisionalBudget, publicBudgetChoice, regionAttention, revokeMeasure, scheduleRegionalEffects, segmentAttention, societyMood, societyShock, observatorySociety } from './society-engine.js?v=20261020-1';
 import { ACTIVITY_MEDIA, INDICATORS, ISSUE_TOPICS, SEGMENTS } from '../data/simulation/society-rules.js?v=20261020-1';
 import { book, hasAsset, releaseElectionFund, setBudgetLevel } from './finance-engine.js?v=20261020-1';
 import { BUDGET_SECTORS, EU_CALLS, PROJECT_TYPES } from '../data/simulation/project-rules.js?v=20261020-1';
@@ -4565,6 +4565,32 @@ export const store = {
     state = addTimeline({ ...next, society: out.society, ui: { ...next.ui, toast: `Rendiconto presentato: ${out.call.title}` } }, [{ kind: 'governo', title: `Rendicontazione dei fondi europei «${out.call.title}»`, detail: 'Bruxelles prende atto: i rapporti con la Commissione migliorano.', tone: 'good' }]);
     persist(); emit();
     return out.call;
+  },
+  // Spending review: the money saved and the services lost arrive at once; allies and ministers feel it; one a quarter.
+  reviewSpending({ level, protect = null } = {}) {
+    requirePremier();
+    const next = withGovernmentCost('spendingReview');
+    const week = next.game.week.index;
+    const parliament = governmentSpendingReview(next.parliament, { level, protect }, next.clock.currentDate, week);
+    const { society, summary } = applySpendingReview(next.society, { level, protect, date: next.clock.currentDate, week });
+    const text = `Revisione della spesa ${SPENDING_REVIEW.levels[level].label.toLowerCase()}: deficit ${summary.deficit.toLocaleString('it-IT')} punti, margine +${summary.headroom.toLocaleString('it-IT')}, spread ${summary.spread.toLocaleString('it-IT')}`;
+    applyParliamentUpdate({ ...next, society }, parliament, text);
+    return summary;
+  },
+  // Round table with a group of citizens (and, if you put something on the table, a cost in the budget).
+  holdSocialTable({ segmentId, areaId = null, incentive = false } = {}) {
+    requirePremier();
+    const current = state.parliament?.government;
+    const week = state.game.week.index;
+    const last = current?.socialTables?.[segmentId];
+    if (Number.isFinite(last) && week - last < SOCIAL_TABLE.cooldownWeeks) throw new Error(`Con questo gruppo hai già un tavolo aperto: si può riconvocare tra ${SOCIAL_TABLE.cooldownWeeks - (week - last)} settimane.`);
+    const next = withGovernmentCost('socialTable');
+    const { society, summary } = applySocialTable(next.society, { segmentId, areaId, incentive, date: next.clock.currentDate, week });
+    const label = SEGMENTS.find(item => item.id === segmentId)?.label ?? segmentId;
+    let parliament = { ...next.parliament, government: { ...next.parliament.government, socialTables: { ...(next.parliament.government.socialTables ?? {}), [segmentId]: week } } };
+    parliament = recordParliament(parliament, next.clock.currentDate, 'tavolo-parti-sociali', `Tavolo con ${label.toLowerCase()}${areaId ? ` su ${AREA_BY_ID[areaId].label.toLowerCase()}` : ''}${incentive ? `, con un impegno di spesa (margine ${summary.headroom})` : ''}.`, { segmentId, areaId, incentive });
+    applyParliamentUpdate({ ...next, society }, parliament, `Tavolo con ${label}: il clima migliora`, { influence: 0.5 });
+    return summary;
   },
   majoritySummit() {
     requirePremier();

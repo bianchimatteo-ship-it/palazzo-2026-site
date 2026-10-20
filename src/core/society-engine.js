@@ -1,6 +1,7 @@
 import { uniqueId } from './ids.js?v=20261020-1';
 import { ITALIAN_REGIONS } from '../data/regions.js?v=20261020-1';
 import { INDICATORS, ISSUE_THRESHOLD, ISSUE_TOPICS, MEDIA_OUTLETS, REAL_TOPIC_AREAS, SCENARIO_EXECUTIVE, SEGMENTS } from '../data/simulation/society-rules.js?v=20261020-1';
+import { SOCIAL_TABLE, SPENDING_REVIEW } from '../data/simulation/policy-rules.js?v=20261020-1';
 import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, EU_PROCEDURE_WEEKS, FINANCING, INSTRUMENT_KINDS, INTENSITY, MACRO_AREAS, POLICY_AREAS, SPREAD_BASE, TERRITORIAL_TARGETS, areaOf, macroAreaOf } from '../data/simulation/policy-rules.js?v=20261020-1';
 import { BUDGET_SECTORS, FISCAL_LEVERS } from '../data/simulation/project-rules.js?v=20261020-1';
 import { euWeek, openCallWeek, projectsOf, projectsWeek } from './project-engine.js?v=20261020-1';
@@ -773,6 +774,51 @@ export function publicBudgetChoice(input, kind) {
   }
   refresh(society);
   return society;
+}
+// ---------- the Prime Minister's moves on the money and on the citizens ----------
+// Spending review: the savings arrive at once on the deficit, the room in the budget and the spread; the cost arrives at once too, on the services of every region (but the protected area) and on the citizens
+// who use them. Returns { society, summary }.
+export function applySpendingReview(input, { level, protect = null, date, week } = {}) {
+  const spec = SPENDING_REVIEW.levels[level];
+  if (!spec) throw new Error('Scegli quanto tagliare: leggera, media o profonda.');
+  if (protect && !AREA_BY_ID[protect]) throw new Error('L’area da proteggere non esiste.');
+  const society = normalizeSociety(copy(input));
+  const finance = society.publicFinance;
+  const before = { deficit: society.economy.deficit, headroom: finance.headroom, spread: finance.spread };
+  society.economy.deficit = round2(clamp(society.economy.deficit + spec.deficit, 0, 12));
+  finance.headroom = round1(clamp(finance.headroom + spec.headroom));
+  finance.spread = round1(Math.max(40, (finance.spread ?? SPREAD_BASE) + spec.spread));
+  const spared = new Set(protect ? Object.keys(AREA_BY_ID[protect].regional ?? {}) : []);
+  const hit = SPENDING_REVIEW.indicators.filter(id => !spared.has(id));
+  for (const region of Object.values(society.regions)) for (const id of hit) if (region.indicators[id] !== undefined) region.indicators[id] = round1(clamp(region.indicators[id] - spec.indicators));
+  const protectedPleased = new Set(protect ? AREA_BY_ID[protect].pleased ?? [] : []);
+  for (const segment of society.segments) {
+    const weight = SPENDING_REVIEW.moodWeights[segment.id] ?? 1;
+    segment.mood = round1(clamp((segment.mood ?? 0) - spec.mood * weight * (protectedPleased.has(segment.id) ? 0.5 : 1), -15, 15));
+  }
+  society.trust = round1(clamp(society.trust - spec.trust, 5, 95));
+  refresh(society);
+  const summary = { level, protect, deficit: round2(society.economy.deficit - before.deficit), headroom: round1(finance.headroom - before.headroom), spread: round1(finance.spread - before.spread), indicators: hit, week, date };
+  return { society, summary };
+}
+// Round table with a group of citizens: the group's mood rises and the Government's attention to its area moves a little week after week; with an incentive on the table the effect is larger and it costs
+// room in the budget and a few hundredths of deficit.
+export function applySocialTable(input, { segmentId, areaId = null, incentive = false, date, week } = {}) {
+  const segmentSpec = SEGMENTS.find(item => item.id === segmentId);
+  if (!segmentSpec) throw new Error('Scegli con chi sedersi al tavolo.');
+  const area = areaId ? AREA_BY_ID[areaId] : null;
+  if (areaId && !area) throw new Error('L’area di cui discutere non esiste.');
+  const society = normalizeSociety(copy(input));
+  const finance = society.publicFinance;
+  if (incentive && finance.headroom < SOCIAL_TABLE.headroomCost + 2) throw new Error('Non c’è margine di bilancio per mettere qualcosa sul tavolo: servono almeno 6 punti di margine.');
+  const segment = society.segments.find(item => item.id === segmentId);
+  const moodGain = incentive ? SOCIAL_TABLE.moodIncentive : SOCIAL_TABLE.mood;
+  if (segment) segment.mood = round1(clamp((segment.mood ?? 0) + moodGain, -15, 15));
+  if (incentive) { finance.headroom = round1(clamp(finance.headroom - SOCIAL_TABLE.headroomCost)); society.economy.deficit = round2(clamp(society.economy.deficit + SOCIAL_TABLE.deficitIncentive, 0, 12)); }
+  if (area) pushEffect(society, { area: area.id, perWeek: round2((incentive ? SOCIAL_TABLE.areaPushIncentive : SOCIAL_TABLE.areaPush) / SOCIAL_TABLE.areaWeeks), remaining: SOCIAL_TABLE.areaWeeks, cause: `Tavolo con ${segmentSpec.label.toLowerCase()}` });
+  society.trust = round1(clamp(society.trust + SOCIAL_TABLE.trust, 5, 95));
+  refresh(society);
+  return { society, summary: { segmentId, areaId, incentive, mood: moodGain, headroom: incentive ? -SOCIAL_TABLE.headroomCost : 0, week, date } };
 }
 // Local listening, visits and promises move a region's opinion a little.
 export function regionAttention(input, regionName, delta) {

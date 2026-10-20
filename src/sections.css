@@ -1296,3 +1296,125 @@ details.accord-panel.pm-fold { padding: 0; }
 .priority-error { display: grid; gap: 6px; padding: 10px 12px; border: 1px solid #c4574a; border-left: 5px solid #c4574a; border-radius: 8px; background: color-mix(in srgb, #c4574a 12%, var(--panel)); }
 .priority-error[hidden] { display: none; }
 .priority-pick { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Institutions (comune, provincia, regione): each section has its own colour and icon; the active tab is filled, the others carry the colour on border and icon. */
+.local-tabs { gap: 6px; padding: 6px; }
+.local-tabs .sx-tab { --sc: #8aa0a8; gap: 7px; border: 1px solid color-mix(in srgb, var(--sc) 40%, transparent); border-radius: 9px; background: color-mix(in srgb, var(--sc) 9%, transparent); color: var(--ink); }
+.local-tabs .sx-tab .glyph { color: var(--sc); flex: none; }
+.local-tabs .sx-tab:hover { background: color-mix(in srgb, var(--sc) 20%, transparent); color: var(--ink); }
+.local-tabs .sx-tab.active { background: var(--sc); border-color: var(--sc); color: #0d1411; box-shadow: 0 0 0 2px color-mix(in srgb, var(--sc) 38%, transparent); }
+.local-tabs .sx-tab.active .glyph { color: #0d1411; }
+.local-tabs .sx-tab[data-sec="panoramica"], .local-section[data-sec="panoramica"] { --sc: #7fa7d9; }
+.local-tabs .sx-tab[data-sec="bilancio"], .local-section[data-sec="bilancio"] { --sc: #d1a24a; }
+.local-tabs .sx-tab[data-sec="opere"], .local-section[data-sec="opere"] { --sc: #d9824a; }
+.local-tabs .sx-tab[data-sec="territorio"], .local-section[data-sec="territorio"] { --sc: #5fae7e; }
+.local-tabs .sx-tab[data-sec="atti"], .local-section[data-sec="atti"] { --sc: #a79cdf; }
+.local-tabs .sx-tab[data-sec="cronologia"], .local-section[data-sec="cronologia"] { --sc: #8fb0bb; }
+.local-section { --sc: #7fa7d9; }
+.local-section .local-h { display: flex; align-items: center; gap: 8px; margin: 18px 0 10px; padding: 6px 0 6px 11px; border-left: 4px solid var(--sc); font: 750 15px var(--font-head, Manrope, sans-serif); }
+.local-section .hq-facts > div { padding-left: 10px; border-left: 3px solid color-mix(in srgb, var(--sc) 55%, transparent); border-radius: 2px; }
+.local-section .hq-facts > div:nth-child(odd) { background: color-mix(in srgb, var(--sc) 5%, transparent); }
+.local-section details > summary { color: var(--sc); font-weight: 700; }
+.local-section .bill-card, .local-section .act-card { border-left-color: var(--sc); }
+.local-jump .sx-tab { border: 1px solid color-mix(in srgb, var(--lv, #8aa0a8) 45%, transparent); border-radius: 9px; background: color-mix(in srgb, var(--lv, #8aa0a8) 10%, transparent); color: var(--ink); }
+.local-jump .sx-tab.active { background: var(--lv, var(--accent)); color: #0d1411; box-shadow: 0 0 0 2px color-mix(in srgb, var(--lv, var(--accent)) 38%, transparent); }
+@media (max-width: 640px) { .local-tabs, .local-jump { scroll-snap-type: x proximity; } .local-tabs .sx-tab, .local-jump .sx-tab { min-height: 44px; scroll-snap-align: start; } }
+.hq-bar.warn i { background: #c9a13f; }
+.local-territory .hq-bar, .local-section .hq-facts .hq-bar { height: 7px; }
+.local-heading { flex-wrap: wrap; }
+.local-heading .source-pill, .local-heading .badge, .local-heading .status-tag { white-space: nowrap; align-self: flex-start; }
+@media (min-width: 641px) { .local-tabs { flex-wrap: wrap; overflow-x: visible; } }
+@media (max-width: 640px) { .local-heading > :last-child:not(div) { order: 3; } }
+.local-heading .parliament-provenance { white-space: nowrap; align-self: flex-start; }
+@media (max-width: 640px) { .local-heading { display: grid; grid-template-columns: auto minmax(0, 1fr); } .local-heading .parliament-provenance { grid-column: 1 / -1; justify-self: start; } }
+
+/* Campaign set-up: the action first, with its dates; strategies in colour; fewer words. */
+.campaign-cta { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 340px); gap: 18px; align-items: center; margin: 0 0 14px; padding: 16px 20px; border: 1px solid var(--line-strong); border-left: 6px solid #8fb0bb; border-radius: 12px; background: linear-gradient(135deg, var(--panel-3), var(--panel)); }
+.campaign-cta.is-open { border-left-color: #5fae7e; background: linear-gradient(135deg, color-mix(in srgb, #5fae7e 14%, var(--panel-3)), var(--panel)); }
+.campaign-cta.is-closed { border-left-color: #d1a24a; }
+.campaign-cta h2 { margin: 4px 0 8px; font: 750 24px/1.2 var(--font-head, Manrope, sans-serif); letter-spacing: -.02em; }
+.campaign-cta .campaign-kicker { display: inline-flex; align-items: center; gap: 6px; }
+.cta-facts { display: flex; flex-wrap: wrap; gap: 8px 10px; margin: 0; padding: 0; list-style: none; }
+.cta-facts li { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); font-size: 13px; }
+.cta-facts li span { color: var(--muted); } .cta-facts li b { font-weight: 750; } .cta-facts .glyph { color: #8fb0bb; }
+.cta-chip { display: inline-flex; align-items: center; gap: 6px; font-weight: 750; }
+.cta-facts li:has(.cta-chip.is-open) { border-color: #5fae7e; background: color-mix(in srgb, #5fae7e 18%, var(--panel)); } .cta-chip.is-open .glyph { color: #7fd1a0; }
+.cta-facts li:has(.cta-chip.is-wait) { border-color: #d1a24a; background: color-mix(in srgb, #d1a24a 14%, var(--panel)); } .cta-chip.is-wait .glyph { color: #e0c07a; }
+.cta-action { display: grid; gap: 8px; justify-items: stretch; }
+.cta-button { min-height: 52px; font-size: 16px; }
+.cta-action small { color: var(--ink-2); font-size: 12.5px; line-height: 1.45; }
+.campaign-setup-grid { gap: 10px; }
+.campaign-strategies { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+.campaign-strategy { --st: #8fb0bb; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-content: start; padding: 11px 12px; border: 1px solid color-mix(in srgb, var(--st) 40%, var(--line)); border-left: 4px solid var(--st); border-radius: 10px; background: color-mix(in srgb, var(--st) 6%, var(--panel)); cursor: pointer; }
+.campaign-strategy.is-selected { border-color: var(--st); background: color-mix(in srgb, var(--st) 18%, var(--panel)); box-shadow: 0 0 0 2px color-mix(in srgb, var(--st) 40%, transparent); }
+.campaign-strategy-icon { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: color-mix(in srgb, var(--st) 25%, transparent); color: var(--st); }
+.campaign-strategy[data-strategy="consolidare"] { --st: #5fae7e; } .campaign-strategy[data-strategy="nuovi"] { --st: #7fa7d9; } .campaign-strategy[data-strategy="territorio"] { --st: #d1a24a; } .campaign-strategy[data-strategy="media"] { --st: #a79cdf; } .campaign-strategy[data-strategy="temi"] { --st: #e0806f; }
+.campaign-strategy .pros { color: #7fd1a0; font-style: normal; } .campaign-strategy .cons { color: #f0907f; font-style: normal; }
+.campaign-strategy small, .campaign-strategy em { display: block; font-size: 12.5px; line-height: 1.4; }
+.campaign-method { margin-top: 12px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.campaign-method summary { cursor: pointer; font-weight: 700; } .campaign-method > span { display: block; margin-top: 6px; color: var(--ink-2); font-size: 13px; }
+.campaign-note-small { display: block; margin-top: 8px; color: var(--muted); }
+@media (max-width: 760px) { .campaign-cta { grid-template-columns: minmax(0, 1fr); padding: 14px; } .campaign-cta h2 { font-size: 20px; } .cta-button { width: 100%; } .campaign-strategies { grid-template-columns: minmax(0, 1fr); } }
+.campaign-setup .campaign-section-head { margin-bottom: 8px; }
+.campaign-target { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 0 0 10px; padding: 7px 12px; border: 1px dashed var(--line-strong); border-radius: 8px; font-size: 13px; background: color-mix(in srgb, #8fb0bb 7%, transparent); }
+.municipality-band-field { grid-column: 1 / -1; display: grid; gap: 3px; padding: 9px 12px; border: 1px solid var(--line); border-left: 4px solid #d1a24a; border-radius: 8px; background: color-mix(in srgb, #d1a24a 7%, var(--panel)); }
+.municipality-band-field small { color: var(--ink-2); font-size: 12.5px; line-height: 1.45; }
+.municipality-band-field .campaign-legal-ref { color: var(--muted); }
+.campaign-setup-grid label { gap: 5px; }
+.campaign-setup-bottom { align-items: center; }
+
+/* Campaign in progress: colour by role of the block (phase, goal, money, people, metrics, activities), icons from the markup, no new text. */
+.eh-campaign .campaign-phase.is-current { background: color-mix(in srgb, #5fae7e 14%, var(--panel)); box-shadow: inset 0 -3px 0 #5fae7e, inset -1px 0 0 var(--line); }
+.eh-campaign .campaign-phase.is-current strong { color: #7fd1a0; }
+.eh-campaign .campaign-phase.is-done strong::before { content: "✓ "; color: #5fae7e; }
+.campaign-goal-line > div { border-top: 3px solid #7fa7d9; } .campaign-goal-line > div:nth-child(2) { border-top-color: #5fae7e; } .campaign-goal-line > div:nth-child(3) { border-top-color: #d1a24a; } .campaign-goal-line > div:nth-child(4) { border-top-color: #a79cdf; }
+.campaign-resource-line { gap: 8px; background: transparent; border: 0; }
+.campaign-resource-line > div { padding: 9px 12px; border: 1px solid var(--line); border-top: 3px solid var(--rc, #8fb0bb); border-radius: 8px; background: var(--panel); }
+.campaign-resource-line > div:nth-child(1) { --rc: #d1a24a; } .campaign-resource-line > div:nth-child(2) { --rc: #5fae7e; } .campaign-resource-line > div:nth-child(3) { --rc: #e0806f; } .campaign-resource-line > div:nth-child(4) { --rc: #7fa7d9; } .campaign-resource-line > div:nth-child(5) { --rc: #a79cdf; } .campaign-resource-line > div:nth-child(6) { --rc: #e0c07a; }
+.campaign-resource-line strong { font: 750 18px Manrope, sans-serif; }
+.campaign-metric { border-left: 4px solid #8fb0bb; }
+.campaign-metric[data-metric="consenso-territoriale"] { border-left-color: #5fae7e; } .campaign-metric[data-metric="sondaggio"] { border-left-color: #7fa7d9; } .campaign-metric[data-metric="andamento"] { border-left-color: #d1a24a; } .campaign-metric[data-metric="proiezione-ballottaggio"] { border-left-color: #a79cdf; }
+.campaign-nomination { border-left: 5px solid #d1a24a; background: color-mix(in srgb, #d1a24a 8%, var(--panel)); }
+.campaign-activity-group > summary { border-left: 4px solid var(--gc, #8fb0bb); }
+.campaign-activity-group[data-remember$="territory"] { --gc: #5fae7e; } .campaign-activity-group[data-remember$="event"] { --gc: #d9824a; } .campaign-activity-group[data-remember$="media"] { --gc: #a79cdf; } .campaign-activity-group[data-remember$="ads"] { --gc: #e0806f; } .campaign-activity-group[data-remember$="internal"] { --gc: #7fa7d9; } .campaign-activity-group[data-remember$="resources"] { --gc: #d1a24a; }
+.campaign-activity-group > summary .glyph { color: var(--gc, #8fb0bb); }
+.campaign-activity.is-blocked { opacity: .62; }
+.campaign-countdown strong { color: #e0c07a; }
+@media (max-width: 760px) { .campaign-resource-line { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Candidacy: the action first (open windows), then how it works; tones with their colour and a mark. */
+.eh-candidate-now { display: grid; gap: 10px; margin: 0 0 14px; padding: 14px 16px; border: 1px solid #5fae7e; border-left: 6px solid #5fae7e; border-radius: 12px; background: linear-gradient(135deg, color-mix(in srgb, #5fae7e 14%, var(--panel-3)), var(--panel)); }
+.eh-candidate-now .section-kicker { display: inline-flex; align-items: center; gap: 6px; color: #7fd1a0; }
+.eh-candidate-now ul { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.eh-now-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+.eh-now-item strong { display: block; font: 750 17px var(--font-head, Manrope, sans-serif); }
+.eh-now-item small { display: block; color: var(--ink-2); font-size: 13px; }
+.eh-now-left { display: inline-flex; align-items: center; gap: 5px; margin-top: 4px; font-size: 12.5px; font-weight: 700; color: #e0c07a; } .eh-now-left.is-urgent { color: #f0907f; }
+.eh-now-action { display: grid; gap: 4px; justify-items: end; } .eh-now-action .primary-button { min-height: 46px; padding: 0 22px; font-size: 15px; }
+.eh-checklist li { border-left: 4px solid var(--line-strong); } .eh-checklist li.tone-good { border-left-color: #5fae7e; background: color-mix(in srgb, #5fae7e 7%, transparent); } .eh-checklist li.tone-warn { border-left-color: #d1a24a; background: color-mix(in srgb, #d1a24a 8%, transparent); } .eh-checklist li.tone-bad { border-left-color: #c4574a; background: color-mix(in srgb, #c4574a 9%, transparent); }
+.eh-checklist li > b::before { margin-right: 6px; font-weight: 800; } .eh-checklist li.tone-good > b::before { content: "✓"; color: #7fd1a0; } .eh-checklist li.tone-warn > b::before { content: "!"; color: #e0c07a; } .eh-checklist li.tone-bad > b::before { content: "✕"; color: #f0907f; }
+.eh-race-who .badge { margin-left: 6px; }
+@media (max-width: 640px) { .eh-now-item { grid-template-columns: auto minmax(0, 1fr); } .eh-now-action { grid-column: 1 / -1; justify-items: stretch; } .eh-now-action .primary-button { width: 100%; } }
+
+/* Government desk and laws: every block of the desk has its colour and icon; states and filters are coloured by what they are. */
+.pm-fold { --pm: #8fb0bb; border-left: 5px solid var(--pm); background: color-mix(in srgb, var(--pm) 5%, var(--panel)); }
+.pm-fold > summary .glyph { color: var(--pm); }
+.pm-fold[open] { background: color-mix(in srgb, var(--pm) 8%, var(--panel)); box-shadow: 0 0 0 1px color-mix(in srgb, var(--pm) 35%, transparent); }
+.pm-fold > summary { min-height: 52px; }
+.pm-fold[data-remember="gov-program"] { --pm: #7fa7d9; } .pm-fold[data-remember="gov-majority"] { --pm: #5fae7e; } .pm-fold[data-remember="gov-cabinet"] { --pm: #a79cdf; }
+.pm-fold[data-remember="gov-review"] { --pm: #d1a24a; } .pm-fold[data-remember="gov-table"] { --pm: #4aa38f; } .pm-fold[data-remember="gov-measure"] { --pm: #d9824a; }
+.pm-fold[data-remember="gov-budget"] { --pm: #e0c07a; } .pm-fold[data-remember^="gov-proj"], .pm-fold[data-remember^="gov-eu"] { --pm: #6fb3c9; }
+.review-levels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.review-level { --rl: #d1a24a; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--rl) 45%, var(--line)); border-left: 4px solid var(--rl); border-radius: 10px; background: color-mix(in srgb, var(--rl) 6%, var(--panel)); cursor: pointer; }
+.review-level.tone-leggera { --rl: #5fae7e; } .review-level.tone-media { --rl: #d1a24a; } .review-level.tone-profonda { --rl: #e0806f; }
+.review-level:has(input:checked) { background: color-mix(in srgb, var(--rl) 18%, var(--panel)); box-shadow: 0 0 0 2px color-mix(in srgb, var(--rl) 40%, transparent); }
+.review-level strong { display: block; } .review-level small { display: block; color: var(--ink-2); font-size: 12.5px; margin: 2px 0 6px; }
+.review-chips { display: flex; flex-wrap: wrap; gap: 4px; } .review-chips .chip { padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 700; background: var(--panel-2); }
+.review-chips .chip.up { color: #7fd1a0; background: color-mix(in srgb, #4c8f6b 18%, transparent); } .review-chips .chip.down { color: #f0907f; background: color-mix(in srgb, #c4574a 18%, transparent); }
+.table-form .wizard-form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.bill-filters button[data-view-filter-value="governo"] { --bf: #7fa7d9; } .bill-filters button[data-view-filter-value="maggioranza"] { --bf: #5fae7e; } .bill-filters button[data-view-filter-value="opposizione"] { --bf: #d1a24a; } .bill-filters button[data-view-filter-value="commissioni"] { --bf: #a79cdf; } .bill-filters button[data-view-filter-value="aula"] { --bf: #e0806f; } .bill-filters button[data-view-filter-value="concluse"] { --bf: #8fb0bb; }
+.bill-filters button { border: 1px solid color-mix(in srgb, var(--bf, #8fb0bb) 45%, var(--line)); background: color-mix(in srgb, var(--bf, #8fb0bb) 8%, transparent); }
+.bill-filters button.active { background: var(--bf, var(--accent)); border-color: var(--bf, var(--accent)); color: #0d1411; }
+.bill-card { border-left-width: 5px; } .bill-card.side-governo { border-left-color: #7fa7d9; } .bill-card.side-maggioranza { border-left-color: #5fae7e; } .bill-card.side-opposizione { border-left-color: #d1a24a; } .bill-card.side-commissione { border-left-color: #a79cdf; }
+.bill-flag.good { background: color-mix(in srgb, #4c8f6b 22%, transparent); color: #7fd1a0; } .bill-flag.bad { background: color-mix(in srgb, #c4574a 22%, transparent); color: #f0907f; } .bill-flag.warn { background: color-mix(in srgb, #d1a24a 22%, transparent); color: #e0c07a; }
+@media (max-width: 760px) { .review-levels, .table-form .wizard-form-grid { grid-template-columns: minmax(0, 1fr); } }

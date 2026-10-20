@@ -1,5 +1,5 @@
 import { DATA_SOURCES } from '../data/schema.js?v=20261020-1';
-import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, STAGE_WEEKS, areaOf, governmentKindOf } from '../data/simulation/policy-rules.js?v=20261020-1';
+import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, SPENDING_REVIEW, STAGE_WEEKS, areaOf, governmentKindOf } from '../data/simulation/policy-rules.js?v=20261020-1';
 import { BUDGET_SECTORS } from '../data/simulation/project-rules.js?v=20261020-1';
 import { evaluateAdvancement } from './progression-engine.js?v=20261020-1';
 import { groupLine, splitGroupVote } from './vote-engine.js?v=20261020-1';
@@ -921,6 +921,27 @@ export function setGovernmentProgram(parliament, { line, priorities = [] }, curr
     if (delta) { next = changePartner(next, groupId, delta); reactions.push(`${getGroup(parliament, groupId)?.officialName ?? groupId} ${delta > 0 ? '+' : ''}${delta}`); }
   }
   return record(next, currentDate, 'programma-governo', `Programma di governo: ${GOVERNMENT_LINES[line].label.toLowerCase()} · priorità ${areas.map(id => AREA_BY_ID[id].label.toLowerCase()).join(', ')}.${reactions.length ? ` Reazioni degli alleati: ${reactions.join('; ')}.` : ''}`, { line, priorities: areas, source: DATA_SOURCES.SIMULATION });
+}
+// Spending review of the Prime Minister: the allies feel the cuts (less those who defend the protected area), the ministers lose some loyalty, the Government some stability. One a quarter.
+export function governmentSpendingReview(parliament, { level, protect = null } = {}, currentDate, week) {
+  const government = parliament.government;
+  if (!government || government.status !== 'active') throw new Error('La revisione della spesa si decide con un governo in carica.');
+  const spec = SPENDING_REVIEW.levels[level];
+  if (!spec) throw new Error('Scegli quanto tagliare: leggera, media o profonda.');
+  if (Number.isFinite(government.lastReviewWeek) && week - government.lastReviewWeek < SPENDING_REVIEW.cooldownWeeks) throw new Error(`Una revisione della spesa ogni ${SPENDING_REVIEW.cooldownWeeks} settimane: ancora ${SPENDING_REVIEW.cooldownWeeks - (week - government.lastReviewWeek)}.`);
+  let next = { ...parliament, government: { ...government, lastReviewWeek: week } };
+  const reactions = [];
+  for (const groupId of Object.keys(government.partners ?? {})) {
+    const profile = groupProfile(getGroup(parliament, groupId) ?? groupId);
+    const spared = Boolean(protect) && profile.likes.includes(protect);
+    const delta = -(spared ? Math.ceil(spec.partners / 2) : spec.partners);
+    next = changePartner(next, groupId, delta);
+    reactions.push(`${getGroup(parliament, groupId)?.officialName ?? groupId} ${delta}`);
+  }
+  const stability = level === 'profonda' ? -2 : level === 'media' ? -1 : 0;
+  next = { ...next, government: { ...next.government, stability: clamp((next.government.stability ?? 50) + stability, 0, 100), ministers: (next.government.ministers ?? []).map(item => item.endedAt || item.playerAppointed ? item : { ...item, loyalty: clamp(Math.round((item.loyalty ?? 60) - spec.partners * 0.75), 0, 100) }) } };
+  const where = protect && AREA_BY_ID[protect] ? ` risparmiando ${AREA_BY_ID[protect].label.toLowerCase()}` : '';
+  return record(next, currentDate, 'revisione-spesa', `Revisione della spesa ${spec.label.toLowerCase()}${where}.${reactions.length ? ` Reazioni degli alleati: ${reactions.slice(0, 4).join(', ')}.` : ''}`, { level, protect, source: DATA_SOURCES.SIMULATION });
 }
 // Summit of the majority: it can calm the allies, or make a quarrel public.
 export function majoritySummit(parliament, currentDate, roll = 0.5) {

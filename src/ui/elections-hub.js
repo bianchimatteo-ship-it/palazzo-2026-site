@@ -203,8 +203,20 @@ function raceSection(state, { races = [], archive = [], raceOptions = () => null
   return card({ kicker: 'CANDIDATI DEL PARTITO · CORSE TERRITORIALI · SIMULAZIONE', title: 'Regionali, provinciali e comunali', body });
 }
 
+// When a candidacy is open the action to run is the first thing on the page, with the vote, its window and how long is left.
+function candidateNow(state) {
+  if (!state.game || state.campaign?.status === 'active' || state.game.status === 'ended') return '';
+  const open = upcomingElections(state.game).filter(entry => entry.status === 'open');
+  if (!open.length) return '';
+  const today = state.clock.currentDate;
+  const rows = open.map(entry => {
+    const left = Math.max(0, daysUntil(today, entry.windowClosesAt));
+    return `<li class="eh-now-item"><span class="eh-cal-icon">${glyph(TYPE_ICONS[entry.type] ?? 'ballot', 18)}</span><div><strong>${esc(entry.label)}</strong><small>Voto il ${esc(shortDate(entry.electionDate))} · candidature fino al ${esc(shortDate(entry.windowClosesAt))}</small><span class="eh-now-left ${left <= 7 ? 'is-urgent' : ''}">${glyph('clock', 13)} chiudono tra ${left} ${left === 1 ? 'giorno' : 'giorni'}</span></div><div class="eh-now-action">${candidateButton(state, entry, { primary: true, label: 'Candidati' })}</div></li>`;
+  }).join('');
+  return `<section class="eh-candidate-now" data-candidate-now aria-label="Candidature aperte"><span class="section-kicker">${glyph('target', 14)} CANDIDATURE APERTE ORA</span><ul>${rows}</ul></section>`;
+}
 function candidacy(state, options = {}) {
-  return `${candidacyCard(state)}${raceSection(state, options.races ?? {})}`;
+  return `${candidateNow(state)}${candidacyCard(state)}${raceSection(state, options.races ?? {})}`;
 }
 function candidacyCard(state) {
   const campaign = state.campaign;

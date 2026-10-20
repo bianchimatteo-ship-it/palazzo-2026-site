@@ -401,7 +401,7 @@ export function advanceOrganization(org, { rand, week, date, pollShare = null, p
   // The week of the fee, told so that it adds up: joins - leaves = the change in members; the income is booked below.
   const net = org.members - before, joins = Math.max(Math.round(joined), net, 0), leaves = Math.max(0, joins - net);
   const fade = value => value * MEMBERSHIP.shockDecay < 0.0002 ? 0 : value * MEMBERSHIP.shockDecay;
-  org.membership = { ...membership, shock: fade(membership.shock), boost: fade(membership.boost), weekly: { week, joins, leaves, net, fee: membership.fee, payers: 0, income: 0, accepted: Math.round(fee.accepted * 10) / 10, drivers: { climate: Math.round(climate * 100) / 100, vitality: Math.round(vit * 100) / 100, cohesion: Math.round(coh * 100) / 100, treasuryRed: org.treasury.balance < 0, conflict: hotConflict > 0 } } };
+  org.membership = { ...membership, shock: fade(membership.shock), boost: fade(membership.boost), weekly: { week, joins, leaves, net, fee: membership.fee, payers: 0, income: 0, accepted: Math.round(fee.accepted * 10) / 10, drivers: { climate: Math.round(climate * 100) / 100, sections: Math.round(vit * 100) / 100, unity: Math.round(coh * 100) / 100, treasuryRed: org.treasury.balance < 0, conflict: hotConflict > 0 } } };
   const targetMilitants = org.members * (0.07 + org.cohesion / 1500 + org.priorities.formazione * 0.01 + (founder ? 0.12 : 0));
   org.militants = Math.round(org.militants + (targetMilitants - org.militants) * 0.1);
   // Without money the staff leaves: the cadres shrink while the treasury is in the red, and grow back only when it is not.

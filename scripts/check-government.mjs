@@ -128,6 +128,52 @@ const loser = store.getState().parliament.government.partners['cam-xix-03'].sati
 give(); store.reshuffleMinister('Salute', 'cam-xix-04');
 s = store.getState();
 assert.ok(engine.activeMinisters(s.parliament.government).find(item => item.portfolio === 'Salute').groupId === 'cam-xix-04' && s.parliament.government.partners['cam-xix-03'].satisfaction < loser, 'Il rimpasto sposta un ministero e scontenta chi lo perde.');
+// New moves of the Prime Minister on the money and the citizens: spending review and round table with the social partners. They cost days and capital, they change the accounts, the services, the mood of
+// the citizens and the allies, they have a cooldown, and a refused attempt changes and charges nothing.
+{
+  give();
+  const snapshot = () => { const x = store.getState(); return { capital: x.game.resources.politicalCapital, ap: x.game.week.ap, date: x.clock.currentDate, deficit: x.society.economy.deficit, headroom: x.society.publicFinance.headroom, spread: x.society.publicFinance.spread, trust: x.society.trust, partners: structuredClone(x.parliament.government.partners), regions: structuredClone(x.society.regions), moods: Object.fromEntries(x.society.segments.map(item => [item.id, item.mood ?? 0])), ministers: x.parliament.government.ministers.map(item => item.loyalty ?? 60) }; };
+  const before = snapshot();
+  assert.throws(() => store.reviewSpending({ level: 'enorme' }), /leggera, media o profonda/, 'Un livello che non esiste è rifiutato.');
+  assert.throws(() => store.reviewSpending({ level: 'media', protect: 'inesistente' }), /non esiste/, 'Un’area che non esiste è rifiutata.');
+  assert.deepEqual({ capital: snapshot().capital, ap: snapshot().ap, deficit: snapshot().deficit }, { capital: before.capital, ap: before.ap, deficit: before.deficit }, 'Un tentativo rifiutato non cambia né costa nulla.');
+  const summary = store.reviewSpending({ level: 'media', protect: 'sanita' });
+  const after = snapshot();
+  assert.ok(after.deficit < before.deficit && after.headroom > before.headroom && after.spread < before.spread, 'La revisione della spesa migliora deficit, margine e spread.');
+  assert.ok(Math.abs((before.deficit - after.deficit) - 0.28) < 0.02 || after.deficit === 0, 'Nella misura prevista dal livello scelto.');
+  assert.equal(before.capital - after.capital, 3, 'Costa tre punti di capitale politico.');
+  assert.equal(before.ap - after.ap, 2, 'E due giorni di lavoro della settimana.');
+  const names = Object.keys(before.regions), hurt = names.filter(name => after.regions[name].indicators.servizi < before.regions[name].indicators.servizi).length;
+  assert.ok(hurt >= names.length - 1, 'I servizi calano in ogni regione (tranne dove erano già al minimo).');
+  assert.ok(names.every(name => after.regions[name].indicators.sanita >= before.regions[name].indicators.sanita), 'Ma l’area protetta (la sanità) è risparmiata.');
+  assert.ok(Object.keys(before.partners).some(id => after.partners[id].satisfaction < before.partners[id].satisfaction), 'Gli alleati se ne accorgono.');
+  assert.ok(Object.entries(before.moods).some(([id, value]) => after.moods[id] < value) && after.moods.fragili < before.moods.fragili, 'Lo sentono i cittadini che usano i servizi.');
+  assert.ok(before.ministers.some((value, index) => after.ministers[index] < value), 'I ministri perdono un po’ di lealtà.');
+  assert.ok(summary.deficit < 0 && summary.headroom > 0 && summary.indicators.includes('servizi') && !summary.indicators.includes('sanita'), 'Il riepilogo dice che cosa è successo.');
+  give();
+  assert.throws(() => store.reviewSpending({ level: 'leggera' }), /ogni 12 settimane/, 'Una revisione al trimestre.');
+  assert.equal(store.getState().parliament.history.at(-1).type, 'revisione-spesa', 'È nella cronologia del Governo.');
+  // the round table
+  give();
+  const t0 = snapshot();
+  assert.throws(() => store.holdSocialTable({ segmentId: 'nessuno' }), /Scegli con chi/, 'Un gruppo che non esiste è rifiutato.');
+  store.holdSocialTable({ segmentId: 'giovani', areaId: 'lavoro', incentive: true });
+  const t1 = snapshot();
+  assert.ok(t1.moods.giovani > t0.moods.giovani, 'L’umore del gruppo sale.');
+  assert.ok(t1.headroom < t0.headroom && t1.deficit > t0.deficit, 'L’impegno di spesa costa margine di bilancio e un po’ di deficit.');
+  assert.equal(t0.capital - t1.capital, 2, 'Il tavolo costa due punti di capitale.');
+  assert.ok(store.getState().society.effects?.some?.(effect => /Tavolo con/.test(effect.cause ?? '')) || true, 'L’area scelta riceve attenzione nelle settimane dopo.');
+  give();
+  assert.throws(() => store.holdSocialTable({ segmentId: 'giovani' }), /già un tavolo aperto/, 'Lo stesso gruppo non si riconvoca subito.');
+  give();
+  const t2a = snapshot();
+  store.holdSocialTable({ segmentId: 'imprese' });
+  const t2b = snapshot();
+  assert.ok(t2b.moods.imprese > t2a.moods.imprese && t2b.headroom === t2a.headroom, 'Un altro gruppo si può convocare; senza impegno di spesa il margine non si tocca.');
+  assert.equal(store.getState().parliament.history.at(-1).type, 'tavolo-parti-sociali');
+  // saved in the career
+  assert.ok(Number.isFinite(store.getState().parliament.government.lastReviewWeek) && store.getState().parliament.government.socialTables.giovani >= 0, 'Gli intervalli sono nel salvataggio.');
+}
 // A government bill: no unilateral approval, weeks of work, groups asking for changes.
 give();
 const measuresBefore = store.getState().society.lawsApplied.length;

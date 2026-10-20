@@ -112,6 +112,23 @@ export const GOVERNMENT_LINES = Object.freeze({
   riforme: { label: 'Grandi riforme', detail: 'Cambiare le regole del Paese: tempi lunghi, molti nemici, eredità duratura.', spread: -4, pleased: ['imprese'], displeased: [] }
 });
 
+// Two moves of the Prime Minister on the money of the State and on the citizens (all simulated, game mechanics).
+// Spending review: the Government cuts what the State spends. The saving is real (deficit, room in the budget, spread) and so is the cost: services in every region, the mood of the citizens who
+// use them, the allies who defend them; a protected area is spared. One a quarter.
+export const SPENDING_REVIEW = Object.freeze({
+  cooldownWeeks: 12,
+  levels: Object.freeze({
+    leggera: { label: 'Leggera', detail: 'Tagli selettivi agli sprechi: pochi risparmi, pochi scontenti.', deficit: -0.12, headroom: 4, spread: -3, indicators: 0.5, mood: 0.8, partners: 1, trust: 0.2 },
+    media: { label: 'Media', detail: 'Tagli lineari ai ministeri: il bilancio respira, i servizi si fanno sentire.', deficit: -0.28, headroom: 9, spread: -8, indicators: 1.1, mood: 1.8, partners: 2, trust: 0.6 },
+    profonda: { label: 'Profonda', detail: 'Una potatura vera: i conti migliorano molto, il Paese e gli alleati lo ricordano.', deficit: -0.5, headroom: 15, spread: -14, indicators: 2, mood: 3.2, partners: 4, trust: 1.2 }
+  }),
+  // Citizens who feel a cut more (×) or less; the indicators of the public services a cut reaches in every region.
+  moodWeights: Object.freeze({ fragili: 1.6, anziani: 1.3, famiglie: 1, giovani: 0.9, imprese: 0.4 }),
+  indicators: Object.freeze(['servizi', 'sanita', 'istruzione', 'trasporti', 'infrastrutture'])
+});
+// Round table with the social partners: the Government sits with a group of citizens (and, if it wants, puts something on the table: it costs room in the budget). One per group every six weeks.
+export const SOCIAL_TABLE = Object.freeze({ cooldownWeeks: 6, mood: 2, moodIncentive: 3.6, headroomCost: 4, deficitIncentive: 0.05, areaPush: 0.3, areaPushIncentive: 0.55, areaWeeks: 8, trust: 0.4 });
+
 // The kinds of Government the consultations produce (legislature-engine) and how each lives: the level its stability tends to (points), how fast time in office wears it (months per
 // point of stability lost, a lower number wears faster), how restless its allies are (×), and whether they ask for ministries (a technical Government has none to give).
 export const GOVERNMENT_KINDS = Object.freeze({

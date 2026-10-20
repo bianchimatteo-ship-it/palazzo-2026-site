@@ -162,7 +162,7 @@ function territoryPanel(inst, state) {
       return { label: item.label, value: region.indicators[item.id], coming: own.reduce((sum, effect) => sum + effect.perWeek * effect.remaining, 0), causes: [...new Set(own.filter(effect => !effect.delay).map(effect => effect.cause))] };
     });
   }
-  const list = rows.map(row => `<div><dt>${esc(row.label)}</dt><dd>${num(row.value, 0)}/100 ${meter(row.value, row.value < 40 ? 'danger' : '')}${Math.abs(row.coming) >= 0.1 ? `<small>In arrivo ${signed(row.coming)} da ${esc(row.causes.slice(0, 2).join(', ') || 'atti approvati')}</small>` : ''}</dd></div>`).join('');
+  const list = rows.map(row => `<div><dt>${esc(row.label)}</dt><dd>${num(row.value, 0)}/100 ${meter(row.value, row.value < 40 ? 'danger' : row.value < 55 ? 'warn' : row.value >= 65 ? 'good' : '')}${Math.abs(row.coming) >= 0.1 ? `<small>In arrivo ${signed(row.coming)} da ${esc(row.causes.slice(0, 2).join(', ') || 'atti approvati')}</small>` : ''}</dd></div>`).join('');
   // The priorities: the weakest services, with the work the level would build for each.
   const weakest = [...rows].sort((a, b) => a.value - b.value).slice(0, 3);
   const priorities = `<div class="local-commitments"><strong>Priorità del territorio</strong><ul>${weakest.map(row => `<li>${esc(row.label)}: ${num(row.value, 0)}/100${row.value < 45 ? ' · <b class="bad">in sofferenza</b>' : ''}</li>`).join('')}</ul></div>`;
@@ -416,6 +416,8 @@ function resultsSection(inst, state) {
 // ---------- the card of an institution: one mandate at a time, one section at a time ----------
 const SECTION_IDS = Object.freeze([['panoramica', 'Panoramica'], ['bilancio', 'Bilancio'], ['opere', 'Opere e cantieri'], ['territorio', 'Servizi e territorio'], ['atti', 'Consiglio e Giunta'], ['cronologia', 'Cronologia e risultati']]);
 const EUROPE_SECTIONS = Object.freeze([['panoramica', 'Panoramica'], ['atti', 'Dossier e voti'], ['cronologia', 'Cronologia']]);
+// An icon and a colour (data-sec, in sections.css) for each section: the tabs are told apart at a glance, never by colour alone.
+const SECTION_ICONS = Object.freeze({ panoramica: 'sections', bilancio: 'money', opere: 'factory', territorio: 'pin', atti: 'law', cronologia: 'clock' });
 export const sectionsOf = inst => inst.kind === 'europa' ? EUROPE_SECTIONS : SECTION_IDS;
 function institutionCard(input, capital, context, state, ui = {}) {
   const inst = withLocalState(withEuropeanSeat(input, input.since));
@@ -427,7 +429,7 @@ function institutionCard(input, capital, context, state, ui = {}) {
   const history = inst.history.slice(-12).reverse().map(item => `<li><time>${esc(date(item.date))}</time> ${esc(item.text)}</li>`).join('');
   const archive = [...closed.map(act => ({ title: act.title, stage: act.stage, closedAt: act.closedAt, vote: compactVote(act.votes?.at(-1)), committeeVote: act.votes?.length ? null : act.committeeVote ?? null, answer: act.answer ?? null, withdrawn: act.withdrawn ?? null, effects: measureText(inst, act) })), ...inst.archive.slice(-6).reverse()].slice(0, 10).map(item => `<li><span class="bill-flag ${item.stage === 'approvato' || item.answer === 'esauriente' ? 'good' : 'bad'}">${esc(STAGES[item.stage] ?? item.stage)}</span> ${esc(item.title)} <small>${esc(date(item.closedAt))}</small>${resultLine(item)}</li>`).join('');
   const badge = id => id === 'opere' ? activeWorks(inst).length : id === 'atti' ? open.length : 0;
-  const tabs = `<nav class="sx-tabs local-tabs" role="tablist" aria-label="Sezioni di ${esc(inst.name)}">${sections.map(([id, label]) => `<button type="button" role="tab" id="tab-${esc(inst.kind)}-${id}" class="sx-tab${section === id ? ' active' : ''}" data-local-section="${id}" aria-selected="${section === id}" aria-controls="panel-${esc(inst.kind)}" tabindex="${section === id ? 0 : -1}">${esc(label)}${badge(id) ? ` <span class="badge">${badge(id)}</span>` : ''}</button>`).join('')}</nav>`;
+  const tabs = `<nav class="sx-tabs local-tabs" role="tablist" aria-label="Sezioni di ${esc(inst.name)}">${sections.map(([id, label]) => `<button type="button" role="tab" id="tab-${esc(inst.kind)}-${id}" class="sx-tab${section === id ? ' active' : ''}" data-sec="${id}" data-local-section="${id}" aria-selected="${section === id}" aria-controls="panel-${esc(inst.kind)}" tabindex="${section === id ? 0 : -1}">${glyph(SECTION_ICONS[id] ?? 'news', 15)}<span>${esc(label)}</span>${badge(id) ? ` <span class="badge">${badge(id)}</span>` : ''}</button>`).join('')}</nav>`;
   let body;
   if (section === 'bilancio') body = `<h3 class="local-h">Bilancio e impegni</h3>${budgetPanel(inst)}`;
   else if (section === 'opere') body = `<h3 class="local-h">Opere e cantieri</h3>${worksSection(inst, state)}`;
@@ -436,7 +438,7 @@ function institutionCard(input, capital, context, state, ui = {}) {
   else if (section === 'cronologia') body = `${inst.kind !== 'europa' ? `<h3 class="local-h">Risultati del mandato</h3>${resultsSection(inst, state)}` : ''}<h3 class="local-h">Cronaca del ${esc(rules.label.toLowerCase())}</h3>${history ? `<ul class="bill-journal">${history}</ul>` : '<p class="quiet-copy">La cronaca si riempie con le decisioni del consiglio.</p>'}`;
   else body = `<div class="local-grid"><div><h3 class="local-h">Composizione</h3>${composition(inst, state, ui)}</div><div><h3 class="local-h">${esc(inst.ep ? 'Le tue commissioni' : rules.executive)}</h3>${inst.ep ? europeanPanel(inst, context) : executivePanel(inst)}</div></div>${inst.ep ? `<h3 class="local-h">${esc(rules.executive)}</h3>${executivePanel(inst)}` : ''}<h3 class="local-h">Il tuo ruolo</h3>${roleBox(inst, state)}`;
   return `<section class="hq-panel local-institution" id="istituzione-${esc(inst.kind)}" style="--lv:${esc(territoryVisual(inst.kind).color)}" data-level="${esc(inst.kind)}"><div class="home-section-heading local-heading">${territoryTile(inst.kind)}<div><span class="section-kicker">${esc(rules.label.toUpperCase())} · SIMULAZIONE</span><h2>${esc(inst.name)}</h2><p class="section-subtitle">${esc(roleLine(inst))}${inst.until ? ` · mandato fino al voto del ${esc(date(inst.until))}` : ''}</p></div><span class="parliament-provenance simulated">SCENARIO SIMULATO</span></div>
-    ${tabs}<div class="local-section" role="tabpanel" id="panel-${esc(inst.kind)}" aria-labelledby="tab-${esc(inst.kind)}-${section}">${body}</div></section>`;
+    ${tabs}<div class="local-section" data-sec="${section}" role="tabpanel" id="panel-${esc(inst.kind)}" aria-labelledby="tab-${esc(inst.kind)}-${section}">${body}</div></section>`;
 }
 // The player's active institutions (none: an empty string, the page stays as it was). One mandate is shown at a time (a selector when there are several); each has its sections.
 export function renderInstitutions(state, ui = {}) {

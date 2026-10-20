@@ -221,6 +221,8 @@ const HISTORY = {
   'cambio-maggioranza': { cat: 'governo', imp: 3, tone: 'neutral', h: { neutral: 'Cambiano i numeri della maggioranza', critical: 'Maggioranza in bilico dopo i cambi di gruppo', friendly: 'La maggioranza ridisegna i numeri' } },
   'vertice-maggioranza': { cat: 'governo', imp: 2, tone: 'neutral', h: { neutral: 'Vertice di maggioranza', critical: 'Vertice di maggioranza: fumata grigia?', friendly: 'Vertice di maggioranza: gli alleati al tavolo' } },
   'programma-bilancio': { cat: 'governo', imp: 3, tone: 'neutral', h: { neutral: 'Il Governo fa il bilancio del suo programma', critical: 'Programma di governo: quanto è stato fatto davvero?', friendly: 'Programma di governo: il bilancio delle priorità' } },
+  'revisione-spesa': { cat: 'economia', imp: 3, tone: 'neutral', h: { neutral: 'Il Governo avvia una revisione della spesa', critical: 'Tagli ai ministeri: chi paga il conto della revisione?', friendly: 'Revisione della spesa: il Governo mette ordine nei conti' }, p: () => 'Il risparmio arriva subito sul bilancio; il costo si vede nei servizi e nell’umore dei cittadini che li usano.' },
+  'tavolo-parti-sociali': { cat: 'governo', imp: 2, tone: 'good', h: { neutral: 'Il Governo apre un tavolo con le parti sociali', critical: 'Tavolo con le parti sociali: basterà a ricucire?', friendly: 'Parti sociali al tavolo del Governo: si cerca un’intesa' } },
   'programma-governo': { cat: 'governo', imp: 2, tone: 'neutral', h: { neutral: 'Il Governo fissa il programma', critical: 'Il programma del Governo, tra priorità e promesse', friendly: 'Il Governo presenta le sue priorità' } }
 };
 const factFromHistory = (entry, ctx) => {

@@ -1971,7 +1971,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       const data = new FormData(form);
       try { store.amendLaw(form.dataset.lawId, data.get('amendment')); }
       catch (error) { store.getState().ui.toast = error.message; render(store.getState(),store.getLastSaved()); }
-    } else if (form.matches('[data-government-program-form],[data-policy-form],[data-budget-form],[data-reshuffle-form],[data-party-program-form]')) {
+    } else if (form.matches('[data-government-program-form],[data-government-review-form],[data-government-table-form],[data-policy-form],[data-budget-form],[data-reshuffle-form],[data-party-program-form]')) {
       event.preventDefault();
       const data = new FormData(form);
       try {
@@ -1980,6 +1980,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
           if (picked.length < 2 || picked.length > 5) { syncProgramForm(form); form.querySelector('[data-priority-error]')?.scrollIntoView?.({ block: 'nearest' }); return; }   // (the page says why; nothing is saved or removed)
           store.setGovernmentProgram({ line: data.get('line'), priorities: picked });
         }
+        else if (form.matches('[data-government-review-form]')) store.reviewSpending({ level: data.get('level'), protect: data.get('protect') || null });
+        else if (form.matches('[data-government-table-form]')) store.holdSocialTable({ segmentId: data.get('segment'), areaId: data.get('area') || null, incentive: data.get('incentive') === 'on' });
         else if (form.matches('[data-policy-form]')) {
           const kind = event.submitter?.value ?? 'bill';
           const draft = { title: data.get('title'), policy: designFromForm(form) };
