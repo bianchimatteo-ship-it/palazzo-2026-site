@@ -264,7 +264,7 @@ function history(state) {
   return card({ kicker: 'STORICO ELETTORALE · SIMULAZIONE', title: `${entries.length} ${entries.length === 1 ? 'elezione' : 'elezioni'} · ${wins} con mandato`, body: table([['date', 'Data'], ['type', 'Elezione'], ['share', '%', 'num'], ['position', 'Pos.', 'num'], ['outcome', 'Esito'], ['expectation', 'Attese'], ['seats', 'Seggi lista', 'num']], rows, { empty: 'Nessuna elezione ancora disputata.' }) });
 }
 
-export function renderElectionsHub(state, { parties = [], logoFor = () => null, tab = null, national = null, geography = null, nationalView = null, campaignPicks = {}, presidency = null, polls = {}, races = {} } = {}) {
+export function renderElectionsHub(state, { parties = [], logoFor = () => null, tab = null, national = null, geography = null, nationalView = null, nationalMap = null, campaignPicks = {}, presidency = null, polls = {}, races = {} } = {}) {
   if (!state.game) return empty('Crea prima un politico per entrare nella centrale elettorale.', '<button class="primary-button" data-action="new-career">Crea il politico</button>');
   const active = ELECTION_TABS.some(([id]) => id === tab) ? tab : defaultElectionTab(state);
   const summary = state.campaign?.status === 'active' ? campaignSummary(state.campaign) : null;
@@ -277,7 +277,7 @@ export function renderElectionsHub(state, { parties = [], logoFor = () => null, 
   else if (active === 'avversari') body = renderCampaignObservatory(state, polls);
   else if (active === 'risultati') body = renderElectionReport(state.career.lastElectionReport, { place: mandatePlace(state, state.career.lastElectionReport) });
   else if (active === 'quirinale') body = presidency ? `<p class="sx-note quirinale-pointer">Il Quirinale ha una sezione propria: <button type="button" class="text-link" data-nav="quirinale">Istituzioni → Quirinale</button>. Qui resta la scheda dell’elezione del Presidente, con i suoi passaggi.</p>${renderQuirinale(state, presidency())}` : empty('Il Quirinale si apre con i dati della partita.');
-  else if (active === 'nazionali') body = national ? renderNationalView(state, national(), { geography, view: nationalView }) : empty('Il ciclo nazionale si apre con i dati della partita: calendario, coalizioni e proiezione dei seggi.');
+  else if (active === 'nazionali') body = national ? renderNationalView(state, national(), { geography, view: nationalView, map: nationalMap }) : empty('Il ciclo nazionale si apre con i dati della partita: calendario, coalizioni e proiezione dei seggi.');
   else body = history(state);
   return `<div class="elections-hub">${hero(state, summary)}${sectionTabs('elezioni', ELECTION_TABS.map(([id, label]) => [id, label, counts[id]]), active)}<div class="sx-body" role="tabpanel">${body}</div></div>`;
 }

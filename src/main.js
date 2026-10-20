@@ -60,7 +60,9 @@ function loadDocuments() {
     isRealCollectionLoaded('electoralGeography') ? null : loadRealDocument('electoralGeography').then(geography => store.setElectoralGeography(geography)).catch(error => console.warn('Mappa elettorale 2022 non disponibile:', error)),
     isRealCollectionLoaded('localElections') ? null : loadRealDocument('localElections').then(doc => store.setLocalCalendar(doc)).catch(error => console.warn('Calendario delle elezioni locali non disponibile:', error)),
     // (optional: until the ISTAT population is imported the size class of a comune is a declared fallback)
-    loadOptionalRealDocument('municipalPopulation').then(doc => store.setMunicipalPopulation(doc))
+    loadOptionalRealDocument('municipalPopulation').then(doc => store.setMunicipalPopulation(doc)),
+    // (optional: the geographic map of the national elections; without it the squares map is all there is)
+    loadOptionalRealDocument('italyBoundaries').catch(() => null)
   ]);
 }
 // “Riprova” on the notice of missing data: only what is missing is requested again.
@@ -92,7 +94,7 @@ else {
     app = mountApp(root, store, { retryData: () => retryMissingData().finally(refresh), refreshReference: () => store.setRealReference(reference(loaded(INSTITUTION_COLLECTIONS) ? governingEntityIds() : [])) });
     registerOfflineCache();
     loadInstitutions().catch(error => console.warn('Dati istituzionali non disponibili:', error)).finally(refresh);
-    loadDocuments();
+    loadDocuments().finally(refresh);
   } catch (error) {
     bootError(error);
   }

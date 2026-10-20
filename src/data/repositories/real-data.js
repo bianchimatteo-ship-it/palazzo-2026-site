@@ -48,7 +48,8 @@ const documentFiles = Object.freeze({
 });
 // Documents that may legitimately be missing: the game works without them and says so (loadOptionalRealDocument returns null, nothing is listed among the failures).
 // municipalPopulation: population of the comuni (ISTAT), imported by scripts/import-istat-popolazione-comuni.mjs from the official files.
-const optionalDocumentFiles = Object.freeze({ municipalPopulation: 'municipal-population.json' });
+// italyBoundaries: outline of the regions and provinces for the geographic map (scripts/build-italy-boundaries.mjs, ISTAT via Openpolis, CC BY 4.0).
+const optionalDocumentFiles = Object.freeze({ municipalPopulation: 'municipal-population.json', italyBoundaries: 'italy-boundaries.json' });
 const loadingDocuments = new Map();
 let manifestPromise;
 // What could not be loaded (a collection, a document or the manifest) and why: the game starts with the rest and
@@ -164,7 +165,7 @@ export async function loadOptionalRealDocument(name) {
   if (!realDatabase.manifest?.documents?.[name]) return null;
   try {
     const document = await fetchJson(optionalDocumentFiles[name]);
-    if (!document || typeof document !== 'object' || Array.isArray(document) || document.source !== 'real' || document.status === 'non-importato' || !Array.isArray(document.records)) return null;
+    if (!document || typeof document !== 'object' || Array.isArray(document) || document.source !== 'real' || document.status === 'non-importato' || !(Array.isArray(document.records) || Array.isArray(document.regions))) return null;
     realDatabase = Object.freeze({ ...realDatabase, [name]: freezeDeep(document) });
     return realDatabase[name];
   } catch { return null; }

@@ -1253,3 +1253,35 @@ details.accord-panel.pm-fold { padding: 0; }
 .pl-page .sx-card.tone-good { border-top-color: var(--good-line); }
 .pl-page .sx-card.tone-bad { border-top-color: var(--bad-line); }
 .pl-page .sx-card.tone-warn { border-top-color: var(--gold-line); }
+
+/* Geographic map of the national elections (italy-map.js). */
+.it-controls { display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: center; }
+.it-class-line { margin: 0 0 8px; }
+.it-class { display: inline-block; padding: 3px 10px; border-radius: 12px; background: var(--panel-2); border: 1px solid var(--line-strong); color: var(--ink); font: 750 12px var(--font-head, Manrope, sans-serif); letter-spacing: .04em; }
+.it-layout { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); gap: 16px; align-items: start; }
+.it-stage { min-width: 0; }
+.it-map { display: block; width: 100%; height: auto; max-height: 76vh; }
+.it-area { stroke: var(--panel, #fff); stroke-width: .8; cursor: pointer; transition: opacity .12s; outline: none; }
+.it-area:hover { opacity: .82; }
+.it-area:focus-visible { stroke: var(--ink); stroke-width: 3; }
+.it-area.is-tie { stroke-dasharray: 3 2; }
+.it-outline path { stroke: var(--ink); stroke-width: 1.6; stroke-opacity: .7; }
+.it-halo { stroke: var(--ink); stroke-width: 4; stroke-linejoin: round; }
+.it-labels text { fill: #fff; font: 800 17px var(--font-head, Manrope, sans-serif); text-anchor: middle; dominant-baseline: middle; paint-order: stroke; stroke: rgba(0,0,0,.45); stroke-width: 3px; }
+.it-side { min-width: 0; }
+.it-info { display: grid; gap: 6px; padding: 12px 14px; border: 1px solid var(--line-strong); border-left: 4px solid var(--accent); border-radius: 10px; background: var(--panel-2); }
+.it-info h4 { margin: 0; font: 750 17px/1.2 var(--font-head, Manrope, sans-serif); }
+.it-info small { color: var(--ink-2); }
+.it-info.is-empty { border-left-color: var(--line-strong); color: var(--ink-2); }
+.it-info.is-empty p { margin: 0; }
+.it-verdict { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; }
+.it-rows { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.it-rows li { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto auto; gap: 6px; align-items: center; font-size: 13.5px; }
+.it-rows li small { min-width: 34px; text-align: right; }
+.it-table { margin-top: 10px; }
+.it-table summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
+@media (max-width: 760px) {
+  .it-layout { grid-template-columns: minmax(0, 1fr); }
+  .it-map { max-height: none; }
+  .it-labels text { font-size: 21px; }
+}
