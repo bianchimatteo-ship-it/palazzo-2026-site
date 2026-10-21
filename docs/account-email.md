@@ -1,6 +1,6 @@
 # Email degli account: verifica e recupero password
 
-Stato: **gateway Google Apps Script integrato nel codice e provato con un gateway simulato; l'invio reale non è stato verificato** (il segreto non è configurato e nessuna e-mail reale è stata inviata). Non dichiarare la consegna delle email funzionante finché non è stata provata su un indirizzo vero.
+Stato: **in funzione**. L’invio passa dal gateway Google Apps Script (Gmail) e il recupero della password è stato provato dal titolare dopo il trasferimento del mittente al nuovo account Gmail. Il repository non contiene né può contenere il segreto né il codice del gateway: questa pagina descrive quanto il codice fa e quanto va tenuto allineato fuori dal repository.
 
 ## Cosa fa il Worker (`worker.js`)
 - Un account può avere un solo indirizzo (tabella `user_emails`), **facoltativo**. Gli account esistenti continuano ad accedere con le credenziali di sempre e possono aggiungerne uno da *Menu → Account* (serve la password).
@@ -19,22 +19,20 @@ recupero resta neutro, il preavviso di inattività non viene registrato (si ripr
 Gli oggetti ammessi sono esattamente tre (`MAIL_SUBJECTS` in `worker.js`): «POLITICANDO 2026 — conferma il tuo indirizzo email», «POLITICANDO 2026 — nuova password» e «POLITICANDO 2026: il tuo
 account sarà eliminato per inattività». **La lista ammessa nel codice Apps Script deve contenere esattamente questi testi** (non verificato da qui: il codice del gateway non è nel repository).
 
-## Cosa serve per attivare l'invio reale (a cura del titolare, non ancora fatto)
-1. Nel gateway Apps Script: proprietà `SHARED_SECRET` e `ALLOWED_RESET_HOST` (l'host di `PUBLIC_BASE_URL`) già impostate; allow-list degli oggetti allineata a `MAIL_SUBJECTS`.
-2. Segreto del Worker uguale a `SHARED_SECRET`: `npx wrangler secret put EMAIL_GATEWAY_SECRET` (mai nel repository). Finché manca, `mailConfigured()` è falso, `/api/account/status` risponde
-   `email: false`, nessun messaggio parte e il gioco lo dice. Anche `EMAIL_GATEWAY_URL` deve essere un indirizzo `https://script.google.com/macros/s/<id>/exec`.
-3. `PUBLIC_BASE_URL` (in `vars`) è il sito a cui portano i collegamenti dei messaggi.
-4. Migrazioni additive `migrations/0003_save_protocol.sql` e `migrations/0004_email_recovery.sql` (`wrangler d1 migrations apply politicando-accounts`); il Worker comunque crea le tabelle da solo.
-   **Non eseguite sul database di produzione.**
-5. Quando l'invio è attivo, aggiornare l'informativa (`privacy.html` §6 dice oggi che non si inviano e-mail) con Google come fornitore dell'invio, e registrarlo in `docs/legale-requisiti.json`.
-6. Provare con un indirizzo vero (sezione «Prova reale» sotto). Il preavviso di inattività resta spento (`RETENTION_ENABLED` e `RETENTION_NOTICE_TESTED` a "0").
+## Configurazione attuale (a cura del titolare, fuori dal repository)
+1. **URL del gateway**: `wrangler.jsonc` → `vars.EMAIL_GATEWAY_URL` è l’indirizzo `https://script.google.com/macros/s/<id>/exec` del web app di Apps Script **attualmente configurato su Cloudflare** (quello del nuovo account Gmail). Se il gateway viene ripubblicato con un nuovo ID, va aggiornato qui e in Cloudflare insieme; il repository non deve restare indietro (`npm run check:email-gateway` verifica che l’URL del file sia quello atteso e che Resend non sia più usato).
+2. **Segreto**: il secret Cloudflare `EMAIL_GATEWAY_SECRET` deve coincidere con `SHARED_SECRET` del nuovo Apps Script. Non si trova nel repository e non si cambia da qui (`npx wrangler secret put EMAIL_GATEWAY_SECRET` solo da chi lo possiede). Finché manca, `mailConfigured()` è falso, `/api/account/status` risponde `email: false`, nessun messaggio parte e il gioco lo dice.
+3. Nel gateway: `ALLOWED_RESET_HOST` (l’host di `PUBLIC_BASE_URL`) e allow-list degli oggetti allineata a `MAIL_SUBJECTS`.
+4. `PUBLIC_BASE_URL` (in `vars`) è il sito a cui portano i collegamenti dei messaggi.
+5. Migrazioni additive `migrations/0003_save_protocol.sql` e `migrations/0004_email_recovery.sql` (`wrangler d1 migrations apply politicando-accounts`); il Worker comunque crea le tabelle da solo. Non vengono eseguite da questo repository.
+6. L’informativa (`privacy.html` §3, §5, §6) e `termini.html` §6 descrivono l’invio tramite Google Apps Script/Gmail; la qualifica di Google e le garanzie sui trasferimenti restano tra i requisiti aperti (`docs/legale-requisiti.json`, `email-fornitore`). Il preavviso di inattività resta spento (`RETENTION_ENABLED` e `RETENTION_NOTICE_TESTED` a "0").
 
 ## Test
 `npm run check:email-gateway` (gateway simulato: richiesta esatta, conferma, 11 tipi di errore, flussi, risposte neutre, segreto assente da log e risposte), `npm run check:accounts` (server, token, limiti, riuso, scadenza, account legacy), `npm run check:account-isolation` (browser: schermate, collegamenti, sessione), `npm run check:security` (informativa coerente col Worker). Il Worker è eseguito in processo con un trasporto di prova (`env.EMAIL_SEND`), che esiste solo nei test: i segreti del Worker sono stringhe.
 
 
-## Prova reale (da eseguire dopo la configurazione, non ancora eseguita)
-Il recupero della password è **operativo in produzione solo dopo questa prova**:
+## Prova reale (checklist per riverificare dopo ogni cambio di gateway, segreto o mittente)
+Il titolare ha provato il recupero dopo il trasferimento del mittente; questa è la sequenza da ripetere se qualcosa cambia (non è stata rieseguita da questo repository):
 1. Verificare `GET /api/account/status` → `email: true` (richiede `EMAIL_GATEWAY_SECRET` e il gateway raggiungibile).
 2. Con un account di prova e un indirizzo che si controlla: Menu → Account → aggiungere l’indirizzo → ricevere il messaggio → aprire il collegamento (valido 48 ore) → stato «verificato».
 3. Disconnettersi → «Password dimenticata?» → indirizzo → ricevere il messaggio (collegamento valido 30 minuti) → scegliere una nuova password → accedere con la nuova; la vecchia deve fallire e le sessioni precedenti devono essere chiuse.

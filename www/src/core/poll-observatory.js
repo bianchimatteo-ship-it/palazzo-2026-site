@@ -1,5 +1,5 @@
-import { OBSERVATORY_RULES as RULES, POLL_EXTENSIONS as EXT, POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261021-7';
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261021-7';
+import { OBSERVATORY_RULES as RULES, POLL_EXTENSIONS as EXT, POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261021-11';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261021-11';
 
 // The poll observatory: what each simulated institute measures week after week, the average of the institutes, the segments
 // of the electorate, the flows between the forces and the insights drawn from them.

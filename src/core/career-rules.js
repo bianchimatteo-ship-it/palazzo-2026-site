@@ -1,8 +1,8 @@
-import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel } from '../data/regions.js?v=20261021-7';
-import { isSelectableParty } from '../data/schema.js?v=20261021-7';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261021-7';
-import { startAgeProblems, startProblems } from './start-engine.js?v=20261021-7';
-import { presidentialEligibility } from './presidency-engine.js?v=20261021-7';
+import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel } from '../data/regions.js?v=20261021-11';
+import { isSelectableParty } from '../data/schema.js?v=20261021-11';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261021-11';
+import { startAgeProblems, startProblems } from './start-engine.js?v=20261021-11';
+import { presidentialEligibility } from './presidency-engine.js?v=20261021-11';
 
 const genders = new Set(['preferisco-non-specificare', 'donna', 'uomo', 'non-binario']);
 const orientations = new Set(['Centrismo civico', 'Progressista', 'Conservatore', 'Liberale', 'Socialdemocratico', 'Ecologista', 'Popolare', 'Autonomista', 'Altro']);

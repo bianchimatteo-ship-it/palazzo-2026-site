@@ -21,7 +21,6 @@ const { panFromDrag } = await import(`../src/ui/logo-editor-view.js${v}`);
 const { store } = await import(`../src/core/store.js${v}`);
 const { renderPartyPage } = await import(`../src/ui/party-page.js${v}`);
 const { progressionFactors } = await import(`../src/core/progression-engine.js${v}`);
-const { saveLocalLogo, getLocalLogo } = await import(`../src/data/repositories/logo-store.js${v}`);
 const clean = html => { const text = html.replace(/data-[a-z-]+="[^"]*"/g, ''); const match = text.match(/undefined|NaN|\[object Object\]|Infinity/); if (match) console.error(`…${text.slice(Math.max(0, match.index - 120), match.index + 30)}…`); return !match; };
 const seeded = seed => { let state = seed >>> 0 || 1; return () => { state = (Math.imul(state, 1664525) + 1013904223) >>> 0; return state / 4294967296; }; };
 const { COMMITTEE_STATES, committeeStrength, createCommittees, advanceCommittees, applyCommitteeAction, foundCommittee, committeeSupport, committeesAfterVote, committeeSummary } = committeesEngine;
@@ -320,10 +319,6 @@ assert.ok(cleared === 100 && pixels[3] === 0 && pixels[5 * 4 + 3] === 255, 'Lo s
 assert.equal(logo.dominantColor(new Uint8ClampedArray([255, 255, 255, 255, 0, 0, 0, 0])), null, 'Nessun colore in un’immagine bianca o trasparente.');
 const meta = logo.editorMetadata({ ...editor, ratio: 'quadrata', zoom: 0.8, transparent: true }, { dominant: '#c8102e', cleared: 100 });
 assert.ok(meta.crop && meta.ratio === 'quadrata' && meta.transparent && meta.original.name === 'logo.png' && meta.dominantColor === '#c8102e', 'I metadati conservano ritaglio, proporzione, trasparenza, colore e file originale.');
-// The logo store keeps the editor's metadata next to source and verification.
-const saved = await saveLocalLogo('party-prova', { blob: new Blob([new Uint8Array([137, 80, 78, 71])], { type: 'image/png' }), fileName: 'logo.png', source: 'https://example.org', verified: true, alt: 'Logo di prova', editor: meta });
-assert.ok(saved.editor?.crop && saved.verified === true && saved.source === 'https://example.org', 'Il logo salvato conserva metadati, fonte e verifica.');
-assert.equal((await getLocalLogo('party-prova')).editor.ratio, 'quadrata', 'I metadati si rileggono.');
 // No forced circle: logos keep their shape.
 const css = await readFile(new URL('../src/sections.css', import.meta.url), 'utf8');
 assert.ok(/\.emblem\.has-logo \{[^}]*border-radius: 8px/.test(css), 'I loghi non sono forzati in un cerchio.');

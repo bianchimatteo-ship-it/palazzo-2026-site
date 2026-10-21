@@ -32,18 +32,18 @@
     },
     {
       "id": "diritti-asset",
-      "title": "Titolarità e licenze di marchio, illustrazioni, testata e loghi caricati",
+      "title": "Titolarità e licenze di marchio, illustrazioni e testata; diritti sui loghi scelti dagli utenti",
       "section": "termini.html §4–5",
-      "why": "Il nome e il marchio «POLITICANDO», le illustrazioni, la testata «LA POLITICA 24» e i loghi dei partiti che il titolare carica o collega nell'Admin hanno bisogno di una titolarità o licenza documentata (e di una ricerca di anteriorità sul nome). Il catalogo non stabilisce la provenienza ufficiale di un logo e non modifica mai logoVerified. L'inventario è in docs/privacy-e-asset.md e docs/audit-diritti-asset.md.",
+      "why": "Il nome e il marchio «POLITICANDO», le illustrazioni e la testata «LA POLITICA 24» hanno bisogno di una titolarità o licenza documentata (e di una ricerca di anteriorità sul nome). I loghi dei partiti non sono più distribuiti dal gioco né dal titolare: ogni giocatore sceglie i propri nel catalogo personale, che resta sul suo dispositivo, e termini e catalogo avvertono che deve averne i diritti; il gioco non verifica da dove provengano e non stabilisce nessuna licenza. Resta da fornire la documentazione su marchio, illustrazioni e testata, e il titolare deve valutare se l'avvertenza basta. Il requisito resta aperto e bloccante finché non è documentato.",
       "required": true,
       "status": "mancante",
       "provided": null
     },
     {
       "id": "email-fornitore",
-      "title": "Fornitore dell’invio e-mail: Google (Gmail tramite Google Apps Script)",
-      "section": "privacy.html §3 e §6",
-      "why": "L’invio passa da un gateway Google Apps Script che spedisce dall’account Gmail del titolare. Quando il segreto EMAIL_GATEWAY_SECRET viene configurato, il paragrafo «E-mail e recupero della password» dell’informativa (oggi: il servizio non invia e-mail) va aggiornato con il fornitore, il suo ruolo e gli eventuali trasferimenti extra-SEE. Condizionato all’attivazione.",
+      "title": "Google (Apps Script/Gmail) come fornitore dell’invio e-mail",
+      "section": "privacy.html §5 e §6",
+      "why": "L’invio dei messaggi di verifica e recupero passa da un gateway Google Apps Script che spedisce dall’account Gmail del titolare, ed è in funzione (il recupero della password è stato verificato dal titolare). L’informativa (§5 e §6) lo descrive. Resta da confermare, a cura del titolare, la qualifica di Google (responsabile o titolare autonomo) e le garanzie sui trasferimenti fuori dallo SEE, che il testo non può dichiarare al suo posto.",
       "required": false,
       "status": "mancante",
       "provided": null

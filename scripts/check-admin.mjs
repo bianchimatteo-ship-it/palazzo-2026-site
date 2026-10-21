@@ -124,9 +124,9 @@ assert.ok(realData.realDatabase.parties.find(item => item.id === addedId)?.admin
   const other = realData.realDatabase.parties.find(item => !item.adminCreated && !item.adminHidden && item.id !== target.id && item.id !== addedId);
   store.saveRecordOverride('parties', target.id, { officialName: `${target.officialName} (prova)`, color: '#336699' }, realData.pristineRecord('parties', target.id) ?? {});
   store.saveRecordOverride('parties', other.id, { abbreviation: 'PRV' }, realData.pristineRecord('parties', other.id) ?? {});
-  await sync.publishSharedArchive({ [target.id]: { kind: 'data', dataUrl: 'data:image/png;base64,iVBORw0KGgo=', alt: 'Logo di prova' } });
+  await sync.publishSharedArchive();
   let server = (await call('/api/admin')).body;
-  assert.ok(server.parties[target.id] && server.parties[other.id] && server.logos[target.id], 'Le correzioni e il logo sono sul server.');
+  assert.ok(server.parties[target.id] && server.parties[other.id] && Object.keys(server.logos).length === 0, 'Le correzioni sono sul server; i loghi non fanno più parte dell’archivio.');
   // a reset: the record is gone from the archive in use, from the shared copy and, after the publication, from the server; the other correction and the logo stay
   store.resetRecordOverride('parties', target.id);
   assert.ok(!store.loadAdminArchive().parties[target.id], 'Dopo il ripristino la correzione non torna dalla copia condivisa.');
@@ -134,7 +134,7 @@ assert.ok(realData.realDatabase.parties.find(item => item.id === addedId)?.admin
   await sync.publishSharedArchive();
   server = (await call('/api/admin')).body;
   assert.ok(!server.parties[target.id] && server.parties[other.id], 'Sul server il ripristino arriva davvero (la pagina non lo dice soltanto).');
-  assert.ok(server.logos[target.id], 'Il logo resta: ha la sua area.');
+  assert.deepEqual(server.logos, {}, 'I loghi non sono nell’archivio condiviso.');
   // an edit brought back to the original values is a deletion as well
   store.saveRecordOverride('parties', other.id, { abbreviation: realData.pristineRecord('parties', other.id)?.abbreviation ?? null }, realData.pristineRecord('parties', other.id) ?? {});
   assert.ok(!store.loadAdminArchive().parties[other.id], 'Un campo riportato al valore originale non lascia nulla.');
@@ -148,7 +148,7 @@ assert.ok(realData.realDatabase.parties.find(item => item.id === addedId)?.admin
   await sync.publishSharedArchive();
   server = (await call('/api/admin')).body;
   assert.deepEqual([Object.keys(server.parties), Object.keys(server.politicians), Object.keys(server.addedParties), Object.keys(server.hidden)], [[], [], [], []], '«Cancella tutto» svuota davvero anche il server.');
-  assert.ok(server.logos[target.id], 'E non porta via i loghi, che il proprietario non ha chiesto di perdere.');
+  assert.deepEqual(server.logos, {}, 'E l’archivio continua a non avere loghi.');
   realData.refreshAdminOverrides();
   assert.equal(realData.realDatabase.parties.find(item => item.id === target.id).adminEdited, undefined, 'Nel gioco tornano i dati del dataset.');
   assert.ok(!realData.realDatabase.parties.some(item => item.id === addedId), 'E il partito aggiunto non c’è più.');

@@ -1,15 +1,16 @@
 // Main menu, how-to-play, settings, save slots and the end-of-week report.
-import { renderTutorialInvite } from './tutorial.js?v=20261021-7';
-import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261021-7';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261021-7';
-import { formatDate } from '../core/time.js?v=20261021-7';
-import { illustration } from './illustrations.js?v=20261021-7';
-import { glyph } from './visuals.js?v=20261021-7';
-import { identityMark, identityVars } from './party-identity.js?v=20261021-7';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261021-7';
-import { hallView } from './hall-view.js?v=20261021-7';
-import { esc, signed } from './charts.js?v=20261021-7';
-import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261021-7';
+import { renderTutorialInvite } from './tutorial.js?v=20261021-11';
+import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261021-11';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261021-11';
+import { formatDate } from '../core/time.js?v=20261021-11';
+import { illustration } from './illustrations.js?v=20261021-11';
+import { glyph } from './visuals.js?v=20261021-11';
+import { identityMark, identityVars } from './party-identity.js?v=20261021-11';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261021-11';
+import { hallView } from './hall-view.js?v=20261021-11';
+import { renderLogoCatalog } from './logo-catalog.js?v=20261021-11';
+import { esc, signed } from './charts.js?v=20261021-11';
+import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261021-11';
 
 const when = iso => { try { return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch { return ''; } };
 // The actions of the opening screen, in order of importance: starting a career and resuming one are the two main ones (drawn apart, below); then what concerns the
@@ -18,6 +19,7 @@ const MENU_GROUPS = [
   ['Le tue carriere', [
     ['carica', 'book', 'Carica partita', 'Slot, file esportati e importati'],
     ['hall', 'crown', 'Hall of Fame', 'Le carriere concluse e la loro eredità'],
+    ['loghi', 'flag', 'Loghi dei partiti', 'Il tuo catalogo personale, sul dispositivo'],
     ['account', 'users', 'Account e salvataggi online', 'Ritrova le carriere su ogni dispositivo']
   ]],
   ['Aiuto e opzioni', [
@@ -103,13 +105,13 @@ function slotWhere(info) {
   if (!info.durable) return '<small class="save-state is-pending">Scrittura non ancora confermata dal browser</small>';
   return info.where === 'database' ? '<small class="save-state">Nel database del browser (la memoria rapida era piena)</small>' : '<small class="save-state">In questo browser</small>';
 }
-function loadView({ hasCareer, meta, gate = null, protectedCount = 0, slots, versions = [], saving, lastSaved, unsaved, error, identity, identityOf }) {
+function loadView({ hasCareer, meta, account = null, gate = null, protectedCount = 0, slots, versions = [], saving, lastSaved, unsaved, error, identity, identityOf }) {
   const rows = slots.map(slot => `<article class="slot-row" data-slot-row="${esc(slot.id)}">${identityOf ? identityMark(identityOf(slot), 'sm') : ''}<div><strong>${esc(slot.name)}</strong>${slot.autoPreserve ? '<span class="slot-tag">Copia automatica prima di cambiare partita</span>' : ''}<span>${esc(slot.player ? `${slot.player} · ` : '')}${esc(slot.role ?? 'Senza incarico')} · ${esc(slot.party ?? '')}</span><small>Settimana ${slot.week} · ${esc(formatDate(slot.gameDate))} · salvato il ${esc(savedOn(slot.savedAt))}</small>${slotWhere(slot.info)}</div><div class="slot-actions"><button class="primary-button" data-slot-load="${esc(slot.id)}">Carica</button><button class="secondary-button" data-slot-export="${esc(slot.id)}" aria-label="Esporta ${esc(slot.name)} su file">Esporta su file</button><button class="icon-text-button" data-slot-delete="${esc(slot.id)}" aria-label="Elimina ${esc(slot.name)}">${glyph('alert', 15)} Elimina</button></div></article>`).join('');
   const copies = versions.map(item => `<li data-version-row="${esc(item.id)}"><span><b>${esc(versionReason(item.reason))}</b> · ${esc(item.player)} · settimana ${esc(item.week)} · ${esc(formatDate(item.gameDate))}<small>salvata il ${esc(savedOn(item.savedAt))} · revisione ${esc(item.revision)}</small></span><span class="slot-actions"><button class="secondary-button" data-version-restore="${esc(item.id)}">${item.older ? 'Ripristina come nuova carriera' : 'Ripristina'}</button><button class="secondary-button" data-version-export="${esc(item.id)}">Esporta</button></span></li>`).join('');
   return `<h2>Carica partita</h2><p class="section-subtitle">La partita in corso si salva da sola; qui conservi fino a 5 salvataggi e li porti su altri dispositivi con un file. Il gioco non elimina mai da solo un salvataggio.</p>
     ${hasCareer && !gate ? `<article class="slot-row is-current">${identity ? identityMark(identity, 'sm') : ''}<div><strong>Partita in corso</strong><span>${esc(meta.player)} · ${esc(meta.role ?? 'Senza incarico')}</span><small>Settimana ${meta.week} · ${esc(formatDate(meta.gameDate))}</small>${currentStatus(saving, lastSaved, unsaved)}</div><div class="slot-actions"><button class="secondary-button" data-menu-action="save-slot">Salva in uno slot</button><button class="secondary-button" data-menu-action="export">Esporta su file</button></div></article>` : ''}
     <div class="slot-list">${rows || '<p class="quiet-copy">Nessun salvataggio negli slot.</p>'}</div>
-    ${gate || protectedCount ? `<p class="quiet-copy" data-protected-saves>${protectedCount + (gate ? 1 : 0) === 1 ? 'Una partita è collegata' : `${protectedCount + (gate ? 1 : 0)} partite sono collegate`} a un account e non ${protectedCount + (gate ? 1 : 0) === 1 ? 'è mostrata' : 'sono mostrate'}: accedi con l’account a cui appartengono. Nulla è stato eliminato.</p>` : ''}
+    ${(gate || protectedCount) && !account?.user ? '<p class="quiet-copy" data-protected-saves>Le carriere di questo dispositivo compaiono dopo l’accesso con il loro account. Nulla è stato eliminato.</p>' : gate || protectedCount ? `<p class="quiet-copy" data-protected-saves>${protectedCount + (gate ? 1 : 0) === 1 ? 'Una partita è collegata' : `${protectedCount + (gate ? 1 : 0)} partite sono collegate`} a un account e non ${protectedCount + (gate ? 1 : 0) === 1 ? 'è mostrata' : 'sono mostrate'}: accedi con l’account a cui appartengono. Nulla è stato eliminato.</p>` : ''}
     ${copies ? `<details class="slot-versions"><summary>Copie di sicurezza di questo browser (${versions.length})</summary><p class="quiet-copy">Il gioco le tiene da parte quando un salvataggio viene sostituito, recuperato o rifiutato perché obsoleto. Ripristinandone una, la partita in corso viene prima messa in uno slot.</p><ul class="history-list" aria-label="Copie di sicurezza">${copies}</ul></details>` : ''}
     <label class="menu-import"><input type="file" accept="application/json,.json" data-menu-import />${glyph('book', 16)} Importa una partita da file</label>
     ${error ? `<p class="menu-error" role="alert">${esc(error)}</p>` : ''}`;
@@ -232,7 +234,7 @@ export function settingsView(settings, { error = '', account = null } = {}) {
 
 // Everything the main menu opens (saves, Hall of Fame, account, guide, settings, the first-run steps) is a dialog over the homepage, never a panel added under it. It closes with the
 // close button, «Annulla», Escape or a click on the backdrop (app.js); nothing behind it can be reached while it is open.
-const POPUP_TITLES = { carica: 'Carica partita', hall: 'Hall of Fame', account: 'Account e salvataggi online', guida: 'Come giocare', impostazioni: 'Impostazioni', benvenuto: 'Benvenuto', tour: 'Primo avvio' };
+const POPUP_TITLES = { carica: 'Carica partita', hall: 'Hall of Fame', loghi: 'Loghi dei partiti', account: 'Account e salvataggi online', guida: 'Come giocare', impostazioni: 'Impostazioni', benvenuto: 'Benvenuto', tour: 'Primo avvio' };
 function menuPopup(view, content) {
   const title = POPUP_TITLES[view] ?? 'POLITICANDO 2026';
   return `<div class="modal-backdrop report-backdrop menu-popup-backdrop" data-menu-close data-menu-popup="${esc(view)}"><section class="report-modal menu-popup" role="dialog" aria-modal="true" aria-label="${esc(title)}">
@@ -248,7 +250,7 @@ export function renderMainMenu(menu, context) {
   const home = `<span class="section-kicker">POLITICANDO 2026</span><h2>La politica italiana, settimana dopo settimana</h2><p class="section-subtitle">Un gestionale di carriera in un mondo politico vivo: partiti, parlamentari, governo e leggi reali; tutto ciò che accade in partita è simulazione dichiarata.</p>
     ${facts.length ? `<div class="menu-facts">${facts.map(([value, label]) => `<div><strong>${esc(value)}</strong><span>${esc(label)}</span></div>`).join('')}</div>` : ''}
     <ul class="menu-points"><li>${glyph('clock', 18)}<span><strong>Una settimana alla volta</strong> sei giorni da spendere, poi il mondo va avanti.</span></li><li>${glyph('route', 18)}<span><strong>Sei percorsi</strong> ${esc(Object.values(CAREER_LEVELS).map(level => level.shortLabel).join(', '))}.</span></li><li>${glyph('flag', 18)}<span><strong>Il tuo partito</strong> uno reale, uno fondato da te o nessuno: il gioco ne prende logo e colori.</span></li><li>${glyph('shield', 18)}<span><strong>Reale e simulato, sempre distinti</strong> i dati istituzionali sono verificati, il resto è dichiarato simulazione.</span></li></ul>`;
-  const side = menu.view === 'benvenuto' ? welcomeView(context.account, menu) : menu.view === 'tour' ? tourView(menu.tourStep) : menu.view === 'carica' ? loadView(context) : menu.view === 'account' ? accountView(context.account) : menu.view === 'guida' ? guideView() : menu.view === 'hall' ? hallView(context.hall, { identityOf: context.hallIdentity }) : menu.view === 'impostazioni' ? settingsView(settings, context) : home;
+  const side = menu.view === 'benvenuto' ? welcomeView(context.account, menu) : menu.view === 'tour' ? tourView(menu.tourStep) : menu.view === 'carica' ? loadView(context) : menu.view === 'account' ? accountView(context.account) : menu.view === 'guida' ? guideView() : menu.view === 'hall' ? hallView(context.hall, { identityOf: context.hallIdentity }) : menu.view === 'loghi' ? renderLogoCatalog(context.logos ?? {}) : menu.view === 'impostazioni' ? settingsView(settings, context) : home;
   const popup = menu.view !== 'home' ? menuPopup(menu.view, side) : '';
   const group = ([title, items]) => `<nav class="menu-group" aria-label="${esc(title)}"><h2 class="menu-group-title">${esc(title)}</h2><div class="menu-list">${items.map(([id, icon, label, detail]) => `<button class="menu-item ${menu.view === id ? 'active' : ''}" data-menu="${id}">${glyph(icon, 18)}<span><strong>${esc(label)}</strong><small>${esc(detail)}</small></span></button>`).join('')}</div></nav>`;
   return `<div class="main-menu ${hasCareer ? 'has-career' : ''}">

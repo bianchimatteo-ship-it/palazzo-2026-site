@@ -36,7 +36,7 @@ for (const name of PAGES) {
 for (const [name, target] of links) await access(new URL(target === './' ? 'index.html' : target.replace(/^\.\//, ''), root)).catch(() => assert.fail(`${name}: il collegamento «${target}» non porta a un file.`));
 // the texts say what the code does (the numbers are audited in check-security.mjs)
 const privacy = await readFile(new URL('privacy.html', root), 'utf8');
-for (const needle of ['Titolare del trattamento', 'Cloudflare', 'Garante', 'Minori', 'localStorage', 'non usa cookie', 'Per quanto tempo conserviamo i dati', 'Elimina il mio account', 'nessun dato di gioco viene inviato ai nostri server', 'non invia e-mail']) assert.ok(privacy.includes(needle), `Informativa: «${needle}».`);
+for (const needle of ['Titolare del trattamento', 'Cloudflare', 'Garante', 'Minori', 'localStorage', 'non usa cookie', 'Per quanto tempo conserviamo i dati', 'Elimina il mio account', 'nessun dato di gioco viene inviato ai nostri server', 'Google Apps Script e Gmail', 'Loghi dei partiti']) assert.ok(privacy.includes(needle), `Informativa: «${needle}».`);
 const terms = await readFile(new URL('termini.html', root), 'utf8');
 for (const needle of ['simulazione politica', 'Account e responsabilità', 'Salvataggi locali e online', 'Proprietà intellettuale', 'Uso consentito', 'Disponibilità, manutenzione', 'inderogabil']) assert.ok(terms.includes(needle), `Termini: «${needle}».`);
 // robots: indexable only when nothing required is missing

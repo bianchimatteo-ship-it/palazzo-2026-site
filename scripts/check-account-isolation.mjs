@@ -38,6 +38,9 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   const plainContinue = () => has('button.menu-continue[data-menu="continua"]');
   const inGame = () => has('.page-wrap');
   const localUse = () => stored('politicando.sync.local-use.v1');
+  // ESCI now hides every career (see check-logout-careers.mjs). A session closed by an earlier version of the game left no such record: the lock by owner (the career linked to an account is not
+  // continued by anyone else) is what these checks exercise, so the record is taken away after the logout, as if the logout had been made by that version.
+  const legacyLogout = async () => { await click('[data-account-action="logout"]'); await wait(() => has('[data-account-form="login"]')); await evaluate(`localStorage.removeItem('politicando.hidden-careers.v1')`); };
 
   // ---------- a career played without an account ----------
   await createCareerInPage({ evaluate, version }, { weeks: 2 });
@@ -75,8 +78,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
 
   // ---------- 2. logout: the session ends here and on the server; the career stays ----------
   const tokenA = (await stored('politicando.account.v1')).token;
-  await click('[data-account-action="logout"]');
-  await wait(() => has('[data-account-form="login"]'));
+  await legacyLogout();
   assert.equal(await stored('politicando.account.v1'), null, 'La sessione locale è finita.');
   const me = await local.worker.fetch(new Request(`${local.origin}/api/account/me`, { headers: { authorization: `Bearer ${tokenA}` } }), local.env);
   assert.equal(me.status, 401, 'E quella sul server è stata chiusa.');
@@ -102,7 +104,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   assert.match(await text('.menu-error'), /collegata all’account «legacy\.a»/, 'E dice perché.');
   await forceSlotAction('data-slot-export');
   assert.equal(await inGame(), false, 'La partita non si apre.');
-  assert.equal(await slotCount(), slotsBefore, 'Lo slot locale è intatto.');
+  assert.ok(await slotCount() >= slotsBefore, 'Lo slot locale è intatto (l’uscita ne aggiunge uno di sicurezza, non ne toglie).');
   assert.equal(saves('legacy.a').length, 1, 'La copia online dell’account è ancora presente.');
   assert.equal(await text('.account-message'), '', 'Nessuna informazione dell’account precedente resta nei pannelli.');
   // The same account signs in again: the career is normal to continue and nothing was lost.
@@ -122,8 +124,9 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   assert.ok(saves('legacy.a')[0].revision >= aCopy.revision, 'La copia online non è tornata indietro.');
   aCopy = saves('legacy.a')[0];
   await openAccount();
-  await click('[data-account-action="logout"]');
-  await wait(() => has('[data-account-form="login"]'));
+  await legacyLogout();
+  await goto('');
+  await openAccount();
 
   // ---------- 3. another account signs in: the career of the first one is not theirs ----------
   await fill('login', { username: 'legacy.b', password: 'password-di-b' });
@@ -163,6 +166,10 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   assert.match(await text('.menu-error'), /sessione è scaduta/, 'Una sessione scaduta è detta chiaramente.');
   assert.equal(await stored('politicando.account.v1'), null);
   assert.ok((await persisted()) >= careerWeek, 'La carriera resta salvata in questo browser.');
+  // (an expired session now hides the careers too, see check-logout-careers.mjs; here the lock by owner is exercised, as a session ended by an earlier version would leave it)
+  await evaluate(`localStorage.removeItem('politicando.hidden-careers.v1')`);
+  await goto('');
+  await openAccount();
 
   // ---------- 5. a sign-out made in another tab is followed here ----------
   await fill('login', { username: 'legacy.a', password: 'password-di-a' });

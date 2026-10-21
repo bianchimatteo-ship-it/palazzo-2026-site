@@ -68,7 +68,7 @@ for (const path of sources) {
 assert.deepEqual(found.dynamic, [], 'Nessun eval, new Function, document.write né stringhe eseguite da timer.');
 assert.deepEqual(found.inline, [], 'Nessuno script o stile in linea né gestori di eventi nel codice: la politica non ne ha bisogno.');
 assert.deepEqual(found.remote, [], 'Nessun @import né font o immagini di CSS da un altro sito.');
-assert.deepEqual([...found.hosts].filter(item => !/logo-store\.js/.test(item)), [], 'Le chiamate di rete scritte con un indirizzo fisso sono solo quelle previste (la copia di un logo a indirizzo, che la politica lascia fallire e il gioco gestisce collegando l’immagine).');
+assert.deepEqual([...found.hosts], [], 'Nessuna chiamata di rete scritta con un indirizzo fisso: i loghi si importano dal browser con il caricatore di immagini, senza fetch.');
 
 // ---------- 4. the privacy text says what the code does ----------
 const privacy = await text('privacy.html');
@@ -89,11 +89,12 @@ assert.ok(/token_hash TEXT PRIMARY KEY/.test(workerCode) && /sha256\(token\)/.te
 assert.ok(/EMAIL_GATEWAY_SECRET/.test(workerCode) && !/EMAIL_GATEWAY_SECRET['"]?\s*[:=]\s*['"][^'"]{4,}/.test(workerCode + await text('wrangler.jsonc')), 'Il gateway email si configura con un segreto del Worker, nessun segreto nel repository.');
 assert.ok(!/body\.force|\bforce\b[^.\n]*skip/i.test(workerCode.replace(/\/\/[^\n]*/g, '')), 'Il Worker non ha nessuna scorciatoia `force` per saltare i controlli sui salvataggi.');
 assert.ok(/versioni precedenti/.test(privacy) && /DELETE FROM save_history WHERE user_id = \?'\)\.bind\(userId\)/.test(workerCode) && /deleteAccountData\(db, account\.id\)/.test(workerCode), 'La cronologia dei salvataggi è nell’informativa e la cancellazione dell’account la elimina.');
-const logoFromUrl = (await text('src/ui/party-logo.js')).includes("logo.kind === 'url'");
-assert.ok(logoFromUrl, 'Il gioco può mostrare il logo di un partito da un indirizzo esterno.');
+const personal = await text('src/data/repositories/personal-logos.js');
+assert.ok(!(await text('src/ui/party-logo.js')).includes("logo.kind === 'url'"), 'Il gioco non mostra più loghi da un indirizzo esterno: ogni logo è una copia locale.');
+assert.ok(/crossOrigin = 'anonymous'/.test(personal) && /referrerPolicy = 'no-referrer'/.test(personal) && !/\bfetch\(/.test(personal), 'L’importazione da indirizzo usa il caricatore di immagini del browser (CORS, nessun referrer, nessun fetch né proxy).');
 assert.ok(!/non carica caratteri o altre risorse da server esterni\./.test(privacy), 'L’informativa non afferma più, senza eccezioni, che nulla viene caricato da server esterni.');
-assert.ok(/(unica|sola) eccezione/i.test(privacy) && /logo/.test(privacy) && /indirizzo IP/.test(privacy), 'Dichiara l’unica eccezione: il logo a indirizzo, che mostra l’IP al sito che lo ospita.');
-assert.ok(/titolare|amministrator/i.test(/eccezione[\s\S]{0,900}/i.exec(privacy)?.[0] ?? ''), 'E dice che la scelta può essere anche del titolare (un partito del gioco), non solo dell’utente.');
+assert.ok(/(unica|sola) eccezione/i.test(privacy) && /logo/.test(privacy) && /indirizzo IP/.test(privacy), 'Dichiara l’unica eccezione: l’importazione di un logo da un indirizzo, che mostra l’IP al sito che lo ospita.');
+assert.ok(/Loghi dei partiti/.test(/eccezione[\s\S]{0,900}/i.exec(privacy)?.[0] ?? ''), 'E dice che la scelta è dell’utente, dalla sezione dei loghi.');
 assert.ok(/non (viene|è) (inviat|comunicat)[^.]*(pagina|referrer)|senza (indicare|inviare)[^.]*(pagina|referrer)|nessun referrer/i.test(privacy), 'E che il sito esterno non sa da quale pagina arriva (nessun referrer).');
 for (const name of ['privacy.html', 'termini.html', 'elimina-account.html']) assert.ok(!/data-controller-todo/.test(await text(name)), `${name}: nessun segnaposto «da completare» nelle pagine pubbliche (le informazioni mancanti stanno in docs/legale-requisiti.json).`);
 const legal = await loadRequirements();

@@ -1,5 +1,5 @@
 // Shared admin archive: the Worker API on Workers KV, the client that reads and publishes it,
-// persistence across refreshes, restarts and new deploys, logos visible to every player, real data untouched.
+// persistence across refreshes, restarts and new deploys, no shared logos, real data untouched.
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
@@ -30,7 +30,17 @@ const token = result.body.token;
 assert.equal((await api('/api/admin', { method: 'PUT', body: '{}' })).status, 401, 'Scrivere richiede una sessione.');
 result = await api('/api/admin', { method: 'PUT', body: JSON.stringify({ parties: { 'party-registro-p1-2015-29-ir': { fields: { abbreviation: 'PD-test' }, updatedAt: '2026-09-24T10:00:00Z' } }, politicians: {}, logos: { 'party-registro-p1-2015-29-ir': { url: 'https://example.org/logo.svg', alt: 'Logo' }, pericoloso: { url: 'javascript:alert(1)' }, grande: { dataUrl: `data:image/png;base64,${'A'.repeat(500000)}` } } }) }, { authorization: `Bearer ${token}` });
 assert.equal(result.status, 200);
-assert.equal(result.body.logos, 1, 'Solo loghi sicuri e leggeri vengono pubblicati.');
+assert.equal(result.body.logos, undefined, 'I loghi non si pubblicano più (sono personali, sul dispositivo): la risposta non li conta.');
+// What an earlier version had stored in the shared archive is left exactly as it was (never served, never rewritten).
+const storedArchive = JSON.parse(kvData.get('archivio-condiviso').value);
+assert.deepEqual(storedArchive.logos, {}, 'Una pagina vecchia che invia loghi non li fa entrare nell’archivio.');
+const olderLogos = { 'party-x': { kind: 'url', url: 'https://example.org/vecchio.png' } };
+kvData.set('archivio-condiviso', { value: JSON.stringify({ ...storedArchive, logos: olderLogos }), expires: null });
+result = await api('/api/admin', { method: 'PUT', body: JSON.stringify({ parties: { 'party-registro-p1-2015-29-ir': { fields: { abbreviation: 'PD-test' }, updatedAt: '2026-09-24T10:00:00Z' } }, politicians: {} }) }, { authorization: `Bearer ${token}` });
+assert.equal(result.status, 200);
+assert.deepEqual(JSON.parse(kvData.get('archivio-condiviso').value).logos, olderLogos, 'I dati dei loghi già presenti sul server non vengono toccati né cancellati dalla pubblicazione.');
+result = await api('/api/admin');
+assert.deepEqual(result.body.logos, {}, 'Ma non vengono più serviti ai giocatori.');
 // Wrong PINs are limited.
 for (let i = 0; i < 8; i++) await api('/api/admin/session', { method: 'POST', body: JSON.stringify({ pin: `sbagliato-${i}` }) });
 assert.equal((await api('/api/admin/session', { method: 'POST', body: JSON.stringify({ pin: 'pin-segreto-1' }) })).status, 429, 'Dopo troppi tentativi il PIN viene bloccato per un po’.');
@@ -40,7 +50,11 @@ worker = await deploy(2);
 result = await api('/api/admin');
 assert.equal(result.body.configured, true);
 assert.equal(result.body.parties['party-registro-p1-2015-29-ir'].fields.abbreviation, 'PD-test', 'Le correzioni sopravvivono a un nuovo deploy.');
-assert.equal(result.body.logos['party-registro-p1-2015-29-ir'].url, 'https://example.org/logo.svg', 'I loghi da indirizzo restano salvati sul server.');
+assert.deepEqual(result.body.logos, {}, 'L’archivio condiviso non serve loghi.');
+result = await api('/api/admin/logo/party-registro-p1-2015-29-ir');
+assert.equal(result.status, 404, 'Il percorso di distribuzione dei loghi non esiste più.');
+result = await api('/api/admin/logos/party-registro-p1-2015-29-ir', { method: 'PUT', body: JSON.stringify({ base64: 'AAAA' }) }, { authorization: `Bearer ${token}` });
+assert.equal(result.status, 404, 'E non si può più pubblicare un logo per tutti.');
 assert.equal((await api('/api/admin/session', { method: 'POST', body: JSON.stringify({ pin: 'pin-segreto-1' }) })).status, 200, 'Dopo l’attivazione basta il PIN.');
 // Cross-origin reading from GitHub Pages.
 result = await api('/api/admin', {}, { origin: 'https://bianchimatteo-ship-it.github.io' });
@@ -64,7 +78,7 @@ assert.ok(await sync.refreshSharedArchive(), 'Il gioco scarica l’archivio cond
 await realData.loadRealDatabase();
 await realData.loadRealCollections(['parties']);
 assert.equal(realData.realDatabase.parties.find(item => item.id === 'party-registro-p1-2015-29-ir').abbreviation, 'PD-test', 'Ogni giocatore vede la correzione pubblicata.');
-assert.equal(adminStore.sharedLogos()['party-registro-p1-2015-29-ir'].url, 'https://example.org/logo.svg', 'E il logo pubblicato.');
+assert.equal(adminStore.sharedLogos, undefined, 'Il gioco non ha più un catalogo di loghi condiviso.');
 // Offline: the cached copy keeps working.
 globalThis.fetch = async (url, init) => { if (String(url).startsWith(ORIGIN)) throw new TypeError('offline'); return realFetch(url, init); };
 assert.equal(await sync.refreshSharedArchive(), false);
@@ -76,8 +90,8 @@ await sync.openSharedSession('pin-segreto-1');
 assert.ok(sync.hasSharedSession());
 const original = realData.pristineRecord('parties', 'party-registro-p1-2015-29-ir');
 adminStore.setRecordField('parties', 'party-registro-p1-2015-29-ir', 'color', '#123456', original);
-const published = await sync.publishSharedArchive({ 'party-futuro-nazionale': { url: 'https://example.org/fn.png', alt: 'Logo' } });
-assert.equal(published.logos, 2);
+const published = await sync.publishSharedArchive();
+assert.ok(published.updatedAt, 'La pubblicazione è confermata dal server.');
 result = await api('/api/admin');
 assert.equal(result.body.parties['party-registro-p1-2015-29-ir'].fields.color, '#123456', 'La modifica dell’amministratore è pubblicata per tutti.');
 assert.equal(result.body.parties['party-registro-p1-2015-29-ir'].fields.abbreviation, 'PD-test', 'Senza perdere le correzioni precedenti.');
@@ -86,7 +100,6 @@ local.clear(); session.clear();
 await sync.refreshSharedArchive();
 realData.refreshAdminOverrides();
 assert.equal(realData.realDatabase.parties.find(item => item.id === 'party-registro-p1-2015-29-ir').color, '#123456', 'Un nuovo giocatore vede i dati dell’amministratore.');
-assert.equal(adminStore.sharedLogos()['party-futuro-nazionale'].url, 'https://example.org/fn.png');
 assert.equal(realData.pristineRecord('parties', 'party-registro-p1-2015-29-ir').abbreviation, original.abbreviation, 'Il dato reale originale resta intatto.');
 assert.equal(await fingerprint(), before, 'Il file dei dati reali non viene mai modificato.');
 // An expired session asks for the PIN again.

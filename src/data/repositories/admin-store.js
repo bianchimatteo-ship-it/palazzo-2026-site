@@ -66,13 +66,12 @@ export function loadSharedArchive() {
 // Returns true when the copy is also written in the browser's storage.
 export function storeSharedArchive(archive) {
   if (!archive || typeof archive !== 'object') return false;
-  const copy = { version: 1, updatedAt: archive.updatedAt ?? null, parties: archive.parties ?? {}, politicians: archive.politicians ?? {}, logos: archive.logos ?? {}, addedParties: archive.addedParties ?? {}, hidden: archive.hidden ?? {}, configured: Boolean(archive.configured), fetchedAt: new Date().toISOString() };
+  const copy = { version: 1, updatedAt: archive.updatedAt ?? null, parties: archive.parties ?? {}, politicians: archive.politicians ?? {}, logos: {}, addedParties: archive.addedParties ?? {}, hidden: archive.hidden ?? {}, configured: Boolean(archive.configured), fetchedAt: new Date().toISOString() };
   memoryShared = copy;
   try { localStorage.setItem(SHARED_KEY, JSON.stringify(copy)); sharedStored = true; } catch { sharedStored = false; }
   return sharedStored;
 }
 export const sharedCopyStored = () => sharedStored;
-export const sharedLogos = () => loadSharedArchive()?.logos ?? {};
 export function sharedSessionToken() { try { return sessionStorage.getItem(SHARED_TOKEN_KEY); } catch { return null; } }
 export function setSharedSessionToken(token) { try { if (token) sessionStorage.setItem(SHARED_TOKEN_KEY, token); else sessionStorage.removeItem(SHARED_TOKEN_KEY); } catch { /* session only */ } }
 // The archive in use: the shared one (published for everyone) with this browser's newer edits on top.

@@ -1,6 +1,6 @@
 // The owner's corrections, from the Admin to the first day of a new career, on an isolated copy of the Cloudflare setup (scripts/lib/local-worker.mjs: the real worker.js, a KV and a D1
 // stand-in, the game served on port 8791 as the local preview). Nothing of the production archive, of the real accounts or of the saves of a player is read or written.
-//   1. Browser A (the owner, a clean profile): opens the owner session, corrects Futuro Nazionale (name, abbreviation, logo, colour; the old record still carries a legacy second colour that must
+//   1. Browser A (the owner, a clean profile): opens the owner session, corrects Futuro Nazionale (name, abbreviation, colour (logos are personal now, never published); the old record still carries a legacy second colour that must
 //      never show), a second party (name, colour), a politician's name, adds a party, and publishes the archive to the server.
 //   2. Browser B (another clean profile: no cache, no storage): starts, reads the published archive, creates a career in Futuro Nazionale; every screen of the career, the reload and the first
 //      week carry the corrected name and the colour; the canonical hex value is the one the owner wrote (only the presentation is adapted for contrast).
@@ -42,7 +42,7 @@ try {
       const addedId = store.addAdminParty({ officialName: 'Lista Civica di Prova', color: '#2a9d8f' }, real.realDatabase.parties);
       const canvas = document.createElement('canvas'); canvas.width = canvas.height = 96; const g = canvas.getContext('2d'); g.fillStyle = ${JSON.stringify(PRIMARY)}; g.fillRect(0, 0, 96, 96); g.fillStyle = ${JSON.stringify(SECONDARY)}; g.fillRect(0, 48, 96, 48);
       const dataUrl = canvas.toDataURL('image/png');
-      const published = await sync.publishSharedArchive({ [${JSON.stringify(FN)}]: { kind: 'data', dataUrl, alt: 'Logo di prova' } });
+      const published = await sync.publishSharedArchive();
       return { personId: person.id, personOriginal: person.fullName, dataUrl, updatedAt: published.updatedAt, addedId, status: sync.sharedSyncStatus() };
     })()`);
     assert.ok(!result.error, result.error);
@@ -67,7 +67,7 @@ try {
   }, { serverPort: 8791 });
   const stored = JSON.parse(local.kvData.get('archivio-condiviso')?.value ?? 'null');
   check(stored?.parties?.[FN]?.fields?.color === PRIMARY && !stored.parties[FN].fields.color2, 'Il server ha l’archivio con il colore scritto dal proprietario, tale e quale e nessun secondo colore.');
-  check(stored?.logos?.[FN]?.dataUrl === logoDataUrl, 'Il server ha il logo.');
+  check(Object.keys(stored?.logos ?? {}).length === 0, 'Il server non ha loghi: sono personali, restano sul dispositivo di ogni giocatore.');
   check(Object.keys(stored?.addedParties ?? {}).length === 1 && stored.addedParties[Object.keys(stored.addedParties)[0]].color2 === null, 'Il partito aggiunto è sul server, senza secondo colore.');
 
   // ---------- 2. a new browser, a new career ----------
@@ -101,7 +101,7 @@ try {
       await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu=continua]"))'));
       const menu = await evaluate(`(() => { const card = document.querySelector('.menu-continue'); return { text: card.textContent.replace(/\\s+/g, ' '), accent: getComputedStyle(card).getPropertyValue('--party-accent').trim(), img: card.querySelector('img')?.getAttribute('src') ?? null }; })()`);
       check(menu.text.includes(NEW_NAME) && !menu.text.includes('Futuro Nazionale'), `${label}: «Continua» mostra il nome corretto (${menu.text.slice(0, 120)}).`);
-      check(menu.img === logoDataUrl, `${label}: «Continua» mostra il logo pubblicato dal proprietario.`);
+      check(!menu.img, `${label}: nessun logo viene distribuito dal proprietario: «Continua» usa il segno originale del partito.`);
       await evaluate('document.querySelector("[data-menu=continua]").click(), true');
       await waitFor(() => evaluate('Boolean(document.querySelector(".page-wrap"))'));
       for (const page of SCREENS) {

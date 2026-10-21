@@ -41,6 +41,5 @@ export function userPartyLogo(party) {
   const logo = party?.logo;
   if (!logo) return null;
   if (logo.kind === 'builder') return partyLogoDataUrl({ ...logo, primary: logo.primary ?? party.color, secondary: logo.secondary, text: logo.text ?? party.abbreviation });
-  if (logo.kind === 'url' && /^https?:\/\//i.test(logo.url ?? '')) return logo.url;
   return null;
 }

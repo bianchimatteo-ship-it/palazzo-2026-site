@@ -36,7 +36,7 @@ Non ci sono cookie, pubblicità, pagamenti, strumenti di analisi o profilazione 
 Restano soltanto:
 
 - il Worker dello stesso sito (`/api/*`);
-- **loghi di partiti creati dal giocatore con un indirizzo di immagine** (`logo.kind === 'url'` in `src/ui/party-logo.js`): il browser scarica l'immagine dall'indirizzo scelto e quel sito vede l'indirizzo IP. È una scelta esplicita dell'utente; l'informativa lo segnala. Alternativa possibile: accettare solo loghi costruiti nel gioco o caricati come file;
+- **importazione di un logo da un indirizzo** (`importLogoFromUrl` in `src/data/repositories/personal-logos.js`): su scelta esplicita dell'utente il browser richiede l'immagine una volta (caricatore di immagini del browser, CORS, nessun referrer, solo https); quel sito vede l'indirizzo IP. L'immagine è copiata sul dispositivo (IndexedDB) e l'indirizzo non è conservato né richiesto di nuovo; nessun proxy. L'informativa lo segnala;
 - collegamenti alle fonti ufficiali: si aprono solo se l'utente li clicca.
 
 ## 4. Inventario degli asset
@@ -45,7 +45,7 @@ Restano soltanto:
 |---|---|---|---|---|---|---|
 | Marchio e icone «POLITICANDO» | `icons/*`, `favicon.*` | Progetto | DA FORNIRE | DA FORNIRE | — | Da confermare |
 | Logo di Futuro Nazionale | rimosso il 20/10/2026 (nessuna autorizzazione documentata): il gioco disegna un proprio segno | — | Vedi `docs/audit-diritti-asset.md` |
-| Marchi degli altri 74 partiti/movimenti | — | Nessun logo incluso: il gioco disegna un segno generato (sigla e colori) | — | — | — | Nessun asset di terzi |
+| Marchi degli altri 74 partiti/movimenti | — | Nessun logo incluso: il gioco disegna un segno generato (sigla e colori); i loghi scelti dal giocatore restano nel suo catalogo personale sul dispositivo | — | — | — | Nessun asset di terzi distribuito dal gioco |
 | Loghi/colori modificati dal proprietario (Area amministrativa) | KV `archivio-condiviso` | Il proprietario | DA FORNIRE | DA FORNIRE | Una modifica Admin **non** prova i diritti d'uso | Da verificare uno per uno |
 | «LA POLITICA 24» (nome e logo di testata) | `src/ui/illustrations.js` (`lp24Logo`), `src/data/simulation/news-rules.js` | Progetto, originale | DA FORNIRE | DA FORNIRE | Disponibilità commerciale del nome **non verificata** | Da verificare prima del rilascio |
 | Illustrazioni delle notizie e dei territori | `src/ui/illustrations.js`, `src/ui/visuals.js` | Disegnate nel codice (SVG) | Progetto | DA FORNIRE | — | Originali, da confermare |

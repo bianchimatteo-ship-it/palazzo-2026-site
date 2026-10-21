@@ -14,7 +14,7 @@
   // secret is NOT in the project: set it as a Worker secret equal to the gateway's SHARED_SECRET (npx wrangler secret put EMAIL_GATEWAY_SECRET). Until it exists nothing is sent and the service says so.
   // RETENTION_ENABLED / RETENTION_NOTICE_TESTED stay "0": the deletion of accounts inactive for 12 months is written but OFF until the notice channel is configured and tested (docs/conservazione-account.md).
   // See docs/account-email.md. PUBLIC_BASE_URL is where the links of the messages lead; ACCOUNT_EMAIL_REQUIRED "1" makes the address mandatory at registration.
-  "vars": { "EMAIL_GATEWAY_URL": "https://script.google.com/macros/s/AKfycbw4iyWEgh5H-3lEtktBHewnMqR1ldI-D6q3xvwvhOTZ4I5LYWI7g07PO751uAtXVwb6-w/exec", "PUBLIC_BASE_URL": "https://palazzo-2026-site.bianchimatteo657.workers.dev", "ACCOUNT_EMAIL_REQUIRED": "0", "RETENTION_ENABLED": "0", "RETENTION_NOTICE_TESTED": "0" },
+  "vars": { "EMAIL_GATEWAY_URL": "https://script.google.com/macros/s/AKfycbwzUfLKTPFmcorBTV6YfT6Z7u9IYaVxOwXmCogAVE5TgfE12NgFsswmWn_vLWi0J1tcNQ/exec", "PUBLIC_BASE_URL": "https://palazzo-2026-site.bianchimatteo657.workers.dev", "ACCOUNT_EMAIL_REQUIRED": "0", "RETENTION_ENABLED": "0", "RETENTION_NOTICE_TESTED": "0" },
   "assets": {
     "directory": ".",
     "binding": "ASSETS",

@@ -41,7 +41,7 @@ await withBrowser(async browser => {
   let state = await menu();
   check(state.order[0] === 'nuova', `Senza carriera la prima azione è «Nuova partita» (ordine: ${state.order.join(', ')}).`);
   check(!state.order.includes('continua') && !state.continueCard, 'Senza carriera non c’è «Continua»: nessun pannello vuoto o finto.');
-  check(JSON.stringify(state.order.slice(1)) === JSON.stringify(['carica', 'hall', 'account', 'guida', 'impostazioni']), `Poi le carriere già fatte e l’aiuto: ${state.order.slice(1).join(', ')}.`);
+  check(JSON.stringify(state.order.slice(1)) === JSON.stringify(['carica', 'hall', 'loghi', 'account', 'guida', 'impostazioni']), `Poi le carriere già fatte, i loghi personali e l’aiuto: ${state.order.slice(1).join(', ')}.`);
   check(state.groups.join('|') === 'Le tue carriere|Aiuto e opzioni', `Gruppi: ${state.groups.join(' | ')}.`);
   check(state.facts.length > 0 && state.facts.every(value => Number(value.replace(/\D/g, '')) > 0), `I numeri del gioco sono quelli dei dati caricati, mai zero o vuoti (${state.facts.join(', ')}).`);
   // every entry opens its own content as a dialog centred over the homepage (never a panel added under it), and it closes with its close button, «Annulla», Escape or a click on the backdrop

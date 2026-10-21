@@ -13,7 +13,7 @@ const statement = (sql, params = []) => ({
 });
 const d1 = { prepare: sql => statement(sql), batch: async list => Promise.all(list.map(item => item.run())), exec: async sql => sqlite.exec(sql) };
 const ORIGIN = 'https://palazzo-2026-site.bianchimatteo657.workers.dev';
-const GATEWAY = 'https://script.google.com/macros/s/AKfycbw4iyWEgh5H-3lEtktBHewnMqR1ldI-D6q3xvwvhOTZ4I5LYWI7g07PO751uAtXVwb6-w/exec';
+const GATEWAY = 'https://script.google.com/macros/s/AKfycbwzUfLKTPFmcorBTV6YfT6Z7u9IYaVxOwXmCogAVE5TgfE12NgFsswmWn_vLWi0J1tcNQ/exec';
 const SECRET = `segreto-di-prova-${Math.random().toString(16).slice(2)}`;
 const base = { ACCOUNTS: d1, ADMIN_ARCHIVE: { get: async () => null, put: async () => {}, delete: async () => {} }, ASSETS: { fetch: async () => new Response('asset') }, PUBLIC_BASE_URL: ORIGIN };
 const configured = { ...base, EMAIL_GATEWAY_URL: GATEWAY, EMAIL_GATEWAY_SECRET: SECRET };

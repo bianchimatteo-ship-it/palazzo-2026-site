@@ -10,6 +10,7 @@
 // The last one is kept per CAREER (not per slot name and not per account) together with what the copy was when it was synced (its local revision and how far it had got). A copy
 // goes online only if it descends from that: an older copy with the same name does not inherit the newest revision. Without that proof (a copy that was never linked, a record written by
 // the old protocol) nothing is uploaded automatically: the player reconciles first.
+import { hiddenOwner, releaseCareersOf } from './career-visibility.js?v=20261021-11';
 const PRODUCTION_ORIGIN = 'https://palazzo-2026-site.bianchimatteo657.workers.dev';
 const ACCOUNT_KEY = 'politicando.account.v1';
 // The old record (revision per slot and per account, with no provenance): never trusted again to authorize an upload; kept only so that nothing is erased.
@@ -105,6 +106,9 @@ export function stopUsingLocally(careerId) { const next = { ...localUse() }; del
 // Is this career's link a question for the player now? A career linked to an account is normal to continue only for that account (signed in), or after the choice «use it locally».
 // Returns null (nothing to ask: an anonymous career, the owner is signed in, already used locally) or { owner, signedIn }.
 export function careerGate(careerId, username = currentAccount()?.username ?? null) {
+  // after a logout every career of the device is reserved to the account that left: nobody else sees it, not even through «use it locally»
+  const reserved = hiddenOwner(careerId);
+  if (reserved && reserved !== normalizeUsername(username)) return { owner: reserved, signedIn: username ? normalizeUsername(username) : null, hidden: true };
   const owner = ownerOf(careerId);
   if (!owner || usedLocally(careerId)) return null;
   if (username && owner === normalizeUsername(username)) return null;
@@ -206,13 +210,13 @@ export async function deleteAccount(password, confirm) {
   if (String(password ?? '').length < PASSWORD_MIN) throw new Error(`Inserisci la password dell’account (almeno ${PASSWORD_MIN} caratteri).`);
   if (String(confirm ?? '').trim() !== 'ELIMINA') throw new Error('Per confermare scrivi ELIMINA.');
   const body = await call('/api/account', { method: 'DELETE', body: { proof: await passwordProof(account.username, password), confirm: 'ELIMINA' } });
-  write(ACCOUNT_KEY, null); write(REVISIONS_KEY, null); forgetLinksOf(account.username);
+  write(ACCOUNT_KEY, null); write(REVISIONS_KEY, null); forgetLinksOf(account.username); releaseCareersOf(account.username);
   sessionEnded('deleted');
   return body;
 }
 // After the account of `username` was deleted elsewhere (the public deletion page): this browser forgets its session if it was the same account.
 export function forgetAccountIf(username) {
-  if (currentAccount()?.username === normalizeUsername(username)) { write(ACCOUNT_KEY, null); write(REVISIONS_KEY, null); forgetLinksOf(username); sessionEnded('deleted'); return true; }
+  if (currentAccount()?.username === normalizeUsername(username)) { write(ACCOUNT_KEY, null); write(REVISIONS_KEY, null); forgetLinksOf(username); releaseCareersOf(username); sessionEnded('deleted'); return true; }
   return false;
 }
 export const accountInfo = () => call('/api/account/me');

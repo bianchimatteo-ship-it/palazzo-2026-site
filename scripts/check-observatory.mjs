@@ -168,7 +168,7 @@ assert.ok(avs.store.getState().world.polls.at(-1).results.some(row => row.partyI
 const siStart = await playerStart({ partyMode: 'existing', partyId: SI });
 assert.equal(siStart.me.id, AVS, 'Chi sceglie Sinistra Italiana è rilevato dentro AVS (una sola forza, una sola serie).');
 assert.equal(siStart.world.playerComponent?.id, SI, 'E il suo partito resta distinto: componente di AVS.');
-// The owner manages AVS like any force: colour and logo, through the shared archive, without touching the real data.
+// The owner manages AVS like any force: colour and name, through the shared archive, without touching the real data.
 const adminStore = await import(`../src/data/repositories/admin-store.js${v}`);
 adminStore.saveRecordOverride('coalitions', AVS, { color: '#12a64f' }, avsRecord);
 const edited = adminStore.applyAdminOverrides('coalitions', db.coalitions).find(item => item.id === AVS);
@@ -176,9 +176,6 @@ assert.equal(edited.color, '#12a64f', 'Il colore di AVS si corregge dall’area 
 adminStore.setRecordField('coalitions', AVS, 'color', avsRecord.color ?? '#008000', avsRecord);
 adminStore.resetRecordOverride('coalitions', AVS);
 assert.equal(adminStore.applyAdminOverrides('coalitions', db.coalitions).find(item => item.id === AVS).color, avsRecord.color, 'E si ripristina.');
-adminStore.storeSharedArchive({ parties: {}, politicians: {}, logos: { [AVS]: { url: 'https://example.org/avs.svg', alt: 'Logo AVS' } } });
-assert.equal(adminStore.sharedLogos()[AVS].url, 'https://example.org/avs.svg', 'Il logo di AVS passa dall’archivio condiviso, come quello di ogni forza.');
-adminStore.storeSharedArchive({ parties: {}, politicians: {}, logos: {} });
 assert.deepEqual(links.forceKind(avsRecord, id => db.parties.find(item => item.id === id)), { kind: 'coalition', label: 'Coalizione / lista elettorale', components: avsRecord.componentPartyIds.map(id => db.parties.find(item => item.id === id)).map(item => item.officialName ?? item.name) }, 'Il resolver dice cos’è AVS: coalizione / lista, con i suoi partiti.');
 assert.equal(links.forceKind(db.parties.find(item => item.id === SI)), null, 'Un partito registrato non ha bisogno di etichetta.');
 assert.equal(links.forceKind({ id: 'partito-utente-x', source: 'user' }).label, 'Partito creato dal giocatore');

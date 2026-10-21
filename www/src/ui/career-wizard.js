@@ -1,16 +1,16 @@
-import { residentsText } from '../core/municipal-rules.js?v=20261021-7';
-import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261021-7';
-import { LOGO_SHAPES, LOGO_SYMBOLS, partyLogoDataUrl } from './party-logo.js?v=20261021-7';
-import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261021-7';
-import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261021-7';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261021-7';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261021-7';
-import { POLL_SCENARIOS, SCENARIO_LIMITS } from '../core/poll-scenario.js?v=20261021-7';
-import { startStep, startSummary } from './start-wizard.js?v=20261021-7';
-import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261021-7';
-import { normalizeStart } from '../core/start-engine.js?v=20261021-7';
-import { legacyBanner } from './hall-view.js?v=20261021-7';
-import { formatDate } from '../core/time.js?v=20261021-7';
+import { residentsText } from '../core/municipal-rules.js?v=20261021-11';
+import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261021-11';
+import { LOGO_SHAPES, LOGO_SYMBOLS, partyLogoDataUrl } from './party-logo.js?v=20261021-11';
+import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261021-11';
+import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261021-11';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261021-11';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261021-11';
+import { POLL_SCENARIOS, SCENARIO_LIMITS } from '../core/poll-scenario.js?v=20261021-11';
+import { startStep, startSummary } from './start-wizard.js?v=20261021-11';
+import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261021-11';
+import { normalizeStart } from '../core/start-engine.js?v=20261021-11';
+import { legacyBanner } from './hall-view.js?v=20261021-11';
+import { formatDate } from '../core/time.js?v=20261021-11';
 
 const POSITIONS = ['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra'];
 
@@ -332,19 +332,18 @@ function partyStep(d, parties, logoFor, parliamentaryGroups, partyLeaderships, p
 }
 // The logo of the new party: built from shape, symbol and colours, linked from an address, or uploaded.
 export function wizardLogoPreview(d) {
-  if (d.partyLogoMode === 'url') return /^https?:\/\//i.test(d.partyLogoUrl || '') ? d.partyLogoUrl : null;
   if (d.partyLogoMode === 'upload') return d.partyLogoPreview ?? null;
   return partyLogoDataUrl({ shape: d.partyLogoShape, symbol: d.partyLogoSymbol, primary: d.partyColor, text: d.partyAbbreviation });
 }
 function logoBuilder(d) {
   const mode = d.partyLogoMode ?? 'builder';
   const preview = wizardLogoPreview(d);
-  const modes = [['builder', 'Crea con forme e simboli'], ['url', 'Da un indirizzo'], ['upload', 'Carica un file']].map(([id, label]) => '<label class="' + (mode === id ? 'active' : '') + '"><input type="radio" name="partyLogoMode" value="' + id + '" ' + (mode === id ? 'checked' : '') + ' />' + label + '</label>').join('');
+  const modes = [['builder', 'Crea con forme e simboli'], ['upload', 'Carica un file']].map(([id, label]) => '<label class="' + (mode === id ? 'active' : '') + '"><input type="radio" name="partyLogoMode" value="' + id + '" ' + (mode === id ? 'checked' : '') + ' />' + label + '</label>').join('');
   const builder = mode === 'builder' ? '<label>Forma<select name="partyLogoShape">' + Object.entries(LOGO_SHAPES).map(([id, item]) => '<option value="' + id + '" ' + (d.partyLogoShape === id ? 'selected' : '') + '>' + esc(item.label) + '</option>').join('') + '</select></label><label>Simbolo<select name="partyLogoSymbol">' + Object.entries(LOGO_SYMBOLS).map(([id, item]) => '<option value="' + id + '" ' + (d.partyLogoSymbol === id ? 'selected' : '') + '>' + esc(item.label) + '</option>').join('') + '</select></label>' : '';
-  const url = mode === 'url' ? '<label class="wizard-full-field">Indirizzo dell’immagine<input type="url" name="partyLogoUrl" value="' + val(d, 'partyLogoUrl') + '" placeholder="https://…/logo.png" /></label>' : '';
+  const url = '';
   // After choosing the file the editor opens in its slot: crop, ratio, zoom, transparency, dominant colour.
-  const upload = mode === 'upload' ? '<label class="wizard-full-field logo-admin-upload">File SVG, PNG, JPEG o WebP (resta in questo browser)<input type="file" accept="image/svg+xml,image/png,image/jpeg,image/webp" data-wizard-logo-upload /></label>' + (d.partyLogoError ? '<small class="menu-error">' + esc(d.partyLogoError) + '</small>' : '') + '<div class="wizard-full-field" data-logo-editor-slot></div>' : '';
-  return '<section class="wizard-section wizard-logo-section" aria-label="Logo del partito"><div class="policy-heading"><strong>Logo del partito</strong><small>Anteprima e strumenti per crearlo, collegarlo o caricarlo.</small></div><div class="wizard-logo-builder"><div class="wizard-logo-preview" data-wizard-logo-preview>' + (preview ? '<img src="' + esc(preview) + '" alt="Anteprima del logo" />' : '<span>Logo</span>') + '</div><div class="wizard-logo-controls"><div class="segmented" role="group" aria-label="Tipo di logo">' + modes + '</div><div class="wizard-form-grid">' + builder + url + upload + '</div><small>I simboli disponibili sono segni grafici generici, diversi dagli emblemi dei partiti esistenti. Il logo è un dato dell’utente.</small></div></div></section>';
+  const upload = mode === 'upload' ? '<label class="wizard-full-field logo-admin-upload">File PNG, JPEG o WebP (resta su questo dispositivo, nel tuo catalogo dei loghi)<input type="file" accept="image/png,image/jpeg,image/webp" data-wizard-logo-upload /></label>' + (d.partyLogoError ? '<small class="menu-error">' + esc(d.partyLogoError) + '</small>' : '') + '<div class="wizard-full-field" data-logo-editor-slot></div>' : '';
+  return '<section class="wizard-section wizard-logo-section" aria-label="Logo del partito"><div class="policy-heading"><strong>Logo del partito</strong><small>Anteprima e strumenti per crearlo o caricarlo.</small></div><div class="wizard-logo-builder"><div class="wizard-logo-preview" data-wizard-logo-preview>' + (preview ? '<img src="' + esc(preview) + '" alt="Anteprima del logo" />' : '<span>Logo</span>') + '</div><div class="wizard-logo-controls"><div class="segmented" role="group" aria-label="Tipo di logo">' + modes + '</div><div class="wizard-form-grid">' + builder + url + upload + '</div><small>I simboli disponibili sono segni grafici generici, diversi dagli emblemi dei partiti esistenti. Il logo è un dato dell’utente.</small></div></div></section>';
 }
 function summaryStep(d, parties, level, parliamentaryGroups, place = null, pollView = null) {
   const party = d.partyMode === 'existing' ? parties.find(p => p.id === d.partyId) : null;
