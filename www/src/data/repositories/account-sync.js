@@ -27,7 +27,7 @@ const write = (key, value) => { try { if (value === null) globalThis.localStorag
 
 // Where the API lives: on the Worker (and its local preview) it is the same site; GitHub Pages uses the Worker.
 // The installed app (Capacitor) runs on its own origin (capacitor://localhost, https://localhost): the account service is always the published Worker.
-const isNativeApp = () => globalThis.Capacitor?.isNativePlatform?.() === true || globalThis.location?.protocol === 'capacitor:';
+export const isNativeApp = () => globalThis.Capacitor?.isNativePlatform?.() === true || globalThis.location?.protocol === 'capacitor:';
 // Where the public pages of the game live (privacy, terms, account deletion): the same site on the web, the published site inside the app.
 export function publicSiteBase() {
   const location = globalThis.location;

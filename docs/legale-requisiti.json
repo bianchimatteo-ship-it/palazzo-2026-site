@@ -41,9 +41,9 @@
     },
     {
       "id": "email-fornitore",
-      "title": "Fornitore dell'invio e-mail (recupero password, verifica indirizzo)",
+      "title": "Fornitore dell’invio e-mail: Google (Gmail tramite Google Apps Script)",
       "section": "privacy.html §3 e §6",
-      "why": "Il recupero via e-mail è implementato ma non attivo: RESEND_API_KEY, EMAIL_FROM e il dominio mittente verificato non sono configurati e nessuna e-mail reale è stata inviata. Prima di attivarlo serve il contratto/DPA del fornitore, l'indicazione del trasferimento extra-SEE e l'aggiornamento dell'informativa (§6); poi una prova reale (docs/account-email.md). Finché non è attivo il testo dice che non si inviano e-mail.",
+      "why": "L’invio passa da un gateway Google Apps Script che spedisce dall’account Gmail del titolare. Quando il segreto EMAIL_GATEWAY_SECRET viene configurato, il paragrafo «E-mail e recupero della password» dell’informativa (oggi: il servizio non invia e-mail) va aggiornato con il fornitore, il suo ruolo e gli eventuali trasferimenti extra-SEE. Condizionato all’attivazione.",
       "required": false,
       "status": "mancante",
       "provided": null

@@ -95,6 +95,7 @@ try {
   const started = Date.now();
   await send('Page.navigate', { url: `${ORIGIN}/` });
   await waitFor(() => has('.main-menu'), 20000, 'menu principale');
+  await waitFor(() => has('.menu-new:not([disabled])'), 20000, 'Nuova partita utilizzabile (dati di partenza arrivati)');
   ok(failed.has('coalitions.json'), 'La collezione delle coalizioni è stata fatta fallire.');
   ok(/Alcuni dati reali non sono disponibili:[\s\S]*coalizioni/.test(await text()), 'Boot con una collezione reale fallita: il gioco si apre e dice cosa manca.');
   ok((await text()).includes('Prima di iniziare: il tuo account'), 'Primo avvio reale: parte il benvenuto.');
@@ -139,7 +140,7 @@ try {
   await pause(600);
   ok(!(await text()).includes('Prima di iniziare: il tuo account'), 'Avvio locale persistente: dopo il ricaricamento non torna il benvenuto account.');
   ok(!(await has('.data-alert')), 'Ricaricando, le collezioni tornate disponibili non sono più segnalate.');
-  await tap('[data-menu="nuova"]', { scroll: true });
+  await tap('[data-menu="nuova"]:not([disabled])', { scroll: true });
   await waitFor(() => has('.career-wizard'), 10000, 'wizard da “Nuova carriera”');
   ok(!(await text()).includes('Prima di iniziare'), 'Nuova carriera senza passare di nuovo dall’account.');
 
@@ -206,7 +207,7 @@ try {
   for (const [id, title] of [['carica', 'Carica partita'], ['account', 'Account e salvataggi online'], ['impostazioni', 'Impostazioni'], ['guida', 'Come giocare'], ['hall', 'Hall of Fame']]) {
     await tap(`[data-menu="${id}"]`, { scroll: true });
     await waitFor(() => has('.menu-popup'), 5000, `popup ${title}`);
-    const box = await evaluate(`(() => { const r = document.querySelector('.menu-popup').getBoundingClientRect(); const body = document.querySelector('.menu-popup-body'); const under = document.querySelector('.menu-column [data-menu="nuova"]'); const c = under.getBoundingClientRect(); const hit = document.elementFromPoint(c.left + c.width / 2, Math.max(2, Math.min(c.top + c.height / 2, innerHeight - 2))); return { w: Math.round(r.width), h: Math.round(r.height), vw: innerWidth, vh: innerHeight, sideways: document.documentElement.scrollWidth > innerWidth + 1, scroll: getComputedStyle(body).overflowY, label: document.querySelector('.menu-popup').getAttribute('aria-label'), covered: Boolean(hit?.closest('.menu-popup-backdrop')), hit: hit?.outerHTML.slice(0, 80) ?? null, c: [Math.round(c.left), Math.round(c.top)] }; })()`);
+    const box = await evaluate(`(() => { const r = document.querySelector('.menu-popup').getBoundingClientRect(); const body = document.querySelector('.menu-popup-body'); const under = document.querySelector('.menu-column [data-menu="nuova"]:not([disabled])'); const c = under.getBoundingClientRect(); const hit = document.elementFromPoint(c.left + c.width / 2, Math.max(2, Math.min(c.top + c.height / 2, innerHeight - 2))); return { w: Math.round(r.width), h: Math.round(r.height), vw: innerWidth, vh: innerHeight, sideways: document.documentElement.scrollWidth > innerWidth + 1, scroll: getComputedStyle(body).overflowY, label: document.querySelector('.menu-popup').getAttribute('aria-label'), covered: Boolean(hit?.closest('.menu-popup-backdrop')), hit: hit?.outerHTML.slice(0, 80) ?? null, c: [Math.round(c.left), Math.round(c.top)] }; })()`);
     ok(box.label === title && box.w === box.vw && box.h <= box.vh && !box.sideways && ['auto', 'scroll'].includes(box.scroll), `Su telefono «${title}» è un popup che sta nello schermo, scorre da sé e non allarga la pagina (${JSON.stringify(box)}).`);
     ok(box.covered, `Su telefono sotto il popup di «${title}» la homepage non riceve i tocchi (${JSON.stringify(box)}).`);
     await tap('.menu-popup-foot [data-menu-close]');

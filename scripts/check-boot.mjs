@@ -39,9 +39,14 @@ const settle = async () => { for (let i = 0; i < 40; i++) await new Promise(reso
 await settle();
 const real = await import(`../src/data/repositories/real-data.js${v}`);
 
-// 1. The game is open, with what arrived.
+// 1. The game is open, with what arrived. The first screen comes first: the starting collections are in and «Nuova partita» is usable, while the institutions and the heavy documents, which the
+// first screen does not need, wait (they start a moment later, or at once when a career is opened).
 assert.ok(root.innerHTML.includes('main-menu'), 'Con una collezione mancante il gioco si apre comunque.');
 assert.ok(!root.innerHTML.includes('non è stato possibile leggere'), 'Nessuna schermata di errore bloccante.');
+for (const name of ['parties', 'politicalMovements', 'twoPerThousand', 'realPolls']) assert.ok(real.isRealCollectionLoaded(name), `Subito disponibile per la prima schermata: ${name}.`);
+assert.ok(/class="menu-new"(?![^>]*disabled)/.test(root.innerHTML), '«Nuova partita» è utilizzabile appena i dati di partenza sono arrivati.');
+assert.ok(!real.isRealCollectionLoaded('government') && !real.isRealCollectionLoaded('electoralGeography'), 'Istituzioni e documenti pesanti non competono con la prima schermata: partono dopo.');
+for (let i = 0; i < 5; i++) await settle(); // (the deferred load: about 2.3 seconds without requestIdleCallback)
 for (const name of ['parties', 'politicalMovements', 'twoPerThousand', 'realPolls', 'government', 'parliamentaryGroups']) assert.ok(real.isRealCollectionLoaded(name), `Collezione caricata nonostante gli errori: ${name}.`);
 // 2. Only what is really missing is named, the integrity check still holds.
 const failures = real.realDataFailures();

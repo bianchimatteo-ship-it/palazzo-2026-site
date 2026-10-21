@@ -47,8 +47,8 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   for (const vp of [{ name: 'desktop', width: 1280, height: 900, mobile: false }, { name: 'smartphone', width: 390, height: 780, mobile: true }]) {
     await viewport(vp.width, vp.height, vp.mobile);
     await goto('');
-    await wait(() => has('[data-menu="nuova"]'));
-    await click('[data-menu="nuova"]');
+    await wait(() => has('[data-menu="nuova"]:not([disabled])'));
+    await click('[data-menu="nuova"]:not([disabled])');
     await wait(() => has('.career-wizard'));
     await setField('.career-wizard [name="firstName"]', 'Prova'); await setField('.career-wizard [name="lastName"]', 'Filtro');
     await setField('.career-wizard [name="birthDate"]', '1985-04-12', 'change'); await setField('.career-wizard [name="previousProfession"]', 'Insegnante');

@@ -440,15 +440,35 @@ async function writeSave(db, account, slot, { current, info, body, reason, lastR
 }
 const conflictAnswer = async (request, db, account, slot, extra = {}) => json(request, { error: 'Questo salvataggio è stato aggiornato da un altro dispositivo.', conflict: true, ...extra, remote: remoteOf(await currentRow(db, account.id, slot)) }, 409);
 
-// ---------- e-mail (recovery of the password) ----------
-// The real sending goes through a provider chosen with Worker settings (Resend: RESEND_API_KEY as a secret, EMAIL_FROM as a variable); nothing is simulated. Without them nothing is sent
-// and the service says so (/api/account/status). `env.EMAIL_SEND` is a hook only for tests that run the Worker in process: a Worker's secrets and variables are strings, so it cannot be set in production.
-const mailConfigured = env => typeof env.EMAIL_SEND === 'function' || Boolean(env.RESEND_API_KEY && env.EMAIL_FROM);
+// ---------- e-mail (verification, recovery of the password, notice of inactivity) ----------
+// Messages leave through a Google Apps Script gateway (a web app that sends from the owner's Gmail): EMAIL_GATEWAY_URL is a plain variable, EMAIL_GATEWAY_SECRET a Worker secret equal to the
+// gateway's SHARED_SECRET. Nothing is simulated: a message counts as sent only when the gateway answers 200 with `{ "ok": true }`. Without both settings nothing is sent and the service says so
+// (/api/account/status). `env.EMAIL_SEND` is a hook only for tests that run the Worker in process: a Worker's secrets and variables are strings, so it cannot be set in production.
+// The gateway only accepts the subjects listed here (its allow-list must contain exactly these); the secret is never logged or put in an error message.
+export const MAIL_SUBJECTS = Object.freeze({
+  verify: 'POLITICANDO 2026 — conferma il tuo indirizzo email',
+  reset: 'POLITICANDO 2026 — nuova password',
+  retention: 'POLITICANDO 2026: il tuo account sarà eliminato per inattività'
+});
+const GATEWAY_TIMEOUT_MS = 15_000; // (EMAIL_GATEWAY_TIMEOUT_MS only lets a test shorten it)
+const mailConfigured = env => typeof env.EMAIL_SEND === 'function' || Boolean(/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(String(env.EMAIL_GATEWAY_URL ?? '')) && env.EMAIL_GATEWAY_SECRET);
+const mailError = (message, code) => Object.assign(new Error(message), { code });
 async function sendMail(env, { to, subject, text }) {
-  if (typeof env.EMAIL_SEND === 'function') return env.EMAIL_SEND({ to, subject, text, from: env.EMAIL_FROM ?? 'prova@example.invalid' });
-  if (!env.RESEND_API_KEY || !env.EMAIL_FROM) throw Object.assign(new Error('Invio email non configurato.'), { code: 'email-not-configured' });
-  const response = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' }, body: JSON.stringify({ from: env.EMAIL_FROM, to: [to], subject, text }) });
-  if (!response.ok) throw Object.assign(new Error(`Il provider email ha risposto ${response.status}.`), { code: 'email-provider' });
+  if (typeof env.EMAIL_SEND === 'function') return env.EMAIL_SEND({ to, subject, text });
+  if (!mailConfigured(env)) throw mailError('Invio email non configurato.', 'email-not-configured');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), Number(env.EMAIL_GATEWAY_TIMEOUT_MS) || GATEWAY_TIMEOUT_MS);
+  let response;
+  try {
+    // Google answers the POST with a redirect to the page that holds the script's output: fetch follows it (and reads the result with a GET, as Apps Script web apps expect).
+    response = await fetch(env.EMAIL_GATEWAY_URL, { method: 'POST', redirect: 'follow', signal: controller.signal, headers: { 'content-type': 'application/json' }, body: JSON.stringify({ secret: env.EMAIL_GATEWAY_SECRET, action: 'sendMail', to, subject, text }) });
+  } catch (error) {
+    throw mailError(error?.name === 'AbortError' ? 'Il gateway email non ha risposto in tempo.' : 'Il gateway email non è raggiungibile.', 'email-gateway-unreachable');
+  } finally { clearTimeout(timer); }
+  if (!response.ok) throw mailError(`Il gateway email ha risposto ${response.status}.`, 'email-gateway-http');
+  let body;
+  try { body = JSON.parse(await response.text()); } catch { throw mailError('Risposta del gateway email non valida.', 'email-gateway-invalid'); }
+  if (!body || typeof body !== 'object' || body.ok !== true) throw mailError('Il gateway email non ha confermato l’invio.', 'email-gateway-rejected');
 }
 // Everything of one account, in one D1 batch (all or nothing): saves, their history, the address, tokens, sessions, the notice of inactivity and the account. Used by the deletion the player asks for
 // and by the retention of inactive accounts (which is switched off, see below).
@@ -520,7 +540,7 @@ export async function runRetention(env, now = Date.now()) {
   for (const row of rows.filter(item => item.action === 'avvisare').slice(0, RETENTION.batch)) {
     const deadline = new Date(now + RETENTION.noticeDays * 86_400_000).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
     try {
-      await sendMail(env, { to: row.email, subject: 'POLITICANDO 2026: il tuo account sarà eliminato per inattività', text: `Ciao ${row.username},\n\nil tuo account di POLITICANDO 2026 non è usato da oltre ${RETENTION.inactivityMonths} mesi. Se non lo usi entro il ${deadline}, l’account e i salvataggi online verranno eliminati.\n\nPer tenerlo basta aprire il gioco${base ? ` (${base})` : ''}, accedere e giocare o salvare una partita.\n\nSe non vuoi più l’account puoi anche eliminarlo subito dal gioco.\n\nPOLITICANDO 2026 è una simulazione.` });
+      await sendMail(env, { to: row.email, subject: MAIL_SUBJECTS.retention, text: `Ciao ${row.username},\n\nil tuo account di POLITICANDO 2026 non è usato da oltre ${RETENTION.inactivityMonths} mesi. Se non lo usi entro il ${deadline}, l’account e i salvataggi online verranno eliminati.\n\nPer tenerlo basta aprire il gioco${base ? ` (${base})` : ''}, accedere e giocare o salvare una partita.\n\nSe non vuoi più l’account puoi anche eliminarlo subito dal gioco.\n\nPOLITICANDO 2026 è una simulazione.` });
     } catch { continue; }
     await db.prepare('INSERT OR REPLACE INTO retention_notices (user_id, sent_at, activity_at) VALUES (?, ?, ?)').bind(row.id, new Date(now).toISOString(), row.lastActivity).run();
     warned++;
@@ -556,7 +576,7 @@ async function useToken(db, token, purpose) {
 async function sendVerification(env, request, db, userId, email, emailNorm) {
   const token = await issueToken(db, userId, 'verify', emailNorm, VERIFY_TOKEN_HOURS * 3_600_000);
   const link = `${publicBase(env, request)}/?verifica-email=${token}`;
-  await sendMail(env, { to: email, subject: 'POLITICANDO 2026 — conferma il tuo indirizzo email', text: `Hai chiesto di collegare questo indirizzo al tuo account di POLITICANDO 2026.\n\nPer confermarlo apri questo collegamento (vale ${VERIFY_TOKEN_HOURS} ore e si usa una volta sola):\n${link}\n\nL’indirizzo serve soltanto a recuperare la password. Se non sei stato tu, ignora questo messaggio.` });
+  await sendMail(env, { to: email, subject: MAIL_SUBJECTS.verify, text: `Hai chiesto di collegare questo indirizzo al tuo account di POLITICANDO 2026.\n\nPer confermarlo apri questo collegamento (vale ${VERIFY_TOKEN_HOURS} ore e si usa una volta sola):\n${link}\n\nL’indirizzo serve soltanto a recuperare la password. Se non sei stato tu, ignora questo messaggio.` });
 }
 
 async function handleAccounts(request, env, url) {
@@ -617,7 +637,7 @@ async function handleAccounts(request, env, url) {
     if (row && mail) {
       try {
         const token = await issueToken(db, row.userId, 'reset', emailNorm, RESET_TOKEN_MINUTES * 60_000);
-        await sendMail(env, { to: row.email, subject: 'POLITICANDO 2026 — nuova password', text: `Hai chiesto di scegliere una nuova password per il tuo account di POLITICANDO 2026.\n\nApri questo collegamento (vale ${RESET_TOKEN_MINUTES} minuti e si usa una volta sola):\n${publicBase(env, request)}/?reimposta-password=${token}\n\nSe non sei stato tu, ignora questo messaggio: la password non cambia.` });
+        await sendMail(env, { to: row.email, subject: MAIL_SUBJECTS.reset, text: `Hai chiesto di scegliere una nuova password per il tuo account di POLITICANDO 2026.\n\nApri questo collegamento (vale ${RESET_TOKEN_MINUTES} minuti e si usa una volta sola):\n${publicBase(env, request)}/?reimposta-password=${token}\n\nSe non sei stato tu, ignora questo messaggio: la password non cambia.` });
       } catch { /* the answer is the same: nobody learns whether the address exists or the sending failed */ }
     }
     return json(request, answer);

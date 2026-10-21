@@ -5,7 +5,7 @@
 //     the phrase book (src/data/i18n/en-*.js): exact phrases, phrases with numbers (`#`) or free parts (`{}`), and the numbers, currency and dates in English form.
 //     Proper names (people, parties, places, official denominations) are never in the phrase book: they stay as they are. A phrase that is not in the book stays Italian, never wrong.
 // Nothing here touches a career: the language is a view of the same data.
-import { saveSetting } from './settings.js?v=20261021-6';
+import { saveSetting } from './settings.js?v=20261021-7';
 
 export const LANGUAGES = Object.freeze([['it', 'Italiano', 'it-IT'], ['en', 'English', 'en-GB']]);
 const SETTINGS_KEY = 'politicando.settings.v1';
@@ -43,10 +43,13 @@ function compileTemplate(it, en) {
   // a free part is a short stretch of text (a name, a label), so a long text never goes through a costly match
   const source = parts.map(piece => piece === null ? '(.{1,120}?)' : piece.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/#/g, '(\\d[\\d.]*(?:,\\d+)?)')).join('');
   const literals = parts.filter(piece => piece !== null).flatMap(piece => piece.split('#')).filter(piece => piece.length > 1);
-  return { re: new RegExp(`^${source}$`), en, literals };
+  // the text before the first free part or number: templates are looked up by it (and the most specific one, the one with most fixed text, is tried first)
+  const lead = (parts[0] ?? '').split('#')[0];
+  return { re: new RegExp(`^${source}$`), en, literals, lead, weight: literals.reduce((sum, piece) => sum + piece.length, 0) };
 }
 export function installBook(pairs, keys = {}) {
-  book = book ?? { exact: new Map(), lower: new Map(), templates: [], keys: {} };
+  book = book ?? { exact: new Map(), lower: new Map(), templates: [], keys: {}, index: null };
+  book.index = null;
   for (const [it, en] of pairs) {
     const key = norm(it);
     if (/\{\}/.test(key)) book.templates.push(compileTemplate(key, en));
@@ -78,6 +81,20 @@ function englishDates(text) {
     .replace(new RegExp(`${L}(\\d{1,2}) (${short})${R}`, 'gu'), (m, d, month) => `${d} ${SHORT_MONTHS[month]}`);
 }
 
+// The templates worth trying for a text: those that start with the same words (found by their first letters), then the ones that start with a free part; each group from the most specific
+// (the most fixed text) to the least. Built once, the first time a template is needed.
+function candidates(key) {
+  if (!book.index) {
+    const sorted = [...book.templates].sort((a, b) => b.weight - a.weight);
+    const byLead = new Map(), open = [];
+    for (const template of sorted) {
+      if (template.lead.length >= 3) { const head = template.lead.slice(0, 3); if (!byLead.has(head)) byLead.set(head, []); byLead.get(head).push(template); } else open.push(template);
+    }
+    book.index = { byLead, open };
+  }
+  const near = (book.index.byLead.get(key.slice(0, 3)) ?? []).filter(template => key.startsWith(template.lead));
+  return near.length ? near.concat(book.index.open) : book.index.open;
+}
 const cache = new Map();
 function lookup(text, depth = 0) {
   const key = norm(text);
@@ -94,13 +111,15 @@ function lookup(text, depth = 0) {
     if (hit !== undefined) { let i = 0; return hit.replace(/#/g, () => values[i++] ?? '#'); }
   }
   if (key.length > 360) return null;
-  for (const template of book.templates) {
+  for (const template of candidates(key)) {
     if (!template.literals.every(piece => key.includes(piece))) continue;
     const match = key.match(template.re);
     if (!match) continue;
-    let i = 1;
-    // the free parts are translated too when they are phrases of the book (roles, labels); names stay as they are
-    return template.en.replace(/\{\}|#/g, token => { const value = match[i++] ?? ''; return token === '#' ? value : (depth < 2 ? translatePiece(value, depth + 1) : value); });
+    // the free parts are translated too when they are phrases of the book (roles, labels); names stay as they are.
+    // `{}` and `#` take the free parts and the numbers in order; `{2}` names one by its position (when the English puts them in another order).
+    const parts = match.slice(1);
+    let next = 0;
+    return template.en.replace(/\{(\d)\}|\{\}|#/g, (token, position) => { const value = (position ? parts[Number(position) - 1] : parts[next++]) ?? ''; return token === '#' ? value : (depth < 2 ? translatePiece(value, depth + 1) : value); });
   }
   return null;
 }
@@ -200,7 +219,7 @@ export function watchTree(root) {
 let loading = null;
 export function loadBook() {
   if (book?.loaded) return Promise.resolve(book);
-  loading ??= import('../data/i18n/index.js?v=20261021-6').then(module => { module.install(installBook); book.loaded = true; return book; });
+  loading ??= import('../data/i18n/index.js?v=20261021-7').then(module => { module.install(installBook); book.loaded = true; return book; });
   return loading;
 }
 // At start: English needs its book before the first render, so the module waits for it (top level await); Italian loads nothing.

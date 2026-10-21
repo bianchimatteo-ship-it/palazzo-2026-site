@@ -60,6 +60,11 @@ export async function createCareerInPage({ evaluate, version }, { party = 'party
     const real = await import('/src/data/repositories/real-data.js?v=${version}');
     await real.loadRealDatabase();
     await real.loadRealCollections(['parties', 'politicalMovements', 'parliamentaryGroups']);
+    // The game loads the institutions and the heavy documents a moment after its first screen (src/main.js): a career made straight from the page waits for them, as the creator of a
+    // career does (it asks for them and waits), so that it starts with the Government, the electoral map and the calendars of the data set.
+    const waitUntil = async (check, ms = 30000) => { const t0 = Date.now(); while (!check() && Date.now() - t0 < ms) await new Promise(resolve => setTimeout(resolve, 100)); };
+    await waitUntil(() => ['government', 'politicians', 'parliamentaryGroups', 'localElections', 'electoralGeography'].every(name => real.isRealCollectionLoaded(name)));
+    await new Promise(resolve => setTimeout(resolve, 400));
     const party = real.realDatabase.parties.find(item => item.id === ${JSON.stringify(party)});
     store.createCareer({ firstName: ${JSON.stringify(name[0])}, lastName: ${JSON.stringify(name[1])}, birthDate: '1980-05-05', gender: 'donna', region: ${JSON.stringify(region)}, municipality: 'Siena', municipalityCode: '052032', provinceCode: '052', provinceName: 'Siena', provinceType: 'Provincia', previousProfession: 'Insegnante', initialLevel: ${JSON.stringify(level)}, partyMode: 'existing', partyId: party.id, parliamentStartMode: 'real-context', parliamentaryGroupId: ${JSON.stringify(group)}, policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 } }, real.realDatabase.parties, real.realDatabase.parliamentaryGroups);
     for (let i = 0; i < ${weeks}; i++) store.advanceTurn(1);

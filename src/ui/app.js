@@ -1,63 +1,63 @@
-import { onLanguageChange, setLanguage, watchTree } from '../core/i18n.js?v=20261021-6';
-import { pendingCelebration, pendingOutcome } from '../core/celebration.js?v=20261021-6';
-import { fullDate, formatDate } from '../core/time.js?v=20261021-6';
-import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20261021-6';
-import * as accountApi from '../data/repositories/account-sync.js?v=20261021-6';
-import { accountApiBase, commitRevision, currentAccount, deleteAccount, probeAccountService, deleteCloudSave, downloadSave, listCloudSaves, login, logout, register, slotForCareer } from '../data/repositories/account-sync.js?v=20261021-6';
-import { createSyncEngine } from '../data/repositories/sync-queue.js?v=20261021-6';
-import { setPartyLogoResolver } from './person-marks.js?v=20261021-6';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261021-6';
-import { isRealCollectionLoaded, loadRealCollections, optionalDocumentStatus, loadRealCollectionsSettled, pristineRecord, realDataFailures, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20261021-6';
-import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20261021-6';
-import { renderAdminPanel } from './admin-panel.js?v=20261021-6';
-import { sharedLogos } from '../data/repositories/admin-store.js?v=20261021-6';
-import { closeSharedSession, hasSharedSession, isAdminVerified, migrateDataLogos, openSharedSession, publicationState, rotateSharedCredential, publishLogoFile, publishSharedArchive, refreshSharedArchive, removeLogoFile, sha256Of, sharedApiUrl, sharedLogoSrc, sharedSyncStatus, verifySharedSession } from '../data/repositories/admin-sync.js?v=20261021-6';
-import { deleteLocalLogo, exportLogoConfiguration, fetchLogoFromUrl, getLocalLogo, importLogoConfiguration, listLocalLogos, markLogoPublication, probeImage, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20261021-6';
-import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20261021-6';
-import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20261021-6';
-import { PARTY_LINK_COLLECTIONS, forceKind, isCoalitionList, politicalForces } from '../data/repositories/party-links.js?v=20261021-6';
-import { renderLogoAdmin } from './logo-admin.js?v=20261021-6';
-import { chosenPlace, makeCareerDraft, pollScenarioOf, removePartyCriterion, renderCareerWizard, togglePartyOrientation, wizardLogoPreview } from './career-wizard.js?v=20261021-6';
-import { userPartyLogo } from './party-logo.js?v=20261021-6';
-import { CAREER_STEPS, validateWizardStep } from '../core/career-rules.js?v=20261021-6';
-import { renderElectionsHub } from './elections-hub.js?v=20261021-6';
-import { renderQuirinale } from './presidency-view.js?v=20261021-6';
-import { renderCareerPage } from './career-page.js?v=20261021-6';
-import { renderPartyPage } from './party-page.js?v=20261021-6';
-import { renderAgendaPage } from './agenda-page.js?v=20261021-6';
-import { HEMICYCLE_DEFAULTS, renderHemicycle } from './hemicycle-view.js?v=20261021-6';
-import { renderFeaturedMembers } from './members-view.js?v=20261021-6';
-import { drawLogoEditor, exportLogo, measureBackground, panFromDrag, renderLogoEditor } from './logo-editor-view.js?v=20261021-6';
-import { createEditorState } from '../core/logo-editor.js?v=20261021-6';
-import { renderParliamentPage } from './parliament-mode.js?v=20261021-6';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261021-6';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261021-6';
-import { chooseStart } from '../core/start-engine.js?v=20261021-6';
-import { renderHeadquarters, renderNewsroom } from './game-mode.js?v=20261021-6';
-import { newsMedia, newsPopupHtml, popupItem } from './news-view.js?v=20261021-6';
-import { articleScript, bulletinScript, onVoiceChange, speakLines, stopVoice, syncVoiceDom, voiceStatus, voiceTarget } from './radio-voice.js?v=20261021-6';
-import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20261021-6';
-import { playerRoles } from '../core/roles.js?v=20261021-6';
-import { accordWarning, budgetPreview, designFromForm, planFromForm, policyFields, policyPreview, projectPreview, rangeText, requestFromForm } from './policy-mode.js?v=20261021-6';
-import { areaOf } from '../data/simulation/policy-rules.js?v=20261021-6';
-import { attachChartInteractions, hideChartTip } from './polls-mode.js?v=20261021-6';
-import { renderObservatory } from './observatory-view.js?v=20261021-6';
-import { glyph } from './visuals.js?v=20261021-6';
-import { identityVars, partyChip, partyIdentity, topbarParty } from './party-identity.js?v=20261021-6';
-import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20261021-6';
-import { renderFinancePage } from './finance-mode.js?v=20261021-6';
-import { PLAN_MAX, planConfirmLines, planKey, renderPlanTray } from './plan-view.js?v=20261021-6';
-import { STAFF_TASK_BY_ID } from '../data/simulation/staff-rules.js?v=20261021-6';
-import { renderContactsPanel } from './organization-mode.js?v=20261021-6';
-import { renderRealLaws } from './real-laws.js?v=20261021-6';
-import { realLawArea } from '../core/society-engine.js?v=20261021-6';
-import { canManageParliament } from '../core/parliament-engine.js?v=20261021-6';
-import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, TOUR_STEPS } from './menu.js?v=20261021-6';
-import { setForceColorOverrides } from './political-colors.js?v=20261021-6';
-import { renderTutorialCard, tutorialAction, tutorialContext, tutorialState, TUTORIAL_STEPS } from './tutorial.js?v=20261021-6';
-import { storage as localStorageApi } from '../core/storage.js?v=20261021-6';
-import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20261021-6';
-import { playSound } from './sound.js?v=20261021-6';
+import { onLanguageChange, setLanguage, watchTree } from '../core/i18n.js?v=20261021-7';
+import { pendingCelebration, pendingOutcome } from '../core/celebration.js?v=20261021-7';
+import { fullDate, formatDate } from '../core/time.js?v=20261021-7';
+import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20261021-7';
+import * as accountApi from '../data/repositories/account-sync.js?v=20261021-7';
+import { accountApiBase, commitRevision, currentAccount, deleteAccount, probeAccountService, deleteCloudSave, downloadSave, listCloudSaves, login, logout, register, slotForCareer } from '../data/repositories/account-sync.js?v=20261021-7';
+import { createSyncEngine } from '../data/repositories/sync-queue.js?v=20261021-7';
+import { setPartyLogoResolver } from './person-marks.js?v=20261021-7';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261021-7';
+import { isRealCollectionLoaded, loadRealCollections, optionalDocumentStatus, loadRealCollectionsSettled, pristineRecord, realDataFailures, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20261021-7';
+import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20261021-7';
+import { renderAdminPanel } from './admin-panel.js?v=20261021-7';
+import { sharedLogos } from '../data/repositories/admin-store.js?v=20261021-7';
+import { closeSharedSession, hasSharedSession, isAdminVerified, migrateDataLogos, openSharedSession, publicationState, rotateSharedCredential, publishLogoFile, publishSharedArchive, refreshSharedArchive, removeLogoFile, sha256Of, sharedApiUrl, sharedLogoSrc, sharedSyncStatus, verifySharedSession } from '../data/repositories/admin-sync.js?v=20261021-7';
+import { deleteLocalLogo, exportLogoConfiguration, fetchLogoFromUrl, getLocalLogo, importLogoConfiguration, listLocalLogos, markLogoPublication, probeImage, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20261021-7';
+import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20261021-7';
+import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20261021-7';
+import { PARTY_LINK_COLLECTIONS, forceKind, isCoalitionList, politicalForces } from '../data/repositories/party-links.js?v=20261021-7';
+import { renderLogoAdmin } from './logo-admin.js?v=20261021-7';
+import { chosenPlace, makeCareerDraft, pollScenarioOf, removePartyCriterion, renderCareerWizard, togglePartyOrientation, wizardLogoPreview } from './career-wizard.js?v=20261021-7';
+import { userPartyLogo } from './party-logo.js?v=20261021-7';
+import { CAREER_STEPS, validateWizardStep } from '../core/career-rules.js?v=20261021-7';
+import { renderElectionsHub } from './elections-hub.js?v=20261021-7';
+import { renderQuirinale } from './presidency-view.js?v=20261021-7';
+import { renderCareerPage } from './career-page.js?v=20261021-7';
+import { renderPartyPage } from './party-page.js?v=20261021-7';
+import { renderAgendaPage } from './agenda-page.js?v=20261021-7';
+import { HEMICYCLE_DEFAULTS, renderHemicycle } from './hemicycle-view.js?v=20261021-7';
+import { renderFeaturedMembers } from './members-view.js?v=20261021-7';
+import { drawLogoEditor, exportLogo, measureBackground, panFromDrag, renderLogoEditor } from './logo-editor-view.js?v=20261021-7';
+import { createEditorState } from '../core/logo-editor.js?v=20261021-7';
+import { renderParliamentPage } from './parliament-mode.js?v=20261021-7';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261021-7';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261021-7';
+import { chooseStart } from '../core/start-engine.js?v=20261021-7';
+import { renderHeadquarters, renderNewsroom } from './game-mode.js?v=20261021-7';
+import { newsMedia, newsPopupHtml, popupItem } from './news-view.js?v=20261021-7';
+import { articleScript, bulletinScript, onVoiceChange, speakLines, stopVoice, syncVoiceDom, voiceStatus, voiceTarget } from './radio-voice.js?v=20261021-7';
+import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20261021-7';
+import { playerRoles } from '../core/roles.js?v=20261021-7';
+import { accordWarning, budgetPreview, designFromForm, planFromForm, policyFields, policyPreview, projectPreview, rangeText, requestFromForm } from './policy-mode.js?v=20261021-7';
+import { areaOf } from '../data/simulation/policy-rules.js?v=20261021-7';
+import { attachChartInteractions, hideChartTip } from './polls-mode.js?v=20261021-7';
+import { renderObservatory } from './observatory-view.js?v=20261021-7';
+import { glyph } from './visuals.js?v=20261021-7';
+import { identityVars, partyChip, partyIdentity, topbarParty } from './party-identity.js?v=20261021-7';
+import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20261021-7';
+import { renderFinancePage } from './finance-mode.js?v=20261021-7';
+import { PLAN_MAX, planConfirmLines, planKey, renderPlanTray } from './plan-view.js?v=20261021-7';
+import { STAFF_TASK_BY_ID } from '../data/simulation/staff-rules.js?v=20261021-7';
+import { renderContactsPanel } from './organization-mode.js?v=20261021-7';
+import { renderRealLaws } from './real-laws.js?v=20261021-7';
+import { realLawArea } from '../core/society-engine.js?v=20261021-7';
+import { canManageParliament } from '../core/parliament-engine.js?v=20261021-7';
+import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, TOUR_STEPS } from './menu.js?v=20261021-7';
+import { setForceColorOverrides } from './political-colors.js?v=20261021-7';
+import { renderTutorialCard, tutorialAction, tutorialContext, tutorialState, TUTORIAL_STEPS } from './tutorial.js?v=20261021-7';
+import { storage as localStorageApi } from '../core/storage.js?v=20261021-7';
+import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20261021-7';
+import { playSound } from './sound.js?v=20261021-7';
 
 // The destinations of the game, by theme. On computers the sidebar lists the eight and opens the pages of the current one; on phones the
 // bar below keeps Home · Elezioni · Sondaggi · Istituzioni one tap away and “Altro” gathers everything else (the same pages, nothing twice).
@@ -159,7 +159,10 @@ const dataLabel = name => DATA_LABELS[name] ?? name;
 const WIZARD_TERRITORY = ['territorialUnits', 'municipalities'];
 const WIZARD_COLLECTIONS = [...WIZARD_TERRITORY, 'parties', 'politicalMovements', 'coalitions', 'parliamentaryGroups', 'groupMemberships', 'chambers', 'partyLeaderships', 'politicalFigures', 'politicians'];
 
-export function mountApp(root, store, { retryData = null, refreshReference = null } = {}) {
+export function mountApp(root, store, { retryData = null, refreshReference = null, bootPhase = () => 'ready', needBackground = null, popupsReady = () => true } = {}) {
+  // The data the first screen does not need (institutions, heavy documents) starts when the browser is idle; a career being created or entered asks for it at once.
+  const askBackground = () => { try { return Promise.resolve(needBackground?.()).catch(() => null); } catch { return Promise.resolve(); } };
+  const dataLoading = () => bootPhase() === 'loading';
   let wizard = null;
   // Loading of the wizard's real data: 'loading', 'ready' or 'error' (with the collections that failed).
   const wizardData = { status: 'idle', failed: [] };
@@ -450,7 +453,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   const menuContext = () => {
     const collections = realDatabase.manifest?.collections ?? {};
     return {
-      hallIdentity,
+      hallIdentity, loading: dataLoading(),
       hasCareer: store.hasCareer(), meta: store.currentMeta(), identity: store.hasCareer() ? careerIdentity(store.getState()) : null, identityOf: metaIdentity, hall: store.hallOfFame(), slots: store.listSlots().filter(slot => !careerBlocked(slot.careerId)).map(slot => menu.view === 'carica' ? { ...slot, info: store.slotInfo(slot.id) } : slot), versions: menu.view === 'carica' ? store.localVersions().filter(item => !careerBlocked(item.careerId)) : [], protectedCount: store.listSlots().filter(slot => careerBlocked(slot.careerId)).length + (menu.view === 'carica' ? store.localVersions().filter(item => careerBlocked(item.careerId)).length : 0), saving: store.saveStatus(), lastSaved: store.getLastSaved(), unsaved: store.hasUnsavedChanges(), settings, error: menu.error, account, gate: gateOf(),
       stats: [[realDatabase.manifest?.politiciansInOffice ?? collections.politicians ?? 0, 'parlamentari in carica'], [collections.laws ?? 0, 'atti della XIX legislatura'], [collections.twoPerThousand ?? 0, 'partiti reali nel 2×1000'], [collections.parliamentaryGroups ?? 0, 'gruppi parlamentari']]
     };
@@ -653,7 +656,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       return;
     }
     // The weekly pop-up of the newsroom: the week is looked at once (the save remembers it), never while something else asks for the player's attention and never if the player turned it off.
-    if (!newsPopup && !wizard && !reportOpen && !pendingConfirm && state.game) {
+    if (!newsPopup && !wizard && !reportOpen && !pendingConfirm && state.game && popupsReady()) {
       const items = store.weeklyNewsPopup({ enabled: settings.newsPopup === 'on' && newsPopupHoldWeek !== state.game.week.index });
       if (items.length) newsPopup = { items: items.map(popupItem) };
     }
@@ -935,10 +938,12 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   };
   // Creates the career from the wizard (the real Government in office is loaded first, so every career finds it).
   // Entering a career (Continua, a save, an import, a new career) always starts from the Home, on phones and computers.
-  const enterHome = async () => { setHash('panoramica', true); globalThis.scrollTo?.(0, 0); await ensurePageData('panoramica'); };
+  const enterHome = async () => { askBackground(); refreshContacts(); setHash('panoramica', true); globalThis.scrollTo?.(0, 0); await ensurePageData('panoramica'); };
   const finishWizard = async () => {
     try {
       try { await loadRealCollections(['government','politicians','parliamentaryGroups']); store.setReferenceGovernment(referenceGovernmentSpec()); } catch { /* without the real Government the career starts without one */ }
+      // The calendars, the electoral map and the population are part of the new career: they are waited for (at most 20 seconds; without them the game uses its declared fallbacks).
+      await Promise.race([askBackground(), new Promise(resolve => setTimeout(resolve, 20000))]);
       // The career in progress is kept, and the browser's confirmation waited for, before the new one takes its place: if it cannot be kept nothing is replaced.
       await store.preserveCurrent();
       const player = store.createCareer(wizard,realParties(),realDatabase.parliamentaryGroups ?? []);
@@ -968,6 +973,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     render(store.getState(), store.getLastSaved());
   };
   const openNewGame = async (legacyId = '') => {
+    if (dataLoading()) return;
+    askBackground();
     menu.open = false;
     wizard = makeCareerDraft(store.startDate(), store.getState().dataset.parties, store.hallOfFame());
     // Starting from the legacy of a concluded career (the Hall of Fame keeps it).
@@ -1020,6 +1027,9 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
         closeMenuPopup(); playSound('click'); render(store.getState(), store.getLastSaved()); return;
       }
       menu.error = '';
+      // A new career starts from the real data (parties, polls, two per thousand): until it has arrived «Nuova partita» does nothing (the button is disabled; this covers any other way to reach it).
+      // A career already saved is not held back: it carries its own world, and the pages it opens ask for the collections they need.
+      if (dataLoading() && (data.menu === 'nuova' || data.menuAction === 'start-local')) return;
       try {
         if (data.menu === 'continua' && gateOf()) { menu.view = 'account'; account.mode = 'login'; menu.reveal = true; playSound('click'); }
         else if (data.menu === 'continua') { menu.open = false; playSound('confirm'); await enterHome(); }
@@ -2424,7 +2434,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   render(store.getState(),store.getLastSaved());
   refreshLocalLogos();
   ensurePageData(initialPage,true);
-  refreshContacts();
+  // The real parliamentarians of a career already saved are loaded now, as before; without a career the menu does not need them (a career that is created or entered asks for them when it opens).
+  if (store.hasCareer()) refreshContacts();
   // main.js redraws after the data loaded in the background (or the notice of what is missing).
   return { refresh: () => render(store.getState(), store.getLastSaved()) };
 }

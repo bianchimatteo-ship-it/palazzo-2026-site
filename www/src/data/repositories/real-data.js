@@ -2,8 +2,8 @@
 // retained for exports and validation, but the browser never downloads it.
 export const REAL_DATA_ASSET_VERSION = '2026-10-14.1-ce89d48f72';
 
-import { applyAdminOverrides } from './admin-store.js?v=20261021-6';
-import { displayCase, withDisplayNames } from './name-case.js?v=20261021-6';
+import { applyAdminOverrides } from './admin-store.js?v=20261021-7';
+import { displayCase, withDisplayNames } from './name-case.js?v=20261021-7';
 
 export let realDatabase = Object.freeze({});
 // Untouched copies of what the files contain, so owner overrides can be re-layered or reverted.
@@ -73,11 +73,20 @@ function freezeRecords(records) {
 const dataUrl = file => { const url = new URL(`../real/${file}`, import.meta.url); url.searchParams.set('v', REAL_DATA_ASSET_VERSION); return url; };
 // Every real data file, for the offline cache: the optional documents too (the cache asks for them one by one and a file that is not there is skipped, never an error for the rest).
 export const realDataUrls = () => ['manifest.json', ...Object.values(collectionFiles), ...Object.values(documentFiles), ...Object.values(optionalDocumentFiles)].map(file => dataUrl(file).href);
+// A request that never answers must not leave the screen waiting for ever: every file has a time limit, and a late answer is an error the game shows (with «Riprova»), not a hang.
+export const DATA_FILE_TIMEOUT_MS = 45000;
 async function fetchJson(file) {
   const url = dataUrl(file);
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`Dati reali non disponibili (${response.status}: ${file}).`);
-  return response.json();
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), DATA_FILE_TIMEOUT_MS) : null;
+  try {
+    const response = await fetch(url, controller ? { signal: controller.signal } : undefined);
+    if (!response.ok) throw new Error(`Dati reali non disponibili (${response.status}: ${file}).`);
+    return await response.json();
+  } catch (error) {
+    if (controller?.signal.aborted) throw new Error(`Tempo scaduto nel caricamento di ${file}: controlla la connessione e riprova.`);
+    throw error;
+  } finally { if (timer) clearTimeout(timer); }
 }
 
 export async function loadRealDatabase() {

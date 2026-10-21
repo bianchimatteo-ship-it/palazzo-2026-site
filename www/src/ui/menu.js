@@ -1,15 +1,15 @@
 // Main menu, how-to-play, settings, save slots and the end-of-week report.
-import { renderTutorialInvite } from './tutorial.js?v=20261021-6';
-import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261021-6';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261021-6';
-import { formatDate } from '../core/time.js?v=20261021-6';
-import { illustration } from './illustrations.js?v=20261021-6';
-import { glyph } from './visuals.js?v=20261021-6';
-import { identityMark, identityVars } from './party-identity.js?v=20261021-6';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261021-6';
-import { hallView } from './hall-view.js?v=20261021-6';
-import { esc, signed } from './charts.js?v=20261021-6';
-import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261021-6';
+import { renderTutorialInvite } from './tutorial.js?v=20261021-7';
+import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261021-7';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261021-7';
+import { formatDate } from '../core/time.js?v=20261021-7';
+import { illustration } from './illustrations.js?v=20261021-7';
+import { glyph } from './visuals.js?v=20261021-7';
+import { identityMark, identityVars } from './party-identity.js?v=20261021-7';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261021-7';
+import { hallView } from './hall-view.js?v=20261021-7';
+import { esc, signed } from './charts.js?v=20261021-7';
+import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261021-7';
 
 const when = iso => { try { return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch { return ''; } };
 // The actions of the opening screen, in order of importance: starting a career and resuming one are the two main ones (drawn apart, below); then what concerns the
@@ -82,8 +82,9 @@ function languageSwitch(settings) {
   return `<div class="menu-lang" role="group" aria-label="Lingua / Language" data-no-translate><span class="menu-lang-icon" aria-hidden="true">${glyph('globe', 16)}</span>${[['it', 'Italiano'], ['en', 'English']].map(([id, label]) => `<button type="button" class="${current === id ? 'active' : ''}" data-setting-key="language" data-setting-value="${id}" aria-pressed="${current === id}" lang="${id}">${label}</button>`).join('')}</div>`;
 }
 // Starting a career: the main action of the screen, with what it leads to (all of it chosen in the new-game steps).
-function newCareerCard() {
-  return `<button class="menu-new" data-menu="nuova"><span class="menu-new-icon">${glyph('flag', 24)}</span><span class="menu-new-body"><strong>Nuova partita</strong><small>Scegli dove partire e crea il tuo politico in cinque passaggi.</small></span><span class="menu-new-go" aria-hidden="true">${glyph('steady', 22)}</span></button>`;
+// While the index of the real data and the starting collections are still arriving (`loading`), the card is there but waits: it is not an action yet, and says why.
+function newCareerCard(loading = false) {
+  return `<button class="menu-new" data-menu="nuova"${loading ? ' disabled aria-disabled="true" aria-busy="true"' : ''}><span class="menu-new-icon">${glyph('flag', 24)}</span><span class="menu-new-body"><strong>Nuova partita</strong><small>${loading ? 'Carico i dati reali…' : 'Scegli dove partire e crea il tuo politico in cinque passaggi.'}</small></span><span class="menu-new-go" aria-hidden="true">${glyph('steady', 22)}</span></button>`;
 }
 
 // Why the game kept a copy aside, in words.
@@ -256,7 +257,7 @@ export function renderMainMenu(menu, context) {
       <h1 class="menu-brand"><img class="brand-logo menu-logo" src="icons/logo-politicando-640.webp" srcset="icons/logo-politicando-240.webp 240w, icons/logo-politicando-640.webp 640w" sizes="(max-width:700px) 120px, 200px" width="200" height="200" alt="POLITICANDO 2026" decoding="async" /></h1>
       ${languageSwitch(settings)}
       <p class="menu-tagline">Una carriera nella politica italiana</p>
-      ${newCareerCard()}
+      ${newCareerCard(context.loading)}
       ${hasCareer ? continueCard(meta, lastSaved, unsaved, identity, context.gate) : ''}${hasCareer && !context.gate && context.account?.sync ? syncStatusLine(context.account.sync) : ''}
       ${MENU_GROUPS.map(group).join('')}
       <p class="menu-footnote">Dati reali verificati · simulazione dichiarata · ${context.account?.user ? `salvataggi online come ${esc(context.account.user.username)}` : 'salvataggi nel browser, online con un account'}</p>

@@ -87,19 +87,20 @@ await withBrowser(async browser => {
     await evaluate(`new Promise(resolve => { const done = () => resolve(true); const request = indexedDB.deleteDatabase('politicando-vault'); request.onsuccess = request.onerror = request.onblocked = done; })`);
     await browser.goto();
     await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu], .main-menu"))'));
+    await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu=nuova]:not([disabled])"))')); // (it is usable once the starting data has arrived)
     await pause(400);
     const start = await evaluate(`[...document.querySelectorAll('[data-menu]')].map(item => item.dataset.menu)`);
     assert.ok(start.includes('nuova'), `La schermata iniziale ha «Nuova partita» (${start}).`);
     await audit(`schermata iniziale ${width}px`);
     // the «Nuova partita» button in particular: every state
-    const index = await evaluate(`(() => { const button = document.querySelector('[data-menu="nuova"]'); button.setAttribute('data-audit', 'nuova'); return 'nuova'; })()`);
+    const index = await evaluate(`(() => { const button = document.querySelector('[data-menu="nuova"]:not([disabled])'); button.setAttribute('data-audit', 'nuova'); return 'nuova'; })()`);
     for (const pseudo of [[], ['hover'], ['focus', 'focus-visible'], ['active'], ['hover', 'active'], ['hover', 'focus']]) {
       const measured = await stateRatio(index, pseudo);
       assert.ok(measured, '«Nuova partita» si misura.');
       assert.ok(measured.ratio >= 4.5, `«Nuova partita» a ${width}px, stato ${pseudo.join('+') || 'normale'}: ${measured.ratio}:1 (serve 4.5:1).`);
     }
     // its outline when it has the keyboard focus must show
-    const focus = await evaluate(`(() => { const button = document.querySelector('[data-menu="nuova"]'); button.focus(); const s = getComputedStyle(button); return { outline: s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) >= 2, shadow: s.boxShadow !== 'none' }; })()`);
+    const focus = await evaluate(`(() => { const button = document.querySelector('[data-menu="nuova"]:not([disabled])'); button.focus(); const s = getComputedStyle(button); return { outline: s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) >= 2, shadow: s.boxShadow !== 'none' }; })()`);
     assert.ok(focus.outline || focus.shadow, '«Nuova partita» ha un contorno visibile con la tastiera.');
   }
 
@@ -107,8 +108,8 @@ await withBrowser(async browser => {
   await viewport(390, 844, true);
   await evaluate(`localStorage.setItem('politicando.onboarding.v1', JSON.stringify({ account: true, tour: 'done', localStart: true })), true`);
   await browser.goto();
-  await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu=nuova]"))'));
-  await evaluate(`document.querySelector('[data-menu="nuova"]')?.click(), true`);
+  await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu=nuova]:not([disabled])"))'));
+  await evaluate(`document.querySelector('[data-menu="nuova"]:not([disabled])')?.click(), true`);
   await waitFor(() => evaluate('Boolean(document.querySelector(".career-wizard"))'));
   await pause(400);
   await audit('procedura di nuova partita 390px');

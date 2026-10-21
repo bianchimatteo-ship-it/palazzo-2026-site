@@ -51,8 +51,8 @@ else await withBrowser(async browser => {
   assert.ok(!regions.regionalSource || regions.regionalSource.every(value => value === undefined || value === 'simulation'), `Le quote regionali restano simulate (${regions.regionalSource}).`);
   // the wizard says the same day: no birth date after it
   await goto();
-  await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu=nuova]"))'));
-  await evaluate('document.querySelector("[data-menu=nuova]").click(), true');
+  await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu=nuova]:not([disabled])"))'));
+  await evaluate('document.querySelector("[data-menu=nuova]:not([disabled])").click(), true');
   await waitFor(() => evaluate('Boolean(document.querySelector(".career-wizard"))'));
   const max = await waitFor(() => evaluate('document.querySelector("input[name=birthDate]")?.max || ""'));
   assert.equal(max, SCENARIO, `La procedura di creazione non accetta una nascita dopo il ${SCENARIO} (${max}).`);

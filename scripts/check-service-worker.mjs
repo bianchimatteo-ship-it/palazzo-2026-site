@@ -56,6 +56,28 @@ let result = await run('src/main.js?v=1');
 assert.ok(result.handled && (await cachedUrls()).includes('GET /palazzo/src/main.js'), 'I file del gioco (GET) passano dal service worker e restano in cache.');
 await run('src/data/real/parties.json?v=1');
 
+// A file named with a build stamp that is already kept is served without asking the network (a return visit costs no round trip per file); a new stamp is fetched and replaces the old copy;
+// the page and anything without a stamp stay network first; a stamped file that is not kept yet still comes from the network.
+{
+  let before = network.length;
+  result = await run('src/main.js?v=1');
+  assert.ok(result.handled && network.length === before, 'Un file con timbro già in cache è servito senza rete.');
+  before = network.length;
+  result = await run('src/main.js?v=2');
+  assert.ok(network.length === before + 1, 'Un timbro nuovo va in rete.');
+  assert.ok((await cachedUrls()).filter(url => url === 'GET /palazzo/src/main.js').length === 1, 'E sostituisce la copia del timbro vecchio (una sola copia per file).');
+  before = network.length;
+  result = await run('src/ui/never-seen.js?v=2');
+  assert.ok(network.length === before + 1, 'Un file con timbro non ancora conservato viene dalla rete.');
+  await run('index.html');
+  before = network.length;
+  result = await run('index.html');
+  assert.ok(network.length === before + 1, 'La pagina (senza timbro) resta network first: una nuova versione si vede subito.');
+  before = network.length;
+  await run('index.html?build-check=123');
+  assert.ok(network.length === before + 1, 'Il controllo della versione va sempre in rete.');
+  await run('src/main.js?v=1'); // (leave the cache as the following checks expect it)
+}
 // Writes and the API: never handled, never cached.
 for (const method of ['POST', 'PUT', 'DELETE', 'PATCH']) {
   result = await run('api/saves/c-prova', { method, body: method === 'DELETE' ? undefined : '{}', headers: { 'content-type': 'application/json' } });

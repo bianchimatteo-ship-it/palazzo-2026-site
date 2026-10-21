@@ -51,7 +51,7 @@ async function wizard(browser) {
   await setLang(evaluate);
   await goto(); await wait(() => evaluate('Boolean(document.querySelector(".main-menu"))'));
   await pause(500);
-  await evaluate(`document.querySelector('[data-menu="nuova"]').click(); true`); await pause(2500);
+  await evaluate(`document.querySelector('[data-menu="nuova"]:not([disabled])').click(); true`); await pause(2500);
   add('wizard/0', await evaluate(COLLECT));
   for (let step = 1; step <= 8; step++) {
     const moved = await evaluate(`(() => { const b = [...document.querySelectorAll('[data-wizard-action="next"], [data-wizard-action="continue"], [data-wizard-goto]')].find(x => !x.disabled && x.getBoundingClientRect().height > 0 && /Avanti|Continua|Next|Scegli|Prosegui/.test(x.textContent)); if (!b) return false; b.click(); return true; })()`);

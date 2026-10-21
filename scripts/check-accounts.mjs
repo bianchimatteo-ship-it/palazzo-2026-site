@@ -201,7 +201,7 @@ assert.equal((await api('/api/saves', { token })).body.saves[0].revision, 19);
 // ---------- 2b. e-mail verified by a link, recovery of the password ----------
 // The Worker is run with a transport that records the messages (the real one is a provider set with secrets: see docs/account-email.md); nothing is sent anywhere.
 const outbox = [];
-const mailEnv = { ...env, EMAIL_SEND: async message => { outbox.push(message); }, EMAIL_FROM: 'POLITICANDO <prova@example.invalid>', PUBLIC_BASE_URL: ORIGIN };
+const mailEnv = { ...env, EMAIL_SEND: async message => { outbox.push(message); }, PUBLIC_BASE_URL: ORIGIN };
 const linkOf = (message, name) => new URL(/https?:\/\/\S+/.exec(message.text)[0]).searchParams.get(name);
 const mailApi = (path, options = {}) => api(path, { environment: mailEnv, ...options });
 const newWindow = () => sqlite.prepare("DELETE FROM attempts WHERE key LIKE 'recupero%'").run();

@@ -1,6 +1,6 @@
-import { realDatabase } from '../data/repositories/real-data.js?v=20261021-6';
-import { BASIS_LABELS, electionListOf, groupAffiliation, groupLabel, inOffice, politicianAffiliation } from '../data/repositories/party-links.js?v=20261021-6';
-import { personMark } from './visuals.js?v=20261021-6';
+import { realDatabase } from '../data/repositories/real-data.js?v=20261021-7';
+import { BASIS_LABELS, electionListOf, groupAffiliation, groupLabel, inOffice, politicianAffiliation } from '../data/repositories/party-links.js?v=20261021-7';
+import { personMark } from './visuals.js?v=20261021-7';
 
 const esc = (value = '') => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
 const pageSize = 48;
@@ -46,7 +46,7 @@ export function renderPoliticianArchive(filters, { status = {}, logoFor = () => 
   const noPartyFacts = '<p class="catalog-footnote">Partito, gruppo parlamentare (con l’eventuale componente del Misto) e lista d’elezione sono relazioni distinte. Il partito attuale viene solo da un collegamento dell’amministratore o da un’iscrizione documentata: il gruppo non è mai un partito e la lista del 2022 non è il partito attuale. Il logo accanto al nome è quello del partito attuale; senza partito documentato resta l’iniziale della Camera.</p>';
   const pagination = visible.length < filtered.length ? `<div class="catalog-pagination"><span>Mostrati ${visible.length} di ${filtered.length}</span><button type="button" data-catalog-more="politicianPage">Mostra altri 48</button></div>` : `<div class="catalog-pagination"><span>${filtered.length} risultati</span></div>`;
   const current = people.filter(person => inOffice(person)).length;
-  return `<div class="catalog-shell"><div class="catalog-summary"><strong>${current} parlamentari in carica</strong><span>Deputati e senatori della XIX legislatura · snapshot ${esc(realDatabase.manifest.snapshotDate)}${people.length > current ? ` · ${people.length - current} con mandato concluso` : ''}</span></div>${controls}<div class="catalog-result-count" aria-live="polite">${filtered.length} profili corrispondenti</div><div class="catalog-list">${rows || '<div class="catalog-empty">Nessun politico corrisponde ai filtri selezionati. Rimuovi un filtro o prova un altro nome.</div>'}</div>${filtered.length ? pagination : ''}${noPartyFacts}<p class="catalog-footnote">Ogni profilo collega alla scheda istituzionale d’origine. I dati anagrafici mancanti restano vuoti.</p></div>`;
+  return `<div class="catalog-shell"><div class="catalog-summary"><strong>${current} parlamentari in carica</strong><span>Deputati e senatori della XIX legislatura · snapshot ${esc(realDatabase.manifest?.snapshotDate)}${people.length > current ? ` · ${people.length - current} con mandato concluso` : ''}</span></div>${controls}<div class="catalog-result-count" aria-live="polite">${filtered.length} profili corrispondenti</div><div class="catalog-list">${rows || '<div class="catalog-empty">Nessun politico corrisponde ai filtri selezionati. Rimuovi un filtro o prova un altro nome.</div>'}</div>${filtered.length ? pagination : ''}${noPartyFacts}<p class="catalog-footnote">Ogni profilo collega alla scheda istituzionale d’origine. I dati anagrafici mancanti restano vuoti.</p></div>`;
 }
 
 export function renderPoliticianProfile(id, { loading = false, logoFor = () => null } = {}) {

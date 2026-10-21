@@ -1,6 +1,6 @@
-import { realDatabase } from '../data/repositories/real-data.js?v=20261021-6';
-import { BASIS_LABELS, ENTITY_KIND_LABELS, POLITICAL_POSITIONS, electedOnListsOf, entityKind, linkedPoliticians, politicianAffiliation } from '../data/repositories/party-links.js?v=20261021-6';
-import { personMark } from './visuals.js?v=20261021-6';
+import { realDatabase } from '../data/repositories/real-data.js?v=20261021-7';
+import { BASIS_LABELS, ENTITY_KIND_LABELS, POLITICAL_POSITIONS, electedOnListsOf, entityKind, linkedPoliticians, politicianAffiliation } from '../data/repositories/party-links.js?v=20261021-7';
+import { personMark } from './visuals.js?v=20261021-7';
 
 const KIND_LABELS = ENTITY_KIND_LABELS;
 const kindOf = entityKind;
@@ -61,7 +61,7 @@ export function renderPartyArchive(filters, { status = {}, logoFor = () => null 
   }).join('');
   const empty = '<div class="catalog-empty">Nessun partito o movimento corrisponde ai filtri selezionati. Rimuovi un filtro o prova un’altra ricerca.</div>';
   const pagination = visible.length < results.length ? `<div class="catalog-pagination"><span>Mostrati ${visible.length} di ${results.length}</span><button type="button" data-catalog-more="partyPage">Mostra altri 18</button></div>` : `<div class="catalog-pagination"><span>${results.length} risultati</span></div>`;
-  return `<div class="catalog-shell"><div class="catalog-summary"><strong>${all.length} partiti e movimenti</strong><span>Registro, partecipazioni documentate e fonti ufficiali · snapshot ${esc(realDatabase.manifest.snapshotDate)}</span></div>${toolbar}<div class="catalog-result-count" aria-live="polite">${results.length} risultati</div><div class="organization-list">${cards || empty}</div>${results.length ? pagination : ''}<p class="catalog-footnote">Partiti, movimenti, coalizioni e liste elettorali restano entità separate; i gruppi parlamentari sono nell’archivio del Parlamento. La collocazione è la classificazione sintetica del documento del 24/09/2026 (per liste e coalizioni indica l’aggregazione). I valori assenti non sono dedotti.</p></div>`;
+  return `<div class="catalog-shell"><div class="catalog-summary"><strong>${all.length} partiti e movimenti</strong><span>Registro, partecipazioni documentate e fonti ufficiali · snapshot ${esc(realDatabase.manifest?.snapshotDate)}</span></div>${toolbar}<div class="catalog-result-count" aria-live="polite">${results.length} risultati</div><div class="organization-list">${cards || empty}</div>${results.length ? pagination : ''}<p class="catalog-footnote">Partiti, movimenti, coalizioni e liste elettorali restano entità separate; i gruppi parlamentari sono nell’archivio del Parlamento. La collocazione è la classificazione sintetica del documento del 24/09/2026 (per liste e coalizioni indica l’aggregazione). I valori assenti non sono dedotti.</p></div>`;
 }
 
 function filterParties(source, filters) {

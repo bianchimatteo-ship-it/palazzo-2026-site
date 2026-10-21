@@ -16,6 +16,8 @@ const cacheable = request => {
   return url.origin === self.location.origin && !url.pathname.includes('/api/') && !request.headers.has('authorization');
 };
 
+const versioned = request => { const { searchParams } = new URL(request.url); return searchParams.has('v') && !searchParams.has('build-check'); };
+
 // One copy per file: a newer build (?v=...) replaces the older one instead of piling up.
 async function remember(request, response) {
   const url = new URL(request.url);
@@ -33,6 +35,13 @@ self.addEventListener('fetch', event => {
   // Anything else (other methods, the API, other sites) goes straight to the network, as without the service worker.
   if (!cacheable(request)) return;
   event.respondWith((async () => {
+    // A file named with a build stamp (?v=...) never changes under that name (a new build has a new stamp, and `remember` drops the old copy): once kept it is served without asking the network,
+    // so a returning visit does not pay one round trip per file (about 170), on a slow connection or none. The page itself, the service worker and everything without a stamp stay network first.
+    if (versioned(request)) {
+      const cache = await caches.open(CACHE);
+      const kept = await cache.match(request);
+      if (kept) return kept;
+    }
     try {
       const response = await fetch(request);
       event.waitUntil(remember(request, response.clone()));

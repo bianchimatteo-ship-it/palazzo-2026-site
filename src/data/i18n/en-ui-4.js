@@ -961,5 +961,6 @@ export const PHRASES = [
   ["Fondi", "Funds"],
   ["Bilancio", "Budget"],
   ["Elezioni e campagna", "Elections and campaign"],
-  ["Finanze.", "Finances."]
+  ["Finanze.", "Finances."],
+  ["Carico i dati reali…", "Loading the real data…"]
 ];

@@ -11,7 +11,6 @@ const { startLocalWorker } = await import('./lib/local-worker.mjs');
 const local = await startLocalWorker({ port: 8791 });
 const outbox = [];
 local.env.EMAIL_SEND = async message => { outbox.push(message); };
-local.env.EMAIL_FROM = 'POLITICANDO <prova@example.invalid>';
 local.env.PUBLIC_BASE_URL = local.origin;
 let ipCounter = 10;
 const registerApi = async (username, password) => {
@@ -84,7 +83,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   assert.equal(await persisted(), careerWeek, 'La carriera non è stata cancellata dal browser.');
   // After the logout the career of that account is not «Continua la partita» as usual: the menu asks, and it does not go into the game on its own.
   await goto('');
-  await wait(() => has('[data-menu="nuova"]'));
+  await wait(() => has('[data-menu="nuova"]:not([disabled])'));
   assert.ok(await lockedCard('legacy.a'), 'Dopo l’uscita la carriera collegata all’account non compare come «Continua la partita» normale.');
   assert.equal(await plainContinue(), false, 'Nessun pulsante «Continua» che entri nella partita.');
   assert.match(await text('.menu-continue.is-locked'), /legacy\.a/, 'Il gioco dice a quale account appartiene.');
@@ -132,7 +131,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   assert.match(await text('.account-message'), /legacy\.a/, 'Il gioco dice a quale account è collegata.');
   assert.equal(saves('legacy.b').length, 0, 'Nel secondo account non è arrivato nulla.');
   await goto('');
-  await wait(() => has('[data-menu="nuova"]'));
+  await wait(() => has('[data-menu="nuova"]:not([disabled])'));
   assert.ok(await lockedCard('legacy.a'), 'Con un altro account la carriera dell’account precedente non è «Continua la partita» normale.');
   assert.match(await text('.menu-continue.is-locked'), /legacy\.b/, 'Dice anche con quale account sei collegato.');
   assert.equal(await plainContinue(), false);
@@ -174,7 +173,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
 
   // ---------- 5b. «Usa localmente»: the career linked to an account goes on here without being synced; an anonymous career is never asked anything ----------
   await goto('');
-  await wait(() => has('[data-menu="nuova"]'));
+  await wait(() => has('[data-menu="nuova"]:not([disabled])'));
   assert.ok(await lockedCard('legacy.b'), 'Da disconnesso la carriera ora collegata a legacy.b è bloccata.');
   const bCopy = saves('legacy.b')[0];
   await click('[data-menu-action="gate-local"]');
