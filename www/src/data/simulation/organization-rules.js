@@ -35,7 +35,7 @@ export const ELECTED_CONTRIBUTION = 0.1;   // quota dell'indennità versata dagl
 
 export const TREASURY_LABELS = Object.freeze({
   quote: 'Quote degli iscritti', contributi: 'Contributi degli eletti', duepermille: '2×1000 (stima di gioco)', donazioni: 'Donazioni',
-  sedi: 'Sedi e sezioni', personale: 'Personale', comunicazione: 'Comunicazione', formazione: 'Eventi e formazione', campagne: 'Campagne', prestiti: 'Prestiti agli eletti'
+  sedi: 'Sedi e sezioni', personale: 'Personale', comunicazione: 'Comunicazione', formazione: 'Eventi e formazione', campagne: 'Campagne', prestiti: 'Prestiti agli eletti', sostegno: 'Sostegno a eletti e candidati'
 });
 
 // Priorities the national leadership can give to the party budget (rank 3+ or founder).

@@ -1,6 +1,6 @@
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261020-2';
-import { CONGRESS_CYCLE_WEEKS, FIRST_CONGRESS_WEEKS, MEMBERSHIP, MEMBERSHIP_FEE, ORGANS, PARTY_PRIORITIES, SECTION_WEEKLY_COST, TREASURY_LABELS } from '../data/simulation/organization-rules.js?v=20261020-2';
-import { PARTY_INVESTMENTS } from '../data/simulation/career-rules.js?v=20261020-2';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261021-1';
+import { CONGRESS_CYCLE_WEEKS, FIRST_CONGRESS_WEEKS, MEMBERSHIP, MEMBERSHIP_FEE, ORGANS, PARTY_PRIORITIES, SECTION_WEEKLY_COST, TREASURY_LABELS } from '../data/simulation/organization-rules.js?v=20261021-1';
+import { PARTY_INVESTMENTS } from '../data/simulation/career-rules.js?v=20261021-1';
 
 // The party as an organisation: members, sections, bodies, cohesion, conflicts and treasury.
 // Everything is simulated and lives inside the career state (game.party.org).
@@ -258,8 +258,11 @@ export function projectMembers(org, fee, { climate = 0, vitality = 50, weeks = 5
 }
 // The leader sets the annual fee (whole euros, within limits, once every cooldownWeeks). Returns the new membership record and the line that tells it.
 export function setMembershipFee(org, fee, { week }) {
-  const value = Math.round(Number(fee));
   const rule = MEMBERSHIP;
+  // an empty or non-numeric input is not a fee: Number('') is 0 and would silently become a free membership
+  const raw = typeof fee === 'string' ? fee.trim() : fee;
+  if (raw === '' || raw === null || raw === undefined || typeof raw === 'boolean' || (typeof raw !== 'number' && typeof raw !== 'string') || !Number.isFinite(Number(raw))) throw new Error(`Inserisci una cifra valida in euro (da ${rule.min} a ${rule.max} €): la quota in vigore non è cambiata.`);
+  const value = Math.round(Number(raw));
   if (!Number.isFinite(value) || value < rule.min || value > rule.max) throw new Error(`La quota annuale va da ${rule.min} a ${rule.max} €.`);
   const current = membershipOf(org);
   if (value === current.fee) throw new Error('È già la quota in vigore.');

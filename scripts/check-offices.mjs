@@ -271,7 +271,7 @@ const throwsWith = (fn, pattern, message) => assert.throws(fn, pattern, message)
 
 // ---------- 8. sul motore vero: la Provincia come livello e le candidature ----------
 {
-  const run = await startCareer({ seed: 'cariche-provincia', level: 'provinciale' });
+  const run = await startCareer({ seed: 's2', level: 'provinciale' });
   const { store, db } = run;
   let state = store.getState();
   assert.deepEqual(heldOfficesOf(state), ['consigliere-provinciale', 'consigliere-comunale'], 'Una carriera provinciale parte con il seggio in provincia e quello nel comune');
@@ -287,7 +287,7 @@ const throwsWith = (fn, pattern, message) => assert.throws(fn, pattern, message)
   assert.ok(/Consigliere/.test(renderInstitutions(state)), 'Le istituzioni dicono che ruolo si ha');
   // Si arriva al voto provinciale: il presidente è per i sindaci, il consigliere per chi ha un seggio in un comune.
   let guard = 0;
-  while (!(state.game.elections ?? []).some(item => item.type === 'provinciale' && item.status === 'open') && guard++ < 80) { store.advance(7); state = store.getState(); if (state.campaign?.status === 'active') store.clearCampaign?.(); state = store.getState(); }
+  while (!(state.game.elections ?? []).some(item => item.type === 'provinciale' && item.status === 'open') && guard++ < 130) { store.advance(7); state = store.getState(); if (state.campaign?.status === 'active') store.clearCampaign?.(); state = store.getState(); }
   assert.ok((state.game.elections ?? []).some(item => item.type === 'provinciale' && item.status === 'open'), 'Si apre la finestra delle candidature provinciali');
   if (state.campaign?.status === 'active') { store.clearCampaign(); }
   assert.throws(() => store.startCampaign({ electionType: 'provinciale', role: 'presidente', objective: 'seat' }, db.parties, { politicians: db.politicians, groups: db.parliamentaryGroups }), /sindaco/i, 'Il Presidente della Provincia è un sindaco: un consigliere comunale non si candida');

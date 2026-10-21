@@ -1,11 +1,12 @@
 // Money of the career and of the party: balance, flows, budget, reports and sustainability.
-import { BUDGET_LINES, FINANCE_CATEGORIES, financeOutlook, hasAsset, INVESTMENTS, operationRange, RESERVE, TREASURY_OPERATIONS } from '../core/finance-engine.js?v=20261020-2';
-import { costProblem } from '../core/career-engine.js?v=20261020-2';
-import { costText, planAddButton } from './plan-view.js?v=20261020-2';
-import { isPartyLeader, PARTY_PRIORITIES, TREASURY_LABELS, treasuryOutlook } from '../core/organization-engine.js?v=20261020-2';
-import { artTile } from './visuals.js?v=20261020-2';
-import { illustration } from './illustrations.js?v=20261020-2';
-import { breakdown, esc, euro, EXPENSE_COLOR, flowChart, INCOME_COLOR, lineChart, num, SERIES, signed, sparkline, stateBadge } from './charts.js?v=20261020-2';
+import { BUDGET_LINES, FINANCE_CATEGORIES, financeOutlook, hasAsset, INVESTMENTS, operationProblem, operationRange, partyRequestRules, RESERVE, TREASURY_OPERATIONS } from '../core/finance-engine.js?v=20261021-1';
+import { TRANSFERS } from '../data/simulation/finance-rules.js?v=20261021-1';
+import { costProblem } from '../core/career-engine.js?v=20261021-1';
+import { costText, planAddButton } from './plan-view.js?v=20261021-1';
+import { isPartyLeader, PARTY_PRIORITIES, TREASURY_LABELS, treasuryOutlook } from '../core/organization-engine.js?v=20261021-1';
+import { artTile } from './visuals.js?v=20261021-1';
+import { illustration } from './illustrations.js?v=20261021-1';
+import { breakdown, esc, euro, EXPENSE_COLOR, flowChart, INCOME_COLOR, lineChart, num, SERIES, signed, sparkline, stateBadge } from './charts.js?v=20261021-1';
 
 const STATUS_KIND = { solida: 'solida', calo: 'calo', rischio: 'rischio', crisi: 'crisi' };
 
@@ -34,7 +35,7 @@ function operationsPanel(game, state) {
   const running = new Set((game.finance.operations ?? []).filter(item => item.status === 'in-corso').map(item => item.opId));
   const cards = TREASURY_OPERATIONS.map(spec => {
     const range = operationRange(spec, notoriety);
-    const problem = ended ? 'Carriera conclusa.' : running.has(spec.id) ? 'È già in corso: aspetta l’esito.' : spec.requiresParty && !game.party?.org ? 'Serve un partito.' : costProblem(game, spec.cost);
+    const problem = ended ? 'Carriera conclusa.' : running.has(spec.id) ? 'È già in corso: aspetta l’esito.' : operationProblem(game, spec) ?? costProblem(game, spec.cost);
     const benefit = range.key === 'income' ? `${euro(range.low)}–${euro(range.high)} di incasso` : `${range.low}–${range.high} nuovi iscritti${spec.incomePerMember ? ` (${euro(spec.incomePerMember)} di quota ciascuno)` : ''}`;
     const risk = spec.risk ? `${Math.round(spec.risk.chance * 100)}%: ${spec.risk.label.toLowerCase()}${spec.risk.cost ? ` (−${euro(spec.risk.cost)})` : ''}` : 'nessun rischio particolare';
     return `<article class="invest-card ${problem ? '' : 'is-ready'}">${artTile(spec.icon, 'var(--party-accent)', 'sm')}<div><strong>${esc(spec.label)}</strong><small>${esc(spec.detail)}</small>
@@ -48,7 +49,8 @@ function operationsPanel(game, state) {
   const spent = done.reduce((sum, item) => sum + item.cost + (item.result.extraCost ?? 0), 0), back = done.reduce((sum, item) => sum + item.result.income, 0);
   const members = done.reduce((sum, item) => sum + (item.result.members ?? 0), 0);
   const summary = done.length ? `<p class="parliament-note">Finora ${done.length} ${done.length === 1 ? 'operazione conclusa' : 'operazioni concluse'}: spesi ${euro(spent)}, incassati ${euro(back)}${members ? `, ${members} nuovi iscritti` : ''}. Risultato netto ${back - spent >= 0 ? '+' : '−'}${euro(Math.abs(back - spent))}.</p>` : '';
-  return `<div class="invest-grid">${cards}</div>${summary}${register}<p class="parliament-note">Importi e adesioni sono esiti simulati, tirati a sorte alla scadenza dentro gli intervalli indicati: nessuna donazione, quota o transazione è reale.</p>`;
+  const supporters = game.supporters ? `<p class="parliament-note" data-supporters>Sostenitori ricorrenti: circa ${num(game.supporters.count, 0)} (${euro(game.supporters.perHead)} a testa a settimana), ${euro(game.supporters.income)} incassati questa settimana. Crescono con notorietà, consenso e popolarità e danno di più se la reputazione è alta; la cifra cambia di settimana in settimana.</p>` : '';
+  return `${supporters}<div class="invest-grid">${cards}</div>${summary}${register}<p class="parliament-note">Importi e adesioni sono esiti simulati, tirati a sorte alla scadenza dentro gli intervalli indicati: nessuna donazione, quota o transazione è reale.</p>`;
 }
 // Where the weekly budget goes, line by line (the same lines as the controls above).
 function allocationPanel(game) {
@@ -77,6 +79,27 @@ function investmentsPanel(game, outlook) {
     <div class="fund-box">${artTile('wallet', '#4C8F6B', 'sm')}<div><strong>Riserva di emergenza</strong><small>Soldi tenuti da parte: pagano per primi gli imprevisti (cause, guasti, un donatore che si ritira) e coprono il debito prima degli interessi. Si possono riprendere in ogni momento; massimo ${euro(RESERVE.cap)}. Mantenimento dei beni: ${euro(outlook.upkeep)}/sett.</small></div><div class="fund-actions">${reserveButtons}</div></div>`;
 }
 
+// Funds between the politician and the party: two separate pots, every movement in both registers. Ask the treasury (by rank, approval when the rule says so) or pay into it.
+const TRANSFER_STATUS = { 'in-attesa': ['in attesa', 'rischio'], approvata: ['approvata', 'solida'], rifiutata: ['respinta', 'crisi'], eseguito: ['eseguito', 'solida'] };
+function transfersPanel(game) {
+  const org = game.party?.org;
+  if (!org) return '<p class="quiet-copy">Senza un partito non c’è una tesoreria con cui scambiare fondi: i tuoi fondi restano tuoi.</p>';
+  const ended = game.status === 'ended';
+  const rules = partyRequestRules(game);
+  const funds = game.resources.funds, treasury = org.treasury.balance;
+  const ask = TRANSFERS.presets.map(amount => `<button class="chip-button" data-transfer-request="${amount}" ${ended || !rules.allowed || amount > rules.cap ? 'disabled' : ''}>${euro(amount)}</button>`).join('');
+  const give = TRANSFERS.presets.map(amount => `<button class="chip-button" data-transfer-give="${amount}" ${ended || amount > funds ? 'disabled' : ''}>${euro(amount)}</button>`).join('');
+  const rule = !rules.allowed ? esc(rules.reason) : rules.approval ? `Con il tuo ruolo puoi chiedere fino a ${euro(rules.cap)} per volta; risponde la direzione alla chiusura della settimana e non è garantito.` : `Il segretario dispone direttamente, fino a ${euro(rules.cap)} per volta (un quarto della tesoreria).`;
+  const rows = (game.finance.transfers ?? []).slice(0, 8).map(item => { const [word, kind] = TRANSFER_STATUS[item.status] ?? [item.status, 'calo']; return `<div class="ledger-row"><time>${item.week ? `S${item.week}` : ''}</time><span><strong>${item.direction === 'dal-partito' ? 'Dal partito a te' : 'Da te al partito'}</strong><small>${esc(item.note ?? '')}${Number.isFinite(item.treasuryAfter) ? ` · tesoreria ${euro(item.treasuryAfter)}, tuoi fondi ${euro(item.fundsAfter)}` : ''}</small></span><b class="${item.direction === 'dal-partito' ? 'pos' : 'neg'}">${item.direction === 'dal-partito' ? '+' : '−'}${euro(item.amount)} ${stateBadge(kind, word)}</b></div>`; }).join('');
+  return `<div class="balance-sheet"><div><small>I tuoi fondi</small><strong>${euro(funds)}</strong></div><div><small>Tesoreria del partito</small><strong>${euro(treasury)}</strong></div></div>
+    <div class="fund-box"><div><strong>Richiedi fondi al partito</strong><small>${rule}</small><div class="chip-row" role="group" aria-label="Importo da richiedere">${ask}</div>
+    <label class="transfer-custom">Un’altra cifra (€)<input type="number" inputmode="numeric" min="${TRANSFERS.min}" step="10" placeholder="importo" data-transfer-custom="request" ${ended || !rules.allowed ? 'disabled' : ''} /></label><button class="secondary-button" data-transfer-request="custom" ${ended || !rules.allowed ? 'disabled' : ''}>Richiedi</button></div></div>
+    <div class="fund-box"><div><strong>Versa fondi al partito</strong><small>Dai tuoi fondi alla tesoreria, subito, mai più di quanto hai in cassa. Le quote di tesseramento restano entrate del partito: non passano da qui.</small><div class="chip-row" role="group" aria-label="Importo da versare">${give}</div>
+    <label class="transfer-custom">Un’altra cifra (€)<input type="number" inputmode="numeric" min="${TRANSFERS.min}" step="10" placeholder="importo" data-transfer-custom="give" ${ended ? 'disabled' : ''} /></label><button class="secondary-button" data-transfer-give="custom" ${ended ? 'disabled' : ''}>Versa</button></div></div>
+    ${rows ? `<div class="ledger transfers-register">${rows}</div>` : '<p class="quiet-copy">Nessun trasferimento finora.</p>'}
+    <p class="parliament-note">Importi di gioco: nessun pagamento reale. Ogni trasferimento compare nel registro dei tuoi fondi e in quello della tesoreria, per lo stesso importo, una volta sola.</p>`;
+}
+
 export function renderFinancePage(state) {
   const game = state.game;
   if (!game?.finance) return '<p class="quiet-copy">Le finanze si attivano con la carriera.</p>';
@@ -99,6 +122,7 @@ export function renderFinancePage(state) {
     </div>
     ${panel('BILANCIO SETTIMANALE', 'Le tue spese ricorrenti', budgetControls(game) + '<p class="parliament-note">Le scelte valgono dalla prossima chiusura di settimana. Se la cassa non basta, la differenza diventa debito; oltre 2.500 € scatta una crisi finanziaria.</p>', `<span class="hq-count">${euro(outlook.recurring)}/sett.</span>`)}
     ${panel('RACCOLTE FONDI ED EVENTI', 'Operazioni con un costo oggi e un esito domani', operationsPanel(game, state))}
+    ${panel('FONDI E PARTITO', 'Trasferimenti tra te e la tesoreria del partito', transfersPanel(game))}
     <div class="society-grid">
       ${panel('RIPARTIZIONE DEL BUDGET', 'Come si divide la spesa settimanale', allocationPanel(game))}
       ${panel('INVESTIMENTI E PATRIMONIO', 'Cosa possiedi e dove investire', investmentsPanel(game, outlook))}

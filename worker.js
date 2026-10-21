@@ -272,6 +272,80 @@ async function sendMail(env, { to, subject, text }) {
   const response = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { authorization: `Bearer ${env.RESEND_API_KEY}`, 'content-type': 'application/json' }, body: JSON.stringify({ from: env.EMAIL_FROM, to: [to], subject, text }) });
   if (!response.ok) throw Object.assign(new Error(`Il provider email ha risposto ${response.status}.`), { code: 'email-provider' });
 }
+// Everything of one account, in one D1 batch (all or nothing): saves, their history, the address, tokens, sessions, the notice of inactivity and the account. Used by the deletion the player asks for
+// and by the retention of inactive accounts (which is switched off, see below).
+async function deleteAccountData(db, userId) {
+  await db.batch([
+    db.prepare('DELETE FROM saves WHERE user_id = ?').bind(userId),
+    db.prepare('DELETE FROM save_history WHERE user_id = ?').bind(userId),
+    db.prepare('DELETE FROM save_state WHERE user_id = ?').bind(userId),
+    db.prepare('DELETE FROM email_tokens WHERE user_id = ?').bind(userId),
+    db.prepare('DELETE FROM user_emails WHERE user_id = ?').bind(userId),
+    db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(userId),
+    db.prepare('DELETE FROM users WHERE id = ?').bind(userId)
+  ]);
+  // the table of the notices exists only once the retention has run (it never does while it is off): nothing to delete when it is not there
+  await db.prepare('DELETE FROM retention_notices WHERE user_id = ?').bind(userId).run().catch(() => null);
+}
+
+// ---------- retention of inactive accounts: SWITCHED OFF ----------
+// The aim is to delete an account after 12 months without activity, with a notice first. The notice can only reach whoever has a VERIFIED e-mail address, and the e-mail channel is not
+// configured yet (docs/account-email.md): so nothing runs. `retentionState` says whether the procedure may run at all and why not; `planRetention` only reads (it is the report the owner can
+// look at: who would be warned, who would be deleted, who cannot be warned); `runRetention` acts only when ALL of this holds: RETENTION_ENABLED is "1", the mail provider is configured and
+// RETENTION_NOTICE_TESTED is "1" (set by the owner after a real notice was received). An account with no verified address is never deleted by the procedure (it cannot be warned).
+// "Activity" is read from what the tables hold (a save written, a session opened, the account created): a session older than its 30 days is gone, so a login that saved nothing is not counted after that.
+// The steps: 1) notice (e-mail, with the date of deletion, 30 days ahead); 2) after the 30 days, if there has been no activity since the notice, one deletion (deleteAccountData); a notice that was sent
+// but not delivered (the provider failed) is not recorded, so the account is warned again at the next run and never deleted without a notice on record.
+export const RETENTION = Object.freeze({ inactivityMonths: 12, noticeDays: 30, batch: 50 });
+export function retentionState(env) {
+  const reasons = [];
+  if (env.RETENTION_ENABLED !== '1') reasons.push('RETENTION_ENABLED non è «1»: la procedura è spenta.');
+  if (!mailConfigured(env)) reasons.push('Il canale e-mail non è configurato: non si può inviare il preavviso.');
+  if (env.RETENTION_NOTICE_TESTED !== '1') reasons.push('RETENTION_NOTICE_TESTED non è «1»: il preavviso non è stato provato con una ricezione reale.');
+  return { enabled: reasons.length === 0, reasons };
+}
+const monthsBack = (now, months) => { const date = new Date(now); date.setUTCMonth(date.getUTCMonth() - months); return date.getTime(); };
+export async function planRetention(db, now = Date.now()) {
+  const table = await db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'retention_notices'").first().catch(() => null);
+  const users = (await db.prepare('SELECT u.id AS id, u.username AS username, u.created_at AS createdAt, (SELECT MAX(created_at) FROM sessions s WHERE s.user_id = u.id) AS lastSession, (SELECT MAX(updated_at) FROM saves v WHERE v.user_id = u.id) AS lastSave, (SELECT email_norm FROM user_emails e WHERE e.user_id = u.id AND e.verified_at IS NOT NULL) AS email FROM users u').all()).results ?? [];
+  const notices = new Map(table ? ((await db.prepare('SELECT user_id AS userId, sent_at AS sentAt FROM retention_notices').all()).results ?? []).map(row => [row.userId, row.sentAt]) : []);
+  const limit = monthsBack(now, RETENTION.inactivityMonths);
+  const rows = [];
+  for (const user of users) {
+    const last = Math.max(...[user.createdAt, user.lastSession, user.lastSave].filter(Boolean).map(value => Date.parse(value)).filter(Number.isFinite));
+    const noticeAt = notices.has(user.id) ? Date.parse(notices.get(user.id)) : null;
+    // inactive for the whole period; a notice counts only if it was sent AFTER the last activity (so an account that came back and fell silent again is warned again)
+    let action = 'attivo';
+    if (last < limit) {
+      if (!user.email) action = 'non-avvisabile';
+      else if (noticeAt === null || last >= noticeAt) action = 'avvisare';
+      else action = now - noticeAt >= RETENTION.noticeDays * 86_400_000 ? 'eliminare' : 'in-preavviso';
+    }
+    rows.push({ id: user.id, username: user.username, lastActivity: new Date(last).toISOString(), hasVerifiedEmail: Boolean(user.email), email: user.email ?? null, noticeSentAt: noticeAt === null ? null : new Date(noticeAt).toISOString(), action });
+  }
+  return rows;
+}
+export async function runRetention(env, now = Date.now()) {
+  const state = retentionState(env);
+  if (!state.enabled) return { ran: false, reasons: state.reasons, warned: 0, deleted: 0 };
+  const db = env.ACCOUNTS;
+  await ensureSchema(db);
+  await db.prepare('CREATE TABLE IF NOT EXISTS retention_notices (user_id TEXT PRIMARY KEY, sent_at TEXT NOT NULL, activity_at TEXT NOT NULL)').run();
+  const rows = await planRetention(db, now);
+  let warned = 0, deleted = 0;
+  const base = String(env.PUBLIC_BASE_URL ?? '').replace(/\/+$/, '');
+  for (const row of rows.filter(item => item.action === 'avvisare').slice(0, RETENTION.batch)) {
+    const deadline = new Date(now + RETENTION.noticeDays * 86_400_000).toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+    try {
+      await sendMail(env, { to: row.email, subject: 'POLITICANDO 2026: il tuo account sarà eliminato per inattività', text: `Ciao ${row.username},\n\nil tuo account di POLITICANDO 2026 non è usato da oltre ${RETENTION.inactivityMonths} mesi. Se non lo usi entro il ${deadline}, l’account e i salvataggi online verranno eliminati.\n\nPer tenerlo basta aprire il gioco${base ? ` (${base})` : ''}, accedere e giocare o salvare una partita.\n\nSe non vuoi più l’account puoi anche eliminarlo subito dal gioco.\n\nPOLITICANDO 2026 è una simulazione.` });
+    } catch { continue; }
+    await db.prepare('INSERT OR REPLACE INTO retention_notices (user_id, sent_at, activity_at) VALUES (?, ?, ?)').bind(row.id, new Date(now).toISOString(), row.lastActivity).run();
+    warned++;
+  }
+  for (const row of rows.filter(item => item.action === 'eliminare').slice(0, RETENTION.batch)) { await deleteAccountData(db, row.id); deleted++; }
+  return { ran: true, reasons: [], warned, deleted };
+}
+
 const publicBase = (env, request) => {
   const configured = String(env.PUBLIC_BASE_URL ?? '').replace(/\/+$/, '');
   if (/^https:\/\/[^\s/]+$/.test(configured) || /^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(configured)) return configured;
@@ -452,15 +526,7 @@ async function handleAccounts(request, env, url) {
     if (!user || !equalStrings(await proofHash(body.proof, user.salt, user.iterations), user.hash)) { await guard.fail(); return json(request, { error: 'Password non corretta: l’account non è stato eliminato.' }, 403); }
     const saves = await db.prepare('SELECT COUNT(*) AS n FROM saves WHERE user_id = ?').bind(account.id).first();
     const sessions = await db.prepare('SELECT COUNT(*) AS n FROM sessions WHERE user_id = ?').bind(account.id).first();
-    await db.batch([
-      db.prepare('DELETE FROM saves WHERE user_id = ?').bind(account.id),
-      db.prepare('DELETE FROM save_history WHERE user_id = ?').bind(account.id),
-      db.prepare('DELETE FROM save_state WHERE user_id = ?').bind(account.id),
-      db.prepare('DELETE FROM email_tokens WHERE user_id = ?').bind(account.id),
-      db.prepare('DELETE FROM user_emails WHERE user_id = ?').bind(account.id),
-      db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(account.id),
-      db.prepare('DELETE FROM users WHERE id = ?').bind(account.id)
-    ]);
+    await deleteAccountData(db, account.id);
     await guard.clear();
     return json(request, { ok: true, deleted: { account: 1, saves: saves?.n ?? 0, sessions: sessions?.n ?? 0 } });
   }
@@ -608,6 +674,6 @@ export default {
   // Daily (wrangler.jsonc, triggers.crons): expired sessions and old attempts go even when nobody logs in.
   async scheduled(event, env, ctx) {
     if (!env.ACCOUNTS) return;
-    ctx.waitUntil((async () => { await ensureSchema(env.ACCOUNTS); await cleanupExpired(env.ACCOUNTS); })());
+    ctx.waitUntil((async () => { await ensureSchema(env.ACCOUNTS); await cleanupExpired(env.ACCOUNTS); await runRetention(env); })());
   }
 };

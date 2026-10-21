@@ -91,7 +91,7 @@ await withBrowser(async browser => {
   await pause(500);
   state = await menu();
   check(state.order[0] === 'nuova' && state.order[1] === 'continua', `Con una carriera: prima «Nuova partita», poi «Continua» (ordine: ${state.order.join(', ')}).`);
-  check(state.continueCard?.img?.includes('futuro-nazionale.png'), `Il riquadro «Continua» mostra il logo del partito della carriera (${state.continueCard?.img}).`);
+  check(!state.continueCard?.img?.includes('futuro-nazionale.png'), `Il riquadro «Continua» non usa il logo ufficiale di terzi (${state.continueCard?.img}).`);
   check(/Futuro Nazionale/.test(state.continueCard?.text ?? '') && state.continueCard.text.includes(before.player) && /Settimana \d+/.test(state.continueCard.text), `Con giocatore, partito, settimana e data (${state.continueCard?.text}).`);
   check(/^#[0-9a-f]{6}$/i.test(state.continueCard?.accent ?? ''), `Con il colore del partito (${state.continueCard?.accent}).`);
   // it is the same colour that the career then uses
@@ -104,7 +104,7 @@ await withBrowser(async browser => {
   // the menu opened again from inside the game: the same card, the career still there
   await click('[data-action=menu]');
   state = await menu();
-  check(Boolean(state.continueCard) && state.continueCard.img?.includes('futuro-nazionale.png'), 'Il menu aperto dalla partita mostra ancora la carriera con il logo.');
+  check(Boolean(state.continueCard) && !state.continueCard.img?.includes('futuro-nazionale.png'), 'Il menu aperto dalla partita mostra ancora la carriera, con il segno generato.');
   // the save slot and its row
   await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); store.saveToSlot(); return true; })()`);
   await click('[data-menu=carica]');

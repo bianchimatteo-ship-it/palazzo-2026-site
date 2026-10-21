@@ -40,8 +40,11 @@ assert.equal(normalizeOrganization(saved, { rand: seeded(1), region: 'Toscana', 
 
 // ---------- 2. validation ----------
 assert.throws(() => setMembershipFee(fresh, -5, { week: 1 }), /va da/, 'Non negativa.');
+// an empty or non-numeric input is not a fee (Number('') is 0): refused, with a message, and the fee in force stays as it was
+for (const bad of ['', '   ', 'abc', '12abc', null, undefined, NaN, true, {}, []]) assert.throws(() => setMembershipFee(fresh, bad, { week: 1 }), /cifra valida|va da/, `Quota non valida rifiutata: ${JSON.stringify(bad)}.`);
+assert.equal(membershipOf(fresh).fee, MEMBERSHIP_FEE, 'Dopo gli input non validi la quota in vigore è invariata.');
 assert.throws(() => setMembershipFee(fresh, MEMBERSHIP.max + 1, { week: 1 }), /va da/, 'Non oltre il massimo.');
-assert.throws(() => setMembershipFee(fresh, 'abc', { week: 1 }), /va da/, 'Un numero.');
+assert.throws(() => setMembershipFee(fresh, 'abc', { week: 1 }), /cifra valida|va da/, 'Un numero.');
 assert.throws(() => setMembershipFee(fresh, MEMBERSHIP_FEE, { week: 1 }), /già la quota/, 'Nessun cambio a vuoto.');
 const first = setMembershipFee(fresh, 50, { week: 10 });
 assert.throws(() => setMembershipFee({ ...fresh, membership: first.membership }, 20, { week: 10 + MEMBERSHIP.cooldownWeeks - 1 }), /una volta ogni/, 'Una quota alla volta: c’è un intervallo tra due cambi.');

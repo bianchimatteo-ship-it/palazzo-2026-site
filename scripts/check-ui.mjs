@@ -180,10 +180,10 @@ assert.ok((home.match(/class="hqc-drawer /g) ?? []).length >= 9 && home.includes
 {
   const sheetStart = home.indexOf('data-mobile-sheet hidden'), sheet = home.slice(sheetStart, home.indexOf('mobile-sheet-status', sheetStart));
   const groups = [...sheet.matchAll(/data-sheet-group="([a-z]+)"/g)].map(match => match[1]);
-  assert.ok(sheet.length > 0 && home.includes('data-mobile-sheet hidden') && groups.length === 7 && new Set(groups).size === 7, 'Il pannello “Altro” ha sette categorie, senza doppioni.');
-  const ids = ['calendario', 'eventi', 'carriera', 'partito', 'finanze', 'partiti-lista', 'parlamento', 'governo', 'quirinale', 'leggi', 'elezioni', 'sondaggi', 'territori', 'notizie', 'archivio', 'politici', 'profilo', 'impostazioni'];
+  assert.ok(sheet.length > 0 && home.includes('data-mobile-sheet hidden') && groups.join() === 'panoramica,carriera,partito,elezioni,sondaggi,istituzioni,territori,informazione,profilo,impostazioni' && new Set(groups).size === 10, `Il pannello “Altro” ha le sezioni della barra laterale del PC nello stesso ordine, senza doppioni (${groups.join(',')}).`);
+  const ids = ['panoramica', 'calendario', 'eventi', 'carriera', 'partito', 'finanze', 'partiti-lista', 'parlamento', 'governo', 'quirinale', 'leggi', 'elezioni', 'sondaggi', 'territori', 'notizie', 'archivio', 'politici', 'profilo', 'impostazioni'];
   assert.ok(ids.every(id => sheet.split(`data-nav="${id}"`).length - 1 === 1), 'Il pannello “Altro” raggiunge tutte le pagine, ciascuna una sola volta.');
-  assert.ok(sheet.includes('data-sheet-search') && !/<details class="sheet-group"[^>]* open>/.test(sheet.replace(/<details class="sheet-group" data-sheet-group="[a-z]+" data-remember="sheet-[a-z]+" open>/, '')), 'Con la ricerca e al più una categoria aperta.');
+  assert.ok(sheet.includes('data-sheet-search') && !/<details class="sheet-group"[^>]* open>/.test(sheet.replace(/<details class="sheet-group" data-sec="[a-z]+" data-sheet-group="[a-z]+" data-remember="sheet-[a-z]+" open>/, '')), 'Con la ricerca e al più una categoria aperta.');
 }
 // Branding: the party created in the wizard has a real identity used across the game.
 const userParty = store.getState().dataset.parties.find(party => party.source === 'user');

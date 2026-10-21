@@ -1,62 +1,62 @@
-import { pendingCelebration, pendingOutcome } from '../core/celebration.js?v=20261020-2';
-import { fullDate, formatDate } from '../core/time.js?v=20261020-2';
-import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20261020-2';
-import * as accountApi from '../data/repositories/account-sync.js?v=20261020-2';
-import { accountApiBase, commitRevision, currentAccount, deleteAccount, probeAccountService, deleteCloudSave, downloadSave, listCloudSaves, login, logout, register, slotForCareer } from '../data/repositories/account-sync.js?v=20261020-2';
-import { createSyncEngine } from '../data/repositories/sync-queue.js?v=20261020-2';
-import { setPartyLogoResolver } from './person-marks.js?v=20261020-2';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261020-2';
-import { isRealCollectionLoaded, loadRealCollections, loadRealCollectionsSettled, pristineRecord, realDataFailures, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20261020-2';
-import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20261020-2';
-import { renderAdminPanel } from './admin-panel.js?v=20261020-2';
-import { sharedLogos } from '../data/repositories/admin-store.js?v=20261020-2';
-import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, publishSharedArchive, refreshSharedArchive, sharedApiUrl, sharedSyncStatus, verifySharedSession } from '../data/repositories/admin-sync.js?v=20261020-2';
-import { deleteLocalLogo, exportLogoConfiguration, fetchLogoFromUrl, getLocalLogo, importLogoConfiguration, listLocalLogos, probeImage, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20261020-2';
-import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20261020-2';
-import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20261020-2';
-import { PARTY_LINK_COLLECTIONS, forceKind, isCoalitionList, politicalForces } from '../data/repositories/party-links.js?v=20261020-2';
-import { renderLogoAdmin } from './logo-admin.js?v=20261020-2';
-import { chosenPlace, makeCareerDraft, pollScenarioOf, removePartyCriterion, renderCareerWizard, togglePartyOrientation, wizardLogoPreview } from './career-wizard.js?v=20261020-2';
-import { userPartyLogo } from './party-logo.js?v=20261020-2';
-import { CAREER_STEPS, validateWizardStep } from '../core/career-rules.js?v=20261020-2';
-import { renderElectionsHub } from './elections-hub.js?v=20261020-2';
-import { renderQuirinale } from './presidency-view.js?v=20261020-2';
-import { renderCareerPage } from './career-page.js?v=20261020-2';
-import { renderPartyPage } from './party-page.js?v=20261020-2';
-import { renderAgendaPage } from './agenda-page.js?v=20261020-2';
-import { HEMICYCLE_DEFAULTS, renderHemicycle } from './hemicycle-view.js?v=20261020-2';
-import { renderFeaturedMembers } from './members-view.js?v=20261020-2';
-import { drawLogoEditor, exportLogo, measureBackground, panFromDrag, renderLogoEditor } from './logo-editor-view.js?v=20261020-2';
-import { createEditorState } from '../core/logo-editor.js?v=20261020-2';
-import { renderParliamentPage } from './parliament-mode.js?v=20261020-2';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261020-2';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261020-2';
-import { chooseStart } from '../core/start-engine.js?v=20261020-2';
-import { renderHeadquarters, renderNewsroom } from './game-mode.js?v=20261020-2';
-import { newsMedia, newsPopupHtml, popupItem } from './news-view.js?v=20261020-2';
-import { articleScript, bulletinScript, onVoiceChange, speakLines, stopVoice, syncVoiceDom, voiceStatus, voiceTarget } from './radio-voice.js?v=20261020-2';
-import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20261020-2';
-import { playerRoles } from '../core/roles.js?v=20261020-2';
-import { accordWarning, budgetPreview, designFromForm, planFromForm, policyFields, policyPreview, projectPreview, rangeText, requestFromForm } from './policy-mode.js?v=20261020-2';
-import { areaOf } from '../data/simulation/policy-rules.js?v=20261020-2';
-import { attachChartInteractions, hideChartTip } from './polls-mode.js?v=20261020-2';
-import { renderObservatory } from './observatory-view.js?v=20261020-2';
-import { glyph } from './visuals.js?v=20261020-2';
-import { identityVars, partyChip, partyIdentity, topbarParty } from './party-identity.js?v=20261020-2';
-import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20261020-2';
-import { renderFinancePage } from './finance-mode.js?v=20261020-2';
-import { PLAN_MAX, planConfirmLines, planKey, renderPlanTray } from './plan-view.js?v=20261020-2';
-import { STAFF_TASK_BY_ID } from '../data/simulation/staff-rules.js?v=20261020-2';
-import { renderContactsPanel } from './organization-mode.js?v=20261020-2';
-import { renderRealLaws } from './real-laws.js?v=20261020-2';
-import { realLawArea } from '../core/society-engine.js?v=20261020-2';
-import { canManageParliament } from '../core/parliament-engine.js?v=20261020-2';
-import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, TOUR_STEPS } from './menu.js?v=20261020-2';
-import { setForceColorOverrides } from './political-colors.js?v=20261020-2';
-import { renderTutorialCard, tutorialAction, tutorialContext, tutorialState, TUTORIAL_STEPS } from './tutorial.js?v=20261020-2';
-import { storage as localStorageApi } from '../core/storage.js?v=20261020-2';
-import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20261020-2';
-import { playSound } from './sound.js?v=20261020-2';
+import { pendingCelebration, pendingOutcome } from '../core/celebration.js?v=20261021-1';
+import { fullDate, formatDate } from '../core/time.js?v=20261021-1';
+import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20261021-1';
+import * as accountApi from '../data/repositories/account-sync.js?v=20261021-1';
+import { accountApiBase, commitRevision, currentAccount, deleteAccount, probeAccountService, deleteCloudSave, downloadSave, listCloudSaves, login, logout, register, slotForCareer } from '../data/repositories/account-sync.js?v=20261021-1';
+import { createSyncEngine } from '../data/repositories/sync-queue.js?v=20261021-1';
+import { setPartyLogoResolver } from './person-marks.js?v=20261021-1';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261021-1';
+import { isRealCollectionLoaded, loadRealCollections, optionalDocumentStatus, loadRealCollectionsSettled, pristineRecord, realDataFailures, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20261021-1';
+import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20261021-1';
+import { renderAdminPanel } from './admin-panel.js?v=20261021-1';
+import { sharedLogos } from '../data/repositories/admin-store.js?v=20261021-1';
+import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, publishSharedArchive, refreshSharedArchive, sharedApiUrl, sharedSyncStatus, verifySharedSession } from '../data/repositories/admin-sync.js?v=20261021-1';
+import { deleteLocalLogo, exportLogoConfiguration, fetchLogoFromUrl, getLocalLogo, importLogoConfiguration, listLocalLogos, probeImage, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20261021-1';
+import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20261021-1';
+import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20261021-1';
+import { PARTY_LINK_COLLECTIONS, forceKind, isCoalitionList, politicalForces } from '../data/repositories/party-links.js?v=20261021-1';
+import { renderLogoAdmin } from './logo-admin.js?v=20261021-1';
+import { chosenPlace, makeCareerDraft, pollScenarioOf, removePartyCriterion, renderCareerWizard, togglePartyOrientation, wizardLogoPreview } from './career-wizard.js?v=20261021-1';
+import { userPartyLogo } from './party-logo.js?v=20261021-1';
+import { CAREER_STEPS, validateWizardStep } from '../core/career-rules.js?v=20261021-1';
+import { renderElectionsHub } from './elections-hub.js?v=20261021-1';
+import { renderQuirinale } from './presidency-view.js?v=20261021-1';
+import { renderCareerPage } from './career-page.js?v=20261021-1';
+import { renderPartyPage } from './party-page.js?v=20261021-1';
+import { renderAgendaPage } from './agenda-page.js?v=20261021-1';
+import { HEMICYCLE_DEFAULTS, renderHemicycle } from './hemicycle-view.js?v=20261021-1';
+import { renderFeaturedMembers } from './members-view.js?v=20261021-1';
+import { drawLogoEditor, exportLogo, measureBackground, panFromDrag, renderLogoEditor } from './logo-editor-view.js?v=20261021-1';
+import { createEditorState } from '../core/logo-editor.js?v=20261021-1';
+import { renderParliamentPage } from './parliament-mode.js?v=20261021-1';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261021-1';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261021-1';
+import { chooseStart } from '../core/start-engine.js?v=20261021-1';
+import { renderHeadquarters, renderNewsroom } from './game-mode.js?v=20261021-1';
+import { newsMedia, newsPopupHtml, popupItem } from './news-view.js?v=20261021-1';
+import { articleScript, bulletinScript, onVoiceChange, speakLines, stopVoice, syncVoiceDom, voiceStatus, voiceTarget } from './radio-voice.js?v=20261021-1';
+import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20261021-1';
+import { playerRoles } from '../core/roles.js?v=20261021-1';
+import { accordWarning, budgetPreview, designFromForm, planFromForm, policyFields, policyPreview, projectPreview, rangeText, requestFromForm } from './policy-mode.js?v=20261021-1';
+import { areaOf } from '../data/simulation/policy-rules.js?v=20261021-1';
+import { attachChartInteractions, hideChartTip } from './polls-mode.js?v=20261021-1';
+import { renderObservatory } from './observatory-view.js?v=20261021-1';
+import { glyph } from './visuals.js?v=20261021-1';
+import { identityVars, partyChip, partyIdentity, topbarParty } from './party-identity.js?v=20261021-1';
+import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20261021-1';
+import { renderFinancePage } from './finance-mode.js?v=20261021-1';
+import { PLAN_MAX, planConfirmLines, planKey, renderPlanTray } from './plan-view.js?v=20261021-1';
+import { STAFF_TASK_BY_ID } from '../data/simulation/staff-rules.js?v=20261021-1';
+import { renderContactsPanel } from './organization-mode.js?v=20261021-1';
+import { renderRealLaws } from './real-laws.js?v=20261021-1';
+import { realLawArea } from '../core/society-engine.js?v=20261021-1';
+import { canManageParliament } from '../core/parliament-engine.js?v=20261021-1';
+import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, TOUR_STEPS } from './menu.js?v=20261021-1';
+import { setForceColorOverrides } from './political-colors.js?v=20261021-1';
+import { renderTutorialCard, tutorialAction, tutorialContext, tutorialState, TUTORIAL_STEPS } from './tutorial.js?v=20261021-1';
+import { storage as localStorageApi } from '../core/storage.js?v=20261021-1';
+import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20261021-1';
+import { playSound } from './sound.js?v=20261021-1';
 
 // The destinations of the game, by theme. On computers the sidebar lists the eight and opens the pages of the current one; on phones the
 // bar below keeps Home · Elezioni · Sondaggi · Istituzioni one tap away and “Altro” gathers everything else (the same pages, nothing twice).
@@ -81,23 +81,12 @@ const LOCAL_KIND_LABELS = Object.freeze({ comune: 'Comune', provincia: 'Provinci
 const localEntries = state => ['comune', 'provincia', 'regione'].filter(kind => (state.local?.institutions ?? []).some(item => item.kind === kind && item.status === 'active')).map(kind => ({ page: 'territori', label: LOCAL_KIND_LABELS[kind], scroll: `istituzione-${kind}`, kind }));
 // The pages of a destination, as entries {page, label, scroll?}: Territori adds the institutions of the player.
 const sectionEntries = (section, state) => [...section.pages.map(([page, label]) => ({ page, label, ...(page === 'territori' ? { scroll: 'il-paese' } : {}) })), ...(section.locals ? localEntries(state) : [])];
-// “Altro” on phones: the same pages as the sidebar, gathered by theme in accordions (one open at a time, the group of the current page first), with a search box.
-// Home, Elezioni and Sondaggi are on the bar below; Elezioni and Sondaggi are repeated in their group so that every page is reachable from here too.
-const SHEET_GROUPS = Object.freeze([
-  { id: 'carriera', label: 'Carriera e agenda', glyph: 'route', hint: 'Percorso, agenda, eventi e profilo', pages: [['carriera', 'Percorso'], ['calendario', 'Agenda'], ['eventi', 'Eventi'], ['profilo', 'Profilo']] },
-  { id: 'partito', label: 'Partito e organizzazione', glyph: 'party', hint: 'Dirigenti, finanze, tutti i partiti', pages: [['partito', 'Il tuo partito'], ['finanze', 'Finanze'], ['partiti-lista', 'Tutti i partiti']] },
-  { id: 'istituzioni', label: 'Istituzioni', glyph: 'building', hint: 'Camere, Governo, Quirinale, Leggi', pages: [['parlamento', 'Camere'], ['governo', 'Governo'], ['quirinale', 'Quirinale'], ['leggi', 'Leggi']] },
-  { id: 'elezioni', label: 'Elezioni e sondaggi', glyph: 'ballot', hint: 'Candidature, campagne, risultati e Osservatorio', pages: [['elezioni', 'Centrale elettorale'], ['sondaggi', 'Osservatorio']] },
-  { id: 'territori', label: 'Territori', glyph: 'map', hint: 'Il Paese, Comune, Provincia e Regione', pages: [['territori', 'Il Paese']], locals: true },
-  { id: 'informazione', label: 'Notizie e radio', glyph: 'news', hint: 'Cronaca, radio, archivio dati reali, politici', pages: [['notizie', 'Notizie e radio'], ['archivio', 'Archivio dati reali'], ['politici', 'Politici']] },
-  { id: 'gestione', label: 'Gestione e strumenti', glyph: 'settings', hint: 'Impostazioni, salvataggi, account, guida', pages: [['impostazioni', 'Impostazioni']], actions: [['menu', 'Menu principale'], ['account', 'Account e salvataggi'], ['guide', 'Come giocare']], admin: true }
-]);
-const sheetItems = (group, state) => [
-  ...group.pages.map(([page, label]) => ({ page, label, ...(page === 'territori' ? { scroll: 'il-paese' } : {}) })),
-  ...(group.locals ? localEntries(state) : []),
-  ...(group.actions ?? []).map(([action, label]) => ({ action, label })),
-  ...(group.admin && isAdminVerified() ? [{ page: 'amministrazione', label: 'Amministrazione' }] : [])
-];
+// “Altro” on phones is the sidebar of the computer, entry by entry: the same sections in the same order with the same names and the same pages (SECTIONS and sectionEntries are the one source of both),
+// then Profilo and Impostazioni, which the sidebar keeps at the bottom. A section with more than one page is an accordion (one open at a time, the section of the current page first), one with a single
+// page is a direct button, exactly as on the computer. Nothing is added, left out or repeated; every section has its own colour and icon.
+const SHEET_BOTTOM = Object.freeze([{ id: 'profilo', label: 'Profilo', glyph: 'person', pages: [['profilo', 'Profilo']] }, { id: 'impostazioni', label: 'Impostazioni', glyph: 'settings', pages: [['impostazioni', 'Impostazioni']] }]);
+const SHEET_GROUPS = Object.freeze([...SECTIONS, ...SHEET_BOTTOM]);
+const sheetItems = (group, state) => group.locals !== undefined || SECTIONS.includes(group) ? sectionEntries(group, state) : group.pages.map(([page, label]) => ({ page, label }));
 // What the tutorial's examples quote from the game being played (nothing is saved or changed by showing them).
 const tutorialFacts = state => {
   const funds = state.game?.finance?.funds ?? state.game?.finance?.balance;
@@ -108,10 +97,12 @@ const tutorialFacts = state => {
 const mobileSheet = (state, lastSaved, territory) => {
   const page = state.ui.activePage;
   const groups = SHEET_GROUPS.map(group => ({ group, items: sheetItems(group, state) }));
-  const current = groups.find(({ items }) => items.some(item => item.page && entryOn(item, items.filter(other => other.page), page, territory)))?.group.id ?? null;
-  return `<div class="mobile-sheet" id="mobile-sheet" data-mobile-sheet hidden><div class="mobile-sheet-panel" role="dialog" aria-modal="true" aria-label="Altro: tutte le sezioni"><div class="mobile-sheet-head"><strong>Altro</strong><button type="button" class="icon-button" data-mobile-close aria-label="Chiudi">×</button></div><label class="sheet-search"><span class="visually-hidden">Cerca una pagina</span><input type="search" data-sheet-search placeholder="Cerca una pagina…" autocomplete="off" enterkeyhint="search" /></label><p class="sheet-empty" data-sheet-empty hidden>Nessuna pagina corrisponde.</p>${groups.map(({ group, items }) => `<details class="sheet-group" data-sheet-group="${group.id}" data-remember="sheet-${group.id}"${group.id === current ? ' open' : ''}><summary><span class="sheet-group-icon">${icon(group.glyph, 18)}</span><span class="sheet-group-text"><strong>${group.label}</strong><small>${group.hint}</small></span><span class="sheet-group-count">${items.length}</span></summary><div class="mobile-sheet-grid">${items.map(entry => entry.action
-    ? `<button type="button" class="sheet-item" data-sheet-label="${entry.label}" ${entry.action === 'guide' ? 'data-sheet-guide' : `data-action="${entry.action}"`}>${entry.label}</button>`
-    : `<button type="button" class="sheet-item ${entryOn(entry, items.filter(other => other.page), page, territory) ? 'active' : ''}" data-sheet-label="${entry.label}" ${entryAttrs(entry)}>${entry.label}</button>`).join('')}</div></details>`).join('')}<div class="mobile-sheet-status"><span class="save-dot"></span>${lastSaved}</div></div></div>`;
+  const current = groups.find(({ items }) => items.some(item => entryOn(item, items, page, territory)))?.group.id ?? null;
+  const itemHtml = (entry, items) => `<button type="button" class="sheet-item ${entryOn(entry, items, page, territory) ? 'active' : ''}" data-sheet-label="${entry.label}" ${entryAttrs(entry)}>${entry.label}</button>`;
+  const body = groups.map(({ group, items }) => items.length > 1
+    ? `<details class="sheet-group" data-sec="${group.id}" data-sheet-group="${group.id}" data-remember="sheet-${group.id}"${group.id === current ? ' open' : ''}><summary><span class="sheet-group-icon">${icon(group.glyph, 18)}</span><span class="sheet-group-text"><strong>${group.label}</strong><small>${items.map(item => item.label).join(' · ')}</small></span><span class="sheet-group-count">${items.length}</span></summary><div class="mobile-sheet-grid">${items.map(entry => itemHtml(entry, items)).join('')}</div></details>`
+    : `<div class="sheet-group is-direct" data-sec="${group.id}" data-sheet-group="${group.id}"><button type="button" class="sheet-item sheet-direct ${entryOn(items[0], items, page, territory) ? 'active' : ''}" data-sheet-label="${group.label}" ${entryAttrs(items[0])}><span class="sheet-group-icon">${icon(group.glyph, 18)}</span><strong>${group.label}</strong></button></div>`).join('');
+  return `<div class="mobile-sheet" id="mobile-sheet" data-mobile-sheet hidden><div class="mobile-sheet-panel" role="dialog" aria-modal="true" aria-label="Altro: tutte le sezioni"><div class="mobile-sheet-head"><strong>Altro</strong><button type="button" class="icon-button" data-mobile-close aria-label="Chiudi">×</button></div><label class="sheet-search"><span class="visually-hidden">Cerca una pagina</span><input type="search" data-sheet-search placeholder="Cerca una pagina…" autocomplete="off" enterkeyhint="search" /></label><p class="sheet-empty" data-sheet-empty hidden>Nessuna pagina corrisponde.</p>${body}<div class="mobile-sheet-status"><span class="save-dot"></span>${lastSaved}</div></div></div>`;
 };
 const entryActive = (entry, page, territory = {}) => page === entry.page && (!entry.kind || (territory.localInst ? territory.localInst === entry.kind : false));
 // An entry is current when it is its page, or, in Territori, the institution that is open ("Il Paese" is current while none is chosen).
@@ -564,15 +555,23 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   // The mark of a real win (an election won, a congress won): shown once, discreetly, at the bottom of the page. The motion plays only the first time that mark is drawn (a redraw shows it still),
   // never with reduced motion, and the mark leaves the game for good when it ends (a few seconds, or the player closes it): a reload or a saved game does not bring it back.
   // The official result of a vote or of a congress: a card at the centre, closed by the player (button or Escape), never twice. It does not block the page: no backdrop takes the clicks.
-  let outcomeDrawn = null;
+  let outcomeDrawn = null, outcomeDrawnAt = 0;
   const outcomeCard = state => {
     const pending = pendingOutcome(state.game);
     if (!pending) { outcomeDrawn = null; return ''; }
-    const fresh = outcomeDrawn !== pending.id;
-    outcomeDrawn = pending.id;
-    const mark = { win: 'spark', partial: 'info', loss: 'alert' }[pending.tone] ?? 'info';
+    // «new» lasts the few seconds of the effect, not just the first render: a redraw of the page in those seconds (data arriving, the clock) must not take the confetti away.
+    if (outcomeDrawn !== pending.id) { outcomeDrawn = pending.id; outcomeDrawnAt = Date.now(); }
+    const fresh = Date.now() - outcomeDrawnAt < 6000;
+    const mark = { win: 'trophy', partial: 'scales', loss: 'alert' }[pending.tone] ?? 'scales';
     const label = { win: 'Vittoria', partial: 'Risultato parziale', loss: 'Sconfitta' }[pending.tone] ?? 'Esito';
-    return `<aside class="outcome-popup is-${esc(pending.tone)} ${fresh ? 'is-new' : ''}" role="dialog" aria-labelledby="outcome-title" aria-describedby="outcome-lines" data-outcome="${esc(pending.id)}" data-outcome-kind="${esc(pending.kind)}" data-outcome-tone="${esc(pending.tone)}"><div class="outcome-head"><span class="outcome-mark" aria-hidden="true">${icon(mark, 20)}</span><div><small class="outcome-kicker">${esc(label)} · ${esc(pending.title)}</small><strong id="outcome-title">${esc(pending.headline)}</strong></div></div><ul id="outcome-lines">${(pending.lines ?? []).map(line => `<li>${esc(line)}</li>`).join('')}</ul><div class="outcome-actions"><button type="button" class="primary-button" data-outcome-dismiss="${esc(pending.id)}">Chiudi</button></div></aside>`;
+    // The result line (percentage of the votes) is the big number of the card; every other line stays as it is, with the mandate won or missed and the real consequences.
+    const lines = pending.lines ?? [];
+    const statIndex = lines.findIndex(line => /^Risultato:/i.test(line));
+    const stat = statIndex >= 0 ? lines[statIndex].replace(/^Risultato:\s*/i, '') : '';
+    const rest = lines.filter((_, index) => index !== statIndex);
+    // Confetti only for a victory, once (no endless effect), a fixed set so that a redraw does not change it; with reduced motion the style hides it.
+    const confetti = pending.tone === 'win' && fresh ? `<div class="outcome-confetti" aria-hidden="true">${Array.from({ length: 44 }, (_, i) => `<i style="--x:${(i * 37) % 100}%;--d:${((i * 53) % 90) / 100}s;--t:${2.6 + ((i * 29) % 14) / 10}s;--r:${(i * 47) % 360}deg;--c:${i % 5}"></i>`).join('')}</div>` : '';
+    return `<div class="outcome-overlay is-${esc(pending.tone)} ${fresh ? 'is-new' : ''}" data-outcome-overlay>${confetti}<aside class="outcome-popup is-${esc(pending.tone)} ${fresh ? 'is-new' : ''}" role="dialog" aria-modal="true" aria-labelledby="outcome-title" aria-describedby="outcome-lines" data-outcome="${esc(pending.id)}" data-outcome-kind="${esc(pending.kind)}" data-outcome-tone="${esc(pending.tone)}"><div class="outcome-medal" aria-hidden="true"><span class="outcome-mark">${glyph(mark, 38)}</span></div><small class="outcome-kicker">${esc(label)} · ${esc(pending.title)}</small><h2 class="outcome-headline" id="outcome-title">${esc(pending.headline)}</h2>${stat ? `<div class="outcome-stat"><b>${esc(stat)}</b><small>risultato</small></div>` : ''}<ul id="outcome-lines">${rest.map(line => `<li>${esc(line)}</li>`).join('')}</ul><div class="outcome-actions"><button type="button" class="primary-button" data-outcome-dismiss="${esc(pending.id)}">Chiudi</button></div></aside></div>`;
   };
   let celebrationDrawn = null;
   let celebrationTimer = null;
@@ -640,7 +639,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
         ${mobileSheet(state, lastSaved, territory)}
         ${store.hasCareer() && state.game && !wizard && !menu.open ? renderTutorialCard(state, state.ui.activePage, tutorialFacts(state)) : ''}
         <main class="main-area">
-          <header class="topbar"><div class="topbar-title"><strong>${store.hasCareer() && state.game ? topbarParty(identity) : ''}${current.title}</strong><span>${current.intro}</span></div><div class="top-actions"><div class="top-tools"><button class="icon-button menu-button" data-action="menu" aria-label="Torna alla schermata iniziale (menu principale)" title="Schermata iniziale: Nuova partita, Continua, Carica partita">${icon('home', 17)}</button><button class="icon-button" aria-label="Salva carriera" title="Salva carriera" data-action="save">${icon('save', 17)}</button></div><div class="top-time"><div class="date-chip">${icon('calendar', 16)}<span>${fullDate(state.clock.currentDate)}</span></div><span class="week-chip">Settimana ${state.game.week.index} · ${state.game.week.ap}/${state.game.week.maxAp} giorni</span><button class="advance-button" data-action="advance" ${state.game.status === 'ended' ? 'disabled' : ''}>${state.campaign?.status === 'active' ? 'Avanza campagna' : 'Chiudi settimana'} ${icon('arrow', 17)}</button></div></div></header>
+          <header class="topbar"><div class="topbar-title"><span class="topbar-brands"><img class="topbar-brand" src="icons/logo-politicando-240.webp" srcset="icons/logo-politicando-240.webp 240w, icons/logo-politicando-640.webp 640w" sizes="96px" width="96" height="96" alt="POLITICANDO 2026" decoding="async" />${store.hasCareer() && state.game ? topbarParty(identity) : ''}</span><strong>${current.title}</strong><span>${current.intro}</span></div><div class="top-actions"><div class="top-tools"><button class="icon-button menu-button" data-action="menu" aria-label="Torna alla schermata iniziale (menu principale)" title="Schermata iniziale: Nuova partita, Continua, Carica partita">${icon('home', 17)}</button><button class="icon-button" aria-label="Salva carriera" title="Salva carriera" data-action="save">${icon('save', 17)}</button></div><div class="top-time"><div class="date-chip">${icon('calendar', 16)}<span>${fullDate(state.clock.currentDate)}</span></div><span class="week-chip">Settimana ${state.game.week.index} · ${state.game.week.ap}/${state.game.week.maxAp} giorni</span><button class="advance-button" data-action="advance" ${state.game.status === 'ended' ? 'disabled' : ''}>${state.campaign?.status === 'active' ? 'Avanza campagna' : 'Chiudi settimana'} ${icon('arrow', 17)}</button></div></div></header>
           ${wizard ? '' : saveAlert()}${wizard ? '' : dataNotice()}<div class="page-wrap">${wizard ? '' : (state.ui.activePage === 'panoramica' ? renderHeadquarters(state, { identity, partyName: identity.kind === 'partito' ? identity.name : null, partyLogo: identity.logo, newsFilter: views.newsFilter, newsCategory: views.newsCategory, newsOutlet: views.newsOutlet, expanded: views.homeExpand ?? {} }) : subpage(state, current, player, party, eventList, catalog, { logoFor, homePlace: () => store.homePlace(), nationalOverview: () => store.nationalOverview(), presidencyView: () => store.presidencyView(), electoralGeography: () => store.electoralGeography?.() ?? null, campaignPicks: campaignChoices(state), parties:realParties(), selectable:selectableParties(), findParty, realLeader, admin, adminContext, territory, realLaws, archive, views, tabFor, settings, lastSaved, account, allianceOdds: id => { try { return store.allianceOdds(id); } catch { return null; } }, allianceWindow: () => store.allianceWindow(), raceOptions: id => { try { return store.raceCandidates(id, racePeople()); } catch { return null; } } }))}</div>
         </main>
         ${wizard ? renderCareerWizard(state, wizard, realParties(), logoFor, realDatabase.parliamentaryGroups ?? [], realDatabase.partyLeaderships ?? [], realDatabase.politicalFigures ?? [], realDatabase.politicians ?? [], wizardTerritoryView(), wizardDataStatus(), store.pollScenarioView(pollScenarioOf(wizard))) : ''}
@@ -1128,7 +1127,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       }
       return;
     }
-    const planControl = event.target.closest('[data-plan-add],[data-plan-remove],[data-plan-clear],[data-plan-run],[data-treasury-start],[data-staff-status]');
+    const planControl = event.target.closest('[data-plan-add],[data-plan-remove],[data-plan-clear],[data-plan-run],[data-treasury-start],[data-transfer-request],[data-transfer-give],[data-staff-status]');
     if (planControl) {
       const data = planControl.dataset;
       try {
@@ -1148,6 +1147,14 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
           confirmThen({ kicker: 'PIANO DELLA SETTIMANA', title: `Eseguire ${snapshot.length} ${snapshot.length === 1 ? 'operazione' : 'operazioni'}?`, body: 'Le operazioni si eseguono in questo ordine, una sola volta: se una non riesce, nessuna viene fatta.', details: planConfirmLines(store.getState(), snapshot, preview), confirmLabel: 'Esegui il piano' }, () => { const result = store.executePlan(snapshot); plan = []; playSound('confirm'); return result; });
           return;
         } else if (data.treasuryStart) { store.startTreasuryOperation(data.treasuryStart); playSound('confirm'); }
+        else if (data.transferRequest !== undefined || data.transferGive !== undefined) {
+          // funds between the politician and the party: a preset, or the figure typed in the box (an empty box is an error, never zero)
+          const kind = data.transferRequest !== undefined ? 'request' : 'give';
+          const raw = kind === 'request' ? data.transferRequest : data.transferGive;
+          const amount = raw === 'custom' ? (root.querySelector(`[data-transfer-custom="${kind}"]`)?.value ?? '') : raw;
+          if (kind === 'request') store.requestPartyFunds(amount); else store.payIntoParty(amount);
+          playSound('confirm');
+        }
         else if (data.staffStatus) {
           const status = data.staffStatus, id = data.mandateId;
           if (status === 'annullato') { confirmThen({ kicker: 'STAFF', title: 'Annullare l’incarico?', body: 'Lo staff smette di lavorarci: quanto già speso resta speso e non si riapre.', confirmLabel: 'Annulla l’incarico', tone: 'danger' }, () => store.setStaffMandate(id, 'annullato')); return; }
@@ -1200,6 +1207,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     }
     const viewFilterChoice = event.target.closest('[data-view-filter]');
     if (viewFilterChoice) {
+      // regions and provinces are two readings of the map: a pick of one is not carried over to the other
+      if (viewFilterChoice.dataset.viewFilter === 'mapScope' && (views.filters.mapScope ?? 'regioni') !== viewFilterChoice.dataset.viewFilterValue) views.filters.mapSel = '';
       views.filters[viewFilterChoice.dataset.viewFilter] = viewFilterChoice.dataset.viewFilterValue;
       if (viewFilterChoice.dataset.viewFilter === 'leggi') views.filters.leggiPage = 1;
       saveViews(); render(store.getState(), store.getLastSaved()); return;
@@ -1527,8 +1536,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
         else if (data.territoryRegion) { territory.region = data.territoryRegion; render(store.getState(), store.getLastSaved()); root.querySelector('.region-detail')?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' }); }
         else if (data.budgetLine) store.setBudget(data.budgetLine, Number(data.budgetLevel));
         else if (data.partyPriority) store.setPartyPriority(data.partyPriority, Number(data.partyPriorityLevel));
-        else if (data.membershipFee) store.setMembershipFee(Number(data.membershipFee));
-        else if ('membershipApply' in data) store.setMembershipFee(Number(root.querySelector('[data-membership-custom]')?.value));
+        else if (data.membershipFee) store.setMembershipFee(data.membershipFee);
+        else if ('membershipApply' in data) store.setMembershipFee(root.querySelector('[data-membership-custom]')?.value ?? '');
         else if (data.invest) store.invest(data.invest);
         else if (data.electionFund) store.saveForElection(Number(data.electionFund));
         else if (data.reserve) store.saveReserve(Number(data.reserve));
@@ -2350,7 +2359,7 @@ function subpage(state, page, player, party, events, catalog, options = {}) {
     politici: `<div class="catalog-body" data-catalog-body>${renderPoliticianArchive(catalog,{status:catalogStatus,logoFor:options.logoFor})}</div>`,
     'partiti-lista': `<div class="catalog-body" data-catalog-body>${renderPartyArchive(catalog,{status:catalogStatus,logoFor:options.logoFor})}</div>`,
     sondaggi: renderObservatory(state, observatoryOptions(state, options)),
-    elezioni: renderElectionsHub(state, { parties: options.parties ?? [], logoFor: options.logoFor, tab: options.tabFor?.('elezioni', state), national: options.nationalOverview, geography: options.electoralGeography?.() ?? null, nationalView: options.views?.filters?.nazionali, nationalMap: { boundaries: realDatabase.italyBoundaries ?? null, scope: options.views?.filters?.mapScope, selected: options.views?.filters?.mapSel }, campaignPicks: options.campaignPicks, presidency: options.presidencyView, polls: observatoryOptions(state, options), races: { raceOptions: options.raceOptions } }),
+    elezioni: renderElectionsHub(state, { parties: options.parties ?? [], logoFor: options.logoFor, tab: options.tabFor?.('elezioni', state), national: options.nationalOverview, geography: options.electoralGeography?.() ?? null, nationalView: options.views?.filters?.nazionali, nationalMap: { boundaries: realDatabase.italyBoundaries ?? null, status: optionalDocumentStatus('italyBoundaries'), scope: options.views?.filters?.mapScope, selected: options.views?.filters?.mapSel }, campaignPicks: options.campaignPicks, presidency: options.presidencyView, polls: observatoryOptions(state, options), races: { raceOptions: options.raceOptions } }),
     partito: state.game ? renderPartyPage(state, { filters: options.views?.filters ?? {}, tab: options.tabFor?.('partito', state), record: party, logoFor: options.logoFor, selectable: options.selectable ?? [], territory: { units: realDatabase.territorialUnits ?? [], municipalities: isRealCollectionLoaded('municipalities') ? realDatabase.municipalities : null, home: options.homePlace?.() ?? {}, filter: options.views?.filters?.comitati ?? 'tutti', region: options.views?.filters?.['comitati-regione'] ?? '', found: { region: options.views?.filters?.['found-region'], unit: options.views?.filters?.['found-unit'], municipality: options.views?.filters?.['found-municipality'] } } }) : `<div class="feature-card party-detail-card"><span class="feature-icon">◇</span><div class="eyebrow">${party ? 'AFFILIAZIONE ATTUALE' : 'PROFILO INDIPENDENTE'}</div><div class="party-detail-heading">${party && options.logoFor?.(party) ? `<img src="${esc(options.logoFor(party))}" alt="${esc(party.logoAlt || `Logo di ${party.officialName || party.name}`)}" />` : ''}<h2>${party ? esc(party.officialName || party.name) : 'Nessuna affiliazione'}</h2></div><p>${party ? esc(party.source === DATA_SOURCES.REAL ? party.factualDescription || 'Descrizione non disponibile nelle fonti consultate.' : party.description || 'Partito pronto a essere configurato.') : 'Sei indipendente. Qui sotto puoi aderire a un partito oppure continuare senza affiliazione.'}</p><div class="party-detail-meta">${party ? `<span class="source-pill">${sourceLabel(party.source)}${party.source === DATA_SOURCES.REAL ? ' verificato' : ''}</span>${party.abbreviation ? `<span>${esc(party.abbreviation)}</span>` : ''}${party.orientation ? `<span><small>ORIENTAMENTO</small><strong>${esc(party.orientation)}</strong></span>` : ''}${party.status ? `<span>${esc(party.status)}</span>` : ''}` : '<span class="source-pill">Nessuna affiliazione</span>'}</div>${party?.source === DATA_SOURCES.REAL && party.sourceUrl ? `<a class="catalog-source" href="${esc(party.sourceUrl)}" target="_blank" rel="noopener noreferrer">Fonte ufficiale ↗</a>` : ''}${party?.policyPositions ? `<div class="policy-summary">${[['economia','Economia'],['welfare','Welfare'],['ambiente','Ambiente'],['europa','Europa']].map(([key,label]) => `<span><small>${label}</small><strong>${Number(party.policyPositions[key] ?? 3)} <i>/ 5</i></strong><b><i style="width:${Number(party.policyPositions[key] ?? 3)*20}%"></i></b></span>`).join('')}</div>` : ''}</div>`,
     carriera: renderCareerPage(state, { tab: options.tabFor?.('carriera', state), timelineFilter: options.views?.timelineFilter }),
     profilo: `<div class="profile-page"><section class="profile-page-lead"><div class="hero-avatar">${player ? esc(player.firstName[0] + player.lastName[0]) : 'P'}</div><div><span class="section-kicker">IL TUO POLITICO</span><h2>${player ? esc(player.displayName) : 'Nessun profilo creato'}</h2><p>${player ? `${esc(player.previousProfession)} · residente a ${esc(player.municipality)}, ${esc(player.region)}` : 'Crea una carriera per definire il tuo profilo.'}</p></div>${player ? '' : '<button class="primary-button" data-action="new-career">Nuova carriera ' + icon('arrow', 16) + '</button>'}</section><div class="profile-page-facts"><div><span>INCARICO</span><strong>${player?.roleId && state.dataset.offices.some(item => item.id === player.roleId) ? esc(officeLabel(state.dataset.offices.find(item => item.id === player.roleId))) : 'Da assegnare'}</strong></div><div><span>TERRITORIO</span><strong>${esc(state.dataset.territories.find(item => item.id === player?.territoryId)?.name ?? player?.region ?? 'Italia')}</strong></div><div><span>PARTITO</span><strong>${party ? esc(partyName(party)) : 'Indipendente'}</strong></div></div><section class="profile-metrics"><h3>Statistiche</h3>${profileMetrics}</section><button class="text-link" data-nav="politici">Esplora i profili politici ${icon('arrow', 16)}</button></div>`,

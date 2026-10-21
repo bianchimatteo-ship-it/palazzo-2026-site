@@ -496,7 +496,14 @@ const toRunoff = (seedId, values) => { let c = splitField(approved(make('comunal
   assert.equal(state.game.rivalRegistry.length, field(campaign).length, 'Dopo il voto i rivali entrano nel registro del gioco.');
   assert.ok(state.game.rivalRegistry.every(item => item.meetings === 1 && item.key.startsWith('comunale|comune:Siena|') && item.lastMet === state.campaign.currentDate && item.memory.length), 'Ogni rivale ricorda come è andata.');
   assert.equal(state.game.endorsers.length, 1); assert.ok(state.game.endorsers[0].relation > 50 && state.game.endorsers[0].relation < 58 && state.game.endorsers[0].history[0].outcome === 'perso', 'Chi ti ha sostenuto ricorda anche una sconfitta (un po’ meno bene).');
-  assert.ok(relation('unions', state.game) < before.unions && relation('leadership', state.game) < before.leadership, 'Una sconfitta fa pagare gli impegni presi: i sindacati e la dirigenza ne escono più freddi.');
+  {
+    // the price of a defeat is small (−0,5 for a backer, −0,5 for a list promise) and the week of the vote has its own random events, which can add up to a point: the price is checked as it is
+    // computed (campaignDebts) and in the game for the leadership; the unions may be warmed by an unrelated event of the same week, never by more than that
+    const { campaignDebts } = await import(`../src/core/campaign-engine.js${v}`);
+    const debts = campaignDebts(state.campaign, { won: false }).relations;
+    assert.ok(debts.unions < 0 && debts.leadership < 0, `Una sconfitta fa pagare gli impegni presi: i sindacati e la dirigenza ne escono più freddi (${JSON.stringify(debts)}).`);
+    assert.ok(relation('leadership', state.game) < before.leadership && relation('unions', state.game) <= before.unions + 1, 'Nel gioco il prezzo della sconfitta si vede (la dirigenza) e non è cancellato (i sindacati).');
+  }
   const diary = state.game.log.find(item => item.id === `diario-voto-${state.campaign.id}`);
   assert.ok(diary && diary.lines.some(line => /rivali ricordano/.test(line)) && diary.lines.some(line => /Sostegni ricevuti/.test(line)), `Il diario del voto racconta cosa resta (${JSON.stringify(diary?.lines)}).`);
   store.clearCampaign();

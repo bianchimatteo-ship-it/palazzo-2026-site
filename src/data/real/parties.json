@@ -2855,11 +2855,11 @@
     "validTo": null,
     "website": "https://futuronazionale.it/",
     "status": "active",
-    "logoUrl": "https://futuronazionale.it/wp-content/uploads/2026/01/Futuro-Nazionale-logo.png",
-    "logoAsset": "./src/data/real/assets/logos/futuro-nazionale.png",
-    "logoSource": "https://futuronazionale.it/il-logo/",
-    "logoVerified": true,
-    "logoAlt": "Logo ufficiale di Futuro Nazionale",
+    "logoUrl": null,
+    "logoAsset": null,
+    "logoSource": null,
+    "logoVerified": false,
+    "logoAlt": null,
     "secondarySources": [
       {
         "source": "real",

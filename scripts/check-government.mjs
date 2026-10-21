@@ -276,5 +276,19 @@ const poor = store.getState();
 poor.game.resources.politicalCapital = 1;
 assert.throws(() => store.majoritySummit(), /capitale|Presidente/, 'Ogni mossa del governo costa capitale politico.');
 
+// ---------- 7. the interface offers only what the engine accepts: no spending review during a government crisis ----------
+{
+  const { governmentDesk } = await import('../src/ui/policy-mode.js');
+  const base = structuredClone(store.getState());
+  base.parliament.government.primeMinister = 'player';
+  base.parliament.government.status = 'active';
+  assert.ok(governmentDesk(base).includes('data-government-review-form'), 'Con un governo in carica la revisione della spesa è offerta.');
+  base.parliament.government.status = 'crisis';
+  const html = governmentDesk(base);
+  assert.ok(!html.includes('data-government-review-form') && html.includes('data-review-locked'), 'In crisi la revisione della spesa non è offerta (e si dice perché).');
+  assert.throws(() => engine.governmentSpendingReview(base.parliament, { level: 'light' }, base.clock.currentDate, base.game.week.index), /governo in carica/, 'Il motore la rifiuterebbe: UI e regola coincidono.');
+  assert.ok(html.includes('data-government-table-form'), 'Il tavolo con le parti sociali resta disponibile in crisi (il motore lo accetta).');
+}
+
 console.log(`  rami: ddl ${bill.stage}, decreto ${lapsed.stage}, governo ${store.getState().parliament.government.status}, manovra ${store.getState().parliament.laws.find(item => item.kind === 'manovra')?.stage ?? 'non presentata'}`);
 console.log(`Governo e politiche verificati: ${rules.POLICY_AREAS.length} temi con indicatori, problemi, ministeri e 4 strumenti ciascuno; costi, coperture (deficit, tasse, tagli, fondi UE), deficit, spread e procedura europea; manovra e esercizio provvisorio; effetti diversi per territorio e gruppo di cittadini; sicurezza con strumenti e tempi diversi; Presidente del Consiglio con programma, alleati, rimpasti, disegni di legge (esito: ${bill.stage}), decreti con urgenza e decadenza, fiducia su un testo, alleati che escono dalla maggioranza.`);

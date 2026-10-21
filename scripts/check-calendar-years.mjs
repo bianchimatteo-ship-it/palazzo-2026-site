@@ -37,7 +37,7 @@ const PLACES = {
 
 // What a calendar leaves the player: every entry (election of the player or spring round) with the statuses it went through.
 function watch(game, seen) {
-  for (const entry of game.elections) { const row = seen.get(entry.id) ?? { id: entry.id, kind: 'voto', type: entry.type, date: entry.electionDate, early: Boolean(entry.early), statuses: new Set() }; row.date = entry.electionDate; row.short = row.short || Object.hasOwn(entry, 'shortGap'); row.early = row.early || Boolean(entry.early); row.statuses.add(entry.status); seen.set(entry.id, row); }
+  for (const entry of game.elections) { const row = seen.get(entry.id) ?? { id: entry.id, kind: 'voto', type: entry.type, date: entry.electionDate, early: Boolean(entry.early), statuses: new Set() }; row.date = entry.electionDate; row.short = row.short || Object.hasOwn(entry, 'shortGap'); row.deferred = row.deferred || Boolean(entry.deferred); row.early = row.early || Boolean(entry.early); row.statuses.add(entry.status); seen.set(entry.id, row); }
   for (const round of game.rounds ?? []) { const row = seen.get(round.id) ?? { id: round.id, kind: 'tornata', type: 'tornata', date: round.electionDate, statuses: new Set() }; row.statuses.add(round.status); seen.set(round.id, row); }
 }
 // The next vote still ahead, from the calendar of the game (elections not yet held, rounds not yet held).
@@ -102,7 +102,9 @@ for (const [index, [level, regionName]] of CASES.entries()) {
     const dates = rows.filter(row => row.type === type);
     for (let i = 1; i < dates.length; i++) {
       const gap = years(dates[i - 1].date, dates[i].date);
-      if (!dates[i].early && !dates[i - 1].early) assert.ok(gap >= low && gap <= high, `${label}: ${type} ${dates[i - 1].date} → ${dates[i].date} (${gap.toFixed(2)} anni)`);
+      // a vote put off beyond its window, and declared so (deferred), may run later than its legal cycle by the wait the calendar allows (at most 420 days)
+      const limit = high + (dates[i].deferred ? CALENDAR_RULES.conflictDeferDays[type] / 365 : 0);
+      if (!dates[i].early && !dates[i - 1].early) assert.ok(gap >= low && gap <= limit, `${label}: ${type} ${dates[i - 1].date} → ${dates[i].date} (${gap.toFixed(2)} anni)`);
     }
   }
   // The legislature changes with the general election: the next one is planned and the number goes up.

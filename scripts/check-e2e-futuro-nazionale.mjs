@@ -28,7 +28,7 @@ const run = await startCareer({ seed, level: 'deputato', partyId: FN, draft: { p
 const { store, db } = run;
 let state = store.getState();
 const real = db.parties.find(item => item.id === FN);
-assert.ok(real?.verified === true && real.source === 'real' && real.logoAsset, 'Futuro Nazionale è nel database come partito reale verificato, con il suo logo.');
+assert.ok(real?.verified === true && real.source === 'real' && !real.logoAsset, 'Futuro Nazionale è nel database come partito reale verificato, senza logo (nessuna autorizzazione documentata: il gioco usa un marchio generato).');
 assert.equal(state.career.partyId, FN); assert.equal(state.game.party.partyId, FN, 'Il partito della carriera è Futuro Nazionale.');
 assert.equal(state.parliament.player.groupId, 'cam-xix-12', 'Nel gruppo di Futuro Nazionale alla Camera.');
 const force = state.world.parties.find(item => item.isPlayer);
@@ -129,7 +129,7 @@ assert.equal(second.store.getState().game.week.index, before.game.week.index, 'R
 // determinism: the same seed, the same decisions, the same game
 const replay = async () => { const again = await startCareer({ seed: 'e2e-det', level: 'deputato', partyId: FN, draft: { parliamentaryGroupId: 'cam-xix-12' }, fast: true }); for (let i = 0; i < 6; i++) playWeek(again); return fingerprint(again.store.getState()); };
 assert.equal(await replay(), await replay(), 'Stesso inizio e stesse decisioni: stessa partita.');
-console.log(`Futuro Nazionale, motore: partito, presidente, logo e sondaggio reali collegati alla carriera; sondaggi nazionali e per venti regioni coerenti (Italia ${start.national.toFixed(1)}% → ${later.national.toFixed(1)}%); ${done.length} attività dell'agenda fatte con effetti che restano; quattordici settimane giocate con eventi, notizie e invarianti; finestra di candidatura, campagna e risultato; salvataggio esportato e importato identico; stesso seme, stessa partita.`);
+console.log(`Futuro Nazionale, motore: partito, presidente e sondaggio reali (senza logo ufficiale) collegati alla carriera; sondaggi nazionali e per venti regioni coerenti (Italia ${start.national.toFixed(1)}% → ${later.national.toFixed(1)}%); ${done.length} attività dell'agenda fatte con effetti che restano; quattordici settimane giocate con eventi, notizie e invarianti; finestra di candidatura, campagna e risultato; salvataggio esportato e importato identico; stesso seme, stessa partita.`);
 async function tryAct(fn) { try { fn(); return 'ok'; } catch (error) { return `errore:${error.message}`; } }
 
 // ---------- 2. the browser ----------
@@ -145,7 +145,7 @@ await withBrowser(async browser => {
   for (const [width, height] of [[1280, 900], [390, 844]]) {
     await viewport(width, height); await pause(400);
     const shell = await evaluate(`(() => { const shell = document.querySelector('.app-shell'); return { identity: shell?.dataset.identity, source: shell?.dataset.identitySource, accent: getComputedStyle(shell).getPropertyValue('--party-accent').trim(), logo: Boolean(document.querySelector('.party-identity img, .topbar-party img')), home: [...document.querySelectorAll('.hqc-head, .hqc-priorities, .hqc-resources, .hqc-indicators, .hqc-board-status, .hqc-board-next, .hqc-board-secondary, .hqc-details')].map(el => el.className.split(' ')[0]) }; })()`);
-    check(shell.identity === 'partito' && shell.source === 'logo' && /^#[0-9a-f]{6}$/i.test(shell.accent) && shell.logo, `${width}px · identità di Futuro Nazionale nel guscio (${JSON.stringify(shell)})`);
+    check(shell.identity === 'partito' && shell.source === 'logo' && /^#[0-9a-f]{6}$/i.test(shell.accent) && !shell.logo, `${width}px · identità di Futuro Nazionale nel guscio (${JSON.stringify(shell)})`);
     check(shell.home.join(',') === 'hqc-head,hqc-priorities,hqc-resources,hqc-indicators,hqc-board,hqc-board,hqc-board,hqc-details' || shell.home.length >= 7, `${width}px · la Home nell’ordine previsto (${shell.home.join(', ')})`);
   }
   await viewport(1280, 900); await pause(300);
@@ -184,4 +184,4 @@ await withBrowser(async browser => {
   if (errors.length) problems.push(`Errori JavaScript: ${errors.slice(0, 3).join(' | ')}`);
 });
 if (problems.length) { console.error(`Futuro Nazionale nel browser: ${problems.length} problemi.\n${problems.join('\n')}`); process.exit(1); }
-console.log('Futuro Nazionale, browser: identità (colore del logo, logo, nome) nel guscio a 1280 e 390 px, Home nell’ordine, agenda con le attività disponibili e le altre ripiegate, un’attività fatta dal pulsante con costi ed effetti, sondaggi e territori (venti regioni, voto reale 2022 non offerto, stima dichiarata simulata), settimana chiusa con il resoconto, carriera ripresa dal menu nella settimana giusta, nessun errore nella pagina.');
+console.log('Futuro Nazionale, browser: identità (colore, nome, senza logo ufficiale) nel guscio a 1280 e 390 px, Home nell’ordine, agenda con le attività disponibili e le altre ripiegate, un’attività fatta dal pulsante con costi ed effetti, sondaggi e territori (venti regioni, voto reale 2022 non offerto, stima dichiarata simulata), settimana chiusa con il resoconto, carriera ripresa dal menu nella settimana giusta, nessun errore nella pagina.');

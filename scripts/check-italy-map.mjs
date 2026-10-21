@@ -8,7 +8,8 @@ import { chromeAvailable, createCareerInPage, openCareer, withBrowser } from './
 const read = f => JSON.parse(readFileSync(new URL(`../src/data/real/${f}.json`, import.meta.url), 'utf8'));
 const boundaries = read('italy-boundaries'), geography = read('electoral-geography'), manifest = read('manifest');
 const build = (readFileSync(new URL('../index.html', import.meta.url), 'utf8')).match(/main\.js\?v=([^"']+)/)?.[1];
-const { territoryTallies, provinceDistricts, italyMapSvg, italyMapInfo } = await import(new URL(`../src/ui/italy-map.js?v=${build}`, import.meta.url).href);
+const { territoryTallies, provinceDistricts, italyMapSvg, italyMapInfo, PROVINCE_INDICATOR_NOTE } = await import(new URL(`../src/ui/italy-map.js?v=${build}`, import.meta.url).href);
+const { geoMapCard } = await import(new URL(`../src/ui/national-view.js?v=${build}`, import.meta.url).href);
 
 // ---------- 1. the data: provenance, licence, completeness ----------
 assert.equal(boundaries.source, 'real'); assert.equal(boundaries.license, 'CC BY 4.0');
@@ -39,8 +40,18 @@ assert.ok(toscana.counts.get('csx') > 0 && toscana.leader, 'Toscana: il centrosi
 const aosta = tallies.regions.get(boundaries.regions.find(item => item.name === 'Valle d’Aosta').code);
 assert.equal(aosta.total, 2, 'Valle d’Aosta: un collegio per Camera e Senato.');
 const taa = tallies.regions.get(boundaries.regions.find(item => item.name === 'Trentino-Alto Adige').code);
-assert.ok(taa.missing >= 0 && taa.total > 0, 'Trentino-Alto Adige: ciò che manca nei dati resta dichiarato come mancante, mai inventato.');
+assert.ok(taa.missing === 6 && taa.total > 0, 'Trentino-Alto Adige: i sei collegi uninominali del Senato mancano nei dati e restano «senza risultato», mai sostituiti con la Camera.');
+const taaSenate = geography.senato.collegi.filter(item => item.region === 'Trentino-Alto Adige');
+assert.equal(taaSenate.length, 6);
+assert.ok(taaSenate.every(item => item.winner === null && item.dataGap?.status === 'mancante' && item.dataGap.official === false && /elezioni\.interno\.gov\.it/.test(item.dataGap.howToFill)), 'I sei collegi U01–U06 portano una lacuna dichiarata (dataGap), senza vincitore inventato.');
+assert.ok(geography.notes.some(note => /LACUNA/.test(note) && /Trentino/.test(note)), 'La lacuna è nelle note del documento.');
 assert.ok(boundaries.provinces.every(item => { const t = tallies.provinces.get(item.code); return t.total + t.missing > 0; }), 'Ogni provincia ha almeno un collegio.');
+// the province is an indicator by comuni, never a whole district given to every province it touches: each comune counts once, so the weights of all provinces add up to the comuni
+const comuniInProvinces = Object.keys(geography.comuni).filter(code => boundaries.provinces.some(item => item.code === String(code).padStart(6, '0').slice(0, 3))).length;
+const weightSum = [...tallies.provinces.values()].reduce((sum, t) => sum + t.total + t.missing, 0);
+assert.ok(Math.abs(weightSum - comuniInProvinces) < 1e-6, `Le province contano ogni comune una sola volta (${weightSum.toFixed(2)} su ${comuniInProvinces}).`);
+const sharedDistrict = [...provinceDistricts(geography).entries()].flatMap(([province, slot]) => [...slot.camera.keys()].map(index => [index, province])).reduce((map, [index, province]) => map.set(index, [...(map.get(index) ?? []), province]), new Map());
+assert.ok([...sharedDistrict.values()].some(list => list.length > 1), 'Esistono collegi che toccano più province (il caso da non contare per intero in ciascuna).');
 // a province is read from districts that include its comuni: Siena (052) must hold the district(s) of its comuni
 const siena = tallies.provinces.get('052');
 assert.ok(siena.total >= 1 && [...siena.counts.keys()].every(id => ['cdx', 'csx', 'm5s', 'azione-iv'].includes(id) || typeof id === 'string'), 'Siena: collegi dai suoi comuni.');
@@ -54,7 +65,21 @@ assert.equal((svgProvinces.match(/data-map-area="p:/g) ?? []).length, 110, '110 
 assert.ok(/aria-pressed="true"/.test(svgProvinces) && /it-halo/.test(svgProvinces), 'La zona scelta è evidenziata.');
 assert.ok(/<title>/.test(svgRegions) && /aria-label="[^"]*collegi/.test(svgRegions) && !/http|<image/.test(svgRegions), 'Ogni area ha etichetta e tooltip, nessuna risorsa esterna.');
 const info = italyMapInfo({ boundaries, tallies, selected: 'p:052', labelOf, colorOf, dataClass: 'DATO STORICO REALE' });
-assert.ok(/Provincia di Siena/.test(info) && /non è un risultato provinciale ufficiale/i.test(info) && /DATO STORICO REALE/.test(info), 'La scheda dice che cos’è e che non è un risultato provinciale ufficiale.');
+assert.ok(/Provincia di Siena/.test(info) && /Indicatore descrittivo/.test(info) && /non è il vincitore né un risultato ufficiale della provincia/.test(info) && /dei comuni/.test(info) && !/prevale<\/span>/.test(info) && /DATO STORICO REALE/.test(info), 'La scheda dice che è un indicatore sui comuni, non il vincitore né un risultato ufficiale della provincia.');
+assert.ok(/Indicatore descrittivo/.test(PROVINCE_INDICATOR_NOTE) && /Indicatore/.test(svgProvinces) === false || /indicatore sui comuni/.test(svgProvinces), 'Le province dichiarano l’indicatore in etichetta e tooltip.');
+// a selection of the other level is never shown: a province while the regions are on, a region while the provinces are on
+const staleInfo = italyMapInfo({ boundaries, tallies, selected: 'p:052', labelOf, colorOf, dataClass: '', scope: 'regioni' });
+assert.ok(/Tocca o seleziona/.test(staleInfo) && !/Siena/.test(staleInfo), 'Passando da province a regioni nessuna scheda residua.');
+assert.ok(!/is-selected|it-halo/.test(italyMapSvg({ boundaries, tallies, scope: 'regioni', selected: 'p:052', colorOf, labelOf })), 'Nessuna zona evidenziata dopo il cambio di livello.');
+// the four states of the loading: loading, error (with retry), missing and no results — none is a screen that waits for ever
+const dummy = { national: {} };
+assert.ok(/data-geo-state="loading"/.test(geoMapCard(dummy, geography, 'proiezione', { boundaries: null, status: { status: 'loading' } })), 'Stato: caricamento.');
+assert.ok(/data-geo-state="loading"/.test(geoMapCard(dummy, geography, 'proiezione', { boundaries: null, status: { status: 'idle' } })), 'Stato: in attesa.');
+const failed = geoMapCard(dummy, geography, 'proiezione', { boundaries: null, status: { status: 'error', reason: 'Tempo scaduto nel caricamento di italy-boundaries.json.' } });
+assert.ok(/data-geo-state="error"/.test(failed) && /data-action="retry-data"/.test(failed) && /Tempo scaduto/.test(failed), 'Stato: errore, con motivo e «Riprova».');
+assert.ok(/data-geo-state="missing"/.test(geoMapCard(dummy, geography, 'proiezione', { boundaries: null, status: { status: 'missing', reason: 'Il pacchetto dei dati reali non comprende questo documento.' } })), 'Stato: dato mancante.');
+const noResults = geoMapCard(dummy, null, 'proiezione', { boundaries, status: { status: 'ready' } });
+assert.ok(/data-geo-state="no-results"/.test(noResults) && /data-action="retry-data"/.test(noResults), 'Stato: confini presenti ma elezioni 2022 non caricate.');
 assert.ok(/Tocca o seleziona/.test(italyMapInfo({ boundaries, tallies, selected: '', labelOf, colorOf, dataClass: '' })), 'Senza selezione, un invito.');
 console.log('Mappa geografica: dati e funzioni verificati (20 regioni, 110 province, 2022 coerente con i collegi ufficiali).');
 
@@ -84,9 +109,10 @@ await withBrowser(async browser => {
     // provinces
     await click('[data-view-filter="mapScope"][data-view-filter-value="province"]');
     await wait(() => evaluate(`document.querySelectorAll('.it-area').length === 110`), 5000);
+    assert.ok(await evaluate(`document.querySelector('.it-info')?.classList.contains('is-empty') && !document.querySelector('.it-area.is-selected')`), `${name}: passando alle province la regione scelta non resta selezionata.`);
     await click('.it-area[data-map-area="p:052"]');
     await wait(() => evaluate(`/Siena/.test(document.querySelector('.it-info h4')?.textContent ?? '')`), 5000);
-    assert.ok(await evaluate(`/non è un risultato provinciale ufficiale/i.test(document.querySelector('.it-info')?.textContent ?? '')`), `${name}: la provincia dichiara il metodo.`);
+    assert.ok(await evaluate(`/Indicatore descrittivo/.test(document.querySelector('.it-info')?.textContent ?? '') && /non è il vincitore/.test(document.querySelector('.it-info')?.textContent ?? '')`), `${name}: la provincia dichiara il metodo.`);
     assert.ok(await evaluate(`document.querySelector('.it-area.is-selected')?.dataset.mapArea === 'p:052'`), `${name}: area scelta evidenziata.`);
     // 2022 reading is real and its alliances are labelled
     await click('[data-view-filter="nazionali"][data-view-filter-value="2022"]');

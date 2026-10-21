@@ -109,7 +109,7 @@ const filters = { politicianQuery: 'schlein', politicianChamber: 'all', politici
 let html = renderPoliticianArchive(filters, { logoFor });
 assert.ok(html.includes('src="https://example.org/pd.svg"') && html.includes('person-mark'), 'Nella lista, al posto dell’iniziale, il logo del partito.');
 html = renderPoliticianArchive({ ...filters, politicianQuery: 'ziello' }, { logoFor });
-assert.ok(html.includes('futuro-nazionale.png'), 'Il logo verificato di Futuro Nazionale.');
+assert.ok(!html.includes('futuro-nazionale.png'), 'Il logo ufficiale di Futuro Nazionale non è incluso: nessuna autorizzazione documentata.');
 html = renderPoliticianArchive({ ...filters, politicianQuery: person(byList.id).fullName.toLowerCase() }, { logoFor });
 assert.ok(html.includes('class="catalog-mark"') && html.includes('Partito non documentato') && html.includes('Lista 2022: Movimento 5 Stelle'), 'Senza partito documentato: iniziale della Camera; la lista 2022 resta indicata a parte.');
 html = renderPoliticianArchive({ ...filters, politicianQuery: senator.fullName.toLowerCase() }, { logoFor });

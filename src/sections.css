@@ -1418,3 +1418,52 @@ details.accord-panel.pm-fold { padding: 0; }
 .bill-card { border-left-width: 5px; } .bill-card.side-governo { border-left-color: #7fa7d9; } .bill-card.side-maggioranza { border-left-color: #5fae7e; } .bill-card.side-opposizione { border-left-color: #d1a24a; } .bill-card.side-commissione { border-left-color: #a79cdf; }
 .bill-flag.good { background: color-mix(in srgb, #4c8f6b 22%, transparent); color: #7fd1a0; } .bill-flag.bad { background: color-mix(in srgb, #c4574a 22%, transparent); color: #f0907f; } .bill-flag.warn { background: color-mix(in srgb, #d1a24a 22%, transparent); color: #e0c07a; }
 @media (max-width: 760px) { .review-levels, .table-form .wizard-form-grid { grid-template-columns: minmax(0, 1fr); } }
+
+/* Le tre misure della campagna (consenso territoriale, sondaggio, andamento) con la stessa struttura: titolo su due righe, cifra, barra, descrizione; stessa altezza e stessi margini. */
+.campaign-consensus-trend.campaign-metrics { grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); align-items: stretch; gap: 12px; }
+.campaign-consensus-trend.campaign-metrics .campaign-metric { display: grid; grid-template-rows: 2.5em auto 10px 1fr; row-gap: 6px; align-content: start; padding: 12px 14px; border-radius: 10px; background: var(--panel, #fff); border: 1px solid var(--line, #d7dcd9); }
+.campaign-consensus-trend.campaign-metrics .campaign-metric small { display: flex; align-items: flex-end; min-height: 2.5em; line-height: 1.25; letter-spacing: .05em; text-transform: uppercase; }
+.campaign-consensus-trend.campaign-metrics .campaign-metric strong { font-size: 24px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.campaign-consensus-trend.campaign-metrics .campaign-metric span { font-size: 12.5px; line-height: 1.4; min-height: 4.2em; }
+.metric-bar { position: relative; height: 8px; border-radius: 99px; background: color-mix(in srgb, var(--muted, #6b756e) 22%, transparent); overflow: hidden; align-self: center; }
+.metric-bar i { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 99px; background: var(--party-accent, #2f7d57); }
+.metric-bar.is-delta::before { content: ""; position: absolute; left: 50%; top: -1px; bottom: -1px; width: 2px; background: color-mix(in srgb, var(--muted, #6b756e) 70%, transparent); z-index: 1; }
+.metric-bar.is-delta.is-up i { background: #3e9b66; } .metric-bar.is-delta.is-down i { background: #c0564b; }
+.campaign-consensus-trend.campaign-metrics svg { grid-column: 1 / -1; margin-top: 2px; }
+/* I pannelli a tendina della campagna: da chiusi un riepilogo utile, da aperti tutto com'era. */
+.campaign-fold > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; cursor: pointer; list-style: none; }
+.campaign-fold > summary::-webkit-details-marker { display: none; }
+.campaign-fold > summary::after { content: "▾"; margin-left: auto; transition: transform .15s ease; color: var(--muted, #6b756e); }
+.campaign-fold[open] > summary::after { transform: rotate(180deg); }
+.campaign-fold-summary { flex: 1 1 100%; order: 3; color: var(--muted, #6b756e); font-size: 13px; line-height: 1.4; }
+.campaign-fold[open] > summary .campaign-fold-summary { display: none; }
+.campaign-fold-body { margin-top: 10px; }
+.campaign-note-small { margin: 0 0 8px; color: var(--muted, #6b756e); font-size: 12.5px; }
+.campaign-columns > .campaign-fold { align-self: start; }
+@media (prefers-reduced-motion: reduce) { .campaign-fold > summary::after { transition: none; } }
+
+/* ---------- telefono: barra alta con i due loghi (POLITICANDO e il partito) e menu «Altro» a colori, uguale alla barra laterale del computer ---------- */
+.topbar-brands { display: none; }
+@media (max-width: 600px) {
+  .topbar-title .topbar-brands { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; min-width: 0; }
+  .topbar-brand { flex: none; width: 44px; height: 44px; object-fit: contain; border-radius: 10px; }
+  .topbar-title .topbar-brands .topbar-party { display: inline-flex; align-items: center; margin: 0; padding-left: 10px; border-left: 1px solid var(--line, rgba(255,255,255,.18)); }
+  .topbar-title .topbar-brands .topbar-party .emblem { width: 40px; height: 40px; }
+  .topbar-title .topbar-party { margin-right: 0; }
+  .mobile-sheet [data-sec] { --hue: #8fb0bb; }
+  .mobile-sheet [data-sec="panoramica"] { --hue: #4fb287; } .mobile-sheet [data-sec="carriera"] { --hue: #5b9bd5; } .mobile-sheet [data-sec="partito"] { --hue: #d06aa1; }
+  .mobile-sheet [data-sec="elezioni"] { --hue: #e0675a; } .mobile-sheet [data-sec="sondaggi"] { --hue: #9a85e0; } .mobile-sheet [data-sec="istituzioni"] { --hue: #3db5c4; }
+  .mobile-sheet [data-sec="territori"] { --hue: #e0a93d; } .mobile-sheet [data-sec="informazione"] { --hue: #ee8446; } .mobile-sheet [data-sec="profilo"] { --hue: #7fa2b8; } .mobile-sheet [data-sec="impostazioni"] { --hue: #a3acb6; }
+  .mobile-sheet .sheet-group { border-radius: 14px; border: 1px solid color-mix(in srgb, var(--hue) 38%, transparent); background: linear-gradient(135deg, color-mix(in srgb, var(--hue) 14%, transparent), transparent 70%); }
+  .mobile-sheet .sheet-group > summary { border: 0; background: none; }
+  .mobile-sheet .sheet-group[open] { border-color: var(--hue); background: linear-gradient(135deg, color-mix(in srgb, var(--hue) 24%, transparent), transparent 80%); }
+  .mobile-sheet .sheet-group[open] > summary { border: 0; background: none; }
+  .mobile-sheet .sheet-group-icon { background: var(--hue); color: #0d1612; box-shadow: 0 2px 8px color-mix(in srgb, var(--hue) 45%, transparent); }
+  .mobile-sheet .sheet-group-count { background: color-mix(in srgb, var(--hue) 30%, transparent); color: var(--ink-hi, #fff); }
+  .mobile-sheet .sheet-group .mobile-sheet-grid { padding: 4px 10px 12px; }
+  .mobile-sheet .sheet-group .sheet-item { border-left: 3px solid var(--hue); }
+  .mobile-sheet .sheet-group .sheet-item.active { background: color-mix(in srgb, var(--hue) 26%, transparent); border-color: var(--hue); color: var(--ink-hi, #fff); font-weight: 700; }
+  .mobile-sheet .sheet-group.is-direct { margin-top: 8px; }
+  .mobile-sheet .sheet-direct { width: 100%; min-height: 56px; gap: 12px; padding: 8px 12px; border: 0 !important; background: none !important; color: var(--ink-hi, #fff); font: 800 14px/1.2 var(--font-head, inherit); text-align: left; }
+  .mobile-sheet .sheet-group.is-direct:has(.sheet-direct.active) { border-color: var(--hue); background: linear-gradient(135deg, color-mix(in srgb, var(--hue) 28%, transparent), transparent 80%); }
+}

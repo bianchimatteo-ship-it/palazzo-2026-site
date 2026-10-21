@@ -86,7 +86,7 @@ for (const [index, month] of MONTHS.entries()) {
 }
 
 // the rule itself, on made-up dates
-assert.ok(keepsDistance('2028-05-28', ['2028-05-28']) && keepsDistance('2028-05-28', ['2028-02-27']) === false && keepsDistance('2028-05-28', ['2027-12-01']) === false && keepsDistance('2028-05-28', ['2027-11-30']), 'Stesso giorno: una sola tornata; 91 e 179 giorni: troppo vicini; 180: ammesso.');
+assert.ok(keepsDistance('2028-05-28', ['2028-05-28']) === false && keepsDistance('2028-05-28', ['2028-02-27']) === false && keepsDistance('2028-05-28', ['2027-12-01']) === false && keepsDistance('2028-05-28', ['2027-11-30']), 'Stesso giorno: non ammesso (due elezioni distinte non coincidono); 91 e 179 giorni: troppo vicini; 180: ammesso.');
 const planned = C.createGameState({ seedText: 'x', currentDate: '2026-10-12', level: 'regionale', place: PLACES.Lombardia, localCalendar: C.localCalendarOf(calendar, { municipalityCode: PLACES.Lombardia.municipalityCode, region: 'Lombardia', seed: 'Bergamo', provinceCode: '016' }), stats: STATS });
 assert.ok(distinctRounds([...planned.elections.map(item => item.electionDate), ...planned.rounds.map(item => item.electionDate)]).closest.days >= 180, 'Il calendario di partenza rispetta già i 180 giorni.');
 // idempotent: harmonizing again changes nothing

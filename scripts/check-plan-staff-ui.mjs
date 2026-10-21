@@ -92,7 +92,7 @@ await withBrowser(async browser => {
   // ---------- Finanze: the treasury operations ----------
   await evaluate(`document.querySelector('[data-nav="finanze"]')?.click(), true`); await pause(600);
   const ops = await evaluate(`(() => { const cards = [...document.querySelectorAll('.invest-card')].filter(card => card.querySelector('[data-treasury-start]')); return { n: cards.length, texts: cards.map(card => card.textContent.replace(/\\s+/g, ' ')), ready: cards.filter(card => !card.querySelector('[data-treasury-start]').disabled).length, plans: document.querySelectorAll('[data-treasury-start] ~ .plan-add').length }; })()`);
-  check(ops.n === 4 && ops.texts.every(text => /Costo/.test(text) && /Tempi/.test(text) && /non è garantito/.test(text) && /Rischio/.test(text)), 'Quattro operazioni, ognuna con costo, tempi, risultato possibile non garantito e rischio.');
+  check(ops.n === 9 && ops.texts.every(text => /Costo/.test(text) && /Tempi/.test(text) && /non è garantito/.test(text) && /Rischio/.test(text)), 'Nove operazioni (quattro raccolte del partito, cinque entrate dichiarate della persona), ognuna con costo, tempi, risultato possibile non garantito e rischio.');
   const f0 = (await game()).funds;
   await click('[data-treasury-start="cena-raccolta"]');
   const f1 = await game();
@@ -117,4 +117,4 @@ await withBrowser(async browser => {
   } catch (error) { console.error(`Interrotto: ${error.message}\nProblemi finora:\n${problems.join('\n')}`); throw error; }
 });
 if (problems.length) { console.error(`Piano, staff e tesoreria: ${problems.length} problemi.\n${[...new Set(problems)].slice(0, 40).join('\n')}`); process.exit(1); }
-console.log('Piano, staff e tesoreria verificati in Chrome: il blocco dello staff in Home (competenze, incarichi con il perché di quelli bloccati, ciò che non si delega); «+ Piano» sulle attività, vassoio con il costo di ogni passo e quanto resta, piano impossibile bloccato con il motivo, conferma e un’unica esecuzione; incarico affidato con conferma, sospeso, ripreso, modificato, annullato, resoconto alla chiusura della settimana; in Finanze quattro operazioni con costo, tempi, risultato non garantito e rischio, avviate una alla volta e registrate; nessuno scroll orizzontale da 320 a 1280 px e il vassoio non copre la barra in basso.');
+console.log('Piano, staff e tesoreria verificati in Chrome: il blocco dello staff in Home (competenze, incarichi con il perché di quelli bloccati, ciò che non si delega); «+ Piano» sulle attività, vassoio con il costo di ogni passo e quanto resta, piano impossibile bloccato con il motivo, conferma e un’unica esecuzione; incarico affidato con conferma, sospeso, ripreso, modificato, annullato, resoconto alla chiusura della settimana; in Finanze nove operazioni con costo, tempi, risultato non garantito e rischio, avviate una alla volta e registrate; nessuno scroll orizzontale da 320 a 1280 px e il vassoio non copre la barra in basso.');

@@ -1,5 +1,6 @@
-import { TREASURY_OPERATIONS, TREASURY_OPERATIONS_KEPT } from '../data/simulation/finance-rules.js?v=20261020-2';
-import { BUDGET_LINES, DEBT_CRISIS_THRESHOLD, DEBT_WEEKLY_INTEREST, ELECTION_FUND_MATCH, FINANCE_CATEGORIES, FINANCE_SHOCKS, HISTORY_WEEKS, INVESTMENTS, LEDGER_SIZE, RESERVE, RESERVE_BEFORE_REPAYING, ROLE_COST_SHARE } from '../data/simulation/finance-rules.js?v=20261020-2';
+import { SUPPORTERS, TRANSFERS, TREASURY_OPERATIONS, TREASURY_OPERATIONS_KEPT } from '../data/simulation/finance-rules.js?v=20261021-1';
+import { treasuryBook } from './organization-engine.js?v=20261021-1';
+import { BUDGET_LINES, DEBT_CRISIS_THRESHOLD, DEBT_WEEKLY_INTEREST, ELECTION_FUND_MATCH, FINANCE_CATEGORIES, FINANCE_SHOCKS, HISTORY_WEEKS, INVESTMENTS, LEDGER_SIZE, RESERVE, RESERVE_BEFORE_REPAYING, ROLE_COST_SHARE } from '../data/simulation/finance-rules.js?v=20261021-1';
 
 const SIM = 'simulation';
 const blankPeriod = () => ({ income: 0, expense: 0, byCategory: {} });
@@ -141,6 +142,7 @@ export function settleFinanceWeek(game, { week, date, incomes = [], partyContrib
   };
   // The cost of a role: representing an office has a price that grows with the office.
   const indemnity = incomes.find(item => item.category === 'indennita')?.amount ?? 0;
+  finance.indemnity = indemnity;
   if (indemnity > 0) book(game, -Math.round(indemnity * ROLE_COST_SHARE), 'relazioni', 'Spese di rappresentanza della carica', date);
   for (const line of BUDGET_LINES) {
     const level = finance.budget[line.id] ?? 0;
@@ -234,11 +236,18 @@ export function operationRange(spec, notoriety = 30) {
   const low = Math.round(Math.min(...spec.outcomes.map(item => item[key][0])) * factor), high = Math.round(Math.max(...spec.outcomes.map(item => item[key][1])) * factor);
   return { key, low, high };
 }
+// Why an operation cannot be started now (null when it can): it needs a party, or an indemnity below the limit that is compatible with the work it stands for.
+export function operationProblem(game, spec) {
+  if (spec.requiresParty && !game.party?.org) return 'Serve un partito: questa operazione è del partito.';
+  if (Number.isFinite(spec.maxIndemnity) && (game.finance?.indemnity ?? 0) > spec.maxIndemnity) return `Non è compatibile con l’indennità della tua carica attuale (oltre ${spec.maxIndemnity} € a settimana).`;
+  return null;
+}
 // Starts it: the player pays (the caller charges days and funds), the operation is recorded as in progress with the week it falls due.
 export function beginOperation(game, id, { week, date }) {
   const spec = treasuryOperation(id);
   if (!spec) throw new Error('Operazione di tesoreria non riconosciuta.');
-  if (spec.requiresParty && !game.party?.org) throw new Error('Serve un partito: questa operazione è del partito.');
+  const problem = operationProblem(game, spec);
+  if (problem) throw new Error(problem);
   game.finance ??= createFinance({ week, date, funds: game.resources.funds });
   game.finance.operations ??= [];
   if (game.finance.operations.some(item => item.opId === id && item.status === 'in-corso')) throw new Error('Questa operazione è già in corso: aspetta l’esito prima di ripeterla.');
@@ -278,4 +287,108 @@ export function settleOperations(game, { week, date, rand, notoriety = 30 }) {
     results.push({ entry, spec, members, text, tone: outcome.tone });
   }
   return { results, effects };
+}
+
+
+// ---------- the regular supporters ----------
+// The circle of supporters follows the politician's standing: how many they are (notoriety, consensus, popularity) and what each gives (reputation); the weekly cashing varies.
+// Returns the week's income and keeps the state (game.supporters) up to date: a save from before this model starts at the number the standing sustains, so nothing jumps.
+export function supporterTarget(stats = {}) {
+  const raw = SUPPORTERS.base + SUPPORTERS.perNotoriety * (stats.notoriety ?? 0) + SUPPORTERS.perConsensus * (stats.consensus ?? 0) + SUPPORTERS.perPopularity * (stats.popularity ?? 0);
+  return Math.max(SUPPORTERS.min, Math.min(SUPPORTERS.max, raw));
+}
+export const supporterPerHead = (stats = {}) => SUPPORTERS.perHeadMin + SUPPORTERS.perHeadSpan * Math.max(0, Math.min(100, stats.reputation ?? 50)) / 100;
+export function supporterIncome(game, stats, rand = () => 0.5) {
+  const target = supporterTarget(stats);
+  const state = game.supporters && Number.isFinite(game.supporters.count) ? game.supporters : { count: target };
+  const moved = state.count + (target - state.count) * SUPPORTERS.inertia;
+  const count = Math.max(SUPPORTERS.min, Math.min(SUPPORTERS.max, moved * (1 + (rand() - 0.5) * 2 * SUPPORTERS.noise)));
+  const perHead = supporterPerHead(stats);
+  const [low, high] = SUPPORTERS.swing;
+  const amount = Math.round(count * perHead * (low + (high - low) * rand()));
+  game.supporters = { count: Math.round(count * 10) / 10, target: Math.round(target), perHead: Math.round(perHead * 100) / 100, income: amount, source: 'simulation' };
+  return { amount, count: Math.round(count), target: Math.round(target), perHead };
+}
+
+// ---------- transfers between the politician's funds and the party's treasury ----------
+// Two separate pots: the funds of the politician (game.resources.funds, with the committee budget) and the treasury of the party (game.party.org.treasury). A transfer is written in both registers
+// (the same amount, once each side), never creates money, never leaves a balance below zero. The membership fees are income of the party and never pass through here.
+const log = game => (game.finance.transfers ??= []);
+function addTransfer(game, entry) {
+  game.finance.transfers = [entry, ...log(game)].slice(0, TRANSFERS.historyKept);
+  return entry;
+}
+const validAmount = amount => {
+  const raw = typeof amount === 'string' ? amount.trim() : amount;
+  if (raw === '' || raw === null || raw === undefined || typeof raw === 'boolean' || !Number.isFinite(Number(raw))) throw new Error(`Indica una cifra valida in euro (da ${TRANSFERS.min} a ${TRANSFERS.max} €).`);
+  const value = Math.round(Number(raw));
+  if (value < TRANSFERS.min || value > TRANSFERS.max) throw new Error(`L’importo va da ${TRANSFERS.min} a ${TRANSFERS.max} €.`);
+  return value;
+};
+// What the politician can ask of the party: the rule of the rank (cap, approval), the room in the treasury and the waiting time since the last request.
+export function partyRequestRules(game) {
+  const party = game.party, org = party?.org;
+  if (!org) return { allowed: false, reason: 'Serve un partito: senza partito non c’è una tesoreria a cui chiedere.' };
+  const rank = party.affiliation === 'founder' ? 5 : (party.rank ?? 0);
+  const rule = TRANSFERS.ranks[Math.min(5, rank)];
+  if (!rule) return { allowed: false, reason: 'Da semplice iscritto non puoi chiedere fondi al partito: serve almeno un incarico di coordinatore locale.', rank };
+  const balance = org.treasury.balance;
+  const room = Math.max(0, balance - TRANSFERS.floor);
+  const cap = rule.approval ? Math.min(rule.cap, room) : Math.min(rule.cap, Math.floor(balance * TRANSFERS.leaderShare), room);
+  const pending = log(game).some(item => item.direction === 'dal-partito' && item.status === 'in-attesa');
+  const last = log(game).find(item => item.direction === 'dal-partito' && item.status !== 'rifiutata');
+  const wait = last && Number.isFinite(last.week) ? Math.max(0, TRANSFERS.cooldownWeeks - ((game.week?.index ?? 0) - last.week)) : 0;
+  const reason = pending ? 'Hai già una richiesta in attesa di risposta.' : wait ? `Hai già ricevuto fondi di recente: la prossima richiesta tra ${wait} ${wait === 1 ? 'settimana' : 'settimane'}.` : cap < TRANSFERS.min ? `La tesoreria del partito non ha margine (restano da parte ${TRANSFERS.floor} €).` : null;
+  return { allowed: !reason, reason, rank, approval: rule.approval, cap, rankCap: rule.cap, balance, wait, pending };
+}
+export function requestPartyFunds(game, amount, { week, date }) {
+  const value = validAmount(amount);
+  const rules = partyRequestRules(game);
+  if (!rules.allowed) throw new Error(rules.reason);
+  if (value > rules.cap) throw new Error(`Con il tuo ruolo puoi chiedere al massimo ${rules.cap} € per volta${rules.approval ? '' : ` (un quarto della tesoreria)`}.`);
+  game.finance ??= createFinance({ week, date, funds: game.resources.funds });
+  const base = { id: `tr-${week}-${log(game).length + 1}`, week, date, direction: 'dal-partito', amount: value, source: 'simulation' };
+  if (rules.approval) return addTransfer(game, { ...base, status: 'in-attesa', note: 'La direzione risponde alla chiusura della settimana.' });
+  return settleGrant(game, addTransfer(game, { ...base, status: 'in-attesa', note: '' }), { week, date, decided: 'Disposta direttamente dal segretario' });
+}
+// Pays an approved request: the treasury must still hold the amount (and its floor), then the money moves in both registers.
+function settleGrant(game, entry, { week, date, decided }) {
+  const org = game.party?.org;
+  if (!org || org.treasury.balance - entry.amount < TRANSFERS.floor) {
+    Object.assign(entry, { status: 'rifiutata', decidedWeek: week, note: 'La tesoreria non ha più il margine necessario: nessun fondo è stato spostato.' });
+    return entry;
+  }
+  treasuryBook(org, -entry.amount, 'sostegno', 'Sostegno a un eletto o candidato');
+  book(game, entry.amount, 'fondi_partito', 'Fondi ricevuti dal partito', date);
+  const support = Math.max(0, Math.min(0.8, entry.amount / 3000 * TRANSFERS.askedCost));
+  if (game.party && !decided.startsWith('Disposta')) game.party.support = Math.max(0, Math.round(((game.party.support ?? 50) - support) * 100) / 100);
+  Object.assign(entry, { status: 'approvata', decidedWeek: week, note: `${decided}.`, treasuryAfter: org.treasury.balance, fundsAfter: game.resources.funds });
+  return entry;
+}
+// At the weekly close: the requests that wait are decided, with a chance that follows the support of the politician in the party, the reputation and the state of the treasury.
+export function settleTransfers(game, { week, date, rand, stats = {} }) {
+  const results = [];
+  for (const entry of log(game)) {
+    if (entry.status !== 'in-attesa' || entry.week > week) continue;
+    const org = game.party?.org;
+    const rules = TRANSFERS.approval;
+    const room = org ? org.treasury.balance : 0;
+    const chance = Math.max(0.05, Math.min(0.95, rules.base + rules.perSupport * (game.party?.support ?? 50) + rules.perReputation * (stats.reputation ?? 50) + (room > entry.amount * 4 ? rules.flush : room < entry.amount * 2 + TRANSFERS.floor ? rules.tight : 0)));
+    if (rand() < chance) settleGrant(game, entry, { week, date, decided: 'Approvata dalla direzione' });
+    else Object.assign(entry, { status: 'rifiutata', decidedWeek: week, note: 'La direzione ha respinto la richiesta: la cassa serve ad altro in questo momento.' });
+    results.push(entry);
+  }
+  return results;
+}
+export function contributeToParty(game, amount, { week, date }) {
+  const org = game.party?.org;
+  if (!org) throw new Error('Serve un partito: senza partito non c’è una tesoreria a cui versare.');
+  const value = validAmount(amount);
+  if (value > game.resources.funds) throw new Error(`Nei tuoi fondi ci sono ${game.resources.funds} €: non puoi versare ${value} €.`);
+  game.finance ??= createFinance({ week, date, funds: game.resources.funds });
+  book(game, -value, 'partito', 'Versamento volontario al partito', date);
+  treasuryBook(org, value, 'contributi', 'Versamento volontario di un eletto');
+  const gift = Math.min(TRANSFERS.giftSupportMax, value / TRANSFERS.giftSupport);
+  if (game.party) game.party.support = Math.min(100, Math.round(((game.party.support ?? 50) + gift) * 100) / 100);
+  return addTransfer(game, { id: `tr-${week}-${log(game).length + 1}`, week, date, direction: 'al-partito', amount: value, status: 'eseguito', note: 'Versamento volontario.', treasuryAfter: org.treasury.balance, fundsAfter: game.resources.funds, source: 'simulation' });
 }

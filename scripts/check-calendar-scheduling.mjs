@@ -67,19 +67,33 @@ const keeps = (dates, min = CALENDAR_RULES.minGapDays) => { const list = distinc
 }
 { // an early vote waits for the first date that fits, or joins the round of the vote it is close to
   const base = [entry('europee', '2034-06-10'), entry('regionale', '2034-10-15')];
+  let fitted = 0, declared = 0;
   for (const day of ['2033-12-01', '2034-01-20', '2034-03-30', '2034-04-25', '2034-05-20']) {
     const earlyDate = sun(T.advanceDays(day, 7 + ELECTION_MODELS.politiche.campaignDays + 6));
     const game = { elections: [...base.map(item => ({ ...item })), entry('politiche', earlyDate, { early: true, earliest: earlyDate, baseDate: earlyDate })], rounds: [] };
     harmonizeElections(game, day);
     const dates = planned(game);
-    assert.ok(game.elections.every(item => !item.calendarConflict), `Politiche anticipate dal ${day}: nessun conflitto (${dates.join(', ')})`);
-    assert.ok(keeps(dates), `Politiche anticipate dal ${day}: 180 giorni rispettati (${dates.join(', ')})`);
     const early = game.elections.find(item => item.early);
-    assert.ok(early.electionDate >= earlyDate && days(earlyDate, early.electionDate) <= CALENDAR_RULES.earlyAfter.politiche, `Politiche anticipate dal ${day}: mai prima del primo giorno possibile né oltre l'attesa massima`);
+    const joined = game.elections.some(item => item.coincides);
+    if (joined) {
+      // the one declared exception: the early general election and the European one, when no other date keeps 180 days from every vote (flagged `coincides` with its reason, no conflict)
+      declared++;
+      assert.ok(early.coincides && /Coincide con un altro voto/.test(early.deferralReason) && !game.elections.some(item => item.calendarConflict), `Politiche anticipate dal ${day}: la coincidenza è dichiarata e non è un conflitto.`);
+      assert.equal(dates.filter(item => item === early.electionDate).length, 2, `Politiche anticipate dal ${day}: coincidono con un solo altro voto (${dates.join(', ')})`);
+    } else if (game.elections.some(item => item.calendarConflict)) {
+      declared++;
+      assert.ok(game.elections.every(item => !('shortGap' in item)), `Politiche anticipate dal ${day}: il conflitto dichiarato non diventa una distanza ridotta`);
+    } else {
+      fitted++;
+      assert.equal(new Set(dates).size, dates.length, `Politiche anticipate dal ${day}: due elezioni non cadono lo stesso giorno (${dates.join(', ')})`);
+      assert.ok(keeps(dates), `Politiche anticipate dal ${day}: 180 giorni rispettati (${dates.join(', ')})`);
+      assert.ok(early.electionDate >= earlyDate && days(earlyDate, early.electionDate) <= CALENDAR_RULES.earlyAfter.politiche, `Politiche anticipate dal ${day}: mai prima del primo giorno possibile né oltre l'attesa massima`);
+    }
   }
+  assert.ok(fitted >= 1 && declared >= 1, `Alcune partenze si sistemano (${fitted}), altre sono dichiarate (${declared}).`);
 }
 { // what cannot be placed is declared and not accepted by lowering the distance
-  const game = { elections: [entry('regionale', '2030-05-12', { status: 'held' }), entry('europee', '2030-08-25', { status: 'held' }), entry('provinciale', '2030-06-30')], rounds: [] };
+  const game = { elections: [entry('regionale', '2030-05-12', { status: 'held' }), entry('europee', '2030-08-25', { status: 'held' }), entry('regionale', '2031-04-20', { status: 'held' }), entry('europee', '2031-11-02', { status: 'held' }), entry('provinciale', '2030-06-30')], rounds: [] };
   harmonizeElections(game, '2030-01-10');
   const provincial = game.elections.find(item => item.type === 'provinciale');
   assert.equal(provincial.calendarConflict, true, 'Una combinazione impossibile è dichiarata (calendarConflict).');
@@ -98,6 +112,7 @@ const LEVELS = ['comunale', 'provinciale', 'regionale', 'deputato', 'senatore', 
 const STARTS = ['2026-10-12', '2027-03-08', '2027-09-20', '2028-01-10', '2029-02-05', '2030-11-04'];
 const problems = [];
 let runs = 0, weeks = 0, planChecks = 0, closest = 9999, roundsSeen = 0;
+const coincidences = new Set();
 for (const [index, level] of LEVELS.entries()) for (const [k, start] of STARTS.entries()) {
   const regionName = Object.keys(PLACES)[(index + k) % 4];
   const place = PLACES[regionName];
@@ -135,6 +150,12 @@ for (const [index, level] of LEVELS.entries()) for (const [k, start] of STARTS.e
         if (item.windowOpensAt !== T.advanceDays(item.electionDate, -ELECTION_MODELS[item.type].campaignDays)) problems.push(`${label} @${date}: ${item.type} ${item.electionDate} con la finestra aperta il ${item.windowOpensAt}`);
         if (item.windowClosesAt !== T.advanceDays(item.windowOpensAt, ELECTION_SCHEDULE[item.type].windowDays)) problems.push(`${label} @${date}: ${item.type} con la finestra chiusa il ${item.windowClosesAt}`);
         if (item.windowClosesAt > item.electionDate) problems.push(`${label} @${date}: ${item.type} con le candidature chiuse dopo il voto`);
+      }
+      // two distinct elections never share a day: the only exception is the declared one (the general election and the European one, when no other date exists)
+      if (item.status !== 'held') {
+        const same = [...game.elections.filter(other => other !== item && other.status !== 'held'), ...(game.rounds ?? []).filter(round => round.status !== 'held')].filter(other => other.electionDate === item.electionDate);
+        if (same.length && !(item.coincides || same.some(other => other.coincides))) problems.push(`${label} @${date}: ${item.type} ${item.electionDate} lo stesso giorno di un altro voto, senza dichiarazione`);
+        if (item.coincides) coincidences.add(`${label}|${item.electionDate}`);
       }
       if (game.elections.filter(other => other.type === item.type && other.electionDate === item.electionDate && other.status !== 'held').length > 1) problems.push(`${label} @${date}: due ${item.type} lo stesso giorno (${item.electionDate})`);
       if (item.status === 'upcoming' && !sunday(item.electionDate) && item.type !== 'europee') problems.push(`${label} @${date}: ${item.type} non cade di domenica (${item.electionDate})`);

@@ -116,9 +116,8 @@ const futuroNazionale = existingFuturoNazionale ?? {
   };
 if (!existingFuturoNazionale) parties.push(futuroNazionale);
 Object.assign(futuroNazionale, {
-    website:urls.futuroNazionaleHome, status:'active', logoUrl:urls.futuroNazionaleLogo,
-    logoAsset:'./src/data/real/assets/logos/futuro-nazionale.png', logoSource:urls.futuroNazionaleLogoPage,
-    logoVerified:true, logoAlt:'Logo ufficiale di Futuro Nazionale',
+    // (no logo: the official logo is not included, no permission to use it in the game is documented; the game draws its own mark from the initials and the colours, as for the other parties)
+    website:urls.futuroNazionaleHome, status:'active', logoUrl:null, logoAsset:null, logoSource:null, logoVerified:false, logoAlt:null,
     secondarySources:[
       meta(urls.futuroNazionaleHome,'Futuro Nazionale — sito ufficiale, tesseramento 2026'),
       meta(urls.futuroNazionaleOrganigram,'Futuro Nazionale — organigramma ufficiale'),

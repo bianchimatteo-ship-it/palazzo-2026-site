@@ -153,7 +153,11 @@ try {
     const [{ bytes:liveLogo }, localLogo] = await Promise.all([get(logoUrl), readFile(new URL(`../${bundledLogo.replace(/^\.\//,'' )}`, import.meta.url))]);
     assert(hash(liveLogo) === hash(localLogo), 'Logo verificato live diverso dal file locale');
     assert(liveLogo.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10])), 'Logo pubblicato non è un PNG valido');
-  } else assert(false, 'Asset del logo verificato non associato a Futuro Nazionale');
+  } else {
+    // no logo of Futuro Nazionale is shipped (no permission documented): the file must not be published either
+    const gone = await fetch(new URL('./src/data/real/assets/logos/futuro-nazionale.png', pageUrl)).then(response => response.status).catch(() => 404);
+    assert(gone === 404, 'Il logo di Futuro Nazionale non deve più essere pubblicato');
+  }
 
   for (const asset of stylesheets) {
     const live = new URL(asset, pageUrl); live.searchParams.set('v', mainUrl.searchParams.get('v') ?? version);

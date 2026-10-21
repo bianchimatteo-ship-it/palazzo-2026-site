@@ -1,5 +1,5 @@
 // Interface sounds synthesised with the Web Audio API: no audio file is downloaded.
-import { loadSettings } from '../core/settings.js?v=20261020-2';
+import { loadSettings } from '../core/settings.js?v=20261021-1';
 
 let context = null;
 const TONES = Object.freeze({

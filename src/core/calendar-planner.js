@@ -1,12 +1,14 @@
-// The electoral calendar of a career, kept honest: two distinct votes are never closer than CALENDAR_RULES.minGapDays (votes held on the same day are one round of voting, a
-// “tornata”, and count as one), and the player always has a vote to play: no calendar year without one and never more than a year between two. There is no way out under the distance:
-// when the dates do not fit, the algorithm looks further (every vote the law leaves room for moves by whole weeks inside its legal window — the ordinary general election too —, a vote
-// brought forward by a crisis waits for the first date that fits, a round of the amministrative joins the gap) and a combination that still does not fit is declared (calendarConflict),
+// The electoral calendar of a career, kept honest: two distinct elections are never closer than CALENDAR_RULES.minGapDays and NEVER fall on the same day (the player could stand in only one of them,
+// the other would be lost to the career), and the player always has a vote to play: no calendar year without one and never more than a year between two. There is no way out under the distance:
+// when the dates do not fit, the algorithm looks further (every vote the law leaves room for moves by whole weeks inside its legal window — the ordinary general election too —; a vote brought forward
+// by a crisis waits for the first date that fits; a round of the amministrative joins the gap). When no date fits inside the window, the conflict is resolved EXPLICITLY and the entry says so:
+// the councils, provinces and regions are put off beyond their window (deferred, deferralReason), the general election is brought forward by an early dissolution (anticipated), and only when
+// even that leaves no date the general election and the European one — fixed by the Union — share the day, declared (coincides). A combination that still does not fit is declared (calendarConflict),
 // never accepted by lowering the distance. Nothing is invented: a round of the amministrative is added only when no vote falls in the time the rule requires. Pure functions over the
 // calendar of the game: the same calendar always gives the same dates.
-import { advanceDays } from './time.js?v=20261020-2';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261020-2';
-import { ELECTION_SCHEDULE } from '../data/simulation/career-rules.js?v=20261020-2';
+import { advanceDays } from './time.js?v=20261021-1';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261021-1';
+import { ELECTION_SCHEDULE } from '../data/simulation/career-rules.js?v=20261021-1';
 
 export const CALENDAR_RULES = Object.freeze({
   // The distance between two distinct rounds: one value, never lowered (no step, no floor, no exception).
@@ -30,17 +32,25 @@ export const CALENDAR_RULES = Object.freeze({
   // goes on with the consultations (a Government of the President) instead of leaving the country with a Government for the current affairs for months.
   dissolveWithinDays: 112,
   deferDays: Object.freeze({ comunale: 70, provinciale: 238, regionale: 238 }),
+  // Two distinct elections never share a day, and the comuni, the provinces and the regions cannot always keep their window: when no date fits inside the window (and the usual deferral
+  // above), the vote is put off, by whole weeks, up to this many days beyond its window. It is the explicit resolution of the conflict between "in the window of the law" and "never on the
+  // same day as another vote": the entry says so (deferred, deferralReason) and the dates, the candidacy window and the countdown follow the new date.
+  conflictDeferDays: Object.freeze({ comunale: 420, provinciale: 420, regionale: 420 }),
+  // The ordinary general election cannot be put off (art. 61: within seventy days of the end of the Chambers) and the European one is fixed by the Union: when they fall less than the distance
+  // apart, the Chambers are dissolved a little early, by whole weeks and by at most this many days before the legal window (a dissolution before the end of the term, as happens in practice).
+  conflictAdvanceDays: Object.freeze({ politiche: 210 }),
   // A round of the amministrative already open can still be put off, to join another vote, by at most this many days.
   roundPostponeDays: 126,
   order: Object.freeze(['politiche', 'regionale', 'provinciale', 'comunale'])
 });
 const dayNo = day => Math.round(Date.parse(`${day}T12:00:00Z`) / 86400000);
 export const daysApart = (a, b) => Math.abs(dayNo(a) - dayNo(b));
-// A date is free when it is another vote's own day (the same round) or at least minGapDays from every other.
-export const keepsDistance = (day, others, min = CALENDAR_RULES.minGapDays) => others.every(other => other === day || daysApart(other, day) >= min);
-// The votes of a list of dates grouped by round (same day), and the closest pair of different rounds.
+// A date is free when it is at least minGapDays from every other vote. A vote on the very day of another is NOT free: two distinct elections never coincide, because the player could stand
+// in only one of them and the other would be lost to the career (the planner used to count votes of the same day as one round).
+export const keepsDistance = (day, others, min = CALENDAR_RULES.minGapDays) => others.every(other => daysApart(other, day) >= min);
+// The votes of a list of dates (one date per vote: two votes on the same day are a gap of zero days), and the closest pair.
 export function distinctRounds(dates) {
-  const days = [...new Set(dates)].sort();
+  const days = [...dates].sort();
   let closest = null;
   for (let i = 1; i < days.length; i++) { const gap = daysApart(days[i - 1], days[i]); if (!closest || gap < closest.days) closest = { days: gap, from: days[i - 1], to: days[i] }; }
   return { rounds: days, closest };
@@ -71,6 +81,18 @@ const ascending = (earliest, base, after) => {
 // running or held, and never moves a window into the past. The votes are placed together (a small search, the natural dates first and the legal order of the kinds), so that one that
 // takes a free date does not leave another without. A vote that cannot be placed keeps its natural date and is marked calendarConflict (the tests list them).
 export function harmonizeElections(game, today) {
+  // A vote put off in one pass may widen what the next one can try (the flag stays on the entry), so the plan is repeated until it no longer moves: the calendar the player sees at the
+  // start is the one every later week finds, not a different one after the first tick.
+  const key = () => (game.elections ?? []).map(entry => `${entry.id}:${entry.electionDate}`).join('|');
+  for (let pass = 0, before = key(); pass < 4; pass++) {
+    harmonizeOnce(game, today);
+    const after = key();
+    if (after === before) break;
+    before = after;
+  }
+  return game;
+}
+function harmonizeOnce(game, today) {
   const fixed = [];
   const free = [];
   for (const entry of game.elections ?? []) (movable(entry, today) ? free : fixed).push(entry);
@@ -79,7 +101,7 @@ export function harmonizeElections(game, today) {
   for (const entry of free) entry.baseDate ??= entry.electionDate;
   // the country is going to vote after a dissolution: the other votes of the calendar may be put off for it
   const dissolved = (game.elections ?? []).some(entry => entry.type === 'politiche' && entry.early && entry.status !== 'held');
-  const optionsFor = wait => free.map(entry => {
+  const optionsFor = (wait, extended = false) => free.map(entry => {
     const model = ELECTION_MODELS[entry.type];
     // A vote brought forward takes the first date that keeps its distances, from the first one the law allows (so that the player is never left more than a year without a vote);
     // the others stay as near as they can to their natural date.
@@ -89,26 +111,37 @@ export function harmonizeElections(game, today) {
     else {
       const range = rangeOf(entry);
       days = shifts(range).map(shift => advanceDays(entry.baseDate, shift));
-      if ((dissolved || entry.deferred) && entry.type !== 'politiche') for (let step = Math.ceil((range[1] + 1) / 7) * 7; step <= range[1] + CALENDAR_RULES.deferDays[entry.type]; step += 7) days.push(advanceDays(entry.baseDate, step));
+      if (extended && entry.type === 'politiche') for (let step = Math.ceil((range[0] + 1) / 7) * 7; step <= range[0] + CALENDAR_RULES.conflictAdvanceDays.politiche; step += 7) days.push(advanceDays(entry.baseDate, -step));
+      if ((dissolved || entry.deferred || extended) && entry.type !== 'politiche') {
+        const reach = extended ? CALENDAR_RULES.conflictDeferDays[entry.type] : CALENDAR_RULES.deferDays[entry.type];
+        for (let step = Math.ceil((range[1] + 1) / 7) * 7; step <= range[1] + reach; step += 7) days.push(advanceDays(entry.baseDate, step));
+      }
     }
     return days.filter(day => advanceDays(day, -model.campaignDays) > today);
   });
   let options = optionsFor(CALENDAR_RULES.earlyPoliticheFirst);
   const chosen = [];
   let nodes = 0;
+  // last resort, declared: the ordinary general election cannot move out of its legal window and the European one is fixed, so when nothing else fits the two share the day (as the
+  // law of the Union and the Constitution leave no other date); the entry says so (coincides) and the tests list it, nothing is silently allowed
+  let join = false;
+  const fixedDays = new Set(anchors);
   const search = depth => {
     if (depth === free.length) return true;
     if (++nodes > 400000) return false;
     const taken = [...anchors, ...chosen.slice(0, depth)];
     for (const day of options[depth]) {
-      if (!keepsDistance(day, taken)) continue;
+      if (!keepsDistance(day, taken) && !(join && free[depth].type === 'politiche' && fixedDays.has(day) && keepsDistance(day, taken.filter(other => other !== day)))) continue;
       chosen[depth] = day;
       if (search(depth + 1)) return true;
     }
     return false;
   };
   let solved = free.length === 0 || search(0);
-  if (!solved && dissolved) { options = optionsFor(Infinity); nodes = 0; solved = search(0); }
+  // The Chambers dissolved: the country votes soon (art. 61) and it is the other votes that wait; a longer wait for the general election only comes after that. Without a dissolution, the votes of the
+  // councils, provinces and regions that cannot keep both their window and the distance wait beyond the window (explicitly) before a conflict is declared.
+  const passes = dissolved ? [[CALENDAR_RULES.earlyPoliticheFirst, true, false], [Infinity, true, false], [Infinity, true, true]] : [[CALENDAR_RULES.earlyPoliticheFirst, true, false], [CALENDAR_RULES.earlyPoliticheFirst, true, true]];
+  for (const [wait, extended, joining] of passes) { if (solved) break; join = joining; options = optionsFor(wait, extended); nodes = 0; solved = search(0); }
   const placed = [];
   free.forEach((entry, index) => {
     const model = ELECTION_MODELS[entry.type];
@@ -120,8 +153,16 @@ export function harmonizeElections(game, today) {
       if (keepsDistance(day, taken)) delete entry.calendarConflict; else entry.calendarConflict = true;
     } else delete entry.calendarConflict;
     delete entry.shortGap;
+    if (entry.type === 'politiche') { if (solved && join && fixedDays.has(day)) { entry.coincides = true; entry.deferralReason = 'Coincide con un altro voto fissato dalla legge: nessuna altra data rispetta i 180 giorni'; } else delete entry.coincides; }
     // a vote put off beyond its window for a general election called early stays so until it is held (its natural window would no longer fit between the others)
-    if (entry.type !== 'politiche' && !late(entry)) { if (shifts(rangeOf(entry)).some(shift => advanceDays(entry.baseDate, shift) === day)) delete entry.deferred; else entry.deferred = true; }
+    if (entry.type === 'politiche' && !late(entry)) {
+      if (shifts(rangeOf(entry)).some(shift => advanceDays(entry.baseDate, shift) === day)) { delete entry.anticipated; if (!entry.coincides) delete entry.deferralReason; }
+      else { entry.anticipated = true; entry.deferralReason = 'Le Camere si sciolgono in anticipo: le politiche non cadono mai lo stesso giorno delle europee né a meno di 180 giorni da un altro voto'; }
+    }
+    if (entry.type !== 'politiche' && !late(entry)) {
+      if (shifts(rangeOf(entry)).some(shift => advanceDays(entry.baseDate, shift) === day)) { delete entry.deferred; delete entry.deferralReason; }
+      else { entry.deferred = true; entry.deferralReason = dissolved ? 'Rinviata per le elezioni politiche anticipate' : 'Rinviata oltre la finestra ordinaria: due elezioni non cadono mai lo stesso giorno e devono distare almeno 180 giorni'; }
+    }
     placed.push(day);
     if (day !== entry.electionDate) {
       const opens = advanceDays(day, -model.campaignDays);

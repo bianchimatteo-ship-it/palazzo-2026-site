@@ -44,7 +44,7 @@ Restano soltanto:
 | Asset | Posizione | Origine | Titolare | Licenza | Verifica | Stato |
 |---|---|---|---|---|---|---|
 | Marchio e icone «POLITICANDO» | `icons/*`, `favicon.*` | Progetto | DA FORNIRE | DA FORNIRE | — | Da confermare |
-| Logo di Futuro Nazionale | `src/data/real/assets/logos/futuro-nazionale.png` (fonte `https://futuronazionale.it/il-logo/`) | Sito ufficiale del partito | Futuro Nazionale | **Non documentata** | `logoVerified: true` = logo ufficiale, **non** licenza d'uso | Diritti commerciali non accertati |
+| Logo di Futuro Nazionale | rimosso il 20/10/2026 (nessuna autorizzazione documentata): il gioco disegna un proprio segno | — | Vedi `docs/audit-diritti-asset.md` |
 | Marchi degli altri 74 partiti/movimenti | — | Nessun logo incluso: il gioco disegna un segno generato (sigla e colori) | — | — | — | Nessun asset di terzi |
 | Loghi/colori modificati dal proprietario (Area amministrativa) | KV `archivio-condiviso` | Il proprietario | DA FORNIRE | DA FORNIRE | Una modifica Admin **non** prova i diritti d'uso | Da verificare uno per uno |
 | «LA POLITICA 24» (nome e logo di testata) | `src/ui/illustrations.js` (`lp24Logo`), `src/data/simulation/news-rules.js` | Progetto, originale | DA FORNIRE | DA FORNIRE | Disponibilità commerciale del nome **non verificata** | Da verificare prima del rilascio |

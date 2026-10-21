@@ -6,6 +6,7 @@ export const FINANCE_CATEGORIES = Object.freeze({
   indennita: { label: 'Indennità di carica', kind: 'entrata' },
   rimborsi: { label: 'Rimborsi del partito', kind: 'entrata' },
   donazioni: { label: 'Donazioni e raccolte fondi', kind: 'entrata' },
+  professione: { label: 'Reddito professionale', kind: 'entrata' },
   territorio: { label: 'Attività territoriali', kind: 'uscita' },
   comunicazione: { label: 'Comunicazione', kind: 'uscita' },
   eventi: { label: 'Eventi e appuntamenti', kind: 'uscita' },
@@ -20,6 +21,7 @@ export const FINANCE_CATEGORIES = Object.freeze({
   manutenzione: { label: 'Mantenimento e utenze', kind: 'uscita' },
   formazione: { label: 'Formazione e squadra', kind: 'uscita' },
   imprevisti: { label: 'Imprevisti', kind: 'uscita' },
+  fondi_partito: { label: 'Fondi dal partito', kind: 'entrata' },
   fondo: { label: 'Fondo elettorale', kind: 'movimento' },
   riserva: { label: 'Riserva di emergenza', kind: 'movimento' },
   altro: { label: 'Altro', kind: 'uscita' }
@@ -98,6 +100,26 @@ export const RESERVE_BEFORE_REPAYING = 1500;
 export const LEDGER_SIZE = 80;
 export const HISTORY_WEEKS = 52;
 
+// The regular supporters: how many there are and what each gives follow how the politician stands, week after week. `target` is the number the standing would sustain (notoriety, consensus and
+// popularity widen the circle); the real number follows it slowly (`inertia`), so a scandal or a victory is felt over weeks, not in one tick. Each supporter gives `perHead`, which grows with the
+// reputation; the week's cashing varies (`swing`). Game values: not real donations.
+export const SUPPORTERS = Object.freeze({
+  base: 20, perNotoriety: 4.5, perConsensus: 12, perPopularity: 0.7, min: 10, max: 4000,
+  inertia: 0.06, noise: 0.03,
+  perHeadMin: 0.6, perHeadSpan: 0.8, swing: [0.92, 1.08]
+});
+// Transfers between the politician's funds and the party's treasury: separate pots (the politician's own funds, the treasury of the party), and every movement is in both registers.
+//  - «Richiedi fondi al partito»: by rank, with a cap per request; below the secretary the leadership decides (approval at the weekly close, not guaranteed), the secretary and the founder dispose
+//    directly but never of more than `leaderShare` of the treasury at a time. The treasury never goes under `floor` because of a request.
+//  - «Versa fondi al partito»: from the politician's funds, immediate, never more than what is in the funds.
+export const TRANSFERS = Object.freeze({
+  presets: [200, 500, 1000, 2500], min: 50, max: 25000,
+  floor: 300, leaderShare: 0.25, cooldownWeeks: 4, historyKept: 60,
+  // rank -> { cap per request, approval needed }: 0 (iscritto) cannot ask, 5 and the founder dispose directly
+  ranks: Object.freeze({ 1: { cap: 300, approval: true }, 2: { cap: 800, approval: true }, 3: { cap: 1500, approval: true }, 4: { cap: 2500, approval: true }, 5: { cap: 5000, approval: false } }),
+  approval: Object.freeze({ base: 0.4, perSupport: 0.004, perReputation: 0.002, flush: 0.12, tight: -0.15, weeks: 1 }),
+  askedCost: 0.6, giftSupport: 2500, giftSupportMax: 1
+});
 // One-off treasury operations: fundraising dinners, membership drives, party events, an online appeal. Each costs days and money NOW, takes weeks, and what it brings is NOT guaranteed: the
 // outcome is drawn when it falls due (one of `outcomes`, with its chance), and a risk can make it cost more. Game values and simulated outcomes: no real money, donation or transaction.
 // income / members are [min, max] ranges; `scale: 'notoriety'` makes the income grow with how well known the politician is. The cost is paid at the start and booked in `category`.
@@ -117,6 +139,26 @@ export const TREASURY_OPERATIONS = Object.freeze([
   { id: 'raccolta-online', label: 'Raccolta fondi online (simulata)', icon: 'chart', category: 'comunicazione', cost: { ap: 1, funds: 120 }, weeks: 4, requiresParty: false, scale: 'notoriety',
     detail: 'Un appello online: rende di più se sei conosciuto e meno se non lo sei, e può restare sotto la spesa. Nessuna donazione è reale.',
     outcomes: [{ chance: 0.3, label: 'Appello ignorato', tone: 'warn', income: [20, 120] }, { chance: 0.5, label: 'Risposta discreta', tone: 'good', income: [200, 600] }, { chance: 0.2, label: 'Appello virale', tone: 'good', income: [700, 1500] }],
-    effects: { stats: { notoriety: 0.2 } }, risk: { chance: 0.05, label: 'Una polemica sui toni dell’appello', stats: { reputation: -0.4 } } }
+    effects: { stats: { notoriety: 0.2 } }, risk: { chance: 0.05, label: 'Una polemica sui toni dell’appello', stats: { reputation: -0.4 } } },
+  { id: 'crowdfunding', label: 'Crowdfunding per un progetto (simulato)', icon: 'chart', category: 'comunicazione', cost: { ap: 1, funds: 200 }, weeks: 5, requiresParty: false, scale: 'notoriety',
+    detail: 'Una raccolta online per un progetto preciso sul territorio: rende se il progetto convince e sei conosciuto, altrimenti non copre nemmeno la spesa. Nessuna donazione è reale.',
+    outcomes: [{ chance: 0.3, label: 'Obiettivo mancato', tone: 'warn', income: [60, 260] }, { chance: 0.5, label: 'Obiettivo quasi raggiunto', tone: 'good', income: [350, 900] }, { chance: 0.2, label: 'Obiettivo superato', tone: 'good', income: [1000, 2200] }],
+    effects: { stats: { notoriety: 0.3 } }, risk: { chance: 0.06, label: 'Una critica sulla trasparenza dei conti del progetto', stats: { reputation: -0.5 } } },
+  { id: 'presentazione-libro', label: 'Presentazione di un libro', icon: 'book', category: 'eventi', cost: { ap: 2, funds: 500 }, weeks: 6, requiresParty: false, scale: 'notoriety',
+    detail: 'Un libro e un giro di presentazioni: la tiratura e le serate costano subito, le copie vendute e gli inviti arrivano nelle settimane dopo. Più sei noto, più rende, ma non è garantito.',
+    outcomes: [{ chance: 0.35, label: 'Vendite modeste', tone: 'warn', income: [120, 420] }, { chance: 0.45, label: 'Discreto successo', tone: 'good', income: [600, 1400] }, { chance: 0.2, label: 'Caso editoriale locale', tone: 'good', income: [1600, 3200] }],
+    effects: { stats: { notoriety: 0.9, reputation: 0.3 } }, risk: { chance: 0.08, label: 'Una pagina del libro fa discutere', stats: { reputation: -0.7 } } },
+  { id: 'conferenza-retribuita', label: 'Conferenza o seminario a pagamento', icon: 'megaphone', category: 'eventi', cost: { ap: 1, funds: 120 }, weeks: 2, requiresParty: false, scale: 'notoriety',
+    detail: 'Un intervento su invito di un’associazione o di un ente di formazione: un compenso, se ti conoscono, e un po’ di visibilità. Il compenso varia, non è garantito, e a volte l’evento salta.',
+    outcomes: [{ chance: 0.25, label: 'Evento annullato, solo un rimborso', tone: 'warn', income: [0, 120] }, { chance: 0.55, label: 'Compenso regolare', tone: 'good', income: [180, 520] }, { chance: 0.2, label: 'Invito di prestigio', tone: 'good', income: [600, 1100] }],
+    effects: { stats: { notoriety: 0.3 } }, risk: null },
+  { id: 'collaborazione-editoriale', label: 'Rubrica su una testata locale', icon: 'news', category: 'comunicazione', cost: { ap: 1, funds: 100 }, weeks: 3, requiresParty: false, scale: 'notoriety',
+    detail: 'Una rubrica o una serie di articoli retribuiti: il compenso è modesto, non è garantito e dipende dalla testata; ti espone, nel bene e nel male, alle reazioni dei lettori.',
+    outcomes: [{ chance: 0.3, label: 'Compenso simbolico', tone: 'warn', income: [40, 160] }, { chance: 0.55, label: 'Compenso regolare', tone: 'good', income: [200, 480] }, { chance: 0.15, label: 'Rubrica molto letta', tone: 'good', income: [500, 900] }],
+    effects: { stats: { notoriety: 0.5, reputation: 0.2 } }, risk: { chance: 0.1, label: 'Una polemica sui toni di un articolo', stats: { reputation: -0.6 } } },
+  { id: 'consulenza-professionale', label: 'Lavoro professionale (consulenze, incarichi)', icon: 'wallet', category: 'professione', cost: { ap: 1, funds: 100 }, weeks: 1, requiresParty: false, maxIndemnity: 450,
+    detail: 'Nelle prime fasi della carriera il lavoro di prima porta ancora un reddito: un giorno di lavoro, un compenso che cambia da una settimana all’altra e non è garantito. Con l’indennità di un incarico alto non è più compatibile.',
+    outcomes: [{ chance: 0.25, label: 'Settimana scarica', tone: 'warn', income: [60, 180] }, { chance: 0.6, label: 'Incarico regolare', tone: 'good', income: [220, 480] }, { chance: 0.15, label: 'Incarico ben pagato', tone: 'good', income: [520, 820] }],
+    effects: { stats: {} }, risk: null }
 ]);
 export const TREASURY_OPERATIONS_KEPT = 24;

@@ -1,9 +1,9 @@
 // The immutable real snapshot is fetched by collection. The 2 MB aggregate is
 // retained for exports and validation, but the browser never downloads it.
-export const REAL_DATA_ASSET_VERSION = '2026-10-14.1-0ca9616d6b';
+export const REAL_DATA_ASSET_VERSION = '2026-10-14.1-6bdee4f20c';
 
-import { applyAdminOverrides } from './admin-store.js?v=20261020-2';
-import { displayCase, withDisplayNames } from './name-case.js?v=20261020-2';
+import { applyAdminOverrides } from './admin-store.js?v=20261021-1';
+import { displayCase, withDisplayNames } from './name-case.js?v=20261021-1';
 
 export let realDatabase = Object.freeze({});
 // Untouched copies of what the files contain, so owner overrides can be re-layered or reverted.
@@ -156,19 +156,45 @@ export async function loadRealDocument(name) {
   return loadingDocuments.get(name);
 }
 
-// An optional real document (see optionalDocumentFiles): the document, or null when the file is not there or is not an import (status 'non-importato').
-export async function loadOptionalRealDocument(name) {
-  if (!optionalDocumentFiles[name]) throw new Error(`Documento opzionale sconosciuto: ${name}`);
-  if (Object.hasOwn(realDatabase, name)) return realDatabase[name];
-  // (the manifest says whether the file was imported: without the entry nothing is requested)
-  try { await loadRealDatabase(); } catch { return null; }
-  if (!realDatabase.manifest?.documents?.[name]) return null;
+// An optional real document (see optionalDocumentFiles): the document, or null when the file is not there, is not an import (status 'non-importato') or cannot be read. The reason is kept apart:
+// optionalDocumentStatus(name) says 'loading', 'ready', 'missing' (the data set does not include it) or 'error' (the request failed, timed out or the file is not valid): a page can show each of
+// them, and ask again (the request is repeated only after a failure, never while one is under way).
+const optionalStatus = new Map();
+const optionalPending = new Map();
+export const OPTIONAL_DOCUMENT_TIMEOUT_MS = 20000;
+export const optionalDocumentStatus = name => Object.hasOwn(realDatabase, name) ? { status: 'ready', reason: null } : (optionalStatus.get(name) ?? { status: 'idle', reason: null });
+async function fetchJsonWithin(file, ms) {
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), ms) : null;
   try {
-    const document = await fetchJson(optionalDocumentFiles[name]);
-    if (!document || typeof document !== 'object' || Array.isArray(document) || document.source !== 'real' || document.status === 'non-importato' || !(Array.isArray(document.records) || Array.isArray(document.regions))) return null;
-    realDatabase = Object.freeze({ ...realDatabase, [name]: freezeDeep(document) });
-    return realDatabase[name];
-  } catch { return null; }
+    const response = await fetch(dataUrl(file), controller ? { signal: controller.signal } : undefined);
+    if (!response.ok) throw new Error(`Dati reali non disponibili (${response.status}: ${file}).`);
+    return await response.json();
+  } catch (error) {
+    if (controller?.signal.aborted) throw new Error(`Tempo scaduto nel caricamento di ${file}.`);
+    throw error;
+  } finally { if (timer) clearTimeout(timer); }
+}
+export function loadOptionalRealDocument(name) {
+  if (!optionalDocumentFiles[name]) return Promise.reject(new Error(`Documento opzionale sconosciuto: ${name}`));
+  if (Object.hasOwn(realDatabase, name)) return Promise.resolve(realDatabase[name]);
+  if (optionalPending.has(name)) return optionalPending.get(name);
+  optionalStatus.set(name, { status: 'loading', reason: null });
+  const run = (async () => {
+    // (the manifest says whether the file was imported: without the entry nothing is requested)
+    try { await loadRealDatabase(); } catch (error) { optionalStatus.set(name, { status: 'error', reason: String(error?.message ?? error) }); return null; }
+    if (!realDatabase.manifest?.documents?.[name]) { optionalStatus.set(name, { status: 'missing', reason: 'Il pacchetto dei dati reali non comprende questo documento.' }); return null; }
+    try {
+      const document = await fetchJsonWithin(optionalDocumentFiles[name], OPTIONAL_DOCUMENT_TIMEOUT_MS);
+      if (document && typeof document === 'object' && !Array.isArray(document) && document.source === 'real' && document.status === 'non-importato') { optionalStatus.set(name, { status: 'missing', reason: 'Il documento non è stato importato.' }); return null; }
+      if (!document || typeof document !== 'object' || Array.isArray(document) || document.source !== 'real' || !(Array.isArray(document.records) || Array.isArray(document.regions))) { optionalStatus.set(name, { status: 'error', reason: 'Il file non ha il formato previsto.' }); return null; }
+      realDatabase = Object.freeze({ ...realDatabase, [name]: freezeDeep(document) });
+      optionalStatus.set(name, { status: 'ready', reason: null });
+      return realDatabase[name];
+    } catch (error) { optionalStatus.set(name, { status: 'error', reason: String(error?.message ?? error) }); return null; }
+  })().finally(() => optionalPending.delete(name));
+  optionalPending.set(name, run);
+  return run;
 }
 
 // Re-applies the owner archive after an edit, without reloading the files.

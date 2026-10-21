@@ -21,8 +21,8 @@ const parties = await json('parties');
 const fnRecord = parties.find(item => item.id === FN);
 assert.ok(fnRecord, 'Futuro Nazionale è nel database dei partiti.');
 assert.equal(fnRecord.color, null, 'Il database non ha un colore per Futuro Nazionale: nessun colore è stato inventato nei dati.');
-assert.ok(fnRecord.logoVerified === true && fnRecord.logoAsset, 'Futuro Nazionale ha un logo verificato nel database.');
-for (const id of Object.keys(LOGO_BRAND)) assert.ok(parties.find(item => item.id === id && item.logoAsset), `${id}: i colori di party-brand.js vengono da un logo che il database ha davvero.`);
+assert.ok(!fnRecord.logoAsset && !fnRecord.logoUrl && !fnRecord.logoVerified, 'Il logo ufficiale di Futuro Nazionale non è nel database: non risulta un’autorizzazione al suo uso, il gioco disegna un proprio segno.');
+for (const id of Object.keys(LOGO_BRAND)) assert.ok(parties.find(item => item.id === id && !item.logoAsset), `${id}: i colori di party-brand.js sono una scelta dichiarata del progetto, non quelli di un file di terzi.`);
 
 const fn = partyIdentity({ party: fnRecord, force: { color: '#c98500', label: 'Futuro Nazionale' }, logo: 'logo.png' });
 assert.equal(fn.kind, 'partito'); assert.equal(fn.source, 'logo', 'Senza colore nel database né scelto dal giocatore, Futuro Nazionale prende il colore del suo logo.');
@@ -72,14 +72,10 @@ for (let r = 0; r < 256; r += 51) for (let g = 0; g < 256; g += 51) for (let b =
 assert.ok(worstInk >= 4.5 && worstText >= 4.5 && worstGraphic >= 3, `Qualunque colore scelto: inchiostro ${worstInk.toFixed(2)}:1, testo ${worstText.toFixed(2)}:1 (almeno 4,5:1), elemento grafico ${worstGraphic.toFixed(2)}:1 (almeno 3:1).`);
 assert.ok(inkOn('#122c69') === '#ffffff', 'Il blu del logo vuole inchiostro chiaro.');
 
-// ---------- 2. the colours are the logo's ----------
+// ---------- 2. the colours are a declared choice, backed by no third-party file ----------
 for (const [id, brand] of Object.entries(LOGO_BRAND)) {
-  const png = decodePng(await readFile(new URL(`../${brand.asset.replace(/^\.\//, '')}`, import.meta.url)));
-  const measured = brandOfLogo(png);
-  const close = (a, b) => [1, 3, 5].every(index => Math.abs(parseInt(a.slice(index, index + 2), 16) - parseInt(b.slice(index, index + 2), 16)) <= 2);
-  assert.ok(measured.primary && close(measured.primary, brand.primary), `${id}: il colore principale ${brand.primary} è quello del logo (misurato ${measured.primary}).`);
-  assert.ok(measured.secondary && close(measured.secondary, brand.secondary), `${id}: il secondo colore ${brand.secondary} è quello del logo (misurato ${measured.secondary}).`);
-  assert.ok(brand.source.includes('Logo ufficiale'), `${id}: la fonte è dichiarata.`);
+  assert.ok(!('asset' in brand), `${id}: nessun file di terzi dietro i colori.`);
+  assert.ok(/non è incluso|non risulta/.test(brand.source), `${id}: la fonte dei colori dice che il logo ufficiale non è incluso.`);
 }
 
 // ---------- 3. Futuro Nazionale is linked to everything the game uses ----------
@@ -106,15 +102,15 @@ await withBrowser(async browser => {
   await viewport(1280, 800, false);
   await rerender();
   let now = await state();
-  assert.equal(now.kind, 'partito'); assert.equal(now.source, 'logo', 'Futuro Nazionale: colore del logo.');
+  assert.equal(now.kind, 'partito'); assert.equal(now.source, 'logo', 'Futuro Nazionale: colore di rappresentazione dichiarato.');
   assert.equal(now.accent, fn.accent, `L’accento della pagina è quello calcolato (${now.accent}).`);
-  assert.ok(now.chip.img?.includes('futuro-nazionale.png') && /Futuro Nazionale/.test(now.chip.text), `Il riquadro del partito mostra il logo e il nome (${JSON.stringify(now.chip)}).`);
+  assert.ok(!now.chip.img && /Futuro Nazionale/.test(now.chip.text), `Il riquadro del partito mostra il segno generato dal gioco (nessun logo di terzi) e il nome (${JSON.stringify(now.chip)}).`);
   assert.ok(now.navActive.includes('34, 84, 200') || now.navActive.includes(hexToRgb(fn.accent)), 'La voce attiva del menu usa il colore del partito.');
   assert.equal(now.top.shown, false, 'Sul computer la barra alta non ripete il segno del partito (c’è il riquadro nel menu).');
   await viewport(390, 844, true); await rerender();
   now = await state();
   assert.equal(now.top.shown, true, 'Sul telefono il segno del partito è nella barra alta.');
-  assert.ok(now.top.img?.includes('futuro-nazionale.png') && /Futuro Nazionale/.test(now.top.label), 'Con il logo di Futuro Nazionale.');
+  assert.ok(!now.top.img && /Futuro Nazionale/.test(now.top.label), 'Con il segno generato dal gioco per Futuro Nazionale.');
   await viewport(1280, 800, false); await rerender();
 
   // Leaving the party: independent, neutral, nothing of the old colour.

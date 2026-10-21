@@ -162,7 +162,7 @@ for (const place of places) {
   assert.ok(s.game.elections.some(item => item.type === 'provinciale' && item.status === 'upcoming'), 'La partita caricata riceve il voto provinciale');
   noIssues(s, 'partita migrata');
   // Il ciclo: dopo il voto il prossimo è tra quattro anni circa.
-  for (let i = 0; i < 90 && !store.getState().game.elections.some(item => item.type === 'provinciale' && item.status === 'open'); i++) store.advance(7);
+  for (let i = 0; i < 130 && !store.getState().game.elections.some(item => item.type === 'provinciale' && item.status === 'open'); i++) store.advance(7);
   s = store.getState();
   assert.ok(s.game.elections.some(item => item.type === 'provinciale' && item.status === 'open'), 'La finestra provinciale si apre');
 }

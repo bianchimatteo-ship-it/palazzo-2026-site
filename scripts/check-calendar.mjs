@@ -47,9 +47,14 @@ const local = C.localCalendarOf(calendar, { municipalityCode: '048017', region: 
 assert.ok(local.comunaleReal && local.regionaleReal && local.comunale === '2024-06-09' && local.regionale === '2025-10-12');
 const game = C.createGameState({ seedText: 'firenze', currentDate: '2026-09-26', level: 'comunale', place: { region: 'Toscana', municipality: 'Firenze' }, localCalendar: local });
 const dateOf = type => game.elections.find(item => item.type === type).electionDate;
-// The natural date (last Sunday of May) is 14 days from the European elections: two rounds closer than 100 days are not allowed, so the comuni vote together with Europe (as in 2024).
+// The natural date (last Sunday of May) is 14 days from the European elections: two distinct elections are never on the same day nor closer than 180 days, so the comunali are put off, explicitly (deferred).
 assert.equal(game.elections.find(item => item.type === 'comunale').baseDate, '2029-05-27', 'Le comunali di Firenze: la data naturale è l’ultima domenica di maggio 2029.');
-assert.equal(dateOf('comunale'), dateOf('europee'), 'Le comunali di Firenze nel 2029 si tengono con le europee (stessa tornata).');
+assert.notEqual(dateOf('comunale'), dateOf('europee'), 'Le comunali di Firenze nel 2029 non cadono lo stesso giorno delle europee.');
+{
+  const comunale = game.elections.find(item => item.type === 'comunale');
+  assert.ok(Math.abs(Date.parse(comunale.electionDate) - Date.parse(dateOf('europee'))) / 86400000 >= 180, 'Comunali ed europee distano almeno 180 giorni.');
+  assert.ok(comunale.deferred && /Rinviata/.test(comunale.deferralReason) && !comunale.calendarConflict, 'Il rinvio è dichiarato (deferred, deferralReason) e non è un conflitto.');
+}
 assert.equal(dateOf('regionale'), '2030-10-27', 'Le regionali toscane nel 2030.');
 assert.equal(dateOf('politiche'), '2027-09-26', 'Le politiche alla fine della legislatura.');
 assert.ok(new Set(game.elections.map(item => item.electionDate.slice(0, 4))).size >= 3, 'Le elezioni della carriera cadono in anni diversi.');
@@ -133,7 +138,8 @@ console.log(`  Tre anni: regionali in ${heldRegions.map(([region, entry]) => `${
       const dates = list.filter(item => item.type === type);
       for (let i = 1; i < dates.length; i++) {
         const years = (Date.parse(dates[i].date) - Date.parse(dates[i - 1].date)) / (365.25 * 86400000);
-        if (!dates[i].early) assert.ok(years > 4.6 && years < 5.4, `${region}: ${type} ${dates[i - 1].date} → ${dates[i].date} (${years.toFixed(2)} anni).`);
+        // a vote put off (deferred) beyond its window to keep 180 days from another one shortens the next mandate by up to the deferral (conflictDeferDays, 420 days at most)
+        if (!dates[i].early) assert.ok(years > 3.8 && years < 5.4, `${region}: ${type} ${dates[i - 1].date} → ${dates[i].date} (${years.toFixed(2)} anni).`);
         else assert.ok(years < 5, `${region}: voto anticipato ${type} il ${dates[i].date}.`);
       }
     }

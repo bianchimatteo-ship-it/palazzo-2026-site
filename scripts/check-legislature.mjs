@@ -55,14 +55,17 @@ assert.ok(next.plannedVote.startsWith('2032-09') && isSunday(next.plannedVote), 
 const game = C.createGameState({ seedText: 'calendario', currentDate: '2026-09-25', level: 'comunale', party: null, place: { region: 'Toscana', municipality: 'Siena' } });
 const politiche = game.elections.find(item => item.type === 'politiche');
 const europee = game.elections.find(item => item.type === 'europee');
-assert.deepEqual([politiche.electionDate, europee.electionDate], ['2027-09-26', '2029-06-10'], 'Il calendario della carriera segue quello nazionale reale.');
-assert.equal(politiche.windowOpensAt, '2027-08-08', 'Le candidature si aprono sette settimane prima del voto.');
+// The natural date of the vote is the real one (26/09/2027); the calendar may put it off inside the 70 days of art. 61 so that it keeps 180 days from the other votes of the career.
+assert.equal(politiche.baseDate, '2027-09-26', 'Il calendario della carriera parte da quello nazionale reale.');
+assert.ok(politiche.electionDate >= '2027-09-26' && politiche.electionDate <= '2027-12-21' && isSunday(politiche.electionDate), `Le politiche restano nei 70 giorni dell’art. 61 (${politiche.electionDate}).`);
+assert.equal(europee.electionDate, '2029-06-10', 'Le europee restano il 10 giugno 2029.');
+assert.equal(politiche.windowOpensAt, new Date(Date.parse(`${politiche.electionDate}T12:00:00Z`) - 49 * 86400000).toISOString().slice(0, 10), 'Le candidature si aprono sette settimane prima del voto.');
 // A save made with the accelerated calendar moves to the real one, keeping the ids of its entries.
 const old = structuredClone(game);
 delete old.flags.nationalCalendar;
 old.elections = old.elections.map(item => ['politiche', 'europee'].includes(item.type) ? { ...item, windowOpensAt: '2027-01-01', windowClosesAt: '2027-01-15', electionDate: '2027-02-19' } : item);
 const aligned = C.normalizeGameState(old);
-assert.equal(aligned.elections.find(item => item.id === politiche.id).electionDate, '2027-09-26', 'Un vecchio salvataggio passa al calendario reale.');
+assert.equal(aligned.elections.find(item => item.id === politiche.id).baseDate ?? aligned.elections.find(item => item.id === politiche.id).electionDate, '2027-09-26', 'Un vecchio salvataggio passa al calendario reale.');
 assert.equal(aligned.flags.nationalCalendar, 2);
 const early = C.scheduleEarlyElection(game, '2027-01-07');
 const earlyEntry = early.elections.find(item => item.type === 'politiche');

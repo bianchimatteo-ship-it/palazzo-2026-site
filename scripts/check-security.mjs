@@ -87,7 +87,7 @@ assert.ok(/e-mail \(facoltativo\)/i.test(privacy) && /Senza e-mail verificata la
 assert.ok(/token_hash TEXT PRIMARY KEY/.test(workerCode) && /sha256\(token\)/.test(workerCode) && !/INSERT INTO email_tokens \(token_hash[^)]*\) VALUES \(\?, \?, \?, \?, \?, \?, NULL\)'\)\.bind\(token,/.test(workerCode), 'I token delle e-mail si conservano come impronta.');
 assert.ok(/RESEND_API_KEY/.test(workerCode) && !/re_[A-Za-z0-9]{20,}/.test(workerCode + await text('wrangler.jsonc')), 'Il provider si configura con un segreto del Worker, nessun segreto nel repository.');
 assert.ok(!/body\.force|\bforce\b[^.\n]*skip/i.test(workerCode.replace(/\/\/[^\n]*/g, '')), 'Il Worker non ha nessuna scorciatoia `force` per saltare i controlli sui salvataggi.');
-assert.ok(/versioni precedenti/.test(privacy) && /DELETE FROM save_history WHERE user_id = \?'\)\.bind\(account\.id\)/.test(workerCode), 'La cronologia dei salvataggi è nell’informativa e la cancellazione dell’account la elimina.');
+assert.ok(/versioni precedenti/.test(privacy) && /DELETE FROM save_history WHERE user_id = \?'\)\.bind\(userId\)/.test(workerCode) && /deleteAccountData\(db, account\.id\)/.test(workerCode), 'La cronologia dei salvataggi è nell’informativa e la cancellazione dell’account la elimina.');
 const logoFromUrl = (await text('src/ui/party-logo.js')).includes("logo.kind === 'url'");
 assert.ok(logoFromUrl, 'Il gioco può mostrare il logo di un partito da un indirizzo esterno.');
 assert.ok(!/non carica caratteri o altre risorse da server esterni\./.test(privacy), 'L’informativa non afferma più, senza eccezioni, che nulla viene caricato da server esterni.');
@@ -95,7 +95,7 @@ assert.ok(/(unica|sola) eccezione/i.test(privacy) && /logo/.test(privacy) && /in
 assert.ok(/titolare|amministrator/i.test(/eccezione[\s\S]{0,900}/i.exec(privacy)?.[0] ?? ''), 'E dice che la scelta può essere anche del titolare (un partito del gioco), non solo dell’utente.');
 assert.ok(/non (viene|è) (inviat|comunicat)[^.]*(pagina|referrer)|senza (indicare|inviare)[^.]*(pagina|referrer)|nessun referrer/i.test(privacy), 'E che il sito esterno non sa da quale pagina arriva (nessun referrer).');
 const todos = [...privacy.matchAll(/data-controller-todo="([^"]+)"/g)].map(item => item[1]);
-for (const marker of ['titolare', 'infrastruttura', 'conservazione']) assert.ok(todos.includes(marker), `Resta il punto aperto del titolare: ${marker}.`);
+for (const marker of ['indirizzo-titolare', 'infrastruttura', 'conservazione', 'minori', 'storage']) assert.ok(todos.includes(marker), `Resta il punto aperto del titolare: ${marker}.`);
 
 // ---------- 5. Chrome, with the real headers ----------
 let checkedPages = 0, blockedByControl = 0;

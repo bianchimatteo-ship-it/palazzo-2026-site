@@ -86,6 +86,9 @@ const regionName = name => GAME_NAMES[name] ?? name;
 const doc = {
   source: 'real',
   status: 'importato',
+  verified: true,
+  verifiedAt: '2026-10-19',
+  verificationNote: 'Importato dal commit indicato di openpolis/geojson-italy (confini ISTAT al 1 gennaio 2026); i codici ISTAT di regioni e province coincidono con quelli dei collegi e dei comuni del gioco. Non è stato confrontato con il file originale ISTAT.',
   title: 'Confini amministrativi d’Italia: regioni e province (semplificati)',
   vintage: '2026-01-01',
   sourceName: 'ISTAT — Confini delle unità amministrative a fini statistici, al 1 gennaio 2026, nella redistribuzione di Openpolis (geojson-italy)',

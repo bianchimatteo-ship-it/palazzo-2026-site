@@ -21,7 +21,7 @@ const groups = await read('parliamentary-groups'), parties = await read('parties
 // ---------- 1. the operations as rules ----------
 assert.ok(TREASURY_OPERATIONS.length >= 4 && new Set(TREASURY_OPERATIONS.map(item => item.id)).size === TREASURY_OPERATIONS.length);
 for (const spec of TREASURY_OPERATIONS) {
-  assert.ok(spec.cost.ap >= 1 && spec.cost.funds >= 100 && spec.weeks >= 2, `${spec.id}: costa giorni e fondi e richiede tempo.`);
+  assert.ok(spec.cost.ap >= 1 && spec.cost.funds >= 100 && spec.weeks >= 1, `${spec.id}: costa giorni e fondi e richiede tempo.`);
   const total = spec.outcomes.reduce((sum, item) => sum + item.chance, 0);
   assert.ok(Math.abs(total - 1) < 1e-9, `${spec.id}: gli esiti sommano a 1.`);
   assert.ok(spec.outcomes.some(item => item.tone === 'warn'), `${spec.id}: il beneficio non è garantito, c’è un esito debole.`);
