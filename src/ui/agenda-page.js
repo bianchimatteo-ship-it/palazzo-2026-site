@@ -1,11 +1,11 @@
 // AGENDA — the time of the career: this week's decisions and days, the calendar of every dated commitment
 // (votes, candidacies, congresses, promises, decrees, consequences), the weekly activities and the register.
-import { AGENDA_KINDS, agendaByMonth, agendaCalendar } from '../core/agenda-engine.js?v=20261021-1';
-import { ADVANCE_RULES, STAT_LABELS } from '../data/simulation/career-rules.js?v=20261021-1';
-import { advanceDays, formatDate } from '../core/time.js?v=20261021-1';
-import { glyph } from './visuals.js?v=20261021-1';
-import { renderInbox, renderPlanner } from './game-mode.js?v=20261021-1';
-import { arrow, badge, card, esc, euro, num, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261021-1';
+import { AGENDA_KINDS, agendaByMonth, agendaCalendar } from '../core/agenda-engine.js?v=20261021-3';
+import { ADVANCE_RULES, STAT_LABELS } from '../data/simulation/career-rules.js?v=20261021-3';
+import { advanceDays, formatDate } from '../core/time.js?v=20261021-3';
+import { glyph } from './visuals.js?v=20261021-3';
+import { renderInbox, renderPlanner } from './game-mode.js?v=20261021-3';
+import { arrow, badge, card, esc, euro, num, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261021-3';
 
 export const AGENDA_TABS = Object.freeze([['settimana', 'Questa settimana'], ['calendario', 'Calendario'], ['attivita', 'Attività'], ['registro', 'Registro']]);
 // Filters of the calendar: groups of kinds, kept across redraws by the caller.
@@ -18,6 +18,9 @@ export const AGENDA_FILTERS = Object.freeze([
   ['decisioni', 'Decisioni', ['decisione']],
   ['risorse', 'Risorse', ['investimento']]
 ]);
+// The family of a dated commitment, for its colour and its icon (the label is always written): elections, candidacies, party, institutions, decisions, promises and deadlines, resources.
+const CATEGORY_OF = { elezione: 'elezioni', candidature: 'candidature', campagna: 'candidature', selezione: 'partito', congresso: 'partito', decreto: 'istituzioni', alleato: 'istituzioni', legislatura: 'istituzioni', quirinale: 'istituzioni', decisione: 'decisioni', promessa: 'impegni', conseguenza: 'impegni', investimento: 'risorse' };
+export const agendaCategory = kind => CATEGORY_OF[kind] ?? 'impegni';
 const WEEKDAYS = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
 const toneBadge = tone => tone === 'bad' ? 'bad' : tone === 'warn' ? 'warn' : tone === 'good' ? 'good' : 'neutral';
 const whenLabel = days => days === 0 ? 'oggi' : days === 1 ? 'domani' : days < 14 ? `tra ${days} giorni` : `tra ${Math.round(days / 7)} settimane`;
@@ -36,9 +39,9 @@ function actionOf(item) {
 
 function itemRow(item) {
   const kind = AGENDA_KINDS[item.kind] ?? { label: 'Impegno', icon: 'clock' };
-  return `<li class="ag-item tone-${esc(item.tone)} ${item.urgent ? 'is-urgent' : ''}">
+  return `<li class="ag-item tone-${esc(item.tone)} ${item.urgent ? 'is-urgent' : ''}" data-cat="${agendaCategory(item.kind)}">
     <time class="ag-date" datetime="${esc(item.date)}"><strong>${esc(formatDate(item.date, { day: '2-digit' }))}</strong><span>${esc(formatDate(item.date, { month: 'short' }))}</span></time>
-    <div class="ag-copy"><div class="ag-meta">${glyph(kind.icon, 14)}<span>${esc(kind.label)}</span>${badge(whenLabel(item.days), item.urgent ? 'bad' : item.days <= 14 ? 'warn' : 'neutral')}</div><strong>${esc(item.title)}</strong>${item.detail ? `<small>${esc(item.detail)}</small>` : ''}</div>
+    <div class="ag-copy"><div class="ag-meta"><span class="ag-kind">${glyph(kind.icon, 14)}<span>${esc(kind.label)}</span></span>${item.urgent ? badge('Urgente', 'bad') : ''}${badge(whenLabel(item.days), item.urgent ? 'bad' : item.days <= 14 ? 'warn' : 'neutral')}</div><strong>${esc(item.title)}</strong>${item.detail ? `<small>${esc(item.detail)}</small>` : ''}</div>
     <div class="ag-action">${actionOf(item)}</div>
   </li>`;
 }
@@ -55,7 +58,7 @@ function monthGrid(month, items, today) {
     const date = `${month}-${String(index + 1).padStart(2, '0')}`;
     const entries = byDay.get(date) ?? [];
     const label = entries.map(item => item.title).join(' · ');
-    return `<span class="ag-cell ${date === today ? 'is-today' : ''} ${entries.length ? `has-items tone-${entries.some(item => item.urgent) ? 'bad' : toneBadge(entries[0].tone)}` : ''}" ${entries.length ? `title="${esc(label)}" aria-label="${esc(`${formatDate(date)}: ${label}`)}"` : ''}><b>${index + 1}</b>${entries.length ? `<i>${entries.length}</i>` : ''}</span>`;
+    return `<span class="ag-cell ${date === today ? 'is-today' : ''} ${entries.length ? `has-items tone-${entries.some(item => item.urgent) ? 'bad' : toneBadge(entries[0].tone)}` : ''}" ${entries.length ? `data-cat="${agendaCategory(entries[0].kind)}"` : ''} ${entries.length ? `title="${esc(label)}" aria-label="${esc(`${formatDate(date)}: ${label}`)}"` : ''}><b>${index + 1}</b>${entries.length ? `<i>${entries.length}</i>` : ''}</span>`;
   })];
   return `<div class="ag-month"><h4>${esc(formatDate(first, { month: 'long', year: 'numeric' }))}</h4><div class="ag-grid" role="grid">${WEEKDAYS.map(day => `<span class="ag-weekday">${day}</span>`).join('')}${cells.join('')}</div></div>`;
 }
@@ -124,7 +127,7 @@ export function renderAgendaPage(state, { tab = null, filter = 'tutto', events =
     const months = agendaByMonth(visible);
     const today = state.clock.currentDate;
     const gridMonths = [today.slice(0, 7), advanceDays(`${today.slice(0, 7)}-01`, 32).slice(0, 7)];
-    const filters = `<div class="ag-filters" role="group" aria-label="Filtra il calendario">${AGENDA_FILTERS.map(([id, label, kinds]) => { const count = kinds ? calendar.filter(item => kinds.includes(item.kind)).length : calendar.length; return `<button data-view-filter="agenda" data-view-filter-value="${id}" class="${group[0] === id ? 'active' : ''}" aria-pressed="${group[0] === id}">${esc(label)}${count ? ` · ${count}` : ''}</button>`; }).join('')}</div>`;
+    const filters = `<div class="ag-filters" role="group" aria-label="Filtra il calendario">${AGENDA_FILTERS.map(([id, label, kinds]) => { const count = kinds ? calendar.filter(item => kinds.includes(item.kind)).length : calendar.length; return `<button data-view-filter="agenda" data-view-filter-value="${id}" data-cat="${id}" class="${group[0] === id ? 'active' : ''}" aria-pressed="${group[0] === id}">${esc(label)}${count ? ` · ${count}` : ''}</button>`; }).join('')}</div>`;
     body = `${filters}${advanceForm(state, advanceDate ?? '')}<div class="ag-layout"><div class="ag-months">${gridMonths.map(month => monthGrid(month, visible, today)).join('')}<p class="sx-note">Giorni evidenziati: scadenze e appuntamenti. Rosso: urgente. Politiche ed europee seguono il calendario reale; comunali e regionali seguono il calendario reale del tuo comune e della tua regione.</p></div><div class="ag-timeline">${months.length ? months.map(({ month, entries }) => `<section class="ag-group"><h3>${esc(formatDate(`${month}-01`, { month: 'long', year: 'numeric' }))}</h3><ol class="ag-list">${entries.map(itemRow).join('')}</ol></section>`).join('') : '<p class="sx-empty">Nessun impegno per questo filtro nei prossimi due anni.</p>'}</div></div>`;
   } else if (active === 'attivita') {
     body = `${weekStrip(state)}${card({ kicker: 'AGENDA DEL POLITICO', title: 'Come usi la settimana', body: renderPlanner(state), id: 'hq-planner' })}`;

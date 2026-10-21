@@ -1,12 +1,13 @@
 // Money of the career and of the party: balance, flows, budget, reports and sustainability.
-import { BUDGET_LINES, FINANCE_CATEGORIES, financeOutlook, hasAsset, INVESTMENTS, operationProblem, operationRange, partyRequestRules, RESERVE, TREASURY_OPERATIONS } from '../core/finance-engine.js?v=20261021-1';
-import { TRANSFERS } from '../data/simulation/finance-rules.js?v=20261021-1';
-import { costProblem } from '../core/career-engine.js?v=20261021-1';
-import { costText, planAddButton } from './plan-view.js?v=20261021-1';
-import { isPartyLeader, PARTY_PRIORITIES, TREASURY_LABELS, treasuryOutlook } from '../core/organization-engine.js?v=20261021-1';
-import { artTile } from './visuals.js?v=20261021-1';
-import { illustration } from './illustrations.js?v=20261021-1';
-import { breakdown, esc, euro, EXPENSE_COLOR, flowChart, INCOME_COLOR, lineChart, num, SERIES, signed, sparkline, stateBadge } from './charts.js?v=20261021-1';
+import { BUDGET_LINES, FINANCE_CATEGORIES, financeOutlook, hasAsset, INVESTMENTS, operationProblem, operationRange, partyRequestRules, RESERVE, TREASURY_OPERATIONS } from '../core/finance-engine.js?v=20261021-3';
+import { TRANSFERS } from '../data/simulation/finance-rules.js?v=20261021-3';
+import { costProblem } from '../core/career-engine.js?v=20261021-3';
+import { costText, planAddButton } from './plan-view.js?v=20261021-3';
+import { isPartyLeader, PARTY_PRIORITIES, TREASURY_LABELS, treasuryOutlook } from '../core/organization-engine.js?v=20261021-3';
+import { artTile, glyph } from './visuals.js?v=20261021-3';
+import { illustration } from './illustrations.js?v=20261021-3';
+import { foldPanel } from './sections-kit.js?v=20261021-3';
+import { breakdown, esc, euro, EXPENSE_COLOR, flowChart, INCOME_COLOR, lineChart, num, SERIES, signed, sparkline, stateBadge } from './charts.js?v=20261021-3';
 
 const STATUS_KIND = { solida: 'solida', calo: 'calo', rischio: 'rischio', crisi: 'crisi' };
 
@@ -81,23 +82,52 @@ function investmentsPanel(game, outlook) {
 
 // Funds between the politician and the party: two separate pots, every movement in both registers. Ask the treasury (by rank, approval when the rule says so) or pay into it.
 const TRANSFER_STATUS = { 'in-attesa': ['in attesa', 'rischio'], approvata: ['approvata', 'solida'], rifiutata: ['respinta', 'crisi'], eseguito: ['eseguito', 'solida'] };
+// Two arrows, one per direction: from the party to the politician (down-left, green) and from the politician to the party (up-right, gold).
+const FLOW_ICON = {
+  request: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 7 7 17"/><path d="M17 17H7V7"/></svg>',
+  give: '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17 17 7"/><path d="M7 7h10v10"/></svg>'
+};
 function transfersPanel(game) {
   const org = game.party?.org;
   if (!org) return '<p class="quiet-copy">Senza un partito non c’è una tesoreria con cui scambiare fondi: i tuoi fondi restano tuoi.</p>';
   const ended = game.status === 'ended';
   const rules = partyRequestRules(game);
   const funds = game.resources.funds, treasury = org.treasury.balance;
-  const ask = TRANSFERS.presets.map(amount => `<button class="chip-button" data-transfer-request="${amount}" ${ended || !rules.allowed || amount > rules.cap ? 'disabled' : ''}>${euro(amount)}</button>`).join('');
-  const give = TRANSFERS.presets.map(amount => `<button class="chip-button" data-transfer-give="${amount}" ${ended || amount > funds ? 'disabled' : ''}>${euro(amount)}</button>`).join('');
+  const askOff = amount => ended || !rules.allowed || amount > rules.cap;
+  const giveOff = amount => ended || amount > funds;
+  const chip = (kind, amount, off) => `<button class="chip-button tr-chip" data-transfer-${kind}="${amount}" ${off ? `disabled title="${esc(ended ? 'Carriera conclusa.' : kind === 'request' ? (rules.allowed ? `Oltre il limite di ${euro(rules.cap)} per volta.` : rules.reason) : `Hai in cassa ${euro(funds)}.`)}"` : ''}>${euro(amount)}</button>`;
+  const ask = TRANSFERS.presets.map(amount => chip('request', amount, askOff(amount))).join('');
+  const give = TRANSFERS.presets.map(amount => chip('give', amount, giveOff(amount))).join('');
   const rule = !rules.allowed ? esc(rules.reason) : rules.approval ? `Con il tuo ruolo puoi chiedere fino a ${euro(rules.cap)} per volta; risponde la direzione alla chiusura della settimana e non è garantito.` : `Il segretario dispone direttamente, fino a ${euro(rules.cap)} per volta (un quarto della tesoreria).`;
-  const rows = (game.finance.transfers ?? []).slice(0, 8).map(item => { const [word, kind] = TRANSFER_STATUS[item.status] ?? [item.status, 'calo']; return `<div class="ledger-row"><time>${item.week ? `S${item.week}` : ''}</time><span><strong>${item.direction === 'dal-partito' ? 'Dal partito a te' : 'Da te al partito'}</strong><small>${esc(item.note ?? '')}${Number.isFinite(item.treasuryAfter) ? ` · tesoreria ${euro(item.treasuryAfter)}, tuoi fondi ${euro(item.fundsAfter)}` : ''}</small></span><b class="${item.direction === 'dal-partito' ? 'pos' : 'neg'}">${item.direction === 'dal-partito' ? '+' : '−'}${euro(item.amount)} ${stateBadge(kind, word)}</b></div>`; }).join('');
-  return `<div class="balance-sheet"><div><small>I tuoi fondi</small><strong>${euro(funds)}</strong></div><div><small>Tesoreria del partito</small><strong>${euro(treasury)}</strong></div></div>
-    <div class="fund-box"><div><strong>Richiedi fondi al partito</strong><small>${rule}</small><div class="chip-row" role="group" aria-label="Importo da richiedere">${ask}</div>
-    <label class="transfer-custom">Un’altra cifra (€)<input type="number" inputmode="numeric" min="${TRANSFERS.min}" step="10" placeholder="importo" data-transfer-custom="request" ${ended || !rules.allowed ? 'disabled' : ''} /></label><button class="secondary-button" data-transfer-request="custom" ${ended || !rules.allowed ? 'disabled' : ''}>Richiedi</button></div></div>
-    <div class="fund-box"><div><strong>Versa fondi al partito</strong><small>Dai tuoi fondi alla tesoreria, subito, mai più di quanto hai in cassa. Le quote di tesseramento restano entrate del partito: non passano da qui.</small><div class="chip-row" role="group" aria-label="Importo da versare">${give}</div>
-    <label class="transfer-custom">Un’altra cifra (€)<input type="number" inputmode="numeric" min="${TRANSFERS.min}" step="10" placeholder="importo" data-transfer-custom="give" ${ended ? 'disabled' : ''} /></label><button class="secondary-button" data-transfer-give="custom" ${ended ? 'disabled' : ''}>Versa</button></div></div>
-    ${rows ? `<div class="ledger transfers-register">${rows}</div>` : '<p class="quiet-copy">Nessun trasferimento finora.</p>'}
-    <p class="parliament-note">Importi di gioco: nessun pagamento reale. Ogni trasferimento compare nel registro dei tuoi fondi e in quello della tesoreria, per lo stesso importo, una volta sola.</p>`;
+  const askMode = !rules.allowed ? ['Non disponibile', 'off'] : rules.approval ? ['Serve l’approvazione della direzione', 'wait'] : ['Disposizione diretta', 'ok'];
+  const giveBlock = !ended && funds < TRANSFERS.min ? `Non hai fondi sufficienti: servono almeno ${euro(TRANSFERS.min)}.` : '';
+  const rows = (game.finance.transfers ?? []).slice(0, 8).map(item => {
+    const [word, kind] = TRANSFER_STATUS[item.status] ?? [item.status, 'calo'];
+    const fromParty = item.direction === 'dal-partito';
+    return `<li class="tr-row ${fromParty ? 'is-request' : 'is-give'}"><span class="tr-row-ico">${FLOW_ICON[fromParty ? 'request' : 'give']}</span><span class="tr-row-main"><strong>${fromParty ? 'Dal partito a te' : 'Da te al partito'}</strong><small>${item.week ? `Settimana ${item.week} · ` : ''}${esc(item.note ?? '')}${Number.isFinite(item.treasuryAfter) ? ` · tesoreria ${euro(item.treasuryAfter)}, tuoi fondi ${euro(item.fundsAfter)}` : ''}</small></span><b class="${fromParty ? 'pos' : 'neg'}">${fromParty ? '+' : '−'}${euro(item.amount)}</b>${stateBadge(kind, word)}</li>`;
+  }).join('');
+  const op = (kind, { dir, title, tag, tagTone, note, facts, chips, field, button, off, reason }) => `<section class="tr-op is-${kind}" aria-label="${esc(title)}">
+      <header><span class="tr-op-ico">${FLOW_ICON[kind]}</span><div><span class="tr-dir">${dir}</span><h3>${esc(title)}</h3></div><span class="tr-tag tone-${tagTone}">${esc(tag)}</span></header>
+      <p class="tr-note">${note}</p>
+      <dl class="tr-facts">${facts.map(([label, value]) => `<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>
+      ${reason ? `<p class="tr-reason" role="status">${reason}</p>` : ''}
+      <div class="tr-presets" role="group" aria-label="${esc(field.group)}">${chips}</div>
+      <div class="tr-custom"><label>Un’altra cifra (€)<input type="number" inputmode="numeric" min="${TRANSFERS.min}" step="10" placeholder="importo" data-transfer-custom="${kind}" ${off ? 'disabled' : ''} /></label><button class="${kind === 'request' ? 'primary-button' : 'secondary-button'} tr-go" data-transfer-${kind}="custom" ${off ? 'disabled' : ''}>${button}</button></div>
+    </section>`;
+  return `<div class="transfers">
+    <div class="tr-balances" role="group" aria-label="Saldi">
+      <article class="tr-balance is-personal"><span class="tr-balance-ico">${glyph('wallet', 22)}</span><div><small>I tuoi fondi</small><strong>${euro(funds)}</strong><em>per campagne, staff e spese tue</em></div></article>
+      <div class="tr-link" aria-hidden="true"><span class="tr-link-to-you">${FLOW_ICON.request}</span><span class="tr-link-to-party">${FLOW_ICON.give}</span></div>
+      <article class="tr-balance is-treasury"><span class="tr-balance-ico">${glyph('flag', 22)}</span><div><small>Tesoreria del partito</small><strong>${euro(treasury)}</strong><em>cassa comune del partito</em></div></article>
+    </div>
+    <div class="tr-ops">
+      ${op('request', { dir: 'DAL PARTITO → A TE', title: 'Richiedi fondi al partito', tag: askMode[0], tagTone: askMode[1], note: rule, facts: rules.allowed ? [['Massimo per volta', euro(rules.cap)], ['Risposta', rules.approval ? 'alla chiusura della settimana' : 'subito'], ['Esito', rules.approval ? 'non garantito' : 'garantito']] : [['Massimo per volta', '—']], chips: ask, field: { group: 'Importo da richiedere' }, button: 'Richiedi', off: ended || !rules.allowed, reason: !rules.allowed ? esc(rules.reason) : '' })}
+      ${op('give', { dir: 'DA TE → AL PARTITO', title: 'Versa fondi al partito', tag: 'Subito', tagTone: 'ok', note: 'Dai tuoi fondi alla tesoreria, subito, mai più di quanto hai in cassa. Le quote di tesseramento restano entrate del partito: non passano da qui.', facts: [['Massimo', euro(funds)], ['Risposta', 'subito'], ['Esito', 'garantito']], chips: give, field: { group: 'Importo da versare' }, button: 'Versa', off: ended, reason: giveBlock })}
+    </div>
+    <p class="tr-diff"><strong>Richiesta o versamento?</strong> La richiesta porta denaro dalla tesoreria ai tuoi fondi e dipende dal tuo ruolo; il versamento porta denaro dai tuoi fondi alla tesoreria ed è immediato.</p>
+    <div class="tr-history"><h3>Storico dei trasferimenti</h3>${rows ? `<ul class="transfers-register">${rows}</ul>` : '<p class="quiet-copy">Nessun trasferimento finora.</p>'}</div>
+    <p class="parliament-note">Importi di gioco: nessun pagamento reale. Ogni trasferimento compare nel registro dei tuoi fondi e in quello della tesoreria, per lo stesso importo, una volta sola.</p>
+  </div>`;
 }
 
 export function renderFinancePage(state) {
@@ -116,21 +146,20 @@ export function renderFinancePage(state) {
       ${illustration('tesoro', 'hero-art')}<div>${artTile('wallet', 'var(--party-accent)', 'lg')}<div><span class="section-kicker">LE TUE FINANZE POLITICHE · SIMULATE</span><h2>${euro(game.resources.funds)} in cassa</h2><p class="section-subtitle">Comitato, staff, comunicazione e campagne si pagano da qui. Le spese ricorrenti lavorano per te ogni settimana; il debito costa interessi.</p></div>${stateBadge(STATUS_KIND[outlook.status], outlook.statusLabel)}</div>
       <div class="finance-kpis"><div><small>Entrate medie</small><strong>${euro(outlook.income)}</strong><span>a settimana</span></div><div><small>Uscite medie</small><strong>${euro(outlook.expense)}</strong><span>a settimana</span></div><div><small>Risultato medio</small><strong class="${outlook.net >= 0 ? 'in' : 'out'}">${signed(outlook.net, 0)} €</strong><span>ultime 6 settimane</span></div><div><small>Spese fisse</small><strong>${euro(outlook.recurring)}</strong><span>budget settimanale</span></div><div><small>Autonomia</small><strong>${outlook.runway === null ? '—' : `${outlook.runway} sett.`}</strong><span>al ritmo attuale</span></div><div><small>Debito</small><strong class="${outlook.debt ? 'out' : ''}">${euro(outlook.debt)}</strong><span>${outlook.debt ? 'interessi 1% a settimana' : 'nessun debito'}</span></div></div>
     </section>
-    <div class="society-grid">
+    ${panel('FONDI E PARTITO', 'Trasferimenti tra te e la tesoreria del partito', transfersPanel(game))}
+    ${panel('RACCOLTE FONDI ED EVENTI', 'Operazioni con un costo oggi e un esito domani', operationsPanel(game, state))}
+    ${foldPanel({ id: 'fin-andamento', tone: 'azzurro', icon: 'chart', title: 'Bilancio e andamento', summary: `${esc(euro(game.resources.funds))} in cassa · ${esc(signed(outlook.net, 0))} €/sett.`, body: `<div class="society-grid">
       ${panel('FLUSSI', 'Entrate e uscite, settimana per settimana', flowChart(weeks) + `<details class="poll-table"><summary>Tabella dei dati</summary><div class="poll-table-scroll"><table><thead><tr><th>Settimana</th><th>Entrate</th><th>Uscite</th><th>Saldo</th></tr></thead><tbody>${history.map(item => `<tr><th>S${item.week}</th><td>${euro(item.income)}</td><td>${euro(item.expense)}</td><td>${euro(item.balance)}</td></tr>`).join('')}</tbody></table></div></details>`)}
       ${panel('SALDO', 'Cassa nel tempo', lineChart({ series: [{ label: 'Saldo in cassa', short: 'Saldo', color: SERIES[0], values: history.map(item => item.balance), emphasis: true }, ...(history.some(item => item.debt) ? [{ label: 'Debito', color: SERIES[7], values: history.map(item => item.debt) }] : [])], labels: history.map(item => `S${item.week}`), tips: history.map(item => `Settimana ${item.week}`), unit: ' €', digits: 0, min: 0, ariaLabel: 'Saldo in cassa per settimana' }))}
-    </div>
-    ${panel('BILANCIO SETTIMANALE', 'Le tue spese ricorrenti', budgetControls(game) + '<p class="parliament-note">Le scelte valgono dalla prossima chiusura di settimana. Se la cassa non basta, la differenza diventa debito; oltre 2.500 € scatta una crisi finanziaria.</p>', `<span class="hq-count">${euro(outlook.recurring)}/sett.</span>`)}
-    ${panel('RACCOLTE FONDI ED EVENTI', 'Operazioni con un costo oggi e un esito domani', operationsPanel(game, state))}
-    ${panel('FONDI E PARTITO', 'Trasferimenti tra te e la tesoreria del partito', transfersPanel(game))}
-    <div class="society-grid">
-      ${panel('RIPARTIZIONE DEL BUDGET', 'Come si divide la spesa settimanale', allocationPanel(game))}
-      ${panel('INVESTIMENTI E PATRIMONIO', 'Cosa possiedi e dove investire', investmentsPanel(game, outlook))}
-    ${panel(`ANNO ${esc(finance.year ?? '')}`, 'Da dove arrivano e dove vanno', `<div class="split-breakdown"><div><small>ENTRATE</small>${year.income.length ? breakdown(year.income, { format: euro }) : '<p class="quiet-copy">—</p>'}</div><div><small>USCITE</small>${year.expense.length ? breakdown(year.expense, { format: euro }) : '<p class="quiet-copy">—</p>'}</div></div>`)}
-      ${panel('MOVIMENTI', 'Registro contabile', `<div class="ledger">${ledger || '<p class="quiet-copy">Nessun movimento.</p>'}</div>`)}
-    </div>
-    ${panel('BILANCI ANNUALI', 'Chiusure d’esercizio', annual)}
-    ${renderTreasuryPanel(state)}
+    </div>` })}
+    ${foldPanel({ id: 'fin-entrate-uscite', tone: 'oro', icon: 'scales', title: 'Entrate e uscite', summary: `Spese fisse ${esc(euro(outlook.recurring))}/sett.`, body: `${panel('BILANCIO SETTIMANALE', 'Le tue spese ricorrenti', budgetControls(game) + '<p class="parliament-note">Le scelte valgono dalla prossima chiusura di settimana. Se la cassa non basta, la differenza diventa debito; oltre 2.500 € scatta una crisi finanziaria.</p>', `<span class="hq-count">${euro(outlook.recurring)}/sett.</span>`)}
+      <div class="society-grid">
+        ${panel('RIPARTIZIONE DEL BUDGET', 'Come si divide la spesa settimanale', allocationPanel(game))}
+        ${panel(`ANNO ${esc(finance.year ?? '')}`, 'Da dove arrivano e dove vanno', `<div class="split-breakdown"><div><small>ENTRATE</small>${year.income.length ? breakdown(year.income, { format: euro }) : '<p class="quiet-copy">—</p>'}</div><div><small>USCITE</small>${year.expense.length ? breakdown(year.expense, { format: euro }) : '<p class="quiet-copy">—</p>'}</div></div>`)}
+      </div>` })}
+    ${foldPanel({ id: 'fin-investimenti', tone: 'verde', icon: 'briefcase', title: 'Investimenti e patrimonio', summary: 'Cosa possiedi e dove investire', body: panel('INVESTIMENTI E PATRIMONIO', 'Cosa possiedi e dove investire', investmentsPanel(game, outlook)) })}
+    ${foldPanel({ id: 'fin-registri', tone: 'viola', icon: 'book', title: 'Registri e storico', summary: `${finance.ledger.length ? `${Math.min(18, finance.ledger.length)} movimenti recenti` : 'nessun movimento'}${finance.annual.length ? ` · ${finance.annual.length} chiusure` : ''}`, body: `${panel('MOVIMENTI', 'Registro contabile', `<div class="ledger">${ledger || '<p class="quiet-copy">Nessun movimento.</p>'}</div>`)}${panel('BILANCI ANNUALI', 'Chiusure d’esercizio', annual)}` })}
+    ${game.party?.org ? foldPanel({ id: 'fin-tesoreria', tone: 'corallo', icon: 'flag', title: 'Tesoreria del partito', summary: `${esc(euro(game.party.org.treasury.balance))} nelle casse`, body: renderTreasuryPanel(state) }) : ''}
     <p class="poll-footnote">Importi di gioco (source: simulation): non corrispondono a indennità, rimborsi o bilanci reali di persone o partiti.</p>
   </div>`;
 }

@@ -1,6 +1,6 @@
 // Shared building blocks of the main sections (Elezioni, Carriera, Partito, Agenda): hero, internal tabs,
 // indicators, cards and tables with the same visual language as the rest of POLITICANDO 2026.
-import { glyph } from './visuals.js?v=20261021-1';
+import { glyph } from './visuals.js?v=20261021-3';
 
 export const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const num = (value, digits = 1) => value === null || value === undefined || Number.isNaN(Number(value)) ? '—' : Number(value).toLocaleString('it-IT', { maximumFractionDigits: digits });
@@ -24,8 +24,15 @@ export function kpi({ label, value, note = '', tone = '', bar = null, title = ''
 export function sectionTabs(name, tabs, active) {
   return `<nav class="sx-tabs" role="tablist" aria-label="Sezioni interne">${tabs.map(([id, label, count]) => `<button type="button" role="tab" class="sx-tab ${active === id ? 'active' : ''}" data-section-tab="${esc(name)}" data-section-tab-value="${esc(id)}" aria-selected="${active === id}">${esc(label)}${count ? `<span class="sx-tab-count">${esc(count)}</span>` : ''}</button>`).join('')}</nav>`;
 }
-export function card({ kicker = '', title = '', body = '', action = '', tone = '', className = '', id = '' }) {
-  return `<section class="sx-card ${tone ? `tone-${esc(tone)}` : ''} ${esc(className)}" ${id ? `id="${esc(id)}"` : ''}>${kicker || title || action ? `<header class="sx-card-head"><div>${kicker ? `<span class="section-kicker">${esc(kicker)}</span>` : ''}${title ? `<h3>${esc(title)}</h3>` : ''}</div>${action}</header>` : ''}${body}</section>`;
+// `fold`: { id, icon, start } makes the card a responsive accordion. On a phone it is a panel that opens and closes (title, icon and kicker on the summary; the state is remembered by the
+// interface, `start` says whether it opens at first); on a computer it is the card it always was, whole and open, with no control to hide it. One markup for both: the same content, never two versions.
+export function card({ kicker = '', title = '', body = '', action = '', tone = '', className = '', id = '', fold = null }) {
+  const head = kicker || title || action ? `<header class="sx-card-head"><div>${kicker ? `<span class="section-kicker">${esc(kicker)}</span>` : ''}${title ? `<h3>${esc(title)}</h3>` : ''}</div>${action}</header>` : '';
+  if (fold?.id) {
+    const summary = `<summary class="card-fold-head">${fold.icon ? `<span class="fold-icon">${glyph(fold.icon, 18)}</span>` : ''}<span class="fold-title">${kicker ? `<span class="section-kicker">${esc(kicker)}</span>` : ''}<strong>${esc(title)}</strong></span><span class="fold-chevron" aria-hidden="true"></span></summary>`;
+    return `<section class="sx-card is-foldable ${tone ? `tone-${esc(tone)}` : ''} ${esc(className)}" ${id ? `id="${esc(id)}"` : ''}><details class="card-fold" data-remember="${esc(fold.id)}" data-fold-responsive data-fold-start="${fold.start === 'open' ? 'open' : 'closed'}">${summary}<div class="card-fold-body">${head}${body}</div></details></section>`;
+  }
+  return `<section class="sx-card ${tone ? `tone-${esc(tone)}` : ''} ${esc(className)}" ${id ? `id="${esc(id)}"` : ''}>${head}${body}</section>`;
 }
 export function badge(label, tone = 'neutral') {
   return `<span class="sx-badge tone-${esc(tone)}">${esc(label)}</span>`;
@@ -43,4 +50,10 @@ export function empty(text, action = '') {
 }
 export function weeksLabel(count) {
   return `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
+}
+
+// A secondary block that opens and closes (details[data-remember]: the state survives every redraw and is kept by the interface, never by the game data). `open`: 'desktop' (open on a computer,
+// folded on a phone until the player opens it), 'always' (starts open) or 'closed'. The summary carries a title, an icon and a short summary, so what is folded stays readable.
+export function foldPanel({ id, title, kicker = '', summary = '', body = '', icon = '', tone = '', open = 'desktop', className = '' }) {
+  return `<details class="fold-panel ${esc(className)}" ${tone ? `data-tone="${esc(tone)}"` : ''} data-remember="${esc(id)}" data-fold-default="${esc(open)}" ${open === 'always' ? 'open' : ''}><summary class="fold-head">${icon ? `<span class="fold-icon">${glyph(icon, 18)}</span>` : ''}<span class="fold-title">${kicker ? `<span class="section-kicker">${esc(kicker)}</span>` : ''}<strong>${esc(title)}</strong></span>${summary ? `<span class="fold-summary">${summary}</span>` : ''}<span class="fold-chevron" aria-hidden="true"></span></summary><div class="fold-body">${body}</div></details>`;
 }

@@ -1,17 +1,17 @@
 // CARRIERA — the path and the progression: four tracks (institutions, party, Parliament, Government), the odds of
 // every next step with the factors that decide them, offices and powers, the timeline and the goals.
-import { careerOverview } from '../core/career-overview.js?v=20261021-1';
-import { ADVANCEMENT_OUTCOMES } from '../core/progression-engine.js?v=20261021-1';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261021-1';
-import { careerLevelLabel } from '../data/regions.js?v=20261021-1';
-import { formatDate } from '../core/time.js?v=20261021-1';
-import { startOverview } from '../core/start-engine.js?v=20261021-1';
-import { renderGoals } from './goals-view.js?v=20261021-1';
-import { renderRetirement } from './hall-view.js?v=20261021-1';
-import { glyph, officeIcon } from './visuals.js?v=20261021-1';
-import { REPUTATIONS, REPUTATION_IDS } from '../data/simulation/standing-rules.js?v=20261021-1';
-import { renderCareerTimeline, renderMemoryPanel, renderRolesPanel, renderWhyPanel } from './game-mode.js?v=20261021-1';
-import { arrow, badge, bar, card, empty, esc, num, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261021-1';
+import { careerOverview } from '../core/career-overview.js?v=20261021-3';
+import { ADVANCEMENT_OUTCOMES } from '../core/progression-engine.js?v=20261021-3';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261021-3';
+import { careerLevelLabel } from '../data/regions.js?v=20261021-3';
+import { formatDate } from '../core/time.js?v=20261021-3';
+import { startOverview } from '../core/start-engine.js?v=20261021-3';
+import { renderGoals } from './goals-view.js?v=20261021-3';
+import { renderRetirement } from './hall-view.js?v=20261021-3';
+import { glyph, officeIcon } from './visuals.js?v=20261021-3';
+import { REPUTATIONS, REPUTATION_IDS } from '../data/simulation/standing-rules.js?v=20261021-3';
+import { renderCareerTimeline, renderMemoryPanel, renderRolesPanel, renderWhyPanel } from './game-mode.js?v=20261021-3';
+import { arrow, badge, bar, card, empty, esc, num, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261021-3';
 
 export const CAREER_TABS = Object.freeze([['percorso', 'Percorso'], ['progressione', 'Progressione'], ['incarichi', 'Incarichi e poteri'], ['cronologia', 'Cronologia'], ['obiettivi', 'Obiettivi']]);
 const STAT_ORDER = ['popularity', 'reputation', 'influence', 'experience', 'notoriety'];
@@ -45,7 +45,7 @@ function stepper(steps) {
 function trackCard(track) {
   const odds = track.odds ? `<div class="cp-odds tone-${chanceTone(track.odds.chance)}"><strong>${pctOf(track.odds.chance)}</strong><span>probabilità stimata${track.odds.score !== null && track.odds.threshold ? ` · punteggio ${num(track.odds.score, 0)} su soglia ${track.odds.threshold}` : ''}</span>${bar(track.odds.chance * 100, chanceTone(track.odds.chance))}</div>` : '';
   const next = track.next ? `<div class="cp-next"><small>PROSSIMO PASSO</small><strong>${esc(track.next.title)}</strong><span>${esc(track.next.when)}</span></div>` : '<div class="cp-next"><small>PROSSIMO PASSO</small><strong>Nessun passo ulteriore su questo percorso</strong></div>';
-  return `<article class="cp-track track-${esc(track.id)}">
+  return `<article class="cp-track track-${esc(track.id)}" data-track="${esc(track.id)}">
     <header><span class="cp-track-icon">${glyph(track.icon, 18)}</span><div><span class="section-kicker">${esc(track.label.toUpperCase())}</span><h3>${esc(track.position)}</h3></div></header>
     ${stepper(track.steps)}
     ${next}${odds}
@@ -99,7 +99,7 @@ export function renderOddsCard(track) {
     ${factors}
     <h4 class="cp-sub">Come può finire</h4>${outcomes}
     <div class="sx-actions">${actionButton(track.action, ['party-contest', 'parliament-contest'].includes(track.action?.type) ? track.blocker : null)}${track.blocker ? `<em class="cp-blocker">${esc(track.blocker)}</em>` : ''}</div>`;
-  return card({ kicker: `${track.label.toUpperCase()} · PROBABILITÀ SIMULATA`, title: track.next?.title ?? track.position, body, tone: chanceTone(track.odds.chance) === 'good' ? 'good' : '' });
+  return card({ kicker: `${track.label.toUpperCase()} · PROBABILITÀ SIMULATA`, title: track.next?.title ?? track.position, body, tone: chanceTone(track.odds.chance) === 'good' ? 'good' : '', className: `cp-odds-card track-${track.id}` });
 }
 
 // How the player stands: the capital, the notoriety and the influence, the four reputations (and what each is made of) and the

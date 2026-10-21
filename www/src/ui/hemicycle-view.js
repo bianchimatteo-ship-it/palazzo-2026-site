@@ -1,13 +1,13 @@
 // The interactive hemicycle of the Parlamento section: Camera and Senato apart, one marker per seat (real
 // parliamentarians in office, the player's seat), colours by group or by party, filters by party, group and
 // committee, a card for every parliamentarian and, for a simulated vote, the vote of every seat.
-import { chamberRoster, committeesOf, forceColorResolver, partyColors, seatColor, UNKNOWN_COLOR } from '../core/hemicycle.js?v=20261021-1';
-import { individualVotes, VOTE_CHOICES, voteCatalog, voteSummary } from '../core/vote-engine.js?v=20261021-1';
-import { BASIS_LABELS, electionListOf, groupAffiliation, groupLabel, politicianAffiliation } from '../data/repositories/party-links.js?v=20261021-1';
-import { formatDate } from '../core/time.js?v=20261021-1';
-import { placeholderPerson } from '../core/seat-roster.js?v=20261021-1';
-import { glyph } from './visuals.js?v=20261021-1';
-import { badge, esc, num, table } from './sections-kit.js?v=20261021-1';
+import { chamberRoster, committeesOf, forceColorResolver, partyColors, seatColor, UNKNOWN_COLOR } from '../core/hemicycle.js?v=20261021-3';
+import { individualVotes, VOTE_CHOICES, voteCatalog, voteSummary } from '../core/vote-engine.js?v=20261021-3';
+import { BASIS_LABELS, electionListOf, groupAffiliation, groupLabel, politicianAffiliation } from '../data/repositories/party-links.js?v=20261021-3';
+import { formatDate } from '../core/time.js?v=20261021-3';
+import { placeholderPerson } from '../core/seat-roster.js?v=20261021-3';
+import { glyph } from './visuals.js?v=20261021-3';
+import { badge, esc, num, table } from './sections-kit.js?v=20261021-3';
 
 export const HEMICYCLE_DEFAULTS = Object.freeze({ chamber: null, colorBy: 'gruppo', party: '', group: '', committee: '', vote: '', selected: null, q: '', territory: '', limit: 40 });
 export const ROSTER_PAGE = 40;

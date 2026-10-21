@@ -1,19 +1,26 @@
 // VITA INTERNA — the people behind the currents, what they ask, the agreements, the congress, the local leaders, the
 // rebuilding of the party and the way it is founded, merged or renamed. All simulated: no real person appears here.
-import { costProblem, lifeOverview, partyOpsAvailability } from '../core/career-engine.js?v=20261021-1';
-import { mergeCandidates } from '../core/world-engine.js?v=20261021-1';
-import { OP_COSTS } from '../core/party-ops-engine.js?v=20261021-1';
-import { CADRE_ACTIONS, REBUILD_FOCUS, RENAME_STYLES } from '../data/simulation/party-life-rules.js?v=20261021-1';
-import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20261021-1';
-import { badge, bar, card, empty, esc, euro, num, weeksLabel } from './sections-kit.js?v=20261021-1';
-import { territoryTile, territoryVisual } from './visuals.js?v=20261021-1';
-import { planAddButton } from './plan-view.js?v=20261021-1';
+import { costProblem, lifeOverview, partyOpsAvailability } from '../core/career-engine.js?v=20261021-3';
+import { mergeCandidates } from '../core/world-engine.js?v=20261021-3';
+import { OP_COSTS } from '../core/party-ops-engine.js?v=20261021-3';
+import { CADRE_ACTIONS, REBUILD_FOCUS, RENAME_STYLES } from '../data/simulation/party-life-rules.js?v=20261021-3';
+import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20261021-3';
+import { badge, bar, card, empty, esc, euro, foldPanel, num, weeksLabel } from './sections-kit.js?v=20261021-3';
+import { glyph, territoryTile, territoryVisual } from './visuals.js?v=20261021-3';
+import { planAddButton } from './plan-view.js?v=20261021-3';
 
 const STANCE = { alleata: ['good', 'Alleata'], neutrale: ['neutral', 'Neutrale'], ostile: ['bad', 'Ostile'] };
 const PACT_STATUS = { attivo: ['good', 'In vigore'], scaduto: ['neutral', 'Scaduto'], rotto: ['bad', 'Rotto'], rinnovato: ['good', 'Rinnovato'] };
 const TREND = { crescita: ['good', 'In crescita'], stabile: ['neutral', 'Stabile'], declino: ['bad', 'In declino'], volatile: ['warn', 'Volatile'] };
 const tone = (value, low, high, invert = false) => { const good = invert ? value <= low : value >= high; const bad = invert ? value >= high : value <= low; return good ? 'good' : bad ? 'bad' : ''; };
 const costChips = cost => Object.entries(cost ?? {}).map(([key, value]) => `<span class="hq-cost-chip">${key === 'ap' ? `${value} giorn${value === 1 ? 'o' : 'i'}` : key === 'capital' ? `${value} cap. politico` : key === 'funds' ? euro(value) : key === 'treasury' ? `${euro(value)} dal partito` : `${value} ${esc(key)}`}</span>`).join(' ');
+// The identity of an internal area: a colour and an icon fixed by its id (never by the order in which it is drawn), the same on its card, on its delegates and on the congress projection. The
+// three areas of the game have their own; an area that is not among them (a new one) takes a pair from a fixed pool by a hash of its id. The name and the numbers are always written out.
+const AREA_IDENTITY = Object.freeze({ riformisti: { color: '#5b9bd5', icon: 'scales' }, territori: { color: '#5fb58a', icon: 'pin' }, movimento: { color: '#e0875a', icon: 'megaphone' } });
+const AREA_POOL = Object.freeze([{ color: '#9a85e0', icon: 'star' }, { color: '#d06aa1', icon: 'heart' }, { color: '#3db5c4', icon: 'globe' }, { color: '#c4a66a', icon: 'flag' }]);
+const hashOf = text => [...String(text)].reduce((n, char) => (Math.imul(n, 31) + char.charCodeAt(0)) >>> 0, 2166136261);
+export const areaIdentity = id => AREA_IDENTITY[id] ?? AREA_POOL[hashOf(id ?? '') % AREA_POOL.length];
+const areaMark = id => { const identity = areaIdentity(id); return `<span class="pl-area-mark" style="--area:${identity.color}" aria-hidden="true">${glyph(identity.icon, 14)}</span>`; };
 const meterRow = (label, value, toneName = '') => `<div class="pl-meter"><span>${esc(label)}</span>${bar(value, toneName)}<b>${num(value, 0)}</b></div>`;
 
 function vitalsCard(view) {
@@ -45,7 +52,7 @@ function areasCard(view, party) {
   const rows = [...view.currents].sort((a, b) => b.strength - a.strength).map(item => {
     const [stanceTone, stanceLabel] = STANCE[item.stance] ?? STANCE.neutrale;
     const badges = [item.ruling ? badge('Guida il partito', 'good') : '', item.aligned ? badge('La tua area', 'neutral') : '', badge(stanceLabel, stanceTone), item.leaving ? badge('Valuta la rottura', 'bad') : ''].join(' ');
-    return `<article class="pl-area ${item.aligned ? 'is-mine' : ''}"><header><div><strong>${esc(item.label)}</strong><small>${esc(item.leader ?? '')}</small></div><div class="pl-badges">${badges}</div></header>
+    return `<article class="pl-area ${item.aligned ? 'is-mine' : ''}" data-area="${esc(item.id)}" style="--area:${areaIdentity(item.id).color}"><header><div class="pl-area-name">${areaMark(item.id)}<div><strong>${esc(item.label)}</strong><small>${esc(item.leader ?? '')}</small></div></div><div class="pl-badges">${badges}</div></header>
       <p class="pl-trait">${esc(item.persona ? `${item.persona[0].toUpperCase()}${item.persona.slice(1)}: ${item.trait}` : '')}${item.line ? ` · linea «${esc(PARTY_LINES[item.line]?.label ?? item.line)}»` : ''}${item.areas.length ? ` · temi: ${esc(item.areas.join(', '))}` : ''}</p>
       ${meterRow(`Peso nel partito ${item.share}%`, item.share * 1.6)}${meterRow(`Seggi negli organi ${item.seats}/${view.organs.total}`, item.seats / view.organs.total * 100)}${meterRow('Lealtà', item.loyalty, tone(item.loyalty, 35, 65))}${meterRow('Malcontento', item.grievance, tone(item.grievance, 35, 65, true))}
       <footer><small>Richieste accolte ${item.granted} · respinte ${item.refused} · rapporto con te ${item.relation}/100${item.pacts.length ? ` · accordi: ${esc(item.pacts.join(', '))}` : ''}</small>${!view.secretary && !item.aligned && party.affiliation === 'member' ? `<button type="button" class="secondary-button" data-party-current="${esc(item.id)}">Schierati</button>` : ''}</footer></article>`;
@@ -87,12 +94,13 @@ function congressWork(view, congress, party, state) {
 
 function congressCard(view, party, state) {
   const congress = view.congress;
-  const lastRows = view.lastCongress ? `<h4>Ultimo congresso (settimana ${view.lastCongress.week})</h4><ul class="pl-rank">${view.lastCongress.ranked.map(row => `<li><span>${esc(row.label)}</span>${bar(row.pct, row.id === view.lastCongress.winnerId ? 'good' : '')}<b>${num(row.pct, 1)}%</b></li>`).join('')}</ul>` : '';
+  const lastRows = view.lastCongress ? `<h4>Ultimo congresso (settimana ${view.lastCongress.week})</h4><ul class="pl-rank">${view.lastCongress.ranked.map(row => `<li data-area="${esc(row.id)}" style="--area:${areaIdentity(row.id).color}" class="${row.id === view.lastCongress.winnerId ? 'is-lead' : ''}"><span>${areaMark(row.id)}${esc(row.label)}</span>${bar(row.pct, row.id === view.lastCongress.winnerId ? 'good' : '')}<b>${num(row.pct, 1)}%</b></li>`).join('')}</ul>` : '';
   if (!congress) return card({ className: 'pl-cat-congresso', kicker: 'CONGRESSO', title: party.affiliation === 'founder' ? 'Guidi il partito da fondatore: nessun congresso' : `Prossimo congresso: settimana ${view.nextCongressWeek ?? '—'}`, body: `<p class="sx-note">${party.affiliation === 'founder' ? 'Un partito appena fondato non ha congressi: li avrà quando sarà cresciuto.' : 'La stagione congressuale si apre circa otto mesi prima del voto: forza delle aree → preparazione → delegati → alleanze → trattative → mozioni → voto.'}</p>${lastRows}` });
   const phases = congress.schedule.map(item => `<li class="${item.id === congress.phase ? 'current' : congress.schedule.findIndex(entry => entry.id === item.id) < congress.schedule.findIndex(entry => entry.id === congress.phase) ? 'done' : ''}"><span>${esc(item.label)}</span><small>sett. ${item.startWeek}</small></li>`).join('');
-  const delegates = congress.delegates ? view.currents.map(item => { const n = congress.delegates.byCurrent[item.id] ?? 0; return `<li><span>${esc(item.label)}</span>${bar(n, item.aligned ? 'good' : '', congress.delegates.total)}<b>${n}</b></li>`; }).join('') : '';
-  const projection = congress.projection?.ranked?.map(row => `<li><span>${esc(row.label)}</span>${bar(row.pct, row === congress.projection.winner ? 'good' : '')}<b>${num(row.pct, 1)}%</b></li>`).join('') ?? '';
+  const delegates = congress.delegates ? view.currents.map(item => { const n = congress.delegates.byCurrent[item.id] ?? 0; return `<li data-area="${esc(item.id)}" style="--area:${areaIdentity(item.id).color}" class="${item.aligned ? 'is-mine' : ''}"><span>${areaMark(item.id)}${esc(item.label)}</span>${bar(n, item.aligned ? 'good' : '', congress.delegates.total)}<b>${n}</b></li>`; }).join('') : '';
+  const projection = congress.projection?.ranked?.map(row => `<li data-area="${esc(row.id ?? '')}" style="--area:${areaIdentity(row.id).color}" class="${row === congress.projection.winner ? 'is-lead' : ''}"><span>${areaMark(row.id)}${esc(row.label)}</span>${bar(row.pct, row === congress.projection.winner ? 'good' : '')}<b>${num(row.pct, 1)}%</b></li>`).join('') ?? '';
   return card({ kicker: 'CONGRESSO · FORZA → PREPARAZIONE → DELEGATI → ALLEANZE → TRATTATIVE → MOZIONI → VOTO', title: `${congress.phaseLabel} · voto tra ${weeksLabel(congress.weeksLeft)}`, body: `<p>${esc(congress.phaseDetail ?? '')}</p><ol class="organ-ladder pl-phases">${phases}</ol>
+    <ul class="pl-area-legend" aria-label="Le aree del partito">${view.currents.map(item => `<li style="--area:${areaIdentity(item.id).color}">${areaMark(item.id)}<span>${esc(item.label)}</span></li>`).join('')}</ul>
     <div class="sx-grid two"><div><h4>Delegati (${congress.delegates?.total ?? '—'}${congress.delegates?.player ? ` · ${congress.delegates.player} legati a te` : ''})</h4><ul class="pl-rank">${delegates}</ul></div><div><h4>Se si votasse oggi</h4><ul class="pl-rank">${projection || '<li>Stima non disponibile.</li>'}</ul></div></div>
     ${congress.alliances.length ? `<h4>Alleanze di mozioni</h4><ul class="pl-notes">${congress.alliances.map(al => `<li>${esc(al.labels.join(' + '))} <small>(${esc(al.origin)})</small></li>`).join('')}</ul>` : ''}
     ${congress.notes.length ? `<ul class="pl-notes">${congress.notes.map(item => `<li><small>sett. ${item.week}</small> ${esc(item.text)}</li>`).join('')}</ul>` : ''}
@@ -158,6 +166,17 @@ function chronicleCard(view) {
   return card({ className: 'pl-cat-memoria', kicker: 'MEMORIA INTERNA', title: 'Cosa è successo di recente', body: `<ul class="pl-notes">${items.slice(0, 14).join('')}</ul>` });
 }
 
+// What cannot wait, on one line under the state of the party: the requests to answer, an area that is thinking of leaving, the congress under way, a rebuilding plan.
+function urgentStrip(view) {
+  const items = [
+    view.requests.length ? ['bad', `${view.requests.length} ${view.requests.length === 1 ? 'richiesta aperta' : 'richieste aperte'} da gestire`] : null,
+    ...view.currents.filter(item => item.leaving).map(item => ['bad', `${item.label} valuta la rottura`]),
+    view.congress ? ['warn', `Congresso: voto tra ${weeksLabel(view.congress.weeksLeft)}`] : null,
+    view.rebuild ? ['good', `Ricostruzione al ${view.rebuild.progress}%`] : null
+  ].filter(Boolean);
+  return items.length ? `<ul class="pl-alerts" role="status" aria-label="Avvisi del partito">${items.map(([tone, text]) => `<li class="tone-${tone}">${esc(text)}</li>`).join('')}</ul>` : '';
+}
+
 export function renderPartyLife(state, filters = {}) {
   const game = state.game;
   const party = game?.party;
@@ -165,5 +184,19 @@ export function renderPartyLife(state, filters = {}) {
   if (!view) return empty('La vita interna del partito compare quando fai parte di un partito.');
   const neighbours = state.world ? mergeCandidates(state.world) : [];
   const ops = partyOpsAvailability(game, { neighbours });
-  return `<div class="pl-page">${vitalsCard(view)}${requestsCard(view)}${areasCard(view, party)}${pactsCard(view)}${congressCard(view, party, state)}${cadresCard(view, party, filters)}${rebuildCard(view, view.secretary)}${opsCard(state, view, party, neighbours, ops)}${chronicleCard(view)}</div>`;
+  const rebuild = rebuildCard(view, view.secretary), chronicle = chronicleCard(view);
+  const activePacts = view.pacts.filter(pact => pact.status === 'attivo').length;
+  const vacant = (view.committees ?? []).filter(item => item.vacant).length;
+  const lead = [...view.currents].sort((a, b) => b.strength - a.strength)[0];
+  const folds = [
+    foldPanel({ id: 'vita-richieste', tone: 'corallo', icon: 'megaphone', title: 'Richieste', summary: view.requests.length ? `${view.requests.length} ${view.requests.length === 1 ? 'aperta' : 'aperte'}` : 'nessuna aperta', open: view.requests.length ? 'always' : 'closed', body: requestsCard(view) }),
+    foldPanel({ id: 'vita-aree', tone: 'azzurro', icon: 'users', title: 'Aree e correnti', summary: `${view.currents.length} ${view.currents.length === 1 ? 'area' : 'aree'}${lead ? ` · più forte: ${esc(lead.label)}` : ''}`, body: areasCard(view, party) }),
+    foldPanel({ id: 'vita-accordi', tone: 'oro', icon: 'link', title: 'Accordi', summary: `${activePacts} in vigore`, body: pactsCard(view) }),
+    foldPanel({ id: 'vita-congresso', tone: 'viola', icon: 'ballot', title: 'Congresso', summary: view.congress ? `${esc(view.congress.phaseLabel)} · voto tra ${esc(weeksLabel(view.congress.weeksLeft))}` : party.affiliation === 'founder' ? 'nessun congresso' : `prossimo: settimana ${esc(view.nextCongressWeek ?? '—')}`, body: congressCard(view, party, state) }),
+    foldPanel({ id: 'vita-quadri', tone: 'verde', icon: 'comitato', title: 'Quadri e comitati', summary: `${view.cadres.length} ${view.cadres.length === 1 ? 'dirigente' : 'dirigenti'} · ${vacant} ${vacant === 1 ? 'comitato vacante' : 'comitati vacanti'}`, body: cadresCard(view, party, filters) }),
+    rebuild ? foldPanel({ id: 'vita-ricostruzione', tone: 'arancio', icon: 'route', title: 'Ricostruzione organizzativa', summary: view.rebuild ? `${esc(view.rebuild.label)} · ${view.rebuild.progress}%` : 'piano disponibile', body: rebuild }) : '',
+    foldPanel({ id: 'vita-operazioni', tone: 'rosa', icon: 'split', title: 'Operazioni sul partito', summary: 'fondazione, fusione, nome', open: 'closed', body: opsCard(state, view, party, neighbours, ops) }),
+    chronicle ? foldPanel({ id: 'vita-cronologia', tone: 'turchese', icon: 'clock', title: 'Cronologia interna', summary: `${view.history.length + view.closed.length} eventi`, open: 'closed', body: chronicle }) : ''
+  ].join('');
+  return `<div class="pl-page">${vitalsCard(view)}${urgentStrip(view)}${folds}</div>`;
 }

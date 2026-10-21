@@ -2,16 +2,19 @@
 // elections, coalitions and national campaign, the seats projected on the real map of 2022, the last votes, the new
 // Chambers and the formation of the Government. The map, the seats and the results of 2022 are real data (Eligendo);
 // polls, coalitions, votes, seats and Governments of the game are simulation, and every block says which is which.
-import { districtRows } from '../core/legislature-engine.js?v=20261021-1';
-import { formatDate } from '../core/time.js?v=20261021-1';
-import { ALLIANCE_COLORS, NEUTRAL_COLOR, coalitionColor, forceColor } from './political-colors.js?v=20261021-1';
-import { glyph } from './visuals.js?v=20261021-1';
-import { arrow, badge, bar, card, esc, euro, kpi, num, pct, table } from './sections-kit.js?v=20261021-1';
-import { MAP_SCOPES, NO_DATA_COLOR, PROVINCE_INDICATOR_NOTE, italyMapInfo, italyMapSvg, italyMapTable, territoryTallies } from './italy-map.js?v=20261021-1';
+import { districtRows } from '../core/legislature-engine.js?v=20261021-3';
+import { formatDate } from '../core/time.js?v=20261021-3';
+import { ALLIANCE_COLORS, NEUTRAL_COLOR, coalitionColor, forceColor } from './political-colors.js?v=20261021-3';
+import { glyph } from './visuals.js?v=20261021-3';
+import { arrow, badge, bar, card, esc, euro, kpi, num, pct, table } from './sections-kit.js?v=20261021-3';
+import { MAP_SCOPES, NO_DATA_COLOR, PROVINCE_INDICATOR_NOTE, italyMapInfo, italyMapSvg, italyMapTable, territoryTallies } from './italy-map.js?v=20261021-3';
 
 export const NATIONAL_MAP_VIEWS = Object.freeze([['proiezione', 'Proiezione di oggi'], ['2022', 'Vincitori 2022 (reale)'], ['voto', 'Ultimo voto della partita']]);
 const NEUTRAL = NEUTRAL_COLOR;
-const ALLIANCES_2022 = { cdx: ['Centrodestra', ALLIANCE_COLORS.cdx], csx: ['Centrosinistra', ALLIANCE_COLORS.csx], m5s: ['Movimento 5 Stelle', ALLIANCE_COLORS.m5s], 'azione-iv': ['Azione – Italia Viva', ALLIANCE_COLORS['azione-iv']] };
+const ALLIANCES_2022 = { cdx: ['Centrodestra', ALLIANCE_COLORS.cdx], csx: ['Centrosinistra', ALLIANCE_COLORS.csx], m5s: ['Movimento 5 Stelle', ALLIANCE_COLORS.m5s], 'azione-iv': ['Azione – Italia Viva', ALLIANCE_COLORS['azione-iv']],
+  ADA: ['Alleanza Democratica per l’Autonomia', ALLIANCE_COLORS.ADA], DAF: ['Democrazia Ambiente Futuro', ALLIANCE_COLORS.DAF], 'SVP-PATT': ['SVP – PATT', ALLIANCE_COLORS['SVP-PATT']], SVP: ['Südtiroler Volkspartei (SVP)', ALLIANCE_COLORS.SVP], VDAAPF: ['Vallée d’Aoste – Autonomie Progrès Fédéralisme', ALLIANCE_COLORS.VDAAPF] };
+// The official electoral group of a winner (kept apart from the map category used for the colour): its own name where the data has it, else the name of the category.
+const groupOf = winner => winner?.electoralGroup ?? ALLIANCES_2022[winner?.alliance]?.[0] ?? winner?.alliance ?? '—';
 const FORMATION_ORDER = ['insediamento', 'consultazioni', 'incarico', 'fiducia', 'completata'];
 const day = date => date ? formatDate(date) : '—';
 const shortDay = date => date ? formatDate(date, { day: 'numeric', month: 'short', year: 'numeric' }) : '—';
@@ -49,7 +52,7 @@ function calendarCard(overview) {
     kpi({ label: 'Prossime politiche', value: politiche ? esc(shortDay(politiche.electionDate)) : '—', note: politiche?.early ? 'anticipate' : `fine naturale ${esc(shortDay(calendar.politiche.naturalEnd))}` }),
     kpi({ label: 'Prossime europee', value: europee ? esc(shortDay(europee.electionDate)) : esc(shortDay(calendar.europee.date)), note: '76 seggi all’Italia · soglia 4%' })
   ].join('');
-  return card({ kicker: 'CALENDARIO NAZIONALE', title: 'Legislatura, politiche ed europee', body: `<div class="sx-kpis nv-kpis">${kpis}</div><ol class="nv-timeline">${items}</ol>${formation ? `<p class="sx-note">${glyph('dome', 14)} In corso: ${esc(overview.phases[formation.phase] ?? formation.phase)}.</p>` : ''}<p class="sx-note">Politiche ed europee seguono il calendario reale: la legislatura dura cinque anni dalla prima seduta e si vota poco prima della scadenza, salvo scioglimento anticipato. Comunali e regionali seguono il calendario reale di ogni comune e regione (ultimo voto da Eligendo, mandato di cinque anni): ogni anno si vota da qualche parte.</p>` });
+  return card({ fold: { id: 'nv-calendario', icon: 'calendar', start: 'open' }, kicker: 'CALENDARIO NAZIONALE', title: 'Legislatura, politiche ed europee', body: `<div class="sx-kpis nv-kpis">${kpis}</div><ol class="nv-timeline">${items}</ol>${formation ? `<p class="sx-note">${glyph('dome', 14)} In corso: ${esc(overview.phases[formation.phase] ?? formation.phase)}.</p>` : ''}<p class="sx-note">Politiche ed europee seguono il calendario reale: la legislatura dura cinque anni dalla prima seduta e si vota poco prima della scadenza, salvo scioglimento anticipato. Comunali e regionali seguono il calendario reale di ogni comune e regione (ultimo voto da Eligendo, mandato di cinque anni): ogni anno si vota da qualche parte.</p>` });
 }
 
 // ---------- coalitions and national campaign ----------
@@ -73,7 +76,7 @@ function coalitionsCard(overview) {
   } else if (campaign?.fixed) controls = `<p class="sx-note">${glyph('trophy', 14)} Liste depositate: le coalizioni sono fissate fino al voto del ${esc(day(campaign.electionDate))}.</p>`;
   else if (!campaign) controls = `<p class="sx-note">Le coalizioni si decidono quando si aprono le candidature per le politiche${overview.entries.find(item => item.type === 'politiche') ? ` (dal ${esc(shortDay(overview.entries.find(item => item.type === 'politiche').windowOpensAt))})` : ''}: oggi sono una stima, in base a collocazione, rapporti e alleanze tra i partiti.</p>`;
   else if (!secretary) controls = '<p class="sx-note">Con chi correre lo decide il segretario del partito.</p>';
-  return card({ kicker: campaign ? `COALIZIONI PER LE POLITICHE · ${campaign.fixed ? 'LISTE DEPOSITATE' : 'IN TRATTATIVA'} · SIMULAZIONE` : 'COALIZIONI · STIMA DI OGGI · SIMULAZIONE', title: 'Chi corre con chi', body: `<ul class="nv-coalitions">${rows || '<li class="sx-empty">Nessuna coalizione: ogni forza corre da sola.</li>'}</ul>${alone ? `<p class="nv-alone"><small>DA SOLI</small>${alone}</p>` : ''}${choice ? `<p class="sx-note">${choice}</p>` : ''}${controls}` });
+  return card({ fold: { id: 'nv-coalizioni', icon: 'users', start: 'closed' }, kicker: campaign ? `COALIZIONI PER LE POLITICHE · ${campaign.fixed ? 'LISTE DEPOSITATE' : 'IN TRATTATIVA'} · SIMULAZIONE` : 'COALIZIONI · STIMA DI OGGI · SIMULAZIONE', title: 'Chi corre con chi', body: `<ul class="nv-coalitions">${rows || '<li class="sx-empty">Nessuna coalizione: ogni forza corre da sola.</li>'}</ul>${alone ? `<p class="nv-alone"><small>DA SOLI</small>${alone}</p>` : ''}${choice ? `<p class="sx-note">${choice}</p>` : ''}${controls}` });
 }
 function campaignLineCard(overview, state) {
   const { national, lines, secretary } = overview;
@@ -87,7 +90,7 @@ function campaignLineCard(overview, state) {
     const button = secretary && !active ? `<button type="button" class="secondary-button" data-national-line="${esc(line.id)}" ${affordable ? '' : `disabled title="Servono ${line.cost.capital} di capitale e ${euro(line.cost.treasury)} in tesoreria"`}>Scegli · ${line.cost.capital} cap. · ${esc(euro(line.cost.treasury))}</button>` : active ? badge('Linea attuale', 'good') : '';
     return `<li class="${active ? 'is-active' : ''}"><span><strong>${esc(line.label)}</strong><small>${esc(line.detail)}</small></span>${button}</li>`;
   }).join('');
-  return card({ kicker: 'CAMPAGNA NAZIONALE DEL PARTITO · SIMULAZIONE', title: campaign.line ? `Linea: ${lines[campaign.line]?.label ?? campaign.line}` : 'Scegli la linea della campagna', body: `<ul class="nv-lines">${rows}</ul><p class="sx-note">${secretary ? 'La linea pesa ogni settimana sui sondaggi fino al voto; il voto utile premia le coalizioni e penalizza le piccole liste che corrono da sole.' : 'La linea della campagna nazionale la sceglie il segretario del partito.'}</p>` });
+  return card({ fold: { id: 'nv-campagna', icon: 'megaphone', start: 'closed' }, kicker: 'CAMPAGNA NAZIONALE DEL PARTITO · SIMULAZIONE', title: campaign.line ? `Linea: ${lines[campaign.line]?.label ?? campaign.line}` : 'Scegli la linea della campagna', body: `<ul class="nv-lines">${rows}</ul><p class="sx-note">${secretary ? 'La linea pesa ogni settimana sui sondaggi fino al voto; il voto utile premia le coalizioni e penalizza le piccole liste che corrono da sole.' : 'La linea della campagna nazionale la sceglie il segretario del partito.'}</p>` });
 }
 
 // ---------- seats ----------
@@ -108,7 +111,7 @@ function projectionCard(overview) {
   const label = labelOf(overview, projection);
   const outcome = projection.winner ? `${label(projection.winner)} avrebbe la maggioranza in entrambe le Camere` : `Nessuna maggioranza: primo ${label(projection.largest)}`;
   const model = projection.model === 'geografia-2022' ? `Proiezione dai sondaggi simulati di oggi sui ${num(overview.geography.camera?.collegi ?? 147, 0)} + ${num(overview.geography.senato?.collegi ?? 74, 0)} collegi uninominali reali del 2022, con le soglie e il riparto proporzionale.` : 'Mappa elettorale del 2022 non ancora caricata: proiezione semplificata (stesse soglie, seggi in proporzione).';
-  return card({ kicker: 'SE SI VOTASSE OGGI · PROIEZIONE SIMULATA', title: outcome, body: `${seatsBlock(projection, 'camera', overview, colors)}${seatsBlock(projection, 'senato', overview, colors)}<p class="sx-note">${esc(model)} Il giorno del voto indecisi, affluenza e sorprese locali spostano il risultato.</p>` });
+  return card({ fold: { id: 'nv-proiezione', icon: 'chart', start: 'closed' }, kicker: 'SE SI VOTASSE OGGI · PROIEZIONE SIMULATA', title: outcome, body: `${seatsBlock(projection, 'camera', overview, colors)}${seatsBlock(projection, 'senato', overview, colors)}<p class="sx-note">${esc(model)} Il giorno del voto indecisi, affluenza e sorprese locali spostano il risultato.</p>` });
 }
 function homeCard(overview) {
   const projection = overview.projection;
@@ -119,10 +122,10 @@ function homeCard(overview) {
   const row = (chamber, district) => {
     if (!district) return '';
     const race = districtRows(projection, chamber).find(item => item.id === district.id);
-    const alliance = ALLIANCES_2022[district.winner?.alliance]?.[0] ?? district.winner?.alliance ?? '—';
-    return `<li><span class="nv-home-kind">${chamber === 'camera' ? 'Camera' : 'Senato'}</span><div><strong>${esc(district.name)}</strong><small>${esc(district.code)} · ${esc(district.region)} · ${num(district.electors, 0)} elettori (2022)</small><small>${district.winner ? `Nel 2022: ${esc(district.winner.name)} (${esc(alliance)}), ${pct(district.winner.share)}` : esc(district.baselineNote ?? 'Risultato 2022 non disponibile')}</small>${race ? `<small>Oggi: ${swatch(colors.of(race.w))} ${esc(label(race.w))} avanti di ${num(race.m)} punti${race.t?.[1] ? ` su ${esc(label(race.t[1][0]))}` : ''}</small>` : ''}</div></li>`;
+    const alliance = groupOf(district.winner);
+    return `<li><span class="nv-home-kind">${chamber === 'camera' ? 'Camera' : 'Senato'}</span><div><strong>${esc(district.name)}</strong><small>${esc(district.code)} · ${esc(district.region)} · ${num(district.electors, 0)} elettori (2022)</small><small>${district.winner ? `Nel 2022: ${esc(district.winner.name)} (${esc(alliance)}), ${num(district.winner.votes, 0)} voti, ${pct(district.winner.share)}${district.baseline ? '. Voti di lista del collegio: base della Camera 2022, non risultato del Senato' : ''}` : esc(district.baselineNote ?? 'Risultato 2022 non disponibile')}</small>${race ? `<small>Oggi: ${swatch(colors.of(race.w))} ${esc(label(race.w))} avanti di ${num(race.m)} punti${race.t?.[1] ? ` su ${esc(label(race.t[1][0]))}` : ''}</small>` : ''}</div></li>`;
   };
-  return card({ kicker: 'I TUOI COLLEGI · MAPPA REALE 2022', title: 'Dove voti tu', body: `<ul class="nv-home">${row('camera', home.camera)}${row('senato', home.senato)}</ul><p class="sx-note">${home.approximate ? 'Il tuo comune non è stato ricondotto con certezza a un collegio: è indicato un collegio della tua provincia o regione.' : 'Collegi del comune scelto nella creazione del politico (codice ISTAT 2026).'} Candidandoti nell’uninominale corri qui come candidato della tua coalizione.</p>` });
+  return card({ fold: { id: 'nv-collegi-tuoi', icon: 'pin', start: 'closed' }, kicker: 'I TUOI COLLEGI · MAPPA REALE 2022', title: 'Dove voti tu', body: `<ul class="nv-home">${row('camera', home.camera)}${row('senato', home.senato)}</ul><p class="sx-note">${home.approximate ? 'Il tuo comune non è stato ricondotto con certezza a un collegio: è indicato un collegio della tua provincia o regione.' : 'Collegi del comune scelto nella creazione del politico (codice ISTAT 2026).'} Candidandoti nell’uninominale corri qui come candidato della tua coalizione.</p>` });
 }
 
 // ---------- the map ----------
@@ -149,7 +152,7 @@ function mapCard(overview, geography, view) {
         let id, color, text;
         if (mode === '2022') {
           const [name, tone] = ALLIANCES_2022[district.winner?.alliance] ?? [district.winner?.alliance ?? 'Non disponibile', NEUTRAL];
-          id = district.winner?.alliance ?? 'nd'; color = district.winner ? tone : '#d7dcd9'; text = `${district.name} (${district.code}) · 2022: ${district.winner ? `${district.winner.name}, ${name}, ${num(district.winner.share)}%` : 'risultato non disponibile'}`;
+          id = district.winner?.alliance ?? 'nd'; color = district.winner ? tone : '#d7dcd9'; text = `${district.name} (${district.code}) · 2022: ${district.winner ? `${district.winner.name}, ${groupOf(district.winner)}, ${num(district.winner.votes, 0)} voti, ${num(district.winner.share)}%` : 'risultato non disponibile'}`;
           legend.set(id, [name, color]);
         } else {
           id = race?.w ?? 'nd'; color = race ? colors.of(race.w) : '#d7dcd9'; text = `${district.name} (${district.code}) · ${race ? `${label(race.w)}, margine ${num(race.m)} punti` : 'nessun dato'}`;
@@ -164,7 +167,7 @@ function mapCard(overview, geography, view) {
   const switcher = `<div class="nv-map-switch" role="group" aria-label="Cosa mostra la mappa">${NATIONAL_MAP_VIEWS.filter(([id]) => id !== 'voto' || last).filter(([id]) => id !== 'proiezione' || overview.projection).map(([id, text]) => `<button type="button" class="${mode === id ? 'active' : ''}" data-view-filter="nazionali" data-view-filter-value="${id}" aria-pressed="${mode === id}">${esc(text)}</button>`).join('')}</div>`;
   const legendHtml = `<ul class="nv-legend">${[...legend.values()].map(([name, color]) => `<li>${swatch(color)}<span>${esc(name)}</span></li>`).join('')}${mode !== '2022' ? '<li><i class="nv-swatch is-close"></i><span>Margine sotto 4 punti</span></li>' : ''}</ul>`;
   const kicker = mode === '2022' ? 'MAPPA DEI COLLEGI · VINCITORI 2022 · DATO REALE' : mode === 'voto' ? `MAPPA DEI COLLEGI · VOTO DEL ${shortDay(last.date).toUpperCase()} · SIMULAZIONE` : 'MAPPA DEI COLLEGI · PROIEZIONE · SIMULAZIONE';
-  return card({ kicker, title: 'I collegi uninominali regione per regione', body: `${switcher}${legendHtml}<div class="nv-map-grid">${chambers}</div><p class="sx-note">Ogni quadrato è un collegio uninominale reale del 2022, nell’ordine ufficiale per regione (non è una carta geografica). Passa il puntatore per il nome del collegio. ${mode === '2022' ? 'Vincitori e alleanze: dati ufficiali Eligendo; in Trentino-Alto Adige il Senato 2022 non è nella copia dei dati.' : 'Vincitori simulati dal gioco.'}</p>` });
+  return card({ fold: { id: 'nv-mappa-collegi', icon: 'map', start: 'closed' }, kicker, title: 'I collegi uninominali regione per regione', body: `${switcher}${legendHtml}<div class="nv-map-grid">${chambers}</div><p class="sx-note">Ogni quadrato è un collegio uninominale reale del 2022, nell’ordine ufficiale per regione (non è una carta geografica). Passa il puntatore per il nome del collegio. ${mode === '2022' ? 'Vincitori e alleanze: dati ufficiali Eligendo; in Trentino-Alto Adige il Senato 2022 non è nella copia dei dati.' : 'Vincitori simulati dal gioco.'}</p>` });
 }
 // The geographic map beside the squares: the same three readings (2022, projection, last vote), drawn on the real boundaries of regions and provinces. The squares map below stays as it is.
 export function geoMapCard(overview, geography, view, map) {
@@ -174,11 +177,11 @@ export function geoMapCard(overview, geography, view, map) {
   const kicker = 'MAPPA GEOGRAFICA · REGIONI E PROVINCE';
   if (!boundaries) {
     // four different states, never a screen that waits for ever: the request ends (it has a time limit) in "ready", "missing" or "error"
-    if (status === 'loading' || status === 'idle') return card({ kicker, title: 'Mappa geografica in caricamento', body: '<p class="sx-empty" role="status" aria-busy="true" data-geo-state="loading">Sto caricando i confini di regioni e province. Se non arrivano entro pochi secondi comparirà un avviso con il pulsante «Riprova»; intanto resta la mappa dei collegi qui sotto.</p>' });
-    if (status === 'missing') return card({ kicker, title: 'Mappa geografica non disponibile', body: `<p class="sx-empty" role="status" data-geo-state="missing">${esc(map?.status?.reason ?? 'I confini di regioni e province non sono compresi nei dati di questa versione.')} Resta disponibile la mappa dei collegi qui sotto.</p>` });
-    return card({ kicker, title: 'Mappa geografica non caricata', body: `<p class="sx-empty" role="alert" data-geo-state="error">Non è stato possibile caricare i confini${map?.status?.reason ? ` (${esc(map.status.reason)})` : ''}. Controlla la connessione e riprova. ${retry} La mappa dei collegi qui sotto funziona comunque.</p>` });
+    if (status === 'loading' || status === 'idle') return card({ fold: { id: 'nv-mappa-geo', icon: 'map', start: 'closed' }, kicker, title: 'Mappa geografica in caricamento', body: '<p class="sx-empty" role="status" aria-busy="true" data-geo-state="loading">Sto caricando i confini di regioni e province. Se non arrivano entro pochi secondi comparirà un avviso con il pulsante «Riprova»; intanto resta la mappa dei collegi qui sotto.</p>' });
+    if (status === 'missing') return card({ fold: { id: 'nv-mappa-geo', icon: 'map', start: 'closed' }, kicker, title: 'Mappa geografica non disponibile', body: `<p class="sx-empty" role="status" data-geo-state="missing">${esc(map?.status?.reason ?? 'I confini di regioni e province non sono compresi nei dati di questa versione.')} Resta disponibile la mappa dei collegi qui sotto.</p>` });
+    return card({ fold: { id: 'nv-mappa-geo', icon: 'map', start: 'closed' }, kicker, title: 'Mappa geografica non caricata', body: `<p class="sx-empty" role="alert" data-geo-state="error">Non è stato possibile caricare i confini${map?.status?.reason ? ` (${esc(map.status.reason)})` : ''}. Controlla la connessione e riprova. ${retry} La mappa dei collegi qui sotto funziona comunque.</p>` });
   }
-  if (!geography) return card({ kicker, title: 'Dati elettorali mancanti', body: `<p class="sx-empty" role="alert" data-geo-state="no-results">I confini ci sono, ma la mappa elettorale del 2022 (collegi e vincitori) non è stata caricata, quindi non c’è nulla da colorare. ${retry}</p>` });
+  if (!geography) return card({ fold: { id: 'nv-mappa-geo', icon: 'map', start: 'closed' }, kicker, title: 'Dati elettorali mancanti', body: `<p class="sx-empty" role="alert" data-geo-state="no-results">I confini ci sono, ma la mappa elettorale del 2022 (collegi e vincitori) non è stata caricata, quindi non c’è nulla da colorare. ${retry}</p>` });
   const last = overview.national.lastPolitiche;
   const mode = view === 'voto' && last ? 'voto' : view === '2022' ? '2022' : overview.projection ? 'proiezione' : '2022';
   const result = mode === 'voto' ? last : mode === 'proiezione' ? overview.projection : null;
@@ -206,7 +209,7 @@ export function geoMapCard(overview, geography, view, map) {
   const scopes = `<div class="nv-map-switch" role="group" aria-label="Livello territoriale">${MAP_SCOPES.map(([id, text]) => `<button type="button" class="${scope === id ? 'active' : ''}" data-view-filter="mapScope" data-view-filter-value="${id}" aria-pressed="${scope === id}">${esc(text)}</button>`).join('')}</div>`;
   const common = { boundaries, tallies, labelOf: nameOf, colorOf, scope };
   const note = `<p class="sx-note">Confini: ISTAT, al 1 gennaio 2026, elaborati da Openpolis (CC BY 4.0), semplificati per lo schermo. ${mode === '2022' ? 'Vincitori dei collegi: dati ufficiali Eligendo.' : 'Vincitori dei collegi: simulazione della partita, non dato reale.'} Le regioni sommano i collegi uninominali di Camera e Senato. Le province non hanno un vincitore: mostrano un indicatore descrittivo sui comuni (nota sotto la legenda). In Trentino-Alto Adige il Senato 2022 è una lacuna dei dati: quei collegi non sono colorati nel dato reale. ${esc(boundaries.attribution ?? '')}</p>`;
-  return card({ kicker: `MAPPA GEOGRAFICA · ${scope === 'province' ? 'PROVINCE' : 'REGIONI'} · ${dataClass.split(' · ')[0]}`, title: 'Dove vince ogni schieramento', body: `<div class="it-controls">${switcher}${scopes}</div><p class="it-class-line"><span class="it-class">${esc(dataClass)}</span></p>${legend}<div class="it-layout"><div class="it-stage">${italyMapSvg({ ...common, selected })}</div><div class="it-side" aria-live="polite">${italyMapInfo({ ...common, selected, dataClass })}</div></div>${italyMapTable(common)}${note}` });
+  return card({ fold: { id: 'nv-mappa-geo', icon: 'map', start: 'closed' }, kicker: `MAPPA GEOGRAFICA · ${scope === 'province' ? 'PROVINCE' : 'REGIONI'} · ${dataClass.split(' · ')[0]}`, title: 'Dove vince ogni schieramento', body: `<div class="it-controls">${switcher}${scopes}</div><p class="it-class-line"><span class="it-class">${esc(dataClass)}</span></p>${legend}<div class="it-layout"><div class="it-stage">${italyMapSvg({ ...common, selected })}</div><div class="it-side" aria-live="polite">${italyMapInfo({ ...common, selected, dataClass })}</div></div>${italyMapTable(common)}${note}` });
 }
 function contestedCard(overview, geography) {
   const projection = overview.projection;
@@ -220,7 +223,7 @@ function contestedCard(overview, geography) {
     return `<li><span><strong>${esc(district?.name ?? row.id)}</strong><small>${esc(row.chamber)} · ${esc(district?.code ?? '')} · nel 2022 ${esc(ALLIANCES_2022[row.f]?.[0] ?? row.f ?? 'risultato non disponibile')}</small><small class="nv-race">${swatch(colors.of(row.w))}${esc(label(row.w))} davanti a ${second}</small></span><b>${num(row.m)}<small>punti</small></b></li>`;
   }).join('');
   const count = (projection.contested?.camera?.length ?? 0) + (projection.contested?.senato?.length ?? 0);
-  return card({ kicker: 'COLLEGI IN BILICO · PROIEZIONE SIMULATA', title: `${num(count, 0)} collegi sotto i 4 punti`, body: rows ? `<ul class="nv-contested">${rows}</ul>${count > 12 ? `<p class="sx-note">I 12 più incerti; tutti i collegi sono nella mappa qui sotto (bordo chiaro).</p>` : ''}` : '<p class="sx-empty">Nessun collegio in bilico: i margini sono tutti sopra i 4 punti.</p>' });
+  return card({ fold: { id: 'nv-bilico', icon: 'scales', start: 'closed' }, kicker: 'COLLEGI IN BILICO · PROIEZIONE SIMULATA', title: `${num(count, 0)} collegi sotto i 4 punti`, body: rows ? `<ul class="nv-contested">${rows}</ul>${count > 12 ? `<p class="sx-note">I 12 più incerti; tutti i collegi sono nella mappa qui sotto (bordo chiaro).</p>` : ''}` : '<p class="sx-empty">Nessun collegio in bilico: i margini sono tutti sopra i 4 punti.</p>' });
 }
 
 // ---------- after the vote ----------
@@ -233,7 +236,7 @@ function lastVoteCard(overview, state) {
   const player = last.player;
   const own = player ? `<p class="sx-note">${glyph(player.mandate ? 'trophy' : 'alert', 14)} La tua candidatura (${player.chamber === 'senato' ? 'Senato' : 'Camera'}): ${esc(player.mandate ? 'eletto' : 'non eletto')}${player.district ? ` · collegio ${esc(player.district.name)}, ${num(player.district.share)}%` : ''}${player.constituency?.name ? ` · lista in ${esc(player.constituency.name)}: ${num(player.constituency.seats, 0)} seggi` : ''}.</p>` : '';
   const outcome = last.winner ? `Vince ${label(last.winner)}` : `Nessuna maggioranza · primo ${label(last.largest)}`;
-  return card({ kicker: `ELEZIONI POLITICHE DEL ${shortDay(last.date).toUpperCase()} · RISULTATO SIMULATO`, title: `${outcome} · affluenza ${pct(last.turnout)}`, body: `${seatsBlock(last, 'camera', overview, colors)}${seatsBlock(last, 'senato', overview, colors)}${table([['name', 'Lista'], ['share', '%', 'num'], ['camera', 'Camera', 'num'], ['senato', 'Senato', 'num']], lists)}${own}<p class="sx-note">Voto ${last.model === 'geografia-2022' ? 'contato sulla mappa reale del 2022 (collegi, circoscrizioni e seggi)' : 'contato con il modello semplificato'}: percentuali, seggi e coalizioni sono della partita.</p>` });
+  return card({ fold: { id: 'nv-ultimo-voto', icon: 'ballot', start: 'closed' }, kicker: `ELEZIONI POLITICHE DEL ${shortDay(last.date).toUpperCase()} · RISULTATO SIMULATO`, title: `${outcome} · affluenza ${pct(last.turnout)}`, body: `${seatsBlock(last, 'camera', overview, colors)}${seatsBlock(last, 'senato', overview, colors)}${table([['name', 'Lista'], ['share', '%', 'num'], ['camera', 'Camera', 'num'], ['senato', 'Senato', 'num']], lists)}${own}<p class="sx-note">Voto ${last.model === 'geografia-2022' ? 'contato sulla mappa reale del 2022 (collegi, circoscrizioni e seggi)' : 'contato con il modello semplificato'}: percentuali, seggi e coalizioni sono della partita.</p>` });
 }
 function formationCard(overview, state) {
   const formation = overview.national.formation;
@@ -244,26 +247,26 @@ function formationCard(overview, state) {
   const government = state.parliament?.government;
   const status = formation.phase === 'fallita' ? badge('Camere sciolte', 'bad') : formation.phase === 'completata' ? badge('Governo in carica', 'good') : badge(overview.phases[formation.phase] ?? formation.phase, 'warn');
   const chambers = state.parliament?.legislature?.reference === 'simulation' ? ['camera', 'senato'].map(chamber => `<div><h4>${chamber === 'camera' ? 'Camera' : 'Senato'} · gruppi</h4><p class="nv-groups">${(state.parliament.chambers?.[chamber]?.groups ?? []).map(group => `<span class="${group.groupId === state.parliament.player?.groupId ? 'is-player' : ''}">${esc(group.officialName)} <b>${num(group.simulatedSeats, 0)}</b></span>`).join('')}</p></div>`).join('') : '';
-  return card({ kicker: `${formation.crisis ? 'CRISI DI GOVERNO' : 'DOPO IL VOTO'} · FORMAZIONE DEL GOVERNO · SIMULAZIONE`, title: government && formation.phase === 'completata' ? government.name : 'Verso il nuovo governo', action: status, body: `<ol class="nv-stepper">${stepper}</ol>${formation.majority ? `<p class="sx-note">Maggioranza: <b>${esc(formation.majority.label ?? 'nuova maggioranza')}</b> (${esc(formation.majority.partyIds.map(labelOf(overview, overview.national.lastPolitiche)).join(', '))}).</p>` : ''}<ol class="nv-log">${steps}</ol>${chambers ? `<div class="nv-chambers">${chambers}</div>` : ''}<div class="sx-actions"><button class="text-link" data-nav="governo">Palazzo Chigi ${arrow}</button><button class="text-link" data-nav="parlamento">Le nuove Camere ${arrow}</button></div>` });
+  return card({ fold: { id: 'nv-formazione', icon: 'dome', start: 'closed' }, kicker: `${formation.crisis ? 'CRISI DI GOVERNO' : 'DOPO IL VOTO'} · FORMAZIONE DEL GOVERNO · SIMULAZIONE`, title: government && formation.phase === 'completata' ? government.name : 'Verso il nuovo governo', action: status, body: `<ol class="nv-stepper">${stepper}</ol>${formation.majority ? `<p class="sx-note">Maggioranza: <b>${esc(formation.majority.label ?? 'nuova maggioranza')}</b> (${esc(formation.majority.partyIds.map(labelOf(overview, overview.national.lastPolitiche)).join(', '))}).</p>` : ''}<ol class="nv-log">${steps}</ol>${chambers ? `<div class="nv-chambers">${chambers}</div>` : ''}<div class="sx-actions"><button class="text-link" data-nav="governo">Palazzo Chigi ${arrow}</button><button class="text-link" data-nav="parlamento">Le nuove Camere ${arrow}</button></div>` });
 }
 function europeanCard(overview) {
   const last = overview.national.lastEuropee;
   if (!last) return '';
   const rows = last.national.filter(row => row.share >= 1 || row.isPlayer).map(row => `<li class="${row.isPlayer ? 'is-majority' : ''}"><span><strong>${esc(row.label)}</strong><small>${pct(row.share)} · ${row.share >= last.threshold ? 'sopra la soglia' : 'sotto la soglia: nessun seggio'}${row.isPlayer ? ' · il tuo partito' : ''}</small></span><b>${num(row.seats, 0)}</b></li>`).join('');
-  return card({ kicker: `ELEZIONI EUROPEE DEL ${shortDay(last.date).toUpperCase()} · RISULTATO SIMULATO`, title: `${num(last.seats, 0)} seggi · affluenza ${pct(last.turnout)}`, body: `<ul class="nv-seats">${rows}</ul><p class="sx-note">Soglia nazionale del 4% (dato reale); riparto nazionale e circoscrizioni simulati.</p>` });
+  return card({ fold: { id: 'nv-europee', icon: 'globe', start: 'closed' }, kicker: `ELEZIONI EUROPEE DEL ${shortDay(last.date).toUpperCase()} · RISULTATO SIMULATO`, title: `${num(last.seats, 0)} seggi · affluenza ${pct(last.turnout)}`, body: `<ul class="nv-seats">${rows}</ul><p class="sx-note">Soglia nazionale del 4% (dato reale); riparto nazionale e circoscrizioni simulati.</p>` });
 }
 function historyCard(overview) {
   const votes = overview.national.votes ?? [];
   const log = (overview.national.history ?? []).slice(0, 12);
   if (!votes.length && !log.length) return '';
   const rows = votes.map(vote => `<li><time>${esc(shortDay(vote.date))}</time><span><b>${vote.type === 'europee' ? 'Europee' : 'Politiche'}</b> · ${esc(vote.type === 'europee' ? vote.lists.slice(0, 3).map(item => `${item.label} ${num(item.seats, 0)}`).join(' · ') : vote.winnerLabel ? `vince ${vote.winnerLabel}` : 'nessuna maggioranza')} · affluenza ${pct(vote.turnout)}</span></li>`).join('');
-  return card({ kicker: 'STORIA NAZIONALE DELLA PARTITA · SIMULAZIONE', title: votes.length ? `${num(votes.length, 0)} ${votes.length === 1 ? 'voto nazionale' : 'voti nazionali'}` : 'Ancora nessun voto nazionale', body: `${rows ? `<ol class="nv-log">${rows}</ol>` : ''}${log.length ? `<details class="nv-more"><summary>Cronaca del ciclo nazionale</summary><ol class="nv-log">${log.map(item => `<li><time>${esc(shortDay(item.date))}</time><span>${esc(item.text)}</span></li>`).join('')}</ol></details>` : ''}` });
+  return card({ fold: { id: 'nv-storia', icon: 'book', start: 'closed' }, kicker: 'STORIA NAZIONALE DELLA PARTITA · SIMULAZIONE', title: votes.length ? `${num(votes.length, 0)} ${votes.length === 1 ? 'voto nazionale' : 'voti nazionali'}` : 'Ancora nessun voto nazionale', body: `${rows ? `<ol class="nv-log">${rows}</ol>` : ''}${log.length ? `<details class="nv-more"><summary>Cronaca del ciclo nazionale</summary><ol class="nv-log">${log.map(item => `<li><time>${esc(shortDay(item.date))}</time><span>${esc(item.text)}</span></li>`).join('')}</ol></details>` : ''}` });
 }
 function sourcesCard(overview) {
   const geography = overview.geography;
   const notes = overview.rules.notes.map(note => `<li>${esc(note)}</li>`).join('');
   const real = geography.loaded ? `<p>${badge('DATO REALE', 'good')} Mappa elettorale delle politiche del ${esc(day(geography.electionDate))}: ${num(geography.camera.collegi, 0)} collegi uninominali della Camera e ${num(geography.senato.collegi, 0)} del Senato, circoscrizioni, seggi e voti di lista. Fonte: <a href="${esc(geography.sourceUrl)}" target="_blank" rel="noopener noreferrer">${esc(geography.sourceName)} ↗</a>${geography.mirror?.url ? ` · copia dei file ufficiali: <a href="${esc(geography.mirror.url)}" target="_blank" rel="noopener noreferrer">${esc(geography.mirror.name ?? 'mirror')} ↗</a>` : ''} · verificata il ${esc(day(geography.verifiedAt))}.</p>` : '<p class="sx-note">Mappa elettorale 2022 non ancora caricata.</p>';
-  return card({ kicker: 'FONTI E REGOLE', title: 'Cosa è reale e cosa è simulato', body: `${real}<ul class="nv-notes">${notes}</ul>` });
+  return card({ fold: { id: 'nv-fonti', icon: 'shield', start: 'closed' }, kicker: 'FONTI E REGOLE', title: 'Cosa è reale e cosa è simulato', body: `${real}<ul class="nv-notes">${notes}</ul>` });
 }
 
 export function renderNationalView(state, overview, { geography = null, view = null, map = null } = {}) {

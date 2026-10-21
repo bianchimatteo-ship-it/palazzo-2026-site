@@ -170,8 +170,9 @@ for (const [chamber, want] of Object.entries(expected)) {
     const votes = Object.values(item.votes).reduce((total, value) => total + value, 0);
     if (!circIds.has(item.circoscrizione) || (item.plurinominale && !pluriIds.has(item.plurinominale)) || !gameRegions.has(item.region) || !item.name || !item.code) fail(`Collegio ${item.id}: riferimenti non validi`);
     if (Object.keys(item.votes).some(code => !listCodes.has(code)) || Math.abs(votes - item.valid) > 1 || item.valid <= 0) fail(`Collegio ${item.id}: voti non coerenti`);
-    if (!item.baseline && (!item.winner?.name || !(item.winner.share > 0 && item.winner.share < 100))) fail(`Collegio ${item.id}: vincitore 2022 mancante`);
-    if (item.baseline && (item.winner || item.baseline !== 'camera-2022' || !item.baselineNote)) fail(`Collegio ${item.id}: base stimata non dichiarata`);
+    if (!item.winner?.name || !(item.winner.share > 0 && item.winner.share < 100) || !(item.winner.votes > 0)) fail(`Collegio ${item.id}: vincitore 2022 mancante`);
+    // the six Senate districts of Trentino-Alto Adige: the official winner, with the electoral group, and the list votes as a declared Camera baseline (never a Senate result)
+    if (item.baseline && (item.baseline !== 'camera-2022' || !item.baselineNote || !item.winner?.electoralGroup || item.runnerUp || item.dataGap?.status !== 'parziale')) fail(`Collegio ${item.id}: base stimata non dichiarata`);
   }
   for (const item of data.plurinominali) if (!(item.seats >= 1) || !circIds.has(item.circoscrizione) || item.collegi !== data.collegi.filter(district => district.plurinominale === item.id).length) fail(`Plurinominale ${item.id}: dati non coerenti`);
   for (const item of data.estero) if (!(item.seats >= 1) || Object.keys(item.votes).some(code => !listCodes.has(code))) fail(`Estero ${item.id}: dati non coerenti`);

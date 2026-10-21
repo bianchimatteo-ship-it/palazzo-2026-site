@@ -1,7 +1,7 @@
 // The guided tutorial: eleven short steps, optional, that follow the player through the real pages of the game. It is a card, not a mode: it costs no action points,
 // no money and no time, never touches the career, and remembers only where the player stopped (this browser's preference, not part of the saved game).
 // Skip it, close it and resume it later from “Come giocare”, or start it again from the first step.
-import { glyph } from './visuals.js?v=20261021-1';
+import { glyph } from './visuals.js?v=20261021-3';
 
 export const TUTORIAL_KEY = 'politicando.tutorial.v1';
 // Each step: id, icon, page it is about, title, what it is, what it costs, what happens next, and an example drawn from the player's own game.
@@ -22,12 +22,13 @@ export const TUTORIAL_STEPS = Object.freeze([
 const read = () => { try { const value = JSON.parse(localStorage.getItem(TUTORIAL_KEY) ?? '{}'); return value && typeof value === 'object' ? value : {}; } catch { return {}; } };
 const write = patch => { const next = { ...read(), ...patch }; try { localStorage.setItem(TUTORIAL_KEY, JSON.stringify(next)); } catch { /* a preference, not the game */ } return next; };
 
-// The state of the tutorial: { status: 'idle' | 'active' | 'closed' | 'done' | 'skipped', step }.
+// The state of the tutorial: { status: 'idle' | 'active' | 'closed' | 'done' | 'skipped', step, expanded }. `expanded` only says whether a phone shows the details of the step (a preference of this
+// browser, like the step); a computer always shows them.
 export function tutorialState() {
   const saved = read();
   const step = Math.max(0, Math.min(TUTORIAL_STEPS.length - 1, Number(saved.step) || 0));
   const status = ['active', 'closed', 'done', 'skipped'].includes(saved.status) ? saved.status : 'idle';
-  return { status, step };
+  return { status, step, expanded: saved.expanded === true };
 }
 export function tutorialAction(action) {
   const { status, step } = tutorialState();
@@ -35,6 +36,7 @@ export function tutorialAction(action) {
   if (action === 'resume') return write({ status: 'active', step });
   if (action === 'next') return step >= TUTORIAL_STEPS.length - 1 ? write({ status: 'done', step: 0 }) : write({ status: 'active', step: step + 1 });
   if (action === 'prev') return write({ status: 'active', step: Math.max(0, step - 1) });
+  if (action === 'toggle') return write({ expanded: !tutorialState().expanded });
   if (action === 'close') return write({ status: status === 'active' ? 'closed' : status });
   if (action === 'skip') return write({ status: 'skipped' });
   return read();
@@ -50,13 +52,14 @@ export function tutorialContext(state = {}, extra = {}) {
 
 // The card: progress, the step with its three facts and an example, and the controls. Shown only while the tutorial is active, over the pages of the game.
 export function renderTutorialCard(state, activePage, context = {}) {
-  const { status, step } = tutorialState();
+  const { status, step, expanded } = tutorialState();
   if (status !== 'active') return '';
   const item = TUTORIAL_STEPS[step];
   const last = step === TUTORIAL_STEPS.length - 1;
   const here = activePage === item.page;
   const percent = Math.round(((step + 1) / TUTORIAL_STEPS.length) * 100);
-  return `<aside class="tutorial-card" data-tutorial-card role="dialog" aria-modal="false" aria-labelledby="tutorial-title" aria-live="polite"><header><span class="tutorial-kicker">${glyph(item.icon, 16)} TUTORIAL · PASSO ${step + 1} DI ${TUTORIAL_STEPS.length}</span><button type="button" class="icon-button" data-tutorial="close" aria-label="Chiudi il tutorial (potrai riprenderlo da «Come giocare»)">×</button></header><div class="tutorial-progress" role="progressbar" aria-valuemin="0" aria-valuemax="${TUTORIAL_STEPS.length}" aria-valuenow="${step + 1}"><i style="width:${percent}%"></i></div><h3 id="tutorial-title">${esc(item.title)}</h3><p>${esc(item.what)}</p><dl class="tutorial-facts"><div><dt>Costa</dt><dd>${esc(item.cost)}</dd></div><div><dt>Poi</dt><dd>${esc(item.next)}</dd></div></dl><p class="tutorial-example">${esc(item.example(context))}</p><div class="tutorial-actions">${here ? '' : `<button type="button" class="secondary-button" data-nav="${item.page}" data-tutorial-go>Vai alla schermata</button>`}<button type="button" class="secondary-button" data-tutorial="prev" ${step ? '' : 'disabled'}>Indietro</button><button type="button" class="primary-button" data-tutorial="next">${last ? 'Fine' : 'Avanti'}</button><button type="button" class="text-link" data-tutorial="skip">Salta il tutorial</button></div></aside>`;
+  // On a phone the card is a slim, non-blocking panel above the bottom bar: the step, the progress and the essential buttons; the details open on request. On a computer everything shows.
+  return `<aside class="tutorial-card ${expanded ? 'is-expanded' : 'is-compact'}" data-tutorial-card data-expanded="${expanded ? '1' : '0'}" role="dialog" aria-modal="false" aria-labelledby="tutorial-title" aria-live="polite"><header><span class="tutorial-kicker">${glyph(item.icon, 16)} TUTORIAL · PASSO ${step + 1} DI ${TUTORIAL_STEPS.length}</span><button type="button" class="icon-button tutorial-toggle" data-tutorial="toggle" aria-expanded="${expanded}" aria-controls="tutorial-details" aria-label="${expanded ? 'Nascondi i dettagli del passo' : 'Mostra i dettagli del passo'}"><span class="tutorial-chevron" aria-hidden="true"></span></button><button type="button" class="icon-button" data-tutorial="close" aria-label="Chiudi il tutorial (potrai riprenderlo da «Come giocare»)">×</button></header><div class="tutorial-progress" role="progressbar" aria-valuemin="0" aria-valuemax="${TUTORIAL_STEPS.length}" aria-valuenow="${step + 1}"><i style="width:${percent}%"></i></div><h3 id="tutorial-title">${esc(item.title)}</h3><div class="tutorial-details" id="tutorial-details"><p>${esc(item.what)}</p><dl class="tutorial-facts"><div><dt>Costa</dt><dd>${esc(item.cost)}</dd></div><div><dt>Poi</dt><dd>${esc(item.next)}</dd></div></dl><p class="tutorial-example">${esc(item.example(context))}</p></div><div class="tutorial-actions"><button type="button" class="secondary-button" data-tutorial="prev" ${step ? '' : 'disabled'}>Indietro</button><button type="button" class="primary-button" data-tutorial="next">${last ? 'Fine' : 'Avanti'}</button>${here ? '' : `<button type="button" class="secondary-button" data-nav="${item.page}" data-tutorial-go>Vai alla schermata</button>`}<button type="button" class="text-link" data-tutorial="skip">Salta il tutorial</button></div></aside>`;
 }
 
 // For “Come giocare”: where the player stopped, with the right button.

@@ -1,15 +1,15 @@
 // Main menu, how-to-play, settings, save slots and the end-of-week report.
-import { renderTutorialInvite } from './tutorial.js?v=20261021-1';
-import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261021-1';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261021-1';
-import { formatDate } from '../core/time.js?v=20261021-1';
-import { illustration } from './illustrations.js?v=20261021-1';
-import { glyph } from './visuals.js?v=20261021-1';
-import { identityMark, identityVars } from './party-identity.js?v=20261021-1';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261021-1';
-import { hallView } from './hall-view.js?v=20261021-1';
-import { esc, signed } from './charts.js?v=20261021-1';
-import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261021-1';
+import { renderTutorialInvite } from './tutorial.js?v=20261021-3';
+import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261021-3';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261021-3';
+import { formatDate } from '../core/time.js?v=20261021-3';
+import { illustration } from './illustrations.js?v=20261021-3';
+import { glyph } from './visuals.js?v=20261021-3';
+import { identityMark, identityVars } from './party-identity.js?v=20261021-3';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261021-3';
+import { hallView } from './hall-view.js?v=20261021-3';
+import { esc, signed } from './charts.js?v=20261021-3';
+import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261021-3';
 
 const when = iso => { try { return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch { return ''; } };
 // The actions of the opening screen, in order of importance: starting a career and resuming one are the two main ones (drawn apart, below); then what concerns the
@@ -216,10 +216,10 @@ export function renderConfirmDialog(pending) {
   </section></div>`;
 }
 
-export function settingsView(settings, { error = '' } = {}) {
+export function settingsView(settings, { error = '', account = null } = {}) {
   const groups = [['Audio', ['sound', 'volume']], ['Interfaccia', ['motion', 'density', 'textSize', 'contrast']], ['Notifiche', ['toasts', 'toastLength', 'weeklyReport', 'newsPopup']], ['Partita', ['autosave', 'weeksPerTurn']]];
-  return `<h2>Impostazioni</h2><p class="section-subtitle">Valgono per tutte le partite in questo browser e si applicano subito.</p>
-    ${groups.map(([title, keys]) => `<section class="settings-group"><h3>${esc(title)}</h3>${keys.map(key => { const spec = SETTINGS_SCHEMA[key]; return `<div class="setting-row"><span>${esc(spec.label)}</span><div class="segmented" role="group" aria-label="${esc(spec.label)}">${spec.options.map(([value, label]) => `<button data-setting-key="${key}" data-setting-value="${esc(value)}" class="${settings[key] === value ? 'active' : ''}" aria-pressed="${settings[key] === value}">${esc(label)}</button>`).join('')}</div></div>`; }).join('')}</section>`).join('')}
+  return `<h2>Impostazioni</h2><p class="section-subtitle">Valgono per tutte le partite in questo browser e si applicano subito; il popup delle notizie settimanali segue l’account con cui hai effettuato l’accesso.</p>
+    ${groups.map(([title, keys]) => `<section class="settings-group"><h3>${esc(title)}</h3>${keys.map(key => { const spec = SETTINGS_SCHEMA[key]; const hint = spec.hint ? `<small class="setting-hint" role="status" data-setting-state="${key}"><b>${esc(spec.options.find(([v]) => v === settings[key])?.[1] ?? '')}.</b> ${esc(spec.hint[settings[key]] ?? '')}${spec.scoped ? ` ${account?.user ? `Vale per l’account «${esc(account.user.username)}».` : 'Vale per questo browser.'}` : ''}</small>` : ''; return `<div class="setting-row ${spec.hint ? 'has-hint' : ''}" data-setting-row="${key}"><span>${esc(spec.label)}</span><div class="segmented" role="group" aria-label="${esc(spec.label)}">${spec.options.map(([value, label]) => `<button data-setting-key="${key}" data-setting-value="${esc(value)}" class="${settings[key] === value ? 'active' : ''}" aria-pressed="${settings[key] === value}">${esc(label)}</button>`).join('')}</div>${hint}</div>`; }).join('')}</section>`).join('')}
     <section class="settings-group"><h3>Dati di gioco</h3><div class="setting-actions"><button class="secondary-button" data-menu-action="export">Esporta la partita in corso</button><label class="secondary-button menu-import-inline"><input type="file" accept="application/json,.json" data-menu-import />Importa una partita</label><button class="secondary-button" data-menu-action="reset-settings">Ripristina le impostazioni</button><button class="secondary-button danger" data-menu-action="clear-saves">Elimina tutti i salvataggi</button></div><p class="parliament-note">L’archivio dell’amministratore e i loghi caricati restano separati e non vengono cancellati.</p></section>
     ${error ? `<p class="menu-error" role="alert">${esc(error)}</p>` : ''}`;
 }

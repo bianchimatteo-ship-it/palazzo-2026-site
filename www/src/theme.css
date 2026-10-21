@@ -1022,3 +1022,9 @@ select option, select optgroup { background: var(--panel); color: var(--ink); fo
 .menu-popup-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 26px 18px; outline: none; }
 .menu-popup-foot { display: flex; justify-content: flex-end; padding: 12px 26px 16px; border-top: 1px solid var(--line); }
 @media (max-width: 700px) { .menu-popup-backdrop { padding: 0; } .menu-popup { width: 100%; max-height: 100dvh; height: 100dvh; border-radius: 0; } .menu-popup-head { padding: 12px 14px 0 18px; } .menu-popup-body { padding: 4px 18px 14px; } .menu-popup-foot { padding: 10px 18px 14px; } }
+
+/* ---------- impostazioni con una frase di stato (es. «Popup notizie settimanali»): lo stato si legge subito, anche su telefono ---------- */
+.setting-row.has-hint { align-items: center; }
+.setting-hint { flex: 1 1 100%; color: var(--ink-3, #9aa59d); font-size: 12.5px; line-height: 1.45; }
+.setting-hint b { color: var(--ink, #fff); }
+.setting-row.has-hint .segmented button { min-height: 44px; min-width: 96px; }

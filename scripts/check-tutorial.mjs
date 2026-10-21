@@ -11,7 +11,7 @@ const check = (condition, message) => { if (!condition) problems.push(message); 
 await withBrowser(async browser => {
   const { evaluate, send, viewport, goto, waitFor, pause, errors, version } = browser;
   const click = async selector => { await evaluate(`document.querySelector(${JSON.stringify(selector)})?.click(), true`); await pause(450); };
-  const card = () => evaluate(`(() => { const el = document.querySelector('[data-tutorial-card]'); if (!el) return null; const r = el.getBoundingClientRect(); const bar = document.querySelector('.mobile-tabbar'); const barTop = bar && getComputedStyle(bar).display !== 'none' ? bar.getBoundingClientRect().top : innerHeight; return { kicker: el.querySelector('.tutorial-kicker').textContent.trim(), title: el.querySelector('h3').textContent, now: Number(el.querySelector('[role=progressbar]').getAttribute('aria-valuenow')), max: Number(el.querySelector('[role=progressbar]').getAttribute('aria-valuemax')), hash: location.hash, inside: r.left >= 0 && r.right <= innerWidth + .5 && r.top >= 0 && r.bottom <= barTop + .5, scrollW: document.documentElement.scrollWidth, innerW: innerWidth, buttons: [...el.querySelectorAll('button')].map(b => [b.textContent.trim(), Math.round(b.getBoundingClientRect().height), b.disabled]) }; })()`);
+  const card = () => evaluate(`(() => { const el = document.querySelector('[data-tutorial-card]'); if (!el) return null; const r = el.getBoundingClientRect(); const bar = document.querySelector('.mobile-tabbar'); const barTop = bar && getComputedStyle(bar).display !== 'none' ? bar.getBoundingClientRect().top : innerHeight; return { kicker: el.querySelector('.tutorial-kicker').textContent.trim(), title: el.querySelector('h3').textContent, now: Number(el.querySelector('[role=progressbar]').getAttribute('aria-valuenow')), max: Number(el.querySelector('[role=progressbar]').getAttribute('aria-valuemax')), hash: location.hash, inside: r.left >= 0 && r.right <= innerWidth + .5 && r.top >= 0 && r.bottom <= barTop + .5, scrollW: document.documentElement.scrollWidth, innerW: innerWidth, buttons: [...el.querySelectorAll('button')].filter(b => b.getBoundingClientRect().height > 0).map(b => [b.textContent.trim(), Math.round(b.getBoundingClientRect().height), b.disabled]), hiddenButtons: [...el.querySelectorAll('button')].filter(b => b.getBoundingClientRect().height === 0).map(b => b.textContent.trim()), box: [Math.round(r.height), innerHeight], expanded: el.dataset.expanded }; })()`);
   const facts = () => evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); const s = store.getState(); return JSON.stringify({ id: s.career.id, week: s.game.week.index, ap: s.game.week.ap, date: s.clock.currentDate, funds: s.game.finance?.funds ?? null }); })()`);
   const status = () => evaluate(`JSON.parse(localStorage.getItem('politicando.tutorial.v1') ?? '{}')`);
 
@@ -36,7 +36,20 @@ await withBrowser(async browser => {
   check(c && c.now === 1 && c.max === 11 && /PASSO 1 DI 11/.test(c.kicker), `Parte dal primo passo (${c?.kicker}).`);
   check(!await evaluate(`Boolean(document.querySelector('.main-menu'))`), 'Il menu si chiude: il tutorial si vede sulle pagine del gioco.');
   check(c.inside && c.scrollW <= c.innerW + 1, 'Su 375 px la scheda sta nello schermo, sopra la barra, senza scorrimento orizzontale.');
-  check(c.buttons.every(([label, height]) => height >= 40), `I pulsanti sono da tocco (${JSON.stringify(c.buttons)}).`);
+  check(c.buttons.every(([label, height]) => height >= 40), `I pulsanti visibili sono da tocco (${JSON.stringify(c.buttons)}).`);
+  // phone: a slim, collapsible, non-blocking panel; the details open on request and the page below stays usable
+  check(c.expanded === '0' && c.box[0] <= c.box[1] * 0.3, `Su telefono parte compatto (${c.box[0]} px su ${c.box[1]}).`);
+  check(c.buttons.some(([label]) => label === 'Avanti') && c.buttons.some(([label]) => label === 'Indietro') && c.buttons.some(([label]) => label === '×'), 'Avanti, Indietro e chiudi sono sempre raggiungibili.');
+  check(!(await evaluate(`(() => { const d = document.querySelector('.tutorial-details'); return d && d.getBoundingClientRect().height > 0; })()`)), 'I dettagli sono chiusi finché non si chiede.');
+  check(await evaluate(`(() => { const el = document.querySelector('[data-tutorial-card]'); const r = el.getBoundingClientRect(); const probe = document.elementFromPoint(innerWidth / 2, Math.max(120, r.top - 40)); return Boolean(probe) && !probe.closest('[data-tutorial-card]'); })()`), 'Sopra il pannello la pagina sottostante resta raggiungibile.');
+  await click('[data-tutorial=toggle]');
+  const open = await card();
+  check(open.expanded === '1' && await evaluate(`document.querySelector('.tutorial-details').getBoundingClientRect().height > 0`) && open.box[0] <= open.box[1] * 0.62, `I dettagli si aprono a richiesta e il pannello resta entro il 62% dello schermo (${open.box[0]} px).`);
+  check(open.inside, 'Aperto, il pannello sta nello schermo sopra la barra inferiore.');
+  check(open.buttons.every(([label, height]) => height >= 40), `Anche aperto i pulsanti sono da tocco (${JSON.stringify(open.buttons)}).`);
+  check((await status()).expanded === true && (await status()).step === 0, 'Il passo non cambia aprendo i dettagli; la preferenza è ricordata.');
+  await click('[data-tutorial=toggle]');
+  check((await card()).expanded === '0', 'I dettagli si richiudono.');
   check(c.buttons.find(([label]) => label === 'Indietro')?.[2] === true, 'Al primo passo «Indietro» è disattivato.');
 
   // walk forward through the real pages

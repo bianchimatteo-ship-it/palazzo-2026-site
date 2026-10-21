@@ -229,6 +229,16 @@ async function estero(chamber) {
 }
 
 // ---------- build ----------
+// Senato 2022, Trentino-Alto Adige/Südtirol: the official winner of each single-member district (name, electoral group, votes, share), provided by the owner from the official count and not
+// re-checked on Eligendo from the working session. The other lists' votes and the runner-up are NOT available: the district keeps the Camera baseline for those, declared.
+const TAA_WINNERS = {
+  U01: { name: 'PIETRO PATTON', alliance: 'ADA', electoralGroup: 'Alleanza Democratica per l’Autonomia', votes: 48021, share: 41.2 },
+  U02: { name: 'MICHAELA BIANCOFIORE', alliance: 'cdx', electoralGroup: 'Lega – FI – Noi Moderati – FdI', lists: ['LEGA', 'FI', 'NM', 'FDI'], votes: 33601, share: 36.79 },
+  U03: { name: 'ELENA TESTOR', alliance: 'cdx', electoralGroup: 'Lega – FI – Noi Moderati – FdI', lists: ['LEGA', 'FI', 'NM', 'FDI'], votes: 27364, share: 44.03 },
+  U04: { name: 'LUIGI SPAGNOLLI', alliance: 'DAF', electoralGroup: 'Democrazia Ambiente Futuro', votes: 21936, share: 26.18 },
+  U05: { name: 'JULIANE UNTERBERGER', alliance: 'SVP-PATT', electoralGroup: 'SVP – PATT', lists: ['SVP'], votes: 30747, share: 47.65 },
+  U06: { name: 'MEINHARD DURNWALDER', alliance: 'SVP-PATT', electoralGroup: 'SVP – PATT', lists: ['SVP'], votes: 39024, share: 46.11 }
+};
 const output = { camera: null, senato: null };
 const comuniOf = { camera: [], senato: [] };
 for (const chamber of ['camera', 'senato']) {
@@ -261,8 +271,8 @@ for (const chamber of ['camera', 'senato']) {
       const code = `TRENTINO-ALTO ADIGE/SÜDTIROL - ${number}`;
       collegi.push({
         id: `senato-u-${slug(code)}`, code, name, region: 'Trentino-Alto Adige', circoscrizione: 'senato-c-trentino-alto-adige-sudtirol', plurinominale: null,
-        electors, voters, valid: Object.values(votes).reduce((sum, value) => sum + value, 0), votes, winner: null, runnerUp: null, comuniCount: comuni.length,
-        baseline: 'camera-2022', baselineNote: 'Risultato del Senato 2022 non presente nella copia dei dati: la base del collegio è il voto della Camera 2022 negli stessi comuni.',
+        electors, voters, valid: Object.values(votes).reduce((sum, value) => sum + value, 0), votes, winner: { ...TAA_WINNERS[number], source: 'scrutinio ufficiale del Senato 2022 (collegio uninominale), fornito dal titolare del progetto; non riverificato su Eligendo dalla sessione di lavoro' }, runnerUp: null, comuniCount: comuni.length,
+        baseline: 'camera-2022', baselineNote: 'I voti di lista del Senato 2022 in questo collegio non sono nella copia dei dati: i voti per lista mostrati sono la baseline della Camera 2022 negli stessi comuni (non un risultato del Senato). Il vincitore è quello ufficiale del Senato.',
         _comuni: comuni.map(comune => ({ name: comune.name, istat: comune.istat, electors: comune.camera.reduce((sum, item) => sum + item.electors, 0) }))
       });
       if (comuni.some(comune => !comune.istat)) throw new Error(`Senato TAA ${code}: comuni senza corrispondenza nella Camera (${comuni.filter(comune => !comune.istat).map(comune => comune.name).join(', ')}).`);
@@ -351,7 +361,7 @@ for (const chamber of ['camera', 'senato']) {
   const data = output[chamber];
   if (data.circoscrizioni.reduce((sum, item) => sum + item.seats, 0) !== data.seats.italia) fail(`${chamber}: i seggi delle circoscrizioni non danno ${data.seats.italia}`);
   // The Eligendo count assigns the Italian single-member districts (Valle d'Aosta and, at the Senate, TAA excluded) as the winners computed here.
-  const wins = data.collegi.filter(item => item.winner && item.region !== 'Valle d’Aosta').length;
+  const wins = data.collegi.filter(item => item.winner && !item.baseline && item.region !== 'Valle d’Aosta').length;
   if (wins !== data.national.uninominali) fail(`${chamber}: ${wins} vincitori calcolati contro ${data.national.uninominali} collegi assegnati dalla fonte`);
   const districtVotes = data.collegi.filter(item => item.region !== 'Valle d’Aosta' && !item.baseline).reduce((sum, item) => sum + item.valid, 0);
   if (Math.abs(districtVotes - data.national.valid) / data.national.valid > 0.002) fail(`${chamber}: voti validi dei collegi ${districtVotes} contro ${data.national.valid} della fonte`);
@@ -374,7 +384,7 @@ const geography = {
     'Collegi, circoscrizioni, comuni, voti di lista e seggi come nei file ufficiali di Eligendo; i voti al solo candidato sono ripartiti tra le liste collegate in proporzione ai loro voti nel collegio, come prevede la legge per il riparto proporzionale.',
     'Seggi proporzionali per collegio plurinominale e circoscrizione: quelli assegnati nel 2022.',
     'Seggi dell’Estero per ripartizione: Camera 3, 2, 2 e 1 (i deputati eletti nel 2022 per ripartizione), Senato uno per ripartizione.',
-    'Senato, Trentino-Alto Adige/Südtirol: i sei collegi uninominali e i loro comuni sono ufficiali; il risultato del Senato 2022 non è nella copia dei dati, e la base del collegio è il voto della Camera negli stessi comuni (baseline: camera-2022).',
+    'Senato, Trentino-Alto Adige/Südtirol: i sei collegi uninominali e i loro comuni sono ufficiali; i vincitori del Senato 2022 sono quelli ufficiali; restano non disponibili i voti delle altre liste e il secondo classificato (baseline della Camera negli stessi comuni, baseline: camera-2022).',
     'Comuni: codici ISTAT dell’elenco del 21 febbraio 2026; i comuni con codice cambiato (Sardegna, fusioni) sono ricondotti per nome, i pochi non riconoscibili prendono il collegio della propria provincia (terzo valore 1).'
   ],
   lists: [...lists.values()].sort((a, b) => a.code.localeCompare(b.code)), alliances2022: ALLIANCES,

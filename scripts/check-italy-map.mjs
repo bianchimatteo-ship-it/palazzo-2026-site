@@ -40,11 +40,11 @@ assert.ok(toscana.counts.get('csx') > 0 && toscana.leader, 'Toscana: il centrosi
 const aosta = tallies.regions.get(boundaries.regions.find(item => item.name === 'Valle d’Aosta').code);
 assert.equal(aosta.total, 2, 'Valle d’Aosta: un collegio per Camera e Senato.');
 const taa = tallies.regions.get(boundaries.regions.find(item => item.name === 'Trentino-Alto Adige').code);
-assert.ok(taa.missing === 6 && taa.total > 0, 'Trentino-Alto Adige: i sei collegi uninominali del Senato mancano nei dati e restano «senza risultato», mai sostituiti con la Camera.');
+assert.ok(taa.missing === 0 && taa.total > 0, 'Trentino-Alto Adige: i sei collegi del Senato hanno il vincitore ufficiale e nessuno resta «senza risultato».');
 const taaSenate = geography.senato.collegi.filter(item => item.region === 'Trentino-Alto Adige');
 assert.equal(taaSenate.length, 6);
-assert.ok(taaSenate.every(item => item.winner === null && item.dataGap?.status === 'mancante' && item.dataGap.official === false && /elezioni\.interno\.gov\.it/.test(item.dataGap.howToFill)), 'I sei collegi U01–U06 portano una lacuna dichiarata (dataGap), senza vincitore inventato.');
-assert.ok(geography.notes.some(note => /LACUNA/.test(note) && /Trentino/.test(note)), 'La lacuna è nelle note del documento.');
+// the winners and the residual gaps are checked in detail by check-senato-taa.mjs
+assert.ok(taaSenate.every(item => item.winner?.name && item.dataGap?.status === 'parziale' && item.dataGap.official === false && item.runnerUp === null), 'I sei collegi hanno il vincitore; restano dichiarati solo i voti di lista (baseline) e il secondo classificato.');
 assert.ok(boundaries.provinces.every(item => { const t = tallies.provinces.get(item.code); return t.total + t.missing > 0; }), 'Ogni provincia ha almeno un collegio.');
 // the province is an indicator by comuni, never a whole district given to every province it touches: each comune counts once, so the weights of all provinces add up to the comuni
 const comuniInProvinces = Object.keys(geography.comuni).filter(code => boundaries.provinces.some(item => item.code === String(code).padStart(6, '0').slice(0, 3))).length;

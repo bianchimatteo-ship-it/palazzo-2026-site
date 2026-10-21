@@ -1,7 +1,7 @@
 // The colours of the political forces in the national view, fixed by id: a force, or a coalition led by it, has the same colour in every legislature, every vote, every week and every view
 // (Calendario, Coalizioni, Proiezione, Camere), whatever else is on the page. The colours come from the validated series of the charts; the camps keep their sense (the centre-right is blue, the
 // centre-left coral, the M5S green, the centre violet) and what has no entry here takes a colour from a fixed pool by a hash of its own id, never by the order in which it happens to be drawn.
-import { SERIES } from './charts.js?v=20261021-1';
+import { SERIES } from './charts.js?v=20261021-3';
 
 const BLUE = SERIES[0], GOLD = SERIES[1], CORAL = SERIES[2], GREEN = SERIES[3], VIOLET = SERIES[4], PINK = SERIES[5], SAGE = SERIES[6], SKY = SERIES[7];
 export const NEUTRAL_COLOR = '#8d9791';
@@ -17,7 +17,8 @@ export const FORCE_COLORS = Object.freeze({
   'party-futuro-nazionale': SKY            // Futuro Nazionale
 });
 // The alliances of 2022 (real data of the national map).
-export const ALLIANCE_COLORS = Object.freeze({ cdx: BLUE, csx: CORAL, m5s: GREEN, 'azione-iv': VIOLET });
+// The electoral groups of Trentino-Alto Adige/Südtirol and Valle d’Aosta (Senato 2022) are map categories of their own, each with its own colour, distinct from the camps.
+export const ALLIANCE_COLORS = Object.freeze({ cdx: BLUE, csx: CORAL, m5s: GREEN, 'azione-iv': VIOLET, ADA: SAGE, DAF: SKY, 'SVP-PATT': GOLD, SVP: GOLD, VDAAPF: PINK });
 // What has no entry: a pool of the series that the entries above use least, picked by the id.
 const FALLBACK_POOL = Object.freeze([GOLD, GREEN, VIOLET, SAGE, SKY]);
 const hash = text => [...String(text)].reduce((n, char) => (Math.imul(n, 31) + char.charCodeAt(0)) >>> 0, 2166136261);
