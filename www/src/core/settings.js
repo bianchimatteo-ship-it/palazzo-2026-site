@@ -2,6 +2,8 @@
 const SETTINGS_KEY = 'politicando.settings.v1';
 
 export const SETTINGS_SCHEMA = Object.freeze({
+  // the language of the interface: a preference of the browser, apart from every career (see core/i18n.js)
+  language: { label: 'Lingua', options: [['it', 'Italiano'], ['en', 'English']], default: 'it' },
   sound: { label: 'Effetti sonori', options: [['on', 'Attivi'], ['off', 'Disattivati']], default: 'on' },
   volume: { label: 'Volume', options: [['30', 'Basso'], ['60', 'Medio'], ['100', 'Alto']], default: '60' },
   motion: { label: 'Animazioni', options: [['full', 'Complete'], ['reduced', 'Ridotte'], ['off', 'Disattivate']], default: 'full' },

@@ -1687,3 +1687,70 @@ details.accord-panel.pm-fold { padding: 0; }
   .news-popup header { position: sticky; top: 0; z-index: 1; padding: 10px 0 4px; background: inherit; }
   .news-popup footer { position: sticky; bottom: 0; z-index: 1; padding: 6px 0 10px; background: inherit; box-shadow: 0 -10px 10px -8px rgba(0, 0, 0, .5); }
 }
+
+/* Campagna conclusa: «Prepara una nuova elezione» subito dopo il risultato, grande e ben visibile */
+.campaign-result-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px 14px; margin: 14px 0 18px; padding: 16px 18px; background: linear-gradient(135deg, var(--panel-3), var(--panel)); border: 1px solid var(--accent); border-radius: 10px; color: var(--ink); font-size: 14px; }
+.campaign-result-actions .campaign-next-copy { display: grid; gap: 4px; min-width: 0; }
+.campaign-result-actions .campaign-next-copy strong { font-weight: 650; font-size: 14px; line-height: 1.4; color: var(--ink); }
+.campaign-result-actions .campaign-new-button { min-height: 48px; margin: 0; padding: 0 24px; font-size: 16px; line-height: 1.2; white-space: normal; text-align: center; }
+.campaign-result-actions .secondary-button { min-height: 44px; }
+.campaign-result-actions .campaign-new-button:focus-visible { outline: 3px solid var(--gold-soft); outline-offset: 3px; }
+@media (max-width: 760px) {
+  .campaign-result-actions { grid-template-columns: 1fr; padding: 14px; }
+  .campaign-result-actions .campaign-new-button, .campaign-result-actions .secondary-button { width: 100%; justify-content: center; min-height: 52px; }
+  .campaign-result-actions .campaign-new-button { order: -1; }
+}
+
+/* Weekly news pop-up: the opt-out sits between the list and the buttons */
+.news-popup-optout { display: grid; gap: 4px; padding: 10px 0 4px; border-top: 1px solid var(--line, rgba(255,255,255,.12)); }
+.news-popup-optout label { display: flex; align-items: flex-start; gap: 10px; min-height: 44px; padding: 6px 0; cursor: pointer; color: var(--ink-hi); font-size: 14px; line-height: 1.35; }
+.news-popup-optout input[type="checkbox"] { flex: none; width: 22px; height: 22px; margin-top: 1px; accent-color: var(--accent); cursor: pointer; }
+.news-popup-optout input[type="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.news-popup-optout small { color: var(--ink-2); font-size: 12.5px; line-height: 1.4; padding-left: 32px; }
+.news-popup footer .news-popup-optout { flex: 1 1 100%; margin-bottom: 2px; }
+@media (max-width: 900px) { .news-popup { max-height: 64vh; } .news-popup-optout label { min-height: 44px; font-size: 13.5px; } .news-popup-optout small { font-size: 12px; } }
+
+/* Hall of Fame: an archive of concluded careers */
+.hall-head { display: grid; gap: 6px; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid var(--line-strong); position: relative; }
+.hall-head::after { content: ""; position: absolute; left: 0; bottom: -1px; width: 72px; height: 3px; background: linear-gradient(90deg, var(--gold-light, #f0d58c), var(--accent)); border-radius: 2px; }
+.hall-head h2 { margin: 0; font: 800 clamp(26px, 4vw, 34px)/1.05 var(--font-display, Manrope, serif); letter-spacing: -.02em; color: var(--ink-hi); }
+.hall-head .section-subtitle { margin: 0; max-width: 62ch; }
+.hall-count { margin: 4px 0 0; color: var(--ink-2); font-size: 13px; letter-spacing: .04em; text-transform: uppercase; }
+.hall-count b { font: 800 22px/1 Manrope, sans-serif; color: var(--accent); margin-right: 6px; letter-spacing: 0; }
+.hall-list { display: grid; gap: 14px; margin-top: 4px; }
+.hall-card { position: relative; display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 14px 18px; padding: 18px 20px 16px; border: 1px solid var(--line-strong); border-left: 4px solid var(--hall-tone, var(--accent)); border-radius: 12px; background: linear-gradient(135deg, rgba(196,166,106,.07), rgba(255,255,255,.015) 55%); box-shadow: 0 6px 18px rgba(0,0,0,.18); transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+.hall-card:hover { border-color: var(--accent); box-shadow: 0 10px 26px rgba(0,0,0,.28); }
+.hall-card:focus-within { border-color: var(--accent); outline: 2px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: 2px; }
+.hall-card[data-tier="protagonista"], .hall-card[data-tier="statista"] { --hall-tone: var(--gold-light, #f0d58c); }
+.hall-seal { display: grid; align-content: start; justify-items: center; padding-top: 2px; }
+.hall-seal .emblem-lg { width: 64px; height: 64px; box-shadow: 0 0 0 2px var(--line-strong), 0 0 0 5px rgba(196,166,106,.12); }
+.hall-seal .emblem img { object-fit: contain; }
+.hall-main { display: grid; gap: 9px; min-width: 0; }
+.hall-card .hall-main > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.hall-name { min-width: 0; }
+.hall-name h3 { margin: 0; font: 800 clamp(18px, 2.2vw, 22px)/1.15 var(--font-display, Manrope, serif); color: var(--ink-hi); overflow-wrap: anywhere; }
+.hall-name small { display: block; margin-top: 3px; color: var(--ink-2); font-size: 12.5px; line-height: 1.4; }
+.hall-card .hall-score { flex: none; display: grid; justify-items: end; gap: 0; font: 800 34px/1 Manrope, sans-serif; color: var(--accent); }
+.hall-card .hall-score small { margin: 0; font-size: 12px; color: var(--muted); letter-spacing: .06em; }
+.hall-peak { margin: 0; display: grid; gap: 1px; padding: 8px 12px; border-radius: 8px; background: rgba(8,14,12,.28); border: 1px solid var(--line); }
+.hall-peak-label { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.hall-peak strong { font: 750 17px/1.25 Manrope, sans-serif; color: var(--ink-hi); overflow-wrap: anywhere; }
+.hall-card .hall-tier { color: var(--ink-2); }
+.hall-card .hall-facts { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.hall-card .hall-facts dd { overflow-wrap: anywhere; }
+.hall-card .hall-actions { margin-top: 2px; }
+.hall-card .hall-actions button { min-height: 44px; }
+.hall-delete:hover { border-color: var(--critical, #c4574a); color: var(--ink-hi); }
+.hall-empty { display: grid; justify-items: center; gap: 6px; padding: 28px 18px; text-align: center; border: 1px dashed var(--line-strong); border-radius: 12px; background: rgba(255,255,255,.015); }
+.hall-empty-mark { font-size: 30px; color: var(--accent); line-height: 1; }
+.hall-empty p { margin: 0; max-width: 46ch; }
+@media (max-width: 640px) {
+  .hall-card { grid-template-columns: minmax(0, 1fr); padding: 14px 14px 12px; gap: 10px; }
+  .hall-seal { justify-items: start; padding: 0; position: absolute; top: 14px; right: 14px; }
+  .hall-seal .emblem-lg { width: 44px; height: 44px; font-size: 14px; }
+  .hall-card .hall-main > header { flex-direction: row; align-items: flex-start; padding-right: 54px; }
+  .hall-card .hall-score { font-size: 28px; }
+  .hall-card .hall-actions { display: grid; grid-template-columns: 1fr; }
+  .hall-card .hall-actions button { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { .hall-card { transition: none; } }

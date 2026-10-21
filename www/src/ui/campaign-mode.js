@@ -1,15 +1,15 @@
-import { bandDescription, bandOfMunicipality, MUNICIPAL_LEGAL_REFERENCES } from '../core/municipal-rules.js?v=20261021-3';
-import { CAMPAIGN_OBJECTIVES, CAMPAIGN_PHASES, CAMPAIGN_STRATEGIES, DEBATE_TOPICS, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261021-3';
-import { affiliationOf, markForPerson } from './person-marks.js?v=20261021-3';
-import { campaignActivities, campaignMetrics, campaignSummary, listStanding, strategyAvailable, strategyFit, strategyOf, strategyStages } from '../core/campaign-engine.js?v=20261021-3';
-import { resultDescription } from '../core/election-engine.js?v=20261021-3';
-import { formatDate } from '../core/time.js?v=20261021-3';
-import { careerLevelLabel } from '../data/regions.js?v=20261021-3';
-import { upcomingElections } from '../core/career-engine.js?v=20261021-3';
-import { candidacyBlock, candidacyNotes, personalCandidacies } from '../core/office-engine.js?v=20261021-3';
-import { heldOfficesOf } from '../core/roles.js?v=20261021-3';
-import { mandatePlace, renderElectionReport } from './election-report.js?v=20261021-3';
-import { glyph } from './visuals.js?v=20261021-3';
+import { bandDescription, bandOfMunicipality, MUNICIPAL_LEGAL_REFERENCES } from '../core/municipal-rules.js?v=20261021-6';
+import { CAMPAIGN_OBJECTIVES, CAMPAIGN_PHASES, CAMPAIGN_STRATEGIES, DEBATE_TOPICS, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261021-6';
+import { affiliationOf, markForPerson } from './person-marks.js?v=20261021-6';
+import { campaignActivities, campaignMetrics, campaignSummary, listStanding, strategyAvailable, strategyFit, strategyOf, strategyStages } from '../core/campaign-engine.js?v=20261021-6';
+import { resultDescription } from '../core/election-engine.js?v=20261021-6';
+import { formatDate } from '../core/time.js?v=20261021-6';
+import { careerLevelLabel } from '../data/regions.js?v=20261021-6';
+import { upcomingElections } from '../core/career-engine.js?v=20261021-6';
+import { candidacyBlock, candidacyNotes, personalCandidacies } from '../core/office-engine.js?v=20261021-6';
+import { heldOfficesOf } from '../core/roles.js?v=20261021-6';
+import { mandatePlace, renderElectionReport } from './election-report.js?v=20261021-6';
+import { glyph } from './visuals.js?v=20261021-6';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const roleLabels={sindaco:'Candidatura a sindaco',consigliere:'Candidato in lista per il consiglio',presidente:'Candidato alla presidenza (Regione o Provincia)',deputato:'Candidato alla Camera',senatore:'Candidato al Senato',uninominale:'Collegio uninominale simulato',eurodeputato:'Candidato al Parlamento europeo'};
@@ -257,7 +257,8 @@ function renderResult(campaign,parties,logoFor,state={}) {
   const report=state.career?.lastElectionReport?.campaignId===campaign.id?state.career.lastElectionReport:null;
   return `<section class="campaign-result-head"><span class="campaign-kicker">SCRUTINIO CONCLUSO · RISULTATO SIMULATO</span><h2>${esc(result?.outcome?.label??(result?.objectiveMet?'Obiettivo raggiunto.':'La corsa è finita.'))}</h2><p>${esc(resultDescription(campaign,result))}${parliamentOutcome(campaign,state)?` ${esc(parliamentOutcome(campaign,state))}`:''}</p></section>
   ${report?renderElectionReport(report,{place:mandatePlace(state,report)}):`<p class="campaign-real-note">Percentuale ${pct(result?.playerShare??0)} · seggi ${number(result?.playerSeats??0)} · mandato ${result?.personalMandate?'sì':'no'}.</p>`}
-  <section class="campaign-block campaign-history"><div class="campaign-section-head"><div><span class="campaign-kicker">STORICO</span><h3>Chiusura della campagna</h3></div><time>${esc(formatDate(campaign.closedAt))}</time></div>${campaign.history.slice(0,8).map(item=>`<div class="campaign-log-row"><time>G${item.day}</time><div><strong>${esc(item.text)}</strong><small>${esc(formatDate(item.date,{day:'numeric',month:'short'}))} · simulazione</small></div></div>`).join('')}</section><div class="campaign-result-actions"><span>Il risultato e l’impatto sulla carriera sono salvati in questo browser.</span>${(place=>place?`<button class="secondary-button" data-nav="${place.nav}"${place.scroll?` data-scroll="${place.scroll}"`:''}>${esc(place.label)}</button>`:'')(mandatePlace(state,report??{electionType:campaign.electionType,personalMandate:result?.personalMandate}))}<button class="primary-button" data-action="campaign-new">Prepara una nuova elezione</button></div><footer class="campaign-rules-note"><span>Modello: ${esc(result?.model??campaign.model)} · ${esc(sourceText('simulation'))}</span><span>Le cifre sono prodotte dal motore di gioco, non sono risultati reali; soglia UE del 4% da fonte verificata. <a href="${esc(ELECTION_MODELS[campaign.electionType]?.referenceUrl??'#')}" target="_blank" rel="noopener noreferrer">Riferimento istituzionale ↗</a></span></footer>`;
+  <section class="campaign-result-actions" aria-label="Dopo il risultato"><div class="campaign-next-copy"><span class="campaign-kicker">E ADESSO?</span><strong>Il risultato e l’impatto sulla carriera sono salvati in questo browser.</strong></div>${(place=>place?`<button class="secondary-button" data-nav="${place.nav}"${place.scroll?` data-scroll="${place.scroll}"`:''}>${esc(place.label)}</button>`:'')(mandatePlace(state,report??{electionType:campaign.electionType,personalMandate:result?.personalMandate}))}<button class="primary-button campaign-new-button" data-action="campaign-new">Prepara una nuova elezione</button></section>
+  <section class="campaign-block campaign-history"><div class="campaign-section-head"><div><span class="campaign-kicker">STORICO</span><h3>Chiusura della campagna</h3></div><time>${esc(formatDate(campaign.closedAt))}</time></div>${campaign.history.slice(0,8).map(item=>`<div class="campaign-log-row"><time>G${item.day}</time><div><strong>${esc(item.text)}</strong><small>${esc(formatDate(item.date,{day:'numeric',month:'short'}))} · simulazione</small></div></div>`).join('')}</section><footer class="campaign-rules-note"><span>Modello: ${esc(result?.model??campaign.model)} · ${esc(sourceText('simulation'))}</span><span>Le cifre sono prodotte dal motore di gioco, non sono risultati reali; soglia UE del 4% da fonte verificata. <a href="${esc(ELECTION_MODELS[campaign.electionType]?.referenceUrl??'#')}" target="_blank" rel="noopener noreferrer">Riferimento istituzionale ↗</a></span></footer>`;
 }
 
 function parliamentOutcome(campaign,state) {

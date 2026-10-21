@@ -84,9 +84,187 @@ async function tooManyFailures(env, request) {
   const count = Number(await env.ADMIN_ARCHIVE.get(key) ?? 0);
   return { key, count, blocked: count >= MAX_FAILURES };
 }
+// A session is valid only for the credential it was opened with: the PIN record carries an `epoch` (absent = the first one) that every session stores, so changing the
+// credential makes all the older sessions invalid at once, even those no listing could reach.
+const credentialEpoch = stored => String(stored?.epoch ?? '1');
 async function sessionValid(env, request) {
   const token = (request.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
-  return /^[\da-f]{48}$/.test(token) && Boolean(await env.ADMIN_ARCHIVE.get(`sessione:${token}`));
+  if (!/^[\da-f]{48}$/.test(token)) return false;
+  const [session, stored] = await Promise.all([env.ADMIN_ARCHIVE.get(`sessione:${token}`), env.ADMIN_ARCHIVE.get(PIN_KEY, 'json')]);
+  return Boolean(session && stored) && equalStrings(session, credentialEpoch(stored));
+}
+// Replaces the owner's credential: a new salt and hash (the value itself is never stored or logged) and a new epoch; old sessions are also removed where the store can list them.
+async function replaceCredential(env, newPin) {
+  const salt = randomToken(12);
+  const record = { salt, hash: await pinHash(newPin, salt), since: new Date().toISOString(), epoch: randomToken(8) };
+  await env.ADMIN_ARCHIVE.put(PIN_KEY, JSON.stringify(record));
+  try {
+    const listed = await env.ADMIN_ARCHIVE.list?.({ prefix: 'sessione:' });
+    for (const key of listed?.keys ?? []) await env.ADMIN_ARCHIVE.delete(key.name);
+  } catch { /* the epoch already invalidated them */ }
+  return record;
+}
+
+
+// ---------- the shared logo catalog ----------
+// A logo approved in the Admin is published here: the file goes to persistent storage (the R2 bucket LOGO_BUCKET when the Worker has one, else Workers KV, which is already bound), the
+// catalog (the shared archive, `logos[entityId]`) keeps the reference and the metadata, and every player reads the same file from /api/admin/logo/<entityId>. Files are named by their
+// SHA-256, so publishing the same file twice writes nothing twice. Nothing here decides whether a logo is the party's official one: `logoVerified` is never touched.
+const MAX_LOGO_FILE = 2 * 1024 * 1024;
+const MAX_SVG_CHARS = 200_000;
+const LOGO_ID = /^[\w.-]{1,120}$/;
+const SVG_TAGS = new Set(['svg', 'g', 'path', 'rect', 'circle', 'ellipse', 'polygon', 'polyline', 'line', 'defs', 'clippath', 'mask', 'lineargradient', 'radialgradient', 'stop', 'title', 'desc']);
+const SVG_ATTRIBUTES = new Set(['xmlns', 'viewbox', 'width', 'height', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'stroke-miterlimit', 'stroke-dasharray', 'stroke-dashoffset', 'fill-rule', 'clip-rule', 'opacity', 'fill-opacity', 'stroke-opacity', 'transform', 'cx', 'cy', 'r', 'rx', 'ry', 'x', 'y', 'x1', 'x2', 'y1', 'y2', 'd', 'points', 'id', 'offset', 'stop-color', 'stop-opacity', 'gradientunits', 'gradienttransform', 'clip-path', 'mask', 'preserveaspectratio', 'fx', 'fy', 'spreadmethod', 'maskunits', 'maskcontentunits', 'clippathunits', 'version', 'role', 'aria-label', 'aria-hidden', 'focusable']);
+const LOGO_TYPES = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/svg+xml']);
+const base64Of = bytes => { let binary = ''; for (let at = 0; at < bytes.length; at += 0x8000) binary += String.fromCharCode(...bytes.subarray(at, at + 0x8000)); return btoa(binary); };
+const bytesOf = text => Uint8Array.from(atob(text), character => character.charCodeAt(0));
+const sha256Hex = async bytes => toHex(await crypto.subtle.digest('SHA-256', bytes));
+// What the bytes are, read from the bytes themselves (never from the name or from the type the client declares).
+function sniffLogo(bytes) {
+  const at = (...values) => values.every((value, index) => bytes[index] === value);
+  if (bytes.length > 24 && at(137, 80, 78, 71, 13, 10, 26, 10)) {
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    if (view.getUint32(16) > 4096 || view.getUint32(20) > 4096 || view.getUint32(16) < 1 || view.getUint32(20) < 1) return { error: 'Il PNG supera i 4096 pixel per lato.' };
+    return { type: 'image/png' };
+  }
+  if (bytes.length > 4 && at(255, 216, 255)) return { type: 'image/jpeg' };
+  if (bytes.length > 12 && at(82, 73, 70, 70) && bytes[8] === 87 && bytes[9] === 69 && bytes[10] === 66 && bytes[11] === 80) return { type: 'image/webp' };
+  if (bytes.length > 10 && at(71, 73, 70, 56) && (bytes[4] === 55 || bytes[4] === 57) && bytes[5] === 97) return { type: 'image/gif' };
+  const head = new TextDecoder().decode(bytes.subarray(0, Math.min(bytes.length, 400))).trimStart();
+  if (/^(<\?xml[^>]*\?>\s*)?<svg[\s>]/i.test(head)) return { type: 'image/svg+xml' };
+  return { error: 'Sono ammesse immagini SVG, PNG, JPEG, WebP o GIF.' };
+}
+// An SVG is accepted only when it is made of drawing shapes: no script, no event handler, no external reference, no DOCTYPE or entity, no style, no embedded image.
+function checkSvg(text) {
+  if (text.length > MAX_SVG_CHARS) return 'L’SVG è troppo grande.';
+  if (/<!doctype|<!entity|<!\[cdata\[/i.test(text)) return 'L’SVG contiene dichiarazioni non ammesse.';
+  if (/<!--/.test(text) && /<!--[\s\S]*?-->[\s\S]*?(script|javascript)/i.test(text)) return 'L’SVG contiene codice non ammesso.';
+  const body = text.replace(/<\?xml[\s\S]*?\?>/i, '').replace(/<!--[\s\S]*?-->/g, '');
+  let depth = 0, rootSeen = false, tags = 0;
+  const tagPattern = /<(\/?)([a-zA-Z][\w:-]*)((?:\s+[^<>]*?)?)(\/?)>/g;
+  let last = 0, match;
+  while ((match = tagPattern.exec(body))) {
+    const between = body.slice(last, match.index);
+    if (/[<>]/.test(between)) return 'L’SVG non è ben formato.';
+    last = tagPattern.lastIndex;
+    const [, closing, nameRaw, attributes, selfClosing] = match;
+    const name = nameRaw.toLowerCase();
+    if (!SVG_TAGS.has(name)) return `L’SVG contiene un elemento non ammesso (${nameRaw}).`;
+    if (++tags > 4000) return 'L’SVG è troppo complesso.';
+    if (closing) { depth--; if (depth < 0) return 'L’SVG non è ben formato.'; continue; }
+    if (!rootSeen) { if (name !== 'svg') return 'Il file SVG non è valido.'; rootSeen = true; }
+    const attributePattern = /([^\s=/"'<>]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'))?/g;
+    let attribute;
+    while ((attribute = attributePattern.exec(attributes))) {
+      const key = attribute[1].toLowerCase(), value = (attribute[2] ?? attribute[3] ?? '').trim();
+      if (!SVG_ATTRIBUTES.has(key) || /^on/.test(key)) return `L’SVG contiene un attributo non ammesso (${attribute[1]}).`;
+      if (/javascript:|data:|&#|&[a-z]+;|@import|expression\(/i.test(value)) return 'L’SVG contiene un riferimento non ammesso.';
+      if (/url\s*\(/i.test(value) && !/^url\(#[\w.-]+\)$/.test(value)) return 'L’SVG contiene un riferimento esterno non ammesso.';
+    }
+    if (!selfClosing) depth++;
+  }
+  if (/[<>]/.test(body.slice(last)) || depth !== 0 || !rootSeen) return 'L’SVG non è ben formato.';
+  return null;
+}
+// R2 when the Worker has the bucket, else KV: the same three operations, the file always under its own hash.
+function logoFiles(env) {
+  if (env.LOGO_BUCKET?.put) return {
+    kind: 'r2',
+    put: (hash, bytes, type) => env.LOGO_BUCKET.put(`logos/${hash}`, bytes, { httpMetadata: { contentType: type } }),
+    get: async hash => { const object = await env.LOGO_BUCKET.get(`logos/${hash}`); return object ? new Uint8Array(await object.arrayBuffer()) : null; },
+    delete: hash => env.LOGO_BUCKET.delete(`logos/${hash}`)
+  };
+  return {
+    kind: 'kv',
+    put: (hash, bytes) => env.ADMIN_ARCHIVE.put(`logo-file:${hash}`, base64Of(bytes)),
+    get: async hash => { const text = await env.ADMIN_ARCHIVE.get(`logo-file:${hash}`); return text ? bytesOf(text) : null; },
+    delete: hash => env.ADMIN_ARCHIVE.delete(`logo-file:${hash}`)
+  };
+}
+// The entities a logo can belong to: the parties, movements and coalitions of the real data (read from the published files, never written) and the parties the owner added.
+let knownIdsCache = null;
+async function knownEntityIds(env, request) {
+  if (knownIdsCache && Date.now() - knownIdsCache.at < 600_000) return knownIdsCache.ids;
+  const ids = new Set();
+  for (const file of ['parties', 'political-movements', 'coalitions']) {
+    const response = await env.ASSETS.fetch(new Request(new URL(`/src/data/real/${file}.json`, request.url)));
+    if (!response.ok) throw new Error('catalogo-non-verificabile');
+    for (const item of await response.json()) if (item?.id) ids.add(item.id);
+  }
+  knownIdsCache = { at: Date.now(), ids };
+  return ids;
+}
+async function readArchive(env) { return await env.ADMIN_ARCHIVE.get(ARCHIVE_KEY, 'json') ?? emptyArchive(); }
+async function writeArchive(env, archive) { archive.updatedAt = new Date().toISOString(); await env.ADMIN_ARCHIVE.put(ARCHIVE_KEY, JSON.stringify(archive)); return archive; }
+const assetPathOf = (entityId, hash) => `/api/admin/logo/${entityId}?v=${hash.slice(0, 12)}`;
+const stillUsed = (archive, hash, exceptId) => Object.entries(archive.logos).some(([id, logo]) => id !== exceptId && logo?.kind === 'asset' && logo.sha256 === hash);
+// Stores one approved logo and records it in the catalog. Returns { entry, replaced, unchanged } or { error, status }.
+async function publishLogoFile(env, request, entityId, input) {
+  if (!LOGO_ID.test(entityId)) return { error: 'Identificativo del partito non valido.', status: 400 };
+  if (!input || typeof input !== 'object' || typeof input.base64 !== 'string') return { error: 'File del logo mancante.', status: 400 };
+  if (input.base64.length > Math.ceil(MAX_LOGO_FILE * 4 / 3) + 8 || !/^[A-Za-z0-9+/]+={0,2}$/.test(input.base64)) return { error: 'Il file deve essere più piccolo di 2 MB.', status: 413 };
+  const archive = await readArchive(env);
+  let ids;
+  try { ids = await knownEntityIds(env, request); } catch { return { error: 'Il catalogo dei partiti non è verificabile in questo momento: riprova.', status: 503 }; }
+  if (!ids.has(entityId) && !archive.addedParties?.[entityId]) return { error: 'Il partito non esiste nel catalogo: il logo non è stato pubblicato.', status: 404 };
+  let bytes;
+  try { bytes = bytesOf(input.base64); } catch { return { error: 'File del logo non valido.', status: 400 }; }
+  if (bytes.length > MAX_LOGO_FILE || bytes.length < 16) return { error: 'Il file deve essere più piccolo di 2 MB.', status: 413 };
+  const sniffed = sniffLogo(bytes);
+  if (sniffed.error) return { error: sniffed.error, status: 400 };
+  if (sniffed.type === 'image/svg+xml') { const problem = checkSvg(new TextDecoder().decode(bytes)); if (problem) return { error: problem, status: 400 }; }
+  const hash = await sha256Hex(bytes);
+  const files = logoFiles(env);
+  const before = archive.logos[entityId] ?? null;
+  const entry = { kind: 'asset', sha256: hash, mimeType: sniffed.type, bytes: bytes.length, assetPath: assetPathOf(entityId, hash), alt: cleanText(input.alt, 160) ?? '', sourceUrl: typeof input.sourceUrl === 'string' && /^https?:\/\/[^\s"'<>]{4,600}$/i.test(input.sourceUrl) ? input.sourceUrl : null, fileName: cleanText(input.fileName, 120), storage: files.kind, updatedAt: new Date().toISOString() };
+  if (before?.kind === 'asset' && before.sha256 === hash) {
+    // The same file is already published: nothing is written twice; the description may still be corrected.
+    const same = { ...before, alt: entry.alt || before.alt, sourceUrl: entry.sourceUrl ?? before.sourceUrl };
+    if (same.alt !== before.alt || same.sourceUrl !== before.sourceUrl) { archive.logos[entityId] = { ...same, updatedAt: entry.updatedAt }; await writeArchive(env, archive); }
+    return { entry: archive.logos[entityId], replaced: false, unchanged: true, updatedAt: archive.updatedAt };
+  }
+  // Another entity may already hold this very file: the file is stored once and both entries point to it.
+  if (!stillUsed(archive, hash, entityId)) await files.put(hash, bytes, sniffed.type);
+  archive.logos[entityId] = entry;
+  await writeArchive(env, archive);
+  if (before?.kind === 'asset' && !stillUsed(archive, before.sha256, entityId)) await files.delete(before.sha256).catch(() => {});
+  return { entry, replaced: Boolean(before), unchanged: false, updatedAt: archive.updatedAt };
+}
+async function removeLogo(env, entityId) {
+  if (!LOGO_ID.test(entityId)) return { error: 'Identificativo del partito non valido.', status: 400 };
+  const archive = await readArchive(env);
+  const before = archive.logos[entityId];
+  if (!before) return { removed: false, updatedAt: archive.updatedAt };
+  delete archive.logos[entityId];
+  await writeArchive(env, archive);
+  if (before.kind === 'asset' && !stillUsed(archive, before.sha256, entityId)) await logoFiles(env).delete(before.sha256).catch(() => {});
+  return { removed: true, updatedAt: archive.updatedAt };
+}
+// The logos that the first versions kept inside the archive as data addresses are moved to files, once: the result is the same logo, the archive gets smaller, nothing is lost or doubled.
+async function migrateDataLogos(env, request) {
+  const archive = await readArchive(env);
+  const done = [], failed = [];
+  for (const [entityId, logo] of Object.entries(archive.logos)) {
+    if (logo?.kind !== 'data' || typeof logo.dataUrl !== 'string') continue;
+    const match = logo.dataUrl.match(/^data:(image\/[\w+.-]+);base64,([\w+/=]+)$/);
+    if (!match) { failed.push({ entityId, error: 'indirizzo dati non valido' }); continue; }
+    const result = await publishLogoFile(env, request, entityId, { base64: match[2], alt: logo.alt, sourceUrl: logo.sourceUrl });
+    if (result.error) failed.push({ entityId, error: result.error }); else done.push(entityId);
+  }
+  return { migrated: done, failed, updatedAt: (await readArchive(env)).updatedAt };
+}
+// The public file: only what the catalog lists, with its own type, never executable in the page.
+async function serveLogo(env, request, entityId) {
+  if (!LOGO_ID.test(entityId)) return json(request, { error: 'Logo non trovato.' }, 404);
+  const archive = await readArchive(env);
+  const logo = archive.logos[entityId];
+  if (logo?.kind !== 'asset') return json(request, { error: 'Logo non trovato.' }, 404);
+  const bytes = await logoFiles(env).get(logo.sha256);
+  if (!bytes) return json(request, { error: 'Il file del logo non è disponibile.' }, 404);
+  const asked = new URL(request.url).searchParams.get('v');
+  const headers = { 'content-type': logo.mimeType, 'x-content-type-options': 'nosniff', 'cross-origin-resource-policy': 'cross-origin', 'content-security-policy': "default-src 'none'; style-src 'none'; sandbox", 'referrer-policy': 'no-referrer', etag: `"${logo.sha256}"`, 'cache-control': asked === logo.sha256.slice(0, 12) ? 'public, max-age=31536000, immutable' : 'public, max-age=300', ...cors(request), 'access-control-allow-methods': 'GET, OPTIONS' };
+  if (request.headers.get('if-none-match') === `"${logo.sha256}"`) return new Response(null, { status: 304, headers });
+  return new Response(bytes, { status: 200, headers });
 }
 
 // ---------- player accounts and online saves (D1) ----------
@@ -296,6 +474,11 @@ async function deleteAccountData(db, userId) {
 // "Activity" is read from what the tables hold (a save written, a session opened, the account created): a session older than its 30 days is gone, so a login that saved nothing is not counted after that.
 // The steps: 1) notice (e-mail, with the date of deletion, 30 days ahead); 2) after the 30 days, if there has been no activity since the notice, one deletion (deleteAccountData); a notice that was sent
 // but not delivered (the provider failed) is not recorded, so the account is warned again at the next run and never deleted without a notice on record.
+// For the owner's offline tool (scripts/admin-credential-record.mjs): the same record the Worker writes.
+export async function adminCredentialRecord(pin) {
+  const salt = randomToken(12);
+  return { salt, hash: await pinHash(pin, salt), since: new Date().toISOString(), epoch: randomToken(8) };
+}
 export const RETENTION = Object.freeze({ inactivityMonths: 12, noticeDays: 30, batch: 50 });
 export function retentionState(env) {
   const reasons = [];
@@ -644,11 +827,58 @@ async function handleApi(request, env) {
       // First connection: the setup code (a Worker secret known only to the owner) binds the PIN to the archive.
       if (!env.ADMIN_SETUP_CODE || !equalStrings(String(body.setupCode ?? ''), env.ADMIN_SETUP_CODE)) return fail('Codice di attivazione non corretto.');
       const salt = randomToken(12);
-      await env.ADMIN_ARCHIVE.put(PIN_KEY, JSON.stringify({ salt, hash: await pinHash(pin, salt), since: new Date().toISOString() }));
+      await env.ADMIN_ARCHIVE.put(PIN_KEY, JSON.stringify({ salt, hash: await pinHash(pin, salt), since: new Date().toISOString(), epoch: '1' }));
     } else if (!equalStrings(await pinHash(pin, stored.salt), stored.hash)) return fail('PIN non corretto.');
     const token = randomToken();
-    await env.ADMIN_ARCHIVE.put(`sessione:${token}`, '1', { expirationTtl: SESSION_SECONDS });
+    await env.ADMIN_ARCHIVE.put(`sessione:${token}`, credentialEpoch(await env.ADMIN_ARCHIVE.get(PIN_KEY, 'json')), { expirationTtl: SESSION_SECONDS });
     return json(request, { token, expiresIn: SESSION_SECONDS });
+  }
+  // Rotation of the owner's credential. Either the open session plus the current credential, or the Worker's setup code (the owner's way back in if the credential is lost).
+  // The same attempt limit as the login applies; every older session stops working; the new credential is returned to nobody and written nowhere in clear.
+  if (url.pathname === '/api/admin/credential' && request.method === 'POST') {
+    const guard = await tooManyFailures(env, request);
+    if (guard.blocked) return json(request, { error: 'Troppi tentativi: riprova tra 15 minuti.' }, 429);
+    const body = await request.json().catch(() => ({}));
+    const newPin = String(body.newPin ?? '');
+    if (newPin.length < 6 || newPin.length > 64) return json(request, { error: 'La nuova credenziale deve avere da 6 a 64 caratteri.' }, 400);
+    const stored = await env.ADMIN_ARCHIVE.get(PIN_KEY, 'json');
+    const fail = async (message, status = 401) => { await env.ADMIN_ARCHIVE.put(guard.key, String(guard.count + 1), { expirationTtl: 900 }); return json(request, { error: message }, status); };
+    const viaSetupCode = typeof body.setupCode === 'string' && body.setupCode.length > 0;
+    if (viaSetupCode) {
+      if (!env.ADMIN_SETUP_CODE || !equalStrings(body.setupCode, env.ADMIN_SETUP_CODE)) return fail('Codice di attivazione non corretto.');
+    } else {
+      if (!stored) return fail('Nessuna credenziale da sostituire: serve il codice di attivazione.', 409);
+      if (!await sessionValid(env, request)) return fail('Sessione amministrativa non valida o scaduta.');
+      if (!equalStrings(await pinHash(String(body.currentPin ?? ''), stored.salt), stored.hash)) return fail('La credenziale attuale non è corretta.');
+    }
+    if (stored && equalStrings(await pinHash(newPin, stored.salt), stored.hash)) return json(request, { error: 'La nuova credenziale deve essere diversa da quella attuale.' }, 400);
+    const record = await replaceCredential(env, newPin);
+    const token = randomToken();
+    await env.ADMIN_ARCHIVE.put(`sessione:${token}`, record.epoch, { expirationTtl: SESSION_SECONDS });
+    return json(request, { ok: true, token, expiresIn: SESSION_SECONDS, since: record.since });
+  }
+  // The shared logo catalog: the files are public to read; publishing, replacing, removing and migrating need the owner's session.
+  const logoRoute = url.pathname.match(/^\/api\/admin\/logo\/([^/]+)$/);
+  if (logoRoute && request.method === 'GET') return serveLogo(env, request, decodeURIComponent(logoRoute[1]));
+  const logosRoute = url.pathname.match(/^\/api\/admin\/logos\/([^/]+)$/);
+  if (logosRoute || url.pathname === '/api/admin/logos/migrate') {
+    if (!await sessionValid(env, request)) return json(request, { error: 'Sessione amministrativa scaduta: inserisci di nuovo il PIN.' }, 401);
+    if (url.pathname === '/api/admin/logos/migrate' && request.method === 'POST') return json(request, { ok: true, ...await migrateDataLogos(env, request) });
+    const entityId = decodeURIComponent(logosRoute?.[1] ?? '');
+    if (request.method === 'PUT') {
+      const text = await request.text();
+      if (text.length > Math.ceil(MAX_LOGO_FILE * 4 / 3) + 4000) return json(request, { error: 'Il file deve essere più piccolo di 2 MB.' }, 413);
+      let input;
+      try { input = JSON.parse(text); } catch { return json(request, { error: 'Richiesta non valida.' }, 400); }
+      const result = await publishLogoFile(env, request, entityId, input);
+      if (result.error) return json(request, { error: result.error }, result.status);
+      return json(request, { ok: true, entityId, logo: result.entry, replaced: result.replaced, unchanged: result.unchanged, updatedAt: result.updatedAt });
+    }
+    if (request.method === 'DELETE') {
+      const result = await removeLogo(env, entityId);
+      if (result.error) return json(request, { error: result.error }, result.status);
+      return json(request, { ok: true, entityId, removed: result.removed, updatedAt: result.updatedAt });
+    }
   }
   if (url.pathname === '/api/admin' && request.method === 'PUT') {
     if (!await sessionValid(env, request)) return json(request, { error: 'Sessione amministrativa scaduta: inserisci di nuovo il PIN.' }, 401);
@@ -656,7 +886,15 @@ async function handleApi(request, env) {
     if (text.length > MAX_BYTES) return json(request, { error: 'Archivio troppo grande.' }, 413);
     let archive;
     try { archive = cleanArchive(JSON.parse(text)); } catch (error) { return json(request, { error: error.message || 'Archivio non valido.' }, 400); }
+    // The published files are not the page's to rewrite: a logo kept as a file stays in the catalog unless the owner removes it (DELETE) or replaces it with another logo.
+    const stored = await readArchive(env);
+    const replaced = [];
+    for (const [entityId, logo] of Object.entries(stored.logos)) {
+      if (logo?.kind !== 'asset') continue;
+      if (!archive.logos[entityId]) archive.logos[entityId] = logo; else replaced.push(logo.sha256);
+    }
     await env.ADMIN_ARCHIVE.put(ARCHIVE_KEY, JSON.stringify(archive));
+    for (const hash of replaced) if (!stillUsed(archive, hash, null)) await logoFiles(env).delete(hash).catch(() => {});
     return json(request, { ok: true, updatedAt: archive.updatedAt, parties: Object.keys(archive.parties).length, politicians: Object.keys(archive.politicians).length, logos: Object.keys(archive.logos).length, addedParties: Object.keys(archive.addedParties).length, hidden: Object.values(archive.hidden).filter(item => item.hidden).length });
   }
   return json(request, { error: 'Richiesta non riconosciuta.' }, 404);

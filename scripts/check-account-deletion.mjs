@@ -7,10 +7,11 @@
 //     never as a failed attempt; sessions that have expired are removed for everybody on the next login/registration/deletion and by the daily schedule; every API answer carries the security headers;
 //   - the browser client (deleteAccount) clears the local session only after the server confirmed;
 //   - the in-game account panel and the public pages (privacy, terms, deletion) exist, are static, call no external host, and the open points for the controller are listed.
-// `node scripts/check-account-deletion.mjs --release` also fails while the pages still carry the controller's open points (the gate before a store release).
+// `node scripts/check-account-deletion.mjs --release` also fails while docs/legale-requisiti.json lists indispensable information still missing (the gate before a store release).
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { DatabaseSync } from 'node:sqlite';
+import { loadRequirements, releaseMessage } from './lib/legal-requirements.mjs';
 
 const nativeFetch = globalThis.fetch;
 
@@ -211,7 +212,9 @@ const panel = menu.renderMainMenu({ view: 'account' }, { account: { user: { user
 assert.ok(/data-account-form="delete"/.test(panel) && /ELIMINA/.test(panel) && /Elimina il mio account/.test(panel), 'Il pannello Account ha la cancellazione (password e parola di conferma).');
 assert.ok(/privacy\.html/.test(panel) && /termini\.html/.test(panel) && /elimina-account\.html/.test(panel), 'Il pannello rimanda alle pagine pubbliche.');
 const page = async name => readFile(new URL(`../${name}`, import.meta.url), 'utf8');
-const todo = [];
+const legalRequirements = await loadRequirements();
+assert.deepEqual(legalRequirements.problems, [], 'Il file dei requisiti legali è ben formato.');
+const todo = legalRequirements.missingRequired.map(item => `${item.section}:${item.id}`);
 for (const name of ['privacy.html', 'termini.html', 'elimina-account.html']) {
   const html = await page(name);
   assert.ok(/<html lang="it">/.test(html) && /<title>[^<]+<\/title>/.test(html) && /name="viewport"/.test(html), `${name}: pagina completa.`);
@@ -219,11 +222,11 @@ for (const name of ['privacy.html', 'termini.html', 'elimina-account.html']) {
   assert.ok(!/https?:\/\/(?!palazzo-2026-site)/.test(html.replace(/<meta http-equiv="Content-Security-Policy"[^>]*>/, '').replace(/https?:\/\/openfontlicense\.org/g, '')), `${name}: nessun host esterno.`);
   assert.ok(!/<script(?![^>]*src=)[^>]*>/.test(html), `${name}: nessuno script incorporato.`);
   assert.ok(!/(undefined|NaN|\[object Object\])/.test(html), `${name}: nessun valore non valido.`);
-  for (const match of html.matchAll(/data-controller-todo="([^"]+)"/g)) todo.push(`${name}:${match[1]}`);
+  assert.ok(!/data-controller-todo/.test(html), `${name}: nessun segnaposto nella pagina pubblica.`);
 }
 const privacy = await page('privacy.html');
 for (const needle of ['nome utente', 'impronta della password', 'Indirizzo IP', 'Salvataggi online', '30 giorni', 'Cloudflare', 'non usa cookie', 'Elimina il mio account']) assert.ok(privacy.toLowerCase().includes(needle.toLowerCase()), `Informativa: ${needle}.`);
-assert.ok(/non dichiara la conformità/.test(privacy), 'L’informativa non dichiara la conformità.');
+assert.ok(!/(pienamente|totalmente) conform|garantisc[eo] la conformità/i.test(privacy), 'L’informativa non dichiara una conformità che non è stata verificata.');
 const deletePage = await page('elimina-account.html');
 assert.ok(/id="delete-form"/.test(deletePage) && /src="\.\/src\/legal\/delete-account\.js"/.test(deletePage), 'La pagina di cancellazione ha il modulo e lo script.');
 assert.ok((await readFile(new URL('../.assetsignore', import.meta.url), 'utf8')).split('\n').every(line => !/^(privacy|termini|elimina-account)\.html$|^src\/legal|^src\/fonts/.test(line.trim())), 'Le pagine pubbliche non sono escluse dalla pubblicazione.');
@@ -301,5 +304,5 @@ else {
   await local.close();
 }
 
-if (process.argv.includes('--release') && todo.length) { console.error(`BLOCCO DI RILASCIO: restano ${todo.length} punti da completare a cura del titolare:\n- ${todo.join('\n- ')}`); process.exit(1); }
-console.log(`Cancellazione dell’account verificata: servizio (sessione, password dell’account, conferma, nessun account altrui, nessun dato orfano, limite di tentativi, errore del database), client e pannello nel gioco, pagine pubbliche statiche senza host esterni. Punti per il titolare ancora aperti: ${todo.length} (${[...new Set(todo.map(item => item.split(':')[1]))].join(', ')}).`);
+if (process.argv.includes('--release') && legalRequirements.missingRequired.length) { console.error(releaseMessage(legalRequirements.missingRequired)); process.exit(1); }
+console.log(`Cancellazione dell’account verificata: servizio (sessione, password dell’account, conferma, nessun account altrui, nessun dato orfano, limite di tentativi, errore del database), client e pannello nel gioco, pagine pubbliche statiche senza host esterni. Punti per il titolare ancora aperti: ${todo.length} (${todo.map(item => item.split(':')[1]).join(', ')}).`);

@@ -1,15 +1,15 @@
 // Main menu, how-to-play, settings, save slots and the end-of-week report.
-import { renderTutorialInvite } from './tutorial.js?v=20261021-3';
-import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261021-3';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261021-3';
-import { formatDate } from '../core/time.js?v=20261021-3';
-import { illustration } from './illustrations.js?v=20261021-3';
-import { glyph } from './visuals.js?v=20261021-3';
-import { identityMark, identityVars } from './party-identity.js?v=20261021-3';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261021-3';
-import { hallView } from './hall-view.js?v=20261021-3';
-import { esc, signed } from './charts.js?v=20261021-3';
-import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261021-3';
+import { renderTutorialInvite } from './tutorial.js?v=20261021-6';
+import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261021-6';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261021-6';
+import { formatDate } from '../core/time.js?v=20261021-6';
+import { illustration } from './illustrations.js?v=20261021-6';
+import { glyph } from './visuals.js?v=20261021-6';
+import { identityMark, identityVars } from './party-identity.js?v=20261021-6';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261021-6';
+import { hallView } from './hall-view.js?v=20261021-6';
+import { esc, signed } from './charts.js?v=20261021-6';
+import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261021-6';
 
 const when = iso => { try { return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch { return ''; } };
 // The actions of the opening screen, in order of importance: starting a career and resuming one are the two main ones (drawn apart, below); then what concerns the
@@ -75,6 +75,11 @@ function continueCard(meta, lastSaved, unsaved, identity, gate = null) {
   const mark = identity ? identityMark(identity, 'lg') : '';
   const style = identity ? ` style="${esc(identityVars(identity))}"` : '';
   return `<button class="menu-continue ${ended ? 'is-ended' : ''}" data-menu="continua"${style}>${mark}<span class="menu-continue-body"><span class="menu-continue-kicker">${glyph('route', 16)} ${ended ? 'CARRIERA CONCLUSA' : 'CONTINUA LA PARTITA'}</span><strong>${esc(meta.player)}</strong><span class="menu-continue-role">${esc(meta.role ?? 'Senza incarico')} · <b>${esc(meta.party)}</b></span><small>Settimana ${meta.week} · ${esc(formatDate(meta.gameDate))} · ${esc(unsaved ? 'modifiche non salvate' : lastSaved)}</small></span><span class="menu-continue-go" aria-hidden="true">${glyph('steady', 22)}</span></button>`;
+}
+// The language of the interface, visible before any career is started: Italian is the default; the choice is kept in this browser, apart from every save.
+function languageSwitch(settings) {
+  const current = settings?.language ?? 'it';
+  return `<div class="menu-lang" role="group" aria-label="Lingua / Language" data-no-translate><span class="menu-lang-icon" aria-hidden="true">${glyph('globe', 16)}</span>${[['it', 'Italiano'], ['en', 'English']].map(([id, label]) => `<button type="button" class="${current === id ? 'active' : ''}" data-setting-key="language" data-setting-value="${id}" aria-pressed="${current === id}" lang="${id}">${label}</button>`).join('')}</div>`;
 }
 // Starting a career: the main action of the screen, with what it leads to (all of it chosen in the new-game steps).
 function newCareerCard() {
@@ -217,9 +222,9 @@ export function renderConfirmDialog(pending) {
 }
 
 export function settingsView(settings, { error = '', account = null } = {}) {
-  const groups = [['Audio', ['sound', 'volume']], ['Interfaccia', ['motion', 'density', 'textSize', 'contrast']], ['Notifiche', ['toasts', 'toastLength', 'weeklyReport', 'newsPopup']], ['Partita', ['autosave', 'weeksPerTurn']]];
+  const groups = [['Audio', ['sound', 'volume']], ['Interfaccia', ['language', 'motion', 'density', 'textSize', 'contrast']], ['Notifiche', ['toasts', 'toastLength', 'weeklyReport', 'newsPopup']], ['Partita', ['autosave', 'weeksPerTurn']]];
   return `<h2>Impostazioni</h2><p class="section-subtitle">Valgono per tutte le partite in questo browser e si applicano subito; il popup delle notizie settimanali segue l’account con cui hai effettuato l’accesso.</p>
-    ${groups.map(([title, keys]) => `<section class="settings-group"><h3>${esc(title)}</h3>${keys.map(key => { const spec = SETTINGS_SCHEMA[key]; const hint = spec.hint ? `<small class="setting-hint" role="status" data-setting-state="${key}"><b>${esc(spec.options.find(([v]) => v === settings[key])?.[1] ?? '')}.</b> ${esc(spec.hint[settings[key]] ?? '')}${spec.scoped ? ` ${account?.user ? `Vale per l’account «${esc(account.user.username)}».` : 'Vale per questo browser.'}` : ''}</small>` : ''; return `<div class="setting-row ${spec.hint ? 'has-hint' : ''}" data-setting-row="${key}"><span>${esc(spec.label)}</span><div class="segmented" role="group" aria-label="${esc(spec.label)}">${spec.options.map(([value, label]) => `<button data-setting-key="${key}" data-setting-value="${esc(value)}" class="${settings[key] === value ? 'active' : ''}" aria-pressed="${settings[key] === value}">${esc(label)}</button>`).join('')}</div>${hint}</div>`; }).join('')}</section>`).join('')}
+    ${groups.map(([title, keys]) => `<section class="settings-group"><h3>${esc(title)}</h3>${keys.map(key => { const spec = SETTINGS_SCHEMA[key]; const hint = spec.hint ? `<small class="setting-hint" role="status" data-setting-state="${key}"><b>${esc(spec.options.find(([v]) => v === settings[key])?.[1] ?? '')}.</b> ${esc(spec.hint[settings[key]] ?? '')}${spec.scoped ? ` ${account?.user ? `Vale per l’account «${esc(account.user.username)}».` : 'Vale per questo browser.'}` : ''}</small>` : ''; return `<div class="setting-row ${spec.hint ? 'has-hint' : ''}" data-setting-row="${key}"><span>${esc(spec.label)}</span><div class="segmented" role="group" aria-label="${esc(spec.label)}">${spec.options.map(([value, label]) => `<button data-setting-key="${key}" data-setting-value="${esc(value)}" class="${settings[key] === value ? 'active' : ''}" aria-pressed="${settings[key] === value}"${key === 'language' ? ` lang="${esc(value)}" data-no-translate` : ''}>${esc(label)}</button>`).join('')}</div>${hint}</div>`; }).join('')}</section>`).join('')}
     <section class="settings-group"><h3>Dati di gioco</h3><div class="setting-actions"><button class="secondary-button" data-menu-action="export">Esporta la partita in corso</button><label class="secondary-button menu-import-inline"><input type="file" accept="application/json,.json" data-menu-import />Importa una partita</label><button class="secondary-button" data-menu-action="reset-settings">Ripristina le impostazioni</button><button class="secondary-button danger" data-menu-action="clear-saves">Elimina tutti i salvataggi</button></div><p class="parliament-note">L’archivio dell’amministratore e i loghi caricati restano separati e non vengono cancellati.</p></section>
     ${error ? `<p class="menu-error" role="alert">${esc(error)}</p>` : ''}`;
 }
@@ -242,13 +247,14 @@ export function renderMainMenu(menu, context) {
   const home = `<span class="section-kicker">POLITICANDO 2026</span><h2>La politica italiana, settimana dopo settimana</h2><p class="section-subtitle">Un gestionale di carriera in un mondo politico vivo: partiti, parlamentari, governo e leggi reali; tutto ciò che accade in partita è simulazione dichiarata.</p>
     ${facts.length ? `<div class="menu-facts">${facts.map(([value, label]) => `<div><strong>${esc(value)}</strong><span>${esc(label)}</span></div>`).join('')}</div>` : ''}
     <ul class="menu-points"><li>${glyph('clock', 18)}<span><strong>Una settimana alla volta</strong> sei giorni da spendere, poi il mondo va avanti.</span></li><li>${glyph('route', 18)}<span><strong>Sei percorsi</strong> ${esc(Object.values(CAREER_LEVELS).map(level => level.shortLabel).join(', '))}.</span></li><li>${glyph('flag', 18)}<span><strong>Il tuo partito</strong> uno reale, uno fondato da te o nessuno: il gioco ne prende logo e colori.</span></li><li>${glyph('shield', 18)}<span><strong>Reale e simulato, sempre distinti</strong> i dati istituzionali sono verificati, il resto è dichiarato simulazione.</span></li></ul>`;
-  const side = menu.view === 'benvenuto' ? welcomeView(context.account, menu) : menu.view === 'tour' ? tourView(menu.tourStep) : menu.view === 'carica' ? loadView(context) : menu.view === 'account' ? accountView(context.account) : menu.view === 'guida' ? guideView() : menu.view === 'hall' ? hallView(context.hall) : menu.view === 'impostazioni' ? settingsView(settings, context) : home;
+  const side = menu.view === 'benvenuto' ? welcomeView(context.account, menu) : menu.view === 'tour' ? tourView(menu.tourStep) : menu.view === 'carica' ? loadView(context) : menu.view === 'account' ? accountView(context.account) : menu.view === 'guida' ? guideView() : menu.view === 'hall' ? hallView(context.hall, { identityOf: context.hallIdentity }) : menu.view === 'impostazioni' ? settingsView(settings, context) : home;
   const popup = menu.view !== 'home' ? menuPopup(menu.view, side) : '';
   const group = ([title, items]) => `<nav class="menu-group" aria-label="${esc(title)}"><h2 class="menu-group-title">${esc(title)}</h2><div class="menu-list">${items.map(([id, icon, label, detail]) => `<button class="menu-item ${menu.view === id ? 'active' : ''}" data-menu="${id}">${glyph(icon, 18)}<span><strong>${esc(label)}</strong><small>${esc(detail)}</small></span></button>`).join('')}</div></nav>`;
   return `<div class="main-menu ${hasCareer ? 'has-career' : ''}">
     ${illustration('palazzo', 'menu-art')}
     <div class="menu-column"${popup ? ' inert' : ''}>
       <h1 class="menu-brand"><img class="brand-logo menu-logo" src="icons/logo-politicando-640.webp" srcset="icons/logo-politicando-240.webp 240w, icons/logo-politicando-640.webp 640w" sizes="(max-width:700px) 120px, 200px" width="200" height="200" alt="POLITICANDO 2026" decoding="async" /></h1>
+      ${languageSwitch(settings)}
       <p class="menu-tagline">Una carriera nella politica italiana</p>
       ${newCareerCard()}
       ${hasCareer ? continueCard(meta, lastSaved, unsaved, identity, context.gate) : ''}${hasCareer && !context.gate && context.account?.sync ? syncStatusLine(context.account.sync) : ''}

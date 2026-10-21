@@ -1,62 +1,63 @@
-import { pendingCelebration, pendingOutcome } from '../core/celebration.js?v=20261021-3';
-import { fullDate, formatDate } from '../core/time.js?v=20261021-3';
-import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20261021-3';
-import * as accountApi from '../data/repositories/account-sync.js?v=20261021-3';
-import { accountApiBase, commitRevision, currentAccount, deleteAccount, probeAccountService, deleteCloudSave, downloadSave, listCloudSaves, login, logout, register, slotForCareer } from '../data/repositories/account-sync.js?v=20261021-3';
-import { createSyncEngine } from '../data/repositories/sync-queue.js?v=20261021-3';
-import { setPartyLogoResolver } from './person-marks.js?v=20261021-3';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261021-3';
-import { isRealCollectionLoaded, loadRealCollections, optionalDocumentStatus, loadRealCollectionsSettled, pristineRecord, realDataFailures, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20261021-3';
-import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20261021-3';
-import { renderAdminPanel } from './admin-panel.js?v=20261021-3';
-import { sharedLogos } from '../data/repositories/admin-store.js?v=20261021-3';
-import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, publishSharedArchive, refreshSharedArchive, sharedApiUrl, sharedSyncStatus, verifySharedSession } from '../data/repositories/admin-sync.js?v=20261021-3';
-import { deleteLocalLogo, exportLogoConfiguration, fetchLogoFromUrl, getLocalLogo, importLogoConfiguration, listLocalLogos, probeImage, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20261021-3';
-import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20261021-3';
-import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20261021-3';
-import { PARTY_LINK_COLLECTIONS, forceKind, isCoalitionList, politicalForces } from '../data/repositories/party-links.js?v=20261021-3';
-import { renderLogoAdmin } from './logo-admin.js?v=20261021-3';
-import { chosenPlace, makeCareerDraft, pollScenarioOf, removePartyCriterion, renderCareerWizard, togglePartyOrientation, wizardLogoPreview } from './career-wizard.js?v=20261021-3';
-import { userPartyLogo } from './party-logo.js?v=20261021-3';
-import { CAREER_STEPS, validateWizardStep } from '../core/career-rules.js?v=20261021-3';
-import { renderElectionsHub } from './elections-hub.js?v=20261021-3';
-import { renderQuirinale } from './presidency-view.js?v=20261021-3';
-import { renderCareerPage } from './career-page.js?v=20261021-3';
-import { renderPartyPage } from './party-page.js?v=20261021-3';
-import { renderAgendaPage } from './agenda-page.js?v=20261021-3';
-import { HEMICYCLE_DEFAULTS, renderHemicycle } from './hemicycle-view.js?v=20261021-3';
-import { renderFeaturedMembers } from './members-view.js?v=20261021-3';
-import { drawLogoEditor, exportLogo, measureBackground, panFromDrag, renderLogoEditor } from './logo-editor-view.js?v=20261021-3';
-import { createEditorState } from '../core/logo-editor.js?v=20261021-3';
-import { renderParliamentPage } from './parliament-mode.js?v=20261021-3';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261021-3';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261021-3';
-import { chooseStart } from '../core/start-engine.js?v=20261021-3';
-import { renderHeadquarters, renderNewsroom } from './game-mode.js?v=20261021-3';
-import { newsMedia, newsPopupHtml, popupItem } from './news-view.js?v=20261021-3';
-import { articleScript, bulletinScript, onVoiceChange, speakLines, stopVoice, syncVoiceDom, voiceStatus, voiceTarget } from './radio-voice.js?v=20261021-3';
-import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20261021-3';
-import { playerRoles } from '../core/roles.js?v=20261021-3';
-import { accordWarning, budgetPreview, designFromForm, planFromForm, policyFields, policyPreview, projectPreview, rangeText, requestFromForm } from './policy-mode.js?v=20261021-3';
-import { areaOf } from '../data/simulation/policy-rules.js?v=20261021-3';
-import { attachChartInteractions, hideChartTip } from './polls-mode.js?v=20261021-3';
-import { renderObservatory } from './observatory-view.js?v=20261021-3';
-import { glyph } from './visuals.js?v=20261021-3';
-import { identityVars, partyChip, partyIdentity, topbarParty } from './party-identity.js?v=20261021-3';
-import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20261021-3';
-import { renderFinancePage } from './finance-mode.js?v=20261021-3';
-import { PLAN_MAX, planConfirmLines, planKey, renderPlanTray } from './plan-view.js?v=20261021-3';
-import { STAFF_TASK_BY_ID } from '../data/simulation/staff-rules.js?v=20261021-3';
-import { renderContactsPanel } from './organization-mode.js?v=20261021-3';
-import { renderRealLaws } from './real-laws.js?v=20261021-3';
-import { realLawArea } from '../core/society-engine.js?v=20261021-3';
-import { canManageParliament } from '../core/parliament-engine.js?v=20261021-3';
-import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, TOUR_STEPS } from './menu.js?v=20261021-3';
-import { setForceColorOverrides } from './political-colors.js?v=20261021-3';
-import { renderTutorialCard, tutorialAction, tutorialContext, tutorialState, TUTORIAL_STEPS } from './tutorial.js?v=20261021-3';
-import { storage as localStorageApi } from '../core/storage.js?v=20261021-3';
-import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20261021-3';
-import { playSound } from './sound.js?v=20261021-3';
+import { onLanguageChange, setLanguage, watchTree } from '../core/i18n.js?v=20261021-6';
+import { pendingCelebration, pendingOutcome } from '../core/celebration.js?v=20261021-6';
+import { fullDate, formatDate } from '../core/time.js?v=20261021-6';
+import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20261021-6';
+import * as accountApi from '../data/repositories/account-sync.js?v=20261021-6';
+import { accountApiBase, commitRevision, currentAccount, deleteAccount, probeAccountService, deleteCloudSave, downloadSave, listCloudSaves, login, logout, register, slotForCareer } from '../data/repositories/account-sync.js?v=20261021-6';
+import { createSyncEngine } from '../data/repositories/sync-queue.js?v=20261021-6';
+import { setPartyLogoResolver } from './person-marks.js?v=20261021-6';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261021-6';
+import { isRealCollectionLoaded, loadRealCollections, optionalDocumentStatus, loadRealCollectionsSettled, pristineRecord, realDataFailures, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20261021-6';
+import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20261021-6';
+import { renderAdminPanel } from './admin-panel.js?v=20261021-6';
+import { sharedLogos } from '../data/repositories/admin-store.js?v=20261021-6';
+import { closeSharedSession, hasSharedSession, isAdminVerified, migrateDataLogos, openSharedSession, publicationState, rotateSharedCredential, publishLogoFile, publishSharedArchive, refreshSharedArchive, removeLogoFile, sha256Of, sharedApiUrl, sharedLogoSrc, sharedSyncStatus, verifySharedSession } from '../data/repositories/admin-sync.js?v=20261021-6';
+import { deleteLocalLogo, exportLogoConfiguration, fetchLogoFromUrl, getLocalLogo, importLogoConfiguration, listLocalLogos, markLogoPublication, probeImage, saveLocalLogo, validateLogoFile } from '../data/repositories/logo-store.js?v=20261021-6';
+import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20261021-6';
+import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20261021-6';
+import { PARTY_LINK_COLLECTIONS, forceKind, isCoalitionList, politicalForces } from '../data/repositories/party-links.js?v=20261021-6';
+import { renderLogoAdmin } from './logo-admin.js?v=20261021-6';
+import { chosenPlace, makeCareerDraft, pollScenarioOf, removePartyCriterion, renderCareerWizard, togglePartyOrientation, wizardLogoPreview } from './career-wizard.js?v=20261021-6';
+import { userPartyLogo } from './party-logo.js?v=20261021-6';
+import { CAREER_STEPS, validateWizardStep } from '../core/career-rules.js?v=20261021-6';
+import { renderElectionsHub } from './elections-hub.js?v=20261021-6';
+import { renderQuirinale } from './presidency-view.js?v=20261021-6';
+import { renderCareerPage } from './career-page.js?v=20261021-6';
+import { renderPartyPage } from './party-page.js?v=20261021-6';
+import { renderAgendaPage } from './agenda-page.js?v=20261021-6';
+import { HEMICYCLE_DEFAULTS, renderHemicycle } from './hemicycle-view.js?v=20261021-6';
+import { renderFeaturedMembers } from './members-view.js?v=20261021-6';
+import { drawLogoEditor, exportLogo, measureBackground, panFromDrag, renderLogoEditor } from './logo-editor-view.js?v=20261021-6';
+import { createEditorState } from '../core/logo-editor.js?v=20261021-6';
+import { renderParliamentPage } from './parliament-mode.js?v=20261021-6';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261021-6';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261021-6';
+import { chooseStart } from '../core/start-engine.js?v=20261021-6';
+import { renderHeadquarters, renderNewsroom } from './game-mode.js?v=20261021-6';
+import { newsMedia, newsPopupHtml, popupItem } from './news-view.js?v=20261021-6';
+import { articleScript, bulletinScript, onVoiceChange, speakLines, stopVoice, syncVoiceDom, voiceStatus, voiceTarget } from './radio-voice.js?v=20261021-6';
+import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20261021-6';
+import { playerRoles } from '../core/roles.js?v=20261021-6';
+import { accordWarning, budgetPreview, designFromForm, planFromForm, policyFields, policyPreview, projectPreview, rangeText, requestFromForm } from './policy-mode.js?v=20261021-6';
+import { areaOf } from '../data/simulation/policy-rules.js?v=20261021-6';
+import { attachChartInteractions, hideChartTip } from './polls-mode.js?v=20261021-6';
+import { renderObservatory } from './observatory-view.js?v=20261021-6';
+import { glyph } from './visuals.js?v=20261021-6';
+import { identityVars, partyChip, partyIdentity, topbarParty } from './party-identity.js?v=20261021-6';
+import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20261021-6';
+import { renderFinancePage } from './finance-mode.js?v=20261021-6';
+import { PLAN_MAX, planConfirmLines, planKey, renderPlanTray } from './plan-view.js?v=20261021-6';
+import { STAFF_TASK_BY_ID } from '../data/simulation/staff-rules.js?v=20261021-6';
+import { renderContactsPanel } from './organization-mode.js?v=20261021-6';
+import { renderRealLaws } from './real-laws.js?v=20261021-6';
+import { realLawArea } from '../core/society-engine.js?v=20261021-6';
+import { canManageParliament } from '../core/parliament-engine.js?v=20261021-6';
+import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, TOUR_STEPS } from './menu.js?v=20261021-6';
+import { setForceColorOverrides } from './political-colors.js?v=20261021-6';
+import { renderTutorialCard, tutorialAction, tutorialContext, tutorialState, TUTORIAL_STEPS } from './tutorial.js?v=20261021-6';
+import { storage as localStorageApi } from '../core/storage.js?v=20261021-6';
+import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20261021-6';
+import { playSound } from './sound.js?v=20261021-6';
 
 // The destinations of the game, by theme. On computers the sidebar lists the eight and opens the pages of the current one; on phones the
 // bar below keeps Home · Elezioni · Sondaggi · Istituzioni one tap away and “Altro” gathers everything else (the same pages, nothing twice).
@@ -184,6 +185,10 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   let logoUrlLoading = false;
   const logoUrls = new Map();
   const logoMetadata = new Map();
+  // The SHA-256 of the file kept in this browser for each logo (to tell the published one from a different copy) and what the page is doing about publishing.
+  const logoHashes = new Map();
+  let logoNotice = '';
+  let logoPublishing = false;
   const catalog = {
     partyQuery:'', partyPresence:'all', partyType:'all', partyLevel:'all', partyRegion:'all', partyStatus:'all', partyElection:'all', partySort:'name', partyPage:1,
     politicianQuery:'', politicianChamber:'all', politicianParty:'all', politicianGroup:'all', politicianPage:1,
@@ -418,6 +423,9 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     html.style.setProperty('--ui-scale', String(Number(settings.textSize) / 100));
   };
   applySettings();
+  // The interface is written in Italian; in English it is translated as it is drawn (core/i18n.js). A change of language redraws the same screen with the same data.
+  watchTree(root);
+  onLanguageChange(() => { watchTree(root); render(store.getState(), store.getLastSaved()); });
   const download = (text, name) => { const url = URL.createObjectURL(new Blob([text], { type: 'application/json' })); const link = document.createElement('a'); link.href = url; link.download = name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
   // The identity of the party the career is in (see party-identity.js). It is the party of the game, not the one still written in the career record: after leaving a party the
   // player is independent until joining or founding another.
@@ -434,9 +442,15 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     const record = meta.partyId ? findParty(meta.partyId) : null;
     return partyIdentity({ party: record ?? { id: meta.partyId ?? null, label: meta.party }, logo: record ? logoFor(record) : null });
   };
+  // The mark of the party a concluded career belonged to: by its id when the entry has one, else by its name among the known parties (an old entry keeps only the name); never an invented logo.
+  const hallIdentity = ({ party, partyId }) => {
+    const known = (partyId && findParty(partyId)) || realParties().find(item => [item.officialName, item.name, item.label].some(name => name && name === party)) || null;
+    return partyIdentity({ party: known ?? { id: partyId ?? null, label: party }, logo: known ? logoFor(known) : null });
+  };
   const menuContext = () => {
     const collections = realDatabase.manifest?.collections ?? {};
     return {
+      hallIdentity,
       hasCareer: store.hasCareer(), meta: store.currentMeta(), identity: store.hasCareer() ? careerIdentity(store.getState()) : null, identityOf: metaIdentity, hall: store.hallOfFame(), slots: store.listSlots().filter(slot => !careerBlocked(slot.careerId)).map(slot => menu.view === 'carica' ? { ...slot, info: store.slotInfo(slot.id) } : slot), versions: menu.view === 'carica' ? store.localVersions().filter(item => !careerBlocked(item.careerId)) : [], protectedCount: store.listSlots().filter(slot => careerBlocked(slot.careerId)).length + (menu.view === 'carica' ? store.localVersions().filter(item => careerBlocked(item.careerId)).length : 0), saving: store.saveStatus(), lastSaved: store.getLastSaved(), unsaved: store.hasUnsavedChanges(), settings, error: menu.error, account, gate: gateOf(),
       stats: [[realDatabase.manifest?.politiciansInOffice ?? collections.politicians ?? 0, 'parlamentari in carica'], [collections.laws ?? 0, 'atti della XIX legislatura'], [collections.twoPerThousand ?? 0, 'partiti reali nel 2×1000'], [collections.parliamentaryGroups ?? 0, 'gruppi parlamentari']]
     };
@@ -471,11 +485,15 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   const realParties = () => politicalForces(realDatabase);
   const findParty = id => [...store.getState().dataset.parties, ...realParties()].find(item => item.id === id) ?? null;
   const logoFor = party => {
-    const local = logoUrls.get(party?.id);
+    const id = party?.id;
+    const local = logoUrls.get(id);
+    // A logo the owner published is the same for every player and wins over a different copy kept in this browser (except for the owner's own copy that is not published yet, which the owner still
+    // sees, labelled «Solo in questo browser»). The parties a player creates are never in the shared catalog: their own logo is read from the browser, as before.
+    const sharedEntry = id ? sharedLogos()[id] : null;
+    const sharedSrc = sharedEntry ? sharedLogoSrc(sharedEntry) : null;
+    const waiting = local && isAdminVerified() && ['local', 'outdated'].includes(publicationState(id, logoMetadata.get(id), logoHashes.get(id)).status);
+    if (sharedSrc && !waiting) return sharedSrc;
     if (local) return local;
-    // Logos published by the owner are the same for every player.
-    const shared = party?.id ? sharedLogos()[party.id] : null;
-    if (shared?.url || shared?.dataUrl) return shared.url ?? shared.dataUrl;
     if (party?.source === DATA_SOURCES.USER && party.logo) return userPartyLogo(party);
     if (party?.logoAsset) return new URL(party.logoAsset, document.baseURI).href;
     return party?.logoVerified && party?.logoUrl ? party.logoUrl : null;
@@ -537,6 +555,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       const wanted = element.hasAttribute('data-fold-responsive') ? (phone ? (typeof saved === 'boolean' ? saved : element.dataset.foldStart === 'open') : true)
         : typeof saved === 'boolean' ? saved : element.dataset.foldDefault === 'desktop' ? !phone : null;
       if (typeof wanted === 'boolean' && element.open !== wanted) { if (typeof saved !== 'boolean' || element.hasAttribute('data-fold-responsive')) element.dataset.autoToggle = '1'; element.open = wanted; }
+      element.querySelector(':scope > summary')?.setAttribute('aria-expanded', String(element.open));
     }
   };
   // The choices in the campaign's selects (setup, theme, territory, rival, strategy) are saved with the game
@@ -565,6 +584,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     const target = pendingScroll ? globalThis.document?.getElementById?.(pendingScroll) : null;
     if (!target) return;
     pendingScroll = null;
+    const wrapper = target.closest?.('details.hqc-fold-band');
+    if (wrapper && !wrapper.open) wrapper.open = true;
     target.scrollIntoView?.({ block: 'start' });
   };
   // The mark of a real win (an election won, a congress won): shown once, discreetly, at the bottom of the page. The motion plays only the first time that mark is drawn (a redraw shows it still),
@@ -660,11 +681,11 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
           ${wizard ? '' : saveAlert()}${wizard ? '' : dataNotice()}<div class="page-wrap">${wizard ? '' : (state.ui.activePage === 'panoramica' ? renderHeadquarters(state, { identity, partyName: identity.kind === 'partito' ? identity.name : null, partyLogo: identity.logo, newsFilter: views.newsFilter, newsCategory: views.newsCategory, newsOutlet: views.newsOutlet, expanded: views.homeExpand ?? {} }) : subpage(state, current, player, party, eventList, catalog, { logoFor, homePlace: () => store.homePlace(), nationalOverview: () => store.nationalOverview(), presidencyView: () => store.presidencyView(), electoralGeography: () => store.electoralGeography?.() ?? null, campaignPicks: campaignChoices(state), parties:realParties(), selectable:selectableParties(), findParty, realLeader, admin, adminContext, territory, realLaws, archive, views, tabFor, settings, lastSaved, account, allianceOdds: id => { try { return store.allianceOdds(id); } catch { return null; } }, allianceWindow: () => store.allianceWindow(), raceOptions: id => { try { return store.raceCandidates(id, racePeople()); } catch { return null; } } }))}</div>
         </main>
         ${wizard ? renderCareerWizard(state, wizard, realParties(), logoFor, realDatabase.parliamentaryGroups ?? [], realDatabase.partyLeaderships ?? [], realDatabase.politicalFigures ?? [], realDatabase.politicians ?? [], wizardTerritoryView(), wizardDataStatus(), store.pollScenarioView(pollScenarioOf(wizard))) : ''}
-        ${logoAdminOpen ? renderLogoAdmin({shared:sharedLogos(),selectedId:selectedLogoPartyId,query:catalog.logoQuery,page:catalog.logoPage,metadata:[...logoMetadata.values()],entities:[...realParties(),...state.dataset.parties],logoFor,error:logoAdminError,pendingPreview:pendingLogoUrl ?? pendingRemoteUrl,pendingRemote:Boolean(pendingRemoteUrl && !pendingLogo),urlDraft:logoUrlDraft,urlLoading:logoUrlLoading,editorHtml:logoEditor?.context === 'admin' ? renderLogoEditor(logoEditor, { context: 'admin' }) : ''}) : ''}
+        ${logoAdminOpen ? renderLogoAdmin({shared:sharedLogos(),selectedId:selectedLogoPartyId,query:catalog.logoQuery,page:catalog.logoPage,metadata:[...logoMetadata.values()],entities:[...realParties(),...state.dataset.parties],logoFor,error:logoAdminError,notice:logoNotice,busy:logoPublishing,canPublish:isAdminVerified(),pendingCount:logoPendingIds().length,states:logoStates(),pendingPreview:pendingLogoUrl ?? pendingRemoteUrl,pendingRemote:Boolean(pendingRemoteUrl && !pendingLogo),urlDraft:logoUrlDraft,urlLoading:logoUrlLoading,editorHtml:logoEditor?.context === 'admin' ? renderLogoEditor(logoEditor, { context: 'admin' }) : ''}) : ''}
         ${catalog.selectedPoliticianId ? renderPoliticianProfile(catalog.selectedPoliticianId,{loading:catalog.profileLoading,logoFor}) : ''}
         ${catalog.selectedPartyId ? renderPartyProfile(catalog.selectedPartyId,logoFor) : ''}
         ${reportOpen ? renderWeeklyReport(state) : ''}
-        ${newsPopup && !reportOpen ? newsPopupHtml(newsPopup) : ''}
+        ${newsPopup && !reportOpen ? newsPopupHtml(newsPopup, { optOut: settings.newsPopup === 'off' }) : ''}
         ${wizard || !store.hasCareer() || !state.game ? '' : renderPlanTray(state, plan, planPreviewOf(state))}
         ${renderConfirmDialog(pendingConfirm)}
         ${outcomeCard(state)}
@@ -779,14 +800,38 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       if (ticket === catalog.loadTicket) { catalog.loadingPage = null; catalog.errors[page] = error.message || 'Caricamento non riuscito.'; render(store.getState(),store.getLastSaved()); }
     }
   };
+  // What the server has confirmed for each logo this page knows about: published for everyone, or only in this browser (a record kept here that the catalog does not have, or has with another file).
+  const logoStates = () => {
+    const out = {};
+    for (const id of new Set([...logoMetadata.keys(), ...Object.keys(sharedLogos())])) out[id] = publicationState(id, logoMetadata.get(id), logoHashes.get(id));
+    return out;
+  };
+  const logoPendingIds = () => Object.entries(logoStates()).filter(([, state]) => state.status === 'local' || state.status === 'outdated').map(([id]) => id);
+  // Publishes the copy kept in this browser: a file goes to the catalog as a file, a plain https address as an address. The state is "published" only after the server confirms.
+  const publishLocalLogo = async partyId => {
+    const record = await getLocalLogo(partyId);
+    if (!record) throw new Error('Non c’è un logo salvato in questo browser per questo partito.');
+    const alt = record.alt || '';
+    if (record.blob) {
+      const result = await publishLogoFile(partyId, record.blob, { alt, sourceUrl: record.source || record.sourceUrl || null, fileName: record.fileName });
+      await markLogoPublication(partyId, { status: 'published', sha256: result.logo.sha256 });
+      return result.unchanged ? 'già pubblicato (invariato)' : 'pubblicato';
+    }
+    if (record.url && /^https:\/\//i.test(record.url)) {
+      await publishSharedArchive({ [partyId]: { url: record.url, alt, sourceUrl: record.source || record.sourceUrl || record.url } });
+      await markLogoPublication(partyId, { status: 'published', sha256: null });
+      return 'pubblicato';
+    }
+    throw new Error('Un indirizzo che non comincia con https:// non si può pubblicare: scegli un file o un indirizzo https.');
+  };
   const refreshLocalLogos = async () => {
     const metadata = await listLocalLogos().catch(() => []);
     for (const [id,url] of logoUrls) if (url.startsWith('blob:')) URL.revokeObjectURL(url);
-    logoUrls.clear(); logoMetadata.clear();
+    logoUrls.clear(); logoMetadata.clear(); logoHashes.clear();
     for (const item of metadata) {
       logoMetadata.set(item.partyId,item);
       const record = await getLocalLogo(item.partyId).catch(() => null);
-      if (record?.blob) logoUrls.set(item.partyId,URL.createObjectURL(record.blob));
+      if (record?.blob) { logoUrls.set(item.partyId,URL.createObjectURL(record.blob)); logoHashes.set(item.partyId, await sha256Of(record.blob).catch(() => null)); }
       else if (record?.url) logoUrls.set(item.partyId,record.url);
     }
     render(store.getState(),store.getLastSaved());
@@ -963,7 +1008,9 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       root.querySelector?.(`#${guideJump}`)?.scrollIntoView?.({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
       return;
     }
-    const menuTarget =event.target.closest('[data-menu],[data-menu-close],[data-menu-action],[data-slot-load],[data-slot-delete],[data-slot-export],[data-version-restore],[data-version-export],[data-setting-key],[data-report-close],[data-account-action],[data-cloud-load],[data-cloud-delete],[data-conflict],[data-history-open],[data-history-restore]');
+    let menuTarget =event.target.closest('[data-menu],[data-menu-close],[data-menu-action],[data-slot-load],[data-slot-delete],[data-slot-export],[data-version-restore],[data-version-export],[data-setting-key],[data-report-close],[data-account-action],[data-cloud-load],[data-cloud-delete],[data-conflict],[data-history-open],[data-history-restore]');
+    // A click inside a dialog on a control that is not one of the menu's (the Hall's «Nuova carriera con questa eredità» and «Elimina», for one) must reach the handlers below: only the backdrop itself is the backdrop's.
+    if (menuTarget && menuTarget.matches('.report-backdrop') && event.target !== menuTarget && event.target.closest('.report-modal') && !event.target.closest('[data-menu],[data-menu-action],[data-slot-load],[data-slot-delete],[data-slot-export],[data-version-restore],[data-version-export],[data-setting-key],[data-account-action],[data-cloud-load],[data-cloud-delete],[data-conflict],[data-history-open],[data-history-restore],[data-report-close],[data-menu-close]:not(.menu-popup-backdrop)')) menuTarget = null;
     if (menuTarget) {
       const data = menuTarget.dataset;
       if (menuTarget.matches('.report-backdrop') && event.target.closest('.report-modal')) return;
@@ -1007,6 +1054,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
           return;
         }
         else if (data.slotDelete) { const slot = store.listSlots().find(item => item.id === data.slotDelete); assertAvailable(slot?.careerId); confirmThen({ title: 'Eliminare questo salvataggio?', body: `«${slot?.name ?? 'Salvataggio'}» verrà eliminato da questo browser. L’operazione non si può annullare.`, confirmLabel: 'Elimina salvataggio', tone: 'danger' }, () => store.deleteSlot(data.slotDelete)); return; }
+        else if (data.settingKey === 'language') { await setLanguage(data.settingValue); settings = loadSettings(settingsScope()); applySettings(); playSound('click'); }
         else if (data.settingKey) { settings = saveSetting(data.settingKey, data.settingValue, settingsScope()); if (data.settingKey === 'newsPopup') { if (data.settingValue === 'off') newsPopup = null; else newsPopupHoldWeek = store.getState().game?.week?.index ?? null; } applySettings(); playSound('click'); }
         else if ('reportClose' in data) reportOpen = false;
         else if (data.accountAction === 'logout') { const outcome = await logout(); account.user = null; account.saves = []; account.conflict = null; account.conflicts = []; account.info = null; account.history = null; account.message = outcome.server === false ? 'Sei uscito da questo dispositivo. La sessione sul server verrà chiusa appena possibile. Le carriere restano nel browser e online.' : 'Sei uscito: le carriere restano nel browser e online. Questa copia non verrà più sincronizzata con l’account finché non accedi di nuovo.'; }
@@ -1539,6 +1587,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       const target = document.getElementById(scrollTarget);
       // A folded block of the Home opens when an action points to it (and stays open, as the player left it).
       if (target?.matches?.('details') && !target.open) target.open = true;
+      const wrapper = target?.closest?.('details.hqc-fold-band');
+      if (wrapper && !wrapper.open) wrapper.open = true;
       target?.scrollIntoView({ behavior: settings.motion === 'full' ? 'smooth' : 'auto', block: 'start' });
       return;
     }
@@ -1761,11 +1811,11 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       return;
     }
     if (event.target.closest('[data-action="logo-admin-close"]') || event.target.matches('[data-logo-admin-backdrop]')) {
-      logoAdminOpen = false; pendingLogo = null; pendingLogoUrl && URL.revokeObjectURL(pendingLogoUrl); pendingLogoUrl = null; pendingRemoteUrl = null; logoUrlDraft = ''; logoAdminError = ''; if (logoEditor?.context === 'admin') closeLogoEditor(); render(store.getState(),store.getLastSaved()); return;
+      logoAdminOpen = false; logoNotice = ''; pendingLogo = null; pendingLogoUrl && URL.revokeObjectURL(pendingLogoUrl); pendingLogoUrl = null; pendingRemoteUrl = null; logoUrlDraft = ''; logoAdminError = ''; if (logoEditor?.context === 'admin') closeLogoEditor(); render(store.getState(),store.getLastSaved()); return;
     }
     if (event.target.matches('[data-logo-admin-item]')) return;
     const logoParty = event.target.closest('[data-logo-party-id]')?.dataset.logoPartyId;
-    if (logoParty) { selectedLogoPartyId = logoParty; pendingLogo = null; pendingLogoUrl && URL.revokeObjectURL(pendingLogoUrl); pendingLogoUrl = null; pendingRemoteUrl = null; logoUrlDraft = ''; logoAdminError = ''; if (logoEditor?.context === 'admin') closeLogoEditor(); render(store.getState(),store.getLastSaved()); return; }
+    if (logoParty) { selectedLogoPartyId = logoParty; logoNotice = ''; pendingLogo = null; pendingLogoUrl && URL.revokeObjectURL(pendingLogoUrl); pendingLogoUrl = null; pendingRemoteUrl = null; logoUrlDraft = ''; logoAdminError = ''; if (logoEditor?.context === 'admin') closeLogoEditor(); render(store.getState(),store.getLastSaved()); return; }
     // The phone sheet opens and closes at once, without redrawing the page.
     const sheet = root.querySelector('[data-mobile-sheet]');
     if (event.target.closest('[data-mobile-more]')) { const open = sheet.hidden; sheet.hidden = !open; event.target.closest('[data-mobile-more]').setAttribute('aria-expanded', String(open)); if (open) sheet.querySelector('.sheet-item.active, .sheet-item')?.focus?.(); return; }
@@ -1844,22 +1894,54 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
         const edited = pendingLogo && logoEditor?.context === 'admin' ? await exportLogo(logoEditor, logoEditorImage, pendingLogo) : null;
         if (edited) { const name = pendingLogo.name || 'logo'; pendingLogo = edited.blob; pendingLogo.name = edited.blob.type === 'image/png' && !/\.png$/i.test(name) ? `${name.replace(/\.[a-z0-9]+$/i, '')}.png` : name; }
         await saveLocalLogo(selectedLogoPartyId, pendingLogo ? {blob:pendingLogo,fileName:pendingLogo.name || 'logo',sourceUrl:pendingRemoteUrl,source,verified,alt,editor:edited?.editor ?? null} : {url:pendingRemoteUrl,sourceUrl:pendingRemoteUrl,source,verified,alt});
-        // The owner connected to the shared archive publishes the logo for everyone: the address, or the image itself if small.
+        // The owner connected to the shared archive publishes the logo for everyone; the page says "published" only when the server confirms. If the upload fails the copy stays here, labelled as such.
+        logoAdminError = ''; logoNotice = '';
+        const savedFor = selectedLogoPartyId;
         if (isAdminVerified()) {
-          const shared = pendingRemoteUrl && /^https:/i.test(pendingRemoteUrl) ? { url: pendingRemoteUrl, alt, sourceUrl: source || pendingRemoteUrl } : pendingLogo && pendingLogo.size <= 300000 ? { dataUrl: await blobToDataUrl(pendingLogo), alt, sourceUrl: source || null } : null;
-          if (shared) await publishSharedArchive({ [selectedLogoPartyId]: shared }).then(() => { logoAdminError = ''; }).catch(error => { logoAdminError = `Logo salvato in questo browser, non pubblicato: ${error.message}`; });
-          else logoAdminError = 'Logo salvato in questo browser: per pubblicarlo per tutti usa un indirizzo https o un file sotto i 300 KB.';
-        }
+          logoPublishing = true;
+          try { const how = await publishLocalLogo(savedFor); logoNotice = `Logo ${how}: ora lo vedono tutti i giocatori (confermato dal server).`; }
+          catch (error) { await markLogoPublication(savedFor, { status: 'failed', error: error.message }).catch(() => {}); logoAdminError = `Logo salvato solo in questo browser, NON pubblicato: ${error.message} Puoi riprovare con «Pubblica per tutti i giocatori».`; }
+          logoPublishing = false;
+        } else logoNotice = 'Logo salvato solo in questo browser. Per pubblicarlo per tutti i giocatori serve la sessione amministrativa (area Amministrazione).';
         pendingLogo=null; pendingLogoUrl && URL.revokeObjectURL(pendingLogoUrl); pendingLogoUrl=null; pendingRemoteUrl=null; logoUrlDraft=''; closeLogoEditor(); await refreshLocalLogos();
       } catch (error) { logoAdminError=error.message || 'Salvataggio non riuscito.'; render(store.getState(),store.getLastSaved()); }
     }
     else if (action === 'logo-delete') {
       try {
-        await deleteLocalLogo(selectedLogoPartyId); logoAdminError='';
-        if (isAdminVerified() && sharedLogos()[selectedLogoPartyId]) await publishSharedArchive({ [selectedLogoPartyId]: null });
+        logoNotice = ''; logoAdminError = '';
+        const id = selectedLogoPartyId;
+        const entry = sharedLogos()[id];
+        // The owner removes the published logo from the catalog too (and the server confirms); anyone else only deletes the copy kept in this browser.
+        if (isAdminVerified() && entry) {
+          try { if (entry.kind === 'asset') await removeLogoFile(id); else await publishSharedArchive({ [id]: null }); logoNotice = 'Logo rimosso dal catalogo condiviso (confermato dal server).'; }
+          catch (error) { logoAdminError = `Il logo non è stato rimosso dal catalogo condiviso: ${error.message}`; render(store.getState(), store.getLastSaved()); return; }
+        }
+        await deleteLocalLogo(id);
         await refreshLocalLogos();
       }
       catch (error) { logoAdminError=error.message || 'Eliminazione non riuscita.'; render(store.getState(),store.getLastSaved()); }
+    }
+    else if (action === 'logo-publish') {
+      logoNotice = ''; logoAdminError = ''; logoPublishing = true; render(store.getState(), store.getLastSaved());
+      try { const how = await publishLocalLogo(selectedLogoPartyId); logoNotice = `Logo ${how}: ora lo vedono tutti i giocatori (confermato dal server).`; }
+      catch (error) { await markLogoPublication(selectedLogoPartyId, { status: 'failed', error: error.message }).catch(() => {}); logoAdminError = `Logo NON pubblicato: ${error.message} Resta in questo browser; puoi riprovare.`; }
+      logoPublishing = false; await refreshLocalLogos();
+    }
+    else if (action === 'logo-reconcile') {
+      // Publishes every logo kept in this browser that the catalog does not have (or has as another file): the same file is never published twice, a correct published logo is never touched.
+      logoNotice = ''; logoAdminError = ''; logoPublishing = true; render(store.getState(), store.getLastSaved());
+      const done = [], same = [], failed = [];
+      try {
+        if (Object.values(sharedLogos()).some(entry => entry?.kind === 'data')) await migrateDataLogos().catch(() => {});
+        for (const id of logoPendingIds()) {
+          try { const how = await publishLocalLogo(id); (how.startsWith('già') ? same : done).push(id); }
+          catch (error) { failed.push(`${findParty(id)?.officialName ?? findParty(id)?.name ?? id}: ${error.message}`); await markLogoPublication(id, { status: 'failed', error: error.message }).catch(() => {}); }
+        }
+      } catch (error) { failed.push(error.message); }
+      logoPublishing = false;
+      logoNotice = `Pubblicazione: ${done.length} pubblicati, ${same.length} già presenti (invariati), ${failed.length} non riusciti.`;
+      if (failed.length) logoAdminError = `Non pubblicati (restano solo in questo browser): ${failed.slice(0, 5).join(' · ')}`;
+      await refreshLocalLogos();
     }
   });
   root.addEventListener('submit', async event => {
@@ -1937,6 +2019,13 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
         }
       } catch (error) { account.error = error.message; if (['offline', 'timeout'].includes(error.code) || error.status >= 500) setAccountStatus('unreachable'); else if (error.status) setAccountStatus('available'); }
       account.busy = false;
+      render(store.getState(), store.getLastSaved()); return;
+    }
+    if (form.matches('[data-admin-credential-form]')) {
+      event.preventDefault();
+      const data = Object.fromEntries(new FormData(form));
+      try { await rotateSharedCredential({ currentPin: data.currentPin, newPin: data.newPin }); form.reset(); admin.message = 'Credenziale sostituita: le altre sessioni amministrative sono state chiuse.'; }
+      catch (error) { admin.message = error.message; }
       render(store.getState(), store.getLastSaved()); return;
     }
     if (form.matches('[data-admin-shared-form]')) {
@@ -2041,6 +2130,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   root.addEventListener('toggle', event => {
     const element = event.target;
     if (!element?.matches?.('details[data-remember]')) return;
+    element.querySelector(':scope > summary')?.setAttribute('aria-expanded', String(element.open));
     if (element.dataset.autoToggle) { delete element.dataset.autoToggle; return; }
     // In “Altro” one group is open at a time; while searching the groups open on their own and nothing is remembered.
     if (element.matches('[data-sheet-group]')) {
@@ -2144,6 +2234,16 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     // The dialog's option survives a redraw while the confirmation is open.
     if (pendingConfirm && event.target.matches?.('[data-confirm-option]')) { pendingConfirm.optionChecked = Boolean(event.target.checked); return; }
     const field=event.target;
+    // The check box of the weekly pop-up is the «Popup notizie settimanali» setting itself (saved for the signed-in account): it switches the automatic pop-ups off or on at once; the one on screen
+    // stays readable and closes as usual; the news keep being made and kept.
+    if (field.matches?.('[data-news-popup-optout]')) {
+      const off = Boolean(field.checked);
+      settings = saveSetting('newsPopup', off ? 'off' : 'on', settingsScope());
+      if (!off) newsPopupHoldWeek = store.getState().game?.week?.index ?? null;
+      render(store.getState(), store.getLastSaved());
+      root.querySelector?.('[data-news-popup-optout]')?.focus?.({ preventScroll: true });
+      return;
+    }
     if (field.matches?.('[data-government-program-form] input[name="priorities"]')) { syncProgramForm(field.form); return; }
     // The campaign's selects: the choice is kept for the next redraws (another electoral model restarts the roles).
     const campaignPick = field.matches?.('[data-campaign-setup]') ? `setup.${field.dataset.campaignSetup}` : CAMPAIGN_PICKS.find(([selector]) => field.matches?.(selector))?.[1];

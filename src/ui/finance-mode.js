@@ -1,13 +1,13 @@
 // Money of the career and of the party: balance, flows, budget, reports and sustainability.
-import { BUDGET_LINES, FINANCE_CATEGORIES, financeOutlook, hasAsset, INVESTMENTS, operationProblem, operationRange, partyRequestRules, RESERVE, TREASURY_OPERATIONS } from '../core/finance-engine.js?v=20261021-3';
-import { TRANSFERS } from '../data/simulation/finance-rules.js?v=20261021-3';
-import { costProblem } from '../core/career-engine.js?v=20261021-3';
-import { costText, planAddButton } from './plan-view.js?v=20261021-3';
-import { isPartyLeader, PARTY_PRIORITIES, TREASURY_LABELS, treasuryOutlook } from '../core/organization-engine.js?v=20261021-3';
-import { artTile, glyph } from './visuals.js?v=20261021-3';
-import { illustration } from './illustrations.js?v=20261021-3';
-import { foldPanel } from './sections-kit.js?v=20261021-3';
-import { breakdown, esc, euro, EXPENSE_COLOR, flowChart, INCOME_COLOR, lineChart, num, SERIES, signed, sparkline, stateBadge } from './charts.js?v=20261021-3';
+import { BUDGET_LINES, FINANCE_CATEGORIES, financeOutlook, hasAsset, INVESTMENTS, operationProblem, operationRange, partyRequestRules, RESERVE, TREASURY_OPERATIONS } from '../core/finance-engine.js?v=20261021-6';
+import { TRANSFERS } from '../data/simulation/finance-rules.js?v=20261021-6';
+import { costProblem } from '../core/career-engine.js?v=20261021-6';
+import { costText, planAddButton } from './plan-view.js?v=20261021-6';
+import { isPartyLeader, PARTY_PRIORITIES, TREASURY_LABELS, treasuryOutlook } from '../core/organization-engine.js?v=20261021-6';
+import { artTile, glyph } from './visuals.js?v=20261021-6';
+import { illustration } from './illustrations.js?v=20261021-6';
+import { foldPanel } from './sections-kit.js?v=20261021-6';
+import { breakdown, esc, euro, EXPENSE_COLOR, flowChart, INCOME_COLOR, lineChart, num, SERIES, signed, sparkline, stateBadge } from './charts.js?v=20261021-6';
 
 const STATUS_KIND = { solida: 'solida', calo: 'calo', rischio: 'rischio', crisi: 'crisi' };
 
@@ -146,8 +146,6 @@ export function renderFinancePage(state) {
       ${illustration('tesoro', 'hero-art')}<div>${artTile('wallet', 'var(--party-accent)', 'lg')}<div><span class="section-kicker">LE TUE FINANZE POLITICHE · SIMULATE</span><h2>${euro(game.resources.funds)} in cassa</h2><p class="section-subtitle">Comitato, staff, comunicazione e campagne si pagano da qui. Le spese ricorrenti lavorano per te ogni settimana; il debito costa interessi.</p></div>${stateBadge(STATUS_KIND[outlook.status], outlook.statusLabel)}</div>
       <div class="finance-kpis"><div><small>Entrate medie</small><strong>${euro(outlook.income)}</strong><span>a settimana</span></div><div><small>Uscite medie</small><strong>${euro(outlook.expense)}</strong><span>a settimana</span></div><div><small>Risultato medio</small><strong class="${outlook.net >= 0 ? 'in' : 'out'}">${signed(outlook.net, 0)} €</strong><span>ultime 6 settimane</span></div><div><small>Spese fisse</small><strong>${euro(outlook.recurring)}</strong><span>budget settimanale</span></div><div><small>Autonomia</small><strong>${outlook.runway === null ? '—' : `${outlook.runway} sett.`}</strong><span>al ritmo attuale</span></div><div><small>Debito</small><strong class="${outlook.debt ? 'out' : ''}">${euro(outlook.debt)}</strong><span>${outlook.debt ? 'interessi 1% a settimana' : 'nessun debito'}</span></div></div>
     </section>
-    ${panel('FONDI E PARTITO', 'Trasferimenti tra te e la tesoreria del partito', transfersPanel(game))}
-    ${panel('RACCOLTE FONDI ED EVENTI', 'Operazioni con un costo oggi e un esito domani', operationsPanel(game, state))}
     ${foldPanel({ id: 'fin-andamento', tone: 'azzurro', icon: 'chart', title: 'Bilancio e andamento', summary: `${esc(euro(game.resources.funds))} in cassa · ${esc(signed(outlook.net, 0))} €/sett.`, body: `<div class="society-grid">
       ${panel('FLUSSI', 'Entrate e uscite, settimana per settimana', flowChart(weeks) + `<details class="poll-table"><summary>Tabella dei dati</summary><div class="poll-table-scroll"><table><thead><tr><th>Settimana</th><th>Entrate</th><th>Uscite</th><th>Saldo</th></tr></thead><tbody>${history.map(item => `<tr><th>S${item.week}</th><td>${euro(item.income)}</td><td>${euro(item.expense)}</td><td>${euro(item.balance)}</td></tr>`).join('')}</tbody></table></div></details>`)}
       ${panel('SALDO', 'Cassa nel tempo', lineChart({ series: [{ label: 'Saldo in cassa', short: 'Saldo', color: SERIES[0], values: history.map(item => item.balance), emphasis: true }, ...(history.some(item => item.debt) ? [{ label: 'Debito', color: SERIES[7], values: history.map(item => item.debt) }] : [])], labels: history.map(item => `S${item.week}`), tips: history.map(item => `Settimana ${item.week}`), unit: ' €', digits: 0, min: 0, ariaLabel: 'Saldo in cassa per settimana' }))}
@@ -158,7 +156,9 @@ export function renderFinancePage(state) {
         ${panel(`ANNO ${esc(finance.year ?? '')}`, 'Da dove arrivano e dove vanno', `<div class="split-breakdown"><div><small>ENTRATE</small>${year.income.length ? breakdown(year.income, { format: euro }) : '<p class="quiet-copy">—</p>'}</div><div><small>USCITE</small>${year.expense.length ? breakdown(year.expense, { format: euro }) : '<p class="quiet-copy">—</p>'}</div></div>`)}
       </div>` })}
     ${foldPanel({ id: 'fin-investimenti', tone: 'verde', icon: 'briefcase', title: 'Investimenti e patrimonio', summary: 'Cosa possiedi e dove investire', body: panel('INVESTIMENTI E PATRIMONIO', 'Cosa possiedi e dove investire', investmentsPanel(game, outlook)) })}
+    ${foldPanel({ id: 'fin-raccolte', tone: 'azzurro', icon: 'ballot', title: 'Raccolte fondi ed eventi', summary: 'Operazioni con un costo oggi e un esito domani', body: panel('RACCOLTE FONDI ED EVENTI', 'Operazioni con un costo oggi e un esito domani', operationsPanel(game, state)) })}
     ${foldPanel({ id: 'fin-registri', tone: 'viola', icon: 'book', title: 'Registri e storico', summary: `${finance.ledger.length ? `${Math.min(18, finance.ledger.length)} movimenti recenti` : 'nessun movimento'}${finance.annual.length ? ` · ${finance.annual.length} chiusure` : ''}`, body: `${panel('MOVIMENTI', 'Registro contabile', `<div class="ledger">${ledger || '<p class="quiet-copy">Nessun movimento.</p>'}</div>`)}${panel('BILANCI ANNUALI', 'Chiusure d’esercizio', annual)}` })}
+    ${game.party?.org ? foldPanel({ id: 'fin-fondi-partito', tone: 'oro', icon: 'wallet', title: 'Fondi e partito', summary: 'Trasferimenti tra te e la tesoreria', body: panel('FONDI E PARTITO', 'Trasferimenti tra te e la tesoreria del partito', transfersPanel(game)) }) : panel('FONDI E PARTITO', 'Trasferimenti tra te e la tesoreria del partito', transfersPanel(game))}
     ${game.party?.org ? foldPanel({ id: 'fin-tesoreria', tone: 'corallo', icon: 'flag', title: 'Tesoreria del partito', summary: `${esc(euro(game.party.org.treasury.balance))} nelle casse`, body: renderTreasuryPanel(state) }) : ''}
     <p class="poll-footnote">Importi di gioco (source: simulation): non corrispondono a indennità, rimborsi o bilanci reali di persone o partiti.</p>
   </div>`;

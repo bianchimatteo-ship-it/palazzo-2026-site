@@ -1,32 +1,32 @@
-import { endedHeadline } from './hall-view.js?v=20261021-3';
-import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261021-3';
-import { playerRoles } from '../core/roles.js?v=20261021-3';
-import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20261021-3';
-import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261021-3';
-import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261021-3';
-import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20261021-3';
-import { careerLevelLabel } from '../data/regions.js?v=20261021-3';
-import { advanceDays, formatDate } from '../core/time.js?v=20261021-3';
-import { renderBarometerPanel } from './polls-mode.js?v=20261021-3';
-import { candidacyAccess } from './campaign-mode.js?v=20261021-3';
-import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20261021-3';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261021-3';
-import { societyMood } from '../core/society-engine.js?v=20261021-3';
-import { financeOutlook } from '../core/finance-engine.js?v=20261021-3';
-import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20261021-3';
-import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20261021-3';
-import { activeInstitutions, institutionLabel } from './local-mode.js?v=20261021-3';
-import { renderFinanceCard } from './finance-mode.js?v=20261021-3';
-import { renderStaffBand } from './staff-view.js?v=20261021-3';
-import { planAddButton } from './plan-view.js?v=20261021-3';
-import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20261021-3';
-import { stateBadge, statusChip } from './charts.js?v=20261021-3';
-import { articleHtml, newsMedia, renderNewsroomTabs } from './news-view.js?v=20261021-3';
-import { relevantArticles } from '../core/news-engine.js?v=20261021-3';
-import { identityMark, kindChip } from './party-identity.js?v=20261021-3';
-import { illustration } from './illustrations.js?v=20261021-3';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261021-3';
-import { regionPriorities } from '../core/society-engine.js?v=20261021-3';
+import { endedHeadline } from './hall-view.js?v=20261021-6';
+import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261021-6';
+import { playerRoles } from '../core/roles.js?v=20261021-6';
+import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20261021-6';
+import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261021-6';
+import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261021-6';
+import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20261021-6';
+import { careerLevelLabel } from '../data/regions.js?v=20261021-6';
+import { advanceDays, formatDate } from '../core/time.js?v=20261021-6';
+import { renderBarometerPanel } from './polls-mode.js?v=20261021-6';
+import { candidacyAccess } from './campaign-mode.js?v=20261021-6';
+import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20261021-6';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261021-6';
+import { societyMood } from '../core/society-engine.js?v=20261021-6';
+import { financeOutlook } from '../core/finance-engine.js?v=20261021-6';
+import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20261021-6';
+import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20261021-6';
+import { activeInstitutions, institutionLabel } from './local-mode.js?v=20261021-6';
+import { renderFinanceCard } from './finance-mode.js?v=20261021-6';
+import { renderStaffBand } from './staff-view.js?v=20261021-6';
+import { planAddButton } from './plan-view.js?v=20261021-6';
+import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20261021-6';
+import { stateBadge, statusChip } from './charts.js?v=20261021-6';
+import { articleHtml, newsMedia, renderNewsroomTabs } from './news-view.js?v=20261021-6';
+import { relevantArticles } from '../core/news-engine.js?v=20261021-6';
+import { identityMark, kindChip } from './party-identity.js?v=20261021-6';
+import { illustration } from './illustrations.js?v=20261021-6';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261021-6';
+import { regionPriorities } from '../core/society-engine.js?v=20261021-6';
 
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -73,13 +73,12 @@ function identity(state, gc, options) {
   const partyLabel = game.party ? `${options.partyName || game.party.label || 'Partito'} · ${game.party.rankTitle}${game.party.org ? ` · ${organOf(game.party).label}` : ''}` : 'Indipendente';
   const seat = state.parliament?.player;
   const group = seat ? state.parliament.chambers?.[seat.chamber]?.groups.find(item => item.groupId === seat.groupId) : null;
-  const chips = [
-    kindChip(game.party ? 'partito' : 'indipendente', partyLabel),
-    group ? kindChip('gruppo', group.officialName) : '',
-    seat ? kindChip('istituzione', CHAMBERS[seat.chamber].label) : ''
-  ].filter(Boolean).join('');
+  // Three groups, in the order of what matters: the party (or «Indipendente»), then the career (path, difficulty, status), then the group and the institution. On a computer they run on as
+  // one row of chips, as they always did; on a phone each group has its own row.
+  const partyChip = kindChip(game.party ? 'partito' : 'indipendente', partyLabel);
+  const linkChips = [group ? kindChip('gruppo', group.officialName) : '', seat ? kindChip('istituzione', CHAMBERS[seat.chamber].label) : ''].filter(Boolean).join('');
   const logo = options.partyLogo ? `<img class="hero-party-logo" src="${esc(options.partyLogo)}" alt="${esc(`Logo di ${options.partyName ?? 'partito'}`)}" />` : (mine?.kind === 'partito' ? identityMark(mine, 'lg') : '');
-  return `<div class="hq-identity"><span class="section-kicker">IL TUO POLITICO · SETTIMANA ${game.week.index}</span><div class="hq-identity-row"><div class="hero-avatar">${player ? esc(player.firstName[0] + player.lastName[0]) : 'P'}</div>${logo}<div><h1>${player ? esc(player.displayName) : 'Nessun politico'}</h1><p>${office ? `<span class="hq-office">${glyph(officeIcon(office), 15)}</span>${esc(office.endDate ? `${office.title} · concluso` : office.title)}` : 'Nessun incarico'} <span>·</span> ${esc(territory)}</p><div class="hq-chips">${chips}<span>${esc(careerLevelLabel(state.career.currentLevel ?? state.career.initialLevel) ?? 'Percorso')}</span><span title="Difficoltà scelta all’inizio">Difficoltà: ${esc(({ facile: 'Facile', normale: 'Normale', difficile: 'Difficile' })[game.difficulty] ?? 'Normale')}</span><span class="hq-status ${status[1]}">${status[0]}</span></div>${institutionLinks(state)}</div></div></div>`;
+  return `<div class="hq-identity"><span class="section-kicker">IL TUO POLITICO · SETTIMANA ${game.week.index}</span><div class="hq-identity-row"><div class="hero-avatar">${player ? esc(player.firstName[0] + player.lastName[0]) : 'P'}</div>${logo}<div><h1>${player ? esc(player.displayName) : 'Nessun politico'}</h1><p class="hq-role">${office ? `<span class="hq-office">${glyph(officeIcon(office), 15)}</span>${esc(office.endDate ? `${office.title} · concluso` : office.title)}` : 'Nessun incarico'} <span>·</span> ${esc(territory)}</p><div class="hq-chips"><div class="hq-chip-group hq-chip-party">${partyChip}</div><div class="hq-chip-group hq-chip-career"><span>${esc(careerLevelLabel(state.career.currentLevel ?? state.career.initialLevel) ?? 'Percorso')}</span><span title="Difficoltà scelta all’inizio">Difficoltà: ${esc(({ facile: 'Facile', normale: 'Normale', difficile: 'Difficile' })[game.difficulty] ?? 'Normale')}</span><span class="hq-status ${status[1]}">${status[0]}</span></div>${linkChips ? `<div class="hq-chip-group hq-chip-links">${linkChips}</div>` : ''}</div>${institutionLinks(state)}</div></div></div>`;
 }
 // The personal indicators, with their change this week.
 function statMeters(state, gc) {
@@ -148,6 +147,12 @@ function folded(html, listClass, key, count, limit, noun, expanded = {}) {
   if (count <= limit) return html;
   const open = Boolean(expanded[key]);
   return html.replace(`class="${listClass}"`, `class="${listClass} hqc-fold fold-${limit}${open ? '' : ' is-folded'}"`) + `<button type="button" class="hqc-more" data-home-expand="${esc(key)}" aria-expanded="${open}">${open ? 'Mostra meno' : `Mostra ${noun} (${count})`}</button>`;
+}
+// On a phone the secondary blocks of the Home are panels that open and close (the same <details data-remember> the drawers use: the choice is kept by the interface and survives every
+// redraw); on a computer they are the blocks they always were, whole and open, with no control to hide them. `html` is the block as it is drawn for a computer: one markup, never two copies.
+function homeFold(id, { kicker, title, icon, summary = '', start = 'closed' }, html, { className = '' } = {}) {
+  if (!html) return '';
+  return `<section class="hqc-foldwrap ${className}"><details class="hqc-fold-band" data-remember="home-fold-${esc(id)}" data-fold-responsive data-fold-start="${start === 'open' ? 'open' : 'closed'}"><summary class="hqc-fold-head" aria-expanded="${start === 'open'}"><span class="fold-icon">${glyph(icon, 18)}</span><span class="fold-title"><span class="section-kicker">${esc(kicker)}</span><strong>${esc(title)}</strong>${summary ? `<small>${esc(summary)}</small>` : ''}</span><span class="fold-chevron" aria-hidden="true"></span></summary><div class="hqc-fold-inner">${html}</div></details></section>`;
 }
 // 2b. The staff's priorities, right under the resources: the few things that matter most this week, with the place to act.
 function prioritiesBand(state, gc, expanded) {
@@ -612,21 +617,26 @@ export function renderHeadquarters(state, options = {}) {
   // what is coming (deadlines, the next vote, the goals); the news; then the details, folded: where you stand (consensus, relations, offices, majority, party, money) and the other areas.
   const status = cardGroup([cards.elezioni, cards.relazioni, cards.carriera, cards.parlamento, cards.partito, cards.finanze], { key: 'aree', limit: 99, kicker: 'DOVE SEI', title: 'Consenso, relazioni e cariche', lead: 'Un riepilogo per area: apri la sezione per vedere i dettagli e agire.', noun: 'tutte le aree', className: 'hqc-status-head', expanded });
   const secondary = cardGroup([cards.paese, cards.territorio, cards.media, cards.memoria], { key: 'altre', limit: 99, kicker: 'ALTRE AREE', title: 'Paese, territorio, stampa e memoria', lead: 'Il contesto in cui si svolge la carriera.', noun: 'le altre aree', className: 'hqc-secondary-head', expanded });
+  const game = state.game;
+  const free = WEEKLY_ACTIVITIES.filter(activity => !activityProblem(gc.ctx, gc.env, activity)).length;
+  const articles = newsBand(state);
+  const goalsList = objectiveProgress(gc.ctx, gc.env).filter(item => item.available);
+  const upcoming = upcomingElections(game)[0];
   return `<div class="hq hqc">${endedBanner(state, gc)}
     ${commandHeader(state, gc, options)}
     ${resourcesBar(state, gc)}
     ${prioritiesBand(state, gc, expanded)}
     <div class="hqc-board hqc-board-act">
       ${decisionsBand(state, expanded)}
-      ${activitiesBand(state, gc)}
+      ${homeFold('attivita', { kicker: 'ATTIVITÀ DELLA SETTIMANA', title: 'Come usi i giorni', icon: 'clock', summary: `${game.week.ap} giorni · ${free} attività` }, activitiesBand(state, gc), { className: 'hqc-foldwrap-act' })}
     </div>
-    ${renderStaffBand(state)}
+    ${homeFold('staff', { kicker: 'STAFF · SIMULATO', title: 'Cosa fa il tuo staff', icon: 'users' }, renderStaffBand(state))}
     <div class="hqc-board hqc-board-next">
-      ${deadlineBand}
-      ${electionsBand}
-      ${goalsBand}
+      ${homeFold('scadenze', { kicker: 'SCADENZE', title: 'In arrivo', icon: 'calendar' }, deadlineBand)}
+      ${homeFold('elezioni', { kicker: 'ELEZIONI IN CALENDARIO', title: 'Il prossimo voto', icon: 'ballot', summary: upcoming?.label ?? '' }, electionsBand)}
+      ${homeFold('traguardi', { kicker: 'TRAGUARDI', title: 'Obiettivi della carriera', icon: 'target', summary: `${goalsList.filter(item => item.done).length} / ${goalsList.length}` }, goalsBand)}
     </div>
-    ${newsBand(state)}
+    ${homeFold('notizie', { kicker: 'LA POLITICA 24 · SIMULATA', title: 'Dalla redazione', icon: 'news' }, articles)}
     ${detailsBlock(state, gc, { ...options, status, secondary })}
     <footer class="home-footer"><span>POLITICANDO 2026</span><span>Persone e dati istituzionali reali restano in sola lettura (dati verificati); carriera, cittadini, territori, economia, media e relazioni sono simulati.</span></footer></div>`;
 }

@@ -17,7 +17,7 @@
 
 <h1>Elimina l’account</h1>
 <p class="meta">Pagina pubblica: non serve aprire il gioco.</p>
-<p>Inserisci nome utente e password dell’account. Verranno eliminati subito e in modo definitivo l’account, le carriere salvate online e le sessioni aperte. <strong>Non si può annullare.</strong> Le partite salvate nel browser del tuo dispositivo non sono toccate.</p>
+<p>Inserisci nome utente e password dell’account. Verranno eliminati subito e in modo definitivo l’account, le carriere salvate online (con le versioni precedenti), l’eventuale indirizzo e-mail, i collegamenti di verifica e le sessioni aperte. <strong>Non si può annullare.</strong> Le partite salvate nel browser del tuo dispositivo non sono toccate.</p>
 <form id="delete-form" novalidate>
 <label>Nome utente<input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required minlength="3" maxlength="24" /></label>
 <label>Password<input name="password" type="password" autocomplete="current-password" required minlength="8" /></label>
@@ -26,9 +26,9 @@
 </form>
 <div id="delete-result" class="result" role="status" aria-live="polite" hidden></div>
 <h2>Non ricordi la password?</h2>
-<p>Il gioco non conserva la password e non può recuperarla: senza di essa l’account non si può verificare da qui.</p>
-<p>Per chi non ricorda la password, o non può accedere, la richiesta di cancellazione si invia a <a href="mailto:bianchimatteo657@gmail.com">bianchimatteo657@gmail.com</a> indicando il nome utente.</p>
-<div class="todo" data-controller-todo="verifica-identita">Da definire a cura del titolare: come verificare che chi scrive sia davvero il titolare dell’account (oggi un account non ha un’e-mail verificata obbligatoria e il recupero via e-mail non è attivo): finché la procedura non è definita il titolare non può eliminare un account su semplice richiesta scritta senza rischiare di cancellare l’account di un altro. Il modo sicuro è la cancellazione con la password.</div>
+<p>Il gioco non conserva la password e non può recuperarla: senza di essa l’account non si può eliminare da qui. Il recupero via e-mail non è al momento disponibile.</p>
+<p>Per proteggere gli account degli altri, il titolare non elimina un account su semplice richiesta scritta, perché non può verificare con certezza chi scrive. Se hai bisogno di aiuto, o se ritieni che un account sia stato creato a tuo nome o da un minore senza il consenso di un genitore, scrivi a <a href="mailto:politicando2026simulazione@gmail.com">politicando2026simulazione@gmail.com</a> indicando il nome utente e spiegando la situazione: la richiesta viene valutata caso per caso.</p>
+<p>Le informazioni sui dati trattati e sul loro periodo di conservazione sono nell’<a href="privacy.html">Informativa sulla privacy</a>.</p>
 <script type="module" src="./src/legal/delete-account.js"></script>
 <nav class="legal-nav" aria-label="Informazioni legali"><a href="privacy.html">Informativa sulla privacy</a><a href="termini.html">Termini di utilizzo</a><a href="elimina-account.html">Elimina l’account</a></nav>
 </main>

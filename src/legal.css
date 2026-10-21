@@ -17,6 +17,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.6 'DM Sans',
 .legal th{background:var(--panel);font-weight:700}
 .legal .wide{overflow-x:auto}
 .legal .notice{border:1px solid var(--warn);border-left-width:4px;border-radius:6px;padding:10px 14px;margin:14px 0;background:var(--panel)}
+.legal .summary{border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:6px;padding:10px 14px;margin:14px 0;background:var(--panel)}
 .legal .todo{border:1px dashed var(--warn);border-radius:6px;padding:8px 12px;margin:10px 0;color:var(--warn);background:transparent}
 .legal a{color:var(--accent)}
 .legal nav.legal-nav{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:30px;padding-top:14px;border-top:1px solid var(--line)}
@@ -27,3 +28,6 @@ body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.6 'DM Sans',
 .legal .result{margin-top:14px;padding:10px 14px;border-radius:6px;border:1px solid var(--line);background:var(--panel)}
 .legal .result.ok{border-color:var(--accent)}
 .legal .result.error{border-color:var(--bad);color:var(--bad)}
+
+@media (max-width:600px){.legal .wide table,.legal .wide tbody,.legal .wide tr,.legal .wide td{display:block;width:100%;box-sizing:border-box}.legal .wide tr:first-child{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}.legal .wide tr{margin:0 0 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel)}.legal .wide td{border:0;border-bottom:1px solid var(--line);overflow-wrap:anywhere}.legal .wide td:last-child{border-bottom:0}.legal .wide td::before{content:attr(data-label);display:block;font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}}
+.legal{overflow-wrap:anywhere}

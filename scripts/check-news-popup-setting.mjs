@@ -173,6 +173,36 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   assert.equal(await popup(), null, 'E non ricompare cambiando pagina.');
   await openSettings(); await tap('Attivo'); await pause(200); await tap('Disattivato'); await pause(200);
 
+  // the check box inside the pop-up is the same preference: it reflects the setting, saves «off» at once, leaves the pop-up readable and closable, and the automatic pop-ups stop
+  for (const [width, mobile] of [[1280, false], [390, true], [320, true]]) {
+    await viewport(width, 800, mobile);
+    await reload(); await openSettings(); await tap('Attivo'); await pause(300); await closePopups();
+    let shown = null;
+    for (let i = 0; i < 6 && !shown; i++) {
+      await evaluate(`document.querySelector('[data-action="advance"]').click(), true`); await pause(1100);
+      await evaluate(`[...document.querySelectorAll('button')].filter(b => /Chiudi|Continua|OK/i.test(b.textContent) && b.closest('.report-modal,.modal-backdrop')).forEach(b => b.click()), true`); await pause(300);
+      shown = await popup();
+    }
+    assert.ok(shown, `${width}px: un popup compare per la prova della casella.`);
+    const box = await evaluate(`(() => { const input = document.querySelector('[data-news-popup-optout]'); const wrap = input?.closest('.news-popup-optout'); const pop = document.querySelector('[data-news-popup]'); if (!input) return null; const r = input.closest('label').getBoundingClientRect(), p = pop.getBoundingClientRect(); return { checked: input.checked, text: input.closest('label').textContent.trim(), hint: wrap.querySelector('small').textContent.trim(), h: Math.round(r.height), inside: r.left >= 0 && r.right <= innerWidth + .5 && r.bottom <= innerHeight + .5, over: document.documentElement.scrollWidth > innerWidth + 1, count: document.querySelectorAll('[data-news-popup-optout]').length, footerBelow: Boolean(pop.querySelector('footer')) }; })()`);
+    assert.ok(box, `${width}px: nel popup c’è la casella.`);
+    assert.equal(box.text, 'Non mostrare più i popup delle notizie settimanali', `${width}px: il testo della casella.`);
+    assert.equal(box.hint, 'Potrai riattivarli in qualsiasi momento dal menu Impostazioni.', `${width}px: la nota sotto la casella.`);
+    assert.equal(box.checked, false, `${width}px: con i popup attivi la casella non è selezionata (riflette la preferenza).`);
+    assert.ok(box.h >= 40 && box.inside && !box.over && box.count === 1, `${width}px: casella da tocco e dentro lo schermo (${JSON.stringify(box)}).`);
+    await evaluate(`document.querySelector('[data-news-popup-optout]').click(), true`); await pause(500);
+    assert.ok(/"newsPopup":"off"/.test(await evaluate(`localStorage.getItem('politicando.settings.v1')`)), `${width}px: selezionata, salva subito «off» tra le impostazioni.`);
+    const still = await popup();
+    assert.ok(still && still.n >= 1, `${width}px: il popup corrente resta leggibile.`);
+    assert.equal(await evaluate(`document.querySelector('[data-news-popup-optout]').checked`), true, `${width}px: e la casella resta selezionata.`);
+    await closePopups(); await pause(300);
+    assert.equal(await popup(), null, `${width}px: si chiude normalmente.`);
+    await openSettings();
+    assert.ok((await settingsRow()).buttons[1].active, `${width}px: nelle Impostazioni il popup è «Disattivato»: la casella e l’impostazione sono la stessa preferenza.`);
+    for (let i = 0; i < 2; i++) { await evaluate(`document.querySelector('[data-action="advance"]').click(), true`); await pause(1100); await evaluate(`[...document.querySelectorAll('button')].filter(b => /Chiudi|Continua|OK/i.test(b.textContent) && b.closest('.report-modal,.modal-backdrop')).forEach(b => b.click()), true`); await pause(300); assert.equal(await popup(), null, `${width}px: settimana ${i + 1}: nessun popup automatico dopo la casella.`); }
+    await reload(); assert.equal(await popup(), null, `${width}px: nemmeno dopo aver ricaricato la partita.`);
+  }
+
   // accounts: a signed-in account has its own choice; the other account and the browser are not touched
   await evaluate(`localStorage.setItem('politicando.account.v1', JSON.stringify({ username: 'prova.a', token: 'fittizio-a' })), true`);
   await reload(); await openSettings();
@@ -187,4 +217,4 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   assert.ok((await settingsRow()).buttons[1].active, 'L’account B vede la sua scelta (quella del browser: Disattivato), non quella di A.');
   assert.ok(errors.filter(e => !/401|fetch|Failed to load/i.test(String(e))).length === 0, `Nessun errore JavaScript (${errors.join(' | ').slice(0, 200)}).`);
 });
-console.log('Popup notizie settimanali verificato: interruttore Attivo/Disattivato (stato scritto e visibile su 320, 390 e 1280 px), attivo di default, preferenza persistente al riavvio, isolata per account senza toccare browser né carriere; da spento nessun popup, notizie generate e consultabili, settimana non consumata; riacceso, un solo popup di al massimo tre notizie recenti, mai l’arretrato né duplicati.');
+console.log('Popup notizie settimanali verificato: interruttore Attivo/Disattivato (stato scritto e visibile su 320, 390 e 1280 px), attivo di default, preferenza persistente al riavvio, isolata per account senza toccare browser né carriere; da spento nessun popup, notizie generate e consultabili, settimana non consumata; riacceso, un solo popup di al massimo tre notizie recenti, mai l’arretrato né duplicati; la casella nel popup (320, 390, 1280 px) è la stessa preferenza: riflette lo stato, salva «off» subito, lascia il popup leggibile e chiudibile, ferma i popup futuri anche dopo il ricaricamento.');

@@ -1,0 +1,79 @@
+{
+  "version": 1,
+  "updated": "2026-10-21",
+  "note": "Informazioni che solo il titolare può fornire e che il codice non può verificare. Le pagine pubbliche (privacy.html, termini.html, elimina-account.html) sono scritte senza di esse e non le inventano. Finché un requisito con required=true è «mancante» le pagine restano con noindex e il controllo di rilascio (npm run check:legal -- --release) fallisce. Per chiudere un requisito: inserire il dato nel testo pubblico indicato in «section», portare status a «fornito» e scrivere in «provided» una nota con la data e la fonte (mai il dato personale, se non pubblico).",
+  "items": [
+    {
+      "id": "indirizzo-titolare",
+      "title": "Indirizzo (domicilio o residenza) del titolare",
+      "section": "privacy.html §1 · termini.html §1",
+      "why": "Gli obblighi di identificazione di chi offre un servizio online (art. 7 D.Lgs. 70/2003) e l'informativa (art. 13 GDPR) richiedono l'identità e i recapiti del titolare. Oggi compaiono nome e indirizzo e-mail; l'indirizzo fisico non è stato fornito e non va inventato. Serve anche una valutazione professionale sull'obbligo effettivo per un servizio gratuito gestito da una persona fisica.",
+      "required": true,
+      "status": "mancante",
+      "provided": null
+    },
+    {
+      "id": "cloudflare-dpa",
+      "title": "Accordo sul trattamento dei dati con Cloudflare",
+      "section": "privacy.html §5",
+      "why": "L'informativa dice che Cloudflare agisce come responsabile del trattamento alle condizioni che pubblica per i clienti. Solo il titolare può confermare che l'addendum sul trattamento dei dati (DPA) è accettato per l'account usato, lo stato della certificazione nel Data Privacy Framework UE-USA e se D1 e KV sono configurati con una giurisdizione dedicata. Il codice non può verificarlo.",
+      "required": true,
+      "status": "mancante",
+      "provided": null
+    },
+    {
+      "id": "minori",
+      "title": "Trattamento dei minori: età minima o avvertenza ai genitori",
+      "section": "privacy.html §10 · termini.html §6",
+      "why": "Oggi non c'è una verifica dell'età né un limite; il testo lo dice e offre la cancellazione su richiesta di un genitore. Se il gioco è destinato anche a minori di 14 anni (art. 2-quinquies Codice privacy) serve una valutazione legale sulla capacità di concludere il contratto di servizio e sull'eventuale avvertenza o verifica da introdurre.",
+      "required": true,
+      "status": "mancante",
+      "provided": null
+    },
+    {
+      "id": "diritti-asset",
+      "title": "Titolarità e licenze di marchio, illustrazioni, testata e loghi caricati",
+      "section": "termini.html §4–5",
+      "why": "Il nome e il marchio «POLITICANDO», le illustrazioni, la testata «LA POLITICA 24» e i loghi dei partiti che il titolare carica o collega nell'Admin hanno bisogno di una titolarità o licenza documentata (e di una ricerca di anteriorità sul nome). Il catalogo non stabilisce la provenienza ufficiale di un logo e non modifica mai logoVerified. L'inventario è in docs/privacy-e-asset.md e docs/audit-diritti-asset.md.",
+      "required": true,
+      "status": "mancante",
+      "provided": null
+    },
+    {
+      "id": "email-fornitore",
+      "title": "Fornitore dell'invio e-mail (recupero password, verifica indirizzo)",
+      "section": "privacy.html §3 e §6",
+      "why": "Il recupero via e-mail è implementato ma non attivo: RESEND_API_KEY, EMAIL_FROM e il dominio mittente verificato non sono configurati e nessuna e-mail reale è stata inviata. Prima di attivarlo serve il contratto/DPA del fornitore, l'indicazione del trasferimento extra-SEE e l'aggiornamento dell'informativa (§6); poi una prova reale (docs/account-email.md). Finché non è attivo il testo dice che non si inviano e-mail.",
+      "required": false,
+      "status": "mancante",
+      "provided": null
+    },
+    {
+      "id": "conservazione-inattivi",
+      "title": "Eliminazione degli account inattivi da 12 mesi",
+      "section": "privacy.html §8",
+      "why": "La procedura è scritta ma spenta (RETENTION_ENABLED=0): richiede un canale di preavviso configurato e provato (e-mail). Il testo dice che oggi non avviene; se la si accende va aggiornato.",
+      "required": false,
+      "status": "mancante",
+      "provided": null
+    },
+    {
+      "id": "verifica-identita-richieste",
+      "title": "Come verificare chi chiede la cancellazione senza password",
+      "section": "elimina-account.html",
+      "why": "Il testo dice che non si elimina un account su semplice richiesta scritta. Se il titolare vuole offrire una procedura alternativa (per esempio con l'e-mail verificata una volta attivo l'invio) va definita e descritta.",
+      "required": false,
+      "status": "mancante",
+      "provided": null
+    },
+    {
+      "id": "legge-foro",
+      "title": "Legge applicabile e foro competente; limitazioni di responsabilità",
+      "section": "termini.html §9",
+      "why": "I termini non contengono clausole su legge applicabile, foro o limitazioni di responsabilità e salvano i diritti inderogabili dei consumatori. Se il titolare le vuole serve una redazione con un professionista; non sono richieste per pubblicare.",
+      "required": false,
+      "status": "mancante",
+      "provided": null
+    }
+  ]
+}

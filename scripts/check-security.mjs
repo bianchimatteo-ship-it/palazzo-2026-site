@@ -14,6 +14,7 @@ import { readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { chromeAvailable, createCareerInPage, openCareer, withBrowser } from './lib/browser.mjs';
 import { startLocalWorker } from './lib/local-worker.mjs';
+import { loadRequirements } from './lib/legal-requirements.mjs';
 
 const root = new URL('..', import.meta.url).pathname;
 const text = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
@@ -94,8 +95,10 @@ assert.ok(!/non carica caratteri o altre risorse da server esterni\./.test(priva
 assert.ok(/(unica|sola) eccezione/i.test(privacy) && /logo/.test(privacy) && /indirizzo IP/.test(privacy), 'Dichiara l’unica eccezione: il logo a indirizzo, che mostra l’IP al sito che lo ospita.');
 assert.ok(/titolare|amministrator/i.test(/eccezione[\s\S]{0,900}/i.exec(privacy)?.[0] ?? ''), 'E dice che la scelta può essere anche del titolare (un partito del gioco), non solo dell’utente.');
 assert.ok(/non (viene|è) (inviat|comunicat)[^.]*(pagina|referrer)|senza (indicare|inviare)[^.]*(pagina|referrer)|nessun referrer/i.test(privacy), 'E che il sito esterno non sa da quale pagina arriva (nessun referrer).');
-const todos = [...privacy.matchAll(/data-controller-todo="([^"]+)"/g)].map(item => item[1]);
-for (const marker of ['indirizzo-titolare', 'infrastruttura', 'conservazione', 'minori', 'storage']) assert.ok(todos.includes(marker), `Resta il punto aperto del titolare: ${marker}.`);
+for (const name of ['privacy.html', 'termini.html', 'elimina-account.html']) assert.ok(!/data-controller-todo/.test(await text(name)), `${name}: nessun segnaposto «da completare» nelle pagine pubbliche (le informazioni mancanti stanno in docs/legale-requisiti.json).`);
+const legal = await loadRequirements();
+assert.deepEqual(legal.problems, [], 'Il file dei requisiti legali è ben formato.');
+for (const id of ['indirizzo-titolare', 'cloudflare-dpa', 'minori', 'diritti-asset']) assert.ok(legal.items.some(item => item.id === id && item.required), `Resta tracciata l’informazione del titolare: ${id}.`);
 
 // ---------- 5. Chrome, with the real headers ----------
 let checkedPages = 0, blockedByControl = 0;

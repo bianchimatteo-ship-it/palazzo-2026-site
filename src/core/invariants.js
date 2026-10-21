@@ -3,9 +3,9 @@
 // checkInvariants(state, context) → { ok, issues: [{ code, path, message }] }
 // context (optional): the real reference the state may point to — realPartyIds, realGroupIds (Sets or arrays).
 
-import { countProblems } from './electorate.js?v=20261021-3';
-import { LEVER_BY_ID } from '../data/simulation/start-rules.js?v=20261021-3';
-import { AMBITION_LIMIT, OBJECTIVE_BY_ID } from '../data/simulation/objective-rules.js?v=20261021-3';
+import { countProblems } from './electorate.js?v=20261021-6';
+import { LEVER_BY_ID } from '../data/simulation/start-rules.js?v=20261021-6';
+import { AMBITION_LIMIT, OBJECTIVE_BY_ID } from '../data/simulation/objective-rules.js?v=20261021-6';
 
 const SEATS = { camera: 400, senato: 200 };
 // The Senate also has the senators for life (and, in the real XIX legislature, a few vacancies may appear in either

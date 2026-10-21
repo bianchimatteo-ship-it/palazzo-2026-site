@@ -4,7 +4,7 @@
 // and recorded in the Hall of Fame, which belongs to the player and outlives every career. A new career may start from
 // the legacy of a concluded one: a bounded set of starting conditions (a known name, a network, a shadow), never a
 // change to the world of the game. Pure functions over plain data. Everything is simulated.
-import { memoryBalance } from './career-engine.js?v=20261021-3';
+import { memoryBalance } from './career-engine.js?v=20261021-6';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -69,7 +69,7 @@ export function careerFacts(state) {
     offices: ranked.map(item => ({ title: item.office.title, from: item.office.startDate ?? null, to: item.office.endDate ?? null })).slice(-10),
     mandates: (career.electionHistory ?? []).filter(item => item.personalMandate).length, campaigns: (career.electionHistory ?? []).length,
     laws: (state.parliament?.laws ?? []).filter(law => law.stage === 'approved' && !law.sponsor).length,
-    objectives, party: party ? { label: party.label ?? null, rank, rankTitle: party.rankTitle ?? null, founded: party.affiliation === 'founder' } : null,
+    objectives, party: party ? { id: party.partyId ?? null, label: party.label ?? null, rank, rankTitle: party.rankTitle ?? null, founded: party.affiliation === 'founder' } : null,
     pastParties: (game?.pastParties ?? []).length,
     stats: { reputation: stats.reputation ?? 50, popularity: stats.popularity ?? 45, influence: stats.influence ?? 30, notoriety: stats.notoriety ?? 20, experience: stats.experience ?? 30 },
     memory: { good: round1(memory.good), bad: round1(memory.bad), net: round1(memory.net) },

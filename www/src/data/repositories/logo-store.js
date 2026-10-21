@@ -193,3 +193,14 @@ export async function importLogoConfiguration(text) {
     await saveLocalLogo(item.partyId, { blob, fileName: item.fileName, sourceUrl: item.sourceUrl, source: item.source, verified: item.verified, alt: item.alt, editor: item.editor ?? null });
   }
 }
+
+// What the server has said about this browser's copy of a logo: `publish` = { status: 'published' | 'failed', sha256, at, error }. It is kept with the record, never decided by the page.
+export async function markLogoPublication(partyId, publish) {
+  const record = await getLocalLogo(partyId);
+  if (!record) return null;
+  const next = { ...record, publish: publish ? { ...publish, at: publish.at ?? new Date().toISOString() } : null };
+  const database = await openDatabase();
+  if (!database) memory.set(partyId, next);
+  else await withStore('readwrite', store => store.put(next));
+  return next;
+}

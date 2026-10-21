@@ -138,7 +138,7 @@ for (const [tab] of AGENDA_TABS) {
 }
 for (const [filter, , kinds] of AGENDA_FILTERS) {
   const html = renderAgendaPage(state, { tab: 'calendario', filter });
-  assert.ok(html.includes(`data-view-filter-value="${filter}" class="active"`) && clean(html), `Agenda: il filtro ${filter} resta selezionato.`);
+  assert.ok(new RegExp(`data-view-filter-value="${filter}"[^>]*class="active"`).test(html) && clean(html), `Agenda: il filtro ${filter} resta selezionato.`);
   if (kinds) assert.equal((html.match(/class="ag-item /g) ?? []).length, calendar.filter(item => kinds.includes(item.kind)).length, `Agenda: il filtro ${filter} mostra solo i suoi impegni.`);
 }
 const calendarHtml = renderAgendaPage(state, { tab: 'calendario' });

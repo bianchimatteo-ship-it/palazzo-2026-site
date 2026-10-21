@@ -1,9 +1,10 @@
 // HALL OF FAME, retirement and legacy: the careers concluded and what they leave. The Hall belongs to the player and
 // outlives every career; a new career can start from the legacy of one of them (a bounded set of starting conditions,
 // never a change to the world of the game). Also the card of the Career page where a career is concluded.
-import { LEVER_BY_ID, START_PROFILES } from '../data/simulation/start-rules.js?v=20261021-3';
-import { END_KINDS, LEGACY_TIERS, RETIREMENT, boonLines, careerFacts, legacyBoon, legacyScore, legacyTags, retirementProblem, tierOf } from '../core/legacy-engine.js?v=20261021-3';
-import { formatDate } from '../core/time.js?v=20261021-3';
+import { LEVER_BY_ID, START_PROFILES } from '../data/simulation/start-rules.js?v=20261021-6';
+import { END_KINDS, LEGACY_TIERS, RETIREMENT, boonLines, careerFacts, legacyBoon, legacyScore, legacyTags, retirementProblem, tierOf } from '../core/legacy-engine.js?v=20261021-6';
+import { formatDate } from '../core/time.js?v=20261021-6';
+import { identityMark, partyIdentity } from './party-identity.js?v=20261021-6';
 
 const esc = (value = '') => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const leverLabel = id => LEVER_BY_ID[id]?.label ?? id;
@@ -16,27 +17,37 @@ const partsList = parts => `<ul class="hall-parts">${parts.map(item => `<li clas
 const tagList = tags => tags.length ? `<ul class="hall-tags">${tags.map(tag => `<li>${esc(tag)}</li>`).join('')}</ul>` : '';
 
 // ---------- the Hall of Fame (menu) ----------
-function entryCard(entry) {
+// An archive of concluded careers: the best first. Every figure on a card is one the career and its `legacy` already hold (nothing is computed here, nothing invented); a fact the entry
+// does not have is simply not shown. `context.identityOf({ party, partyId })` gives the party's mark (its logo, else its initials; an independent has the neutral one).
+function entryCard(entry, context = {}) {
   const boon = legacyBoon(entry);
   const tier = LEGACY_TIERS.find(item => item.id === entry.tier?.id) ?? tierOf(entry.score);
   const profile = START_PROFILES[entry.startProfile]?.label ?? 'Inizio ordinario';
+  const partyName = entry.party ? `${entry.party.label ?? 'Partito'}${entry.party.founded ? ' (fondato da lui)' : entry.party.rankTitle ? ` · ${entry.party.rankTitle}` : ''}` : 'Indipendente';
+  const identity = entry.party?.label ? (context.identityOf?.({ party: entry.party.label, partyId: entry.party.id ?? null }) ?? partyIdentity({ party: { id: entry.party.id ?? null, label: entry.party.label } })) : partyIdentity();
+  const span = [year(entry.startedAt), year(entry.endedAt)].filter(Boolean).join('–');
   const facts = [
-    ['Carica più alta', entry.peak?.label ?? 'Nessuna'], ['Anni di carriera', num(entry.years)], ['Partito', entry.party ? `${entry.party.label ?? 'Partito'}${entry.party.founded ? ' (fondato da lui)' : entry.party.rankTitle ? ` · ${entry.party.rankTitle}` : ''}` : 'Indipendente'],
+    ['Anni di carriera', num(entry.years)], ['Partito', partyName],
     ['Mandati conquistati', entry.counts?.mandates ?? 0], ['Leggi approvate', entry.counts?.laws ?? 0], ['Obiettivi raggiunti', entry.counts?.objectives ?? 0],
     ['Partenza', `${LEVELS[entry.level] ?? entry.level} · ${profile}`], ['Difficoltà', entry.difficulty]
   ];
-  return `<article class="hall-entry" data-hall-entry="${esc(entry.id)}">
-    <header><div><strong>${esc(entry.name)}</strong><small>${esc(entry.endLabel ?? '')} · ${esc(year(entry.startedAt))}–${esc(year(entry.endedAt))} · ${esc(entry.age ? `${entry.age} anni` : '')}</small></div><span class="hall-score" aria-label="Eredità ${entry.score} su 100">${entry.score}<small>/100</small></span></header>
-    <p class="hall-tier"><b>${esc(tier.label)}</b> ${esc(tier.text)}</p>${tagList(entry.tags ?? [])}
-    <dl class="hall-facts">${facts.map(([label, value]) => `<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>
-    <details><summary>Come è stata pesata l’eredità</summary>${partsList(entry.parts ?? [])}</details>
-    <p class="hall-boon"><b>Cosa lascia a una nuova carriera</b> ${esc(boonLines(boon, leverLabel).join(' · '))}</p>
-    <div class="hall-actions"><button class="primary-button" data-hall-legacy="${esc(entry.id)}">Nuova carriera con questa eredità</button><button class="secondary-button" data-hall-delete="${esc(entry.id)}">Elimina dalla Hall of Fame</button></div>
+  return `<article class="hall-entry hall-card" data-hall-entry="${esc(entry.id)}" data-tier="${esc(tier.id ?? '')}">
+    <div class="hall-seal" title="${esc(entry.party?.label ?? 'Indipendente')}">${identityMark(identity, 'lg')}</div>
+    <div class="hall-main">
+      <header><div class="hall-name"><h3>${esc(entry.name)}</h3><small>${esc(entry.endLabel ?? '')}${span ? ` · ${esc(span)}` : ''}${entry.age ? ` · ${esc(`${entry.age} anni`)}` : ''}</small></div><span class="hall-score" role="img" aria-label="Eredità ${entry.score} su 100"><b>${entry.score}</b><small>/100</small></span></header>
+      <p class="hall-peak"><span class="hall-peak-label">Carica più alta</span><strong>${esc(entry.peak?.label ?? 'Nessuna')}</strong></p>
+      <p class="hall-tier"><b>${esc(tier.label)}</b> ${esc(tier.text)}</p>${tagList(entry.tags ?? [])}
+      <dl class="hall-facts">${facts.map(([label, value]) => `<div><dt>${esc(label)}</dt><dd>${esc(value)}</dd></div>`).join('')}</dl>
+      <details><summary>Come è stata pesata l’eredità</summary>${partsList(entry.parts ?? [])}</details>
+      <p class="hall-boon"><b>Cosa lascia a una nuova carriera</b> ${esc(boonLines(boon, leverLabel).join(' · '))}</p>
+      <div class="hall-actions"><button class="primary-button" data-hall-legacy="${esc(entry.id)}">Nuova carriera con questa eredità</button><button class="secondary-button hall-delete" data-hall-delete="${esc(entry.id)}" aria-label="Elimina dalla Hall of Fame: ${esc(entry.name)}">Elimina dalla Hall of Fame</button></div>
+    </div>
   </article>`;
 }
-export function hallView(entries = []) {
-  return `<h2>Hall of Fame</h2><p class="section-subtitle">Le carriere concluse, dalla più alta in giù. Ogni carriera lascia un’eredità politica pesata su ciò che è davvero successo: cariche, mandati, leggi, obiettivi, partito, reputazione e memoria. Una nuova carriera può partire dall’eredità di una di queste, senza toccare il mondo di gioco. La Hall resta nel browser anche se cancelli i salvataggi.</p>
-    ${entries.length ? `<div class="hall-list">${entries.map(entryCard).join('')}</div>` : '<p class="quiet-copy">Nessuna carriera conclusa. Quando lascerai la politica (Carriera → Percorso), la tua storia entrerà qui con la sua eredità.</p>'}
+export function hallView(entries = [], context = {}) {
+  const count = entries.length;
+  return `<header class="hall-head"><span class="section-kicker">ARCHIVIO DELLE CARRIERE</span><h2>Hall of Fame</h2><p class="section-subtitle">Le carriere concluse, dalla più alta in giù. Ogni carriera lascia un’eredità politica pesata su ciò che è davvero successo: cariche, mandati, leggi, obiettivi, partito, reputazione e memoria. Una nuova carriera può partire dall’eredità di una di queste, senza toccare il mondo di gioco. La Hall resta nel browser anche se cancelli i salvataggi.</p><p class="hall-count" data-hall-count="${count}"><b>${count}</b> ${count === 1 ? 'carriera conclusa' : 'carriere concluse'}</p></header>
+    ${count ? `<div class="hall-list">${entries.map(entry => entryCard(entry, context)).join('')}</div>` : '<div class="hall-empty"><span class="hall-empty-mark" aria-hidden="true">★</span><p class="quiet-copy">Nessuna carriera conclusa. Quando lascerai la politica (Carriera → Percorso), la tua storia entrerà qui con la sua eredità.</p></div>'}
     <details class="hall-howto"><summary>Come si pesa l’eredità</summary><ul class="hall-parts"><li><span>Punteggio da 0 a 100: anni di carriera, carica più alta (in proporzione a quanto è durata), mandati, leggi, obiettivi, partito guidato, reputazione, memoria politica, parola data, scandali e cadute.</span></li>${LEGACY_TIERS.map(item => `<li><span><b>${esc(item.label)}</b> da ${item.min} · ${esc(item.text)}</span></li>`).join('')}<li><span>Gli scenari personalizzati valgono l’85% e la difficoltà pesa sul risultato (facile 90%, difficile 112%).</span></li></ul></details>`;
 }
 
