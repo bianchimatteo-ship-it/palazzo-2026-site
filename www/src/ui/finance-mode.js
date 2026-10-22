@@ -1,13 +1,13 @@
 // Money of the career and of the party: balance, flows, budget, reports and sustainability.
-import { BUDGET_LINES, FINANCE_CATEGORIES, financeOutlook, hasAsset, INVESTMENTS, operationProblem, operationRange, partyRequestRules, RESERVE, TREASURY_OPERATIONS } from '../core/finance-engine.js?v=20261022-14';
-import { TRANSFERS } from '../data/simulation/finance-rules.js?v=20261022-14';
-import { costProblem } from '../core/career-engine.js?v=20261022-14';
-import { costText, planAddButton } from './plan-view.js?v=20261022-14';
-import { isPartyLeader, PARTY_PRIORITIES, TREASURY_LABELS, treasuryOutlook } from '../core/organization-engine.js?v=20261022-14';
-import { artTile, glyph } from './visuals.js?v=20261022-14';
-import { illustration } from './illustrations.js?v=20261022-14';
-import { foldPanel } from './sections-kit.js?v=20261022-14';
-import { breakdown, esc, euro, EXPENSE_COLOR, flowChart, INCOME_COLOR, lineChart, num, SERIES, signed, sparkline, stateBadge } from './charts.js?v=20261022-14';
+import { BUDGET_LINES, FINANCE_CATEGORIES, financeOutlook, hasAsset, INVESTMENTS, operationProblem, operationRange, partyRequestRules, RESERVE, TREASURY_OPERATIONS } from '../core/finance-engine.js?v=20261022-19';
+import { TRANSFERS } from '../data/simulation/finance-rules.js?v=20261022-19';
+import { costProblem } from '../core/career-engine.js?v=20261022-19';
+import { costText, planAddButton } from './plan-view.js?v=20261022-19';
+import { isPartyLeader, PARTY_PRIORITIES, TREASURY_LABELS, treasuryOutlook } from '../core/organization-engine.js?v=20261022-19';
+import { artTile, glyph } from './visuals.js?v=20261022-19';
+import { illustration } from './illustrations.js?v=20261022-19';
+import { foldPanel } from './sections-kit.js?v=20261022-19';
+import { breakdown, esc, euro, EXPENSE_COLOR, flowChart, INCOME_COLOR, lineChart, num, SERIES, signed, sparkline, stateBadge } from './charts.js?v=20261022-19';
 
 const STATUS_KIND = { solida: 'solida', calo: 'calo', rischio: 'rischio', crisi: 'crisi' };
 

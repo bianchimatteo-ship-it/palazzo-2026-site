@@ -1,62 +1,63 @@
-import { onLanguageChange, setLanguage, watchTree } from '../core/i18n.js?v=20261022-14';
-import { pendingCelebration, pendingOutcome } from '../core/celebration.js?v=20261022-14';
-import { fullDate, formatDate } from '../core/time.js?v=20261022-14';
-import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20261022-14';
-import * as accountApi from '../data/repositories/account-sync.js?v=20261022-14';
-import { hideCareers } from '../data/repositories/career-visibility.js?v=20261022-14';
-import { accountApiBase, commitRevision, currentAccount, deleteAccount, probeAccountService, deleteCloudSave, downloadSave, listCloudSaves, login, logout, register, slotForCareer } from '../data/repositories/account-sync.js?v=20261022-14';
-import { createSyncEngine } from '../data/repositories/sync-queue.js?v=20261022-14';
-import { setPartyLogoResolver } from './person-marks.js?v=20261022-14';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261022-14';
-import { isRealCollectionLoaded, loadRealCollections, optionalDocumentStatus, loadRealCollectionsSettled, pristineRecord, realDataFailures, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20261022-14';
-import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20261022-14';
-import { renderAdminPanel } from './admin-panel.js?v=20261022-14';
-import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, rotateSharedCredential, publishSharedArchive, refreshSharedArchive, sharedApiUrl, sharedSyncStatus, verifySharedSession } from '../data/repositories/admin-sync.js?v=20261022-14';
-import { claimLegacyLogo, deleteLogo, discardLegacyLogo, importLogoFromUrl, listLegacyLogos, listLogoInfos, loadLogos, logoInfo, logosArePersistent, migrateLegacyLogos, onLogosChange, prepareLogo, releaseLegacyPreviews, resolveLogo, saveLogo } from '../data/repositories/personal-logos.js?v=20261022-14';
-import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20261022-14';
-import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20261022-14';
-import { PARTY_LINK_COLLECTIONS, forceKind, isCoalitionList, politicalForces } from '../data/repositories/party-links.js?v=20261022-14';
-import { PROFESSIONS, chosenPlace, makeCareerDraft, pollScenarioOf, removePartyCriterion, renderCareerWizard, togglePartyOrientation, wizardLogoPreview } from './career-wizard.js?v=20261022-14';
-import { userPartyLogo } from './party-logo.js?v=20261022-14';
-import { CAREER_STEPS, validateWizardStep } from '../core/career-rules.js?v=20261022-14';
-import { renderElectionsHub } from './elections-hub.js?v=20261022-14';
-import { renderQuirinale } from './presidency-view.js?v=20261022-14';
-import { renderCareerPage } from './career-page.js?v=20261022-14';
-import { renderPartyPage } from './party-page.js?v=20261022-14';
-import { renderAgendaPage } from './agenda-page.js?v=20261022-14';
-import { HEMICYCLE_DEFAULTS, renderHemicycle } from './hemicycle-view.js?v=20261022-14';
-import { renderFeaturedMembers } from './members-view.js?v=20261022-14';
-import { drawLogoEditor, exportLogo, measureBackground, panFromDrag, renderLogoEditor } from './logo-editor-view.js?v=20261022-14';
-import { createEditorState } from '../core/logo-editor.js?v=20261022-14';
-import { renderParliamentPage } from './parliament-mode.js?v=20261022-14';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261022-14';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261022-14';
-import { chooseStart } from '../core/start-engine.js?v=20261022-14';
-import { renderHeadquarters, renderNewsroom } from './game-mode.js?v=20261022-14';
-import { newsMedia, newsPopupHtml, popupItem } from './news-view.js?v=20261022-14';
-import { articleScript, bulletinScript, onVoiceChange, speakLines, stopVoice, syncVoiceDom, voiceStatus, voiceTarget } from './radio-voice.js?v=20261022-14';
-import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20261022-14';
-import { playerRoles } from '../core/roles.js?v=20261022-14';
-import { accordWarning, budgetPreview, designFromForm, planFromForm, policyFields, policyPreview, projectPreview, rangeText, requestFromForm } from './policy-mode.js?v=20261022-14';
-import { areaOf } from '../data/simulation/policy-rules.js?v=20261022-14';
-import { attachChartInteractions, hideChartTip } from './polls-mode.js?v=20261022-14';
-import { renderObservatory } from './observatory-view.js?v=20261022-14';
-import { glyph } from './visuals.js?v=20261022-14';
-import { identityVars, partyChip, partyIdentity, topbarParty } from './party-identity.js?v=20261022-14';
-import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20261022-14';
-import { renderFinancePage } from './finance-mode.js?v=20261022-14';
-import { PLAN_MAX, planConfirmLines, planKey, renderPlanTray } from './plan-view.js?v=20261022-14';
-import { STAFF_TASK_BY_ID } from '../data/simulation/staff-rules.js?v=20261022-14';
-import { renderContactsPanel } from './organization-mode.js?v=20261022-14';
-import { renderRealLaws } from './real-laws.js?v=20261022-14';
-import { realLawArea } from '../core/society-engine.js?v=20261022-14';
-import { canManageParliament } from '../core/parliament-engine.js?v=20261022-14';
-import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, TOUR_STEPS } from './menu.js?v=20261022-14';
-import { setForceColorOverrides } from './political-colors.js?v=20261022-14';
-import { renderTutorialCard, tutorialAction, tutorialContext, tutorialState, TUTORIAL_STEPS } from './tutorial.js?v=20261022-14';
-import { storage as localStorageApi } from '../core/storage.js?v=20261022-14';
-import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20261022-14';
-import { playSound } from './sound.js?v=20261022-14';
+import { onLanguageChange, setLanguage, watchTree } from '../core/i18n.js?v=20261022-19';
+import { pendingCelebration, pendingOutcome } from '../core/celebration.js?v=20261022-19';
+import { fullDate, formatDate } from '../core/time.js?v=20261022-19';
+import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20261022-19';
+import * as accountApi from '../data/repositories/account-sync.js?v=20261022-19';
+import { hideCareers } from '../data/repositories/career-visibility.js?v=20261022-19';
+import { accountApiBase, commitRevision, currentAccount, deleteAccount, probeAccountService, deleteCloudSave, downloadSave, listCloudSaves, login, logout, register, slotForCareer } from '../data/repositories/account-sync.js?v=20261022-19';
+import { createSyncEngine } from '../data/repositories/sync-queue.js?v=20261022-19';
+import { setPartyLogoResolver } from './person-marks.js?v=20261022-19';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261022-19';
+import { isRealCollectionLoaded, loadRealCollections, optionalDocumentStatus, loadRealCollectionsSettled, pristineRecord, realDataFailures, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20261022-19';
+import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20261022-19';
+import { renderAdminPanel } from './admin-panel.js?v=20261022-19';
+import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, rotateSharedCredential, publishSharedArchive, refreshSharedArchive, sharedApiUrl, sharedSyncStatus, verifySharedSession } from '../data/repositories/admin-sync.js?v=20261022-19';
+import { syncLogos, resolveLogoConflict, listLogoConflicts } from '../data/repositories/logo-sync.js?v=20261022-19';
+import { claimLegacyLogo, deleteLogo, discardLegacyLogo, importGuestLogo, importLogoFromUrl, listGuestLogos, listLegacyLogos, listLogoInfos, loadLogos, logoInfo, logosArePersistent, migrateLegacyLogos, onLogosChange, prepareLogo, releaseLegacyPreviews, resolveLogo, saveLogo } from '../data/repositories/personal-logos.js?v=20261022-19';
+import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20261022-19';
+import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20261022-19';
+import { PARTY_LINK_COLLECTIONS, forceKind, isCoalitionList, politicalForces } from '../data/repositories/party-links.js?v=20261022-19';
+import { PROFESSIONS, chosenPlace, makeCareerDraft, pollScenarioOf, removePartyCriterion, renderCareerWizard, togglePartyOrientation, wizardLogoPreview } from './career-wizard.js?v=20261022-19';
+import { userPartyLogo } from './party-logo.js?v=20261022-19';
+import { CAREER_STEPS, validateWizardStep } from '../core/career-rules.js?v=20261022-19';
+import { renderElectionsHub } from './elections-hub.js?v=20261022-19';
+import { renderQuirinale } from './presidency-view.js?v=20261022-19';
+import { renderCareerPage } from './career-page.js?v=20261022-19';
+import { renderPartyPage } from './party-page.js?v=20261022-19';
+import { renderAgendaPage } from './agenda-page.js?v=20261022-19';
+import { HEMICYCLE_DEFAULTS, renderHemicycle } from './hemicycle-view.js?v=20261022-19';
+import { renderFeaturedMembers } from './members-view.js?v=20261022-19';
+import { drawLogoEditor, exportLogo, measureBackground, panFromDrag, renderLogoEditor } from './logo-editor-view.js?v=20261022-19';
+import { createEditorState } from '../core/logo-editor.js?v=20261022-19';
+import { renderParliamentPage } from './parliament-mode.js?v=20261022-19';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261022-19';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261022-19';
+import { chooseStart } from '../core/start-engine.js?v=20261022-19';
+import { renderHeadquarters, renderNewsroom } from './game-mode.js?v=20261022-19';
+import { newsMedia, newsPopupHtml, popupItem } from './news-view.js?v=20261022-19';
+import { articleScript, bulletinScript, onVoiceChange, onVoicesChange, speakLines, stopVoice, syncVoiceDom, voiceStatus, voiceTarget } from './radio-voice.js?v=20261022-19';
+import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20261022-19';
+import { playerRoles } from '../core/roles.js?v=20261022-19';
+import { accordWarning, budgetPreview, designFromForm, planFromForm, policyFields, policyPreview, projectPreview, rangeText, requestFromForm } from './policy-mode.js?v=20261022-19';
+import { areaOf } from '../data/simulation/policy-rules.js?v=20261022-19';
+import { attachChartInteractions, hideChartTip } from './polls-mode.js?v=20261022-19';
+import { renderObservatory } from './observatory-view.js?v=20261022-19';
+import { glyph } from './visuals.js?v=20261022-19';
+import { identityVars, partyChip, partyIdentity, topbarParty } from './party-identity.js?v=20261022-19';
+import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20261022-19';
+import { renderFinancePage } from './finance-mode.js?v=20261022-19';
+import { PLAN_MAX, planConfirmLines, planKey, renderPlanTray } from './plan-view.js?v=20261022-19';
+import { STAFF_TASK_BY_ID } from '../data/simulation/staff-rules.js?v=20261022-19';
+import { renderContactsPanel } from './organization-mode.js?v=20261022-19';
+import { renderRealLaws } from './real-laws.js?v=20261022-19';
+import { realLawArea } from '../core/society-engine.js?v=20261022-19';
+import { canManageParliament } from '../core/parliament-engine.js?v=20261022-19';
+import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, TOUR_STEPS } from './menu.js?v=20261022-19';
+import { setForceColorOverrides } from './political-colors.js?v=20261022-19';
+import { renderTutorialCard, tutorialAction, tutorialContext, tutorialState, TUTORIAL_STEPS } from './tutorial.js?v=20261022-19';
+import { storage as localStorageApi } from '../core/storage.js?v=20261022-19';
+import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20261022-19';
+import { playSound } from './sound.js?v=20261022-19';
 
 // The destinations of the game, by theme. On computers the sidebar lists the eight and opens the pages of the current one; on phones the
 // bar below keeps Home · Elezioni · Sondaggi · Istituzioni one tap away and “Altro” gathers everything else (the same pages, nothing twice).
@@ -177,7 +178,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   let logoEditorUrl = null;
   let logoDrag = null;
   // The personal catalog of logos (Menu → Loghi dei partiti): what the player is looking at and the image waiting to be saved.
-  const logoCatalog = { query: '', page: 1, selectedId: null, pending: null, error: '', notice: '', busy: '', urlDraft: '', loading: false, legacy: [], persistent: true };
+  const logoCatalog = { query: '', page: 1, selectedId: null, pending: null, error: '', notice: '', busy: '', urlDraft: '', loading: false, legacy: [], persistent: true, guest: [], conflicts: [], sync: null, syncing: false };
   const catalog = {
     partyQuery:'', partyPresence:'all', partyType:'all', partyLevel:'all', partyRegion:'all', partyStatus:'all', partyElection:'all', partySort:'name', partyPage:1,
     politicianQuery:'', politicianChamber:'all', politicianParty:'all', politicianGroup:'all', politicianPage:1,
@@ -648,7 +649,9 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     if (!pendingArticle.shown) { pendingArticle.shown = true; card.scrollIntoView?.({ block: 'center' }); }
   };
   const settleRadioVoice = () => { const what = voiceTarget(); if (what && ![...(root.querySelectorAll?.('[data-voice-target]') ?? [])].some(button => button.dataset.voiceTarget === what)) stopVoice(); syncVoiceDom(root); };
-  onVoiceChange(() => syncVoiceDom(root));
+  onVoiceChange(() => { syncVoiceDom(root); if (voiceStatus() === 'error') render(store.getState(), store.getLastSaved()); });
+  // The list of voices of some browsers arrives after the page: the reading control appears once there is an Italian voice.
+  onVoicesChange(() => { if (voiceStatus() === 'idle') render(store.getState(), store.getLastSaved()); });
   const renderFrame = (state, lastSaved) => {
     hideChartTip();
     if (menu.open && !wizard) {
@@ -873,12 +876,25 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   const logoCatalogView = () => ({
     entities: menu.view === 'loghi' ? logoEntities() : [], infos: listLogoInfos(), logoSrc: resolveLogo, query: logoCatalog.query, page: logoCatalog.page, selectedId: logoCatalog.selectedId,
     pending: logoCatalog.pending, error: logoCatalog.error, notice: logoCatalog.notice, busy: logoCatalog.busy, urlDraft: logoCatalog.urlDraft, loading: logoCatalog.loading, signedIn: account.user?.username ?? null,
-    editorHtml: logoEditor?.context === 'catalog' ? renderLogoEditor(logoEditor, { context: 'catalog' }) : '', legacy: logoCatalog.legacy.map(item => ({ ...item, name: logoEntities().find(entity => entity.id === item.partyId)?.name ?? item.partyId })), persistent: logoCatalog.persistent
+    editorHtml: logoEditor?.context === 'catalog' ? renderLogoEditor(logoEditor, { context: 'catalog' }) : '', legacy: logoCatalog.legacy.map(item => ({ ...item, name: logoEntities().find(entity => entity.id === item.partyId)?.name ?? item.partyId })), persistent: logoCatalog.persistent,
+    guest: logoCatalog.guest.map(item => ({ ...item, name: logoEntities().find(entity => entity.id === item.partyId)?.name ?? item.partyId })), conflicts: logoCatalog.conflicts.map(item => ({ ...item, name: logoEntities().find(entity => entity.id === item.partyId)?.name ?? item.partyId, localSrc: resolveLogo(item.partyId) })), sync: logoCatalog.sync, syncing: logoCatalog.syncing
   });
   const clearPendingLogo = () => { if (logoCatalog.pending?.src) URL.revokeObjectURL(logoCatalog.pending.src); logoCatalog.pending = null; if (logoEditor?.context === 'catalog') closeLogoEditor(); };
   const redrawLogos = () => render(store.getState(), store.getLastSaved());
   // The account changed (sign-in, sign-out, expired session, another tab): the logos of the previous scope leave the screen, those of the new one are read.
-  const refreshLogoScope = () => { clearPendingLogo(); logoCatalog.selectedId = null; return loadLogos().then(redrawLogos).catch(() => {}); };
+  const refreshLogoScope = () => { clearPendingLogo(); logoCatalog.selectedId = null; logoCatalog.sync = null; logoCatalog.guest = []; logoCatalog.conflicts = []; return loadLogos().then(() => { redrawLogos(); if (account.user) runLogoSync(); }).catch(() => {}); };
+  // The cloud copy of the account's logos: one run at a time (logo-sync.js), at sign-in, when the catalog opens, when the network comes back, after a change and on demand. Offline or not configured
+  // it only says so: the logos stay on the device and are tried again later.
+  const refreshLogoExtras = async () => { logoCatalog.guest = await listGuestLogos().catch(() => []); logoCatalog.conflicts = await listLogoConflicts().catch(() => []); };
+  let logoSyncTimer = null;
+  const runLogoSync = async () => {
+    if (!account.user) { logoCatalog.sync = null; return; }
+    logoCatalog.syncing = true; if (menu.view === 'loghi') redrawLogos();
+    try { logoCatalog.sync = await syncLogos(); await loadLogos(); await refreshLogoExtras(); } catch { /* the report says what happened */ }
+    logoCatalog.syncing = false; redrawLogos();
+  };
+  const scheduleLogoSync = () => { clearTimeout(logoSyncTimer); logoSyncTimer = setTimeout(() => runLogoSync(), 1200); };
+  addEventListener('online', () => { if (account.user) runLogoSync(); });
   const openLogoCatalog = async () => {
     Object.assign(logoCatalog, { error: '', notice: '', busy: '', urlDraft: '', page: 1, loading: true });
     clearPendingLogo();
@@ -887,9 +903,11 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     await loadLogos();
     logoCatalog.persistent = await logosArePersistent();
     logoCatalog.legacy = await listLegacyLogos().catch(() => []);
+    await refreshLogoExtras();
     logoCatalog.loading = false;
     logoCatalog.selectedId ||= logoEntities()[0]?.id ?? null;
     redrawLogos();
+    if (account.user) runLogoSync();
   };
   const stageLogo = async (prepared, fileName, origin) => {
     clearPendingLogo();
@@ -923,8 +941,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       let prepared = pending.prepared;
       if (logoEditor?.context === 'catalog') { const edited = await exportLogo(logoEditor, logoEditorImage, null); prepared = await prepareLogo(new File([edited.blob], 'logo.png', { type: 'image/png' })); }
       const saved = await saveLogo(selectedId, prepared, { fileName: pending.fileName, origin: pending.origin, alt: `Logo di ${name}` });
-      logoCatalog.notice = saved.persistent ? `Logo salvato su questo dispositivo: lo vedi in tutte le tue partite${account.user ? ' con questo account' : ''}.` : 'Logo in uso solo finché la pagina resta aperta: questo browser non permette di conservarlo.';
-      logoCatalog.persistent = saved.persistent; clearPendingLogo();
+      logoCatalog.notice = saved.persistent ? (account.user ? 'Logo salvato su questo dispositivo e in caricamento sul tuo account: lo ritrovi su ogni dispositivo con cui accedi.' : 'Logo salvato su questo dispositivo: lo vedi in tutte le tue partite. Accedi a un account per averlo anche su altri dispositivi.') : 'Logo in uso solo finché la pagina resta aperta: questo browser non permette di conservarlo.';
+      logoCatalog.persistent = saved.persistent; clearPendingLogo(); scheduleLogoSync();
     }
     catch (error) { logoCatalog.error = error.message; }
     logoCatalog.busy = ''; redrawLogos();
@@ -1914,12 +1932,24 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       catch (error) { logoCatalog.error = error.message; }
       redrawLogos();
     }
+    else if (action === 'logo-sync-now') await runLogoSync();
+    else if (action === 'logo-guest-import') {
+      const id = event.target.closest('[data-logo-guest]')?.dataset.logoGuest;
+      try { await importGuestLogo(id); logoCatalog.notice = 'Logo copiato nel tuo account: viene caricato online.'; logoCatalog.error = ''; await refreshLogoExtras(); scheduleLogoSync(); } catch (error) { logoCatalog.error = error.message; }
+      redrawLogos();
+    }
+    else if (action === 'logo-conflict-local' || action === 'logo-conflict-remote') {
+      const id = event.target.closest('[data-logo-conflict]')?.dataset.logoConflict;
+      try { await resolveLogoConflict(id, action === 'logo-conflict-local' ? 'local' : 'remote'); logoCatalog.notice = action === 'logo-conflict-local' ? 'Hai tenuto il logo di questo dispositivo: ora è anche online.' : 'Hai tenuto il logo del tuo account: ha sostituito quello di questo dispositivo.'; logoCatalog.error = ''; await refreshLogoExtras(); }
+      catch (error) { logoCatalog.error = error.message; }
+      redrawLogos();
+    }
     else if (action === 'logo-save') await saveStagedLogo();
     else if (action === 'logo-cancel') { clearPendingLogo(); Object.assign(logoCatalog, { error: '', notice: '', urlDraft: '' }); redrawLogos(); }
     else if (action === 'logo-delete') {
       const id = logoCatalog.selectedId, entity = logoEntities().find(item => item.id === id);
-      if (id && logoInfo(id)) confirmThen({ title: 'Eliminare il logo?', body: `Il tuo logo di «${entity?.name ?? 'questo partito'}» verrà eliminato da questo dispositivo. Il gioco tornerà a usare il segno originale con la sigla e i colori del partito.`, confirmLabel: 'Elimina il logo', tone: 'danger' }, async () => {
-        try { await deleteLogo(id); clearPendingLogo(); Object.assign(logoCatalog, { error: '', notice: 'Logo eliminato da questo dispositivo.' }); } catch (error) { logoCatalog.error = error.message; }
+      if (id && logoInfo(id)) confirmThen({ title: 'Eliminare il logo?', body: `Il tuo logo di «${entity?.name ?? 'questo partito'}» verrà eliminato da questo dispositivo${account.user ? ' e dal tuo account online' : ''}. Il gioco tornerà a usare il segno originale con la sigla e i colori del partito.`, confirmLabel: 'Elimina il logo', tone: 'danger' }, async () => {
+        try { await deleteLogo(id); clearPendingLogo(); Object.assign(logoCatalog, { error: '', notice: account.user ? 'Logo eliminato da questo dispositivo: la copia online viene eliminata alla prossima sincronizzazione.' : 'Logo eliminato da questo dispositivo.' }); scheduleLogoSync(); } catch (error) { logoCatalog.error = error.message; }
         redrawLogos();
       });
     }

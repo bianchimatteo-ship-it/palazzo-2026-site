@@ -397,7 +397,6 @@ export const PHRASES = [
   ["{} di {} è stata {}; il tema è {}{}.", "{1} of {2} was {3}; the subject is {4}{5}."],
   ["{} ha la fiducia di {} gruppi{}; la stabilità è a {}/100{}.", "{1} has the confidence of {2} groups{3}; stability is at {4}/100{5}."],
   ["{} in difficoltà su {}", "{1} in difficulty on {2}"],
-  ["{} si chiude{}{}. {}", "{1} closes{2}{3}. {4}"],
   ["{}, sforamento dei costi: chi paga?", "{1}, cost overrun: who pays?"],
   ["{}: il Governo avvia l’opera", "{1}: the Government starts the work"],
   ["{}: il tuo risultato{} vale un mandato", "{1}: your result{2} is worth a mandate"],

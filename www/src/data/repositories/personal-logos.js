@@ -1,7 +1,8 @@
 // The personal catalog of party logos. Every logo is a small raster image (PNG, JPEG or WebP, re-encoded here) kept in this browser's IndexedDB, under the account that is signed in (or
-// the guest scope when nobody is) and the party's stable identifier. Nothing here is ever sent anywhere: no Worker, no database, no analytics, no synchronisation, and the images are
-// never written into the saves of the careers. A logo added from an address is copied once into the browser and the address is forgotten.
-import { signedInUsername } from './career-visibility.js?v=20261022-14';
+// the guest scope when nobody is) and the party's stable identifier, and the images are never written into the saves of the careers. A logo added from an address is copied once into the
+// browser and the address is forgotten. This file only keeps the browser's copy (the cache that works offline): the synchronisation with the account's cloud copy is logo-sync.js, which
+// reads and writes these records through the `logoStore` below. A record carries `sync` ({ version, sha } of the cloud copy it was last known to equal) and `dirty` (changed here since).
+import { signedInUsername } from './career-visibility.js?v=20261022-19';
 
 const DATABASE = 'politicando-personal-logos';
 const STORE = 'logos';
@@ -173,19 +174,35 @@ export const resolveLogo = partyId => (partyId && activeScope === scopeNow() ? u
 export const logoInfo = partyId => infos.get(String(partyId)) ?? null;
 export const listLogoInfos = () => [...infos.values()];
 
+export async function sha256OfBlob(blob) {
+  const digest = await crypto.subtle.digest('SHA-256', await blob.arrayBuffer());
+  return [...new Uint8Array(digest)].map(byte => byte.toString(16).padStart(2, '0')).join('');
+}
+// The low-level access of the synchronisation (logo-sync.js): the records of one scope (with deleted-logo markers), one record written or removed. Not for the interface.
+export const CONFLICT_SUFFIX = '#conflitto';
+export const logoStore = { all: scope => readAll(scope), put: record => putRecord(record), remove: key => removeRecord(key), keyOf, reload: scope => loadLogos(scope), fail };
+
 export async function saveLogo(partyId, prepared, { fileName = 'logo', origin = 'file', alt = '' } = {}) {
   const id = String(partyId ?? '').trim();
   if (!id || !prepared?.blob) throw fail('Partito o immagine non validi.');
   const scope = scopeNow();
   const now = new Date().toISOString();
   const previous = scope === activeScope ? infos.get(id) : null;
-  await putRecord({ key: keyOf(scope, id), scope, partyId: id, blob: prepared.blob, mimeType: prepared.mimeType, width: prepared.width, height: prepared.height, bytes: prepared.bytes, fileName: String(fileName).slice(0, 120), origin, alt: String(alt).slice(0, 160), addedAt: previous?.addedAt ?? now, updatedAt: now });
+  const stored = (await readAll(scope).catch(() => [])).find(record => record.partyId === id);
+  const sha = await sha256OfBlob(prepared.blob);
+  // What the cloud copy was when this one was made stays in `sync`: the next synchronisation uploads this image on top of exactly that version (or reports a conflict). A logo changed here is `dirty`.
+  await putRecord({ key: keyOf(scope, id), scope, partyId: id, blob: prepared.blob, mimeType: prepared.mimeType, width: prepared.width, height: prepared.height, bytes: prepared.bytes, fileName: String(fileName).slice(0, 120), origin, alt: String(alt).slice(0, 160), addedAt: previous?.addedAt ?? now, updatedAt: now, sha, sync: stored?.sync ?? null, dirty: true });
   await loadLogos(scope);
   return { persistent: await logosArePersistent() };
 }
 export async function deleteLogo(partyId) {
   const scope = scopeNow();
-  await removeRecord(keyOf(scope, String(partyId)));
+  const key = keyOf(scope, String(partyId));
+  const stored = (await readAll(scope).catch(() => [])).find(record => record.partyId === String(partyId));
+  // A logo that exists in the cloud leaves a marker (no image) so that the next synchronisation deletes the cloud copy too; one that was never uploaded just goes.
+  if (stored?.sync?.version && scope !== GUEST) await putRecord({ key, scope, partyId: String(partyId), deleted: true, sync: stored.sync, updatedAt: new Date().toISOString() });
+  else await removeRecord(key);
+  await removeRecord(`${scope}${CONFLICT_SUFFIX}|${String(partyId)}`).catch(() => null);
   await loadLogos(scope);
 }
 
@@ -236,21 +253,41 @@ export function releaseLegacyPreviews() { for (const url of legacyUrls.values())
 export async function listLegacyLogos() {
   releaseLegacyPreviews();
   const records = await readAll(LEGACY_SCOPE).catch(() => []);
-  return records.filter(record => record.blob && ALLOWED.includes(record.mimeType)).map(record => { const src = URL.createObjectURL(record.blob); legacyUrls.set(record.partyId, src); const { blob, ...info } = record; return { ...info, src }; });
+  return records.filter(record => record.blob && ALLOWED.includes(record.mimeType) && !record.claimedBy).map(record => { const src = URL.createObjectURL(record.blob); legacyUrls.set(record.partyId, src); const { blob, ...info } = record; return { ...info, src }; });
 }
-// The player says «this one is mine to use»: it moves to the account in use (or the guest scope); an existing logo of the player's is not replaced.
+// The player says «this one is mine to use»: it is COPIED to the account in use (or the guest scope) and the copy waits to be uploaded; the original stays (hidden) until the upload has been
+// verified (logo-sync.js removes it then), so a failed upload loses nothing. An existing logo of the player's is not replaced.
 export async function claimLegacyLogo(partyId) {
   const records = await readAll(LEGACY_SCOPE);
-  const record = records.find(item => item.partyId === String(partyId));
+  const record = records.find(item => item.partyId === String(partyId) && !item.claimedBy);
   if (!record) throw fail('Questo logo non c’è più.');
   if (await getExisting(record.partyId)) throw fail('Per questo partito hai già un logo: eliminalo prima se vuoi usare questo.');
   const scope = scopeNow();
   const now = new Date().toISOString();
-  await putRecord({ ...record, key: keyOf(scope, record.partyId), scope, origin: 'file', updatedAt: now });
-  await removeRecord(record.key);
+  const sha = record.sha ?? await sha256OfBlob(record.blob);
+  await putRecord({ ...record, key: keyOf(scope, record.partyId), scope, origin: 'file', updatedAt: now, sha, sync: null, dirty: true, fromLegacy: LEGACY_SCOPE });
+  await putRecord({ ...record, claimedBy: scope });
   await loadLogos(scope);
 }
 export async function discardLegacyLogo(partyId) { await removeRecord(keyOf(LEGACY_SCOPE, String(partyId))); }
+// The logos added while nobody was signed in (guest scope) are never given to an account on their own: once signed in, the player may COPY one into the account (the guest copy stays).
+export async function listGuestLogos() {
+  if (scopeNow() === GUEST) return [];
+  releaseLegacyPreviews();
+  const records = await readAll(GUEST).catch(() => []);
+  return records.filter(record => record.blob && ALLOWED.includes(record.mimeType) && !record.importedBy).map(record => { const src = URL.createObjectURL(record.blob); legacyUrls.set(`guest|${record.partyId}`, src); const { blob, ...info } = record; return { ...info, src }; });
+}
+export async function importGuestLogo(partyId) {
+  const scope = scopeNow();
+  if (scope === GUEST) throw fail('Per importare un logo nel tuo account devi prima accedere.');
+  const record = (await readAll(GUEST)).find(item => item.partyId === String(partyId) && item.blob);
+  if (!record) throw fail('Questo logo non c’è più.');
+  if (await getExisting(record.partyId)) throw fail('Per questo partito hai già un logo nel tuo account: eliminalo prima se vuoi importare questo.');
+  const now = new Date().toISOString();
+  await putRecord({ ...record, key: keyOf(scope, record.partyId), scope, origin: 'file', updatedAt: now, sha: record.sha ?? await sha256OfBlob(record.blob), sync: null, dirty: true, fromGuest: true });
+  await putRecord({ ...record, importedBy: scope });
+  await loadLogos(scope);
+}
 async function getExisting(partyId) {
   const database = await openDatabase();
   const key = keyOf(scopeNow(), partyId);
