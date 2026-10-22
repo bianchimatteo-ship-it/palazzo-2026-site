@@ -128,7 +128,8 @@ try {
   assert(db.parties.length === localManifest.collections.parties && db.politicalMovements.length === localManifest.collections.politicalMovements, 'Conteggi pubblicati dei partiti/movimenti non corrispondono');
   assert(db.politicians.length === 604 && db.parliamentaryGroups.length === 22, 'Conteggi pubblicati di politici/gruppi non corrispondono');
   assert(db.politicalFigures.length === localManifest.collections.politicalFigures && db.partyLeaderships.length === localManifest.collections.partyLeaderships && db.partyLeaderships.length >= 38, 'Figure politiche o incarichi di partito mancanti');
-  assert([...parties, ...db.coalitions].every(item => item.politicalPosition), 'Collocazione del documento mancante in qualche entità pubblicata');
+  // Only an entity declared and waiting for confirmation (Progetto Civico Italia) has no position: none is invented for it.
+  assert([...parties, ...db.coalitions].every(item => item.politicalPosition || (item.verified !== true && item.verificationStatus === 'in-attesa-di-conferma' && item.politicalPosition === null)), 'Collocazione del documento mancante in qualche entità pubblicata');
   assert(db.realPolls[0]?.source === 'real' && db.realPolls[0].results.length >= 10, 'Sondaggio reale iniziale mancante');
   // The ISTAT comuni are compact records: real and verified, with the full provenance on their territorial unit.
   const istatUnits = new Map(db.territorialUnits.map(unit => [unit.code, unit]));
@@ -137,6 +138,8 @@ try {
     if (name === 'municipalities') assert(record.source === 'real' && record.verified === true && /^\d{6}$/.test(record.code) && istatUnits.get(record.unit)?.sourceUrl, `${name}/${record.id}: provenienza non verificata`);
     // A poll transcribed from a source that could not be read again is declared as such (never verified without a reading): source, link and the date it was transcribed are still required.
     else if (name === 'realPolls' && record.verified !== true) assert(record.source === 'real' && record.verificationStatus === 'in-attesa-di-conferma' && record.verifiedAt === null && record.transcribedAt && record.sourceUrl && record.sourceName, `${name}/${record.id}: dichiarato ma senza lo stato di attesa di conferma`);
+    // A party declared from a poll that could not be read again says so in the same way (verified false, in-attesa-di-conferma, transcribed on a date, with a note).
+    else if (name === 'parties' && record.verified !== true) assert(record.source === 'real' && record.verificationStatus === 'in-attesa-di-conferma' && record.verifiedAt === null && record.transcribedAt && record.verificationNote && record.sourceUrl && record.sourceName, `${name}/${record.id}: dichiarato ma senza lo stato «in-attesa-di-conferma» e la data di trascrizione`);
     else assert(record.source === 'real' && record.verified === true && record.sourceUrl && record.sourceName && record.verifiedAt, `${name}/${record.id}: provenienza non verificata`);
   }
   const partyIds = new Set(parties.map(item => item.id));

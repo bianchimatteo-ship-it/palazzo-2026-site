@@ -80,6 +80,7 @@ for (const file of ['manifest.json', 'database.json']) {
   if (file === 'database.json') json.parties = addParty(json.parties);
   if (!manifest) continue;
   if (file === 'manifest.json') { manifest.collections.realPolls = polls.length; manifest.collections.parties = parties.filter(item => item.id !== NEW_PARTY).length + 1; }
+  if (file === 'database.json') manifest.collections.parties = json.parties.length;
   manifest.datasetVersion = '2026-10-22.1';
   manifest.pollsNote = 'Sondaggi reali: Supermedia del 24/09/2026 e del 01/10/2026 (storico) e sondaggio BiDiMedia di ottobre 2026 (rilevazione 17–19/10, pubblicato il 22/10/2026), apertura delle nuove carriere realistiche dal 22/10/2026.';
   await write(file, json);

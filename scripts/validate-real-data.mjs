@@ -74,7 +74,8 @@ for (const cabinet of government) {
 // Specification of 24/09/2026: every entity classified, lists linked without turning into memberships, no alias clashes.
 const POSITIONS = ['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra'];
 const coalitionIds = idsByCollection('coalitions');
-for (const entity of [...organizations, ...(db.coalitions ?? [])]) if (!POSITIONS.includes(entity.politicalPosition)) fail(`${entity.id}: collocazione politica mancante o non valida`);
+// An entity declared and waiting for confirmation has no position and none is invented for it (see the party record's verificationNote).
+for (const entity of [...organizations, ...(db.coalitions ?? [])]) if (!POSITIONS.includes(entity.politicalPosition) && !(entity.verificationStatus === 'in-attesa-di-conferma' && entity.politicalPosition === null)) fail(`${entity.id}: collocazione politica mancante o non valida`);
 for (const list of db.electoralLists) {
   if (list.politicalPosition && !POSITIONS.includes(list.politicalPosition)) fail(`${list.id}: collocazione non valida`);
   if (list.electionId === 'election-it-politiche-2022' && !list.listType) fail(`${list.id}: lista 2022 senza collegamento documentato`);
