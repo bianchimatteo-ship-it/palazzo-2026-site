@@ -53,6 +53,8 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   await fill('login', { username: 'legacy.a', password: 'password-di-a' });
   await wait(() => has('[data-isolation="unlinked"]'));
   assert.equal(saves('legacy.a').length, 0, 'Dopo l’accesso nulla è stato caricato nell’account.');
+  // the message is completed after the account's online data and the logo scope are read: the screen already shows the state before that, so the test waits for the sentence
+  await wait(async () => /solo su questo dispositivo/.test(await text('.account-message')));
   assert.match(await text('.account-message'), /solo su questo dispositivo/, 'Il gioco dice che la carriera in corso resta locale.');
   assert.ok(await has('[data-sync-status="unlinked"]'), 'Lo stato dice «solo su questo dispositivo».');
   await pause(2500);
