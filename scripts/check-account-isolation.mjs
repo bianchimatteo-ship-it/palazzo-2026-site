@@ -222,7 +222,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   await openAccount();
 
   // ---------- 6. e-mail verified by a link, then the password recovered ----------
-  await fill('register', { username: 'con.email', email: 'con.email@example.org', password: 'prima-password', confirm: 'prima-password' });
+  await fill('register', { username: 'con.email', email: 'con.email@example.org', password: 'prima-password', confirm: 'prima-password', ageBand: 'adult14' });
   await wait(() => has('[data-account-action="logout"]') || has('.tour'));
   assert.equal(outbox.length, 1, 'Il messaggio di verifica parte.');
   assert.match(outbox[0].text, /\/\?verifica-email=[\da-f]{64}/);
