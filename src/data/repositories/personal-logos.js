@@ -1,7 +1,7 @@
 // The personal catalog of party logos. Every logo is a small raster image (PNG, JPEG or WebP, re-encoded here) kept in this browser's IndexedDB, under the account that is signed in (or
 // the guest scope when nobody is) and the party's stable identifier. Nothing here is ever sent anywhere: no Worker, no database, no analytics, no synchronisation, and the images are
 // never written into the saves of the careers. A logo added from an address is copied once into the browser and the address is forgotten.
-import { signedInUsername } from './career-visibility.js?v=20261022-13';
+import { signedInUsername } from './career-visibility.js?v=20261022-14';
 
 const DATABASE = 'politicando-personal-logos';
 const STORE = 'logos';

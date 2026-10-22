@@ -103,6 +103,14 @@ export async function startCareer({ seed = 'a', level = 'deputato', partyId = 'p
   const place = PLACES.find(item => item.region === region) ?? drawn;
   const birth = `19${60 + Math.floor(pick() * 30)}-0${1 + Math.floor(pick() * 9)}-1${Math.floor(pick() * 9)}`;
   store.createCareer({ firstName: `Prova${seed}`, lastName: 'Lunga', birthDate: birth, gender: 'donna', ...place, previousProfession: 'Insegnante', ...PROFILES[level], partyMode: 'existing', partyId, difficulty: 'normale', policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 }, ...draft }, db.parties, db.parliamentaryGroups);
+  // The same seed gives the same career id, and starting a career keeps the one being replaced in an automatic slot (as the game does): a run that repeats a seed would then find, in that slot,
+  // a copy of the previous run that "has gone further" and, rightly, would never be downgraded by the fresh one. The runs of the harness are separate games: that copy is dropped.
+  {
+    const stamp = (await readFile(new URL('index.html', root), 'utf8')).match(/main\.js\?v=([^"']+)/)?.[1];
+    const { storage } = await import(new URL(`src/core/storage.js${stamp ? `?v=${stamp}` : ''}`, root).href);
+    const own = store.getState().career.id;
+    for (const slot of storage.listSlots()) { try { if (slot.autoPreserve && storage.loadSlot(slot.id)?.career?.id === own) storage.deleteSlot(slot.id); } catch { /* a slot that cannot be read stays */ } }
+  }
   if (['deputato', 'senatore'].includes(level)) store.initializeParliament(db.parliamentaryGroups);
   // The territorial committees are born when the ISTAT units are loaded, as in the game: the long run plays them too.
   if (db.territorialUnits?.length) store.initializeCommittees(db.territorialUnits);
