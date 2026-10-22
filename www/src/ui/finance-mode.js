@@ -1,13 +1,13 @@
 // Money of the career and of the party: balance, flows, budget, reports and sustainability.
-import { BUDGET_LINES, FINANCE_CATEGORIES, financeOutlook, hasAsset, INVESTMENTS, operationProblem, operationRange, partyRequestRules, RESERVE, TREASURY_OPERATIONS } from '../core/finance-engine.js?v=20261021-11';
-import { TRANSFERS } from '../data/simulation/finance-rules.js?v=20261021-11';
-import { costProblem } from '../core/career-engine.js?v=20261021-11';
-import { costText, planAddButton } from './plan-view.js?v=20261021-11';
-import { isPartyLeader, PARTY_PRIORITIES, TREASURY_LABELS, treasuryOutlook } from '../core/organization-engine.js?v=20261021-11';
-import { artTile, glyph } from './visuals.js?v=20261021-11';
-import { illustration } from './illustrations.js?v=20261021-11';
-import { foldPanel } from './sections-kit.js?v=20261021-11';
-import { breakdown, esc, euro, EXPENSE_COLOR, flowChart, INCOME_COLOR, lineChart, num, SERIES, signed, sparkline, stateBadge } from './charts.js?v=20261021-11';
+import { BUDGET_LINES, FINANCE_CATEGORIES, financeOutlook, hasAsset, INVESTMENTS, operationProblem, operationRange, partyRequestRules, RESERVE, TREASURY_OPERATIONS } from '../core/finance-engine.js?v=20261022-13';
+import { TRANSFERS } from '../data/simulation/finance-rules.js?v=20261022-13';
+import { costProblem } from '../core/career-engine.js?v=20261022-13';
+import { costText, planAddButton } from './plan-view.js?v=20261022-13';
+import { isPartyLeader, PARTY_PRIORITIES, TREASURY_LABELS, treasuryOutlook } from '../core/organization-engine.js?v=20261022-13';
+import { artTile, glyph } from './visuals.js?v=20261022-13';
+import { illustration } from './illustrations.js?v=20261022-13';
+import { foldPanel } from './sections-kit.js?v=20261022-13';
+import { breakdown, esc, euro, EXPENSE_COLOR, flowChart, INCOME_COLOR, lineChart, num, SERIES, signed, sparkline, stateBadge } from './charts.js?v=20261022-13';
 
 const STATUS_KIND = { solida: 'solida', calo: 'calo', rischio: 'rischio', crisi: 'crisi' };
 
@@ -160,7 +160,7 @@ export function renderFinancePage(state) {
     ${foldPanel({ id: 'fin-registri', tone: 'viola', icon: 'book', title: 'Registri e storico', summary: `${finance.ledger.length ? `${Math.min(18, finance.ledger.length)} movimenti recenti` : 'nessun movimento'}${finance.annual.length ? ` · ${finance.annual.length} chiusure` : ''}`, body: `${panel('MOVIMENTI', 'Registro contabile', `<div class="ledger">${ledger || '<p class="quiet-copy">Nessun movimento.</p>'}</div>`)}${panel('BILANCI ANNUALI', 'Chiusure d’esercizio', annual)}` })}
     ${game.party?.org ? foldPanel({ id: 'fin-fondi-partito', tone: 'oro', icon: 'wallet', title: 'Fondi e partito', summary: 'Trasferimenti tra te e la tesoreria', body: panel('FONDI E PARTITO', 'Trasferimenti tra te e la tesoreria del partito', transfersPanel(game)) }) : panel('FONDI E PARTITO', 'Trasferimenti tra te e la tesoreria del partito', transfersPanel(game))}
     ${game.party?.org ? foldPanel({ id: 'fin-tesoreria', tone: 'corallo', icon: 'flag', title: 'Tesoreria del partito', summary: `${esc(euro(game.party.org.treasury.balance))} nelle casse`, body: renderTreasuryPanel(state) }) : ''}
-    <p class="poll-footnote">Importi di gioco (source: simulation): non corrispondono a indennità, rimborsi o bilanci reali di persone o partiti.</p>
+    <p class="poll-footnote">Importi di gioco: non corrispondono a indennità, rimborsi o bilanci reali di persone o partiti.</p>
   </div>`;
 }
 

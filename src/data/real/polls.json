@@ -233,5 +233,152 @@
     "verificationNote": "Valori trascritti il 14/10/2026 dalla tabella dell’articolo indicata dal committente del progetto. La pagina di YouTrend non era raggiungibile dall’ambiente di lavoro (neanche il 16/10/2026: la rete lo blocca) e non è stata riletta, né è stata trovata una copia attendibile: i valori sono dichiarati dal committente, NON riscontrati sulla fonte. Per chiudere la verifica: rileggere la tabella, confrontare i dodici valori e le variazioni, poi impostare verified=true, verificationStatus=\"verificato\" e verifiedAt alla data di quella lettura.",
     "validFrom": "2026-10-01",
     "validTo": null
+  },
+  {
+    "id": "poll-bidimedia-2026-10-21",
+    "kind": "sondaggio",
+    "label": "Sondaggio BiDiMedia",
+    "institute": "BiDiMedia",
+    "referenceDate": "2026-10-21",
+    "publishedAt": "2026-10-22",
+    "fieldworkFrom": "2026-10-17",
+    "fieldworkTo": "2026-10-19",
+    "method": "Sondaggio nazionale sulle intenzioni di voto, secondo la pubblicazione di BiDiMedia (campione e metodo non registrati dal progetto)",
+    "includedPolls": null,
+    "results": [
+      {
+        "label": "Fratelli d’Italia",
+        "entityId": "party-registro-p1-2014-04-ir",
+        "share": 26.5,
+        "delta": null
+      },
+      {
+        "label": "Partito Democratico",
+        "entityId": "party-registro-p1-2015-29-ir",
+        "share": 20.5,
+        "delta": null
+      },
+      {
+        "label": "Movimento 5 Stelle",
+        "entityId": "party-registro-p1-2022-63-ir",
+        "share": 12,
+        "delta": null
+      },
+      {
+        "label": "Futuro Nazionale",
+        "entityId": "party-futuro-nazionale",
+        "share": 7.2,
+        "delta": null
+      },
+      {
+        "label": "Forza Italia",
+        "entityId": "party-registro-p1-2015-20-ir",
+        "share": 6.7,
+        "delta": null
+      },
+      {
+        "label": "Alleanza Verdi e Sinistra",
+        "entityId": "coalition-alleanza-verdi-sinistra",
+        "share": 6.6,
+        "delta": null,
+        "sourceLabel": "AVS"
+      },
+      {
+        "label": "Lega",
+        "entityId": "party-registro-p1-2017-41-ir",
+        "share": 5.4,
+        "delta": null
+      },
+      {
+        "label": "Azione",
+        "entityId": "party-registro-p1-2019-51-ir",
+        "share": 3,
+        "delta": null
+      },
+      {
+        "label": "Italia Viva",
+        "entityId": "party-registro-p1-2019-52-ir",
+        "share": 2,
+        "delta": null,
+        "sourceLabel": "Casa Riformista–Italia Viva"
+      },
+      {
+        "label": "Sud chiama Nord",
+        "entityId": "party-registro-p1-2022-67-ir",
+        "share": 1.4,
+        "delta": null,
+        "sourceLabel": "Sud Chiama Nord"
+      },
+      {
+        "label": "Più Europa",
+        "entityId": "party-registro-p1-2018-47-ir",
+        "share": 1.1,
+        "delta": null
+      },
+      {
+        "label": "Noi Moderati",
+        "entityId": "party-registro-p1-2020-56-ir",
+        "share": 1,
+        "delta": null
+      },
+      {
+        "label": "Progetto Civico Italia",
+        "entityId": "party-progetto-civico-italia",
+        "share": 1,
+        "delta": null
+      },
+      {
+        "label": "Partito Liberaldemocratico",
+        "entityId": "party-registro-p1-2024-74-ir",
+        "share": 0.8,
+        "delta": null
+      },
+      {
+        "label": "Potere al Popolo",
+        "entityId": "movement-potere-al-popolo",
+        "share": 0.8,
+        "delta": null
+      },
+      {
+        "label": "Rifondazione Comunista",
+        "entityId": "party-registro-p1-2014-01-ir",
+        "share": 0.8,
+        "delta": null
+      },
+      {
+        "label": "Ora!",
+        "entityId": "party-ora",
+        "share": 0.7,
+        "delta": null
+      },
+      {
+        "label": "Partito Socialista Italiano",
+        "entityId": "party-registro-p1-2014-05-ir",
+        "share": 0.6,
+        "delta": null,
+        "sourceLabel": "Avanti–PSI"
+      },
+      {
+        "label": "UDC",
+        "entityId": "party-registro-p1-2015-25-ir",
+        "share": 0.5,
+        "delta": null
+      }
+    ],
+    "others": 1.4,
+    "othersNote": "Altri: «un’altra lista» della fonte (1,4%), una categoria aggregata e non un partito",
+    "mappingNote": "Casa Riformista–Italia Viva è mappata all’ID esistente di Italia Viva; AVS all’entità esistente Alleanza Verdi e Sinistra; Avanti–PSI al Partito Socialista Italiano registrato (è l’unico partito socialista del catalogo: l’abbinamento è una scelta del progetto da confermare sulla fonte); Progetto Civico Italia è stato aggiunto al catalogo con il solo nome; Più Europa e +Europa sono la stessa entità. Nessun dato aggregato sulle coalizioni è registrato.",
+    "deltaNote": "Nessuna variazione registrata: la fonte non ne ha fornite al progetto",
+    "coalitions": null,
+    "source": "real",
+    "verified": false,
+    "verificationStatus": "in-attesa-di-conferma",
+    "sourceUrl": "https://sondaggibidimedia.com/sondaggio-bidimedia-ottobre-2026/",
+    "sourceName": "BiDiMedia — Sondaggio BiDiMedia di ottobre 2026 (rilevazione del 21 ottobre, pubblicata il 22 ottobre)",
+    "transcribedAt": "2026-10-22",
+    "verifiedAt": null,
+    "verificationNote": "Valori trascritti dalla tabella del sondaggio indicata dal committente del progetto; la pagina non era raggiungibile dall’ambiente di lavoro e non è stata riletta: da riconfermare alla prima occasione (diciannove forze 98,6% più «un’altra lista» 1,4%; date: rilevazione 17–19/10, sondaggio del 21/10 come dato al progetto, pubblicazione originale 22/10).",
+    "validFrom": "2026-10-22",
+    "validTo": null
   }
 ]

@@ -1,17 +1,17 @@
 // PARTITO — the organisation seen from inside: identity, the player's role and odds, internal areas, members and
 // sections, the secretary's desk and the history. The real party stays a reference; everything inside is simulated.
-import { careerOverview } from '../core/career-overview.js?v=20261021-11';
-import { organOf, treasuryOutlook } from '../core/organization-engine.js?v=20261021-11';
-import { playerRoles } from '../core/roles.js?v=20261021-11';
-import { formatDate } from '../core/time.js?v=20261021-11';
-import { lineChart, SERIES } from './charts.js?v=20261021-11';
-import { glyph } from './visuals.js?v=20261021-11';
-import { renderPartyPosition, renderSecretaryDesk } from './game-mode.js?v=20261021-11';
-import { renderOrganizationPanel } from './organization-mode.js?v=20261021-11';
-import { renderOddsCard } from './career-page.js?v=20261021-11';
-import { renderCommitteesPanel } from './committees-view.js?v=20261021-11';
-import { renderPartyLife } from './party-life-view.js?v=20261021-11';
-import { arrow, badge, bar, card, esc, euro, num, pct, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261021-11';
+import { careerOverview } from '../core/career-overview.js?v=20261022-13';
+import { organOf, treasuryOutlook } from '../core/organization-engine.js?v=20261022-13';
+import { playerRoles } from '../core/roles.js?v=20261022-13';
+import { formatDate } from '../core/time.js?v=20261022-13';
+import { lineChart, SERIES } from './charts.js?v=20261022-13';
+import { glyph } from './visuals.js?v=20261022-13';
+import { renderPartyPosition, renderSecretaryDesk } from './game-mode.js?v=20261022-13';
+import { renderOrganizationPanel } from './organization-mode.js?v=20261022-13';
+import { renderOddsCard } from './career-page.js?v=20261022-13';
+import { renderCommitteesPanel } from './committees-view.js?v=20261022-13';
+import { renderPartyLife } from './party-life-view.js?v=20261022-13';
+import { arrow, badge, bar, card, esc, euro, num, pct, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261022-13';
 
 const SOURCE_LABELS = { real: 'Dato reale verificato', user: 'Creato da te', simulation: 'Simulazione' };
 const partyName = party => party?.officialName ?? party?.name ?? 'Partito';
@@ -103,7 +103,7 @@ function hero(state, record, logoFor, track) {
   const logo = record ? logoFor?.(record) : null;
   const actions = track?.action?.type === 'party-contest' ? `<button class="primary-button" data-party-action="contest" ${track.blocker ? `disabled title="${esc(track.blocker)}"` : ''}>${esc(track.action.label)} · ${Math.round((track.odds?.chance ?? 0) * 100)}%</button>` : playerRoles(state).secretary ? `<button class="primary-button" data-section-tab="partito" data-section-tab-value="segreteria">Decisioni della segreteria ${arrow}</button>` : '';
   return sectionHero({
-    kicker: `IL TUO PARTITO · ${(SOURCE_LABELS[record?.source] ?? 'SIMULAZIONE').toUpperCase()}`, icon: 'flag',
+    kicker: `IL TUO PARTITO · ${(record?.source === 'real' && record.verified !== true ? 'Dato reale in attesa di conferma' : SOURCE_LABELS[record?.source] ?? 'SIMULAZIONE').toUpperCase()}`, icon: 'flag',
     title: partyName(record) || party.label,
     lead: `${party.rankTitle}${org ? ` · siedi in ${organOf(party).label.toLowerCase()}` : ''} · area: ${party.currents?.find(item => item.id === party.alignedCurrentId)?.label ?? 'nessuna'}. Ruoli, correnti e organizzazione interna sono simulati.`,
     actions,

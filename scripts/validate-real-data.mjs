@@ -9,7 +9,9 @@ for (const [name, records] of collections) {
   const ids = records.map(record => record.id).filter(Boolean);
   if (new Set(ids).size !== ids.length) fail(`${name}: ID duplicati`);
   for (const record of records) {
-    if (record.source !== 'real' || record.verified !== true || !record.sourceUrl || !record.sourceName || !record.verifiedAt) fail(`${name}/${record.id ?? '(senza ID)'}: provenienza incompleta`);
+    // A party may be declared and waiting for confirmation (never verified without a reading): then it says when it was transcribed and what is missing, like a poll.
+    const pending = name === 'parties' && record.source === 'real' && record.verified === false && record.verificationStatus === 'in-attesa-di-conferma' && record.verifiedAt === null && /^\d{4}-\d{2}-\d{2}$/.test(record.transcribedAt ?? '') && Boolean(record.verificationNote) && Boolean(record.sourceUrl) && Boolean(record.sourceName);
+    if (!pending && (record.source !== 'real' || record.verified !== true || !record.sourceUrl || !record.sourceName || !record.verifiedAt)) fail(`${name}/${record.id ?? '(senza ID)'}: provenienza incompleta`);
   }
 }
 const organizations = [...db.parties, ...db.politicalMovements];

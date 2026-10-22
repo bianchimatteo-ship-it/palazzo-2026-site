@@ -3,17 +3,17 @@
 // decides, the majority it needs, what it changes, the forecast and the player's vote), what the player can do
 // (propose, question, negotiate, govern), the chronicle of the council. Everything here is simulation, except the size
 // of the European groups at the constitutive session of 2024 (real, with its source).
-import { DELEGA_FORBIDDEN, actCapacity, EP_COMMITTEES, EP_COSTS, EP_GROUPS_2024, committeeById, compactVote, coverageGap, europeanOdds, forecastAct, inCommittee, INSTITUTIONS, isClosedAct, LOCAL_VOTE_CHOICES, localAreas, majorityMargin, mandateRecord, measureOf, actorOf, delegaScore, nextEuropeanRole, typeOfAct, voteRule, weakCityAreas, withEuropeanSeat, withLocalState } from '../core/local-engine.js?v=20261021-11';
-import { ACT_TYPES, CITY_INDICATORS, PROVINCE_INDICATORS, QUORUMS, actTypeOf, neededYes, proposableTypes } from '../data/simulation/local-acts.js?v=20261021-11';
-import { COFIN_TERMS, WORK_PRIORITIES, WORK_RULES, WORK_SITE_LIST, WORK_TYPES, siteLabel, workTypesFor } from '../data/simulation/local-works.js?v=20261021-11';
-import { activeWorks, agedUpkeepOf, archiveOf, canManageWorks, cofinPartners, euroOf, externalOf, isActiveWork, planWork, workGap, workView, worksLedger } from '../core/local-works-engine.js?v=20261021-11';
-import { INDICATORS } from '../data/simulation/society-rules.js?v=20261021-11';
-import { DELEGA_RULES } from '../data/simulation/office-rules.js?v=20261021-11';
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261021-11';
-import { esc, meter, num, signed } from './charts.js?v=20261021-11';
-import { glyph, territoryTile, territoryVisual } from './visuals.js?v=20261021-11';
-import { fallbackTones, forceColorResolver, hemicycleLayout, seatColor } from '../core/hemicycle.js?v=20261021-11';
-import { SEAT_ROLES, rosterSeats } from '../core/seat-roster.js?v=20261021-11';
+import { DELEGA_FORBIDDEN, actCapacity, EP_COMMITTEES, EP_COSTS, EP_GROUPS_2024, committeeById, compactVote, coverageGap, europeanOdds, forecastAct, inCommittee, INSTITUTIONS, isClosedAct, LOCAL_VOTE_CHOICES, localAreas, majorityMargin, mandateRecord, measureOf, actorOf, delegaScore, nextEuropeanRole, typeOfAct, voteRule, weakCityAreas, withEuropeanSeat, withLocalState } from '../core/local-engine.js?v=20261022-13';
+import { ACT_TYPES, CITY_INDICATORS, PROVINCE_INDICATORS, QUORUMS, actTypeOf, neededYes, proposableTypes } from '../data/simulation/local-acts.js?v=20261022-13';
+import { COFIN_TERMS, WORK_PRIORITIES, WORK_RULES, WORK_SITE_LIST, WORK_TYPES, siteLabel, workTypesFor } from '../data/simulation/local-works.js?v=20261022-13';
+import { activeWorks, agedUpkeepOf, archiveOf, canManageWorks, cofinPartners, euroOf, externalOf, isActiveWork, planWork, workGap, workView, worksLedger } from '../core/local-works-engine.js?v=20261022-13';
+import { INDICATORS } from '../data/simulation/society-rules.js?v=20261022-13';
+import { DELEGA_RULES } from '../data/simulation/office-rules.js?v=20261022-13';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261022-13';
+import { esc, meter, num, signed } from './charts.js?v=20261022-13';
+import { glyph, territoryTile, territoryVisual } from './visuals.js?v=20261022-13';
+import { fallbackTones, forceColorResolver, hemicycleLayout, seatColor } from '../core/hemicycle.js?v=20261022-13';
+import { SEAT_ROLES, rosterSeats } from '../core/seat-roster.js?v=20261022-13';
 
 const STAGES = Object.freeze({ commissione: 'In commissione', giunta: 'In Giunta', aula: 'In aula', osservazioni: 'Osservazioni dei cittadini', 'seconda-lettura': 'Attesa della seconda deliberazione', risposta: 'In attesa di risposta', approvato: 'Approvato', respinto: 'Respinto', ritirato: 'Ritirato', risposto: 'Risposta data' });
 const SIDE_LABELS = Object.freeze({ maggioranza: 'Maggioranza', opposizione: 'Opposizione' });
@@ -449,7 +449,7 @@ export function renderInstitutions(state, ui = {}) {
   const context = { capital, influence, today: state.clock?.currentDate ?? null };
   const selected = active.find(inst => inst.kind === ui.localInst) ?? active[0];
   const jump = active.length > 1 ? `<nav class="sx-tabs local-jump" role="tablist" aria-label="I tuoi mandati">${active.map(inst => `<button type="button" role="tab" class="sx-tab${inst.id === selected.id ? ' active' : ''}" data-local-inst="${esc(inst.kind)}" aria-selected="${inst.id === selected.id}" tabindex="${inst.id === selected.id ? 0 : -1}" style="--lv:${esc(territoryVisual(inst.kind).color)}">${glyph(territoryVisual(inst.kind).icon, 15)} ${esc(institutionLabel(inst))}</button>`).join('')}</nav>` : '';
-  return `<div class="local-institutions" id="istituzioni"><div class="home-section-heading local-intro"><div><span class="section-kicker">LE TUE ISTITUZIONI</span><h2>Dove eserciti il tuo mandato</h2><p class="section-subtitle">Un mandato alla volta: panoramica, bilancio, opere e cantieri, servizi del territorio, atti e cronologia. Ogni atto approvato e ogni opera finita cambiano i servizi del territorio.</p></div></div>${jump}${institutionCard(selected, capital, context, state, ui)}<p class="poll-footnote">Consigli, giunte, gruppi, atti, voti, opere ed effetti sono simulati (source: simulation); sindaci, presidenti e assessori non giocanti sono figure simulate, non persone reali.</p></div>`;
+  return `<div class="local-institutions" id="istituzioni"><div class="home-section-heading local-intro"><div><span class="section-kicker">LE TUE ISTITUZIONI</span><h2>Dove eserciti il tuo mandato</h2><p class="section-subtitle">Un mandato alla volta: panoramica, bilancio, opere e cantieri, servizi del territorio, atti e cronologia. Ogni atto approvato e ogni opera finita cambiano i servizi del territorio.</p></div></div>${jump}${institutionCard(selected, capital, context, state, ui)}<p class="poll-footnote">Consigli, giunte, gruppi, atti, voti, opere ed effetti sono simulati; sindaci, presidenti e assessori non giocanti sono figure simulate, non persone reali.</p></div>`;
 }
 export const activeInstitutions = state => (state?.local?.institutions ?? []).filter(item => item.status === 'active');
 // How a council is named in the links that lead to it (Home, election report).

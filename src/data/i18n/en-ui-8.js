@@ -281,4 +281,6 @@ export const PHRASES = [
   ["Ho 14 anni o più", "I am 14 or older"],
   ["L’account online è riservato a chi ha almeno 14 anni: per i più piccoli non è ancora prevista una procedura di consenso dei genitori. Puoi giocare lo stesso: la partita resta sul tuo dispositivo, senza account e senza inviare nulla ai nostri server.", "The online account is for people aged 14 or over: there is not yet a parental-consent procedure for younger players. You can still play: the game stays on your device, with no account and nothing sent to our servers."],
   ["Indica la tua età per creare l’account.", "Tell us your age range to create the account."],
+  ["Dato reale in attesa di conferma", "Real data awaiting confirmation"],
+  ["DATO REALE IN ATTESA DI CONFERMA", "REAL DATA AWAITING CONFIRMATION"],
 ];

@@ -1,7 +1,7 @@
 // The personal catalog of party logos. Every logo is a small raster image (PNG, JPEG or WebP, re-encoded here) kept in this browser's IndexedDB, under the account that is signed in (or
 // the guest scope when nobody is) and the party's stable identifier. Nothing here is ever sent anywhere: no Worker, no database, no analytics, no synchronisation, and the images are
 // never written into the saves of the careers. A logo added from an address is copied once into the browser and the address is forgotten.
-import { signedInUsername } from './career-visibility.js?v=20261021-11';
+import { signedInUsername } from './career-visibility.js?v=20261022-13';
 
 const DATABASE = 'politicando-personal-logos';
 const STORE = 'logos';
@@ -12,13 +12,17 @@ export const OUTPUT_SIDE = 512;
 export const OUTPUT_BYTES = 300 * 1024;
 const ALLOWED = ['image/png', 'image/jpeg', 'image/webp'];
 const LEGACY_FLAG = 'politicando.personal-logos.migrated.v1';
+// The logos of the earlier version have no known owner: they wait here, never shown, until the player claims them one by one (or discards them).
+export const LEGACY_SCOPE = '_precedente';
 
 export const scopeNow = () => signedInUsername() ?? GUEST;
 const keyOf = (scope, partyId) => `${scope}|${partyId}`;
 const fail = (message, code = 'invalid') => Object.assign(new Error(message), { code });
 
-// ---------- the browser's database (a plain in-memory map when IndexedDB is not there) ----------
+// ---------- the browser's database (a plain in-memory map when IndexedDB is not there: then a logo lasts only until the page closes, and the game says so) ----------
 const memory = new Map();
+// Does this browser really keep logos? False when IndexedDB cannot be opened: what is saved then lives in memory only.
+export const logosArePersistent = async () => Boolean(await openDatabase());
 let databasePromise = null;
 function openDatabase() {
   if (!globalThis.indexedDB) return Promise.resolve(null);
@@ -177,6 +181,7 @@ export async function saveLogo(partyId, prepared, { fileName = 'logo', origin = 
   const previous = scope === activeScope ? infos.get(id) : null;
   await putRecord({ key: keyOf(scope, id), scope, partyId: id, blob: prepared.blob, mimeType: prepared.mimeType, width: prepared.width, height: prepared.height, bytes: prepared.bytes, fileName: String(fileName).slice(0, 120), origin, alt: String(alt).slice(0, 160), addedAt: previous?.addedAt ?? now, updatedAt: now });
   await loadLogos(scope);
+  return { persistent: await logosArePersistent() };
 }
 export async function deleteLogo(partyId) {
   const scope = scopeNow();
@@ -184,10 +189,13 @@ export async function deleteLogo(partyId) {
   await loadLogos(scope);
 }
 
-// ---------- the logos of the earlier version (kept in this browser by the owner's panel) move here once ----------
-// The old database is read and left as it is. Raster files are carried over as they are; an old SVG is drawn to a raster once; an address that was never copied cannot be carried over.
+// ---------- the logos of the earlier version ----------
+// The old database (the owner's panel, one per browser) is read and left as it is. Its logos have no known owner or origin, so they are NOT given to the account in use or to the guest
+// scope: they are kept apart (LEGACY_SCOPE, never resolved) and shown in the catalog, where the player claims the ones they have the right to use. Raster files are carried over as
+// they are; an old SVG is drawn to a raster once; an address that was never copied cannot be carried over.
 export async function migrateLegacyLogos() {
   try { if (globalThis.localStorage?.getItem(LEGACY_FLAG)) return { migrated: 0, skipped: 0, already: true }; } catch { return { migrated: 0, skipped: 0 }; }
+  if (!(await logosArePersistent())) return { migrated: 0, skipped: 0, deferred: true };
   let migrated = 0, skipped = 0;
   try {
     const legacy = await new Promise(resolve => {
@@ -203,17 +211,18 @@ export async function migrateLegacyLogos() {
         read.onerror = () => { database.close(); resolve([]); };
       };
     });
+    const known = new Set((await readAll(LEGACY_SCOPE)).map(record => record.partyId));
     for (const record of legacy) {
       try {
-        if (!record?.partyId || !(record.blob instanceof Blob)) { skipped++; continue; }
-        if (await getExisting(record.partyId)) { skipped++; continue; }
+        if (!record?.partyId || !(record.blob instanceof Blob) || known.has(record.partyId)) { skipped++; continue; }
         let prepared;
         if (record.blob.type === 'image/svg+xml') {
           const href = URL.createObjectURL(record.blob);
           try { const image = await loadElement(href, 8000); prepared = await drawToLogo(image, image.naturalWidth || 256, image.naturalHeight || 256); }
           finally { URL.revokeObjectURL(href); }
         } else prepared = await prepareLogo(new File([record.blob], record.fileName || 'logo', { type: record.blob.type }));
-        await saveLogo(record.partyId, prepared, { fileName: record.fileName || 'logo', origin: 'file', alt: record.alt || '' });
+        const now = new Date().toISOString();
+        await putRecord({ key: keyOf(LEGACY_SCOPE, record.partyId), scope: LEGACY_SCOPE, partyId: record.partyId, blob: prepared.blob, mimeType: prepared.mimeType, width: prepared.width, height: prepared.height, bytes: prepared.bytes, fileName: String(record.fileName || 'logo').slice(0, 120), origin: 'legacy', alt: '', addedAt: now, updatedAt: now });
         migrated++;
       } catch { skipped++; }
     }
@@ -221,6 +230,27 @@ export async function migrateLegacyLogos() {
   try { globalThis.localStorage?.setItem(LEGACY_FLAG, JSON.stringify({ at: new Date().toISOString(), migrated, skipped })); } catch { /* tried again at the next start */ }
   return { migrated, skipped };
 }
+// The waiting logos, with a preview each (the previews are released by `releaseLegacyPreviews`).
+const legacyUrls = new Map();
+export function releaseLegacyPreviews() { for (const url of legacyUrls.values()) { try { URL.revokeObjectURL(url); } catch { /* gone */ } } legacyUrls.clear(); }
+export async function listLegacyLogos() {
+  releaseLegacyPreviews();
+  const records = await readAll(LEGACY_SCOPE).catch(() => []);
+  return records.filter(record => record.blob && ALLOWED.includes(record.mimeType)).map(record => { const src = URL.createObjectURL(record.blob); legacyUrls.set(record.partyId, src); const { blob, ...info } = record; return { ...info, src }; });
+}
+// The player says «this one is mine to use»: it moves to the account in use (or the guest scope); an existing logo of the player's is not replaced.
+export async function claimLegacyLogo(partyId) {
+  const records = await readAll(LEGACY_SCOPE);
+  const record = records.find(item => item.partyId === String(partyId));
+  if (!record) throw fail('Questo logo non c’è più.');
+  if (await getExisting(record.partyId)) throw fail('Per questo partito hai già un logo: eliminalo prima se vuoi usare questo.');
+  const scope = scopeNow();
+  const now = new Date().toISOString();
+  await putRecord({ ...record, key: keyOf(scope, record.partyId), scope, origin: 'file', updatedAt: now });
+  await removeRecord(record.key);
+  await loadLogos(scope);
+}
+export async function discardLegacyLogo(partyId) { await removeRecord(keyOf(LEGACY_SCOPE, String(partyId))); }
 async function getExisting(partyId) {
   const database = await openDatabase();
   const key = keyOf(scopeNow(), partyId);

@@ -3,7 +3,7 @@
 // it takes, how often it slips, what it brings when it is finished and what it costs to keep. Rules of the game (source: simulation), never
 // statistics. The national projects (project-rules.js) keep their own state in society.projects; the works of a comune, a provincia or a regione
 // live in the institution that answers for them. They share the stages and the rules of the decisions on delays and overruns.
-import { PROJECT_RULES, PROJECT_STAGES } from './project-rules.js?v=20261022-12';
+import { PROJECT_RULES, PROJECT_STAGES } from './project-rules.js?v=20261022-13';
 
 export const WORK_STAGES = Object.freeze([
   { id: 'autorizzazioni', label: 'Autorizzazioni' },

@@ -2372,7 +2372,7 @@ export const PHRASES = [
   ["; non è il tuo gruppo parlamentare.", "; it is not your parliamentary group."],
   ["CRISI DI GOVERNO", "GOVERNMENT CRISIS"],
   ["Camere e gruppi non disponibili.", "Chambers and groups not available."],
-  ["Camere nate dal voto della partita sulla mappa elettorale reale del 2022: gruppi, seggi e rapporti sono simulati, source: simulation. I gruppi sotto la soglia siedono nel Misto come componenti.", "Chambers born from the game's vote on the real 2022 electoral map: groups, seats and relationships are simulated, source: simulation. Groups below the threshold sit in the Mixed group as components."],
+  ["Camere nate dal voto della partita sulla mappa elettorale reale del 2022: gruppi, seggi e rapporti sono simulati. I gruppi sotto la soglia siedono nel Misto come componenti.", "Chambers born from the game's vote on the real 2022 electoral map: groups, seats and relationships are simulated. Groups below the threshold sit in the Mixed group as components."],
   ["Capogruppo non documentato", "Group leader not documented"],
   ["Con il gruppo (", "With the group ("],
   ["Consistenza di riferimento non disponibile", "Reference size not available"],

@@ -1,7 +1,7 @@
-import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261021-11';
-import { formatDate } from '../core/time.js?v=20261021-11';
-import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261021-11';
-import { distinctSeries, sparkline } from './charts.js?v=20261021-11';
+import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261022-13';
+import { formatDate } from '../core/time.js?v=20261022-13';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261022-13';
+import { distinctSeries, sparkline } from './charts.js?v=20261022-13';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const pct = (value, digits = 1) => value === null || value === undefined ? '—' : `${Number(value).toLocaleString('it-IT', { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
@@ -290,7 +290,7 @@ export function renderPollsPage(state, options = {}) {
       ${panel('STRATEGIE · SIMULATE', 'Chi sta dove', strategyRows)}
     </div>
     ${dataTable(world, index)}
-    <p class="poll-footnote">I partiti sono reali. Il primo sondaggio della carriera è la fotografia della fonte reale indicata: solo le forze che misura, con “Altri” come nella fonte. Da lì istituti, percentuali settimanali, ingressi e uscite dai sondaggi, strategie, alleanze, rapporti ed eventi sono simulati (source: simulation) e non attribuiscono a partiti o persone reali decisioni mai prese. Le forze del database fuori dai sondaggi non hanno stime pubblicate finché non emergono.</p>
+    <p class="poll-footnote">I partiti sono reali. Il primo sondaggio della carriera è la fotografia della fonte reale indicata: solo le forze che misura, con “Altri” come nella fonte. Da lì istituti, percentuali settimanali, ingressi e uscite dai sondaggi, strategie, alleanze, rapporti ed eventi sono simulati e non attribuiscono a partiti o persone reali decisioni mai prese. Le forze del database fuori dai sondaggi non hanno stime pubblicate finché non emergono.</p>
   </div>`;
 }
 

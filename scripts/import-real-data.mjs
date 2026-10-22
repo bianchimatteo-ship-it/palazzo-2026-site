@@ -4,7 +4,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 // No simulation or user records are touched. Unknown fields deliberately remain null.
 const AS_OF = '2026-09-22';
 // The day new careers start (a Monday, not before the snapshot); `npm run scenario:date` sets it on the files already written.
-const SCENARIO_DATE = '2026-10-12';
+const SCENARIO_DATE = '2026-10-26';
 const ROOT = new URL('../src/data/real/', import.meta.url);
 const urls = {
   cameraRoster: 'https://www.camera.it/deputati/ws/elenco_deputati?_format=json&leg=19',

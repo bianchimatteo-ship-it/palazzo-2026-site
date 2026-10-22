@@ -6,9 +6,9 @@
 // even that leaves no date the general election and the European one — fixed by the Union — share the day, declared (coincides). A combination that still does not fit is declared (calendarConflict),
 // never accepted by lowering the distance. Nothing is invented: a round of the amministrative is added only when no vote falls in the time the rule requires. Pure functions over the
 // calendar of the game: the same calendar always gives the same dates.
-import { advanceDays } from './time.js?v=20261021-11';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261021-11';
-import { ELECTION_SCHEDULE } from '../data/simulation/career-rules.js?v=20261021-11';
+import { advanceDays } from './time.js?v=20261022-13';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261022-13';
+import { ELECTION_SCHEDULE } from '../data/simulation/career-rules.js?v=20261022-13';
 
 export const CALENDAR_RULES = Object.freeze({
   // The distance between two distinct rounds: one value, never lowered (no step, no floor, no exception).

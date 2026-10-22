@@ -44,7 +44,11 @@ const REQUIRED_FIELDS = Object.freeze({
 // Only real verified parties can be joined; a party founded by the player is the player's own (user) data.
 // A MEF 2‰ denomination of an already registered party is the same organisation: it is never offered twice.
 // Parties hidden or deleted by the owner leave every list of the game (the real files never change).
-export const isSelectableParty = party => !party?.adminHidden && (party?.source === DATA_SOURCES.USER || (party?.source === DATA_SOURCES.REAL && party.verified === true && !party.sameEntityAs));
+// A real record is usable when it was read on its source (verified) or when it is declared and waiting for confirmation (verificationStatus 'in-attesa-di-conferma', with the date it was
+// transcribed and a note saying what is missing): the same rule as the polls. The game says which of the two it is (isPendingReal).
+export const isPendingReal = record => record?.source === DATA_SOURCES.REAL && record.verified !== true && record.verificationStatus === 'in-attesa-di-conferma';
+export const isUsableReal = record => record?.source === DATA_SOURCES.REAL && (record.verified === true || isPendingReal(record));
+export const isSelectableParty = party => !party?.adminHidden && (party?.source === DATA_SOURCES.USER || (isUsableReal(party) && !party.sameEntityAs));
 
 export function validateEntity(collection, record) {
   const required = REQUIRED_FIELDS[collection];

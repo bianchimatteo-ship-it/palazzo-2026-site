@@ -1,8 +1,8 @@
-import { DATA_SOURCES } from '../data/schema.js?v=20261022-12';
-import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, SPENDING_REVIEW, STAGE_WEEKS, areaOf, governmentKindOf } from '../data/simulation/policy-rules.js?v=20261022-12';
-import { BUDGET_SECTORS } from '../data/simulation/project-rules.js?v=20261022-12';
-import { evaluateAdvancement } from './progression-engine.js?v=20261022-12';
-import { groupLine, splitGroupVote } from './vote-engine.js?v=20261022-12';
+import { DATA_SOURCES } from '../data/schema.js?v=20261022-13';
+import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, SPENDING_REVIEW, STAGE_WEEKS, areaOf, governmentKindOf } from '../data/simulation/policy-rules.js?v=20261022-13';
+import { BUDGET_SECTORS } from '../data/simulation/project-rules.js?v=20261022-13';
+import { evaluateAdvancement } from './progression-engine.js?v=20261022-13';
+import { groupLine, splitGroupVote } from './vote-engine.js?v=20261022-13';
 
 export const CHAMBERS = Object.freeze({
   camera: { label: 'Camera dei deputati', shortLabel: 'Camera', source: DATA_SOURCES.REAL },

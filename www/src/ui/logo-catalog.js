@@ -8,7 +8,7 @@ const colourOf = item => /^#[\da-f]{6}$/i.test(item.color ?? '') ? item.color : 
 export const fallbackMark = (item, size = 'm') => `<span class="logo-fallback is-${size}" style="--logo-fallback:${esc(colourOf(item))}" aria-hidden="true">${esc(initialsOf(item))}</span>`;
 const sizeLabel = bytes => bytes >= 1024 * 1024 ? `${(bytes / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`;
 
-export function renderLogoCatalog({ entities = [], infos = [], logoSrc = () => null, query = '', page = 1, selectedId = null, pending = null, error = '', notice = '', busy = '', urlDraft = '', loading = false, signedIn = null } = {}) {
+export function renderLogoCatalog({ entities = [], infos = [], logoSrc = () => null, query = '', page = 1, selectedId = null, pending = null, error = '', notice = '', busy = '', urlDraft = '', loading = false, signedIn = null, editorHtml = '', legacy = [], persistent = true } = {}) {
   const byId = new Map(infos.map(info => [info.partyId, info]));
   const q = query.trim().toLocaleLowerCase('it-IT');
   const matches = entities.filter(item => !q || `${item.name ?? ''} ${item.abbreviation ?? ''}`.toLocaleLowerCase('it-IT').includes(q));
@@ -28,7 +28,7 @@ export function renderLogoCatalog({ entities = [], infos = [], logoSrc = () => n
     <div class="logo-detail-head">
       <div class="logo-preview" data-logo-preview>${shown ? `<img src="${esc(shown)}" alt="${esc(pending ? 'Anteprima del nuovo logo' : `Logo di ${selected.name}`)}" />` : fallbackMark(selected, 'l')}</div>
       <div><h3>${esc(selected.name)}</h3><p class="quiet-copy">${esc(selected.kind ?? 'Partito')}${selected.abbreviation ? ` · ${esc(selected.abbreviation)}` : ''}</p>
-        <p class="logo-status" data-logo-status="${pending ? 'pending' : info ? 'custom' : 'none'}">${pending ? 'Anteprima: non ancora salvata.' : info ? `Logo tuo, salvato su questo dispositivo (${sizeLabel(info.bytes ?? 0)}, ${info.width}×${info.height} px${info.origin === 'url' ? ', copiato da un indirizzo' : ''}).` : 'Nessun logo: il gioco disegna un segno originale con la sigla e i colori del partito.'}</p></div>
+        <p class="logo-status" data-logo-status="${pending ? 'pending' : info ? 'custom' : 'none'}">${pending ? 'Modifica in corso: non ancora salvata.' : info ? `Logo tuo, salvato su questo dispositivo (${sizeLabel(info.bytes ?? 0)}, ${info.width}×${info.height} px${info.origin === 'url' ? ', copiato da un indirizzo' : ''}).` : 'Nessun logo: il gioco disegna un segno originale con la sigla e i colori del partito.'}</p></div>
     </div>
     <div class="logo-add" data-logo-drop>
       <label class="logo-file"><span class="secondary-button">Scegli un file</span><input type="file" accept="image/png,image/jpeg,image/webp,.png,.jpg,.jpeg,.webp" data-logo-file ${busy ? 'disabled' : ''} /></label>
@@ -36,12 +36,15 @@ export function renderLogoCatalog({ entities = [], infos = [], logoSrc = () => n
       <form class="logo-url-form" data-logo-url-form><label>Oppure l’indirizzo di un’immagine<input type="url" name="url" data-logo-url inputmode="url" placeholder="https://…/logo.png" value="${esc(urlDraft)}" autocomplete="off" ${busy ? 'disabled' : ''} /></label><button type="submit" class="secondary-button" ${busy ? 'disabled' : ''}>${busy === 'url' ? 'Importo…' : 'Importa l’immagine'}</button></form>
       <p class="quiet-copy">L’immagine viene copiata sul dispositivo e l’indirizzo non viene conservato: poi non serve più alcun collegamento. Se il sito non permette la copia, scarica il file e caricalo qui.</p>
     </div>
-    <div class="logo-actions"><button type="button" class="primary-button" data-action="logo-save" ${pending && !busy ? '' : 'disabled'}>${info ? 'Sostituisci il logo' : 'Aggiungi il logo'}</button>${pending ? '<button type="button" class="secondary-button" data-action="logo-cancel">Annulla</button>' : ''}<button type="button" class="secondary-button" data-action="logo-delete" ${info && !busy ? '' : 'disabled'}>Elimina il mio logo</button></div>
+    ${editorHtml}
+    <div class="logo-actions"><button type="button" class="primary-button" data-action="logo-save" ${pending && !busy ? '' : 'disabled'}>${info ? 'Conferma e sostituisci' : 'Conferma e salva'}</button>${pending ? '<button type="button" class="secondary-button" data-action="logo-cancel">Annulla</button>' : ''}<button type="button" class="secondary-button" data-action="logo-delete" ${info && !busy ? '' : 'disabled'}>Elimina il mio logo</button></div>
     ${error ? `<div class="wizard-errors" role="alert" data-logo-error>${esc(error)}</div>` : ''}${notice ? `<p class="account-message" role="status" data-logo-notice>${esc(notice)}</p>` : ''}
   </section>` : '<p class="quiet-copy">Nessun partito disponibile.</p>';
   return `<div class="logo-catalog" data-logo-catalog>
     <p class="quiet-copy logo-intro">Qui scegli i loghi che vuoi vedere accanto ai partiti. Sono tuoi: restano su questo dispositivo${signedIn ? `, associati all’account «${esc(signedIn)}»` : ''}, e li ritrovi in tutte le tue partite${signedIn ? ' dopo ogni accesso' : ''}. Non vengono caricati online né condivisi con altri giocatori o dispositivi.</p>
     <p class="logo-rights" data-logo-rights><strong>Diritti.</strong> Usa soltanto immagini che hai il diritto di utilizzare: il gioco non include loghi di terzi e non verifica da dove provengano quelli che aggiungi.</p>
+    ${legacy.length ? `<section class="logo-legacy" data-logo-legacy-block><h3>Loghi trovati dalla versione precedente</h3><p class="quiet-copy">Erano salvati in questo browser, senza sapere di chi fossero né da dove venissero: non sono stati assegnati a nessun account. Tieni solo quelli che hai il diritto di usare; gli altri puoi scartarli.</p><div class="logo-legacy-list">${legacy.map(item => `<div class="logo-legacy-item"><span class="logo-row-mark"><img src="${esc(item.src)}" alt="" /></span><span class="logo-row-text"><strong>${esc(item.name)}</strong></span><button type="button" class="secondary-button" data-action="logo-legacy-claim" data-logo-legacy="${esc(item.partyId)}">Usa per il mio account</button><button type="button" class="secondary-button" data-action="logo-legacy-discard" data-logo-legacy="${esc(item.partyId)}">Scarta</button></div>`).join('')}</div></section>` : ''}
+    ${persistent ? '' : '<p class="wizard-errors" role="alert" data-logo-volatile>Questo browser non permette di conservare i loghi: quelli che aggiungi restano solo finché la pagina è aperta.</p>'}
     ${loading ? '<p class="quiet-copy">Carico l’elenco dei partiti…</p>' : `<div class="logo-layout">
       <div class="logo-list"><label class="logo-search">Cerca un partito<input type="search" data-logo-query value="${esc(query)}" placeholder="Nome o sigla" autocomplete="off" /></label>
         <p class="quiet-copy" data-logo-count>${matches.length} su ${entities.length} · ${infos.length} con un logo tuo</p>

@@ -1,6 +1,6 @@
-// The day a new career starts: Monday 12 October 2026 (the scenario date of the real data, src/data/real/manifest.json), apart from the day the real data was verified (the snapshot).
+// The day a new career starts: Monday 26 October 2026 (the scenario date of the real data, src/data/real/manifest.json), apart from the day the real data was verified (the snapshot).
 // Data: both manifests say the scenario date, it is a Monday and not before the snapshot; the real opening poll is the newest published on or before it (nothing published after it is used);
-// the Parliament and the Government in office at the start are the verified ones. Game, in Chrome: the career, the clock, the first week and the wizard all say 12 October; a career
+// the Parliament and the Government in office at the start are the verified ones. Game, in Chrome: the career, the clock, the first week and the wizard all say 26 October; a career
 // already saved keeps its date, its week and its history when another career is started and when it is loaded again. Skipped without Chrome (the data part always runs).
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -9,7 +9,7 @@ import { chromeAvailable, createCareerInPage, withBrowser } from './lib/browser.
 const read = async name => JSON.parse(await readFile(new URL(`../src/data/real/${name}`, import.meta.url), 'utf8'));
 const manifest = await read('manifest.json');
 const aggregate = await read('database.json');
-const SCENARIO = '2026-10-12';
+const SCENARIO = '2026-10-26';
 assert.equal(manifest.scenarioDate, SCENARIO, 'Il manifesto indica la data di inizio delle nuove carriere.');
 assert.equal(aggregate.manifest.scenarioDate, SCENARIO, 'Anche l’aggregato.');
 assert.equal(new Date(`${SCENARIO}T00:00:00Z`).getUTCDay(), 1, 'È un lunedì: le settimane di gioco cominciano di lunedì.');
@@ -39,7 +39,7 @@ else await withBrowser(async browser => {
   await waitFor(async () => (await state()).startDate === SCENARIO);
   await createCareerInPage(browser, { party: 'party-futuro-nazionale', group: 'cam-xix-12' });
   const first = await state();
-  assert.equal(first.date, SCENARIO, 'La nuova carriera parte il 12 ottobre 2026.');
+  assert.equal(first.date, SCENARIO, 'La nuova carriera parte il 26 ottobre 2026.');
   assert.equal(first.started, SCENARIO); assert.equal(first.week.startedAt, SCENARIO); assert.equal(first.week.index, 1);
   assert.equal(first.poll.source, 'real', 'Il primo sondaggio della carriera è reale.');
   assert.equal(first.poll.publishedAt, newest.publishedAt, 'È il più recente pubblicato entro la data dello scenario.');

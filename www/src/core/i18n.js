@@ -5,7 +5,7 @@
 //     the phrase book (src/data/i18n/en-*.js): exact phrases, phrases with numbers (`#`) or free parts (`{}`), and the numbers, currency and dates in English form.
 //     Proper names (people, parties, places, official denominations) are never in the phrase book: they stay as they are. A phrase that is not in the book stays Italian, never wrong.
 // Nothing here touches a career: the language is a view of the same data.
-import { saveSetting } from './settings.js?v=20261021-11';
+import { saveSetting } from './settings.js?v=20261022-13';
 
 export const LANGUAGES = Object.freeze([['it', 'Italiano', 'it-IT'], ['en', 'English', 'en-GB']]);
 const SETTINGS_KEY = 'politicando.settings.v1';
@@ -123,26 +123,37 @@ function lookup(text, depth = 0) {
   }
   return null;
 }
-function translatePiece(text, depth = 0) {
-  const found = lookup(text, depth);
-  if (found !== null) return found;
-  // «a · b · c» and «first sentence. second sentence»: translated piece by piece when at least one piece is known
-  const pieces = text.split(/( · | — | – |: |; |(?<=[.!?…])\s+)/);
-  if (pieces.length > 1) {
-    let known = 0;
-    const out = pieces.map((piece, index) => { if (index % 2) return piece; const hit = piece.trim() ? lookup(piece, depth) : null; if (hit !== null) { known++; return hit; } return piece; });
-    if (known) return out.join('');
+// The cuts a text goes through when it is not a phrase of the book as a whole, from the coarsest to the finest: «a · b», «first sentence. second sentence», «a; b», «label: value».
+// Each part is translated as a whole first (it can be a phrase of the book, or cut again); the text is given back changed only if at least one part was known.
+const CUTS = [/( · | — | – )/, /((?<=[.!?…])\s+)/, /(; )/, /(: )/];
+function translatePiece(text, depth = 0, level = 0) {
+  if (level === 0) { const found = lookup(text, depth); if (found !== null) return found; }
+  for (let cut = level; cut < CUTS.length; cut++) {
+    const parts = text.split(CUTS[cut]);
+    if (parts.length < 2) continue;
+    let changed = false;
+    const done = parts.map((part, index) => {
+      if (index % 2 || !part.trim()) return part;
+      const hit = lookup(part, depth);
+      const next = hit !== null ? hit : translatePiece(part, depth, cut + 1);
+      if (next !== part) changed = true;
+      return next;
+    });
+    if (changed) return done.join('');
   }
   return text;
 }
 // The translation of one Italian text (a node, an attribute); the original is returned when nothing is known.
+const OFFICIAL_ACT = /\b(decreto|decreto-legge|legislativo|ratifica ed esecuzione|disposizioni (?:per|in materia)|conversione in legge|delega al governo|istituzione del|modifiche (?:al|alla|agli))\b/i;
 export function translateText(text) {
   if (language !== 'en' || !book || typeof text !== 'string' || !text.trim()) return text;
   const lead = text.match(/^\s*/)[0], trail = text.match(/\s*$/)[0];
   const core = text.trim();
   let out = cache.get(core);
   if (out === undefined) {
-    out = englishDates(englishNumbers(translatePiece(core)));
+    const translated = translatePiece(core);
+    // the title of an act of Parliament that is not in the phrase book is an official name: it stays whole in Italian (no English month or number inside it)
+    out = translated === core && OFFICIAL_ACT.test(core) ? core : englishDates(englishNumbers(translated));
     if (cache.size > 20000) cache.clear();
     cache.set(core, out);
   }
@@ -219,7 +230,7 @@ export function watchTree(root) {
 let loading = null;
 export function loadBook() {
   if (book?.loaded) return Promise.resolve(book);
-  loading ??= import('../data/i18n/index.js?v=20261021-11').then(module => { module.install(installBook); book.loaded = true; return book; });
+  loading ??= import('../data/i18n/index.js?v=20261022-13').then(module => { module.install(installBook); book.loaded = true; return book; });
   return loading;
 }
 // At start: English needs its book before the first render, so the module waits for it (top level await); Italian loads nothing.

@@ -1,8 +1,8 @@
-import { ADMIN_FIELDS, POSITIONS, adminArchiveSummary, loadSharedArchive, overrideFor } from '../data/repositories/admin-store.js?v=20261021-11';
-import { affiliationOf, markForPerson } from './person-marks.js?v=20261021-11';
-import { hasSharedSession, sharedApiUrl, sharedSyncStatus } from '../data/repositories/admin-sync.js?v=20261021-11';
-import { emblem, glyph } from './visuals.js?v=20261021-11';
-import { BASIS_LABELS, electionListOf, groupAffiliation, groupLabel, politicianAffiliation } from '../data/repositories/party-links.js?v=20261021-11';
+import { ADMIN_FIELDS, POSITIONS, adminArchiveSummary, loadSharedArchive, overrideFor } from '../data/repositories/admin-store.js?v=20261022-13';
+import { affiliationOf, markForPerson } from './person-marks.js?v=20261022-13';
+import { hasSharedSession, sharedApiUrl, sharedSyncStatus } from '../data/repositories/admin-sync.js?v=20261022-13';
+import { emblem, glyph } from './visuals.js?v=20261022-13';
+import { BASIS_LABELS, electionListOf, groupAffiliation, groupLabel, politicianAffiliation } from '../data/repositories/party-links.js?v=20261022-13';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const norm = value => String(value ?? '').toLocaleLowerCase('it-IT').normalize('NFD').replace(/[\u0300-\u036f]/g, '');

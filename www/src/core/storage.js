@@ -1,4 +1,4 @@
-import { createTier } from './tiered-storage.js?v=20261021-11';
+import { createTier } from './tiered-storage.js?v=20261022-13';
 const STORAGE_KEY = 'palazzo-2026.career.v1';
 const BACKUP_KEY = `${STORAGE_KEY}.backup`;
 const HISTORY_KEY = `${STORAGE_KEY}.history`;
@@ -188,9 +188,9 @@ function backupLocked(payload, reason) {
 function nextRevision(state) {
   return allSaveCandidates().filter(item => careerIdOf(item.state) === careerIdOf(state)).reduce((max, item) => Math.max(max, revisionOf(item.state)), revisionOf(state)) + 1;
 }
-// Every key of the browser's storage that holds a slot, listed or not (a browser without key() only knows the index).
+// Every key of the browser's storage that holds a slot, listed or not (a storage that cannot list its keys is read through the slot index: its slots are saves of the career like any other, and a copy of the career that has gone further must be found).
 const canScan = () => typeof localStorage.key === 'function' && Number.isFinite(localStorage.length);
-const slotKeys = () => { const keys = []; try { if (canScan()) for (let index = 0; index < localStorage.length; index++) { const key = localStorage.key(index); if (key?.startsWith(SLOT_PREFIX)) keys.push(key); } } catch { /* the index is all that is known */ } return keys; };
+const slotKeys = () => { const keys = []; try { if (canScan()) for (let index = 0; index < localStorage.length; index++) { const key = localStorage.key(index); if (key?.startsWith(SLOT_PREFIX)) keys.push(key); } else { const index = readJson(SLOT_INDEX); for (const entry of Array.isArray(index) ? index : []) if (entry?.id && localStorage.getItem(SLOT_PREFIX + entry.id) !== null) keys.push(SLOT_PREFIX + entry.id); } } catch { /* the index is all that is known */ } return keys; };
 // Does the slot of an entry exist? (a scan of the keys: the slots themselves are not read)
 const slotsPresent = () => { const keys = canScan() ? new Set(slotKeys()) : null; return id => keys ? keys.has(SLOT_PREFIX + id) : localStorage.getItem(SLOT_PREFIX + id) !== null; };
 // What a slot shows before it is opened, for a slot the index lost (its game says it all).

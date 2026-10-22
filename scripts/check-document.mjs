@@ -27,7 +27,10 @@ const byName = name => [...organizations, ...db.coalitions].filter(item => norm(
 // ---------- §2 collocazione ----------
 const expected = { 'Partito della Rifondazione Comunista - Sinistra Europea': 'estrema sinistra', 'Partito Democratico': 'centro-sinistra', "Fratelli d'Italia - Alleanza Nazionale": 'destra', 'Futuro Nazionale': 'destra', 'MoVimento 5 Stelle': 'centro-sinistra', 'AZIONE': 'centro', 'Noi Moderati': 'centro-destra', 'Movimento politico Forza Italia': 'centro-destra', 'Europa Verde-Verdi': 'sinistra', 'Unione per il Trentino': 'centro' };
 for (const [name, position] of Object.entries(expected)) assert.equal(byName(name)[0]?.politicalPosition, position, `Collocazione di ${name}`);
-assert.ok([...organizations, ...db.coalitions].every(item => links.POLITICAL_POSITIONS.includes(item.politicalPosition)), 'Ogni partito, movimento e coalizione ha la collocazione del documento.');
+// An entity declared and still waiting for confirmation (Progetto Civico Italia, from the BiDiMedia poll) has no position: the document does not place it and none is invented.
+const pendingEntities = [...organizations, ...db.coalitions].filter(item => item.verified !== true);
+assert.deepEqual(pendingEntities.map(item => [item.id, item.politicalPosition, item.verificationStatus]), [['party-progetto-civico-italia', null, 'in-attesa-di-conferma']], 'Solo Progetto Civico Italia è in attesa di conferma e non ha una collocazione inventata.');
+assert.ok([...organizations, ...db.coalitions].filter(item => item.verified === true).every(item => links.POLITICAL_POSITIONS.includes(item.politicalPosition)), 'Ogni partito, movimento e coalizione verificato ha la collocazione del documento.');
 
 // ---------- §4 new entities, once each, with official sources ----------
 const NEW = { 'Forza Nuova': ['politicalMovement', 'estrema destra'], 'CasaPound Italia': ['politicalMovement', 'estrema destra'], 'Alleanza Verdi e Sinistra': ['coalition', 'sinistra'], 'Democrazia Sovrana Popolare': ['party', 'sinistra'], 'Partito Popolare del Nord - Autonomia e Libertà': ['party', 'centro-destra'], 'Potere al Popolo!': ['politicalMovement', 'estrema sinistra'], 'Partito Comunista Italiano': ['party', 'sinistra'], 'Partito Comunista dei Lavoratori': ['party', 'estrema sinistra'], 'Partito Sardo d’Azione': ['party', 'centro-destra'], 'Rete dei Patrioti': ['politicalMovement', 'estrema destra'], 'ORA!': ['party', 'centro'] };
@@ -134,23 +137,25 @@ const poll = db.realPolls[0];
 assert.equal(poll.publishedAt, '2026-09-24');
 assert.ok(/agi\.it/.test(poll.sourceUrl) && poll.source === 'real');
 assert.equal(poll.results.find(row => row.entityId === 'party-registro-p1-2014-04-ir').share, 27.0);
-assert.equal(db.realPolls.length, 2, 'Il sondaggio del 24/09 sostituisce quello del 17/09 e resta nello storico accanto alla Supermedia del 1° ottobre.');
+assert.equal(db.realPolls.length, 3, 'Il sondaggio del 24/09 sostituisce quello del 17/09 e resta nello storico accanto alla Supermedia del 1° ottobre e al sondaggio BiDiMedia di ottobre.');
+const supermedia = db.realPolls.find(item => item.id === 'poll-supermedia-youtrend-agi-2026-10-01');
+assert.equal(supermedia.referenceDate, '2026-10-01'); assert.equal(supermedia.publishedAt, '2026-10-07', 'La Supermedia del 1° ottobre è stata pubblicata il 7: tre date distinte.');
 const opening = db.realPolls.at(-1);
-assert.equal(opening.referenceDate, '2026-10-01'); assert.equal(opening.publishedAt, '2026-10-07', 'La Supermedia del 1° ottobre è stata pubblicata il 7: tre date distinte.');
+assert.equal(opening.id, 'poll-bidimedia-2026-10-21'); assert.equal(opening.publishedAt, '2026-10-22', 'Il sondaggio BiDiMedia è stato pubblicato il 22 ottobre; rilevazione 17–19/10.');
 const { store } = await import('../src/core/store.js');
 store.setRealReference({ twoPerThousand: db.twoPerThousand, parties: db.parties, movements: db.politicalMovements, coalitions: db.coalitions, polls: db.realPolls, governingIds: links.governingEntityIds(), startDate: db.manifest.scenarioDate ?? db.manifest.snapshotDate });
 const draft = { firstName: 'Anna', lastName: 'Prova', birthDate: '1988-03-01', gender: 'donna', region: 'Lazio', municipality: 'Viterbo', previousProfession: 'Insegnante', initialLevel: 'comunale', partyMode: 'new', partyName: 'Lista di prova', partyAbbreviation: 'LDP', partyDescription: 'Partito creato per il test.', partyOrientation: 'Altro', partyColor: '#285c42', partyPosition: 'centro-sinistra', difficulty: 'difficile', policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 } };
 store.createCareer(draft, db.parties, db.parliamentaryGroups);
 let state = store.getState();
-assert.equal(state.clock.currentDate, '2026-10-12', 'La nuova carriera parte dalla data dello scenario (12 ottobre 2026), non da quella dello snapshot.');
-assert.equal(state.career.startedAt, '2026-10-12');
+assert.equal(state.clock.currentDate, '2026-10-26', 'La nuova carriera parte dalla data dello scenario (26 ottobre 2026), non da quella dello snapshot.');
+assert.equal(state.career.startedAt, '2026-10-26');
 const first = state.world.polls[0];
 assert.ok(first.real.publishedAt <= state.clock.currentDate, 'Il sondaggio reale è quello disponibile alla data di avvio.');
-assert.equal(first.real.publishedAt, opening.publishedAt, 'È il più recente pubblicato entro la data di avvio: la Supermedia del 1° ottobre, non quella di settembre.');
+assert.equal(first.real.publishedAt, opening.publishedAt, 'È il più recente pubblicato entro la data di avvio: il sondaggio BiDiMedia del 22 ottobre, non le Supermedie.');
 assert.equal(first.source, 'real', 'La carriera parte dal sondaggio reale.');
-assert.equal(first.results.find(row => row.partyId === 'party-registro-p1-2015-29-ir').share, 20.4);
-assert.equal(first.results.find(row => row.partyId === 'coalition-alleanza-verdi-sinistra').share, 6.3, 'AVS entra come coalizione, con il suo dato reale.');
-assert.equal(first.results.find(row => row.partyId === 'party-registro-p1-2024-74-ir').share, 1.3, 'Il Partito Liberaldemocratico è nella Supermedia del 1° ottobre.');
+assert.equal(first.results.find(row => row.partyId === 'party-registro-p1-2015-29-ir').share, 20.5);
+assert.equal(first.results.find(row => row.partyId === 'coalition-alleanza-verdi-sinistra').share, 6.6, 'AVS entra come coalizione, con il suo dato reale.');
+assert.equal(first.results.find(row => row.partyId === 'party-registro-p1-2024-74-ir').share, 0.8, 'Il Partito Liberaldemocratico è nel sondaggio BiDiMedia.');
 assert.ok(!db.realPolls[0].results.some(row => row.entityId === 'party-registro-p1-2024-74-ir'), 'E non era in quella del 24/09, che resta nello storico così com’era.');
 assert.ok(first.results.find(row => row.partyId === state.world.playerPartyId).simulated, 'Il partito creato dal giocatore è una stima simulata, dichiarata.');
 assert.equal(state.world.parties.find(item => item.id === 'party-registro-p1-2014-04-ir').governing, true);

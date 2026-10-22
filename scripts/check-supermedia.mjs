@@ -22,8 +22,8 @@ const SEPTEMBER = [27, 20.8, 12.6, 7.8, 7.4, 6.5, 5.6, 3.4, 2.2, 1.5, 1.1, 1.1];
 
 // ---------- 1. the file ----------
 const polls = await read('polls.json');
-assert.equal(polls.length, 2, 'Due sondaggi reali: lo storico di settembre e la Supermedia di ottobre.');
-const [september, october] = polls;
+assert.equal(polls.length, 3, 'Tre sondaggi reali: le Supermedie di settembre e di ottobre (storico) e il sondaggio BiDiMedia (check-bidimedia-poll).');
+const september = polls.find(poll => poll.id === 'poll-supermedia-youtrend-agi-2026-09-24'), october = polls.find(poll => poll.id === 'poll-supermedia-youtrend-agi-2026-10-01');
 assert.equal(september.id, 'poll-supermedia-youtrend-agi-2026-09-24', 'Lo storico di settembre resta.');
 assert.deepEqual(september.results.map(row => row.share), SEPTEMBER, 'I valori di settembre non sono stati toccati.');
 assert.equal(september.publishedAt, '2026-09-24');
@@ -59,7 +59,7 @@ assert.ok(/non era raggiungibile|non è stata riletta/.test(october.verification
 assert.ok(october.results.every(row => row.entityId && !/Altri/i.test(row.label)), 'Nessuna riga «Altri» tra le forze.');
 assert.ok(/non sono la differenza con la rilevazione del 24\/09/.test(october.deltaNote), 'Le variazioni sono dichiarate come pubblicate.');
 const manifest = await read('manifest.json');
-assert.equal(manifest.collections.realPolls, 2, 'Il manifest conta due sondaggi.');
+assert.equal(manifest.collections.realPolls, 3, 'Il manifest conta tre sondaggi.');
 const { computeDataVersion, currentDataVersion } = await import('./lib/data-version.mjs');
 assert.equal(await currentDataVersion(), await computeDataVersion(), 'Il timbro dei dati segue il loro contenuto.');
 
@@ -67,7 +67,7 @@ assert.equal(await currentDataVersion(), await computeDataVersion(), 'Il timbro 
 const build = (await readFile(new URL('../index.html', import.meta.url), 'utf8')).match(/main\.js\?v=([^"']+)/)?.[1];
 const roundOf = value => Math.round(value * 10) / 10;
 const opening = world => world.polls.find(item => item.source === 'real');
-const run = await startCareer({ seed: 'supermedia-ottobre', level: 'deputato', partyId: 'party-futuro-nazionale', fast: true });
+const run = await startCareer({ seed: 'supermedia-ottobre', level: 'deputato', partyId: 'party-futuro-nazionale', fast: true, startDate: '2026-10-12' });
 const { store } = run;
 let world = store.getState().world;
 const first = opening(world);
@@ -121,6 +121,10 @@ assert.ok(world.polls.filter(item => item.source === 'real').length === 1, 'Un s
   assert.equal(poll.results.find(row => /Futuro Nazionale/.test(early.store.getState().world.parties.find(p => p.id === row.partyId)?.label ?? ''))?.share, 7.8, 'Con i valori di settembre.');
   const late = await startCareer({ seed: 'supermedia-tardi', level: 'deputato', partyId: 'party-futuro-nazionale', fast: true, startDate: '2026-10-12' });
   assert.equal(opening(late.store.getState().world).real.id, october.id, 'Dal 12 ottobre con quella di ottobre.');
+  const eve = await startCareer({ seed: 'supermedia-vigilia', level: 'deputato', partyId: 'party-futuro-nazionale', fast: true, startDate: '2026-10-21' });
+  assert.equal(opening(eve.store.getState().world).real.id, october.id, 'Il 21 ottobre, prima della pubblicazione di BiDiMedia, vale ancora la Supermedia di ottobre.');
+  const bidimedia = await startCareer({ seed: 'supermedia-bidimedia', level: 'deputato', partyId: 'party-futuro-nazionale', fast: true, startDate: '2026-10-26' });
+  assert.equal(opening(bidimedia.store.getState().world).real.id, 'poll-bidimedia-2026-10-21', 'Dal 26 ottobre con il sondaggio BiDiMedia.');
 }
 
 assert.equal(await digest(), before, 'I JSON reali sono identici prima e dopo: nulla di simulato vi è confluito.');

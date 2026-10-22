@@ -1,5 +1,5 @@
 {
-  "datasetVersion": "2026-10-14.1",
+  "datasetVersion": "2026-10-22.1",
   "snapshotDate": "2026-09-24",
   "publisher": "POLITICANDO 2026 — importatore open data",
   "sourcePolicy": "Primary institutional sources only; unknown values are null. Registry entries are sourced to registration deliberations; only explicit deregistration notices set historical status. MEF 2‰ evidence is dated to its reporting year.",
@@ -49,7 +49,7 @@
     "electoralGeographyMirror": "https://github.com/ondata/elezioni-politiche-2022"
   },
   "collections": {
-    "parties": 75,
+    "parties": 76,
     "politicalMovements": 6,
     "politicalFigures": 38,
     "partyLeaderships": 38,
@@ -68,7 +68,7 @@
     "laws": 436,
     "twoPerThousand": 30,
     "government": 1,
-    "realPolls": 2,
+    "realPolls": 3,
     "territorialUnits": 110,
     "municipalities": 7894,
     "committees": 24,
@@ -82,7 +82,7 @@
     "La collocazione politica (estrema sinistra … estrema destra) è la classificazione sintetica del documento di specifica del 24/09/2026; per liste e coalizioni indica l’aggregazione e non sostituisce le singole componenti.",
     "Le liste con più partiti o coalizioni restano relazioni elettorali: non diventano iscrizione a un singolo partito. Le iscrizioni individuali documentate derivano solo da incarichi di partito verificati.",
     "Il partito attuale di un parlamentare viene solo da un collegamento dell’amministratore o da un’iscrizione documentata: la lista d’elezione 2022 è una relazione elettorale e il gruppo parlamentare non è un partito.",
-    "Il sondaggio iniziale è la Supermedia YouTrend/Agi del 24/09/2026 (dato reale: solo le forze presenti nella fonte, “Altri” come nella fonte); dalla prima settimana di gioco i sondaggi sono simulati."
+    "Il sondaggio iniziale delle carriere realistiche è quello più recente pubblicato entro la data di inizio (dal 26/10/2026: sondaggio BiDiMedia del 22/10/2026, dichiarato dal committente e in attesa di conferma sulla fonte); è un dato reale con le sole forze presenti nella fonte, «un’altra lista» come aggregato «Altri». Dalla prima settimana di gioco i sondaggi sono simulati."
   ],
   "twoPerThousandTotals": {
     "declarationYear": 2025,
@@ -167,7 +167,7 @@
       "simplifiedTo": "~1.3 km"
     }
   },
-  "scenarioDate": "2026-10-12",
+  "scenarioDate": "2026-10-26",
   "scenarioNote": "La carriera inizia alla data dello scenario; i dati reali (Parlamento, governo, partiti, sondaggio) sono quelli verificati alla data dello snapshot. Nessuna fonte pubblicata dopo la data dello scenario è stata usata.",
-  "pollsNote": "Sondaggi reali: Supermedia del 24/09/2026 (storico) e del 01/10/2026 (apertura delle nuove carriere realistiche, articolo del 07/10/2026)."
+  "pollsNote": "Sondaggi reali: Supermedia del 24/09/2026 e del 01/10/2026 (storico) e sondaggio BiDiMedia di ottobre 2026 (rilevazione 17–19/10, pubblicato il 22/10/2026), apertura delle nuove carriere realistiche dal 22/10/2026."
 }
