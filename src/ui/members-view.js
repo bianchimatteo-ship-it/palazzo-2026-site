@@ -1,10 +1,10 @@
 // "In Aula questa settimana": cards of verified real parliamentarians of the chamber on screen, picked by
 // `featuredMembers` (deterministic, varied from week to week). Names, groups, constituencies and offices are
 // the dataset's own; nothing here is a statement or an opinion of the person.
-import { FEATURED_REASONS, featuredMembers } from '../core/featured-members.js?v=20261022-14';
-import { glyph, artTile } from './visuals.js?v=20261022-14';
-import { esc } from './sections-kit.js?v=20261022-14';
-import { affiliationOf, markForPerson } from './person-marks.js?v=20261022-14';
+import { FEATURED_REASONS, featuredMembers } from '../core/featured-members.js?v=20261022-15';
+import { glyph, artTile } from './visuals.js?v=20261022-15';
+import { esc } from './sections-kit.js?v=20261022-15';
+import { affiliationOf, markForPerson } from './person-marks.js?v=20261022-15';
 
 const CHAMBER_NAME = { camera: 'Camera dei deputati', senato: 'Senato della Repubblica' };
 

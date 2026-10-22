@@ -28,7 +28,7 @@ function equalStrings(a, b) {
 function cors(request) {
   const origin = request.headers.get('origin');
   const allowed = origin && (ALLOWED_ORIGINS.includes(origin) || origin === new URL(request.url).origin) ? origin : ALLOWED_ORIGINS[0];
-  return { 'access-control-allow-origin': allowed, 'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS', 'access-control-allow-headers': 'content-type, authorization', 'access-control-max-age': '86400', vary: 'origin' };
+  return { 'access-control-allow-origin': allowed, 'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS', 'access-control-allow-headers': 'content-type, authorization, x-base-version', 'access-control-expose-headers': 'etag, x-logo-version, x-logo-sha256', 'access-control-max-age': '86400', vary: 'origin' };
 }
 // Every answer of the API: nothing to sniff, nothing to frame or to run (it only ever returns JSON), no referrer, HTTPS only. The static assets get theirs from _headers.
 const API_SECURITY_HEADERS = { 'x-content-type-options': 'nosniff', 'content-security-policy': "default-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'", 'x-frame-options': 'DENY', 'referrer-policy': 'no-referrer', 'strict-transport-security': 'max-age=31536000', 'cross-origin-resource-policy': 'cross-origin', 'permissions-policy': 'camera=(), microphone=(), geolocation=(), payment=()' };
@@ -146,7 +146,9 @@ const SCHEMA = [
   'CREATE INDEX IF NOT EXISTS user_emails_norm ON user_emails (email_norm)',
   'CREATE TABLE IF NOT EXISTS email_tokens (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL, purpose TEXT NOT NULL, email_norm TEXT, created_at TEXT NOT NULL, expires_at INTEGER NOT NULL, used_at TEXT)',
   'CREATE INDEX IF NOT EXISTS email_tokens_user ON email_tokens (user_id)',
-  'CREATE INDEX IF NOT EXISTS email_tokens_expiry ON email_tokens (expires_at)'
+  'CREATE INDEX IF NOT EXISTS email_tokens_expiry ON email_tokens (expires_at)',
+  // Personal party logos kept for the account (the images are in R2, only the metadata is here): one row per party, a deleted logo leaves a row with `deleted_at` so that another device learns of it.
+  'CREATE TABLE IF NOT EXISTS logos (user_id TEXT NOT NULL, party_id TEXT NOT NULL, version INTEGER NOT NULL, sha256 TEXT, mime TEXT, bytes INTEGER, width INTEGER, height INTEGER, name TEXT, origin TEXT, object_key TEXT, deleted_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, PRIMARY KEY (user_id, party_id))',
 ];
 let schemaReady = null;
 const ensureSchema = db => (schemaReady ??= db.batch(SCHEMA.map(sql => db.prepare(sql))).catch(error => { schemaReady = null; throw error; }));
@@ -312,6 +314,7 @@ async function deleteAccountData(db, userId) {
     db.prepare('DELETE FROM email_tokens WHERE user_id = ?').bind(userId),
     db.prepare('DELETE FROM user_emails WHERE user_id = ?').bind(userId),
     db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(userId),
+    db.prepare('DELETE FROM logos WHERE user_id = ?').bind(userId),
     db.prepare('DELETE FROM users WHERE id = ?').bind(userId)
   ]);
   // the table of the notices exists only once the retention has run (it never does while it is off): nothing to delete when it is not there
@@ -377,7 +380,7 @@ export async function runRetention(env, now = Date.now()) {
     await db.prepare('INSERT OR REPLACE INTO retention_notices (user_id, sent_at, activity_at) VALUES (?, ?, ?)').bind(row.id, new Date(now).toISOString(), row.lastActivity).run();
     warned++;
   }
-  for (const row of rows.filter(item => item.action === 'eliminare').slice(0, RETENTION.batch)) { await deleteAccountData(db, row.id); deleted++; }
+  for (const row of rows.filter(item => item.action === 'eliminare').slice(0, RETENTION.batch)) { try { await purgeLogos(env, row.id); } catch { continue; } await deleteAccountData(db, row.id); deleted++; }
   return { ran: true, reasons: [], warned, deleted };
 }
 
@@ -411,6 +414,91 @@ async function sendVerification(env, request, db, userId, email, emailNorm) {
   await sendMail(env, { to: email, subject: MAIL_SUBJECTS.verify, text: `Hai chiesto di collegare questo indirizzo al tuo account di POLITICANDO 2026.\n\nPer confermarlo apri questo collegamento (vale ${VERIFY_TOKEN_HOURS} ore e si usa una volta sola):\n${link}\n\nL’indirizzo serve soltanto a recuperare la password. Se non sei stato tu, ignora questo messaggio.` });
 }
 
+
+// ---------- personal logos of the account (R2 for the images, D1 for the metadata) ----------
+// The owner is always the account of the verified session, never an id sent by the client. A logo is a small PNG, JPEG or WebP (what the game itself produces: at most 300 KB). Every write names the
+// version the device saw (x-base-version); a different one is a conflict and nothing is overwritten. Not configured (no R2 binding) the routes say so and the game keeps its logos on the device.
+const MAX_LOGOS = 60, MAX_LOGO_BYTES = 300 * 1024, LOGO_ID = /^[\w.-]{1,120}$/;
+const sniffLogo = bytes => {
+  const at = (...values) => values.every((value, index) => bytes[index] === value);
+  if (bytes.length >= 24 && at(137, 80, 78, 71, 13, 10, 26, 10)) return 'image/png';
+  if (bytes.length >= 12 && at(0xff, 0xd8, 0xff)) return 'image/jpeg';
+  if (bytes.length >= 16 && at(0x52, 0x49, 0x46, 0x46) && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) return 'image/webp';
+  return null;
+};
+const sha256Bytes = async bytes => toHex(await crypto.subtle.digest('SHA-256', bytes));
+const logoKey = async (userId, partyId, version) => `logos/${userId}/${(await sha256(partyId)).slice(0, 24)}-${version}`;
+const logoMeta = row => ({ partyId: row.party_id, version: row.version, deleted: Boolean(row.deleted_at), sha256: row.sha256 ?? null, mime: row.mime ?? null, bytes: row.bytes ?? 0, width: row.width ?? null, height: row.height ?? null, name: row.name ?? null, origin: row.origin ?? null, updatedAt: row.updated_at });
+// Every image of an account, listed by prefix (the account is leaving: nothing of it stays in R2). Throws when the bucket fails: the caller then does not delete the account, so it can be retried.
+async function purgeLogos(env, userId) {
+  if (!env.LOGOS) return 0;
+  let removed = 0, cursor;
+  for (let page = 0; page < 200; page++) {
+    const listed = await env.LOGOS.list({ prefix: `logos/${userId}/`, cursor, limit: 500 });
+    for (const object of listed.objects ?? []) { await env.LOGOS.delete(object.key); removed++; }
+    if (!listed.truncated) break;
+    cursor = listed.cursor;
+  }
+  return removed;
+}
+async function handleLogos(request, env, db, account, path) {
+  if (!env.LOGOS) return json(request, { error: 'La sincronizzazione dei loghi non è attiva su questo sito: i loghi restano su questo dispositivo.', code: 'not-configured' }, 503);
+  if (path === '/api/logos' && request.method === 'GET') {
+    const { results } = await db.prepare('SELECT * FROM logos WHERE user_id = ? ORDER BY party_id').bind(account.id).all();
+    return json(request, { logos: (results ?? []).map(logoMeta), limits: { maxLogos: MAX_LOGOS, maxBytes: MAX_LOGO_BYTES } });
+  }
+  const match = /^\/api\/logos\/([^/]+)$/.exec(path);
+  const partyId = match ? decodeURIComponent(match[1]) : null;
+  if (!partyId || !LOGO_ID.test(partyId)) return json(request, { error: 'Richiesta non riconosciuta.' }, 404);
+  const row = await db.prepare('SELECT * FROM logos WHERE user_id = ? AND party_id = ?').bind(account.id, partyId).first();
+  if (request.method === 'GET') {
+    if (!row || row.deleted_at) return json(request, { error: 'Logo non trovato.' }, 404);
+    const object = await env.LOGOS.get(row.object_key);
+    if (!object) return json(request, { error: 'L’immagine non è più nell’archivio: caricala di nuovo da questo dispositivo.', code: 'object-missing' }, 410);
+    return new Response(await object.arrayBuffer(), { headers: { 'content-type': row.mime, 'cache-control': 'private, no-store', etag: `"${row.sha256}"`, 'x-logo-version': String(row.version), 'x-logo-sha256': row.sha256, ...API_SECURITY_HEADERS, ...cors(request) } });
+  }
+  const base = Number(request.headers.get('x-base-version'));
+  const current = row?.version ?? 0;
+  if (request.method === 'DELETE') {
+    if (!row || row.deleted_at) return json(request, { ok: true, unchanged: true, version: current });
+    if (!Number.isInteger(base) || base !== current) return json(request, { error: 'Il logo online è cambiato: aggiorna e riprova.', code: 'conflict', current: logoMeta(row) }, 409);
+    try { await env.LOGOS.delete(row.object_key); } catch { return json(request, { error: 'L’archivio non ha cancellato l’immagine: nulla è stato eliminato, riprova.', code: 'storage' }, 502); }
+    const now = new Date().toISOString();
+    const changed = await db.prepare('UPDATE logos SET version = version + 1, sha256 = NULL, mime = NULL, bytes = 0, object_key = NULL, deleted_at = ?, updated_at = ? WHERE user_id = ? AND party_id = ? AND version = ?').bind(now, now, account.id, partyId, current).run();
+    if (!(changed.meta?.changes > 0)) return json(request, { error: 'Il logo online è cambiato: aggiorna e riprova.', code: 'conflict' }, 409);
+    return json(request, { ok: true, version: current + 1 });
+  }
+  if (request.method !== 'PUT') return json(request, { error: 'Richiesta non riconosciuta.' }, 404);
+  if (!Number.isInteger(base) || base < 0 || request.headers.get('x-base-version') === null) return json(request, { error: 'Indica la versione online che hai visto.', code: 'base-missing' }, 400);
+  if (base !== current) return json(request, { error: 'Online c’è un logo diverso per questo partito: nessuna copia è stata sovrascritta.', code: 'conflict', current: row ? logoMeta(row) : null }, 409);
+  const bytes = new Uint8Array(await request.arrayBuffer());
+  if (bytes.length > MAX_LOGO_BYTES) return json(request, { error: `Il logo supera ${MAX_LOGO_BYTES / 1024} KB.`, code: 'too-large' }, 413);
+  const mime = sniffLogo(bytes);
+  if (!mime) return json(request, { error: 'Il file non è un’immagine PNG, JPEG o WebP valida.', code: 'invalid' }, 400);
+  const sha = await sha256Bytes(bytes);
+  const url = new URL(request.url);
+  const width = Math.min(8192, Math.max(0, Number(url.searchParams.get('w')) | 0)), height = Math.min(8192, Math.max(0, Number(url.searchParams.get('h')) | 0));
+  const name = cleanText(url.searchParams.get('name'), 120), origin = ['file', 'url', 'legacy', 'import'].includes(url.searchParams.get('origin')) ? url.searchParams.get('origin') : 'file';
+  // The same image again is not a new version (a retried upload creates no duplicate).
+  if (row && !row.deleted_at && row.sha256 === sha) return json(request, { ok: true, unchanged: true, ...logoMeta(row) });
+  if (!row || row.deleted_at) {
+    const count = await db.prepare('SELECT COUNT(*) AS n FROM logos WHERE user_id = ? AND deleted_at IS NULL').bind(account.id).first();
+    if ((count?.n ?? 0) >= MAX_LOGOS) return json(request, { error: `Puoi conservare online al massimo ${MAX_LOGOS} loghi: eliminane uno.`, code: 'limit' }, 409);
+  }
+  const version = current + 1;
+  const key = await logoKey(account.id, partyId, version);
+  try { await env.LOGOS.put(key, bytes, { httpMetadata: { contentType: mime } }); } catch { return json(request, { error: 'L’archivio non ha salvato l’immagine: il logo resta su questo dispositivo, riprova.', code: 'storage' }, 502); }
+  const now = new Date().toISOString();
+  let written = false;
+  try {
+    if (!row) { await db.prepare('INSERT INTO logos (user_id, party_id, version, sha256, mime, bytes, width, height, name, origin, object_key, deleted_at, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)').bind(account.id, partyId, version, sha, mime, bytes.length, width, height, name, origin, key, now, now).run(); written = true; }
+    else written = (await db.prepare('UPDATE logos SET version = ?, sha256 = ?, mime = ?, bytes = ?, width = ?, height = ?, name = ?, origin = ?, object_key = ?, deleted_at = NULL, updated_at = ? WHERE user_id = ? AND party_id = ? AND version = ?').bind(version, sha, mime, bytes.length, width, height, name, origin, key, now, account.id, partyId, current).run()).meta?.changes > 0;
+  } catch { written = false; }
+  if (!written) { await env.LOGOS.delete(key).catch(() => null); return json(request, { error: 'Il logo online è cambiato mentre lo caricavi: nessuna copia è stata sovrascritta.', code: 'conflict' }, 409); }
+  if (row?.object_key && row.object_key !== key) await env.LOGOS.delete(row.object_key).catch(() => null);
+  return json(request, { ok: true, partyId, version, sha256: sha, bytes: bytes.length, mime, updatedAt: now }, row ? 200 : 201);
+}
+
 async function handleAccounts(request, env, url) {
   const db = env.ACCOUNTS;
   if (!db) return json(request, { error: 'Gli account non sono ancora configurati su questo sito.' }, 503);
@@ -418,7 +506,7 @@ async function handleAccounts(request, env, url) {
   const path = url.pathname.replace(/\/+$/, '');
   const mail = mailConfigured(env);
   // The game asks whether the service answers before offering the account (no data, no session needed). `email` says whether messages can really be sent from here.
-  if (path === '/api/account/status' && request.method === 'GET') return json(request, { ok: true, service: 'accounts', features: ['account-delete', 'save-protocol-2', 'save-history', ...(mail ? ['email-recovery'] : [])], email: mail, emailRequired: env.ACCOUNT_EMAIL_REQUIRED === '1' });
+  if (path === '/api/account/status' && request.method === 'GET') return json(request, { ok: true, service: 'accounts', features: ['account-delete', 'save-protocol-2', 'save-history', ...(env.LOGOS ? ['logo-sync'] : []), ...(mail ? ['email-recovery'] : [])], email: mail, emailRequired: env.ACCOUNT_EMAIL_REQUIRED === '1' });
   if ((path === '/api/account/register' || path === '/api/account/login') && request.method === 'POST') {
     const registering = path.endsWith('register');
     const guard = await accountGuard(db, request, registering ? 'registrazione' : 'accesso');
@@ -561,10 +649,13 @@ async function handleAccounts(request, env, url) {
     if (!user || !equalStrings(await proofHash(body.proof, user.salt, user.iterations), user.hash)) { await guard.fail(); return json(request, { error: 'Password non corretta: l’account non è stato eliminato.' }, 403); }
     const saves = await db.prepare('SELECT COUNT(*) AS n FROM saves WHERE user_id = ?').bind(account.id).first();
     const sessions = await db.prepare('SELECT COUNT(*) AS n FROM sessions WHERE user_id = ?').bind(account.id).first();
+    // The images in R2 go first: if the bucket fails the account is NOT deleted (nothing is left half done) and the player can ask again.
+    try { await purgeLogos(env, account.id); } catch { return json(request, { error: 'L’archivio dei loghi non ha risposto: l’account non è stato eliminato, riprova tra poco.', code: 'storage' }, 502); }
     await deleteAccountData(db, account.id);
     await guard.clear();
     return json(request, { ok: true, deleted: { account: 1, saves: saves?.n ?? 0, sessions: sessions?.n ?? 0 } });
   }
+  if (path === '/api/logos' || path.startsWith('/api/logos/')) return handleLogos(request, env, db, account, path);
   if (path === '/api/saves' && request.method === 'GET') {
     const { results } = await db.prepare('SELECT s.slot AS slot, s.name AS name, s.meta AS meta, s.revision AS revision, s.size AS size, s.updated_at AS updatedAt, t.progress AS progress, t.career_id AS careerId FROM saves s LEFT JOIN save_state t ON t.user_id = s.user_id AND t.slot = s.slot WHERE s.user_id = ? ORDER BY s.updated_at DESC').bind(account.id).all();
     return json(request, { saves: (results ?? []).map(row => ({ ...row, meta: JSON.parse(row.meta ?? '{}'), progress: row.progress ? JSON.parse(row.progress) : null })) });
@@ -657,7 +748,7 @@ async function handleAccounts(request, env, url) {
 async function handleApi(request, env) {
   const url = new URL(request.url);
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { ...API_SECURITY_HEADERS, ...cors(request) } });
-  if (url.pathname.startsWith('/api/account') || url.pathname.startsWith('/api/saves')) return handleAccounts(request, env, url);
+  if (url.pathname.startsWith('/api/account') || url.pathname.startsWith('/api/saves') || url.pathname.startsWith('/api/logos')) return handleAccounts(request, env, url);
   if (!env.ADMIN_ARCHIVE) return json(request, { error: 'Archivio condiviso non configurato.' }, 503);
   if (url.pathname === '/api/admin' && request.method === 'GET') {
     const archive = await env.ADMIN_ARCHIVE.get(ARCHIVE_KEY, 'json') ?? emptyArchive();

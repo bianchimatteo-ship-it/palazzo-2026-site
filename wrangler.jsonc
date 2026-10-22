@@ -24,6 +24,9 @@
     { "binding": "ADMIN_ARCHIVE", "id": "a40ce7a2dc6b4ea6bfa5bedafedc421a" }
   ],
   // Player accounts and online career saves (tables are created by worker.js on first use; see migrations/).
+  // Personal party logos of the accounts (images). The bucket is NOT created by this file: create it once with `npx wrangler r2 bucket create politicando-logos` (docs/logo-sync.md).
+  // Until it exists the binding makes a deploy fail, so it is declared only after the bucket has been created: see the commented block below and the steps in the documentation.
+  // "r2_buckets": [{ "binding": "LOGOS", "bucket_name": "politicando-logos" }],
   "d1_databases": [
     { "binding": "ACCOUNTS", "database_name": "politicando-accounts", "database_id": "38d4e3b4-a8a3-437d-8ef0-a06cc074d051", "migrations_dir": "migrations" }
   ]

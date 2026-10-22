@@ -1,0 +1,3 @@
+-- Personal party logos kept for the account. The images are objects in the R2 bucket bound as LOGOS (see wrangler.jsonc and docs/logo-sync.md); only the metadata is in D1.
+-- One row per account and party; a deleted logo keeps its row (deleted_at) so that another device learns of the deletion. Additive: worker.js also creates the table when it is missing.
+CREATE TABLE IF NOT EXISTS logos (user_id TEXT NOT NULL, party_id TEXT NOT NULL, version INTEGER NOT NULL, sha256 TEXT, mime TEXT, bytes INTEGER, width INTEGER, height INTEGER, name TEXT, origin TEXT, object_key TEXT, deleted_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, PRIMARY KEY (user_id, party_id));

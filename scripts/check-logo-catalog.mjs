@@ -102,8 +102,8 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   // ---------- 1. the section on the Home: every party, search, preview, state ----------
   await openCatalog();
   assert.ok(await has('[data-logo-rights]'), 'L’informativa sui diritti compare nella pagina.');
-  assert.match(await text('.logo-intro'), /restano su questo dispositivo/, 'E dice che i loghi restano sul dispositivo.');
-  assert.match(await text('.logo-intro'), /Non vengono caricati online né condivisi/, 'E che non si sincronizzano.');
+  assert.match(await text('.logo-intro'), /restano (soltanto )?su questo dispositivo/, 'E dice che i loghi restano sul dispositivo.');
+  assert.match(await text('.logo-intro'), /non vengono caricati online né condivisi/i, 'E che senza account non si sincronizzano.');
   const total = await inPage(`const m = document.querySelector('[data-logo-count]').textContent.match(/su (\\d+)/); return Number(m[1]);`);
   assert.ok(total >= dataBefore.parties + dataBefore.movements, 'L’elenco comprende tutti i partiti e i movimenti del gioco.');
   await search('zzzz-nessuno');
@@ -292,8 +292,9 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
 
   // ---------- 8. nothing leaves the device; the old shared catalog is gone ----------
   const calls = await net();
-  assert.equal(calls.filter(item => /logo/i.test(item.url)).length, 0, 'Nessuna richiesta di rete riguarda i loghi.');
-  assert.equal(calls.filter(item => item.body && /Blob|ArrayBuffer|FormData|File/.test(item.body)).length, 0, 'Nessun file o immagine viene inviato.');
+  // Without an account nothing leaves the device (check-logo-sync.mjs covers the signed-in synchronisation): the only logo requests are the authenticated ones to the account's own route.
+  assert.equal(calls.filter(item => /logo/i.test(item.url) && !/\/api\/logos(\/|\?|$)/.test(item.url)).length, 0, 'Le uniche richieste che riguardano i loghi sono quelle alla rotta del proprio account.');
+  assert.equal(calls.filter(item => item.body && /Blob|ArrayBuffer|FormData|File/.test(item.body) && !/\/api\/logos\//.test(item.url)).length, 0, 'Nessun file o immagine viene inviato altrove.');
   assert.equal(calls.some(item => item.kind !== 'fetch'), false, 'Né con XHR o beacon.');
   const gone = await evaluate(`fetch('/api/admin/logo/${P1}').then(response => response.status)`);
   assert.equal(gone, 404, 'Il percorso dei loghi condivisi non esiste più.');

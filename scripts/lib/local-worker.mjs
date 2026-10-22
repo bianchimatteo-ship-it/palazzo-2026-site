@@ -25,12 +25,27 @@ export function createStandIns() {
     run: async () => ({ success: true, meta: sqlite.prepare(sql).run(...params) })
   });
   const d1 = { prepare: sql => statement(sql), batch: async list => Promise.all(list.map(item => item.run())), exec: async sql => sqlite.exec(sql) };
-  return { kv, kvData, sqlite, d1 };
+  // R2 stand-in (a Map of key → bytes) with the interface the Worker uses: put, get, delete, list by prefix with a cursor. `fail` lets a test make the bucket fail the next calls (an outage).
+  const r2Data = new Map();
+  const r2Control = { failPut: 0, failDelete: 0, failList: 0, failGet: 0 };
+  const r2 = {
+    async put(key, value, options = {}) { if (r2Control.failPut > 0) { r2Control.failPut--; throw new Error('R2 non disponibile'); } r2Data.set(key, { bytes: new Uint8Array(value), contentType: options.httpMetadata?.contentType ?? null }); },
+    async get(key) { if (r2Control.failGet > 0) { r2Control.failGet--; throw new Error('R2 non disponibile'); } const entry = r2Data.get(key); return entry ? { arrayBuffer: async () => entry.bytes.slice().buffer, size: entry.bytes.length } : null; },
+    async delete(key) { if (r2Control.failDelete > 0) { r2Control.failDelete--; throw new Error('R2 non disponibile'); } r2Data.delete(key); },
+    async list({ prefix = '', cursor = null, limit = 1000 } = {}) {
+      if (r2Control.failList > 0) { r2Control.failList--; throw new Error('R2 non disponibile'); }
+      const keys = [...r2Data.keys()].filter(name => name.startsWith(prefix)).sort();
+      const start = cursor ? Number(cursor) : 0;
+      const page = keys.slice(start, start + limit);
+      return { objects: page.map(key => ({ key })), truncated: start + limit < keys.length, cursor: String(start + limit) };
+    }
+  };
+  return { kv, kvData, sqlite, d1, r2, r2Data, r2Control };
 }
 
 // Serves the project folder (with the headers of `_headers`, as Cloudflare would) and the Worker on `port` (127.0.0.1). Returns { origin, env, kvData, sqlite, close }.
-export async function startLocalWorker({ port = 8791, root = fileURLToPath(new URL('../..', import.meta.url)), setupCode = 'attivazione-di-prova' } = {}) {
-  const { kv, kvData, sqlite, d1 } = createStandIns();
+export async function startLocalWorker({ port = 8791, root = fileURLToPath(new URL('../..', import.meta.url)), setupCode = 'attivazione-di-prova', withLogos = true } = {}) {
+  const { kv, kvData, sqlite, d1, r2, r2Data, r2Control } = createStandIns();
   const worker = (await import(`../../worker.js?local=${port}-${Date.now()}`)).default;
   // What Workers static assets would not publish: the patterns of .assetsignore (gitignore style: a name without a slash matches at any depth, `**/name`, `*.ext`, `dir/file`).
   const ignoreRules = (await readFile(join(root, '.assetsignore'), 'utf8').catch(() => '')).split('\n').map(line => line.trim()).filter(line => line && !line.startsWith('#'));
@@ -67,7 +82,7 @@ export async function startLocalWorker({ port = 8791, root = fileURLToPath(new U
     return new Response(await readFile(path), { headers: { 'content-type': MIME[extname(path)] ?? 'application/octet-stream', 'cache-control': 'no-store', ...publishedHeaders(pathname === '/' ? '/index.html' : pathname) } });
   };
   const env = {
-    ADMIN_ARCHIVE: kv, ACCOUNTS: d1, ADMIN_SETUP_CODE: setupCode,
+    ADMIN_ARCHIVE: kv, ACCOUNTS: d1, ...(withLogos ? { LOGOS: r2 } : {}), ADMIN_SETUP_CODE: setupCode,
     ASSETS: { fetch: async request => (await readAsset(decodeURIComponent(new URL(request.url).pathname))) ?? new Response('Not found', { status: 404 }) }
   };
   const origin = `http://127.0.0.1:${port}`;
@@ -86,5 +101,5 @@ export async function startLocalWorker({ port = 8791, root = fileURLToPath(new U
     } catch (error) { res.writeHead(500, { 'content-type': 'text/plain' }); res.end(String(error?.message ?? error)); }
   });
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(port, '127.0.0.1', resolve); });
-  return { origin, port, env, kvData, sqlite, worker, close: () => new Promise(resolve => { server.closeAllConnections?.(); server.close(resolve); }) };
+  return { origin, port, env, kvData, sqlite, r2Data, r2Control, worker, close: () => new Promise(resolve => { server.closeAllConnections?.(); server.close(resolve); }) };
 }
