@@ -1,13 +1,15 @@
 // The newsroom as the player reads it: full articles (with the facts behind them), the stories that last (timeline, reactions, heat) and the
 // outlets with their identity. Everything shown here was written by the engine from a fact of the game; nothing is attributed to real people.
-import { ARTICLE_CATEGORIES, LP24, NEWSROOM_OUTLETS, RADIO_PROGRAMMES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261022-15';
-import { formatDate } from '../core/time.js?v=20261022-15';
-import { coverIllustration, illustration, lp24Logo, pickByHash } from './illustrations.js?v=20261022-15';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261022-15';
-import { normalizeMedia } from '../core/news-engine.js?v=20261022-15';
-import { esc, meter } from './charts.js?v=20261022-15';
-import { glyph } from './visuals.js?v=20261022-15';
-import { bulletinScript, voiceAvailable, voiceLine, voiceStatus, voiceTarget } from './radio-voice.js?v=20261022-15';
+import { ARTICLE_CATEGORIES, LP24, NEWSROOM_OUTLETS, RADIO_PROGRAMMES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261022-18';
+import { formatDate } from '../core/time.js?v=20261022-18';
+import { coverIllustration, illustration, lp24Logo, pickByHash } from './illustrations.js?v=20261022-18';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261022-18';
+import { normalizeMedia } from '../core/news-engine.js?v=20261022-18';
+import { esc, meter } from './charts.js?v=20261022-18';
+import { glyph } from './visuals.js?v=20261022-18';
+import { bulletinScript, voiceAvailable, voiceError, voiceLine, voiceStatus, voiceTarget } from './radio-voice.js?v=20261022-18';
+// What went wrong with the reading aloud (blocked, no usable voice, silent): said on the page, where the text stays readable.
+const voiceProblem = () => voiceStatus() === 'error' && voiceError() ? `<p class="voice-note" role="alert" data-voice-error="${esc(voiceError().code)}">${esc(voiceError().message)}</p>` : '';
 
 const TONE = { good: 'tone-good', bad: 'tone-bad', neutral: 'tone-neutral' };
 export const leaningLabel = value => value <= -1.5 ? 'sinistra' : value <= -0.5 ? 'centro-sinistra' : value < 0.5 ? 'equidistante' : value < 1.5 ? 'centro-destra' : 'destra';
@@ -43,13 +45,13 @@ export function articleHtml(article, media, { lead = false } = {}) {
   const category = categoryOf(article.category);
   // The article can be read aloud by the device's own voice (only where it has one): the text stays on the page either way.
   const reading = voiceTarget() === `article:${article.id}`;
-  const listen = voiceAvailable() ? `<p class="article-listen"><button type="button" class="secondary-button ${reading ? 'is-on-air' : ''}" data-article-speak="${esc(article.id)}" data-voice-target="article:${esc(article.id)}" data-voice-idle="Ascolta l’articolo" data-voice-active="Ferma la lettura" aria-pressed="${reading}">${glyph('mic', 14)} <span data-voice-label>${reading ? 'Ferma la lettura' : 'Ascolta l’articolo'}</span></button></p>` : '';
+  const listen = voiceAvailable() ? `<p class="article-listen"><button type="button" class="secondary-button ${reading ? 'is-on-air' : ''}" data-article-speak="${esc(article.id)}" data-voice-target="article:${esc(article.id)}" data-voice-idle="Ascolta l’articolo" data-voice-active="Ferma la lettura" aria-pressed="${reading}">${glyph('mic', 14)} <span data-voice-label>${reading ? 'Ferma la lettura' : 'Ascolta l’articolo'}</span></button></p>${voiceProblem()}` : '';
   return `<article class="news-card ${lead ? 'is-lead' : ''} ${article.breaking ? 'is-breaking' : ''} ${TONE[article.tone] ?? TONE.neutral}" style="--cat:${esc(CATEGORY_TONE[article.category] ?? '#6aa9c4')}" data-article="${esc(article.id)}">
     <figure class="news-art" aria-hidden="true">${coverIllustration(newsCoverScene(article), { seed: article.id ?? article.key ?? article.headline, tone: article.tone })}</figure>
     <div class="news-card-body">
       <p class="news-card-meta">${article.breaking ? '<span class="breaking-badge">BREAKING NEWS</span>' : ''}<span class="news-cat">${glyph(category?.icon ?? 'news', 13)} ${esc(category?.label ?? article.category)}</span><time datetime="${esc(article.date ?? '')}">${esc(shortDate(article.date))}</time><span class="news-outlet">${esc(article.outlet)}</span></p>
       ${article.kicker ? `<p class="news-kicker">${esc(article.kicker)}</p>` : ''}<h3 class="news-headline">${esc(article.headline)}</h3>
-      <p class="news-summary">${esc(summaryOf(article))}</p>
+      <p class="news-summary">${esc(summaryOf(article))}</p>${article.tags?.length ? `<p class="news-tags">${article.tags.map(tag => esc(tag)).join(' ')}</p>` : ''}
       <details class="news-article ${TONE[article.tone] ?? TONE.neutral}"><summary>Leggi la storia completa</summary>
         <div class="article-body">${listen}${article.body.map(paragraph => `<p>${esc(paragraph)}</p>`).join('')}${facts}${link}<p class="article-edge"><small>${esc(EDGE_LABEL[article.edge] ?? '')} · articolo simulato dai fatti della partita</small></p></div></details>
     </div></article>`;
@@ -80,7 +82,7 @@ export function radioHtml(state) {
   // The bulletin can be read aloud by the speech synthesis of the device (nothing is downloaded or sent): the control exists only where the device can do it, the text is always on the page.
   const script = bulletinScript(bulletins), canSpeak = script.length > 0 && voiceAvailable(), speaking = voiceTarget() === 'bulletin';
   const speak = canSpeak ? `<button type="button" class="primary-button ${speaking ? 'is-on-air' : ''}" data-radio-speak data-voice-target="bulletin" data-voice-idle="Ascolta il notiziario" data-voice-active="Ferma il notiziario" aria-pressed="${speaking}">${glyph('mic', 15)} <span data-voice-label>${speaking ? 'Ferma il notiziario' : 'Ascolta il notiziario'}</span></button>` : '';
-  const head = `${mastheadHtml('radio')}<div class="radio-deck">${illustration('radio', 'radio-art')}<p>${esc(LP24.radio.name)}: ogni settimana un notiziario e le rubriche che hanno qualcosa da dire, scritti dai fatti della partita. Nessuna voce registrata e nessun servizio esterno: ${canSpeak ? 'il notiziario si legge qui sotto e si può ascoltare con la voce di sintesi italiana del tuo dispositivo (nulla viene scaricato o inviato); la sigla è un suono generato dal gioco.' : 'il notiziario si legge qui sotto e la sigla è un suono generato dal gioco.'}</p><div class="radio-actions">${speak}<button type="button" class="secondary-button" data-radio-play>${glyph('mic', 15)} Ascolta la sigla</button></div></div>`;
+  const head = `${mastheadHtml('radio')}${canSpeak ? voiceProblem() : ''}<div class="radio-deck">${illustration('radio', 'radio-art')}<p>${esc(LP24.radio.name)}: ogni settimana un notiziario e le rubriche che hanno qualcosa da dire, scritti dai fatti della partita. Nessuna voce registrata e nessun servizio esterno: ${canSpeak ? 'il notiziario si legge qui sotto e si può ascoltare con la voce di sintesi italiana del tuo dispositivo (nulla viene scaricato o inviato); la sigla è un suono generato dal gioco.' : 'il notiziario si legge qui sotto e la sigla è un suono generato dal gioco.'}</p><div class="radio-actions">${speak}<button type="button" class="secondary-button" data-radio-play>${glyph('mic', 15)} Ascolta la sigla</button></div></div>`;
   if (!bulletins.length) return `${head}<p class="quiet-copy">Il primo notiziario va in onda alla prossima chiusura di settimana, se ci sono notizie da leggere.</p>`;
   const transcript = `<details class="radio-transcript" ${canSpeak ? '' : 'open'}><summary>Testo del notiziario${canSpeak ? '' : ' (la lettura ad alta voce non è disponibile su questo dispositivo)'}</summary><ol class="radio-script" aria-label="Testo del notiziario">${script.map((entry, index) => `<li class="${speaking && voiceLine() === index ? 'is-reading' : ''}" data-radio-line="${index}">${esc(entry.text)}</li>`).join('')}</ol></details>`;
   const weeks = [...new Set(bulletins.map(item => item.week))].slice(0, 3);

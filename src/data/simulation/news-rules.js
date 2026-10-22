@@ -58,7 +58,7 @@ export const NEWS_RULES = Object.freeze({
   // A story cools every week; it closes when it has been quiet and cold, and an archived story is not reopened.
   heatStart: 55, heatDecay: 6, heatMax: 100, closeBelow: 14, quietWeeks: 5,
   // A rumour (the first stage of a case) is confirmed or denied after this many weeks: the probability depends on the credibility of the outlet that broke it.
-  rumourWeeks: [3, 5], confirmBase: 0.3, confirmPerCredibility: 0.55,
+  rumourWeeks: [3, 5], foundedShare: 0.55,
   // Credibility: what it gains from a confirmed story and loses from a denied one, and the slow return to the level of the masthead.
   credibility: { confirmed: 2, denied: -4, revert: 0.02, min: 10, max: 95 },
   // How much the credibility of an outlet counts when its tone moves the climate (1 at the average credibility of the newsroom).

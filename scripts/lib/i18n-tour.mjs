@@ -2,14 +2,19 @@
 // phrases to translate (scripts/i18n-capture.mjs) and by the coverage check (scripts/check-i18n.mjs).
 export const COLLECT = `(() => {
   const out = [];
-  const skip = new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'CODE', 'PRE', 'NOSCRIPT']);
+  const skip = new Set(['SCRIPT', 'STYLE', 'CODE', 'PRE', 'NOSCRIPT']);
+  const attributes = ['title', 'aria-label', 'placeholder', 'alt', 'aria-description', 'aria-placeholder', 'aria-roledescription', 'aria-valuetext', 'data-tip', 'data-label', 'data-voice-idle', 'data-voice-active'];
   const walk = node => {
-    if (node.nodeType === 3) { const text = node.nodeValue.replace(/\\s+/g, ' ').trim(); if (text && !node.parentElement?.closest('[data-no-translate]')) out.push(text); return; }
+    if (node.nodeType === 3) { const text = node.nodeValue.replace(/\\s+/g, ' ').trim(); if (text && !node.parentElement?.closest('[data-no-translate], textarea')) out.push(text); return; }
     if (node.nodeType !== 1 || skip.has(node.tagName) || node.hasAttribute('data-no-translate')) return;
-    for (const name of ['title', 'aria-label', 'placeholder', 'alt']) { const value = node.getAttribute(name); if (value && value.trim()) out.push(value.replace(/\\s+/g, ' ').trim()); }
+    for (const name of attributes) { const value = node.getAttribute(name); if (value && value.trim()) out.push(value.replace(/\\s+/g, ' ').trim()); }
+    if (node.tagName === 'INPUT' && /^(button|submit|reset)$/.test(node.type) && node.value) out.push(node.value.trim());
+    // what the player typed (textarea, input) is theirs: only the interface's own attributes above were collected
+    if (node.tagName === 'TEXTAREA' || node.tagName === 'INPUT') return;
     for (const child of node.childNodes) walk(child);
   };
   walk(document.body);
+  if (document.title) out.push(document.title.trim());
   return out;
 })()`;
 

@@ -1,8 +1,8 @@
 // Simulated newsroom: headlines tied to what happens in the career, written with different structures
 // (fact, question, number, local angle, quote-like, analysis) and never the same template twice in a row.
 // Headlines speak of the player's own character and of the simulated world: no statement is put in the mouth of real people.
-import { ARTICLE_CATEGORIES, KICKERS, NEWSROOM_OUTLETS, NEWS_RULES as RULES, OUTLET_STYLE, RADIO_PROGRAMMES, RADIO_RULES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261022-15';
-import { WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20261022-15';
+import { ARTICLE_CATEGORIES, KICKERS, NEWSROOM_OUTLETS, NEWS_RULES as RULES, OUTLET_STYLE, RADIO_PROGRAMMES, RADIO_RULES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261022-18';
+import { WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20261022-18';
 const RECENT = 18;
 // A template not used recently; when every template of the kind has been used, the least recently used one.
 const pick = (list, seed, recent) => {
@@ -15,26 +15,26 @@ const hash = value => [...String(value)].reduce((n, char) => (n * 31 + char.char
 
 export const NEWS_TEMPLATES = Object.freeze({
   // What the player does in public.
-  social: { good: ['Il post di {name} fa il giro della rete', '{name} detta l’agenda sui social: migliaia di condivisioni', 'Boom di interazioni per {name}: «Parliamo di problemi veri»', 'Social, la settimana di {name}: numeri in crescita'], bad: ['Polemica per un post di {name}', 'Bufera social su {name}: il messaggio cancellato dopo poche ore', '{name} e quel post che divide anche i suoi', 'Scivolone digitale: {name} costretto a correggersi'] },
-  intervista: { good: ['Intervista a {name}: «{region} merita più attenzione»', '{name} si racconta: carriera, progetti e il nodo {topic}', 'A tu per tu con {name}, tra ambizioni e cautele', '«Ecco cosa farei domani»: il piano di {name}'], bad: ['Parole di {name} travisate: bufera', '{name}, l’intervista che imbarazza il partito', 'Quella frase di {name} che nessuno aveva previsto', 'Dopo l’intervista, {name} in difficoltà'] },
-  talk: { good: ['{name} ospite in prima serata: confronto vinto ai punti', 'In tv {name} tiene testa agli avversari', 'Il faccia a faccia televisivo premia {name}', 'Prima serata, {name} convince anche gli scettici'], bad: ['Scontro in diretta per {name}', 'Talk show, {name} messo all’angolo', 'Serata difficile in tv per {name}', 'Il confronto in studio si trasforma in un boomerang per {name}'] },
-  progetto: { good: ['{name} presenta un progetto per {municipality}', 'Un piano per {region}: la proposta di {name} convince i sindaci', 'Cantieri, tempi, costi: il progetto di {name} nel dettaglio', '{name} porta a {municipality} un’idea che piace alle imprese'], bad: ['Il progetto di {name} si arena', '{municipality}, il progetto di {name} finisce su un binario morto', 'Troppi dubbi sui costi: frenata sul piano di {name}', 'Il progetto annunciato da {name} resta sulla carta'] },
-  ascolto: { good: ['{name} tra mercati e quartieri di {municipality}', 'Porta a porta a {municipality}: {name} ascolta e prende appunti', 'Una giornata nei quartieri con {name}', '{name} tra la gente: «Qui si capisce cosa serve»'], bad: ['Contestazione durante l’incontro di {name}', 'Fischi e cartelli: incontro teso per {name} a {municipality}', 'L’assemblea pubblica sfugge di mano a {name}', 'A {municipality} i residenti accolgono {name} con le proteste'] },
-  associazioni: { good: ['{name} costruisce una rete con le associazioni', 'Volontariato e terzo settore: sponda per {name}', '{name} firma un patto con le associazioni di {region}', 'Le associazioni di {municipality} scelgono il dialogo con {name}'], bad: ['Un comitato accusa {name} di passerella', 'Associazioni deluse: «Da {name} solo promesse»', 'Il terzo settore volta le spalle a {name}', 'Freddezza delle associazioni verso {name}'] },
+  social: { good: ['Il post di {name} fa il giro della rete', '{name} sui social: il post tra i più condivisi della settimana', 'Molte interazioni per il post di {name}', 'Social, la settimana di {name}: numeri in crescita'], bad: ['Polemica per un post di {name}', 'Reazioni critiche al post di {name}', '{name}: il post divide i commenti', 'Il post di {name} è discusso sui social'] },
+  intervista: { good: ['Intervista a {name}: al centro il tema {region}', '{name} si racconta: carriera, progetti e il nodo {topic}', 'A tu per tu con {name}, tra ambizioni e cautele', 'Le proposte di {name} nell’intervista'], bad: ['Intervista di {name}: reazioni contrastanti', 'L’intervista di {name} fa discutere nel partito', 'Una risposta di {name} fa discutere', 'Dopo l’intervista, {name} in difficoltà'] },
+  talk: { good: ['{name} ospite in prima serata: confronto vinto ai punti', 'In tv {name} tiene testa agli avversari', 'Il faccia a faccia televisivo premia {name}', 'Prima serata, {name} convince anche gli scettici'], bad: ['Scontro in diretta per {name}', 'Talk show: serata complicata per {name}', 'Serata difficile in tv per {name}', 'Il confronto in studio non aiuta {name}'] },
+  progetto: { good: ['{name} presenta un progetto per {municipality}', 'Un piano per {region}: la proposta di {name}', 'Cantieri, tempi, costi: il progetto di {name} nel dettaglio', '{name} porta a {municipality} una nuova idea'], bad: ['Il progetto di {name} si arena', '{municipality}, il progetto di {name} rallenta', 'Troppi dubbi sui costi: frenata sul piano di {name}', 'Il progetto annunciato da {name} resta sulla carta'] },
+  ascolto: { good: ['{name} tra mercati e quartieri di {municipality}', 'Porta a porta a {municipality}: {name} ascolta e prende appunti', 'Una giornata nei quartieri con {name}', '{name} tra la gente di {municipality}'], bad: ['Contestazione durante l’incontro di {name}', 'Incontro teso per {name} a {municipality}', 'Assemblea pubblica difficile per {name}', 'A {municipality} un’accoglienza fredda per {name}'] },
+  associazioni: { good: ['{name} costruisce una rete con le associazioni', 'Volontariato e terzo settore: sponda per {name}', '{name} firma un patto con le associazioni di {region}', 'Le associazioni di {municipality} scelgono il dialogo con {name}'], bad: ['Critiche dalle associazioni a {name}', 'Associazioni deluse dall’incontro con {name}', 'Il terzo settore prende le distanze da {name}', 'Freddezza delle associazioni verso {name}'] },
   dissenso: { good: ['{name} rompe con la linea del partito', 'Il coraggio di dire no: {name} si smarca', '{name} guida il dissenso interno', 'Voce fuori dal coro: {name} sfida i vertici'], bad: ['{name} isolato nel partito', 'Strappo senza seguito: {name} resta solo', 'Il partito chiude la porta a {name}', 'Il dissenso di {name} non trova sponde'] },
   'campagna-partito': { good: ['Parte la campagna nazionale di {party}', 'Nuovi manifesti e tour: {party} accelera', '{party} riempie le piazze: la campagna decolla', 'Campagna di {party}, primo bilancio positivo'], bad: ['Spot di {party} criticati', 'Campagna di {party} al centro delle ironie', 'Il messaggio di {party} non arriva: analisti perplessi', 'Soldi e poca resa: i dubbi sulla campagna di {party}'] },
-  conferenza: { good: ['Conferenza stampa di {name}: risposte convincenti', '{name} risponde a tutto: conferenza senza sbavature', 'Numeri e tempi certi: la conferenza di {name}', 'I giornalisti incalzano, {name} non arretra'], bad: ['Conferenza stampa di {name}: domande senza risposta', 'Conferenza lampo e tanti silenzi: il caso {name}', '{name} lascia la sala tra le proteste dei cronisti', 'Troppe contraddizioni nella conferenza di {name}'] },
+  conferenza: { good: ['Conferenza stampa di {name}: risposte convincenti', '{name} risponde a tutto: conferenza senza sbavature', 'Numeri e tempi certi: la conferenza di {name}', 'Domande dei giornalisti: {name} risponde'], bad: ['Conferenza stampa di {name}: domande senza risposta', 'Conferenza stampa di {name}: poche risposte', 'Conferenza di {name}: domande rimaste aperte', 'Dubbi sulla conferenza di {name}'] },
   interrogazione: { good: ['{name} porta in Aula i problemi di {region}', 'Interrogazione di {name}: il governo promette risposte', 'Dal territorio al Parlamento: l’iniziativa di {name}', '{name} incalza il governo su {topic}'], bad: ['Interrogazione di {name}: il governo non risponde', 'Aula semivuota per l’interrogazione di {name}', 'Il governo liquida in due righe la domanda di {name}', 'Interrogazione caduta nel vuoto per {name}'] },
   // What happens around the player, week after week.
-  pollUp: ['{party} sale al {share}% ({delta} punti in una settimana)', 'Sondaggi, vento in poppa per {party}', 'Perché {party} cresce? Tre ipotesi dopo l’ultimo sondaggio', '{party} al {share}%: il massimo da settimane?', 'Il sondaggio della settimana sorride a {party}', 'Nell’area {macro} la spinta di {party}'],
-  pollDown: ['{party} scende al {share}% ({delta} punti)', 'Frenata di {party} nei sondaggi: cosa non funziona', 'Sondaggi amari per {party}, la base chiede risposte', '{party} perde terreno: gli avversari esultano', 'Il calo di {party} spiegato in tre numeri', '{party} sotto pressione dopo l’ultima rilevazione'],
-  government: ['Maggioranza in fibrillazione: stabilità ai minimi', 'Il governo traballa: vertici notturni e veti incrociati', 'Crisi all’orizzonte? Gli alleati alzano il prezzo', 'Tensione nella coalizione: si tratta a oltranza', 'Palazzo Chigi alla prova dei numeri in Aula'],
+  pollUp: ['{party} sale al {share}% ({delta} punti in una settimana)', 'Sondaggi, vento in poppa per {party}', 'Sondaggi: {party} cresce nell’ultima rilevazione', '{party} al {share}% nell’ultima rilevazione', 'Il sondaggio della settimana sorride a {party}', 'Nell’area {macro} la spinta di {party}'],
+  pollDown: ['{party} scende al {share}% ({delta} punti)', 'Frenata di {party} nei sondaggi', 'Sondaggi in calo per {party}', '{party} perde terreno rispetto alla settimana scorsa', 'Il calo di {party} nei numeri dell’ultima rilevazione', '{party} sotto pressione dopo l’ultima rilevazione'],
+  government: ['Maggioranza in fibrillazione: stabilità ai minimi', 'Il governo in difficoltà: la stabilità è sotto la soglia', 'Rischio crisi: la stabilità del governo è bassa', 'Tensione nella coalizione: stabilità bassa', 'Palazzo Chigi alla prova dei numeri in Aula'],
   economy: ['Spread a quota {spread}: i mercati osservano l’Italia', 'Conti pubblici sotto la lente: deficit al {deficit}%', 'Mercati nervosi, il costo del debito sale', 'Borsa e titoli di Stato: settimana di tensione', 'Bruxelles guarda ai conti italiani'],
   region: ['{region}, allarme {indicator}: il dato peggiore d’Italia', 'Il caso {region}: {indicator} ai minimi, sindaci in allarme', 'Viaggio in {region}, dove {indicator} è l’emergenza', '{region} chiede aiuto su {indicator}', 'Cosa non funziona in {region}: il nodo {indicator}'],
   election: ['{countdown} al voto: il quadro', 'Verso le elezioni: liste, alleanze e sondaggi', 'Conto alla rovescia per il voto, partiti in fermento', 'Elezioni tra {weeksText}: chi rischia di più', 'Candidature e trattative: la corsa è iniziata'],
   alliance: ['Nasce un’intesa: {detail}', 'Accordo politico: {detail}', 'Nuovi equilibri: {detail}', 'Alleanze in movimento: {detail}'],
   rupture: ['Rottura: {detail}', 'Divorzio politico: {detail}', 'Finisce l’intesa: {detail}', 'Strappo tra alleati: {detail}'],
-  evolution: ['Partiti in movimento: {detail}', 'Il quadro cambia: {detail}', 'Terremoto nei partiti: {detail}', 'Nuovi assetti: {detail}']
+  evolution: ['Partiti in movimento: {detail}', 'Il quadro cambia: {detail}', 'Partiti: {detail}', 'Nuovi assetti: {detail}']
 });
 
 const fill = (text, context) => String(text).replace(/\{(\w+)\}/g, (match, key) => context[key] ?? match);
@@ -187,7 +187,7 @@ const BUILDERS = {
     const pct = Number.isFinite(d.percent) ? `${String(Math.round(d.percent * 10) / 10).replace('.', ',')}%` : null;
     const won = d.personalMandate;
     const what = d.national ? 'Elezioni politiche' : d.label ?? 'Elezioni';
-    const head = won ? { neutral: `${what}: il tuo risultato${pct ? ` è del ${pct}` : ''} vale un mandato`, critical: `${what}: ${pct ? `${pct} e ` : ''}un mandato conquistato, ma restano le divisioni`, friendly: `${what}: successo${pct ? ` al ${pct}` : ''}, mandato conquistato` } : { neutral: `${what}: ${pct ? `${pct}, ` : ''}nessun mandato`, critical: `${what}: ${pct ? `${pct}, ` : ''}la candidatura non basta`, friendly: `${what}: ${pct ? `${pct}, ` : ''}il risultato non basta per il mandato` };
+    const head = won ? { neutral: `${what}: il tuo risultato${pct ? ` (${pct})` : ''} vale un mandato`, critical: `${what}: ${pct ? `${pct} e ` : ''}un mandato conquistato, ma restano le divisioni`, friendly: `${what}: successo${pct ? ` al ${pct}` : ''}, mandato conquistato` } : { neutral: `${what}: ${pct ? `${pct}, ` : ''}nessun mandato`, critical: `${what}: ${pct ? `${pct}, ` : ''}la candidatura non basta`, friendly: `${what}: ${pct ? `${pct}, ` : ''}il risultato non basta per il mandato` };
     return { headline: head, deck: d.outcomeLabel ?? fact.text, paragraphs: [`${d.label ?? 'Il voto'} si chiude${pct ? ` con il ${pct} per la tua candidatura` : ''}${d.seats ? ` e ${d.seats} ${d.seats === 1 ? 'seggio' : 'seggi'}` : ''}. ${won ? 'Il mandato personale è conquistato.' : 'Il mandato personale non è raggiunto.'}`, d.outcomeLabel ? `Esito: ${lower(d.outcomeLabel)}.` : '', d.objectiveMet === true ? 'L’obiettivo che ti eri dato è stato raggiunto.' : d.objectiveMet === false ? 'L’obiettivo che ti eri dato non è stato raggiunto.' : ''].filter(Boolean), facts: [['Elezione', d.label ?? '—'], ...(pct ? [['Risultato', pct]] : []), ...(d.seats ? [['Seggi', d.seats]] : []), ['Mandato', won ? 'conquistato' : 'non raggiunto']] };
   },
   attivita(fact) {
@@ -364,7 +364,30 @@ function closeStory(story, week, text) {
 // The builders say what happened; this decides how each outlet tells it. Everything added here comes from the game itself (the Government's stability and margin, the story the fact belongs to):
 // no quotation, number or fact is invented, and the same fact always reads the same way for the same outlet (the choice follows the key of the fact, not chance).
 const firstSentence = text => { const match = String(text ?? '').match(/^.*?[.!?](?=\s|$)/); return (match ? match[0] : String(text ?? '')).trim(); };
-const clip = (text, max) => { const t = String(text ?? ''); return t.length <= max ? t : `${t.slice(0, max - 1).replace(/\s+\S*$/, '')}…`; };
+// A cut never leaves half a sentence: at the last full sentence that fits, else at the last clause (comma, semicolon, colon, dash), else at a word with an ellipsis.
+const clip = (text, max) => {
+  const t = String(text ?? '').trim();
+  if (t.length <= max) return t;
+  const head = t.slice(0, max);
+  const sentence = [...head.matchAll(/[.!?](?=\s|$)/g)].at(-1);
+  if (sentence && sentence.index >= max * 0.45) return head.slice(0, sentence.index + 1);
+  const clause = [...head.matchAll(/[,;:–—](?=\s)/g)].at(-1);
+  if (clause && clause.index >= max * 0.6) return `${head.slice(0, clause.index).trim()}…`;
+  return `${head.slice(0, max - 1).replace(/\s+\S*$/, '').replace(/[,;:\s]+$/, '')}…`;
+};
+// A paragraph longer than the limit keeps its first whole sentences (never a cut sentence); one single longer sentence is cut at a clause.
+const fitParagraph = (text, max) => {
+  const t = String(text ?? '').trim();
+  if (t.length <= max) return t;
+  const sentences = t.match(/[^.!?]+[.!?]+(?=\s|$)|[^.!?]+$/g) ?? [t];
+  let out = '';
+  for (const sentence of sentences) { if ((out + sentence).trim().length > max) break; out = `${out}${sentence}`; }
+  return out.trim() || clip(t, max);
+};
+// The calendar day as a reader says it: «21 ottobre» (the year only when it is not this one).
+const MONTHS = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre', 'novembre', 'dicembre'];
+export const dayText = (iso, today = null) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso ?? '')); if (!m) return ''; const year = today && String(today).slice(0, 4) !== m[1] ? ` ${m[1]}` : ''; return `${Number(m[3])} ${MONTHS[Number(m[2]) - 1]}${year}`; };
+const daysBetween = (a, b) => Math.round((Date.parse(`${String(b).slice(0, 10)}T00:00:00Z`) - Date.parse(`${String(a).slice(0, 10)}T00:00:00Z`)) / 86_400_000);
 const NEEDS_GOV_LINE = new Set(['legge', 'respinta', 'governo', 'dossier']);
 function stateLine(fact, ctx, paragraphs) {
   if (!NEEDS_GOV_LINE.has(fact.kind) || !ctx.gov || paragraphs.some(text => /stabilità a \d/.test(text))) return '';
@@ -391,11 +414,21 @@ export function shapeArticle(built, { fact, outlet, story, ctx }) {
   else if (style.form === 'diretta') extra.push(stateLine(fact, ctx, paragraphs));
   paragraphs = [...paragraphs, ...extra.filter(Boolean)];
   // Short forms keep the lead; the analysis puts the line that links the fact to the story before the Government's line.
-  paragraphs = paragraphs.slice(0, style.paragraphs);
+  paragraphs = paragraphs.slice(0, style.paragraphs).map(paragraph => fitParagraph(paragraph, Math.min(RULES.bodyMax, style.chars)));
   const body = []; let used = 0;
   for (const paragraph of paragraphs) { if (used + paragraph.length > style.chars && body.length) break; body.push(paragraph); used += paragraph.length; }
-  const deck = style.form === 'social' ? clip(firstSentence(built.deck), 110) : style.form === 'breve' ? clip(firstSentence(built.deck), 150) : style.form === 'analisi' && body[1] && !/^Il (fatto|passaggio)/.test(body[1]) ? clip(`${firstSentence(built.deck)} ${firstSentence(body[1])}`, 240) : built.deck;
+  const deck = style.form === 'social' ? clip(firstSentence(built.deck), 110) : style.form === 'breve' ? clip(firstSentence(built.deck), 150) : style.form === 'analisi' && body[1] && !/^Il (fatto|passaggio)/.test(body[1]) ? clip(`${firstSentence(built.deck)} ${firstSentence(body[1])}`, 240) : clip(built.deck, 240);
   return { kicker, form: style.form, deck, body };
+}
+// The headline as the outlet writes it: the social network keeps it short, the local outlets put the place first when the story has one and the headline does not already name it, the radio drops the
+// typographic marks that make no sense read aloud; the national paper and the TV news keep it as the builder wrote it. The words are the same (same facts), the shape is not.
+function headlineFor(headline, outlet, region) {
+  const style = OUTLET_STYLE[outlet.id] ?? OUTLET_STYLE.quotidiani;
+  let text = String(headline ?? '').trim();
+  if (style.form === 'social') return clip(text.replace(/[«»]/g, ''), 90);
+  if (style.form === 'cronaca' && region && !text.toLowerCase().includes(String(region).toLowerCase())) return `${region} · ${text}`;
+  if (style.form === 'diretta') return text.replace(/[«»]/g, '').replace(/\s*\?$/, '');
+  return text;
 }
 export function publishFact(mediaIn, fact, ctx) {
   const media = mediaIn;
@@ -409,7 +442,8 @@ export function publishFact(mediaIn, fact, ctx) {
   const shaped = shapeArticle(built, { fact, outlet, story, ctx });
   // Breaking news is rare: only a fact that weighs enough, and one a week.
   const breaking = (fact.importance ?? 0) >= RULES.breakingMin && !media.articles.some(item => item.breaking && item.week === fact.week);
-  const article = { id: `articolo-${fact.week}-${media.seq}`, key: fact.key, week: fact.week, date: fact.date, outletId: outlet.id, outlet: outlet.name, category: fact.category, headline: pickVariant(built.headline, edge), kicker: shaped.kicker, form: shaped.form, deck: shaped.deck, body: shaped.body, facts: built.facts.map(([label, value]) => ({ label, value: String(value) })), tone: fact.tone, importance: fact.importance, edge, storyId: story?.id ?? null, kind: fact.kind, region: fact.data?.region ?? fact.region ?? null, breaking, source: RULES.source };
+  const region = fact.data?.region ?? fact.region ?? null;
+  const article = { id: `articolo-${fact.week}-${media.seq}`, key: fact.key, week: fact.week, date: fact.date, outletId: outlet.id, outlet: outlet.name, category: fact.category, headline: headlineFor(pickVariant(built.headline, edge), outlet, region), tags: outlet.id === 'social' ? [`#${categoryLabel(fact.category).replace(/\s+/g, '')}`] : [], kicker: shaped.kicker, form: shaped.form, deck: shaped.deck, body: shaped.body, facts: built.facts.map(([label, value]) => ({ label, value: String(value) })), tone: fact.tone, importance: fact.importance, edge, storyId: story?.id ?? null, kind: fact.kind, region: fact.data?.region ?? fact.region ?? null, breaking, source: RULES.source };
   media.articles = [article, ...media.articles].slice(0, RULES.articlesKept);
   media.seen = [...media.seen, fact.key].slice(-RULES.seenKept);
   if (story) {
@@ -447,15 +481,34 @@ function storiesWeek(media, ctx) {
   for (const story of media.stories.filter(item => item.status === 'aperta')) {
     story.heat = clamp(story.heat - RULES.heatDecay, 0, RULES.heatMax);
     const outlet = media.outlets.find(item => item.id === story.outletId);
-    // A rumour is confirmed or denied after a few weeks: the more credible the outlet that broke it, the likelier it was right.
-    if (story.kind === 'scandalo' && !story.resolved && week - story.openedWeek >= RULES.rumourWeeks[0] + Math.floor(unit(story.key, 'attesa') * (RULES.rumourWeeks[1] - RULES.rumourWeeks[0] + 1))) {
-      const confirmed = unit(story.key, 'esito') < RULES.confirmBase + RULES.confirmPerCredibility * (outlet?.credibility ?? 50) / 100;
-      story.resolved = confirmed ? 'confermata' : 'smentita';
-      story.stage = 'esito';
-      const text = confirmed ? `Gli accertamenti confermano la ricostruzione di ${outlet?.name ?? 'un quotidiano'}.` : `Le verifiche smentiscono l’indiscrezione di ${outlet?.name ?? 'un quotidiano'}: nessun elemento a carico.`;
-      story.timeline = [...story.timeline, { key: `esito:${story.key}`, week, date: ctx.date, text, tone: confirmed ? 'bad' : 'good', stage: 'esito' }].slice(-RULES.timelineKept);
-      if (outlet) outlet.credibility = clamp(outlet.credibility + (confirmed ? RULES.credibility.confirmed : RULES.credibility.denied), RULES.credibility.min, RULES.credibility.max);
-      if (confirmed) story.heat = clamp(story.heat + 20, 0, RULES.heatMax); else closeStory(story, week, text);
+    // An inquiry is told in steps, week after week: the rumour, the checks under way, what the checks find (or do not), the answer of the parties awaited, the outcome and, when the rumour was
+    // wrong, a correction by the outlet that broke it. Whether the rumour is well founded is decided by the case alone (its key), never by the reputation of the outlet: the reputation only
+    // changes afterwards, as a consequence (it grows with a confirmed story, it falls with a denied one and a correction). No statement is put in the mouth of anyone: the lines say what
+    // the checks found or are awaiting.
+    if (story.kind === 'scandalo' && !story.resolved) {
+      const age = week - story.openedWeek;
+      const [lowest, highest] = RULES.rumourWeeks;
+      const resolveAt = lowest + Math.floor(unit(story.key, 'attesa') * (highest - lowest + 1));
+      story.truth ??= unit(story.key, 'verita') < RULES.foundedShare ? 'fondata' : 'infondata';
+      story.steps ??= [];
+      const step = (name, text, tone = 'neutral') => {
+        if (story.steps.includes(name)) return;
+        story.steps.push(name);
+        story.timeline = [...story.timeline, { key: `${name}:${story.key}`, week, date: ctx.date, text, tone, stage: name === 'esito' || name === 'rettifica' ? 'esito' : 'sviluppi' }].slice(-RULES.timelineKept);
+        story.stage = name === 'esito' || name === 'rettifica' ? 'esito' : 'sviluppi';
+      };
+      if (age >= 1) step('verifiche', `Sono in corso le verifiche sulla ricostruzione di ${outlet?.name ?? 'un quotidiano'}: per ora non ci sono conferme ufficiali.`);
+      if (age >= 2) step('risposta', 'Si attende la risposta delle parti coinvolte e la conclusione degli accertamenti.');
+      if (age >= resolveAt - 1 && age < resolveAt) step('riscontri', story.truth === 'fondata' ? 'Emergono i primi riscontri documentali: gli elementi raccolti sono coerenti con la ricostruzione.' : 'Le verifiche non trovano, finora, riscontri alla ricostruzione.', story.truth === 'fondata' ? 'bad' : 'good');
+      if (age >= resolveAt) {
+        const confirmed = story.truth === 'fondata';
+        story.resolved = confirmed ? 'confermata' : 'smentita';
+        const text = confirmed ? `Gli accertamenti confermano la ricostruzione di ${outlet?.name ?? 'un quotidiano'}.` : `Le verifiche smentiscono l’indiscrezione di ${outlet?.name ?? 'un quotidiano'}: nessun elemento a carico.`;
+        step('esito', text, confirmed ? 'bad' : 'good');
+        if (!confirmed) step('rettifica', `${outlet?.name ?? 'Il quotidiano'} pubblica una rettifica: la ricostruzione non era fondata.`, 'good');
+        if (outlet) outlet.credibility = clamp(outlet.credibility + (confirmed ? RULES.credibility.confirmed : RULES.credibility.denied), RULES.credibility.min, RULES.credibility.max);
+        if (confirmed) story.heat = clamp(story.heat + 20, 0, RULES.heatMax); else closeStory(story, week, text);
+      }
     }
     if (story.status === 'aperta' && story.heat < RULES.closeBelow && week - story.updatedWeek >= RULES.quietWeeks) closeStory(story, week, story.resolved === 'confermata' ? 'La vicenda si chiude con le conferme già note.' : 'Nessun nuovo sviluppo: la vicenda esce dalle prime pagine.');
   }
@@ -480,14 +533,36 @@ function radioWeek(media, ctx) {
   media.radio ??= { seq: 0, bulletins: [] };
   if (media.radio.bulletins.some(item => item.week === week)) return;
   const articles = media.articles.filter(item => item.week === week).sort((a, b) => (b.breaking ? 1 : 0) - (a.breaking ? 1 : 0) || (b.importance ?? 0) - (a.importance ?? 0) || compareText(a.id, b.id));
-  const item = article => ({ articleId: article.id, headline: article.headline, outlet: article.outlet, category: article.category, storyId: article.storyId ?? null, breaking: Boolean(article.breaking), tone: article.tone });
+  const item = article => ({ articleId: article.id, key: article.key ?? null, headline: article.headline, outlet: article.outlet, category: article.category, storyId: article.storyId ?? null, breaking: Boolean(article.breaking), tone: article.tone });
   const make = (programme, items, intro, extra = {}) => { media.radio.seq += 1; media.radio.bulletins.unshift({ id: `radio-${week}-${programme}`, seq: media.radio.seq, week, date: ctx.date, programme, label: RADIO_PROGRAMMES[programme].label, slot: RADIO_PROGRAMMES[programme].slot, intro, items, ...extra, source: RULES.source }); };
-  if (articles.length) make('notiziario', articles.slice(0, RADIO_RULES.itemsPerBulletin).map(item), articles.some(entry => entry.breaking) ? 'Edizione straordinaria in apertura, poi le altre notizie della settimana.' : `Ecco le notizie della settimana ${week}.`);
+  // One item once: a bulletin never repeats an article (by its stable id and its fact key), nor two articles of the same story or with the same headline, and a column does not take again what
+  // the news bulletin of the same week already read. `taken` follows the whole schedule of the week.
+  const taken = new Set();
+  const fresh = article => {
+    const keys = [`id:${article.id}`, article.key ? `fatto:${article.key}` : null, article.storyId ? `storia:${article.storyId}` : null, `titolo:${String(article.headline ?? '').trim().toLowerCase()}`].filter(Boolean);
+    if (keys.some(key => taken.has(key))) return false;
+    keys.forEach(key => taken.add(key));
+    return true;
+  };
+  const chosen = articles.filter(fresh).slice(0, RADIO_RULES.itemsPerBulletin);
+  if (chosen.length) make('notiziario', chosen.map(item), chosen.some(entry => entry.breaking) ? 'Edizione straordinaria in apertura, poi le altre notizie della settimana.' : `Ecco le notizie della settimana ${week}.`);
+  // The poll is told with its own date (and the field period when the poll is a real one): an old survey is never presented as the latest news, and the change is the one between the last two surveys.
   const poll = ctx.pollLine;
-  if (poll && Number.isFinite(poll.share)) make('sondaggi', [], `${poll.label}: ${String(Math.round(poll.share * 10) / 10).replace('.', ',')}% nell’ultima rilevazione${Number.isFinite(poll.delta) && poll.delta ? `, ${poll.delta > 0 ? 'in crescita di' : 'in calo di'} ${String(Math.abs(Math.round(poll.delta * 10) / 10)).replace('.', ',')} punti` : ', in linea con la settimana scorsa'}.`, { figures: [{ label: poll.label, share: poll.share, delta: poll.delta ?? 0 }], pollWeek: poll.week ?? week });
-  const local = articles.filter(entry => ['territorio', 'opere'].includes(entry.category)).slice(0, RADIO_RULES.itemsPerColumn);
+  if (poll && Number.isFinite(poll.share)) {
+    const share = `${String(Math.round(poll.share * 10) / 10).replace('.', ',')}%`;
+    const age = poll.date ? daysBetween(poll.date, ctx.date) : 0;
+    // The sentence is built from clauses joined by «; » so that each one is a phrase the English translation knows.
+    const clauses = [
+      `${poll.label}: ${share} ${poll.date ? `nella rilevazione del ${dayText(poll.date, ctx.date)}` : 'nell’ultima rilevazione disponibile'}`,
+      poll.period?.from && poll.period?.to ? `campo dal ${dayText(poll.period.from, ctx.date)} al ${dayText(poll.period.to, ctx.date)}` : null,
+      Number.isFinite(poll.delta) && poll.delta ? `${poll.delta > 0 ? 'in crescita di' : 'in calo di'} ${String(Math.abs(Math.round(poll.delta * 10) / 10)).replace('.', ',')} punti rispetto alla ${poll.previousDate ? `rilevazione del ${dayText(poll.previousDate, ctx.date)}` : 'rilevazione precedente'}` : 'in linea con la rilevazione precedente'
+    ].filter(Boolean);
+    const stale = age >= 10 ? ` Non ci sono rilevazioni più recenti: questa risale a ${age} giorni fa.` : '';
+    make('sondaggi', [], `${clauses.join('; ')}.${stale}`, { figures: [{ label: poll.label, share: poll.share, delta: poll.delta ?? 0 }], pollWeek: poll.week ?? week, pollDate: poll.date ?? null });
+  }
+  const local = articles.filter(entry => ['territorio', 'opere'].includes(entry.category)).filter(fresh).slice(0, RADIO_RULES.itemsPerColumn);
   if (local.length) make('territorio', local.map(item), 'Dai territori e dai cantieri.');
-  const palace = articles.filter(entry => ['parlamento', 'governo', 'elezioni'].includes(entry.category)).slice(0, RADIO_RULES.itemsPerColumn);
+  const palace = articles.filter(entry => ['parlamento', 'governo', 'elezioni'].includes(entry.category)).filter(fresh).slice(0, RADIO_RULES.itemsPerColumn);
   if (palace.length) make('palazzo', palace.map(item), 'Dal Parlamento, dal Governo e dalle urne.');
   media.radio.bulletins = media.radio.bulletins.slice(0, RADIO_RULES.bulletinsKept);
 }

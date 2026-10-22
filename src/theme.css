@@ -1183,3 +1183,4 @@ select option, select optgroup { background: var(--panel); color: var(--ink); fo
 .acct-danger .acct-h, .settings-danger > h3 { color: var(--bad-ink, #ff9f9f); }
 .acct-danger .acct-h svg, .settings-danger > h3 svg { color: var(--bad-ink, #ff9f9f); }
 .account-forms { grid-template-columns: minmax(0, 560px) !important; }
+.news-tags { margin: 2px 0 6px; color: var(--ink-3, #aab3a3); font-size: 13px; font-weight: 700; letter-spacing: .02em; }

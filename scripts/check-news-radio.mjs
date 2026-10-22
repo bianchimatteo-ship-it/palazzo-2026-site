@@ -91,7 +91,9 @@ const fact = (key, importance, week, extra = {}) => ({ key, kind: 'governo', typ
   const bulletin = bulletins.find(item => item.programme === 'notiziario');
   assert.ok(bulletin && bulletin.items.length >= 1 && bulletin.items.length <= 4, 'Il notiziario ha da 1 a 4 notizie.');
   for (const entry of bulletins.flatMap(item => item.items)) { const article = out.media.articles.find(item => item.id === entry.articleId); assert.ok(article && article.headline === entry.headline, 'Ogni voce rimanda a un articolo vero, con il suo titolo.'); }
-  assert.ok(bulletins.some(item => item.programme === 'palazzo'), 'La rubrica dal palazzo c’è quando ci sono elezioni o Parlamento.');
+  // The one article of this week (the election) is read once in the schedule: the column from the palace does not take it again (no repeats in the same schedule).
+  const read = bulletins.flatMap(item => item.items).map(entry => entry.articleId);
+  assert.equal(new Set(read).size, read.length, 'Nessuna notizia è ripetuta nella scaletta della settimana.');
   assert.ok(!bulletins.some(item => item.programme === 'sondaggi'), 'Senza sondaggio la rubrica non c’è.');
   const count = out.media.radio.bulletins.length;
   out = newsroomWeek(out, withFacts);

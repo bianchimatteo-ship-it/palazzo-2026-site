@@ -5,7 +5,7 @@
 //     the phrase book (src/data/i18n/en-*.js): exact phrases, phrases with numbers (`#`) or free parts (`{}`), and the numbers, currency and dates in English form.
 //     Proper names (people, parties, places, official denominations) are never in the phrase book: they stay as they are. A phrase that is not in the book stays Italian, never wrong.
 // Nothing here touches a career: the language is a view of the same data.
-import { saveSetting } from './settings.js?v=20261022-15';
+import { saveSetting } from './settings.js?v=20261022-18';
 
 export const LANGUAGES = Object.freeze([['it', 'Italiano', 'it-IT'], ['en', 'English', 'en-GB']]);
 const SETTINGS_KEY = 'politicando.settings.v1';
@@ -129,13 +129,15 @@ const CUTS = [/( · | — | – )/, /((?<=[.!?…])\s+)/, /(; )/, /(: )/];
 function translatePiece(text, depth = 0, level = 0) {
   if (level === 0) { const found = lookup(text, depth); if (found !== null) return found; }
   for (let cut = level; cut < CUTS.length; cut++) {
-    const parts = text.split(CUTS[cut]);
+    let parts = text.split(CUTS[cut]);
     if (parts.length < 2) continue;
+    // «label: value: more» is cut at the first colon only, so that what follows can still be a phrase of the book as a whole (or be cut again at the next colon)
+    if (CUTS[cut].source === '(: )' && parts.length > 3) parts = [parts[0], parts[1], parts.slice(2).join('')];
     let changed = false;
     const done = parts.map((part, index) => {
       if (index % 2 || !part.trim()) return part;
       const hit = lookup(part, depth);
-      const next = hit !== null ? hit : translatePiece(part, depth, cut + 1);
+      const next = hit !== null ? hit : translatePiece(part, depth, CUTS[cut].source === '(: )' && index > 0 ? cut : cut + 1);
       if (next !== part) changed = true;
       return next;
     });
@@ -169,8 +171,13 @@ export const formatEuro = value => language === 'en' ? `€${Math.round(Number(v
 export const formatDay = (date, options = { day: 'numeric', month: 'long', year: 'numeric' }) => new Intl.DateTimeFormat(localeOf(), options).format(date instanceof Date ? date : new Date(date));
 
 // ---- the DOM ----
-const ATTRIBUTES = ['title', 'aria-label', 'placeholder', 'alt', 'aria-description', 'data-tip', 'data-label'];
-const SKIP = new Set(['SCRIPT', 'STYLE', 'TEXTAREA', 'CODE', 'PRE']);
+// The attributes that carry words a person reads or hears (tooltips, accessible names, placeholders, image descriptions, the texts a control swaps in while it works).
+const ATTRIBUTES = ['title', 'aria-label', 'placeholder', 'alt', 'aria-description', 'aria-placeholder', 'aria-roledescription', 'aria-valuetext', 'data-tip', 'data-label', 'data-voice-idle', 'data-voice-active'];
+// Never translated, children included: code and the like. TEXTAREA (and any editable field) is different: what the PLAYER wrote in it is theirs and is never touched, but its own placeholder,
+// title and accessible name are the interface's words and are translated (see translateNode).
+const SKIP = new Set(['SCRIPT', 'STYLE', 'CODE', 'PRE']);
+const USER_TEXT = new Set(['TEXTAREA', 'INPUT', 'SELECT']);
+const isUserText = node => USER_TEXT.has(node.tagName) || node.isContentEditable === true || node.getAttribute?.('contenteditable') === 'true' || node.getAttribute?.('contenteditable') === '';
 const originals = new WeakMap();
 const attributeOriginals = new WeakMap();
 // An attribute is translated from its Italian source, remembered with what was shown: the translation is never applied to its own result (a number would flip back and forth).
@@ -189,7 +196,7 @@ let working = false;
 function translateNode(node) {
   if (node.nodeType === Node.TEXT_NODE) {
     const parent = node.parentElement;
-    if (!parent || SKIP.has(parent.tagName) || parent.closest('[data-no-translate]')) return;
+    if (!parent || SKIP.has(parent.tagName) || parent.tagName === 'TEXTAREA' || parent.closest('[data-no-translate], textarea, [contenteditable=""], [contenteditable="true"]')) return;
     const source = originals.has(node) && originals.get(node).shown === node.nodeValue ? originals.get(node).source : node.nodeValue;
     const next = translateText(source);
     if (next !== node.nodeValue) { originals.set(node, { source, shown: next }); node.nodeValue = next; }
@@ -197,7 +204,9 @@ function translateNode(node) {
   }
   if (node.nodeType !== Node.ELEMENT_NODE || SKIP.has(node.tagName) || node.hasAttribute?.('data-no-translate')) return;
   for (const name of ATTRIBUTES) translateAttribute(node, name);
-  if (node.tagName === 'INPUT' && /^(button|submit)$/.test(node.type)) { const next = translateText(node.value); if (next !== node.value) node.value = next; }
+  if (node.tagName === 'INPUT' && /^(button|submit|reset)$/.test(node.type)) { const next = translateText(node.value); if (next !== node.value) node.value = next; }
+  // The words of the player (a textarea, an input, a field being edited) are not translated: only the attributes above, handled here, belong to the interface.
+  if (isUserText(node) && node.tagName !== 'SELECT') return;
   for (const child of node.childNodes) translateNode(child);
 }
 export function translateTree(root) {
@@ -230,11 +239,15 @@ export function watchTree(root) {
 let loading = null;
 export function loadBook() {
   if (book?.loaded) return Promise.resolve(book);
-  loading ??= import('../data/i18n/index.js?v=20261022-15').then(module => { module.install(installBook); book.loaded = true; return book; });
+  loading ??= import('../data/i18n/index.js?v=20261022-18').then(module => { module.install(installBook); book.loaded = true; return book; });
   return loading;
 }
+// The title of the page (the tab) is read by people and by assistive technology: it follows the language like the rest (the Italian one is kept to go back to).
+let titleSource = null;
+function applyTitle() { try { if (typeof document === 'undefined') return; titleSource ??= document.title; document.title = language === 'en' && book ? translateText(titleSource) : titleSource; } catch { /* no document */ } }
 // At start: English needs its book before the first render, so the module waits for it (top level await); Italian loads nothing.
 if (language === 'en') await loadBook().catch(() => { language = 'it'; apply(); });
+applyTitle();
 
 export async function setLanguage(next, { scope = null } = {}) {
   if (!KNOWN.has(next) || next === language) return language;
@@ -243,6 +256,7 @@ export async function setLanguage(next, { scope = null } = {}) {
   cache.clear();
   saveSetting('language', next, scope);
   apply();
+  applyTitle();
   for (const listener of listeners) listener(language);
   return language;
 }

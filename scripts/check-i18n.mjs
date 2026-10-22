@@ -60,6 +60,12 @@ assert.equal(JSON.parse(mem.get('politicando.settings.v1')).language, 'it', 'La 
 // ---------- 2. in a real browser ----------
 if (!chromeAvailable) { console.log('Lingua nel browser saltata: Chrome non trovato (imposta CHROME_PATH per eseguirla).'); process.exit(0); }
 const ITALIAN = new Set('il lo la le gli un una uno di del della dei delle al alla dal nel nella sul sulla per con che non sono come più tra fra sei hai puoi questa questo quando dove cosa senza ogni è già può così anche ancora prima dopo fino mai tutti tutte tutto nessuna nessun viene vengono resta restano tuo tua tuoi tue suo sua loro partita carriera salvataggio salvataggi copia definitivo definitiva azioni conferma scegli serve sono se ma'.split(' '));
+// A text of the screen that is EXACTLY an Italian phrase of the book (whatever its length, a one-word label included) is a translation that did not reach the screen: it is flagged even where the text is too short for the
+// word-count test. Proper names and official denominations are in the book with the same text on both sides, so they never count.
+// Intentional Italian: the title of an official act of Parliament that is not in the book (it stays whole, as published), a title in «quotes» (the name of a law or of a story, a proper name) and the
+// month abbreviation «Mar», which is the same word in English.
+const intentionalItalian = text => /^(Conversione in legge|Ratifica ed esecuzione|Modifiche al|Disposizioni|Istituzione)/.test(text.trim()) || /^«[^»]+»(?::|$)/.test(text.trim()) || text.trim() === 'Mar';
+const knownUntranslated = text => { const core = text.replace(/\s+/g, ' ').trim(); return seen.has(core) && seen.get(core).replace(/\{\d\}/g, '{}') !== core && !/[{#]/.test(core); };
 const italianLines = text => text.split('\n').filter(line => looksItalian(line));
 const looksItalian = text => { const words = text.toLowerCase().match(/[a-zà-ù']+/g) ?? []; const hits = words.filter(word => ITALIAN.has(word)).length; return words.length >= 3 && hits >= 2; };
 await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, errors, version: v, ...browser }) => {
@@ -107,19 +113,40 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   await evaluate(`document.querySelector('[data-action="advance"]')?.click(); true`); await pause(1200);
   assert.deepEqual(errors, [], 'Nessun errore JavaScript.');
 
+  // what the player writes is never translated; the interface's attributes on the same fields are (TEXTAREA and its placeholder, title, accessible name; an input; an editable element)
+  {
+    const probe = await evaluate(`(async () => {
+      const { translateTree } = await import('/src/core/i18n.js?v=${v}');
+      const box = document.createElement('div');
+      box.innerHTML = '<textarea id="p-area" placeholder="Cerca un partito" title="Chiudi" aria-label="Nuova partita">Nuova partita</textarea><input id="p-input" placeholder="Cerca un partito" value="Chiudi" /><div id="p-edit" contenteditable="true" title="Chiudi">Nuova partita</div><img id="p-img" alt="Nuova partita" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" /><button id="p-button" data-voice-idle="Ascolta il notiziario" data-voice-active="Ferma il notiziario">Chiudi</button><input id="p-submit" type="submit" value="Chiudi" />';
+      document.body.append(box);
+      translateTree(box);
+      const get = id => document.getElementById(id);
+      const out = { areaText: get('p-area').value, areaPlaceholder: get('p-area').placeholder, areaTitle: get('p-area').title, areaLabel: get('p-area').getAttribute('aria-label'), inputValue: get('p-input').value, inputPlaceholder: get('p-input').placeholder, editText: get('p-edit').textContent, editTitle: get('p-edit').title, alt: get('p-img').alt, idle: get('p-button').dataset.voiceIdle, active: get('p-button').dataset.voiceActive, button: get('p-button').textContent, submit: get('p-submit').value };
+      box.remove();
+      return out;
+    })()`);
+    assert.equal(probe.areaText, 'Nuova partita', 'Il testo scritto dal giocatore in una TEXTAREA non si traduce.');
+    assert.equal(probe.inputValue, 'Chiudi', 'Né il valore di un campo.'); assert.equal(probe.editText, 'Nuova partita', 'Né un elemento modificabile.');
+    assert.notEqual(probe.areaPlaceholder, 'Cerca un partito', `Il placeholder di una TEXTAREA si traduce (${probe.areaPlaceholder}).`);
+    assert.ok(probe.areaTitle !== 'Chiudi' && probe.areaLabel !== 'Nuova partita', `Titolo e nome accessibile della TEXTAREA si traducono (${probe.areaTitle} / ${probe.areaLabel}).`);
+    assert.notEqual(probe.inputPlaceholder, 'Cerca un partito'); assert.notEqual(probe.editTitle, 'Chiudi'); assert.notEqual(probe.alt, 'Nuova partita', 'L’alt delle immagini si traduce.');
+    assert.ok(probe.idle !== 'Ascolta il notiziario' && probe.active !== 'Ferma il notiziario', `I testi che un comando scambia mentre lavora si traducono (${probe.idle} / ${probe.active}).`);
+    assert.equal(probe.button, 'Close'); assert.equal(probe.submit, 'Close', 'I pulsanti di invio si traducono.');
+  }
   // the main screens in English: how much Italian remains (a measure, with a limit)
   let nodes = 0, italian = []; const tourTexts = [];
   await tourCareer({ evaluate, pause }, { pages: PAGES.filter(page => !['archivio', 'politici', 'partiti-lista'].includes(page)), onScreen: (name, texts) => { for (const text of texts) tourTexts.push([name, text]); } });
   // the pop-ups of the opening menu (Load game, Account, Settings, Logos, Guide, Hall of Fame) and the five steps of a new career, in English; proper names (parties, groups, movements) stay as they are
   const proper = await evaluate(`(async () => { const real = await import('/src/data/repositories/real-data.js?v=${v}'); await real.loadRealCollections(['parties', 'politicalMovements', 'coalitions', 'parliamentaryGroups', 'laws', 'politicians', 'offices']); const names = new Set(); for (const list of [real.realDatabase.parties, real.realDatabase.politicalMovements, real.realDatabase.coalitions, real.realDatabase.parliamentaryGroups, real.realDatabase.laws, real.realDatabase.politicians, real.realDatabase.offices]) for (const item of list ?? []) { for (const [key, value] of Object.entries(item)) if (/group|committee|commission|title|office/i.test(key) && typeof value === 'string' && value.length > 5 && value.length < 200) names.add(value); for (const key of ['officialName', 'name', 'abbreviation', 'label', 'title', 'shortTitle']) if (item[key] && item[key].length > 3) names.add(item[key]); if (list === real.realDatabase.parliamentaryGroups) for (const value of Object.values(item)) if (typeof value === 'string' && value.length > 5 && value.length < 160) names.add(value); } for (const masthead of ['La Gazzetta del Territorio', 'Il Meridiano', 'LA POLITICA 24', 'Gazzetta del Territorio']) names.add(masthead);
   // official denominations of parliamentary groups as the institutions publish them (they stay in Italian)
-  for (const group of ["NOI MODERATI (NOI CON L'ITALIA, CORAGGIO ITALIA, UDC E ITALIA AL CENTRO)-MAIE-CENTRO POPOLARE", "Civici d'Italia-UDC-Noi Moderati (Noi con l'Italia, Coraggio Italia, Italia al Centro)-MAIE-Centro Popolare", 'Per le Autonomie (SVP-PATT, Campobase)']) names.add(group); return [...names].sort((a, b) => b.length - a.length); })()`);
+  for (const group of ["NOI MODERATI (NOI CON L'ITALIA, CORAGGIO ITALIA, UDC E ITALIA AL CENTRO)-MAIE-CENTRO POPOLARE", "Civici d'Italia-UDC-Noi Moderati (Noi con l'Italia, Coraggio Italia, Italia al Centro)-MAIE-Centro Popolare", 'Per le Autonomie (SVP-PATT, Campobase)', 'Per le Autonomie (SVP-PATT, Camp…']) names.add(group); return [...names].sort((a, b) => b.length - a.length); })()`);
   const fold = text => text.replace(/[’']/g, "'").toLowerCase();
   const properFolded = [...new Set(proper.map(fold))].sort((a, b) => b.length - a.length);
   const stripProper = text => { let out = fold(text); for (const name of properFolded) if (out.includes(name)) out = out.split(name).join(' '); return out; };
-  for (const [name, text] of tourTexts) { nodes++; if (looksItalian(stripProper(text))) italian.push(`${name}: ${text.slice(0, 400)}`); }
+  for (const [name, text] of tourTexts) { nodes++; if (!intentionalItalian(text) && (looksItalian(stripProper(text)) || knownUntranslated(text))) italian.push(`${name}: ${text.slice(0, 400)}`); }
   const screens = new Map();
-  const record = async name => { for (const text of await evaluate(COLLECT)) { nodes++; if (looksItalian(stripProper(text))) italian.push(`${name}: ${text.slice(0, 400)}`); } screens.set(name, true); };
+  const record = async name => { for (const text of await evaluate(COLLECT)) { nodes++; if (!intentionalItalian(text) && (looksItalian(stripProper(text)) || knownUntranslated(text))) italian.push(`${name}: ${text.slice(0, 400)}`); } screens.set(name, true); };
   await goto(); await wait(() => evaluate('Boolean(document.querySelector(".main-menu"))')); await pause(600);
   for (const view of ['guida', 'impostazioni', 'carica', 'hall', 'loghi', 'account']) {
     await evaluate(`document.querySelector('[data-menu="${view}"]')?.click(); true`); await pause(view === 'loghi' ? 1800 : 700);
@@ -149,7 +176,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   if (process.env.I18N_LEFT) (await import('node:fs')).writeFileSync(process.env.I18N_LEFT, JSON.stringify(italian));
   const ratio = italian.length / nodes;
   console.log(`Inglese: ${nodes} testi su ${PAGES.length - 3} pagine e schede più ${screens.size} popup e passaggi, ${italian.length} ancora in italiano (${(ratio * 100).toFixed(2)}%)${italian.length ? `: ${italian.slice(0, 12).join(' | ')}` : ''}.`);
-  assert.ok(ratio < 0.01, `Troppo italiano rimasto in inglese (${(ratio * 100).toFixed(1)}%): ${italian.slice(0, 8).join(' | ')}`);
+  assert.ok(ratio < 0.002, `Troppo italiano rimasto in inglese (${(ratio * 100).toFixed(1)}%): ${italian.slice(0, 8).join(' | ')}`);
   assert.deepEqual(errors, [], 'Nessun errore JavaScript durante il giro delle pagine.');
 });
 console.log('Lingua verificata: dizionario inglese ben formato (numeri e parti libere coerenti), selettore sulla schermata iniziale, scelta salvata fuori dai salvataggi e ritrovata dopo il ricaricamento, <html lang> aggiornato, stessa schermata e stessi dati cambiando lingua in una carriera, pagine principali in inglese con la quota di italiano residuo misurata.');
