@@ -149,6 +149,7 @@ h1, h2, h3, h4 { color: var(--ink); }
 .wizard-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 26px 34px 16px; border-bottom: 1px solid var(--line); }
 .wizard-kicker { color: var(--gold-soft); font: 800 12px/1 var(--font-head); letter-spacing: .14em; }
 .wizard-kicker i { margin: 0 4px; color: var(--ink-3); font-style: normal; }
+.wizard-header > div:first-child { min-width: 0; flex: 1 1 auto; }
 .wizard-header h1 { margin: 8px 0 6px; color: var(--ink-hi); font: 600 28px/1.15 var(--font-display); letter-spacing: -.01em; }
 .wizard-header p { margin: 0; max-width: 62ch; color: var(--muted); font-size: 13.5px; line-height: 1.5; }
 .wizard-x { width: 34px; height: 34px; flex: none; border: 0; border-radius: var(--radius-sm); background: var(--panel-2); color: var(--muted); font-size: 22px; line-height: 1; }
@@ -220,7 +221,7 @@ h1, h2, h3, h4 { color: var(--ink); }
   box-shadow: 0 16px 36px rgba(0,0,0,.46), inset 0 1px 0 rgba(255,255,255,.13);
   transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease, background-color .16s ease; }
 .menu-new::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 4px; z-index: 1; background: linear-gradient(90deg, #2f9462 0 33.34%, #f3efe4 33.34% 66.67%, #cf4a3a 66.67% 100%); }
-.menu-new::after { content: ""; position: absolute; right: -40px; bottom: -60px; width: 190px; height: 190px; z-index: -1; border-radius: 50%; background: radial-gradient(circle, rgba(240,207,133,.15), rgba(240,207,133,0) 68%); pointer-events: none; }
+.menu-new::after { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(circle at 100% 100%, rgba(240,207,133,.15), rgba(240,207,133,0) 45%); pointer-events: none; }
 .menu-new:hover { transform: translateY(-2px); border-color: var(--nw-gold); box-shadow: 0 22px 44px rgba(0,0,0,.52), 0 0 0 1px rgba(240,207,133,.25), inset 0 1px 0 rgba(255,255,255,.18); }
 .menu-new:active { transform: translateY(0) scale(.995); box-shadow: 0 8px 20px rgba(0,0,0,.45), inset 0 2px 6px rgba(0,0,0,.3); }
 .menu-new:focus-visible { outline: 3px solid var(--nw-gold); outline-offset: 3px; }
