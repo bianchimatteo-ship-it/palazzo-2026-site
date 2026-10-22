@@ -1,7 +1,7 @@
 // The logo editor: crop frame over the original image (drag to pan, sliders for zoom and ratio), transparency of a
 // flat background, previews on light, dark and transparent backgrounds, the dominant colour. Markup is a string like
 // every other view; drawing happens on canvases after each render (drawLogoEditor).
-import { backgroundColor, cropRect, dominantColor, editorMetadata, frameAspect, knockOut, LOGO_EDITOR_LIMITS, outputSize, placement, untouched } from '../core/logo-editor.js?v=20261021-11';
+import { backgroundColor, cropRect, dominantColor, editorMetadata, frameAspect, knockOut, LOGO_EDITOR_LIMITS, outputSize, placement, untouched } from '../core/logo-editor.js?v=20261022-12';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const range = (key, label, min, max, step, value, disabled = false, hint = '') => `<label class="le-field"><span>${esc(label)} <b data-logo-value="${key}">${esc(value)}</b></span><input type="range" data-logo-edit="${key}" min="${min}" max="${max}" step="${step}" value="${esc(value)}" ${disabled ? 'disabled' : ''} />${hint ? `<small>${esc(hint)}</small>` : ''}</label>`;
@@ -26,8 +26,8 @@ export function renderLogoEditor(editor, { context = 'admin' } = {}) {
         <button type="button" class="text-link" data-logo-edit-reset>Ripristina l’originale</button>
       </div>
       <div class="le-preview"><span class="section-kicker">ANTEPRIMA</span><div class="le-tiles"><span class="le-tile is-light"><canvas data-logo-result width="120" height="120"></canvas></span><span class="le-tile is-dark"><canvas data-logo-result-copy width="120" height="120"></canvas></span><span class="le-tile is-check"><canvas data-logo-result-copy width="120" height="120"></canvas></span></div>
-        <div class="le-color"><i data-logo-dominant-swatch></i><span>Colore dominante <b data-logo-dominant>—</b></span><button type="button" class="secondary-button" data-logo-edit-color>${context === 'wizard' ? 'Usa come colore del partito' : 'Imposta come colore del partito'}</button></div>
-        <small class="le-note">Il logo non viene mai forzato in un cerchio: resta nella sua forma, dentro una cornice ${editor.ratio === 'quadrata' ? 'quadrata' : 'con la proporzione scelta'}.</small>
+        <div class="le-color"><i data-logo-dominant-swatch></i><span>Colore dominante <b data-logo-dominant>—</b></span>${context === 'catalog' ? '' : `<button type="button" class="secondary-button" data-logo-edit-color>${context === 'wizard' ? 'Usa come colore del partito' : 'Imposta come colore del partito'}</button>`}</div>
+        <small class="le-note">Il logo non viene mai forzato in un cerchio: resta nella sua forma, dentro una cornice ${editor.ratio === 'quadrata' ? 'quadrata' : 'con la proporzione scelta'}.</small>${context === 'catalog' ? '<small class="le-note">Lo sfondo si toglie bene quando è di un solo colore; con sfondi complessi il risultato può non essere perfetto: regola la tolleranza, ritaglia o torna all’originale. Viene salvato solo il risultato finale, ridotto, su questo dispositivo.</small>' : ''}
       </div>
     </div>
   </section>`;

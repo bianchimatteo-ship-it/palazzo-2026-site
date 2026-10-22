@@ -63,3 +63,9 @@ Provengono da fonti istituzionali primarie, ciascun record con `sourceName`, `so
 ## 6. Cosa non è stato dichiarato
 
 Il gioco **non** è dichiarato conforme al GDPR, pronto per gli store o libero da diritti di terzi. Restano aperti i punti «DA FORNIRE» sopra e quelli elencati da `check:account-deletion --release`.
+
+## 7. Aggiornamento del 22/10/2026
+- **Minori**: scelta neutra della fascia d'età alla registrazione (non salvata né inviata; sotto i 14 anni l'account non si crea, il gioco locale resta aperto). Analisi e decisioni aperte: `docs/minori-e-privacy.md`.
+- **Pagine pubbliche in inglese**: `privacy-en.html`, `terms-en.html`, `delete-account-en.html` (stesso significato, stessi numeri e stesse sezioni, verificati da `check-legal`); la pagina di cancellazione non dichiara più il recupero della password non disponibile.
+- **Android**: nessun permesso oltre `INTERNET`, nessun SDK di terzi; `allowBackup` attivo (dichiarato in informativa §7). Scheda e dichiarazioni: `docs/google-play.md`.
+- **Loghi personali**: ritaglio, ingrandimento e rimozione dello sfondo avvengono sul dispositivo; il risultato ottimizzato è l'unico salvato (IndexedDB, per account). I loghi dei browser delle versioni precedenti sono in quarantena (`_precedente`) finché l'utente non li rivendica o li scarta: non sono assegnati a nessun account né al profilo ospite.

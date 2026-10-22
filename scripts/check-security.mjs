@@ -20,7 +20,7 @@ const root = new URL('..', import.meta.url).pathname;
 const text = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 const walk = async dir => (await readdir(join(root, dir), { withFileTypes: true })).flatMap(entry => entry.isDirectory() ? [] : [`${dir}/${entry.name}`]).concat(...await Promise.all((await readdir(join(root, dir), { withFileTypes: true })).filter(entry => entry.isDirectory()).map(entry => walk(`${dir}/${entry.name}`))));
 const WORKER = 'https://palazzo-2026-site.bianchimatteo657.workers.dev';
-const PAGES = ['index.html', 'privacy.html', 'termini.html', 'elimina-account.html'];
+const PAGES = ['index.html', 'privacy.html', 'termini.html', 'elimina-account.html', 'privacy-en.html', 'terms-en.html', 'delete-account-en.html'];
 
 const parse = policy => new Map(policy.split(';').map(item => item.trim()).filter(Boolean).map(item => { const [name, ...values] = item.split(/\s+/); return [name, values]; }));
 
@@ -96,7 +96,7 @@ assert.ok(!/non carica caratteri o altre risorse da server esterni\./.test(priva
 assert.ok(/(unica|sola) eccezione/i.test(privacy) && /logo/.test(privacy) && /indirizzo IP/.test(privacy), 'Dichiara l’unica eccezione: l’importazione di un logo da un indirizzo, che mostra l’IP al sito che lo ospita.');
 assert.ok(/Loghi dei partiti/.test(/eccezione[\s\S]{0,900}/i.exec(privacy)?.[0] ?? ''), 'E dice che la scelta è dell’utente, dalla sezione dei loghi.');
 assert.ok(/non (viene|è) (inviat|comunicat)[^.]*(pagina|referrer)|senza (indicare|inviare)[^.]*(pagina|referrer)|nessun referrer/i.test(privacy), 'E che il sito esterno non sa da quale pagina arriva (nessun referrer).');
-for (const name of ['privacy.html', 'termini.html', 'elimina-account.html']) assert.ok(!/data-controller-todo/.test(await text(name)), `${name}: nessun segnaposto «da completare» nelle pagine pubbliche (le informazioni mancanti stanno in docs/legale-requisiti.json).`);
+for (const name of ['privacy.html', 'termini.html', 'elimina-account.html', 'privacy-en.html', 'terms-en.html', 'delete-account-en.html']) assert.ok(!/data-controller-todo/.test(await text(name)), `${name}: nessun segnaposto «da completare» nelle pagine pubbliche (le informazioni mancanti stanno in docs/legale-requisiti.json).`);
 const legal = await loadRequirements();
 assert.deepEqual(legal.problems, [], 'Il file dei requisiti legali è ben formato.');
 for (const id of ['indirizzo-titolare', 'cloudflare-dpa', 'minori', 'diritti-asset']) assert.ok(legal.items.some(item => item.id === id && item.required), `Resta tracciata l’informazione del titolare: ${id}.`);
@@ -131,7 +131,7 @@ else {
       // the menu: new game wizard, load, account, guide
       for (const menu of await evaluate(`[...document.querySelectorAll('[data-menu]')].map(item => item.dataset.menu)`)) { void menu; }
       // the public pages
-      for (const page of ['privacy.html', 'termini.html', 'elimina-account.html']) {
+      for (const page of ['privacy.html', 'termini.html', 'elimina-account.html', 'privacy-en.html', 'terms-en.html', 'delete-account-en.html']) {
         await goto(page);
         await waitFor(() => evaluate('document.readyState === "complete" && Boolean(document.querySelector("h1"))'));
         await pause(400);

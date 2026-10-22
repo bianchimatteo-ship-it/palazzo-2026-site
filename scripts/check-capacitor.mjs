@@ -40,7 +40,7 @@ try {
   result = run(['--out', out]);
   assert.match(result.stdout, /1 rimossi/, 'Un file che non è più sorgente viene tolto dalla build (e solo da lì).');
   const present = async name => readFile(join(out, name)).then(() => true, () => false);
-  for (const name of ['index.html', 'sw.js', 'src/main.js', 'src/styles.css', 'src/home.css', 'src/fonts/dm-sans-latin-400-normal.woff2', 'src/fonts/LICENSES.txt', 'src/data/real/parties.json', 'privacy.html', 'termini.html', 'elimina-account.html', 'icons/icon-512.png', 'site.webmanifest']) assert.ok(await present(name), `${name} è nella build.`);
+  for (const name of ['index.html', 'sw.js', 'src/main.js', 'src/styles.css', 'src/home.css', 'src/fonts/dm-sans-latin-400-normal.woff2', 'src/fonts/LICENSES.txt', 'src/data/real/parties.json', 'privacy.html', 'termini.html', 'elimina-account.html', 'privacy-en.html', 'terms-en.html', 'delete-account-en.html', 'icons/icon-512.png', 'site.webmanifest']) assert.ok(await present(name), `${name} è nella build.`);
   for (const name of ['worker.js', 'wrangler.jsonc', 'package.json', 'scripts/build-www.mjs', 'docs/privacy-e-asset.md', 'migrations/0001_accounts.sql', 'server.mjs', 'src/data/real/database.json', '.assetsignore', '_headers', 'ios/App/App/Info.plist', 'README.md']) assert.equal(await present(name), false, `${name} non è nella build.`);
   assert.equal(/fonts\.googleapis|fonts\.gstatic/.test(await readFile(join(out, 'index.html'), 'utf8')), false, 'La build non chiama Google Fonts.');
 
@@ -50,7 +50,7 @@ try {
     await mkdir(join(dir, 'src/fonts'), { recursive: true }); await mkdir(join(dir, 'src/legal'), { recursive: true }); await mkdir(join(dir, 'icons'), { recursive: true }); await mkdir(join(dir, 'ios/App/App.xcodeproj'), { recursive: true });
     const files = {
       'index.html': '<!doctype html><link rel="stylesheet" href="./src/a.css?v=20260101-1"><script type="module" src="./src/main.js?v=20260101-1"></script>',
-      'sw.js': '//', 'favicon.ico': 'x', 'favicon.svg': '<svg/>', 'site.webmanifest': '{"icons":[{"src":"./icons/i.png"}]}', 'privacy.html': '<p/>', 'termini.html': '<p/>', 'elimina-account.html': '<p/>',
+      'sw.js': '//', 'favicon.ico': 'x', 'favicon.svg': '<svg/>', 'site.webmanifest': '{"icons":[{"src":"./icons/i.png"}]}', 'privacy.html': '<p/>', 'termini.html': '<p/>', 'elimina-account.html': '<p/>', 'privacy-en.html': '<p/>', 'terms-en.html': '<p/>', 'delete-account-en.html': '<p/>',
       'icons/i.png': 'x', 'src/a.css': 'body{}', 'src/main.js': "import './b.js?v=20260101-1';\n", 'src/b.js': 'export const b = 1;\n', 'src/legal.css': '', 'src/legal/delete-account.js': '', 'src/fonts/LICENSES.txt': 'OFL',
       'capacitor.config.json': JSON.stringify({ appId: 'it.prova.app', appName: 'Prova', webDir: 'www' }),
       'ios/App/App.xcodeproj/project.pbxproj': 'PRODUCT_BUNDLE_IDENTIFIER = it.prova.app;'

@@ -31,7 +31,7 @@ if (!OUT.startsWith(ROOT + sep)) {
   if (present.length && !present.includes('build-info.json')) throw new Error(`La cartella ${OUT} non è vuota e non è una build precedente: non la tocco.`);
 }
 
-const ROOT_FILES = ['index.html', 'sw.js', 'favicon.ico', 'favicon.svg', 'site.webmanifest', 'privacy.html', 'termini.html', 'elimina-account.html'];
+const ROOT_FILES = ['index.html', 'sw.js', 'favicon.ico', 'favicon.svg', 'site.webmanifest', 'privacy.html', 'termini.html', 'elimina-account.html', 'privacy-en.html', 'terms-en.html', 'delete-account-en.html'];
 const DIRS = ['icons', 'src'];
 // Published by the web site only (the snapshot the build step of the web site leaves out), and files that are never part of the game.
 const SKIP = [/(^|\/)\.DS_Store$/, /\.map$/, /^src\/data\/real\/database\.json$/, /(^|\/)\.gitkeep$/];
@@ -98,7 +98,7 @@ while (queue.length) {
   if (/\.js$/.test(name)) { for (const match of source.matchAll(IMPORT)) visit(name, match[1], 'import'); for (const match of source.matchAll(URL_REF)) visit(name, match[1], 'indirizzo'); }
   else if (/\.css$/.test(name)) for (const match of source.matchAll(CSS_URL)) visit(name, match[1], 'risorsa');
 }
-for (const needed of ['privacy.html', 'termini.html', 'elimina-account.html', 'src/legal.css', 'src/legal/delete-account.js', 'src/fonts/LICENSES.txt', 'src/main.js']) if (!files.has(needed)) fail(`Manca ${needed}.`);
+for (const needed of ['privacy.html', 'termini.html', 'elimina-account.html', 'privacy-en.html', 'terms-en.html', 'delete-account-en.html', 'src/legal.css', 'src/legal/delete-account.js', 'src/fonts/LICENSES.txt', 'src/main.js']) if (!files.has(needed)) fail(`Manca ${needed}.`);
 // the icons named by the manifest
 try { for (const icon of JSON.parse(text('site.webmanifest')).icons ?? []) if (!files.has(posix.normalize(icon.src.replace(/^\.\//, '')))) fail(`Icona del manifest mancante: ${icon.src}.`); } catch { fail('site.webmanifest non è un JSON valido.'); }
 

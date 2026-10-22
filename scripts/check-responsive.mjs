@@ -257,14 +257,14 @@ try {
   // The public pages (privacy, terms, account deletion): readable and without horizontal scroll at every width.
   for (const [width, height, mobile, label] of widths) {
     await viewport(width, height, mobile);
-    for (const path of ['privacy.html', 'termini.html', 'elimina-account.html']) {
+    for (const path of ['privacy.html', 'termini.html', 'elimina-account.html', 'privacy-en.html', 'terms-en.html', 'delete-account-en.html']) {
       await send('Page.navigate', { url: base + path });
       await pause(500);
       const page = await evaluate(`(() => ({ over: document.documentElement.scrollWidth - document.documentElement.clientWidth, small: [...document.querySelectorAll('.legal p, .legal li, .legal td, .legal label, .legal button')].filter(el => parseFloat(getComputedStyle(el).fontSize) < 14).length, form: Boolean(document.querySelector('#delete-form')), title: document.title }))()`);
       checked++;
       if (page.over > 1) report.push(`${label} · ${path} · scorrimento orizzontale di ${page.over} px`);
       if (page.small) report.push(`${label} · ${path} · ${page.small} testi sotto 14 px`);
-      if (path === 'elimina-account.html' && !page.form) report.push(`${label} · ${path} · modulo mancante`);
+      if (/(elimina-account|delete-account-en)\.html/.test(path) && !page.form) report.push(`${label} · ${path} · modulo mancante`);
       if (!/POLITICANDO 2026/.test(page.title)) report.push(`${label} · ${path} · titolo inatteso (${page.title})`);
     }
   }

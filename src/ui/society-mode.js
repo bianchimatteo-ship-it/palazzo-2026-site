@@ -1,12 +1,12 @@
 // Country, territories, citizens and media: the simulated society as the player sees it.
-import { INDICATORS, MEDIA_OUTLETS, SEGMENTS } from '../data/simulation/society-rules.js?v=20261021-11';
-import { nationalIndicators, regionPriorities, societyMood } from '../core/society-engine.js?v=20261021-11';
-import { illustration } from './illustrations.js?v=20261021-11';
-import { artTile, contrastRatio, glyph } from './visuals.js?v=20261021-11';
+import { INDICATORS, MEDIA_OUTLETS, SEGMENTS } from '../data/simulation/society-rules.js?v=20261022-12';
+import { nationalIndicators, regionPriorities, societyMood } from '../core/society-engine.js?v=20261022-12';
+import { illustration } from './illustrations.js?v=20261022-12';
+import { artTile, contrastRatio, glyph } from './visuals.js?v=20261022-12';
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
-import { breakdown, esc, levelState, lineChart, meter, num, rampColor, SERIES, signed, sparkline, stateBadge, trendState, GREEN_RAMP } from './charts.js?v=20261021-11';
-import { areasPanel, publicFinancePanel, securityPanel } from './policy-mode.js?v=20261021-11';
-import { renderInstitutions } from './local-mode.js?v=20261021-11';
+import { breakdown, esc, levelState, lineChart, meter, num, rampColor, SERIES, signed, sparkline, stateBadge, trendState, GREEN_RAMP } from './charts.js?v=20261022-12';
+import { areasPanel, publicFinancePanel, securityPanel } from './policy-mode.js?v=20261022-12';
+import { renderInstitutions } from './local-mode.js?v=20261022-12';
 
 // Tile cartogram of the regions: a recognisable boot, one tile per region.
 const TILES = Object.freeze({
@@ -126,7 +126,7 @@ export function renderTerritoriesPage(state, ui = {}) {
       ${panel('LEGGI E PROVVEDIMENTI', 'Cosa arriva sui territori', lawsApplied(society))}
       ${panel(governing ? 'GOVERNO IN CARICA' : 'ESECUTIVO DI SCENARIO', governing ? 'Il governo della simulazione' : esc(executive.label), `<dl class="hq-facts"><div><dt>Gradimento</dt><dd>${num(governing ? state.world?.polls?.at(-1)?.government?.approval : executive.approval, 0)}/100</dd></div><div><dt>Margine di bilancio</dt><dd>${num(society.publicFinance.headroom, 0)}/100 ${meter(society.publicFinance.headroom, society.publicFinance.headroom < 20 ? 'danger' : '')}</dd></div><div><dt>Risorse già impegnate</dt><dd>${num(society.publicFinance.committed, 0)} punti</dd></div></dl><p class="parliament-note">${governing ? 'Il governo formato in Parlamento risponde ai cittadini: la sua stabilità pesa sull’economia e l’umore del Paese pesa sul suo gradimento.' : 'Finché in Parlamento non nasce un governo della simulazione, un esecutivo di scenario interviene ogni sei settimane sul problema più urgente, se i conti lo consentono. Non rappresenta il governo reale.'}</p>`)}
     </div>
-    <p class="poll-footnote">Popolazione, territori, economia, conti pubblici e media di questa pagina sono interamente simulati (source: simulation): non sono statistiche ufficiali né dati reali.${society.weightSource === 'camera' ? ' Le medie nazionali pesano ogni regione per il numero di deputati in carica eletti nelle sue circoscrizioni (dato reale della Camera).' : ''}</p>
+    <p class="poll-footnote">Popolazione, territori, economia, conti pubblici e media di questa pagina sono interamente simulati: non sono statistiche ufficiali né dati reali.${society.weightSource === 'camera' ? ' Le medie nazionali pesano ogni regione per il numero di deputati in carica eletti nelle sue circoscrizioni (dato reale della Camera).' : ''}</p>
   </div>`;
 }
 

@@ -126,6 +126,15 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   assert.ok(await has('[data-logo-party-id]'), 'Dopo gli errori il gioco funziona e l’elenco c’è.');
   await giveFile({ kind: 'png', w: 1800, h: 1200, color: '#0a7' });
   assert.equal(await state(), 'pending', 'Un PNG valido compare in anteprima, non ancora salvato.');
+  // the editor opens on the image: crop, zoom, position, uniform background with a tolerance, previews on light/dark/transparent, restore; the colour button is not for the catalog
+  assert.ok(await has('[data-logo-editor]'), 'Si apre l’editor dei loghi.');
+  for (const selector of ['[data-logo-stage]', 'input[data-logo-edit="zoom"]', 'input[data-logo-edit="panX"]', 'input[data-logo-edit="panY"]', 'input[data-logo-edit="transparent"]', 'input[data-logo-edit="tolerance"]', '[data-logo-edit-reset]', '.le-tile.is-light', '.le-tile.is-dark', '.le-tile.is-check']) assert.ok(await has(selector), `L’editor ha ${selector}.`);
+  assert.equal(await has('[data-logo-edit-color]'), false, 'Nel catalogo non c’è «usa come colore del partito».');
+  assert.match(await text('.logo-editor'), /non essere perfetto/, 'Non promette una rimozione perfetta dello sfondo.');
+  await evaluate(`(() => { const zoom = document.querySelector('input[data-logo-edit="zoom"]'); zoom.value = '1.5'; zoom.dispatchEvent(new Event('input', { bubbles: true })); const box = document.querySelector('input[data-logo-edit="transparent"]'); box.checked = true; box.dispatchEvent(new Event('change', { bubbles: true })); return true; })()`);
+  await pause(300);
+  await click('[data-logo-edit-reset]'); await pause(300);
+  assert.ok(await has('[data-logo-editor]'), 'Il ripristino riporta l’immagine originale senza chiudere l’editor.');
   assert.equal(await resolved(P1), null, 'Finché non si salva il logo non è in uso.');
   await click('[data-action="logo-save"]');
   await wait(async () => (await state()) === 'custom');
@@ -140,7 +149,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   assert.match(await text('[data-logo-notice]'), /dispositivo/, 'Il gioco conferma dove è stato salvato.');
   // replace with a JPEG, then a WebP
   await giveFile({ kind: 'jpeg', color: '#a0a' });
-  assert.match(await text('[data-action="logo-save"]'), /Sostituisci/, 'Con un logo già presente il pulsante dice «Sostituisci».');
+  assert.match(await text('[data-action="logo-save"]'), /sostituisci/i, 'Con un logo già presente il pulsante dice «Sostituisci».');
   await click('[data-action="logo-save"]');
   await wait(async () => (await records())[0]?.mimeType !== saved[0].mimeType || (await records())[0]?.updatedAt !== saved[0].updatedAt);
   assert.equal((await records()).length, 1, 'La sostituzione non crea un secondo logo.');
@@ -194,6 +203,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   await createCareerInPage({ evaluate, version }, { weeks: 1, party: P2, name: ['Seconda', 'Due'] });
   await goto('');
   await arm();
+  await wait(async () => Boolean(await resolved(P2)));   // the catalog is read in the background at the start
   assert.match((await resolved(P2)) ?? '', /^blob:/, 'Una seconda carriera in un altro partito usa il suo logo, senza nuove azioni.');
   assert.match((await resolved(P1)) ?? '', /^blob:/);
   // a parliamentarian, wherever shown, carries the logo of the party the data gives him now
@@ -308,11 +318,15 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
     const again = await L.migrateLegacyLogos();
     const old = await new Promise(resolve => { const r = indexedDB.open('politicando-local-admin'); r.onsuccess = () => { const q = r.result.transaction('party-logos').objectStore('party-logos').getAll(); q.onsuccess = () => resolve(q.result.length); }; });
     return { result, again, old, mine: L.resolveLogo('party-futuro-nazionale') };`);
-  assert.equal(legacy.result.migrated, 1, 'Il logo della versione precedente viene portato nel catalogo.');
-  assert.match(legacy.mine ?? '', /^blob:/);
+  assert.equal(legacy.result.migrated, 1, 'Il logo della versione precedente viene messo da parte.');
+  assert.equal(legacy.mine, null, 'Senza proprietario noto non viene dato né all’ospite né all’account: non si vede in nessuna schermata.');
   assert.equal(legacy.again.already, true, 'Una volta sola.');
   assert.equal(legacy.old, 1, 'Il vecchio archivio non viene toccato.');
-
+  await openCatalog();
+  assert.ok(await has('[data-logo-legacy-block]'), 'Nel catalogo compare l’elenco dei loghi trovati, con la spiegazione.');
+  await click('[data-action="logo-legacy-claim"]');
+  await wait(async () => !(await has('[data-logo-legacy-block]')));
+  assert.match((await resolved('party-futuro-nazionale')) ?? '', /^blob:/, 'Dopo che il giocatore lo rivendica il logo è suo e si usa.');
   assert.deepEqual(errors, [], 'Nessun errore in pagina.');
 }, { serverPort: 8791 });
 await local.close();

@@ -21,7 +21,7 @@ const check = (url, ...flags) => new Promise(resolve => {
 const scratch = await mkdtemp(join(tmpdir(), 'politicando-pub-'));
 const copy = async () => {
   const root = join(scratch, `site-${Math.random().toString(36).slice(2, 8)}`);
-  for (const name of ['index.html', 'sw.js', 'favicon.ico', 'favicon.svg', 'site.webmanifest', 'privacy.html', 'termini.html', 'elimina-account.html', '.assetsignore', 'icons', 'src', 'package.json', 'worker.js', 'wrangler.jsonc', 'capacitor.config.json', 'migrations', 'docs', 'scripts']) await cp(join(ROOT, name), join(root, name), { recursive: true }).catch(() => {});
+  for (const name of ['index.html', 'sw.js', 'favicon.ico', 'favicon.svg', 'site.webmanifest', 'privacy.html', 'termini.html', 'elimina-account.html', 'privacy-en.html', 'terms-en.html', 'delete-account-en.html', '.assetsignore', 'icons', 'src', 'package.json', 'worker.js', 'wrangler.jsonc', 'capacitor.config.json', 'migrations', 'docs', 'scripts']) await cp(join(ROOT, name), join(root, name), { recursive: true }).catch(() => {});
   return root;
 };
 try {

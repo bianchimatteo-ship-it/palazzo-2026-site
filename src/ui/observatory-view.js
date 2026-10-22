@@ -4,19 +4,19 @@
 // of the campaign (renderCampaignObservatory): what `campaignObservatory()` reads from a valid campaign, and nothing when there is none.
 // Everything here is read from what the game has saved (the world, its observatory, the campaign) and measures the simulation: no number on these
 // pages gives a bonus, and the real parties stay real (their candidates, voters and readings are simulated, source: simulation).
-import { latestPoll, observatoryReport } from '../core/world-engine.js?v=20261021-11';
-import { campaignObservatory } from '../core/campaign-engine.js?v=20261021-11';
-import { coalitionScenario } from '../core/poll-observatory.js?v=20261021-11';
-import { POLL_EXTENSIONS } from '../data/simulation/polling-rules.js?v=20261021-11';
-import { observatorySociety } from '../core/society-engine.js?v=20261021-11';
-import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261021-11';
-import { formatDate } from '../core/time.js?v=20261021-11';
-import { lineChart, SERIES } from './charts.js?v=20261021-11';
-import { emblem, glyph, partyMarkText } from './visuals.js?v=20261021-11';
-import { arrow, bar, card, empty, esc, kpi, num, table } from './sections-kit.js?v=20261021-11';
-import { alliancesList, barometer, chronicle, dataTable, forcesGrid, partyIndex, pct, pollPanel, presencePanel, shortDate, signed, strategyList } from './polls-mode.js?v=20261021-11';
-import { heatmap, italyMap, MACRO_AREAS, partyBars, provenance, regionAbbreviation, regionBars, regionsOfArea, TERRITORY_MEASURES } from './territory-charts.js?v=20261021-11';
-import { forceRegionalVote2022 } from '../core/regional-vote.js?v=20261021-11';
+import { latestPoll, observatoryReport } from '../core/world-engine.js?v=20261022-12';
+import { campaignObservatory } from '../core/campaign-engine.js?v=20261022-12';
+import { coalitionScenario } from '../core/poll-observatory.js?v=20261022-12';
+import { POLL_EXTENSIONS } from '../data/simulation/polling-rules.js?v=20261022-12';
+import { observatorySociety } from '../core/society-engine.js?v=20261022-12';
+import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261022-12';
+import { formatDate } from '../core/time.js?v=20261022-12';
+import { lineChart, SERIES } from './charts.js?v=20261022-12';
+import { emblem, glyph, partyMarkText } from './visuals.js?v=20261022-12';
+import { arrow, bar, card, empty, esc, kpi, num, table } from './sections-kit.js?v=20261022-12';
+import { alliancesList, barometer, chronicle, dataTable, forcesGrid, partyIndex, pct, pollPanel, presencePanel, shortDate, signed, strategyList } from './polls-mode.js?v=20261022-12';
+import { heatmap, italyMap, MACRO_AREAS, partyBars, provenance, regionAbbreviation, regionBars, regionsOfArea, TERRITORY_MEASURES } from './territory-charts.js?v=20261022-12';
+import { forceRegionalVote2022 } from '../core/regional-vote.js?v=20261022-12';
 
 export const OBSERVATORY_VIEWS = Object.freeze([['quadro', 'Quadro'], ['istituti', 'Istituti'], ['segmenti', 'Segmenti e temi'], ['territori', 'Territori'], ['forze', 'Forze e alleanze'], ['candidati', 'Candidati e rivali'], ['flussi', 'Indecisi e flussi'], ['gradimento', 'Gradimento e leggi'], ['scenari', 'Scenari e coalizioni']]);
 // The page has five areas; the nine views of the observatory are gathered in them (an area with several views shows them as a second row of tabs).
@@ -585,7 +585,7 @@ export function renderObservatory(state, options = {}) {
   const view = OBSERVATORY_VIEWS.some(([id]) => id === options.view) ? options.view : 'quadro';
   const average = ctx.report.latestAverage;
   const head = `<div class="obs-head"><p>${glyph('chart', 16)} <span>${average?.institutes ? `Media di ${average.institutes} istituti simulati · ${num(average.sample, 0)} interviste · settimana ${average.week}${average.date ? ` · aggiornata al ${formatDate(average.date)}` : ''}` : 'Parti dalla media reale: gli istituti simulati iniziano con la prima settimana'}</span></p>${links(state)}</div>`;
-  return `<div class="polls-page observatory">${viewTabs(view)}${head}${VIEW_RENDERERS[view](ctx)}<p class="poll-footnote">I partiti sono reali; sondaggi, istituti, campioni, segmenti, travasi e candidature sono simulati (source: simulation) e non attribuiscono a persone o partiti reali decisioni mai prese. Il campione dei sondaggi è l’insieme degli intervistati; l’elettorato è la popolazione simulata che vota: sono grandezze diverse.</p></div>`;
+  return `<div class="polls-page observatory">${viewTabs(view)}${head}${VIEW_RENDERERS[view](ctx)}<p class="poll-footnote">I partiti sono reali; sondaggi, istituti, campioni, segmenti, travasi e candidature sono simulati e non attribuiscono a persone o partiti reali decisioni mai prese. Il campione dei sondaggi è l’insieme degli intervistati; l’elettorato è la popolazione simulata che vota: sono grandezze diverse.</p></div>`;
 }
 
 // Elezioni → Sondaggi e avversari: only the race of the campaign, as `campaignObservatory()` reads it from the campaign (the candidacies, the readings of
@@ -598,5 +598,5 @@ export function renderCampaignObservatory(state, options = {}) {
   if (!race?.rows.length) {
     return `<div class="polls-page observatory">${card({ kicker: 'CORSA · SIMULAZIONE', title: 'Nessuna campagna in corso', body: '<p class="sx-note">I sondaggi della corsa e gli avversari diretti compaiono quando c’è una campagna: in un voto politico o europeo sono le forze che davvero si presentano, in uno locale cambiano da territorio a territorio. Il quadro generale del Paese è in Sondaggi e media.</p><div class="sx-actions"><button type="button" class="secondary-button" data-nav="sondaggi">Apri Sondaggi e media</button></div>' })}</div>`;
   }
-  return `<div class="polls-page observatory">${candidates(ctx)}${raceTerritories(ctx, race)}<p class="poll-footnote">I partiti sono reali; sondaggi, istituti, campioni e candidature della corsa sono simulati (source: simulation) e non attribuiscono a persone o partiti reali decisioni mai prese.</p></div>`;
+  return `<div class="polls-page observatory">${candidates(ctx)}${raceTerritories(ctx, race)}<p class="poll-footnote">I partiti sono reali; sondaggi, istituti, campioni e candidature della corsa sono simulati e non attribuiscono a persone o partiti reali decisioni mai prese.</p></div>`;
 }

@@ -89,11 +89,16 @@ page = await game.click({ menu: 'nuova' });
 assert.ok(page.includes(WELCOME) && page.includes('Per iniziare una nuova carriera crea il tuo account o accedi') && !page.includes('career-wizard'), 'Senza account la nuova carriera passa prima dall’account.');
 page = await game.click({ menu: 'account', accountMode: 'register' });
 assert.ok(page.includes('account-forms focus-register') && page.includes('data-account-form="register"'), 'Il pulsante porta alla creazione dell’account.');
-page = await game.submit('register', { username: 'prova.primo', password: 'password-lunga', confirm: 'password-diversa' });
+page = await game.submit('register', { username: 'prova.primo', password: 'password-lunga', confirm: 'password-diversa', ageBand: 'adult14' });
 assert.ok(page.includes('Le due password non coincidono') && !calls.length, 'Password diverse: nessuna chiamata al servizio.');
 
+page = await game.submit('register', { username: 'prova.piccolo', password: 'password-lunga', confirm: 'password-lunga', ageBand: 'under14' });
+assert.ok(page.includes('riservato a chi ha almeno 14 anni') && page.includes('senza account') && !calls.length, 'Sotto i 14 anni l’account non si crea e non parte nessuna chiamata: si gioca sul dispositivo.');
+page = await game.submit('register', { username: 'prova.piccolo', password: 'password-lunga', confirm: 'password-lunga' });
+assert.ok(page.includes('Indica la tua età') && !calls.length, 'Senza risposta sull’età l’account non si crea.');
+
 // ---------- 2. registration, then the tour (skippable, once) and the first career ----------
-page = await game.submit('register', { username: 'prova.primo', password: 'password-lunga', confirm: 'password-lunga' });
+page = await game.submit('register', { username: 'prova.primo', password: 'password-lunga', confirm: 'password-lunga', ageBand: 'adult14' });
 assert.ok(calls.includes('/api/account/register'), 'La registrazione passa dal sistema account esistente.');
 assert.ok(flags().account === true, 'Il benvenuto è completato.');
 assert.ok(page.includes(`COME FUNZIONA · 1 DI ${TOUR_STEPS.length}`) && page.includes('data-tour="skip"'), 'Dopo la registrazione parte il breve onboarding visuale, saltabile.');
@@ -128,7 +133,7 @@ assert.ok(calls.includes('/api/account/login') && page.includes('career-wizard')
 mem.clear();
 game = open();
 await game.click({ menu: 'account', accountMode: 'register' });
-page = await game.submit('register', { username: 'prova.salta', password: 'password-lunga', confirm: 'password-lunga' });
+page = await game.submit('register', { username: 'prova.salta', password: 'password-lunga', confirm: 'password-lunga', ageBand: 'adult14' });
 assert.ok(page.includes('COME FUNZIONA · 1 DI'));
 page = await game.click({ tour: 'skip' });
 assert.ok(!page.includes('COME FUNZIONA') && page.includes('La politica italiana, settimana dopo settimana') && flags().tour === 'done', 'Il tour si può saltare e non si ripete.');
@@ -154,7 +159,7 @@ await tick();
 await game.click({ menu: 'nuova' });
 await game.click({ menu: 'account', accountMode: 'register' });
 serviceDown = true;
-page = await game.submit('register', { username: 'prova.rete', password: 'password-lunga', confirm: 'password-lunga' });
+page = await game.submit('register', { username: 'prova.rete', password: 'password-lunga', confirm: 'password-lunga', ageBand: 'adult14' });
 assert.ok(page.includes('Connessione assente') && page.includes('data-menu-action="start-local"'), 'Se il servizio non risponde si può iniziare senza account.');
 page = await game.click({ menuAction: 'start-local' });
 assert.ok(page.includes('career-wizard'));

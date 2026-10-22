@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "updated": "2026-10-21",
+  "updated": "2026-10-22",
   "note": "Informazioni che solo il titolare può fornire e che il codice non può verificare. Le pagine pubbliche (privacy.html, termini.html, elimina-account.html) sono scritte senza di esse e non le inventano. Finché un requisito con required=true è «mancante» le pagine restano con noindex e il controllo di rilascio (npm run check:legal -- --release) fallisce. Per chiudere un requisito: inserire il dato nel testo pubblico indicato in «section», portare status a «fornito» e scrivere in «provided» una nota con la data e la fonte (mai il dato personale, se non pubblico).",
   "items": [
     {
@@ -23,9 +23,9 @@
     },
     {
       "id": "minori",
-      "title": "Trattamento dei minori: età minima o avvertenza ai genitori",
-      "section": "privacy.html §10 · termini.html §6",
-      "why": "Oggi non c'è una verifica dell'età né un limite; il testo lo dice e offre la cancellazione su richiesta di un genitore. Se il gioco è destinato anche a minori di 14 anni (art. 2-quinquies Codice privacy) serve una valutazione legale sulla capacità di concludere il contratto di servizio e sull'eventuale avvertenza o verifica da introdurre.",
+      "title": "Trattamento dei minori: età minima, consenso dei genitori, Google Play Families",
+      "section": "privacy.html §10 · termini.html §6 · docs/minori-e-privacy.md",
+      "why": "Misure già nel codice: si gioca senza account (nessun dato ai server); la registrazione dell'account chiede una fascia d'età neutra («meno di 14» / «14 o più»), non salvata né inviata, e sotto i 14 anni non crea l'account; nessuna data di nascita dell'utente, nessuna pubblicità, analisi o SDK; eliminazione in app e dalla pagina pubblica. Restano decisioni del titolare e verifica di un professionista (vedi docs/minori-e-privacy.md): se i minori di 14 anni siano o no pubblico previsto (dichiarazione «Target audience» e programma Families di Google Play), la base giuridica e la capacità di concludere il contratto del servizio, e se introdurre un consenso dei genitori verificabile (il testo oggi dice che non esiste). La fascia d'età dichiarata non è una verifica e non va presentata come tale.",
       "required": true,
       "status": "mancante",
       "provided": null
@@ -72,6 +72,15 @@
       "section": "termini.html §9",
       "why": "I termini non contengono clausole su legge applicabile, foro o limitazioni di responsabilità e salvano i diritti inderogabili dei consumatori. Se il titolare le vuole serve una redazione con un professionista; non sono richieste per pubblicare.",
       "required": false,
+      "status": "mancante",
+      "provided": null
+    },
+    {
+      "id": "account-sviluppatore-play",
+      "title": "Chi gestisce il servizio e chi è titolare dell'account sviluppatore Google Play",
+      "section": "privacy.html §1 · termini.html §1 · scheda Play Console (sviluppatore, indirizzo, contatti)",
+      "why": "Le pagine pubbliche indicano come titolare Matteo Bianchi, persona fisica. Google Play chiede che nome e contatti dello sviluppatore siano veri e coerenti con la politica sulla privacy, e per gli account personali nuovi richiede la verifica dell'identità e dell'indirizzo. Solo il titolare può confermare che l'account sviluppatore e il titolare del trattamento sono la stessa persona (o indicare chi è l'altro soggetto e adeguare informativa e termini). Il codice non può verificarlo e non va inventato.",
+      "required": true,
       "status": "mancante",
       "provided": null
     }

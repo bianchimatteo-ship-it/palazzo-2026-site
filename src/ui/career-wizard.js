@@ -1,16 +1,16 @@
-import { residentsText } from '../core/municipal-rules.js?v=20261021-11';
-import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261021-11';
-import { LOGO_SHAPES, LOGO_SYMBOLS, partyLogoDataUrl } from './party-logo.js?v=20261021-11';
-import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261021-11';
-import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261021-11';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261021-11';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261021-11';
-import { POLL_SCENARIOS, SCENARIO_LIMITS } from '../core/poll-scenario.js?v=20261021-11';
-import { startStep, startSummary } from './start-wizard.js?v=20261021-11';
-import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261021-11';
-import { normalizeStart } from '../core/start-engine.js?v=20261021-11';
-import { legacyBanner } from './hall-view.js?v=20261021-11';
-import { formatDate } from '../core/time.js?v=20261021-11';
+import { residentsText } from '../core/municipal-rules.js?v=20261022-12';
+import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261022-12';
+import { LOGO_SHAPES, LOGO_SYMBOLS, partyLogoDataUrl } from './party-logo.js?v=20261022-12';
+import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261022-12';
+import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261022-12';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261022-12';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261022-12';
+import { POLL_SCENARIOS, SCENARIO_LIMITS } from '../core/poll-scenario.js?v=20261022-12';
+import { startStep, startSummary } from './start-wizard.js?v=20261022-12';
+import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261022-12';
+import { normalizeStart } from '../core/start-engine.js?v=20261022-12';
+import { legacyBanner } from './hall-view.js?v=20261022-12';
+import { formatDate } from '../core/time.js?v=20261022-12';
 
 const POSITIONS = ['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra'];
 
@@ -65,9 +65,9 @@ export function renderCareerWizard(state, draft, realParties = [], logoFor = () 
   const errorBox = `${draft.errors?.length ? `<div class="wizard-errors" role="alert">${draft.errors.map(error => `<span>${esc(error)}</span>`).join('')}</div>` : ''}${exportBox}`;
   // Real data that did not arrive (parties, groups, people): the wizard goes on with the rest and offers a new attempt.
   const dataBox = data?.failed?.length ? `<div class="wizard-data-alert" role="alert"><span>Non è stato possibile caricare: ${esc(data.failed.join(', '))}. Le scelte che ne dipendono restano vuote finché i dati non arrivano.</span><button type="button" class="secondary-button" data-wizard-retry-data>Riprova</button></div>` : '';
-  return `<div class="wizard-backdrop" data-wizard-backdrop><section class="career-wizard" role="dialog" aria-modal="true" aria-labelledby="wizard-title">
+  return `<div class="wizard-backdrop" data-wizard-backdrop><section class="career-wizard" data-step="${draft.step}" role="dialog" aria-modal="true" aria-labelledby="wizard-title">
     <aside class="wizard-aside"><div class="wizard-brand"><img class="brand-logo wizard-logo" src="icons/logo-politicando-640.webp" srcset="icons/logo-politicando-240.webp 240w, icons/logo-politicando-640.webp 640w" sizes="88px" width="88" height="88" alt="POLITICANDO 2026" decoding="async" /></div><span class="wizard-aside-label">NUOVA CARRIERA</span><h2>Una storia<br/>da scrivere.</h2><p>Chi sei, da dove parti, con quale partito e con quali regole: cinque passaggi, dal più importante al dettaglio.</p><div class="wizard-steps">${steps.map((s, i) => `<div class="wizard-step ${draft.step === i + 1 ? 'current' : ''} ${draft.step > i + 1 ? 'complete' : ''}"><span class="wizard-step-icon">${draft.step > i + 1 ? '✓' : ico(s[2], 16)}</span><span><small>PASSAGGIO ${String(i + 1).padStart(2, '0')}</small><strong>${s[0]}</strong></span></div>`).join('')}</div><div class="wizard-aside-foot"><span class="live-dot"></span><span>Il salvataggio avviene solo quando inizi la carriera.</span></div></aside>
-    <div class="wizard-main"><header class="wizard-header"><div><div class="wizard-progress" role="progressbar" aria-label="Avanzamento" aria-valuemin="1" aria-valuemax="${LAST_STEP}" aria-valuenow="${draft.step}">${steps.map((_, i) => `<i class="${draft.step > i + 1 ? 'done' : draft.step === i + 1 ? 'current' : ''}"></i>`).join('')}</div><span class="wizard-kicker">PASSAGGIO ${String(draft.step).padStart(2, '0')} <i>/</i> ${String(LAST_STEP).padStart(2, '0')}</span><h1 id="wizard-title">${activeStep[1]}</h1><p>${stepIntro(draft.step)}</p></div><button class="wizard-x" type="button" aria-label="Annulla nuova carriera" data-wizard-action="cancel">×</button></header>
+    <div class="wizard-main"><header class="wizard-header"><div><div class="wizard-progress" role="progressbar" aria-label="Avanzamento" aria-valuemin="1" aria-valuemax="${LAST_STEP}" aria-valuenow="${draft.step}">${steps.map((_, i) => `<i class="${draft.step > i + 1 ? 'done' : draft.step === i + 1 ? 'current' : ''}"></i>`).join('')}</div><ol class="wizard-chips" aria-label="Passaggi della nuova carriera">${steps.map((st, i) => `<li class="${draft.step > i + 1 ? 'done' : draft.step === i + 1 ? 'current' : ''}" ${draft.step === i + 1 ? 'aria-current="step"' : ''}><span>${draft.step > i + 1 ? '✓' : i + 1}</span><b>${st[0]}</b></li>`).join('')}</ol><span class="wizard-kicker">PASSAGGIO ${String(draft.step).padStart(2, '0')} <i>/</i> ${String(LAST_STEP).padStart(2, '0')}</span><h1 id="wizard-title">${activeStep[1]}</h1><p>${stepIntro(draft.step)}</p></div><button class="wizard-x" type="button" aria-label="Annulla nuova carriera" data-wizard-action="cancel">×</button></header>
       <div class="wizard-body">${legacyBanner(draft)}${errorBox}${dataBox}${body}</div>
       <footer class="wizard-footer">${backButton}<span class="wizard-footer-note">${draft.step < LAST_STEP ? 'Puoi tornare indietro e modificare ogni scelta.' : `Avvio della carriera il ${esc(draft.currentDate ?? state.clock.currentDate)}.`}</span>${actionButton}</footer>
     </div>
@@ -165,14 +165,22 @@ function difficultyStep(d) {
   const setting = DIFFICULTIES[d.difficulty] ?? DIFFICULTIES.normale;
   return '<section class="summary-section difficulty-section"><div class="summary-section-heading"><div><span>DIFFICOLTÀ</span><strong>' + esc(setting.label) + '</strong></div></div><div class="difficulty-grid" role="radiogroup" aria-label="Difficoltà della partita">' + Object.entries(DIFFICULTIES).map(([id, item]) => '<label class="difficulty-card ' + ((d.difficulty ?? 'normale') === id ? 'selected' : '') + '"><input type="radio" name="difficulty" value="' + id + '" ' + ((d.difficulty ?? 'normale') === id ? 'checked' : '') + ' /><strong>' + esc(item.label) + '</strong><em>' + esc(item.short) + '</em><small>' + esc(item.detail) + '</small></label>').join('') + '</div><small>Si sceglie all’inizio e resta per tutta la carriera.</small></section>';
 }
+// The previous job: a list to choose from, with «Altro» to write one's own; the value kept in the draft is always the text itself (previousProfession), as before.
+export const PROFESSIONS = Object.freeze(['Insegnante', 'Avvocato', 'Medico', 'Infermiere', 'Ingegnere', 'Imprenditore', 'Commerciante', 'Artigiano', 'Agricoltore', 'Operaio', 'Impiegato', 'Dirigente d’azienda', 'Libero professionista', 'Giornalista', 'Docente universitario', 'Ricercatore', 'Funzionario pubblico', 'Sindacalista', 'Studente', 'Pensionato']);
+function professionField(d) {
+  const text = String(d.previousProfession ?? '').trim();
+  const choice = PROFESSIONS.includes(text) ? text : (text || d.professionChoice === 'altro') ? 'altro' : '';
+  return '<label class="wizard-full-field">Professione precedente<select name="professionChoice" autocomplete="off"><option value="" ' + (choice === '' ? 'selected' : '') + '>Scegli dall’elenco…</option>' + PROFESSIONS.map(item => '<option value="' + esc(item) + '" ' + (choice === item ? 'selected' : '') + '>' + esc(item) + '</option>').join('') + '<option value="altro" ' + (choice === 'altro' ? 'selected' : '') + '>Altro…</option></select></label>'
+    + (choice === 'altro' ? '<label class="wizard-full-field">Scrivi la professione<input name="previousProfession" value="' + val(d, 'previousProfession') + '" autocomplete="organization-title" maxlength="100" placeholder="Es. restauratrice, pilota, musicista" /></label>' : '<input type="hidden" name="previousProfession" value="' + esc(choice) + '" />');
+}
 function profileStep(state, d) {
   return `<section class="summary-section wizard-profile"><div class="summary-section-heading"><div><span>CHI SEI</span><strong>Il tuo politico</strong></div></div><div class="wizard-form-grid">
     <label>Nome<input name="firstName" value="${val(d, 'firstName')}" autocomplete="given-name" maxlength="40" placeholder="Il tuo nome" /></label>
     <label>Cognome<input name="lastName" value="${val(d, 'lastName')}" autocomplete="family-name" maxlength="50" placeholder="Il tuo cognome" /></label>
     <label>Data di nascita<input type="date" name="birthDate" value="${val(d, 'birthDate')}" max="${esc(d.currentDate ?? state.clock.currentDate)}" /></label>
     <label>Genere<select name="gender"><option value="preferisco-non-specificare" ${d.gender === 'preferisco-non-specificare' ? 'selected' : ''}>Preferisco non specificare</option><option value="donna" ${d.gender === 'donna' ? 'selected' : ''}>Donna</option><option value="uomo" ${d.gender === 'uomo' ? 'selected' : ''}>Uomo</option><option value="non-binario" ${d.gender === 'non-binario' ? 'selected' : ''}>Non binario</option></select></label>
-    <label class="wizard-full-field">Professione precedente<input name="previousProfession" value="${val(d, 'previousProfession')}" autocomplete="organization-title" maxlength="100" placeholder="Es. insegnante, avvocata, imprenditore" /></label>
-  </div><small>I dati anagrafici sono usati solo per questa carriera (source: user).</small></section>`;
+    ${professionField(d)}
+  </div><small class="wizard-hint">Sono i dati del tuo personaggio, non i tuoi: puoi inventarli. Servono solo a questa carriera. La data di nascita è quella del personaggio.</small></section>`;
 }
 function levelStep(d, parliamentaryGroups, realPoliticians, place = null) {
   const details = {
@@ -375,5 +383,5 @@ function summaryStep(d, parties, level, parliamentaryGroups, place = null, pollV
   const affiliation = '<section class="summary-section"><div class="summary-section-heading"><div><span>03 · APPARTENENZA</span><strong>' + esc(partySummary) + '</strong></div><button type="button" data-wizard-goto="3">Modifica</button></div>' + (party?.source === DATA_SOURCES.REAL && party.sourceUrl ? '<a class="catalog-source" href="' + esc(party.sourceUrl) + '" target="_blank" rel="noopener noreferrer">Fonte del partito ↗</a>' : '') + (d.partyMode === 'new' ? '<small>' + esc(d.partyOrientation) + ' · ' + esc(d.partyPosition ?? 'centro') + ' · Colore <i class="summary-color" style="--party:' + esc(d.partyColor) + '"></i></small>' : '') + '</section>';
   const initialStatus = directPresident ? 'Presidente della Repubblica · nessun seggio personale' : externalPremier ? 'Presidente del Consiglio · esterno al Parlamento' : chamber ? 'componente del gruppo nello scenario' : 'carriera territoriale in avvio';
   const identity = '<section class="summary-section"><div class="summary-section-heading"><div><span>01 · IDENTITÀ</span><strong>' + esc([d.firstName, d.lastName].filter(Boolean).join(' ') || 'Nome da inserire') + '</strong></div><button type="button" data-wizard-goto="1">Modifica</button></div><small>' + esc([d.birthDate, d.previousProfession].filter(Boolean).join(' · ') || 'Data di nascita e professione da inserire') + '</small></section>';
-  return '<div class="summary-sheet">' + identity + where + '<section class="summary-section"><div class="summary-section-heading"><div><span>02 · PERCORSO ISTITUZIONALE</span><strong>' + esc(pathLabel) + '</strong></div><button type="button" data-wizard-goto="2">Modifica</button></div><small>' + esc(territorySummary) + '</small></section>' + scenario + parliamentary + affiliation + position + '<section class="summary-section"><div class="summary-section-heading"><div><span>STATISTICHE INIZIALI</span><strong>Valori di gioco simulati · base bilanciata per percorso</strong></div></div><div class="summary-stat-grid">' + metrics.map(([label, value]) => '<span><small>' + label + '</small><strong>' + value + '<i>/100</i></strong></span>').join('') + '</div><small>Posizione iniziale: ' + initialStatus + ' · situazione politica non garantita.</small></section>' + difficulty + pollSummary + startSummary(d) + '<div class="summary-disclaimer">Il giocatore è un personaggio creato da te (source: user). I valori, la posizione e gli eventi di questa carriera sono source: simulation. Le fonti istituzionali restano in sola lettura.</div></div>';
+  return '<div class="summary-sheet">' + identity + where + '<section class="summary-section"><div class="summary-section-heading"><div><span>02 · PERCORSO ISTITUZIONALE</span><strong>' + esc(pathLabel) + '</strong></div><button type="button" data-wizard-goto="2">Modifica</button></div><small>' + esc(territorySummary) + '</small></section>' + scenario + parliamentary + affiliation + position + '<section class="summary-section"><div class="summary-section-heading"><div><span>STATISTICHE INIZIALI</span><strong>Valori di gioco simulati · base bilanciata per percorso</strong></div></div><div class="summary-stat-grid">' + metrics.map(([label, value]) => '<span><small>' + label + '</small><strong>' + value + '<i>/100</i></strong></span>').join('') + '</div><small>Posizione iniziale: ' + initialStatus + ' · situazione politica non garantita.</small></section>' + difficulty + pollSummary + startSummary(d) + '<div class="summary-disclaimer">Il giocatore è un personaggio creato da te. I valori, la posizione e gli eventi di questa carriera sono simulati. Le fonti istituzionali restano in sola lettura.</div></div>';
 }

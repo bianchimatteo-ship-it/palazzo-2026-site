@@ -1,5 +1,18 @@
 apply plugin: 'com.android.application'
 
+// Release signing: the key is never in the repository. Put `storeFile`, `storePassword`, `keyAlias` and `keyPassword` in android/keystore.properties (ignored by git) or in the environment variables
+// POLITICANDO_KEYSTORE_FILE, POLITICANDO_KEYSTORE_PASSWORD, POLITICANDO_KEY_ALIAS and POLITICANDO_KEY_PASSWORD. Without them the release bundle is built unsigned and Gradle says so.
+def keystoreProps = new Properties()
+def keystoreFile = rootProject.file('keystore.properties')
+if (keystoreFile.exists()) keystoreFile.withInputStream { keystoreProps.load(it) }
+def signingValue = { String property, String variable -> keystoreProps.getProperty(property) ?: System.getenv(variable) }
+def releaseStoreFile = signingValue('storeFile', 'POLITICANDO_KEYSTORE_FILE')
+def releaseStorePassword = signingValue('storePassword', 'POLITICANDO_KEYSTORE_PASSWORD')
+def releaseKeyAlias = signingValue('keyAlias', 'POLITICANDO_KEY_ALIAS')
+def releaseKeyPassword = signingValue('keyPassword', 'POLITICANDO_KEY_PASSWORD')
+def releaseSigningReady = releaseStoreFile && releaseStorePassword && releaseKeyAlias && releaseKeyPassword && file(releaseStoreFile).exists()
+if (!releaseSigningReady) logger.warn('POLITICANDO: no release signing key configured: the release bundle will NOT be signed (see docs/google-play.md).')
+
 android {
     namespace = "it.matteobianchi.politicando2026"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,8 +29,19 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (releaseSigningReady) {
+            release {
+                storeFile file(releaseStoreFile)
+                storePassword releaseStorePassword
+                keyAlias releaseKeyAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
     buildTypes {
         release {
+            if (releaseSigningReady) signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }

@@ -28,7 +28,7 @@ const assert = (condition, message) => { if (!condition) failures.push(message);
 // and `--expect-commit <sha>` asserts which commit that is. `--allow-dirty` skips the clean tree rule (a trial before committing). The version Cloudflare itself holds (Wrangler's deployment id)
 // is not visible without credentials: it is reported by the deploy, not verified here.
 const git = args => { try { return execFileSync('git', args, { cwd: fileURLToPath(new URL('../', import.meta.url)), encoding: 'utf8' }).trim(); } catch { return null; } };
-const PUBLISHABLE = ['index.html', 'sw.js', 'favicon.ico', 'favicon.svg', 'site.webmanifest', 'privacy.html', 'termini.html', 'elimina-account.html', 'icons', 'src', 'worker.js', 'wrangler.jsonc'];
+const PUBLISHABLE = ['index.html', 'sw.js', 'favicon.ico', 'favicon.svg', 'site.webmanifest', 'privacy.html', 'termini.html', 'elimina-account.html', 'privacy-en.html', 'terms-en.html', 'delete-account-en.html', 'icons', 'src', 'worker.js', 'wrangler.jsonc'];
 const headCommit = git(['rev-parse', 'HEAD']);
 const uncommitted = git(['status', '--porcelain', '--', ...PUBLISHABLE]);
 const expectedCommit = process.argv.includes('--expect-commit') ? process.argv[process.argv.indexOf('--expect-commit') + 1] : null;
@@ -174,7 +174,7 @@ try {
   } catch (error) { failures.push(`sw.js non disponibile (${error.message})`); }
   // Favicon and web app manifest: the POLITICANDO mark in every browser.
   const fontFiles = (await readdir(new URL('../src/fonts/', import.meta.url))).map(name => `src/fonts/${name}`);
-  for (const asset of ['favicon.ico', 'favicon.svg', 'site.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png', 'icons/favicon-32.png', 'privacy.html', 'termini.html', 'elimina-account.html', 'src/legal.css', 'src/legal/delete-account.js', ...fontFiles]) {
+  for (const asset of ['favicon.ico', 'favicon.svg', 'site.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png', 'icons/favicon-32.png', 'privacy.html', 'termini.html', 'elimina-account.html', 'privacy-en.html', 'terms-en.html', 'delete-account-en.html', 'src/legal.css', 'src/legal/delete-account.js', ...fontFiles]) {
     try {
       const [{ bytes }, expected] = await Promise.all([get(new URL(asset, pageUrl)), readFile(new URL(`../${asset}`, import.meta.url))]);
       assert(hash(bytes) === hash(expected), `${asset} live diverso dal file locale`);

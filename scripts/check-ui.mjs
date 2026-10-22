@@ -84,7 +84,7 @@ assert.equal(loadSettings().motion, 'reduced', 'Annullando non cambia nulla.');
 await click({ menuAction: 'reset-settings' });
 await click({ confirm: 'ok' });
 assert.equal(loadSettings().motion, 'full');
-assert.ok((await click({ menu: 'carica' })).includes('Nessun salvataggio negli slot'));
+assert.ok((await click({ menu: 'carica' })).includes('Nessuna carriera attiva negli slot'));
 // Account: sign in or sign up from the menu; the career is then kept online too.
 menuHtml = await click({ menu: 'account' });
 assert.ok(menuHtml.includes('data-account-form="login"') && menuHtml.includes('data-account-form="register"'), 'Dal menu si accede o si crea un account.');
@@ -571,6 +571,9 @@ assert.equal(sniffed([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50
 assert.equal(sniffed([...new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"></svg>')]), null, 'Un SVG non è un’immagine ammessa, qualunque nome abbia.');
 assert.equal(sniffed([0x47, 0x49, 0x46, 0x38, 0x39, 0x61, ...new Array(20).fill(0)]), null, 'Né un GIF.');
 assert.equal(logos.checkImageAddress('https://example.org/logo.png'), 'https://example.org/logo.png');
+// without IndexedDB (here: Node) a logo lives in memory only, and the game must not call that saved
+assert.equal(await logos.logosArePersistent(), false, 'Senza IndexedDB i loghi non sono persistenti.');
+assert.equal((await logos.saveLogo('party-prova', { blob: new Blob([new Uint8Array(32)]), mimeType: 'image/png', width: 32, height: 32, bytes: 32 })).persistent, false, 'E il salvataggio lo dice: non è conservato.');
 for (const bad of ['http://example.org/logo.png', 'ftp://example.org/logo.png', 'logo.png', 'https://example.org/logo.svg', 'https://utente:pw@example.org/logo.png', 'javascript:alert(1)', 'https://example.org/animato.gif']) assert.throws(() => logos.checkImageAddress(bad), `L’indirizzo «${bad}» è rifiutato.`);
 assert.equal(realData.realDatabase.parties.find(item => item.id === 'party-registro-p1-2015-29-ir').logoUrl ?? null, realData.realDatabase.parties.find(item => item.id === 'party-registro-p1-2015-29-ir').logoUrl ?? null);
 assert.ok(Object.isFrozen(realData.realDatabase.parties[0]), 'I dati reali restano immutabili');

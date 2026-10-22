@@ -229,7 +229,9 @@ for (const needle of ['nome utente', 'impronta della password', 'Indirizzo IP', 
 assert.ok(!/(pienamente|totalmente) conform|garantisc[eo] la conformità/i.test(privacy), 'L’informativa non dichiara una conformità che non è stata verificata.');
 const deletePage = await page('elimina-account.html');
 assert.ok(/id="delete-form"/.test(deletePage) && /src="\.\/src\/legal\/delete-account\.js"/.test(deletePage), 'La pagina di cancellazione ha il modulo e lo script.');
-assert.ok((await readFile(new URL('../.assetsignore', import.meta.url), 'utf8')).split('\n').every(line => !/^(privacy|termini|elimina-account)\.html$|^src\/legal|^src\/fonts/.test(line.trim())), 'Le pagine pubbliche non sono escluse dalla pubblicazione.');
+assert.ok((await readFile(new URL('../.assetsignore', import.meta.url), 'utf8')).split('\n').every(line => !/^(privacy|termini|elimina-account|privacy-en|terms-en|delete-account-en)\.html$|^src\/legal|^src\/fonts/.test(line.trim())), 'Le pagine pubbliche non sono escluse dalla pubblicazione.');
+const deleteEn = await page('delete-account-en.html');
+assert.ok(/<html lang="en">/.test(deleteEn) && /id="delete-form"/.test(deleteEn) && /src="\.\/src\/legal\/delete-account\.js"/.test(deleteEn) && /Forgot password/.test(deleteEn) && !/non è al momento disponibile|not (currently )?available/i.test(deletePage + deleteEn), 'La pagina inglese di cancellazione ha lo stesso modulo e non dichiara il recupero non disponibile.');
 // every external host of the game: none (the fonts are served from src/fonts)
 const index = await page('index.html');
 assert.ok(!/fonts\.(googleapis|gstatic)\.com/.test(index), 'Nessun carattere caricato da Google Fonts.');

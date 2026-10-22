@@ -4,3 +4,8 @@ node_modules/
 /work/
 .wrangler/
 *.zip
+
+# Android release signing: never commit keys or passwords
+*.jks
+*.keystore
+android/keystore.properties
