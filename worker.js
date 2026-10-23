@@ -418,7 +418,7 @@ async function sendVerification(env, request, db, userId, email, emailNorm) {
 // ---------- personal logos of the account (R2 for the images, D1 for the metadata) ----------
 // The owner is always the account of the verified session, never an id sent by the client. A logo is a small PNG, JPEG or WebP (what the game itself produces: at most 300 KB). Every write names the
 // version the device saw (x-base-version); a different one is a conflict and nothing is overwritten. Not configured (no R2 binding) the routes say so and the game keeps its logos on the device.
-const MAX_LOGOS = 60, MAX_LOGO_BYTES = 300 * 1024, LOGO_ID = /^[\w.-]{1,120}$/;
+const MAX_LOGOS = 150, MAX_LOGO_BYTES = 300 * 1024, LOGO_ID = /^[\w.-]{1,120}$/;
 const sniffLogo = bytes => {
   const at = (...values) => values.every((value, index) => bytes[index] === value);
   if (bytes.length >= 24 && at(137, 80, 78, 71, 13, 10, 26, 10)) return 'image/png';

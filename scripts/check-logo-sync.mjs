@@ -71,11 +71,11 @@ assert.equal((await (await api('/api/logos', { token: B.token })).json()).logos.
 assert.equal((await api('/api/logos/p-uno', { token: B.token, method: 'DELETE', base: 1 })).status, 200, 'La cancellazione di B su un logo che B non ha non tocca nulla…');
 assert.equal(rowsOf('logo.a').length, 1, '…e il logo di A resta.');
 // the limit of the number of logos
-for (let i = 0; i < 59; i++) assert.equal((await api(`/api/logos/l-${i}`, { token: B.token, method: 'PUT', body: png(i, 0, 0), base: 0 })).status, 201);
-assert.equal((await api('/api/logos/l-59', { token: B.token, method: 'PUT', body: png(9, 9, 9), base: 0 })).status, 201);
-const over = await api('/api/logos/l-60', { token: B.token, method: 'PUT', body: png(10, 9, 9), base: 0 });
-assert.equal(over.status, 409); assert.equal((await over.json()).code, 'limit', 'Oltre 60 loghi per account no.');
-for (let i = 0; i < 60; i++) await api(`/api/logos/l-${i}`, { token: B.token, method: 'DELETE', base: 1 });
+for (let i = 0; i < 149; i++) assert.equal((await api(`/api/logos/l-${i}`, { token: B.token, method: 'PUT', body: png(i, 0, 0), base: 0 })).status, 201);
+assert.equal((await api('/api/logos/l-149', { token: B.token, method: 'PUT', body: png(149, 0, 0), base: 0 })).status, 201);
+const over = await api('/api/logos/l-150', { token: B.token, method: 'PUT', body: png(10, 9, 9), base: 0 });
+assert.equal(over.status, 409); assert.equal((await over.json()).code, 'limit', 'Oltre 150 loghi per account no.');
+for (let i = 0; i < 150; i++) await api(`/api/logos/l-${i}`, { token: B.token, method: 'DELETE', base: 1 });
 await api('/api/logos/p-uno', { token: A.token, method: 'DELETE', base: 1 });
 
 // ---------- 2. synchronisation: upload, idempotence, replacement ----------
