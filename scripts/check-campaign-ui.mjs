@@ -38,6 +38,8 @@ try {
   let id = 0;
   const pending = new Map();
   const send = (method, params = {}) => new Promise((resolve, reject) => { const key = ++id; pending.set(key, { resolve, reject }); socket.send(JSON.stringify({ id: key, method, params })); });
+  // A Chrome that dies (crash) must fail the check at once instead of leaving every pending call waiting for ever.
+  socket.onclose = () => { console.error('Chrome si è chiuso durante il controllo (crash del browser): controllo NON eseguito.'); chrome.kill('SIGKILL'); server.kill('SIGKILL'); process.exit(2); };
   socket.onmessage = message => { const data = JSON.parse(message.data); if (data.id && pending.has(data.id)) { const { resolve, reject } = pending.get(data.id); pending.delete(data.id); data.error ? reject(new Error(data.error.message)) : resolve(data.result); } };
   const evaluate = async (expression, commandLine = false) => { const result = await send('Runtime.evaluate', { expression, awaitPromise: true, returnByValue: true, includeCommandLineAPI: commandLine }); if (result.exceptionDetails) throw new Error(result.exceptionDetails.exception?.description ?? result.exceptionDetails.text); return result.result.value; };
   const q = selector => JSON.stringify(selector);

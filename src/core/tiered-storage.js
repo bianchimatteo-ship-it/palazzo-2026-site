@@ -10,7 +10,7 @@
 //   - at start copies what localStorage holds into IndexedDB (idempotent: what is already there and equal is skipped), reads it back to check it, and takes back into memory what only
 //     IndexedDB has. Nothing is ever deleted from localStorage by this code: the old copies stay where they were.
 // The small keys (lock, slot index, Hall of Fame, settings, sync queue) never leave localStorage.
-import { LZ_MARK, compress, decompress } from './lz.js?v=20261022-19';
+import { LZ_MARK, compress, decompress } from './lz.js?v=20261023-1';
 const DB_NAME = 'politicando-vault';
 const STORE = 'entries';
 const META_KEY = '__meta__';

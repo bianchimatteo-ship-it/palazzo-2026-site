@@ -326,3 +326,23 @@ Etichette: **codice** · **test locale** · **provato nel browser** (Chrome head
 - **La suite completa dei 169 test NON è terminata**: il batch (`check:all` in sequenza) è stato interrotto dopo circa 24 test per procedere al rilascio con i controlli essenziali. **Gli altri non sono stati eseguiti e non vanno considerati superati.** La suite completa resta da eseguire.
 - **Cloudflare**: il controllo `Workers Builds` è rosso su ogni commit del branch (6 su 6 in questa sessione) e verde su `main`; i log sono solo nella dashboard (non raggiungibile da qui) e il check non espone testo. Verificato in locale: `wrangler deploy --dry-run` e `versions upload --dry-run` passano e il bundle del Worker si costruisce (`--outdir`, 59.917 byte); nessun credenziale Cloudflare in questo ambiente, quindi nessun deploy manuale: il deploy di produzione è quello di Workers Builds al push su `main`.
 - **Pubblicazione su `main` (22/10/2026)**: fast-forward `1bc241f` → `5bd85c5`, senza forzature. GitHub: `build`, `deploy` (Pages) e `report-build-status` **riusciti**. **`Workers Builds: palazzo-2026-site` su `5bd85c5` è FALLITO** (a differenza di `1bc241f`, verde): il dettaglio è solo nella dashboard Cloudflare (non raggiungibile da qui, nessun testo né annotazione nel check), il sito `workers.dev` non è raggiungibile da questo ambiente e non ci sono credenziali Cloudflare per un deploy manuale. In locale, su una copia pulita di `5bd85c5`: `npm ci` ok, `wrangler deploy --dry-run` e `versions upload --dry-run` ok, differenza di asset rispetto a `main` precedente: soltanto tre pagine HTML nuove; `worker.js`, `wrangler.jsonc`, `package-lock.json`, `.assetsignore` e `_headers` identici. **La produzione Cloudflare NON è confermata aggiornata.**
+
+## Audit di release finale (23/10/2026)
+
+### Esito dei 174 controlli (reali, non dedotti)
+- **Eseguiti e superati**: tutti tranne i quattro punti sotto. I controlli lunghi sono stati rilanciati con limite esteso, non dati per buoni: `check-start` (1597 s), `check-calendar-years` (3389 s), `check-long-run --tier=medium` (418 s), tutti PASS.
+- **NON conclusi — `check-long-run` livello pieno (30 anni, 1565 settimane)**: fermato al limite di 3500 s alla settimana ~340 (anno 6-7), senza errori; richiede circa 5 ore. Non è un PASS: va rilanciato con `--resume` e un limite adeguato. Il livello medio (10 anni) è superato.
+- **NON eseguibile qui — `check-campaign-ui`**: in questo ambiente Chrome termina da solo (crashpad) subito dopo il ricaricamento della pagina, in modo ripetibile, anche senza accelerazione grafica e anche su `main`. Il controllo ora fallisce subito con un messaggio (prima restava appeso) invece di dichiararsi superato. Va eseguito su una macchina con Chrome funzionante.
+- **NON eseguibile qui — `check-published-site`**: interroga il sito pubblicato e la rete esterna non è raggiungibile (`fetch failed`). La sua versione offline `check-published-local` è inclusa tra i controlli eseguiti.
+- Bug reali corretti durante l'audit: fusione di carriere con stesso seme nel collaudo (harness), overflow del menu e dell'intestazione a 320 px, regole per i partiti «in attesa di conferma», attributi/TEXTAREA in inglese, radio/articoli (ripetizioni, date dei sondaggi, inchieste graduali), sincronizzazione dei loghi.
+
+### Risorse Cloudflare
+- **Già configurate (da `wrangler.jsonc`)**: D1 `politicando-accounts`, KV `ADMIN_ARCHIVE`, variabili, cron.
+- **Ancora da creare dal titolare**: bucket R2 `politicando-logos` (`npx wrangler r2 bucket create politicando-logos`), poi decommentare il binding `LOGOS` in `wrangler.jsonc` e applicare la migrazione 0005 (`npx wrangler d1 migrations apply politicando-accounts --remote`). Finché non lo fa, la sincronizzazione cloud dei loghi resta spenta e i loghi restano locali (nessuna perdita). Il segreto `EMAIL_GATEWAY_SECRET` non è verificabile da qui.
+- **Workers Builds**: la build risulta rossa sui commit recenti; il log non è accessibile da questo ambiente (nessuna credenziale Cloudflare). Causa non accertata.
+
+### Release Android
+`applicationId` it.matteobianchi.politicando2026, versionCode 1 / versionName 1.0, targetSdk 36, solo permesso INTERNET. **AAB non prodotto**: mancano SDK Android e chiave di firma. Passi in `docs/google-play.md`.
+
+### Aperti per la pubblicazione ufficiale
+I cinque requisiti legali in `docs/legale-requisiti.json` (titolare/contatti, DPA con i fornitori, ecc.) e la dichiarazione dei dati su Play Console. Il progetto **non è dichiarabile pronto** finché restano aperti i controlli sopra e questi punti.

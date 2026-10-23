@@ -1,16 +1,16 @@
-import { residentsText } from '../core/municipal-rules.js?v=20261022-19';
-import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261022-19';
-import { LOGO_SHAPES, LOGO_SYMBOLS, partyLogoDataUrl } from './party-logo.js?v=20261022-19';
-import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261022-19';
-import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261022-19';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261022-19';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261022-19';
-import { POLL_SCENARIOS, SCENARIO_LIMITS } from '../core/poll-scenario.js?v=20261022-19';
-import { startStep, startSummary } from './start-wizard.js?v=20261022-19';
-import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261022-19';
-import { normalizeStart } from '../core/start-engine.js?v=20261022-19';
-import { legacyBanner } from './hall-view.js?v=20261022-19';
-import { formatDate } from '../core/time.js?v=20261022-19';
+import { residentsText } from '../core/municipal-rules.js?v=20261023-1';
+import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261023-1';
+import { LOGO_SHAPES, LOGO_SYMBOLS, partyLogoDataUrl } from './party-logo.js?v=20261023-1';
+import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261023-1';
+import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261023-1';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261023-1';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261023-1';
+import { POLL_SCENARIOS, SCENARIO_LIMITS } from '../core/poll-scenario.js?v=20261023-1';
+import { startStep, startSummary } from './start-wizard.js?v=20261023-1';
+import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261023-1';
+import { normalizeStart } from '../core/start-engine.js?v=20261023-1';
+import { legacyBanner } from './hall-view.js?v=20261023-1';
+import { formatDate } from '../core/time.js?v=20261023-1';
 
 const POSITIONS = ['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra'];
 
