@@ -1,9 +1,9 @@
 # Loghi personali sincronizzati sull'account (R2 + D1) — 22/10/2026
 
-**Stato: codice e test pronti; la risorsa cloud NON esiste ancora e nulla è stato distribuito.** Finché il bucket R2 non è creato e collegato, il Worker risponde `503 not-configured` alle rotte dei loghi, il servizio non dichiara `logo-sync` e il gioco tiene i loghi sul dispositivo (come prima), mostrando «La copia online dei loghi non è attiva su questo sito».
+**Stato aggiornato 23/10/2026: bucket R2 creato, binding `LOGOS` attivato in `main` e migrazioni D1 `0002`–`0005` applicate.** Il Worker pubblicato dichiara `logo-sync`; resta da completare la prova end-to-end del caricamento e recupero su due browser reali. Se il binding non è disponibile in un ambiente, il Worker risponde `503 not-configured` e il gioco mantiene la copia locale.
 
 ## Cosa fa
-- **Server** (`worker.js`, rotte `/api/logos`): `GET /api/logos` (elenco: metadati e cancellazioni), `GET /api/logos/:partyId` (immagine), `PUT /api/logos/:partyId` (carica o sostituisce), `DELETE /api/logos/:partyId`. Il proprietario è sempre l'account della sessione verificata dal server (mai un ID inviato dal client). Solo PNG, JPEG, WebP riconosciuti dai byte, al massimo 300 KB e 60 loghi per account; identificativo `[\w.-]{1,120}`. Ogni scrittura indica la versione vista (`x-base-version`): una versione diversa è `409 conflict`, nulla viene sovrascritto; la stessa immagine ripetuta non crea una versione nuova (idempotenza). Le immagini sono in R2 sotto `logos/<id-account>/…`; i metadati (versione, SHA-256, tipo, dimensioni, nome, date) in D1 (`logos`). Una cancellazione lascia una riga con `deleted_at` perché gli altri dispositivi la apprendano.
+- **Server** (`worker.js`, rotte `/api/logos`): `GET /api/logos` (elenco: metadati e cancellazioni), `GET /api/logos/:partyId` (immagine), `PUT /api/logos/:partyId` (carica o sostituisce), `DELETE /api/logos/:partyId`. Il proprietario è sempre l'account della sessione verificata dal server (mai un ID inviato dal client). Solo PNG, JPEG, WebP riconosciuti dai byte, al massimo 300 KB e 150 loghi per account; identificativo `[\w.-]{1,120}`. Ogni scrittura indica la versione vista (`x-base-version`): una versione diversa è `409 conflict`, nulla viene sovrascritto; la stessa immagine ripetuta non crea una versione nuova (idempotenza). Le immagini sono in R2 sotto `logos/<id-account>/…`; i metadati (versione, SHA-256, tipo, dimensioni, nome, date) in D1 (`logos`). Una cancellazione lascia una riga con `deleted_at` perché gli altri dispositivi la apprendano.
 - **Cancellazione dell'account** (`DELETE /api/account`, e la pulizia degli account inattivi se sarà accesa): prima si svuota il prefisso dell'account in R2; se il bucket non risponde l'account **non** viene eliminato (risposta 502, si può ripetere), poi D1 in un unico batch.
 - **Client** (`src/data/repositories/logo-sync.js`, `personal-logos.js`): IndexedDB resta la cache che funziona offline. Sincronizzazione all'accesso, all'apertura del catalogo, al ritorno della rete, dopo una modifica e su richiesta («Sincronizza ora»), una alla volta. Un caricamento vale solo se il cloud risponde con checksum e dimensione dell'immagine inviata; fino ad allora il logo resta «in attesa» e si riprova (nessun duplicato). Copie diverse su dispositivo e cloud: **conflitto**, si conservano entrambe e il giocatore sceglie («tieni quello di questo dispositivo» / «tieni quello dell'account»). Un logo cancellato su un dispositivo cancella il cloud solo se il cloud è ancora alla versione nota; altrimenti torna.
 
@@ -13,12 +13,15 @@
 - I riferimenti ai loghi nelle carriere sono gli ID canonici dei partiti: non cambiano e non serve una mappatura. (I loghi disegnati con il costruttore per un partito fondato dal giocatore stanno già nei dati di quella carriera e non fanno parte del catalogo.)
 - **Rollback**: la migrazione non cancella nulla prima della verifica; per tornare indietro basta non usare l'account (i loghi locali restano) o eliminare i loghi online dal catalogo / l'account. Un logo già perso dal dispositivo prima della migrazione non è recuperabile dal server se non ne esiste una copia remota.
 
-## Cosa devi creare e configurare (non è stato fatto, nessun deploy)
-1. Creare il bucket (una volta): `npx wrangler r2 bucket create politicando-logos`
-2. In `wrangler.jsonc`, togliere il commento al blocco `r2_buckets` (`{ "binding": "LOGOS", "bucket_name": "politicando-logos" }`). **Va fatto solo dopo il passo 1**: un binding a un bucket inesistente fa fallire il deploy.
-3. La tabella `logos` si crea da sola alla prima richiesta (`worker.js`); in alternativa applicare la migrazione: `npx wrangler d1 migrations apply politicando-accounts --remote` (`migrations/0005_personal_logos.sql`).
-4. Distribuire come per ogni modifica del Worker (push su `main`, Workers Builds). Verificare con un account di prova: `GET /api/account/status` deve elencare `logo-sync`.
-5. Il bucket R2 è un fornitore di archiviazione in più dentro Cloudflare (già responsabile del trattamento): verificare, a cura del titolare, che il DPA di Cloudflare copra R2 (resta aperto il requisito `cloudflare-dpa`). L'informativa (§3, §5, §7) e i termini (§4) descrivono già i loghi online.
+## Stato della configurazione cloud (aggiornato 23/10/2026)
+
+- [x] Bucket R2 `politicando-logos` creato.
+- [x] Binding `LOGOS` attivato in `wrangler.jsonc` e integrato in `main`.
+- [x] Migrazioni D1 `0002`–`0005_personal_logos.sql` applicate al database remoto.
+- [x] Il Worker pubblicato dichiara `logo-sync` in `/api/account/status`.
+- [ ] Completare il test reale con un account di prova su due browser separati.
+- [ ] Verificare che il DPA di Cloudflare copra anche R2 (requisito `cloudflare-dpa`).
+
 
 ## Test
 `node scripts/check-logo-sync.mjs` (in `check:all`): rotte e limiti, proprietario dalla sessione, conflitti, idempotenza, secondo dispositivo, isolamento A/B, offline e guasti del bucket con ripetizione senza duplicati né orfani, cancellazione, migrazione legacy e ospite, eliminazione dell'account con pulizia di R2 e D1, assenza di bucket. Usano un D1 e un R2 simulati in memoria (`scripts/lib/local-worker.mjs`): nessun dato reale. Non provato contro un R2 reale.
