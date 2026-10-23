@@ -135,7 +135,7 @@ store.createCareer(draft(), [realParty], groups);
 {
   const poll = first(store.getState());
   assert.equal(poll.source, 'real', 'Realistico: il primo sondaggio è dato reale.');
-  assert.ok(poll.real && /youtrend/i.test(poll.real.sourceUrl), 'Con la sua fonte.');
+  assert.ok(poll.real && /(youtrend|bidimedia)/i.test(poll.real.sourceUrl), 'Con la sua fonte (la rilevazione reale in uso alla data di inizio).');
   assert.ok(!poll.scenario, 'Senza scenario.');
   assert.equal(store.getState().career.pollScenario, null, 'E la carriera non porta nessuno scenario.');
   assert.equal(poll.results.filter(row => row.real).length, poll.results.length - poll.results.filter(row => row.outsideSource).length, 'Le righe sono dati reali.');

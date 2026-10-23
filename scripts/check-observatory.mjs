@@ -368,9 +368,18 @@ console.log('Scala del voto, offerte di sostegno e collegio uninominale verifica
 
 // ---------- 8. alliances: windows, subjects, memory, no duplicate effects ----------
 {
-  const w = JSON.parse(JSON.stringify(world));
+  // Whether two forces have joined by a given week depends on the chance of each career (an alliance of at least two forces, not the player's): the section is about what the player can do with such
+  // an alliance, so the career is played on, week by week, until one exists (it must within a few years: the world forms them), and the test fails if none ever does.
+  const isOpen = (item, me) => item.status === 'active' && item.partyIds.length >= 2 && !item.partyIds.includes(me);
+  let source = world;
+  if (!source.alliances.some(item => isOpen(item, source.playerPartyId ?? source.parties.find(party => party.isPlayer).id))) {
+    const wait = await start(existing);
+    for (let step = 0; step < 260 && !wait.getState().world.alliances.some(item => isOpen(item, wait.getState().world.playerPartyId ?? wait.getState().world.parties.find(party => party.isPlayer).id)); step++) weeks(wait, 1);
+    source = wait.getState().world;
+  }
+  const w = JSON.parse(JSON.stringify(source));
   const me = w.playerPartyId ?? w.parties.find(item => item.isPlayer).id;
-  const open = w.alliances.find(item => item.status === 'active' && item.partyIds.length >= 2 && !item.partyIds.includes(me));
+  const open = w.alliances.find(item => isOpen(item, me));
   assert.ok(open, 'Nel mondo ci sono coalizioni a cui il partito può aderire.');
   const ties = JSON.stringify(w.ties);
   const joined = engine.joinCoalition(w, open.id, '2027-01-14');

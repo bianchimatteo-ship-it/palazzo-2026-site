@@ -125,11 +125,15 @@ for (const force of forces) {
   if (values.length < 0.6 * SEEDS) continue;
   const t = avg(values) / ((dev(values) || 1e-9) / Math.sqrt(values.length));
   trends.push(`${force.label} ${(avg(values) * 100).toFixed(1)}%`);
+  // A force that starts below one per cent (the lists the BiDiMedia poll measures at 0,5–0,8%) lives against the floor of the world (0,3): a relative change there is a few hundredths of a point and
+  // the floor is a reflecting barrier, so only the absolute movement is judged (at most half a point in ten years), not the relative trend.
+  if (force.share < 1) { assert.ok(Math.abs(avg(values)) * force.share <= 0.5, `${force.label}: deriva assoluta oltre mezzo punto in dieci anni (${(avg(values) * force.share).toFixed(2)} punti).`); continue; }
   assert.ok(Math.abs(t) <= 3 || Math.abs(avg(values)) <= 0.03, `${force.label}: tendenza sistematica in dieci anni (${(avg(values) * 100).toFixed(1)}% in media, t ${t.toFixed(1)}).`);
 }
-const byRole = flag => avg(forces.filter(force => force.governing === flag).flatMap(force => shares.get(force.id)));
+// (the forces under one per cent live against the floor of the world and are judged in absolute points above: they are left out of the relative averages by role and by size)
+const byRole = flag => avg(forces.filter(force => force.share >= 1 && force.governing === flag).flatMap(force => shares.get(force.id)));
 assert.ok(Math.abs(byRole(true) - byRole(false)) <= 0.03, `Governo e opposizione senza vantaggi strutturali (${(byRole(true) * 100).toFixed(1)}% contro ${(byRole(false) * 100).toFixed(1)}%).`);
-const bySize = (min, max) => avg(forces.filter(force => force.share >= min && force.share < max).flatMap(force => own.get(force.id)));
+const bySize = (min, max) => avg(forces.filter(force => force.share >= Math.max(1, min) && force.share < max).flatMap(force => own.get(force.id)));
 assert.ok([bySize(10, 100), bySize(4, 10), bySize(0, 4)].every(value => Math.abs(value) <= 0.05), `Nessun vantaggio per dimensione (grandi ${(bySize(10, 100) * 100).toFixed(1)}%, medie ${(bySize(4, 10) * 100).toFixed(1)}%, piccole ${(bySize(0, 4) * 100).toFixed(1)}%).`);
 assert.ok(playerMoved < 0.01 && playerEffects === 0, `Il partito del giocatore si muove solo con le sue azioni (spostamento ${playerMoved}, effetti esterni ${playerEffects}).`);
 

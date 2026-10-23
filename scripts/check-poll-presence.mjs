@@ -57,7 +57,7 @@ assert.ok(!html.includes('Partito Socialista Italiano'), 'Le forze del database 
 // ---------- 2. every other force of the database can enter later ----------
 const measured = new Set(source.results.map(row => canonical(row.entityId)));
 const inLists = new Set(db.coalitions.filter(item => measured.has(item.id)).flatMap(item => item.componentPartyIds ?? []));
-const eligible = [...db.parties, ...db.politicalMovements].filter(item => item.source === 'real' && item.verified === true && !item.sameEntityAs && item.status === 'active' && !measured.has(item.id) && !inLists.has(item.id)).map(item => item.id);
+const eligible = [...db.parties, ...db.politicalMovements].filter(item => item.source === 'real' && (item.verified === true || item.verificationStatus === 'in-attesa-di-conferma') && !item.sameEntityAs && item.status === 'active' && !measured.has(item.id) && !inLists.has(item.id)).map(item => item.id);
 const latentIds = state.world.latent.map(item => item.id);
 assert.deepEqual([...latentIds].sort(), [...eligible].sort(), 'Tutti i partiti e movimenti reali attivi fuori dal primo sondaggio sono in attesa, senza doppioni.');
 assert.ok(latentIds.includes(PSI) && !latentIds.includes('party-registro-p1-2014-10-ir') && !latentIds.includes('party-mef-2025-15'), 'Esclusi i partiti storici e i doppioni MEF.');
