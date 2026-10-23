@@ -53,7 +53,7 @@ URL richiesti (sito pubblicato): politica sulla privacy `https://palazzo-2026-si
   > • Tutto ciò che accade nella tua partita (voti, notizie, sondaggi, rapporti) è inventato dal gioco: non è informazione elettorale, né giornalismo reale, né una previsione.
   > • Gioca senza account: la partita resta sul tuo dispositivo e non invia nulla ai nostri server. L'account, facoltativo e riservato a chi ha almeno 14 anni, serve a ritrovare le carriere su altri dispositivi.
   > • Nessuna pubblicità, nessuna analisi, nessun acquisto.
-  > • Puoi aggiungere, solo per te e sul tuo dispositivo, i loghi dei partiti che hai il diritto di usare.
+  > • Puoi aggiungere, solo per te, i loghi dei partiti che hai il diritto di usare: restano sul tuo dispositivo e, se hai un account, sono copiati anche nell'archivio online del tuo account per ritrovarli su altri dispositivi.
   >
   > POLITICANDO 2026 non è collegato né approvato da partiti, movimenti, istituzioni o persone reali citati.
 
@@ -67,7 +67,7 @@ URL richiesti (sito pubblicato): politica sulla privacy `https://palazzo-2026-si
   > • Everything that happens in your game (votes, news, polls, relationships) is invented by the game: it is not electoral information, not real journalism and not a forecast.
   > • Play without an account: the game stays on your device and sends nothing to our servers. The account, optional and reserved for people aged 14 or over, lets you find your careers on other devices.
   > • No ads, no analytics, no purchases.
-  > • You can add, for yourself and on your own device, the party logos you have the right to use.
+  > • You can add, for yourself, the party logos you have the right to use: they stay on your device and, if you have an account, are also copied to your account's online storage so you can find them on other devices.
   >
   > POLITICANDO 2026 is neither connected to nor approved by the parties, movements, institutions or people it mentions.
 
@@ -84,8 +84,8 @@ Le dichiarazioni le compila e le firma il titolare. Qui ci sono solo i **fatti v
 | Accesso all'app | Tutte le funzioni sono disponibili senza account; l'account è facoltativo. Nessuna credenziale di prova è fornita nel repository: il revisore può giocare subito o creare un proprio account di prova (basta nome utente e password; l'e-mail è facoltativa). Per provare il recupero password serve un indirizzo e-mail reale. |
 | Pubblico di destinazione e Famiglie | **DA DECIDERE dal titolare** (vedi `docs/minori-e-privacy.md` §3). Non scegliere le fasce per superare i controlli. Fatto: l'account è riservato a chi dichiara almeno 14 anni; si gioca senza account a qualunque età. |
 | Classificazione dei contenuti (IARC) | **Questionario da compilare dal titolare.** Fatti utili: tema politico/elettorale reale simulato; nessuna violenza, sesso, gioco d'azzardo, linguaggio volgare né uso di sostanze nel gioco; contenuti generati dall'utente: solo i nomi inventati del proprio personaggio e dei propri partiti, privati (non condivisi con altri utenti); nessuna chat né condivisione di posizione. |
-| Sicurezza dei dati — raccolta | Con account: *Informazioni personali* → nome utente e (facoltativo) e-mail; *Attività nell'app* → contenuto dei salvataggi; identificativi → impronta di sessione. Senza account: nessun dato raccolto. |
-| Sicurezza dei dati — condivisione | Nessuna vendita né condivisione a fini di pubblicità. Fornitori che trattano per conto del titolare: Cloudflare (hosting, D1, KV) e Google Apps Script/Gmail (solo invio dei messaggi e-mail): da dichiarare secondo le definizioni correnti di Play (la qualifica di Google è un punto aperto, `email-fornitore`). |
+| Sicurezza dei dati — raccolta | Con account: *Informazioni personali* → nome utente e (facoltativo) e-mail; *Attività nell'app* → contenuto dei salvataggi; *Foto e video* → i loghi scelti dall'utente (PNG, JPEG o WebP, fino a 300 KB e 150 per account), solo con un account, conservati in R2 con i metadati in D1 ed eliminabili uno a uno o con l'account; identificativi → impronta di sessione. Senza account: nessun dato raccolto. |
+| Sicurezza dei dati — condivisione | Nessuna vendita né condivisione a fini di pubblicità. Fornitori che trattano per conto del titolare: Cloudflare (hosting, D1, KV, R2) e Google Apps Script/Gmail (solo invio dei messaggi e-mail): da dichiarare secondo le definizioni correnti di Play (la qualifica di Google è un punto aperto, `email-fornitore`). |
 | Sicurezza dei dati — sicurezza | Dati in transito cifrati (HTTPS); password mai inviata né conservata in chiaro; eliminazione dei dati disponibile in app e dal web. |
 | Eliminazione dell'account | In app: Menu → Account → «Elimina il mio account»; web: URL indicato sopra. Rimuove account, salvataggi con versioni precedenti, e-mail e sessioni (test `check-account-deletion`). |
 | App governativa / finanziaria / salute / notizie | Non è un'app di notizie né governativa; è una simulazione: la scheda dice che non è informazione elettorale né giornalismo. |
