@@ -106,7 +106,8 @@ await withBrowser(async browser => {
   assert.equal(now.accent, fn.accent, `L’accento della pagina è quello calcolato (${now.accent}).`);
   assert.ok(!now.chip.img && /Futuro Nazionale/.test(now.chip.text), `Il riquadro del partito mostra il segno generato dal gioco (nessun logo di terzi) e il nome (${JSON.stringify(now.chip)}).`);
   assert.ok(now.navActive.includes('34, 84, 200') || now.navActive.includes(hexToRgb(fn.accent)), 'La voce attiva del menu usa il colore del partito.');
-  assert.equal(now.top.shown, false, 'Sul computer la barra alta non ripete il segno del partito (c’è il riquadro nel menu).');
+  // Since the top-bar redesign (src/sections.css, «computer e tablet: barra alta con i due loghi affiancati») the top bar shows the party's sign next to the POLITICANDO logo on every width: the test follows the design that is in force.
+  assert.equal(now.top.shown, true, 'Sul computer la barra alta mostra il segno del partito accanto al logo del gioco.');
   await viewport(390, 844, true); await rerender();
   now = await state();
   assert.equal(now.top.shown, true, 'Sul telefono il segno del partito è nella barra alta.');
