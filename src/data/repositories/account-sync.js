@@ -10,7 +10,7 @@
 // The last one is kept per CAREER (not per slot name and not per account) together with what the copy was when it was synced (its local revision and how far it had got). A copy
 // goes online only if it descends from that: an older copy with the same name does not inherit the newest revision. Without that proof (a copy that was never linked, a record written by
 // the old protocol) nothing is uploaded automatically: the player reconciles first.
-import { hiddenOwner, releaseCareersOf } from './career-visibility.js?v=20261023-1';
+import { hiddenOwner, releaseCareersOf } from './career-visibility.js?v=20261026-1';
 const PRODUCTION_ORIGIN = 'https://palazzo-2026-site.bianchimatteo657.workers.dev';
 const ACCOUNT_KEY = 'politicando.account.v1';
 // The old record (revision per slot and per account, with no provenance): never trusted again to authorize an upload; kept only so that nothing is erased.

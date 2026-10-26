@@ -1,11 +1,11 @@
 // The plan of the week: the operations the player collects (activities, committee and local-leader actions, treasury operations) and does together, after seeing what they cost and what is
 // left. The tray shows the list with the days, funds and capital each one takes from the one before, names the step that cannot be done and why, and nothing runs until the player confirms.
-import { WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261023-1';
-import { CADRE_ACTIONS } from '../data/simulation/party-life-rules.js?v=20261023-1';
-import { TREASURY_OPERATIONS } from '../data/simulation/finance-rules.js?v=20261023-1';
-import { COMMITTEE_ACTIONS } from '../core/committee-engine.js?v=20261023-1';
-import { esc, euro } from './sections-kit.js?v=20261023-1';
-import { glyph } from './visuals.js?v=20261023-1';
+import { WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261026-1';
+import { CADRE_ACTIONS } from '../data/simulation/party-life-rules.js?v=20261026-1';
+import { TREASURY_OPERATIONS } from '../data/simulation/finance-rules.js?v=20261026-1';
+import { COMMITTEE_ACTIONS } from '../core/committee-engine.js?v=20261026-1';
+import { esc, euro } from './sections-kit.js?v=20261026-1';
+import { glyph } from './visuals.js?v=20261026-1';
 
 export const PLAN_MAX = 12;
 // The identity of an operation (the target of an activity is not part of it: the same activity is the same step).
