@@ -70,6 +70,19 @@ assert.ok(!root.innerHTML.includes('menu-popup-backdrop'), 'La chiusura del popu
 await click({ menu: 'guida' });
 let menuHtml = await click({ menu: 'impostazioni' });
 for (const key of ['sound', 'volume', 'motion', 'toasts', 'autosave', 'weeksPerTurn', 'textSize', 'contrast', 'density']) assert.ok(menuHtml.includes(`data-setting-key="${key}"`), `Impostazione mancante: ${key}`);
+// Animations: off by default (nothing saved), also in the page before the script runs; the three choices stay in the settings, a saved choice is kept and they can be switched on again.
+const indexHtml = await readFile(fileURLToPath(new URL('../index.html', import.meta.url)), 'utf8');
+assert.match(indexHtml, /<html[^>]*\sdata-motion="off"/, 'index.html parte con data-motion="off": nessuna animazione durante il primo caricamento.');
+assert.equal(loadSettings().motion, 'off', 'Senza preferenza salvata le animazioni sono disattivate.');
+assert.equal(html.dataset.motion, 'off', 'All’avvio la pagina ha le animazioni disattivate.');
+assert.equal(localStorage.getItem('politicando.settings.v1'), null, 'Il valore predefinito non viene scritto come scelta del giocatore.');
+assert.ok(['Complete', 'Ridotte', 'Disattivate'].every(label => menuHtml.includes(`>${label}<`)) && ['full', 'reduced', 'off'].every(value => menuHtml.includes(`data-setting-key="motion" data-setting-value="${value}"`)), 'Le impostazioni offrono Complete, Ridotte e Disattivate.');
+await click({ settingKey: 'motion', settingValue: 'full' });
+assert.equal(html.dataset.motion, 'full', 'Le animazioni si riattivano dalle impostazioni.');
+assert.equal(loadSettings().motion, 'full', 'La scelta «Complete» resta salvata (una preferenza esplicita non torna al valore predefinito).');
+assert.equal(JSON.parse(localStorage.getItem('politicando.settings.v1')).motion, 'full', 'La scelta è scritta nelle preferenze del browser.');
+await click({ settingKey: 'motion', settingValue: 'off' });
+assert.equal(html.dataset.motion, 'off', 'Si possono disattivare di nuovo.');
 await click({ settingKey: 'motion', settingValue: 'reduced' });
 await click({ settingKey: 'textSize', settingValue: '112' });
 await click({ settingKey: 'contrast', settingValue: 'high' });
@@ -83,7 +96,7 @@ assert.ok(!(await click({ confirm: 'cancel' })).includes('confirm-dialog'), 'Ann
 assert.equal(loadSettings().motion, 'reduced', 'Annullando non cambia nulla.');
 await click({ menuAction: 'reset-settings' });
 await click({ confirm: 'ok' });
-assert.equal(loadSettings().motion, 'full');
+assert.equal(loadSettings().motion, 'off', 'Ripristinando le impostazioni tornano le animazioni disattivate (il valore predefinito).');
 assert.ok((await click({ menu: 'carica' })).includes('Nessuna carriera attiva negli slot'));
 // Account: sign in or sign up from the menu; the career is then kept online too.
 menuHtml = await click({ menu: 'account' });

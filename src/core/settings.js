@@ -6,7 +6,7 @@ export const SETTINGS_SCHEMA = Object.freeze({
   language: { label: 'Lingua', options: [['it', 'Italiano'], ['en', 'English']], default: 'it' },
   sound: { label: 'Effetti sonori', options: [['on', 'Attivi'], ['off', 'Disattivati']], default: 'on' },
   volume: { label: 'Volume', options: [['30', 'Basso'], ['60', 'Medio'], ['100', 'Alto']], default: '60' },
-  motion: { label: 'Animazioni', options: [['full', 'Complete'], ['reduced', 'Ridotte'], ['off', 'Disattivate']], default: 'full' },
+  motion: { label: 'Animazioni', options: [['full', 'Complete'], ['reduced', 'Ridotte'], ['off', 'Disattivate']], default: 'off' },
   toasts: { label: 'Messaggi a comparsa', options: [['on', 'Mostra'], ['off', 'Nascondi']], default: 'on' },
   toastLength: { label: 'Durata dei messaggi', options: [['short', 'Breve'], ['normal', 'Normale'], ['long', 'Lunga']], default: 'normal' },
   // `scoped`: the choice belongs to the account that is signed in (or to the browser when nobody is), so that one account never changes another's; see saveSetting.
