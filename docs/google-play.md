@@ -13,7 +13,7 @@
 | Dipendenze native | Capacitor 8.5.x, AndroidX appcompat/coordinatorlayout/core-splashscreen; nessun SDK di pubblicità, analisi, pagamenti o notifiche push (il plugin google-services si applica solo se esiste `google-services.json`, che non c'è) | nessun SDK di terzi |
 | Rete | solo HTTPS (origine `https://localhost` dell'app, Worker pubblicato in HTTPS); nessun `usesCleartextTraffic`, nessun `server.url` in `capacitor.config.json` | ok |
 | Backup | `allowBackup="true"` (predefinito di Capacitor): Android può includere i dati dell'app nel backup Google dell'utente | dichiarato nell'informativa (§7); il titolare può scegliere di disattivarlo |
-| Firma di rilascio | **aggiunta** in `android/app/build.gradle`: legge `android/keystore.properties` (ignorato da git) o le variabili `POLITICANDO_KEYSTORE_FILE`, `_KEYSTORE_PASSWORD`, `_KEY_ALIAS`, `_KEY_PASSWORD`; senza di esse il rilascio resta non firmato e Gradle lo segnala | nessun segreto nel repository; `.gitignore` esclude `*.jks`, `*.keystore` e `keystore.properties` |
+| Firma di rilascio | **aggiunta** in `android/app/build.gradle`: legge `android/keystore.properties` (ignorato da git) o le variabili `POLITICANDO_KEYSTORE_FILE`, `_KEYSTORE_PASSWORD`, `_KEY_ALIAS`, `_KEY_PASSWORD`; senza una chiave valida `bundleRelease`/`assembleRelease` **falliscono** con un messaggio che elenca cosa manca (mai i valori); le build debug non sono toccate | nessun segreto nel repository; `.gitignore` esclude `*.jks`, `*.keystore` e `keystore.properties` |
 | Segreti nel bundle | `npm run build:www` rifiuta file estranei, segreti e host esterni; la credenziale amministrativa non è nel codice (`check-admin-credential`) | verificato dai test |
 | Dipendenze npm | `npm audit --omit=dev`: 3 avvisi *moderate* (`uuid` → `xcode` → `@capacitor/cli`), solo strumenti di build, non inclusi nell'app; la correzione proposta (`--force`) è un declassamento del CLI e non è stata applicata | da rivedere a ogni aggiornamento di Capacitor |
 
@@ -24,10 +24,12 @@ npm ci
 npm run version:build
 npm run build:www
 npx cap sync android
+npm run check:www && npm run check:android -- --release --previous-version-code <versionCode già su Play>
 # prima volta: creare la chiave di caricamento (conservarla fuori dal repository e farne una copia sicura)
 keytool -genkeypair -v -keystore politicando-upload.jks -alias upload -keyalg RSA -keysize 2048 -validity 10000
 # android/keystore.properties (non committare): storeFile=/percorso/politicando-upload.jks  storePassword=…  keyAlias=upload  keyPassword=…
 cd android && ./gradlew bundleRelease
+# dopo: verificare la firma del .aab (jarsigner -verify -verbose -certs app-release.aab) prima del caricamento; incrementare versionCode in android/app/build.gradle a ogni caricamento
 # risultato: android/app/build/outputs/bundle/release/app-release.aab
 ```
 

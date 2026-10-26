@@ -1,7 +1,7 @@
 apply plugin: 'com.android.application'
 
 // Release signing: the key is never in the repository. Put `storeFile`, `storePassword`, `keyAlias` and `keyPassword` in android/keystore.properties (ignored by git) or in the environment variables
-// POLITICANDO_KEYSTORE_FILE, POLITICANDO_KEYSTORE_PASSWORD, POLITICANDO_KEY_ALIAS and POLITICANDO_KEY_PASSWORD. Without them the release bundle is built unsigned and Gradle says so.
+// POLITICANDO_KEYSTORE_FILE, POLITICANDO_KEYSTORE_PASSWORD, POLITICANDO_KEY_ALIAS and POLITICANDO_KEY_PASSWORD. Without them a release build FAILS (see the guard below); debug builds are unaffected.
 def keystoreProps = new Properties()
 def keystoreFile = rootProject.file('keystore.properties')
 if (keystoreFile.exists()) keystoreFile.withInputStream { keystoreProps.load(it) }
@@ -11,7 +11,19 @@ def releaseStorePassword = signingValue('storePassword', 'POLITICANDO_KEYSTORE_P
 def releaseKeyAlias = signingValue('keyAlias', 'POLITICANDO_KEY_ALIAS')
 def releaseKeyPassword = signingValue('keyPassword', 'POLITICANDO_KEY_PASSWORD')
 def releaseSigningReady = releaseStoreFile && releaseStorePassword && releaseKeyAlias && releaseKeyPassword && file(releaseStoreFile).exists()
-if (!releaseSigningReady) logger.warn('POLITICANDO: no release signing key configured: the release bundle will NOT be signed (see docs/google-play.md).')
+// A release bundle without a valid key would be refused by Google Play, so building one is an ERROR, not a warning (debug builds are not affected). The message names what is missing, never a value.
+def missingSigning = []
+if (!releaseStoreFile) missingSigning << 'storeFile / POLITICANDO_KEYSTORE_FILE'
+else if (!file(releaseStoreFile).exists()) missingSigning << 'the keystore file it points to (not found)'
+if (!releaseStorePassword) missingSigning << 'storePassword / POLITICANDO_KEYSTORE_PASSWORD'
+if (!releaseKeyAlias) missingSigning << 'keyAlias / POLITICANDO_KEY_ALIAS'
+if (!releaseKeyPassword) missingSigning << 'keyPassword / POLITICANDO_KEY_PASSWORD'
+gradle.taskGraph.whenReady { graph ->
+    def releaseTask = graph.allTasks.find { it.path.startsWith(project.path + ':') && it.name ==~ /^(bundle|assemble|package|sign|publish)Release.*|.*ReleaseBundle$/ }
+    if (releaseTask != null && !releaseSigningReady) {
+        throw new GradleException("POLITICANDO: refusing to build ${releaseTask.name}: no valid release signing key (missing: ${missingSigning.join(', ')}). Configure android/keystore.properties or the POLITICANDO_KEY* environment variables (docs/google-play.md). Debug builds (assembleDebug) do not need it.")
+    }
+}
 
 android {
     namespace = "it.matteobianchi.politicando2026"

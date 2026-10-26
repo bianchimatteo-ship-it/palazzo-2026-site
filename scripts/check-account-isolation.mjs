@@ -133,6 +133,8 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   // ---------- 3. another account signs in: the career of the first one is not theirs ----------
   await fill('login', { username: 'legacy.b', password: 'password-di-b' });
   await wait(() => has('[data-isolation="foreign"]'));
+  // as in the first step: the sentence that names the account is completed after the online data is read
+  await wait(async () => /legacy\.a/.test(await text('.account-message')));
   assert.match(await text('.account-message'), /legacy\.a/, 'Il gioco dice a quale account è collegata.');
   assert.equal(saves('legacy.b').length, 0, 'Nel secondo account non è arrivato nulla.');
   await goto('');

@@ -89,13 +89,14 @@ const worker = await readFile(join(root, 'worker.js'), 'utf8');
 assert.ok(files.includes(wrangler.main), 'Il Worker principale esiste.');
 assert.equal(wrangler.assets?.directory, '.', 'Gli asset sono la radice del progetto (filtrata da .assetsignore).');
 assert.equal(wrangler.assets?.binding, 'ASSETS'); assert.deepEqual(wrangler.assets?.run_worker_first, ['/api/*'], 'Il Worker risponde solo a /api/*: il resto sono asset.');
-const bindings = new Set([...(wrangler.kv_namespaces ?? []).map(item => item.binding), ...(wrangler.d1_databases ?? []).map(item => item.binding), wrangler.assets?.binding, ...Object.keys(wrangler.vars ?? {})]);
+const bindings = new Set([...(wrangler.kv_namespaces ?? []).map(item => item.binding), ...(wrangler.d1_databases ?? []).map(item => item.binding), ...(wrangler.r2_buckets ?? []).map(item => item.binding), wrangler.assets?.binding, ...Object.keys(wrangler.vars ?? {})]);
 // Secrets of the Worker (never in the project) and the one hook for tests (a function: a Worker's variables are strings, so it cannot exist in production).
 // LOGO_BUCKET: an optional R2 bucket for the shared logo files, bound only when the owner creates one (declaring a bucket that does not exist would break the deploy); without it the files go to KV.
-// LOGOS: the R2 bucket of the personal logos of the accounts (docs/logo-sync.md): declared in wrangler.jsonc only after the owner has created the bucket (a binding to a bucket that does not exist breaks the deploy);
-// until then the routes answer 503 and the game keeps the logos on the device. The commented block in wrangler.jsonc is checked below.
-const WORKER_SECRETS = new Set(['ADMIN_SETUP_CODE', 'EMAIL_GATEWAY_SECRET', 'EMAIL_GATEWAY_TIMEOUT_MS', 'EMAIL_SEND', 'LOGO_BUCKET', 'LOGOS']);
-assert.ok(/\/\/\s*"r2_buckets": \[\{ "binding": "LOGOS", "bucket_name": "politicando-logos" \}\]/.test(await readFile(join(root, 'wrangler.jsonc'), 'utf8')), 'Il binding R2 dei loghi è preparato (commentato) in wrangler.jsonc.');
+// LOGOS: the R2 bucket of the personal logos of the accounts (docs/logo-sync.md): declared and active in wrangler.jsonc (the bucket was created by the owner; without it the routes answer 503 and the game keeps the logos on the device).
+// It is a declared binding, not a secret: it must stay active, so this check fails if the block is removed or commented out again.
+const WORKER_SECRETS = new Set(['ADMIN_SETUP_CODE', 'EMAIL_GATEWAY_SECRET', 'EMAIL_GATEWAY_TIMEOUT_MS', 'EMAIL_SEND', 'LOGO_BUCKET']);
+assert.deepEqual(wrangler.r2_buckets, [{ binding: 'LOGOS', bucket_name: 'politicando-logos' }], 'Il binding R2 dei loghi è dichiarato e attivo in wrangler.jsonc (non commentato).');
+assert.ok(/env\.LOGOS\b/.test(worker), 'Il Worker usa il binding LOGOS.');
 assert.ok(['EMAIL_GATEWAY_URL', 'PUBLIC_BASE_URL', 'ACCOUNT_EMAIL_REQUIRED'].every(name => name in (wrangler.vars ?? {})) && !('EMAIL_GATEWAY_SECRET' in (wrangler.vars ?? {})), 'Le impostazioni dell’email sono dichiarate; il segreto del gateway è un secret, non una variabile.');
 for (const used of new Set([...worker.matchAll(/\benv\.([A-Z_]+)\b/g)].map(match => match[1]))) assert.ok(bindings.has(used) || WORKER_SECRETS.has(used), `env.${used} è letto dal Worker ma non è dichiarato in wrangler.jsonc.`);
 assert.ok(worker.includes('ADMIN_SETUP_CODE') && !/ADMIN_SETUP_CODE['"]?\s*[:=]\s*['"][^'"]{3,}/.test(worker + stripped), 'Il codice di attivazione è un secret del Worker, non scritto nel progetto.');

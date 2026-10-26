@@ -271,9 +271,11 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     account.conflict = account.conflicts.find(item => item.careerId === careerIdNow()) ?? account.conflicts[0] ?? null;
   };
   Object.defineProperty(account, 'sync', { enumerable: true, get: () => syncViewOf() });
+  // The error of a link in a message (invalid or expired) is shown by the account screen; the read of the online data that finishes after it must not wipe it before the player has seen it.
+  let linkError = '';
   const refreshCloud = async ({ info = false } = {}) => {
     if (!account.user) return;
-    try { account.saves = await listCloudSaves(); account.error = ''; if (info) account.info = await accountApi.accountInfo().catch(() => account.info); }
+    try { account.saves = await listCloudSaves(); if (!linkError || account.error !== linkError) account.error = ''; if (info) account.info = await accountApi.accountInfo().catch(() => account.info); }
     catch (error) { if (error.status !== 401) account.error = error.message; account.user = currentAccount(); }
     refreshSyncView();
   };
@@ -2408,7 +2410,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     if (resetToken || verifyToken) {
       try { globalThis.history?.replaceState?.(null, '', `${globalThis.location.pathname}${globalThis.location.hash ?? ''}`); } catch { /* the code stays in the address; it works once anyway */ }
       menu.open = true; menu.view = 'account'; account.mode = resetToken ? 'reset' : 'login';
-      if (resetToken) accountApi.checkResetToken(resetToken).then(answer => { account.reset = { token: resetToken, username: answer.username }; render(store.getState(), store.getLastSaved()); }).catch(error => { account.error = error.message; account.mode = 'recover'; render(store.getState(), store.getLastSaved()); });
+      if (resetToken) accountApi.checkResetToken(resetToken).then(answer => { account.reset = { token: resetToken, username: answer.username }; render(store.getState(), store.getLastSaved()); }).catch(error => { account.error = linkError = error.message; account.mode = 'recover'; render(store.getState(), store.getLastSaved()); });
       else accountApi.verifyEmail(verifyToken).then(answer => { account.message = answer.message ?? 'Indirizzo email verificato.'; return account.user ? accountApi.accountInfo().then(info => { account.info = info; }) : null; }).catch(error => { account.error = error.message; }).finally(() => render(store.getState(), store.getLastSaved()));
     }
   }
