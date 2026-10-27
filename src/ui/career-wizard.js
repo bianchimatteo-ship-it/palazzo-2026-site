@@ -1,18 +1,18 @@
-import { residentsText } from '../core/municipal-rules.js?v=20261027-4';
-import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261027-4';
-import { LOGO_SHAPES, LOGO_SYMBOLS, partyLogoDataUrl } from './party-logo.js?v=20261027-4';
-import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261027-4';
-import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261027-4';
-import { AVATAR_FIELDS, AVATAR_LABELS, AVATAR_OPTIONS, DEFAULT_AVATAR, normalizeAvatar } from '../core/avatar.js?v=20261027-4';
-import { avatarSvg } from './avatar-svg.js?v=20261027-4';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261027-4';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261027-4';
-import { POLL_SCENARIOS, SCENARIO_LIMITS } from '../core/poll-scenario.js?v=20261027-4';
-import { startStep, startSummary } from './start-wizard.js?v=20261027-4';
-import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261027-4';
-import { normalizeStart } from '../core/start-engine.js?v=20261027-4';
-import { legacyBanner } from './hall-view.js?v=20261027-4';
-import { formatDate } from '../core/time.js?v=20261027-4';
+import { residentsText } from '../core/municipal-rules.js?v=20261027-5';
+import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261027-5';
+import { DEFAULT_LOGO_SECONDARY, LOGO_SECONDARY_PALETTE, LOGO_SHAPES, LOGO_SYMBOLS, isLogoColor, partyLogoDataUrl } from './party-logo.js?v=20261027-5';
+import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261027-5';
+import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261027-5';
+import { AVATAR_GROUPS, AVATAR_LABELS, AVATAR_OPTIONS, DEFAULT_AVATAR, normalizeAvatar } from '../core/avatar.js?v=20261027-5';
+import { avatarSvg } from './avatar-svg.js?v=20261027-5';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261027-5';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261027-5';
+import { POLL_SCENARIOS, SCENARIO_LIMITS } from '../core/poll-scenario.js?v=20261027-5';
+import { startStep, startSummary } from './start-wizard.js?v=20261027-5';
+import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261027-5';
+import { normalizeStart } from '../core/start-engine.js?v=20261027-5';
+import { legacyBanner } from './hall-view.js?v=20261027-5';
+import { formatDate } from '../core/time.js?v=20261027-5';
 
 const POSITIONS = ['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra'];
 
@@ -36,12 +36,12 @@ const val = (draft, field) => esc(draft[field] ?? '');
 
 export function makeCareerDraft(currentDate, parties = [], hall = []) {
   return {
-    step: 1, errors: [], firstName: '', lastName: '', birthDate: '', gender: 'preferisco-non-specificare', avatar: { ...DEFAULT_AVATAR }, previousProfession: '', startingRole: null, startingOffice: null,
+    step: 1, errors: [], firstName: '', lastName: '', birthDate: '', gender: 'uomo', avatar: { ...DEFAULT_AVATAR }, previousProfession: '', startingRole: null, startingOffice: null,
     region: '', territorialUnit: '', municipality: '', municipalityCode: '', municipalityQuery: '', municipalityLimit: 40,
     initialLevel: 'comunale', parliamentStartMode: 'real-context', parliamentaryGroupId: '', groupQuery: '',
     partyMode: 'independent', partyId: parties.find(isSelectableParty)?.id ?? '',
     partyName: '', partyAbbreviation: '', partyDescription: '', partyColor: '#264d82', partyOrientation: 'Centrismo civico',
-    partyProgram: [], partyLogoMode: 'builder', partyLogoShape: 'cerchio', partyLogoSymbol: 'freccia', partyLogoUrl: '',
+    partyProgram: [], partyLogoMode: 'builder', partyLogoShape: 'cerchio', partyLogoSymbol: 'freccia', partyLogoSecondaryColor: DEFAULT_LOGO_SECONDARY, partyLogoUrl: '',
     partyPosition: 'centro', difficulty: 'normale', start: { profile: 'ordinaria', levels: {} }, hall, legacyId: '',
     pollMode: 'realistico', pollSeed: '', pollCustom: {},
     policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 }, currentDate
@@ -187,7 +187,7 @@ function profileStep(state, d) {
     <label>Nome<input name="firstName" value="${val(d, 'firstName')}" autocomplete="given-name" maxlength="40" placeholder="Il tuo nome" /></label>
     <label>Cognome<input name="lastName" value="${val(d, 'lastName')}" autocomplete="family-name" maxlength="50" placeholder="Il tuo cognome" /></label>
     <label>Data di nascita<input type="date" name="birthDate" value="${val(d, 'birthDate')}" max="${esc(d.currentDate ?? state.clock.currentDate)}" /></label>
-    <label>Genere<select name="gender"><option value="preferisco-non-specificare" ${d.gender === 'preferisco-non-specificare' ? 'selected' : ''}>Preferisco non specificare</option><option value="donna" ${d.gender === 'donna' ? 'selected' : ''}>Donna</option><option value="uomo" ${d.gender === 'uomo' ? 'selected' : ''}>Uomo</option><option value="non-binario" ${d.gender === 'non-binario' ? 'selected' : ''}>Non binario</option></select></label>
+    <label>Genere<select name="gender"><option value="uomo" ${d.gender === 'uomo' ? 'selected' : ''}>Uomo</option><option value="donna" ${d.gender === 'donna' ? 'selected' : ''}>Donna</option></select></label>
     ${professionField(d)}
   </div><small class="wizard-hint">Sono i dati del tuo personaggio, non i tuoi: puoi inventarli. Servono solo a questa carriera. La data di nascita è quella del personaggio.</small></section>${avatarEditor(d)}`;
 }
@@ -195,10 +195,17 @@ function profileStep(state, d) {
 // the avatar is its own field, never derived from (or tied to) the gender.
 function avatarEditor(d) {
   const avatar = normalizeAvatar(d.avatar);
-  const groups = AVATAR_FIELDS.map(field => {
+  // Every trait is shown with what it looks like: a colour sample for the colours, a small preview of the avatar itself (cropped on the head, with that choice applied) for the shapes.
+  const groups = AVATAR_GROUPS.map(field => {
     const swatches = AVATAR_OPTIONS[field][0].color !== undefined;
-    const choices = AVATAR_OPTIONS[field].map(item => `<button type="button" class="avatar-choice ${swatches ? 'is-swatch' : ''} ${avatar[field] === item.id ? 'selected' : ''}" data-avatar-field="${field}" data-avatar-value="${item.id}" aria-pressed="${avatar[field] === item.id}" ${swatches ? `title="${esc(item.label)}" aria-label="${esc(item.label)}" style="--sw:${item.color}"` : ''}>${swatches ? '<i></i>' : esc(item.label)}</button>`).join('');
-    return `<fieldset class="avatar-group" data-avatar-group="${field}"><legend>${esc(AVATAR_LABELS[field])}</legend><div class="avatar-choices">${choices}</div></fieldset>`;
+    const choices = AVATAR_OPTIONS[field].map(item => {
+      const on = avatar[field] === item.id;
+      const attrs = `data-avatar-field="${field}" data-avatar-value="${item.id}" aria-pressed="${on}" title="${esc(item.label)}" aria-label="${esc(item.label)}"`;
+      return swatches
+        ? `<button type="button" class="avatar-choice is-swatch ${on ? 'selected' : ''}" ${attrs} style="--sw:${item.color}"><i></i></button>`
+        : `<button type="button" class="avatar-choice is-mini ${on ? 'selected' : ''}" ${attrs}>${avatarSvg({ ...avatar, [field]: item.id }, { size: 56, label: '', focus: true, className: 'avatar-mini' })}<span>${esc(item.label)}</span></button>`;
+    }).join('');
+    return `<fieldset class="avatar-group" data-avatar-group="${field}"><legend>${esc(AVATAR_LABELS[field])}</legend><div class="avatar-choices ${swatches ? '' : 'is-minis'}">${choices}</div></fieldset>`;
   }).join('');
   return `<section class="summary-section avatar-editor" aria-labelledby="avatar-title" data-avatar-editor><div class="summary-section-heading"><div><span>AVATAR</span><strong id="avatar-title">Il tuo volto</strong></div></div><div class="avatar-editor-body"><div class="avatar-preview" data-avatar-preview>${avatarSvg(avatar, { size: 200, label: 'Anteprima dell’avatar' })}</div><div class="avatar-controls">${groups}</div></div><small class="wizard-hint">L’avatar è disegnato sul tuo dispositivo e compare in Profilo, in Home e in Parlamento. Non dipende dal genere.</small></section>`;
 }
@@ -361,13 +368,19 @@ function partyStep(d, parties, logoFor, parliamentaryGroups, partyLeaderships, p
 // The logo of the new party: built from shape, symbol and colours, linked from an address, or uploaded.
 export function wizardLogoPreview(d) {
   if (d.partyLogoMode === 'upload') return d.partyLogoPreview ?? null;
-  return partyLogoDataUrl({ shape: d.partyLogoShape, symbol: d.partyLogoSymbol, primary: d.partyColor, text: d.partyAbbreviation });
+  return partyLogoDataUrl({ shape: d.partyLogoShape, symbol: d.partyLogoSymbol, primary: d.partyColor, secondary: d.partyLogoSecondaryColor, text: d.partyAbbreviation });
+}
+// The second colour of the logo: the picker, its hexadecimal value (always in view) and a palette of ready colours. The main colour of the party stays its own field (partyColor).
+function secondaryColor(d) {
+  const value = isLogoColor(d.partyLogoSecondaryColor) ? d.partyLogoSecondaryColor : DEFAULT_LOGO_SECONDARY;
+  const palette = LOGO_SECONDARY_PALETTE.map(color => '<button type="button" class="logo-swatch ' + (color.toLowerCase() === value.toLowerCase() ? 'selected' : '') + '" data-logo-secondary="' + color + '" aria-pressed="' + (color.toLowerCase() === value.toLowerCase()) + '" title="' + color + '" aria-label="Secondo colore ' + color + '" style="--sw:' + color + '"><i></i></button>').join('');
+  return '<div class="wizard-full-field logo-secondary"><label class="color-field">Secondo colore del logo<span class="color-input-wrap"><input type="color" name="partyLogoSecondaryColor" value="' + esc(value) + '" /><span data-logo-secondary-hex>' + esc(value) + '</span></span></label><div class="logo-palette" role="group" aria-label="Colori predefiniti del logo">' + palette + '</div><small>Contorno, simbolo e sigla del logo. Il colore principale del partito resta quello scelto sopra.</small></div>';
 }
 function logoBuilder(d) {
   const mode = d.partyLogoMode ?? 'builder';
   const preview = wizardLogoPreview(d);
   const modes = [['builder', 'Crea con forme e simboli'], ['upload', 'Carica un file']].map(([id, label]) => '<label class="' + (mode === id ? 'active' : '') + '"><input type="radio" name="partyLogoMode" value="' + id + '" ' + (mode === id ? 'checked' : '') + ' />' + label + '</label>').join('');
-  const builder = mode === 'builder' ? '<label>Forma<select name="partyLogoShape">' + Object.entries(LOGO_SHAPES).map(([id, item]) => '<option value="' + id + '" ' + (d.partyLogoShape === id ? 'selected' : '') + '>' + esc(item.label) + '</option>').join('') + '</select></label><label>Simbolo<select name="partyLogoSymbol">' + Object.entries(LOGO_SYMBOLS).map(([id, item]) => '<option value="' + id + '" ' + (d.partyLogoSymbol === id ? 'selected' : '') + '>' + esc(item.label) + '</option>').join('') + '</select></label>' : '';
+  const builder = mode === 'builder' ? '<label>Forma<select name="partyLogoShape">' + Object.entries(LOGO_SHAPES).map(([id, item]) => '<option value="' + id + '" ' + (d.partyLogoShape === id ? 'selected' : '') + '>' + esc(item.label) + '</option>').join('') + '</select></label><label>Simbolo<select name="partyLogoSymbol">' + Object.entries(LOGO_SYMBOLS).map(([id, item]) => '<option value="' + id + '" ' + (d.partyLogoSymbol === id ? 'selected' : '') + '>' + esc(item.label) + '</option>').join('') + '</select></label>' + secondaryColor(d) : '';
   const url = '';
   // After choosing the file the editor opens in its slot: crop, ratio, zoom, transparency, dominant colour.
   const upload = mode === 'upload' ? '<label class="wizard-full-field logo-admin-upload">File PNG, JPEG o WebP (resta su questo dispositivo, nel tuo catalogo dei loghi)<input type="file" accept="image/png,image/jpeg,image/webp" data-wizard-logo-upload /></label>' + (d.partyLogoError ? '<small class="menu-error">' + esc(d.partyLogoError) + '</small>' : '') + '<div class="wizard-full-field" data-logo-editor-slot></div>' : '';

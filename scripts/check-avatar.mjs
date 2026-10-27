@@ -15,20 +15,24 @@ const build = (await readFile(new URL('../index.html', import.meta.url), 'utf8')
 const v = build ? `?v=${build}` : '?';
 const A = await import(`../src/core/avatar.js${v}`);
 const { avatarSvg } = await import(`../src/ui/avatar-svg.js${v}`);
-const { WIZARD_CHECKS, WIZARD_VIEWS, CAREER_STEPS, validateCareerStep, validateWizardStep } = await import(`../src/core/career-rules.js${v}`);
+const { WIZARD_CHECKS, WIZARD_VIEWS, CAREER_STEPS, GENDERS, normalizeGender, validateCareerStep, validateWizardStep } = await import(`../src/core/career-rules.js${v}`);
 const { makeCareerDraft, renderCareerWizard, WIZARD_STEPS } = await import(`../src/ui/career-wizard.js${v}`);
 const { validateEntity } = await import(`../src/data/schema.js${v}`);
 const lines = [];
 
 // ---------- 1. the options and the drawing ----------
-assert.deepEqual(A.AVATAR_FIELDS, ['face', 'skin', 'hair', 'hairstyle', 'beard', 'glasses', 'jacket']);
+assert.deepEqual(A.AVATAR_FIELDS, ['face', 'skin', 'hair', 'hairstyle', 'beard', 'glasses', 'jacket', 'eyes', 'expression', 'moustache'], 'I sette campi di prima restano in testa: un avatar salvato prima è un prefisso del nuovo.');
+assert.deepEqual([...A.AVATAR_GROUPS].sort(), [...A.AVATAR_FIELDS].sort(), 'L’editor mostra ogni campo.');
 const count = field => A.AVATAR_OPTIONS[field].length;
-assert.deepEqual([count('face'), count('skin'), count('hair'), count('hairstyle'), count('beard'), count('glasses'), count('jacket')], [3, 5, 5, 7, 3, 3, 4], 'Le opzioni richieste ci sono (almeno cinque acconciature).');
-assert.deepEqual(A.AVATAR_OPTIONS.face.map(item => item.id), ['maschile', 'femminile', 'neutro']);
+assert.deepEqual([count('face'), count('skin'), count('hair'), count('hairstyle'), count('beard'), count('glasses'), count('jacket'), count('eyes'), count('expression'), count('moustache')], [2, 5, 5, 12, 3, 3, 8, 5, 3, 5], 'Le opzioni richieste ci sono: 5 occhi, 3 espressioni, 12 acconciature, 8 giacche, 5 baffi.');
+assert.deepEqual(A.AVATAR_OPTIONS.face.map(item => item.id), ['maschile', 'femminile'], 'Volto: solo maschile e femminile (nessuna variante neutra).');
+assert.deepEqual(A.AVATAR_OPTIONS.moustache.map(item => item.id), ['nessuno', 'sottili', 'classici', 'folti', 'manubrio']);
+assert.deepEqual(A.AVATAR_OPTIONS.expression.map(item => item.id), ['serena', 'sorridente', 'determinata']);
+assert.ok(!JSON.stringify(A.AVATAR_OPTIONS).match(/neutr|binari|altro/i), 'Nessuna opzione neutra, non binaria o «altro».');
 assert.deepEqual(A.AVATAR_OPTIONS.hair.map(item => item.id), ['nero', 'castano', 'biondo', 'rosso', 'grigio']);
 assert.deepEqual(A.AVATAR_OPTIONS.beard.map(item => item.id), ['nessuna', 'corta', 'completa']);
 assert.deepEqual(A.AVATAR_OPTIONS.glasses.map(item => item.id), ['nessuno', 'tondi', 'rettangolari']);
-for (const field of ['skin', 'hair', 'jacket']) assert.ok(A.AVATAR_OPTIONS[field].every(item => /^#[\da-f]{6}$/i.test(item.color)), `${field}: ogni voce ha il suo colore.`);
+for (const field of ['skin', 'hair', 'jacket', 'eyes']) assert.ok(A.AVATAR_OPTIONS[field].every(item => /^#[\da-f]{6}$/i.test(item.color)), `${field}: ogni voce ha il suo colore.`);
 const base = A.DEFAULT_AVATAR;
 const draw = (change = {}, options = {}) => avatarSvg({ ...base, ...change }, options);
 const reference = draw();
@@ -41,6 +45,14 @@ for (const field of A.AVATAR_FIELDS) {
   }
   assert.equal(seen.size, count(field), `${field}: ogni scelta cambia il disegno (nessuna voce è uguale a un’altra).`);
 }
+for (const beard of A.AVATAR_OPTIONS.beard) {
+  const drawn = A.AVATAR_OPTIONS.moustache.map(item => draw({ beard: beard.id, moustache: item.id, hair: 'nero' }));
+  assert.equal(new Set(drawn).size, 5, `Baffi con barba «${beard.id}»: ogni stile cambia il disegno.`);
+  assert.ok(drawn.slice(1).every(svg => svg.includes('stroke-linejoin="round"/><g fill') || svg.includes('fill="#')), 'I baffi sono disegnati.');
+}
+for (const moustache of A.AVATAR_OPTIONS.moustache.slice(1)) assert.equal(new Set(A.AVATAR_OPTIONS.beard.map(item => draw({ moustache: moustache.id, beard: item.id }))).size, 3, `Baffi «${moustache.id}»: si combinano con ogni barba (tre disegni diversi).`);
+assert.notEqual(draw({ moustache: 'folti' }), draw({ moustache: 'folti', beard: 'completa' }), 'Barba e baffi sono indipendenti.');
+assert.notEqual(draw({}, { focus: true }), draw(), 'Il ritaglio sul volto (anteprime dell’editor) è un altro disegno.');
 assert.ok(!/https?:\/\/(?!www\.w3\.org)|data:|<image|<script|<foreignObject|href=|xlink|@import|url\((?!#)/.test(reference), 'L’avatar è disegnato solo con forme locali: nessuna immagine, indirizzo o script.');
 assert.equal(draw(), draw(), 'Lo stesso avatar dà sempre lo stesso disegno.');
 assert.ok(/role="img" aria-label="Avatar del tuo politico"/.test(draw()) && /aria-hidden="true"/.test(draw({}, { label: '' })), 'Nome accessibile, oppure decorativo.');
@@ -58,14 +70,21 @@ const ids = ['politico-1', 'giocatore-abc', 'p-2026-xyz', 'x'];
 for (const id of ids) {
   const first = A.defaultAvatarFor(id);
   assert.deepEqual(first, A.defaultAvatarFor(id), `${id}: l’aspetto predefinito è sempre lo stesso.`);
-  assert.ok(A.isValidAvatar(first) && first.face === 'neutro' && first.beard === 'nessuna' && first.glasses === 'nessuno', `${id}: valido, neutro, senza barba né occhiali.`);
+  assert.ok(A.isValidAvatar(first) && first.beard === 'nessuna' && first.moustache === 'nessuno' && first.glasses === 'nessuno' && ['maschile', 'femminile'].includes(first.face), `${id}: valido, senza barba, baffi né occhiali.`);
 }
 assert.ok(new Set(ids.map(id => JSON.stringify(A.defaultAvatarFor(id)))).size > 1, 'Gli aspetti predefiniti non sono tutti uguali.');
 const oldPlayer = { id: 'politico-vecchio', firstName: 'Ada', lastName: 'Prova', gender: 'donna' };
 assert.deepEqual(A.avatarOf(oldPlayer), A.defaultAvatarFor('politico-vecchio'), 'Una carriera senza avatar riceve il suo aspetto predefinito stabile.');
 assert.equal('avatar' in oldPlayer, false, 'Mostrarlo non modifica il record.');
 assert.equal(A.avatarOf({ ...oldPlayer, gender: 'uomo' }).face, A.avatarOf(oldPlayer).face, 'Il genere non decide l’avatar.');
-lines.push('aspetto predefinito stabile per le vecchie carriere');
+// an avatar saved before the new traits (seven fields, and the old neutral face) keeps what it had
+const legacy = { id: 'politico-legacy', avatar: { face: 'neutro', skin: 'bruna', hair: 'rosso', hairstyle: 'riccio', beard: 'corta', glasses: 'tondi', jacket: 'bordeaux' } };
+const kept = A.avatarOf(legacy);
+assert.deepEqual({ skin: kept.skin, hair: kept.hair, hairstyle: kept.hairstyle, beard: kept.beard, glasses: kept.glasses, jacket: kept.jacket }, { skin: 'bruna', hair: 'rosso', hairstyle: 'riccio', beard: 'corta', glasses: 'tondi', jacket: 'bordeaux' }, 'Un avatar di prima conserva le sue scelte.');
+assert.deepEqual([kept.eyes, kept.expression, kept.moustache], ['marroni', 'serena', 'nessuno'], 'I tratti nuovi prendono i valori predefiniti.');
+assert.ok(['maschile', 'femminile'].includes(kept.face) && kept.face === A.defaultAvatarFor('politico-legacy').face, 'Il vecchio volto neutro passa a uno dei due, sempre lo stesso per lo stesso personaggio.');
+assert.deepEqual(A.avatarOf({ ...legacy, avatar: { face: 'maschile', skin: 'chiara', hair: 'nero', hairstyle: 'corto', beard: 'nessuna', glasses: 'nessuno', jacket: 'blu' } }).face, 'maschile', 'Un volto valido resta.');
+lines.push('aspetto predefinito stabile per le vecchie carriere, avatar di prima conservato');
 
 // ---------- 3. the checks of the wizard: explicit map between screens and numbered checks ----------
 assert.equal(CAREER_STEPS, 5);
@@ -75,10 +94,15 @@ assert.deepEqual(WIZARD_STEPS.map(step => step[1]), ['Identità e avatar', 'Terr
 assert.deepEqual(WIZARD_CHECKS, { 1: [5], 2: [1], 3: [2], 4: [3], 5: [4, 5], 6: [] }, 'Mappa esplicita: schermata → controlli numerati (1 territorio, 2 percorso, 3 partito, 4 difficoltà e condizioni, 5 identità).');
 const run = await startCareer({ seed: 'avatar', level: 'comunale', draft: { avatar: { face: 'femminile', skin: 'bruna', hair: 'rosso', hairstyle: 'riccio', beard: 'nessuna', glasses: 'tondi', jacket: 'bordeaux' }, gender: 'uomo' } });
 const { store, db } = run;
+const { storage } = await import(`../src/core/storage.js${v}`);
+// each new career or loaded game keeps the previous one in an automatic slot (at most five): the test empties them so that it can go on as long as it needs
+const free = () => { for (const slot of storage.listSlots()) { try { storage.deleteSlot(slot.id); } catch { /* a slot that cannot be removed stays */ } } };
+const load = payload => { free(); return store.loadGame(payload); };
+const create = (...args) => { free(); return store.createCareer(...args); };
 const territory = { units: db.territorialUnits, municipalities: db.municipalities };
 const draftOf = extra => ({ ...makeCareerDraft('2026-09-24'), region: 'Toscana', municipality: 'Siena', municipalityCode: '052032', firstName: 'Ada', lastName: 'Prova', birthDate: '1985-04-12', previousProfession: 'Insegnante', ...extra });
 const screen = (extra, view) => validateWizardStep(draftOf(extra), view, db.parties, db.parliamentaryGroups, territory);
-assert.deepEqual(makeCareerDraft('2026-09-24').avatar, base, 'Il nuovo personaggio parte da un avatar neutro.');
+assert.deepEqual(makeCareerDraft('2026-09-24').avatar, base, 'Il nuovo personaggio parte dall’avatar predefinito.');
 assert.deepEqual(screen({}, 1), [], 'Identità e avatar: completa.');
 assert.equal(screen({ avatar: { ...base, jacket: 'rosa' } }, 1).length, 1, 'Un avatar non valido è rifiutato nella schermata dell’identità.');
 assert.deepEqual(screen({ avatar: undefined }, 1), [], 'Un avatar assente non blocca (parte quello predefinito).');
@@ -95,24 +119,25 @@ lines.push('schermate e controlli: mappa esplicita');
 const stateOf = () => store.getState();
 const playerOf = state => state.dataset.politicians.find(person => person.id === state.career.playerId);
 const player = playerOf(stateOf());
-assert.deepEqual(player.avatar, { face: 'femminile', skin: 'bruna', hair: 'rosso', hairstyle: 'riccio', beard: 'nessuna', glasses: 'tondi', jacket: 'bordeaux' }, 'L’avatar sta nel record canonico del personaggio.');
+assert.deepEqual(player.avatar, { face: 'femminile', skin: 'bruna', hair: 'rosso', hairstyle: 'riccio', beard: 'nessuna', glasses: 'tondi', jacket: 'bordeaux', eyes: 'marroni', expression: 'serena', moustache: 'nessuno' }, 'L’avatar sta nel record canonico del personaggio.');
 assert.equal(player.gender, 'uomo', 'E resta distinto dal genere (volto femminile, genere «uomo»).');
+assert.deepEqual([player.avatar.eyes, player.avatar.expression, player.avatar.moustache], ['marroni', 'serena', 'nessuno'], 'Un avatar parziale si completa con i tratti nuovi.');
 const minimal = { id: 'p1', firstName: 'Ada', lastName: 'Prova', source: 'user', gender: 'donna', avatar: player.avatar };
 assert.doesNotThrow(() => validateEntity('politicians', minimal), 'Lo schema canonico dei politici conosce il campo avatar, accanto al genere.');
 assert.throws(() => validateEntity('politicians', { ...minimal, avatarX: 1 }), /campi non riconosciuti/, 'Lo schema resta rigoroso sugli altri campi.');
-const created = store.createCareer({ ...draftOf({ gender: 'donna' }), avatar: { face: 'maschile', hairstyle: 'lungo' } }, db.parties, db.parliamentaryGroups);
+const created = create({ ...draftOf({ gender: 'donna' }), avatar: { face: 'maschile', hairstyle: 'lungo' } }, db.parties, db.parliamentaryGroups);
 const fresh = playerOf(store.getState());
 assert.deepEqual(fresh.avatar, { ...base, face: 'maschile', hairstyle: 'lungo' }, 'Un avatar parziale nel draft si completa con i valori predefiniti.');
 assert.equal(fresh.gender, 'donna');
-store.createCareer(draftOf({ avatar: undefined }), db.parties, db.parliamentaryGroups);
+create(draftOf({ avatar: undefined }), db.parties, db.parliamentaryGroups);
 assert.deepEqual(playerOf(store.getState()).avatar, base, 'Senza avatar nel draft la carriera parte con quello predefinito.');
 // a file saved and loaded again, an online copy and a download
 const file = JSON.parse(store.exportSave());
 assert.deepEqual(file.dataset.politicians.find(person => person.id === file.career.playerId).avatar, base, 'L’esportazione porta l’avatar.');
-store.createCareer({ ...draftOf({}), avatar: { face: 'femminile', skin: 'scura', hair: 'grigio', hairstyle: 'raccolto', beard: 'corta', glasses: 'rettangolari', jacket: 'verde' } }, db.parties, db.parliamentaryGroups);
+create({ ...draftOf({}), avatar: { face: 'femminile', skin: 'scura', hair: 'grigio', hairstyle: 'raccolto', beard: 'corta', glasses: 'rettangolari', jacket: 'verde' } }, db.parties, db.parliamentaryGroups);
 const chosen = playerOf(store.getState()).avatar;
 const exported = store.exportSave();
-store.loadGame(exported);
+load(exported);
 assert.deepEqual(playerOf(store.getState()).avatar, chosen, 'Importato di nuovo, l’avatar è lo stesso.');
 
 const { webcrypto } = await import('node:crypto');
@@ -131,9 +156,9 @@ const slot = account.slotForCareer(store.getState().career.id);
 await account.uploadSave(slot, store.cloudSnapshot(), { create: true });
 const remote = await account.downloadSave(slot, { commit: false });
 assert.deepEqual(playerOf(remote.state).avatar, chosen, 'La copia online riporta l’avatar così com’è.');
-store.createCareer(draftOf({ firstName: 'Altra' }), db.parties, db.parliamentaryGroups);
+create(draftOf({ firstName: 'Altra' }), db.parties, db.parliamentaryGroups);
 assert.notDeepEqual(playerOf(store.getState()).avatar, chosen);
-const restored = store.loadGame(remote.state);
+const restored = load(remote.state);
 assert.deepEqual(playerOf(restored).avatar, chosen, 'Ripristinando la copia scaricata l’avatar torna quello salvato.');
 assert.deepEqual(playerOf(store.getState()).avatar, chosen);
 lines.push('record canonico, esportazione, copia online e ripristino con lo stesso avatar');
@@ -143,25 +168,58 @@ const old = JSON.parse(store.exportSave());
 const oldPlayerRecord = old.dataset.politicians.find(person => person.id === old.career.playerId);
 const before = { ...oldPlayerRecord }; delete before.avatar;
 delete oldPlayerRecord.avatar;
-const loadedOld = store.loadGame(JSON.stringify(old));
+const loadedOld = load(JSON.stringify(old));
 const loadedRecord = playerOf(loadedOld);
 for (const [key, value] of Object.entries(before)) assert.deepEqual(loadedRecord[key], value, `Vecchia carriera: ${key} intatto.`);
 assert.deepEqual(A.avatarOf(loadedRecord), A.defaultAvatarFor(loadedRecord.id), 'Vecchia carriera: aspetto predefinito, sempre lo stesso.');
 assert.equal(loadedOld.career.id, old.career.id, 'La carriera è la stessa.');
 const damaged = JSON.parse(store.exportSave());
 playerOf(damaged).avatar = { face: 'neutro', skin: 'verde', hair: 5, extra: 'x' };
-const loadedDamaged = store.loadGame(JSON.stringify(damaged));
+const loadedDamaged = load(JSON.stringify(damaged));
 assert.ok(A.isValidAvatar(playerOf(loadedDamaged).avatar) && !('extra' in playerOf(loadedDamaged).avatar), 'Un avatar rovinato nel salvataggio viene ripulito, senza errori.');
 lines.push('vecchie carriere senza perdita di dati, avatar rovinato ripulito');
+
+// the gender of the character: man or woman, nothing else; older values are brought to one of them without losing the original
+assert.deepEqual([...GENDERS], ['uomo', 'donna']);
+assert.deepEqual(['uomo', 'donna', 'non-binario', 'preferisco-non-specificare', 'altro', null, undefined].map(normalizeGender), ['uomo', 'donna', 'uomo', 'uomo', 'uomo', 'uomo', 'uomo']);
+assert.equal(makeCareerDraft('2026-09-24').gender, 'uomo', 'Il genere predefinito è uno dei due.');
+for (const gender of ['non-binario', 'preferisco-non-specificare', 'altro', '', null]) assert.ok(validateCareerStep(draftOf({ gender }), 5).some(error => /genere/i.test(error)), `Il genere «${gender}» non è più accettato.`);
+for (const gender of ['uomo', 'donna']) assert.deepEqual(validateCareerStep(draftOf({ gender }), 5), [], `Il genere «${gender}» è valido.`);
+create({ ...draftOf({ gender: 'donna' }) }, db.parties, db.parliamentaryGroups);
+assert.equal(playerOf(store.getState()).gender, 'donna');
+for (const legacyValue of ['non-binario', 'preferisco-non-specificare', 'altro']) {
+  const file = JSON.parse(store.exportSave());
+  const record = file.dataset.politicians.find(person => person.id === file.career.playerId);
+  const before = { ...record }; record.gender = legacyValue;
+  const loaded = playerOf(load(JSON.stringify(file)));
+  assert.equal(loaded.gender, 'uomo', `Vecchio genere «${legacyValue}»: normalizzato.`);
+  assert.equal(loaded.legacyGender, legacyValue, `Vecchio genere «${legacyValue}»: l’originale è conservato.`);
+  for (const [key, value] of Object.entries(before)) if (!['gender', 'legacyGender'].includes(key)) assert.deepEqual(loaded[key], value, `Vecchio genere «${legacyValue}»: ${key} intatto.`);
+}
+const okFile = JSON.parse(store.exportSave()), okRecord = okFile.dataset.politicians.find(person => person.id === okFile.career.playerId);
+okRecord.gender = 'donna'; delete okRecord.legacyGender;
+assert.ok(!('legacyGender' in playerOf(load(JSON.stringify(okFile)))), 'Un valore valido non lascia tracce.');
+assert.doesNotThrow(() => validateEntity('politicians', { id: 'p1', firstName: 'A', lastName: 'B', source: 'user', gender: 'uomo', legacyGender: 'non-binario' }), 'Lo schema conosce legacyGender.');
+lines.push('genere: solo uomo e donna, vecchi valori normalizzati senza perdita');
 
 // ---------- 5. the rendering of the wizard ----------
 const view = d => renderCareerWizard(store.getState(), { ...makeCareerDraft('2026-09-24'), region: 'Toscana', municipality: 'Siena', municipalityCode: '052032', ...d }, db.parties, () => null, db.parliamentaryGroups, [], [], db.politicians, territory);
 const first = view({ step: 1 });
 assert.ok(first.includes('Identità e avatar') && first.includes('data-avatar-editor') && first.includes('data-avatar-preview') && first.includes('PASSAGGIO 01 <i>/</i> 06'), 'La prima schermata ha l’editor e l’anteprima.');
 for (const field of A.AVATAR_FIELDS) for (const item of A.AVATAR_OPTIONS[field]) assert.ok(first.includes(`data-avatar-field="${field}" data-avatar-value="${item.id}"`), `Scelta disponibile: ${field}/${item.id}.`);
-assert.equal((first.match(/data-avatar-value="[a-z]+" aria-pressed="true"/g) ?? []).length, 7, 'Per ogni tratto una scelta è attiva.');
+assert.equal((first.match(/data-avatar-value="[a-z]+" aria-pressed="true"/g) ?? []).length, 10, 'Per ogni tratto una scelta è attiva.');
+// every choice has its sample: a colour for the colours, a small preview of the avatar for the shapes; the active one is marked
+const minis = (first.match(/class="avatar-choice is-mini/g) ?? []).length, swatches = (first.match(/class="avatar-choice is-swatch/g) ?? []).length;
+assert.deepEqual([minis, swatches], [2 + 3 + 12 + 3 + 5 + 3, 5 + 5 + 5 + 8], 'Anteprime per le forme (28) e campioni per i colori (23): nessuna scelta è solo testo.');
+assert.ok(A.AVATAR_GROUPS.every(field => first.includes(`data-avatar-group="${field}"`)), 'Un gruppo per ogni campo, nell’ordine dell’editor.');
+const miniOf = (html, field, value) => html.match(new RegExp(`<button type="button" class="avatar-choice is-mini[^"]*" data-avatar-field="${field}" data-avatar-value="${value}"[^>]*>(<svg.*?</svg>)`))?.[1];
+for (const field of ['face', 'expression', 'hairstyle', 'beard', 'moustache', 'glasses']) {
+  const previews = A.AVATAR_OPTIONS[field].map(item => miniOf(first, field, item.id));
+  assert.ok(previews.every(Boolean) && new Set(previews).size === previews.length, `${field}: ogni scelta ha la sua mini-anteprima, diversa dalle altre.`);
+  assert.ok(previews.every(svg => svg.includes('viewBox="18 8 84 84"')), `${field}: le anteprime sono ritagliate sul volto.`);
+}
 const changed = view({ step: 1, avatar: { ...base, face: 'femminile', hairstyle: 'lungo' } });
-assert.ok(changed.includes('data-avatar="femminile.chiara.castano.lungo.nessuna.nessuno.blu') && !changed.includes(`data-avatar="${Object.values(base).join('.')}"`), 'L’anteprima segue il draft.');
+assert.ok(changed.includes('data-avatar="femminile.chiara.castano.lungo.nessuna.nessuno.blu.marroni.serena.nessuno"') && !changed.includes(`data-avatar="${Object.values(base).join('.')}"`), 'L’anteprima segue il draft.');
 const second = view({ step: 2 }), third = view({ step: 3 });
 assert.ok(second.includes('data-wizard-region') && !second.includes('data-level=') && !second.includes('data-starting-office='), 'Territorio e partenza: solo il territorio.');
 assert.ok(['comunale', 'provinciale', 'regionale', 'deputato', 'senatore', 'europeo'].every(level => third.includes(`data-level="${level}"`)) && third.includes('presidenteConsiglio') && third.includes('presidenteRepubblica') && !third.includes('data-wizard-region') && third.includes('Comune di Siena'), 'Scegli la tua carriera: tutti i percorsi, più i due scenari, in una pagina propria.');
@@ -189,7 +247,7 @@ if (!chromeAvailable) { console.log(`Avatar verificato (senza Chrome): ${lines.j
 const ITALIAN = new Set('il lo la le gli un una uno di del della dei delle al alla dal nel nella sul sulla per con che non sono come più tra fra sei hai puoi questa questo quando dove cosa senza ogni è già può così'.split(' '));
 const italianWords = text => (text.toLowerCase().match(/[a-zà-ù']+/g) ?? []).filter(word => ITALIAN.has(word));
 const SIENA = '052032';
-const FEMALE = { face: 'femminile', skin: 'oliva', hair: 'biondo', hairstyle: 'caschetto', beard: 'nessuna', glasses: 'rettangolari', jacket: 'verde' };
+const FEMALE = { face: 'femminile', skin: 'oliva', hair: 'biondo', hairstyle: 'caschetto', beard: 'nessuna', glasses: 'rettangolari', jacket: 'verde', eyes: 'azzurri', expression: 'sorridente', moustache: 'nessuno' };
 
 const tools = browser => {
   const { evaluate, waitFor, pause } = browser;
@@ -232,7 +290,17 @@ await withBrowser(async browser => {
   assert.equal(await t.kicker(), 'PASSAGGIO 01 / 06', 'Sei passaggi: si comincia dal primo.');
   assert.equal(await t.title(), 'Identità e avatar');
   assert.ok(await t.has('[data-avatar-editor] [data-avatar-preview] svg'), 'L’editor ha l’anteprima.');
-  assert.equal(await t.preview(), Object.values(base).join('.'), 'L’anteprima parte dall’avatar neutro.');
+  assert.equal(await t.preview(), Object.values(base).join('.'), 'L’anteprima parte dall’avatar predefinito.');
+  // the gender: man or woman, nothing else, a default chosen
+  const genderOptions = await evaluate(`[...document.querySelectorAll('select[name="gender"] option')].map(option => [option.value, option.textContent.trim()])`);
+  assert.deepEqual(genderOptions, [['uomo', 'Uomo'], ['donna', 'Donna']], 'Genere: solo Uomo e Donna.');
+  assert.equal(await evaluate(`document.querySelector('select[name="gender"]').value`), 'uomo');
+  assert.ok(!/non.?binari|preferisco non|neutro|altro/i.test(await (await t.text('[data-avatar-editor]')) + (await evaluate(`document.querySelector('select[name="gender"]').innerText`))), 'Nessuna opzione non binaria, neutra o «altro» nella schermata.');
+  // the samples: a small preview for each shape (cropped on the head), a colour for each colour; the active one is framed
+  const samples = await evaluate(`(() => { const minis = [...document.querySelectorAll('.avatar-choice.is-mini')]; const swatches = [...document.querySelectorAll('.avatar-choice.is-swatch')]; const box = el => el.getBoundingClientRect(); return { minis: minis.length, swatches: swatches.length, miniSvg: minis.every(el => el.querySelector('svg') && box(el.querySelector('svg')).width >= 48), miniLabels: minis.every(el => el.querySelector('span')?.textContent.trim()), colours: swatches.every(el => /^#/.test(el.style.getPropertyValue('--sw').trim()) || el.getAttribute('style')?.includes('--sw')), touch: [...minis, ...swatches].every(el => box(el).width >= 40 && box(el).height >= 40), tick: getComputedStyle(document.querySelector('.avatar-choice.is-mini.selected'), '::after').content, selected: document.querySelectorAll('.avatar-choice.selected').length }; })()`);
+  assert.deepEqual([samples.minis, samples.swatches], [28, 23], 'Anteprime e campioni per ogni scelta.');
+  assert.ok(samples.miniSvg && samples.miniLabels && samples.colours && samples.touch, 'Ogni scelta è riconoscibile (anteprima o colore, con nome) e si tocca bene.');
+  assert.ok(/✓/.test(samples.tick) && samples.selected === 10, 'La scelta attiva di ogni gruppo è evidenziata.');
   // the picture of the Palace is behind the editor only: blurred, covering, with a dark veil; the avatar and the controls are not blurred
   const look = await evaluate(`(() => {
     const editor = document.querySelector('[data-avatar-editor]');
@@ -259,7 +327,7 @@ await withBrowser(async browser => {
   assert.equal(await evaluate(`document.querySelector('.wizard-body').scrollTop`), 0);
   for (const [field, value] of Object.entries(FEMALE)) await t.click(`[data-avatar-field="${field}"][data-avatar-value="${value}"]`, 60);
   assert.equal(await t.preview(), Object.values(FEMALE).join('.'));
-  assert.equal(await evaluate(`document.activeElement?.dataset?.avatarValue`), 'verde', 'Il focus resta sulla scelta fatta.');
+  assert.equal(await evaluate(`document.activeElement?.dataset?.avatarValue`), 'nessuno', 'Il focus resta sulla scelta fatta.');
   // two columns on a desktop: preview on the left of the controls
   const columns = await evaluate(`(() => { const p = document.querySelector('[data-avatar-preview]').getBoundingClientRect(), c = document.querySelector('.avatar-controls').getBoundingClientRect(); return { left: p.right <= c.left + 1, tall: p.height > 150 }; })()`);
   assert.ok(columns.left && columns.tall, 'Su desktop l’anteprima sta accanto ai controlli.');
@@ -336,6 +404,7 @@ await withBrowser(async browser => {
   await t.openWizard();
   for (const [field, value] of Object.entries(FEMALE)) await t.click(`[data-avatar-field="${field}"][data-avatar-value="${value}"]`, 40);
   await t.fillIdentity('Beatrice');
+  await t.setField('.career-wizard [name="gender"]', 'donna', 'change');
   await t.next(); await t.pickSiena(); await t.next();
   await t.click('[data-level="provinciale"]', 200);
   await t.next(); await t.next(); await t.next();
@@ -344,7 +413,7 @@ await withBrowser(async browser => {
   await waitFor(() => evaluate(`Boolean(document.querySelector('.page-wrap')) && !document.querySelector('.career-wizard')`), 40000);
   const born = await t.stored();
   assert.deepEqual(born.avatar, FEMALE, 'La carriera creata porta l’avatar scelto.');
-  assert.equal(born.gender, 'preferisco-non-specificare', 'Il genere è un altro campo: non cambia con l’avatar.');
+  assert.equal(born.gender, 'donna', 'Il genere scelto è salvato, in un campo suo.');
   const signature = Object.values(FEMALE).join('.');
 
   // the same face wherever the player is shown
@@ -410,10 +479,13 @@ await withBrowser(async browser => {
   await viewport(375, 740, true);
   await t.openWizard();
   assert.equal(await t.title(), 'Identity and avatar');
+  assert.deepEqual(await evaluate(`[...document.querySelectorAll('select[name="gender"] option')].map(option => option.textContent.trim())`), ['Man', 'Woman'], 'Inglese: Man e Woman, nient’altro.');
   const editor = await t.text('[data-avatar-editor]');
-  for (const word of ['Face', 'Skin tone', 'Hair', 'Hairstyle', 'Beard', 'Glasses', 'Jacket', 'Masculine', 'Feminine', 'Neutral', 'Curly', 'Bob', 'Updo', 'Receding', 'Round', 'Rectangular', 'No beard', 'No glasses']) assert.ok(editor.toLowerCase().includes(word.toLowerCase()), `Inglese: «${word}».`);
+  for (const word of ['Face', 'Skin tone', 'Hair', 'Hairstyle', 'Beard', 'Glasses', 'Jacket', 'Masculine', 'Feminine', 'Curly', 'Bob', 'Updo', 'Receding', 'Round', 'Rectangular', 'No beard', 'No glasses', 'Calm', 'Smiling', 'Determined', 'Buzz cut', 'Ponytail', 'Wavy', 'No moustache', 'Handlebar moustache', 'Eye colour', 'Moustache']) assert.ok(editor.toLowerCase().includes(word.toLowerCase()), `Inglese: «${word}».`);
   assert.deepEqual(italianWords(editor), [], 'Inglese: nessuna parola italiana nell’editor.');
   assert.match(await evaluate(`document.querySelector('[data-avatar-field="skin"][data-avatar-value="oliva"]').getAttribute('aria-label')`), /Olive skin/, 'Anche i nomi accessibili dei colori sono in inglese.');
+  assert.deepEqual(await evaluate(`[...document.querySelectorAll('[data-avatar-field="eyes"]')].map(el => el.getAttribute('aria-label'))`), ['Brown eyes', 'Hazel eyes', 'Green eyes', 'Blue eyes', 'Grey eyes'], 'Inglese: i colori degli occhi.');
+  assert.deepEqual(await evaluate(`[...document.querySelectorAll('[data-avatar-field="jacket"]')].map(el => el.getAttribute('aria-label'))`), ['Midnight blue jacket', 'Burgundy jacket', 'Forest green jacket', 'Charcoal jacket', 'Black jacket', 'Camel jacket', 'Plum jacket', 'Teal jacket'], 'Inglese: le otto giacche.');
   assert.match(await evaluate(`document.querySelector('[data-avatar-preview] svg').getAttribute('aria-label')`), /avatar/i);
   assert.deepEqual(italianWords((await evaluate(`document.querySelector('.wizard-header').innerText`))), [], 'Inglese: intestazione del wizard.');
   // phone: one column, nothing sideways, touch targets of at least 40 px, the preview in full view

@@ -10,8 +10,8 @@
 //
 // The party is not the coalition, the parliamentary group or the institution: those have their own tones (KIND_TONES) and their own glyph, whatever the party colour is,
 // so that a chip says at a glance whether it speaks of the party, of the list it stands in with others, of the group in the Chamber or of the institution.
-import { LOGO_BRAND } from '../data/party-brand.js?v=20261027-4';
-import { contrastRatio, emblem, glyph, inkOn, partyMarkText } from './visuals.js?v=20261027-4';
+import { LOGO_BRAND } from '../data/party-brand.js?v=20261027-5';
+import { contrastRatio, emblem, glyph, inkOn, partyMarkText } from './visuals.js?v=20261027-5';
 
 export const NEUTRAL_ACCENT = '#9fb0a2';
 // What a party colour must stand out from: the lightest panel of the app (for text), and the shell and the second panel (for lines, bars and fills).

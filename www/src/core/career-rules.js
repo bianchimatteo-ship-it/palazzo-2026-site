@@ -1,11 +1,15 @@
-import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel } from '../data/regions.js?v=20261027-4';
-import { isSelectableParty } from '../data/schema.js?v=20261027-4';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261027-4';
-import { startAgeProblems, startProblems } from './start-engine.js?v=20261027-4';
-import { presidentialEligibility } from './presidency-engine.js?v=20261027-4';
-import { avatarProblems } from './avatar.js?v=20261027-4';
+import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel } from '../data/regions.js?v=20261027-5';
+import { isSelectableParty } from '../data/schema.js?v=20261027-5';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261027-5';
+import { startAgeProblems, startProblems } from './start-engine.js?v=20261027-5';
+import { presidentialEligibility } from './presidency-engine.js?v=20261027-5';
+import { avatarProblems } from './avatar.js?v=20261027-5';
 
-const genders = new Set(['preferisco-non-specificare', 'donna', 'uomo', 'non-binario']);
+// The gender of the character: man or woman. A value of an older career (not specified, non-binary…) is brought to one of the two when the career is loaded, keeping the original in `legacyGender`.
+export const GENDERS = Object.freeze(['uomo', 'donna']);
+export const DEFAULT_GENDER = 'uomo';
+export const normalizeGender = value => GENDERS.includes(value) ? value : DEFAULT_GENDER;
+const genders = new Set(GENDERS);
 const orientations = new Set(['Centrismo civico', 'Progressista', 'Conservatore', 'Liberale', 'Socialdemocratico', 'Ecologista', 'Popolare', 'Autonomista', 'Altro']);
 export const STARTING_ROLES = Object.freeze({
   militante: { label: 'Giovane militante', partyRank: 0 },
@@ -92,6 +96,7 @@ export function validateCareerStep(draft, step, selectableParties, parliamentary
       if (!orientations.has(draft.partyOrientation)) errors.push('Scegli un orientamento generale.');
       if (!/^#[\da-f]{6}$/i.test(draft.partyColor || '')) errors.push('Scegli un colore valido.');
       if ((draft.partyProgram ?? []).length > 4) errors.push('Il programma ha al massimo quattro priorità.');
+      if (draft.partyLogoMode !== 'upload' && draft.partyLogoMode !== 'url' && draft.partyLogoSecondaryColor != null && !/^#[\da-f]{6}$/i.test(draft.partyLogoSecondaryColor)) errors.push('Scegli un colore valido per il secondo colore del logo.');
       if (draft.partyLogoMode === 'url' && !/^https?:\/\/\S+$/i.test(draft.partyLogoUrl || '')) errors.push('Incolla un indirizzo del logo che inizi con https://, oppure scegli un altro tipo di logo.');
       for (const [key, label] of [['economia','economia'], ['welfare','welfare'], ['ambiente','ambiente'], ['europa','integrazione europea']]) {
         const value = Number(draft.policyPositions?.[key]);

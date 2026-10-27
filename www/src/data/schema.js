@@ -23,7 +23,7 @@ export function validateRealRecord(record, collection = 'record') {
 // Canonical fields for repository adapters and future save migrations.
 // `source` is required on every record to preserve data provenance end-to-end.
 export const ENTITY_FIELDS = Object.freeze({
-  politicians: ['id', 'firstName', 'lastName', 'displayName', 'birthDate', 'gender', 'avatar', 'region', 'municipality', 'previousProfession', 'partyId', 'territoryId', 'roleId', 'source', 'createdAt'],
+  politicians: ['id', 'firstName', 'lastName', 'displayName', 'birthDate', 'gender', 'legacyGender', 'avatar', 'region', 'municipality', 'previousProfession', 'partyId', 'territoryId', 'roleId', 'source', 'createdAt'],
   parties: ['id', 'name', 'abbreviation', 'description', 'color', 'orientation', 'policyPositions', 'source', 'sourceRef', 'verified', 'createdAt', 'foundedAt', 'logoUrl', 'logoAsset', 'logoSource', 'logoVerified', 'logoAlt'],
   elections: ['id', 'name', 'level', 'date', 'territoryId', 'electionType', 'status', 'source'],
   territories: ['id', 'kind', 'name', 'parentId', 'source'],

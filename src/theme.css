@@ -1239,3 +1239,17 @@ html[data-motion="off"] .language-gate-button { transition: none; }
   .wizard-aside { padding-top: 18px; padding-bottom: 14px; } .wizard-aside-label { margin-top: 18px; } .wizard-aside h2 { font-size: 24px; margin: 8px 0; } .wizard-aside > p { display: none; }
   .wizard-steps { margin-top: 16px; gap: 4px; } .wizard-step { min-height: 42px; padding-top: 4px; padding-bottom: 4px; }
 }
+/* the editor of the avatar: a small preview of the avatar for each shape, a sample for each colour; the active choice is framed and ticked */
+.avatar-choices.is-minis { display: grid; grid-template-columns: repeat(auto-fill, minmax(72px, 1fr)); gap: 6px; }
+.avatar-choice.is-mini { position: relative; display: grid; justify-items: center; align-content: start; gap: 3px; min-height: 0; padding: 5px 3px 6px; border-radius: 14px; font-size: 11.5px; line-height: 1.15; text-align: center; overflow-wrap: anywhere; }
+.avatar-choice.is-mini .avatar-svg { width: 56px; height: 56px; border-radius: 10px; display: block; }
+.avatar-choice.is-mini.selected::after { content: '✓'; position: absolute; top: 3px; right: 3px; width: 17px; height: 17px; display: grid; place-items: center; border-radius: 50%; background: #f0cf85; color: #1a1408; font: 800 11px/1 Manrope, sans-serif; }
+.avatar-choice.is-swatch.selected { transform: scale(1.08); }
+@media (max-width: 760px) { .avatar-choices.is-minis { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); } .avatar-choice.is-mini { min-height: 44px; } }
+/* the second colour of the logo of a new party: picker with its value, and ready colours */
+.logo-secondary { display: grid; gap: 8px; }
+.logo-palette { display: flex; flex-wrap: wrap; gap: 6px; }
+.logo-swatch { width: 40px; height: 40px; padding: 0; display: grid; place-items: center; border: 1.5px solid var(--line-strong); border-radius: 50%; background: transparent; cursor: pointer; }
+.logo-swatch i { width: 24px; height: 24px; border-radius: 50%; background: var(--sw); box-shadow: inset 0 0 0 1.5px rgba(128,128,128,.45); }
+.logo-swatch.selected { border-color: var(--gold-soft, #f0cf85); box-shadow: 0 0 0 2px rgba(240,207,133,.55); }
+.logo-swatch:focus-visible { outline: 3px solid var(--gold-soft, #f0cf85); outline-offset: 2px; }

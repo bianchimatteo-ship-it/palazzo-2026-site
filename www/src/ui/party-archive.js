@@ -1,6 +1,6 @@
-import { realDatabase } from '../data/repositories/real-data.js?v=20261027-4';
-import { BASIS_LABELS, ENTITY_KIND_LABELS, POLITICAL_POSITIONS, electedOnListsOf, entityKind, linkedPoliticians, politicianAffiliation } from '../data/repositories/party-links.js?v=20261027-4';
-import { personMark } from './visuals.js?v=20261027-4';
+import { realDatabase } from '../data/repositories/real-data.js?v=20261027-5';
+import { BASIS_LABELS, ENTITY_KIND_LABELS, POLITICAL_POSITIONS, electedOnListsOf, entityKind, linkedPoliticians, politicianAffiliation } from '../data/repositories/party-links.js?v=20261027-5';
+import { personMark } from './visuals.js?v=20261027-5';
 
 const KIND_LABELS = ENTITY_KIND_LABELS;
 const kindOf = entityKind;
