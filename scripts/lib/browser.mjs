@@ -45,7 +45,7 @@ export async function withBrowser(callback, { root = fileURLToPath(new URL('../.
     await send('Runtime.enable');
     await viewport(1280, 800, false);
     await goto();
-    await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu], .main-menu"))'));
+    await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu], .main-menu, .language-gate"))'));
     const version = await evaluate('document.querySelector("script[type=module]").src.split("v=")[1]');
     return await callback({ evaluate, send, viewport, goto, screenshot, waitFor, pause, errors, base, version });
   } finally { await cleanup(); }

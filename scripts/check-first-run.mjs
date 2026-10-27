@@ -65,7 +65,9 @@ function el(attrs) {
   };
 }
 // A fresh mount of the game on a stand-in root, as when the page is opened.
-function open() {
+function open({ language = 'it' } = {}) {
+  // a player who already chose the language (the first screen of a first installation is checked apart, in section 0)
+  if (language && !mem.has('politicando.settings.v1')) mem.set('politicando.settings.v1', JSON.stringify({ language }));
   const listeners = {};
   const root = { innerHTML: '', addEventListener: (type, fn) => { (listeners[type] ??= []).push(fn); }, querySelector: () => null, querySelectorAll: () => [] };
   mountApp(root, store);
@@ -75,6 +77,30 @@ function open() {
 }
 const flags = () => JSON.parse(localStorage.getItem('politicando.onboarding.v1') ?? '{}');
 const WELCOME = 'Prima di iniziare: il tuo account';
+
+// ---------- 0. a first installation: the language comes first, before any account screen ----------
+{
+  mem.clear(); calls.length = 0;
+  const first = open({ language: null });
+  let screen = first.root.innerHTML;
+  assert.ok(screen.includes('language-gate') && screen.includes('Scegli la lingua') && screen.includes('Choose your language') && screen.includes('Seleziona una lingua per continuare') && screen.includes('Select a language to continue'), 'Alla prima installazione la prima schermata è la scelta della lingua, in italiano e in inglese.');
+  assert.ok(screen.includes('data-language-choice="it"') && screen.includes('data-language-choice="en"') && screen.includes('🇮🇹') && screen.includes('🇬🇧') && screen.includes('logo-politicando'), 'Due pulsanti (Italiano, English) e il logo.');
+  assert.ok(!screen.includes(WELCOME) && !screen.includes('data-account-form') && !screen.includes('menu-new'), 'Nessuna schermata di account né menu prima della lingua.');
+  assert.equal(localStorage.getItem('politicando.settings.v1'), null, 'Finché non sceglie, nulla viene salvato.');
+  await tick();
+  assert.ok(first.root.innerHTML.includes('language-gate'), 'Nemmeno la risposta del servizio account scavalca la scelta.');
+  screen = await first.click({ languageChoice: 'it' });
+  assert.equal(JSON.parse(localStorage.getItem('politicando.settings.v1')).language, 'it', 'Anche l’italiano, che è il predefinito, viene salvato in politicando.settings.v1.');
+  assert.ok(!screen.includes('language-gate') && screen.includes(WELCOME), 'Dopo la scelta compare la schermata dell’account esistente, in italiano.');
+  assert.ok(screen.includes('menu-lang') && screen.includes('data-setting-value="en"'), 'Il selettore Italiano/English resta nel menu.');
+  screen = await first.submit('register', { username: 'prova.lingua', password: 'password-lunga', confirm: 'password-lunga', ageBand: 'adult14' });
+  assert.ok(calls.includes('/api/account/register'), 'La registrazione usa la logica esistente.');
+  assert.ok(!screen.includes('COME FUNZIONA') && !screen.includes('menu-popup-backdrop') && screen.includes('La politica italiana, settimana dopo settimana') && screen.includes('data-menu="nuova"'), 'Dopo l’account si arriva alla home, senza tour né popup.');
+  // restarted: the language is kept and the first screen does not come back
+  const again = open();
+  assert.ok(!again.root.innerHTML.includes('language-gate') && !again.root.innerHTML.includes(WELCOME), 'Al riavvio la lingua è ricordata e la scelta non si ripete.');
+  mem.clear(); calls.length = 0; probes.length = 0;
+}
 
 // ---------- 1. first opening without an account ----------
 let game = open();

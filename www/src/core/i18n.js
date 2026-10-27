@@ -5,7 +5,7 @@
 //     the phrase book (src/data/i18n/en-*.js): exact phrases, phrases with numbers (`#`) or free parts (`{}`), and the numbers, currency and dates in English form.
 //     Proper names (people, parties, places, official denominations) are never in the phrase book: they stay as they are. A phrase that is not in the book stays Italian, never wrong.
 // Nothing here touches a career: the language is a view of the same data.
-import { saveSetting } from './settings.js?v=20261027-2';
+import { saveSetting } from './settings.js?v=20261027-3';
 
 export const LANGUAGES = Object.freeze([['it', 'Italiano', 'it-IT'], ['en', 'English', 'en-GB']]);
 const SETTINGS_KEY = 'politicando.settings.v1';
@@ -103,7 +103,7 @@ function lookup(text, depth = 0) {
   if (direct !== undefined) return direct;
   // the same phrase in another case («più irpef sui redditi alti» for «Più IRPEF sui redditi alti»): found by its lower-case form, given back in the case of the text
   const folded = book.lower.get(key.toLowerCase());
-  if (folded !== undefined) return key[0] === key[0].toLowerCase() && key[0] !== key[0].toUpperCase() ? folded[0].toLowerCase() + folded.slice(1) : folded;
+  if (folded !== undefined) return matchCase(key, folded);
   // the same phrase with its numbers abstracted
   const { key: abstract, values } = abstractNumbers(key);
   if (values.length) {
@@ -119,9 +119,24 @@ function lookup(text, depth = 0) {
     // `{}` and `#` take the free parts and the numbers in order; `{2}` names one by its position (when the English puts them in another order).
     const parts = match.slice(1);
     let next = 0;
-    return template.en.replace(/\{(\d)\}|\{\}|#/g, (token, position) => { const value = (position ? parts[Number(position) - 1] : parts[next++]) ?? ''; return token === '#' ? value : (depth < 2 ? translatePiece(value, depth + 1) : value); });
+    return template.en.replace(/\{(\d)\}|\{\}|#/g, (token, position) => { const value = (position ? parts[Number(position) - 1] : parts[next++]) ?? ''; return token === '#' ? value : (depth < 3 ? keepSpaces(value, translatePiece(value, depth + 1)) : value); });
   }
   return null;
+}
+// A free part keeps the spaces around it («groups{} ; …» with « (of which 1 from outside)»): the lookup trims the text it translates, the sentence needs them back.
+function keepSpaces(original, translated) {
+  if (!original.trim()) return original;
+  return original.match(/^\s*/)[0] + translated.trim() + original.match(/\s*$/)[0];
+}
+// The case of the text is kept when the phrase is found by its lower-case form: «STIMA SIMULATA» stays in capitals, «stima simulata» starts in lower case, and a book entry written in capitals
+// («STIMA SIMULATA» → «SIMULATED ESTIMATE») is not poured into a sentence-case text as «sIMULATED ESTIMATE».
+function matchCase(key, value) {
+  const letters = text => text.replace(/[^\p{L}]/gu, '');
+  const keyLetters = letters(key), valueLetters = letters(value);
+  if (keyLetters.length > 1 && keyLetters === keyLetters.toUpperCase()) return value.toUpperCase();
+  const shouting = valueLetters.length > 3 && valueLetters === valueLetters.toUpperCase();
+  const base = shouting && value.includes(' ') ? value[0] + value.slice(1).toLowerCase() : value;
+  return key[0] === key[0].toLowerCase() && key[0] !== key[0].toUpperCase() ? base[0].toLowerCase() + base.slice(1) : base;
 }
 // The cuts a text goes through when it is not a phrase of the book as a whole, from the coarsest to the finest: «a · b», «first sentence. second sentence», «a; b», «label: value».
 // Each part is translated as a whole first (it can be a phrase of the book, or cut again); the text is given back changed only if at least one part was known.
@@ -142,6 +157,15 @@ function translatePiece(text, depth = 0, level = 0) {
       return next;
     });
     if (changed) return done.join('');
+  }
+  // a known label followed by a signed figure («Reputazione sul territorio +8», «Capitale politico ogni settimana −1»): the label is translated, the figure stays
+  const signed = text.match(/^(.*\S) ([+−±]\d[\d.,]*%?)$/u);
+  if (signed) { const head = lookup(signed[1], depth); if (head !== null) return `${head} ${signed[2]}`; }
+  // a list of known labels («sicurezza, natalità e demografia, giustizia»): translated only when EVERY item is a phrase of the book, so that a sentence with commas is never half translated
+  if (level === 0 && depth < 2 && text.includes(', ')) {
+    const items = text.split(', ');
+    const found = items.map(item => lookup(item, depth + 1));
+    if (items.length >= 2 && found.every(item => item !== null)) return found.join(', ');
   }
   return text;
 }
@@ -239,7 +263,7 @@ export function watchTree(root) {
 let loading = null;
 export function loadBook() {
   if (book?.loaded) return Promise.resolve(book);
-  loading ??= import('../data/i18n/index.js?v=20261027-2').then(module => { module.install(installBook); book.loaded = true; return book; });
+  loading ??= import('../data/i18n/index.js?v=20261027-3').then(module => { module.install(installBook); book.loaded = true; return book; });
   return loading;
 }
 // The title of the page (the tab) is read by people and by assistive technology: it follows the language like the rest (the Italian one is kept to go back to).

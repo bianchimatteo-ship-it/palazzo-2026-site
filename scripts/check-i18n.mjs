@@ -72,6 +72,9 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   // the opening screen: Italian by default, the selector in view, English on request
   await viewport(390, 800, true);
   assert.equal(await evaluate(`document.documentElement.lang`), 'it', 'Italiano è la lingua predefinita.');
+  // a first installation starts with the choice of the language (both languages, two buttons); Italian is chosen here and the selector stays on the menu
+  assert.ok(await evaluate(`Boolean(document.querySelector('.language-gate [data-language-choice="it"]')) && Boolean(document.querySelector('.language-gate [data-language-choice="en"]'))`), 'La prima schermata è la scelta della lingua.');
+  await evaluate(`document.querySelector('.language-gate [data-language-choice="it"]').click(); true`); await wait(() => evaluate('Boolean(document.querySelector(".main-menu .menu-lang"))'));
   const sw = await evaluate(`(() => { const box = document.querySelector('.menu-lang'); const r = box.getBoundingClientRect(); const b = [...box.querySelectorAll('button')].map(x => [(x.querySelector('.menu-lang-label')?.textContent ?? x.textContent).trim(), x.getAttribute('aria-pressed'), Math.round(x.getBoundingClientRect().height)]); return { r: [r.left, r.right, r.top, r.bottom], b, w: innerWidth, over: document.documentElement.scrollWidth > innerWidth + 1 }; })()`);
   assert.deepEqual(sw.b.map(x => x.slice(0, 2)), [['Italiano', 'true'], ['English', 'false']], 'Il selettore Italiano / English è sulla schermata iniziale.');
   assert.ok(await evaluate(`[...document.querySelectorAll('.menu-lang button')].map(b => b.querySelector('.menu-lang-flag')?.textContent).join('')`) === '🇮🇹🇬🇧' && await evaluate(`Boolean(document.querySelector('.menu-lang button.active .menu-lang-check'))`), 'Bandiere italiana e britannica, con la lingua attiva evidente.');

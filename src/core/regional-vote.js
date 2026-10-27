@@ -2,7 +2,7 @@
 // (Eligendo: the list votes of each of the 147 collegi, which cover the whole Italian territory). It is the one real regional figure the game holds: the regional
 // polls of the simulation are estimates (national figure + regional offsets of the model), this is what the ballot boxes said. A force that did not run in 2022
 // (a party born later, such as Futuro Nazionale) has no figure: nothing is invented for it. Pure functions on the document: nothing is saved.
-import { LIST_FORCES } from './legislature-engine.js?v=20261027-2';
+import { LIST_FORCES } from './legislature-engine.js?v=20261027-3';
 
 // Joint lists of the centre-right abroad and in Valle d’Aosta are not the vote of one party in a region.
 const JOINT_LISTS = new Set(['CDXE', 'CDXVDA']);

@@ -1,17 +1,18 @@
 // PARTITO — the organisation seen from inside: identity, the player's role and odds, internal areas, members and
 // sections, the secretary's desk and the history. The real party stays a reference; everything inside is simulated.
-import { careerOverview } from '../core/career-overview.js?v=20261027-2';
-import { organOf, treasuryOutlook } from '../core/organization-engine.js?v=20261027-2';
-import { playerRoles } from '../core/roles.js?v=20261027-2';
-import { formatDate } from '../core/time.js?v=20261027-2';
-import { lineChart, SERIES } from './charts.js?v=20261027-2';
-import { glyph } from './visuals.js?v=20261027-2';
-import { renderPartyPosition, renderSecretaryDesk } from './game-mode.js?v=20261027-2';
-import { renderOrganizationPanel } from './organization-mode.js?v=20261027-2';
-import { renderOddsCard } from './career-page.js?v=20261027-2';
-import { renderCommitteesPanel } from './committees-view.js?v=20261027-2';
-import { renderPartyLife } from './party-life-view.js?v=20261027-2';
-import { arrow, badge, bar, card, esc, euro, num, pct, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261027-2';
+import { careerOverview } from '../core/career-overview.js?v=20261027-3';
+import { organOf, treasuryOutlook } from '../core/organization-engine.js?v=20261027-3';
+import { playerRoles } from '../core/roles.js?v=20261027-3';
+import { currentObjectiveLabel } from '../data/simulation/career-rules.js?v=20261027-3';
+import { formatDate } from '../core/time.js?v=20261027-3';
+import { lineChart, SERIES } from './charts.js?v=20261027-3';
+import { glyph } from './visuals.js?v=20261027-3';
+import { renderPartyPosition, renderSecretaryDesk } from './game-mode.js?v=20261027-3';
+import { renderOrganizationPanel } from './organization-mode.js?v=20261027-3';
+import { renderOddsCard } from './career-page.js?v=20261027-3';
+import { renderCommitteesPanel } from './committees-view.js?v=20261027-3';
+import { renderPartyLife } from './party-life-view.js?v=20261027-3';
+import { arrow, badge, bar, card, esc, euro, num, pct, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261027-3';
 
 const SOURCE_LABELS = { real: 'Dato reale verificato', user: 'Creato da te', simulation: 'Simulazione' };
 const partyName = party => party?.officialName ?? party?.name ?? 'Partito';
@@ -42,7 +43,7 @@ function identity(party, record, logoFor) {
 }
 
 function currentsCard(party) {
-  const rows = [...(party.currents ?? [])].sort((a, b) => b.strength - a.strength).map(current => { const request = current.profile?.requests?.at(-1); return `<li class="${party.alignedCurrentId === current.id ? 'is-mine' : ''}"><span><strong>${esc(current.label)}</strong><small>${party.leaderCurrentId === current.id ? 'guida il partito · ' : ''}rapporto con te ${num(current.value ?? current.relation, 0)}/100</small><small>${esc(current.profile?.objective ?? 'Obiettivo in definizione')} · ${esc(current.lastAction ?? 'Iniziativa non ancora registrata')}${request?.status === 'open' ? ` · richiesta: ${esc(request.title)}` : ''}</small></span><b>${num(current.strength, 1)}%</b>${bar(current.strength, party.alignedCurrentId === current.id ? 'good' : '')}</li>`; }).join('');
+  const rows = [...(party.currents ?? [])].sort((a, b) => b.strength - a.strength).map(current => { const request = current.profile?.requests?.at(-1); return `<li class="${party.alignedCurrentId === current.id ? 'is-mine' : ''}"><span><strong>${esc(current.label)}</strong><small>${party.leaderCurrentId === current.id ? 'guida il partito · ' : ''}rapporto con te ${num(current.value ?? current.relation, 0)}/100</small><small>${esc(current.profile?.objective ? currentObjectiveLabel(current.profile.objective) : 'Obiettivo in definizione')} · ${esc(current.lastAction ?? 'Iniziativa non ancora registrata')}${request?.status === 'open' ? ` · richiesta: ${esc(request.title)}` : ''}</small></span><b>${num(current.strength, 1)}%</b>${bar(current.strength, party.alignedCurrentId === current.id ? 'good' : '')}</li>`; }).join('');
   return `<ul class="pp-currents">${rows}</ul>${party.alignedCurrentId ? '' : '<p class="sx-note">Non sei schierato: al congresso e nelle nomine chi resta neutrale conta meno.</p>'}<div class="sx-actions"><button class="secondary-button" data-section-tab="partito" data-section-tab-value="ruoli">Schierati o cambia area ${arrow}</button></div>`;
 }
 

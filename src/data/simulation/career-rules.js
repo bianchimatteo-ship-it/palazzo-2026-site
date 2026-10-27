@@ -109,6 +109,12 @@ export const RELATION_TEMPLATES = Object.freeze([
 export const SIMULATED_RIVAL_LABEL = 'Rivale interno (figura simulata)';
 export const LEGACY_RIVAL_NAMES = Object.freeze(['Marco Ferri', 'Laura Conti', 'Paolo Serra', 'Chiara Villa', 'Andrea Galli', 'Sara Fontana', 'Luca Moretti', 'Elena Rizzo']);
 
+// What each area of the party sets out to do (the ids live in the profile of the area; the player reads the label).
+export const CURRENT_OBJECTIVE_LABELS = Object.freeze({
+  'guidare-il-governo': 'Guidare il governo', 'radicare-il-partito': 'Radicare il partito', 'difendere-la-linea': 'Difendere la linea', 'restare-competitiva': 'Restare competitiva'
+});
+export const currentObjectiveLabel = id => CURRENT_OBJECTIVE_LABELS[id] ?? id;
+
 export const CURRENT_TEMPLATES = Object.freeze([
   { id: 'riformisti', label: 'Area riformista' },
   { id: 'territori', label: 'Area dei territori' },

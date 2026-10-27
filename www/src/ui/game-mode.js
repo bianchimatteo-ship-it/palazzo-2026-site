@@ -1,32 +1,32 @@
-import { endedHeadline } from './hall-view.js?v=20261027-2';
-import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261027-2';
-import { playerRoles } from '../core/roles.js?v=20261027-2';
-import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20261027-2';
-import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261027-2';
-import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261027-2';
-import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20261027-2';
-import { careerLevelLabel } from '../data/regions.js?v=20261027-2';
-import { advanceDays, formatDate } from '../core/time.js?v=20261027-2';
-import { renderBarometerPanel } from './polls-mode.js?v=20261027-2';
-import { candidacyAccess } from './campaign-mode.js?v=20261027-2';
-import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20261027-2';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261027-2';
-import { societyMood } from '../core/society-engine.js?v=20261027-2';
-import { financeOutlook } from '../core/finance-engine.js?v=20261027-2';
-import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20261027-2';
-import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20261027-2';
-import { activeInstitutions, institutionLabel } from './local-mode.js?v=20261027-2';
-import { renderFinanceCard } from './finance-mode.js?v=20261027-2';
-import { renderStaffBand } from './staff-view.js?v=20261027-2';
-import { planAddButton } from './plan-view.js?v=20261027-2';
-import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20261027-2';
-import { stateBadge, statusChip } from './charts.js?v=20261027-2';
-import { articleHtml, newsMedia, renderNewsroomTabs } from './news-view.js?v=20261027-2';
-import { relevantArticles } from '../core/news-engine.js?v=20261027-2';
-import { identityMark, kindChip } from './party-identity.js?v=20261027-2';
-import { illustration } from './illustrations.js?v=20261027-2';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261027-2';
-import { regionPriorities } from '../core/society-engine.js?v=20261027-2';
+import { endedHeadline } from './hall-view.js?v=20261027-3';
+import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261027-3';
+import { playerRoles } from '../core/roles.js?v=20261027-3';
+import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20261027-3';
+import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, currentObjectiveLabel, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261027-3';
+import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261027-3';
+import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20261027-3';
+import { careerLevelLabel } from '../data/regions.js?v=20261027-3';
+import { advanceDays, formatDate } from '../core/time.js?v=20261027-3';
+import { renderBarometerPanel } from './polls-mode.js?v=20261027-3';
+import { candidacyAccess } from './campaign-mode.js?v=20261027-3';
+import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20261027-3';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261027-3';
+import { societyMood } from '../core/society-engine.js?v=20261027-3';
+import { financeOutlook } from '../core/finance-engine.js?v=20261027-3';
+import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20261027-3';
+import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20261027-3';
+import { activeInstitutions, institutionLabel } from './local-mode.js?v=20261027-3';
+import { renderFinanceCard } from './finance-mode.js?v=20261027-3';
+import { renderStaffBand } from './staff-view.js?v=20261027-3';
+import { planAddButton } from './plan-view.js?v=20261027-3';
+import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20261027-3';
+import { stateBadge, statusChip } from './charts.js?v=20261027-3';
+import { articleHtml, newsMedia, renderNewsroomTabs } from './news-view.js?v=20261027-3';
+import { relevantArticles } from '../core/news-engine.js?v=20261027-3';
+import { identityMark, kindChip } from './party-identity.js?v=20261027-3';
+import { illustration } from './illustrations.js?v=20261027-3';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261027-3';
+import { regionPriorities } from '../core/society-engine.js?v=20261027-3';
 
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -664,7 +664,7 @@ export function renderPartyPosition(state, options = {}) {
   const ladder = party.affiliation === 'founder'
     ? `<ol class="party-ladder"><li class="current"><span>${esc(party.rankTitle)}</span></li></ol>`
     : `<ol class="party-ladder">${PARTY_RANKS.map(rank => `<li class="${rank.level < party.rank ? 'done' : rank.level === party.rank ? 'current' : ''}"><span>${esc(rank.title)}</span>${rank.threshold ? `<small>soglia ${rank.threshold}</small>` : ''}</li>`).join('')}</ol>`;
-  const currents = [...party.currents].sort((a, b) => b.strength - a.strength).map(current => { const request = current.profile?.requests?.at(-1); return `<div class="party-current ${party.alignedCurrentId === current.id ? 'aligned' : ''}"><div><strong>${esc(current.label)}${party.leaderCurrentId === current.id ? ' <em>guida il partito</em>' : ''}</strong><small>Peso interno ${num(current.strength, 1)}% · rapporto ${num(current.value ?? current.relation, 0)}/100</small><small>${esc(current.profile?.objective ?? 'Obiettivo in definizione')} · ${esc(current.lastAction ?? 'In attesa di iniziativa')}${request?.status === 'open' ? ` · richiesta: ${esc(request.title)}` : ''}</small>${meter(current.value ?? current.relation)}</div>${party.alignedCurrentId === current.id ? '<span class="hq-tag">LA TUA AREA</span>' : `<button class="secondary-button" data-party-current="${esc(current.id)}" ${costProblem(game, { ap: 1 }) ? 'disabled' : ''}>Schierati · 1 giorno</button>`}</div>`; }).join('');
+  const currents = [...party.currents].sort((a, b) => b.strength - a.strength).map(current => { const request = current.profile?.requests?.at(-1); return `<div class="party-current ${party.alignedCurrentId === current.id ? 'aligned' : ''}"><div><strong>${esc(current.label)}${party.leaderCurrentId === current.id ? ' <em>guida il partito</em>' : ''}</strong><small>Peso interno ${num(current.strength, 1)}% · rapporto ${num(current.value ?? current.relation, 0)}/100</small><small>${esc(current.profile?.objective ? currentObjectiveLabel(current.profile.objective) : 'Obiettivo in definizione')} · ${esc(current.lastAction ?? 'In attesa di iniziativa')}${request?.status === 'open' ? ` · richiesta: ${esc(request.title)}` : ''}</small>${meter(current.value ?? current.relation)}</div>${party.alignedCurrentId === current.id ? '<span class="hq-tag">LA TUA AREA</span>' : `<button class="secondary-button" data-party-current="${esc(current.id)}" ${costProblem(game, { ap: 1 }) ? 'disabled' : ''}>Schierati · 1 giorno</button>`}</div>`; }).join('');
   const log = game.log.filter(entry => entry.kind === 'partito' || /congresso|partito/i.test(entry.title)).slice(0, 5).map(entry => `<article class="hq-log tone-${esc(entry.tone)}"><time>S${entry.week}</time><div><strong>${esc(entry.title)}</strong>${entry.lines?.length ? `<small>${esc(entry.lines.join(' · '))}</small>` : ''}</div></article>`).join('');
   return `<section class="party-position"><div class="home-section-heading"><div><span class="section-kicker">POSIZIONE NEL PARTITO · SIMULAZIONE</span><h2>${esc(party.rankTitle)}</h2></div><button class="text-link" data-party-action="leave">Lascia il partito</button></div>
     <div class="party-metrics"><div><small>SOSTEGNO INTERNO</small><strong>${num(party.support, 0)}</strong>${meter(party.support, party.support < 25 ? 'danger' : '')}</div>${leadership ? `<div><small>RAPPORTO CON LA LEADERSHIP</small><strong>${num(leadership.value, 0)}</strong>${meter(leadership.value)}</div>` : ''}<div><small>AREA DI RIFERIMENTO</small><strong class="small">${esc(party.currents.find(item => item.id === party.alignedCurrentId)?.label ?? 'Nessuna')}</strong></div></div>

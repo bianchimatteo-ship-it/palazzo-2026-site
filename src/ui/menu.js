@@ -1,16 +1,16 @@
 // Main menu, how-to-play, settings, save slots and the end-of-week report.
-import { renderTutorialInvite } from './tutorial.js?v=20261027-2';
-import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261027-2';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261027-2';
-import { formatDate } from '../core/time.js?v=20261027-2';
-import { illustration } from './illustrations.js?v=20261027-2';
-import { glyph } from './visuals.js?v=20261027-2';
-import { identityMark, identityVars } from './party-identity.js?v=20261027-2';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261027-2';
-import { hallView } from './hall-view.js?v=20261027-2';
-import { renderLogoCatalog } from './logo-catalog.js?v=20261027-2';
-import { esc, signed } from './charts.js?v=20261027-2';
-import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261027-2';
+import { renderTutorialInvite } from './tutorial.js?v=20261027-3';
+import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261027-3';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261027-3';
+import { formatDate } from '../core/time.js?v=20261027-3';
+import { illustration } from './illustrations.js?v=20261027-3';
+import { glyph } from './visuals.js?v=20261027-3';
+import { identityMark, identityVars } from './party-identity.js?v=20261027-3';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261027-3';
+import { hallView } from './hall-view.js?v=20261027-3';
+import { renderLogoCatalog } from './logo-catalog.js?v=20261027-3';
+import { esc, signed } from './charts.js?v=20261027-3';
+import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261027-3';
 
 const when = iso => { try { return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch { return ''; } };
 // The actions of the opening screen, in order of importance: starting a career and resuming one are the two main ones (drawn apart, below); then what concerns the
@@ -258,7 +258,24 @@ function menuPopup(view, content) {
   </section></div>`;
 }
 
+// The very first screen of a first installation: the language, in both languages so that everybody understands it, before any account screen. Italian and English are the two buttons; nothing is
+// translated here (data-no-translate) because both texts are always shown. The choice is kept in the settings of the browser (politicando.settings.v1) and the selector stays on the home.
+export function languageGate() {
+  return `<div class="language-gate" role="dialog" aria-modal="true" aria-labelledby="language-gate-title" data-no-translate>
+    <div class="language-gate-card">
+      <img class="language-gate-logo" src="icons/logo-politicando-640.webp" srcset="icons/logo-politicando-240.webp 240w, icons/logo-politicando-640.webp 640w" sizes="(max-width:700px) 150px, 200px" width="200" height="200" alt="POLITICANDO 2026" decoding="async" />
+      <span class="language-gate-rule" aria-hidden="true"></span>
+      <h1 id="language-gate-title">Scegli la lingua<span> / </span><em>Choose your language</em></h1>
+      <div class="language-gate-buttons">
+        <button type="button" class="language-gate-button" data-language-choice="it" lang="it"><span class="language-gate-flag" aria-hidden="true">🇮🇹</span><span class="language-gate-name">Italiano</span></button>
+        <button type="button" class="language-gate-button" data-language-choice="en" lang="en"><span class="language-gate-flag" aria-hidden="true">🇬🇧</span><span class="language-gate-name">English</span></button>
+      </div>
+      <p class="language-gate-hint">Seleziona una lingua per continuare<span> / </span><em>Select a language to continue</em></p>
+    </div>
+  </div>`;
+}
 export function renderMainMenu(menu, context) {
+  if (menu.view === 'lingua') return languageGate();
   const { hasCareer, meta, lastSaved, unsaved, stats, settings, identity } = context;
   const facts = (stats ?? []).filter(([value]) => Number(value) > 0);
   const home = `<span class="section-kicker">POLITICANDO 2026</span><h2>La politica italiana, settimana dopo settimana</h2><p class="section-subtitle">Un gestionale di carriera in un mondo politico vivo: partiti, parlamentari, governo e leggi reali; tutto ciò che accade in partita è simulazione dichiarata.</p>

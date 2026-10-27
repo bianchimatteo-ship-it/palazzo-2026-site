@@ -1184,3 +1184,23 @@ select option, select optgroup { background: var(--panel); color: var(--ink); fo
 .acct-danger .acct-h svg, .settings-danger > h3 svg { color: var(--bad-ink, #ff9f9f); }
 .account-forms { grid-template-columns: minmax(0, 560px) !important; }
 .news-tags { margin: 2px 0 6px; color: var(--ink-3, #aab3a3); font-size: 13px; font-weight: 700; letter-spacing: .02em; }
+
+/* ---------- the first screen of a first installation: the language (both languages shown, dark and gold) ---------- */
+.language-gate { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: max(20px, env(safe-area-inset-top)) 16px max(20px, env(safe-area-inset-bottom)); overflow-y: auto;
+  background: radial-gradient(90% 70% at 50% 0%, rgba(240,207,133,.16), rgba(240,207,133,0) 60%), radial-gradient(120% 80% at 50% 100%, rgba(26,90,64,.32), rgba(26,90,64,0) 62%), linear-gradient(180deg, #0b1511 0%, #070d0a 100%); color: #f8f5ec; }
+.language-gate-card { width: min(520px, 100%); display: grid; justify-items: center; gap: 18px; padding: 34px 26px 28px; text-align: center; border: 1.5px solid rgba(240,207,133,.5); border-radius: 22px;
+  background: linear-gradient(160deg, rgba(26,90,64,.38), rgba(10,34,25,.78) 60%) #0a2219; box-shadow: 0 24px 60px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.07); }
+.language-gate-logo { width: min(200px, 44vw); height: auto; filter: drop-shadow(0 10px 22px rgba(0,0,0,.5)); }
+.language-gate-rule { width: 86px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, transparent, #f0cf85, transparent); }
+.language-gate h1 { margin: 0; font: 800 clamp(24px, 5.6vw, 32px)/1.2 Manrope, sans-serif; color: #f8f5ec; letter-spacing: -.01em; }
+.language-gate h1 span { color: #f0cf85; font-weight: 600; } .language-gate h1 em { display: block; font-style: normal; color: #f0cf85; font-size: .78em; font-weight: 700; margin-top: 4px; } .language-gate h1 span { display: none; }
+.language-gate-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
+.language-gate-button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; min-height: 118px; padding: 16px 10px; border: 1.5px solid rgba(240,207,133,.55); border-radius: 18px; color: #f8f5ec; cursor: pointer;
+  background: radial-gradient(110% 150% at 0% 0%, rgba(240,207,133,.17), rgba(240,207,133,0) 58%), linear-gradient(135deg, #1a5a40 0%, #10372a 52%, #0a2219 100%) #10372a; font: 750 20px Manrope, sans-serif; transition: transform .15s, border-color .15s, box-shadow .15s; }
+.language-gate-button:hover { transform: translateY(-2px); border-color: #f0cf85; box-shadow: 0 10px 26px rgba(0,0,0,.45), 0 0 0 1px rgba(240,207,133,.4); }
+.language-gate-button:active { transform: translateY(0); }
+.language-gate-button:focus-visible { outline: 3px solid #f0cf85; outline-offset: 3px; }
+.language-gate-flag { font-size: 40px; line-height: 1; }
+.language-gate-hint { margin: 2px 0 0; color: #dcd9cf; font: 600 14px/1.5 'DM Sans', sans-serif; } .language-gate-hint span { display: none; } .language-gate-hint em { display: block; font-style: normal; color: #bba880; }
+@media (max-width: 380px) { .language-gate-buttons { grid-template-columns: 1fr; } .language-gate-button { min-height: 84px; flex-direction: row; gap: 14px; } }
+html[data-motion="off"] .language-gate-button { transition: none; }

@@ -59,6 +59,9 @@ const clean = text => !/undefined|NaN|\[object Object\]/.test(text.replace(/data
 const goto = page => click({ nav: page });
 
 // ---------- 1. main menu at start ----------
+// a first installation opens on the choice of the language (see check-first-run); here the player picks Italian and the main menu follows
+assert.ok(root.innerHTML.includes('language-gate'), 'Alla prima installazione compare prima la scelta della lingua.');
+await click({ languageChoice: 'it' });
 assert.ok(root.innerHTML.includes('main-menu'), 'All’avvio compare il menu principale');
 for (const label of ['Nuova partita', 'Carica partita', 'Come giocare', 'Impostazioni']) assert.ok(root.innerHTML.includes(label), `Menu: manca ${label}`);
 assert.ok(!root.innerHTML.includes('CONTINUA LA PARTITA'), 'Senza partita non c’è “Continua”');
@@ -75,7 +78,7 @@ const indexHtml = await readFile(fileURLToPath(new URL('../index.html', import.m
 assert.match(indexHtml, /<html[^>]*\sdata-motion="off"/, 'index.html parte con data-motion="off": nessuna animazione durante il primo caricamento.');
 assert.equal(loadSettings().motion, 'off', 'Senza preferenza salvata le animazioni sono disattivate.');
 assert.equal(html.dataset.motion, 'off', 'All’avvio la pagina ha le animazioni disattivate.');
-assert.equal(localStorage.getItem('politicando.settings.v1'), null, 'Il valore predefinito non viene scritto come scelta del giocatore.');
+assert.equal(JSON.parse(localStorage.getItem('politicando.settings.v1')).motion, undefined, 'Il valore predefinito delle animazioni non viene scritto come scelta del giocatore (c’è solo la lingua).');
 assert.ok(['Complete', 'Ridotte', 'Disattivate'].every(label => menuHtml.includes(`>${label}<`)) && ['full', 'reduced', 'off'].every(value => menuHtml.includes(`data-setting-key="motion" data-setting-value="${value}"`)), 'Le impostazioni offrono Complete, Ridotte e Disattivate.');
 await click({ settingKey: 'motion', settingValue: 'full' });
 assert.equal(html.dataset.motion, 'full', 'Le animazioni si riattivano dalle impostazioni.');

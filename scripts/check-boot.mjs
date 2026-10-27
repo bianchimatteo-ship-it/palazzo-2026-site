@@ -7,6 +7,8 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
 const mem = new Map();
+// not a first installation: the language is already chosen (the first-run flow has its own checks)
+mem.set('politicando.settings.v1', JSON.stringify({ language: 'it' }));
 globalThis.localStorage = { getItem: key => mem.get(key) ?? null, setItem: (key, value) => mem.set(key, String(value)), removeItem: key => mem.delete(key) };
 globalThis.sessionStorage = { getItem: () => null, setItem() {}, removeItem() {} };
 globalThis.window = { innerWidth: 1200 };
