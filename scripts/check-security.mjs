@@ -112,7 +112,7 @@ else {
       const watch = `window.__csp = []; document.addEventListener('securitypolicyviolation', event => window.__csp.push(event.violatedDirective + ' ← ' + String(event.blockedURI).slice(0, 80) + (event.sample ? ' [' + event.sample.slice(0, 40) + ']' : '')));`;
       await send('Page.addScriptToEvaluateOnNewDocument', { source: watch });
       await goto();
-      await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu], .main-menu"))'));
+      await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu], .main-menu, .language-gate"))'));
       const delivered = await evaluate(`fetch('/index.html').then(response => ({ csp: response.headers.get('content-security-policy'), nosniff: response.headers.get('x-content-type-options'), referrer: response.headers.get('referrer-policy'), frame: response.headers.get('x-frame-options') }))`);
       assert.equal(delivered.csp, cspHeader, 'Il Worker serve davvero la politica di _headers.');
       assert.deepEqual([delivered.nosniff, delivered.referrer, delivered.frame], ['nosniff', 'no-referrer', 'DENY']);
@@ -139,7 +139,7 @@ else {
         assert.deepEqual(await evaluate('window.__csp'), [], `${page}: nessuna violazione della politica.`);
       }
       await goto();
-      await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu], .main-menu"))'));
+      await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu], .main-menu, .language-gate"))'));
       const violations = await evaluate('window.__csp');
       assert.deepEqual(violations, [], `Il gioco gira con la politica attiva senza violazioni: ${violations.slice(0, 3).join(' | ')}`);
       assert.deepEqual(errors, [], `Errori in pagina: ${errors.slice(0, 2).join(' | ')}`);

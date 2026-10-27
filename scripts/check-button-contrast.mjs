@@ -86,7 +86,7 @@ await withBrowser(async browser => {
     // a clean browser has no IndexedDB copy of the saves either
     await evaluate(`new Promise(resolve => { const done = () => resolve(true); const request = indexedDB.deleteDatabase('politicando-vault'); request.onsuccess = request.onerror = request.onblocked = done; })`);
     await browser.goto();
-    await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu], .main-menu"))'));
+    await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu], .main-menu, .language-gate"))'));
     await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu=nuova]:not([disabled])"))')); // (it is usable once the starting data has arrived)
     await pause(400);
     const start = await evaluate(`[...document.querySelectorAll('[data-menu]')].map(item => item.dataset.menu)`);
@@ -130,4 +130,4 @@ await withBrowser(async browser => {
   const unique = [...new Set(problems)];
   assert.deepEqual(unique.slice(0, 25), [], `Pulsanti o collegamenti poco leggibili (${unique.length}).`);
   console.log(`Contrasto dei pulsanti verificato in Chrome: ${checked} controlli (schermata iniziale, procedura di nuova partita, menu con carriera e nove sezioni, a 390 e 1280 px) e ${states} stati forzati (hover, tastiera, premuto): ogni testo ha almeno 4,5:1 (3:1 se grande) col suo sfondo, «Nuova partita» in ogni stato e con il contorno della tastiera visibile.`);
-}, {});
+}, { language: 'it' });

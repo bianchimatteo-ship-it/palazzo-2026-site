@@ -15,7 +15,7 @@ export const waitFor = async (check, timeout = 25000) => { const start = Date.no
 
 // `serverPort`: the game is already served there (a test that runs its own server, such as the local Worker of scripts/lib/local-worker.mjs); then no server.mjs is started.
 // `fresh`: a new clean Chrome profile is the default; two calls of withBrowser are two browsers that share nothing (no cache, no storage).
-export async function withBrowser(callback, { root = fileURLToPath(new URL('../..', import.meta.url)), serverPort = null } = {}) {
+export async function withBrowser(callback, { root = fileURLToPath(new URL('../..', import.meta.url)), serverPort = null, language = null } = {}) {
   const port = serverPort ?? 4600 + Math.floor(Math.random() * 300), debug = 9700 + Math.floor(Math.random() * 300);
   const server = serverPort ? { kill() {} } : spawn(process.execPath, ['server.mjs'], { cwd: root, env: { ...process.env, PORT: String(port) }, stdio: 'ignore' });
   const profile = await mkdtemp(join(tmpdir(), 'politicando-browser-'));
@@ -43,6 +43,8 @@ export async function withBrowser(callback, { root = fileURLToPath(new URL('../.
     const screenshot = async file => { const shot = await send('Page.captureScreenshot', { format: 'png' }); await writeFile(file, Buffer.from(shot.data, 'base64')); };
     await send('Page.enable');
     await send('Runtime.enable');
+    // `language`: not a first installation (the language is already chosen, in every page load, even after the storage is cleared); without it a fresh profile opens on the choice of the language
+    if (language) await send('Page.addScriptToEvaluateOnNewDocument', { source: `try { if (!localStorage.getItem('politicando.settings.v1')) localStorage.setItem('politicando.settings.v1', JSON.stringify({ language: ${JSON.stringify(language)} })); } catch {}` });
     await viewport(1280, 800, false);
     await goto();
     await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu], .main-menu, .language-gate"))'));
@@ -55,7 +57,7 @@ export async function withBrowser(callback, { root = fileURLToPath(new URL('../.
 // The browser then opens on the main menu: `openCareer` presses "Continua".
 export async function createCareerInPage({ evaluate, version }, { party = 'party-registro-p1-2017-41-ir', group = 'cam-xix-03', level = 'deputato', weeks = 0, name = ['Prova', 'Verifica'], region = 'Toscana', onboarding = true, extra = '' } = {}) {
   await evaluate(`(async () => {
-    ${onboarding ? `localStorage.setItem('politicando.onboarding.v1', JSON.stringify({ account: true, tour: 'done', localStart: true }));` : ''}
+    ${onboarding ? `if (!localStorage.getItem('politicando.settings.v1')) localStorage.setItem('politicando.settings.v1', JSON.stringify({ language: 'it' })); localStorage.setItem('politicando.onboarding.v1', JSON.stringify({ account: true, tour: 'done', localStart: true }));` : ''}
     const { store } = await import('/src/core/store.js?v=${version}');
     const real = await import('/src/data/repositories/real-data.js?v=${version}');
     await real.loadRealDatabase();

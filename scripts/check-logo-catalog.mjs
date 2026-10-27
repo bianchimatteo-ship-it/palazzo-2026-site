@@ -329,6 +329,6 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   await wait(async () => !(await has('[data-logo-legacy-block]')));
   assert.match((await resolved('party-futuro-nazionale')) ?? '', /^blob:/, 'Dopo che il giocatore lo rivendica il logo è suo e si usa.');
   assert.deepEqual(errors, [], 'Nessun errore in pagina.');
-}, { serverPort: 8791 });
+}, { serverPort: 8791, language: 'it' });
 await local.close();
 console.log('Catalogo personale dei loghi verificato in Chrome: sezione della Home con tutti i partiti, ricerca, anteprima e stato; aggiunta da file o da indirizzo https (copiata una volta, indirizzo dimenticato), sostituzione ed eliminazione; solo PNG, JPEG e WebP reali, compressi in locale; salvati in IndexedDB per account e identificativo del partito, mai nei salvataggi; riutilizzati in tutte le carriere e per i parlamentari; fallback originale; isolamento tra account e ospite; quota esaurita gestita; nessuna richiesta di rete; dati del gioco intatti; migrazione una tantum dei loghi precedenti.');

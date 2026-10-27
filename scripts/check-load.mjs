@@ -58,7 +58,7 @@ else {
       await evaluate(`new Promise(resolve => { const done = () => resolve(true); const request = indexedDB.deleteDatabase('politicando-vault'); request.onsuccess = request.onerror = request.onblocked = done; })`);
       const start = Date.now();
       await goto(page);
-      await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu], .main-menu"))'), 60000);
+      await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu], .main-menu, .language-gate"))'), 60000);
       const menuMs = Date.now() - start;
       await pause(500);
       const stats = await evaluate(`(() => {
@@ -73,7 +73,7 @@ else {
       // (the account service probe answers 404 on the plain static server of the tests: the game then plays offline, as designed)
       assert.deepEqual(stats.failed, [], 'Nessuna richiesta fallita.');
       return { page, menuMs, ...stats, spread: stats.lastStart - stats.firstStart };
-    }, { serverPort: 8796 });
+    }, { serverPort: 8796, language: 'it' });
     const withPreload = await measure('index.html');
     const without = await measure('nopreload.html');
     for (const result of [withPreload, without]) assert.ok(result.modules >= graph.list.length - 2 && result.modules <= graph.list.length + 2, `Moduli caricati da ${result.page}: ${result.modules} (grafo ${graph.list.length}): niente scaricato in più.`);

@@ -12,7 +12,7 @@ await withBrowser(async ({ evaluate, viewport, goto, waitFor, pause, version }) 
     await goto();
     await evaluate(`localStorage.setItem('politicando.onboarding.v1', JSON.stringify({ account: true, tour: 'done', localStart: true })), true`);
     await goto();
-    await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu], .main-menu"))'));
+    await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu], .main-menu, .language-gate"))'));
     await pause(800);
     await evaluate(`(async () => {
       const { store } = await import('/src/core/store.js?v=${version}');
