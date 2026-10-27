@@ -171,10 +171,14 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   await setField('[data-wizard-region]', 'Toscana', 'change'); await wait(() => evaluate('Boolean(document.querySelector("[data-wizard-municipality-search]"))'));
   await setField('[data-wizard-municipality-search]', 'Siena'); await wait(() => evaluate('Boolean(document.querySelector("[data-municipality-code=\\"052032\\"]"))'));
   await evaluate(`document.querySelector('[data-municipality-code="052032"]').click(); true`); await pause(300);
+  // 3 career path, 4 party, 5 advanced settings (and the starting conditions, opened), 6 summary
   await nextStep(); await record('wizard/3');
+  await evaluate(`document.querySelector('[data-starting-office="presidenteConsiglio"]').click(); true`); await pause(300); await record('wizard/3-pdc');
+  await evaluate(`document.querySelector('[data-level="comunale"]').click(); true`); await pause(300);
   await nextStep(); await record('wizard/4');
-  await evaluate(`document.querySelectorAll('.career-wizard details:not([open])').forEach(d => d.setAttribute('open', '')); true`); await record('wizard/4-aperto');
   await nextStep(); await record('wizard/5');
+  await evaluate(`document.querySelectorAll('.career-wizard details:not([open])').forEach(d => d.setAttribute('open', '')); true`); await record('wizard/5-aperto');
+  await nextStep(); await record('wizard/6');
   assert.ok(screens.size >= 14, `Popup e passaggi percorsi: ${screens.size}.`);
   if (process.env.I18N_LEFT) (await import('node:fs')).writeFileSync(process.env.I18N_LEFT, JSON.stringify(italian));
   const ratio = italian.length / nodes;

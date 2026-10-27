@@ -255,9 +255,10 @@ if (chromeAvailable) {
       await click('[data-municipality-code="052032"]'); await pause(400);
       await click('.wizard-footer [data-wizard-action="next"]'); await pause(500);
       await click('.wizard-footer [data-wizard-action="next"]'); await pause(500);
-      // step 3 (party): independent is the default; step 4
+      await click('.wizard-footer [data-wizard-action="next"]'); await pause(500);
+      // screen 3 (career path: the default is valid) and screen 4 (party: independent is the default); screen 5 is the advanced one
       await waitFor(() => evaluate(`Boolean(document.querySelector('.poll-scenario')) || document.querySelector('.career-wizard')?.textContent.includes('DIFFICOLTÀ')`), 15000);
-      assert.ok(await evaluate(`Boolean(document.querySelector('.poll-scenario'))`), `${width}px: il passaggio 4 ha il blocco «Sondaggio iniziale».`);
+      assert.ok(await evaluate(`Boolean(document.querySelector('.poll-scenario'))`), `${width}px: il passaggio 5 ha il blocco «Sondaggio iniziale».`);
       const modes = await evaluate(`[...document.querySelectorAll('input[name="pollMode"]')].map(item => item.value)`);
       assert.deepEqual(modes, ['realistico', 'casuale', 'personalizzato'], `${width}px: i tre modi.`);
       assert.equal(await evaluate(`document.querySelector('input[name="pollMode"]:checked')?.value`), 'realistico', 'Il modo di partenza è Realistico.');
@@ -293,7 +294,7 @@ if (chromeAvailable) {
       assert.ok(await evaluate(`Boolean(document.querySelector('.poll-problems'))`), `${width}px: oltre 100 il blocco dice perché.`);
       assert.match(await text('.poll-problems'), /sommano|Altri/, `${width}px: con il motivo.`);
       await click('.wizard-footer [data-wizard-action="next"]'); await pause(500);
-      assert.equal(await evaluate(`Number(document.querySelector('.career-wizard')?.dataset?.step ?? 0) || (document.querySelector('.poll-scenario') ? 4 : 5)`), 4, `${width}px: con una somma che non torna non si va avanti.`);
+      assert.equal(await evaluate(`Number(document.querySelector('.career-wizard')?.dataset?.step ?? 0) || (document.querySelector('.poll-scenario') ? 5 : 6)`), 5, `${width}px: con una somma che non torna non si va avanti.`);
       assert.ok(await evaluate(`Boolean(document.querySelector('.wizard-errors'))`), `${width}px: e l’errore è in vista.`);
       await click('[data-poll-fit]'); await pause(500);
       assert.ok(!(await evaluate(`Boolean(document.querySelector('.poll-problems'))`)), `${width}px: «Porta a 100» fa tornare i conti.`);

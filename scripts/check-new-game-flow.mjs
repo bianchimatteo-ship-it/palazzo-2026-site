@@ -57,11 +57,13 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
       await click('[data-municipality-code="052032"]'); await pause(250);
       await next();
     }
-    if (target >= 4) await next();
+    // 3 is the career path (its own page), 4 the party, 5 the advanced settings, 6 the summary
+    if (target >= 4) { await wait(() => has('.level-cards')); await next(); }
     if (target >= 5) await next();
+    if (target >= 6) await next();
     await wait(async () => (await step()).includes(`0${target}`));
   };
-  for (const target of [1, 2, 3, 4, 5]) {
+  for (const target of [1, 2, 3, 4, 5, 6]) {
     await reach(target);
     await evaluate(`document.querySelector('.career-wizard').click(), true`); await pause(200);
     assert.ok(await has('.career-wizard'), `Un clic dentro il popup non annulla (passaggio ${target}).`);
@@ -71,7 +73,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
     // the creator is a popup over the homepage (which stays, out of reach); every way out lands on the initial menu
     assert.ok(await has('.wizard-under .menu-new'), `Al passaggio ${target} la homepage resta dietro il popup.`);
     assert.equal(await evaluate(`document.querySelector('.wizard-under').hasAttribute('inert')`), true, 'E non si può toccare.');
-    const how = ['cancel', 'x', 'escape', 'backdrop', 'cancel'][target - 1];
+    const how = ['cancel', 'x', 'escape', 'backdrop', 'cancel', 'x'][target - 1];
     if (how === 'cancel') await click('.wizard-cancel');
     else if (how === 'x') await click('.wizard-x');
     else if (how === 'escape') { await evaluate(`window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })), true`); await pause(300); }
@@ -132,7 +134,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   assert.equal(verdict.reason, 'full');
   const slotsBefore = await evaluate(`Object.keys(localStorage).filter(key => key.includes('slot')).length`);
   await evaluate(`(() => { window.__downloads = []; const make = URL.createObjectURL.bind(URL); URL.createObjectURL = blob => { window.__downloads.push(blob.size); return make(blob); }; return true; })()`);
-  await reach(5);
+  await reach(6);
   await click('.wizard-footer [data-wizard-action="finish"]');
   await wait(() => has('.wizard-blocked'));
   assert.match(await evaluate(`document.querySelector('.wizard-errors').textContent`), /slot sono pieni/, 'Il gioco spiega perché la nuova carriera non parte.');

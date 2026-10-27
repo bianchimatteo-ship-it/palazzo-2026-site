@@ -1,8 +1,9 @@
-import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel } from '../data/regions.js?v=20261027-3';
-import { isSelectableParty } from '../data/schema.js?v=20261027-3';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261027-3';
-import { startAgeProblems, startProblems } from './start-engine.js?v=20261027-3';
-import { presidentialEligibility } from './presidency-engine.js?v=20261027-3';
+import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel } from '../data/regions.js?v=20261027-4';
+import { isSelectableParty } from '../data/schema.js?v=20261027-4';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261027-4';
+import { startAgeProblems, startProblems } from './start-engine.js?v=20261027-4';
+import { presidentialEligibility } from './presidency-engine.js?v=20261027-4';
+import { avatarProblems } from './avatar.js?v=20261027-4';
 
 const genders = new Set(['preferisco-non-specificare', 'donna', 'uomo', 'non-binario']);
 const orientations = new Set(['Centrismo civico', 'Progressista', 'Conservatore', 'Liberale', 'Socialdemocratico', 'Ecologista', 'Popolare', 'Autonomista', 'Altro']);
@@ -23,14 +24,15 @@ const isValidDate = value => {
   return !Number.isNaN(date.valueOf()) && date.toISOString().slice(0, 10) === value;
 };
 
-// Steps of a new career: 1 where (Regione → Comune, from the ISTAT list), 2 path, 3 party, 4 difficulty and starting conditions, 5 who you are.
+// The checks of a new career keep their own numbering: 1 where (Regione → Comune, from the ISTAT list), 2 path, 3 party, 4 difficulty and starting conditions, 5 who you are (with the avatar).
 // territory: { units, municipalities } — when given, the comune must be one of the ISTAT list, in the chosen region.
 export const CAREER_STEPS = 5;
 // requireTerritory: the Career Wizard needs the ISTAT list; while it is missing no comune can be accepted (never one
 // typed freely). Without it (saves, tests, careers built in code) a comune name is enough, as before.
-// The wizard shows five steps (identity, start, party, advanced settings, summary); the checks above keep their own numbers.
-// Each step of the wizard runs the checks of the parts of the old numbering that it gathers (the age rules of the starting conditions depend on the birth date, so they run in both places).
-export const WIZARD_CHECKS = Object.freeze({ 1: [5], 2: [1, 2], 3: [3], 4: [4, 5], 5: [] });
+// The wizard shows six screens: 1 identity and avatar, 2 territory and start, 3 career path, 4 party, 5 advanced settings, 6 summary.
+// Each screen runs the checks (numbered as above) of the parts that it gathers; the age rules of the starting conditions depend on the birth date, so check 5 runs together with check 4 on the advanced screen too.
+export const WIZARD_VIEWS = 6;
+export const WIZARD_CHECKS = Object.freeze({ 1: [5], 2: [1], 3: [2], 4: [3], 5: [4, 5], 6: [] });
 export const validateWizardStep = (draft, view, ...rest) => [...new Set((WIZARD_CHECKS[view] ?? []).flatMap(step => validateCareerStep(draft, step, ...rest)))];
 export function validateCareerStep(draft, step, selectableParties, parliamentaryGroups = [], territory = null, { requireTerritory = false } = {}) {
   const errors = [];
@@ -49,6 +51,7 @@ export function validateCareerStep(draft, step, selectableParties, parliamentary
     if (!draft.lastName?.trim()) errors.push('Inserisci il cognome.');
     if (!isValidDate(draft.birthDate) || draft.birthDate > draft.currentDate) errors.push('Inserisci una data di nascita valida e precedente all’inizio della carriera.');
     if (!genders.has(draft.gender)) errors.push('Seleziona il genere.');
+    errors.push(...avatarProblems(draft.avatar));
     if (!draft.previousProfession?.trim()) errors.push('Inserisci la professione precedente.');
     if (draft.startingOffice === 'presidenteRepubblica') errors.push(...presidentialEligibility({ birthDate: draft.birthDate, date: draft.currentDate }).problems);
     // A career that starts consolidated needs the years to have it: the age is known only here.

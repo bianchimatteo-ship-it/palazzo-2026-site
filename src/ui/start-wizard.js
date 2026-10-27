@@ -1,10 +1,10 @@
-// The starting conditions in the career wizard (step 4, under the difficulty): how the career begins — an ordinary
+// The starting conditions in the career wizard (screen 5, under the difficulty): how the career begins — an ordinary
 // start, an outsider, with political debts, in a party already divided, with a consolidated career, or a custom
 // scenario built under a budget of points. What each choice does is read from the same rules the engine applies.
-import { LEVER_BY_ID, START_BUDGET, START_LEVERS, START_LEVEL_MAX, START_PROFILES, START_PROFILE_ORDER } from '../data/simulation/start-rules.js?v=20261027-3';
-import { normalizeStart, planLines, startPlan } from '../core/start-engine.js?v=20261027-3';
-import { legacyPicker } from './hall-view.js?v=20261027-3';
-import { scenarioLines, scenarioOf } from '../core/scenario-engine.js?v=20261027-3';
+import { LEVER_BY_ID, START_BUDGET, START_LEVERS, START_LEVEL_MAX, START_PROFILES, START_PROFILE_ORDER } from '../data/simulation/start-rules.js?v=20261027-4';
+import { normalizeStart, planLines, startPlan } from '../core/start-engine.js?v=20261027-4';
+import { legacyPicker } from './hall-view.js?v=20261027-4';
+import { scenarioLines, scenarioOf } from '../core/scenario-engine.js?v=20261027-4';
 
 const esc = (value = '') => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const list = (items, mark) => items.length ? `<ul class="start-list">${items.map(item => `<li data-mark="${mark}">${esc(item)}</li>`).join('')}</ul>` : '';
@@ -25,7 +25,7 @@ function profileCards(d, selected) {
     return `<button type="button" class="start-card ${on ? 'selected' : ''}" data-start-profile="${esc(id)}" aria-pressed="${on}" ${blocked ? 'disabled' : ''}>
       <span class="start-card-top"><strong>${esc(item.label)}</strong><span class="radio-ring"></span></span>
       <p>${esc(item.summary)}</p>${list(item.gives, '+')}${list(item.costs, '−')}
-      ${blocked ? '<em class="start-note">Serve un partito esistente: sceglilo nel passaggio 3.</em>' : ''}
+      ${blocked ? '<em class="start-note">Serve un partito esistente: sceglilo nel passaggio 4.</em>' : ''}
     </button>`;
   }).join('');
 }
@@ -80,5 +80,5 @@ export function startSummary(d) {
   const plan = startPlan(d.start, { partyMode: d.partyMode });
   const rows = planLines(plan);
   const heir = (d.hall ?? []).find(entry => entry.id === d.legacyId);
-  return `<section class="summary-section"><div class="summary-section-heading"><div><span>04 · PUNTO DI PARTENZA</span><strong>${esc(plan.label)}</strong></div><button type="button" data-wizard-goto="4">Modifica</button></div><small>${rows.length ? esc(rows.map(row => `${row.label} ${row.level}/3`).join(' · ')) : 'Nessuna condizione particolare.'}${heir ? esc(` · con l’eredità di ${heir.name}`) : ''}</small></section>`;
+  return `<section class="summary-section"><div class="summary-section-heading"><div><span>05 · PUNTO DI PARTENZA</span><strong>${esc(plan.label)}</strong></div><button type="button" data-wizard-goto="5">Modifica</button></div><small>${rows.length ? esc(rows.map(row => `${row.label} ${row.level}/3`).join(' · ')) : 'Nessuna condizione particolare.'}${heir ? esc(` · con l’eredità di ${heir.name}`) : ''}</small></section>`;
 }

@@ -5,7 +5,7 @@
 //     the phrase book (src/data/i18n/en-*.js): exact phrases, phrases with numbers (`#`) or free parts (`{}`), and the numbers, currency and dates in English form.
 //     Proper names (people, parties, places, official denominations) are never in the phrase book: they stay as they are. A phrase that is not in the book stays Italian, never wrong.
 // Nothing here touches a career: the language is a view of the same data.
-import { saveSetting } from './settings.js?v=20261027-3';
+import { saveSetting } from './settings.js?v=20261027-4';
 
 export const LANGUAGES = Object.freeze([['it', 'Italiano', 'it-IT'], ['en', 'English', 'en-GB']]);
 const SETTINGS_KEY = 'politicando.settings.v1';
@@ -45,7 +45,9 @@ function compileTemplate(it, en) {
   const literals = parts.filter(piece => piece !== null).flatMap(piece => piece.split('#')).filter(piece => piece.length > 1);
   // the text before the first free part or number: templates are looked up by it (and the most specific one, the one with most fixed text, is tried first)
   const lead = (parts[0] ?? '').split('#')[0];
-  return { re: new RegExp(`^${source}$`), en, literals, lead, weight: literals.reduce((sum, piece) => sum + piece.length, 0) };
+  // the longest fixed piece is the cheapest test that rules a template out (most texts fail it at once)
+  const longest = literals.reduce((best, piece) => piece.length > best.length ? piece : best, '');
+  return { re: new RegExp(`^${source}$`), en, literals, longest, lead, weight: literals.reduce((sum, piece) => sum + piece.length, 0) };
 }
 export function installBook(pairs, keys = {}) {
   book = book ?? { exact: new Map(), lower: new Map(), templates: [], keys: {}, index: null };
@@ -112,7 +114,10 @@ function lookup(text, depth = 0) {
   }
   if (key.length > 360) return null;
   for (const template of candidates(key)) {
-    if (!template.literals.every(piece => key.includes(piece))) continue;
+    if (template.longest && !key.includes(template.longest)) continue;
+    let missing = false;
+    for (const piece of template.literals) if (!key.includes(piece)) { missing = true; break; }
+    if (missing) continue;
     const match = key.match(template.re);
     if (!match) continue;
     // the free parts are translated too when they are phrases of the book (roles, labels); names stay as they are.
@@ -263,7 +268,7 @@ export function watchTree(root) {
 let loading = null;
 export function loadBook() {
   if (book?.loaded) return Promise.resolve(book);
-  loading ??= import('../data/i18n/index.js?v=20261027-3').then(module => { module.install(installBook); book.loaded = true; return book; });
+  loading ??= import('../data/i18n/index.js?v=20261027-4').then(module => { module.install(installBook); book.loaded = true; return book; });
   return loading;
 }
 // The title of the page (the tab) is read by people and by assistive technology: it follows the language like the rest (the Italian one is kept to go back to).

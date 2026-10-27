@@ -21,7 +21,7 @@ await realData.loadRealCollections(['territorialUnits', 'municipalities', 'parti
 const db = realData.realDatabase;
 const { ITALIAN_REGIONS } = await import(`../src/data/regions.js${v}`);
 const { makeCareerDraft, renderCareerWizard, chosenPlace, WIZARD_STEPS } = await import(`../src/ui/career-wizard.js${v}`);
-const { validateCareerStep, validateNewCareerDraft, validateWizardStep, WIZARD_CHECKS, CAREER_STEPS } = await import(`../src/core/career-rules.js${v}`);
+const { validateCareerStep, validateNewCareerDraft, validateWizardStep, WIZARD_CHECKS, CAREER_STEPS, WIZARD_VIEWS } = await import(`../src/core/career-rules.js${v}`);
 const { store } = await import(`../src/core/store.js${v}`);
 
 // ---------- 1. the ISTAT list, imported, complete and separate ----------
@@ -48,15 +48,16 @@ const sources = [];
 for (const dir of ['../src/ui/', '../src/core/', '../src/data/simulation/']) for (const name of await readdir(new URL(dir, import.meta.url))) if (name.endsWith('.js')) sources.push(await readFile(new URL(dir + name, import.meta.url), 'utf8'));
 assert.ok(sources.every(text => !/\bBosio\b|\bMatteo\b/.test(text)), 'Nessun riferimento personale (Matteo, Bosio) nel codice di gioco.');
 
-// ---------- 3. the steps: who you are → where and as what → party → advanced settings → summary ----------
-assert.equal(CAREER_STEPS, 5);
-assert.deepEqual(WIZARD_STEPS.map(step => step[0]), ['Identità', 'Partenza', 'Partito', 'Avanzate', 'Riepilogo']);
+// ---------- 3. the screens: who you are (with the avatar) → territory → career path → party → advanced settings → summary ----------
+assert.equal(CAREER_STEPS, 5, 'I controlli numerati restano cinque (la loro numerazione non cambia).');
+assert.equal(WIZARD_VIEWS, 6);
+assert.deepEqual(WIZARD_STEPS.map(step => step[0]), ['Identità', 'Territorio', 'Carriera', 'Partito', 'Avanzate', 'Riepilogo']);
 const state = store.getState();
 const render = (d, t = territory) => renderCareerWizard(state, { ...makeCareerDraft('2026-09-24'), ...d }, [], () => null, db.parliamentaryGroups, [], [], db.politicians, t);
 let html = render({ step: 1 });
-assert.ok(html.includes('Chi sei') && html.includes('PASSAGGIO 01 <i>/</i> 05') && ['firstName', 'lastName', 'birthDate', 'gender', 'previousProfession'].every(name => html.includes(`name="${name}"`)) && !html.includes('data-wizard-region'), 'Si comincia da chi sei: nome, cognome, nascita, genere e professione.');
+assert.ok(html.includes('Identità e avatar') && html.includes('data-avatar-editor') && html.includes('PASSAGGIO 01 <i>/</i> 06') && ['firstName', 'lastName', 'birthDate', 'gender', 'previousProfession'].every(name => html.includes(`name="${name}"`)) && !html.includes('data-wizard-region'), 'Si comincia da chi sei: nome, cognome, nascita, genere e professione.');
 html = render({ step: 2 });
-assert.ok(html.includes('Da dove parti') && html.includes('data-wizard-region') && html.includes('PASSAGGIO 02 <i>/</i> 05') && html.includes('istat.it') && html.includes('data-level="comunale"'), 'Il secondo passaggio è il punto di partenza: territorio (con la fonte ISTAT) e percorso insieme.');
+assert.ok(html.includes('Territorio e partenza') && html.includes('data-wizard-region') && html.includes('PASSAGGIO 02 <i>/</i> 06') && html.includes('istat.it') && !html.includes('data-level='), 'Il secondo passaggio è il punto di partenza: territorio (con la fonte ISTAT) e percorso insieme.');
 assert.ok(!html.includes('data-municipality-code'), 'Prima la regione, poi il comune.');
 assert.ok(render({ step: 2 }, null).includes('Caricamento dell’elenco ISTAT'), 'Finché l’elenco non è caricato lo si dice.');
 html = render({ step: 2, region: 'Piemonte' });
@@ -70,13 +71,17 @@ assert.ok(html.includes('data-municipality-code="058091"') && html.includes('cap
 const roma = { step: 2, region: 'Lazio', municipalityCode: '058091', municipality: 'Roma' };
 assert.equal(chosenPlace(roma, territory)?.unit.name, 'Roma');
 html = render(roma);
-assert.ok(html.includes('<strong>Comune di Roma</strong>') && html.includes('data-level="comunale"') && html.includes('Cambia comune'), 'Il percorso si sceglie nello stesso passaggio del comune, che resta in vista (l’elenco si chiude).');
+assert.ok(html.includes('<strong>Comune di Roma</strong>') && html.includes('Cambia comune') && !html.includes('data-level='), 'Il comune resta in vista (l’elenco si chiude) e il percorso non è più in questo passaggio.');
+const careerHtml = render({ ...roma, step: 3 });
+assert.ok(careerHtml.includes('Scegli la tua carriera') && careerHtml.includes('PASSAGGIO 03 <i>/</i> 06') && ['comunale', 'provinciale', 'regionale', 'deputato', 'senatore', 'europeo'].every(level => careerHtml.includes(`data-level="${level}"`)) && careerHtml.includes('data-starting-office="presidenteConsiglio"') && careerHtml.includes('data-starting-office="presidenteRepubblica"') && careerHtml.includes('Comune di Roma') && !careerHtml.includes('data-wizard-region'), 'Il percorso ha la sua pagina: tutte le carte (CAREER_LEVELS e i due scenari), il comune scelto in vista e nessun campo del territorio.');
+assert.ok(!careerHtml.includes('data-group-id=') && !careerHtml.includes('data-pdc-context'), 'Con un percorso locale non compaiono né il gruppo né il contesto del Presidente del Consiglio.');
+assert.ok(render({ ...roma, step: 3, initialLevel: 'senatore' }).includes('data-wizard-group-search') && render({ ...roma, step: 3, startingOffice: 'presidenteConsiglio', initialLevel: 'deputato' }).includes('data-pdc-context="external"'), 'Le opzioni dipendenti compaiono solo per il percorso scelto (gruppo parlamentare, contesto del PdC).');
 assert.ok(/<details class="wizard-more" data-wizard-more="comuni" >/.test(html), 'Scelto il comune, l’elenco dei comuni è un accordion chiuso.');
 assert.ok(/<details class="wizard-more" data-wizard-more="comuni" open/.test(render({ step: 2, region: 'Lazio' })), 'Senza comune l’elenco è aperto.');
 assert.ok(/<details class="wizard-more" data-wizard-more="comuni" open/.test(render({ ...roma, open: { comuni: true } })), 'Un accordion lasciato aperto dal giocatore resta aperto.');
-assert.ok(render({ ...roma, step: 4 }).includes('difficulty-grid'), 'La difficoltà ha un suo passaggio.');
-assert.ok(/<details class="wizard-more" data-wizard-more="start" >/.test(render({ ...roma, step: 4 })), 'Le condizioni di partenza sono un accordion chiuso sotto la difficoltà.');
-html = render({ ...roma, step: 5, firstName: 'Ada', lastName: 'Prova' });
+assert.ok(render({ ...roma, step: 5 }).includes('difficulty-grid'), 'La difficoltà ha un suo passaggio.');
+assert.ok(/<details class="wizard-more" data-wizard-more="start" >/.test(render({ ...roma, step: 5 })), 'Le condizioni di partenza sono un accordion chiuso sotto la difficoltà.');
+html = render({ ...roma, step: 6, firstName: 'Ada', lastName: 'Prova' });
 assert.ok(!html.includes('name="firstName"') && html.includes('01 · IDENTITÀ') && html.includes('Ada Prova') && html.includes('02 · DOVE INIZI') && html.includes('codice ISTAT 058091') && html.includes('data-wizard-action="finish"'), 'In fondo il riepilogo: identità, comune ISTAT e avvio.');
 
 // Validation follows the same order; the comune must come from the ISTAT list of the chosen region.
@@ -87,14 +92,18 @@ assert.ok(check({ region: 'Piemonte', municipalityCode: '058091', municipality: 
 assert.deepEqual(check({ region: 'Lazio', municipalityCode: '058091', municipality: 'Roma' }, 1), []);
 // The steps of the wizard run the checks of the parts they gather (the numbered checks above keep their meaning).
 const view = (d, step) => validateWizardStep({ ...makeCareerDraft('2026-09-24'), ...d }, step, db.parties, db.parliamentaryGroups, territory);
-assert.deepEqual(Object.keys(WIZARD_CHECKS).map(Number), [1, 2, 3, 4, 5]);
+assert.deepEqual(Object.keys(WIZARD_CHECKS).map(Number), [1, 2, 3, 4, 5, 6]);
+// the explicit map: screen → numbered checks (1 territory, 2 path, 3 party, 4 difficulty and starting conditions, 5 identity)
+assert.deepEqual(WIZARD_CHECKS, { 1: [5], 2: [1], 3: [2], 4: [3], 5: [4, 5], 6: [] });
 assert.ok(view({}, 1).some(error => /nome/.test(error)) && view({}, 1).some(error => /professione/.test(error)), 'Identità: nome e professione obbligatori.');
 assert.deepEqual(view({ firstName: 'Ada', lastName: 'Prova', birthDate: '1985-04-12', previousProfession: 'Insegnante' }, 1), [], 'Identità completa.');
-assert.ok(view({}, 2).some(error => /regione/.test(error)), 'Partenza: la regione serve.');
-assert.ok(view({ region: 'Lazio', municipalityCode: '058091', municipality: 'Roma', initialLevel: 'deputato' }, 2).some(error => /gruppo/.test(error)), 'Partenza: anche il percorso è controllato (un deputato ha bisogno del gruppo).');
-assert.deepEqual(view({ region: 'Lazio', municipalityCode: '058091', municipality: 'Roma' }, 2), [], 'Partenza completa.');
-assert.deepEqual(view({}, 5), [], 'Il riepilogo non ha controlli propri: l’avvio li esegue tutti.');
-assert.ok(view({ start: { profile: 'consolidata', levels: {} }, birthDate: '1995-01-01' }, 4).some(error => /almeno 40 anni/.test(error)), 'Avanzate: la carriera consolidata richiede l’età (il controllo dipende dalla data di nascita).');
+assert.ok(view({}, 2).some(error => /regione/.test(error)), 'Territorio: la regione serve.');
+assert.ok(!view({ region: 'Lazio', municipalityCode: '058091', municipality: 'Roma', initialLevel: 'deputato' }, 2).some(error => /gruppo/.test(error)), 'Territorio: il percorso non si controlla più qui.');
+assert.deepEqual(view({ region: 'Lazio', municipalityCode: '058091', municipality: 'Roma' }, 2), [], 'Territorio completo.');
+assert.ok(view({ initialLevel: 'deputato' }, 3).some(error => /gruppo/.test(error)), 'Carriera: il percorso è controllato (un deputato ha bisogno del gruppo).');
+assert.deepEqual(view({}, 3), [], 'Carriera: il percorso predefinito è valido.');
+assert.deepEqual(view({}, 6), [], 'Il riepilogo non ha controlli propri: l’avvio li esegue tutti.');
+assert.ok(view({ start: { profile: 'consolidata', levels: {} }, birthDate: '1995-01-01' }, 5).some(error => /almeno 40 anni/.test(error)), 'Avanzate: la carriera consolidata richiede l’età (il controllo dipende dalla data di nascita).');
 // The ISTAT list not loaded (still loading or failed): the wizard accepts no comune at all, not even one typed freely.
 const wizardCheck = (d, list) => validateCareerStep({ ...makeCareerDraft('2026-09-24'), ...d }, 1, db.parties, db.parliamentaryGroups, list, { requireTerritory: true });
 assert.ok(wizardCheck({ region: 'Lazio', municipality: 'Paese inventato' }, null).some(error => /elenco ISTAT dei comuni non è ancora disponibile/.test(error)), 'Senza elenco ISTAT il wizard non accetta comuni inventati.');
@@ -126,4 +135,4 @@ assert.equal(started.world.place.region, place.region);
 assert.ok(started.game.timeline[0].detail.includes(place.municipality.name), 'La cronologia comincia dal comune scelto.');
 
 assert.equal(await fingerprint(), before, 'I dati ISTAT non vengono modificati dal gioco.');
-console.log(`Onboarding verificato: identità → punto di partenza (Regione → Comune e percorso) → partito → impostazioni avanzate → riepilogo; ${db.municipalities.length} comuni e ${db.territorialUnits.length} unità territoriali ISTAT (21/02/2026, Sardegna 2026), ricerca e filtro per provincia, comune obbligatorio dall’elenco della regione, nessuna persona o territorio preimpostati, il comune scelto (${place.municipality.name}, ${place.region}) diventa il territorio iniziale con il suo codice ISTAT; dati ISTAT intatti.`);
+console.log(`Onboarding verificato: identità e avatar → territorio → carriera → partito → impostazioni avanzate → riepilogo; ${db.municipalities.length} comuni e ${db.territorialUnits.length} unità territoriali ISTAT (21/02/2026, Sardegna 2026), ricerca e filtro per provincia, comune obbligatorio dall’elenco della regione, nessuna persona o territorio preimpostati, il comune scelto (${place.municipality.name}, ${place.region}) diventa il territorio iniziale con il suo codice ISTAT; dati ISTAT intatti.`);

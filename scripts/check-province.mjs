@@ -49,7 +49,7 @@ const db = { ...first.db, municipalities: realData.realDatabase.municipalities, 
   // Il wizard: la carta c’è, e si spegne dove la provincia non ha organi.
   const territory = { units: db.territorialUnits, municipalities: db.municipalities, sourceUrl: db.manifest.territorialSource.url, sourceName: db.manifest.territorialSource.name };
   const state = first.store.getState();
-  const render = code => { const municipality = db.municipalities.find(item => item.code === code); const unit = db.territorialUnits.find(item => item.code === municipality.unit); return renderCareerWizard(state, { ...makeCareerDraft('2026-09-24'), step: 2, region: unit.gameRegion, municipality: municipality.name, municipalityCode: code, provinceCode: unit.code, provinceName: unit.name, provinceType: unit.type, initialLevel: 'provinciale' }, [], () => null, db.parliamentaryGroups, [], [], db.politicians, territory); };
+  const render = code => { const municipality = db.municipalities.find(item => item.code === code); const unit = db.territorialUnits.find(item => item.code === municipality.unit); return renderCareerWizard(state, { ...makeCareerDraft('2026-09-24'), step: 3, region: unit.gameRegion, municipality: municipality.name, municipalityCode: code, provinceCode: unit.code, provinceName: unit.name, provinceType: unit.type, initialLevel: 'provinciale' }, [], () => null, db.parliamentaryGroups, [], [], db.politicians, territory); };
   const siena = render('052032');
   clean(siena, 'wizard Siena');
   assert.ok(/PROVINCIALE/.test(siena) && /data-level="provinciale"/.test(siena) && !/data-level="provinciale"[^>]*disabled/.test(siena), 'A Siena la carta della Provincia è attiva');

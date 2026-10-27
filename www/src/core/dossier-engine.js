@@ -3,11 +3,11 @@
 // put right when its level, measured on the country, reaches the goal. A result moves the minister (loyalty, competence or pressure), the Government (stability) and the
 // group the minister comes from, once. The programme of the Government is balanced the same way against the measures enacted in its priority areas.
 // Everything is simulation: no dossier is a real decision of a real minister. Choices are a hash of the keys, never the random sequence of the game.
-import { DATA_SOURCES } from '../data/schema.js?v=20261027-3';
-import { AREA_BY_ID, areasOfPortfolio } from '../data/simulation/policy-rules.js?v=20261027-3';
-import { DOSSIER_KINDS, DOSSIER_RULES as R, LAW_PROGRESS } from '../data/simulation/dossier-rules.js?v=20261027-3';
-import { activeMinisters, canManageParliament, groupProfile, parliamentInternals, proposeLaw, record } from './parliament-engine.js?v=20261027-3';
-import { areaValue, pushEffect } from './society-engine.js?v=20261027-3';
+import { DATA_SOURCES } from '../data/schema.js?v=20261027-4';
+import { AREA_BY_ID, areasOfPortfolio } from '../data/simulation/policy-rules.js?v=20261027-4';
+import { DOSSIER_KINDS, DOSSIER_RULES as R, LAW_PROGRESS } from '../data/simulation/dossier-rules.js?v=20261027-4';
+import { activeMinisters, canManageParliament, groupProfile, parliamentInternals, proposeLaw, record } from './parliament-engine.js?v=20261027-4';
+import { areaValue, pushEffect } from './society-engine.js?v=20261027-4';
 
 const SIM = DATA_SOURCES.SIMULATION;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));

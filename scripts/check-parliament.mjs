@@ -82,7 +82,7 @@ const founder = { partyMode: 'new', partyId: '', partyName: 'Lista di prova', pa
 assert.equal(state.career.parliamentContext.groupId, deputyDraft.parliamentaryGroupId);
 assert.equal(state.career.parliamentContext.source, 'simulation');
 assert.ok(state.dataset.offices[0].institution === 'Camera dei deputati');
-const renderedWizard = renderCareerWizard(state, { ...makeCareerDraft(state.clock.currentDate), step: 2, initialLevel: 'deputato', parliamentaryGroupId: 'cam-xix-01' }, [party], () => party.logoAsset, groups);
+const renderedWizard = renderCareerWizard(state, { ...makeCareerDraft(state.clock.currentDate), step: 3, initialLevel: 'deputato', parliamentaryGroupId: 'cam-xix-01' }, [party], () => party.logoAsset, groups);
 assert.ok(renderedWizard.includes('data-level="deputato"'));
 assert.ok(renderedWizard.includes('data-level="senatore"'));
 assert.ok(renderedWizard.includes('data-group-id="cam-xix-01"'));

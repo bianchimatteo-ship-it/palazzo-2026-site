@@ -1,5 +1,5 @@
-import { countBallots, distributeVotes, withVotes } from './electorate.js?v=20261027-3';
-import { ELECTION_MODELS, EUROPEAN_CONSTITUENCIES, EUROPEAN_THRESHOLD, OUTCOME_LABELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261027-3';
+import { countBallots, distributeVotes, withVotes } from './electorate.js?v=20261027-4';
+import { ELECTION_MODELS, EUROPEAN_CONSTITUENCIES, EUROPEAN_THRESHOLD, OUTCOME_LABELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261027-4';
 
 const SCALE_FALLBACK = 100000;
 // every candidate of a local or regional race is a row: the shares add up to 100 (up to rounding), so no «other lists» row is made

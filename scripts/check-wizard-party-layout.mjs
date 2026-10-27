@@ -17,7 +17,7 @@ await withBrowser(async ({ evaluate, viewport, goto, waitFor, pause, version }) 
     await evaluate(`(async () => {
       const { store } = await import('/src/core/store.js?v=${version}');
       const wizard = await import('/src/ui/career-wizard.js?v=${version}');
-      const draft = { ...wizard.makeCareerDraft('2026-10-12'), step: 3, partyMode: 'new', partyName: 'Partito di prova con un nome molto lungo', partyAbbreviation: 'PPL', partyColor: '#264d82', startingRole: null, region: 'Toscana', municipality: 'Siena' };
+      const draft = { ...wizard.makeCareerDraft('2026-10-12'), step: 4, partyMode: 'new', partyName: 'Partito di prova con un nome molto lungo', partyAbbreviation: 'PPL', partyColor: '#264d82', startingRole: null, region: 'Toscana', municipality: 'Siena' };
       document.querySelector('#app').innerHTML = wizard.renderCareerWizard(store.getState(), draft, [], () => null, [], [], [], [], null);
       return true;
     })()`);

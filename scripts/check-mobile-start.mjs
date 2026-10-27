@@ -157,14 +157,14 @@ try {
   await waitFor(() => has('[data-municipality-code="052032"]'), 10000, 'Siena nell’elenco');
   await tap('[data-municipality-code="052032"]', { scroll: true });
   ok(await evaluate('document.querySelector(".wizard-more[data-wizard-more=comuni]") && !document.querySelector(".wizard-more[data-wizard-more=comuni]").open'), 'Scelto il comune, l’elenco dei comuni si chiude.');
-  // Steps 2 to 4 with real taps: the path (PdC and PdR included), the party, the advanced settings; step 5 is the summary.
-  for (let step = 2; step <= 4; step++) {
-    if (step === 2) {
-      ok(await has('[data-starting-office="presidenteConsiglio"]') && await has('[data-starting-office="presidenteRepubblica"]'), 'Su telefono le partenze PdC e PdR sono visibili nel punto di partenza.');
+  // Screens 2 to 5 with real taps: the territory, the career path (PdC and PdR included), the party, the advanced settings; screen 6 is the summary.
+  for (let step = 2; step <= 5; step++) {
+    if (step === 3) {
+      ok(await has('[data-starting-office="presidenteConsiglio"]') && await has('[data-starting-office="presidenteRepubblica"]'), 'Su telefono le partenze PdC e PdR sono visibili nella pagina della carriera.');
       ok(await evaluate('(() => { const body = document.querySelector(".wizard-body"); return body.scrollWidth <= body.clientWidth + 1 && [...document.querySelectorAll(".level-cards .level-card")].length === 8 && [...document.querySelectorAll(".level-cards .level-card")].every(card => getComputedStyle(card).display !== "none" && card.getBoundingClientRect().width > 0); })()'), 'Le otto card del percorso restano visibili e senza overflow orizzontale su 375 px.');
     }
-    // Step 4 (difficulty and starting conditions): the conditions are shut under their current choice; opened, the cards and the custom scenario work with taps.
-    if (step === 4) {
+    // Screen 5 (difficulty and starting conditions): the conditions are shut under their current choice; opened, the cards and the custom scenario work with taps.
+    if (step === 5) {
       ok(await evaluate('(() => { const more = document.querySelector(".wizard-more[data-wizard-more=start]"); return Boolean(more) && !more.open && Boolean(document.querySelector(".difficulty-grid")); })()'), 'Wizard su telefono: difficoltà in vista, condizioni di partenza chiuse.');
       await tap('.wizard-more[data-wizard-more="start"] > summary', { scroll: true });
       ok(await has('[data-start-profile="outsider"]') && await has('[data-start-profile="personalizzato"]'), 'Wizard su telefono: aperto l’accordion, le condizioni di partenza sono nel passaggio 4.');
@@ -178,12 +178,12 @@ try {
     }
     await tap('.wizard-footer [data-wizard-action="next"]');
     ok(await evaluate(`document.querySelector('.wizard-kicker')?.textContent.includes('0${step + 1}')`), `Wizard su telefono: “Continua” del passaggio ${step} ricevuto.`);
-    if (step === 2) {
+    if (step === 3) {
       await tap('[data-party-mode="existing"]', { scroll: true });
       ok(await evaluate('(() => { const body = document.querySelector(".wizard-body"), cards = [...document.querySelectorAll(".wizard-party-role-cards [data-starting-role]")]; return cards.length === 5 && cards.every(card => getComputedStyle(card).display !== "none" && card.getBoundingClientRect().width > 0) && body.scrollWidth <= body.clientWidth + 1; })()'), 'Le cinque card di posizione nel partito sono visibili e senza overflow su 375 px.');
       await tap('[data-party-mode="independent"]', { scroll: true });
     }
-    if (step === 4) {
+    if (step === 5) {
       ok(await evaluate('(() => { const body = document.querySelector(".wizard-body"), summary = document.querySelector(".summary-sheet"); return Boolean(summary) && body.scrollWidth <= body.clientWidth + 1 && summary.scrollWidth <= summary.clientWidth + 1 && summary.innerText.includes("PERCORSO ISTITUZIONALE") && summary.innerText.includes("IDENTITÀ"); })()'), 'Il riepilogo del percorso resta coerente e senza overflow orizzontale su 375 px.');
     }
   }
