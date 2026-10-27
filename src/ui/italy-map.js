@@ -6,7 +6,7 @@
 // districts a big comune is split into) and goes to the bloc that won the district; the colour is the bloc whose districts cover most comuni of the province. A district that touches several
 // provinces is therefore never given in full to each of them. The indicator is labelled as such on the map, in the legend, in the tooltip and in the panel. No boundary and no winner is invented:
 // where there is no district there is no colour.
-import { esc, num } from './sections-kit.js?v=20261027-5';
+import { esc, num } from './sections-kit.js?v=20261027-6';
 
 export const MAP_SCOPES = Object.freeze([['regioni', 'Regioni'], ['province', 'Province']]);
 const REGION_SHORT = { Piemonte: 'PIE', 'Valle d’Aosta': 'VDA', Lombardia: 'LOM', 'Trentino-Alto Adige': 'TAA', Veneto: 'VEN', 'Friuli-Venezia Giulia': 'FVG', Liguria: 'LIG', 'Emilia-Romagna': 'EMR', Toscana: 'TOS', Umbria: 'UMB', Marche: 'MAR', Lazio: 'LAZ', Abruzzo: 'ABR', Molise: 'MOL', Campania: 'CAM', Puglia: 'PUG', Basilicata: 'BAS', Calabria: 'CAL', Sicilia: 'SIC', Sardegna: 'SAR' };

@@ -1,34 +1,34 @@
-import { endedHeadline } from './hall-view.js?v=20261027-5';
-import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261027-5';
-import { playerRoles } from '../core/roles.js?v=20261027-5';
-import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20261027-5';
-import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, currentObjectiveLabel, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261027-5';
-import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261027-5';
-import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20261027-5';
-import { careerLevelLabel } from '../data/regions.js?v=20261027-5';
-import { advanceDays, formatDate } from '../core/time.js?v=20261027-5';
-import { renderBarometerPanel } from './polls-mode.js?v=20261027-5';
-import { candidacyAccess } from './campaign-mode.js?v=20261027-5';
-import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20261027-5';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261027-5';
-import { societyMood } from '../core/society-engine.js?v=20261027-5';
-import { financeOutlook } from '../core/finance-engine.js?v=20261027-5';
-import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20261027-5';
-import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20261027-5';
-import { activeInstitutions, institutionLabel } from './local-mode.js?v=20261027-5';
-import { renderFinanceCard } from './finance-mode.js?v=20261027-5';
-import { renderStaffBand } from './staff-view.js?v=20261027-5';
-import { planAddButton } from './plan-view.js?v=20261027-5';
-import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20261027-5';
-import { stateBadge, statusChip } from './charts.js?v=20261027-5';
-import { articleHtml, newsMedia, renderNewsroomTabs } from './news-view.js?v=20261027-5';
-import { relevantArticles } from '../core/news-engine.js?v=20261027-5';
-import { identityMark, kindChip } from './party-identity.js?v=20261027-5';
-import { illustration } from './illustrations.js?v=20261027-5';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261027-5';
-import { avatarOf } from '../core/avatar.js?v=20261027-5';
-import { avatarSvg } from './avatar-svg.js?v=20261027-5';
-import { regionPriorities } from '../core/society-engine.js?v=20261027-5';
+import { endedHeadline } from './hall-view.js?v=20261027-6';
+import { activityFor, activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261027-6';
+import { playerRoles } from '../core/roles.js?v=20261027-6';
+import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20261027-6';
+import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, currentObjectiveLabel, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261027-6';
+import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261027-6';
+import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20261027-6';
+import { careerLevelLabel } from '../data/regions.js?v=20261027-6';
+import { advanceDays, formatDate } from '../core/time.js?v=20261027-6';
+import { renderBarometerPanel } from './polls-mode.js?v=20261027-6';
+import { candidacyAccess } from './campaign-mode.js?v=20261027-6';
+import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20261027-6';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261027-6';
+import { societyMood } from '../core/society-engine.js?v=20261027-6';
+import { financeOutlook } from '../core/finance-engine.js?v=20261027-6';
+import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20261027-6';
+import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20261027-6';
+import { activeInstitutions, institutionLabel } from './local-mode.js?v=20261027-6';
+import { renderFinanceCard } from './finance-mode.js?v=20261027-6';
+import { renderStaffBand } from './staff-view.js?v=20261027-6';
+import { planAddButton } from './plan-view.js?v=20261027-6';
+import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20261027-6';
+import { stateBadge, statusChip } from './charts.js?v=20261027-6';
+import { articleHtml, newsMedia, renderNewsroomTabs } from './news-view.js?v=20261027-6';
+import { relevantArticles } from '../core/news-engine.js?v=20261027-6';
+import { identityMark, kindChip } from './party-identity.js?v=20261027-6';
+import { illustration } from './illustrations.js?v=20261027-6';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261027-6';
+import { avatarOf } from '../core/avatar.js?v=20261027-6';
+import { avatarSvg } from './avatar-svg.js?v=20261027-6';
+import { regionPriorities } from '../core/society-engine.js?v=20261027-6';
 
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -313,7 +313,8 @@ function planner(state, gc, { openLimit = Infinity } = {}) {
   let opened = 0;
   const groups = Object.entries(ACTIVITY_CATEGORIES).map(([category, label]) => {
     // The activities of the local offices appear only to those who hold one (the others would see a long list of blocked ones).
-    const entries = WEEKLY_ACTIVITIES.filter(activity => activity.category === category && !(activity.local && activityProblem(ctx, env, activity))).map(activity => {
+    const entries = WEEKLY_ACTIVITIES.filter(activity => activity.category === category && !(activity.local && activityProblem(ctx, env, activity))).map(base => {
+      const activity = activityFor(base, ctx.game);
       const problem = activityProblem(ctx, env, activity);
       const target = activity.target && targets[activity.target]?.length ? `<select data-activity-target="${esc(activity.id)}" aria-label="Destinatario">${targets[activity.target].map(([id, text]) => `<option value="${esc(id)}">${esc(text)}</option>`).join('')}</select>` : '';
       return { problem, html: `<div class="hq-activity ${problem ? 'is-blocked' : ''}"><div class="hq-activity-copy"><strong>${esc(activity.label)}</strong><small>${esc(activity.detail)}</small><span><b>Effetti</b> ${esc(describeEffects(activity.effects) || 'vedi descrizione')}</span>${activity.requiresLabel ? `<span class="hq-req"><b>Serve</b> ${esc(activity.requiresLabel)}${activity.weekly === 1 ? ' Una volta a settimana.' : ''}</span>` : activity.weekly === 1 ? '<span class="hq-req"><b>Serve</b> Una volta a settimana.</span>' : ''}${activity.risk || activity.later ? `<span class="hq-risk"><b>Rischio</b> ${activity.risk ? `${Math.round(activity.risk.chance * 100)}%: ${esc(activity.risk.label.toLowerCase())}` : ''}${activity.later ? `${activity.risk ? ' · ' : ''}${esc((activity.later.hint ?? activity.later.label ?? 'conseguenze in arrivo').toLowerCase())}` : ''}</span>` : ''}</div><div class="hq-cost">${costChips(activity.cost)}</div><div class="hq-activity-action">${target}<button class="secondary-button" data-game-activity="${esc(activity.id)}" ${problem ? 'disabled' : ''}>Fai</button>${problem ? '' : planAddButton({ kind: 'activity', id: activity.id })}${problem ? `<em>${esc(problem)}</em>` : ''}</div></div>` };

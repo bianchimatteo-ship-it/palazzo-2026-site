@@ -205,6 +205,47 @@ const fresh = async mutate => { store = await reload(saved => { rich(saved); mut
   assert.throws(() => store.performWeeklyActivity('vertice-maggioranza'), /Già fatto/, 'Una volta a settimana.');
 }
 
+// party activities by affiliation: a member, the founder of a party of their own and an independent. «Riunione di partito», «Incontro con la leadership» and «Prendi posizione contro la linea» asked for
+// membership, which a founder is not (he leads the party): the founder gets the meeting and a variant of the leadership one (the managers of his own party), the dissent stays closed to him with its own
+// reason, and the independent stays limited everywhere. Nothing of membership, rank, promotions or congresses is given to the founder.
+{
+  const asMember = await fresh(saved => { saved.game.party.affiliation = 'member'; saved.game.party.rank = 1; });
+  const memberMeeting = store.performWeeklyActivity('riunione');
+  assert.ok(memberMeeting.report.lines.some(line => /Sostegno nel partito \+3/.test(line)) && memberMeeting.report.lines.some(line => /leadership/i.test(line)), 'Iscritto: la riunione dà sostegno interno e rapporto con la leadership.');
+  const memberLeadership = store.performWeeklyActivity('leadership');
+  assert.equal(memberLeadership.report.title, 'Incontro con la leadership', 'Iscritto: l’incontro con la leadership è quello di sempre.');
+  assert.ok(memberLeadership.report.lines.some(line => /leadership/i.test(line)), 'Iscritto: cambia il rapporto con la leadership.');
+  store.performWeeklyActivity('dissenso');
+  assert.equal(store.getState().game.party.affiliation, 'member', 'Iscritto: resta iscritto.');
+
+  // a real founder: the career starts with a party of his own (no leadership above him, so no relation with it)
+  const founderDraft = { ...draft, partyMode: 'new', partyId: '', partyName: 'Partito del Fondatore', partyAbbreviation: 'PDF', partyDescription: 'Un partito di prova', partyColor: '#264d82', partyOrientation: 'Centrismo civico', startingRole: null, policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3 } };
+  localStore.clear(); store = await load(); store.createCareer(founderDraft, [realParty], groups);
+  const asFounder = await fresh();
+  assert.equal(asFounder.game.party.affiliation, 'founder', 'Il fondatore è davvero un fondatore.');
+  const rank = asFounder.game.party.rank, support = asFounder.game.party.support;
+  assert.ok(!asFounder.game.relations.some(item => item.id === 'leadership'), 'Il fondatore non ha una leadership esterna con cui avere un rapporto.');
+  const founderMeeting = store.performWeeklyActivity('riunione');
+  assert.ok(founderMeeting.report.lines.some(line => /Sostegno nel partito \+3/.test(line)), 'Fondatore: la riunione di partito è disponibile e dà sostegno interno.');
+  assert.ok(!founderMeeting.report.lines.some(line => /leadership/i.test(line)), 'Fondatore: nessun rapporto con una leadership che non c’è.');
+  assert.ok(store.getState().game.party.support > support, 'Fondatore: il sostegno interno cresce davvero.');
+  const influence = stat(store.getState(), 'influence');
+  const founderLeadership = store.performWeeklyActivity('leadership');
+  assert.equal(founderLeadership.report.title, 'Incontro con i dirigenti del partito', 'Fondatore: la variante è l’incontro con i dirigenti del proprio partito.');
+  assert.ok(!founderLeadership.report.lines.some(line => /leadership/i.test(line)) && stat(store.getState(), 'influence') > influence, 'Fondatore: più peso interno, senza rapporti con una leadership esterna.');
+  assert.throws(() => store.performWeeklyActivity('dissenso'), /Da fondatore la linea la decidi tu/, 'Fondatore: il dissenso interno resta chiuso, con il motivo giusto (non «serve l’iscrizione»).');
+  const after = store.getState().game.party;
+  assert.deepEqual([after.affiliation, after.rank, after.rankTitle], [asFounder.game.party.affiliation, rank, asFounder.game.party.rankTitle], 'Fondatore: iscrizione, grado e titolo non cambiano (non è un iscritto).');
+  assert.ok(!('joinedAt' in after) || after.joinedAt === asFounder.game.party.joinedAt, 'Fondatore: nessuna data di iscrizione inventata.');
+
+  await fresh(saved => { saved.game.party = null; });
+  for (const [id, reason] of [['riunione', /Serve un partito/], ['leadership', /iscrizione a un partito/], ['dissenso', /Serve l’iscrizione a un partito/]]) assert.throws(() => store.performWeeklyActivity(id), reason, `Indipendente: «${id}» resta chiusa, con il motivo giusto.`);
+  // the rest of the party activities keep their own requirements for the three of them
+  for (const id of ['tesseramento', 'corrente', 'contributo']) assert.throws(() => store.performWeeklyActivity(id), /Serve un partito/, `Indipendente: «${id}» richiede un partito.`);
+  localStore.clear(); store = await load(); store.createCareer(founderDraft, [realParty], groups); await fresh();
+  assert.doesNotThrow(() => store.performWeeklyActivity('tesseramento'), 'Fondatore: le attività di partito che già gli spettano restano disponibili.');
+}
+
 // determinism: the same career, the same activity, the same outcome
 {
   const run = async () => { localStore.clear(); store = await load(); store.createCareer(draft, [realParty], groups); store = await reload(rich); const result = store.performWeeklyActivity('tour-regione', 'Puglia'); const state = store.getState(); return JSON.stringify([result.report, state.society.regions.Puglia.trust, stat(state, 'notoriety'), state.game.pending.length]); };
