@@ -1,7 +1,8 @@
-import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261027-6';
-import { formatDate } from '../core/time.js?v=20261027-6';
-import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261027-6';
-import { distinctSeries, sparkline } from './charts.js?v=20261027-6';
+import { campaignScope } from '../core/campaign-engine.js?v=20261027-7';
+import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261027-7';
+import { formatDate } from '../core/time.js?v=20261027-7';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261027-7';
+import { distinctSeries, sparkline } from './charts.js?v=20261027-7';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const pct = (value, digits = 1) => value === null || value === undefined ? '—' : `${Number(value).toLocaleString('it-IT', { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
@@ -286,8 +287,12 @@ export function renderPollsPage(state, options = {}) {
   const panel = pollPanel;
   const alliances = alliancesList(world, index);
   const strategyRows = strategyList(world);
+  // With a campaign under way this page is the general picture of the country: the race has a poll of its own, on its own question (the lists of the vote, or one territory), and says so.
+  const scope = state.campaign?.status === 'active' ? campaignScope(state.campaign) : null;
+  const scopeNote = scope ? `<p class="poll-footnote poll-scope" data-poll-scope="${scope.kind}"><strong>${scope.kind === 'liste' ? 'Questa pagina è il sondaggio generale del Paese.' : 'Questa pagina è il sondaggio nazionale dei partiti, non quello della tua corsa.'}</strong> <span>${esc(scope.poll)}</span></p>` : '';
   return `<div class="polls-page">
     ${barometer(state, world, poll, { logo })}
+    ${scopeNote}
     <div class="poll-grid">
       ${panel('SONDAGGIO DELLA SETTIMANA', 'Intenzioni di voto', nationalBars(world, poll, index, logo), `<span class="hq-count">${marginText(poll)}</span>`)}
       ${panel('TREND', 'Come cambiano i consensi', trendChart(world, index))}

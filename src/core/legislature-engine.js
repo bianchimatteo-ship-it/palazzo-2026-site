@@ -3,15 +3,15 @@
 // Chambers and their groups, the formation of the Government. Everything that happens is simulation: the real data are
 // the geography, the seats and the 2022 results the vote starts from; parties, coalitions, votes and seats of the game
 // are estimates of the game and never presented as real results.
-import { populationReferenceDate, residentsOfItaly } from './municipal-rules.js?v=20261027-6';
-import { actualTurnout } from './electorate.js?v=20261027-6';
-import { uniqueId } from './ids.js?v=20261027-6';
-import { advanceDays, formatDate } from './time.js?v=20261027-6';
-import { axisOf, nationalShares } from './world-engine.js?v=20261027-6';
-import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20261027-6';
-import { archiveGovernment, voteGovernmentConfidence } from './parliament-engine.js?v=20261027-6';
-import { seededRandom } from './vote-engine.js?v=20261027-6';
-import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20261027-6';
+import { populationReferenceDate, residentsOfItaly } from './municipal-rules.js?v=20261027-7';
+import { actualTurnout } from './electorate.js?v=20261027-7';
+import { uniqueId } from './ids.js?v=20261027-7';
+import { advanceDays, formatDate } from './time.js?v=20261027-7';
+import { axisOf, nationalShares } from './world-engine.js?v=20261027-7';
+import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20261027-7';
+import { archiveGovernment, voteGovernmentConfidence } from './parliament-engine.js?v=20261027-7';
+import { seededRandom } from './vote-engine.js?v=20261027-7';
+import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20261027-7';
 
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -491,11 +491,27 @@ export function nationalElectorate(geography, turnout, chamber = 'camera') {
   const valid = Math.min(Math.round(voters * ratio), voters);
   return { normalized: false, residents, populationReferenceDate: populationReferenceDate(), electors, voters, valid, ballots: valid, invalid: voters - valid, validRatio: Math.round(ratio * 10000) / 10000, turnout, turnoutRequested: turnout, turnoutActual: actualTurnout(electors, voters), basis: 'iscritti alle liste delle politiche 2022 (ultimo dato reale della mappa)', electorsSource: 'registro', source: SIM };
 }
-export function runNationalVote({ geography = null, world, coalitions = [], date, seed = 'politiche', player = null, noise = true, line = null, participation = 60 }) {
-  const rand = random(hash(`${seed}|${date}|politiche`));
+// The forces that stand, as the vote counts them. Without a campaign they are the forces of the political world as the polls measure them. With the campaign of the player (lists: the
+// list shares it ends on, from nationalListShares) the vote is the one of that campaign: the same lists on the same base, the movement of the weeks (what the player did, the rivals, the
+// events, the day of the vote itself) is already in those shares and is not added a second time; the forces the campaign does not field keep their relative weight in what it leaves out.
+export function votingForces(world, lists = null) {
   const base = voteForces(world);
-  // Election day: undecided voters, turnout and the error of every poll move each force a little (never in the projection).
-  const forces = base.forces.map(force => ({ ...force, share: noise ? Math.max(0.05, force.share + rand.gauss() * (0.25 + 0.1 * Math.sqrt(force.share))) : force.share }));
+  if (!lists?.shares) return { ...base, campaign: false };
+  const given = lists.shares;
+  const outside = base.forces.filter(force => !(force.id in given));
+  const room = Math.max(0, Number(lists.others) || 0);
+  const rest = outside.reduce((sum, force) => sum + force.share, 0) + base.others;
+  const scale = rest > 0 ? room / rest : 0;
+  const forces = base.forces.map(force => ({ ...force, share: force.id in given ? given[force.id] : round2(force.share * scale) })).filter(force => force.share > 0);
+  // a list the campaign fields that the political world does not measure (a force outside the polls) is part of "Altri" in the count
+  const unmeasured = Object.entries(given).filter(([id]) => !base.forces.some(force => force.id === id)).reduce((sum, [, share]) => sum + share, 0);
+  return { forces, others: round2(Math.max(0, base.others * scale + unmeasured)), campaign: true };
+}
+export function runNationalVote({ geography = null, world, coalitions = [], date, seed = 'politiche', player = null, noise = true, line = null, participation = 60, lists = null }) {
+  const rand = random(hash(`${seed}|${date}|politiche`));
+  const base = votingForces(world, lists);
+  // Election day: undecided voters, turnout and the error of every poll move each force a little (never in the projection). With the campaign the day of the vote is already in its shares.
+  const forces = base.forces.map(force => ({ ...force, share: noise && !base.campaign ? Math.max(0.05, force.share + rand.gauss() * (0.25 + 0.1 * Math.sqrt(force.share))) : force.share }));
   const total = forces.reduce((sum, force) => sum + force.share, 0) + base.others;
   forces.forEach(force => { force.share = round2(force.share * 100 / total); });
   const others = round2(base.others * 100 / total);
@@ -618,10 +634,10 @@ export function politicheOutcome(result, player, { geography = null, rand = rand
 // ---------- the European election ----------
 // 76 seats, 4% threshold, quotient and highest remainders nationally; the five circoscrizioni receive seats in
 // proportion to their voters of 2022 and every list's seats in proportion to its votes there (simplified).
-export function runEuropeanVote({ geography = null, world, date, seed = 'europee', noise = true, participation = 60 }) {
+export function runEuropeanVote({ geography = null, world, date, seed = 'europee', noise = true, participation = 60, lists = null }) {
   const rand = random(hash(`${seed}|${date}|europee`));
-  const base = voteForces(world);
-  const forces = base.forces.map(force => ({ ...force, share: noise ? Math.max(0.05, force.share + rand.gauss() * (0.3 + 0.12 * Math.sqrt(force.share))) : force.share }));
+  const base = votingForces(world, lists);
+  const forces = base.forces.map(force => ({ ...force, share: noise && !base.campaign ? Math.max(0.05, force.share + rand.gauss() * (0.3 + 0.12 * Math.sqrt(force.share))) : force.share }));
   const total = forces.reduce((sum, force) => sum + force.share, 0) + base.others;
   forces.forEach(force => { force.share = round2(force.share * 100 / total); });
   const rule = LEGISLATURE_RULES.european;

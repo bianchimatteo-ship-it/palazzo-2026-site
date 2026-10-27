@@ -1359,4 +1359,10 @@ export const PHRASES = [
   ["Contorno, simbolo e sigla del logo. Il colore principale del partito resta quello scelto sopra.", "Outline, symbol and initials of the logo. The party’s main colour stays the one chosen above."],
   ["Scegli un colore valido per il secondo colore del logo.", "Choose a valid colour for the second colour of the logo."],
   ["Tetto", "Roof"],
+  ["quota della tua lista sul totale dei voti validi, «Altri» compresi: la stessa base dei sondaggi nazionali", "your list’s share of all valid votes, “Others” included: the same base as the national polls"],
+  ["quota della tua lista sul totale dei voti validi, «Altri» compresi: la stessa base dei sondaggi nazionali.", "your list’s share of all valid votes, “Others” included: the same base as the national polls."],
+  ["Sondaggio delle liste: stessa base dei sondaggi nazionali (percentuali sul totale dei voti validi, con «Altri»). Parte dal sondaggio generale e se ne discosta solo per ciò che muove la campagna: azioni, eventi, avversari.", "Poll of the lists: the same base as the national polls (percentages of all valid votes, with “Others”). It starts from the general poll and departs from it only by what moves the campaign: actions, events, rivals."],
+  ["Sondaggio della sola corsa «{}»: riguarda le candidature in campo in quel territorio e non è confrontabile con le intenzioni di voto nazionali dei partiti.", "Poll of the «{1}» race only: it covers the candidacies in the field in that territory and cannot be compared with the national voting intentions of the parties."],
+  ["Questa pagina è il sondaggio generale del Paese.", "This page is the general poll of the country."],
+  ["Questa pagina è il sondaggio nazionale dei partiti, non quello della tua corsa.", "This page is the national poll of the parties, not that of your race."],
 ];

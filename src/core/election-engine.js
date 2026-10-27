@@ -1,5 +1,5 @@
-import { countBallots, distributeVotes, withVotes } from './electorate.js?v=20261027-6';
-import { ELECTION_MODELS, EUROPEAN_CONSTITUENCIES, EUROPEAN_THRESHOLD, OUTCOME_LABELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261027-6';
+import { countBallots, distributeVotes, withVotes } from './electorate.js?v=20261027-7';
+import { ELECTION_MODELS, EUROPEAN_CONSTITUENCIES, EUROPEAN_THRESHOLD, OUTCOME_LABELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261027-7';
 
 const SCALE_FALLBACK = 100000;
 // every candidate of a local or regional race is a row: the shares add up to 100 (up to rounding), so no «other lists» row is made
@@ -24,7 +24,13 @@ function ballotsOf(campaign) {
   return countBallots(campaign, { turnout, normal });
 }
 
-function allianceLeader(candidate,candidates) {
+// A general or European vote is a vote for lists: the percentage of a force is the one of its own list, whatever coalition it stands in (the coalition decides the seats of the
+// single-member districts, not the votes). A local race is the other way round: a candidacy backed by an agreement is one competitor.
+export const listVote = campaign => ['politiche','europee'].includes(campaign.electionType);
+// The share of the votes that goes to the lists nobody names (the roster of a national vote leaves them out): the candidacies of the race share what is left. 1 where the race has no such share.
+export const voteScale = campaign => listVote(campaign) ? clamp(1 - (Number(campaign.othersShare) || 0) / 100, .5, 1) : 1;
+function allianceLeader(candidate,candidates,campaign=null) {
+  if (campaign&&listVote(campaign)) return candidate;
   if (candidate.coalitionLeaderId) return candidates.find(item => item.id === candidate.coalitionLeaderId) ?? candidate;
   return candidate;
 }
@@ -34,7 +40,7 @@ export function electoralGroups(campaign) {
   const candidates = campaign.candidates.filter(item => item.status !== 'eliminated' && item.status !== 'withdrawn');
   const grouped = new Map();
   for (const candidate of candidates) {
-    const leader = allianceLeader(candidate,campaign.candidates);
+    const leader = allianceLeader(candidate,campaign.candidates,campaign);
     if (candidate.status === 'allied' && candidate.id !== leader.id) continue;
     const id = leader.id;
     const group = grouped.get(id) ?? {id,leaderCandidateId:leader.id,partyIds:[],members:[],label:leader.displayLabel};
@@ -43,11 +49,12 @@ export function electoralGroups(campaign) {
     if(national&&!grouped.has(id)&&leader.partyLabel) { group.label=leader.partyLabel; group.person=leader.realReference?.fullName??(leader.isPlayer?leader.displayName:null); }
     group.members.push(candidate.id);
     if (candidate.partyId && !group.partyIds.includes(candidate.partyId)) group.partyIds.push(candidate.partyId);
+    if (national&&candidate.coalitionLeaderId) group.coalitionLeaderId=candidate.coalitionLeaderId;
     grouped.set(id,group);
   }
   for (const candidate of candidates) {
     if (candidate.status !== 'allied') continue;
-    const leader = allianceLeader(candidate, campaign.candidates);
+    const leader = allianceLeader(candidate, campaign.candidates, campaign);
     const group = grouped.get(leader.id);
     if (group && !group.members.includes(candidate.id)) { group.members.push(candidate.id); if (candidate.partyId && !group.partyIds.includes(candidate.partyId)) group.partyIds.push(candidate.partyId); }
   }
@@ -61,12 +68,13 @@ export function sharesByGroup(campaign, territoryId) {
   if (!area) return [];
   const raw = area.supportByCandidate ?? {};
   const totals = new Map(electoralGroups(campaign).map(group => [group.id,{...group,share:0}]));
+  const scale = voteScale(campaign);
   for (const [candidateId,value] of Object.entries(raw)) {
     const candidate = candidates.get(candidateId);
     if (!candidate || candidate.status === 'eliminated' || candidate.status === 'withdrawn') continue;
-    const leader = allianceLeader(candidate,campaign.candidates);
+    const leader = allianceLeader(candidate,campaign.candidates,campaign);
     const group = totals.get(leader.id);
-    if (group) group.share += Number(value)||0;
+    if (group) group.share += (Number(value)||0) * scale;
   }
   return [...totals.values()].map(group => ({...group,share:clamp(rounded(group.share))})).sort(byShare(campaign));
 }
@@ -81,6 +89,16 @@ export function aggregateShares(campaign) {
     }
   }
   return [...groups.values()].map(group=>({...group,share:clamp(rounded(group.share))})).sort(byShare(campaign));
+}
+
+// The lists of a general or European campaign as the vote counts them: the share of each list on the whole vote (the same base as the polls and the projection) and what the race leaves
+// to the lists it does not field. The count of the nation reads this, so that the vote is the one the campaign was about.
+export function nationalListShares(campaign) {
+  if (!listVote(campaign)) return null;
+  const shares = {};
+  for (const group of aggregateShares(campaign)) for (const id of group.partyIds ?? []) shares[id] = rounded((shares[id] ?? 0) + group.share);
+  const own = Object.values(shares).reduce((sum,value)=>sum+value,0);
+  return { shares, others: rounded(Math.max(0,100-own)), player: aggregateShares(campaign).find(group => group.id === campaign.playerCandidateId)?.share ?? null, day: campaign.day, source: 'simulation' };
 }
 
 function allocateDHondt(groups,seatCount,threshold=0) {

@@ -46,7 +46,8 @@ async function open(type, party, profile, seed) {
   try { store.startCampaign({ electionType: type, objective: 'seat', ...(type === 'politiche' ? { role: 'deputato' } : {}) }, db.parties, { politicians: db.politicians, groups: db.parliamentaryGroups }); } catch { return null; }
   const campaign = store.getState().campaign;
   const weight = campaign.territories.reduce((sum, area) => sum + area.weight, 0);
-  const share = id => campaign.territories.reduce((sum, area) => sum + (area.supportByCandidate[id] ?? 0) * area.weight, 0) / weight;
+  // (a general or European vote counts the shares on the whole vote, "Altri" included: campaign.othersShare is what the race leaves to the lists it does not field)
+  const share = id => campaign.territories.reduce((sum, area) => sum + (area.supportByCandidate[id] ?? 0) * area.weight, 0) / weight * (1 - (campaign.othersShare ?? 0) / 100);
   const me = share(campaign.playerCandidateId);
   const rivals = campaign.candidates.filter(item => !item.isPlayer).map(item => share(item.id));
   const summary = campaignSummary(campaign);
@@ -55,7 +56,7 @@ async function open(type, party, profile, seed) {
   const before = me;
   store.advance(1);
   const after = store.getState().campaign;
-  const afterShare = after?.status === 'active' ? after.territories.reduce((sum, area) => sum + (area.supportByCandidate[after.playerCandidateId] ?? 0) * area.weight, 0) / weight : before;
+  const afterShare = after?.status === 'active' ? after.territories.reduce((sum, area) => sum + (area.supportByCandidate[after.playerCandidateId] ?? 0) * area.weight, 0) / weight * (1 - (after.othersShare ?? 0) / 100) : before;
   assert.ok(Math.abs(afterShare - before) <= 1.6, `${type}/${party}/${profile}/${seed}: dopo un giorno senza azioni la quota passa da ${before.toFixed(1)} a ${afterShare.toFixed(1)}: nessun salto ingiustificato.`);
   const prep = campaign.preparation ?? {};
   return { type, party, profile, seed, me, rivalMean: rivals.reduce((a, b) => a + b, 0) / rivals.length, rivalMax: Math.max(...rivals), pollShare: prep.pollShare ?? null, pollBonus: prep.pollBonus, parts: prep.pollParts ?? null, field: campaign.candidates.length };

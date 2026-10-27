@@ -5,12 +5,12 @@
 // fixed contribution (`cofin`), agreed in simulated euros and paid once from its own margin; what it pays is not drawn again from the owner's.
 // Benefits arrive only when the work is finished, in proportion to its quality; a work never delivers what it has not built. The national projects (project-engine) are another thing: they live in society.projects
 // and use the national budget. Pure functions on plain data; the store keeps what they return.
-import { uniqueId } from './ids.js?v=20261027-6';
-import { fundingOf, stageOf } from './project-engine.js?v=20261027-6';
-import { PORTFOLIO_AREAS } from '../data/simulation/office-rules.js?v=20261027-6';
-import { regionShareOf } from './territory-share.js?v=20261027-6';
-import { serviceIndicatorsOf } from '../data/simulation/local-acts.js?v=20261027-6';
-import { ACTIVE_WORK_STAGES, COFIN_LEVEL, WORK_BY_ID, WORK_RULES, WORK_SITES, WORK_STAGE_LABEL, defaultWorkFor, workTypesFor } from '../data/simulation/local-works.js?v=20261027-6';
+import { uniqueId } from './ids.js?v=20261027-7';
+import { fundingOf, stageOf } from './project-engine.js?v=20261027-7';
+import { PORTFOLIO_AREAS } from '../data/simulation/office-rules.js?v=20261027-7';
+import { regionShareOf } from './territory-share.js?v=20261027-7';
+import { serviceIndicatorsOf } from '../data/simulation/local-acts.js?v=20261027-7';
+import { ACTIVE_WORK_STAGES, COFIN_LEVEL, WORK_BY_ID, WORK_RULES, WORK_SITES, WORK_STAGE_LABEL, defaultWorkFor, workTypesFor } from '../data/simulation/local-works.js?v=20261027-7';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));

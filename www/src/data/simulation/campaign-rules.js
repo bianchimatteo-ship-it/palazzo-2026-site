@@ -335,6 +335,9 @@ export const EUROPEAN_CONSTITUENCIES = Object.freeze({
 export const CAMPAIGN_POLL_RULES = Object.freeze({
   sampleScale: { comunaleSmall: .3, comunale: .5, provinciale: .4, regionale: .7, politiche: 1, europee: 1 },
   everyDays: 7, waves: 14,
+  // The error of an institute on a race is a fraction of its nominal sampling error in the national polls (a long series that moves by tenths); a race has few interviews and one reading a week,
+  // so the average of the institutes is off the real support by about what its own sample says (the margin it publishes): 2.4 times the error of the national series.
+  noise: 2.4,
   // The rivals of a local race that stand without a party: a civic or independent candidacy (declared as such, never a made-up party).
   independents: { comunaleSmall: .55, comunale: .75, provinciale: .3, regionale: .25 }
 });

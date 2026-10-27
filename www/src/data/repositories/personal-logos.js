@@ -2,7 +2,7 @@
 // the guest scope when nobody is) and the party's stable identifier, and the images are never written into the saves of the careers. A logo added from an address is copied once into the
 // browser and the address is forgotten. This file only keeps the browser's copy (the cache that works offline): the synchronisation with the account's cloud copy is logo-sync.js, which
 // reads and writes these records through the `logoStore` below. A record carries `sync` ({ version, sha } of the cloud copy it was last known to equal) and `dirty` (changed here since).
-import { signedInUsername } from './career-visibility.js?v=20261027-6';
+import { signedInUsername } from './career-visibility.js?v=20261027-7';
 
 const DATABASE = 'politicando-personal-logos';
 const STORE = 'logos';

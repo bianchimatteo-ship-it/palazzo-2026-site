@@ -1,10 +1,10 @@
-import { advanceDays } from './time.js?v=20261027-6';
-import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261027-6';
-import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261027-6';
-import { aggregateShares, mateForce, runFinalElection, runFirstRound } from './election-engine.js?v=20261027-6';
-import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261027-6';
-import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261027-6';
-import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261027-6';
+import { advanceDays } from './time.js?v=20261027-7';
+import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261027-7';
+import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261027-7';
+import { aggregateShares, listVote, mateForce, runFinalElection, runFirstRound, voteScale } from './election-engine.js?v=20261027-7';
+import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261027-7';
+import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261027-7';
+import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261027-7';
 
 const SOURCE = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
@@ -38,7 +38,7 @@ function recordCampaignPoll(campaign, label = null) {
   const margin = sample > 0 ? round(1.96 * Math.sqrt(.25 / sample) * 100) : null;
   const labels = new Map(aggregateShares(campaign).map(group => [group.id, group.label]));
   const results = wave.average.map(([candidateId, share, delta]) => ({ candidateId, label: labels.get(candidateId) ?? candidateId, share, delta: Number.isFinite(delta) ? round(delta) : null, source: SOURCE }));
-  const poll = { id: `${campaign.id}-poll-${campaign.day}-${campaign.stage}`, day: campaign.day, date: campaign.currentDate, stage: campaign.stage, institute: { id: 'media', name: 'Media degli istituti' }, institutes: Object.keys(wave.institutes ?? {}).length, sample, margin, results, source: SOURCE };
+  const poll = { id: `${campaign.id}-poll-${campaign.day}-${campaign.stage}`, day: campaign.day, date: campaign.currentDate, stage: campaign.stage, institute: { id: 'media', name: 'Media degli istituti' }, institutes: Object.keys(wave.institutes ?? {}).length, sample, margin, results, others: Number.isFinite(wave.others) ? round(wave.others) : 0, scope: listVote(campaign) ? 'liste' : 'candidature', source: SOURCE };
   campaign.polls = [...campaign.polls, poll].slice(-24);
   return poll;
 }
@@ -578,6 +578,25 @@ function initSupport(areas, candidates, player, seed, { extra = {}, edges = {}, 
     const shares = normalized(strengths);
     area.supportByCandidate = Object.fromEntries(candidates.map((candidate,index) => [candidate.id,shares[index]]));
   }
+  // A general or European vote starts from the polls: every list opens, on the whole country, at the weight the polls give it (the lean of an area, the pull of a name, the luck of a draw move
+  // the lists from area to area, they do not move a force by points on the whole: that is what the weeks of the campaign are for).
+  const anchored = candidates.filter(candidate => Number.isFinite(Number(anchors[candidate.id])));
+  if (anchored.length >= 2 && areas.length) {
+    const total = anchored.reduce((sum, candidate) => sum + Number(anchors[candidate.id]), 0) || 1;
+    const weight = areas.reduce((sum, area) => sum + area.weight, 0) || 1;
+    for (let round = 0; round < 8; round++) {
+      for (const candidate of anchored) {
+        const national = areas.reduce((sum, area) => sum + Number(area.supportByCandidate[candidate.id] ?? 0) * area.weight, 0) / weight;
+        const wanted = Number(anchors[candidate.id]) / total * 100;
+        if (national > 0) for (const area of areas) area.supportByCandidate[candidate.id] *= wanted / national;
+      }
+      for (const area of areas) {
+        const sum = Object.values(area.supportByCandidate).reduce((acc, value) => acc + value, 0) || 1;
+        for (const id of Object.keys(area.supportByCandidate)) area.supportByCandidate[id] = area.supportByCandidate[id] * 100 / sum;
+      }
+    }
+    for (const area of areas) for (const id of Object.keys(area.supportByCandidate)) area.supportByCandidate[id] = round(area.supportByCandidate[id]);
+  }
 }
 
 function addHistory(campaign, type, text, extra = {}) {
@@ -616,10 +635,13 @@ function transferSupport(campaign, fromId, toId, delta, areaId = null) {
 // points come easily, then every point costs more). A strong campaign is worth a few points, never a landslide.
 const IMPACT_SCALE = Object.freeze({ comunale:.42, provinciale:.4, regionale:.5, politiche:.6, europee:.6 });
 const ELASTICITY = Object.freeze({ comunale:5, provinciale:5, regionale:4.5, politiche:3.5, europee:3.5 });
+// The secretary of a party who leads its general or European campaign carries the whole list: what he does moves the list more than what a candidate does (it used to be a pull on the party
+// after the vote; now it is part of the campaign, like the rest).
+const leaderPull = campaign => listVote(campaign) ? Number(campaign.leaderPull) || 1 : 1;
 function playerMove(campaign, delta, areaId = null) {
   const player = campaign.candidates.find(item => item.isPlayer);
   if (!player || !delta) return 0;
-  const scale = IMPACT_SCALE[campaign.electionType] ?? .5;
+  const scale = (IMPACT_SCALE[campaign.electionType] ?? .5) * leaderPull(campaign);
   const elastic = delta > 0 ? 1 / (1 + Math.max(0, campaign.gained ?? 0) / (ELASTICITY[campaign.electionType] ?? 4)) : 1;
   const before = weightedShare(campaign, player.id);
   moveSupport(campaign, player.id, delta * scale * elastic, areaId);
@@ -630,7 +652,7 @@ function playerMove(campaign, delta, areaId = null) {
 function playerTransfer(campaign, fromId, delta, areaId = null) {
   const player = campaign.candidates.find(item => item.isPlayer);
   if (!player || !delta) return 0;
-  const scale = IMPACT_SCALE[campaign.electionType] ?? .5;
+  const scale = (IMPACT_SCALE[campaign.electionType] ?? .5) * leaderPull(campaign);
   const elastic = delta > 0 ? 1 / (1 + Math.max(0, campaign.gained ?? 0) / (ELASTICITY[campaign.electionType] ?? 4)) : 1;
   const before = weightedShare(campaign, player.id);
   transferSupport(campaign, fromId, player.id, delta * scale * elastic, areaId);
@@ -657,7 +679,8 @@ function releaseSupport(campaign, fromId, toId, rate) {
 }
 // A coalition is not a sum: part of the partner's voters does not follow the agreement and votes elsewhere.
 function mergeAlliance(campaign, leaderId, partner) {
-  const rate = clamp(.55 + Number(partner.relationship ?? .5) * .3, .55, .85);
+  // In a vote for lists an agreement between two forces shares seats, not voters: nobody loses a part of the votes of the list to the others (the transfer of an agreement is a local matter).
+  const rate = listVote(campaign) ? 1 : clamp(.55 + Number(partner.relationship ?? .5) * .3, .55, .85);
   for (const area of campaign.territories) {
     const shares = area.supportByCandidate;
     const partnerShare = Number(shares[partner.id] ?? 0);
@@ -679,9 +702,16 @@ function charge(resources,cost) {
 function supportAt(campaign, territoryId, candidateId = campaign.playerCandidateId) {
   return Number(campaign.territories.find(area=>area.id===territoryId)?.supportByCandidate?.[candidateId] ?? 0);
 }
+// The support of a candidacy among all the voters of the race. In a general or European vote that is the share of the whole vote, "Altri" included (voteScale), the same base as the polls
+// and the count; the simulated shares themselves stay a split of 100 among the candidacies in the field.
 function weightedShare(campaign, candidateId) {
   const total = campaign.territories.reduce((sum, area) => sum + area.weight, 0) || 1;
-  return campaign.territories.reduce((sum, area) => sum + Number(area.supportByCandidate?.[candidateId] ?? 0) * area.weight, 0) / total;
+  return campaign.territories.reduce((sum, area) => sum + Number(area.supportByCandidate?.[candidateId] ?? 0) * area.weight, 0) / total * voteScale(campaign);
+}
+// How much a move of the campaign weighs on a list: the points a rival gains or a controversy costs are written for a race in which a candidacy holds a fifth of the vote or more;
+// in a vote for lists a force of 3% cannot move by half a point a week, nor lose a tenth of its voters to every attack. The size scales the move (1 for a local race and for a force of 12% or more).
+function listSize(campaign, candidateId) {
+  return listVote(campaign) ? clamp(weightedShare(campaign, candidateId) / 12, .04, 1) : 1;
 }
 function targetArea(campaign, requestedId) { return campaign.territories.find(item=>item.id===requestedId) ?? campaign.territories[0]; }
 function activeOpponents(campaign) { return campaign.candidates.filter(item=>!item.isPlayer&&item.status==='active'); }
@@ -1137,15 +1167,15 @@ function opponentTurn(campaign) {
     profile.lastDecision = { day:campaign.day, action, targetId:target?.id ?? null, source:SOURCE };
     rival.strategy = action === 'attack' ? 'risposta agli attacchi' : action === 'defend' ? 'difesa del vantaggio' : action === 'territory' ? 'presidio dei territori deboli' : action === 'alliance' ? 'costruzione di alleanze' : action === 'withdraw' ? 'conservazione' : 'visibilità mirata';
     if (action === 'attack') {
-      transferSupport(campaign, player.id, rival.id, targeted ? .08 + draw(campaign) * .15 : .16 + draw(campaign) * .27, target?.id);
-      moveSupport(campaign, rival.id, .12 + draw(campaign) * .24, target?.id);
+      transferSupport(campaign, player.id, rival.id, (targeted ? .08 + draw(campaign) * .15 : .16 + draw(campaign) * .27) * Math.min(listSize(campaign, player.id), listSize(campaign, rival.id)), target?.id);
+      moveSupport(campaign, rival.id, (.12 + draw(campaign) * .24) * listSize(campaign, rival.id), target?.id);
       rival.lastAction = targeted ? 'Ricorda l’attacco e risponde colpo su colpo.' : 'Apre un fronte contro la candidatura del giocatore.';
       rivalMemory(campaign, rival, 'attack', player.id, { action:'attacco-autonomo', relationDelta:-2, weight:.35 });
     } else if (action === 'territory' && target) {
-      moveSupport(campaign, rival.id, .3 + draw(campaign) * .4, target.id);
+      moveSupport(campaign, rival.id, (.3 + draw(campaign) * .4) * listSize(campaign, rival.id), target.id);
       rival.lastAction = `Concentra risorse su ${target.name}.`;
     } else if (action === 'visibility') {
-      moveSupport(campaign, rival.id, .18 + draw(campaign) * .32);
+      moveSupport(campaign, rival.id, (.18 + draw(campaign) * .32) * listSize(campaign, rival.id));
       rival.lastAction = 'Cerca visibilità per allargare il proprio elettorato.';
     } else if (action === 'alliance') {
       const formed = formRivalAlliance(campaign, rival, rivals);
@@ -1154,7 +1184,7 @@ function opponentTurn(campaign) {
       rival.resources.organization = Math.min(100, Number(rival.resources.organization ?? 0) + 1);
       rival.lastAction = 'Riduce il ritmo per conservare risorse e influenza.';
     } else {
-      moveSupport(campaign, rival.id, .22 + draw(campaign) * .25, top?.area?.id);
+      moveSupport(campaign, rival.id, (.22 + draw(campaign) * .25) * listSize(campaign, rival.id), top?.area?.id);
       rival.lastAction = 'Difende il vantaggio nelle aree più solide.';
     }
     rival.resources.money = Math.max(0, rival.resources.money - Math.round(80 + draw(campaign) * 200));
@@ -1165,7 +1195,7 @@ function opponentTurn(campaign) {
   // Rivals also remember conflicts between themselves; personality and trust change who starts them.
   for (const rival of activeOpponents(campaign)) {
     rival.campaignStats.momentum = round(clamp(Number(rival.campaignStats.momentum ?? 0) * .8 + gaussian(campaign) * 1.2, -5, 5));
-    moveSupport(campaign, rival.id, rival.campaignStats.momentum * .06);
+    moveSupport(campaign, rival.id, rival.campaignStats.momentum * .06 * listSize(campaign, rival.id));
   }
   const field = [...activeOpponents(campaign)].sort((a, b) => weightedShare(campaign, b.id) - weightedShare(campaign, a.id));
   if (field.length >= 2) {
@@ -1174,7 +1204,7 @@ function opponentTurn(campaign) {
     const conflictChance = clamp(.08 + aggressiveness * .07 + (50 - rivalRelationship(campaign, second, first.id)) / 500, .03, .32);
     if (draw(campaign) < conflictChance) {
       const backfires = draw(campaign) < .35;
-      transferSupport(campaign, first.id, second.id, (.15 + draw(campaign) * .35) * (backfires ? -1 : 1));
+      transferSupport(campaign, first.id, second.id, (.15 + draw(campaign) * .35) * (backfires ? -1 : 1) * Math.min(listSize(campaign, first.id), listSize(campaign, second.id)));
       second.lastAction = backfires ? 'Il suo attacco alla candidatura in testa si è ritorto contro.' : 'Attacca la candidatura in testa e guadagna terreno.';
       rivalMemory(campaign, second, 'conflict', first.id, { action:'scontro-tra-rivali', relationDelta:-5, weight:1 });
       rivalMemory(campaign, first, 'conflict', second.id, { action:'scontro-tra-rivali', relationDelta:-5, weight:1 });
@@ -1303,7 +1333,9 @@ function electionDay(campaign, round_ = 'primo-turno') {
   for (const candidate of active) {
     const share = Math.max(.5, before[candidate.id]);
     const volatility = candidate.isPlayer ? strategy.volatility : 1;
-    shifts[candidate.id] = round(gaussian(campaign) * (.45 + Math.sqrt(share) * .3) * volatility * climate * smallElectorate * .8 + (mobilization[candidate.id] - mean) + (candidate.isPlayer ? listEdge(campaign) : 0));
+    // (a list of 1% does not swing by half a point on the day: the part of the error that does not depend on the size is much smaller in a vote for lists, and so is the effect of mobilisation)
+    const lists = listVote(campaign);
+    shifts[candidate.id] = round(gaussian(campaign) * ((lists ? .12 : .45) + Math.sqrt(share) * .3) * volatility * climate * smallElectorate * .8 + (mobilization[candidate.id] - mean) * (lists ? listSize(campaign, candidate.id) : 1) + (candidate.isPlayer ? listEdge(campaign) : 0));
   }
   for (const area of campaign.territories) {
     const shares = area.supportByCandidate;
@@ -1679,13 +1711,15 @@ export function pollWave(campaign, label = null) {
   for (const profile of POLL_INSTITUTES) {
     const scaled = { ...profile, sample: profile.sample.map(value => Math.max(150, Math.round(value * scale / 10) * 10)) };
     const before = last?.institutes?.[profile.id]?.rows;
-    const out = readInstitute({ profile: scaled, seed: campaign.seed, week: campaign.day + (campaign.stage === 'ballottaggio' ? 1000 : 0), date: campaign.currentDate, trueRows, previousRows: before ? unpackRows(before) : null, errors: box.errors[profile.id] ?? {}, noise: 1 });
+    const out = readInstitute({ profile: scaled, seed: campaign.seed, week: campaign.day + (campaign.stage === 'ballottaggio' ? 1000 : 0), date: campaign.currentDate, trueRows, previousRows: before ? unpackRows(before) : null, errors: box.errors[profile.id] ?? {}, noise: CAMPAIGN_POLL_RULES.noise ?? 1, exact: true });
     box.errors[profile.id] = out.errors;
     wave.institutes[profile.id] = { sample: out.reading.sample, margin: out.reading.margin, rows: packRows(out.reading.rows), others: out.reading.others };
     readings.push({ ...out.reading });
   }
-  const average = averageOf(readings, last?.average ? unpackRows(last.average) : null);
+  const average = averageOf(readings, last?.average ? unpackRows(last.average) : null, { total: trueRows.reduce((sum, row) => sum + row.share, 0) });
   wave.average = average ? packRows(average.rows.map(row => ({ ...row }))).map((row, index) => [...row, average.rows[index].spread]) : [];
+  // what the race leaves to the lists it does not field (a general or European vote): the one "Altri" of the poll, as the count has it
+  wave.others = average ? average.others : 0;
   // The groups the polls follow, as they stand now: the same ids as the candidacies of the race.
   wave.groups = groups.map(group => ({ id: group.id, members: group.members, partyIds: group.partyIds }));
   box.waves = [...box.waves, wave].slice(-CAMPAIGN_POLL_RULES.waves);
@@ -1854,7 +1888,7 @@ export function createCampaign({career,player,statistics=[],offices=[],territori
     media:{coverage:0,reactions:0,criticalEvents:0,source:SOURCE},partyImpact:{internalSupport:internalSupport,source:SOURCE},
     strategy:null,activityUses:{},crisis:null,commitments:0,eventLog:{},electionDays:[],partyTrend:0,
     crew:newCrew(playerStats,{quality:config.crew?.quality??null,fieldEdge:config.crew?.fieldEdge??0,organization:initialResources.organization}),rivalScope,endorsements:{known:Array.isArray(config.endorsers)?config.endorsers.filter(item=>item?.key&&item.areaId).map(item=>({key:item.key,kind:item.kind,areaId:item.areaId,label:item.label,relation:Number(item.relation??50)})):[],given:[],refused:[],pending:{},offers:0,source:SOURCE},
-    anchored:Object.keys(anchors).length>0,audience:{},electorate:electorateOf(config,type),roster:roster?{ type, regionId:roster.regionId??null, others:roster.others??null, participants:roster.participants.map(item=>({ id:item.id, label:item.label, abbreviation:item.abbreviation??null, refSource:item.refSource??'real', share:item.share, surveyed:item.surveyed, reason:item.reason, regional:Boolean(item.regional), isPlayer:Boolean(item.isPlayer) })), source:SOURCE }:null,
+    anchored:Object.keys(anchors).length>0,othersShare:roster&&['politiche','europee'].includes(type)&&Number.isFinite(Number(roster.others))?round(clamp(Number(roster.others),0,40)):0,audience:{},electorate:electorateOf(config,type),roster:roster?{ type, regionId:roster.regionId??null, others:roster.others??null, participants:roster.participants.map(item=>({ id:item.id, label:item.label, abbreviation:item.abbreviation??null, refSource:item.refSource??'real', share:item.share, surveyed:item.surveyed, reason:item.reason, regional:Boolean(item.regional), isPlayer:Boolean(item.isPlayer) })), source:SOURCE }:null,
     seed,rngState:seed,source:SOURCE
   };
   addHistory(campaign,'inizio',`${model.label}: inizia una campagna di ${model.campaignDays} giorni nello scenario simulato.`,{source:SOURCE});
@@ -1863,7 +1897,7 @@ export function createCampaign({career,player,statistics=[],offices=[],territori
   const alliedParties=new Set(config.allies??[]);
   if(alliedParties.size) for(const rival of campaign.candidates.filter(item=>!item.isPlayer&&item.partyId&&alliedParties.has(item.partyId))) addHistory(campaign,'alleanza',formPlayerAlliance(campaign,campaign.candidates.find(item=>item.isPlayer),rival,'Intesa già in vigore tra i due partiti',2,{existing:true}),{source:SOURCE});
   const openingWeight=campaignAreas.reduce((sum,item)=>sum+item.weight,0)||1;
-  const openingConsensus=campaignAreas.reduce((sum,item)=>sum+Number(item.supportByCandidate[playerCandidateId]??0)*item.weight,0)/openingWeight;
+  const openingConsensus=campaignAreas.reduce((sum,item)=>sum+Number(item.supportByCandidate[playerCandidateId]??0)*item.weight,0)/openingWeight*voteScale(campaign);
   campaign.consensusHistory.push({day:0,date:currentDate,value:round(openingConsensus),stage:'campagna',metric:'quota-primo-turno',source:SOURCE});
   if (strategy) {
     const opts = { topicId: config.topicId ?? null, targetId: config.targetId ?? null };
@@ -1878,8 +1912,13 @@ export function setExpectation(campaign, { pollShare = null } = {}) {
   const share = round(weightedShare(campaign, campaign.playerCandidateId));
   campaign.expectation = { share, pollShare, setOn:campaign.currentDate, ...(campaign.incumbency?.expectation ? { pressure:campaign.incumbency.expectation } : {}), source:SOURCE };
   if (campaign.consensusHistory[0]) campaign.consensusHistory[0] = { ...campaign.consensusHistory[0], value:share };
-  // The opening poll of the race: what the institutes read on the first day, from the projection the campaign starts with.
-  pollWave(campaign, 'Apertura della campagna');
+  // The opening poll of the race: what the institutes read on the first day, from the projection the campaign starts with (the one it has now, after the preparation, the memory and the
+  // climate moved the start: a reading taken before them is no longer the reading of this race, so the first day is read again from nothing).
+  const box = ensurePolls(campaign);
+  box.waves = box.waves.filter(wave => !(wave.day === campaign.day && wave.stage === campaign.stage));
+  campaign.polls = (campaign.polls ?? []).filter(poll => !(poll.day === campaign.day && poll.stage === campaign.stage));
+  if (!box.waves.length) box.errors = {};
+  recordCampaignPoll(campaign, 'Apertura della campagna');
   return campaign;
 }
 
@@ -2055,7 +2094,7 @@ export function performCampaignActivity(input,activityId,options={}) {
   if(activity.category==='internal'&&!campaign.pendingEvents.length) contextualEvent(campaign,'internal');
   for(let day=0;day<activity.days;day++) tick(campaign);
   if(activity.category!=='media'&&campaign.day>0&&campaign.day%7===0&&!campaign.pendingEvents.length) contextualEvent(campaign,activity.category);
-  const own=campaign.status==='active'?playerShareNow(campaign):campaign.territories.reduce((sum,item)=>sum+Number(item.supportByCandidate[player.id]??0)*item.weight,0)/campaign.territories.reduce((sum,item)=>sum+item.weight,0);
+  const own=campaign.status==='active'?playerShareNow(campaign):weightedShare(campaign,player.id);
   campaign.consensusHistory.push({day:campaign.day,date:campaign.currentDate,value:round(own),stage:campaign.stage,metric:campaign.stage==='ballottaggio'?'proiezione-ballottaggio':'quota-primo-turno',source:SOURCE});
   campaign.consensusHistory=campaign.consensusHistory.slice(-16);
   campaign.resources={...player.resources,visibility:campaign.resources.visibility,source:SOURCE};
@@ -2230,13 +2269,47 @@ export function advanceCampaign(input,days=7) {
     tick(campaign);
   }
   const player=campaign.candidates.find(item=>item.isPlayer);
-  const average=campaign.status==='active'?playerShareNow(campaign):campaign.territories.reduce((sum,area)=>sum+Number(area.supportByCandidate[player.id]??0)*area.weight,0)/campaign.territories.reduce((sum,area)=>sum+area.weight,0);
+  const average=campaign.status==='active'?playerShareNow(campaign):weightedShare(campaign,player.id);
   if(campaign.consensusHistory.at(-1)?.day!==campaign.day) campaign.consensusHistory.push({day:campaign.day,date:campaign.currentDate,value:round(average),stage:campaign.stage,metric:campaign.stage==='ballottaggio'?'proiezione-ballottaggio':'quota-primo-turno',source:SOURCE});
   campaign.consensusHistory=campaign.consensusHistory.slice(-16);
   campaign.resources={...player.resources,visibility:campaign.resources.visibility,source:SOURCE};
   return campaign;
 }
 
+// The political world goes on while a general or European campaign is under way: the weeks move the forces (events, the mood, the polls' own trend) and the lists of the campaign move with
+// them, by as much as the world moved since the last time they met (forces: [{ id, share }], the true shares of the world on the whole vote). What the campaign adds on top of the world
+// (the player's actions, the rivals' campaigns, the events of the race, the day of the vote) stays its own: that is the whole difference between the general poll and the campaign's.
+export function followWorld(input, forces = []) {
+  if (!input || input.status !== 'active' || !listVote(input) || !forces.length) return input;
+  const now = Object.fromEntries(forces.map(force => [force.id, Number(force.share)]));
+  const seen = input.worldShares ?? null;
+  if (!seen) return { ...input, worldShares: now };
+  const moves = [];
+  for (const candidate of input.candidates) {
+    const id = candidate.partyId;
+    if (!id || candidate.status === 'eliminated' || candidate.status === 'withdrawn' || !Number.isFinite(now[id]) || !Number.isFinite(seen[id])) continue;
+    const delta = now[id] - seen[id];
+    const own = weightedShare(input, candidate.id);
+    if (Math.abs(delta) < 0.005 || own <= 0) continue;
+    moves.push([candidate.id, Math.max(.2, (own + delta) / own)]);
+  }
+  if (!moves.length) return { ...input, worldShares: { ...seen, ...now } };
+  const campaign = copy(input);
+  for (const area of campaign.territories) {
+    for (const [id, factor] of moves) if (id in area.supportByCandidate) area.supportByCandidate[id] = Math.max(.01, Number(area.supportByCandidate[id]) * factor);
+    const sum = Object.values(area.supportByCandidate).reduce((total, value) => total + Number(value), 0) || 1;
+    for (const id of Object.keys(area.supportByCandidate)) area.supportByCandidate[id] = round(Number(area.supportByCandidate[id]) * 100 / sum);
+  }
+  campaign.worldShares = { ...seen, ...now };
+  return campaign;
+}
+// What a campaign's percentages are about, said once: a vote for lists is measured on the whole vote and on the same lists as the national polls; a local race is measured on its own
+// territory and its own candidacies, which is not what the national voting intentions measure (the two are never compared as if they were the same question).
+export function campaignScope(campaign) {
+  if (!campaign) return null;
+  if (listVote(campaign)) return { kind: 'liste', territorial: 'quota della tua lista sul totale dei voti validi, «Altri» compresi: la stessa base dei sondaggi nazionali', poll: 'Sondaggio delle liste: stessa base dei sondaggi nazionali (percentuali sul totale dei voti validi, con «Altri»). Parte dal sondaggio generale e se ne discosta solo per ciò che muove la campagna: azioni, eventi, avversari.' };
+  return { kind: 'territorio', territorial: 'quota tra tutte le candidature del primo turno, base simulata sul territorio', poll: `Sondaggio della sola corsa «${campaign.electionLabel ?? 'locale'}»: riguarda le candidature in campo in quel territorio e non è confrontabile con le intenzioni di voto nazionali dei partiti.` };
+}
 // The percentages of a campaign, each with its own name and what it measures. They are different things and are never shown as one number:
 //  - territorialConsensus: the support the player has on the territory, weighted by the area, as a share among ALL the candidacies of the first round (the base the campaign is simulated on);
 //  - poll: the last reading of the institutes of the stage that is running (institute, sample, margin of error), an estimate of that same base with sampling error;
@@ -2257,8 +2330,8 @@ export function campaignMetrics(campaign) {
   } : null;
   return {
     stage,
-    territorialConsensus: { value: round(territorial), label: 'Consenso territoriale', scope: 'quota tra tutte le candidature del primo turno, base simulata sul territorio' },
-    poll: stagePoll && pollRow ? { share: pollRow.share, margin: stagePoll.margin ?? null, sample: stagePoll.sample ?? null, institute: stagePoll.institute?.name ?? null, institutes: stagePoll.institutes ?? null, day: stagePoll.day, date: stagePoll.date ?? null, stage: stagePoll.stage ?? 'campagna', label: stage === 'ballottaggio' ? 'Sondaggio di campagna · ballottaggio' : 'Sondaggio di campagna · primo turno' } : null,
+    territorialConsensus: { value: round(territorial), label: 'Consenso territoriale', scope: campaignScope(campaign).territorial },
+    poll: stagePoll && pollRow ? { share: pollRow.share, margin: stagePoll.margin ?? null, sample: stagePoll.sample ?? null, institute: stagePoll.institute?.name ?? null, institutes: stagePoll.institutes ?? null, day: stagePoll.day, date: stagePoll.date ?? null, stage: stagePoll.stage ?? 'campagna', label: stage === 'ballottaggio' ? 'Sondaggio di campagna · ballottaggio' : 'Sondaggio di campagna · primo turno', others: stagePoll.others ?? 0, scope: campaignScope(campaign).poll } : null,
     runoffProjection: projection ? { share: projection[own] ?? null, finalist: own in projection, label: 'Proiezione del ballottaggio', scope: own in projection ? 'testa a testa tra i due finalisti, dopo i trasferimenti di voto' : 'non sei tra i finalisti: la proiezione riguarda gli altri due' } : null,
     result,
     // the variation is read inside the stage that is running: the first round and the runoff are different measures
@@ -2269,9 +2342,9 @@ export function campaignMetrics(campaign) {
 
 export function campaignSummary(campaign) {
   const player=campaign.candidates.find(item=>item.isPlayer);
-  const denominator=campaign.territories.reduce((sum,area)=>sum+area.weight,0)||1;
-  const consensus=campaign.territories.reduce((sum,area)=>sum+Number(area.supportByCandidate[player?.id]??0)*area.weight,0)/denominator;
-  const groups=campaign.territories.map(area=>({id:area.id,name:area.name,weight:area.weight,localTrend:area.localTrend??0,consensus:round(area.supportByCandidate[player?.id]??0),leaders:Object.entries(area.supportByCandidate).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([candidateId,value])=>({candidateId,value:round(value)}))}));
+  const consensus=weightedShare(campaign,player?.id);
+  const scale=voteScale(campaign);
+  const groups=campaign.territories.map(area=>({id:area.id,name:area.name,weight:area.weight,localTrend:area.localTrend??0,consensus:round((area.supportByCandidate[player?.id]??0)*scale),leaders:Object.entries(area.supportByCandidate).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([candidateId,value])=>({candidateId,value:round(value)}))}));
   const standings = campaign.status === 'active' ? aggregateShares(campaign).map((group, index) => ({ ...group, position:index + 1 })) : [];
   const playerPosition = standings.find(group => group.id === campaign.playerCandidateId)?.position ?? null;
   return {consensus:round(consensus),territories:groups,daysRemaining:Math.max(0,campaign.totalDays-campaign.day),candidateStatus:player?.status,nationalContext:campaign.nationalContext,phase:campaignPhase(campaign),strategy:strategyOf(campaign),expectation:campaign.expectation?.share ?? campaign.consensusHistory?.[0]?.value ?? null,crisis:campaign.crisis ?? null,standings,playerPosition,crew:crewOf(campaign),runoff:campaign.stage === 'ballottaggio' && campaign.status === 'active' && campaign.runoff ? { projection:runoffProjection(campaign), transfers:campaign.runoff.transfers ?? transferTable(campaign), pacts:campaign.runoff.pacts ?? [], appeal:campaign.runoff.appeal ?? 0, stances:campaign.runoff.stances ?? {} } : null,turnout:campaign.status === 'active' ? turnoutOf(campaign, campaign.stage === 'ballottaggio' ? 'ballottaggio' : 'primo-turno') : null,source:SOURCE};

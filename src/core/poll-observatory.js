@@ -1,5 +1,5 @@
-import { OBSERVATORY_RULES as RULES, POLL_EXTENSIONS as EXT, POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261027-6';
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261027-6';
+import { OBSERVATORY_RULES as RULES, POLL_EXTENSIONS as EXT, POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261027-7';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261027-7';
 
 // The poll observatory: what each simulated institute measures week after week, the average of the institutes, the segments
 // of the electorate, the flows between the forces and the insights drawn from them.
@@ -76,11 +76,30 @@ export function settleReading(rows, previousRows, { damp = 1 } = {}) {
   return results;
 }
 
+// The published rows brought to an exact total (a tenth at a time, to the rows that were rounded down the most or that are the largest, within the weekly change of each force when
+// there is a previous reading): the percentages of a race in which every candidacy is present add up to exactly 100.0, never 99.7 with the rest left in an invented "Altri".
+export function balanceRows(rows, total, previousRows = null, exact = null) {
+  const target = round1(total);
+  const before = new Map((previousRows ?? []).map(row => [row.partyId, row.share]));
+  const out = rows.map(row => ({ ...row }));
+  for (let diff = round1(target - out.reduce((sum, row) => sum + row.share, 0)), guard = 0; Math.abs(diff) >= 0.05 && guard < 400; guard++) {
+    const step = diff > 0 ? 0.1 : -0.1;
+    const room = row => { const was = before.get(row.partyId); if (!Number.isFinite(was)) return true; const cap = weeklyCap(was) + 0.05; return Math.abs(row.share + step - was) <= cap; };
+    const lack = row => ((exact?.get(row.partyId) ?? row.share) - row.share) * Math.sign(step);
+    const pick = out.filter(row => row.share + step >= 0 && room(row)).sort((a, b) => lack(b) - lack(a) || b.share - a.share)[0] ?? out.filter(row => row.share + step >= 0).sort((a, b) => b.share - a.share)[0];
+    if (!pick) break;
+    pick.share = round1(pick.share + step);
+    if (Number.isFinite(before.get(pick.partyId))) pick.delta = round1(pick.share - before.get(pick.partyId));
+    diff = round1(diff - step);
+  }
+  return out;
+}
+
 // One reading of one institute: the true shares of the population seen through a sample. The error of the institute on every force
 // is kept from one week to the next (the panel does not change), and it is a fraction of the nominal sampling error.
 // trueRows: [{ partyId, share }]; previousRows: the institute's previous reading (or the last published poll);
 // errors: { partyId: error } the institute carries; returns the reading and the new errors.
-export function readInstitute({ profile, seed, week, date, trueRows, previousRows = null, errors = {}, noise = 1, damp = 1 }) {
+export function readInstitute({ profile, seed, week, date, trueRows, previousRows = null, errors = {}, noise = 1, damp = 1, exact = false }) {
   const sample = instituteSample(profile, seed, week);
   const fresh = {};
   const noisy = trueRows.map(row => {
@@ -90,23 +109,31 @@ export function readInstitute({ profile, seed, week, date, trueRows, previousRow
     fresh[row.partyId] = error;
     return { partyId: row.partyId, raw: Math.max(Math.min(0.2, row.share), row.share + error + houseEffect(profile.id, row.partyId, row.share)) };
   });
-  const rows = settleReading(normalize(noisy, 100 - trueRows.reduce((sum, row) => sum + row.share, 0)), previousRows, { damp });
+  const rest = Math.max(0, 100 - trueRows.reduce((sum, row) => sum + row.share, 0));
+  let rows = settleReading(normalize(noisy, rest), previousRows, { damp });
+  // exact: the race has every candidacy in it, so what the rows leave out of 100 is exactly what the race leaves out (nothing, or the lists nobody names), not a rounding residue.
+  if (exact) rows = balanceRows(rows, 100 - rest, previousRows);
   return { reading: { id: profile.id, week, date, sample, margin: marginOf(sample), rows, others: round1(Math.max(0, 100 - rows.reduce((sum, row) => sum + row.share, 0))) }, errors: fresh };
 }
 
 // ---------- the average of the institutes ----------
 // Weighted by the sample: a larger panel counts more. A force an institute does not (yet) measure is averaged over the others.
-export function averageOf(readings, previousRows = null) {
+export function averageOf(readings, previousRows = null, { total = null } = {}) {
   const live = readings.filter(item => item?.rows?.length);
   if (!live.length) return null;
   const ids = [...new Set(live.flatMap(item => item.rows.map(row => row.partyId)))];
   const before = new Map((previousRows ?? []).map(row => [row.partyId, row.share]));
-  const rows = ids.map(partyId => {
+  const exactShare = new Map();
+  let rows = ids.map(partyId => {
     const parts = live.map(item => [item.sample ?? 1, item.rows.find(row => row.partyId === partyId)?.share]).filter(([, share]) => Number.isFinite(share));
     const weight = parts.reduce((sum, [w]) => sum + w, 0) || 1;
-    const share = round1(parts.reduce((sum, [w, value]) => sum + w * value, 0) / weight);
+    const mean = parts.reduce((sum, [w, value]) => sum + w * value, 0) / weight;
+    exactShare.set(partyId, mean);
+    const share = round1(mean);
     return { partyId, share, delta: before.has(partyId) ? round1(share - before.get(partyId)) : 0, spread: round1(Math.max(...parts.map(([, value]) => value)) - Math.min(...parts.map(([, value]) => value))) };
   });
+  // total: every candidacy of the race is in the average, so the rows add up to exactly that total (the rest to 100 is the lists nobody names, or nothing).
+  if (Number.isFinite(total)) rows = balanceRows(rows, total, previousRows, exactShare);
   const sample = live.reduce((sum, item) => sum + (item.sample ?? 0), 0);
   return { rows, others: round1(Math.max(0, 100 - rows.reduce((sum, row) => sum + row.share, 0))), sample, institutes: live.length };
 }

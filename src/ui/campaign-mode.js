@@ -1,15 +1,15 @@
-import { bandDescription, bandOfMunicipality, MUNICIPAL_LEGAL_REFERENCES } from '../core/municipal-rules.js?v=20261027-6';
-import { CAMPAIGN_OBJECTIVES, CAMPAIGN_PHASES, CAMPAIGN_STRATEGIES, DEBATE_TOPICS, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261027-6';
-import { affiliationOf, markForPerson } from './person-marks.js?v=20261027-6';
-import { campaignActivities, campaignMetrics, campaignSummary, listStanding, strategyAvailable, strategyFit, strategyOf, strategyStages } from '../core/campaign-engine.js?v=20261027-6';
-import { resultDescription } from '../core/election-engine.js?v=20261027-6';
-import { formatDate } from '../core/time.js?v=20261027-6';
-import { careerLevelLabel } from '../data/regions.js?v=20261027-6';
-import { upcomingElections } from '../core/career-engine.js?v=20261027-6';
-import { candidacyBlock, candidacyNotes, personalCandidacies } from '../core/office-engine.js?v=20261027-6';
-import { heldOfficesOf } from '../core/roles.js?v=20261027-6';
-import { mandatePlace, renderElectionReport } from './election-report.js?v=20261027-6';
-import { glyph } from './visuals.js?v=20261027-6';
+import { bandDescription, bandOfMunicipality, MUNICIPAL_LEGAL_REFERENCES } from '../core/municipal-rules.js?v=20261027-7';
+import { CAMPAIGN_OBJECTIVES, CAMPAIGN_PHASES, CAMPAIGN_STRATEGIES, DEBATE_TOPICS, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261027-7';
+import { affiliationOf, markForPerson } from './person-marks.js?v=20261027-7';
+import { campaignActivities, campaignMetrics, campaignScope, campaignSummary, listStanding, strategyAvailable, strategyFit, strategyOf, strategyStages } from '../core/campaign-engine.js?v=20261027-7';
+import { resultDescription } from '../core/election-engine.js?v=20261027-7';
+import { formatDate } from '../core/time.js?v=20261027-7';
+import { careerLevelLabel } from '../data/regions.js?v=20261027-7';
+import { upcomingElections } from '../core/career-engine.js?v=20261027-7';
+import { candidacyBlock, candidacyNotes, personalCandidacies } from '../core/office-engine.js?v=20261027-7';
+import { heldOfficesOf } from '../core/roles.js?v=20261027-7';
+import { mandatePlace, renderElectionReport } from './election-report.js?v=20261027-7';
+import { glyph } from './visuals.js?v=20261027-7';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const roleLabels={sindaco:'Candidatura a sindaco',consigliere:'Candidato in lista per il consiglio',presidente:'Candidato alla presidenza (Regione o Provincia)',deputato:'Candidato alla Camera',senatore:'Candidato al Senato',uninominale:'Collegio uninominale simulato',eurodeputato:'Candidato al Parlamento europeo'};
@@ -190,7 +190,7 @@ function renderActive(campaign,parties,logoFor,picks={}) {
   const areas=summary.territories.map(area=>`<div class="campaign-area-row"><div><strong>${esc(area.name)}</strong><small>${weightPercent(area.weight)}% del peso · andamento ${area.localTrend>.35?'favorevole':area.localTrend<-.35?'in calo':'stabile'} · ${area.consensus>25?'forte presenza':area.consensus<11?'da recuperare':'area contendibile'}</small></div><strong>${pct(area.consensus)}</strong><div class="campaign-meter"><i style="width:${Math.max(3,area.consensus)}%"></i></div></div>`).join('');
   const rivals=campaign.candidates.filter(item=>!item.isPlayer).map(candidate=>{
     const affiliated=parties.find(item=>item.id===candidate.partyId);
-    const support=summary.territories.reduce((sum,area)=>sum+Number(campaign.territories.find(t=>t.id===area.id)?.supportByCandidate[candidate.id]??0)*area.weight,0)/100;
+    const support=summary.territories.reduce((sum,area)=>sum+Number(campaign.territories.find(t=>t.id===area.id)?.supportByCandidate[candidate.id]??0)*area.weight,0)/100*(1-(Number(campaign.othersShare)||0)/100);
     const img=affiliated&&logoFor(affiliated)?`<img src="${esc(logoFor(affiliated))}" alt="${esc(affiliated.logoAlt??`Logo ${partyName(affiliated)}`)}">`:'';
     const affiliation=realIdentity(candidate)??(affiliated?partyName(affiliated):'Indipendente simulato');
     const initials=candidate.realReference?candidate.realReference.fullName.split(/\s+/).map(word=>word[0]).join('').slice(0,2):(affiliated?.abbreviation??'S').slice(0,2);
@@ -226,7 +226,7 @@ function renderActive(campaign,parties,logoFor,picks={}) {
   // What the two folded panels say when closed: the strongest and the weakest area; the leading contenders and the player's place. Open, they keep all they had (rows, meters, alliances).
   const byStrength=[...summary.territories].sort((a,b)=>b.consensus-a.consensus);
   const territorySummary=byStrength.length?`Più forte: ${esc(byStrength[0].name)} ${pct(byStrength[0].consensus)}${byStrength.length>1?` · più debole: ${esc(byStrength.at(-1).name)} ${pct(byStrength.at(-1).consensus)}`:''} · ${byStrength.length} ${byStrength.length===1?'area':'aree'}`:'Nessuna area';
-  const rivalShares=campaign.candidates.filter(item=>!item.isPlayer&&item.status!=='withdrawn').map(candidate=>({name:candidate.realReference?candidate.realReference.fullName:'Candidatura simulata',support:summary.territories.reduce((sum,area)=>sum+Number(campaign.territories.find(t=>t.id===area.id)?.supportByCandidate[candidate.id]??0)*area.weight,0)/100})).sort((a,b)=>b.support-a.support);
+  const rivalShares=campaign.candidates.filter(item=>!item.isPlayer&&item.status!=='withdrawn').map(candidate=>({name:candidate.realReference?candidate.realReference.fullName:'Candidatura simulata',support:summary.territories.reduce((sum,area)=>sum+Number(campaign.territories.find(t=>t.id===area.id)?.supportByCandidate[candidate.id]??0)*area.weight,0)/100*(1-(Number(campaign.othersShare)||0)/100)})).sort((a,b)=>b.support-a.support);
   const opponentSummary=rivalShares.length?`${rivalShares.length} ${rivalShares.length===1?'contendente':'contendenti'} · avanti: ${esc(rivalShares[0].name)} ${pct(rivalShares[0].support)}${summary.playerPosition?` · tu: ${summary.playerPosition}ª posizione`:''}`:'Nessun contendente';
   const crisis=campaign.crisis?`<section class="campaign-crisis" role="status">${glyph('scandal',18)}<div><strong>Polemica in corso: ${esc(campaign.crisis.title)}</strong><span>Ogni settimana costa consenso e reputazione finché non la gestisci (o si spegne da sola dopo tre settimane).</span></div><button class="secondary-button" data-campaign-activity="crisis_response">Gestisci la crisi</button></section>`:'';
   return `<section class="campaign-active-head"><div><span class="campaign-kicker">CAMPAGNA · ${esc(campaign.electionLabel.toUpperCase())}</span><h2>${esc(player.displayName)}</h2><p>${esc(roleLabels[campaign.candidacy.role]??campaign.candidacy.role)} · ${esc(party?partyName(party):'Indipendente')} · ${esc(campaign.territories[0]?.name??'Italia')}</p></div><div class="campaign-countdown"><small>AL VOTO</small><strong>${days}<span>giorni</span></strong><time>${esc(formatDate(campaign.electionDate))}</time></div></section>
@@ -244,6 +244,7 @@ function renderActive(campaign,parties,logoFor,picks={}) {
     ${metrics.stage==='ballottaggio'?`<div class="campaign-metric" data-metric="proiezione-ballottaggio"><small>PROIEZIONE DEL BALLOTTAGGIO</small><strong>${metrics.runoffProjection?.finalist?pct(metrics.runoffProjection.share):'fuori'}</strong>${metricBar(metrics.runoffProjection?.finalist?metrics.runoffProjection.share:null)}<span>${esc(metrics.runoffProjection?.scope??'')}${campaign.firstRoundResult?` · al primo turno hai preso ${pct(campaign.firstRoundResult.playerShare)}`:''}</span></div>`:''}
     <div class="campaign-metric" data-metric="andamento"><small>ANDAMENTO${metrics.stage==='ballottaggio'?' NEL BALLOTTAGGIO':' NEL PRIMO TURNO'}</small><strong>${metrics.variation===null?'—':`${metrics.variation>=0?'+':''}${metrics.variation.toFixed(1).replace('.',',')} punti`}</strong>${metricBar(metrics.variation,true)}<span>${metrics.variation===null?'scenario appena avviato':`dall’inizio ${metrics.stage==='ballottaggio'?'del ballottaggio':'della campagna'}`}${summary.expectation!==null&&metrics.stage!=='ballottaggio'?` · attesa iniziale ${pct(summary.expectation)}`:''}</span></div>
     <svg viewBox="0 0 100 30" preserveAspectRatio="none" aria-label="Andamento della fase in corso"><polyline points="${spark}" /></svg>
+    <p class="campaign-note-small campaign-scope" data-campaign-scope>${esc(campaignScope(campaign).poll)}</p>
   </section>
   <div class="campaign-columns"><details class="campaign-block campaign-territories campaign-fold" data-remember="camp-geografia"><summary class="campaign-section-head"><div><span class="campaign-kicker">GEOGRAFIA DEL VOTO</span><h3>Dove sei forte</h3></div><small class="campaign-fold-summary">${territorySummary}</small></summary><div class="campaign-fold-body"><p class="campaign-note-small">Clima nazionale simulato ${number(campaign.nationalContext.moodIndex)}/100 · ${campaign.nationalContext.macroTrend>0?'tendenza favorevole':campaign.nationalContext.macroTrend<0?'contesto in calo':'contesto stabile'} · tema: ${esc(DEBATE_TOPICS.find(topic=>topic.id===campaign.nationalContext.salientTopic)?.label??'scenario politico')}</p>${areas}<p class="campaign-footnote">Le percentuali territoriali sono la base di consenso simulata; i sondaggi settimanali stimano la stessa base e possono differire per errore campionario.</p></div></details>
   <details class="campaign-block campaign-opponents campaign-fold" data-remember="camp-contendenti"><summary class="campaign-section-head"><div><span class="campaign-kicker">CONTENDENTI</span><h3>Le altre campagne</h3></div><small class="campaign-fold-summary">${opponentSummary}</small></summary><div class="campaign-fold-body"><p class="campaign-note-small">${number(campaign.aiTurns)} turni di campagna simulati</p>${rivals||'<p>Nessuna candidatura simulata disponibile.</p>'}${activeAlliances?`<div class="campaign-alliance-list"><span class="campaign-kicker">ACCORDI ATTIVI</span>${activeAlliances}</div>`:''}<div class="campaign-opponent-note">Le candidature avversarie sono simulate. Se mostrano un partito reale, il legame è un riferimento d’identità; le percentuali e le strategie sono generate dal gioco.</div></div></details></div>
