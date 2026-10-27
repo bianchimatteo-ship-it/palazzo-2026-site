@@ -1,7 +1,7 @@
-import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261026-1';
-import { formatDate } from '../core/time.js?v=20261026-1';
-import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261026-1';
-import { distinctSeries, sparkline } from './charts.js?v=20261026-1';
+import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261027-1';
+import { formatDate } from '../core/time.js?v=20261027-1';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261027-1';
+import { distinctSeries, sparkline } from './charts.js?v=20261027-1';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const pct = (value, digits = 1) => value === null || value === undefined ? '—' : `${Number(value).toLocaleString('it-IT', { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
@@ -214,6 +214,18 @@ export function forcesGrid(state, world, poll, index, logo, realLeader, secretar
   return `${note}<div class="force-grid">${rows}</div>`;
 }
 
+// The reason of a way out of the polls, with the figures that decided it: the SIMULATED consensus (what the thresholds read), the weeks it was held, the state it was in and for how long, and
+// the figure the latest poll PUBLISHED (one institute's measure, with its margin: it is not the consensus the rules use).
+export function evidenceParts(evidence) {
+  if (!evidence) return [];
+  const published = evidence.published ? `Ultimo sondaggio pubblicato: ${pct(evidence.published.share)}${evidence.published.institute ? ` (${evidence.published.institute})` : ''}: misura di un singolo istituto, diversa dal consenso simulato.` : 'Nessun dato pubblicato nell’ultimo sondaggio.';
+  const was = `Stato precedente: ${PRESENCE_LABELS[evidence.from] ?? evidence.from}${Number.isFinite(evidence.weeksIn) ? ` da ${evidence.weeksIn} settimane (minimo ${evidence.minWeeks}).` : '.'}`;
+  const cooldown = Number.isFinite(evidence.cooldownUntil) ? [`Non può rientrare prima della settimana ${evidence.cooldownUntil} (cooldown).`] : [];
+  if (evidence.rule === 'fusione') return [`Confluita in ${evidence.intoLabel}.`, `Consenso simulato ${pct(evidence.share, 2)}, sotto la soglia di consolidamento (${pct(evidence.maxShare, 1)}).`, was, published];
+  if (evidence.rule === 'osservazione') return [`Osservazione conclusa dopo ${evidence.weeksIn} settimane (massimo ${evidence.maxWeeks}).`, `Consenso simulato ${pct(evidence.share, 2)}, sotto la soglia d’ingresso (${pct(evidence.threshold, 2)}).`, published, ...cooldown];
+  return [`Consenso simulato ${pct(evidence.share, 2)}, sotto la soglia di ${pct(evidence.threshold, 2)} per ${evidence.weeksBelow} settimane consecutive (ne servivano ${evidence.weeksRequired}).`, was, published, ...cooldown];
+}
+export const evidenceLine = evidence => evidenceParts(evidence).join(' ');
 // Presence in the polls: who is consolidated, surveyed, emerging or outside, the latest moves and the rules.
 export function presencePanel(world) {
   const overview = presenceOverview(world);
@@ -221,14 +233,15 @@ export function presencePanel(world) {
   const chip = item => `<span class="presence-chip ${item.isPlayer ? 'is-player' : ''}" data-tip="${esc(`${item.label}${item.since ? ` · in questo stato dalla settimana ${item.since}` : ''}`)}" tabindex="0">${esc(item.abbreviation || item.label)}</span>`;
   const group = (id, label, items, note, body = items.map(chip).join('') || '<em>nessuna forza</em>') => `<div class="presence-group presence-${id}"><div><strong>${esc(label)} · ${items.length ?? items}</strong><small>${esc(note)}</small></div><div class="presence-chips">${body}</div></div>`;
   const emerging = overview.emerging.map(item => `<span class="presence-chip is-emerging" data-tip="${esc(`${item.label}: circa ${pct(item.share)} (stima simulata, ancora dentro “Altri”)`)}" tabindex="0">${esc(item.abbreviation || item.label)} · ~${pct(item.share)}</span>`).join('') || '<em>nessuna forza</em>';
-  const exited = overview.exited.map(item => `<span class="presence-chip is-out" data-tip="${esc(`${item.label}: uscita dalla rilevazione nella settimana ${item.week}; la sua storia nei sondaggi resta`)}" tabindex="0">${esc(item.abbreviation || item.label)} · uscita S${item.week}</span>`).join('');
+  const exited = overview.exited.map(item => `<span class="presence-chip is-out" data-tip="${esc(`${item.label}: uscita dalla rilevazione nella settimana ${item.week}; la sua storia nei sondaggi resta. ${evidenceLine(item.evidence)}`)}" tabindex="0">${esc(item.abbreviation || item.label)} · uscita S${item.week}</span>`).join('');
+  const merged = overview.merged.map(item => `<span class="presence-chip is-out" data-tip="${esc(`${item.label}: ${evidenceLine(item.evidence)}`)}" tabindex="0">${esc(item.abbreviation || item.label)} · fusa S${item.week}</span>`).join('');
   const rules = PRESENCE_RULES;
-  const moves = overview.moves.length ? `<ul class="presence-moves">${overview.moves.map(move => `<li><span>S${move.week}</span><b>${esc(move.label)}</b><em>${esc(PRESENCE_LABELS[move.from])} → ${esc(PRESENCE_LABELS[move.to])}</em></li>`).join('')}</ul>` : '<p class="quiet-copy">Nessun ingresso o uscita finora.</p>';
+  const moves = overview.moves.length ? `<ul class="presence-moves">${overview.moves.map(move => `<li><span>S${move.week}</span><b>${esc(move.label)}</b><em>${esc(PRESENCE_LABELS[move.from])} → ${esc(move.merged ? 'Fusa' : PRESENCE_LABELS[move.to])}</em>${move.evidence ? `<small class="presence-why">${evidenceParts(move.evidence).map(part => `<span>${esc(part)}</span>`).join(' ')}</small>` : ''}</li>`).join('')}</ul>` : '<p class="quiet-copy">Nessun ingresso o uscita finora.</p>';
   return `<div class="presence-grid">
       ${group('consolidato', 'Consolidati', overview.consolidated, `Almeno ${decimal(rules.consolidate.share)}% da ${rules.consolidate.weeks} settimane`)}
       ${group('rilevato', 'Rilevati', overview.surveyed, 'Con una propria voce nei sondaggi')}
       ${group('emergente', 'Emergenti', overview.emerging, 'Osservati, ancora dentro “Altri”', emerging)}
-      <div class="presence-group presence-non-rilevato"><div><strong>Non rilevati · ${overview.outside}</strong><small>Forze del database fuori dai sondaggi: nessuna stima pubblicata</small></div>${exited ? `<div class="presence-chips">${exited}</div>` : ''}</div>
+      <div class="presence-group presence-non-rilevato"><div><strong>Non rilevati · ${overview.outside}</strong><small>Forze del database fuori dai sondaggi: nessuna stima pubblicata</small></div>${exited || merged ? `<div class="presence-chips">${exited}${merged}</div>` : ''}</div>
     </div>
     <h3 class="presence-subtitle">Ultimi ingressi e uscite</h3>${moves}
     <details class="presence-rules"><summary>Come si entra e si esce dai sondaggi</summary><ul>

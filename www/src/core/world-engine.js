@@ -1,9 +1,9 @@
-import { uniqueId } from './ids.js?v=20261026-1';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261026-1';
-import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261026-1';
-import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261026-1';
-import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261026-1';
-import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261026-1';
+import { uniqueId } from './ids.js?v=20261027-1';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261027-1';
+import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261027-1';
+import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261027-1';
+import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261027-1';
+import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261027-1';
 export { houseEffect };
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
@@ -45,6 +45,19 @@ export const PRESENCE_RULES = Object.freeze({
   weaken: { share: 2.2, weeks: 8 },
   exit: { share: 0.6, weeks: 8, minWeeks: 12, cooldown: 16 }
 });
+// A merger is another way out of the polls and answers to the same rules: the force must have been in its state for the minimum permanence, not in a cooldown, not consolidated (a force
+// above the consolidation share goes through the weaker state first) and the world has had no merger in the last `cooldown` weeks.
+export const MERGE_RULES = Object.freeze({ minWeeks: PRESENCE_RULES.exit.minWeeks, cooldown: 16, maxShare: PRESENCE_RULES.consolidate.share });
+// Why a merger is or is not allowed (null: allowed). `shares` are the simulated consensus of the forces.
+export function mergeProblem(world, force, shares = null) {
+  const presence = force?.presence;
+  if (!force?.active || force.isPlayer) return 'forza non disponibile';
+  if (presence?.status === PRESENCE.CONSOLIDATED) return 'consolidata: prima deve scendere sotto la soglia di consolidamento';
+  if (presence && world.week - (presence.since ?? world.week) < MERGE_RULES.minWeeks) return 'permanenza minima non raggiunta';
+  if (presence && (presence.cooldownUntil ?? -1) > world.week) return 'in cooldown';
+  if (shares && (shares.get(force.id) ?? force.baseline) >= MERGE_RULES.maxShare) return 'consenso sopra la soglia di consolidamento';
+  return null;
+}
 // Small forces move less in absolute terms: 1 at `full` points and above, down to 0.3 for the smallest.
 const sizeFactor = (share, full) => clamp(Math.sqrt(Math.max(0, share) / full), 0.3, 1);
 // The smallest consensus a force of the polls holds is 0,3%. A force that is born below it (the party the player founds) keeps its own size
@@ -1066,6 +1079,12 @@ function split(world, parent, date) {
   logEvent(world, date, { kind: 'scissione', icon: 'unlink', scope: 'nazionale', title: `Scissione in ${parent.label}`, body: `Nello scenario la minoranza interna lascia il partito e fonda una nuova forza (${force.label}). Nessun dirigente reale è coinvolto: è un’evoluzione simulata. Per ora il suo consenso è dentro “Altri”: gli istituti la rileveranno se regge.`, tone: 'bad', partyId: parent.id });
 }
 function merge(world, absorber, absorbed, date) {
+  // What justifies the merger, kept with the force: its state and permanence, the simulated consensus of both and the published figure of the latest poll.
+  const shares = trueShares(world);
+  const evidence = { rule: 'fusione', from: absorbed.presence?.status ?? PRESENCE.SURVEYED, to: 'fusa', week: world.week, date, into: absorber.id, intoLabel: absorber.label, share: round2(shares.get(absorbed.id) ?? absorbed.baseline), intoShare: round2(shares.get(absorber.id) ?? absorber.baseline), weeksIn: world.week - (absorbed.presence?.since ?? world.week), minWeeks: MERGE_RULES.minWeeks, maxShare: MERGE_RULES.maxShare, published: publishedOf(world, absorbed.id) };
+  absorbed.mergedEvidence = evidence;
+  world.cooldowns.fusione = world.week;
+  world.presenceMoves = [...(world.presenceMoves ?? []), { week: world.week, date, id: absorbed.id, label: absorbed.label, from: evidence.from, to: PRESENCE.NONE, merged: true, player: false, evidence }].slice(-40);
   absorbed.active = false;
   absorbed.mergedInto = absorber.id;
   absorber.baseline = round2(absorber.baseline + absorbed.baseline * 0.8);
@@ -1087,14 +1106,16 @@ function partyLife(world, date, trust = 48) {
   }
   // Two close forces with good relations can merge: the small ones more easily, a federation of larger ones rarely.
   if (draw(world) < 0.03) {
-    const pool = world.parties.filter(item => item.active && !item.isPlayer && isSurveyed(item) && item.baseline < 8);
+    // a merger answers to the rules of the survey: permanence, cooldown (of the force and of the world), not consolidated
+    const shares = trueShares(world);
+    const pool = world.week - (world.cooldowns.fusione ?? -99) < MERGE_RULES.cooldown ? [] : world.parties.filter(item => item.active && !item.isPlayer && isSurveyed(item) && item.baseline < 8 && !mergeProblem(world, item, shares));
     const pairs = pool.flatMap((a, index) => pool.slice(index + 1).map(b => [a, b])).filter(([a, b]) => distance(a, b) <= 1 && (world.ties[tieKey(a.id, b.id)] ?? 0) >= (a.baseline + b.baseline < 5 ? 40 : 60) && !world.grudges?.[tieKey(a.id, b.id)]);
     if (pairs.length) { const [a, b] = pairs[Math.floor(draw(world) * pairs.length)]; if (a.baseline >= b.baseline) merge(world, a, b, date); else merge(world, b, a, date); }
   }
   // A split that did not take off goes back home when the wounds have healed (a ricomposizione).
   for (const force of world.parties.filter(item => item.active && item.origin === 'evoluzione' && item.parentId && item.baseline < 1.5 && world.week - (item.createdWeek ?? world.week) >= 52)) {
     const parent = world.parties.find(item => item.id === force.parentId && item.active);
-    if (parent && !world.grudges?.[tieKey(force.id, parent.id)] && (world.ties[tieKey(force.id, parent.id)] ?? -100) >= 10 && draw(world) < 0.05) { merge(world, parent, force, date); break; }
+    if (parent && !world.grudges?.[tieKey(force.id, parent.id)] && (world.ties[tieKey(force.id, parent.id)] ?? -100) >= 10 && !mergeProblem(world, force) && world.week - (world.cooldowns.fusione ?? -99) >= MERGE_RULES.cooldown && draw(world) < 0.05) { merge(world, parent, force, date); break; }
   }
   // New forces: a civic list now and then; a protest movement when trust in the institutions is low. Rarer when many
   // new forces already crowd the field.
@@ -1225,9 +1246,16 @@ function promote(world, entry) {
   if (player && Number.isFinite(player.axis) && Number.isFinite(party.axis)) party.playerRelation = round1(clamp(12 - 8 * Math.abs(player.axis - party.axis), -30, 20));
   return party;
 }
-function movePresence(world, force, to, date, reason = null) {
+// The published figure of a force in the latest poll (an institute's number, rounded, with its noise), told apart from the simulated consensus the thresholds read.
+function publishedOf(world, id) {
+  const poll = world.polls?.at(-1);
+  const row = poll?.results?.find(item => item.partyId === id);
+  return row && Number.isFinite(row.share) ? { share: round1(row.share), date: poll.date ?? null, institute: poll.institute ?? null } : null;
+}
+function movePresence(world, force, to, date, reason = null, evidence = null) {
   const presence = force.presence;
   const from = presence.status;
+  const proof = evidence ? { ...evidence, from, to, week: world.week, date, published: publishedOf(world, force.id) } : null;
   Object.assign(presence, { status: to, since: world.week, above: 0, below: 0 });
   if (to === PRESENCE.SURVEYED && from === PRESENCE.EMERGING) presence.entries = (presence.entries ?? 0) + 1;
   if (to === PRESENCE.NONE) {
@@ -1238,10 +1266,11 @@ function movePresence(world, force, to, date, reason = null) {
       if (!isLatent(force)) { force.anchor = round2(Math.min(force.anchor ?? force.baseline, force.baseline + 0.1)); force.visibility = 20; force.exitedWeek = world.week; }
     }
   }
-  presence.log = [...(presence.log ?? []), { week: world.week, date, from, to }].slice(-6);
+  presence.log = [...(presence.log ?? []), { week: world.week, date, from, to, ...(proof ? { evidence: proof } : {}) }].slice(-6);
+  if (to === PRESENCE.NONE && proof) presence.lastExit = { ...proof, cooldownUntil: presence.cooldownUntil };
   const party = to === PRESENCE.SURVEYED && isLatent(force) ? promote(world, force) : force;
   if (to === PRESENCE.SURVEYED && from === PRESENCE.EMERGING) party.enteredWeek = world.week;
-  world.presenceMoves = [...(world.presenceMoves ?? []), { week: world.week, date, id: force.id, label: force.label, from, to, player: Boolean(force.isPlayer) }].slice(-40);
+  world.presenceMoves = [...(world.presenceMoves ?? []), { week: world.week, date, id: force.id, label: force.label, from, to, player: Boolean(force.isPlayer), ...(proof ? { evidence: { ...proof, ...(to === PRESENCE.NONE ? { cooldownUntil: presence.cooldownUntil } : {}) } } : {}) }].slice(-40);
   const text = presenceText(force, from, to, reason);
   logEvent(world, date, { kind: 'sondaggi', icon: 'chart', scope: 'nazionale', title: text.title, body: text.body, tone: text.tone, partyId: force.id });
 }
@@ -1267,12 +1296,13 @@ function presenceStep(world, date, stats = {}) {
       const down = held(share < rules.fade.share, 'below');
       if (up >= rules.enter.weeks && weeksIn >= rules.enter.minWeeks) movePresence(world, force, PRESENCE.SURVEYED, date);
       // Half a year under observation without breaking through: the institutes stop watching.
-      else if ((down >= rules.fade.weeks && weeksIn >= rules.fade.minWeeks) || weeksIn >= rules.fade.maxWeeks) movePresence(world, force, PRESENCE.NONE, date);
+      else if ((down >= rules.fade.weeks && weeksIn >= rules.fade.minWeeks) || weeksIn >= rules.fade.maxWeeks) movePresence(world, force, PRESENCE.NONE, date, null, down >= rules.fade.weeks && weeksIn >= rules.fade.minWeeks ? { rule: 'soglia', share: round2(share), threshold: rules.fade.share, weeksBelow: down, weeksRequired: rules.fade.weeks, weeksIn, minWeeks: rules.fade.minWeeks } : { rule: 'osservazione', share: round2(share), threshold: rules.enter.share, weeksIn, maxWeeks: rules.fade.maxWeeks });
     } else if (presence.status === PRESENCE.SURVEYED) {
       const up = held(share >= rules.consolidate.share, 'above');
-      const down = held(share < rules.exit.share, 'below');
+      const threshold = rules.exit.share;
+      const down = held(share < threshold, 'below');
       if (up >= rules.consolidate.weeks) movePresence(world, force, PRESENCE.CONSOLIDATED, date);
-      else if (down >= rules.exit.weeks && weeksIn >= rules.exit.minWeeks) movePresence(world, force, PRESENCE.NONE, date);
+      else if (down >= rules.exit.weeks && weeksIn >= rules.exit.minWeeks) movePresence(world, force, PRESENCE.NONE, date, null, { rule: 'soglia', share: round2(share), threshold, weeksBelow: down, weeksRequired: rules.exit.weeks, weeksIn, minWeeks: rules.exit.minWeeks });
     } else if (presence.status === PRESENCE.CONSOLIDATED) {
       presence.above = 0;
       if (held(share < rules.weaken.share, 'below') >= rules.weaken.weeks) movePresence(world, force, PRESENCE.SURVEYED, date);
@@ -1333,7 +1363,8 @@ export function presenceOverview(world) {
   return {
     consolidated: of(PRESENCE.CONSOLIDATED).map(row), surveyed: of(PRESENCE.SURVEYED).map(row), emerging: of(PRESENCE.EMERGING).map(row).sort((a, b) => b.share - a.share),
     outside: of(PRESENCE.NONE).filter(force => !force.isPlayer).length,
-    exited: world.parties.filter(party => party.active && !party.isPlayer && party.presence?.status === PRESENCE.NONE && party.presence.exits > 0).map(party => ({ ...row(party), week: party.exitedWeek ?? party.presence.since })),
+    exited: world.parties.filter(party => party.active && !party.isPlayer && party.presence?.status === PRESENCE.NONE && party.presence.exits > 0).map(party => ({ ...row(party), week: party.exitedWeek ?? party.presence.since, evidence: party.presence.lastExit ?? null })),
+    merged: world.parties.filter(party => !party.active && party.mergedEvidence).map(party => ({ ...row(party), week: party.mergedEvidence.week, evidence: party.mergedEvidence })).slice(-6),
     moves: (world.presenceMoves ?? []).slice(-8).reverse(), rules: PRESENCE_RULES
   };
 }
@@ -1783,7 +1814,10 @@ export function campaignPollBonus(world, electionType, stats = {}, relations = [
   const share = shares.find(row => row.partyId === player.id)?.share ?? 0;
   const alliance = allianceOf(world, player.id);
   const allies = alliance ? alliance.partyIds.filter(id => id !== player.id).reduce((sum, id) => sum + (shares.find(row => row.partyId === id)?.share ?? 0), 0) : 0;
-  return { bonus: round2(clamp((share - 6) * 0.2 + allies * 0.08, -2, 4)), share: round1(share), allies: round1(allies) };
+  // `partyTerm` is what the weight of the party in the polls gives, `alliesTerm` what its allies add: a campaign that already starts from the weight of the party (an anchor in the polls, the pull of the party
+  // on its candidate) takes only the second (store.startCampaign), so that the same weight is not counted twice.
+  const partyTerm = (share - 6) * 0.2, alliesTerm = allies * 0.08;
+  return { bonus: round2(clamp(partyTerm + alliesTerm, -2, 4)), share: round1(share), allies: round1(allies), partyTerm: round2(partyTerm), alliesTerm: round2(alliesTerm) };
 }
 export { STRATEGIES };
 

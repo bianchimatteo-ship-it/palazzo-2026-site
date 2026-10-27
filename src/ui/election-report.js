@@ -1,7 +1,7 @@
 // The full report of a vote, shared by the electoral centre and the campaign page.
-import { formatDate } from '../core/time.js?v=20261026-1';
-import { glyph } from './visuals.js?v=20261026-1';
-import { arrow, badge, bar, card, empty, esc, kpi, num, pct, signed, table } from './sections-kit.js?v=20261026-1';
+import { formatDate } from '../core/time.js?v=20261027-1';
+import { glyph } from './visuals.js?v=20261027-1';
+import { arrow, badge, bar, card, empty, esc, kpi, num, pct, signed, table } from './sections-kit.js?v=20261027-1';
 
 const EVENT_LABELS = { 'dopo-voto-vittoria': 'Le prime mosse dopo il voto', 'dopo-voto-sconfitta': 'Come ripartire dopo il voto', 'giunta-offerta': 'La giunta valuta il tuo nome', 'giunta-composizione': 'La scelta della tua giunta', 'capogruppo-opposizione': 'Chi guida l’opposizione', 'ricorso-elettorale': 'Un possibile ricorso', 'resa-dei-conti': 'Resa dei conti nel partito', 'consultazioni-governo': 'La squadra di governo', 'impegni-elettorali': 'Gli impegni presi in campagna' };
 const STAT_NAMES = { reputation: 'Reputazione', influence: 'Influenza', notoriety: 'Notorietà', popularity: 'Popolarità' };
@@ -21,7 +21,9 @@ export function mandatePlace(state, report) {
   if (!report?.personalMandate) return null;
   if (report.electionType === 'politiche') return state?.parliament?.player || state?.career?.parliamentContext ? { nav: 'parlamento', label: 'Vai al Parlamento' } : null;
   const [kind, label] = PLACES[report.electionType] ?? [];
-  return kind && (state?.local?.institutions ?? []).some(item => item.kind === kind && item.status === 'active') ? { nav: 'territori', label, scroll: `istituzione-${kind}` } : null;
+  // the mandate just won is the latest of its kind (a new council is added last); each institution has its own anchor
+  const seat = kind ? [...(state?.local?.institutions ?? [])].reverse().find(item => item.kind === kind && item.status === 'active') : null;
+  return seat ? { nav: 'territori', label, scroll: `istituzione-${seat.id}` } : null;
 }
 
 // The full report of a vote: outcome, numbers, territory, runoff and what it changes for the career.

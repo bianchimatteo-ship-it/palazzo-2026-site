@@ -1,63 +1,64 @@
-import { onLanguageChange, setLanguage, watchTree } from '../core/i18n.js?v=20261026-1';
-import { pendingCelebration, pendingOutcome } from '../core/celebration.js?v=20261026-1';
-import { fullDate, formatDate } from '../core/time.js?v=20261026-1';
-import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20261026-1';
-import * as accountApi from '../data/repositories/account-sync.js?v=20261026-1';
-import { hideCareers } from '../data/repositories/career-visibility.js?v=20261026-1';
-import { accountApiBase, commitRevision, currentAccount, deleteAccount, probeAccountService, deleteCloudSave, downloadSave, listCloudSaves, login, logout, register, slotForCareer } from '../data/repositories/account-sync.js?v=20261026-1';
-import { createSyncEngine } from '../data/repositories/sync-queue.js?v=20261026-1';
-import { setPartyLogoResolver } from './person-marks.js?v=20261026-1';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261026-1';
-import { isRealCollectionLoaded, loadRealCollections, optionalDocumentStatus, loadRealCollectionsSettled, pristineRecord, realDataFailures, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20261026-1';
-import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20261026-1';
-import { renderAdminPanel } from './admin-panel.js?v=20261026-1';
-import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, rotateSharedCredential, publishSharedArchive, refreshSharedArchive, sharedApiUrl, sharedSyncStatus, verifySharedSession } from '../data/repositories/admin-sync.js?v=20261026-1';
-import { syncLogos, resolveLogoConflict, listLogoConflicts } from '../data/repositories/logo-sync.js?v=20261026-1';
-import { claimLegacyLogo, deleteLogo, discardLegacyLogo, importGuestLogo, importLogoFromUrl, listGuestLogos, listLegacyLogos, listLogoInfos, loadLogos, logoInfo, logosArePersistent, migrateLegacyLogos, onLogosChange, prepareLogo, releaseLegacyPreviews, resolveLogo, saveLogo } from '../data/repositories/personal-logos.js?v=20261026-1';
-import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20261026-1';
-import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20261026-1';
-import { PARTY_LINK_COLLECTIONS, forceKind, isCoalitionList, politicalForces } from '../data/repositories/party-links.js?v=20261026-1';
-import { PROFESSIONS, chosenPlace, makeCareerDraft, pollScenarioOf, removePartyCriterion, renderCareerWizard, togglePartyOrientation, wizardLogoPreview } from './career-wizard.js?v=20261026-1';
-import { userPartyLogo } from './party-logo.js?v=20261026-1';
-import { CAREER_STEPS, validateWizardStep } from '../core/career-rules.js?v=20261026-1';
-import { renderElectionsHub } from './elections-hub.js?v=20261026-1';
-import { renderQuirinale } from './presidency-view.js?v=20261026-1';
-import { renderCareerPage } from './career-page.js?v=20261026-1';
-import { renderPartyPage } from './party-page.js?v=20261026-1';
-import { renderAgendaPage } from './agenda-page.js?v=20261026-1';
-import { HEMICYCLE_DEFAULTS, renderHemicycle } from './hemicycle-view.js?v=20261026-1';
-import { renderFeaturedMembers } from './members-view.js?v=20261026-1';
-import { drawLogoEditor, exportLogo, measureBackground, panFromDrag, renderLogoEditor } from './logo-editor-view.js?v=20261026-1';
-import { createEditorState } from '../core/logo-editor.js?v=20261026-1';
-import { renderParliamentPage } from './parliament-mode.js?v=20261026-1';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261026-1';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261026-1';
-import { chooseStart } from '../core/start-engine.js?v=20261026-1';
-import { renderHeadquarters, renderNewsroom } from './game-mode.js?v=20261026-1';
-import { newsMedia, newsPopupHtml, popupItem } from './news-view.js?v=20261026-1';
-import { articleScript, bulletinScript, onVoiceChange, onVoicesChange, speakLines, stopVoice, syncVoiceDom, voiceStatus, voiceTarget } from './radio-voice.js?v=20261026-1';
-import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20261026-1';
-import { playerRoles } from '../core/roles.js?v=20261026-1';
-import { accordWarning, budgetPreview, designFromForm, planFromForm, policyFields, policyPreview, projectPreview, rangeText, requestFromForm } from './policy-mode.js?v=20261026-1';
-import { areaOf } from '../data/simulation/policy-rules.js?v=20261026-1';
-import { attachChartInteractions, hideChartTip } from './polls-mode.js?v=20261026-1';
-import { renderObservatory } from './observatory-view.js?v=20261026-1';
-import { glyph } from './visuals.js?v=20261026-1';
-import { identityVars, partyChip, partyIdentity, topbarParty } from './party-identity.js?v=20261026-1';
-import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20261026-1';
-import { renderFinancePage } from './finance-mode.js?v=20261026-1';
-import { PLAN_MAX, planConfirmLines, planKey, renderPlanTray } from './plan-view.js?v=20261026-1';
-import { STAFF_TASK_BY_ID } from '../data/simulation/staff-rules.js?v=20261026-1';
-import { renderContactsPanel } from './organization-mode.js?v=20261026-1';
-import { renderRealLaws } from './real-laws.js?v=20261026-1';
-import { realLawArea } from '../core/society-engine.js?v=20261026-1';
-import { canManageParliament } from '../core/parliament-engine.js?v=20261026-1';
-import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, TOUR_STEPS } from './menu.js?v=20261026-1';
-import { setForceColorOverrides } from './political-colors.js?v=20261026-1';
-import { renderTutorialCard, tutorialAction, tutorialContext, tutorialState, TUTORIAL_STEPS } from './tutorial.js?v=20261026-1';
-import { storage as localStorageApi } from '../core/storage.js?v=20261026-1';
-import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20261026-1';
-import { playSound } from './sound.js?v=20261026-1';
+import { onLanguageChange, setLanguage, watchTree } from '../core/i18n.js?v=20261027-1';
+import { pendingCelebration, pendingOutcome } from '../core/celebration.js?v=20261027-1';
+import { fullDate, formatDate } from '../core/time.js?v=20261027-1';
+import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20261027-1';
+import * as accountApi from '../data/repositories/account-sync.js?v=20261027-1';
+import { hideCareers } from '../data/repositories/career-visibility.js?v=20261027-1';
+import { accountApiBase, commitRevision, currentAccount, deleteAccount, probeAccountService, deleteCloudSave, downloadSave, listCloudSaves, login, logout, register, slotForCareer } from '../data/repositories/account-sync.js?v=20261027-1';
+import { createSyncEngine } from '../data/repositories/sync-queue.js?v=20261027-1';
+import { setPartyLogoResolver } from './person-marks.js?v=20261027-1';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261027-1';
+import { isRealCollectionLoaded, loadRealCollections, optionalDocumentStatus, loadRealCollectionsSettled, pristineRecord, realDataFailures, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20261027-1';
+import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20261027-1';
+import { renderAdminPanel } from './admin-panel.js?v=20261027-1';
+import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, rotateSharedCredential, publishSharedArchive, refreshSharedArchive, sharedApiUrl, sharedSyncStatus, verifySharedSession } from '../data/repositories/admin-sync.js?v=20261027-1';
+import { syncLogos, resolveLogoConflict, listLogoConflicts } from '../data/repositories/logo-sync.js?v=20261027-1';
+import { claimLegacyLogo, deleteLogo, discardLegacyLogo, importGuestLogo, importLogoFromUrl, listGuestLogos, listLegacyLogos, listLogoInfos, loadLogos, logoInfo, logosArePersistent, migrateLegacyLogos, onLogosChange, prepareLogo, releaseLegacyPreviews, resolveLogo, saveLogo } from '../data/repositories/personal-logos.js?v=20261027-1';
+import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20261027-1';
+import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20261027-1';
+import { PARTY_LINK_COLLECTIONS, forceKind, isCoalitionList, politicalForces } from '../data/repositories/party-links.js?v=20261027-1';
+import { PROFESSIONS, chosenPlace, makeCareerDraft, pollScenarioOf, removePartyCriterion, renderCareerWizard, togglePartyOrientation, wizardLogoPreview } from './career-wizard.js?v=20261027-1';
+import { userPartyLogo } from './party-logo.js?v=20261027-1';
+import { CAREER_STEPS, validateWizardStep } from '../core/career-rules.js?v=20261027-1';
+import { renderElectionsHub } from './elections-hub.js?v=20261027-1';
+import { renderQuirinale } from './presidency-view.js?v=20261027-1';
+import { renderCareerPage } from './career-page.js?v=20261027-1';
+import { renderPartyPage } from './party-page.js?v=20261027-1';
+import { renderAgendaPage } from './agenda-page.js?v=20261027-1';
+import { HEMICYCLE_DEFAULTS, renderHemicycle } from './hemicycle-view.js?v=20261027-1';
+import { renderFeaturedMembers } from './members-view.js?v=20261027-1';
+import { drawLogoEditor, exportLogo, measureBackground, panFromDrag, renderLogoEditor } from './logo-editor-view.js?v=20261027-1';
+import { createEditorState } from '../core/logo-editor.js?v=20261027-1';
+import { renderParliamentPage } from './parliament-mode.js?v=20261027-1';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261027-1';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261027-1';
+import { chooseStart } from '../core/start-engine.js?v=20261027-1';
+import { renderHeadquarters, renderNewsroom } from './game-mode.js?v=20261027-1';
+import { newsMedia, newsPopupHtml, popupItem } from './news-view.js?v=20261027-1';
+import { articleScript, bulletinScript, onVoiceChange, onVoicesChange, speakLines, stopVoice, syncVoiceDom, voiceStatus, voiceTarget } from './radio-voice.js?v=20261027-1';
+import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20261027-1';
+import { playerRoles } from '../core/roles.js?v=20261027-1';
+import { accordWarning, budgetPreview, designFromForm, planFromForm, policyFields, policyPreview, projectPreview, rangeText, requestFromForm } from './policy-mode.js?v=20261027-1';
+import { areaOf } from '../data/simulation/policy-rules.js?v=20261027-1';
+import { attachChartInteractions, hideChartTip } from './polls-mode.js?v=20261027-1';
+import { renderObservatory } from './observatory-view.js?v=20261027-1';
+import { glyph } from './visuals.js?v=20261027-1';
+import { identityVars, partyChip, partyIdentity, topbarParty } from './party-identity.js?v=20261027-1';
+import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20261027-1';
+import { renderFinancePage } from './finance-mode.js?v=20261027-1';
+import { PLAN_MAX, planConfirmLines, planKey, renderPlanTray } from './plan-view.js?v=20261027-1';
+import { STAFF_TASK_BY_ID } from '../data/simulation/staff-rules.js?v=20261027-1';
+import { renderContactsPanel } from './organization-mode.js?v=20261027-1';
+import { renderRealLaws } from './real-laws.js?v=20261027-1';
+import { realLawArea } from '../core/society-engine.js?v=20261027-1';
+import { canManageParliament } from '../core/parliament-engine.js?v=20261027-1';
+import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, TOUR_STEPS } from './menu.js?v=20261027-1';
+import { setForceColorOverrides } from './political-colors.js?v=20261027-1';
+import { renderTutorialCard, tutorialAction, tutorialContext, tutorialState, TUTORIAL_STEPS } from './tutorial.js?v=20261027-1';
+import { storage as localStorageApi } from '../core/storage.js?v=20261027-1';
+import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20261027-1';
+import { playSound } from './sound.js?v=20261027-1';
+import { resolveInstitution } from './local-mode.js?v=20261027-1';
 
 // The destinations of the game, by theme. On computers the sidebar lists the eight and opens the pages of the current one; on phones the
 // bar below keeps Home · Elezioni · Sondaggi · Istituzioni one tap away and “Altro” gathers everything else (the same pages, nothing twice).
@@ -79,7 +80,8 @@ const mainSectionActive = (id, page) => sectionOf(page)?.id === id;
 const sectionTarget = section => section.pages[0][0];
 // Comune, Provincia and Regione stay three distinct experiences: one entry for each mandate the player holds, opening that institution in Territori.
 const LOCAL_KIND_LABELS = Object.freeze({ comune: 'Comune', provincia: 'Provincia', regione: 'Regione' });
-const localEntries = state => ['comune', 'provincia', 'regione'].filter(kind => (state.local?.institutions ?? []).some(item => item.kind === kind && item.status === 'active')).map(kind => ({ page: 'territori', label: LOCAL_KIND_LABELS[kind], scroll: `istituzione-${kind}`, kind }));
+// One entry for each institution (its own id), so two councils of one kind are two entries; the place is added to the label when a kind appears more than once.
+const localEntries = state => { const active = (state.local?.institutions ?? []).filter(item => LOCAL_KIND_LABELS[item.kind] && item.status === 'active'); return active.map(inst => ({ page: 'territori', label: active.filter(item => item.kind === inst.kind).length > 1 ? `${LOCAL_KIND_LABELS[inst.kind]} · ${String(inst.name).replace(/^(Comune di|Provincia di|Città metropolitana di|Libero consorzio comunale di|Regione)\s*/, '')}` : LOCAL_KIND_LABELS[inst.kind], scroll: `istituzione-${inst.id}`, kind: inst.kind, inst: inst.id })); };
 // The pages of a destination, as entries {page, label, scroll?}: Territori adds the institutions of the player.
 const sectionEntries = (section, state) => [...section.pages.map(([page, label]) => ({ page, label, ...(page === 'territori' ? { scroll: 'il-paese' } : {}) })), ...(section.locals ? localEntries(state) : [])];
 // “Altro” on phones is the sidebar of the computer, entry by entry: the same sections in the same order with the same names and the same pages (SECTIONS and sectionEntries are the one source of both),
@@ -105,7 +107,7 @@ const mobileSheet = (state, lastSaved, territory) => {
     : `<div class="sheet-group is-direct" data-sec="${group.id}" data-sheet-group="${group.id}"><button type="button" class="sheet-item sheet-direct ${entryOn(items[0], items, page, territory) ? 'active' : ''}" data-sheet-label="${group.label}" ${entryAttrs(items[0])}><span class="sheet-group-icon">${icon(group.glyph, 18)}</span><strong>${group.label}</strong></button></div>`).join('');
   return `<div class="mobile-sheet" id="mobile-sheet" data-mobile-sheet hidden><div class="mobile-sheet-panel" role="dialog" aria-modal="true" aria-label="Altro: tutte le sezioni"><div class="mobile-sheet-head"><strong>Altro</strong><button type="button" class="icon-button" data-mobile-close aria-label="Chiudi">×</button></div><label class="sheet-search"><span class="visually-hidden">Cerca una pagina</span><input type="search" data-sheet-search placeholder="Cerca una pagina…" autocomplete="off" enterkeyhint="search" /></label><p class="sheet-empty" data-sheet-empty hidden>Nessuna pagina corrisponde.</p>${body}<div class="mobile-sheet-status"><span class="save-dot"></span>${lastSaved}</div></div></div>`;
 };
-const entryActive = (entry, page, territory = {}) => page === entry.page && (!entry.kind || (territory.localInst ? territory.localInst === entry.kind : false));
+const entryActive = (entry, page, territory = {}) => page === entry.page && (!entry.kind || (territory.localInst ? territory.localInst === entry.inst || territory.localInst === entry.kind : false));
 // An entry is current when it is its page, or, in Territori, the institution that is open ("Il Paese" is current while none is chosen).
 const entryOn = (entry, entries, page, territory = {}) => entry.kind ? entryActive(entry, page, territory) : entry.page === page && !entries.some(other => other.kind && entryActive(other, page, territory));
 const entryAttrs = entry => `data-nav="${entry.page}"${entry.scroll ? ` data-scroll="${entry.scroll}"` : ''}`;
@@ -1636,7 +1638,9 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     // A link to a mandate opens that mandate (one is shown at a time).
     const scrollIsNav = Boolean(scrollTarget && event.target.closest('[data-scroll]').matches?.('[data-nav]'));
     if (scrollTarget?.startsWith('istituzione-')) {
-      const kind = scrollTarget.slice('istituzione-'.length);
+      // the anchor names an institution by its id (a bare kind, from an old link, opens the latest of that kind)
+      const ref = scrollTarget.slice('istituzione-'.length);
+      const kind = resolveInstitution(store.getState(), ref)?.id ?? ref;
       if (territory.localInst !== kind) { territory.localInst = kind; territory.localSection = null; territory.localSeat = null; saveViews(); if (store.getState().ui.activePage === 'territori') render(store.getState(), store.getLastSaved()); }
     }
     if (scrollTarget && scrollIsNav && !globalThis.document?.getElementById?.(scrollTarget)) pendingScroll = scrollTarget;
@@ -2423,7 +2427,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     const page = pageFromHash();
     // #comune, #provincia and #regione open that institution in Territori.
     const kind = decodeURIComponent(globalThis.location?.hash?.replace(/^#\/?/, '') ?? '');
-    if (LOCAL_KIND_LABELS[kind]) { territory.localInst = kind; territory.localSection = null; territory.localSeat = null; saveViews(); }
+    if (LOCAL_KIND_LABELS[kind]) { territory.localInst = resolveInstitution(store.getState(), kind)?.id ?? kind; territory.localSection = null; territory.localSeat = null; saveViews(); }
     if (page && page !== store.getState().ui.activePage) ensurePageData(page);
   });
   render(store.getState(),store.getLastSaved());

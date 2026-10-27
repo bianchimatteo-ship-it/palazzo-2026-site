@@ -190,7 +190,8 @@ try {
         // Territori shows one mandate at a time (a selector) and one section at a time: each of the two mandates is picked, and each of its sections is opened and audited.
         const pick = async selector => { await evaluate(`document.querySelector(${JSON.stringify(selector)})?.click(), true`); await pause(300); };
         const kinds = await evaluate(`[...document.querySelectorAll('.local-institutions .local-jump [data-local-inst]')].map(button => button.dataset.localInst)`);
-        if (kinds.length !== 2 || !kinds.includes('comune') || !kinds.includes('europa')) report.push(`${label} · territori: il selettore dei mandati mostra ${kinds.join(', ') || 'nessun mandato'} invece di Comune ed Europa`);
+        // the selector buttons carry the id of each institution (it starts with its kind)
+        if (kinds.length !== 2 || !kinds.some(id => id.startsWith('comune')) || !kinds.some(id => id.startsWith('europa'))) report.push(`${label} · territori: il selettore dei mandati mostra ${kinds.join(', ') || 'nessun mandato'} invece di Comune ed Europa`);
         for (const kind of kinds) {
           await pick(`.local-institutions [data-local-inst="${kind}"]`);
           const sections = await evaluate(`[...document.querySelectorAll('.local-institutions .local-tabs [data-local-section]')].map(button => button.dataset.localSection)`);
@@ -198,8 +199,8 @@ try {
           for (const section of sections) {
             await pick(`.local-institutions [data-local-section="${section}"]`);
             const where = `${label} · territori · ${kind} · ${section}`;
-            const cards = await evaluate(`[...document.querySelectorAll('.local-institutions [id^=istituzione-]')].map(card => card.id)`);
-            if (cards.length !== 1 || cards[0] !== `istituzione-${kind}`) report.push(`${where}: schede mostrate ${cards.join(', ') || 'nessuna'} invece di istituzione-${kind}`);
+            const cards = await evaluate(`[...document.querySelectorAll('.local-institutions [id^=istituzione-]')].map(card => ({ id: card.id, level: card.dataset.level, own: card.dataset.institutionId }))`);
+            if (cards.length !== 1 || (cards[0].level !== kind && cards[0].own !== kind) || cards[0].id !== `istituzione-${cards[0].own}`) report.push(`${where}: schede mostrate ${cards.map(card => card.id).join(', ') || 'nessuna'} invece dell’istituzione ${kind} (con il proprio id)`);
             if (section === 'panoramica') {
               // The seats of this institution are drawn, and a seat picked (its card is drawn and audited too).
               if ((await evaluate('document.querySelectorAll(".local-institutions .hemi-svg").length')) !== 1) report.push(`${where}: i seggi dell'istituzione non sono disegnati`);

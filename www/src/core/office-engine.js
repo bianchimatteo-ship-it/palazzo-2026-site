@@ -3,7 +3,7 @@
 // progression and the incompatibilities. Pure functions: the callers pass in the facts they already have.
 import {
   GOVERNMENT_CANDIDACY_BLOCK, INCOMPATIBILITIES, OFFICES, OFFICE_BASES, OFFICE_OF_CANDIDACY, POWERS, PROVINCIAL_PRESIDENT_MIN_MONTHS
-} from '../data/simulation/office-rules.js?v=20261026-1';
+} from '../data/simulation/office-rules.js?v=20261027-1';
 
 // The office of the player in a local or European institution (see local-engine: kinds comune, provincia, regione, europa).
 export function institutionOffice(inst) {
@@ -22,7 +22,8 @@ export function institutionOffice(inst) {
 // What the player holds in the institutions now: { comune, provincia, regione, europa } (each an office id or null).
 export function localOffices(institutions = []) {
   const held = { comune: null, provincia: null, regione: null, europa: null };
-  for (const inst of institutions) if (inst?.status === 'active' && inst.kind in held) held[inst.kind] = institutionOffice(inst);
+  // Several councils of one kind can be active in different places: the heaviest office of the kind is the one reported here (heldOffices lists every one).
+  for (const inst of institutions) if (inst?.status === 'active' && inst.kind in held) { const id = institutionOffice(inst); if (id && (!held[inst.kind] || officeTier(id) > officeTier(held[inst.kind]))) held[inst.kind] = id; }
   return held;
 }
 
@@ -37,8 +38,7 @@ export const officeScope = id => OFFICES[id]?.scope ?? null;
 // minister, undersecretary, premier, inMajority, secretary, president }. Ordered by weight, the heaviest first.
 export function heldOffices(facts = {}) {
   const held = new Set();
-  const local = localOffices(facts.institutions ?? []);
-  for (const id of Object.values(local)) if (id) held.add(id);
+  for (const inst of facts.institutions ?? []) if (inst?.status === 'active') { const id = institutionOffice(inst); if (id) held.add(id); }
   if ((facts.institutions ?? []).some(inst => inst?.status === 'active' && inst.playerGroupLead && inst.kind !== 'europa')) held.add('capogruppo-consiliare');
   if (facts.chamber === 'camera') held.add('deputato');
   else if (facts.chamber === 'senato') held.add('senatore');

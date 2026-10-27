@@ -452,9 +452,9 @@ assert.ok(!page.includes('data-world-alliance') && page.includes('Alleanze e rot
   const council = store.getState().local?.institutions?.find(item => item.status === 'active' && item.kind === 'comune');
   assert.ok(council, 'La carriera comunale siede nel suo consiglio');
   let home = await goto('panoramica');
-  assert.ok(home.includes('data-nav="territori" data-scroll="istituzione-comune"'), 'La Home porta al consiglio comunale');
+  assert.ok(home.includes(`data-nav="territori" data-scroll="istituzione-${council.id}"`), 'La Home porta al consiglio comunale');
   let page = await goto('territori');
-  assert.ok(page.includes('id="istituzione-comune"') && page.includes('LE TUE ISTITUZIONI') && page.includes('data-local-section="atti"') && clean(page), 'Territori: il consiglio comunale con le sue sezioni');
+  assert.ok(page.includes(`id="istituzione-${council.id}"`) && page.includes('LE TUE ISTITUZIONI') && page.includes('data-local-section="atti"') && clean(page), 'Territori: il consiglio comunale con le sue sezioni');
   page = await click({ localSection: 'atti' });
   assert.ok(page.includes('data-local-question') && page.includes('data-local-propose-form') && clean(page), 'Territori, Consiglio e Giunta: le azioni del consigliere');
   await click({ localQuestion: '', instId: council.id });
@@ -472,12 +472,13 @@ assert.ok(!page.includes('data-world-alliance') && page.includes('Alleanze e rot
   store.getState().local.institutions.push(L.createInstitution({ kind: 'europa', name: 'Parlamento europeo', date: store.getState().clock.currentDate, role: 'eurodeputato', side: 'maggioranza', playerGroupId: 'sd', groups, committee: 'envi' }));
   for (let week = 0; week < 5; week++) { store.getState().game.status = 'active'; store.advance(7); }
   home = await goto('panoramica');
-  assert.ok(home.includes('data-scroll="istituzione-europa"'), 'La Home porta anche al Parlamento europeo');
+  const europe = store.getState().local.institutions.find(item => item.status === 'active' && item.kind === 'europa');
+  assert.ok(home.includes(`data-scroll="istituzione-${europe.id}"`), 'La Home porta anche al Parlamento europeo');
   page = await goto('territori');
-  page = await click({ localInst: 'europa' });
-  assert.ok(page.includes('id="istituzione-europa"') && page.includes('Le tue commissioni') && page.includes('data-ep-role') && page.includes('data-ep-committee-form') && clean(page), 'Territori: Parlamento europeo con le sue commissioni');
+  page = await click({ localInst: europe.id });
+  assert.ok(page.includes(`id="istituzione-${europe.id}"`) && page.includes('Le tue commissioni') && page.includes('data-ep-role') && page.includes('data-ep-committee-form') && clean(page), 'Territori: Parlamento europeo con le sue commissioni');
   const seats = store.getState().local.institutions.filter(item => item.status === 'active');
-  if (seats.length > 1) assert.ok(seats.every(item => page.includes(`data-local-inst="${item.kind}"`)), 'Con più istituzioni, un selettore dei mandati in cima alla pagina');
+  if (seats.length > 1) assert.ok(seats.every(item => page.includes(`data-local-inst="${item.id}"`)), 'Con più istituzioni, un selettore dei mandati in cima alla pagina');
   const seat = store.getState().local.institutions.find(item => item.kind === 'europa' && item.status === 'active');
   await click({ epRole: '', instId: seat.id });
   assert.match(store.getState().ui.toast ?? '', /più lavoro in commissione/, 'Senza lavoro in commissione niente incarichi: il gioco lo spiega');

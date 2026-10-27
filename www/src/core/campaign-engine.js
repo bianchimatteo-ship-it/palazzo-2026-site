@@ -1,10 +1,10 @@
-import { advanceDays } from './time.js?v=20261026-1';
-import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261026-1';
-import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261026-1';
-import { aggregateShares, mateForce, runFinalElection, runFirstRound } from './election-engine.js?v=20261026-1';
-import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261026-1';
-import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261026-1';
-import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261026-1';
+import { advanceDays } from './time.js?v=20261027-1';
+import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261027-1';
+import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261027-1';
+import { aggregateShares, mateForce, runFinalElection, runFirstRound } from './election-engine.js?v=20261027-1';
+import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261027-1';
+import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261027-1';
+import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261027-1';
 
 const SOURCE = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
@@ -353,6 +353,19 @@ function partyEdges(rivals, weights = {}) {
   const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
   return Object.fromEntries(rivals.map(item => [item.id, item.partyId ? round(clamp((Number(weights[item.partyId] ?? 0) - mean) / (mean + 4) * 6, -3.5, 3.5)) : 0]));
 }
+// How much the weight of a party decides a local vote: a comune votes mostly on the person and on civic lists, a province more on the parties, a region mostly on them. The weight of the party in the
+// polls (the local ones for a comune, the regional ones above it) multiplies the strength of its candidate by (weight / average weight)^exponent: a force of 0,3% is not at the start of one of 25% because
+// the candidate is a good one, and the difference between them is wider the more the vote is about parties (it was an additive edge of at most 3,5 points, the same for a force of 0,3% and one of 8%).
+// Smoothed by one point so that a force at zero is not annihilated. Not applied where the roster of the forces already anchors the start to the polls (general and European votes).
+export const PARTY_PULL = Object.freeze({ comunale: .55, provinciale: .7, regionale: .85 });
+export function partyPulls(candidates, weights = {}, type) {
+  const exponent = PARTY_PULL[type];
+  const parties = candidates.filter(item => item.partyId);
+  if (!exponent || !parties.length || !parties.some(item => Number(weights[item.partyId] ?? 0) > 0)) return {};
+  const weightOf = item => Math.max(0, Number(weights[item.partyId] ?? 0)) + 1;
+  const mean = parties.reduce((sum, item) => sum + weightOf(item), 0) / parties.length;
+  return Object.fromEntries(candidates.map(item => [item.id, item.partyId ? round(Math.pow(weightOf(item) / mean, exponent)) : 1]));
+}
 // Where each rival is from: a stronghold area and how deep the roots go (zero-mean, like the party edge).
 function rivalRoots(rivals, areas, seed) {
   const roots = {};
@@ -539,7 +552,7 @@ const candidateLabel = candidate => candidate.realReference?.fullName ?? (candid
 // what a newcomer with the default consensus has. Kept apart from popularity (how well liked) and from the party edge (what the party's weight gives).
 const DEFAULT_PERSONAL_CONSENSUS = 4;
 const personalConsensus = stats => clamp((Number(stats?.consensus ?? DEFAULT_PERSONAL_CONSENSUS) - DEFAULT_PERSONAL_CONSENSUS) * .09, -.5, 5);
-function initSupport(areas, candidates, player, seed, { extra = {}, edges = {}, roots = {}, homeExtra = 0, spread = 1.6, anchors = {}, rooted = false } = {}) {
+function initSupport(areas, candidates, player, seed, { extra = {}, edges = {}, pulls = {}, roots = {}, homeExtra = 0, spread = 1.6, anchors = {}, rooted = false } = {}) {
   const rand = randomFrom(seed ^ 0x7f4a7c15);
   for (const area of areas) {
     const strengths = candidates.map((candidate,index) => {
@@ -560,7 +573,7 @@ function initSupport(areas, candidates, player, seed, { extra = {}, edges = {}, 
         const quality = clamp((foundation - 20) / 100, -.25, .35);
         return Math.max(.03, anchor * (1 + quality) + size * (territoryBoost + stronghold + lean + Number(extra[candidate.id] ?? 0) + (candidate.campaignStats.momentum??0)*.55 + (area.localTrend??0)*.8 + (rand()*7 - 3.5)));
       }
-      return Math.max(4, foundation + (candidate.isPlayer ? personalConsensus(candidate.campaignStats) : 0) + territoryBoost + stronghold + lean + Number(extra[candidate.id] ?? 0) + Number(edges[candidate.id] ?? 0) + (candidate.campaignStats.momentum??0)*.55 + (area.localTrend??0)*.8 + rand()*7 + area.organization*.015);
+      return Math.max(4, foundation + (candidate.isPlayer ? personalConsensus(candidate.campaignStats) : 0) + territoryBoost + stronghold + lean + Number(extra[candidate.id] ?? 0) + Number(edges[candidate.id] ?? 0) + (candidate.campaignStats.momentum??0)*.55 + (area.localTrend??0)*.8 + rand()*7 + area.organization*.015) * Number(pulls[candidate.id] ?? 1);
     });
     const shares = normalized(strengths);
     area.supportByCandidate = Object.fromEntries(candidates.map((candidate,index) => [candidate.id,shares[index]]));
@@ -1805,7 +1818,7 @@ export function createCampaign({career,player,statistics=[],offices=[],territori
     const shareOf=id=>roster.participants.find(item=>item.id===id)?.share;
     for(const item of candidates) { const value=item.isPlayer?(partyId?shareOf(partyId):null):shareOf(item.partyId); anchors[item.id]=Number.isFinite(value)?value:item.isPlayer?.3:.3; }
   }
-  initSupport(campaignAreas,candidates,player,seed,{extra,edges:partyEdges(candidates,config.partyWeights??{}),roots:rivalRoots(opponents,campaignAreas,seed),homeExtra,spread:local?1.8:1.2,anchors,rooted});
+  initSupport(campaignAreas,candidates,player,seed,{extra,edges:PARTY_PULL[type]?{}:partyEdges(candidates,config.partyWeights??{}),pulls:partyPulls(candidates,config.partyWeights??{},type),roots:rivalRoots(opponents,campaignAreas,seed),homeExtra,spread:local?1.8:1.2,anchors,rooted});
   const focus=campaignAreas.find(area=>area.name===player.municipality)?.id ?? campaignAreas.find(area=>area.region===player.region)?.id ?? campaignAreas.find(area=>area.constituency && (config.constituency === area.constituency))?.id ?? campaignAreas[0].id;
   const deadlineDay=model.nominationDays;
   const internalSupport=partyId && !userOrIndependent ? round(1.5+playerStats.influence*.035+(incumbency?1.5:0)) : 10;

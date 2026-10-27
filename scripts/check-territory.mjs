@@ -278,7 +278,44 @@ assert.ok(Number.isFinite(factors.territory) && factors.territory > 0, 'Le promo
 state = store.getState();
 const html = renderPartyPage(state, { tab: 'territorio', record: volt, logoFor: () => null, territory: { units, home: store.homePlace(), filter: 'tutti' } });
 assert.ok(html.includes('cm-panel') && html.includes('IL TUO TERRITORIO') && html.includes('Siena') && html.includes('data-committee-action="rilancia"') && clean(html), 'Scheda Territorio del Partito.');
-for (const filter of ['attivi', 'problemi', 'sciolti']) assert.ok(clean(renderPartyPage(state, { tab: 'territorio', record: volt, territory: { units, home: store.homePlace(), filter } })), `Filtro ${filter}.`);
+// The filters of the committees: one for each state the engine defines (and «Tutti»), each showing only its committees, with the count of the region shown.
+{
+  const { COMMITTEE_STATES } = await import(`../src/core/committee-engine.js${v}`);
+  const { COMMITTEE_FILTERS, normalizeCommitteeFilter } = await import(`../src/ui/committees-view.js${v}`);
+  const states = Object.keys(COMMITTEE_STATES);
+  assert.deepEqual(COMMITTEE_FILTERS.map(([id]) => id), ['tutti', ...states], 'Un filtro per ogni stato definito, più «Tutti».');
+  assert.deepEqual(COMMITTEE_FILTERS.map(([, label]) => label), ['Tutti', 'Fondazione', 'Crescita', 'Consolidamento', 'Crisi', 'Perdita del controllo', 'Sciolti'], 'Con le etichette previste.');
+  assert.deepEqual(['attivi', 'problemi', 'sciolti', 'x', undefined, 'crisi'].map(normalizeCommitteeFilter), ['tutti', 'crisi', 'dissoluzione', 'tutti', 'tutti', 'crisi'], 'I filtri salvati da una versione precedente si leggono come i più vicini.');
+  // every state is present in the first region and some of them in the second, so that the counts differ between regions
+  const committees = store.getState().game.party.org.committees;
+  const regions = [...new Set(committees.map(item => item.region))];
+  assert.ok(regions.length >= 2, 'Ci sono comitati in almeno due regioni.');
+  committees.forEach((item, index) => { item.status = states[(regions.indexOf(item.region) === 0 ? index : index * 2) % states.length]; });
+  const page = (filter, region) => renderPartyPage(store.getState(), { tab: 'territorio', record: volt, logoFor: () => null, territory: { units, home: store.homePlace(), filter, region } });
+  for (const region of regions.slice(0, 2)) {
+    const own = committees.filter(item => item.region === region);
+    for (const [id] of COMMITTEE_FILTERS) {
+      const expected = own.filter(item => id === 'tutti' || item.status === id);
+      const html = page(id, region);
+      assert.ok(clean(html), `Filtro ${id} (${region}).`);
+      const grid = html.slice(html.indexOf('<div class="cm-grid">'));
+      const shown = [...grid.matchAll(/data-committee-id="([^"]+)"/g)].map(match => match[1]);
+      const cards = [...grid.matchAll(/<article class="cm-card[^"]*"[^>]*>[\s\S]*?<h4>([^<]+)<\/h4>/g)].map(match => match[1]);
+      assert.deepEqual([...new Set(cards)].sort(), [...new Set(expected.map(item => item.name))].sort(), `Filtro ${id} (${region}): solo i comitati di quello stato.`);
+      void shown;
+      assert.ok(html.includes(`data-view-filter-value="${id}" data-count="${expected.length}"`), `Filtro ${id} (${region}): il conteggio è ${expected.length}.`);
+      assert.equal(html.includes(`data-view-filter-value="${id}" data-count="${expected.length}" class="active"`), true, `Il filtro ${id} è quello attivo.`);
+    }
+  }
+  // every button is a separate, clickable control
+  const html = page('tutti', regions[0]);
+  for (const [id] of COMMITTEE_FILTERS) assert.ok(html.includes(`data-view-filter="comitati" data-view-filter-value="${id}"`), `Pulsante ${id}.`);
+  assert.equal([...html.matchAll(/data-view-filter="comitati"/g)].length, COMMITTEE_FILTERS.length, 'Sette pulsanti, uno per filtro.');
+  // the dissolved ones keep their action to found again
+  const dissolved = page('dissoluzione', regions[0]);
+  assert.ok(dissolved.includes('data-committee-action="fonda"') || committees.filter(item => item.region === regions[0] && item.status === 'dissoluzione').length === 0, 'I comitati sciolti si possono rifondare.');
+  for (const legacy of ['attivi', 'problemi', 'sciolti']) assert.ok(clean(page(legacy, regions[0])), `Il vecchio filtro ${legacy} si legge ancora.`);
+}
 // The campaign starts with the committees of the territory: volunteers, organisation, candidacy, local support.
 store.getState().game.party.support = 70;
 if (!store.getState().game.elections.some(item => item.type === 'comunale' && item.status === 'open')) store.fastForwardToElection('comunale');

@@ -3,17 +3,17 @@
 // decides, the majority it needs, what it changes, the forecast and the player's vote), what the player can do
 // (propose, question, negotiate, govern), the chronicle of the council. Everything here is simulation, except the size
 // of the European groups at the constitutive session of 2024 (real, with its source).
-import { DELEGA_FORBIDDEN, actCapacity, EP_COMMITTEES, EP_COSTS, EP_GROUPS_2024, committeeById, compactVote, coverageGap, europeanOdds, forecastAct, inCommittee, INSTITUTIONS, isClosedAct, LOCAL_VOTE_CHOICES, localAreas, majorityMargin, mandateRecord, measureOf, actorOf, delegaScore, nextEuropeanRole, typeOfAct, voteRule, weakCityAreas, withEuropeanSeat, withLocalState } from '../core/local-engine.js?v=20261026-1';
-import { ACT_TYPES, CITY_INDICATORS, PROVINCE_INDICATORS, QUORUMS, actTypeOf, neededYes, proposableTypes } from '../data/simulation/local-acts.js?v=20261026-1';
-import { COFIN_TERMS, WORK_PRIORITIES, WORK_RULES, WORK_SITE_LIST, WORK_TYPES, siteLabel, workTypesFor } from '../data/simulation/local-works.js?v=20261026-1';
-import { activeWorks, agedUpkeepOf, archiveOf, canManageWorks, cofinPartners, euroOf, externalOf, isActiveWork, planWork, workGap, workView, worksLedger } from '../core/local-works-engine.js?v=20261026-1';
-import { INDICATORS } from '../data/simulation/society-rules.js?v=20261026-1';
-import { DELEGA_RULES } from '../data/simulation/office-rules.js?v=20261026-1';
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261026-1';
-import { esc, meter, num, signed } from './charts.js?v=20261026-1';
-import { glyph, territoryTile, territoryVisual } from './visuals.js?v=20261026-1';
-import { fallbackTones, forceColorResolver, hemicycleLayout, seatColor } from '../core/hemicycle.js?v=20261026-1';
-import { SEAT_ROLES, rosterSeats } from '../core/seat-roster.js?v=20261026-1';
+import { DELEGA_FORBIDDEN, actCapacity, EP_COMMITTEES, EP_COSTS, EP_GROUPS_2024, committeeById, compactVote, coverageGap, europeanOdds, forecastAct, inCommittee, INSTITUTIONS, isClosedAct, LOCAL_VOTE_CHOICES, localAreas, majorityMargin, mandateRecord, measureOf, actorOf, delegaScore, nextEuropeanRole, typeOfAct, voteRule, weakCityAreas, withEuropeanSeat, withLocalState } from '../core/local-engine.js?v=20261027-1';
+import { ACT_TYPES, CITY_INDICATORS, PROVINCE_INDICATORS, QUORUMS, actTypeOf, neededYes, proposableTypes } from '../data/simulation/local-acts.js?v=20261027-1';
+import { COFIN_TERMS, WORK_PRIORITIES, WORK_RULES, WORK_SITE_LIST, WORK_TYPES, siteLabel, workTypesFor } from '../data/simulation/local-works.js?v=20261027-1';
+import { activeWorks, agedUpkeepOf, archiveOf, canManageWorks, cofinPartners, euroOf, externalOf, isActiveWork, planWork, workGap, workView, worksLedger } from '../core/local-works-engine.js?v=20261027-1';
+import { INDICATORS } from '../data/simulation/society-rules.js?v=20261027-1';
+import { DELEGA_RULES } from '../data/simulation/office-rules.js?v=20261027-1';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261027-1';
+import { esc, meter, num, signed } from './charts.js?v=20261027-1';
+import { glyph, territoryTile, territoryVisual } from './visuals.js?v=20261027-1';
+import { fallbackTones, forceColorResolver, hemicycleLayout, seatColor } from '../core/hemicycle.js?v=20261027-1';
+import { SEAT_ROLES, rosterSeats } from '../core/seat-roster.js?v=20261027-1';
 
 const STAGES = Object.freeze({ commissione: 'In commissione', giunta: 'In Giunta', aula: 'In aula', osservazioni: 'Osservazioni dei cittadini', 'seconda-lettura': 'Attesa della seconda deliberazione', risposta: 'In attesa di risposta', approvato: 'Approvato', respinto: 'Respinto', ritirato: 'Ritirato', risposto: 'Risposta data' });
 const SIDE_LABELS = Object.freeze({ maggioranza: 'Maggioranza', opposizione: 'Opposizione' });
@@ -429,7 +429,7 @@ function institutionCard(input, capital, context, state, ui = {}) {
   const history = inst.history.slice(-12).reverse().map(item => `<li><time>${esc(date(item.date))}</time> ${esc(item.text)}</li>`).join('');
   const archive = [...closed.map(act => ({ title: act.title, stage: act.stage, closedAt: act.closedAt, vote: compactVote(act.votes?.at(-1)), committeeVote: act.votes?.length ? null : act.committeeVote ?? null, answer: act.answer ?? null, withdrawn: act.withdrawn ?? null, effects: measureText(inst, act) })), ...inst.archive.slice(-6).reverse()].slice(0, 10).map(item => `<li><span class="bill-flag ${item.stage === 'approvato' || item.answer === 'esauriente' ? 'good' : 'bad'}">${esc(STAGES[item.stage] ?? item.stage)}</span> ${esc(item.title)} <small>${esc(date(item.closedAt))}</small>${resultLine(item)}</li>`).join('');
   const badge = id => id === 'opere' ? activeWorks(inst).length : id === 'atti' ? open.length : 0;
-  const tabs = `<nav class="sx-tabs local-tabs" role="tablist" aria-label="Sezioni di ${esc(inst.name)}">${sections.map(([id, label]) => `<button type="button" role="tab" id="tab-${esc(inst.kind)}-${id}" class="sx-tab${section === id ? ' active' : ''}" data-sec="${id}" data-local-section="${id}" aria-selected="${section === id}" aria-controls="panel-${esc(inst.kind)}" tabindex="${section === id ? 0 : -1}">${glyph(SECTION_ICONS[id] ?? 'news', 15)}<span>${esc(label)}</span>${badge(id) ? ` <span class="badge">${badge(id)}</span>` : ''}</button>`).join('')}</nav>`;
+  const tabs = `<nav class="sx-tabs local-tabs" role="tablist" aria-label="Sezioni di ${esc(inst.name)}">${sections.map(([id, label]) => `<button type="button" role="tab" id="tab-${esc(inst.id)}-${id}" class="sx-tab${section === id ? ' active' : ''}" data-sec="${id}" data-local-section="${id}" aria-selected="${section === id}" aria-controls="panel-${esc(inst.kind)}" tabindex="${section === id ? 0 : -1}">${glyph(SECTION_ICONS[id] ?? 'news', 15)}<span>${esc(label)}</span>${badge(id) ? ` <span class="badge">${badge(id)}</span>` : ''}</button>`).join('')}</nav>`;
   let body;
   if (section === 'bilancio') body = `<h3 class="local-h">Bilancio e impegni</h3>${budgetPanel(inst)}`;
   else if (section === 'opere') body = `<h3 class="local-h">Opere e cantieri</h3>${worksSection(inst, state)}`;
@@ -437,8 +437,8 @@ function institutionCard(input, capital, context, state, ui = {}) {
   else if (section === 'atti') body = `<h3 class="local-h">Cosa puoi fare</h3>${roleBox(inst, state)}${actionsPanel(inst, capital)}<h3 class="local-h">In discussione (${open.length})</h3>${open.map(act => actCard(inst, act, capital, context)).join('') || '<p class="quiet-copy">Nessun atto in calendario: la giunta e i gruppi ne presentano di nuovi ogni settimana.</p>'}${archive ? `<details class="bill-archive"><summary>Atti conclusi</summary><ul>${archive}</ul></details>` : ''}${inst.kind !== 'europa' ? actsGuide(inst) : ''}`;
   else if (section === 'cronologia') body = `${inst.kind !== 'europa' ? `<h3 class="local-h">Risultati del mandato</h3>${resultsSection(inst, state)}` : ''}<h3 class="local-h">Cronaca del ${esc(rules.label.toLowerCase())}</h3>${history ? `<ul class="bill-journal">${history}</ul>` : '<p class="quiet-copy">La cronaca si riempie con le decisioni del consiglio.</p>'}`;
   else body = `<div class="local-grid"><div><h3 class="local-h">Composizione</h3>${composition(inst, state, ui)}</div><div><h3 class="local-h">${esc(inst.ep ? 'Le tue commissioni' : rules.executive)}</h3>${inst.ep ? europeanPanel(inst, context) : executivePanel(inst)}</div></div>${inst.ep ? `<h3 class="local-h">${esc(rules.executive)}</h3>${executivePanel(inst)}` : ''}<h3 class="local-h">Il tuo ruolo</h3>${roleBox(inst, state)}`;
-  return `<section class="hq-panel local-institution" id="istituzione-${esc(inst.kind)}" style="--lv:${esc(territoryVisual(inst.kind).color)}" data-level="${esc(inst.kind)}"><div class="home-section-heading local-heading">${territoryTile(inst.kind)}<div><span class="section-kicker">${esc(rules.label.toUpperCase())} · SIMULAZIONE</span><h2>${esc(inst.name)}</h2><p class="section-subtitle">${esc(roleLine(inst))}${inst.until ? ` · mandato fino al voto del ${esc(date(inst.until))}` : ''}</p></div><span class="parliament-provenance simulated">SCENARIO SIMULATO</span></div>
-    ${tabs}<div class="local-section" data-sec="${section}" role="tabpanel" id="panel-${esc(inst.kind)}" aria-labelledby="tab-${esc(inst.kind)}-${section}">${body}</div></section>`;
+  return `<section class="hq-panel local-institution" id="${esc(institutionAnchor(inst))}" data-institution-id="${esc(inst.id)}" style="--lv:${esc(territoryVisual(inst.kind).color)}" data-level="${esc(inst.kind)}"><div class="home-section-heading local-heading">${territoryTile(inst.kind)}<div><span class="section-kicker">${esc(rules.label.toUpperCase())} · SIMULAZIONE</span><h2>${esc(inst.name)}</h2><p class="section-subtitle">${esc(roleLine(inst))}${inst.until ? ` · mandato fino al voto del ${esc(date(inst.until))}` : ''}</p></div><span class="parliament-provenance simulated">SCENARIO SIMULATO</span></div>
+    ${tabs}<div class="local-section" data-sec="${section}" role="tabpanel" id="panel-${esc(inst.id)}" aria-labelledby="tab-${esc(inst.id)}-${section}">${body}</div></section>`;
 }
 // The player's active institutions (none: an empty string, the page stays as it was). One mandate is shown at a time (a selector when there are several); each has its sections.
 export function renderInstitutions(state, ui = {}) {
@@ -447,13 +447,26 @@ export function renderInstitutions(state, ui = {}) {
   const capital = state.game?.resources?.politicalCapital ?? 0;
   const influence = state.dataset?.statistics?.find(item => item.subjectId === state.career?.playerId && item.metric === 'influence')?.value ?? 30;
   const context = { capital, influence, today: state.clock?.currentDate ?? null };
-  const selected = active.find(inst => inst.kind === ui.localInst) ?? active[0];
-  const jump = active.length > 1 ? `<nav class="sx-tabs local-jump" role="tablist" aria-label="I tuoi mandati">${active.map(inst => `<button type="button" role="tab" class="sx-tab${inst.id === selected.id ? ' active' : ''}" data-local-inst="${esc(inst.kind)}" aria-selected="${inst.id === selected.id}" tabindex="${inst.id === selected.id ? 0 : -1}" style="--lv:${esc(territoryVisual(inst.kind).color)}">${glyph(territoryVisual(inst.kind).icon, 15)} ${esc(institutionLabel(inst))}</button>`).join('')}</nav>` : '';
+  // Each institution is reached by its own id (a legacy value that is a kind, from an older session or a link, opens the first of that kind).
+  const selected = resolveInstitution(state, ui.localInst) ?? active[0];
+  const jump = active.length > 1 ? `<nav class="sx-tabs local-jump" role="tablist" aria-label="I tuoi mandati">${active.map(inst => `<button type="button" role="tab" class="sx-tab${inst.id === selected.id ? ' active' : ''}" data-local-inst="${esc(inst.id)}" aria-selected="${inst.id === selected.id}" tabindex="${inst.id === selected.id ? 0 : -1}" style="--lv:${esc(territoryVisual(inst.kind).color)}">${glyph(territoryVisual(inst.kind).icon, 15)} ${esc(institutionLabel(inst, active))}</button>`).join('')}</nav>` : '';
   return `<div class="local-institutions" id="istituzioni"><div class="home-section-heading local-intro"><div><span class="section-kicker">LE TUE ISTITUZIONI</span><h2>Dove eserciti il tuo mandato</h2><p class="section-subtitle">Un mandato alla volta: panoramica, bilancio, opere e cantieri, servizi del territorio, atti e cronologia. Ogni atto approvato e ogni opera finita cambiano i servizi del territorio.</p></div></div>${jump}${institutionCard(selected, capital, context, state, ui)}<p class="poll-footnote">Consigli, giunte, gruppi, atti, voti, opere ed effetti sono simulati; sindaci, presidenti e assessori non giocanti sono figure simulate, non persone reali.</p></div>`;
 }
 export const activeInstitutions = state => (state?.local?.institutions ?? []).filter(item => item.status === 'active');
-// How a council is named in the links that lead to it (Home, election report).
-export function institutionLabel(inst) {
+// The anchor of an institution on the page: its own id, never its kind (two councils of one kind are two anchors).
+export const institutionAnchor = inst => `istituzione-${inst.id}`;
+// The institution a reference points to: an id, or (a link or a view saved by an older version) a kind, which opens the latest of that kind.
+export function resolveInstitution(state, ref) {
+  const active = activeInstitutions(state);
+  return active.find(inst => inst.id === ref) ?? [...active].reverse().find(inst => inst.kind === ref) ?? null;
+}
+const placeOf = inst => inst.kind === 'europa' ? '' : String(inst.name ?? '').replace(inst.kind === 'comune' ? /^Comune di\s*/ : inst.kind === 'provincia' ? /^(Provincia|Città metropolitana|Libero consorzio comunale)\s*(di)?\s*/ : /^Regione\s*/, '');
+// How a council is named in the links that lead to it (Home, election report). With several of one kind active, the place is added so each is told apart.
+export function institutionLabel(inst, among = null) {
+  const label = baseLabel(inst);
+  return among && inst.kind !== 'europa' && among.filter(item => item.kind === inst.kind).length > 1 && !label.includes(placeOf(inst)) ? `${label} · ${placeOf(inst)}` : label;
+}
+function baseLabel(inst) {
   if (inst.kind === 'europa') return 'Parlamento europeo';
   if (inst.executive?.leader === 'player') return inst.kind === 'regione' ? `La tua Regione · ${inst.name.replace(/^Regione\s*/, '')}` : inst.kind === 'provincia' ? `La tua Provincia · ${inst.name.replace(/^(Provincia|Città metropolitana|Libero consorzio comunale)\s*(di)?\s*/, '')}` : `Il tuo Comune · ${inst.name.replace(/^Comune di\s*/, '')}`;
   return inst.kind === 'regione' ? 'Consiglio regionale' : inst.kind === 'provincia' ? 'Consiglio provinciale' : 'Consiglio comunale';

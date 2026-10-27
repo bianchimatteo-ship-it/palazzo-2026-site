@@ -70,12 +70,14 @@ const lines = [];
 // One mandate and one section are shown at a time: the controls are looked for across the sections of the mandate.
 const SECTIONS = ['panoramica', 'bilancio', 'opere', 'territorio', 'atti', 'cronologia'];
 function ui(s, kind, { present = [], absent = [] } = {}) {
-  assert.ok(renderTerritoriesPage(s, { localInst: kind }).includes(`id="istituzione-${kind}"`), `Territori: la scheda ${kind} è nella pagina`);
+  const anchor = `istituzione-${active(s, kind).id}`; // each institution has its own anchor (its id)
+  assert.ok(renderTerritoriesPage(s, { localInst: kind }).includes(`id="${anchor}"`), `Territori: la scheda ${kind} è nella pagina`);
+  assert.ok(renderTerritoriesPage(s, { localInst: active(s, kind).id }).includes(`id="${anchor}"`), `Territori: la scheda ${kind} si raggiunge con il suo id`);
   const page = SECTIONS.map(id => renderTerritoriesPage(s, { localInst: kind, localSection: id })).join('');
   for (const control of present) assert.ok(page.includes(control), `Territori (${kind}): c’è ${control}`);
   for (const control of absent) assert.ok(!page.includes(control), `Territori (${kind}): non c’è ${control}`);
   assert.ok(!/undefined|NaN/.test(page.replace(/data-[a-z-]+="[^"]*"/g, '')), `Territori (${kind}): nessun valore non valido`);
-  assert.ok(renderHeadquarters(s).includes(`data-nav="territori" data-scroll="istituzione-${kind}"`), `Home: collegamento diretto a ${kind}`);
+  assert.ok(renderHeadquarters(s).includes(`data-nav="territori" data-scroll="${anchor}"`), `Home: collegamento diretto a ${kind}`);
   return page;
 }
 
@@ -88,7 +90,7 @@ function ui(s, kind, { present = [], absent = [] } = {}) {
   assert.ok(inst && inst.playerRole === 'sindaco' && inst.executive.leader === 'player', 'Il sindaco guida la giunta del suo comune');
   assert.ok(hasRole(s, /^Sindaco di /), 'Tra i ruoli: Sindaco');
   assert.ok(power(s, 'Giunta, assessori').enabled && power(s, 'Proposte, voti').enabled, 'Il sindaco nomina gli assessori, decide i tributi e vota in consiglio');
-  assert.deepEqual(mandatePlace(s, s.career.lastElectionReport), { nav: 'territori', label: 'Vai al consiglio comunale', scroll: 'istituzione-comune' });
+  assert.deepEqual(mandatePlace(s, s.career.lastElectionReport), { nav: 'territori', label: 'Vai al consiglio comunale', scroll: `istituzione-${active(s, 'comune').id}` });
   assert.ok(inbox(s).includes('giunta-composizione'), 'Dopo il voto: la scelta della giunta in agenda');
   assert.match(renderInstitutions(s, { localSection: 'bilancio' }), /data-local-tax/, 'La pagina Territori mostra il comune con le leve del sindaco');
   ui(s, 'comune', { present: ['data-local-tax', 'data-local-reshuffle-form', 'data-local-propose-form'], absent: ['data-local-question', 'data-ep-'] });
@@ -147,7 +149,7 @@ function ui(s, kind, { present = [], absent = [] } = {}) {
   assert.ok(inst && inst.playerRole === 'presidente' && inst.executive.leader === 'player');
   assert.ok(hasRole(s, /^Presidente della Regione Toscana$/));
   ui(s, 'regione', { present: ['data-local-tax', 'data-local-reshuffle-form', 'data-local-propose-form'], absent: ['data-local-question'] });
-  assert.deepEqual(mandatePlace(s, s.career.lastElectionReport), { nav: 'territori', label: 'Vai al consiglio regionale', scroll: 'istituzione-regione' });
+  assert.deepEqual(mandatePlace(s, s.career.lastElectionReport), { nav: 'territori', label: 'Vai al consiglio regionale', scroll: `istituzione-${active(s, 'regione').id}` });
   lines.push(`Presidente di Regione dopo ${weeks} settimane di avanzamento`);
 }
 
@@ -172,7 +174,7 @@ function ui(s, kind, { present = [], absent = [] } = {}) {
   const inst = active(s, 'europa');
   assert.ok(inst && inst.playerRole === 'eurodeputato' && inst.groups.some(group => group.id === inst.playerGroupId), 'Siedi in un gruppo del Parlamento europeo');
   assert.ok(hasRole(s, /^Deputato al Parlamento europeo$/) && power(s, 'Proposte, voti').enabled);
-  assert.deepEqual(mandatePlace(s, s.career.lastElectionReport), { nav: 'territori', label: 'Vai al Parlamento europeo', scroll: 'istituzione-europa' });
+  assert.deepEqual(mandatePlace(s, s.career.lastElectionReport), { nav: 'territori', label: 'Vai al Parlamento europeo', scroll: `istituzione-${active(s, 'europa').id}` });
   ui(s, 'europa', { present: ['data-ep-committee-form', 'data-ep-role', 'data-local-question', 'data-local-propose-form', 'Le tue commissioni'], absent: ['data-local-tax'] });
   assert.ok(inst.ep && E.committeeById(inst.ep.member) && inst.ep.member !== inst.ep.substitute, 'Membro titolare di una commissione e sostituto in un’altra');
   assert.ok(power(s, 'Relazioni, emendamenti').enabled, 'Tra i poteri: relazioni ed emendamenti in commissione');

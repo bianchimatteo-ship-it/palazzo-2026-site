@@ -5,18 +5,18 @@
 // deadline, votes with individual dissent, and a player who proposes, votes, negotiates or governs. A council that loses
 // its majority is dissolved and votes early. Everything is simulation; the European groups start from their real size
 // at the constitutive session of 2024 (europarl), then evolve in the game.
-import { uniqueId } from './ids.js?v=20261026-1';
-import { DATA_SOURCES } from '../data/schema.js?v=20261026-1';
-import { AREA_BY_ID, CAMP_PRIORITIES, INTENSITY } from '../data/simulation/policy-rules.js?v=20261026-1';
-import { regionShareOf } from './territory-share.js?v=20261026-1';
-import { ACT_TYPES, AREA_BREADTH, AREA_LEANS, CITY_INDICATORS, CITY_SHARE_OF_REGION, PROVINCE_SHARE_OF_REGION, actTitle, actTypeOf, legalNumber, naturalType, neededYes, regionalWeights, proposableTypes, serviceIndicatorOf, serviceIndicatorsOf, typeFitsArea } from '../data/simulation/local-acts.js?v=20261026-1';
-import { activeWorks, advanceWorks, applyWorkActivity, availableWorkTypes, cofinRequest, emptyWorksRecord, executiveWorkChoice, planWork, startWork, workGap, worksOf } from './local-works-engine.js?v=20261026-1';
-import { WORK_RULES } from '../data/simulation/local-works.js?v=20261026-1';
-import { DELEGA_RULES, PORTFOLIO_AREAS } from '../data/simulation/office-rules.js?v=20261026-1';
-import { cohesiveShare } from './parliament-engine.js?v=20261026-1';
-import { groupLine, seededRandom, splitGroupVote } from './vote-engine.js?v=20261026-1';
-import { advanceDays } from './time.js?v=20261026-1';
-import { INCUMBENCY_RULES } from '../data/simulation/campaign-rules.js?v=20261026-1';
+import { uniqueId } from './ids.js?v=20261027-1';
+import { DATA_SOURCES } from '../data/schema.js?v=20261027-1';
+import { AREA_BY_ID, CAMP_PRIORITIES, INTENSITY } from '../data/simulation/policy-rules.js?v=20261027-1';
+import { regionShareOf } from './territory-share.js?v=20261027-1';
+import { ACT_TYPES, AREA_BREADTH, AREA_LEANS, CITY_INDICATORS, CITY_SHARE_OF_REGION, PROVINCE_SHARE_OF_REGION, actTitle, actTypeOf, legalNumber, naturalType, neededYes, regionalWeights, proposableTypes, serviceIndicatorOf, serviceIndicatorsOf, typeFitsArea } from '../data/simulation/local-acts.js?v=20261027-1';
+import { activeWorks, advanceWorks, applyWorkActivity, availableWorkTypes, cofinRequest, emptyWorksRecord, executiveWorkChoice, planWork, startWork, workGap, worksOf } from './local-works-engine.js?v=20261027-1';
+import { WORK_RULES } from '../data/simulation/local-works.js?v=20261027-1';
+import { DELEGA_RULES, PORTFOLIO_AREAS } from '../data/simulation/office-rules.js?v=20261027-1';
+import { cohesiveShare } from './parliament-engine.js?v=20261027-1';
+import { groupLine, seededRandom, splitGroupVote } from './vote-engine.js?v=20261027-1';
+import { advanceDays } from './time.js?v=20261027-1';
+import { INCUMBENCY_RULES } from '../data/simulation/campaign-rules.js?v=20261027-1';
 
 const SIM = DATA_SOURCES.SIMULATION;
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -73,6 +73,25 @@ export const epGroupFor = axis => ({ '-3': 'left', '-2': 'greens', '-1': 'sd', 0
 
 // ---------- creation ----------
 // spec: { kind, name, region, date, until, role, side, groups: [{ id, label, partyId, axis, seats, side }], leaderGroupId, leaderIsPlayer, playerGroupId }
+// The territory an institution answers for, told apart by stable identifiers (ISTAT codes where the game has them, else the normalised name): two councils of the same kind are the same
+// institution only when they are in the same place. A comune is told by its municipalityCode, a provincia by its provinceCode, a regione by its name; the European Parliament is one.
+const slugOf = text => String(text ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+const stripName = (kind, name) => String(name ?? '').replace(kind === 'comune' ? /^Comune di\s*/i : kind === 'provincia' ? /^(Provincia|Città metropolitana|Libero consorzio comunale)\s*(di)?\s*/i : /^Regione\s*/i, '');
+export function territoryOf(input = {}) {
+  const place = input.place ?? {};
+  const kind = input.kind;
+  if (kind === 'europa') return { code: 'europa', name: 'europa' };
+  if (kind === 'comune') return { code: place.municipalityCode ?? null, name: slugOf(place.municipality ?? stripName(kind, input.name)) };
+  if (kind === 'provincia') return { code: place.provinceCode ?? null, name: slugOf(place.provinceName ?? stripName(kind, input.name)) };
+  return { code: null, name: slugOf(place.region ?? input.region ?? stripName(kind, input.name)) };
+}
+// Same kind and same place. Codes decide when both sides have them (two comuni may share a name); otherwise the name does (a save from before the codes were kept).
+export function sameTerritory(a, b) {
+  if (!a || !b || a.kind !== b.kind) return false;
+  const first = territoryOf(a), second = territoryOf(b);
+  if (first.code && second.code) return first.code === second.code;
+  return first.name === second.name;
+}
 export function createInstitution(spec) {
   const rules = INSTITUTIONS[spec.kind];
   const groups = spec.groups.filter(group => group.seats > 0).map(group => ({ ...group, camp: campOf(group.axis), cohesion: 70, source: SIM }));

@@ -121,7 +121,7 @@ for (const place of places) {
   const html = renderInstitutions(s, { localInst: 'provincia' });
   clean(html, `${place.label}: istituzioni`);
   const territory = renderInstitutions(s, { localInst: 'provincia', localSection: 'territorio' }), budget = renderInstitutions(s, { localInst: 'provincia', localSection: 'bilancio' });
-  assert.ok(html.includes('id="istituzione-provincia"') && html.includes('Consiglio provinciale') && territory.includes('Stato del territorio provinciale') && territory.includes('Strade provinciali e ponti') && !html.includes('data-local-tax') && !budget.includes('data-local-tax'), `${place.label}: la scheda della Provincia ha servizi propri e non ha tributi`);
+  assert.ok(html.includes(`id="istituzione-${s.local.institutions.find(item => item.kind === 'provincia' && item.status === 'active').id}"`) && html.includes('Consiglio provinciale') && territory.includes('Stato del territorio provinciale') && territory.includes('Strade provinciali e ponti') && !html.includes('data-local-tax') && !budget.includes('data-local-tax'), `${place.label}: la scheda della Provincia ha servizi propri e non ha tributi`);
   // Seats with people: the provincial council (and the comune's) has one simulated person for each seat, the player's in his group.
   for (const inst of s.local.institutions.filter(item => item.status === 'active')) {
     const seats = R.rosterSeats(inst.roster);

@@ -1,32 +1,32 @@
-import { endedHeadline } from './hall-view.js?v=20261026-1';
-import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261026-1';
-import { playerRoles } from '../core/roles.js?v=20261026-1';
-import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20261026-1';
-import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261026-1';
-import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261026-1';
-import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20261026-1';
-import { careerLevelLabel } from '../data/regions.js?v=20261026-1';
-import { advanceDays, formatDate } from '../core/time.js?v=20261026-1';
-import { renderBarometerPanel } from './polls-mode.js?v=20261026-1';
-import { candidacyAccess } from './campaign-mode.js?v=20261026-1';
-import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20261026-1';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261026-1';
-import { societyMood } from '../core/society-engine.js?v=20261026-1';
-import { financeOutlook } from '../core/finance-engine.js?v=20261026-1';
-import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20261026-1';
-import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20261026-1';
-import { activeInstitutions, institutionLabel } from './local-mode.js?v=20261026-1';
-import { renderFinanceCard } from './finance-mode.js?v=20261026-1';
-import { renderStaffBand } from './staff-view.js?v=20261026-1';
-import { planAddButton } from './plan-view.js?v=20261026-1';
-import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20261026-1';
-import { stateBadge, statusChip } from './charts.js?v=20261026-1';
-import { articleHtml, newsMedia, renderNewsroomTabs } from './news-view.js?v=20261026-1';
-import { relevantArticles } from '../core/news-engine.js?v=20261026-1';
-import { identityMark, kindChip } from './party-identity.js?v=20261026-1';
-import { illustration } from './illustrations.js?v=20261026-1';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261026-1';
-import { regionPriorities } from '../core/society-engine.js?v=20261026-1';
+import { endedHeadline } from './hall-view.js?v=20261027-1';
+import { activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261027-1';
+import { playerRoles } from '../core/roles.js?v=20261027-1';
+import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20261027-1';
+import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261027-1';
+import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261027-1';
+import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20261027-1';
+import { careerLevelLabel } from '../data/regions.js?v=20261027-1';
+import { advanceDays, formatDate } from '../core/time.js?v=20261027-1';
+import { renderBarometerPanel } from './polls-mode.js?v=20261027-1';
+import { candidacyAccess } from './campaign-mode.js?v=20261027-1';
+import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20261027-1';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261027-1';
+import { societyMood } from '../core/society-engine.js?v=20261027-1';
+import { financeOutlook } from '../core/finance-engine.js?v=20261027-1';
+import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20261027-1';
+import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20261027-1';
+import { activeInstitutions, institutionLabel } from './local-mode.js?v=20261027-1';
+import { renderFinanceCard } from './finance-mode.js?v=20261027-1';
+import { renderStaffBand } from './staff-view.js?v=20261027-1';
+import { planAddButton } from './plan-view.js?v=20261027-1';
+import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20261027-1';
+import { stateBadge, statusChip } from './charts.js?v=20261027-1';
+import { articleHtml, newsMedia, renderNewsroomTabs } from './news-view.js?v=20261027-1';
+import { relevantArticles } from '../core/news-engine.js?v=20261027-1';
+import { identityMark, kindChip } from './party-identity.js?v=20261027-1';
+import { illustration } from './illustrations.js?v=20261027-1';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261027-1';
+import { regionPriorities } from '../core/society-engine.js?v=20261027-1';
 
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -60,7 +60,7 @@ function meter(value, tone = '') {
 // ---------- Home: the command centre ----------
 // Who the player is, as a compact identity: avatar and party logo, name, office, territory and status.
 // The councils (and the European Parliament) where the player holds a seat: one tap from the Home.
-const institutionLinks = state => { const active = activeInstitutions(state); return active.length ? `<p class="hq-institutions">${active.map(inst => `<button class="text-link" data-nav="territori" data-scroll="istituzione-${esc(inst.kind)}">${glyph(inst.kind === 'europa' ? 'globe' : inst.kind === 'regione' || inst.kind === 'provincia' ? 'map' : 'town', 14)} ${esc(institutionLabel(inst))} →</button>`).join('')}</p>` : ''; };
+const institutionLinks = state => { const active = activeInstitutions(state); return active.length ? `<p class="hq-institutions">${active.map(inst => `<button class="text-link" data-nav="territori" data-scroll="istituzione-${esc(inst.id)}">${glyph(inst.kind === 'europa' ? 'globe' : inst.kind === 'regione' || inst.kind === 'provincia' ? 'map' : 'town', 14)} ${esc(institutionLabel(inst, active))} →</button>`).join('')}</p>` : ''; };
 function identity(state, gc, options) {
   const { player, stats } = gc;
   const game = state.game;
