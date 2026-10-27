@@ -94,6 +94,9 @@ try {
   // ---------- 1. first opening: a real collection fails, the account service does not answer ----------
   const started = Date.now();
   await send('Page.navigate', { url: `${ORIGIN}/` });
+  // a first installation opens on the choice of the language: Italian is picked, then the main menu follows
+  await waitFor(() => has('.language-gate [data-language-choice="it"]'), 20000, 'scelta della lingua');
+  await evaluate(`document.querySelector('.language-gate [data-language-choice="it"]').click(), true`);
   await waitFor(() => has('.main-menu'), 20000, 'menu principale');
   await waitFor(() => has('.menu-new:not([disabled])'), 20000, 'Nuova partita utilizzabile (dati di partenza arrivati)');
   ok(failed.has('coalitions.json'), 'La collezione delle coalizioni è stata fatta fallire.');

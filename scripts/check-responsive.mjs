@@ -40,10 +40,11 @@ try {
   await send('Runtime.enable');
   await viewport(1280, 800, false);
   await send('Page.navigate', { url: base });
-  await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu], .main-menu"))'));
+  await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu], .main-menu, .language-gate"))'));
   // A parliamentary career created through the game's own store (no account, nothing leaves the browser).
   const version = await evaluate('document.querySelector("script[type=module]").src.split("v=")[1]');
   await evaluate(`(async () => {
+    localStorage.setItem('politicando.settings.v1', JSON.stringify({ language: 'it' }));
     localStorage.setItem('politicando.onboarding.v1', JSON.stringify({ account: true, tour: 'done', localStart: true }));
     const { store } = await import('/src/core/store.js?v=${version}');
     const real = await import('/src/data/repositories/real-data.js?v=${version}');

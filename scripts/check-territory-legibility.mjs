@@ -48,10 +48,11 @@ try {
   await send('Runtime.enable');
   await viewport(1280, 800, false);
   await send('Page.navigate', { url: base });
-  await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu], .main-menu"))'));
+  await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu], .main-menu, .language-gate"))'));
   const version = await evaluate('document.querySelector("script[type=module]").src.split("v=")[1]');
   // A career through the game's own store (isolated browser profile: nothing else is touched), a few weeks on so that the regional pictures have a history.
   await evaluate(`(async () => {
+    localStorage.setItem('politicando.settings.v1', JSON.stringify({ language: 'it' }));
     localStorage.setItem('politicando.onboarding.v1', JSON.stringify({ account: true, tour: 'done', localStart: true }));
     const { store } = await import('/src/core/store.js?v=${version}');
     const real = await import('/src/data/repositories/real-data.js?v=${version}');
