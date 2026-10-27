@@ -1,15 +1,16 @@
 // The territorial committees of the party (Partito → Territorio): the player's own chain Region → Province → Comune,
 // every committee with state, strength, members, volunteers, local consensus, loyalty and leader, the actions that
 // change them, and new committees to found on the ISTAT map.
-import { COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, committeeActionCost, committeeProfile, committeeStrength, committeeSummary, ensureStructure, leaderStance, PARTY_SCALES, SEAT_TIERS, territorialControl } from '../core/committee-engine.js?v=20261027-1';
-import { costProblem } from '../core/career-engine.js?v=20261027-1';
-import { isPartyLeader } from '../core/organization-engine.js?v=20261027-1';
-import { glyph, territoryTile, territoryVisual } from './visuals.js?v=20261027-1';
-import { planAddButton } from './plan-view.js?v=20261027-1';
-import { arrow, badge, bar, card, esc, euro, kpi, num } from './sections-kit.js?v=20261027-1';
+import { COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, committeeActionCost, committeeProfile, committeeStrength, committeeSummary, ensureStructure, leaderStance, PARTY_SCALES, SEAT_TIERS, territorialControl } from '../core/committee-engine.js?v=20261027-2';
+import { costProblem } from '../core/career-engine.js?v=20261027-2';
+import { isPartyLeader } from '../core/organization-engine.js?v=20261027-2';
+import { glyph, territoryTile, territoryVisual } from './visuals.js?v=20261027-2';
+import { planAddButton } from './plan-view.js?v=20261027-2';
+import { arrow, badge, bar, card, esc, euro, kpi, num } from './sections-kit.js?v=20261027-2';
 
 const STATE_ORDER = ['fondazione', 'crescita', 'consolidamento', 'crisi', 'perdita-controllo', 'dissoluzione'];
 // One filter for each state the engine defines (COMMITTEE_STATES), plus «Tutti»; the dissolved ones are «Sciolti». The id of a filter is the state itself.
+export const ALL_REGIONS = 'tutte';
 export const COMMITTEE_FILTERS = Object.freeze([['tutti', 'Tutti'], ...STATE_ORDER.map(status => [status, status === 'dissoluzione' ? 'Sciolti' : COMMITTEE_STATES[status].label])]);
 // A filter saved by an older version («attivi», «problemi», «sciolti») or an unknown value reads as the closest one.
 export const normalizeCommitteeFilter = filter => STATE_ORDER.includes(filter) ? filter : filter === 'sciolti' ? 'dissoluzione' : filter === 'problemi' ? 'crisi' : 'tutti';
@@ -65,7 +66,7 @@ function committeeCard(game, committee, { leader, expanded = false, currents = [
     </dl>
     ${expanded ? `<p class="sx-note">${esc(COMMITTEE_STATES[committee.status].detail)}${last ? ` Ultimo fatto (S${last.week}): ${esc(last.text.toLowerCase())}.` : ''}</p>` : last ? `<p class="sx-note">S${last.week}: ${esc(last.text)}</p>` : ''}`;
   // Compact by default: name, level, territory, state, the person in charge and the main actions on the first line; the figures, the history and the other actions fold under «Dettagli».
-  return `<article class="cm-card cm-compact tone-${toneOf(committee.status)} ${committee.leader?.player ? 'is-mine' : ''}" style="--lv:${esc(visual.color)}" data-level="${esc(committee.level)}">
+  return `<article class="cm-card cm-compact tone-${toneOf(committee.status)} ${committee.leader?.player ? 'is-mine' : ''}" style="--lv:${esc(visual.color)}" data-level="${esc(committee.level)}" data-status="${esc(committee.status)}" data-region="${esc(committee.region)}">
     <header>${territoryTile(committee.level, 'sm')}<div><span class="section-kicker">${esc(COMMITTEE_LEVELS[committee.level].label.toUpperCase())}${committee.unitType && committee.level === 'provincia' ? ` · ${esc(committee.unitType.toUpperCase())}` : ''} · ${esc(committee.region)}</span><h4>${esc(committee.name)}</h4><small class="cm-lead">${dissolved ? 'Comitato sciolto' : `Responsabile: ${esc(leaderName(committee))}${stance ? ` · ${esc(stance.label)}` : ''}`}</small></div><span class="cm-badges">${badge(COMMITTEE_STATES[committee.status].label, toneOf(committee.status))}${dissolved ? '' : badge(`${profile.tier}${profile.trend === 'stabile' ? '' : ` · ${profile.trend}`}`, profile.trend === 'declino' || profile.tier === 'fragile' ? 'warn' : profile.trend === 'crescita' || profile.tier === 'forte' ? 'good' : 'neutral')}</span></header>
     <div class="cm-strength"><span>Forza</span><b>${dissolved ? '—' : strength}</b>${bar(strength, strength >= 60 ? 'good' : strength < 35 ? 'bad' : 'warn')}</div>
     <div class="cm-actions">${main}</div>
@@ -121,21 +122,26 @@ export function renderCommitteesPanel(state, { units = [], municipalities = null
   const options = { leader, currents, party };
   const control = territorialControl(party, { region: home.region });
   const regions = [...new Set(committees.map(item => item.region))].sort((a, b) => (b === home.region) - (a === home.region) || a.localeCompare(b, 'it'));
-  const selectedRegion = regions.includes(region) ? region : home.region ?? regions[0];
+  // «Tutte le regioni» (the value ALL_REGIONS): the network of every committee of the party in Italy, which a click on a state pill of the summary turns on.
+  const allRegions = region === ALL_REGIONS;
+  const selectedRegion = allRegions ? ALL_REGIONS : regions.includes(region) ? region : home.region ?? regions[0];
+  const regionLabel = allRegions ? 'Tutte le regioni' : selectedRegion;
   const matches = committee => filter === 'tutti' || committee.status === filter;
   // The count of each filter is the one of the region shown: it follows the region that is selected.
-  const ofRegion = committees.filter(item => item.region === selectedRegion);
+  const ofRegion = allRegions ? committees : committees.filter(item => item.region === selectedRegion);
   const countOf = id => id === 'tutti' ? ofRegion.length : ofRegion.filter(item => item.status === id).length;
-  const inRegion = ofRegion.filter(matches).sort((a, b) => ['regione', 'provincia', 'comune'].indexOf(a.level) - ['regione', 'provincia', 'comune'].indexOf(b.level) || committeeStrength(b) - committeeStrength(a));
+  const inRegion = ofRegion.filter(matches).sort((a, b) => (allRegions ? a.region.localeCompare(b.region, 'it') : 0) || ['regione', 'provincia', 'comune'].indexOf(a.level) - ['regione', 'provincia', 'comune'].indexOf(b.level) || committeeStrength(b) - committeeStrength(a));
   // New committees: the provinces of the selected region still without one, and the comuni of the player's province.
   const foundPanel = foundingPanel(game, { committees, units, municipalities, home, found });
-  const statusChips = STATE_ORDER.map(status => `<span class="cm-chip tone-${toneOf(status)}"><b>${summary.byStatus[status]}</b>${esc(COMMITTEE_STATES[status].label)}</span>`).join('');
+  // The pills of the summary count the committees of all Italy and are filters: a click shows every committee of that state in the network (all the regions); «Tutti» takes the whole network back.
+  const pill = (id, label, count, tone) => `<button type="button" class="cm-chip tone-${tone}${filter === id && allRegions ? ' active' : ''}" data-view-filter="comitati" data-view-filter-value="${id}" data-view-filter-also="comitati-regione=${ALL_REGIONS}" data-chip-count="${count}" aria-pressed="${filter === id && allRegions}"><b>${count}</b>${esc(label)}</button>`;
+  const statusChips = [pill('tutti', 'Tutti', committees.length, 'neutral'), ...STATE_ORDER.map(status => pill(status, status === 'dissoluzione' ? 'Sciolti' : COMMITTEE_STATES[status].label, committees.filter(item => item.status === status).length, toneOf(status)))].join('');
   return `<div class="cm-panel">
     <div class="cm-kpis">${kpi({ label: 'Comitati attivi', value: `${summary.active}<small>/${summary.total}</small>` })}${kpi({ label: 'Forza media', value: `${summary.strength}/100`, bar: summary.strength, tone: summary.strength >= 60 ? 'good' : summary.strength < 35 ? 'bad' : '' })}${kpi({ label: 'Iscritti nei comitati locali', value: num(summary.members, 0) })}${kpi({ label: 'Volontari attivi', value: `${num(summary.activists, 0)}<small> · qualità ${summary.quality}/100</small>` })}${kpi({ label: 'Sedi e raccolta', value: `${summary.seats}<small> sedi · ${euro(summary.upkeep)}/sett. di costi · ${euro(summary.raised)}/sett. raccolti</small>` })}${kpi({ label: 'Rete', value: `${summary.strong}<small> forti · ${summary.growing} in crescita · ${summary.declining} in declino · ${summary.fragile} fragili</small>` })}${control ? kpi({ label: 'Controllo del territorio', value: `${control.index}<small>/100 · ${control.byStance.tuo + control.byStance['con-te']} con te · ${control.byStance.distante + control.byStance.contro} distanti o contro</small>`, bar: control.index, tone: control.index >= 65 ? 'good' : control.index < 40 ? 'bad' : '' }) : ''}</div>
     <div class="cm-chips">${statusChips}</div>
     ${foundPanel}
     ${card({ kicker: 'IL TUO TERRITORIO · SIMULAZIONE', title: `${home.municipality ?? ''}${home.provinceName ? `, ${home.provinceName}` : ''} · ${home.region ?? ''}`, body: `${chain(game, committees, home, options)}<p class="sx-note">Alle elezioni i comitati del territorio del voto portano volontari, organizzazione, peso nella scelta dei candidati e consenso locale; un comitato fuori controllo lavora contro di te. Ogni responsabile segue un’area del partito (o te): se è con te porta volontari, preferenze e candidature, se è distante o contro no. Il controllo del territorio conta alle candidature, al congresso, nei rapporti con le aree e nelle promozioni.</p>` })}
-    ${card({ kicker: 'RETE DEI COMITATI', title: selectedRegion, action: '', body: `<div class="cm-filters"><label>Regione<select data-view-filter-select="comitati-regione">${regions.map(name => `<option value="${esc(name)}" ${name === selectedRegion ? 'selected' : ''}>${esc(name)}${name === home.region ? ' · casa tua' : ''}</option>`).join('')}</select></label><div class="cm-filter-buttons" role="group" aria-label="Filtra i comitati">${COMMITTEE_FILTERS.map(([id, label]) => `<button type="button" data-view-filter="comitati" data-view-filter-value="${id}" data-count="${countOf(id)}" class="${filter === id ? 'active' : ''}" aria-pressed="${filter === id}">${esc(label)} <b class="cm-filter-count">${countOf(id)}</b></button>`).join('')}</div></div>
+    ${card({ kicker: 'RETE DEI COMITATI', title: regionLabel, action: '', body: `<div class="cm-filters"><label>Regione<select data-view-filter-select="comitati-regione"><option value="${ALL_REGIONS}" ${allRegions ? 'selected' : ''}>Tutte le regioni · ${committees.length}</option>${regions.map(name => `<option value="${esc(name)}" ${name === selectedRegion ? 'selected' : ''}>${esc(name)}${name === home.region ? ' · casa tua' : ''}</option>`).join('')}</select></label><div class="cm-filter-buttons" role="group" aria-label="Filtra i comitati">${COMMITTEE_FILTERS.map(([id, label]) => `<button type="button" data-view-filter="comitati" data-view-filter-value="${id}" data-count="${countOf(id)}" class="${filter === id ? 'active' : ''}" aria-pressed="${filter === id}">${esc(label)} <b class="cm-filter-count">${countOf(id)}</b></button>`).join('')}</div></div>
       <div class="cm-grid">${inRegion.map(item => committeeCard(game, item, options)).join('') || '<p class="sx-empty">Nessun comitato per questo filtro.</p>'}</div>` })}
     ${summary.scale ? `<p class="sx-note">${esc(PARTY_SCALES[summary.scale].label)}: ${esc(PARTY_SCALES[summary.scale].detail)} ${summary.autonomous ? `${summary.autonomous} comitati decidono in buona parte da soli.` : ''}</p>` : ''}
     <p class="sx-note">${glyph('map', 14)} Territori e nomi sono quelli ISTAT (elenco dei comuni al 21 febbraio 2026); iscritti, responsabili, forza e stati dei comitati sono simulati e non descrivono l’organizzazione reale del partito. I responsabili sono figure simulate, mai persone reali.</p>

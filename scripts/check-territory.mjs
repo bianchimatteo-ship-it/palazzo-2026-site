@@ -291,6 +291,7 @@ assert.ok(html.includes('cm-panel') && html.includes('IL TUO TERRITORIO') && htm
   const regions = [...new Set(committees.map(item => item.region))];
   assert.ok(regions.length >= 2, 'Ci sono comitati in almeno due regioni.');
   committees.forEach((item, index) => { item.status = states[(regions.indexOf(item.region) === 0 ? index : index * 2) % states.length]; });
+  for (const region of regions.slice(0, 2)) committees.find(item => item.region === region && item.status !== 'crisi').status = 'crisi'; // a state with committees in more than one region
   const page = (filter, region) => renderPartyPage(store.getState(), { tab: 'territorio', record: volt, logoFor: () => null, territory: { units, home: store.homePlace(), filter, region } });
   for (const region of regions.slice(0, 2)) {
     const own = committees.filter(item => item.region === region);
@@ -310,7 +311,23 @@ assert.ok(html.includes('cm-panel') && html.includes('IL TUO TERRITORIO') && htm
   // every button is a separate, clickable control
   const html = page('tutti', regions[0]);
   for (const [id] of COMMITTEE_FILTERS) assert.ok(html.includes(`data-view-filter="comitati" data-view-filter-value="${id}"`), `Pulsante ${id}.`);
-  assert.equal([...html.matchAll(/data-view-filter="comitati"/g)].length, COMMITTEE_FILTERS.length, 'Sette pulsanti, uno per filtro.');
+  assert.equal([...html.matchAll(/data-view-filter="comitati"/g)].length, COMMITTEE_FILTERS.length * 2, 'Sette pulsanti nella rete e sette pillole del riepilogo, uno per filtro.');
+  // the pills of the summary are buttons that count all Italy and turn on «Tutte le regioni»
+  const chips = [...html.slice(html.indexOf('<div class="cm-chips">'), html.indexOf('RETE DEI COMITATI')).matchAll(/<button type="button" class="cm-chip[^"]*" data-view-filter="comitati" data-view-filter-value="([^"]+)" data-view-filter-also="comitati-regione=tutte" data-chip-count="(\d+)"/g)].map(match => [match[1], Number(match[2])]);
+  assert.deepEqual(chips.map(([id]) => id), COMMITTEE_FILTERS.map(([id]) => id), 'Le pillole sono i filtri (pulsanti, non etichette).');
+  for (const [id, count] of chips) assert.equal(count, id === 'tutti' ? committees.length : committees.filter(item => item.status === id).length, `Pillola ${id}: conteggio di tutta Italia.`);
+  // «Tutte le regioni»: every committee of the state, whatever the region
+  for (const [id] of COMMITTEE_FILTERS) {
+    const global = page(id, 'tutte');
+    const grid = global.slice(global.indexOf('<div class="cm-grid">'));
+    const shown = [...grid.matchAll(/<article class="cm-card[^"]*"[^>]*data-status="([^"]+)" data-region="([^"]+)"[\s\S]*?<h4>([^<]+)<\/h4>/g)].map(match => ({ status: match[1], region: match[2], name: match[3] }));
+    const expected = committees.filter(item => id === 'tutti' || item.status === id);
+    assert.deepEqual(shown.map(item => item.name).sort(), expected.map(item => item.name).sort(), `Tutte le regioni · ${id}: tutti e soli i comitati di quello stato (${expected.length}).`);
+    assert.ok(shown.every(item => id === 'tutti' || item.status === id), `Tutte le regioni · ${id}: nessuno di un altro stato.`);
+    assert.ok(global.includes('<option value="tutte" selected>Tutte le regioni'), 'Il selettore è su «Tutte le regioni».');
+    assert.ok(global.includes(`data-view-filter-value="${id}" data-view-filter-also="comitati-regione=tutte" data-chip-count="${expected.length}" aria-pressed="true"`), `La pillola ${id} è attiva.`);
+  }
+  assert.ok(new Set(committees.filter(item => item.status === 'crisi').map(item => item.region)).size >= 2, 'La prova ha comitati in crisi in più regioni.');
   // the dissolved ones keep their action to found again
   const dissolved = page('dissoluzione', regions[0]);
   assert.ok(dissolved.includes('data-committee-action="fonda"') || committees.filter(item => item.region === regions[0] && item.status === 'dissoluzione').length === 0, 'I comitati sciolti si possono rifondare.');

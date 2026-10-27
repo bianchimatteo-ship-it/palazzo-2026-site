@@ -393,4 +393,6 @@ export const PHRASES = [
   ["Consenso simulato #%, sotto la soglia d’ingresso (#%).", "Simulated consensus #%, below the entry threshold (#%)."],
   ["Fusa", "Merged"],
   ["fusa S#", "merged S#"],
+  ["Tutte le regioni", "All regions"],
+  ["Nessun comitato per questo filtro.", "No committee for this filter."],
 ];
