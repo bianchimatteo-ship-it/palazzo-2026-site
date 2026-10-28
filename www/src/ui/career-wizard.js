@@ -1,18 +1,18 @@
-import { residentsText } from '../core/municipal-rules.js?v=20261027-7';
-import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261027-7';
-import { DEFAULT_LOGO_SECONDARY, LOGO_SECONDARY_PALETTE, LOGO_SHAPES, LOGO_SYMBOLS, isLogoColor, partyLogoDataUrl } from './party-logo.js?v=20261027-7';
-import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261027-7';
-import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261027-7';
-import { AVATAR_GROUPS, AVATAR_LABELS, AVATAR_OPTIONS, DEFAULT_AVATAR, normalizeAvatar } from '../core/avatar.js?v=20261027-7';
-import { avatarSvg } from './avatar-svg.js?v=20261027-7';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261027-7';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261027-7';
-import { POLL_SCENARIOS, SCENARIO_LIMITS } from '../core/poll-scenario.js?v=20261027-7';
-import { startStep, startSummary } from './start-wizard.js?v=20261027-7';
-import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261027-7';
-import { normalizeStart } from '../core/start-engine.js?v=20261027-7';
-import { legacyBanner } from './hall-view.js?v=20261027-7';
-import { formatDate } from '../core/time.js?v=20261027-7';
+import { residentsText } from '../core/municipal-rules.js?v=20261028-1';
+import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261028-1';
+import { DEFAULT_LOGO_SECONDARY, LOGO_SECONDARY_PALETTE, LOGO_SHAPES, LOGO_SYMBOLS, isLogoColor, partyLogoDataUrl } from './party-logo.js?v=20261028-1';
+import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261028-1';
+import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261028-1';
+import { AVATAR_GROUPS, AVATAR_LABELS, AVATAR_OPTIONS, DEFAULT_AVATAR, normalizeAvatar } from '../core/avatar.js?v=20261028-1';
+import { avatarSvg } from './avatar-svg.js?v=20261028-1';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261028-1';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261028-1';
+import { POLL_SCENARIOS, SCENARIO_LIMITS } from '../core/poll-scenario.js?v=20261028-1';
+import { startStep, startSummary } from './start-wizard.js?v=20261028-1';
+import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261028-1';
+import { normalizeStart } from '../core/start-engine.js?v=20261028-1';
+import { legacyBanner } from './hall-view.js?v=20261028-1';
+import { formatDate } from '../core/time.js?v=20261028-1';
 
 const POSITIONS = ['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra'];
 

@@ -3,9 +3,9 @@
 // checkInvariants(state, context) → { ok, issues: [{ code, path, message }] }
 // context (optional): the real reference the state may point to — realPartyIds, realGroupIds (Sets or arrays).
 
-import { countProblems } from './electorate.js?v=20261027-7';
-import { LEVER_BY_ID } from '../data/simulation/start-rules.js?v=20261027-7';
-import { AMBITION_LIMIT, OBJECTIVE_BY_ID } from '../data/simulation/objective-rules.js?v=20261027-7';
+import { countProblems } from './electorate.js?v=20261028-1';
+import { LEVER_BY_ID } from '../data/simulation/start-rules.js?v=20261028-1';
+import { AMBITION_LIMIT, OBJECTIVE_BY_ID } from '../data/simulation/objective-rules.js?v=20261028-1';
 
 const SEATS = { camera: 400, senato: 200 };
 // The Senate also has the senators for life (and, in the real XIX legislature, a few vacancies may appear in either
@@ -309,7 +309,9 @@ function checkCampaign(state, report) {
   if (campaign.status === 'finished' && !campaign.result) report('coerenza', 'campaign.result', 'Campagna conclusa senza risultato');
   // the count of the vote: voters never above the residents or the electors, valid ballots never above the voters, the votes of the lists add up to the valid ballots
   if (campaign.result?.electorate) for (const problem of countProblems(campaign.result.electorate, campaign.result.groups ?? [], { label: `campagna ${campaign.id}` })) report('coerenza', 'campaign.result.electorate', problem);
-  if (campaign.electionId && state.game?.elections && !state.game.elections.some(item => item.id === campaign.electionId)) report('riferimento', 'campaign.electionId', `Elezione ${campaign.electionId} assente dal calendario`);
+  // (the vote of a race of the party is in the races, not in the calendar of the player's own votes: its id is the id of the race)
+  const ofRace = Boolean(campaign.raceId) && campaign.electionId === campaign.raceId && [...(state.races?.items ?? []), ...(state.races?.archive ?? [])].some(item => item.id === campaign.raceId);
+  if (campaign.electionId && !ofRace && state.game?.elections && !state.game.elections.some(item => item.id === campaign.electionId)) report('riferimento', 'campaign.electionId', `Elezione ${campaign.electionId} assente dal calendario`);
 }
 
 // The national cycle: the seats of the last general election add up, the formation is in a known phase and a

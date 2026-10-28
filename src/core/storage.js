@@ -1,4 +1,4 @@
-import { createTier } from './tiered-storage.js?v=20261027-7';
+import { createTier } from './tiered-storage.js?v=20261028-1';
 const STORAGE_KEY = 'palazzo-2026.career.v1';
 const BACKUP_KEY = `${STORAGE_KEY}.backup`;
 const HISTORY_KEY = `${STORAGE_KEY}.history`;

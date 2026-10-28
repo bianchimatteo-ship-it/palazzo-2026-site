@@ -4,10 +4,10 @@
 // Pure functions on plain data: the store gives them the calendar, the people and the state of the game, and keeps what they return.
 // Everything made here is simulation: the territories and the dates come from the real calendar of the votes, the candidates and the results are
 // simulated (a real politician stays real, his candidacy is not); a new figure is a person of the simulation, never a real one.
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261027-7';
-import { RACE_LEVELS, RACE_ROLES, RACE_RULES } from '../data/simulation/race-rules.js?v=20261027-7';
-import { advanceDays, nextMunicipalVote, nextProvincialVote, nextRegionalVote } from './time.js?v=20261027-7';
-import { advanceCampaign, campaignObservatory, createCampaign, decideCampaignEvent, performCampaignActivity, setExpectation } from './campaign-engine.js?v=20261027-7';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261028-1';
+import { RACE_LEVELS, RACE_ROLES, RACE_RULES } from '../data/simulation/race-rules.js?v=20261028-1';
+import { advanceDays, nextMunicipalVote, nextProvincialVote, nextRegionalVote } from './time.js?v=20261028-1';
+import { advanceCampaign, campaignObservatory, createCampaign, decideCampaignEvent, performCampaignActivity, setExpectation } from './campaign-engine.js?v=20261028-1';
 
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -259,7 +259,7 @@ export function chooseCandidate(items, raceId, choice, ctx) {
     chosen = { ...options.simulation, label, id, personId: id, personRef: { collection: 'politicians', id, source: SIM } };
   } else throw new Error('Scelta non riconosciuta.');
   const from = choice.kind === 'player' ? ctx.from : choice.kind === 'simulation' ? { region: race.territory.region, municipality: race.territory.kind === 'comune' ? race.territory.name : null, provinceCode: race.territory.provinceCode } : { region: chosen.region ?? null, municipality: chosen.municipality ?? null, municipalityCode: chosen.municipalityCode ?? null, provinceCode: chosen.provinceCode ?? null };
-  race.candidacy = { kind: chosen.kind, personId: chosen.personId, personRef: chosen.personRef, ...(chosen.cadreId ? { cadreId: chosen.cadreId } : {}), label: chosen.label, partyId: ctx.career.partyId, partyLabel: ctx.career.partyLabel ?? null, role: chosen.role ?? RACE_ROLES[race.level], source: chosen.source, rooting: chosen.rooting.points, from, confirmedAt: ctx.today };
+  race.candidacy = { kind: chosen.kind, personId: chosen.personId, personRef: chosen.personRef, ...(chosen.cadreId ? { cadreId: chosen.cadreId } : {}), label: chosen.label, partyId: ctx.career.partyId, forceId: ctx.career.forceId ?? ctx.career.partyId, partyLabel: ctx.career.partyLabel ?? null, role: chosen.role ?? RACE_ROLES[race.level], source: chosen.source, rooting: chosen.rooting.points, from, confirmedAt: ctx.today };
   race.status = 'confirmed';
   stamp(`Candidatura confermata: ${chosen.label}${chosen.kind === 'player' ? ' (te stesso: campagna giocabile)' : ''}`);
   return { items: next, person };
