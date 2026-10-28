@@ -20,7 +20,40 @@ function syncBlock(sync, syncing) {
   return `<p class="logo-sync ${tone}" data-logo-sync="${syncing ? 'running' : sync?.unavailable ? 'unavailable' : sync?.offline ? 'offline' : sync?.errors?.length ? 'error' : sync ? 'ok' : 'idle'}" role="status">${text} <button type="button" class="text-link" data-action="logo-sync-now" ${syncing ? 'disabled' : ''}>Sincronizza ora</button></p>`;
 }
 
-export function renderLogoCatalog({ entities = [], infos = [], logoSrc = () => null, query = '', page = 1, selectedId = null, pending = null, error = '', notice = '', busy = '', urlDraft = '', loading = false, signedIn = null, editorHtml = '', legacy = [], persistent = true, guest = [], conflicts = [], sync = null, syncing = false } = {}) {
+
+// «Esporta tutti i loghi» / «Importa loghi»: the whole catalog in one zip, and the review of an archive before anything is written (duplicates and conflicts, with the player's choice).
+const STATUS_WORD = { new: 'nuovo', same: 'già presente', conflict: 'conflitto', invalid: 'non valido' };
+function archiveBlock(archive, entities, count) {
+  if (!archive) return '';
+  const nameOf = id => entities.find(item => item.id === id)?.name ?? id;
+  const plan = archive.plan;
+  const busy = Boolean(archive.busy);
+  const toolbar = `<div class="logo-archive-bar" data-logo-archive-bar>
+    <button type="button" class="secondary-button" data-action="logo-export" ${busy || !count ? 'disabled' : ''}>Esporta tutti i loghi</button>
+    <label class="logo-file"><span class="secondary-button ${busy ? 'is-disabled' : ''}">Importa loghi</span><input type="file" accept=".zip,application/zip" data-logo-import-file ${busy ? 'disabled' : ''} /></label>
+    ${archive.replacedCount ? `<button type="button" class="text-link" data-action="logo-restore-replaced" ${busy ? 'disabled' : ''}>Ripristina i ${archive.replacedCount} loghi sostituiti dall’ultima importazione</button>` : ''}
+  </div>
+  <p class="quiet-copy">L’esportazione crea un solo file ZIP con tutte le immagini, gli identificativi originali dei partiti e un manifest: puoi conservarlo come copia di sicurezza o importarlo in un altro account. Prima di importare vedrai cosa c’è di nuovo e cosa è in conflitto; nulla viene cambiato senza la tua scelta.</p>`;
+  const message = archive.error ? `<div class="wizard-errors" role="alert" data-logo-archive-error>${esc(archive.error)}</div>` : archive.notice ? `<p class="account-message" role="status" data-logo-archive-notice>${esc(archive.notice)}</p>` : '';
+  if (!plan) return `<section class="logo-archive" data-logo-archive>${toolbar}${message}</section>`;
+  const a = plan.analysis, c = a.counts;
+  const shown = a.items.filter(item => item.status === 'conflict' || item.status === 'invalid').slice(0, 40);
+  const rows = shown.map(item => item.status === 'conflict'
+    ? `<li data-logo-import-row="${esc(item.partyId)}"><strong>${esc(nameOf(item.partyId))}</strong> <small>${esc(STATUS_WORD.conflict)}: hai già un logo diverso</small>
+        <select data-logo-import-decision="${esc(item.partyId)}" aria-label="Scelta per ${esc(nameOf(item.partyId))}"><option value="" ${plan.decisions[item.partyId] ? '' : 'selected'}>Come la scelta generale</option><option value="keep" ${plan.decisions[item.partyId] === 'keep' ? 'selected' : ''}>Mantieni quello che hai</option><option value="replace" ${plan.decisions[item.partyId] === 'replace' ? 'selected' : ''}>Sostituisci con quello importato</option><option value="skip" ${plan.decisions[item.partyId] === 'skip' ? 'selected' : ''}>Salta</option></select></li>`
+    : `<li data-logo-import-row="${esc(item.partyId)}" class="is-invalid"><strong>${esc(nameOf(item.partyId) || item.partyId || '(senza identificativo)')}</strong> <small>${esc(STATUS_WORD.invalid)}: ${esc(item.reason)}</small></li>`).join('');
+  const more = c.conflict + c.invalid - shown.length;
+  const report = plan.report;
+  const failed = report?.failed?.length ?? 0;
+  const summary = `<p data-logo-import-summary><strong>${esc(plan.fileName)}</strong>: ${c.total} loghi · ${c.new} nuovi · ${c.same} già presenti identici · ${c.conflict} in conflitto · ${c.invalid} non validi.${a.overLimit ? ` Attenzione: dopo l’importazione sarebbero ${a.overLimit} loghi e online ne restano al massimo ${150}: gli ultimi non verrebbero caricati sull’account.` : ''}</p>`;
+  const policy = c.conflict ? `<fieldset class="logo-import-policy" data-logo-import-policy><legend>Per i loghi in conflitto</legend>${[['keep', 'Mantieni quelli che hai'], ['replace', 'Sostituiscili con quelli importati (i tuoi restano recuperabili)'], ['skip', 'Salta i conflitti']].map(([value, label]) => `<label><input type="radio" name="logo-import-policy" value="${value}" ${plan.policy === value ? 'checked' : ''} ${busy ? 'disabled' : ''} /> ${label}</label>`).join('')}</fieldset>` : '';
+  const progress = archive.progress ? `<p class="quiet-copy" role="status" data-logo-import-progress>Importazione in corso: ${archive.progress.done} di ${archive.progress.total}…</p>` : '';
+  const result = report ? `<p class="${failed ? 'wizard-errors' : 'account-message'}" role="${failed ? 'alert' : 'status'}" data-logo-import-result>Importati ${report.imported.length}, sostituiti ${report.replaced.length}, mantenuti ${report.kept.length}, saltati ${report.skipped.length}, già presenti ${report.same.length}, non validi ${report.invalid.length}, non riusciti ${failed}.</p>${failed ? `<p class="quiet-copy" data-logo-import-failed>${esc(report.failed[0].message)}</p>` : ''}` : '';
+  const actions = `<div class="sx-actions"><button type="button" class="primary-button" data-action="logo-import-apply" ${busy || (!c.new && !c.conflict) ? 'disabled' : ''}>${report ? 'Importa di nuovo' : 'Importa'}</button>${failed ? `<button type="button" class="secondary-button" data-action="logo-import-retry" ${busy ? 'disabled' : ''}>Riprova i ${failed} non riusciti</button>` : ''}<button type="button" class="secondary-button" data-action="logo-import-cancel" ${busy ? 'disabled' : ''}>Chiudi</button></div>`;
+  return `<section class="logo-archive" data-logo-archive>${toolbar}<div class="logo-import-plan" data-logo-import-plan>${summary}${policy}${rows ? `<ul class="logo-import-rows">${rows}</ul>` : ''}${more > 0 ? `<p class="quiet-copy">… e altri ${more}.</p>` : ''}${progress}${result}${actions}</div>${message}</section>`;
+}
+
+export function renderLogoCatalog({ entities = [], infos = [], logoSrc = () => null, query = '', page = 1, selectedId = null, pending = null, error = '', notice = '', busy = '', urlDraft = '', loading = false, signedIn = null, editorHtml = '', legacy = [], persistent = true, guest = [], conflicts = [], sync = null, syncing = false, archive = null } = {}) {
   const byId = new Map(infos.map(info => [info.partyId, info]));
   const q = query.trim().toLocaleLowerCase('it-IT');
   const matches = entities.filter(item => !q || `${item.name ?? ''} ${item.abbreviation ?? ''}`.toLocaleLowerCase('it-IT').includes(q));
@@ -55,6 +88,7 @@ export function renderLogoCatalog({ entities = [], infos = [], logoSrc = () => n
   return `<div class="logo-catalog" data-logo-catalog>
     <p class="quiet-copy logo-intro">Qui scegli i loghi che vuoi vedere accanto ai partiti. Sono tuoi e li ritrovi in tutte le tue partite. ${signedIn ? `Sono associati all’account «${esc(signedIn)}»: restano su questo dispositivo (anche senza connessione) e vengono copiati online nel tuo account, così li ritrovi su ogni dispositivo con cui accedi. Nessun altro giocatore li vede e non fanno parte dei salvataggi.` : 'Senza un account restano soltanto su questo dispositivo: non vengono caricati online né condivisi. Con un account puoi averli anche su altri dispositivi.'}</p>
     ${signedIn ? syncBlock(sync, syncing) : ''}
+    ${archiveBlock(archive, entities, infos.length)}
     <p class="logo-rights" data-logo-rights><strong>Diritti.</strong> Usa soltanto immagini che hai il diritto di utilizzare: il gioco non include loghi di terzi e non verifica da dove provengano quelli che aggiungi.</p>
     ${conflicts.length ? `<section class="logo-legacy logo-conflicts" data-logo-conflict-block><h3>Due versioni diverse dello stesso logo</h3><p class="quiet-copy">Per questi partiti il logo di questo dispositivo e quello del tuo account sono diversi. Nessuno è stato sovrascritto: scegli quale tenere.</p><div class="logo-legacy-list">${conflicts.map(item => `<div class="logo-legacy-item" data-logo-conflict="${esc(item.partyId)}"><strong>${esc(item.name)}</strong><span class="logo-conflict-pair"><span><small>Questo dispositivo</small>${item.localSrc ? `<img src="${esc(item.localSrc)}" alt="Logo di questo dispositivo" />` : ''}</span><span><small>Account online</small><img src="${esc(item.src)}" alt="Logo del tuo account" /></span></span><button type="button" class="secondary-button" data-action="logo-conflict-local">Tieni quello di questo dispositivo</button><button type="button" class="secondary-button" data-action="logo-conflict-remote">Tieni quello dell’account</button></div>`).join('')}</div></section>` : ''}
     ${guest.length ? `<section class="logo-legacy logo-guest" data-logo-guest-block><h3>Loghi aggiunti senza account</h3><p class="quiet-copy">Questi loghi li hai aggiunti su questo dispositivo prima di accedere: non sono stati messi nel tuo account. Importa solo quelli che hai il diritto di usare e vuoi avere su tutti i tuoi dispositivi; l’originale su questo dispositivo resta dov’è.</p><div class="logo-legacy-list">${guest.map(item => `<div class="logo-legacy-item"><span class="logo-row-mark"><img src="${esc(item.src)}" alt="" /></span><span class="logo-row-text"><strong>${esc(item.name)}</strong></span><button type="button" class="secondary-button" data-action="logo-guest-import" data-logo-guest="${esc(item.partyId)}">Importa nel mio account</button></div>`).join('')}</div></section>` : ''}

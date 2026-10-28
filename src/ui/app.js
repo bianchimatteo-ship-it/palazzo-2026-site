@@ -1,66 +1,67 @@
-import { onLanguageChange, setLanguage, watchTree } from '../core/i18n.js?v=20261028-1';
-import { pendingCelebration, pendingOutcome } from '../core/celebration.js?v=20261028-1';
-import { fullDate, formatDate } from '../core/time.js?v=20261028-1';
-import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20261028-1';
-import * as accountApi from '../data/repositories/account-sync.js?v=20261028-1';
-import { hideCareers } from '../data/repositories/career-visibility.js?v=20261028-1';
-import { accountApiBase, commitRevision, currentAccount, deleteAccount, probeAccountService, deleteCloudSave, downloadSave, listCloudSaves, login, logout, register, slotForCareer } from '../data/repositories/account-sync.js?v=20261028-1';
-import { createSyncEngine } from '../data/repositories/sync-queue.js?v=20261028-1';
-import { setPartyLogoResolver } from './person-marks.js?v=20261028-1';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261028-1';
-import { isRealCollectionLoaded, loadRealCollections, optionalDocumentStatus, loadRealCollectionsSettled, pristineRecord, realDataFailures, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20261028-1';
-import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20261028-1';
-import { renderAdminPanel } from './admin-panel.js?v=20261028-1';
-import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, rotateSharedCredential, publishSharedArchive, refreshSharedArchive, sharedApiUrl, sharedSyncStatus, verifySharedSession } from '../data/repositories/admin-sync.js?v=20261028-1';
-import { syncLogos, resolveLogoConflict, listLogoConflicts } from '../data/repositories/logo-sync.js?v=20261028-1';
-import { claimLegacyLogo, deleteLogo, discardLegacyLogo, importGuestLogo, importLogoFromUrl, listGuestLogos, listLegacyLogos, listLogoInfos, loadLogos, logoInfo, logosArePersistent, migrateLegacyLogos, onLogosChange, prepareLogo, releaseLegacyPreviews, resolveLogo, saveLogo } from '../data/repositories/personal-logos.js?v=20261028-1';
-import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20261028-1';
-import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20261028-1';
-import { PARTY_LINK_COLLECTIONS, forceKind, isCoalitionList, politicalForces } from '../data/repositories/party-links.js?v=20261028-1';
-import { PROFESSIONS, chosenPlace, makeCareerDraft, pollScenarioOf, removePartyCriterion, renderCareerWizard, togglePartyOrientation, wizardLogoPreview } from './career-wizard.js?v=20261028-1';
-import { userPartyLogo } from './party-logo.js?v=20261028-1';
-import { WIZARD_VIEWS, validateWizardStep } from '../core/career-rules.js?v=20261028-1';
-import { avatarOf, normalizeAvatar } from '../core/avatar.js?v=20261028-1';
-import { avatarSvg } from './avatar-svg.js?v=20261028-1';
-import { renderElectionsHub } from './elections-hub.js?v=20261028-1';
-import { renderQuirinale } from './presidency-view.js?v=20261028-1';
-import { renderCareerPage } from './career-page.js?v=20261028-1';
-import { renderPartyPage } from './party-page.js?v=20261028-1';
-import { renderAgendaPage } from './agenda-page.js?v=20261028-1';
-import { HEMICYCLE_DEFAULTS, renderHemicycle } from './hemicycle-view.js?v=20261028-1';
-import { renderFeaturedMembers } from './members-view.js?v=20261028-1';
-import { drawLogoEditor, exportLogo, measureBackground, panFromDrag, renderLogoEditor } from './logo-editor-view.js?v=20261028-1';
-import { createEditorState } from '../core/logo-editor.js?v=20261028-1';
-import { renderParliamentPage } from './parliament-mode.js?v=20261028-1';
-import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261028-1';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261028-1';
-import { chooseStart } from '../core/start-engine.js?v=20261028-1';
-import { renderHeadquarters, renderNewsroom } from './game-mode.js?v=20261028-1';
-import { newsMedia, newsPopupHtml, popupItem } from './news-view.js?v=20261028-1';
-import { articleScript, bulletinScript, onVoiceChange, onVoicesChange, speakLines, stopVoice, syncVoiceDom, voiceStatus, voiceTarget } from './radio-voice.js?v=20261028-1';
-import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20261028-1';
-import { playerRoles } from '../core/roles.js?v=20261028-1';
-import { accordWarning, budgetPreview, designFromForm, planFromForm, policyFields, policyPreview, projectPreview, rangeText, requestFromForm } from './policy-mode.js?v=20261028-1';
-import { areaOf } from '../data/simulation/policy-rules.js?v=20261028-1';
-import { attachChartInteractions, hideChartTip } from './polls-mode.js?v=20261028-1';
-import { renderObservatory } from './observatory-view.js?v=20261028-1';
-import { glyph } from './visuals.js?v=20261028-1';
-import { identityVars, partyChip, partyIdentity, topbarParty } from './party-identity.js?v=20261028-1';
-import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20261028-1';
-import { renderFinancePage } from './finance-mode.js?v=20261028-1';
-import { PLAN_MAX, planConfirmLines, planKey, renderPlanTray } from './plan-view.js?v=20261028-1';
-import { STAFF_TASK_BY_ID } from '../data/simulation/staff-rules.js?v=20261028-1';
-import { renderContactsPanel } from './organization-mode.js?v=20261028-1';
-import { renderRealLaws } from './real-laws.js?v=20261028-1';
-import { realLawArea } from '../core/society-engine.js?v=20261028-1';
-import { canManageParliament } from '../core/parliament-engine.js?v=20261028-1';
-import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, TOUR_STEPS } from './menu.js?v=20261028-1';
-import { setForceColorOverrides } from './political-colors.js?v=20261028-1';
-import { renderTutorialCard, tutorialAction, tutorialContext, tutorialState, TUTORIAL_STEPS } from './tutorial.js?v=20261028-1';
-import { storage as localStorageApi } from '../core/storage.js?v=20261028-1';
-import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20261028-1';
-import { playSound } from './sound.js?v=20261028-1';
-import { resolveInstitution } from './local-mode.js?v=20261028-1';
+import { onLanguageChange, setLanguage, watchTree } from '../core/i18n.js?v=20261028-2';
+import { pendingCelebration, pendingOutcome } from '../core/celebration.js?v=20261028-2';
+import { fullDate, formatDate } from '../core/time.js?v=20261028-2';
+import { referenceGovernmentSpec } from '../data/repositories/government-reference.js?v=20261028-2';
+import * as accountApi from '../data/repositories/account-sync.js?v=20261028-2';
+import { hideCareers } from '../data/repositories/career-visibility.js?v=20261028-2';
+import { accountApiBase, commitRevision, currentAccount, deleteAccount, probeAccountService, deleteCloudSave, downloadSave, listCloudSaves, login, logout, register, slotForCareer } from '../data/repositories/account-sync.js?v=20261028-2';
+import { createSyncEngine } from '../data/repositories/sync-queue.js?v=20261028-2';
+import { setPartyLogoResolver } from './person-marks.js?v=20261028-2';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261028-2';
+import { isRealCollectionLoaded, loadRealCollections, optionalDocumentStatus, loadRealCollectionsSettled, pristineRecord, realDataFailures, realDatabase, refreshAdminOverrides } from '../data/repositories/real-data.js?v=20261028-2';
+import { addAdminParty, addRoleOverride, clearAdminArchive, exportAdminArchive, importAdminArchive, loadSharedArchive, removeRoleOverride, resetRecordOverride, saveRecordOverride, setRecordField, setRecordHidden } from '../data/repositories/admin-store.js?v=20261028-2';
+import { renderAdminPanel } from './admin-panel.js?v=20261028-2';
+import { closeSharedSession, hasSharedSession, isAdminVerified, openSharedSession, rotateSharedCredential, publishSharedArchive, refreshSharedArchive, sharedApiUrl, sharedSyncStatus, verifySharedSession } from '../data/repositories/admin-sync.js?v=20261028-2';
+import { syncLogos, resolveLogoConflict, listLogoConflicts } from '../data/repositories/logo-sync.js?v=20261028-2';
+import { analyzeLogoArchive, applyLogoImport, exportLogosZip, listReplacedLogos, restoreReplacedLogos } from '../data/repositories/logo-archive.js?v=20261028-2';
+import { claimLegacyLogo, deleteLogo, discardLegacyLogo, importGuestLogo, importLogoFromUrl, listGuestLogos, listLegacyLogos, listLogoInfos, loadLogos, logoInfo, logosArePersistent, migrateLegacyLogos, onLogosChange, prepareLogo, releaseLegacyPreviews, resolveLogo, saveLogo } from '../data/repositories/personal-logos.js?v=20261028-2';
+import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=20261028-2';
+import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20261028-2';
+import { PARTY_LINK_COLLECTIONS, forceKind, isCoalitionList, politicalForces } from '../data/repositories/party-links.js?v=20261028-2';
+import { PROFESSIONS, chosenPlace, makeCareerDraft, pollScenarioOf, removePartyCriterion, renderCareerWizard, togglePartyOrientation, wizardLogoPreview } from './career-wizard.js?v=20261028-2';
+import { userPartyLogo } from './party-logo.js?v=20261028-2';
+import { WIZARD_VIEWS, validateWizardStep } from '../core/career-rules.js?v=20261028-2';
+import { avatarOf, normalizeAvatar } from '../core/avatar.js?v=20261028-2';
+import { avatarSvg } from './avatar-svg.js?v=20261028-2';
+import { renderElectionsHub } from './elections-hub.js?v=20261028-2';
+import { renderQuirinale } from './presidency-view.js?v=20261028-2';
+import { renderCareerPage } from './career-page.js?v=20261028-2';
+import { renderPartyPage } from './party-page.js?v=20261028-2';
+import { renderAgendaPage } from './agenda-page.js?v=20261028-2';
+import { HEMICYCLE_DEFAULTS, renderHemicycle } from './hemicycle-view.js?v=20261028-2';
+import { renderFeaturedMembers } from './members-view.js?v=20261028-2';
+import { drawLogoEditor, exportLogo, measureBackground, panFromDrag, renderLogoEditor } from './logo-editor-view.js?v=20261028-2';
+import { createEditorState } from '../core/logo-editor.js?v=20261028-2';
+import { renderParliamentPage } from './parliament-mode.js?v=20261028-2';
+import { ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261028-2';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261028-2';
+import { chooseStart } from '../core/start-engine.js?v=20261028-2';
+import { renderHeadquarters, renderNewsroom } from './game-mode.js?v=20261028-2';
+import { newsMedia, newsPopupHtml, popupItem } from './news-view.js?v=20261028-2';
+import { articleScript, bulletinScript, onVoiceChange, onVoicesChange, speakLines, stopVoice, syncVoiceDom, voiceStatus, voiceTarget } from './radio-voice.js?v=20261028-2';
+import { ARCHIVE_COLLECTIONS, renderArchiveBody, renderArchiveHub } from './archive-hub.js?v=20261028-2';
+import { playerRoles } from '../core/roles.js?v=20261028-2';
+import { accordWarning, budgetPreview, designFromForm, planFromForm, policyFields, policyPreview, projectPreview, rangeText, requestFromForm } from './policy-mode.js?v=20261028-2';
+import { areaOf } from '../data/simulation/policy-rules.js?v=20261028-2';
+import { attachChartInteractions, hideChartTip } from './polls-mode.js?v=20261028-2';
+import { renderObservatory } from './observatory-view.js?v=20261028-2';
+import { glyph } from './visuals.js?v=20261028-2';
+import { identityVars, partyChip, partyIdentity, topbarParty } from './party-identity.js?v=20261028-2';
+import { renderMediaPanel, renderTerritoriesPage } from './society-mode.js?v=20261028-2';
+import { renderFinancePage } from './finance-mode.js?v=20261028-2';
+import { PLAN_MAX, planConfirmLines, planKey, renderPlanTray } from './plan-view.js?v=20261028-2';
+import { STAFF_TASK_BY_ID } from '../data/simulation/staff-rules.js?v=20261028-2';
+import { renderContactsPanel } from './organization-mode.js?v=20261028-2';
+import { renderRealLaws } from './real-laws.js?v=20261028-2';
+import { realLawArea } from '../core/society-engine.js?v=20261028-2';
+import { canManageParliament } from '../core/parliament-engine.js?v=20261028-2';
+import { renderConfirmDialog, renderMainMenu, renderWeeklyReport, settingsView, TOUR_STEPS } from './menu.js?v=20261028-2';
+import { setForceColorOverrides } from './political-colors.js?v=20261028-2';
+import { renderTutorialCard, tutorialAction, tutorialContext, tutorialState, TUTORIAL_STEPS } from './tutorial.js?v=20261028-2';
+import { storage as localStorageApi } from '../core/storage.js?v=20261028-2';
+import { loadSettings, resetSettings, saveSetting } from '../core/settings.js?v=20261028-2';
+import { playSound } from './sound.js?v=20261028-2';
+import { resolveInstitution } from './local-mode.js?v=20261028-2';
 
 // The destinations of the game, by theme. On computers the sidebar lists the eight and opens the pages of the current one; on phones the
 // bar below keeps Home · Elezioni · Sondaggi · Istituzioni one tap away and “Altro” gathers everything else (the same pages, nothing twice).
@@ -182,7 +183,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   let logoEditorUrl = null;
   let logoDrag = null;
   // The personal catalog of logos (Menu → Loghi dei partiti): what the player is looking at and the image waiting to be saved.
-  const logoCatalog = { query: '', page: 1, selectedId: null, pending: null, error: '', notice: '', busy: '', urlDraft: '', loading: false, legacy: [], persistent: true, guest: [], conflicts: [], sync: null, syncing: false };
+  const logoCatalog = { query: '', page: 1, selectedId: null, pending: null, error: '', notice: '', busy: '', urlDraft: '', loading: false, legacy: [], persistent: true, guest: [], conflicts: [], sync: null, syncing: false, archive: { plan: null, busy: '', progress: null, error: '', notice: '', replacedCount: 0 } };
   const catalog = {
     partyQuery:'', partyPresence:'all', partyType:'all', partyLevel:'all', partyRegion:'all', partyStatus:'all', partyElection:'all', partySort:'name', partyPage:1,
     politicianQuery:'', politicianChamber:'all', politicianParty:'all', politicianGroup:'all', politicianPage:1,
@@ -883,12 +884,12 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     entities: menu.view === 'loghi' ? logoEntities() : [], infos: listLogoInfos(), logoSrc: resolveLogo, query: logoCatalog.query, page: logoCatalog.page, selectedId: logoCatalog.selectedId,
     pending: logoCatalog.pending, error: logoCatalog.error, notice: logoCatalog.notice, busy: logoCatalog.busy, urlDraft: logoCatalog.urlDraft, loading: logoCatalog.loading, signedIn: account.user?.username ?? null,
     editorHtml: logoEditor?.context === 'catalog' ? renderLogoEditor(logoEditor, { context: 'catalog' }) : '', legacy: logoCatalog.legacy.map(item => ({ ...item, name: logoEntities().find(entity => entity.id === item.partyId)?.name ?? item.partyId })), persistent: logoCatalog.persistent,
-    guest: logoCatalog.guest.map(item => ({ ...item, name: logoEntities().find(entity => entity.id === item.partyId)?.name ?? item.partyId })), conflicts: logoCatalog.conflicts.map(item => ({ ...item, name: logoEntities().find(entity => entity.id === item.partyId)?.name ?? item.partyId, localSrc: resolveLogo(item.partyId) })), sync: logoCatalog.sync, syncing: logoCatalog.syncing
+    guest: logoCatalog.guest.map(item => ({ ...item, name: logoEntities().find(entity => entity.id === item.partyId)?.name ?? item.partyId })), conflicts: logoCatalog.conflicts.map(item => ({ ...item, name: logoEntities().find(entity => entity.id === item.partyId)?.name ?? item.partyId, localSrc: resolveLogo(item.partyId) })), sync: logoCatalog.sync, syncing: logoCatalog.syncing, archive: logoCatalog.archive
   });
   const clearPendingLogo = () => { if (logoCatalog.pending?.src) URL.revokeObjectURL(logoCatalog.pending.src); logoCatalog.pending = null; if (logoEditor?.context === 'catalog') closeLogoEditor(); };
   const redrawLogos = () => render(store.getState(), store.getLastSaved());
   // The account changed (sign-in, sign-out, expired session, another tab): the logos of the previous scope leave the screen, those of the new one are read.
-  const refreshLogoScope = () => { clearPendingLogo(); logoCatalog.selectedId = null; logoCatalog.sync = null; logoCatalog.guest = []; logoCatalog.conflicts = []; return loadLogos().then(() => { redrawLogos(); if (account.user) runLogoSync(); }).catch(() => {}); };
+  const refreshLogoScope = () => { clearPendingLogo(); logoCatalog.selectedId = null; logoCatalog.sync = null; logoCatalog.guest = []; logoCatalog.conflicts = []; Object.assign(logoCatalog.archive, { plan: null, busy: '', progress: null, error: '', notice: '', replacedCount: 0 }); return loadLogos().then(() => { redrawLogos(); if (account.user) runLogoSync(); }).catch(() => {}); };
   // The cloud copy of the account's logos: one run at a time (logo-sync.js), at sign-in, when the catalog opens, when the network comes back, after a change and on demand. Offline or not configured
   // it only says so: the logos stay on the device and are tried again later.
   const refreshLogoExtras = async () => { logoCatalog.guest = await listGuestLogos().catch(() => []); logoCatalog.conflicts = await listLogoConflicts().catch(() => []); };
@@ -901,6 +902,40 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   };
   const scheduleLogoSync = () => { clearTimeout(logoSyncTimer); logoSyncTimer = setTimeout(() => runLogoSync(), 1200); };
   addEventListener('online', () => { if (account.user) runLogoSync(); });
+  // Export and import of the whole catalog (logo-archive.js): one zip out, one zip in with a review first; what is imported is uploaded by the usual synchronisation.
+  const logoArchive = logoCatalog.archive;
+  const downloadFile = (blob, fileName) => { const href = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = href; link.download = fileName; document.body.append(link); link.click(); link.remove(); setTimeout(() => URL.revokeObjectURL(href), 4000); };
+  const exportAllLogos = async () => {
+    Object.assign(logoArchive, { busy: 'export', error: '', notice: '' }); redrawLogos();
+    try { const made = await exportLogosZip(); downloadFile(made.blob, made.fileName); logoArchive.notice = made.skipped.length ? `Esportati ${made.count} loghi in ${made.fileName} (${made.skipped.length} non esportati: file non valido).` : `Esportati ${made.count} loghi in ${made.fileName}.`; }
+    catch (error) { logoArchive.error = error.message || 'Esportazione non riuscita.'; }
+    logoArchive.busy = ''; redrawLogos();
+  };
+  const reviewLogoArchive = async file => {
+    Object.assign(logoArchive, { busy: 'review', error: '', notice: '', plan: null }); redrawLogos();
+    try { const analysis = await analyzeLogoArchive(file); logoArchive.plan = { analysis, fileName: file.name || 'archivio.zip', policy: 'keep', decisions: {}, report: null }; }
+    catch (error) { logoArchive.error = error.message || 'Il file non è un archivio di loghi valido.'; }
+    logoArchive.busy = ''; redrawLogos();
+  };
+  const runLogoImport = async only => {
+    const plan = logoArchive.plan; if (!plan) return;
+    Object.assign(logoArchive, { busy: 'import', error: '', notice: '', progress: { done: 0, total: only ? only.size : plan.analysis.items.length } }); redrawLogos();
+    try {
+      const report = await applyLogoImport(plan.analysis, { policy: plan.policy, decisions: plan.decisions, only, onProgress: progress => { logoArchive.progress = progress; } });
+      // a retry adds to what the first run already did
+      plan.report = only && plan.report ? { ...report, imported: [...plan.report.imported, ...report.imported], replaced: [...plan.report.replaced, ...report.replaced], kept: [...plan.report.kept, ...report.kept], skipped: [...plan.report.skipped, ...report.skipped], same: [...plan.report.same, ...report.same], invalid: plan.report.invalid } : report;
+      logoArchive.replacedCount = (await listReplacedLogos().catch(() => [])).length;
+      logoArchive.notice = account.user ? 'Importazione finita: i loghi nuovi vengono caricati sul tuo account.' : 'Importazione finita: i loghi sono su questo dispositivo (accedi per caricarli sul tuo account).';
+      await loadLogos(); await refreshLogoExtras(); scheduleLogoSync();
+    } catch (error) { logoArchive.error = error.message || 'Importazione non riuscita.'; }
+    Object.assign(logoArchive, { busy: '', progress: null }); redrawLogos();
+  };
+  const restoreReplaced = async () => {
+    Object.assign(logoArchive, { busy: 'restore', error: '', notice: '' }); redrawLogos();
+    try { const back = await restoreReplacedLogos(); logoArchive.notice = `${back.length} loghi ripristinati (quelli importati restano recuperabili).`; logoArchive.replacedCount = (await listReplacedLogos().catch(() => [])).length; await loadLogos(); scheduleLogoSync(); }
+    catch (error) { logoArchive.error = error.message || 'Ripristino non riuscito.'; }
+    logoArchive.busy = ''; redrawLogos();
+  };
   const openLogoCatalog = async () => {
     Object.assign(logoCatalog, { error: '', notice: '', busy: '', urlDraft: '', page: 1, loading: true });
     clearPendingLogo();
@@ -909,6 +944,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     await loadLogos();
     logoCatalog.persistent = await logosArePersistent();
     logoCatalog.legacy = await listLegacyLogos().catch(() => []);
+    logoCatalog.archive.replacedCount = (await listReplacedLogos().catch(() => [])).length;
     await refreshLogoExtras();
     logoCatalog.loading = false;
     logoCatalog.selectedId ||= logoEntities()[0]?.id ?? null;
@@ -1971,6 +2007,11 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       redrawLogos();
     }
     else if (action === 'logo-sync-now') await runLogoSync();
+    else if (action === 'logo-export') await exportAllLogos();
+    else if (action === 'logo-import-apply') await runLogoImport(null);
+    else if (action === 'logo-import-retry') await runLogoImport(new Set((logoCatalog.archive.plan?.report?.failed ?? []).map(item => item.partyId)));
+    else if (action === 'logo-import-cancel') { Object.assign(logoCatalog.archive, { plan: null, error: '', notice: '' }); redrawLogos(); }
+    else if (action === 'logo-restore-replaced') await restoreReplaced();
     else if (action === 'logo-guest-import') {
       const id = event.target.closest('[data-logo-guest]')?.dataset.logoGuest;
       try { await importGuestLogo(id); logoCatalog.notice = 'Logo copiato nel tuo account: viene caricato online.'; logoCatalog.error = ''; await refreshLogoExtras(); scheduleLogoSync(); } catch (error) { logoCatalog.error = error.message; }
@@ -2380,6 +2421,9 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     if (field.matches('[data-wizard-region]') && wizard) { Object.assign(wizard, { region: field.value, territorialUnit: '', municipality: '', municipalityCode: '', municipalityQuery: '', municipalityLimit: 40, provinceCode: '', provinceName: '', provinceType: '', errors: [] }); render(store.getState(), store.getLastSaved()); return; }
     if (field.matches('[data-wizard-unit]') && wizard) { wizard.territorialUnit = field.value; wizard.municipalityLimit = 40; render(store.getState(), store.getLastSaved()); return; }
     if (field.matches('[data-logo-file]')) { const file = field.files?.[0]; field.value = ''; if (file) await stageLogoFile(file); return; }
+    if (field.matches('[data-logo-import-file]')) { const file = field.files?.[0]; field.value = ''; if (file) await reviewLogoArchive(file); return; }
+    if (field.matches('input[name="logo-import-policy"]') && logoCatalog.archive.plan) { logoCatalog.archive.plan.policy = field.value; redrawLogos(); return; }
+    if (field.matches('[data-logo-import-decision]') && logoCatalog.archive.plan) { const id = field.dataset.logoImportDecision; if (field.value) logoCatalog.archive.plan.decisions[id] = field.value; else delete logoCatalog.archive.plan.decisions[id]; return; }
   });
   // In the logo catalog an image (or an address) can be pasted from the clipboard, or dropped on the page of the selected party.
   root.addEventListener('paste', event => {
@@ -2435,15 +2479,20 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   store.subscribe(() => { const status = store.saveStatus(); if (status.seq !== savedSeen) { savedSeen = status.seq; if (status.ok && !status.dirty) scheduleSync(); } });
   // The network is back, the page is shown again, another tab signed in or out: the queue takes up what is written down (always after reading the version online again).
   globalThis.addEventListener?.('online', () => { if (account.user) syncEngine.flush(); });
-  globalThis.document?.addEventListener?.('visibilitychange', () => { if (!globalThis.document.hidden && account.user) syncEngine.resume(); });
+  // The logos of the account follow the same moments (and one more: a signed-in page that stays open asks again every few minutes, so that what another device changed arrives).
+  globalThis.document?.addEventListener?.('visibilitychange', () => { if (!globalThis.document.hidden && account.user) { syncEngine.resume(); runLogoSync(); } });
+  const logoPoll = setInterval(() => { if (account.user && !globalThis.document?.hidden && globalThis.navigator?.onLine !== false) runLogoSync(); }, 5 * 60 * 1000);
+  logoPoll?.unref?.();
   globalThis.addEventListener?.('storage', event => {
     if (event.key !== 'politicando.account.v1') return;
     const before = account.user?.username ?? null;
     account.user = currentAccount();
-    if ((account.user?.username ?? null) !== before) { syncEngine.stop(); account.saves = []; account.conflicts = []; account.conflict = null; account.info = null; account.history = null; account.currentSlot = null; account.message = account.user ? `In un’altra scheda hai effettuato l’accesso come ${account.user.username}.` : 'In un’altra scheda sei uscito dall’account.'; if (account.user) { refreshCloud().then(() => render(store.getState(), store.getLastSaved())); syncEngine.resume(); } refreshLogoScope(); reconcileCareers(); }
+    if ((account.user?.username ?? null) !== before) { refreshLogoScope(); syncEngine.stop(); account.saves = []; account.conflicts = []; account.conflict = null; account.info = null; account.history = null; account.currentSlot = null; account.message = account.user ? `In un’altra scheda hai effettuato l’accesso come ${account.user.username}.` : 'In un’altra scheda sei uscito dall’account.'; if (account.user) { refreshCloud().then(() => render(store.getState(), store.getLastSaved())); syncEngine.resume(); } refreshLogoScope(); reconcileCareers(); }
   });
   if (account.user) {
     refreshCloud().then(() => { render(store.getState(), store.getLastSaved()); });
+    // (the logos of the account are read again at every start with a session, not only when the catalog is opened)
+    refreshLogoScope();
     // What was written down before the page was closed: taken up now, after the version online has been read again.
     syncEngine.resume();
   }
