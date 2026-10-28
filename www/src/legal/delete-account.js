@@ -1,6 +1,6 @@
 // The public page for deleting an account (elimina-account.html): signs in with the proof of the password, asks the Worker to delete the account and everything kept online for it,
 // and tells the player what happened. It does not touch any game save; if this browser was signed in to the same account, it forgets the session.
-import { PASSWORD_MIN, USERNAME_RULE, accountApiBase, forgetAccountIf, normalizeUsername, passwordProof } from '../data/repositories/account-sync.js?v=20261028-2';
+import { PASSWORD_MIN, USERNAME_RULE, accountApiBase, forgetAccountIf, normalizeUsername, passwordProof } from '../data/repositories/account-sync.js?v=20261028-3';
 
 const form = document.querySelector('#delete-form');
 const result = document.querySelector('#delete-result');

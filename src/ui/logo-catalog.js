@@ -23,7 +23,31 @@ function syncBlock(sync, syncing) {
 
 // «Esporta tutti i loghi» / «Importa loghi»: the whole catalog in one zip, and the review of an archive before anything is written (duplicates and conflicts, with the player's choice).
 const STATUS_WORD = { new: 'nuovo', same: 'già presente', conflict: 'conflitto', invalid: 'non valido' };
-function archiveBlock(archive, entities, count) {
+// What the last import did, in numbers, where the logos went and what the account copy is doing (never «done» while it is not).
+function outcomeBlock(archive, { sync, syncing, signedIn, persistent }) {
+  const o = archive.outcome; if (!o) return '';
+  const r = o.report, failed = r.failed.length, written = r.imported.length + r.replaced.length, conflicts = r.replaced.length + r.kept.length + r.skipped.length;
+  const numbers = conflicts
+    ? `${written} importati · ${r.same.length} già presenti · ${conflicts} in conflitto (${r.replaced.length} sostituiti, ${r.kept.length} mantenuti, ${r.skipped.length} saltati) · ${r.invalid.length} non validi · ${failed} non riusciti.`
+    : `${written} importati · ${r.same.length} già presenti · ${conflicts} in conflitto · ${r.invalid.length} non validi · ${failed} non riusciti.`;
+  let where, cloud = '', retry = false, tone = failed ? 'wizard-errors' : 'account-message';
+  if (!written) where = failed ? 'Nessun logo è stato salvato.' : 'Nessun logo nuovo da salvare.';
+  else if (!persistent) { where = 'Questo browser non permette di conservarli: i loghi importati restano solo finché la pagina è aperta.'; tone = 'wizard-errors'; }
+  else if (!o.account) where = 'Senza account i loghi importati restano su questo dispositivo: accedi per caricarli sul tuo account e ritrovarli sugli altri dispositivi.';
+  else where = `Salvati nel catalogo dell’account «${esc(o.account)}» su questo dispositivo.`;
+  if (written && persistent && o.account && signedIn === o.account) {
+    if (syncing) cloud = 'Caricamento sull’account in corso…';
+    else if (!sync) cloud = 'Il caricamento sull’account non è ancora stato eseguito.';
+    else if (sync.unavailable) cloud = 'La copia online dei loghi non è attiva su questo sito: restano su questo dispositivo.';
+    else if (sync.offline) { cloud = `Account non raggiungibile: ${sync.pending || written} loghi attendono di essere caricati (non sono persi, si riproverà da solo).`; retry = true; tone = 'wizard-errors'; }
+    else if (sync.errors?.length) { cloud = `Caricamento incompleto: ${esc(sync.errors[0].message)}`; retry = true; tone = 'wizard-errors'; }
+    else if (sync.pending) { cloud = `${sync.pending} loghi attendono ancora di essere caricati.`; retry = true; }
+    else cloud = 'Tutti i loghi importati sono stati caricati sul tuo account.';
+  }
+  const pendingNote = sync?.errors?.length && sync.pending && cloud ? `<span>${sync.pending} loghi in attesa: non sono persi.</span> ` : '';
+  return `<div class="${tone}" role="${tone === 'wizard-errors' ? 'alert' : 'status'}" data-logo-import-outcome><strong>Esito:</strong> <span>${numbers}</span> <span>${where}</span>${cloud ? ` <span>${cloud}</span> ${pendingNote}` : ''}${retry ? ' <button type="button" class="text-link" data-action="logo-sync-now">Riprova il caricamento</button>' : ''}</div>`;
+}
+function archiveBlock(archive, entities, count, context = {}) {
   if (!archive) return '';
   const nameOf = id => entities.find(item => item.id === id)?.name ?? id;
   const plan = archive.plan;
@@ -35,7 +59,8 @@ function archiveBlock(archive, entities, count) {
   </div>
   <p class="quiet-copy">L’esportazione crea un solo file ZIP con tutte le immagini, gli identificativi originali dei partiti e un manifest: puoi conservarlo come copia di sicurezza o importarlo in un altro account. Prima di importare vedrai cosa c’è di nuovo e cosa è in conflitto; nulla viene cambiato senza la tua scelta.</p>`;
   const message = archive.error ? `<div class="wizard-errors" role="alert" data-logo-archive-error>${esc(archive.error)}</div>` : archive.notice ? `<p class="account-message" role="status" data-logo-archive-notice>${esc(archive.notice)}</p>` : '';
-  if (!plan) return `<section class="logo-archive" data-logo-archive>${toolbar}${message}</section>`;
+  const outcome = outcomeBlock(archive, context);
+  if (!plan) return `<section class="logo-archive" data-logo-archive>${toolbar}${outcome}${message}</section>`;
   const a = plan.analysis, c = a.counts;
   const shown = a.items.filter(item => item.status === 'conflict' || item.status === 'invalid').slice(0, 40);
   const rows = shown.map(item => item.status === 'conflict'
@@ -50,7 +75,7 @@ function archiveBlock(archive, entities, count) {
   const progress = archive.progress ? `<p class="quiet-copy" role="status" data-logo-import-progress>Importazione in corso: ${archive.progress.done} di ${archive.progress.total}…</p>` : '';
   const result = report ? `<p class="${failed ? 'wizard-errors' : 'account-message'}" role="${failed ? 'alert' : 'status'}" data-logo-import-result>Importati ${report.imported.length}, sostituiti ${report.replaced.length}, mantenuti ${report.kept.length}, saltati ${report.skipped.length}, già presenti ${report.same.length}, non validi ${report.invalid.length}, non riusciti ${failed}.</p>${failed ? `<p class="quiet-copy" data-logo-import-failed>${esc(report.failed[0].message)}</p>` : ''}` : '';
   const actions = `<div class="sx-actions"><button type="button" class="primary-button" data-action="logo-import-apply" ${busy || (!c.new && !c.conflict) ? 'disabled' : ''}>${report ? 'Importa di nuovo' : 'Importa'}</button>${failed ? `<button type="button" class="secondary-button" data-action="logo-import-retry" ${busy ? 'disabled' : ''}>Riprova i ${failed} non riusciti</button>` : ''}<button type="button" class="secondary-button" data-action="logo-import-cancel" ${busy ? 'disabled' : ''}>Chiudi</button></div>`;
-  return `<section class="logo-archive" data-logo-archive>${toolbar}<div class="logo-import-plan" data-logo-import-plan>${summary}${policy}${rows ? `<ul class="logo-import-rows">${rows}</ul>` : ''}${more > 0 ? `<p class="quiet-copy">… e altri ${more}.</p>` : ''}${progress}${result}${actions}</div>${message}</section>`;
+  return `<section class="logo-archive" data-logo-archive>${toolbar}<div class="logo-import-plan" data-logo-import-plan>${summary}${policy}${rows ? `<ul class="logo-import-rows">${rows}</ul>` : ''}${more > 0 ? `<p class="quiet-copy">… e altri ${more}.</p>` : ''}${progress}${result}${actions}</div>${outcome}${message}</section>`;
 }
 
 export function renderLogoCatalog({ entities = [], infos = [], logoSrc = () => null, query = '', page = 1, selectedId = null, pending = null, error = '', notice = '', busy = '', urlDraft = '', loading = false, signedIn = null, editorHtml = '', legacy = [], persistent = true, guest = [], conflicts = [], sync = null, syncing = false, archive = null } = {}) {
@@ -88,7 +113,7 @@ export function renderLogoCatalog({ entities = [], infos = [], logoSrc = () => n
   return `<div class="logo-catalog" data-logo-catalog>
     <p class="quiet-copy logo-intro">Qui scegli i loghi che vuoi vedere accanto ai partiti. Sono tuoi e li ritrovi in tutte le tue partite. ${signedIn ? `Sono associati all’account «${esc(signedIn)}»: restano su questo dispositivo (anche senza connessione) e vengono copiati online nel tuo account, così li ritrovi su ogni dispositivo con cui accedi. Nessun altro giocatore li vede e non fanno parte dei salvataggi.` : 'Senza un account restano soltanto su questo dispositivo: non vengono caricati online né condivisi. Con un account puoi averli anche su altri dispositivi.'}</p>
     ${signedIn ? syncBlock(sync, syncing) : ''}
-    ${archiveBlock(archive, entities, infos.length)}
+    ${archiveBlock(archive, entities, infos.length, { sync, syncing, signedIn, persistent })}
     <p class="logo-rights" data-logo-rights><strong>Diritti.</strong> Usa soltanto immagini che hai il diritto di utilizzare: il gioco non include loghi di terzi e non verifica da dove provengano quelli che aggiungi.</p>
     ${conflicts.length ? `<section class="logo-legacy logo-conflicts" data-logo-conflict-block><h3>Due versioni diverse dello stesso logo</h3><p class="quiet-copy">Per questi partiti il logo di questo dispositivo e quello del tuo account sono diversi. Nessuno è stato sovrascritto: scegli quale tenere.</p><div class="logo-legacy-list">${conflicts.map(item => `<div class="logo-legacy-item" data-logo-conflict="${esc(item.partyId)}"><strong>${esc(item.name)}</strong><span class="logo-conflict-pair"><span><small>Questo dispositivo</small>${item.localSrc ? `<img src="${esc(item.localSrc)}" alt="Logo di questo dispositivo" />` : ''}</span><span><small>Account online</small><img src="${esc(item.src)}" alt="Logo del tuo account" /></span></span><button type="button" class="secondary-button" data-action="logo-conflict-local">Tieni quello di questo dispositivo</button><button type="button" class="secondary-button" data-action="logo-conflict-remote">Tieni quello dell’account</button></div>`).join('')}</div></section>` : ''}
     ${guest.length ? `<section class="logo-legacy logo-guest" data-logo-guest-block><h3>Loghi aggiunti senza account</h3><p class="quiet-copy">Questi loghi li hai aggiunti su questo dispositivo prima di accedere: non sono stati messi nel tuo account. Importa solo quelli che hai il diritto di usare e vuoi avere su tutti i tuoi dispositivi; l’originale su questo dispositivo resta dov’è.</p><div class="logo-legacy-list">${guest.map(item => `<div class="logo-legacy-item"><span class="logo-row-mark"><img src="${esc(item.src)}" alt="" /></span><span class="logo-row-text"><strong>${esc(item.name)}</strong></span><button type="button" class="secondary-button" data-action="logo-guest-import" data-logo-guest="${esc(item.partyId)}">Importa nel mio account</button></div>`).join('')}</div></section>` : ''}

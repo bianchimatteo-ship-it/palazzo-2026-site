@@ -1,10 +1,10 @@
-import { mountApp } from './ui/app.js?v=20261028-2';
-import { refreshSharedArchive } from './data/repositories/admin-sync.js?v=20261028-2';
-import { isNativeApp } from './data/repositories/account-sync.js?v=20261028-2';
-import { store } from './core/store.js?v=20261028-2';
-import { isRealCollectionLoaded, loadRealCollectionsSettled, loadRealDatabase, loadOptionalRealDocument, loadRealDocument, realDatabase, realDataUrls, refreshAdminOverrides } from './data/repositories/real-data.js?v=20261028-2';
-import { PARTY_LINK_COLLECTIONS, governingEntityIds } from './data/repositories/party-links.js?v=20261028-2';
-import { referenceGovernmentSpec } from './data/repositories/government-reference.js?v=20261028-2';
+import { mountApp } from './ui/app.js?v=20261028-3';
+import { refreshSharedArchive } from './data/repositories/admin-sync.js?v=20261028-3';
+import { isNativeApp } from './data/repositories/account-sync.js?v=20261028-3';
+import { store } from './core/store.js?v=20261028-3';
+import { isRealCollectionLoaded, loadRealCollectionsSettled, loadRealDatabase, loadOptionalRealDocument, loadRealDocument, realDatabase, realDataUrls, refreshAdminOverrides } from './data/repositories/real-data.js?v=20261028-3';
+import { PARTY_LINK_COLLECTIONS, governingEntityIds } from './data/repositories/party-links.js?v=20261028-3';
+import { referenceGovernmentSpec } from './data/repositories/government-reference.js?v=20261028-3';
 
 const BUILD = new URL(import.meta.url).searchParams.get('v');
 // The installed app (Capacitor) carries its own copy of the game: the site cannot update it, so it never asks the site for a newer build and keeps no browser cache of its own.

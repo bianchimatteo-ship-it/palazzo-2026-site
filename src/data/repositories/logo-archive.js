@@ -7,7 +7,7 @@
 //   - Import, step 2 `applyLogoImport`: the player's policy for the conflicts (keep the existing, replace, skip), each decision can be changed per party. A logo replaced goes first into a
 //     recovery copy (`#recupero`) that can be restored; an error on one logo never stops or spoils the others; the failed ones are reported and can be retried; repeating the same import
 //     changes nothing (what is already there is `same`).
-import { CONFLICT_SUFFIX, MAX_INPUT_BYTES, MAX_SIDE, OUTPUT_BYTES, logoStore, prepareLogo, scopeNow, sha256OfBlob, sniffImage } from './personal-logos.js?v=20261028-2';
+import { CONFLICT_SUFFIX, MAX_INPUT_BYTES, MAX_SIDE, OUTPUT_BYTES, logoStore, prepareLogo, scopeNow, sha256OfBlob, sniffImage } from './personal-logos.js?v=20261028-3';
 
 export const ARCHIVE_FORMAT = 'politicando-logos';
 export const ARCHIVE_VERSION = 1;
@@ -251,6 +251,16 @@ export async function applyLogoImport(analysis, { policy = 'keep', decisions = {
   }
   onProgress?.({ done: work.length, total: work.length, partyId: null });
   await logoStore.reload(scope).catch(() => null);
+  // «imported» means written AND read back: what the store does not hold with the same image is reported as failed, never as done
+  const written = [...report.imported, ...report.replaced];
+  if (written.length) {
+    const held = new Map((await logoStore.all(scope).catch(() => [])).filter(record => record.blob && !record.deleted).map(record => [record.partyId, record]));
+    const lost = new Set(written.filter(id => { const record = held.get(id), want = analysis.items.find(item => item.partyId === id)?.incoming?.sha; return !record || (want && record.sha && record.sha !== want); }));
+    if (lost.size) {
+      report.imported = report.imported.filter(id => !lost.has(id)); report.replaced = report.replaced.filter(id => !lost.has(id));
+      for (const id of lost) report.failed.push({ partyId: id, message: 'Non salvato: il browser non ha conservato il logo.', code: 'not-stored' });
+    }
+  }
   return report;
 }
 
