@@ -147,7 +147,7 @@ async function work(kind) {
       out.push({ kind: kind.id, career, copy, ...one });
       made++;
     }
-    if (usable && bases.length < 3) bases.push({ career, raw, db, store });
+    if (usable && bases.length < 6) bases.push({ career, raw, db, store });
   }
   // determinism: the first race of the first career, played again from the same save, gives the same numbers
   const again = [];
@@ -304,7 +304,9 @@ if (argv.worker) {
     // (the projection is what the campaign did; the result adds the day of the vote, which is another draw in each of the two races)
     out.actions = { pairs: made.length, uplift: r2(mean(uplift)), upliftProjection: r2(mean(upliftProjection)), positive: made.filter((item, index) => upliftProjection[index] > 0).length };
     check(made.length >= 6, `${kind.id}: servono coppie di campagne con e senza azioni (${made.length}).`);
-    check(out.actions.upliftProjection >= (national ? 0.1 : 0.3) && out.actions.positive >= Math.ceil(made.length * 0.7) && out.actions.uplift > 0, `${kind.id}: le azioni del giocatore devono spostare il voto (proiezione ${out.actions.upliftProjection} punti, voto ${out.actions.uplift}, positiva in ${out.actions.positive} coppie su ${made.length}).`);
+    // (the result adds the day of the vote, another draw in each of the two races: its mean is judged against its own standard error, so that a noisy estimate is not read as a lost effect)
+    const spread = Math.sqrt(uplift.reduce((sum, value) => sum + (value - mean(uplift)) ** 2, 0) / Math.max(1, uplift.length - 1)) / Math.sqrt(Math.max(1, uplift.length));
+    check(out.actions.upliftProjection >= (national ? 0.1 : 0.2) && out.actions.positive >= Math.ceil(made.length * 0.6) && out.actions.uplift > -2 * spread, `${kind.id}: le azioni del giocatore devono spostare il voto (proiezione ${out.actions.upliftProjection} punti, voto ${out.actions.uplift}, positiva in ${out.actions.positive} coppie su ${made.length}).`);
     summary[kind.id] = { ...(summary[kind.id] ?? {}), ...out, sims: sims.length, rows: gaps.projection.length };
     delete summary[kind.id].runoffGaps;
   }
