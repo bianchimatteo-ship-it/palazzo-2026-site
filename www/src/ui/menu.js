@@ -1,16 +1,16 @@
 // Main menu, how-to-play, settings, save slots and the end-of-week report.
-import { renderTutorialInvite } from './tutorial.js?v=20261029-1';
-import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261029-1';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261029-1';
-import { formatDate } from '../core/time.js?v=20261029-1';
-import { illustration } from './illustrations.js?v=20261029-1';
-import { glyph } from './visuals.js?v=20261029-1';
-import { identityMark, identityVars } from './party-identity.js?v=20261029-1';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261029-1';
-import { hallView } from './hall-view.js?v=20261029-1';
-import { renderLogoCatalog } from './logo-catalog.js?v=20261029-1';
-import { esc, signed } from './charts.js?v=20261029-1';
-import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261029-1';
+import { renderTutorialInvite } from './tutorial.js?v=20261029-2';
+import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261029-2';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261029-2';
+import { formatDate } from '../core/time.js?v=20261029-2';
+import { illustration } from './illustrations.js?v=20261029-2';
+import { glyph } from './visuals.js?v=20261029-2';
+import { identityMark, identityVars } from './party-identity.js?v=20261029-2';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261029-2';
+import { hallView } from './hall-view.js?v=20261029-2';
+import { renderLogoCatalog } from './logo-catalog.js?v=20261029-2';
+import { esc, signed } from './charts.js?v=20261029-2';
+import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261029-2';
 
 const when = iso => { try { return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch { return ''; } };
 // The actions of the opening screen, in order of importance: starting a career and resuming one are the two main ones (drawn apart, below); then what concerns the

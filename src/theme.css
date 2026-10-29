@@ -1253,3 +1253,16 @@ html[data-motion="off"] .language-gate-button { transition: none; }
 .logo-swatch i { width: 24px; height: 24px; border-radius: 50%; background: var(--sw); box-shadow: inset 0 0 0 1.5px rgba(128,128,128,.45); }
 .logo-swatch.selected { border-color: var(--gold-soft, #f0cf85); box-shadow: 0 0 0 2px rgba(240,207,133,.55); }
 .logo-swatch:focus-visible { outline: 3px solid var(--gold-soft, #f0cf85); outline-offset: 2px; }
+
+/* Coalitions that grow: the outcome of an invitation and the view of the coalition. */
+.alliance-report{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin:0 0 14px;padding:12px 14px;border:1px solid var(--line,rgba(255,255,255,.14));border-left-width:4px;border-radius:10px;background:var(--panel-soft,rgba(255,255,255,.04))}
+.alliance-report.is-good{border-left-color:var(--good,#3fa66b)}
+.alliance-report.is-bad{border-left-color:var(--bad,#c4553f)}
+.alliance-report small{display:block;margin-top:4px}
+.alliance-odds-reasons{margin:6px 0 0;padding:0;list-style:none}
+.alliance-odds-reasons li{display:flex;justify-content:space-between;gap:12px;font-size:.9em}
+.coalition-view{margin-top:8px}
+.coalition-view summary{cursor:pointer;font-weight:600}
+.coalition-body{display:grid;gap:6px;margin-top:6px}
+.coalition-body h4{margin:6px 0 0}
+.coalition-members,.coalition-terms,.coalition-history{margin:0;padding-left:18px}

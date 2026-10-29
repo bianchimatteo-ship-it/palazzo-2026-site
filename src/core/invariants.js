@@ -3,9 +3,9 @@
 // checkInvariants(state, context) → { ok, issues: [{ code, path, message }] }
 // context (optional): the real reference the state may point to — realPartyIds, realGroupIds (Sets or arrays).
 
-import { countProblems } from './electorate.js?v=20261029-1';
-import { LEVER_BY_ID } from '../data/simulation/start-rules.js?v=20261029-1';
-import { AMBITION_LIMIT, OBJECTIVE_BY_ID } from '../data/simulation/objective-rules.js?v=20261029-1';
+import { countProblems } from './electorate.js?v=20261029-2';
+import { LEVER_BY_ID } from '../data/simulation/start-rules.js?v=20261029-2';
+import { AMBITION_LIMIT, OBJECTIVE_BY_ID } from '../data/simulation/objective-rules.js?v=20261029-2';
 
 const SEATS = { camera: 400, senato: 200 };
 // The Senate also has the senators for life (and, in the real XIX legislature, a few vacancies may appear in either
@@ -168,6 +168,10 @@ function checkWorld(state, known, report) {
     for (const id of alliance.partyIds ?? []) if (!forces.has(id) && !known.parties.has(id)) report('riferimento', `world.alliances[${index}]`, `Alleanza ${alliance.id}: forza ${id} sconosciuta`);
     if (alliance.leaderId && !(alliance.partyIds ?? []).includes(alliance.leaderId)) report('coerenza', `world.alliances[${index}]`, `Alleanza ${alliance.id}: la guida ${alliance.leaderId} non ne fa parte`);
   });
+  // A force is in one accord at a time: an intesa or a coalition of several forces that is active (a pole of one force is not an accord yet).
+  const membership = new Map();
+  for (const alliance of records(world.alliances)) if (alliance.status === 'active' && (alliance.partyIds ?? []).length >= 2) for (const id of alliance.partyIds) membership.set(id, [...(membership.get(id) ?? []), alliance.id]);
+  for (const [id, list] of membership) if (list.length > 1) report('coerenza', 'world.alliances', `La forza ${id} appartiene a due accordi attivi (${list.join(', ')})`);
 }
 
 // The Chambers of the game: groups tied to known parties, seats that are whole, positive and add up.

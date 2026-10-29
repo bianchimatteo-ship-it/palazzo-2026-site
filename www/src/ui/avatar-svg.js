@@ -1,6 +1,6 @@
 // The avatar of the player, drawn as one local SVG from the chosen traits: no library, no request, no remote image. The same renderer draws it in the wizard (live preview), in the profile, in the
 // headquarters and in the Parliament, so that the player is the same face everywhere. The input is always cleaned first (an unknown value falls back to the default).
-import { AVATAR_OPTIONS, normalizeAvatar } from '../core/avatar.js?v=20261029-1';
+import { AVATAR_OPTIONS, normalizeAvatar } from '../core/avatar.js?v=20261029-2';
 
 const colorOf = (field, id) => AVATAR_OPTIONS[field].find(item => item.id === id)?.color ?? '#888888';
 // A colour made lighter (amount > 0) or darker (amount < 0).
