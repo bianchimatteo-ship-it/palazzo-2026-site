@@ -1465,4 +1465,7 @@ export const PHRASES = [
   ["# loghi in attesa: non sono persi.", "# logos waiting: they are not lost."],
   ["Riprova il caricamento", "Retry the upload"],
   ["Partito non presente in questa partita (identificativo originale)", "Party not present in this game (original identifier)"],
+  ["Candidatura presentata", "Candidacy filed"],
+  ["Candidatura presentata. Per guidare tu la campagna premi «Guida la campagna» entro il {}: altrimenti la condurrà il partito per te e il risultato arriverà al voto del {}.", "Candidacy filed. To lead the campaign yourself press “Lead the campaign” by {1}: otherwise the party will run it for you and the result will come at the vote of {2}."],
+  ["Candidature chiuse: la tua candidatura è presentata e resta valida. La campagna la conduce il partito per te e il risultato arriva al voto del {}.", "Candidacies closed: your candidacy is filed and stays valid. The party runs the campaign for you and the result comes at the vote of {1}."],
 ];

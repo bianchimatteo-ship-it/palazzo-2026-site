@@ -1,19 +1,19 @@
 // The electoral centre: next vote, calendar, context, candidacy, campaign, polls and rivals, results and history.
-import { isSecretary, upcomingElections, upcomingRounds } from '../core/career-engine.js?v=20261028-3';
-import { campaignScope, campaignSummary, strategyOf } from '../core/campaign-engine.js?v=20261028-3';
-import { CAMPAIGN_PHASES, ELECTION_MODELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261028-3';
-import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261028-3';
-import { formatDate } from '../core/time.js?v=20261028-3';
-import { societyMood } from '../core/society-engine.js?v=20261028-3';
-import { candidacyAccess, renderCampaignPage } from './campaign-mode.js?v=20261028-3';
-import { politicalPhase } from './game-mode.js?v=20261028-3';
-import { lineChart, SERIES } from './charts.js?v=20261028-3';
-import { glyph } from './visuals.js?v=20261028-3';
-import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, sectionTabs, signed, table, weeksLabel } from './sections-kit.js?v=20261028-3';
-import { mandatePlace, renderElectionReport } from './election-report.js?v=20261028-3';
-import { renderNationalView } from './national-view.js?v=20261028-3';
-import { renderQuirinale } from './presidency-view.js?v=20261028-3';
-import { renderCampaignObservatory } from './observatory-view.js?v=20261028-3';
+import { isSecretary, upcomingElections, upcomingRounds } from '../core/career-engine.js?v=20261029-1';
+import { campaignScope, campaignSummary, strategyOf } from '../core/campaign-engine.js?v=20261029-1';
+import { CAMPAIGN_PHASES, ELECTION_MODELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261029-1';
+import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261029-1';
+import { formatDate } from '../core/time.js?v=20261029-1';
+import { societyMood } from '../core/society-engine.js?v=20261029-1';
+import { candidacyAccess, renderCampaignPage } from './campaign-mode.js?v=20261029-1';
+import { politicalPhase } from './game-mode.js?v=20261029-1';
+import { lineChart, SERIES } from './charts.js?v=20261029-1';
+import { glyph } from './visuals.js?v=20261029-1';
+import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, sectionTabs, signed, table, weeksLabel } from './sections-kit.js?v=20261029-1';
+import { mandatePlace, renderElectionReport } from './election-report.js?v=20261029-1';
+import { renderNationalView } from './national-view.js?v=20261029-1';
+import { renderQuirinale } from './presidency-view.js?v=20261029-1';
+import { renderCampaignObservatory } from './observatory-view.js?v=20261029-1';
 export { renderElectionReport };
 
 export const ELECTION_TABS = Object.freeze([['panoramica', 'Panoramica'], ['nazionali', 'Nazionali'], ['quirinale', 'Quirinale'], ['candidatura', 'Candidatura'], ['campagna', 'Campagna'], ['avversari', 'Sondaggi e avversari'], ['risultati', 'Risultati'], ['storico', 'Storico']]);
@@ -164,7 +164,7 @@ function optionRow(option, selected) {
 }
 function raceRow(race, { state, leader, options }) {
   const today = state.clock.currentDate;
-  const [statusLabel, tone] = { planned: ['Da decidere', 'warn'], confirmed: ['Candidato scelto', 'good'], running: ['Campagna in corso', 'warn'], held: ['Conclusa', 'neutral'], missed: ['Senza candidato', 'bad'] }[race.status] ?? ['', 'neutral'];
+  const [statusLabel, tone] = { planned: ['Da decidere', 'warn'], confirmed: [race.candidacy?.kind === 'player' && today > race.windowClosesAt ? 'Candidatura presentata' : 'Candidato scelto', 'good'], running: ['Campagna in corso', 'warn'], held: ['Conclusa', 'neutral'], missed: ['Senza candidato', 'bad'] }[race.status] ?? ['', 'neutral'];
   const open = today >= race.windowOpensAt && today <= race.windowClosesAt;
   const choosing = leader && ['planned', 'confirmed'].includes(race.status) && today <= race.windowClosesAt;
   const candidacyOf = race.candidacy;
@@ -181,9 +181,12 @@ function raceRow(race, { state, leader, options }) {
       : options.player.available ? `<button type="button" class="primary-button" data-race-action="stand" data-race-id="${esc(race.id)}">Mi candido</button>` : `<small class="sx-note">Non puoi candidarti: ${esc(options.player.reason ?? '')}</small>`) : '';
   const picker = choosing && options ? `<div class="eh-race-pick"><label><span>Candidato</span><select data-race-pick="${esc(race.id)}" aria-label="Candidato per ${esc(race.label)}"><option value="none" ${current === 'none' ? 'selected' : ''}>Nessun candidato</option>${groups}</select></label><button type="button" class="primary-button" data-race-action="confirm" data-race-id="${esc(race.id)}">Conferma</button></div>` : '';
   const play = race.status === 'confirmed' && candidacyOf?.kind === 'player' && open && state.campaign?.status !== 'active' ? `<button type="button" class="secondary-button" data-race-action="play" data-race-id="${esc(race.id)}" data-race-level="${esc(race.level)}">Guida la campagna ${arrow}</button>` : '';
+  // the candidacy of the player stays valid after the candidacies close: until the vote it is filed, and the party runs the campaign he does not lead
+  const filed = race.status === 'confirmed' && candidacyOf?.kind === 'player'
+    ? `<p class="sx-note">${today <= race.windowClosesAt ? `Candidatura presentata. Per guidare tu la campagna premi «Guida la campagna» entro il ${esc(formatDate(race.windowClosesAt))}: altrimenti la condurrà il partito per te e il risultato arriverà al voto del ${esc(formatDate(race.electionDate))}.` : `Candidature chiuse: la tua candidatura è presentata e resta valida. La campagna la conduce il partito per te e il risultato arriva al voto del ${esc(formatDate(race.electionDate))}.`}</p>` : '';
   const who = candidacyOf ? `<span class="eh-race-who"><strong>${esc(candidacyOf.label)}</strong> ${badge(KIND_LABELS[candidacyOf.kind] ?? '', candidacyOf.kind === 'player' ? 'good' : 'neutral')} <small>${esc(rootingWord(candidacyOf.rooting))} · radicamento ${signedOne(candidacyOf.rooting)}</small></span>` : '<span class="eh-race-who"><small>Nessun candidato scelto</small></span>';
   const result = race.result ? `<p class="sx-note">${race.result.won ? 'Vince il candidato del partito' : race.result.mandate ? 'Il candidato del partito entra in consiglio all’opposizione' : 'Il candidato del partito non è eletto'} (${num(race.result.share, 1)}%${race.result.position ? `, ${race.result.position}º` : ''}).${race.result.winner && !race.result.won ? ` Primo: ${esc(race.result.winner.label)} (${num(race.result.winner.percent, 1)}%).` : ''}${race.office ? ` ${esc(race.office.title)}.` : ''}</p>` : '';
-  return `<li class="eh-race status-${esc(race.status)}"><div class="eh-race-head"><span class="eh-cal-icon">${glyph(RACE_ICONS[race.level] ?? 'ballot', 18)}</span><div><strong>${esc(race.label)}</strong><small>Voto ${esc(formatDate(race.electionDate))} · candidature ${esc(shortDate(race.windowOpensAt))} – ${esc(shortDate(race.windowClosesAt))}${open ? ' · aperte ora' : ''}</small></div>${badge(statusLabel, tone)}</div>${who}${picker}${stand || play ? `<div class="sx-actions">${stand}${play}</div>` : ''}${result}</li>`;
+  return `<li class="eh-race status-${esc(race.status)}"><div class="eh-race-head"><span class="eh-cal-icon">${glyph(RACE_ICONS[race.level] ?? 'ballot', 18)}</span><div><strong>${esc(race.label)}</strong><small>Voto ${esc(formatDate(race.electionDate))} · candidature ${esc(shortDate(race.windowOpensAt))} – ${esc(shortDate(race.windowClosesAt))}${open ? ' · aperte ora' : ''}</small></div>${badge(statusLabel, tone)}</div>${who}${filed}${picker}${stand || play ? `<div class="sx-actions">${stand}${play}</div>` : ''}${result}</li>`;
 }
 function raceSection(state, { races = [], archive = [], raceOptions = () => null } = {}) {
   const game = state.game;

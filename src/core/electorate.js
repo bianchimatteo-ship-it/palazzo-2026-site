@@ -7,7 +7,7 @@
 // The votes of the lists are the valid ballots shared among the lists, in whole numbers that add up to them exactly (largest remainder). Without demographic data (the file is not
 // loaded, or the territory is not in it) the count falls back to a declared scale of 100,000 ballots: percentages only, never presented as voters. A second-level vote (the province:
 // the mayors and the councillors vote, with weights) is also a scale, never the population.
-import { residentsOfItaly, residentsOfMunicipality, residentsOfRegion, populationReferenceDate } from './municipal-rules.js?v=20261028-3';
+import { residentsOfItaly, residentsOfMunicipality, residentsOfRegion, populationReferenceDate } from './municipal-rules.js?v=20261029-1';
 
 export const ELIGIBLE_SHARE = 0.82;
 export const SCALE = 100000;

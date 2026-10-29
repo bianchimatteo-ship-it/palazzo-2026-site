@@ -41,6 +41,7 @@
     "check:poll-metrics": "node scripts/check-poll-metrics.mjs",
     "check:poll-election-consistency": "node scripts/check-poll-election-consistency.mjs",
     "check:race-player-campaign": "node scripts/check-race-player-campaign.mjs",
+    "check:race-candidacy-lifecycle": "node scripts/check-race-candidacy-lifecycle.mjs",
     "check:logo-archive": "node scripts/check-logo-archive.mjs",
     "check:logo-archive-ui": "node scripts/check-logo-archive-ui.mjs",
     "check:logo-sync-triggers": "node scripts/check-logo-sync-triggers.mjs",

@@ -225,15 +225,16 @@ lines.push('vittoria (sindaco) e sconfitta (nessuna carica), storico e id coeren
   store.chooseRaceCandidate(second.id, { kind: 'player' }, people);
   assert.throws(() => store.chooseRaceCandidate(third.id, { kind: 'player' }, people), /Si sovrappone|Già candidato|sovrappon/i, 'Due campagne del giocatore che si sovrappongono: no.');
   goTo(store, advance(first.electionDate, 3) > second.windowClosesAt ? advance(first.electionDate, 3) : advance(second.windowClosesAt, 2));
-  const lapsed = raceOf(store, second.id);
-  assert.equal(lapsed.status, 'missed', 'Una candidatura mai avviata scade: nessun candidato.');
-  assert.equal(lapsed.result, null); assert.equal(lapsed.campaignId, null);
+  const filed = raceOf(store, second.id);
+  assert.notEqual(filed.status, 'missed', 'Una candidatura presentata e mai avviata non scade alla chiusura delle candidature.');
+  if (store.getState().clock.currentDate < second.electionDate) { assert.equal(filed.status, 'confirmed', 'Resta valida fino al voto.'); assert.equal(filed.result, null); assert.equal(filed.campaignId, null); }
+  else { assert.equal(filed.status, 'held', 'Al voto la campagna non avviata la conduce il partito.'); assert.ok(filed.result && filed.campaignId); }
   const ran = raceOf(store, first.id);
   assert.equal(ran.status, 'held', 'La corsa affidata al partito si conclude al voto.');
   assert.ok(ran.result && ran.campaignId && ran.history.some(item => /Voto del/.test(item.text)), 'Con il suo risultato e la sua campagna simulata.');
   assert.equal(racesCount(store, first.id), 1);
   assert.equal((store.getState().career.electionHistory ?? []).filter(item => item.raceId === first.id).length, 0, 'Le corse del partito non entrano nella storia del giocatore.');
-  lines.push('candidati del partito simulati, candidatura mai avviata scaduta, sovrapposizioni rifiutate');
+  lines.push('candidati del partito simulati, candidatura presentata e mai avviata valida fino al voto, sovrapposizioni rifiutate');
 }
 function advance(date, days) { return new Date(Date.parse(`${date}T12:00:00Z`) + days * 86400000).toISOString().slice(0, 10); }
 

@@ -1,7 +1,7 @@
 // The guided tutorial: eleven short steps, optional, that follow the player through the real pages of the game. It is a card, not a mode: it costs no action points,
 // no money and no time, never touches the career, and remembers only where the player stopped (this browser's preference, not part of the saved game).
 // Skip it, close it and resume it later from “Come giocare”, or start it again from the first step.
-import { glyph } from './visuals.js?v=20261028-3';
+import { glyph } from './visuals.js?v=20261029-1';
 
 export const TUTORIAL_KEY = 'politicando.tutorial.v1';
 // Each step: id, icon, page it is about, title, what it is, what it costs, what happens next, and an example drawn from the player's own game.

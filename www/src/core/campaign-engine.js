@@ -1,10 +1,10 @@
-import { advanceDays } from './time.js?v=20261028-3';
-import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261028-3';
-import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261028-3';
-import { aggregateShares, listVote, mateForce, runFinalElection, runFirstRound, voteScale } from './election-engine.js?v=20261028-3';
-import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261028-3';
-import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261028-3';
-import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261028-3';
+import { advanceDays } from './time.js?v=20261029-1';
+import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261029-1';
+import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261029-1';
+import { aggregateShares, listVote, mateForce, runFinalElection, runFirstRound, voteScale } from './election-engine.js?v=20261029-1';
+import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261029-1';
+import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261029-1';
+import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261029-1';
 
 const SOURCE = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
@@ -1706,7 +1706,7 @@ export function pollWave(campaign, label = null) {
   const trueRows = groups.map(group => ({ partyId: group.id, share: group.share }));
   // (the runoff is another question – the two finalists head to head – so its first reading does not start from the readings of the first round)
   const last = box.waves.at(-1)?.stage === campaign.stage ? box.waves.at(-1) : null;
-  const wave = { id: ids('onda', campaign.seed, campaign.day), day: campaign.day, date: campaign.currentDate, stage: campaign.stage, label, institutes: {}, source: SOURCE };
+  const wave = { id: ids('onda', campaign.seed, campaign.day + (campaign.stage === 'ballottaggio' ? 1000 : 0)), day: campaign.day, date: campaign.currentDate, stage: campaign.stage, label, institutes: {}, source: SOURCE };
   const readings = [];
   for (const profile of POLL_INSTITUTES) {
     const scaled = { ...profile, sample: profile.sample.map(value => Math.max(150, Math.round(value * scale / 10) * 10)) };
