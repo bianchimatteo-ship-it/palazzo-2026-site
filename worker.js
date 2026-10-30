@@ -148,6 +148,8 @@ const SCHEMA = [
   'CREATE INDEX IF NOT EXISTS email_tokens_user ON email_tokens (user_id)',
   'CREATE INDEX IF NOT EXISTS email_tokens_expiry ON email_tokens (expires_at)',
   // Personal party logos kept for the account (the images are in R2, only the metadata is here): one row per party, a deleted logo leaves a row with `deleted_at` so that another device learns of it.
+  // The daily reward of the game (500 € once a day for each account, wherever it plays): one row per account and day (Europe/Rome), written once; the first device to claim it gets it.
+  'CREATE TABLE IF NOT EXISTS reward_claims (user_id TEXT NOT NULL, day TEXT NOT NULL, claimed_at TEXT NOT NULL, career_id TEXT, PRIMARY KEY (user_id, day))',
   'CREATE TABLE IF NOT EXISTS logos (user_id TEXT NOT NULL, party_id TEXT NOT NULL, version INTEGER NOT NULL, sha256 TEXT, mime TEXT, bytes INTEGER, width INTEGER, height INTEGER, name TEXT, origin TEXT, object_key TEXT, deleted_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, PRIMARY KEY (user_id, party_id))',
 ];
 let schemaReady = null;
@@ -160,10 +162,18 @@ async function proofHash(proof, salt, iterations) {
 // What the service keeps only to work, and for as short a time as it needs: the connecting address of the attempts (a day at most, the window is 15 minutes), the sessions
 // once they have expired (the 30 days of the privacy text) and the e-mail tokens once they have expired or been used. Whoever asks for a login, a registration or a deletion triggers it for everybody, and the daily schedule (wrangler.jsonc, triggers) does
 // it even when nobody asks.
+// The day of a moment in Europe/Rome (YYYY-MM-DD): the reference of the daily reward, the same as the game's (src/core/rewards-engine.js).
+export function romeDay(moment = Date.now()) {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date(moment));
+  const get = type => parts.find(item => item.type === type)?.value;
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}
 async function cleanupExpired(db, now = Date.now()) {
   const attempts = await db.prepare('DELETE FROM attempts WHERE window_start < ?').bind(now - 86_400_000).run();
   const sessions = await db.prepare('DELETE FROM sessions WHERE expires_at < ?').bind(now).run();
   const tokens = await db.prepare('DELETE FROM email_tokens WHERE expires_at < ? OR used_at IS NOT NULL AND expires_at < ?').bind(now - 86_400_000, now).run();
+  // the claims of the daily reward are kept two months (the day is the key, nothing else is needed after it)
+  await db.prepare('DELETE FROM reward_claims WHERE day < ?').bind(romeDay(now - 62 * 86_400_000)).run().catch(() => null);
   return { attempts: attempts?.meta?.changes ?? 0, sessions: sessions?.meta?.changes ?? 0, tokens: tokens?.meta?.changes ?? 0 };
 }
 // The limit of one kind of request from one address (or one subject, such as a mail address: only its hash is kept): `fail()` books a wrong attempt, `record()` an event that succeeded and is limited anyway (a new account); `clear()` forgets it.
@@ -315,6 +325,7 @@ async function deleteAccountData(db, userId) {
     db.prepare('DELETE FROM user_emails WHERE user_id = ?').bind(userId),
     db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(userId),
     db.prepare('DELETE FROM logos WHERE user_id = ?').bind(userId),
+    db.prepare('DELETE FROM reward_claims WHERE user_id = ?').bind(userId),
     db.prepare('DELETE FROM users WHERE id = ?').bind(userId)
   ]);
   // the table of the notices exists only once the retention has run (it never does while it is off): nothing to delete when it is not there
@@ -506,7 +517,7 @@ async function handleAccounts(request, env, url) {
   const path = url.pathname.replace(/\/+$/, '');
   const mail = mailConfigured(env);
   // The game asks whether the service answers before offering the account (no data, no session needed). `email` says whether messages can really be sent from here.
-  if (path === '/api/account/status' && request.method === 'GET') return json(request, { ok: true, service: 'accounts', features: ['account-delete', 'save-protocol-2', 'save-history', ...(env.LOGOS ? ['logo-sync'] : []), ...(mail ? ['email-recovery'] : [])], email: mail, emailRequired: env.ACCOUNT_EMAIL_REQUIRED === '1' });
+  if (path === '/api/account/status' && request.method === 'GET') return json(request, { ok: true, service: 'accounts', features: ['account-delete', 'save-protocol-2', 'save-history', 'daily-reward', ...(env.LOGOS ? ['logo-sync'] : []), ...(mail ? ['email-recovery'] : [])], email: mail, emailRequired: env.ACCOUNT_EMAIL_REQUIRED === '1' });
   if ((path === '/api/account/register' || path === '/api/account/login') && request.method === 'POST') {
     const registering = path.endsWith('register');
     const guard = await accountGuard(db, request, registering ? 'registrazione' : 'accesso');
@@ -654,6 +665,17 @@ async function handleAccounts(request, env, url) {
     await deleteAccountData(db, account.id);
     await guard.clear();
     return json(request, { ok: true, deleted: { account: 1, saves: saves?.n ?? 0, sessions: sessions?.n ?? 0 } });
+  }
+  // The daily reward: the Worker, not the device, decides the day (Europe/Rome) and who got it first. GET says whether the day is already taken; POST takes it (once) for this account.
+  if (path === '/api/account/rewards/daily' && (request.method === 'GET' || request.method === 'POST')) {
+    const day = romeDay();
+    const taken = await db.prepare('SELECT claimed_at AS claimedAt FROM reward_claims WHERE user_id = ? AND day = ?').bind(account.id, day).first();
+    if (request.method === 'GET') return json(request, { ok: true, day, claimed: Boolean(taken) });
+    if (taken) return json(request, { ok: true, day, claimed: false, already: true });
+    let careerId = null;
+    try { const body = await request.json(); if (typeof body?.careerId === 'string' && /^[\w.|~-]{1,80}$/.test(body.careerId)) careerId = body.careerId; } catch { /* no body: no career recorded */ }
+    const written = await db.prepare('INSERT OR IGNORE INTO reward_claims (user_id, day, claimed_at, career_id) VALUES (?, ?, ?, ?)').bind(account.id, day, new Date().toISOString(), careerId).run();
+    return json(request, written?.meta?.changes > 0 ? { ok: true, day, claimed: true } : { ok: true, day, claimed: false, already: true });
   }
   if (path === '/api/logos' || path.startsWith('/api/logos/')) return handleLogos(request, env, db, account, path);
   if (path === '/api/saves' && request.method === 'GET') {

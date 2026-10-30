@@ -1266,3 +1266,26 @@ html[data-motion="off"] .language-gate-button { transition: none; }
 .coalition-body{display:grid;gap:6px;margin-top:6px}
 .coalition-body h4{margin:6px 0 0}
 .coalition-members,.coalition-terms,.coalition-history{margin:0;padding-left:18px}
+
+/* Ricompense: the daily reward, the time played, the rewarded videos and the history. */
+.rewards-page{display:grid;gap:16px}
+.reward-hero>div{display:flex;gap:14px;align-items:center}
+.reward-daily{display:grid;grid-template-columns:minmax(150px,220px) 1fr;gap:18px;align-items:center}
+.reward-amount strong{display:block;font-size:2rem;line-height:1.1}
+.reward-amount small,.reward-meta small{display:block;color:var(--ink-2,#9aa79a)}
+.reward-state{display:grid;gap:8px}
+.reward-bar{height:10px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden}
+.reward-bar i{display:block;height:100%;border-radius:inherit;background:var(--party-accent,#d6a54c);transition:width .4s ease}
+.reward-row{display:grid;grid-template-columns:minmax(160px,1fr) minmax(120px,2fr) minmax(130px,1fr);gap:14px;align-items:center;padding:10px 0;border-top:1px solid var(--line,rgba(255,255,255,.12))}
+.reward-row small{display:block;color:var(--ink-2,#9aa79a)}
+.reward-total{margin:0 0 6px}
+.reward-total strong{font-size:1.5rem}
+.reward-history{display:grid;font-size:.95rem}
+.reward-history-head,.reward-history-row{display:grid;grid-template-columns:minmax(140px,1.3fr) minmax(150px,1.4fr) minmax(90px,.8fr) minmax(130px,1fr);gap:10px;padding:8px 0;border-top:1px solid var(--line,rgba(255,255,255,.12))}
+.reward-history-head{color:var(--ink-2,#9aa79a);font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;border-top:0}
+@media (max-width:700px){
+  .reward-daily,.reward-row{grid-template-columns:1fr}
+  .reward-history-head{display:none}
+  .reward-history-row{grid-template-columns:1fr 1fr;gap:4px 10px}
+  .reward-history-row time{grid-column:1/-1;color:var(--ink-2,#9aa79a);font-size:.85rem}
+}

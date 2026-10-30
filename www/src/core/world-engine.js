@@ -1,9 +1,10 @@
-import { uniqueId } from './ids.js?v=20261029-4';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261029-4';
-import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261029-4';
-import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261029-4';
-import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261029-4';
-import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261029-4';
+import { uniqueId } from './ids.js?v=20261030-1';
+import { AD_REWARD } from '../data/simulation/reward-rules.js?v=20261030-1';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261030-1';
+import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261030-1';
+import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261030-1';
+import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261030-1';
+import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261030-1';
 export { houseEffect };
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
@@ -311,7 +312,7 @@ export function createWorld({ seedText, date, week = 1, place = {}, playerParty 
   const seed = hash(`${seedText}|mondo`);
   const world = {
     version: 3, source: SIM, seed, rngState: seed, createdAt: date, week, place, playerPartyId: playerParty?.id ?? null, pollNoise,
-    parties: [], others: 8, undecided: 27, effects: [], alliances: [], figures: [], events: [], polls: [], ties: {}, grudges: {}, cooldowns: {}, lastEventId: null,
+    parties: [], others: 8, undecided: 27, effects: [], adTransfers: [], adClaims: [], alliances: [], figures: [], events: [], polls: [], ties: {}, grudges: {}, cooldowns: {}, lastEventId: null,
     latent: [], residual: null, presenceMoves: [], observatory: normalizeObservatory(null)
   };
   const included = forces.reduce((sum, force) => sum + force.share, 0);
@@ -395,7 +396,7 @@ export function normalizeWorld(world) {
   if (!world || typeof world !== 'object' || !Array.isArray(world.parties)) return null;
   const week = world.week ?? 1;
   // Before the presence model every force of the world was in the polls: it keeps its place there.
-  return { effects: [], alliances: [], figures: [], events: [], polls: [], others: 4, undecided: 27, place: {}, ties: {}, grudges: {}, cooldowns: {}, pollNoise: 1, presenceMoves: [], ...world, observatory: withObservatory(world), latent: Array.isArray(world.latent) ? world.latent : [], residual: world.residual ?? world.others ?? 4, parties: world.parties.map(party => ({ strategy: 'autonoma', strategySince: week, playerRelation: 0, axis: axisOf(party.position), life: { nextCongress: week + 60 + (hash(party.id) % 120), minority: 22, leadership: 'uscente', congresses: 0 }, ...party, presence: party.presence ?? initialPresence(party.baseline ?? 0, week) })) };
+  return { effects: [], adTransfers: [], adClaims: [], alliances: [], figures: [], events: [], polls: [], others: 4, undecided: 27, place: {}, ties: {}, grudges: {}, cooldowns: {}, pollNoise: 1, presenceMoves: [], ...world, observatory: withObservatory(world), latent: Array.isArray(world.latent) ? world.latent : [], residual: world.residual ?? world.others ?? 4, parties: world.parties.map(party => ({ strategy: 'autonoma', strategySince: week, playerRelation: 0, axis: axisOf(party.position), life: { nextCongress: week + 60 + (hash(party.id) % 120), minority: 22, leadership: 'uscente', congresses: 0 }, ...party, presence: party.presence ?? initialPresence(party.baseline ?? 0, week) })) };
 }
 // The world knows the collocazione of the real entities: older saves get it without being rebuilt.
 export function withPositions(input, positions = {}) {
@@ -497,8 +498,12 @@ function publishPoll(world, { date, stats = {}, parliament = null, game = null, 
   // A force that has just entered the survey has no previous figure: its change starts from the next poll. The first simulated
   // poll starts from the real one: it may move less than an ordinary week. A force entering the survey takes only the room the
   // others leave, and the total is brought back to 100 within the weekly change of each force (settleReading).
-  const results = settleReading(sampleShares(world, trueRows, sample, institute.id), previous?.results, { damp: previous?.source === 'real' || previous?.scenario ? 0.6 : 1 })
+  // (the reading is settled against the previous poll WITHOUT the shift of the videos, so that the shift never feeds the next reading: what the videos add is exactly what they add)
+  const reference = previous ? withoutAdShift(world, previous) : previous?.results;
+  const results = settleReading(sampleShares(world, trueRows, sample, institute.id), reference, { damp: previous?.source === 'real' || previous?.scenario ? 0.6 : 1 })
     .map(row => ({ ...row, ...(row.partyId === player && !playerSurveyed ? { internal: true } : {}) }));
+  // The rewarded videos move the published figures (see applyAdTransfers): nothing else of the world, and nothing is said about it.
+  const shifted = applyAdTransfers(world, results, previous?.results, reference);
   const regional = player ? Object.fromEntries(ITALIAN_REGIONS.map(region => [region, round1(regionalShares(world, region, boosts.regional).find(row => row.partyId === player)?.share ?? 0)])) : {};
   const local = player ? round1(localShares(world, boosts.regional, boosts.local).find(row => row.partyId === player)?.share ?? 0) : null;
   const mood = world.society?.mood ?? 50;
@@ -520,8 +525,10 @@ function publishPoll(world, { date, stats = {}, parliament = null, game = null, 
   // The full regional map is kept for the latest poll only; the home region stays in every entry.
   world.polls = [...world.polls.map(item => item.regional ? { ...item, regional: null } : item), poll].slice(-HISTORY);
   // Every institute publishes its own reading of the same population; the average and the segments of the week are kept (observatory).
-  const entries = results.map(row => world.parties.find(item => item.id === row.partyId)).filter(Boolean).map(party => ({ id: party.id, share: trueRows.find(row => row.partyId === party.id)?.share ?? party.baseline, agenda: agendaOf(party), stance: stanceOf(party) }));
-  world.observatory = advanceObservatory(world.observatory, { week: world.week, date, seed: world.seed, trueRows, headline: { instituteId: institute.id, results, sample, margin }, previous, noise: world.pollNoise ?? 1, society: observatory?.society ?? null, entries, undecided: world.undecided });
+  // (the institutes of the observatory read the same population: the published shift is part of what they read, so that the views of the survey agree)
+  const seen = shifted.length ? trueRows.map(row => ({ ...row, share: round2(row.share + shifted.reduce((sum, item) => sum + (row.partyId === item.partyId ? item.amount : row.partyId === item.donorId ? -item.amount : 0), 0)) })) : trueRows;
+  const entries = results.map(row => world.parties.find(item => item.id === row.partyId)).filter(Boolean).map(party => ({ id: party.id, share: seen.find(row => row.partyId === party.id)?.share ?? party.baseline, agenda: agendaOf(party), stance: stanceOf(party) }));
+  world.observatory = advanceObservatory(world.observatory, { week: world.week, date, seed: world.seed, trueRows: seen, headline: { instituteId: institute.id, results, sample, margin }, previous, noise: world.pollNoise ?? 1, society: observatory?.society ?? null, entries, undecided: world.undecided });
   // Approval of the Government and of the leader (not the vote), the regional picture, and the laws in force that are due a survey: all measurements, none moves the world here.
   world.observatory = recordApproval(world.observatory, { week: world.week, date, government: poll.government?.approval ?? null, executive: poll.executive?.approval ?? null, leader: poll.personal?.approval ?? null, margin });
   if (world.week % POLL_EXTENSIONS.regional.every === 0) {
@@ -530,7 +537,67 @@ function publishPoll(world, { date, stats = {}, parliament = null, game = null, 
   }
   world.observatory = lawSurveys(world.observatory, { week: world.week, date, seed: world.seed, lawsApplied: observatory?.lawsApplied ?? [], society: observatory?.society ?? null, entries, undecided: world.undecided });
   poll.instituteId = institute.id;
+  // what the videos added to this poll is kept apart (by poll and party), only so that the world can read the series without it (trendOf, the next reading): the poll itself carries no trace
+  const kept = Object.fromEntries(Object.entries(world.adShifts ?? {}).filter(([id]) => world.polls.some(item => item.id === id)));
+  if (shifted.length) { const map = {}; for (const item of shifted) { map[item.partyId] = round2((map[item.partyId] ?? 0) + item.amount); if (item.donorId) map[item.donorId] = round2((map[item.donorId] ?? 0) - item.amount); } kept[poll.id] = map; }
+  if (Object.keys(kept).length) world.adShifts = kept; else delete world.adShifts;
   return poll;
+}
+// ---------- rewarded videos: a few points of the published poll, handed over from another component ----------
+// A completed video gives the player's party AD_REWARD.points on the published national poll (the figure the player reads, not the base consensus of any party, which is never touched), for exactly
+// AD_REWARD.polls weekly polls: the transfer is counted in polls (not in the weeks of the effects, which fade in and out and are decremented before the poll is made), applied after the poll is
+// sampled and settled, and ended after the last. The same quantity is taken from one component that can give it (another force of the survey or «Altri», chosen at random, never the player's party,
+// never below the least a force or «Altri» keeps), so that the total stays 100. It is an independent record (id, beneficiary, donor, amount, polls left) and leaves no trace: no event, no chronicle, no
+// effect of the world, and when it ends the figures just return to the ordinary reading.
+const adRoom = (rows, donorId, amount, player) => donorId === 'altri'
+  ? round2(100 - rows.reduce((sum, row) => sum + row.share, 0)) - amount >= AD_REWARD.minOthers - 1e-9
+  : rows.some(row => row.partyId === donorId && row.partyId !== player && row.share - amount >= AD_REWARD.minShare - 1e-9);
+const adDonors = (rows, amount, player, world) => [...rows.filter(row => row.partyId !== player && world.parties.some(party => party.id === row.partyId && party.active) && adRoom(rows, row.partyId, amount, player)).map(row => row.partyId), ...(adRoom(rows, 'altri', amount, player) ? ['altri'] : [])];
+export function addAdTransfer(input, { id }) {
+  const world = copy(input);
+  const player = playerParty(world);
+  world.adTransfers ??= []; world.adClaims ??= [];
+  if (!id) return { world: input, transfer: null, reason: 'senza-id' };
+  if (world.adClaims.includes(id)) return { world: input, transfer: null, reason: 'duplicato' };
+  if (!player) return { world: input, transfer: null, reason: 'senza-partito' };
+  const rows = latestPoll(world)?.results ?? [];
+  const donors = adDonors(rows, AD_REWARD.points, player.id, world);
+  const donorId = donors.length ? donors[Math.min(donors.length - 1, Math.floor(draw(world) * donors.length))] : null;
+  const transfer = { id, partyId: player.id, donorId, amount: AD_REWARD.points, polls: AD_REWARD.polls, createdWeek: world.week };
+  world.adTransfers.push(transfer);
+  world.adClaims = [...world.adClaims, id].slice(-AD_REWARD.keep);
+  return { world, transfer: { ...transfer } };
+}
+// Applies every active transfer to the rows of the poll that is being published (the beneficiary follows the player's party if it changed; a donor that is gone, has merged or can no longer give is
+// replaced by another at random; with nobody able to give, the poll is published as it is and the transfer still counts one of its polls).
+function applyAdTransfers(world, results, previous = null, reference = null) {
+  const list = world.adTransfers ?? [];
+  const applied = [];
+  if (!list.length) return applied;
+  const player = world.playerPartyId ?? playerParty(world)?.id ?? null;
+  const row = id => results.find(item => item.partyId === id);
+  for (const transfer of list) {
+    const beneficiary = player ? row(player) : null;
+    if (beneficiary && player) {
+      const donors = adDonors(results, transfer.amount, player, world);
+      const donorId = transfer.donorId && donors.includes(transfer.donorId) ? transfer.donorId : donors.length ? donors[Math.min(donors.length - 1, Math.floor(draw(world) * donors.length))] : null;
+      if (donorId) {
+        beneficiary.share = round2(beneficiary.share + transfer.amount); if (Number.isFinite(beneficiary.delta)) beneficiary.delta = round2(beneficiary.delta + transfer.amount);
+        const donor = donorId === 'altri' ? null : row(donorId);
+        if (donor) { donor.share = round2(donor.share - transfer.amount); if (Number.isFinite(donor.delta)) donor.delta = round2(donor.delta - transfer.amount); }
+        transfer.donorId = donorId; transfer.partyId = player;
+        applied.push({ partyId: player, donorId: donor ? donorId : null, amount: transfer.amount });
+      }
+    }
+    transfer.polls -= 1;
+  }
+  world.adTransfers = list.filter(item => item.polls > 0);
+  // The change from the previous published poll is what the player reads: with the shift in either poll it is recomputed against the published figures (the same rounding as the reading).
+  if (previous && (applied.length || reference !== previous)) {
+    const touched = new Set(applied.flatMap(item => [item.partyId, item.donorId]));
+    for (const row of results) { const was = previous.find(item => item.partyId === row.partyId)?.share; if (Number.isFinite(was) && (touched.has(row.partyId) || (reference && reference !== previous))) row.delta = touched.has(row.partyId) ? round2(row.share - was) : round1(row.share - was); }
+  }
+  return applied;
 }
 // What a force stands for in the polls' segments: its agenda, or the priorities of its camp while it has none yet.
 function agendaOf(party) {
@@ -608,9 +675,15 @@ export function playerPollShare(world, scope = 'national') {
   if (scope === 'regional') return poll.regionalHome ?? null;
   return poll.results.find(row => row.partyId === world.playerPartyId)?.share ?? null;
 }
+// The rows of a published poll as they were before the shift of the rewarded videos (see addAdTransfer): the world reads its own series without it.
+function withoutAdShift(world, poll) {
+  const shift = world.adShifts?.[poll?.id];
+  return shift ? poll.results.map(row => shift[row.partyId] ? { ...row, share: round2(row.share - shift[row.partyId]) } : row) : poll?.results;
+}
 function trendOf(world, partyId, weeks = 4) {
-  const now = world.polls.at(-1)?.results.find(row => row.partyId === partyId)?.share;
-  const then = world.polls.at(-1 - weeks)?.results.find(row => row.partyId === partyId)?.share ?? world.polls[0]?.results.find(row => row.partyId === partyId)?.share;
+  const rowOf = poll => poll ? withoutAdShift(world, poll)?.find(row => row.partyId === partyId)?.share : undefined;
+  const now = rowOf(world.polls.at(-1));
+  const then = rowOf(world.polls.at(-1 - weeks)) ?? rowOf(world.polls[0]);
   return Number.isFinite(now) && Number.isFinite(then) ? now - then : 0;
 }
 

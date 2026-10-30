@@ -22,6 +22,7 @@ export const FINANCE_CATEGORIES = Object.freeze({
   formazione: { label: 'Formazione e squadra', kind: 'uscita' },
   imprevisti: { label: 'Imprevisti', kind: 'uscita' },
   fondi_partito: { label: 'Fondi dal partito', kind: 'entrata' },
+  ricompense: { label: 'Ricompense di gioco', kind: 'entrata' },
   fondo: { label: 'Fondo elettorale', kind: 'movimento' },
   riserva: { label: 'Riserva di emergenza', kind: 'movimento' },
   altro: { label: 'Altro', kind: 'uscita' }

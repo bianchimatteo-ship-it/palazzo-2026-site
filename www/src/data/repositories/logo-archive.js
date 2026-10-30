@@ -7,7 +7,7 @@
 //   - Import, step 2 `applyLogoImport`: the player's policy for the conflicts (keep the existing, replace, skip), each decision can be changed per party. A logo replaced goes first into a
 //     recovery copy (`#recupero`) that can be restored; an error on one logo never stops or spoils the others; the failed ones are reported and can be retried; repeating the same import
 //     changes nothing (what is already there is `same`).
-import { CONFLICT_SUFFIX, MAX_INPUT_BYTES, MAX_SIDE, OUTPUT_BYTES, logoStore, prepareLogo, scopeNow, sha256OfBlob, sniffImage } from './personal-logos.js?v=20261029-4';
+import { CONFLICT_SUFFIX, MAX_INPUT_BYTES, MAX_SIDE, OUTPUT_BYTES, logoStore, prepareLogo, scopeNow, sha256OfBlob, sniffImage } from './personal-logos.js?v=20261030-1';
 
 export const ARCHIVE_FORMAT = 'politicando-logos';
 export const ARCHIVE_VERSION = 1;
