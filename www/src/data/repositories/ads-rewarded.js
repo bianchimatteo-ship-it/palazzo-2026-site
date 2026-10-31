@@ -5,7 +5,7 @@
 //   { kind: 'admob', isReady(): boolean | Promise<boolean>, show(): Promise<{ completed: boolean, verified: boolean, completionId: string }> }
 // `completed` is the SDK's own confirmation that the user earned the reward, `verified` that it comes from the SDK / the ad network (and not from the page), `completionId` an id that is unique for each completion
 // (the transaction id of the network). A `demo` provider (kind: 'demo') is for tests only and is refused unless the caller passes `allowDemo: true`; production never does.
-import { ADS_CONFIG } from '../ads-config.js?v=20261030-1';
+import { ADS_CONFIG } from '../ads-config.js?v=20261031-1';
 
 export const REWARDED_ADS_OFF = 'Gli annunci premiati non sono ancora attivi: serve l’integrazione di AdMob, non ancora configurata.';
 const validId = id => typeof id === 'string' && /^[\w.:|~-]{8,160}$/.test(id);

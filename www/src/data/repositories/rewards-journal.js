@@ -7,7 +7,7 @@ const KEEP_DAYS = 45;
 
 export function createRewardsJournal(storage = globalThis.localStorage) {
   let memory = null;
-  const blank = () => ({ v: 1, guestId: null, careers: {}, accounts: {}, ads: {} });
+  const blank = () => ({ v: 1, guestId: null, deviceId: null, careers: {}, accounts: {}, ads: {}, queue: {} });
   const read = () => {
     try { const raw = storage?.getItem?.(KEY); if (raw) { const data = JSON.parse(raw); if (data && data.v === 1) return { ...blank(), ...data }; } } catch { /* unreadable: the memory copy goes on */ }
     return memory ?? blank();
@@ -19,11 +19,20 @@ export function createRewardsJournal(storage = globalThis.localStorage) {
   return {
     // A persistent local identity for guests (it stays on this device until the browser data are cleared).
     guestId() { return edit(data => (data.guestId ??= randomId())); },
+    // A persistent identity of this device, sent with the time and the claim of an account (so that the Worker can tell that a claim was this device's).
+    deviceId() { return edit(data => (data.deviceId ??= randomId())); },
     scope(username = null) { return username ? `a:${String(username).toLowerCase()}` : `g:${this.guestId()}`; },
     // ----- the daily reward of an account or guest -----
     daily(scope, day) { const record = read().accounts[scope]; return record?.day === day ? { ...record } : { day, ms: 0, state: 'counting', claim: null }; },
     addDailyMs(scope, day, ms) { return edit(data => { const record = data.accounts[scope]?.day === day ? data.accounts[scope] : (data.accounts[scope] = { day, ms: 0, state: 'counting', claim: null }); record.ms += Math.max(0, Math.floor(ms)); return { ...record }; }); },
     setDaily(scope, day, patch) { return edit(data => { const record = data.accounts[scope]?.day === day ? data.accounts[scope] : (data.accounts[scope] = { day, ms: 0, state: 'counting', claim: null }); Object.assign(record, patch); return { ...record }; }); },
+    // ----- the time not yet sent to the Worker (accounts): spans of real time played, in wall-clock milliseconds, each for one career; it survives a refresh and is sent in batches -----
+    queued(scope) { return (read().queue?.[scope] ?? []).map(span => ({ ...span })); },
+    queueAdd(scope, careerId, start, end) { return edit(data => { if (!(end > start)) return; const list = ((data.queue ??= {})[scope] ??= []); const last = list.at(-1); if (last && last.c === careerId && start - last.e <= 3000 && start >= last.s) last.e = Math.max(last.e, end); else list.push({ c: careerId, s: start, e: end }); if (list.length > 400) list.splice(0, list.length - 400); }); },
+    // Takes every queued span (the request that sends them owns them now); if the request fails they are given back with queueRestore.
+    queueTake(scope) { return edit(data => { const list = data.queue?.[scope] ?? []; if (data.queue) delete data.queue[scope]; return list; }); },
+    queueRestore(scope, spans) { return edit(data => { const list = ((data.queue ??= {})[scope] ??= []); list.unshift(...spans); if (list.length > 400) list.splice(0, list.length - 400); }); },
+    queuedMs(scope, careerId = null) { return (read().queue?.[scope] ?? []).reduce((sum, span) => sum + (careerId === null || span.c === careerId ? span.e - span.s : 0), 0); },
     // ----- a career -----
     career(careerId) { const record = read().careers[careerId]; return record ? { ...record, daily: [...(record.daily ?? [])], ads: [...(record.ads ?? [])] } : { playMs: 0, updatedAt: null, daily: [], ads: [] }; },
     addCareerMs(careerId, ms, at = new Date().toISOString()) { return edit(data => { const record = careerOf(data, careerId); record.playMs += Math.max(0, Math.floor(ms)); record.updatedAt = at; return record.playMs; }); },

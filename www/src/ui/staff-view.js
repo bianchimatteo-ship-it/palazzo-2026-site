@@ -1,9 +1,9 @@
 // The staff in the Home: what it is working on (mandates with progress, budget spent and the last report), what it can be asked to do (with the skill each task needs and why one cannot be
 // given), and what is never delegated. Every control is a real action of the store: give, change, suspend, resume, cancel. Nothing starts without the player's confirmation.
-import { STAFF_DURATIONS, STAFF_SKILLS } from '../data/simulation/staff-rules.js?v=20261030-1';
-import { delegableNotes, mandateQuality, staffTargets, staffView, taskProblem } from '../core/staff-engine.js?v=20261030-1';
-import { badge, bar, esc, euro, num } from './sections-kit.js?v=20261030-1';
-import { artTile, glyph } from './visuals.js?v=20261030-1';
+import { STAFF_DURATIONS, STAFF_SKILLS } from '../data/simulation/staff-rules.js?v=20261031-1';
+import { delegableNotes, mandateQuality, staffTargets, staffView, taskProblem } from '../core/staff-engine.js?v=20261031-1';
+import { badge, bar, esc, euro, num } from './sections-kit.js?v=20261031-1';
+import { artTile, glyph } from './visuals.js?v=20261031-1';
 
 const STATUS_TONE = { attivo: 'good', sospeso: 'warn', concluso: 'neutral', annullato: 'neutral' };
 const targetLabel = (game, mandate) => mandate.target ? (staffTargets(game, mandate.task).find(([id]) => id === mandate.target)?.[1] ?? 'bersaglio non più disponibile') : 'dove serve di più';

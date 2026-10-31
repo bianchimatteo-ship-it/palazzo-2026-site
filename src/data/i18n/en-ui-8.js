@@ -1621,4 +1621,5 @@ export const PHRASES = [
   ["Nessuna ricompensa ancora: gioca qualche minuto per ottenere la prima.", "No reward yet: play a few minutes to get the first."],
   ["Le ricompense si attivano con la carriera.", "Rewards start with the career."],
   ["Ricompensa giornaliera: +{} €", "Daily reward: +{1} €"],
+  ["In attesa di accredito", "Awaiting credit"],
 ];

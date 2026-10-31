@@ -10,7 +10,7 @@
 // The last one is kept per CAREER (not per slot name and not per account) together with what the copy was when it was synced (its local revision and how far it had got). A copy
 // goes online only if it descends from that: an older copy with the same name does not inherit the newest revision. Without that proof (a copy that was never linked, a record written by
 // the old protocol) nothing is uploaded automatically: the player reconciles first.
-import { hiddenOwner, releaseCareersOf } from './career-visibility.js?v=20261030-1';
+import { hiddenOwner, releaseCareersOf } from './career-visibility.js?v=20261031-1';
 const PRODUCTION_ORIGIN = 'https://palazzo-2026-site.bianchimatteo657.workers.dev';
 const ACCOUNT_KEY = 'politicando.account.v1';
 // The old record (revision per slot and per account, with no provenance): never trusted again to authorize an upload; kept only so that nothing is erased.
@@ -220,8 +220,11 @@ export function forgetAccountIf(username) {
   return false;
 }
 export const accountInfo = () => call('/api/account/me');
-// The daily reward of the game: the Worker gives it once for each account and day (Europe/Rome): { claimed: true } the first time, { claimed: false, already: true } afterwards (any device).
-export const claimDailyReward = careerId => call('/api/account/rewards/daily', { method: 'POST', body: careerId ? { careerId: String(careerId) } : {} });
+// The daily reward of the game: the Worker checks the 5 minutes of the day it holds for the account and gives the reward once for each account and day (Europe/Rome):
+// { claimed: true } the first time; { claimed: false, already: true, mine } afterwards (mine: the claim was this device's); { claimed: false, short: true, dayMs } while the minutes are not enough.
+export const claimDailyReward = (careerId, device = null) => call('/api/account/rewards/daily', { method: 'POST', body: { ...(careerId ? { careerId: String(careerId) } : {}), ...(device ? { device: String(device) } : {}) } });
+// The time played, merged across the devices of the account (apart from the saves): sends the spans counted here and the career asked about, gets the merged totals of today and of that career.
+export const syncRewardTime = body => call('/api/account/rewards/time', { method: 'POST', body });
 export const dailyRewardStatus = () => call('/api/account/rewards/daily');
 
 // ---------- e-mail and recovery of the password ----------

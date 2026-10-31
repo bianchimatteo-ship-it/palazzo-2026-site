@@ -1,14 +1,14 @@
 // «Ricompense»: the daily reward, the time played, the rewarded videos and what was received. It shows only what the player is meant to know: nothing about how long the effect of a video lasts or where it
 // comes from (that is not told anywhere in the game).
-import { DAILY_REWARD, PLAY_REWARDS } from '../data/simulation/reward-rules.js?v=20261030-1';
-import { glyph } from './visuals.js?v=20261030-1';
-import { esc, euro } from './charts.js?v=20261030-1';
+import { DAILY_REWARD, PLAY_REWARDS } from '../data/simulation/reward-rules.js?v=20261031-1';
+import { glyph } from './visuals.js?v=20261031-1';
+import { esc, euro } from './charts.js?v=20261031-1';
 
 const clockText = ms => { const total = Math.floor(Math.max(0, ms) / 1000); return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`; };
 const durationText = ms => { const minutes = Math.floor(Math.max(0, ms) / 60000); const hours = Math.floor(minutes / 60); return hours ? `${hours} h ${minutes % 60} min` : `${minutes} min`; };
 const whenText = at => { const date = new Date(at); return Number.isFinite(date.getTime()) ? new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' }).format(date) : '—'; };
 const DAILY_STATE = {
-  counting: ['In corso', 'warn'], claimed: ['Riscossa oggi', 'good'], pending: ['In attesa di conferma', 'warn'], 'claimed-elsewhere': ['Già riscossa oggi da questo account', 'good']
+  counting: ['In corso', 'warn'], claimed: ['Riscossa oggi', 'good'], pending: ['In attesa di conferma', 'warn'], owed: ['In attesa di accredito', 'warn'], 'claimed-elsewhere': ['Già riscossa oggi da questo account', 'good']
 };
 const KIND_LABEL = { giornaliera: 'Ricompensa giornaliera', capitale: 'Tempo di gioco · 30 minuti', preparazione: 'Tempo di gioco · 60 minuti', video: 'Video premiato' };
 const amountText = entry => entry.kind === 'giornaliera' ? `+${euro(entry.amount)}` : entry.kind === 'video' ? '+0,15 punti' : entry.amount ? `+${entry.amount}` : '0 (già al massimo)';

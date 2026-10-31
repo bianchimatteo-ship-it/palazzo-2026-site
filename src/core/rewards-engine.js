@@ -1,8 +1,8 @@
 // Rewards of the game for time played and for rewarded videos (the rules are in data/simulation/reward-rules.js). Pure functions on the game state: the store gives them the game and the journal of the device
 // and keeps what they return. Nothing here has rules of its own about politics: the funds go through book() of the finance engine (the personal funds of the career, never the treasury of the party), the political
 // capital and the preparation are the resources the game already has (game.resources.politicalCapital, game.prep) with the limits it already has.
-import { AD_REWARD, DAILY_REWARD, PLAY_REWARDS, REWARD_HISTORY_SIZE, REWARD_TIMEZONE } from '../data/simulation/reward-rules.js?v=20261030-1';
-import { book } from './finance-engine.js?v=20261030-1';
+import { AD_REWARD, DAILY_REWARD, PLAY_REWARDS, REWARD_HISTORY_SIZE, REWARD_TIMEZONE } from '../data/simulation/reward-rules.js?v=20261031-1';
+import { book } from './finance-engine.js?v=20261031-1';
 
 const SIM = 'simulation';
 const MINUTE = 60000;

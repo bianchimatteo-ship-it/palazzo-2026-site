@@ -6,8 +6,8 @@
 //     next run simply tries again (the same image again is never a second version);
 //   - a copy that came from an earlier version (legacy) or from the guest scope is removed from its old place only after its upload has been verified;
 //   - the guest scope is never synchronised and nothing is uploaded unless an account is signed in.
-import { accountApiBase, currentAccount } from './account-sync.js?v=20261030-1';
-import { CONFLICT_SUFFIX, LEGACY_SCOPE, logoStore, scopeNow, sha256OfBlob, sniffImage } from './personal-logos.js?v=20261030-1';
+import { accountApiBase, currentAccount } from './account-sync.js?v=20261031-1';
+import { CONFLICT_SUFFIX, LEGACY_SCOPE, logoStore, scopeNow, sha256OfBlob, sniffImage } from './personal-logos.js?v=20261031-1';
 
 const GUEST = '_ospite';
 const MAX_BYTES = 300 * 1024;

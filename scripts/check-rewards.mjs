@@ -218,17 +218,24 @@ const fake = (opts = {}) => {
   const tokenA = await register('premio.a', 'password-di-a'), tokenB = await register('premio.b', 'password-di-b');
   const day = R.romeDay();
   assert.deepEqual((await call(tokenA, 'GET')).body, { ok: true, day, claimed: false });
-  const first = await call(tokenA, 'POST'); assert.deepEqual([first.status, first.body.claimed, first.body.day], [200, true, day], 'La prima richiesta del giorno ottiene la ricompensa.');
+  const early = await call(tokenA, 'POST'); assert.deepEqual([early.status, early.body.claimed, early.body.short], [200, false, true], 'Senza i cinque minuti registrati dal servizio la ricompensa non c’è.');
+  const sendTime = (token, spans, extra = {}) => local.worker.fetch(new Request(`${local.origin}/api/account/rewards/time`, { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify({ device: 'd1', spans, ...extra }) }), local.env).then(response => response.json());
+  await sendTime(tokenA, [{ c: 'carriera-prova', a: 290000, b: 0 }]);
+  assert.equal((await call(tokenA, 'POST')).body.short, true, '4 minuti e 50 secondi non bastano.');
+  await sendTime(tokenA, [{ c: 'carriera-prova', a: 310000, b: 290000 }]);
+  const first = await call(tokenA, 'POST'); assert.deepEqual([first.status, first.body.claimed, first.body.day], [200, true, day], 'Raggiunti i cinque minuti la prima richiesta del giorno ottiene la ricompensa.');
   const second = await call(tokenA, 'POST'); assert.deepEqual([second.body.claimed, second.body.already], [false, true], 'La seconda, da qualunque dispositivo, no.');
   assert.equal((await call(tokenA, 'GET')).body.claimed, true);
+  assert.equal((await call(tokenB, 'POST')).body.short, true, 'Un altro account non eredita i minuti.');
+  await sendTime(tokenB, [{ c: 'altra', a: 301000, b: 0 }]);
   assert.equal((await call(tokenB, 'POST')).body.claimed, true, 'Un altro account ha la sua.');
   assert.equal((await local.worker.fetch(new Request(`${local.origin}/api/account/rewards/daily`, { method: 'POST' }), local.env)).status, 401, 'Senza accesso non si riscuote.');
   // the day belongs to the Worker: the claims of the day before do not count today
   local.sqlite.prepare('UPDATE reward_claims SET day = ?').run('2020-01-01');
-  assert.equal((await call(tokenA, 'POST')).body.claimed, true, 'Il giorno dopo la ricompensa è di nuovo disponibile.');
+  assert.equal((await call(tokenA, 'POST')).body.claimed, true, 'Il giorno dopo la ricompensa è di nuovo disponibile (i minuti di oggi ci sono già).');
   assert.equal(local.sqlite.prepare('SELECT COUNT(*) AS n FROM reward_claims WHERE day = ?').get(day).n, 1, 'Una sola riga per account e giorno.');
   await local.close();
-  lines.push('Worker reale: una richiesta vincente al giorno per account, indipendente dal dispositivo, il giorno lo decide il servizio');
+  lines.push('Worker reale: soglia dei cinque minuti verificata dal servizio, una richiesta vincente al giorno per account, indipendente dal dispositivo, il giorno lo decide il servizio');
 }
 
 // ---------- 8. rewarded videos: the effect on the published poll ----------
@@ -279,6 +286,28 @@ const total = poll => Math.round((poll.results.reduce((sum, row) => sum + row.sh
   lines.push(`video: +0,15 esatti per tre sondaggi, donatore uguale e casuale (${donors.size} diversi), totale 100, nessun negativo, consenso di base e cronaca invariati`);
 }
 {
+  // the random generator of the simulation is not touched by a bonus: same sequence, same everything that is not the bonus (also when a donor must be replaced)
+  for (let trial = 0; trial < 12; trial++) {
+    const warm = weekly(newWorld(`video-rng-${trial}`), 3).world;
+    const added = W.addAdTransfer(warm, { id: `completamento-rng-${trial}` });
+    assert.equal(added.world.rngState, warm.rngState, 'Assegnare un bonus non muove rngState.');
+    const world = structuredClone(added.world);
+    if (trial % 2 && world.adTransfers[0].donorId && world.adTransfers[0].donorId !== 'altri') world.parties.find(item => item.id === world.adTransfers[0].donorId).active = false; // forces a new donor at publication
+    const control = structuredClone(world); control.adTransfers = [];
+    const treated = weekly(world, 5, 5), plain = weekly(control, 5, 5);
+    assert.equal(treated.world.rngState, plain.world.rngState, 'Dopo cinque sondaggi la sequenza casuale è identica a quella senza bonus (anche con il donatore sostituito).');
+    assert.deepEqual(treated.world.events, plain.world.events, 'Gli eventi del mondo sono gli stessi.');
+    assert.deepEqual(treated.world.parties.map(item => [item.id, item.baseline, item.strategy, item.cohesion]), plain.world.parties.map(item => [item.id, item.baseline, item.strategy, item.cohesion]), 'I partiti sono gli stessi.');
+    treated.polls.forEach((poll, index) => {
+      const free = plain.polls[index];
+      const moved = poll.results.filter(row => Math.abs(row.share - shareOf(free, row.partyId)) > 1e-9).map(row => row.partyId);
+      assert.ok(moved.every(id => id === 'io' || (index < 3 && moved.length <= 2)), 'Cambiano solo il partito del giocatore e al più un donatore, e solo durante il bonus.');
+      if (index >= 3) assert.deepEqual(moved, [], 'Finito il bonus il sondaggio è identico a quello senza.');
+    });
+  }
+  lines.push('bonus pubblicitario: rngState e sequenza casuale invariati (anche con donatore sostituito), nessun altro risultato politico cambia');
+}
+{
   // several videos add up, each with its own end; a duplicate id does nothing
   const warm = weekly(newWorld('video-somma'), 3).world;
   let world = W.addAdTransfer(warm, { id: 'uno-uno-uno' }).world;
@@ -289,7 +318,6 @@ const total = poll => Math.round((poll.results.reduce((sum, row) => sum + row.sh
   for (let week = 5; week < 14; week++) {
     date = addDays(date, 7);
     if (week === 6) t = W.addAdTransfer(t, { id: 'due-due-due' }).world; if (week === 7) t = W.addAdTransfer(t, { id: 'tre-tre-tre' }).world;
-    if (week === 6 || week === 7) { c.rngState = t.rngState; }
     t = W.advanceWorld(t, { date, week, stats: {}, society }).world; c = W.advanceWorld(c, { date, week, stats: {}, society }).world;
     treated.push(W.latestPoll(t)); plain.push(W.latestPoll(c));
   }

@@ -1,10 +1,10 @@
-import { uniqueId } from './ids.js?v=20261030-1';
-import { AD_REWARD } from '../data/simulation/reward-rules.js?v=20261030-1';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261030-1';
-import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261030-1';
-import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261030-1';
-import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261030-1';
-import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261030-1';
+import { uniqueId } from './ids.js?v=20261031-1';
+import { AD_REWARD } from '../data/simulation/reward-rules.js?v=20261031-1';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261031-1';
+import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261031-1';
+import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261031-1';
+import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261031-1';
+import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261031-1';
 export { houseEffect };
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
@@ -553,6 +553,13 @@ const adRoom = (rows, donorId, amount, player) => donorId === 'altri'
   ? round2(100 - rows.reduce((sum, row) => sum + row.share, 0)) - amount >= AD_REWARD.minOthers - 1e-9
   : rows.some(row => row.partyId === donorId && row.partyId !== player && row.share - amount >= AD_REWARD.minShare - 1e-9);
 const adDonors = (rows, amount, player, world) => [...rows.filter(row => row.partyId !== player && world.parties.some(party => party.id === row.partyId && party.active) && adRoom(rows, row.partyId, amount, player)).map(row => row.partyId), ...(adRoom(rows, 'altri', amount, player) ? ['altri'] : [])];
+// The donor is picked with a generator of its own, seeded by the world and the transfer (never draw(world)): handing out a bonus must not move world.rngState, or the rest of the simulation would change.
+function adPick(world, key, list) {
+  let h = 2166136261;
+  for (const char of `${world.seed}|${key}`) h = Math.imul(h ^ char.charCodeAt(0), 16777619) >>> 0;
+  h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0; h = Math.imul(h ^ (h >>> 13), 3266489909) >>> 0; h = (h ^ (h >>> 16)) >>> 0;
+  return list[Math.min(list.length - 1, Math.floor(h / 4294967296 * list.length))];
+}
 export function addAdTransfer(input, { id }) {
   const world = copy(input);
   const player = playerParty(world);
@@ -562,7 +569,7 @@ export function addAdTransfer(input, { id }) {
   if (!player) return { world: input, transfer: null, reason: 'senza-partito' };
   const rows = latestPoll(world)?.results ?? [];
   const donors = adDonors(rows, AD_REWARD.points, player.id, world);
-  const donorId = donors.length ? donors[Math.min(donors.length - 1, Math.floor(draw(world) * donors.length))] : null;
+  const donorId = donors.length ? adPick(world, `${id}|${world.week}`, donors) : null;
   const transfer = { id, partyId: player.id, donorId, amount: AD_REWARD.points, polls: AD_REWARD.polls, createdWeek: world.week };
   world.adTransfers.push(transfer);
   world.adClaims = [...world.adClaims, id].slice(-AD_REWARD.keep);
@@ -580,7 +587,7 @@ function applyAdTransfers(world, results, previous = null, reference = null) {
     const beneficiary = player ? row(player) : null;
     if (beneficiary && player) {
       const donors = adDonors(results, transfer.amount, player, world);
-      const donorId = transfer.donorId && donors.includes(transfer.donorId) ? transfer.donorId : donors.length ? donors[Math.min(donors.length - 1, Math.floor(draw(world) * donors.length))] : null;
+      const donorId = transfer.donorId && donors.includes(transfer.donorId) ? transfer.donorId : donors.length ? adPick(world, `${transfer.id}|${world.week}|${world.polls?.length ?? 0}`, donors) : null;
       if (donorId) {
         beneficiary.share = round2(beneficiary.share + transfer.amount); if (Number.isFinite(beneficiary.delta)) beneficiary.delta = round2(beneficiary.delta + transfer.amount);
         const donor = donorId === 'altri' ? null : row(donorId);
