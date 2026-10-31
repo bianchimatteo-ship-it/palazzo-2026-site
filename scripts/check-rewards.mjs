@@ -219,7 +219,8 @@ const fake = (opts = {}) => {
   const day = R.romeDay();
   assert.deepEqual((await call(tokenA, 'GET')).body, { ok: true, day, claimed: false });
   const early = await call(tokenA, 'POST'); assert.deepEqual([early.status, early.body.claimed, early.body.short], [200, false, true], 'Senza i cinque minuti registrati dal servizio la ricompensa non c’è.');
-  const sendTime = (token, spans, extra = {}) => local.worker.fetch(new Request(`${local.origin}/api/account/rewards/time`, { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify({ device: 'd1', spans, ...extra }) }), local.env).then(response => response.json());
+  let seq = 0;
+  const sendTime = (token, spans, extra = {}) => local.worker.fetch(new Request(`${local.origin}/api/account/rewards/time`, { method: 'POST', headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: JSON.stringify({ device: 'd1', now: Date.now(), spans: spans.map(({ c, a, b }) => ({ q: seq++, c, s: Date.now() - a, e: Date.now() - b })), ...extra }) }), local.env).then(response => response.json());
   await sendTime(tokenA, [{ c: 'carriera-prova', a: 290000, b: 0 }]);
   assert.equal((await call(tokenA, 'POST')).body.short, true, '4 minuti e 50 secondi non bastano.');
   await sendTime(tokenA, [{ c: 'carriera-prova', a: 310000, b: 290000 }]);

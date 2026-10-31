@@ -15,3 +15,9 @@ export const AD_REWARD = Object.freeze({ points: 0.15, polls: 3, minShare: 0.2, 
 // The clock: a tick is counted in full only when it is no longer than this (a longer gap means the page was frozen or the machine asleep), and a tab holds the lease for a few seconds at a time; an account sends the time counted to the Worker every syncEveryMs.
 export const PLAY_CLOCK = Object.freeze({ tickMs: 1000, maxGapMs: 3000, leaseMs: 8000, syncEveryMs: 15000 });
 export const REWARD_HISTORY_SIZE = 60;
+
+// One-off rewards for the community of the game. The Instagram one is a SELF-DECLARATION: the player says they followed the profile, nothing about the social network is verified or asked for (no login, no credentials).
+// It is switched off here until the rules of Meta for rewarding a follow have been checked against their current text (see docs/audit-finale.md); the page shows the card with the reason, and the switch is `enabled`.
+export const COMMUNITY_REWARD = Object.freeze({
+  instagram: Object.freeze({ id: 'instagram', url: 'https://www.instagram.com/politicandoitalia2026/', funds: 1500, capital: 5, category: 'ricompense', label: 'Community Instagram', enabled: false })
+});

@@ -148,16 +148,44 @@ const SCHEMA = [
   'CREATE INDEX IF NOT EXISTS email_tokens_user ON email_tokens (user_id)',
   'CREATE INDEX IF NOT EXISTS email_tokens_expiry ON email_tokens (expires_at)',
   // Personal party logos kept for the account (the images are in R2, only the metadata is here): one row per party, a deleted logo leaves a row with `deleted_at` so that another device learns of it.
-  // The daily reward of the game (500 € once a day for each account, wherever it plays): one row per account and day (Europe/Rome), written once; the first device to claim it gets it.
+  // The rewards of the game (migrations/0006_rewards.sql has the same text). The daily reward: one row per account and day (Europe/Rome), written once; the first device to claim it gets it.
   'CREATE TABLE IF NOT EXISTS reward_claims (user_id TEXT NOT NULL, day TEXT NOT NULL, claimed_at TEXT NOT NULL, career_id TEXT, device_id TEXT, PRIMARY KEY (user_id, day))',
-  // The time really played, kept apart from the saves: for each account one row per day («d:YYYY-MM-DD», Europe/Rome) and per career («c:<career>»). The devices send the spans of time they counted and the
-  // rows keep their UNION, so that two devices open together never count the same minute twice and the time of different devices adds up. total_ms = base_ms + folded_ms + the length of the spans.
+  // The time really played, kept apart from the saves: for each account one row per day («d:YYYY-MM-DD», Europe/Rome) and per career («c:<career>»). The devices send spans of time and the rows keep their UNION,
+  // so that two devices open together never count the same minute twice and the time of different devices adds up. total_ms = base_ms + folded_ms + the length of the spans.
   'CREATE TABLE IF NOT EXISTS reward_time (user_id TEXT NOT NULL, scope TEXT NOT NULL, base_ms INTEGER NOT NULL DEFAULT 0, folded_ms INTEGER NOT NULL DEFAULT 0, spans TEXT NOT NULL DEFAULT \'[]\', total_ms INTEGER NOT NULL DEFAULT 0, rev INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL, PRIMARY KEY (user_id, scope))',
+  // Which spans of each device were already applied (ranges of the sequence numbers the device gives them): a span sent again is recognised and counted once, and acknowledged again.
+  'CREATE TABLE IF NOT EXISTS reward_devices (user_id TEXT NOT NULL, device_id TEXT NOT NULL, ranges TEXT NOT NULL DEFAULT \'[]\', rev INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL, PRIMARY KEY (user_id, device_id))',
+  // The blocks of 30 and 60 minutes of a career: one row per account, career, kind and number — the first claim wins and the Worker checks that its merged time reaches the block.
+  'CREATE TABLE IF NOT EXISTS reward_blocks (user_id TEXT NOT NULL, career_id TEXT NOT NULL, kind TEXT NOT NULL, block INTEGER NOT NULL, device_id TEXT, claimed_at TEXT NOT NULL, PRIMARY KEY (user_id, career_id, kind, block))',
+  // One-off community rewards (the Instagram one): one row per account and reward.
+  'CREATE TABLE IF NOT EXISTS reward_community (user_id TEXT NOT NULL, reward TEXT NOT NULL, claimed_at TEXT NOT NULL, career_id TEXT, device_id TEXT, PRIMARY KEY (user_id, reward))',
+  // The migrations applied by the code (the ones that cannot be written as CREATE ... IF NOT EXISTS, such as a column added to a table that already exists).
+  'CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL)',
   'CREATE TABLE IF NOT EXISTS logos (user_id TEXT NOT NULL, party_id TEXT NOT NULL, version INTEGER NOT NULL, sha256 TEXT, mime TEXT, bytes INTEGER, width INTEGER, height INTEGER, name TEXT, origin TEXT, object_key TEXT, deleted_at TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL, PRIMARY KEY (user_id, party_id))',
 ];
 let schemaReady = null;
-// A reward_claims table made before the device was recorded gets the column (the error of a table that already has it is expected and ignored).
-const ensureSchema = db => (schemaReady ??= db.batch(SCHEMA.map(sql => db.prepare(sql))).then(() => db.prepare('ALTER TABLE reward_claims ADD COLUMN device_id TEXT').run().catch(() => null)).catch(error => { schemaReady = null; throw error; }));
+// Migration «0006-rewards»: the columns that tables made by an earlier version of the rewards lack. The tables are read with PRAGMA table_info and a column is added ONLY when it is missing; any other error
+// (a table that cannot be read, an ALTER that fails for a reason other than a column that another request has just added) is NOT ignored: schemaReady is reset and the request fails, so that nothing runs on a half-migrated schema.
+// Nothing existing is altered or deleted: the rows stay as they were.
+export const REWARD_MIGRATION = '0006-rewards';
+export const REWARD_COLUMNS = {
+  reward_claims: [['device_id', 'TEXT']],
+  reward_time: [['base_ms', 'INTEGER NOT NULL DEFAULT 0'], ['folded_ms', 'INTEGER NOT NULL DEFAULT 0'], ['spans', "TEXT NOT NULL DEFAULT '[]'"], ['total_ms', 'INTEGER NOT NULL DEFAULT 0'], ['rev', 'INTEGER NOT NULL DEFAULT 0'], ['updated_at', "TEXT NOT NULL DEFAULT ''"]]
+};
+const columnsOf = async (db, table) => ((await db.prepare(`PRAGMA table_info(${table})`).all()).results ?? []).map(row => row.name);
+async function migrateRewards(db) {
+  for (const [table, wanted] of Object.entries(REWARD_COLUMNS)) {
+    let have = await columnsOf(db, table);
+    if (!have.length) throw new Error(`migrazione ${REWARD_MIGRATION}: la tabella ${table} non esiste`);
+    for (const [name, ddl] of wanted) {
+      if (have.includes(name)) continue;
+      try { await db.prepare(`ALTER TABLE ${table} ADD COLUMN ${name} ${ddl}`).run(); }
+      catch (error) { have = await columnsOf(db, table); if (!have.includes(name)) throw error; /* another request added it first */ }
+    }
+  }
+  await db.prepare('INSERT OR IGNORE INTO schema_migrations (name, applied_at) VALUES (?, ?)').bind(REWARD_MIGRATION, new Date().toISOString()).run();
+}
+const ensureSchema = db => (schemaReady ??= db.batch(SCHEMA.map(sql => db.prepare(sql))).then(() => migrateRewards(db)).catch(error => { schemaReady = null; throw error; }));
 const sha256 = async text => toHex(await crypto.subtle.digest('SHA-256', encoder.encode(text)));
 async function proofHash(proof, salt, iterations) {
   const key = await crypto.subtle.importKey('raw', encoder.encode(String(proof)), 'PBKDF2', false, ['deriveBits']);
@@ -174,13 +202,17 @@ export function romeDay(moment = Date.now()) {
 }
 // ----- the time played, merged across devices (reward_time) -----
 const REWARD_DAILY_MS = 5 * 60_000;
-const SPAN_KEEP_MS = 72 * 3_600_000, SPAN_MAX = 200, REQUEST_MAX_MS = 24 * 3_600_000, CAREER_BASE_MAX = 1000 * 3_600_000;
+const COMMUNITY_REWARDS = ['instagram'];
+const SPAN_KEEP_MS = 30 * 86_400_000;              // spans older than this are refused (and said so), and the detail of the older ones is folded into a total
+const SPAN_MAX = 2000;                             // detail kept per row; the oldest are folded into folded_ms
+const SPAN_LONGEST_MS = 6 * 3_600_000;             // a single span longer than this is not a span of play
+const SPANS_PER_REQUEST = 50, REQUEST_BUDGET_MS = 24 * 3_600_000, CAREER_BASE_MAX = 1000 * 3_600_000, SKEW_MAX_MS = 36 * 3_600_000;
 const REWARD_ID = /^[\w.|~-]{1,80}$/;
-// Joins the spans that touch or overlap (gap up to 1.5 s): the same minute played on two devices is one minute.
+// Joins the spans that touch or overlap (no gap is ever added to the time): the same minute played on two devices is one minute.
 export function mergeSpans(spans) {
   const sorted = spans.filter(span => span[1] > span[0]).map(span => [span[0], span[1]]).sort((a, b) => a[0] - b[0]);
   const out = [];
-  for (const span of sorted) { const last = out.at(-1); if (last && span[0] <= last[1] + 1500) last[1] = Math.max(last[1], span[1]); else out.push(span); }
+  for (const span of sorted) { const last = out.at(-1); if (last && span[0] <= last[1]) last[1] = Math.max(last[1], span[1]); else out.push(span); }
   return out;
 }
 // Cuts a span at the midnights of Rome, so that every day gets its own part: [[day, start, end], …].
@@ -198,7 +230,7 @@ function splitByDay(start, end) {
 const sumSpans = spans => spans.reduce((sum, span) => sum + (span[1] - span[0]), 0);
 // Adds spans to one scope of an account and returns its total. Optimistic: the row has a revision and a lost race is repeated (merging spans is idempotent, so repeating is safe).
 async function rewardTimeAdd(db, userId, scope, spans, { base = 0, now = Date.now() } = {}) {
-  for (let attempt = 0; attempt < 5; attempt++) {
+  for (let attempt = 0; attempt < 6; attempt++) {
     let row = await db.prepare('SELECT base_ms AS base, folded_ms AS folded, spans, rev FROM reward_time WHERE user_id = ? AND scope = ?').bind(userId, scope).first();
     if (!row) {
       if (!spans.length && !base) return 0;
@@ -207,7 +239,7 @@ async function rewardTimeAdd(db, userId, scope, spans, { base = 0, now = Date.no
       if (!(created?.meta?.changes > 0)) continue;
     }
     if (!spans.length) return row.base + row.folded + sumSpans(JSON.parse(row.spans));
-    let merged = mergeSpans([...JSON.parse(row.spans), ...spans]);
+    const merged = mergeSpans([...JSON.parse(row.spans), ...spans]);
     let folded = row.folded;
     const cut = now - SPAN_KEEP_MS;
     while (merged.length && (merged[0][1] < cut || merged.length > SPAN_MAX)) { folded += merged[0][1] - merged[0][0]; merged.shift(); }
@@ -217,20 +249,56 @@ async function rewardTimeAdd(db, userId, scope, spans, { base = 0, now = Date.no
   }
   throw new Error('reward-time-busy');
 }
-// The request of a device: { device, career: { id, baseMs }?, spans: [{ c, a, b }] } where a and b are how long ago (ms) the span began and ended: the Worker uses its own clock, so that the clocks of the devices cannot shift the time.
+// The sequence numbers of a device that were applied, as sorted ranges [[from, to], …] (inclusive).
+const inRanges = (ranges, n) => ranges.some(range => n >= range[0] && n <= range[1]);
+function addToRanges(ranges, numbers) {
+  const all = [...ranges.map(range => [range[0], range[1]]), ...numbers.map(n => [n, n])].sort((a, b) => a[0] - b[0]);
+  const out = [];
+  for (const range of all) { const last = out.at(-1); if (last && range[0] <= last[1] + 1) last[1] = Math.max(last[1], range[1]); else out.push(range); }
+  return out;
+}
+async function deviceRanges(db, userId, device) {
+  const row = await db.prepare('SELECT ranges, rev FROM reward_devices WHERE user_id = ? AND device_id = ?').bind(userId, device).first();
+  return row ? { ranges: JSON.parse(row.ranges), rev: row.rev } : { ranges: [], rev: -1 };
+}
+async function markApplied(db, userId, device, numbers, now) {
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const current = await deviceRanges(db, userId, device);
+    const ranges = JSON.stringify(addToRanges(current.ranges, numbers));
+    if (current.rev < 0) {
+      const created = await db.prepare('INSERT OR IGNORE INTO reward_devices (user_id, device_id, ranges, rev, updated_at) VALUES (?, ?, ?, 0, ?)').bind(userId, device, ranges, new Date(now).toISOString()).run();
+      if (created?.meta?.changes > 0) return;
+    } else {
+      const done = await db.prepare('UPDATE reward_devices SET ranges = ?, rev = rev + 1, updated_at = ? WHERE user_id = ? AND device_id = ? AND rev = ?').bind(ranges, new Date(now).toISOString(), userId, device, current.rev).run();
+      if (done?.meta?.changes > 0) return;
+    }
+  }
+  throw new Error('reward-time-busy');
+}
+// The request of a device: { device, now, spans: [{ q, c, s, e }], career: { id, baseMs }? }. q is the number the device gives the span (never reused), c its career, s and e the wall-clock milliseconds of the device;
+// the Worker corrects them by the difference between its clock and the device's at the moment of the request. The answer says, for every span it examined, what became of it:
+//   acked: applied now or already applied before (the device may forget them); rejected: [{ q, reason }] refused for good (invalid, expired) — never retried;
+//   every span that is in neither list (more than 50 in the request, or beyond the 24 hours of one request) was NOT examined and stays with the device for the next request.
 async function rewardTimeSync(db, userId, body, now = Date.now()) {
-  const list = Array.isArray(body?.spans) ? body.spans.slice(0, 50) : [];
-  const byDay = new Map(), byCareer = new Map();
-  let budget = REQUEST_MAX_MS;
+  const device = typeof body?.device === 'string' && REWARD_ID.test(body.device) ? body.device : null;
+  const list = device && Array.isArray(body?.spans) ? body.spans.slice(0, SPANS_PER_REQUEST) : [];
+  const offset = Number.isFinite(Number(body?.now)) && Math.abs(now - Number(body.now)) <= SKEW_MAX_MS ? now - Number(body.now) : 0;
+  const known = list.length ? (await deviceRanges(db, userId, device)).ranges : [];
+  const acked = [], rejected = [], fresh = [], byDay = new Map(), byCareer = new Map();
+  let budget = REQUEST_BUDGET_MS;
   for (const item of list) {
-    const a = Number(item?.a), b = Number(item?.b);
-    if (!Number.isFinite(a) || !Number.isFinite(b) || b < 0 || a <= b || a > SPAN_KEEP_MS) continue;
-    let start = Math.round(now - a), end = Math.min(Math.round(now - b), now);
-    if (end - start > budget) start = end - budget;
-    if (end <= start) continue;
-    budget -= end - start;
+    const q = Number(item?.q);
+    if (!Number.isSafeInteger(q) || q < 0) continue;                        // without a number it cannot be acknowledged: not examined
+    if (inRanges(known, q)) { acked.push(q); continue; }                    // already applied: acknowledged again, counted once
+    const s = Number(item.s) + offset, e = Math.min(Number(item.e) + offset, now);
+    if (!Number.isFinite(s) || !Number.isFinite(e) || e <= s || e - s > SPAN_LONGEST_MS) { rejected.push({ q, reason: 'invalid' }); continue; }
+    if (s < now - SPAN_KEEP_MS) { rejected.push({ q, reason: 'expired' }); continue; }
+    if (e - s > budget) break;                                              // the rest waits for the next request
+    budget -= e - s;
+    const start = Math.round(s), end = Math.round(e);
     for (const [day, from, to] of splitByDay(start, end)) byDay.set(day, [...(byDay.get(day) ?? []), [from, to]]);
     if (typeof item.c === 'string' && REWARD_ID.test(item.c)) byCareer.set(item.c, [...(byCareer.get(item.c) ?? []), [start, end]]);
+    fresh.push(q);
   }
   const today = romeDay(now);
   const days = {}, careers = {};
@@ -241,7 +309,28 @@ async function rewardTimeSync(db, userId, body, now = Date.now()) {
   const baseOf = id => id === askedId && Number.isFinite(Number(asked.baseMs)) ? Math.max(0, Math.min(CAREER_BASE_MAX, Math.floor(Number(asked.baseMs)))) : 0;
   for (const [career, spans] of byCareer) careers[career] = await rewardTimeAdd(db, userId, `c:${career}`, spans, { base: baseOf(career), now });
   if (askedId && !(askedId in careers)) careers[askedId] = await rewardTimeAdd(db, userId, `c:${askedId}`, [], { base: baseOf(askedId), now });
-  return { day: today, dayMs: days[today] ?? 0, careers };
+  // the spans are acknowledged only after their time is in the rows
+  if (fresh.length) { await markApplied(db, userId, device, fresh, now); acked.push(...fresh); }
+  return { day: today, dayMs: days[today] ?? 0, careers, acked, rejected };
+}
+// The blocks of 30 (political capital) and 60 (preparation) minutes of a career: authoritative. A block is recorded once for each account, career and number, and only if the merged time of the career reaches it.
+const BLOCK_MINUTES = { capitale: 30, preparazione: 60 };
+async function rewardBlocks(db, userId, body) {
+  const careerId = typeof body?.careerId === 'string' && REWARD_ID.test(body.careerId) ? body.careerId : null;
+  const device = typeof body?.device === 'string' && REWARD_ID.test(body.device) ? body.device : null;
+  if (!careerId) return { results: [] };
+  const total = await rewardTimeAdd(db, userId, `c:${careerId}`, []);
+  const results = [];
+  for (const claim of (Array.isArray(body?.claims) ? body.claims : []).slice(0, 40)) {
+    const minutes = BLOCK_MINUTES[claim?.kind], n = Number(claim?.n);
+    if (!minutes || !Number.isSafeInteger(n) || n < 1) { results.push({ kind: claim?.kind, n: claim?.n, status: 'invalid' }); continue; }
+    if (total < n * minutes * 60_000) { results.push({ kind: claim.kind, n, status: 'short' }); continue; }
+    const written = await db.prepare('INSERT OR IGNORE INTO reward_blocks (user_id, career_id, kind, block, device_id, claimed_at) VALUES (?, ?, ?, ?, ?, ?)').bind(userId, careerId, claim.kind, n, device, new Date().toISOString()).run();
+    if (written?.meta?.changes > 0) { results.push({ kind: claim.kind, n, status: 'first' }); continue; }
+    const row = await db.prepare('SELECT device_id AS deviceId FROM reward_blocks WHERE user_id = ? AND career_id = ? AND kind = ? AND block = ?').bind(userId, careerId, claim.kind, n).first();
+    results.push({ kind: claim.kind, n, status: 'recorded', mine: Boolean(device && row?.deviceId === device) });
+  }
+  return { results };
 }
 async function cleanupExpired(db, now = Date.now()) {
   const attempts = await db.prepare('DELETE FROM attempts WHERE window_start < ?').bind(now - 86_400_000).run();
@@ -250,6 +339,7 @@ async function cleanupExpired(db, now = Date.now()) {
   // the claims of the daily reward are kept two months (the day is the key, nothing else is needed after it)
   await db.prepare('DELETE FROM reward_claims WHERE day < ?').bind(romeDay(now - 62 * 86_400_000)).run().catch(() => null);
   await db.prepare("DELETE FROM reward_time WHERE scope LIKE 'd:%' AND scope < ?").bind(`d:${romeDay(now - 62 * 86_400_000)}`).run().catch(() => null);
+  await db.prepare('DELETE FROM reward_devices WHERE updated_at < ?').bind(new Date(now - 90 * 86_400_000).toISOString()).run().catch(() => null);
   return { attempts: attempts?.meta?.changes ?? 0, sessions: sessions?.meta?.changes ?? 0, tokens: tokens?.meta?.changes ?? 0 };
 }
 // The limit of one kind of request from one address (or one subject, such as a mail address: only its hash is kept): `fail()` books a wrong attempt, `record()` an event that succeeded and is limited anyway (a new account); `clear()` forgets it.
@@ -403,6 +493,9 @@ async function deleteAccountData(db, userId) {
     db.prepare('DELETE FROM logos WHERE user_id = ?').bind(userId),
     db.prepare('DELETE FROM reward_claims WHERE user_id = ?').bind(userId),
     db.prepare('DELETE FROM reward_time WHERE user_id = ?').bind(userId),
+    db.prepare('DELETE FROM reward_devices WHERE user_id = ?').bind(userId),
+    db.prepare('DELETE FROM reward_blocks WHERE user_id = ?').bind(userId),
+    db.prepare('DELETE FROM reward_community WHERE user_id = ?').bind(userId),
     db.prepare('DELETE FROM users WHERE id = ?').bind(userId)
   ]);
   // the table of the notices exists only once the retention has run (it never does while it is off): nothing to delete when it is not there
@@ -594,7 +687,7 @@ async function handleAccounts(request, env, url) {
   const path = url.pathname.replace(/\/+$/, '');
   const mail = mailConfigured(env);
   // The game asks whether the service answers before offering the account (no data, no session needed). `email` says whether messages can really be sent from here.
-  if (path === '/api/account/status' && request.method === 'GET') return json(request, { ok: true, service: 'accounts', features: ['account-delete', 'save-protocol-2', 'save-history', 'daily-reward', 'reward-time', ...(env.LOGOS ? ['logo-sync'] : []), ...(mail ? ['email-recovery'] : [])], email: mail, emailRequired: env.ACCOUNT_EMAIL_REQUIRED === '1' });
+  if (path === '/api/account/status' && request.method === 'GET') return json(request, { ok: true, service: 'accounts', features: ['account-delete', 'save-protocol-2', 'save-history', 'daily-reward', 'reward-time', 'reward-blocks', 'reward-community', ...(env.LOGOS ? ['logo-sync'] : []), ...(mail ? ['email-recovery'] : [])], email: mail, emailRequired: env.ACCOUNT_EMAIL_REQUIRED === '1' });
   if ((path === '/api/account/register' || path === '/api/account/login') && request.method === 'POST') {
     const registering = path.endsWith('register');
     const guard = await accountGuard(db, request, registering ? 'registrazione' : 'accesso');
@@ -743,12 +836,36 @@ async function handleAccounts(request, env, url) {
     await guard.clear();
     return json(request, { ok: true, deleted: { account: 1, saves: saves?.n ?? 0, sessions: sessions?.n ?? 0 } });
   }
-  // The time played, apart from the saves: the devices of the account send the spans they counted and get back the merged totals (today, and the careers asked about).
+  // The time played, apart from the saves: the devices of the account send the spans they counted and get back the merged totals (today, and the career asked about) and what became of each span.
   if (path === '/api/account/rewards/time' && request.method === 'POST') {
     let body = {};
     try { body = await request.json(); } catch { /* an empty request only asks for the totals of today */ }
     try { return json(request, { ok: true, ...(await rewardTimeSync(db, account.id, body)) }); }
     catch { return json(request, { error: 'Il conteggio del tempo di gioco è occupato: riprova tra poco.', code: 'busy' }, 503); }
+  }
+  if (path === '/api/account/rewards/blocks' && request.method === 'POST') {
+    let body = {};
+    try { body = await request.json(); } catch { /* nothing claimed */ }
+    try { return json(request, { ok: true, ...(await rewardBlocks(db, account.id, body)) }); }
+    catch { return json(request, { error: 'Il conteggio del tempo di gioco è occupato: riprova tra poco.', code: 'busy' }, 503); }
+  }
+  // One-off community rewards (today only «instagram»): the Worker gives each to an account once. The claim is a self-declaration of the player: nothing about the social network is verified or asked for.
+  const community = /^\/api\/account\/rewards\/community\/([a-z]{3,20})$/.exec(path);
+  if (community && (request.method === 'GET' || request.method === 'POST')) {
+    const reward = community[1];
+    if (!COMMUNITY_REWARDS.includes(reward)) return json(request, { error: 'Ricompensa non riconosciuta.' }, 404);
+    const taken = () => db.prepare('SELECT claimed_at AS claimedAt, device_id AS deviceId FROM reward_community WHERE user_id = ? AND reward = ?').bind(account.id, reward).first();
+    if (request.method === 'GET') return json(request, { ok: true, reward, claimed: Boolean(await taken()) });
+    let careerId = null, device = null;
+    try {
+      const body = await request.json();
+      if (typeof body?.careerId === 'string' && REWARD_ID.test(body.careerId)) careerId = body.careerId;
+      if (typeof body?.device === 'string' && REWARD_ID.test(body.device)) device = body.device;
+    } catch { /* no body */ }
+    const written = await db.prepare('INSERT OR IGNORE INTO reward_community (user_id, reward, claimed_at, career_id, device_id) VALUES (?, ?, ?, ?, ?)').bind(account.id, reward, new Date().toISOString(), careerId, device).run();
+    if (written?.meta?.changes > 0) return json(request, { ok: true, reward, claimed: true });
+    const row = await taken();
+    return json(request, { ok: true, reward, claimed: false, already: true, mine: Boolean(device && row?.deviceId === device) });
   }
   // The daily reward: the Worker, not the device, decides the day (Europe/Rome), checks that the 5 minutes of the day were played (the time it holds for the account, from all the devices) and who got it first.
   // The claim is one statement that writes the row only if the threshold is reached and nobody has it yet (atomic): once for each account and day.

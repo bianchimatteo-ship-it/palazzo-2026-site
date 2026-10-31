@@ -57,6 +57,19 @@ await withBrowser(async ({ evaluate, send, goto, waitFor: wait, pause, errors, v
   await inPage(`const day = R.romeDay(); const scope = J.rewardsJournal.scope(null); J.rewardsJournal.setDaily(scope, day, { ms: 299000, state: 'counting', claim: null }); return true;`);
   await click('[data-nav="carriera"]'); await pause(200); await click('[data-nav="ricompense"]'); await must(() => has('[data-rewards-page]'), 'la pagina Ricompense');
   await must(async () => (await funds()) === before + 500, 'i 500 € della ricompensa giornaliera');
+  // the popup of the credit: a real dialog (not a toast) with what was received and why
+  await must(() => has('[data-reward-notice][data-reward-kind="giornaliera"]'), 'il popup della ricompensa giornaliera');
+  const popup = await text('[data-reward-notice]');
+  assert.match(popup, /\+500 €/); assert.match(popup, /Hai giocato almeno 5 minuti oggi/); assert.match(popup, /Fondi personali/);
+  assert.equal(await evaluate(`document.querySelector('[data-reward-notice]').getAttribute('role')`), 'dialog');
+  // several credits at once queue up and are shown one after the other
+  await inPage(`store.addPlayTime(60 * 60000); return true;`);
+  await must(() => has('[data-reward-count]'), 'il contatore degli avvisi in coda');
+  assert.match(await text('[data-reward-count]'), /Premio 1 di 4/, 'Quattro avvisi in coda: nessuno sovrascrive un altro.');
+  const seen = [];
+  for (let i = 0; i < 4; i++) { seen.push(await evaluate(`document.querySelector('[data-reward-notice]')?.dataset.rewardKind ?? null`)); await click('[data-reward-notice-dismiss]'); await pause(150); }
+  assert.deepEqual(seen, ['giornaliera', 'capitale', 'capitale', 'preparazione'], 'Uno alla volta, nell’ordine dei crediti.');
+  assert.equal(await has('[data-reward-notice]'), false, 'Chiusi tutti, il popup non c’è più.');
   await must(async () => /Riscossa oggi/.test(await text('[data-rewards-page]')), 'lo stato «Riscossa oggi»');
   const done = await text('[data-rewards-page]');
   assert.match(done, /Già riscossa nella giornata/); assert.match(done, /Ricompensa giornaliera/); assert.match(done, /\+500 €/); assert.match(done, /Fondi personali/);
@@ -71,5 +84,29 @@ await withBrowser(async ({ evaluate, send, goto, waitFor: wait, pause, errors, v
   assert.ok(await has('[data-rewards-page] .reward-history-row'), 'Lo storico c’è anche sul telefono.');
   assert.deepEqual(errors.filter(item => !/favicon|ERR_|Failed to load resource/i.test(String(item))), [], 'Nessun errore nella pagina.');
 }, { language: 'it' });
+
+// ---------- the same page and the popup in English: nothing is left in Italian ----------
+await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, version }) => {
+  const click = selector => evaluate(`(() => { const el = document.querySelector(${JSON.stringify(selector)}); if (!el) throw new Error('missing ${selector.replace(/'/g, '')}'); el.click(); return true; })()`);
+  const has = selector => evaluate(`Boolean(document.querySelector(${JSON.stringify(selector)}))`);
+  const text = selector => evaluate(`document.querySelector(${JSON.stringify(selector)})?.innerText ?? ''`);
+  const inPage = body => evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); ${body} })()`);
+  await goto('');
+  await createCareerInPage({ evaluate, version }, { weeks: 1, name: ['Premi', 'Inglese'] });
+  await goto(''); await wait(() => has('[data-menu="continua"]')); await click('[data-menu="continua"]'); await wait(() => has('.page-wrap'));
+  await click('[data-nav="carriera"]'); await pause(300); await click('[data-nav="ricompense"]'); await wait(() => has('[data-rewards-page]'));
+  await inPage(`store.getState().game.resources.politicalCapital = 98; store.addPlayTime(30 * 60000); store.addPlayTime(30 * 60000); return true;`);
+  await wait(() => has('[data-reward-notice]'));
+  const popup = await text('[data-reward-notice]');
+  assert.match(popup, /\+2 Political capital/, 'Importo effettivo: 98 + 4 → +2.'); assert.match(popup, /You have reached 30 minutes of play/); assert.match(popup, /REWARD RECEIVED/i); assert.match(popup, /Reward 1 of 3/); assert.match(popup, /Continue/);
+  await click('[data-reward-notice-dismiss]'); await pause(200);
+  const zero = await text('[data-reward-notice]');
+  assert.match(zero, /Political capital already at maximum/); assert.match(zero, /no points added, the limit is 100/); assert.ok(!/\+\d/.test(zero.split('\n').slice(0, 3).join(' ')), 'A zero credit announces no gain.');
+  await click('[data-reward-notice-dismiss]'); await pause(200);
+  const page = await text('[data-rewards-page]');
+  for (const part of ['Daily reward', 'Play time', 'Next political capital', 'Next electoral preparation', 'Rewarded', 'What you have received', 'Instagram community', 'Watch the video', 'Rewards earned']) assert.ok(new RegExp(part, 'i').test(page), `In English the page says «${part}».`);
+  const italian = page.match(/Ricompens|Tempo di gioco|Prossim|Storico|riscuot|Guarda|Segui|Premi ottenuti|Giocare|Che cosa|Fondi personali|Capitale politico|Hai /gi);
+  assert.equal(italian, null, `Nothing of the page is left in Italian (${italian}).`);
+}, { language: 'en' });
 console.log('Ricompense nel browser verificate: pagina nella sezione Carriera con le quattro parti, video spento con il motivo, tempo che cresce solo in primo piano e con il lease della scheda, ricompensa giornaliera arrivata da sola ai 5 minuti (una sola volta, nel registro e nello storico), pagina leggibile sul telefono.');
 process.exit(0);

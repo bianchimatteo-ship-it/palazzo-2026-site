@@ -1267,25 +1267,71 @@ html[data-motion="off"] .language-gate-button { transition: none; }
 .coalition-body h4{margin:6px 0 0}
 .coalition-members,.coalition-terms,.coalition-history{margin:0;padding-left:18px}
 
-/* Ricompense: the daily reward, the time played, the rewarded videos and the history. */
-.rewards-page{display:grid;gap:16px}
-.reward-hero>div{display:flex;gap:14px;align-items:center}
-.reward-daily{display:grid;grid-template-columns:minmax(150px,220px) 1fr;gap:18px;align-items:center}
-.reward-amount strong{display:block;font-size:2rem;line-height:1.1}
-.reward-amount small,.reward-meta small{display:block;color:var(--ink-2,#9aa79a)}
+/* Ricompense: hero, one card for each reward (each with its own tone), the popup of the credits and the history. */
+.rewards-page{display:grid;gap:18px}
+.reward-hero{display:grid;grid-template-columns:auto 1fr auto;gap:18px;align-items:center;padding:22px;border-radius:var(--radius);border:1px solid var(--line-strong);background:linear-gradient(135deg,color-mix(in srgb,#d6a54c 22%,var(--panel)) 0%,var(--panel) 62%)}
+.reward-hero-mark{display:grid;place-items:center;width:64px;height:64px;border-radius:18px;background:color-mix(in srgb,#d6a54c 28%,transparent);color:#f0c46a}
+.reward-hero-copy h2{margin:2px 0 6px;font-size:1.7rem;line-height:1.15}
+.reward-hero-copy .section-subtitle{margin:0;max-width:60ch}
+.reward-hero-stats{display:grid;grid-auto-flow:column;gap:10px;margin:0}
+.reward-hero-stats>div{min-width:104px;padding:10px 14px;border-radius:12px;border:1px solid var(--line);background:color-mix(in srgb,var(--panel-2) 80%,transparent)}
+.reward-hero-stats dt{font-size:.74rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-2,#9aa79a)}
+.reward-hero-stats dd{margin:2px 0 0;font-size:1.35rem;font-weight:750}
+.reward-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:stretch}
+.reward-card{--tone:#d6a54c;position:relative;display:grid;align-content:start;gap:14px;padding:18px 18px 18px 22px;border-radius:var(--radius);border:1px solid var(--line);background:var(--panel);overflow:hidden}
+.reward-card::before{content:"";position:absolute;inset:0 auto 0 0;width:5px;background:var(--tone)}
+.reward-card.is-blue{--tone:#5aa0e6}.reward-card.is-violet{--tone:#a07be0}.reward-card.is-rose{--tone:#e0709a}.reward-card.is-neutral{--tone:var(--line-strong)}
+.reward-card-head h2{margin:2px 0 0;font-size:1.2rem}
+.reward-card-head .section-kicker{color:var(--tone)}
+.reward-card p{margin:0}
+.reward-daily{display:grid;gap:14px}
+.reward-amount strong{display:block;font-size:2.4rem;line-height:1.05;color:var(--tone);font-variant-numeric:tabular-nums}
+.reward-amount small,.reward-meta small,.reward-row small,.reward-state>small{display:block;color:var(--ink-2,#9aa79a)}
 .reward-state{display:grid;gap:8px}
-.reward-bar{height:10px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden}
-.reward-bar i{display:block;height:100%;border-radius:inherit;background:var(--party-accent,#d6a54c);transition:width .4s ease}
-.reward-row{display:grid;grid-template-columns:minmax(160px,1fr) minmax(120px,2fr) minmax(130px,1fr);gap:14px;align-items:center;padding:10px 0;border-top:1px solid var(--line,rgba(255,255,255,.12))}
-.reward-row small{display:block;color:var(--ink-2,#9aa79a)}
-.reward-total{margin:0 0 6px}
-.reward-total strong{font-size:1.5rem}
+.reward-bar{height:12px;border-radius:999px;background:rgba(255,255,255,.09);overflow:hidden}
+.reward-bar i{display:block;height:100%;border-radius:inherit;background:var(--tone);transition:width .6s linear}
+.reward-row{display:grid;gap:8px;padding:12px;border-radius:12px;background:var(--panel-2);border:1px solid var(--line)}
+.reward-row-name strong{display:block}
+.reward-meta b{font-variant-numeric:tabular-nums}
+.reward-perks{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.reward-perks li{display:flex;gap:8px;align-items:baseline}
+.reward-perks strong{color:var(--tone);font-variant-numeric:tabular-nums}
+.reward-actions{display:flex;flex-wrap:wrap;gap:10px}
+.reward-actions .secondary-button,.reward-actions .primary-button{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:0 16px;border-radius:10px;text-decoration:none}
+.reward-history-card{padding-left:22px}
 .reward-history{display:grid;font-size:.95rem}
-.reward-history-head,.reward-history-row{display:grid;grid-template-columns:minmax(140px,1.3fr) minmax(150px,1.4fr) minmax(90px,.8fr) minmax(130px,1fr);gap:10px;padding:8px 0;border-top:1px solid var(--line,rgba(255,255,255,.12))}
-.reward-history-head{color:var(--ink-2,#9aa79a);font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;border-top:0}
-@media (max-width:700px){
-  .reward-daily,.reward-row{grid-template-columns:1fr}
+.reward-history-head,.reward-history-row{display:grid;grid-template-columns:minmax(150px,1.3fr) minmax(170px,1.5fr) minmax(90px,.8fr) minmax(130px,1fr);gap:12px;align-items:center;padding:10px 4px}
+.reward-history-head{color:var(--ink-2,#9aa79a);font-size:.76rem;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--line)}
+.reward-history-row{--tone:#d6a54c;border-bottom:1px solid color-mix(in srgb,var(--line) 70%,transparent);box-shadow:inset 3px 0 0 var(--tone);padding-left:12px}
+.reward-history-row.is-blue{--tone:#5aa0e6}.reward-history-row.is-violet{--tone:#a07be0}.reward-history-row.is-rose{--tone:#e0709a}
+.reward-history-row time{color:var(--ink-2,#9aa79a);font-size:.88rem}
+.reward-history-row b{font-variant-numeric:tabular-nums;color:var(--tone)}
+.reward-history-row.is-zero b{color:var(--ink-2,#9aa79a);font-weight:500}
+/* the popup of the credits */
+.reward-overlay{position:fixed;inset:0;z-index:60;display:grid;place-items:center;padding:20px;background:rgba(5,9,8,.62);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.reward-popup{--tone:#d6a54c;display:grid;justify-items:center;gap:8px;width:min(92vw,380px);padding:26px 24px 22px;text-align:center;border-radius:20px;border:1px solid var(--tone);background:linear-gradient(180deg,color-mix(in srgb,var(--tone) 16%,var(--panel)) 0%,var(--panel) 55%);box-shadow:0 30px 80px rgba(0,0,0,.55);animation:reward-pop .28s ease-out}
+.reward-popup.is-blue{--tone:#5aa0e6}.reward-popup.is-violet{--tone:#a07be0}.reward-popup.is-rose{--tone:#e0709a}
+.reward-popup.is-flat{--tone:var(--line-strong)}
+.reward-popup-mark{display:grid;place-items:center;width:58px;height:58px;border-radius:50%;background:color-mix(in srgb,var(--tone) 24%,transparent);color:var(--tone)}
+.reward-popup .section-kicker{color:var(--tone)}
+.reward-popup-amount{font-size:2.1rem;line-height:1.1;font-variant-numeric:tabular-nums}
+.reward-popup-reason{margin:0;color:var(--ink)}
+.reward-popup-resource,.reward-popup-count{color:var(--ink-2,#9aa79a)}
+.reward-popup .primary-button{margin-top:10px;min-width:150px;min-height:44px;border-radius:12px}
+@keyframes reward-pop{from{opacity:0;transform:translateY(10px) scale(.96)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.reward-popup{animation:none}.reward-bar i{transition:none}}
+@media (max-width:900px){
+  .reward-hero{grid-template-columns:auto 1fr}
+  .reward-hero-stats{grid-column:1/-1;grid-auto-flow:row;grid-template-columns:1fr 1fr}
+  .reward-grid{grid-template-columns:1fr}
+}
+@media (max-width:640px){
+  .reward-hero{padding:16px;gap:12px}.reward-hero-mark{width:48px;height:48px}
+  .reward-hero-copy h2{font-size:1.4rem}
+  .reward-amount strong{font-size:2rem}
   .reward-history-head{display:none}
-  .reward-history-row{grid-template-columns:1fr 1fr;gap:4px 10px}
-  .reward-history-row time{grid-column:1/-1;color:var(--ink-2,#9aa79a);font-size:.85rem}
+  .reward-history-row{grid-template-columns:1fr auto;gap:2px 10px}
+  .reward-history-row time{grid-column:1/-1}
+  .reward-history-row .reward-history-kind{font-weight:650}
+  .reward-actions>*{flex:1 1 100%}
 }

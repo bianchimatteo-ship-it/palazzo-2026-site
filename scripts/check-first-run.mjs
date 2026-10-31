@@ -143,7 +143,7 @@ game = open();
 page = game.root.innerHTML;
 assert.ok(!page.includes(WELCOME) && !page.includes('COME FUNZIONA'), 'Chi ha già un account non rivede benvenuto né tour.');
 page = await game.click({ menu: 'nuova' });
-assert.ok(page.includes('career-wizard') && !calls.some(path => path.startsWith('/api/account/')), 'Nuova partita apre subito la carriera, senza nuova registrazione.');
+assert.ok(page.includes('career-wizard') && !calls.some(path => path.startsWith('/api/account/') && !path.startsWith('/api/account/rewards/')), 'Nuova partita apre subito la carriera, senza nuova registrazione.');
 
 // ---------- 4. another device: sign in, the career starts, no tour ----------
 mem.clear(); calls.length = 0;
