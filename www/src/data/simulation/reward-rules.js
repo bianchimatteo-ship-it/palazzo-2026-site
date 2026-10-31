@@ -17,7 +17,8 @@ export const PLAY_CLOCK = Object.freeze({ tickMs: 1000, maxGapMs: 3000, leaseMs:
 export const REWARD_HISTORY_SIZE = 60;
 
 // One-off rewards for the community of the game. The Instagram one is a SELF-DECLARATION: the player says they followed the profile, nothing about the social network is verified or asked for (no login, no credentials).
-// It is switched off here until the rules of Meta for rewarding a follow have been checked against their current text (see docs/audit-finale.md); the page shows the card with the reason, and the switch is `enabled`.
+// It is ON (`enabled: true`). The text of Meta's rules on rewarding a follow could not be read when it was switched on (see docs/audit-finale.md): if an incompatibility emerges, set `enabled: false` here (nothing else
+// changes: the card then says the reward is not available and nothing can be claimed; what was already received stays).
 export const COMMUNITY_REWARD = Object.freeze({
-  instagram: Object.freeze({ id: 'instagram', url: 'https://www.instagram.com/politicandoitalia2026/', funds: 1500, capital: 5, category: 'ricompense', label: 'Community Instagram', enabled: false })
+  instagram: Object.freeze({ id: 'instagram', url: 'https://www.instagram.com/politicandoitalia2026/', funds: 1500, capital: 5, category: 'ricompense', label: 'Community Instagram', enabled: true })
 });

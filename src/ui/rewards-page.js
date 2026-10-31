@@ -1,8 +1,10 @@
 // «Ricompense»: the daily reward, the time played, the rewarded videos and what was received. It shows only what the player is meant to know: nothing about how long the effect of a video lasts or where it
 // comes from (that is not told anywhere in the game).
-import { DAILY_REWARD, PLAY_REWARDS } from '../data/simulation/reward-rules.js?v=20261031-2';
-import { glyph } from './visuals.js?v=20261031-2';
-import { esc, euro } from './charts.js?v=20261031-2';
+import { DAILY_REWARD, PLAY_REWARDS } from '../data/simulation/reward-rules.js?v=20261031-3';
+import { glyph } from './visuals.js?v=20261031-3';
+import { esc } from './charts.js?v=20261031-3';
+// euros with the thousands point also for four digits (toLocaleString('it-IT') writes 1500): the amounts here are 500 and 1.500
+const euro = value => `${String(Math.round(Number(value) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} €`;
 
 const clockText = ms => { const total = Math.floor(Math.max(0, ms) / 1000); return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`; };
 const durationText = ms => { const minutes = Math.floor(Math.max(0, ms) / 60000); const hours = Math.floor(minutes / 60); return hours ? `${hours} h ${minutes % 60} min` : `${minutes} min`; };
@@ -62,10 +64,10 @@ export function renderRewardsPage(state, snapshot = null) {
   const igBusy = ['claiming', 'pending', 'owed'].includes(ig?.state);
   const instagram = ig ? card('rose', 'COMMUNITY', 'Community Instagram', `
       <p>Segui il profilo ufficiale del gioco e ricevi una volta sola:</p><ul class="reward-perks"><li><strong>+${euro(ig.funds)}</strong> <span>ai fondi personali</span></li><li><strong>+${ig.capital}</strong> <span>capitale politico</span></li></ul>
-      <div class="reward-state"><span class="badge badge-${ig.enabled ? igTone : 'warn'}" data-community-label>${ig.enabled ? esc(igLabel) : 'Non ancora attiva'}</span><small>${ig.guest ? 'Senza accesso vale una volta per questo dispositivo.' : 'Una volta sola per account, su qualunque carriera e dispositivo.'}</small></div>
+      <div class="reward-state"><span class="badge badge-${ig.enabled ? igTone : 'warn'}" data-community-label>${ig.enabled ? esc(igLabel) : 'Non disponibile'}</span><small>${ig.guest ? 'Senza accesso vale una volta per questo dispositivo.' : 'Una volta sola per account, su qualunque carriera e dispositivo.'}</small></div>
       ${ig.enabled && !igDone ? `<div class="reward-actions"><a class="secondary-button" href="${esc(ig.url)}" target="_blank" rel="noopener noreferrer" data-community-follow>Segui su Instagram</a><button type="button" class="primary-button" data-community-claim ${ig.state === 'visited' && snapshot.playing && !igBusy ? '' : 'disabled aria-disabled="true"'}>Ho seguito, riscuoti</button></div>
       <p class="quiet-copy" data-community-note>${ig.state === 'idle' ? 'Apri il profilo, poi torna qui e riscuoti.' : igBusy ? 'La richiesta è in attesa: si completa da sola appena possibile.' : snapshot.playing ? 'È una tua dichiarazione: non controlliamo il tuo account Instagram e non ti chiediamo credenziali.' : 'Servono una carriera aperta e la partita in primo piano.'}</p>` : ''}
-      ${ig.enabled ? '' : '<p class="quiet-copy" data-community-note>Questa ricompensa si attiva appena le regole della piattaforma saranno verificate.</p>'}`, 'data-reward-community="instagram"') : '';
+      ${ig.enabled ? '' : '<p class="quiet-copy" data-community-note>Questa ricompensa non è al momento disponibile.</p>'}`, `data-reward-community="instagram" data-community-state="${esc(ig.state)}" data-community-enabled="${ig.enabled ? 'yes' : 'no'}"`) : '';
   return `<div class="rewards-page" data-rewards-page>
     <section class="reward-hero"><div class="reward-hero-mark">${glyph('trophy', 34)}</div><div class="reward-hero-copy"><span class="section-kicker">RICOMPENSE · SIMULAZIONE</span><h2>Giocare ti premia</h2><p class="section-subtitle">Un premio al giorno, uno ogni mezz’ora e uno ogni ora di gioco, e i video premiati. Il tempo conta solo quando giochi davvero: la partita aperta, la pagina in primo piano.</p></div>
       <dl class="reward-hero-stats"><div><dt>Tempo di gioco</dt><dd data-reward-text="total">${esc(durationText(play.totalMs))}</dd></div><div><dt>Premi ottenuti</dt><dd>${history.filter(entry => entry.amount > 0).length}</dd></div></dl></section>
@@ -87,6 +89,8 @@ export function patchRewardsPage(root, snapshot) {
     const barEl = page.querySelector(`[data-reward-bar="${key}"]`); if (barEl) { barEl.firstElementChild.style.width = `${Math.max(0, Math.min(100, fraction * 100)).toFixed(1)}%`; barEl.setAttribute('aria-valuenow', String(Math.round(fraction * 100))); }
     const textEl = page.querySelector(`[data-reward-text="${key}"]`); if (textEl && text) textEl.textContent = text;
   };
+  const card = page.querySelector('[data-reward-community]');
+  if (card && snapshot.community?.instagram && (card.dataset.communityState !== snapshot.community.instagram.state || card.dataset.communityEnabled !== (snapshot.community.instagram.enabled ? 'yes' : 'no'))) return false;   // the card changes: the page is drawn again
   const { daily, play } = snapshot;
   const taken = daily.state === 'claimed' || daily.state === 'claimed-elsewhere';
   set('daily', taken ? 1 : daily.ms / (daily.minutes * 60000), taken ? 'Già riscossa nella giornata' : `${clockText(daily.ms)} di ${daily.minutes}:00`);

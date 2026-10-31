@@ -438,17 +438,18 @@ const HOUR = 3600000;
 
 // ============ 10. the community reward (Instagram): off by default, then a self-declaration, once, recoverable ============
 {
-  assert.equal(rules.COMMUNITY_REWARD.instagram.enabled, false, 'Per scelta è spenta finché le regole della piattaforma non sono verificate.');
+  assert.equal(rules.COMMUNITY_REWARD.instagram.enabled, true, 'La ricompensa è attiva nella configurazione.');
   const calls = []; const realFetch = globalThis.fetch;
   globalThis.fetch = async (...args) => { calls.push(String(args[0])); return realFetch(...args); };
-  const off = makeDevice('I0', null, null, {}); activate('I0');
+  const off = makeDevice('I0', null, null, {}); off.service = createRewardsService({ store, journal: off.journal, username: () => null, community: { instagram: false }, env: { now: () => 0, wall: () => vt, visible: () => true, playing: () => true, lease: createStorageLease(memoryStorage(), { tabId: 'I0', wall: () => vt }), storage: memoryStorage() } }); activate('I0');
   game().resources.politicalCapital = 50;
-  assert.equal((await off.service.claimCommunity('instagram')).reason, 'non-attiva'); assert.equal(off.service.snapshot().community.instagram.enabled, false);
+  assert.equal((await off.service.claimCommunity('instagram')).reason, 'non-attiva', 'Spegnendola dalla configurazione non si riscuote più.'); assert.equal(off.service.snapshot().community.instagram.enabled, false);
+  assert.match(renderRewardsPage(store.getState(), { ...off.service.snapshot(), playing: true }), /Questa ricompensa non è al momento disponibile/, 'E la carta lo dice.');
   assert.equal(off.service.visitCommunity('instagram'), false);
 
   // a guest: once for this device
   const mk = (name, userName, token, extra = {}) => { const d = makeDevice(name, userName, token, extra); return d; };
-  const G = mk('I1', null, null, {}); G.service = createRewardsService({ store, journal: G.journal, username: () => null, community: { instagram: true }, env: { now: () => 0, wall: () => vt, visible: () => true, playing: () => true, lease: createStorageLease(memoryStorage(), { tabId: 'I1', wall: () => vt }), storage: memoryStorage() } });
+  const G = mk('I1', null, null, {}); G.service = createRewardsService({ store, journal: G.journal, username: () => null, env: { now: () => 0, wall: () => vt, visible: () => true, playing: () => true, lease: createStorageLease(memoryStorage(), { tabId: 'I1', wall: () => vt }), storage: memoryStorage() } });
   activate('I1');
   game().resources.politicalCapital = 98;
   const fundsBefore = game().resources.funds, incomeBefore = game().finance.current.income;
@@ -466,16 +467,26 @@ const HOUR = 3600000;
   assert.equal(notes.length, 2); assert.deepEqual(noticeParts(notes.find(item => item.resource === 'Capitale politico')).title, '+2 Capitale politico');
   assert.equal((await G.service.claimCommunity('instagram')).reason, 'già-riscossa'); assert.equal(game().resources.funds, fundsBefore + 1500, 'Una volta sola.');
   // refresh: the state is in the journal; and another career on the same device gets nothing more
-  const reopened = createRewardsService({ store, journal: G.journal, username: () => null, community: { instagram: true }, env: { now: () => 0, wall: () => vt, visible: () => true, playing: () => true, lease: createStorageLease(memoryStorage(), { tabId: 'I1b', wall: () => vt }), storage: memoryStorage() } });
+  const reopened = createRewardsService({ store, journal: G.journal, username: () => null, env: { now: () => 0, wall: () => vt, visible: () => true, playing: () => true, lease: createStorageLease(memoryStorage(), { tabId: 'I1b', wall: () => vt }), storage: memoryStorage() } });
   assert.equal(reopened.snapshot().community.instagram.state, 'claimed'); assert.equal((await reopened.claimCommunity('instagram')).reason, 'già-riscossa');
   const other = JSON.parse(store.exportSave()); other.career.id = 'altra-carriera-instagram'; other.saveMeta = { ...(other.saveMeta ?? {}), careerId: 'altra-carriera-instagram' }; delete other.game.rewards;
   store.loadGame(other); const fundsOther = game().resources.funds; assert.equal((await reopened.claimCommunity('instagram')).reason, 'già-riscossa'); assert.equal(game().resources.funds, fundsOther, 'Un’altra carriera dello stesso dispositivo: niente.');
   store.loadGame(JSON.parse(JSON.stringify(devices.I1.save)));
 
+  // the limit: capital already at 100 → nothing is added and the notice announces no gain
+  const capDevice = mk('I2', null, null, {}); capDevice.service = createRewardsService({ store, journal: capDevice.journal, username: () => null, env: { now: () => 0, wall: () => vt, visible: () => true, playing: () => true, lease: createStorageLease(memoryStorage(), { tabId: 'I2', wall: () => vt }), storage: memoryStorage() } });
+  activate('I2'); game().resources.politicalCapital = 100; capDevice.service.visitCommunity('instagram');
+  await capDevice.service.claimCommunity('instagram');
+  const capEntry = capDevice.service.notices().filter(item => item.kind === 'community').find(item => item.resource === 'Capitale politico');
+  assert.equal(game().resources.politicalCapital, 100); assert.equal(capEntry.amount, 0, 'Al tetto: importo ricevuto 0.');
+  assert.equal(noticeParts(capEntry).gained, false); assert.ok(!/\+/.test(noticeParts(capEntry).title), 'Nessun «+5» dichiarato quando non è arrivato nulla.');
+  assert.equal(R.rewardHistory(game()).find(item => item.id.endsWith('-capitale')).amount, 0, 'Nello storico l’importo effettivo.');
+  assert.ok(R.rewardHistory(game()).some(item => item.id.endsWith('-fondi') && item.amount === 1500), 'E i fondi arrivano comunque.');
+
   // an account: the Worker gives it once for the account, recovers an answer that was lost, survives a logout with no career playing
   const token = await register('social.uno');
   const viaWorker = (token0, hooks = {}) => ({ claim: async (reward, career, id) => { const answer = await post(token0, `/api/account/rewards/community/${reward}`, { careerId: career, device: id }); if (hooks.drop?.()) throw Object.assign(new Error('rete'), { code: 'offline' }); return answer; } });
-  const make = (name, userName, token0, hooks = {}) => { const d = makeDevice(name, userName, token0, {}); d.service = createRewardsService({ store, journal: d.journal, username: () => userName, community: { instagram: true }, claimCommunity: viaWorker(token0, hooks).claim, syncTime: body => sendRaw(token0, body), env: { now: () => d.env.t, wall: () => vt, visible: () => true, playing: () => d.env.playing, lease: createStorageLease(memoryStorage(), { tabId: name, wall: () => vt }), storage: memoryStorage() } }); return d; };
+  const make = (name, userName, token0, hooks = {}) => { const d = makeDevice(name, userName, token0, {}); d.service = createRewardsService({ store, journal: d.journal, username: () => userName, claimCommunity: viaWorker(token0, hooks).claim, syncTime: body => sendRaw(token0, body), env: { now: () => d.env.t, wall: () => vt, visible: () => true, playing: () => d.env.playing, lease: createStorageLease(memoryStorage(), { tabId: name, wall: () => vt }), storage: memoryStorage() } }); return d; };
   let drop = false;
   const A = make('S1', 'social.uno', token, { drop: () => drop }), B = make('S2', 'social.uno', token);
   activate('S1'); const f1 = game().resources.funds;
@@ -502,9 +513,23 @@ const HOUR = 3600000;
   const H = make('S4', 'social.tre', token3, { drop: () => { H.env.playing = false; outside = true; return false; } }); activate('S4'); const f4 = game().resources.funds;
   H.service.visitCommunity('instagram'); await H.service.claimCommunity('instagram');
   assert.equal(outside, true); assert.equal(H.journal.community(H.journal.scope('social.tre'), 'instagram').state, 'owed', 'Senza carriera in gioco quando arriva la risposta: dovuta.'); assert.equal(game().resources.funds, f4);
-  const next = createRewardsService({ store, journal: H.journal, username: () => 'social.tre', community: { instagram: true }, claimCommunity: viaWorker(token3).claim, env: { now: () => 0, wall: () => vt, visible: () => true, playing: () => true, lease: createStorageLease(memoryStorage(), { tabId: 'S4b', wall: () => vt }), storage: memoryStorage() } });
+  const next = createRewardsService({ store, journal: H.journal, username: () => 'social.tre', claimCommunity: viaWorker(token3).claim, env: { now: () => 0, wall: () => vt, visible: () => true, playing: () => true, lease: createStorageLease(memoryStorage(), { tabId: 'S4b', wall: () => vt }), storage: memoryStorage() } });
   await next.settleCommunity('instagram'); assert.equal(game().resources.funds, f4 + 1500, 'Alla pagina successiva (dopo un nuovo accesso) viene accreditata, una volta.');
   await next.settleCommunity('instagram'); assert.equal(game().resources.funds, f4 + 1500);
+  // simultaneous requests: eight at once for one account (Worker), and two devices of the same account claiming together: one credit, one row
+  const token4 = await register('social.quattro');
+  const burst = await Promise.all(Array.from({ length: 8 }, (_, i) => post(token4, '/api/account/rewards/community/instagram', { careerId, device: `dev${i}` })));
+  assert.equal(burst.filter(answer => answer.claimed === true).length, 1, 'Otto richieste insieme: una sola vince.');
+  assert.equal(burst.filter(answer => answer.already === true).length, 7);
+  assert.equal(local.sqlite.prepare("SELECT COUNT(*) AS n FROM reward_community WHERE user_id = (SELECT id FROM users WHERE username = 'social.quattro')").get().n, 1);
+  const token5 = await register('social.cinque');
+  const P = make('S5', 'social.cinque', token5), Q = make('S6', 'social.cinque', token5);
+  activate('S5'); const f5 = game().resources.funds; P.service.visitCommunity('instagram'); Q.service.visitCommunity('instagram');
+  const both = await Promise.all([P.service.claimCommunity('instagram'), Q.service.claimCommunity('instagram')]);
+  assert.equal(game().resources.funds, f5 + 1500, 'Due dispositivi che riscuotono insieme: +1.500 € una volta sola.');
+  assert.equal(game().finance.ledger.filter(item => item.label === 'Community Instagram').length, 1, 'Una riga nel registro finanziario.');
+  assert.equal(both.filter(result => result.ok).length >= 1, true);
+  assert.equal(local.sqlite.prepare("SELECT COUNT(*) AS n FROM reward_community WHERE user_id = (SELECT id FROM users WHERE username = 'social.cinque')").get().n, 1);
   // no automatic verification, no credentials: nothing was fetched from the social network, the page asks for nothing
   assert.ok(!calls.some(url => /instagram/i.test(url)), 'Nessuna richiesta a Instagram: nessuna verifica automatica del follow.');
   globalThis.fetch = realFetch;
@@ -512,7 +537,7 @@ const HOUR = 3600000;
   assert.ok(html.includes('https://www.instagram.com/politicandoitalia2026/') && /rel="noopener noreferrer"/.test(html) && /target="_blank"/.test(html), 'Il link ufficiale si apre fuori dal gioco.');
   assert.ok(!/<input|password|<img[^>]*instagram/i.test(html), 'Nessun campo per credenziali, nessun logo nelle altre carte.');
   assert.match(html, /Segui su Instagram/); assert.match(html, /Ho seguito, riscuoti/); assert.match(html, /non controlliamo il tuo account Instagram/);
-  lines.push('ricompensa Instagram: spenta per scelta finché non verificata; da autodichiarazione una volta (ospite per dispositivo, account per account), +1.500 € nel registro e +5 capitale col tetto, recuperabile dopo errore di rete, risposta persa e uscita, nessuna chiamata a Instagram');
+  lines.push('ricompensa Instagram: attiva da configurazione (e disattivabile da lì); da autodichiarazione una volta (ospite per dispositivo, account per account), +1.500 € nel registro e +5 capitale col tetto, recuperabile dopo errore di rete, risposta persa e uscita, nessuna chiamata a Instagram');
 }
 
 // ============ 11. the migration of a database made by the earlier version ============

@@ -1,8 +1,8 @@
 // Simulated newsroom: headlines tied to what happens in the career, written with different structures
 // (fact, question, number, local angle, quote-like, analysis) and never the same template twice in a row.
 // Headlines speak of the player's own character and of the simulated world: no statement is put in the mouth of real people.
-import { ARTICLE_CATEGORIES, KICKERS, NEWSROOM_OUTLETS, NEWS_RULES as RULES, OUTLET_STYLE, RADIO_PROGRAMMES, RADIO_RULES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261031-2';
-import { WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20261031-2';
+import { ARTICLE_CATEGORIES, KICKERS, NEWSROOM_OUTLETS, NEWS_RULES as RULES, OUTLET_STYLE, RADIO_PROGRAMMES, RADIO_RULES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261031-3';
+import { WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20261031-3';
 const RECENT = 18;
 // A template not used recently; when every template of the kind has been used, the least recently used one.
 const pick = (list, seed, recent) => {

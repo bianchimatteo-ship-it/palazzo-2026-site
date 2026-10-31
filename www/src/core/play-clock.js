@@ -1,7 +1,7 @@
 // The clock of the time really played (not the calendar of the simulation): it counts only while a career is open, the page is visible and in the foreground and this tab holds the lease, and it measures
 // with a monotonic clock (performance.now()) so that a change of the system time, a pause of the page or a sleeping machine can neither give nor take time. Pure of the page: everything it needs is given.
 // Two tabs never count the same time: the lease (one holder at a time, renewed every tick, lost when the tab stops being in the foreground or closes) says which one does.
-import { PLAY_CLOCK } from '../data/simulation/reward-rules.js?v=20261031-2';
+import { PLAY_CLOCK } from '../data/simulation/reward-rules.js?v=20261031-3';
 
 // The lease of the playing tab, kept in a storage shared by the tabs of the browser (localStorage). `wall` is the wall clock (the tabs of one browser agree on it, the monotonic clocks do not).
 export function createStorageLease(storage, { tabId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`, wall = () => Date.now(), key = 'politicando.rewards.lease', leaseMs = PLAY_CLOCK.leaseMs } = {}) {
