@@ -1,8 +1,8 @@
-import { campaignScope } from '../core/campaign-engine.js?v=20261101-2';
-import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261101-2';
-import { formatDate } from '../core/time.js?v=20261101-2';
-import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261101-2';
-import { distinctSeries, sparkline } from './charts.js?v=20261101-2';
+import { campaignScope } from '../core/campaign-engine.js?v=20261101-3';
+import { allianceKind, allianceOf, isSurveyed, latestPoll, PRESENCE_LABELS, PRESENCE_RULES, presenceOverview, STRATEGIES } from '../core/world-engine.js?v=20261101-3';
+import { formatDate } from '../core/time.js?v=20261101-3';
+import { artTile, emblem, glyph, inkOn } from './visuals.js?v=20261101-3';
+import { distinctSeries, sparkline } from './charts.js?v=20261101-3';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const pct = (value, digits = 1) => value === null || value === undefined ? '—' : `${Number(value).toLocaleString('it-IT', { minimumFractionDigits: digits, maximumFractionDigits: digits })}%`;
@@ -211,7 +211,7 @@ export function myCoalitionPanel(state, world, index, poll, options = {}) {
   const shareOf = id => poll?.results?.find(row => row.partyId === id)?.share ?? null;
   const measured = members.filter(member => shareOf(member.id) !== null);
   const total = measured.reduce((sum, member) => sum + shareOf(member.id), 0);
-  const rows = members.map(member => `<li data-coalition-member="${esc(member.id)}"><strong>${esc(member.label)}</strong>${member.id === leader?.id ? ' <span class="badge badge-kind">Capofila</span>' : ''}${member.isPlayer ? ' <span class="badge">Tu</span>' : ''}<small>${shareOf(member.id) === null ? '<span>non nell’ultima rilevazione</span>' : pct(shareOf(member.id))}${member.position ? ` · ${esc(member.position)}` : ''}</small></li>`).join('');
+  const rows = members.map(member => `<li data-coalition-member="${esc(member.id)}"><strong>${esc(member.label)}</strong>${member.id === leader?.id ? ' <span class="badge badge-kind">Capofila</span>' : ''}${member.isPlayer ? ' <span class="badge">Tu</span>' : ''}<small>${shareOf(member.id) === null ? '<span>non nell’ultima rilevazione</span>' : pct(shareOf(member.id))}${member.position ? ` · ${esc(member.position)}` : ''}</small>${member.isPlayer || !Number.isFinite(Number(member.playerRelation)) ? '' : ` <span class="relation-chip ${member.playerRelation >= 10 ? 'good' : member.playerRelation <= -10 ? 'bad' : ''}" data-coalition-relation>Rapporto con te: ${esc(relationLabel(member.playerRelation))} · ${member.playerRelation > 0 ? '+' : ''}${Math.round(member.playerRelation)}</span>`}</li>`).join('');
   const terms = (alliance.terms ?? []).slice(-6).map(term => `<li><span>${esc(term.text)}</span>${term.status ? ` <span>— ${esc({ aperto: 'in sospeso fino al voto', mantenuto: 'mantenuto', tradito: 'non rispettato', decaduto: 'decaduto' }[term.status] ?? term.status)}</span>` : ''}</li>`).join('');
   const history = (alliance.history ?? []).slice(-5).map(item => `<li>${esc(item.text)}</li>`).join('');
   const cohesion = Math.max(0, Math.min(100, Math.round(alliance.cohesion)));
@@ -235,6 +235,7 @@ export function myCoalitionPanel(state, world, index, poll, options = {}) {
     <p><span>Coesione:</span> <b class="hq-bar ${cohesion < 30 ? 'danger' : ''}"><i style="width:${cohesion}%"></i></b> <small><span>${cohesion}/100 (sim.) ·</span> <span data-coalition-state>${esc(state_)}</span></small></p>
     ${cohesion < 40 ? '<p class="parliament-note" data-coalition-crisis>La coesione è bassa: se scende sotto 25 la coalizione perde il membro più distante (anche il tuo partito, che esce da solo) o, se siete in due, l’intesa si rompe.</p>' : ''}
     <ul class="coalition-members">${rows}</ul>
+    <p class="coalition-can" data-coalition-can><strong>Cosa puoi fare ora:</strong> ${esc(options.windowClosed ? 'le intese sono ferme fino al voto (inviti e uscite riprendono dopo).' : !secretary ? 'solo il segretario del partito invita o esce dall’accordo; tu puoi migliorare i rapporti con le tue attività.' : `${choices.length ? `invitare uno dei ${choices.length} partiti liberi` : 'nessun partito libero da invitare'} · uscire dall’accordo${alliance.partyIds.length >= 3 ? ' (gli altri restano insieme)' : ' (l’intesa si scioglie)'}.`)}</p>
     ${registeredHtml}
     ${terms ? `<h4>Condizioni e accordi</h4><ul class="coalition-terms">${terms}</ul>` : '<p class="quiet-copy">Nessuna condizione particolare è stata concordata.</p>'}
     ${history ? `<h4>Cronologia</h4><ul class="coalition-history">${history}</ul>` : ''}

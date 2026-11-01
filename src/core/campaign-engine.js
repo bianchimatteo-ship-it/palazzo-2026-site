@@ -1,10 +1,10 @@
-import { advanceDays } from './time.js?v=20261101-2';
-import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261101-2';
-import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261101-2';
-import { aggregateShares, listVote, mateForce, runFinalElection, runFirstRound, voteScale } from './election-engine.js?v=20261101-2';
-import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261101-2';
-import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261101-2';
-import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261101-2';
+import { advanceDays } from './time.js?v=20261101-3';
+import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261101-3';
+import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261101-3';
+import { aggregateShares, listVote, mateForce, runFinalElection, runFirstRound, voteScale } from './election-engine.js?v=20261101-3';
+import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261101-3';
+import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261101-3';
+import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261101-3';
 
 const SOURCE = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
@@ -633,6 +633,11 @@ function transferSupport(campaign, fromId, toId, delta, areaId = null) {
 }
 // How much a campaign can move: what the player does counts, but less and less as the gains pile up (the first
 // points come easily, then every point costs more). A strong campaign is worth a few points, never a landslide.
+// The comparison with a rival takes votes from him in every territory (the other activities act on one area, or on all with a discount): at .9 it was worth 10–25 times a field activity
+// and the first thing to do every day; .6 keeps it among the best ones without making the rest pointless.
+const RIVAL_COMPARISON_BASE = .6, RIVAL_COMPARISON_CAP = 1.2;
+// The most a poll follows the real movement of a group in one week (points); the rest is carried to the following waves.
+const POLL_SHIFT_LIMIT = 6;
 const IMPACT_SCALE = Object.freeze({ comunale:.42, provinciale:.4, regionale:.5, politiche:.6, europee:.6 });
 const ELASTICITY = Object.freeze({ comunale:5, provinciale:5, regionale:4.5, politiche:3.5, europee:3.5 });
 // The secretary of a party who leads its general or European campaign carries the whole list: what he does moves the list more than what a candidate does (it used to be a pull on the party
@@ -946,6 +951,8 @@ export function expectedGain(campaign, activity, modifiers = activityModifiers(c
   const areas = campaign.territories;
   const area = areas.find(item => item.id === campaign.candidacy?.territoryId) ?? areas[0];
   const weight = areas.reduce((sum, item) => sum + item.weight, 0) || 1;
+  // The comparison with a rival moves votes in every territory at once: its estimate is the amount it really transfers (it is not scaled by the organisation or by the area).
+  if (activity.rival) return round(Math.max(0, Math.min(RIVAL_COMPARISON_CAP, RIVAL_COMPARISON_BASE * modifiers.total) * (IMPACT_SCALE[campaign.electionType] ?? .5) * (1 / (1 + Math.max(0, campaign.gained ?? 0) / (ELASTICITY[campaign.electionType] ?? 4)))));
   const base = activity.effect * (.55 + (player?.resources.organization ?? 30) / 120 + (player?.resources.volunteers ?? 10) / 100) * (.78 + (campaign.candidateStats?.reputation ?? 50) / 180) * (1.14 - supportAt(campaign, area?.id) / 125);
   const scope = activity.scope === 'national' ? .55 : activity.scope === 'broad' ? .6 : activity.rival ? .9 : area ? area.weight / weight : 1;
   const elastic = 1 / (1 + Math.max(0, campaign.gained ?? 0) / (ELASTICITY[campaign.electionType] ?? 4));
@@ -1139,6 +1146,8 @@ function formRivalAlliance(campaign, rival, rivals) {
   addHistory(campaign, 'alleanza', 'Due candidature simulate hanno annunciato un accordo.', { source:SOURCE });
   return true;
 }
+// What the rivals' own campaigns are worth: the same weight as the player's (IMPACT_SCALE), so that an idle player is not eaten by rivals whose every push counts in full while his own count less than half.
+const rivalScale = campaign => (IMPACT_SCALE[campaign.electionType] ?? .5);
 function opponentTurn(campaign) {
   if (campaign.status !== 'active') return;
   campaign.aiTurns = (campaign.aiTurns ?? 0) + 1;
@@ -1167,15 +1176,15 @@ function opponentTurn(campaign) {
     profile.lastDecision = { day:campaign.day, action, targetId:target?.id ?? null, source:SOURCE };
     rival.strategy = action === 'attack' ? 'risposta agli attacchi' : action === 'defend' ? 'difesa del vantaggio' : action === 'territory' ? 'presidio dei territori deboli' : action === 'alliance' ? 'costruzione di alleanze' : action === 'withdraw' ? 'conservazione' : 'visibilità mirata';
     if (action === 'attack') {
-      transferSupport(campaign, player.id, rival.id, (targeted ? .08 + draw(campaign) * .15 : .16 + draw(campaign) * .27) * Math.min(listSize(campaign, player.id), listSize(campaign, rival.id)), target?.id);
-      moveSupport(campaign, rival.id, (.12 + draw(campaign) * .24) * listSize(campaign, rival.id), target?.id);
+      transferSupport(campaign, player.id, rival.id, rivalScale(campaign) * (targeted ? .08 + draw(campaign) * .15 : .16 + draw(campaign) * .27) * Math.min(listSize(campaign, player.id), listSize(campaign, rival.id)), target?.id);
+      moveSupport(campaign, rival.id, rivalScale(campaign) * (.12 + draw(campaign) * .24) * listSize(campaign, rival.id), target?.id);
       rival.lastAction = targeted ? 'Ricorda l’attacco e risponde colpo su colpo.' : 'Apre un fronte contro la candidatura del giocatore.';
       rivalMemory(campaign, rival, 'attack', player.id, { action:'attacco-autonomo', relationDelta:-2, weight:.35 });
     } else if (action === 'territory' && target) {
-      moveSupport(campaign, rival.id, (.3 + draw(campaign) * .4) * listSize(campaign, rival.id), target.id);
+      moveSupport(campaign, rival.id, rivalScale(campaign) * (.3 + draw(campaign) * .4) * listSize(campaign, rival.id), target.id);
       rival.lastAction = `Concentra risorse su ${target.name}.`;
     } else if (action === 'visibility') {
-      moveSupport(campaign, rival.id, (.18 + draw(campaign) * .32) * listSize(campaign, rival.id));
+      moveSupport(campaign, rival.id, rivalScale(campaign) * (.18 + draw(campaign) * .32) * listSize(campaign, rival.id));
       rival.lastAction = 'Cerca visibilità per allargare il proprio elettorato.';
     } else if (action === 'alliance') {
       const formed = formRivalAlliance(campaign, rival, rivals);
@@ -1184,7 +1193,7 @@ function opponentTurn(campaign) {
       rival.resources.organization = Math.min(100, Number(rival.resources.organization ?? 0) + 1);
       rival.lastAction = 'Riduce il ritmo per conservare risorse e influenza.';
     } else {
-      moveSupport(campaign, rival.id, (.22 + draw(campaign) * .25) * listSize(campaign, rival.id), top?.area?.id);
+      moveSupport(campaign, rival.id, rivalScale(campaign) * (.22 + draw(campaign) * .25) * listSize(campaign, rival.id), top?.area?.id);
       rival.lastAction = 'Difende il vantaggio nelle aree più solide.';
     }
     rival.resources.money = Math.max(0, rival.resources.money - Math.round(80 + draw(campaign) * 200));
@@ -1711,8 +1720,21 @@ export function pollWave(campaign, label = null) {
   // (only for a group that is the same group: when its members changed — an ally joined or left — the quantity measured is another one and the reading keeps the old cap)
   const signature = members => [...(members ?? [])].sort().join('|');
   const memberSigs = new Map((last?.groups ?? []).map(group => [group.id, signature(group.members)]));
-  // (the runoff is another question: the head-to-head projection of the finalists is a model of where the eliminated voters go, recomputed every week — it has moved by 12 points in a week on its own — so its polls keep the old cap)
-  const shift = new Map(last?.truth && campaign.stage !== 'ballottaggio' ? groups.flatMap(group => { const was = last.truth.find(item => item[0] === group.id)?.[1]; return Number.isFinite(was) && memberSigs.get(group.id) === signature(group.members) ? [[group.id, group.share - was]] : []; }) : []);
+  // A poll cannot jump as the model does: an eliminated candidate who backs a finalist moves the head-to-head projection by ten or twenty points in one day, a week of polls follows by at most POLL_SHIFT_LIMIT
+  // and the rest is carried to the next waves (wave.carry), so that the polls reach the new situation in a few weeks instead of never (the plain cap would leave them 20 points behind the vote). The runoff has
+  // its own readings (another stage: it starts again from its own first wave), and a group whose members changed is another quantity: no shift.
+  const carryIn = new Map(last?.carry ?? []);
+  const carryOut = [];
+  const shift = new Map(last?.truth && last.stage === campaign.stage ? groups.flatMap(group => {
+    const was = last.truth.find(item => item[0] === group.id)?.[1];
+    if (!Number.isFinite(was) || memberSigs.get(group.id) !== signature(group.members)) return [];
+    const due = (group.share - was) + Number(carryIn.get(group.id) ?? 0);
+    const limit = campaign.stage === 'ballottaggio' ? POLL_SHIFT_LIMIT : Infinity; // (the first round moves by activities, gradually; the runoff by discrete events of the eliminated candidates)
+    const applied = Math.max(-limit, Math.min(limit, due));
+    if (Math.abs(due - applied) > .005) carryOut.push([group.id, round(due - applied)]);
+    return [[group.id, applied]];
+  }) : []);
+  wave.carry = carryOut;
   wave.truth = groups.map(group => [group.id, round(group.share)]);
   const readings = [];
   for (const profile of POLL_INSTITUTES) {
@@ -2030,7 +2052,7 @@ export function performCampaignActivity(input,activityId,options={}) {
     if (rival) {
       const backlash = campaign.candidateStats.reputation < 45 && draw(campaign) < .35 * strategy.risk;
       if (backlash) { playerTransfer(campaign, rival.id, -.3); campaign.candidateStats.reputation = round(clamp(campaign.candidateStats.reputation - .8)); rivalMemory(campaign, rival, 'attack', player.id, { action:'attacco-del-giocatore', relationDelta:-10, weight:1.4 }); report = `L’attacco a ${rival.realReference?.fullName ?? 'un avversario'} viene percepito come scorretto: effetto boomerang.`; }
-      else { playerTransfer(campaign, rival.id, round(Math.min(1.6, .9 * factor))); rivalMemory(campaign, rival, 'attack', player.id, { action:'attacco-del-giocatore', relationDelta:-7, weight:1 }); report = `Il confronto con ${rival.realReference?.fullName ?? 'la candidatura rivale'} sposta voti dalla sua parte alla tua.`; }
+      else { playerTransfer(campaign, rival.id, round(Math.min(RIVAL_COMPARISON_CAP, RIVAL_COMPARISON_BASE * factor))); rivalMemory(campaign, rival, 'attack', player.id, { action:'attacco-del-giocatore', relationDelta:-7, weight:1 }); report = `Il confronto con ${rival.realReference?.fullName ?? 'la candidatura rivale'} sposta voti dalla sua parte alla tua.`; }
     } else report = 'Non ci sono avversari da mettere a confronto.';
   } else {
     let support=baseSupport()*factor;

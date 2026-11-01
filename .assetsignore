@@ -27,3 +27,4 @@ ios
 android
 docs
 capacitor.config.json
+worker-translate.js

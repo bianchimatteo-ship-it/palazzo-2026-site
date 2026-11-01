@@ -1,6 +1,7 @@
 // POLITICANDO 2026 on Cloudflare Workers: static assets for the game, a small shared archive for the owner's
 // corrections (Workers KV), and player accounts with online career saves (Cloudflare D1).
 // The real dataset files are never written.
+import { handleTranslate } from './worker-translate.js';
 const ARCHIVE_KEY = 'archivio-condiviso';
 const PIN_KEY = 'pin-amministratore';
 const MAX_BYTES = 1_500_000;
@@ -981,6 +982,7 @@ async function handleAccounts(request, env, url) {
 async function handleApi(request, env) {
   const url = new URL(request.url);
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { ...API_SECURITY_HEADERS, ...cors(request) } });
+  if (url.pathname === '/api/translate' || url.pathname === '/api/translate/status') return handleTranslate(request, env, json, url);
   if (url.pathname.startsWith('/api/account') || url.pathname.startsWith('/api/saves') || url.pathname.startsWith('/api/logos')) return handleAccounts(request, env, url);
   if (!env.ADMIN_ARCHIVE) return json(request, { error: 'Archivio condiviso non configurato.' }, 503);
   if (url.pathname === '/api/admin' && request.method === 'GET') {
