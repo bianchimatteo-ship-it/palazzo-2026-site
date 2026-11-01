@@ -1,8 +1,9 @@
 // «Ricompense»: the daily reward, the time played, the rewarded videos and what was received. It shows only what the player is meant to know: nothing about how long the effect of a video lasts or where it
 // comes from (that is not told anywhere in the game).
-import { DAILY_REWARD, PLAY_REWARDS } from '../data/simulation/reward-rules.js?v=20261031-3';
-import { glyph } from './visuals.js?v=20261031-3';
-import { esc } from './charts.js?v=20261031-3';
+import { DAILY_REWARD, PLAY_REWARDS } from '../data/simulation/reward-rules.js?v=20261101-2';
+import { t } from '../core/i18n.js?v=20261101-2';
+import { glyph } from './visuals.js?v=20261101-2';
+import { esc } from './charts.js?v=20261101-2';
 // euros with the thousands point also for four digits (toLocaleString('it-IT') writes 1500): the amounts here are 500 and 1.500
 const euro = value => `${String(Math.round(Number(value) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} €`;
 
@@ -27,9 +28,9 @@ export function noticeParts(notice) {
   const gained = Number(notice.amount) > 0, funds = isFunds(notice);
   const title = gained ? (funds ? `+${euro(notice.amount)}` : `+${notice.amount} ${notice.resource}`) : `${notice.resource} già al massimo`;
   let reason;
-  if (notice.kind === 'giornaliera') reason = 'Hai giocato almeno 5 minuti oggi';
-  else if (notice.kind === 'community') reason = gained ? 'Grazie per far parte della community' : 'Il limite è 100: nessun punto aggiunto';
-  else reason = gained ? `Hai raggiunto ${notice.minutes} minuti di gioco` : `Hai raggiunto ${notice.minutes} minuti di gioco: nessun punto aggiunto, il limite è 100`;
+  if (notice.kind === 'giornaliera') reason = t('rewards.popup.daily', 'Hai giocato almeno 5 minuti oggi');
+  else if (notice.kind === 'community') reason = gained ? t('rewards.popup.community', 'Grazie per far parte della community') : t('rewards.popup.limit', 'Il limite è 100: nessun punto aggiunto');
+  else reason = gained ? t('rewards.popup.minutes', 'Hai raggiunto {minutes} minuti di gioco', { minutes: notice.minutes }) : t('rewards.popup.minutesFull', 'Hai raggiunto {minutes} minuti di gioco: nessun punto aggiunto, il limite è 100', { minutes: notice.minutes });
   return { title, reason, gained, resource: notice.resource };
 }
 export function renderRewardNotice(notice, total = 1) {
@@ -38,12 +39,12 @@ export function renderRewardNotice(notice, total = 1) {
   const tone = KIND_TONE[notice.kind] ?? 'gold';
   return `<div class="reward-overlay" data-reward-overlay><aside class="reward-popup is-${tone} ${gained ? '' : 'is-flat'}" role="dialog" aria-modal="true" aria-labelledby="reward-popup-title" aria-describedby="reward-popup-reason" data-reward-notice="${esc(notice.id)}" data-reward-kind="${esc(notice.kind)}" data-reward-gained="${gained ? 'yes' : 'no'}">
     <div class="reward-popup-mark" aria-hidden="true">${glyph('trophy', 30)}</div>
-    <span class="section-kicker">${gained ? 'RICOMPENSA RICEVUTA' : 'RICOMPENSA'}</span>
+    <span class="section-kicker">${gained ? t('rewards.popup.kickerReceived', 'RICOMPENSA RICEVUTA') : t('rewards.popup.kicker', 'RICOMPENSA')}</span>
     <strong class="reward-popup-amount" id="reward-popup-title" data-reward-title>${esc(title)}</strong>
     <p class="reward-popup-reason" id="reward-popup-reason" data-reward-reason>${esc(reason)}</p>
     ${isFunds(notice) ? `<small class="reward-popup-resource">${esc(resource)}</small>` : ''}
-    ${total > 1 ? `<small class="reward-popup-count" data-reward-count>${esc(`Premio 1 di ${total}`)}</small>` : ''}
-    <button type="button" class="primary-button" data-reward-notice-dismiss autofocus>Continua</button>
+    ${total > 1 ? `<small class="reward-popup-count" data-reward-count>${esc(t('rewards.popup.count', 'Premio {n} di {total}', { n: 1, total }))}</small>` : ''}
+    <button type="button" class="primary-button" data-reward-notice-dismiss autofocus>${t('rewards.popup.continue', 'Continua')}</button>
   </aside></div>`;
 }
 

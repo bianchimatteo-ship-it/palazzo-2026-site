@@ -92,11 +92,14 @@ const fake = (kind, extra = {}) => ({ id: `${kind}-x`, kind, status: 'active', p
   assert.deepEqual(bad(['presidente-regione'], 'assessore-comunale'), ['presidente-regione']);
   assert.deepEqual(bad(['deputato', 'capogruppo'], 'consigliere-regionale'), ['capogruppo', 'deputato']);
   // Combinazioni compatibili: lo sono davvero.
-  for (const [held, office] of [[['consigliere-comunale'], 'consigliere-provinciale'], [['sindaco'], 'presidente-provincia'], [['sindaco'], 'consigliere-provinciale'], [['consigliere-comunale'], 'deputato'], [['consigliere-regionale'], 'consigliere-comunale'], [['deputato'], 'ministro'], [['senatore'], 'premier'], [['segretario'], 'sindaco'], [['segretario'], 'presidente-regione'], [['deputato'], 'segretario'], [['assessore-comunale'], 'consigliere-regionale'], [['consigliere-provinciale'], 'consigliere-regionale']]) assert.deepEqual(bad(held, office), [], `${held} e ${office} si possono avere insieme`);
+  for (const [held, office] of [[['consigliere-comunale'], 'consigliere-provinciale'], [['sindaco'], 'presidente-provincia'], [['sindaco'], 'consigliere-provinciale'], [['consigliere-comunale'], 'deputato'], [['consigliere-regionale'], 'consigliere-comunale'], [['deputato'], 'ministro'], [['senatore'], 'premier'], [['segretario'], 'sindaco'], [['segretario'], 'presidente-regione'], [['deputato'], 'segretario'], [['consigliere-provinciale'], 'consigliere-regionale']]) assert.deepEqual(bad(held, office), [], `${held} e ${office} si possono avere insieme`);
   // La regola è simmetrica e la nuova carica non si esclude da sola.
   for (const rule of R.INCOMPATIBILITIES) for (const a of rule.a) for (const b of rule.b) if (a !== b) { assert.ok(O.incompatibleWith([a], b).some(item => item.office === a), `${a} esclude ${b}`); assert.ok(O.incompatibleWith([b], a).some(item => item.office === b), `${b} esclude ${a}`); }
   assert.deepEqual(O.incompatibleWith(['deputato'], 'deputato'), [], 'La rielezione nella stessa carica non è un conflitto');
   assert.ok(O.lapsesFor(['consigliere-regionale'], 'senatore').every(item => /art\. 122/i.test(item.rule)), 'Si dice quale regola si applica');
+  // Art. 65 TUEL: il consigliere regionale non è, nella stessa Regione, sindaco, presidente di Provincia o assessore comunale.
+  assert.deepEqual(bad(['assessore-comunale'], 'consigliere-regionale'), ['assessore-comunale'], 'Consigliere regionale e assessore comunale (art. 65 TUEL)');
+  assert.deepEqual(bad(['consigliere-regionale'], 'sindaco'), ['consigliere-regionale']); assert.deepEqual(bad(['consigliere-regionale'], 'presidente-provincia'), ['consigliere-regionale']);
   // I livelli che pendono da un altro: la Provincia dal Comune.
   assert.ok(O.missingBase(['consigliere-regionale'], 'consigliere-provinciale'), 'Senza un seggio in un comune non c’è un seggio provinciale');
   assert.equal(O.missingBase(['consigliere-comunale'], 'consigliere-provinciale'), null);
@@ -104,6 +107,54 @@ const fake = (kind, extra = {}) => ({ id: `${kind}-x`, kind, status: 'active', p
   assert.ok(O.missingBase(['consigliere-comunale'], 'presidente-provincia'), 'Il Presidente della Provincia è un sindaco');
   assert.equal(O.missingBase(['sindaco'], 'presidente-provincia'), null);
   assert.ok(O.missingBase(['consigliere-comunale'], 'vicepremier') && O.missingBase(['deputato'], 'capogruppo') === null);
+}
+
+// ---------- 3b. le regole che dipendono dal luogo e dalla dimensione ----------
+{
+  const detail = (office, extra = {}) => ({ office, kind: office.includes('provincia') || office === 'consigliere-provinciale' ? 'provincia' : office.includes('regional') || office === 'presidente-regione' ? 'regione' : 'comune', region: 'Toscana', provinceCode: '052', municipalityCode: '052032', population: 50000, until: '2031-05-01', ...extra });
+  const facts = (details, target = {}) => ({ details, target: { region: 'Toscana', provinceCode: '052', municipalityCode: '052032', population: null, ...target } });
+  const bad = (held, office, f) => O.incompatibleWith(held, office, f).map(item => item.office).sort();
+  assert.equal(R.LOCAL_POPULATION_THRESHOLD, 15000, 'La soglia è 15.000 abitanti.');
+  // Parlamentare e sindaco: incompatibili solo se l’ente supera 15.000 abitanti (art. 13, comma 3, DL 138/2011).
+  for (const [population, incompatible] of [[14999, false], [15000, false], [15001, true], [20000, true], [3000, false]]) {
+    assert.deepEqual(bad(['sindaco'], 'deputato', facts([detail('sindaco', { population })])), incompatible ? ['sindaco'] : [], `Sindaco di un comune di ${population} abitanti e deputato`);
+    assert.deepEqual(bad(['deputato'], 'sindaco', facts([detail('deputato', { kind: null, population: null })], { population })), incompatible ? ['deputato'] : [], `Deputato che si candida sindaco di un comune di ${population} abitanti`);
+  }
+  assert.deepEqual(bad(['presidente-provincia'], 'senatore', facts([detail('presidente-provincia', { population: 250000 })])), ['presidente-provincia'], 'Il presidente di Provincia è monocratico e la sua provincia supera 15.000 abitanti');
+  assert.deepEqual(bad(['presidente-provincia'], 'senatore', facts([detail('presidente-provincia', { population: 9000 })])), [], 'Con una popolazione fino a 15.000 abitanti non c’è incompatibilità');
+  assert.deepEqual(bad(['sindaco'], 'deputato', facts([detail('sindaco', { population: null })])), ['sindaco'], 'Con la popolazione sconosciuta vale la regola come prima (nessuna eccezione inventata)');
+  assert.deepEqual(bad(['sindaco'], 'deputato', facts([detail('sindaco', { population: 9000 }), detail('sindaco', { population: 80000, municipalityCode: '058091' })])), ['sindaco'], 'Basta un sindaco di un ente grande');
+  // Il parlamentare con una carica regionale (consiglio o giunta): sempre incompatibili (art. 122 Cost.).
+  for (const office of ['consigliere-regionale', 'assessore-regionale', 'presidente-regione']) assert.deepEqual(bad([office], 'deputato', facts([detail(office, { kind: 'regione', population: null })])), [office], `${office} e deputato (art. 122)`);
+  // Consigliere regionale: incompatibile con sindaco, presidente di Provincia e assessore comunale della STESSA Regione (art. 65 TUEL).
+  for (const office of ['sindaco', 'presidente-provincia', 'assessore-comunale']) {
+    assert.deepEqual(bad([office], 'consigliere-regionale', facts([detail(office)], { region: 'Toscana' })), [office], `${office} della stessa Regione e consigliere regionale`);
+    assert.deepEqual(bad([office], 'consigliere-regionale', facts([detail(office)], { region: 'Lombardia' })), [], `${office} di un’altra Regione non esclude un seggio in Lombardia`);
+    assert.deepEqual(bad(['consigliere-regionale'], office, facts([detail('consigliere-regionale', { kind: 'regione', region: 'Toscana' })], { region: 'Toscana' })), ['consigliere-regionale'], `Consigliere regionale che diventa ${office} nella stessa Regione`);
+    assert.deepEqual(bad(['consigliere-regionale'], office, facts([detail('consigliere-regionale', { kind: 'regione', region: 'Toscana' })], { region: 'Lazio' })), [], `…in un’altra Regione no`);
+  }
+  // Consigliere provinciale: solo sindaci e consiglieri comunali in carica DELLA STESSA provincia; l’assessore esterno non basta.
+  const base = (details, province = '052', date = '2027-11-28') => O.missingBase(details.map(item => item.office), 'consigliere-provinciale', { details, target: { provinceCode: province }, electionDate: date });
+  assert.equal(base([detail('sindaco')]), null); assert.equal(base([detail('consigliere-comunale')]), null);
+  assert.match(base([detail('consigliere-comunale')], '058') ?? '', /altra provincia/, 'Un consigliere comunale di un’altra provincia non è eleggibile');
+  assert.match(base([detail('assessore-comunale', { population: 40000 })]) ?? '', /assessore esterno/, 'Un assessore (comune oltre 15.000 abitanti) non è consigliere: non basta');
+  assert.equal(base([detail('assessore-comunale', { population: 9000 })]), null, 'Nei comuni fino a 15.000 abitanti il consigliere nominato assessore conserva il seggio');
+  assert.equal(base([detail('assessore-comunale', { population: 15000 })]), null, '15.000 è ancora «fino a 15.000»');
+  assert.match(base([detail('assessore-comunale', { population: 15001 })]) ?? '', /assessore/, '15.001: l’assessore lascia il consiglio');
+  assert.ok(base([detail('consigliere-regionale', { kind: 'regione' })]), 'Un consigliere regionale non ha un seggio comunale');
+  // Presidente della Provincia: sindaco della provincia con almeno 18 mesi di mandato residuo (comma 60).
+  const president = (details, province = '052', date = '2027-11-28') => O.missingBase(details.map(item => item.office), 'presidente-provincia', { details, target: { provinceCode: province }, electionDate: date });
+  assert.equal(president([detail('sindaco', { until: '2029-06-01' })]), null, '18 mesi e 3 giorni: eleggibile');
+  assert.equal(president([detail('sindaco', { until: '2029-05-28' })]), null, 'Esattamente 18 mesi: eleggibile');
+  assert.match(president([detail('sindaco', { until: '2029-04-01' })]) ?? '', /18 mesi/, 'Meno di 18 mesi: non eleggibile');
+  assert.match(president([detail('sindaco')], '058') ?? '', /altra provincia/, 'Un sindaco di un’altra provincia non è eleggibile');
+  assert.match(president([detail('consigliere-comunale')]) ?? '', /sindaco/, 'Un consigliere comunale non basta');
+  // Le candidature distinguono il blocco (non eleggibile) dalla perdita successiva (opzione): il sindaco di un comune piccolo si candida alle Camere e, se vince, può tenerle entrambe.
+  assert.deepEqual(O.candidacyNotes({ held: ['sindaco'], electionType: 'politiche', role: 'deputato', facts: facts([detail('sindaco', { population: 9000 })]) }), [], 'Nessun avviso di decadenza per un comune fino a 15.000 abitanti');
+  assert.ok(O.candidacyNotes({ held: ['sindaco'], electionType: 'politiche', role: 'deputato', facts: facts([detail('sindaco', { population: 90000 })]) }).some(text => /sindaco/i.test(text) && /15\.000/.test(text)), 'Per un comune grande la candidatura dice cosa si lascia, con la norma');
+  assert.equal(O.candidacyBlock({ held: ['sindaco'], electionType: 'politiche', role: 'deputato', facts: facts([detail('sindaco', { population: 90000 })]) }), null, 'Candidarsi è consentito: l’incompatibilità scatta con l’elezione (opzione)');
+  assert.match(O.candidacyBlock({ held: ['consigliere-comunale'], electionType: 'provinciale', role: 'consigliere', electionDate: '2027-11-28', facts: facts([detail('consigliere-comunale')], { provinceCode: '058' }) }) ?? '', /altra provincia/, 'La candidatura a consigliere provinciale controlla la provincia');
+  assert.match(O.candidacyBlock({ held: ['sindaco'], electionType: 'provinciale', role: 'presidente', electionDate: '2027-11-28', facts: facts([detail('sindaco', { until: '2028-12-01' })]) }) ?? '', /18 mesi/, 'e i 18 mesi di mandato residuo del sindaco');
 }
 
 // ---------- 4. le candidature ----------

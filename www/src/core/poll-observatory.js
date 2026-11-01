@@ -1,5 +1,5 @@
-import { OBSERVATORY_RULES as RULES, POLL_EXTENSIONS as EXT, POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261031-3';
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261031-3';
+import { OBSERVATORY_RULES as RULES, POLL_EXTENSIONS as EXT, POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261101-2';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261101-2';
 
 // The poll observatory: what each simulated institute measures week after week, the average of the institutes, the segments
 // of the electorate, the flows between the forces and the insights drawn from them.
@@ -34,7 +34,10 @@ export function houseEffect(instituteId, partyId, share) {
   const mean = POLL_INSTITUTES.reduce((sum, item) => sum + houseLean(item.id, partyId), 0) / POLL_INSTITUTES.length;
   return (houseLean(instituteId, partyId) - mean) * 0.3 * clamp(Math.sqrt(Math.max(share, 0.1) / 10), 0.3, 1.2);
 }
-// No force moves by more than a credible amount between two consecutive polls of the same institute.
+// No force moves by more than a credible amount between two consecutive polls of the same institute — beyond what the electorate itself has moved. The cap is a limit on the NOISE of a reading (the difference of the errors of two
+// polls), not on the real change: reading_k = reading_(k-1) + move + noise with |noise| <= weeklyCap(reading_(k-1)), where `move` is how far the true support of the force went since the previous reading (0 when it is not
+// known or the force did not move: the cap is then exactly the old one). Without `move` a force whose real support grows by 14 points in six weeks could never be read above the cap's pace (0.25 + 0.035·share points a poll:
+// about 0.5 at 6% and 1 at 20%) and the polls would stay near the starting figure while the vote went to the new one.
 export const weeklyCap = share => 0.25 + 0.035 * share;
 export const marginOf = sample => round1(1.96 * Math.sqrt(0.25 / Math.max(1, sample)) * 100);
 export function instituteSample(profile, seed, week) {
@@ -48,14 +51,16 @@ function normalize(rows, others) {
 // Rows capped one by one against the previous reading (a force that just entered has no previous figure and starts from the
 // next one), the new ones taking only the room the others leave, and the total brought back to 100 a tenth at a time from the
 // largest forces that still have room within their weekly change. `damp` shrinks the cap (the first simulated week after a real poll).
-export function settleReading(rows, previousRows, { damp = 1 } = {}) {
+export function settleReading(rows, previousRows, { damp = 1, shift = null } = {}) {
   const before = new Map((previousRows ?? []).map(row => [row.partyId, row.share]));
+  const moved = id => Number(shift?.get?.(id) ?? 0) || 0;
   const floors = new Map();
   const results = rows.map(row => {
     const was = before.get(row.partyId);
     const cap = Number.isFinite(was) ? weeklyCap(was) * damp : 0;
-    const share = Number.isFinite(was) ? round1(clamp(row.share, was - cap, was + cap)) : round1(row.share);
-    floors.set(row.partyId, Number.isFinite(was) ? was - cap : 0);
+    const centre = Number.isFinite(was) ? was + moved(row.partyId) : 0;
+    const share = Number.isFinite(was) ? round1(Math.max(0, clamp(row.share, centre - cap, centre + cap))) : round1(row.share);
+    floors.set(row.partyId, Number.isFinite(was) ? Math.max(0, centre - cap) : 0);
     return { ...row, share, delta: Number.isFinite(was) ? round1(share - was) : 0 };
   });
   const entrants = results.filter(row => !Number.isFinite(before.get(row.partyId)));
@@ -78,13 +83,13 @@ export function settleReading(rows, previousRows, { damp = 1 } = {}) {
 
 // The published rows brought to an exact total (a tenth at a time, to the rows that were rounded down the most or that are the largest, within the weekly change of each force when
 // there is a previous reading): the percentages of a race in which every candidacy is present add up to exactly 100.0, never 99.7 with the rest left in an invented "Altri".
-export function balanceRows(rows, total, previousRows = null, exact = null) {
+export function balanceRows(rows, total, previousRows = null, exact = null, { shift = null } = {}) {
   const target = round1(total);
   const before = new Map((previousRows ?? []).map(row => [row.partyId, row.share]));
   const out = rows.map(row => ({ ...row }));
   for (let diff = round1(target - out.reduce((sum, row) => sum + row.share, 0)), guard = 0; Math.abs(diff) >= 0.05 && guard < 400; guard++) {
     const step = diff > 0 ? 0.1 : -0.1;
-    const room = row => { const was = before.get(row.partyId); if (!Number.isFinite(was)) return true; const cap = weeklyCap(was) + 0.05; return Math.abs(row.share + step - was) <= cap; };
+    const room = row => { const was = before.get(row.partyId); if (!Number.isFinite(was)) return true; const cap = weeklyCap(was) + 0.05; return Math.abs(row.share + step - (was + (Number(shift?.get?.(row.partyId) ?? 0) || 0))) <= cap; };
     const lack = row => ((exact?.get(row.partyId) ?? row.share) - row.share) * Math.sign(step);
     const pick = out.filter(row => row.share + step >= 0 && room(row)).sort((a, b) => lack(b) - lack(a) || b.share - a.share)[0] ?? out.filter(row => row.share + step >= 0).sort((a, b) => b.share - a.share)[0];
     if (!pick) break;
@@ -99,7 +104,7 @@ export function balanceRows(rows, total, previousRows = null, exact = null) {
 // is kept from one week to the next (the panel does not change), and it is a fraction of the nominal sampling error.
 // trueRows: [{ partyId, share }]; previousRows: the institute's previous reading (or the last published poll);
 // errors: { partyId: error } the institute carries; returns the reading and the new errors.
-export function readInstitute({ profile, seed, week, date, trueRows, previousRows = null, errors = {}, noise = 1, damp = 1, exact = false }) {
+export function readInstitute({ profile, seed, week, date, trueRows, previousRows = null, errors = {}, noise = 1, damp = 1, exact = false, shift = null }) {
   const sample = instituteSample(profile, seed, week);
   const fresh = {};
   const noisy = trueRows.map(row => {
@@ -110,15 +115,15 @@ export function readInstitute({ profile, seed, week, date, trueRows, previousRow
     return { partyId: row.partyId, raw: Math.max(Math.min(0.2, row.share), row.share + error + houseEffect(profile.id, row.partyId, row.share)) };
   });
   const rest = Math.max(0, 100 - trueRows.reduce((sum, row) => sum + row.share, 0));
-  let rows = settleReading(normalize(noisy, rest), previousRows, { damp });
+  let rows = settleReading(normalize(noisy, rest), previousRows, { damp, shift });
   // exact: the race has every candidacy in it, so what the rows leave out of 100 is exactly what the race leaves out (nothing, or the lists nobody names), not a rounding residue.
-  if (exact) rows = balanceRows(rows, 100 - rest, previousRows);
+  if (exact) rows = balanceRows(rows, 100 - rest, previousRows, null, { shift });
   return { reading: { id: profile.id, week, date, sample, margin: marginOf(sample), rows, others: round1(Math.max(0, 100 - rows.reduce((sum, row) => sum + row.share, 0))) }, errors: fresh };
 }
 
 // ---------- the average of the institutes ----------
 // Weighted by the sample: a larger panel counts more. A force an institute does not (yet) measure is averaged over the others.
-export function averageOf(readings, previousRows = null, { total = null } = {}) {
+export function averageOf(readings, previousRows = null, { total = null, shift = null } = {}) {
   const live = readings.filter(item => item?.rows?.length);
   if (!live.length) return null;
   const ids = [...new Set(live.flatMap(item => item.rows.map(row => row.partyId)))];
@@ -133,7 +138,7 @@ export function averageOf(readings, previousRows = null, { total = null } = {}) 
     return { partyId, share, delta: before.has(partyId) ? round1(share - before.get(partyId)) : 0, spread: round1(Math.max(...parts.map(([, value]) => value)) - Math.min(...parts.map(([, value]) => value))) };
   });
   // total: every candidacy of the race is in the average, so the rows add up to exactly that total (the rest to 100 is the lists nobody names, or nothing).
-  if (Number.isFinite(total)) rows = balanceRows(rows, total, previousRows, exactShare);
+  if (Number.isFinite(total)) rows = balanceRows(rows, total, previousRows, exactShare, { shift });
   const sample = live.reduce((sum, item) => sum + (item.sample ?? 0), 0);
   return { rows, others: round1(Math.max(0, 100 - rows.reduce((sum, row) => sum + row.share, 0))), sample, institutes: live.length };
 }

@@ -1,13 +1,14 @@
 // Roles and powers: what the player may do depends on the offices actually held.
 // Every power listed here is checked again by the store before the action runs.
-import { activeMinisters, playerInMajority } from './parliament-engine.js?v=20261031-3';
-import { heldOffices, hasPower, institutionOffice, officeLabel } from './office-engine.js?v=20261031-3';
-import { OFFICES, POWERS } from '../data/simulation/office-rules.js?v=20261031-3';
-import { isSecretary } from './career-engine.js?v=20261031-3';
-import { EP_ROLES, committeeById } from './local-engine.js?v=20261031-3';
-import { PRESIDENCY_RULES } from '../data/simulation/presidency-rules.js?v=20261031-3';
-import { presidentialEligibility, whiteSemester } from './presidency-engine.js?v=20261031-3';
-import { END_KINDS } from './legacy-engine.js?v=20261031-3';
+import { activeMinisters, playerInMajority } from './parliament-engine.js?v=20261101-2';
+import { heldOffices, hasPower, institutionOffice, officeDetails, officeLabel } from './office-engine.js?v=20261101-2';
+import { bandOfMunicipality, residentsOfUnit } from './municipal-rules.js?v=20261101-2';
+import { OFFICES, POWERS } from '../data/simulation/office-rules.js?v=20261101-2';
+import { isSecretary } from './career-engine.js?v=20261101-2';
+import { EP_ROLES, committeeById } from './local-engine.js?v=20261101-2';
+import { PRESIDENCY_RULES } from '../data/simulation/presidency-rules.js?v=20261101-2';
+import { presidentialEligibility, whiteSemester } from './presidency-engine.js?v=20261101-2';
+import { END_KINDS } from './legacy-engine.js?v=20261101-2';
 
 const governing = parliament => ['active', 'crisis'].includes(parliament?.government?.status);
 export const isPrimeMinister = parliament => governing(parliament) && parliament.government.primeMinister === 'player';
@@ -31,6 +32,29 @@ export function officeFacts(state) {
   };
 }
 export const heldOfficesOf = state => heldOffices(officeFacts(state));
+
+// The territorial facts the incompatibilities and the eligibility of the local offices need (see office-engine: officeDetails, incompatibleWith, missingBase): where each local mandate of the player is and how large the entity
+// is, and where the office that is being run for or gained is (the territory of the race, else the place the player comes from). Populations come from the ISTAT data of the game (null while they are not loaded).
+const populationOfComune = code => { const info = bandOfMunicipality(code); return Number.isFinite(info?.population) ? info.population : null; };
+export function officeFactsDetail(state) {
+  return officeDetails((state.local?.institutions ?? []).filter(item => item.status === 'active'), { populationOfComune, populationOfProvince: code => residentsOfUnit(code) });
+}
+// The target of an office just won, from the council where it was taken (its place and the size of the entity).
+export function institutionTarget(inst) {
+  const place = inst?.place ?? {};
+  const population = inst?.kind === 'comune' ? populationOfComune(place.municipalityCode ?? null) : inst?.kind === 'provincia' ? residentsOfUnit(place.provinceCode ?? null) : null;
+  return { region: place.region ?? inst?.region ?? null, provinceCode: place.provinceCode ?? null, municipalityCode: place.municipalityCode ?? null, population: Number.isFinite(population) ? population : null };
+}
+// target: { region, provinceCode, municipalityCode, population } of the office of an election. electionType: comunale | provinciale | regionale | ...; race: a race of the game with a territory (optional).
+export function candidacyFacts(state, { electionType = null, race = null } = {}) {
+  const player = (state.dataset?.politicians ?? []).find(item => item.id === state.career?.playerId) ?? null;
+  const own = (state.dataset?.territories ?? []).find(item => item.kind === 'comune' && item.source === 'user') ?? null;
+  const territory = race?.territory ?? null;
+  const home = { region: player?.region ?? state.game?.place?.region ?? null, municipalityCode: player?.municipalityCode ?? own?.istatCode ?? null, provinceCode: own?.provinceCode ?? state.game?.place?.provinceCode ?? null };
+  const region = territory?.region ?? home.region, provinceCode = territory?.provinceCode ?? home.provinceCode, municipalityCode = territory?.municipalityCode ?? home.municipalityCode;
+  const population = electionType === 'comunale' ? populationOfComune(municipalityCode) : electionType === 'provinciale' ? residentsOfUnit(provinceCode) : null;
+  return { details: officeFactsDetail(state), target: { region, provinceCode, municipalityCode, population: Number.isFinite(population) ? population : null } };
+}
 
 export function playerRoles(state) {
   const game = state.game;

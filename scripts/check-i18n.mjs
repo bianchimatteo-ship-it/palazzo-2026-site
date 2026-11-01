@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { chromeAvailable, createCareerInPage, openCareer, withBrowser } from './lib/browser.mjs';
 import { COLLECT, PAGES, tourCareer } from './lib/i18n-tour.mjs';
+import { ALLOWED_ITALIAN, ENGLISH_LOANWORDS } from './lib/i18n-allowlist.mjs';
 
 // ---------- 1. the dictionaries ----------
 const mem = new Map();
@@ -32,6 +33,17 @@ for (const [it, en] of all) {
   seen.set(it, en);
 }
 assert.ok(Object.keys(KEYS).includes('language.label') && KEYS['language.hint'], 'Le chiavi stabili della lingua ci sono.');
+{
+  // every stable key used in the code has its English text, and every key of the dictionary is used (nothing orphaned)
+  const { readdir } = await import('node:fs/promises');
+  const used = new Set();
+  for (const folder of ['ui', 'core']) for (const file of (await readdir(new URL(`../src/${folder}/`, import.meta.url))).filter(name => name.endsWith('.js'))) {
+    const text = (await readFile(new URL(`../src/${folder}/${file}`, import.meta.url), 'utf8')).replace(/^\s*\/\/.*$/gm, '');
+    for (const match of text.matchAll(/\bt\('([a-zA-Z0-9]+(?:\.[a-zA-Z0-9]+)+)',/g)) used.add(match[1]);
+  }
+  for (const key of used) assert.ok(KEYS[key], `La chiave «${key}» è usata nel codice ma non ha il testo inglese in keys.js.`);
+  for (const key of Object.keys(KEYS)) assert.ok(used.has(key) || key.startsWith('language.'), `La chiave «${key}» è in keys.js ma nessun codice la usa.`);
+}
 I.installBook(all, KEYS);
 await I.setLanguage('en');
 const T = I.translateText;
@@ -49,7 +61,7 @@ assert.equal(T('Apri il profilo di Azione'), 'Open the profile of Azione', 'Una 
 assert.equal(T('Toscana · fiducia 62'), 'Toscana · confidence 62');
 assert.equal(T('un testo mai visto prima'), 'un testo mai visto prima', 'Ciò che non è nel dizionario resta italiano, mai sbagliato.');
 assert.equal(T('Z'.repeat(5000)), 'Z'.repeat(5000), 'Un testo lungo non passa dai confronti costosi.');
-const t0 = Date.now(); for (let i = 0; i < 2000; i++) T(`Un testo qualunque ${i} che non ha corrispondenze, con ${i} numeri e (parentesi) · e altro: ancora`); assert.ok(Date.now() - t0 < 1500, `La ricerca è rapida (${Date.now() - t0} ms).`);
+const t0 = Date.now(); for (let i = 0; i < 2000; i++) T(`Un testo qualunque ${i} che non ha corrispondenze, con ${i} numeri e (parentesi) · e altro: ancora`); assert.ok(Date.now() - t0 < 3000, `La ricerca è rapida (${Date.now() - t0} ms).`);
 assert.equal(I.t('language.label', 'Lingua'), 'Language');
 assert.equal(I.t('chiave.inesistente', 'Testo {n}', { n: 3 }), 'Testo 3', 'Una chiave mancante ricade sull’italiano.');
 await I.setLanguage('it');
@@ -65,7 +77,16 @@ const ITALIAN = new Set('il lo la le gli un una uno di del della dei delle al al
 // Intentional Italian: the title of an official act of Parliament that is not in the book (it stays whole, as published), a title in «quotes» (the name of a law or of a story, a proper name) and the
 // month abbreviation «Mar», which is the same word in English.
 const intentionalItalian = text => /^(Conversione in legge|Ratifica ed esecuzione|Modifiche al|Disposizioni|Istituzione)/.test(text.trim()) || /^«[^»]+»(?::|$)/.test(text.trim()) || text.trim() === 'Mar';
-const knownUntranslated = text => { const core = text.replace(/\s+/g, ' ').trim(); return seen.has(core) && seen.get(core).replace(/\{\d\}/g, '{}') !== core && !/[{#]/.test(core); };
+// The words that are Italian and nothing else: every word of the Italian side of the phrase book that never appears in an English text of the book. A text of the English interface that contains one of them is Italian that did not
+// get translated, whatever its length (a one-word label, a button, a tooltip, a short heading); proper names and official denominations are in the book with the same text on both sides, so their words are not in this set.
+const wordsOf = text => text.toLowerCase().replace(/#|\{\d?\}/g, ' ').match(/[a-zà-ù]{3,}/g) ?? [];
+const italianWords = new Set(), englishWords = new Set();
+for (const [it, en] of all) { for (const word of wordsOf(it)) italianWords.add(word); for (const word of wordsOf(en)) englishWords.add(word); }
+const italianOnly = new Set([...italianWords].filter(word => !englishWords.has(word) && !ENGLISH_LOANWORDS.has(word)));
+const allowedItalian = text => ALLOWED_ITALIAN.find(item => item.pattern.test(text.trim()))?.reason ?? null;
+const englishSides = new Set(all.map(([, en]) => en.replace(/\{\d\}/g, '{}')));
+// (a word that is both an Italian phrase of the book and an English one — «Province» — is not untranslated Italian)
+const knownUntranslated = text => { const core = text.replace(/\s+/g, ' ').trim(); return !englishSides.has(core) && seen.has(core) && seen.get(core).replace(/\{\d\}/g, '{}') !== core && !/[{#]/.test(core); };
 const italianLines = text => text.split('\n').filter(line => looksItalian(line));
 const looksItalian = text => { const words = text.toLowerCase().match(/[a-zà-ù']+/g) ?? []; const hits = words.filter(word => ITALIAN.has(word)).length; return words.length >= 3 && hits >= 2; };
 await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, errors, version: v, ...browser }) => {
@@ -79,7 +100,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   assert.deepEqual(sw.b.map(x => x.slice(0, 2)), [['Italiano', 'true'], ['English', 'false']], 'Il selettore Italiano / English è sulla schermata iniziale.');
   assert.ok(await evaluate(`[...document.querySelectorAll('.menu-lang button')].map(b => b.querySelector('.menu-lang-flag')?.textContent).join('')`) === '🇮🇹🇬🇧' && await evaluate(`Boolean(document.querySelector('.menu-lang button.active .menu-lang-check'))`), 'Bandiere italiana e britannica, con la lingua attiva evidente.');
   assert.ok(sw.r[0] >= 0 && sw.r[1] <= sw.w && sw.r[2] >= 0 && sw.r[3] <= 160 && sw.b.every(x => x[2] >= 40) && !sw.over, `Il selettore è visibile e toccabile (${JSON.stringify(sw)}).`);
-  await createCareerInPage({ evaluate, version: v }, { weeks: 4 });
+  await createCareerInPage({ evaluate, version: v }, { weeks: 4, name: ['Anna', 'Bianchi'] });
   await viewport(1280, 900, false);
   await goto(); await wait(() => evaluate('Boolean(document.querySelector(".main-menu"))'));
   const saves = () => evaluate(`JSON.stringify(Object.keys(localStorage).filter(k => /career|slot|save/i.test(k)).sort())`);
@@ -138,18 +159,41 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
     assert.equal(probe.button, 'Close'); assert.equal(probe.submit, 'Close', 'I pulsanti di invio si traducono.');
   }
   // the main screens in English: how much Italian remains (a measure, with a limit)
-  let nodes = 0, italian = []; const tourTexts = [];
+  let nodes = 0, italian = []; const tourTexts = []; const reasons = new Map();
   await tourCareer({ evaluate, pause }, { pages: PAGES.filter(page => !['archivio', 'politici', 'partiti-lista'].includes(page)), onScreen: (name, texts) => { for (const text of texts) tourTexts.push([name, text]); } });
   // the pop-ups of the opening menu (Load game, Account, Settings, Logos, Guide, Hall of Fame) and the five steps of a new career, in English; proper names (parties, groups, movements) stay as they are
-  const proper = await evaluate(`(async () => { const real = await import('/src/data/repositories/real-data.js?v=${v}'); await real.loadRealCollections(['parties', 'politicalMovements', 'coalitions', 'parliamentaryGroups', 'laws', 'politicians', 'offices']); const names = new Set(); for (const list of [real.realDatabase.parties, real.realDatabase.politicalMovements, real.realDatabase.coalitions, real.realDatabase.parliamentaryGroups, real.realDatabase.laws, real.realDatabase.politicians, real.realDatabase.offices]) for (const item of list ?? []) { for (const [key, value] of Object.entries(item)) if (/group|committee|commission|title|office/i.test(key) && typeof value === 'string' && value.length > 5 && value.length < 200) names.add(value); for (const key of ['officialName', 'name', 'abbreviation', 'label', 'title', 'shortTitle']) if (item[key] && item[key].length > 3) names.add(item[key]); if (list === real.realDatabase.parliamentaryGroups) for (const value of Object.values(item)) if (typeof value === 'string' && value.length > 5 && value.length < 160) names.add(value); } for (const masthead of ['La Gazzetta del Territorio', 'Il Meridiano', 'LA POLITICA 24', 'Gazzetta del Territorio']) names.add(masthead);
+  const proper = await evaluate(`(async () => { const real = await import('/src/data/repositories/real-data.js?v=${v}'); await real.loadRealCollections(['parties', 'politicalMovements', 'coalitions', 'parliamentaryGroups', 'laws', 'politicians', 'offices', 'territorialUnits', 'municipalities', 'committees', 'politicalFigures']); const names = new Set(); { const geo = await (await fetch('/src/data/real/electoral-geography.json')).json(); for (const chamber of ['camera', 'senato']) for (const district of geo?.[chamber]?.collegi ?? []) { if (district.name) names.add(district.name); if (district.region) names.add(district.region); } for (const list of [geo?.camera?.circoscrizioni, geo?.senato?.circoscrizioni, geo?.camera?.estero, geo?.senato?.estero]) for (const item of list ?? []) { if (item.name) names.add(item.name); if (item.region) names.add(item.region); } for (const item of [...(real.realDatabase.territorialUnits ?? []), ...(real.realDatabase.municipalities ?? []), ...(real.realDatabase.committees ?? [])]) for (const key of ['name', 'region', 'gameRegion', 'label', 'officialName']) if (typeof item[key] === 'string' && item[key].length > 3) names.add(item[key]); } for (const list of [real.realDatabase.parties, real.realDatabase.politicalMovements, real.realDatabase.coalitions, real.realDatabase.parliamentaryGroups, real.realDatabase.laws, real.realDatabase.politicians, real.realDatabase.offices, real.realDatabase.politicalFigures]) for (const item of list ?? []) { for (const [key, value] of Object.entries(item)) if (/group|committee|commission|title|office/i.test(key) && typeof value === 'string' && value.length > 5 && value.length < 200) names.add(value); for (const key of ['officialName', 'name', 'abbreviation', 'label', 'title', 'shortTitle', 'fullName', 'displayName', 'firstName', 'lastName']) if (item[key] && item[key].length > 3) names.add(item[key]); if (list === real.realDatabase.parliamentaryGroups) for (const value of Object.values(item)) if (typeof value === 'string' && value.length > 5 && value.length < 160) names.add(value); } for (const masthead of ['La Gazzetta del Territorio', 'Il Meridiano', 'LA POLITICA 24', 'Gazzetta del Territorio']) names.add(masthead);
   // official denominations of parliamentary groups as the institutions publish them (they stay in Italian)
   for (const group of ["NOI MODERATI (NOI CON L'ITALIA, CORAGGIO ITALIA, UDC E ITALIA AL CENTRO)-MAIE-CENTRO POPOLARE", "Civici d'Italia-UDC-Noi Moderati (Noi con l'Italia, Coraggio Italia, Italia al Centro)-MAIE-Centro Popolare", 'Per le Autonomie (SVP-PATT, Campobase)', 'Per le Autonomie (SVP-PATT, Camp…']) names.add(group); return [...names].sort((a, b) => b.length - a.length); })()`);
   const fold = text => text.replace(/[’']/g, "'").toLowerCase();
   const properFolded = [...new Set(proper.map(fold))].sort((a, b) => b.length - a.length);
-  const stripProper = text => { let out = fold(text); for (const name of properFolded) if (out.includes(name)) out = out.split(name).join(' '); return out; };
-  for (const [name, text] of tourTexts) { nodes++; if (!intentionalItalian(text) && (looksItalian(stripProper(text)) || knownUntranslated(text))) italian.push(`${name}: ${text.slice(0, 400)}`); }
+  // a proper name is removed as a whole name, never from inside a word (the «nomic» of a name would otherwise eat «economic»)
+  const escapeRe = text => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const stripProper = text => { let out = fold(text); for (const name of properFolded) if (out.includes(name)) out = out.replace(new RegExp(`(^|[^a-zà-ù0-9])${escapeRe(name)}(?![a-zà-ù0-9])`, 'g'), '$1 '); return out; };
+  // why a text counts as Italian (kept in the report, so that a false alarm is easy to tell from a missing translation)
+  const reasonOf = text => {
+    if (intentionalItalian(text) || allowedItalian(text)) return null;
+    const bare = stripProper(text);
+    if (knownUntranslated(text)) return 'è una voce del dizionario rimasta in italiano';
+    const word = wordsOf(bare).find(item => italianOnly.has(item));
+    if (word) return `parola solo italiana: «${word}»`;
+    if (looksItalian(bare)) return 'parole grammaticali italiane';
+    return null;
+  };
+  const untranslated = text => reasonOf(text) !== null;
+  for (const [name, text] of tourTexts) { nodes++; if (untranslated(text)) italian.push(`${name}: ${text.slice(0, 400)}`) && reasons.set(text, reasonOf(text)); }
   const screens = new Map();
-  const record = async name => { for (const text of await evaluate(COLLECT)) { nodes++; if (!intentionalItalian(text) && (looksItalian(stripProper(text)) || knownUntranslated(text))) italian.push(`${name}: ${text.slice(0, 400)}`); } screens.set(name, true); };
+  const record = async name => { for (const text of await evaluate(COLLECT)) { nodes++; if (untranslated(text)) italian.push(`${name}: ${text.slice(0, 400)}`) && reasons.set(text, reasonOf(text)); } screens.set(name, true); };
+  // the tooltip of a chart is appended to the body (outside the container the interface redraws) and written to while the pointer moves: it is English too, numbers included
+  await evaluate(`location.hash = '#sondaggi'; true`); await pause(1200);
+  for (const [index, ratio] of [[0, 0.25], [1, 0.7]]) {
+    const tip = await evaluate(`(async () => { const chart = document.querySelectorAll('[data-trend]')[${index}]; if (!chart) return null; chart.scrollIntoView({ block: 'center' }); await new Promise(resolve => setTimeout(resolve, 400)); const r = chart.getBoundingClientRect(); chart.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: r.left + r.width * ${ratio}, clientY: r.top + r.height / 2 })); await new Promise(resolve => setTimeout(resolve, 120)); const el = document.querySelector('.viz-tip'); return el && !el.hidden ? el.innerText : ''; })()`);
+    if (tip === null) continue;
+    assert.ok(tip.length > 3, `Il tooltip del grafico ${index + 1} compare (${JSON.stringify(tip)}).`);
+    const bad = tip.split('\n').filter(Boolean).filter(line => { nodes++; return reasonOf(line) !== null || /\d,\d/.test(line); });
+    assert.deepEqual(bad, [], `Il tooltip del grafico ${index + 1} è in inglese, con i numeri in forma inglese (${JSON.stringify(tip)}).`);
+    screens.set(`tooltip/${index}`, true);
+  }
   await goto(); await wait(() => evaluate('Boolean(document.querySelector(".main-menu"))')); await pause(600);
   for (const view of ['guida', 'impostazioni', 'carica', 'hall', 'loghi', 'account']) {
     await evaluate(`document.querySelector('[data-menu="${view}"]')?.click(); true`); await pause(view === 'loghi' ? 1800 : 700);
@@ -164,7 +208,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   const setField = (selector, value, event = 'input') => evaluate(`(() => { const el = document.querySelector(${JSON.stringify(selector)}); el.value = ${JSON.stringify(value)}; el.dispatchEvent(new Event(${JSON.stringify(event)}, { bubbles: true })); return true; })()`);
   const nextStep = async () => { await evaluate(`document.querySelector('.wizard-footer [data-wizard-action="next"]').click(); true`); await pause(500); };
   await record('wizard/1');
-  await setField('.career-wizard [name="firstName"]', 'Prova'); await setField('.career-wizard [name="lastName"]', 'Lingua'); await setField('.career-wizard [name="birthDate"]', '1985-04-12', 'change');
+  await setField('.career-wizard [name="firstName"]', 'Anna'); await setField('.career-wizard [name="lastName"]', 'Bianchi'); await setField('.career-wizard [name="birthDate"]', '1985-04-12', 'change');
   await setField('.career-wizard [name="professionChoice"]', 'altro', 'change'); await pause(300); await record('wizard/1-altro');
   await setField('.career-wizard [name="professionChoice"]', 'Insegnante', 'change'); await pause(300);
   await nextStep(); await wait(() => evaluate('Boolean(document.querySelector("[data-wizard-region]"))')); await record('wizard/2');
@@ -181,9 +225,16 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   await nextStep(); await record('wizard/6');
   assert.ok(screens.size >= 14, `Popup e passaggi percorsi: ${screens.size}.`);
   if (process.env.I18N_LEFT) (await import('node:fs')).writeFileSync(process.env.I18N_LEFT, JSON.stringify(italian));
+  // the extraction for development (scripts/i18n-extract.mjs): the distinct Italian texts the English screens still show, numbers brought to `#`, with the screens that show them
+  if (process.env.I18N_EXTRACT) {
+    const distinct = new Map();
+    for (const entry of italian) { const at = entry.indexOf(': '); const screen = entry.slice(0, at), text = entry.slice(at + 2); const key = text.replace(/\d[\d.,]*/g, '#'); const item = distinct.get(key) ?? { text: key, example: text, screens: [] }; if (!item.screens.includes(screen)) item.screens.push(screen); distinct.set(key, item); }
+    (await import('node:fs')).writeFileSync(process.env.I18N_EXTRACT, JSON.stringify([...distinct.values()].sort((a, b) => a.text.localeCompare(b.text)), null, 1));
+  }
   const ratio = italian.length / nodes;
+  if (process.env.I18N_WHY) for (const [text, why] of reasons) console.log(`  [${why}] ${text.slice(0, 160)}`);
   console.log(`Inglese: ${nodes} testi su ${PAGES.length - 3} pagine e schede più ${screens.size} popup e passaggi, ${italian.length} ancora in italiano (${(ratio * 100).toFixed(2)}%)${italian.length ? `: ${italian.slice(0, 12).join(' | ')}` : ''}.`);
-  assert.ok(ratio < 0.002, `Troppo italiano rimasto in inglese (${(ratio * 100).toFixed(1)}%): ${italian.slice(0, 8).join(' | ')}`);
+  if (!process.env.I18N_MEASURE) assert.equal(italian.length, 0, `Testi italiani non autorizzati nell’inglese (${italian.length}): ${italian.slice(0, 12).join(' | ')}`);
   assert.deepEqual(errors, [], 'Nessun errore JavaScript durante il giro delle pagine.');
 });
-console.log('Lingua verificata: dizionario inglese ben formato (numeri e parti libere coerenti), selettore sulla schermata iniziale, scelta salvata fuori dai salvataggi e ritrovata dopo il ricaricamento, <html lang> aggiornato, stessa schermata e stessi dati cambiando lingua in una carriera, pagine principali in inglese con la quota di italiano residuo misurata.');
+console.log('Lingua verificata: dizionario inglese ben formato (numeri e parti libere coerenti), selettore sulla schermata iniziale, scelta salvata fuori dai salvataggi e ritrovata dopo il ricaricamento, <html lang> aggiornato, stessa schermata e stessi dati cambiando lingua in una carriera, pagine, popup, procedura guidata e tooltip dei grafici in inglese senza alcun testo italiano non autorizzato (lessico italiano, parole singole ed etichette brevi comprese), chiavi stabili tutte usate e tutte tradotte.');

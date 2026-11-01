@@ -1,12 +1,12 @@
 // The territorial committees of the party (Partito → Territorio): the player's own chain Region → Province → Comune,
 // every committee with state, strength, members, volunteers, local consensus, loyalty and leader, the actions that
 // change them, and new committees to found on the ISTAT map.
-import { COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, committeeActionCost, committeeProfile, committeeStrength, committeeSummary, ensureStructure, leaderStance, PARTY_SCALES, SEAT_TIERS, territorialControl } from '../core/committee-engine.js?v=20261031-3';
-import { costProblem } from '../core/career-engine.js?v=20261031-3';
-import { isPartyLeader } from '../core/organization-engine.js?v=20261031-3';
-import { glyph, territoryTile, territoryVisual } from './visuals.js?v=20261031-3';
-import { planAddButton } from './plan-view.js?v=20261031-3';
-import { arrow, badge, bar, card, esc, euro, kpi, num } from './sections-kit.js?v=20261031-3';
+import { COMMITTEE_ACTIONS, COMMITTEE_LEVELS, COMMITTEE_STATES, committeeActionCost, committeeProfile, committeeStrength, committeeSummary, ensureStructure, leaderStance, PARTY_SCALES, SEAT_TIERS, territorialControl } from '../core/committee-engine.js?v=20261101-2';
+import { costProblem } from '../core/career-engine.js?v=20261101-2';
+import { isPartyLeader } from '../core/organization-engine.js?v=20261101-2';
+import { glyph, territoryTile, territoryVisual } from './visuals.js?v=20261101-2';
+import { planAddButton } from './plan-view.js?v=20261101-2';
+import { arrow, badge, bar, card, esc, euro, kpi, num } from './sections-kit.js?v=20261101-2';
 
 const STATE_ORDER = ['fondazione', 'crescita', 'consolidamento', 'crisi', 'perdita-controllo', 'dissoluzione'];
 // One filter for each state the engine defines (COMMITTEE_STATES), plus «Tutti»; the dissolved ones are «Sciolti». The id of a filter is the state itself.
@@ -86,22 +86,39 @@ function chain(game, committees, home, options) {
 
 // Founding a committee anywhere in Italy: Region → Province → Comune, from the ISTAT lists (the region of a comune is the one of its province). The level founded is the lowest one chosen;
 // the cost is paid once and a new committee has no manager until one is recruited.
+// What the party already has, told apart by the ISTAT codes: a dissolved committee does not count (its place is free again at once). A comune is told by its code; the name is the fallback ONLY for the records of before the
+// codes were kept (and only inside the same province), so two comuni with the same name in different provinces are never confused.
+const liveOf = committees => committees.filter(item => item.status !== 'dissoluzione');
+const hasRegional = (live, region) => live.some(item => item.level === 'regione' && item.region === region);
+const hasProvincial = (live, region, unit) => live.some(item => item.level === 'provincia' && item.region === region && item.unitCode === unit.code);
+const hasComunal = (live, region, unit, place) => live.some(item => item.level === 'comune' && item.region === region && (item.municipalityCode ? item.municipalityCode === place.code : item.name === place.name && item.unitCode === unit.code));
 function foundingPanel(game, { committees, units, municipalities, home, found }) {
   if (!units.length) return '';
-  const regions = [...new Set(units.map(unit => unit.gameRegion))].sort((a, b) => (b === home.region) - (a === home.region) || a.localeCompare(b, 'it'));
+  const live = liveOf(committees);
+  // The comuni of every province that the party has not got yet (nothing is listed that cannot be founded), counted once.
+  const freePlaces = new Map();
+  const freeIn = unit => { if (!freePlaces.has(unit.code)) freePlaces.set(unit.code, municipalities ? municipalities.filter(item => item.unit === unit.code && !hasComunal(live, unit.gameRegion, unit, item)).sort((a, b) => a.name.localeCompare(b.name, 'it')) : []); return freePlaces.get(unit.code); };
+  // A province is listed while something can still be founded in it: its own committee, or a comune.
+  const unitFoundable = unit => !hasProvincial(live, unit.gameRegion, unit) || (municipalities ? freeIn(unit).length > 0 : false);
+  const regionFoundable = name => !hasRegional(live, name) || units.some(unit => unit.gameRegion === name && unitFoundable(unit));
+  const regions = [...new Set(units.map(unit => unit.gameRegion))].filter(regionFoundable).sort((a, b) => (b === home.region) - (a === home.region) || a.localeCompare(b, 'it'));
+  if (!regions.length) return `<section class="cm-found" aria-label="Fonda un nuovo comitato"><strong class="cm-found-title">Fonda un nuovo comitato</strong><small class="cm-found-note" data-found-complete>Il partito ha già un comitato in ogni territorio.</small></section>`;
   const region = regions.includes(found.region) ? found.region : regions.includes(home.region) ? home.region : regions[0];
-  const regionUnits = units.filter(unit => unit.gameRegion === region).sort((a, b) => a.name.localeCompare(b.name, 'it'));
+  const regionUnits = units.filter(unit => unit.gameRegion === region && unitFoundable(unit)).sort((a, b) => a.name.localeCompare(b.name, 'it'));
+  const canFoundRegional = !hasRegional(live, region);
   const homeUnit = region === home.region ? regionUnits.find(unit => unit.code === home.provinceCode) ?? null : null;
+  // The choice of the player when it can still be made; otherwise the first thing that can be founded (never a state with nothing to found and a disabled button).
   const wanted = found.unit !== undefined ? found.unit : homeUnit?.code ?? '';
-  const unitChosen = regionUnits.find(item => item.code === wanted) ?? null;
-  const places = unitChosen && municipalities ? municipalities.filter(item => item.unit === unitChosen.code).sort((a, b) => a.name.localeCompare(b.name, 'it')) : [];
-  const place = unitChosen ? places.find(item => item.code === found.municipality) ?? null : null;
+  const unitChosen = regionUnits.find(item => item.code === wanted) ?? (canFoundRegional ? null : regionUnits[0] ?? null);
+  const places = unitChosen ? freeIn(unitChosen) : [];
+  const provinceFree = unitChosen ? !hasProvincial(live, region, unitChosen) : false;
+  const place = unitChosen ? places.find(item => item.code === found.municipality) ?? (provinceFree ? null : places[0] ?? null) : null;
   const level = place ? 'comune' : unitChosen ? 'provincia' : 'regione';
   const name = place?.name ?? unitChosen?.name ?? region;
-  const exists = committees.some(item => item.status !== 'dissoluzione' && item.level === level && item.region === region && (level === 'regione' || (level === 'provincia' ? item.unitCode === unitChosen.code : item.municipalityCode === place.code || (item.name === place.name && item.unitCode === unitChosen.code))));
+  const exists = level === 'regione' ? !canFoundRegional : level === 'provincia' ? !provinceFree : false;
   const problem = exists ? `Il partito ha già il comitato ${COMMITTEE_LEVELS[level].label.toLowerCase().replace('comitato ', '')} di ${name}.` : costProblem(game, COMMITTEE_ACTIONS.fonda.cost) || (game.status === 'ended' ? 'Carriera conclusa.' : '');
-  const unitSelect = `<label>Provincia<select data-view-filter-select="found-unit"><option value="" ${unitChosen ? '' : 'selected'}>Nessuna: comitato regionale</option>${regionUnits.map(item => `<option value="${esc(item.code)}" ${unitChosen?.code === item.code ? 'selected' : ''}>${esc(item.name)} · ${esc(item.type)}</option>`).join('')}</select></label>`;
-  const placeSelect = !unitChosen ? '' : municipalities ? `<label>Comune<select data-view-filter-select="found-municipality"><option value="" ${place ? '' : 'selected'}>Nessuno: comitato provinciale</option>${places.map(item => `<option value="${esc(item.code)}" ${place?.code === item.code ? 'selected' : ''}>${esc(item.name)}</option>`).join('')}</select></label>` : `<button type="button" class="secondary-button" data-committee-load="municipalities">Carica i comuni ISTAT</button>`;
+  const unitSelect = `<label>Provincia<select data-view-filter-select="found-unit">${canFoundRegional ? `<option value="" ${unitChosen ? '' : 'selected'}>Nessuna: comitato regionale</option>` : ''}${regionUnits.map(item => `<option value="${esc(item.code)}" ${unitChosen?.code === item.code ? 'selected' : ''}>${esc(item.name)} · ${esc(item.type)}</option>`).join('')}</select></label>`;
+  const placeSelect = !unitChosen ? '' : municipalities ? `<label>Comune<select data-view-filter-select="found-municipality">${provinceFree ? `<option value="" ${place ? '' : 'selected'}>Nessuno: comitato provinciale</option>` : ''}${places.map(item => `<option value="${esc(item.code)}" ${place?.code === item.code ? 'selected' : ''}>${esc(item.name)}</option>`).join('')}</select></label>` : `<button type="button" class="secondary-button" data-committee-load="municipalities">Carica i comuni ISTAT</button>`;
   return `<section class="cm-found" aria-label="Fonda un nuovo comitato"><strong class="cm-found-title">Fonda un nuovo comitato</strong>
     <label>Regione<select data-view-filter-select="found-region">${regions.map(item => `<option value="${esc(item)}" ${item === region ? 'selected' : ''}>${esc(item)}${item === home.region ? ' · casa tua' : ''}</option>`).join('')}</select></label>${unitSelect}${placeSelect}
     <button type="button" class="primary-button" data-committee-found="nuovo" data-committee-level="${esc(level)}" data-committee-name="${esc(name)}" data-committee-region="${esc(region)}" data-committee-unit="${esc(unitChosen?.code ?? '')}" data-committee-unit-type="${esc(unitChosen?.type ?? '')}" data-committee-unit-name="${esc(unitChosen?.name ?? '')}" data-committee-municipality="${esc(place?.code ?? '')}" ${problem ? `disabled title="${esc(problem)}"` : ''}>Fonda il ${esc(COMMITTEE_LEVELS[level].label.toLowerCase())} di ${esc(name)} <small>${esc(costLabel(committeeActionCost({ level }, 'fonda')))}</small></button>

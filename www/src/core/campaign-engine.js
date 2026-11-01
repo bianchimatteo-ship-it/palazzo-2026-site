@@ -1,10 +1,10 @@
-import { advanceDays } from './time.js?v=20261031-3';
-import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261031-3';
-import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261031-3';
-import { aggregateShares, listVote, mateForce, runFinalElection, runFirstRound, voteScale } from './election-engine.js?v=20261031-3';
-import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261031-3';
-import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261031-3';
-import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261031-3';
+import { advanceDays } from './time.js?v=20261101-2';
+import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261101-2';
+import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261101-2';
+import { aggregateShares, listVote, mateForce, runFinalElection, runFirstRound, voteScale } from './election-engine.js?v=20261101-2';
+import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261101-2';
+import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261101-2';
+import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261101-2';
 
 const SOURCE = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
@@ -1707,16 +1707,23 @@ export function pollWave(campaign, label = null) {
   // (the runoff is another question – the two finalists head to head – so its first reading does not start from the readings of the first round)
   const last = box.waves.at(-1)?.stage === campaign.stage ? box.waves.at(-1) : null;
   const wave = { id: ids('onda', campaign.seed, campaign.day + (campaign.stage === 'ballottaggio' ? 1000 : 0)), day: campaign.day, date: campaign.currentDate, stage: campaign.stage, label, institutes: {}, source: SOURCE };
+  // How far the real support of each group went since the previous wave: the polls follow it (the weekly cap limits only the noise of a reading, poll-observatory.js: weeklyCap).
+  // (only for a group that is the same group: when its members changed — an ally joined or left — the quantity measured is another one and the reading keeps the old cap)
+  const signature = members => [...(members ?? [])].sort().join('|');
+  const memberSigs = new Map((last?.groups ?? []).map(group => [group.id, signature(group.members)]));
+  // (the runoff is another question: the head-to-head projection of the finalists is a model of where the eliminated voters go, recomputed every week — it has moved by 12 points in a week on its own — so its polls keep the old cap)
+  const shift = new Map(last?.truth && campaign.stage !== 'ballottaggio' ? groups.flatMap(group => { const was = last.truth.find(item => item[0] === group.id)?.[1]; return Number.isFinite(was) && memberSigs.get(group.id) === signature(group.members) ? [[group.id, group.share - was]] : []; }) : []);
+  wave.truth = groups.map(group => [group.id, round(group.share)]);
   const readings = [];
   for (const profile of POLL_INSTITUTES) {
     const scaled = { ...profile, sample: profile.sample.map(value => Math.max(150, Math.round(value * scale / 10) * 10)) };
     const before = last?.institutes?.[profile.id]?.rows;
-    const out = readInstitute({ profile: scaled, seed: campaign.seed, week: campaign.day + (campaign.stage === 'ballottaggio' ? 1000 : 0), date: campaign.currentDate, trueRows, previousRows: before ? unpackRows(before) : null, errors: box.errors[profile.id] ?? {}, noise: CAMPAIGN_POLL_RULES.noise ?? 1, exact: true });
+    const out = readInstitute({ profile: scaled, seed: campaign.seed, week: campaign.day + (campaign.stage === 'ballottaggio' ? 1000 : 0), date: campaign.currentDate, trueRows, previousRows: before ? unpackRows(before) : null, shift, errors: box.errors[profile.id] ?? {}, noise: CAMPAIGN_POLL_RULES.noise ?? 1, exact: true });
     box.errors[profile.id] = out.errors;
     wave.institutes[profile.id] = { sample: out.reading.sample, margin: out.reading.margin, rows: packRows(out.reading.rows), others: out.reading.others };
     readings.push({ ...out.reading });
   }
-  const average = averageOf(readings, last?.average ? unpackRows(last.average) : null, { total: trueRows.reduce((sum, row) => sum + row.share, 0) });
+  const average = averageOf(readings, last?.average ? unpackRows(last.average) : null, { total: trueRows.reduce((sum, row) => sum + row.share, 0), shift });
   wave.average = average ? packRows(average.rows.map(row => ({ ...row }))).map((row, index) => [...row, average.rows[index].spread]) : [];
   // what the race leaves to the lists it does not field (a general or European vote): the one "Altri" of the poll, as the count has it
   wave.others = average ? average.others : 0;

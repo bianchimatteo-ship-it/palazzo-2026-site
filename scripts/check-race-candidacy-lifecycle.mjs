@@ -137,8 +137,19 @@ async function run(label, setup, race, { reload = true } = {}) {
 // ---------- the case of the report: a provincial race of another region ----------
 {
   const setup = await leader({ seed: 'cand-provinciale' });
-  const race = findRace(setup, 'provinciale', { sameRegion: false });
-  await run('provinciali, altra provincia e altra regione', setup, race);
+  // Since the law of the Province is applied (L. 56/2014, art. 1, c. 69), a councillor of a comune does not stand in another province: the race stays visible, the player is told why.
+  const { store: st, people } = setup;
+  const home = st.homePlace();
+  let race = null;
+  for (let guard = 0; guard < 200 && !race; guard++) {
+    race = st.races().find(item => item.level === 'provinciale' && !item.round && item.status === 'planned' && item.windowOpensAt > today(st) && item.territory.provinceCode !== home.provinceCode && item.territory.region !== home.region) ?? null;
+    if (!race) st.advance(7);
+  }
+  assert.ok(race, 'provinciali, altra provincia e altra regione: c\'è una corsa fuori dal proprio territorio.');
+  const player = st.raceCandidates(race.id, people)?.player;
+  assert.equal(player?.available, false, 'provinciali, altra provincia: il giocatore non può candidarsi.');
+  assert.match(player.reason ?? '', /altra provincia|provincia/i, 'provinciali, altra provincia: il motivo di legge è detto.');
+  lines.push('provinciali, altra provincia e altra regione: candidatura negata con il motivo di legge (L. 56/2014, c. 69)');
 }
 // ---------- the other places of the three levels ----------
 {
@@ -160,7 +171,7 @@ async function run(label, setup, race, { reload = true } = {}) {
 {
   const setup = await leader({ seed: 'cand-vecchio-salvataggio' });
   const { store, people } = setup;
-  const race = findRace(setup, 'provinciale');
+  const race = findRace(setup, 'comunale', { sameRegion: true });
   store.chooseRaceCandidate(race.id, { kind: 'player' }, people);
   while (today(store) <= race.windowClosesAt) store.advance(7);
   assert.equal(raceOf(store, race.id).status, 'confirmed');

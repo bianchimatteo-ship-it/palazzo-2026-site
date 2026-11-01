@@ -6,7 +6,7 @@
 // districts a big comune is split into) and goes to the bloc that won the district; the colour is the bloc whose districts cover most comuni of the province. A district that touches several
 // provinces is therefore never given in full to each of them. The indicator is labelled as such on the map, in the legend, in the tooltip and in the panel. No boundary and no winner is invented:
 // where there is no district there is no colour.
-import { esc, num } from './sections-kit.js?v=20261031-3';
+import { esc, num } from './sections-kit.js?v=20261101-2';
 
 export const MAP_SCOPES = Object.freeze([['regioni', 'Regioni'], ['province', 'Province']]);
 const REGION_SHORT = { Piemonte: 'PIE', 'Valle d’Aosta': 'VDA', Lombardia: 'LOM', 'Trentino-Alto Adige': 'TAA', Veneto: 'VEN', 'Friuli-Venezia Giulia': 'FVG', Liguria: 'LIG', 'Emilia-Romagna': 'EMR', Toscana: 'TOS', Umbria: 'UMB', Marche: 'MAR', Lazio: 'LAZ', Abruzzo: 'ABR', Molise: 'MOL', Campania: 'CAM', Puglia: 'PUG', Basilicata: 'BAS', Calabria: 'CAL', Sicilia: 'SIC', Sardegna: 'SAR' };
@@ -112,11 +112,22 @@ export function italyMapInfo({ boundaries, tallies, selected, labelOf, colorOf, 
 }
 
 // An accessible table with the same information as the map (one row per region).
-export function italyMapTable({ boundaries, tallies, labelOf, colorOf }) {
-  const rows = boundaries.regions.map(region => {
-    const tally = tallies.regions.get(region.code);
+// The table for those who do not use the map: the rows follow the level that is shown. Regions: 20 rows, the winner of the single-member districts they hold. Provinces: 110 rows with the DESCRIPTIVE indicator
+// (not a winner: see PROVINCE_INDICATOR_NOTE), with the region of each province.
+export function italyMapTable({ boundaries, tallies, labelOf, colorOf, scope = 'regioni' }) {
+  const provinceLevel = scope === 'province';
+  const list = provinceLevel ? boundaries.provinces : boundaries.regions;
+  const regionName = new Map(boundaries.regions.map(region => [region.code, region.name]));
+  const rows = list.map(item => {
+    const tally = (provinceLevel ? tallies.provinces : tallies.regions).get(item.code);
     const lead = tally?.leader ? `<i class="nv-swatch" style="background:${esc(colorOf(tally.leader))}"></i>${esc(labelOf(tally.leader))}` : tally?.tie ? 'Pari' : '—';
-    return `<tr><th scope="row">${esc(region.name)}</th><td>${lead}</td><td>${esc(tally?.total ? tally.ranked.map(([id, n]) => `${labelOf(id)} ${num(n, 0)}`).join(' · ') : 'nessun dato')}</td></tr>`;
+    const detail = esc(tally?.total ? tally.ranked.map(([id, n]) => `${labelOf(id)} ${num(n, provinceLevel ? 1 : 0)}`).join(' · ') : 'nessun dato');
+    return provinceLevel
+      ? `<tr><th scope="row">${esc(item.name)}</th><td>${esc(regionName.get(item.region) ?? item.region ?? '')}</td><td>${lead}</td><td>${detail}</td></tr>`
+      : `<tr><th scope="row">${esc(item.name)}</th><td>${lead}</td><td>${detail}</td></tr>`;
   }).join('');
-  return `<details class="it-table"><summary>Tabella per regione</summary><div class="sx-table-wrap"><table class="sx-table"><thead><tr><th scope="col">Regione</th><th scope="col">Prevale</th><th scope="col">Collegi vinti</th></tr></thead><tbody>${rows}</tbody></table></div></details>`;
+  const head = provinceLevel
+    ? '<th scope="col">Provincia</th><th scope="col">Regione</th><th scope="col">Indicatore prevalente</th><th scope="col">Peso dei collegi</th>'
+    : '<th scope="col">Regione</th><th scope="col">Prevale</th><th scope="col">Collegi vinti</th>';
+  return `<details class="it-table" data-map-table="${provinceLevel ? 'province' : 'regioni'}"><summary>${provinceLevel ? 'Tabella per provincia' : 'Tabella per regione'}</summary><div class="sx-table-wrap"><table class="sx-table"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table></div></details>`;
 }

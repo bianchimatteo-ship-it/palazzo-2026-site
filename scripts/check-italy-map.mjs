@@ -8,7 +8,7 @@ import { chromeAvailable, createCareerInPage, openCareer, withBrowser } from './
 const read = f => JSON.parse(readFileSync(new URL(`../src/data/real/${f}.json`, import.meta.url), 'utf8'));
 const boundaries = read('italy-boundaries'), geography = read('electoral-geography'), manifest = read('manifest');
 const build = (readFileSync(new URL('../index.html', import.meta.url), 'utf8')).match(/main\.js\?v=([^"']+)/)?.[1];
-const { territoryTallies, provinceDistricts, italyMapSvg, italyMapInfo, PROVINCE_INDICATOR_NOTE } = await import(new URL(`../src/ui/italy-map.js?v=${build}`, import.meta.url).href);
+const { territoryTallies, provinceDistricts, italyMapSvg, italyMapInfo, italyMapTable, PROVINCE_INDICATOR_NOTE } = await import(new URL(`../src/ui/italy-map.js?v=${build}`, import.meta.url).href);
 const { geoMapCard } = await import(new URL(`../src/ui/national-view.js?v=${build}`, import.meta.url).href);
 
 // ---------- 1. the data: provenance, licence, completeness ----------
@@ -81,6 +81,12 @@ assert.ok(/data-geo-state="missing"/.test(geoMapCard(dummy, geography, 'proiezio
 const noResults = geoMapCard(dummy, null, 'proiezione', { boundaries, status: { status: 'ready' } });
 assert.ok(/data-geo-state="no-results"/.test(noResults) && /data-action="retry-data"/.test(noResults), 'Stato: confini presenti ma elezioni 2022 non caricate.');
 assert.ok(/Tocca o seleziona/.test(italyMapInfo({ boundaries, tallies, selected: '', labelOf, colorOf, dataClass: '' })), 'Senza selezione, un invito.');
+{
+  const labelOf = id => String(id), colorOf = () => '#888';
+  const regionRows = (italyMapTable({ boundaries, tallies, labelOf, colorOf, scope: 'regioni' }).match(/<tr><th scope="row">/g) ?? []).length;
+  const provinceRows = (italyMapTable({ boundaries, tallies, labelOf, colorOf, scope: 'province' }).match(/<tr><th scope="row">/g) ?? []).length;
+  assert.equal(regionRows, 20, 'La tabella regionale ha 20 righe.'); assert.equal(provinceRows, 110, 'La tabella provinciale ne ha 110.');
+}
 console.log('Mappa geografica: dati e funzioni verificati (20 regioni, 110 province, 2022 coerente con i collegi ufficiali).');
 
 // ---------- 4. the page, in Chrome ----------
@@ -114,16 +120,33 @@ await withBrowser(async browser => {
     await wait(() => evaluate(`/Siena/.test(document.querySelector('.it-info h4')?.textContent ?? '')`), 5000);
     assert.ok(await evaluate(`/Indicatore descrittivo/.test(document.querySelector('.it-info')?.textContent ?? '') && /non è il vincitore/.test(document.querySelector('.it-info')?.textContent ?? '')`), `${name}: la provincia dichiara il metodo.`);
     assert.ok(await evaluate(`document.querySelector('.it-area.is-selected')?.dataset.mapArea === 'p:052'`), `${name}: area scelta evidenziata.`);
+    // blocs / parties: the simulated reading can be coloured by winning bloc (row.w) or winning party (row.p); the districts are the same 221 either way, none lost, none counted twice
+    if (await has('[data-view-filter="nazionali"][data-view-filter-value="proiezione"]')) await click('[data-view-filter="nazionali"][data-view-filter-value="proiezione"]');
+    await click('[data-view-filter="mapScope"][data-view-filter-value="regioni"]'); await wait(() => evaluate(`document.querySelectorAll('.it-area').length === 20`), 5000);
+    const tableTotal = () => evaluate(`[...document.querySelectorAll('.it-table tbody tr')].reduce((sum, row) => sum + [...(row.children[2]?.textContent ?? '').matchAll(/ (\\d+)(?: ·|$)/g)].reduce((a, m) => a + Number(m[1]), 0), 0)`);
+    const legendSize = () => evaluate(`document.querySelectorAll('.it-layout')?.[0]?.closest('.sx-card, section, article')?.querySelectorAll('.nv-legend li').length ?? 0`);
+    assert.ok(await has('[data-view-filter="mapGroup"][data-view-filter-value="schieramenti"]') && await has('[data-view-filter="mapGroup"][data-view-filter-value="partiti"]'), `${name}: la scelta Schieramenti / Partiti c’è.`);
+    const byBloc = { total: await tableTotal(), legend: await legendSize() };
+    await click('[data-view-filter="mapGroup"][data-view-filter-value="partiti"]'); await wait(() => evaluate(`document.querySelector('[data-view-filter="mapGroup"][data-view-filter-value="partiti"]')?.classList.contains('active')`), 5000);
+    const byParty = { total: await tableTotal(), legend: await legendSize() };
+    assert.equal(byBloc.total, 221, `${name}: per schieramenti i collegi sono 221 (147 + 74).`); assert.equal(byParty.total, 221, `${name}: per partiti i collegi sono ancora 221: nessuno sparisce né è contato due volte.`);
+    assert.ok(byParty.legend >= byBloc.legend, `${name}: per partiti la legenda ha almeno tanti elementi quanti gli schieramenti (${byParty.legend} / ${byBloc.legend}).`);
+    await click('[data-view-filter="mapGroup"][data-view-filter-value="schieramenti"]'); await pause(300);
+    await click('[data-view-filter="mapScope"][data-view-filter-value="province"]'); await wait(() => evaluate(`document.querySelectorAll('.it-area').length === 110`), 5000);
     // 2022 reading is real and its alliances are labelled
     await click('[data-view-filter="nazionali"][data-view-filter-value="2022"]');
+    await wait(() => evaluate(`document.querySelector('[data-map-group-note]') !== null && !document.querySelector('[data-view-filter="mapGroup"]')`), 5000);
     await wait(() => evaluate(`/DATO STORICO REALE/.test(document.querySelector('.it-class')?.textContent ?? '')`), 5000);
     assert.ok(await evaluate(`/Centrodestra/.test(document.querySelector('.it-layout')?.closest('.sx-card, section, article, div')?.textContent ?? document.body.textContent)`), `${name}: legenda con il centrodestra nel 2022.`);
     // keyboard: Enter on a focused area picks it
     await evaluate(`(() => { const el = document.querySelector('.it-area[data-map-area="p:058"]'); el.focus(); el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); return true; })()`);
     await wait(() => evaluate(`/Roma/.test(document.querySelector('.it-info h4')?.textContent ?? '')`), 5000);
     // the table is there for those who do not use the map
-    assert.ok(await evaluate(`document.querySelectorAll('.it-table tbody tr').length === 20`), `${name}: tabella con le 20 regioni.`);
+    assert.ok(await evaluate(`document.querySelectorAll('.it-table tbody tr').length === 110 && document.querySelector('.it-table')?.dataset.mapTable === 'province'`), `${name}: nella vista provinciale la tabella ha le 110 province.`);
+    assert.ok(await evaluate(`/Siena/.test(document.querySelector('.it-table')?.textContent ?? '') && /Toscana/.test(document.querySelector('.it-table')?.textContent ?? '')`), `${name}: con la regione di ciascuna.`);
     await click('[data-view-filter="mapScope"][data-view-filter-value="regioni"]');
+    await wait(() => evaluate(`document.querySelectorAll('.it-table tbody tr').length === 20`), 5000);
+    assert.ok(await evaluate(`document.querySelector('.it-table')?.dataset.mapTable === 'regioni'`), `${name}: nella vista regionale la tabella ha le 20 regioni.`);
     await click('[data-view-filter="mapSel"][data-view-filter-value=""]').catch(() => {});
   }
   assert.deepEqual(errors, [], 'Nessun errore JavaScript.');

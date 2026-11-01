@@ -3,7 +3,7 @@
 // the institutions, the Parliament, the Government and the party); this file says what that means. Powers, duties and risks
 // are rules of the game; the incompatibilities are simplified from art. 122 of the Constitution and from the laws on
 // ineligibility and incompatibility, and every refusal says which rule it applies (referenceVerified: false).
-import { DATA_SOURCES } from '../schema.js?v=20261031-3';
+import { DATA_SOURCES } from '../schema.js?v=20261101-2';
 
 export const OFFICE_RULES_SOURCE = DATA_SOURCES.SIMULATION;
 
@@ -146,6 +146,16 @@ const GOVERNMENT = ['sottosegretario', 'ministro', 'vicepremier', 'premier'];
 const LOCAL_HEADS = ['sindaco', 'presidente-provincia'];
 const LOCAL_EXECUTIVE = ['sindaco', 'assessore-comunale', 'presidente-provincia', 'assessore-provinciale'];
 
+// The population above which a monocratic territorial office (a mayor, the president of a Province) cannot be held with a seat in Parliament: «più di 15.000 abitanti» (art. 13, comma 3, DL 138/2011, as amended by
+// law 56/2014). An entity of up to 15,000 inhabitants is still compatible. Used with the population of the entity the office leads (the comune of the mayor, the province of its president).
+export const LOCAL_POPULATION_THRESHOLD = 15000;
+// The rules the territorial checks apply (documented here and quoted in every refusal; referenceVerified stays false: they are the game's reading of the law, not legal advice):
+//  - art. 122 Cost.: nobody belongs to a Regional Council or Giunta and to a Chamber (or to the European Parliament) at once;
+//  - art. 13, comma 3, DL 138/2011 (law 56/2014): the mandate of a member of Parliament is incompatible with a monocratic elective territorial office (sindaco, presidente di Provincia) of an entity of more than 15.000 inhabitants;
+//  - art. 65 TUEL: a regional councillor cannot be, in the same Region, a mayor, the president of a Province or a comunal assessore (as the game applies it);
+//  - law 56/2014, art. 1, comma 69: the Provincial Council is elected among the mayors and the sitting councillors of the comuni OF THE PROVINCE (an external assessore is not enough: in the comuni up to 15.000 inhabitants a
+//    councillor appointed assessore keeps the seat of councillor, in the larger ones he leaves it);
+//  - law 56/2014, art. 1, comma 60: the President of the Province is elected among the mayors of the province whose mandate lasts at least eighteen months more.
 export const INCOMPATIBILITIES = Object.freeze([
   { id: 'camere-regione', a: PARLIAMENT, b: REGIONAL, rule: 'Art. 122 della Costituzione: non si appartiene insieme a un Consiglio o a una Giunta regionale e a una delle Camere.' },
   { id: 'camere-europa', a: PARLIAMENT, b: ['eurodeputato'], rule: 'Il mandato di eurodeputato è incompatibile con quello di parlamentare nazionale.' },
@@ -154,16 +164,20 @@ export const INCOMPATIBILITIES = Object.freeze([
   { id: 'governo-europa', a: GOVERNMENT, b: ['eurodeputato'], rule: 'Un membro del governo di uno Stato membro non può essere eurodeputato.' },
   { id: 'governo-regione', a: GOVERNMENT, b: REGIONAL, rule: 'Regola di gioco semplificata: chi ha un incarico di governo non ricopre una carica regionale.' },
   { id: 'governo-enti', a: GOVERNMENT, b: LOCAL_EXECUTIVE, rule: 'Regola di gioco semplificata: chi ha un incarico di governo non guida un ente locale.' },
-  { id: 'camere-capi', a: PARLIAMENT, b: LOCAL_HEADS, rule: 'Regola di gioco semplificata, ispirata alle incompatibilità per i grandi comuni: sindaco e presidente di Provincia non si cumulano con il mandato parlamentare.' },
-  { id: 'regione-capi', a: REGIONAL, b: LOCAL_HEADS, rule: 'Regola di gioco semplificata: una carica regionale non si cumula con quella di sindaco o di presidente di Provincia.' },
+  // Only for an entity of more than 15.000 inhabitants (population: the comune of the mayor, the province of its president).
+  { id: 'camere-capi', a: PARLIAMENT, b: LOCAL_HEADS, population: true, rule: 'Art. 13, comma 3, DL 138/2011 (legge 56/2014): il mandato parlamentare è incompatibile con la carica monocratica di sindaco o di presidente di Provincia di un ente con più di 15.000 abitanti.' },
+  // The regional councillor against the local offices of the SAME Region (art. 65 TUEL).
+  { id: 'consiglio-regione-enti', a: ['consigliere-regionale'], b: ['sindaco', 'presidente-provincia', 'assessore-comunale'], sameRegion: true, rule: 'Art. 65 del TUEL: il consigliere regionale non è, nella stessa Regione, sindaco, presidente di Provincia o assessore comunale.' },
+  { id: 'regione-capi', a: ['assessore-regionale', 'presidente-regione'], b: LOCAL_HEADS, rule: 'Regola di gioco semplificata: una carica di giunta regionale non si cumula con quella di sindaco o di presidente di Provincia.' },
   { id: 'regione-giunte', a: ['presidente-regione', 'assessore-regionale'], b: ['assessore-comunale', 'assessore-provinciale'], rule: 'Regola di gioco semplificata: un assessore regionale non è anche assessore di un altro ente.' }
 ]);
 
-// What an office needs in order to exist (a seat that hangs from another one): the held offices that make it possible.
+// What an office needs in order to exist (a seat that hangs from another one): the held offices that make it possible. The territorial checks (office-engine: missingBase with facts) add «of the same province» and the
+// size of the comune; here the plain rule.
 export const OFFICE_BASES = Object.freeze({
-  'consigliere-provinciale': { anyOf: ['sindaco', 'consigliere-comunale', 'assessore-comunale'], rule: 'Il consiglio provinciale è eletto dai sindaci e dai consiglieri comunali della provincia (legge 56/2014): serve un seggio in un comune.' },
+  'consigliere-provinciale': { anyOf: ['sindaco', 'consigliere-comunale'], rule: 'Il consiglio provinciale è eletto tra i sindaci e i consiglieri comunali in carica dei comuni della provincia (legge 56/2014, art. 1, comma 69): serve un seggio in un comune della provincia, un assessore esterno al consiglio non basta.' },
   'assessore-provinciale': { anyOf: ['consigliere-provinciale'], rule: 'Il consigliere delegato è scelto dal Presidente tra i consiglieri provinciali.' },
-  'presidente-provincia': { anyOf: ['sindaco'], rule: 'Il Presidente della Provincia è scelto tra i sindaci della provincia (legge 56/2014): serve essere sindaco.' },
+  'presidente-provincia': { anyOf: ['sindaco'], rule: 'Il Presidente della Provincia è scelto tra i sindaci della provincia (legge 56/2014, art. 1, comma 60): serve essere sindaco.' },
   capogruppo: { anyOf: ['deputato', 'senatore'], rule: 'Il capogruppo è un parlamentare del gruppo.' },
   vicepremier: { anyOf: ['ministro'], rule: 'La vicepresidenza del Consiglio si accompagna a un ministero.' }
 });

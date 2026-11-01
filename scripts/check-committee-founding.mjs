@@ -108,9 +108,58 @@ assert.ok(html.includes('data-committee-level="regione"') && !html.includes('dat
 html = panel({ region: 'Calabria', unit: cosenza.code }, null);
 assert.ok(html.includes('data-committee-load="municipalities"'), 'I comuni ISTAT si caricano a richiesta');
 html = panel({ region: 'Sicilia', unit: palermo.code, municipality: bagheria.code }, municipalities, 'Sicilia');
-assert.ok(/disabled[^>]*title="[^"]*già il comitato/.test(html), 'Un comitato già fondato non si fonda di nuovo, e il perché è detto');
+assert.ok(!html.includes(`value="${bagheria.code}"`), 'Il comune che ha già un comitato attivo non è nell’elenco (non basta disabilitare il pulsante)');
+assert.ok(!/data-committee-found="nuovo"[^>]*disabled/.test(html), 'Il pulsante resta attivo: si fonda un altro comune, non quello che esiste');
+assert.ok(!html.includes(`data-committee-municipality="${bagheria.code}"`), 'E non propone di rifondare il comune che esiste');
 assert.ok(html.includes('Nessun responsabile'), 'L’elenco mostra i comitati ancora senza responsabile');
 assert.ok(!/undefined|NaN|\[object Object\]/.test(html.replace(/data-[a-z-]+="[^"]*"/g, '')), 'Nessun valore non valido nel pannello');
+// 5b. Which places can be chosen: what the party has is not listed, a dissolved committee is free again at once, the ISTAT code tells the comuni apart, the hierarchy never leaves nothing to found
+{
+  const org2 = structuredClone(org); const state2 = { game: { ...game, party: { ...game.party, org: org2 } }, local: {}, ui: {} };
+  const panel2 = (found, region = '') => { try { return renderCommitteesPanel(state2, { units, municipalities, home: { region: 'Toscana', municipality: 'Siena', provinceCode: units.find(unit => unit.name === 'Siena')?.code }, found, region }); } catch (error) { return `ERR ${error.message}`; } };
+  const optionsOf = html => [...(html.match(/data-view-filter-select="found-municipality">([\s\S]*?)<\/select>/)?.[1] ?? '').matchAll(/value="(\d*)"/g)].map(item => item[1]);
+  const palermoPick = { region: 'Sicilia', unit: palermo.code };
+  // active: not listed; dissolved: listed again immediately
+  const bag = org2.committees.find(item => item.municipalityCode === bagheria.code);
+  assert.ok(bag && bag.status !== 'dissoluzione', 'Bagheria ha un comitato attivo');
+  assert.ok(!optionsOf(panel2(palermoPick)).includes(bagheria.code), 'Attivo: Bagheria non è nell’elenco dei comuni');
+  const idBefore = bag.id, historyBefore = bag.history.length;
+  bag.status = 'dissoluzione';
+  assert.ok(optionsOf(panel2(palermoPick)).includes(bagheria.code), 'Passato a dissoluzione: il comune è subito selezionabile');
+  assert.ok(/data-committee-level="comune"[^>]*data-committee-municipality="[^"]*"/.test(panel2({ ...palermoPick, municipality: bagheria.code })) && panel2({ ...palermoPick, municipality: bagheria.code }).includes(`data-committee-municipality="${bagheria.code}"`), 'e si può rifondare');
+  // refounding recovers the same record, with its id and its history, without duplicates
+  const refounded = E.foundCommittee(org2, { level: 'comune', name: bagheria.name, region: 'Sicilia', parentId: null, week: 130, currents, rand: seeded(5), extra: { unitCode: palermo.code, municipalityCode: bagheria.code } });
+  assert.equal(refounded.id, idBefore, 'Rifondato: lo stesso identificativo');
+  assert.equal(org2.committees.filter(item => item.municipalityCode === bagheria.code).length, 1, 'Nessun duplicato');
+  assert.ok(refounded.history.length > historyBefore && refounded.status !== 'dissoluzione', 'Con lo storico che c’era e la nuova voce');
+  assert.ok(!optionsOf(panel2(palermoPick)).includes(bagheria.code), 'Rifondato: di nuovo fuori dall’elenco');
+  // namesakes: the code decides, the name is only the fallback for records without a code (and inside the same province)
+  const byName = new Map(); for (const item of municipalities) { const list = byName.get(item.name) ?? []; list.push(item); byName.set(item.name, list); }
+  const twin = [...byName.values()].find(list => list.length >= 2 && new Set(list.map(item => item.unit)).size >= 2 && list.every(item => units.find(unit => unit.code === item.unit)?.gameRegion));
+  assert.ok(twin, 'I dati hanno comuni omonimi in province diverse');
+  const [first, other] = twin, unitFirst = units.find(unit => unit.code === first.unit), unitOther = units.find(unit => unit.code === other.unit);
+  const created = E.foundCommittee(org2, { level: 'comune', name: first.name, region: unitFirst.gameRegion, parentId: null, week: 131, currents, rand: seeded(6), extra: { unitCode: unitFirst.code, municipalityCode: first.code } });
+  assert.ok(!optionsOf(panel2({ region: unitFirst.gameRegion, unit: unitFirst.code })).includes(first.code), `${first.name} (${unitFirst.name}) ha il comitato`);
+  assert.ok(optionsOf(panel2({ region: unitOther.gameRegion, unit: unitOther.code })).includes(other.code), `L’omonimo di ${unitOther.name} è ancora selezionabile`);
+  assert.doesNotThrow(() => E.foundCommittee(org2, { level: 'comune', name: other.name, region: unitOther.gameRegion, parentId: null, week: 132, currents, rand: seeded(7), extra: { unitCode: unitOther.code, municipalityCode: other.code } }), 'L’omonimo si fonda senza «Esiste già»');
+  assert.equal(new Set(org2.committees.map(item => item.id)).size, org2.committees.length, 'Due comuni omonimi hanno identificativi diversi');
+  // an old record without code: the name stops the same comune of the same province, and not its namesake elsewhere
+  created.municipalityCode = null;
+  assert.ok(!optionsOf(panel2({ region: unitFirst.gameRegion, unit: unitFirst.code })).includes(first.code), 'Vecchio record senza codice: vale il nome nella stessa provincia');
+  // the hierarchy: when a province has its committee and every comune has one, the province is not offered; the regional one too; the screen never stays with nothing to found
+  const small = units.filter(unit => !['Sicilia', 'Toscana'].includes(unit.gameRegion)).map(unit => [unit, municipalities.filter(item => item.unit === unit.code)]).filter(([, list]) => list.length).sort((a, b) => a[1].length - b[1].length)[0];
+  const [smallUnit, smallComuni] = small;
+  const placeFor = region => ({ region, unit: smallUnit.code });
+  const regionName = smallUnit.gameRegion;
+  const regionals = units.filter(unit => unit.gameRegion === regionName);
+  E.foundCommittee(org2, { level: 'comune', name: smallComuni[0].name, region: regionName, parentId: null, week: 133, currents, rand: seeded(8), extra: { unitCode: smallUnit.code, municipalityCode: smallComuni[0].code }, ancestors: [{ level: 'regione', name: regionName }, { level: 'provincia', name: smallUnit.name, extra: { unitCode: smallUnit.code, unitType: smallUnit.type } }] });
+  for (const comune of smallComuni.slice(1)) E.foundCommittee(org2, { level: 'comune', name: comune.name, region: regionName, parentId: org2.committees.find(item => item.level === 'provincia' && item.unitCode === smallUnit.code)?.id ?? null, week: 134, currents, rand: seeded(9), extra: { unitCode: smallUnit.code, municipalityCode: comune.code } });
+  const full = panel2(placeFor(regionName));
+  assert.ok(!full.includes('ERR '), full.slice(0, 200));
+  assert.ok(!new RegExp(`found-unit"[\\s\\S]*?value="${smallUnit.code}"[\\s\\S]*?</select>`).test(full.match(/data-view-filter-select="found-unit">[\s\S]*?<\/select>/)?.[0] ?? '') , `La provincia ${smallUnit.name}, completa, non è più offerta`);
+  assert.ok(!/data-committee-found="nuovo"[^>]*disabled/.test(full) || regionals.length === 1, 'Il pannello non resta senza nulla da fondare (a meno che la regione non sia completa)');
+  assert.ok(!/<option value="">Nessuna: comitato regionale<\/option>/.test(full), 'Il comitato regionale esiste: non è tra le scelte');
+}
 // 6. Through the career: founding costs once, leaves the committee without a person, and the manager is one person, the same in the committee and in the internal life
 {
   const { createGameState, committeeAction, lifeCadre, advanceWeek } = await import(`../src/core/career-engine.js${v}`);

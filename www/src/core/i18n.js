@@ -5,7 +5,7 @@
 //     the phrase book (src/data/i18n/en-*.js): exact phrases, phrases with numbers (`#`) or free parts (`{}`), and the numbers, currency and dates in English form.
 //     Proper names (people, parties, places, official denominations) are never in the phrase book: they stay as they are. A phrase that is not in the book stays Italian, never wrong.
 // Nothing here touches a career: the language is a view of the same data.
-import { saveSetting } from './settings.js?v=20261031-3';
+import { saveSetting } from './settings.js?v=20261101-2';
 
 export const LANGUAGES = Object.freeze([['it', 'Italiano', 'it-IT'], ['en', 'English', 'en-GB']]);
 const SETTINGS_KEY = 'politicando.settings.v1';
@@ -113,8 +113,11 @@ function lookup(text, depth = 0) {
     if (hit !== undefined) { let i = 0; return hit.replace(/#/g, () => values[i++] ?? '#'); }
   }
   if (key.length > 360) return null;
+  const compound = key.includes(' · ') || /[.!?…]\s+\S/.test(key);
   for (const template of candidates(key)) {
     if (template.longest && !key.includes(template.longest)) continue;
+    // a template made only of free parts and punctuation («{}, {} · {}») says nothing by itself: on a compound text the cuts do the work, piece by piece
+    if (compound) { if (template.pure === undefined) template.pure = !/[A-Za-zÀ-ÿ]/.test(template.en.replace(/\{\d?\}/g, '')); if (template.pure) continue; }
     let missing = false;
     for (const piece of template.literals) if (!key.includes(piece)) { missing = true; break; }
     if (missing) continue;
@@ -123,8 +126,10 @@ function lookup(text, depth = 0) {
     // the free parts are translated too when they are phrases of the book (roles, labels); names stay as they are.
     // `{}` and `#` take the free parts and the numbers in order; `{2}` names one by its position (when the English puts them in another order).
     const parts = match.slice(1);
+    // a free part never swallows the pieces of a compound text («a · b», «first sentence. second sentence»): it would hide them from the cuts, and what the template does not name would stay in Italian. Such a text is cut first
+    if (/\{\}|\{\d\}/.test(template.en) && template.en.indexOf(' · ') < 0 && parts.some(part => typeof part === 'string' && (part.includes(' · ') || /[.!?…]\s+\S/.test(part)))) continue;
     let next = 0;
-    return template.en.replace(/\{(\d)\}|\{\}|#/g, (token, position) => { const value = (position ? parts[Number(position) - 1] : parts[next++]) ?? ''; return token === '#' ? value : (depth < 3 ? keepSpaces(value, translatePiece(value, depth + 1)) : value); });
+    return template.en.replace(/\{(\d)\}|\{\}|#/g, (token, position) => { const value = (position ? parts[Number(position) - 1] : parts[next++]) ?? ''; return token === '#' ? value : (depth < 5 ? keepSpaces(value, translatePiece(value, depth + 1)) : value); });
   }
   return null;
 }
@@ -148,6 +153,8 @@ function matchCase(key, value) {
 const CUTS = [/( · | — | – )/, /((?<=[.!?…])\s+)/, /(; )/, /(: )/];
 function translatePiece(text, depth = 0, level = 0) {
   if (level === 0) { const found = lookup(text, depth); if (found !== null) return found; }
+  // a list item that starts with its bullet («· giovani 18–34»): the bullet stays, the rest is translated
+  if (level === 0) { const bullet = text.match(/^([·•]\s+)([\s\S]+)$/); if (bullet) { const rest = translatePiece(bullet[2], depth); return rest === bullet[2] ? text : bullet[1] + rest; } }
   for (let cut = level; cut < CUTS.length; cut++) {
     let parts = text.split(CUTS[cut]);
     if (parts.length < 2) continue;
@@ -164,7 +171,7 @@ function translatePiece(text, depth = 0, level = 0) {
     if (changed) return done.join('');
   }
   // a known label followed by a signed figure («Reputazione sul territorio +8», «Capitale politico ogni settimana −1»): the label is translated, the figure stays
-  const signed = text.match(/^(.*\S) ([+−±]\d[\d.,]*%?)$/u);
+  const signed = text.match(/^(.*\S) ([+−±-]\d[\d.,]*%?)$/u);
   if (signed) { const head = lookup(signed[1], depth); if (head !== null) return `${head} ${signed[2]}`; }
   // a list of known labels («sicurezza, natalità e demografia, giustizia»): translated only when EVERY item is a phrase of the book, so that a sentence with commas is never half translated
   if (level === 0 && depth < 2 && text.includes(', ')) {
@@ -243,11 +250,11 @@ export function translateTree(root) {
   working = true;
   try { translateNode(root); } finally { working = false; }
 }
-let observer = null;
+let observer = null, outsideObserver = null;
 // Keeps a container translated while the interface redraws it: every inserted node is translated as it arrives.
 export function watchTree(root) {
-  observer?.disconnect();
-  observer = null;
+  observer?.disconnect(); outsideObserver?.disconnect();
+  observer = null; outsideObserver = null;
   if (language !== 'en' || !book || typeof MutationObserver === 'undefined') return;
   translateTree(root);
   observer = new MutationObserver(records => {
@@ -262,13 +269,33 @@ export function watchTree(root) {
     } finally { working = false; }
   });
   observer.observe(root, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTRIBUTES });
+  // What the interface puts OUTSIDE the container (the tooltip of a chart, a floating panel, anything appended to the body) and then writes into while the player moves around is translated the same way:
+  // a second observer on the body that leaves alone what is inside the container (the first one has it).
+  const body = root.ownerDocument?.body ?? null;
+  if (body && body !== root && !root.contains?.(body)) {
+    outsideObserver = new MutationObserver(records => {
+      if (working) return;
+      working = true;
+      try {
+        for (const record of records) {
+          const target = record.target;
+          if (target && root.contains?.(target)) continue;
+          if (record.type === 'characterData') translateNode(target);
+          else if (record.type === 'attributes') translateAttribute(target, record.attributeName);
+          else for (const node of record.addedNodes) if (!root.contains?.(node)) translateNode(node);
+        }
+      } finally { working = false; }
+    });
+    outsideObserver.observe(body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTRIBUTES });
+    translateTree(body.querySelector?.('.viz-tip') ?? null);
+  }
 }
 
 // ---- the language itself ----
 let loading = null;
 export function loadBook() {
   if (book?.loaded) return Promise.resolve(book);
-  loading ??= import('../data/i18n/index.js?v=20261031-3').then(module => { module.install(installBook); book.loaded = true; return book; });
+  loading ??= import('../data/i18n/index.js?v=20261101-2').then(module => { module.install(installBook); book.loaded = true; return book; });
   return loading;
 }
 // The title of the page (the tab) is read by people and by assistive technology: it follows the language like the rest (the Italian one is kept to go back to).
