@@ -1,5 +1,7 @@
 // The Italian that is allowed to stay in the English interface, each with the reason (nothing else is: check-i18n fails on any other Italian text of the English screens). A pattern is matched against the whole text.
 export const ALLOWED_ITALIAN = [
+  { pattern: /^(in cooldown|In deficit)$/i, reason: 'Parole che in inglese si scrivono allo stesso modo.' },
+  { pattern: /^(Il Meridiano|La Gazzetta del Territorio|La Politica [#\d]*|Radio La Politica [#\d]*|Vallée d’Aoste – Autonomie Progrès Fédéralisme)$/, reason: 'Nome proprio: testate inventate del gioco e lista della Valle d’Aosta come compare nei risultati.' },
   { pattern: /^(Conversione in legge|Ratifica ed esecuzione|Modifiche al|Disposizioni|Istituzione)\b/, reason: 'Titolo ufficiale di un atto del Parlamento: resta intero, come pubblicato.' },
   { pattern: /^«[^»]+»(?::|$)/, reason: 'Un titolo tra virgolette (nome di una legge o di una storia) è un nome proprio.' },
   { pattern: /^Mar$/, reason: '«Mar» (marzo abbreviato) è la stessa parola in inglese.' },

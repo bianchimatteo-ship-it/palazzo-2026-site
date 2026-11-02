@@ -1,29 +1,41 @@
-# Traduzione automatica IT → EN
-
-Stato: **il meccanismo è nel codice, il provider NON è configurato.** Finché non lo configuri, i testi senza traduzione restano in italiano e il gioco lo dichiara (`GET /api/translate/status` → `configured: false` con l’elenco di ciò che manca; `scripts/i18n-auto.mjs` lo scrive in chiaro). Il dizionario `src/data/i18n/en-ui-*.js` è un dizionario rivisto a mano, **non** traduzione automatica.
+# Traduzione automatica IT → EN (DeepL API)
 
 ## Come funziona
 
 | Livello | Dove | Cosa fa |
 |---|---|---|
-| Dizionario rivisto | `src/data/i18n/en-ui-*.js`, `keys.js` | Frasi esatte, modelli con `#` (numeri) e `{}` (parti libere). Vince sempre. |
-| Traduzioni generate | `src/data/i18n/en-auto.js` | Prodotto da `scripts/i18n-auto.mjs` (sviluppo/build) col provider configurato; incluso nella build, funziona offline. |
-| Cache del dispositivo | `src/core/i18n-auto.js` (`localStorage`, chiave `politicando.i18n.auto.v1`) | Testi nuovi a runtime (contenuti dinamici, testi introdotti da aggiornamenti futuri): chiesti al server **una volta**, poi riusati anche offline. |
-| Server | `worker-translate.js` + `POST /api/translate` | Chiama il provider (la chiave è un secret del Worker, mai nella pagina), cache persistente in KV (`tr:v1:…`), tetto giornaliero di caratteri nuovi, limite di richieste per indirizzo. |
+| Dizionario rivisto | `src/data/i18n/en-ui-*.js`, `keys.js` | Frasi esatte, modelli con `#` (numeri) e `{}` (parti libere). Vince sempre. Copre il 100% delle stringhe del codice (`npm run check:i18n-census`) e delle schermate (`npm run check:i18n`). |
+| Cache del dispositivo | `src/core/i18n-auto.js` (`localStorage`, chiave `politicando.i18n.auto.v2`) | Ciò che il dizionario non conosce (contenuti dinamici, testi di aggiornamenti futuri) viene chiesto al server **una volta**, poi riusato anche offline. |
+| Server | `worker-translate.js`, `POST /api/translate` | Cache KV (`tr:v2:deepl:…`), contatore atomico su D1, un'unica chiamata accorpata a DeepL per i soli testi mancanti. |
 
-Cosa non viene mai tradotto né inviato: testi scritti dal giocatore (campi di testo, `data-no-translate`), nomi propri (testi senza parole italiane funzionali, sigle, nomi di partiti/persone/luoghi registrati dal gioco e protetti dentro le frasi che li contengono), numeri e segnaposto (`{nome}`, `%s`, `#`), il glossario politico-istituzionale (`GLOSSARY` in `worker-translate.js`, con il termine inglese fisso). I dati delle carriere non vengono mai modificati: la traduzione vive solo sullo schermo e nella cache.
+**Cosa parte verso DeepL.** Solo *modelli anonimi*. La pagina sostituisce nomi (persone, partiti, luoghi: parole maiuscole a metà frase, sigle, nomi che il gioco conosce), numeri, date e variabili con `⟦0⟧, ⟦1⟧…` **prima** di parlare con il Worker: «Hai ottenuto 1.234 voti a Siena» viaggia come «Hai ottenuto ⟦1⟧ voti a ⟦0⟧» e i valori tornano al loro posto sul dispositivo. Il Worker rifiuta qualsiasi modello che contenga ancora una cifra, un indirizzo e-mail o un indirizzo web, sostituisce il glossario politico e ciò che riconosce ancora come nome con `<x i="k"/>` e manda a DeepL (`tag_handling: xml`, `ignore_tags: ["x"]`) solo quei tag anonimi e le parole italiane attorno. Mai: testi scritti dal giocatore, account, salvataggi, dati di carriera. Una risposta che perde o altera un segnaposto viene scartata (resta l'italiano).
 
-Una risposta del provider che perde o altera un nome, un numero o un segnaposto viene **scartata** (resta l’italiano), non usata.
+**Italiano come ripiego.** Provider non configurato, limite raggiunto, rete assente, risposta scartata: il testo resta in italiano; `autoStatus()` / `GET /api/translate/status` dicono perché.
 
-## Cosa serve da parte tua (nessun servizio a pagamento è attivato)
+**Nessuna traduzione massiva.** Né la build né l'apertura dell'app traducono in blocco: si traduce a richiesta, un modello alla volta, con cache. `npm run build:www` non chiama DeepL.
 
-1. Scegli un provider: `deepl` (esiste un piano gratuito con chiave `…:fx`), `google` (a pagamento oltre le quote) oppure `libretranslate` (gratuito se lo ospiti tu).
-2. Variabili del Worker: `TRANSLATE_PROVIDER` (`deepl|google|libretranslate`) e, solo per LibreTranslate, `TRANSLATE_API_URL`.
-3. Secret del Worker: `npx wrangler secret put TRANSLATE_API_KEY`.
-4. Opzionale: `TRANSLATE_DAILY_CHARS` (tetto giornaliero di caratteri nuovi, predefinito 200000).
-5. Per le traduzioni «da build»: nella macchina che esegue `npm run build:www` imposta le stesse variabili d’ambiente (`TRANSLATE_PROVIDER`, `TRANSLATE_API_KEY`, …) e `CHROME_PATH`; `npm run i18n:auto` estrae i testi italiani ancora visibili in inglese e li traduce. `npm run i18n:auto:status` dice se è configurato.
-6. Privacy: con il provider attivo i testi dell’interfaccia (non dati personali, non testi del giocatore) vanno a un fornitore esterno; aggiorna di conseguenza l’informativa (`privacy.html`, `privacy-en.html`).
+## Configurazione (Worker `palazzo-2026-site`)
+
+- `TRANSLATE_PROVIDER=deepl` (variabile, in `wrangler.jsonc`) — unico provider; nessun ripiego verso altri servizi.
+- `TRANSLATE_API_KEY` (secret del Worker, già caricata; il repository non la contiene, il client non la vede).
+- Endpoint: chiave che finisce con `:fx` → `https://api-free.deepl.com` (piano Free); qualsiasi altra chiave → `https://api.deepl.com` (piano a pagamento/Developer). È la regola di DeepL per i due host.
+- Limiti (variabili, predefiniti tra parentesi): `TRANSLATE_DAILY_CHARS` (10000), `TRANSLATE_MONTHLY_CHARS` (100000), `TRANSLATE_REQUEST_CHARS` (2000 per richiesta), `TRANSLATE_MAX_TEXTS` (20 per richiesta), `TRANSLATE_RATE_PER_MIN` (20 richieste al minuto per indirizzo).
+
+## Come si contano e si bloccano i consumi
+
+- Il contatore è **globale e atomico**: una sola riga D1 (`translate_budget`) aggiornata con un'unica istruzione `INSERT … ON CONFLICT DO UPDATE … WHERE` che somma e controlla insieme tetto giornaliero e mensile. Due richieste simultanee non possono superare l'ultimo carattere disponibile. Non usa KV per contare.
+- Si **prenotano** prima della chiamata i caratteri del payload realmente inviato (tag compresi). La prenotazione non viene mai restituita, nemmeno se la chiamata fallisce.
+- Raggiunto un tetto: 429, nessuna chiamata a DeepL, nessun tentativo ripetuto. Contatore guasto: 503 e nessuna chiamata (*fail closed*).
+- Errore di DeepL: 456/403/401 bloccano il servizio per 6 ore, 429/5xx e rete per 30 minuti (`blocked_until`), senza nuovi tentativi.
+- Cache prima di tutto: cache del dispositivo → cache KV → solo dopo prenotazione e chiamata. Stesso testo in richieste simultanee: una sola chiamata (`translate_claims`). Una traduzione già disponibile non fa chiamate né addebiti.
+
+## Monitoraggio
+
+- `npm run i18n:auto` (o `GET /api/translate/status`): configurazione, limiti, **caratteri usati oggi e nel mese**, eventuale blocco. Non chiama DeepL e non consuma nulla.
+- Da D1: `npx wrangler d1 execute politicando-accounts --remote --command "SELECT * FROM translate_budget"`.
+- Quota effettiva presso DeepL: area account DeepL o `GET https://api.deepl.com/v2/usage` (o `api-free`), con la tua chiave, da fuori dal repository.
+- Per fermare tutto subito: rimuovi `TRANSLATE_PROVIDER` (o mettilo a un altro valore) e distribuisci; oppure `UPDATE translate_budget SET blocked_until = 9999999999999`.
 
 ## Controlli
 
-`npm run check:i18n-auto` (protezione, Worker con provider finto, cache, offline, nessuna chiave nel client, pagina in Chrome) e `npm run check:i18n` (nessun testo italiano non autorizzato nell’inglese su tutte le schermate, popup, passaggi, tooltip e ARIA). Il test usa un provider finto: prova ciò che viene **inviato** e cosa si fa della **risposta**, non la qualità dell’inglese di un provider reale.
+`npm run check:i18n-auto` (provider simulato: payload HTTP reale senza alcun dato, ripristino locale, cache, offline, limiti giornaliero/mensile/per richiesta/per indirizzo, 30 richieste simultanee, duplicati, errori e blocco, contatore guasto, origini Android, pagina in Chrome con profilo desktop e Android), `npm run check:i18n` (ogni schermata, popup, passaggio, tooltip e ARIA), `npm run check:i18n-census` (ogni stringa italiana del codice). Nessun controllo chiama DeepL.

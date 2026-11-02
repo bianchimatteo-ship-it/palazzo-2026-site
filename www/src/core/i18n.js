@@ -5,7 +5,7 @@
 //     the phrase book (src/data/i18n/en-*.js): exact phrases, phrases with numbers (`#`) or free parts (`{}`), and the numbers, currency and dates in English form.
 //     Proper names (people, parties, places, official denominations) are never in the phrase book: they stay as they are. A phrase that is not in the book stays Italian, never wrong.
 // Nothing here touches a career: the language is a view of the same data.
-import { saveSetting } from './settings.js?v=20261101-3';
+import { saveSetting } from './settings.js?v=20261102-1';
 
 export const LANGUAGES = Object.freeze([['it', 'Italiano', 'it-IT'], ['en', 'English', 'en-GB']]);
 const SETTINGS_KEY = 'politicando.settings.v1';
@@ -200,7 +200,7 @@ export function translateText(text) {
     // Not in the phrase book: the automatic translator (server provider, persistent cache) is asked; until it answers the text stays Italian (retranslate() clears this memory when answers arrive).
     if (translated === core && auto) {
       const known = auto.lookup(core);
-      if (typeof known === 'string') translated = known; else if (englishDates(englishNumbers(core)) === core) auto.request(core);
+      if (typeof known === 'string') translated = known; else auto.request(core);
     }
     // the title of an act of Parliament that is not in the phrase book is an official name: it stays whole in Italian (no English month or number inside it)
     out = translated === core && OFFICIAL_ACT.test(core) ? core : englishDates(englishNumbers(translated));
@@ -307,7 +307,7 @@ export function watchTree(root) {
 let loading = null;
 export function loadBook() {
   if (book?.loaded) return Promise.resolve(book);
-  loading ??= import('../data/i18n/index.js?v=20261101-3').then(module => { module.install(installBook); book.loaded = true; return book; });
+  loading ??= import('../data/i18n/index.js?v=20261102-1').then(module => { module.install(installBook); book.loaded = true; return book; });
   return loading;
 }
 // The title of the page (the tab) is read by people and by assistive technology: it follows the language like the rest (the Italian one is kept to go back to).

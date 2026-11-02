@@ -135,6 +135,10 @@ const SCHEMA = [
   'CREATE TABLE IF NOT EXISTS sessions (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL, created_at TEXT NOT NULL, expires_at INTEGER NOT NULL)',
   'CREATE TABLE IF NOT EXISTS saves (user_id TEXT NOT NULL, slot TEXT NOT NULL, name TEXT, meta TEXT, data TEXT NOT NULL, encoding TEXT NOT NULL, revision INTEGER NOT NULL, size INTEGER NOT NULL, updated_at TEXT NOT NULL, PRIMARY KEY (user_id, slot))',
   'CREATE TABLE IF NOT EXISTS attempts (key TEXT PRIMARY KEY, count INTEGER NOT NULL, window_start INTEGER NOT NULL)',
+  // Automatic translation (worker-translate.js; migrations/0007_translation_budget.sql has the same text): ONE row of global consumption (atomic conditional update), a rate window per address and a short claim per text.
+  'CREATE TABLE IF NOT EXISTS translate_budget (id TEXT PRIMARY KEY, day TEXT NOT NULL, day_used INTEGER NOT NULL DEFAULT 0, month TEXT NOT NULL, month_used INTEGER NOT NULL DEFAULT 0, blocked_until INTEGER NOT NULL DEFAULT 0, blocked_reason TEXT, updated_at TEXT)',
+  'CREATE TABLE IF NOT EXISTS translate_rate (key TEXT PRIMARY KEY, n INTEGER NOT NULL, window INTEGER NOT NULL)',
+  'CREATE TABLE IF NOT EXISTS translate_claims (hash TEXT PRIMARY KEY, at INTEGER NOT NULL)',
   'CREATE INDEX IF NOT EXISTS sessions_user ON sessions (user_id)',
   'CREATE INDEX IF NOT EXISTS sessions_expiry ON sessions (expires_at)',
   // 0003: what the server knows about the content of each slot (read from the content, not declared), the monotone revision counter and the versions replaced.
@@ -982,7 +986,7 @@ async function handleAccounts(request, env, url) {
 async function handleApi(request, env) {
   const url = new URL(request.url);
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { ...API_SECURITY_HEADERS, ...cors(request) } });
-  if (url.pathname === '/api/translate' || url.pathname === '/api/translate/status') return handleTranslate(request, env, json, url);
+  if (url.pathname === '/api/translate' || url.pathname === '/api/translate/status') return handleTranslate(request, env, json, url, ensureSchema);
   if (url.pathname.startsWith('/api/account') || url.pathname.startsWith('/api/saves') || url.pathname.startsWith('/api/logos')) return handleAccounts(request, env, url);
   if (!env.ADMIN_ARCHIVE) return json(request, { error: 'Archivio condiviso non configurato.' }, 503);
   if (url.pathname === '/api/admin' && request.method === 'GET') {

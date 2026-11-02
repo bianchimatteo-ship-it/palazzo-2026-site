@@ -1,10 +1,10 @@
-import { uniqueId } from './ids.js?v=20261101-3';
-import { AD_REWARD } from '../data/simulation/reward-rules.js?v=20261101-3';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261101-3';
-import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261101-3';
-import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261101-3';
-import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261101-3';
-import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261101-3';
+import { uniqueId } from './ids.js?v=20261102-1';
+import { AD_REWARD } from '../data/simulation/reward-rules.js?v=20261102-1';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261102-1';
+import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261102-1';
+import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261102-1';
+import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261102-1';
+import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261102-1';
 export { houseEffect };
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
@@ -881,7 +881,7 @@ function partyAgents(world, date, { approval, player, playerIsLeader, playerStra
       if (choice !== party.strategy) {
         party.strategy = choice;
         party.strategySince = world.week;
-        logEvent(world, date, { kind: 'strategia', icon: 'route', scope: 'nazionale', title: `${party.label} cambia strategia: ${STRATEGIES[choice].label.toLowerCase()}`, body: `${trend < -0.4 ? 'Dopo settimane in calo nei sondaggi, n' : 'N'}ello scenario il partito sceglie una nuova linea (simulazione).`, tone: 'neutral', partyId: party.id });
+        logEvent(world, date, { kind: 'strategia', icon: 'route', scope: 'nazionale', title: `${party.label} cambia strategia: ${STRATEGIES[choice].label.toLowerCase()}`, body: trend < -0.4 ? 'Dopo settimane in calo nei sondaggi, nello scenario il partito sceglie una nuova linea (simulazione).' : 'Nello scenario il partito sceglie una nuova linea (simulazione).', tone: 'neutral', partyId: party.id });
       }
     }
     // Relationship with the player's party: it fades, and conflicting lines wear it down.

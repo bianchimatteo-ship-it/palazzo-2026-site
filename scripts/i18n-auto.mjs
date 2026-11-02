@@ -1,59 +1,24 @@
-// Automatic translation at development and build time: the Italian texts that the English screens still show (the same extraction as check-i18n) are translated by the configured provider
-// (worker-translate.js: placeholders, numbers, names and the political glossary are protected) and written to src/data/i18n/en-auto.js, which ships with the build and works offline.
-//   node scripts/i18n-auto.mjs --status        says whether a provider is configured and what is missing (exit 0 configured, 2 not).
-//   node scripts/i18n-auto.mjs                 (build) without a provider: says so and goes on (the build does not fail, the texts stay Italian and check-i18n counts them);
-//                                              with a provider: extracts the missing texts (Chrome needed), translates only the new ones, merges them into en-auto.js.
-//   node scripts/i18n-auto.mjs --strict        as above but exits 2 when no provider is configured (CI that must translate).
-//   node scripts/i18n-auto.mjs --from file     translates the texts of a JSON list ([{text}] or [string]) instead of running the extraction.
-// Configuration (environment of the machine that runs it, never the repository): TRANSLATE_PROVIDER, TRANSLATE_API_KEY, TRANSLATE_API_URL (see worker-translate.js). No paid service is used by default.
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+// Monitoring of the automatic translation (DeepL), without translating anything and without spending a character.
+//   node scripts/i18n-auto.mjs --status [url]   reads GET /api/translate/status of the Worker (default: the published one): configured or not, what is missing, the limits and the characters used today
+//                                               and this month (the same counter that blocks the calls). It never calls DeepL.
+//   node scripts/i18n-auto.mjs --missing        runs the tour of check-i18n in English (Chrome needed, CHROME_PATH) and says how many Italian texts are still visible; nothing is translated: the texts
+//                                               that the phrase book lacks are translated at run time, once, as anonymous templates, through the Worker (cache + limits), never in bulk at build.
+// The translations are NOT made at build or at start: the build only ships the phrase book and the code.
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { needsOf, providerOf, translateBatch } from '../worker-translate.js';
 
-const here = path => fileURLToPath(new URL(path, import.meta.url));
-const OUT = here('../src/data/i18n/en-auto.js');
 const args = process.argv.slice(2);
-const flag = name => args.includes(name);
-const needs = needsOf(process.env);
 const say = text => console.log(`[i18n-auto] ${text}`);
-
-if (needs.length) {
-  say(`Traduzione automatica NON configurata: nessun testo nuovo viene tradotto. Occorre: ${needs.join('; ')}.`);
-  say('I testi senza traduzione restano in italiano (check-i18n li conta); il dizionario esistente non è traduzione automatica.');
-  process.exit(flag('--status') || flag('--strict') ? 2 : 0);
+if (args.includes('--missing')) {
+  const run = spawnSync(process.execPath, [fileURLToPath(new URL('./check-i18n.mjs', import.meta.url))], { env: { ...process.env, I18N_MEASURE: '1' }, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  say((run.stdout.match(/^Inglese:[^\n]*/m) ?? [run.stderr.slice(0, 300)])[0]);
+  process.exit(run.status === 0 ? 0 : 1);
 }
-say(`Provider configurato: ${providerOf(process.env)}.`);
-if (flag('--status')) process.exit(0);
-
-const load = async () => existsSync(OUT) ? (await import(`${OUT}?t=${Date.now()}`)).PHRASES : [];
-const known = new Map((await load()).map(([it, en]) => [it, en]));
-const book = new Set();
-for (let n = 1; n <= 8; n++) for (const match of readFileSync(here(`../src/data/i18n/en-ui-${n}.js`), 'utf8').matchAll(/^\s*\["((?:[^"\\]|\\.)*)",/gm)) book.add(match[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\'));
-
-let list;
-const fromAt = args.indexOf('--from');
-if (fromAt >= 0) list = JSON.parse(readFileSync(args[fromAt + 1], 'utf8'));
-else {
-  const target = here('../scripts/i18n-missing.json');
-  const run = spawnSync(process.execPath, [here('./i18n-extract.mjs'), target], { encoding: 'utf8', env: process.env, maxBuffer: 64 * 1024 * 1024 });
-  if (run.status !== 0 && !existsSync(target)) { say(`Estrazione non riuscita (serve Chrome: CHROME_PATH): ${run.stderr.slice(0, 200)}`); process.exit(1); }
-  list = JSON.parse(readFileSync(target, 'utf8'));
-}
-const texts = [...new Set(list.map(item => typeof item === 'string' ? item : item.text))].filter(text => text && !book.has(text) && !known.has(text));
-say(`${texts.length} testi da tradurre (${known.size} già in en-auto.js).`);
-let added = 0, refused = 0;
-for (let at = 0; at < texts.length; at += 40) {
-  const chunk = texts.slice(at, at + 40);
-  const { translations } = await translateBatch(process.env, chunk, []);
-  for (const text of chunk) {
-    const en = translations[text];
-    // a translation that lost a number (#) or a free part ({}) is not used: the text stays Italian and is reported
-    if (typeof en === 'string' && text.split('#').length === en.split('#').length && text.split('{}').length === en.split('{}').length) { known.set(text, en); added++; } else refused++;
-  }
-}
-const escape = text => text.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
-const body = [...known].sort((a, b) => a[0].localeCompare(b[0])).map(([it, en]) => `  ["${escape(it)}", "${escape(en)}"],\n`).join('');
-writeFileSync(OUT, `// GENERATED by scripts/i18n-auto.mjs (machine translation by the configured provider, placeholders and glossary protected): do not edit by hand.\n// A reviewed translation in en-ui-*.js wins over this file. Pairs: [Italian, English], \`#\` a number, \`{}\` a free part.\nexport const PHRASES = [\n${body}];\n`);
-say(`Scritte ${added} traduzioni nuove, ${refused} rifiutate (segnaposto non conservati: restano in italiano). Totale ${known.size}.`);
-process.exit(0);
+const origin = args.find(item => /^https?:/.test(item)) ?? 'https://palazzo-2026-site.bianchimatteo657.workers.dev';
+try {
+  const data = await (await fetch(`${origin}/api/translate/status`, { signal: AbortSignal.timeout(10000) })).json();
+  say(`Servizio: ${data.configured ? `attivo (${data.provider})` : `NON configurato — manca: ${(data.needs ?? []).join('; ')}`}`);
+  if (data.limits) say(`Limiti: ${data.limits.day} caratteri al giorno, ${data.limits.month} al mese, ${data.limits.request} per richiesta, ${data.limits.texts} testi per richiesta, ${data.limits.rate} richieste al minuto per indirizzo.`);
+  if (data.usage) say(`Consumo: oggi ${data.usage.day.used}/${data.usage.day.limit}, mese ${data.usage.month.used}/${data.usage.month.limit}${data.usage.blocked ? `; BLOCCATO fino a ${data.usage.blocked.until} (${data.usage.blocked.reason})` : ''}.`);
+  process.exit(data.configured ? 0 : 2);
+} catch (error) { say(`Stato non raggiungibile da qui (${error.cause?.code ?? error.message}).`); process.exit(3); }
