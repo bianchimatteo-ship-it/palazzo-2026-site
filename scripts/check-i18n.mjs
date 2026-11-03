@@ -6,6 +6,7 @@ import { readFile } from 'node:fs/promises';
 import { chromeAvailable, createCareerInPage, openCareer, withBrowser } from './lib/browser.mjs';
 import { COLLECT, PAGES, tourCareer } from './lib/i18n-tour.mjs';
 import { ALLOWED_ITALIAN, ENGLISH_LOANWORDS } from './lib/i18n-allowlist.mjs';
+import { partsOf } from './lib/i18n-pair.mjs';
 
 // ---------- 1. the dictionaries ----------
 const mem = new Map();
@@ -21,12 +22,18 @@ assert.ok(books.length === 8 && all.length > 8000, `Il dizionario inglese ha ${a
 const seen = new Map();
 for (const [it, en] of all) {
   assert.ok(typeof it === 'string' && typeof en === 'string' && it.trim() && en.trim(), `Voce vuota o non testuale: ${JSON.stringify([it, en])}`);
-  assert.equal(it.split('#').length, en.split('#').length, `Numeri (#) diversi: «${it}» → «${en}»`);
-  // free parts: the Italian has n `{}`; the English has n parts too, plain `{}` or named by position `{1}`…`{n}` (never a position beyond n)
-  const free = it.split('{}').length - 1;
+  // free parts (`{}`) and numbers (`#`) together: the English names every part by its position (numbers count), see scripts/lib/i18n-pair.mjs; otherwise numbers and free parts are counted apart
+  const free = it.split('{}').length - 1, total = partsOf(it);
   const named = [...en.matchAll(/\{(\d)\}/g)].map(match => Number(match[1])), plain = en.split('{}').length - 1;
-  assert.equal(plain + named.length, free, `Parti libere ({}) diverse: «${it}» → «${en}»`);
-  assert.ok(named.every(position => position >= 1 && position <= free), `Posizione fuori intervallo: «${it}» → «${en}»`);
+  if (free > 0 && total > free && named.length > 0) {
+    const freeAt = [...it.matchAll(/\{\}|#/g)].map((match, index) => match[0] === '{}' ? index + 1 : null).filter(Boolean);
+    assert.ok(freeAt.every(position => named.includes(position)), `Parte libera non nominata (posizioni: ${freeAt}): «${it}» → «${en}»`);
+    assert.ok(named.every(position => position >= 1 && position <= total) && !/\{\}|#/.test(en), `Posizioni da usare da sole quando ci sono parti libere e numeri: «${it}» → «${en}»`);
+  } else {
+    assert.equal(it.split('#').length, en.split('#').length, `Numeri (#) diversi: «${it}» → «${en}»`);
+    assert.equal(plain + named.length, free, `Parti libere ({}) diverse: «${it}» → «${en}»`);
+    assert.ok(named.every(position => position >= 1 && position <= free), `Posizione fuori intervallo: «${it}» → «${en}»`);
+  }
   assert.ok(!/\bTODO\b|XXX/.test(en), `Segnaposto nella traduzione: ${en}`);
   const same = text => text.replace(/\{\d\}/g, '{}');
   assert.ok(!(seen.has(it) && same(seen.get(it)) !== same(en)), `Voce doppia con traduzioni diverse: «${it}» → «${seen.get(it)}» / «${en}»`);
@@ -60,6 +67,36 @@ assert.equal(T('Partito Democratico'), 'Partito Democratico', 'Le denominazioni 
 assert.equal(T('Apri il profilo di Azione'), 'Open the profile of Azione', 'Una frase con una parte libera: il nome resta.');
 assert.equal(T('Toscana · fiducia 62'), 'Toscana · confidence 62');
 assert.equal(T('un testo mai visto prima'), 'un testo mai visto prima', 'Ciò che non è nel dizionario resta italiano, mai sbagliato.');
+// ---- the engine: a translation is complete only when nothing Italian is left in it ----
+{
+  // the straight and the curly apostrophe are the same letter, and a closing mark does not make another phrase
+  assert.equal(T('L\'accordo non regge più.'), T('L’accordo non regge più.'), 'L’apostrofo dritto e quello curvo sono la stessa lettera.');
+  assert.notEqual(T('L’accordo non regge più.'), 'L’accordo non regge più.');
+  assert.equal(T('Nuova partita.'), `${T('Nuova partita')}.`, 'Un punto in più non è un’altra frase.');
+  assert.equal(T('Nuova partita…'), `${T('Nuova partita')}…`);
+  // a sentence of the book with a long name inside is still a template (no limit at 360 characters)
+  const longName = 'Associazione per la tutela e la promozione dei diritti dei cittadini del comune e dei territori limitrofi di montagna';
+  const frame = 'Quest’anno non hai un voto tuo, ma il {}, {} si misura nei comuni al voto. Puoi anche candidarti tu, in un comune della tua regione che vota quel giorno (Elezioni → Candidatura): la campagna la giochi. Chi fa campagna per i candidati si fa vedere e se ne prende il merito; chi resta fuori non rischia nulla se va male, ma se va bene resta a guardare.';
+  assert.ok(frame.replace('{}', longName).replace('{}', 'ottobre').length > 360);
+  assert.match(T(frame.replace('{}', longName).replace('{}', 'ottobre')), /^This year you have no vote of your own/, 'Una frase lunga con un nome lungo si traduce comunque.');
+  // what is Italian in a text that merely changed: found, with the word
+  assert.equal(I.residualItalian('Programme: fino a quattro priorità'), 'fino');
+  assert.equal(I.residualItalian('Siena\'s post goes round the web'), null, 'Un nome a metà frase non conta.');
+  assert.equal(I.residualItalian('Il governo is falling'), 'il', 'Un articolo italiano basta.');
+  assert.equal(I.residualItalian('Open the profile of Azione'), null);
+  // a partial translation goes to the automatic translator as a WHOLE text, not as a text that "changed"
+  const asked = [];
+  I.setAutoTranslator({ lookup: () => undefined, request: text => asked.push(text), status: () => ({}) });
+  const partial = T('Programma: fino a nove temi nuovi per la settimana');
+  assert.ok(asked.includes('Programma: fino a nove temi nuovi per la settimana'), `Il testo tradotto a metà viene chiesto per intero (${JSON.stringify(asked)}).`);
+  asked.length = 0;
+  T('Nuova partita');
+  assert.deepEqual(asked, [], 'Un testo tradotto per intero non si chiede.');
+  I.setAutoTranslator({ lookup: text => text === 'Programma: fino a nove temi nuovi per la settimana' ? 'Programme: up to nine new topics for the week' : undefined, request: () => {}, status: () => ({}) });
+  assert.equal(T('Programma: fino a nove temi nuovi per la settimana'), 'Programme: up to nine new topics for the week', 'La traduzione completa sostituisce quella a metà.');
+  I.setAutoTranslator(null);
+  assert.ok(partial.includes('Programme') || partial.includes('PROGRAMME'), 'Senza traduttore, ciò che è noto resta tradotto.');
+}
 assert.equal(T('Z'.repeat(5000)), 'Z'.repeat(5000), 'Un testo lungo non passa dai confronti costosi.');
 const t0 = Date.now(); for (let i = 0; i < 2000; i++) T(`Un testo qualunque ${i} che non ha corrispondenze, con ${i} numeri e (parentesi) · e altro: ancora`); assert.ok(Date.now() - t0 < 3000, `La ricerca è rapida (${Date.now() - t0} ms).`);
 assert.equal(I.t('language.label', 'Lingua'), 'Language');

@@ -549,7 +549,7 @@ export const PHRASES = [
   ["Il mandato del Presidente scade il # febbraio #: il Parlamento in seduta comune elegge il successore a scrutinio segreto.", "The President's mandate expires on # February #: Parliament in joint session elects the successor by secret ballot."],
   ["Il mandato dura sette anni e non è rinnovabile per legge né vietato dalla Costituzione: può essere rieletto chi ha il consenso dell’assemblea.", "The mandate lasts seven years and is neither renewable by law nor forbidden by the Constitution: whoever has the assembly's consent can be re-elected."],
   ["Il mandato scade", "The mandate expires"],
-  ["Il mediatore · Area dei territori (figura simulata)", "The mediator · Area dei territori (simulated figure)"],
+  ["Il mediatore · Area dei territori (figura simulata)", "The mediator · Territories area (simulated figure)"],
   ["Il mediatore: cerca accordi e teme le rotture · linea «Corsa solitaria» · tOPICS: autonomie, mezzogiorno, agricoltura, trasporti, turismo", "The mediator: seeks agreements and fears breaks · line “Solo run” · topics: autonomies, the South, agriculture, transport, tourism"],
   ["Il Meridiano · Quotidiani nazionali", "Il Meridiano · National dailies"],
   ["Il metodo di selezione pesa sulla tua candidatura: arrivaci con sostegno interno alto.", "The selection method weighs on your candidacy: get there with high internal support."],

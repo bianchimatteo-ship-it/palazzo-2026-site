@@ -10,10 +10,11 @@ export const ALLOWED_ITALIAN = [
   { pattern: /\b(Centrodestra|Centrosinistra|Sud chiama Nord|Vallée d'Aoste|Südtiroler)\b/, reason: 'Nome di coalizione o lista così come compare nei risultati elettorali (nome proprio).' },
   { pattern: /\bCommissione\b/, reason: 'Denominazione ufficiale di una commissione parlamentare (nome proprio).' },
   { pattern: /\b(I Governo Meloni|Governo Meloni)\b/, reason: 'Nome di un governo (nome proprio).' },
-  { pattern: /\b(Potere al Popolo|Rifondazione Comunista|Progetto Civico)\b/, reason: 'Nome di un partito o movimento (nome proprio).' },
+  { pattern: /\b(Potere al Popolo|Rifondazione Comunista|Progetto Civico)\b/i, reason: 'Nome di un partito o movimento (nome proprio).' },
   { pattern: /\bmovimento 5 Stelle\b/i, reason: 'Nome di un partito (nome proprio), anche in minuscolo a metà frase.' },
   { pattern: /· Misto ·/, reason: 'Gruppo Misto: denominazione ufficiale del gruppo parlamentare.' },
   { pattern: /: «[^»]+»$/, reason: 'Un titolo tra virgolette alla fine della frase (nome di una legge o di una votazione) è un nome proprio.' },
+  { pattern: /(NOI CON L'ITALIA|Noi con l'Italia), .*(UDC E |\))-MAIE-CENTRO POPOLARE|^Civici d'Italia-UDC-/i, reason: 'Denominazione ufficiale di un gruppo parlamentare (nome proprio, come pubblicata da Camera e Senato).' },
   { pattern: /^(Popolare|Massimo)$/, reason: 'Frammento di una denominazione ufficiale (gruppo parlamentare) o nome di persona.' }
 ];
 // English words of Italian origin or spelling the phrase book never needs to translate (they are English too): not counted as untranslated Italian.
