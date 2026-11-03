@@ -3,7 +3,7 @@
 // progression and the incompatibilities. Pure functions: the callers pass in the facts they already have.
 import {
   GOVERNMENT_CANDIDACY_BLOCK, INCOMPATIBILITIES, LOCAL_POPULATION_THRESHOLD, OFFICES, OFFICE_BASES, OFFICE_OF_CANDIDACY, POWERS, PROVINCIAL_PRESIDENT_MIN_MONTHS
-} from '../data/simulation/office-rules.js?v=20261103-1';
+} from '../data/simulation/office-rules.js?v=20261103-2';
 
 // The office of the player in a local or European institution (see local-engine: kinds comune, provincia, regione, europa).
 export function institutionOffice(inst) {
@@ -177,7 +177,13 @@ export function personalCandidacies(game, races = []) {
 }
 export const candidacyRecord = ({ id, type, label, windowOpensAt = null, electionDate, early = false, kind = 'elezione' }) => ({ id, type, label, windowOpensAt, electionDate, early: Boolean(early), kind });
 
+// The two ways to play (career.gameMode): «realistica» keeps every requirement of the Italian system; «sandbox» opens every candidacy of every election the game has. The one thing it keeps is
+// the single campaign at a time (a limit of the game, not a requirement of eligibility); the incompatibilities between offices are NOT lifted either: they are told before the vote and applied after the win.
+export const GAME_MODES = Object.freeze(['realistica', 'sandbox']);
+export const gameModeOf = career => career?.gameMode === 'sandbox' ? 'sandbox' : 'realistica';
+export const isSandbox = facts => facts?.mode === 'sandbox';
 export function candidacyBlock({ held = [], electionType, role, electionDate = null, windowOpensAt = null, municipalVote = null, candidacies = [], candidacyId = null, facts = null } = {}) {
+  if (isSandbox(facts)) return rhythmBlock({ candidacies, candidacyId, electionDate, windowOpensAt });
   if (held.includes('presidente-repubblica')) return 'Il Presidente della Repubblica sta sopra le parti: non si candida a nessun’altra carica.';
   if (GOVERNMENT_CANDIDACY_BLOCK.includes(electionType) && held.some(id => OFFICES[id]?.scope === 'governo')) return 'Chi ha un incarico di governo non si candida a un ente territoriale o al Parlamento europeo: prima lascia l’incarico (regola di gioco).';
   const office = officeOfCandidacy(electionType, role);
@@ -189,8 +195,18 @@ export function candidacyBlock({ held = [], electionType, role, electionDate = n
   return rhythmBlock({ candidacies, candidacyId, electionDate, windowOpensAt });
 }
 
-// What winning the candidacy would cost, to say it before the campaign starts: the offices that lapse and the rule.
-export function candidacyNotes({ held = [], electionType, role, facts = null } = {}) {
+// The offices that are left when `gained` is won: the same list the game applies after the win (store: lapseConflicts) and the one told before the campaign. The derived offices (capogruppo, vicepremier)
+// vanish with the seat they hang from; the move from one Chamber to the other is the Parliament's own business, so it is applied there but still told (forNotice).
+export function lostOffices(held = [], gained, facts = null, { forNotice = false } = {}) {
+  if (!gained) return [];
+  const parliamentSeat = gained === 'deputato' || gained === 'senatore';
+  return lapsesFor(held.filter(id => id !== gained), gained, facts).filter(item => !['capogruppo', 'vicepremier'].includes(item.office) && (forNotice || !(parliamentSeat && ['deputato', 'senatore'].includes(item.office))));
+}
+// What winning the candidacy would cost, to say it before the campaign starts: the offices that lapse and the rule (structured, for the screens that need the name of the office).
+export function candidacyLapses({ held = [], electionType, role, facts = null } = {}) {
   const office = officeOfCandidacy(electionType, role);
-  return office ? lapsesFor(held, office, facts).map(item => `Se vinci lasci ${officeLabel(item.office).toLowerCase()}: ${item.rule}`) : [];
+  return office ? lostOffices(held, office, facts, { forNotice: true }).map(item => ({ office: item.office, label: officeLabel(item.office), rule: item.rule, gained: office, gainedLabel: officeLabel(office) })) : [];
+}
+export function candidacyNotes({ held = [], electionType, role, facts = null } = {}) {
+  return candidacyLapses({ held, electionType, role, facts }).map(item => `Se vinci lasci ${item.label.toLowerCase()}: ${item.rule}`);
 }

@@ -24,7 +24,9 @@ export const PAGES = ['panoramica', 'profilo', 'carriera', 'partito', 'calendari
 export async function tourCareer({ evaluate, pause }, { pages = PAGES, onScreen }) {
   const closePopups = () => evaluate(`(() => { [...document.querySelectorAll('button')].filter(b => /^(Chiudi|Close)$/.test(b.textContent.trim()) && b.closest('aside,[role=dialog]')).forEach(b => b.click()); return true; })()`);
   const openAll = () => evaluate(`(() => { document.querySelectorAll('details:not([open])').forEach(d => { d.dataset.tourOpened = '1'; d.setAttribute('open', ''); }); return true; })()`);
-  const record = async name => { await openAll(); await pause(120); await onScreen(name, await evaluate(COLLECT)); };
+  // (a screen is read when it has stopped changing: on a busy machine the translation of the page can come a moment after the drawing)
+  const settled = async () => { let last = null; for (let i = 0; i < 12; i++) { const now = JSON.stringify(await evaluate(COLLECT)); if (now === last) return JSON.parse(now); last = now; await pause(250); } return JSON.parse(last); };
+  const record = async name => { await openAll(); await pause(120); await onScreen(name, await settled()); };
   const tabs = () => evaluate(`[...document.querySelectorAll('[data-section-tab]')].map(b => [b.dataset.sectionTab, b.dataset.sectionTabValue])`);
   const click = (name, value) => evaluate(`(() => { const b = [...document.querySelectorAll('[data-section-tab]')].find(x => x.dataset.sectionTab === ${JSON.stringify(name)} && x.dataset.sectionTabValue === ${JSON.stringify(value)}); if (!b) return false; b.click(); return true; })()`);
   for (const page of pages) {

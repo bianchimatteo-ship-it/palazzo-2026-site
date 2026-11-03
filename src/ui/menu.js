@@ -1,16 +1,16 @@
 // Main menu, how-to-play, settings, save slots and the end-of-week report.
-import { renderTutorialInvite } from './tutorial.js?v=20261103-1';
-import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261103-1';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261103-1';
-import { formatDate } from '../core/time.js?v=20261103-1';
-import { illustration } from './illustrations.js?v=20261103-1';
-import { glyph } from './visuals.js?v=20261103-1';
-import { identityMark, identityVars } from './party-identity.js?v=20261103-1';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261103-1';
-import { hallView } from './hall-view.js?v=20261103-1';
-import { renderLogoCatalog } from './logo-catalog.js?v=20261103-1';
-import { esc, signed } from './charts.js?v=20261103-1';
-import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261103-1';
+import { renderTutorialInvite } from './tutorial.js?v=20261103-2';
+import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261103-2';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261103-2';
+import { formatDate } from '../core/time.js?v=20261103-2';
+import { illustration } from './illustrations.js?v=20261103-2';
+import { glyph } from './visuals.js?v=20261103-2';
+import { identityMark, identityVars } from './party-identity.js?v=20261103-2';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261103-2';
+import { hallView } from './hall-view.js?v=20261103-2';
+import { renderLogoCatalog } from './logo-catalog.js?v=20261103-2';
+import { esc, signed } from './charts.js?v=20261103-2';
+import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261103-2';
 
 const when = iso => { try { return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch { return ''; } };
 // The actions of the opening screen, in order of importance: starting a career and resuming one are the two main ones (drawn apart, below); then what concerns the
@@ -87,7 +87,7 @@ function languageSwitch(settings) {
 // Starting a career: the main action of the screen, with what it leads to (all of it chosen in the new-game steps).
 // While the index of the real data and the starting collections are still arriving (`loading`), the card is there but waits: it is not an action yet, and says why.
 function newCareerCard(loading = false) {
-  return `<button class="menu-new" data-menu="nuova"${loading ? ' disabled aria-disabled="true" aria-busy="true"' : ''}><span class="menu-new-icon">${glyph('flag', 24)}</span><span class="menu-new-body"><strong>Nuova partita</strong><small>${loading ? 'Carico i dati reali…' : 'Scegli dove partire e crea il tuo politico in cinque passaggi.'}</small></span><span class="menu-new-go" aria-hidden="true">${glyph('steady', 22)}</span></button>`;
+  return `<button class="menu-new" data-menu="nuova"${loading ? ' disabled aria-disabled="true" aria-busy="true"' : ''}><span class="menu-new-icon">${glyph('flag', 24)}</span><span class="menu-new-body"><strong>Nuova partita</strong><small>${loading ? 'Carico i dati reali…' : 'Scegli dove partire e crea il tuo politico in sei passaggi.'}</small></span><span class="menu-new-go" aria-hidden="true">${glyph('steady', 22)}</span></button>`;
 }
 
 // Why the game kept a copy aside, in words.

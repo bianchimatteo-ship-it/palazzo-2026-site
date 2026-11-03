@@ -4,14 +4,14 @@
 // Pure functions on a plain state (`state.presidency`): nothing here touches the store, the parliament or the world;
 // the store applies the consequences. Every draw comes from a seeded sequence: the same state gives the same vote.
 // Everything is simulation: the candidates are figures of the game and the incumbent is never named.
-import { uniqueId } from './ids.js?v=20261103-1';
-import { advanceDays, formatDate } from './time.js?v=20261103-1';
-import { seededRandom } from './vote-engine.js?v=20261103-1';
-import { campOfAxis } from './parliament-engine.js?v=20261103-1';
-import { linkGroupsToParties } from './lawmaking-engine.js?v=20261103-1';
-import { regionalShares } from './world-engine.js?v=20261103-1';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261103-1';
-import { AFFINITY, CAMP_LABELS, CANDIDATE_TYPES, LEDGER_KEEP, LEDGER_RULES, PRESIDENCY_RULES, PRESIDENT_ACTIVITIES, PRESIDENT_ACTS } from '../data/simulation/presidency-rules.js?v=20261103-1';
+import { uniqueId } from './ids.js?v=20261103-2';
+import { advanceDays, formatDate } from './time.js?v=20261103-2';
+import { seededRandom } from './vote-engine.js?v=20261103-2';
+import { campOfAxis } from './parliament-engine.js?v=20261103-2';
+import { linkGroupsToParties } from './lawmaking-engine.js?v=20261103-2';
+import { regionalShares } from './world-engine.js?v=20261103-2';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261103-2';
+import { AFFINITY, CAMP_LABELS, CANDIDATE_TYPES, LEDGER_KEEP, LEDGER_RULES, PRESIDENCY_RULES, PRESIDENT_ACTIVITIES, PRESIDENT_ACTS } from '../data/simulation/presidency-rules.js?v=20261103-2';
 
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -65,9 +65,11 @@ export function whiteSemester(incumbent, date, legislatureEnd = null) {
 
 // ---------- the person ----------
 // What the Constitution asks of a candidate (art. 84): fifty years of age and the enjoyment of civil and political rights.
-export function presidentialEligibility({ birthDate, date }) {
+export function presidentialEligibility({ birthDate, date, sandbox = false }) {
   const age = ageOn(birthDate, date);
   const problems = [];
+  // Sandbox: the age requirement of art. 84 is not asked (every election of the game is open); the date of birth still has to be valid
+  if (sandbox && age !== null) return { eligible: true, age, minAge: PRESIDENCY_RULES.minAge, turns50: birthDate ? addYears(birthDate, PRESIDENCY_RULES.minAge) : null, problems, sandbox: true };
   const turns = birthDate ? addYears(birthDate, PRESIDENCY_RULES.minAge) : null;
   if (age === null) problems.push('Serve una data di nascita valida.');
   else if (age < PRESIDENCY_RULES.minAge) problems.push(`Servono ${PRESIDENCY_RULES.minAge} anni compiuti (art. 84 della Costituzione): li compirai il ${formatDate(turns)}.`);

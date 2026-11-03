@@ -54,3 +54,10 @@ Chiamate effettuate: **0**. Consumo previsto per il normale gioco: 0 caratteri (
 - Non esiste un traduttore locale generale: un testo il cui modello **non** compare nel dizionario (contenuto nuovo aggiunto in futuro, o un percorso di gioco non raggiunto dalle 30 carriere) resta in italiano finché non viene aggiunto, o tradotto con DeepL se configurato. Il censimento prova la copertura dell'inventario verificato, non di ogni possibile partita.
 - 36 modelli (24 letterali + 12 generati) sono frammenti concatenati a run time: si verificano solo nelle schermate raggiunte.
 - La correttezza stilistica dell'inglese composto oltre alle 25 frasi esatte non è verificabile in automatico: il censimento prova che non resta italiano e che numeri e nomi sono conservati.
+
+## Modalità di gioco e verifica finale (Realistica / Sandbox)
+
+- Censimento finale: 8123 letterali e 8845 modelli generati, 0 incompleti, 0 mancanti. `check-i18n` (Chrome): 34297 testi in inglese, 0 italiani.
+- Modalità Realistica (predefinita, anche per le carriere vecchie) e Sandbox: scelta prima dei sei passaggi, salvata in `career.gameMode`.
+- Sandbox: candidatura libera a ogni elezione (ritmo di una campagna alla volta e incompatibilità tra cariche invariati; età minima del Quirinale ignorata). L'avviso «Se vinci, lasci…» precede la conferma; le cariche si perdono solo a vittoria acquisita.
+- Non verificati end-to-end: finestra di conferma delle corse territoriali nel browser, flusso Quirinale in Sandbox; `check-campaign-ui` (crash Chrome già presente su HEAD) e `check-presidency` (timeout) non conclusi; `check:all` completo non eseguito.

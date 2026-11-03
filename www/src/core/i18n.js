@@ -5,7 +5,7 @@
 //     the phrase book (src/data/i18n/en-*.js): exact phrases, phrases with numbers (`#`) or free parts (`{}`), and the numbers, currency and dates in English form.
 //     Proper names (people, parties, places, official denominations) are never in the phrase book: they stay as they are. A phrase that is not in the book stays Italian, never wrong.
 // Nothing here touches a career: the language is a view of the same data.
-import { saveSetting } from './settings.js?v=20261103-1';
+import { saveSetting } from './settings.js?v=20261103-2';
 
 export const LANGUAGES = Object.freeze([['it', 'Italiano', 'it-IT'], ['en', 'English', 'en-GB']]);
 const SETTINGS_KEY = 'politicando.settings.v1';
@@ -42,7 +42,9 @@ function abstractNumbers(text) {
 function compileTemplate(it, en) {
   const parts = it.split(/(\{\})/).map(piece => piece === '{}' ? null : piece);
   // a free part is a short stretch of text (a name, a label), so a long text never goes through a costly match (the list of the parties that support a government from outside is the one long free part: up to 400)
-  const source = parts.map(piece => piece === null ? (it.includes(', senza ministri') ? '(.{1,400}?)' : '(.{1,120}?)') : piece.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/#/g, '(\\d[\\d.]*(?:,\\d+)?)')).join('');
+  // two free parts side by side («{}{}»: a title and what may follow it): the first takes all it can up to the fixed text, the second may be empty — never one letter and the rest
+  const adjacent = parts.map((piece, i) => piece === null && ((parts[i + 1] === '' && parts[i + 2] === null) ? 'first' : (parts[i - 1] === '' && parts[i - 2] === null) ? 'second' : null));
+  const source = parts.map((piece, i) => piece === null ? (adjacent[i] === 'first' ? '(.{1,120})' : adjacent[i] === 'second' ? '(.{0,120}?)' : it.includes(', senza ministri') ? '(.{1,400}?)' : '(.{1,120}?)') : piece.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/#/g, '(\\d[\\d.]*(?:,\\d+)?)')).join('');
   const literals = parts.filter(piece => piece !== null).flatMap(piece => piece.split('#')).filter(piece => piece.length > 1);
   // the text before the first free part or number: templates are looked up by it (and the most specific one, the one with most fixed text, is tried first)
   const lead = (parts[0] ?? '').split('#')[0];
@@ -183,7 +185,7 @@ function matchCase(key, value) {
   const keyLetters = letters(key), valueLetters = letters(value);
   if (keyLetters.length > 1 && keyLetters === keyLetters.toUpperCase()) return value.toUpperCase();
   const shouting = valueLetters.length > 3 && valueLetters === valueLetters.toUpperCase();
-  const base = shouting && value.includes(' ') ? value[0] + value.slice(1).toLowerCase() : value;
+  const base = shouting ? value[0] + value.slice(1).toLowerCase() : value;
   return key[0] === key[0].toLowerCase() && key[0] !== key[0].toUpperCase() ? base[0].toLowerCase() + base.slice(1) : base;
 }
 // The cuts a text goes through when it is not a phrase of the book as a whole, from the coarsest to the finest: «a · b», «first sentence. second sentence», «a; b», «label: value».
@@ -231,10 +233,12 @@ function translateClipped(text, depth) {
   return null;
 }
 function translatePiece(text, depth = 0, level = 0) {
+  // a list item that starts with its bullet («· giovani 18–34»): the bullet stays, the rest is translated
+  if (level === 0) { const bullet = text.match(/^([·•]\s+)([\s\S]+)$/); if (bullet) { const rest = translatePiece(bullet[2], depth); if (rest !== bullet[2]) return bullet[1] + rest; } }
   if (level === 0) { const found = lookup(text, depth); if (found !== null) return found; }
   if (level === 0 && text.endsWith('…') && text.length > 14) { const clipped = translateClipped(text, depth); if (clipped !== null) return clipped; }
-  // a list item that starts with its bullet («· giovani 18–34»): the bullet stays, the rest is translated
-  if (level === 0) { const bullet = text.match(/^([·•]\s+)([\s\S]+)$/); if (bullet) { const rest = translatePiece(bullet[2], depth); return rest === bullet[2] ? text : bullet[1] + rest; } }
+  // a title in quotes («Riforma dei servizi per l’infanzia»): the quotes stay, the title inside is translated
+  { const quoted = text.match(/^([«“])([^«»“”]{3,200})([»”])$/); if (quoted) { const inner = translatePiece(quoted[2], depth + 1); if (inner !== quoted[2]) return quoted[1] + inner + quoted[3]; } }
   let first = null;
   for (let cut = level; cut < CUTS.length; cut++) {
     let parts = text.split(CUTS[cut]);
@@ -253,8 +257,10 @@ function translatePiece(text, depth = 0, level = 0) {
       // The coarsest cut that changes something is taken – unless it leaves Italian behind and a finer cut (the sentences of a text that also holds a dash: «Dossier fallito — ministero X: …. Le circostanze…»)
       // translates all of it: then that one is taken.
       const joined = done.join('');
-      if (residualItalian(joined) === null || cut === CUTS.length - 1) return joined;
+      // (a date still written in Italian — «29 aprile 2029» — is turned into English at the end of translateText: it is not Italian left behind)
+      if (residualItalian(englishDates(joined)) === null) return joined;
       first ??= joined;
+      if (cut === CUTS.length - 1) return first;
     }
   }
   if (first !== null) return first;
@@ -265,7 +271,7 @@ function translatePiece(text, depth = 0, level = 0) {
   // longest labels the book knows; translated only when EVERY label is known
   if (level === 0 && depth < 3) { const listed = translateLabelList(text, depth); if (listed !== null) return listed; }
   // a list of known labels («sicurezza, natalità e demografia, giustizia»): translated only when EVERY item is a phrase of the book, so that a sentence with commas is never half translated
-  if (level === 0 && depth < 2 && text.includes(', ')) {
+  if (depth < 2 && text.includes(', ')) {
     const items = text.split(', ');
     // (an item that is a name — no Italian word in it — stays as it is: «Lega, Nuova forza civica (simulata n.2), Azione» is a list of parties, one of which the book knows)
     const known = items.map(item => lookup(item, depth + 1));
@@ -428,7 +434,7 @@ export function watchTree(root) {
 let loading = null;
 export function loadBook() {
   if (book?.loaded) return Promise.resolve(book);
-  loading ??= import('../data/i18n/index.js?v=20261103-1').then(module => { module.install(installBook); book.loaded = true; return book; });
+  loading ??= import('../data/i18n/index.js?v=20261103-2').then(module => { module.install(installBook); book.loaded = true; return book; });
   return loading;
 }
 // The title of the page (the tab) is read by people and by assistive technology: it follows the language like the rest (the Italian one is kept to go back to).

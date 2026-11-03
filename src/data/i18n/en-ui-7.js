@@ -394,7 +394,8 @@ export const PHRASES = [
   ["{} scende al {}% ({} punti)", "{1} falls to {2}% ({3} points)"],
   ["{} sotto pressione dopo l’ultima rilevazione", "{1} under pressure after the latest survey"],
   ["{}, allarme {}: il dato peggiore d’Italia", "{1}, {2} alarm: the worst figure in Italy"],
-  ["{} di {} è stata {}; il tema è {}{}.", "{1} of {2} was {3}; the subject is {4}{5}."],
+  ["{} di {} è stata {}; il tema è {}.", "{1} of {2} was {3}; the subject is {4}."],
+  ["{} di {} è stata {}; il tema è {} e il territorio di riferimento è {}.", "{1} of {2} was {3}; the subject is {4} and the reference territory is {5}."],
   ["{} ha la fiducia di {} gruppi{}; la stabilità è a {}/100{}.", "{1} has the confidence of {2} groups{3}; stability is at {4}/100{5}."],
   ["{} in difficoltà su {}", "{1} in difficulty on {2}"],
   ["{}, sforamento dei costi: chi paga?", "{1}, cost overrun: who pays?"],
@@ -2277,4 +2278,8 @@ export const PHRASES = [
   ["Camera", "Chamber"],
   ["Senato", "Senate"],
   ["Gli effetti sui cittadini sono distribuiti e senza vincitori o vinti netti.", "The effects on citizens are spread out, with no clear winners or losers."],
+  ["Incarichi conclusi", "Ended assignments"],
+  ["candidature {} – {}", "candidacies {1} – {2}"],
+  ["voto il {} · candidature {} – {}", "vote on {1} · candidacies {2} – {3}"],
+  ["· voto il {} · candidature {} – {}", "· vote on {1} · candidacies {2} – {3}"],
 ];

@@ -77,3 +77,16 @@
 @media(max-width:850px){.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){.level-cards{grid-template-columns:1fr}.level-card{min-height:0;padding:11px}.level-card-top{margin-bottom:8px}.level-card p{min-height:0;margin:5px 0 7px}.party-mode-grid{grid-template-columns:1fr;gap:6px}.party-mode{min-height:0}.wizard-form-grid{gap:10px}.summary-stat-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.demo-party{gap:7px;padding:8px}.demo-party .source-pill{display:none}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .party-detail-meta{display:flex;align-items:center;gap:12px;margin:18px 0 12px}.party-detail-meta>span:nth-child(2){display:flex;flex-direction:column;gap:3px}.party-detail-meta>span:nth-child(2) small{font-size:7px;color:var(--ink-3);font-weight:700;letter-spacing:.1em}.party-detail-meta>span:nth-child(2) strong{font-size:12px;color:#bfd4dd}.policy-summary{max-width:620px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:18px}.policy-summary>span{padding:10px;}.policy-summary small,.policy-summary strong{display:block}.policy-summary small{font-size:8px;color:#979b87}.policy-summary strong{font:700 14px Manrope,sans-serif;color:#c6e1ec;margin:5px 0}.policy-summary strong i{font:400 8px 'DM Sans',sans-serif;color:var(--ink-3)}.policy-summary b{display:block;height:3px;background:var(--panel-3);border-radius:5px;overflow:hidden}.policy-summary b i{display:block;height:100%;background:#878c75;border-radius:5px}@media(max-width:560px){.policy-summary{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* The choice of the way to play, before the six steps of the new career */
+.wizard-mode-cards { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.wizard-mode-card { display: flex; flex-direction: column; gap: 8px; text-align: left; padding: 18px; border-radius: 16px; border: 2px solid var(--line, #d6dbe6); background: var(--surface, #fff); color: inherit; font: inherit; cursor: pointer; min-height: 160px; }
+.wizard-mode-card strong { font-size: 1.15rem; }
+.wizard-mode-card span { line-height: 1.4; }
+.wizard-mode-card small { opacity: .75; line-height: 1.35; margin-top: auto; }
+.wizard-mode-card:hover, .wizard-mode-card:focus-visible, .wizard-mode-card.selected { border-color: var(--accent, #264d82); outline: none; box-shadow: 0 0 0 3px rgba(38, 77, 130, .18); }
+@media (max-width: 720px) { .wizard-mode-cards { grid-template-columns: 1fr; } .wizard-mode-card { min-height: 0; } }
+/* What winning would cost: told before the campaign, apart from the requirements that bar a candidacy */
+.campaign-lapse-box { margin: 12px 0; padding: 12px 14px; border-radius: 12px; border: 1px solid #c58a1a; background: rgba(197, 138, 26, .12); }
+.campaign-lapse-box strong { display: block; margin-bottom: 6px; }
+.campaign-lapse-box ul { margin: 0; padding-left: 18px; }

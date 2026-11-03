@@ -1,14 +1,14 @@
 // Roles and powers: what the player may do depends on the offices actually held.
 // Every power listed here is checked again by the store before the action runs.
-import { activeMinisters, playerInMajority } from './parliament-engine.js?v=20261103-1';
-import { heldOffices, hasPower, institutionOffice, officeDetails, officeLabel } from './office-engine.js?v=20261103-1';
-import { bandOfMunicipality, residentsOfUnit } from './municipal-rules.js?v=20261103-1';
-import { OFFICES, POWERS } from '../data/simulation/office-rules.js?v=20261103-1';
-import { isSecretary } from './career-engine.js?v=20261103-1';
-import { EP_ROLES, committeeById } from './local-engine.js?v=20261103-1';
-import { PRESIDENCY_RULES } from '../data/simulation/presidency-rules.js?v=20261103-1';
-import { presidentialEligibility, whiteSemester } from './presidency-engine.js?v=20261103-1';
-import { END_KINDS } from './legacy-engine.js?v=20261103-1';
+import { activeMinisters, playerInMajority } from './parliament-engine.js?v=20261103-2';
+import { heldOffices, hasPower, institutionOffice, officeDetails, officeLabel } from './office-engine.js?v=20261103-2';
+import { bandOfMunicipality, residentsOfUnit } from './municipal-rules.js?v=20261103-2';
+import { OFFICES, POWERS } from '../data/simulation/office-rules.js?v=20261103-2';
+import { isSecretary } from './career-engine.js?v=20261103-2';
+import { EP_ROLES, committeeById } from './local-engine.js?v=20261103-2';
+import { PRESIDENCY_RULES } from '../data/simulation/presidency-rules.js?v=20261103-2';
+import { presidentialEligibility, whiteSemester } from './presidency-engine.js?v=20261103-2';
+import { END_KINDS } from './legacy-engine.js?v=20261103-2';
 
 const governing = parliament => ['active', 'crisis'].includes(parliament?.government?.status);
 export const isPrimeMinister = parliament => governing(parliament) && parliament.government.primeMinister === 'player';
@@ -53,7 +53,7 @@ export function candidacyFacts(state, { electionType = null, race = null } = {})
   const home = { region: player?.region ?? state.game?.place?.region ?? null, municipalityCode: player?.municipalityCode ?? own?.istatCode ?? null, provinceCode: own?.provinceCode ?? state.game?.place?.provinceCode ?? null };
   const region = territory?.region ?? home.region, provinceCode = territory?.provinceCode ?? home.provinceCode, municipalityCode = territory?.municipalityCode ?? home.municipalityCode;
   const population = electionType === 'comunale' ? populationOfComune(municipalityCode) : electionType === 'provinciale' ? residentsOfUnit(provinceCode) : null;
-  return { details: officeFactsDetail(state), target: { region, provinceCode, municipalityCode, population: Number.isFinite(population) ? population : null } };
+  return { mode: state.career?.gameMode === 'sandbox' ? 'sandbox' : 'realistica', details: officeFactsDetail(state), target: { region, provinceCode, municipalityCode, population: Number.isFinite(population) ? population : null } };
 }
 
 export function playerRoles(state) {
@@ -70,7 +70,7 @@ export function playerRoles(state) {
   const electionRole = state.presidency?.election?.player?.role ?? null;
   const elector = ['leader', 'elettore', 'delegato'].includes(electionRole) && state.presidency?.election?.phase !== 'conclusa';
   const birthDate = state.dataset?.politicians?.find(item => item.id === state.career?.playerId)?.birthDate ?? null;
-  const eligibility = presidentialEligibility({ birthDate, date: state.clock?.currentDate ?? null });
+  const eligibility = presidentialEligibility({ birthDate, date: state.clock?.currentDate ?? null, sandbox: state.career?.gameMode === 'sandbox' });
   const semester = president ? whiteSemester(state.presidency.incumbent, state.clock.currentDate, state.national?.legislature?.naturalEnd ?? null) : null;
   const held = heldOfficesOf(state);
   const roles = [];
