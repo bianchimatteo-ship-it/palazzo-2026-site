@@ -17,7 +17,8 @@
   // See docs/account-email.md. PUBLIC_BASE_URL is where the links of the messages lead; ACCOUNT_EMAIL_REQUIRED "1" makes the address mandatory at registration.
   "vars": { "EMAIL_GATEWAY_URL": "https://script.google.com/macros/s/AKfycbwzUfLKTPFmcorBTV6YfT6Z7u9IYaVxOwXmCogAVE5TgfE12NgFsswmWn_vLWi0J1tcNQ/exec", "PUBLIC_BASE_URL": "https://palazzo-2026-site.bianchimatteo657.workers.dev", "ACCOUNT_EMAIL_REQUIRED": "0", "RETENTION_ENABLED": "0", "RETENTION_NOTICE_TESTED": "0", "TRANSLATE_PROVIDER": "deepl", "TRANSLATE_DAILY_CHARS": "10000", "TRANSLATE_MONTHLY_CHARS": "100000", "TRANSLATE_REQUEST_CHARS": "2000", "TRANSLATE_MAX_TEXTS": "20", "TRANSLATE_RATE_PER_MIN": "20" },
   "assets": {
-    "directory": ".",
+    // PRODUCTION serves no game: only the portal (confirm the e-mail, new password, legal pages), see portal/ and docs/ambiente-test-privato.md. The full web game exists only in the private test site (wrangler.test.jsonc).
+    "directory": "./portal",
     "binding": "ASSETS",
     "run_worker_first": ["/api/*"]
   },

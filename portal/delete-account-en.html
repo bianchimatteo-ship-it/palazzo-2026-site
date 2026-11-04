@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self'; connect-src 'self' https://palazzo-2026-site.bianchimatteo657.workers.dev http://127.0.0.1:8791 http://localhost:8791; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
+<meta name="referrer" content="no-referrer" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Delete your account · POLITICANDO 2026</title>
+<meta name="description" content="Delete your POLITICANDO 2026 account and online saves, without installing anything." />
+<meta name="robots" content="noindex" />
+<link rel="icon" href="./favicon.ico" sizes="16x16 32x32 48x48" />
+<link rel="stylesheet" href="./src/legal.css" />
+<link rel="alternate" hreflang="it" href="./elimina-account.html" />
+</head>
+<body>
+<main class="legal">
+<header><a class="back" href="./">← Back to the game</a><span class="meta">POLITICANDO 2026 · simulation · <a href="elimina-account.html" hreflang="it" lang="it">Italiano</a></span></header>
+
+<h1>Delete your account</h1>
+<p class="meta">Public page: you do not need to open the game.</p>
+<p>Enter the account’s username and password. The account, the careers saved online (with their previous versions), any email address, the verification links and the open sessions will be deleted immediately and permanently. <strong>This cannot be undone.</strong> Games saved in your device’s browser are not touched.</p>
+<form id="delete-form" novalidate>
+<label>Username<input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required minlength="3" maxlength="24" /></label>
+<label>Password<input name="password" type="password" autocomplete="current-password" required minlength="8" /></label>
+<label>Type ELIMINA to confirm (the Italian word for “delete”)<input name="confirm" autocomplete="off" autocapitalize="characters" spellcheck="false" required /></label>
+<button type="submit" id="delete-submit">Permanently delete the account</button>
+</form>
+<div id="delete-result" class="result" role="status" aria-live="polite" hidden></div>
+<h2>Don’t remember the password?</h2>
+<p>The game does not keep the password and cannot tell it to you. If you added and verified an email address to the account, you can choose a new password: in the game open Menu → Account → “Forgot password”, write the address and follow the link you receive (valid 30 minutes); then come back here, or delete the account from the game. Without a verified address the password cannot be recovered and the account cannot be deleted from here.</p>
+<p>To protect other people’s accounts, the controller does not delete an account on a simple written request, because it cannot be certain who is writing. If you need help, or if you believe an account was created in your name or by a minor without a parent’s consent, write to <a href="mailto:politicando2026simulazione@gmail.com">politicando2026simulazione@gmail.com</a> giving the username and explaining the situation: the request is assessed case by case.</p>
+<p>Information about the data processed and how long it is kept is in the <a href="privacy-en.html">Privacy notice</a>.</p>
+<script type="module" src="./src/legal/delete-account.js"></script>
+<nav class="legal-nav" aria-label="Legal information"><a href="privacy-en.html">Privacy notice</a><a href="terms-en.html">Terms of use</a><a href="delete-account-en.html">Delete your account</a></nav>
+</main>
+</body>
+</html>

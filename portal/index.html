@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'self'; form-action 'none'; object-src 'none'" />
+  <title>POLITICANDO 2026 · Account</title>
+  <link rel="icon" href="./favicon.ico" />
+  <link rel="stylesheet" href="./portal.css" />
+</head>
+<body>
+  <main class="portal">
+    <h1>POLITICANDO 2026</h1>
+    <p class="portal-lead">Conferma dell’indirizzo e-mail e recupero della password. Il gioco si usa nell’app Android.</p>
+    <section id="portal-state" role="status" aria-live="polite"></section>
+    <form id="portal-reset" hidden>
+      <p>Scegli una nuova password per <strong id="portal-user"></strong>.</p>
+      <label>Nuova password<input id="portal-password" type="password" autocomplete="new-password" minlength="8" required /></label>
+      <label>Ripeti la password<input id="portal-password2" type="password" autocomplete="new-password" minlength="8" required /></label>
+      <button type="submit">Cambia password</button>
+    </form>
+    <p id="portal-app" hidden><a id="portal-app-link" class="portal-button" href="#">Apri l’app</a></p>
+    <nav class="portal-links"><a href="privacy.html">Privacy</a> · <a href="termini.html">Termini</a> · <a href="elimina-account.html">Elimina l’account</a></nav>
+  </main>
+  <script type="module" src="./portal.js"></script>
+</body>
+</html>
