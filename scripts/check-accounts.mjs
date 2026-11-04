@@ -188,9 +188,9 @@ for (let i = 0; i < 12; i++) await put(`c-slot${i}`, at(1, `slot${i}`), { baseRe
 assert.equal((await put('c-slot99', at(1, 'slot99'), { baseRevision: 0 }, other)).status, 409, 'Numero massimo di carriere online.');
 assert.equal((await api('/api/saves/c-slot0', { method: 'DELETE', token: other })).status, 200);
 assert.equal((await api('/api/saves', { token: other })).body.saves.length, 11, 'Dodici carriere online al massimo (una già dell’altro account), poi una eliminata.');
-// CORS for the copy on GitHub Pages.
+// CORS: the game is no longer published on GitHub Pages, whose origin is not one of the service any more.
 result = await api('/api/account/me', { token, origin: 'https://bianchimatteo-ship-it.github.io' });
-assert.equal(result.headers.get('access-control-allow-origin'), 'https://bianchimatteo-ship-it.github.io');
+assert.notEqual(result.headers.get('access-control-allow-origin'), 'https://bianchimatteo-ship-it.github.io');
 assert.match(result.headers.get('access-control-allow-methods'), /DELETE/);
 // A new deploy: accounts and saves are still there.
 worker = (await import('../worker.js?deploy=accounts-2')).default;

@@ -28,3 +28,5 @@ android
 docs
 capacitor.config.json
 worker-translate.js
+wrangler.test.jsonc
+portal

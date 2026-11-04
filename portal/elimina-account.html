@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; style-src-attr 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self'; connect-src 'self' https://palazzo-2026-site.bianchimatteo657.workers.dev http://127.0.0.1:8791 http://localhost:8791; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'" />
+<meta name="referrer" content="no-referrer" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Elimina l’account · POLITICANDO 2026</title>
+<meta name="description" content="Elimina il tuo account POLITICANDO 2026 e i salvataggi online, senza installare nulla." />
+<meta name="robots" content="noindex" />
+<link rel="icon" href="./favicon.ico" sizes="16x16 32x32 48x48" />
+<link rel="stylesheet" href="./src/legal.css" />
+<link rel="alternate" hreflang="en" href="./delete-account-en.html" />
+</head>
+<body>
+<main class="legal">
+<header><a class="back" href="./">← Torna al gioco</a><span class="meta">POLITICANDO 2026 · simulazione · <a href="delete-account-en.html" hreflang="en" lang="en">English</a></span></header>
+
+<h1>Elimina l’account</h1>
+<p class="meta">Pagina pubblica: non serve aprire il gioco.</p>
+<p>Inserisci nome utente e password dell’account. Verranno eliminati subito e in modo definitivo l’account, le carriere salvate online (con le versioni precedenti), l’eventuale indirizzo e-mail, i collegamenti di verifica e le sessioni aperte. <strong>Non si può annullare.</strong> Le partite salvate nel browser del tuo dispositivo non sono toccate.</p>
+<form id="delete-form" novalidate>
+<label>Nome utente<input name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required minlength="3" maxlength="24" /></label>
+<label>Password<input name="password" type="password" autocomplete="current-password" required minlength="8" /></label>
+<label>Scrivi ELIMINA per confermare<input name="confirm" autocomplete="off" autocapitalize="characters" spellcheck="false" required /></label>
+<button type="submit" id="delete-submit">Elimina definitivamente l’account</button>
+</form>
+<div id="delete-result" class="result" role="status" aria-live="polite" hidden></div>
+<h2>Non ricordi la password?</h2>
+<p>Il gioco non conserva la password e non può dirtela. Se all’account hai aggiunto e verificato un indirizzo e-mail, puoi sceglierne una nuova: nel gioco apri Menu → Account → «Password dimenticata», scrivi l’indirizzo e segui il collegamento ricevuto (vale 30 minuti); poi torna qui, o elimina l’account dal gioco. Senza un indirizzo verificato la password non si può recuperare e l’account non si può eliminare da qui.</p>
+<p>Per proteggere gli account degli altri, il titolare non elimina un account su semplice richiesta scritta, perché non può verificare con certezza chi scrive. Se hai bisogno di aiuto, o se ritieni che un account sia stato creato a tuo nome o da un minore senza il consenso di un genitore, scrivi a <a href="mailto:politicando2026simulazione@gmail.com">politicando2026simulazione@gmail.com</a> indicando il nome utente e spiegando la situazione: la richiesta viene valutata caso per caso.</p>
+<p>Le informazioni sui dati trattati e sul loro periodo di conservazione sono nell’<a href="privacy.html">Informativa sulla privacy</a>.</p>
+<script type="module" src="./src/legal/delete-account.js"></script>
+<nav class="legal-nav" aria-label="Informazioni legali"><a href="privacy.html">Informativa sulla privacy</a><a href="termini.html">Termini di utilizzo</a><a href="elimina-account.html">Elimina l’account</a></nav>
+</main>
+</body>
+</html>
