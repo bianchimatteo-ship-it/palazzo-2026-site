@@ -1760,3 +1760,14 @@ details.accord-panel.pm-fold { padding: 0; }
   .hall-card .hall-actions button { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) { .hall-card { transition: none; } }
+
+/* Vita interna: the forms of the operations never wider than their card (the select shows only the short names; the description of the chosen one is a line apart) */
+.pl-op { min-width: 0; box-sizing: border-box; max-width: 100%; }
+.pl-form { min-width: 0; max-width: 100%; }
+.pl-form label, .pl-op > label { min-width: 0; max-width: 100%; box-sizing: border-box; }
+.pl-form select, .pl-form input[type=text], .pl-op select { width: 100%; min-width: 0; max-width: 100%; box-sizing: border-box; text-overflow: ellipsis; }
+.pl-rename-style { flex: 1 1 100%; }
+.pl-rename-detail { margin: 0; color: var(--ink-2); font-size: 13px; line-height: 1.45; overflow-wrap: anywhere; }
+.pl-found-form { min-width: 0; max-width: 100%; }
+.pl-found-form .wizard-form-grid, .pl-found-form .wizard-program, .pl-found-form .policy-grid { grid-template-columns: minmax(0, 1fr); }
+.pl-found-form input, .pl-found-form select, .pl-found-form textarea { max-width: 100%; box-sizing: border-box; min-width: 0; }

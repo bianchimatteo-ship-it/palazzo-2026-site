@@ -1,10 +1,11 @@
-import { advanceDays } from './time.js?v=20261104-1';
-import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261104-1';
-import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261104-1';
-import { aggregateShares, listVote, mateForce, runFinalElection, runFirstRound, voteScale } from './election-engine.js?v=20261104-1';
-import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261104-1';
-import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261104-1';
-import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261104-1';
+import { advanceDays } from './time.js?v=20261104-2';
+import { difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261104-2';
+import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261104-2';
+import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261104-2';
+import { aggregateShares, listVote, mateForce, runFinalElection, runFirstRound, voteScale } from './election-engine.js?v=20261104-2';
+import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261104-2';
+import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261104-2';
+import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261104-2';
 
 const SOURCE = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
@@ -639,14 +640,17 @@ const RIVAL_COMPARISON_BASE = .6, RIVAL_COMPARISON_CAP = 1.2;
 // The most a poll follows the real movement of a group in one week (points); the rest is carried to the following waves.
 const POLL_SHIFT_LIMIT = 6;
 const IMPACT_SCALE = Object.freeze({ comunale:.42, provinciale:.4, regionale:.5, politiche:.6, europee:.6 });
-const ELASTICITY = Object.freeze({ comunale:5, provinciale:5, regionale:4.5, politiche:3.5, europee:3.5 });
+// (the smaller the number, the sooner each further point costs more: the returns of a campaign decline faster as the consensus grows)
+const ELASTICITY = Object.freeze({ comunale:4.2, provinciale:4.2, regionale:3.6, politiche:2.6, europee:2.6 });
+// How much of what the activities do reaches the voters, by difficulty: the same campaign grows more on Easy and less on Hard.
+const yieldOf = campaign => difficultyOf(campaign.difficulty).campaignYield ?? 1;
 // The secretary of a party who leads its general or European campaign carries the whole list: what he does moves the list more than what a candidate does (it used to be a pull on the party
 // after the vote; now it is part of the campaign, like the rest).
 const leaderPull = campaign => listVote(campaign) ? Number(campaign.leaderPull) || 1 : 1;
 function playerMove(campaign, delta, areaId = null) {
   const player = campaign.candidates.find(item => item.isPlayer);
   if (!player || !delta) return 0;
-  const scale = (IMPACT_SCALE[campaign.electionType] ?? .5) * leaderPull(campaign);
+  const scale = (IMPACT_SCALE[campaign.electionType] ?? .5) * leaderPull(campaign) * yieldOf(campaign);
   const elastic = delta > 0 ? 1 / (1 + Math.max(0, campaign.gained ?? 0) / (ELASTICITY[campaign.electionType] ?? 4)) : 1;
   const before = weightedShare(campaign, player.id);
   moveSupport(campaign, player.id, delta * scale * elastic, areaId);
@@ -657,7 +661,7 @@ function playerMove(campaign, delta, areaId = null) {
 function playerTransfer(campaign, fromId, delta, areaId = null) {
   const player = campaign.candidates.find(item => item.isPlayer);
   if (!player || !delta) return 0;
-  const scale = (IMPACT_SCALE[campaign.electionType] ?? .5) * leaderPull(campaign);
+  const scale = (IMPACT_SCALE[campaign.electionType] ?? .5) * leaderPull(campaign) * yieldOf(campaign);
   const elastic = delta > 0 ? 1 / (1 + Math.max(0, campaign.gained ?? 0) / (ELASTICITY[campaign.electionType] ?? 4)) : 1;
   const before = weightedShare(campaign, player.id);
   transferSupport(campaign, fromId, player.id, delta * scale * elastic, areaId);
@@ -952,11 +956,11 @@ export function expectedGain(campaign, activity, modifiers = activityModifiers(c
   const area = areas.find(item => item.id === campaign.candidacy?.territoryId) ?? areas[0];
   const weight = areas.reduce((sum, item) => sum + item.weight, 0) || 1;
   // The comparison with a rival moves votes in every territory at once: its estimate is the amount it really transfers (it is not scaled by the organisation or by the area).
-  if (activity.rival) return round(Math.max(0, Math.min(RIVAL_COMPARISON_CAP, RIVAL_COMPARISON_BASE * modifiers.total) * (IMPACT_SCALE[campaign.electionType] ?? .5) * (1 / (1 + Math.max(0, campaign.gained ?? 0) / (ELASTICITY[campaign.electionType] ?? 4)))));
+  if (activity.rival) return round(Math.max(0, Math.min(RIVAL_COMPARISON_CAP, RIVAL_COMPARISON_BASE * modifiers.total) * (IMPACT_SCALE[campaign.electionType] ?? .5) * yieldOf(campaign) * (1 / (1 + Math.max(0, campaign.gained ?? 0) / (ELASTICITY[campaign.electionType] ?? 4)))));
   const base = activity.effect * (.55 + (player?.resources.organization ?? 30) / 120 + (player?.resources.volunteers ?? 10) / 100) * (.78 + (campaign.candidateStats?.reputation ?? 50) / 180) * (1.14 - supportAt(campaign, area?.id) / 125);
   const scope = activity.scope === 'national' ? .55 : activity.scope === 'broad' ? .6 : activity.rival ? .9 : area ? area.weight / weight : 1;
   const elastic = 1 / (1 + Math.max(0, campaign.gained ?? 0) / (ELASTICITY[campaign.electionType] ?? 4));
-  return round(Math.max(0, base * modifiers.total * scope * (IMPACT_SCALE[campaign.electionType] ?? .5) * elastic * (activity.gotv ? .7 : 1)));
+  return round(Math.max(0, base * modifiers.total * scope * (IMPACT_SCALE[campaign.electionType] ?? .5) * yieldOf(campaign) * leaderPull(campaign) * elastic * (activity.gotv ? .7 : 1)));
 }
 // The activities of this campaign, with availability, modifiers and expected effect, for the interface.
 export function campaignActivities(campaign, options = {}) {
@@ -1910,7 +1914,7 @@ export function createCampaign({career,player,statistics=[],offices=[],territori
     objective:config.objective??'build',playerCandidateId,partyId,independent:userOrIndependent && !partyId,partyReferences:allPartyRefs,
     initialLevel:career.initialLevel,territoryId:career.territoryId,homeRegion:player.region ?? null,territories:campaignAreas,candidates,resources:initialResources,
     candidateStats:playerStats,startingStats:{...playerStats},nomination,internalCandidates,candidacy:{role,listPosition:role==='uninominale'?null:6,territoryId:focus,incumbent:incumbency||governingIncumbent},incumbency:incumbencyRecord,list:buildList({seed,type,role,areas:campaignAreas}),listContext:config.listContext?{...config.listContext,source:SOURCE}:null,obligations:[],
-    status:'active',stage:'campagna',startedAt:currentDate,currentDate,electionDate:withinDays(currentDate,model.campaignDays),
+    status:'active',stage:'campagna',difficulty:difficultyId(career.difficulty),startedAt:currentDate,currentDate,electionDate:withinDays(currentDate,model.campaignDays),
     day:0,totalDays:model.campaignDays,daysToNomination:deadlineDay,firstRoundResult:null,result:null,runoffCandidateIds:null,
     alliances:[],events:[],pendingEvents:[],history:[],consensusHistory:[],polls:[],pollObservatory:{waves:[],errors:{}},pollErrors:{},aiTurns:0,preparationByTopic:Object.fromEntries(DEBATE_TOPICS.map(topic=>[topic.id,0])),
     nationalContext:{moodIndex:Math.round(42+randomFrom(seed ^ 0x165667b1)()*18),macroTrend:round((randomFrom(seed ^ 0x9e3779b9)()-.5)*4),salientTopic:DEBATE_TOPICS[Math.floor(randomFrom(seed ^ 0x85ebca6b)()*DEBATE_TOPICS.length)].id,source:SOURCE},

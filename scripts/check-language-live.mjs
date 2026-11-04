@@ -17,13 +17,14 @@ const here = new URL('..', import.meta.url).pathname;
 const codeLiterals = new Set();
 for (const dir of ['src/ui', 'src/core', 'src/data/simulation']) for (const file of readdirSync(here + dir).filter(name => name.endsWith('.js'))) for (const match of readFileSync(`${here}${dir}/${file}`, 'utf8').matchAll(/'([^'\n\\]{3,60})'/g)) codeLiterals.add(match[1].replace(/’/g, "'"));
 const SAME_OK = new Set(['Home', 'Agenda', 'Quirinale', 'QUIRINALE', 'Hall of Fame', 'POLITICANDO 2026', 'Audio', 'Volume', 'Password', 'Media', 'MEDIA', 'Welfare', 'Sport', 'Area', 'Spread', 'Deficit', 'DEFICIT', 'In deficit', 'agenda', 'scenario', 'Complete', 'Outsider', 'Afro', 'Pos.', 'Italia', 'Siena', 'Lega', 'Azione', 'Como', 'Lodi', 'Nuova', 'Sandbox', 'Account', 'ACCOUNT', 'Mar', 'Il Meridiano', 'Question time', 'Palazzo', 'Province', 'ECR', 'AGRI', 'INTA', 'ENVI', 'ECON', 'AFET', 'LIBE', 'ITRE', 'IMCO', 'TRAN', 'REGI', 'EMPL', 'CULT', 'JURI', 'DEVE', 'SEDE', 'PETI', 'BUDG', 'CONT', 'AFCO', 'FEMM', 'PECH', 'SANT', 'DROI', 'TREND', 'Trend', 'Politicando 2026, Home', 'MISTO', 'Radio', 'Social network', 'Online', 'Offline', 'Standard', 'Top', 'Totale', 'Base', 'Mix', 'Extra', 'Premium', 'Welfare', 'Europa', 'Lazio', 'Marche', 'Veneto', 'Piemonte', 'Lombardia', 'Toscana', 'Sicilia', 'Sardegna', 'Puglia', 'Campania', 'Calabria', 'Basilicata', 'Molise', 'Abruzzo', 'Umbria', 'Liguria', 'Emilia-Romagna', 'Friuli-Venezia Giulia', 'Trentino-Alto Adige', 'Valle d’Aosta']);
+const isColor = text => /^#[0-9a-f]{3,8}$/i.test(text.trim());
 const REGION_CODES = new Set('ABR BAS CAL CAM EMR FVG LAZ LIG LOM MAR MOL PIE PUG SAR SIC TOS TAA UMB VDA VEN'.split(' '));
 const LINK = new Set(['di', 'del', 'della', 'dei', 'delle', 'degli', 'dello', 'de', 'd', 'e', 'la', 'il', 'lo', 'in', 'per', 'al', 'all', 'dal', 'con', 'su', 'a']);
 // names are told apart by their shape: most of the words start with a capital letter (a party, a person, a place, a newspaper)
 const isName = text => { const words = (text.match(/[\p{L}]+/gu) ?? []).filter(word => !LINK.has(word.toLowerCase())); return words.length > 1 && words.filter(word => /^\p{Lu}/u.test(word)).length / words.length > 0.6; };
 const OFFICIAL = /^(?:Disposizioni|Ratifica|Conversione|Istituzione|Modifiche|Delega|Misure|Norme|Interventi|Gov\.|Pres\. |Sen\. |Dep\. )|\bed altri\b|\bdecreto[- ]legge\b/;   // titles of acts and the lists of their proposers: official Italian names, kept whole by design
 const bare = text => text.replace(/[\d\s.,%€:+\-–/·()#]+/g, ' ').trim();
-const untranslated = text => !SAME_OK.has(text) && !SAME_OK.has(bare(text)) && !OFFICIAL.test(text) && !REGION_CODES.has(text) && !/^[\d\s.,%€:+\-–/·()#]+$/.test(text) && !/^https?:|@/.test(text)
+const untranslated = text => !isColor(text) && !SAME_OK.has(text) && !SAME_OK.has(bare(text)) && !OFFICIAL.test(text) && !REGION_CODES.has(text) && !/^[\d\s.,%€:+\-–/·()#]+$/.test(text) && !/^https?:|@/.test(text)
   && (/\s/.test(text.trim()) ? !isName(text) && /\p{Ll}{3}/u.test(text) : codeLiterals.has(text.replace(/’/g, "'")));
 const problems = [], stats = { screens: 0, texts: 0 }, unchanged = new Map();   // texts that are the SAME in both languages on the same screen: translated, or a name, or left in Italian (no vocabulary decides it)
 for (const level of levels) {
@@ -45,7 +46,7 @@ for (const level of levels) {
       const it1 = await settled();
       stats.screens++; stats.texts += en.length;
       const left = [...new Set(en)].map(text => [text, detector.reasonOf(text)]).filter(([, reason]) => reason);
-      for (const [text, reason] of left) problems.push(`${level}/${screen} [EN] italiano rimasto: «${text.slice(0, 110)}» (${reason})`);
+      for (const [text, reason] of left) problems.push(`${level}/${screen} [EN] italiano rimasto: «${text.slice(0, 400)}» (${reason})`);
       const back = [...new Set(it1)].map(text => [text, detector.reasonOfEnglish(text)]).filter(([, reason]) => reason);
       for (const [text, reason] of back) problems.push(`${level}/${screen} [IT dopo EN] inglese rimasto: «${text.slice(0, 110)}» (${reason})`);
       const itSet = new Set(it0);

@@ -1,10 +1,10 @@
-import { uniqueId } from './ids.js?v=20261104-1';
-import { AD_REWARD } from '../data/simulation/reward-rules.js?v=20261104-1';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261104-1';
-import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261104-1';
-import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261104-1';
-import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261104-1';
-import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261104-1';
+import { uniqueId } from './ids.js?v=20261104-2';
+import { AD_REWARD } from '../data/simulation/reward-rules.js?v=20261104-2';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261104-2';
+import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261104-2';
+import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261104-2';
+import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261104-2';
+import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261104-2';
 export { houseEffect };
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
@@ -414,10 +414,15 @@ function effectWeight(effect) {
   if (!Number.isFinite(total) || total <= 1) return 1;
   return Math.min(1, (total - effect.remaining + 1) / 2, effect.remaining / 2 + 0.5);
 }
+// The effects in force add up, but never without limit: many together (activities, lines, events, weekly updates) bend towards a ceiling, so that a party is not carried by ten overlapping pushes
+// while a single strong one still counts almost in full (an exceptional result stays possible, an ordinary one stops at a few points).
+export const EFFECT_CEILING = 7;
+const bend = (sum, ceiling = EFFECT_CEILING) => ceiling * Math.tanh(sum / ceiling);
 function effectSum(world, party, scope, region = null) {
   const scale = sizeFactor(party.baseline, 8);
-  return world.effects.filter(effect => effect.scope === scope && (effect.partyId === party.id || (effect.strategy && effect.strategy === party.strategy && !party.isPlayer)) && (!region || effect.region === region))
-    .reduce((sum, effect) => sum + effect.delta * effectWeight(effect) * (effect.unscaled ? 1 : Math.min(1, scale)), 0);
+  const sum = world.effects.filter(effect => effect.scope === scope && (effect.partyId === party.id || (effect.strategy && effect.strategy === party.strategy && !party.isPlayer)) && (!region || effect.region === region))
+    .reduce((total, effect) => total + effect.delta * effectWeight(effect) * (effect.unscaled ? 1 : Math.min(1, scale)), 0);
+  return scope === 'national' && !region ? bend(sum) : sum;
 }
 function normalize(rows, others) {
   const total = rows.reduce((sum, row) => sum + row.raw, 0) + others;

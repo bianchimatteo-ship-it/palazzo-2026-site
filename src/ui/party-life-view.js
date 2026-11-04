@@ -1,14 +1,15 @@
 // VITA INTERNA — the people behind the currents, what they ask, the agreements, the congress, the local leaders, the
 // rebuilding of the party and the way it is founded, merged or renamed. All simulated: no real person appears here.
-import { costProblem, lifeOverview, partyOpsAvailability } from '../core/career-engine.js?v=20261104-1';
-import { mergeCandidates } from '../core/world-engine.js?v=20261104-1';
-import { OP_COSTS } from '../core/party-ops-engine.js?v=20261104-1';
-import { CADRE_ACTIONS, REBUILD_FOCUS, RENAME_STYLES } from '../data/simulation/party-life-rules.js?v=20261104-1';
-import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20261104-1';
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261104-1';
-import { badge, bar, card, empty, esc, euro, foldPanel, num, weeksLabel } from './sections-kit.js?v=20261104-1';
-import { glyph, territoryTile, territoryVisual } from './visuals.js?v=20261104-1';
-import { planAddButton } from './plan-view.js?v=20261104-1';
+import { costProblem, lifeOverview, partyOpsAvailability } from '../core/career-engine.js?v=20261104-2';
+import { mergeCandidates } from '../core/world-engine.js?v=20261104-2';
+import { OP_COSTS } from '../core/party-ops-engine.js?v=20261104-2';
+import { CADRE_ACTIONS, REBUILD_FOCUS, RENAME_STYLES } from '../data/simulation/party-life-rules.js?v=20261104-2';
+import { PARTY_LINES } from '../data/simulation/career-rules.js?v=20261104-2';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261104-2';
+import { badge, bar, card, empty, esc, euro, foldPanel, num, weeksLabel } from './sections-kit.js?v=20261104-2';
+import { glyph, territoryTile, territoryVisual } from './visuals.js?v=20261104-2';
+import { planAddButton } from './plan-view.js?v=20261104-2';
+import { renderNewPartyFields } from './career-wizard.js?v=20261104-2';
 
 const STANCE = { alleata: ['good', 'Alleata'], neutrale: ['neutral', 'Neutrale'], ostile: ['bad', 'Ostile'] };
 const PACT_STATUS = { attivo: ['good', 'In vigore'], scaduto: ['neutral', 'Scaduto'], rotto: ['bad', 'Rotto'], rinnovato: ['good', 'Rinnovato'] };
@@ -151,14 +152,24 @@ function rebuildCard(view, secretary) {
   return card({ kicker: 'RICOSTRUZIONE · OPPOSIZIONE', title: 'Un piano per rimettere in piedi il partito', body: `<p class="sx-note">Quando il partito è all’opposizione e perde terreno, sei mesi di lavoro mirato possono ricostruire sezioni, quadri, identità o conti.</p><div class="pl-actions">${Object.entries(REBUILD_FOCUS).map(([id, spec]) => `<button type="button" class="secondary-button" data-life-rebuild="${id}" title="${esc(spec.detail)}">${esc(spec.label)} <small>2 cap.</small></button>`).join('')}</div>` });
 }
 
-function opsCard(state, view, party, neighbours, ops) {
+// The fields of the foundation start from what the party being left already has (identity, colour, logo, programme, positions): everything stays editable.
+function foundDraft(state, party) {
+  const parent = (state.dataset?.parties ?? []).find(item => item.id === (state.career?.partyId ?? party?.partyId)) ?? {};
+  return {
+    partyName: '', partyAbbreviation: '', partyDescription: '', partyOrientation: parent.orientation ?? 'Centrismo civico', partyPosition: parent.politicalPosition ?? 'centro',
+    partyColor: /^#[\da-f]{6}$/i.test(parent.color ?? '') ? parent.color : '#264d82', partyLogoMode: 'builder', partyLogoShape: parent.logo?.shape ?? 'cerchio', partyLogoSymbol: parent.logo?.symbol ?? 'freccia',
+    partyLogoSecondaryColor: parent.logo?.secondary ?? '#f2c14e', partyProgram: [...(party?.program?.areas ?? parent.program ?? [])].slice(0, 4), policyPositions: { economia: 3, welfare: 3, ambiente: 3, europa: 3, ...(parent.policyPositions ?? {}) }
+  };
+}
+function opsCard(state, view, party, neighbours, ops, { foundOnly = false } = {}) {
+  party = party ?? { label: null, program: null };
   const found = `<article class="pl-op"><h4>Fonda un nuovo partito</h4><p>Lasci ${esc(party.label ?? 'il partito')} (o parti da indipendente) e ne fondi uno tuo: porti con te le aree che scegli, i comitati che guidi, una parte di iscritti, volontari e cassa. Nel Parlamento una parte del gruppo ti segue. ${costChips(OP_COSTS.found)}</p>
-    <div class="pl-form"><label>Nome del partito<input type="text" data-life-field="found-label" maxlength="60" placeholder="Es. Alleanza dei Territori" /></label><label>Sigla<input type="text" data-life-field="found-abbr" maxlength="6" placeholder="Es. ADT" /></label></div>
+    <div class="pl-found-form" data-life-found-form>${renderNewPartyFields(foundDraft(state, party), { upload: false })}<small class="pl-note">Il logo si crea con forme e simboli; un file tuo (PNG, JPEG o WebP) si carica dopo la fondazione dal catalogo dei loghi del menu. I campi partono dai valori del partito che lasci e si possono modificare.</small></div>
     ${view.currents.length ? `<fieldset class="pl-followers"><legend>Aree che ti seguono</legend>${view.currents.map(item => `<label><input type="checkbox" data-life-follower value="${esc(item.id)}" ${item.aligned ? 'checked' : ''}/> ${esc(item.label)} <small>${item.share}%</small></label>`).join('')}</fieldset>` : ''}
     <button type="button" class="primary-button" data-life-found ${ops.found.ok ? '' : `disabled title="${esc(ops.found.reason ?? '')}"`}>Fonda il partito</button>${ops.found.ok ? '' : `<small class="pl-reason">${esc(ops.found.reason ?? '')}</small>`}</article>`;
   const merge = `<article class="pl-op"><h4>Fusione con un’altra forza</h4><p>Iscritti, sezioni e cassa si sommano, nasce una nuova area interna e la coesione ne soffre per qualche mese. ${costChips(OP_COSTS.merge)}</p>${neighbours.length ? `<label class="pl-check"><input type="checkbox" data-life-field="merge-unify" ${party.affiliation === 'founder' ? '' : 'disabled'}/> Unisci anche i nomi</label>${neighbours.map(item => `<div class="pl-neighbour"><span><strong>${esc(item.label)}</strong><small>${num(item.share, 1)}% · rapporti ${item.tie} · distanza ${num(item.axisGap, 1)}</small></span><button type="button" class="secondary-button" data-life-merge="${esc(item.id)}" ${ops.merge.ok ? '' : `disabled title="${esc(ops.merge.reason ?? '')}"`}>Proponi la fusione</button></div>`).join('')}` : '<p class="sx-empty">Nessuna forza è abbastanza vicina per ideologia, dimensioni e rapporti.</p>'}${!ops.merge.ok && neighbours.length ? `<small class="pl-reason">${esc(ops.merge.reason ?? '')}</small>` : ''}</article>`;
-  const rename = `<article class="pl-op"><h4>Cambia nome e identità</h4><p>Un nuovo nome costa soldi e riconoscibilità: nei sondaggi c’è uno scossone, poi un rilancio. ${costChips(OP_COSTS.rename)}</p>${party.affiliation === 'founder' ? `<div class="pl-form"><label>Nuovo nome<input type="text" data-life-field="rename-label" maxlength="60" value="" placeholder="${esc(party.label ?? '')}" /></label><label>Sigla<input type="text" data-life-field="rename-abbr" maxlength="6" /></label><label>Tipo<select data-life-field="rename-style">${Object.entries(RENAME_STYLES).map(([id, spec]) => `<option value="${id}" ${id === 'rilancio' ? 'selected' : ''}>${esc(spec.label)} — ${esc(spec.detail)}</option>`).join('')}</select></label></div><button type="button" class="secondary-button" data-life-rename ${ops.rename.ok ? '' : `disabled title="${esc(ops.rename.reason ?? '')}"`}>Cambia nome</button>${ops.rename.ok ? '' : `<small class="pl-reason">${esc(ops.rename.reason ?? '')}</small>`}` : `<p class="sx-note">${esc(ops.rename.reason ?? 'Solo chi ha fondato il proprio partito può cambiarne il nome.')}</p>`}</article>`;
-  return card({ className: 'pl-cat-struttura', kicker: 'IL PARTITO COME STRUTTURA · FONDAZIONE, FUSIONE, IDENTITÀ', title: 'Scissioni, nuovi partiti, fusioni e cambi di nome', body: `<div class="pl-ops">${found}${merge}${rename}</div><p class="sx-note">Seggi, territori, consenso, organizzazione e finanze cambiano davvero: il partito reale resta un riferimento, ciò che nasce nella tua partita è simulato.</p>` });
+  const rename = `<article class="pl-op"><h4>Cambia nome e identità</h4><p>Un nuovo nome costa soldi e riconoscibilità: nei sondaggi c’è uno scossone, poi un rilancio. ${costChips(OP_COSTS.rename)}</p>${party.affiliation === 'founder' ? `<div class="pl-form"><label>Nuovo nome<input type="text" data-life-field="rename-label" maxlength="60" value="" placeholder="${esc(party.label ?? '')}" /></label><label>Sigla<input type="text" data-life-field="rename-abbr" maxlength="6" /></label><label class="pl-rename-style">Tipo<select data-life-field="rename-style" data-rename-style>${Object.entries(RENAME_STYLES).map(([id, spec]) => `<option value="${id}" ${id === 'rilancio' ? 'selected' : ''}>${esc(spec.label)}</option>`).join('')}</select></label></div><div class="pl-rename-details" aria-live="polite">${Object.entries(RENAME_STYLES).map(([id, spec]) => `<p class="pl-rename-detail" data-rename-detail="${id}" ${id === 'rilancio' ? '' : 'hidden'}><strong>${esc(spec.label)}</strong>: ${esc(spec.detail)}</p>`).join('')}</div><button type="button" class="secondary-button" data-life-rename ${ops.rename.ok ? '' : `disabled title="${esc(ops.rename.reason ?? '')}"`}>Cambia nome</button>${ops.rename.ok ? '' : `<small class="pl-reason">${esc(ops.rename.reason ?? '')}</small>`}` : `<p class="sx-note">${esc(ops.rename.reason ?? 'Solo chi ha fondato il proprio partito può cambiarne il nome.')}</p>`}</article>`;
+  return card({ className: 'pl-cat-struttura', kicker: 'IL PARTITO COME STRUTTURA · FONDAZIONE, FUSIONE, IDENTITÀ', title: 'Scissioni, nuovi partiti, fusioni e cambi di nome', body: `<div class="pl-ops">${found}${foundOnly ? '' : merge}${foundOnly ? '' : rename}</div><p class="sx-note">Seggi, territori, consenso, organizzazione e finanze cambiano davvero: il partito reale resta un riferimento, ciò che nasce nella tua partita è simulato.</p>` });
 }
 
 function chronicleCard(view) {
@@ -182,6 +193,8 @@ export function renderPartyLife(state, filters = {}) {
   const game = state.game;
   const party = game?.party;
   const view = party ? lifeOverview(game) : null;
+  // A career as an independent has no party to run, but can found one: only that operation is offered.
+  if (!view && game && !party) { const ops = partyOpsAvailability(game, { neighbours: [] }); return `<div class="pl-page">${card({ className: 'pl-cat-struttura', kicker: 'INDIPENDENTE · FONDAZIONE', title: 'Fonda il tuo partito', body: `<div class="pl-ops">${opsCard(state, { currents: [] }, null, [], ops, { foundOnly: true })}</div>` })}</div>`; }
   if (!view) return empty('La vita interna del partito compare quando fai parte di un partito.');
   const neighbours = state.world ? mergeCandidates(state.world) : [];
   const ops = partyOpsAvailability(game, { neighbours });

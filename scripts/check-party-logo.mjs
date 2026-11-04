@@ -54,8 +54,8 @@ lines.push('due colori nel disegno, oro predefinito, vecchi loghi invariati');
 const run = await startCareer({ seed: 'logo', level: 'comunale' });
 const { store, db } = run;
 const territory = { units: db.territorialUnits, municipalities: db.municipalities };
-const view = d => renderCareerWizard(store.getState(), { ...makeCareerDraft('2026-09-24'), step: 4, region: 'Toscana', municipality: 'Siena', municipalityCode: '052032', partyMode: 'new', partyName: 'Prova', partyAbbreviation: 'PRV', partyDescription: 'x', ...d }, db.parties, () => null, db.parliamentaryGroups, [], [], db.politicians, territory);
-const draft0 = makeCareerDraft('2026-09-24');
+const view = d => renderCareerWizard(store.getState(), { ...makeCareerDraft('2026-09-24'), step: 4, gameMode: 'realistica', region: 'Toscana', municipality: 'Siena', municipalityCode: '052032', partyMode: 'new', partyName: 'Prova', partyAbbreviation: 'PRV', partyDescription: 'x', ...d }, db.parties, () => null, db.parliamentaryGroups, [], [], db.politicians, territory);
+const draft0 = { ...makeCareerDraft('2026-09-24'), gameMode: 'realistica' };
 assert.equal(draft0.partyLogoSecondaryColor, '#f2c14e', 'Il nuovo partito parte con l’oro.');
 const html = view({ partyLogoSecondaryColor: '#2a9d8f', partyColor: '#112233', partyLogoShape: 'ottagono', partyLogoSymbol: 'bussola' });
 assert.ok(html.includes('name="partyLogoSecondaryColor"') && html.includes('type="color"') && html.includes('value="#2a9d8f"') && html.includes('data-logo-secondary-hex>#2a9d8f<'), 'Selettore del secondo colore con il valore esadecimale visibile.');
@@ -113,6 +113,7 @@ await withBrowser(async browser => {
   await evaluate(`localStorage.setItem('politicando.onboarding.v1', JSON.stringify({ account: true, tour: 'done', localStart: true })), true`);
   await goto(); await waitFor(() => has('[data-menu="nuova"]:not([disabled])'));
   await click('[data-menu="nuova"]:not([disabled])', 200); await waitFor(() => has('.career-wizard'));
+  await click('[data-wizard-mode="realistica"]', 200); await waitFor(() => has('.career-wizard [name="firstName"]'));
   await setField('.career-wizard [name="firstName"]', 'Ada'); await setField('.career-wizard [name="lastName"]', 'Logo');
   await setField('.career-wizard [name="birthDate"]', '1985-04-12', 'change'); await setField('.career-wizard [name="previousProfession"]', 'Insegnante');
   await next();

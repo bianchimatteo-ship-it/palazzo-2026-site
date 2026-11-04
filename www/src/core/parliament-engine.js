@@ -1,8 +1,8 @@
-import { DATA_SOURCES } from '../data/schema.js?v=20261104-1';
-import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, SPENDING_REVIEW, STAGE_WEEKS, areaOf, governmentKindOf } from '../data/simulation/policy-rules.js?v=20261104-1';
-import { BUDGET_SECTORS } from '../data/simulation/project-rules.js?v=20261104-1';
-import { evaluateAdvancement } from './progression-engine.js?v=20261104-1';
-import { groupLine, splitGroupVote } from './vote-engine.js?v=20261104-1';
+import { DATA_SOURCES } from '../data/schema.js?v=20261104-2';
+import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, SPENDING_REVIEW, STAGE_WEEKS, areaOf, governmentKindOf } from '../data/simulation/policy-rules.js?v=20261104-2';
+import { BUDGET_SECTORS } from '../data/simulation/project-rules.js?v=20261104-2';
+import { evaluateAdvancement } from './progression-engine.js?v=20261104-2';
+import { groupLine, splitGroupVote } from './vote-engine.js?v=20261104-2';
 
 export const CHAMBERS = Object.freeze({
   camera: { label: 'Camera dei deputati', shortLabel: 'Camera', source: DATA_SOURCES.REAL },
@@ -520,6 +520,42 @@ const tuningOf = parliament => DIFFICULTY_TUNING[parliament?.difficulty] ?? DIFF
 // curve — a group convinced by the text votes almost compact, a hostile one almost compact against, a divided one
 // splits. Negotiations and compromises move whole groups, not a few votes.
 export const cohesiveShare = support => clamp(0.5 + 0.5 * Math.tanh((support - 0.5) * 12) / Math.tanh(6), 0.02, 0.98);
+// ---------- the directive of the group leader ----------
+// The leader of the parliamentary group can give an indication (in favour, against, abstain, or none) on a bill or on a vote of confidence. It guides, it does not command: each member follows or not,
+// deterministically, according to the cohesion of the group, the discipline of the party and the relations inside it. The player always keeps the own vote.
+export const DIRECTIVE_CHOICES = Object.freeze(['favorevole', 'contrario', 'astenuto', 'nessuna']);
+export const directiveKey = (kind, targetId) => `${kind}:${targetId}`;
+export const directiveOf = (parliament, kind, targetId) => {
+  const item = parliament?.directives?.[directiveKey(kind, targetId)];
+  return item && item.groupId === parliament?.player?.groupId && DIRECTIVE_CHOICES.includes(item.choice) && item.choice !== 'nessuna' ? item : null;
+};
+export function groupDirectiveEffect({ yes, no, abstain, directive, cohesion = 62, discipline = 50, relation = 50 }) {
+  const seats = yes + no + abstain;
+  const bucket = { favorevole: 'yes', contrario: 'no', astenuto: 'abstain' }[directive];
+  const now = { yes, no, abstain };
+  // adherence: a compact, disciplined group with good relations follows almost everyone; a divided one only a part (never everyone, never no one)
+  const adherence = clamp(0.3 + (cohesion - 50) / 250 + (discipline - 50) / 400 + (relation - 50) / 500, 0.2, 0.85);
+  const movable = seats - now[bucket];
+  const moved = Math.round(movable * adherence);
+  let left = moved;
+  const out = { ...now };
+  for (const other of ['yes', 'no', 'abstain'].filter(item => item !== bucket).sort((a, b) => now[b] - now[a])) {
+    const take = Math.min(left, now[other]);
+    out[other] -= take; out[bucket] += take; left -= take;
+  }
+  return { ...out, follow: out[bucket], dissent: seats - out[bucket], adherence: Math.round(adherence * 100) / 100 };
+}
+// The leader of the group (not of a local council) gives the indication: it is kept per target (a bill, a confidence vote of a Government) and lapses with it.
+export function setGroupDirective(parliament, { kind, targetId, choice }) {
+  if (!['law', 'confidence'].includes(kind)) throw new Error('La direttiva riguarda una legge o un voto di fiducia.');
+  if (!DIRECTIVE_CHOICES.includes(choice)) throw new Error('Direttiva non valida.');
+  if (!parliament?.player?.groupId) throw new Error('Serve un seggio con un gruppo parlamentare.');
+  if (kind === 'confidence' && (!parliament.government || parliament.government.id !== targetId)) throw new Error('Questa direttiva riguarda un altro governo o è scaduta.');
+  const directives = { ...(parliament.directives ?? {}) };
+  if (choice === 'nessuna') delete directives[directiveKey(kind, targetId)];
+  else directives[directiveKey(kind, targetId)] = { groupId: parliament.player.groupId, choice, kind, targetId };
+  return { ...parliament, directives };
+}
 function calculateVote(parliament, law, chamber, currentDate = null) {
   const governing = governingGroupIds(parliament);
   const tuning = tuningOf(parliament);
@@ -563,6 +599,14 @@ function calculateVote(parliament, law, chamber, currentDate = null) {
     // The votes not in favour split into against and abstentions (vote-engine); the line is what most members do.
     const split = splitGroupVote({ seats: members, yes: votes, confidence: Boolean(law.confidence), seed: `${law.id}|${chamber}|${law.stage}|${(law.votes ?? []).length}|${group.groupId}` });
     let no = split.no, abstain = split.abstain, absent = 0;
+    // The indication of the leader of the player's group moves a part of the group, never all of it.
+    let directive = null;
+    const given = own ? directiveOf(parliament, 'law', law.id) : null;
+    if (given) {
+      const effect = groupDirectiveEffect({ yes: votes, no, abstain, directive: given.choice, cohesion: group.cohesion ?? 62, discipline, relation });
+      votes = effect.yes; no = effect.no; abstain = effect.abstain;
+      directive = { choice: given.choice, follow: effect.follow, dissent: effect.dissent, adherence: effect.adherence };
+    }
     if (seated) {
       playerLine = groupLine(split);
       playerChoice = !law.pendingPlayerVote || law.pendingPlayerVote === 'linea' ? playerLine : law.pendingPlayerVote;
@@ -570,7 +614,7 @@ function calculateVote(parliament, law, chamber, currentDate = null) {
       if (playerChoice === 'favorevole') votes += 1; else if (playerChoice === 'contrario') no += 1; else if (playerChoice === 'astenuto') abstain += 1; else absent += 1;
     }
     yes += votes;
-    return { groupId: group.groupId, yesVotes: votes, noVotes: no, abstainVotes: abstain, ...(absent ? { absentVotes: absent } : {}), line: seated ? groupLine({ yes: votes, no, abstain }) : groupLine(split), snipers, governing: governing.has(group.groupId), simulatedSeats: group.simulatedSeats, ...(seated ? { playerChoice } : {}), source: DATA_SOURCES.SIMULATION };
+    return { groupId: group.groupId, yesVotes: votes, noVotes: no, abstainVotes: abstain, ...(absent ? { absentVotes: absent } : {}), ...(directive ? { directive } : {}), line: seated ? groupLine({ yes: votes, no, abstain }) : groupLine(split), snipers, governing: governing.has(group.groupId), simulatedSeats: group.simulatedSeats, ...(seated ? { playerChoice } : {}), source: DATA_SOURCES.SIMULATION };
   });
   const total = rows.reduce((sum, group) => sum + group.simulatedSeats, 0);
   const needed = Math.floor(total / 2) + 1;
@@ -818,7 +862,8 @@ export function voteGovernmentConfidence(parliament, currentDate) {
   if (!government || !['awaiting-confidence', 'crisis'].includes(government.status)) throw new Error('Non è prevista una votazione di fiducia in questa fase.');
   const groups = new Set([...government.coalitionGroupIds, ...government.supportingGroupIds]);
   const seat = parliament.player?.groupId ? parliament.player : null;
-  const decided = government.pendingPlayerVote ?? null;
+  // a decision taken for another Government (an old request) never reaches this vote
+  const decided = government.pendingPlayerVoteFor && government.pendingPlayerVoteFor !== government.id ? null : government.pendingPlayerVote ?? null;
   let playerVote = null;
   const votes = ['camera', 'senato'].map(chamber => {
     const nominal = parliament.chambers[chamber].groups.filter(group => groups.has(group.groupId)).reduce((sum, group) => sum + group.simulatedSeats, 0);
@@ -836,6 +881,21 @@ export function voteGovernmentConfidence(parliament, currentDate) {
       left -= defections;
       return { groupId: group.groupId, yesVotes: seats - defections, noVotes: defections, abstainVotes: 0, line: 'favorevole', snipers: 0, governing: true, simulatedSeats: seats, source: DATA_SOURCES.SIMULATION };
     });
+    // The indication of the group leader (a Government of others): a part of the group follows it, the rest keeps the line of the group.
+    const given = directiveOf(parliament, 'confidence', government.id);
+    const leading = given ? byGroup.find(row => row.groupId === seat?.groupId && seat?.chamber === chamber) : null;
+    if (given && leading) {
+      const members = Math.max(0, leading.yesVotes + leading.noVotes + leading.abstainVotes - 1);
+      const base = { yes: leading.yesVotes, no: leading.noVotes, abstain: leading.abstainVotes };
+      // (the player's own seat is counted apart below: the effect is applied to the other members)
+      const line = leading.governing ? 'favorevole' : leading.line;
+      const bucketOf = { favorevole: 'yes', contrario: 'no', astenuto: 'abstain' }[line];
+      if (base[bucketOf] > 0) base[bucketOf] -= 1; else if (base.no > 0) base.no -= 1; else if (base.yes > 0) base.yes -= 1;
+      const effect = groupDirectiveEffect({ ...base, directive: given.choice, cohesion: parliament.groups?.find?.(item => item.id === seat.groupId)?.cohesion ?? 62, discipline: parliament.careerStanding?.partySupport ?? 50, relation: parliament.relations?.[leading.groupId]?.value ?? 50 });
+      base[bucketOf] += 1;   // the seat of the player goes back where the line puts it: it moves below with the choice
+      leading.yesVotes = effect.yes + (bucketOf === 'yes' ? 1 : 0); leading.noVotes = effect.no + (bucketOf === 'no' ? 1 : 0); leading.abstainVotes = effect.abstain + (bucketOf === 'abstain' ? 1 : 0);
+      leading.directive = { choice: given.choice, follow: effect.follow, dissent: effect.dissent, adherence: effect.adherence, members };
+    }
     // The player's own vote: taken from the group's line, given to the player's choice.
     const own = seat?.chamber === chamber ? byGroup.find(row => row.groupId === seat.groupId) : null;
     if (own) {
@@ -850,7 +910,7 @@ export function voteGovernmentConfidence(parliament, currentDate) {
     }
     const yes = byGroup.reduce((sum, row) => sum + row.yesVotes, 0);
     if (playerVote?.chamber === chamber) playerVote.decisive = playerVote.choice === 'favorevole' ? yes === needed : yes === needed - 1;
-    return { id: `${government.id}-fiducia-${(government.confidenceVotes ?? []).length + 1}-${chamber}`, date: currentDate, kind: 'fiducia', label: 'Fiducia al governo', chamber, yes, nominalSupport: nominal, absent: byGroup.reduce((sum, row) => sum + (row.absentVotes ?? 0), 0), total, needed, passed: yes >= needed, confidence: true, byGroup, ...(playerVote?.chamber === chamber ? { playerChoice: playerVote.choice, playerLine: playerVote.line, decisive: playerVote.decisive } : {}), source: DATA_SOURCES.SIMULATION };
+    return { id: `${government.id}-fiducia-${(government.confidenceVotes ?? []).length + 1}-${chamber}`, date: currentDate, kind: 'fiducia', label: 'Fiducia al governo', chamber, yes, against: byGroup.reduce((sum, row) => sum + row.noVotes, 0), abstain: byGroup.reduce((sum, row) => sum + row.abstainVotes, 0), nominalSupport: nominal, absent: byGroup.reduce((sum, row) => sum + (row.absentVotes ?? 0), 0), total, needed, passed: yes >= needed, confidence: true, byGroup, ...(playerVote?.chamber === chamber ? { playerChoice: playerVote.choice, playerLine: playerVote.line, decisive: playerVote.decisive } : {}), source: DATA_SOURCES.SIMULATION };
   });
   const passed = votes.every(vote => vote.passed);
   const status = passed ? 'active' : 'fallen';
@@ -859,19 +919,20 @@ export function voteGovernmentConfidence(parliament, currentDate) {
   const margin = Math.min(...votes.map(vote => vote.yes - vote.needed));
   const stability = passed ? clamp(Math.round(government.status === 'crisis' ? 40 + margin / 3 : 45 + margin / 2), 25, 80) : 0;
   const partners = Object.fromEntries([...groups].filter(id => id !== parliament.player?.groupId).map(id => [id, government.partners?.[id] ?? { satisfaction: government.coalitionGroupIds.includes(id) ? 62 : 55, demand: null, source: DATA_SOURCES.SIMULATION }]));
-  let next = { ...parliament, government: { ...government, status, stability, ministers, partners, pendingPlayerVote: null, crisisSeverity: passed ? 0 : government.crisisSeverity, lastCrisisSeverity: government.crisisSeverity, confidenceVotes: [...government.confidenceVotes, { date: currentDate, votes, result: status, source: DATA_SOURCES.SIMULATION }], formedAt: passed ? (government.formedAt ?? currentDate) : government.formedAt ?? null, fallenAt: passed ? null : currentDate } };
+  let next = { ...parliament, government: { ...government, status, stability, ministers, partners, pendingPlayerVote: null, pendingPlayerVoteFor: null, crisisSeverity: passed ? 0 : government.crisisSeverity, lastCrisisSeverity: government.crisisSeverity, confidenceVotes: [...government.confidenceVotes, { date: currentDate, votes, result: status, source: DATA_SOURCES.SIMULATION }], formedAt: passed ? (government.formedAt ?? currentDate) : government.formedAt ?? null, fallenAt: passed ? null : currentDate } };
   if (inCoalition) next = adjustStanding(next, passed ? 1 : -2);
   const player = playerVote ? { playerChoice: playerVote.choice, playerLine: playerVote.line, decisive: Boolean(playerVote.decisive), decided: Boolean(decided), yes: votes.find(vote => vote.chamber === playerVote.chamber).yes, needed: votes.find(vote => vote.chamber === playerVote.chamber).needed } : {};
   return settleAccordAfterVote(record(next, currentDate, passed ? 'fiducia-ottenuta' : 'fiducia-negata', passed ? 'La maggioranza simulata ha ottenuto la fiducia in entrambe le Camere.' : 'La maggioranza simulata non ha ottenuto la fiducia in entrambe le Camere.', { governmentId: government.id, governmentName: government.name, votes: votes.map(vote => ({ chamber: vote.chamber, yes: vote.yes, needed: vote.needed, passed: vote.passed })), renewed: government.status === 'crisis', ...player, source: DATA_SOURCES.SIMULATION }), passed, currentDate);
 }
 // The player's vote on the next confidence vote (the agenda, or the Governo page).
-export function setConfidenceVote(parliament, choice) {
+export function setConfidenceVote(parliament, choice, governmentId = null) {
   const government = parliament?.government;
+  if (governmentId && government && government.id !== governmentId) throw new Error('Questa richiesta di fiducia riguarda un altro governo o è scaduta.');
   if (!['linea', 'favorevole', 'contrario', 'astenuto', 'assente'].includes(choice)) throw new Error('Scelta di voto non valida.');
   if (!parliament?.player?.groupId) throw new Error('Serve un seggio con un gruppo parlamentare.');
   if (!government || !['awaiting-confidence', 'crisis'].includes(government.status)) throw new Error('Non è prevista una votazione di fiducia.');
   if (government.primeMinister === 'player' || government.formedBy === 'player') throw new Error('È il tuo governo: la fiducia la chiedi tu.');
-  return { ...parliament, government: { ...government, pendingPlayerVote: choice } };
+  return { ...parliament, government: { ...government, pendingPlayerVote: choice, pendingPlayerVoteFor: government.id } };
 }
 
 export function triggerGovernmentCrisis(parliament, currentDate) {

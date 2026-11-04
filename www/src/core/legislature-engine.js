@@ -3,15 +3,15 @@
 // Chambers and their groups, the formation of the Government. Everything that happens is simulation: the real data are
 // the geography, the seats and the 2022 results the vote starts from; parties, coalitions, votes and seats of the game
 // are estimates of the game and never presented as real results.
-import { populationReferenceDate, residentsOfItaly } from './municipal-rules.js?v=20261104-1';
-import { actualTurnout } from './electorate.js?v=20261104-1';
-import { uniqueId } from './ids.js?v=20261104-1';
-import { advanceDays, formatDate } from './time.js?v=20261104-1';
-import { axisOf, nationalShares } from './world-engine.js?v=20261104-1';
-import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20261104-1';
-import { archiveGovernment, voteGovernmentConfidence } from './parliament-engine.js?v=20261104-1';
-import { seededRandom } from './vote-engine.js?v=20261104-1';
-import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20261104-1';
+import { populationReferenceDate, residentsOfItaly } from './municipal-rules.js?v=20261104-2';
+import { actualTurnout } from './electorate.js?v=20261104-2';
+import { uniqueId } from './ids.js?v=20261104-2';
+import { advanceDays, formatDate } from './time.js?v=20261104-2';
+import { axisOf, nationalShares } from './world-engine.js?v=20261104-2';
+import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20261104-2';
+import { archiveGovernment, voteGovernmentConfidence } from './parliament-engine.js?v=20261104-2';
+import { seededRandom } from './vote-engine.js?v=20261104-2';
+import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20261104-2';
 
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -143,9 +143,12 @@ export function buildCoalitions(world, { playerChoice = null } = {}) {
   if (!forces.length) return [];
   const allianceWith = id => (world.alliances ?? []).filter(item => item.status === 'active' && item.partyIds.includes(id)).flatMap(item => item.partyIds).filter(other => other !== id);
   // The largest force of each camp leads its coalition, whoever governs.
-  const right = forces.filter(force => force.axis >= 1).sort((a, b) => b.share - a.share)[0];
-  const left = forces.filter(force => force.axis <= -1).sort((a, b) => b.share - a.share)[0];
-  const centre = forces.filter(force => force.axis === 0 && force.share >= 8 && force !== right && force !== left).sort((a, b) => b.share - a.share)[0];
+  // A force that runs alone (the player who chose «Corri da solo», a party with an autonomous strategy) leads no coalition and joins none: it competes under its own ID, never as the only member of a made-up coalition.
+  const runsAlone = force => (force.isPlayer && playerChoice === 'alone') || (!force.isPlayer && force.strategy === 'autonoma');
+  const candidates = forces.filter(force => !runsAlone(force));
+  const right = candidates.filter(force => force.axis >= 1).sort((a, b) => b.share - a.share)[0];
+  const left = candidates.filter(force => force.axis <= -1).sort((a, b) => b.share - a.share)[0];
+  const centre = candidates.filter(force => force.axis === 0 && force.share >= 8 && force !== right && force !== left).sort((a, b) => b.share - a.share)[0];
   const anchors = [right, left, centre].filter(Boolean);
   const coalitions = anchors.map(anchor => ({ id: `coalizione-${slug(anchor.id)}`, label: COALITION_LABELS[campOf(anchor.axis)], leaderId: anchor.id, camp: campOf(anchor.axis), partyIds: [anchor.id], simulated: true, source: SIM }));
   // The coalitions negotiated in the world run as they are: around an anchor they are its coalition, otherwise a pole
@@ -176,7 +179,7 @@ export function buildCoalitions(world, { playerChoice = null } = {}) {
   };
   const player = forces.find(force => force.isPlayer);
   for (const force of forces) {
-    if (anchors.includes(force) || coalitions.some(coalition => coalition.partyIds.includes(force.id))) continue;
+    if (anchors.includes(force) || coalitions.some(coalition => coalition.partyIds.includes(force.id)) || runsAlone(force)) continue;
     if (force.isPlayer && playerChoice) {
       const chosen = coalitions.find(item => item.id === playerChoice);
       if (chosen) chosen.partyIds.push(force.id);
@@ -198,7 +201,11 @@ export function buildCoalitions(world, { playerChoice = null } = {}) {
   }
   // A camp label shared by two coalitions takes the name of its leader.
   for (const coalition of coalitions) if (coalitions.filter(item => item.label === coalition.label).length > 1) coalition.label = `${coalition.label} (${forces.find(item => item.id === coalition.leaderId)?.label ?? ''})`;
-  if (player && playerChoice === 'alone') for (const coalition of coalitions) coalition.partyIds = coalition.partyIds.filter(id => id !== player.id || coalition.leaderId === player.id);
+  // The player who runs alone is in no coalition at all (not even as the leader of one that the alliances of the world had formed); forces with an autonomous strategy are in one only through an active alliance.
+  if (player && playerChoice === 'alone') for (const coalition of coalitions) {
+    coalition.partyIds = coalition.partyIds.filter(id => id !== player.id);
+    if (coalition.leaderId === player.id) coalition.leaderId = coalition.partyIds.map(id => forces.find(force => force.id === id)).filter(Boolean).sort((a, b) => b.share - a.share)[0]?.id ?? coalition.leaderId;
+  }
   const boostOf = coalition => Object.fromEntries(grants.filter(term => term.kind === 'collegi' && coalition.partyIds.includes(term.partyId)).map(term => [term.partyId, COLLEGI_BOOST]));
   return coalitions.filter(coalition => coalition.partyIds.length > 1 || anchors.some(anchor => anchor.id === coalition.leaderId)).map(coalition => ({ ...coalition, ...(Object.keys(boostOf(coalition)).length ? { quotaBoost: boostOf(coalition) } : {}), partyIds: coalition.partyIds.sort((a, b) => (forces.find(item => item.id === b)?.share ?? 0) - (forces.find(item => item.id === a)?.share ?? 0)) }));
 }
@@ -761,7 +768,14 @@ const groupsOfParties = (parliament, partyIds) => ['camera', 'senato'].flatMap(c
 // exclude: forces that said no (the player's party in opposition); include: forces that joined the majority;
 // previous: the majority of a fallen Government (a crisis tends to end with the same forces, or most of them).
 // null: no majority at all.
-export function majorityAfterVote(parliament, result, world = null, { exclude = [], include = [], crisis = false, rand = null, previous = null, prefer = null } = {}) {
+// `consent`: the parties that must agree before anyone adds them to a majority (the player's party, any force with an autonomous strategy) are never put there by the consultations — as allies or as outside support — unless
+// they already ran in the winning coalition, they are in `consent.granted` (the secretary said yes), or an active alliance ties them to the majority. Who refuses stays out.
+export function majorityAfterVote(parliament, result, world = null, { exclude = [], include = [], crisis = false, rand = null, previous = null, prefer = null, consent = {} } = {}) {
+  const needConsent = new Set((world?.parties ?? []).filter(party => party.isPlayer || party.strategy === 'autonoma').map(party => party.id));
+  const granted = new Set([...(consent.granted ?? []), ...include]);
+  const allied = id => (world?.alliances ?? []).some(item => item.status === 'active' && item.partyIds.includes(id));
+  const blockedParty = id => needConsent.has(id) && !granted.has(id) && !allied(id);
+  const winnerMembers = new Set((result.coalitions ?? []).find(item => item.id === result.winner)?.partyIds ?? []);
   const coalitions = result.coalitions ?? [];
   const forcesOf = id => coalitions.find(item => item.id === id)?.partyIds ?? [id];
   const axis = id => world?.parties?.find(item => item.id === id)?.axis ?? 0;
@@ -777,6 +791,7 @@ export function majorityAfterVote(parliament, result, world = null, { exclude = 
     for (const bloc of candidates) {
       if (marginOf(ids) >= LEGISLATURE_RULES.safeMargin) break;
       if (Math.abs(axis(bloc.leaderId) - leaderAxis) > 1) continue;
+      if (bloc.partyIds.some(id => blockedParty(id) && !ids.includes(id))) continue;
       ids.push(...bloc.partyIds.filter(id => !ids.includes(id)));
     }
     return marginOf(ids) > marginOf(partyIds) ? ids : partyIds;
@@ -794,7 +809,7 @@ export function majorityAfterVote(parliament, result, world = null, { exclude = 
   // How well two forces can govern together: close collocazione, good relations, no grudges.
   const affinity = (lead, bloc) => 1.6 - Math.abs(axis(bloc.leaderId) - axis(lead.leaderId)) * 0.8 + tie(lead.leaderId, bloc.leaderId) / 60 - grudge(lead.leaderId, bloc.leaderId) / 40;
   const candidates = [];
-  const ranked = [...blocs].sort((a, b) => weightOf(b) - weightOf(a));
+  const ranked = blocs.filter(bloc => !bloc.partyIds.some(id => blockedParty(id) && !winnerMembers.has(id) && result.winner !== id)).sort((a, b) => weightOf(b) - weightOf(a));
   const previousIds = new Set(previous?.partyIds ?? []);
   const score = (leaderRank, partyIds, supportPartyIds) => {
     const members = [...partyIds, ...supportPartyIds];
@@ -806,7 +821,7 @@ export function majorityAfterVote(parliament, result, world = null, { exclude = 
     return [4, 1.4, 0.6][leaderRank] * Math.exp(-spread / 2.2) * (margin >= LEGISLATURE_RULES.safeMargin ? 1.25 : margin >= 3 ? 1 : 0.7) * clamp(1 + ties / 120, 0.5, 1.6) * (1 + continuity * (crisis ? 1.2 : 0.3)) * (supportPartyIds.length ? 0.85 : 1);
   };
   ranked.slice(0, 3).forEach((lead, rank) => {
-    const partners = blocs.filter(bloc => bloc !== lead).map(bloc => ({ bloc, value: affinity(lead, bloc) })).filter(item => item.value > -1.2).sort((a, b) => b.value - a.value || weightOf(b.bloc) - weightOf(a.bloc));
+    const partners = blocs.filter(bloc => bloc !== lead && !bloc.partyIds.some(id => blockedParty(id) && !lead.partyIds.includes(id) && !winnerMembers.has(id))).map(bloc => ({ bloc, value: affinity(lead, bloc) })).filter(item => item.value > -1.2).sort((a, b) => b.value - a.value || weightOf(b.bloc) - weightOf(a.bloc));
     const partyIds = [...lead.partyIds];
     const support = [];
     for (const { bloc } of partners) {
@@ -821,9 +836,9 @@ export function majorityAfterVote(parliament, result, world = null, { exclude = 
   });
   // The two largest forces together: a grand coalition, when they are not at opposite ends.
   const [first, second] = ranked;
-  if (first && second && Math.abs(axis(first.leaderId) - axis(second.leaderId)) <= 3 && marginOf([...first.partyIds, ...second.partyIds]) >= 0) candidates.push({ ...majority('grande-coalizione', first.leaderId, [...first.partyIds, ...second.partyIds], 'Grande coalizione'), weight: 0.35 * (crisis ? 1.4 : 1) });
+  if (first && second && ![...first.partyIds, ...second.partyIds].some(id => blockedParty(id) && !winnerMembers.has(id)) && Math.abs(axis(first.leaderId) - axis(second.leaderId)) <= 3 && marginOf([...first.partyIds, ...second.partyIds]) >= 0) candidates.push({ ...majority('grande-coalizione', first.leaderId, [...first.partyIds, ...second.partyIds], 'Grande coalizione'), weight: 0.35 * (crisis ? 1.4 : 1) });
   // The last resort: a technical Prime Minister backed by every force but the far ends.
-  const broad = blocs.filter(bloc => Math.abs(axis(bloc.leaderId)) < 3).flatMap(bloc => bloc.partyIds);
+  const broad = blocs.filter(bloc => Math.abs(axis(bloc.leaderId)) < 3).flatMap(bloc => bloc.partyIds).filter(id => !blockedParty(id) || winnerMembers.has(id));
   if (broad.length && marginOf(broad) >= 0) candidates.push({ ...majority('governo-del-presidente', null, broad, 'Governo del Presidente'), weight: candidates.length ? 0.25 * (crisis ? 1.5 : 1) : 1 });
   if (!candidates.length) return null;
   const total = candidates.reduce((sum, item) => sum + item.weight, 0);
@@ -919,7 +934,7 @@ export function formationStep({ formation, parliament, result, world = null, dat
   // After a failed confidence vote the second round looks for a broader majority (no coalition wins by right). In a
   // crisis, or with no winner, the consultations can settle on different majorities (drawn with the formation's own
   // sequence: the same answers of the parties give the same outcome).
-  const find = () => majorityAfterVote(chambers, next.attempts ? { ...result, winner: null } : result, world, { exclude: next.excluded ?? [], include: next.included ?? [], crisis: Boolean(next.crisis || next.attempts), previous: next.previous ?? null, prefer: ['main', 'alt', 'tech'].includes(next.presidentChoice) ? next.presidentChoice : null, rand: seededRandom(`${next.resultId}|${next.firstSitting}|${next.attempts ?? 0}|${(next.excluded ?? []).join(',')}|${(next.included ?? []).join(',')}`) });
+  const find = () => majorityAfterVote(chambers, next.attempts ? { ...result, winner: null } : result, world, { exclude: next.excluded ?? [], include: next.included ?? [], consent: { granted: next.consentedParties ?? [] }, crisis: Boolean(next.crisis || next.attempts), previous: next.previous ?? null, prefer: ['main', 'alt', 'tech'].includes(next.presidentChoice) ? next.presidentChoice : null, rand: seededRandom(`${next.resultId}|${next.firstSitting}|${next.attempts ?? 0}|${(next.excluded ?? []).join(',')}|${(next.included ?? []).join(',')}`) });
   // When the player is the President of the Republic the consultations end with the player's decision on the mandate.
   const askPresident = majority => {
     if (!presidential?.player || !majority?.options?.length || next.presidentAsked === `${next.attempts ?? 0}`) return;
