@@ -1,0 +1,19 @@
+// PRIVATE TEST SITE of POLITICANDO 2026: the full web game for the owner's tests, protected by Cloudflare Access (only the owner's e-mail), with its OWN D1, KV and R2: nothing here can touch the accounts, saves or
+// logos of production. Deploy it by hand only after the steps of docs/ambiente-test-privato.md:  npx wrangler deploy -c wrangler.test.jsonc
+// The ids below are PLACEHOLDERS on purpose: a deploy with them fails, so it can never land on the production resources by mistake. Replace them with the ids of the TEST resources you create in the Dashboard (never the production ones).
+// `npm run check:publication` fails if any id, name, URL or secret of production appears in this file.
+{
+  "name": "politicando-test",
+  "main": "worker.js",
+  "compatibility_date": "2026-09-01",
+  "workers_dev": true,
+  "preview_urls": false,
+  // GAME_WEB=1: the Worker serves the whole game (the production Worker serves only the portal).
+  // No EMAIL_GATEWAY_URL: this site sends no e-mail (the service answers "Invio email non configurato"). If you want to test the messages, point it to a SEPARATE test gateway, never to the production one.
+  // PUBLIC_BASE_URL: set it to the address of the test site (the links of the test messages must not lead to production).
+  "vars": { "GAME_WEB": "1", "PUBLIC_BASE_URL": "REPLACE_WITH_THE_TEST_SITE_ADDRESS", "ACCOUNT_EMAIL_REQUIRED": "0", "RETENTION_ENABLED": "0", "RETENTION_NOTICE_TESTED": "0" },
+  "assets": { "directory": ".", "binding": "ASSETS", "run_worker_first": ["/api/*"] },
+  "kv_namespaces": [{ "binding": "ADMIN_ARCHIVE", "id": "REPLACE_WITH_THE_TEST_KV_NAMESPACE_ID" }],
+  "r2_buckets": [{ "binding": "LOGOS", "bucket_name": "politicando-logos-test" }],
+  "d1_databases": [{ "binding": "ACCOUNTS", "database_name": "politicando-accounts-test", "database_id": "REPLACE_WITH_THE_TEST_D1_DATABASE_ID", "migrations_dir": "migrations" }]
+}

@@ -8,7 +8,9 @@ const MAX_BYTES = 1_500_000;
 const SESSION_SECONDS = 12 * 3600;
 const MAX_FAILURES = 8;
 // The web sites of the game and, for the installed app (Capacitor), its own origins: iOS capacitor://localhost, Android https://localhost. Credentials travel in the Authorization header, never in cookies.
-const ALLOWED_ORIGINS = ['https://bianchimatteo-ship-it.github.io', 'https://palazzo-2026-site.bianchimatteo657.workers.dev', 'http://127.0.0.1:8791', 'http://localhost:8791', 'capacitor://localhost', 'https://localhost'];
+// (the game is no longer published on a web site: GitHub Pages is not an origin of the service any more)
+const PRODUCTION_ORIGIN = 'https://palazzo-2026-site.bianchimatteo657.workers.dev';
+const ALLOWED_ORIGINS = [PRODUCTION_ORIGIN, 'http://127.0.0.1:8791', 'http://localhost:8791', 'capacitor://localhost', 'https://localhost'];
 
 const encoder = new TextEncoder();
 const toHex = buffer => [...new Uint8Array(buffer)].map(byte => byte.toString(16).padStart(2, '0')).join('');
@@ -28,7 +30,7 @@ function equalStrings(a, b) {
 }
 function cors(request) {
   const origin = request.headers.get('origin');
-  const allowed = origin && (ALLOWED_ORIGINS.includes(origin) || origin === new URL(request.url).origin) ? origin : ALLOWED_ORIGINS[0];
+  const allowed = origin && (ALLOWED_ORIGINS.includes(origin) || origin === new URL(request.url).origin) ? origin : PRODUCTION_ORIGIN;
   return { 'access-control-allow-origin': allowed, 'access-control-allow-methods': 'GET, POST, PUT, DELETE, OPTIONS', 'access-control-allow-headers': 'content-type, authorization, x-base-version', 'access-control-expose-headers': 'etag, x-logo-version, x-logo-sha256', 'access-control-max-age': '86400', vary: 'origin' };
 }
 // Every answer of the API: nothing to sniff, nothing to frame or to run (it only ever returns JSON), no referrer, HTTPS only. The static assets get theirs from _headers.
@@ -574,7 +576,7 @@ const publicBase = (env, request) => {
   const configured = String(env.PUBLIC_BASE_URL ?? '').replace(/\/+$/, '');
   if (/^https:\/\/[^\s/]+$/.test(configured) || /^http:\/\/(127\.0\.0\.1|localhost):\d+$/.test(configured)) return configured;
   const origin = new URL(request.url).origin;
-  return ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[1];
+  return ALLOWED_ORIGINS.includes(origin) ? origin : PRODUCTION_ORIGIN;
 };
 const normalizeEmail = value => { const text = String(value ?? '').trim().toLowerCase(); return text.length <= 254 && EMAIL.test(text) ? text : null; };
 const maskEmail = email => { const [name, host] = String(email).split('@'); return `${name.slice(0, 2)}${'•'.repeat(Math.max(1, name.length - 2))}@${host}`; };
@@ -1055,6 +1057,7 @@ async function handleApi(request, env) {
   return json(request, { error: 'Richiesta non riconosciuta.' }, 404);
 }
 
+export const PORTAL_PATHS = /^\/(?:index\.html|portal\.(?:js|css)|privacy(?:-en)?\.html|termini\.html|terms-en\.html|elimina-account\.html|delete-account-en\.html|favicon\.(?:ico|svg)|src\/legal\.css|src\/legal\/delete-account\.js|src\/data\/repositories\/(?:account-sync|career-visibility)\.js)?$/;
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -1062,6 +1065,8 @@ export default {
       try { return await handleApi(request, env); }
       catch (error) { return json(request, { error: url.pathname.startsWith('/api/admin') ? 'Errore interno dell’archivio condiviso.' : 'Errore interno del servizio account.' }, 500); }
     }
+    // The production Worker serves no game: only the pages of the portal (confirm the e-mail, new password, legal pages, account deletion). The private test site sets GAME_WEB=1 (behind Cloudflare Access) and serves everything.
+    if (env.GAME_WEB !== '1' && !PORTAL_PATHS.test(url.pathname)) return new Response('Non trovato.', { status: 404, headers: { 'content-type': 'text/plain; charset=utf-8', 'x-content-type-options': 'nosniff' } });
     return env.ASSETS.fetch(request);
   },
   // Daily (wrangler.jsonc, triggers.crons): expired sessions and old attempts go even when nobody logs in.

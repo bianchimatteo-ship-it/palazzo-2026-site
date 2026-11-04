@@ -58,7 +58,7 @@ assert.equal(result.status, 404, 'E non si può più pubblicare un logo per tutt
 assert.equal((await api('/api/admin/session', { method: 'POST', body: JSON.stringify({ pin: 'pin-segreto-1' }) })).status, 200, 'Dopo l’attivazione basta il PIN.');
 // Cross-origin reading from GitHub Pages.
 result = await api('/api/admin', {}, { origin: 'https://bianchimatteo-ship-it.github.io' });
-assert.equal(result.headers.get('access-control-allow-origin'), 'https://bianchimatteo-ship-it.github.io', 'Anche i giocatori su GitHub Pages vedono l’archivio condiviso.');
+assert.notEqual(result.headers.get('access-control-allow-origin'), 'https://bianchimatteo-ship-it.github.io', 'GitHub Pages non è più un’origine del servizio.');
 
 // ---------- 2. the client: read for everyone, publish with the owner's session ----------
 const local = new Map();
