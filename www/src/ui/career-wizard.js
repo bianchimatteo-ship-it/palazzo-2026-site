@@ -1,18 +1,18 @@
-import { residentsText } from '../core/municipal-rules.js?v=20261103-2';
-import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261103-2';
-import { DEFAULT_LOGO_SECONDARY, LOGO_SECONDARY_PALETTE, LOGO_SHAPES, LOGO_SYMBOLS, isLogoColor, partyLogoDataUrl } from './party-logo.js?v=20261103-2';
-import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261103-2';
-import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261103-2';
-import { AVATAR_GROUPS, AVATAR_LABELS, AVATAR_OPTIONS, DEFAULT_AVATAR, normalizeAvatar } from '../core/avatar.js?v=20261103-2';
-import { avatarSvg } from './avatar-svg.js?v=20261103-2';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261103-2';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261103-2';
-import { POLL_SCENARIOS, SCENARIO_LIMITS } from '../core/poll-scenario.js?v=20261103-2';
-import { startStep, startSummary } from './start-wizard.js?v=20261103-2';
-import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261103-2';
-import { normalizeStart } from '../core/start-engine.js?v=20261103-2';
-import { legacyBanner } from './hall-view.js?v=20261103-2';
-import { formatDate } from '../core/time.js?v=20261103-2';
+import { residentsText } from '../core/municipal-rules.js?v=20261104-1';
+import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261104-1';
+import { DEFAULT_LOGO_SECONDARY, LOGO_SECONDARY_PALETTE, LOGO_SHAPES, LOGO_SYMBOLS, isLogoColor, partyLogoDataUrl } from './party-logo.js?v=20261104-1';
+import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261104-1';
+import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261104-1';
+import { AVATAR_GROUPS, AVATAR_LABELS, AVATAR_OPTIONS, DEFAULT_AVATAR, normalizeAvatar } from '../core/avatar.js?v=20261104-1';
+import { avatarSvg } from './avatar-svg.js?v=20261104-1';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261104-1';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261104-1';
+import { POLL_SCENARIOS, SCENARIO_LIMITS } from '../core/poll-scenario.js?v=20261104-1';
+import { startStep, startSummary } from './start-wizard.js?v=20261104-1';
+import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261104-1';
+import { normalizeStart } from '../core/start-engine.js?v=20261104-1';
+import { legacyBanner } from './hall-view.js?v=20261104-1';
+import { formatDate } from '../core/time.js?v=20261104-1';
 
 const POSITIONS = ['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra'];
 
@@ -53,8 +53,8 @@ export function makeCareerDraft(currentDate, parties = [], hall = []) {
 // The choice that comes before the six steps: how the career is played. «Realistica» keeps every requirement of the Italian system; «Sandbox» opens every candidacy of every election of the game (the
 // incompatibilities between offices stay: they are told before the vote and applied after the win). The choice is saved with the career.
 export const GAME_MODE_CARDS = Object.freeze([
-  ['realistica', 'Realistica', 'Segui il tuo percorso politico: ti candidi solo se hai i requisiti, le condizioni di eleggibilità e i vincoli istituzionali del sistema italiano.', 'Resta com’è oggi: nessuna scorciatoia.'],
-  ['sandbox', 'Sandbox', 'Ti candidi e giochi liberamente a tutte le elezioni del gioco, anche senza i requisiti normali: per esempio alle provinciali senza essere sindaco o consigliere comunale.', 'Le incompatibilità tra cariche restano: ti avvisiamo prima del voto e le applichiamo dopo la vittoria.']
+  ['realistica', 'Realistica', 'Segui il tuo percorso politico: ti candidi solo se hai i requisiti, le condizioni di eleggibilità e i vincoli istituzionali del sistema italiano.', 'Vivi la politica seguendo le regole e le dinamiche della realtà.'],
+  ['sandbox', 'Modalità libera', 'Ti candidi a qualsiasi elezione senza bisogno dei requisiti: per esempio alle provinciali senza essere sindaco, o al Quirinale senza avere 50 anni.', 'Le incompatibilità tra cariche restano: ti avvisiamo prima del voto e le applichiamo dopo la vittoria.']
 ]);
 function renderModeGate(draft) {
   const cards = GAME_MODE_CARDS.map(([id, label, text, note]) => `<button type="button" class="wizard-mode-card ${draft.gameMode === id ? 'selected' : ''}" data-wizard-mode="${id}" aria-pressed="${draft.gameMode === id}"><strong>${label}</strong><span>${text}</span><small>${note}</small></button>`).join('');
@@ -433,6 +433,6 @@ function summaryStep(d, parties, level, parliamentaryGroups, place = null, pollV
   const affiliation = '<section class="summary-section"><div class="summary-section-heading"><div><span>04 · APPARTENENZA</span><strong>' + esc(partySummary) + '</strong></div><button type="button" data-wizard-goto="4">Modifica</button></div>' + (party?.source === DATA_SOURCES.REAL && party.sourceUrl ? '<a class="catalog-source" href="' + esc(party.sourceUrl) + '" target="_blank" rel="noopener noreferrer">Fonte del partito ↗</a>' : '') + (d.partyMode === 'new' ? '<small>' + esc(d.partyOrientation) + ' · ' + esc(d.partyPosition ?? 'centro') + ' · Colore <i class="summary-color" style="--party:' + esc(d.partyColor) + '"></i></small>' : '') + '</section>';
   const initialStatus = directPresident ? 'Presidente della Repubblica · nessun seggio personale' : externalPremier ? 'Presidente del Consiglio · esterno al Parlamento' : chamber ? 'componente del gruppo nello scenario' : 'carriera territoriale in avvio';
   const identity = '<section class="summary-section summary-identity"><div class="summary-avatar">' + avatarSvg(d.avatar, { size: 64, label: 'Avatar del tuo politico' }) + '</div><div class="summary-section-heading"><div><span>01 · IDENTITÀ</span><strong>' + esc([d.firstName, d.lastName].filter(Boolean).join(' ') || 'Nome da inserire') + '</strong></div><button type="button" data-wizard-goto="1">Modifica</button></div><small>' + esc([d.birthDate, d.previousProfession].filter(Boolean).join(' · ') || 'Data di nascita e professione da inserire') + '</small></section>';
-  const modeLine = '<p class="summary-mode"><span>MODALITÀ DI GIOCO</span> <strong>' + (d.gameMode === 'sandbox' ? 'Sandbox' : 'Realistica') + '</strong></p>';
+  const modeLine = '<p class="summary-mode"><span>MODALITÀ DI GIOCO</span> <strong>' + (d.gameMode === 'sandbox' ? 'Modalità libera' : 'Realistica') + '</strong></p>';
   return '<div class="summary-sheet">' + modeLine + identity + where + '<section class="summary-section"><div class="summary-section-heading"><div><span>03 · PERCORSO ISTITUZIONALE</span><strong>' + esc(pathLabel) + '</strong></div><button type="button" data-wizard-goto="3">Modifica</button></div><small>' + esc(territorySummary) + '</small></section>' + scenario + parliamentary + affiliation + position + '<section class="summary-section"><div class="summary-section-heading"><div><span>STATISTICHE INIZIALI</span><strong>Valori di gioco simulati · base bilanciata per percorso</strong></div></div><div class="summary-stat-grid">' + metrics.map(([label, value]) => '<span><small>' + label + '</small><strong>' + value + '<i>/100</i></strong></span>').join('') + '</div><small>Posizione iniziale: ' + initialStatus + ' · situazione politica non garantita.</small></section>' + difficulty + pollSummary + startSummary(d) + '<div class="summary-disclaimer">Il giocatore è un personaggio creato da te. I valori, la posizione e gli eventi di questa carriera sono simulati. Le fonti istituzionali restano in sola lettura.</div></div>';
 }

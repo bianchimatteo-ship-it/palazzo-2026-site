@@ -57,7 +57,7 @@ export function createIndependentDetector({ extraNames = [] } = {}) {
   const names = realProperNames(extraNames);
   const lexicon = new Set([...italian].filter(w => w.length >= 3 && !english.has(w)));
   // words of the lexicon that are ordinary English too (a loanword, a name) never flag
-  const ENGLISH_OK = new Set('era asl rail serve emerge mon tue wed thu fri sat sun pie vda lom taa ven fvg lig emr tos umb mar laz abr mol cam pug bas cal sic sar app mail email online offline login logout account password username web wifi sms pdf zip png json url http https api ios android google apple instagram facebook youtube tiktok radio sport welfare budget leader dossier summit premier team staff social media video audio file smartphone pop rock jazz menu bar hub meme blog chat link'.split(' '));
+  const ENGLISH_OK = new Set('voucher rush era asl rail serve emerge mon tue wed thu fri sat sun pie vda lom taa ven fvg lig emr tos umb mar laz abr mol cam pug bas cal sic sar app mail email online offline login logout account password username web wifi sms pdf zip png json url http https api ios android google apple instagram facebook youtube tiktok radio sport welfare budget leader dossier summit premier team staff social media video audio file smartphone pop rock jazz menu bar hub meme blog chat link'.split(' '));
   const fold = t => t.replace(/[’']/g, "'").toLowerCase();
   const stripNames = text => {
     // whole names (n-grams up to 8 words) removed first, any case
@@ -107,7 +107,7 @@ export function createIndependentDetector({ extraNames = [] } = {}) {
   };
   // The other direction: English in the Italian interface (function words that no Italian text uses); proper names, brands and the few English terms the game keeps are taken out first.
   const ENGLISH_STOP = new Set('the and of to your you with from for this that are is was will not have has been can may but our their which when where how what who into about after before under between while'.split(' '));
-  const ENGLISH_KEPT = [/\bHall of Fame\b/gi, /\bFratelli d[’']Italia\b/gi, /\bsandbox\b/gi, /\bRenew Europe\b/g, /\bS&D\b/g, /\bECR\b/g, /\bAccount\b/g, /\bPOLITICANDO 2026\b/g, /\bOpen\s?Data\b/gi, /\bLicence\b/gi, /\bCC BY\b/g, /\bonData\b/g, /\bmade in\b/gi, /\bPartito (?:Democratico|Liberaldemocratico)\b/g, /\bPiù Europa\b/g];
+  const ENGLISH_KEPT = [/\bAutonomie e Territori\b/g, /\bAutonomie\b/g, /\bHall of Fame\b/gi, /\bFratelli d[’']Italia\b/gi, /\bsandbox\b/gi, /\bRenew Europe\b/g, /\bS&D\b/g, /\bECR\b/g, /\bAccount\b/g, /\bPOLITICANDO 2026\b/g, /\bOpen\s?Data\b/gi, /\bLicence\b/gi, /\bCC BY\b/g, /\bonData\b/g, /\bmade in\b/gi, /\bPartito (?:Democratico|Liberaldemocratico)\b/g, /\bPiù Europa\b/g];
   const reasonOfEnglish = text => {
     if (!text) return null;
     const bare = stripNames(ENGLISH_KEPT.reduce((out, re) => out.replace(re, ' '), text));

@@ -1,9 +1,9 @@
-import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel } from '../data/regions.js?v=20261103-2';
-import { isSelectableParty } from '../data/schema.js?v=20261103-2';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261103-2';
-import { startAgeProblems, startProblems } from './start-engine.js?v=20261103-2';
-import { presidentialEligibility } from './presidency-engine.js?v=20261103-2';
-import { avatarProblems } from './avatar.js?v=20261103-2';
+import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel } from '../data/regions.js?v=20261104-1';
+import { isSelectableParty } from '../data/schema.js?v=20261104-1';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261104-1';
+import { startAgeProblems, startProblems } from './start-engine.js?v=20261104-1';
+import { presidentialEligibility } from './presidency-engine.js?v=20261104-1';
+import { avatarProblems } from './avatar.js?v=20261104-1';
 
 // The gender of the character: man or woman. A value of an older career (not specified, non-binary…) is brought to one of the two when the career is loaded, keeping the original in `legacyGender`.
 export const GENDERS = Object.freeze(['uomo', 'donna']);
@@ -57,7 +57,7 @@ export function validateCareerStep(draft, step, selectableParties, parliamentary
     if (!genders.has(draft.gender)) errors.push('Seleziona il genere.');
     errors.push(...avatarProblems(draft.avatar));
     if (!draft.previousProfession?.trim()) errors.push('Inserisci la professione precedente.');
-    if (draft.startingOffice === 'presidenteRepubblica') errors.push(...presidentialEligibility({ birthDate: draft.birthDate, date: draft.currentDate }).problems);
+    if (draft.startingOffice === 'presidenteRepubblica') errors.push(...presidentialEligibility({ birthDate: draft.birthDate, date: draft.currentDate, sandbox: draft.gameMode === 'sandbox' }).problems);
     // A career that starts consolidated needs the years to have it: the age is known only here.
     errors.push(...startAgeProblems(draft.start, { partyMode: draft.partyMode, birthDate: draft.birthDate, date: draft.currentDate }));
   }

@@ -59,6 +59,7 @@
     "check:i18n-audit": "node scripts/check-i18n-audit.mjs",
     "check:game-mode": "node scripts/check-game-mode.mjs",
     "check:game-mode-ui": "node scripts/check-game-mode-ui.mjs",
+    "check:language-live": "node scripts/check-language-live.mjs",
     "check:campaign-gameplay": "node scripts/check-campaign-gameplay.mjs",
     "d1:verify-rewards": "node scripts/verify-d1-rewards.mjs --local",
     "d1:verify-rewards:remote": "node scripts/verify-d1-rewards.mjs --remote",

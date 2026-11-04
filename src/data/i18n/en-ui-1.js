@@ -90,7 +90,7 @@ export const PHRASES = [
   ["# aperti · # riusciti · # falliti", "# open · # succeeded · # failed"],
   ["# aree · più forte: Area riformista", "# areas · strongest: Reformist Area"],
   ["# atti della XIX legislatura dal Senato (# leggi approvate definitivamente, # in corso). Una modifica proposta da te resta una simulazione: l’atto reale non cambia.", "# acts of the XIX legislature from the Senate (# laws definitively approved, # in progress). An amendment you propose remains a simulation: the real act does not change."],
-  ["# cap.", "# cap."],
+  ["# cap.", "# pol. cap."],
   ["# cap. politico", "# political cap."],
   ["# collegi sotto i # punti", "# constituencies below # points"],
   ["# componenti nel dato reale · #-#-#", "# members in the real data · #-#-#"],

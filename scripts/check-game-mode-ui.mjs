@@ -15,7 +15,7 @@ for (const language of ['it', 'en']) {
     await evaluate(`document.querySelector('[data-menu="nuova"]:not([disabled])').click(); true`);
     await wait(() => evaluate('Boolean(document.querySelector(".wizard-mode-gate"))'));
     const gate = await evaluate(`(() => { const g = document.querySelector('.wizard-mode-gate'); return { cards: [...g.querySelectorAll('[data-wizard-mode]')].map(b => [b.dataset.wizardMode, b.querySelector('strong').textContent.trim(), b.textContent.length]), title: g.querySelector('h1').textContent.trim(), steps: g.querySelectorAll('.wizard-chips li, .wizard-step').length, firstField: Boolean(g.querySelector('[name="firstName"]')) }; })()`);
-    assert.deepEqual(gate.cards.map(c => c.slice(0, 2)), [['realistica', T('Realistica', 'Realistic')], ['sandbox', 'Sandbox']], 'La schermata iniziale ha le due modalità');
+    assert.deepEqual(gate.cards.map(c => c.slice(0, 2)), [['realistica', T('Realistica', 'Realistic')], ['sandbox', T('Modalità libera', 'Free mode')]], 'La schermata iniziale ha le due modalità');
     assert.equal(gate.title, T('Come vuoi giocare?', 'How do you want to play?'));
     assert.equal(gate.steps, 0); assert.equal(gate.firstField, false, 'Prima dei sei passaggi, non dentro il wizard');
     // cancelling goes back to the menu and creates nothing; opening again asks again
@@ -38,7 +38,7 @@ for (const language of ['it', 'en']) {
     await evaluate(`document.querySelector('[data-municipality-code="052032"]').click(); true`); await pause(300);
     await next(); await evaluate(`document.querySelector('[data-level="comunale"]').click(); true`); await pause(300);
     await next(); await next(); await next(); // party, advanced, summary
-    assert.ok(/Sandbox/.test(await evaluate(`document.querySelector('.summary-mode')?.textContent ?? ''`)), 'Il riepilogo dice la modalità');
+    assert.ok(/Modalità libera|Free mode/.test(await evaluate(`document.querySelector('.summary-mode')?.textContent ?? ''`)), 'Il riepilogo dice la modalità');
     await evaluate(`document.querySelector('.wizard-footer [data-wizard-action="finish"]').click(); true`);
     await wait(() => evaluate('Boolean(document.querySelector(".page-wrap"))'), 30000);
     const mode = () => evaluate(`(async () => (await import('/src/core/store.js?v=${version}')).store.getState().career.gameMode)()`);

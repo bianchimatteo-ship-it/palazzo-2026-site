@@ -15,7 +15,9 @@ const weeksList = (process.env.AUDIT_WEEKS ?? '10,130').split(',').map(Number);
 const clicks = process.env.AUDIT_CLICKS !== '0';
 const findings = new Map(); // text → { reason, screens:Set }
 const analysed = { texts: 0, distinct: new Set(), screens: 0, clicks: 0, areas: new Set() };
+const byScreen = {};   // AUDIT_TEXTS: every text of every screen, to compare the Italian and the English run screen by screen (what is identical in both languages is a name, or was not translated)
 const record = (screen, texts) => {
+  (byScreen[screen] ??= new Set()); for (const text of texts) byScreen[screen].add(text);
   analysed.screens++; analysed.areas.add(screen.split('/')[0]);
   for (const text of texts) {
     analysed.texts++; analysed.distinct.add(text);
@@ -98,6 +100,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   if (errors.length) console.error(`[audit] errori JavaScript nella pagina: ${errors.length} (primo: ${String(errors[0]).slice(0, 200)})`);
 });
 const rows = [...findings].map(([text, item]) => ({ text, reason: item.reason, screens: [...item.screens].slice(0, 6) })).sort((a, b) => a.reason.localeCompare(b.reason));
+if (process.env.AUDIT_TEXTS) writeFileSync(process.env.AUDIT_TEXTS, JSON.stringify(Object.fromEntries(Object.entries(byScreen).map(([k, v]) => [k, [...v]]))));
 if (process.env.AUDIT_OUT) writeFileSync(process.env.AUDIT_OUT, JSON.stringify({ analysed: { texts: analysed.texts, distinct: analysed.distinct.size, screens: analysed.screens, clicks: analysed.clicks, areas: [...analysed.areas], failed: analysed.failed ?? 0 }, rows }, null, 1));
 console.log(`Audit interfaccia inglese: ${analysed.texts} testi (${analysed.distinct.size} distinti) su ${analysed.screens} schermate/stati, ${analysed.clicks} pulsanti premuti; ${rows.length} testi ancora italiani.`);
 for (const row of rows.slice(0, Number(process.env.AUDIT_SHOW ?? 40))) console.log(`  [${row.reason}] ${row.text.slice(0, 140)}  ← ${row.screens[0]}`);

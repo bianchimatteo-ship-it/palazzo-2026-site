@@ -158,6 +158,21 @@ h1, h2, h3, h4 { color: var(--ink); }
 .wizard-footer { display: flex; align-items: center; gap: 14px; flex: none; min-height: 66px; padding: 12px 34px; border-top: 1px solid var(--line); background: var(--panel); }
 .wizard-footer .primary-button { height: 40px; margin: 0 0 0 auto; padding: 0 18px; }
 .wizard-footer-note { color: var(--ink-3); font-size: 12px; }
+/* ---------- mode gate: Realistica / Sandbox ---------- */
+.career-wizard.wizard-mode-gate { height: auto; min-height: 0; max-height: calc(100vh - 44px); }
+.wizard-mode-gate .wizard-body { flex: 0 1 auto; padding: 22px 34px 26px; }
+.wizard-mode-gate .wizard-footer { min-height: 56px; }
+.wizard-mode-cards { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.wizard-mode-card { position: relative; display: flex; flex-direction: column; gap: 10px; text-align: left; padding: 20px 20px 18px; border-radius: var(--radius); border: 1px solid var(--line-strong); background: var(--panel-2); color: var(--ink); font: inherit; cursor: pointer; min-height: 170px; transition: border-color .15s, background .15s, transform .15s, box-shadow .15s; }
+.wizard-mode-card strong { color: var(--gold-soft); font: 600 22px/1.15 var(--font-display); letter-spacing: -.005em; }
+.wizard-mode-card span { color: var(--ink); font-size: 14px; line-height: 1.5; }
+.wizard-mode-card small { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line); color: var(--ink-2); font-size: 12.5px; line-height: 1.45; }
+.wizard-mode-card:hover { border-color: var(--gold); background: var(--panel-3); transform: translateY(-2px); box-shadow: 0 8px 22px rgba(0, 0, 0, .35); }
+.wizard-mode-card:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.wizard-mode-card:active { transform: translateY(0); }
+.wizard-mode-card.selected { border-color: var(--gold); background: var(--accent-soft); box-shadow: 0 0 0 2px var(--gold), 0 8px 22px rgba(0, 0, 0, .35); }
+.wizard-mode-card.selected::after { content: "\2713"; position: absolute; top: 14px; right: 16px; color: var(--gold-soft); font-weight: 800; }
+@media (max-width: 720px) { .wizard-mode-cards { grid-template-columns: 1fr; gap: 12px; } .wizard-mode-card { min-height: 0; padding: 16px; } .wizard-mode-gate .wizard-body { padding: 16px 18px 18px; } }
 /* five segments for the phone, where the side list of the steps is not shown */
 .wizard-progress { display: none; gap: 5px; margin: 0 0 12px; }
 .wizard-progress i { flex: 1; height: 4px; border-radius: 2px; background: var(--line-strong); }

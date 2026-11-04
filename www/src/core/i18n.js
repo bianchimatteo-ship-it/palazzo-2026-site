@@ -5,7 +5,7 @@
 //     the phrase book (src/data/i18n/en-*.js): exact phrases, phrases with numbers (`#`) or free parts (`{}`), and the numbers, currency and dates in English form.
 //     Proper names (people, parties, places, official denominations) are never in the phrase book: they stay as they are. A phrase that is not in the book stays Italian, never wrong.
 // Nothing here touches a career: the language is a view of the same data.
-import { saveSetting } from './settings.js?v=20261103-2';
+import { saveSetting } from './settings.js?v=20261104-1';
 
 export const LANGUAGES = Object.freeze([['it', 'Italiano', 'it-IT'], ['en', 'English', 'en-GB']]);
 const SETTINGS_KEY = 'politicando.settings.v1';
@@ -215,7 +215,8 @@ function translateLabelList(text, depth) {
   if (labels === null || labels.length < 2) return null;
   return labels.length === 2 ? `${labels[0]} and ${labels[1]}` : `${labels.slice(0, -1).join(', ')} and ${labels.at(-1)}`;
 }
-const CUTS = [/( · | — | – )/, /((?<=[.!?…])\s+)/, /(; )/, /(: )/];
+// (the full stop of an abbreviation — «art. 1», «n. 5», «Es.» — does not end a sentence)
+const CUTS = [/( · | — | – )/, /((?<=[.!?…])(?<!\b(?:art|artt|n|nn|es|ecc|sett|lett|cfr|pag|dott|prof|sig|dl|dpr|c|co|cc)\.)\s+)/, /(; )/, /(: )/];
 // A text clipped by the game for a preview (a deck, a headline: «…, finanziato in deficit. Ne traggono vantaggio pensionati e over 65 e redditi bassi…») ends with an ellipsis and stops where the cut fell, which no phrase of
 // the book can predict. It is translated up to the last clause that is a whole phrase («a, b» → «a», «a; b» → «a»…) and keeps its ellipsis: a shorter preview in English, never a half-Italian one.
 function translateClipped(text, depth) {
@@ -434,7 +435,7 @@ export function watchTree(root) {
 let loading = null;
 export function loadBook() {
   if (book?.loaded) return Promise.resolve(book);
-  loading ??= import('../data/i18n/index.js?v=20261103-2').then(module => { module.install(installBook); book.loaded = true; return book; });
+  loading ??= import('../data/i18n/index.js?v=20261104-1').then(module => { module.install(installBook); book.loaded = true; return book; });
   return loading;
 }
 // The title of the page (the tab) is read by people and by assistive technology: it follows the language like the rest (the Italian one is kept to go back to).

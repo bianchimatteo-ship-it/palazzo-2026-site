@@ -62,15 +62,20 @@ function literalsOf(code) {
   return out;
 }
 
+const shortLabels = new Map();
 const literals = new Map(); // key (numbers as #, {…} as {}) → { text, files }
 for (const file of files) {
   if (file === 'src/core/invariants.js' || file === 'src/core/i18n-auto.js' || file === 'src/core/i18n.js') continue; // developer diagnostics (never rendered) and the status text of the translator (not shown in any screen)
   for (const whole of literalsOf(readFileSync(join(root, file), 'utf8'))) {
     // a template with markup is several texts (one for each element): they are read one by one, as the page shows them
-    for (const raw of whole.replace(/<[^>]+>/g, '|').replace(/&[a-z]+;|&#\d+;/g, ' ').split('|')) {
+    // the texts a reader (or a screen reader) gets from the ATTRIBUTES of the markup (tooltip, accessible name, placeholder, alternative text) are texts too: they are read before the tags are cut away
+    const attributeTexts = [...whole.matchAll(/\b(?:title|aria-label|aria-description|aria-placeholder|aria-roledescription|aria-valuetext|placeholder|alt|data-tip|data-label|data-voice-idle|data-voice-active)="([^"]*)"/g)].map(match => match[1]);
+    for (const raw of [...attributeTexts, ...whole.replace(/\b(?:title|aria-label|aria-description|aria-placeholder|aria-roledescription|aria-valuetext|placeholder|alt|data-tip|data-label|data-voice-idle|data-voice-active)="[^"]*"/g, '').replace(/<[^>]+>/g, '|').replace(/&[a-z]+;|&#\d+;/g, ' ').split('|')]) {
       const text = raw.replace(/\s+/g, ' ').trim();
-      if (text.length < 8 || CODE.test(text) || (text.match(/[\p{L}]+/gu) ?? []).length < 2 || !ITALIAN.test(text)) continue;
-      if (!/\p{Ll}{3}/u.test(text.replace(/\{\}/g, ''))) continue;
+      // the short labels (table headers, buttons, chips: «Data», «Stato», «Incontralo») are texts too: no vocabulary decides them, so every one that the book leaves unchanged is listed (and judged by a person, or allowed by name)
+      if (text.length >= 3 && text.length < 40 && (text.match(/[\p{L}]+/gu) ?? []).length <= 4 && !CODE.test(text) && !/[0-9{}#=<>_@\\\/[\]()]/.test(text) && /^[\p{Lu}\p{Ll}][\p{L}'’ .,:;!?·+\-–—]*$/u.test(text)) shortLabels.set(text, (shortLabels.get(text) ?? new Set()).add(file));
+      if (text.length < 8 || CODE.test(text) || (text.match(/[\p{L}]+/gu) ?? []).length < 2 || !ITALIAN.test(text)) continue;   // (Italian by a function word, or by the independent detector: «Candidature chiuse» has no function word)
+      if (!/\p{L}{3}/u.test(text.replace(/\{\}/g, ''))) continue;   // (the kickers in capitals are texts too)
       if (/="|^[">]|["<]$|\bclass=|\bdata-[a-z-]+=/.test(text)) continue;
       if (/\.json$|throw new|\) \{|\bconst \w+ =/.test(text)) continue; // a file name or a stretch of code
       const key = text.replace(/\{\w+\}/g, '{}').replace(/\d+(?:[.,]\d+)*/g, '#');
@@ -239,6 +244,10 @@ if (process.env.CENSUS_RUNTIME !== '0') {
   }
 }
 
+// ---- short labels left unchanged ----
+const unchangedShort = [...shortLabels].filter(([text]) => I.translateText(text) === text).map(([text, where]) => ({ text, files: [...where] }));
+report.unchangedShort = unchangedShort;
+if (process.env.CENSUS_SHORT) { console.log(`Etichette brevi invariate: ${unchangedShort.length} su ${shortLabels.size}`); for (const item of unchangedShort) console.log(`  ${item.text} | ${item.files[0]}`); }
 // ---- report ----
 const order = ['tradotta', 'dinamica-verificata', 'dinamica-non-verificabile', 'incompleta', 'mancante', 'consentita'];
 const line = (bucket, label) => count[bucket] ? `${label}: ${Object.values(count[bucket]).reduce((a, b) => a + b, 0)} testi — ${order.map(cls => `${cls} ${count[bucket][cls] ?? 0}`).join(' · ')}` : null;

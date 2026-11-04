@@ -251,7 +251,7 @@ export const PHRASES = [
   ["Equilibrio tra Stato e Regioni", "Balance between State and Regions"],
   ["Eredità politica", "Political legacy"],
   ["Es. ADT", "E.g. ADT"],
-  ["Es. Alleanza dei Territori", "E.g. Alleanza dei Territori"],
+  ["Es. Alleanza dei Territori", "E.g. Alliance of the Territories"],
   ["Es. Siena, Toscana, Rossi", "E.g. Siena, Tuscany, Rossi"],
   ["Esclusa dalla candidatura", "Excluded from the candidacy"],
   ["Escluso dalla candidatura", "Excluded from the candidacy"],

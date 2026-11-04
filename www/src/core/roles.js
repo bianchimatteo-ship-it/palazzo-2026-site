@@ -1,14 +1,14 @@
 // Roles and powers: what the player may do depends on the offices actually held.
 // Every power listed here is checked again by the store before the action runs.
-import { activeMinisters, playerInMajority } from './parliament-engine.js?v=20261103-2';
-import { heldOffices, hasPower, institutionOffice, officeDetails, officeLabel } from './office-engine.js?v=20261103-2';
-import { bandOfMunicipality, residentsOfUnit } from './municipal-rules.js?v=20261103-2';
-import { OFFICES, POWERS } from '../data/simulation/office-rules.js?v=20261103-2';
-import { isSecretary } from './career-engine.js?v=20261103-2';
-import { EP_ROLES, committeeById } from './local-engine.js?v=20261103-2';
-import { PRESIDENCY_RULES } from '../data/simulation/presidency-rules.js?v=20261103-2';
-import { presidentialEligibility, whiteSemester } from './presidency-engine.js?v=20261103-2';
-import { END_KINDS } from './legacy-engine.js?v=20261103-2';
+import { activeMinisters, playerInMajority } from './parliament-engine.js?v=20261104-1';
+import { heldOffices, hasPower, institutionOffice, officeDetails, officeLabel } from './office-engine.js?v=20261104-1';
+import { bandOfMunicipality, residentsOfUnit } from './municipal-rules.js?v=20261104-1';
+import { OFFICES, POWERS } from '../data/simulation/office-rules.js?v=20261104-1';
+import { isSecretary } from './career-engine.js?v=20261104-1';
+import { EP_ROLES, committeeById } from './local-engine.js?v=20261104-1';
+import { PRESIDENCY_RULES } from '../data/simulation/presidency-rules.js?v=20261104-1';
+import { presidentialEligibility, whiteSemester } from './presidency-engine.js?v=20261104-1';
+import { END_KINDS } from './legacy-engine.js?v=20261104-1';
 
 const governing = parliament => ['active', 'crisis'].includes(parliament?.government?.status);
 export const isPrimeMinister = parliament => governing(parliament) && parliament.government.primeMinister === 'player';
@@ -36,8 +36,11 @@ export const heldOfficesOf = state => heldOffices(officeFacts(state));
 // The territorial facts the incompatibilities and the eligibility of the local offices need (see office-engine: officeDetails, incompatibleWith, missingBase): where each local mandate of the player is and how large the entity
 // is, and where the office that is being run for or gained is (the territory of the race, else the place the player comes from). Populations come from the ISTAT data of the game (null while they are not loaded).
 const populationOfComune = code => { const info = bandOfMunicipality(code); return Number.isFinite(info?.population) ? info.population : null; };
+export function officeFactsDetailOf(institutions) {
+  return officeDetails(institutions, { populationOfComune, populationOfProvince: code => residentsOfUnit(code) });
+}
 export function officeFactsDetail(state) {
-  return officeDetails((state.local?.institutions ?? []).filter(item => item.status === 'active'), { populationOfComune, populationOfProvince: code => residentsOfUnit(code) });
+  return officeFactsDetailOf((state.local?.institutions ?? []).filter(item => item.status === 'active'));
 }
 // The target of an office just won, from the council where it was taken (its place and the size of the entity).
 export function institutionTarget(inst) {

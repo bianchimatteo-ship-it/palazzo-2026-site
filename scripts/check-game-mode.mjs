@@ -13,6 +13,7 @@ const build = (await readFile(new URL('../index.html', import.meta.url), 'utf8')
 const module = path => import(new URL(`../${path}${build ? `?v=${build}` : ''}`, import.meta.url).href);
 const O = await module('src/core/office-engine.js');
 const R = await module('src/core/roles.js');
+const S = await module('src/core/store.js');
 const { checkInvariants } = await module('src/core/invariants.js');
 const lines = [];
 
@@ -153,5 +154,34 @@ const finish = store => { let guard = 0; while (store.getState().campaign?.statu
     assert.ok(checkInvariants(result).ok, `Invarianti dopo ${type}: ${JSON.stringify(checkInvariants(result).issues?.slice(0, 3))}`);
   }
   lines.push('sandbox: provinciali (Presidenza senza essere sindaco), comunali, regionali, europee e politiche giocate fino al risultato; Realistica rifiuta la Presidenza');
+}
+// ---------- 5. the offices: the President of the Republic from the start in Sandbox, and what a win really closes ----------
+{
+  // direct career as President of the Republic under 50 years: Sandbox opens it (the date of birth is still asked), Realistica refuses
+  const young = { startingOffice: 'presidenteRepubblica', partyMode: 'independent', startingRole: null, parliamentaryGroupId: '', birthDate: '1995-03-03' };
+  await assert.rejects(() => startCareer({ seed: 'pdr-real', level: 'comunale', fast: true, draft: { ...young, gameMode: 'realistica' } }), /50 anni/, 'Realistica: sotto i 50 anni non si parte dal Quirinale');
+  const pdr = await startCareer({ seed: 'pdr-sand', level: 'comunale', fast: true, draft: { ...young, gameMode: 'sandbox' } });
+  const st = pdr.store.getState();
+  assert.equal(st.career.gameMode, 'sandbox'); assert.equal(st.career.currentLevel, 'presidente', 'Sandbox: la carriera parte da Presidente della Repubblica a 31 anni');
+  assert.ok(st.game.flags.president, 'Il mandato presidenziale è attivo');
+  assert.ok(checkInvariants(st).ok);
+  // the other paths to the Quirinale: the eligibility of a young deputy
+  const dep = await startCareer({ seed: 'pdr-dep', level: 'deputato', fast: true, draft: { gameMode: 'sandbox', birthDate: '1995-03-03' } });
+  assert.equal(S.presidentialEligibilityOf(dep.store.getState()).eligible, true, 'Sandbox: eleggibile al Quirinale sotto i 50 anni');
+  const depReal = await startCareer({ seed: 'pdr-dep2', level: 'deputato', fast: true, draft: { birthDate: '1995-03-03' } });
+  assert.equal(S.presidentialEligibilityOf(depReal.store.getState()).eligible, false, 'Realistica: serve avere 50 anni');
+  // the exceptions of the territory and of the population are always respected: a mayor of up to 15.000 inhabitants keeps the office when a seat in Parliament is won, one of a larger comune does not
+  const small = { office: 'sindaco', kind: 'comune', region: 'Lombardia', provinceCode: '016', municipalityCode: '016999', population: 8000 };
+  const large = { office: 'sindaco', kind: 'comune', region: 'Lombardia', provinceCode: '016', municipalityCode: '016024', population: 120000 };
+  const target = { region: 'Lombardia', provinceCode: '016', municipalityCode: null, population: null };
+  assert.deepEqual(O.lostOffices(['sindaco'], 'deputato', { details: [small], target }).map(i => i.office), [], 'Sindaco fino a 15.000 abitanti: compatibile con il seggio da deputato');
+  assert.deepEqual(O.lostOffices(['sindaco'], 'deputato', { details: [large], target }).map(i => i.office), ['sindaco'], 'Sindaco di un comune più grande: incompatibile');
+  // several mandates of the same office: each one is judged by its own place, only the incompatible one is closed
+  assert.deepEqual(O.incompatibleWith(['sindaco'], 'deputato', { details: [small], target }).length, 0, 'Il mandato piccolo, da solo, resta');
+  assert.deepEqual(O.incompatibleWith(['sindaco'], 'deputato', { details: [large], target }).length, 1, 'Il mandato grande, da solo, decade');
+  const otherRegion = { office: 'sindaco', kind: 'comune', region: 'Toscana', provinceCode: '052', municipalityCode: '052032', population: 50000 };
+  assert.deepEqual(O.incompatibleWith(['sindaco'], 'consigliere-regionale', { details: [otherRegion], target }).length, 0, 'Sindaco in un’altra Regione: compatibile con il consiglio regionale');
+  assert.deepEqual(O.incompatibleWith(['sindaco'], 'consigliere-regionale', { details: [{ ...large }], target }).length, 1, 'Sindaco della stessa Regione: incompatibile');
+  lines.push('cariche: Quirinale sotto i 50 anni in Sandbox (partenza diretta, deputato), eccezioni di popolazione e di Regione, mandati multipli giudicati uno per uno');
 }
 console.log(`Modalità di gioco verificate sul motore vero: ${lines.join(' · ')}.`);
