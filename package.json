@@ -238,7 +238,11 @@
     "check:parliament-votes": "node scripts/check-parliament-votes.mjs",
     "check:party-founding": "node scripts/check-party-founding.mjs",
     "check:party-life-layout": "node scripts/check-party-life-layout.mjs",
-    "check:i18n-wizard": "node scripts/check-i18n-wizard.mjs"
+    "check:i18n-wizard": "node scripts/check-i18n-wizard.mjs",
+    "check:consent": "node scripts/check-consent.mjs",
+    "check:consent-store": "node scripts/check-consent-store.mjs",
+    "check:group-directive-ui": "node scripts/check-group-directive-ui.mjs",
+    "check:party-founding-ui": "node scripts/check-party-founding-ui.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",

@@ -241,7 +241,7 @@ if (chromeAvailable) {
       await evaluate(`localStorage.clear(), sessionStorage.clear(), localStorage.setItem('politicando.onboarding.v1', JSON.stringify({ account: true, tour: 'done', localStart: true })), true`);
       await goto();
       await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu=nuova]:not([disabled])"))'));
-      await click('[data-menu="nuova"]:not([disabled])');
+      await click('[data-menu="nuova"]:not([disabled])'); await evaluate(`document.querySelector('[data-wizard-mode="realistica"]')?.click(); true`); await new Promise(resolve => setTimeout(resolve, 500));
       await waitFor(() => evaluate('Boolean(document.querySelector(".career-wizard"))'));
       // the first steps, as a player would fill them in: identity, Toscana · Siena, an independent
       await waitFor(() => evaluate(`Boolean(document.querySelector('.career-wizard [name="firstName"]'))`));

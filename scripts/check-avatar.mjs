@@ -17,6 +17,7 @@ const A = await import(`../src/core/avatar.js${v}`);
 const { avatarSvg } = await import(`../src/ui/avatar-svg.js${v}`);
 const { WIZARD_CHECKS, WIZARD_VIEWS, CAREER_STEPS, GENDERS, normalizeGender, validateCareerStep, validateWizardStep } = await import(`../src/core/career-rules.js${v}`);
 const { makeCareerDraft, renderCareerWizard, WIZARD_STEPS } = await import(`../src/ui/career-wizard.js${v}`);
+const realisticDraft = (...args) => ({ ...makeCareerDraft(...args), gameMode: 'realistica' });   // (the mode is chosen before the six steps)
 const { validateEntity } = await import(`../src/data/schema.js${v}`);
 const lines = [];
 
@@ -100,9 +101,9 @@ const free = () => { for (const slot of storage.listSlots()) { try { storage.del
 const load = payload => { free(); return store.loadGame(payload); };
 const create = (...args) => { free(); return store.createCareer(...args); };
 const territory = { units: db.territorialUnits, municipalities: db.municipalities };
-const draftOf = extra => ({ ...makeCareerDraft('2026-09-24'), region: 'Toscana', municipality: 'Siena', municipalityCode: '052032', firstName: 'Ada', lastName: 'Prova', birthDate: '1985-04-12', previousProfession: 'Insegnante', ...extra });
+const draftOf = extra => ({ ...realisticDraft('2026-09-24'), region: 'Toscana', municipality: 'Siena', municipalityCode: '052032', firstName: 'Ada', lastName: 'Prova', birthDate: '1985-04-12', previousProfession: 'Insegnante', ...extra });
 const screen = (extra, view) => validateWizardStep(draftOf(extra), view, db.parties, db.parliamentaryGroups, territory);
-assert.deepEqual(makeCareerDraft('2026-09-24').avatar, base, 'Il nuovo personaggio parte dall’avatar predefinito.');
+assert.deepEqual(realisticDraft('2026-09-24').avatar, base, 'Il nuovo personaggio parte dall’avatar predefinito.');
 assert.deepEqual(screen({}, 1), [], 'Identità e avatar: completa.');
 assert.equal(screen({ avatar: { ...base, jacket: 'rosa' } }, 1).length, 1, 'Un avatar non valido è rifiutato nella schermata dell’identità.');
 assert.deepEqual(screen({ avatar: undefined }, 1), [], 'Un avatar assente non blocca (parte quello predefinito).');
@@ -182,7 +183,7 @@ lines.push('vecchie carriere senza perdita di dati, avatar rovinato ripulito');
 // the gender of the character: man or woman, nothing else; older values are brought to one of them without losing the original
 assert.deepEqual([...GENDERS], ['uomo', 'donna']);
 assert.deepEqual(['uomo', 'donna', 'non-binario', 'preferisco-non-specificare', 'altro', null, undefined].map(normalizeGender), ['uomo', 'donna', 'uomo', 'uomo', 'uomo', 'uomo', 'uomo']);
-assert.equal(makeCareerDraft('2026-09-24').gender, 'uomo', 'Il genere predefinito è uno dei due.');
+assert.equal(realisticDraft('2026-09-24').gender, 'uomo', 'Il genere predefinito è uno dei due.');
 for (const gender of ['non-binario', 'preferisco-non-specificare', 'altro', '', null]) assert.ok(validateCareerStep(draftOf({ gender }), 5).some(error => /genere/i.test(error)), `Il genere «${gender}» non è più accettato.`);
 for (const gender of ['uomo', 'donna']) assert.deepEqual(validateCareerStep(draftOf({ gender }), 5), [], `Il genere «${gender}» è valido.`);
 create({ ...draftOf({ gender: 'donna' }) }, db.parties, db.parliamentaryGroups);
@@ -203,7 +204,7 @@ assert.doesNotThrow(() => validateEntity('politicians', { id: 'p1', firstName: '
 lines.push('genere: solo uomo e donna, vecchi valori normalizzati senza perdita');
 
 // ---------- 5. the rendering of the wizard ----------
-const view = d => renderCareerWizard(store.getState(), { ...makeCareerDraft('2026-09-24'), region: 'Toscana', municipality: 'Siena', municipalityCode: '052032', ...d }, db.parties, () => null, db.parliamentaryGroups, [], [], db.politicians, territory);
+const view = d => renderCareerWizard(store.getState(), { ...realisticDraft('2026-09-24'), region: 'Toscana', municipality: 'Siena', municipalityCode: '052032', ...d }, db.parties, () => null, db.parliamentaryGroups, [], [], db.politicians, territory);
 const first = view({ step: 1 });
 assert.ok(first.includes('Identità e avatar') && first.includes('data-avatar-editor') && first.includes('data-avatar-preview') && first.includes('PASSAGGIO 01 <i>/</i> 06'), 'La prima schermata ha l’editor e l’anteprima.');
 for (const field of A.AVATAR_FIELDS) for (const item of A.AVATAR_OPTIONS[field]) assert.ok(first.includes(`data-avatar-field="${field}" data-avatar-value="${item.id}"`), `Scelta disponibile: ${field}/${item.id}.`);
@@ -261,7 +262,7 @@ const tools = browser => {
   const back = async () => { await click('.wizard-footer [data-wizard-action="back"]', 300); };
   const preview = () => evaluate(`document.querySelector('[data-avatar-preview] svg')?.getAttribute('data-avatar') ?? ''`);
   const pressed = field => evaluate(`[...document.querySelectorAll('[data-avatar-field="${field}"][aria-pressed="true"]')].map(el => el.dataset.avatarValue)`);
-  const openWizard = async () => { await click('[data-menu="nuova"]:not([disabled])', 200); await waitFor(() => has('.career-wizard')); };
+  const openWizard = async () => { await click('[data-menu="nuova"]:not([disabled])', 200); await waitFor(() => has('.wizard-mode-gate')); await click('[data-wizard-mode="realistica"]', 200); await waitFor(() => has('.career-wizard [name="firstName"]')); };
   const fillIdentity = async (name = 'Ada') => {
     await setField('.career-wizard [name="firstName"]', name); await setField('.career-wizard [name="lastName"]', 'Avatar');
     await setField('.career-wizard [name="birthDate"]', '1985-04-12', 'change'); await setField('.career-wizard [name="previousProfession"]', 'Insegnante');

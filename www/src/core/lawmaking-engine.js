@@ -5,10 +5,10 @@
 // it needs or puts the question of confidence; the bills of the opposition often never reach the floor. The player sits
 // in one Chamber: speaks, amends and casts a personal vote on every bill there — and the vote has consequences.
 // Everything here is simulation (source: simulation); the groups of the real XIX legislature keep their real reference.
-import { DATA_SOURCES } from '../data/schema.js?v=20261104-2';
-import { AREA_BY_ID, DECREE_RULES, FINANCING, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261104-2';
-import { amendLawPolicy, campOfAxis, cohesiveShare, governingGroupIds, groupProfile, parliamentInternals } from './parliament-engine.js?v=20261104-2';
-import { groupLine, splitGroupVote } from './vote-engine.js?v=20261104-2';
+import { DATA_SOURCES } from '../data/schema.js?v=20261104-5';
+import { AREA_BY_ID, DECREE_RULES, FINANCING, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261104-5';
+import { amendLawPolicy, campOfAxis, cohesiveShare, directiveOf, governingGroupIds, groupDirectiveEffect, groupProfile, parliamentInternals } from './parliament-engine.js?v=20261104-5';
+import { groupLine, splitGroupVote } from './vote-engine.js?v=20261104-5';
 
 const { getGroup, allGroups, record, replaceLaw, demandFor, contentAffinity, setRelation } = parliamentInternals;
 const SIM = DATA_SOURCES.SIMULATION;
@@ -234,6 +234,14 @@ export function autoVote(parliament, law, chamber, { date, world = null, playerC
     let votes = Math.round(others * cohesiveShare(support));
     const split = splitGroupVote({ seats: others, yes: votes, confidence: Boolean(law.confidence), seed: `${law.id}|${chamber}|${(law.votes ?? []).length}|${group.groupId}` });
     let no = split.no, abstain = split.abstain, absent = 0;
+    // The indication of the leader of the player's group (the bills of the weekly sessions too): a part of the group follows it, the rest keeps its line.
+    let directive = null;
+    const given = own ? directiveOf(parliament, 'law', law.id) : null;
+    if (given) {
+      const effect = groupDirectiveEffect({ yes: votes, no, abstain, directive: given.choice, cohesion: group.cohesion ?? 62, discipline: parliament.careerStanding?.partySupport ?? 50, relation: parliament.relations?.[group.groupId]?.value ?? 50 });
+      votes = effect.yes; no = effect.no; abstain = effect.abstain;
+      directive = { choice: given.choice, follow: effect.follow, dissent: effect.dissent, adherence: effect.adherence };
+    }
     if (own) {
       groupLineBefore = line;
       choice = !playerChoice || playerChoice === 'linea' ? line : playerChoice;
@@ -241,7 +249,7 @@ export function autoVote(parliament, law, chamber, { date, world = null, playerC
       if (choice === 'favorevole') votes += 1; else if (choice === 'contrario') no += 1; else if (choice === 'astenuto') abstain += 1; else absent += 1;
     }
     yes += votes;
-    return { groupId: group.groupId, yesVotes: votes, noVotes: no, abstainVotes: abstain, ...(absent ? { absentVotes: absent } : {}), line: groupLine({ yes: votes, no, abstain }), governing: governing.has(group.groupId), simulatedSeats: group.simulatedSeats, ...(own ? { playerChoice: choice } : {}) };
+    return { groupId: group.groupId, yesVotes: votes, noVotes: no, abstainVotes: abstain, ...(absent ? { absentVotes: absent } : {}), ...(directive ? { directive } : {}), line: groupLine({ yes: votes, no, abstain }), governing: governing.has(group.groupId), simulatedSeats: group.simulatedSeats, ...(own ? { playerChoice: choice } : {}) };
   });
   const total = rows.reduce((sum, group) => sum + group.simulatedSeats, 0);
   const needed = Math.floor(total / 2) + 1;

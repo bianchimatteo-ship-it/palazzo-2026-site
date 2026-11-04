@@ -230,7 +230,15 @@ for (let week = 0; week < 16 && !['completata', 'fallita'].includes(store.getSta
   for (const item of [...store.getState().game.inbox]) { try { give(); store.resolveAgendaItem(item.id, item.defaultChoice); } catch { /* not this week */ } }
   const s = store.getState();
   if (s.national.formation.playerAccepted && s.parliament.government?.status === 'awaiting-confidence') { give(); store.voteGovernmentConfidence(); }
+  const before = store.getState();
   store.advance(7);
+  // Regression: the request of a vote of confidence that reaches the player is never consumed in the same weekly close that generated it.
+  const afterState = store.getState();
+  const gov = before.parliament.government, govAfter = afterState.parliament.government;
+  if (gov && govAfter && gov.id === govAfter.id && (govAfter.confidenceVotes?.length ?? 0) > (gov.confidenceVotes?.length ?? 0) && before.parliament.player?.groupId && gov.primeMinister !== 'player' && gov.formedBy !== 'player') {
+    assert.ok(gov.confidenceRequestedAt && gov.confidenceRequestedAt < afterState.clock.currentDate, `La fiducia al ${gov.name} si vota in una chiusura successiva a quella della richiesta (${gov.confidenceRequestedAt} → ${afterState.clock.currentDate}).`);
+    seen.confidenceWindow = true;
+  }
 }
 state = store.getState();
 const formed = state.national.formation;

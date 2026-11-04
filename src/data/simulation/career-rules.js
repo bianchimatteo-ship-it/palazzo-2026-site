@@ -819,10 +819,11 @@ export const SITUATION_EVENTS = Object.freeze({
     { id: 'aderisci', label: 'Chiedi di entrare in {coalition}', cost: { capital: 3 }, special: 'national-coalition' },
     { id: 'da-soli', label: 'Corri da solo: identità e mani libere', effects: { party: { support: 1 } }, special: 'national-alone' },
     { id: 'direzione', label: 'Lascia decidere alla direzione, in base ai rapporti con gli altri partiti', special: 'national-auto' }] },
-  'sostegno-nuovo-governo': { id: 'sostegno-nuovo-governo', title: 'Consultazioni: {majority}', body: 'Dopo il voto nessuna coalizione governa da sola. Al Quirinale si lavora a {majority} attorno a {leader}: il tuo partito deve dire se ci sta.', defaultChoice: 'valuta', choices: [
-    { id: 'sostieni', label: 'Sostieni il nuovo governo', effects: { stats: { influence: 1 }, party: { support: -1 } }, special: 'national-support' },
+  'sostegno-nuovo-governo': { id: 'sostegno-nuovo-governo', title: 'Consultazioni: {majority}', body: 'Dopo il voto le consultazioni lavorano a {majority} attorno a {leader} e contano sul tuo partito. Il tuo consenso è esplicito: entrare nella coalizione (ministri e programma comune), dare solo un sostegno esterno (la fiducia senza ministri) o restare all’opposizione. Se rinvii o non rispondi, il partito resta fuori dalla maggioranza.', defaultChoice: 'valuta', choices: [
+    { id: 'coalizione', label: 'Entra nella coalizione di governo', effects: { stats: { influence: 1 }, party: { support: -1 } }, special: 'national-join' },
+    { id: 'esterno', label: 'Dai solo un sostegno esterno (senza ministri)', effects: { stats: { influence: 0.6 }, party: { support: -0.5 } }, special: 'national-external' },
     { id: 'opposizione', label: 'Resta all’opposizione', effects: { stats: { reputation: 0.5 } }, special: 'national-opposition' },
-    { id: 'valuta', label: 'Decidi con gli altri partiti: segui la direzione', special: 'national-wait' }] },
+    { id: 'valuta', label: 'Rinvia: nessun consenso, segui la direzione degli altri partiti', special: 'national-wait' }] },
   // A bill of the Government, of another group or of a committee comes to the floor of the player's Chamber.
   'voto-aula': { id: 'voto-aula', title: 'Voto in Aula: {lawTitle}', body: '{sponsorLine} {whereWhen} Il tuo gruppo è orientato a votare {lineLabel}; previsione: {forecast}.{confidenceLine} Votare in dissenso ti rende visibile, ma il gruppo e il partito se ne ricordano.', defaultChoice: 'linea', choices: [
     { id: 'linea', label: 'Segui la linea del gruppo ({lineShort})', special: 'law-vote-line' },

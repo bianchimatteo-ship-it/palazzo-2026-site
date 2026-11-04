@@ -170,8 +170,12 @@ const { institutionOps } = await module('src/core/store.js');
   setRole(both, first, true); setRole(both, second, true);
   for (const inst of [first, second]) if (!officeOf(both, inst)) both.dataset.offices.push({ id: `prova-${inst.id}`, title: 'Sindaco', institution: inst.name, level: 'comunale', politicianId: both.career.playerId, startDate: inst.since, endDate: null });
   const afterBoth = institutionOps.lapseConflicts(both, 'deputato', date);
-  assert.deepEqual([stateOf(afterBoth, first), stateOf(afterBoth, second)], ['concluso', 'concluso'], 'Due sindaci: entrambe le fasce decadono.');
-  assert.equal(Boolean(openOf(afterBoth, first)) || Boolean(openOf(afterBoth, second)), false, 'E i due incarichi si chiudono, ciascuno nel suo comune.');
+  // each mandate is judged by the size of its own comune: above 15.000 inhabitants it lapses, up to 15.000 it is compatible with a seat in Parliament and stays
+  const roles = await module('src/core/roles.js');
+  const small = inst => { const mayor = roles.officeFactsDetailOf([{ ...inst, executive: { leader: 'player' }, playerRole: 'sindaco' }])[0]; return Number.isFinite(mayor?.population) && mayor.population <= 15000; };
+  assert.deepEqual([stateOf(afterBoth, first), stateOf(afterBoth, second)], [small(first) ? 'active' : 'concluso', small(second) ? 'active' : 'concluso'], 'Due sindaci: decade solo il mandato di un comune sopra i 15.000 abitanti, ciascuno nel proprio comune.');
+  assert.equal(Boolean(openOf(afterBoth, first)), !(!small(first)), 'L’incarico si chiude solo nel comune il cui mandato decade.');
+  assert.equal(Boolean(openOf(afterBoth, second)), small(second), 'E resta aperto dove il mandato è compatibile.');
   // a council of another kind is not touched by a comune that closes elsewhere; a province falls only when no comune of its province is left
   const closedOne = institutionOps.closeInstitution(structuredClone(base), 'comune', date, 'concluso', { id: first.id });
   assert.equal(stateOf(closedOne, first), 'concluso', 'Chiudere un comune per id chiude solo quello.');

@@ -15,6 +15,7 @@ const C = await module('src/core/career-engine.js');
 const { ELECTION_MODELS } = await module('src/data/simulation/campaign-rules.js');
 const { validateCareerStep } = await module('src/core/career-rules.js');
 const { makeCareerDraft, renderCareerWizard } = await module('src/ui/career-wizard.js');
+const realisticDraft = (...args) => ({ ...makeCareerDraft(...args), gameMode: 'realistica' });   // (the mode is chosen before the six steps)
 const { renderInstitutions } = await module('src/ui/local-mode.js');
 const { renderCampaignPage } = await module('src/ui/campaign-mode.js');
 const { playerRoles, heldOfficesOf } = await module('src/core/roles.js');
@@ -49,7 +50,7 @@ const db = { ...first.db, municipalities: realData.realDatabase.municipalities, 
   // Il wizard: la carta c’è, e si spegne dove la provincia non ha organi.
   const territory = { units: db.territorialUnits, municipalities: db.municipalities, sourceUrl: db.manifest.territorialSource.url, sourceName: db.manifest.territorialSource.name };
   const state = first.store.getState();
-  const render = code => { const municipality = db.municipalities.find(item => item.code === code); const unit = db.territorialUnits.find(item => item.code === municipality.unit); return renderCareerWizard(state, { ...makeCareerDraft('2026-09-24'), step: 3, region: unit.gameRegion, municipality: municipality.name, municipalityCode: code, provinceCode: unit.code, provinceName: unit.name, provinceType: unit.type, initialLevel: 'provinciale' }, [], () => null, db.parliamentaryGroups, [], [], db.politicians, territory); };
+  const render = code => { const municipality = db.municipalities.find(item => item.code === code); const unit = db.territorialUnits.find(item => item.code === municipality.unit); return renderCareerWizard(state, { ...realisticDraft('2026-09-24'), step: 3, region: unit.gameRegion, municipality: municipality.name, municipalityCode: code, provinceCode: unit.code, provinceName: unit.name, provinceType: unit.type, initialLevel: 'provinciale' }, [], () => null, db.parliamentaryGroups, [], [], db.politicians, territory); };
   const siena = render('052032');
   clean(siena, 'wizard Siena');
   assert.ok(/PROVINCIALE/.test(siena) && /data-level="provinciale"/.test(siena) && !/data-level="provinciale"[^>]*disabled/.test(siena), 'A Siena la carta della Provincia è attiva');
@@ -58,7 +59,7 @@ const db = { ...first.db, municipalities: realData.realDatabase.municipalities, 
     assert.ok(/data-level="provinciale"[^>]*disabled/.test(html) && html.includes(PROVINCIAL_LEVEL_PROBLEM.slice(0, 40)), `${label}: la carta della Provincia è spenta e dice perché`);
   }
   // E il passaggio non si supera con un comune senza provincia.
-  const problem = (code, level = 'provinciale') => { const municipality = db.municipalities.find(item => item.code === code); const unit = db.territorialUnits.find(item => item.code === municipality.unit); return validateCareerStep({ ...makeCareerDraft('2026-09-24'), region: unit.gameRegion, municipalityCode: code, provinceCode: unit.code, provinceType: unit.type, initialLevel: level }, 2, [], db.parliamentaryGroups); };
+  const problem = (code, level = 'provinciale') => { const municipality = db.municipalities.find(item => item.code === code); const unit = db.territorialUnits.find(item => item.code === municipality.unit); return validateCareerStep({ ...realisticDraft('2026-09-24'), region: unit.gameRegion, municipalityCode: code, provinceCode: unit.code, provinceType: unit.type, initialLevel: level }, 2, [], db.parliamentaryGroups); };
   assert.deepEqual(problem('052032'), [], 'Siena: il percorso provinciale è valido');
   assert.ok(problem('021008').includes(PROVINCIAL_LEVEL_PROBLEM), 'Bolzano: nessun percorso provinciale');
   assert.deepEqual(problem('021008', 'comunale'), [], 'ma il comune resta una partenza valida');

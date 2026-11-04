@@ -23,6 +23,7 @@ const { renderCareerPage, CAREER_TABS } = await module('src/ui/career-page.js');
 const { renderRetirement, hallView, legacyPicker } = await module('src/ui/hall-view.js');
 const { renderMainMenu } = await module('src/ui/menu.js');
 const { makeCareerDraft, renderCareerWizard } = await module('src/ui/career-wizard.js');
+const realisticDraft = (...args) => ({ ...makeCareerDraft(...args), gameMode: 'realistica' });   // (the mode is chosen before the six steps)
 const { progressionFactors } = await module('src/core/progression-engine.js');
 const { playerRoles } = await module('src/core/roles.js');
 const { checkInvariants } = await module('src/core/invariants.js');
@@ -360,11 +361,11 @@ let entry; let legacyHeir;
   clean(renderCareerPage(s, { tab: 'percorso' }), 'Carriera dell’erede');
   // Il wizard: il selettore dell’eredità c’è solo se la Hall non è vuota.
   const territory = { units: run.db.territorialUnits, municipalities: run.db.municipalities, sourceUrl: run.db.manifest.territorialSource.url, sourceName: run.db.manifest.territorialSource.name };
-  const draft = d => ({ ...makeCareerDraft('2026-09-24', [], store.hallOfFame()), region: 'Toscana', municipality: 'Siena', municipalityCode: '052032', step: 5, ...d });
+  const draft = d => ({ ...realisticDraft('2026-09-24', [], store.hallOfFame()), region: 'Toscana', municipality: 'Siena', municipalityCode: '052032', step: 5, ...d });
   const html = renderCareerWizard(s, draft({ legacyId: strongEntry.id }), [], () => null, run.db.parliamentaryGroups, [], [], run.db.politicians, territory);
   assert.ok(html.includes('name="legacyId"') && html.includes(`value="${strongEntry.id}" selected`) && html.includes('Sono condizioni di partenza in più'), 'Il wizard offre di raccogliere l’eredità e dice cosa dà');
   clean(html, 'wizard con eredità');
-  const empty = renderCareerWizard(s, { ...makeCareerDraft('2026-09-24'), region: 'Toscana', municipality: 'Siena', municipalityCode: '052032', step: 5 }, [], () => null, run.db.parliamentaryGroups, [], [], run.db.politicians, territory);
+  const empty = renderCareerWizard(s, { ...realisticDraft('2026-09-24'), region: 'Toscana', municipality: 'Siena', municipalityCode: '052032', step: 5 }, [], () => null, run.db.parliamentaryGroups, [], [], run.db.politicians, territory);
   assert.ok(!empty.includes('name="legacyId"'), 'Senza carriere concluse non c’è nulla da raccogliere');
   assert.ok(legacyPicker({ hall: [] }) === '');
   const summary = renderCareerWizard(s, draft({ step: 6, legacyId: strongEntry.id }), [], () => null, run.db.parliamentaryGroups, [], [], run.db.politicians, territory);

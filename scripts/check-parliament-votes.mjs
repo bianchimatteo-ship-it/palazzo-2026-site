@@ -89,4 +89,14 @@ assert.equal(after.government.pendingPlayerVote, null, 'La scelta è consumata d
   assert.ok(tight.follow > loose.follow && loose.follow >= 10 && tight.dissent > 0, 'Coesione e disciplina aumentano l’adesione, mai a controllo assoluto.');
 }
 
+// timing: a request that reached the player in this very close is not voted in it; the next close votes it
+{
+  const earlier = date => { const d = new Date(`${date}T12:00:00Z`); d.setUTCDate(d.getUTCDate() - 21); return d.toISOString().slice(0, 10); };
+  const waiting = { ...crisis, government: { ...crisis.government, crisisOpenedAt: earlier(date), confidenceRequestedAt: date } };
+  assert.equal(PE.advanceGovernmentWeek(waiting, date, 0.5).government.status, 'crisis', 'Richiesta della settimana: la votazione non avviene nella stessa chiusura.');
+  const later = { ...waiting, government: { ...waiting.government, confidenceRequestedAt: earlier(date) } };
+  assert.notEqual(PE.advanceGovernmentWeek(later, date, 0.5).government.status, 'crisis', 'Alla chiusura successiva la fiducia si vota.');
+  const voted = PE.advanceGovernmentWeek(later, date, 0.5).government;
+  assert.equal(voted.confidenceRequestedAt, null, 'Dopo il voto la richiesta è chiusa.');
+}
 console.log('Fiducia e direttiva: voto personale, richieste scadute, registrazione dei voti, direttiva con adesioni e dissensi verificati (il consenso del sostegno esterno non è coperto da un test automatico).');

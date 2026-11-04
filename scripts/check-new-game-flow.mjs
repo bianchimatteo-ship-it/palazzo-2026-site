@@ -13,7 +13,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   const click = selector => evaluate(`(() => { const el = document.querySelector(${JSON.stringify(selector)}); if (!el) throw new Error('manca ${selector.replace(/'/g, '')}'); el.click(); return true; })()`);
   const snapshot = () => evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); const s = store.getState(); return JSON.stringify({ id: s.career.id, week: s.game.week.index, date: s.clock.currentDate, revision: s.saveMeta?.revision ?? null, main: localStorage.getItem('palazzo-2026.career.v1')?.length ?? 0, slots: Object.keys(localStorage).filter(key => key.includes('slot')).length }); })()`);
   const onMenu = async () => { await wait(() => has(".menu-shell .menu-new:not([disabled])")); return !(await has('.career-wizard')); };
-  const openWizard = async () => { await click('[data-menu="nuova"]:not([disabled]), [data-action="new-career"]'); await wait(() => has('.career-wizard')); };
+  const openWizard = async () => { await click('[data-menu="nuova"]:not([disabled]), [data-action="new-career"]'); await evaluate(`document.querySelector('[data-wizard-mode="realistica"]')?.click(); true`); await new Promise(resolve => setTimeout(resolve, 500)); await wait(() => has('.career-wizard')); };
   const wizardIsAlone = async label => {
     for (const part of ['.sidebar', '.topbar', '.mobile-tabbar', '.page-wrap']) assert.equal(await has(part), false, `${label}: con la creazione aperta la carriera in corso non è disegnata dietro (${part}).`);
   };
@@ -27,14 +27,14 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   for (let i = 0; i < 20; i++) { await pause(400); const again = await snapshot(); if (again === before) break; before = again; }
 
   // ---------- 1. from the main menu: the creator is a screen of its own; × and «Annulla» go back ----------
-  await click('[data-menu="nuova"]:not([disabled])');
+  await click('[data-menu="nuova"]:not([disabled])'); await evaluate(`document.querySelector('[data-wizard-mode="realistica"]')?.click(); true`); await new Promise(resolve => setTimeout(resolve, 500));
   await wait(() => has('.career-wizard'));
   await wizardIsAlone('dal menu');
   assert.ok(await has('.wizard-cancel'), '«Annulla» c’è al passaggio 1.');
   await click('.wizard-x');
   assert.ok(await onMenu(), '× torna al menu iniziale.');
   assert.equal(await snapshot(), before, 'La carriera non è cambiata dopo ×.');
-  await click('[data-menu="nuova"]:not([disabled])'); await wait(() => has('.career-wizard'));
+  await click('[data-menu="nuova"]:not([disabled])'); await evaluate(`document.querySelector('[data-wizard-mode="realistica"]')?.click(); true`); await new Promise(resolve => setTimeout(resolve, 500)); await wait(() => has('.career-wizard'));
   await click('.wizard-cancel');
   assert.ok(await onMenu(), '«Annulla» torna al menu iniziale.');
   assert.equal(await snapshot(), before, 'La carriera non è cambiata dopo «Annulla».');
@@ -84,7 +84,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
 
   // ---------- 3. a reply of the data after the cancel changes nothing and does not reopen the creator ----------
   await evaluate(`(() => { const original = window.fetch.bind(window); window.__slow = true; window.fetch = (...args) => window.__slow ? new Promise(resolve => setTimeout(() => resolve(original(...args)), 1500)) : original(...args); return true; })()`);
-  await click('[data-menu="nuova"]:not([disabled])');
+  await click('[data-menu="nuova"]:not([disabled])'); await evaluate(`document.querySelector('[data-wizard-mode="realistica"]')?.click(); true`); await new Promise(resolve => setTimeout(resolve, 500));
   await wait(() => has('.career-wizard'));
   await click('.wizard-cancel');
   assert.ok(await onMenu(), '«Annulla» mentre i dati sono in caricamento torna al menu.');
@@ -118,7 +118,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   // ---------- 5. on a phone ----------
   await viewport(375, 740, true);
   await click('[data-action="menu"]'); await onMenu();
-  await click('[data-menu="nuova"]:not([disabled])'); await wait(() => has('.career-wizard'));
+  await click('[data-menu="nuova"]:not([disabled])'); await evaluate(`document.querySelector('[data-wizard-mode="realistica"]')?.click(); true`); await new Promise(resolve => setTimeout(resolve, 500)); await wait(() => has('.career-wizard'));
   await wizardIsAlone('su telefono');
   assert.equal(await visible('.mobile-tabbar'), false, 'Su telefono la barra di navigazione non si vede con la creazione aperta.');
   assert.ok(await visible('.wizard-cancel'), '«Annulla» si vede e si tocca su telefono.');

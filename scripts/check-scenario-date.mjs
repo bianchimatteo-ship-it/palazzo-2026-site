@@ -52,7 +52,7 @@ else await withBrowser(async browser => {
   // the wizard says the same day: no birth date after it
   await goto();
   await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu=nuova]:not([disabled])"))'));
-  await evaluate('document.querySelector("[data-menu=nuova]:not([disabled])").click(), true');
+  await evaluate('document.querySelector("[data-menu=nuova]:not([disabled])").click(), true'); await evaluate(`document.querySelector('[data-wizard-mode="realistica"]')?.click(); true`); await new Promise(resolve => setTimeout(resolve, 500));
   await waitFor(() => evaluate('Boolean(document.querySelector(".career-wizard"))'));
   const max = await waitFor(() => evaluate('document.querySelector("input[name=birthDate]")?.max || ""'));
   assert.equal(max, SCENARIO, `La procedura di creazione non accetta una nascita dopo il ${SCENARIO} (${max}).`);

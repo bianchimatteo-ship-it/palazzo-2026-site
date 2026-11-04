@@ -40,7 +40,7 @@ const helpers = ({ evaluate, waitFor, pause, version }) => {
   // the creator with the real buttons: identity, place, path, a NEW party with an uploaded logo, summary, create
   const createCareerWithLogo = async ({ first, last, partyName, abbreviation, color }) => {
     await closeMenuView(); await wait(() => has('[data-menu="nuova"]:not([disabled])'));
-    await click('[data-menu="nuova"]:not([disabled])'); await wait(() => has('.career-wizard') || has('[data-confirm="ok"]'));
+    await click('[data-menu="nuova"]:not([disabled])'); await evaluate(`document.querySelector('[data-wizard-mode="realistica"]')?.click(); true`); await new Promise(resolve => setTimeout(resolve, 500)); await wait(() => has('.career-wizard') || has('[data-confirm="ok"]'));
     if (await has('[data-confirm="ok"]')) { await click('[data-confirm="ok"]'); await wait(() => has('.career-wizard')); }
     await setField('.career-wizard [name="firstName"]', first); await setField('.career-wizard [name="lastName"]', last);
     await setField('.career-wizard [name="birthDate"]', '1985-04-12', 'change'); await setField('.career-wizard [name="previousProfession"]', 'Insegnante');

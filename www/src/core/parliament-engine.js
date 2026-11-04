@@ -1,8 +1,8 @@
-import { DATA_SOURCES } from '../data/schema.js?v=20261104-2';
-import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, SPENDING_REVIEW, STAGE_WEEKS, areaOf, governmentKindOf } from '../data/simulation/policy-rules.js?v=20261104-2';
-import { BUDGET_SECTORS } from '../data/simulation/project-rules.js?v=20261104-2';
-import { evaluateAdvancement } from './progression-engine.js?v=20261104-2';
-import { groupLine, splitGroupVote } from './vote-engine.js?v=20261104-2';
+import { DATA_SOURCES } from '../data/schema.js?v=20261104-5';
+import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, SPENDING_REVIEW, STAGE_WEEKS, areaOf, governmentKindOf } from '../data/simulation/policy-rules.js?v=20261104-5';
+import { BUDGET_SECTORS } from '../data/simulation/project-rules.js?v=20261104-5';
+import { evaluateAdvancement } from './progression-engine.js?v=20261104-5';
+import { groupLine, splitGroupVote } from './vote-engine.js?v=20261104-5';
 
 export const CHAMBERS = Object.freeze({
   camera: { label: 'Camera dei deputati', shortLabel: 'Camera', source: DATA_SOURCES.REAL },
@@ -919,7 +919,7 @@ export function voteGovernmentConfidence(parliament, currentDate) {
   const margin = Math.min(...votes.map(vote => vote.yes - vote.needed));
   const stability = passed ? clamp(Math.round(government.status === 'crisis' ? 40 + margin / 3 : 45 + margin / 2), 25, 80) : 0;
   const partners = Object.fromEntries([...groups].filter(id => id !== parliament.player?.groupId).map(id => [id, government.partners?.[id] ?? { satisfaction: government.coalitionGroupIds.includes(id) ? 62 : 55, demand: null, source: DATA_SOURCES.SIMULATION }]));
-  let next = { ...parliament, government: { ...government, status, stability, ministers, partners, pendingPlayerVote: null, pendingPlayerVoteFor: null, crisisSeverity: passed ? 0 : government.crisisSeverity, lastCrisisSeverity: government.crisisSeverity, confidenceVotes: [...government.confidenceVotes, { date: currentDate, votes, result: status, source: DATA_SOURCES.SIMULATION }], formedAt: passed ? (government.formedAt ?? currentDate) : government.formedAt ?? null, fallenAt: passed ? null : currentDate } };
+  let next = { ...parliament, government: { ...government, status, stability, ministers, partners, pendingPlayerVote: null, pendingPlayerVoteFor: null, confidenceRequestedAt: null, crisisSeverity: passed ? 0 : government.crisisSeverity, lastCrisisSeverity: government.crisisSeverity, confidenceVotes: [...government.confidenceVotes, { date: currentDate, votes, result: status, source: DATA_SOURCES.SIMULATION }], formedAt: passed ? (government.formedAt ?? currentDate) : government.formedAt ?? null, fallenAt: passed ? null : currentDate } };
   if (inCoalition) next = adjustStanding(next, passed ? 1 : -2);
   const player = playerVote ? { playerChoice: playerVote.choice, playerLine: playerVote.line, decisive: Boolean(playerVote.decisive), decided: Boolean(decided), yes: votes.find(vote => vote.chamber === playerVote.chamber).yes, needed: votes.find(vote => vote.chamber === playerVote.chamber).needed } : {};
   return settleAccordAfterVote(record(next, currentDate, passed ? 'fiducia-ottenuta' : 'fiducia-negata', passed ? 'La maggioranza simulata ha ottenuto la fiducia in entrambe le Camere.' : 'La maggioranza simulata non ha ottenuto la fiducia in entrambe le Camere.', { governmentId: government.id, governmentName: government.name, votes: votes.map(vote => ({ chamber: vote.chamber, yes: vote.yes, needed: vote.needed, passed: vote.passed })), renewed: government.status === 'crisis', ...player, source: DATA_SOURCES.SIMULATION }), passed, currentDate);
@@ -1267,7 +1267,8 @@ export function advanceGovernmentWeek(parliament, currentDate, roll = 0.5, rand 
   const random = rand ?? (() => roll);
   // A Government led by the simulated Prime Minister goes back to the Chambers by itself, two weeks into a crisis.
   const led = next?.government && !playerLeadsGovernment(next) && next.government.formedBy !== 'player';
-  if (led && ['crisis', 'awaiting-confidence'].includes(next.government.status) && weeksBetween(next.government.crisisOpenedAt ?? next.government.proposedAt ?? currentDate, currentDate) >= 2) {
+  // (a request that reached the player in this very close is voted in the next one)
+  if (led && ['crisis', 'awaiting-confidence'].includes(next.government.status) && weeksBetween(next.government.crisisOpenedAt ?? next.government.proposedAt ?? currentDate, currentDate) >= 2 && !(next.government.confidenceRequestedAt && currentDate <= next.government.confidenceRequestedAt)) {
     next = record(next, currentDate, 'fiducia-richiesta', 'Il Presidente del Consiglio (simulato) torna alle Camere e chiede la fiducia.', { governmentId: next.government.id, source: DATA_SOURCES.SIMULATION });
     return voteGovernmentConfidence(next, currentDate);
   }

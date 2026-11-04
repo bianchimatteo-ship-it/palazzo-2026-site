@@ -111,6 +111,7 @@ try {
     const state = await evaluate('JSON.stringify({ url: location.href, wizard: Boolean(document.querySelector(".career-wizard")), menu: Boolean(document.querySelector(".main-menu")), welcome: document.querySelector("#app")?.innerText.slice(0, 500) })');
     throw new Error(`${error.message} · stato dopo il tocco: ${state}`);
   }
+  for (let i = 0; i < 40 && !(await has('.career-wizard [name="firstName"]')); i++) { await evaluate(`document.querySelector('[data-wizard-mode="realistica"]')?.click(); true`); await pause(250); }
   ok(!(await tabbarShown()), 'Con il wizard aperto la barra di navigazione mobile non è visibile.');
   // The wizard opens on who you are (step 1); the territory is the second step.
   const fillIdentity = async () => {
@@ -143,7 +144,7 @@ try {
   await pause(600);
   ok(!(await text()).includes('Prima di iniziare: il tuo account'), 'Avvio locale persistente: dopo il ricaricamento non torna il benvenuto account.');
   ok(!(await has('.data-alert')), 'Ricaricando, le collezioni tornate disponibili non sono più segnalate.');
-  await tap('[data-menu="nuova"]:not([disabled])', { scroll: true });
+  await tap('[data-menu="nuova"]:not([disabled])', { scroll: true }); await evaluate(`document.querySelector('[data-wizard-mode="realistica"]')?.click(); true`); await new Promise(resolve => setTimeout(resolve, 500)); for (let i = 0; i < 40 && !(await has('.career-wizard [name="firstName"]')); i++) { await evaluate(`document.querySelector('[data-wizard-mode="realistica"]')?.click(); true`); await new Promise(r => setTimeout(r, 250)); }
   await waitFor(() => has('.career-wizard'), 10000, 'wizard da “Nuova carriera”');
   ok(!(await text()).includes('Prima di iniziare'), 'Nuova carriera senza passare di nuovo dall’account.');
 
@@ -201,6 +202,7 @@ try {
   ok(!(await tabbarShown()) && await evaluate('!document.querySelector(".mobile-sheet") || getComputedStyle(document.querySelector(".mobile-sheet")).display === "none"'), 'Nuova carriera da telefono: barra e foglio mobile non coprono il wizard.');
   const layering = await evaluate('(() => { const z = selector => { const el = document.querySelector(selector); return el ? Number(getComputedStyle(el).zIndex) || 0 : 0; }; return Number(getComputedStyle(document.querySelector(".wizard-backdrop")).zIndex) > Math.max(z(".mobile-tabbar"), z(".mobile-sheet")); })()');
   ok(layering, 'Il wizard sta sopra barra e foglio mobile anche come livelli (z-index).');
+  for (let i = 0; i < 40 && !(await has('.career-wizard [name="firstName"]')); i++) { await evaluate(`document.querySelector('[data-wizard-mode="realistica"]')?.click(); true`); await pause(250); }
   await tap('.wizard-footer [data-wizard-action="next"]');
   ok((await text()).includes('Inserisci il nome'), 'Il footer del wizard riceve il tocco anche dentro la partita.');
   await tap('.wizard-footer [data-wizard-action="cancel"]');

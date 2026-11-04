@@ -131,6 +131,7 @@ await withBrowser(async browser => {
     for (const step of [1, 2, 3]) {
       await open();
       await waitFor(() => evaluate('Boolean(document.querySelector(".career-wizard"))'));
+      await evaluate(`document.querySelector('[data-wizard-mode="realistica"]')?.click(); true`); await pause(400);
       snap0 = await snapshot();
       if (step >= 2) {
         await setValue('.career-wizard [name="firstName"]', 'Anna'); await setValue('.career-wizard [name="lastName"]', 'Annullo'); await setValue('.career-wizard [name="birthDate"]', '1985-02-11'); await setValue('.career-wizard [name="previousProfession"]', 'Insegnante');
