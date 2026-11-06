@@ -36,7 +36,8 @@ import { advanceStart, hasStart, startBase, startFundsFactor, startInit, startSp
 import { advanceLife, breakPact, cadreAction, cadreDecision, congressActionsOf, congressWork, createLife, honourCadrePromises, honourListPacts, lapseAnswer, lifeOverview, normalizeLife, resolveCongress, respondRequest, startRebuild } from './party-life-engine.js?v=20261106-1';
 import { enterNewParty, foundParty, mergeParties, OP_COSTS, partyOpsAvailability, renameParty, splitOff } from './party-ops-engine.js?v=20261106-1';
 // The decisions of the party's internal life join the situation events; the daily events join the procedural ones.
-const SITUATIONS = { ...SITUATION_EVENTS, ...LIFE_SITUATIONS, ...PRESIDENCY_SITUATIONS, ...START_SITUATIONS, ...OBJECTIVE_SITUATIONS };
+import { RIVAL_SITUATIONS } from '../data/simulation/rival-life-rules.js?v=20261106-1';
+const SITUATIONS = { ...RIVAL_SITUATIONS, ...SITUATION_EVENTS, ...LIFE_SITUATIONS, ...PRESIDENCY_SITUATIONS, ...START_SITUATIONS, ...OBJECTIVE_SITUATIONS };
 const EVENT_POOL = [...CAREER_EVENTS, ...DAILY_EVENTS];
 
 const SIM = 'simulation';
@@ -1208,6 +1209,8 @@ function handleSpecial(ctx, env, special, item, lines, specials, choice = {}) {
     specials.push({ type: 'world-alliance', partyId: item.params.partyId });
   } else if (special === 'world-relation-up' || special === 'world-relation-down') {
     specials.push({ type: 'world-relation', partyId: item.params.partyId, delta: special === 'world-relation-up' ? 10 : -10 });
+  } else if (special.startsWith('rival-')) {
+    specials.push({ type: 'rival-move', rivalKey: item.params.rivalKey, answer: special, area: item.params.area ?? null });
   } else if (special === 'media-repair' || special.startsWith('public-')) {
     specials.push({ type: special });
   } else if (special === 'accept-rank') {

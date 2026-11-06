@@ -112,3 +112,15 @@
 .night-menu-row .ghost-button { min-height: 40px; padding: 0 16px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--panel-2); color: var(--ink); font: 700 14px var(--font-ui); }
 .night-choice { display: block; width: 100%; padding: 12px 14px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--panel-2); color: var(--ink); font: 600 15px/1.35 var(--font-ui); }
 .night-choice:hover, .night-choice:focus-visible { border-color: var(--gold); background: var(--panel-3); }
+/* animations: «Ridotte» and «Disattivate» (data-motion on <html>, settings) and the system preference apply to everything of the night, bars and counters included */
+html[data-motion="reduced"] .night-item.is-new, html[data-motion="reduced"] .night-unit.on, html[data-motion="reduced"] .night-live { animation: none; }
+html[data-motion="reduced"] .night-progress span, html[data-motion="reduced"] .night-bar i { transition: none; }
+html[data-motion="off"] .night-item.is-new, html[data-motion="off"] .night-unit.on, html[data-motion="off"] .night-live, html[data-motion="off"] .night-progress span, html[data-motion="off"] .night-bar i { animation: none !important; transition: none !important; }
+.night-live { animation: night-blink 1.6s ease-in-out infinite; }
+@keyframes night-blink { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .night-live { animation: none; } }
+.night-delta { margin-left: 6px; font: 700 12px var(--font-ui); }
+.night-delta.up { color: var(--good-ink); }
+.night-delta.down { color: var(--critical-ink); }
+.night-gap { margin: 12px 0 0; padding: 8px 12px; border-radius: var(--radius); background: var(--panel-2); border: 1px solid var(--line); font-size: 13px; color: var(--ink-2); }
+.night-onair { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 4px; background: var(--critical); color: #fff; font: 800 11px var(--font-head); letter-spacing: .1em; }

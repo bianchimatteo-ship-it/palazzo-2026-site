@@ -248,7 +248,17 @@
     "cf:deploy:test": "npx --yes wrangler@4 deploy -c wrangler.test.jsonc",
     "check:election-night-engine": "node scripts/check-election-night-engine.mjs",
     "check:election-night-ui": "node scripts/check-election-night-ui.mjs",
-    "check:election-night-language": "node scripts/check-election-night-language.mjs"
+    "check:election-night-language": "node scripts/check-election-night-language.mjs",
+    "check:program": "node scripts/check-program.mjs",
+    "check:program-store": "node scripts/check-program-store.mjs",
+    "check:program-ui": "node scripts/check-program-ui.mjs",
+    "check:cabinet-life": "node scripts/check-cabinet-life.mjs",
+    "check:cabinet-ui": "node scripts/check-cabinet-ui.mjs",
+    "check:diplomacy": "node scripts/check-diplomacy.mjs",
+    "check:scene": "node scripts/check-scene.mjs",
+    "check:scene-ui": "node scripts/check-scene-ui.mjs",
+    "check:challenges": "node scripts/check-challenges.mjs",
+    "check:rival-life": "node scripts/check-rival-life.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",

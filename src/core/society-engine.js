@@ -324,10 +324,12 @@ export function scheduleRegionalEffects(input, { region, indicators = {}, phase 
   return society;
 }
 // Applies a measure: the money goes at once, the effects arrive week after week (and bonuses fade).
-export function applyMeasure(input, design, { title, origin = 'giocatore', date, week, lawId = null } = {}) {
+export function applyMeasure(input, design, { title, origin = 'giocatore', date, week, lawId = null, factor = 1 } = {}) {
   const society = normalizeSociety(copy(input));
   const impact = measureImpact(society, design);
   if (!impact) return { society, summary: null };
+  // How well the minister in charge does the job (cabinet-life-engine.js): the same measure achieves more or less, never more than a tenth either way.
+  if (factor !== 1) { impact.areaDelta = round2((impact.areaDelta ?? 0) * factor); for (const row of Object.values(impact.byIndicator ?? {})) for (const key of Object.keys(row)) row[key] = round2(row[key] * factor); }
   const phase = impact.phaseIn;
   const regionalSpec = AREA_BY_ID[impact.area].regional ?? {};
   for (const [name, gain] of Object.entries(impact.regions)) {
@@ -371,11 +373,11 @@ export function applyMeasure(input, design, { title, origin = 'giocatore', date,
   return { society, summary, impact };
 }
 // Compatibility entry point: a law described only by its area uses a medium investment paid in deficit.
-export function applyLawToSociety(input, { category, compromiseLevel = 0, title, origin = 'giocatore', date, week, policy = null, lawId = null }) {
+export function applyLawToSociety(input, { category, compromiseLevel = 0, title, origin = 'giocatore', date, week, policy = null, lawId = null, factor = 1 }) {
   const design = measureDesign({ ...(policy ?? {}), area: policy?.area ?? category, compromise: policy?.compromise ?? compromiseLevel });
   if (!design) return { society: copy(input), summary: null };
   if (!policy) design.financing = 'deficit';
-  return applyMeasure(input, design, { title, origin, date, week, lawId });
+  return applyMeasure(input, design, { title, origin, date, week, lawId, factor });
 }
 // A decree not converted in time: what has not happened yet is cancelled and part of the rest is undone.
 export function revokeMeasure(input, title, share = 0.6) {

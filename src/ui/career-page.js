@@ -7,6 +7,7 @@ import { careerLevelLabel } from '../data/regions.js?v=20261106-1';
 import { formatDate } from '../core/time.js?v=20261106-1';
 import { startOverview } from '../core/start-engine.js?v=20261106-1';
 import { renderGoals } from './goals-view.js?v=20261106-1';
+import { renderChallenges } from './challenge-view.js?v=20261106-1';
 import { renderRetirement } from './hall-view.js?v=20261106-1';
 import { glyph, officeIcon } from './visuals.js?v=20261106-1';
 import { REPUTATIONS, REPUTATION_IDS } from '../data/simulation/standing-rules.js?v=20261106-1';
@@ -167,7 +168,7 @@ function hero(state, player, overview) {
   });
 }
 
-export function renderCareerPage(state, { tab = null, timelineFilter = 'tutto' } = {}) {
+export function renderCareerPage(state, { tab = null, timelineFilter = 'tutto', challenges = null } = {}) {
   const player = state.dataset?.politicians?.find(item => item.id === state.career?.playerId) ?? null;
   if (!state.game || !player) return empty('Crea il tuo politico per iniziare il percorso.', '<button class="primary-button" data-action="new-career">Crea il tuo politico</button>');
   const overview = careerOverview(state);
@@ -190,7 +191,7 @@ export function renderCareerPage(state, { tab = null, timelineFilter = 'tutto' }
   } else if (active === 'cronologia') {
     body = `<div class="cp-two-col">${card({ kicker: 'CRONOLOGIA · SIMULAZIONE', title: 'La tua carriera, tappa per tappa', body: renderCareerTimeline(state, timelineFilter), className: 'career-timeline-panel' })}${card({ kicker: 'MEMORIA POLITICA', title: 'Quello che non si dimentica', body: renderMemoryPanel(state) })}</div>`;
   } else {
-    body = `${renderGoals(state)}${card({ kicker: 'PERCHÉ È CAMBIATO', title: 'Da dove vengono i tuoi numeri', body: renderWhyPanel(state) })}`;
+    body = `${renderChallenges(challenges)}${renderGoals(state)}${card({ kicker: 'PERCHÉ È CAMBIATO', title: 'Da dove vengono i tuoi numeri', body: renderWhyPanel(state) })}`;
   }
   return `<div class="career-page">${hero(state, player, overview)}${sectionTabs('carriera', CAREER_TABS.map(([id, label]) => [id, label, counts[id]]), active)}<div class="sx-body" role="tabpanel">${body}</div></div>`;
 }

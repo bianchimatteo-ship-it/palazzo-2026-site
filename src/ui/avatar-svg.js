@@ -78,34 +78,50 @@ function glasses(kind) {
   return '';
 }
 
+// The jacket, the collar, the shirt and the tie (the shoulders of the figure).
+const BODY = jacket => `<path d="M12 124C12 104 28 95 49 91L60 104L71 91C92 95 108 104 108 124Z" fill="${jacket}"/>`
+  + `<path d="M49 91L60 104L52 91ZM71 91L60 104L68 91Z" fill="${shade(jacket, -0.35)}"/><path d="M50 90.4L60 104L70 90.4L66 88.6L60 95L54 88.6Z" fill="#f4efe4"/><path d="M60 95L63 98L60 112L57 98Z" fill="#c9a25a"/>`
+  + `<path d="M47 91L56 110" stroke="${shade(jacket, 0.18)}" stroke-width="1" fill="none" opacity=".6"/><path d="M73 91L64 110" stroke="${shade(jacket, 0.18)}" stroke-width="1" fill="none" opacity=".6"/>`;
 // The avatar as an SVG string. `size` in pixels (the drawing scales), `label` is the accessible name (empty: decorative). `focus` crops on the head and the shoulders, without the ring: it is what the
 // small previews of the editor show, so that every choice is seen where it matters.
 export function avatarSvg(input, { size = 96, label = 'Avatar del tuo politico', className = '', focus = false } = {}) {
   const a = normalizeAvatar(input);
+  const uid = `av${Object.values(a).map(value => value.slice(0, 3)).join('')}${size}${focus ? 'f' : ''}`;
+  const a11y = label ? `role="img" aria-label="${esc(label)}"` : 'aria-hidden="true" focusable="false"';
+  const view = focus ? '18 8 84 84' : '0 0 120 120';
+  const parts = avatarParts(a, uid);
+  return `<svg class="avatar-svg ${esc(className)}" xmlns="http://www.w3.org/2000/svg" viewBox="${view}" width="${size}" height="${size}" ${a11y} data-avatar="${esc(Object.values(a).join('.'))}">`
+    + parts.defs
+    + `<g${focus ? '' : ` clip-path="url(#${uid}-c)"`}><rect width="120" height="120" fill="url(#${uid}-b)"/><circle cx="60" cy="52" r="46" fill="#f0cf85" opacity=".09"/>`
+    + parts.figure
+    + `</g>${focus ? '' : '<circle cx="60" cy="60" r="58" fill="none" stroke="#e7c98f" stroke-width="2.4"/>'}</svg>`;
+}
+
+// The figure of the avatar in separate groups, so that a scene can animate them without touching the identity: the whole body (.av-body), the head with the hair and the glasses (.av-head), the
+// eyes (.av-eyes, they blink), the brows (.av-brows) and the mouth (.av-mouth, with an open mouth .av-mouth-open that shows while the character speaks). The drawing is the same as always: the
+// groups only wrap it. `expression` overrides the trait for a moment (a scene changes the face, never who the person is).
+export function avatarParts(input, uid, { expression = null } = {}) {
+  const a = normalizeAvatar(expression ? { ...input, expression } : input);
   const skin = colorOf('skin', a.skin), hair = colorOf('hair', a.hair), jacket = colorOf('jacket', a.jacket), iris = colorOf('eyes', a.eyes);
   const skinShade = shade(skin, -0.16), hairShade = shade(hair, -0.28);
-  const uid = `av${Object.values(a).map(value => value.slice(0, 3)).join('')}${size}${focus ? 'f' : ''}`;
   const back = HAIR_BACK[a.hairstyle] ? (HAIR_BACK[a.hairstyle].startsWith('<') ? HAIR_BACK[a.hairstyle] : `<path d="${HAIR_BACK[a.hairstyle]}"/>`) : '';
   const frontPath = HAIR_FRONT[a.hairstyle];
   const front = frontPath.startsWith('<') ? frontPath : `<path d="${frontPath}" fill-rule="evenodd"${a.hairstyle === 'rasato' ? ' opacity=".6"' : ''}/>`;
   const lips = a.face === 'femminile' ? '#b4574f' : shade(skin, -0.32);
-  const a11y = label ? `role="img" aria-label="${esc(label)}"` : 'aria-hidden="true" focusable="false"';
-  const view = focus ? '18 8 84 84' : '0 0 120 120';
-  return `<svg class="avatar-svg ${esc(className)}" xmlns="http://www.w3.org/2000/svg" viewBox="${view}" width="${size}" height="${size}" ${a11y} data-avatar="${esc(Object.values(a).join('.'))}">`
-    + `<defs><clipPath id="${uid}-c"><circle cx="60" cy="60" r="58"/></clipPath><linearGradient id="${uid}-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a3a52"/><stop offset="1" stop-color="#0f1a2b"/></linearGradient></defs>`
-    + `<g${focus ? '' : ` clip-path="url(#${uid}-c)"`}><rect width="120" height="120" fill="url(#${uid}-b)"/><circle cx="60" cy="52" r="46" fill="#f0cf85" opacity=".09"/>`
-    + `<g fill="${hair}">${back}</g>`
+  const defs = `<defs><clipPath id="${uid}-c"><circle cx="60" cy="60" r="58"/></clipPath><linearGradient id="${uid}-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a3a52"/><stop offset="1" stop-color="#0f1a2b"/></linearGradient></defs>`;
+  const open = `<ellipse class="av-mouth-open" cx="60" cy="71.4" rx="5.4" ry="3.6" fill="#3a1713" stroke="${lips}" stroke-width="1" opacity="0"/>`;
+  const figure = `<g class="av-body"><g fill="${hair}">${back}</g>`
     + `<path d="M53 76h14v22H53z" fill="${skinShade}"/>`
-    + `<path d="M12 124C12 104 28 95 49 91L60 104L71 91C92 95 108 104 108 124Z" fill="${jacket}"/>`
-    + `<path d="M49 91L60 104L52 91ZM71 91L60 104L68 91Z" fill="${shade(jacket, -0.35)}"/><path d="M50 90.4L60 104L70 90.4L66 88.6L60 95L54 88.6Z" fill="#f4efe4"/><path d="M60 95L63 98L60 112L57 98Z" fill="#c9a25a"/>`
-    + `<path d="M47 91L56 110" stroke="${shade(jacket, 0.18)}" stroke-width="1" fill="none" opacity=".6"/><path d="M73 91L64 110" stroke="${shade(jacket, 0.18)}" stroke-width="1" fill="none" opacity=".6"/>`
+    + BODY(jacket)
+    + `</g><g class="av-head">`
     + `<circle cx="38.4" cy="56" r="4.4" fill="${skinShade}"/><circle cx="81.6" cy="56" r="4.4" fill="${skinShade}"/>`
     + `<path d="${HEADS[a.face]}" fill="${skin}"/>`
     + `<path d="M60 56L58.4 62.4Q60 63.4 61.6 62.4Z" fill="${skinShade}" opacity=".8"/>`
-    + mouth(a.face, a.expression, lips, skinShade)
-    + eyes(a.face, hairShade, iris) + brows(a.face, a.expression, hair)
+    + `<g class="av-mouth">${mouth(a.face, a.expression, lips, skinShade)}</g>${open}`
+    + `<g class="av-eyes">${eyes(a.face, hairShade, iris)}</g><g class="av-brows">${brows(a.face, a.expression, hair)}</g>`
     + beard(a.beard, hair) + moustache(a.moustache, hair)
     + `<g fill="${hair}">${front}</g>`
     + glasses(a.glasses)
-    + `</g>${focus ? '' : '<circle cx="60" cy="60" r="58" fill="none" stroke="#e7c98f" stroke-width="2.4"/>'}</svg>`;
+    + `</g>`;
+  return { defs, figure, avatar: a };
 }

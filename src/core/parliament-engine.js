@@ -950,7 +950,7 @@ export function triggerGovernmentCrisis(parliament, currentDate) {
 }
 
 // ---------- the Government as an actor ----------
-function changePartner(parliament, groupId, delta, patch = {}) {
+export function changePartner(parliament, groupId, delta, patch = {}) {
   const government = parliament.government;
   if (!government?.partners?.[groupId]) return parliament;
   const partner = government.partners[groupId];

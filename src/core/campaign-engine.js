@@ -229,7 +229,7 @@ export function mergeRivalRegistry(registry = [], ledger = [], date = null) {
     byKey.set(entry.key, {
       key:entry.key, label:entry.label, partyId:entry.partyId, scope:entry.scope, electionType:entry.electionType,
       personality:old?.personality ?? entry.personality, objectives:entry.objectives, interests:old?.interests ?? entry.interests, loyalty:entry.loyalty, initiative:entry.initiative,
-      relation:entry.relation, meetings:Number(old?.meetings ?? 0) + 1, firstMet:old?.firstMet ?? date, lastMet:date,
+      relation:entry.relation, life:old?.life ?? null, meetings:Number(old?.meetings ?? 0) + 1, firstMet:old?.firstMet ?? date, lastMet:date,
       record:{ beatPlayer:Number(record.beatPlayer ?? 0) + (entry.flags.beatPlayer ? 1 : 0), lostToPlayer:Number(record.lostToPlayer ?? 0) + (entry.flags.lostToPlayer ? 1 : 0), allied:Number(record.allied ?? 0) + (entry.flags.allied ? 1 : 0), betrayed:Number(record.betrayed ?? 0) + (entry.flags.betrayed ? 1 : 0), attacked:Number(record.attacked ?? 0) + (entry.flags.attacked ? 1 : 0), aided:Number(record.aided ?? 0) + (entry.flags.aided ? 1 : 0) },
       last:{ date, campaignId:entry.campaignId, electionType:entry.electionType, share:entry.share, ahead:entry.ahead },
       memory:Object.values(memory).map(row => ({ ...row, weight:round(Math.min(3, row.weight)) })).sort((a, b) => b.weight - a.weight).slice(0, RIVAL_PERSISTENCE.memoryLimit), source:SOURCE
@@ -964,7 +964,7 @@ export function expectedGain(campaign, activity, modifiers = activityModifiers(c
 }
 // The activities of this campaign, with availability, modifiers and expected effect, for the interface.
 export function campaignActivities(campaign, options = {}) {
-  return CAMPAIGN_ACTIVITIES.map(activity => { const modifiers = activityModifiers(campaign, activity, options); return { activity, ...activityAvailability(campaign, activity), modifiers, expected: expectedGain(campaign, activity, modifiers) }; }).filter(item => !item.hidden);
+  return CAMPAIGN_ACTIVITIES.filter(activity => !activity.promiseOnly || options.includePromises).map(activity => { const modifiers = activityModifiers(campaign, activity, options); return { activity, ...activityAvailability(campaign, activity), modifiers, expected: expectedGain(campaign, activity, modifiers) }; }).filter(item => !item.hidden);
 }
 export function setCampaignStrategy(input, strategyId, { topicId = null, targetId = null } = {}) {
   const campaign = copy(input);
@@ -1960,6 +1960,7 @@ export function performCampaignActivity(input,activityId,options={}) {
   if(campaign.status!=='active') throw new Error('Questa campagna è già conclusa.');
   const activity=CAMPAIGN_ACTIVITIES.find(item=>item.id===activityId);
   if(!activity) throw new Error('Attività di campagna non riconosciuta.');
+  if(activity.promiseOnly&&!options.promiseId) throw new Error('Una promessa si presenta dalla pagina del programma.');
   if(campaign.day+activity.days>campaign.totalDays) throw new Error('Non ci sono abbastanza giorni prima del voto per questa attività.');
   const player=campaign.candidates.find(item=>item.isPlayer);
   if(!resourceAffordable(player.resources,activity.cost)) throw new Error('Risorse insufficienti per questa attività.');
@@ -2005,7 +2006,8 @@ export function performCampaignActivity(input,activityId,options={}) {
     const pressurePenalty=Math.max(0,45-pressure)*.1;
     const playerScore=preparedness+reputation+visibility-pressurePenalty+draw(campaign)*5+(topic.id===campaign.nationalContext.salientTopic?1.5:0);
     const rivalScore=(opponent?.campaignStats.debateReadiness??40)*.48+(opponent?.campaignStats.reputation??50)*.15+draw(campaign)*5;
-    const edge=playerScore-rivalScore;
+    // (a debate played as a scene — scene-engine.js — brings its own verdict; the comparison above stays for the quick debate of the activity list)
+    const edge=Number.isFinite(options.sceneEdge)?options.sceneEdge:playerScore-rivalScore;
     if(edge>1.5){playerMove(campaign,.62*factor,area.id);if(opponent&&strategy.id==='contrasto'&&strategy.targetId===opponent.id)playerTransfer(campaign,opponent.id,.25*factor);campaign.candidateStats.reputation=round(clamp(campaign.candidateStats.reputation+.45));report=`Il confronto su “${topic.label}” ha favorito la tua candidatura nello scenario simulato.`;}
     else if(edge< -1.5){playerMove(campaign,-.55,area.id);campaign.candidateStats.reputation=round(clamp(campaign.candidateStats.reputation-.55));report=`Il confronto su “${topic.label}” ha lasciato un’impressione incerta nello scenario simulato.`;}
     else {report=`Il confronto su “${topic.label}” è terminato senza un vantaggio netto nello scenario simulato.`;}

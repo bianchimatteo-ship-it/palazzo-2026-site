@@ -1,0 +1,51 @@
+/* Interactive scenes (scene-view.js): the television studio and its characters, in the tokens of the game. */
+.scene-shell { min-height: 100vh; min-height: 100dvh; padding: 10px 12px calc(24px + env(safe-area-inset-bottom)); background: var(--paper); }
+.scene { max-width: 860px; margin: 0 auto; display: grid; gap: 10px; }
+.scene-head { display: grid; gap: 8px; padding: 12px 14px; border: 1px solid var(--line-strong); border-radius: var(--radius-lg); background: linear-gradient(135deg, var(--night-deep), var(--night)); }
+.scene-head h2 { margin: 2px 0 0; font: 800 clamp(18px, 3vw, 24px)/1.15 var(--font-head); color: var(--ink-hi); }
+.scene-steps { height: 6px; border-radius: 99px; background: var(--panel-3); overflow: hidden; }
+.scene-steps span { display: block; height: 100%; background: var(--accent); transition: width .5s ease; }
+.scene-stage { border: 1px solid var(--line-strong); border-radius: var(--radius-lg); overflow: hidden; background: #0b1713; }
+.sc-svg { display: block; width: 100%; height: auto; max-height: 52vh; }
+.sc-cam { transform-origin: 160px 90px; transition: transform .7s ease; }
+.sc-cam[data-camera="host"] { transform: translate(0, -6px) scale(1.5) translate(-53px, -14px); }
+.sc-cam[data-camera="player"] { transform: translate(0, -6px) scale(1.55) translate(2px, -10px); }
+.sc-cam[data-camera="rival"] { transform: translate(0, -6px) scale(1.55) translate(-112px, -10px); }
+.sc-title { font: 800 11px var(--font-head); letter-spacing: .12em; fill: var(--gold-light); }
+.sc-topic { font: 700 7px var(--font-ui); fill: var(--ink-2); }
+.sc-plate { font: 800 5.5px var(--font-head); fill: var(--accent-ink); letter-spacing: .08em; }
+.sc-figure .av-eyes { animation: sc-blink 4.6s infinite; transform-box: fill-box; transform-origin: center; }
+.sc-figure.is-speaking .av-mouth { opacity: 0; }
+.sc-figure.is-speaking .av-mouth-open { animation: sc-talk .34s steps(2, jump-none) infinite; }
+.sc-figure.is-speaking .av-head { animation: sc-nod 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 90%; }
+.sc-figure.is-speaking .av-body { animation: sc-sway 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+.sc-audience.is-applause .sc-aud { animation: sc-clap .5s ease-in-out infinite; animation-delay: calc(var(--i) * 30ms); }
+.sc-audience.is-boo .sc-aud { opacity: .75; animation: sc-murmur 1.1s ease-in-out infinite; animation-delay: calc(var(--i) * 40ms); }
+@keyframes sc-blink { 0%, 94%, 100% { transform: scaleY(1); } 97% { transform: scaleY(.1); } }
+@keyframes sc-talk { 0% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes sc-nod { 50% { transform: translateY(-1.2px) rotate(.8deg); } }
+@keyframes sc-sway { 50% { transform: translateX(.8px); } }
+@keyframes sc-clap { 50% { transform: translate(var(--x, 0), -3px); } }
+@keyframes sc-murmur { 50% { transform: translateY(1.5px); } }
+html[data-motion="reduced"] .sc-cam, html[data-motion="off"] .sc-cam, html[data-motion="reduced"] .scene-steps span, html[data-motion="off"] .scene-steps span { transition: none; }
+html[data-motion="reduced"] .sc-figure *, html[data-motion="reduced"] .sc-aud, html[data-motion="off"] .sc-figure *, html[data-motion="off"] .sc-aud { animation: none !important; }
+html[data-motion="off"] .sc-figure.is-speaking .av-mouth { opacity: 0; } html[data-motion="off"] .sc-figure.is-speaking .av-mouth-open { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .sc-cam, .scene-steps span { transition: none; } .sc-figure *, .sc-aud { animation: none !important; } .sc-figure.is-speaking .av-mouth { opacity: 0; } .sc-figure.is-speaking .av-mouth-open { opacity: 1; } }
+.scene-meter { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center; font-size: 13px; color: var(--ink-2); }
+.scene-meter b { display: block; height: 8px; border-radius: 99px; background: var(--panel-3); overflow: hidden; } .scene-meter i { display: block; height: 100%; background: linear-gradient(90deg, var(--critical), var(--warning), var(--good)); transition: width .5s ease; }
+.scene-dialogue { display: grid; gap: 6px; padding: 14px 16px; border: 1px solid var(--line-strong); border-radius: var(--radius-lg); background: var(--panel); }
+.scene-speaker { font: 800 12px var(--font-head); letter-spacing: .08em; text-transform: uppercase; color: var(--gold-light); }
+.scene-title { color: var(--ink-3); }
+.scene-dialogue p { margin: 0; font-size: 17px; line-height: 1.5; overflow-wrap: anywhere; }
+.scene-audience-line { color: var(--ink-2); font-style: italic; }
+.scene-why { font-size: 13px !important; color: var(--ink-3); } .scene-why b { color: var(--gold-light); }
+.scene-result { margin: 6px 0 0; padding-left: 18px; line-height: 1.6; }
+.scene-choices { display: grid; gap: 8px; }
+.scene-choice { display: grid; gap: 2px; min-height: 52px; padding: 10px 14px; text-align: left; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--panel-2); color: var(--ink); font: 600 15px var(--font-ui); }
+.scene-choice small { color: var(--ink-3); font-weight: 500; font-size: 12.5px; line-height: 1.35; }
+.scene-choice:hover:not([disabled]), .scene-choice:focus-visible { border-color: var(--gold); background: var(--panel-3); }
+.scene-choice[disabled] { opacity: .5; cursor: not-allowed; }
+.scene-choice.primary-button { text-align: center; justify-items: center; }
+.scene-foot { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; } .scene-foot small { color: var(--ink-3); }
+@media (min-width: 700px) { .scene-choices { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.scene-why ul { margin: 4px 0 0; padding-left: 18px; }

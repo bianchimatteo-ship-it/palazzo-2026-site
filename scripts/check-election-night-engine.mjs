@@ -31,6 +31,8 @@ for (const level of levels) {
   const stages = ['finale', ...(campaign.firstRoundResult ? ['primo-turno'] : [])];
   for (const stage of stages) {
     const rngBefore = JSON.stringify(campaign.rngState);
+    // a candidate who was in the first round and is out of the runoff has lost: he is not «escluso dalla candidatura» (the party never nominated him)
+    if (stage === 'finale' && campaign.firstRoundResult && campaign.candidates?.some(item => item.isPlayer)) assert.notEqual(campaign.result.outcome?.code, 'escluso', `${level}/${kind}: chi esce al primo turno ha perso, non è escluso dalla candidatura.`);
     const first = createNight(campaign, stage);
     assert.ok(first, `${level}/${stage}: la notte si crea.`);
     assert.equal(JSON.stringify(campaign.rngState), rngBefore, `${level}/${stage}: la sequenza casuale della campagna non viene toccata.`);
@@ -56,7 +58,13 @@ for (const level of levels) {
       const proj = projection(night, view);
       assert.ok(Math.abs(proj.rows.reduce((acc, row) => acc + row.percent, 0) - 100) < 0.6, 'La proiezione somma a 100.');
       if (hour === 1) assert.equal(view.counted, 0, 'Alla prima ora lo scrutinio non è iniziato.');
-      if (hour >= 5 && night.snapshot.seatTotal) assert.equal(proj.rows.reduce((acc, row) => acc + row.seats, 0), night.snapshot.seatTotal, 'I seggi stimati sommano ai seggi dell’assemblea.');
+      if (night.snapshot.seatTotal) assert.equal(proj.rows.reduce((acc, row) => acc + row.seats, 0), view.complete ? night.snapshot.seatTotal : night.snapshot.rule.seatCount, `${level}/${stage}: ora ${hour}, i seggi stimati sommano ai seggi dell’assemblea secondo la regola del voto.`);
+      if (view.complete) {
+        // count closed (the last hour, or earlier for a small council): the projection IS the official result, to the last decimal and the last seat
+        for (const row of proj.rows) { const official = view.rows.find(item => item.id === row.id); assert.equal(row.percent, official.percent, `${level}/${stage}: ultima ora, la proiezione di ${row.label} coincide con il risultato ufficiale (${row.percent} / ${official.percent}).`); assert.equal(row.seats, night.snapshot.groups.find(group => group.id === row.id).seats, 'Anche i seggi coincidono.'); }
+        assert.equal(proj.official, true); assert.equal(proj.margin, 0);
+      } else assert.equal(proj.official, false, 'A scrutinio aperto la proiezione è una stima.');
+      if (hour === NIGHT_HOURS) assert.equal(view.complete, true, 'All’ultima ora lo scrutinio è chiuso.');
     }
     const last = views.at(-1);
     assert.equal(last.complete, true);
@@ -76,6 +84,20 @@ for (const level of levels) {
     assert.equal(new Set(ids).size, ids.length, 'Nessuna notizia doppia.');
     for (let hour = 1; hour <= NIGHT_HOURS; hour++) assert.ok(night.feed.some(item => item.hour === hour), `Ora ${hour}: almeno una notizia.`);
     assert.equal(new Set(night.feed.filter(item => item.kind === 'speciale' || item.kind === 'chiusura').map(item => item.tag + item.text)).size, NIGHT_HOURS, 'Le dodici ore hanno contenuti distinti.');
+    // no leakage: the projection of an hour before the last never reads the final seats (they are zeroed in a copy: same percentages, same estimated seats)
+    const blind = { ...night, snapshot: { ...night.snapshot, groups: night.snapshot.groups.map(group => ({ ...group, seats: 0 })) } };
+    for (let hour = 1; hour < NIGHT_HOURS; hour++) if (!nightView(night, hour).complete) assert.equal(JSON.stringify(projection(blind, nightView(blind, hour)).rows), JSON.stringify(projection(night, nightView(night, hour)).rows), `${level}/${stage}: ora ${hour}, la proiezione non usa i seggi finali.`);
+    // the same with the votes of the units still to count: a copy whose uncounted units are emptied gives the same projection (nothing is read from the future)
+    for (const hour of [3, 6, 9]) {
+      const tally = nightTally(night); const counted = nightView(night, hour).counted;
+      const probe = { ...night, snapshot: { ...night.snapshot } };
+      const emptied = { ...tally, units: tally.units.map(unit => unit.order < counted ? unit : { ...unit, votes: unit.votes.map(() => 0), ballots: 0 }) };
+      assert.ok(emptied.units.length === tally.units.length);
+      // (the projection is computed from the view, which only sums counted units: the future units cannot matter)
+      const v = nightView(night, hour); const sumCounted = v.ballots;
+      assert.equal(sumCounted, tally.units.filter(unit => unit.order < counted).reduce((acc, unit) => acc + unit.ballots, 0), 'La vista somma solo le unità contate.');
+      void probe;
+    }
     // determinism: the same night rebuilt, the same feed, the same units; advancing past the end does nothing
     let again = createNight(campaign, stage);
     for (let hour = 2; hour <= NIGHT_HOURS; hour++) again = advanceNight(again);

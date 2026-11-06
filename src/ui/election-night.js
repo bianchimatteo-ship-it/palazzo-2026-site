@@ -8,7 +8,7 @@ import { badge, card, esc, kpi, num, pct, sectionTabs } from './sections-kit.js?
 import { glyph } from './visuals.js?v=20261106-1';
 
 export const NIGHT_TABS = Object.freeze([['diretta', 'Diretta'], ['scrutinio', 'Scrutinio'], ['risultati', 'Risultati'], ['territorio', 'Territorio'], ['mappa', 'Mappa'], ['previsioni', 'Sondaggi e previsioni'], ['parlamento', 'Parlamento'], ['dichiarazioni', 'Dichiarazioni']]);
-const TAG_TONE = Object.freeze({ 'EXIT POLL': 'info', PROIEZIONE: 'info', SONDAGGI: 'info', SCRUTINIO: 'good', RISULTATO: 'good', SORPASSO: 'warning', SORPRESA: 'warning', SOGLIA: 'warning', RIMONTA: 'warning', BALLOTTAGGIO: 'warning', MAGGIORANZA: 'good', DICHIARAZIONE: 'neutral', TU: 'good' });
+const TAG_TONE = Object.freeze({ 'EXIT POLL': 'info', PROIEZIONE: 'info', SONDAGGI: 'info', SCRUTINIO: 'good', RISULTATO: 'good', SORPASSO: 'warning', SORPRESA: 'warning', SOGLIA: 'warning', RIMONTA: 'warning', RIBALTAMENTO: 'warning', BALLOTTAGGIO: 'warning', MAGGIORANZA: 'good', DICHIARAZIONE: 'neutral', TU: 'good' });
 const STAGE_LABEL = Object.freeze({ finale: 'Esito della consultazione', 'primo-turno': 'Primo turno: verso il ballottaggio' });
 const colorOfGroup = (group, snapshot) => {
   if (!group) return '#8d9791';
@@ -18,6 +18,13 @@ const colorOfGroup = (group, snapshot) => {
 };
 const swatch = color => `<i class="night-swatch" style="background:${esc(color)}" aria-hidden="true"></i>`;
 const pcFmt = value => `${num(value, 1)}%`;
+const deltaTag = (row, prev) => {
+  const before = prev?.ballots ? prev.rows.find(item => item.id === row.id) : null;
+  if (!before) return '';
+  const d = Math.round((row.percent - before.percent) * 100) / 100;
+  return Math.abs(d) < 0.05 ? '' : `<span class="night-delta ${d > 0 ? 'up' : 'down'}" aria-label="${esc(d > 0 ? 'in crescita' : 'in calo')}">${d > 0 ? '▲' : '▼'} ${num(Math.abs(d), 1)}</span>`;
+};
+const gapOf = view => { const [a, b] = view.rows.filter(row => row.id !== 'altri'); return a && b ? Math.round((a.percent - b.percent) * 100) / 100 : null; };
 const hourLabel = (night, hour) => { const clock = nightClock(night, hour); return `${clock.label}${clock.dayOffset ? ' (+1)' : ''}`; };
 
 // ---------- the frame ----------
@@ -25,7 +32,7 @@ function header(night, view) {
   const clock = nightClock(night, night.hour);
   const dots = Array.from({ length: NIGHT_HOURS }, (_, index) => { const h = index + 1; return `<li class="${h < night.hour ? 'done' : h === night.hour ? 'current' : ''}" aria-label="${esc(`Ora ${h}: ${hourLabel(night, h)}`)}"><b>${h}</b></li>`; }).join('');
   return `<header class="night-head">
-    <div class="night-brand"><span class="night-live" aria-hidden="true"></span><div><span class="section-kicker">NOTTE ELETTORALE · ${esc(STAGE_LABEL[night.stage] ?? '')}</span><h2>${esc(night.electionLabel)}</h2><small>${esc(night.closeLabel.charAt(0).toUpperCase() + night.closeLabel.slice(1))} · unità di scrutinio simulate</small></div></div>
+    <div class="night-brand"><span class="night-live" aria-hidden="true"></span><div><span class="night-onair">IN DIRETTA</span> <span class="section-kicker">NOTTE ELETTORALE · ${esc(STAGE_LABEL[night.stage] ?? '')}</span><h2>${esc(night.electionLabel)}</h2><small>${esc(night.closeLabel.charAt(0).toUpperCase() + night.closeLabel.slice(1))} · unità di scrutinio simulate</small></div></div>
     <div class="night-clock" role="timer" aria-live="off"><strong>${esc(clock.label)}</strong><small>${esc(`Ora ${night.hour} di ${NIGHT_HOURS}${clock.dayOffset ? ' · giorno dopo' : ''}`)}</small></div>
   </header>
   <ol class="night-hours" aria-label="Le dodici ore dello speciale">${dots}</ol>
@@ -91,20 +98,27 @@ function nightUnitTiles(night, view) {
     return `<i class="night-unit on" style="background:${esc(colorOfGroup(tally.groups[best], night.snapshot))}"></i>`;
   }).join('');
 }
-function resultRows(night, view, proj, { showSeats }) {
+function resultRows(night, view, proj, { showSeats, prev = null }) {
   const max = Math.max(1, ...view.rows.map(row => row.percent));
   return `<ol class="night-rows">${view.rows.filter(row => row.votes > 0 || view.complete).map(row => {
     const color = colorOfGroup(row, night.snapshot);
     const seats = proj.rows.find(item => item.id === row.id)?.seats ?? 0;
-    return `<li class="${row.isPlayer ? 'is-player' : ''}"><span class="night-pos">${row.position}</span><div class="night-row-main"><div class="night-row-top"><strong>${swatch(color)}${esc(row.label)}${row.isPlayer ? ' ' + badge('Tu', 'good') : ''}</strong><span class="night-num">${pcFmt(row.percent)}</span></div>
+    return `<li class="${row.isPlayer ? 'is-player' : ''}"><span class="night-pos">${row.position}</span><div class="night-row-main"><div class="night-row-top"><strong>${swatch(color)}${esc(row.label)}${row.isPlayer ? ' ' + badge('Tu', 'good') : ''}</strong><span class="night-num">${pcFmt(row.percent)}${deltaTag(row, prev)}</span></div>
       <b class="night-bar"><i style="width:${Math.round(row.percent / max * 100)}%;background:${esc(color)}"></i></b>
       <small>${num(row.votes, 0)} voti${showSeats && seats ? ` · ${view.complete ? '' : '~'}${seats} seggi` : ''}</small></div></li>`;
   }).join('')}</ol>`;
 }
+function gapLine(night, view) {
+  const gap = gapOf(view);
+  if (gap === null) return '';
+  const before = night.hour > 1 ? nightView(night, night.hour - 1) : null;
+  const was = before?.ballots ? gapOf(before) : null;
+  return `<p class="night-gap">${esc(was !== null && Math.abs(was - gap) >= 0.05 ? `Distacco tra primo e secondo: ${num(gap, 1)} punti (era ${num(was, 1)} un’ora fa)` : `Distacco tra primo e secondo: ${num(gap, 1)} punti`)}</p>`;
+}
 function tabRisultati(night, view, proj) {
   const { snapshot } = night;
   const officialLabel = view.complete ? 'RISULTATO DEFINITIVO' : 'RISULTATO PARZIALE UFFICIALE (SIMULATO)';
-  return `${card({ kicker: officialLabel, title: view.complete ? 'Classifica finale' : `Classifica sui voti scrutinati (${pct(view.shareCounted * 100, 0)} delle unità)`, body: `${view.ballots ? resultRows(night, view, proj, { showSeats: night.hour >= 5 && snapshot.seatTotal > 0 }) : '<p class="sx-empty">Lo scrutinio non è ancora iniziato: per ora ci sono solo l’affluenza e l’exit poll.</p>'}<p class="night-note">Le percentuali sono calcolate sui voti già scrutinati e cambiano a ogni ora. ${snapshot.seatTotal && !view.complete ? 'I seggi con «~» sono stime.' : ''}</p>` })}`;
+  return `${card({ kicker: officialLabel, title: view.complete ? 'Classifica finale' : `Classifica sui voti scrutinati (${pct(view.shareCounted * 100, 0)} delle unità)`, body: `${view.ballots ? resultRows(night, view, proj, { showSeats: night.hour >= 5 && snapshot.seatTotal > 0, prev: night.hour > 1 ? nightView(night, night.hour - 1) : null }) + gapLine(night, view) : '<p class="sx-empty">Lo scrutinio non è ancora iniziato: per ora ci sono solo l’affluenza e l’exit poll.</p>'}<p class="night-note">Le percentuali sono calcolate sui voti già scrutinati e cambiano a ogni ora. ${snapshot.seatTotal && !view.complete ? 'I seggi con «~» sono stime.' : ''}</p>` })}`;
 }
 function tabTerritorio(night, view, selected) {
   const rows = [...view.areas].sort((a, b) => b.weight - a.weight || a.name.localeCompare(b.name));
