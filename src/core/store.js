@@ -4051,7 +4051,7 @@ export const store = {
     const reputation = playerStat(state, 'reputation');
     const campaign = state.campaign?.status === 'active' ? state.campaign : null;
     const rivals = campaign ? campaign.candidates.filter(item => !item.isPlayer && item.status === 'active').map(item => ({ id: item.id, label: item.label ?? item.name ?? item.id, partyId: item.partyId ?? null, areas: rivalProgram(state.world, item.partyId) })) : [];
-    return { promises, accord: accordPromises(state.parliament), partyAreas: game?.party?.program?.areas ?? [], credibility: programCredibility(game ?? { promises: [] }, { society: state.society, reputation }), suggestion: derivePriorities(game, state.parliament), campaign: campaign ? { id: campaign.id, day: campaign.day, totalDays: campaign.totalDays, rivals } : null };
+    return { known: rivalsView(game), promises, accord: accordPromises(state.parliament), partyAreas: game?.party?.program?.areas ?? [], credibility: programCredibility(game ?? { promises: [] }, { society: state.society, reputation }), suggestion: derivePriorities(game, state.parliament), campaign: campaign ? { id: campaign.id, day: campaign.day, totalDays: campaign.totalDays, rivals } : null };
   },
   makePromise(args = {}) {
     requireCareer();

@@ -85,6 +85,13 @@ function rivalsCard(view) {
   return card({ kicker: 'AVVERSARI', title: 'Cosa promettono gli altri', body: `<ul class="program-rivals">${rows || '<li>Nessun avversario in campo.</li>'}</ul><p class="sx-note">★ = stesso tema di una tua promessa aperta: lo scontro in campagna e nei dibattiti passa da lì.</p>` });
 }
 
+function knownRivalsCard(view) {
+  const known = view.known ?? [];
+  if (!known.length) return '';
+  const rows = known.slice(0, 6).map(item => `<li><strong>${esc(item.label)}</strong><span>${esc(item.personality ?? '')}${item.life?.moves ? ` · ${item.life.moves} ${item.life.moves === 1 ? 'mossa' : 'mosse'} risposte` : ''}</span>${badge(item.mood.hostility > item.mood.warmth ? 'Ostile' : item.mood.warmth > item.mood.hostility ? 'Cordiale' : 'Neutrale', item.mood.hostility > item.mood.warmth ? 'bad' : item.mood.warmth > item.mood.hostility ? 'good' : 'neutral')}</li>`).join('');
+  return card({ kicker: 'RIVALI CHE CONOSCI', title: 'Chi ti ricorda', body: `<ul class="program-rivals">${rows}</ul><p class="sx-note">Gli avversari delle campagne passate non spariscono: agiscono secondo il loro carattere e ricordano come hai risposto (le loro mosse arrivano in agenda).</p>` });
+}
+
 export function renderProgram(state, view) {
   if (!state.game) return empty('Crea prima un politico per costruire un programma.', '<button class="primary-button" data-action="new-career">Crea il politico</button>');
   const week = state.game.week.index;
@@ -98,7 +105,7 @@ export function renderProgram(state, view) {
     ${credibilityCard(view)}
     <div class="sx-grid two">${partyCard(view, premier)}${makeForm(view, { premier, hasAccord })}</div>
     ${card({ kicker: 'IN CORSO', title: `Le tue promesse (${live.length})`, body: live.length ? `<div class="program-list">${live.map(item => promiseCard(item, { campaign: view.campaign })).join('')}</div>` : '<p class="sx-empty">Nessuna promessa aperta. Ogni impegno è una responsabilità: sceglili con cura.</p>' })}
-    ${accordCard(view)}${rivalsCard(view)}${compare}
+    ${accordCard(view)}${rivalsCard(view)}${knownRivalsCard(view)}${compare}
     ${premier && view.suggestion.length ? card({ kicker: 'GOVERNO', title: 'Il programma di governo parte dalle tue promesse', body: `<p>Priorità suggerite dal tuo programma: ${view.suggestion.map(id => esc(AREA_BY_ID[id]?.label ?? id)).join(' · ')}.</p><p class="sx-note">Quando fissi il programma del Governo (Parlamento › Governo) senza scegliere le priorità, il gioco usa queste; ogni priorità diventa anche una promessa di governo.</p>` }) : ''}
   </div>`;
 }
