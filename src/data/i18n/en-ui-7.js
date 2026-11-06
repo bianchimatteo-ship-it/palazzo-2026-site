@@ -2973,4 +2973,7 @@ export const PHRASES = [
   ["Il dibattito televisivo si fa durante una campagna.", "The television debate takes place during a campaign."],
   ["Non ci sono avversari con cui confrontarsi.", "There are no opponents to face."],
   ["Una scena alla volta.", "One scene at a time."],
+  ["Consiglio dei ministri: si discute di {}.", "Council of Ministers: {1} is under discussion."],
+  ["Il Consiglio dei ministri respinge la proposta su {}.", "The Council of Ministers rejects the proposal on {1}."],
+  ["Scontro in Consiglio fra i ministri {} e {} su {}.", "Clash in the Council between the ministers of {1} and {2} over {3}."],
 ];
