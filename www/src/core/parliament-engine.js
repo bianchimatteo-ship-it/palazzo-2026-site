@@ -1,8 +1,8 @@
-import { DATA_SOURCES } from '../data/schema.js?v=20261106-1';
-import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, SPENDING_REVIEW, STAGE_WEEKS, areaOf, governmentKindOf } from '../data/simulation/policy-rules.js?v=20261106-1';
-import { BUDGET_SECTORS } from '../data/simulation/project-rules.js?v=20261106-1';
-import { evaluateAdvancement } from './progression-engine.js?v=20261106-1';
-import { groupLine, splitGroupVote } from './vote-engine.js?v=20261106-1';
+import { DATA_SOURCES } from '../data/schema.js?v=20261106-2';
+import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, SPENDING_REVIEW, STAGE_WEEKS, areaOf, governmentKindOf } from '../data/simulation/policy-rules.js?v=20261106-2';
+import { BUDGET_SECTORS } from '../data/simulation/project-rules.js?v=20261106-2';
+import { evaluateAdvancement } from './progression-engine.js?v=20261106-2';
+import { groupLine, splitGroupVote } from './vote-engine.js?v=20261106-2';
 
 export const CHAMBERS = Object.freeze({
   camera: { label: 'Camera dei deputati', shortLabel: 'Camera', source: DATA_SOURCES.REAL },
@@ -950,7 +950,7 @@ export function triggerGovernmentCrisis(parliament, currentDate) {
 }
 
 // ---------- the Government as an actor ----------
-function changePartner(parliament, groupId, delta, patch = {}) {
+export function changePartner(parliament, groupId, delta, patch = {}) {
   const government = parliament.government;
   if (!government?.partners?.[groupId]) return parliament;
   const partner = government.partners[groupId];

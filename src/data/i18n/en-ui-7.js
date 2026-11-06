@@ -3275,4 +3275,13 @@ export const PHRASES = [
   ["vale #% (concessioni)", "worth #% (concessions)"],
   ["Firmato {} con {}. Va ratificato.", "Signed {1} with {2}. Needs ratification."],
   ["Firmato {} con {} (con # concessioni: vale #%). Va ratificato.", "Signed {1} with {2} (with {3} concessions: worth {4}%). Needs ratification."],
+  ["Camera: bocciatura per “{}” ({}: # favorevoli, soglia #). {} ha la fiducia di # gruppi; la stabilità è a #/# e il margine nella Camera più stretta è di…", "Chamber: “{1}” rejected ({2}: {3} in favour, threshold {4}). {5} has the confidence of {6} groups; stability is at {7}/{8} and the margin in the narrower Chamber is…"],
+  ["Senato: bocciatura per “{}” ({}: # favorevoli, soglia #). {} ha la fiducia di # gruppi; la stabilità è a #/# e il margine nella Camera più stretta è di…", "Senate: “{1}” rejected ({2}: {3} in favour, threshold {4}). {5} has the confidence of {6} groups; stability is at {7}/{8} and the margin in the narrower Chamber is…"],
+  ["Camera: bocciatura per “{}” ({}: # favorevoli, soglia #). {} ha la fiducia di # gruppi; la stabilità è a #/# e il margine nella Camera più stretta è di +# seggi.", "Chamber: “{1}” rejected ({2}: {3} in favour, threshold {4}). {5} has the confidence of {6} groups; stability is at {7}/{8} and the margin in the narrower Chamber is +{9} seats."],
+  ["Camera: bocciatura per “{}” ({}: # favorevoli, soglia #). {} ha la fiducia di # gruppi; la stabilità è a #/# e il margine nella Camera più stretta è di -# seggi.", "Chamber: “{1}” rejected ({2}: {3} in favour, threshold {4}). {5} has the confidence of {6} groups; stability is at {7}/{8} and the margin in the narrower Chamber is -{9} seats."],
+  ["Senato: bocciatura per “{}” ({}: # favorevoli, soglia #). {} ha la fiducia di # gruppi; la stabilità è a #/# e il margine nella Camera più stretta è di +# seggi.", "Senate: “{1}” rejected ({2}: {3} in favour, threshold {4}). {5} has the confidence of {6} groups; stability is at {7}/{8} and the margin in the narrower Chamber is +{9} seats."],
+  ["Senato: bocciatura per “{}” ({}: # favorevoli, soglia #). {} ha la fiducia di # gruppi; la stabilità è a #/# e il margine nella Camera più stretta è di -# seggi.", "Senate: “{1}” rejected ({2}: {3} in favour, threshold {4}). {5} has the confidence of {6} groups; stability is at {7}/{8} and the margin in the narrower Chamber is -{9} seats."],
+  ["in carica all’inizio", "in office at the start"],
+  ["Governo in carica all’inizio", "Government in office at the start"],
+  ["{}: nuovo obiettivo", "{1}: new objective"],
 ];

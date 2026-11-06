@@ -6,8 +6,8 @@
 // made, the answers are judged on competence, charisma, preparation and political coherence (the credibility of the programme), the rivals attack where the player is weak and answer as their
 // personality and their programme say. Nothing is drawn from the random sequence of the campaign: the little variation of a beat comes from a hash of the scene's seed, so a scene resumed or
 // replayed from the same choices is the same scene. The player's avatar is always the one chosen at the start of the career: the scene may change the face for a moment (expression), never the person.
-import { defaultAvatarFor, normalizeAvatar } from './avatar.js?v=20261106-1';
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261106-1';
+import { defaultAvatarFor, normalizeAvatar } from './avatar.js?v=20261106-2';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261106-2';
 
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 const hashOf = text => { let h = 2166136261 >>> 0; for (let i = 0; i < String(text).length; i++) { h ^= String(text).charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h; };

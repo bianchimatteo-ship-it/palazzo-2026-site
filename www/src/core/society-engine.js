@@ -1,10 +1,10 @@
-import { uniqueId } from './ids.js?v=20261106-1';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261106-1';
-import { INDICATORS, ISSUE_THRESHOLD, ISSUE_TOPICS, MEDIA_OUTLETS, REAL_TOPIC_AREAS, SCENARIO_EXECUTIVE, SEGMENTS } from '../data/simulation/society-rules.js?v=20261106-1';
-import { SOCIAL_TABLE, SPENDING_REVIEW } from '../data/simulation/policy-rules.js?v=20261106-1';
-import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, EU_PROCEDURE_WEEKS, FINANCING, INSTRUMENT_KINDS, INTENSITY, MACRO_AREAS, POLICY_AREAS, SPREAD_BASE, TERRITORIAL_TARGETS, areaOf, macroAreaOf } from '../data/simulation/policy-rules.js?v=20261106-1';
-import { BUDGET_SECTORS, FISCAL_LEVERS } from '../data/simulation/project-rules.js?v=20261106-1';
-import { euWeek, openCallWeek, projectsOf, projectsWeek } from './project-engine.js?v=20261106-1';
+import { uniqueId } from './ids.js?v=20261106-2';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261106-2';
+import { INDICATORS, ISSUE_THRESHOLD, ISSUE_TOPICS, MEDIA_OUTLETS, REAL_TOPIC_AREAS, SCENARIO_EXECUTIVE, SEGMENTS } from '../data/simulation/society-rules.js?v=20261106-2';
+import { SOCIAL_TABLE, SPENDING_REVIEW } from '../data/simulation/policy-rules.js?v=20261106-2';
+import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, EU_PROCEDURE_WEEKS, FINANCING, INSTRUMENT_KINDS, INTENSITY, MACRO_AREAS, POLICY_AREAS, SPREAD_BASE, TERRITORIAL_TARGETS, areaOf, macroAreaOf } from '../data/simulation/policy-rules.js?v=20261106-2';
+import { BUDGET_SECTORS, FISCAL_LEVERS } from '../data/simulation/project-rules.js?v=20261106-2';
+import { euWeek, openCallWeek, projectsOf, projectsWeek } from './project-engine.js?v=20261106-2';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -324,10 +324,12 @@ export function scheduleRegionalEffects(input, { region, indicators = {}, phase 
   return society;
 }
 // Applies a measure: the money goes at once, the effects arrive week after week (and bonuses fade).
-export function applyMeasure(input, design, { title, origin = 'giocatore', date, week, lawId = null } = {}) {
+export function applyMeasure(input, design, { title, origin = 'giocatore', date, week, lawId = null, factor = 1 } = {}) {
   const society = normalizeSociety(copy(input));
   const impact = measureImpact(society, design);
   if (!impact) return { society, summary: null };
+  // How well the minister in charge does the job (cabinet-life-engine.js): the same measure achieves more or less, never more than a tenth either way.
+  if (factor !== 1) { impact.areaDelta = round2((impact.areaDelta ?? 0) * factor); for (const row of Object.values(impact.byIndicator ?? {})) for (const key of Object.keys(row)) row[key] = round2(row[key] * factor); }
   const phase = impact.phaseIn;
   const regionalSpec = AREA_BY_ID[impact.area].regional ?? {};
   for (const [name, gain] of Object.entries(impact.regions)) {
@@ -371,11 +373,11 @@ export function applyMeasure(input, design, { title, origin = 'giocatore', date,
   return { society, summary, impact };
 }
 // Compatibility entry point: a law described only by its area uses a medium investment paid in deficit.
-export function applyLawToSociety(input, { category, compromiseLevel = 0, title, origin = 'giocatore', date, week, policy = null, lawId = null }) {
+export function applyLawToSociety(input, { category, compromiseLevel = 0, title, origin = 'giocatore', date, week, policy = null, lawId = null, factor = 1 }) {
   const design = measureDesign({ ...(policy ?? {}), area: policy?.area ?? category, compromise: policy?.compromise ?? compromiseLevel });
   if (!design) return { society: copy(input), summary: null };
   if (!policy) design.financing = 'deficit';
-  return applyMeasure(input, design, { title, origin, date, week, lawId });
+  return applyMeasure(input, design, { title, origin, date, week, lawId, factor });
 }
 // A decree not converted in time: what has not happened yet is cancelled and part of the rest is undone.
 export function revokeMeasure(input, title, share = 0.6) {

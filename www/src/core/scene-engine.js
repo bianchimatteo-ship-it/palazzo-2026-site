@@ -1,0 +1,205 @@
+// The engine of the interactive scenes: a scene is a short sequence of beats (a character speaks, with a face, a gesture and a shot of the camera) and of choices of the player, in a setting, with a
+// cast. It is built to be reused (press conferences, cabinet meetings, Parliament, rallies, the Quirinale, diplomatic meetings): what is specific to a kind of scene is the builder of its beats; what
+// is common is here — the cast with its avatars, the history of the choices, the saving (the whole scene is plain data in the state: it resumes exactly where it was), the audience, the scoring.
+//
+// The first scene is the television debate (kind 'dibattito-tv'). Its beats follow the situation of the game: the questions come from the topics of the campaign and from the promises the player has
+// made, the answers are judged on competence, charisma, preparation and political coherence (the credibility of the programme), the rivals attack where the player is weak and answer as their
+// personality and their programme say. Nothing is drawn from the random sequence of the campaign: the little variation of a beat comes from a hash of the scene's seed, so a scene resumed or
+// replayed from the same choices is the same scene. The player's avatar is always the one chosen at the start of the career: the scene may change the face for a moment (expression), never the person.
+import { defaultAvatarFor, normalizeAvatar } from './avatar.js?v=20261106-2';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261106-2';
+
+const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
+const hashOf = text => { let h = 2166136261 >>> 0; for (let i = 0; i < String(text).length; i++) { h ^= String(text).charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h; };
+const unit = text => hashOf(text) / 4294967296;
+const round1 = value => Math.round(value * 10) / 10;
+
+export const SCENE_STATUS = Object.freeze({ active: 'in corso', done: 'conclusa', declined: 'rifiutata', abandoned: 'abbandonata' });
+export const STYLES = Object.freeze({
+  dati: { label: 'Con i dati', detail: 'Cifre, fatti, competenza: convince chi ragiona, annoia chi ascolta con il cuore.' },
+  empatia: { label: 'Con empatia', detail: 'Parli alle persone e ai loro problemi: carisma, meno concretezza.' },
+  programma: { label: 'Dal programma', detail: 'Citi le tue promesse: vale quanto sei credibile e quanto sei coerente.' },
+  attacco: { label: 'All’attacco', detail: 'Colpisci l’avversario: premia se è debole, punisce se non sei preparato.' }
+});
+export const REPLIES = Object.freeze({ fatti: { label: 'Rispondi con i fatti', detail: 'Smonti l’accusa con i numeri: serve preparazione.' }, calma: { label: 'Resta calmo', detail: 'Non raccogli la provocazione: sobrio, ma sembri sulla difensiva.' }, contrattacco: { label: 'Contrattacca', detail: 'Rispondi colpo su colpo: il pubblico si accende, con rischi.' }, ignora: { label: 'Ignora l’attacco', detail: 'Cambi argomento: lascia il segno all’avversario.' } });
+export const ASKS = Object.freeze({ conti: { label: 'Chiedi come finanzia le promesse', detail: 'Mette alla prova il suo programma.' }, coerenza: { label: 'Chiedi conto delle contraddizioni', detail: 'Colpisce se ha cambiato idea.' }, passato: { label: 'Ricordagli il suo passato', detail: 'Rischioso: se ricordi male, si ritorce.' }, salta: { label: 'Non fare domande', detail: 'Lasci il tempo al conduttore.' } });
+export const CLOSINGS = Object.freeze({ sobrio: { label: 'Chiusura sobria', detail: 'Ringrazi e riassumi con misura.' }, appello: { label: 'Appello agli elettori', detail: 'Parli al Paese: carisma e visione.' }, sfida: { label: 'Sfida finale', detail: 'Ti rivolgi all’avversario: forte, ma divisivo.' } });
+const BEATS = Object.freeze(['invito', 'preparazione', 'ingresso', 'q1', 'r1', 'domanda', 'risposta-rivale', 'q2', 'r2', 'attacco', 'r3', 'chiusura', 'esito']);
+
+// ---------- the cast ----------
+// The avatar of a character that is not the player: always the same for the same character (from its id), with the traits that make the rival recognisable. The role may dress it (the host in
+// anthracite). The player's one is never made here: it is the one saved in the career.
+export function characterAvatar(character) {
+  if (character.avatar) return normalizeAvatar(character.avatar);
+  const base = defaultAvatarFor(character.id);
+  const h = hashOf(`${character.id}|aspetto`);
+  const out = { ...base, beard: base.face === 'maschile' && h % 5 === 0 ? 'corta' : base.beard, glasses: h % 4 === 0 ? 'tondi' : h % 7 === 0 ? 'rettangolari' : base.glasses, expression: character.role === 'rivale' && h % 3 === 0 ? 'determinata' : base.expression };
+  if (character.role === 'conduttore') out.jacket = 'antracite';
+  return normalizeAvatar(out);
+}
+
+export function createDebateScene({ id, seed, player, playerAvatar, rival, host, topic, promises = [], credibility = 60, prep = 0, rivalProgram = [], rivalReadiness = 50, rivalAggression = 50, crisis = false, campaignId = null, date = null, salientTopic = null, secondTopic = null }) {
+  const cast = [
+    { id: 'giocatore', role: 'giocatore', name: player.name, avatar: normalizeAvatar(playerAvatar), position: 'sinistra' },
+    { id: rival.id, role: 'rivale', name: rival.name, avatar: characterAvatar({ id: rival.id, role: 'rivale' }), position: 'destra', partyId: rival.partyId ?? null },
+    { id: host.id, role: 'conduttore', name: host.name, avatar: characterAvatar({ id: host.id, role: 'conduttore' }), position: 'centro' }
+  ];
+  const topicPromises = promises.filter(item => item.topic === topic.id);
+  return {
+    id, kind: 'dibattito-tv', setting: 'studio-televisivo', seed, campaignId, date, status: 'active', nodeId: 'invito', cast,
+    topic: { id: topic.id, label: topic.label }, secondTopic: secondTopic ? { id: secondTopic.id, label: secondTopic.label } : null, salientTopic,
+    context: { credibility, prep, rivalProgram, rivalReadiness, rivalAggression, crisis, promises: promises.map(item => ({ id: item.id, label: item.label, topic: item.topic, status: item.status, intervention: item.intervention, cost: item.cost })), topicPromises: topicPromises.map(item => item.id) },
+    audience: { mood: 50, history: [] }, scores: [], history: [], prepFocus: null, outcome: null
+  };
+}
+
+const cast = (scene, role) => scene.cast.find(item => item.role === role);
+const stats = scene => scene.context.stats ?? { competence: 50, charisma: 50 };
+export const withStats = (scene, { competence, charisma }) => ({ ...scene, context: { ...scene.context, stats: { competence, charisma } } });
+
+// ---------- scoring ----------
+// How an answer of a style does, 0..100, from what the player is and has done. Every term can be explained to the player in the reaction of the beat.
+function judge(scene, style, { topicId, nodeId }) {
+  const { competence, charisma } = stats(scene);
+  const ctx = scene.context;
+  const hasPromise = ctx.promises.some(item => item.topic === topicId && !['non-mantenuta'].includes(item.status));
+  const brokenOnTopic = ctx.promises.some(item => item.topic === topicId && item.status === 'non-mantenuta');
+  const prepared = scene.prepFocus === style || (scene.prepFocus === 'programma' && style === 'programma') ? 1 : 0;
+  const prep = clamp(ctx.prep / 24, 0, 1);
+  const noise = (unit(`${scene.seed}|${nodeId}|${style}`) - 0.5) * 10;
+  let score = 50, why = [];
+  if (style === 'dati') { score = 38 + competence * 0.4 + prep * 14 + prepared * 8; why.push(`competenza ${Math.round(competence)}`, prep ? 'preparazione' : 'poca preparazione'); }
+  else if (style === 'empatia') { score = 36 + charisma * 0.45 + prepared * 6 + (scene.audience.mood - 50) * 0.15; why.push(`carisma ${Math.round(charisma)}`); }
+  else if (style === 'programma') {
+    score = 30 + ctx.credibility * 0.38 + (hasPromise ? 14 : -14) + prepared * 8 - (brokenOnTopic ? 14 : 0);
+    why.push(`credibilità ${Math.round(ctx.credibility)}`, hasPromise ? 'una promessa sul tema' : 'nessuna promessa concreta sul tema'); if (brokenOnTopic) why.push('una promessa tradita sullo stesso tema');
+  } else { score = 34 + (100 - ctx.rivalReadiness) * 0.28 + competence * 0.16 + prepared * 6 - (ctx.crisis ? 10 : 0); why.push(ctx.rivalReadiness < 50 ? 'un avversario impreparato' : 'un avversario preparato'); }
+  if (topicId === scene.salientTopic) score += 3;
+  return { score: Math.round(clamp(score + noise, 5, 95)), why };
+}
+const reactionLines = (scene, style, result, topic) => {
+  const rival = cast(scene, 'rivale').name, host = cast(scene, 'conduttore').name;
+  const good = result.score >= 62, bad = result.score < 45;
+  return {
+    host: good ? `${host}: «Una risposta chiara su ${topic}.»` : bad ? `${host}: «Non ha risposto del tutto alla domanda: la riformulo.»` : `${host}: «Una risposta che divide.»`,
+    rival: style === 'attacco' ? (good ? `${rival} incassa il colpo e prende appunti.` : `${rival}: «Parlare male degli altri non è un programma.»`) : good ? `${rival} annuisce, poi cerca un punto debole.` : `${rival}: «Parole, ma dove sono i fatti?»`,
+    audience: good ? 'Il pubblico applaude.' : bad ? 'Il pubblico rumoreggia.' : 'Il pubblico è diviso.'
+  };
+};
+
+// ---------- the current beat ----------
+// The node to show now: who speaks, what, with which face/gesture/shot, and the choices. A pure function of the scene.
+export function sceneNode(scene) {
+  const rival = cast(scene, 'rivale'), host = cast(scene, 'conduttore'), me = cast(scene, 'giocatore');
+  const topic = scene.topic, ctx = scene.context;
+  const last = scene.history.at(-1) ?? null;
+  const base = { id: scene.nodeId, setting: scene.setting };
+  switch (scene.nodeId) {
+    case 'invito': return { ...base, speaker: host.id, expression: 'sorridente', gesture: 'accoglie', camera: 'host', text: `Sei invitato a «Faccia a faccia», il dibattito televisivo sul tema «${topic.label}»: parteciperà ${rival.name}. Accetti l’invito?`, choices: [['accetta', 'Accetta l’invito'], ['rifiuta', 'Rifiuta (la sedia vuota farà rumore)']] };
+    case 'preparazione': return { ...base, speaker: me.id, expression: 'determinata', gesture: 'pensa', camera: 'player', text: `Hai un’ora prima di andare in onda. Su cosa ti prepari? ${ctx.topicPromises.length ? 'Hai promesse sul tema: puoi difenderle.' : 'Non hai promesse su questo tema: sarà difficile citare qualcosa di concreto.'}`, choices: [['programma', 'Ripassa il tuo programma', !ctx.topicPromises.length], ['dati', 'Studia dati e cifre'], ['empatia', 'Prepara storie e volti'], ['attacco', 'Studia i punti deboli dell’avversario']] };
+    case 'ingresso': return { ...base, speaker: host.id, expression: 'serena', gesture: 'presenta', camera: 'wide', text: `Buonasera. Stasera a confronto ${me.name} e ${rival.name}${ctx.rivalProgram.length ? `, che nel suo programma mette ${ctx.rivalProgram.slice(0, 2).map(id => AREA_BY_ID[id]?.label ?? id).join(' e ')}` : ''}. Si comincia.`, choices: [['continua', 'Inizia il dibattito']] };
+    case 'q1': return { ...base, speaker: host.id, expression: 'serena', gesture: 'domanda', camera: 'host', text: `Prima domanda, a ${me.name}: ${topic.label} è la priorità del momento. Che cosa propone concretamente?`, choices: Object.entries(STYLES).map(([id, spec]) => [id, spec.label, false, spec.detail]) };
+    case 'r1': return reactionNode(scene, base, 'Reazioni alla prima risposta');
+    case 'domanda': return { ...base, speaker: me.id, expression: 'determinata', gesture: 'indica', camera: 'player', text: `Hai la possibilità di rivolgere una domanda a ${rival.name}.`, choices: Object.entries(ASKS).map(([id, spec]) => [id, spec.label, false, spec.detail]) };
+    case 'risposta-rivale': return reactionNode(scene, base, `${rival.name} risponde`);
+    case 'q2': return { ...base, speaker: host.id, expression: 'serena', gesture: 'domanda', camera: 'host', text: `Seconda domanda, a ${me.name}: ${scene.secondTopic ? `parliamo di ${scene.secondTopic.label}` : 'le persone vogliono sapere come pagherà tutto questo'}. Come risponde?`, choices: Object.entries(STYLES).map(([id, spec]) => [id, spec.label, false, spec.detail]) };
+    case 'r2': return reactionNode(scene, base, 'Reazioni alla seconda risposta');
+    case 'attacco': return { ...base, speaker: rival.id, expression: 'determinata', gesture: 'attacca', camera: 'rival', text: scene.attackLine ?? `${rival.name}: «Lei promette molto, ma gli italiani vogliono i fatti.»`, choices: Object.entries(REPLIES).map(([id, spec]) => [id, spec.label, false, spec.detail]) };
+    case 'r3': return reactionNode(scene, base, 'Reazioni alla replica');
+    case 'chiusura': return { ...base, speaker: host.id, expression: 'sorridente', gesture: 'accoglie', camera: 'host', text: 'Siamo alle battute finali: a ciascuno trenta secondi per le dichiarazioni conclusive.', choices: Object.entries(CLOSINGS).map(([id, spec]) => [id, spec.label, false, spec.detail]) };
+    default: return { ...base, speaker: host.id, expression: 'serena', gesture: 'saluta', camera: 'wide', text: scene.outcome?.summary ?? 'Il dibattito è concluso.', choices: [['fine', 'Esci dallo studio']], final: true };
+  }
+}
+function reactionNode(scene, base, title) {
+  const last = scene.history.at(-1);
+  const lines = last?.reactions ?? {};
+  const speaker = lines.rival && /^.+: «/.test(lines.rival) ? cast(scene, 'rivale').id : cast(scene, 'conduttore').id;
+  return { ...base, title, speaker, expression: last && last.score >= 62 ? 'serena' : 'determinata', gesture: 'ascolta', camera: speaker === cast(scene, 'rivale').id ? 'rival' : 'host', text: lines.host ?? '', lines: [lines.rival].filter(Boolean), audience: lines.audience, why: last?.why ?? [], score: last?.score ?? null, choices: [['continua', 'Continua']] };
+}
+
+// ---------- moving the scene on ----------
+const NEXT = { invito: 'preparazione', preparazione: 'ingresso', ingresso: 'q1', q1: 'r1', r1: 'domanda', domanda: 'risposta-rivale', 'risposta-rivale': 'q2', q2: 'r2', r2: 'attacco', attacco: 'r3', r3: 'chiusura', chiusura: 'esito' };
+export function chooseInScene(input, choiceId) {
+  const scene = JSON.parse(JSON.stringify(input));
+  if (scene.status !== 'active') throw new Error('La scena è già conclusa.');
+  const node = sceneNode(scene);
+  const choice = node.choices.find(item => item[0] === choiceId);
+  if (!choice) throw new Error('Scelta non valida per questo momento.');
+  if (choice[2]) throw new Error('Questa scelta non è disponibile: ti manca qualcosa di concreto.');
+  const me = cast(scene, 'giocatore'), rival = cast(scene, 'rivale');
+  let next = scene.nodeId;
+  const log = entry => { scene.history.push({ node: scene.nodeId, choice: choiceId, ...entry }); };
+  const mood = delta => { scene.audience.mood = clamp(round1(scene.audience.mood + delta), 0, 100); scene.audience.history.push(scene.audience.mood); };
+  if (scene.nodeId === 'invito') {
+    if (choiceId === 'rifiuta') { scene.status = 'declined'; scene.outcome = { performance: 38, summary: 'Hai rifiutato l’invito: in studio resta la tua sedia vuota e l’avversario ha tutto il tempo per parlare.', edge: -3, declined: true }; log({ declined: true }); return scene; }
+    log({}); next = NEXT.invito;
+  } else if (scene.nodeId === 'preparazione') { scene.prepFocus = choiceId; log({ focus: choiceId }); next = NEXT.preparazione; }
+  else if (['q1', 'q2'].includes(scene.nodeId)) {
+    const topic = scene.nodeId === 'q1' ? scene.topic : (scene.secondTopic ?? scene.topic);
+    const result = judge(scene, choiceId, { topicId: topic.id, nodeId: scene.nodeId });
+    scene.scores.push({ node: scene.nodeId, kind: 'risposta', style: choiceId, score: result.score });
+    mood((result.score - 50) / 3);
+    // the rival picks the answer up: the attack that comes later is built where the player is weak
+    if (scene.nodeId === 'q1' && choiceId === 'attacco' && result.score < 50) scene.provoked = true;
+    log({ style: choiceId, score: result.score, why: result.why, reactions: reactionLines(scene, choiceId, result, topic.label) });
+    next = NEXT[scene.nodeId];
+  } else if (scene.nodeId === 'domanda') {
+    if (choiceId === 'salta') { log({ skipped: true, reactions: { host: `${cast(scene, 'conduttore').name}: «Passiamo avanti.»` }, score: 50, why: [] }); scene.skippedAsk = true; }
+    else {
+      const rivalWeak = scene.context.rivalReadiness < 50;
+      const base = choiceId === 'conti' ? (scene.context.rivalProgram.length >= 3 ? 56 : 44) + (rivalWeak ? 8 : -6) : choiceId === 'coerenza' ? 48 + (rivalWeak ? 10 : -4) : 40 + (scene.context.rivalAggression - 50) * -0.1 + (rivalWeak ? 6 : -8);
+      const noise = (unit(`${scene.seed}|domanda|${choiceId}`) - 0.5) * 10;
+      const score = Math.round(clamp(base + stats(scene).competence * 0.12 + noise, 5, 95));
+      scene.scores.push({ node: 'domanda', kind: 'domanda', style: choiceId, score });
+      mood((score - 50) / 3.5);
+      log({ ask: choiceId, score, why: [rivalWeak ? 'un avversario in difficoltà' : 'un avversario che regge'], reactions: { host: `${cast(scene, 'conduttore').name}: «Domanda diretta: risponda.»`, rival: score >= 55 ? `${rival.name} esita e cerca le parole.` : `${rival.name}: «Una domanda a effetto, ma la risposta è semplice.»`, audience: score >= 55 ? 'Il pubblico è colpito.' : 'Il pubblico non si lascia convincere.' } });
+    }
+    next = NEXT.domanda;
+  } else if (scene.nodeId === 'attacco') {
+    const hasFacts = scene.context.prep >= 8 || scene.prepFocus === 'dati';
+    const base = choiceId === 'fatti' ? (hasFacts ? 66 : 42) : choiceId === 'calma' ? 52 + (scene.context.credibility - 50) * 0.1 : choiceId === 'contrattacco' ? 50 + (100 - scene.context.rivalReadiness - 50) * 0.3 : 38;
+    const noise = (unit(`${scene.seed}|attacco|${choiceId}`) - 0.5) * 10;
+    const score = Math.round(clamp(base + noise, 5, 95));
+    scene.scores.push({ node: 'attacco', kind: 'replica', style: choiceId, score });
+    mood((score - 50) / 3);
+    log({ reply: choiceId, score, why: [hasFacts ? 'preparato sui fatti' : 'poca preparazione sui fatti'], reactions: { host: score >= 60 ? `${cast(scene, 'conduttore').name}: «Una replica efficace.»` : `${cast(scene, 'conduttore').name}: «Una replica debole.»`, rival: score >= 60 ? `${rival.name} perde il filo.` : `${rival.name}: «Vedete? Non risponde.»`, audience: score >= 60 ? 'Il pubblico applaude la replica.' : 'Il pubblico mormora.' } });
+    next = NEXT.attacco;
+  } else if (scene.nodeId === 'chiusura') {
+    const base = choiceId === 'appello' ? 42 + stats(scene).charisma * 0.32 : choiceId === 'sfida' ? 46 + (scene.audience.mood - 50) * 0.3 + (100 - scene.context.rivalReadiness) * 0.1 : 50 + (scene.context.credibility - 50) * 0.15;
+    const score = Math.round(clamp(base + (unit(`${scene.seed}|chiusura|${choiceId}`) - 0.5) * 8, 5, 95));
+    scene.scores.push({ node: 'chiusura', kind: 'chiusura', style: choiceId, score });
+    mood((score - 50) / 4);
+    log({ closing: choiceId, score, why: [], reactions: { host: `${cast(scene, 'conduttore').name}: «Grazie a entrambi. La parola agli elettori.»`, rival: `${rival.name} chiude con un appello al voto.`, audience: score >= 60 ? 'Applauso lungo dalla platea.' : 'Applauso cortese.' } });
+    // the end: the performance is the weighted mean of the beats, and the audience's mood adds its share
+    const weights = { risposta: 1.3, domanda: 0.7, replica: 1, chiusura: 0.7 };
+    const total = scene.scores.reduce((sum, item) => sum + item.score * weights[item.kind], 0), w = scene.scores.reduce((sum, item) => sum + weights[item.kind], 0);
+    const performance = Math.round(clamp(total / w * 0.8 + scene.audience.mood * 0.2, 0, 100));
+    const edge = round1((performance - 50) / 5.5);
+    const best = [...scene.scores].sort((a, b) => b.score - a.score)[0], worst = [...scene.scores].sort((a, b) => a.score - b.score)[0];
+    scene.outcome = { performance, edge, audience: scene.audience.mood, best: best ? { kind: best.kind, style: best.style, score: best.score } : null, worst: worst ? { kind: worst.kind, style: worst.style, score: worst.score } : null,
+      summary: performance >= 62 ? `Serata positiva per ${me.name}: ${rival.name} non è riuscito a metterti in difficoltà.` : performance >= 48 ? `Serata in equilibrio fra ${me.name} e ${rival.name}: nessuno ha vinto davvero.` : `Serata difficile per ${me.name}: ${rival.name} ha avuto la meglio.` };
+    scene.status = 'done'; scene.nodeId = 'esito';
+    return scene;
+  } else { next = NEXT[scene.nodeId] ?? 'esito'; log({}); }
+  // the rival's attack is built just before it comes, where the player is weakest
+  if (next === 'attacco') scene.attackLine = attackLine(scene);
+  scene.nodeId = next;
+  // (the attack is skipped when nothing gives the rival a reason: a prepared, credible player who did not provoke)
+  return scene;
+}
+function attackLine(scene) {
+  const rival = cast(scene, 'rivale').name;
+  const broken = scene.context.promises.find(item => item.status === 'non-mantenuta');
+  if (broken) return `${rival}: «Lei prometteva ${broken.label} e non ha mantenuto la parola. Perché dovremmo crederle?»`;
+  if (scene.context.credibility < 50) return `${rival}: «Promette troppo e in troppe direzioni: dove sono i soldi?»`;
+  if (scene.context.crisis) return `${rival}: «Una polemica dopo l’altra: è questa la serietà che offre?»`;
+  if (scene.provoked) return `${rival}: «Ha attaccato per non rispondere. Lo ha notato anche il pubblico.»`;
+  return `${rival}: «Parole ben scelte, ma i fatti dove sono?»`;
+}
+
+// What the finished scene gives back to the game: the edge for the debate (campaign-engine uses it in place of the random comparison), a line for the history, a memory for the rival.
+export function sceneEffects(scene) {
+  if (!scene.outcome) return null;
+  return { edge: scene.outcome.edge, performance: scene.outcome.performance, declined: Boolean(scene.outcome.declined), topicId: scene.topic.id, rivalId: cast(scene, 'rivale').id, line: scene.outcome.summary };
+}
+export const sceneProgress = scene => { const index = BEATS.indexOf(scene.nodeId); return { index: Math.max(0, index), total: BEATS.length }; };

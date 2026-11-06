@@ -1,17 +1,18 @@
 // CARRIERA — the path and the progression: four tracks (institutions, party, Parliament, Government), the odds of
 // every next step with the factors that decide them, offices and powers, the timeline and the goals.
-import { careerOverview } from '../core/career-overview.js?v=20261106-1';
-import { ADVANCEMENT_OUTCOMES } from '../core/progression-engine.js?v=20261106-1';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261106-1';
-import { careerLevelLabel } from '../data/regions.js?v=20261106-1';
-import { formatDate } from '../core/time.js?v=20261106-1';
-import { startOverview } from '../core/start-engine.js?v=20261106-1';
-import { renderGoals } from './goals-view.js?v=20261106-1';
-import { renderRetirement } from './hall-view.js?v=20261106-1';
-import { glyph, officeIcon } from './visuals.js?v=20261106-1';
-import { REPUTATIONS, REPUTATION_IDS } from '../data/simulation/standing-rules.js?v=20261106-1';
-import { renderCareerTimeline, renderMemoryPanel, renderRolesPanel, renderWhyPanel } from './game-mode.js?v=20261106-1';
-import { arrow, badge, bar, card, empty, esc, num, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261106-1';
+import { careerOverview } from '../core/career-overview.js?v=20261106-2';
+import { ADVANCEMENT_OUTCOMES } from '../core/progression-engine.js?v=20261106-2';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261106-2';
+import { careerLevelLabel } from '../data/regions.js?v=20261106-2';
+import { formatDate } from '../core/time.js?v=20261106-2';
+import { startOverview } from '../core/start-engine.js?v=20261106-2';
+import { renderGoals } from './goals-view.js?v=20261106-2';
+import { renderChallenges } from './challenge-view.js?v=20261106-2';
+import { renderRetirement } from './hall-view.js?v=20261106-2';
+import { glyph, officeIcon } from './visuals.js?v=20261106-2';
+import { REPUTATIONS, REPUTATION_IDS } from '../data/simulation/standing-rules.js?v=20261106-2';
+import { renderCareerTimeline, renderMemoryPanel, renderRolesPanel, renderWhyPanel } from './game-mode.js?v=20261106-2';
+import { arrow, badge, bar, card, empty, esc, num, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261106-2';
 
 export const CAREER_TABS = Object.freeze([['percorso', 'Percorso'], ['progressione', 'Progressione'], ['incarichi', 'Incarichi e poteri'], ['cronologia', 'Cronologia'], ['obiettivi', 'Obiettivi']]);
 const STAT_ORDER = ['popularity', 'reputation', 'influence', 'experience', 'notoriety'];
@@ -167,7 +168,7 @@ function hero(state, player, overview) {
   });
 }
 
-export function renderCareerPage(state, { tab = null, timelineFilter = 'tutto' } = {}) {
+export function renderCareerPage(state, { tab = null, timelineFilter = 'tutto', challenges = null } = {}) {
   const player = state.dataset?.politicians?.find(item => item.id === state.career?.playerId) ?? null;
   if (!state.game || !player) return empty('Crea il tuo politico per iniziare il percorso.', '<button class="primary-button" data-action="new-career">Crea il tuo politico</button>');
   const overview = careerOverview(state);
@@ -190,7 +191,7 @@ export function renderCareerPage(state, { tab = null, timelineFilter = 'tutto' }
   } else if (active === 'cronologia') {
     body = `<div class="cp-two-col">${card({ kicker: 'CRONOLOGIA · SIMULAZIONE', title: 'La tua carriera, tappa per tappa', body: renderCareerTimeline(state, timelineFilter), className: 'career-timeline-panel' })}${card({ kicker: 'MEMORIA POLITICA', title: 'Quello che non si dimentica', body: renderMemoryPanel(state) })}</div>`;
   } else {
-    body = `${renderGoals(state)}${card({ kicker: 'PERCHÉ È CAMBIATO', title: 'Da dove vengono i tuoi numeri', body: renderWhyPanel(state) })}`;
+    body = `${renderChallenges(challenges)}${renderGoals(state)}${card({ kicker: 'PERCHÉ È CAMBIATO', title: 'Da dove vengono i tuoi numeri', body: renderWhyPanel(state) })}`;
   }
   return `<div class="career-page">${hero(state, player, overview)}${sectionTabs('carriera', CAREER_TABS.map(([id, label]) => [id, label, counts[id]]), active)}<div class="sx-body" role="tabpanel">${body}</div></div>`;
 }

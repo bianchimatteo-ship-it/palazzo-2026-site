@@ -1,5 +1,5 @@
-import { countBallots, distributeVotes, withVotes } from './electorate.js?v=20261106-1';
-import { ELECTION_MODELS, EUROPEAN_CONSTITUENCIES, EUROPEAN_THRESHOLD, OUTCOME_LABELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261106-1';
+import { countBallots, distributeVotes, withVotes } from './electorate.js?v=20261106-2';
+import { ELECTION_MODELS, EUROPEAN_CONSTITUENCIES, EUROPEAN_THRESHOLD, OUTCOME_LABELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261106-2';
 
 const SCALE_FALLBACK = 100000;
 // every candidate of a local or regional race is a row: the shares add up to 100 (up to rounding), so no «other lists» row is made
@@ -101,7 +101,7 @@ export function nationalListShares(campaign) {
   return { shares, others: rounded(Math.max(0,100-own)), player: aggregateShares(campaign).find(group => group.id === campaign.playerCandidateId)?.share ?? null, day: campaign.day, source: 'simulation' };
 }
 
-function allocateDHondt(groups,seatCount,threshold=0) {
+export function allocateDHondt(groups,seatCount,threshold=0) {
   const eligible=groups.filter(group=>group.share>=threshold);
   const allocation=eligible.map(group=>({...group,seats:0}));
   for (let seat=0;seat<seatCount&&allocation.length;seat++) {
@@ -111,7 +111,7 @@ function allocateDHondt(groups,seatCount,threshold=0) {
   return allocation.sort((a,b)=>b.seats-a.seats||b.share-a.share);
 }
 // Seats with a majority bonus: the winner gets at least `bonus` of the seats, the others share the rest (simplified).
-function allocateWithBonus(groups, seatCount, winnerId, bonus, threshold = 0) {
+export function allocateWithBonus(groups, seatCount, winnerId, bonus, threshold = 0) {
   const plain = allocateDHondt(groups, seatCount, threshold);
   const winner = plain.find(item => item.id === winnerId);
   const floor = Math.ceil(seatCount * bonus);
@@ -363,7 +363,9 @@ function personalResult(campaign,playerRow,winner,rows) {
   const role=campaign.candidacy.role;
   const threshold = campaign.electionType === 'europee' ? EUROPEAN_THRESHOLD.percent : campaign.electionType === 'comunale' ? (campaign.municipalityBand === 'oltre-15000' ? SEAT_RULES.comunale.threshold : 0) : SEAT_RULES[campaign.electionType]?.threshold ?? 0;
   const base = { mandate:false, via:null, side:null, position:playerRow ? rows.indexOf(playerRow) + 1 : null, threshold, belowThreshold:Boolean(playerRow && threshold && playerRow.percent < threshold) };
-  if(!playerRow) return { ...base, code:'escluso' };
+  // Out of the runoff is not out of the race: who was a candidate in the first round and did not pass it has lost, he was not left off (the «escluso» of a candidacy the party never gave).
+  const ranFirstRound = Boolean(campaign.firstRoundResult) && campaign.candidates?.some(item => item.isPlayer);
+  if(!playerRow) return { ...base, code: ranFirstRound ? 'sconfitta' : 'escluso' };
   const won = winner?.id===campaign.playerCandidateId;
   if(role==='sindaco'||role==='presidente') {
     if (won) return { ...base, mandate:true, via:campaign.stage==='ballottaggio'?'ballottaggio':'diretto', side:'maggioranza', code:campaign.stage==='ballottaggio'?'ballottaggio-vinto':'vittoria' };

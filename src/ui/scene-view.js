@@ -1,9 +1,9 @@
 // The scene on screen (scene-engine.js): a 2D television studio drawn in SVG — backdrop, desk, podiums, audience — with the avatars of the cast built from the game's own avatar system
 // (avatar-svg.js: the player is always the avatar chosen at the start of the career, the others are the avatars of their characters), the speaker animated (mouth, head, gesture, blinking) with
 // CSS, the camera that changes shot, the audience that reacts, the line and the choices below. Reduced motion or no animation: the same scenes, nothing moves.
-import { avatarParts } from './avatar-svg.js?v=20261106-1';
-import { ASKS, CLOSINGS, REPLIES, STYLES, sceneNode, sceneProgress } from '../core/scene-engine.js?v=20261106-1';
-import { esc } from './charts.js?v=20261106-1';
+import { avatarParts } from './avatar-svg.js?v=20261106-2';
+import { ASKS, CLOSINGS, REPLIES, STYLES, sceneNode, sceneProgress } from '../core/scene-engine.js?v=20261106-2';
+import { esc } from './charts.js?v=20261106-2';
 
 const KIND_LABELS = { risposta: 'Risposta', domanda: 'Domanda', replica: 'Replica', chiusura: 'Chiusura' };
 const STYLE_LABELS = Object.fromEntries([...Object.entries(STYLES), ...Object.entries(REPLIES), ...Object.entries(ASKS), ...Object.entries(CLOSINGS)].map(([id, spec]) => [id, spec.label]));

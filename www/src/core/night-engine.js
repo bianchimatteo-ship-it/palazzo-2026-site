@@ -8,7 +8,8 @@
 //   - the exit poll, the projections and the seat estimates are estimates and are never built from the units not yet counted (they use the exit poll as the prior of what is still to count);
 //   - the news of the night are derived from those figures, stored once when the hour is reached (so a reload or a save does not write them twice) and never touch the career.
 // The career is touched once, when the night is concluded (store.concludeElectionNight → the same closeCampaign as before).
-import { SEAT_RULES, EUROPEAN_THRESHOLD } from '../data/simulation/campaign-rules.js?v=20261106-1';
+import { SEAT_RULES, EUROPEAN_THRESHOLD, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261106-2';
+import { allocateDHondt, allocateWithBonus } from './election-engine.js?v=20261106-2';
 
 export const NIGHT_HOURS = 12;
 export const NIGHT_STAGES = Object.freeze({ finale: 'Esito della consultazione', 'primo-turno': 'Primo turno' });
@@ -96,12 +97,21 @@ export function nightSnapshot(campaign, stage) {
   const type = campaign.electionType;
   const threshold = type === 'europee' ? EUROPEAN_THRESHOLD.percent : (SEAT_RULES[type]?.threshold ?? 0);
   const seatTotal = groups.reduce((sum, group) => sum + group.seats, 0);
+  // The rule that turns votes into seats, taken from the same tables the election engine uses (campaign-rules.js): the night applies it to the shares of the hour (never to the final seats).
+  const band = campaign.municipalityBand ?? 'fino-15000';
+  const model = ELECTION_MODELS[type];
+  const seatCount = type === 'politiche' ? (campaign.candidacy?.role === 'senatore' ? 200 : 400) : type === 'comunale' ? (band === 'oltre-15000' ? 16 : 12) : model?.seatCount ?? seatTotal;
+  const rule = !seatTotal ? null : type === 'comunale' ? { kind: 'bonus', seatCount, bonus: SEAT_RULES.comunale.majorityBonus[band], threshold: band === 'oltre-15000' ? SEAT_RULES.comunale.threshold : 0 }
+    : type === 'provinciale' ? { kind: 'bonus', seatCount, bonus: SEAT_RULES.provinciale.majorityBonus, threshold: 0 }
+    : type === 'regionale' ? { kind: 'bonus', seatCount, bonus: SEAT_RULES.regionale.majorityBonus, threshold: SEAT_RULES.regionale.threshold }
+    : type === 'politiche' ? { kind: 'politiche', seatCount, uninominal: Math.round(seatCount * .37), threshold: SEAT_RULES.politiche.threshold }
+    : { kind: 'europee', seatCount, threshold: EUROPEAN_THRESHOLD.percent };
   const electorate = result.electorate ?? {};
   return {
     stage, electionType: type, electionLabel: campaign.electionLabel ?? 'Elezione', runoff: stage === 'finale' && Boolean(campaign.firstRoundResult?.requiresRunoff), groups, areas,
     totalVotes: groups.reduce((sum, group) => sum + group.votes, 0), voters: Math.round(Number(electorate.voters) || 0), electors: Math.round(Number(electorate.electors) || 0),
     turnout: Number.isFinite(Number(result.turnout)) ? Number(result.turnout) : Number(electorate.turnout) || null, basis: electorate.basis ?? '',
-    threshold, seatTotal, majority: seatTotal ? Math.floor(seatTotal / 2) + 1 : 0, seatNote: result.seatRule ?? SEAT_RULES[type]?.note ?? null,
+    threshold, seatTotal, rule, majority: seatTotal ? Math.floor(seatTotal / 2) + 1 : 0, seatNote: result.seatRule ?? SEAT_RULES[type]?.note ?? null,
     poll, requiresRunoff: Boolean(result.requiresRunoff), runoffIds: result.runoffCandidateIds ?? [], winnerGroupId: result.winnerGroupId ?? null,
     playerGroupId: groups.find(group => group.isPlayer)?.id ?? null, outcome: stage === 'finale' ? (result.outcome ?? null) : null, personalMandate: stage === 'finale' ? Boolean(result.personalMandate) : null,
     objectiveMet: stage === 'finale' ? Boolean(result.objectiveMet) : null
@@ -201,34 +211,77 @@ export function exitPoll(night) {
 }
 
 // The projection: what the counted units say, completed with the exit poll where nothing is counted yet. It is an estimate, with a margin that shrinks with the count; it never reads
-// the units that are still to count. Seats are estimated from the projected shares against the groups' seats of the engine (a stated simplification).
+// the units that are still to count, nor the final votes or seats. At the last hour (count closed) it IS the official result: the same percentages and seats, never a second figure.
+// Seats come from the rule of the vote (snapshot.rule: the same tables and allocation functions as the election engine) applied to the projected shares and, for the general and European
+// votes, to the projected winner and shares of each area.
 export function projection(night, view = nightView(night)) {
   const tally = nightTally(night);
   const { snapshot } = night;
+  if (view.complete) {
+    const rows = view.rows.map(row => ({ id: row.id, label: row.label, isPlayer: row.isPlayer, coalitionId: row.coalitionId, percent: row.percent, seats: snapshot.groups.find(group => group.id === row.id)?.seats ?? 0, margin: 0, official: true }));
+    return { rows, margin: 0, estimate: false, official: true, seatTotal: snapshot.seatTotal, majority: snapshot.majority };
+  }
   const exit = exitPoll(night);
   const exitBy = Object.fromEntries(exit.map(row => [row.id, row.percent]));
   const prior = id => exitBy[id] ?? 0;
   let weightSum = 0;
   const acc = Object.fromEntries(tally.groups.map(group => [group.id, 0]));
+  const areaShares = [];
   view.areas.forEach(area => {
     const w = area.weight || 1;
     weightSum += w;
     const trust = Math.min(1, area.counted / Math.max(1, area.units) * 1.6);
+    const shares = {};
     tally.groups.forEach((group, index) => {
       const share = area.ballots ? area.byGroup[index] * 100 / area.ballots : prior(group.id);
-      acc[group.id] += w * (share * trust + prior(group.id) * (1 - trust));
+      shares[group.id] = share * trust + prior(group.id) * (1 - trust);
+      acc[group.id] += w * shares[group.id];
     });
+    areaShares.push({ id: area.id, name: area.name, weight: w, shares });
   });
-  const margin = round1(view.complete ? 0 : .35 + 3.2 * Math.sqrt(Math.max(0, 1 - view.shareCounted)) * (view.shareCounted === 0 ? 1 : .85));
+  const margin = round1(.35 + 3.2 * Math.sqrt(Math.max(0, 1 - view.shareCounted)) * (view.shareCounted === 0 ? 1 : .85));
   const rows = tally.groups.map(group => ({ id: group.id, label: group.label, isPlayer: group.isPlayer, coalitionId: group.coalitionId, percent: weightSum ? round1(acc[group.id] / weightSum) : 0 }));
   const total = rows.reduce((sum, row) => sum + row.percent, 0) || 1;
   rows.forEach(row => { row.percent = round1(row.percent * 100 / total); });
   rows.sort((a, b) => b.percent - a.percent || a.label.localeCompare(b.label));
-  const finalSeats = Object.fromEntries(snapshot.groups.map(group => [group.id, { seats: group.seats, percent: group.percent }]));
-  const raw = rows.map(row => { const f = finalSeats[row.id]; return f && f.percent > 0 ? f.seats * row.percent / f.percent : 0; });
-  const seats = snapshot.seatTotal ? apportion(snapshot.seatTotal, raw) : rows.map(() => 0);
-  rows.forEach((row, index) => { row.seats = view.complete ? (finalSeats[row.id]?.seats ?? 0) : seats[index]; row.margin = margin; });
-  return { rows, margin, estimate: !view.complete, seatTotal: snapshot.seatTotal, majority: snapshot.majority };
+  const seats = snapshot.rule ? projectSeats(snapshot, Object.fromEntries(rows.map(row => [row.id, row.percent])), areaShares) : {};
+  rows.forEach(row => { row.seats = seats[row.id] ?? 0; row.margin = margin; });
+  return { rows, margin, estimate: true, official: false, seatTotal: snapshot.seatTotal, majority: snapshot.majority };
+}
+
+// Seats from shares, by the rule of the vote. `nat`: projected percentage of each group; `areas`: [{ id, weight, shares }] projected by area.
+export function projectSeats(snapshot, nat, areas = []) {
+  const rule = snapshot.rule;
+  const out = {};
+  if (!rule) return out;
+  const listed = snapshot.groups.filter(group => !group.others).map(group => ({ id: group.id, share: nat[group.id] ?? 0 }));
+  const top = [...listed].sort((a, b) => b.share - a.share || a.id.localeCompare(b.id))[0];
+  if (rule.kind === 'bonus') {
+    for (const row of allocateWithBonus(listed, rule.seatCount, top?.id, rule.bonus, rule.threshold)) out[row.id] = row.seats;
+    return out;
+  }
+  const weightSum = areas.reduce((sum, area) => sum + area.weight, 0) || 1;
+  const quotas = (count, scale) => {
+    const exact = areas.map(area => ({ area, seats: count * area.weight / scale }));
+    const assigned = exact.map(item => ({ ...item, count: Math.floor(item.seats) }));
+    let remaining = count - assigned.reduce((sum, item) => sum + item.count, 0);
+    const order = [...assigned].sort((a, b) => (b.seats - Math.floor(b.seats)) - (a.seats - Math.floor(a.seats)) || a.area.id.localeCompare(b.area.id));
+    for (let i = 0; i < remaining && order.length; i++) order[i % order.length].count++;
+    return assigned;
+  };
+  const listedIds = new Set(listed.map(group => group.id));
+  const areaOrder = area => Object.entries(area.shares).filter(([id]) => listedIds.has(id)).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  if (rule.kind === 'politiche') {
+    for (const item of quotas(rule.uninominal, weightSum)) { const winner = areaOrder(item.area)[0]?.[0]; if (winner) out[winner] = (out[winner] ?? 0) + item.count; }
+    for (const row of allocateDHondt(listed, rule.seatCount - rule.uninominal, rule.threshold)) out[row.id] = (out[row.id] ?? 0) + row.seats;
+    return out;
+  }
+  const eligible = new Set(listed.filter(group => group.share >= rule.threshold).map(group => group.id));
+  for (const item of quotas(rule.seatCount, 100)) {
+    const rows = Object.entries(item.area.shares).filter(([id]) => eligible.has(id)).map(([id, share]) => ({ id, share }));
+    for (const row of allocateDHondt(rows, item.count, 0)) out[row.id] = (out[row.id] ?? 0) + row.seats;
+  }
+  return out;
 }
 // ---------- the news ----------
 const fmt = (template, ...args) => { let index = 0; return template.replace(/\{\}/g, () => String(args[index++] ?? '')); };
@@ -298,6 +351,10 @@ function eventItems(night, hour, view, prev, proj, ctx) {
   const seen = ctx.seen;
   const once = (id, item) => { if (!seen.has(id)) { seen.add(id); out.push({ ...item, id: `${night.id}-h${hour}-${id}` }); } };
   if (hour >= 2 && prev && prev.rows[0] && view.rows[0] && prev.rows[0].id !== view.rows[0].id && prev.counted > 0) once(`lead-${view.rows[0].id}`, { kind: 'notizia', tag: 'SORPASSO', text: fmt('Cambia la testa della corsa: {} supera {}.', view.rows[0].label, prev.rows[0].label) });
+  if (hour >= 3 && prev) {
+    const flipped = view.areas.map(area => ({ area, was: prev.areas.find(item => item.id === area.id) })).filter(({ area, was }) => was?.leaderId && area.leaderId && was.leaderId !== area.leaderId && was.counted > 0).sort((a, b) => b.area.weight - a.area.weight)[0];
+    if (flipped) once(`ribaltamento-${flipped.area.id}-${flipped.area.leaderId}`, { kind: 'notizia', tag: 'RIBALTAMENTO', text: fmt('Ribaltamento a {}: {} supera {} con lo scrutinio che avanza.', flipped.area.name, flipped.area.leaderLabel, flipped.was.leaderLabel) });
+  }
   const counting = view.areas.filter(area => area.state === 'completo');
   const prevDone = new Set(prev ? prev.areas.filter(area => area.state === 'completo').map(area => area.id) : []);
   const fresh = counting.filter(area => !prevDone.has(area.id)).sort((a, b) => b.weight - a.weight);

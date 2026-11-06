@@ -1,5 +1,5 @@
 // Special challenges (challenge-engine.js): the one open, the ones that can be taken and the verdicts. Every button calls the store (startChallenge, abandonChallenge): nothing is decorative.
-import { badge, bar, card, esc } from './sections-kit.js?v=20261106-1';
+import { badge, bar, card, esc } from './sections-kit.js?v=20261106-2';
 
 function rewardText(spec) {
   const parts = [];
