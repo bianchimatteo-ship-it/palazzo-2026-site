@@ -27,7 +27,8 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   await click('[data-confirm="ok"]'); await pause(600);
   assert.equal(await S('return store.challengeView().open;'), null, 'Abbandonare chiude la sfida.');
 
-  // the other pages
+  // the other pages (after some weeks, so they have content)
+  await S('for (let i = 0; i < 8; i++) store.advance(7); return true;'); await pause(500);
   await go('#diplomazia'); assert.ok((await evaluate('document.body.innerText')).length > 200, 'La pagina Diplomazia si disegna.');
   await go('#governo'); assert.ok((await evaluate('document.body.innerText')).length > 200, 'La pagina Governo si disegna.');
 
@@ -49,8 +50,8 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
     await go(hash);
     if (hash === '#carriera') await click('[data-section-tab="carriera"][data-section-tab-value="obiettivi"]');
     const leaves = await evaluate('[...document.querySelectorAll(".page-wrap *")].filter(el => !el.children.length).map(el => el.textContent.replace(/\\s+/g, " ").trim()).filter(Boolean)');
-    const left = [...new Set(leaves)].filter(item => detector.reasonOf(item)).slice(0, 30);
-    assert.deepEqual(left, [], `${hash}: nessun italiano rimasto in inglese: ${left.join(' | ').slice(0, 700)}`);
+    const left = [...new Set(leaves)].filter(item => detector.reasonOf(item)).slice(0, 400);
+    assert.deepEqual(left, [], `${hash}: nessun italiano rimasto in inglese: ${left.join(' | ').slice(0, 20000)}`);
   }
   assert.deepEqual(errors, [], 'Nessun errore JavaScript.');
 }, {});
