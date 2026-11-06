@@ -12,6 +12,7 @@ export const SETTINGS_SCHEMA = Object.freeze({
   // `scoped`: the choice belongs to the account that is signed in (or to the browser when nobody is), so that one account never changes another's; see saveSetting.
   newsPopup: { label: 'Popup notizie settimanali', options: [['on', 'Attivo'], ['off', 'Disattivato']], default: 'on', scoped: true,
     hint: { on: 'Ogni settimana compare un riepilogo delle notizie principali.', off: 'Nessun riepilogo automatico: le notizie restano in Informazione e nella Home.' } },
+  electionNight: { label: 'Notte Elettorale', options: [['on', 'Da giocare ora per ora'], ['off', 'Salta (risultato subito)']], default: 'on', hint: { on: 'Alla fine di ogni voto vivi le dodici ore dello scrutinio in diretta.', off: 'Il risultato viene registrato subito, senza la giornata elettorale.' } },
   weeklyReport: { label: 'Resoconto a fine settimana', options: [['on', 'Mostra'], ['off', 'Non mostrare']], default: 'on' },
   autosave: { label: 'Salvataggio automatico', options: [['action', 'Dopo ogni azione'], ['week', 'A fine settimana'], ['manual', 'Solo manuale']], default: 'action' },
   weeksPerTurn: { label: 'Velocità della simulazione', options: [['1', '1 settimana per turno'], ['2', '2 settimane per turno'], ['4', '4 settimane per turno']], default: '1' },

@@ -245,7 +245,10 @@
     "check:party-founding-ui": "node scripts/check-party-founding-ui.mjs",
     "build:portal": "node scripts/build-portal.mjs",
     "check:publication": "node scripts/check-publication.mjs",
-    "cf:deploy:test": "npx --yes wrangler@4 deploy -c wrangler.test.jsonc"
+    "cf:deploy:test": "npx --yes wrangler@4 deploy -c wrangler.test.jsonc",
+    "check:election-night-engine": "node scripts/check-election-night-engine.mjs",
+    "check:election-night-ui": "node scripts/check-election-night-ui.mjs",
+    "check:election-night-language": "node scripts/check-election-night-language.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",

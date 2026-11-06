@@ -3,7 +3,7 @@
 // progression and the incompatibilities. Pure functions: the callers pass in the facts they already have.
 import {
   GOVERNMENT_CANDIDACY_BLOCK, INCOMPATIBILITIES, LOCAL_POPULATION_THRESHOLD, OFFICES, OFFICE_BASES, OFFICE_OF_CANDIDACY, POWERS, PROVINCIAL_PRESIDENT_MIN_MONTHS
-} from '../data/simulation/office-rules.js?v=20261104-5';
+} from '../data/simulation/office-rules.js?v=20261106-1';
 
 // The office of the player in a local or European institution (see local-engine: kinds comune, provincia, regione, europa).
 export function institutionOffice(inst) {

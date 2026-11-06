@@ -15,7 +15,7 @@ export const waitFor = async (check, timeout = 25000) => { const start = Date.no
 
 // `serverPort`: the game is already served there (a test that runs its own server, such as the local Worker of scripts/lib/local-worker.mjs); then no server.mjs is started.
 // `fresh`: a new clean Chrome profile is the default; two calls of withBrowser are two browsers that share nothing (no cache, no storage).
-export async function withBrowser(callback, { root = fileURLToPath(new URL('../..', import.meta.url)), serverPort = null, language = null } = {}) {
+export async function withBrowser(callback, { root = fileURLToPath(new URL('../..', import.meta.url)), serverPort = null, language = null, night = false } = {}) {
   const port = serverPort ?? 4600 + Math.floor(Math.random() * 300), debug = 9700 + Math.floor(Math.random() * 300);
   const server = serverPort ? { kill() {} } : spawn(process.execPath, ['server.mjs'], { cwd: root, env: { ...process.env, PORT: String(port) }, stdio: 'ignore' });
   const profile = await mkdtemp(join(tmpdir(), 'politicando-browser-'));
@@ -45,6 +45,8 @@ export async function withBrowser(callback, { root = fileURLToPath(new URL('../.
     await send('Runtime.enable');
     // `language`: not a first installation (the language is already chosen, in every page load, even after the storage is cleared); without it a fresh profile opens on the choice of the language
     if (language) await send('Page.addScriptToEvaluateOnNewDocument', { source: `try { if (!localStorage.getItem('politicando.settings.v1')) localStorage.setItem('politicando.settings.v1', JSON.stringify({ language: ${JSON.stringify(language)} })); } catch {}` });
+    // The election night (core/night-engine.js) is a screen of its own that stops the time of the career: the tests that play a vote through the store do not stop at it, unless they ask for it (`night: true`).
+    if (!night) await send('Page.addScriptToEvaluateOnNewDocument', { source: 'globalThis.__noElectionNight = true;' });
     await viewport(1280, 800, false);
     await goto();
     await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu], .main-menu, .language-gate"))'));
