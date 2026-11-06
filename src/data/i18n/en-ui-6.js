@@ -62,7 +62,7 @@ export const PHRASES = [
   ["La richiesta resta nel cassetto", "The request stays in the drawer"],
   ["La segreteria ti esclude da un tavolo importante", "The secretariat excludes you from an important table"],
   ["La segreteria ti offre un incarico", "The secretariat offers you a post"],
-  ["La situazione peggiora: ti accusano di aver sottovalutato", "The situation worsens: they accuse you of having underestimated it"],
+  ["La situazione peggiora: ti accusano di aver sottovalutato", "The situation worsens: they blame you for having underestimated it"],
   ["La squadra accelera i dossier", "The team speeds up the dossiers"],
   ["La tempesta passa, a fatica", "The storm passes, with difficulty"],
   ["La tesoreria del partito è in rosso", "The party treasury is in the red"],
