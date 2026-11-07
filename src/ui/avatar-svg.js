@@ -4,7 +4,7 @@ import { AVATAR_OPTIONS, normalizeAvatar } from '../core/avatar.js?v=20261106-2'
 
 const colorOf = (field, id) => AVATAR_OPTIONS[field].find(item => item.id === id)?.color ?? '#888888';
 // A colour made lighter (amount > 0) or darker (amount < 0).
-function shade(hex, amount) {
+export function shade(hex, amount) {
   const n = parseInt(hex.slice(1), 16);
   const mix = channel => Math.max(0, Math.min(255, Math.round(amount < 0 ? channel * (1 + amount) : channel + (255 - channel) * amount)));
   return `#${[n >> 16, (n >> 8) & 255, n & 255].map(mix).map(value => value.toString(16).padStart(2, '0')).join('')}`;
@@ -100,6 +100,8 @@ export function avatarSvg(input, { size = 96, label = 'Avatar del tuo politico',
 // The figure of the avatar in separate groups, so that a scene can animate them without touching the identity: the whole body (.av-body), the head with the hair and the glasses (.av-head), the
 // eyes (.av-eyes, they blink), the brows (.av-brows) and the mouth (.av-mouth, with an open mouth .av-mouth-open that shows while the character speaks). The drawing is the same as always: the
 // groups only wrap it. `expression` overrides the trait for a moment (a scene changes the face, never who the person is).
+// The colours of an avatar (skin, hair, jacket), for the stage that draws the rest of the body around it.
+export function avatarColors(input) { const a = normalizeAvatar(input); return { skin: colorOf('skin', a.skin), hair: colorOf('hair', a.hair), jacket: colorOf('jacket', a.jacket) }; }
 export function avatarParts(input, uid, { expression = null } = {}) {
   const a = normalizeAvatar(expression ? { ...input, expression } : input);
   const skin = colorOf('skin', a.skin), hair = colorOf('hair', a.hair), jacket = colorOf('jacket', a.jacket), iris = colorOf('eyes', a.eyes);

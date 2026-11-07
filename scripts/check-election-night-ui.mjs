@@ -19,7 +19,9 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   const S = body => evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); ${body} })()`);
   assert.equal(await S('return store.electionNightLive();'), true, 'La Notte Elettorale è attiva nel gioco (nessuno scorciatoia di test).');
   const snapshot = () => S(`const s = store.getState(); return { night: s.night ? { stage: s.night.stage, hour: s.night.hour, feed: s.night.feed.length, statements: s.night.statements.length } : null, date: s.clock.currentDate, week: s.game?.week?.index, last: s.career.lastCampaignId, camp: s.campaign ? { status: s.campaign.status, stage: s.campaign.stage, id: s.campaign.id } : null, held: s.nightsHeld ?? [], page: s.ui.activePage };`);
-  const untilNight = async () => { for (let i = 0; i < 90; i++) { const s = await snapshot(); if (s.night) return s; await S('store.advance(7);'); } throw new Error('La notte non si è aperta.'); };
+  let votes = 0;
+  // the player's own vote (a scene) comes first: it is seen, then skipped (it decides nothing), and the night follows
+  const untilNight = async () => { for (let i = 0; i < 90; i++) { const s = await snapshot(); if (s.night) { if (await S(`return store.getState().scene?.kind ?? null;`) === 'voto') { votes++; await S(`store.sceneSkip(); return true;`); await pause(300); } return snapshot(); } await S('store.advance(7);'); } throw new Error('La notte non si è aperta.'); };
   const text = () => evaluate('document.querySelector(".night")?.innerText ?? ""');
   // everything that moves the career refuses while a night lasts (both phases), and changes nothing: the whole state but the notice on screen is identical before and after
   const BLOCKED = ['advance(7)', 'advanceTurn(1)', 'advanceToDate("2100-01-01")', 'fastForwardToElection("comunale")', 'performCampaignActivity("comizio")', 'decideCampaignEvent("x", "y")', 'setCampaignStrategy("equilibrata")', 'startCampaign({ electionType: "comunale" }, [])', 'performWeeklyActivity("studio")', 'resolveAgendaItem("x", "y")', 'clearCampaign()', 'proposeLaw({})', 'castLawVote("x", "si")', 'issueDecree({})', 'formGovernment({})', 'askConfidence()', 'triggerGovernmentCrisis()', 'setPartyProgram({})', 'invest({})', 'proposeAlliance("x")'];
@@ -163,4 +165,5 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   assert.equal(await S('return store.getState().career.electionHistory.filter(item => item.campaignId === store.getState().career.lastCampaignId).length;'), 1, 'Una sola voce nello storico.');
   assert.deepEqual(errors, [], 'Nessun errore JavaScript.');
   console.log(`Notte elettorale verificata in Chrome (computer, 768, 390 e 320 px): apertura al termine del voto, dodici ore con orologio e tempo della carriera fermo, schede, dichiarazione, ricaricamento a metà identico, conclusione unica${runoffSeen ? ', primo turno con ballottaggio e nuova campagna, carta di vittoria/sconfitta al termine, sospensione totale della carriera, animazioni ridotte' : ''}.`);
+  assert.ok(votes >= 1, 'Prima della notte il giocatore vota al seggio (scena saltabile).');
 }, { night: true });

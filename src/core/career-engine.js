@@ -581,7 +581,10 @@ export function activityProblem(ctx, env, activity) {
   if (activity.weekly && (ctx.game.week.activityUses?.[activity.id] ?? 0) >= activity.weekly) return activity.weekly === 1 ? 'Già fatto questa settimana: si può rifare dalla prossima.' : `Già fatto ${activity.weekly} volte questa settimana.`;
   return costProblem(ctx.game, activity.cost);
 }
-export function performActivity(input, env, activityId, targetId = null) {
+// `options.sceneEdge`: the activity was played as a scene (a guest spot on television): the verdict of the scene scales the positive effects and replaces the random draw of the risk — a bad one
+// (below -3) pays the risk, a good one never does. The costs are the same, paid once.
+const scaleEffects = (effects, factor) => !effects ? effects : { ...effects, stats: effects.stats ? Object.fromEntries(Object.entries(effects.stats).map(([key, value]) => [key, value > 0 ? Math.round(value * factor * 100) / 100 : value])) : effects.stats, relations: effects.relations ? Object.fromEntries(Object.entries(effects.relations).map(([key, value]) => [key, value > 0 ? Math.round(value * factor * 100) / 100 : value])) : effects.relations };
+export function performActivity(input, env, activityId, targetId = null, options = {}) {
   const ctx = start(input);
   const activity = activityFor(WEEKLY_ACTIVITIES.find(item => item.id === activityId), ctx.game);
   if (!activity) throw new Error('Attività non riconosciuta.');
@@ -599,11 +602,12 @@ export function performActivity(input, env, activityId, targetId = null) {
   if (activity.weekly) ctx.game.week.activityUses = { ...(ctx.game.week.activityUses ?? {}), [activity.id]: (ctx.game.week.activityUses?.[activity.id] ?? 0) + 1 };
   // The ledger of what the player does: the goals of the career are measured on it.
   bump(ctx.game, 'activities', activity.category); bump(ctx.game, 'activityIds', activity.id);
-  const lines = applyEffects(ctx, activity.effects, targetId, [], { date: env.currentDate, fundsLabel: activity.label });
+  const sceneFactor = Number.isFinite(options.sceneEdge) ? Math.max(0.2, Math.min(1.8, 1 + options.sceneEdge / 10)) : null;
+  const lines = applyEffects(ctx, sceneFactor ? scaleEffects(activity.effects, sceneFactor) : activity.effects, targetId, [], { date: env.currentDate, fundsLabel: activity.label });
   let tone = 'good';
   // An external press office halves the risks of media exposure.
   const riskChance = activity.risk ? activity.risk.chance * (activity.category === 'media' && hasAsset(ctx.game.finance, 'ufficio-stampa', ctx.game.week.index) ? 0.5 : 1) : 0;
-  if (activity.risk && draw(ctx.game) < riskChance) {
+  if (activity.risk && (sceneFactor ? options.sceneEdge < -3 : draw(ctx.game) < riskChance)) {
     lines.push(activity.risk.label);
     applyEffects(ctx, activity.risk.effects, targetId, lines, { date: env.currentDate });
     tone = 'bad';
@@ -1209,6 +1213,8 @@ function handleSpecial(ctx, env, special, item, lines, specials, choice = {}) {
     specials.push({ type: 'world-alliance', partyId: item.params.partyId });
   } else if (special === 'world-relation-up' || special === 'world-relation-down') {
     specials.push({ type: 'world-relation', partyId: item.params.partyId, delta: special === 'world-relation-up' ? 10 : -10 });
+  } else if (special === 'tv-sim' || special === 'tv-studio') {
+    specials.push({ type: special, itemId: item.id });
   } else if (special.startsWith('rival-')) {
     specials.push({ type: 'rival-move', rivalKey: item.params.rivalKey, answer: special, area: item.params.area ?? null });
   } else if (special === 'media-repair' || special.startsWith('public-')) {

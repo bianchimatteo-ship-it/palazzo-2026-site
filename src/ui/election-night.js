@@ -81,9 +81,9 @@ function tabScrutinio(night, view) {
   return `<div class="night-grid">
     ${card({ kicker: 'DATO UFFICIALE SIMULATO', title: 'Lo scrutinio', body: `<div class="sx-kpis night-kpis">
       ${kpi({ label: 'Unità scrutinate', value: `${view.counted}/${view.units}`, note: pct(view.shareCounted * 100, 0), bar: view.shareCounted * 100 })}
-      ${kpi({ label: 'Voti scrutinati', value: num(view.ballots, 0), note: `su ${num(snapshot.totalVotes, 0)} voti validi` })}
-      ${kpi({ label: 'Voti da scrutinare', value: num(Math.max(0, snapshot.totalVotes - view.ballots), 0), note: view.complete ? 'scrutinio chiuso' : 'ancora in arrivo' })}
-      ${kpi({ label: 'Affluenza', value: snapshot.turnout !== null ? pcFmt(snapshot.turnout) : '—', note: 'dato finale' })}
+      ${kpi({ label: 'Voti scrutinati', value: num(view.ballots, 0), note: view.complete ? `su ${num(snapshot.totalVotes, 0)} voti validi` : `in ${view.counted} unità su ${view.units}` })}
+      ${view.complete ? kpi({ label: 'Voti da scrutinare', value: '0', note: 'scrutinio chiuso' }) : kpi({ label: 'Stima dei voti totali', value: `~${num(Math.round(view.ballots * view.units / Math.max(1, view.counted) / 100) * 100, 0)}`, note: 'stima dal campione contato, non è un dato ufficiale' })}
+      ${kpi({ label: 'Affluenza', value: view.complete && snapshot.turnout !== null ? pcFmt(snapshot.turnout) : '—', note: view.complete ? 'dato definitivo' : 'il dato ufficiale arriva a scrutinio chiuso' })}
     </div>${unitsGrid}<p class="night-note">Le unità di scrutinio sono <strong>simulate</strong>: il gioco non dispone delle sezioni elettorali reali e non inventa dati ufficiali. Ogni quadratino è un’unità; il colore è quello della lista in testa quando viene scrutinata.</p>` })}
     ${card({ kicker: 'ANDAMENTO', title: 'Unità scrutinate ora per ora', body: `<ol class="night-curve">${hoursBars}</ol>` })}
   </div>`;

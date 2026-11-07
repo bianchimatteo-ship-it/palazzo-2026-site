@@ -54,7 +54,7 @@ const NEW = ['tour-regione', 'comizio-piazza', 'incontro-amministratori', 'selez
     assert.equal(activity.weekly, 1, `${id}: una volta a settimana.`);
     assert.ok(activity.cost.ap >= 1, `${id}: costa almeno un giorno.`);
     assert.ok(Object.keys(activity.effects ?? {}).length >= 2, `${id}: effetti reali.`);
-    assert.ok(id === 'corso-politiche' || activity.risk || activity.later, `${id}: può andare male o ha un seguito.`);
+    assert.ok(id === 'corso-politiche' || activity.risk || activity.later || activity.scene, `${id}: può andare male o ha un seguito.`);
     assert.ok(id === 'corso-politiche' || id === 'audizione-commissione' || activity.requires, `${id}: ha un requisito di ruolo, partito, luogo o calendario.`);
   }
   // the requirements read the situation they name
@@ -63,7 +63,7 @@ const NEW = ['tour-regione', 'comizio-piazza', 'incontro-amministratori', 'selez
   assert.ok(!requires('vertice-maggioranza')(sit({ inMajority: true })) && requires('vertice-maggioranza')(sit({ inMajority: true, secretary: true })) && !requires('vertice-maggioranza')(sit({ inMajority: false, secretary: true })) && !requires('vertice-maggioranza')(sit({ inMajority: true, secretary: true, governing: false })), 'Il vertice: governo in carica, posto in maggioranza e un ruolo di peso.');
   assert.ok(requires('question-time')(sit({})) && !requires('question-time')(sit({ inMajority: true })) && !requires('question-time')(sit({ governing: false })) && !requires('question-time')(sit({ seat: false })), 'Question time: un seggio all’opposizione di un governo in carica.');
   assert.ok(!requires('replica-polemica')(sit({})) && requires('replica-polemica')(sit({ memory: { bad: 1.5 } })) && requires('replica-polemica')(sit({ pollDelta: -0.4 })), 'La replica: serve una polemica (cattiva memoria o sondaggi in calo).');
-  assert.ok(!requires('comizio-piazza')(sit({})) && requires('comizio-piazza')(sit({ game: { elections: [{ status: 'open' }] } })), 'Il comizio: serve una finestra di candidatura aperta.');
+  assert.ok(requires('comizio-piazza')(sit({ president: false })) && !requires('comizio-piazza')(sit({ president: true })), 'Il comizio in piazza: ogni settimana per chi fa attività di parte (non da Presidente della Repubblica).');
   assert.ok(!requires('selezione-candidati')(sit({ game: { elections: [{ status: 'open' }] } })) && requires('selezione-candidati')(sit({ secretary: true, game: { elections: [{ status: 'open' }] } })) && !requires('selezione-candidati')(sit({ secretary: true })), 'I colloqui coi candidati: la guida del partito e una candidatura aperta.');
   assert.ok(requires('tour-regione')(sit({ seat: false, party: false, role: { regional: true } })) && !requires('tour-regione')(sit({ seat: false, party: false })), 'Il tour: un partito o un mandato.');
 }
@@ -118,17 +118,15 @@ const fresh = async mutate => { store = await reload(saved => { rich(saved); mut
   assert.throws(() => store.performWeeklyActivity('tour-regione', away), /Già fatto/, 'Una volta a settimana.');
 }
 
-// comizio-piazza: only with an open window; raises the electoral preparation
+// comizio-piazza: any week (not as President of the Republic), once a week, raises the electoral preparation; the speech itself is the scene (check-rally-store)
 {
-  await fresh(saved => { for (const election of saved.game.elections) if (election.status === 'open') election.status = 'upcoming'; });
-  assert.throws(() => store.performWeeklyActivity('comizio-piazza'), /finestra di candidatura/, 'Senza una finestra aperta il comizio non si fa, e il motivo è scritto.');
-  const before = await fresh(saved => { const election = saved.game.elections.find(item => item.status === 'upcoming'); election.status = 'open'; });
-  const prep = before.game.prep, popularity = stat(before, 'popularity'), trust = before.society.regions[before.game.place.region].trust;
-  const result = store.performWeeklyActivity('comizio-piazza');
+  const before = await fresh(saved => { for (const election of saved.game.elections) if (election.status === 'open') election.status = 'upcoming'; });
+  const prep = before.game.prep, trust = before.society.regions[before.game.place.region].trust;
+  store.performWeeklyActivity('comizio-piazza');
   const after = store.getState();
   assert.ok(after.game.prep >= prep + 3 - 1e-9, `La preparazione elettorale cresce (${prep} → ${after.game.prep}).`);
-  assert.ok(result.report.tone === 'bad' ? stat(after, 'popularity') < popularity + 1.2 : stat(after, 'popularity') > popularity, 'La popolarità segue l’esito.');
-  assert.ok(after.society.regions[after.game.place.region].trust >= trust - 0.01 && (result.report.tone === 'bad' || after.society.regions[after.game.place.region].trust > trust), 'La fiducia nel territorio di casa cresce (se non va male).');
+  assert.ok(after.society.regions[after.game.place.region].trust >= trust - 0.01, 'La fiducia nel territorio di casa non cala.');
+  assert.throws(() => store.performWeeklyActivity('comizio-piazza'), /Già fatto/, 'Una volta a settimana.');
 }
 
 // selezione-candidati: the secretary only, an open window, a current is heard and the others take note

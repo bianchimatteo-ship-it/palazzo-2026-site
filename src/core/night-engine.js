@@ -297,7 +297,7 @@ function leadItem(night, hour, view, prev, proj, ctx) {
   switch (hour) {
     case 1: {
       const exit = exitPoll(night);
-      const turnout = snapshot.turnout !== null ? fmt('Affluenza finale: {}.', pc(snapshot.turnout)) : '';
+      const turnout = 'L’affluenza definitiva sarà nota a scrutinio concluso.';
       return { kind: 'speciale', tag: 'EXIT POLL', text: fmt('Si apre lo speciale elettorale: {}. {} Exit poll (stima, non è un risultato): {} {}, {} {}, {} {}.', night.closeLabel, turnout, exit[0]?.label ?? '', pc(exit[0]?.percent ?? 0), exit[1]?.label ?? '', pc(exit[1]?.percent ?? 0), exit[2]?.label ?? '', pc(exit[2]?.percent ?? 0)).replace(/\s+/g, ' ') };
     }
     case 2: return { kind: 'speciale', tag: 'SCRUTINIO', text: fmt('Primi dati dallo scrutinio: {} unità su {} contate. In testa {} ({}).', view.counted, view.units, first?.label ?? '', pc(first?.percent ?? 0)) };

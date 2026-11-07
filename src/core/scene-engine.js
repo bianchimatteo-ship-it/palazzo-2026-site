@@ -8,6 +8,8 @@
 // replayed from the same choices is the same scene. The player's avatar is always the one chosen at the start of the career: the scene may change the face for a moment (expression), never the person.
 import { defaultAvatarFor, normalizeAvatar } from './avatar.js?v=20261106-2';
 import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261106-2';
+import { createRallyScene, createVoteScene, rallyChoose, rallyEffects, rallyNode, rallyProgress, voteChoose, voteNode, voteProgress } from './rally-scene.js?v=20261106-2';
+export { createRallyScene, createVoteScene };
 
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 const hashOf = text => { let h = 2166136261 >>> 0; for (let i = 0; i < String(text).length; i++) { h ^= String(text).charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h; };
@@ -90,6 +92,8 @@ const reactionLines = (scene, style, result, topic) => {
 // ---------- the current beat ----------
 // The node to show now: who speaks, what, with which face/gesture/shot, and the choices. A pure function of the scene.
 export function sceneNode(scene) {
+  if (scene.kind === 'comizio') return rallyNode(scene);
+  if (scene.kind === 'voto') return voteNode(scene);
   const rival = cast(scene, 'rivale'), host = cast(scene, 'conduttore'), me = cast(scene, 'giocatore');
   const topic = scene.topic, ctx = scene.context;
   const last = scene.history.at(-1) ?? null;
@@ -119,7 +123,19 @@ function reactionNode(scene, base, title) {
 
 // ---------- moving the scene on ----------
 const NEXT = { invito: 'preparazione', preparazione: 'ingresso', ingresso: 'q1', q1: 'r1', r1: 'domanda', domanda: 'risposta-rivale', 'risposta-rivale': 'q2', q2: 'r2', r2: 'attacco', attacco: 'r3', r3: 'chiusura', chiusura: 'esito' };
+// One door for every kind of scene: the beat before is remembered (the stage animates the passage from it), the rest is the builder of the kind.
 export function chooseInScene(input, choiceId) {
+  const before = input.nodeId;
+  let scene;
+  if (input.kind === 'comizio' || input.kind === 'voto') {
+    scene = JSON.parse(JSON.stringify(input));
+    if (scene.status !== 'active') throw new Error('La scena è già conclusa.');
+    scene = scene.kind === 'comizio' ? rallyChoose(scene, choiceId) : voteChoose(scene, choiceId);
+  } else scene = chooseDebate(input, choiceId);
+  if (scene.nodeId !== before) scene.prevNodeId = before;
+  return scene;
+}
+function chooseDebate(input, choiceId) {
   const scene = JSON.parse(JSON.stringify(input));
   if (scene.status !== 'active') throw new Error('La scena è già conclusa.');
   const node = sceneNode(scene);
@@ -200,6 +216,37 @@ function attackLine(scene) {
 // What the finished scene gives back to the game: the edge for the debate (campaign-engine uses it in place of the random comparison), a line for the history, a memory for the rival.
 export function sceneEffects(scene) {
   if (!scene.outcome) return null;
-  return { edge: scene.outcome.edge, performance: scene.outcome.performance, declined: Boolean(scene.outcome.declined), topicId: scene.topic.id, rivalId: cast(scene, 'rivale').id, line: scene.outcome.summary };
+  if (scene.kind === 'comizio') return rallyEffects(scene);
+  if (scene.kind === 'voto') return { voted: true, line: 'Hai votato.' };
+  const performance = scene.outcome.performance;
+  const base = { edge: scene.outcome.edge, performance, declined: Boolean(scene.outcome.declined), topicId: scene.topic.id, rivalId: cast(scene, 'rivale').id, line: scene.outcome.summary };
+  // an ordinary guest spot (not an electoral debate): the verdict moves the media numbers of the player, scaled by the performance
+  if (scene.kind === 'talkshow') return { ...base, deltas: { notoriety: round1(clamp(1.2 + performance / 28, 0, 5)), popularity: round1((performance - 50) / 28), reputation: round1((performance - 50) / 50) }, mediaTone: performance >= 62 ? 1 : performance < 45 ? -1 : 0.3 };
+  return base;
 }
-export const sceneProgress = scene => { const index = BEATS.indexOf(scene.nodeId); return { index: Math.max(0, index), total: BEATS.length }; };
+export const sceneProgress = scene => {
+  if (scene.kind === 'comizio') return rallyProgress(scene);
+  if (scene.kind === 'voto') return voteProgress(scene);
+  const index = BEATS.indexOf(scene.nodeId); return { index: Math.max(0, index), total: BEATS.length };
+};
+// An ordinary television guest spot: the same studio, the same beats and the same scoring as the debate, with a guest of the show in the place of the rival.
+export function createTalkShowScene(args) { const scene = createDebateScene(args); return { ...scene, kind: 'talkshow', topic: { ...scene.topic } }; }
+// The scene played in one go by the best choices the situation allows (the quick way of a guest spot or of a rally): the same beats, the same scoring, the same outcome as the animated way, with no
+// stage. The choice at each beat is the one that scores best in that beat (ties: the first), so the quick result is the result of a careful player, not a lottery.
+export function autoPlay(input) {
+  let scene = input;
+  for (let guard = 0; guard < 40 && scene.status === 'active'; guard++) {
+    const node = sceneNode(scene);
+    let best = null;
+    for (const choice of node.choices) {
+      if (choice[2]) continue;
+      let trial; try { trial = chooseInScene(scene, choice[0]); } catch { continue; }
+      const entry = trial.history.at(-1);
+      const value = Number.isFinite(entry?.score) ? entry.score : (trial.status === 'done' ? trial.outcome?.performance ?? 0 : (choice[0] === 'accetta' || choice[0] === 'continua' || choice[0] === 'fine' ? 100 : 0));
+      if (!best || value > best.value) best = { id: choice[0], value };
+    }
+    if (!best) break;
+    scene = chooseInScene(scene, best.id);
+  }
+  return scene;
+}

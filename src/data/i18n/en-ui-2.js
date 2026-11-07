@@ -497,7 +497,7 @@ export const PHRASES = [
   ["I dati anagrafici sono usati solo per questa carriera.", "Personal data are used only for this career."],
   ["i dati istituzionali sono verificati, il resto è dichiarato simulazione.", "the institutional data are verified, the rest is declared simulation."],
   ["I delegati nascono dalle federazioni: contano gli iscritti, la vitalità, chi guida il comitato e quanto l’area si è mobilitata. Le tue scelte passate (comitati, fondi, accordi, schieramenti) cambiano i numeri.", "Delegates come from the federations: members, vitality, who leads the committee and how much the area has mobilised all count. Your past choices (committees, funds, agreements, alignments) change the numbers."],
-  ["I dossier dei ministri", "The ministers' dossiers"],
+  ["Lavori affidati ai ministri", "Work assigned to the ministers"],
   ["I giorni finiti non tornano fino alla settimana successiva.", "Days used up do not come back until the following week."],
   ["I giovani del partito organizzano un’iniziativa — Mandi un saluto (senza decisione)", "The party's young members organise an initiative — You send a greeting (no decision)"],
   ["I numeri grandi e i rapporti sono della partita. Composizione reale di riferimento, data, capigruppo documentati e fonti sono distinti per ogni gruppo.", "The big numbers and the relations belong to the game. Real reference composition, date, documented group leaders and sources are kept distinct for each group."],

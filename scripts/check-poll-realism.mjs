@@ -95,6 +95,7 @@ for (let seed = 0; seed < SEEDS; seed++) {
   const start = new Map(world.parties.map(party => [party.id, party.baseline]));
   const firstPoll = new Map(world.polls.at(-1).results.map(row => [row.partyId, row.share]));
   const player = world.parties.find(party => party.isPlayer).baseline;
+  const lastLevel = new Map();
   const inherited = new Map(), seen = new Set(world.parties.map(party => party.id)), merged = new Set();
   let date = '2026-09-24';
   for (let week = 2; week <= 520; week++) {
@@ -102,6 +103,7 @@ for (let seed = 0; seed < SEEDS; seed++) {
     world = engine.advanceWorld(world, { date, week, stats: { popularity: 45, reputation: 55, notoriety: 40 }, parliament: neutral.parliament(), society: neutral.society }).world;
     playerEffects += world.effects.filter(effect => effect.partyId === 'io').length;
     for (const party of world.parties) {
+      if (party.active && start.has(party.id)) lastLevel.set(party.id, (party.baseline - start.get(party.id) - (inherited.get(party.id) ?? 0)) / start.get(party.id));
       // A split takes part of the parent's level for good (60%), a merge brings part of the absorbed force's (60%).
       if (!seen.has(party.id)) { seen.add(party.id); if (party.parentId) inherited.set(party.parentId, (inherited.get(party.parentId) ?? 0) - party.baseline * 0.6); }
       if (!party.active && party.mergedInto && !merged.has(party.id)) { merged.add(party.id); inherited.set(party.mergedInto, (inherited.get(party.mergedInto) ?? 0) + (party.anchor ?? party.baseline) * 0.6); }
@@ -110,7 +112,9 @@ for (let seed = 0; seed < SEEDS; seed++) {
   playerMoved = Math.max(playerMoved, Math.abs(world.parties.find(party => party.isPlayer).baseline - player));
   for (const force of forces) {
     const party = world.parties.find(item => item.id === force.id);
-    if (!party?.active) continue;
+    // A force that merged into another stops existing: the survivors alone would lean upward by selection (the ones that sank are the ones that merged). Its last level before the merger counts as its
+    // result, so the sample is not made only of the forces that held; the thresholds are the same.
+    if (!party?.active) { if (lastLevel.has(force.id)) own.get(force.id).push(lastLevel.get(force.id)); continue; }
     own.get(force.id).push((party.baseline - start.get(force.id) - (inherited.get(force.id) ?? 0)) / start.get(force.id));
     const share = world.polls.at(-1).results.find(row => row.partyId === force.id)?.share;
     if (Number.isFinite(share) && !inherited.get(force.id)) shares.get(force.id).push((share - firstPoll.get(force.id)) / firstPoll.get(force.id));

@@ -258,7 +258,12 @@
     "check:scene": "node scripts/check-scene.mjs",
     "check:scene-ui": "node scripts/check-scene-ui.mjs",
     "check:challenges": "node scripts/check-challenges.mjs",
-    "check:rival-life": "node scripts/check-rival-life.mjs"
+    "check:rival-life": "node scripts/check-rival-life.mjs",
+    "check:rally": "node scripts/check-rally.mjs",
+    "check:rally-store": "node scripts/check-rally-store.mjs",
+    "check:stage-ui": "node scripts/check-stage-ui.mjs",
+    "check:runoff-rule": "node scripts/check-runoff-rule.mjs",
+    "check:challenges-ui": "node scripts/check-challenges-ui.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",

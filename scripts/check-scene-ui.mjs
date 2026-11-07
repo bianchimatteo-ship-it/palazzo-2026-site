@@ -19,13 +19,13 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   const avatar = await S('const c = await import("/src/core/avatar.js?v=' + version + '"); const s = store.getState(); return Object.values(c.avatarOf(s.dataset.politicians.find(p => p.id === s.career.playerId))).join(".");');
   const dayBefore = await S('return store.getState().campaign.day;');
   await click('[data-scene-start]');
-  await wait(() => evaluate('Boolean(document.querySelector(".scene .sc-svg"))'), 15000);
-  assert.equal(await evaluate('document.querySelectorAll(".sc-figure").length'), 3, 'In studio ci sono tre personaggi.');
-  assert.equal(await evaluate('document.querySelector(".sc-figure.role-giocatore").dataset.avatar'), avatar, 'Il giocatore ha l’avatar scelto a inizio carriera.');
+  await wait(() => evaluate('Boolean(document.querySelector(".scene .st-svg"))'), 15000);
+  assert.equal(await evaluate('document.querySelectorAll(".st-actor").length'), 3, 'In studio ci sono tre personaggi.');
+  assert.equal(await evaluate('document.querySelector(".st-actor.role-giocatore").dataset.avatar'), avatar, 'Il giocatore ha l’avatar scelto a inizio carriera.');
   assert.equal(await evaluate('Boolean(document.querySelector(".page-wrap, .sidebar, .mobile-tabbar"))'), false, 'La carriera non è disegnata dietro la scena.');
-  assert.equal(await evaluate('document.querySelectorAll(".sc-figure .av-mouth-open").length'), 3, 'Ogni personaggio ha la bocca che si apre (parti del volto separate).');
+  assert.equal(await evaluate('document.querySelectorAll(".st-actor .av-mouth-open").length'), 3, 'Ogni personaggio ha la bocca che si apre (parti del volto separate).');
   const seenCameras = new Set(), speakers = new Set();
-  const snapshot = () => evaluate(`(() => { const sp = document.querySelector('.sc-figure.is-speaking'); return { node: document.querySelector('.scene').dataset.sceneNode, cam: document.querySelector('.sc-cam').dataset.camera, speaker: sp?.dataset.cast ?? null, speakers: document.querySelectorAll('.sc-figure.is-speaking').length, choices: [...document.querySelectorAll('[data-scene-choice]:not([disabled])')].map(b => b.dataset.sceneChoice), text: document.querySelector('.scene-dialogue p')?.textContent ?? '' }; })()`);
+  const snapshot = () => evaluate(`(() => { const sp = document.querySelector('.st-actor.is-speaking'); return { node: document.querySelector('.scene').dataset.sceneNode, cam: document.querySelector('.st-cam').dataset.camera, speaker: sp?.dataset.actor ?? null, speakers: document.querySelectorAll('.st-actor.is-speaking').length, choices: [...document.querySelectorAll('[data-scene-choice]:not([disabled])')].map(b => b.dataset.sceneChoice), text: document.querySelector('.scene-dialogue p')?.textContent ?? '' }; })()`);
   const pick = (choices, prefer) => prefer.find(item => choices.includes(item)) ?? choices[0];
   const plan = { invito: ['accetta'], preparazione: ['dati'], ingresso: ['continua'], q1: ['dati'], r1: ['continua'], domanda: ['conti'], 'risposta-rivale': ['continua'], q2: ['programma', 'dati'], r2: ['continua'], attacco: ['fatti'], r3: ['continua'], chiusura: ['appello'], esito: ['fine'] };
   let steps = 0, midChecked = false;
@@ -39,7 +39,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
       // reload in the middle: the same scene
       midChecked = true; const before = await S('return JSON.stringify(store.sceneView());');
       await goto(); await wait(() => evaluate('Boolean(document.querySelector("[data-menu=continua]"))')); await click('[data-menu=continua]');
-      await wait(() => evaluate('Boolean(document.querySelector(".scene .sc-svg"))'), 20000);
+      await wait(() => evaluate('Boolean(document.querySelector(".scene .st-svg"))'), 20000);
       assert.equal(await S('return JSON.stringify(store.sceneView());'), before, 'Dopo il ricaricamento la scena è la stessa.');
       assert.equal(await S('try { store.advance(7); return "mosso"; } catch (error) { return /studio/.test(error.message) ? "fermo" : error.message; }'), 'fermo', 'Il tempo della carriera è fermo in studio.');
     }
@@ -48,7 +48,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   assert.ok(seenCameras.size >= 3, `L’inquadratura cambia (${[...seenCameras].join(', ')}).`);
   assert.ok(speakers.size >= 3, 'Parlano tutti e tre i personaggi.');
   assert.match(await evaluate('document.querySelector(".scene-result")?.innerText ?? ""'), /Prestazione/, 'La scena finale mostra la prestazione.');
-  assert.equal(await evaluate('document.querySelector(".sc-figure.role-giocatore").dataset.avatar'), avatar, 'A fine scena l’avatar del giocatore è sempre lo stesso.');
+  assert.equal(await evaluate('document.querySelector(".st-actor.role-giocatore").dataset.avatar'), avatar, 'A fine scena l’avatar del giocatore è sempre lo stesso.');
   await click('[data-scene-choice="fine"]');
   await wait(() => evaluate('Boolean(document.querySelector(".page-wrap"))'), 15000);
   assert.equal(await S('return store.sceneView();'), null, 'Finita la scena si torna alla carriera.');
@@ -57,7 +57,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   await evaluate(`location.hash = '#elezioni'; true`); await pause(600);
   await click('[data-section-tab="elezioni"][data-section-tab-value="campagna"]');
   await wait(() => evaluate('Boolean(document.querySelector("[data-scene-start]"))'), 15000);
-  await click('[data-scene-start]'); await wait(() => evaluate('Boolean(document.querySelector(".scene .sc-svg"))'), 15000);
+  await click('[data-scene-start]'); await wait(() => evaluate('Boolean(document.querySelector(".scene .st-svg"))'), 15000);
   await click('[data-scene-choice="accetta"]'); await click('[data-scene-choice="dati"]'); await click('[data-scene-choice="continua"]');
   for (const [name, w, h, mobile] of [['smartphone stretto', 320, 700, true], ['smartphone', 390, 800, true], ['tablet', 768, 1000, true], ['computer', 1440, 900, false]]) {
     await viewport(w, h, mobile); await pause(500);
@@ -69,9 +69,9 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   await viewport(1280, 900, false);
   for (const [mode, moving] of [['full', true], ['reduced', false], ['off', false]]) {
     await evaluate(`document.documentElement.dataset.motion = ${JSON.stringify(mode)}; true`); await pause(150);
-    const anim = await evaluate(`(() => { const o = document.querySelector('.sc-figure.is-speaking .av-mouth-open'); return o ? getComputedStyle(o).animationName : 'nessuno'; })()`);
-    if (moving) assert.equal(anim, 'sc-talk', 'Con le animazioni complete la bocca si muove.'); else assert.ok(anim === 'none' || anim === 'nessuno', `Animazioni ${mode}: la bocca non si anima (${anim}).`);
-    assert.equal(await evaluate(`getComputedStyle(document.querySelector('.sc-figure.is-speaking .av-mouth-open')).opacity !== undefined`), true);
+    const anim = await evaluate(`(() => { const o = document.querySelector('.st-actor.is-speaking .av-mouth-open'); return o ? getComputedStyle(o).animationName : 'nessuno'; })()`);
+    if (moving) assert.equal(anim, 'st-talk', 'Con le animazioni complete la bocca si muove.'); else assert.ok(anim === 'none' || anim === 'nessuno', `Animazioni ${mode}: la bocca non si anima (${anim}).`);
+    assert.equal(await evaluate(`getComputedStyle(document.querySelector('.st-actor.is-speaking .av-mouth-open')).opacity !== undefined`), true);
   }
   // English: the rest of the scene is walked in English and every screen is read
   await evaluate(`import('/src/core/i18n.js?v=${version}').then(m => m.setLanguage('en')).then(() => true)`); await pause(800);

@@ -20,6 +20,7 @@ import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=202
 import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20261106-2';
 import { PARTY_LINK_COLLECTIONS, forceKind, isCoalitionList, politicalForces } from '../data/repositories/party-links.js?v=20261106-2';
 import { renderScene } from './scene-view.js?v=20261106-2';
+import { playStage, stageIsPaused, stagePause, stageResume, stageSkip } from './stage-player.js?v=20261106-2';
 import { renderDiplomacy } from './diplomacy-view.js?v=20261106-2';
 import { renderElectionNight } from './election-night.js?v=20261106-2';
 import { PROFESSIONS, chosenPlace, makeCareerDraft, pollScenarioOf, removePartyCriterion, renderCareerWizard, togglePartyOrientation, wizardLogoPreview } from './career-wizard.js?v=20261106-2';
@@ -477,6 +478,13 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   watchTree(root);
   onLanguageChange(() => { watchTree(root); render(store.getState(), store.getLastSaved()); });
   const download = (text, name) => { const url = URL.createObjectURL(new Blob([text], { type: 'application/json' })); const link = document.createElement('a'); link.href = url; link.download = name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); };
+  // The stage of a scene is drawn in its final pose; the passage from the beat before is played here, once (the scene remembers the beats already seen), with the motion the player chose.
+  const afterSceneRender = state => {
+    const scene = state.scene;
+    if (!scene) return;
+    const autoplay = scene.kind === 'voto' && settings.motion === 'full' && scene.nodeId !== 'uscita';
+    playStage(root, { motion: settings.motion, seen: scene.stageSeen === scene.nodeId, autoplay, onSeen: id => store.sceneMarkSeen(id), onEnd: () => { try { if (store.getState().scene?.nodeId === scene.nodeId) store.sceneChoose('continua'); } catch { /* the buttons lead */ } } });
+  };
   // The identity of the party the career is in (see party-identity.js). It is the party of the game, not the one still written in the career record: after leaving a party the
   // player is independent until joining or founding another.
   const careerIdentity = state => {
@@ -702,15 +710,16 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       if (pendingConfirm) root.querySelector?.('[data-confirm="cancel"]')?.focus?.();
       return;
     }
+    // A scene (the television debate) is a screen of its own while it lasts, like the election night: the career is not drawn, its time does not move.
+    if (state.scene) {
+      root.innerHTML = `<div class="app-shell scene-shell"><div class="night-menu-row"><button type="button" class="ghost-button" data-action="menu">Menu</button></div>${renderScene(state, { identity: careerIdentity(state), motion: settings.motion })}${renderConfirmDialog(pendingConfirm)}${state.ui.toast && settings.toasts === 'on' ? `<div class="toast" role="status">${icon('spark', 17)}${esc(state.ui.toast)}</div>` : ''}</div>`;
+      if (state.ui.toast) { clearTimeout(toastTimer); toastTimer = setTimeout(() => { const s = store.getState(); if (s.ui.toast) { s.ui.toast = null; root.querySelector?.('.toast')?.remove?.(); } }, { short: 1600, normal: 3200, long: 6000 }[settings.toastLength] ?? 3200); }
+      afterSceneRender(state);
+      return;
+    }
     // The election night is a screen of its own while it lasts: the career (menu, topbar, pages) is not drawn, the time of the career does not move, the menu stays reachable.
     if (state.night) {
       root.innerHTML = `<div class="app-shell night-shell"><div class="night-menu-row"><button type="button" class="ghost-button" data-action="menu">Menu</button></div>${renderElectionNight(state, { tab: nightTab, area: nightArea, boundaries: realDatabase.italyBoundaries ?? null })}${renderConfirmDialog(pendingConfirm)}${state.ui.toast && settings.toasts === 'on' ? `<div class="toast" role="status">${icon('spark', 17)}${esc(state.ui.toast)}</div>` : ''}</div>`;
-      if (state.ui.toast) { clearTimeout(toastTimer); toastTimer = setTimeout(() => { const s = store.getState(); if (s.ui.toast) { s.ui.toast = null; root.querySelector?.('.toast')?.remove?.(); } }, { short: 1600, normal: 3200, long: 6000 }[settings.toastLength] ?? 3200); }
-      return;
-    }
-    // A scene (the television debate) is a screen of its own while it lasts, like the election night: the career is not drawn, its time does not move.
-    if (state.scene) {
-      root.innerHTML = `<div class="app-shell scene-shell"><div class="night-menu-row"><button type="button" class="ghost-button" data-action="menu">Menu</button></div>${renderScene(state)}${renderConfirmDialog(pendingConfirm)}${state.ui.toast && settings.toasts === 'on' ? `<div class="toast" role="status">${icon('spark', 17)}${esc(state.ui.toast)}</div>` : ''}</div>`;
       if (state.ui.toast) { clearTimeout(toastTimer); toastTimer = setTimeout(() => { const s = store.getState(); if (s.ui.toast) { s.ui.toast = null; root.querySelector?.('.toast')?.remove?.(); } }, { short: 1600, normal: 3200, long: 6000 }[settings.toastLength] ?? 3200); }
       return;
     }
@@ -1633,10 +1642,15 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     }
     // The bills of the Government, of the other groups and of the committees: speeches and the player's vote.
     if (event.target.closest?.('[data-life-logo-clear]')) { clearFoundLogo(); const box = root.querySelector('[data-life-logo-preview]'), input = root.querySelector('[data-life-logo-upload]'); if (box) box.hidden = true; if (input) input.value = ''; return; }
-    const sceneControl = event.target.closest('[data-scene-choice],[data-scene-abandon],[data-scene-start]');
+    const sceneControl = event.target.closest('[data-scene-choice],[data-scene-abandon],[data-scene-start],[data-scene-start-kind],[data-scene-skip],[data-stage-skip],[data-stage-pause],[data-scene-motion]');
     if (sceneControl) {
       try {
-        if (sceneControl.matches('[data-scene-start]')) store.startDebateScene({});
+        if (sceneControl.matches('[data-stage-skip]')) { stageSkip(); return; }
+        if (sceneControl.matches('[data-stage-pause]')) { if (stageIsPaused()) { stageResume(); sceneControl.textContent = 'Pausa'; sceneControl.setAttribute('aria-pressed', 'false'); } else { stagePause(); sceneControl.textContent = 'Riprendi'; sceneControl.setAttribute('aria-pressed', 'true'); } return; }
+        if (sceneControl.matches('[data-scene-motion]')) { settings = saveSetting('motion', sceneControl.dataset.sceneMotion, settingsScope()); applySettings(); render(store.getState(), store.getLastSaved()); return; }
+        if (sceneControl.matches('[data-scene-skip]')) store.sceneSkip();
+        else if (sceneControl.matches('[data-scene-start-kind]')) { const kind = sceneControl.dataset.sceneStartKind; if (kind === 'comizio') store.startRallyScene(); else if (kind === 'talkshow') store.startTalkShowScene({ source: 'attivita' }); }
+        else if (sceneControl.matches('[data-scene-start]')) store.startDebateScene({});
         else if (sceneControl.matches('[data-scene-abandon]')) store.sceneAbandon();
         else store.sceneChoose(sceneControl.dataset.sceneChoice);
         playSound('confirm'); window.scrollTo?.({ top: 0 });
@@ -1961,7 +1975,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     const partyCurrent = event.target.closest('[data-party-current]')?.dataset.partyCurrent;
     if (gameActivity || agendaChoice || fastForward || partyAction || partyCurrent) {
       try {
-        if (gameActivity) { const result = store.performWeeklyActivity(gameActivity, activityButton.dataset.activityTargetValue ?? root.querySelector(`[data-activity-target="${gameActivity}"]`)?.value ?? null); playSound(result.report.tone === 'bad' ? 'failure' : 'confirm'); }
+        if (gameActivity && activityButton.matches('[data-quick-scene]')) { if (gameActivity === 'comizio-piazza') store.startRallyScene({ quick: true }); else store.startTalkShowScene({ source: 'attivita', quick: true }); playSound('confirm'); }
+        else if (gameActivity) { const result = store.performWeeklyActivity(gameActivity, activityButton.dataset.activityTargetValue ?? root.querySelector(`[data-activity-target="${gameActivity}"]`)?.value ?? null); playSound(result.report.tone === 'bad' ? 'failure' : 'confirm'); }
         else if (agendaChoice) { const result = store.resolveAgendaItem(agendaChoice.dataset.agendaItem, agendaChoice.dataset.agendaChoice); playSound(result.report.tone === 'bad' ? 'failure' : 'confirm'); }
         else if (fastForward) {
           // Far-reaching: many weeks in one action, so it is confirmed first.
