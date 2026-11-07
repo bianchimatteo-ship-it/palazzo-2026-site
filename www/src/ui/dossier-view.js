@@ -1,11 +1,11 @@
 // The Council of Ministers at work: the dossiers each minister took on (objective, term, progress read from the game, results and who is to blame) and the balance of
 // the Government's programme against the measures enacted. The Prime Minister can help a dossier; everyone else reads.
-import { DOSSIER_KINDS, DOSSIER_RULES } from '../data/simulation/dossier-rules.js?v=20261106-2';
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261106-2';
-import { isPrimeMinister } from '../core/roles.js?v=20261106-2';
-import { dossiersOf, openDossiers, programReport } from '../core/dossier-engine.js?v=20261106-2';
-import { esc, meter } from './charts.js?v=20261106-2';
-import { glyph } from './visuals.js?v=20261106-2';
+import { DOSSIER_KINDS, DOSSIER_RULES } from '../data/simulation/dossier-rules.js?v=20261107-1';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261107-1';
+import { isPrimeMinister } from '../core/roles.js?v=20261107-1';
+import { dossiersOf, openDossiers, programReport } from '../core/dossier-engine.js?v=20261107-1';
+import { esc, meter } from './charts.js?v=20261107-1';
+import { glyph } from './visuals.js?v=20261107-1';
 
 const BLAME = { ministro: 'colpa del ministro', maggioranza: 'maggioranza troppo stretta', circostanze: 'le circostanze' };
 const OUTCOME = { riuscito: 'Riuscito', fallito: 'Fallito', ritirato: 'Ritirato' };
@@ -38,8 +38,8 @@ export function dossierPanel(state) {
   const program = report ? `<div class="pm-block"><h3>${glyph('route', 16)} Il programma di governo alla prova · ${report.done}/${report.total} priorità attuate</h3>
     <ul class="program-report">${report.rows.map(row => `<li class="${row.status}"><span>${esc(row.label)}</span><b>${esc(STATUS[row.status])}</b><small>${row.status === 'attuata' ? esc(row.measures.join(' · ')) : row.bill ? esc(`«${row.bill.title}»: ${row.bill.stage}`) : 'nessun provvedimento della maggioranza nella materia'}</small></li>`).join('')}</ul>
     <small class="parliament-note">${report.settled ? 'Il bilancio è stato fatto: ha già pesato su stabilità e alleati.' : `Dopo ${DOSSIER_RULES.program.weeks} settimane il programma viene misurato sulle misure approvate (oggi ${report.weeks}): ${Math.round(DOSSIER_RULES.program.good * 100)}% o più rafforza il governo, ${Math.round(DOSSIER_RULES.program.bad * 100)}% o meno lo indebolisce.`}</small></div>` : '';
-  return `<section class="government-current dossier-desk"><div class="home-section-heading"><div><span class="section-kicker">CONSIGLIO DEI MINISTRI · SIMULAZIONE</span><h2>I dossier dei ministri</h2></div><span class="badge">${open.length} aperti · ${done} riusciti · ${failed} falliti</span></div>
-    <p class="parliament-note">Ogni ministro prende in carico un obiettivo nel suo settore, con una scadenza: una riforma si chiude quando una legge della maggioranza è approvata, un settore in difficoltà quando il suo livello nel Paese raggiunge l’obiettivo. Il risultato pesa su ministro, governo e gruppo di provenienza${canAct ? '; tu puoi aiutare un dossier o toglierlo' : ''}.</p>
-    ${open.length ? `<div class="project-list">${open.map(item => openRow(item, state, canAct)).join('')}</div>` : '<p class="quiet-copy">Nessun dossier aperto: i ministri ne prendono in carico di nuovi dopo una pausa.</p>'}
+  return `<section class="government-current dossier-desk"><div class="home-section-heading"><div><span class="section-kicker">CONSIGLIO DEI MINISTRI · SIMULAZIONE</span><h2>Lavori affidati ai ministri</h2></div><span class="badge">${open.length} aperti · ${done} riusciti · ${failed} falliti</span></div>
+    <p class="parliament-note">Ogni ministro prende in carico un obiettivo nel suo settore, con una scadenza: una riforma si chiude quando una legge della maggioranza è approvata, un settore in difficoltà quando il suo livello nel Paese raggiunge l’obiettivo. Il risultato pesa su ministro, governo e gruppo di provenienza${canAct ? '; tu puoi sostenere un lavoro o toglierlo' : ''}.</p>
+    ${open.length ? `<div class="project-list">${open.map(item => openRow(item, state, canAct)).join('')}</div>` : '<p class="quiet-copy">Nessun lavoro aperto: i ministri ne prendono in carico di nuovi dopo una pausa.</p>'}
     ${closed.length ? `<h4 class="news-subhead">Chiusi di recente</h4><div class="project-list">${closed.map(closedRow).join('')}</div>` : ''}${program}</section>`;
 }

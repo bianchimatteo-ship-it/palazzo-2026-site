@@ -30,7 +30,7 @@ export const MEDIA_OUTLETS = Object.freeze([
 // Which channel an activity or decision reaches.
 export const ACTIVITY_MEDIA = Object.freeze({
   social: 'social', intervista: 'quotidiani', talk: 'tv-nazionale', progetto: 'stampa-locale', ascolto: 'stampa-locale', associazioni: 'tv-locale',
-  radio: 'radio', 'prima-serata': 'tv-nazionale', dissenso: 'quotidiani', presa: 'tv-nazionale'
+  radio: 'radio', 'comizio-piazza': 'tv-locale', 'prima-serata': 'tv-nazionale', dissenso: 'quotidiani', presa: 'tv-nazionale'
 });
 
 // A territorial issue appears when an indicator falls below this level.

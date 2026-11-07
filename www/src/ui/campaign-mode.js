@@ -1,15 +1,15 @@
-import { bandDescription, bandOfMunicipality, MUNICIPAL_LEGAL_REFERENCES } from '../core/municipal-rules.js?v=20261106-2';
-import { CAMPAIGN_OBJECTIVES, CAMPAIGN_PHASES, CAMPAIGN_STRATEGIES, DEBATE_TOPICS, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261106-2';
-import { affiliationOf, markForPerson } from './person-marks.js?v=20261106-2';
-import { campaignActivities, campaignMetrics, campaignScope, campaignSummary, listStanding, strategyAvailable, strategyFit, strategyOf, strategyStages } from '../core/campaign-engine.js?v=20261106-2';
-import { resultDescription } from '../core/election-engine.js?v=20261106-2';
-import { formatDate } from '../core/time.js?v=20261106-2';
-import { careerLevelLabel } from '../data/regions.js?v=20261106-2';
-import { upcomingElections } from '../core/career-engine.js?v=20261106-2';
-import { candidacyBlock, candidacyLapses, personalCandidacies } from '../core/office-engine.js?v=20261106-2';
-import { candidacyFacts, heldOfficesOf } from '../core/roles.js?v=20261106-2';
-import { mandatePlace, renderElectionReport } from './election-report.js?v=20261106-2';
-import { glyph } from './visuals.js?v=20261106-2';
+import { bandDescription, bandOfMunicipality, MUNICIPAL_LEGAL_REFERENCES } from '../core/municipal-rules.js?v=20261107-1';
+import { CAMPAIGN_OBJECTIVES, CAMPAIGN_PHASES, CAMPAIGN_STRATEGIES, DEBATE_TOPICS, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261107-1';
+import { affiliationOf, markForPerson } from './person-marks.js?v=20261107-1';
+import { campaignActivities, campaignMetrics, campaignScope, campaignSummary, listStanding, strategyAvailable, strategyFit, strategyOf, strategyStages } from '../core/campaign-engine.js?v=20261107-1';
+import { resultDescription } from '../core/election-engine.js?v=20261107-1';
+import { formatDate } from '../core/time.js?v=20261107-1';
+import { careerLevelLabel } from '../data/regions.js?v=20261107-1';
+import { upcomingElections } from '../core/career-engine.js?v=20261107-1';
+import { candidacyBlock, candidacyLapses, personalCandidacies } from '../core/office-engine.js?v=20261107-1';
+import { candidacyFacts, heldOfficesOf } from '../core/roles.js?v=20261107-1';
+import { mandatePlace, renderElectionReport } from './election-report.js?v=20261107-1';
+import { glyph } from './visuals.js?v=20261107-1';
 
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const roleLabels={sindaco:'Candidatura a sindaco',consigliere:'Candidato in lista per il consiglio',presidente:'Candidato alla presidenza (Regione o Provincia)',deputato:'Candidato alla Camera',senatore:'Candidato al Senato',uninominale:'Collegio uninominale simulato',eurodeputato:'Candidato al Parlamento europeo'};
@@ -222,7 +222,7 @@ function renderActive(campaign,parties,logoFor,picks={}) {
     const body=scenePanel+rows.map(({activity,ok,reason,modifiers,expected})=>{
       const chips=[['Fase',modifiers.phase],['Elezione',modifiers.type],['Strategia',modifiers.strategy],['Ripetizione',modifiers.repetition],['Tema',modifiers.topic],['Clima',modifiers.mood],['Partito',modifiers.party],['Area',modifiers.area],['Squadra',modifiers.crew]].filter(([,value])=>factorLabel(value)).map(([name,value])=>`<i class="${value>1?'up':'down'}">${esc(name)} ${factorLabel(value)}</i>`).join('');
       const risk=Math.round(activity.risk*(strategy.risk??1));
-      return `<div class="campaign-activity ${ok?'':'is-blocked'}"><div class="campaign-activity-copy"><strong>${esc(activity.label)}</strong><span>${esc(activity.detail)}</span><small>${activity.days} ${activity.days===1?'giorno':'giorni'} · Rischio ${risk}/100 · ${esc(SCOPE_NAMES[activity.scope]??'Territorio')}${expected?` · effetto atteso <b>+${String(expected).replace('.',',')} punti</b>`:''}</small>${chips?`<span class="campaign-mods">${chips}</span>`:''}</div><div class="campaign-activity-cost">${esc(activityCost(activity))}</div><button class="campaign-action-button" data-campaign-activity="${activity.id}" ${ok?'':'disabled'}>${ok?'Scegli':'Non disponibile'}</button>${reason?`<small class="campaign-activity-reason">${esc(reason)}</small>`:''}</div>`;
+      return `<div class="campaign-activity ${ok?'':'is-blocked'}"><div class="campaign-activity-copy"><strong>${esc(activity.label)}</strong><span>${esc(activity.detail)}</span><small>${activity.days} ${activity.days===1?'giorno':'giorni'} · Rischio ${risk}/100 · ${esc(SCOPE_NAMES[activity.scope]??'Territorio')}${expected?` · effetto atteso <b>+${String(expected).replace('.',',')} punti</b>`:''}</small>${chips?`<span class="campaign-mods">${chips}</span>`:''}</div><div class="campaign-activity-cost">${esc(activityCost(activity))}</div>${activity.id==='rally'&&ok?`<button class="campaign-action-button primary-button" data-scene-start-kind="comizio">Scendi in piazza</button>`:''}<button class="campaign-action-button" data-campaign-activity="${activity.id}" ${ok?'':'disabled'}>${ok?(activity.id==='rally'?'Simula il comizio':'Scegli'):'Non disponibile'}</button>${reason?`<small class="campaign-activity-reason">${esc(reason)}</small>`:''}</div>`;
     }).join('');
     return `<details class="campaign-activity-group" data-remember="campagna-${category}" ${['territory','media','event'].includes(category)?'open':''}><summary>${glyph(icon,16)}<span>${esc(label)}</span><small>${available} disponibili su ${rows.length}</small></summary>${body}</details>`;
   }).join('');

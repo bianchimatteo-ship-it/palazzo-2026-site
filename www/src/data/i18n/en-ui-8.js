@@ -398,7 +398,7 @@ export const PHRASES = [
   ["la stabilità è a #/# e il margine nella Camera più stretta è di +# seggi.", "stability is at #/# and the margin in the narrower Chamber is +# seats."],
   ["la stabilità è a #/# e il margine nella Camera più stretta è di # seggi.", "stability is at #/# and the margin in the narrower Chamber is # seats."],
   ["la stabilità è a #/#.", "stability is at #/#."],
-  ["Nessun dossier aperto: i ministri ne prendono in carico di nuovi dopo una pausa.", "No open dossier: the ministers take on new ones after a pause."],
+  ["Nessun lavoro aperto: i ministri ne prendono in carico di nuovi dopo una pausa.", "No open work: the ministers take on new ones after a pause."],
   ["Giustizia", "Justice"],
   ["Ho già un account: accedi", "I already have an account: log in"],
   ["Non serve un indirizzo email.", "No email address is needed."],

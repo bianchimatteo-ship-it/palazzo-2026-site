@@ -8,9 +8,9 @@
 //   - the minister who contests the line in public and, if nobody listens, resigns with a quarrel.
 // The Prime Minister decides: when it is the player, requests, conflicts and meetings wait for him (and turn into their default if he lets them pass); when it is a simulated one, the same
 // rules are answered by chance seeded on the date. Everything is pure: the store passes the parliament and gets it back with the lines to tell.
-import { DATA_SOURCES } from '../data/schema.js?v=20261106-2';
-import { AREA_BY_ID, areasOfPortfolio } from '../data/simulation/policy-rules.js?v=20261106-2';
-import { activeMinisters, assignMinister, changePartner, groupProfile, parliamentInternals } from './parliament-engine.js?v=20261106-2';
+import { DATA_SOURCES } from '../data/schema.js?v=20261107-1';
+import { AREA_BY_ID, areasOfPortfolio } from '../data/simulation/policy-rules.js?v=20261107-1';
+import { activeMinisters, assignMinister, changePartner, groupProfile, parliamentInternals } from './parliament-engine.js?v=20261107-1';
 
 const { getGroup, record } = parliamentInternals;
 const SIM = DATA_SOURCES.SIMULATION;
@@ -131,8 +131,8 @@ export function advanceCabinetLife(input, { date, week = 0, rand = Math.random, 
       const issue = AREA_BY_ID[pick.area]?.label ?? pick.area;
       life = { ...life, lastConflict: date, conflicts: [...life.conflicts, { id: `conflitto-${date}-${pick.a.id}`, a: pick.a.id, b: pick.b.id, issue, severity: 1 + Math.round(rand() * 2), openedAt: date, resolvedAt: null }] };
       next = setLife(next, life);
-      lines.push(`Scontro in Consiglio fra i ministri ${pick.a.portfolio} e ${pick.b.portfolio} su ${issue.toLowerCase()}.`);
-      next = log(next, date, 'conflitto-ministri', `Scontro fra i ministri ${pick.a.portfolio} e ${pick.b.portfolio} su ${issue.toLowerCase()}.`, { auto: !playerPremier });
+      lines.push(`Scontro in Consiglio fra i ministri di ${pick.a.portfolio} e di ${pick.b.portfolio} su ${issue.toLowerCase()}.`);
+      next = log(next, date, 'conflitto-ministri', `Scontro fra i ministri di ${pick.a.portfolio} e di ${pick.b.portfolio} su ${issue.toLowerCase()}.`, { auto: !playerPremier });
     } else life = { ...life, lastConflict: date };
   }
   for (const conflict of life.conflicts.filter(item => !item.resolvedAt && weeksBetween(item.openedAt, date) >= CABINET_LIFE.conflictPatience)) {

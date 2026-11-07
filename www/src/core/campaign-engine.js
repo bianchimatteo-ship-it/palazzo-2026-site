@@ -1,11 +1,11 @@
-import { advanceDays } from './time.js?v=20261106-2';
-import { difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261106-2';
-import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261106-2';
-import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261106-2';
-import { aggregateShares, listVote, mateForce, runFinalElection, runFirstRound, voteScale } from './election-engine.js?v=20261106-2';
-import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261106-2';
-import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261106-2';
-import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261106-2';
+import { advanceDays } from './time.js?v=20261107-1';
+import { difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261107-1';
+import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261107-1';
+import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261107-1';
+import { aggregateShares, listVote, mateForce, runFinalElection, runFirstRound, voteScale } from './election-engine.js?v=20261107-1';
+import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261107-1';
+import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261107-1';
+import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261107-1';
 
 const SOURCE = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
@@ -1973,7 +1973,9 @@ export function performCampaignActivity(input,activityId,options={}) {
   const topic=DEBATE_TOPICS.find(item=>item.id===options.topicId)??DEBATE_TOPICS.find(item=>item.id===campaign.strategy?.topicId)??DEBATE_TOPICS[0];
   const strategy = strategyOf(campaign);
   const modifiers = activityModifiers(campaign, activity, { ...options, territoryId:area?.id, topicId:topic.id });
-  const factor = modifiers.total;
+  // A rally played as a scene (scene-engine.js, createRallyScene) brings its verdict: the speech scales what the rally yields and the protest, if it came, replaces the random incident of the activity.
+  const rallyScene = activity.id === 'rally' && Number.isFinite(options.sceneEdge) ? { edge: options.sceneEdge, protest: options.sceneProtest ?? 'nessuna' } : null;
+  const factor = modifiers.total * (rallyScene ? clamp(1 + rallyScene.edge / 40, .2, 1.8) : 1);
   campaign.activityUses = { ...(campaign.activityUses ?? {}), [activity.id]:(campaign.activityUses?.[activity.id] ?? 0) + 1 };
   recordAudience(campaign, activity);
   let report='';
@@ -2095,7 +2097,16 @@ export function performCampaignActivity(input,activityId,options={}) {
   // A tired team makes mistakes; a well-trained one makes fewer.
   const crewRisk=activity.rest?0:Math.max(0,Number(crew.teams[teamOfActivity(activity)].fatigue??0)-CREW_RULES.fatigue.tired)*CREW_RULES.fatigue.risk*1.5-(crew.quality-CREW_RULES.quality.base)*.04;
   const risk=activity.rest?0:clamp((activity.risk+crewRisk+campaign.candidateStats.notoriety*.18-campaign.candidateStats.reputation*.05)*strategy.risk,0,75);
-  if(risk&&draw(campaign)<risk/100) {
+  if (rallyScene) {
+    campaign.media.coverage = round(clamp(campaign.media.coverage + (rallyScene.protest === 'nessuna' ? 0 : 1.2)));
+    if (rallyScene.protest === 'gestita') { campaign.candidateStats.reputation = round(clamp(campaign.candidateStats.reputation + .5)); campaign.media.reactions++; report += ' La contestazione è stata affrontata davanti alle telecamere.'; }
+    else if (rallyScene.protest === 'degenerata') {
+      campaign.candidateStats.reputation = round(clamp(campaign.candidateStats.reputation - 1.1)); playerMove(campaign, -.45, area.id);
+      player.resources.volunteers = Math.max(0, player.resources.volunteers - 2); campaign.media.criticalEvents++; campaign.media.reactions++;
+      report += ' La contestazione è degenerata: il comizio è stato interrotto.';
+    }
+  }
+  if(!rallyScene && risk&&draw(campaign)<risk/100) {
     if(activity.category==='media') {
       campaign.media.criticalEvents++;
       campaign.candidateStats.reputation=round(clamp(campaign.candidateStats.reputation-.65));

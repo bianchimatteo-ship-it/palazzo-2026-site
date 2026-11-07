@@ -1845,3 +1845,19 @@ details.accord-panel.pm-fold { padding: 0; }
 .ch-rows li.is-met b { color: var(--good, #1f7a3d); }
 .ch-limits li { font: 500 13px var(--font-ui); }
 .ch-limits li.is-broken { color: var(--bad, #b3261e); font-weight: 700; }
+
+/* Government: the card of each minister; Diplomacy: country cards and authority notes */
+.cl-head { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; }
+.cl-avatar { width: 52px; height: 52px; border-radius: 50%; overflow: hidden; border: 2px solid var(--line-strong); background: var(--panel-3); display: block; }
+.cl-id { display: grid; gap: 2px; min-width: 0; } .cl-id small { color: var(--ink-3); }
+.cl-trend { display: grid; grid-template-columns: 90px 1fr; gap: 8px; align-items: center; color: var(--accent, var(--gold)); } .cl-trend svg { width: 90px; height: 32px; } .cl-trend small { color: var(--ink-3); }
+.cl-situation { margin: 0; padding-left: 18px; color: var(--ink-2); font-size: 13.5px; line-height: 1.45; }
+.cl-explain, .dp-authority { display: block; color: var(--ink-3); font-size: 12.5px; line-height: 1.45; margin-top: 4px; }
+.cl-explain b, .dp-authority b { color: var(--ink-2); }
+.dp-country { display: grid; gap: 8px; }
+.dp-interests { margin: 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; color: var(--ink-2); }
+.dp-chip { padding: 2px 9px; border: 1px solid var(--line); border-radius: 99px; font-size: 12px; text-transform: capitalize; }
+.dp-hist summary { cursor: pointer; color: var(--ink-2); font-size: 13px; min-height: 32px; display: flex; align-items: center; }
+@media (max-width: 480px) { .cl-head { grid-template-columns: auto 1fr; } .cl-head .cl-grade { grid-column: 1 / -1; justify-self: start; } .cl-trend { grid-template-columns: 1fr; } }
+.program-compare { margin: 4px 0 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; color: var(--ink-2); }
+.dp-chip.is-shared { border-color: var(--gold); color: var(--gold-light); }

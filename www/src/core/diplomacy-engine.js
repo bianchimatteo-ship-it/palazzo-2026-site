@@ -5,7 +5,7 @@
 //
 // Who can do what: the Prime Minister (the player when he leads the Government, otherwise the simulated one) negotiates, goes to the summits and answers the crises; the President of the Republic
 // receives, ratifies (or delays, or refuses) the treaties and holds state visits; anyone else follows. Everything here is pure: the store passes the state and gets it back with the effects.
-import { DATA_SOURCES } from '../data/schema.js?v=20261106-2';
+import { DATA_SOURCES } from '../data/schema.js?v=20261107-1';
 
 const SIM = DATA_SOURCES.SIMULATION;
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));

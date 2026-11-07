@@ -1,10 +1,10 @@
-import { uniqueId } from './ids.js?v=20261106-2';
-import { AD_REWARD } from '../data/simulation/reward-rules.js?v=20261106-2';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261106-2';
-import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261106-2';
-import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261106-2';
-import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261106-2';
-import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261106-2';
+import { uniqueId } from './ids.js?v=20261107-1';
+import { AD_REWARD } from '../data/simulation/reward-rules.js?v=20261107-1';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261107-1';
+import { APPROVAL_NEUTRAL, CHART_SLOTS, POLL_EXTENSIONS, CIVIC_FIGURE_LABEL, POLL_INSTITUTES, STRATEGIES, WORLD_CHAIN_STAGES, WORLD_EVENTS, WORLD_FOLLOWUPS, WORLD_PARTY_EVENTS } from '../data/simulation/polling-rules.js?v=20261107-1';
+import { AREA_BY_ID, CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261107-1';
+import { advanceDays, nextMunicipalVote, nextRegionalVote, sundayOnOrBeforeDate } from './time.js?v=20261107-1';
+import { advanceObservatory, houseEffect, lawSurveys, normalizeObservatory, observatoryView, recordApproval, recordRegional, seedObservatory, settleReading, stanceOf, unit } from './poll-observatory.js?v=20261107-1';
 export { houseEffect };
 
 // The political world: real parties whose poll figures, strategies, alliances and reactions are simulated.
@@ -811,6 +811,15 @@ function advanceChains(world, date, parliament, reactions, lines) {
   }
 }
 
+// An alliance found pays as much as a search without partners costs, in the AVERAGE: the payment is relative to the share of the forces that look for partners and have found them, so that the strategy
+// moves the forces among themselves (who is allied gains on who is not) without a net flow in favour of the forces that happen to be allied most of the time (a stream on the level without the anchor
+// would raise them for good: the small forces in a coalition drifted +6% in ten years in a neutral country).
+function coalitionPay(world, party) {
+  const looking = world.parties.filter(item => item.active && item.strategy === 'coalizione');
+  const allied = item => world.alliances.some(alliance => alliance.status === 'active' && alliance.partyIds.includes(item.id));
+  const rate = looking.length ? looking.filter(allied).length / looking.length : 0;
+  return allied(party) ? 0.01 * (1 - rate) * 2 : -0.01 * rate * 2;
+}
 // A party in crisis loses voters for good: close forces outside the polls pick up part of them, and get noticed.
 function bleed(world, party) {
   const loss = round2(clamp(party.baseline * 0.03, 0.02, 0.08));
@@ -874,7 +883,7 @@ function partyAgents(world, date, { approval, player, playerIsLeader, playerStra
     if (world.week - party.agendaSince >= 52) refreshAgenda(world, party, date);
     // What the strategy yields this week: backing or fighting the executive pays with the approval of the government
     // (around its neutral level); an alliance found pays as much as a search without partners costs.
-    const effect = party.strategy === 'governista' ? (approval - APPROVAL_NEUTRAL) / 500 : party.strategy === 'opposizione' ? (APPROVAL_NEUTRAL - approval) / 500 : party.strategy === 'coalizione' ? (world.alliances.some(item => item.status === 'active' && item.partyIds.includes(party.id)) ? 0.01 : -0.01) : 0;
+    const effect = party.strategy === 'governista' ? (approval - APPROVAL_NEUTRAL) / 500 : party.strategy === 'opposizione' ? (APPROVAL_NEUTRAL - approval) / 500 : party.strategy === 'coalizione' ? coalitionPay(world, party) : 0;
     party.baseline = round2(Math.max(0.3, party.baseline + effect * sizeFactor(party.baseline, 6)));
     // Re-thinking the strategy: losing ground, or the climate turned.
     const trend = trendOf(world, party.id);

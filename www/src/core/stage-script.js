@@ -1,0 +1,106 @@
+// The script of a scene on its stage: for every beat of a scene (scene-engine.js) WHERE each character stands, how (standing, walking, sitting, gesture), WHAT the camera frames and what the crowd does.
+// It is a pure function of the scene (kind, node, history): the animation (ui/stage-player.js) only plays the passage from the poses of the previous beat to the poses of this one, so a scene saved
+// and resumed, skipped or played with the motion off shows exactly the same poses — the final ones — and never repeats a beat that is over. The poses are the DECISIONS of the engines drawn on
+// a stage: nothing here decides a result.
+//
+// Coordinates: the stage is 640 x 360 units; `x` is the centre of the figure, `y` the line of its feet (the lower, the nearer to the camera); `s` the scale of the figure (nearer = bigger).
+
+export const STAGE_W = 640, STAGE_H = 360;
+export const depthScale = y => Math.max(0.2, Math.min(0.72, 0.3 + (y - 170) / 190 * 0.34));
+const pose = (x, y, extra = {}) => ({ x, y, s: depthScale(y), facing: 1, posture: 'stand', gesture: null, visible: true, ...extra });
+const away = (x, y) => pose(x, y, { visible: false });
+
+// ---------- the television studio (debates and talk shows) ----------
+const SEAT = { giocatore: { x: 128, y: 292 }, rivale: { x: 512, y: 292 }, conduttore: { x: 320, y: 262 } };
+const DOOR = { giocatore: { x: -70, y: 300 }, rivale: { x: 710, y: 300 }, conduttore: { x: 320, y: 262 } };
+const STUDIO_ORDER = ['invito', 'preparazione', 'ingresso', 'q1', 'r1', 'domanda', 'risposta-rivale', 'q2', 'r2', 'attacco', 'r3', 'chiusura', 'esito'];
+
+function studioPoses(scene, nodeId, node) {
+  const at = STUDIO_ORDER.indexOf(nodeId);
+  const seated = at >= STUDIO_ORDER.indexOf('ingresso') && nodeId !== 'esito';
+  const out = {};
+  for (const member of scene.cast) {
+    const seat = SEAT[member.role] ?? SEAT.rivale, door = DOOR[member.role] ?? DOOR.rivale;
+    const speaking = node?.speaker === member.id;
+    const gesture = speaking ? (node.gesture ?? 'sottolinea') : (node?.speaker && at >= 3 ? 'ascolta' : null);
+    if (member.role === 'conduttore') out[member.id] = pose(seat.x, seat.y, { posture: nodeId === 'esito' || nodeId === 'invito' || nodeId === 'preparazione' ? 'stand' : 'stand', gesture, facing: 1 });
+    else if (nodeId === 'invito' || nodeId === 'preparazione') out[member.id] = member.role === 'giocatore' && nodeId === 'preparazione' ? pose(150, 300, { gesture: 'pensa' }) : away(door.x, door.y);
+    else if (nodeId === 'esito') out[member.id] = pose(member.role === 'giocatore' ? 90 : 550, 300, { gesture: 'saluta', posture: 'stand' });
+    else if (seated) out[member.id] = pose(seat.x, seat.y, { posture: 'sit', gesture, facing: member.role === 'rivale' ? -1 : 1 });
+    else out[member.id] = pose(seat.x, seat.y, { gesture });
+  }
+  return out;
+}
+const studioCrowd = (scene, node) => {
+  if (!node?.audience) return scene.audience.mood >= 60 ? 'warm' : 'quiet';
+  const mood = scene.audience.mood;
+  return mood >= 58 ? 'applause' : mood < 45 ? 'boo' : 'mixed';
+};
+const studioCamera = node => ({ wide: 'wide', host: 'host', player: 'left', rival: 'right', crowd: 'crowd' })[node?.camera ?? 'wide'] ?? 'wide';
+
+// ---------- the square (rallies) ----------
+const STAGE_MIC = { x: 330, y: 222 };
+const RALLY_STEPS = [{ x: 40, y: 330 }, { x: 230, y: 332 }, { x: 262, y: 246 }, STAGE_MIC];
+function rallyPoses(scene, nodeId, node) {
+  const me = scene.cast.find(item => item.role === 'giocatore');
+  const out = {};
+  const speaking = node?.speaker === me.id;
+  const gesture = speaking ? (node.gesture ?? 'sottolinea') : null;
+  const interrupted = scene.protest?.state === 'degenerata' || scene.interrupted;
+  if (nodeId === 'arrivo') out[me.id] = pose(RALLY_STEPS[0].x, RALLY_STEPS[0].y, { gesture: 'saluta' });
+  else if (nodeId === 'cammino') out[me.id] = pose(STAGE_MIC.x - 22, STAGE_MIC.y, { path: RALLY_STEPS, gesture: 'saluta' });
+  else if (nodeId === 'esito') out[me.id] = interrupted ? pose(-60, 232, { facing: -1, path: [{ x: 300, y: 226 }, { x: 150, y: 232 }, { x: -60, y: 232 }] }) : pose(-50, 228, { facing: -1, path: [{ x: 290, y: 226 }, { x: 150, y: 230 }, { x: -50, y: 228 }], gesture: 'saluta' });
+  else out[me.id] = pose(STAGE_MIC.x, STAGE_MIC.y, { gesture: gesture ?? (nodeId === 'contestazione' ? 'ascolta' : 'sottolinea'), facing: nodeId === 'contestazione' ? 1 : 1 });
+  for (const member of scene.cast.filter(item => item.role === 'sostenitore' || item.role === 'contestatore')) {
+    out[member.id] = member.role === 'contestatore'
+      ? (['contestazione', 'tema2', 'chiusura', 'esito'].includes(nodeId) && scene.protest?.arrived ? pose(member.x, member.y, { gesture: nodeId === 'contestazione' ? 'indica' : 'sottolinea' }) : away(740, member.y))
+      : pose(member.x, member.y, { gesture: null });
+  }
+  return out;
+}
+function rallyCrowd(scene, nodeId, node) {
+  if (scene.protest?.arrived && ['contestazione'].includes(nodeId)) return 'protest';
+  if (nodeId === 'arrivo' || nodeId === 'cammino') return 'welcome';
+  if (nodeId === 'esito') return scene.protest?.state === 'degenerata' ? 'boo' : (scene.audience.mood >= 58 ? 'cheer' : scene.audience.mood < 45 ? 'boo' : 'mixed');
+  if (!node?.audience && !['saluto', 'tema1', 'tema2', 'chiusura'].includes(nodeId)) return 'quiet';
+  const mood = scene.audience.mood;
+  return mood >= 62 ? 'cheer' : mood >= 54 ? 'applause' : mood < 42 ? 'boo' : 'mixed';
+}
+const RALLY_CAMERA = { arrivo: 'panorama', cammino: 'follow', saluto: 'stage', tema1: 'stage', contestazione: 'protest', tema2: 'stage', chiusura: 'player', esito: 'wide' };
+
+// ---------- the polling station (the vote) ----------
+const VOTE_POSES = {
+  ingresso: { x: 560, y: 262, path: [{ x: 600, y: 262 }, { x: 560, y: 262 }], gesture: null, prop: 'desk', booth: 'open' },
+  banco: { x: 300, y: 300, path: [{ x: 440, y: 300 }, { x: 300, y: 300 }], gesture: 'prende', prop: 'hand', booth: 'open' },
+  cabina: { x: 474, y: 286, path: [{ x: 400, y: 318 }, { x: 474, y: 300 }], gesture: null, prop: 'hand', booth: 'closed' },
+  voto: { x: 474, y: 286, gesture: 'scrive', prop: 'hand', booth: 'closed', hidden: true },
+  piega: { x: 474, y: 286, gesture: 'piega', prop: 'folded', booth: 'closed', hidden: true },
+  esce: { x: 440, y: 304, path: [{ x: 474, y: 300 }, { x: 440, y: 308 }], gesture: null, prop: 'folded', booth: 'open' },
+  urna: { x: 150, y: 306, path: [{ x: 300, y: 318 }, { x: 150, y: 306 }], gesture: 'inserisce', prop: 'urn', booth: 'open' },
+  uscita: { x: 620, y: 252, path: [{ x: 300, y: 330 }, { x: 560, y: 300 }, { x: 640, y: 256 }], gesture: 'saluta', prop: 'none', booth: 'open', exit: true }
+};
+export const VOTE_ORDER = Object.freeze(Object.keys(VOTE_POSES));
+function votePoses(scene, nodeId) {
+  const me = scene.cast.find(item => item.role === 'giocatore');
+  const spec = VOTE_POSES[nodeId] ?? VOTE_POSES.uscita;
+  const out = { [me.id]: pose(spec.x, spec.y, { path: spec.path, gesture: spec.gesture, visible: !spec.hidden, exit: spec.exit }) };
+  for (const member of scene.cast.filter(item => item.role === 'scrutatore')) out[member.id] = pose(member.x, member.y, { posture: 'sit', gesture: nodeId === 'banco' ? 'porge' : null });
+  return out;
+}
+
+// What a stage shows at a beat of a scene.
+export function stageOf(scene, node) {
+  const nodeId = scene.nodeId;
+  if (scene.setting === 'piazza') return { setting: 'piazza', poses: rallyPoses(scene, nodeId, node), camera: RALLY_CAMERA[nodeId] ?? 'stage', crowd: rallyCrowd(scene, nodeId, node), props: {}, protest: Boolean(scene.protest?.arrived) };
+  if (scene.setting === 'seggio') { const spec = VOTE_POSES[nodeId] ?? VOTE_POSES.uscita; return { setting: 'seggio', poses: votePoses(scene, nodeId), camera: nodeId === 'cabina' || nodeId === 'voto' || nodeId === 'piega' ? 'booth' : nodeId === 'urna' ? 'urn' : 'wide', crowd: 'quiet', props: { ballot: spec.prop ?? 'none', booth: spec.booth ?? 'open' } }; }
+  return { setting: scene.setting, poses: studioPoses(scene, nodeId, node), camera: studioCamera(node), crowd: studioCrowd(scene, node), props: {} };
+}
+// The beat before this one (to animate the passage), or null for the first.
+export function previousNode(scene) { return scene.prevNodeId ?? null; }
+// The poses of the beat before: the animation starts from them. For the first beat, every character starts offstage or where the beat puts it.
+export function stageBefore(scene, sceneNodeFn) {
+  const prevId = previousNode(scene);
+  if (!prevId) return null;
+  const earlier = { ...scene, nodeId: prevId };
+  return stageOf(earlier, sceneNodeFn(earlier));
+}

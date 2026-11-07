@@ -1,9 +1,9 @@
 // The programme and the promises (program-engine.js): what the party proposes, what the player promised, how credible it is, how each promise is going against what the game really did,
 // the commitments of the coalition, and what the rivals promise. Every button here calls the store (makePromise, modifyPromise, withdrawPromise, announcePromise): nothing is decorative.
-import { AMBITIONS, PROMISE_SCOPES, PROMISE_SETTLED, PROMISE_STATES, promiseLine } from '../core/program-engine.js?v=20261106-2';
-import { AREA_BY_ID, INSTRUMENT_KINDS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261106-2';
-import { badge, bar, card, empty, esc, kpi, num } from './sections-kit.js?v=20261106-2';
-import { glyph } from './visuals.js?v=20261106-2';
+import { AMBITIONS, PROMISE_SCOPES, PROMISE_SETTLED, PROMISE_STATES, promiseLine } from '../core/program-engine.js?v=20261107-1';
+import { AREA_BY_ID, INSTRUMENT_KINDS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261107-1';
+import { badge, bar, card, empty, esc, kpi, num } from './sections-kit.js?v=20261107-1';
+import { glyph } from './visuals.js?v=20261107-1';
 
 const TONE = { neutral: 'neutral', info: 'info', good: 'good', warning: 'warning', bad: 'bad' };
 const stateChip = status => { const spec = PROMISE_STATES[status] ?? PROMISE_STATES['non-avviata']; return badge(spec.label, TONE[spec.tone] ?? 'neutral'); };
@@ -88,7 +88,9 @@ function rivalsCard(view) {
 function knownRivalsCard(view) {
   const known = view.known ?? [];
   if (!known.length) return '';
-  const rows = known.slice(0, 6).map(item => `<li><strong>${esc(item.label)}</strong><span>${esc(item.personality ?? '')}${item.life?.moves ? ` · ${item.life.moves} ${item.life.moves === 1 ? 'mossa' : 'mosse'} risposte` : ''}</span>${badge(item.mood.hostility > item.mood.warmth ? 'Ostile' : item.mood.warmth > item.mood.hostility ? 'Cordiale' : 'Neutrale', item.mood.hostility > item.mood.warmth ? 'bad' : item.mood.warmth > item.mood.hostility ? 'good' : 'neutral')}</li>`).join('');
+  const chips = (ids, tone = '') => ids.slice(0, 5).map(id => `<span class="dp-chip ${tone}">${esc(AREA_BY_ID[id]?.label ?? id)}</span>`).join('');
+  const rows = known.slice(0, 6).map(item => `<li><strong>${esc(item.label)}</strong><span>${esc(item.personality ?? '')}${item.life?.moves ? ` · ${item.life.moves} ${item.life.moves === 1 ? 'mossa' : 'mosse'} risposte` : ''}</span>${badge(item.mood.hostility > item.mood.warmth ? 'Ostile' : item.mood.warmth > item.mood.hostility ? 'Cordiale' : 'Neutrale', item.mood.hostility > item.mood.warmth ? 'bad' : item.mood.warmth > item.mood.hostility ? 'good' : 'neutral')}
+    ${item.areas?.length ? `<p class="program-compare"><b>Temi del suo programma</b> ${chips(item.areas)}</p>${item.shared.length ? `<p class="program-compare"><b>Gli stessi tuoi</b> ${chips(item.shared, 'is-shared')}</p>` : ''}${item.onlyMine.length ? `<p class="program-compare"><b>Solo tuoi</b> ${chips(item.onlyMine)}</p>` : ''}` : '<p class="program-compare">Programma non noto.</p>'}</li>`).join('');
   return card({ kicker: 'RIVALI CHE CONOSCI', title: 'Chi ti ricorda', body: `<ul class="program-rivals">${rows}</ul><p class="sx-note">Gli avversari delle campagne passate non spariscono: agiscono secondo il loro carattere e ricordano come hai risposto (le loro mosse arrivano in agenda).</p>` });
 }
 

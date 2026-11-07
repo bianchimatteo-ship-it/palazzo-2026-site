@@ -1,9 +1,9 @@
 // Rival life between campaigns (rival-life-rules.js): the rivals the player has already met (game.rivalRegistry, the same record the campaigns write) keep acting on their own. Pure and deterministic
 // (hash of week and key, no random numbers): by personality (RIVAL_PERSONALITIES of the campaign engine), by what they remember of the player (the same memory types) and by what the player promised
 // (game.promises). A move is a situation event; the answer is written back in the registry, so the next campaign meets a rival who remembers.
-import { RIVAL_PERSONALITIES } from './campaign-engine.js?v=20261106-2';
-import { RIVAL_LIFE, RIVAL_SITUATIONS } from '../data/simulation/rival-life-rules.js?v=20261106-2';
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261106-2';
+import { RIVAL_PERSONALITIES } from './campaign-engine.js?v=20261107-1';
+import { RIVAL_LIFE, RIVAL_SITUATIONS } from '../data/simulation/rival-life-rules.js?v=20261107-1';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261107-1';
 
 const hash = text => { let h = 2166136261; for (const ch of String(text)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; };
 const round1 = value => Math.round(value * 10) / 10;
@@ -89,6 +89,8 @@ export function answerRivalMove(registry, rivalKey, special, { date, week, compe
   return { registry: registry.map(item => item.key === rivalKey ? next : item), effects: duel?.effects ?? {}, line, duel };
 }
 // What the page shows: the rivals the player has met, with mood and last move.
-export function rivalsView(game) {
-  return (game?.rivalRegistry ?? []).map(record => ({ key: record.key, label: record.label, personality: record.personality, mood: rivalMood(record), relation: record.relation ?? 50, life: record.life ?? null, lastMet: record.lastMet ?? null, memoryLine: memoryLineOf(record) }));
+export function rivalsView(game, areasOf = () => []) {
+  const mine = new Set((game?.promises ?? []).filter(item => !['mantenuta', 'parzialmente-mantenuta', 'non-mantenuta', 'modificata'].includes(item.status)).map(item => item.area));
+  for (const id of game?.party?.program?.areas ?? []) mine.add(id);
+  return (game?.rivalRegistry ?? []).map(record => { const theirs = areasOf(record.partyId) ?? []; return ({ shared: theirs.filter(id => mine.has(id)), onlyTheirs: theirs.filter(id => !mine.has(id)), onlyMine: [...mine].filter(id => !theirs.includes(id)).slice(0, 4), areas: theirs, key: record.key, label: record.label, personality: record.personality, mood: rivalMood(record), relation: record.relation ?? 50, life: record.life ?? null, lastMet: record.lastMet ?? null, memoryLine: memoryLineOf(record) }); });
 }

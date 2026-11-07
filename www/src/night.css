@@ -124,3 +124,8 @@ html[data-motion="off"] .night-item.is-new, html[data-motion="off"] .night-unit.
 .night-delta.down { color: var(--critical-ink); }
 .night-gap { margin: 12px 0 0; padding: 8px 12px; border-radius: var(--radius); background: var(--panel-2); border: 1px solid var(--line); font-size: 13px; color: var(--ink-2); }
 .night-onair { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 4px; background: var(--critical); color: #fff; font: 800 11px var(--font-head); letter-spacing: .1em; }
+
+/* the ranking glides and the overtake is marked (ui/night-motion.js) */
+.night-rows li { border-radius: 8px; }
+.night-rows li.is-overtake .night-pos { color: var(--gold-light); }
+.night-unit.on { transform-origin: center; }

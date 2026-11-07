@@ -3577,4 +3577,6 @@ export const PHRASES = [
   ["Programma non noto.", "Programme not known."],
   ["Serve almeno una promessa aperta: falla dal Programma (Elezioni › Programma).", "You need at least one open promise: make it from the Programme (Elections › Programme)."],
   ["Una polemica ti ha colpito", "A controversy has hit you"],
+  ["Camera: bocciatura per “{}” ({}: # favorevoli, soglia #). {} ha la fiducia di # gruppi…", "Chamber: “{1}” rejected ({2}: {3} in favour, threshold {4}). {5} has the confidence of {6} groups…"],
+  ["Senato: bocciatura per “{}” ({}: # favorevoli, soglia #). {} ha la fiducia di # gruppi…", "Senate: “{1}” rejected ({2}: {3} in favour, threshold {4}). {5} has the confidence of {6} groups…"],
 ];

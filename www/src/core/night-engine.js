@@ -8,8 +8,8 @@
 //   - the exit poll, the projections and the seat estimates are estimates and are never built from the units not yet counted (they use the exit poll as the prior of what is still to count);
 //   - the news of the night are derived from those figures, stored once when the hour is reached (so a reload or a save does not write them twice) and never touch the career.
 // The career is touched once, when the night is concluded (store.concludeElectionNight → the same closeCampaign as before).
-import { SEAT_RULES, EUROPEAN_THRESHOLD, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261106-2';
-import { allocateDHondt, allocateWithBonus } from './election-engine.js?v=20261106-2';
+import { SEAT_RULES, EUROPEAN_THRESHOLD, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261107-1';
+import { allocateDHondt, allocateWithBonus } from './election-engine.js?v=20261107-1';
 
 export const NIGHT_HOURS = 12;
 export const NIGHT_STAGES = Object.freeze({ finale: 'Esito della consultazione', 'primo-turno': 'Primo turno' });
@@ -297,7 +297,7 @@ function leadItem(night, hour, view, prev, proj, ctx) {
   switch (hour) {
     case 1: {
       const exit = exitPoll(night);
-      const turnout = snapshot.turnout !== null ? fmt('Affluenza finale: {}.', pc(snapshot.turnout)) : '';
+      const turnout = 'L’affluenza definitiva sarà nota a scrutinio concluso.';
       return { kind: 'speciale', tag: 'EXIT POLL', text: fmt('Si apre lo speciale elettorale: {}. {} Exit poll (stima, non è un risultato): {} {}, {} {}, {} {}.', night.closeLabel, turnout, exit[0]?.label ?? '', pc(exit[0]?.percent ?? 0), exit[1]?.label ?? '', pc(exit[1]?.percent ?? 0), exit[2]?.label ?? '', pc(exit[2]?.percent ?? 0)).replace(/\s+/g, ' ') };
     }
     case 2: return { kind: 'speciale', tag: 'SCRUTINIO', text: fmt('Primi dati dallo scrutinio: {} unità su {} contate. In testa {} ({}).', view.counted, view.units, first?.label ?? '', pc(first?.percent ?? 0)) };

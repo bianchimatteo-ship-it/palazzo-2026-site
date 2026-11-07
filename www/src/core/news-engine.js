@@ -1,8 +1,8 @@
 // Simulated newsroom: headlines tied to what happens in the career, written with different structures
 // (fact, question, number, local angle, quote-like, analysis) and never the same template twice in a row.
 // Headlines speak of the player's own character and of the simulated world: no statement is put in the mouth of real people.
-import { ARTICLE_CATEGORIES, KICKERS, NEWSROOM_OUTLETS, NEWS_RULES as RULES, OUTLET_STYLE, RADIO_PROGRAMMES, RADIO_RULES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261106-2';
-import { WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20261106-2';
+import { ARTICLE_CATEGORIES, KICKERS, NEWSROOM_OUTLETS, NEWS_RULES as RULES, OUTLET_STYLE, RADIO_PROGRAMMES, RADIO_RULES, STORY_KINDS } from '../data/simulation/news-rules.js?v=20261107-1';
+import { WORLD_EVENTS } from '../data/simulation/polling-rules.js?v=20261107-1';
 const RECENT = 18;
 // A template not used recently; when every template of the kind has been used, the least recently used one.
 const pick = (list, seed, recent) => {
@@ -372,7 +372,7 @@ const clip = (text, max) => {
   const sentence = [...head.matchAll(/[.!?](?=\s|$)/g)].at(-1);
   if (sentence && sentence.index >= max * 0.45) return head.slice(0, sentence.index + 1);
   const clause = [...head.matchAll(/[,;:–—](?=\s)/g)].at(-1);
-  if (clause && clause.index >= max * 0.6) return `${head.slice(0, clause.index).trim()}…`;
+  if (clause && clause.index >= max * 0.4) return `${head.slice(0, clause.index).trim()}…`;
   return `${head.slice(0, max - 1).replace(/\s+\S*$/, '').replace(/[,;:\s]+$/, '')}…`;
 };
 // A paragraph longer than the limit keeps its first whole sentences (never a cut sentence); one single longer sentence is cut at a clause.
