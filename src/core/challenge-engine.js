@@ -63,9 +63,17 @@ const activitiesOf = (game, categories) => categories.reduce((sum, category) => 
 // The day the challenge begins: everything a goal is compared with.
 export function baselineOf(ctx) {
   const game = ctx.game, stats = ctx.stats ?? {};
-  return { stats: { reputation: stats.reputation ?? 50, popularity: stats.popularity ?? 50, influence: stats.influence ?? 50 }, kept: kept(game), broken: broken(game), laws: lawsOf(ctx), activities: { territorio: activitiesOf(game, ['territorio']), relazioni: activitiesOf(game, ['relazioni']), both: activitiesOf(game, ['territorio', 'relazioni']) } };
+  return { stats: { reputation: stats.reputation ?? 50, popularity: stats.popularity ?? 50, influence: stats.influence ?? 50 }, stability: ctx.parliament?.government?.stability ?? null, cohesion: game?.party?.org?.cohesion ?? null, ties: measureValue({ kind: 'relations', min: 65 }, ctx, {}), kept: kept(game), broken: broken(game), laws: lawsOf(ctx), activities: { territorio: activitiesOf(game, ['territorio']), relazioni: activitiesOf(game, ['relazioni']), both: activitiesOf(game, ['territorio', 'relazioni']) } };
 }
 
+// A goal never starts already met: the targets that read a level are at least the level of the day the challenge began (what the starting condition took away must be won back) and, for the
+// network of allies, two more than the ties already held.
+export function targetOf(goal, base) {
+  if (goal.kind === 'stability' && Number.isFinite(base?.stability)) return Math.min(92, Math.max(goal.target, Math.round(base.stability)));
+  if (goal.kind === 'cohesion' && Number.isFinite(base?.cohesion)) return Math.min(92, Math.max(goal.target, Math.round(base.cohesion)));
+  if (goal.kind === 'relations' && Number.isFinite(base?.ties) && goal.min === 65) return Math.max(goal.target, base.ties + 2);
+  return goal.target;
+}
 function goalValue(goal, ctx, env, base) {
   const game = ctx.game, stats = ctx.stats ?? {};
   switch (goal.kind) {
@@ -100,6 +108,7 @@ export function challengeProblem(spec, ctx, env = {}) {
   const game = ctx.game;
   if (game?.challenge?.status === 'attiva') return 'Hai già una sfida in corso: portala a termine prima di accettarne un’altra.';
   if (game?.challengesDone?.[spec.id]?.status === 'riuscita') return 'Sfida già superata.';
+  if (spec.id === 'parola-data' && !(game?.promises ?? []).some(item => !['mantenuta', 'parzialmente-mantenuta', 'non-mantenuta', 'modificata'].includes(item.status))) return 'Serve almeno una promessa aperta: falla dal Programma (Elezioni › Programma).';
   if (spec.needs === 'party' && !objectiveAvailable({ needs: 'party' }, ctx, env)) return 'Serve un partito: iscriviti o fondane uno.';
   if (spec.needs === 'seat' && !objectiveAvailable({ needs: 'seat' }, ctx, env)) return 'Serve un seggio in Parlamento.';
   if (spec.needs === 'government' && !(ctx.inMajority || ctx.premier)) return 'Serve far parte della maggioranza di Governo.';
@@ -119,8 +128,8 @@ export function challengeRows(challenge, ctx, env = {}) {
   const spec = CHALLENGE_BY_ID[challenge?.id];
   if (!spec) return { goals: [], limits: [], met: false, failed: false, progress: 0 };
   const goals = spec.goals.map(goal => {
-    const value = goalValue(goal, ctx, env, challenge.baseline);
-    return { label: goal.label, value, target: goal.target, met: value >= goal.target, ratio: Math.min(1, goal.target ? value / goal.target : 1) };
+    const value = goalValue(goal, ctx, env, challenge.baseline), target = targetOf(goal, challenge.baseline);
+    return { label: goal.label, value, target, met: value >= target, ratio: Math.min(1, target ? value / target : 1) };
   });
   const limits = spec.limits.map(limit => ({ label: limit.label, broken: limitBroken(limit, ctx, challenge.baseline) }));
   const progress = Math.round(100 * goals.reduce((sum, row) => sum + row.ratio, 0) / (goals.length || 1));

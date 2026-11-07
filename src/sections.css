@@ -1859,3 +1859,5 @@ details.accord-panel.pm-fold { padding: 0; }
 .dp-chip { padding: 2px 9px; border: 1px solid var(--line); border-radius: 99px; font-size: 12px; text-transform: capitalize; }
 .dp-hist summary { cursor: pointer; color: var(--ink-2); font-size: 13px; min-height: 32px; display: flex; align-items: center; }
 @media (max-width: 480px) { .cl-head { grid-template-columns: auto 1fr; } .cl-head .cl-grade { grid-column: 1 / -1; justify-self: start; } .cl-trend { grid-template-columns: 1fr; } }
+.program-compare { margin: 4px 0 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; color: var(--ink-2); }
+.dp-chip.is-shared { border-color: var(--gold); color: var(--gold-light); }

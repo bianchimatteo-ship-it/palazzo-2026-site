@@ -20,6 +20,7 @@ import { renderPartyArchive, renderPartyProfile } from './party-archive.js?v=202
 import { renderPoliticianArchive, renderPoliticianProfile } from './politician-archive.js?v=20261106-2';
 import { PARTY_LINK_COLLECTIONS, forceKind, isCoalitionList, politicalForces } from '../data/repositories/party-links.js?v=20261106-2';
 import { renderScene } from './scene-view.js?v=20261106-2';
+import { playNightMotion } from './night-motion.js?v=20261106-2';
 import { playStage, stageIsPaused, stagePause, stageResume, stageSkip } from './stage-player.js?v=20261106-2';
 import { renderDiplomacy } from './diplomacy-view.js?v=20261106-2';
 import { renderElectionNight } from './election-night.js?v=20261106-2';
@@ -720,6 +721,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     // The election night is a screen of its own while it lasts: the career (menu, topbar, pages) is not drawn, the time of the career does not move, the menu stays reachable.
     if (state.night) {
       root.innerHTML = `<div class="app-shell night-shell"><div class="night-menu-row"><button type="button" class="ghost-button" data-action="menu">Menu</button></div>${renderElectionNight(state, { tab: nightTab, area: nightArea, boundaries: realDatabase.italyBoundaries ?? null })}${renderConfirmDialog(pendingConfirm)}${state.ui.toast && settings.toasts === 'on' ? `<div class="toast" role="status">${icon('spark', 17)}${esc(state.ui.toast)}</div>` : ''}</div>`;
+      playNightMotion(root, { motion: settings.motion, key: state.night.key });
       if (state.ui.toast) { clearTimeout(toastTimer); toastTimer = setTimeout(() => { const s = store.getState(); if (s.ui.toast) { s.ui.toast = null; root.querySelector?.('.toast')?.remove?.(); } }, { short: 1600, normal: 3200, long: 6000 }[settings.toastLength] ?? 3200); }
       return;
     }

@@ -2,7 +2,7 @@
 // with its reward or penalty and a card with the real tone; the career is not touched when no challenge is open; a challenge survives the save; a save from before (no challenge) loads as it was.
 import assert from 'node:assert/strict';
 import { startCareer } from './lib/long-run.mjs';
-import { CHALLENGES, CHALLENGE_BY_ID, baselineOf, challengeRows, tickChallenge } from '../src/core/challenge-engine.js';
+import { CHALLENGES, CHALLENGE_BY_ID, baselineOf, challengeRows, targetOf, tickChallenge } from '../src/core/challenge-engine.js';
 
 // ---- pure engine
 assert.ok(CHALLENGES.length >= 6);
@@ -23,6 +23,9 @@ assert.equal(waiting.ended, null); assert.equal(waiting.challenge.status, 'attiv
 const won = tickChallenge({ challenge: open }, { game: { ...ctx0.game, record: { activities: { territorio: 5 } } }, stats: { ...ctx0.stats, popularity: 57 }, parliament: null }, {}, { week: 6, date: '2026-02-08' });
 assert.equal(won.ended.status, 'riuscita'); assert.equal(won.ended.tone, 'win');
 assert.deepEqual(challengeRows(open, ctx0).goals.map(row => row.met), [false, false]);
+// a goal never starts already met: stability and cohesion targets are at least the level of the day of acceptance
+assert.equal(targetOf({ kind: 'stability', target: 60 }, { stability: 78 }), 78); assert.equal(targetOf({ kind: 'stability', target: 60 }, { stability: 40 }), 60);
+assert.equal(targetOf({ kind: 'relations', min: 65, target: 4 }, { ties: 3 }), 5);
 assert.deepEqual(tickChallenge({ challenge: null }, ctx0, {}, { week: 1, date: '' }), { challenge: null, ended: null });
 
 // ---- in the game
@@ -67,7 +70,9 @@ assert.throws(() => store.abandonChallenge(), /Nessuna sfida in corso/);
 // needs: a government challenge is refused outside the majority
 assert.ok(store.challengeView().available.find(item => item.id === 'governo-che-regge'));
 
-// survives the save
+// survives the save (the word given needs an open promise: without one it cannot even start)
+assert.throws(() => store.startChallenge('parola-data'), /almeno una promessa aperta/);
+store.makePromise({ area: 'sanita', scope: 'candidato', instrument: 'riforma', ambition: 'prudente' });
 store.startChallenge('parola-data');
 store.save();
 const exported = JSON.parse(JSON.stringify(store.getState().game.challenge));

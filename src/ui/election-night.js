@@ -56,7 +56,7 @@ function footer(night, summaryShown) {
 // ---------- the tabs ----------
 function feedItem(item, fresh) {
   const tone = TAG_TONE[item.tag] ?? 'neutral';
-  return `<article class="night-item kind-${esc(item.kind)}${fresh ? ' is-new' : ''}"><header><span class="night-tag tone-${tone}">${esc(item.tag)}</span><time>${esc(item.time)}</time></header><p>${esc(item.text)}</p></article>`;
+  return `<article class="night-item kind-${esc(item.kind)}${fresh ? ' is-new' : ''}" data-feed="${esc(item.id ?? `${item.time}|${String(item.text).slice(0, 48)}`)}"><header><span class="night-tag tone-${tone}">${esc(item.tag)}</span><time>${esc(item.time)}</time></header><p>${esc(item.text)}</p></article>`;
 }
 function promptCards(night) {
   return pendingPrompts(night).map(prompt => `<section class="night-prompt" aria-label="Dichiarazione"><span class="section-kicker">LA TUA DICHIARAZIONE · ORA ${prompt.hour}</span><p>${esc(prompt.text)}</p>
@@ -81,7 +81,7 @@ function tabScrutinio(night, view) {
   return `<div class="night-grid">
     ${card({ kicker: 'DATO UFFICIALE SIMULATO', title: 'Lo scrutinio', body: `<div class="sx-kpis night-kpis">
       ${kpi({ label: 'Unità scrutinate', value: `${view.counted}/${view.units}`, note: pct(view.shareCounted * 100, 0), bar: view.shareCounted * 100 })}
-      ${kpi({ label: 'Voti scrutinati', value: num(view.ballots, 0), note: view.complete ? `su ${num(snapshot.totalVotes, 0)} voti validi` : `in ${view.counted} unità su ${view.units}` })}
+      ${kpi({ label: 'Voti scrutinati', value: `<span data-count="${view.ballots}" data-fmt="int" data-count-id="ballots">${num(view.ballots, 0)}</span>`, note: view.complete ? `su ${num(snapshot.totalVotes, 0)} voti validi` : `in ${view.counted} unità su ${view.units}` })}
       ${view.complete ? kpi({ label: 'Voti da scrutinare', value: '0', note: 'scrutinio chiuso' }) : kpi({ label: 'Stima dei voti totali', value: `~${num(Math.round(view.ballots * view.units / Math.max(1, view.counted) / 100) * 100, 0)}`, note: 'stima dal campione contato, non è un dato ufficiale' })}
       ${kpi({ label: 'Affluenza', value: view.complete && snapshot.turnout !== null ? pcFmt(snapshot.turnout) : '—', note: view.complete ? 'dato definitivo' : 'il dato ufficiale arriva a scrutinio chiuso' })}
     </div>${unitsGrid}<p class="night-note">Le unità di scrutinio sono <strong>simulate</strong>: il gioco non dispone delle sezioni elettorali reali e non inventa dati ufficiali. Ogni quadratino è un’unità; il colore è quello della lista in testa quando viene scrutinata.</p>` })}
@@ -103,7 +103,7 @@ function resultRows(night, view, proj, { showSeats, prev = null }) {
   return `<ol class="night-rows">${view.rows.filter(row => row.votes > 0 || view.complete).map(row => {
     const color = colorOfGroup(row, night.snapshot);
     const seats = proj.rows.find(item => item.id === row.id)?.seats ?? 0;
-    return `<li class="${row.isPlayer ? 'is-player' : ''}"><span class="night-pos">${row.position}</span><div class="night-row-main"><div class="night-row-top"><strong>${swatch(color)}${esc(row.label)}${row.isPlayer ? ' ' + badge('Tu', 'good') : ''}</strong><span class="night-num">${pcFmt(row.percent)}${deltaTag(row, prev)}</span></div>
+    return `<li class="${row.isPlayer ? 'is-player' : ''}" data-row="${esc(row.id)}"><span class="night-pos">${row.position}</span><div class="night-row-main"><div class="night-row-top"><strong>${swatch(color)}${esc(row.label)}${row.isPlayer ? ' ' + badge('Tu', 'good') : ''}</strong><span class="night-num"><span data-count="${row.percent}" data-fmt="pct" data-count-id="${esc(row.id)}-pct">${pcFmt(row.percent)}</span>${deltaTag(row, prev)}</span></div>
       <b class="night-bar"><i style="width:${Math.round(row.percent / max * 100)}%;background:${esc(color)}"></i></b>
       <small>${num(row.votes, 0)} voti${showSeats && seats ? ` · ${view.complete ? '' : '~'}${seats} seggi` : ''}</small></div></li>`;
   }).join('')}</ol>`;

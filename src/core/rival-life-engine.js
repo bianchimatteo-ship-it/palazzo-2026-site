@@ -89,6 +89,8 @@ export function answerRivalMove(registry, rivalKey, special, { date, week, compe
   return { registry: registry.map(item => item.key === rivalKey ? next : item), effects: duel?.effects ?? {}, line, duel };
 }
 // What the page shows: the rivals the player has met, with mood and last move.
-export function rivalsView(game) {
-  return (game?.rivalRegistry ?? []).map(record => ({ key: record.key, label: record.label, personality: record.personality, mood: rivalMood(record), relation: record.relation ?? 50, life: record.life ?? null, lastMet: record.lastMet ?? null, memoryLine: memoryLineOf(record) }));
+export function rivalsView(game, areasOf = () => []) {
+  const mine = new Set((game?.promises ?? []).filter(item => !['mantenuta', 'parzialmente-mantenuta', 'non-mantenuta', 'modificata'].includes(item.status)).map(item => item.area));
+  for (const id of game?.party?.program?.areas ?? []) mine.add(id);
+  return (game?.rivalRegistry ?? []).map(record => { const theirs = areasOf(record.partyId) ?? []; return ({ shared: theirs.filter(id => mine.has(id)), onlyTheirs: theirs.filter(id => !mine.has(id)), onlyMine: [...mine].filter(id => !theirs.includes(id)).slice(0, 4), areas: theirs, key: record.key, label: record.label, personality: record.personality, mood: rivalMood(record), relation: record.relation ?? 50, life: record.life ?? null, lastMet: record.lastMet ?? null, memoryLine: memoryLineOf(record) }); });
 }

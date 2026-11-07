@@ -3571,4 +3571,10 @@ export const PHRASES = [
   ["migrazioni", "migration"],
   ["sicurezza", "security"],
   ["# crisi", "# crisis"],
+  ["Temi del suo programma", "Topics of their programme"],
+  ["Gli stessi tuoi", "The same as yours"],
+  ["Solo tuoi", "Only yours"],
+  ["Programma non noto.", "Programme not known."],
+  ["Serve almeno una promessa aperta: falla dal Programma (Elezioni › Programma).", "You need at least one open promise: make it from the Programme (Elections › Programme)."],
+  ["Una polemica ti ha colpito", "A controversy has hit you"],
 ];

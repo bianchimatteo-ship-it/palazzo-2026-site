@@ -4194,7 +4194,7 @@ export const store = {
     const next = withGovernmentCost('cabinet');
     return applyParliamentUpdate(next, withCapital(result.parliament, next.game), result.lines[0] ?? 'Il governo decide', { influence: 0.3 });
   },
-  rivalsView() { return rivalsView(state.game); },
+  rivalsView() { return rivalsView(state.game, partyId => partyId ? rivalProgram(state.world, partyId) : []); },
   // ---------- special challenges (challenge-engine.js) ----------
   challengeView() {
     const game = state.game;
@@ -4236,7 +4236,7 @@ export const store = {
     const reputation = playerStat(state, 'reputation');
     const campaign = state.campaign?.status === 'active' ? state.campaign : null;
     const rivals = campaign ? campaign.candidates.filter(item => !item.isPlayer && item.status === 'active').map(item => ({ id: item.id, label: item.label ?? item.name ?? item.id, partyId: item.partyId ?? null, areas: rivalProgram(state.world, item.partyId) })) : [];
-    return { known: rivalsView(game), promises, accord: accordPromises(state.parliament), partyAreas: game?.party?.program?.areas ?? [], credibility: programCredibility(game ?? { promises: [] }, { society: state.society, reputation }), suggestion: derivePriorities(game, state.parliament), campaign: campaign ? { id: campaign.id, day: campaign.day, totalDays: campaign.totalDays, rivals } : null };
+    return { known: rivalsView(game, partyId => partyId ? rivalProgram(state.world, partyId) : []), promises, accord: accordPromises(state.parliament), partyAreas: game?.party?.program?.areas ?? [], credibility: programCredibility(game ?? { promises: [] }, { society: state.society, reputation }), suggestion: derivePriorities(game, state.parliament), campaign: campaign ? { id: campaign.id, day: campaign.day, totalDays: campaign.totalDays, rivals } : null };
   },
   makePromise(args = {}) {
     requireCareer();
