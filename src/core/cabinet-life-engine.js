@@ -131,8 +131,8 @@ export function advanceCabinetLife(input, { date, week = 0, rand = Math.random, 
       const issue = AREA_BY_ID[pick.area]?.label ?? pick.area;
       life = { ...life, lastConflict: date, conflicts: [...life.conflicts, { id: `conflitto-${date}-${pick.a.id}`, a: pick.a.id, b: pick.b.id, issue, severity: 1 + Math.round(rand() * 2), openedAt: date, resolvedAt: null }] };
       next = setLife(next, life);
-      lines.push(`Scontro in Consiglio fra i ministri ${pick.a.portfolio} e ${pick.b.portfolio} su ${issue.toLowerCase()}.`);
-      next = log(next, date, 'conflitto-ministri', `Scontro fra i ministri ${pick.a.portfolio} e ${pick.b.portfolio} su ${issue.toLowerCase()}.`, { auto: !playerPremier });
+      lines.push(`Scontro in Consiglio fra i ministri di ${pick.a.portfolio} e di ${pick.b.portfolio} su ${issue.toLowerCase()}.`);
+      next = log(next, date, 'conflitto-ministri', `Scontro fra i ministri di ${pick.a.portfolio} e di ${pick.b.portfolio} su ${issue.toLowerCase()}.`, { auto: !playerPremier });
     } else life = { ...life, lastConflict: date };
   }
   for (const conflict of life.conflicts.filter(item => !item.resolvedAt && weeksBetween(item.openedAt, date) >= CABINET_LIFE.conflictPatience)) {

@@ -372,7 +372,7 @@ const clip = (text, max) => {
   const sentence = [...head.matchAll(/[.!?](?=\s|$)/g)].at(-1);
   if (sentence && sentence.index >= max * 0.45) return head.slice(0, sentence.index + 1);
   const clause = [...head.matchAll(/[,;:–—](?=\s)/g)].at(-1);
-  if (clause && clause.index >= max * 0.6) return `${head.slice(0, clause.index).trim()}…`;
+  if (clause && clause.index >= max * 0.4) return `${head.slice(0, clause.index).trim()}…`;
   return `${head.slice(0, max - 1).replace(/\s+\S*$/, '').replace(/[,;:\s]+$/, '')}…`;
 };
 // A paragraph longer than the limit keeps its first whole sentences (never a cut sentence); one single longer sentence is cut at a clause.
