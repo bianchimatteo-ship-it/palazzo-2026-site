@@ -9,8 +9,8 @@
 //   - the programme of the Government (government.program.priorities, dossier-engine.js settles it) is derived from the promises of the player and the programme of the party, so the
 //     Government does what was promised, not something else.
 // Everything here is pure: the store applies the effects (reputation, popularity, partners, memory, news) once, when a promise is settled.
-import { AREA_BY_ID, INSTRUMENT_KINDS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261109-2';
-import { LAW_PROGRESS } from '../data/simulation/dossier-rules.js?v=20261109-2';
+import { AREA_BY_ID, INSTRUMENT_KINDS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261109-3';
+import { LAW_PROGRESS } from '../data/simulation/dossier-rules.js?v=20261109-3';
 
 export const PROMISE_STATES = Object.freeze({
   'non-avviata': { label: 'Non avviata', tone: 'neutral' },

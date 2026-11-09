@@ -2,9 +2,9 @@
 // its person (avatar-svg.js: always the avatar saved for the player, a stable one for the others) plus a body drawn here — torso, two arms with an elbow, two legs — in separate groups, so that the
 // player (ui/stage-player.js) can make them walk, sit, gesture. Every group carries the data the player needs (class, data-*); the poses come from core/stage-script.js. No animation is started here:
 // what is drawn is the FINAL pose of the beat, so with the motion off or reduced, or in a scene resumed, the stage is already right.
-import { avatarColors, avatarParts, shade } from './avatar-svg.js?v=20261109-2';
-import { depthScale, STAGE_W, STAGE_H } from '../core/stage-script.js?v=20261109-2';
-import { defaultAvatarFor } from '../core/avatar.js?v=20261109-2';
+import { avatarColors, avatarParts, shade } from './avatar-svg.js?v=20261109-3';
+import { depthScale, STAGE_W, STAGE_H } from '../core/stage-script.js?v=20261109-3';
+import { defaultAvatarFor } from '../core/avatar.js?v=20261109-3';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const hash = text => { let h = 2166136261 >>> 0; for (const ch of String(text)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return h; };
@@ -121,7 +121,7 @@ const screenWall = (x, y, w, h, uid, label, count) => `<g class="st-screens">${A
 function studioFaccia(scene, uid, crowd) {
   const members = ['giocatore', 'rivale', 'conduttore'].map(role => scene.cast.find(item => item.role === role));
   const last = member => String(member?.name ?? '').split(' ').slice(-1)[0];
-  const lectern = (x, color, name) => `<g class="st-desk"><rect x="${x - 78}" y="248" width="156" height="52" rx="5" fill="#26333f"/><rect x="${x - 78}" y="248" width="156" height="6" rx="3" fill="#8fb4c6"/><rect x="${x - 70}" y="262" width="140" height="28" rx="3" fill="${color}" opacity=".9"/>${plate(x, 276, 124, name)}</g>`;
+  const lectern = (x, color, name) => `<g class="st-desk"><rect x="${x - 78}" y="248" width="156" height="52" rx="5" fill="#26333f"/><rect x="${x - 78}" y="248" width="156" height="6" rx="3" fill="#8fb4c6"/><rect x="${x - 70}" y="262" width="140" height="28" rx="3" fill="${color}" opacity=".9"/></g>`;
   const back = `${studioFloor(uid, FORMAT_LOOK.faccia, [[128, 300, 150], [512, 300, 150], [320, 270, 120]])}${screenWall(70, 26, 500, 84, uid, '', 3)}`
     + `<text x="320" y="58" text-anchor="middle" font-size="19" font-weight="900" letter-spacing="3" fill="#f0d68a">${esc(scene.show?.name ? scene.show.name.toUpperCase() : 'FACCIA A FACCIA')}</text><text x="320" y="84" text-anchor="middle" font-size="11" font-weight="700" fill="#cfe7f1">${esc(scene.topic.label)}</text>`
     + `<path d="M0 196H640" stroke="#58a3c4" stroke-opacity=".25"/>${rigLights([40, 150, 260, 380, 490, 600])}`;

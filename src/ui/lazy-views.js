@@ -2,32 +2,32 @@
 // each page renderer is here a small function with the same name and the same arguments as the real one; the first time it is called the module is imported in the background and the page shows a
 // short «loading» block, then the page is drawn again with the real renderer. When a career is opened the modules are fetched in the background (`prefetchViews`), so that the first visit to a page
 // is almost always instant, and the pages seen are in the cache for when the network is missing. Nothing here decides anything: it only delays the code, never the data.
-import { HEMICYCLE_DEFAULTS } from './hemicycle-defaults.js?v=20261109-2';
-import { ARCHIVE_COLLECTIONS } from './archive-collections.js?v=20261109-2';
+import { HEMICYCLE_DEFAULTS } from './hemicycle-defaults.js?v=20261109-3';
+import { ARCHIVE_COLLECTIONS } from './archive-collections.js?v=20261109-3';
 
 export { HEMICYCLE_DEFAULTS, ARCHIVE_COLLECTIONS };
 
 const LOADERS = {
-  'admin-panel': () => import('./admin-panel.js?v=20261109-2'),
-  'agenda-page': () => import('./agenda-page.js?v=20261109-2'),
-  'archive-hub': () => import('./archive-hub.js?v=20261109-2'),
-  'diplomacy-view': () => import('./diplomacy-view.js?v=20261109-2'),
-  'election-night': () => import('./election-night.js?v=20261109-2'),
-  'elections-hub': () => import('./elections-hub.js?v=20261109-2'),
-  'hemicycle-view': () => import('./hemicycle-view.js?v=20261109-2'),
-  'members-view': () => import('./members-view.js?v=20261109-2'),
-  'parliament-mode': () => import('./parliament-mode.js?v=20261109-2'),
-  'party-page': () => import('./party-page.js?v=20261109-2'),
-  'scene-view': () => import('./scene-view.js?v=20261109-2'),
-  'career-page': () => import('./career-page.js?v=20261109-2'),
-  'observatory-view': () => import('./observatory-view.js?v=20261109-2'),
-  'presidency-view': () => import('./presidency-view.js?v=20261109-2'),
-  'real-laws': () => import('./real-laws.js?v=20261109-2'),
-  'game-mode': () => import('./game-mode.js?v=20261109-2'),
-  'finance-mode': () => import('./finance-mode.js?v=20261109-2'),
-  'society-mode': () => import('./society-mode.js?v=20261109-2'),
-  'organization-mode': () => import('./organization-mode.js?v=20261109-2'),
-  'local-mode': () => import('./local-mode.js?v=20261109-2')
+  'admin-panel': () => import('./admin-panel.js?v=20261109-3'),
+  'agenda-page': () => import('./agenda-page.js?v=20261109-3'),
+  'archive-hub': () => import('./archive-hub.js?v=20261109-3'),
+  'diplomacy-view': () => import('./diplomacy-view.js?v=20261109-3'),
+  'election-night': () => import('./election-night.js?v=20261109-3'),
+  'elections-hub': () => import('./elections-hub.js?v=20261109-3'),
+  'hemicycle-view': () => import('./hemicycle-view.js?v=20261109-3'),
+  'members-view': () => import('./members-view.js?v=20261109-3'),
+  'parliament-mode': () => import('./parliament-mode.js?v=20261109-3'),
+  'party-page': () => import('./party-page.js?v=20261109-3'),
+  'scene-view': () => import('./scene-view.js?v=20261109-3'),
+  'career-page': () => import('./career-page.js?v=20261109-3'),
+  'observatory-view': () => import('./observatory-view.js?v=20261109-3'),
+  'presidency-view': () => import('./presidency-view.js?v=20261109-3'),
+  'real-laws': () => import('./real-laws.js?v=20261109-3'),
+  'game-mode': () => import('./game-mode.js?v=20261109-3'),
+  'finance-mode': () => import('./finance-mode.js?v=20261109-3'),
+  'society-mode': () => import('./society-mode.js?v=20261109-3'),
+  'organization-mode': () => import('./organization-mode.js?v=20261109-3'),
+  'local-mode': () => import('./local-mode.js?v=20261109-3')
 };
 const modules = new Map();
 const pending = new Map();
@@ -48,12 +48,20 @@ function load(name) {
 let scheduled = false;
 const settle = () => { if (scheduled) return; scheduled = true; Promise.resolve().then(() => new Promise(resolve => setTimeout(resolve, 0))).then(() => { scheduled = false; if (loadedSinceDraw) { loadedSinceDraw = false; try { onLoaded(); } catch (error) { console.error(error); } } }); };
 
+// A module that did not arrive (a network hiccup) is asked for again, a few times, one second and a half apart: the page never stays «loading» for ever on a failure that passes.
+const attempts = new Map();
+function retry(name, error) {
+  const count = (attempts.get(name) ?? 0) + 1;
+  attempts.set(name, count);
+  if (count <= 6) setTimeout(() => { try { onLoaded(); } catch { /* the next draw asks again */ } }, 1500);
+  else console.error(error);
+}
 export const LOADING_HTML = '<section class="lazy-loading" role="status" aria-busy="true" data-lazy-loading><p>Carico la pagina…</p></section>';
 // A renderer that returns HTML: the real one when its module is here, otherwise the loading block (and the module is fetched).
 const html = (name, fn, fallback = LOADING_HTML) => (...args) => {
   const module = modules.get(name);
   if (module) return module[fn](...args);
-  load(name).then(settle, error => { console.error(error); });
+  load(name).then(settle, error => retry(name, error));
   return fallback;
 };
 // A helper that is not HTML (it can only be called once the page that uses it has been drawn): the real one when the module is here, otherwise nothing.
@@ -81,7 +89,7 @@ const everyViewHere = () => prefetchDone || Object.keys(LOADERS).every(name => m
 export const renderHeadquarters = (...args) => {
   const module = modules.get('game-mode');
   if (module && everyViewHere()) return module.renderHeadquarters(...args);
-  prefetchViews().then(() => { loadedSinceDraw = true; settle(); }, error => { console.error(error); });
+  prefetchViews().then(() => { loadedSinceDraw = true; settle(); }, error => retry('game-mode', error));
   return LOADING_HTML;
 };
 export const renderNewsroom = html('game-mode', 'renderNewsroom', '');

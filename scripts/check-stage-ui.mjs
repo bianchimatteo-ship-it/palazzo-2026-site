@@ -87,7 +87,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
 
   console.log('fase: a guest spot in the studio (the three formats)');
   // ---- a guest spot in the studio: each of the three studios (news and interview, talk show, face to face) has its own scenery, the people sit where that studio puts them, the straps show the names whole
-  const studios = [['tg-sera', 'intervista', { audience: false, straps: 3, plates: 0 }], ['prima-serata', 'talk', { audience: true, straps: 3, plates: 0 }], ['tribuna', 'faccia', { audience: true, straps: 2, plates: 2 }]];
+  const studios = [['tg-sera', 'intervista', { audience: false, straps: 3, plates: 0 }], ['prima-serata', 'talk', { audience: true, straps: 3, plates: 0 }], ['tribuna', 'faccia', { audience: true, straps: 2, plates: 0 }]];
   const looks = new Set();
   for (const [showId, format, expect] of studios) {
     await S(`store.advance(7); return true;`);       // a new week: the days of the last guest spot are spent
@@ -97,7 +97,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
     assert.equal(await evaluate(`document.querySelector('.st-svg').dataset.format`), format, `Lo studio è quello del formato ${format}.`);
     assert.equal(await evaluate(`document.querySelectorAll('.st-actor').length`), 3, 'Giocatore, ospite e conduttore.');
     assert.ok(await evaluate(`document.querySelectorAll('.st-desk').length`) >= 1, 'Scrivania o leggio.');
-    assert.equal(await evaluate(`document.querySelectorAll('.st-plate').length`), expect.plates, 'Targhette sui leggii del faccia a faccia, non altrove.');
+    assert.equal(await evaluate(`document.querySelectorAll('.st-plate').length`), expect.plates, 'I nomi stanno nelle didascalie, non su targhette che li ripetono.');
     assert.equal(await evaluate(`document.querySelectorAll('.st-crowd .cm').length > 20`), expect.audience, expect.audience ? 'Il pubblico in studio.' : 'Nello studio del notiziario non c’è pubblico.');
     assert.equal(await evaluate(`document.querySelectorAll('.st-strap').length`) >= 2, true, 'Le didascalie con i nomi.');
     assert.equal(await evaluate(`document.querySelectorAll('.st-strap').length`) + (await evaluate(`document.querySelector('.st-strap.is-speaking') ? 0 : 0`)), expect.straps, 'Le didascalie dei tre protagonisti (o dei due candidati).');
