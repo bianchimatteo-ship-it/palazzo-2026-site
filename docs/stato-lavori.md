@@ -107,6 +107,25 @@ Fatto in questa tornata (repository cloud, ramo `main`; **nessun AAB** generato:
 
 **AAB sul Mac** (stessa chiave di upload, versionCode > ultimo pubblicato, nessun segreto nei log): `npm run version:build` → `npm run build:www` → `npm run check:www` → `npx cap sync android` → `npm run check:android -- --release --previous-version-code N` → `cd android && ./gradlew bundleRelease` → verifica firma con `jarsigner -verify` → dimensione e SHA-256.
 
+## Ultima revisione prima dell'AAB — sondaggi e risultato, promesse, seggio, Aula (nota di lavoro)
+
+**Sondaggi nazionali e risultato delle Politiche.** Tracciato lo stesso partito dal sondaggio al conteggio (`scripts/check-national-poll-campaign-gap.mjs`: 32 campagne, politiche ed europee, Azione/Lega/FdI/partito fondato, ferme e giocate). Cause dello scarto trovate in `store.startCampaign`: il bonus d'apertura (umore, memoria, condizioni di partenza, *più* i punti degli alleati, *più* il sostegno dei comitati di un solo territorio) veniva sommato a ogni area e quindi alla percentuale nazionale della lista prima di giocare (fino a +4 punti su un partito al 7%).
+- apertura: `electionRoster` per politiche/europee parte da metà della media ponderata degli ultimi quattro sondaggi (pesi 0,4/0,3/0,2/0,1) e metà del consenso sottostante (`recentPollAverage`); il rumore di un campione non diventa consenso stabile;
+- umore, memoria e partenza valgono al massimo il 6% della dimensione della lista (mai meno di 0,25 punti); il resto è registrato come «non contato» (`pollParts.deferred`);
+- gli alleati non danno più i loro punti alla lista del giocatore (le liste tengono i propri voti): portano organizzazione e volontari (mobilitazione) e pesano su collegi uninominali e trattative;
+- i comitati di un territorio sostengono la loro regione, non la percentuale nazionale;
+- lo scarto del giorno del voto ha tre cause registrate (`electionDays[].shiftParts`: errore delle stime e indecisi, mobilitazione, forza della lista);
+- «Perché la percentuale è questa» (`campaignOpeningNotes`, in Campagna): ultimo sondaggio con data, istituto, campione e margine; media e modello; cosa è stato contato e cosa no; ultima rilevazione; scarto del giorno. Campagna e risultato hanno la stessa base (quota della lista sul totale dei voti validi, «Altre liste» comprese): non sono due metriche diverse.
+Risultati misurati: apertura media a 0,38 punti dall'ultimo sondaggio (massimo 1,35); senza giocare il risultato si discosta dal sondaggio in media di +0,23 (90° percentile 2,36); una campagna giocata con costanza guadagna in media +2,5 punti (i casi migliori oltre i +3): una crescita dal 7% all'11% è possibile solo con molta attività, non per un bonus d'apertura.
+
+**Promesse**: priorità (al massimo due in cima, peso su credibilità ed effetti), revisione con motivo verificato sui fatti, trattativa con un alleato (un capitale, estrazione deterministica, costo diviso o rapporto che si raffredda), storico per ogni passaggio; una proposta pubblicata del programma può essere presentata come disegno di legge vero (`store.proposalToBill`: area, strumento della prima misura e copertura viaggiano con il testo; non è mai legge né promessa da sola). Test: `check-promise-tools`. Non fatto: collegamento amministrativo (giunte, ministeri) delle tre nuove misure: l'unico collegamento reale supportato è la legge in Parlamento.
+
+**Seggio**: elettore sempre visibile sopra la tenda (a mezza altezza), scheda nella mano che scrive, poi piegata, poi nell'urna accanto all'urna (non sopra); tenda aperta raccolta a destra, chiusa solo dalla vita in giù. Visto in Chrome a 1440 px; il controllo geometrico è in `check-stage-ui`.
+
+**Aula**: posizione salvata con la carriera (`game.flags.aulaProgress`), ripresa dalla Home dallo stesso seggio e nello stesso ordine; nessun voto ricalcolato, nessun effetto applicato dall'Aula (solo la posizione e il «visto»); esito annunciato soltanto alla fine. Test in `check-aula-ui`.
+
+**AAB**: non generato. Nel container mancano keystore di upload, Android SDK e il dato dell'ultimo `versionCode` caricato su Google Play (il repository riporta `versionCode 1`, che non è il pubblicato). Come da istruzioni: fermarsi e segnalare il dato mancante.
+
 ## Milestone precedente — fondazione partito, consenso, fiducia, direttiva (completata)
 Vedi la cronologia git (commit `7fbae22`, `8842e95`).
 
