@@ -118,7 +118,7 @@ try {
     ['resoconto settimanale', 'document.querySelector(".topbar [data-action=advance], [data-action=advance]")?.click(); await new Promise(resolve => setTimeout(resolve, 500)); document.querySelector("[data-confirm=ok]")?.click()', 'document.querySelector("[data-report-close]")?.click()', '.report-modal'],
     ['nuova carriera', 'document.querySelector("[data-nav=impostazioni]")?.click(); await new Promise(resolve => setTimeout(resolve, 600)); document.querySelector("[data-action=new-career]")?.click(); await new Promise(resolve => setTimeout(resolve, 600)); document.querySelector("[data-menu-action=start-local]")?.click()', 'document.querySelector("[data-wizard-action=cancel]")?.click(); await new Promise(resolve => setTimeout(resolve, 400)); document.querySelector("[data-menu=continua]")?.click()', '.career-wizard']
   ];
-  const widths = [[320, 640, true, 'telefono 320'], [360, 800, true, 'telefono 360'], [375, 812, true, 'telefono'], [390, 844, true, 'telefono 390'], [430, 932, true, 'telefono 430'], [768, 1024, true, 'tablet'], [1024, 768, false, 'desktop 1024'], [1280, 800, false, 'desktop']];
+  const widths = [[320, 640, true, 'telefono 320'], [360, 800, true, 'telefono 360'], [375, 812, true, 'telefono'], [390, 844, true, 'telefono 390'], [430, 932, true, 'telefono 430'], [768, 1024, true, 'tablet'], [1024, 768, false, 'desktop 1024'], [1280, 800, false, 'desktop'], [1440, 900, false, 'desktop 1440'], [812, 375, true, 'telefono in orizzontale']];
   const report = [];
   const opened = new Set();
   const missing = new Set();

@@ -1,5 +1,6 @@
 // English phrase book, part 8 of 8: the administrative area, the account and sign-out screens, the personal logo catalogue, the tutorial invitation and the engine's law-effect and government lines. Same format as part 6: [Italian as shown, English]; `#` stands for a number, `{}` for a free part; in the English a free part is named by its position (`{2}` for the second one).
 import { ALL_PAIRS } from '../studio-lines.js?v=20261109-3';
+import { ALL_PAIRS as ACTIVITY_SCENE_PAIRS } from '../activity-scene-lines.js?v=20261109-3';
 
 export const PHRASES = [
   ["Verifica della sessione…", "Checking the session…"],
@@ -5288,4 +5289,29 @@ export const PHRASES = [
   ["Gruppi parlamentari","Parliamentary groups"],["Gruppi e forze","Groups and forces"],["Partiti","Parties"],
   ["Carico la pagina…","Loading the page…"],
   ...ALL_PAIRS,
+  ...ACTIVITY_SCENE_PAIRS,
+  ["Sfumato", "Fade"], ["Undercut", "Undercut"], ["Ciuffo laterale", "Side quiff"], ["All’indietro", "Swept back"], ["Cresta", "Mohawk"], ["Dreadlocks", "Dreadlocks"], ["Treccine", "Braids"],
+  ["Di tre giorni", "Three-day stubble"], ["Pizzetto", "Goatee"], ["Basette", "Sideburns"], ["Collare", "Chin strap"],
+  ["Baffi a matita", "Pencil moustache"], ["Baffi a spazzola", "Toothbrush moustache"], ["Baffi a ferro di cavallo", "Horseshoe moustache"], ["Baffi chevron", "Chevron moustache"],
+  ["Incentivi e agevolazioni fiscali", "Incentives and tax relief"], ["Potenziamento dei servizi", "Strengthening public services"], ["Controlli e sanzioni", "Checks and penalties"],
+  ["Crediti d’imposta e sgravi per chi investe o assume: minori entrate per lo Stato, effetti rapidi ma temporanei.", "Tax credits and relief for those who invest or hire: lower revenue for the State, quick but temporary effects."],
+  ["Più personale e sportelli in scuole, sanità e uffici: effetti diffusi e duraturi, con una spesa che ogni anno ritorna.", "More staff and counters in schools, healthcare and offices: widespread, lasting effects, with spending that recurs every year."],
+  ["Più verifiche e pene più certe: costano poco, funzionano dove c’è chi controlla e scontentano chi viene colpito.", "More checks and more certain penalties: they cost little, work where someone checks and upset those who are hit."],
+  ["VOTAZIONE IN AULA", "VOTE IN THE CHAMBER"], ["SEGUI LA VOTAZIONE", "FOLLOW THE VOTE"], ["Non seguire", "Do not follow"], ["Votazione in Aula", "Vote in the Chamber"],
+  ["Il presidente di turno aprirà la seduta e i seggi voteranno uno dopo l’altro. L’esito si saprà solo alla fine.", "The presiding officer will open the sitting and the seats will vote one after the other. The outcome will only be known at the end."],
+  ["Voto segreto: Il presidente di turno aprirà la seduta e i seggi voteranno uno dopo l’altro. L’esito si saprà solo alla fine.", "Secret ballot: The presiding officer will open the sitting and the seats will vote one after the other. The outcome will only be known at the end."],
+  ["Testi, pannelli, notifiche e contatori si animano.", "Text, panels, notifications and counters are animated."],
+  ["Movimenti dell’interfaccia più brevi e discreti.", "Shorter, more discreet interface movements."],
+  ["Le scene mostrano le pose senza percorsi e movimenti lunghi.", "Scenes show the poses without long paths and movements."],
+  ["Le scene mostrano la posizione di ogni momento, senza movimento.", "Scenes show the position of each moment, without movement."],
+  ["Animazioni dell’interfaccia", "Interface animations"],
+  ["Animazioni delle scene", "Scene animations"],
+  ["Animazioni delle scene di gioco", "Game scene animations"],
+  ["Testi e pannelli compaiono subito, senza movimenti o effetti decorativi.", "Text and panels appear at once, without movement or decorative effects."],
+  ["Comizi, proteste, studi TV, voto, Notte elettorale e Aula con personaggi in movimento.", "Rallies, protests, TV studios, the vote, Election Night and the Chamber with characters in motion."],
+  ["Partecipa", "Take part"], ["Simula", "Simulate"],
+  ["Clima dell’incontro", "Mood of the meeting"], ["Clima dell’incontro: #/100", "Mood of the meeting: #/100"], ["Lascia la scena", "Leave the scene"], ["COMITATI E ASSOCIAZIONI", "COMMITTEES AND ASSOCIATIONS"], ["CANTIERE", "BUILDING SITE"], ["COMMISSIONE", "COMMITTEE"], ["AUDIZIONE PUBBLICA", "PUBLIC HEARING"],
+  ["Non partecipi: nessun costo e nessun effetto.", "You do not take part: no cost and no effect."],
+  ["La scena sta per cominciare: nulla è deciso finché non finisce.", "The scene is about to begin: nothing is decided until it ends."],
+  ["Hai lasciato la scena a metà.", "You left the scene halfway."],
 ];

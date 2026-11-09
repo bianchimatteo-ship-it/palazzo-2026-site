@@ -589,7 +589,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       if (element.closest('[data-mobile-sheet], dialog, [data-wizard-backdrop]')) continue;
       const card = element.closest('[data-committee-id], [data-cadre], [data-remember], article[id], section[id]');
       const owner = card?.dataset?.committeeId ?? card?.dataset?.cadre ?? card?.id ?? card?.dataset?.remember ?? element.closest('.cm-card')?.querySelector?.('[data-committee-id]')?.dataset?.committeeId ?? '';
-      const base = `auto|${root.querySelector('.page-wrap')?.dataset?.page ?? location.hash ?? ''}|${owner}|${(element.querySelector(':scope > summary')?.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 60)}`;
+      const base = `auto|${root.querySelector('.page-wrap')?.dataset?.page ?? location.hash ?? ''}|${owner}|${(element.querySelector(':scope > summary')?.textContent ?? '').trim().replace(/\s+/g, ' ').replace(/\d+/g, '#').slice(0, 60)}`; // the numbers of a title (a count) are not part of its identity: a block the player closed stays closed when the count changes
       const nth = seen.get(base) ?? 0;
       seen.set(base, nth + 1);
       element.dataset.remember = `${base}|${nth}`;
@@ -681,6 +681,16 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   // Crossing the phone breakpoint (rotation, window) re-applies the open/closed state of the responsive blocks.
   if (typeof matchMedia === 'function') { try { matchMedia('(max-width: 600px)').addEventListener('change', () => restoreDetails()); } catch { /* old browsers: the next redraw does it */ } }
   const render = (state, lastSaved) => { settings = loadSettings(settingsScope()); setForceColorOverrides(new Map((state.world?.parties ?? []).filter(item => item.brandColor && /^#[\da-f]{6}$/i.test(item.color ?? '')).map(item => [item.id, item.color]))); renderFrame(state, lastSaved); paintLogoEditor(); restoreDetails(); markPlanned(); persistViewState(); scrollPending(); settleRadioVoice(); openPendingArticle(); };
+  // The six optional scenes of the weekly activities (core/activity-scenes.js, loaded on demand): «Partecipa» opens the animated scene, «Simula» plays it by the best choices with no stage, «Non partecipare»
+  // changes nothing (a note only: no cost, no effect, no week). Nothing starts by itself.
+  const startActivityScene = async (activityId, quick) => {
+    try {
+      const target = root.querySelector(`[data-activity-target="${activityId}"]`)?.value ?? null;
+      const result = await store.startActivityScene(activityId, { quick, target });
+      playSound(quick && result?.report?.tone === 'bad' ? 'failure' : 'confirm');
+      if (!quick) window.scrollTo?.({ top: 0 });
+    } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
+  };
   // The radio reads only while its page is on screen: leaving it (or drawing a page without the bulletin) stops the voice; the buttons and the highlighted sentence follow the reading.
   // (armed for a moment, not consumed by the first redraw: the page change draws the newsroom more than once)
   const openPendingArticle = () => {
@@ -1646,6 +1656,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     }
     // The bills of the Government, of the other groups and of the committees: speeches and the player's vote.
     if (event.target.closest?.('[data-life-logo-clear]')) { clearFoundLogo(); const box = root.querySelector('[data-life-logo-preview]'), input = root.querySelector('[data-life-logo-upload]'); if (box) box.hidden = true; if (input) input.value = ''; return; }
+    const skipActivity = event.target.closest('[data-skip-activity]');
+    if (skipActivity) { event.preventDefault(); store.getState().ui.toast = 'Non partecipi: nessun costo e nessun effetto.'; render(store.getState(), store.getLastSaved()); return; }
     const sceneControl = event.target.closest('[data-scene-choice],[data-scene-abandon],[data-scene-start],[data-scene-start-kind],[data-scene-skip],[data-stage-skip],[data-stage-pause],[data-scene-motion-set]');
     if (sceneControl) {
       try {
@@ -1653,7 +1665,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
         if (sceneControl.matches('[data-stage-pause]')) { if (stageIsPaused()) { stageResume(); sceneControl.textContent = 'Pausa'; sceneControl.setAttribute('aria-pressed', 'false'); } else { stagePause(); sceneControl.textContent = 'Riprendi'; sceneControl.setAttribute('aria-pressed', 'true'); } return; }
         if (sceneControl.matches('[data-scene-motion-set]')) { settings = saveSetting('sceneMotion', sceneControl.dataset.sceneMotionSet, settingsScope()); applySettings(); render(store.getState(), store.getLastSaved()); return; }
         if (sceneControl.matches('[data-scene-skip]')) store.sceneSkip();
-        else if (sceneControl.matches('[data-scene-start-kind]')) { const kind = sceneControl.dataset.sceneStartKind; if (kind === 'comizio') store.startRallyScene(); else if (kind === 'talkshow') store.startTalkShowScene({ source: 'attivita', showId: root.querySelector('[data-activity-target="talk"]')?.value ?? null }); }
+        else if (sceneControl.matches('[data-scene-start-kind]')) { const kind = sceneControl.dataset.sceneStartKind; if (kind === 'attivita') { startActivityScene(sceneControl.dataset.sceneActivity, false); return; } if (kind === 'comizio') store.startRallyScene(); else if (kind === 'talkshow') store.startTalkShowScene({ source: 'attivita', showId: root.querySelector('[data-activity-target="talk"]')?.value ?? null }); }
         else if (sceneControl.matches('[data-scene-start]')) store.startDebateScene({});
         else if (sceneControl.matches('[data-scene-abandon]')) store.sceneAbandon();
         else store.sceneChoose(sceneControl.dataset.sceneChoice);
@@ -1692,6 +1704,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       return;
     }
     // The Aula: a vote the game already decided, replayed seat by seat. Read only; loaded when someone enters it.
+    const dismissAula = event.target.closest('[data-aula-dismiss]');
+    if (dismissAula) { store.markAulaSeen(dismissAula.dataset.aulaDismiss); return; }
     const aulaControl = event.target.closest('[data-aula-open],[data-aula-local]');
     if (aulaControl) {
       try {
@@ -1707,6 +1721,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
         if (!aula) throw new Error('Questa votazione non ha i dati dei gruppi per entrare in aula.');
         module.openAula(aula, { motion: document.documentElement.dataset.sceneMotion ?? settings.sceneMotion });
         playSound('confirm');
+        if (aulaControl.dataset.aulaFollow) store.markAulaSeen(aulaControl.dataset.aulaFollow);
       } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
       return;
     }
@@ -2009,7 +2024,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     const partyCurrent = event.target.closest('[data-party-current]')?.dataset.partyCurrent;
     if (gameActivity || agendaChoice || fastForward || partyAction || partyCurrent) {
       try {
-        if (gameActivity && activityButton.matches('[data-quick-scene]')) { if (gameActivity === 'comizio-piazza') store.startRallyScene({ quick: true }); else store.startTalkShowScene({ source: 'attivita', quick: true, showId: root.querySelector('[data-activity-target="talk"]')?.value ?? null }); playSound('confirm'); }
+        if (gameActivity && activityButton.matches('[data-quick-scene]')) { if (activityButton.closest('.hq-activity')?.querySelector('[data-scene-activity]')) { startActivityScene(gameActivity, true); return; } if (gameActivity === 'comizio-piazza') store.startRallyScene({ quick: true }); else store.startTalkShowScene({ source: 'attivita', quick: true, showId: root.querySelector('[data-activity-target="talk"]')?.value ?? null }); playSound('confirm'); }
         else if (gameActivity) { const result = store.performWeeklyActivity(gameActivity, activityButton.dataset.activityTargetValue ?? root.querySelector(`[data-activity-target="${gameActivity}"]`)?.value ?? null); playSound(result.report.tone === 'bad' ? 'failure' : 'confirm'); }
         else if (agendaChoice) { const result = store.resolveAgendaItem(agendaChoice.dataset.agendaItem, agendaChoice.dataset.agendaChoice); playSound(result.report.tone === 'bad' ? 'failure' : 'confirm'); }
         else if (fastForward) {

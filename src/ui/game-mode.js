@@ -1,4 +1,5 @@
 import { invitedShows } from '../core/scene-engine.js?v=20261109-3';
+import { voteCatalog } from '../core/vote-engine.js?v=20261109-3';
 import { endedHeadline } from './hall-view.js?v=20261109-3';
 import { activityFor, activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261109-3';
 import { playerRoles } from '../core/roles.js?v=20261109-3';
@@ -319,7 +320,7 @@ function planner(state, gc, { openLimit = Infinity } = {}) {
       const activity = activityFor(base, ctx.game);
       const problem = activityProblem(ctx, env, activity);
       const target = activity.target && targets[activity.target]?.length ? `<select data-activity-target="${esc(activity.id)}" aria-label="Destinatario">${targets[activity.target].map(([id, text]) => `<option value="${esc(id)}">${esc(text)}</option>`).join('')}</select>` : '';
-      return { problem, html: `<div class="hq-activity ${problem ? 'is-blocked' : ''}"><div class="hq-activity-copy"><strong>${esc(activity.label)}</strong><small>${esc(activity.detail)}</small><span><b>Effetti</b> ${esc(describeEffects(activity.effects) || 'vedi descrizione')}</span>${activity.requiresLabel ? `<span class="hq-req"><b>Serve</b> ${esc(activity.requiresLabel)}${activity.weekly === 1 ? ' Una volta a settimana.' : ''}</span>` : activity.weekly === 1 ? '<span class="hq-req"><b>Serve</b> Una volta a settimana.</span>' : ''}${activity.risk || activity.later ? `<span class="hq-risk"><b>Rischio</b> ${activity.risk ? `${Math.round(activity.risk.chance * 100)}%: ${esc(activity.risk.label.toLowerCase())}` : ''}${activity.later ? `${activity.risk ? ' · ' : ''}${esc((activity.later.hint ?? activity.later.label ?? 'conseguenze in arrivo').toLowerCase())}` : ''}</span>` : ''}</div><div class="hq-cost">${costChips(activity.cost)}</div><div class="hq-activity-action">${target}${activity.scene ? `<button class="primary-button" data-scene-start-kind="${esc(activity.scene)}" ${problem ? 'disabled' : ''}>${esc(activity.button)}</button>` : ''}<button class="secondary-button" data-game-activity="${esc(activity.id)}" ${problem ? 'disabled' : ''}${activity.scene ? ' data-quick-scene' : ''}>${activity.scene ? esc(activity.quickButton) : 'Fai'}</button>${problem ? '' : planAddButton({ kind: 'activity', id: activity.id })}${problem ? `<em>${esc(problem)}</em>` : ''}</div></div>` };
+      return { problem, html: `<div class="hq-activity ${problem ? 'is-blocked' : ''}"><div class="hq-activity-copy"><strong>${esc(activity.label)}</strong><small>${esc(activity.detail)}</small><span><b>Effetti</b> ${esc(describeEffects(activity.effects) || 'vedi descrizione')}</span>${activity.requiresLabel ? `<span class="hq-req"><b>Serve</b> ${esc(activity.requiresLabel)}${activity.weekly === 1 ? ' Una volta a settimana.' : ''}</span>` : activity.weekly === 1 ? '<span class="hq-req"><b>Serve</b> Una volta a settimana.</span>' : ''}${activity.risk || activity.later ? `<span class="hq-risk"><b>Rischio</b> ${activity.risk ? `${Math.round(activity.risk.chance * 100)}%: ${esc(activity.risk.label.toLowerCase())}` : ''}${activity.later ? `${activity.risk ? ' · ' : ''}${esc((activity.later.hint ?? activity.later.label ?? 'conseguenze in arrivo').toLowerCase())}` : ''}</span>` : ''}</div><div class="hq-cost">${costChips(activity.cost)}</div><div class="hq-activity-action">${target}${activity.scene ? `<button class="primary-button${activity.scene === 'attivita' ? ' scene-take' : ''}" data-scene-start-kind="${esc(activity.scene)}"${activity.scene === 'attivita' ? ` data-scene-activity="${esc(activity.id)}"` : ''} ${problem ? 'disabled' : ''}>${esc(activity.button)}</button>` : ''}<button class="secondary-button" data-game-activity="${esc(activity.id)}" ${problem ? 'disabled' : ''}${activity.scene ? ' data-quick-scene' : ''}>${activity.scene ? esc(activity.quickButton) : 'Fai'}</button>${activity.scene === 'attivita' && !problem ? `<button type="button" class="ghost-button scene-skip" data-skip-activity="${esc(activity.id)}">Non partecipare</button>` : ''}${problem ? '' : planAddButton({ kind: 'activity', id: activity.id })}${problem ? `<em>${esc(problem)}</em>` : ''}</div></div>` };
     });
     // The ones that can be done now come first; the others, with what they ask for, are folded under them (they stay one tap away: they say what to become or wait for).
     const open = entries.filter(entry => !entry.problem).map(entry => entry.html).join('');
@@ -613,6 +614,23 @@ function newsBand(state) {
 //   4. what is coming: the elections in the calendar and the next goal;
 //   5. the news that concern the career;
 //   6. the secondary areas (the country, the territory, the press, memory) and the details, folded.
+// A vote the game has already decided, held in the last two weeks in the Chamber of the player and not followed yet: Home offers to follow it live in the Aula (the plain label only: the result is NOT told here,
+// it comes out seat by seat in the Aula). Followed (or skipped) once, it is not offered again.
+export function liveVoteOffer(state) {
+  const parliament = state.parliament;
+  if (!parliament?.player || !state.game) return null;
+  const seen = new Set(state.game.flags?.aulaSeen ?? []);
+  const today = state.clock?.currentDate ?? '';
+  const limit = today ? advanceDays(today, -14) : '';
+  const chamber = parliament.player.chamber;
+  const vote = voteCatalog(parliament).find(item => item.chamber === chamber && item.id && !seen.has(item.id) && (!item.date || !limit || item.date >= limit) && (item.byGroup?.length ?? 0) > 0);
+  return vote ? { id: vote.id, chamber, label: vote.label ?? vote.title ?? 'Votazione in Aula', date: vote.date ?? null, secret: Boolean(vote.secret) } : null;
+}
+function liveVoteBand(state) {
+  const offer = liveVoteOffer(state);
+  if (!offer) return '';
+  return `<section class="aula-live" data-aula-live aria-label="Votazione in Aula"><div><span class="section-kicker">VOTAZIONE IN AULA${offer.date ? ` · ${esc(formatDate(offer.date).toUpperCase())}` : ''}</span><strong>${esc(offer.label)}</strong><small>${offer.secret ? 'Voto segreto: ' : ''}Il presidente di turno aprirà la seduta e i seggi voteranno uno dopo l’altro. L’esito si saprà solo alla fine.</small></div><div class="aula-live-actions"><button type="button" class="primary-button aula-follow" data-aula-open="${esc(offer.id)}" data-aula-chamber="${esc(offer.chamber)}" data-aula-follow="${esc(offer.id)}">SEGUI LA VOTAZIONE</button><button type="button" class="ghost-button" data-aula-dismiss="${esc(offer.id)}">Non seguire</button></div></section>`;
+}
 export function renderHeadquarters(state, options = {}) {
   const gc = gameContext(state);
   const expanded = options.expanded ?? {};
@@ -629,6 +647,7 @@ export function renderHeadquarters(state, options = {}) {
   const upcoming = upcomingElections(game)[0];
   return `<div class="hq hqc">${endedBanner(state, gc)}
     ${commandHeader(state, gc, options)}
+    ${liveVoteBand(state)}
     ${resourcesBar(state, gc)}
     ${prioritiesBand(state, gc, expanded)}
     <div class="hqc-board hqc-board-act">

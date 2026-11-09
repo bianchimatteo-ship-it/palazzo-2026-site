@@ -13,7 +13,7 @@ import { loadSettings } from './settings.js?v=20261109-3';
 import { advanceNight, answerStatement, createNight, NIGHT_HOURS } from './night-engine.js?v=20261109-3';
 import { avatarOf } from './avatar.js?v=20261109-3';
 import { CAMPAIGN_ACTIVITIES, DEBATE_TOPICS } from '../data/simulation/campaign-rules.js?v=20261109-3';
-import { autoPlay, chooseInScene, createDebateScene, createRallyScene, createTalkShowScene, createVoteScene, invitedShows, sceneEffects, showFor, withStats as sceneWithStats } from './scene-engine.js?v=20261109-3';
+import { abandonKindScene, autoPlay, chooseInScene, createDebateScene, createRallyScene, createTalkShowScene, createVoteScene, invitedShows, sceneEffects, showFor, withStats as sceneWithStats } from './scene-engine.js?v=20261109-3';
 import { abandonRally } from './rally-scene.js?v=20261109-3';
 import { answerRivalMove, rivalPulse, rivalsView } from './rival-life-engine.js?v=20261109-3';
 import { abandonChallenge as abandonChallengeRun, challengeView as challengeViewOf, recordVerdict as recordChallengeVerdict, startChallenge as startChallengeRun, tickChallenge } from './challenge-engine.js?v=20261109-3';
@@ -55,7 +55,7 @@ import { classifyOutcome, nationalListShares, preferenceStanding } from './elect
 import { DIFFICULTIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261109-3';
 import { POLL_EXTENSIONS, WORLD_PARTY_COUNT } from '../data/simulation/polling-rules.js?v=20261109-3';
 import { candidacyFacts, heldOfficesOf, institutionTarget as officeTargetOf, isPrimeMinister, officeFactsDetail, officeFactsDetailOf } from './roles.js?v=20261109-3';
-import { costProblem, leavePartyFor, memoryAbout, memoryBalance, memoryWeight, recordWhy, remember, scheduleFollowUp } from './career-engine.js?v=20261109-3';
+import { activityFor, costProblem, leavePartyFor, memoryAbout, memoryBalance, memoryWeight, recordWhy, remember, scheduleFollowUp } from './career-engine.js?v=20261109-3';
 import { addLedger, advanceElection, ledgerLabel, affinity, applyPresidentCredit, composeAssembly, createPresidency, dealWithBloc, declareCandidacy, lineText, normalizePresidency, openElection as openPresidentialElection, playerStanding, presidencySchedule, presidentActivityEffects, presidentActivityProblem, presidentWeek, presidentialEligibility, proclaim, projection, quorumFor, resignPresidency, setPlayerLine, setPlayerVote as setPresidentialVote, settleLedger, sponsorCandidate, startPlayerPresidency, termEndOf, vetoCandidate, whiteSemester, withdrawCandidacy } from './presidency-engine.js?v=20261109-3';
 import { PRESIDENCY_RULES, PRESIDENT_ACTIVITIES, PRESIDENT_ACTS } from '../data/simulation/presidency-rules.js?v=20261109-3';
 import { PARTY_LINES, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261109-3';
@@ -1108,8 +1108,28 @@ function finishVote() {
   persist(); emit();
   return state;
 }
+// The optional scene of a weekly activity ends: the plain activity is performed ONCE here (its cost and its effects, scaled by the verdict of the scene, the same engine as «Simula»), the family of topics is
+// remembered (the next scene of this kind does not repeat it), and a line goes in the diary. Opening, playing or leaving the scene never touches the week.
+const SEGMENT_FAMILY = { giovani: 'lavoro', famiglie: 'scuola', anziani: 'sanita', imprese: 'lavoro', fragili: 'casa' };
+function finishActivityScene(scene) {
+  const effects = sceneEffects(scene);
+  state = { ...state, scene: null };
+  const toast = effects.line;
+  let result = null;
+  // an activity that is no longer available (a save edited by hand, a role lost) closes the scene without costs or effects: the scene never leaves the game stuck
+  try { result = performActivity({ game: state.game, stats: statsOf(state), parliament: state.parliament }, gameEnv(state), scene.activityId, scene.target ?? null, { sceneEdge: effects.edge }); } catch (error) { state = { ...state, ui: { ...state.ui, toast: error.message } }; persist(); emit(); return state; }
+  state = applyGameResult(state, result.ctx, toast, result.specials ?? []);
+  state = publicEcho(state, scene.activityId, result.report.tone, { tone: effects.mediaTone });
+  const game = deepCopy(state.game);
+  game.flags = { ...game.flags, sceneLog: [...(game.flags?.sceneLog ?? []), { key: scene.sceneKey, family: scene.familyId, week: game.week.index, performance: effects.performance }].slice(-24) };
+  remember(game, { date: state.clock.currentDate, kind: 'scena-attivita', text: effects.line, weight: 0.7 });
+  state = { ...state, game, ui: { ...state.ui, toast } };
+  persist(); emit();
+  return state;
+}
 function finishScene() {
   const kind = state.scene?.kind;
+  if (kind === 'attivita') return finishActivityScene(state.scene);
   if (kind === 'comizio') return finishRally(state.scene);
   if (kind === 'talkshow') return finishTalkShow(state.scene);
   if (kind === 'voto') return finishVote();
@@ -4151,6 +4171,7 @@ export const store = {
     const scene = state.scene;
     if (scene.kind === 'voto') return store.sceneSkip();
     if (scene.kind === 'comizio') { state = { ...state, scene: abandonRally(scene) }; return finishScene(); }
+    if (scene.kind === 'attivita') { state = { ...state, scene: abandonKindScene(scene) ?? { ...scene, status: 'abandoned', outcome: { performance: 40, band: 'mid', edge: -2, summary: 'Hai lasciato la scena a metà.', audience: scene.audience?.mood ?? 50 } } }; return finishScene(); }
     state = { ...state, scene: { ...scene, status: 'abandoned', outcome: { performance: 30, edge: -4, summary: 'Hai lasciato lo studio prima della fine: una figuraccia in diretta.', declined: scene.kind !== 'talkshow', deltas: { notoriety: 0.6, popularity: -0.8, reputation: -0.8 }, mediaTone: -1 } } };
     return finishScene();
   },
@@ -4184,6 +4205,40 @@ export const store = {
     if (quick) scene = autoPlay(scene);
     state = { ...state, scene, ui: { ...state.ui, activePage: campaign ? 'elezioni' : state.ui.activePage, toast: quick ? state.ui.toast : 'Scendi in piazza: il comizio sta per iniziare' } };
     if (quick) return finishScene();
+    persist(); emit();
+    return scene;
+  },
+  // A vote followed in the Aula (or not followed): it is not offered again on Home. Nothing else changes; the vote was decided by the game long before.
+  markAulaSeen(voteId) {
+    if (!state.game || !voteId) return;
+    const game = deepCopy(state.game);
+    game.flags = { ...game.flags, aulaSeen: [...new Set([...(game.flags?.aulaSeen ?? []), String(voteId)])].slice(-60) };
+    state = { ...state, game };
+    persist(); emit();
+  },
+  // ---------- the six optional scenes of the weekly activities (activity-scenes.js, loaded on demand) ----------
+  // «Partecipa»: the animated scene; `quick` («Simula»): the same scene played by the best choices with no stage, the same outcome engine. Nothing is paid or changed before the scene ends.
+  async startActivityScene(activityId, { quick = false, target = null } = {}) {
+    requireCareer();
+    if (state.scene) throw new Error('Una scena alla volta.');
+    const module = await import('./activity-scenes.js?v=20261109-3');
+    const key = module.sceneKeyOf(activityId);
+    if (!key) throw new Error('Questa attività non ha una scena.');
+    if (state.scene) throw new Error('Una scena alla volta.');
+    const activity = WEEKLY_ACTIVITIES.find(item => item.id === activityId);
+    const problem = activityProblem({ game: state.game, stats: statsOf(state), parliament: state.parliament }, gameEnv(state), activityFor(activity, state.game));
+    if (problem) throw new Error(problem);
+    const player = playerOf(state), game = state.game;
+    const id = `attivita-${activityId}-${state.career.id ?? 'carriera'}-${game.week.index}`;
+    const recent = (game.flags?.sceneLog ?? []).filter(item => item.key === key).map(item => item.family);
+    const variant = activityId === 'ispezione-cantiere' ? 'opposition' : activityId === 'sopralluogo' ? 'head' : 'default';
+    let scene = module.createActivityScene({
+      id, seed: `${state.career.id ?? 'carriera'}|${id}`, sceneKey: key, activityId, target, variant, player: { name: player?.displayName ?? 'Tu', tag: studioTags(state).player }, playerAvatar: avatarOf(player),
+      stats: { competence: (playerStat(state, 'experience') + playerStat(state, 'influence')) / 2, charisma: (playerStat(state, 'notoriety') + playerStat(state, 'reputation')) / 2, reputation: playerStat(state, 'reputation') },
+      recent, prefer: activityId === 'cittadini' ? SEGMENT_FAMILY[target] ?? null : null, date: state.clock.currentDate
+    });
+    if (quick) { state = { ...state, scene: autoPlay(scene) }; return finishScene(); }
+    state = { ...state, scene, ui: { ...state.ui, toast: 'La scena sta per cominciare: nulla è deciso finché non finisce.' } };
     persist(); emit();
     return scene;
   },

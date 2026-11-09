@@ -29,6 +29,9 @@ export const INSTRUMENT_KINDS = Object.freeze({
   investimento: { label: 'Investimento', costFactor: 1, effectFactor: 1, phaseIn: 10, lasting: true, controversy: 0.2, detail: 'Spesa pubblica pluriennale: effetti ampi ma lenti, pesa sul bilancio.' },
   riforma: { label: 'Riforma strutturale', costFactor: 0.35, effectFactor: 0.75, phaseIn: 16, lasting: true, controversy: 0.8, detail: 'Cambia le regole di un settore: costa poco, divide molto, dà risultati nel tempo.' },
   sostegno: { label: 'Sostegno mirato', costFactor: 0.7, effectFactor: 0.8, phaseIn: 4, lasting: false, controversy: 0.35, detail: 'Bonus e incentivi: effetti rapidi per chi li riceve, poi svaniscono.' },
+  incentivi: { label: 'Incentivi e agevolazioni fiscali', costFactor: 0.55, effectFactor: 0.7, phaseIn: 6, lasting: false, controversy: 0.3, detail: 'Crediti d’imposta e sgravi per chi investe o assume: minori entrate per lo Stato, effetti rapidi ma temporanei.' },
+  servizi: { label: 'Potenziamento dei servizi', costFactor: 0.85, effectFactor: 0.9, phaseIn: 12, lasting: true, controversy: 0.15, detail: 'Più personale e sportelli in scuole, sanità e uffici: effetti diffusi e duraturi, con una spesa che ogni anno ritorna.' },
+  controlli: { label: 'Controlli e sanzioni', costFactor: 0.2, effectFactor: 0.5, phaseIn: 6, lasting: true, controversy: 0.6, detail: 'Più verifiche e pene più certe: costano poco, funzionano dove c’è chi controlla e scontentano chi viene colpito.' },
   regole: { label: 'Regolazione e semplificazione', costFactor: 0.12, effectFactor: 0.45, phaseIn: 8, lasting: true, controversy: 0.55, detail: 'Norme e procedure: quasi a costo zero, scontentano chi perde vantaggi.' }
 });
 

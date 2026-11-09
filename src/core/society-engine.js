@@ -281,7 +281,10 @@ export function measureImpact(society, input) {
       investimento: { capacity: 8, crime: -3, perceived: 4 },
       riforma: { prevention: 10, crime: -4, perceived: 1.5 },
       sostegno: { operations: 10, crime: -2, perceived: 6, capacity: -2 },
-      regole: { perceived: 4, crime: -0.5, justice: -3 }
+      regole: { perceived: 4, crime: -0.5, justice: -3 },
+      incentivi: { capacity: 2, perceived: 1.5, crime: -0.5 },
+      servizi: { capacity: 6, prevention: 4, crime: -2, perceived: 3 },
+      controlli: { operations: 8, crime: -3, perceived: 5, justice: -1 }
     }[design.instrument];
     security = Object.fromEntries(Object.entries(security).map(([key, value]) => [key, round2(value * strength)]));
     if (design.instrument === 'regole') add('giovani', -1.2 * strength, 'teme misure solo repressive');

@@ -14,6 +14,7 @@ const hashOf = text => { let h = 2166136261 >>> 0; for (const ch of String(text)
 export const SPEAK_GESTURES = ['sottolinea', 'apre', 'indica', 'palmi', 'petto', 'sottolinea', 'pensa'];
 export const LISTEN_GESTURES = ['ascolta', 'appunti', 'esita', 'ascolta', 'dissenso', 'sorpresa'];
 export const pickGesture = (scene, nodeId, who, list) => list[hashOf(`${scene.seed ?? scene.id}|${nodeId}|${who}`) % list.length];
+export const stagePose = (x, y, extra = {}) => pose(x, y, extra);
 const pose = (x, y, extra = {}) => ({ x, y, s: depthScale(y), facing: 1, posture: 'stand', gesture: null, visible: true, ...extra });
 const away = (x, y) => pose(x, y, { visible: false });
 
@@ -109,9 +110,13 @@ function votePoses(scene, nodeId) {
   return out;
 }
 
+// Stages of other settings (the rooms of the optional scenes) register their script here: (scene, node) -> { setting, poses, camera, crowd, props }.
+const SCRIPTS = {};
+export const registerStageScript = (setting, fn) => { SCRIPTS[setting] = fn; };
 // What a stage shows at a beat of a scene.
 export function stageOf(scene, node) {
   const nodeId = scene.nodeId;
+  if (SCRIPTS[scene.setting]) return SCRIPTS[scene.setting](scene, node);
   if (scene.setting === 'piazza') return { setting: 'piazza', poses: rallyPoses(scene, nodeId, node), camera: RALLY_CAMERA[nodeId] ?? 'stage', crowd: rallyCrowd(scene, nodeId, node), props: {}, protest: Boolean(scene.protest?.arrived) };
   if (scene.setting === 'seggio') { const spec = VOTE_POSES[nodeId] ?? VOTE_POSES.uscita; return { setting: 'seggio', poses: votePoses(scene, nodeId), camera: nodeId === 'cabina' || nodeId === 'voto' || nodeId === 'piega' ? 'booth' : nodeId === 'urna' ? 'urn' : 'wide', crowd: 'quiet', props: { ballot: spec.prop ?? 'none', booth: spec.booth ?? 'open' } }; }
   return { setting: scene.setting, poses: studioPoses(scene, nodeId, node), camera: studioCamera(scene, node), crowd: studioCrowd(scene, node), props: {} };

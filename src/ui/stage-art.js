@@ -154,7 +154,7 @@ function studioIntervista(scene, uid) {
 }
 // The strip of headlines (one per beat, from the situation of the game) and the name straps: drawn over the camera, inside the frame; the text is wrapped, never cut.
 const wrapText = (text, chars) => { const lines = []; let current = ''; for (const word of String(text ?? '').split(/\s+/).filter(Boolean)) { if (current && `${current} ${word}`.length > chars) { lines.push(current); current = word; } else current = current ? `${current} ${word}` : word; } if (current) lines.push(current); return lines; };
-function strap(member, x, w, bottom, active) {
+export function strap(member, x, w, bottom, active) {
   const nameLines = wrapText(member.name, Math.floor((w - 18) / 6.4)), tagLines = wrapText(member.tag, Math.floor((w - 18) / 5.0));
   const height = 8 + nameLines.length * 11.5 + tagLines.length * 9.6 + 4, top = bottom - height;
   return `<g class="st-strap${active ? ' is-speaking' : ''}"><rect x="${x}" y="${top}" width="${w}" height="${height}" rx="3" fill="#0c1d2b" fill-opacity=".94" stroke="${active ? '#f0d68a' : '#3d6277'}" stroke-width="${active ? 1.6 : 1}"/><rect x="${x}" y="${top}" width="4" height="${height}" rx="1.5" fill="${active ? '#f0d68a' : '#58a3c4'}"/>`
@@ -270,9 +270,12 @@ export const cameraTransform = name => { const c = CAMERAS[name] ?? CAMERAS.wide
 export { depthScale, STAGE_W, STAGE_H, defsOf };
 
 // The whole stage of a beat as one SVG. `before` (optional) is JSON the player reads to animate the passage from the previous beat.
+// Settings of other kinds (the rooms of the optional scenes, ui/room-art.js) register their drawing here: (scene, stage, node, uid) -> { body, overlay }.
+const SETTINGS = {};
+export const registerStageSetting = (setting, fn) => { SETTINGS[setting] = fn; };
 export function renderStageSvg(scene, stage, node, { identity = null, before = null, label = '' } = {}) {
   const uid = `st${hash(scene.id) % 9973}`;
-  const art = scene.setting === 'piazza' ? squareSvg(scene, stage, node, uid, identity) : scene.setting === 'seggio' ? stationSvg(scene, stage, node, uid) : studioSvg(scene, stage, node, uid);
+  const art = SETTINGS[scene.setting] ? SETTINGS[scene.setting](scene, stage, node, uid) : scene.setting === 'piazza' ? squareSvg(scene, stage, node, uid, identity) : scene.setting === 'seggio' ? stationSvg(scene, stage, node, uid) : studioSvg(scene, stage, node, uid);
   const data = esc(JSON.stringify({ node: scene.nodeId, camera: stage.camera, crowd: stage.crowd, props: stage.props ?? {}, before }));
   return `<svg class="st-svg" viewBox="0 0 ${STAGE_W} ${STAGE_H}" role="img" aria-label="${esc(label)}" data-stage="${data}" data-setting="${esc(scene.setting)}"${scene.format ? ` data-format="${esc(scene.format)}"` : ''} preserveAspectRatio="xMidYMid slice"><g class="st-cam" data-camera="${esc(stage.camera)}" style="transform-origin:0 0;transform:${cameraTransform(stage.camera)}">${art.body}</g>${art.overlay ?? ''}</svg>`;
 }

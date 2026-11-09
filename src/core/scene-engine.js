@@ -12,6 +12,12 @@ import { line, formatOf } from './studio-lines.js?v=20261109-3';
 import { createRallyScene, createVoteScene, rallyChoose, rallyEffects, rallyNode, rallyProgress, voteChoose, voteNode, voteProgress } from './rally-scene.js?v=20261109-3';
 export { createRallyScene, createVoteScene, formatOf };
 
+// Scenes of other kinds (the optional scenes of the weekly activities, core/activity-scenes.js) are loaded on demand and register here: { node, choose, effects, progress }. Nothing of them is in the first screen.
+const KINDS = {};
+export const registerSceneKind = (kind, impl) => { KINDS[kind] = impl; };
+export const sceneKindRegistered = kind => Boolean(KINDS[kind]);
+// A scene of a registered kind left halfway: the closing it has (a verdict of its own).
+export const abandonKindScene = scene => KINDS[scene.kind]?.abandon?.(scene) ?? null;
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 const hashOf = text => { let h = 2166136261 >>> 0; for (let i = 0; i < String(text).length; i++) { h ^= String(text).charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h; };
 const unit = text => hashOf(text) / 4294967296;
@@ -114,6 +120,7 @@ const reactionLines = (scene, style, result, topic) => {
 // ---------- the current beat ----------
 // The node to show now: who speaks, what, with which face/gesture/shot, and the choices. A pure function of the scene.
 export function sceneNode(scene) {
+  if (KINDS[scene.kind]) return KINDS[scene.kind].node(scene);
   if (scene.kind === 'comizio') return rallyNode(scene);
   if (scene.kind === 'voto') return voteNode(scene);
   const rival = cast(scene, 'rivale'), host = cast(scene, 'conduttore'), me = cast(scene, 'giocatore');
@@ -149,7 +156,11 @@ const NEXT = { invito: 'preparazione', preparazione: 'ingresso', ingresso: 'q1',
 export function chooseInScene(input, choiceId) {
   const before = input.nodeId;
   let scene;
-  if (input.kind === 'comizio' || input.kind === 'voto') {
+  if (KINDS[input.kind]) {
+    scene = JSON.parse(JSON.stringify(input));
+    if (scene.status !== 'active') throw new Error('La scena è già conclusa.');
+    scene = KINDS[input.kind].choose(scene, choiceId);
+  } else if (input.kind === 'comizio' || input.kind === 'voto') {
     scene = JSON.parse(JSON.stringify(input));
     if (scene.status !== 'active') throw new Error('La scena è già conclusa.');
     scene = scene.kind === 'comizio' ? rallyChoose(scene, choiceId) : voteChoose(scene, choiceId);
@@ -256,6 +267,7 @@ function attackLine(scene) {
 // What the finished scene gives back to the game: the edge for the debate (campaign-engine uses it in place of the random comparison), a line for the history, a memory for the rival.
 export function sceneEffects(scene) {
   if (!scene.outcome) return null;
+  if (KINDS[scene.kind]) return KINDS[scene.kind].effects(scene);
   if (scene.kind === 'comizio') return rallyEffects(scene);
   if (scene.kind === 'voto') return { voted: true, line: 'Hai votato.' };
   const performance = scene.outcome.performance;
@@ -265,6 +277,7 @@ export function sceneEffects(scene) {
   return base;
 }
 export const sceneProgress = scene => {
+  if (KINDS[scene.kind]) return KINDS[scene.kind].progress(scene);
   if (scene.kind === 'comizio') return rallyProgress(scene);
   if (scene.kind === 'voto') return voteProgress(scene);
   const index = BEATS.indexOf(scene.nodeId); return { index: Math.max(0, index), total: BEATS.length };
