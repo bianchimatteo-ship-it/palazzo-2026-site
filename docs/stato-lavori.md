@@ -67,6 +67,32 @@ Proiezioni dell'ultima ora = risultato ufficiale; le due notti (primo turno e ba
 
 **Limiti.** Le frasi generate dei comizi sono in banche di varianti (circa 30 modelli, riempiti dal contesto), non testo libero. I ministri sono figure simulate senza nome proprio. Test su Android reale non eseguiti. Il deploy non è verificabile da qui.
 
+## Consolidamento 3 — completamento ufficiale (nota di lavoro, in aggiornamento)
+
+**Studi televisivi.** Tre studi diversi, scelti dal programma (`scene.format`, `core/scene-engine.js` `SHOWS`): *notiziario e intervista* (parete di schermi, scrivania del giornalista, due poltrone, nessun pubblico, regia), *talk show* (scrivania curva del conduttore, divano e tavolino per gli ospiti, pubblico nelle file dietro, skyline) e *faccia a faccia* (due leggii, moderatore al centro, tabellone a tre schermi, pubblico in tribuna). Pose e inquadrature per formato in `core/stage-script.js`; disegno in `ui/stage-art.js` (`studioFaccia`, `studioTalk`, `studioIntervista`, `studioOverlay`). Sopra l'inquadratura (non zoomano) stanno la **striscia delle notizie** (una notizia per momento, ricavata da tema, promesse, fatti dei giorni, programma dell'avversario; testo dentro il suo perimetro, compresso e mai tagliato) e le **didascalie** con nome completo, ruolo e partito (a capo, mai troncate; evidenziata chi parla). Gli inviti sono tre a settimana in base al seed e alla notorietà (`invitedShows`: la prima serata chiede notorietà), scelti dal menu dell'attività «Ospite in un talk show»; «Entra in studio» e «Simula» usano lo stesso motore e hanno gli stessi effetti.
+
+**Varietà delle battute.** `data/studio-lines.js` (coppie italiano/inglese, usate anche dal dizionario inglese) e `core/studio-lines.js`: inviti, aperture, prime e seconde domande (denaro, altro tema, promessa tradita o aperta, programma dell'avversario, fatto dei giorni), attacchi (promessa tradita, scarsa credibilità, polemiche, fatti, proposta senza copertura), reazioni e chiusure, per formato; la variante è scelta da un hash del seed (stessa scena = stesse parole). Comizio: 18 modelli di discorso in più e reazioni della piazza nuove (`RALLY_EXTRA`). Le proteste nascono dai fatti del gioco (`stageContext(...).triggers`: opere in ritardo, tagli a un settore, eventi critici, problemi della regione, promesse tradite) con gruppi e cartelli diversi per tema; i comizi senza protesta restano la regola.
+
+**Identità dei candidati simulati.** Nomi italiani plausibili, deterministici, unici per elezione (`simulatedName`), segnati «personaggio simulato», mai l'id tecnico né «Candidatura simulata n. N» nell'interfaccia; gli id del database non cambiano.
+
+**Ballottaggio con il giocatore eliminato.** `startRunoff` segna come eliminati i non finalisti (non alleati dei finalisti); il giocatore eliminato non ha più la campagna da candidato (resta solo l'indicazione di voto), il ballottaggio prosegue e arriva al risultato (`check-runoff-eliminated`).
+
+**Editor del Programma.** `core/program-proposals.js` + store (`addProposal`, `editProposal`, `setProposalState`, `moveProposal`, `deleteProposal`, `linkProposal`): proposte strutturate (area, titolo, problema, obiettivo, fino a 4 misure con strumento, costo, copertura, scadenza, territorio, priorità), bozza/pubblicata, anteprima per gli elettori, collegamento a una promessa **solo** se ce n'è una del giocatore nella stessa area (la promessa resta distinta e la verifica il gioco). Effetti reali: una proposta pubblicata e coperta dà credibilità (+1,5, massimo +6), una senza copertura la toglie (−3, minimo −9), le bozze nulla; le aree entrano nelle opzioni del comizio e nelle priorità del Governo; l'avversario attacca nel dibattito la proposta scoperta. Additivo al salvataggio (`game.proposals`, assente = vuoto). Test: `check-program-editor`.
+
+**Mappe dei collegi.** Filtro per partito (simulazione, non il 2022): i collegi del partito scelto restano colorati, gli altri si attenuano; legenda «Altri partiti»; stesso filtro sulla mappa a quadrati e su quella geografica.
+
+**Avatar.** Sei cursori (larghezza del volto, lunghezza del mento, distanza e grandezza degli occhi, altezza delle sopracciglia, larghezza della bocca) da −3 a +3 (`avatar.shape`): un avatar salvato prima non ha il campo e si disegna identico; tutti zero = non si salva; limiti sicuri (`avatarProblems` rifiuta i fuori limite). Non cambiano forma del volto «maschile/femminile» né i tratti esistenti.
+
+**Aula.** «ENTRA IN AULA» (emiciclo del Parlamento, atti dei consigli comunali/regionali/Parlamento europeo con voti per gruppo): `core/aula-script.js` (puro) + `ui/aula-view.js` (caricata solo all'ingresso): rivede seggio per seggio un voto **già deciso** dal motore (ordine dei seggi da un hash dell'id del voto, contatori = somma dei seggi mostrati, alla fine esattamente i totali; nessun ricalcolo, nessun effetto sul gioco), annunci del Presidente (un ruolo, mai una persona reale), voto palese e segreto (nel segreto si sa chi ha votato, non come), voto simulato del giocatore, «Vai all'esito», pausa, Esc. Con animazioni spente o ridotte si apre sull'esito. I filtri e l'elenco dei componenti dell'emiciclo sono ora a tendina/richiudibili.
+
+**Seggio.** Insegna del comune sulla parete (non più sulla scrivania, dove il personaggio la copriva), scrutatori più distanti e rivolti verso il banco, tenda della cabina sotto l'intestazione «CABINA».
+
+**Caricamento.** Il grafo statico all'avvio era 184 moduli, 5,67 MB (limite 150, 4,9 MB, 1,2 MB compressi). Le pagine (Home, Elezioni, Parlamento, Partito, Carriera, Agenda, Osservatorio, Quirinale, Diplomazia, Notte, scene, Archivio, Finanze, Territori…) sono ora moduli caricati al bisogno (`ui/lazy-views.js`: stessi nomi e argomenti dei renderer, blocco «Carico la pagina…» alla prima chiamata, poi ridisegno; con una carriera aperta i moduli si scaricano in sottofondo). Risultato: 150 moduli, 4,72 MB, 1,16 MB compressi, nessun limite alzato.
+
+**Pulsanti.** I pulsanti secondari (scene, Governo, Diplomazia, Programma, Sfide, Obiettivi, Aula, emiciclo, istituzioni locali) hanno lo stile di «Fai» (fondo scuro, bordo sottile, testo leggibile, oro al passaggio).
+
+**Limiti dichiarati.** La striscia delle notizie non ha ancora i sondaggi nazionali (solo tema, promesse, fatti, programma dell'avversario). L'Aula non ha un adattatore per i voti segreti delle istituzioni locali (nel gioco sono palesi). I cursori dell'avatar non cambiano la forma «squadrata/arrotondata» del volto oltre larghezza e mento. Il Presidente dell'assemblea è sempre un ruolo senza nome. Nessuna prova su dispositivo Android; il deploy non è verificabile da questo ambiente.
+
 ## Milestone precedente — fondazione partito, consenso, fiducia, direttiva (completata)
 Vedi la cronologia git (commit `7fbae22`, `8842e95`).
 
@@ -78,4 +104,4 @@ Vedi la cronologia git (commit `7fbae22`, `8842e95`).
 
 ## Problemi noti non legati a queste modifiche
 - `check-annual-elections` (caso `regionale/b`): fallisce già sul commit `1480b52`, prima del lavoro di questa sessione.
-- `check-load` (162 moduli > 150), `check-chart-contrast`, `check-campaign-ui` (crash di Chrome), `check-start-screen`: falliscono già sul codice di partenza.
+- `check-chart-contrast`, `check-campaign-ui` (crash di Chrome), `check-start-screen`: falliscono già sul codice di partenza.

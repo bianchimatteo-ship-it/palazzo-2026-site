@@ -9,7 +9,8 @@ import { placeholderPerson } from '../core/seat-roster.js?v=20261107-1';
 import { glyph } from './visuals.js?v=20261107-1';
 import { badge, esc, num, table } from './sections-kit.js?v=20261107-1';
 
-export const HEMICYCLE_DEFAULTS = Object.freeze({ chamber: null, colorBy: 'gruppo', party: '', group: '', committee: '', vote: '', selected: null, q: '', territory: '', limit: 40 });
+import { HEMICYCLE_DEFAULTS } from './hemicycle-defaults.js?v=20261107-1';
+export { HEMICYCLE_DEFAULTS };
 export const ROSTER_PAGE = 40;
 const CHAMBER_LABELS = { camera: 'Camera dei deputati', senato: 'Senato della Repubblica' };
 const KIND_LABELS = { legge: 'Proposta di legge', decreto: 'Decreto-legge', manovra: 'Legge di bilancio', fiducia: 'Fiducia al governo' };
@@ -289,7 +290,7 @@ export function renderHemicycle(state, { politicians = [], db = {}, view = {}, l
     <header class="hemi-head"><div><span class="section-kicker">EMICICLO INTERATTIVO · RAPPRESENTAZIONE GRAFICA</span><h2>${esc(CHAMBER_LABELS[model.chamber])}</h2><p>${intro}</p></div>${model.votes.length ? `<button type="button" class="primary-button aula-enter" data-aula-open="${esc((model.vote ?? model.votes[0]).id)}" data-aula-chamber="${esc(model.chamber)}">ENTRA IN AULA</button>` : ''}<span class="hemi-count">${model.visible === model.roster.total ? `${num(model.roster.total, 0)} seggi` : `${num(model.visible, 0)} di ${num(model.roster.total, 0)}`}</span></header>
     ${controls(model, settings, counts)}
     <div class="hemi-layout">
-      <div class="hemi-stage">${svg(model, settings)}${legend(model, settings)}${placeholders ? `<p class="sx-note">${placeholders} ${placeholders === 1 ? 'seggio' : 'seggi'} dello scenario senza un componente nell’archivio verificato: sono in grigio e non sono attribuiti a nessuno.</p>` : ''}</div>
+      <div class="hemi-stage">${svg(model, settings)}<details class="hemi-legend-fold" data-remember="hemi-legend" open><summary>${model.simulated ? 'Gruppi e forze' : settings.colorBy === 'partito' ? 'Partiti' : 'Gruppi parlamentari'}</summary>${legend(model, settings)}</details>${placeholders ? `<p class="sx-note">${placeholders} ${placeholders === 1 ? 'seggio' : 'seggi'} dello scenario senza un componente nell’archivio verificato: sono in grigio e non sono attribuiti a nessuno.</p>` : ''}</div>
       <aside class="hemi-side">${card(model, state, db, logoFor)}${model.simulated ? '' : committeePanel(model, db)}${rosterList(model, settings)}</aside>
     </div>
     ${votePanel(model, db)}

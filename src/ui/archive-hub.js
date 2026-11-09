@@ -16,16 +16,8 @@ export const ARCHIVE_TABS = Object.freeze([
   ['leggi', 'law', 'Leggi e atti'],
   ['territori', 'map', 'Territori']
 ]);
-// Collections each tab needs, loaded on demand.
-export const ARCHIVE_COLLECTIONS = Object.freeze({
-  partiti: ['parties', 'politicalMovements', 'coalitions', 'electoralLists', 'territories', 'electionParticipations', 'twoPerThousand', 'partyLeaderships', 'politicalFigures', 'partyMemberships', 'politicians'],
-  deputati: ['politicians', 'parliamentaryGroups', ...PARTY_LINK_COLLECTIONS],
-  senatori: ['politicians', 'parliamentaryGroups', ...PARTY_LINK_COLLECTIONS],
-  gruppi: ['parliamentaryGroups', 'groupMemberships', 'politicians', ...PARTY_LINK_COLLECTIONS],
-  governo: ['government', 'politicians', ...PARTY_LINK_COLLECTIONS],
-  leggi: ['laws'],
-  territori: ['territories', 'politicians']
-});
+import { ARCHIVE_COLLECTIONS } from './archive-collections.js?v=20261107-1';
+export { ARCHIVE_COLLECTIONS };
 
 const number = value => Number(value).toLocaleString('it-IT');
 const sourceLink = record => record?.sourceUrl ? `<a class="catalog-source" href="${esc(record.sourceUrl)}" target="_blank" rel="noopener noreferrer">${esc(record.sourceName ?? 'Fonte')} ↗</a>` : '';

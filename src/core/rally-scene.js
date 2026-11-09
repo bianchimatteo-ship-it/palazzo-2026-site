@@ -48,8 +48,8 @@ export function createVoteScene({ id, seed, player, playerAvatar, electionLabel 
   const a = hashOf(`${seed}|scrutatore`) % names.length;
   const cast = [
     { id: 'giocatore', role: 'giocatore', name: player.name, avatar: playerAvatar, position: 'seggio' },
-    { id: 'scrutatore-1', role: 'scrutatore', name: names[a], x: 262, y: 270 },
-    { id: 'scrutatore-2', role: 'scrutatore', name: names[(a + 3) % names.length], x: 356, y: 270 }
+    { id: 'scrutatore-1', role: 'scrutatore', name: names[a], x: 246, y: 270 },
+    { id: 'scrutatore-2', role: 'scrutatore', name: names[(a + 3) % names.length], x: 372, y: 270 }
   ];
   return { id, kind: 'voto', setting: 'seggio', seed, date, status: 'active', nodeId: 'ingresso', prevNodeId: null, cast, place: { label: place.municipality ?? place.region ?? 'il tuo comune' }, electionLabel, topic: { id: 'voto', label: electionLabel }, audience: { mood: 50, history: [] }, scores: [], history: [], outcome: null };
 }

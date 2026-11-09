@@ -100,7 +100,7 @@ function votePoses(scene, nodeId) {
   const me = scene.cast.find(item => item.role === 'giocatore');
   const spec = VOTE_POSES[nodeId] ?? VOTE_POSES.uscita;
   const out = { [me.id]: pose(spec.x, spec.y, { path: spec.path, gesture: spec.gesture, visible: !spec.hidden, exit: spec.exit }) };
-  for (const member of scene.cast.filter(item => item.role === 'scrutatore')) out[member.id] = pose(member.x, member.y, { posture: 'sit', gesture: nodeId === 'banco' ? 'porge' : null });
+  for (const member of scene.cast.filter(item => item.role === 'scrutatore')) out[member.id] = pose(member.x, member.y, { posture: 'sit', facing: member.x > 310 ? -1 : 1, gesture: nodeId === 'banco' ? 'porge' : null });
   return out;
 }
 

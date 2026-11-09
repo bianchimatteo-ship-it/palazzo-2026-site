@@ -1862,3 +1862,58 @@ details.accord-panel.pm-fold { padding: 0; }
 .program-compare { margin: 4px 0 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; color: var(--ink-2); }
 .dp-chip.is-shared { border-color: var(--gold); color: var(--gold-light); }
 .campaign-eliminated { display: grid; gap: 6px; padding: 12px 14px; border: 1px solid var(--critical-ink, #c9604d); border-radius: var(--radius); background: var(--panel-2); } .campaign-eliminated span { color: var(--ink-2); line-height: 1.5; }
+
+/* The programme editor and the preview for the voters (program-view.js editorCard / previewCard) */
+.program-proposal { display: grid; gap: 8px; padding: 14px 16px; border: 1px solid var(--line-strong); border-left: 4px solid var(--teal-soft); border-radius: var(--radius); background: var(--panel); }
+.program-proposal.state-pubblicata { border-left-color: var(--gold, #c4a66a); }
+.program-proposal.state-bozza { border-left-style: dashed; }
+.program-proposal header { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
+.program-proposal header strong { display: flex; gap: 8px; align-items: center; overflow-wrap: anywhere; }
+.program-proposal header small { display: flex; gap: 6px; align-items: center; margin-top: 3px; color: var(--ink-3); font-size: 12px; }
+.program-proposal p { margin: 0; line-height: 1.45; overflow-wrap: anywhere; }
+.program-proposal b { color: var(--gold-light); font-weight: 700; margin-right: 4px; }
+.program-priority { display: inline-grid; place-items: center; min-width: 26px; height: 26px; border-radius: 50%; background: var(--panel-3); border: 1px solid var(--line-strong); color: var(--gold-light); font: 800 13px var(--font-ui); flex: none; }
+.program-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.program-measure-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.program-measure-list li { padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel-2); line-height: 1.4; overflow-wrap: anywhere; }
+.program-proposal .program-meta span { padding: 3px 9px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel-2); }
+.program-proposal .program-notes { list-style: none; padding-left: 0; display: grid; gap: 3px; }
+.program-proposal .program-notes li::before { content: "• "; }
+.program-link { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.program-link-form { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; }
+.program-link-form label { display: grid; gap: 4px; font: 600 13px var(--font-ui); color: var(--ink-2); flex: 1 1 240px; min-width: 0; }
+.program-link-form select { min-height: 44px; padding: 0 10px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--panel-2); color: var(--ink); max-width: 100%; }
+.program-link-none { color: var(--ink-3); }
+.program-form textarea, .program-modify textarea, .program-form input[type="text"], .program-form input[type="number"], .program-modify input[type="text"], .program-modify input[type="number"] { width: 100%; min-height: 44px; padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--panel-2); color: var(--ink); font: 500 14px var(--font-ui); box-sizing: border-box; }
+.program-modify form, .program-form { min-width: 0; }
+.program-modify[open] { flex: 1 1 100%; }
+.program-modify > summary, .program-new > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; min-height: 44px; }
+.program-modify > summary::-webkit-details-marker, .program-new > summary::-webkit-details-marker { display: none; }
+.program-new { margin-top: 4px; }
+.program-new[open] > summary { margin-bottom: 8px; }
+.program-measures { border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; display: grid; gap: 8px; grid-column: 1 / -1; }
+.program-measures legend { padding: 0 6px; color: var(--ink-2); font: 700 13px var(--font-ui); }
+.program-measure { display: grid; grid-template-columns: minmax(130px, 200px) minmax(0, 1fr); gap: 8px; }
+.program-row { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); grid-column: 1 / -1; }
+.program-form > label, .program-modify form > label { grid-column: 1 / -1; }
+.program-preview { padding: 16px 18px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: #f4efe0; color: #1d1a12; display: grid; gap: 10px; }
+.program-preview header { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; border-bottom: 2px solid #b8353d; padding-bottom: 8px; }
+.program-preview header strong { font: 900 18px var(--font-head, Manrope, sans-serif); }
+.program-preview ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
+.program-preview li { display: grid; gap: 4px; }
+.program-preview h4 { margin: 0; font: 800 16px var(--font-head, Manrope, sans-serif); }
+.program-preview p { margin: 0; line-height: 1.45; }
+.program-preview b { color: #7a1f24; }
+.program-preview ul { margin: 0; padding-left: 18px; list-style: disc; }
+.program-preview-area { color: #5b5547; font-size: 12.5px; text-transform: uppercase; letter-spacing: .06em; }
+.program-preview-cost { color: #5b5547; font-size: 13px; }
+.program-preview footer { border-top: 1px solid #b9b19b; padding-top: 8px; font-weight: 700; }
+@media (max-width: 640px) { .program-measure { grid-template-columns: 1fr; } .program-proposal { padding: 12px; } .program-preview { padding: 12px; } }
+.program-preview h4 { color: #1d1a12; }
+.program-preview ul li { display: list-item; }
+.program-modify > summary, .program-new > summary { font: 700 14px var(--font-ui, system-ui, sans-serif); padding: 0 14px; }
+.hemi-legend-fold > summary { cursor: pointer; list-style: none; padding: 8px 0; font: 800 12px var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--gold-light); }
+.hemi-legend-fold > summary::before { content: "▾ "; } .hemi-legend-fold:not([open]) > summary::before { content: "▸ "; }
+.hemi-legend-fold > summary::-webkit-details-marker { display: none; }
+.hemi-roster > summary { cursor: pointer; list-style: none; } .hemi-roster > summary::-webkit-details-marker { display: none; }
+.hemi-roster > summary .hemi-roster-head::before { content: "▸ "; color: var(--gold-light); } .hemi-roster[open] > summary .hemi-roster-head::before { content: "▾ "; }
