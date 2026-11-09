@@ -38,30 +38,30 @@
 .scene-said { font-style: italic; color: var(--ink-1, var(--ink)); }
 .st-plate text { paint-order: stroke; }
 /* Complete motion only: the life of the stage that loops (lights, flags, bulbs, the LED walls, the crowd), and the speaker. */
-html[data-motion="full"] .st-led { animation: st-sweep 5.2s linear infinite; animation-delay: var(--d, 0ms); }
-html[data-motion="full"] .st-light { animation: st-flicker 3.4s ease-in-out infinite; animation-delay: var(--d, 0ms); }
-html[data-motion="full"] .st-bulb { animation: st-twinkle 1.8s ease-in-out infinite; animation-delay: var(--d, 0ms); }
-html[data-motion="full"] .st-spot { animation: st-flicker 4.2s ease-in-out infinite; animation-delay: var(--d, 0ms); }
-html[data-motion="full"] .st-tally.is-on { animation: st-blink 1.6s steps(2, jump-none) infinite; }
-html[data-motion="full"] .cm-cloth { animation: st-wave 2.2s ease-in-out infinite; animation-delay: var(--d, 0ms); transform-box: fill-box; transform-origin: 0 50%; }
-html[data-motion="full"] .cm-flag .cm-cloth { animation-duration: 1.9s; }
-html[data-motion="full"] .st-camera { animation: st-dolly 9s ease-in-out infinite alternate; }
-html[data-motion="full"] .st-protest .st-banner { animation: st-bob 1.1s ease-in-out infinite; }
-html[data-motion="full"] .st-actor .av-eyes { animation: st-blink-eyes 4.6s infinite; transform-box: fill-box; transform-origin: center; }
-html[data-motion="full"] .st-actor.is-speaking .av-mouth { opacity: 0; }
-html[data-motion="full"] .st-actor.is-speaking .av-mouth-open { animation: st-talk .34s steps(2, jump-none) infinite; }
-html[data-motion="full"] .st-actor.is-speaking .av-head { animation: st-nod 1.6s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 90%; }
-html:not([data-motion="full"]) .st-actor.is-speaking .av-mouth { opacity: 0; } html:not([data-motion="full"]) .st-actor.is-speaking .av-mouth-open { opacity: 1; }
+html[data-scene-motion="full"] .st-led { animation: st-sweep 5.2s linear infinite; animation-delay: var(--d, 0ms); }
+html[data-scene-motion="full"] .st-light { animation: st-flicker 3.4s ease-in-out infinite; animation-delay: var(--d, 0ms); }
+html[data-scene-motion="full"] .st-bulb { animation: st-twinkle 1.8s ease-in-out infinite; animation-delay: var(--d, 0ms); }
+html[data-scene-motion="full"] .st-spot { animation: st-flicker 4.2s ease-in-out infinite; animation-delay: var(--d, 0ms); }
+html[data-scene-motion="full"] .st-tally.is-on { animation: st-blink 1.6s steps(2, jump-none) infinite; }
+html[data-scene-motion="full"] .cm-cloth { animation: st-wave 2.2s ease-in-out infinite; animation-delay: var(--d, 0ms); transform-box: fill-box; transform-origin: 0 50%; }
+html[data-scene-motion="full"] .cm-flag .cm-cloth { animation-duration: 1.9s; }
+html[data-scene-motion="full"] .st-camera { animation: st-dolly 9s ease-in-out infinite alternate; }
+html[data-scene-motion="full"] .st-protest .st-banner { animation: st-bob 1.1s ease-in-out 6; }
+html[data-scene-motion="full"] .st-actor .av-eyes { animation: st-blink-eyes 4.6s infinite; transform-box: fill-box; transform-origin: center; }
+html[data-scene-motion="full"] .st-actor.is-speaking .av-mouth { opacity: 0; }
+html[data-scene-motion="full"] .st-actor.is-speaking .av-mouth-open { animation: st-talk .34s steps(2, jump-none) 14; }
+html[data-scene-motion="full"] .st-actor.is-speaking .av-head { animation: st-nod 1.6s ease-in-out 4; transform-box: fill-box; transform-origin: 50% 90%; }
+html:not([data-scene-motion="full"]) .st-actor.is-speaking .av-mouth { opacity: 0; } html:not([data-scene-motion="full"]) .st-actor.is-speaking .av-mouth-open { opacity: 1; }
 /* the crowd: quiet, applause, cheer, boo, mixed, protest, welcome, warm — each a different movement of arms and bodies */
 .cm-arm { transform-box: fill-box; transform-origin: 50% 100%; } .cm-arm-l { --sg: -1; }
-html[data-motion="full"] .st-crowd.is-applause .cm-in { animation: st-clap .55s ease-in-out infinite; animation-delay: var(--d, 0ms); }
-html[data-motion="full"] .st-crowd.is-applause .cm-arm, html[data-motion="full"] .st-crowd.is-cheer .cm-arm { animation: st-arms .5s ease-in-out infinite alternate; animation-delay: var(--d, 0ms); }
-html[data-motion="full"] .st-crowd.is-cheer .cm-in { animation: st-jump .6s ease-in-out infinite; animation-delay: var(--d, 0ms); }
-html[data-motion="full"] .st-crowd.is-boo .cm-in, html[data-motion="full"] .st-crowd.is-protest .cm-in { animation: st-murmur 1.1s ease-in-out infinite; animation-delay: var(--d, 0ms); }
-html[data-motion="full"] .st-crowd.is-mixed .cm-in { animation: st-murmur 2.2s ease-in-out infinite; animation-delay: var(--d, 0ms); }
-html[data-motion="full"] .st-crowd.is-welcome .cm-arm, html[data-motion="full"] .st-crowd.is-warm .cm-arm { animation: st-arms 1.1s ease-in-out infinite alternate; animation-delay: var(--d, 0ms); }
-html[data-motion="full"] .st-crowd.is-burst .cm-in { animation-duration: .3s; }
-html[data-motion="full"] .cm-protest .cm-arm { animation: st-arms .45s ease-in-out infinite alternate; animation-delay: var(--d, 0ms); }
+html[data-scene-motion="full"] .st-crowd.is-applause .cm-in { animation: st-clap .55s ease-in-out 8; animation-delay: var(--d, 0ms); }
+html[data-scene-motion="full"] .st-crowd.is-applause .cm-arm, html[data-scene-motion="full"] .st-crowd.is-cheer .cm-arm { animation: st-arms .5s ease-in-out 8 alternate; animation-delay: var(--d, 0ms); }
+html[data-scene-motion="full"] .st-crowd.is-cheer .cm-in { animation: st-jump .6s ease-in-out 8; animation-delay: var(--d, 0ms); }
+html[data-scene-motion="full"] .st-crowd.is-boo .cm-in, html[data-scene-motion="full"] .st-crowd.is-protest .cm-in { animation: st-murmur 1.1s ease-in-out 8; animation-delay: var(--d, 0ms); }
+html[data-scene-motion="full"] .st-crowd.is-mixed .cm-in { animation: st-murmur 2.2s ease-in-out 8; animation-delay: var(--d, 0ms); }
+html[data-scene-motion="full"] .st-crowd.is-welcome .cm-arm, html[data-scene-motion="full"] .st-crowd.is-warm .cm-arm { animation: st-arms 1.1s ease-in-out 8 alternate; animation-delay: var(--d, 0ms); }
+html[data-scene-motion="full"] .st-crowd.is-burst .cm-in { animation-duration: .3s; }
+html[data-scene-motion="full"] .cm-protest .cm-arm { animation: st-arms .45s ease-in-out 8 alternate; animation-delay: var(--d, 0ms); }
 .st-crowd.is-boo .cm-in, .st-crowd.is-protest .cm-in { opacity: .88; }
 /* the arms of the crowd are down unless the crowd is raising them: reduced and off show the raised arms of applause/cheer/protest as a still pose */
 .cm-arm { transform: rotate(0deg); }

@@ -6,7 +6,13 @@
 import { CAMERAS, GESTURES, cameraTransform, depthScale, gestureAngles } from './stage-art.js?v=20261109-3';
 
 const SPEED = 118;            // units of the stage per second when walking
-const state = { anims: [], paused: false, key: null, timer: null, finished: true, listeners: new Set() };
+const state = { anims: [], paused: false, key: null, timer: null, timers: new Set(), finished: true, listeners: new Set() };
+// Every timer of a beat is kept, so that a new beat (or a scene that ends) cancels them: nothing of the old beat goes on after it.
+const later = (fn, ms) => { const id = setTimeout(() => { state.timers.delete(id); fn(); }, ms); state.timers.add(id); return id; };
+// What is still alive of the stage (for the checks): running animations, those that never end, the timers.
+export const stageStats = () => ({ running: state.anims.filter(a => a.playState === 'running').length, endless: state.anims.filter(a => { const t = a.effect?.getComputedTiming?.(); return t && !Number.isFinite(t.endTime); }).length, timers: state.timers.size });
+// Ends the stage at once: animations cancelled, timers cleared (used when the beat changes, the scene ends or the page is left).
+export function stageStop() { for (const anim of state.anims) { try { anim.cancel(); } catch { /* gone */ } } state.anims = []; for (const id of state.timers) clearTimeout(id); state.timers.clear(); clearTimeout(state.timer); state.finished = true; state.paused = false; }
 
 const prefersReduced = () => { try { return globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false; } catch { return false; } };
 export const motionAllows = motion => motion === 'full' && !prefersReduced();
@@ -50,7 +56,7 @@ function walkAnimations(root, actor, from, to) {
   if (body) animate(body, [{ transform: `translateY(${-3 * 0}px)` }, { transform: 'translateY(-4px)' }], { duration: cycle / 2, iterations: Math.ceil(duration / (cycle / 2)), direction: 'alternate', easing: 'ease-in-out', fill: 'none' });
   void seatShift;
   const done = state.anims.at(-1);
-  setTimeout(() => actor.classList.remove('is-walking'), duration + 30);
+  later(() => actor.classList.remove('is-walking'), duration + 30);
   return { duration, points, cum, total };
 }
 
@@ -68,22 +74,25 @@ function poseAnimations(root, actor, from, to, delay) {
   }
   if (!from || from.visible !== to.visible) animate(actor, [{ opacity: to.visible ? 0 : 1 }, { opacity: to.visible ? 1 : 0 }], { duration: 400, delay, easing: 'ease-in-out' });
 }
-// What a gesture does while it lasts (a loop that starts after the passage): the forearm that underlines, the arms that open, the hand that waves.
+// What a gesture does: it starts after the passage, develops a few times (the forearm that underlines, the arms that open, the hand that waves) and ENDS back on the pose of the beat: nothing repeats
+// for ever. The number of repetitions and the speed vary with the gesture, so that two characters never move in the same way.
+const GESTURE_CYCLES = { saluta: [3, 420], scrive: [3, 300], indica: [2, 760], sottolinea: [2, 840], pensa: [1, 1100], prende: [1, 900], inserisce: [1, 900], porge: [1, 900], apre: [2, 900], applaude: [4, 300], scuote: [3, 360] };
 function gestureLoop(actor, to, delay) {
-  const side = ['indica', 'sottolinea', 'saluta', 'pensa', 'scrive', 'prende', 'inserisce'].includes(to.gesture) ? 'r' : null;
+  const side = ['indica', 'sottolinea', 'saluta', 'pensa', 'scrive', 'prende', 'inserisce', 'porge'].includes(to.gesture) ? 'r' : null;
   const angles = gestureAngles(to.gesture, to.posture);
-  if (to.gesture === 'apre') for (const s of ['l', 'r']) { const arm = actor.querySelector(`.st-arm-${s}`); animate(arm, [{ transform: `rotate(${angles[s][0]}deg)` }, { transform: `rotate(${angles[s][0] * 0.78}deg)` }], { duration: 900, delay, direction: 'alternate', iterations: Infinity, easing: 'ease-in-out' }); }
+  const [cycles, speed] = GESTURE_CYCLES[to.gesture] ?? [2, 800];
+  const options = { duration: speed, delay, direction: 'alternate', iterations: cycles * 2, easing: 'ease-in-out', fill: 'none' };
+  if (to.gesture === 'apre') for (const s of ['l', 'r']) { const arm = actor.querySelector(`.st-arm-${s}`); animate(arm, [{ transform: `rotate(${angles[s][0]}deg)` }, { transform: `rotate(${angles[s][0] * 0.78}deg)` }], options); }
   else if (side) {
     const fore = actor.querySelector(`.st-arm-${side} .st-fore`);
     const swing = to.gesture === 'saluta' ? 26 : to.gesture === 'scrive' ? 7 : to.gesture === 'indica' ? 6 : 16;
-    animate(fore, [{ transform: `rotate(${angles[side][1]}deg)` }, { transform: `rotate(${angles[side][1] + swing}deg)` }], { duration: to.gesture === 'saluta' ? 420 : to.gesture === 'scrive' ? 260 : 900, delay, direction: 'alternate', iterations: Infinity, easing: 'ease-in-out' });
+    animate(fore, [{ transform: `rotate(${angles[side][1]}deg)` }, { transform: `rotate(${angles[side][1] + swing}deg)` }], options);
   }
 }
 
 export function playStage(root, { motion = 'off', seen = false, autoplay = false, onSeen = null, onEnd = null } = {}) {
-  clearTimeout(state.timer);
+  stageStop();
   const svg = el(root, '.st-svg');
-  state.anims = []; state.finished = true; state.paused = false;
   if (!svg) return;
   let data; try { data = JSON.parse(svg.dataset.stage || '{}'); } catch { data = {}; }
   const key = `${svg.dataset.setting}|${data.node}`;
@@ -124,7 +133,7 @@ export function playStage(root, { motion = 'off', seen = false, autoplay = false
   }
   // the curtain of the booth
   const curtain = root.querySelector('.st-curtain');
-  if (curtain && before?.props?.booth && before.props.booth !== data.booth) {
+  if (curtain && before?.props?.booth && before.props.booth !== data.props?.booth) {
     const closed = curtain.classList.contains('is-closed');
     animate(curtain, [{ transform: `translate(${closed ? 530 : 474}px,300px) scaleX(${closed ? 0.16 : 1})` }, { transform: `translate(${closed ? 474 : 530}px,300px) scaleX(${closed ? 1 : 0.16})` }], { duration: 520, delay: 150, easing: 'ease-in-out' });
   }
@@ -144,7 +153,7 @@ export function playStage(root, { motion = 'off', seen = false, autoplay = false
   }
   // the crowd: a burst of reaction when it changes
   const crowd = el(root, '.st-crowd');
-  if (crowd && before?.crowd && before.crowd !== data.crowd) { crowd.classList.add('is-burst'); setTimeout(() => crowd.classList.remove('is-burst'), 1900); }
+  if (crowd && before?.crowd && before.crowd !== data.crowd) { crowd.classList.add('is-burst'); later(() => crowd.classList.remove('is-burst'), 1900); }
   const finite = state.anims.filter(anim => { const t = anim.effect?.getComputedTiming?.(); return t && Number.isFinite(t.endTime); });
   Promise.all(finite.map(anim => anim.finished.catch(() => 'cancelled'))).then(results => { if (state.key !== key || results.includes('cancelled')) return; finishUp(); });
   if (!finite.length) finishUp();

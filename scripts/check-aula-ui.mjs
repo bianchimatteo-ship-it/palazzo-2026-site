@@ -19,7 +19,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   await wait(() => evaluate(`Boolean(document.querySelector('[data-aula-open]'))`), 15000);
   const snapshot = () => S(`return JSON.stringify({ p: store.getState().parliament, g: store.getState().game });`);
   const before = await snapshot();
-  const open = (motion) => evaluate(`document.documentElement.dataset.motion = ${JSON.stringify(motion)}, true`);
+  const open = (motion) => evaluate(`document.documentElement.dataset.sceneMotion = ${JSON.stringify(motion)}, true`);
 
   // motion off: the final picture at once
   await open('off');

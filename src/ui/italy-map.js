@@ -7,10 +7,23 @@
 // provinces is therefore never given in full to each of them. The indicator is labelled as such on the map, in the legend, in the tooltip and in the panel. No boundary and no winner is invented:
 // where there is no district there is no colour.
 import { esc, num } from './sections-kit.js?v=20261109-3';
+import { toneEdge } from '../data/party-brand.js?v=20261109-3';
 
 export const MAP_SCOPES = Object.freeze([['regioni', 'Regioni'], ['province', 'Province']]);
 const REGION_SHORT = { Piemonte: 'PIE', 'Valle d’Aosta': 'VDA', Lombardia: 'LOM', 'Trentino-Alto Adige': 'TAA', Veneto: 'VEN', 'Friuli-Venezia Giulia': 'FVG', Liguria: 'LIG', 'Emilia-Romagna': 'EMR', Toscana: 'TOS', Umbria: 'UMB', Marche: 'MAR', Lazio: 'LAZ', Abruzzo: 'ABR', Molise: 'MOL', Campania: 'CAM', Puglia: 'PUG', Basilicata: 'BAS', Calabria: 'CAL', Sicilia: 'SIC', Sardegna: 'SAR' };
 export const NO_DATA_COLOR = '#d7dcd9';
+// The reading «where is this party?» (a party picked in the filter): the colour of the party, paler where it holds a smaller part of the territory; a dark slate where it holds nothing (absent); the pale
+// grey of «no data» where no district has a result. The four states are never one colour.
+export const ABSENT_COLOR = '#2e3733';
+export const PRESENCE_NOTE = 'Presenza del partito: per le regioni, la quota dei collegi uninominali (Camera e Senato) vinti dal partito; per le province, la quota dei comuni che cadono in collegi vinti dal partito (indicatore descrittivo, non un risultato). Colore pieno = il partito prevale (oltre metà); colore più chiaro = presenza parziale; grigio scuro = assente (0%); grigio chiaro = nessun dato. Un partito con zero collegi uninominali può avere seggi proporzionali: questa mappa non li mostra.';
+const shareOf = (tally, party) => tally?.total > 0 ? (tally.counts.get(party) ?? 0) / tally.total : null;
+const presenceFill = (tally, party, color) => {
+  const share = shareOf(tally, party);
+  if (share === null) return { fill: NO_DATA_COLOR, state: 'nodata', opacity: 1, share };
+  if (share <= 1e-9) return { fill: ABSENT_COLOR, state: 'absent', opacity: 1, share: 0 };
+  return { fill: color, state: share > 0.5 ? 'prevails' : 'partial', opacity: Math.round((0.32 + 0.68 * share) * 100) / 100, share };
+};
+const presenceWords = (share, isProvince) => share === null ? 'nessun dato' : share <= 1e-9 ? 'partito assente' : `presenza ${Math.round(share * 100)}% ${isProvince ? 'dei comuni' : 'dei collegi'}`;
 
 // ---------- which districts belong to which territory ----------
 const provinceCache = new WeakMap();
@@ -72,7 +85,7 @@ const tallyText = (tally, label, isProvince) => !tally.total ? 'nessun dato per 
 export const PROVINCE_INDICATOR_NOTE = 'Indicatore descrittivo: per ogni provincia, la quota dei suoi comuni che cadono in collegi uninominali vinti da ciascuno schieramento (ogni comune conta una volta). I collegi non seguono le province e i voti ufficiali per comune non sono nei dati: non è il vincitore né un risultato ufficiale della provincia.';
 
 // map: { boundaries, tallies, scope, selected, colorOf(id), labelOf(id) }
-export function italyMapSvg({ boundaries, tallies, scope = 'regioni', selected = '', colorOf, labelOf }) {
+export function italyMapSvg({ boundaries, tallies, scope = 'regioni', selected = '', colorOf, labelOf, presence = null }) {
   const [, , width, height] = boundaries.viewBox;
   const isProvince = scope === 'province';
   const fill = tally => tally?.leader ? colorOf(tally.leader) : NO_DATA_COLOR;
@@ -80,18 +93,25 @@ export function italyMapSvg({ boundaries, tallies, scope = 'regioni', selected =
   // a selection that belongs to the other level (a province while the regions are shown, or the reverse) is not a selection of this map
   const current = selected && selected.startsWith(isProvince ? 'p:' : 'r:') ? selected : '';
   const paths = territories.map(item => {
+    if (presence) {
+      const view = presenceFill(item.tally, presence, colorOf(presence));
+      const text = presenceWords(view.share, isProvince);
+      const edge = toneEdge(view.fill);
+      return `<path class="it-area ${item.key === current ? 'is-selected' : ''} is-presence is-${view.state}${edge ? ` edge-${edge}` : ''} ${isProvince ? 'is-indicator' : ''}" d="${item.d}" fill="${esc(view.fill)}" fill-opacity="${view.opacity}" data-view-filter="mapSel" data-view-filter-value="${esc(item.key === current ? '' : item.key)}" data-map-area="${esc(item.key)}" data-presence="${view.state}" tabindex="0" role="button" aria-pressed="${item.key === current}" aria-label="${esc(`${item.name}: ${labelOf(presence)}, ${text}`)}"><title>${esc(`${item.name} · ${labelOf(presence)}: ${text}`)}</title></path>`;
+    }
     const state = item.tally?.leader ? (isProvince ? `${labelOf(item.tally.leader)} (indicatore sui comuni)` : `${labelOf(item.tally.leader)}`) : item.tally?.tie ? 'pari tra più schieramenti' : 'nessun dato';
-    return `<path class="it-area ${item.key === current ? 'is-selected' : ''} ${item.tally?.tie ? 'is-tie' : ''} ${isProvince ? 'is-indicator' : ''}" d="${item.d}" fill="${esc(fill(item.tally))}" data-view-filter="mapSel" data-view-filter-value="${esc(item.key === current ? '' : item.key)}" data-map-area="${esc(item.key)}" tabindex="0" role="button" aria-pressed="${item.key === current}" aria-label="${esc(`${item.name}: ${state}. ${tallyText(item.tally ?? { total: 0, ranked: [] }, labelOf, isProvince)}`)}"><title>${esc(`${item.name} · ${state}`)}</title></path>`;
+    const tone = toneEdge(fill(item.tally));
+    return `<path class="it-area ${item.key === current ? 'is-selected' : ''} ${item.tally?.tie ? 'is-tie' : ''} ${isProvince ? 'is-indicator' : ''}${tone ? ` edge-${tone}` : ''}" d="${item.d}" fill="${esc(fill(item.tally))}" data-view-filter="mapSel" data-view-filter-value="${esc(item.key === current ? '' : item.key)}" data-map-area="${esc(item.key)}" tabindex="0" role="button" aria-pressed="${item.key === current}" aria-label="${esc(`${item.name}: ${state}. ${tallyText(item.tally ?? { total: 0, ranked: [] }, labelOf, isProvince)}`)}"><title>${esc(`${item.name} · ${state}`)}</title></path>`;
   }).join('');
   const regionOutline = isProvince ? `<g class="it-outline" fill="none" pointer-events="none">${boundaries.regions.map(item => `<path d="${item.d}"/>`).join('')}</g>` : '';
   const labels = !isProvince ? `<g class="it-labels" aria-hidden="true" pointer-events="none">${territories.map(item => `<text x="${item.c[0]}" y="${item.c[1]}">${esc(REGION_SHORT[item.name] ?? '')}</text>`).join('')}</g>` : '';
   const chosen = current ? territories.find(item => item.key === current) : null;
   const halo = chosen ? `<path class="it-halo" d="${chosen.d}" fill="none" pointer-events="none"/>` : '';
-  return `<svg class="it-map" viewBox="0 0 ${width} ${height}" role="group" aria-label="${isProvince ? 'Mappa dell’Italia per province: indicatore descrittivo sui comuni, non il risultato delle province' : 'Mappa dell’Italia per regioni, colorata per schieramento prevalente nei collegi uninominali'}"><g class="it-areas" fill-rule="evenodd">${paths}</g>${regionOutline}${halo}${labels}</svg>`;
+  return `<svg class="it-map" viewBox="0 0 ${width} ${height}" role="group" aria-label="${presence ? `Mappa dell’Italia: presenza di ${labelOf(presence)}, ${isProvince ? 'per province (indicatore sui comuni)' : 'per regioni'}` : isProvince ? 'Mappa dell’Italia per province: indicatore descrittivo sui comuni, non il risultato delle province' : 'Mappa dell’Italia per regioni, colorata per schieramento prevalente nei collegi uninominali'}"><g class="it-areas" fill-rule="evenodd">${paths}</g>${regionOutline}${halo}${labels}</svg>`;
 }
 
 // The card that tells everything about the area picked (tap, click or Enter): name, bloc by bloc counts, what kind of data it is.
-export function italyMapInfo({ boundaries, tallies, selected, labelOf, colorOf, dataClass, scope = null }) {
+export function italyMapInfo({ boundaries, tallies, selected, labelOf, colorOf, dataClass, scope = null, presence = null }) {
   const [kind, code] = String(selected ?? '').split(':');
   // a selection of the other level than the one shown is ignored (no stale panel)
   const stale = scope && ((scope === 'province') !== (kind === 'p'));
@@ -104,8 +124,9 @@ export function italyMapInfo({ boundaries, tallies, selected, labelOf, colorOf, 
   const sub = region ? 'Regione' : `${regionOfProvince?.name ?? ''}${province.sigla ? ` · ${province.sigla}` : ''}`;
   const unit = region ? n => num(n, 0) : n => `${pct(n, tally.total)}%`;
   const rows = tally?.ranked?.length ? `<ul class="it-rows">${tally.ranked.map(([id, n]) => `<li><i class="nv-swatch" style="background:${esc(colorOf(id))}"></i><span>${esc(labelOf(id))}</span><b>${unit(n)}</b><small>${region ? `${num(100 * n / tally.total, 0)}%` : 'dei comuni'}</small></li>`).join('')}</ul>` : '<p class="sx-empty">Nessun collegio con un risultato per questo territorio.</p>';
-  const verdict = tally?.leader ? `<span class="it-verdict"><i class="nv-swatch" style="background:${esc(colorOf(tally.leader))}"></i>${region ? `${esc(labelOf(tally.leader))} prevale` : `Indicatore: più comuni in collegi vinti da ${esc(labelOf(tally.leader))}`}</span>` : tally?.tie ? '<span class="it-verdict">Pari tra più schieramenti</span>' : '';
-  const note = region ? 'Collegi uninominali della regione (Camera e Senato).' : PROVINCE_INDICATOR_NOTE;
+  const share = presence ? shareOf(tally, presence) : null;
+  const verdict = presence ? `<span class="it-verdict"><i class="nv-swatch${toneEdge(colorOf(presence)) ? ` edge-${toneEdge(colorOf(presence))}` : ''}" style="background:${esc(colorOf(presence))}"></i>${esc(labelOf(presence))}: ${esc(presenceWords(share, Boolean(province)))}</span>` : tally?.leader ? `<span class="it-verdict"><i class="nv-swatch" style="background:${esc(colorOf(tally.leader))}"></i>${region ? `${esc(labelOf(tally.leader))} prevale` : `Indicatore: più comuni in collegi vinti da ${esc(labelOf(tally.leader))}`}</span>` : tally?.tie ? '<span class="it-verdict">Pari tra più schieramenti</span>' : '';
+  const note = presence ? PRESENCE_NOTE : region ? 'Collegi uninominali della regione (Camera e Senato).' : PROVINCE_INDICATOR_NOTE;
   const closeNote = region && tally?.close ? `<p class="sx-note">${num(tally.close, 0)} ${tally.close === 1 ? 'collegio' : 'collegi'} con margine sotto i 4 punti.</p>` : '';
   const missingNote = tally?.missing > 0.5 ? `<p class="sx-note">${region ? `${num(tally.missing, 0)} ${tally.missing === 1 ? 'collegio' : 'collegi'} senza risultato nei dati.` : `${pct(tally.missing, tally.missing + tally.total)}% dei comuni è in collegi senza risultato nei dati (non colorati).`}</p>` : '';
   return `<div class="it-info"><span class="it-class">${esc(dataClass)}</span><h4>${esc(title)}</h4><small>${esc(sub)}</small>${verdict}${rows}${closeNote}${missingNote}<p class="sx-note">${esc(note)}</p><button type="button" class="text-link" data-view-filter="mapSel" data-view-filter-value="">Deseleziona</button></div>`;
@@ -114,20 +135,20 @@ export function italyMapInfo({ boundaries, tallies, selected, labelOf, colorOf, 
 // An accessible table with the same information as the map (one row per region).
 // The table for those who do not use the map: the rows follow the level that is shown. Regions: 20 rows, the winner of the single-member districts they hold. Provinces: 110 rows with the DESCRIPTIVE indicator
 // (not a winner: see PROVINCE_INDICATOR_NOTE), with the region of each province.
-export function italyMapTable({ boundaries, tallies, labelOf, colorOf, scope = 'regioni' }) {
+export function italyMapTable({ boundaries, tallies, labelOf, colorOf, scope = 'regioni', presence = null }) {
   const provinceLevel = scope === 'province';
   const list = provinceLevel ? boundaries.provinces : boundaries.regions;
   const regionName = new Map(boundaries.regions.map(region => [region.code, region.name]));
   const rows = list.map(item => {
     const tally = (provinceLevel ? tallies.provinces : tallies.regions).get(item.code);
-    const lead = tally?.leader ? `<i class="nv-swatch" style="background:${esc(colorOf(tally.leader))}"></i>${esc(labelOf(tally.leader))}` : tally?.tie ? 'Pari' : '—';
+    const lead = presence ? esc(presenceWords(shareOf(tally, presence), provinceLevel)) : tally?.leader ? `<i class="nv-swatch" style="background:${esc(colorOf(tally.leader))}"></i>${esc(labelOf(tally.leader))}` : tally?.tie ? 'Pari' : '—';
     const detail = esc(tally?.total ? tally.ranked.map(([id, n]) => `${labelOf(id)} ${num(n, provinceLevel ? 1 : 0)}`).join(' · ') : 'nessun dato');
     return provinceLevel
       ? `<tr><th scope="row">${esc(item.name)}</th><td>${esc(regionName.get(item.region) ?? item.region ?? '')}</td><td>${lead}</td><td>${detail}</td></tr>`
       : `<tr><th scope="row">${esc(item.name)}</th><td>${lead}</td><td>${detail}</td></tr>`;
   }).join('');
   const head = provinceLevel
-    ? '<th scope="col">Provincia</th><th scope="col">Regione</th><th scope="col">Indicatore prevalente</th><th scope="col">Peso dei collegi</th>'
-    : '<th scope="col">Regione</th><th scope="col">Prevale</th><th scope="col">Collegi vinti</th>';
+    ? `<th scope="col">Provincia</th><th scope="col">Regione</th><th scope="col">${presence ? 'Presenza del partito' : 'Indicatore prevalente'}</th><th scope="col">Peso dei collegi</th>`
+    : `<th scope="col">Regione</th><th scope="col">${presence ? 'Presenza del partito' : 'Prevale'}</th><th scope="col">Collegi vinti</th>`;
   return `<details class="it-table" data-map-table="${provinceLevel ? 'province' : 'regioni'}"><summary>${provinceLevel ? 'Tabella per provincia' : 'Tabella per regione'}</summary><div class="sx-table-wrap"><table class="sx-table"><thead><tr>${head}</tr></thead><tbody>${rows}</tbody></table></div></details>`;
 }

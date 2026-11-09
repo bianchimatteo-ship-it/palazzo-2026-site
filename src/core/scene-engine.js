@@ -49,6 +49,9 @@ const BEATS = Object.freeze(['invito', 'preparazione', 'ingresso', 'q1', 'r1', '
 // ---------- the cast ----------
 // The avatar of a character that is not the player: always the same for the same character (from its id), with the traits that make the rival recognisable. The role may dress it (the host in
 // anthracite). The player's one is never made here: it is the one saved in the career.
+// The text of a button or an action («Partecipa», «Simula», «Non partecipare»…) is never the name of a person: a name that is missing, or that is the text of a control, becomes the description of the post.
+const CONTROL_WORDS = /^\s*(partecipa|partecipare|non partecipare|simula|salta|salta attivit[àa]|entra|entra in studio|accetta|rifiuta|continua|inizia|fine|ok|annulla)\b/i;
+export const personName = (name, fallback) => { const text = String(name ?? '').trim(); return !text || CONTROL_WORDS.test(text) || /^(undefined|null|\[object)/i.test(text) ? fallback : text; };
 export function characterAvatar(character) {
   if (character.avatar) return normalizeAvatar(character.avatar);
   const base = defaultAvatarFor(character.id);
@@ -60,9 +63,9 @@ export function characterAvatar(character) {
 
 export function createDebateScene({ id, seed, player, playerAvatar, rival, host, topic, promises = [], credibility = 60, prep = 0, rivalProgram = [], rivalReadiness = 50, rivalAggression = 50, crisis = false, campaignId = null, date = null, salientTopic = null, secondTopic = null, show = 'faccia-a-faccia', ticker = [], events = [], rivalProgramLabels = [], weakProposal = null }) {
   const cast = [
-    { id: 'giocatore', role: 'giocatore', name: player.name, avatar: normalizeAvatar(playerAvatar), position: 'sinistra', tag: player.tag ?? '' },
-    { id: rival.id, role: 'rivale', name: rival.name, avatar: characterAvatar({ id: rival.id, role: 'rivale' }), position: 'destra', partyId: rival.partyId ?? null, tag: rival.tag ?? '' },
-    { id: host.id, role: 'conduttore', name: host.name, avatar: characterAvatar({ id: host.id, role: 'conduttore' }), position: 'centro', tag: host.tag ?? '' }
+    { id: 'giocatore', role: 'giocatore', name: personName(player.name, 'Il candidato'), avatar: normalizeAvatar(playerAvatar), position: 'sinistra', tag: player.tag ?? '' },
+    { id: rival.id, role: 'rivale', name: personName(rival.name, rival.tag?.startsWith('Ospite') ? 'L’ospite' : 'Lo sfidante'), avatar: characterAvatar({ id: rival.id, role: 'rivale' }), position: 'destra', partyId: rival.partyId ?? null, tag: rival.tag ?? '' },
+    { id: host.id, role: 'conduttore', name: personName(host.name, host.tag === 'Giornalista' ? 'Il giornalista' : host.tag === 'Moderatore' ? 'Il moderatore' : 'Il conduttore'), avatar: characterAvatar({ id: host.id, role: 'conduttore' }), position: 'centro', tag: host.tag ?? '' }
   ];
   const showSpec = showFor(show, 'faccia-a-faccia');
   const topicPromises = promises.filter(item => item.topic === topic.id);

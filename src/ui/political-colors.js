@@ -2,6 +2,7 @@
 // (Calendario, Coalizioni, Proiezione, Camere), whatever else is on the page. The colours come from the validated series of the charts; the camps keep their sense (the centre-right is blue, the
 // centre-left coral, the M5S green, the centre violet) and what has no entry here takes a colour from a fixed pool by a hash of its own id, never by the order in which it happens to be drawn.
 import { SERIES } from './charts.js?v=20261109-3';
+import { brandPrimary } from '../data/party-brand.js?v=20261109-3';
 
 const BLUE = SERIES[0], GOLD = SERIES[1], CORAL = SERIES[2], GREEN = SERIES[3], VIOLET = SERIES[4], PINK = SERIES[5], SAGE = SERIES[6], SKY = SERIES[7];
 export const NEUTRAL_COLOR = '#8d9791';
@@ -14,11 +15,11 @@ export const FORCE_COLORS = Object.freeze({
   'party-registro-p1-2015-20-ir': SAGE,    // Forza Italia
   'coalition-alleanza-verdi-sinistra': PINK, // Alleanza Verdi e Sinistra
   'party-registro-p1-2019-51-ir': VIOLET,  // Azione
-  'party-futuro-nazionale': SKY            // Futuro Nazionale
+  'party-futuro-nazionale': SKY            // Futuro Nazionale (the brand blue of party-brand.js wins in forceColor)
 });
 // The alliances of 2022 (real data of the national map).
 // The electoral groups of Trentino-Alto Adige/Südtirol and Valle d’Aosta (Senato 2022) are map categories of their own, each with its own colour, distinct from the camps.
-export const ALLIANCE_COLORS = Object.freeze({ cdx: BLUE, csx: CORAL, m5s: GREEN, 'azione-iv': VIOLET, ADA: SAGE, DAF: SKY, 'SVP-PATT': GOLD, SVP: GOLD, VDAAPF: PINK });
+export const ALLIANCE_COLORS = Object.freeze({ cdx: BLUE, csx: CORAL, m5s: GREEN, 'azione-iv': VIOLET, ADA: SAGE, DAF: SKY, 'SVP-PATT': '#4a5154', SVP: brandPrimary('party-registro-p1-2015-19-ir'), VDAAPF: PINK });
 // What has no entry: a pool of the series that the entries above use least, picked by the id.
 const FALLBACK_POOL = Object.freeze([GOLD, GREEN, VIOLET, SAGE, SKY]);
 const hash = text => [...String(text)].reduce((n, char) => (Math.imul(n, 31) + char.charCodeAt(0)) >>> 0, 2166136261);
@@ -27,6 +28,6 @@ export const stableColor = (id, pool = FALLBACK_POOL) => pool[hash(id) % pool.le
 // them from the world each time it draws. Without one, the colour of the id below (the fallback, fixed by the id, never by the order of drawing).
 let overrides = new Map();
 export const setForceColorOverrides = map => { overrides = map instanceof Map ? map : new Map(); };
-export const forceColor = id => overrides.get(id) ?? FORCE_COLORS[id] ?? stableColor(id);
+export const forceColor = id => overrides.get(id) ?? brandPrimary(id) ?? FORCE_COLORS[id] ?? stableColor(id);
 // A coalition: its own entry, else the colour of its leader, else its own id.
-export const coalitionColor = coalition => ALLIANCE_COLORS[coalition?.id] ?? FORCE_COLORS[coalition?.leaderId] ?? FORCE_COLORS[coalition?.id] ?? stableColor(coalition?.id ?? coalition?.leaderId ?? 'coalizione');
+export const coalitionColor = coalition => ALLIANCE_COLORS[coalition?.id] ?? brandPrimary(coalition?.leaderId) ?? FORCE_COLORS[coalition?.leaderId] ?? FORCE_COLORS[coalition?.id] ?? stableColor(coalition?.id ?? coalition?.leaderId ?? 'coalizione');

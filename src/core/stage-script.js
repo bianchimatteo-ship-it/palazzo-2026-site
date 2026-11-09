@@ -9,6 +9,11 @@ import { formatOf } from './studio-lines.js?v=20261109-3';
 
 export const STAGE_W = 640, STAGE_H = 360;
 export const depthScale = y => Math.max(0.2, Math.min(0.72, 0.3 + (y - 170) / 190 * 0.34));
+// A character never makes the same gesture for the same kind of beat: one is picked, by the seed of the scene and the beat, among the ones that suit the moment (speaking, listening, reacting).
+const hashOf = text => { let h = 2166136261 >>> 0; for (const ch of String(text)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return h; };
+export const SPEAK_GESTURES = ['sottolinea', 'apre', 'indica', 'palmi', 'petto', 'sottolinea', 'pensa'];
+export const LISTEN_GESTURES = ['ascolta', 'appunti', 'esita', 'ascolta', 'dissenso', 'sorpresa'];
+export const pickGesture = (scene, nodeId, who, list) => list[hashOf(`${scene.seed ?? scene.id}|${nodeId}|${who}`) % list.length];
 const pose = (x, y, extra = {}) => ({ x, y, s: depthScale(y), facing: 1, posture: 'stand', gesture: null, visible: true, ...extra });
 const away = (x, y) => pose(x, y, { visible: false });
 
@@ -31,7 +36,7 @@ function studioPoses(scene, nodeId, node) {
   for (const member of scene.cast) {
     const seat = seats[member.role] ?? seats.rivale, door = doors[member.role] ?? doors.rivale;
     const speaking = node?.speaker === member.id;
-    const gesture = speaking ? (node.gesture ?? 'sottolinea') : (node?.speaker && at >= 3 ? 'ascolta' : null);
+    const gesture = speaking ? (node.gesture && node.gesture !== 'sottolinea' ? node.gesture : pickGesture(scene, nodeId, member.id, SPEAK_GESTURES)) : (node?.speaker && at >= 3 ? pickGesture(scene, nodeId, member.id, LISTEN_GESTURES) : null);
     if (member.role === 'conduttore') out[member.id] = pose(seat.x, seat.y, { posture: seat.posture, gesture: nodeId === 'esito' ? 'saluta' : gesture, facing: seat.facing });
     else if (nodeId === 'invito' || nodeId === 'preparazione') out[member.id] = member.role === 'giocatore' && nodeId === 'preparazione' ? pose(format === 'faccia' ? 150 : 520, 300, { gesture: 'pensa', facing: format === 'faccia' ? 1 : -1 }) : away(door.x, door.y);
     else if (nodeId === 'esito') out[member.id] = format === 'faccia' ? pose(member.role === 'giocatore' ? 90 : 550, 300, { gesture: 'saluta', posture: 'stand' }) : pose(seat.x, seat.y, { gesture: 'saluta', posture: 'stand', facing: seat.facing });
@@ -61,7 +66,7 @@ function rallyPoses(scene, nodeId, node) {
   const me = scene.cast.find(item => item.role === 'giocatore');
   const out = {};
   const speaking = node?.speaker === me.id;
-  const gesture = speaking ? (node.gesture ?? 'sottolinea') : null;
+  const gesture = speaking ? (node.gesture && node.gesture !== 'sottolinea' ? node.gesture : pickGesture(scene, nodeId, 'comiziante', SPEAK_GESTURES)) : null;
   const interrupted = scene.protest?.state === 'degenerata' || scene.interrupted;
   if (nodeId === 'arrivo') out[me.id] = pose(RALLY_STEPS[0].x, RALLY_STEPS[0].y, { gesture: 'saluta' });
   else if (nodeId === 'cammino') out[me.id] = pose(STAGE_MIC.x - 22, STAGE_MIC.y, { path: RALLY_STEPS, gesture: 'saluta' });

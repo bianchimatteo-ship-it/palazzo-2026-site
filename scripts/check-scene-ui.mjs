@@ -68,7 +68,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   }
   await viewport(1280, 900, false);
   for (const [mode, moving] of [['full', true], ['reduced', false], ['off', false]]) {
-    await evaluate(`document.documentElement.dataset.motion = ${JSON.stringify(mode)}; true`); await pause(150);
+    await evaluate(`document.documentElement.dataset.sceneMotion = ${JSON.stringify(mode)}; true`); await pause(150);
     const anim = await evaluate(`(() => { const o = document.querySelector('.st-actor.is-speaking .av-mouth-open'); return o ? getComputedStyle(o).animationName : 'nessuno'; })()`);
     if (moving) assert.equal(anim, 'st-talk', 'Con le animazioni complete la bocca si muove.'); else assert.ok(anim === 'none' || anim === 'nessuno', `Animazioni ${mode}: la bocca non si anima (${anim}).`);
     assert.equal(await evaluate(`getComputedStyle(document.querySelector('.st-actor.is-speaking .av-mouth-open')).opacity !== undefined`), true);

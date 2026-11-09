@@ -87,6 +87,31 @@ assert.ok(/Tocca o seleziona/.test(italyMapInfo({ boundaries, tallies, selected:
   const provinceRows = (italyMapTable({ boundaries, tallies, labelOf, colorOf, scope: 'province' }).match(/<tr><th scope="row">/g) ?? []).length;
   assert.equal(regionRows, 20, 'La tabella regionale ha 20 righe.'); assert.equal(provinceRows, 110, 'La tabella provinciale ne ha 110.');
 }
+// ---------- 3b. the party filter reads «where is the party» (presence), on regions and provinces ----------
+{
+  const PARTY = 'party-x';
+  // a fake outcome: the party wins the districts of a few regions, nothing in the others, no result in one
+  const winRegions = new Set(['Toscana', 'Lazio']);
+  const outcome = (chamber, district) => district.region === 'Molise' ? null : { id: district.region === 'Toscana' || (district.region === 'Lazio' && String(district.id).length % 2 === 0) || (district.region === 'Lazio' && /[0-4]$/.test(String(district.id))) ? PARTY : 'altri' };
+  const t = territoryTallies(geography, boundaries, outcome);
+  const presence = PARTY;
+  const partyColor = id => id === PARTY ? '#7fb8d6' : '#c9cfcb', partyLabel = id => id === PARTY ? 'Partito X' : 'Altri';
+  const regionsSvg = italyMapSvg({ boundaries, tallies: t, scope: 'regioni', colorOf: partyColor, labelOf: partyLabel, presence });
+  const provincesSvg = italyMapSvg({ boundaries, tallies: t, scope: 'province', colorOf: partyColor, labelOf: partyLabel, presence });
+  for (const [name, svg] of [['regioni', regionsSvg], ['province', provincesSvg]]) {
+    const states = new Set([...svg.matchAll(/data-presence="([a-z]+)"/g)].map(match => match[1]));
+    assert.ok(states.has('absent'), `${name}: «assente» è uno stato distinto.`);
+    assert.ok(states.has('nodata') || name === 'province' || svg.includes('Molise'), `${name}: nessun dato distinto.`);
+    assert.ok(states.has('partial') || states.has('prevails'), `${name}: la presenza del partito si vede.`);
+    assert.ok(!/is-absent[^>]*fill="#d7dcd9"/.test(svg), `${name}: l’assenza non ha il grigio del «nessun dato».`);
+  }
+  assert.ok(/fill="#2e3733"/.test(regionsSvg) && /fill="#d7dcd9"/.test(regionsSvg), 'Regioni: assente e nessun dato hanno due colori diversi.');
+  assert.ok(/fill-opacity="(0\.[3-9]\d?|1)"/.test(provincesSvg), 'Province: la presenza parziale è resa con l’intensità.');
+  const info = italyMapInfo({ boundaries, tallies: t, selected: 'r:09', labelOf: partyLabel, colorOf: partyColor, dataClass: 'x', scope: 'regioni', presence });
+  assert.match(info, /Partito X: (presenza|partito assente)/, 'La scheda dice la presenza del partito.');
+  assert.match(info, /Presenza del partito/, 'La scheda spiega la metrica.');
+  assert.ok(/Presenza del partito/.test(italyMapTable({ boundaries, tallies: t, labelOf: partyLabel, colorOf: partyColor, scope: 'province', presence })), 'La tabella ha la colonna della presenza.');
+}
 console.log('Mappa geografica: dati e funzioni verificati (20 regioni, 110 province, 2022 coerente con i collegi ufficiali).');
 
 // ---------- 4. the page, in Chrome ----------

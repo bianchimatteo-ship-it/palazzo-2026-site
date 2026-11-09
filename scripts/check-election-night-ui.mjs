@@ -130,13 +130,13 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   await viewport(1280, 800, false); await pause(300);
   // animations: the setting applies to everything of the night
   for (const [mode, expectAnim] of [['full', true], ['reduced', false], ['off', false]]) {
-    await evaluate(`document.documentElement.dataset.motion = ${JSON.stringify(mode)}; true`); await pause(150);
+    await evaluate(`document.documentElement.dataset.sceneMotion = ${JSON.stringify(mode)}; true`); await pause(150);
     await click('[data-night-tab-value="diretta"]');
     const m = await evaluate(`(() => { const item = document.querySelector('.night-item.is-new'); const bar = document.querySelector('.night-progress span'); return { anim: item ? getComputedStyle(item).animationName : 'nessuno', transition: getComputedStyle(bar).transitionDuration, live: getComputedStyle(document.querySelector('.night-live')).animationName }; })()`);
     if (expectAnim) { assert.equal(m.anim, 'night-in', 'Animazioni complete: le notizie entrano con movimento.'); assert.notEqual(m.transition, '0s', 'Animazioni complete: la barra dello scrutinio si muove.'); }
     else { assert.ok(m.anim === 'none' || m.anim === 'nessuno', `Animazioni ${mode}: le notizie non si animano (${m.anim}).`); assert.equal(m.transition, '0s', `Animazioni ${mode}: nessuna transizione sulla barra.`); assert.equal(m.live, 'none', `Animazioni ${mode}: nemmeno il segnale «in diretta».`); }
   }
-  await evaluate(`document.documentElement.dataset.motion = 'off'; true`);
+  await evaluate(`document.documentElement.dataset.sceneMotion = 'off'; true`);
   await click('[data-night-tab-value="riepilogo"]');
   assert.match(await text(), /RIEPILOGO FINALE/, 'Il riepilogo finale è nella dodicesima ora.');
   const final = await snapshot();

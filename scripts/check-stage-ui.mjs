@@ -4,6 +4,18 @@
 import assert from 'node:assert/strict';
 import { chromeAvailable, createCareerInPage, openCareer, withBrowser } from './lib/browser.mjs';
 
+// The backdrop never squeezes or cuts a name: every word of the speaker and of the party is there, on as many lines as needed, at a size that fits.
+{
+  const { backdropLines, wrapWords } = await import('../src/ui/stage-art.js');
+  for (const [name, party] of [['Matteo Bianchi', 'Futuro Nazionale'], ['Maria Giuseppina De Santis Caputo-Verdi', 'Alleanza Verdi e Sinistra per la Giustizia Sociale e Ambientale'], ['Li', 'SVP']]) {
+    const { name: n, party: p } = backdropLines(name, party);
+    assert.equal(n.lines.join(' '), name, `Il nome «${name}» è intero sullo sfondo.`);
+    assert.equal(p.lines.join(' '), party, `Il partito «${party}» è intero sullo sfondo.`);
+    assert.ok(n.lines.length <= 3 && p.lines.length <= 4, 'Poche righe.');
+    assert.ok([...n.lines].every(line => line.length * n.size * 0.6 <= 130) && [...p.lines].every(line => line.length * p.size * 0.6 <= 130), `«${name}» / «${party}» stanno nel riquadro.`);
+  }
+  assert.deepEqual(wrapWords('Alleanza Verdi e Sinistra', 12), ['Alleanza', 'Verdi e', 'Sinistra']);
+}
 if (!chromeAvailable) { console.log('Scene animate nel browser saltate: Chrome non trovato.'); process.exit(0); }
 await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, errors, version, screenshot }) => {
   await createCareerInPage({ evaluate, version }, { level: 'deputato', onboarding: true, extra: '' });
@@ -11,7 +23,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   const S = body => evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); ${body} })()`);
   const click = async selector => { await evaluate(`document.querySelector(${JSON.stringify(selector)})?.click(), true`); await pause(350); };
   const rect = selector => evaluate(`(() => { const r = document.querySelector(${JSON.stringify(selector)})?.getBoundingClientRect(); return r ? { x: r.x, y: r.y, w: r.width, h: r.height } : null; })()`);
-  const anims = () => evaluate(`document.getAnimations().filter(a => a.effect?.getComputedTiming().iterations !== Infinity && a.playState !== 'finished').length`);
+  const anims = () => evaluate(`document.getAnimations().filter(a => !(a instanceof CSSAnimation) && a.effect?.getComputedTiming().iterations !== Infinity && a.playState !== 'finished').length`);
   const sceneNode = () => evaluate(`document.querySelector('.scene')?.dataset.sceneNode ?? null`);
   const player = '.st-actor[data-actor="giocatore"]';
 
@@ -26,8 +38,8 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   const avatarKey = await evaluate(`document.querySelector('${player} .st-avatar')?.innerHTML.length`);
   assert.ok(avatarKey > 500);
   // motion full
-  await click('[data-scene-motion="full"]');
-  assert.equal(await evaluate(`document.documentElement.dataset.motion`), 'full');
+  await click('[data-scene-motion-set="full"]');
+  assert.equal(await evaluate(`document.documentElement.dataset.sceneMotion`), 'full');
   await click('[data-scene-choice="continua"]');           // arrivo → cammino: the player walks across the square
   assert.equal(await sceneNode(), 'cammino');
   const a = await rect(player); await pause(900); const b = await rect(player);
@@ -58,16 +70,21 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   assert.match(await evaluate(`document.querySelector('.scene-dialogue').innerText`), /Hai detto/, 'Si vede la battuta pronunciata.');
   const before = await evaluate(`document.querySelector('.st-crowd').className.baseVal ?? document.querySelector('.st-crowd').getAttribute('class')`);
   assert.match(before, /is-(applause|cheer|mixed|boo|quiet)/);
-  // the speaker's gesture loop and the mouth
-  assert.ok(await evaluate(`document.getAnimations().some(a => a.effect?.target?.classList?.contains('st-fore') && a.effect.getComputedTiming().iterations === Infinity)`), 'Il gesto del discorso è un ciclo.');
+  // the gestures of the characters have a beginning and an end (no loop for ever), none is duplicated or orphaned, and when they are over nothing of the actors still moves
+  const personal = `[...document.getAnimations()].filter(a => !(a instanceof CSSAnimation) && a.effect?.target?.closest?.('.st-actor'))`;
+  assert.ok(await evaluate(`${personal}.length > 0 && ${personal}.every(a => Number.isFinite(a.effect.getComputedTiming().endTime))`), 'I gesti dei personaggi sono finiti: nessuna ripetizione senza fine.');
+  assert.equal(await evaluate(`${personal}.filter(a => !a.effect.target.isConnected).length`), 0, 'Nessuna animazione orfana su elementi scomparsi.');
+  assert.equal(await evaluate(`(() => { const seen = new Set(); let dup = 0; for (const a of ${personal}) { const k = (a.effect.target.dataset?.actor ?? a.effect.target.getAttribute('class')) + '|' + JSON.stringify(a.effect.getKeyframes().map(f => f.transform)) + '|' + a.effect.getTiming().delay; if (seen.has(k) && a.playState === 'running') dup++; seen.add(k); } return dup; })()`), 0, 'Nessuna animazione duplicata.');
+  await pause(9000);
+  assert.equal(await evaluate(`${personal}.filter(a => a.playState === 'running').length`), 0, 'Finito il gesto, i personaggi stanno fermi.');
   assert.ok(await evaluate(`Boolean(document.querySelector('${player}.is-speaking'))`));
   // motion off: nothing moves, the final pose stays
-  await click('[data-scene-motion="off"]');
-  assert.equal(await evaluate(`document.documentElement.dataset.motion`), 'off');
+  await click('[data-scene-motion-set="off"]');
+  assert.equal(await evaluate(`document.documentElement.dataset.sceneMotion`), 'off');
   assert.equal(await evaluate(`document.getAnimations().length`), 0, 'Animazioni disattivate: nessuna animazione in corso.');
   const offA = await rect(player); await pause(500); const offB = await rect(player);
   assert.deepEqual(offA, offB, 'Con le animazioni spente la scena è ferma.');
-  await click('[data-scene-motion="reduced"]');
+  await click('[data-scene-motion-set="reduced"]');
   assert.equal(await evaluate(`document.getAnimations().length`), 0, 'Animazioni ridotte: niente movimento.');
 
   // layout at every width: the stage is entirely visible, nothing scrolls sideways
@@ -93,7 +110,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
     await S(`store.advance(7); return true;`);       // a new week: the days of the last guest spot are spent
     assert.equal(await S(`try { store.startTalkShowScene({ source: 'attivita', showId: ${JSON.stringify(showId)} }); return 'ok'; } catch (e) { return e.message; }`), 'ok', 'L’ospitata si apre.');
     await wait(() => evaluate(`Boolean(document.querySelector('.scene[data-scene-kind="talkshow"] .st-svg'))`), 8000);
-    await click('[data-scene-motion="full"]');
+    await click('[data-scene-motion-set="full"]');
     assert.equal(await evaluate(`document.querySelector('.st-svg').dataset.format`), format, `Lo studio è quello del formato ${format}.`);
     assert.equal(await evaluate(`document.querySelectorAll('.st-actor').length`), 3, 'Giocatore, ospite e conduttore.');
     assert.ok(await evaluate(`document.querySelectorAll('.st-desk').length`) >= 1, 'Scrivania o leggio.');
@@ -127,7 +144,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   // ---- the vote
   await S(`const { createVoteScene } = await import('/src/core/scene-engine.js?v=${version}'); const player = store.getState().dataset.politicians.find(p => p.id === store.getState().career.playerId); const saved = JSON.parse(store.exportSave()); const { avatarOf } = await import('/src/core/avatar.js?v=${version}'); saved.scene = createVoteScene({ id: 'voto-prova', seed: 'v', player: { name: player.displayName }, playerAvatar: avatarOf(player), electionLabel: 'Elezioni comunali', place: { municipality: 'Roma' } }); store.loadGame(saved); return true;`);
   await wait(() => evaluate(`Boolean(document.querySelector('.scene[data-scene-kind="voto"] .st-svg'))`), 8000);
-  await click('[data-scene-motion="full"]');
+  await click('[data-scene-motion-set="full"]');
   assert.equal(await evaluate(`Boolean(document.querySelector('.st-booth')) && Boolean(document.querySelector('.st-urn')) && Boolean(document.querySelector('.st-curtain'))`), true, 'Seggio con cabina e urna.');
   const seen = [];
   for (let i = 0; i < 9; i++) {

@@ -87,3 +87,10 @@ for (const assembly of Object.keys(A.ASSEMBLIES)) for (const [secret, passed, co
 }
 for (const text of ['Camera dei deputati', 'Senato della Repubblica', 'Consiglio comunale', 'Consiglio regionale', 'Parlamento europeo', 'AULA · CAMERA DEI DEPUTATI', 'ENTRA IN AULA', 'Vai all’esito', 'Hanno votato', 'Camera dei deputati: 399 seggi']) assert.equal(I.residualItalian(I.translateText(text)), null, `Aula: «${text}» non è tradotto`);
 console.log(`check-studio-lines: aula ok (${aulaTexts} annunci tradotti)`);
+
+// 7. the text of a button is never the name of a person (a guest, a host, an opponent)
+{
+  const bad = E.createDebateScene({ id: 'n1', seed: 'n1', show: 'salotto', player: { name: 'Partecipa' }, playerAvatar: null, rival: { id: 'r', name: 'Non partecipare', tag: 'Ospite' }, host: { id: 'h', name: 'Simula', tag: 'Giornalista' }, topic: { id: 'sanita', label: 'sanità' }, promises: [] });
+  assert.deepEqual(bad.cast.map(item => item.name), ['Il candidato', 'L’ospite', 'Il giornalista'], 'Il testo di un pulsante non diventa mai il nome di un personaggio.');
+  console.log('check-studio-lines: nomi ok');
+}

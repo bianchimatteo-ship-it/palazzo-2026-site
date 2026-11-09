@@ -464,7 +464,9 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   let settings = loadSettings(settingsScope());
   const applySettings = () => {
     const html = document.documentElement;
-    html.dataset.motion = settings.motion;
+    html.dataset.uiMotion = settings.interfaceMotion;
+    html.dataset.sceneMotion = settings.sceneMotion;
+    delete html.dataset.motion;
     html.dataset.contrast = settings.contrast;
     html.dataset.density = settings.density;
     html.style.setProperty('--ui-scale', String(Number(settings.textSize) / 100));
@@ -483,8 +485,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   const afterSceneRender = state => {
     const scene = state.scene;
     if (!scene) return;
-    const autoplay = scene.kind === 'voto' && settings.motion === 'full' && scene.nodeId !== 'uscita';
-    playStage(root, { motion: settings.motion, seen: scene.stageSeen === scene.nodeId, autoplay, onSeen: id => store.sceneMarkSeen(id), onEnd: () => { try { if (store.getState().scene?.nodeId === scene.nodeId) store.sceneChoose('continua'); } catch { /* the buttons lead */ } } });
+    const autoplay = scene.kind === 'voto' && settings.sceneMotion === 'full' && scene.nodeId !== 'uscita';
+    playStage(root, { motion: settings.sceneMotion, seen: scene.stageSeen === scene.nodeId, autoplay, onSeen: id => store.sceneMarkSeen(id), onEnd: () => { try { if (store.getState().scene?.nodeId === scene.nodeId) store.sceneChoose('continua'); } catch { /* the buttons lead */ } } });
   };
   // The identity of the party the career is in (see party-identity.js). It is the party of the game, not the one still written in the career record: after leaving a party the
   // player is independent until joining or founding another.
@@ -713,7 +715,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     }
     // A scene (the television debate) is a screen of its own while it lasts, like the election night: the career is not drawn, its time does not move.
     if (state.scene) {
-      root.innerHTML = `<div class="app-shell scene-shell"><div class="night-menu-row"><button type="button" class="ghost-button" data-action="menu">Menu</button></div>${renderScene(state, { identity: careerIdentity(state), motion: settings.motion })}${renderConfirmDialog(pendingConfirm)}${state.ui.toast && settings.toasts === 'on' ? `<div class="toast" role="status">${icon('spark', 17)}${esc(state.ui.toast)}</div>` : ''}</div>`;
+      root.innerHTML = `<div class="app-shell scene-shell"><div class="night-menu-row"><button type="button" class="ghost-button" data-action="menu">Menu</button></div>${renderScene(state, { identity: careerIdentity(state), motion: settings.sceneMotion })}${renderConfirmDialog(pendingConfirm)}${state.ui.toast && settings.toasts === 'on' ? `<div class="toast" role="status">${icon('spark', 17)}${esc(state.ui.toast)}</div>` : ''}</div>`;
       if (state.ui.toast) { clearTimeout(toastTimer); toastTimer = setTimeout(() => { const s = store.getState(); if (s.ui.toast) { s.ui.toast = null; root.querySelector?.('.toast')?.remove?.(); } }, { short: 1600, normal: 3200, long: 6000 }[settings.toastLength] ?? 3200); }
       afterSceneRender(state);
       return;
@@ -721,7 +723,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     // The election night is a screen of its own while it lasts: the career (menu, topbar, pages) is not drawn, the time of the career does not move, the menu stays reachable.
     if (state.night) {
       root.innerHTML = `<div class="app-shell night-shell"><div class="night-menu-row"><button type="button" class="ghost-button" data-action="menu">Menu</button></div>${renderElectionNight(state, { tab: nightTab, area: nightArea, boundaries: realDatabase.italyBoundaries ?? null })}${renderConfirmDialog(pendingConfirm)}${state.ui.toast && settings.toasts === 'on' ? `<div class="toast" role="status">${icon('spark', 17)}${esc(state.ui.toast)}</div>` : ''}</div>`;
-      playNightMotion(root, { motion: settings.motion, key: state.night.key });
+      playNightMotion(root, { motion: settings.sceneMotion, key: state.night.key });
       if (state.ui.toast) { clearTimeout(toastTimer); toastTimer = setTimeout(() => { const s = store.getState(); if (s.ui.toast) { s.ui.toast = null; root.querySelector?.('.toast')?.remove?.(); } }, { short: 1600, normal: 3200, long: 6000 }[settings.toastLength] ?? 3200); }
       return;
     }
@@ -1188,7 +1190,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     const guideJump = event.target.closest('[data-guide-jump]')?.dataset.guideJump;
     if (guideJump) {
       event.preventDefault();
-      const smooth = settings.motion === 'full' && !globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+      const smooth = settings.interfaceMotion === 'full' && !globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
       root.querySelector?.(`#${guideJump}`)?.scrollIntoView?.({ behavior: smooth ? 'smooth' : 'auto', block: 'start' });
       return;
     }
@@ -1644,12 +1646,12 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     }
     // The bills of the Government, of the other groups and of the committees: speeches and the player's vote.
     if (event.target.closest?.('[data-life-logo-clear]')) { clearFoundLogo(); const box = root.querySelector('[data-life-logo-preview]'), input = root.querySelector('[data-life-logo-upload]'); if (box) box.hidden = true; if (input) input.value = ''; return; }
-    const sceneControl = event.target.closest('[data-scene-choice],[data-scene-abandon],[data-scene-start],[data-scene-start-kind],[data-scene-skip],[data-stage-skip],[data-stage-pause],[data-scene-motion]');
+    const sceneControl = event.target.closest('[data-scene-choice],[data-scene-abandon],[data-scene-start],[data-scene-start-kind],[data-scene-skip],[data-stage-skip],[data-stage-pause],[data-scene-motion-set]');
     if (sceneControl) {
       try {
         if (sceneControl.matches('[data-stage-skip]')) { stageSkip(); return; }
         if (sceneControl.matches('[data-stage-pause]')) { if (stageIsPaused()) { stageResume(); sceneControl.textContent = 'Pausa'; sceneControl.setAttribute('aria-pressed', 'false'); } else { stagePause(); sceneControl.textContent = 'Riprendi'; sceneControl.setAttribute('aria-pressed', 'true'); } return; }
-        if (sceneControl.matches('[data-scene-motion]')) { settings = saveSetting('motion', sceneControl.dataset.sceneMotion, settingsScope()); applySettings(); render(store.getState(), store.getLastSaved()); return; }
+        if (sceneControl.matches('[data-scene-motion-set]')) { settings = saveSetting('sceneMotion', sceneControl.dataset.sceneMotionSet, settingsScope()); applySettings(); render(store.getState(), store.getLastSaved()); return; }
         if (sceneControl.matches('[data-scene-skip]')) store.sceneSkip();
         else if (sceneControl.matches('[data-scene-start-kind]')) { const kind = sceneControl.dataset.sceneStartKind; if (kind === 'comizio') store.startRallyScene(); else if (kind === 'talkshow') store.startTalkShowScene({ source: 'attivita', showId: root.querySelector('[data-activity-target="talk"]')?.value ?? null }); }
         else if (sceneControl.matches('[data-scene-start]')) store.startDebateScene({});
@@ -1703,7 +1705,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
           if (inst && act) aula = module.localAula(inst, act, { colorOf: group => ({ maggioranza: '#3f7fb5', opposizione: '#b5653f' })[group.side] ?? '#7d8b84' });
         }
         if (!aula) throw new Error('Questa votazione non ha i dati dei gruppi per entrare in aula.');
-        module.openAula(aula, { motion: document.documentElement.dataset.motion ?? settings.motion });
+        module.openAula(aula, { motion: document.documentElement.dataset.sceneMotion ?? settings.sceneMotion });
         playSound('confirm');
       } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
       return;
@@ -1899,7 +1901,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       if (target?.matches?.('details') && !target.open) target.open = true;
       const wrapper = target?.closest?.('details.hqc-fold-band');
       if (wrapper && !wrapper.open) wrapper.open = true;
-      target?.scrollIntoView({ behavior: settings.motion === 'full' ? 'smooth' : 'auto', block: 'start' });
+      target?.scrollIntoView({ behavior: settings.interfaceMotion === 'full' ? 'smooth' : 'auto', block: 'start' });
       return;
     }
     const simulationControl = event.target.closest('[data-local-seat],[data-local-inst],[data-local-section],[data-territory-measure],[data-territory-region],[data-budget-line],[data-party-priority],[data-membership-fee],[data-membership-apply],[data-real-law-more],[data-real-law-amend],[data-invest],[data-election-fund],[data-reserve],[data-reserve-release]');

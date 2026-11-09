@@ -25,13 +25,13 @@ const lines = [];
 assert.deepEqual(A.AVATAR_FIELDS, ['face', 'skin', 'hair', 'hairstyle', 'beard', 'glasses', 'jacket', 'eyes', 'expression', 'moustache'], 'I sette campi di prima restano in testa: un avatar salvato prima è un prefisso del nuovo.');
 assert.deepEqual([...A.AVATAR_GROUPS].sort(), [...A.AVATAR_FIELDS].sort(), 'L’editor mostra ogni campo.');
 const count = field => A.AVATAR_OPTIONS[field].length;
-assert.deepEqual([count('face'), count('skin'), count('hair'), count('hairstyle'), count('beard'), count('glasses'), count('jacket'), count('eyes'), count('expression'), count('moustache')], [2, 5, 5, 12, 3, 3, 8, 5, 3, 5], 'Le opzioni richieste ci sono: 5 occhi, 3 espressioni, 12 acconciature, 8 giacche, 5 baffi.');
+assert.deepEqual([count('face'), count('skin'), count('hair'), count('hairstyle'), count('beard'), count('glasses'), count('jacket'), count('eyes'), count('expression'), count('moustache')], [2, 5, 5, 19, 8, 3, 8, 5, 3, 9], 'Le opzioni richieste ci sono: 5 occhi, 3 espressioni, 19 acconciature (12 + 7 nuove), 8 barbe, 9 baffi, 8 giacche, 5 baffi.');
 assert.deepEqual(A.AVATAR_OPTIONS.face.map(item => item.id), ['maschile', 'femminile'], 'Volto: solo maschile e femminile (nessuna variante neutra).');
-assert.deepEqual(A.AVATAR_OPTIONS.moustache.map(item => item.id), ['nessuno', 'sottili', 'classici', 'folti', 'manubrio']);
+assert.deepEqual(A.AVATAR_OPTIONS.moustache.map(item => item.id).slice(0, 5), ['nessuno', 'sottili', 'classici', 'folti', 'manubrio']);
 assert.deepEqual(A.AVATAR_OPTIONS.expression.map(item => item.id), ['serena', 'sorridente', 'determinata']);
 assert.ok(!JSON.stringify(A.AVATAR_OPTIONS).match(/neutr|binari|altro/i), 'Nessuna opzione neutra, non binaria o «altro».');
 assert.deepEqual(A.AVATAR_OPTIONS.hair.map(item => item.id), ['nero', 'castano', 'biondo', 'rosso', 'grigio']);
-assert.deepEqual(A.AVATAR_OPTIONS.beard.map(item => item.id), ['nessuna', 'corta', 'completa']);
+assert.deepEqual(A.AVATAR_OPTIONS.beard.map(item => item.id).slice(0, 3), ['nessuna', 'corta', 'completa']);
 assert.deepEqual(A.AVATAR_OPTIONS.glasses.map(item => item.id), ['nessuno', 'tondi', 'rettangolari']);
 for (const field of ['skin', 'hair', 'jacket', 'eyes']) assert.ok(A.AVATAR_OPTIONS[field].every(item => /^#[\da-f]{6}$/i.test(item.color)), `${field}: ogni voce ha il suo colore.`);
 const base = A.DEFAULT_AVATAR;
@@ -48,10 +48,10 @@ for (const field of A.AVATAR_FIELDS) {
 }
 for (const beard of A.AVATAR_OPTIONS.beard) {
   const drawn = A.AVATAR_OPTIONS.moustache.map(item => draw({ beard: beard.id, moustache: item.id, hair: 'nero' }));
-  assert.equal(new Set(drawn).size, 5, `Baffi con barba «${beard.id}»: ogni stile cambia il disegno.`);
+  assert.equal(new Set(drawn).size, A.AVATAR_OPTIONS.moustache.length, `Baffi con barba «${beard.id}»: ogni stile cambia il disegno.`);
   assert.ok(drawn.slice(1).every(svg => svg.includes('stroke-linejoin="round"/><g fill') || svg.includes('fill="#')), 'I baffi sono disegnati.');
 }
-for (const moustache of A.AVATAR_OPTIONS.moustache.slice(1)) assert.equal(new Set(A.AVATAR_OPTIONS.beard.map(item => draw({ moustache: moustache.id, beard: item.id }))).size, 3, `Baffi «${moustache.id}»: si combinano con ogni barba (tre disegni diversi).`);
+for (const moustache of A.AVATAR_OPTIONS.moustache.slice(1)) assert.equal(new Set(A.AVATAR_OPTIONS.beard.map(item => draw({ moustache: moustache.id, beard: item.id }))).size, A.AVATAR_OPTIONS.beard.length, `Baffi «${moustache.id}»: si combinano con ogni barba (tre disegni diversi).`);
 assert.notEqual(draw({ moustache: 'folti' }), draw({ moustache: 'folti', beard: 'completa' }), 'Barba e baffi sono indipendenti.');
 assert.notEqual(draw({}, { focus: true }), draw(), 'Il ritaglio sul volto (anteprime dell’editor) è un altro disegno.');
 assert.ok(!/https?:\/\/(?!www\.w3\.org)|data:|<image|<script|<foreignObject|href=|xlink|@import|url\((?!#)/.test(reference), 'L’avatar è disegnato solo con forme locali: nessuna immagine, indirizzo o script.');
@@ -86,6 +86,34 @@ assert.deepEqual([kept.eyes, kept.expression, kept.moustache], ['marroni', 'sere
 assert.ok(['maschile', 'femminile'].includes(kept.face) && kept.face === A.defaultAvatarFor('politico-legacy').face, 'Il vecchio volto neutro passa a uno dei due, sempre lo stesso per lo stesso personaggio.');
 assert.deepEqual(A.avatarOf({ ...legacy, avatar: { face: 'maschile', skin: 'chiara', hair: 'nero', hairstyle: 'corto', beard: 'nessuna', glasses: 'nessuno', jacket: 'blu' } }).face, 'maschile', 'Un volto valido resta.');
 lines.push('aspetto predefinito stabile per le vecchie carriere, avatar di prima conservato');
+
+// the options added later are additive: the old ids are untouched and in the same place; every new one is drawn, is its own picture and fits both faces, the colours, the glasses and the proportions
+const OLD = { hairstyle: ['corto', 'riga', 'riccio', 'caschetto', 'lungo', 'raccolto', 'stempiato', 'rasato', 'afro', 'codino', 'frangia', 'ondulato'], beard: ['nessuna', 'corta', 'completa'], moustache: ['nessuno', 'sottili', 'classici', 'folti', 'manubrio'] };
+for (const [field, ids] of Object.entries(OLD)) assert.deepEqual(A.AVATAR_OPTIONS[field].slice(0, ids.length).map(item => item.id), ids, `${field}: gli id di prima non cambiano e restano al loro posto.`);
+assert.ok(A.AVATAR_OPTIONS.hairstyle.length - 12 >= 6 && A.AVATAR_OPTIONS.beard.length - 3 >= 3 && A.AVATAR_OPTIONS.moustache.length - 5 >= 3, 'Almeno 6 acconciature, 3 barbe e 3 baffi nuovi.');
+for (const field of ['hairstyle', 'beard', 'moustache']) {
+  const drawings = new Set();
+  for (const item of A.AVATAR_OPTIONS[field]) {
+    const svg = avatarSvg({ ...base, [field]: item.id }, { focus: true, size: 64 });
+    drawings.add(svg.replace(/id="[^"]*"|url\(#[^)]*\)|data-avatar="[^"]*"/g, ''));
+    for (const face of ['maschile', 'femminile']) for (const skin of ['porcellana', 'scura']) for (const hair of ['nero', 'grigio']) {
+      const full = avatarSvg({ ...base, face, skin, hair, glasses: 'tondi', [field]: item.id, shape: { w: 3, j: -3, d: 3, s: -3, b: 3, m: -3 } });
+      assert.ok(!/NaN|undefined/.test(full) && (full.match(/<g[ >]/g) ?? []).length === (full.match(/<\/g>/g) ?? []).length, `${field}/${item.id}: disegno valido con ${face}, ${skin}, ${hair}.`);
+    }
+  }
+  assert.equal(drawings.size, A.AVATAR_OPTIONS[field].length, `${field}: ogni opzione ha un disegno proprio (nessuna è una copia di un’altra).`);
+}
+// every path of every new drawing stays inside the 120 x 120 picture (numbers of the paths read from the source)
+{
+  const { readFileSync } = await import('node:fs');
+  const source = readFileSync(new URL('../src/ui/avatar-svg.js', import.meta.url), 'utf8');
+  for (const match of source.matchAll(/'((?:M[^']*))'/g)) { const nums = [...match[1].matchAll(/-?\d+(?:\.\d+)?/g)].map(item => Number(item[0])); assert.ok(nums.every(n => n >= 0 && n <= 120), `Percorso fuori dal disegno: ${match[1].slice(0, 40)}`); }
+}
+// a saved avatar with the new options survives the normalisation, the file export and the copy
+const withNew = { ...base, hairstyle: 'dreadlocks', beard: 'pizzetto', moustache: 'ferro', shape: { w: 1, j: 0, d: 0, s: 0, b: 0, m: 0 } };
+assert.deepEqual(A.normalizeAvatar(JSON.parse(JSON.stringify(withNew))), withNew, 'Le nuove opzioni sopravvivono a salvataggio, esportazione e ripristino.');
+assert.equal(A.avatarProblems(withNew).length, 0);
+lines.push('nuove acconciature, barbe e baffi: additive, disegni propri, entro il quadro, con tutti i volti e le proporzioni');
 
 // the proportions of the face: six sliders from -3 to 3, none = the drawing as it always was
 const shaped = { w: 3, j: -2, d: 2, s: 3, b: -3, m: 2 };
@@ -234,7 +262,7 @@ for (const field of A.AVATAR_FIELDS) for (const item of A.AVATAR_OPTIONS[field])
 assert.equal((first.match(/data-avatar-value="[a-z]+" aria-pressed="true"/g) ?? []).length, 10, 'Per ogni tratto una scelta è attiva.');
 // every choice has its sample: a colour for the colours, a small preview of the avatar for the shapes; the active one is marked
 const minis = (first.match(/class="avatar-choice is-mini/g) ?? []).length, swatches = (first.match(/class="avatar-choice is-swatch/g) ?? []).length;
-assert.deepEqual([minis, swatches], [2 + 3 + 12 + 3 + 5 + 3, 5 + 5 + 5 + 8], 'Anteprime per le forme (28) e campioni per i colori (23): nessuna scelta è solo testo.');
+assert.deepEqual([minis, swatches], [2 + 3 + 19 + 8 + 9 + 3, 5 + 5 + 5 + 8], 'Anteprime per le forme (44) e campioni per i colori (23): nessuna scelta è solo testo.');
 assert.ok(A.AVATAR_GROUPS.every(field => first.includes(`data-avatar-group="${field}"`)), 'Un gruppo per ogni campo, nell’ordine dell’editor.');
 const miniOf = (html, field, value) => html.match(new RegExp(`<button type="button" class="avatar-choice is-mini[^"]*" data-avatar-field="${field}" data-avatar-value="${value}"[^>]*>(<svg.*?</svg>)`))?.[1];
 for (const field of ['face', 'expression', 'hairstyle', 'beard', 'moustache', 'glasses']) {

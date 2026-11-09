@@ -6,6 +6,7 @@
 import { electionListOf, groupAffiliation, inOffice, politicianAffiliation, positionAxis } from '../data/repositories/party-links.js?v=20261109-3';
 import { CHART_SLOTS } from '../data/simulation/polling-rules.js?v=20261109-3';
 import { rosterSeats, rosterSize } from './seat-roster.js?v=20261109-3';
+import { brandPrimary } from '../data/party-brand.js?v=20261109-3';
 
 // Colour: the colour of a group or a party is the main colour of the force it belongs to, as the game already knows it (the world's force, with the owner's
 // corrections: `forceColor`); a group of a legislature born from a vote carries it. Only the groups no force stands for take the eight validated slots of the
@@ -16,10 +17,11 @@ export const UNKNOWN_COLOR = '#434d48';
 const MISTO = /^misto/i;
 
 // The colour of every force of the game as the world knows it (with the owner's corrections); a party merged into another takes the colour of the force that absorbed it.
+// A colour chosen on purpose (owner, founder) wins; then the colour of identity of the project (party-brand.js: Futuro Nazionale blue, SVP black); then the colour the charts gave the force.
 export function forceColorResolver(world) {
-  const colors = new Map();
-  for (const force of world?.parties ?? []) for (const id of [force.id, ...(force.mergedFrom ?? [])]) if (/^#[\da-f]{6}$/i.test(force.color ?? '')) colors.set(id, force.color);
-  return id => colors.get(id) ?? null;
+  const colors = new Map(), chosen = new Set();
+  for (const force of world?.parties ?? []) for (const id of [force.id, ...(force.mergedFrom ?? [])]) if (/^#[\da-f]{6}$/i.test(force.color ?? '')) { colors.set(id, force.color); if (force.brandColor) chosen.add(id); }
+  return id => (chosen.has(id) ? colors.get(id) : null) ?? brandPrimary(id) ?? colors.get(id) ?? null;
 }
 // The colour of a seat of an assembly the game simulates: the colour of the force its person belongs to; a seat that belongs to no force (a territorial list, a civic list,
 // a foreign member of the European Parliament) takes the colour of its group, and an unknown one the neutral tone.

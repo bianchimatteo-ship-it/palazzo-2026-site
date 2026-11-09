@@ -6,7 +6,12 @@ export const SETTINGS_SCHEMA = Object.freeze({
   language: { label: 'Lingua', options: [['it', 'Italiano'], ['en', 'English']], default: 'it' },
   sound: { label: 'Effetti sonori', options: [['on', 'Attivi'], ['off', 'Disattivati']], default: 'on' },
   volume: { label: 'Volume', options: [['30', 'Basso'], ['60', 'Medio'], ['100', 'Alto']], default: '60' },
-  motion: { label: 'Animazioni', options: [['full', 'Complete'], ['reduced', 'Ridotte'], ['off', 'Disattivate']], default: 'off' },
+  // Two independent preferences (never one for both): the motion of the interface (texts, panels, notices, counters, decorative effects) is OFF by default; the motion of the game scenes (rallies,
+  // protests, television, the vote at the polling station, the election night, the Aula and the political scenes) is COMPLETE by default.
+  interfaceMotion: { label: 'Animazioni dell’interfaccia', options: [['full', 'Complete'], ['reduced', 'Ridotte'], ['off', 'Disattivate']], default: 'off',
+    hint: { full: 'Testi, pannelli, notifiche e contatori si animano.', reduced: 'Movimenti dell’interfaccia più brevi e discreti.', off: 'Testi e pannelli compaiono subito, senza movimenti o effetti decorativi.' } },
+  sceneMotion: { label: 'Animazioni delle scene di gioco', options: [['full', 'Complete'], ['reduced', 'Ridotte'], ['off', 'Disattivate']], default: 'full',
+    hint: { full: 'Comizi, proteste, studi TV, voto, Notte elettorale e Aula con personaggi in movimento.', reduced: 'Le scene mostrano le pose senza percorsi e movimenti lunghi.', off: 'Le scene mostrano la posizione di ogni momento, senza movimento.' } },
   toasts: { label: 'Messaggi a comparsa', options: [['on', 'Mostra'], ['off', 'Nascondi']], default: 'on' },
   toastLength: { label: 'Durata dei messaggi', options: [['short', 'Breve'], ['normal', 'Normale'], ['long', 'Lunga']], default: 'normal' },
   // `scoped`: the choice belongs to the account that is signed in (or to the browser when nobody is), so that one account never changes another's; see saveSetting.
@@ -36,6 +41,12 @@ export function loadSettings(scope = null) {
   for (const [key, spec] of Object.entries(SETTINGS_SCHEMA)) {
     if (spec.scoped && validFor(spec, own?.[key])) settings[key] = own[key];
     else if (validFor(spec, saved[key])) settings[key] = saved[key];
+  }
+  // A choice made before the two preferences existed (the single `motion` key, written only when the player chose it) is kept for both, until they are separated; an automatic default is never taken for a choice.
+  const old = saved.motion;
+  if (['full', 'reduced', 'off'].includes(old)) {
+    if (!validFor(SETTINGS_SCHEMA.sceneMotion, saved.sceneMotion)) settings.sceneMotion = old;
+    if (!validFor(SETTINGS_SCHEMA.interfaceMotion, saved.interfaceMotion)) settings.interfaceMotion = old;
   }
   return settings;
 }

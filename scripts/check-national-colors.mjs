@@ -11,10 +11,32 @@ import { SERIES } from '../src/ui/charts.js';
 import { ALLIANCE_COLORS, FORCE_COLORS, NEUTRAL_COLOR, coalitionColor, forceColor, stableColor } from '../src/ui/political-colors.js';
 import { nationalPalette } from '../src/ui/national-view.js';
 import { contrastRatio } from '../src/ui/visuals.js';
+import { LOGO_BRAND, brandPrimary, toneEdge } from '../src/data/party-brand.js';
+import { forceColorResolver } from '../src/core/hemicycle.js';
 
 // ---------- 1. the table ----------
 const series = new Set(SERIES);
-assert.ok(Object.values(FORCE_COLORS).every(color => series.has(color)) && Object.values(ALLIANCE_COLORS).every(color => series.has(color)), 'Solo colori della serie validata dei grafici.');
+const brands = new Set(Object.values(LOGO_BRAND).map(item => item.primary));
+assert.ok(Object.values(FORCE_COLORS).every(color => series.has(color)), 'Le forze hanno colori della serie validata dei grafici.');
+assert.ok(Object.values(ALLIANCE_COLORS).every(color => series.has(color) || brands.has(color) || /^#[\da-f]{6}$/i.test(color)), 'Gli schieramenti usano la serie o i colori d’identità dichiarati.');
+// Futuro Nazionale and SVP: the identity colour is read by the same source everywhere (forceColor, the resolver of the Chambers, the alliances of the map)
+assert.equal(forceColor('party-futuro-nazionale'), LOGO_BRAND['party-futuro-nazionale'].primary, 'Futuro Nazionale ha il blu del suo marchio in ogni vista.');
+assert.equal(forceColor('party-registro-p1-2015-19-ir'), '#15191a', 'La SVP resta nera.');
+assert.equal(ALLIANCE_COLORS.SVP, forceColor('party-registro-p1-2015-19-ir'), 'La SVP della mappa 2022 è la stessa SVP.');
+assert.notEqual(ALLIANCE_COLORS['SVP-PATT'], ALLIANCE_COLORS.SVP, 'SVP e SVP–PATT si distinguono.');
+{
+  const world = { parties: [{ id: 'party-futuro-nazionale', color: '#7fb8d6' }, { id: 'party-registro-p1-2015-19-ir', color: '#888888' }, { id: 'party-x', color: '#112233', brandColor: '#112233' }, { id: 'party-registro-p1-2014-04-ir', color: '#4a9db8' }] };
+  const resolve = forceColorResolver(world);
+  assert.equal(resolve('party-futuro-nazionale'), brandPrimary('party-futuro-nazionale'), 'Camera/Senato: Futuro Nazionale col suo blu.');
+  assert.equal(resolve('party-registro-p1-2015-19-ir'), '#15191a', 'Camera/Senato: la SVP nera.');
+  assert.equal(resolve('party-x'), '#112233', 'La scelta del proprietario vince.');
+  assert.equal(resolve('party-registro-p1-2014-04-ir'), '#4a9db8', 'Gli altri restano col colore del mondo.');
+}
+assert.equal(toneEdge('#15191a'), 'dark', 'Un nero ha il bordo chiaro.');
+assert.equal(toneEdge('#ffffff'), 'light', 'Un bianco ha il bordo scuro.');
+assert.equal(toneEdge('#f4f4ee'), 'light');
+assert.equal(toneEdge('#4a9db8'), null, 'Un colore medio non ha bisogno di bordo.');
+assert.ok(new Set([toneEdge('#ffffff'), toneEdge('#fafafa')]).size === 1, 'Due bianchi hanno lo stesso bordo.');
 assert.ok([...series].every(color => contrastRatio(color, '#1d1e1a') >= 3 && contrastRatio(color, '#10231b') >= 3), 'Ogni colore si legge sui pannelli scuri (3:1).');
 const LEADERS = ['party-registro-p1-2014-04-ir', 'party-registro-p1-2015-29-ir', 'party-registro-p1-2022-63-ir', 'party-registro-p1-2017-41-ir', 'party-registro-p1-2015-20-ir', 'coalition-alleanza-verdi-sinistra', 'party-registro-p1-2019-51-ir', 'party-futuro-nazionale'];
 assert.equal(new Set(LEADERS.map(forceColor)).size, LEADERS.length, 'Le otto forze principali hanno otto colori diversi.');

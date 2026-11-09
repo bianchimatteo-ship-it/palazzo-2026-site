@@ -131,7 +131,7 @@ button.hqc-resource-link:hover { border-color: var(--accent); transform: transla
 .hqc-drawer[open] > summary .hqc-drawer-toggle { transform: rotate(-90deg); color: var(--accent); border-color: var(--accent); }
 .hqc-drawer[open] > summary { border-bottom: 1px solid var(--line); }
 .hqc-drawer-body { padding: 14px 16px 16px; min-width: 0; }
-html[data-motion="reduced"] .hqc-drawer-toggle, html[data-motion="reduced"] button.hqc-resource-link { transition: none; }
+html[data-ui-motion="reduced"] .hqc-drawer-toggle, html[data-ui-motion="reduced"] button.hqc-resource-link { transition: none; }
 
 /* ---------- wide screens: more room, fewer rows ---------- */
 @media (min-width: 1500px) {
