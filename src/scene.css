@@ -80,3 +80,13 @@ html[data-motion="full"] .cm-protest .cm-arm { animation: st-arms .45s ease-in-o
 @keyframes st-jump { 50% { transform: translateY(-6px); } }
 @keyframes st-arms { from { transform: rotate(calc(var(--sg, 1) * -8deg)); } to { transform: rotate(calc(var(--sg, 1) * -34deg)); } }
 @keyframes st-murmur { 50% { transform: translateX(1.6px); } }
+
+/* The secondary buttons of the scenes, the Government, Diplomacy, Programme and Challenges are the ones of «Fai» in the weekly activities: dark ground, thin visible border, readable text, gold on hover. */
+.scene .ghost-button, .cabinet-life .ghost-button, .diplomacy-page .ghost-button, .program-page .ghost-button, .challenges-view .ghost-button, .goals-view .ghost-button {
+  background: var(--panel-2); color: var(--ink); border: 1px solid var(--line-strong); border-radius: var(--radius); font-weight: 700; transition: border-color .15s ease, color .15s ease, background .15s ease; }
+.scene .ghost-button:hover:not(:disabled), .cabinet-life .ghost-button:hover:not(:disabled), .diplomacy-page .ghost-button:hover:not(:disabled), .program-page .ghost-button:hover:not(:disabled), .challenges-view .ghost-button:hover:not(:disabled), .goals-view .ghost-button:hover:not(:disabled) { border-color: var(--accent); color: #fff; background: var(--panel-3); }
+.scene .ghost-button:disabled, .cabinet-life .ghost-button:disabled, .diplomacy-page .ghost-button:disabled, .program-page .ghost-button:disabled, .challenges-view .ghost-button:disabled { opacity: .5; cursor: not-allowed; }
+.scene .ghost-button.is-on, .scene .ghost-button[aria-pressed="true"] { border-color: var(--accent); color: var(--gold-light); box-shadow: inset 0 0 0 1px var(--accent); }
+.st-svg text { font-family: var(--font-ui, system-ui, sans-serif); }
+.st-svg .st-name { font-family: var(--font-head, var(--font-ui, system-ui)); }
+.generated-tag { font: 600 11px var(--font-ui); color: var(--ink-3); border: 1px solid var(--line); border-radius: 99px; padding: 1px 7px; margin-left: 6px; }

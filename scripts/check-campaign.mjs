@@ -22,7 +22,7 @@ for(const [type,role] of [['comunale','sindaco'],['regionale','presidente'],['po
   assert.equal(campaign.source,'simulation');
   assert.ok(campaign.territories.length===(type==='comunale'?1:type==='regionale'?4:type==='europee'?5:20));
   assert.ok(campaign.candidates.every(item=>item.source==='simulation'));
-  assert.ok(campaign.candidates.filter(item=>!item.isPlayer).every(item=>item.displayName.startsWith('Candidatura simulata')));
+  { const rivals = campaign.candidates.filter(item=>!item.isPlayer); assert.ok(rivals.every(item=>!/^Candidatura/i.test(item.displayName) && /^[A-ZÀ-Ý][a-zà-ÿ]+ [A-ZÀ-Ý]/.test(item.displayName)), 'Nomi e cognomi leggibili, mai «Candidatura simulata».'); assert.equal(new Set(rivals.map(item=>item.displayName)).size, rivals.length, 'Nessuna omonimia nella stessa elezione.'); assert.ok(rivals.filter(item=>!item.realReference).every(item=>item.generated === true), 'I personaggi inventati sono segnati come generati.'); }
   campaign.nomination.status='approved';
   campaign.day=campaign.totalDays-1;
   campaign=advanceCampaign(campaign,1);

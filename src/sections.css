@@ -1861,3 +1861,4 @@ details.accord-panel.pm-fold { padding: 0; }
 @media (max-width: 480px) { .cl-head { grid-template-columns: auto 1fr; } .cl-head .cl-grade { grid-column: 1 / -1; justify-self: start; } .cl-trend { grid-template-columns: 1fr; } }
 .program-compare { margin: 4px 0 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 13px; color: var(--ink-2); }
 .dp-chip.is-shared { border-color: var(--gold); color: var(--gold-light); }
+.campaign-eliminated { display: grid; gap: 6px; padding: 12px 14px; border: 1px solid var(--critical-ink, #c9604d); border-radius: var(--radius); background: var(--panel-2); } .campaign-eliminated span { color: var(--ink-2); line-height: 1.5; }

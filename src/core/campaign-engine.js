@@ -309,6 +309,19 @@ function campaignTerritories(type, player, userTerritories, weights = null, role
   return ITALIAN_REGIONS.map((name,index) => ({ id:`sim-regione-${index+1}`, name, region:name, kind:'regione', weight:real?.weights?.[name] ?? 100/ITALIAN_REGIONS.length, weightBasis:real ? real.basis : 'uniforme-dati-mancanti', source:SOURCE, organization:20 }));
 }
 
+// The people the game makes up to stand against the player (the real ones carry their verified name): plausible Italian names, the same for the same campaign seed, never twice in one election; they
+// are marked as generated (`generated: true`) so that no screen presents them as real persons. The id stays the technical one; what the screens show is the name.
+const FIRST_NAMES = Object.freeze(['Marco', 'Luca', 'Andrea', 'Paolo', 'Giorgio', 'Stefano', 'Roberto', 'Davide', 'Matteo', 'Fabio', 'Claudio', 'Enrico', 'Sergio', 'Alberto', 'Franco', 'Daniele', 'Elena', 'Chiara', 'Giulia', 'Francesca', 'Laura', 'Marta', 'Silvia', 'Paola', 'Anna', 'Sara', 'Federica', 'Monica', 'Cristina', 'Valentina', 'Irene', 'Barbara']);
+const SURNAMES = Object.freeze(['Rinaldi', 'Ferrari', 'Bellini', 'Costa', 'Gentile', 'Moretti', 'Villa', 'Fiore', 'Longo', 'Bosco', 'Marchetti', 'Pellegrini', 'Neri', 'Conti', 'Valenti', 'Mariani', 'Barbieri', 'Fontana', 'Santoro', 'Caruso', 'Greco', 'Rossetti', 'Basile', 'Orlando', 'Sala', 'Vitale', 'Leone', 'Marini', 'Giordano', 'De Angelis', 'Monti', 'Serra', 'Coppola', 'Riva', 'Parisi', 'Galli', 'Piras', 'Lombardi', 'Ferri', 'Testa']);
+const hashName = text => { let h = 2166136261 >>> 0; for (const ch of String(text)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return h; };
+export function simulatedName(seed, index, taken = new Set()) {
+  for (let attempt = 0; attempt < 60; attempt++) {
+    const h = hashName(`${seed}|nome|${index}|${attempt}`);
+    const name = `${FIRST_NAMES[h % FIRST_NAMES.length]} ${SURNAMES[(h >>> 8) % SURNAMES.length]}`;
+    if (!taken.has(name)) { taken.add(name); return name; }
+  }
+  return `${FIRST_NAMES[index % FIRST_NAMES.length]} ${SURNAMES[(index * 7) % SURNAMES.length]}`;
+}
 function createCandidate({ id, player = false, partyId = null, displayName, seed, stats = {} }) {
   const rand = randomFrom(seed);
   return {
@@ -527,6 +540,7 @@ function buildOpponents(partyId, catalog, seed, count = 3, realCandidates = [], 
   const matched = new Map();
   if (national) for (const person of realCandidates) { const slot = forceOfGroup(person.groupName ?? person.electedOnList, slots.filter(item => !item.independent && !matched.has(item.id))); if (slot) matched.set(slot.id, person); }
   const candidates = [];
+  const takenNames = new Set(realCandidates.map(item => item.fullName));
   slots.forEach((slot, index) => {
     const candidateId = ids('candidatura-simulata',seed,index+1);
     const person = national ? matched.get(slot.id) : realCandidates[index];
@@ -535,15 +549,15 @@ function buildOpponents(partyId, catalog, seed, count = 3, realCandidates = [], 
     const party = slot?.independent ? null : slot;
     const trace = party ? { partyKind: partyKindOf(party.source), rosterReason: party.rosterReason ?? null, surveyed: party.surveyed ?? null } : { partyKind: 'indipendente', independent: true, rosterReason: 'indipendente', surveyed: false };
     if (person) candidates.push({ ...createCandidate({ id:candidateId, partyId:national ? party?.id ?? null : null, displayName:person.fullName, seed:rivalSeed }), aiProfile, ...(national && party ? { partyLabel:party.officialName ?? party.name ?? null, partyAbbreviation:party.abbreviation ?? null } : {}), ...trace, realReference:{ politicianId:person.id, fullName:person.fullName, chamber:person.chamber, groupId:person.groupId ?? null, groupName:person.groupName ?? null, electedOnList:person.electedOnList ?? null, circoscription:person.circoscription ?? null, sourceUrl:person.sourceUrl, sourceName:person.sourceName, source:'real', verified:true } });
-    else if (slot?.independent) candidates.push({ ...createCandidate({ id:candidateId, partyId:null, displayName:`Candidatura indipendente simulata ${index+1}`, seed:rivalSeed }), aiProfile, ...trace });
-    else candidates.push({ ...createCandidate({ id:candidateId, partyId:party?.id ?? null, displayName:`Candidatura simulata ${index+1}`, seed:rivalSeed }), aiProfile, partyLabel:party?.officialName ?? party?.name ?? null, partyAbbreviation:party?.abbreviation ?? null, ...trace });
+    else if (slot?.independent) candidates.push({ ...createCandidate({ id:candidateId, partyId:null, displayName:simulatedName(seed,index+1,takenNames), seed:rivalSeed }), generated:true, aiProfile, ...trace });
+    else candidates.push({ ...createCandidate({ id:candidateId, partyId:party?.id ?? null, displayName:simulatedName(seed,index+1,takenNames), seed:rivalSeed }), generated:true, aiProfile, partyLabel:party?.officialName ?? party?.name ?? null, partyAbbreviation:party?.abbreviation ?? null, ...trace });
   });
   return candidates;
 }
 
 // How many rival candidacies run against the player, by kind of election.
 export const RIVALS_BY_TYPE = Object.freeze({ comunale:{ small:3, default:4 }, provinciale:{ default:3 }, regionale:{ default:4 }, politiche:{ default:5 }, europee:{ default:6 } });
-const candidateLabel = candidate => candidate.realReference?.fullName ?? (candidate.partyAbbreviation || candidate.partyLabel ? `la candidatura di ${candidate.partyAbbreviation || candidate.partyLabel}` : candidate.displayName);
+const candidateLabel = candidate => candidate.realReference?.fullName ?? (candidate.generated ? `${candidate.displayName}${candidate.partyAbbreviation || candidate.partyLabel ? ` (${candidate.partyAbbreviation || candidate.partyLabel})` : ''}` : candidate.partyAbbreviation || candidate.partyLabel ? `la candidatura di ${candidate.partyAbbreviation || candidate.partyLabel}` : candidate.displayName);
 // The opening of the race, area by area: what the candidate is (name, standing), where he is from (roots, strongholds), what his party is
 // worth there (the lean of each area for each party, the weight of the party in the polls) and what the term he served left behind.
 // `extra` are points per candidate (the record of an incumbent), `edges` the party weight, `roots` the strongholds of the rivals, `homeExtra`

@@ -128,7 +128,8 @@ export function situation(ctx, env = {}) {
     direzione: ctx.game.party?.affiliation === 'member' && ctx.game.party.rank >= 3,
     secretary: isSecretary(ctx.game.party),
     premier: governing && parliament?.government?.primeMinister === 'player',
-    campaignActive: env.campaign?.status === 'active',
+    // A candidate eliminated at the first round of a runoff is out of the race: he is back to the ordinary weeks of his career (the runoff goes on in the world without him).
+    campaignActive: env.campaign?.status === 'active' && env.campaign.candidates?.find(item => item.isPlayer)?.status !== 'eliminated',
     // The President of the Republic is an office apart: no party, no seat, the activities of the Quirinale.
     president: Boolean(ctx.game.flags?.president),
     // What the rest of the world looks like this week: events depend on it.

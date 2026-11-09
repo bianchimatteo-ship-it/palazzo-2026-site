@@ -47,33 +47,46 @@ const defsOf = parts => parts.map(part => part.defs).join('');
 
 // ---------- the crowd ----------
 // Heads and shoulders seen from behind, in rows (the camera is behind the crowd, the stage in front of it), with raised arms, flags and signs. Deterministic from the seed.
-function crowdSvg(seed, rows, { color = '#9c2f39', signs = [], flags = 3, x0 = 20, x1 = 620 } = {}) {
+function crowdSvg(seed, rows, { color = '#9c2f39', signs = [], flags = [], x0 = 20, x1 = 620, aisle = null, split = false, abbr = '' } = {}) {
   const hairs = ['#2b2118', '#3a2a1c', '#5a4632', '#8a7355', '#20262e', '#b9b2a4', '#6a3a24'];
   const tops = ['#27414a', '#3d3a52', '#4a3b34', '#1f3a33', '#53424a', '#2f3b52'];
-  let out = '';
+  const rowHtml = [];
   rows.forEach(([y, scale, count], row) => {
+    let html = '';
     for (let i = 0; i < count; i++) {
       const key = `${seed}|${row}|${i}`;
       const x = x0 + (x1 - x0) * (i + 0.5 + (unit(key + 'x') - 0.5) * 0.7) / count;
+      if (aisle && y > 250 && x > aisle[0] && x < aisle[1]) continue;     // the aisle the speaker walks along: nobody stands in it
       const s = scale * (0.92 + unit(key + 's') * 0.2);
       const hair = hairs[hash(key + 'h') % hairs.length], top = tops[hash(key + 't') % tops.length];
       const arms = unit(key + 'a') < 0.55;
-      out += `<g class="cm" style="--d:${Math.round(unit(key + 'd') * 600)}ms;transform:translate(${x.toFixed(1)}px,${y}px) scale(${s.toFixed(2)})"><g class="cm-in">`
+      html += `<g class="cm" style="--d:${Math.round(unit(key + 'd') * 600)}ms;transform:translate(${x.toFixed(1)}px,${y}px) scale(${s.toFixed(2)})"><g class="cm-in">`
         + (arms ? `<g class="cm-arm cm-arm-l"><rect x="-17" y="-34" width="6" height="30" rx="3" fill="${top}"/><circle cx="-14" cy="-36" r="4" fill="#d9b48f"/></g><g class="cm-arm cm-arm-r"><rect x="11" y="-34" width="6" height="30" rx="3" fill="${top}"/><circle cx="14" cy="-36" r="4" fill="#d9b48f"/></g>` : '')
         + `<path d="M-19 8C-19 -8 -10 -13 0 -13S19 -8 19 8Z" fill="${top}"/><circle cx="0" cy="-22" r="11" fill="${hair}"/></g></g>`;
     }
+    rowHtml.push({ y, html });
   });
-  for (let f = 0; f < flags; f++) {
-    const slots = [60, 150, 520, 600, 40, 560]; const x = slots[f % slots.length] + (x1 - 640), y = 280 + (f % 2) * 12;
-    out += `<g class="cm-flag" style="--d:${f * 220}ms;transform:translate(${x.toFixed(0)}px,${y}px)"><rect x="-1.2" y="-74" width="2.4" height="70" fill="#c8c0a8"/><path class="cm-cloth" d="M1 -74 q12 -5 24 0 t24 0 v22 q-12 5 -24 0 t-24 0Z" fill="${f % 3 === 1 ? '#f2f0ea' : color}"/></g>`;
-  }
-  signs.forEach((text, i) => { const x = [150, 540, 90, 600][i % 4] + unit(`${seed}|sg${i}`) * 20, y = 292 + (i % 2) * 8; out += `<g class="cm-sign" style="--d:${i * 180}ms;transform:translate(${x.toFixed(0)}px,${y}px)"><rect x="-1.2" y="-58" width="2.4" height="54" fill="#8b7a5e"/><rect x="-30" y="-90" width="60" height="32" rx="2" fill="#f4efe0" stroke="#3a2f22" stroke-width="1.4"/><text x="0" y="-70" text-anchor="middle" font-size="9" font-weight="800" fill="#3a2f22" textLength="50" lengthAdjust="spacingAndGlyphs">${esc(text)}</text></g>`; });
-  return out;
+  // flags: the Italian tricolour and the flag of the party, on poles, waving (a flag never stands in the aisle)
+  let extra = '';
+  flags.forEach((flag, f) => {
+    const x = flag.x + (x1 - 640), y = flag.y ?? 282;
+    const cloth = flag.kind === 'tricolore'
+      ? `<g class="cm-cloth"><rect x="1" y="-74" width="17" height="22" fill="#1f8a4c"/><rect x="18" y="-74" width="17" height="22" fill="#f5f3ec"/><rect x="35" y="-74" width="17" height="22" fill="#cd2b35"/></g>`
+      : `<g class="cm-cloth"><rect x="1" y="-74" width="52" height="22" fill="${color}"/><circle cx="14" cy="-63" r="7.5" fill="#fff"/><text x="14" y="-60.4" text-anchor="middle" font-size="7" font-weight="900" fill="${color}">${esc(String(abbr).slice(0, 3).toUpperCase())}</text></g>`;
+    extra += `<g class="cm-flag" style="--d:${f * 220}ms;transform:translate(${x.toFixed(0)}px,${y}px)"><rect x="-1.2" y="-74" width="2.4" height="70" fill="#c8c0a8"/>${cloth}</g>`;
+  });
+  signs.forEach((text, i) => { const x = [150, 540, 90, 600][i % 4] + unit(`${seed}|sg${i}`) * 20, y = 292 + (i % 2) * 8; extra += `<g class="cm-sign" style="--d:${i * 180}ms;transform:translate(${x.toFixed(0)}px,${y}px)"><rect x="-1.2" y="-58" width="2.4" height="54" fill="#8b7a5e"/><rect x="-30" y="-90" width="60" height="32" rx="2" fill="#f4efe0" stroke="#3a2f22" stroke-width="1.4"/><text x="0" y="-70" text-anchor="middle" font-size="9" font-weight="800" fill="#3a2f22" textLength="50" lengthAdjust="spacingAndGlyphs">${esc(text)}</text></g>`; });
+  if (split) return { rows: rowHtml, extra };
+  return rowHtml.map(item => item.html).join('') + extra;
 }
+const luminance = hex => { const m = /^#?([0-9a-f]{6})$/i.exec(String(hex ?? '')); if (!m) return 0.2; const [r, g, b] = [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16) / 255).map(v => v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
+// The ink that reads on a colour: white on the dark ones, near-black on the light ones.
+export const inkOn = hex => luminance(hex) > 0.38 ? '#161a1f' : '#ffffff';
 // the protesters: a group with signs and a banner, drawn like the crowd but facing the stage and moving as a block
-function protestSvg(seed, label) {
+function protestSvg(seed, label, group = '', slogans = []) {
   const people = [0, 1, 2, 3, 4, 5].map(i => { const x = 520 + (i % 3) * 34 + unit(`${seed}|pp${i}`) * 10, y = 304 + Math.floor(i / 3) * 22; return `<g class="cm cm-protest" style="--d:${i * 90}ms;transform:translate(${x.toFixed(0)}px,${y}px) scale(.7)"><g class="cm-in"><g class="cm-arm cm-arm-l"><rect x="-17" y="-34" width="6" height="30" rx="3" fill="#3b2a2a"/><circle cx="-14" cy="-36" r="4" fill="#d9b48f"/></g><path d="M-19 8C-19 -8 -10 -13 0 -13S19 -8 19 8Z" fill="#3b2a2a"/><circle cx="0" cy="-22" r="11" fill="#2b2118"/></g></g>`; }).join('');
-  return `<g class="st-protest"><g class="st-banner" style="transform:translate(494px,236px)"><rect x="-74" y="-24" width="148" height="34" rx="2" fill="#f4efe0" stroke="#7a1f24" stroke-width="2"/><text x="0" y="-3" text-anchor="middle" font-size="9.5" font-weight="900" fill="#7a1f24" textLength="132" lengthAdjust="spacingAndGlyphs">${esc(label.toUpperCase().slice(0, 34))}</text><rect x="-60" y="10" width="2.4" height="62" fill="#8b7a5e"/><rect x="58" y="10" width="2.4" height="62" fill="#8b7a5e"/></g>${people}</g>`;
+  const signs = slogans.slice(0, 2).map((text, i) => `<g class="cm-sign" style="--d:${i * 200}ms;transform:translate(${470 + i * 56}px,${312 + i * 6}px) scale(.8)"><rect x="-1.2" y="-58" width="2.4" height="54" fill="#8b7a5e"/><rect x="-34" y="-90" width="68" height="32" rx="2" fill="#f4efe0" stroke="#7a1f24" stroke-width="1.4"/><text x="0" y="-70" text-anchor="middle" font-size="8" font-weight="800" fill="#7a1f24" textLength="58" lengthAdjust="spacingAndGlyphs">${esc(text)}</text></g>`).join('');
+  return `<g class="st-protest" data-group="${esc(group)}">${signs}<g class="st-banner" style="transform:translate(494px,236px)"><rect x="-74" y="-24" width="148" height="34" rx="2" fill="#f4efe0" stroke="#7a1f24" stroke-width="2"/><text x="0" y="-3" text-anchor="middle" font-size="9.5" font-weight="900" fill="#7a1f24" textLength="132" lengthAdjust="spacingAndGlyphs">${esc(label.toUpperCase().slice(0, 34))}</text><rect x="-60" y="10" width="2.4" height="62" fill="#8b7a5e"/><rect x="58" y="10" width="2.4" height="62" fill="#8b7a5e"/></g>${people}</g>`;
 }
 
 // ---------- the settings ----------
@@ -102,7 +115,7 @@ function studioFront(scene, members) {
   const camera = (x, tally) => `<g class="st-camera" style="transform:translate(${x}px,334px)"><rect x="-22" y="-26" width="44" height="30" rx="5" fill="#1b232b"/><rect x="-16" y="-34" width="32" height="12" rx="3" fill="#2c3944"/><circle cx="0" cy="-12" r="9" fill="#0b0f13" stroke="#5c6b78" stroke-width="2"/><circle class="st-tally${tally ? ' is-on' : ''}" cx="16" cy="-30" r="3" fill="#d42e2e"/><rect x="-3" y="4" width="6" height="14" fill="#38444f"/></g>`;
   return `${desk(128, 190, 246, 50)}${desk(512, 190, 246, 50)}${desk(320, 160, 222, 44)}${camera(46, true)}${camera(594, false)}`;
 }
-function audienceSides(seed, crowd) { return `<g class="st-crowd is-${crowd}" data-crowd>${crowdSvg(`${seed}|aud`, [[352, 0.62, 5], [338, 0.5, 6]], { x0: 8, x1: 124, flags: 0 })}${crowdSvg(`${seed}|aud2`, [[352, 0.62, 5], [338, 0.5, 6]], { x0: 516, x1: 632, flags: 0 })}</g>`; }
+function audienceSides(seed, crowd) { return `<g class="st-crowd is-${crowd}" data-crowd>${crowdSvg(`${seed}|aud`, [[352, 0.62, 5], [338, 0.5, 6]], { x0: 8, x1: 124 })}${crowdSvg(`${seed}|aud2`, [[352, 0.62, 5], [338, 0.5, 6]], { x0: 516, x1: 632 })}</g>`; }
 
 export function studioSvg(scene, stage, node, uid) {
   const members = ['giocatore', 'rivale', 'conduttore'].map(role => scene.cast.find(item => item.role === role));
@@ -112,13 +125,17 @@ export function studioSvg(scene, stage, node, uid) {
 }
 
 export function squareSvg(scene, stage, node, uid, identity) {
-  const color = identity?.accent ?? '#a82f3a';
+  const color = identity?.accent ?? '#a82f3a', ink = inkOn(color);
+  const me = scene.cast.find(item => item.role === 'giocatore'), partyName = String(identity?.name ?? scene.party.name ?? '');
+  const playerY = stage.poses[me.id]?.y ?? 222;
+  // the speaker walks along an aisle of the crowd (nobody stands in it); a row is drawn behind or in front of him by where his feet are
+  const crowd = crowdSvg(scene.seed, [[262, 0.52, 18], [276, 0.64, 20], [291, 0.78, 20], [307, 0.92, 18]], { color, abbr: identity?.mark ?? identity?.abbreviation ?? scene.party.abbreviation ?? partyName, aisle: [196, 282], split: true, signs: [], flags: [{ x: 108, kind: 'tricolore' }, { x: 150, kind: 'partito' }, { x: 176, kind: 'tricolore', y: 296 }, ...(stage.protest ? [] : [{ x: 540, kind: 'partito' }, { x: 600, kind: 'tricolore' }, { x: 500, kind: 'tricolore', y: 296 }])] });
   const actors = [...scene.cast].filter(item => item.role === 'giocatore').map((member, index) => actorSvg(member, stage.poses[member.id], `${uid}a${index}`, { speaking: node.speaker === member.id, expression: node.speaker === member.id ? node.expression : null })).join('');
   const lamps = [70, 190, 450, 570].map((x, i) => `<g><rect x="${x - 1.5}" y="150" width="3" height="104" fill="#2a2f36"/><circle class="st-bulb" style="--d:${i * 300}ms" cx="${x}" cy="148" r="5" fill="#ffe6a6"/></g>`).join('');
   const bulbs = Array.from({ length: 22 }, (_, i) => `<circle class="st-bulb" style="--d:${i * 140}ms" cx="${i * 30 - 10}" cy="${40 + Math.sin(i * 0.9) * 8 + 10}" r="2.6" fill="#ffd978"/>`).join('');
   const windows = (x0, w, rows, cols) => Array.from({ length: rows * cols }, (_, i) => `<rect x="${x0 + 12 + (i % cols) * (w - 24) / cols}" y="${74 + Math.floor(i / cols) * 34}" width="12" height="18" rx="2" fill="${unit(`${scene.seed}|w${x0}${i}`) < 0.55 ? '#f3d58a' : '#314054'}" opacity=".9"/>`).join('');
   const spots = [236, 330, 424].map((x, i) => `<g class="st-spot" style="--d:${i * 450}ms"><path d="M${x} 168L${x - 46} 232H${x + 46}Z" fill="#fff2c4" opacity=".1"/><circle cx="${x}" cy="166" r="5" fill="#fff6d8"/></g>`).join('');
-  const protest = stage.protest ? protestSvg(scene.seed, scene.protest?.reason?.label ?? 'protesta') : '';
+  const protest = stage.protest ? protestSvg(scene.seed, scene.protest?.reason?.group ?? scene.protest?.reason?.label ?? 'protesta', scene.protest?.reason?.group ?? '', scene.protest?.reason?.slogans ?? []) : '';
   return { body: `<defs>${sky(`${uid}-sky`, '#1a2a4a', '#e0a06a')}${sky(`${uid}-ground`, '#5a5148', '#2c2823')}</defs>`
     + `<rect x="-200" y="-100" width="1040" height="330" fill="url(#${uid}-sky)"/>`
     + `<g class="st-town"><rect x="-60" y="52" width="160" height="190" fill="#3b3646"/>${windows(-60, 160, 5, 4)}<rect x="540" y="44" width="160" height="198" fill="#3a3342"/>${windows(540, 160, 5, 4)}`
@@ -126,12 +143,13 @@ export function squareSvg(scene, stage, node, uid, identity) {
     + `<rect x="-200" y="212" width="1040" height="200" fill="url(#${uid}-ground)"/>${Array.from({ length: 9 }, (_, i) => `<path d="M${-60 + i * 90} 360L${160 + i * 40} 214" stroke="#000" stroke-opacity=".12" stroke-width="1"/>`).join('')}`
     + `<g class="st-bulbs">${bulbs}</g>${lamps}`
     + `<g class="st-palco"><rect x="170" y="196" width="300" height="46" fill="#2c2f38"/><rect x="170" y="196" width="300" height="6" fill="#8d96a6"/><rect x="170" y="232" width="300" height="12" fill="${color}"/><rect x="236" y="152" width="168" height="6" fill="#1a1d23"/><rect x="236" y="152" width="4" height="46" fill="#1a1d23"/><rect x="400" y="152" width="4" height="46" fill="#1a1d23"/>`
-    + `<g class="st-backdrop"><rect x="214" y="86" width="212" height="62" rx="4" fill="${color}"/>${logoMark(identity, 262, 117, 42, uid)}<text x="352" y="112" text-anchor="middle" font-size="12" font-weight="900" fill="#fff" textLength="116" lengthAdjust="spacingAndGlyphs">${esc((identity?.name ?? scene.party.name).toUpperCase().slice(0, 22))}</text><text x="352" y="128" text-anchor="middle" font-size="8.5" font-weight="700" fill="#fff" opacity=".9">${esc(scene.place.label)}</text></g>`
+    + `<g class="st-backdrop"><rect x="214" y="54" width="212" height="62" rx="4" fill="${color}"/>${logoMark(identity, 252, 85, 40, uid)}<text x="344" y="79" text-anchor="middle" class="st-name" font-size="13.5" font-weight="900" fill="${ink}" textLength="${Math.min(126, Math.max(40, me.name.length * 7.4))}" lengthAdjust="spacingAndGlyphs">${esc(me.name)}</text><text x="344" y="97" text-anchor="middle" class="st-party" font-size="9.5" font-weight="700" fill="${ink}" textLength="${Math.min(126, Math.max(40, partyName.length * 5.4))}" lengthAdjust="spacingAndGlyphs">${esc(partyName)}</text></g>`
     + `<g class="st-speaker"><rect x="176" y="164" width="22" height="32" rx="3" fill="#111"/><circle cx="187" cy="174" r="5" fill="#333"/><circle cx="187" cy="187" r="7" fill="#333"/></g><g class="st-speaker"><rect x="442" y="164" width="22" height="32" rx="3" fill="#111"/><circle cx="453" cy="174" r="5" fill="#333"/><circle cx="453" cy="187" r="7" fill="#333"/></g>${spots}`
     + `<path d="M232 244H262V250H232Z" fill="#4b4f5a"/><path d="M226 250H268V256H226Z" fill="#4b4f5a"/>`
     + `<g class="st-mic"><rect x="329" y="170" width="2.4" height="52" fill="#1a1d23"/><ellipse cx="330" cy="168" rx="4" ry="6" fill="#222"/><path d="M322 222H338" stroke="#1a1d23" stroke-width="3"/></g></g>`
-    + `<g class="st-crowd is-${stage.crowd}" data-crowd>${crowdSvg(scene.seed, [[262, 0.52, 18], [276, 0.64, 20], [291, 0.78, 20], [307, 0.92, 18]], { color, signs: scene.protest?.arrived ? [] : ['SI VOTA', 'INSIEME'], flags: 5 })}</g>`
-    + `${protest}<g class="st-actors">${actors}</g>` };
+    + `${crowd.rows.filter(row => row.y <= playerY).map(row => `<g class="st-crowd is-${stage.crowd}" data-crowd>${row.html}</g>`).join('')}`
+    + `${protest}<g class="st-actors">${actors}</g>`
+    + `${crowd.rows.filter(row => row.y > playerY).map(row => `<g class="st-crowd is-${stage.crowd}" data-crowd>${row.html}</g>`).join('')}<g class="st-flags is-${stage.crowd}">${crowd.extra}</g>` };
 }
 
 export function stationSvg(scene, stage, node, uid) {
@@ -156,7 +174,7 @@ export function stationSvg(scene, stage, node, uid) {
 // ---------- the cameras ----------
 export const CAMERAS = Object.freeze({
   wide: { x: 320, y: 180, s: 1 }, panorama: { x: 320, y: 186, s: 1 }, host: { x: 320, y: 232, s: 1.3 }, left: { x: 150, y: 235, s: 1.7 }, right: { x: 490, y: 235, s: 1.7 }, crowd: { x: 320, y: 290, s: 1.5 },
-  follow: { x: 260, y: 270, s: 1.3 }, stage: { x: 330, y: 190, s: 1.45 }, protest: { x: 420, y: 240, s: 1.2 }, player: { x: 330, y: 182, s: 1.8 }, booth: { x: 440, y: 222, s: 1.4 }, urn: { x: 220, y: 235, s: 1.35 }
+  follow: { x: 260, y: 270, s: 1.3 }, stage: { x: 330, y: 190, s: 1.45 }, protest: { x: 420, y: 205, s: 1.15 }, player: { x: 330, y: 182, s: 1.8 }, booth: { x: 440, y: 222, s: 1.4 }, urn: { x: 220, y: 235, s: 1.35 }
 });
 export const cameraTransform = name => { const c = CAMERAS[name] ?? CAMERAS.wide; return `translate(${(STAGE_W / 2 - c.s * c.x).toFixed(1)}px,${(STAGE_H / 2 - c.s * c.y).toFixed(1)}px) scale(${c.s})`; };
 export { depthScale, STAGE_W, STAGE_H, defsOf };

@@ -253,7 +253,7 @@ function rivals(state, parties, logoFor) {
       const candidate = campaign.candidates.find(item => item.id === group.leaderCandidateId);
       const party = parties.find(item => item.id === candidate?.partyId);
       const logo = party ? logoFor(party) : null;
-      const name = candidate?.isPlayer ? 'La tua candidatura' : candidate?.realReference?.fullName ?? 'Candidatura simulata';
+      const name = candidate?.isPlayer ? 'La tua candidatura' : candidate?.realReference?.fullName ?? candidate?.displayName ?? 'Candidato simulato';
       const label = candidate?.isPlayer ? (party?.officialName ?? party?.name ?? 'Indipendente') : candidate?.realReference ? `Deputato in carica${candidate.realReference.groupName ? ` · ${candidate.realReference.groupName}` : ''}` : party?.officialName ?? party?.name ?? 'Lista simulata';
       return { _class: candidate?.isPlayer ? 'is-player' : '', pos: `${group.position}ª`, name: `<span class="eh-cand">${logo ? `<img src="${esc(logo)}" alt="" loading="lazy">` : `<i>${esc((party?.abbreviation ?? name).slice(0, 2))}</i>`}<span><strong>${esc(name)}</strong><small>${esc(label)}${(group.members?.length ?? 1) > 1 ? ` · coalizione di ${group.members.length}` : ''}</small></span></span>`, share: `<span class="eh-share"><b>${pct(group.share)}</b>${bar(group.share, candidate?.isPlayer ? 'good' : '')}</span>`, action: candidate?.isPlayer ? '' : esc(candidate?.lastAction ?? '') };
     });

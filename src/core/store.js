@@ -971,11 +971,19 @@ function stageContext(s) {
   const approval = s.world?.polls?.at(-1)?.government?.approval ?? s.world?.polls?.at(-1)?.executive?.approval ?? 50;
   const broken = promises.filter(item => item.status === 'non-mantenuta').length;
   const memoryBad = (game.memory ?? []).filter(item => /tradit|scandal|polemic|sconfitt|attacco|interrott/.test(String(item.kind ?? ''))).length;
+  // the facts of the game a protest can come from: a work that is late, a cut to a sector, a controversial or critical event of the last weeks (never invented)
+  const triggers = [];
+  const lateWork = (s.society?.projects ?? []).filter(item => ['progettazione', 'gara', 'cantiere'].includes(item.stage) && (item.delayWeeks ?? 0) >= 8).sort((a, b) => b.delayWeeks - a.delayWeeks)[0];
+  if (lateWork) triggers.push({ kind: 'opera', area: null, label: `l’opera «${lateWork.title ?? lateWork.name ?? 'in ritardo'}» ferma da ${lateWork.delayWeeks} settimane`, weight: 1.5 + Math.min(1, lateWork.delayWeeks / 40) });
+  const cutSector = Object.entries(s.society?.publicFinance?.sectors ?? {}).filter(([, level]) => level < 0).sort((a, b) => a[1] - b[1])[0];
+  if (cutSector) triggers.push({ kind: 'tagli', area: AREA_BY_ID[cutSector[0]] ? cutSector[0] : null, label: `i tagli a ${String(AREA_BY_ID[cutSector[0]]?.label ?? cutSector[0]).toLowerCase()}`, weight: 1.6 });
+  for (const entry of (game.log ?? []).slice(0, 8)) if (/sciopero|crisi|polemic|decreto contest|chiusur|tagli|sospes|inchiest/i.test(String(entry.title ?? ''))) { triggers.push({ kind: 'evento', area: null, label: String(entry.title).replace(/[.]$/, ''), weight: 1.3 }); break; }
+  for (const issue of (s.society?.issues ?? []).filter(item => item.region === region).slice(0, 2)) if (INDICATOR_AREA[issue.indicator]) triggers.push({ kind: 'territorio', area: INDICATOR_AREA[issue.indicator], label: `${String(issue.topic ?? indicatorLabel(issue.indicator)).toLowerCase()} in ${region}`, weight: 1.4 + (issue.severity ?? 0) / 60 });
   const protestLevel = Math.max(0, Math.min(1, (50 - trust) / 70 + broken * 0.16 + (economy.inflation >= 4.5 ? 0.12 : 0) + Math.min(0.2, memoryBad * 0.07) + (governing && approval < 42 ? 0.2 : 0) + (problems[0]?.severity ?? 0) / 120));
   return {
     stats, credibility: quality.score, promises: promises.map(item => ({ id: item.id, label: item.label, area: item.area, status: item.status, intervention: item.intervention })), programAreas: game.party?.program?.areas ?? [],
     territory: { name: region, trust, problems }, economy, events: (game.log ?? []).slice(0, 2).map(item => item.title).filter(Boolean), governing, government: { approval }, relations: { civic: game.relations?.find(item => item.id === 'civic')?.value ?? 50 },
-    memoryBad, protestLevel, rallyMemory: game.flags?.rallyLog ?? []
+    triggers, memoryBad, protestLevel, rallyMemory: game.flags?.rallyLog ?? []
   };
 }
 const HOSTS = ['Marco Valenti', 'Giulia Ferri', 'Paolo Conti', 'Elena Mariani'];
@@ -6129,9 +6137,9 @@ function electionReport(campaign, result, aftermath) {
   // In a general or European election a row is a list, a party or a coalition (never the person at its head, whose name goes in the detail); an independent or local candidacy has no list to name.
   const national = ['politiche', 'europee'].includes(campaign.electionType);
   const candidateOfRow = row => campaign.candidates.find(item => item.id === row.candidateId);
-  const listLabel = row => { const candidate = candidateOfRow(row); if (!candidate) return row.label ?? 'Candidatura simulata'; if (candidate.isPlayer) return 'La tua lista'; if (candidate.partyLabel) return (row.memberCandidateIds?.length ?? 0) > 1 ? `${candidate.partyLabel} e alleati` : candidate.partyLabel; return candidate.realReference?.fullName ?? row.label ?? 'Candidatura simulata'; };
+  const listLabel = row => { const candidate = candidateOfRow(row); if (!candidate) return row.label ?? 'Candidato simulato'; if (candidate.isPlayer) return 'La tua lista'; if (candidate.partyLabel) return (row.memberCandidateIds?.length ?? 0) > 1 ? `${candidate.partyLabel} e alleati` : candidate.partyLabel; return candidate.realReference?.fullName ?? candidate.displayName ?? row.label ?? 'Candidato simulato'; };
   const personOf = row => { const candidate = candidateOfRow(row); return national && candidate && !candidate.isPlayer && candidate.partyLabel ? candidate.realReference?.fullName ?? null : null; };
-  const candidateLabel = row => { if (national) return listLabel(row); const candidate = candidateOfRow(row); return candidate?.isPlayer ? 'La tua lista' : candidate?.realReference?.fullName ?? (candidate?.partyLabel ? `${candidate.partyLabel} (candidatura simulata)` : row.label ?? 'Candidatura simulata'); };
+  const candidateLabel = row => { if (national) return listLabel(row); const candidate = candidateOfRow(row); return candidate?.isPlayer ? 'La tua lista' : candidate?.realReference?.fullName ?? (candidate?.generated ? `${candidate.displayName}${candidate.partyLabel ? ` (${candidate.partyLabel})` : ''}` : candidate?.partyLabel ? `${candidate.partyLabel} (candidatura simulata)` : row.label ?? 'Candidato simulato'); };
   const candidateIdentity = candidate => ({ candidateId:candidate.id,personId:candidate.isPlayer?campaign.playerId:candidate.realReference?.politicianId??null,partyId:candidate.partyId??null,source:candidate.isPlayer?DATA_SOURCES.USER:candidate.realReference?.source===DATA_SOURCES.REAL?DATA_SOURCES.REAL:DATA_SOURCES.SIMULATION,verified:candidate.realReference?.verified===true });
   const latestPoll=campaign.polls?.at(-1);
   const playerPollShare=latestPoll?.results?.find(item=>item.candidateId===campaign.playerCandidateId)?.share;
