@@ -67,14 +67,14 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   await wait(() => evaluate(`Boolean(document.querySelector('[data-aula-live]'))`), 20000);
   const offer = await evaluate(`(() => { const band = document.querySelector('[data-aula-live]'), button = band.querySelector('[data-aula-follow]'); return { text: band.textContent, button: button.textContent.trim(), upper: getComputedStyle(button).textTransform, hasSkip: Boolean(band.querySelector('[data-aula-dismiss]')) }; })()`);
   assert.equal(offer.button, 'SEGUI LA VOTAZIONE', 'Il pulsante dorato della Home.'); assert.ok(offer.hasSkip, 'Si può non seguirla.');
-  assert.ok(!/approvat|respint|favorevoli \d|\d+ (sì|no|contrari)/i.test(offer.text), 'La Home non anticipa l’esito del voto.');
+  assert.ok(!/approva|respinge|fiducia accordata|favorevoli \d|\d+ (sì|no|contrari)/i.test(offer.text), 'La Home non anticipa l’esito del voto.');
   await open('full'); await click('[data-aula-follow]');
   await wait(() => evaluate(`Boolean(document.querySelector('.aula-overlay'))`), 8000);
   assert.equal(await evaluate(`document.querySelector('.aula-overlay').dataset.aulaFinal`), '0', 'All’inizio l’Aula non mostra ancora l’esito.');
-  assert.ok(!/Approvat|Respint|approvat|respint/.test(await evaluate(`document.querySelector('.aula-said').textContent`)), 'Nessun esito nelle frasi del presidente prima della fine.');
+  assert.ok(!/approva:|respinge:|accorda la fiducia|nega la fiducia/.test(await evaluate(`document.querySelector('.aula-said').textContent`)), 'Nessun esito nelle frasi del presidente prima della fine.');
   await click('[data-aula-skip]');
   assert.equal(await evaluate(`document.querySelector('.aula-overlay').dataset.aulaFinal`), '1');
-  assert.ok(/approvat|respint|esito|non approvat/i.test(await evaluate(`document.querySelector('.aula-said').textContent`)), 'Alla fine il presidente proclama l’esito.');
+  assert.ok(/approva:|respinge:|accorda la fiducia|nega la fiducia/.test(await evaluate(`document.querySelector('.aula-said').textContent`)), 'Alla fine il presidente proclama l’esito.');
   await click('[data-aula-close]');
   await pause(500);
   assert.equal(await evaluate(`Boolean(document.querySelector('[data-aula-live]'))`), false, 'Seguita una volta, la votazione non è più proposta.');
