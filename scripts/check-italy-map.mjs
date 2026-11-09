@@ -131,6 +131,21 @@ await withBrowser(async browser => {
     const byParty = { total: await tableTotal(), legend: await legendSize() };
     assert.equal(byBloc.total, 221, `${name}: per schieramenti i collegi sono 221 (147 + 74).`); assert.equal(byParty.total, 221, `${name}: per partiti i collegi sono ancora 221: nessuno sparisce né è contato due volte.`);
     assert.ok(byParty.legend >= byBloc.legend, `${name}: per partiti la legenda ha almeno tanti elementi quanti gli schieramenti (${byParty.legend} / ${byBloc.legend}).`);
+    // the filter by party: the districts a party wins keep their colour, all the others are muted; none lost, the legend names the others, «Tutti i partiti» gives the map back
+    assert.ok(await has('[data-map-party]'), `${name}: il filtro per partito c’è.`);
+    await evaluate(`document.querySelector('[data-map-party]').open = true; true`);
+    const partyButtons = await evaluate(`[...document.querySelectorAll('[data-view-filter="mapParty"]')].map(el => el.dataset.viewFilterValue)`);
+    assert.ok(partyButtons[0] === '' && partyButtons.length >= 3, `${name}: Tutti i partiti più almeno due partiti.`);
+    const cellsBefore = await evaluate(`document.querySelectorAll('.nv-map .nv-cell').length`);
+    await click(`[data-view-filter="mapParty"][data-view-filter-value="${partyButtons[1]}"]`);
+    await wait(() => evaluate(`document.querySelector('[data-view-filter="mapParty"][data-view-filter-value="${partyButtons[1]}"]')?.classList.contains('active')`), 5000);
+    assert.equal(await evaluate(`document.querySelectorAll('.nv-map .nv-cell').length`), cellsBefore, `${name}: con il filtro i collegi sono sempre gli stessi.`);
+    const muted = await evaluate(`[...document.querySelectorAll('.nv-map .nv-cell')].filter(el => el.style.background.includes('201, 207, 203') || el.style.background.includes('c9cfcb')).length`);
+    assert.ok(muted > 0 && muted < cellsBefore, `${name}: i collegi degli altri partiti sono attenuati, quelli del partito scelto no (${muted}/${cellsBefore}).`);
+    assert.ok(await evaluate(`[...document.querySelectorAll('.nv-legend li')].some(li => /Altri partiti/.test(li.textContent))`), `${name}: la legenda nomina gli altri partiti.`);
+    await evaluate(`document.querySelector('[data-map-party]').open = true; true`);
+    await click('[data-view-filter="mapParty"][data-view-filter-value=""]');
+    await wait(() => evaluate(`!document.querySelector('.nv-legend')?.textContent.includes('Altri partiti')`), 5000);
     await click('[data-view-filter="mapGroup"][data-view-filter-value="schieramenti"]'); await pause(300);
     await click('[data-view-filter="mapScope"][data-view-filter-value="province"]'); await wait(() => evaluate(`document.querySelectorAll('.it-area').length === 110`), 5000);
     // 2022 reading is real and its alliances are labelled

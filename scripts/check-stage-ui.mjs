@@ -21,7 +21,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   assert.equal(await sceneNode(), 'arrivo');
   assert.equal(await evaluate(`Boolean(document.querySelector('.st-backdrop'))`), true, 'Il palco ha lo sfondo del partito.');
   assert.ok(await evaluate(`document.querySelectorAll('.st-crowd .cm').length`) > 40, 'C’è una folla.');
-  assert.ok(await evaluate(`document.querySelectorAll('.st-crowd .cm-flag').length`) >= 3, 'Bandiere nella folla.');
+  assert.ok(await evaluate(`document.querySelectorAll('.st-flags .cm-flag').length`) >= 3, 'Bandiere nella folla.');
   assert.equal(await evaluate(`document.querySelectorAll('${player} .av-head').length`), 1, 'Il giocatore ha il suo avatar.');
   const avatarKey = await evaluate(`document.querySelector('${player} .st-avatar')?.innerHTML.length`);
   assert.ok(avatarKey > 500);
@@ -85,27 +85,43 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   await S(`store.sceneAbandon(); return true;`);
   await wait(() => evaluate(`!document.querySelector('.scene')`), 8000);
 
-  console.log('fase: a guest spot in the studio');
-  // ---- a guest spot in the studio
-  assert.equal(await S(`try { store.startTalkShowScene({ source: 'attivita' }); return 'ok'; } catch (e) { return e.message; }`), 'ok', 'L’ospitata si apre.');
-  await wait(() => evaluate(`Boolean(document.querySelector('.scene[data-scene-kind="talkshow"] .st-svg'))`), 8000);
-  await click('[data-scene-motion="full"]');
-  assert.equal(await evaluate(`document.querySelectorAll('.st-actor').length`), 3, 'Giocatore, ospite e conduttore.');
-  assert.ok(await evaluate(`document.querySelectorAll('.st-desk').length`) >= 3, 'Scrivanie.');
-  assert.ok(await evaluate(`document.querySelectorAll('.st-plate').length`) >= 3, 'Targhette.');
-  await click('[data-scene-choice="dati"]');          // preparazione → ingresso: the guests walk in and sit
-  assert.equal(await sceneNode(), 'ingresso');
-  const guest = '.st-actor.role-rivale';
-  const g1 = await rect(guest); await pause(900); const g2 = await rect(guest);
-  assert.ok(Math.abs(g1.x - g2.x) > 5, 'L’ospite entra in studio camminando.');
-  await pause(5200);
-  assert.equal(await evaluate(`document.querySelector('${guest}').dataset.posture`), 'sit', 'Poi si siede.');
-  await click('[data-stage-skip]');
-  // the plates are inside their desks
-  const plates = await evaluate(`[...document.querySelectorAll('.st-plate')].map(p => { const r = p.getBoundingClientRect(), t = p.querySelector('text').getBoundingClientRect(); return t.left >= r.left - 1 && t.right <= r.right + 1; })`);
-  assert.ok(plates.every(Boolean), 'Le targhette contengono il nome senza tagli.');
-  await S(`store.sceneAbandon(); return true;`);
-  await wait(() => evaluate(`!document.querySelector('.scene')`), 8000);
+  console.log('fase: a guest spot in the studio (the three formats)');
+  // ---- a guest spot in the studio: each of the three studios (news and interview, talk show, face to face) has its own scenery, the people sit where that studio puts them, the straps show the names whole
+  const studios = [['tg-sera', 'intervista', { audience: false, straps: 3, plates: 0 }], ['prima-serata', 'talk', { audience: true, straps: 3, plates: 0 }], ['tribuna', 'faccia', { audience: true, straps: 2, plates: 2 }]];
+  const looks = new Set();
+  for (const [showId, format, expect] of studios) {
+    await S(`store.advance(7); return true;`);       // a new week: the days of the last guest spot are spent
+    assert.equal(await S(`try { store.startTalkShowScene({ source: 'attivita', showId: ${JSON.stringify(showId)} }); return 'ok'; } catch (e) { return e.message; }`), 'ok', 'L’ospitata si apre.');
+    await wait(() => evaluate(`Boolean(document.querySelector('.scene[data-scene-kind="talkshow"] .st-svg'))`), 8000);
+    await click('[data-scene-motion="full"]');
+    assert.equal(await evaluate(`document.querySelector('.st-svg').dataset.format`), format, `Lo studio è quello del formato ${format}.`);
+    assert.equal(await evaluate(`document.querySelectorAll('.st-actor').length`), 3, 'Giocatore, ospite e conduttore.');
+    assert.ok(await evaluate(`document.querySelectorAll('.st-desk').length`) >= 1, 'Scrivania o leggio.');
+    assert.equal(await evaluate(`document.querySelectorAll('.st-plate').length`), expect.plates, 'Targhette sui leggii del faccia a faccia, non altrove.');
+    assert.equal(await evaluate(`document.querySelectorAll('.st-crowd .cm').length > 20`), expect.audience, expect.audience ? 'Il pubblico in studio.' : 'Nello studio del notiziario non c’è pubblico.');
+    assert.equal(await evaluate(`document.querySelectorAll('.st-strap').length`) >= 2, true, 'Le didascalie con i nomi.');
+    assert.equal(await evaluate(`document.querySelectorAll('.st-strap').length`) + (await evaluate(`document.querySelector('.st-strap.is-speaking') ? 0 : 0`)), expect.straps, 'Le didascalie dei tre protagonisti (o dei due candidati).');
+    assert.equal(await evaluate(`Boolean(document.querySelector('.st-ticker text'))`), true, 'La striscia delle notizie.');
+    looks.add(await evaluate(`document.querySelector('.st-svg').innerHTML.length`));
+    await click('[data-scene-choice="dati"]');          // preparazione → ingresso: the guests walk in and sit
+    assert.equal(await sceneNode(), 'ingresso');
+    if (format === 'intervista') {
+      const guest = '.st-actor.role-rivale';
+      const g1 = await rect(guest); await pause(900); const g2 = await rect(guest);
+      assert.ok(Math.abs(g1.x - g2.x) > 5, 'L’ospite entra in studio camminando.');
+      await pause(5200);
+      assert.equal(await evaluate(`document.querySelector('${guest}').dataset.posture`), 'sit', 'Poi si siede.');
+    }
+    await click('[data-stage-skip]');
+    // names and tags are whole inside their straps, the ticker text stays inside its strip
+    const straps = await evaluate(`[...document.querySelectorAll('.st-strap')].map(g => { const r = g.querySelector('rect').getBoundingClientRect(); return [...g.querySelectorAll('text')].every(t => { const b = t.getBoundingClientRect(); return b.left >= r.left - 1 && b.right <= r.right + 1 && b.top >= r.top - 1 && b.bottom <= r.bottom + 1; }); })`);
+    assert.ok(straps.every(Boolean), 'I nomi e i ruoli stanno interi nelle didascalie.');
+    const ticker = await evaluate(`(() => { const rects = document.querySelectorAll('.st-ticker > rect'), strip = rects[0].getBoundingClientRect(), tab = rects[1].getBoundingClientRect(), t = document.querySelector('.st-ticker g[clip-path] text').getBoundingClientRect(); return t.right <= strip.right + 1 && t.left >= tab.right - 1; })()`);
+    assert.ok(ticker, 'La notizia sta dentro la striscia.');
+    await S(`store.sceneAbandon(); return true;`);
+    await wait(() => evaluate(`!document.querySelector('.scene')`), 8000);
+  }
+  assert.equal(looks.size, 3, 'I tre studi sono disegnati in modo diverso.');
 
   console.log('fase: the vote');
   // ---- the vote

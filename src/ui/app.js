@@ -1689,6 +1689,16 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
       return;
     }
+    const proposalControl = event.target.closest('[data-proposal-move],[data-proposal-state],[data-proposal-delete]');
+    if (proposalControl) {
+      try {
+        if (proposalControl.matches('[data-proposal-move]')) store.moveProposal(proposalControl.dataset.proposalMove, Number(proposalControl.dataset.dir));
+        else if (proposalControl.matches('[data-proposal-state]')) store.setProposalState(proposalControl.dataset.proposalState, proposalControl.dataset.state);
+        else if (window.confirm?.('Eliminare questa proposta dal programma?') !== false) store.deleteProposal(proposalControl.dataset.proposalDelete);
+        playSound('confirm');
+      } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
+      return;
+    }
     const nightControl = event.target.closest('[data-night-next],[data-night-conclude],[data-night-say],[data-night-tab],[data-night-area]');
     if (nightControl) {
       try {
@@ -2056,6 +2066,15 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       // A ready colour for the second colour of the logo: it is written in the picker and in its value, and the preview follows.
       const logoSwatch = event.target.closest('[data-logo-secondary]');
       if (logoSwatch) { syncWizardDraft(); wizard.partyLogoSecondaryColor = logoSwatch.dataset.logoSecondary; const top = root.querySelector?.('.wizard-body')?.scrollTop ?? 0; render(store.getState(), store.getLastSaved()); const body = root.querySelector?.('.wizard-body'); if (body) body.scrollTop = top; return; }
+      if (event.target.closest('[data-avatar-shape-reset]')) {
+        syncWizardDraft();
+        const { shape, ...rest } = wizard.avatar ?? {};
+        wizard.avatar = normalizeAvatar(rest); wizard.errors = [];
+        const top = root.querySelector?.('.wizard-body')?.scrollTop ?? 0;
+        render(store.getState(), store.getLastSaved());
+        const body = root.querySelector?.('.wizard-body'); if (body) body.scrollTop = top;
+        return;
+      }
       const avatarChoice = event.target.closest('[data-avatar-field]');
       if (avatarChoice) {
         syncWizardDraft();
@@ -2369,6 +2388,17 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       const data = new FormData(form);
       try { store.diplomacyAction('negotiate-open', data.get('type'), data.get('country')); playSound('confirm'); }
       catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
+    } else if (form.matches('[data-proposal-form],[data-proposal-edit-form],[data-proposal-link-form]')) {
+      event.preventDefault();
+      const data = new FormData(form);
+      try {
+        if (form.matches('[data-proposal-link-form]')) store.linkProposal(form.dataset.proposalId, data.get('promise') || null);
+        else {
+          const input = { area: data.get('area'), title: data.get('title'), problem: data.get('problem'), objective: data.get('objective'), cost: data.get('cost'), financing: data.get('financing'), deadlineWeeks: data.get('deadlineWeeks'), territory: data.get('territory'), region: data.get('region'), measures: [0, 1, 2, 3].map(index => ({ instrument: data.get(`instrument${index}`), text: data.get(`measure${index}`) })).filter(item => item.text) };
+          if (form.matches('[data-proposal-form]')) store.addProposal(input); else store.editProposal(form.dataset.proposalId, input);
+        }
+        playSound('confirm');
+      } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
     } else if (form.matches('[data-promise-form],[data-promise-modify-form]')) {
       event.preventDefault();
       const data = new FormData(form);
@@ -2442,6 +2472,16 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     views.open = { ...(views.open ?? {}), [element.dataset.remember]: element.open };
     saveViews();
   }, true);
+  // The proportion sliders of the avatar: the draft follows the slider and the preview is redrawn in place (the focus stays on the slider).
+  root.addEventListener('input', event => {
+    const slider = event.target.closest?.('[data-avatar-shape]');
+    if (!slider || !wizard) return;
+    const field = slider.dataset.avatarShape;
+    wizard.avatar = normalizeAvatar({ ...wizard.avatar, shape: { ...(wizard.avatar?.shape ?? {}), [field]: Number(slider.value) } });
+    const out = root.querySelector?.(`[data-avatar-shape-out="${field}"]`); if (out) out.textContent = `${Number(slider.value) > 0 ? '+' : ''}${Number(slider.value)}`;
+    const preview = root.querySelector?.('[data-avatar-preview]'); if (preview) preview.innerHTML = avatarSvg(wizard.avatar, { size: 200, label: 'Anteprima dell’avatar' });
+    const reset = root.querySelector?.('[data-avatar-shape-reset]'); if (reset) reset.disabled = !wizard.avatar.shape;
+  });
   // The search box of “Altro” filters its pages in place, without redrawing anything.
   root.addEventListener('input', event => {
     const guideBox = event.target.closest?.('[data-guide-search]');
@@ -2810,7 +2850,7 @@ function subpage(state, page, player, party, events, catalog, options = {}) {
     politici: `<div class="catalog-body" data-catalog-body>${renderPoliticianArchive(catalog,{status:catalogStatus,logoFor:options.logoFor})}</div>`,
     'partiti-lista': `<div class="catalog-body" data-catalog-body>${renderPartyArchive(catalog,{status:catalogStatus,logoFor:options.logoFor})}</div>`,
     sondaggi: renderObservatory(state, observatoryOptions(state, options)),
-    elezioni: renderElectionsHub(state, { parties: options.parties ?? [], logoFor: options.logoFor, tab: options.tabFor?.('elezioni', state), national: options.nationalOverview, geography: options.electoralGeography?.() ?? null, nationalView: options.views?.filters?.nazionali, nationalMap: { boundaries: realDatabase.italyBoundaries ?? null, status: optionalDocumentStatus('italyBoundaries'), scope: options.views?.filters?.mapScope, group: options.views?.filters?.mapGroup, selected: options.views?.filters?.mapSel }, campaignPicks: options.campaignPicks, program: options.programView?.() ?? null, presidency: options.presidencyView, polls: observatoryOptions(state, options), races: { raceOptions: options.raceOptions } }),
+    elezioni: renderElectionsHub(state, { parties: options.parties ?? [], logoFor: options.logoFor, tab: options.tabFor?.('elezioni', state), national: options.nationalOverview, geography: options.electoralGeography?.() ?? null, nationalView: options.views?.filters?.nazionali, nationalMap: { boundaries: realDatabase.italyBoundaries ?? null, status: optionalDocumentStatus('italyBoundaries'), scope: options.views?.filters?.mapScope, group: options.views?.filters?.mapGroup, party: options.views?.filters?.mapParty, selected: options.views?.filters?.mapSel }, campaignPicks: options.campaignPicks, program: options.programView?.() ?? null, presidency: options.presidencyView, polls: observatoryOptions(state, options), races: { raceOptions: options.raceOptions } }),
     partito: state.game ? renderPartyPage(state, { filters: options.views?.filters ?? {}, tab: options.tabFor?.('partito', state), record: party, logoFor: options.logoFor, selectable: options.selectable ?? [], territory: { units: realDatabase.territorialUnits ?? [], municipalities: isRealCollectionLoaded('municipalities') ? realDatabase.municipalities : null, home: options.homePlace?.() ?? {}, filter: options.views?.filters?.comitati ?? 'tutti', region: options.views?.filters?.['comitati-regione'] ?? '', found: { region: options.views?.filters?.['found-region'], unit: options.views?.filters?.['found-unit'], municipality: options.views?.filters?.['found-municipality'] } } }) : `<div class="feature-card party-detail-card"><span class="feature-icon">◇</span><div class="eyebrow">${party ? 'AFFILIAZIONE ATTUALE' : 'PROFILO INDIPENDENTE'}</div><div class="party-detail-heading">${party && options.logoFor?.(party) ? `<img src="${esc(options.logoFor(party))}" alt="${esc(party.logoAlt || `Logo di ${party.officialName || party.name}`)}" />` : ''}<h2>${party ? esc(party.officialName || party.name) : 'Nessuna affiliazione'}</h2></div><p>${party ? esc(party.source === DATA_SOURCES.REAL ? party.factualDescription || 'Descrizione non disponibile nelle fonti consultate.' : party.description || 'Partito pronto a essere configurato.') : 'Sei indipendente. Qui sotto puoi aderire a un partito oppure continuare senza affiliazione.'}</p><div class="party-detail-meta">${party ? `<span class="source-pill">${sourceLabel(party.source)}${party.source === DATA_SOURCES.REAL ? ' verificato' : ''}</span>${party.abbreviation ? `<span>${esc(party.abbreviation)}</span>` : ''}${party.orientation ? `<span><small>ORIENTAMENTO</small><strong>${esc(party.orientation)}</strong></span>` : ''}${party.status ? `<span>${esc(party.status)}</span>` : ''}` : '<span class="source-pill">Nessuna affiliazione</span>'}</div>${party?.source === DATA_SOURCES.REAL && party.sourceUrl ? `<a class="catalog-source" href="${esc(party.sourceUrl)}" target="_blank" rel="noopener noreferrer">Fonte ufficiale ↗</a>` : ''}${party?.policyPositions ? `<div class="policy-summary">${[['economia','Economia'],['welfare','Welfare'],['ambiente','Ambiente'],['europa','Europa']].map(([key,label]) => `<span><small>${label}</small><strong>${Number(party.policyPositions[key] ?? 3)} <i>/ 5</i></strong><b><i style="width:${Number(party.policyPositions[key] ?? 3)*20}%"></i></b></span>`).join('')}</div>` : ''}</div>`,
     carriera: renderCareerPage(state, { tab: options.tabFor?.('carriera', state), timelineFilter: options.views?.timelineFilter, challenges: state.game ? options.challengeView?.() ?? null : null }),
     profilo: `<div class="profile-page"><section class="profile-page-lead"><div class="hero-avatar has-avatar">${player ? avatarSvg(avatarOf(player), { size: 96, label: 'Avatar di ' + player.displayName }) : 'P'}</div><div><span class="section-kicker">IL TUO POLITICO</span><h2>${player ? esc(player.displayName) : 'Nessun profilo creato'}</h2><p>${player ? `${esc(player.previousProfession)} · residente a ${esc(player.municipality)}, ${esc(player.region)}` : 'Crea una carriera per definire il tuo profilo.'}</p></div>${player ? '' : '<button class="primary-button" data-action="new-career">Nuova carriera ' + icon('arrow', 16) + '</button>'}</section><div class="profile-page-facts"><div><span>INCARICO</span><strong>${player?.roleId && state.dataset.offices.some(item => item.id === player.roleId) ? esc(officeLabel(state.dataset.offices.find(item => item.id === player.roleId))) : 'Da assegnare'}</strong></div><div><span>TERRITORIO</span><strong>${esc(state.dataset.territories.find(item => item.id === player?.territoryId)?.name ?? player?.region ?? 'Italia')}</strong></div><div><span>PARTITO</span><strong>${party ? esc(partyName(party)) : 'Indipendente'}</strong></div></div><section class="profile-metrics"><h3>Statistiche</h3>${profileMetrics}</section><button class="text-link" data-nav="politici">Esplora i profili politici ${icon('arrow', 16)}</button></div>`,

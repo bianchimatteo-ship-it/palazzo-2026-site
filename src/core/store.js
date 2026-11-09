@@ -18,7 +18,8 @@ import { abandonRally } from './rally-scene.js?v=20261107-1';
 import { answerRivalMove, rivalPulse, rivalsView } from './rival-life-engine.js?v=20261107-1';
 import { abandonChallenge as abandonChallengeRun, challengeView as challengeViewOf, recordVerdict as recordChallengeVerdict, startChallenge as startChallengeRun, tickChallenge } from './challenge-engine.js?v=20261107-1';
 import { tickerFor } from './studio-lines.js?v=20261107-1';
-import { accordPromises, credibility as programCredibility, derivePriorities, makePromise as makeProgramPromise, modifyPromise as modifyProgramPromise, promisesOf, rivalProgram, tickPromises, topicOfArea, withdrawPromise as withdrawProgramPromise } from './program-engine.js?v=20261107-1';
+import { assessProposal, createProposal, linkProposal as linkProposalTo, moveProposals, programPreview as programPreviewOf, proposalContext, proposalCredibility, proposalsOf, removeProposals, setProposalState as setProposalStateOf, updateProposal as updateProposalOf, linkableTo, FINANCING, TERRITORIES, DEADLINES, PROPOSAL_LIMIT } from './program-proposals.js?v=20261107-1';
+import { accordPromises, areaIndicator as areaIndicatorOf, credibility as baseProgramCredibility, derivePriorities, makePromise as makeProgramPromise, modifyPromise as modifyProgramPromise, promisesOf, rivalProgram, tickPromises, topicOfArea, withdrawPromise as withdrawProgramPromise } from './program-engine.js?v=20261107-1';
 import { advanceDays, formatDate } from './time.js?v=20261107-1';
 import { CALENDAR_RULES } from './calendar-planner.js?v=20261107-1';
 import { GENDERS, STARTING_OFFICES, STARTING_ROLES, normalizeGender, validateNewCareerDraft } from './career-rules.js?v=20261107-1';
@@ -116,6 +117,11 @@ function hydrateState(saved) {
   return { ...saved, dataset, ui: { ...(saved.ui ?? {}) }, campaign: saved.campaign ?? null, parliament: saved.parliament ?? null };
 }
 
+// The credibility of the programme: the promises (program-engine.js) and the published proposals of the programme editor (program-proposals.js: covered ones help, uncovered ones hurt).
+function programCredibility(game, options = {}) {
+  const base = baseProgramCredibility(game, options), extra = proposalCredibility(game, { society: options.society ?? null });
+  return extra.delta || extra.notes.length ? { ...base, score: Math.round(Math.max(5, Math.min(100, base.score + extra.delta))), notes: [...base.notes, ...extra.notes] } : base;
+}
 const playerOf = s => s.dataset.politicians.find(item => item.id === s.career.playerId) ?? null;
 const statsOf = s => Object.fromEntries(s.dataset.statistics.filter(item => item.subjectId === s.career.playerId).map(item => [item.metric, item.value]));
 const playerStat = (s, metric, fallback = 50) => statsOf(s)[metric] ?? fallback;
@@ -982,10 +988,23 @@ function stageContext(s) {
   for (const issue of (s.society?.issues ?? []).filter(item => item.region === region).slice(0, 2)) if (INDICATOR_AREA[issue.indicator]) triggers.push({ kind: 'territorio', area: INDICATOR_AREA[issue.indicator], label: `la situazione su ${String(issue.topic ?? indicatorLabel(issue.indicator)).toLowerCase()} in ${region}`, weight: 1.4 + (issue.severity ?? 0) / 60 });
   const protestLevel = Math.max(0, Math.min(1, (50 - trust) / 70 + broken * 0.16 + (economy.inflation >= 4.5 ? 0.12 : 0) + Math.min(0.2, memoryBad * 0.07) + (governing && approval < 42 ? 0.2 : 0) + (problems[0]?.severity ?? 0) / 120));
   return {
-    stats, credibility: quality.score, promises: promises.map(item => ({ id: item.id, label: item.label, area: item.area, status: item.status, intervention: item.intervention })), programAreas: game.party?.program?.areas ?? [],
+    stats, credibility: quality.score, promises: promises.map(item => ({ id: item.id, label: item.label, area: item.area, status: item.status, intervention: item.intervention })), programAreas: [...new Set([...proposalContext(game, { society: s.society }).areas, ...(game.party?.program?.areas ?? [])])], proposals: proposalContext(game, { society: s.society }),
     territory: { name: region, trust, problems }, economy, events: (game.log ?? []).slice(0, 2).map(item => item.title).filter(Boolean), governing, government: { approval }, relations: { civic: game.relations?.find(item => item.id === 'civic')?.value ?? 50 },
     triggers, memoryBad, protestLevel, rallyMemory: game.flags?.rallyLog ?? []
   };
+}
+// What the programme editor shows: every proposal with its assessment, the promise it is linked to (and how that promise stands), the promises it can be linked to, the indicator of its area, the preview.
+function proposalsView(s) {
+  const game = s.game;
+  const region = playerOf(s)?.region ?? game?.place?.region ?? null;
+  const promises = promisesOf(game);
+  const list = [...proposalsOf(game)].sort((a, b) => a.priority - b.priority).map(item => ({
+    ...item, assessment: assessProposal(game, item, { society: s.society }), linked: promises.find(promise => promise.id === item.linkedPromiseId) ?? null,
+    linkable: linkableTo(game, item).map(promise => ({ id: promise.id, label: promise.label, intervention: promise.intervention, status: promise.status })),
+    indicator: areaIndicatorOf(s.society, item.area, item.territory === 'nazionale' ? null : (item.region ?? region))
+  }));
+  const party = game?.party?.label ?? 'Indipendente';
+  return { list, limit: PROPOSAL_LIMIT, financing: Object.entries(FINANCING).map(([id, spec]) => ({ id, ...spec })), territories: TERRITORIES, deadlines: DEADLINES, region, preview: programPreviewOf(game, { society: s.society, party, player: playerOf(s)?.displayName ?? '' }) };
 }
 const HOSTS = ['Marco Valenti', 'Giulia Ferri', 'Paolo Conti', 'Elena Mariani'];
 const GUESTS = ['Roberto Neri', 'Chiara Bosco', 'Davide Longo', 'Silvia Marchetti', 'Andrea Costa', 'Laura Pellegrini'];
@@ -4103,7 +4122,7 @@ export const store = {
     const { events, ticker } = studioTicker(state, { topic: main.label, rivalName: label, rivalProgramLabels: rivalAreas });
     const tags = studioTags(state, { rivalTag: `Candidato · ${rival.partyLabel ?? state.world?.parties?.find(item => item.id === rival.partyId)?.label ?? 'Indipendente'}`, hostTag: 'Moderatore' });
     const scene = sceneWithStats(createDebateScene({
-      id, seed: `${campaign.seed}|${id}`, show: show.id, ticker, events, rivalProgramLabels: rivalAreas, player: { name: player?.displayName ?? 'Tu', tag: tags.player }, playerAvatar: avatarOf(player), rival: { id: rival.id, name: label, partyId: rival.partyId ?? null, tag: tags.rival }, host: { id: `conduttore-${hosts[hashSeed(id) % hosts.length]}`, name: hosts[hashSeed(id) % hosts.length], tag: tags.host },
+      id, seed: `${campaign.seed}|${id}`, show: show.id, ticker, events, rivalProgramLabels: rivalAreas, weakProposal: proposalContext(state.game, { society: state.society }).weak?.title ?? null, player: { name: player?.displayName ?? 'Tu', tag: tags.player }, playerAvatar: avatarOf(player), rival: { id: rival.id, name: label, partyId: rival.partyId ?? null, tag: tags.rival }, host: { id: `conduttore-${hosts[hashSeed(id) % hosts.length]}`, name: hosts[hashSeed(id) % hosts.length], tag: tags.host },
       topic: main, secondTopic: second, salientTopic: campaign.nationalContext?.salientTopic ?? null, promises: promisesOf(state.game).filter(item => !['mantenuta', 'parzialmente-mantenuta', 'non-mantenuta', 'modificata'].includes(item.status) || item.status === 'non-mantenuta').map(item => ({ id: item.id, label: item.label, topic: topicOfArea(item.area), status: item.status, intervention: item.intervention, cost: item.cost })),
       credibility: quality.score, prep: campaign.preparationByTopic?.[main.id] ?? 0, rivalProgram: rivalProgram(state.world, rival.partyId), rivalReadiness: rival.campaignStats?.debateReadiness ?? 50, rivalAggression: 30 + hashSeed(`${rival.id}|aggressivita`) % 50, crisis: Boolean(campaign.crisis), campaignId: campaign.id, date: state.clock.currentDate
     }), { competence: (playerStat(state, 'experience') + playerStat(state, 'influence')) / 2, charisma: (playerStat(state, 'notoriety') + playerStat(state, 'reputation')) / 2 });
@@ -4269,7 +4288,61 @@ export const store = {
     const reputation = playerStat(state, 'reputation');
     const campaign = state.campaign?.status === 'active' ? state.campaign : null;
     const rivals = campaign ? campaign.candidates.filter(item => !item.isPlayer && item.status === 'active').map(item => ({ id: item.id, label: item.label ?? item.name ?? item.id, partyId: item.partyId ?? null, areas: rivalProgram(state.world, item.partyId) })) : [];
-    return { known: rivalsView(game, partyId => partyId ? rivalProgram(state.world, partyId) : []), promises, accord: accordPromises(state.parliament), partyAreas: game?.party?.program?.areas ?? [], credibility: programCredibility(game ?? { promises: [] }, { society: state.society, reputation }), suggestion: derivePriorities(game, state.parliament), campaign: campaign ? { id: campaign.id, day: campaign.day, totalDays: campaign.totalDays, rivals } : null };
+    return { known: rivalsView(game, partyId => partyId ? rivalProgram(state.world, partyId) : []), promises, accord: accordPromises(state.parliament), partyAreas: game?.party?.program?.areas ?? [], credibility: programCredibility(game ?? { promises: [] }, { society: state.society, reputation }), suggestion: derivePriorities(game, state.parliament, 5, proposalsOf(game)), proposals: proposalsView(state), campaign: campaign ? { id: campaign.id, day: campaign.day, totalDays: campaign.totalDays, rivals } : null };
+  },
+  // ---------- the programme editor: proposals (program-proposals.js) ----------
+  addProposal(input = {}) {
+    requireCareer();
+    const week = state.game.week.index, date = state.clock.currentDate;
+    const proposal = createProposal(state.game, input, { week, date });
+    const game = deepCopy(state.game);
+    game.proposals = [...proposalsOf(game), proposal];
+    state = { ...state, game, ui: { ...state.ui, toast: `Proposta aggiunta al programma: ${proposal.title}` } };
+    persist(); emit();
+    return proposal;
+  },
+  editProposal(id, input = {}) {
+    requireCareer();
+    const updated = updateProposalOf(state.game, id, input, { week: state.game.week.index });
+    const game = deepCopy(state.game);
+    game.proposals = proposalsOf(game).map(item => item.id === id ? updated : item);
+    state = { ...state, game, ui: { ...state.ui, toast: 'Proposta modificata' } };
+    persist(); emit();
+    return updated;
+  },
+  setProposalState(id, status) {
+    requireCareer();
+    const updated = setProposalStateOf(state.game, id, status, { week: state.game.week.index });
+    const game = deepCopy(state.game);
+    game.proposals = proposalsOf(game).map(item => item.id === id ? updated : item);
+    state = { ...state, game, ui: { ...state.ui, toast: status === 'pubblicata' ? 'Proposta pubblicata nel programma' : 'Proposta riportata in bozza' } };
+    persist(); emit();
+    return updated;
+  },
+  moveProposal(id, delta) {
+    requireCareer();
+    const game = deepCopy(state.game);
+    game.proposals = moveProposals(state.game, id, Number(delta) < 0 ? -1 : 1);
+    state = { ...state, game };
+    persist(); emit();
+    return game.proposals;
+  },
+  deleteProposal(id) {
+    requireCareer();
+    const game = deepCopy(state.game);
+    game.proposals = removeProposals(state.game, id);
+    state = { ...state, game, ui: { ...state.ui, toast: 'Proposta eliminata dal programma' } };
+    persist(); emit();
+    return game.proposals;
+  },
+  linkProposal(id, promiseId) {
+    requireCareer();
+    const updated = linkProposalTo(state.game, id, promiseId || null);
+    const game = deepCopy(state.game);
+    game.proposals = proposalsOf(game).map(item => item.id === id ? updated : item);
+    state = { ...state, game, ui: { ...state.ui, toast: promiseId ? 'Proposta collegata alla promessa' : 'Collegamento rimosso' } };
+    persist(); emit();
+    return updated;
   },
   makePromise(args = {}) {
     requireCareer();
@@ -5389,7 +5462,7 @@ export const store = {
   setGovernmentProgram(input = {}) {
     requirePremier();
     // The programme of the Government comes from what was promised: without a choice it takes the promises of the player, the programme of the party and the areas of the accord.
-    const program = { ...input, priorities: input.priorities?.length ? input.priorities : derivePriorities(state.game, state.parliament) };
+    const program = { ...input, priorities: input.priorities?.length ? input.priorities : derivePriorities(state.game, state.parliament, 5, proposalsOf(state.game)) };
     const next = withGovernmentCost('program');
     let parliament = setGovernmentProgram(next.parliament, program, next.clock.currentDate);
     const line = GOVERNMENT_LINES[program.line];

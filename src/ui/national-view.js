@@ -34,6 +34,18 @@ const labelOf = (overview, result = null) => id => {
 // What a district is coloured by in a SIMULATED reading: the winning bloc (row.w) or the winning party (row.p). The 2022 historical reading stays by alliance: its data names the alliance of the winner, not always a single party.
 export const MAP_GROUPS = Object.freeze([['schieramenti', 'Schieramenti'], ['partiti', 'Partiti']]);
 const winnerOf = (row, group) => group === 'partiti' ? (row?.p ?? row?.w ?? null) : (row?.w ?? null);
+// The filter by party on the maps of the districts (simulated readings only): the districts a party wins are in its colour, all the others are muted. `party` is a party id (the winner row.p), '' = all.
+export const MUTED_COLOR = '#c9cfcb';
+export const OTHERS = 'altri';
+const winnerFiltered = (row, group, party) => party ? ((row?.p ?? row?.w ?? null) === party ? party : OTHERS) : winnerOf(row, group);
+function partyFilter(rowsByChamber, label, party, mode) {
+  if (mode === '2022') return '<p class="sx-note nv-group-note" data-map-party-note>Il filtro per partito vale per le letture simulate: i vincitori del 2022 sono indicati per alleanza.</p>';
+  const counts = new Map();
+  for (const rows of rowsByChamber) for (const row of rows) { const id = row?.p ?? row?.w; if (id) counts.set(id, (counts.get(id) ?? 0) + 1); }
+  const list = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+  const chips = [['', 'Tutti i partiti'], ...list.map(([id, n]) => [id, `${label(id)} (${n})`])].map(([id, text]) => `<button type="button" class="${(party ?? '') === id ? 'active' : ''}" data-view-filter="mapParty" data-view-filter-value="${esc(id)}" aria-pressed="${(party ?? '') === id}">${esc(text)}</button>`).join('');
+  return `<details class="nv-party-filter" data-map-party${party ? ' open' : ''}><summary class="ghost-button">Filtra per partito${party ? `: ${esc(label(party))}` : ''}</summary><div class="nv-map-switch" role="group" aria-label="Partito da evidenziare">${chips}</div></details>`;
+}
 const groupSwitch = (group, mode) => mode === '2022'
   ? '<p class="sx-note nv-group-note" data-map-group-note>Per il 2022 il dato storico indica l’alleanza del vincitore, non sempre un singolo partito: la lettura resta per schieramenti.</p>'
   : `<div class="nv-map-switch" role="group" aria-label="Raggruppa i collegi per">${MAP_GROUPS.map(([id, text]) => `<button type="button" class="${group === id ? 'active' : ''}" data-view-filter="mapGroup" data-view-filter-value="${id}" aria-pressed="${group === id}">${esc(text)}</button>`).join('')}</div>`;
@@ -135,7 +147,7 @@ function homeCard(overview) {
 }
 
 // ---------- the map ----------
-function mapCard(overview, geography, view, group = 'schieramenti') {
+function mapCard(overview, geography, view, group = 'schieramenti', party = '') {
   if (!geography) return card({ kicker: 'MAPPA ELETTORALE 2022 · DATO REALE', title: 'Mappa in caricamento', body: '<p class="sx-empty">La mappa dei collegi (Eligendo) si carica in background: torna tra poco.</p>' });
   const last = overview.national.lastPolitiche;
   const mode = view === 'voto' && last ? 'voto' : view === '2022' ? '2022' : overview.projection ? 'proiezione' : '2022';
@@ -161,9 +173,10 @@ function mapCard(overview, geography, view, group = 'schieramenti') {
           id = district.winner?.alliance ?? 'nd'; color = district.winner ? tone : '#d7dcd9'; text = `${district.name} (${district.code}) · 2022: ${district.winner ? `${district.winner.name}, ${groupOf(district.winner)}, ${num(district.winner.votes, 0)} voti, ${num(district.winner.share)}%` : 'risultato non disponibile'}`;
           legend.set(id, [name, color]);
         } else {
-          const winner = winnerOf(race, group);
-          id = winner ?? 'nd'; color = race ? colors.of(winner) : '#d7dcd9'; text = `${district.name} (${district.code}) · ${race ? `${label(winner)}, margine ${num(race.m)} punti` : 'nessun dato'}`;
-          if (race) legend.set(id, [label(winner), color]);
+          const winner = winnerFiltered(race, group, party);
+          const muted = winner === OTHERS;
+          id = winner ?? 'nd'; color = race ? (muted ? MUTED_COLOR : colors.of(winner)) : '#d7dcd9'; text = `${district.name} (${district.code}) · ${race ? `${muted ? `vinto da ${label(winnerOf(race, 'partiti'))}` : `${label(winner)}, margine ${num(race.m)} punti`}` : 'nessun dato'}`;
+          if (race) legend.set(id, [muted ? 'Altri partiti' : label(winner), color]);
         }
         return `<i class="nv-cell ${race && race.m < 4 && mode !== '2022' ? 'is-close' : ''}" style="background:${esc(color)}" title="${esc(text)}"></i>`;
       }).join('');
@@ -171,14 +184,17 @@ function mapCard(overview, geography, view, group = 'schieramenti') {
     }).join('');
     return `<div class="nv-map-chamber"><h4>${chamber === 'camera' ? 'Camera · 147 collegi uninominali' : 'Senato · 74 collegi uninominali'}</h4><ul class="nv-map">${lines}</ul></div>`;
   }).join('');
+  const filterRows = result ? ['camera', 'senato'].map(chamber => districtRows(result, chamber, geography)) : [];
+  const partyBox = result ? partyFilter(filterRows, label, party, mode) : '';
   const switcher = `<div class="nv-map-switch" role="group" aria-label="Cosa mostra la mappa">${NATIONAL_MAP_VIEWS.filter(([id]) => id !== 'voto' || last).filter(([id]) => id !== 'proiezione' || overview.projection).map(([id, text]) => `<button type="button" class="${mode === id ? 'active' : ''}" data-view-filter="nazionali" data-view-filter-value="${id}" aria-pressed="${mode === id}">${esc(text)}</button>`).join('')}</div>`;
   const legendHtml = `<ul class="nv-legend">${[...legend.values()].map(([name, color]) => `<li>${swatch(color)}<span>${esc(name)}</span></li>`).join('')}${mode !== '2022' ? '<li><i class="nv-swatch is-close"></i><span>Margine sotto 4 punti</span></li>' : ''}</ul>`;
   const kicker = mode === '2022' ? 'MAPPA DEI COLLEGI · VINCITORI 2022 · DATO REALE' : mode === 'voto' ? `MAPPA DEI COLLEGI · VOTO DEL ${shortDay(last.date).toUpperCase()} · SIMULAZIONE` : 'MAPPA DEI COLLEGI · PROIEZIONE · SIMULAZIONE';
-  return card({ fold: { id: 'nv-mappa-collegi', icon: 'map', start: 'closed' }, kicker, title: 'I collegi uninominali regione per regione', body: `${switcher}${groupSwitch(group, mode)}${legendHtml}<div class="nv-map-grid">${chambers}</div><p class="sx-note">Ogni quadrato è un collegio uninominale reale del 2022, nell’ordine ufficiale per regione (non è una carta geografica). Passa il puntatore per il nome del collegio. ${mode === '2022' ? 'Vincitori e alleanze: dati ufficiali Eligendo; in Trentino-Alto Adige il Senato 2022 non è nella copia dei dati.' : 'Vincitori simulati dal gioco.'}</p>` });
+  return card({ fold: { id: 'nv-mappa-collegi', icon: 'map', start: 'closed' }, kicker, title: 'I collegi uninominali regione per regione', body: `${switcher}${groupSwitch(group, mode)}${partyBox}${legendHtml}<div class="nv-map-grid">${chambers}</div><p class="sx-note">Ogni quadrato è un collegio uninominale reale del 2022, nell’ordine ufficiale per regione (non è una carta geografica). Passa il puntatore per il nome del collegio. ${mode === '2022' ? 'Vincitori e alleanze: dati ufficiali Eligendo; in Trentino-Alto Adige il Senato 2022 non è nella copia dei dati.' : 'Vincitori simulati dal gioco.'}</p>` });
 }
 // The geographic map beside the squares: the same three readings (2022, projection, last vote), drawn on the real boundaries of regions and provinces. The squares map below stays as it is.
 export function geoMapCard(overview, geography, view, map) {
   const group = map?.group === 'partiti' ? 'partiti' : 'schieramenti';
+  const party = map?.party ?? '';
   const boundaries = map?.boundaries;
   const status = map?.status?.status ?? (boundaries ? 'ready' : 'loading');
   const retry = '<button type="button" class="text-link" data-action="retry-data">Riprova</button>';
@@ -200,11 +216,11 @@ export function geoMapCard(overview, geography, view, map) {
   const outcome = (chamber, district) => {
     if (mode === '2022') return district.winner?.alliance ? { id: district.winner.alliance } : null;
     const row = byId[chamber].get(district.id);
-    const winner = winnerOf(row, mode === '2022' ? 'schieramenti' : group);
+    const winner = winnerFiltered(row, mode === '2022' ? 'schieramenti' : group, mode === '2022' ? '' : party);
     return winner ? { id: winner, close: row.m < 4 } : null;
   };
-  const colorOf = id => mode === '2022' ? (ALLIANCES_2022[id]?.[1] ?? NEUTRAL) : colors.of(id);
-  const nameOf = id => mode === '2022' ? (ALLIANCES_2022[id]?.[0] ?? String(id)) : label(id);
+  const colorOf = id => mode === '2022' ? (ALLIANCES_2022[id]?.[1] ?? NEUTRAL) : id === OTHERS ? MUTED_COLOR : colors.of(id);
+  const nameOf = id => mode === '2022' ? (ALLIANCES_2022[id]?.[0] ?? String(id)) : id === OTHERS ? 'Altri partiti' : label(id);
   const scope = MAP_SCOPES.some(([id]) => id === map.scope) ? map.scope : 'regioni';
   const tallies = territoryTallies(geography, boundaries, outcome);
   const selected = String(map.selected ?? '');
@@ -218,7 +234,7 @@ export function geoMapCard(overview, geography, view, map) {
   const scopes = `<div class="nv-map-switch" role="group" aria-label="Livello territoriale">${MAP_SCOPES.map(([id, text]) => `<button type="button" class="${scope === id ? 'active' : ''}" data-view-filter="mapScope" data-view-filter-value="${id}" aria-pressed="${scope === id}">${esc(text)}</button>`).join('')}</div>`;
   const common = { boundaries, tallies, labelOf: nameOf, colorOf, scope };
   const note = `<p class="sx-note">Confini: ISTAT, al 1 gennaio 2026, elaborati da Openpolis (CC BY 4.0), semplificati per lo schermo. ${mode === '2022' ? 'Vincitori dei collegi: dati ufficiali Eligendo.' : 'Vincitori dei collegi: simulazione della partita, non dato reale.'} Le regioni sommano i collegi uninominali di Camera e Senato. Le province non hanno un vincitore: mostrano un indicatore descrittivo sui comuni (nota sotto la legenda). In Trentino-Alto Adige il Senato 2022 è una lacuna dei dati: quei collegi non sono colorati nel dato reale. ${esc(boundaries.attribution ?? '')}</p>`;
-  return card({ fold: { id: 'nv-mappa-geo', icon: 'map', start: 'closed' }, kicker: `MAPPA GEOGRAFICA · ${scope === 'province' ? 'PROVINCE' : 'REGIONI'} · ${dataClass.split(' · ')[0]}`, title: 'Dove vince ogni schieramento', body: `<div class="it-controls">${switcher}${scopes}${groupSwitch(group, mode)}</div><p class="it-class-line"><span class="it-class">${esc(dataClass)}</span></p>${legend}<div class="it-layout"><div class="it-stage">${italyMapSvg({ ...common, selected })}</div><div class="it-side" aria-live="polite">${italyMapInfo({ ...common, selected, dataClass })}</div></div>${italyMapTable(common)}${note}` });
+  return card({ fold: { id: 'nv-mappa-geo', icon: 'map', start: 'closed' }, kicker: `MAPPA GEOGRAFICA · ${scope === 'province' ? 'PROVINCE' : 'REGIONI'} · ${dataClass.split(' · ')[0]}`, title: 'Dove vince ogni schieramento', body: `<div class="it-controls">${switcher}${scopes}${groupSwitch(group, mode)}${result ? partyFilter([districtRows(result, 'camera', geography), districtRows(result, 'senato', geography)], label, party, mode) : ''}</div><p class="it-class-line"><span class="it-class">${esc(dataClass)}</span></p>${legend}<div class="it-layout"><div class="it-stage">${italyMapSvg({ ...common, selected })}</div><div class="it-side" aria-live="polite">${italyMapInfo({ ...common, selected, dataClass })}</div></div>${italyMapTable(common)}${note}` });
 }
 function contestedCard(overview, geography) {
   const projection = overview.projection;
@@ -290,7 +306,7 @@ export function renderNationalView(state, overview, { geography = null, view = n
     ${campaignLineCard(overview, state)}
     <div class="sx-grid two">${projectionCard(overview)}<div class="nv-stack">${homeCard(overview)}${contestedCard(overview, geography)}</div></div>
     ${geoMapCard(overview, geography, view, map)}
-    ${mapCard(overview, geography, view, map?.group === 'partiti' ? 'partiti' : 'schieramenti')}
+    ${mapCard(overview, geography, view, map?.group === 'partiti' ? 'partiti' : 'schieramenti', map?.party ?? '')}
     ${lastVoteCard(overview, state)}
     ${!formationActive ? formationCard(overview, state) : ''}
     <div class="sx-grid two">${europeanCard(overview)}${historyCard(overview)}</div>

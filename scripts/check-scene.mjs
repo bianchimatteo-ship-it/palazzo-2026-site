@@ -50,7 +50,7 @@ assert.throws(() => chooseInScene(make(), 'dati'), /non valida/);
 const broken = play(make({ promises: [{ id: 'x', label: 'Sanità', topic: 'sanita', status: 'non-mantenuta' }] }), FLOW.slice(0, 9));
 assert.match(sceneNode(broken).text, /non ha mantenuto la parola|prometteva sanità/i, 'L’avversario attacca sulla promessa tradita.');
 const lowCred = play(make({ credibility: 30 }), FLOW.slice(0, 9));
-assert.match(sceneNode(lowCred).text, /dove sono i soldi/, 'O sulla scarsa credibilità del programma.');
+assert.match(sceneNode(lowCred).text, /dove sono i soldi|coperture/, 'O sulla scarsa credibilità del programma.');
 assert.ok(q1(make(), 'dati') !== undefined);
 // a good evening and a bad one
 const strong = play(make({ credibility: 90, prep: 22, rivalReadiness: 25 }, { competence: 95, charisma: 90 }), ['accetta', 'dati', 'continua', 'dati', 'continua', 'conti', 'continua', 'programma', 'continua', 'fatti', 'continua', 'appello']);

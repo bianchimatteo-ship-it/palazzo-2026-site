@@ -36,6 +36,10 @@ assert.ok([...questions].some(text => text.includes('Si dimette un ministro: il 
 const attacks = new Set();
 for (let n = 0; n < 60; n++) { const scene = { ...base('faccia-a-faccia', 300 + n), nodeId: 'q2' }; let step = E.chooseInScene(scene, 'dati'); step = E.chooseInScene({ ...step, nodeId: 'r2' }, 'continua'); attacks.add(E.sceneNode(step).text); }
 assert.ok(attacks.size >= 3, `L’attacco dell’avversario non è sempre lo stesso (${attacks.size}).`);
+// the rival attacks the proposal of the programme that has no funding
+const weakAttacks = new Set();
+for (let n = 0; n < 80; n++) { const scene = { ...base('faccia-a-faccia', 500 + n, { weakProposal: 'Sussidio per tutti' }), nodeId: 'r2' }; weakAttacks.add(E.sceneNode(E.chooseInScene({ ...scene, nodeId: 'q2' }, 'dati') && E.chooseInScene(E.chooseInScene({ ...scene, nodeId: 'q2' }, 'dati'), 'continua')).text); }
+assert.ok([...weakAttacks].some(text => text.includes('Sussidio per tutti')), 'Una proposta senza copertura diventa un attacco dell’avversario.');
 // 4. the English: every line of every format has its translation, with no Italian left
 let counted = 0;
 for (const show of Object.keys(SHOWS)) for (let n = 0; n < 12; n++) {

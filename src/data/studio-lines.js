@@ -106,6 +106,10 @@ export const LINES = Object.freeze({
       ['{}: «Ha attaccato per non rispondere. Lo ha notato anche il pubblico.»', '{1}: «You attacked in order not to answer. The audience noticed too.»'],
       ['{}: «Alzare la voce non è un argomento. Torniamo ai fatti.»', '{1}: “Raising your voice is not an argument. Let us go back to the facts.”']
     ],
+    coverage: [
+      ['{}: «{}: bella idea, ma dove sono le coperture?»', '{1}: “{2}: a nice idea, but where is the funding?”'],
+      ['{}: «Nel suo programma c’è «{}»: chi lo paga, e con quali soldi?»', '{1}: “Your programme includes “{2}”: who pays for it, and with what money?”']
+    ],
     event: [
       ['{}: «Mentre si discute di {}, lei dov’era?»', '{1}: “While people discuss {2}, where were you?”'],
       ['{}: «Su {} i cittadini aspettano risposte, non slogan.»', '{1}: “On {2} citizens wait for answers, not slogans.”']

@@ -58,7 +58,7 @@ export function characterAvatar(character) {
   return normalizeAvatar(out);
 }
 
-export function createDebateScene({ id, seed, player, playerAvatar, rival, host, topic, promises = [], credibility = 60, prep = 0, rivalProgram = [], rivalReadiness = 50, rivalAggression = 50, crisis = false, campaignId = null, date = null, salientTopic = null, secondTopic = null, show = 'faccia-a-faccia', ticker = [], events = [], rivalProgramLabels = [] }) {
+export function createDebateScene({ id, seed, player, playerAvatar, rival, host, topic, promises = [], credibility = 60, prep = 0, rivalProgram = [], rivalReadiness = 50, rivalAggression = 50, crisis = false, campaignId = null, date = null, salientTopic = null, secondTopic = null, show = 'faccia-a-faccia', ticker = [], events = [], rivalProgramLabels = [], weakProposal = null }) {
   const cast = [
     { id: 'giocatore', role: 'giocatore', name: player.name, avatar: normalizeAvatar(playerAvatar), position: 'sinistra', tag: player.tag ?? '' },
     { id: rival.id, role: 'rivale', name: rival.name, avatar: characterAvatar({ id: rival.id, role: 'rivale' }), position: 'destra', partyId: rival.partyId ?? null, tag: rival.tag ?? '' },
@@ -69,7 +69,7 @@ export function createDebateScene({ id, seed, player, playerAvatar, rival, host,
   return {
     id, kind: 'dibattito-tv', setting: 'studio-televisivo', format: showSpec.format, show: { id: showSpec.id, name: showSpec.name, slot: showSpec.slot }, ticker: ticker.slice(0, 8), seed, campaignId, date, status: 'active', nodeId: 'invito', cast,
     topic: { id: topic.id, label: topic.label }, secondTopic: secondTopic ? { id: secondTopic.id, label: secondTopic.label } : null, salientTopic,
-    context: { credibility, prep, rivalProgram, rivalProgramLabels: rivalProgramLabels.slice(0, 3), events: events.slice(0, 3), rivalReadiness, rivalAggression, crisis, promises: promises.map(item => ({ id: item.id, label: item.label, topic: item.topic, status: item.status, intervention: item.intervention, cost: item.cost })), topicPromises: topicPromises.map(item => item.id) },
+    context: { credibility, prep, rivalProgram, rivalProgramLabels: rivalProgramLabels.slice(0, 3), events: events.slice(0, 3), weakProposal: weakProposal ? String(weakProposal).slice(0, 80) : null, rivalReadiness, rivalAggression, crisis, promises: promises.map(item => ({ id: item.id, label: item.label, topic: item.topic, status: item.status, intervention: item.intervention, cost: item.cost })), topicPromises: topicPromises.map(item => item.id) },
     audience: { mood: 50, history: [] }, scores: [], history: [], prepFocus: null, outcome: null
   };
 }
@@ -243,6 +243,7 @@ function attackLine(scene) {
   if (ctx.credibility < 50) options.push(['attacco.credibility', [rival]]);
   if (ctx.crisis) options.push(['attacco.crisis', [rival]]);
   if (scene.provoked) options.push(['attacco.provoked', [rival]]);
+  if (ctx.weakProposal) options.push(['attacco.coverage', [rival, ctx.weakProposal]]);
   if (ctx.events?.length) options.push(['attacco.event', [rival, ctx.events[0]]]);
   if (!options.length) options.push(['attacco.any', [rival]]);
   const [key, args] = options[Math.floor(unit(`${scene.seed}|attacco-line`) * options.length)];

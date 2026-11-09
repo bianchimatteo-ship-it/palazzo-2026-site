@@ -1,6 +1,6 @@
 // The avatar of the player, drawn as one local SVG from the chosen traits: no library, no request, no remote image. The same renderer draws it in the wizard (live preview), in the profile, in the
 // headquarters and in the Parliament, so that the player is the same face everywhere. The input is always cleaned first (an unknown value falls back to the default).
-import { AVATAR_OPTIONS, normalizeAvatar } from '../core/avatar.js?v=20261107-1';
+import { AVATAR_FIELDS, AVATAR_OPTIONS, SHAPE_FIELDS, normalizeAvatar } from '../core/avatar.js?v=20261107-1';
 
 const colorOf = (field, id) => AVATAR_OPTIONS[field].find(item => item.id === id)?.color ?? '#888888';
 // A colour made lighter (amount > 0) or darker (amount < 0).
@@ -40,15 +40,26 @@ const HAIR_FRONT = {
   ondulato: 'M38 52C36 28 50 17 62 18C75 19 85 30 82 52C79 42 74 37 68 40C64 33 58 38 54 35C48 36 42 42 38 52Z'
 };
 
-function eyes(face, ink, iris) {
-  const lash = face === 'femminile' ? `<path d="M46.5 52.6L44.6 50.8M49.5 51.6L48.8 49.2M72.8 49.2L72.1 51.6M75.4 50.8L73.5 52.6" stroke="${ink}" stroke-width="1" stroke-linecap="round" fill="none"/>` : '';
-  return `<ellipse cx="51.5" cy="54.2" rx="3.2" ry="2.5" fill="#fbf8f2"/><ellipse cx="68.5" cy="54.2" rx="3.2" ry="2.5" fill="#fbf8f2"/><circle cx="51.8" cy="54.3" r="2.1" fill="${iris}"/><circle cx="68.2" cy="54.3" r="2.1" fill="${iris}"/><circle cx="51.8" cy="54.3" r="1" fill="#1b130d"/><circle cx="68.2" cy="54.3" r="1" fill="#1b130d"/><circle cx="52.5" cy="53.5" r=".55" fill="#fff"/><circle cx="68.9" cy="53.5" r=".55" fill="#fff"/>${lash}`;
+// The proportions of the face (core/avatar.js `shape`, six integers from -3 to 3; none = the drawing as it always was): how far each feature is moved or scaled. Every value is small and bounded.
+const unitOf = shape => shape ? { dx: 0.7 * shape.d, eye: 1 + 0.07 * shape.s, brow: -0.6 * shape.b, mouth: 1 + 0.06 * shape.m, width: 1 + 0.028 * shape.w, chin: 1 + 0.025 * shape.j } : null;
+const wrap = (content, transform) => transform ? `<g transform="${transform}">${content}</g>` : content;
+const aboutX = (scale, x = 60) => `translate(${x} 0) scale(${scale.toFixed(3)} 1) translate(${-x} 0)`;
+function eyes(face, ink, iris, u = null) {
+  const lashL = face === 'femminile' ? `<path d="M46.5 52.6L44.6 50.8M49.5 51.6L48.8 49.2" stroke="${ink}" stroke-width="1" stroke-linecap="round" fill="none"/>` : '';
+  const lashR = face === 'femminile' ? `<path d="M72.8 49.2L72.1 51.6M75.4 50.8L73.5 52.6" stroke="${ink}" stroke-width="1" stroke-linecap="round" fill="none"/>` : '';
+  const left = `<ellipse cx="51.5" cy="54.2" rx="3.2" ry="2.5" fill="#fbf8f2"/><circle cx="51.8" cy="54.3" r="2.1" fill="${iris}"/><circle cx="51.8" cy="54.3" r="1" fill="#1b130d"/><circle cx="52.5" cy="53.5" r=".55" fill="#fff"/>${lashL}`;
+  const right = `<ellipse cx="68.5" cy="54.2" rx="3.2" ry="2.5" fill="#fbf8f2"/><circle cx="68.2" cy="54.3" r="2.1" fill="${iris}"/><circle cx="68.2" cy="54.3" r="1" fill="#1b130d"/><circle cx="68.9" cy="53.5" r=".55" fill="#fff"/>${lashR}`;
+  if (!u) return `<ellipse cx="51.5" cy="54.2" rx="3.2" ry="2.5" fill="#fbf8f2"/><ellipse cx="68.5" cy="54.2" rx="3.2" ry="2.5" fill="#fbf8f2"/><circle cx="51.8" cy="54.3" r="2.1" fill="${iris}"/><circle cx="68.2" cy="54.3" r="2.1" fill="${iris}"/><circle cx="51.8" cy="54.3" r="1" fill="#1b130d"/><circle cx="68.2" cy="54.3" r="1" fill="#1b130d"/><circle cx="52.5" cy="53.5" r=".55" fill="#fff"/><circle cx="68.9" cy="53.5" r=".55" fill="#fff"/>${lashL}${lashR}`;
+  const eye = (content, cx, side) => wrap(content, `translate(${(side * u.dx).toFixed(2)} 0) translate(${cx} 54.2) scale(${u.eye.toFixed(3)}) translate(${-cx} -54.2)`);
+  return eye(left, 51.5, -1) + eye(right, 68.5, 1);
 }
 // The eyebrows follow the face and the expression (raised when smiling, lowered and angled when determined).
-function brows(face, expression, color) {
+function brows(face, expression, color, u = null) {
   const thick = (face === 'maschile' ? 2 : 1.2) + (expression === 'determinata' ? 0.5 : 0);
   const d = expression === 'determinata' ? ['M45.4 46.6L57.2 49.8', 'M62.8 49.8L74.6 46.6'] : expression === 'sorridente' ? ['M46 47Q51.5 43.6 57 46.6', 'M63 46.6Q68.5 43.6 74 47'] : ['M46 48.4Q51.5 45.6 57 48', 'M63 48Q68.5 45.6 74 48.4'];
-  return `<path d="${d[0]}" stroke="${color}" stroke-width="${thick}" stroke-linecap="round" fill="none"/><path d="${d[1]}" stroke="${color}" stroke-width="${thick}" stroke-linecap="round" fill="none"/>`;
+  const stroke = `stroke="${color}" stroke-width="${thick}" stroke-linecap="round" fill="none"`;
+  if (!u) return `<path d="${d[0]}" ${stroke}/><path d="${d[1]}" ${stroke}/>`;
+  return wrap(`<path d="${d[0]}" ${stroke}/>`, `translate(${(-u.dx).toFixed(2)} ${u.brow.toFixed(2)})`) + wrap(`<path d="${d[1]}" ${stroke}/>`, `translate(${u.dx.toFixed(2)} ${u.brow.toFixed(2)})`);
 }
 function mouth(face, expression, lips, skinShade) {
   if (expression === 'sorridente') return `<path d="M52.6 69.4Q60 77.4 67.4 69.4Q60 72.6 52.6 69.4Z" fill="#fbf8f2" stroke="${lips}" stroke-width="1" stroke-linejoin="round"/><path d="M49.8 66.8Q48.4 70.6 50.6 73.4M70.2 66.8Q71.6 70.6 69.4 73.4" stroke="${skinShade}" stroke-width=".9" fill="none" stroke-linecap="round"/>`;
@@ -71,10 +82,13 @@ function moustache(kind, hair) {
   if (!MOUSTACHES[kind]) return '';
   return `<path d="${MOUSTACHES[kind]}" fill="${shade(hair, -0.3)}" stroke="${shade(hair, 0.38)}" stroke-width=".7" stroke-linejoin="round"/>`;
 }
-function glasses(kind) {
+function glasses(kind, u = null) {
   const frame = '#2b2118';
-  if (kind === 'tondi') return `<g fill="rgba(210,225,240,.16)" stroke="${frame}" stroke-width="1.6"><circle cx="51.5" cy="54.2" r="7.6"/><circle cx="68.5" cy="54.2" r="7.6"/></g><path d="M59.1 53.4Q60 52.2 60.9 53.4M44 53.6L40.2 52.4M76 53.6L79.8 52.4" stroke="${frame}" stroke-width="1.4" fill="none" stroke-linecap="round"/>`;
-  if (kind === 'rettangolari') return `<g fill="rgba(210,225,240,.16)" stroke="${frame}" stroke-width="1.8"><rect x="43.6" y="49" width="15.4" height="10.4" rx="2.2"/><rect x="61" y="49" width="15.4" height="10.4" rx="2.2"/></g><path d="M59 53.2L61 53.2M43.6 52L40.2 51M76.4 52L79.8 51" stroke="${frame}" stroke-width="1.5" fill="none" stroke-linecap="round"/>`;
+  const lens = (shapeL, shapeR, extra) => u
+    ? `<g fill="rgba(210,225,240,.16)" stroke="${frame}" stroke-width="${extra.w}"><g transform="translate(${(-u.dx).toFixed(2)} 0)">${shapeL}</g><g transform="translate(${u.dx.toFixed(2)} 0)">${shapeR}</g></g>`
+    : `<g fill="rgba(210,225,240,.16)" stroke="${frame}" stroke-width="${extra.w}">${shapeL}${shapeR}</g>`;
+  if (kind === 'tondi') return `${lens('<circle cx="51.5" cy="54.2" r="7.6"/>', '<circle cx="68.5" cy="54.2" r="7.6"/>', { w: 1.6 })}<path d="M59.1 53.4Q60 52.2 60.9 53.4M44 53.6L40.2 52.4M76 53.6L79.8 52.4" stroke="${frame}" stroke-width="1.4" fill="none" stroke-linecap="round"/>`;
+  if (kind === 'rettangolari') return `${lens('<rect x="43.6" y="49" width="15.4" height="10.4" rx="2.2"/>', '<rect x="61" y="49" width="15.4" height="10.4" rx="2.2"/>', { w: 1.8 })}<path d="M59 53.2L61 53.2M43.6 52L40.2 51M76.4 52L79.8 51" stroke="${frame}" stroke-width="1.5" fill="none" stroke-linecap="round"/>`;
   return '';
 }
 
@@ -86,11 +100,13 @@ const BODY = jacket => `<path d="M12 124C12 104 28 95 49 91L60 104L71 91C92 95 1
 // small previews of the editor show, so that every choice is seen where it matters.
 export function avatarSvg(input, { size = 96, label = 'Avatar del tuo politico', className = '', focus = false } = {}) {
   const a = normalizeAvatar(input);
-  const uid = `av${Object.values(a).map(value => value.slice(0, 3)).join('')}${size}${focus ? 'f' : ''}`;
+  const code = AVATAR_FIELDS.map(field => a[field]);
+  const shapeCode = a.shape ? SHAPE_FIELDS.map(field => a.shape[field]).join(',') : '';
+  const uid = `av${code.map(value => value.slice(0, 3)).join('')}${shapeCode.replace(/[^0-9]/g, m => m === '-' ? 'n' : '')}${size}${focus ? 'f' : ''}`;
   const a11y = label ? `role="img" aria-label="${esc(label)}"` : 'aria-hidden="true" focusable="false"';
   const view = focus ? '18 8 84 84' : '0 0 120 120';
   const parts = avatarParts(a, uid);
-  return `<svg class="avatar-svg ${esc(className)}" xmlns="http://www.w3.org/2000/svg" viewBox="${view}" width="${size}" height="${size}" ${a11y} data-avatar="${esc(Object.values(a).join('.'))}">`
+  return `<svg class="avatar-svg ${esc(className)}" xmlns="http://www.w3.org/2000/svg" viewBox="${view}" width="${size}" height="${size}" ${a11y} data-avatar="${esc(code.join('.'))}${shapeCode ? esc(`.${shapeCode}`) : ''}">`
     + parts.defs
     + `<g${focus ? '' : ` clip-path="url(#${uid}-c)"`}><rect width="120" height="120" fill="url(#${uid}-b)"/><circle cx="60" cy="52" r="46" fill="#f0cf85" opacity=".09"/>`
     + parts.figure
@@ -110,20 +126,21 @@ export function avatarParts(input, uid, { expression = null } = {}) {
   const frontPath = HAIR_FRONT[a.hairstyle];
   const front = frontPath.startsWith('<') ? frontPath : `<path d="${frontPath}" fill-rule="evenodd"${a.hairstyle === 'rasato' ? ' opacity=".6"' : ''}/>`;
   const lips = a.face === 'femminile' ? '#b4574f' : shade(skin, -0.32);
+  const u = unitOf(a.shape);
   const defs = `<defs><clipPath id="${uid}-c"><circle cx="60" cy="60" r="58"/></clipPath><linearGradient id="${uid}-b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a3a52"/><stop offset="1" stop-color="#0f1a2b"/></linearGradient></defs>`;
   const open = `<ellipse class="av-mouth-open" cx="60" cy="71.4" rx="5.4" ry="3.6" fill="#3a1713" stroke="${lips}" stroke-width="1" opacity="0"/>`;
-  const figure = `<g class="av-body"><g fill="${hair}">${back}</g>`
+  const figure = `<g class="av-body">${wrap(`<g fill="${hair}">${back}</g>`, u && aboutX(u.width))}`
     + `<path d="M53 76h14v22H53z" fill="${skinShade}"/>`
     + BODY(jacket)
-    + `</g><g class="av-head">`
+    + `</g><g class="av-head">${u ? `<g transform="${aboutX(u.width)}">` : ''}`
     + `<circle cx="38.4" cy="56" r="4.4" fill="${skinShade}"/><circle cx="81.6" cy="56" r="4.4" fill="${skinShade}"/>`
-    + `<path d="${HEADS[a.face]}" fill="${skin}"/>`
+    + wrap(`<path d="${HEADS[a.face]}" fill="${skin}"/>`, u && `translate(0 24) scale(1 ${u.chin.toFixed(3)}) translate(0 -24)`)
     + `<path d="M60 56L58.4 62.4Q60 63.4 61.6 62.4Z" fill="${skinShade}" opacity=".8"/>`
-    + `<g class="av-mouth">${mouth(a.face, a.expression, lips, skinShade)}</g>${open}`
-    + `<g class="av-eyes">${eyes(a.face, hairShade, iris)}</g><g class="av-brows">${brows(a.face, a.expression, hair)}</g>`
-    + beard(a.beard, hair) + moustache(a.moustache, hair)
+    + wrap(`<g class="av-mouth">${mouth(a.face, a.expression, lips, skinShade)}</g>${open}`, u && aboutX(u.mouth))
+    + `<g class="av-eyes">${eyes(a.face, hairShade, iris, u)}</g><g class="av-brows">${brows(a.face, a.expression, hair, u)}</g>`
+    + wrap(beard(a.beard, hair), u && `translate(0 24) scale(1 ${u.chin.toFixed(3)}) translate(0 -24)`) + moustache(a.moustache, hair)
     + `<g fill="${hair}">${front}</g>`
-    + glasses(a.glasses)
-    + `</g>`;
+    + glasses(a.glasses, u)
+    + `${u ? '</g>' : ''}</g>`;
   return { defs, figure, avatar: a };
 }

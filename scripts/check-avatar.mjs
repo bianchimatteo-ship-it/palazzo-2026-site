@@ -87,6 +87,29 @@ assert.ok(['maschile', 'femminile'].includes(kept.face) && kept.face === A.defau
 assert.deepEqual(A.avatarOf({ ...legacy, avatar: { face: 'maschile', skin: 'chiara', hair: 'nero', hairstyle: 'corto', beard: 'nessuna', glasses: 'nessuno', jacket: 'blu' } }).face, 'maschile', 'Un volto valido resta.');
 lines.push('aspetto predefinito stabile per le vecchie carriere, avatar di prima conservato');
 
+// the proportions of the face: six sliders from -3 to 3, none = the drawing as it always was
+const shaped = { w: 3, j: -2, d: 2, s: 3, b: -3, m: 2 };
+assert.deepEqual(A.normalizeAvatar(base), base, 'Senza proporzioni l’avatar è quello di sempre (nessun campo in più).');
+assert.deepEqual(A.normalizeAvatar({ ...base, shape: { w: 0, j: 0, d: 0, s: 0, b: 0, m: 0 } }), base, 'Tutte le proporzioni a zero non si salvano.');
+assert.deepEqual(A.normalizeAvatar({ ...base, shape: { w: 99, j: -99, d: 1.4, s: 'x', b: null, m: 3 } }).shape, { w: 3, j: -3, d: 1, s: 0, b: 0, m: 3 }, 'I valori sono interi e sempre dentro ai limiti sicuri.');
+assert.equal(A.normalizeAvatar({ ...base, shape: [1, 2] }).shape, undefined, 'Una proporzione che non è un oggetto si ignora.');
+assert.deepEqual(A.avatarProblems({ ...base, shape: shaped }), [], 'Un avatar con proporzioni valide è valido.');
+assert.equal(A.avatarProblems({ ...base, shape: { w: 9 } }).length, 1, 'Fuori dai limiti è rifiutato.');
+assert.equal(A.avatarProblems({ ...base, shape: { zz: 1 } }).length, 1, 'Una proporzione sconosciuta è rifiutata.');
+assert.equal(draw({}), reference, 'Il disegno senza proporzioni è invariato.');
+assert.ok(!reference.includes('transform='), 'Senza proporzioni il disegno non ha trasformazioni aggiunte.');
+const shapedSvg = avatarSvg({ ...base, shape: shaped });
+assert.notEqual(shapedSvg, reference, 'Le proporzioni cambiano il disegno.');
+for (const field of A.SHAPE_FIELDS) { assert.notEqual(avatarSvg({ ...base, glasses: 'tondi', beard: 'completa', shape: { [field]: 3 } }), avatarSvg({ ...base, glasses: 'tondi', beard: 'completa' }), `Il cursore «${A.SHAPE_LABELS[field]}» cambia il disegno.`); assert.notEqual(avatarSvg({ ...base, shape: { [field]: -3 } }), avatarSvg({ ...base, shape: { [field]: 3 } }), `${field}: due estremi diversi.`); }
+assert.equal((shapedSvg.match(/<g[ >]/g) ?? []).length, (shapedSvg.match(/<\/g>/g) ?? []).length, 'I gruppi del disegno con proporzioni sono bilanciati.');
+for (const extreme of [-3, 3]) for (const glasses of ['nessuno', 'tondi', 'rettangolari']) for (const beard of ['nessuna', 'completa']) {
+  const svg = avatarSvg({ ...base, glasses, beard, shape: { w: extreme, j: extreme, d: extreme, s: extreme, b: extreme, m: extreme } });
+  assert.ok(/<svg[^>]*>.*<\/svg>$/s.test(svg) && !/NaN|undefined/.test(svg), `Combinazioni estreme (${extreme}, ${glasses}, ${beard}): disegno valido.`);
+}
+assert.deepEqual(A.avatarOf({ id: 'p', avatar: { ...base, shape: shaped } }).shape, shaped, 'Le proporzioni passano da avatarOf (un avatar salvato le conserva).');
+assert.equal(avatarSvg({ ...base, shape: shaped }, { size: 64 }), avatarSvg({ ...base, shape: shaped }, { size: 64 }), 'Stesso avatar, stesso disegno.');
+lines.push('proporzioni del volto: sei cursori da −3 a +3, limiti sicuri, vecchi avatar identici');
+
 // ---------- 3. the checks of the wizard: explicit map between screens and numbered checks ----------
 assert.equal(CAREER_STEPS, 5);
 assert.equal(WIZARD_VIEWS, 6);
