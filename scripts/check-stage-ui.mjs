@@ -153,7 +153,14 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
     if (node === 'uscita') break;
     await pause(i === 1 ? 1200 : 300);
     if (node === 'banco') assert.equal(await evaluate(`document.querySelector('.st-ballot').dataset.ballot`), 'hand');
-    if (node === 'voto') assert.equal(await evaluate(`document.querySelector('${player}').dataset.visible`), '0', 'Dentro la cabina il votante non si vede.');
+    // in the booth the voter stays in view above the curtain, with the ballot in the hand (written, then folded): never hidden, never floating
+    if (['cabina', 'voto', 'piega'].includes(node)) {
+      assert.equal(await evaluate(`document.querySelector('${player}').dataset.visible`), '1', `Nella cabina (${node}) il votante si vede.`);
+      const geo = await evaluate(`(() => { const a = document.querySelector('${player}').getBoundingClientRect(), b = document.querySelector('.st-ballot').getBoundingClientRect(), booth = document.querySelector('.st-booth').getBoundingClientRect(), c = document.querySelector('.st-curtain').getBoundingClientRect(); return { ballotInActor: b.left >= a.left - 4 && b.right <= a.right + 40 && b.top >= a.top && b.bottom <= a.bottom, ballotInBooth: b.left >= booth.left - 2 && b.right <= booth.right + 40, headAboveCurtain: a.top < c.top, kind: document.querySelector('.st-ballot').dataset.ballot }; })()`);
+      assert.ok(geo.ballotInActor && geo.ballotInBooth, `${node}: la scheda è nella mano del votante, dentro la cabina (${JSON.stringify(geo)}).`);
+      assert.ok(geo.headAboveCurtain, `${node}: la testa sta sopra la tenda.`);
+      assert.equal(geo.kind, node === 'piega' ? 'folded' : 'hand');
+    }
     if (node === 'urna') assert.equal(await evaluate(`document.querySelector('.st-ballot').dataset.ballot`), 'urn');
     await click('[data-stage-skip]');
     await click('[data-scene-choice="continua"]');
