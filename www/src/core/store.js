@@ -1,87 +1,87 @@
-import { territoryWeightsOf } from './territory-weights.js?v=20261109-3';
-import { addPlayTime as engineAddPlayTime, confirmPlayTime as engineConfirmPlayTime, creditCommunity as engineCreditCommunity, creditDaily as engineCreditDaily, normalizeRewards, reconcileRewards as engineReconcileRewards } from './rewards-engine.js?v=20261109-3';
-import { rewardsJournal } from '../data/repositories/rewards-journal.js?v=20261109-3';
-import { AD_REWARD } from '../data/simulation/reward-rules.js?v=20261109-3';
-import { bandOfMunicipality, indexMunicipalPopulation, residentsOfMunicipality, setMunicipalPopulationIndex } from './municipal-rules.js?v=20261109-3';
-import { uniqueId } from './ids.js?v=20261109-3';
-import { DATA_SOURCES, emptyDataset, isSelectableParty, isUsableReal } from '../data/schema.js?v=20261109-3';
-import { makeDemoState } from '../data/demo.js?v=20261109-3';
-import { CAREER_LEVELS, ITALIAN_REGIONS, hasProvincialLevel, initialCareerStatistics, regionIdOf } from '../data/regions.js?v=20261109-3';
-import { withVotes } from './electorate.js?v=20261109-3';
-import { MAX_SLOTS, compareSaveProgress, storage } from './storage.js?v=20261109-3';
-import { loadSettings } from './settings.js?v=20261109-3';
-import { advanceNight, answerStatement, createNight, NIGHT_HOURS } from './night-engine.js?v=20261109-3';
-import { avatarOf } from './avatar.js?v=20261109-3';
-import { CAMPAIGN_ACTIVITIES, DEBATE_TOPICS } from '../data/simulation/campaign-rules.js?v=20261109-3';
-import { autoPlay, chooseInScene, createDebateScene, createRallyScene, createTalkShowScene, createVoteScene, invitedShows, sceneEffects, showFor, withStats as sceneWithStats } from './scene-engine.js?v=20261109-3';
-import { abandonRally } from './rally-scene.js?v=20261109-3';
-import { answerRivalMove, rivalPulse, rivalsView } from './rival-life-engine.js?v=20261109-3';
-import { abandonChallenge as abandonChallengeRun, challengeView as challengeViewOf, recordVerdict as recordChallengeVerdict, startChallenge as startChallengeRun, tickChallenge } from './challenge-engine.js?v=20261109-3';
-import { tickerFor } from './studio-lines.js?v=20261109-3';
-import { assessProposal, createProposal, linkProposal as linkProposalTo, moveProposals, programPreview as programPreviewOf, proposalContext, proposalCredibility, proposalsOf, removeProposals, setProposalState as setProposalStateOf, updateProposal as updateProposalOf, linkableTo, FINANCING, TERRITORIES, DEADLINES, PROPOSAL_LIMIT } from './program-proposals.js?v=20261109-3';
-import { accordPromises, areaIndicator as areaIndicatorOf, credibility as baseProgramCredibility, derivePriorities, makePromise as makeProgramPromise, modifyPromise as modifyProgramPromise, promisesOf, rivalProgram, tickPromises, topicOfArea, withdrawPromise as withdrawProgramPromise } from './program-engine.js?v=20261109-3';
-import { advanceDays, formatDate } from './time.js?v=20261109-3';
-import { CALENDAR_RULES } from './calendar-planner.js?v=20261109-3';
-import { GENDERS, STARTING_OFFICES, STARTING_ROLES, normalizeGender, validateNewCareerDraft } from './career-rules.js?v=20261109-3';
-import { activityAvailability, advanceCampaign, applyCrewProfile, breakCampaignAlliance, campaignDebts, createCampaign, decayEndorsers, decideCampaignEvent, followWorld, mergeEndorsers, mergeRivalRegistry, negotiateCampaignAlliance, performCampaignActivity, rivalLedger, setCampaignStrategy, setExpectation } from './campaign-engine.js?v=20261109-3';
-import { electionAftermath } from './aftermath-engine.js?v=20261109-3';
-import { advancementOdds, progressionFactors } from './progression-engine.js?v=20261109-3';
-import { hasStart, planLines, startMods, startPlan, startStatDeltas } from './start-engine.js?v=20261109-3';
-import { objectiveMods } from './objective-engine.js?v=20261109-3';
-import { END_KINDS, addToHall, careerFacts, hallEntry, legacyBoon, legacyScore, legacyTags, retirementProblem, sortedHall } from './legacy-engine.js?v=20261109-3';
-import { COMMITTEE_ACTIONS, committeeSupport, committeesAfterVote, createCommittees } from './committee-engine.js?v=20261109-3';
-import { changePartner } from './parliament-engine.js?v=20261109-3';
-import { governmentSpendingReview, accordApplies, accordConflicts, parliamentInternals, premierGroupOf, answerCommitment, ensureAccord, offerConcession, tickAccord, changeSeats, checkMajority, record as recordParliament, setConfidenceVote, setGroupDirective, createReferenceGovernment, neverHadGovernment, offerGroupSupport, requestGovernmentPost, withdrawGroupSupport, partnerSatisfaction, acceptLawDemand, activeMinisters, amendLawPolicy, askConfidenceOnLaw, groupProfile, issueDecree, majoritySummit, reshuffleMinister, setGovernmentProgram, settlePartnerDemand, withdrawLaw, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20261109-3';
-import { activityProblem, dissolutionWait, situation, addProvincialCalendar, declareAmbition, scheduleEarlyLocalElection, alignLocalCalendar, localCalendarOf, committeeAction, startTreasuryOperation, requestFundsFromParty, payIntoParty, staffChange, staffGive, staffSetStatus, setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, lifeBreakPact, lifeCadre, lifeCongress, lifeFound, lifeMerge, lifeOverview, lifeRebuild, lifeRename, lifeRespond, partyOpsAvailability, saveForElection, saveReserve, takeReserve, scheduleEarlyElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20261109-3';
-import { ADVANCE_RULES, AMENDMENT_CAPITAL_COST, COMMUNICATION_STYLES, GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS, PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261109-3';
-import { syncAgendas, advanceLegislativeWeek, amendOthersLaw, amendmentOdds, linkGroupsToParties, setPlayerVote, speakOnLaw } from './lawmaking-engine.js?v=20261109-3';
-import { seededRandom } from './vote-engine.js?v=20261109-3';
-import { advanceCabinetWeek, joinAsSupport, majorityMargin } from './cabinet-engine.js?v=20261109-3';
-import { CRISIS_ANSWERS, advanceDiplomacy, answerCrisis, createDiplomacy, decideSummit, diplomacyView, negotiate, openNegotiation, presidentTreaty } from './diplomacy-engine.js?v=20261109-3';
-import { advanceCabinetLife, cabinetView, decideMeeting as decideCabinetMeeting, ministerFactor, resolveConflict as resolveCabinetConflict, resolveRequest as resolveCabinetRequest } from './cabinet-life-engine.js?v=20261109-3';
-import { draftDossierBill, fundDossier, openDossiers, postponeDossier, settleProgram, tickDossiers, withdrawDossier } from './dossier-engine.js?v=20261109-3';
-import { EP_COSTS, EP_GROUPS_2024, EP_ROLES, INSTITUTIONS, advanceInstitutionWeek, applyLocalEffect, bidRapporteur, concedeToGroup, createInstitution, committeeById, epGroupFor, grantDelega, localAreas, mandateRecord, proposeCofinance, proposeLocalAct, withdrawLocalAct, questionExecutive, requestCommittee, reshuffleLocal, revokeDelega, runForCommitteeRole, sameTerritory, setLocalVote, tableAmendment, territoryOf, territoryValue, weakCityAreas, withLocalState } from './local-engine.js?v=20261109-3';
-import { answerProtest, payUpkeep, planWork, refundWork, resizeWork, resumeWork, setWorkFunding, settleCofinance, settleWorkIssue, suspendWork, workGap, workRequestFor } from './local-works-engine.js?v=20261109-3';
-import { WORK_BY_ID, WORK_RULES } from '../data/simulation/local-works.js?v=20261109-3';
-import { cadreName, LOCAL_ROLES } from './party-life-engine.js?v=20261109-3';
-import { announceOutcome, celebrate, dismissCelebration, dismissOutcome, electionTone, electionWin } from './celebration.js?v=20261109-3';
-import { candidacyBlock, candidacyLapses, candidacyRecord, incompatibleWith, institutionOffice, lapsesFor, lostOffices, officeLabel, officeScope, personalCandidacies } from './office-engine.js?v=20261109-3';
-import { actTypeOf } from '../data/simulation/local-acts.js?v=20261109-3';
-import { SECTOR_GAINS, competenceIn, gainSector, sectorFloors, standingFactors } from './standing-engine.js?v=20261109-3';
-import { AREA_BY_ID, BILLION_PER_POINT, BUDGET_SESSION, GOVERNMENT_LINES, POLICY_AREAS, SOCIAL_TABLE, SPENDING_REVIEW, areaOf } from '../data/simulation/policy-rules.js?v=20261109-3';
-import { addAdTransfer, opinionEffect, recordAccordOutcome, settleElectoralTerms, allianceBlock, allianceOf, inviteBlock, inviteOdds, inviteToAlliance, playerAlliance, electionRoster, forceProfiles, mergeCandidates, mergeIntoPlayerForce, renamePlayerForce, setPlayerAgenda, splitPlayerForce, localShares, regionalShares, withRegionalLeans, withLocalCalendar, joinCoalition, acceptAlliance, addWorldEffects, advanceWorld, alignWorldToVote, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setGoverningForces, setPlayerParty, withCanonicalForces, withLatentForces, withPartyIdentities, withPositions } from './world-engine.js?v=20261109-3';
-import { candidacyQuotas, FORMATION_PHASES, LEGISLATURE_RULES, NATIONAL_LINES, acceptMandate, crisisFormation, seatResult, startFormation, buildCoalitions, campaignWeekEffects, coalitionOptions, compactResult, contestedDistricts, createNationalState, europeanListSeats, formationStep, groupOfParty, homeDistricts, legislatureGroups, legislatureTerm, nationalCalendar, nationalHistory, nationalProjection, normalizeNationalState, openLegislature, politicheOutcome, regionalBreakdown, runEuropeanVote, runNationalVote, seatPlayer, voteForces } from './legislature-engine.js?v=20261109-3';
-import { classifyOutcome, nationalListShares, preferenceStanding } from './election-engine.js?v=20261109-3';
-import { DIFFICULTIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261109-3';
-import { POLL_EXTENSIONS, WORLD_PARTY_COUNT } from '../data/simulation/polling-rules.js?v=20261109-3';
-import { candidacyFacts, heldOfficesOf, institutionTarget as officeTargetOf, isPrimeMinister, officeFactsDetail, officeFactsDetailOf } from './roles.js?v=20261109-3';
-import { costProblem, leavePartyFor, memoryAbout, memoryBalance, memoryWeight, recordWhy, remember, scheduleFollowUp } from './career-engine.js?v=20261109-3';
-import { addLedger, advanceElection, ledgerLabel, affinity, applyPresidentCredit, composeAssembly, createPresidency, dealWithBloc, declareCandidacy, lineText, normalizePresidency, openElection as openPresidentialElection, playerStanding, presidencySchedule, presidentActivityEffects, presidentActivityProblem, presidentWeek, presidentialEligibility, proclaim, projection, quorumFor, resignPresidency, setPlayerLine, setPlayerVote as setPresidentialVote, settleLedger, sponsorCandidate, startPlayerPresidency, termEndOf, vetoCandidate, whiteSemester, withdrawCandidacy } from './presidency-engine.js?v=20261109-3';
-import { PRESIDENCY_RULES, PRESIDENT_ACTIVITIES, PRESIDENT_ACTS } from '../data/simulation/presidency-rules.js?v=20261109-3';
-import { PARTY_LINES, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261109-3';
-import { CADRE_ACTIONS } from '../data/simulation/party-life-rules.js?v=20261109-3';
-import { TREASURY_OPERATIONS } from '../data/simulation/finance-rules.js?v=20261109-3';
-import { advanceSociety, applyBudgetPlan, applyLawToSociety, applySocialTable, applySpendingReview, calibrateWeights, createSociety, explainMood, measureDesign, mediaEvent, normalizeSociety, provisionalBudget, publicBudgetChoice, regionAttention, revokeMeasure, scheduleRegionalEffects, segmentAttention, societyMood, societyShock, observatorySociety } from './society-engine.js?v=20261109-3';
-import { ACTIVITY_MEDIA, INDICATORS, ISSUE_TOPICS, SEGMENTS } from '../data/simulation/society-rules.js?v=20261109-3';
-import { book, hasAsset, releaseElectionFund, setBudgetLevel } from './finance-engine.js?v=20261109-3';
-import { BUDGET_SECTORS, EU_CALLS, PROJECT_TYPES } from '../data/simulation/project-rules.js?v=20261109-3';
-import { applyCall, projectQuote, proposeProject, reportCall, setProjectFunding, settleProjectIssue, suspendProject } from './project-engine.js?v=20261109-3';
-import { isPartyLeader, setMembershipFee as applyMembershipFee, treasuryBook } from './organization-engine.js?v=20261109-3';
-import { selectContacts, syncContacts } from './contacts-engine.js?v=20261109-3';
-import { POLL_SCENARIOS, fitCustom, normalizePollScenario, scenarioPoll } from './poll-scenario.js?v=20261109-3';
-import { NEWS_TEMPLATES, activityArticle, composeHeadline, markHomeSeen, newsroomWeek, weeklyNews, weeklyPopup } from './news-engine.js?v=20261109-3';
-import { macroAreaOf, MACRO_AREAS } from '../data/simulation/policy-rules.js?v=20261109-3';
-import { RACE_ROLES, RACE_RULES } from '../data/simulation/race-rules.js?v=20261109-3';
-import { buildSlate, candidateOptions, chooseCandidate, mergeSlate, profileStats, raceDue, raceOutcome, rootingOf, runRace, syncRoundRaces } from './race-engine.js?v=20261109-3';
-import { MEMBER_HISTORY_LIMIT, closeVacancy, drawMemberChange, fillSeat, inOffice, isSeatPerson, leaveSeat, moveSeat, newMember, normalizeSeatPerson, openVacancy, partsWithGuests, rosterInSync, rosterPeople, rosterSeats, seatOf, syncRoster, vacanciesOf, withMemberEntry } from './seat-roster.js?v=20261109-3';
+import { territoryWeightsOf } from './territory-weights.js?v=20261109-5';
+import { addPlayTime as engineAddPlayTime, confirmPlayTime as engineConfirmPlayTime, creditCommunity as engineCreditCommunity, creditDaily as engineCreditDaily, normalizeRewards, reconcileRewards as engineReconcileRewards } from './rewards-engine.js?v=20261109-5';
+import { rewardsJournal } from '../data/repositories/rewards-journal.js?v=20261109-5';
+import { AD_REWARD } from '../data/simulation/reward-rules.js?v=20261109-5';
+import { bandOfMunicipality, indexMunicipalPopulation, residentsOfMunicipality, setMunicipalPopulationIndex } from './municipal-rules.js?v=20261109-5';
+import { uniqueId } from './ids.js?v=20261109-5';
+import { DATA_SOURCES, emptyDataset, isSelectableParty, isUsableReal } from '../data/schema.js?v=20261109-5';
+import { makeDemoState } from '../data/demo.js?v=20261109-5';
+import { CAREER_LEVELS, ITALIAN_REGIONS, hasProvincialLevel, initialCareerStatistics, regionIdOf } from '../data/regions.js?v=20261109-5';
+import { withVotes } from './electorate.js?v=20261109-5';
+import { MAX_SLOTS, compareSaveProgress, storage } from './storage.js?v=20261109-5';
+import { loadSettings } from './settings.js?v=20261109-5';
+import { advanceNight, answerStatement, createNight, NIGHT_HOURS } from './night-engine.js?v=20261109-5';
+import { avatarOf } from './avatar.js?v=20261109-5';
+import { CAMPAIGN_ACTIVITIES, DEBATE_TOPICS } from '../data/simulation/campaign-rules.js?v=20261109-5';
+import { abandonKindScene, autoPlay, chooseInScene, createDebateScene, createRallyScene, createTalkShowScene, createVoteScene, invitedShows, sceneEffects, showFor, withStats as sceneWithStats } from './scene-engine.js?v=20261109-5';
+import { abandonRally } from './rally-scene.js?v=20261109-5';
+import { answerRivalMove, rivalPulse, rivalsView } from './rival-life-engine.js?v=20261109-5';
+import { abandonChallenge as abandonChallengeRun, challengeView as challengeViewOf, recordVerdict as recordChallengeVerdict, startChallenge as startChallengeRun, tickChallenge } from './challenge-engine.js?v=20261109-5';
+import { tickerFor } from './studio-lines.js?v=20261109-5';
+import { assessProposal, createProposal, linkProposal as linkProposalTo, moveProposals, programPreview as programPreviewOf, proposalContext, proposalCredibility, proposalsOf, removeProposals, setProposalState as setProposalStateOf, updateProposal as updateProposalOf, linkableTo, FINANCING, TERRITORIES, DEADLINES, PROPOSAL_LIMIT } from './program-proposals.js?v=20261109-5';
+import { accordPromises, areaIndicator as areaIndicatorOf, credibility as baseProgramCredibility, derivePriorities, makePromise as makeProgramPromise, modifyPromise as modifyProgramPromise, promisesOf, rivalProgram, tickPromises, topicOfArea, withdrawPromise as withdrawProgramPromise } from './program-engine.js?v=20261109-5';
+import { advanceDays, formatDate } from './time.js?v=20261109-5';
+import { CALENDAR_RULES } from './calendar-planner.js?v=20261109-5';
+import { GENDERS, STARTING_OFFICES, STARTING_ROLES, normalizeGender, validateNewCareerDraft } from './career-rules.js?v=20261109-5';
+import { activityAvailability, advanceCampaign, applyCrewProfile, breakCampaignAlliance, campaignDebts, createCampaign, decayEndorsers, decideCampaignEvent, followWorld, mergeEndorsers, mergeRivalRegistry, negotiateCampaignAlliance, performCampaignActivity, rivalLedger, setCampaignStrategy, setExpectation } from './campaign-engine.js?v=20261109-5';
+import { electionAftermath } from './aftermath-engine.js?v=20261109-5';
+import { advancementOdds, progressionFactors } from './progression-engine.js?v=20261109-5';
+import { hasStart, planLines, startMods, startPlan, startStatDeltas } from './start-engine.js?v=20261109-5';
+import { objectiveMods } from './objective-engine.js?v=20261109-5';
+import { END_KINDS, addToHall, careerFacts, hallEntry, legacyBoon, legacyScore, legacyTags, retirementProblem, sortedHall } from './legacy-engine.js?v=20261109-5';
+import { COMMITTEE_ACTIONS, committeeSupport, committeesAfterVote, createCommittees } from './committee-engine.js?v=20261109-5';
+import { changePartner } from './parliament-engine.js?v=20261109-5';
+import { governmentSpendingReview, accordApplies, accordConflicts, parliamentInternals, premierGroupOf, answerCommitment, ensureAccord, offerConcession, tickAccord, changeSeats, checkMajority, record as recordParliament, setConfidenceVote, setGroupDirective, createReferenceGovernment, neverHadGovernment, offerGroupSupport, requestGovernmentPost, withdrawGroupSupport, partnerSatisfaction, acceptLawDemand, activeMinisters, amendLawPolicy, askConfidenceOnLaw, groupProfile, issueDecree, majoritySummit, reshuffleMinister, setGovernmentProgram, settlePartnerDemand, withdrawLaw, playerInMajority, advanceGovernmentWeek, majorityShift, advanceLaw, amendLaw, assignMinister, assignPlayerGroup, canManageParliament, compromiseLaw, contestCommitteeRole, createParliamentState, enterParliament, formGovernment, leaveParliament, negotiateGovernmentSupport, negotiateLaw, normalizeParliamentState, proposeLaw, reviseGovernmentCoalition, triggerGovernmentCrisis, voteGovernmentConfidence } from './parliament-engine.js?v=20261109-5';
+import { activityProblem, dissolutionWait, situation, addProvincialCalendar, declareAmbition, scheduleEarlyLocalElection, alignLocalCalendar, localCalendarOf, committeeAction, startTreasuryOperation, requestFundsFromParty, payIntoParty, staffChange, staffGive, staffSetStatus, setCommunication, setPartyProgram, addSituationEvent, addWorldReaction, advanceWeek, alignCurrent, assignOrgans, callEarlyCongress, contestPartyRank, createGameState, disciplineGroup, expelDissidents, isSecretary, joinParty, makeInvestment, nextPartyRank, partyInvestment, lifeBreakPact, lifeCadre, lifeCongress, lifeFound, lifeMerge, lifeOverview, lifeRebuild, lifeRename, lifeRespond, partyOpsAvailability, saveForElection, saveReserve, takeReserve, scheduleEarlyElection, setCandidacyRule, setPartyLine, markElectionHeld, markElectionRunning, normalizeGameState, openElection, performActivity, quitParty, refreshObjectives, relationValue, resolveInboxItem, spendTime, upcomingElections } from './career-engine.js?v=20261109-5';
+import { ADVANCE_RULES, AMENDMENT_CAPITAL_COST, COMMUNICATION_STYLES, GOVERNMENT_CAPITAL_COSTS, PARLIAMENT_TIME_COSTS, PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261109-5';
+import { syncAgendas, advanceLegislativeWeek, amendOthersLaw, amendmentOdds, linkGroupsToParties, setPlayerVote, speakOnLaw } from './lawmaking-engine.js?v=20261109-5';
+import { seededRandom } from './vote-engine.js?v=20261109-5';
+import { advanceCabinetWeek, joinAsSupport, majorityMargin } from './cabinet-engine.js?v=20261109-5';
+import { CRISIS_ANSWERS, advanceDiplomacy, answerCrisis, createDiplomacy, decideSummit, diplomacyView, negotiate, openNegotiation, presidentTreaty } from './diplomacy-engine.js?v=20261109-5';
+import { advanceCabinetLife, cabinetView, decideMeeting as decideCabinetMeeting, ministerFactor, resolveConflict as resolveCabinetConflict, resolveRequest as resolveCabinetRequest } from './cabinet-life-engine.js?v=20261109-5';
+import { draftDossierBill, fundDossier, openDossiers, postponeDossier, settleProgram, tickDossiers, withdrawDossier } from './dossier-engine.js?v=20261109-5';
+import { EP_COSTS, EP_GROUPS_2024, EP_ROLES, INSTITUTIONS, advanceInstitutionWeek, applyLocalEffect, bidRapporteur, concedeToGroup, createInstitution, committeeById, epGroupFor, grantDelega, localAreas, mandateRecord, proposeCofinance, proposeLocalAct, withdrawLocalAct, questionExecutive, requestCommittee, reshuffleLocal, revokeDelega, runForCommitteeRole, sameTerritory, setLocalVote, tableAmendment, territoryOf, territoryValue, weakCityAreas, withLocalState } from './local-engine.js?v=20261109-5';
+import { answerProtest, payUpkeep, planWork, refundWork, resizeWork, resumeWork, setWorkFunding, settleCofinance, settleWorkIssue, suspendWork, workGap, workRequestFor } from './local-works-engine.js?v=20261109-5';
+import { WORK_BY_ID, WORK_RULES } from '../data/simulation/local-works.js?v=20261109-5';
+import { cadreName, LOCAL_ROLES } from './party-life-engine.js?v=20261109-5';
+import { announceOutcome, celebrate, dismissCelebration, dismissOutcome, electionTone, electionWin } from './celebration.js?v=20261109-5';
+import { candidacyBlock, candidacyLapses, candidacyRecord, incompatibleWith, institutionOffice, lapsesFor, lostOffices, officeLabel, officeScope, personalCandidacies } from './office-engine.js?v=20261109-5';
+import { actTypeOf } from '../data/simulation/local-acts.js?v=20261109-5';
+import { SECTOR_GAINS, competenceIn, gainSector, sectorFloors, standingFactors } from './standing-engine.js?v=20261109-5';
+import { AREA_BY_ID, BILLION_PER_POINT, BUDGET_SESSION, GOVERNMENT_LINES, POLICY_AREAS, SOCIAL_TABLE, SPENDING_REVIEW, areaOf } from '../data/simulation/policy-rules.js?v=20261109-5';
+import { addAdTransfer, opinionEffect, recordAccordOutcome, settleElectoralTerms, allianceBlock, allianceOf, inviteBlock, inviteOdds, inviteToAlliance, playerAlliance, electionRoster, forceProfiles, mergeCandidates, mergeIntoPlayerForce, renamePlayerForce, setPlayerAgenda, splitPlayerForce, localShares, regionalShares, withRegionalLeans, withLocalCalendar, joinCoalition, acceptAlliance, addWorldEffects, advanceWorld, alignWorldToVote, allianceOdds, applyWorldSignals, axisOf, breakAlliance, campaignPollBonus, createWorld, isLegacyWorld, normalizeWorld, proposeAlliance, setGoverningForces, setPlayerParty, withCanonicalForces, withLatentForces, withPartyIdentities, withPositions } from './world-engine.js?v=20261109-5';
+import { candidacyQuotas, FORMATION_PHASES, LEGISLATURE_RULES, NATIONAL_LINES, acceptMandate, crisisFormation, seatResult, startFormation, buildCoalitions, campaignWeekEffects, coalitionOptions, compactResult, contestedDistricts, createNationalState, europeanListSeats, formationStep, groupOfParty, homeDistricts, legislatureGroups, legislatureTerm, nationalCalendar, nationalHistory, nationalProjection, normalizeNationalState, openLegislature, politicheOutcome, regionalBreakdown, runEuropeanVote, runNationalVote, seatPlayer, voteForces } from './legislature-engine.js?v=20261109-5';
+import { classifyOutcome, nationalListShares, preferenceStanding } from './election-engine.js?v=20261109-5';
+import { DIFFICULTIES, difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261109-5';
+import { POLL_EXTENSIONS, WORLD_PARTY_COUNT } from '../data/simulation/polling-rules.js?v=20261109-5';
+import { candidacyFacts, heldOfficesOf, institutionTarget as officeTargetOf, isPrimeMinister, officeFactsDetail, officeFactsDetailOf } from './roles.js?v=20261109-5';
+import { activityFor, costProblem, leavePartyFor, memoryAbout, memoryBalance, memoryWeight, recordWhy, remember, scheduleFollowUp } from './career-engine.js?v=20261109-5';
+import { addLedger, advanceElection, ledgerLabel, affinity, applyPresidentCredit, composeAssembly, createPresidency, dealWithBloc, declareCandidacy, lineText, normalizePresidency, openElection as openPresidentialElection, playerStanding, presidencySchedule, presidentActivityEffects, presidentActivityProblem, presidentWeek, presidentialEligibility, proclaim, projection, quorumFor, resignPresidency, setPlayerLine, setPlayerVote as setPresidentialVote, settleLedger, sponsorCandidate, startPlayerPresidency, termEndOf, vetoCandidate, whiteSemester, withdrawCandidacy } from './presidency-engine.js?v=20261109-5';
+import { PRESIDENCY_RULES, PRESIDENT_ACTIVITIES, PRESIDENT_ACTS } from '../data/simulation/presidency-rules.js?v=20261109-5';
+import { PARTY_LINES, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261109-5';
+import { CADRE_ACTIONS } from '../data/simulation/party-life-rules.js?v=20261109-5';
+import { TREASURY_OPERATIONS } from '../data/simulation/finance-rules.js?v=20261109-5';
+import { advanceSociety, applyBudgetPlan, applyLawToSociety, applySocialTable, applySpendingReview, calibrateWeights, createSociety, explainMood, measureDesign, mediaEvent, normalizeSociety, provisionalBudget, publicBudgetChoice, regionAttention, revokeMeasure, scheduleRegionalEffects, segmentAttention, societyMood, societyShock, observatorySociety } from './society-engine.js?v=20261109-5';
+import { ACTIVITY_MEDIA, INDICATORS, ISSUE_TOPICS, SEGMENTS } from '../data/simulation/society-rules.js?v=20261109-5';
+import { book, hasAsset, releaseElectionFund, setBudgetLevel } from './finance-engine.js?v=20261109-5';
+import { BUDGET_SECTORS, EU_CALLS, PROJECT_TYPES } from '../data/simulation/project-rules.js?v=20261109-5';
+import { applyCall, projectQuote, proposeProject, reportCall, setProjectFunding, settleProjectIssue, suspendProject } from './project-engine.js?v=20261109-5';
+import { isPartyLeader, setMembershipFee as applyMembershipFee, treasuryBook } from './organization-engine.js?v=20261109-5';
+import { selectContacts, syncContacts } from './contacts-engine.js?v=20261109-5';
+import { POLL_SCENARIOS, fitCustom, normalizePollScenario, scenarioPoll } from './poll-scenario.js?v=20261109-5';
+import { NEWS_TEMPLATES, activityArticle, composeHeadline, markHomeSeen, newsroomWeek, weeklyNews, weeklyPopup } from './news-engine.js?v=20261109-5';
+import { macroAreaOf, MACRO_AREAS } from '../data/simulation/policy-rules.js?v=20261109-5';
+import { RACE_ROLES, RACE_RULES } from '../data/simulation/race-rules.js?v=20261109-5';
+import { buildSlate, candidateOptions, chooseCandidate, mergeSlate, profileStats, raceDue, raceOutcome, rootingOf, runRace, syncRoundRaces } from './race-engine.js?v=20261109-5';
+import { MEMBER_HISTORY_LIMIT, closeVacancy, drawMemberChange, fillSeat, inOffice, isSeatPerson, leaveSeat, moveSeat, newMember, normalizeSeatPerson, openVacancy, partsWithGuests, rosterInSync, rosterPeople, rosterSeats, seatOf, syncRoster, vacanciesOf, withMemberEntry } from './seat-roster.js?v=20261109-5';
 
 const STATE_VERSION = 10;
 const POSITIONS_SET = new Set(['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra']);
 const PARLIAMENTARY_CAMPAIGN_ROLES = Object.freeze({ deputato: 'camera', uninominale: 'camera', senatore: 'senato' });
 const isRestorableSave = saved => saved && typeof saved === 'object' && saved.career && typeof saved.career === 'object' && saved.clock?.currentDate && saved.dataset && Array.isArray(saved.dataset.politicians);
 
-import { isHiddenFrom, signedInUsername } from '../data/repositories/career-visibility.js?v=20261109-3';
-import { defaultAvatarFor, normalizeAvatar } from './avatar.js?v=20261109-3';
+import { isHiddenFrom, signedInUsername } from '../data/repositories/career-visibility.js?v=20261109-5';
+import { defaultAvatarFor, normalizeAvatar } from './avatar.js?v=20261109-5';
 // The career that was running when the player left the account stays in the browser but is not opened for anybody else: the game starts empty and the career is back for its account.
 const storedRaw = storage.load();
 const careerHiddenAtStart = Boolean(storedRaw?.career?.id && isHiddenFrom(storedRaw.career.id, signedInUsername()));
@@ -1108,8 +1108,28 @@ function finishVote() {
   persist(); emit();
   return state;
 }
+// The optional scene of a weekly activity ends: the plain activity is performed ONCE here (its cost and its effects, scaled by the verdict of the scene, the same engine as «Simula»), the family of topics is
+// remembered (the next scene of this kind does not repeat it), and a line goes in the diary. Opening, playing or leaving the scene never touches the week.
+const SEGMENT_FAMILY = { giovani: 'lavoro', famiglie: 'scuola', anziani: 'sanita', imprese: 'lavoro', fragili: 'casa' };
+function finishActivityScene(scene) {
+  const effects = sceneEffects(scene);
+  state = { ...state, scene: null };
+  const toast = effects.line;
+  let result = null;
+  // an activity that is no longer available (a save edited by hand, a role lost) closes the scene without costs or effects: the scene never leaves the game stuck
+  try { result = performActivity({ game: state.game, stats: statsOf(state), parliament: state.parliament }, gameEnv(state), scene.activityId, scene.target ?? null, { sceneEdge: effects.edge }); } catch (error) { state = { ...state, ui: { ...state.ui, toast: error.message } }; persist(); emit(); return state; }
+  state = applyGameResult(state, result.ctx, toast, result.specials ?? []);
+  state = publicEcho(state, scene.activityId, result.report.tone, { tone: effects.mediaTone });
+  const game = deepCopy(state.game);
+  game.flags = { ...game.flags, sceneLog: [...(game.flags?.sceneLog ?? []), { key: scene.sceneKey, family: scene.familyId, week: game.week.index, performance: effects.performance }].slice(-24) };
+  remember(game, { date: state.clock.currentDate, kind: 'scena-attivita', text: effects.line, weight: 0.7 });
+  state = { ...state, game, ui: { ...state.ui, toast } };
+  persist(); emit();
+  return state;
+}
 function finishScene() {
   const kind = state.scene?.kind;
+  if (kind === 'attivita') return finishActivityScene(state.scene);
   if (kind === 'comizio') return finishRally(state.scene);
   if (kind === 'talkshow') return finishTalkShow(state.scene);
   if (kind === 'voto') return finishVote();
@@ -4151,6 +4171,7 @@ export const store = {
     const scene = state.scene;
     if (scene.kind === 'voto') return store.sceneSkip();
     if (scene.kind === 'comizio') { state = { ...state, scene: abandonRally(scene) }; return finishScene(); }
+    if (scene.kind === 'attivita') { state = { ...state, scene: abandonKindScene(scene) ?? { ...scene, status: 'abandoned', outcome: { performance: 40, band: 'mid', edge: -2, summary: 'Hai lasciato la scena a metà.', audience: scene.audience?.mood ?? 50 } } }; return finishScene(); }
     state = { ...state, scene: { ...scene, status: 'abandoned', outcome: { performance: 30, edge: -4, summary: 'Hai lasciato lo studio prima della fine: una figuraccia in diretta.', declined: scene.kind !== 'talkshow', deltas: { notoriety: 0.6, popularity: -0.8, reputation: -0.8 }, mediaTone: -1 } } };
     return finishScene();
   },
@@ -4184,6 +4205,40 @@ export const store = {
     if (quick) scene = autoPlay(scene);
     state = { ...state, scene, ui: { ...state.ui, activePage: campaign ? 'elezioni' : state.ui.activePage, toast: quick ? state.ui.toast : 'Scendi in piazza: il comizio sta per iniziare' } };
     if (quick) return finishScene();
+    persist(); emit();
+    return scene;
+  },
+  // A vote followed in the Aula (or not followed): it is not offered again on Home. Nothing else changes; the vote was decided by the game long before.
+  markAulaSeen(voteId) {
+    if (!state.game || !voteId) return;
+    const game = deepCopy(state.game);
+    game.flags = { ...game.flags, aulaSeen: [...new Set([...(game.flags?.aulaSeen ?? []), String(voteId)])].slice(-60) };
+    state = { ...state, game };
+    persist(); emit();
+  },
+  // ---------- the six optional scenes of the weekly activities (activity-scenes.js, loaded on demand) ----------
+  // «Partecipa»: the animated scene; `quick` («Simula»): the same scene played by the best choices with no stage, the same outcome engine. Nothing is paid or changed before the scene ends.
+  async startActivityScene(activityId, { quick = false, target = null } = {}) {
+    requireCareer();
+    if (state.scene) throw new Error('Una scena alla volta.');
+    const module = await import('./activity-scenes.js?v=20261109-5');
+    const key = module.sceneKeyOf(activityId);
+    if (!key) throw new Error('Questa attività non ha una scena.');
+    if (state.scene) throw new Error('Una scena alla volta.');
+    const activity = WEEKLY_ACTIVITIES.find(item => item.id === activityId);
+    const problem = activityProblem({ game: state.game, stats: statsOf(state), parliament: state.parliament }, gameEnv(state), activityFor(activity, state.game));
+    if (problem) throw new Error(problem);
+    const player = playerOf(state), game = state.game;
+    const id = `attivita-${activityId}-${state.career.id ?? 'carriera'}-${game.week.index}`;
+    const recent = (game.flags?.sceneLog ?? []).filter(item => item.key === key).map(item => item.family);
+    const variant = activityId === 'ispezione-cantiere' ? 'opposition' : activityId === 'sopralluogo' ? 'head' : 'default';
+    let scene = module.createActivityScene({
+      id, seed: `${state.career.id ?? 'carriera'}|${id}`, sceneKey: key, activityId, target, variant, player: { name: player?.displayName ?? 'Tu', tag: studioTags(state).player }, playerAvatar: avatarOf(player),
+      stats: { competence: (playerStat(state, 'experience') + playerStat(state, 'influence')) / 2, charisma: (playerStat(state, 'notoriety') + playerStat(state, 'reputation')) / 2, reputation: playerStat(state, 'reputation') },
+      recent, prefer: activityId === 'cittadini' ? SEGMENT_FAMILY[target] ?? null : null, date: state.clock.currentDate
+    });
+    if (quick) { state = { ...state, scene: autoPlay(scene) }; return finishScene(); }
+    state = { ...state, scene, ui: { ...state.ui, toast: 'La scena sta per cominciare: nulla è deciso finché non finisce.' } };
     persist(); emit();
     return scene;
   },

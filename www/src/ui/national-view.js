@@ -2,12 +2,13 @@
 // elections, coalitions and national campaign, the seats projected on the real map of 2022, the last votes, the new
 // Chambers and the formation of the Government. The map, the seats and the results of 2022 are real data (Eligendo);
 // polls, coalitions, votes, seats and Governments of the game are simulation, and every block says which is which.
-import { districtRows } from '../core/legislature-engine.js?v=20261109-3';
-import { formatDate } from '../core/time.js?v=20261109-3';
-import { ALLIANCE_COLORS, NEUTRAL_COLOR, coalitionColor, forceColor } from './political-colors.js?v=20261109-3';
-import { glyph } from './visuals.js?v=20261109-3';
-import { arrow, badge, bar, card, esc, euro, kpi, num, pct, table } from './sections-kit.js?v=20261109-3';
-import { MAP_SCOPES, NO_DATA_COLOR, PROVINCE_INDICATOR_NOTE, italyMapInfo, italyMapSvg, italyMapTable, territoryTallies } from './italy-map.js?v=20261109-3';
+import { districtRows } from '../core/legislature-engine.js?v=20261109-5';
+import { formatDate } from '../core/time.js?v=20261109-5';
+import { ALLIANCE_COLORS, NEUTRAL_COLOR, coalitionColor, forceColor } from './political-colors.js?v=20261109-5';
+import { glyph } from './visuals.js?v=20261109-5';
+import { arrow, badge, bar, card, esc, euro, kpi, num, pct, table } from './sections-kit.js?v=20261109-5';
+import { toneEdge } from '../data/party-brand.js?v=20261109-5';
+import { ABSENT_COLOR, MAP_SCOPES, NO_DATA_COLOR, PRESENCE_NOTE, PROVINCE_INDICATOR_NOTE, italyMapInfo, italyMapSvg, italyMapTable, territoryTallies } from './italy-map.js?v=20261109-5';
 
 export const NATIONAL_MAP_VIEWS = Object.freeze([['proiezione', 'Proiezione di oggi'], ['2022', 'Vincitori 2022 (reale)'], ['voto', 'Ultimo voto della partita']]);
 const NEUTRAL = NEUTRAL_COLOR;
@@ -49,7 +50,8 @@ function partyFilter(rowsByChamber, label, party, mode) {
 const groupSwitch = (group, mode) => mode === '2022'
   ? '<p class="sx-note nv-group-note" data-map-group-note>Per il 2022 il dato storico indica l’alleanza del vincitore, non sempre un singolo partito: la lettura resta per schieramenti.</p>'
   : `<div class="nv-map-switch" role="group" aria-label="Raggruppa i collegi per">${MAP_GROUPS.map(([id, text]) => `<button type="button" class="${group === id ? 'active' : ''}" data-view-filter="mapGroup" data-view-filter-value="${id}" aria-pressed="${group === id}">${esc(text)}</button>`).join('')}</div>`;
-const swatch = color => `<i class="nv-swatch" style="background:${esc(color)}"></i>`;
+const edgeClass = color => { const edge = toneEdge(color); return edge ? ` edge-${edge}` : ''; };
+const swatch = color => `<i class="nv-swatch${edgeClass(color)}" style="background:${esc(color)}"></i>`;
 
 // ---------- calendar ----------
 function calendarCard(overview) {
@@ -118,7 +120,7 @@ function seatsBlock(result, chamber, overview, colors) {
   const label = labelOf(overview, result);
   const blocs = [...data.coalitions.map(row => ({ id: row.id, seats: row.seats, uni: row.uni, prop: row.prop, estero: row.estero, share: row.share })), ...data.parties.filter(row => !row.coalitionId).map(row => ({ id: row.id, seats: row.seats, uni: row.uni, prop: row.prop, estero: row.estero, share: row.share }))].filter(row => row.seats > 0).sort((a, b) => b.seats - a.seats);
   const total = data.total || 1;
-  const strip = `<div class="nv-seatbar" role="img" aria-label="${esc(`${chamber === 'camera' ? 'Camera' : 'Senato'}: ${blocs.map(row => `${label(row.id)} ${row.seats}`).join(', ')}; maggioranza ${data.majority}`)}">${blocs.map(row => `<i style="width:${row.seats / total * 100}%;background:${colors.of(row.id)}" title="${esc(`${label(row.id)}: ${row.seats}`)}"></i>`).join('')}<b style="left:${data.majority / total * 100}%" title="Maggioranza ${data.majority}"></b></div>`;
+  const strip = `<div class="nv-seatbar" role="img" aria-label="${esc(`${chamber === 'camera' ? 'Camera' : 'Senato'}: ${blocs.map(row => `${label(row.id)} ${row.seats}`).join(', ')}; maggioranza ${data.majority}`)}">${blocs.map(row => `<i class="${edgeClass(colors.of(row.id)).trim()}" style="width:${row.seats / total * 100}%;background:${colors.of(row.id)}" title="${esc(`${label(row.id)}: ${row.seats}`)}"></i>`).join('')}<b style="left:${data.majority / total * 100}%" title="Maggioranza ${data.majority}"></b></div>`;
   const rows = blocs.map(row => `<li class="${row.seats >= data.majority ? 'is-majority' : ''}"><span>${swatch(colors.of(row.id))}<strong>${esc(label(row.id))}</strong><small>${pct(row.share)} · collegi ${num(row.uni, 0)} · proporzionale ${num(row.prop, 0)}${row.estero ? ` · estero ${num(row.estero, 0)}` : ''}${row.seats >= data.majority ? ' · maggioranza' : ''}</small></span><b>${num(row.seats, 0)}</b></li>`).join('');
   return `<div class="nv-chamber"><h4>${chamber === 'camera' ? 'Camera dei deputati' : 'Senato della Repubblica'} <small>${num(total, 0)} seggi · maggioranza ${num(data.majority, 0)}</small></h4>${strip}<ul class="nv-seats">${rows}</ul></div>`;
 }
@@ -178,7 +180,7 @@ function mapCard(overview, geography, view, group = 'schieramenti', party = '') 
           id = winner ?? 'nd'; color = race ? (muted ? MUTED_COLOR : colors.of(winner)) : '#d7dcd9'; text = `${district.name} (${district.code}) · ${race ? `${muted ? `vinto da ${label(winnerOf(race, 'partiti'))}` : `${label(winner)}, margine ${num(race.m)} punti`}` : 'nessun dato'}`;
           if (race) legend.set(id, [muted ? 'Altri partiti' : label(winner), color]);
         }
-        return `<i class="nv-cell ${race && race.m < 4 && mode !== '2022' ? 'is-close' : ''}" style="background:${esc(color)}" title="${esc(text)}"></i>`;
+        return `<i class="nv-cell${edgeClass(color)} ${race && race.m < 4 && mode !== '2022' ? 'is-close' : ''}" style="background:${esc(color)}" title="${esc(text)}"></i>`;
       }).join('');
       return `<li><span>${esc(region)}</span><div class="nv-cells">${cells}</div><b>${districts.length}</b></li>`;
     }).join('');
@@ -228,11 +230,12 @@ export function geoMapCard(overview, geography, view, map) {
   const dataClass = scope === 'province' ? `INDICATORE DESCRITTIVO SUI COMUNI · ${dataClassBase}` : dataClassBase;
   const used = new Map();
   for (const tally of [...tallies.regions.values(), ...(scope === 'province' ? tallies.provinces.values() : [])]) if (tally.leader) used.set(tally.leader, [nameOf(tally.leader), colorOf(tally.leader)]);
-  const legend = `<ul class="nv-legend">${[...used.values()].map(([name, color]) => `<li>${swatch(color)}<span>${esc(name)}</span></li>`).join('')}<li>${swatch(NO_DATA_COLOR)}<span>Pari o nessun dato</span></li></ul>${scope === 'province' ? `<p class="sx-note it-indicator-note" data-province-note>${esc(PROVINCE_INDICATOR_NOTE)}</p>` : ''}`;
+  const presence = party && mode !== '2022' ? party : null;
+  const legend = presence ? `<ul class="nv-legend" data-presence-legend><li>${swatch(colorOf(presence))}<span>${esc(label(presence))}: prevale (oltre metà)</span></li><li><i class="nv-swatch" style="background:${esc(colorOf(presence))};opacity:.5"></i><span>Presenza parziale (più chiaro = meno)</span></li><li>${swatch(ABSENT_COLOR)}<span>Assente (0%)</span></li><li>${swatch(NO_DATA_COLOR)}<span>Nessun dato</span></li></ul><p class="sx-note it-indicator-note" data-presence-note>${esc(PRESENCE_NOTE)}</p>${scope === 'province' ? `<p class="sx-note it-indicator-note" data-province-note>${esc(PROVINCE_INDICATOR_NOTE)}</p>` : ''}` : `<ul class="nv-legend">${[...used.values()].map(([name, color]) => `<li>${swatch(color)}<span>${esc(name)}</span></li>`).join('')}<li>${swatch(NO_DATA_COLOR)}<span>Pari o nessun dato</span></li></ul>${scope === 'province' ? `<p class="sx-note it-indicator-note" data-province-note>${esc(PROVINCE_INDICATOR_NOTE)}</p>` : ''}`;
   const modes = NATIONAL_MAP_VIEWS.filter(([id]) => id !== 'voto' || last).filter(([id]) => id !== 'proiezione' || overview.projection);
   const switcher = `<div class="nv-map-switch" role="group" aria-label="Cosa mostra la mappa geografica">${modes.map(([id, text]) => `<button type="button" class="${mode === id ? 'active' : ''}" data-view-filter="nazionali" data-view-filter-value="${id}" aria-pressed="${mode === id}">${esc(text)}</button>`).join('')}</div>`;
   const scopes = `<div class="nv-map-switch" role="group" aria-label="Livello territoriale">${MAP_SCOPES.map(([id, text]) => `<button type="button" class="${scope === id ? 'active' : ''}" data-view-filter="mapScope" data-view-filter-value="${id}" aria-pressed="${scope === id}">${esc(text)}</button>`).join('')}</div>`;
-  const common = { boundaries, tallies, labelOf: nameOf, colorOf, scope };
+  const common = { boundaries, tallies, labelOf: nameOf, colorOf, scope, presence };
   const note = `<p class="sx-note">Confini: ISTAT, al 1 gennaio 2026, elaborati da Openpolis (CC BY 4.0), semplificati per lo schermo. ${mode === '2022' ? 'Vincitori dei collegi: dati ufficiali Eligendo.' : 'Vincitori dei collegi: simulazione della partita, non dato reale.'} Le regioni sommano i collegi uninominali di Camera e Senato. Le province non hanno un vincitore: mostrano un indicatore descrittivo sui comuni (nota sotto la legenda). In Trentino-Alto Adige il Senato 2022 è una lacuna dei dati: quei collegi non sono colorati nel dato reale. ${esc(boundaries.attribution ?? '')}</p>`;
   return card({ fold: { id: 'nv-mappa-geo', icon: 'map', start: 'closed' }, kicker: `MAPPA GEOGRAFICA · ${scope === 'province' ? 'PROVINCE' : 'REGIONI'} · ${dataClass.split(' · ')[0]}`, title: 'Dove vince ogni schieramento', body: `<div class="it-controls">${switcher}${scopes}${groupSwitch(group, mode)}${result ? partyFilter([districtRows(result, 'camera', geography), districtRows(result, 'senato', geography)], label, party, mode) : ''}</div><p class="it-class-line"><span class="it-class">${esc(dataClass)}</span></p>${legend}<div class="it-layout"><div class="it-stage">${italyMapSvg({ ...common, selected })}</div><div class="it-side" aria-live="polite">${italyMapInfo({ ...common, selected, dataClass })}</div></div>${italyMapTable(common)}${note}` });
 }

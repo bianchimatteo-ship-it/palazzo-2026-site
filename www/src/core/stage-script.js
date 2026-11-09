@@ -5,10 +5,16 @@
 //
 // Coordinates: the stage is 640 x 360 units; `x` is the centre of the figure, `y` the line of its feet (the lower, the nearer to the camera); `s` the scale of the figure (nearer = bigger).
 
-import { formatOf } from './studio-lines.js?v=20261109-3';
+import { formatOf } from './studio-lines.js?v=20261109-5';
 
 export const STAGE_W = 640, STAGE_H = 360;
 export const depthScale = y => Math.max(0.2, Math.min(0.72, 0.3 + (y - 170) / 190 * 0.34));
+// A character never makes the same gesture for the same kind of beat: one is picked, by the seed of the scene and the beat, among the ones that suit the moment (speaking, listening, reacting).
+const hashOf = text => { let h = 2166136261 >>> 0; for (const ch of String(text)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return h; };
+export const SPEAK_GESTURES = ['sottolinea', 'apre', 'indica', 'palmi', 'petto', 'sottolinea', 'pensa'];
+export const LISTEN_GESTURES = ['ascolta', 'appunti', 'esita', 'ascolta', 'dissenso', 'sorpresa'];
+export const pickGesture = (scene, nodeId, who, list) => list[hashOf(`${scene.seed ?? scene.id}|${nodeId}|${who}`) % list.length];
+export const stagePose = (x, y, extra = {}) => pose(x, y, extra);
 const pose = (x, y, extra = {}) => ({ x, y, s: depthScale(y), facing: 1, posture: 'stand', gesture: null, visible: true, ...extra });
 const away = (x, y) => pose(x, y, { visible: false });
 
@@ -31,7 +37,7 @@ function studioPoses(scene, nodeId, node) {
   for (const member of scene.cast) {
     const seat = seats[member.role] ?? seats.rivale, door = doors[member.role] ?? doors.rivale;
     const speaking = node?.speaker === member.id;
-    const gesture = speaking ? (node.gesture ?? 'sottolinea') : (node?.speaker && at >= 3 ? 'ascolta' : null);
+    const gesture = speaking ? (node.gesture && node.gesture !== 'sottolinea' ? node.gesture : pickGesture(scene, nodeId, member.id, SPEAK_GESTURES)) : (node?.speaker && at >= 3 ? pickGesture(scene, nodeId, member.id, LISTEN_GESTURES) : null);
     if (member.role === 'conduttore') out[member.id] = pose(seat.x, seat.y, { posture: seat.posture, gesture: nodeId === 'esito' ? 'saluta' : gesture, facing: seat.facing });
     else if (nodeId === 'invito' || nodeId === 'preparazione') out[member.id] = member.role === 'giocatore' && nodeId === 'preparazione' ? pose(format === 'faccia' ? 150 : 520, 300, { gesture: 'pensa', facing: format === 'faccia' ? 1 : -1 }) : away(door.x, door.y);
     else if (nodeId === 'esito') out[member.id] = format === 'faccia' ? pose(member.role === 'giocatore' ? 90 : 550, 300, { gesture: 'saluta', posture: 'stand' }) : pose(seat.x, seat.y, { gesture: 'saluta', posture: 'stand', facing: seat.facing });
@@ -61,7 +67,7 @@ function rallyPoses(scene, nodeId, node) {
   const me = scene.cast.find(item => item.role === 'giocatore');
   const out = {};
   const speaking = node?.speaker === me.id;
-  const gesture = speaking ? (node.gesture ?? 'sottolinea') : null;
+  const gesture = speaking ? (node.gesture && node.gesture !== 'sottolinea' ? node.gesture : pickGesture(scene, nodeId, 'comiziante', SPEAK_GESTURES)) : null;
   const interrupted = scene.protest?.state === 'degenerata' || scene.interrupted;
   if (nodeId === 'arrivo') out[me.id] = pose(RALLY_STEPS[0].x, RALLY_STEPS[0].y, { gesture: 'saluta' });
   else if (nodeId === 'cammino') out[me.id] = pose(STAGE_MIC.x - 22, STAGE_MIC.y, { path: RALLY_STEPS, gesture: 'saluta' });
@@ -104,9 +110,13 @@ function votePoses(scene, nodeId) {
   return out;
 }
 
+// Stages of other settings (the rooms of the optional scenes) register their script here: (scene, node) -> { setting, poses, camera, crowd, props }.
+const SCRIPTS = {};
+export const registerStageScript = (setting, fn) => { SCRIPTS[setting] = fn; };
 // What a stage shows at a beat of a scene.
 export function stageOf(scene, node) {
   const nodeId = scene.nodeId;
+  if (SCRIPTS[scene.setting]) return SCRIPTS[scene.setting](scene, node);
   if (scene.setting === 'piazza') return { setting: 'piazza', poses: rallyPoses(scene, nodeId, node), camera: RALLY_CAMERA[nodeId] ?? 'stage', crowd: rallyCrowd(scene, nodeId, node), props: {}, protest: Boolean(scene.protest?.arrived) };
   if (scene.setting === 'seggio') { const spec = VOTE_POSES[nodeId] ?? VOTE_POSES.uscita; return { setting: 'seggio', poses: votePoses(scene, nodeId), camera: nodeId === 'cabina' || nodeId === 'voto' || nodeId === 'piega' ? 'booth' : nodeId === 'urna' ? 'urn' : 'wide', crowd: 'quiet', props: { ballot: spec.prop ?? 'none', booth: spec.booth ?? 'open' } }; }
   return { setting: scene.setting, poses: studioPoses(scene, nodeId, node), camera: studioCamera(scene, node), crowd: studioCrowd(scene, node), props: {} };

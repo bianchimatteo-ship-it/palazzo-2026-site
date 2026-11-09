@@ -1,10 +1,10 @@
-import { uniqueId } from './ids.js?v=20261109-3';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261109-3';
-import { INDICATORS, ISSUE_THRESHOLD, ISSUE_TOPICS, MEDIA_OUTLETS, REAL_TOPIC_AREAS, SCENARIO_EXECUTIVE, SEGMENTS } from '../data/simulation/society-rules.js?v=20261109-3';
-import { SOCIAL_TABLE, SPENDING_REVIEW } from '../data/simulation/policy-rules.js?v=20261109-3';
-import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, EU_PROCEDURE_WEEKS, FINANCING, INSTRUMENT_KINDS, INTENSITY, MACRO_AREAS, POLICY_AREAS, SPREAD_BASE, TERRITORIAL_TARGETS, areaOf, macroAreaOf } from '../data/simulation/policy-rules.js?v=20261109-3';
-import { BUDGET_SECTORS, FISCAL_LEVERS } from '../data/simulation/project-rules.js?v=20261109-3';
-import { euWeek, openCallWeek, projectsOf, projectsWeek } from './project-engine.js?v=20261109-3';
+import { uniqueId } from './ids.js?v=20261109-5';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261109-5';
+import { INDICATORS, ISSUE_THRESHOLD, ISSUE_TOPICS, MEDIA_OUTLETS, REAL_TOPIC_AREAS, SCENARIO_EXECUTIVE, SEGMENTS } from '../data/simulation/society-rules.js?v=20261109-5';
+import { SOCIAL_TABLE, SPENDING_REVIEW } from '../data/simulation/policy-rules.js?v=20261109-5';
+import { AREA_BY_ID, AREA_GROUPS, BILLION_PER_POINT, EU_DEFICIT_LIMIT, EU_PROCEDURE_WEEKS, FINANCING, INSTRUMENT_KINDS, INTENSITY, MACRO_AREAS, POLICY_AREAS, SPREAD_BASE, TERRITORIAL_TARGETS, areaOf, macroAreaOf } from '../data/simulation/policy-rules.js?v=20261109-5';
+import { BUDGET_SECTORS, FISCAL_LEVERS } from '../data/simulation/project-rules.js?v=20261109-5';
+import { euWeek, openCallWeek, projectsOf, projectsWeek } from './project-engine.js?v=20261109-5';
 
 const SIM = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));
@@ -281,7 +281,10 @@ export function measureImpact(society, input) {
       investimento: { capacity: 8, crime: -3, perceived: 4 },
       riforma: { prevention: 10, crime: -4, perceived: 1.5 },
       sostegno: { operations: 10, crime: -2, perceived: 6, capacity: -2 },
-      regole: { perceived: 4, crime: -0.5, justice: -3 }
+      regole: { perceived: 4, crime: -0.5, justice: -3 },
+      incentivi: { capacity: 2, perceived: 1.5, crime: -0.5 },
+      servizi: { capacity: 6, prevention: 4, crime: -2, perceived: 3 },
+      controlli: { operations: 8, crime: -3, perceived: 5, justice: -1 }
     }[design.instrument];
     security = Object.fromEntries(Object.entries(security).map(([key, value]) => [key, round2(value * strength)]));
     if (design.instrument === 'regole') add('giovani', -1.2 * strength, 'teme misure solo repressive');

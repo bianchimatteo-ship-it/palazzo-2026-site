@@ -456,9 +456,11 @@ b.down { color: var(--critical-ink); }
 @keyframes pulse-ring { 0% { box-shadow: 0 0 0 0 rgba(196,166,106,.45); } 100% { box-shadow: 0 0 0 10px rgba(196,166,106,0); } }
 .page-wrap > *, .menu-panel > * { animation: rise .32s ease-out both; }
 .advance-button:not(:disabled) { animation: pulse-ring 2.4s ease-out infinite; }
-html[data-motion="reduced"] .page-wrap > *, html[data-motion="reduced"] .menu-panel > * { animation-duration: .12s; }
-html[data-motion="reduced"] .advance-button { animation: none; }
-html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="off"] *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+html[data-ui-motion="reduced"] .page-wrap > *, html[data-ui-motion="reduced"] .menu-panel > * { animation-duration: .12s; }
+html[data-ui-motion="reduced"] .advance-button { animation: none; }
+/* The interface motion is OFF by default: no movement of panels, texts, notices, counters or decorative effects. The game scenes (stage, Aula, election night, scene windows) have their own preference
+   (data-scene-motion) and are left out: the stage, the characters, the flags, the crowd, the studios, the vote and the Aula keep moving. */
+html[data-ui-motion="off"] :where(*, *::before, *::after):not(.scene *, .st-svg *, .aula-overlay *, .night *, .night) { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; } }
 html[data-contrast="high"] { --line: #5f6556; --line-strong: #8c907a; --muted: var(--ink-2); --ink-2: var(--ink); --panel: var(--paper); --panel-2: var(--panel); }
 html[data-contrast="high"] .hq-panel, html[data-contrast="high"] .menu-item, html[data-contrast="high"] .secretary-block { border-width: 2px; }
@@ -1219,10 +1221,10 @@ select option, select optgroup { background: var(--panel); color: var(--ink); fo
 .language-gate-flag { font-size: 40px; line-height: 1; }
 .language-gate-hint { margin: 2px 0 0; color: #dcd9cf; font: 600 14px/1.5 'DM Sans', sans-serif; } .language-gate-hint span { display: none; } .language-gate-hint em { display: block; font-style: normal; color: #bba880; }
 @media (max-width: 380px) { .language-gate-buttons { grid-template-columns: 1fr; } .language-gate-button { min-height: 84px; flex-direction: row; gap: 14px; } }
-html[data-motion="off"] .language-gate-button { transition: none; }
+html[data-ui-motion="off"] .language-gate-button { transition: none; }
 
 /* ---------- Avatar of the player: the editor of the wizard (local picture of the Palace behind it, blurred, with a dark veil), and the avatar wherever the player is shown ---------- */
-.avatar-editor { position: relative; isolation: isolate; overflow: hidden; border: 1px solid rgba(240,207,133,.38); border-radius: 18px; padding: 16px; background: #0b121c; }
+.avatar-editor { position: relative; isolation: isolate; overflow: clip; border: 1px solid rgba(240,207,133,.38); border-radius: 18px; padding: 16px; background: #0b121c; }
 .avatar-editor::before { content: ''; position: absolute; inset: 0; z-index: -2; background: url('../icons/avatar-palazzo-bg.png') center / cover no-repeat; filter: blur(5px); }
 .avatar-editor::after { content: ''; position: absolute; inset: 0; z-index: -1; background: radial-gradient(90% 70% at 50% 0%, rgba(240,207,133,.10), rgba(240,207,133,0) 60%), linear-gradient(180deg, rgba(7,11,18,.72), rgba(7,11,18,.86)); }
 .avatar-editor .summary-section-heading span { color: #f0cf85; } .avatar-editor .summary-section-heading strong { color: #f8f5ec; } .avatar-editor .wizard-hint { color: #d8d2c2; }
@@ -1243,7 +1245,7 @@ html[data-motion="off"] .language-gate-button { transition: none; }
 .hero-avatar.has-avatar { background: none; border: 0; padding: 0; overflow: visible; font-size: 0; } .hero-avatar.has-avatar .avatar-svg { width: 100%; height: 100%; display: block; }
 .player-avatar.has-avatar { background: none; border: 0; padding: 0; } .player-avatar.has-avatar .avatar-svg { width: 100%; height: 100%; display: block; }
 @media (max-width: 760px) {
-  .avatar-editor { padding: 12px; } .avatar-editor-body { grid-template-columns: minmax(0, 1fr); gap: 14px; } .avatar-preview { position: static; justify-self: center; width: min(250px, 100%); }
+  .avatar-editor { padding: 10px; } .avatar-editor-body { grid-template-columns: minmax(0, 1fr) 84px; gap: 8px; } .avatar-controls { grid-column: 1; grid-row: 1; } .avatar-preview { grid-column: 2; grid-row: 1; position: sticky; top: 6px; z-index: 6; align-self: start; justify-self: end; width: 84px; padding: 4px; border-radius: 14px; background: rgba(10,16,26,.92); } .avatar-preview .avatar-svg { width: 74px; }
   .avatar-choice { min-height: 44px; } .avatar-choice.is-swatch { width: 44px; }
 }
 @media (prefers-reduced-motion: reduce) { .avatar-choice { transition: none; } .avatar-choice:hover { transform: none; } }
@@ -1360,3 +1362,6 @@ html[data-motion="off"] .language-gate-button { transition: none; }
 .avatar-shape .ghost-button:hover:not(:disabled) { border-color: var(--accent); color: #fff; }
 .avatar-shape .ghost-button:disabled { opacity: .5; cursor: not-allowed; }
 @media (max-width: 520px) { .avatar-slider { grid-template-columns: minmax(0, 1fr) 34px; } .avatar-slider span { grid-column: 1 / -1; } .avatar-slider input[type="range"] { grid-column: 1; } }
+
+/* The preview of the avatar stays in sight while the controls scroll: a stable side column on a computer (sticky inside the wizard body), a compact one at the top on a phone */
+@media (min-width: 761px) { .avatar-preview { position: sticky; top: 10px; align-self: start; } }

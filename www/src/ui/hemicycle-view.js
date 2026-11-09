@@ -1,15 +1,16 @@
 // The interactive hemicycle of the Parlamento section: Camera and Senato apart, one marker per seat (real
 // parliamentarians in office, the player's seat), colours by group or by party, filters by party, group and
 // committee, a card for every parliamentarian and, for a simulated vote, the vote of every seat.
-import { chamberRoster, committeesOf, forceColorResolver, partyColors, seatColor, UNKNOWN_COLOR } from '../core/hemicycle.js?v=20261109-3';
-import { individualVotes, VOTE_CHOICES, voteCatalog, voteSummary } from '../core/vote-engine.js?v=20261109-3';
-import { BASIS_LABELS, electionListOf, groupAffiliation, groupLabel, politicianAffiliation } from '../data/repositories/party-links.js?v=20261109-3';
-import { formatDate } from '../core/time.js?v=20261109-3';
-import { placeholderPerson } from '../core/seat-roster.js?v=20261109-3';
-import { glyph } from './visuals.js?v=20261109-3';
-import { badge, esc, num, table } from './sections-kit.js?v=20261109-3';
+import { toneEdge } from '../data/party-brand.js?v=20261109-5';
+import { chamberRoster, committeesOf, forceColorResolver, partyColors, seatColor, UNKNOWN_COLOR } from '../core/hemicycle.js?v=20261109-5';
+import { individualVotes, VOTE_CHOICES, voteCatalog, voteSummary } from '../core/vote-engine.js?v=20261109-5';
+import { BASIS_LABELS, electionListOf, groupAffiliation, groupLabel, politicianAffiliation } from '../data/repositories/party-links.js?v=20261109-5';
+import { formatDate } from '../core/time.js?v=20261109-5';
+import { placeholderPerson } from '../core/seat-roster.js?v=20261109-5';
+import { glyph } from './visuals.js?v=20261109-5';
+import { badge, esc, num, table } from './sections-kit.js?v=20261109-5';
 
-import { HEMICYCLE_DEFAULTS } from './hemicycle-defaults.js?v=20261109-3';
+import { HEMICYCLE_DEFAULTS } from './hemicycle-defaults.js?v=20261109-5';
 export { HEMICYCLE_DEFAULTS };
 export const ROSTER_PAGE = 40;
 const CHAMBER_LABELS = { camera: 'Camera dei deputati', senato: 'Senato della Repubblica' };
@@ -98,7 +99,8 @@ function svg(model, view) {
     const facts = model.factsOf(seat);
     const name = seat.player ? 'Il tuo seggio' : `${facts.name}${facts.kind === 'simulated' ? ' (persona simulata)' : ''}`;
     const label = `${name} · ${model.byGroup.get(seat.groupId)?.shortName ?? ''}${model.individual ? ` · ${VOTE_CHOICES[model.individual.choices[index]].label}` : ''}`;
-    const classes = ['hemi-seat', model.matches(seat) ? '' : 'is-dim', seat.player ? 'is-player' : '', seat.placeholder ? 'is-placeholder' : '', model.selected && seatKey(model.selected) === seatKey(seat) ? 'is-selected' : ''].filter(Boolean).join(' ');
+    const edge = toneEdge(model.colorOf(seat, index));
+    const classes = ['hemi-seat', edge ? `edge-${edge}` : '', model.matches(seat) ? '' : 'is-dim', seat.player ? 'is-player' : '', seat.placeholder ? 'is-placeholder' : '', model.selected && seatKey(model.selected) === seatKey(seat) ? 'is-selected' : ''].filter(Boolean).join(' ');
     return `<circle class="${classes}" cx="${seat.x}" cy="${seat.y}" r="${layout.radius.toFixed(1)}" fill="${model.colorOf(seat, index)}" data-hemi-seat="${esc(seatKey(seat))}"><title>${esc(label)}</title></circle>`;
   }).join('');
   const caption = model.summary ? `${num(model.summary.yes, 0)} sì · ${num(model.summary.against, 0)} no` : `${num(roster.total, 0)} seggi`;

@@ -1,6 +1,6 @@
 // The avatar of the player, drawn as one local SVG from the chosen traits: no library, no request, no remote image. The same renderer draws it in the wizard (live preview), in the profile, in the
 // headquarters and in the Parliament, so that the player is the same face everywhere. The input is always cleaned first (an unknown value falls back to the default).
-import { AVATAR_FIELDS, AVATAR_OPTIONS, SHAPE_FIELDS, normalizeAvatar } from '../core/avatar.js?v=20261109-3';
+import { AVATAR_FIELDS, AVATAR_OPTIONS, SHAPE_FIELDS, normalizeAvatar } from '../core/avatar.js?v=20261109-5';
 
 const colorOf = (field, id) => AVATAR_OPTIONS[field].find(item => item.id === id)?.color ?? '#888888';
 // A colour made lighter (amount > 0) or darker (amount < 0).
@@ -23,7 +23,10 @@ const HAIR_BACK = {
   raccolto: '<circle cx="60" cy="17" r="9.5"/>',
   afro: '<circle cx="60" cy="36" r="28"/>',
   codino: 'M76 30C94 30 100 52 90 70C88 58 86 48 77 41Z',
-  ondulato: 'M35 54C32 26 47 16 60 16C73 16 88 26 85 54C87 64 91 70 85 78C80 74 79 66 76 60L44 60C41 66 40 74 35 78C29 70 33 64 35 54Z'
+  ondulato: 'M35 54C32 26 47 16 60 16C73 16 88 26 85 54C87 64 91 70 85 78C80 74 79 66 76 60L44 60C41 66 40 74 35 78C29 70 33 64 35 54Z',
+  // locks that hang behind the head and the shoulders
+  dreadlocks: '<path d="M36 52C31 70 31 92 35 108L41.5 108C39.5 90 40 70 43 56Z M84 52C89 70 89 92 85 108L78.5 108C80.5 90 80 70 77 56Z M43 44C40 62 40 84 43 102L48.5 102C47 84 47 64 49 48Z M77 44C80 62 80 84 77 102L71.5 102C73 84 73 64 71 48Z"/><path d="M33 78H40M33 92H39M80 78H87M81 92H87M41 70H47M41 86H47M73 70H79M73 86H79" stroke="rgba(0,0,0,.35)" stroke-width="1.1"/>',
+  treccine: '<path d="M40 56C35 74 35 92 39 108L46 108C44 92 44 74 46 60Z M80 56C85 74 85 92 81 108L74 108C76 92 76 74 74 60Z"/><path d="M36.5 68H45M36 78H45M36 88H44.5M37 98H45.5M75 68H83.5M75 78H84M75.5 88H84M74.5 98H83" stroke="rgba(0,0,0,.4)" stroke-width="1.2"/>'
 };
 const HAIR_FRONT = {
   corto: 'M38 50C36 29 48 19 60 19C72 19 84 29 82 50C80 41 74 34 60 33C46 34 40 41 38 50Z',
@@ -37,7 +40,15 @@ const HAIR_FRONT = {
   afro: 'M41 49C41 36 49 30 60 30C71 30 79 36 79 49C76 41 70 37 60 37C50 37 44 41 41 49Z',
   codino: 'M38 50C36 29 48 20 60 20C72 20 84 29 82 50C80 40 73 35 60 34C47 35 40 40 38 50Z',
   frangia: 'M38 50C36 28 48 18 60 18C72 18 84 28 82 50L80 41C70 37 50 37 40 41Z',
-  ondulato: 'M38 52C36 28 50 17 62 18C75 19 85 30 82 52C79 42 74 37 68 40C64 33 58 38 54 35C48 36 42 42 38 52Z'
+  ondulato: 'M38 52C36 28 50 17 62 18C75 19 85 30 82 52C79 42 74 37 68 40C64 33 58 38 54 35C48 36 42 42 38 52Z',
+  // a faded cut: volume on top, the sides shaved (a lighter layer)
+  sfumato: '<path d="M41 45C40 30 50 20 61 20C72 20 81 28 79 45C78 38 74 33 70 31C62 28 52 29 47 34C44 37 42 41 41 45Z"/><path d="M38.6 53C37.4 42 39 35 42.5 31L44.5 45C43.5 48 42.5 51 42 55Z M81.4 53C82.6 42 81 35 77.5 31L75.5 45C76.5 48 77.5 51 78 55Z" opacity=".34"/>',
+  undercut: '<path d="M44 41C43 28 51 20 60 20C70 20 78 27 76 41C74 35 68 31 60 31C52 31 46 35 44 41Z"/><path d="M38.8 53C37.6 42 40 35 44 32L45 46L43 55Z M81.2 53C82.4 42 80 35 76 32L75 46L77 55Z" opacity=".3"/>',
+  ciuffo: '<path d="M38 51C35 30 48 19 63 18C78 18 86 29 82 51C80 43 78 37 72 34C66 29 54 30 48 34C42 38 39 44 38 51Z"/><path d="M47 34C45 22 56 14 69 16C79 18 82 27 79 35C77 29 71 25 63 25C56 25 50 28 47 34Z"/>',
+  indietro: '<path d="M39 49C37 30 49 20 60 20C71 20 83 30 81 49C79 41 74 34 66 31C58 29.5 48 33 45 38C42 41 40 44 39 49Z"/><path d="M49 26C55 23.4 66 23.4 72 28M45 31C52 27.4 68 27.4 77 33" stroke="rgba(0,0,0,.28)" stroke-width="1" fill="none"/>',
+  cresta: '<path d="M53.4 31C51 17 55 10 60 9C65 10 69 17 66.6 31C64 27 56 27 53.4 31Z"/><path d="M41 45C41 35 49 29 60 29C71 29 79 35 79 45C76 39 69 35 60 35C51 35 44 39 41 45Z" opacity=".26"/>',
+  dreadlocks: 'M38 50C36 29 48 19 60 19C72 19 84 29 82 50C80 41 74 34 60 33C46 34 40 41 38 50Z',
+  treccine: 'M38 50C36 29 48 19 60 19C72 19 84 29 82 50C80 41 74 34 66 33L60 27.5L54 33C46 34 40 41 38 50Z'
 };
 
 // The proportions of the face (core/avatar.js `shape`, six integers from -3 to 3; none = the drawing as it always was): how far each feature is moved or scaled. Every value is small and bounded.
@@ -70,12 +81,21 @@ function mouth(face, expression, lips, skinShade) {
 function beard(kind, color) {
   if (kind === 'corta') return `<path d="M40 56C40 74 49 84 60 84C71 84 80 74 80 56C79 69 72 75 60 75C48 75 41 69 40 56Z" fill="${color}" opacity=".78"/>`;
   if (kind === 'completa') return `<path d="M38.5 52C37 76 48 91 60 91C72 91 83 76 81.5 52C80.5 63 77 67 71 69C66 66.6 54 66.6 49 69C43 67 39.5 63 38.5 52Z" fill="${color}"/>`;
+  if (kind === 'tregiorni') return `<path d="M40 56C40 74 49 84 60 84C71 84 80 74 80 56C79 66 74 70 69 70C65 68 55 68 51 70C46 70 41 66 40 56Z" fill="${color}" opacity=".36"/>`;
+  if (kind === 'pizzetto') return `<path d="M55 73.6C55.4 71.4 64.6 71.4 65 73.6C66 79 63 85 60 86.4C57 85 54 79 55 73.6Z" fill="${color}"/>`;
+  if (kind === 'lunga') return `<path d="M38 52C35.5 78 46 102 60 106C74 102 84.5 78 82 52C80.4 63 77 67.4 71 69C66 66.6 54 66.6 49 69C43 67.4 39.6 63 38 52Z" fill="${color}"/>`;
+  if (kind === 'basette') return `<path d="M38.4 49C37.6 59 39 69 42.4 75L45.6 72.6C43.4 66 43 58 43.4 49Z M81.6 49C82.4 59 81 69 77.6 75L74.4 72.6C76.6 66 77 58 76.6 49Z" fill="${color}"/>`;
+  if (kind === 'collare') return `<path d="M39 60C40 78 49 85.4 60 85.4C71 85.4 80 78 81 60L78 62.4C77 74 70 80.4 60 80.4C50 80.4 43 74 42 62.4Z" fill="${color}"/>`;
   return '';
 }
 const MOUSTACHES = {
   sottili: 'M51 67.6Q55.4 65.2 60 66.6Q64.6 65.2 69 67.6Q64.6 67 60 67.9Q55.4 67 51 67.6Z',
   classici: 'M49.6 69Q54 63.8 60 65.6Q66 63.8 70.4 69Q65.4 67.2 60 68.4Q54.6 67.2 49.6 69Z',
   folti: 'M47.6 70C47.6 63.6 53.6 62.6 60 65C66.4 62.6 72.4 63.6 72.4 70C67.6 67.2 63.2 68.4 60 69.6C56.8 68.4 52.4 67.2 47.6 70Z',
+  matita: 'M50 67.4Q55 65.8 60 66.6Q65 65.8 70 67.4L70 68.6Q65 67.2 60 67.9Q55 67.2 50 68.6Z',
+  spazzola: 'M54.4 66.2Q60 65 65.6 66.2L65.6 69.8Q60 68.8 54.4 69.8Z',
+  ferro: 'M50 66.2Q55 64.8 60 65.4Q65 64.8 70 66.2L70 79L66.4 79L66.4 69.6Q60 68.2 53.6 69.6L53.6 79L50 79Z',
+  chevron: 'M46 66.4C52 63.8 58 64.6 60 66.8C62 64.6 68 63.8 74 66.4C73.4 72 71.8 76 70 79.4C68.4 75.4 65.6 71 60 70.4C54.4 71 51.6 75.4 50 79.4C48.2 76 46.6 72 46 66.4Z',
   manubrio: 'M50 68.4Q55 65.6 60 66.8Q65 65.6 70 68.4Q74.4 68.4 76.2 63.4Q75.8 70.8 67.4 69.6Q60 68.4 52.6 69.6Q44.2 70.8 43.8 63.4Q45.6 68.4 50 68.4Z'
 };
 function moustache(kind, hair) {
@@ -136,9 +156,11 @@ export function avatarParts(input, uid, { expression = null } = {}) {
     + `<circle cx="38.4" cy="56" r="4.4" fill="${skinShade}"/><circle cx="81.6" cy="56" r="4.4" fill="${skinShade}"/>`
     + wrap(`<path d="${HEADS[a.face]}" fill="${skin}"/>`, u && `translate(0 24) scale(1 ${u.chin.toFixed(3)}) translate(0 -24)`)
     + `<path d="M60 56L58.4 62.4Q60 63.4 61.6 62.4Z" fill="${skinShade}" opacity=".8"/>`
-    + wrap(`<g class="av-mouth">${mouth(a.face, a.expression, lips, skinShade)}</g>${open}`, u && aboutX(u.mouth))
     + `<g class="av-eyes">${eyes(a.face, hairShade, iris, u)}</g><g class="av-brows">${brows(a.face, a.expression, hair, u)}</g>`
-    + wrap(beard(a.beard, hair), u && `translate(0 24) scale(1 ${u.chin.toFixed(3)}) translate(0 -24)`) + moustache(a.moustache, hair)
+    + wrap(beard(a.beard, hair), u && `translate(0 24) scale(1 ${u.chin.toFixed(3)}) translate(0 -24)`)
+    // (the mouth is drawn over the beard: a beard never hides it)
+    + wrap(`<g class="av-mouth">${mouth(a.face, a.expression, lips, skinShade)}</g>${open}`, u && aboutX(u.mouth))
+    + moustache(a.moustache, hair)
     + `<g fill="${hair}">${front}</g>`
     + glasses(a.glasses, u)
     + `${u ? '</g>' : ''}</g>`;

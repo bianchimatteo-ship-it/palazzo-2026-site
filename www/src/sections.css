@@ -426,6 +426,8 @@
 .hemi-svg { display: block; width: 100%; height: auto; }
 .hemi-seat { cursor: pointer; stroke: var(--panel); stroke-width: 1.5; transition: opacity .2s ease, fill .25s ease; }
 .hemi-seat:hover { stroke: #fff; stroke-width: 2.5; }
+.hemi-seat.edge-dark { stroke: rgba(255,255,255,.7); }
+.hemi-seat.edge-light { stroke: rgba(20,24,22,.8); stroke-width: 2; }
 .hemi-seat.is-dim { opacity: .16; }
 .hemi-seat.is-player { stroke: var(--accent); stroke-width: 4; }
 .hemi-seat.is-placeholder { stroke-dasharray: 3 2; }
@@ -491,7 +493,7 @@
 .hemi-dissent li small { color: var(--muted); font-size: 11.5px; }
 .law-vote-result .text-link { font-size: 12.5px; }
 @media (prefers-reduced-motion: reduce) { .hemi-seat { transition: none; } }
-:root[data-motion="reduced"] .hemi-seat { transition: none; }
+:root[data-scene-motion="reduced"] .hemi-seat { transition: none; }
 
 /* ---------- comitati territoriali ---------- */
 .cm-panel { display: grid; gap: 14px; }
@@ -623,6 +625,9 @@ html body .hq-activity-action select:not([multiple]) { width: 100%; max-width: 2
 .nv-stack { display: grid; gap: 14px; min-width: 0; }
 .nv-kpis { margin: 0 0 12px; border: 1px solid var(--line); border-radius: 10px; }
 .nv-swatch { display: inline-block; flex: none; width: 11px; height: 11px; margin-right: 4px; border-radius: 3px; vertical-align: -1px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.25); }
+.nv-swatch.edge-dark, .nv-cell.edge-dark { box-shadow: inset 0 0 0 1px rgba(255,255,255,.7); }
+.nv-swatch.edge-light, .nv-cell.edge-light, .nv-seatbar i.edge-light { box-shadow: inset 0 0 0 1.5px rgba(20,24,22,.75); }
+.nv-seatbar i.edge-dark { box-shadow: inset 0 0 0 1px rgba(255,255,255,.6); }
 .nv-swatch.is-close { background: transparent; box-shadow: inset 0 0 0 2px var(--ink); }
 .nv-timeline, .nv-coalitions, .nv-lines, .nv-home, .nv-map, .nv-legend, .nv-log, .nv-notes, .nv-stepper { margin: 0; padding: 0; list-style: none; }
 .nv-timeline { display: grid; gap: 6px; }
@@ -1896,20 +1901,20 @@ details.accord-panel.pm-fold { padding: 0; }
 .program-measure { display: grid; grid-template-columns: minmax(130px, 200px) minmax(0, 1fr); gap: 8px; }
 .program-row { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); grid-column: 1 / -1; }
 .program-form > label, .program-modify form > label { grid-column: 1 / -1; }
-.program-preview { padding: 16px 18px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: #f4efe0; color: #1d1a12; display: grid; gap: 10px; }
-.program-preview header { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; border-bottom: 2px solid #b8353d; padding-bottom: 8px; }
+.program-preview { --pp-bg: #f4efe0; --pp-ink: #1d1a12; --pp-line: #b8353d; padding: 16px 18px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--pp-bg); color: var(--pp-ink); display: grid; gap: 10px; }
+.program-preview header { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; border-bottom: 2px solid var(--pp-line); padding-bottom: 8px; }
 .program-preview header strong { font: 900 18px var(--font-head, Manrope, sans-serif); }
 .program-preview ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 14px; }
 .program-preview li { display: grid; gap: 4px; }
 .program-preview h4 { margin: 0; font: 800 16px var(--font-head, Manrope, sans-serif); }
 .program-preview p { margin: 0; line-height: 1.45; }
-.program-preview b { color: #7a1f24; }
+.program-preview b { color: var(--pp-ink); }
 .program-preview ul { margin: 0; padding-left: 18px; list-style: disc; }
-.program-preview-area { color: #5b5547; font-size: 12.5px; text-transform: uppercase; letter-spacing: .06em; }
-.program-preview-cost { color: #5b5547; font-size: 13px; }
-.program-preview footer { border-top: 1px solid #b9b19b; padding-top: 8px; font-weight: 700; }
+.program-preview-area { color: var(--pp-ink); opacity: .8; font-size: 12.5px; text-transform: uppercase; letter-spacing: .06em; }
+.program-preview-cost { color: var(--pp-ink); opacity: .8; font-size: 13px; }
+.program-preview footer { border-top: 1px solid var(--pp-line); padding-top: 8px; font-weight: 700; }
 @media (max-width: 640px) { .program-measure { grid-template-columns: 1fr; } .program-proposal { padding: 12px; } .program-preview { padding: 12px; } }
-.program-preview h4 { color: #1d1a12; }
+.program-preview h4 { color: var(--pp-ink); }
 .program-preview ul li { display: list-item; }
 .program-modify > summary, .program-new > summary { font: 700 14px var(--font-ui, system-ui, sans-serif); padding: 0 14px; }
 .hemi-legend-fold > summary { cursor: pointer; list-style: none; padding: 8px 0; font: 800 12px var(--font-ui); letter-spacing: .08em; text-transform: uppercase; color: var(--gold-light); }
@@ -1917,3 +1922,10 @@ details.accord-panel.pm-fold { padding: 0; }
 .hemi-legend-fold > summary::-webkit-details-marker { display: none; }
 .hemi-roster > summary { cursor: pointer; list-style: none; } .hemi-roster > summary::-webkit-details-marker { display: none; }
 .hemi-roster > summary .hemi-roster-head::before { content: "▸ "; color: var(--gold-light); } .hemi-roster[open] > summary .hemi-roster-head::before { content: "▾ "; }
+/* Colours at the extremes keep an edge on the map; the party filter reads «where is the party»: absent, partial, prevailing, no data. */
+.it-area.edge-dark { stroke: rgba(255,255,255,.75); stroke-width: 1; }
+.it-area.edge-light { stroke: rgba(20,24,22,.8); stroke-width: 1; }
+.it-area.is-presence.is-absent { stroke: rgba(255,255,255,.28); }
+.it-area.is-presence.is-nodata { stroke-dasharray: 2 2; }
+.program-measure { position: relative; }
+.program-measure-hint { grid-column: 1 / -1; color: var(--muted); font-size: 12px; line-height: 1.4; }

@@ -2,9 +2,9 @@
 // its person (avatar-svg.js: always the avatar saved for the player, a stable one for the others) plus a body drawn here — torso, two arms with an elbow, two legs — in separate groups, so that the
 // player (ui/stage-player.js) can make them walk, sit, gesture. Every group carries the data the player needs (class, data-*); the poses come from core/stage-script.js. No animation is started here:
 // what is drawn is the FINAL pose of the beat, so with the motion off or reduced, or in a scene resumed, the stage is already right.
-import { avatarColors, avatarParts, shade } from './avatar-svg.js?v=20261109-3';
-import { depthScale, STAGE_W, STAGE_H } from '../core/stage-script.js?v=20261109-3';
-import { defaultAvatarFor } from '../core/avatar.js?v=20261109-3';
+import { avatarColors, avatarParts, shade } from './avatar-svg.js?v=20261109-5';
+import { depthScale, STAGE_W, STAGE_H } from '../core/stage-script.js?v=20261109-5';
+import { defaultAvatarFor } from '../core/avatar.js?v=20261109-5';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const hash = text => { let h = 2166136261 >>> 0; for (const ch of String(text)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return h; };
@@ -14,7 +14,10 @@ const unit = text => hash(text) / 4294967296;
 export const GESTURES = Object.freeze({
   riposo: { l: [5, 3], r: [-5, -3] }, sottolinea: { l: [6, 4], r: [-38, -62] }, apre: { l: [40, 22], r: [-40, -22] }, indica: { l: [6, 4], r: [-74, -6] }, saluta: { l: [6, 4], r: [-148, -22] },
   ascolta: { l: [8, 10], r: [-8, -10] }, pensa: { l: [6, 4], r: [-44, -132] }, prende: { l: [6, 4], r: [-46, -40] }, porge: { l: [6, 4], r: [-52, -30] }, scrive: { l: [8, 6], r: [-30, -78] },
-  piega: { l: [24, 76], r: [-24, -76] }, inserisce: { l: [6, 4], r: [-62, -24] }, applaude: { l: [16, 78], r: [-16, -78] }, sedutoRiposo: { l: [16, 56], r: [-16, -56] }
+  piega: { l: [24, 76], r: [-24, -76] }, inserisce: { l: [6, 4], r: [-62, -24] }, applaude: { l: [16, 78], r: [-16, -78] }, sedutoRiposo: { l: [16, 56], r: [-16, -56] },
+  // the gestures added for the variety of the scenes: surprise, hesitation, disagreement, taking notes, a handshake, an interruption, both palms up, a hand on the chest
+  sorpresa: { l: [48, 30], r: [-48, -30] }, esita: { l: [6, 4], r: [-36, -112] }, dissenso: { l: [26, 62], r: [-26, -62] }, appunti: { l: [30, 84], r: [-22, -74] }, stretta: { l: [6, 4], r: [-64, -8] },
+  interrompe: { l: [6, 4], r: [-118, -6] }, palmi: { l: [34, 40], r: [-34, -40] }, petto: { l: [6, 4], r: [-36, -122] }, scuote: { l: [16, 50], r: [-16, -50] }
 });
 export const gestureAngles = (name, posture) => GESTURES[name] ?? (posture === 'sit' ? GESTURES.sedutoRiposo : GESTURES.riposo);
 
@@ -47,7 +50,7 @@ const defsOf = parts => parts.map(part => part.defs).join('');
 
 // ---------- the crowd ----------
 // Heads and shoulders seen from behind, in rows (the camera is behind the crowd, the stage in front of it), with raised arms, flags and signs. Deterministic from the seed.
-function crowdSvg(seed, rows, { color = '#9c2f39', signs = [], flags = [], x0 = 20, x1 = 620, aisle = null, split = false, abbr = '' } = {}) {
+function crowdSvg(seed, rows, { color = '#9c2f39', signs = [], flags = [], x0 = 20, x1 = 620, aisle = null, split = false, abbr = '', partyFull = '' } = {}) {
   const hairs = ['#2b2118', '#3a2a1c', '#5a4632', '#8a7355', '#20262e', '#b9b2a4', '#6a3a24'];
   const tops = ['#27414a', '#3d3a52', '#4a3b34', '#1f3a33', '#53424a', '#2f3b52'];
   const rowHtml = [];
@@ -66,13 +69,15 @@ function crowdSvg(seed, rows, { color = '#9c2f39', signs = [], flags = [], x0 = 
     }
     rowHtml.push({ y, html });
   });
-  // flags: the Italian tricolour and the flag of the party, on poles, waving (a flag never stands in the aisle)
+  // flags: the Italian tricolour and the flag of the party, on poles, waving (a flag never stands in the aisle). The flag of the party reads as its abbreviation (the official logo is drawn only where it is allowed),
+  // in the ink that reads on the colour of the party; the full name of the party is in the title of the flag and on the backdrop.
+  const flagInk = inkOn(color), flagText = String(abbr).replace(/\s+/g, '').toUpperCase().slice(0, 4);
   let extra = '';
   flags.forEach((flag, f) => {
     const x = flag.x + (x1 - 640), y = flag.y ?? 282;
     const cloth = flag.kind === 'tricolore'
       ? `<g class="cm-cloth"><rect x="1" y="-74" width="17" height="22" fill="#1f8a4c"/><rect x="18" y="-74" width="17" height="22" fill="#f5f3ec"/><rect x="35" y="-74" width="17" height="22" fill="#cd2b35"/></g>`
-      : `<g class="cm-cloth"><rect x="1" y="-74" width="52" height="22" fill="${color}"/><circle cx="14" cy="-63" r="7.5" fill="#fff"/><text x="14" y="-60.4" text-anchor="middle" font-size="7" font-weight="900" fill="${color}">${esc(String(abbr).slice(0, 3).toUpperCase())}</text></g>`;
+      : `<g class="cm-cloth"><title>${esc(partyFull || String(abbr))}</title><rect x="1" y="-74" width="52" height="22" fill="${color}" stroke="${flagInk === '#ffffff' ? 'rgba(255,255,255,.6)' : 'rgba(20,24,22,.6)'}" stroke-width="1"/><text x="27" y="-59" text-anchor="middle" font-size="${flagText.length > 3 ? 8.5 : 11}" font-weight="900" fill="${flagInk}">${esc(flagText)}</text></g>`;
     extra += `<g class="cm-flag" style="--d:${f * 220}ms;transform:translate(${x.toFixed(0)}px,${y}px)"><rect x="-1.2" y="-74" width="2.4" height="70" fill="#c8c0a8"/>${cloth}</g>`;
   });
   signs.forEach((text, i) => { const x = [150, 540, 90, 600][i % 4] + unit(`${seed}|sg${i}`) * 20, y = 292 + (i % 2) * 8; extra += `<g class="cm-sign" style="--d:${i * 180}ms;transform:translate(${x.toFixed(0)}px,${y}px)"><rect x="-1.2" y="-58" width="2.4" height="54" fill="#8b7a5e"/><rect x="-30" y="-90" width="60" height="32" rx="2" fill="#f4efe0" stroke="#3a2f22" stroke-width="1.4"/><text x="0" y="-70" text-anchor="middle" font-size="9" font-weight="800" fill="#3a2f22" textLength="50" lengthAdjust="spacingAndGlyphs">${esc(text)}</text></g>`; });
@@ -149,7 +154,7 @@ function studioIntervista(scene, uid) {
 }
 // The strip of headlines (one per beat, from the situation of the game) and the name straps: drawn over the camera, inside the frame; the text is wrapped, never cut.
 const wrapText = (text, chars) => { const lines = []; let current = ''; for (const word of String(text ?? '').split(/\s+/).filter(Boolean)) { if (current && `${current} ${word}`.length > chars) { lines.push(current); current = word; } else current = current ? `${current} ${word}` : word; } if (current) lines.push(current); return lines; };
-function strap(member, x, w, bottom, active) {
+export function strap(member, x, w, bottom, active) {
   const nameLines = wrapText(member.name, Math.floor((w - 18) / 6.4)), tagLines = wrapText(member.tag, Math.floor((w - 18) / 5.0));
   const height = 8 + nameLines.length * 11.5 + tagLines.length * 9.6 + 4, top = bottom - height;
   return `<g class="st-strap${active ? ' is-speaking' : ''}"><rect x="${x}" y="${top}" width="${w}" height="${height}" rx="3" fill="#0c1d2b" fill-opacity=".94" stroke="${active ? '#f0d68a' : '#3d6277'}" stroke-width="${active ? 1.6 : 1}"/><rect x="${x}" y="${top}" width="4" height="${height}" rx="1.5" fill="${active ? '#f0d68a' : '#58a3c4'}"/>`
@@ -178,12 +183,40 @@ export function studioSvg(scene, stage, node, uid) {
   return { body: `${art.back}${art.audience}<g class="st-actors">${actors}</g>${art.front}`, overlay: studioOverlay(scene, node, uid) };
 }
 
+// Text on the backdrop of the stage: words wrapped on as many lines as needed, the size lowered before a name is ever squeezed or cut (no textLength, no slice): the full name of the speaker and the full name
+// of the party are always on the backdrop. Returns the SVG text elements, centred at x = 344 on the band 52..116.
+export function wrapWords(text, maxChars) {
+  const lines = [];
+  for (const word of String(text ?? '').split(/\s+/).filter(Boolean)) {
+    const last = lines.at(-1);
+    if (last !== undefined && (last + ' ' + word).length <= maxChars) lines[lines.length - 1] = `${last} ${word}`; else lines.push(word);
+  }
+  return lines.length ? lines : [''];
+}
+export function backdropLines(name, party, width = 128) {
+  const fit = (text, size, maxLines) => {
+    let current = size, lines = wrapWords(text, Math.floor(width / (current * 0.6)));
+    while ((lines.length > maxLines || lines.some(line => line.length * current * 0.6 > width + 1)) && current > 6.2) { current = Math.round((current - 0.6) * 10) / 10; lines = wrapWords(text, Math.floor(width / (current * 0.6))); }
+    return { size: current, lines };
+  };
+  return { name: fit(name, 13.5, 2), party: fit(party, 9.5, 3) };
+}
+function backdropText(name, party, ink) {
+  const { name: n, party: p } = backdropLines(name, party);
+  const heightN = n.lines.length * (n.size + 2), heightP = p.lines.length * (p.size + 1.6), gap = p.lines[0] ? 4 : 0;
+  let y = 84 - (heightN + gap + heightP) / 2;
+  const out = [];
+  for (const line of n.lines) { y += n.size + 2; out.push(`<text x="344" y="${(y - 3).toFixed(1)}" text-anchor="middle" class="st-name" font-size="${n.size}" font-weight="900" fill="${ink}">${esc(line)}</text>`); }
+  y += gap;
+  for (const line of p.lines) { y += p.size + 1.6; out.push(`<text x="344" y="${(y - 2.4).toFixed(1)}" text-anchor="middle" class="st-party" font-size="${p.size}" font-weight="700" fill="${ink}">${esc(line)}</text>`); }
+  return out.join('');
+}
 export function squareSvg(scene, stage, node, uid, identity) {
   const color = identity?.accent ?? '#a82f3a', ink = inkOn(color);
   const me = scene.cast.find(item => item.role === 'giocatore'), partyName = String(identity?.name ?? scene.party.name ?? '');
   const playerY = stage.poses[me.id]?.y ?? 222;
   // the speaker walks along an aisle of the crowd (nobody stands in it); a row is drawn behind or in front of him by where his feet are
-  const crowd = crowdSvg(scene.seed, [[262, 0.52, 18], [276, 0.64, 20], [291, 0.78, 20], [307, 0.92, 18]], { color, abbr: identity?.mark ?? identity?.abbreviation ?? scene.party.abbreviation ?? partyName, aisle: [196, 282], split: true, signs: [], flags: [{ x: 108, kind: 'tricolore' }, { x: 150, kind: 'partito' }, { x: 176, kind: 'tricolore', y: 296 }, ...(stage.protest ? [] : [{ x: 540, kind: 'partito' }, { x: 600, kind: 'tricolore' }, { x: 500, kind: 'tricolore', y: 296 }])] });
+  const crowd = crowdSvg(scene.seed, [[262, 0.52, 18], [276, 0.64, 20], [291, 0.78, 20], [307, 0.92, 18]], { color, abbr: identity?.mark ?? identity?.abbreviation ?? scene.party.abbreviation ?? partyName, partyFull: partyName, aisle: [196, 282], split: true, signs: [], flags: [{ x: 108, kind: 'tricolore' }, { x: 150, kind: 'partito' }, { x: 176, kind: 'tricolore', y: 296 }, ...(stage.protest ? [] : [{ x: 540, kind: 'partito' }, { x: 600, kind: 'tricolore' }, { x: 500, kind: 'tricolore', y: 296 }])] });
   const actors = [...scene.cast].filter(item => item.role === 'giocatore').map((member, index) => actorSvg(member, stage.poses[member.id], `${uid}a${index}`, { speaking: node.speaker === member.id, expression: node.speaker === member.id ? node.expression : null })).join('');
   const lamps = [70, 190, 450, 570].map((x, i) => `<g><rect x="${x - 1.5}" y="150" width="3" height="104" fill="#2a2f36"/><circle class="st-bulb" style="--d:${i * 300}ms" cx="${x}" cy="148" r="5" fill="#ffe6a6"/></g>`).join('');
   const bulbs = Array.from({ length: 22 }, (_, i) => `<circle class="st-bulb" style="--d:${i * 140}ms" cx="${i * 30 - 10}" cy="${40 + Math.sin(i * 0.9) * 8 + 10}" r="2.6" fill="#ffd978"/>`).join('');
@@ -197,7 +230,7 @@ export function squareSvg(scene, stage, node, uid, identity) {
     + `<rect x="-200" y="212" width="1040" height="200" fill="url(#${uid}-ground)"/>${Array.from({ length: 9 }, (_, i) => `<path d="M${-60 + i * 90} 360L${160 + i * 40} 214" stroke="#000" stroke-opacity=".12" stroke-width="1"/>`).join('')}`
     + `<g class="st-bulbs">${bulbs}</g>${lamps}`
     + `<g class="st-palco"><rect x="170" y="196" width="300" height="46" fill="#2c2f38"/><rect x="170" y="196" width="300" height="6" fill="#8d96a6"/><rect x="170" y="232" width="300" height="12" fill="${color}"/><rect x="236" y="152" width="168" height="6" fill="#1a1d23"/><rect x="236" y="152" width="4" height="46" fill="#1a1d23"/><rect x="400" y="152" width="4" height="46" fill="#1a1d23"/>`
-    + `<g class="st-backdrop"><rect x="214" y="54" width="212" height="62" rx="4" fill="${color}"/>${logoMark(identity, 252, 85, 40, uid)}<text x="344" y="79" text-anchor="middle" class="st-name" font-size="13.5" font-weight="900" fill="${ink}" textLength="${Math.min(126, Math.max(40, me.name.length * 7.4))}" lengthAdjust="spacingAndGlyphs">${esc(me.name)}</text><text x="344" y="97" text-anchor="middle" class="st-party" font-size="9.5" font-weight="700" fill="${ink}" textLength="${Math.min(126, Math.max(40, partyName.length * 5.4))}" lengthAdjust="spacingAndGlyphs">${esc(partyName)}</text></g>`
+    + `<g class="st-backdrop" data-backdrop><rect x="206" y="46" width="228" height="76" rx="4" fill="${color}" stroke="${ink === '#ffffff' ? 'rgba(255,255,255,.55)' : 'rgba(20,24,22,.55)'}" stroke-width="1.2"/>${logoMark(identity, 246, 84, 40, uid)}${backdropText(me.name, partyName, ink)}</g>`
     + `<g class="st-speaker"><rect x="176" y="164" width="22" height="32" rx="3" fill="#111"/><circle cx="187" cy="174" r="5" fill="#333"/><circle cx="187" cy="187" r="7" fill="#333"/></g><g class="st-speaker"><rect x="442" y="164" width="22" height="32" rx="3" fill="#111"/><circle cx="453" cy="174" r="5" fill="#333"/><circle cx="453" cy="187" r="7" fill="#333"/></g>${spots}`
     + `<path d="M232 244H262V250H232Z" fill="#4b4f5a"/><path d="M226 250H268V256H226Z" fill="#4b4f5a"/>`
     + `<g class="st-mic"><rect x="329" y="170" width="2.4" height="52" fill="#1a1d23"/><ellipse cx="330" cy="168" rx="4" ry="6" fill="#222"/><path d="M322 222H338" stroke="#1a1d23" stroke-width="3"/></g></g>`
@@ -211,7 +244,10 @@ export function stationSvg(scene, stage, node, uid) {
   const behind = drawn(scene.cast.filter(item => item.role === 'scrutatore'), 0), front = drawn(scene.cast.filter(item => item.role !== 'scrutatore'), 5);
   const closed = stage.props.booth === 'closed';
   const ballot = stage.props.ballot ?? 'none';
-  const ballotPos = { desk: [330, 262], hand: [0, 0], folded: [0, 0], urn: [160, 238], none: [-99, -99] }[ballot] ?? [-99, -99];
+  // the ballot follows the hand of the voter (the same formula the player uses while it moves it); when the voter is out of sight in the booth, the ballot is out of sight with them
+  const voter = scene.cast.find(item => item.role === 'giocatore'), vp = voter ? stage.poses[voter.id] : null;
+  const handAt = vp && vp.visible !== false ? [Math.round(vp.x + 30 * vp.s * (vp.facing ?? 1)), Math.round(vp.y - 140 * vp.s)] : [-99, -99];
+  const ballotPos = { desk: [330, 262], hand: handAt, folded: handAt, urn: [160, 238], none: [-99, -99] }[ballot] ?? [-99, -99];
   return { body: `<defs>${sky(`${uid}-wall`, '#d8d2c0', '#bdb59f')}${sky(`${uid}-fl`, '#8f8573', '#5c5448')}</defs>`
     + `<rect x="-200" y="-100" width="1040" height="300" fill="url(#${uid}-wall)"/><rect x="-200" y="200" width="1040" height="260" fill="url(#${uid}-fl)"/>`
     + `<g class="st-room"><rect x="60" y="40" width="120" height="86" fill="#9fc4d8" stroke="#6d5d3e" stroke-width="5"/><path d="M120 40V126M60 83H180" stroke="#6d5d3e" stroke-width="3"/><rect x="212" y="46" width="216" height="44" rx="3" fill="#f5f0e2" stroke="#8f8573"/><text x="320" y="64" text-anchor="middle" font-size="13" font-weight="900" fill="#1f3a56">SEGGIO ELETTORALE</text>${fitted(String(scene.place.label ?? '').toUpperCase(), 320, 81, 10, 190, 'fill="#5b5547" font-weight="800"')}`
@@ -234,9 +270,12 @@ export const cameraTransform = name => { const c = CAMERAS[name] ?? CAMERAS.wide
 export { depthScale, STAGE_W, STAGE_H, defsOf };
 
 // The whole stage of a beat as one SVG. `before` (optional) is JSON the player reads to animate the passage from the previous beat.
+// Settings of other kinds (the rooms of the optional scenes, ui/room-art.js) register their drawing here: (scene, stage, node, uid) -> { body, overlay }.
+const SETTINGS = {};
+export const registerStageSetting = (setting, fn) => { SETTINGS[setting] = fn; };
 export function renderStageSvg(scene, stage, node, { identity = null, before = null, label = '' } = {}) {
   const uid = `st${hash(scene.id) % 9973}`;
-  const art = scene.setting === 'piazza' ? squareSvg(scene, stage, node, uid, identity) : scene.setting === 'seggio' ? stationSvg(scene, stage, node, uid) : studioSvg(scene, stage, node, uid);
-  const data = esc(JSON.stringify({ node: scene.nodeId, camera: stage.camera, crowd: stage.crowd, before }));
+  const art = SETTINGS[scene.setting] ? SETTINGS[scene.setting](scene, stage, node, uid) : scene.setting === 'piazza' ? squareSvg(scene, stage, node, uid, identity) : scene.setting === 'seggio' ? stationSvg(scene, stage, node, uid) : studioSvg(scene, stage, node, uid);
+  const data = esc(JSON.stringify({ node: scene.nodeId, camera: stage.camera, crowd: stage.crowd, props: stage.props ?? {}, before }));
   return `<svg class="st-svg" viewBox="0 0 ${STAGE_W} ${STAGE_H}" role="img" aria-label="${esc(label)}" data-stage="${data}" data-setting="${esc(scene.setting)}"${scene.format ? ` data-format="${esc(scene.format)}"` : ''} preserveAspectRatio="xMidYMid slice"><g class="st-cam" data-camera="${esc(stage.camera)}" style="transform-origin:0 0;transform:${cameraTransform(stage.camera)}">${art.body}</g>${art.overlay ?? ''}</svg>`;
 }
