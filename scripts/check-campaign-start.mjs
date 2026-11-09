@@ -100,7 +100,8 @@ assert.ok(mean(cell('comunale', 'debole').map(row => row.me / row.rivalMean)) > 
 for (const row of rows) {
   assert.ok(row.parts && ['allies', 'party', 'mood', 'memory', 'committees', 'start'].every(key => Number.isFinite(row.parts[key])), `${row.type}: le parti del bonus sono elencate.`);
   assert.equal(row.parts.party, 0, `${row.type}: il peso del partito nei sondaggi non si somma una seconda volta.`);
-  const total = Object.values(row.parts).reduce((a, b) => a + b, 0);
+  // (the parts that add up are the six named ones; the keys that explain what was NOT counted — deferred, alliesMobilisation — are other things)
+  const total = ['allies', 'party', 'mood', 'memory', 'committees', 'start'].reduce((sum, key) => sum + row.parts[key], 0);
   assert.ok(Math.abs(total - row.pollBonus) < 0.06, `${row.type}: il bonus (${row.pollBonus}) è la somma delle sue parti (${total.toFixed(2)}).`);
 }
 lines.push(`${rows.length} campagne su ${TYPES.length} tipi di voto (forti e deboli, esordienti e noti)`);
