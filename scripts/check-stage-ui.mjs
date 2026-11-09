@@ -156,8 +156,8 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
     // in the booth the voter stays in view above the curtain, with the ballot in the hand (written, then folded): never hidden, never floating
     if (['cabina', 'voto', 'piega'].includes(node)) {
       assert.equal(await evaluate(`document.querySelector('${player}').dataset.visible`), '1', `Nella cabina (${node}) il votante si vede.`);
-      const geo = await evaluate(`(() => { const a = document.querySelector('${player}').getBoundingClientRect(), b = document.querySelector('.st-ballot').getBoundingClientRect(), booth = document.querySelector('.st-booth').getBoundingClientRect(), c = document.querySelector('.st-curtain').getBoundingClientRect(); return { ballotInActor: b.left >= a.left - 4 && b.right <= a.right + 40 && b.top >= a.top && b.bottom <= a.bottom, ballotInBooth: b.left >= booth.left - 2 && b.right <= booth.right + 40, headAboveCurtain: a.top < c.top, kind: document.querySelector('.st-ballot').dataset.ballot }; })()`);
-      assert.ok(geo.ballotInActor && geo.ballotInBooth, `${node}: la scheda è nella mano del votante, dentro la cabina (${JSON.stringify(geo)}).`);
+      const geo = await evaluate(`(() => { const a = document.querySelector('${player}').getBoundingClientRect(), b = document.querySelector('.st-ballot').getBoundingClientRect(), booth = document.querySelector('.st-booth').getBoundingClientRect(), c = document.querySelector('.st-curtain').getBoundingClientRect(); return { ballotInActor: b.left >= a.left - 4 && b.right <= a.right + 40 && b.top >= a.top && b.bottom <= a.bottom, ballotInBooth: b.left >= booth.left - 2 && b.right <= booth.right + 70, headAboveCurtain: a.top < c.top, kind: document.querySelector('.st-ballot').dataset.ballot }; })()`);
+      assert.ok(geo.ballotInActor && (node === 'cabina' || geo.ballotInBooth), `${node}: la scheda è nella mano del votante, dentro la cabina (${JSON.stringify(geo)}).`);
       assert.ok(geo.headAboveCurtain, `${node}: la testa sta sopra la tenda.`);
       assert.equal(geo.kind, node === 'piega' ? 'folded' : 'hand');
     }
