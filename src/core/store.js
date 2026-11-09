@@ -19,7 +19,7 @@ import { answerRivalMove, rivalPulse, rivalsView } from './rival-life-engine.js?
 import { abandonChallenge as abandonChallengeRun, challengeView as challengeViewOf, recordVerdict as recordChallengeVerdict, startChallenge as startChallengeRun, tickChallenge } from './challenge-engine.js?v=20261109-5';
 import { tickerFor } from './studio-lines.js?v=20261109-5';
 import { assessProposal, createProposal, linkProposal as linkProposalTo, moveProposals, programPreview as programPreviewOf, proposalContext, proposalCredibility, proposalsOf, removeProposals, setProposalState as setProposalStateOf, updateProposal as updateProposalOf, linkableTo, FINANCING, TERRITORIES, DEADLINES, PROPOSAL_LIMIT } from './program-proposals.js?v=20261109-5';
-import { accordPromises, areaIndicator as areaIndicatorOf, credibility as baseProgramCredibility, derivePriorities, makePromise as makeProgramPromise, modifyPromise as modifyProgramPromise, promisesOf, rivalProgram, tickPromises, topicOfArea, withdrawPromise as withdrawProgramPromise } from './program-engine.js?v=20261109-5';
+import { accordPromises, areaIndicator as areaIndicatorOf, credibility as baseProgramCredibility, derivePriorities, makePromise as makeProgramPromise, modifyPromise as modifyProgramPromise, negotiatePromise as negotiateProgramPromise, promisesOf, rivalProgram, setPromisePriority as setProgramPromisePriority, tickPromises, topicOfArea, withdrawPromise as withdrawProgramPromise } from './program-engine.js?v=20261109-5';
 import { advanceDays, formatDate } from './time.js?v=20261109-5';
 import { CALENDAR_RULES } from './calendar-planner.js?v=20261109-5';
 import { GENDERS, STARTING_OFFICES, STARTING_ROLES, normalizeGender, validateNewCareerDraft } from './career-rules.js?v=20261109-5';
@@ -4209,10 +4209,24 @@ export const store = {
     return scene;
   },
   // A vote followed in the Aula (or not followed): it is not offered again on Home. Nothing else changes; the vote was decided by the game long before.
+  // Where the player left a vote in the Aula (the number of seats shown out of the total): saved with the career, so closing and reopening resumes exactly there. Nothing of the vote is recomputed and
+  // nothing is applied: only the position is kept; a vote watched to the end is marked as seen and the position is dropped.
+  setAulaProgress(voteId, shown, total) {
+    if (!state.game || !voteId) return;
+    const game = deepCopy(state.game);
+    const flags = { ...game.flags };
+    if (shown >= total) { flags.aulaSeen = [...new Set([...(flags.aulaSeen ?? []), String(voteId)])].slice(-60); delete flags.aulaProgress; }
+    else flags.aulaProgress = { voteId: String(voteId), shown: Math.max(0, Math.floor(shown)), total: Math.floor(total), week: game.week.index };
+    game.flags = flags;
+    state = { ...state, game };
+    persist();
+    if (shown >= total) emit();
+  },
   markAulaSeen(voteId) {
     if (!state.game || !voteId) return;
     const game = deepCopy(state.game);
     game.flags = { ...game.flags, aulaSeen: [...new Set([...(game.flags?.aulaSeen ?? []), String(voteId)])].slice(-60) };
+    if (game.flags.aulaProgress?.voteId === String(voteId)) delete game.flags.aulaProgress;
     state = { ...state, game };
     persist(); emit();
   },
@@ -4413,7 +4427,7 @@ export const store = {
   modifyPromise(id, changes = {}) {
     requireCareer();
     const week = state.game.week.index, date = state.clock.currentDate;
-    const result = modifyProgramPromise(state.game, id, changes, { week, date, society: state.society, reputation: playerStat(state, 'reputation') });
+    const result = modifyProgramPromise(state.game, id, changes, { week, date, society: state.society, reputation: playerStat(state, 'reputation'), allied: Boolean(state.world?.playerPartyId && allianceOf(state.world, state.world.playerPartyId)) });
     const game = deepCopy(state.game);
     game.promises = (game.promises ?? []).map(item => item.id === id ? result.closed : item).concat([result.next]);
     remember(game, { date, kind: 'promessa-modificata', text: `Promessa su ${result.next.label.toLowerCase()} modificata: la parola data cambia.`, weight: 0.8 });
@@ -4421,6 +4435,60 @@ export const store = {
     state = { ...state, ui: { ...state.ui, toast: 'Promessa modificata: ne resta traccia' } };
     persist(); emit();
     return result;
+  },
+  // The priority of an open promise (at most two at the top): a record in its history; the weight shows in credibility and when the promise is settled.
+  setPromisePriority(id, priority) {
+    requireCareer();
+    const week = state.game.week.index, date = state.clock.currentDate;
+    const updated = setProgramPromisePriority(state.game, id, priority, { week, date });
+    const game = deepCopy(state.game);
+    game.promises = (game.promises ?? []).map(item => item.id === id ? updated : item);
+    state = { ...state, game, ui: { ...state.ui, toast: `Priorità della promessa su ${updated.label.toLowerCase()}: ${priority}` } };
+    persist(); emit();
+    return updated;
+  },
+  // The allies of the player's party in the accord a promise can be negotiated with (name and tie with the player).
+  promiseAllies() {
+    const world = state.world, own = world?.playerPartyId;
+    const alliance = own ? allianceOf(world, own) : null;
+    return (alliance?.partyIds ?? []).filter(id => id !== own).map(id => ({ id, label: world.parties.find(item => item.id === id)?.label ?? id, tie: Math.round(world.ties?.[[own, id].sort().join('|')] ?? 0) }));
+  },
+  // Negotiating a promise with an ally: one capital point either way, the draw is seeded (the same career, week, promise and ally always give the same answer).
+  negotiatePromise(id, allyId) {
+    requireCareer();
+    const ally = store.promiseAllies().find(item => item.id === allyId);
+    if (!ally) throw new Error('Questo partito non è un tuo alleato nell’accordo.');
+    if ((state.game.resources.politicalCapital ?? 0) < 1) throw new Error('Serve almeno un punto di capitale politico per trattare.');
+    const week = state.game.week.index, date = state.clock.currentDate;
+    const roll = seededRandom(`${state.career.id ?? 'carriera'}|${week}|promessa|${id}|${allyId}`)();
+    const result = negotiateProgramPromise(state.game, id, { ally, tie: ally.tie, roll }, { week, date });
+    const game = deepCopy(state.game);
+    game.promises = (game.promises ?? []).map(item => item.id === id ? result.promise : item);
+    game.resources = { ...game.resources, politicalCapital: Math.max(0, (game.resources.politicalCapital ?? 0) + result.effects.capital) };
+    remember(game, { date, kind: result.ok ? 'promessa-condivisa' : 'promessa-rifiutata', text: result.ok ? `${ally.label} sostiene la promessa su ${result.promise.label.toLowerCase()}.` : `${ally.label} non sostiene la promessa su ${result.promise.label.toLowerCase()}.`, weight: 0.6 });
+    let next = { ...state, game, ui: { ...state.ui, toast: result.ok ? `${ally.label} sostiene la promessa: il costo si divide.` : `${ally.label} rifiuta: la trattativa non ha esito.` } };
+    if (next.world) { const key = [next.world.playerPartyId, allyId].sort().join('|'); next = { ...next, world: { ...next.world, ties: { ...next.world.ties, [key]: Math.max(-100, Math.min(100, (next.world.ties?.[key] ?? 0) + result.effects.tie)) } } }; }
+    state = next;
+    persist(); emit();
+    return result;
+  },
+  // A published proposal of the programme presented as a bill in the Parliament: the area, the instrument of its first measure and the financing travel with it, so the bill costs and does what the
+  // proposal says; it is a bill like any other (committee, amendments, votes), never a law by itself, and it makes no promise. Only for who has a parliamentary path and a group.
+  proposalToBill(id) {
+    requireCareer();
+    const proposal = proposalsOf(state.game).find(item => item.id === id);
+    if (!proposal) throw new Error('Proposta non trovata nel programma.');
+    if (proposal.billId) throw new Error('Questa proposta è già stata presentata come disegno di legge.');
+    if (!canManageParliament(state.parliament)) throw new Error('Per presentarla come disegno di legge serve un seggio con un gruppo di riferimento: da qui puoi pubblicarla e farne una promessa.');
+    const FINANCE = { bilancio: 'deficit', risparmi: 'tagli', tasse: 'irpef', europa: 'ue', debito: 'deficit' };
+    const instrument = proposal.measures?.[0]?.instrument ?? 'investimento';
+    const bill = store.proposeLaw({ title: proposal.title, summary: [proposal.problem, proposal.objective, ...(proposal.measures ?? []).map(item => item.text)].filter(Boolean).join(' · ').slice(0, 400), category: AREA_BY_ID[proposal.area]?.label ?? proposal.area, policy: { area: proposal.area, instrument, intensity: proposal.cost >= 20 ? 3 : proposal.cost >= 6 ? 2 : 1, financing: FINANCE[proposal.financing] ?? 'deficit', target: 'nazionale' } });
+    const week = state.game.week.index;
+    const game = deepCopy(state.game);
+    game.proposals = proposalsOf(game).map(item => item.id === id ? { ...item, billId: bill.id, history: [...(item.history ?? []), { week, text: 'Presentata come disegno di legge' }].slice(-8) } : item);
+    state = { ...state, game };
+    persist(); emit();
+    return bill;
   },
   withdrawPromise(id) {
     requireCareer();
@@ -4629,7 +4697,9 @@ export const store = {
     if (committees) {
       if (campaign.nomination.status === 'pending') campaign.nomination.internalSupport = round2(Math.max(0, campaign.nomination.internalSupport + committees.nomination));
       // a race elsewhere already counts the committees of the territory in the rooting of the candidate (rootingOf): not twice
-      if (!race) { poll.bonus = round2(poll.bonus + committees.localSupport); pollParts.committees = committees.localSupport; }
+      // (in a general or European vote the committees of ONE territory do not lift the national percentage: their support goes to the areas of their own region, below)
+      if (!race && !NATIONAL_TYPES.includes(config.electionType)) { poll.bonus = round2(poll.bonus + committees.localSupport); pollParts.committees = committees.localSupport; }
+      else if (!race) pollParts.committees = 0;
     }
     // Candidacies: the difficulty and what the party remembers of the player (loyalty, ruptures, defeats) weigh on the list.
     if (campaign.nomination.status === 'pending') {
@@ -4639,10 +4709,40 @@ export const store = {
     }
     const local = ['comunale', 'provinciale', 'regionale'].includes(config.electionType) ? state.society?.regions?.[player?.region] : null;
     campaign.context = { participation: local?.participation ?? state.society?.participation ?? null, mood, incumbent, source: 'simulation' };
-    if (poll.bonus) for (const area of campaign.territories) {
+    // A general or European campaign opens on the weight of the party in the polls (electionRoster: half the average of the recent readings, half the model). What else the career brings is kept SMALL and
+    // SEPARATE, never a uniform lift of the national percentage before the campaign has been played:
+    //   - the mood of the country, the memory of the voters and the conditions of the start (the «personal» parts) move the list by at most 6% of its own size (never less than a quarter of a point);
+    //   - the allies do not give their points to the list of the player (the lists keep their own votes, even when allied): they give organisation and volunteers (mobilisation) and weigh on the single-member
+    //     districts and on the talks, which are other counts;
+    //   - the committees of one territory lift the areas of their own region (and the mobilisation), not the nation.
+    // Every part is kept apart in the preparation (pollParts: what was counted; deferred: what was left out), so that the opening can be read and explained.
+    let regionalLift = null;
+    const nationalVote = NATIONAL_TYPES.includes(config.electionType);
+    const ownBase = state.world?.playerPartyId ? (poll.share ?? 0) : 0;
+    if (nationalVote) {
+      const personal = round2(pollParts.mood + pollParts.memory + pollParts.start);
+      const cap = Math.max(0.25, 0.06 * (campaign.roster?.participants?.find(item => item.id === state.world?.playerPartyId)?.share ?? ownBase));
+      const applied = round2(clampTo(personal, -cap, cap));
+      const factor = personal ? applied / personal : 0;
+      pollParts.deferred = { personal: round2(personal - applied), allies: round2(poll.alliesTerm ?? 0), committees: round2(committees?.localSupport ?? 0) };
+      for (const key of ['mood', 'memory', 'start']) pollParts[key] = round2(pollParts[key] * factor);
+      pollParts.allies = 0;
+      poll.bonus = applied;
+      if ((poll.alliesTerm ?? 0) > 0) {
+        const lift = Math.min(4, Math.round(poll.alliesTerm * 2));
+        candidate.resources.organization = Math.min(100, candidate.resources.organization + lift); candidate.resources.volunteers += lift;
+        campaign.resources = { ...campaign.resources, organization: candidate.resources.organization, volunteers: candidate.resources.volunteers, source: 'simulation' };
+        pollParts.alliesMobilisation = lift;
+      }
+      if (!race && committees?.localSupport) regionalLift = { region: home.region, value: round2(clampTo(committees.localSupport, -1.5, 3)) };
+    }
+    campaign.opening = nationalVote ? { kind: 'liste', share: campaign.roster?.participants?.find(item => item.id === state.world?.playerPartyId) ?? null, personal: pollParts.mood + pollParts.memory + pollParts.start, applied: poll.bonus, regional: regionalLift } : null;
+    if (poll.bonus || regionalLift) for (const area of campaign.territories) {
       const shares = area.supportByCandidate;
+      const lift = poll.bonus + (regionalLift && area.region === regionalLift.region ? regionalLift.value : 0);
+      if (!lift) continue;
       // the floor of 0,5 points is for a share that is lower than that already: a force at 0,3% is not raised to 0,5%
-      shares[campaign.playerCandidateId] = Math.max(Math.min(0.5, shares[campaign.playerCandidateId]), shares[campaign.playerCandidateId] + poll.bonus);
+      shares[campaign.playerCandidateId] = Math.max(Math.min(0.5, shares[campaign.playerCandidateId]), shares[campaign.playerCandidateId] + lift);
       const total = Object.values(shares).reduce((sum, value) => sum + value, 0);
       for (const id of Object.keys(shares)) shares[id] = round2(shares[id] * 100 / total);
     }

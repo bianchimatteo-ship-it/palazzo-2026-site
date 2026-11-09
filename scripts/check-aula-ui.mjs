@@ -17,7 +17,9 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   await S(`const s = store.getState(); s.ui.activePage = 'parlamento'; return true;`);
   await evaluate(`location.hash = '#parlamento'; document.querySelector('[data-nav="parlamento"]')?.click(); true`);
   await wait(() => evaluate(`Boolean(document.querySelector('[data-aula-open]'))`), 15000);
-  const snapshot = () => S(`return JSON.stringify({ p: store.getState().parliament, g: store.getState().game });`);
+  // (the position and the «seen» mark of the Aula are the only things the Aula may write: everything else must stay as it was)
+  const snapshot = () => S(`const g = JSON.parse(JSON.stringify(store.getState().game)); delete g.flags.aulaSeen; delete g.flags.aulaProgress; return JSON.stringify({ p: store.getState().parliament, g });`);
+  const resetAula = () => S(`const save = JSON.parse(store.exportSave()); delete save.game.flags.aulaSeen; delete save.game.flags.aulaProgress; store.loadGame(save); return true;`);
   const before = await snapshot();
   const open = (motion) => evaluate(`document.documentElement.dataset.sceneMotion = ${JSON.stringify(motion)}, true`);
 
@@ -61,6 +63,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   await click('[data-aula-close]');
   assert.equal(await evaluate(`Boolean(document.querySelector('.aula-overlay'))`), false);
   assert.equal(await snapshot(), before, 'Entrare in Aula non cambia nulla nel gioco.');
+  await resetAula();
   // ---- Home: the vote of the last days is offered to be followed live; no result is told there; followed once, it is not offered again
   await viewport(1440, 900, false);
   await evaluate(`location.hash = '#panoramica'; true`); await pause(1200);
@@ -78,6 +81,37 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   await click('[data-aula-close]');
   await pause(500);
   assert.equal(await evaluate(`Boolean(document.querySelector('[data-aula-live]'))`), false, 'Seguita una volta, la votazione non è più proposta.');
+  // ---- saved halfway: closed in the middle, the career closed and reopened, resumed exactly there; nothing recomputed, nothing applied twice; the result only at the end
+  await resetAula(); await pause(400);
+  const gameBefore = await snapshot();
+  await evaluate(`location.hash = '#panoramica'; true`); await pause(1000);
+  await wait(() => evaluate(`Boolean(document.querySelector('[data-aula-live]'))`), 20000);
+  await open('full'); await click('[data-aula-follow]');
+  await wait(() => evaluate(`Boolean(document.querySelector('.aula-overlay'))`), 8000);
+  await wait(() => evaluate(`Number(document.querySelector('.aula-overlay').dataset.aulaShown) >= 8`), 8000);
+  await click('[data-aula-pause]');
+  const halfway = Number(await evaluate(`document.querySelector('.aula-overlay').dataset.aulaShown`));
+  assert.ok(halfway >= 8 && await evaluate(`document.querySelector('.aula-overlay').dataset.aulaFinal`) === '0', `A metà (${halfway} seggi): nessun esito.`);
+  const sequence = await evaluate(`[...document.querySelectorAll('.aula-seat.is-voted')].map(el => el.dataset.seat).join(',')`);
+  const saved = await S(`return JSON.stringify(store.getState().game.flags.aulaProgress ?? null);`);
+  assert.equal(JSON.parse(saved)?.shown, halfway, 'La posizione è salvata con la carriera.');
+  await click('[data-aula-close]');
+  assert.equal(await snapshot(), gameBefore, 'Chiudere a metà non cambia nulla nel gioco (solo la posizione).');
+  await goto(); await wait(() => evaluate('Boolean(document.querySelector("[data-menu=continua]"))')); await click('[data-menu=continua]');
+  await evaluate(`location.hash = '#panoramica'; true`); await pause(1200);
+  await wait(() => evaluate(`Boolean(document.querySelector('[data-aula-live] [data-aula-resume]'))`), 20000);
+  assert.match(await evaluate(`document.querySelector('[data-aula-resume]').textContent`), new RegExp(`${halfway} seggi su`), 'La Home dice da dove si riprende.');
+  await open('full'); await click('[data-aula-follow]');
+  await wait(() => evaluate(`Boolean(document.querySelector('.aula-overlay'))`), 8000);
+  await click('[data-aula-pause]');
+  const resumed = Number(await evaluate(`document.querySelector('.aula-overlay').dataset.aulaShown`));
+  assert.ok(resumed >= halfway, `Riparte da dove era (${halfway} → ${resumed}).`);
+  const again = await evaluate(`[...document.querySelectorAll('.aula-seat.is-voted')].map(el => el.dataset.seat).join(',')`);
+  const had = new Set(again.split(',')); assert.ok(sequence.split(',').every(seat => had.has(seat)), 'È la stessa sequenza: i seggi già votati prima di chiudere sono ancora votati, e nessuno cambia colore.');
+  assert.equal(await evaluate(`document.querySelector('.aula-overlay').dataset.aulaFinal`), '0', 'Ancora nessun esito.');
+  await click('[data-aula-skip]'); await click('[data-aula-close]'); await pause(300);
+  assert.equal(await snapshot(), gameBefore, 'Nessun voto ricalcolato e nessun effetto duplicato.');
+  assert.equal(await S(`return store.getState().game.flags.aulaProgress ?? null;`), null, 'A voto finito la posizione si cancella.');
   assert.deepEqual(errors, [], 'Nessun errore JavaScript.');
 });
 console.log('check-aula-ui: ok');

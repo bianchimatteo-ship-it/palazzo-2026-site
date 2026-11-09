@@ -1460,6 +1460,19 @@ function presenceStep(world, date, stats = {}) {
 // that stands without being measured has the simulated consensus the polls give it (never below the 0,1–0,8% of initialConsensus); what the
 // unmeasured participants hold comes out of "Altri" of the poll, never from the measured forces.
 // Returns { participants: [{ id, label, abbreviation, refSource, origin, share, surveyed, reason, regional, regionId, position, axis, isPlayer }], others }.
+// The recent national polls of a force, weighted (the latest counts most): the average the opening of a general or European campaign leans on. One poll is the truth plus the error of its sample;
+// the error of an institute persists from week to week (POLL_ERROR_MEMORY), so an average of the last readings is steadier than the last one, and the opening takes only HALF of it (the other half is
+// what the model holds underneath): the noise of one sample never becomes the stable consensus of the campaign.
+export const OPENING_POLL_WEIGHTS = Object.freeze([0.4, 0.3, 0.2, 0.1]);
+export const OPENING_POLL_BLEND = 0.5;
+export function recentPollAverage(world, partyId, weights = OPENING_POLL_WEIGHTS) {
+  const polls = [...(world?.polls ?? [])].reverse().filter(poll => poll.results?.some(row => row.partyId === partyId)).slice(0, weights.length);
+  if (!polls.length) return null;
+  const used = weights.slice(0, polls.length), total = used.reduce((sum, weight) => sum + weight, 0);
+  const value = polls.reduce((sum, poll, index) => sum + (poll.results.find(row => row.partyId === partyId)?.share ?? 0) * used[index], 0) / total;
+  const last = polls[0];
+  return { share: round2(value), polls: polls.length, last: { share: last.results.find(row => row.partyId === partyId)?.share ?? null, date: last.date ?? null, institute: last.institute ?? null, sample: last.sample ?? null, margin: last.margin ?? null } };
+}
 export function electionRoster(world, { type = 'politiche', regionId = null, precedent = [], limit = 28 } = {}) {
   if (!world?.parties) return null;
   const shares = trueShares(world);
@@ -1473,6 +1486,21 @@ export function electionRoster(world, { type = 'politiche', regionId = null, pre
     rows.push({ id: force.id, label: force.label, abbreviation: force.abbreviation ?? null, officialName: force.officialName ?? null, refSource: force.refSource ?? 'real', origin: force.origin ?? 'real', share: round2(share), surveyed: !latent && isSurveyed(force), reason, regional: Boolean(force.regional), regionId: force.regionId ?? null, position: force.position ?? null, axis: Number.isFinite(force.axis) ? force.axis : null, isPlayer: Boolean(force.isPlayer), color: force.color ?? null, brandColor: force.brandColor ?? null });
   };
   for (const party of world.parties.filter(item => item.active && inResults(item))) push(party, party.isPlayer ? 'giocatore' : 'rilevata', shares.get(party.id) ?? party.baseline);
+  // A general or European campaign opens on the polls: the surveyed forces take half of the average of the recent readings (see recentPollAverage) and half of what the model holds, and are brought back
+  // to the same total (the opening does not create or remove votes: it only moves them towards what the institutes saw). Each row keeps the trace of its three numbers.
+  if (['politiche', 'europee'].includes(type)) {
+    const surveyed = rows.filter(row => row.surveyed || row.isPlayer);
+    const before = surveyed.reduce((sum, row) => sum + row.share, 0);
+    for (const row of surveyed) {
+      const average = recentPollAverage(world, row.id);
+      row.underlying = row.share;
+      row.pollAverage = average?.share ?? null;
+      row.poll = average?.last ?? null;
+      if (average) row.share = round2(row.share * (1 - OPENING_POLL_BLEND) + average.share * OPENING_POLL_BLEND);
+    }
+    const after = surveyed.reduce((sum, row) => sum + row.share, 0);
+    if (after > 0 && before > 0) for (const row of surveyed) row.share = round2(row.share * before / after);
+  }
   const own = new Set(rows.map(row => row.id));
   const outside = outsideForces(world).filter(force => force.active !== false && !own.has(force.id) && !force.mergedInto);
   for (const force of outside) {

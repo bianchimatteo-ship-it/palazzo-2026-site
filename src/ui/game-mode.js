@@ -624,12 +624,13 @@ export function liveVoteOffer(state) {
   const limit = today ? advanceDays(today, -14) : '';
   const chamber = parliament.player.chamber;
   const vote = voteCatalog(parliament).find(item => item.chamber === chamber && item.id && !seen.has(item.id) && (!item.date || !limit || item.date >= limit) && (item.byGroup?.length ?? 0) > 0);
-  return vote ? { id: vote.id, chamber, label: vote.label ?? vote.title ?? 'Votazione in Aula', date: vote.date ?? null, secret: Boolean(vote.secret) } : null;
+  const left = state.game.flags?.aulaProgress;
+  return vote ? { id: vote.id, chamber, label: vote.label ?? vote.title ?? 'Votazione in Aula', date: vote.date ?? null, secret: Boolean(vote.secret), resume: left?.voteId === vote.id ? { shown: left.shown, total: left.total } : null } : null;
 }
 function liveVoteBand(state) {
   const offer = liveVoteOffer(state);
   if (!offer) return '';
-  return `<section class="aula-live" data-aula-live aria-label="Votazione in Aula"><div><span class="section-kicker">VOTAZIONE IN AULA${offer.date ? ` · ${esc(formatDate(offer.date).toUpperCase())}` : ''}</span><strong>${esc(offer.label)}</strong><small>${offer.secret ? 'Voto segreto: ' : ''}Il presidente di turno aprirà la seduta e i seggi voteranno uno dopo l’altro. L’esito si saprà solo alla fine.</small></div><div class="aula-live-actions"><button type="button" class="primary-button aula-follow" data-aula-open="${esc(offer.id)}" data-aula-chamber="${esc(offer.chamber)}" data-aula-follow="${esc(offer.id)}">SEGUI LA VOTAZIONE</button><button type="button" class="ghost-button" data-aula-dismiss="${esc(offer.id)}">Non seguire</button></div></section>`;
+  return `<section class="aula-live" data-aula-live aria-label="Votazione in Aula"><div><span class="section-kicker">VOTAZIONE IN AULA${offer.date ? ` · ${esc(formatDate(offer.date).toUpperCase())}` : ''}</span><strong>${esc(offer.label)}</strong><small>${offer.secret ? 'Voto segreto: ' : ''}Il presidente di turno aprirà la seduta e i seggi voteranno uno dopo l’altro. L’esito si saprà solo alla fine.</small>${offer.resume ? `<small data-aula-resume>Ripresa dal punto in cui l’hai lasciata: ${offer.resume.shown} seggi su ${offer.resume.total}.</small>` : ''}</div><div class="aula-live-actions"><button type="button" class="primary-button aula-follow" data-aula-open="${esc(offer.id)}" data-aula-chamber="${esc(offer.chamber)}" data-aula-follow="${esc(offer.id)}">SEGUI LA VOTAZIONE</button><button type="button" class="ghost-button" data-aula-dismiss="${esc(offer.id)}">Non seguire</button></div></section>`;
 }
 export function renderHeadquarters(state, options = {}) {
   const gc = gameContext(state);

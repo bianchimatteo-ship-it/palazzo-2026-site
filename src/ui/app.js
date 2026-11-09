@@ -1693,6 +1693,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
       return;
     }
+    const proposalBillControl = event.target.closest("[data-proposal-bill]");
+    if (proposalBillControl) { try { store.proposalToBill(proposalBillControl.dataset.proposalBill); playSound('confirm'); } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); } return; }
     const promiseControl = event.target.closest('[data-promise-adopt],[data-promise-announce],[data-promise-withdraw]');
     if (promiseControl) {
       try {
@@ -1719,9 +1721,12 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
           if (inst && act) aula = module.localAula(inst, act, { colorOf: group => ({ maggioranza: '#3f7fb5', opposizione: '#b5653f' })[group.side] ?? '#7d8b84' });
         }
         if (!aula) throw new Error('Questa votazione non ha i dati dei gruppi per entrare in aula.');
-        module.openAula(aula, { motion: document.documentElement.dataset.sceneMotion ?? settings.sceneMotion });
+        // resumed where it was left, if it was left halfway (the same vote, the same order of seats); the position is saved as it moves
+        const voteKey = aulaControl.dataset.aulaOpen ?? '';
+        const left = store.getState().game?.flags?.aulaProgress;
+        const start = voteKey && left?.voteId === voteKey ? left.shown : 0;
+        module.openAula(aula, { motion: document.documentElement.dataset.sceneMotion ?? settings.sceneMotion, start, onProgress: voteKey ? (shown, total) => store.setAulaProgress(voteKey, shown, total) : null });
         playSound('confirm');
-        if (aulaControl.dataset.aulaFollow) store.markAulaSeen(aulaControl.dataset.aulaFollow);
       } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
       return;
     }
@@ -2436,12 +2441,16 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
         }
         playSound('confirm');
       } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
+    } else if (form.matches('[data-promise-negotiate-form]')) {
+      event.preventDefault();
+      try { const result = store.negotiatePromise(form.dataset.promiseId, new FormData(form).get('ally')); playSound(result.ok ? 'confirm' : 'failure'); }
+      catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
     } else if (form.matches('[data-promise-form],[data-promise-modify-form]')) {
       event.preventDefault();
       const data = new FormData(form);
       try {
         if (form.matches('[data-promise-form]')) store.makePromise({ area: data.get('area'), scope: data.get('scope'), instrument: data.get('instrument'), ambition: data.get('ambition') });
-        else store.modifyPromise(form.dataset.promiseId, { ambition: data.get('ambition'), instrument: data.get('instrument'), extraWeeks: Number(data.get('extraWeeks')) });
+        else store.modifyPromise(form.dataset.promiseId, { ambition: data.get('ambition'), instrument: data.get('instrument'), extraWeeks: Number(data.get('extraWeeks')), reason: data.get('reason') ?? 'nessuno' });
         playSound('confirm');
       } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
     } else if (form.matches('[data-bill-amend-form]')) {
@@ -2615,6 +2624,8 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
   root.addEventListener('change', async event => {
     // Vita interna: the description of the chosen way of changing the name sits apart from the menu (which shows only the short names)
     if (event.target.matches?.('[data-rename-style]')) { for (const item of root.querySelectorAll('[data-rename-detail]')) item.hidden = item.dataset.renameDetail !== event.target.value; return; }
+    // The priority of a promise: recorded at once (at most two at the top).
+    if (event.target.matches?.('[data-promise-priority]')) { try { store.setPromisePriority(event.target.dataset.promisePriority, event.target.value); playSound('confirm'); } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); } return; }
     // The dialog's option survives a redraw while the confirmation is open.
     if (pendingConfirm && event.target.matches?.('[data-confirm-option]')) { pendingConfirm.optionChecked = Boolean(event.target.checked); return; }
     const field=event.target;

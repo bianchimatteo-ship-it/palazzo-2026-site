@@ -95,17 +95,19 @@ const VOTE_POSES = {
   ingresso: { x: 560, y: 262, path: [{ x: 600, y: 262 }, { x: 560, y: 262 }], gesture: null, prop: 'desk', booth: 'open' },
   banco: { x: 300, y: 300, path: [{ x: 440, y: 300 }, { x: 300, y: 300 }], gesture: 'prende', prop: 'hand', booth: 'open' },
   cabina: { x: 474, y: 286, path: [{ x: 400, y: 318 }, { x: 474, y: 300 }], gesture: null, prop: 'hand', booth: 'closed' },
-  voto: { x: 474, y: 286, gesture: 'scrive', prop: 'hand', booth: 'closed', hidden: true },
-  piega: { x: 474, y: 286, gesture: 'piega', prop: 'folded', booth: 'closed', hidden: true },
+  // in the booth the voter stays in view above the curtain (head, shoulders, hands): the ballot is in the hand that writes, then folded in both, never hidden or floating
+  voto: { x: 474, y: 286, gesture: 'scrive', prop: 'hand', booth: 'closed' },
+  piega: { x: 474, y: 286, gesture: 'piega', prop: 'folded', booth: 'closed' },
   esce: { x: 440, y: 304, path: [{ x: 474, y: 300 }, { x: 440, y: 308 }], gesture: null, prop: 'folded', booth: 'open' },
-  urna: { x: 150, y: 306, path: [{ x: 300, y: 318 }, { x: 150, y: 306 }], gesture: 'inserisce', prop: 'urn', booth: 'open' },
+  // the voter stands beside the urn (to its right, facing it), never on top of it: the folded ballot goes into the slot at the top
+  urna: { x: 226, y: 308, path: [{ x: 300, y: 320 }, { x: 226, y: 308 }], gesture: 'inserisce', prop: 'urn', booth: 'open', facing: -1 },
   uscita: { x: 620, y: 252, path: [{ x: 300, y: 330 }, { x: 560, y: 300 }, { x: 640, y: 256 }], gesture: 'saluta', prop: 'none', booth: 'open', exit: true }
 };
 export const VOTE_ORDER = Object.freeze(Object.keys(VOTE_POSES));
 function votePoses(scene, nodeId) {
   const me = scene.cast.find(item => item.role === 'giocatore');
   const spec = VOTE_POSES[nodeId] ?? VOTE_POSES.uscita;
-  const out = { [me.id]: pose(spec.x, spec.y, { path: spec.path, gesture: spec.gesture, visible: !spec.hidden, exit: spec.exit }) };
+  const out = { [me.id]: pose(spec.x, spec.y, { path: spec.path, gesture: spec.gesture, visible: !spec.hidden, exit: spec.exit, facing: spec.facing ?? 1 }) };
   for (const member of scene.cast.filter(item => item.role === 'scrutatore')) out[member.id] = pose(member.x, member.y, { posture: 'sit', facing: member.x > 310 ? -1 : 1, gesture: nodeId === 'banco' ? 'porge' : null });
   return out;
 }

@@ -30,6 +30,14 @@ export const PROMISE_SCOPES = Object.freeze({
 });
 export const AMBITIONS = Object.freeze({ prudente: { label: 'Prudente', goal: 'un miglioramento contenuto', cost: 0.6, lasting: 0.7, weeks: 20 }, media: { label: 'Media', goal: 'un miglioramento sensibile', cost: 1, lasting: 1, weeks: 32 }, ambiziosa: { label: 'Ambiziosa', goal: 'un miglioramento netto', cost: 1.8, lasting: 1.25, weeks: 52 } });
 export const PROMISE_RULES = Object.freeze({ capacity: 4, grace: 12, improvement: 1.5, maxDue: 260, minDue: 8 });
+// Priority of a promise: the voters weigh a promise the player put first more, kept or broken (credibility and what settling it gives).
+export const PRIORITIES = Object.freeze({ alta: { label: 'Priorità alta', weight: 1.35 }, media: { label: 'Priorità media', weight: 1 }, bassa: { label: 'Priorità bassa', weight: 0.75 } });
+const priorityWeight = item => PRIORITIES[item?.priority]?.weight ?? 1;
+// Why a promise is revised: a reason that holds (the resources are really missing, the allies ask for it, an emergency, the situation has really changed) softens the price in credibility; no reason, or
+// one the facts do not support, makes it heavier. The reasons are checked against the game, never taken on trust.
+export const REVISION_REASONS = Object.freeze({
+  risorse: { label: 'Mancano le risorse' }, alleati: { label: 'Lo chiedono gli alleati' }, emergenza: { label: 'Un’emergenza cambia le priorità' }, scenario: { label: 'Il quadro è cambiato' }, nessuno: { label: 'Nessun motivo dichiarato' }
+});
 
 // The topics of the TV debates and of the campaign (campaign-rules.js DEBATE_TOPICS) each area belongs to: what the promise feeds when it is announced or defended.
 const TOPIC_OF_GROUP = Object.freeze({ conti: 'costo-vita', economia: 'lavoro', welfare: 'servizi', sapere: 'giovani', territorio: 'ambiente', sicurezza: 'sicurezza', societa: 'servizi', istituzioni: 'istituzioni' });
@@ -68,8 +76,8 @@ export function promiseQuote({ area, instrument = 'investimento', ambition = 'me
 // leaves, and the contradictions between them. It is what an announcement is worth in the campaign.
 export function credibility(game, { society = null, extra = null, reputation = 50 } = {}) {
   const all = promisesOf(game);
-  const kept = all.filter(item => item.status === 'mantenuta').length + all.filter(item => item.status === 'parzialmente-mantenuta').length * 0.5;
-  const broken = all.filter(item => item.status === 'non-mantenuta').length;
+  const kept = all.filter(item => item.status === 'mantenuta').reduce((sum, item) => sum + priorityWeight(item), 0) + all.filter(item => item.status === 'parzialmente-mantenuta').reduce((sum, item) => sum + 0.5 * priorityWeight(item), 0);
+  const broken = all.filter(item => item.status === 'non-mantenuta').reduce((sum, item) => sum + priorityWeight(item), 0);
   const live = [...all.filter(open), ...(extra ? [extra] : [])];
   const overload = Math.max(0, live.length - PROMISE_RULES.capacity);
   const cost = live.reduce((sum, item) => sum + (item.cost ?? 0), 0);
@@ -81,8 +89,9 @@ export function credibility(game, { society = null, extra = null, reputation = 5
   if (overload) notes.push(`Troppe promesse aperte (${live.length}): un mandato ne regge ${PROMISE_RULES.capacity}.`);
   if (uncovered > 0) notes.push(`Costi per ${round1(cost)} miliardi contro un margine di bilancio di circa ${room}: manca la copertura.`);
   for (const [a, b] of conflicts) notes.push(`${AREA_BY_ID[a]?.label ?? a} e ${AREA_BY_ID[b]?.label ?? b} tirano in direzioni opposte.`);
-  if (broken) notes.push(`${broken} promess${broken === 1 ? 'a non mantenuta pesa' : 'e non mantenute pesano'} sulla tua parola.`);
-  return { score: Math.round(clamp(score, 5, 100)), live: live.length, overload, cost: round1(cost), room, conflicts, notes, kept: Math.round(kept * 10) / 10, broken };
+  const brokenCount = all.filter(item => item.status === 'non-mantenuta').length;
+  if (brokenCount) notes.push(`${brokenCount} promess${brokenCount === 1 ? 'a non mantenuta pesa' : 'e non mantenute pesano'} sulla tua parola.`);
+  return { score: Math.round(clamp(score, 5, 100)), live: live.length, overload, cost: round1(cost), room, conflicts, notes, kept: Math.round(kept * 10) / 10, broken: Math.round(broken * 10) / 10 };
 }
 function conflictsOf(list) {
   const out = [];
@@ -92,7 +101,7 @@ function conflictsOf(list) {
 }
 
 // ---------- making, changing, withdrawing ----------
-export function makePromise(game, { area, scope = 'candidato', instrument = 'investimento', ambition = 'media', dueWeeks = null, region = null, campaignId = null, source = null } = {}, { week, date, society = null, reputation = 50 } = {}) {
+export function makePromise(game, { area, scope = 'candidato', instrument = 'investimento', ambition = 'media', dueWeeks = null, region = null, campaignId = null, source = null, priority = 'media' } = {}, { week, date, society = null, reputation = 50 } = {}) {
   const spec = AREA_BY_ID[area];
   if (!spec) throw new Error('Scegli un’area politica per la promessa.');
   if (!PROMISE_SCOPES[scope]) throw new Error('Scegli in nome di chi prendi l’impegno.');
@@ -105,7 +114,7 @@ export function makePromise(game, { area, scope = 'candidato', instrument = 'inv
     id: `promessa-prog-${week}-${area}-${scope}`, kind: 'programma', scope, area, label: spec.label, instrument, ambition, region,
     problem: spec.problem ?? null, objective: `${spec.national}: ${AMBITIONS[ambition].goal}`, intervention: `${INSTRUMENT_KINDS[instrument].label} in ${spec.label.toLowerCase()}`,
     cost: quote.cost, madeWeek: week, madeDate: date, dueWeek: week + due, baseline: areaIndicator(society, area, region), status: 'non-avviata', progress: 0, impediments: [], history: [{ week, date, text: 'Promessa fatta.' }],
-    modified: 0, announced: [], campaignId, sourceRef: source, source: 'simulation'
+    modified: 0, announced: [], campaignId, sourceRef: source, priority: ['alta', 'media', 'bassa'].includes(priority) ? priority : 'media', backedBy: [], source: 'simulation'
   };
   const quality = credibility({ promises: [...(game?.promises ?? []), item] }, { society, reputation });
   item.credibility = quality.score;
@@ -114,20 +123,58 @@ export function makePromise(game, { area, scope = 'candidato', instrument = 'inv
 
 // Changing a promise: more time (once, with a price), a smaller ambition, another instrument. The old one is closed as «modificata» and the new one carries on its history: nobody can
 // quietly rewrite what was said (the press and the opposition remember the change).
-export function modifyPromise(game, id, changes, { week, date, society = null, reputation = 50 } = {}) {
+export function modifyPromise(game, id, changes, { week, date, society = null, reputation = 50, allied = false } = {}) {
   const old = promisesOf(game).find(item => item.id === id);
   if (!old || !open(old)) throw new Error('Questa promessa non si può più modificare.');
   const ambition = changes.ambition ?? old.ambition, instrument = changes.instrument ?? old.instrument;
   const quote = promiseQuote({ area: old.area, instrument, ambition });
   const extra = clamp(Math.round(changes.extraWeeks ?? 0), 0, 52);
   if (ambition === old.ambition && instrument === old.instrument && !extra) throw new Error('Nessun cambiamento da registrare.');
+  const reason = revisionReason(changes.reason, old, { game, society, allied });
   const next = { ...old, id: `${old.id}~${old.modified + 1}`, instrument, ambition, cost: quote.cost, intervention: `${INSTRUMENT_KINDS[instrument].label} in ${old.label.toLowerCase()}`, objective: `${AREA_BY_ID[old.area].national}: ${AMBITIONS[ambition].goal}`,
     dueWeek: old.dueWeek + extra, modified: old.modified + 1, status: old.progress > 0 ? 'in-corso' : 'non-avviata', settledWeek: null, outcome: null,
-    history: [...old.history, { week, date, text: 'Modificata.' }, ...(extra ? [{ week, date, text: `Tempo in più: ${extra} settimane.` }] : []), ...(ambition !== old.ambition ? [{ week, date, text: `Ambizione cambiata: ${AMBITIONS[ambition].label.toLowerCase()}.` }] : []), ...(instrument !== old.instrument ? [{ week, date, text: `Strumento cambiato: ${INSTRUMENT_KINDS[instrument].label.toLowerCase()}.` }] : [])] };
+    history: [...old.history, { week, date, text: `Modificata. Motivo: ${REVISION_REASONS[reason.id].label.toLowerCase()}${reason.valid ? '' : reason.id === 'nessuno' ? '' : ' (i fatti non lo confermano)'}.` }, ...(extra ? [{ week, date, text: `Tempo in più: ${extra} settimane.` }] : []), ...(ambition !== old.ambition ? [{ week, date, text: `Ambizione cambiata: ${AMBITIONS[ambition].label.toLowerCase()}.` }] : []), ...(instrument !== old.instrument ? [{ week, date, text: `Strumento cambiato: ${INSTRUMENT_KINDS[instrument].label.toLowerCase()}.` }] : [])] };
   const closed = { ...old, status: 'modificata', settledWeek: week, outcome: 'modificata', history: [...old.history, { week, date, text: 'Sostituita da una versione modificata.' }] };
   // a change costs credibility: the harder the retreat, the heavier (a downgrade or a long delay is noticed; a better instrument for the same goal is not)
   const retreat = (AMBITIONS[old.ambition].cost - AMBITIONS[ambition].cost) * 2 + extra / 26;
-  return { closed, next, effects: { reputation: -Math.round(clamp(0.6 + retreat * 1.4, 0.4, 4) * 10) / 10 }, credibility: credibility({ promises: [...(game.promises ?? []).filter(item => item.id !== old.id), closed, next] }, { society, reputation }) };
+  return { closed, next, reason, effects: { reputation: -Math.round(clamp((0.6 + retreat * 1.4) * (reason.valid ? 0.6 : reason.id === 'nessuno' ? 1.25 : 1), 0.3, 5) * 10) / 10 }, credibility: credibility({ promises: [...(game.promises ?? []).filter(item => item.id !== old.id), closed, next] }, { society, reputation }) };
+}
+
+// Does the reason given for a revision hold? Checked against the game: the room of the budget, the accord of the player, the mood of the country, the indicator of the area since the promise was made.
+export function revisionReason(id, promise, { game = null, society = null, allied = false } = {}) {
+  const key = REVISION_REASONS[id] ? id : 'nessuno';
+  let valid = false;
+  if (key === 'risorse') valid = fiscalRoom(society) < (credibility(game ?? { promises: [] }, { society }).cost || promise?.cost || 0);
+  else if (key === 'alleati') valid = Boolean(allied) || ['coalizione', 'governo'].includes(promise?.scope);
+  else if (key === 'emergenza') valid = (society?.mood ?? 50) < 42;
+  else if (key === 'scenario') { const now = areaIndicator(society, promise?.area, promise?.region); valid = promise?.baseline != null && now != null && Math.abs(now - promise.baseline) >= 2; }
+  return { id: key, valid, label: REVISION_REASONS[key].label };
+}
+
+// The priority of an open promise: a record in its history, nothing else changes (the weight shows in credibility and when it is settled).
+export function setPromisePriority(game, id, priority, { week, date } = {}) {
+  const old = promisesOf(game).find(item => item.id === id);
+  if (!old || !open(old)) throw new Error('Questa promessa non è più aperta.');
+  if (!PRIORITIES[priority]) throw new Error('Scegli una priorità: alta, media o bassa.');
+  if (old.priority === priority) throw new Error('Questa è già la sua priorità.');
+  const live = promisesOf(game).filter(item => open(item) && item.id !== id && item.priority === 'alta').length;
+  if (priority === 'alta' && live >= 2) throw new Error('Due promesse in cima bastano: se tutto è prioritario, nulla lo è.');
+  return { ...old, priority, history: [...(old.history ?? []), { week, date, text: `Priorità: ${PRIORITIES[priority].label.toLowerCase()}.` }] };
+}
+
+// Negotiating a promise with an ally of the accord: the ally may back it (the cost is shared, the ally's name stands beside it) or refuse (the relation cools). The chance comes from the tie between the two
+// parties and the priority; the draw is given by the caller (seeded), never taken here. One capital point is spent either way.
+export function negotiatePromise(game, id, { ally, tie = 0, roll }, { week, date } = {}) {
+  const old = promisesOf(game).find(item => item.id === id);
+  if (!old || !open(old)) throw new Error('Questa promessa non è più aperta.');
+  if (!ally?.id) throw new Error('Scegli con quale alleato trattare.');
+  if ((old.backedBy ?? []).some(item => item.id === ally.id)) throw new Error('Questo alleato la sostiene già.');
+  if ((old.backedBy ?? []).length >= 2) throw new Error('Due alleati a sostenerla bastano.');
+  const chance = clamp(0.3 + tie / 160 + (old.priority === 'alta' ? 0.05 : 0), 0.1, 0.85);
+  const ok = roll < chance;
+  const backed = ok ? [...(old.backedBy ?? []), { id: ally.id, label: ally.label, week }] : (old.backedBy ?? []);
+  const promise = { ...old, backedBy: backed, cost: ok ? round1(old.cost * 0.85) : old.cost, history: [...(old.history ?? []), { week, date, text: ok ? `${ally.label} sostiene la promessa: il costo si divide.` : `${ally.label} rifiuta di sostenerla: la trattativa non ha esito.` }] };
+  return { promise, ok, chance: Math.round(chance * 100) / 100, effects: { capital: -1, tie: ok ? 2 : -3 } };
 }
 
 // Withdrawing a promise in the open is a failure that is admitted: it costs less than being found out, but it counts as not kept.
@@ -172,7 +219,7 @@ export function evaluatePromise(promise, { week, date, society = null, parliamen
 
 // Effects of a promise settled, applied once by the store: reputation, popularity, the party, the allies, the voters of the area and the memory/news lines.
 export function settleEffects(promise, status, brokenBefore = 0, { admitted = false } = {}) {
-  const scope = PROMISE_SCOPES[promise.scope]?.weight ?? 1;
+  const scope = (PROMISE_SCOPES[promise.scope]?.weight ?? 1) * priorityWeight(promise);
   const ambition = promise.ambition === 'ambiziosa' ? 1.2 : 1;
   const label = promise.label.toLowerCase();
   if (status === 'mantenuta') return { reputation: round1(2 * scope * ambition), popularity: round1(1.1 * scope), attention: 3, partner: ['coalizione', 'governo'].includes(promise.scope) ? 3 : 0, party: promise.scope === 'partito' ? 1 : 0, memory: { kind: 'promessa-mantenuta', weight: 1.1, text: `Promessa mantenuta su ${label}: ${promise.intervention}.` }, tone: 'good', headline: `Promessa mantenuta su ${label}` };
