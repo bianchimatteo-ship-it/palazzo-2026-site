@@ -350,7 +350,7 @@ await withBrowser(async browser => {
   assert.ok(!/non.?binari|preferisco non|neutro|altro/i.test(await (await t.text('[data-avatar-editor]')) + (await evaluate(`document.querySelector('select[name="gender"]').innerText`))), 'Nessuna opzione non binaria, neutra o «altro» nella schermata.');
   // the samples: a small preview for each shape (cropped on the head), a colour for each colour; the active one is framed
   const samples = await evaluate(`(() => { const minis = [...document.querySelectorAll('.avatar-choice.is-mini')]; const swatches = [...document.querySelectorAll('.avatar-choice.is-swatch')]; const box = el => el.getBoundingClientRect(); return { minis: minis.length, swatches: swatches.length, miniSvg: minis.every(el => el.querySelector('svg') && box(el.querySelector('svg')).width >= 48), miniLabels: minis.every(el => el.querySelector('span')?.textContent.trim()), colours: swatches.every(el => /^#/.test(el.style.getPropertyValue('--sw').trim()) || el.getAttribute('style')?.includes('--sw')), touch: [...minis, ...swatches].every(el => box(el).width >= 40 && box(el).height >= 40), tick: getComputedStyle(document.querySelector('.avatar-choice.is-mini.selected'), '::after').content, selected: document.querySelectorAll('.avatar-choice.selected').length }; })()`);
-  assert.deepEqual([samples.minis, samples.swatches], [28, 23], 'Anteprime e campioni per ogni scelta.');
+  assert.deepEqual([samples.minis, samples.swatches], [44, 23], 'Anteprime e campioni per ogni scelta.');
   assert.ok(samples.miniSvg && samples.miniLabels && samples.colours && samples.touch, 'Ogni scelta è riconoscibile (anteprima o colore, con nome) e si tocca bene.');
   assert.ok(/✓/.test(samples.tick) && samples.selected === 10, 'La scelta attiva di ogni gruppo è evidenziata.');
   // the picture of the Palace is behind the editor only: blurred, covering, with a dark veil; the avatar and the controls are not blurred
@@ -543,7 +543,8 @@ await withBrowser(async browser => {
   // phone: one column, nothing sideways, touch targets of at least 40 px, the preview in full view
   const phone = await evaluate(`(() => { const body = document.querySelector('.wizard-body'); const p = document.querySelector('[data-avatar-preview]').getBoundingClientRect(), c = document.querySelector('.avatar-controls').getBoundingClientRect(); const small = [...document.querySelectorAll('.avatar-choice')].filter(el => { const r = el.getBoundingClientRect(); return r.height < 40 || r.width < 40; }).length; return { over: body.scrollWidth - body.clientWidth, stacked: p.bottom <= c.top + 1, small, previewW: Math.round(p.width), vw: innerWidth, pageOver: document.documentElement.scrollWidth - innerWidth }; })()`);
   assert.ok(phone.over <= 1 && phone.pageOver <= 1, `Telefono: nessuno scroll orizzontale (${JSON.stringify(phone)}).`);
-  assert.ok(phone.stacked && phone.previewW > 150 && phone.previewW <= phone.vw, 'Telefono: l’anteprima sta sopra i controlli, per intero.');
+  // the preview stays in view while the controls scroll (a right-hand column, sticky): it is whole, narrower than the screen and visible
+  assert.ok(phone.previewW > 60 && phone.previewW <= phone.vw, 'Telefono: l’anteprima è sempre visibile, per intero, accanto ai controlli che scorrono.');
   assert.equal(phone.small, 0, 'Telefono: ogni scelta si tocca bene (almeno 40 px).');
   await t.click('[data-avatar-field="face"][data-avatar-value="maschile"]', 60);
   assert.ok((await t.preview()).startsWith('maschile.'), 'Telefono: l’anteprima si aggiorna.');
