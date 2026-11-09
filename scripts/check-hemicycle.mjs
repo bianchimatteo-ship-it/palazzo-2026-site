@@ -160,6 +160,45 @@ html = renderHemicycle(baseState, { politicians: db.politicians, db, view: { vot
 assert.ok(html.includes('Fiducia') && html.includes('Il tuo seggio') && html.includes(votes.VOTE_CHOICES.favorevole.color) && clean(html), 'Fiducia: voti per seggio e scheda del giocatore.');
 html = renderHemicycle(baseState, { politicians: db.politicians, db, view: { committee: 'commissione-camera-xix-05' } });
 assert.ok(html.includes('V Commissione') && html.includes('hemi-members') && html.includes('is-dim'), 'Filtro per commissione: scheda della commissione, elenco componenti, altri seggi attenuati.');
+// ---------- 5b. the Aula: the vote replayed seat by seat, never recomputed ----------
+{
+  const aulaScript = await import(`../src/core/aula-script.js${v}`);
+  const aulaView = await import(`../src/ui/aula-view.js${v}`);
+  const before = JSON.stringify(baseState.parliament);
+  html = renderHemicycle(baseState, { politicians: db.politicians, db, view: {} });
+  assert.ok(html.includes('data-aula-open') && html.includes('ENTRA IN AULA') && html.includes('data-remember="hemi-roster"'), 'Il bottone ENTRA IN AULA c’è e l’elenco dei componenti è un blocco che si apre e si chiude.');
+  // an open vote (confidence): every present seat votes once, the board adds up to the totals of the engine
+  const open = aulaView.parliamentAula(baseState, { voteId: confidenceVote.id, chamber: 'camera', politicians: db.politicians, db });
+  assert.ok(open && open.script.assembly === 'camera' && open.seats.length === rosters.camera.total, 'La Camera in Aula ha i seggi della composizione reale.');
+  const present = open.choices.map((choice, index) => choice === 'assente' ? null : index).filter(index => index !== null);
+  assert.deepEqual([...open.script.order].sort((a, b) => a - b), present, 'Ogni seggio presente vota una sola volta, gli assenti non votano.');
+  const again = aulaView.parliamentAula(baseState, { voteId: confidenceVote.id, chamber: 'camera', politicians: db.politicians, db });
+  assert.deepEqual(again.script.order, open.script.order, 'Lo stesso voto, lo stesso ordine in Aula.');
+  let last = -1;
+  for (const shown of [0, 10, 50, 200, open.script.order.length]) { const board = aulaScript.boardAt(open.script, open.choices, shown); assert.ok(board.voted >= last && board.yes + board.against + board.abstain === board.voted, `A ${shown} seggi la lavagna somma i seggi mostrati.`); last = board.voted; }
+  const end = aulaScript.boardAt(open.script, open.choices, open.script.order.length);
+  const summary = votes.voteSummary(confidenceVote);
+  assert.deepEqual([end.yes, end.against, end.abstain], [summary.yes, summary.against, summary.abstain], 'Alla fine la lavagna è esattamente il risultato deciso dal motore (nulla ricalcolato).');
+  assert.ok(open.script.steps.some(step => step.result && /fiducia/.test(step.text)) && open.script.steps.every(step => !/Mattarella|Fontana|La Russa/.test(step.text)), 'Il Presidente annuncia l’esito; nessun Presidente reale è nominato.');
+  assert.ok(aulaScript.saidAt(open.script, 0).length >= 2 && aulaScript.saidAt(open.script, open.script.order.length).length > aulaScript.saidAt(open.script, 0).length, 'Gli annunci arrivano man mano.');
+  // the secret ballot: it is known who voted, never how; the totals appear at the end
+  const secretAula = aulaView.parliamentAula(baseState, { voteId: vote.id, chamber: vote.chamber, politicians: db.politicians, db });
+  assert.ok(secretAula.script.secret && secretAula.choices.every(choice => ['segreto', 'assente'].includes(choice)), 'Nel voto segreto nessun seggio ha un voto attribuito.');
+  const secretEnd = aulaScript.boardAt(secretAula.script, secretAula.choices, secretAula.script.order.length);
+  assert.equal(secretEnd.yes + secretEnd.against + secretEnd.abstain, 0, 'La lavagna del voto segreto non attribuisce voti ai seggi.');
+  assert.ok(secretAula.script.steps.some(step => /segreto/i.test(step.text)) && secretAula.script.final.yes === secret.yes, 'Annuncia lo scrutinio segreto e, alla fine, i totali del motore.');
+  // the Senate too (a vote of that chamber, or none)
+  const senateVote = catalog.find(item => item.chamber === 'senato');
+  if (senateVote) assert.equal(aulaView.parliamentAula(baseState, { voteId: senateVote.id, chamber: 'senato', politicians: db.politicians, db }).script.assembly, 'senato');
+  // councils and European Parliament: the totals of each group become seats, the sums are exactly the totals of the vote
+  const local = aulaScript.aulaFromTallies({ assembly: 'comune', id: 'atto-1', label: 'Bilancio', passed: true, playerGroupId: 'g1', playerChoice: 'favorevole', groups: [{ id: 'g1', label: 'Maggioranza', seats: 12, yes: 9, against: 1, abstain: 1, absent: 1 }, { id: 'g2', label: 'Opposizione', seats: 8, yes: 1, against: 5, abstain: 1, absent: 1 }] });
+  const localEnd = aulaScript.boardAt(local.script, local.choices, local.script.order.length);
+  assert.deepEqual([localEnd.yes, localEnd.against, localEnd.abstain, local.seats.length], [10, 6, 2, 20], 'Un consiglio: i seggi di ogni gruppo sommano ai totali del voto.');
+  assert.equal(local.seats.filter(seat => seat.player).length, 1, 'Il tuo seggio è uno solo, nel tuo gruppo, con il tuo voto.');
+  assert.equal(local.choices[local.seats.find(seat => seat.player).index], 'favorevole');
+  for (const assembly of ['comune', 'regione', 'europeo']) assert.ok(aulaScript.aulaFromTallies({ assembly, id: 'x', groups: [{ id: 'g', seats: 3, yes: 2, against: 1 }] }).script.president.startsWith('Il Presidente'), `${assembly}: ha il suo Presidente (un ruolo, mai una persona).`);
+  assert.equal(JSON.stringify(baseState.parliament), before, 'Entrare in Aula non cambia nulla nel gioco.');
+}
 html = renderHemicycle(baseState, { politicians: db.politicians, db, view: { chamber: 'senato', colorBy: 'partito' } });
 assert.ok(html.includes('Senato della Repubblica') && html.includes('Partito non documentato') && clean(html), 'Senato colorato per partito, con i non documentati dichiarati.');
 

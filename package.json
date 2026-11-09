@@ -262,6 +262,10 @@
     "check:rally": "node scripts/check-rally.mjs",
     "check:rally-store": "node scripts/check-rally-store.mjs",
     "check:stage-ui": "node scripts/check-stage-ui.mjs",
+    "check:studio-lines": "node scripts/check-studio-lines.mjs",
+    "check:program-editor": "node scripts/check-program-editor.mjs",
+    "check:aula-ui": "node scripts/check-aula-ui.mjs",
+    "check:runoff-eliminated": "node scripts/check-runoff-eliminated.mjs",
     "check:runoff-rule": "node scripts/check-runoff-rule.mjs",
     "check:challenges-ui": "node scripts/check-challenges-ui.mjs"
   },

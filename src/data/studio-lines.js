@@ -221,9 +221,36 @@ const rallyPairs = () => {
   return pairs;
 };
 
+
+// The words of the Aula (ui/aula-view.js): the President of the assembly opens, announces and closes the vote; `{}` are the title of the President, the assembly, the label of the vote. The names are
+// roles, never persons: no real President is named. EN pairs as above.
+export const AULA = Object.freeze({
+  open: [
+    ['{}: «Indìco la votazione: {}.»', '{1}: “I call the vote: {2}.”'],
+    ['{}: «Si passa alla votazione: {}.»', '{1}: “We move to the vote: {2}.”']
+  ],
+  confidence: [['{}: «Si vota sulla questione di fiducia posta dal Governo: {}.»', '{1}: “We vote on the question of confidence raised by the Government: {2}.”']],
+  opened: [['{}: «La votazione è aperta. I colleghi votino.»', '{1}: “The vote is open. Members, please vote.”'], ['{}: «Dichiaro aperta la votazione.»', '{1}: “I declare the vote open.”']],
+  secret: [['{}: «La votazione è a scrutinio segreto: nessuno saprà chi ha votato cosa.»', '{1}: “The vote is by secret ballot: no one will know who voted what.”']],
+  progress: [['Sono stati espressi # voti su # seggi.', '# votes have been cast out of # seats.'], ['Il tabellone si riempie: # voti su #.', 'The board fills up: # votes out of #.']],
+  closed: [['{}: «Dichiaro chiusa la votazione.»', '{1}: “I declare the vote closed.”']],
+  passed: [['{}: «{} approva: favorevoli #, contrari #, astenuti #.»', '{1}: “{2} approves: in favour {3}, against {4}, abstentions {5}.”']],
+  rejected: [['{}: «{} respinge: favorevoli #, contrari #, astenuti #.»', '{1}: “{2} rejects: in favour {3}, against {4}, abstentions {5}.”']],
+  confidencePassed: [['{}: «{} accorda la fiducia: favorevoli #, contrari #, astenuti #.»', '{1}: “{2} grants confidence: in favour {3}, against {4}, abstentions {5}.”']],
+  confidenceRejected: [['{}: «{} nega la fiducia: favorevoli #, contrari #, astenuti #.»', '{1}: “{2} denies confidence: in favour {3}, against {4}, abstentions {5}.”']],
+  secretResult: [['Voto segreto: i voti dei singoli non sono noti, solo i totali.', 'Secret ballot: individual votes are not known, only the totals.']],
+  you: [['Il tuo voto simulato: {}.', 'Your simulated vote: {1}.']],
+  youAbsent: [['Il tuo seggio non partecipa al voto.', 'Your seat does not take part in the vote.']],
+  note: [['Votazione simulata: il gioco ha già deciso i voti di ogni gruppo; qui si rivedono, seggio per seggio, senza cambiarli.', 'Simulated vote: the game has already decided each group’s votes; here they are replayed seat by seat, without changing them.']]
+});
+export const AULA_NAMES = Object.freeze([
+  ['La Camera', 'The Chamber of Deputies'], ['Il Senato', 'The Senate'], ['Il Consiglio comunale', 'The city council'], ['Il Consiglio regionale', 'The regional council'], ['Il Parlamento europeo', 'The European Parliament'],
+  ['Il Presidente della Camera', 'The Speaker of the Chamber'], ['Il Presidente del Senato', 'The President of the Senate'], ['Il Presidente del Consiglio comunale', 'The President of the city council'], ['Il Presidente del Consiglio regionale', 'The President of the regional council'], ['Il Presidente del Parlamento', 'The President of the Parliament']
+]);
+
 export const ALL_PAIRS = (() => {
   const out = [];
   const walk = node => { if (Array.isArray(node) && node.length === 2 && typeof node[0] === 'string') out.push(node); else if (Array.isArray(node)) node.forEach(walk); else if (node && typeof node === 'object') Object.values(node).forEach(walk); };
-  walk(LINES); walk(TICKER);
+  walk(LINES); walk(TICKER); walk(AULA); walk(AULA_NAMES);
   return [...out, ...rallyPairs()];
 })();

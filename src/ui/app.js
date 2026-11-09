@@ -1689,6 +1689,25 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
       return;
     }
+    // The Aula: a vote the game already decided, replayed seat by seat. Read only; loaded when someone enters it.
+    const aulaControl = event.target.closest('[data-aula-open],[data-aula-local]');
+    if (aulaControl) {
+      try {
+        const module = await import('./aula-view.js?v=20261107-1');
+        let aula = null;
+        if (aulaControl.dataset.aulaOpen) aula = module.parliamentAula(store.getState(), { voteId: aulaControl.dataset.aulaOpen, chamber: aulaControl.dataset.aulaChamber, politicians: realDatabase.politicians ?? [], db: realDatabase });
+        else {
+          const [instId, actId] = aulaControl.dataset.aulaLocal.split('|');
+          const inst = (store.getState().local?.institutions ?? []).find(item => item.id === instId);
+          const act = [...(inst?.acts ?? []), ...(inst?.archive ?? [])].find(item => item.id === actId);
+          if (inst && act) aula = module.localAula(inst, act, { colorOf: group => ({ maggioranza: '#3f7fb5', opposizione: '#b5653f' })[group.side] ?? '#7d8b84' });
+        }
+        if (!aula) throw new Error('Questa votazione non ha i dati dei gruppi per entrare in aula.');
+        module.openAula(aula, { motion: document.documentElement.dataset.motion ?? settings.motion });
+        playSound('confirm');
+      } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
+      return;
+    }
     const proposalControl = event.target.closest('[data-proposal-move],[data-proposal-state],[data-proposal-delete]');
     if (proposalControl) {
       try {

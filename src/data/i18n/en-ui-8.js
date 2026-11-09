@@ -5279,5 +5279,11 @@ export const PHRASES = [
   ["Tutti i partiti","All parties"],["Filtra per partito","Filter by party"],["Filtra per partito: {}","Filter by party: {1}"],["Partito da evidenziare","Party to highlight"],["Altri partiti","Other parties"],["{} ({}) · vinto da {}","{1} ({2}) · won by {3}"],
   ["Il filtro per partito vale per le letture simulate: i vincitori del 2022 sono indicati per alleanza.","The filter by party applies to the simulated readings: the 2022 winners are shown by alliance."],
   ["Larghezza del volto","Face width"],["Lunghezza del mento","Chin length"],["Distanza degli occhi","Eye spacing"],["Grandezza degli occhi","Eye size"],["Altezza delle sopracciglia","Eyebrow height"],["Larghezza della bocca","Mouth width"],["Proporzioni del volto","Face proportions"],["Azzera le proporzioni","Reset the proportions"],
+  // ---- the Aula ----
+  ["ENTRA IN AULA","ENTER THE CHAMBER"],["Entra in aula","Enter the chamber"],["Vai all’esito","Go to the result"],["Controlli della votazione","Vote controls"],["Hanno votato","Have voted"],["Assenti","Absent"],["Ha votato (voto segreto)","Has voted (secret ballot)"],["Questa votazione non ha i dati dei gruppi per entrare in aula.","This vote has no group data to enter the chamber."],
+  ["AULA · CAMERA DEI DEPUTATI","CHAMBER · CHAMBER OF DEPUTIES"],["AULA · SENATO DELLA REPUBBLICA","CHAMBER · SENATE OF THE REPUBLIC"],["AULA · CONSIGLIO COMUNALE","CHAMBER · CITY COUNCIL"],["AULA · CONSIGLIO REGIONALE","CHAMBER · REGIONAL COUNCIL"],["AULA · PARLAMENTO EUROPEO","CHAMBER · EUROPEAN PARLIAMENT"],
+  ["CAMERA DEI DEPUTATI","CHAMBER OF DEPUTIES"],["SENATO DELLA REPUBBLICA","SENATE OF THE REPUBLIC"],["CONSIGLIO COMUNALE","CITY COUNCIL"],["CONSIGLIO REGIONALE","REGIONAL COUNCIL"],["PARLAMENTO EUROPEO","EUROPEAN PARLIAMENT"],
+  ["Camera dei deputati","Chamber of Deputies"],["Senato della Repubblica","Senate of the Republic"],["Consiglio comunale","City council"],["Consiglio regionale","Regional council"],["Parlamento europeo","European Parliament"],
+  ["Camera dei deputati: # seggi","Chamber of Deputies: # seats"],["Senato della Repubblica: # seggi","Senate of the Republic: # seats"],["Consiglio comunale: # seggi","City council: # seats"],["Consiglio regionale: # seggi","Regional council: # seats"],["Parlamento europeo: # seggi","European Parliament: # seats"],
   ...ALL_PAIRS,
 ];

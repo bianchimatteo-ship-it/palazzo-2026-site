@@ -76,3 +76,14 @@ for (let n = 0; n < 24; n++) {
 assert.equal(missing.size, 0, `Comizio: righe con italiano residuo:\n${[...missing].slice(0, 40).join('\n')}`);
 assert.ok(protests > 0, 'Almeno un comizio ha una contestazione motivata da un fatto del gioco.');
 console.log(`check-studio-lines: comizio ok (${rallyTexts} righe tradotte)`);
+
+// 6. the Aula: the announcements of the President, in every assembly, open and secret, passed and rejected, confidence: translated, with no Italian left
+const A = await import(`../src/core/aula-script.js?v=${version}`);
+let aulaTexts = 0;
+for (const assembly of Object.keys(A.ASSEMBLIES)) for (const [secret, passed, confidence] of [[false, true, false], [false, false, false], [true, true, false], [false, true, true], [false, false, true]]) {
+  const seats = Array.from({ length: 10 }, (_, index) => ({ index, groupId: 'g', player: index === 0 })), choices = ['favorevole', 'favorevole', 'favorevole', 'contrario', 'contrario', 'astenuto', 'favorevole', 'assente', 'favorevole', 'contrario'].map(choice => secret && choice !== 'assente' ? 'segreto' : choice);
+  const { steps, noun, president } = A.aulaScript({ assembly, id: `v-${assembly}-${secret}-${passed}-${confidence}`, label: 'Sanità', kind: confidence ? 'fiducia' : 'legge', secret, confidence, passed, seats, choices, totals: { yes: 5, against: 3, abstain: 1 } });
+  for (const text of [...steps.map(step => step.text), noun, president]) { const english = I.translateText(text); aulaTexts++; assert.notEqual(english, text, `Annuncio non tradotto: «${text}»`); assert.equal(I.residualItalian(english), null, `Italiano residuo in «${english}»`); }
+}
+for (const text of ['Camera dei deputati', 'Senato della Repubblica', 'Consiglio comunale', 'Consiglio regionale', 'Parlamento europeo', 'AULA · CAMERA DEI DEPUTATI', 'ENTRA IN AULA', 'Vai all’esito', 'Hanno votato', 'Camera dei deputati: 399 seggi']) assert.equal(I.residualItalian(I.translateText(text)), null, `Aula: «${text}» non è tradotto`);
+console.log(`check-studio-lines: aula ok (${aulaTexts} annunci tradotti)`);
