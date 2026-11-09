@@ -1,18 +1,18 @@
-import { residentsText } from '../core/municipal-rules.js?v=20261107-1';
-import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261107-1';
-import { DEFAULT_LOGO_SECONDARY, LOGO_SECONDARY_PALETTE, LOGO_SHAPES, LOGO_SYMBOLS, isLogoColor, partyLogoDataUrl } from './party-logo.js?v=20261107-1';
-import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261107-1';
-import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261107-1';
-import { AVATAR_GROUPS, AVATAR_LABELS, AVATAR_OPTIONS, DEFAULT_AVATAR, normalizeAvatar } from '../core/avatar.js?v=20261107-1';
-import { avatarSvg } from './avatar-svg.js?v=20261107-1';
-import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261107-1';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261107-1';
-import { POLL_SCENARIOS, SCENARIO_LIMITS } from '../core/poll-scenario.js?v=20261107-1';
-import { startStep, startSummary } from './start-wizard.js?v=20261107-1';
-import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261107-1';
-import { normalizeStart } from '../core/start-engine.js?v=20261107-1';
-import { legacyBanner } from './hall-view.js?v=20261107-1';
-import { formatDate } from '../core/time.js?v=20261107-1';
+import { residentsText } from '../core/municipal-rules.js?v=20261109-2';
+import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel, initialCareerStatistics } from '../data/regions.js?v=20261109-2';
+import { DEFAULT_LOGO_SECONDARY, LOGO_SECONDARY_PALETTE, LOGO_SHAPES, LOGO_SYMBOLS, isLogoColor, partyLogoDataUrl } from './party-logo.js?v=20261109-2';
+import { AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261109-2';
+import { STARTING_ROLES, validateCareerStep } from '../core/career-rules.js?v=20261109-2';
+import { AVATAR_GROUPS, AVATAR_LABELS, AVATAR_OPTIONS, DEFAULT_AVATAR, SHAPE_FIELDS, SHAPE_LABELS, SHAPE_LIMIT, normalizeAvatar } from '../core/avatar.js?v=20261109-2';
+import { avatarSvg } from './avatar-svg.js?v=20261109-2';
+import { DATA_SOURCES, isSelectableParty } from '../data/schema.js?v=20261109-2';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261109-2';
+import { POLL_SCENARIOS, SCENARIO_LIMITS } from '../core/poll-scenario.js?v=20261109-2';
+import { startStep, startSummary } from './start-wizard.js?v=20261109-2';
+import { START_PROFILES } from '../data/simulation/start-rules.js?v=20261109-2';
+import { normalizeStart } from '../core/start-engine.js?v=20261109-2';
+import { legacyBanner } from './hall-view.js?v=20261109-2';
+import { formatDate } from '../core/time.js?v=20261109-2';
 
 const POSITIONS = ['estrema sinistra', 'sinistra', 'centro-sinistra', 'centro', 'centro-destra', 'destra', 'estrema destra'];
 
@@ -210,6 +210,12 @@ function profileStep(state, d) {
 }
 // The visual editor of the avatar: a live preview and one group of choices per trait. Each choice is a button (data-avatar-field / data-avatar-value) that changes the draft's `avatar` at once;
 // the avatar is its own field, never derived from (or tied to) the gender.
+// The proportions: six sliders (-3 … +3), the drawing as it always was at zero; moving one redraws the preview and the little previews at once.
+function shapeSliders(avatar) {
+  const shape = avatar.shape ?? {};
+  const rows = SHAPE_FIELDS.map(field => `<label class="avatar-slider"><span>${esc(SHAPE_LABELS[field])}</span><input type="range" min="${-SHAPE_LIMIT}" max="${SHAPE_LIMIT}" step="1" value="${shape[field] ?? 0}" data-avatar-shape="${field}" aria-label="${esc(SHAPE_LABELS[field])}"><output data-avatar-shape-out="${field}">${(shape[field] ?? 0) > 0 ? '+' : ''}${shape[field] ?? 0}</output></label>`).join('');
+  return `<fieldset class="avatar-group avatar-shape" data-avatar-group="shape"><legend>Proporzioni del volto</legend><div class="avatar-sliders">${rows}</div><button type="button" class="ghost-button" data-avatar-shape-reset${avatar.shape ? '' : ' disabled'}>Azzera le proporzioni</button></fieldset>`;
+}
 function avatarEditor(d) {
   const avatar = normalizeAvatar(d.avatar);
   // Every trait is shown with what it looks like: a colour sample for the colours, a small preview of the avatar itself (cropped on the head, with that choice applied) for the shapes.
@@ -224,7 +230,7 @@ function avatarEditor(d) {
     }).join('');
     return `<fieldset class="avatar-group" data-avatar-group="${field}"><legend>${esc(AVATAR_LABELS[field])}</legend><div class="avatar-choices ${swatches ? '' : 'is-minis'}">${choices}</div></fieldset>`;
   }).join('');
-  return `<section class="summary-section avatar-editor" aria-labelledby="avatar-title" data-avatar-editor><div class="summary-section-heading"><div><span>AVATAR</span><strong id="avatar-title">Il tuo volto</strong></div></div><div class="avatar-editor-body"><div class="avatar-preview" data-avatar-preview>${avatarSvg(avatar, { size: 200, label: 'Anteprima dell’avatar' })}</div><div class="avatar-controls">${groups}</div></div><small class="wizard-hint">L’avatar è disegnato sul tuo dispositivo e compare in Profilo, in Home e in Parlamento. Non dipende dal genere.</small></section>`;
+  return `<section class="summary-section avatar-editor" aria-labelledby="avatar-title" data-avatar-editor><div class="summary-section-heading"><div><span>AVATAR</span><strong id="avatar-title">Il tuo volto</strong></div></div><div class="avatar-editor-body"><div class="avatar-preview" data-avatar-preview>${avatarSvg(avatar, { size: 200, label: 'Anteprima dell’avatar' })}</div><div class="avatar-controls">${groups}${shapeSliders(avatar)}</div></div><small class="wizard-hint">L’avatar è disegnato sul tuo dispositivo e compare in Profilo, in Home e in Parlamento. Non dipende dal genere.</small></section>`;
 }
 function levelStep(d, parliamentaryGroups, realPoliticians, place = null) {
   const details = {

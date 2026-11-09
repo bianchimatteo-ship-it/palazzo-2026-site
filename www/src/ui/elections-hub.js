@@ -1,20 +1,20 @@
 // The electoral centre: next vote, calendar, context, candidacy, campaign, polls and rivals, results and history.
-import { renderProgram } from './program-view.js?v=20261107-1';
-import { isSecretary, upcomingElections, upcomingRounds } from '../core/career-engine.js?v=20261107-1';
-import { campaignScope, campaignSummary, strategyOf } from '../core/campaign-engine.js?v=20261107-1';
-import { CAMPAIGN_PHASES, ELECTION_MODELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261107-1';
-import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261107-1';
-import { formatDate } from '../core/time.js?v=20261107-1';
-import { societyMood } from '../core/society-engine.js?v=20261107-1';
-import { candidacyAccess, renderCampaignPage } from './campaign-mode.js?v=20261107-1';
-import { politicalPhase } from './game-mode.js?v=20261107-1';
-import { lineChart, SERIES } from './charts.js?v=20261107-1';
-import { glyph } from './visuals.js?v=20261107-1';
-import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, sectionTabs, signed, table, weeksLabel } from './sections-kit.js?v=20261107-1';
-import { mandatePlace, renderElectionReport } from './election-report.js?v=20261107-1';
-import { renderNationalView } from './national-view.js?v=20261107-1';
-import { renderQuirinale } from './presidency-view.js?v=20261107-1';
-import { renderCampaignObservatory } from './observatory-view.js?v=20261107-1';
+import { renderProgram } from './program-view.js?v=20261109-2';
+import { isSecretary, upcomingElections, upcomingRounds } from '../core/career-engine.js?v=20261109-2';
+import { campaignScope, campaignSummary, strategyOf } from '../core/campaign-engine.js?v=20261109-2';
+import { CAMPAIGN_PHASES, ELECTION_MODELS, SEAT_RULES } from '../data/simulation/campaign-rules.js?v=20261109-2';
+import { PARTY_RANKS } from '../data/simulation/career-rules.js?v=20261109-2';
+import { formatDate } from '../core/time.js?v=20261109-2';
+import { societyMood } from '../core/society-engine.js?v=20261109-2';
+import { candidacyAccess, renderCampaignPage } from './campaign-mode.js?v=20261109-2';
+import { politicalPhase } from './game-mode.js?v=20261109-2';
+import { lineChart, SERIES } from './charts.js?v=20261109-2';
+import { glyph } from './visuals.js?v=20261109-2';
+import { arrow, badge, bar, card, empty, esc, euro, kpi, num, pct, sectionHero, sectionTabs, signed, table, weeksLabel } from './sections-kit.js?v=20261109-2';
+import { mandatePlace, renderElectionReport } from './election-report.js?v=20261109-2';
+import { renderNationalView } from './national-view.js?v=20261109-2';
+import { renderQuirinale } from './presidency-view.js?v=20261109-2';
+import { renderCampaignObservatory } from './observatory-view.js?v=20261109-2';
 export { renderElectionReport };
 
 export const ELECTION_TABS = Object.freeze([['panoramica', 'Panoramica'], ['nazionali', 'Nazionali'], ['quirinale', 'Quirinale'], ['candidatura', 'Candidatura'], ['campagna', 'Campagna'], ['programma', 'Programma'], ['avversari', 'Sondaggi e avversari'], ['risultati', 'Risultati'], ['storico', 'Storico']]);
@@ -253,7 +253,7 @@ function rivals(state, parties, logoFor) {
       const candidate = campaign.candidates.find(item => item.id === group.leaderCandidateId);
       const party = parties.find(item => item.id === candidate?.partyId);
       const logo = party ? logoFor(party) : null;
-      const name = candidate?.isPlayer ? 'La tua candidatura' : candidate?.realReference?.fullName ?? 'Candidatura simulata';
+      const name = candidate?.isPlayer ? 'La tua candidatura' : candidate?.realReference?.fullName ?? candidate?.displayName ?? 'Candidato simulato';
       const label = candidate?.isPlayer ? (party?.officialName ?? party?.name ?? 'Indipendente') : candidate?.realReference ? `Deputato in carica${candidate.realReference.groupName ? ` · ${candidate.realReference.groupName}` : ''}` : party?.officialName ?? party?.name ?? 'Lista simulata';
       return { _class: candidate?.isPlayer ? 'is-player' : '', pos: `${group.position}ª`, name: `<span class="eh-cand">${logo ? `<img src="${esc(logo)}" alt="" loading="lazy">` : `<i>${esc((party?.abbreviation ?? name).slice(0, 2))}</i>`}<span><strong>${esc(name)}</strong><small>${esc(label)}${(group.members?.length ?? 1) > 1 ? ` · coalizione di ${group.members.length}` : ''}</small></span></span>`, share: `<span class="eh-share"><b>${pct(group.share)}</b>${bar(group.share, candidate?.isPlayer ? 'good' : '')}</span>`, action: candidate?.isPlayer ? '' : esc(candidate?.lastAction ?? '') };
     });

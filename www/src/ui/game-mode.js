@@ -1,34 +1,35 @@
-import { endedHeadline } from './hall-view.js?v=20261107-1';
-import { activityFor, activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261107-1';
-import { playerRoles } from '../core/roles.js?v=20261107-1';
-import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20261107-1';
-import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, currentObjectiveLabel, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261107-1';
-import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261107-1';
-import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20261107-1';
-import { careerLevelLabel } from '../data/regions.js?v=20261107-1';
-import { advanceDays, formatDate } from '../core/time.js?v=20261107-1';
-import { renderBarometerPanel } from './polls-mode.js?v=20261107-1';
-import { candidacyAccess } from './campaign-mode.js?v=20261107-1';
-import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20261107-1';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261107-1';
-import { societyMood } from '../core/society-engine.js?v=20261107-1';
-import { financeOutlook } from '../core/finance-engine.js?v=20261107-1';
-import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20261107-1';
-import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20261107-1';
-import { activeInstitutions, institutionLabel } from './local-mode.js?v=20261107-1';
-import { renderFinanceCard } from './finance-mode.js?v=20261107-1';
-import { renderStaffBand } from './staff-view.js?v=20261107-1';
-import { planAddButton } from './plan-view.js?v=20261107-1';
-import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20261107-1';
-import { stateBadge, statusChip } from './charts.js?v=20261107-1';
-import { articleHtml, newsMedia, renderNewsroomTabs } from './news-view.js?v=20261107-1';
-import { relevantArticles } from '../core/news-engine.js?v=20261107-1';
-import { identityMark, kindChip } from './party-identity.js?v=20261107-1';
-import { illustration } from './illustrations.js?v=20261107-1';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261107-1';
-import { avatarOf } from '../core/avatar.js?v=20261107-1';
-import { avatarSvg } from './avatar-svg.js?v=20261107-1';
-import { regionPriorities } from '../core/society-engine.js?v=20261107-1';
+import { invitedShows } from '../core/scene-engine.js?v=20261109-2';
+import { endedHeadline } from './hall-view.js?v=20261109-2';
+import { activityFor, activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261109-2';
+import { playerRoles } from '../core/roles.js?v=20261109-2';
+import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20261109-2';
+import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, currentObjectiveLabel, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261109-2';
+import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261109-2';
+import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20261109-2';
+import { careerLevelLabel } from '../data/regions.js?v=20261109-2';
+import { advanceDays, formatDate } from '../core/time.js?v=20261109-2';
+import { renderBarometerPanel } from './polls-mode.js?v=20261109-2';
+import { candidacyAccess } from './campaign-mode.js?v=20261109-2';
+import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20261109-2';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261109-2';
+import { societyMood } from '../core/society-engine.js?v=20261109-2';
+import { financeOutlook } from '../core/finance-engine.js?v=20261109-2';
+import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20261109-2';
+import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20261109-2';
+import { activeInstitutions, institutionLabel } from './local-mode.js?v=20261109-2';
+import { renderFinanceCard } from './finance-mode.js?v=20261109-2';
+import { renderStaffBand } from './staff-view.js?v=20261109-2';
+import { planAddButton } from './plan-view.js?v=20261109-2';
+import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20261109-2';
+import { stateBadge, statusChip } from './charts.js?v=20261109-2';
+import { articleHtml, newsMedia, renderNewsroomTabs } from './news-view.js?v=20261109-2';
+import { relevantArticles } from '../core/news-engine.js?v=20261109-2';
+import { identityMark, kindChip } from './party-identity.js?v=20261109-2';
+import { illustration } from './illustrations.js?v=20261109-2';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261109-2';
+import { avatarOf } from '../core/avatar.js?v=20261109-2';
+import { avatarSvg } from './avatar-svg.js?v=20261109-2';
+import { regionPriorities } from '../core/society-engine.js?v=20261109-2';
 
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -308,6 +309,7 @@ function planner(state, gc, { openLimit = Infinity } = {}) {
     contact: (game.contacts ?? []).map(item => [item.person.id, `${item.person.fullName} · ${num(item.relation, 0)}`]),
     // A visit to a region that is not the player's: how much that region trusts the institutions now, so the visit goes where it is needed.
     'region-away': [...ITALIAN_REGIONS].filter(name => name !== game.place.region).map(name => [name, `${name} · fiducia ${num(state.society?.regions?.[name]?.trust ?? 50, 0)}`]),
+    show: invitedShows(`${state.career.id ?? ''}|${game.week?.index ?? 0}`, gc.stats.notoriety ?? 0).map(show => [show.id, `${show.name} · ${show.slot}`]),
     segment: SEGMENTS.map(segment => [segment.id, `${segment.label} · soddisfazione ${num(state.society?.segments.find(item => item.id === segment.id)?.satisfaction ?? 50, 0)}`])
   };
   let opened = 0;

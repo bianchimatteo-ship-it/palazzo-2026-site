@@ -1350,3 +1350,13 @@ html[data-motion="off"] .language-gate-button { transition: none; }
   .reward-history-row .reward-history-kind{font-weight:650}
   .reward-actions>*{flex:1 1 100%}
 }
+
+/* The proportions of the face: six sliders (career wizard, avatar editor) */
+.avatar-sliders { display: grid; gap: 8px; }
+.avatar-slider { display: grid; grid-template-columns: minmax(130px, 190px) minmax(0, 1fr) 34px; gap: 10px; align-items: center; color: var(--ink); font: 600 13px var(--font-ui, system-ui); }
+.avatar-slider input[type="range"] { width: 100%; min-height: 32px; accent-color: #d9bd7e; }
+.avatar-slider output { text-align: right; color: #f0cf85; font: 800 13px var(--font-ui, system-ui); font-variant-numeric: tabular-nums; }
+.avatar-shape .ghost-button { margin-top: 10px; min-height: 44px; padding: 0 14px; background: var(--panel-2); color: var(--ink); border: 1px solid var(--line-strong); border-radius: var(--radius); font-weight: 700; }
+.avatar-shape .ghost-button:hover:not(:disabled) { border-color: var(--accent); color: #fff; }
+.avatar-shape .ghost-button:disabled { opacity: .5; cursor: not-allowed; }
+@media (max-width: 520px) { .avatar-slider { grid-template-columns: minmax(0, 1fr) 34px; } .avatar-slider span { grid-column: 1 / -1; } .avatar-slider input[type="range"] { grid-column: 1; } }

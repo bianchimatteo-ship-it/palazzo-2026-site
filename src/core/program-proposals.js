@@ -5,8 +5,8 @@
 // What a proposal does in the game, all deterministic and read from the situation: a published proposal whose cost is covered (by the budget room, by savings, by European funds, by revenue) makes the
 // programme more credible, one that is not covered makes it less; its area enters the rally and the debate (the player can present it, the opponents attack it where it is not covered); and it
 // comes first in the priorities suggested for the Government. A draft does nothing: it is only a draft. Plain data, additive to the save (`game.proposals`, absent in older saves = none).
-import { AREA_BY_ID, INSTRUMENT_KINDS } from '../data/simulation/policy-rules.js?v=20261107-1';
-import { fiscalRoom, promisesOf, promiseQuote } from './program-engine.js?v=20261107-1';
+import { AREA_BY_ID, INSTRUMENT_KINDS } from '../data/simulation/policy-rules.js?v=20261109-2';
+import { fiscalRoom, promisesOf, promiseQuote } from './program-engine.js?v=20261109-2';
 
 export const PROPOSAL_LIMIT = 12;
 export const PROPOSAL_STATES = Object.freeze({ bozza: 'Bozza', pubblicata: 'Pubblicata' });

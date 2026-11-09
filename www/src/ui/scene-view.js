@@ -1,10 +1,10 @@
 // The scene on screen (scene-engine.js): a 2D stage drawn in SVG (ui/stage-art.js) — the television studio, the square of a rally, the polling station — with the characters built from the game's own
 // avatars (the player is always the avatar chosen at the start of the career), the poses and the shots decided by core/stage-script.js and played by ui/stage-player.js. Below the stage: the line,
 // the reactions, the choices; above it the controls of the animation (skip, pause, complete / reduced / off). The same scenes with the motion off or reduced: the stage is simply in its final pose.
-import { ASKS, CLOSINGS, REPLIES, STYLES, sceneNode, sceneProgress } from '../core/scene-engine.js?v=20261107-1';
-import { stageBefore, stageOf } from '../core/stage-script.js?v=20261107-1';
-import { renderStageSvg } from './stage-art.js?v=20261107-1';
-import { esc } from './charts.js?v=20261107-1';
+import { ASKS, CLOSINGS, REPLIES, STYLES, sceneNode, sceneProgress } from '../core/scene-engine.js?v=20261109-2';
+import { stageBefore, stageOf } from '../core/stage-script.js?v=20261109-2';
+import { renderStageSvg } from './stage-art.js?v=20261109-2';
+import { esc } from './charts.js?v=20261109-2';
 
 const KIND_LABELS = { risposta: 'Risposta', domanda: 'Domanda', replica: 'Replica', chiusura: 'Chiusura', saluto: 'Saluto', discorso: 'Discorso', contestazione: 'Contestazione' };
 const STYLE_LABELS = { ...Object.fromEntries([...Object.entries(STYLES), ...Object.entries(REPLIES), ...Object.entries(ASKS), ...Object.entries(CLOSINGS)].map(([id, spec]) => [id, spec.label])), caloroso: 'Saluto caloroso', sobrio: 'Saluto sobrio', locale: 'Saluto locale', combattivo: 'Apertura all’attacco', promessa: 'Dalle promesse', territorio: 'Dal territorio', attualita: 'Dall’attualità', governo: 'Dal Governo', proposta: 'Dalla proposta del partito', attacco: 'All’attacco', ascolta: 'Ascoltare', rispondi: 'Rispondere', prosegui: 'Proseguire', interrompi: 'Interrompere', appello: 'Appello al voto', impegno: 'Impegno pubblico', ringraziamento: 'Ringraziamento', coro: 'Slogan' };
@@ -14,6 +14,13 @@ const HEAD = {
   comizio: ['COMIZIO IN PIAZZA', scene => `Piazza di ${scene.place.label}`, 'Comizio in piazza'],
   voto: ['IL TUO VOTO', scene => scene.electionLabel, 'Voto al seggio']
 };
+// the head of a studio scene follows the show and the format of the studio (the news, the talk show, the face-to-face)
+const FORMAT_HEAD = { intervista: ['INTERVISTA IN STUDIO · IN DIRETTA', 'Intervista televisiva'], talk: ['TALK SHOW · IN DIRETTA', 'Ospitata televisiva'], faccia: ['DIBATTITO TELEVISIVO · IN DIRETTA', 'Dibattito televisivo'] };
+function studioHead(scene) {
+  if (!scene.format || !FORMAT_HEAD[scene.format]) return null;
+  const [kicker, aria] = FORMAT_HEAD[scene.format];
+  return [kicker, item => `${item.show?.name ?? 'In studio'}: ${item.topic.label}`, aria];
+}
 const MOTIONS = [['full', 'Complete'], ['reduced', 'Ridotte'], ['off', 'Disattivate']];
 
 function stageData(scene, node) {
@@ -26,7 +33,7 @@ export function renderScene(state, { identity = null, motion = 'off' } = {}) {
   const scene = state.scene;
   if (!scene) return '';
   const node = sceneNode(scene);
-  const [kicker, titleOf, aria] = HEAD[scene.kind] ?? HEAD['dibattito-tv'];
+  const [kicker, titleOf, aria] = studioHead(scene) ?? HEAD[scene.kind] ?? HEAD['dibattito-tv'];
   const speaker = scene.cast.find(item => item.id === node.speaker);
   const progress = sceneProgress(scene);
   const { stage, before } = stageData(scene, node);

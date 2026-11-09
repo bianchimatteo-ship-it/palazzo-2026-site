@@ -8,7 +8,8 @@
 // of the game: the variation comes from a hash of the seed of the scene, so a scene resumed or played again from the same choices is the same scene.
 //
 // VOTE ('voto'): the player votes in his polling station — entrance, desk, booth, ballot folded, urn, exit. It decides nothing: the result of the election is the one of election-engine.js.
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261107-1';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261109-2';
+import { RALLY_CROWD_EXTRA, RALLY_EXTRA } from '../data/studio-lines.js?v=20261109-2';
 
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 const round1 = value => Math.round(value * 10) / 10;
@@ -26,7 +27,7 @@ function crowdOf(notoriety, trust) { return Math.round(clamp(80 + notoriety * 4.
 export function createRallyScene({ id, seed, player, playerAvatar, party = {}, place = {}, mode = 'settimana', campaignId = null, date = null, context = {} }) {
   const stats = context.stats ?? { competence: 50, charisma: 50, reputation: 50, notoriety: 40 };
   const crowd = crowdOf(stats.notoriety, context.territory?.trust ?? 50);
-  const planned = unit(`${seed}|contestazione`) < clamp((context.protestLevel ?? 0) * 0.62, 0, 0.55);
+  const planned = unit(`${seed}|contestazione`) < clamp((context.protestLevel ?? 0) * 0.5 - 0.04, 0, 0.45);
   const reason = planned ? protestReason(seed, context) : null;
   const cast = [{ id: 'giocatore', role: 'giocatore', name: player.name, avatar: playerAvatar, position: 'palco' }];
   // a few characters of the crowd stand out in front (they are drawn, not listed in the credits); the protesters are a group that arrives only if the situation says so
@@ -47,25 +48,41 @@ export function createVoteScene({ id, seed, player, playerAvatar, electionLabel 
   const a = hashOf(`${seed}|scrutatore`) % names.length;
   const cast = [
     { id: 'giocatore', role: 'giocatore', name: player.name, avatar: playerAvatar, position: 'seggio' },
-    { id: 'scrutatore-1', role: 'scrutatore', name: names[a], x: 262, y: 270 },
-    { id: 'scrutatore-2', role: 'scrutatore', name: names[(a + 3) % names.length], x: 356, y: 270 }
+    { id: 'scrutatore-1', role: 'scrutatore', name: names[a], x: 246, y: 270 },
+    { id: 'scrutatore-2', role: 'scrutatore', name: names[(a + 3) % names.length], x: 372, y: 270 }
   ];
   return { id, kind: 'voto', setting: 'seggio', seed, date, status: 'active', nodeId: 'ingresso', prevNodeId: null, cast, place: { label: place.municipality ?? place.region ?? 'il tuo comune' }, electionLabel, topic: { id: 'voto', label: electionLabel }, audience: { mood: 50, history: [] }, scores: [], history: [], outcome: null };
 }
 
 // ---------- why a protest comes (only from the situation) ----------
+// Who protests and with what: the group and the slogans follow the reason (a sector, a work, a promise, a decision), so a rally does not always meet the same crowd with the same sign.
+const GROUPS = {
+  sanita: ['Comitato dei pazienti', ['OSPEDALI APERTI', 'LISTE D’ATTESA', 'PIU MEDICI']], scuola: ['Studenti e genitori', ['SCUOLA PUBBLICA', 'PIU INSEGNANTI', 'MENSE PER TUTTI']], lavoro: ['Lavoratori', ['SALARI DIGNITOSI', 'NO AI LICENZIAMENTI', 'LAVORO STABILE']],
+  welfare: ['Associazioni e famiglie', ['WELFARE SUBITO', 'NON LASCIATECI SOLI', 'DIRITTI NON FAVORI']], ambiente: ['Comitato ambientalista', ['ARIA PULITA', 'ACQUA BENE COMUNE', 'NO ALLA DISCARICA']], sicurezza: ['Comitato di quartiere', ['PIU SICUREZZA', 'QUARTIERI ABBANDONATI', 'ILLUMINIAMO LE STRADE']],
+  infrastrutture: ['Pendolari e imprese', ['TRENI PUNTUALI', 'CANTIERI FERMI', 'STRADE SICURE']], trasporti: ['Pendolari', ['TRENI PUNTUALI', 'AUTOBUS PIU FREQUENTI', 'MOBILITA PER TUTTI']], fisco: ['Partite IVA e commercianti', ['TASSE TROPPO ALTE', 'MENO BUROCRAZIA', 'ASCOLTATECI']],
+  'costo-vita': ['Consumatori e pensionati', ['PREZZI ASSURDI', 'BOLLETTE ALLE STELLE', 'STIPENDI FERMI']], promessa: ['Elettori delusi', ['PROMESSE TRADITE', 'DOV’È LA PAROLA DATA?', 'VOGLIAMO FATTI']], governo: ['Opposizione sociale', ['BASTA DECRETI', 'ASCOLTATE IL PAESE', 'CAMBIATE ROTTA']],
+  opera: ['Residenti dell’area', ['CANTIERE FERMO', 'LAVORI INFINITI', 'RISPETTATE I TEMPI']], tagli: ['Dipendenti pubblici', ['NO AI TAGLI', 'SERVIZI A RISCHIO', 'INVESTITE SUI SERVIZI']], evento: ['Cittadini in piazza', ['CHIEDIAMO RISPOSTE', 'ORA BASTA', 'ASCOLTATECI']], memoria: ['Critici storici', ['MEMORIA CORTA?', 'RISPONDA ORA', 'TRASPARENZA']]
+};
+export function protestProfile(reason) {
+  const key = (reason?.area && GROUPS[reason.area]) ? reason.area : (GROUPS[reason?.kind] ? reason.kind : 'evento');
+  const [group, slogans] = GROUPS[key];
+  return { group, slogans };
+}
 function protestReason(seed, ctx) {
-  const reasons = [];
+  const reasons = [...(ctx.triggers ?? [])];
   const broken = (ctx.promises ?? []).filter(item => item.status === 'non-mantenuta');
   if (broken[0]) reasons.push({ kind: 'promessa', area: broken[0].area ?? null, label: `la promessa tradita su ${areaLabel(broken[0].area) || broken[0].label.toLowerCase()}`, weight: 2 });
   const worst = (ctx.territory?.problems ?? [])[0];
-  if (worst) reasons.push({ kind: 'territorio', area: worst.area ?? null, label: `${worst.label.toLowerCase()} in ${ctx.territory?.name ?? 'città'}`, weight: 1.4 + (worst.severity ?? 0) / 40 });
-  if ((ctx.memoryBad ?? 0) >= 1) reasons.push({ kind: 'memoria', area: null, label: 'le polemiche che ti hanno accompagnato', weight: 1.2 });
+  if (worst) reasons.push({ kind: 'territorio', area: worst.area ?? null, label: `la situazione su ${worst.label.toLowerCase()} in ${ctx.territory?.name ?? 'città'}`, weight: 1.2 + (worst.severity ?? 0) / 50 });
+  if ((ctx.memoryBad ?? 0) >= 1) reasons.push({ kind: 'memoria', area: null, label: 'le polemiche che ti hanno accompagnato', weight: 1.1 });
   if (ctx.governing && (ctx.government?.approval ?? 50) < 42) reasons.push({ kind: 'governo', area: null, label: 'l’azione del Governo', weight: 1.6 });
-  if ((ctx.economy?.inflation ?? 2) >= 4.5) reasons.push({ kind: 'economia', area: null, label: 'il caro vita', weight: 1.1 });
-  if (!reasons.length) reasons.push({ kind: 'territorio', area: null, label: 'il malcontento sul territorio', weight: 1 });
+  if ((ctx.economy?.inflation ?? 2) >= 4.5) reasons.push({ kind: 'economia', area: 'costo-vita', label: 'il caro vita', weight: 1.1 });
+  if (!reasons.length) reasons.push({ kind: 'evento', area: null, label: 'il malcontento sul territorio', weight: 1 });
+  // among the strongest reasons the one that comes out is picked by the seed: the same situation does not always give the same protest
   reasons.sort((a, b) => b.weight - a.weight || hashOf(`${seed}${a.label}`) - hashOf(`${seed}${b.label}`));
-  return reasons[0];
+  const top = reasons.slice(0, 3);
+  const reason = top[Math.floor(unit(`${seed}|motivo`) * top.length) % top.length];
+  return { ...reason, ...protestProfile(reason) };
 }
 // How loud the protest is, 0..1: from the weight of its reason and the discontent of the territory.
 const protestSeverity = scene => clamp(0.28 + (scene.protest.reason?.weight ?? 1) * 0.16 + (50 - (scene.context.territory?.trust ?? 50)) / 160 + (scene.context.stats.notoriety - 40) / 400, 0.2, 0.95);
@@ -106,7 +123,7 @@ const LINES = {
 };
 function speechLine(scene, option, nodeId) {
   const ctx = scene.context;
-  const bank = LINES[option.kind] ?? LINES.attualita;
+  const bank = [...(LINES[option.kind] ?? LINES.attualita), ...(RALLY_EXTRA[option.kind] ?? RALLY_EXTRA.attualita).map(item => item[0])];
   const used = new Set((ctx.rallyMemory ?? []).flatMap(item => item.lines ?? []));
   const order = bank.map((text, index) => ({ text, index })).sort((a, b) => hashOf(`${scene.seed}|${nodeId}|${option.id}|${a.index}`) - hashOf(`${scene.seed}|${nodeId}|${option.id}|${b.index}`));
   const chosen = order.find(item => !used.has(hashOf(item.text) % 100003)) ?? order[0];
@@ -145,7 +162,7 @@ const CROWD_REACTION = {
   mixed: ['Applausi a metà: una parte della piazza annuisce, l’altra aspetta.', 'Qualche applauso, qualche mormorio: la piazza è divisa.', 'Il pubblico ascolta in silenzio, senza esporsi.'],
   bad: ['Fischi isolati e gente che guarda il telefono.', 'Un mormorio percorre la piazza: non li hai convinti.', 'Qualcuno se ne va, altri scuotono la testa.', 'Un coro ironico dal fondo, poi di nuovo silenzio.']
 };
-const reaction = (scene, score, nodeId) => { const set = score >= 62 ? CROWD_REACTION.good : score >= 46 ? CROWD_REACTION.mixed : CROWD_REACTION.bad; return pick(set, `${scene.seed}|${nodeId}|rx`); };
+const reaction = (scene, score, nodeId) => { const level = score >= 62 ? 'good' : score >= 46 ? 'mixed' : 'bad'; const set = [...CROWD_REACTION[level], ...RALLY_CROWD_EXTRA[level].map(item => item[0])]; return pick(set, `${scene.seed}|${nodeId}|rx`); };
 
 // ---------- the nodes of the rally ----------
 const last = scene => scene.history.at(-1) ?? null;

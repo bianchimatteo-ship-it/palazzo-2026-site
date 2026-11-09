@@ -1,9 +1,10 @@
 // The programme and the promises (program-engine.js): what the party proposes, what the player promised, how credible it is, how each promise is going against what the game really did,
 // the commitments of the coalition, and what the rivals promise. Every button here calls the store (makePromise, modifyPromise, withdrawPromise, announcePromise): nothing is decorative.
-import { AMBITIONS, PROMISE_SCOPES, PROMISE_SETTLED, PROMISE_STATES, promiseLine } from '../core/program-engine.js?v=20261107-1';
-import { AREA_BY_ID, INSTRUMENT_KINDS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261107-1';
-import { badge, bar, card, empty, esc, kpi, num } from './sections-kit.js?v=20261107-1';
-import { glyph } from './visuals.js?v=20261107-1';
+import { AMBITIONS, PROMISE_SCOPES, PROMISE_SETTLED, PROMISE_STATES, promiseLine } from '../core/program-engine.js?v=20261109-2';
+import { AREA_BY_ID, INSTRUMENT_KINDS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261109-2';
+import { badge, bar, card, empty, esc, kpi, num } from './sections-kit.js?v=20261109-2';
+import { glyph } from './visuals.js?v=20261109-2';
+import { FINANCING, TERRITORIES, DEADLINES } from '../core/program-proposals.js?v=20261109-2';
 
 const TONE = { neutral: 'neutral', info: 'info', good: 'good', warning: 'warning', bad: 'bad' };
 const stateChip = status => { const spec = PROMISE_STATES[status] ?? PROMISE_STATES['non-avviata']; return badge(spec.label, TONE[spec.tone] ?? 'neutral'); };
@@ -73,6 +74,65 @@ function promiseCard(promise, { campaign }) {
     ${impediments}${history ? `<details class="program-history"><summary>Storia</summary><ul>${history}</ul></details>` : ''}${actions}</article>`;
 }
 
+
+// ---------- the programme editor: proposals (core/program-proposals.js) ----------
+const COVERAGE = { solida: ['Coperta', 'good'], fragile: ['Copertura fragile', 'warning'], scoperta: ['Senza copertura', 'bad'] };
+const FINANCING_OPTIONS = Object.entries(FINANCING).map(([id, spec]) => [id, spec.label]);
+const TERRITORY_OPTIONS = Object.entries(TERRITORIES);
+const DEADLINE_OPTIONS = Object.entries(DEADLINES);
+function proposalFields(view, values = {}) {
+  const measures = [...(values.measures ?? [])];
+  while (measures.length < 3) measures.push({ instrument: 'investimento', text: '' });
+  return `<label>Area politica<select name="area">${options(AREA_OPTIONS, values.area ?? 'sanita')}</select></label>
+    <label>Titolo della proposta<input name="title" type="text" maxlength="80" value="${esc(values.title ?? '')}" placeholder="Per esempio: più medici nei territori scoperti" autocomplete="off"></label>
+    <label>Il problema<textarea name="problem" rows="2" maxlength="240" placeholder="Che cosa non funziona oggi">${esc(values.problem ?? '')}</textarea></label>
+    <label>L’obiettivo<input name="objective" type="text" maxlength="200" value="${esc(values.objective ?? '')}" placeholder="Che cosa deve cambiare, e di quanto" autocomplete="off"></label>
+    <fieldset class="program-measures"><legend>Le misure (almeno una)</legend>${measures.slice(0, 4).map((item, index) => `<div class="program-measure"><select name="instrument${index}" aria-label="Strumento della misura ${index + 1}">${options(INSTRUMENT_OPTIONS, item.instrument)}</select><input name="measure${index}" type="text" maxlength="160" value="${esc(item.text ?? '')}" placeholder="Misura ${index + 1}" autocomplete="off"></div>`).join('')}</fieldset>
+    <div class="program-row"><label>Costo stimato (miliardi)<input name="cost" type="number" min="0" max="60" step="0.1" value="${values.cost ?? ''}" placeholder="stima automatica"></label>
+    <label>Come si paga<select name="financing">${options(FINANCING_OPTIONS, values.financing ?? 'bilancio')}</select></label>
+    <label>Scadenza<select name="deadlineWeeks">${options(DEADLINE_OPTIONS, String(values.deadlineWeeks ?? 104))}</select></label>
+    <label>Territorio<select name="territory">${options(TERRITORY_OPTIONS, values.territory ?? 'nazionale')}</select></label></div>
+    <label>Regione o comune (se non è tutto il Paese)<input name="region" type="text" maxlength="40" value="${esc(values.region ?? view.proposals?.region ?? '')}" autocomplete="off"></label>`;
+}
+function proposalCard(view, item, index, count) {
+  const [coverLabel, coverTone] = COVERAGE[item.assessment.level] ?? COVERAGE.fragile;
+  const spec = AREA_BY_ID[item.area];
+  const linked = item.linked ? `<p class="program-link"><b>Promessa collegata</b> ${esc(item.linked.intervention)} ${stateChip(item.linked.status)}</p>` : '';
+  const linkForm = item.linked
+    ? `<form data-proposal-link-form data-proposal-id="${esc(item.id)}"><input type="hidden" name="promise" value=""><button type="submit" class="ghost-button">Scollega la promessa</button></form>`
+    : item.linkable.length ? `<form data-proposal-link-form data-proposal-id="${esc(item.id)}" class="program-link-form"><label>Collega a una tua promessa<select name="promise">${options(item.linkable.map(promise => [promise.id, `${promise.label}: ${promise.intervention}`]))}</select></label><button type="submit" class="ghost-button">Collega</button></form>` : '<small class="program-link-none">Nessuna tua promessa aperta in quest’area da collegare: la proposta resta una pagina del programma.</small>';
+  return `<article class="program-proposal state-${esc(item.status)}" data-proposal="${esc(item.id)}">
+    <header><div><strong><span class="program-priority" aria-label="Priorità ${item.priority}">${item.priority}</span> ${esc(item.title)}</strong><small>${glyph(spec?.icon ?? 'target', 14)} ${esc(spec?.label ?? item.area)} · ${esc(TERRITORIES[item.territory] ?? '')}${item.region ? ` (${esc(item.region)})` : ''}</small></div><div class="program-badges">${badge(item.status === 'pubblicata' ? 'Pubblicata' : 'Bozza', item.status === 'pubblicata' ? 'info' : 'neutral')}${badge(coverLabel, coverTone)}</div></header>
+    ${item.problem ? `<p class="program-problem"><b>Problema</b> ${esc(item.problem)}</p>` : ''}<p><b>Obiettivo</b> ${esc(item.objective)}</p>
+    <ul class="program-measure-list">${item.measures.map(measure => `<li><b>${esc(INSTRUMENT_KINDS[measure.instrument]?.label ?? measure.instrument)}</b> ${esc(measure.text)}</li>`).join('')}</ul>
+    <div class="program-meta"><span>Costo ~${num(item.cost, 1)} mld</span><span>${esc(FINANCING[item.financing]?.label ?? item.financing)}</span><span>${esc(DEADLINES[item.deadlineWeeks] ?? '')}</span>${item.indicator !== null ? `<span>Indicatore dell’area: ${num(item.indicator, 0)}/100</span>` : ''}</div>
+    <ul class="program-notes">${item.assessment.notes.map(line => `<li>${esc(line)}</li>`).join('')}</ul>${linked}
+    <div class="program-actions">
+      <button type="button" class="ghost-button" data-proposal-move="${esc(item.id)}" data-dir="-1" aria-label="Sposta in alto"${index === 0 ? ' disabled' : ''}>↑</button><button type="button" class="ghost-button" data-proposal-move="${esc(item.id)}" data-dir="1" aria-label="Sposta in basso"${index === count - 1 ? ' disabled' : ''}>↓</button>
+      <button type="button" class="${item.status === 'bozza' ? 'primary-button' : 'ghost-button'}" data-proposal-state="${esc(item.id)}" data-state="${item.status === 'bozza' ? 'pubblicata' : 'bozza'}">${item.status === 'bozza' ? 'Pubblica nel programma' : 'Riporta in bozza'}</button>
+      <details class="program-modify"><summary class="ghost-button">Modifica</summary><form data-proposal-edit-form data-proposal-id="${esc(item.id)}">${proposalFields(view, item)}<button type="submit" class="primary-button">Salva le modifiche</button></form></details>
+      <button type="button" class="ghost-button" data-proposal-delete="${esc(item.id)}">Elimina</button></div>
+    ${linkForm}</article>`;
+}
+function editorCard(view) {
+  const info = view.proposals;
+  if (!info) return '';
+  const list = info.list;
+  const body = `${list.length ? `<div class="program-list">${list.map((item, index) => proposalCard(view, item, index, list.length)).join('')}</div>` : '<p class="sx-empty">Il programma è vuoto: scrivi la prima proposta qui sotto. Una proposta è una pagina del programma, non ancora una promessa.</p>'}
+    <details class="program-new"${list.length ? '' : ' open'}><summary class="ghost-button">Scrivi una nuova proposta (${list.length}/${info.limit})</summary>
+      <form class="program-form" data-proposal-form>${proposalFields(view)}<button type="submit" class="primary-button">${glyph('target', 16)} Aggiungi al programma</button></form></details>
+    <p class="sx-note">Le proposte pubblicate danno credibilità se la copertura regge e la tolgono se non c’è: gli avversari la attaccano nei dibattiti e la proposta entra nei comizi. Le bozze non contano. Una proposta si collega a una promessa solo se ce n’è una tua nella stessa area: la promessa resta separata e la verifica il gioco.</p>`;
+  return card({ kicker: 'PROGRAMMA', title: 'L’editor del programma', body });
+}
+function previewCard(view) {
+  const preview = view.proposals?.preview;
+  if (!preview) return '';
+  const body = preview.items.length
+    ? `<div class="program-preview" role="document"><header><strong>${esc(preview.party)}</strong><span>${esc(preview.player)}</span></header><ol>${preview.items.map(item => `<li><h4>${esc(item.title)}</h4><p class="program-preview-area">${esc(item.area)} · ${esc(item.territory)}</p>${item.problem ? `<p><b>Il problema.</b> ${esc(item.problem)}</p>` : ''}<p><b>L’obiettivo.</b> ${esc(item.objective)}</p><ul>${item.measures.map(measure => `<li>${esc(measure.text)}</li>`).join('')}</ul><p class="program-preview-cost">Costo stimato ${num(item.cost, 1)} miliardi · ${esc(item.financing)} · ${esc(item.deadline)}</p></li>`).join('')}</ol><footer>Costo complessivo del programma: ${num(preview.total, 1)} miliardi.</footer></div>${preview.drafts ? `<p class="sx-note">${preview.drafts} ${preview.drafts === 1 ? 'bozza non è inclusa' : 'bozze non sono incluse'} in questa anteprima.</p>` : ''}`
+    : '<p class="sx-empty">Nessuna proposta pubblicata: gli elettori, per ora, non vedono un programma. Pubblica almeno una proposta.</p>';
+  return card({ kicker: 'ANTEPRIMA', title: 'Come lo leggono gli elettori', body });
+}
+
 function accordCard(view) {
   if (!view.accord.length) return '';
   return card({ kicker: 'COALIZIONE', title: 'Gli impegni dell’accordo di governo', body: `<ul class="program-accord">${view.accord.map(item => `<li><strong>${esc(item.label)}</strong><span>${esc(item.objective)}</span>${stateChip(item.status)}</li>`).join('')}</ul><p class="sx-note">Li giudica l’accordo di governo (Parlamento › Governo): qui sono accanto alle tue promesse, senza essere contati due volte.</p>` });
@@ -81,7 +141,7 @@ function accordCard(view) {
 function rivalsCard(view) {
   if (!view.campaign) return '';
   const mine = new Set(view.promises.filter(item => !PROMISE_SETTLED.includes(item.status)).map(item => item.area));
-  const rows = view.campaign.rivals.map(rival => `<li><strong>${esc(rival.label)}</strong><span>${rival.areas.length ? rival.areas.map(id => `${esc(AREA_BY_ID[id]?.label ?? id)}${mine.has(id) ? ' ★' : ''}`).join(' · ') : 'Nessun programma noto'}</span></li>`).join('');
+  const rows = view.campaign.rivals.map(rival => `<li><strong>${esc(rival.label)}</strong><span>${rival.areas.length ? rival.areas.map(id => `${esc(AREA_BY_ID[id]?.label ?? id)}${mine.has(id) ? ' <span class="program-star">★</span>' : ''}`).join(' · ') : 'Nessun programma noto'}</span></li>`).join('');
   return card({ kicker: 'AVVERSARI', title: 'Cosa promettono gli altri', body: `<ul class="program-rivals">${rows || '<li>Nessun avversario in campo.</li>'}</ul><p class="sx-note">★ = stesso tema di una tua promessa aperta: lo scontro in campagna e nei dibattiti passa da lì.</p>` });
 }
 
@@ -106,6 +166,7 @@ export function renderProgram(state, view) {
   return `<div class="program-page">
     ${credibilityCard(view)}
     <div class="sx-grid two">${partyCard(view, premier)}${makeForm(view, { premier, hasAccord })}</div>
+    ${editorCard(view)}${previewCard(view)}
     ${card({ kicker: 'IN CORSO', title: `Le tue promesse (${live.length})`, body: live.length ? `<div class="program-list">${live.map(item => promiseCard(item, { campaign: view.campaign })).join('')}</div>` : '<p class="sx-empty">Nessuna promessa aperta. Ogni impegno è una responsabilità: sceglili con cura.</p>' })}
     ${accordCard(view)}${rivalsCard(view)}${knownRivalsCard(view)}${compare}
     ${premier && view.suggestion.length ? card({ kicker: 'GOVERNO', title: 'Il programma di governo parte dalle tue promesse', body: `<p>Priorità suggerite dal tuo programma: ${view.suggestion.map(id => esc(AREA_BY_ID[id]?.label ?? id)).join(' · ')}.</p><p class="sx-note">Quando fissi il programma del Governo (Parlamento › Governo) senza scegliere le priorità, il gioco usa queste; ogni priorità diventa anche una promessa di governo.</p>` }) : ''}

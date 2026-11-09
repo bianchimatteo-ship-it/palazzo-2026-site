@@ -9,8 +9,8 @@
 //   - the programme of the Government (government.program.priorities, dossier-engine.js settles it) is derived from the promises of the player and the programme of the party, so the
 //     Government does what was promised, not something else.
 // Everything here is pure: the store applies the effects (reputation, popularity, partners, memory, news) once, when a promise is settled.
-import { AREA_BY_ID, INSTRUMENT_KINDS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261107-1';
-import { LAW_PROGRESS } from '../data/simulation/dossier-rules.js?v=20261107-1';
+import { AREA_BY_ID, INSTRUMENT_KINDS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261109-2';
+import { LAW_PROGRESS } from '../data/simulation/dossier-rules.js?v=20261109-2';
 
 export const PROMISE_STATES = Object.freeze({
   'non-avviata': { label: 'Non avviata', tone: 'neutral' },
@@ -208,10 +208,11 @@ export function tickPromises(game, ctx) {
 // ---------- the programme of the Government and of the rivals ----------
 // The priorities a Government led by the player should have: the promises of scope governo/coalizione first, then the programme of the party, then the areas the accord asks. Never more
 // than five, never an unknown area (policy-rules).
-export function derivePriorities(game, parliament = null, max = 5) {
+export function derivePriorities(game, parliament = null, max = 5, proposals = []) {
   const out = [];
   const add = id => { if (AREA_BY_ID[id] && !out.includes(id)) out.push(id); };
   promisesOf(game).filter(item => open(item) && ['governo', 'coalizione'].includes(item.scope)).forEach(item => add(item.area));
+  [...proposals].filter(item => item.status === 'pubblicata').sort((a, b) => a.priority - b.priority).forEach(item => add(item.area));
   (game?.party?.program?.areas ?? []).forEach(add);
   promisesOf(game).filter(open).forEach(item => add(item.area));
   for (const item of parliament?.government?.accord?.commitments ?? []) if (item.kind === 'misura') add(item.area);

@@ -1,6 +1,6 @@
 // Picks the words of the television studios (data/studio-lines.js) for a scene: the same scene (same seed, same choices) always says the same things, but two scenes do not: the variant of a line comes
 // from a hash of the seed, the line's key and how many beats were already played, and a variant the scene has already used is skipped. Nothing here decides a result.
-import { LINES, TICKER } from '../data/studio-lines.js?v=20261107-1';
+import { LINES, TICKER } from '../data/studio-lines.js?v=20261109-2';
 
 const hashOf = text => { let h = 2166136261 >>> 0; const t = String(text); for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h; };
 // the free parts are filled in order from the first argument: every variant of a line uses the first n of the arguments the line is given

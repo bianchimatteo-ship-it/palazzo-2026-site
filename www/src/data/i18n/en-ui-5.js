@@ -131,7 +131,7 @@ export const PHRASES = [
   ["La polemica rischia di trascinarsi.", "The controversy risks dragging on."],
   ["La riunione ha lasciato una frizione nel coordinamento.", "The meeting left friction in the coordination."],
   ["La spiegazione attenua la polemica, ma non la chiude.", "The explanation eases the controversy, but does not close it."],
-  ["La trattativa con una candidatura simulata è fallita; il costo politico resta.", "The negotiation with a simulated candidacy failed; the political cost remains."],
+  ["La trattativa con {} è fallita; il costo politico resta.", "The negotiation with {1} failed; the political cost remains."],
   ["La trattativa ha migliorato la tua posizione in lista: numero {}.", "The negotiation improved your position on the list: number {}."],
   ["La trattativa sulla lista si arena: nessuno vuole fare un passo indietro e il rapporto con chi hai provato a spostare si raffredda.", "The negotiation on the list stalls: nobody wants to step back and the relationship with those you tried to move cools."],
   ["La tua candidatura non è in corsa.", "Your candidacy is not in the race."],
