@@ -13,10 +13,11 @@ import { loadSettings } from './settings.js?v=20261107-1';
 import { advanceNight, answerStatement, createNight, NIGHT_HOURS } from './night-engine.js?v=20261107-1';
 import { avatarOf } from './avatar.js?v=20261107-1';
 import { CAMPAIGN_ACTIVITIES, DEBATE_TOPICS } from '../data/simulation/campaign-rules.js?v=20261107-1';
-import { autoPlay, chooseInScene, createDebateScene, createRallyScene, createTalkShowScene, createVoteScene, sceneEffects, withStats as sceneWithStats } from './scene-engine.js?v=20261107-1';
+import { autoPlay, chooseInScene, createDebateScene, createRallyScene, createTalkShowScene, createVoteScene, invitedShows, sceneEffects, showFor, withStats as sceneWithStats } from './scene-engine.js?v=20261107-1';
 import { abandonRally } from './rally-scene.js?v=20261107-1';
 import { answerRivalMove, rivalPulse, rivalsView } from './rival-life-engine.js?v=20261107-1';
 import { abandonChallenge as abandonChallengeRun, challengeView as challengeViewOf, recordVerdict as recordChallengeVerdict, startChallenge as startChallengeRun, tickChallenge } from './challenge-engine.js?v=20261107-1';
+import { tickerFor } from './studio-lines.js?v=20261107-1';
 import { accordPromises, credibility as programCredibility, derivePriorities, makePromise as makeProgramPromise, modifyPromise as modifyProgramPromise, promisesOf, rivalProgram, tickPromises, topicOfArea, withdrawPromise as withdrawProgramPromise } from './program-engine.js?v=20261107-1';
 import { advanceDays, formatDate } from './time.js?v=20261107-1';
 import { CALENDAR_RULES } from './calendar-planner.js?v=20261107-1';
@@ -978,7 +979,7 @@ function stageContext(s) {
   const cutSector = Object.entries(s.society?.publicFinance?.sectors ?? {}).filter(([, level]) => level < 0).sort((a, b) => a[1] - b[1])[0];
   if (cutSector) triggers.push({ kind: 'tagli', area: AREA_BY_ID[cutSector[0]] ? cutSector[0] : null, label: `i tagli a ${String(AREA_BY_ID[cutSector[0]]?.label ?? cutSector[0]).toLowerCase()}`, weight: 1.6 });
   for (const entry of (game.log ?? []).slice(0, 8)) if (/sciopero|crisi|polemic|decreto contest|chiusur|tagli|sospes|inchiest/i.test(String(entry.title ?? ''))) { triggers.push({ kind: 'evento', area: null, label: String(entry.title).replace(/[.]$/, ''), weight: 1.3 }); break; }
-  for (const issue of (s.society?.issues ?? []).filter(item => item.region === region).slice(0, 2)) if (INDICATOR_AREA[issue.indicator]) triggers.push({ kind: 'territorio', area: INDICATOR_AREA[issue.indicator], label: `${String(issue.topic ?? indicatorLabel(issue.indicator)).toLowerCase()} in ${region}`, weight: 1.4 + (issue.severity ?? 0) / 60 });
+  for (const issue of (s.society?.issues ?? []).filter(item => item.region === region).slice(0, 2)) if (INDICATOR_AREA[issue.indicator]) triggers.push({ kind: 'territorio', area: INDICATOR_AREA[issue.indicator], label: `la situazione su ${String(issue.topic ?? indicatorLabel(issue.indicator)).toLowerCase()} in ${region}`, weight: 1.4 + (issue.severity ?? 0) / 60 });
   const protestLevel = Math.max(0, Math.min(1, (50 - trust) / 70 + broken * 0.16 + (economy.inflation >= 4.5 ? 0.12 : 0) + Math.min(0.2, memoryBad * 0.07) + (governing && approval < 42 ? 0.2 : 0) + (problems[0]?.severity ?? 0) / 120));
   return {
     stats, credibility: quality.score, promises: promises.map(item => ({ id: item.id, label: item.label, area: item.area, status: item.status, intervention: item.intervention })), programAreas: game.party?.program?.areas ?? [],
@@ -996,7 +997,21 @@ function buildRallyScene(s, mode) {
   const scene = createRallyScene({ id, seed: `${s.career.id ?? 'carriera'}|${id}`, player: { name: player?.displayName ?? 'Tu' }, playerAvatar: avatarOf(player), party, place: { municipality: player?.municipality ?? null, region: player?.region ?? game.place?.region ?? null }, mode, campaignId: s.campaign?.id ?? null, date: s.clock.currentDate, context: stageContext(s) });
   return scene;
 }
-function buildTalkScene(s, source) {
+// The tags of the people of a studio (the lower-thirds show them whole) and the strip of headlines of the show: made from what the game knows.
+const PROMISE_STATE = { 'in-corso': 'in corso', mantenuta: 'mantenuta', 'parzialmente-mantenuta': 'in parte mantenuta', 'non-mantenuta': 'non mantenuta', modificata: 'modificata' };
+function studioTags(s, { rivalTag = 'Ospite', hostTag = 'Conduttore' } = {}) {
+  const player = playerOf(s), office = s.dataset.offices.find(item => item.id === player?.roleId);
+  const party = s.game?.party?.label ?? 'Indipendente';
+  const campaign = s.campaign?.status === 'active' ? 'Candidato' : (office?.title ?? 'Politico');
+  return { player: `${campaign} · ${party}`, rival: rivalTag, host: hostTag };
+}
+function studioTicker(s, { topic, rivalName = '', rivalProgramLabels = [] } = {}) {
+  const ctx = stageContext(s);
+  const promises = ctx.promises.filter(item => item.label).slice(0, 2).map(item => ({ label: item.label, status: PROMISE_STATE[item.status] ?? 'in corso' }));
+  const events = (s.game?.log ?? []).slice(0, 2).map(item => String(item.title ?? '').replace(/[.]$/, '')).filter(Boolean);
+  return { events, ticker: tickerFor({ topic, promises, events, rivalProgram: rivalProgramLabels[0] ?? null, rivalName }) };
+}
+function buildTalkScene(s, source, showId = null) {
   const player = playerOf(s), game = s.game;
   const id = `ospitata-${s.career.id ?? 'carriera'}-${game.week.index}-${source}`;
   const rivals = (s.world?.parties ?? []).filter(item => item.active && !item.isPlayer && item.baseline >= 3);
@@ -1004,10 +1019,16 @@ function buildTalkScene(s, source) {
   const guestName = GUESTS[hashSeed(`${id}|ospite`) % GUESTS.length];
   const topicLabel = (s.society?.issues ?? [])[0]?.topic ?? 'Attualità';
   const ctx = stageContext(s);
+  const invited = invitedShows(`${s.career.id ?? ''}|${game.week.index}`, playerStat(s, 'notoriety', 20));
+  const show = showFor(showId && invited.some(item => item.id === showId) ? showId : (showId && showFor(showId, 'salotto').id === showId ? showId : invited[hashSeed(`${id}|show`) % Math.max(1, invited.length)]?.id ?? 'salotto'), 'salotto');
+  const hostName = HOSTS[hashSeed(id) % HOSTS.length];
+  const guestTag = `Ospite${rivalParty ? ` · ${rivalParty.label ?? rivalParty.name}` : ''}`;
+  const { events, ticker } = studioTicker(s, { topic: topicLabel });
+  const tags = studioTags(s, { rivalTag: guestTag, hostTag: show.host === 'giornalista' ? 'Giornalista' : 'Conduttore' });
   return createTalkShowScene({
-    id, seed: `${s.career.id ?? 'carriera'}|${id}`, player: { name: player?.displayName ?? 'Tu' }, playerAvatar: avatarOf(player), rival: { id: `ospite-${guestName.split(' ')[0].toLowerCase()}`, name: guestName, partyId: rivalParty?.id ?? null },
-    host: { id: `conduttore-${HOSTS[hashSeed(id) % HOSTS.length]}`, name: HOSTS[hashSeed(id) % HOSTS.length] }, topic: { id: 'attualita', label: topicLabel }, promises: ctx.promises.filter(item => item.status !== 'non-mantenuta' || true).map(item => ({ ...item, topic: item.area })),
-    credibility: ctx.credibility, prep: 0, rivalProgram: [], rivalReadiness: 45 + hashSeed(`${id}|prep`) % 25, rivalAggression: 30 + hashSeed(`${id}|agg`) % 50, crisis: false, date: s.clock.currentDate
+    id, seed: `${s.career.id ?? 'carriera'}|${id}`, show: show.id, player: { name: player?.displayName ?? 'Tu', tag: tags.player }, playerAvatar: avatarOf(player), rival: { id: `ospite-${guestName.split(' ')[0].toLowerCase()}`, name: guestName, partyId: rivalParty?.id ?? null, tag: tags.rival },
+    host: { id: `conduttore-${hostName}`, name: hostName, tag: tags.host }, topic: { id: 'attualita', label: topicLabel }, promises: ctx.promises.filter(item => item.status !== 'non-mantenuta' || true).map(item => ({ ...item, topic: item.area })),
+    credibility: ctx.credibility, prep: 0, rivalProgram: [], rivalReadiness: 45 + hashSeed(`${id}|prep`) % 25, rivalAggression: 30 + hashSeed(`${id}|agg`) % 50, crisis: false, date: s.clock.currentDate, ticker, events
   });
 }
 const DEBATE_TOPICS_BY_ID = Object.freeze(Object.fromEntries(DEBATE_TOPICS.map(item => [item.id, item])));
@@ -4076,9 +4097,13 @@ export const store = {
     const week = state.game.week.index;
     const id = `dibattito-${campaign.id}-${campaign.day}`;
     const hosts = ['Marco Valenti', 'Giulia Ferri', 'Paolo Conti', 'Elena Mariani'];
-    const label = rival.displayLabel ?? rival.displayName ?? 'L’avversario';
+    const label = rival.displayName ?? rival.displayLabel ?? 'L’avversario';
+    const rivalAreas = rivalProgram(state.world, rival.partyId).map(areaId => AREA_BY_ID[areaId]?.label ?? areaId);
+    const show = showFor(hashSeed(`${id}|show`) % 2 ? 'tribuna' : 'faccia-a-faccia');
+    const { events, ticker } = studioTicker(state, { topic: main.label, rivalName: label, rivalProgramLabels: rivalAreas });
+    const tags = studioTags(state, { rivalTag: `Candidato · ${rival.partyLabel ?? state.world?.parties?.find(item => item.id === rival.partyId)?.label ?? 'Indipendente'}`, hostTag: 'Moderatore' });
     const scene = sceneWithStats(createDebateScene({
-      id, seed: `${campaign.seed}|${id}`, player: { name: player?.displayName ?? 'Tu' }, playerAvatar: avatarOf(player), rival: { id: rival.id, name: label, partyId: rival.partyId ?? null }, host: { id: `conduttore-${hosts[hashSeed(id) % hosts.length]}`, name: hosts[hashSeed(id) % hosts.length] },
+      id, seed: `${campaign.seed}|${id}`, show: show.id, ticker, events, rivalProgramLabels: rivalAreas, player: { name: player?.displayName ?? 'Tu', tag: tags.player }, playerAvatar: avatarOf(player), rival: { id: rival.id, name: label, partyId: rival.partyId ?? null, tag: tags.rival }, host: { id: `conduttore-${hosts[hashSeed(id) % hosts.length]}`, name: hosts[hashSeed(id) % hosts.length], tag: tags.host },
       topic: main, secondTopic: second, salientTopic: campaign.nationalContext?.salientTopic ?? null, promises: promisesOf(state.game).filter(item => !['mantenuta', 'parzialmente-mantenuta', 'non-mantenuta', 'modificata'].includes(item.status) || item.status === 'non-mantenuta').map(item => ({ id: item.id, label: item.label, topic: topicOfArea(item.area), status: item.status, intervention: item.intervention, cost: item.cost })),
       credibility: quality.score, prep: campaign.preparationByTopic?.[main.id] ?? 0, rivalProgram: rivalProgram(state.world, rival.partyId), rivalReadiness: rival.campaignStats?.debateReadiness ?? 50, rivalAggression: 30 + hashSeed(`${rival.id}|aggressivita`) % 50, crisis: Boolean(campaign.crisis), campaignId: campaign.id, date: state.clock.currentDate
     }), { competence: (playerStat(state, 'experience') + playerStat(state, 'influence')) / 2, charisma: (playerStat(state, 'notoriety') + playerStat(state, 'reputation')) / 2 });
@@ -4144,7 +4169,7 @@ export const store = {
     return scene;
   },
   // ---------- an ordinary guest spot (talk show, prime time): the studio or the quick way, the same outcome engine ----------
-  startTalkShowScene({ source = 'attivita', quick = false } = {}) {
+  startTalkShowScene({ source = 'attivita', quick = false, showId = null } = {}) {
     requireCareer();
     if (state.scene) throw new Error('Una scena alla volta.');
     if (source === 'attivita') {
@@ -4152,7 +4177,7 @@ export const store = {
       const problem = activityProblem({ game: state.game, stats: statsOf(state), parliament: state.parliament }, gameEnv(state), activity);
       if (problem) throw new Error(problem);
     }
-    let scene = { ...buildTalkScene(state, source), source };
+    let scene = { ...buildTalkScene(state, source, showId), source };
     scene = sceneWithStats(scene, { competence: (playerStat(state, 'experience') + playerStat(state, 'influence')) / 2, charisma: (playerStat(state, 'notoriety') + playerStat(state, 'reputation')) / 2 });
     // the invitation has been accepted by the player already: the scene starts at the preparation
     scene = { ...scene, nodeId: 'preparazione', prevNodeId: 'invito' };

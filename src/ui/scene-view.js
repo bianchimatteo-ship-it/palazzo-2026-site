@@ -14,6 +14,13 @@ const HEAD = {
   comizio: ['COMIZIO IN PIAZZA', scene => `Piazza di ${scene.place.label}`, 'Comizio in piazza'],
   voto: ['IL TUO VOTO', scene => scene.electionLabel, 'Voto al seggio']
 };
+// the head of a studio scene follows the show and the format of the studio (the news, the talk show, the face-to-face)
+const FORMAT_HEAD = { intervista: ['INTERVISTA IN STUDIO · IN DIRETTA', 'Intervista televisiva'], talk: ['TALK SHOW · IN DIRETTA', 'Ospitata televisiva'], faccia: ['DIBATTITO TELEVISIVO · IN DIRETTA', 'Dibattito televisivo'] };
+function studioHead(scene) {
+  if (!scene.format || !FORMAT_HEAD[scene.format]) return null;
+  const [kicker, aria] = FORMAT_HEAD[scene.format];
+  return [kicker, item => `${item.show?.name ?? 'In studio'}: ${item.topic.label}`, aria];
+}
 const MOTIONS = [['full', 'Complete'], ['reduced', 'Ridotte'], ['off', 'Disattivate']];
 
 function stageData(scene, node) {
@@ -26,7 +33,7 @@ export function renderScene(state, { identity = null, motion = 'off' } = {}) {
   const scene = state.scene;
   if (!scene) return '';
   const node = sceneNode(scene);
-  const [kicker, titleOf, aria] = HEAD[scene.kind] ?? HEAD['dibattito-tv'];
+  const [kicker, titleOf, aria] = studioHead(scene) ?? HEAD[scene.kind] ?? HEAD['dibattito-tv'];
   const speaker = scene.cast.find(item => item.id === node.speaker);
   const progress = sceneProgress(scene);
   const { stage, before } = stageData(scene, node);

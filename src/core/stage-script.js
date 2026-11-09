@@ -5,38 +5,54 @@
 //
 // Coordinates: the stage is 640 x 360 units; `x` is the centre of the figure, `y` the line of its feet (the lower, the nearer to the camera); `s` the scale of the figure (nearer = bigger).
 
+import { formatOf } from './studio-lines.js?v=20261107-1';
+
 export const STAGE_W = 640, STAGE_H = 360;
 export const depthScale = y => Math.max(0.2, Math.min(0.72, 0.3 + (y - 170) / 190 * 0.34));
 const pose = (x, y, extra = {}) => ({ x, y, s: depthScale(y), facing: 1, posture: 'stand', gesture: null, visible: true, ...extra });
 const away = (x, y) => pose(x, y, { visible: false });
 
 // ---------- the television studio (debates and talk shows) ----------
-const SEAT = { giocatore: { x: 128, y: 292 }, rivale: { x: 512, y: 292 }, conduttore: { x: 320, y: 262 } };
-const DOOR = { giocatore: { x: -70, y: 300 }, rivale: { x: 710, y: 300 }, conduttore: { x: 320, y: 262 } };
+// Where the people of a studio sit or stand, by format (core/studio-lines.js `formatOf`): the face-to-face debate has two lecterns and a moderator; the talk show a host's desk on the left and a sofa
+// on the right; the news a desk on the left and two armchairs. Doors: the guests come in from the right in the two latter, from both sides at the lecterns.
+const SEATS = {
+  faccia: { giocatore: { x: 128, y: 292, facing: 1, posture: 'sit' }, rivale: { x: 512, y: 292, facing: -1, posture: 'sit' }, conduttore: { x: 320, y: 262, facing: 1, posture: 'stand' } },
+  talk: { conduttore: { x: 176, y: 272, facing: 1, posture: 'sit' }, giocatore: { x: 436, y: 298, facing: -1, posture: 'sit' }, rivale: { x: 574, y: 298, facing: -1, posture: 'sit' } },
+  intervista: { conduttore: { x: 211, y: 276, facing: 1, posture: 'sit' }, giocatore: { x: 436, y: 298, facing: -1, posture: 'sit' }, rivale: { x: 572, y: 298, facing: -1, posture: 'sit' } }
+};
+const DOORS = { faccia: { giocatore: { x: -70, y: 300 }, rivale: { x: 710, y: 300 }, conduttore: { x: 320, y: 262 } }, talk: { giocatore: { x: 700, y: 300 }, rivale: { x: 760, y: 300 }, conduttore: { x: 176, y: 272 } }, intervista: { giocatore: { x: 700, y: 300 }, rivale: { x: 760, y: 300 }, conduttore: { x: 211, y: 276 } } };
 const STUDIO_ORDER = ['invito', 'preparazione', 'ingresso', 'q1', 'r1', 'domanda', 'risposta-rivale', 'q2', 'r2', 'attacco', 'r3', 'chiusura', 'esito'];
 
 function studioPoses(scene, nodeId, node) {
+  const format = formatOf(scene), seats = SEATS[format], doors = DOORS[format];
   const at = STUDIO_ORDER.indexOf(nodeId);
   const seated = at >= STUDIO_ORDER.indexOf('ingresso') && nodeId !== 'esito';
   const out = {};
   for (const member of scene.cast) {
-    const seat = SEAT[member.role] ?? SEAT.rivale, door = DOOR[member.role] ?? DOOR.rivale;
+    const seat = seats[member.role] ?? seats.rivale, door = doors[member.role] ?? doors.rivale;
     const speaking = node?.speaker === member.id;
     const gesture = speaking ? (node.gesture ?? 'sottolinea') : (node?.speaker && at >= 3 ? 'ascolta' : null);
-    if (member.role === 'conduttore') out[member.id] = pose(seat.x, seat.y, { posture: nodeId === 'esito' || nodeId === 'invito' || nodeId === 'preparazione' ? 'stand' : 'stand', gesture, facing: 1 });
-    else if (nodeId === 'invito' || nodeId === 'preparazione') out[member.id] = member.role === 'giocatore' && nodeId === 'preparazione' ? pose(150, 300, { gesture: 'pensa' }) : away(door.x, door.y);
-    else if (nodeId === 'esito') out[member.id] = pose(member.role === 'giocatore' ? 90 : 550, 300, { gesture: 'saluta', posture: 'stand' });
-    else if (seated) out[member.id] = pose(seat.x, seat.y, { posture: 'sit', gesture, facing: member.role === 'rivale' ? -1 : 1 });
-    else out[member.id] = pose(seat.x, seat.y, { gesture });
+    if (member.role === 'conduttore') out[member.id] = pose(seat.x, seat.y, { posture: seat.posture, gesture: nodeId === 'esito' ? 'saluta' : gesture, facing: seat.facing });
+    else if (nodeId === 'invito' || nodeId === 'preparazione') out[member.id] = member.role === 'giocatore' && nodeId === 'preparazione' ? pose(format === 'faccia' ? 150 : 520, 300, { gesture: 'pensa', facing: format === 'faccia' ? 1 : -1 }) : away(door.x, door.y);
+    else if (nodeId === 'esito') out[member.id] = format === 'faccia' ? pose(member.role === 'giocatore' ? 90 : 550, 300, { gesture: 'saluta', posture: 'stand' }) : pose(seat.x, seat.y, { gesture: 'saluta', posture: 'stand', facing: seat.facing });
+    else if (seated) out[member.id] = pose(seat.x, seat.y, { posture: seat.posture, gesture, facing: seat.facing });
+    else out[member.id] = pose(seat.x, seat.y, { gesture, facing: seat.facing });
   }
   return out;
 }
 const studioCrowd = (scene, node) => {
+  if (formatOf(scene) === 'intervista') return 'quiet';
   if (!node?.audience) return scene.audience.mood >= 60 ? 'warm' : 'quiet';
   const mood = scene.audience.mood;
   return mood >= 58 ? 'applause' : mood < 45 ? 'boo' : 'mixed';
 };
-const studioCamera = node => ({ wide: 'wide', host: 'host', player: 'left', rival: 'right', crowd: 'crowd' })[node?.camera ?? 'wide'] ?? 'wide';
+// The shots by format: the host, the player and the other guest are not where they are in the other studios, so each studio has its own framings (stage-art.js CAMERAS).
+const studioCamera = (scene, node) => {
+  const format = formatOf(scene), shot = node?.camera ?? 'wide', base = ({ wide: 'wide', host: 'host', player: 'left', rival: 'right', crowd: 'crowd' })[shot] ?? 'wide';
+  if (format === 'faccia') return base;
+  if (base === 'crowd' && format === 'intervista') return 'wide';
+  return base === 'wide' || base === 'crowd' ? base : `${format}-${base}`;
+};
 
 // ---------- the square (rallies) ----------
 const STAGE_MIC = { x: 330, y: 222 };
@@ -93,7 +109,7 @@ export function stageOf(scene, node) {
   const nodeId = scene.nodeId;
   if (scene.setting === 'piazza') return { setting: 'piazza', poses: rallyPoses(scene, nodeId, node), camera: RALLY_CAMERA[nodeId] ?? 'stage', crowd: rallyCrowd(scene, nodeId, node), props: {}, protest: Boolean(scene.protest?.arrived) };
   if (scene.setting === 'seggio') { const spec = VOTE_POSES[nodeId] ?? VOTE_POSES.uscita; return { setting: 'seggio', poses: votePoses(scene, nodeId), camera: nodeId === 'cabina' || nodeId === 'voto' || nodeId === 'piega' ? 'booth' : nodeId === 'urna' ? 'urn' : 'wide', crowd: 'quiet', props: { ballot: spec.prop ?? 'none', booth: spec.booth ?? 'open' } }; }
-  return { setting: scene.setting, poses: studioPoses(scene, nodeId, node), camera: studioCamera(node), crowd: studioCrowd(scene, node), props: {} };
+  return { setting: scene.setting, poses: studioPoses(scene, nodeId, node), camera: studioCamera(scene, node), crowd: studioCrowd(scene, node), props: {} };
 }
 // The beat before this one (to animate the passage), or null for the first.
 export function previousNode(scene) { return scene.prevNodeId ?? null; }

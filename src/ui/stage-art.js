@@ -101,27 +101,81 @@ export function plate(x, y, w, text, { fill = '#d9bd7e', ink = '#1d1a12' } = {})
   return `<g class="st-plate"><rect x="${x - w / 2}" y="${y - 8}" width="${w}" height="16" rx="3" fill="${fill}" stroke="#7a6232" stroke-width=".8"/><text x="${x}" y="${y + 3.6}" text-anchor="middle" font-size="9.5" font-weight="800" letter-spacing=".4" fill="${ink}" textLength="${Math.min(w - 10, Math.max(24, label.length * 6.4))}" lengthAdjust="spacingAndGlyphs">${esc(label)}</text></g>`;
 }
 
-function studioBack(scene, uid, title, subtitle) {
-  const leds = [60, 250, 440].map((x, i) => `<g><rect x="${x}" y="28" width="140" height="82" rx="4" fill="${i === 1 ? '#1d5470' : '#173f55'}" stroke="#58a3c4" stroke-width="1.2"/><rect class="st-led" style="--d:${i * 700}ms" x="${x}" y="28" width="46" height="82" rx="4" fill="#9fdcf0" opacity=".14"/></g>`).join('');
-  return `<defs>${sky(`${uid}-wall`, '#0e2236', '#081523')}${sky(`${uid}-floor`, '#16222c', '#080d12')}<radialGradient id="${uid}-pool" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffe9b0" stop-opacity=".42"/><stop offset="1" stop-color="#ffe9b0" stop-opacity="0"/></radialGradient></defs>`
-    + `<rect x="-200" y="-100" width="1040" height="400" fill="url(#${uid}-wall)"/>${leds}`
-    + `<text x="320" y="64" text-anchor="middle" font-size="19" font-weight="900" letter-spacing="3" fill="#f0d68a">${esc(title)}</text><text x="320" y="88" text-anchor="middle" font-size="10.5" font-weight="700" fill="#cfe7f1" textLength="${Math.min(260, 20 + String(subtitle).length * 6)}" lengthAdjust="spacingAndGlyphs">${esc(subtitle)}</text>`
-    + `<rect x="-200" y="196" width="1040" height="260" fill="url(#${uid}-floor)"/><ellipse cx="128" cy="300" rx="150" ry="34" fill="url(#${uid}-pool)"/><ellipse cx="512" cy="300" rx="150" ry="34" fill="url(#${uid}-pool)"/><ellipse cx="320" cy="270" rx="120" ry="26" fill="url(#${uid}-pool)"/>`
-    + `<g class="st-rig"><rect x="-200" y="0" width="1040" height="10" fill="#0a0f14"/>${[40, 150, 260, 380, 490, 600].map((x, i) => `<g class="st-light" style="--d:${i * 380}ms"><rect x="${x - 7}" y="8" width="14" height="10" rx="2" fill="#222a32"/><path d="M${x - 5} 18L${x - 28} 80H${x + 28}L${x + 5} 18Z" fill="#fff4cc" opacity=".05"/></g>`).join('')}</g>`;
+// ---------- the three television studios ----------
+// `faccia` (the face-to-face debate): two lecterns and a moderator on a dark stage, the audience on both sides. `talk` (the talk show): a warm set, the host's desk on the left, a sofa and a low table for the
+// guests, the audience in the back rows. `intervista` (the news and interview): a cool newsroom with a wall of screens, the anchor's desk, two armchairs, no audience, the crew's cameras. The people are the
+// same actors; where they sit is core/stage-script.js. The strip of headlines and the name straps are drawn over the camera (they do not zoom): see `studioOverlay`.
+const FORMAT_LOOK = {
+  faccia: { wall: ['#0e2236', '#081523'], floor: ['#16222c', '#080d12'], glow: '#ffe9b0', title: 'FACCIA A FACCIA' },
+  talk: { wall: ['#2a1633', '#150a1c'], floor: ['#2a1d22', '#0f0a0c'], glow: '#ffc88a', title: 'IN STUDIO' },
+  intervista: { wall: ['#16293b', '#0b1722'], floor: ['#1d2a33', '#0a1116'], glow: '#d6ecff', title: 'IN DIRETTA' }
+};
+const formatKey = scene => scene.format ?? (scene.kind === 'talkshow' ? 'talk' : 'faccia');
+// a line of text that always fits its place whole: compressed (never cut) when it is longer than the room it has
+const fitted = (text, x, y, size, room, attrs = '') => { const natural = text.length * size * 0.74; return `<text x="${x}" y="${y}" text-anchor="middle" font-size="${size}" letter-spacing=".6" ${attrs}${natural > room ? ` textLength="${room}" lengthAdjust="spacingAndGlyphs"` : ''}>${esc(text)}</text>`; };
+function rigLights(xs) { return `<g class="st-rig"><rect x="-200" y="0" width="1040" height="10" fill="#0a0f14"/>${xs.map((x, i) => `<g class="st-light" style="--d:${i * 380}ms"><rect x="${x - 7}" y="8" width="14" height="10" rx="2" fill="#222a32"/><path d="M${x - 5} 18L${x - 28} 80H${x + 28}L${x + 5} 18Z" fill="#fff4cc" opacity=".05"/></g>`).join('')}</g>`; }
+function studioFloor(uid, look, pools) { return `<defs>${sky(`${uid}-wall`, ...look.wall)}${sky(`${uid}-floor`, ...look.floor)}<radialGradient id="${uid}-pool" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="${look.glow}" stop-opacity=".42"/><stop offset="1" stop-color="${look.glow}" stop-opacity="0"/></radialGradient></defs><rect x="-200" y="-100" width="1040" height="400" fill="url(#${uid}-wall)"/><rect x="-200" y="196" width="1040" height="260" fill="url(#${uid}-floor)"/>${pools.map(([x, y, rx]) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${rx * 0.23}" fill="url(#${uid}-pool)"/>`).join('')}`; }
+function cameraRig(x, tally, flip = false) { return `<g class="st-camera" style="transform:translate(${x}px,338px)${flip ? ' scaleX(-1)' : ''}"><rect x="-22" y="-26" width="44" height="30" rx="5" fill="#1b232b"/><rect x="-16" y="-34" width="32" height="12" rx="3" fill="#2c3944"/><circle cx="0" cy="-12" r="9" fill="#0b0f13" stroke="#5c6b78" stroke-width="2"/><circle class="st-tally${tally ? ' is-on' : ''}" cx="16" cy="-30" r="3" fill="#d42e2e"/><rect x="-3" y="4" width="6" height="14" fill="#38444f"/></g>`; }
+const screenWall = (x, y, w, h, uid, label, count) => `<g class="st-screens">${Array.from({ length: count }, (_, i) => { const cw = (w - (count - 1) * 4) / count, cx = x + i * (cw + 4); return `<rect x="${cx}" y="${y}" width="${cw}" height="${h}" rx="3" fill="${i % 2 ? '#1d5470' : '#173f55'}" stroke="#58a3c4" stroke-width="1.2"/><rect class="st-led" style="--d:${i * 700}ms" x="${cx}" y="${y}" width="${cw / 3}" height="${h}" rx="3" fill="#9fdcf0" opacity=".14"/>`; }).join('')}</g>`;
+
+function studioFaccia(scene, uid, crowd) {
+  const members = ['giocatore', 'rivale', 'conduttore'].map(role => scene.cast.find(item => item.role === role));
+  const last = member => String(member?.name ?? '').split(' ').slice(-1)[0];
+  const lectern = (x, color, name) => `<g class="st-desk"><rect x="${x - 78}" y="248" width="156" height="52" rx="5" fill="#26333f"/><rect x="${x - 78}" y="248" width="156" height="6" rx="3" fill="#8fb4c6"/><rect x="${x - 70}" y="262" width="140" height="28" rx="3" fill="${color}" opacity=".9"/>${plate(x, 276, 124, name)}</g>`;
+  const back = `${studioFloor(uid, FORMAT_LOOK.faccia, [[128, 300, 150], [512, 300, 150], [320, 270, 120]])}${screenWall(70, 26, 500, 84, uid, '', 3)}`
+    + `<text x="320" y="58" text-anchor="middle" font-size="19" font-weight="900" letter-spacing="3" fill="#f0d68a">${esc(scene.show?.name ? scene.show.name.toUpperCase() : 'FACCIA A FACCIA')}</text><text x="320" y="84" text-anchor="middle" font-size="11" font-weight="700" fill="#cfe7f1">${esc(scene.topic.label)}</text>`
+    + `<path d="M0 196H640" stroke="#58a3c4" stroke-opacity=".25"/>${rigLights([40, 150, 260, 380, 490, 600])}`;
+  const front = `${lectern(128, '#2f6fa8', last(members[0]))}${lectern(512, '#c05a2c', last(members[1]))}<g class="st-desk"><rect x="${320 - 52}" y="230" width="104" height="44" rx="5" fill="#33414d"/><rect x="${320 - 52}" y="230" width="104" height="5" rx="2.5" fill="#d9bd7e"/></g>${cameraRig(46, true)}${cameraRig(594, false, true)}`;
+  const audience = `<g class="st-crowd is-${crowd}" data-crowd>${crowdSvg(`${scene.seed}|aud`, [[236, 0.34, 28], [226, 0.3, 30]], { x0: 14, x1: 626 })}</g>`;
+  return { back, front, audience };
 }
-function studioFront(scene, members) {
-  const [me, rival, host] = members;
-  const desk = (x, w, y, h = 46) => `<g class="st-desk"><rect x="${x - w / 2}" y="${y}" width="${w}" height="${h}" rx="5" fill="#26333f"/><rect x="${x - w / 2}" y="${y}" width="${w}" height="6" rx="3" fill="#6f9fb4"/>${plate(x, y + 21, w - 22, members.find(m => (x < 200 && m.role === 'giocatore') || (x > 440 && m.role === 'rivale') || (x === 320 && m.role === 'conduttore'))?.name.split(' ').slice(-1)[0] ?? '')}</g>`;
-  const camera = (x, tally) => `<g class="st-camera" style="transform:translate(${x}px,334px)"><rect x="-22" y="-26" width="44" height="30" rx="5" fill="#1b232b"/><rect x="-16" y="-34" width="32" height="12" rx="3" fill="#2c3944"/><circle cx="0" cy="-12" r="9" fill="#0b0f13" stroke="#5c6b78" stroke-width="2"/><circle class="st-tally${tally ? ' is-on' : ''}" cx="16" cy="-30" r="3" fill="#d42e2e"/><rect x="-3" y="4" width="6" height="14" fill="#38444f"/></g>`;
-  return `${desk(128, 190, 246, 50)}${desk(512, 190, 246, 50)}${desk(320, 160, 222, 44)}${camera(46, true)}${camera(594, false)}`;
+function studioTalk(scene, uid, crowd) {
+  const back = `${studioFloor(uid, FORMAT_LOOK.talk, [[176, 296, 140], [480, 304, 170]])}`
+    + `<g class="st-skyline"><rect x="250" y="30" width="360" height="104" rx="4" fill="#0d0a18" stroke="#c78b4b" stroke-width="1.4"/>${Array.from({ length: 22 }, (_, i) => { const w = 12 + unit(`${scene.seed}|sk${i}`) * 14, h = 22 + unit(`${scene.seed}|sh${i}`) * 66; return `<rect x="${256 + i * 16}" y="${132 - h}" width="${w}" height="${h}" fill="#1c1630"/>${unit(`${scene.seed}|sl${i}`) < 0.7 ? `<rect x="${260 + i * 16}" y="${132 - h + 6}" width="4" height="5" fill="#f3c57a" opacity=".85"/>` : ''}`; }).join('')}</g>`
+    + `<rect x="30" y="34" width="190" height="52" rx="26" fill="#ff7a3c" opacity=".16"/><rect x="34" y="38" width="182" height="44" rx="22" fill="none" stroke="#ffb07a" stroke-width="2.4"/><text x="125" y="66" text-anchor="middle" font-size="16" font-weight="900" letter-spacing="1.5" fill="#ffd8b8" textLength="${Math.min(160, 14 + String(scene.show?.name ?? 'IN STUDIO').length * 8.6)}" lengthAdjust="spacingAndGlyphs">${esc(String(scene.show?.name ?? 'In studio').toUpperCase())}</text>`
+    + `${rigLights([60, 170, 300, 430, 540])}<g class="st-crowd is-${crowd}" data-crowd>${crowdSvg(`${scene.seed}|talk-aud`, [[236, 0.34, 26], [226, 0.3, 28]], { x0: 20, x1: 620 })}</g>`
+    + `<g class="st-sofa"><rect x="420" y="256" width="180" height="46" rx="12" fill="#6a2f3a"/><rect x="410" y="270" width="18" height="40" rx="8" fill="#7d3a46"/><rect x="592" y="270" width="18" height="40" rx="8" fill="#7d3a46"/></g>`;
+  const front = `<g class="st-desk"><path d="M60 286Q176 252 292 286V316H60Z" fill="#3b2433"/><path d="M60 286Q176 252 292 286" fill="none" stroke="#e0b277" stroke-width="5"/>${fitted(String(scene.show?.name ?? '').toUpperCase(), 176, 288, 9, 200, 'fill="#f2d6ac" font-weight="800"')}</g>`
+    + `<g class="st-table"><ellipse cx="486" cy="326" rx="70" ry="9" fill="#2a1a22"/><ellipse cx="486" cy="322" rx="70" ry="9" fill="#a97a52"/><rect x="448" y="312" width="9" height="9" rx="2" fill="#f4efe0"/><rect x="520" y="313" width="9" height="9" rx="2" fill="#f4efe0"/></g>${cameraRig(40, true)}${cameraRig(602, false, true)}`;
+  return { back, front, audience: '' };
 }
-function audienceSides(seed, crowd) { return `<g class="st-crowd is-${crowd}" data-crowd>${crowdSvg(`${seed}|aud`, [[352, 0.62, 5], [338, 0.5, 6]], { x0: 8, x1: 124 })}${crowdSvg(`${seed}|aud2`, [[352, 0.62, 5], [338, 0.5, 6]], { x0: 516, x1: 632 })}</g>`; }
+function studioIntervista(scene, uid) {
+  const back = `${studioFloor(uid, FORMAT_LOOK.intervista, [[210, 300, 150], [490, 304, 170]])}`
+    + `<g class="st-videowall"><rect x="30" y="22" width="580" height="114" rx="5" fill="#0a1824" stroke="#58a3c4" stroke-width="1.4"/>${Array.from({ length: 140 }, (_, i) => `<circle cx="${46 + (i % 28) * 20}" cy="${40 + Math.floor(i / 28) * 18}" r="${unit(`${scene.seed}|dot${i}`) < 0.45 ? 2.4 : 1.2}" fill="#4f9fc4" opacity="${unit(`${scene.seed}|do${i}`) < 0.5 ? 0.7 : 0.25}"/>`).join('')}<rect class="st-led" x="30" y="22" width="120" height="114" rx="5" fill="#9fdcf0" opacity=".1"/></g>`
+    + `<g class="st-bug"><rect x="44" y="30" width="62" height="16" rx="3" fill="#c0392b"/><text x="75" y="42" text-anchor="middle" font-size="9.5" font-weight="900" fill="#fff" letter-spacing=".8">IN DIRETTA</text></g><rect x="96" y="58" width="448" height="58" rx="4" fill="#0a1824" fill-opacity=".82"/><text x="320" y="82" text-anchor="middle" font-size="19" font-weight="900" letter-spacing="2" fill="#f0d68a" textLength="${Math.min(440, 20 + String(scene.show?.name ?? '').length * 12)}" lengthAdjust="spacingAndGlyphs">${esc(String(scene.show?.name ?? 'Notiziario').toUpperCase())}</text><text x="320" y="108" text-anchor="middle" font-size="11" font-weight="700" fill="#cfe7f1">${esc(scene.topic.label)}</text>`
+    + `${rigLights([70, 190, 320, 450, 570])}<g class="st-arm-l"><rect x="402" y="266" width="80" height="40" rx="14" fill="#2d4a5e"/></g><g class="st-arm-r"><rect x="520" y="266" width="80" height="40" rx="14" fill="#2d4a5e"/></g>`;
+  const front = `<g class="st-desk"><rect x="86" y="266" width="250" height="52" rx="6" fill="#d9e3ea"/><rect x="86" y="266" width="250" height="6" rx="3" fill="#8fb4c6"/><rect x="108" y="273" width="206" height="22" rx="3" fill="#1b3446"/>${fitted(String(scene.show?.name ?? '').toUpperCase(), 211, 288, 10, 190, 'fill="#f0d68a" font-weight="900"')}</g>${cameraRig(44, true)}${cameraRig(596, false, true)}`;
+  return { back, front, audience: '' };
+}
+// The strip of headlines (one per beat, from the situation of the game) and the name straps: drawn over the camera, inside the frame; the text is wrapped, never cut.
+const wrapText = (text, chars) => { const lines = []; let current = ''; for (const word of String(text ?? '').split(/\s+/).filter(Boolean)) { if (current && `${current} ${word}`.length > chars) { lines.push(current); current = word; } else current = current ? `${current} ${word}` : word; } if (current) lines.push(current); return lines; };
+function strap(member, x, w, bottom, active) {
+  const nameLines = wrapText(member.name, Math.floor((w - 18) / 6.4)), tagLines = wrapText(member.tag, Math.floor((w - 18) / 5.0));
+  const height = 8 + nameLines.length * 11.5 + tagLines.length * 9.6 + 4, top = bottom - height;
+  return `<g class="st-strap${active ? ' is-speaking' : ''}"><rect x="${x}" y="${top}" width="${w}" height="${height}" rx="3" fill="#0c1d2b" fill-opacity=".94" stroke="${active ? '#f0d68a' : '#3d6277'}" stroke-width="${active ? 1.6 : 1}"/><rect x="${x}" y="${top}" width="4" height="${height}" rx="1.5" fill="${active ? '#f0d68a' : '#58a3c4'}"/>`
+    + nameLines.map((text, i) => `<text x="${x + 11}" y="${top + 12.5 + i * 11.5}" font-size="10.4" font-weight="800" fill="#fff">${esc(text)}</text>`).join('')
+    + tagLines.map((text, i) => `<text x="${x + 11}" y="${top + 12.5 + nameLines.length * 11.5 + 1 + i * 9.6}" font-size="8" font-weight="600" fill="#bfd9e6">${esc(text)}</text>`).join('') + '</g>';
+}
+export function studioOverlay(scene, node, uid) {
+  const format = formatKey(scene);
+  const member = role => scene.cast.find(item => item.role === role);
+  const me = member('giocatore'), rival = member('rivale'), host = member('conduttore');
+  const speaking = id => node?.speaker === id;
+  const straps = format === 'faccia'
+    ? `${strap(me, 8, 226, 332, speaking(me.id))}${strap(rival, 406, 226, 332, speaking(rival.id))}${speaking(host.id) ? strap(host, 238, 164, 332, true) : ''}`
+    : `${strap(host, 8, 204, 332, speaking(host.id))}${strap(me, 218, 204, 332, speaking(me.id))}${strap(rival, 428, 204, 332, speaking(rival.id))}`;
+  const slot = String(scene.show?.slot ?? 'In diretta').toUpperCase(), tab = Math.max(78, Math.round(slot.length * 5.8 + 18)), from = tab + 8, avail = 632 - from;
+  const items = scene.ticker?.length ? scene.ticker : [`Tema: ${scene.topic.label}`];
+  const index = Math.max(0, ['invito', 'preparazione', 'ingresso', 'q1', 'r1', 'domanda', 'risposta-rivale', 'q2', 'r2', 'attacco', 'r3', 'chiusura', 'esito'].indexOf(scene.nodeId));
+  const text = items[index % items.length], natural = text.length * 5.7;
+  return `<g class="st-ticker" aria-hidden="true"><defs><clipPath id="${uid}-tk"><rect x="${from}" y="338" width="${avail}" height="20"/></clipPath></defs><rect x="0" y="338" width="640" height="22" fill="#08121b"/><rect x="0" y="338" width="${tab}" height="22" fill="#b8353d"/><text x="${tab / 2}" y="352" text-anchor="middle" font-size="8.6" font-weight="900" letter-spacing=".5" fill="#fff">${esc(slot)}</text><g clip-path="url(#${uid}-tk)"><text x="${from}" y="352" font-size="9.6" font-weight="700" fill="#f4efe0"${natural > avail ? ` textLength="${avail}" lengthAdjust="spacingAndGlyphs"` : ''}>${esc(text)}</text></g></g><g class="st-straps">${straps}</g>`;
+}
 
 export function studioSvg(scene, stage, node, uid) {
-  const members = ['giocatore', 'rivale', 'conduttore'].map(role => scene.cast.find(item => item.role === role));
+  const format = formatKey(scene);
+  const art = format === 'talk' ? studioTalk(scene, uid, stage.crowd) : format === 'intervista' ? studioIntervista(scene, uid) : studioFaccia(scene, uid, stage.crowd);
   const actors = [...scene.cast].sort((a, b) => (stage.poses[a.id]?.y ?? 0) - (stage.poses[b.id]?.y ?? 0)).map((member, index) => actorSvg(member, stage.poses[member.id], `${uid}a${index}`, { speaking: node.speaker === member.id, expression: node.speaker === member.id ? node.expression : null })).join('');
-  const kind = scene.kind === 'talkshow' ? 'IN STUDIO' : 'FACCIA A FACCIA';
-  return { defs: '', body: `${studioBack(scene, uid, kind, scene.kind === 'talkshow' ? 'L’ospite della serata' : scene.topic.label)}<g class="st-hostdesk-bg"></g>${audienceSides(scene.seed, stage.crowd)}<g class="st-actors">${actors}</g>${studioFront(scene, members)}` };
+  return { body: `${art.back}${art.audience}<g class="st-actors">${actors}</g>${art.front}`, overlay: studioOverlay(scene, node, uid) };
 }
 
 export function squareSvg(scene, stage, node, uid, identity) {
@@ -174,7 +228,7 @@ export function stationSvg(scene, stage, node, uid) {
 // ---------- the cameras ----------
 export const CAMERAS = Object.freeze({
   wide: { x: 320, y: 180, s: 1 }, panorama: { x: 320, y: 186, s: 1 }, host: { x: 320, y: 232, s: 1.3 }, left: { x: 150, y: 235, s: 1.7 }, right: { x: 490, y: 235, s: 1.7 }, crowd: { x: 320, y: 290, s: 1.5 },
-  follow: { x: 260, y: 270, s: 1.3 }, stage: { x: 330, y: 190, s: 1.45 }, protest: { x: 420, y: 205, s: 1.15 }, player: { x: 330, y: 182, s: 1.8 }, booth: { x: 440, y: 222, s: 1.4 }, urn: { x: 220, y: 235, s: 1.35 }
+  follow: { x: 260, y: 270, s: 1.3 }, stage: { x: 330, y: 190, s: 1.45 }, protest: { x: 420, y: 205, s: 1.15 }, player: { x: 330, y: 182, s: 1.8 }, 'talk-host': { x: 190, y: 242, s: 1.6 }, 'talk-left': { x: 450, y: 252, s: 1.8 }, 'talk-right': { x: 560, y: 252, s: 1.8 }, 'intervista-host': { x: 215, y: 246, s: 1.6 }, 'intervista-left': { x: 442, y: 252, s: 1.8 }, 'intervista-right': { x: 558, y: 252, s: 1.8 }, booth: { x: 440, y: 222, s: 1.4 }, urn: { x: 220, y: 235, s: 1.35 }
 });
 export const cameraTransform = name => { const c = CAMERAS[name] ?? CAMERAS.wide; return `translate(${(STAGE_W / 2 - c.s * c.x).toFixed(1)}px,${(STAGE_H / 2 - c.s * c.y).toFixed(1)}px) scale(${c.s})`; };
 export { depthScale, STAGE_W, STAGE_H, defsOf };
@@ -184,5 +238,5 @@ export function renderStageSvg(scene, stage, node, { identity = null, before = n
   const uid = `st${hash(scene.id) % 9973}`;
   const art = scene.setting === 'piazza' ? squareSvg(scene, stage, node, uid, identity) : scene.setting === 'seggio' ? stationSvg(scene, stage, node, uid) : studioSvg(scene, stage, node, uid);
   const data = esc(JSON.stringify({ node: scene.nodeId, camera: stage.camera, crowd: stage.crowd, before }));
-  return `<svg class="st-svg" viewBox="0 0 ${STAGE_W} ${STAGE_H}" role="img" aria-label="${esc(label)}" data-stage="${data}" data-setting="${esc(scene.setting)}" preserveAspectRatio="xMidYMid slice"><g class="st-cam" data-camera="${esc(stage.camera)}" style="transform-origin:0 0;transform:${cameraTransform(stage.camera)}">${art.body}</g></svg>`;
+  return `<svg class="st-svg" viewBox="0 0 ${STAGE_W} ${STAGE_H}" role="img" aria-label="${esc(label)}" data-stage="${data}" data-setting="${esc(scene.setting)}"${scene.format ? ` data-format="${esc(scene.format)}"` : ''} preserveAspectRatio="xMidYMid slice"><g class="st-cam" data-camera="${esc(stage.camera)}" style="transform-origin:0 0;transform:${cameraTransform(stage.camera)}">${art.body}</g>${art.overlay ?? ''}</svg>`;
 }

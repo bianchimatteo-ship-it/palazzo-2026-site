@@ -2180,7 +2180,7 @@ function negotiateAllianceInPlace(campaign,targetId,costAlreadyPaid=false) {
   if(draw(campaign)*100<chance) return formPlayerAlliance(campaign,player,target,'Sostegno condiviso e lista comune nello scenario simulato.',12);
   campaign.candidateStats.reputation=round(clamp(campaign.candidateStats.reputation-.35));
   rivalMemory(campaign, target, 'rejection', player.id, { action:'accordo-rifiutato-dal-giocatore', relationDelta:-4, weight:.8 });
-  return `La trattativa con una candidatura simulata è fallita; il costo politico resta.`;
+  return `La trattativa con ${candidateLabel(target)} è fallita; il costo politico resta.`;
 }
 
 // The partner joins the coalition of the player: part of his voters follows the agreement, the machine grows a little, the party feels the price of sharing the list.
@@ -2193,7 +2193,7 @@ function formPlayerAlliance(campaign,player,target,terms,relationDelta,{ existin
   if (existing) return `Corri con ${candidateLabel(target)}: l’intesa tra i due partiti era già in vigore.`;
   player.resources.volunteers+=2; player.resources.organization+=1;
   if (campaign.nomination.status === 'pending') campaign.nomination.internalSupport = round(clamp(campaign.nomination.internalSupport - .5, 0, 10));
-  return `Accordo raggiunto con una candidatura simulata: il ${Math.round(transfer * 100)}% dei suoi elettori segue l’intesa, gli altri votano altrove.`;
+  return `Accordo raggiunto con ${candidateLabel(target)}: il ${Math.round(transfer * 100)}% dei suoi elettori segue l’intesa, gli altri votano altrove.`;
 }
 export function negotiateCampaignAlliance(input,targetId=null) {
   const campaign=copy(input);

@@ -1,3 +1,4 @@
+import { invitedShows } from '../core/scene-engine.js?v=20261107-1';
 import { endedHeadline } from './hall-view.js?v=20261107-1';
 import { activityFor, activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261107-1';
 import { playerRoles } from '../core/roles.js?v=20261107-1';
@@ -308,6 +309,7 @@ function planner(state, gc, { openLimit = Infinity } = {}) {
     contact: (game.contacts ?? []).map(item => [item.person.id, `${item.person.fullName} · ${num(item.relation, 0)}`]),
     // A visit to a region that is not the player's: how much that region trusts the institutions now, so the visit goes where it is needed.
     'region-away': [...ITALIAN_REGIONS].filter(name => name !== game.place.region).map(name => [name, `${name} · fiducia ${num(state.society?.regions?.[name]?.trust ?? 50, 0)}`]),
+    show: invitedShows(`${state.career.id ?? ''}|${game.week?.index ?? 0}`, gc.stats.notoriety ?? 0).map(show => [show.id, `${show.name} · ${show.slot}`]),
     segment: SEGMENTS.map(segment => [segment.id, `${segment.label} · soddisfazione ${num(state.society?.segments.find(item => item.id === segment.id)?.satisfaction ?? 50, 0)}`])
   };
   let opened = 0;

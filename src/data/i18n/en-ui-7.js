@@ -31,7 +31,7 @@ export const PHRASES = [
   ["(2 capitale, un po’ di credibilità)", "(2 capital, a little credibility)"],
   [", in cambio di {}", ", in exchange for {1}"],
   ["Accetta il sostegno e assumi l’impegno", "Accept the support and take on the commitment"],
-  ["Accordo raggiunto con una candidatura simulata: il {}% dei suoi elettori segue l’intesa, gli altri votano altrove.", "Agreement reached with a simulated candidacy: {1}% of its voters follow the understanding, the others vote elsewhere."],
+  ["Accordo raggiunto con {}: il {}% dei suoi elettori segue l’intesa, gli altri votano altrove.", "Agreement reached with {1}: {2}% of its voters follow the understanding, the others vote elsewhere."],
   ["Accordo territoriale in {}: sostegno e volontari, in cambio di impegni per l’area.", "Territorial agreement in {1}: support and volunteers, in exchange for commitments for the area."],
   ["Alleanza proposta da chi ti conosce da altre campagne: sostegno e lista comuni.", "Alliance proposed by someone who knows you from other campaigns: joint support and list."],
   ["Cambio di strategia", "Change of strategy"],

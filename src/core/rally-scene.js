@@ -9,6 +9,7 @@
 //
 // VOTE ('voto'): the player votes in his polling station — entrance, desk, booth, ballot folded, urn, exit. It decides nothing: the result of the election is the one of election-engine.js.
 import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261107-1';
+import { RALLY_CROWD_EXTRA, RALLY_EXTRA } from '../data/studio-lines.js?v=20261107-1';
 
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 const round1 = value => Math.round(value * 10) / 10;
@@ -72,7 +73,7 @@ function protestReason(seed, ctx) {
   const broken = (ctx.promises ?? []).filter(item => item.status === 'non-mantenuta');
   if (broken[0]) reasons.push({ kind: 'promessa', area: broken[0].area ?? null, label: `la promessa tradita su ${areaLabel(broken[0].area) || broken[0].label.toLowerCase()}`, weight: 2 });
   const worst = (ctx.territory?.problems ?? [])[0];
-  if (worst) reasons.push({ kind: 'territorio', area: worst.area ?? null, label: `${worst.label.toLowerCase()} in ${ctx.territory?.name ?? 'città'}`, weight: 1.2 + (worst.severity ?? 0) / 50 });
+  if (worst) reasons.push({ kind: 'territorio', area: worst.area ?? null, label: `la situazione su ${worst.label.toLowerCase()} in ${ctx.territory?.name ?? 'città'}`, weight: 1.2 + (worst.severity ?? 0) / 50 });
   if ((ctx.memoryBad ?? 0) >= 1) reasons.push({ kind: 'memoria', area: null, label: 'le polemiche che ti hanno accompagnato', weight: 1.1 });
   if (ctx.governing && (ctx.government?.approval ?? 50) < 42) reasons.push({ kind: 'governo', area: null, label: 'l’azione del Governo', weight: 1.6 });
   if ((ctx.economy?.inflation ?? 2) >= 4.5) reasons.push({ kind: 'economia', area: 'costo-vita', label: 'il caro vita', weight: 1.1 });
@@ -122,7 +123,7 @@ const LINES = {
 };
 function speechLine(scene, option, nodeId) {
   const ctx = scene.context;
-  const bank = LINES[option.kind] ?? LINES.attualita;
+  const bank = [...(LINES[option.kind] ?? LINES.attualita), ...(RALLY_EXTRA[option.kind] ?? RALLY_EXTRA.attualita).map(item => item[0])];
   const used = new Set((ctx.rallyMemory ?? []).flatMap(item => item.lines ?? []));
   const order = bank.map((text, index) => ({ text, index })).sort((a, b) => hashOf(`${scene.seed}|${nodeId}|${option.id}|${a.index}`) - hashOf(`${scene.seed}|${nodeId}|${option.id}|${b.index}`));
   const chosen = order.find(item => !used.has(hashOf(item.text) % 100003)) ?? order[0];
@@ -161,7 +162,7 @@ const CROWD_REACTION = {
   mixed: ['Applausi a metà: una parte della piazza annuisce, l’altra aspetta.', 'Qualche applauso, qualche mormorio: la piazza è divisa.', 'Il pubblico ascolta in silenzio, senza esporsi.'],
   bad: ['Fischi isolati e gente che guarda il telefono.', 'Un mormorio percorre la piazza: non li hai convinti.', 'Qualcuno se ne va, altri scuotono la testa.', 'Un coro ironico dal fondo, poi di nuovo silenzio.']
 };
-const reaction = (scene, score, nodeId) => { const set = score >= 62 ? CROWD_REACTION.good : score >= 46 ? CROWD_REACTION.mixed : CROWD_REACTION.bad; return pick(set, `${scene.seed}|${nodeId}|rx`); };
+const reaction = (scene, score, nodeId) => { const level = score >= 62 ? 'good' : score >= 46 ? 'mixed' : 'bad'; const set = [...CROWD_REACTION[level], ...RALLY_CROWD_EXTRA[level].map(item => item[0])]; return pick(set, `${scene.seed}|${nodeId}|rx`); };
 
 // ---------- the nodes of the rally ----------
 const last = scene => scene.history.at(-1) ?? null;
