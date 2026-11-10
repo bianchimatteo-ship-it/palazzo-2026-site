@@ -2,7 +2,7 @@
 // headquarters, the committee room, the newsroom and the room of the Council of Ministers. Each room is a back layer (walls, windows, furniture), the characters (the same ones the other stages use,
 // made from the avatars of the game), and a front layer (the table in front of whoever sits). Name straps with the full name and the role of everyone are drawn over the camera (never cut: the text is
 // wrapped). Loaded with the scene page; it registers its settings in stage-art.js. Nothing here decides anything: it draws the poses that core/activity-scenes.js gives.
-import { actorSvg, registerStageSetting, strap } from './stage-art.js?v=20261110-1';
+import { actorSvg, inkOn, registerStageSetting, strap } from './stage-art.js?v=20261110-16';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const R = (x, y, w, h, fill, extra = '') => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}"${extra ? ` ${extra}` : ''}/>`;
@@ -54,13 +54,43 @@ const FRONT = {
   consiglio: () => `<g><ellipse cx="320" cy="298" rx="290" ry="30" fill="#7a4a36"/><ellipse cx="320" cy="292" rx="290" ry="28" fill="#8f5b43"/>${[140, 240, 400, 500].map(x => R(x - 20, 284, 40, 14, '#f4efe0', 'stroke="#b39e62"')).join('')}</g>`
 };
 
-function roomSvg(scene, stage, node, uid) {
+// ---------- the party headquarters: the room of the party of the player ----------
+// The sign, the colours and the banner come from the identity of the party the career really holds (ui/party-identity.js: its official name, its logo when the database or the owner has one, its colour):
+// no symbol is ever invented — a party without a logo gets its initials in its colour, an independent gets a plain sign. Drawn at render time from the identity, so careers saved before and parties
+// founded in the game get it too.
+const darken = (hex, amount) => /^#[\da-f]{6}$/i.test(hex ?? '') ? `#${[1, 3, 5].map(i => Math.round(parseInt(hex.slice(i, i + 2), 16) * (1 - amount)).toString(16).padStart(2, '0')).join('')}` : '#2d4a4f';
+const wrapName = (text, chars) => { const lines = []; let current = ''; for (const word of String(text ?? '').split(/\s+/).filter(Boolean)) { if (current && `${current} ${word}`.length > chars) { lines.push(current); current = word; } else current = current ? `${current} ${word}` : word; } if (current) lines.push(current); return lines; };
+export function partyHeadquarters(identity, { uid = 'sede' } = {}) {
+  const named = identity && identity.kind === 'partito';
+  const primary = named && /^#[\da-f]{6}$/i.test(identity.colors?.primary ?? identity.accent ?? '') ? (identity.colors?.primary ?? identity.accent) : null;
+  const wall = primary ? darken(primary, .62) : '#2d4a4f', ink = primary ? inkOn(primary) : '#f4efe0';
+  const name = named ? String(identity.name ?? '').toUpperCase() : 'SEDE DEL PARTITO';
+  const mark = named ? String(identity.mark ?? identity.abbreviation ?? '').slice(0, 4).toUpperCase() : '';
+  const lines = wrapName(name, 22).slice(0, 3);
+  const size = lines.length > 2 ? 9.5 : lines.length > 1 ? 11 : 13;
+  const logo = named && identity.logo ? `<clipPath id="${uid}-lg"><circle cx="238" cy="62" r="25"/></clipPath><circle cx="238" cy="62" r="27" fill="#fff"/><image href="${esc(identity.logo)}" x="213" y="37" width="50" height="50" preserveAspectRatio="xMidYMid meet" clip-path="url(#${uid}-lg)"/>`
+    : named && mark ? `<circle cx="238" cy="62" r="27" fill="#fff"/><circle cx="238" cy="62" r="23" fill="${primary ?? '#264d82'}"/><text x="238" y="${mark.length > 2 ? 66 : 68}" text-anchor="middle" font-size="${mark.length > 2 ? 13 : 17}" font-weight="900" fill="${ink}">${esc(mark)}</text>` : '';
+  const textX = logo ? 284 : 320, anchor = logo ? 'start' : 'middle';
+  const sign = `<g class="rm-party-sign" data-party-sign>${R(190, 26, 260, 72, primary ?? '#3d5f66', 'rx="6"')}${R(190, 92, 260, 6, 'rgba(0,0,0,.28)', 'rx="2"')}${logo}`
+    + lines.map((line, i) => `<text class="rm-party-name" x="${textX}" y="${(logo ? 62 : 62) - (lines.length - 1) * (size + 2) / 2 + i * (size + 2) + size / 3}" text-anchor="${anchor}" font-size="${size}" font-weight="900" fill="${ink}" letter-spacing=".6">${esc(line)}</text>`).join('')
+    + `${named ? '' : ''}</g>`;
+  const flag = x => primary ? `<g class="rm-party-flag" transform="translate(${x},92)"><rect x="-1.2" y="0" width="2.4" height="86" fill="#c8c0a8"/>${R(1, 2, 46, 30, primary)}<text x="24" y="22" text-anchor="middle" font-size="${mark.length > 2 ? 9 : 12}" font-weight="900" fill="${ink}">${esc(mark)}</text></g>` : tricolore(x, 92);
+  return `${R(-200, -100, 1040, 330, wall)}${R(-200, 214, 1040, 200, '#5a4a3a')}${R(-200, 205, 1040, 10, '#3e332a')}${primary ? R(-200, 196, 1040, 9, primary, 'opacity=".85"') : ''}`
+    + `${sign}<g>${R(214, 108, 212, 56, '#f2eee2', 'stroke="#c5bda8" stroke-width="3"')}${[0, 1, 2, 3, 4].map(i => R(232 + i * 38, 156 - [14, 30, 22, 38, 26][i], 24, [14, 30, 22, 38, 26][i], i % 2 ? (primary ?? '#4A9DB8') : '#c4a66a')).join('')}<path d="M226 158H420" stroke="#3a3a3a" stroke-width="2"/></g>`
+    + `${flag(90)}${tricolore(560, 92)}`
+    + `<g>${R(20, 70, 52, 70, '#f4efe0', 'stroke="#8f8573"')}<path d="M28 86H64M28 100H58M28 114H62" stroke="${wall}" stroke-width="3"/></g>${R(580, 74, 44, 56, '#e9e1cc', 'stroke="#8f8573"')}`
+    + `${Array.from({ length: 6 }, (_, i) => `<g transform="translate(${64 + i * 92},246)">${R(-18, 0, 36, 34, '#6f5a43')}${R(-18, -10, 36, 12, primary ? darken(primary, .25) : '#80684e')}</g>`).join('')}`;
+}
+
+function roomSvg(scene, stage, node, uid, identity = null) {
   const setting = scene.setting;
   const actors = [...scene.cast].sort((a, b) => (stage.poses[a.id]?.y ?? 0) - (stage.poses[b.id]?.y ?? 0)).map((member, index) => actorSvg(member, stage.poses[member.id], `${uid}a${index}`, { speaking: node?.speaker === member.id, expression: node?.speaker === member.id ? node.expression : null })).join('');
   const speaking = id => node?.speaker === id;
   const [me, one, two] = [scene.cast.find(item => item.role === 'giocatore'), ...scene.cast.filter(item => item.role === 'ospite')];
-  const straps = `${strap(me, 8, 204, 334, speaking(me.id))}${strap(one, 218, 204, 334, speaking(one.id))}${strap(two, 428, 204, 334, speaking(two.id))}`;
-  return { body: `<g class="st-room" data-room="${esc(setting)}">${BACK[setting]()}</g><g class="st-actors">${actors}</g><g class="st-room-front">${FRONT[setting]()}</g>`, overlay: `<g class="st-straps">${straps}</g>` };
+  const body = scene.bodyLabel ?? '';
+  const straps = `${strap(me, 8, 204, 334, speaking(me.id), body)}${strap(one, 218, 204, 334, speaking(one.id), body)}${strap(two, 428, 204, 334, speaking(two.id), body)}`;
+  const back = setting === 'sede' ? partyHeadquarters(identity, { uid }) : BACK[setting]();
+  return { body: `<g class="st-room" data-room="${esc(setting)}">${back}</g><g class="st-actors">${actors}</g><g class="st-room-front">${FRONT[setting]()}</g>`, overlay: `<g class="st-straps">${straps}</g>` };
 }
 for (const setting of Object.keys(BACK)) registerStageSetting(setting, roomSvg);
 export const ROOMS = Object.freeze(Object.keys(BACK));

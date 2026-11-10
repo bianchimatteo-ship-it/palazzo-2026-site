@@ -1,16 +1,16 @@
 // The interactive hemicycle of the Parlamento section: Camera and Senato apart, one marker per seat (real
 // parliamentarians in office, the player's seat), colours by group or by party, filters by party, group and
 // committee, a card for every parliamentarian and, for a simulated vote, the vote of every seat.
-import { toneEdge } from '../data/party-brand.js?v=20261110-1';
-import { chamberRoster, committeesOf, forceColorResolver, partyColors, seatColor, UNKNOWN_COLOR } from '../core/hemicycle.js?v=20261110-1';
-import { individualVotes, VOTE_CHOICES, voteCatalog, voteSummary } from '../core/vote-engine.js?v=20261110-1';
-import { BASIS_LABELS, electionListOf, groupAffiliation, groupLabel, politicianAffiliation } from '../data/repositories/party-links.js?v=20261110-1';
-import { formatDate } from '../core/time.js?v=20261110-1';
-import { placeholderPerson } from '../core/seat-roster.js?v=20261110-1';
-import { glyph } from './visuals.js?v=20261110-1';
-import { badge, esc, num, table } from './sections-kit.js?v=20261110-1';
+import { toneEdge } from '../data/party-brand.js?v=20261110-16';
+import { chamberRoster, committeesOf, forceColorResolver, partyColors, seatColor, UNKNOWN_COLOR } from '../core/hemicycle.js?v=20261110-16';
+import { individualVotes, VOTE_CHOICES, voteCatalog, voteSummary } from '../core/vote-engine.js?v=20261110-16';
+import { BASIS_LABELS, electionListOf, groupAffiliation, groupLabel, politicianAffiliation } from '../data/repositories/party-links.js?v=20261110-16';
+import { formatDate } from '../core/time.js?v=20261110-16';
+import { placeholderPerson } from '../core/seat-roster.js?v=20261110-16';
+import { glyph } from './visuals.js?v=20261110-16';
+import { badge, esc, num, table } from './sections-kit.js?v=20261110-16';
 
-import { HEMICYCLE_DEFAULTS } from './hemicycle-defaults.js?v=20261110-1';
+import { HEMICYCLE_DEFAULTS } from './hemicycle-defaults.js?v=20261110-16';
 export { HEMICYCLE_DEFAULTS };
 export const ROSTER_PAGE = 40;
 const CHAMBER_LABELS = { camera: 'Camera dei deputati', senato: 'Senato della Repubblica' };
@@ -289,7 +289,7 @@ export function renderHemicycle(state, { politicians = [], db = {}, view = {}, l
     ? `Ogni punto è un seggio della ${esc(state.parliament.legislature?.label ?? 'legislatura simulata')} e ha la sua persona: i gruppi nati dal voto della partita, il tuo seggio, gli eletti già noti al gioco e persone della simulazione, ognuna con il colore della sua forza. Nessun parlamentare reale siede in queste Camere. La disposizione è grafica; i gruppi vanno da sinistra a destra secondo la collocazione dei partiti.`
     : 'Ogni punto è un seggio: parlamentari reali in carica (dati verificati) e il tuo seggio nella partita. La disposizione è grafica, non la posizione fisica in Aula; i gruppi vanno da sinistra a destra secondo la collocazione dei loro componenti.';
   return `<section class="hemicycle" id="hemicycle">
-    <header class="hemi-head"><div><span class="section-kicker">EMICICLO INTERATTIVO · RAPPRESENTAZIONE GRAFICA</span><h2>${esc(CHAMBER_LABELS[model.chamber])}</h2><p>${intro}</p></div>${model.votes.length ? `<button type="button" class="primary-button aula-enter" data-aula-open="${esc((model.vote ?? model.votes[0]).id)}" data-aula-chamber="${esc(model.chamber)}">ENTRA IN AULA</button>` : ''}<span class="hemi-count">${model.visible === model.roster.total ? `${num(model.roster.total, 0)} seggi` : `${num(model.visible, 0)} di ${num(model.roster.total, 0)}`}</span></header>
+    <header class="hemi-head"><div><span class="section-kicker">EMICICLO INTERATTIVO · RAPPRESENTAZIONE GRAFICA</span><h2>${esc(CHAMBER_LABELS[model.chamber])}</h2><p>${intro}</p></div>${model.votes.length ? `<button type="button" class="primary-button aula-enter" data-aula-open="${esc((model.vote ?? model.votes[0]).id)}" data-aula-chamber="${esc(model.chamber)}">RIVEDI L’ESITO IN AULA</button>` : ''}<span class="hemi-count">${model.visible === model.roster.total ? `${num(model.roster.total, 0)} seggi` : `${num(model.visible, 0)} di ${num(model.roster.total, 0)}`}</span></header>
     ${controls(model, settings, counts)}
     <div class="hemi-layout">
       <div class="hemi-stage">${svg(model, settings)}<details class="hemi-legend-fold" data-remember="hemi-legend" open><summary>${model.simulated ? 'Gruppi e forze' : settings.colorBy === 'partito' ? 'Partiti' : 'Gruppi parlamentari'}</summary>${legend(model, settings)}</details>${placeholders ? `<p class="sx-note">${placeholders} ${placeholders === 1 ? 'seggio' : 'seggi'} dello scenario senza un componente nell’archivio verificato: sono in grigio e non sono attribuiti a nessuno.</p>` : ''}</div>

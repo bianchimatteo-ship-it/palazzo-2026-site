@@ -4,7 +4,7 @@
 //   2. the machine: deterministic by seed, the six beats, a memory of the last families (not drawn again in a row), variety across seeds, a scene saved as JSON and resumed is the same;
 //   3. «Partecipa» and «Simula» come from the same scene: the choices of the quick way, played by hand, give the same outcome; a better player does better; the verdict scales the plain activity;
 //   4. the store: opening a scene never starts by itself, never costs, never advances the week; one scene at a time; the cost of the activity is applied ONCE at the end (played, simulated or left halfway);
-//      «Non partecipare» is only an interface note: nothing in the state; the family is remembered.
+//      there is no third button: an activity not chosen is simply left alone; the family is remembered.
 import assert from 'node:assert/strict';
 import { startCareer } from './lib/long-run.mjs';
 import { readFile } from 'node:fs/promises';
@@ -116,4 +116,4 @@ assert.notEqual(sceneNode(sopralluogo).text, sceneNode(ispezione).text, 'Il sopr
   await assert.rejects(() => store.startActivityScene('consiglio-ministri'), /governo|Presidente del Consiglio/i, 'Il Consiglio dei ministri è solo per chi guida un governo.');
   assert.ok(typeof one === 'string');
 }
-console.log('Le sei scene facoltative sono verificate: dati reali e bilingui, sei momenti, semi e memoria, «Partecipa» = «Simula» con le stesse scelte, costo applicato una sola volta, nessuna settimana avanzata, «Non partecipare» senza effetti.');
+console.log('Le sei scene facoltative sono verificate: dati reali e bilingui, sei momenti, semi e memoria, «Partecipa» = «Simula» con le stesse scelte, costo applicato una sola volta, nessuna settimana avanzata, senza un terzo pulsante.');

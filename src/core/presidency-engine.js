@@ -4,14 +4,14 @@
 // Pure functions on a plain state (`state.presidency`): nothing here touches the store, the parliament or the world;
 // the store applies the consequences. Every draw comes from a seeded sequence: the same state gives the same vote.
 // Everything is simulation: the candidates are figures of the game and the incumbent is never named.
-import { uniqueId } from './ids.js?v=20261110-1';
-import { advanceDays, formatDate } from './time.js?v=20261110-1';
-import { seededRandom } from './vote-engine.js?v=20261110-1';
-import { campOfAxis } from './parliament-engine.js?v=20261110-1';
-import { linkGroupsToParties } from './lawmaking-engine.js?v=20261110-1';
-import { regionalShares } from './world-engine.js?v=20261110-1';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261110-1';
-import { AFFINITY, CAMP_LABELS, CANDIDATE_TYPES, LEDGER_KEEP, LEDGER_RULES, PRESIDENCY_RULES, PRESIDENT_ACTIVITIES, PRESIDENT_ACTS } from '../data/simulation/presidency-rules.js?v=20261110-1';
+import { uniqueId } from './ids.js?v=20261110-16';
+import { advanceDays, formatDate } from './time.js?v=20261110-16';
+import { seededRandom } from './vote-engine.js?v=20261110-16';
+import { campOfAxis } from './parliament-engine.js?v=20261110-16';
+import { linkGroupsToParties } from './lawmaking-engine.js?v=20261110-16';
+import { regionalShares } from './world-engine.js?v=20261110-16';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261110-16';
+import { AFFINITY, CAMP_LABELS, CANDIDATE_TYPES, LEDGER_KEEP, LEDGER_RULES, PRESIDENCY_RULES, PRESIDENT_ACTIVITIES, PRESIDENT_ACTS } from '../data/simulation/presidency-rules.js?v=20261110-16';
 
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -715,8 +715,9 @@ export function resignPresidency(presidency, { date }) {
 // ---------- the term of the player-President ----------
 const weeksSince = (from, to) => from ? Math.floor((Date.parse(`${to}T12:00:00`) - Date.parse(`${from}T12:00:00`)) / 604800000) : 999;
 // The activities of the President (a fixed list: days of work, credit, stability, mood). Cooldowns by week.
-export function presidentActivityProblem(incumbent, activity, { week, ap }) {
+export function presidentActivityProblem(incumbent, activity, { week, ap, crisis = false }) {
   if (ap < (activity.cost.ap ?? 0)) return `Servono ${activity.cost.ap} giorni.`;
+  if (activity.requires === 'crisis' && !crisis) return 'Serve una crisi politica aperta o un governo in difficoltà: ora non c’è nulla da mediare.';
   const last = incumbent.actions?.[activity.id];
   if (last !== undefined && week - last < (activity.cooldownWeeks ?? 0)) return `Si può ripetere dalla settimana ${last + activity.cooldownWeeks}.`;
   return null;
@@ -805,4 +806,6 @@ export function settleLedger(presidency, { week, date, parliament, society }) {
   return { presidency: { ...presidency, incumbent: { ...incumbent, ledger: (incumbent.ledger ?? []).filter(entry => !doneIds.has(entry.id)), verified } }, results };
 }
 export const ACTS = PRESIDENT_ACTS;
+// A political crisis the President can mediate: no government in office, a government in crisis or one that is losing the Chambers.
+export const politicalCrisis = parliament => { const government = parliament?.government; return !government || government.status === 'crisis' || (government.status === 'active' && (government.stability ?? 60) < 45); };
 export const ACTIVITIES = PRESIDENT_ACTIVITIES;

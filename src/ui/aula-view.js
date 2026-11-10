@@ -2,11 +2,11 @@
 // hemicycle model, a city council / a regional council / the European Parliament via the totals of each group) and lights the seats one after the other in the order the script gives, with the counters
 // as the sums of the seats shown and the President's announcements. With the motion off or reduced (or prefers-reduced-motion) the window opens on the final picture; «Vai all’esito» does the same
 // at any moment; the vote can be left at any moment (Esc or «Chiudi»). It is loaded only when someone enters the Aula.
-import { aulaFromParliamentVote, aulaFromTallies, boardAt, saidAt } from '../core/aula-script.js?v=20261110-1';
-import { hemicycleModel } from './hemicycle-view.js?v=20261110-1';
-import { hemicycleLayout } from '../core/hemicycle.js?v=20261110-1';
-import { VOTE_CHOICES } from '../core/vote-engine.js?v=20261110-1';
-import { motionAllows } from './stage-player.js?v=20261110-1';
+import { aulaFromParliamentVote, aulaFromTallies, boardAt, saidAt } from '../core/aula-script.js?v=20261110-16';
+import { hemicycleModel } from './hemicycle-view.js?v=20261110-16';
+import { hemicycleLayout } from '../core/hemicycle.js?v=20261110-16';
+import { VOTE_CHOICES } from '../core/vote-engine.js?v=20261110-16';
+import { motionAllows } from './stage-player.js?v=20261110-16';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const COLORS = { ...Object.fromEntries(Object.entries(VOTE_CHOICES).map(([id, spec]) => [id, spec.color])), waiting: '#3a4540' };
@@ -26,7 +26,7 @@ export function localAula(inst, act, { colorOf = () => '#7d8b84' } = {}) {
   const vote = (act.votes ?? []).at(-1);
   if (!vote?.byGroup?.length || vote.organ === 'giunta') return null;
   const groups = inst.groups.map(group => { const row = vote.byGroup.find(item => item.groupId === group.id) ?? {}; return { id: group.id, label: group.label, color: colorOf(group), seats: group.seats, yes: row.yesVotes ?? 0, against: row.noVotes ?? 0, abstain: row.abstainVotes ?? 0, absent: row.absent ?? 0 }; });
-  const assembly = inst.kind === 'regione' ? 'regione' : inst.kind === 'europa' ? 'europeo' : 'comune';
+  const assembly = inst.kind === 'regione' ? 'regione' : inst.kind === 'europa' ? 'europeo' : inst.kind === 'provincia' ? 'provincia' : 'comune';
   const built = aulaFromTallies({ assembly, id: act.id, label: act.title, secret: false, passed: Boolean(vote.passed), groups, playerGroupId: inst.playerGroupId ?? null, playerChoice: vote.playerChoice ?? null });
   const layout = hemicycleLayout(built.seats.length, { width: 1000 });
   const colors = new Map(groups.map(group => [group.id, group.color]));
@@ -78,7 +78,7 @@ export function closeAula() {
 function onKey(event) { if (event.key === 'Escape' && current) { event.stopPropagation(); closeAula(); } }
 
 // Opens the window. `motion`: 'full' plays seat by seat (about six seconds); 'reduced' or 'off', or the system preference, show the final picture at once.
-export function openAula(aula, { motion = 'off', onClose = null, start = 0, onProgress = null } = {}) {
+export function openAula(aula, { motion = 'off', onClose = null, start = 0, onProgress = null, review = false } = {}) {
   if (!aula) return false;
   closeAula();
   previousFocus = document.activeElement;
@@ -88,8 +88,9 @@ export function openAula(aula, { motion = 'off', onClose = null, start = 0, onPr
   root.className = 'aula-overlay';
   root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-labelledby', 'aula-title');
   root.dataset.aulaChamber = script.assembly;
+  root.dataset.aulaMode = review ? 'storico' : 'diretta';
   const legend = aula.groups.map(group => `<li><i style="background:${esc(group.color)}"></i><span>${esc(group.label)}</span></li>`).join('');
-  root.innerHTML = `<div class="aula-window"><header><div><span class="section-kicker">AULA · ${esc(script.kindLabel.toUpperCase())}</span><h2 id="aula-title">${esc(aula.title)}</h2>${aula.subtitle ? `<small>${esc(aula.subtitle)}</small>` : ''}</div><button type="button" class="ghost-button" data-aula-close>Chiudi</button></header>
+  root.innerHTML = `<div class="aula-window"><header><div><span class="section-kicker">${review ? 'STORICO · VOTAZIONE CONCLUSA · ' : 'IN DIRETTA · '}${esc(script.kindLabel.toUpperCase())}</span><h2 id="aula-title">${esc(aula.title)}</h2>${aula.subtitle ? `<small>${esc(aula.subtitle)}</small>` : ''}</div><button type="button" class="ghost-button" data-aula-close>Chiudi</button></header>
     <div class="aula-controls" role="group" aria-label="Controlli della votazione">${play ? '<button type="button" class="ghost-button" data-aula-pause aria-pressed="false">Pausa</button>' : ''}<button type="button" class="ghost-button" data-aula-skip>Vai all’esito</button></div>
     ${seatsSvg(aula)}
     <div class="aula-board" role="status"></div>

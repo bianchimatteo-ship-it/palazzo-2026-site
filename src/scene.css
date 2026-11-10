@@ -124,8 +124,7 @@ html[data-scene-motion="full"] .cm-protest .cm-arm { animation: st-arms .45s eas
 /* The three buttons of the optional scenes of the weekly activities: «Partecipa» (gold, the animated scene), «Simula» and «Non partecipare». */
 .hq-activity-action .scene-take { background: linear-gradient(180deg, #e3c777, #c4a45a); border-color: #e3c777; color: #1b1608; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
 .hq-activity-action .scene-take:hover:not(:disabled) { background: linear-gradient(180deg, #edd68b, #d2b268); }
-.hq-activity-action [data-quick-scene], .hq-activity-action .scene-skip { letter-spacing: .05em; text-transform: uppercase; font-weight: 700; }
-.hq-activity-action .scene-skip { color: var(--muted); }
+.hq-activity-action [data-quick-scene] { letter-spacing: .05em; text-transform: uppercase; font-weight: 700; }
 .scene[data-scene-kind="attivita"] .scene-title { text-transform: none; }
 /* Targets that are touched: the controls under and over the stage are at least 44 px high on a phone or a tablet, 36 on a computer. */
 .scene-foot .ghost-button { min-height: 36px; }

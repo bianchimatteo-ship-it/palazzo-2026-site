@@ -13,7 +13,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   await openCareer({ evaluate, goto, waitFor: wait });
   const S = body => evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); ${body} })()`);
   const click = async selector => { await evaluate(`document.querySelector(${JSON.stringify(selector)})?.click(), true`); await pause(350); };
-  const openTab = async () => { await evaluate(`location.hash = '#elezioni'; true`); await pause(700); await click('[data-section-tab="elezioni"][data-section-tab-value="programma"]'); await wait(() => evaluate('Boolean(document.querySelector(".program-page"))'), 15000); };
+  const openTab = async () => { await evaluate(`location.hash = '#elezioni'; true`); const tab = '[data-section-tab="elezioni"][data-section-tab-value="programma"]'; await wait(() => evaluate(`Boolean(document.querySelector(${JSON.stringify(tab)}))`), 20000); await wait(async () => { await click(tab); return evaluate('Boolean(document.querySelector(".program-page"))'); }, 20000); };
   const setSelect = (selector, value) => evaluate(`(() => { const el = document.querySelector(${JSON.stringify(selector)}); el.value = ${JSON.stringify(value)}; el.dispatchEvent(new Event('change', { bubbles: true })); return true; })()`);
   await openTab();
   let t = await evaluate('document.querySelector(".program-page").innerText');

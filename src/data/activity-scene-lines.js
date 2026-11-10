@@ -172,7 +172,7 @@ export const ACTIVITY_SCENES = Object.freeze({
 
 // What the interface says around the scenes (the three buttons, the notes), as pairs too.
 export const ACTIVITY_SCENE_UI = Object.freeze({
-  take: P('Partecipa', 'Take part'), simulate: P('Simula', 'Simulate'), skip: P('Non partecipare', 'Do not attend'),
+  take: P('Partecipa', 'Take part'), simulate: P('Simula', 'Simulate'),
   skipped: P('Non partecipi: nessun costo e nessun effetto.', 'You do not take part: no cost and no effect.'),
   leaveNote: P('Se te ne vai a metà, la scena si chiude con quanto fatto finora e i costi dell’attività si applicano una sola volta.', 'If you leave halfway, the scene closes with what was done so far and the costs of the activity apply only once.'),
   result: P('Esito della scena', 'Outcome of the scene'),

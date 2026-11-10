@@ -1,5 +1,7 @@
 // The Italian that is allowed to stay in the English interface, each with the reason (nothing else is: check-i18n fails on any other Italian text of the English screens). A pattern is matched against the whole text.
 export const ALLOWED_ITALIAN = [
+  { pattern: /\bschool bus\b/i, reason: '«bus» è una parola inglese: il testo è già in inglese.' },
+  { pattern: /^Azione-Popolari europeisti$/, reason: 'Denominazione ufficiale di un gruppo parlamentare: dato reale, resta intera.' },
   { pattern: /^(in cooldown|In deficit)$/i, reason: 'Parole che in inglese si scrivono allo stesso modo.' },
   { pattern: /^(Il Meridiano|La Gazzetta del Territorio|La Politica [#\d]*|Radio La Politica [#\d]*|Vallée d’Aoste – Autonomie Progrès Fédéralisme)$/, reason: 'Nome proprio: testate inventate del gioco e lista della Valle d’Aosta come compare nei risultati.' },
   { pattern: /^(Conversione in legge|Ratifica ed esecuzione|Modifiche al|Disposizioni|Istituzione)\b/, reason: 'Titolo ufficiale di un atto del Parlamento: resta intero, come pubblicato.' },
@@ -18,4 +20,4 @@ export const ALLOWED_ITALIAN = [
   { pattern: /^(Popolare|Massimo)$/, reason: 'Frammento di una denominazione ufficiale (gruppo parlamentare) o nome di persona.' }
 ];
 // English words of Italian origin or spelling the phrase book never needs to translate (they are English too): not counted as untranslated Italian.
-export const ENGLISH_LOANWORDS = new Set(['dossier', 'welfare', 'budget', 'leader', 'leadership', 'governo', 'summit', 'premier']);
+export const ENGLISH_LOANWORDS = new Set(['bus', 'dossier', 'welfare', 'budget', 'leader', 'leadership', 'governo', 'summit', 'premier']);

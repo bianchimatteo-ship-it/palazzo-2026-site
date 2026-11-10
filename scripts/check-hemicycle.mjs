@@ -166,7 +166,7 @@ assert.ok(html.includes('V Commissione') && html.includes('hemi-members') && htm
   const aulaView = await import(`../src/ui/aula-view.js${v}`);
   const before = JSON.stringify(baseState.parliament);
   html = renderHemicycle(baseState, { politicians: db.politicians, db, view: {} });
-  assert.ok(html.includes('data-aula-open') && html.includes('ENTRA IN AULA') && html.includes('data-remember="hemi-roster"'), 'Il bottone ENTRA IN AULA c’è e l’elenco dei componenti è un blocco che si apre e si chiude.');
+  assert.ok(html.includes('data-aula-open') && html.includes('RIVEDI L’ESITO IN AULA') && html.includes('data-remember="hemi-roster"'), 'Il bottone RIVEDI L’ESITO IN AULA c’è e l’elenco dei componenti è un blocco che si apre e si chiude.');
   // an open vote (confidence): every present seat votes once, the board adds up to the totals of the engine
   const open = aulaView.parliamentAula(baseState, { voteId: confidenceVote.id, chamber: 'camera', politicians: db.politicians, db });
   assert.ok(open && open.script.assembly === 'camera' && open.seats.length === rosters.camera.total, 'La Camera in Aula ha i seggi della composizione reale.');

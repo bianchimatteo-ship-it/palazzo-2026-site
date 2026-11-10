@@ -1,11 +1,11 @@
 // The Quirinale in the electoral centre (tab "Quirinale"): the election of the President of the Republic (the assembly
 // of the grand electors, the field of candidates, the negotiations, the secret ballots and their quorum) and, when the
 // player is the President, the powers of the office. Everything is simulation: the candidates are figures of the game.
-import { formatDate } from '../core/time.js?v=20261110-1';
-import { CAMP_LABELS, CANDIDATE_TYPES, LEDGER_RULES, PRESIDENCY_RULES, PRESIDENT_ACTIVITIES } from '../data/simulation/presidency-rules.js?v=20261110-1';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261110-1';
-import { termEndOf, electionPhaseLabel, lineText } from '../core/presidency-engine.js?v=20261110-1';
-import { arrow, badge, bar, card, empty, esc, kpi, num, table } from './sections-kit.js?v=20261110-1';
+import { formatDate } from '../core/time.js?v=20261110-16';
+import { CAMP_LABELS, CANDIDATE_TYPES, LEDGER_RULES, PRESIDENCY_RULES, PRESIDENT_ACTIVITIES } from '../data/simulation/presidency-rules.js?v=20261110-16';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261110-16';
+import { termEndOf, electionPhaseLabel, lineText, politicalCrisis } from '../core/presidency-engine.js?v=20261110-16';
+import { arrow, badge, bar, card, empty, esc, kpi, num, table } from './sections-kit.js?v=20261110-16';
 
 const day = date => date ? formatDate(date) : '—';
 const shortName = label => String(label ?? '').replace(/\s*\(figura simulata\)$/, '');
@@ -131,9 +131,10 @@ function powersCard(state, view) {
   const activities = PRESIDENT_ACTIVITIES.map(activity => {
     const last = incumbent.actions?.[activity.id];
     const wait = last !== undefined && week - last < (activity.cooldownWeeks ?? 0) ? `dalla settimana ${last + activity.cooldownWeeks}` : null;
-    const blocked = wait || ap < (activity.cost.ap ?? 0) || (state.game.resources.politicalCapital ?? 0) < (activity.cost.capital ?? 0);
+    const noCrisis = activity.requires === 'crisis' && !politicalCrisis(state.parliament);
+    const blocked = wait || noCrisis || ap < (activity.cost.ap ?? 0) || (state.game.resources.politicalCapital ?? 0) < (activity.cost.capital ?? 0);
     const region = activity.target === 'region' ? `<select data-presidency-field="region" aria-label="Regione">${ITALIAN_REGIONS.map(item => option(item, item, item === state.game.place?.region)).join('')}</select>` : '';
-    return `<li><span><strong>${esc(activity.label)}</strong><small>${esc(activity.detail)} · ${activity.cost.ap ?? 0} giorno${activity.cost.capital ? ` · ${activity.cost.capital} capitale` : ''}${wait ? ` · ${esc(wait)}` : ''}</small></span><span class="qr-fields">${region}<button class="secondary-button" data-presidency-action="activity" data-activity="${esc(activity.id)}" ${blocked ? 'disabled' : ''}>Fai</button></span></li>`;
+    return `<li><span><strong>${esc(activity.label)}</strong><small>${esc(activity.detail)} · ${activity.cost.ap ?? 0} giorno${activity.cost.capital ? ` · ${activity.cost.capital} capitale` : ''}${wait ? ` · ${esc(wait)}` : ''}${noCrisis ? ' · serve una crisi politica aperta' : ''}</small></span><span class="qr-fields">${region}<button class="secondary-button" data-presidency-action="activity" data-activity="${esc(activity.id)}" ${blocked ? 'disabled' : ''}>Fai</button></span></li>`;
   }).join('');
   const laws = (state.parliament?.laws ?? []).filter(law => law.auto && law.stage === 'approved' && !law.returned && law.updatedAt && Math.round((Date.parse(`${state.clock.currentDate}T12:00:00`) - Date.parse(`${law.updatedAt}T12:00:00`)) / 86400000) <= PRESIDENCY_RULES.returnWindowDays);
   const lawRows = laws.map(law => `<li><span><strong>${esc(law.title)}</strong><small>approvata il ${esc(day(law.updatedAt))} · promulgazione entro ${PRESIDENCY_RULES.returnWindowDays} giorni</small></span><button class="secondary-button" data-presidency-action="return-law" data-law="${esc(law.id)}">Rinvia alle Camere</button></li>`).join('');

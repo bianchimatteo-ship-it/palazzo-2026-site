@@ -5,7 +5,7 @@
 //
 // Who can do what: the Prime Minister (the player when he leads the Government, otherwise the simulated one) negotiates, goes to the summits and answers the crises; the President of the Republic
 // receives, ratifies (or delays, or refuses) the treaties and holds state visits; anyone else follows. Everything here is pure: the store passes the state and gets it back with the effects.
-import { DATA_SOURCES } from '../data/schema.js?v=20261110-1';
+import { DATA_SOURCES } from '../data/schema.js?v=20261110-16';
 
 const SIM = DATA_SOURCES.SIMULATION;
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
@@ -55,7 +55,13 @@ export function createDiplomacy({ date, week = 0, seed = '' } = {}) {
   return { version: 1, source: SIM, createdAt: date, week, countries, eu: { standing: 55, conditionality: 0 }, treaties: [], negotiations: [], summits: [], crises: [], log: [] };
 }
 const normalize = diplomacy => diplomacy && diplomacy.version === 1 ? diplomacy : null;
-const note = (diplomacy, date, text, kind = 'diplomazia') => ({ ...diplomacy, log: [{ id: `dipl-${diplomacy.week}-${diplomacy.log.length}`, date, week: diplomacy.week, kind, text }, ...diplomacy.log].slice(0, 40) });
+// (the log keeps its last 40 lines: its length stops growing, so the id carries a counter that never repeats within the log)
+const note = (diplomacy, date, text, kind = 'diplomazia') => {
+  const used = new Set(diplomacy.log.map(item => item.id));
+  let n = diplomacy.log.length;
+  while (used.has(`dipl-${diplomacy.week}-${n}`)) n++;
+  return { ...diplomacy, log: [{ id: `dipl-${diplomacy.week}-${n}`, date, week: diplomacy.week, kind, text }, ...diplomacy.log].slice(0, 40) };
+};
 const touch = (diplomacy, countryId, patch, text, date) => {
   const country = diplomacy.countries[countryId];
   if (!country) return diplomacy;

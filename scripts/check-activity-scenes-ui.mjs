@@ -1,4 +1,4 @@
-// The six optional scenes in the browser (Chrome): in Home → the weekly activities the activities that have a scene show three buttons — «Partecipa» (gold, the animated scene), «Simula» and «Non partecipare»;
+// The six optional scenes in the browser (Chrome): in Home → the weekly activities the activities that have a scene show two buttons — «Partecipa» (gold, the animated scene), «Simula» and «Non partecipare»;
 // «Non partecipare» changes nothing; «Partecipa» opens the scene (the career frozen, nothing paid, the week not advanced), the scene survives a reload in the middle, ends and the plain activity is
 // applied ONCE; «Simula» applies it with no scene; each room is drawn with three people with a full name and role; at 390 and 1440 px the stage is whole and nothing scrolls sideways.
 import assert from 'node:assert/strict';
@@ -14,17 +14,14 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   await evaluate(`location.hash = '#panoramica'; true`); await pause(1200);
   await wait(() => evaluate('Boolean(document.querySelector("[data-scene-activity]"))'), 20000);
 
-  // ---- the three buttons
-  const buttons = await evaluate(`(() => { const row = document.querySelector('[data-scene-activity="associazioni"]').closest('.hq-activity'); const take = row.querySelector('[data-scene-activity]'), sim = row.querySelector('[data-quick-scene]'), skip = row.querySelector('[data-skip-activity]'); const bg = getComputedStyle(take).backgroundImage + getComputedStyle(take).backgroundColor; return { take: take.textContent.trim(), sim: sim.textContent.trim(), skip: skip?.textContent.trim(), upper: getComputedStyle(take).textTransform, gold: /22[0-9]|227|196|e3c777|rgb\\(2[0-4]\\d, 1\\d\\d/.test(bg) || bg.includes('227, 199, 119') }; })()`);
-  assert.equal(buttons.take, 'Partecipa'); assert.equal(buttons.sim, 'Simula'); assert.equal(buttons.skip, 'Non partecipare');
+  // ---- the two buttons
+  const buttons = await evaluate(`(() => { const row = document.querySelector('[data-scene-activity="associazioni"]').closest('.hq-activity'); const take = row.querySelector('[data-scene-activity]'), sim = row.querySelector('[data-quick-scene]'); const bg = getComputedStyle(take).backgroundImage + getComputedStyle(take).backgroundColor; return { take: take.textContent.trim(), sim: sim.textContent.trim(), count: [...row.querySelectorAll('button')].filter(b => !b.matches('[data-plan-add]')).length, anySkip: Boolean(row.querySelector('[data-skip-activity]')) || /non partecipare/i.test(row.textContent), upper: getComputedStyle(take).textTransform, gold: /22[0-9]|227|196|e3c777|rgb\\(2[0-4]\\d, 1\\d\\d/.test(bg) || bg.includes('227, 199, 119') }; })()`);
+  assert.equal(buttons.take, 'Partecipa'); assert.equal(buttons.sim, 'Simula'); assert.equal(buttons.anySkip, false, 'Niente pulsante «Non partecipare»: basta non scegliere l’attività.'); assert.equal(buttons.count, 2, 'Solo due pulsanti: Partecipa e Simula.');
   assert.equal(buttons.upper, 'uppercase', 'I pulsanti si leggono in maiuscolo.'); assert.ok(buttons.gold, 'PARTECIPA è dorato.');
   const ids = await evaluate(`[...document.querySelectorAll('[data-scene-activity]')].map(b => b.dataset.sceneActivity)`);
   for (const id of ['associazioni', 'cittadini', 'riunione', 'audizione-commissione', 'intervista']) assert.ok(ids.includes(id), `${id}: ha il pulsante Partecipa.`);
 
-  // ---- «Non partecipare»: nothing changes
   const before = await snap();
-  await click('[data-skip-activity="associazioni"]');
-  assert.deepEqual(await snap(), before, 'Non partecipare non cambia nulla (né denaro, né capitale, né settimana, né scena).');
 
   // ---- «Partecipa»: the scene, nothing paid, a reload in the middle
   await click('[data-scene-activity="associazioni"]');

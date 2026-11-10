@@ -2,7 +2,7 @@
 // the rows of the ranking glide to their new place (a overtake is highlighted), the squares of the counted units pop one after the other, the new news slides in. It is done with the Web
 // Animations API after each draw, from what the previous draw left in memory, so the page itself stays a plain, complete picture: with the motion off or reduced (or the system preference) the
 // numbers and bars are simply the new ones. Nothing here computes anything: the values are the ones the night engine gave.
-import { motionAllows } from './stage-player.js?v=20261110-1';
+import { motionAllows } from './stage-player.js?v=20261110-16';
 
 const memory = { key: null, rows: new Map(), order: [], units: 0, feed: new Set(), counts: new Map(), bars: new Map() };
 const locale = () => (document.documentElement.lang === 'en' ? 'en-GB' : 'it-IT');

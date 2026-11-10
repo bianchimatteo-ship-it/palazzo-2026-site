@@ -1,10 +1,10 @@
 // The team of the Government (cabinet-life-engine.js): each minister with the grade of the last evaluation, competence, loyalty, bond with the Prime Minister, ambition and pressure; what waits for the
 // Prime Minister (requests, conflicts, the cabinet meeting) with its buttons; the latest decisions. Read only for whoever is not the Prime Minister: the page then tells what is going on.
-import { GRADE_LABELS, cabinetView } from '../core/cabinet-life-engine.js?v=20261110-1';
-import { esc } from './charts.js?v=20261110-1';
-import { glyph } from './visuals.js?v=20261110-1';
-import { avatarSvg } from './avatar-svg.js?v=20261110-1';
-import { defaultAvatarFor } from '../core/avatar.js?v=20261110-1';
+import { GRADE_LABELS, cabinetView } from '../core/cabinet-life-engine.js?v=20261110-16';
+import { esc } from './charts.js?v=20261110-16';
+import { glyph } from './visuals.js?v=20261110-16';
+import { avatarSvg } from './avatar-svg.js?v=20261110-16';
+import { defaultAvatarFor } from '../core/avatar.js?v=20261110-16';
 
 const meter = (value, tone = '') => `<b class="cl-meter ${tone}" role="img" aria-label="${esc(String(Math.round(value ?? 0)))}"><i style="width:${Math.max(0, Math.min(100, Number(value) || 0))}%"></i></b>`;
 const gradeChip = grade => grade ? `<span class="cl-grade grade-${esc(grade)}">${esc(GRADE_LABELS[grade])}</span>` : '<span class="cl-grade grade-none">Non ancora valutato</span>';
@@ -45,7 +45,7 @@ export function renderCabinetLife(state) {
     ${premier ? `<span class="cl-actions">${button('meeting', view.meeting.id, 'approvare', 'Approva', 'primary-button')}${button('meeting', view.meeting.id, 'rinviare', 'Rinvia')}${button('meeting', view.meeting.id, 'respingere', 'Respingi')}</span>${explain([['Approva', 'la proposta passa, se il governo è unito.'], ['Rinvia', 'se ne riparla più avanti, senza costi di reputazione.'], ['Respingi', 'il ministro proponente perde lealtà.']])}` : '<small>Decide il Presidente del Consiglio.</small>'}</li>` : '';
   const waiting = requests + conflicts + meeting;
   const recent = view.recent.map(item => `<li>${esc(item.topic)}: ${item.choice === 'approvare' ? 'approvato' : item.choice === 'rinviare' ? 'rinviato' : 'respinto'}</li>`).join('');
-  return `<details class="pm-block pm-fold cabinet-life" data-remember="gov-team" open><summary><span class="pm-fold-title">${glyph('users', 16)} <strong>La squadra di governo</strong></span><small>${view.ministers.length} ministri${view.requests.length + view.conflicts.length + (view.meeting ? 1 : 0) ? ` · ${view.requests.length + view.conflicts.length + (view.meeting ? 1 : 0)} da seguire` : ''}</small></summary>
+  return `<details class="pm-block pm-fold cabinet-life" data-remember="gov-team"${view.requests.length + view.conflicts.length + (view.meeting ? 1 : 0) ? ' open' : ''}><summary><span class="pm-fold-title">${glyph('users', 16)} <strong>La squadra di governo</strong></span><small>${view.ministers.length} ministri${view.requests.length + view.conflicts.length + (view.meeting ? 1 : 0) ? ` · ${view.requests.length + view.conflicts.length + (view.meeting ? 1 : 0)} da seguire` : ''}</small></summary>
     <div class="cl-body">
       ${waiting ? `<ul class="cl-waiting">${waiting}</ul>` : '<p class="parliament-note">Nessuna richiesta, scontro o Consiglio in sospeso.</p>'}
       ${recent ? `<details class="cl-recent"><summary>Ultime decisioni del Consiglio</summary><ul>${recent}</ul></details>` : ''}

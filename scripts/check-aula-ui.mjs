@@ -1,4 +1,4 @@
-// The Aula in the browser: ENTRA IN AULA opens a window over the Parliament page with the seats of the Chamber; with the motion on the seats light up one after the other (the board adds up the seats
+// The Aula in the browser: the history of the votes opens (concluded) a window over the Parliament page with the seats of the Chamber; with the motion on the seats light up one after the other (the board adds up the seats
 // shown), with it off the final picture is there at once; «Vai all’esito» and Esc work; the vote is the one the engine decided (the board ends exactly on its totals) and nothing in the game changes;
 // the window fits 320, 390, 768, 1024 and 1440 px with no horizontal scroll; in English no Italian is left; no JavaScript error. Skipped without Chrome.
 import assert from 'node:assert/strict';
@@ -38,10 +38,30 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   await evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })), true`); await pause(200);
   assert.equal(await evaluate(`Boolean(document.querySelector('.aula-overlay'))`), false, 'Esc chiude l’Aula.');
 
-  // motion full: the seats light up one after the other, the board adds up, skip goes to the end
+  // the history of the votes (the Parliament page): even with the motion full it opens on the official result, marked as concluded: no animation, no pause, nothing saved
   await open('full');
   await click('[data-aula-open]');
   await wait(() => evaluate(`Boolean(document.querySelector('.aula-overlay'))`), 8000);
+  assert.equal(await evaluate(`document.querySelector('.aula-overlay').dataset.aulaMode`), 'storico', 'Dallo storico si rivede l’esito: è distinto dalla diretta.');
+  assert.equal(await evaluate(`document.querySelector('.aula-overlay').dataset.aulaFinal`), '1', 'Lo storico mostra già l’esito ufficiale.');
+  assert.ok(/STORICO · VOTAZIONE CONCLUSA/.test(await evaluate(`document.querySelector('.aula-overlay .section-kicker').textContent`)), 'Ed è dichiarato concluso.');
+  assert.equal(await evaluate(`Boolean(document.querySelector('[data-aula-pause]')) && !document.querySelector('[data-aula-pause]').hidden`), false, 'Nello storico non c’è nulla da mettere in pausa.');
+  await click('[data-aula-close]');
+  assert.equal(await evaluate(`Boolean(document.querySelector('.aula-overlay'))`), false);
+  assert.equal(await snapshot(), before, 'Entrare in Aula non cambia nulla nel gioco.');
+  await resetAula();
+  // ---- Home: the vote of the last days is offered to be followed live; no result is told there; followed once, it is not offered again
+  await viewport(1440, 900, false);
+  await evaluate(`location.hash = '#panoramica'; true`); await pause(1200);
+  await wait(() => evaluate(`Boolean(document.querySelector('[data-aula-live]'))`), 20000);
+  const offer = await evaluate(`(() => { const band = document.querySelector('[data-aula-live]'), button = band.querySelector('[data-aula-follow]'); return { text: band.textContent, button: button.textContent.trim(), upper: getComputedStyle(button).textTransform, hasSkip: Boolean(band.querySelector('[data-aula-dismiss]')) }; })()`);
+  assert.equal(offer.button, 'SEGUI LA VOTAZIONE IN AULA', 'Il pulsante dorato della Home.'); assert.ok(offer.hasSkip, 'Si può non seguirla.');
+  assert.ok(!/approva|respinge|fiducia accordata|favorevoli \d|\d+ (sì|no|contrari)/i.test(offer.text), 'La Home non anticipa l’esito del voto.');
+  await open('full'); await click('[data-aula-follow]');
+  await wait(() => evaluate(`Boolean(document.querySelector('.aula-overlay'))`), 8000);
+  assert.equal(await evaluate(`document.querySelector('.aula-overlay').dataset.aulaFinal`), '0', 'All’inizio l’Aula non mostra ancora l’esito.');
+  assert.ok(!/approva:|respinge:|accorda la fiducia|nega la fiducia/.test(await evaluate(`document.querySelector('.aula-said').textContent`)), 'Nessun esito nelle frasi del presidente prima della fine.');
+  // live: the seats light up one after the other, the board adds up, pause stops it, skip goes to the end
   const a = Number(await evaluate(`document.querySelector('.aula-overlay').dataset.aulaShown`));
   await pause(700);
   const b = Number(await evaluate(`document.querySelector('.aula-overlay').dataset.aulaShown`));
@@ -60,21 +80,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
     const fit = await evaluate(`(() => { const win = document.querySelector('.aula-window').getBoundingClientRect(); return { right: win.right, w: window.innerWidth, over: document.querySelector('.aula-overlay').scrollWidth - document.querySelector('.aula-overlay').clientWidth }; })()`);
     assert.ok(fit.right <= fit.w + 1 && fit.over <= 1, `${w}px: la finestra dell’Aula sta nello schermo (${JSON.stringify(fit)}).`);
   }
-  await click('[data-aula-close]');
-  assert.equal(await evaluate(`Boolean(document.querySelector('.aula-overlay'))`), false);
-  assert.equal(await snapshot(), before, 'Entrare in Aula non cambia nulla nel gioco.');
-  await resetAula();
-  // ---- Home: the vote of the last days is offered to be followed live; no result is told there; followed once, it is not offered again
-  await viewport(1440, 900, false);
-  await evaluate(`location.hash = '#panoramica'; true`); await pause(1200);
-  await wait(() => evaluate(`Boolean(document.querySelector('[data-aula-live]'))`), 20000);
-  const offer = await evaluate(`(() => { const band = document.querySelector('[data-aula-live]'), button = band.querySelector('[data-aula-follow]'); return { text: band.textContent, button: button.textContent.trim(), upper: getComputedStyle(button).textTransform, hasSkip: Boolean(band.querySelector('[data-aula-dismiss]')) }; })()`);
-  assert.equal(offer.button, 'SEGUI LA VOTAZIONE', 'Il pulsante dorato della Home.'); assert.ok(offer.hasSkip, 'Si può non seguirla.');
-  assert.ok(!/approva|respinge|fiducia accordata|favorevoli \d|\d+ (sì|no|contrari)/i.test(offer.text), 'La Home non anticipa l’esito del voto.');
-  await open('full'); await click('[data-aula-follow]');
-  await wait(() => evaluate(`Boolean(document.querySelector('.aula-overlay'))`), 8000);
-  assert.equal(await evaluate(`document.querySelector('.aula-overlay').dataset.aulaFinal`), '0', 'All’inizio l’Aula non mostra ancora l’esito.');
-  assert.ok(!/approva:|respinge:|accorda la fiducia|nega la fiducia/.test(await evaluate(`document.querySelector('.aula-said').textContent`)), 'Nessun esito nelle frasi del presidente prima della fine.');
+  assert.equal(await evaluate(`document.querySelector('.aula-overlay').dataset.aulaMode`), 'diretta', 'La diretta è marcata come tale.');
   await click('[data-aula-skip]');
   assert.equal(await evaluate(`document.querySelector('.aula-overlay').dataset.aulaFinal`), '1');
   assert.ok(/approva:|respinge:|accorda la fiducia|nega la fiducia/.test(await evaluate(`document.querySelector('.aula-said').textContent`)), 'Alla fine il presidente proclama l’esito.');

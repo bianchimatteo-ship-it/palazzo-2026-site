@@ -1,36 +1,38 @@
-import { invitedShows } from '../core/scene-engine.js?v=20261110-1';
-import { voteCatalog } from '../core/vote-engine.js?v=20261110-1';
-import { endedHeadline } from './hall-view.js?v=20261110-1';
-import { activityFor, activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261110-1';
-import { playerRoles } from '../core/roles.js?v=20261110-1';
-import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20261110-1';
-import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, currentObjectiveLabel, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261110-1';
-import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261110-1';
-import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20261110-1';
-import { careerLevelLabel } from '../data/regions.js?v=20261110-1';
-import { advanceDays, formatDate } from '../core/time.js?v=20261110-1';
-import { renderBarometerPanel } from './polls-mode.js?v=20261110-1';
-import { candidacyAccess } from './campaign-mode.js?v=20261110-1';
-import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20261110-1';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261110-1';
-import { societyMood } from '../core/society-engine.js?v=20261110-1';
-import { financeOutlook } from '../core/finance-engine.js?v=20261110-1';
-import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20261110-1';
-import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20261110-1';
-import { activeInstitutions, institutionLabel } from './local-mode.js?v=20261110-1';
-import { renderFinanceCard } from './finance-mode.js?v=20261110-1';
-import { renderStaffBand } from './staff-view.js?v=20261110-1';
-import { planAddButton } from './plan-view.js?v=20261110-1';
-import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20261110-1';
-import { stateBadge, statusChip } from './charts.js?v=20261110-1';
-import { articleHtml, newsMedia, renderNewsroomTabs } from './news-view.js?v=20261110-1';
-import { relevantArticles } from '../core/news-engine.js?v=20261110-1';
-import { identityMark, kindChip } from './party-identity.js?v=20261110-1';
-import { illustration } from './illustrations.js?v=20261110-1';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261110-1';
-import { avatarOf } from '../core/avatar.js?v=20261110-1';
-import { avatarSvg } from './avatar-svg.js?v=20261110-1';
-import { regionPriorities } from '../core/society-engine.js?v=20261110-1';
+import { invitedShows } from '../core/scene-engine.js?v=20261110-16';
+import { voteCatalog } from '../core/vote-engine.js?v=20261110-16';
+import { endedHeadline } from './hall-view.js?v=20261110-16';
+import { activityFor, activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261110-16';
+import { playerRoles } from '../core/roles.js?v=20261110-16';
+import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20261110-16';
+import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, currentObjectiveLabel, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261110-16';
+import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261110-16';
+import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20261110-16';
+import { careerLevelLabel } from '../data/regions.js?v=20261110-16';
+import { advanceDays, formatDate } from '../core/time.js?v=20261110-16';
+import { renderBarometerPanel } from './polls-mode.js?v=20261110-16';
+import { PRESIDENT_ACTIVITIES } from '../data/simulation/presidency-rules.js?v=20261110-16';
+import { politicalCrisis } from '../core/presidency-engine.js?v=20261110-16';
+import { candidacyAccess } from './campaign-mode.js?v=20261110-16';
+import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20261110-16';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261110-16';
+import { societyMood } from '../core/society-engine.js?v=20261110-16';
+import { financeOutlook } from '../core/finance-engine.js?v=20261110-16';
+import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20261110-16';
+import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20261110-16';
+import { activeInstitutions, institutionLabel } from './local-mode.js?v=20261110-16';
+import { renderFinanceCard } from './finance-mode.js?v=20261110-16';
+import { renderStaffBand } from './staff-view.js?v=20261110-16';
+import { planAddButton } from './plan-view.js?v=20261110-16';
+import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20261110-16';
+import { stateBadge, statusChip } from './charts.js?v=20261110-16';
+import { articleHtml, newsMedia, renderNewsroomTabs } from './news-view.js?v=20261110-16';
+import { relevantArticles } from '../core/news-engine.js?v=20261110-16';
+import { identityMark, kindChip } from './party-identity.js?v=20261110-16';
+import { illustration } from './illustrations.js?v=20261110-16';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261110-16';
+import { avatarOf } from '../core/avatar.js?v=20261110-16';
+import { avatarSvg } from './avatar-svg.js?v=20261110-16';
+import { regionPriorities } from '../core/society-engine.js?v=20261110-16';
 
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -171,7 +173,7 @@ function decisionsBand(state, expanded) {
 }
 function activitiesBand(state, gc) {
   const game = state.game;
-  const available = WEEKLY_ACTIVITIES.filter(activity => !activityProblem(gc.ctx, gc.env, activity)).length;
+  const available = game.flags?.president ? PRESIDENT_ACTIVITIES.length : WEEKLY_ACTIVITIES.filter(activity => !activityProblem(gc.ctx, gc.env, activity)).length;
   return band('ATTIVITÀ DELLA SETTIMANA', 'Come usi i giorni', 'Territorio, media, partito, Parlamento: ogni attività costa giorni, fondi o capitale, ha effetti che restano e un rischio dichiarato.', planner(state, gc, { openLimit: 1 }), { id: 'hq-planner', className: 'hqc-activities', extra: `<span class="hq-count" title="Giorni e attività disponibili">${game.week.ap} giorni · ${available} attività</span>` });
 }
 // 4. What is coming: the elections in the calendar (the first is the one that matters most), deadlines, next goal.
@@ -298,7 +300,26 @@ export function renderInbox(state, { compact = false } = {}) {
   }).join('')}</div>`;
 }
 
+// The weekly activities of the President of the Republic: the ones of the office (the party ones do not fit it), with what each asks and why it may be blocked now.
+function presidentPlanner(state) {
+  const game = state.game, incumbent = state.presidency?.incumbent ?? {}, week = game.week.index, ap = game.week.ap;
+  const crisis = politicalCrisis(state.parliament);
+  const rows = PRESIDENT_ACTIVITIES.map(activity => {
+    const last = incumbent.actions?.[activity.id];
+    const wait = last !== undefined && week - last < (activity.cooldownWeeks ?? 0) ? `dalla settimana ${last + activity.cooldownWeeks}` : null;
+    const why = wait ? `Si può ripetere ${wait}.` : activity.requires === 'crisis' && !crisis ? 'Serve una crisi politica aperta o un governo in difficoltà.' : ap < (activity.cost.ap ?? 0) ? `Servono ${activity.cost.ap} giorni.` : (game.resources.politicalCapital ?? 0) < (activity.cost.capital ?? 0) ? `Servono ${activity.cost.capital} di capitale politico.` : '';
+    const region = activity.target === 'region' ? `<select data-presidency-field="region" aria-label="Regione">${ITALIAN_REGIONS.map(item => `<option value="${esc(item)}"${item === game.place?.region ? ' selected' : ''}>${esc(item)}</option>`).join('')}</select>` : '';
+    const chip = text => `<i>${esc(text)}</i>`;
+    const effects = [activity.credit ? chip(`credito ${signed(activity.credit)}`) : '', activity.stability ? chip(`stabilità del governo ${signed(activity.stability)}`) : '', activity.mood ? chip(`clima ${signed(activity.mood)}`) : ''].filter(Boolean).join(' · ');
+    const costs = [chip(`${activity.cost.ap ?? 0} ${(activity.cost.ap ?? 0) === 1 ? 'giorno' : 'giorni'}`), activity.cost.capital ? chip(`${activity.cost.capital} capitale`) : '', activity.cooldownWeeks ? chip(`non prima di ${activity.cooldownWeeks} ${activity.cooldownWeeks === 1 ? 'settimana' : 'settimane'} dalla precedente`) : ''].filter(Boolean).join(' · ');
+    return { why, html: `<div class="hq-activity ${why ? 'is-blocked' : ''}"><div class="hq-activity-copy"><strong>${esc(activity.label)}</strong><small>${esc(activity.detail)}</small><span><b>Effetti</b> ${effects || chip('solo rappresentanza')}</span><span class="hq-req"><b>Costo</b> ${costs}</span></div><div class="hq-activity-action">${region}<button class="primary-button" data-presidency-action="activity" data-activity="${esc(activity.id)}" ${why ? 'disabled' : ''}>Fai</button>${why ? `<em>${esc(why)}</em>` : ''}</div></div>` };
+  });
+  const open = rows.filter(row => !row.why).map(row => row.html).join('');
+  const closed = rows.filter(row => row.why);
+  return `<div class="hq-note">Sei Presidente della Repubblica: le attività di partito non sono disponibili. Queste sono le attività del Quirinale; i poteri formali (consultazioni, rinvio delle leggi, scioglimento) sono nella sezione Elezioni → Quirinale.</div><div class="hq-planner"><details class="hq-category" data-remember="attivita-quirinale" open><summary><span class="cat-icon">${glyph('dome', 16)}</span><span>Quirinale</span></summary>${open || '<p class="quiet-copy hq-none">Nessuna attività disponibile adesso.</p>'}${closed.length ? `<details class="hq-blocked" data-remember="attivita-bloccate-quirinale"><summary>${glyph('clock', 14)} Non disponibili ora (${closed.length})</summary>${closed.map(row => row.html).join('')}</details>` : ''}</details></div>`;
+}
 function planner(state, gc, { openLimit = Infinity } = {}) {
+  if (state.game?.flags?.president) return presidentPlanner(state);
   const { ctx, env } = gc;
   const game = state.game;
   const parliament = state.parliament;
@@ -320,7 +341,7 @@ function planner(state, gc, { openLimit = Infinity } = {}) {
       const activity = activityFor(base, ctx.game);
       const problem = activityProblem(ctx, env, activity);
       const target = activity.target && targets[activity.target]?.length ? `<select data-activity-target="${esc(activity.id)}" aria-label="Destinatario">${targets[activity.target].map(([id, text]) => `<option value="${esc(id)}">${esc(text)}</option>`).join('')}</select>` : '';
-      return { problem, html: `<div class="hq-activity ${problem ? 'is-blocked' : ''}"><div class="hq-activity-copy"><strong>${esc(activity.label)}</strong><small>${esc(activity.detail)}</small><span><b>Effetti</b> ${esc(describeEffects(activity.effects) || 'vedi descrizione')}</span>${activity.requiresLabel ? `<span class="hq-req"><b>Serve</b> ${esc(activity.requiresLabel)}${activity.weekly === 1 ? ' Una volta a settimana.' : ''}</span>` : activity.weekly === 1 ? '<span class="hq-req"><b>Serve</b> Una volta a settimana.</span>' : ''}${activity.risk || activity.later ? `<span class="hq-risk"><b>Rischio</b> ${activity.risk ? `${Math.round(activity.risk.chance * 100)}%: ${esc(activity.risk.label.toLowerCase())}` : ''}${activity.later ? `${activity.risk ? ' · ' : ''}${esc((activity.later.hint ?? activity.later.label ?? 'conseguenze in arrivo').toLowerCase())}` : ''}</span>` : ''}</div><div class="hq-cost">${costChips(activity.cost)}</div><div class="hq-activity-action">${target}${activity.scene ? `<button class="primary-button${activity.scene === 'attivita' ? ' scene-take' : ''}" data-scene-start-kind="${esc(activity.scene)}"${activity.scene === 'attivita' ? ` data-scene-activity="${esc(activity.id)}"` : ''} ${problem ? 'disabled' : ''}>${esc(activity.button)}</button>` : ''}<button class="secondary-button" data-game-activity="${esc(activity.id)}" ${problem ? 'disabled' : ''}${activity.scene ? ' data-quick-scene' : ''}>${activity.scene ? esc(activity.quickButton) : 'Fai'}</button>${activity.scene === 'attivita' && !problem ? `<button type="button" class="ghost-button scene-skip" data-skip-activity="${esc(activity.id)}">Non partecipare</button>` : ''}${problem ? '' : planAddButton({ kind: 'activity', id: activity.id })}${problem ? `<em>${esc(problem)}</em>` : ''}</div></div>` };
+      return { problem, html: `<div class="hq-activity ${problem ? 'is-blocked' : ''}"><div class="hq-activity-copy"><strong>${esc(activity.label)}</strong><small>${esc(activity.detail)}</small><span><b>Effetti</b> ${esc(describeEffects(activity.effects) || 'vedi descrizione')}</span>${activity.requiresLabel ? `<span class="hq-req"><b>Serve</b> ${esc(activity.requiresLabel)}${activity.weekly === 1 ? ' Una volta a settimana.' : ''}</span>` : activity.weekly === 1 ? '<span class="hq-req"><b>Serve</b> Una volta a settimana.</span>' : ''}${activity.risk || activity.later ? `<span class="hq-risk"><b>Rischio</b> ${activity.risk ? `${Math.round(activity.risk.chance * 100)}%: ${esc(activity.risk.label.toLowerCase())}` : ''}${activity.later ? `${activity.risk ? ' · ' : ''}${esc((activity.later.hint ?? activity.later.label ?? 'conseguenze in arrivo').toLowerCase())}` : ''}</span>` : ''}</div><div class="hq-cost">${costChips(activity.cost)}</div><div class="hq-activity-action">${target}${activity.scene ? `<button class="primary-button${activity.scene === 'attivita' ? ' scene-take' : ''}" data-scene-start-kind="${esc(activity.scene)}"${activity.scene === 'attivita' ? ` data-scene-activity="${esc(activity.id)}"` : ''} ${problem ? 'disabled' : ''}>${esc(activity.button)}</button>` : ''}<button class="secondary-button" data-game-activity="${esc(activity.id)}" ${problem ? 'disabled' : ''}${activity.scene ? ' data-quick-scene' : ''}>${activity.scene ? esc(activity.quickButton) : 'Fai'}</button>${problem ? '' : planAddButton({ kind: 'activity', id: activity.id })}${problem ? `<em>${esc(problem)}</em>` : ''}</div></div>` };
     });
     // The ones that can be done now come first; the others, with what they ask for, are folded under them (they stay one tap away: they say what to become or wait for).
     const open = entries.filter(entry => !entry.problem).map(entry => entry.html).join('');
@@ -616,21 +637,40 @@ function newsBand(state) {
 //   6. the secondary areas (the country, the territory, the press, memory) and the details, folded.
 // A vote the game has already decided, held in the last two weeks in the Chamber of the player and not followed yet: Home offers to follow it live in the Aula (the plain label only: the result is NOT told here,
 // it comes out seat by seat in the Aula). Followed (or skipped) once, it is not offered again.
+const LOCAL_ASSEMBLIES = Object.freeze({ comune: 'Consiglio comunale', provincia: 'Consiglio provinciale', regione: 'Consiglio regionale', europa: 'Parlamento europeo' });
 export function liveVoteOffer(state) {
-  const parliament = state.parliament;
-  if (!parliament?.player || !state.game) return null;
+  if (!state.game) return null;
   const seen = new Set(state.game.flags?.aulaSeen ?? []);
   const today = state.clock?.currentDate ?? '';
   const limit = today ? advanceDays(today, -14) : '';
-  const chamber = parliament.player.chamber;
-  const vote = voteCatalog(parliament).find(item => item.chamber === chamber && item.id && !seen.has(item.id) && (!item.date || !limit || item.date >= limit) && (item.byGroup?.length ?? 0) > 0);
   const left = state.game.flags?.aulaProgress;
-  return vote ? { id: vote.id, chamber, label: vote.label ?? vote.title ?? 'Votazione in Aula', date: vote.date ?? null, secret: Boolean(vote.secret), resume: left?.voteId === vote.id ? { shown: left.shown, total: left.total } : null } : null;
+  const resumeOf = id => left?.voteId === id ? { shown: left.shown, total: left.total } : null;
+  // the chamber of the player (Camera or Senato): a vote the game already decided, held in the last two weeks
+  const parliament = state.parliament;
+  if (parliament?.player) {
+    const chamber = parliament.player.chamber;
+    const vote = voteCatalog(parliament).find(item => item.chamber === chamber && item.id && !seen.has(item.id) && (!item.date || !today || item.date <= today) && (!item.date || !limit || item.date >= limit) && (item.byGroup?.length ?? 0) > 0);
+    if (vote) return { id: vote.id, kind: 'nazionale', chamber, assembly: chamber, label: vote.label ?? vote.title ?? 'Votazione in Aula', date: vote.date ?? null, secret: Boolean(vote.secret), resume: resumeOf(vote.id) };
+  }
+  // the council, the provincial or regional council, the European Parliament of the institutions of the player: an act closed with a vote of the groups (the giunta does not vote in an Aula)
+  for (const inst of state.local?.institutions ?? []) {
+    if (inst.status && inst.status !== 'active') continue;
+    for (const act of [...(inst.acts ?? [])].reverse()) {
+      const vote = act.votes?.at(-1);
+      const key = `local:${inst.id}|${act.id}`;
+      if (!vote?.byGroup?.length || vote.organ === 'giunta' || !act.closedAt || seen.has(key)) continue;
+      if (today && (act.closedAt > today || (limit && act.closedAt < limit))) continue;
+      return { id: key, kind: 'locale', local: `${inst.id}|${act.id}`, chamber: null, assembly: inst.kind, institution: LOCAL_ASSEMBLIES[inst.kind] ?? 'Assemblea', place: inst.name ?? '', label: act.title ?? 'Votazione in Aula', date: act.closedAt, secret: false, resume: resumeOf(key) };
+    }
+  }
+  return null;
 }
 function liveVoteBand(state) {
   const offer = liveVoteOffer(state);
   if (!offer) return '';
-  return `<section class="aula-live" data-aula-live aria-label="Votazione in Aula"><div><span class="section-kicker">VOTAZIONE IN AULA${offer.date ? ` · ${esc(formatDate(offer.date).toUpperCase())}` : ''}</span><strong>${esc(offer.label)}</strong><small>${offer.secret ? 'Voto segreto: ' : ''}Il presidente di turno aprirà la seduta e i seggi voteranno uno dopo l’altro. L’esito si saprà solo alla fine.</small>${offer.resume ? `<small data-aula-resume>Ripresa dal punto in cui l’hai lasciata: ${offer.resume.shown} seggi su ${offer.resume.total}.</small>` : ''}</div><div class="aula-live-actions"><button type="button" class="primary-button aula-follow" data-aula-open="${esc(offer.id)}" data-aula-chamber="${esc(offer.chamber)}" data-aula-follow="${esc(offer.id)}">SEGUI LA VOTAZIONE</button><button type="button" class="ghost-button" data-aula-dismiss="${esc(offer.id)}">Non seguire</button></div></section>`;
+  const where = offer.kind === 'locale' ? `${offer.institution}${offer.place ? ` · ${offer.place}` : ''}` : 'VOTAZIONE IN AULA';
+  const control = offer.kind === 'locale' ? `data-aula-local="${esc(offer.local)}"` : `data-aula-open="${esc(offer.id)}" data-aula-chamber="${esc(offer.chamber)}"`;
+  return `<section class="aula-live" data-aula-live data-aula-kind="${esc(offer.kind)}" aria-label="Votazione in Aula"><div><span class="section-kicker">${esc(offer.kind === 'locale' ? where.toUpperCase() : where)}${offer.date ? ` · ${esc(formatDate(offer.date).toUpperCase())}` : ''}</span><strong>${esc(offer.label)}</strong><small>${offer.secret ? 'Voto segreto: ' : ''}Il presidente di turno aprirà la seduta e i seggi voteranno uno dopo l’altro. L’esito si saprà solo alla fine.</small>${offer.resume ? `<small data-aula-resume>Ripresa dal punto in cui l’hai lasciata: ${offer.resume.shown} seggi su ${offer.resume.total}.</small>` : ''}</div><div class="aula-live-actions"><button type="button" class="primary-button aula-follow" ${control} data-aula-live-key="${esc(offer.id)}" data-aula-follow="${esc(offer.id)}">SEGUI LA VOTAZIONE IN AULA</button><button type="button" class="ghost-button" data-aula-dismiss="${esc(offer.id)}">Non seguire</button></div></section>`;
 }
 export function renderHeadquarters(state, options = {}) {
   const gc = gameContext(state);
@@ -642,7 +682,7 @@ export function renderHeadquarters(state, options = {}) {
   const status = cardGroup([cards.elezioni, cards.relazioni, cards.carriera, cards.parlamento, cards.partito, cards.finanze], { key: 'aree', limit: 99, kicker: 'DOVE SEI', title: 'Consenso, relazioni e cariche', lead: 'Un riepilogo per area: apri la sezione per vedere i dettagli e agire.', noun: 'tutte le aree', className: 'hqc-status-head', expanded });
   const secondary = cardGroup([cards.paese, cards.territorio, cards.media, cards.memoria], { key: 'altre', limit: 99, kicker: 'ALTRE AREE', title: 'Paese, territorio, stampa e memoria', lead: 'Il contesto in cui si svolge la carriera.', noun: 'le altre aree', className: 'hqc-secondary-head', expanded });
   const game = state.game;
-  const free = WEEKLY_ACTIVITIES.filter(activity => !activityProblem(gc.ctx, gc.env, activity)).length;
+  const free = game.flags?.president ? PRESIDENT_ACTIVITIES.length : WEEKLY_ACTIVITIES.filter(activity => !activityProblem(gc.ctx, gc.env, activity)).length;
   const articles = newsBand(state);
   const goalsList = objectiveProgress(gc.ctx, gc.env).filter(item => item.available);
   const upcoming = upcomingElections(game)[0];
@@ -676,6 +716,9 @@ export function renderConsequencesPanel(state) { return consequencesPanel(state)
 export function renderPartyPosition(state, options = {}) {
   const game = state.game;
   const gc = gameContext(state);
+  if (!game.party && game.flags?.president) {
+    return `<section class="party-position"><div class="home-section-heading"><div><span class="section-kicker">POSIZIONE NEL PARTITO · SIMULAZIONE</span><h2>Sopra le parti</h2></div></div><p class="parliament-note">Durante il mandato il Presidente della Repubblica non può aderire a un partito. L’adesione sarà di nuovo possibile dopo la fine del mandato.</p></section>`;
+  }
   if (!game.party) {
     const choices = (options.parties ?? []).map(party => `<option value="${esc(party.id)}">${esc(party.officialName ?? party.name)}${party.source === 'real' ? ' · dato reale verificato' : party.source === 'user' ? ' · creato da te' : ' · simulazione'}</option>`).join('');
     return `<section class="party-position"><div class="home-section-heading"><div><span class="section-kicker">POSIZIONE NEL PARTITO · SIMULAZIONE</span><h2>Sei indipendente</h2></div></div><p class="parliament-note">Aderire a un partito apre candidature di lista, incarichi interni e correnti, ma ti lega a una leadership da convincere. Il partito reale resta un riferimento: la tua posizione interna è simulata.</p><div class="party-join"><label>Partito<select data-party-join>${choices}</select></label><button class="primary-button" data-party-action="join" ${costProblem(game, { ap: 1 }) ? 'disabled' : ''}>Aderisci · 1 giorno</button></div></section>`;

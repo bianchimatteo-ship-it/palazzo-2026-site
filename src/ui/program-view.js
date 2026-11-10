@@ -1,13 +1,14 @@
 // The programme and the promises (program-engine.js): what the party proposes, what the player promised, how credible it is, how each promise is going against what the game really did,
 // the commitments of the coalition, and what the rivals promise. Every button here calls the store (makePromise, modifyPromise, withdrawPromise, announcePromise): nothing is decorative.
-import { AMBITIONS, PROMISE_SCOPES, PROMISE_SETTLED, PROMISE_STATES, promiseLine } from '../core/program-engine.js?v=20261110-1';
-import { AREA_BY_ID, INSTRUMENT_KINDS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261110-1';
-import { badge, bar, card, empty, esc, kpi, num } from './sections-kit.js?v=20261110-1';
-import { glyph, inkOn } from './visuals.js?v=20261110-1';
-import { partyIdentity } from './party-identity.js?v=20261110-1';
-import { allianceOf } from '../core/world-engine.js?v=20261110-1';
-import { PRIORITIES, REVISION_REASONS } from '../core/program-engine.js?v=20261110-1';
-import { FINANCING, TERRITORIES, DEADLINES } from '../core/program-proposals.js?v=20261110-1';
+import { AMBITIONS, PROMISE_SCOPES, PROMISE_SETTLED, PROMISE_STATES, promiseLine } from '../core/program-engine.js?v=20261110-16';
+import { AREA_BY_ID, INSTRUMENT_KINDS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261110-16';
+import { badge, bar, card, empty, esc, kpi, num } from './sections-kit.js?v=20261110-16';
+import { glyph, inkOn } from './visuals.js?v=20261110-16';
+import { partyIdentity } from './party-identity.js?v=20261110-16';
+import { allianceOf } from '../core/world-engine.js?v=20261110-16';
+import { PRIORITIES, REVISION_REASONS } from '../core/program-engine.js?v=20261110-16';
+import { FINANCING, TERRITORIES, DEADLINES } from '../core/program-proposals.js?v=20261110-16';
+import { guidedFields } from './program-guide.js?v=20261110-16';
 
 const TONE = { neutral: 'neutral', info: 'info', good: 'good', warning: 'warning', bad: 'bad' };
 const stateChip = status => { const spec = PROMISE_STATES[status] ?? PROMISE_STATES['non-avviata']; return badge(spec.label, TONE[spec.tone] ?? 'neutral'); };
@@ -89,27 +90,7 @@ function promiseCard(promise, { campaign, allies = [] }) {
 
 // ---------- the programme editor: proposals (core/program-proposals.js) ----------
 const COVERAGE = { solida: ['Coperta', 'good'], fragile: ['Copertura fragile', 'warning'], scoperta: ['Senza copertura', 'bad'] };
-const SUGGESTED_INSTRUMENTS = { economia: ['investimento', 'incentivi', 'regole'], conti: ['regole', 'incentivi', 'controlli'], default: ['investimento', 'riforma', 'servizi'], sicurezza: ['controlli', 'servizi', 'riforma'], giustizia: ['servizi', 'riforma', 'controlli'] };
-const FINANCING_OPTIONS = Object.entries(FINANCING).map(([id, spec]) => [id, spec.label]);
-const TERRITORY_OPTIONS = Object.entries(TERRITORIES);
-const DEADLINE_OPTIONS = Object.entries(DEADLINES);
-function proposalFields(view, values = {}) {
-  const measures = [...(values.measures ?? [])];
-  // empty slots do not all start as «Investimento»: each one starts with an instrument that suits the area (investment, a reform, a service, a control, a tax relief…), still the player's to change
-  const area = AREA_BY_ID[values.area ?? 'sanita'];
-  const starts = SUGGESTED_INSTRUMENTS[area?.group] ?? SUGGESTED_INSTRUMENTS.default;
-  while (measures.length < 3) measures.push({ instrument: starts[measures.length % starts.length], text: '' });
-  return `<label>Area politica<select name="area">${options(AREA_OPTIONS, values.area ?? 'sanita')}</select></label>
-    <label>Titolo della proposta<input name="title" type="text" maxlength="80" value="${esc(values.title ?? '')}" placeholder="Per esempio: più medici nei territori scoperti" autocomplete="off"></label>
-    <label>Il problema<textarea name="problem" rows="2" maxlength="240" placeholder="Che cosa non funziona oggi">${esc(values.problem ?? '')}</textarea></label>
-    <label>L’obiettivo<input name="objective" type="text" maxlength="200" value="${esc(values.objective ?? '')}" placeholder="Che cosa deve cambiare, e di quanto" autocomplete="off"></label>
-    <fieldset class="program-measures"><legend>Le misure (almeno una)</legend>${measures.slice(0, 4).map((item, index) => `<div class="program-measure"><select name="instrument${index}" aria-label="Strumento della misura ${index + 1}">${options(INSTRUMENT_OPTIONS, item.instrument)}</select><input name="measure${index}" type="text" maxlength="160" value="${esc(item.text ?? '')}" placeholder="Misura ${index + 1}" autocomplete="off"><small class="program-measure-hint">${esc(INSTRUMENT_KINDS[item.instrument]?.detail ?? '')}</small></div>`).join('')}</fieldset>
-    <div class="program-row"><label>Costo stimato (miliardi)<input name="cost" type="number" min="0" max="60" step="0.1" value="${values.cost ?? ''}" placeholder="stima automatica"></label>
-    <label>Come si paga<select name="financing">${options(FINANCING_OPTIONS, values.financing ?? 'bilancio')}</select></label>
-    <label>Scadenza<select name="deadlineWeeks">${options(DEADLINE_OPTIONS, String(values.deadlineWeeks ?? 104))}</select></label>
-    <label>Territorio<select name="territory">${options(TERRITORY_OPTIONS, values.territory ?? 'nazionale')}</select></label></div>
-    <label>Regione o comune (se non è tutto il Paese)<input name="region" type="text" maxlength="40" value="${esc(values.region ?? view.proposals?.region ?? '')}" autocomplete="off"></label>`;
-}
+function proposalFields(view, values = {}) { return guidedFields(view, values); }
 function proposalCard(view, item, index, count) {
   const [coverLabel, coverTone] = COVERAGE[item.assessment.level] ?? COVERAGE.fragile;
   const spec = AREA_BY_ID[item.area];
@@ -118,7 +99,7 @@ function proposalCard(view, item, index, count) {
     ? `<form data-proposal-link-form data-proposal-id="${esc(item.id)}"><input type="hidden" name="promise" value=""><button type="submit" class="ghost-button">Scollega la promessa</button></form>`
     : item.linkable.length ? `<form data-proposal-link-form data-proposal-id="${esc(item.id)}" class="program-link-form"><label>Collega a una tua promessa<select name="promise">${options(item.linkable.map(promise => [promise.id, `${promise.label}: ${promise.intervention}`]))}</select></label><button type="submit" class="ghost-button">Collega</button></form>` : '<small class="program-link-none">Nessuna tua promessa aperta in quest’area da collegare: la proposta resta una pagina del programma.</small>';
   return `<article class="program-proposal state-${esc(item.status)}" data-proposal="${esc(item.id)}">
-    <header><div><strong><span class="program-priority" aria-label="Priorità ${item.priority}">${item.priority}</span> ${esc(item.title)}</strong><small>${glyph(spec?.icon ?? 'target', 14)} ${esc(spec?.label ?? item.area)} · ${esc(TERRITORIES[item.territory] ?? '')}${item.region ? ` (${esc(item.region)})` : ''}</small></div><div class="program-badges">${badge(item.status === 'pubblicata' ? 'Pubblicata' : 'Bozza', item.status === 'pubblicata' ? 'info' : 'neutral')}${badge(coverLabel, coverTone)}</div></header>
+    <header><div><strong><span class="program-priority" aria-label="Priorità ${item.priority}">${item.priority}</span> ${esc(item.title)}</strong><small>${glyph(spec?.icon ?? 'target', 14)} ${esc(spec?.label ?? item.area)} · ${esc(TERRITORIES[item.territory] ?? '')}${item.municipality || item.region ? ` (${esc([item.municipality, item.region].filter(Boolean).join(', '))})` : ''}</small></div><div class="program-badges">${badge(item.status === 'pubblicata' ? 'Pubblicata' : 'Bozza', item.status === 'pubblicata' ? 'info' : 'neutral')}${badge(coverLabel, coverTone)}</div></header>
     ${item.problem ? `<p class="program-problem"><b>Problema</b> ${esc(item.problem)}</p>` : ''}<p><b>Obiettivo</b> ${esc(item.objective)}</p>
     <ul class="program-measure-list">${item.measures.map(measure => `<li><b>${esc(INSTRUMENT_KINDS[measure.instrument]?.label ?? measure.instrument)}</b> ${esc(measure.text)}</li>`).join('')}</ul>
     <div class="program-meta"><span>Costo ~${num(item.cost, 1)} mld</span><span>${esc(FINANCING[item.financing]?.label ?? item.financing)}</span><span>${esc(DEADLINES[item.deadlineWeeks] ?? '')}</span>${item.indicator !== null ? `<span>Indicatore dell’area: ${num(item.indicator, 0)}/100</span>` : ''}</div>

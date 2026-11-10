@@ -1,21 +1,21 @@
-import { activeMinisters, canManageParliament, CHAMBERS, CONTEST_COST, CONTEST_WINDOW_DAYS, GOVERNMENT_POST_REQUIREMENTS, governingGroupIds, governmentPostProblems, MINISTERIAL_PORTFOLIOS, nextParliamentaryRole, parliamentGroupFacts, playerInMajority } from '../core/parliament-engine.js?v=20261110-1';
-import { amendmentOdds, forecastVote, LAW_SPONSORS, PLAYER_VOTE_CHOICES } from '../core/lawmaking-engine.js?v=20261110-1';
-import { competenceIn } from '../core/standing-engine.js?v=20261110-1';
-import { heldOfficesOf } from '../core/roles.js?v=20261110-1';
-import { AREA_BY_ID, FINANCING, GOVERNMENT_LINES, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261110-1';
+import { activeMinisters, canManageParliament, CHAMBERS, CONTEST_COST, CONTEST_WINDOW_DAYS, GOVERNMENT_POST_REQUIREMENTS, governingGroupIds, governmentPostProblems, MINISTERIAL_PORTFOLIOS, nextParliamentaryRole, parliamentGroupFacts, playerInMajority } from '../core/parliament-engine.js?v=20261110-16';
+import { amendmentOdds, forecastVote, LAW_SPONSORS, PLAYER_VOTE_CHOICES } from '../core/lawmaking-engine.js?v=20261110-16';
+import { competenceIn } from '../core/standing-engine.js?v=20261110-16';
+import { heldOfficesOf } from '../core/roles.js?v=20261110-16';
+import { AREA_BY_ID, FINANCING, GOVERNMENT_LINES, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261110-16';
 const GOVERNMENT_LINE_LABELS = Object.fromEntries(Object.entries(GOVERNMENT_LINES).map(([id, item]) => [id, item.label]));
-import { AMENDMENT_CAPITAL_COST, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20261110-1';
-import { DATA_SOURCES } from '../data/schema.js?v=20261110-1';
-import { careerOverview } from '../core/career-overview.js?v=20261110-1';
-import { voteSummary } from '../core/vote-engine.js?v=20261110-1';
-import { artTile, glyph, LAW_ICONS } from './visuals.js?v=20261110-1';
-import { measureDesign, projectLaw } from '../core/society-engine.js?v=20261110-1';
-import { dossierPanel } from './dossier-view.js?v=20261110-1';
-import { accordPanel, governmentDesk, governmentGlance, lawContent, policyFields, policyPreview } from './policy-mode.js?v=20261110-1';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261110-1';
-import { avatarOf } from '../core/avatar.js?v=20261110-1';
-import { avatarSvg } from './avatar-svg.js?v=20261110-1';
-import { legislatureLabel } from '../core/legislature-engine.js?v=20261110-1';
+import { AMENDMENT_CAPITAL_COST, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20261110-16';
+import { DATA_SOURCES } from '../data/schema.js?v=20261110-16';
+import { careerOverview } from '../core/career-overview.js?v=20261110-16';
+import { voteSummary } from '../core/vote-engine.js?v=20261110-16';
+import { artTile, glyph, LAW_ICONS } from './visuals.js?v=20261110-16';
+import { measureDesign, projectLaw } from '../core/society-engine.js?v=20261110-16';
+import { dossierPanel } from './dossier-view.js?v=20261110-16';
+import { accordPanel, govNav, govSectionClose, govSectionOpen, governmentDesk, governmentGlance, lawContent, policyFields, policyPreview } from './policy-mode.js?v=20261110-16';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261110-16';
+import { avatarOf } from '../core/avatar.js?v=20261110-16';
+import { avatarSvg } from './avatar-svg.js?v=20261110-16';
+import { legislatureLabel } from '../core/legislature-engine.js?v=20261110-16';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const icon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
@@ -394,7 +394,14 @@ export function renderParliamentPage(page, state, options = {}) {
   const days = state.game && parliament.player ? `<div class="parliament-access-note parliament-time-note">Ogni azione in Aula usa 1 giorno della settimana: ne restano <b>${state.game.week.ap}</b> su ${state.game.week.maxAp}. Capitale politico <b>${whole(parliament.resources?.politicalCapital)}</b>.</div>` : '';
   if (page === 'governo') {
     const stats = Object.fromEntries((state.dataset?.statistics ?? []).filter(item => item.subjectId === state.career?.playerId).map(item => [item.metric, item.value]));
-    return days + governmentGlance(state) + governmentDesk(state) + accordPanel(state) + dossierPanel(state) + governmentView(parliament, options.politicians ?? [], state.world?.polls?.at(-1)?.government?.approval ?? null, { stats, secretary: options.secretary, currentDate: state.clock?.currentDate, national: state.national ?? null });
+    // The room of the Government: the overview first, then the sections (majority, cabinet, direction, measures, budget, progress); the panels are the same ones, placed by what they are for.
+    const glance = governmentGlance(state), accord = accordPanel(state), dossier = dossierPanel(state);
+    const desk = governmentDesk(state, { accord, dossier });
+    const view = governmentView(parliament, options.politicians ?? [], state.world?.polls?.at(-1)?.government?.approval ?? null, { stats, secretary: options.secretary, currentDate: state.clock?.currentDate, national: state.national ?? null });
+    const overview = glance ? govSectionOpen('panorama', 'Chi guida, quanto regge la maggioranza e che cosa scade.') + glance + govSectionClose : '';
+    if (desk) return days + '<div class="gov-room">' + govNav() + overview + desk + view + '</div>';
+    const sections = govNav(['panorama', ...(accord ? ['maggioranza'] : []), ...(dossier ? ['provvedimenti'] : [])]);
+    return days + '<div class="gov-room">' + sections + overview + (accord ? govSectionOpen('maggioranza', 'Gli impegni dell’accordo di coalizione e il loro stato.') + accord + govSectionClose : '') + (dossier ? govSectionOpen('provvedimenti', 'Le decisioni che il governo ha davanti.') + dossier + govSectionClose : '') + view + '</div>';
   }
   if (page === 'leggi') {
     const influence = (state.dataset?.statistics ?? []).find(item => item.subjectId === state.career?.playerId && item.metric === 'influence')?.value ?? 50;

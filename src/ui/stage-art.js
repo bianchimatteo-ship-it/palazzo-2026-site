@@ -2,9 +2,10 @@
 // its person (avatar-svg.js: always the avatar saved for the player, a stable one for the others) plus a body drawn here — torso, two arms with an elbow, two legs — in separate groups, so that the
 // player (ui/stage-player.js) can make them walk, sit, gesture. Every group carries the data the player needs (class, data-*); the poses come from core/stage-script.js. No animation is started here:
 // what is drawn is the FINAL pose of the beat, so with the motion off or reduced, or in a scene resumed, the stage is already right.
-import { avatarColors, avatarParts, shade } from './avatar-svg.js?v=20261110-1';
-import { depthScale, STAGE_W, STAGE_H } from '../core/stage-script.js?v=20261110-1';
-import { defaultAvatarFor } from '../core/avatar.js?v=20261110-1';
+import { avatarColors, avatarParts, shade } from './avatar-svg.js?v=20261110-16';
+import { depthScale, STAGE_W, STAGE_H } from '../core/stage-script.js?v=20261110-16';
+import { defaultAvatarFor } from '../core/avatar.js?v=20261110-16';
+import { isEnglish, translateText } from '../core/i18n.js?v=20261110-16';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const hash = text => { let h = 2166136261 >>> 0; for (const ch of String(text)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return h; };
@@ -154,12 +155,24 @@ function studioIntervista(scene, uid) {
 }
 // The strip of headlines (one per beat, from the situation of the game) and the name straps: drawn over the camera, inside the frame; the text is wrapped, never cut.
 const wrapText = (text, chars) => { const lines = []; let current = ''; for (const word of String(text ?? '').split(/\s+/).filter(Boolean)) { if (current && `${current} ${word}`.length > chars) { lines.push(current); current = word; } else current = current ? `${current} ${word}` : word; } if (current) lines.push(current); return lines; };
-export function strap(member, x, w, bottom, active) {
-  const nameLines = wrapText(member.name, Math.floor((w - 18) / 6.4)), tagLines = wrapText(member.tag, Math.floor((w - 18) / 5.0));
-  const height = 8 + nameLines.length * 11.5 + tagLines.length * 9.6 + 4, top = bottom - height;
-  return `<g class="st-strap${active ? ' is-speaking' : ''}"><rect x="${x}" y="${top}" width="${w}" height="${height}" rx="3" fill="#0c1d2b" fill-opacity=".94" stroke="${active ? '#f0d68a' : '#3d6277'}" stroke-width="${active ? 1.6 : 1}"/><rect x="${x}" y="${top}" width="4" height="${height}" rx="1.5" fill="${active ? '#f0d68a' : '#58a3c4'}"/>`
-    + nameLines.map((text, i) => `<text x="${x + 11}" y="${top + 12.5 + i * 11.5}" font-size="10.4" font-weight="800" fill="#fff">${esc(text)}</text>`).join('')
-    + tagLines.map((text, i) => `<text x="${x + 11}" y="${top + 12.5 + nameLines.length * 11.5 + 1 + i * 9.6}" font-size="8" font-weight="600" fill="#bfd9e6">${esc(text)}</text>`).join('') + '</g>';
+// Every strap has three lines, always inside its own box: the name, the role and the party (or, for someone who belongs to no party, the body he speaks for: the programme, the newspaper, the committee).
+// The role and the party come from the cast (`roleLabel`, `partyLabel`); a scene saved before them has «Role · Party» in `tag`, and a person with neither shows what is known, never an empty line.
+const tr = text => text && isEnglish() ? translateText(text) : text;
+export function strapLines(member, fallbackBody = '') {
+  const parts = String(member?.tag ?? '').split(' · ').map(item => item.trim()).filter(Boolean);
+  const role = member?.roleLabel ?? parts[0] ?? '';
+  const party = member?.partyLabel ?? (parts.length > 1 ? parts.slice(1).join(' · ') : '') ?? '';
+  return { name: String(member?.name ?? ''), role: tr(role), party: tr(party || fallbackBody || '') };
+}
+export function strap(member, x, w, bottom, active, fallbackBody = '') {
+  const lines = strapLines(member, fallbackBody);
+  const nameLines = wrapText(lines.name, Math.floor((w - 18) / 6.4)), roleLines = wrapText(lines.role, Math.floor((w - 18) / 5.0)), partyLines = wrapText(lines.party, Math.floor((w - 18) / 5.0));
+  const height = 8 + nameLines.length * 11.5 + roleLines.length * 9.6 + partyLines.length * 9.6 + 5, top = bottom - height;
+  const nameY = i => top + 12.5 + i * 11.5, roleY = i => top + 12.5 + nameLines.length * 11.5 + 1 + i * 9.6, partyY = i => roleY(roleLines.length) + i * 9.6;
+  return `<g class="st-strap${active ? ' is-speaking' : ''}" data-strap="${esc(member?.id ?? '')}"><rect x="${x}" y="${top}" width="${w}" height="${height}" rx="3" fill="#0c1d2b" fill-opacity=".94" stroke="${active ? '#f0d68a' : '#3d6277'}" stroke-width="${active ? 1.6 : 1}"/><rect x="${x}" y="${top}" width="4" height="${height}" rx="1.5" fill="${active ? '#f0d68a' : '#58a3c4'}"/>`
+    + nameLines.map((text, i) => `<text class="st-strap-name" x="${x + 11}" y="${nameY(i)}" font-size="10.4" font-weight="800" fill="#fff">${esc(text)}</text>`).join('')
+    + roleLines.map((text, i) => `<text class="st-strap-role" x="${x + 11}" y="${roleY(i)}" font-size="8" font-weight="600" fill="#bfd9e6">${esc(text)}</text>`).join('')
+    + partyLines.map((text, i) => `<text class="st-strap-party" x="${x + 11}" y="${partyY(i)}" font-size="8" font-weight="800" fill="#f0d68a">${esc(text)}</text>`).join('') + '</g>';
 }
 export function studioOverlay(scene, node, uid) {
   const format = formatKey(scene);
@@ -167,8 +180,8 @@ export function studioOverlay(scene, node, uid) {
   const me = member('giocatore'), rival = member('rivale'), host = member('conduttore');
   const speaking = id => node?.speaker === id;
   const straps = format === 'faccia'
-    ? `${strap(me, 8, 226, 332, speaking(me.id))}${strap(rival, 406, 226, 332, speaking(rival.id))}${speaking(host.id) ? strap(host, 238, 164, 332, true) : ''}`
-    : `${strap(host, 8, 204, 332, speaking(host.id))}${strap(me, 218, 204, 332, speaking(me.id))}${strap(rival, 428, 204, 332, speaking(rival.id))}`;
+    ? `${strap(me, 8, 226, 332, speaking(me.id))}${strap(rival, 406, 226, 332, speaking(rival.id))}${speaking(host.id) ? strap(host, 238, 164, 332, true, scene.show?.name ?? '') : ''}`
+    : `${strap(host, 8, 204, 332, speaking(host.id), scene.show?.name ?? '')}${strap(me, 218, 204, 332, speaking(me.id))}${strap(rival, 428, 204, 332, speaking(rival.id))}`;
   const slot = String(scene.show?.slot ?? 'In diretta').toUpperCase(), tab = Math.max(78, Math.round(slot.length * 5.8 + 18)), from = tab + 8, avail = 632 - from;
   const items = scene.ticker?.length ? scene.ticker : [`Tema: ${scene.topic.label}`];
   const index = Math.max(0, ['invito', 'preparazione', 'ingresso', 'q1', 'r1', 'domanda', 'risposta-rivale', 'q2', 'r2', 'attacco', 'r3', 'chiusura', 'esito'].indexOf(scene.nodeId));
@@ -276,7 +289,7 @@ const SETTINGS = {};
 export const registerStageSetting = (setting, fn) => { SETTINGS[setting] = fn; };
 export function renderStageSvg(scene, stage, node, { identity = null, before = null, label = '' } = {}) {
   const uid = `st${hash(scene.id) % 9973}`;
-  const art = SETTINGS[scene.setting] ? SETTINGS[scene.setting](scene, stage, node, uid) : scene.setting === 'piazza' ? squareSvg(scene, stage, node, uid, identity) : scene.setting === 'seggio' ? stationSvg(scene, stage, node, uid) : studioSvg(scene, stage, node, uid);
+  const art = SETTINGS[scene.setting] ? SETTINGS[scene.setting](scene, stage, node, uid, identity) : scene.setting === 'piazza' ? squareSvg(scene, stage, node, uid, identity) : scene.setting === 'seggio' ? stationSvg(scene, stage, node, uid) : studioSvg(scene, stage, node, uid);
   const data = esc(JSON.stringify({ node: scene.nodeId, camera: stage.camera, crowd: stage.crowd, props: stage.props ?? {}, before }));
   return `<svg class="st-svg" viewBox="0 0 ${STAGE_W} ${STAGE_H}" role="img" aria-label="${esc(label)}" data-stage="${data}" data-setting="${esc(scene.setting)}"${scene.format ? ` data-format="${esc(scene.format)}"` : ''} preserveAspectRatio="xMidYMid slice"><g class="st-cam" data-camera="${esc(stage.camera)}" style="transform-origin:0 0;transform:${cameraTransform(stage.camera)}">${art.body}</g>${art.overlay ?? ''}</svg>`;
 }
