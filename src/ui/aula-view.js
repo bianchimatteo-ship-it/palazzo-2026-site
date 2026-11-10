@@ -60,6 +60,8 @@ function paint(root, aula, shown) {
   const boardEl = root.querySelector('.aula-board'); if (boardEl) boardEl.innerHTML = board(aula, shown);
   const log = root.querySelector('.aula-said');
   if (log) { const lines = saidAt(script, shown); if (log.children.length !== lines.length) log.innerHTML = lines.map(step => `<li class="${step.result ? 'is-result' : ''}">${esc(step.text)}</li>`).join(''); }
+  // at the end there is nothing left to pause or to skip to
+  root.querySelectorAll('[data-aula-pause],[data-aula-skip]').forEach(button => { button.hidden = shown >= script.order.length && script.order.length > 0; });
   root.dataset.aulaShown = String(shown);
   root.dataset.aulaFinal = shown >= script.order.length ? '1' : '0';
 }
