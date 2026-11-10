@@ -138,6 +138,9 @@ Branch `test/ambiente-privato`. Che cosa è cambiato, dove, e come si verifica:
 - **Traduzioni**: `scripts/sync-release-pairs.mjs` scrive le frasi dei file dati nel dizionario (`en-ui-8.js`); tutorial e «Come giocare» aggiornati. Test: `check-i18n-release`.
 - Corretto anche: id duplicati nel registro diplomatico (`check-presidency`), cartellino della squadra di governo aperto a ogni caricamento (`check-government-layout`).
 
+- **Collaudo di questa revisione** (Chrome, container Linux): superati `check-program-guide`, `check-program(-store/-ui/-editor)`, `check-president-rules`, `check-presidency`, `check-scene-variety`, `check-activity-scenes(-ui)`, `check-aula-live`, `check-aula-ui`, `check-hemicycle`, `check-parliament-votes`, `check-government(-layout)`, `check-party-identity`, `check-i18n` (0 testi italiani su 36.832), `check-i18n-release`, `check-tutorial`, `check-responsive` (740 schermate), `check-responsiveness`, `check-load` (150 moduli), `check-save-resilience`, `check-account-isolation`, `check-saves`, `check:android`, `check:publication`, build `www` e portale. Non provato su emulatore o dispositivo Android reale.
+- **Limiti noti**: dialoghi di dibattito, talk show e comizio hanno sei famiglie di situazioni ma poche battute per famiglia (le sei scene delle attività sono invece differenziate per tema, interlocutori e riferimenti); le notizie generate dalle ospitate in TV hanno ancora frasi parzialmente non tradotte; l'Aula dei consigli territoriali usa lo stesso emiciclo con denominazioni proprie; deploy su Cloudflare Test non eseguito da questo ambiente (nessuna configurazione privata né credenziali).
+
 ## Milestone precedente — fondazione partito, consenso, fiducia, direttiva (completata)
 Vedi la cronologia git (commit `7fbae22`, `8842e95`).
 
