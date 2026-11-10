@@ -1,18 +1,18 @@
 // PARTITO — the organisation seen from inside: identity, the player's role and odds, internal areas, members and
 // sections, the secretary's desk and the history. The real party stays a reference; everything inside is simulated.
-import { careerOverview } from '../core/career-overview.js?v=20261110-20';
-import { organOf, treasuryOutlook } from '../core/organization-engine.js?v=20261110-20';
-import { playerRoles } from '../core/roles.js?v=20261110-20';
-import { currentObjectiveLabel } from '../data/simulation/career-rules.js?v=20261110-20';
-import { formatDate } from '../core/time.js?v=20261110-20';
-import { lineChart, SERIES } from './charts.js?v=20261110-20';
-import { glyph } from './visuals.js?v=20261110-20';
-import { renderPartyPosition, renderSecretaryDesk } from './game-mode.js?v=20261110-20';
-import { renderOrganizationPanel } from './organization-mode.js?v=20261110-20';
-import { renderOddsCard } from './career-page.js?v=20261110-20';
-import { renderCommitteesPanel } from './committees-view.js?v=20261110-20';
-import { renderPartyLife } from './party-life-view.js?v=20261110-20';
-import { arrow, badge, bar, card, esc, euro, num, pct, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261110-20';
+import { careerOverview } from '../core/career-overview.js?v=20261110-21';
+import { organOf, treasuryOutlook } from '../core/organization-engine.js?v=20261110-21';
+import { playerRoles } from '../core/roles.js?v=20261110-21';
+import { currentObjectiveLabel } from '../data/simulation/career-rules.js?v=20261110-21';
+import { formatDate } from '../core/time.js?v=20261110-21';
+import { lineChart, SERIES } from './charts.js?v=20261110-21';
+import { glyph } from './visuals.js?v=20261110-21';
+import { renderPartyPosition, renderSecretaryDesk } from './game-mode.js?v=20261110-21';
+import { renderOrganizationPanel } from './organization-mode.js?v=20261110-21';
+import { renderOddsCard } from './career-page.js?v=20261110-21';
+import { renderCommitteesPanel } from './committees-view.js?v=20261110-21';
+import { renderPartyLife } from './party-life-view.js?v=20261110-21';
+import { arrow, badge, bar, card, esc, euro, num, pct, sectionHero, sectionTabs, signed, table } from './sections-kit.js?v=20261110-21';
 
 const SOURCE_LABELS = { real: 'Dato reale verificato', user: 'Creato da te', simulation: 'Simulazione' };
 const partyName = party => party?.officialName ?? party?.name ?? 'Partito';

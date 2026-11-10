@@ -1,13 +1,13 @@
 // The scene on screen (scene-engine.js): a 2D stage drawn in SVG (ui/stage-art.js) — the television studio, the square of a rally, the polling station — with the characters built from the game's own
 // avatars (the player is always the avatar chosen at the start of the career), the poses and the shots decided by core/stage-script.js and played by ui/stage-player.js. Below the stage: the line,
 // the reactions, the choices; above it the controls of the animation (skip, pause, complete / reduced / off). The same scenes with the motion off or reduced: the stage is simply in its final pose.
-import { ASKS, CLOSINGS, REPLIES, STYLES, sceneNode, sceneProgress } from '../core/scene-engine.js?v=20261110-20';
-import { stageBefore, stageOf } from '../core/stage-script.js?v=20261110-20';
-import { renderStageSvg } from './stage-art.js?v=20261110-20';
-import { ROOMS } from './room-art.js?v=20261110-20';
+import { ASKS, CLOSINGS, REPLIES, STYLES, sceneNode, sceneProgress } from '../core/scene-engine.js?v=20261110-21';
+import { stageBefore, stageOf } from '../core/stage-script.js?v=20261110-21';
+import { renderStageSvg } from './stage-art.js?v=20261110-21';
+import { ROOMS } from './room-art.js?v=20261110-21';
 export const SCENE_ROOMS = ROOMS; // the rooms of the optional scenes register themselves when room-art.js is imported
-import { ACTIVITY_SCENES } from '../core/activity-scenes.js?v=20261110-20';
-import { esc } from './charts.js?v=20261110-20';
+import { ACTIVITY_SCENES } from '../core/activity-scenes.js?v=20261110-21';
+import { esc } from './charts.js?v=20261110-21';
 
 const KIND_LABELS = { risposta: 'Risposta', domanda: 'Domanda', replica: 'Replica', chiusura: 'Chiusura', saluto: 'Saluto', discorso: 'Discorso', contestazione: 'Contestazione' };
 const STYLE_LABELS = { ...Object.fromEntries([...Object.entries(STYLES), ...Object.entries(REPLIES), ...Object.entries(ASKS), ...Object.entries(CLOSINGS)].map(([id, spec]) => [id, spec.label])), caloroso: 'Saluto caloroso', sobrio: 'Saluto sobrio', locale: 'Saluto locale', combattivo: 'Apertura all’attacco', promessa: 'Dalle promesse', territorio: 'Dal territorio', attualita: 'Dall’attualità', governo: 'Dal Governo', proposta: 'Dalla proposta del partito', attacco: 'All’attacco', ascolta: 'Ascoltare', rispondi: 'Rispondere', prosegui: 'Proseguire', interrompi: 'Interrompere', appello: 'Appello al voto', impegno: 'Impegno pubblico', ringraziamento: 'Ringraziamento', coro: 'Slogan' };

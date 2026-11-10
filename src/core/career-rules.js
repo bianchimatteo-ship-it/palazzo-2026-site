@@ -1,9 +1,9 @@
-import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel } from '../data/regions.js?v=20261110-20';
-import { isSelectableParty } from '../data/schema.js?v=20261110-20';
-import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261110-20';
-import { startAgeProblems, startProblems } from './start-engine.js?v=20261110-20';
-import { presidentialEligibility } from './presidency-engine.js?v=20261110-20';
-import { avatarProblems } from './avatar.js?v=20261110-20';
+import { CAREER_LEVELS, ITALIAN_REGIONS, PROVINCIAL_LEVEL_PROBLEM, hasProvincialLevel } from '../data/regions.js?v=20261110-21';
+import { isSelectableParty } from '../data/schema.js?v=20261110-21';
+import { DIFFICULTIES } from '../data/simulation/difficulty-rules.js?v=20261110-21';
+import { startAgeProblems, startProblems } from './start-engine.js?v=20261110-21';
+import { presidentialEligibility } from './presidency-engine.js?v=20261110-21';
+import { avatarProblems } from './avatar.js?v=20261110-21';
 
 // The gender of the character: man or woman. A value of an older career (not specified, non-binary…) is brought to one of the two when the career is loaded, keeping the original in `legacyGender`.
 export const GENDERS = Object.freeze(['uomo', 'donna']);
