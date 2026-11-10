@@ -2,9 +2,9 @@
 // its person (avatar-svg.js: always the avatar saved for the player, a stable one for the others) plus a body drawn here — torso, two arms with an elbow, two legs — in separate groups, so that the
 // player (ui/stage-player.js) can make them walk, sit, gesture. Every group carries the data the player needs (class, data-*); the poses come from core/stage-script.js. No animation is started here:
 // what is drawn is the FINAL pose of the beat, so with the motion off or reduced, or in a scene resumed, the stage is already right.
-import { avatarColors, avatarParts, shade } from './avatar-svg.js?v=20261109-5';
-import { depthScale, STAGE_W, STAGE_H } from '../core/stage-script.js?v=20261109-5';
-import { defaultAvatarFor } from '../core/avatar.js?v=20261109-5';
+import { avatarColors, avatarParts, shade } from './avatar-svg.js?v=20261110-1';
+import { depthScale, STAGE_W, STAGE_H } from '../core/stage-script.js?v=20261110-1';
+import { defaultAvatarFor } from '../core/avatar.js?v=20261110-1';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const hash = text => { let h = 2166136261 >>> 0; for (const ch of String(text)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return h; };

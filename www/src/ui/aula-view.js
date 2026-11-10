@@ -2,11 +2,11 @@
 // hemicycle model, a city council / a regional council / the European Parliament via the totals of each group) and lights the seats one after the other in the order the script gives, with the counters
 // as the sums of the seats shown and the President's announcements. With the motion off or reduced (or prefers-reduced-motion) the window opens on the final picture; «Vai all’esito» does the same
 // at any moment; the vote can be left at any moment (Esc or «Chiudi»). It is loaded only when someone enters the Aula.
-import { aulaFromParliamentVote, aulaFromTallies, boardAt, saidAt } from '../core/aula-script.js?v=20261109-5';
-import { hemicycleModel } from './hemicycle-view.js?v=20261109-5';
-import { hemicycleLayout } from '../core/hemicycle.js?v=20261109-5';
-import { VOTE_CHOICES } from '../core/vote-engine.js?v=20261109-5';
-import { motionAllows } from './stage-player.js?v=20261109-5';
+import { aulaFromParliamentVote, aulaFromTallies, boardAt, saidAt } from '../core/aula-script.js?v=20261110-1';
+import { hemicycleModel } from './hemicycle-view.js?v=20261110-1';
+import { hemicycleLayout } from '../core/hemicycle.js?v=20261110-1';
+import { VOTE_CHOICES } from '../core/vote-engine.js?v=20261110-1';
+import { motionAllows } from './stage-player.js?v=20261110-1';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const COLORS = { ...Object.fromEntries(Object.entries(VOTE_CHOICES).map(([id, spec]) => [id, spec.color])), waiting: '#3a4540' };
@@ -60,11 +60,14 @@ function paint(root, aula, shown) {
   const boardEl = root.querySelector('.aula-board'); if (boardEl) boardEl.innerHTML = board(aula, shown);
   const log = root.querySelector('.aula-said');
   if (log) { const lines = saidAt(script, shown); if (log.children.length !== lines.length) log.innerHTML = lines.map(step => `<li class="${step.result ? 'is-result' : ''}">${esc(step.text)}</li>`).join(''); }
+  // at the end there is nothing left to pause or to skip to
+  root.querySelectorAll('[data-aula-pause],[data-aula-skip]').forEach(button => { button.hidden = shown >= script.order.length && script.order.length > 0; });
   root.dataset.aulaShown = String(shown);
   root.dataset.aulaFinal = shown >= script.order.length ? '1' : '0';
 }
 function stop() { if (timer) { clearInterval(timer); timer = null; } }
 export function closeAula() {
+  try { current?.report?.(true); if (current?.leave) removeEventListener('pagehide', current.leave); } catch { /* leaving is never blocked */ }
   stop();
   const root = document.querySelector('.aula-overlay');
   if (root) root.remove();
@@ -75,7 +78,7 @@ export function closeAula() {
 function onKey(event) { if (event.key === 'Escape' && current) { event.stopPropagation(); closeAula(); } }
 
 // Opens the window. `motion`: 'full' plays seat by seat (about six seconds); 'reduced' or 'off', or the system preference, show the final picture at once.
-export function openAula(aula, { motion = 'off', onClose = null } = {}) {
+export function openAula(aula, { motion = 'off', onClose = null, start = 0, onProgress = null } = {}) {
   if (!aula) return false;
   closeAula();
   previousFocus = document.activeElement;
@@ -96,17 +99,26 @@ export function openAula(aula, { motion = 'off', onClose = null } = {}) {
   document.body.appendChild(root);
   document.addEventListener('keydown', onKey, true);
   current = { aula, root };
-  let shown = play ? 0 : script.order.length;
+  // Resumed from where it was left (the seats shown are the first `start` of the same deterministic order: nothing is drawn again, no vote is recomputed); a finished vote opens on the final picture.
+  const total = script.order.length;
+  const resumeAt = Math.max(0, Math.min(total, Math.floor(Number(start) || 0)));
+  let shown = play ? resumeAt : total;
   let paused = false;
+  let lastSaved = -1, savedAt = 0;
+  // Progress is reported when it moves, at most about once a second, and always on pause, skip and close (the player may leave at any moment).
+  const report = (force = false) => { if (!onProgress || shown === lastSaved) return; const now = Date.now(); if (!force && now - savedAt < 1000 && shown < total) return; lastSaved = shown; savedAt = now; try { onProgress(shown, total, shown >= total); } catch { /* the save is not the vote */ } };
+  current.report = report;
+  current.leave = () => report(true);
+  addEventListener('pagehide', current.leave);
   paint(root, aula, shown);
   const chunk = Math.max(1, Math.ceil(script.order.length / 70));
-  const tick = () => { if (paused) return; shown = Math.min(script.order.length, shown + chunk); paint(root, aula, shown); if (shown >= script.order.length) stop(); };
+  const tick = () => { if (paused) return; shown = Math.min(script.order.length, shown + chunk); paint(root, aula, shown); report(); if (shown >= script.order.length) { stop(); report(true); } };
   if (play) timer = setInterval(tick, 90);
   root.addEventListener('click', event => {
-    if (event.target.closest('[data-aula-close]') || event.target === root) { closeAula(); onClose?.(); return; }
-    if (event.target.closest('[data-aula-skip]')) { stop(); shown = script.order.length; paint(root, aula, shown); return; }
+    if (event.target.closest('[data-aula-close]') || event.target === root) { report(true); closeAula(); onClose?.(); return; }
+    if (event.target.closest('[data-aula-skip]')) { stop(); shown = script.order.length; paint(root, aula, shown); report(true); return; }
     const pause = event.target.closest('[data-aula-pause]');
-    if (pause) { paused = !paused; pause.setAttribute('aria-pressed', String(paused)); pause.textContent = paused ? 'Riprendi' : 'Pausa'; }
+    if (pause) { paused = !paused; if (paused) report(true); pause.setAttribute('aria-pressed', String(paused)); pause.textContent = paused ? 'Riprendi' : 'Pausa'; }
   });
   root.querySelector('[data-aula-skip]')?.focus?.({ preventScroll: true });
   return true;

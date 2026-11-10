@@ -1,11 +1,13 @@
 // The programme and the promises (program-engine.js): what the party proposes, what the player promised, how credible it is, how each promise is going against what the game really did,
 // the commitments of the coalition, and what the rivals promise. Every button here calls the store (makePromise, modifyPromise, withdrawPromise, announcePromise): nothing is decorative.
-import { AMBITIONS, PROMISE_SCOPES, PROMISE_SETTLED, PROMISE_STATES, promiseLine } from '../core/program-engine.js?v=20261109-5';
-import { AREA_BY_ID, INSTRUMENT_KINDS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261109-5';
-import { badge, bar, card, empty, esc, kpi, num } from './sections-kit.js?v=20261109-5';
-import { glyph, inkOn } from './visuals.js?v=20261109-5';
-import { partyIdentity } from './party-identity.js?v=20261109-5';
-import { FINANCING, TERRITORIES, DEADLINES } from '../core/program-proposals.js?v=20261109-5';
+import { AMBITIONS, PROMISE_SCOPES, PROMISE_SETTLED, PROMISE_STATES, promiseLine } from '../core/program-engine.js?v=20261110-1';
+import { AREA_BY_ID, INSTRUMENT_KINDS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261110-1';
+import { badge, bar, card, empty, esc, kpi, num } from './sections-kit.js?v=20261110-1';
+import { glyph, inkOn } from './visuals.js?v=20261110-1';
+import { partyIdentity } from './party-identity.js?v=20261110-1';
+import { allianceOf } from '../core/world-engine.js?v=20261110-1';
+import { PRIORITIES, REVISION_REASONS } from '../core/program-engine.js?v=20261110-1';
+import { FINANCING, TERRITORIES, DEADLINES } from '../core/program-proposals.js?v=20261110-1';
 
 const TONE = { neutral: 'neutral', info: 'info', good: 'good', warning: 'warning', bad: 'bad' };
 const stateChip = status => { const spec = PROMISE_STATES[status] ?? PROMISE_STATES['non-avviata']; return badge(spec.label, TONE[spec.tone] ?? 'neutral'); };
@@ -50,7 +52,13 @@ function makeForm(view, { premier, hasAccord }) {
   <p class="sx-note">Ogni promessa indica il problema, l’intervento, l’obiettivo, il costo stimato e la scadenza. Più sono ambiziose e numerose, meno sono credibili; dopo il voto vengono verificate sulle leggi davvero approvate e sugli indicatori del territorio.</p>` });
 }
 
-function promiseCard(promise, { campaign }) {
+// The allies of the player's party in the accord (with the tie): who a promise can be negotiated with.
+function alliesOf(state) {
+  const world = state.world, own = world?.playerPartyId;
+  const alliance = own ? allianceOf(world, own) : null;
+  return (alliance?.partyIds ?? []).filter(id => id !== own).map(id => ({ id, label: world.parties.find(item => item.id === id)?.label ?? id }));
+}
+function promiseCard(promise, { campaign, allies = [] }) {
   const settled = PROMISE_SETTLED.includes(promise.status);
   const weeksLeft = promise.dueWeek - (promise.currentWeek ?? promise.dueWeek);
   const scope = PROMISE_SCOPES[promise.scope]?.label ?? promise.scope;
@@ -63,13 +71,16 @@ function promiseCard(promise, { campaign }) {
         <form data-promise-modify-form data-promise-id="${esc(promise.id)}"><label>Ambizione<select name="ambition">${options(AMBITION_OPTIONS, promise.ambition)}</select></label>
         <label>Strumento<select name="instrument">${options(INSTRUMENT_OPTIONS, promise.instrument)}</select></label>
         <label>Tempo in più (settimane)<select name="extraWeeks">${options([['0', 'Nessuno'], ['8', '8'], ['16', '16'], ['26', '26']], '0')}</select></label>
+        <label>Motivo della revisione<select name="reason">${options(Object.entries(REVISION_REASONS).map(([id, spec]) => [id, spec.label]), 'nessuno')}</select></label>
         <button type="submit" class="ghost-button">Registra la modifica</button><small>Cambiare la parola data costa reputazione, e ne resta traccia.</small></form></details>
+      <label class="program-priority-pick">Priorità<select data-promise-priority="${esc(promise.id)}" aria-label="Priorità della promessa">${options(Object.entries(PRIORITIES).map(([id, spec]) => [id, spec.label]), promise.priority ?? 'media')}</select></label>
+      ${allies.length ? `<form data-promise-negotiate-form data-promise-id="${esc(promise.id)}" class="program-negotiate"><label>Trattativa con un alleato<select name="ally">${options(allies.filter(ally => !(promise.backedBy ?? []).some(item => item.id === ally.id)).map(ally => [ally.id, ally.label]))}</select></label><button type="submit" class="ghost-button"${(promise.backedBy ?? []).length >= 2 ? ' disabled' : ''}>Chiedi sostegno (1 capitale)</button></form>` : ''}
       <button type="button" class="ghost-button" data-promise-withdraw="${esc(promise.id)}">Ritira</button></div>`;
   return `<article class="program-promise status-${esc(promise.status)}">
     <header><div><strong>${esc(promise.label)}</strong><small>${esc(scope)} · ${esc(AMBITIONS[promise.ambition]?.label ?? '')}</small></div>${stateChip(promise.status)}</header>
     ${promise.problem ? `<p class="program-problem"><b>Problema</b> ${esc(promise.problem)}</p>` : ''}
     <p><b>Intervento</b> ${esc(promise.intervention)}</p><p><b>Obiettivo</b> ${esc(promise.objective)}</p>
-    <div class="program-meta"><span>Costo ~${num(promise.cost, 1)} mld</span><span>${settled ? (promise.outcome ? `Esito: ${esc(promise.outcome)}` : '') : `Scadenza tra ${Math.max(0, weeksLeft)} settimane`}</span>${announced ? `<span>Presentata in campagna</span>` : ''}</div>
+    <div class="program-meta"><span>${esc(PRIORITIES[promise.priority]?.label ?? PRIORITIES.media.label)}</span><span>Costo ~${num(promise.cost, 1)} mld</span>${(promise.backedBy ?? []).length ? `<span>Sostenuta da ${esc(promise.backedBy.map(item => item.label).join(', '))}</span>` : ''}<span>${settled ? (promise.outcome ? `Esito: ${esc(promise.outcome)}` : '') : `Scadenza tra ${Math.max(0, weeksLeft)} settimane`}</span>${announced ? `<span>Presentata in campagna</span>` : ''}</div>
     ${bar(promise.progress ?? 0, promise.status === 'non-mantenuta' ? 'bad' : promise.status === 'ritardata' ? 'warning' : 'good')}
     <small class="program-evidence">${esc(promise.evidence ?? 'Nessun atto collegato.')}</small>
     ${impediments}${history ? `<details class="program-history"><summary>Storia</summary><ul>${history}</ul></details>` : ''}${actions}</article>`;
@@ -116,6 +127,7 @@ function proposalCard(view, item, index, count) {
       <button type="button" class="ghost-button" data-proposal-move="${esc(item.id)}" data-dir="-1" aria-label="Sposta in alto"${index === 0 ? ' disabled' : ''}>↑</button><button type="button" class="ghost-button" data-proposal-move="${esc(item.id)}" data-dir="1" aria-label="Sposta in basso"${index === count - 1 ? ' disabled' : ''}>↓</button>
       <button type="button" class="${item.status === 'bozza' ? 'primary-button' : 'ghost-button'}" data-proposal-state="${esc(item.id)}" data-state="${item.status === 'bozza' ? 'pubblicata' : 'bozza'}">${item.status === 'bozza' ? 'Pubblica nel programma' : 'Riporta in bozza'}</button>
       <details class="program-modify"><summary class="ghost-button">Modifica</summary><form data-proposal-edit-form data-proposal-id="${esc(item.id)}">${proposalFields(view, item)}<button type="submit" class="primary-button">Salva le modifiche</button></form></details>
+      ${item.status === 'pubblicata' && !item.billId ? `<button type="button" class="ghost-button" data-proposal-bill="${esc(item.id)}" title="Un disegno di legge vero: commissione, emendamenti, voti. Non diventa legge da solo e non è una promessa.">Presenta come disegno di legge</button>` : item.billId ? '<small class="program-link-none">Presentata come disegno di legge</small>' : ''}
       <button type="button" class="ghost-button" data-proposal-delete="${esc(item.id)}">Elimina</button></div>
     ${linkForm}</article>`;
 }
@@ -182,7 +194,7 @@ export function renderProgram(state, view) {
     ${credibilityCard(view)}
     <div class="sx-grid two">${partyCard(view, premier)}${makeForm(view, { premier, hasAccord })}</div>
     ${editorCard(view)}${previewCard(view, state)}
-    ${card({ kicker: 'IN CORSO', title: `Le tue promesse (${live.length})`, body: live.length ? `<div class="program-list">${live.map(item => promiseCard(item, { campaign: view.campaign })).join('')}</div>` : '<p class="sx-empty">Nessuna promessa aperta. Ogni impegno è una responsabilità: sceglili con cura.</p>' })}
+    ${card({ kicker: 'IN CORSO', title: `Le tue promesse (${live.length})`, body: live.length ? `<div class="program-list">${live.map(item => promiseCard(item, { campaign: view.campaign, allies: alliesOf(state) })).join('')}</div>` : '<p class="sx-empty">Nessuna promessa aperta. Ogni impegno è una responsabilità: sceglili con cura.</p>' })}
     ${accordCard(view)}${rivalsCard(view)}${knownRivalsCard(view)}${compare}
     ${premier && view.suggestion.length ? card({ kicker: 'GOVERNO', title: 'Il programma di governo parte dalle tue promesse', body: `<p>Priorità suggerite dal tuo programma: ${view.suggestion.map(id => esc(AREA_BY_ID[id]?.label ?? id)).join(' · ')}.</p><p class="sx-note">Quando fissi il programma del Governo (Parlamento › Governo) senza scegliere le priorità, il gioco usa queste; ogni priorità diventa anche una promessa di governo.</p>` }) : ''}
   </div>`;

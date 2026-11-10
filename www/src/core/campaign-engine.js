@@ -1,11 +1,11 @@
-import { advanceDays } from './time.js?v=20261109-5';
-import { difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261109-5';
-import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261109-5';
-import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261109-5';
-import { aggregateShares, listVote, mateForce, runFinalElection, runFirstRound, voteScale } from './election-engine.js?v=20261109-5';
-import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261109-5';
-import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261109-5';
-import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261109-5';
+import { advanceDays } from './time.js?v=20261110-1';
+import { difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261110-1';
+import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261110-1';
+import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261110-1';
+import { aggregateShares, listVote, mateForce, runFinalElection, runFirstRound, voteScale } from './election-engine.js?v=20261110-1';
+import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261110-1';
+import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261110-1';
+import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261110-1';
 
 const SOURCE = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
@@ -1357,12 +1357,18 @@ function electionDay(campaign, round_ = 'primo-turno') {
   const turnout = turnoutOf(campaign, round_, mobilization);
   const smallElectorate = electorateNoise(campaign, turnout.value);
   const shifts = {};
+  let shiftParts = null;
   for (const candidate of active) {
     const share = Math.max(.5, before[candidate.id]);
     const volatility = candidate.isPlayer ? strategy.volatility : 1;
     // (a list of 1% does not swing by half a point on the day: the part of the error that does not depend on the size is much smaller in a vote for lists, and so is the effect of mobilisation)
     const lists = listVote(campaign);
-    shifts[candidate.id] = round(gaussian(campaign) * ((lists ? .12 : .45) + Math.sqrt(share) * .3) * volatility * climate * smallElectorate * .8 + (mobilization[candidate.id] - mean) * (lists ? listSize(campaign, candidate.id) : 1) + (candidate.isPlayer ? listEdge(campaign) : 0));
+    // the three causes of the shift of the day, kept apart (the part of the player is recorded in the day: late deciders and the error of the projection, the mobilisation against the mean, the pull of the list)
+    const noise = gaussian(campaign) * ((lists ? .12 : .45) + Math.sqrt(share) * .3) * volatility * climate * smallElectorate * .8;
+    const mobilisationPart = (mobilization[candidate.id] - mean) * (lists ? listSize(campaign, candidate.id) : 1);
+    const edgePart = candidate.isPlayer ? listEdge(campaign) : 0;
+    if (candidate.isPlayer) shiftParts = { sampling: round(noise), mobilisation: round(mobilisationPart), listEdge: round(edgePart) };
+    shifts[candidate.id] = round(noise + mobilisationPart + edgePart);
   }
   for (const area of campaign.territories) {
     const shares = area.supportByCandidate;
@@ -1370,7 +1376,7 @@ function electionDay(campaign, round_ = 'primo-turno') {
     const total = Object.values(shares).reduce((sum, value) => sum + Number(value), 0) || 1;
     for (const id of Object.keys(shares)) shares[id] = round(Number(shares[id]) * 100 / total);
   }
-  campaign.electionDays = [...(campaign.electionDays ?? []), { round:round_, projection:before, shifts, mobilization:round(player && mobilization[player.id] !== undefined ? mobilization[player.id] : 0), mobilizationByCandidate:mobilization, turnout:turnout.value, turnoutParts:turnout.parts, source:SOURCE }];
+  campaign.electionDays = [...(campaign.electionDays ?? []), { round:round_, projection:before, shifts, shiftParts, mobilization:round(player && mobilization[player.id] !== undefined ? mobilization[player.id] : 0), mobilizationByCandidate:mobilization, turnout:turnout.value, turnoutParts:turnout.parts, source:SOURCE }];
 }
 // ---------- endorsements: who backs the player, why, at what price, and what is remembered ----------
 // An endorsement is not a bonus: it comes from a subject (a mayor, a trade association, a union, a civic network, a newspaper, a leader of
@@ -1935,7 +1941,7 @@ export function createCampaign({career,player,statistics=[],offices=[],territori
     media:{coverage:0,reactions:0,criticalEvents:0,source:SOURCE},partyImpact:{internalSupport:internalSupport,source:SOURCE},
     strategy:null,activityUses:{},crisis:null,commitments:0,eventLog:{},electionDays:[],partyTrend:0,
     crew:newCrew(playerStats,{quality:config.crew?.quality??null,fieldEdge:config.crew?.fieldEdge??0,organization:initialResources.organization}),rivalScope,endorsements:{known:Array.isArray(config.endorsers)?config.endorsers.filter(item=>item?.key&&item.areaId).map(item=>({key:item.key,kind:item.kind,areaId:item.areaId,label:item.label,relation:Number(item.relation??50)})):[],given:[],refused:[],pending:{},offers:0,source:SOURCE},
-    anchored:Object.keys(anchors).length>0,othersShare:roster&&['politiche','europee'].includes(type)&&Number.isFinite(Number(roster.others))?round(clamp(Number(roster.others),0,40)):0,audience:{},electorate:electorateOf(config,type),roster:roster?{ type, regionId:roster.regionId??null, others:roster.others??null, participants:roster.participants.map(item=>({ id:item.id, label:item.label, abbreviation:item.abbreviation??null, refSource:item.refSource??'real', share:item.share, surveyed:item.surveyed, reason:item.reason, regional:Boolean(item.regional), isPlayer:Boolean(item.isPlayer) })), source:SOURCE }:null,
+    anchored:Object.keys(anchors).length>0,othersShare:roster&&['politiche','europee'].includes(type)&&Number.isFinite(Number(roster.others))?round(clamp(Number(roster.others),0,40)):0,audience:{},electorate:electorateOf(config,type),roster:roster?{ type, regionId:roster.regionId??null, others:roster.others??null, participants:roster.participants.map(item=>({ id:item.id, label:item.label, abbreviation:item.abbreviation??null, refSource:item.refSource??'real', share:item.share, underlying:item.underlying??null, pollAverage:item.pollAverage??null, poll:item.poll??null, surveyed:item.surveyed, reason:item.reason, regional:Boolean(item.regional), isPlayer:Boolean(item.isPlayer) })), source:SOURCE }:null,
     seed,rngState:seed,source:SOURCE
   };
   addHistory(campaign,'inizio',`${model.label}: inizia una campagna di ${model.campaignDays} giorni nello scenario simulato.`,{source:SOURCE});
@@ -2367,8 +2373,36 @@ export function followWorld(input, forces = []) {
 // territory and its own candidacies, which is not what the national voting intentions measure (the two are never compared as if they were the same question).
 export function campaignScope(campaign) {
   if (!campaign) return null;
-  if (listVote(campaign)) return { kind: 'liste', territorial: 'quota della tua lista sul totale dei voti validi, «Altri» compresi: la stessa base dei sondaggi nazionali', poll: 'Sondaggio delle liste: stessa base dei sondaggi nazionali (percentuali sul totale dei voti validi, con «Altri»). Parte dal sondaggio generale e se ne discosta solo per ciò che muove la campagna: azioni, eventi, avversari.' };
+  if (listVote(campaign)) return { kind: 'liste', territorial: 'quota della tua lista sul totale dei voti validi, «Altri» compresi: la stessa base dei sondaggi nazionali e del risultato', poll: 'Sondaggio delle liste: la stessa base dei sondaggi nazionali e del risultato (percentuali sul totale dei voti validi, con «Altri»). Parte dalla media degli ultimi sondaggi generali e se ne discosta solo per ciò che muove la campagna: azioni, eventi, mobilitazione, avversari; ogni scarto è spiegato in «Perché la percentuale è questa».' };
   return { kind: 'territorio', territorial: 'quota tra tutte le candidature del primo turno, base simulata sul territorio', poll: `Sondaggio della sola corsa «${campaign.electionLabel ?? 'locale'}»: riguarda le candidature in campo in quel territorio e non è confrontabile con le intenzioni di voto nazionali dei partiti.` };
+}
+// Why the percentage of a general or European campaign is where it is, step by step and with each cause apart: the last national poll before the campaign (date, institute, sample, margin), the weighted
+// average of the recent readings and what the model holds, the base the campaign opened on, what the career added (small and separate), what was left out on purpose (the allies' votes stay with their
+// own lists, the committees of one region lift that region), the change of the polls during the campaign and the shift of the day of the vote with its causes. The same base as the vote: the share of
+// the list on all the valid votes, «Altri» included. Lines of text: nothing here changes the campaign.
+export function campaignOpeningNotes(campaign) {
+  if (!campaign || !listVote(campaign)) return [];
+  const notes = [];
+  const row = campaign.roster?.participants?.find(item => item.isPlayer) ?? null;
+  const parts = campaign.preparation?.pollParts ?? {};
+  const f1 = value => Number(value).toLocaleString('it-IT', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const f2 = value => Number(value).toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const sg = value => `${Number(value) < 0 ? '-' : '+'}${f2(Math.abs(Number(value)))}`;
+  if (row?.poll?.share != null) notes.push({ id: 'ultimo-sondaggio', text: `Ultimo sondaggio nazionale prima della campagna: ${f1(row.poll.share)}% (${row.poll.institute ?? 'istituto'}, ${row.poll.date ?? 'data non disponibile'}, campione ${row.poll.sample ?? '—'}, margine ±${f1(row.poll.margin ?? 0)} punti).` });
+  if (row?.pollAverage != null && row?.underlying != null) notes.push({ id: 'base', text: `La campagna parte da ${f1(row.share)}%: metà della media ponderata degli ultimi sondaggi (${f1(row.pollAverage)}%) e metà del consenso sottostante del modello (${f1(row.underlying)}%), così il rumore di un solo campione non diventa consenso stabile.` });
+  const personal = round(Number(parts.mood ?? 0) + Number(parts.memory ?? 0) + Number(parts.start ?? 0));
+  if (personal) notes.push({ id: 'carriera', text: `Umore del Paese, memoria degli elettori e condizioni di partenza valgono ${sg(personal)} punti per la tua lista (limite: il 6% della sua dimensione).` });
+  if (Number(parts.deferred?.personal ?? 0)) notes.push({ id: 'non-applicato', text: `Altri ${f2(parts.deferred.personal)} punti di umore e memoria non vengono contati prima di giocare la campagna: si guadagnano con azioni ed eventi.` });
+  if (Number(parts.alliesMobilisation ?? 0)) notes.push({ id: 'alleati', text: `Le liste alleate tengono i propri voti: non si sommano alla tua. L’alleanza porta ${parts.alliesMobilisation} punti di organizzazione e di volontari, e pesa soprattutto sui collegi uninominali e sulle trattative.` });
+  const regional = campaign.opening?.regional;
+  if (regional?.value) notes.push({ id: 'comitati', text: `I comitati del territorio sostengono la regione ${regional.region}: ${sg(regional.value)} punti lì, non la percentuale nazionale.` });
+  const first = (campaign.consensusHistory ?? [])[0], last = campaign.polls?.at(-1);
+  const own = campaign.playerCandidateId;
+  const poll = last?.results?.find(item => item.candidateId === own);
+  if (poll) notes.push({ id: 'ultima-rilevazione', text: `Ultima rilevazione della campagna: ${f1(poll.share)}% (${last.institute?.name ?? last.institute ?? 'istituto'}, giorno ${last.day}, campione ${last.sample ?? '—'}, margine ±${f1(last.margin ?? 0)} punti): una stima con l’errore del suo campione.` });
+  const day = campaign.electionDays?.find(item => item.round === 'primo-turno') ?? campaign.electionDays?.[0];
+  if (day?.shiftParts) notes.push({ id: 'giorno-del-voto', text: `Il giorno del voto la tua lista si sposta di ${sg(day.shifts?.[own] ?? 0)} punti: errore delle stime e indecisi ${sg(day.shiftParts.sampling)}, mobilitazione ${sg(day.shiftParts.mobilisation)}, forza della lista ${sg(day.shiftParts.listEdge)}.` });
+  return notes;
 }
 // The percentages of a campaign, each with its own name and what it measures. They are different things and are never shown as one number:
 //  - territorialConsensus: the support the player has on the territory, weighted by the area, as a share among ALL the candidacies of the first round (the base the campaign is simulated on);

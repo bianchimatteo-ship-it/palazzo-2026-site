@@ -448,3 +448,11 @@ html[data-ui-motion="reduced"] .hqc-drawer-toggle, html[data-ui-motion="reduced"
   .hqc-fold-inner > .hqc-band > .hqc-band-head { margin-bottom: 8px; }
 }
 @media (prefers-reduced-motion: reduce) { .hqc-fold-head .fold-chevron { transition: none; } }
+/* A phone held sideways (short and wide): the main action of the week stays beside who you are, inside the first screen, and the heading takes less room. */
+@media (orientation: landscape) and (max-height: 480px) and (min-width: 640px) {
+  .hqc-head { grid-template-columns: minmax(0, 1fr) minmax(230px, 300px); grid-template-areas: "who action"; }
+  .hqc-who .hq-identity { padding: 12px 16px 6px; }
+  .hqc-who .situation-bar { display: none; }
+  .hqc-who { padding-bottom: 8px; }
+  .hqc-action { margin: 10px 10px 10px 0; padding: 12px 14px; }
+}

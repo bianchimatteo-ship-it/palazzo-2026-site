@@ -1,6 +1,55 @@
 // English phrase book, part 8 of 8: the administrative area, the account and sign-out screens, the personal logo catalogue, the tutorial invitation and the engine's law-effect and government lines. Same format as part 6: [Italian as shown, English]; `#` stands for a number, `{}` for a free part; in the English a free part is named by its position (`{2}` for the second one).
-import { ALL_PAIRS } from '../studio-lines.js?v=20261109-5';
-import { ALL_PAIRS as ACTIVITY_SCENE_PAIRS } from '../activity-scene-lines.js?v=20261109-5';
+import { ALL_PAIRS } from '../studio-lines.js?v=20261110-1';
+import { ALL_PAIRS as ACTIVITY_SCENE_PAIRS } from '../activity-scene-lines.js?v=20261110-1';
+
+// The explanations of the opening of a general or European campaign (campaign-engine.js campaignOpeningNotes): signed numbers come in both signs.
+function campaignNotePairs() {
+  const out = [];
+  const withSigns = (it, en, slots) => {
+    for (let mask = 0; mask < 1 << slots; mask++) {
+      let i = 0;
+      const pick = () => ((mask >> i++) & 1 ? '-' : '+');
+      out.push([it.replace(/§/g, () => pick()), (i = 0, en.replace(/§/g, () => pick()))]);
+    }
+  };
+  out.push(['Ultimo sondaggio nazionale prima della campagna: #% ({}, {}, campione #, margine ±# punti).', 'Last national poll before the campaign: {1}% ({2}, {3}, sample {4}, margin ±{5} points).']);
+  out.push(['La campagna parte da #%: metà della media ponderata degli ultimi sondaggi (#%) e metà del consenso sottostante del modello (#%), così il rumore di un solo campione non diventa consenso stabile.', 'The campaign starts from #%: half the weighted average of the latest polls (#%) and half the model’s underlying support (#%), so the noise of a single sample does not become stable support.']);
+  withSigns('Umore del Paese, memoria degli elettori e condizioni di partenza valgono §# punti per la tua lista (limite: il 6% della sua dimensione).', 'The mood of the country, the voters’ memory and the starting conditions are worth §# points for your list (limit: 6% of its size).', 1);
+  out.push(['Altri # punti di umore e memoria non vengono contati prima di giocare la campagna: si guadagnano con azioni ed eventi.', 'Another # points of mood and memory are not counted before the campaign is played: they are earned with actions and events.']);
+  out.push(['Le liste alleate tengono i propri voti: non si sommano alla tua. L’alleanza porta # punti di organizzazione e di volontari, e pesa soprattutto sui collegi uninominali e sulle trattative.', 'Allied lists keep their own votes: they are not added to yours. The alliance brings # points of organisation and volunteers, and weighs mostly on the single-member districts and on the talks.']);
+  withSigns('I comitati del territorio sostengono la regione {}: §# punti lì, non la percentuale nazionale.', 'The territory’s committees support the region {1}: §{2} points there, not the national percentage.', 1);
+  out.push(['Ultima rilevazione della campagna: #% ({}, giorno #, campione #, margine ±# punti): una stima con l’errore del suo campione.', 'Latest reading of the campaign: {1}% ({2}, day {3}, sample {4}, margin ±{5} points): an estimate with the error of its sample.']);
+  withSigns('Il giorno del voto la tua lista si sposta di §# punti: errore delle stime e indecisi §#, mobilitazione §#, forza della lista §#.', 'On election day your list moves by §# points: estimate error and undecided voters §#, mobilisation §#, strength of the list §#.', 4);
+  out.push(['Perché la percentuale è questa', 'Why the percentage is this']);
+  out.push(['Sondaggio delle liste: la stessa base dei sondaggi nazionali e del risultato (percentuali sul totale dei voti validi, con «Altri»). Parte dalla media degli ultimi sondaggi generali e se ne discosta solo per ciò che muove la campagna: azioni, eventi, mobilitazione, avversari; ogni scarto è spiegato in «Perché la percentuale è questa».', 'List poll: the same base as the national polls and the result (percentages of all valid votes, with “Others”). It starts from the average of the latest general polls and departs from it only because of what moves the campaign: actions, events, mobilisation, opponents; every gap is explained in “Why the percentage is this”.']);
+  out.push(['quota della tua lista sul totale dei voti validi, «Altri» compresi: la stessa base dei sondaggi nazionali e del risultato', 'your list’s share of all valid votes, “Others” included: the same base as the national polls and the result']);
+  return out;
+}
+
+// The tools of the promises (priority, revision with a reason, negotiation with an ally, proposal presented as a bill).
+function promiseToolPairs() {
+  const out = [
+    ['Priorità alta', 'High priority'], ['Priorità media', 'Medium priority'], ['Priorità bassa', 'Low priority'], ['Priorità', 'Priority'], ['Priorità della promessa', 'Priority of the promise'],
+    ['Motivo della revisione', 'Reason for the revision'], ['Trattativa con un alleato', 'Negotiation with an ally'], ['Chiedi sostegno (1 capitale)', 'Ask for support (1 capital)'],
+    ['Sostenuta da {}', 'Backed by {1}'], ['Presenta come disegno di legge', 'Present as a bill'], ['Presentata come disegno di legge', 'Presented as a bill'],
+    ['Un disegno di legge vero: commissione, emendamenti, voti. Non diventa legge da solo e non è una promessa.', 'A real bill: committee, amendments, votes. It does not become law by itself and it is not a promise.'],
+    ['Mancano le risorse', 'The resources are missing'], ['Lo chiedono gli alleati', 'The allies ask for it'], ['Un’emergenza cambia le priorità', 'An emergency changes the priorities'], ['Il quadro è cambiato', 'The situation has changed'], ['Nessun motivo dichiarato', 'No reason given'],
+    ['Priorità: priorità alta.', 'Priority: high priority.'], ['Priorità: priorità media.', 'Priority: medium priority.'], ['Priorità: priorità bassa.', 'Priority: low priority.'],
+    ['{} sostiene la promessa: il costo si divide.', '{1} backs the promise: the cost is shared.'], ['{} rifiuta di sostenerla: la trattativa non ha esito.', '{1} refuses to back it: the negotiation leads nowhere.'],
+    ['{} rifiuta: la trattativa non ha esito.', '{1} refuses: the negotiation leads nowhere.'], ['{} sostiene la promessa su {}.', '{1} backs the promise on {2}.'], ['{} non sostiene la promessa su {}.', '{1} does not back the promise on {2}.'],
+    ['Questo alleato la sostiene già.', 'This ally already backs it.'], ['Due alleati a sostenerla bastano.', 'Two allies backing it are enough.'], ['Scegli con quale alleato trattare.', 'Choose which ally to negotiate with.'],
+    ['Questo partito non è un tuo alleato nell’accordo.', 'This party is not an ally of yours in the accord.'], ['Serve almeno un punto di capitale politico per trattare.', 'You need at least one political capital point to negotiate.'],
+    ['Due promesse in cima bastano: se tutto è prioritario, nulla lo è.', 'Two promises at the top are enough: if everything is a priority, nothing is.'], ['Scegli una priorità: alta, media o bassa.', 'Choose a priority: high, medium or low.'], ['Questa è già la sua priorità.', 'This is already its priority.'],
+    ['Proposta non trovata nel programma.', 'Proposal not found in the programme.'], ['Questa proposta è già stata presentata come disegno di legge.', 'This proposal has already been presented as a bill.'],
+    ['Per presentarla come disegno di legge serve un seggio con un gruppo di riferimento: da qui puoi pubblicarla e farne una promessa.', 'To present it as a bill you need a seat with a parliamentary group: from here you can publish it and make it a promise.'],
+    ['Presentata come disegno di legge', 'Presented as a bill'],
+    ['Incentivi e agevolazioni fiscali in', 'Incentives and tax relief in']
+  ];
+  for (const [it, en] of [['mancano le risorse', 'the resources are missing'], ['lo chiedono gli alleati', 'the allies ask for it'], ['un’emergenza cambia le priorità', 'an emergency changes the priorities'], ['il quadro è cambiato', 'the situation has changed'], ['nessun motivo dichiarato', 'no reason given']]) {
+    out.push([`Modificata. Motivo: ${it}.`, `Modified. Reason: ${en}.`], [`Modificata. Motivo: ${it} (i fatti non lo confermano).`, `Modified. Reason: ${en} (the facts do not confirm it).`]);
+  }
+  return out;
+}
 
 export const PHRASES = [
   ["Verifica della sessione…", "Checking the session…"],
@@ -5290,6 +5339,9 @@ export const PHRASES = [
   ["Carico la pagina…","Loading the page…"],
   ...ALL_PAIRS,
   ...ACTIVITY_SCENE_PAIRS,
+  ...campaignNotePairs(),
+  ...promiseToolPairs(),
+  ["Ripresa dal punto in cui l’hai lasciata: # seggi su #.", "Resumed from where you left it: # seats out of #."],
   ["Sfumato", "Fade"], ["Undercut", "Undercut"], ["Ciuffo laterale", "Side quiff"], ["All’indietro", "Swept back"], ["Cresta", "Mohawk"], ["Dreadlocks", "Dreadlocks"], ["Treccine", "Braids"],
   ["Di tre giorni", "Three-day stubble"], ["Pizzetto", "Goatee"], ["Basette", "Sideburns"], ["Collare", "Chin strap"],
   ["Baffi a matita", "Pencil moustache"], ["Baffi a spazzola", "Toothbrush moustache"], ["Baffi a ferro di cavallo", "Horseshoe moustache"], ["Baffi chevron", "Chevron moustache"],
