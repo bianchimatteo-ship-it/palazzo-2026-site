@@ -10,6 +10,7 @@ import { AVATAR_OPTIONS, defaultAvatarFor, normalizeAvatar } from './avatar.js?v
 import { personName, registerSceneKind } from './scene-engine.js?v=20261110-20';
 import { SPEAK_GESTURES, LISTEN_GESTURES, pickGesture, registerStageScript, stagePose } from './stage-script.js?v=20261110-20';
 import { ACTIVITY_SCENES, ACTIVITY_SCENE_UI } from '../data/activity-scene-lines.js?v=20261110-20';
+import { STAKES } from '../data/activity-scene-stakes.js?v=20261110-19';
 import { BODIES, CITIZEN_GUESTS, GUESTS, HEADINGS, REFS } from '../data/activity-scene-guests.js?v=20261110-20';
 
 export { ACTIVITY_SCENES, ACTIVITY_SCENE_UI };
@@ -118,7 +119,7 @@ export function activityNode(scene) {
     case 'q2': return { ...base, speaker: guest(scene, 2).id, expression: 'determinata', gesture: 'indica', camera: 'wide', title: family.label[0], text: family.follow[0], choices: approaches };
     case 'r1': case 'r2': {
       const who = last && last.band === 'good' ? guest(scene, scene.nodeId === 'r1' ? 1 : 2) : guest(scene, scene.nodeId === 'r1' ? 2 : 1);
-      return { ...base, speaker: who.id, expression: last?.band === 'good' ? 'serena' : last?.band === 'bad' ? 'determinata' : 'serena', gesture: last?.band === 'bad' ? 'dissenso' : last?.band === 'good' ? 'applaude' : 'ascolta', camera: 'wide', title: scene.nodeId === 'r1' ? 'Reazioni alla prima risposta' : 'Reazioni alla seconda risposta', said: last?.said ?? null, text: last?.reaction ?? '', why: last?.why ?? [], score: last?.score, audience: null, choices: [['continua', 'Continua']] };
+      return { ...base, speaker: who.id, expression: last?.band === 'good' ? 'serena' : last?.band === 'bad' ? 'determinata' : 'serena', gesture: last?.band === 'bad' ? 'dissenso' : last?.band === 'good' ? 'applaude' : 'ascolta', camera: 'wide', title: scene.nodeId === 'r1' ? 'Reazioni alla prima risposta' : 'Reazioni alla seconda risposta', said: last?.said ?? null, text: last?.reaction ?? '', ...(last?.stake ? { lines: [last.stake] } : {}), why: last?.why ?? [], score: last?.score, audience: null, choices: [['continua', 'Continua']] };
     }
     default: return { ...base, speaker: guest(scene, 1).id, expression: scene.outcome?.band === 'bad' ? 'determinata' : 'sorridente', gesture: 'saluta', camera: 'wide', text: scene.outcome?.summary ?? spec.closings.mid[0], choices: [['fine', 'Concludi la scena']], final: true };
   }
@@ -136,7 +137,8 @@ export function activityChoose(scene, choiceId) {
   const result = judge(scene, approach, scene.nodeId);
   const b = band(result.score);
   const reaction = pickBy(spec.reactions[b], `${scene.seed}|${scene.nodeId}|${b}|reazione`)[0];
-  scene.history.push({ node: scene.nodeId, choice: choiceId, score: result.score, band: b, why: result.why, said: approach.label[0], reaction });
+  const stakePair = STAKES[scene.sceneKey]?.[scene.familyId]?.[b === 'good' ? 0 : b === 'bad' ? 1 : -1];
+  scene.history.push({ node: scene.nodeId, choice: choiceId, score: result.score, band: b, why: result.why, said: approach.label[0], reaction, ...(stakePair ? { stake: stakePair[0] } : {}) });
   scene.audience.mood = clamp(round1(scene.audience.mood + (result.score - 55) / 4), 0, 100);
   scene.audience.history.push(scene.audience.mood);
   scene.nodeId = scene.nodeId === 'q1' ? 'r1' : 'r2';

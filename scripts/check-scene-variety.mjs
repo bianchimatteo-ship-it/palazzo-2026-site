@@ -8,6 +8,7 @@ import { readFile } from 'node:fs/promises';
 const build = (await readFile(new URL('../index.html', import.meta.url), 'utf8')).match(/main\.js\?v=([^"']+)/)?.[1];
 const v = build ? `?v=${build}` : '?';
 const lines = await import(`../src/data/activity-scene-lines.js${v}`);
+const stakes = await import(`../src/data/activity-scene-stakes.js${v}`);
 const guests = await import(`../src/data/activity-scene-guests.js${v}`);
 const scenes = await import(`../src/core/activity-scenes.js${v}`);
 const engine = await import(`../src/core/scene-engine.js${v}`);
@@ -65,6 +66,22 @@ const roomSvg = room.ROOMS.includes('sala') ? await (async () => { const { rende
 assert.ok(roomSvg.includes('INCONTRO CON I CITTADINI') && !roomSvg.includes('COMITATI E ASSOCIAZIONI'), 'Sul fondale c’è la scritta giusta.');
 const roomAssoc = art.renderStageSvg(assoc, scenes.activityStage(assoc, scenes.activityNode(assoc)), scenes.activityNode(assoc), {});
 assert.ok(roomAssoc.includes('COMITATI E ASSOCIAZIONI'), 'E per le associazioni resta la loro.');
+
+// each subject has its own answer, good and poor, and the scene shows it as a line of its own after the generic reaction
+const stakeTexts = new Set();
+for (const kind of KINDS) for (const family of lines.ACTIVITY_SCENES[kind].families) {
+  const pair = stakes.STAKES[kind]?.[family.id];
+  assert.ok(pair && pair[0][0] && pair[1][0] && pair[0][1] && pair[1][1], `${kind}/${family.id}: una risposta buona e una scarsa, bilingui.`);
+  for (const text of [pair[0][0], pair[1][0]]) { assert.ok(!stakeTexts.has(text), `Risposta riciclata: ${text}`); stakeTexts.add(text); }
+}
+const probe = scenes.createActivityScene({ id: 'st', seed: 'stake', sceneKey: 'commissione', activityId: 'audizione-commissione', player, playerAvatar: null, prefer: 'sanita', refs: {} });
+let stakeSeen = 0;
+for (const approach of lines.ACTIVITY_SCENES.commissione.approaches) {
+  const copy = structuredClone(probe); copy.nodeId = 'q1'; scenes.activityChoose(copy, approach.id);
+  const node = scenes.activityNode(copy);
+  if (copy.history[0].band !== 'mid') { assert.equal(node.lines?.[0], stakes.STAKES.commissione.sanita[copy.history[0].band === 'good' ? 0 : 1][0], 'La reazione porta la risposta del tema.'); stakeSeen++; } else assert.ok(!node.lines, 'Una risposta mediocre non aggiunge nulla.');
+}
+assert.ok(stakeSeen >= 1, 'Almeno una delle tre risposte è buona o scarsa e porta la riga del tema.');
 
 // ---------- the party headquarters ----------
 const named = { kind: 'partito', name: 'Rotta Civica', mark: 'RTC', abbreviation: 'RTC', colors: { primary: '#264d82' }, accent: '#264d82', logo: null };

@@ -1,10 +1,13 @@
 // The guided tutorial, in a real browser (Chrome over the DevTools protocol; skipped when it is not installed): optional (never shown by itself), started from «Come giocare»,
-// eleven steps that open the real pages with Indietro / Avanti / Salta / Chiudi and a progress bar, resumable after closing and after a reload, repeatable, and harmless:
+// thirteen steps that open the real pages with Indietro / Avanti / Salta / Chiudi and a progress bar, resumable after closing and after a reload, repeatable, and harmless:
 // it never changes the career (week, days, date, funds). The guide has a search box. On a phone the card stays on screen above the navigation bar.
 import assert from 'node:assert/strict';
 import { chromeAvailable, createCareerInPage, openCareer, withBrowser } from './lib/browser.mjs';
 
 if (!chromeAvailable) { console.log('Tutorial saltato: Chrome non trovato (imposta CHROME_PATH per eseguirlo).'); process.exit(0); }
+import { readFile } from 'node:fs/promises';
+const _build = (await readFile(new URL('../index.html', import.meta.url), 'utf8')).match(/main\.js\?v=([^"']+)/)?.[1];
+const N = (await import(`../src/ui/tutorial.js?v=${_build}`)).TUTORIAL_STEPS.length; // the steps of the tutorial (13: the weekly activities and the votes in the Chamber have their own)
 const problems = [];
 const check = (condition, message) => { if (!condition) problems.push(message); };
 
@@ -33,7 +36,7 @@ await withBrowser(async browser => {
   await evaluate(`(() => { const box = document.querySelector('[data-guide-search]'); box.value = ''; box.dispatchEvent(new Event('input', { bubbles: true })); return true; })()`);
   await click('.tutorial-invite [data-tutorial=start]');
   let c = await card();
-  check(c && c.now === 1 && c.max === 11 && /PASSO 1 DI 11/.test(c.kicker), `Parte dal primo passo (${c?.kicker}).`);
+  check(c && c.now === 1 && c.max === N && new RegExp(`PASSO 1 DI ${N}`).test(c.kicker), `Parte dal primo passo (${c?.kicker}).`);
   check(!await evaluate(`Boolean(document.querySelector('.main-menu'))`), 'Il menu si chiude: il tutorial si vede sulle pagine del gioco.');
   check(c.inside && c.scrollW <= c.innerW + 1, 'Su 375 px la scheda sta nello schermo, sopra la barra, senza scorrimento orizzontale.');
   check(c.buttons.every(([label, height]) => height >= 40), `I pulsanti visibili sono da tocco (${JSON.stringify(c.buttons)}).`);
@@ -54,7 +57,7 @@ await withBrowser(async browser => {
 
   // walk forward through the real pages
   const seen = [c.hash];
-  for (let step = 2; step <= 11; step++) {
+  for (let step = 2; step <= N; step++) {
     await click('[data-tutorial=next]');
     c = await card();
     check(c && c.now === step, `Passo ${step}: ${c?.kicker}.`);
@@ -72,7 +75,7 @@ await withBrowser(async browser => {
   check(await card() === null, 'Dopo il ricaricamento il tutorial chiuso non riappare da solo.');
   await click('[data-action=menu]'); await click('[data-menu=guida]');
   const resume = await evaluate(`document.querySelector('.tutorial-invite [data-tutorial=resume]')?.textContent.trim()`);
-  check(/Riprendi dal passo 10 di 11/.test(resume ?? ''), `Si può riprendere (${resume}).`);
+  check(new RegExp(`Riprendi dal passo ${N - 1} di ${N}`).test(resume ?? ''), `Si può riprendere (${resume}).`);
   await click('.tutorial-invite [data-tutorial=resume]');
   c = await card();
   check(c?.now === 10, 'Riprendi riporta al passo salvato.');
