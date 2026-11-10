@@ -2,13 +2,13 @@
 // elections, coalitions and national campaign, the seats projected on the real map of 2022, the last votes, the new
 // Chambers and the formation of the Government. The map, the seats and the results of 2022 are real data (Eligendo);
 // polls, coalitions, votes, seats and Governments of the game are simulation, and every block says which is which.
-import { districtRows } from '../core/legislature-engine.js?v=20261110-1';
-import { formatDate } from '../core/time.js?v=20261110-1';
-import { ALLIANCE_COLORS, NEUTRAL_COLOR, coalitionColor, forceColor } from './political-colors.js?v=20261110-1';
-import { glyph } from './visuals.js?v=20261110-1';
-import { arrow, badge, bar, card, esc, euro, kpi, num, pct, table } from './sections-kit.js?v=20261110-1';
-import { toneEdge } from '../data/party-brand.js?v=20261110-1';
-import { ABSENT_COLOR, MAP_SCOPES, NO_DATA_COLOR, PRESENCE_NOTE, PROVINCE_INDICATOR_NOTE, italyMapInfo, italyMapSvg, italyMapTable, territoryTallies } from './italy-map.js?v=20261110-1';
+import { districtRows } from '../core/legislature-engine.js?v=20261110-24';
+import { formatDate } from '../core/time.js?v=20261110-24';
+import { ALLIANCE_COLORS, NEUTRAL_COLOR, coalitionColor, forceColor } from './political-colors.js?v=20261110-24';
+import { glyph } from './visuals.js?v=20261110-24';
+import { arrow, badge, bar, card, esc, euro, kpi, num, pct, table } from './sections-kit.js?v=20261110-24';
+import { toneEdge } from '../data/party-brand.js?v=20261110-24';
+import { ABSENT_COLOR, MAP_SCOPES, NO_DATA_COLOR, PRESENCE_NOTE, PROVINCE_INDICATOR_NOTE, italyMapInfo, italyMapSvg, italyMapTable, territoryTallies } from './italy-map.js?v=20261110-24';
 
 export const NATIONAL_MAP_VIEWS = Object.freeze([['proiezione', 'Proiezione di oggi'], ['2022', 'Vincitori 2022 (reale)'], ['voto', 'Ultimo voto della partita']]);
 const NEUTRAL = NEUTRAL_COLOR;

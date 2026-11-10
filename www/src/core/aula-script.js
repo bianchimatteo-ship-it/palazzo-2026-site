@@ -2,13 +2,14 @@
 // and nothing is written to the game: the order in which the seats light up comes from a hash of the vote's own id, the colours are the choices the engine assigned, the counters at every moment are the
 // sums of the seats shown so far, and at the end they are exactly the totals of the vote. Adapters bring a vote of the Camera, the Senate, a city council, a regional council or the European Parliament
 // to the same shape (`aulaFromTallies` for the assemblies that keep only the totals of each group). A secret ballot shows who voted, never how. Skipped or with the motion off: the final picture.
-import { AULA } from '../data/studio-lines.js?v=20261110-1';
-import { seededRandom } from './vote-engine.js?v=20261110-1';
+import { AULA } from '../data/studio-lines.js?v=20261110-24';
+import { seededRandom } from './vote-engine.js?v=20261110-24';
 
 export const ASSEMBLIES = Object.freeze({
   camera: { noun: 'La Camera', president: 'Il Presidente della Camera', label: 'Camera dei deputati' },
   senato: { noun: 'Il Senato', president: 'Il Presidente del Senato', label: 'Senato della Repubblica' },
   comune: { noun: 'Il Consiglio comunale', president: 'Il Presidente del Consiglio comunale', label: 'Consiglio comunale' },
+  provincia: { noun: 'Il Consiglio provinciale', president: 'Il Presidente della Provincia', label: 'Consiglio provinciale' },
   regione: { noun: 'Il Consiglio regionale', president: 'Il Presidente del Consiglio regionale', label: 'Consiglio regionale' },
   europeo: { noun: 'Il Parlamento europeo', president: 'Il Presidente del Parlamento', label: 'Parlamento europeo' }
 });

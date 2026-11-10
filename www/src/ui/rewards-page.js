@@ -1,9 +1,9 @@
 // «Ricompense»: the daily reward, the time played, the rewarded videos and what was received. It shows only what the player is meant to know: nothing about how long the effect of a video lasts or where it
 // comes from (that is not told anywhere in the game).
-import { DAILY_REWARD, PLAY_REWARDS } from '../data/simulation/reward-rules.js?v=20261110-1';
-import { t } from '../core/i18n.js?v=20261110-1';
-import { glyph } from './visuals.js?v=20261110-1';
-import { esc } from './charts.js?v=20261110-1';
+import { DAILY_REWARD, PLAY_REWARDS } from '../data/simulation/reward-rules.js?v=20261110-24';
+import { t } from '../core/i18n.js?v=20261110-24';
+import { glyph } from './visuals.js?v=20261110-24';
+import { esc } from './charts.js?v=20261110-24';
 // euros with the thousands point also for four digits (toLocaleString('it-IT') writes 1500): the amounts here are 500 and 1.500
 const euro = value => `${String(Math.round(Number(value) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, '.')} €`;
 

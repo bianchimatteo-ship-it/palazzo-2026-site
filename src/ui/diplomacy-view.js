@@ -1,8 +1,8 @@
 // Diplomacy and the European Union (diplomacy-engine.js): the standing in the Union, the summit that asks for a line, the crises that wait for an answer, the negotiation at the table, the treaties
 // (the President ratifies them), and the countries with their relations as a history of trust and tension. Every button calls the store (diplomacyAction): nothing is decorative.
-import { BLOC_LABELS, CRISIS_ANSWERS, CRISIS_KINDS, STANCES, SUMMIT_STANCES, TREATY_TYPES, COUNTRIES, DIPLOMACY_RULES, diplomacyView } from '../core/diplomacy-engine.js?v=20261110-21';
-import { badge, card, empty, esc, kpi } from './sections-kit.js?v=20261110-21';
-import { glyph } from './visuals.js?v=20261110-21';
+import { BLOC_LABELS, CRISIS_ANSWERS, CRISIS_KINDS, STANCES, SUMMIT_STANCES, TREATY_TYPES, COUNTRIES, DIPLOMACY_RULES, diplomacyView } from '../core/diplomacy-engine.js?v=20261110-24';
+import { badge, card, empty, esc, kpi } from './sections-kit.js?v=20261110-24';
+import { glyph } from './visuals.js?v=20261110-24';
 
 const meter = (value, tone = '') => `<b class="dp-meter ${tone}" role="img" aria-label="${esc(String(Math.round(value ?? 0)))}"><i style="width:${Math.max(0, Math.min(100, Number(value) || 0))}%"></i></b>`;
 const act = (kind, args, label, tone = 'ghost-button') => `<button type="button" class="${tone}" data-diplomacy-kind="${esc(kind)}" data-diplomacy-args="${esc(args.join('|'))}">${esc(label)}</button>`;

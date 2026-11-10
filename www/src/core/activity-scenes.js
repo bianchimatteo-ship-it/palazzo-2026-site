@@ -6,10 +6,12 @@
 // activity is applied ONCE, by the store, when the scene ends.
 // Deterministic: the family of topics, the names and the small variations come from the seed of the scene (and from what the player met lately: the same family is not drawn again in a row).
 // Loaded on demand (it is not in the first screen): it registers itself in scene-engine.js and stage-script.js when imported.
-import { AVATAR_OPTIONS, defaultAvatarFor, normalizeAvatar } from './avatar.js?v=20261110-1';
-import { personName, registerSceneKind } from './scene-engine.js?v=20261110-1';
-import { SPEAK_GESTURES, LISTEN_GESTURES, pickGesture, registerStageScript, stagePose } from './stage-script.js?v=20261110-1';
-import { ACTIVITY_SCENES, ACTIVITY_SCENE_UI } from '../data/activity-scene-lines.js?v=20261110-1';
+import { AVATAR_OPTIONS, defaultAvatarFor, normalizeAvatar } from './avatar.js?v=20261110-24';
+import { personName, registerSceneKind } from './scene-engine.js?v=20261110-24';
+import { SPEAK_GESTURES, LISTEN_GESTURES, pickGesture, registerStageScript, stagePose } from './stage-script.js?v=20261110-24';
+import { ACTIVITY_SCENES, ACTIVITY_SCENE_UI } from '../data/activity-scene-lines.js?v=20261110-24';
+import { STAKES } from '../data/activity-scene-stakes.js?v=20261110-24';
+import { BODIES, CITIZEN_GUESTS, GUESTS, HEADINGS, REFS } from '../data/activity-scene-guests.js?v=20261110-24';
 
 export { ACTIVITY_SCENES, ACTIVITY_SCENE_UI };
 export const SCENE_KIND = 'attivita';
@@ -31,7 +33,7 @@ export function pickFamily(spec, seed, recent = [], prefer = null) {
   const pool = fresh.length ? fresh : spec.families;
   return pool.find(family => family.id === prefer) ?? pickBy(pool, `${seed}|famiglia`);
 }
-const character = (id, role, spec, seed, used) => {
+const character = (id, role, spec, seed, used, { roleLabel = null, partyLabel = '' } = {}) => {
   const names = spec.names.filter(name => !used.has(name));
   const name = personName(pickBy(names.length ? names : spec.names, `${seed}|${id}|nome`), spec.tag[0]);
   used.add(name);
@@ -48,24 +50,39 @@ const character = (id, role, spec, seed, used) => {
     else if (attempt === 5) avatar = candidate;
   }
   taken.push(avatar);
-  return { id, role, name, avatar, tag: spec.tag[0] };
+  return { id, role, name, avatar, tag: roleLabel ?? spec.tag[0], roleLabel: roleLabel ?? spec.tag[0], partyLabel };
 };
 
 // The scene of an activity. `recent`: the ids of the families of the last scenes of this kind (the game keeps them); `prefer`: a family wished by the situation; `variant`: 'head' or 'opposition'
 // (the building site) — the dialogue banks are the same, the introduction changes.
-export function createActivityScene({ id, seed, sceneKey, activityId, target = null, variant = 'default', player, playerAvatar, stats = {}, recent = [], prefer = null, date = null }) {
+// Who belongs to what: in the party meeting everyone is of the party of the player; in the committee and in the Council of Ministers the guests sit for the parties the game gives (`pool`); the others speak for
+// the body of the scene (civil society, the public works, the press). `refs`: what the career holds that a scene can mention (the party, a promise, the territory, a rival, a headline of the week).
+const AFFILIATION = Object.freeze({ sede: 'party', commissione: 'pool', consiglio: 'pool' });
+const REF_ORDER = ['party', 'promise', 'region', 'rival', 'news'];
+export function pickRef(sceneKey, seed, refs = {}) {
+  const available = REF_ORDER.filter(type => String(refs[type] ?? '').trim() && REFS[type]?.[sceneKey]);
+  if (!available.length) return null;
+  const type = available[hashOf(`${seed}|riferimento`) % available.length];
+  return { type, value: String(refs[type]).trim(), text: REFS[type][sceneKey][0].replace('{}', String(refs[type]).trim()) };
+}
+export function createActivityScene({ id, seed, sceneKey, activityId, target = null, variant = 'default', player, playerAvatar, stats = {}, recent = [], prefer = null, date = null, party = null, refs = {}, pool = [] }) {
   const spec = ACTIVITY_SCENES[sceneKey];
   if (!spec) throw new Error('Scena non riconosciuta.');
   const family = pickFamily(spec, seed, recent, prefer);
   const used = new Set();
+  const roles = (activityId === 'cittadini' ? CITIZEN_GUESTS[family.id] : null) ?? GUESTS[sceneKey]?.[family.id] ?? [spec.cast[0].tag, spec.cast[1].tag];
+  const heading = sceneKey === 'associazioni' ? HEADINGS[activityId === 'cittadini' ? 'cittadini' : 'associazioni'] : null;
+  const partyOf = index => AFFILIATION[sceneKey] === 'party' ? (party?.label ?? '') : AFFILIATION[sceneKey] === 'pool' && pool.length ? pool[hashOf(`${seed}|appartenenza|${index}`) % pool.length] : '';
   const cast = [
     { id: 'giocatore', role: 'giocatore', name: personName(player?.name, 'Tu'), avatar: normalizeAvatar(playerAvatar), tag: player?.tag ?? '' },
-    character('ospite1', 'ospite', spec.cast[0], seed, used),
-    character('ospite2', 'ospite', spec.cast[1], seed, used)
+    character('ospite1', 'ospite', spec.cast[0], seed, used, { roleLabel: roles[0]?.[0] ?? null, partyLabel: partyOf(1) }),
+    character('ospite2', 'ospite', spec.cast[1], seed, used, { roleLabel: roles[1]?.[0] ?? null, partyLabel: partyOf(2) })
   ];
+  const bodyLabel = AFFILIATION[sceneKey] === 'party' && party?.label ? party.label : heading?.body[0] ?? BODIES[sceneKey]?.[0] ?? '';
+  const ref = pickRef(sceneKey, seed, { ...refs, party: AFFILIATION[sceneKey] === 'party' || refs.party ? (refs.party ?? party?.label ?? '') : '' });
   return {
     id, kind: SCENE_KIND, sceneKey, activityId, target, variant: spec.intro[variant] ? variant : 'default', setting: spec.setting, seed, date, status: 'active', nodeId: 'apertura', cast,
-    topic: { id: family.id, label: family.label[0] }, place: { label: spec.place[0] }, familyId: family.id,
+    topic: { id: family.id, label: family.label[0] }, place: { label: spec.place[0] }, familyId: family.id, bodyLabel, heading: heading ? { kicker: heading.kicker[0], title: heading.title[0], banner: heading.banner[0] } : null, partyLabel: party?.label ?? '', ref: ref ? { type: ref.type, text: ref.text } : null,
     context: { stats: { competence: stats.competence ?? 50, charisma: stats.charisma ?? 50, reputation: stats.reputation ?? 50 } },
     audience: { mood: 50, history: [] }, history: [], outcome: null
   };
@@ -97,12 +114,12 @@ export function activityNode(scene) {
   const base = { id: scene.nodeId, setting: scene.setting };
   const approaches = spec.approaches.map(item => [item.id, item.label[0], false, item.detail[0]]);
   switch (scene.nodeId) {
-    case 'apertura': return { ...base, speaker: me(scene).id, expression: 'serena', gesture: 'saluta', camera: 'wide', title: spec.title[0], text: (spec.intro[scene.variant] ?? spec.intro.default)[0], choices: [['continua', 'Continua']] };
+    case 'apertura': return { ...base, speaker: me(scene).id, expression: 'serena', gesture: 'saluta', camera: 'wide', title: spec.title[0], text: (spec.intro[scene.variant] ?? spec.intro.default)[0], ...(scene.ref?.text ? { lines: [scene.ref.text] } : {}), choices: [['continua', 'Continua']] };
     case 'q1': return { ...base, speaker: guest(scene, 1).id, expression: 'determinata', gesture: 'sottolinea', camera: 'wide', title: family.label[0], text: family.open[0], choices: approaches };
     case 'q2': return { ...base, speaker: guest(scene, 2).id, expression: 'determinata', gesture: 'indica', camera: 'wide', title: family.label[0], text: family.follow[0], choices: approaches };
     case 'r1': case 'r2': {
       const who = last && last.band === 'good' ? guest(scene, scene.nodeId === 'r1' ? 1 : 2) : guest(scene, scene.nodeId === 'r1' ? 2 : 1);
-      return { ...base, speaker: who.id, expression: last?.band === 'good' ? 'serena' : last?.band === 'bad' ? 'determinata' : 'serena', gesture: last?.band === 'bad' ? 'dissenso' : last?.band === 'good' ? 'applaude' : 'ascolta', camera: 'wide', title: scene.nodeId === 'r1' ? 'Reazioni alla prima risposta' : 'Reazioni alla seconda risposta', said: last?.said ?? null, text: last?.reaction ?? '', why: last?.why ?? [], score: last?.score, audience: null, choices: [['continua', 'Continua']] };
+      return { ...base, speaker: who.id, expression: last?.band === 'good' ? 'serena' : last?.band === 'bad' ? 'determinata' : 'serena', gesture: last?.band === 'bad' ? 'dissenso' : last?.band === 'good' ? 'applaude' : 'ascolta', camera: 'wide', title: scene.nodeId === 'r1' ? 'Reazioni alla prima risposta' : 'Reazioni alla seconda risposta', said: last?.said ?? null, text: last?.reaction ?? '', ...(last?.stake ? { lines: [last.stake] } : {}), why: last?.why ?? [], score: last?.score, audience: null, choices: [['continua', 'Continua']] };
     }
     default: return { ...base, speaker: guest(scene, 1).id, expression: scene.outcome?.band === 'bad' ? 'determinata' : 'sorridente', gesture: 'saluta', camera: 'wide', text: scene.outcome?.summary ?? spec.closings.mid[0], choices: [['fine', 'Concludi la scena']], final: true };
   }
@@ -120,7 +137,8 @@ export function activityChoose(scene, choiceId) {
   const result = judge(scene, approach, scene.nodeId);
   const b = band(result.score);
   const reaction = pickBy(spec.reactions[b], `${scene.seed}|${scene.nodeId}|${b}|reazione`)[0];
-  scene.history.push({ node: scene.nodeId, choice: choiceId, score: result.score, band: b, why: result.why, said: approach.label[0], reaction });
+  const stakePair = STAKES[scene.sceneKey]?.[scene.familyId]?.[b === 'good' ? 0 : b === 'bad' ? 1 : -1];
+  scene.history.push({ node: scene.nodeId, choice: choiceId, score: result.score, band: b, why: result.why, said: approach.label[0], reaction, ...(stakePair ? { stake: stakePair[0] } : {}) });
   scene.audience.mood = clamp(round1(scene.audience.mood + (result.score - 55) / 4), 0, 100);
   scene.audience.history.push(scene.audience.mood);
   scene.nodeId = scene.nodeId === 'q1' ? 'r1' : 'r2';

@@ -3,7 +3,7 @@
 // arrive, the ballot travels from the desk to the hand and into the urn. It is made with the Web Animations API on the SVG groups, so that every animation can be paused, resumed or finished at once
 // (skip) and the end of the passage is known. Complete motion plays everything; reduced or off motion (and the system preference) show the final pose at once. A beat already played (saved in the
 // scene: stageSeen) is never played again: a scene resumed shows the poses of the beat and nothing moves again.
-import { CAMERAS, GESTURES, cameraTransform, depthScale, gestureAngles } from './stage-art.js?v=20261110-1';
+import { CAMERAS, GESTURES, cameraTransform, depthScale, gestureAngles } from './stage-art.js?v=20261110-24';
 
 const SPEED = 118;            // units of the stage per second when walking
 const state = { anims: [], paused: false, key: null, timer: null, timers: new Set(), finished: true, listeners: new Set() };

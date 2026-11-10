@@ -138,3 +138,10 @@ html[data-scene-motion="full"] .cm-protest .cm-arm { animation: st-arms .45s eas
 .aula-live .aula-follow { background: linear-gradient(180deg, #e3c777, #c4a45a); border-color: #e3c777; color: #1b1608; font-weight: 800; letter-spacing: .05em; min-height: 44px; }
 .aula-live .ghost-button { min-height: 44px; }
 @media (max-width: 600px) { .aula-live-actions, .aula-live-actions button { width: 100%; } }
+
+/* the two buttons of an activity with a scene sit side by side, equal, under the target (when it has one) */
+.hqc-activities .hq-activity-action:has(.scene-take) { display: flex; flex-wrap: wrap; justify-content: stretch; align-items: center; gap: 6px; }
+.hqc-activities .hq-activity-action:has(.scene-take) select { flex: 1 1 100%; max-width: none; width: 100%; height: 36px; }
+.hqc-activities .hq-activity-action:has(.scene-take) .scene-take, .hqc-activities .hq-activity-action:has(.scene-take) [data-quick-scene] { flex: 1 1 0; min-width: 96px; min-height: 40px; height: auto; }
+.hqc-activities .hq-activity-action:has(.scene-take) .plan-add, .hqc-activities .hq-activity-action:has(.scene-take) [data-plan-add] { flex: 0 0 auto; }
+.hqc-activities .hq-activity-action:has(.scene-take) em { flex: 1 1 100%; }

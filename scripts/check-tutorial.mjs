@@ -67,10 +67,10 @@ await withBrowser(async browser => {
   check(new Set(seen).size >= 7, `Attraversa pagine diverse del gioco (${[...new Set(seen)].join(' ')}).`);
   await click('[data-tutorial=prev]');
   c = await card();
-  check(c?.now === 10, 'Indietro torna al passo precedente.');
+  check(c?.now === N - 1, 'Indietro torna al passo precedente.');
   // close and resume, also after a reload
   await click('[data-tutorial=close]');
-  check(await card() === null && (await status()).status === 'closed' && (await status()).step === 9, 'Chiudere la scheda ricorda il passo.');
+  check(await card() === null && (await status()).status === 'closed' && (await status()).step === N - 2, 'Chiudere la scheda ricorda il passo.');
   await goto(); await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu=continua]"))')); await click('[data-menu=continua]'); await waitFor(() => evaluate('Boolean(document.querySelector(".page-wrap"))'));
   check(await card() === null, 'Dopo il ricaricamento il tutorial chiuso non riappare da solo.');
   await click('[data-action=menu]'); await click('[data-menu=guida]');
@@ -78,7 +78,7 @@ await withBrowser(async browser => {
   check(new RegExp(`Riprendi dal passo ${N - 1} di ${N}`).test(resume ?? ''), `Si può riprendere (${resume}).`);
   await click('.tutorial-invite [data-tutorial=resume]');
   c = await card();
-  check(c?.now === 10, 'Riprendi riporta al passo salvato.');
+  check(c?.now === N - 1, 'Riprendi riporta al passo salvato.');
   await click('[data-tutorial=next]'); await click('[data-tutorial=next]');
   check(await card() === null && (await status()).status === 'done', 'L’ultimo passo («Fine») chiude il tutorial come completato.');
   // restart, then skip

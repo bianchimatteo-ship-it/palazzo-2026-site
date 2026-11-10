@@ -3,7 +3,7 @@
 // the one thing they lack, the comparison with the day the challenge was accepted (baseline) and a hard end. Pure and deterministic: no random numbers, nothing leaves the game state
 // (game.challenge = the one open, game.challengesDone = the verdicts). The store applies the starting condition and the reward; the weekly tick calls tickChallenge.
 // Everything is simulated; no challenge describes a real person or organisation.
-import { measureValue, objectiveAvailable, recordOf } from './objective-engine.js?v=20261110-1';
+import { measureValue, objectiveAvailable, recordOf } from './objective-engine.js?v=20261110-24';
 
 const round1 = value => Math.round(value * 10) / 10;
 const clamp = (value, min = 0, max = 100) => Math.max(min, Math.min(max, value));

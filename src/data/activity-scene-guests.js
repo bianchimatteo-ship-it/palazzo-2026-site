@@ -18,8 +18,8 @@ export const GUESTS = Object.freeze({
     sicurezza: G(['Responsabile della sicurezza', 'Safety officer'], ['Delegato sindacale dei lavoratori', 'Workers’ union delegate']),
     costi: G(['Direttore tecnico dell’impresa', 'Contractor’s technical director'], ['Ragioniere dell’ente appaltante', 'Contracting authority accountant']),
     viabilita: G(['Comandante della polizia locale', 'Chief of the local police'], ['Rappresentante dei commercianti della zona', 'Representative of local traders']),
-    materiali: G(['Ingegnere collaudatore', 'Testing engineer'], ['Capocantiere', 'Foreman']),
-    residenti: G(['Portavoce dei residenti', 'Residents’ spokesperson'], ['Capocantiere', 'Foreman']),
+    materiali: G(['Ingegnere collaudatore', 'Testing engineer'], ['Capocantiere', 'Site foreman']),
+    residenti: G(['Portavoce dei residenti', 'Residents’ spokesperson'], ['Capocantiere', 'Site foreman']),
     collaudo: G(['Direttore dei lavori', 'Site manager'], ['Funzionario della soprintendenza', 'Heritage authority official'])
   },
   sede: {

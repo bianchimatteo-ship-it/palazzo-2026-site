@@ -1,6 +1,6 @@
 // English phrase-book pairs of the last release pass (data/i18n/en-ui-8.js reads `ALL_PAIRS`): the guided programme editor, the days of the Quirinale and the rule on the parties, the government room, the live
 // votes of the assemblies, the party headquarters, the TV name plates and the tutorial. Format as in the phrase-book: [Italian as shown, English]; `#` a number, `{}` a free part.
-import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261110-21';
+import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261110-24';
 export const ALL_PAIRS = [
   ...GUEST_PAIRS,
   // ---- the guided programme editor ----

@@ -2,10 +2,10 @@
 // its person (avatar-svg.js: always the avatar saved for the player, a stable one for the others) plus a body drawn here — torso, two arms with an elbow, two legs — in separate groups, so that the
 // player (ui/stage-player.js) can make them walk, sit, gesture. Every group carries the data the player needs (class, data-*); the poses come from core/stage-script.js. No animation is started here:
 // what is drawn is the FINAL pose of the beat, so with the motion off or reduced, or in a scene resumed, the stage is already right.
-import { avatarColors, avatarParts, shade } from './avatar-svg.js?v=20261110-21';
-import { depthScale, STAGE_W, STAGE_H } from '../core/stage-script.js?v=20261110-21';
-import { defaultAvatarFor } from '../core/avatar.js?v=20261110-21';
-import { isEnglish, translateText } from '../core/i18n.js?v=20261110-21';
+import { avatarColors, avatarParts, shade } from './avatar-svg.js?v=20261110-24';
+import { depthScale, STAGE_W, STAGE_H } from '../core/stage-script.js?v=20261110-24';
+import { defaultAvatarFor } from '../core/avatar.js?v=20261110-24';
+import { isEnglish, translateText } from '../core/i18n.js?v=20261110-24';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const hash = text => { let h = 2166136261 >>> 0; for (const ch of String(text)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return h; };
@@ -166,13 +166,14 @@ export function strapLines(member, fallbackBody = '') {
 }
 export function strap(member, x, w, bottom, active, fallbackBody = '') {
   const lines = strapLines(member, fallbackBody);
-  const nameLines = wrapText(lines.name, Math.floor((w - 18) / 6.4)), roleLines = wrapText(lines.role, Math.floor((w - 18) / 5.0)), partyLines = wrapText(lines.party, Math.floor((w - 18) / 5.0));
-  const height = 8 + nameLines.length * 11.5 + roleLines.length * 9.6 + partyLines.length * 9.6 + 5, top = bottom - height;
-  const nameY = i => top + 12.5 + i * 11.5, roleY = i => top + 12.5 + nameLines.length * 11.5 + 1 + i * 9.6, partyY = i => roleY(roleLines.length) + i * 9.6;
+  // sizes in stage units (the stage is 640 wide and is scaled to the screen: on a phone 12 units read as about 7 px, so the strap is set larger than it was)
+  const nameLines = wrapText(lines.name, Math.floor((w - 18) / 7.4)), roleLines = wrapText(lines.role, Math.floor((w - 18) / 5.6)), partyLines = wrapText(lines.party, Math.floor((w - 18) / 5.8));
+  const height = 8 + nameLines.length * 14 + roleLines.length * 11.5 + partyLines.length * 11.5 + 5, top = bottom - height;
+  const nameY = i => top + 14 + i * 14, roleY = i => top + 14 + nameLines.length * 14 + 0.5 + i * 11.5, partyY = i => roleY(roleLines.length) + i * 11.5;
   return `<g class="st-strap${active ? ' is-speaking' : ''}" data-strap="${esc(member?.id ?? '')}"><rect x="${x}" y="${top}" width="${w}" height="${height}" rx="3" fill="#0c1d2b" fill-opacity=".94" stroke="${active ? '#f0d68a' : '#3d6277'}" stroke-width="${active ? 1.6 : 1}"/><rect x="${x}" y="${top}" width="4" height="${height}" rx="1.5" fill="${active ? '#f0d68a' : '#58a3c4'}"/>`
-    + nameLines.map((text, i) => `<text class="st-strap-name" x="${x + 11}" y="${nameY(i)}" font-size="10.4" font-weight="800" fill="#fff">${esc(text)}</text>`).join('')
-    + roleLines.map((text, i) => `<text class="st-strap-role" x="${x + 11}" y="${roleY(i)}" font-size="8" font-weight="600" fill="#bfd9e6">${esc(text)}</text>`).join('')
-    + partyLines.map((text, i) => `<text class="st-strap-party" x="${x + 11}" y="${partyY(i)}" font-size="8" font-weight="800" fill="#f0d68a">${esc(text)}</text>`).join('') + '</g>';
+    + nameLines.map((text, i) => `<text class="st-strap-name" x="${x + 11}" y="${nameY(i)}" font-size="12.4" font-weight="800" fill="#fff">${esc(text)}</text>`).join('')
+    + roleLines.map((text, i) => `<text class="st-strap-role" x="${x + 11}" y="${roleY(i)}" font-size="9.6" font-weight="600" fill="#bfd9e6">${esc(text)}</text>`).join('')
+    + partyLines.map((text, i) => `<text class="st-strap-party" x="${x + 11}" y="${partyY(i)}" font-size="9.6" font-weight="800" fill="#f0d68a">${esc(text)}</text>`).join('') + '</g>';
 }
 export function studioOverlay(scene, node, uid) {
   const format = formatKey(scene);

@@ -1929,3 +1929,60 @@ details.accord-panel.pm-fold { padding: 0; }
 .it-area.is-presence.is-nodata { stroke-dasharray: 2 2; }
 .program-measure { position: relative; }
 .program-measure-hint { grid-column: 1 / -1; color: var(--muted); font-size: 12px; line-height: 1.4; }
+
+/* The guided programme editor: every field has a list of choices that suits the area and the text itself, editable (ui/program-guide.js). */
+.guided-form { display: grid; gap: 12px; min-width: 0; grid-column: 1 / -1; }
+.guided-form .guide-field { display: grid; gap: 5px; min-width: 0; font: 600 13px var(--font-ui); color: var(--ink-2); }
+.guided-form .guide-label { font: 700 13px var(--font-ui); color: var(--ink-2); }
+.guided-form .guide-pair { display: grid; gap: 6px; min-width: 0; }
+.guided-form .guide-hint { color: var(--muted); font: 500 12px/1.4 var(--font-ui); overflow-wrap: anywhere; }
+.guided-form select, .guided-form input[type="text"], .guided-form input[type="number"], .guided-form textarea { width: 100%; min-width: 0; box-sizing: border-box; min-height: 44px; padding: 8px 10px; border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--panel-2); color: var(--ink); font: 500 14px var(--font-ui); text-overflow: ellipsis; }
+.guided-form textarea { resize: vertical; }
+.guided-form [data-guide="title"], .guided-form [data-guide="problem"], .guided-form [data-guide="objective"], .guided-form [data-guide="measure"], .guided-form [data-guide="theme"], .guided-form [data-guide="costband"] { color: var(--ink-2); }
+.guided-form .guide-measures { display: grid; gap: 10px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.guided-form .guide-measures legend { padding: 0; font: 700 13px var(--font-ui); color: var(--ink-2); }
+.guided-form .guide-measure { display: grid; gap: 6px; grid-template-columns: 1fr; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius); background: color-mix(in srgb, var(--panel-2) 60%, transparent); }
+.guided-form .guide-row { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); align-items: start; min-width: 0; }
+.guided-form [hidden] { display: none !important; }
+@media (min-width: 900px) { .guided-form .guide-pair { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); } .guided-form .guide-measure { grid-template-columns: minmax(0, 5fr) minmax(0, 3fr) minmax(0, 6fr); align-items: center; } .guided-form [data-guide-field="area"] .guide-pair { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.guided-form [data-guide-field="cost"] .guide-pair { grid-template-columns: 1fr; }
+
+/* The room of the Government: an overview, then seven sections (majority, cabinet, direction, measures, budget, progress), each with an icon and a tone of its own; the panels inside are the same as ever. */
+.gov-room { display: grid; gap: 16px; min-width: 0; }
+.gov-nav { position: sticky; top: 0; z-index: 6; display: flex; gap: 8px; padding: 8px; margin: 0; overflow-x: auto; scrollbar-width: thin; border: 1px solid var(--line); border-radius: var(--radius); background: color-mix(in srgb, var(--panel) 92%, transparent); backdrop-filter: blur(6px); }
+.gov-nav-link { --tone: #4c8fb5; display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto; min-height: 44px; padding: 0 14px; border: 1px solid color-mix(in srgb, var(--tone) 55%, var(--line)); border-radius: 999px; background: color-mix(in srgb, var(--tone) 12%, transparent); color: var(--ink); font: 700 13px var(--font-ui, Manrope, sans-serif); text-decoration: none; white-space: nowrap; }
+.gov-nav-link:hover, .gov-nav-link:focus-visible { background: color-mix(in srgb, var(--tone) 26%, transparent); }
+.gov-nav-link svg { color: var(--tone); flex: 0 0 auto; }
+.gov-sec { --tone: #4c8fb5; display: grid; gap: 12px; min-width: 0; padding: 14px; border: 1px solid var(--line); border-left: 4px solid var(--tone); border-radius: var(--radius); background: var(--panel); scroll-margin-top: 64px; }
+.gov-sec-head { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.gov-sec-head h3 { margin: 0; font: 800 17px/1.25 Manrope, sans-serif; color: var(--ink-hi, var(--ink)); }
+.gov-sec-head small { display: block; margin-top: 2px; color: var(--ink-3); font: 500 13px/1.4 var(--font-ui, Manrope, sans-serif); }
+.gov-sec-icon { flex: 0 0 40px; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 10px; background: color-mix(in srgb, var(--tone) 22%, transparent); color: var(--tone); }
+.gov-sec-body { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); align-items: start; min-width: 0; }
+.gov-sec-body > * { min-width: 0; }
+.gov-sec-body > .pm-grid { display: contents; }
+.gov-sec-body > :not(.pm-fold):not(.pm-grid):not(details) { grid-column: 1 / -1; }
+.gov-sec-body .pm-fold[open] { grid-column: 1 / -1; }
+.gov-sec .government-current { padding: 0; border: 0; background: transparent; }
+.tone-panorama { --tone: #4c8fb5; } .tone-maggioranza { --tone: #4c9f78; } .tone-ministri { --tone: #8e86d8; } .tone-indirizzo { --tone: #d1a24a; } .tone-provvedimenti { --tone: #d0805f; } .tone-bilancio { --tone: #4fb3a9; } .tone-avanzamento { --tone: #d46a6a; }
+.gov-room .gov-glance { margin: 0; background: transparent; border: 0; padding: 0; }
+.gov-room .gov-glance-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr)); gap: 10px; }
+.gov-room .gov-glance-cell { padding: 10px 12px; border: 1px solid var(--line); border-left: 3px solid var(--tone); border-radius: 8px; background: var(--panel-2); }
+/* the groups of the coalition: readable chips with a target of at least 44 px, not a column of tiny checkboxes */
+.government-chamber { grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 8px; padding: 12px; }
+.government-group-check { align-items: center; min-height: 44px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel-2); gap: 10px; }
+.government-group-check:has(input:checked) { border-color: var(--tone, #4c9f78); background: color-mix(in srgb, var(--tone, #4c9f78) 16%, var(--panel-2)); }
+.government-group-check input { width: 20px; height: 20px; margin: 0; flex: 0 0 20px; }
+.government-group-check strong { white-space: normal; font-size: 13px; }
+@media (max-width: 700px) { .gov-nav { margin: 0 -2px; } .gov-sec { padding: 12px; } .gov-sec-body { grid-template-columns: 1fr; } .government-chamber { grid-template-columns: 1fr; } }
+.gov-sec-head > div { min-width: 0; }
+.gov-room .cabinet-life { padding: 0; }
+.gov-room .cabinet-life .cl-body { padding: 10px 14px 14px; }
+.gov-room .cabinet-life > summary { margin: 0; }
+@media (min-width: 900px) { .gov-nav { flex-wrap: wrap; position: static; backdrop-filter: none; } }
+@media (max-width: 700px) { .gov-room .gov-glance-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .gov-room .gov-glance-cell strong { font-size: 15px; } }
+
+/* the sections of the room are shown whole, in rows, never behind a scroll; a phone does not pin them (they would cover the page) */
+.gov-nav { flex-wrap: wrap; overflow-x: visible; position: static; backdrop-filter: none; }
+.gov-nav-link { min-height: 40px; padding: 0 12px; font-size: 12.5px; white-space: normal; text-align: left; }
+@media (max-width: 700px) { .gov-nav-link { flex: 1 1 calc(50% - 8px); } }

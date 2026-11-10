@@ -1,6 +1,6 @@
 // English phrase book, part 8 of 8: the administrative area, the account and sign-out screens, the personal logo catalogue, the tutorial invitation and the engine's law-effect and government lines. Same format as part 6: [Italian as shown, English]; `#` stands for a number, `{}` for a free part; in the English a free part is named by its position (`{2}` for the second one).
-import { ALL_PAIRS } from '../studio-lines.js?v=20261110-21';
-import { ALL_PAIRS as ACTIVITY_SCENE_PAIRS } from '../activity-scene-lines.js?v=20261110-21';
+import { ALL_PAIRS } from '../studio-lines.js?v=20261110-24';
+import { ALL_PAIRS as ACTIVITY_SCENE_PAIRS } from '../activity-scene-lines.js?v=20261110-24';
 
 // The explanations of the opening of a general or European campaign (campaign-engine.js campaignOpeningNotes): signed numbers come in both signs.
 function campaignNotePairs() {
@@ -5425,7 +5425,6 @@ export const PHRASES = [
   ["Nessuno sotto una soglia di retribuzione dignitosa", "No one below a decent pay threshold"],
   ["Salario minimo orario stabilito per legge", "A statutory hourly minimum wage"],
   ["Rinnovo tempestivo dei contratti collettivi", "Timely renewal of collective agreements"],
-  ["Sicurezza sul lavoro", "Safety at work"],
   ["Gli infortuni e le morti sul lavoro restano troppo frequenti.", "Workplace injuries and deaths remain too frequent."],
   ["Ridurre gli infortuni gravi e mortali", "Reduce serious and fatal accidents"],
   ["Più ispettori del lavoro e più controlli nei cantieri", "More labour inspectors and more checks on building sites"],
@@ -5875,13 +5874,11 @@ export const PHRASES = [
   ["Dirigente scolastica", "School head"],
   ["Delegato del sindacato degli inquilini", "Tenants’ union delegate"],
   ["Presidente del comitato sfrattati", "Chair of the evictions committee"],
-  ["Presidente del comitato di quartiere", "Chair of the neighbourhood committee"],
   ["Titolare di un negozio di vicinato", "Owner of a local shop"],
   ["Presidente dell’associazione ambientalista", "Chair of the environmental association"],
   ["Responsabile del comitato contro la discarica", "Head of the anti-landfill committee"],
   ["Delegato sindacale", "Union delegate"],
   ["Presidente della confederazione degli artigiani", "Chair of the craftsmen’s confederation"],
-  ["Direttore dei lavori", "Site manager"],
   ["Responsabile del procedimento", "Project officer"],
   ["Responsabile della sicurezza", "Safety officer"],
   ["Delegato sindacale dei lavoratori", "Workers’ union delegate"],
@@ -5890,14 +5887,11 @@ export const PHRASES = [
   ["Comandante della polizia locale", "Chief of the local police"],
   ["Rappresentante dei commercianti della zona", "Representative of local traders"],
   ["Ingegnere collaudatore", "Testing engineer"],
-  ["Capocantiere", "Foreman"],
   ["Portavoce dei residenti", "Residents’ spokesperson"],
   ["Funzionario della soprintendenza", "Heritage authority official"],
   ["Responsabile del tesseramento", "Membership officer"],
-  ["Delegata dei giovani", "Youth delegate"],
   ["Capogruppo della corrente di maggioranza", "Leader of the majority current"],
   ["Rappresentante della minoranza interna", "Representative of the internal minority"],
-  ["Segretario di sezione", "Section secretary"],
   ["Rappresentante della base", "Representative of the rank and file"],
   ["Tesoriere della sezione", "Section treasurer"],
   ["Militante storico", "Long-time activist"],
@@ -5919,8 +5913,6 @@ export const PHRASES = [
   ["Commercialista esperto in partite IVA", "Accountant expert in self-employed taxation"],
   ["Presidente della commissione Trasporti e telecomunicazioni", "Chair of the Transport and Telecommunications committee"],
   ["Responsabile dell’agenda digitale", "Head of the digital agenda"],
-  ["Direttrice del quotidiano", "Newspaper editor"],
-  ["Cronista politico", "Political reporter"],
   ["Caporedattore economia", "Economics editor"],
   ["Editorialista", "Columnist"],
   ["Retroscenista", "Behind-the-scenes reporter"],
@@ -5928,8 +5920,6 @@ export const PHRASES = [
   ["Cronista parlamentare", "Parliamentary reporter"],
   ["Caporedattore della cronaca locale", "Local news editor"],
   ["Analista dei sondaggi", "Poll analyst"],
-  ["Ministro dell’Economia", "Minister of Economy"],
-  ["Ministra per i rapporti con il Parlamento", "Minister for Relations with Parliament"],
   ["Ministro del Lavoro", "Minister of Labour"],
   ["Sottosegretario alla Presidenza", "Undersecretary to the Prime Minister"],
   ["Ministro dell’Interno", "Minister of the Interior"],

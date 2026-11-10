@@ -11,7 +11,7 @@ export const LOGO_BRAND = Object.freeze({
   'party-registro-p1-2015-19-ir': Object.freeze({
     primary: '#15191a',
     secondary: '#ffffff',
-    source: 'Colore di rappresentazione scelto dal progetto (nero, con scritta chiara): il database dei partiti non riporta un colore'
+    source: 'Colore di rappresentazione scelto dal progetto (nero, con scritta chiara): il database dei partiti non riporta un colore e il logo ufficiale non è incluso perché non risulta un’autorizzazione al suo uso'
   })
 });
 // The colour a force has by identity (a declared brand colour), or null: the single source that maps, charts and legends read before falling back to the colour of the charts.

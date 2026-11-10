@@ -1946,7 +1946,6 @@ details.accord-panel.pm-fold { padding: 0; }
 .guided-form [hidden] { display: none !important; }
 @media (min-width: 900px) { .guided-form .guide-pair { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); } .guided-form .guide-measure { grid-template-columns: minmax(0, 5fr) minmax(0, 3fr) minmax(0, 6fr); align-items: center; } .guided-form [data-guide-field="area"] .guide-pair { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
 .guided-form [data-guide-field="cost"] .guide-pair { grid-template-columns: 1fr; }
-@media (min-width: 900px) { .guided-form [data-guide-field="cost"] .guide-pair { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
 
 /* The room of the Government: an overview, then seven sections (majority, cabinet, direction, measures, budget, progress), each with an icon and a tone of its own; the panels inside are the same as ever. */
 .gov-room { display: grid; gap: 16px; min-width: 0; }

@@ -1365,3 +1365,5 @@ html[data-ui-motion="off"] .language-gate-button { transition: none; }
 
 /* The preview of the avatar stays in sight while the controls scroll: a stable side column on a computer (sticky inside the wizard body), a compact one at the top on a phone */
 @media (min-width: 761px) { .avatar-preview { position: sticky; top: 10px; align-self: start; } }
+/* On a phone the tabs of a destination wrap to a second line instead of hiding the last ones behind a scroll nobody sees: every page of the destination stays one tap away. */
+@media (max-width: 520px) { .section-subnav { flex-wrap: wrap; overflow-x: visible; row-gap: 0; } .subnav-tab { min-height: 44px; padding: 0 14px; } }

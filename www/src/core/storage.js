@@ -1,4 +1,4 @@
-import { createTier } from './tiered-storage.js?v=20261110-1';
+import { createTier } from './tiered-storage.js?v=20261110-24';
 const STORAGE_KEY = 'palazzo-2026.career.v1';
 const BACKUP_KEY = `${STORAGE_KEY}.backup`;
 const HISTORY_KEY = `${STORAGE_KEY}.history`;
@@ -20,8 +20,13 @@ const tier = createTier({ real: () => globalThis.localStorage, isBulk: isBulkKey
 tier.setPrimaryKey(STORAGE_KEY);
 const localStorage = tier.facade;
 
-const readJson = key => { try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null; } catch { return null; } };
-const readRawJson = raw => { try { return raw ? JSON.parse(raw) : null; } catch { return null; } };
+// A save reads the same documents again and again (every candidate for the best copy, for the next revision, for the cover check, the copy written back): each one a parse of a document of hundreds of kilobytes,
+// done by the main thread in the middle of a click. Inside ONE save the same text is parsed once (`parseScope`: raw text → parsed value; it exists only for the duration of the save, is never handed out
+// and nothing here mutates what it holds), so a click that saves costs a fraction of what it did — the checks are the same, only repeated parses are gone.
+let parseScope = null;
+const parseOnce = raw => { if (!parseScope) return JSON.parse(raw); if (parseScope.has(raw)) return parseScope.get(raw); const value = JSON.parse(raw); if (raw.length > 2048) parseScope.set(raw, value); return value; };
+const readJson = key => { try { const raw = localStorage.getItem(key); return raw ? parseOnce(raw) : null; } catch { return null; } };
+const readRawJson = raw => { try { return raw ? parseOnce(raw) : null; } catch { return null; } };
 const careerIdOf = state => String(state?.career?.id ?? state?.saveMeta?.careerId ?? '');
 const revisionOf = state => Number.isSafeInteger(state?.saveMeta?.revision) ? state.saveMeta.revision : 0;
 const progressOf = state => [
@@ -182,9 +187,14 @@ function backupLocked(payload, reason) {
   const entry = { reason, savedAt: new Date().toISOString(), payload: rawPayload };
   try { writeWithHistoryPrune(BACKUP_KEY, JSON.stringify(entry)); }
   catch { archiveSnapshot(rawPayload, reason, entry.savedAt); return false; }
-  if (previous && !samePayload(previous.state, incoming)) archiveSnapshot(previous.state, 'backup-precedente', previous.savedAt ?? undefined);
+  // The copy that the new backup replaces goes to the history of recoveries — but a save is a click: rewriting the whole history (hundreds of kilobytes, compressed and pruned) on every click made each one wait
+  // about a second on a phone. The backup itself is renewed at every save; the history keeps an older version at most once in a while (`ARCHIVE_EVERY_MS`), always the first one of a session.
+  if (previous && !samePayload(previous.state, incoming) && historyDue()) archiveSnapshot(previous.state, 'backup-precedente', previous.savedAt ?? undefined);
   return true;
 }
+const ARCHIVE_EVERY_MS = 90000;
+let lastArchiveAt = 0;
+const historyDue = () => { const now = Date.now(); if (now - lastArchiveAt < ARCHIVE_EVERY_MS) return false; lastArchiveAt = now; return true; };
 function nextRevision(state) {
   return allSaveCandidates().filter(item => careerIdOf(item.state) === careerIdOf(state)).reduce((max, item) => Math.max(max, revisionOf(item.state)), revisionOf(state)) + 1;
 }
@@ -296,7 +306,9 @@ export const storage = {
   },
   save(state) {
     if (!isSave(state)) throw new Error('La carriera non è valida e non può essere salvata.');
-    return withWriteLock(assertOwner => {
+    const outerScope = parseScope;
+    parseScope = outerScope ?? new Map();
+    try { return withWriteLock(assertOwner => {
       const careerId = careerIdOf(state);
       const candidates = allSaveCandidates();
       const persisted = bestCandidate(candidates.filter(item => careerIdOf(item.state) === careerId));
@@ -321,15 +333,17 @@ export const storage = {
       }
       assertOwner();
       writeMainSnapshot(raw);
-      const written = readJson(STORAGE_KEY);
-      if (!written || !samePayload(written, savedState)) {
+      // (the check that what the browser holds is what was written: the same text is the quick answer, the parse and the comparison only when the text differs)
+      const writtenRaw = localStorage.getItem(STORAGE_KEY);
+      const written = writtenRaw === raw ? savedState : readJson(STORAGE_KEY);
+      if (!written || (writtenRaw !== raw && !samePayload(written, savedState))) {
         archiveSnapshot(savedState, 'conflitto-scrittura-concorrente');
         throw new Error('Scrittura concorrente rilevata: il salvataggio persistito non coincide con questa versione.');
       }
       // `durable`: the copy is already safe (in localStorage). Otherwise it lives in memory until IndexedDB confirms: `confirm` resolves true when it has, false when it could not take it.
       const safety = tier.durability(STORAGE_KEY);
       return { savedAt: new Date().toISOString(), state: savedState, revision, durable: safety.durable, confirm: safety.confirm };
-    });
+    }); } finally { parseScope = outerScope; }
   },
   // A save that cannot be restored is copied aside so a later autosave never erases it. True only when the copy is really there: whoever
   // is about to replace a save checks it first.

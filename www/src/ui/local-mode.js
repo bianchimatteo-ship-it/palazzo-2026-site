@@ -3,17 +3,17 @@
 // decides, the majority it needs, what it changes, the forecast and the player's vote), what the player can do
 // (propose, question, negotiate, govern), the chronicle of the council. Everything here is simulation, except the size
 // of the European groups at the constitutive session of 2024 (real, with its source).
-import { DELEGA_FORBIDDEN, actCapacity, EP_COMMITTEES, EP_COSTS, EP_GROUPS_2024, committeeById, compactVote, coverageGap, europeanOdds, forecastAct, inCommittee, INSTITUTIONS, isClosedAct, LOCAL_VOTE_CHOICES, localAreas, majorityMargin, mandateRecord, measureOf, actorOf, delegaScore, nextEuropeanRole, typeOfAct, voteRule, weakCityAreas, withEuropeanSeat, withLocalState } from '../core/local-engine.js?v=20261110-1';
-import { ACT_TYPES, CITY_INDICATORS, PROVINCE_INDICATORS, QUORUMS, actTypeOf, neededYes, proposableTypes } from '../data/simulation/local-acts.js?v=20261110-1';
-import { COFIN_TERMS, WORK_PRIORITIES, WORK_RULES, WORK_SITE_LIST, WORK_TYPES, siteLabel, workTypesFor } from '../data/simulation/local-works.js?v=20261110-1';
-import { activeWorks, agedUpkeepOf, archiveOf, canManageWorks, cofinPartners, euroOf, externalOf, isActiveWork, planWork, workGap, workView, worksLedger } from '../core/local-works-engine.js?v=20261110-1';
-import { INDICATORS } from '../data/simulation/society-rules.js?v=20261110-1';
-import { DELEGA_RULES } from '../data/simulation/office-rules.js?v=20261110-1';
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261110-1';
-import { esc, meter, num, signed } from './charts.js?v=20261110-1';
-import { glyph, territoryTile, territoryVisual } from './visuals.js?v=20261110-1';
-import { fallbackTones, forceColorResolver, hemicycleLayout, seatColor } from '../core/hemicycle.js?v=20261110-1';
-import { SEAT_ROLES, rosterSeats } from '../core/seat-roster.js?v=20261110-1';
+import { DELEGA_FORBIDDEN, actCapacity, EP_COMMITTEES, EP_COSTS, EP_GROUPS_2024, committeeById, compactVote, coverageGap, europeanOdds, forecastAct, inCommittee, INSTITUTIONS, isClosedAct, LOCAL_VOTE_CHOICES, localAreas, majorityMargin, mandateRecord, measureOf, actorOf, delegaScore, nextEuropeanRole, typeOfAct, voteRule, weakCityAreas, withEuropeanSeat, withLocalState } from '../core/local-engine.js?v=20261110-24';
+import { ACT_TYPES, CITY_INDICATORS, PROVINCE_INDICATORS, QUORUMS, actTypeOf, neededYes, proposableTypes } from '../data/simulation/local-acts.js?v=20261110-24';
+import { COFIN_TERMS, WORK_PRIORITIES, WORK_RULES, WORK_SITE_LIST, WORK_TYPES, siteLabel, workTypesFor } from '../data/simulation/local-works.js?v=20261110-24';
+import { activeWorks, agedUpkeepOf, archiveOf, canManageWorks, cofinPartners, euroOf, externalOf, isActiveWork, planWork, workGap, workView, worksLedger } from '../core/local-works-engine.js?v=20261110-24';
+import { INDICATORS } from '../data/simulation/society-rules.js?v=20261110-24';
+import { DELEGA_RULES } from '../data/simulation/office-rules.js?v=20261110-24';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261110-24';
+import { esc, meter, num, signed } from './charts.js?v=20261110-24';
+import { glyph, territoryTile, territoryVisual } from './visuals.js?v=20261110-24';
+import { fallbackTones, forceColorResolver, hemicycleLayout, seatColor } from '../core/hemicycle.js?v=20261110-24';
+import { SEAT_ROLES, rosterSeats } from '../core/seat-roster.js?v=20261110-24';
 
 const STAGES = Object.freeze({ commissione: 'In commissione', giunta: 'In Giunta', aula: 'In aula', osservazioni: 'Osservazioni dei cittadini', 'seconda-lettura': 'Attesa della seconda deliberazione', risposta: 'In attesa di risposta', approvato: 'Approvato', respinto: 'Respinto', ritirato: 'Ritirato', risposto: 'Risposta data' });
 const SIDE_LABELS = Object.freeze({ maggioranza: 'Maggioranza', opposizione: 'Opposizione' });
@@ -427,7 +427,7 @@ function institutionCard(input, capital, context, state, ui = {}) {
   const open = inst.acts.filter(act => !isClosedAct(act)).sort((a, b) => String(a.nextStepAt).localeCompare(String(b.nextStepAt)));
   const closed = inst.acts.filter(isClosedAct).slice(-4).reverse();
   const history = inst.history.slice(-12).reverse().map(item => `<li><time>${esc(date(item.date))}</time> ${esc(item.text)}</li>`).join('');
-  const archive = [...closed.map(act => ({ id: act.id, aula: Boolean(act.votes?.at(-1)?.byGroup?.length && act.votes.at(-1).organ !== 'giunta'), title: act.title, stage: act.stage, closedAt: act.closedAt, vote: compactVote(act.votes?.at(-1)), committeeVote: act.votes?.length ? null : act.committeeVote ?? null, answer: act.answer ?? null, withdrawn: act.withdrawn ?? null, effects: measureText(inst, act) })), ...inst.archive.slice(-6).reverse()].slice(0, 10).map(item => `<li><span class="bill-flag ${item.stage === 'approvato' || item.answer === 'esauriente' ? 'good' : 'bad'}">${esc(STAGES[item.stage] ?? item.stage)}</span> ${esc(item.title)} <small>${esc(date(item.closedAt))}</small>${resultLine(item)}${item.aula ? `<button type="button" class="ghost-button aula-enter-small" data-aula-local="${esc(inst.id)}|${esc(item.id)}">Entra in aula</button>` : ''}</li>`).join('');
+  const archive = [...closed.map(act => ({ id: act.id, aula: Boolean(act.votes?.at(-1)?.byGroup?.length && act.votes.at(-1).organ !== 'giunta'), title: act.title, stage: act.stage, closedAt: act.closedAt, vote: compactVote(act.votes?.at(-1)), committeeVote: act.votes?.length ? null : act.committeeVote ?? null, answer: act.answer ?? null, withdrawn: act.withdrawn ?? null, effects: measureText(inst, act) })), ...inst.archive.slice(-6).reverse()].slice(0, 10).map(item => `<li><span class="bill-flag ${item.stage === 'approvato' || item.answer === 'esauriente' ? 'good' : 'bad'}">${esc(STAGES[item.stage] ?? item.stage)}</span> ${esc(item.title)} <small>${esc(date(item.closedAt))}</small>${resultLine(item)}${item.aula ? `<button type="button" class="ghost-button aula-enter-small" data-aula-local="${esc(inst.id)}|${esc(item.id)}">Rivedi l’esito in aula</button>` : ''}</li>`).join('');
   const badge = id => id === 'opere' ? activeWorks(inst).length : id === 'atti' ? open.length : 0;
   const tabs = `<nav class="sx-tabs local-tabs" role="tablist" aria-label="Sezioni di ${esc(inst.name)}">${sections.map(([id, label]) => `<button type="button" role="tab" id="tab-${esc(inst.id)}-${id}" class="sx-tab${section === id ? ' active' : ''}" data-sec="${id}" data-local-section="${id}" aria-selected="${section === id}" aria-controls="panel-${esc(inst.kind)}" tabindex="${section === id ? 0 : -1}">${glyph(SECTION_ICONS[id] ?? 'news', 15)}<span>${esc(label)}</span>${badge(id) ? ` <span class="badge">${badge(id)}</span>` : ''}</button>`).join('')}</nav>`;
   let body;
