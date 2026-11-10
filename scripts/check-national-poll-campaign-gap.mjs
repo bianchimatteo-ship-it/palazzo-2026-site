@@ -68,11 +68,14 @@ function run(store, db, kind, role, { play }) {
   }
   const done = store.getState().campaign;
   assert.equal(done.status, 'finished', 'La campagna finisce.');
+  // the world goes on during the campaign (the lists follow it): the last national poll before the vote, the one the player sees at the end
+  const finalPoll = store.getState().world.polls.at(-1);
+  const finalPublished = finalPoll?.results.find(row => row.partyId === pid)?.share ?? null;
   const day = done.electionDays?.find(item => item.round === 'primo-turno') ?? done.electionDays?.[0];
   const groups = done.result.groups;
   const resultRow = groups.find(group => group.id === own);
   return {
-    published: publishedRow?.share ?? null, publishedMeta: { date: published.date, institute: published.institute, sample: published.sample, margin: published.margin },
+    published: publishedRow?.share ?? null, finalPublished, publishedMeta: { date: published.date, institute: published.institute, sample: published.sample, margin: published.margin },
     average: average?.share ?? null, underlying: rosterRow.underlying, roster: rosterRow.share, opening, first: readings[0]?.share ?? null, readings, closing: last,
     shift: day?.shifts?.[own] ?? 0, shiftParts: day?.shiftParts ?? null, result: resultRow?.percent ?? null, groups, others: done.result.others ?? done.othersShare ?? null, performed, notes: campaignOpeningNotes({ ...done, status: 'finished' }), campaign: done
   };
@@ -171,7 +174,11 @@ for (const item of all) {
 const idleGap = idle.map(item => item.result - item.published);
 assert.ok(Math.abs(mean(idleGap)) <= 0.9, `Senza giocare, in media il risultato non si stacca dal sondaggio (${r2(mean(idleGap))} punti).`);
 assert.ok(quantile(idleGap.map(Math.abs), 0.9) <= 2.6, `Senza giocare, il 90° percentile dello scarto è ${r2(quantile(idleGap.map(Math.abs), 0.9))}.`);
-assert.ok(idleGap.every(value => Math.abs(value) < 4.5), 'Mai quattro punti di scarto senza una causa giocata.');
+// (the world moves during the weeks of the campaign and the lists follow it: that movement has its own cause, the national polls of the same weeks, and is not counted as a gap of the campaign)
+for (const item of idle) {
+  const gap = item.result - item.published, worldMove = (item.finalPublished ?? item.published) - item.published;
+  assert.ok(Math.abs(gap - worldMove) < 4.5, `Mai quattro punti di scarto senza una causa tracciata: ${item.seed} ha ${r2(gap)} (sondaggio ${item.published}, ultimo sondaggio prima del voto ${item.finalPublished}, media ${item.average}, modello ${item.underlying}, apertura ${r2(item.opening.projection)}, chiusura ${r2(item.closing)}, scarto del giorno ${r2(item.shift)} ${JSON.stringify(item.shiftParts)}, risultato ${r2(item.result)}).`);
+}
 
 // ---------- 5. what the player does still moves the vote ----------
 const pairs = idle.map(item => [item, played.find(other => other.seed === item.seed)]).filter(([, other]) => other);
