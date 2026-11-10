@@ -6,11 +6,11 @@
 // activity is applied ONCE, by the store, when the scene ends.
 // Deterministic: the family of topics, the names and the small variations come from the seed of the scene (and from what the player met lately: the same family is not drawn again in a row).
 // Loaded on demand (it is not in the first screen): it registers itself in scene-engine.js and stage-script.js when imported.
-import { AVATAR_OPTIONS, defaultAvatarFor, normalizeAvatar } from './avatar.js?v=20261110-16';
-import { personName, registerSceneKind } from './scene-engine.js?v=20261110-16';
-import { SPEAK_GESTURES, LISTEN_GESTURES, pickGesture, registerStageScript, stagePose } from './stage-script.js?v=20261110-16';
-import { ACTIVITY_SCENES, ACTIVITY_SCENE_UI } from '../data/activity-scene-lines.js?v=20261110-16';
-import { BODIES, GUESTS, REFS } from '../data/activity-scene-guests.js?v=20261110-16';
+import { AVATAR_OPTIONS, defaultAvatarFor, normalizeAvatar } from './avatar.js?v=20261110-20';
+import { personName, registerSceneKind } from './scene-engine.js?v=20261110-20';
+import { SPEAK_GESTURES, LISTEN_GESTURES, pickGesture, registerStageScript, stagePose } from './stage-script.js?v=20261110-20';
+import { ACTIVITY_SCENES, ACTIVITY_SCENE_UI } from '../data/activity-scene-lines.js?v=20261110-20';
+import { BODIES, CITIZEN_GUESTS, GUESTS, HEADINGS, REFS } from '../data/activity-scene-guests.js?v=20261110-20';
 
 export { ACTIVITY_SCENES, ACTIVITY_SCENE_UI };
 export const SCENE_KIND = 'attivita';
@@ -69,18 +69,19 @@ export function createActivityScene({ id, seed, sceneKey, activityId, target = n
   if (!spec) throw new Error('Scena non riconosciuta.');
   const family = pickFamily(spec, seed, recent, prefer);
   const used = new Set();
-  const roles = GUESTS[sceneKey]?.[family.id] ?? [spec.cast[0].tag, spec.cast[1].tag];
+  const roles = (activityId === 'cittadini' ? CITIZEN_GUESTS[family.id] : null) ?? GUESTS[sceneKey]?.[family.id] ?? [spec.cast[0].tag, spec.cast[1].tag];
+  const heading = sceneKey === 'associazioni' ? HEADINGS[activityId === 'cittadini' ? 'cittadini' : 'associazioni'] : null;
   const partyOf = index => AFFILIATION[sceneKey] === 'party' ? (party?.label ?? '') : AFFILIATION[sceneKey] === 'pool' && pool.length ? pool[hashOf(`${seed}|appartenenza|${index}`) % pool.length] : '';
   const cast = [
     { id: 'giocatore', role: 'giocatore', name: personName(player?.name, 'Tu'), avatar: normalizeAvatar(playerAvatar), tag: player?.tag ?? '' },
     character('ospite1', 'ospite', spec.cast[0], seed, used, { roleLabel: roles[0]?.[0] ?? null, partyLabel: partyOf(1) }),
     character('ospite2', 'ospite', spec.cast[1], seed, used, { roleLabel: roles[1]?.[0] ?? null, partyLabel: partyOf(2) })
   ];
-  const bodyLabel = AFFILIATION[sceneKey] === 'party' && party?.label ? party.label : BODIES[sceneKey]?.[0] ?? '';
+  const bodyLabel = AFFILIATION[sceneKey] === 'party' && party?.label ? party.label : heading?.body[0] ?? BODIES[sceneKey]?.[0] ?? '';
   const ref = pickRef(sceneKey, seed, { ...refs, party: AFFILIATION[sceneKey] === 'party' || refs.party ? (refs.party ?? party?.label ?? '') : '' });
   return {
     id, kind: SCENE_KIND, sceneKey, activityId, target, variant: spec.intro[variant] ? variant : 'default', setting: spec.setting, seed, date, status: 'active', nodeId: 'apertura', cast,
-    topic: { id: family.id, label: family.label[0] }, place: { label: spec.place[0] }, familyId: family.id, bodyLabel, partyLabel: party?.label ?? '', ref: ref ? { type: ref.type, text: ref.text } : null,
+    topic: { id: family.id, label: family.label[0] }, place: { label: spec.place[0] }, familyId: family.id, bodyLabel, heading: heading ? { kicker: heading.kicker[0], title: heading.title[0], banner: heading.banner[0] } : null, partyLabel: party?.label ?? '', ref: ref ? { type: ref.type, text: ref.text } : null,
     context: { stats: { competence: stats.competence ?? 50, charisma: stats.charisma ?? 50, reputation: stats.reputation ?? 50 } },
     audience: { mood: 50, history: [] }, history: [], outcome: null
   };

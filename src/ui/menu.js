@@ -1,16 +1,16 @@
 // Main menu, how-to-play, settings, save slots and the end-of-week report.
-import { renderTutorialInvite } from './tutorial.js?v=20261110-16';
-import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261110-16';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261110-16';
-import { formatDate } from '../core/time.js?v=20261110-16';
-import { illustration } from './illustrations.js?v=20261110-16';
-import { glyph } from './visuals.js?v=20261110-16';
-import { identityMark, identityVars } from './party-identity.js?v=20261110-16';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261110-16';
-import { hallView } from './hall-view.js?v=20261110-16';
-import { renderLogoCatalog } from './logo-catalog.js?v=20261110-16';
-import { esc, signed } from './charts.js?v=20261110-16';
-import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261110-16';
+import { renderTutorialInvite } from './tutorial.js?v=20261110-20';
+import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261110-20';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261110-20';
+import { formatDate } from '../core/time.js?v=20261110-20';
+import { illustration } from './illustrations.js?v=20261110-20';
+import { glyph } from './visuals.js?v=20261110-20';
+import { identityMark, identityVars } from './party-identity.js?v=20261110-20';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261110-20';
+import { hallView } from './hall-view.js?v=20261110-20';
+import { renderLogoCatalog } from './logo-catalog.js?v=20261110-20';
+import { esc, signed } from './charts.js?v=20261110-20';
+import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261110-20';
 
 const when = iso => { try { return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch { return ''; } };
 // The actions of the opening screen, in order of importance: starting a career and resuming one are the two main ones (drawn apart, below); then what concerns the

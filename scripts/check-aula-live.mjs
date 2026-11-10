@@ -7,7 +7,7 @@ import { readFile } from 'node:fs/promises';
 const build = (await readFile(new URL('../index.html', import.meta.url), 'utf8')).match(/main\.js\?v=([^"']+)/)?.[1];
 const v = build ? `?v=${build}` : '?';
 const { liveVoteOffer } = await import(`../src/ui/game-mode.js${v}`);
-const { localAula } = await import(`../src/ui/aula-view.js${v}`);
+const { localAula, seatsSvg } = await import(`../src/ui/aula-view.js${v}`);
 const { ASSEMBLIES, boardAt } = await import(`../src/core/aula-script.js${v}`);
 
 const group = (id, seats, side) => ({ id, label: `Gruppo ${id}`, seats, side });
@@ -31,6 +31,12 @@ for (const [kind, label] of [['comune', 'Consiglio comunale'], ['provincia', 'Co
   assert.deepEqual([board.yes, board.against, board.abstain], [11, 7, 1], `${kind}: a fine voto i numeri sono quelli del voto deciso (11 sì, 7 no, 1 astenuto).`);
   const half = boardAt(aula.script, aula.choices, 9);
   assert.ok(half.yes + half.against + half.abstain <= 9 && half.yes <= 11, `${kind}: a metà il conteggio è parziale e mai oltre il totale.`);
+  // the drawing: every seat, with its whole circle, is inside the frame (a small council has big seats near the edge: they used to be cut)
+  const svg = seatsSvg(aula);
+  const [vx, vy, vw, vh] = svg.match(/viewBox="(-?[\d.]+) (-?[\d.]+) ([\d.]+) ([\d.]+)"/).slice(1).map(Number);
+  const circles = [...svg.matchAll(/<circle[^>]* cx="([\d.]+)" cy="([\d.]+)" r="([\d.]+)"/g)].map(match => match.slice(1).map(Number));
+  assert.equal(circles.length, 19, `${kind}: tutti i seggi sono disegnati.`);
+  assert.ok(circles.every(([cx, cy, r]) => cx - r >= vx && cx + r <= vx + vw && cy - r >= vy && cy + r <= vy + vh), `${kind}: ogni seggio sta interamente nel riquadro (nessun taglio a destra, a sinistra, in alto o in basso).`);
   const again = localAula(inst(kind), act('a1'));
   assert.deepEqual(again.script.order, aula.script.order, `${kind}: lo stesso voto si rivede nello stesso ordine (nessun ricalcolo, nessun sorteggio nuovo).`);
 }

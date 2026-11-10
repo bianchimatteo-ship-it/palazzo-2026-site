@@ -1,6 +1,6 @@
 // English phrase book, part 8 of 8: the administrative area, the account and sign-out screens, the personal logo catalogue, the tutorial invitation and the engine's law-effect and government lines. Same format as part 6: [Italian as shown, English]; `#` stands for a number, `{}` for a free part; in the English a free part is named by its position (`{2}` for the second one).
-import { ALL_PAIRS } from '../studio-lines.js?v=20261110-16';
-import { ALL_PAIRS as ACTIVITY_SCENE_PAIRS } from '../activity-scene-lines.js?v=20261110-16';
+import { ALL_PAIRS } from '../studio-lines.js?v=20261110-20';
+import { ALL_PAIRS as ACTIVITY_SCENE_PAIRS } from '../activity-scene-lines.js?v=20261110-20';
 
 // The explanations of the opening of a general or European campaign (campaign-engine.js campaignOpeningNotes): signed numbers come in both signs.
 function campaignNotePairs() {
@@ -5856,6 +5856,25 @@ export const PHRASES = [
   ["Commissione parlamentare", "Parliamentary committee"],
   ["Stampa", "Press"],
   ["Governo", "Government"],
+  ["Un pensionato in lista d’attesa", "A pensioner on a waiting list"],
+  ["Una madre con due bambini piccoli", "A mother with two small children"],
+  ["Un’operaia pendolare", "A commuting factory worker"],
+  ["Uno studente delle superiori", "A secondary-school student"],
+  ["Un padre di due alunni", "A father of two pupils"],
+  ["Una maestra di scuola elementare", "A primary-school teacher"],
+  ["Una giovane coppia in affitto", "A young couple renting"],
+  ["Un anziano con lo sfratto in corso", "An older man facing eviction"],
+  ["Una commerciante del quartiere", "A shopkeeper of the neighbourhood"],
+  ["Un residente di via Mazzini", "A resident of the street"],
+  ["Un contadino della zona", "A farmer of the area"],
+  ["Una ragazza dei comitati per il clima", "A girl from the climate groups"],
+  ["Un artigiano con la bottega in difficoltà", "A craftsman with a struggling workshop"],
+  ["Una lavoratrice precaria", "A precarious worker"],
+  ["COMITATI E ASSOCIAZIONI", "COMMITTEES AND ASSOCIATIONS"],
+  ["Incontro con comitati e associazioni", "Meeting with committees and associations"],
+  ["INCONTRO CON I CITTADINI", "MEETING WITH CITIZENS"],
+  ["Incontro con i cittadini", "Meeting with citizens"],
+  ["Cittadini", "Citizens"],
   ["Presidente del comitato dei pazienti", "Chair of the patients’ committee"],
   ["Medico di base del quartiere", "Neighbourhood family doctor"],
   ["Portavoce dei pendolari", "Commuters’ spokesperson"],
@@ -6072,6 +6091,23 @@ export const PHRASES = [
   ["Lasci {}", "You leave {1}"],
   ["Obiettivo (volontari mobilitati)", "Goal (volunteers mobilised)"],
   ["Bersaglio", "Target"],
+  ["Sezioni del Governo", "Sections of the Government"],
+  ["Panoramica e situazione politica", "Overview and political situation"],
+  ["Maggioranza e rapporti tra partiti", "Majority and relations between parties"],
+  ["Consiglio dei ministri", "Council of Ministers"],
+  ["Indirizzo politico e priorità", "Political direction and priorities"],
+  ["Provvedimenti e attività legislative", "Measures and legislative activity"],
+  ["Bilancio ed economia", "Budget and economy"],
+  ["Avanzamento delle iniziative e criticità", "Progress of initiatives and problems"],
+  ["Chi guida, quanto regge la maggioranza e che cosa scade.", "Who leads, how well the majority holds and what is due."],
+  ["Gli alleati, il loro umore e gli impegni dell’accordo di coalizione.", "The allies, their mood and the commitments of the coalition agreement."],
+  ["Gli impegni dell’accordo di coalizione e il loro stato.", "The commitments of the coalition agreement and where they stand."],
+  ["I ministri in carica, il rimpasto e la vita del gabinetto.", "The ministers in office, the reshuffle and the life of the cabinet."],
+  ["La linea del governo e le priorità nazionali: da qui parte tutto il resto.", "The line of the government and the national priorities: everything else starts here."],
+  ["Disegni di legge, decreti, revisione della spesa e tavoli con le parti sociali.", "Bills, decrees, spending review and tables with the social partners."],
+  ["Le decisioni che il governo ha davanti.", "The decisions the government has ahead."],
+  ["La legge di bilancio, i margini di spesa e i fondi europei.", "The budget law, the room for spending and the European funds."],
+  ["Le opere in corso e ciò che rischia di fermarsi.", "The works under way and what risks coming to a halt."],
   ["Durante il mandato il Presidente della Repubblica non può aderire a un partito: l’adesione sarà di nuovo possibile dopo la fine del mandato.", "During the term the President of the Republic cannot join a party: joining will be possible again after the term ends."],
   ["Sopra le parti", "Above the parties"],
   ["Durante il mandato il Presidente della Repubblica non può aderire a un partito. L’adesione sarà di nuovo possibile dopo la fine del mandato.", "During the term the President of the Republic cannot join a party. Joining will be possible again after the term ends."],

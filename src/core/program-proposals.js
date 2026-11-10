@@ -5,8 +5,8 @@
 // What a proposal does in the game, all deterministic and read from the situation: a published proposal whose cost is covered (by the budget room, by savings, by European funds, by revenue) makes the
 // programme more credible, one that is not covered makes it less; its area enters the rally and the debate (the player can present it, the opponents attack it where it is not covered); and it
 // comes first in the priorities suggested for the Government. A draft does nothing: it is only a draft. Plain data, additive to the save (`game.proposals`, absent in older saves = none).
-import { AREA_BY_ID, INSTRUMENT_KINDS } from '../data/simulation/policy-rules.js?v=20261110-16';
-import { fiscalRoom, promisesOf, promiseQuote } from './program-engine.js?v=20261110-16';
+import { AREA_BY_ID, INSTRUMENT_KINDS } from '../data/simulation/policy-rules.js?v=20261110-20';
+import { fiscalRoom, promisesOf, promiseQuote } from './program-engine.js?v=20261110-20';
 
 export const PROPOSAL_LIMIT = 12;
 export const PROPOSAL_STATES = Object.freeze({ bozza: 'Bozza', pubblicata: 'Pubblicata' });
@@ -130,6 +130,6 @@ export function programPreview(game, { society = null, party = '', player = '' }
   const drafts = proposalsOf(game).filter(item => item.status === 'bozza').length;
   return {
     party, player, drafts, total: round1(published.reduce((sum, item) => sum + item.cost, 0)),
-    items: published.map(item => ({ id: item.id, priority: item.priority, area: AREA_BY_ID[item.area]?.label ?? item.area, title: item.title, problem: item.problem, objective: item.objective, measures: item.measures.map(measure => ({ instrument: INSTRUMENT_KINDS[measure.instrument]?.label ?? measure.instrument, text: measure.text })), cost: item.cost, financing: FINANCING[item.financing]?.label ?? item.financing, deadline: DEADLINES[item.deadlineWeeks] ?? '', territory: item.territory === 'nazionale' ? TERRITORIES.nazionale : (item.region ?? TERRITORIES[item.territory]), coverage: assessProposal(game, item, { society }).level }))
+    items: published.map(item => ({ id: item.id, priority: item.priority, area: AREA_BY_ID[item.area]?.label ?? item.area, title: item.title, problem: item.problem, objective: item.objective, measures: item.measures.map(measure => ({ instrument: INSTRUMENT_KINDS[measure.instrument]?.label ?? measure.instrument, text: measure.text })), cost: item.cost, financing: FINANCING[item.financing]?.label ?? item.financing, deadline: DEADLINES[item.deadlineWeeks] ?? '', territory: item.territory === 'nazionale' ? TERRITORIES.nazionale : ([item.municipality, item.region].filter(Boolean).join(', ') || TERRITORIES[item.territory]), coverage: assessProposal(game, item, { society }).level }))
   };
 }

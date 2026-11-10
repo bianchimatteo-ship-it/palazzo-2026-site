@@ -8,8 +8,8 @@
 //   - the exit poll, the projections and the seat estimates are estimates and are never built from the units not yet counted (they use the exit poll as the prior of what is still to count);
 //   - the news of the night are derived from those figures, stored once when the hour is reached (so a reload or a save does not write them twice) and never touch the career.
 // The career is touched once, when the night is concluded (store.concludeElectionNight → the same closeCampaign as before).
-import { SEAT_RULES, EUROPEAN_THRESHOLD, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261110-16';
-import { allocateDHondt, allocateWithBonus } from './election-engine.js?v=20261110-16';
+import { SEAT_RULES, EUROPEAN_THRESHOLD, ELECTION_MODELS } from '../data/simulation/campaign-rules.js?v=20261110-20';
+import { allocateDHondt, allocateWithBonus } from './election-engine.js?v=20261110-20';
 
 export const NIGHT_HOURS = 12;
 export const NIGHT_STAGES = Object.freeze({ finale: 'Esito della consultazione', 'primo-turno': 'Primo turno' });

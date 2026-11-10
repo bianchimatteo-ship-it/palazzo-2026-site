@@ -8,8 +8,8 @@
 // of the game: the variation comes from a hash of the seed of the scene, so a scene resumed or played again from the same choices is the same scene.
 //
 // VOTE ('voto'): the player votes in his polling station — entrance, desk, booth, ballot folded, urn, exit. It decides nothing: the result of the election is the one of election-engine.js.
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261110-16';
-import { RALLY_CROWD_EXTRA, RALLY_EXTRA } from '../data/studio-lines.js?v=20261110-16';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261110-20';
+import { RALLY_CROWD_EXTRA, RALLY_EXTRA } from '../data/studio-lines.js?v=20261110-20';
 
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
 const round1 = value => Math.round(value * 10) / 10;

@@ -59,6 +59,20 @@ export const GUESTS = Object.freeze({
     opere: G(['Ministro delle Infrastrutture', 'Minister of Infrastructure'], ['Ministro dell’Economia', 'Minister of Economy'])
   }
 });
+// «Incontra un gruppo di cittadini» is not «Rete con associazioni e comitati»: the same civic hall, but ordinary people with their own problems, and its own heading and banner.
+export const CITIZEN_GUESTS = Object.freeze({
+  sanita: G(['Un pensionato in lista d’attesa', 'A pensioner on a waiting list'], ['Una madre con due bambini piccoli', 'A mother with two small children']),
+  trasporti: G(['Un’operaia pendolare', 'A commuting factory worker'], ['Uno studente delle superiori', 'A secondary-school student']),
+  scuola: G(['Un padre di due alunni', 'A father of two pupils'], ['Una maestra di scuola elementare', 'A primary-school teacher']),
+  casa: G(['Una giovane coppia in affitto', 'A young couple renting'], ['Un anziano con lo sfratto in corso', 'An older man facing eviction']),
+  sicurezza: G(['Una commerciante del quartiere', 'A shopkeeper of the neighbourhood'], ['Un residente di via Mazzini', 'A resident of the street']),
+  ambiente: G(['Un contadino della zona', 'A farmer of the area'], ['Una ragazza dei comitati per il clima', 'A girl from the climate groups']),
+  lavoro: G(['Un artigiano con la bottega in difficoltà', 'A craftsman with a struggling workshop'], ['Una lavoratrice precaria', 'A precarious worker'])
+});
+export const HEADINGS = Object.freeze({
+  associazioni: { kicker: ['COMITATI E ASSOCIAZIONI', 'COMMITTEES AND ASSOCIATIONS'], title: ['Incontro con comitati e associazioni', 'Meeting with committees and associations'], banner: ['COMITATI E ASSOCIAZIONI', 'COMMITTEES AND ASSOCIATIONS'], body: ['Società civile', 'Civil society'] },
+  cittadini: { kicker: ['INCONTRO CON I CITTADINI', 'MEETING WITH CITIZENS'], title: ['Incontro con i cittadini', 'Meeting with citizens'], banner: ['INCONTRO CON I CITTADINI', 'MEETING WITH CITIZENS'], body: ['Cittadini', 'Citizens'] }
+});
 // What the career holds that a scene can mention: one sentence per scene kind (the free part is the real text: the name of the party, the title of a promise, the region, a rival, a headline). A scene
 // uses at most one, picked by the seed among those the career can fill; with none, the scene stays as it was.
 export const REFS = Object.freeze({
@@ -106,6 +120,8 @@ export const REFS = Object.freeze({
 export const BODIES = Object.freeze({ associazioni: ['Società civile', 'Civil society'], cantiere: ['Opera pubblica', 'Public works'], sede: ['Partito', 'Party'], commissione: ['Commissione parlamentare', 'Parliamentary committee'], redazione: ['Stampa', 'Press'], consiglio: ['Governo', 'Government'] });
 export const ALL_PAIRS = [
   ...Object.values(BODIES),
+  ...Object.values(CITIZEN_GUESTS).flat(),
+  ...Object.values(HEADINGS).flatMap(item => [item.kicker, item.title, item.banner, item.body]),
   ...Object.values(GUESTS).flatMap(kind => Object.values(kind).flat()),
   ...Object.values(REFS).flatMap(group => Object.values(group))
 ].filter((pair, index, all) => all.findIndex(other => other[0] === pair[0]) === index);

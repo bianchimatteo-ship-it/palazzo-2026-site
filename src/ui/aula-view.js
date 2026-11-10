@@ -2,11 +2,11 @@
 // hemicycle model, a city council / a regional council / the European Parliament via the totals of each group) and lights the seats one after the other in the order the script gives, with the counters
 // as the sums of the seats shown and the President's announcements. With the motion off or reduced (or prefers-reduced-motion) the window opens on the final picture; «Vai all’esito» does the same
 // at any moment; the vote can be left at any moment (Esc or «Chiudi»). It is loaded only when someone enters the Aula.
-import { aulaFromParliamentVote, aulaFromTallies, boardAt, saidAt } from '../core/aula-script.js?v=20261110-16';
-import { hemicycleModel } from './hemicycle-view.js?v=20261110-16';
-import { hemicycleLayout } from '../core/hemicycle.js?v=20261110-16';
-import { VOTE_CHOICES } from '../core/vote-engine.js?v=20261110-16';
-import { motionAllows } from './stage-player.js?v=20261110-16';
+import { aulaFromParliamentVote, aulaFromTallies, boardAt, saidAt } from '../core/aula-script.js?v=20261110-20';
+import { hemicycleModel } from './hemicycle-view.js?v=20261110-20';
+import { hemicycleLayout } from '../core/hemicycle.js?v=20261110-20';
+import { VOTE_CHOICES } from '../core/vote-engine.js?v=20261110-20';
+import { motionAllows } from './stage-player.js?v=20261110-20';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const COLORS = { ...Object.fromEntries(Object.entries(VOTE_CHOICES).map(([id, spec]) => [id, spec.color])), waiting: '#3a4540' };
@@ -33,12 +33,15 @@ export function localAula(inst, act, { colorOf = () => '#7d8b84' } = {}) {
   return { ...built, positions: layout.seats.map(seat => ({ x: seat.x, y: seat.y })), layout, groups: groups.map(group => ({ id: group.id, label: group.label, color: group.color })), title: act.title, subtitle: inst.name, colors };
 }
 
-function seatsSvg(aula) {
+// The seats are drawn inside a frame that has room for the whole circle of every seat: the seats of a small council have a large radius and the first and the last of the arc sit near the edge of the layout, so
+// a viewBox of exactly the layout cut them (left, right, top and bottom). The frame grows by the radius of the seat plus a margin on every side.
+export function seatsSvg(aula) {
   const { layout, positions, seats } = aula;
   const radius = Math.min(layout.radius ?? 12, 20);
+  const pad = Math.ceil(radius + 6);
   const groupColor = new Map(aula.groups.map(group => [group.id, group.color]));
   const circles = seats.map((seat, index) => `<circle class="aula-seat${seat.player ? ' is-player' : ''}" data-seat="${index}" cx="${positions[index].x}" cy="${positions[index].y}" r="${radius.toFixed(1)}" fill="${esc(groupColor.get(seat.groupId) ?? COLORS.waiting)}" fill-opacity=".38"/>`).join('');
-  return `<svg class="aula-svg" viewBox="0 0 ${layout.width} ${Math.round(layout.height)}" role="img" aria-label="${esc(`${aula.script.kindLabel}: ${seats.length} seggi`)}"><g>${circles}</g><text class="aula-tag" x="${layout.cx}" y="${Math.round(layout.cy * 0.78)}" text-anchor="middle">${esc(aula.script.kindLabel.toUpperCase())}</text></svg>`;
+  return `<svg class="aula-svg" viewBox="${-pad} ${-pad} ${layout.width + 2 * pad} ${Math.round(layout.height) + 2 * pad}" role="img" aria-label="${esc(`${aula.script.kindLabel}: ${seats.length} seggi`)}"><g>${circles}</g><text class="aula-tag" x="${layout.cx}" y="${Math.round(layout.cy * 0.78)}" text-anchor="middle">${esc(aula.script.kindLabel.toUpperCase())}</text></svg>`;
 }
 function board(aula, shown) {
   const b = boardAt(aula.script, aula.choices, shown), done = b.left === 0, secret = aula.script.secret;

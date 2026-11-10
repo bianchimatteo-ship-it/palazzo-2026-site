@@ -47,6 +47,23 @@ const scuola = list.find(item => item.area === 'scuola');
 assert.equal(scuola.deadlineWeeks, 13); assert.ok(scuola.cost > 0, 'Senza importo la stima automatica dà un costo.'); assert.equal(scuola.municipality, null, 'Un comune c’è solo nelle proposte locali.');
 assert.equal(list.find(item => item.area === 'cultura').title, 'Un titolo scritto a mano', 'Il testo scritto a mano resta com’è.');
 assert.ok(list.find(item => item.area === 'cultura').deadlineWeeks === 260);
+
+// what was chosen reaches the preview, the assessment and the credibility: the same data the engine reads
+const before = store.programView();
+const idOf = area => store.programView().proposals.list.find(item => item.area === area).id;
+store.setProposalState(idOf('sanita'), 'pubblicata'); store.setProposalState(idOf('scuola'), 'pubblicata');
+const published = store.programView();
+const preview = published.proposals.preview.items;
+assert.equal(preview.length, 2, 'Le proposte pubblicate sono nell’anteprima.');
+assert.ok(preview.some(item => item.title === catalog.themesOf('sanita')[1].title && item.territory === 'Bergamo, Lombardia'), 'Titolo scelto e comune scelto arrivano all’anteprima.');
+assert.ok(preview.some(item => item.deadline === 'Entro tre mesi' && item.territory === 'Puglia'), 'Scadenza e regione scelte arrivano all’anteprima.');
+assert.ok(published.proposals.preview.items.every(item => ['solida', 'fragile', 'scoperta'].includes(item.coverage)), 'Ogni proposta ha la sua copertura valutata dal motore.');
+store.editProposal(idOf('sanita'), { financing: 'debito', cost: 40 });
+const uncovered = store.programView().proposals.list.find(item => item.area === 'sanita').assessment;
+assert.equal(uncovered.level, 'scoperta', 'Cambiare il finanziamento e il costo cambia la valutazione del motore: 40 miliardi a debito sono senza copertura.');
+assert.ok(store.programView().credibility.score <= published.credibility.score, 'E la credibilità del programma non sale.');
+void before;
+
 // an older proposal (no municipality, a deadline of the old list) edits as before
 const save = JSON.parse(store.exportSave());
 save.game.proposals = save.game.proposals.map(({ municipality, ...rest }) => rest);

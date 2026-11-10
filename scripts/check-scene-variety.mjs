@@ -54,6 +54,18 @@ for (const kind of KINDS) {
 const seenText = new Map();
 for (const kind of KINDS) for (const family of lines.ACTIVITY_SCENES[kind].families) for (const text of [family.open[0], family.follow[0]]) { assert.ok(!seenText.has(text), `Frase riciclata tra ${kind} e ${seenText.get(text)}: ${text}`); seenText.set(text, kind); }
 
+// «Incontra un gruppo di cittadini» is not the meeting with committees and associations: its own heading, banner and ordinary people
+const mk = activity => scenes.createActivityScene({ id: `h-${activity}`, seed: `intestazione|${activity}`, sceneKey: 'associazioni', activityId: activity, player, playerAvatar: null, prefer: 'casa', refs: {} });
+const assoc = mk('associazioni'), citizens = mk('cittadini');
+assert.notEqual(assoc.heading.title, citizens.heading.title, 'I due incontri hanno un titolo diverso.');
+assert.ok(/cittadini/i.test(citizens.heading.title) && /associazioni/i.test(assoc.heading.title));
+assert.notDeepEqual(assoc.cast.filter(item => item.role === 'ospite').map(item => item.roleLabel), citizens.cast.filter(item => item.role === 'ospite').map(item => item.roleLabel), 'Con i cittadini siedono persone comuni, non i soliti comitati.');
+const stage = scenes.activityStage(citizens, scenes.activityNode(citizens));
+const roomSvg = room.ROOMS.includes('sala') ? await (async () => { const { renderStageSvg } = art; return renderStageSvg(citizens, stage, scenes.activityNode(citizens), {}); })() : '';
+assert.ok(roomSvg.includes('INCONTRO CON I CITTADINI') && !roomSvg.includes('COMITATI E ASSOCIAZIONI'), 'Sul fondale c’è la scritta giusta.');
+const roomAssoc = art.renderStageSvg(assoc, scenes.activityStage(assoc, scenes.activityNode(assoc)), scenes.activityNode(assoc), {});
+assert.ok(roomAssoc.includes('COMITATI E ASSOCIAZIONI'), 'E per le associazioni resta la loro.');
+
 // ---------- the party headquarters ----------
 const named = { kind: 'partito', name: 'Rotta Civica', mark: 'RTC', abbreviation: 'RTC', colors: { primary: '#264d82' }, accent: '#264d82', logo: null };
 const svg = room.partyHeadquarters(named, { uid: 'x' });

@@ -1,6 +1,6 @@
 // English phrase-book pairs of the last release pass (data/i18n/en-ui-8.js reads `ALL_PAIRS`): the guided programme editor, the days of the Quirinale and the rule on the parties, the government room, the live
 // votes of the assemblies, the party headquarters, the TV name plates and the tutorial. Format as in the phrase-book: [Italian as shown, English]; `#` a number, `{}` a free part.
-import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261110-16';
+import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261110-20';
 export const ALL_PAIRS = [
   ...GUEST_PAIRS,
   // ---- the guided programme editor ----
@@ -54,6 +54,19 @@ export const ALL_PAIRS = [
   ['# giorno', '# day'], ['# giorni', '# days'], ['# capitale', '# capital'], ['non prima di # settimana dalla precedente', 'not before # week after the previous one'], ['non prima di # settimane dalla precedente', 'not before # weeks after the previous one'],
   ['Presidente della Repubblica #/#', 'President of the Republic #/#'], ['Governo in carica · stabilità #', 'Government in office · stability #'], ['±# €/sett.', '±# €/wk'], ['−# €/sett.', '−# €/wk'], ['# € in cassa · ±# €/sett.', '# € in the bank · ±# €/wk'], ['# € in cassa · −# €/sett.', '# € in the bank · −# €/wk'], ['Lasci {}', 'You leave {1}'],
   ['Obiettivo (volontari mobilitati)', 'Goal (volunteers mobilised)'], ['Bersaglio', 'Target'],
+  // ---- the room of the Government ----
+  ['Sezioni del Governo', 'Sections of the Government'],
+  ['Panoramica e situazione politica', 'Overview and political situation'], ['Maggioranza e rapporti tra partiti', 'Majority and relations between parties'], ['Consiglio dei ministri', 'Council of Ministers'], ['Indirizzo politico e priorità', 'Political direction and priorities'],
+  ['Provvedimenti e attività legislative', 'Measures and legislative activity'], ['Bilancio ed economia', 'Budget and economy'], ['Avanzamento delle iniziative e criticità', 'Progress of initiatives and problems'],
+  ['Chi guida, quanto regge la maggioranza e che cosa scade.', 'Who leads, how well the majority holds and what is due.'],
+  ['Gli alleati, il loro umore e gli impegni dell’accordo di coalizione.', 'The allies, their mood and the commitments of the coalition agreement.'],
+  ['Gli impegni dell’accordo di coalizione e il loro stato.', 'The commitments of the coalition agreement and where they stand.'],
+  ['I ministri in carica, il rimpasto e la vita del gabinetto.', 'The ministers in office, the reshuffle and the life of the cabinet.'],
+  ['La linea del governo e le priorità nazionali: da qui parte tutto il resto.', 'The line of the government and the national priorities: everything else starts here.'],
+  ['Disegni di legge, decreti, revisione della spesa e tavoli con le parti sociali.', 'Bills, decrees, spending review and tables with the social partners.'],
+  ['Le decisioni che il governo ha davanti.', 'The decisions the government has ahead.'],
+  ['La legge di bilancio, i margini di spesa e i fondi europei.', 'The budget law, the room for spending and the European funds.'],
+  ['Le opere in corso e ciò che rischia di fermarsi.', 'The works under way and what risks coming to a halt.'],
   // ---- the President of the Republic ----
   ['Durante il mandato il Presidente della Repubblica non può aderire a un partito: l’adesione sarà di nuovo possibile dopo la fine del mandato.', 'During the term the President of the Republic cannot join a party: joining will be possible again after the term ends.'],
   ['Sopra le parti', 'Above the parties'],

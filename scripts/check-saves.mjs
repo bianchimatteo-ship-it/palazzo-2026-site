@@ -665,6 +665,7 @@ failing.clear();
 const retried = storage.save({ ...withoutHistory, ui: { ...withoutHistory.ui, retryMarker: 'ok' } }).state;
 assert.equal(storage.load().clock.currentDate, dateAfterWeek, 'Dopo un errore transitorio, il salvataggio successivo e il reload restano validi.');
 assert.equal(retried.saveMeta.revision, withoutHistory.saveMeta.revision + 1, 'La revisione continua a crescere dopo il retry.');
-assert.ok((JSON.parse(mem.get(`${KEY}.history`)) ?? []).length <= 4, 'La cronologia circolare resta compatta.');
+// (the history of recoveries is renewed at most every 90 seconds, so that a click is not a second of waiting: it may not exist yet in a test that saves in a burst, and when it exists it is compact)
+assert.ok((JSON.parse(mem.get(`${KEY}.history`) ?? '[]') ?? []).length <= 4, 'La cronologia circolare resta compatta.');
 
 console.log(`Salvataggi verificati: slot e indice coerenti; stale save, backup, reload, tab concorrenti, slot vecchio, migration e setRealReference non retrocedono la carriera 2026→2032; careerId/revision; PdC Camera, Senato ed esterno con maggioranze e incarichi; PdR alternativo con poteri e reload; posizioni di partito, fondatore e segretario; sincronizzazione online.`);

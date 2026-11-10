@@ -2,7 +2,7 @@
 // headquarters, the committee room, the newsroom and the room of the Council of Ministers. Each room is a back layer (walls, windows, furniture), the characters (the same ones the other stages use,
 // made from the avatars of the game), and a front layer (the table in front of whoever sits). Name straps with the full name and the role of everyone are drawn over the camera (never cut: the text is
 // wrapped). Loaded with the scene page; it registers its settings in stage-art.js. Nothing here decides anything: it draws the poses that core/activity-scenes.js gives.
-import { actorSvg, inkOn, registerStageSetting, strap } from './stage-art.js?v=20261110-16';
+import { actorSvg, inkOn, registerStageSetting, strap } from './stage-art.js?v=20261110-20';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const R = (x, y, w, h, fill, extra = '') => `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${fill}"${extra ? ` ${extra}` : ''}/>`;
@@ -11,9 +11,9 @@ const euFlag = (x, y) => `<g transform="translate(${x},${y})"><rect x="-1.2" y="
 
 // ---------- the back layers ----------
 const BACK = {
-  sala: () => `${R(-200, -100, 1040, 330, '#d9cfb8')}${R(-200, 214, 1040, 200, '#8d6d4b')}${R(-200, 205, 1040, 10, '#6b4f35')}`
+  sala: scene => `${R(-200, -100, 1040, 330, '#d9cfb8')}${R(-200, 214, 1040, 200, '#8d6d4b')}${R(-200, 205, 1040, 10, '#6b4f35')}`
     + `${[70, 190, 450, 570].map(x => `<g>${R(x - 30, 70, 60, 84, '#a9c7da')}${R(x - 30, 70, 60, 84, 'none', 'stroke="#7a6a52" stroke-width="4"')}${R(x - 1, 70, 2, 84, '#7a6a52')}</g>`).join('')}`
-    + `<g class="rm-banner">${R(214, 34, 212, 26, '#2f5d62')}<text x="320" y="52" text-anchor="middle" font-size="11" font-weight="900" fill="#f4efe0" letter-spacing="1">COMITATI E ASSOCIAZIONI</text></g>`
+    + `<g class="rm-banner">${R(214, 34, 212, 26, '#2f5d62')}<text x="320" y="52" text-anchor="middle" font-size="11" font-weight="900" fill="#f4efe0" letter-spacing="1">${esc(scene?.heading?.banner ?? 'COMITATI E ASSOCIAZIONI')}</text></g>`
     + `${Array.from({ length: 10 }, (_, i) => `<g transform="translate(${60 + (i % 5) * 54},${i < 5 ? 226 : 244})">${R(0, 0, 30, 6, '#b9ad94')}${R(2, 6, 3, 14, '#7c7260')}${R(25, 6, 3, 14, '#7c7260')}</g>`).join('')}`
     + `<g>${R(330, 176, 112, 8, '#7c5e3d')}${R(338, 184, 5, 36, '#5e472e')}${R(430, 184, 5, 36, '#5e472e')}${[350, 380, 410].map(x => `<ellipse cx="${x}" cy="172" rx="9" ry="5" fill="#f4efe0" stroke="#8f8573"/>`).join('')}</g>`
     + `<g>${R(20, 84, 74, 70, '#f4f1e6', 'stroke="#8f8573"')}<path d="M30 104H80M30 118H72M30 132H84" stroke="#3a6b72" stroke-width="3"/>${R(20, 154, 3, 56, '#6b5a40')}${R(91, 154, 3, 56, '#6b5a40')}</g>`,
@@ -89,7 +89,7 @@ function roomSvg(scene, stage, node, uid, identity = null) {
   const [me, one, two] = [scene.cast.find(item => item.role === 'giocatore'), ...scene.cast.filter(item => item.role === 'ospite')];
   const body = scene.bodyLabel ?? '';
   const straps = `${strap(me, 8, 204, 334, speaking(me.id), body)}${strap(one, 218, 204, 334, speaking(one.id), body)}${strap(two, 428, 204, 334, speaking(two.id), body)}`;
-  const back = setting === 'sede' ? partyHeadquarters(identity, { uid }) : BACK[setting]();
+  const back = setting === 'sede' ? partyHeadquarters(identity, { uid }) : BACK[setting](scene);
   return { body: `<g class="st-room" data-room="${esc(setting)}">${back}</g><g class="st-actors">${actors}</g><g class="st-room-front">${FRONT[setting]()}</g>`, overlay: `<g class="st-straps">${straps}</g>` };
 }
 for (const setting of Object.keys(BACK)) registerStageSetting(setting, roomSvg);
