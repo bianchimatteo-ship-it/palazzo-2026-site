@@ -9,7 +9,7 @@ import { uniqueId } from './ids.js?v=20261110-24';
 import { advanceDays, formatDate } from './time.js?v=20261110-24';
 import { axisOf, nationalShares } from './world-engine.js?v=20261110-24';
 import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20261110-24';
-import { archiveGovernment, voteGovernmentConfidence } from './parliament-engine.js?v=20261110-24';
+import { archiveGovernment, confidenceBallotMissing, voteGovernmentConfidence } from './parliament-engine.js?v=20261110-24';
 import { seededRandom } from './vote-engine.js?v=20261110-24';
 import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20261110-24';
 
@@ -1025,6 +1025,8 @@ export function formationStep({ formation, parliament, result, world = null, dat
     if (date < (next.confidenceAt ?? date)) return done();
     // The request of the vote reaches the player in a weekly close and the vote cannot happen in the same one: it waits for the next (the player decides in between).
     if (chambers.government?.confidenceRequestedAt && date <= chambers.government.confidenceRequestedAt) return done();
+    // …and it waits for the player's own ballot (favorevole, contrario, astenuto): the Chambers do not count a vote the player has not cast.
+    if (confidenceBallotMissing(chambers)) return done();
     const government = chambers.government;
     if (government?.status === 'awaiting-confidence') chambers = voteGovernmentConfidence(chambers, date);
     const status = chambers.government?.status;

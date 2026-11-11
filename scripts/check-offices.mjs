@@ -5,6 +5,7 @@
 // basi (provincia), i poteri dei ruoli locali sul motore, la delega dell’assessore (valutazione, revoca), il capogruppo,
 // la Provincia come livello e le candidature sul motore vero.
 import assert from 'node:assert/strict';
+import { lineVoter } from './lib/floor.mjs';
 import { readFile } from 'node:fs/promises';
 import { startCareer } from './lib/long-run.mjs';
 
@@ -263,7 +264,7 @@ const throwsWith = (fn, pattern, message) => assert.throws(fn, pattern, message)
     when = advanceDays(when, 7);
     // Il servizio affonda: la delega è sotto accusa.
     inst = { ...inst, indicators: Object.fromEntries(Object.entries(inst.indicators).map(([id, value]) => [id, Math.min(value, 24)])) };
-    const out = L.advanceInstitutionWeek(inst, { date: when, rand });
+    const out = L.advanceInstitutionWeek(inst, { voter: lineVoter, date: when, rand });
     inst = out.inst;
     reviews.push(...out.events.filter(event => event.type.startsWith('delega')));
     if (inst.status !== 'active') break;
@@ -282,7 +283,7 @@ const throwsWith = (fn, pattern, message) => assert.throws(fn, pattern, message)
   for (let week = 0; week < 14; week++) {
     when = advanceDays(when, 7);
     good = { ...good, indicators: Object.fromEntries(Object.entries(good.indicators).map(([id, value]) => [id, Math.max(value, 69.5)])) };
-    const out = L.advanceInstitutionWeek(good, { date: when, rand });
+    const out = L.advanceInstitutionWeek(good, { voter: lineVoter, date: when, rand });
     good = out.inst;
     verdicts.push(...out.events.filter(event => event.type === 'delega-valutata').map(event => event.verdict));
     if (good.status !== 'active') break;
@@ -314,7 +315,7 @@ const throwsWith = (fn, pattern, message) => assert.throws(fn, pattern, message)
   const date = advanceDays('2026-09-27', 49);
   let forced = L.setLocalVote({ ...lead, acts: lead.acts.map(item => ({ ...item, stage: 'aula', nextStepAt: advanceDays('2026-09-27', 7) })) }, lead.acts.at(-1).id, 'contrario');
   const before = forced.groups.find(group => group.id === 'd').cohesion;
-  const out = L.advanceInstitutionWeek(forced, { date: advanceDays('2026-09-27', 7), rand });
+  const out = L.advanceInstitutionWeek(forced, { voter: lineVoter, date: advanceDays('2026-09-27', 7), rand });
   const vote = out.events.find(event => event.type === 'atto-votato');
   assert.ok(vote, 'L’atto va al voto');
   void date; void before;

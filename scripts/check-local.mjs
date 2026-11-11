@@ -3,6 +3,7 @@
 // walk out, motions of no confidence that dissolve the council and bring an early vote; the European Parliament with
 // its real groups of 2024; the player who proposes, votes, questions the executive or governs (assessori, taxes).
 import assert from 'node:assert/strict';
+import { lineVoter, castOpenVotes } from './lib/floor.mjs';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
@@ -31,7 +32,7 @@ assert.equal(L.epGroupFor(-1), 'sd'); assert.equal(L.epGroupFor(1), 'epp'); asse
   const rand = seededRandom('europa');
   for (let week = 0; week < 40; week++) {
     date = advanceDays(date, 7);
-    const out = L.advanceInstitutionWeek(ep, { date, rand });
+    const out = L.advanceInstitutionWeek(ep, { date, rand, voter: lineVoter });
     ep = out.inst;
     for (const event of out.events.filter(item => item.type === 'atto-votato')) { votes++; if (event.yes && event.against) split++; }
   }
@@ -60,10 +61,10 @@ const groups = [
   let budget = null, passed = 0, rejected = 0;
   for (let week = 0; week < 52; week++) {
     date = advanceDays(date, 7);
-    const out = L.advanceInstitutionWeek(inst, { date, rand, issues: ['trasporti', 'casa'] });
+    // the votes of the council wait for the councillor's own ballot: here a voter casts it (the first against, then with the group)
+    const out = L.advanceInstitutionWeek(inst, { date, rand, issues: ['trasporti', 'casa'], voter: (act, line) => { asked.push(act); return asked.length === 1 ? 'contrario' : line; } });
     inst = out.inst;
     for (const event of out.events) {
-      if (event.type === 'voto-locale') { asked.push(event); if (asked.length === 1) inst = L.setLocalVote(inst, event.actId, 'contrario'); }
       if (event.type === 'atto-votato') { kinds.add(event.kind); event.passed ? passed++ : rejected++; if (event.budget) budget = event; }
     }
   }
@@ -134,7 +135,7 @@ const groups = [
     const rand = seededRandom(`fragile-${run}`);
     for (let week = 0; week < 40 && inst.status === 'active'; week++) {
       date = advanceDays(date, 7);
-      const out = L.advanceInstitutionWeek(inst, { date, rand });
+      const out = L.advanceInstitutionWeek(inst, { date, rand, voter: lineVoter });
       inst = out.inst;
       walkouts += out.events.filter(item => item.type === 'uscita-maggioranza').length;
       const end = out.events.find(item => item.type === 'scioglimento');
@@ -165,7 +166,7 @@ const groups = [
   let own = 0, all = 0, committeeVotes = 0, memberVotes = 0, reports = 0, bids = 0;
   for (let week = 0; week < 60; week++) {
     date = advanceDays(date, 7);
-    const out = L.advanceInstitutionWeek(ep, { date, rand });
+    const out = L.advanceInstitutionWeek(ep, { date, rand, voter: lineVoter });
     ep = out.inst;
     for (const event of out.events) {
       if (event.type === 'commissione-votata') { committeeVotes++; if (event.playerChoice) memberVotes++; }
@@ -251,7 +252,7 @@ const groups = [
     const rand = seededRandom(`voto-giocatore|${name}`);
     // An act of the giunta that the council votes by the majority of the voters (a deliberation, a regulation, a plan).
     const councilAct = item => item.sponsor.kind === 'executive' && item.organ === 'consiglio' && item.quorum === 'votanti';
-    for (let week = 0; week < 30 && !inst.acts.some(councilAct); week++) inst = L.advanceInstitutionWeek(inst, { date: '2026-10-01', rand }).inst;
+    for (let week = 0; week < 30 && !inst.acts.some(councilAct); week++) inst = L.advanceInstitutionWeek(inst, { date: '2026-10-01', rand, voter: lineVoter }).inst;
     const act = inst.acts.find(councilAct);
     assert.ok(act, `${name}: la giunta porta una delibera in consiglio`);
     return { inst, act };
@@ -260,7 +261,13 @@ const groups = [
     const chosen = L.setLocalVote(inst, act.id, choice);
     const forecast = L.forecastAct(chosen, chosen.acts.find(item => item.id === act.id));
     const due = { ...chosen, acts: chosen.acts.map(item => item.id === act.id ? { ...item, stage: 'aula', nextStepAt: '2026-10-08' } : item) };
-    const out = L.advanceInstitutionWeek(due, { date: '2026-10-08', rand: seededRandom('voto-giocatore|aula') });
+    // the day of the vote: the floor opens and waits (nothing is counted), then the player casts the ballot and the act is voted with it
+    const opened = L.advanceInstitutionWeek(due, { date: '2026-10-08', rand: seededRandom('voto-giocatore|aula') });
+    const waiting = opened.inst.acts.find(item => item.id === act.id);
+    assert.ok(waiting.floor && waiting.stage === 'aula' && waiting.votes.length === 0 && opened.events.some(item => item.type === 'votazione-aperta' && item.actId === act.id) && !opened.events.some(item => item.type === 'atto-votato' && item.actId === act.id), 'Il giorno del voto la votazione si apre e attende il giocatore: nessun esito, nessun effetto');
+    assert.equal(L.advanceInstitutionWeek(opened.inst, { date: '2026-10-15', rand: seededRandom('voto-giocatore|dopo') }).inst.acts.find(item => item.id === act.id).votes.length, 0, 'Passano le settimane: senza il voto del giocatore l’atto non si vota');
+    for (const missing of [null, 'linea', 'assente', 'boh']) assert.throws(() => L.castLocalFloorVote(opened.inst, act.id, missing, { date: '2026-10-08' }), /Favorevole, Contrario o Astenuto/, `Un voto non espresso (${missing}) non chiude la votazione`);
+    const out = L.castLocalFloorVote(opened.inst, act.id, choice, { date: '2026-10-08', rand: seededRandom('voto-giocatore|aula') });
     const done = out.inst.acts.find(item => item.id === act.id);
     return { chosen, forecast, out, done, result: done.votes.at(-1), event: out.events.find(item => item.type === 'atto-votato' && item.actId === act.id) };
   };
@@ -273,17 +280,20 @@ const groups = [
     { id: 'az', label: 'Azione', axis: 0, seats: 1, side: 'opposizione' },
     { id: 'civ', label: 'Liste civiche', axis: 0, seats: 2, side: 'opposizione' }
   ]);
-  const expected = { linea: [4, 0, 0, 0], favorevole: [4, 0, 0, 0], contrario: [3, 1, 0, 0], astenuto: [3, 0, 1, 0], assente: [3, 0, 0, 1] };
+  const expected = { favorevole: [4, 0, 0, 0], contrario: [3, 1, 0, 0], astenuto: [3, 0, 1, 0] };
+  assert.deepEqual(Object.keys(L.LOCAL_VOTE_CHOICES), ['favorevole', 'contrario', 'astenuto'], 'Tre scelte di voto: niente linea del gruppo implicita, niente assenza');
+  assert.throws(() => L.setLocalVote(siena.inst, siena.act.id, 'linea'), /non valida/); assert.throws(() => L.setLocalVote(siena.inst, siena.act.id, 'assente'), /non valida/);
   const results = {};
   for (const [choice, counts] of Object.entries(expected)) {
     const { chosen, forecast, done, result, event } = vote(siena, choice);
     const own = forecast.positions.find(item => item.groupId === 'fn');
     assert.deepEqual([own.yes, own.no, own.abstain, own.absent], counts, `Previsione con il voto ${choice}: Futuro Nazionale ${counts.join('/')} (sì/no/astenuti/assenti)`);
-    assert.equal(own.playerChoice, choice === 'linea' ? own.line : choice, `Previsione: il voto del giocatore è ${choice}`);
+    assert.equal(own.playerChoice, choice, `Previsione: il voto del giocatore è ${choice}`);
     assert.equal(forecast.yes + forecast.against + forecast.abstain + forecast.absent, chosen.seats, 'Previsione: ogni seggio vota una volta');
     const row = result.byGroup.find(item => item.groupId === 'fn');
     assert.deepEqual([row.yesVotes, row.noVotes, row.abstainVotes, row.absent], counts, `Voto con la scelta ${choice}: Futuro Nazionale ${counts.join('/')}`);
-    assert.equal(result.playerChoice, choice === 'linea' ? result.playerLine : choice, `Voto: salvata la scelta del giocatore (${choice})`);
+    assert.equal(result.playerChoice, choice, `Voto: salvata la scelta del giocatore (${choice})`);
+    assert.equal(done.floor ?? null, null, 'Dopo il voto la votazione è chiusa');
     assert.equal(result.yes + result.against + result.abstain + result.absent, chosen.seats, 'Voto: ogni seggio conta una volta');
     assert.equal(result.passed, result.yes > result.against, 'Passa con più sì che no');
     assert.equal(done.stage, result.passed ? 'approvato' : 'respinto', 'Approvato o respinto dai voti espressi');
@@ -291,7 +301,7 @@ const groups = [
     assert.ok(event && event.playerChoice === result.playerChoice && event.passed === result.passed && event.decisive === result.decisive, 'Le conseguenze politiche usano il voto effettivo');
     results[choice] = result;
   }
-  assert.deepEqual([results.favorevole.yes - results.contrario.yes, results.contrario.against - results.favorevole.against, results.astenuto.abstain - results.favorevole.abstain, results.assente.absent - results.favorevole.absent], [1, 1, 1, 1], 'Il voto del giocatore sposta esattamente un voto');
+  assert.deepEqual([results.favorevole.yes - results.contrario.yes, results.contrario.against - results.favorevole.against, results.astenuto.abstain - results.favorevole.abstain, results.astenuto.absent - results.favorevole.absent], [1, 1, 1, 0], 'Il voto del giocatore sposta esattamente un voto');
   assert.ok(Object.values(results).every(item => !item.decisive), `Con ${results.favorevole.yes} sì e ${results.favorevole.against} no il voto del giocatore non è decisivo`);
 
   // A council on a knife-edge: 9 seats of the majority (the player's group among them) against 8.
@@ -301,7 +311,7 @@ const groups = [
     { id: 'pd', label: 'Partito Democratico', axis: -1, seats: 4, side: 'opposizione' },
     { id: 'avs', label: 'Alleanza Verdi e Sinistra', axis: -2, seats: 4, side: 'opposizione' }
   ]);
-  const edge = { favorevole: [9, 8, 'approvato'], contrario: [8, 9, 'respinto'], astenuto: [8, 8, 'respinto'], assente: [8, 8, 'respinto'] };
+  const edge = { favorevole: [9, 8, 'approvato'], contrario: [8, 9, 'respinto'], astenuto: [8, 8, 'respinto'] };
   for (const [choice, [yes, against, stage]] of Object.entries(edge)) {
     const { forecast, done, result, event } = vote(tight, choice);
     assert.deepEqual([result.yes, result.against, done.stage], [yes, against, stage], `In bilico, voto ${choice}: ${yes}-${against}, ${stage}`);
@@ -372,7 +382,7 @@ const groups = [
   // The effects of an approved act: the service improves week after week (compared with the same city without it),
   // the budget pays, the region receives a share.
   const at = (inst, id, stage, date) => ({ ...inst, acts: inst.acts.map(item => item.id === id ? { ...item, stage, nextStepAt: date } : item) });
-  const week = (inst, date) => L.advanceInstitutionWeek(inst, { date, rand: seededRandom(`atti|${date}`) });
+  const week = (inst, date) => L.advanceInstitutionWeek(inst, { date, rand: seededRandom(`atti|${date}`), voter: lineVoter });
   let proposed = L.proposeLocalAct(mayor, 'sicurezza', '2027-01-10', { category: 'regolamento' });
   const rule = proposed.acts.at(-1);
   assert.ok(rule.organ === 'consiglio' && rule.quorum === 'votanti' && rule.measure.indicators.sicurezza > 0, 'Un regolamento lo vota il consiglio e migliora la sicurezza urbana');
@@ -543,8 +553,9 @@ const groups = [
   for (let week = 0; week < 20; week++) {
     s = store.getState();
     if (s.game.status === 'ended') s.game.status = 'active';
-    asked = s.game.inbox.find(item => item.templateId === 'voto-consiglio') ?? asked;
-    if (asked && s.game.inbox.includes(asked)) { store.castLocalVote(asked.params.instId, asked.params.actId, 'astenuto'); }
+    assert.ok(!s.game.inbox.some(item => item.templateId === 'voto-consiglio'), 'Nessuna richiesta di voto con una scelta predefinita in agenda.');
+    // the votes of the council wait for the councillor's own ballot: cast on the open vote (here: abstention)
+    for (const item of castOpenVotes(store, () => 'astenuto')) asked = item.vote;
     store.advance(7);
   }
   s = store.getState();
@@ -554,13 +565,13 @@ const groups = [
   const proposed = [...after.acts, ...after.archive].find(item => item.id === proposalId);
   // the council's record keeps the last 40 lines: in a busy council the line of the proposal can have rotated out, and then the act itself (closed, in the archive) is the trace
   assert.ok(proposed && (after.history.some(item => item.type === 'proposta') || (after.history.length >= 40 && ['approvato', 'respinto', 'ritirato'].includes(proposed.stage))), 'La proposta del giocatore fa il suo percorso.');
-  assert.ok(asked, 'Il consigliere riceve le richieste di voto in agenda.');
+  assert.ok(asked?.scope === 'locale' && asked.assemblyName && asked.title, 'Il consigliere è chiamato a votare di persona sulle votazioni aperte del consiglio.');
   store.questionLocalExecutive(inst.id);
   assert.ok(store.getState().local.institutions.find(item => item.id === inst.id).history.some(item => item.type === 'interrogazione'));
   // A save made before the councils existed: the player is seated at the next week.
   const saved = store.getState();
   mem.clear();
-  console.log(`  Carriera a Firenze: ${after.groups.length} gruppi in consiglio, ${voted.length} atti votati in 20 settimane, richiesta di voto “${asked.params.actTitle}”.`);
+  console.log(`  Carriera a Firenze: ${after.groups.length} gruppi in consiglio, ${voted.length} atti votati in 20 settimane, richiesta di voto “${asked.title}”.`);
   assert.ok(saved.local.institutions.length >= 1);
 }
 

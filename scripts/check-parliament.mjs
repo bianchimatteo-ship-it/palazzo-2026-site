@@ -90,12 +90,21 @@ assert.ok(renderedWizard.includes('Parti da un contesto parlamentare reale'));
 
 // Passa una legge nei due rami del procedimento; il secondo voto usa il Senato.
 let law = store.proposeLaw({ title: 'Fondo per i servizi locali', category: 'Welfare', summary: 'Istituisce un fondo simulato per rafforzare i servizi di prossimità.' });
+// The vote in the player's own Chamber: the player calls it (the floor opens: nothing is counted yet), then casts the ballot on the open vote, and only then the count is made.
+const voteOwn = (lawId, action = 'vote', ballot = 'favorevole') => {
+  store.advanceLaw(lawId, action);
+  const pending = store.getState().parliament.laws.find(item => item.id === lawId);
+  assert.ok(pending.floor && pending.stage === 'amendments' && !pending.votes.some(vote => vote.chamber === pending.currentChamber), 'Chiamato il voto, la votazione è aperta e attende il voto del giocatore: nessun esito esiste ancora.');
+  const open = store.openVotes().find(item => item.lawId === lawId);
+  assert.ok(open?.own && open.title === pending.title, 'La votazione aperta sulla propria proposta è tra quelle che attendono il giocatore.');
+  return store.castOpenVote(open.id, ballot);
+};
 store.advanceLaw(law.id, 'present');
 store.advanceLaw(law.id, 'complete-commission');
 store.compromiseLaw(law.id);
 store.compromiseLaw(law.id);
 store.compromiseLaw(law.id);
-store.advanceLaw(law.id, 'vote');
+voteOwn(law.id, 'vote');
 law = store.getState().parliament.laws.find(item => item.id === law.id);
 assert.equal(law.stage, 'other-chamber');
 assert.equal(law.votes[0].source, 'simulation');
@@ -114,12 +123,12 @@ assert.ok(!law.votes[1].playerChoice, 'Al Senato il giocatore non vota.');
 assert.ok(store.getState().career.parliamentHistory.some(item => item.type === 'legge-proposta'));
 // FAVOREVOLE / CONTRARIO / ASTENUTO on the own bill: the choice from the card enters the count of the Chamber.
 let abstained = store.proposeLaw({ title: 'Registro dei beni comuni', category: 'Ambiente', summary: 'Un registro simulato dei beni comuni gestiti dai cittadini.' });
-assert.match(renderParliamentPage('leggi', store.getState()), /Il tuo voto in Aula[\s\S]*data-bill-vote="favorevole"[\s\S]*data-bill-vote="contrario"[\s\S]*data-bill-vote="astenuto"/, 'La scheda della tua proposta mostra Favorevole, Contrario, Astenuto.');
+assert.match(renderParliamentPage('leggi', store.getState()), /La tua intenzione di voto[\s\S]*data-bill-vote="favorevole"[\s\S]*data-bill-vote="contrario"[\s\S]*data-bill-vote="astenuto"/, 'La scheda della tua proposta mostra Favorevole, Contrario, Astenuto.');
 store.castLawVote(abstained.id, 'astenuto');
 assert.equal(store.getState().parliament.laws.find(item => item.id === abstained.id).pendingPlayerVote, 'astenuto');
 store.advanceLaw(abstained.id, 'present');
 store.advanceLaw(abstained.id, 'complete-commission');
-store.advanceLaw(abstained.id, 'vote');
+voteOwn(abstained.id, 'vote', 'astenuto');
 abstained = store.getState().parliament.laws.find(item => item.id === abstained.id);
 const abstention = abstained.votes[0];
 assert.equal(abstention.playerChoice, 'astenuto', 'Il giocatore si astiene sulla sua proposta, come deciso.');
@@ -160,7 +169,7 @@ store.createCareer(senator, [party], groups);
 const rejected = store.proposeLaw({ title: 'Intervento territoriale', category: 'Infrastrutture', summary: 'Avvia un piano dimostrativo per collegamenti locali.' });
 store.advanceLaw(rejected.id, 'present');
 store.advanceLaw(rejected.id, 'complete-commission');
-store.advanceLaw(rejected.id, 'force-vote');
+voteOwn(rejected.id, 'force-vote');
 assert.equal(store.getState().parliament.laws.find(item => item.id === rejected.id).stage, 'rejected');
 store.save();
 module = await import('../src/core/store.js?parliament-law-reload=' + Date.now());
@@ -262,7 +271,7 @@ assert.ok(demand?.label && demand.patch && !demand.accepted, 'Il gruppo chiede u
 store.acceptLawDemand(oppositionLaw.id, 'cam-xix-01');
 assert.ok(store.getState().parliament.laws.find(item => item.id === oppositionLaw.id).amendments.some(item => item.patch), 'Accogliere la richiesta cambia il contenuto del testo.');
 store.compromiseLaw(oppositionLaw.id); store.compromiseLaw(oppositionLaw.id); store.compromiseLaw(oppositionLaw.id);
-store.advanceLaw(oppositionLaw.id, 'vote');
+voteOwn(oppositionLaw.id, 'vote');
 let tracked = store.getState().parliament.laws.find(item => item.id === oppositionLaw.id);
 assert.equal(tracked.stage, 'other-chamber', 'Negoziato e compromessi portano la proposta oltre la prima Camera.');
 assert.ok(tracked.votes[0].byGroup.find(item => item.groupId === 'cam-xix-04').yesVotes < 52 * 0.6, 'La maggioranza non negoziata segue la linea del governo.');

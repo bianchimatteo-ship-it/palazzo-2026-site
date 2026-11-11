@@ -239,7 +239,7 @@ export const AULA = Object.freeze({
   confidencePassed: [['{}: «{} accorda la fiducia: favorevoli #, contrari #, astenuti #.»', '{1}: “{2} grants confidence: in favour {3}, against {4}, abstentions {5}.”']],
   confidenceRejected: [['{}: «{} nega la fiducia: favorevoli #, contrari #, astenuti #.»', '{1}: “{2} denies confidence: in favour {3}, against {4}, abstentions {5}.”']],
   secretResult: [['Voto segreto: i voti dei singoli non sono noti, solo i totali.', 'Secret ballot: individual votes are not known, only the totals.']],
-  you: [['Il tuo voto simulato: {}.', 'Your simulated vote: {1}.']],
+  you: [['Il tuo voto: {}.', 'Your vote: {1}.']],
   youAbsent: [['Il tuo seggio non partecipa al voto.', 'Your seat does not take part in the vote.']],
   note: [['Votazione simulata: il gioco ha già deciso i voti di ogni gruppo; qui si rivedono, seggio per seggio, senza cambiarli.', 'Simulated vote: the game has already decided each group’s votes; here they are replayed seat by seat, without changing them.']]
 });

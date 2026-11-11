@@ -7,7 +7,8 @@
 // Everything here is simulation (source: simulation); the groups of the real XIX legislature keep their real reference.
 import { DATA_SOURCES } from '../data/schema.js?v=20261110-24';
 import { AREA_BY_ID, DECREE_RULES, FINANCING, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261110-24';
-import { amendLawPolicy, campOfAxis, cohesiveShare, directiveOf, governingGroupIds, groupDirectiveEffect, groupProfile, parliamentInternals } from './parliament-engine.js?v=20261110-24';
+import { amendLawPolicy, campOfAxis, cohesiveShare, confidenceBallotMissing, directiveOf, governingGroupIds, groupDirectiveEffect, groupProfile, parliamentInternals, playerSeatedOn } from './parliament-engine.js?v=20261110-24';
+import { openLocalFloors, playerVotesIn } from './local-engine.js?v=20261110-24';
 import { groupLine, splitGroupVote } from './vote-engine.js?v=20261110-24';
 
 const { getGroup, allGroups, record, replaceLaw, demandFor, contentAffinity, setRelation } = parliamentInternals;
@@ -217,8 +218,13 @@ export function groupSupport(parliament, law, group, { world = null } = {}) {
   return clamp(support, 0.05, 0.95);
 }
 export const lineOf = support => support >= 0.55 ? 'favorevole' : support <= 0.42 ? 'contrario' : 'astenuto';
-// The vote of a Chamber on a bill of the calendar. The player's seat votes as the player decided (the line of the
-// group without a decision); the rest of each group follows its support, with dissenters (vote-engine).
+// The vote of a Chamber on a bill of the calendar. The player's seat votes as the player PERSONALLY decided on the
+// open vote (favorevole, contrario, astenuto: never a default, never an absence for want of a choice — without the
+// player's ballot the vote is not counted at all, see `openFloor` / `castFloorVote`); the rest of each group follows
+// its support, with dissenters (vote-engine).
+export const PLAYER_BALLOTS = Object.freeze(['favorevole', 'contrario', 'astenuto']);
+// Whether the player has a seat with the right to vote in the Chamber where the bill is voted now.
+export const playerVotesOn = (parliament, law) => Boolean(law && parliament?.player?.groupId && parliament.player.chamber === law.currentChamber && parliament.chambers?.[law.currentChamber]?.groups?.some(group => group.groupId === parliament.player.groupId && group.simulatedSeats > 0));
 export function autoVote(parliament, law, chamber, { date, world = null, playerChoice = null } = {}) {
   const governing = governingGroupIds(parliament);
   const rows = parliament.chambers[chamber].groups;
@@ -244,9 +250,9 @@ export function autoVote(parliament, law, chamber, { date, world = null, playerC
     }
     if (own) {
       groupLineBefore = line;
-      choice = !playerChoice || playerChoice === 'linea' ? line : playerChoice;
-      // The player who does not take part is counted as absent (every seat is accounted for).
-      if (choice === 'favorevole') votes += 1; else if (choice === 'contrario') no += 1; else if (choice === 'astenuto') abstain += 1; else absent += 1;
+      if (!PLAYER_BALLOTS.includes(playerChoice)) throw new Error('La votazione non può essere conclusa: manca il tuo voto (favorevole, contrario o astenuto).');
+      choice = playerChoice;
+      if (choice === 'favorevole') votes += 1; else if (choice === 'contrario') no += 1; else abstain += 1;
     }
     yes += votes;
     return { groupId: group.groupId, yesVotes: votes, noVotes: no, abstainVotes: abstain, ...(absent ? { absentVotes: absent } : {}), ...(directive ? { directive } : {}), line: groupLine({ yes: votes, no, abstain }), governing: governing.has(group.groupId), simulatedSeats: group.simulatedSeats, ...(own ? { playerChoice: choice } : {}) };
@@ -277,6 +283,84 @@ export function forecastVote(parliament, law, { world = null } = {}) {
 const note = (law, date, text) => text ? { ...law, journal: [...(law.journal ?? []), { date, text }].slice(-10) } : law;
 const HEARINGS = ['Audizione dei sindacati', 'Audizione delle associazioni d’impresa', 'Audizione di esperti e università', 'Audizione della Conferenza delle Regioni', 'Audizione delle associazioni dei cittadini', 'Audizione della Banca d’Italia e dell’Istat'];
 const between = (rand, [min, max]) => min + Math.floor(rand() * (max - min + 1));
+// Before the vote the sponsor counts the votes: the Government accepts the demands of the allies it needs, and on a
+// text of its own puts the question of confidence when the majority still wavers. Done once, when the bill reaches
+// the floor (before the vote opens for the player).
+function prepareFloor(parliament, law, { date, world }) {
+  let next = parliament;
+  const governing = governingGroupIds(next);
+  const fromGovernment = sponsorGoverns(next, law, governing);
+  let working = next.laws.find(item => item.id === law.id);
+  let forecast = forecastVote(next, working, { world });
+  if (!forecast.passes && fromGovernment) {
+    const pivotal = forecast.positions.filter(item => item.line !== 'favorevole' && governing.has(item.groupId) && !working.demands?.[item.groupId]?.accepted).sort((a, b) => b.seats - a.seats).slice(0, 2);
+    for (const item of pivotal) {
+      const demand = demandFor(next, working, item.groupId);
+      try { next = amendLawPolicy(next, working.id, demand.patch, date, { author: item.groupId, label: `Accolta la richiesta di ${getGroup(next, item.groupId)?.officialName ?? 'un alleato'}: ${demand.label}` }); } catch { /* the text can no longer be amended */ }
+      next = replaceLaw(next, working.id, current => note({ ...current, demands: { ...(current.demands ?? {}), [item.groupId]: { ...demand, accepted: true, date, source: SIM } } }, date, `Accolta una richiesta di ${getGroup(next, item.groupId)?.officialName ?? 'un alleato'}: ${demand.label}.`));
+      working = next.laws.find(entry => entry.id === law.id);
+    }
+    forecast = forecastVote(next, working, { world });
+    if (!forecast.passes && law.sponsor?.kind === 'governo' && !working.confidence && forecast.margin > -25 && next.government?.status === 'active') {
+      next = replaceLaw(next, law.id, current => note({ ...current, confidence: true }, date, 'Il governo pone la questione di fiducia.'));
+      next = record(next, date, 'fiducia-posta', `Il governo pone la questione di fiducia su “${law.title}”: se la perde, cade.`, { lawId: law.id, auto: true });
+    }
+  }
+  return next;
+}
+// The key of one vote of one bill: the bill, the Chamber and the ordinal of the vote (a bill is voted once per Chamber).
+export const floorKeyOf = law => `${law.id}|${law.currentChamber}|${(law.votes ?? []).length + 1}`;
+// The vote is open and waits for the player: a state of the bill (saved with it), no result of any kind.
+function openFloor(parliament, law, { date, world }) {
+  const key = floorKeyOf(law);
+  if (law.floor?.key === key) return { parliament, events: [] };
+  const forecast = forecastVote(parliament, law, { world });
+  const line = forecast.positions.find(item => item.groupId === parliament.player.groupId)?.line ?? 'astenuto';
+  const next = replaceLaw(parliament, law.id, current => note({ ...current, floor: { key, chamber: law.currentChamber, stage: law.stage, openedAt: date, line }, pausedAt: null }, date, `${chamberName(law.currentChamber)}: si apre la votazione, l’Aula attende il tuo voto.`));
+  return { parliament: next, events: [{ type: 'votazione-aperta', lawId: law.id, key, title: law.title, sponsor: law.sponsor, kind: law.kind, chamber: law.currentChamber, finalVote: law.stage === 'final-vote', confidence: Boolean(law.confidence), line, date }] };
+}
+// The count and what follows from it. `ballot` is the player's own vote (required whenever the player votes in this Chamber).
+function resolveFloor(parliament, law, { date, rand, world }, ballot) {
+  let next = parliament;
+  const events = [];
+  const governing = governingGroupIds(next);
+  const fromGovernment = sponsorGoverns(next, law, governing);
+  const working = next.laws.find(item => item.id === law.id);
+  const chamber = working.currentChamber;
+  const vote = { ...autoVote(next, working, chamber, { date, world, playerChoice: ballot }), ...(working.floor ? { floorKey: working.floor.key } : {}) };
+  const finalVote = working.stage === 'final-vote';
+  const stage = vote.passed ? (finalVote ? 'approved' : 'other-chamber') : 'rejected';
+  const wait = stage === 'other-chamber' ? between(rand, LEGISLATIVE_RULES.shuttle) * (working.kind === 'ddl' ? 1 : 0.5) : 0;
+  next = replaceLaw(next, law.id, current => note({ ...current, stage, status: stage, votes: [...(current.votes ?? []), vote], pendingPlayerVote: null, floor: null, pausedAt: null, updatedAt: date, stageSince: date, nextStepAt: stage === 'other-chamber' ? addDays(date, Math.max(1, Math.round(wait)) * 7) : null }, date, `${chamberName(chamber)}: ${vote.passed ? 'approvata' : 'respinta'} con ${vote.yes} voti favorevoli (soglia ${vote.needed}).`));
+  const outcome = vote.passed ? (finalVote ? 'approvazione definitiva' : 'primo sì') : 'bocciatura';
+  next = record(next, date, `iter-${stage}`, `${chamberName(chamber)}: ${outcome} per “${law.title}” (${law.sponsor?.label ?? 'proposta'}: ${vote.yes} favorevoli, soglia ${vote.needed}).`, { lawId: law.id, stage, kind: working.kind, origin: working.origin, sponsor: working.sponsor?.kind ?? null, partyId: working.sponsor?.partyId ?? null, auto: true });
+  // A Government that loses a vote of confidence falls; a Government text rejected weakens it; one approved helps.
+  const government = next.government;
+  if (government && ['active', 'crisis'].includes(government.status)) {
+    if (!vote.passed && working.confidence) {
+      const ministers = government.ministers.map(item => item.endedAt ? item : { ...item, endedAt: date, endReason: 'Fiducia negata' });
+      next = record({ ...next, government: { ...government, status: 'fallen', stability: 0, ministers, fallenAt: date } }, date, 'fiducia-negata', `Il governo perde la fiducia su “${law.title}” e cade.`, { governmentId: government.id, lawId: law.id, auto: true });
+    } else if (fromGovernment) next = { ...next, government: { ...government, stability: clamp((government.stability ?? 50) + (vote.passed ? (finalVote ? 2 : 0.5) : -6), 0, 100), ...(finalVote && vote.passed && working.kind === 'manovra' ? { budgetYear: working.budgetYear } : {}) } };
+  }
+  // Dissent inside the majority on a text of the majority is news: the allies read it as a warning.
+  for (const row of vote.byGroup.filter(item => item.governing && fromGovernment && item.line === 'favorevole' && item.noVotes + item.abstainVotes >= Math.max(3, Math.round(item.simulatedSeats * 0.12)))) {
+    next = record(next, date, 'dissenso-maggioranza', `${row.noVotes + row.abstainVotes} parlamentari di ${getGroup(next, row.groupId)?.officialName ?? 'un gruppo della maggioranza'} non seguono la linea su “${law.title}”.`, { lawId: law.id, groupId: row.groupId, count: row.noVotes + row.abstainVotes, auto: true });
+    if (next.government?.partners?.[row.groupId]) next = { ...next, government: { ...next.government, stability: clamp((next.government.stability ?? 50) - 1, 0, 100) } };
+  }
+  if (vote.playerChoice) events.push({ type: 'voto-giocatore', lawId: law.id, title: law.title, sponsor: working.sponsor, kind: working.kind, choice: vote.playerChoice, line: vote.playerLine, passed: vote.passed, finalVote, chamber, yes: vote.yes, needed: vote.needed, decisive: vote.decisive, confidence: Boolean(working.confidence), fromGovernment, dealBroken: Boolean(working.playerDeal) && vote.playerChoice !== 'favorevole' });
+  return { parliament: next, events, vote };
+}
+// The player casts the vote on an open floor: the count is made now, once, with that ballot. `ctx.rand` must be seeded
+// by the key of the vote (the store does it), so the live sitting and the simulated one give the very same result.
+export function castFloorVote(parliament, lawId, choice, ctx) {
+  if (!PLAYER_BALLOTS.includes(choice)) throw new Error('Scegli come votare: Favorevole, Contrario o Astenuto.');
+  const law = parliament?.laws?.find(item => item.id === lawId);
+  if (!law?.floor || !law.auto) throw new Error('Non c’è una votazione aperta su questo provvedimento.');
+  if (!playerVotesOn(parliament, law)) throw new Error('Non hai diritto di voto in questa assemblea.');
+  return resolveFloor(parliament, law, ctx, choice);
+}
+// The open votes of the Chambers that wait for the player (the bills of the others; the player's own are in parliament-engine).
+export const openFloors = parliament => (parliament?.laws ?? []).filter(law => law.floor && !CLOSED.includes(law.stage));
 // One passage of a bill whose date has come; the events are for the career (the player's votes).
 function stepLaw(parliament, law, ctx) {
   const { date, rand, world } = ctx;
@@ -312,50 +396,17 @@ function stepLaw(parliament, law, ctx) {
     return { parliament: next, events };
   }
   if (law.stage === 'amendments' || law.stage === 'final-vote') {
-    let working = next.laws.find(item => item.id === law.id);
-    // Before the vote the sponsor counts the votes: the Government accepts the demands of the allies it needs, and on
-    // a text of its own puts the question of confidence when the majority still wavers.
-    let forecast = forecastVote(next, working, { world });
-    if (!forecast.passes && fromGovernment) {
-      const pivotal = forecast.positions.filter(item => item.line !== 'favorevole' && governing.has(item.groupId) && !working.demands?.[item.groupId]?.accepted).sort((a, b) => b.seats - a.seats).slice(0, 2);
-      for (const item of pivotal) {
-        const demand = demandFor(next, working, item.groupId);
-        try { next = amendLawPolicy(next, working.id, demand.patch, date, { author: item.groupId, label: `Accolta la richiesta di ${getGroup(next, item.groupId)?.officialName ?? 'un alleato'}: ${demand.label}` }); } catch { /* the text can no longer be amended */ }
-        next = replaceLaw(next, working.id, current => note({ ...current, demands: { ...(current.demands ?? {}), [item.groupId]: { ...demand, accepted: true, date, source: SIM } } }, date, `Accolta una richiesta di ${getGroup(next, item.groupId)?.officialName ?? 'un alleato'}: ${demand.label}.`));
-        working = next.laws.find(entry => entry.id === law.id);
-      }
-      forecast = forecastVote(next, working, { world });
-      if (!forecast.passes && law.sponsor?.kind === 'governo' && !working.confidence && forecast.margin > -25 && next.government?.status === 'active') {
-        next = replaceLaw(next, law.id, current => note({ ...current, confidence: true }, date, 'Il governo pone la questione di fiducia.'));
-        next = record(next, date, 'fiducia-posta', `Il governo pone la questione di fiducia su “${law.title}”: se la perde, cade.`, { lawId: law.id, auto: true });
-        working = next.laws.find(item => item.id === law.id);
-      }
+    next = prepareFloor(next, law, ctx);
+    const working = next.laws.find(item => item.id === law.id);
+    // The player sits in the Chamber that votes: the vote opens and waits for the player's own ballot. Nothing is
+    // counted, recorded or applied until it is cast (castFloorVote): the same resolution serves the live sitting
+    // and the simulated one.
+    // (`ctx.voter(law, line)`: only for the scripts that run the Chambers without a page and without the store — the function that casts the player's ballot; the game never passes it.)
+    if (playerVotesOn(next, working)) {
+      const cast = typeof ctx.voter === 'function' ? ctx.voter(working, lineOf(groupSupport(next, working, getGroup(next, next.player.groupId), { world: ctx.world }))) : null;
+      return PLAYER_BALLOTS.includes(cast) ? resolveFloor(next, working, ctx, cast) : openFloor(next, working, ctx);
     }
-    const chamber = working.currentChamber;
-    // The player's decision (from the agenda or the bill's card); without one the player's seat follows the line.
-    const decided = next.player?.chamber === chamber ? working.pendingPlayerVote ?? null : null;
-    const vote = autoVote(next, working, chamber, { date, world, playerChoice: decided });
-    const finalVote = working.stage === 'final-vote';
-    const stage = vote.passed ? (finalVote ? 'approved' : 'other-chamber') : 'rejected';
-    const wait = stage === 'other-chamber' ? between(rand, LEGISLATIVE_RULES.shuttle) * (working.kind === 'ddl' ? 1 : 0.5) : 0;
-    next = replaceLaw(next, law.id, current => note({ ...current, stage, status: stage, votes: [...(current.votes ?? []), vote], pendingPlayerVote: null, pausedAt: null, updatedAt: date, stageSince: date, nextStepAt: stage === 'other-chamber' ? addDays(date, Math.max(1, Math.round(wait)) * 7) : null }, date, `${chamberName(chamber)}: ${vote.passed ? 'approvata' : 'respinta'} con ${vote.yes} voti favorevoli (soglia ${vote.needed}).`));
-    const outcome = vote.passed ? (finalVote ? 'approvazione definitiva' : 'primo sì') : 'bocciatura';
-    next = record(next, date, `iter-${stage}`, `${chamberName(chamber)}: ${outcome} per “${law.title}” (${law.sponsor?.label ?? 'proposta'}: ${vote.yes} favorevoli, soglia ${vote.needed}).`, { lawId: law.id, stage, kind: working.kind, origin: working.origin, sponsor: working.sponsor?.kind ?? null, partyId: working.sponsor?.partyId ?? null, auto: true });
-    // A Government that loses a vote of confidence falls; a Government text rejected weakens it; one approved helps.
-    const government = next.government;
-    if (government && ['active', 'crisis'].includes(government.status)) {
-      if (!vote.passed && working.confidence) {
-        const ministers = government.ministers.map(item => item.endedAt ? item : { ...item, endedAt: date, endReason: 'Fiducia negata' });
-        next = record({ ...next, government: { ...government, status: 'fallen', stability: 0, ministers, fallenAt: date } }, date, 'fiducia-negata', `Il governo perde la fiducia su “${law.title}” e cade.`, { governmentId: government.id, lawId: law.id, auto: true });
-      } else if (fromGovernment) next = { ...next, government: { ...government, stability: clamp((government.stability ?? 50) + (vote.passed ? (finalVote ? 2 : 0.5) : -6), 0, 100), ...(finalVote && vote.passed && working.kind === 'manovra' ? { budgetYear: working.budgetYear } : {}) } };
-    }
-    // Dissent inside the majority on a text of the majority is news: the allies read it as a warning.
-    for (const row of vote.byGroup.filter(item => item.governing && fromGovernment && item.line === 'favorevole' && item.noVotes + item.abstainVotes >= Math.max(3, Math.round(item.simulatedSeats * 0.12)))) {
-      next = record(next, date, 'dissenso-maggioranza', `${row.noVotes + row.abstainVotes} parlamentari di ${getGroup(next, row.groupId)?.officialName ?? 'un gruppo della maggioranza'} non seguono la linea su “${law.title}”.`, { lawId: law.id, groupId: row.groupId, count: row.noVotes + row.abstainVotes, auto: true });
-      if (next.government?.partners?.[row.groupId]) next = { ...next, government: { ...next.government, stability: clamp((next.government.stability ?? 50) - 1, 0, 100) } };
-    }
-    if (decided && vote.playerChoice) events.push({ type: 'voto-giocatore', lawId: law.id, title: law.title, sponsor: working.sponsor, kind: working.kind, choice: vote.playerChoice, line: vote.playerLine, passed: vote.passed, finalVote, chamber, yes: vote.yes, needed: vote.needed, decisive: vote.decisive, confidence: Boolean(working.confidence), fromGovernment, dealBroken: Boolean(working.playerDeal) && vote.playerChoice !== 'favorevole' });
-    return { parliament: next, events };
+    return resolveFloor(next, working, ctx, null);
   }
   if (law.stage === 'other-chamber') {
     set({ stage: 'final-vote', status: 'final-vote', currentChamber: opposite(law.currentChamber), committeeId: committeeFor(opposite(law.currentChamber), law.kind === 'manovra' ? 'finanze' : law.policy?.area ?? 'economia'), negotiatedGroupIds: [], nextStepAt: addDays(date, (law.kind === 'ddl' ? 2 : 1) * 7) }, `Trasmessa ${law.currentChamber === 'camera' ? 'al Senato' : 'alla Camera'}.`);
@@ -408,7 +459,8 @@ export function amendOthersLaw(parliament, lawId, patch, date, { influence = 50,
   return { parliament: record(next, date, 'emendamento-approvato', `Approvato il tuo emendamento a “${law.title}”.`, { lawId, chance }), accepted: true, chance };
 }
 // The vote the player will cast when the bill comes to the floor of the player's Chamber.
-export const PLAYER_VOTE_CHOICES = Object.freeze({ linea: 'Segui la linea del gruppo', favorevole: 'Favorevole', contrario: 'Contrario', astenuto: 'Astenuto', assente: 'Non partecipi al voto' });
+// The player's ballot: three choices, always expressed (an abstention is a vote, not an absence). Chosen in advance from the bill's card it is an intention: it is confirmed on the open vote.
+export const PLAYER_VOTE_CHOICES = Object.freeze({ favorevole: 'Favorevole', contrario: 'Contrario', astenuto: 'Astenuto' });
 export function setPlayerVote(parliament, lawId, choice) {
   if (!PLAYER_VOTE_CHOICES[choice]) throw new Error('Scelta di voto non valida.');
   const own = parliament.laws.find(item => item.id === lawId && !item.auto);
@@ -453,6 +505,11 @@ export function advanceLegislativeWeek(input, ctx) {
   for (const law of openAuto(parliament).filter(item => item.nextStepAt && item.nextStepAt <= ctx.date).sort((a, b) => a.nextStepAt.localeCompare(b.nextStepAt))) {
     const current = parliament.laws.find(item => item.id === law.id);
     if (!current || CLOSED.includes(current.stage)) continue;
+    // An open vote waits for the player's ballot (it is resolved by castFloorVote, never by the calendar); if the player no longer votes in that Chamber (the seat is gone) the floor closes and the calendar goes on.
+    if (current.floor) {
+      if (current.auto === false || playerVotesOn(parliament, current)) continue;
+      parliament = replaceLaw(parliament, current.id, item => ({ ...item, floor: null }));
+    }
     if (paused && current.kind === 'ddl' && ['amendments', 'final-vote'].includes(current.stage)) {
       const pausedWeeks = weeksBetween(current.pausedAt ?? ctx.date, ctx.date);
       if (pausedWeeks >= LEGISLATIVE_RULES.maxPausedWeeks) {
@@ -464,7 +521,7 @@ export function advanceLegislativeWeek(input, ctx) {
       parliament = replaceLaw(parliament, current.id, item => ({ ...item, pausedAt: item.pausedAt ?? ctx.date }));
       continue;
     }
-    const out = stepLaw(parliament, current, ctx);
+    const out = stepLaw(parliament, parliament.laws.find(item => item.id === current.id), ctx);
     parliament = out.parliament;
     events.push(...out.events);
   }
@@ -480,3 +537,98 @@ export function advanceLegislativeWeek(input, ctx) {
   }
   return { parliament: compactLegislature(parliament), events, lines };
 }
+
+// ---------- the open votes of every assembly ----------
+// The votes that are OPEN and wait for the player's own ballot, in every assembly where the player has a seat with the right to vote: the Camera or the Senate (the bills of the others and the player's
+// own), a city, provincial or regional council, the European Parliament, and the confidence vote on a Government of others. Read from the state as it is saved: an open vote is a field of the bill or of
+// the act (`floor`), so it survives a save, a reload and a change of device. Nothing here counts a vote: the count is made once, when the player casts the ballot (`castFloorVote` above, parliament-engine
+// `advanceLaw`, local-engine `castLocalFloorVote`), and until then no result exists anywhere.
+export const BALLOTS = Object.freeze({ favorevole: 'Favorevole', contrario: 'Contrario', astenuto: 'Astenuto' });
+export const FLOOR_ASSEMBLIES = Object.freeze({
+  camera: { name: 'Camera dei deputati', president: 'Il Presidente della Camera', hall: 'Aula di Montecitorio' },
+  senato: { name: 'Senato della Repubblica', president: 'Il Presidente del Senato', hall: 'Aula di Palazzo Madama' },
+  comune: { name: 'Consiglio comunale', president: 'Il Presidente del Consiglio comunale', hall: 'Sala consiliare' },
+  provincia: { name: 'Consiglio provinciale', president: 'Il Presidente della Provincia', hall: 'Sala del Consiglio provinciale' },
+  regione: { name: 'Consiglio regionale', president: 'Il Presidente del Consiglio regionale', hall: 'Aula del Consiglio regionale' },
+  europa: { name: 'Parlamento europeo', president: 'Il Presidente del Parlamento', hall: 'Emiciclo di Strasburgo' }
+});
+const KIND_LABELS = Object.freeze({ ddl: 'Disegno di legge', decreto: 'Decreto-legge', manovra: 'Legge di bilancio' });
+const FLOOR_INTENSITY = Object.freeze({ 1: 'Intervento limitato', 2: 'Intervento ordinario', 3: 'Intervento ampio' });
+const row = (label, value) => value ? { label, value: String(value) } : null;
+
+// What the text of a bill provides, from the fields the engine keeps (never invented).
+function lawContent(law) {
+  const policy = law.policy ?? {};
+  const area = AREA_BY_ID[policy.area];
+  return [
+    row('Materia', area?.label ?? law.category ?? null),
+    row('Strumento', area?.instruments?.[policy.instrument] ?? null),
+    row('Portata', FLOOR_INTENSITY[policy.intensity] ?? null),
+    row('Copertura', FINANCING[policy.financing]?.label ?? null),
+    row('Emendamenti accolti', (law.amendments ?? []).length ? String(law.amendments.length) : null),
+    row('Fiducia', law.confidence ? 'Il governo ha posto la questione di fiducia: se il testo è respinto, il governo cade' : null)
+  ].filter(Boolean);
+}
+function actContent(inst, act) {
+  const area = AREA_BY_ID[act.area];
+  const measure = act.measure ?? {};
+  return [
+    row('Tipo di atto', act.label ?? null),
+    row('Materia', area?.label ?? null),
+    row('Opera', act.workPlan?.label ?? null),
+    row('Tributi', measure.tax === 'su' ? 'Aumento di tributi o tariffe' : measure.tax === 'giu' ? 'Riduzione di tributi o tariffe' : null),
+    row('Bilancio', act.budget ? 'È il bilancio dell’ente: senza approvazione scatta l’esercizio provvisorio' : null),
+    row('Maggioranza richiesta', { votanti: 'Più favorevoli che contrari', componenti: 'Maggioranza assoluta dei componenti', dueterzi: 'Due terzi dei componenti' }[act.quorum] ?? null),
+    row('Seconda convocazione', act.secondCall ? 'Sì: la prima seduta non aveva il numero legale' : null)
+  ].filter(Boolean);
+}
+const lawSummary = law => law.summary ?? law.description ?? `${KIND_LABELS[law.kind] ?? 'Proposta di legge'} presentato da ${law.sponsor?.label ?? 'un gruppo parlamentare'}.`;
+
+// Every open vote, in the order in which it opened. `voteId` is the id the vote will have once counted (the key the Aula uses to remember what was followed).
+export function openVotesOf(state) {
+  if (!state?.game || state.game.status === 'ended') return [];
+  const out = [];
+  const parliament = state.parliament;
+  if (parliament?.player?.groupId) {
+    for (const law of openFloors(parliament)) {
+      const own = law.auto === false || Boolean(law.floor.own);
+      if (own ? !playerSeatedOn(parliament, law) : !playerVotesOn(parliament, law)) continue;
+      const chamber = law.currentChamber;
+      const group = parliament.chambers?.[chamber]?.groups?.find(item => item.groupId === parliament.player.groupId);
+      out.push({
+        id: `law:${law.id}`, scope: 'nazionale', own, lawId: law.id, assembly: chamber, assemblyName: FLOOR_ASSEMBLIES[chamber].name, place: '', president: FLOOR_ASSEMBLIES[chamber].president, hall: FLOOR_ASSEMBLIES[chamber].hall,
+        title: law.title, kindLabel: KIND_LABELS[law.kind] ?? 'Proposta di legge', reading: law.stage === 'final-vote' ? 'Votazione finale' : 'Prima votazione', summary: lawSummary(law), content: lawContent(law),
+        proposer: own ? 'Tu (primo firmatario)' : law.sponsor?.label ?? 'Un gruppo parlamentare', confidence: Boolean(law.confidence), openedAt: law.floor.openedAt ?? null,
+        line: law.floor.line ?? (group ? lineOf(groupSupport(parliament, law, group, { world: state.world })) : 'astenuto'), intention: BALLOTS[law.pendingPlayerVote] ? law.pendingPlayerVote : null,
+        voteId: `${law.id}-${chamber}-${(law.votes ?? []).length + 1}`, floorKey: law.floor.key
+      });
+    }
+    const government = parliament.government;
+    if (confidenceBallotMissing(parliament) && government.confidenceRequestedAt) {
+      const chamber = parliament.player.chamber;
+      const inside = [...(government.coalitionGroupIds ?? []), ...(government.supportingGroupIds ?? [])].includes(parliament.player.groupId);
+      out.push({
+        id: `fiducia:${government.id}`, scope: 'fiducia', governmentId: government.id, assembly: chamber, assemblyName: FLOOR_ASSEMBLIES[chamber]?.name ?? 'Parlamento', place: '', president: FLOOR_ASSEMBLIES[chamber]?.president ?? 'Il Presidente', hall: FLOOR_ASSEMBLIES[chamber]?.hall ?? '',
+        title: `Fiducia al ${government.name}`, kindLabel: 'Voto di fiducia', reading: 'Chiama nominale', summary: government.status === 'crisis' ? 'Il governo è in crisi e torna alle Camere: senza la fiducia, cade.' : 'Il nuovo governo si presenta alle Camere e chiede la fiducia.',
+        content: [row('Governo', government.name), row('Il tuo gruppo', inside ? 'Fa parte della maggioranza che lo sostiene' : 'È all’opposizione')].filter(Boolean), proposer: government.name, confidence: true,
+        openedAt: government.confidenceRequestedAt, line: inside ? 'favorevole' : 'contrario', intention: null, voteId: null, floorKey: `fiducia|${government.id}`, deferred: true
+      });
+    }
+  }
+  for (const inst of state.local?.institutions ?? []) {
+    if (!playerVotesIn(inst)) continue;
+    for (const act of openLocalFloors(inst)) {
+      const committee = Boolean(act.floor.committee);
+      const spec = committee ? { name: 'Commissione del Parlamento europeo', president: 'Il Presidente della commissione', hall: 'Sala della commissione' } : FLOOR_ASSEMBLIES[inst.kind] ?? FLOOR_ASSEMBLIES.comune;
+      out.push({
+        id: `local:${inst.id}|${act.id}`, scope: 'locale', own: act.sponsor?.kind === 'player' || act.kind === 'player', instId: inst.id, actId: act.id, assembly: inst.kind, assemblyName: spec.name, place: inst.name ?? '', president: spec.president, hall: spec.hall, committee,
+        title: act.title, kindLabel: act.label ?? 'Atto', reading: committee ? 'Voto in commissione' : act.secondCall ? 'Seconda convocazione' : act.firstReadingAt ? 'Seconda deliberazione' : 'Votazione in aula', summary: `${act.label ?? 'Atto'} presentato da ${act.sponsor?.label ?? 'un gruppo'}${AREA_BY_ID[act.area] ? `: ${AREA_BY_ID[act.area].label.toLowerCase()}` : ''}.`, content: actContent(inst, act),
+        proposer: act.sponsor?.label ?? 'Un gruppo consiliare', confidence: act.kind === 'sfiducia', openedAt: act.floor.openedAt ?? null, line: act.floor.line ?? 'astenuto', intention: BALLOTS[act.pendingPlayerVote] ? act.pendingPlayerVote : null,
+        voteId: committee ? null : `local:${inst.id}|${act.id}`, floorKey: act.floor.key
+      });
+    }
+  }
+  return out.sort((a, b) => String(a.openedAt ?? '').localeCompare(String(b.openedAt ?? '')));
+}
+// The sentence that stops the close of the week: which measures wait, and where.
+export const openVotesNotice = votes => votes.length ? `Prima di chiudere la settimana devi votare: ${votes.slice(0, 2).map(vote => `«${vote.title}» (${vote.assemblyName}${vote.place ? `, ${vote.place}` : ''})`).join('; ')}${votes.length > 2 ? ` e ${votes.length - 2 === 1 ? 'un’altra votazione' : `altre ${votes.length - 2} votazioni`}` : ''}.` : '';

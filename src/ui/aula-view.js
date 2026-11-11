@@ -47,7 +47,8 @@ function board(aula, shown) {
   const b = boardAt(aula.script, aula.choices, shown), done = b.left === 0, secret = aula.script.secret;
   const f = aula.script.final;
   const cell = (key, label, value, cls) => `<div class="aula-count ${cls}"><small>${label}</small><strong data-aula-count="${key}">${value}</strong></div>`;
-  return `${cell('yes', 'Favorevoli', secret && !done ? '—' : done ? f.yes : b.yes, 'is-yes')}${cell('against', 'Contrari', secret && !done ? '—' : done ? f.against : b.against, 'is-no')}${cell('abstain', 'Astenuti', secret && !done ? '—' : done ? f.abstain : b.abstain, 'is-abs')}${cell('absent', 'Assenti', aula.choices.filter(choice => choice === 'assente').length, 'is-absent')}${cell('voted', 'Hanno votato', b.voted, 'is-voted')}`;
+  // the counters are the sums of the seats shown so far (never the final numbers before the last seat), and they always add up: voted + absent = seats when the count is over
+  return `${cell('yes', 'Favorevoli', secret && !done ? '—' : done ? f.yes : b.yes, 'is-yes')}${cell('against', 'Contrari', secret && !done ? '—' : done ? f.against : b.against, 'is-no')}${cell('abstain', 'Astenuti', secret && !done ? '—' : done ? f.abstain : b.abstain, 'is-abs')}${cell('absent', 'Assenti', aula.choices.filter(choice => choice === 'assente').length, 'is-absent')}${cell('voted', 'Hanno votato', b.voted, 'is-voted')}${cell('total', 'Seggi', aula.seats.length, 'is-total')}`;
 }
 
 function paint(root, aula, shown) {
@@ -62,7 +63,7 @@ function paint(root, aula, shown) {
   });
   const boardEl = root.querySelector('.aula-board'); if (boardEl) boardEl.innerHTML = board(aula, shown);
   const log = root.querySelector('.aula-said');
-  if (log) { const lines = saidAt(script, shown); if (log.children.length !== lines.length) log.innerHTML = lines.map(step => `<li class="${step.result ? 'is-result' : ''}">${esc(step.text)}</li>`).join(''); }
+  if (log) { const lines = saidAt(script, shown); if (log.children.length !== lines.length) log.innerHTML = lines.map(step => `<li class="${step.result ? 'is-result' : step.mine ? 'is-mine' : ''}">${esc(step.text)}</li>`).join(''); }
   // at the end there is nothing left to pause or to skip to
   root.querySelectorAll('[data-aula-pause],[data-aula-skip]').forEach(button => { button.hidden = shown >= script.order.length && script.order.length > 0; });
   root.dataset.aulaShown = String(shown);
@@ -81,7 +82,7 @@ export function closeAula() {
 function onKey(event) { if (event.key === 'Escape' && current) { event.stopPropagation(); closeAula(); } }
 
 // Opens the window. `motion`: 'full' plays seat by seat (about six seconds); 'reduced' or 'off', or the system preference, show the final picture at once.
-export function openAula(aula, { motion = 'off', onClose = null, start = 0, onProgress = null, review = false } = {}) {
+export function openAula(aula, { motion = 'off', onClose = null, start = 0, onProgress = null, review = false, place = '' } = {}) {
   if (!aula) return false;
   closeAula();
   previousFocus = document.activeElement;
@@ -92,14 +93,15 @@ export function openAula(aula, { motion = 'off', onClose = null, start = 0, onPr
   root.setAttribute('role', 'dialog'); root.setAttribute('aria-modal', 'true'); root.setAttribute('aria-labelledby', 'aula-title');
   root.dataset.aulaChamber = script.assembly;
   root.dataset.aulaMode = review ? 'storico' : 'diretta';
+  const mine = script.playerChoice ? `<p class="aula-mine" data-aula-mine="${esc(script.playerChoice)}">IL TUO VOTO: <b>${esc({ favorevole: 'FAVOREVOLE', contrario: 'CONTRARIO', astenuto: 'ASTENUTO' }[script.playerChoice])}</b></p>` : '';
   const legend = aula.groups.map(group => `<li><i style="background:${esc(group.color)}"></i><span>${esc(group.label)}</span></li>`).join('');
-  root.innerHTML = `<div class="aula-window"><header><div><span class="section-kicker">${review ? 'STORICO · VOTAZIONE CONCLUSA · ' : 'IN DIRETTA · '}${esc(script.kindLabel.toUpperCase())}</span><h2 id="aula-title">${esc(aula.title)}</h2>${aula.subtitle ? `<small>${esc(aula.subtitle)}</small>` : ''}</div><button type="button" class="ghost-button" data-aula-close>Chiudi</button></header>
+  root.innerHTML = `<div class="aula-window"><header><div><span class="section-kicker">${review ? 'STORICO · VOTAZIONE CONCLUSA' : 'IN DIRETTA · VOTAZIONE IN CORSO'}</span><p class="floor-assembly" data-aula-assembly>${esc(script.kindLabel.toUpperCase())}</p><h2 id="aula-title">${esc(aula.title)}</h2>${(aula.subtitle && aula.subtitle !== aula.title) || place ? `<small>${esc(aula.subtitle && aula.subtitle !== aula.title ? aula.subtitle : place)}</small>` : ''}${mine}</div><button type="button" class="ghost-button" data-aula-close>Chiudi</button></header>
     <div class="aula-controls" role="group" aria-label="Controlli della votazione">${play ? '<button type="button" class="ghost-button" data-aula-pause aria-pressed="false">Pausa</button>' : ''}<button type="button" class="ghost-button" data-aula-skip>Vai all’esito</button></div>
     ${seatsSvg(aula)}
     <div class="aula-board" role="status"></div>
     <ol class="aula-said" aria-live="polite"></ol>
     <ul class="aula-legend">${legend}<li><i style="background:${COLORS.favorevole}"></i><span>Favorevole</span></li><li><i style="background:${COLORS.contrario}"></i><span>Contrario</span></li><li><i style="background:${COLORS.astenuto}"></i><span>Astenuto</span></li>${script.secret ? `<li><i style="background:${COLORS.segreto}"></i><span>Ha votato (voto segreto)</span></li>` : ''}</ul>
-    <p class="sx-note">Votazione simulata: il gioco ha già deciso i voti di ogni gruppo; qui si rivedono, seggio per seggio, senza cambiarli.</p></div>`;
+    <p class="sx-note">${review ? 'Votazione conclusa: qui si rivede l’esito ufficiale, seggio per seggio, senza cambiarlo.' : 'I voti compaiono seggio per seggio: l’esito si conosce solo quando ha votato l’ultimo seggio.'}</p></div>`;
   document.body.appendChild(root);
   document.addEventListener('keydown', onKey, true);
   current = { aula, root };
@@ -115,9 +117,10 @@ export function openAula(aula, { motion = 'off', onClose = null, start = 0, onPr
   current.leave = () => report(true);
   addEventListener('pagehide', current.leave);
   paint(root, aula, shown);
-  const chunk = Math.max(1, Math.ceil(script.order.length / 70));
+  // about eleven seconds from the first seat to the last (it was six): the count can be followed, and it can always be paused or skipped
+  const chunk = Math.max(1, Math.ceil(script.order.length / 84));
   const tick = () => { if (paused) return; shown = Math.min(script.order.length, shown + chunk); paint(root, aula, shown); report(); if (shown >= script.order.length) { stop(); report(true); } };
-  if (play) timer = setInterval(tick, 90);
+  if (play) timer = setInterval(tick, 130);
   root.addEventListener('click', event => {
     if (event.target.closest('[data-aula-close]') || event.target === root) { report(true); closeAula(); onClose?.(); return; }
     if (event.target.closest('[data-aula-skip]')) { stop(); shown = script.order.length; paint(root, aula, shown); report(true); return; }

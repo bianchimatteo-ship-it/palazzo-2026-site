@@ -1703,6 +1703,36 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
       } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
       return;
     }
+    // An open vote (the player's own ballot is needed): the sitting, followed live or simulated. The same count either way; loaded when a vote is open.
+    const floorControl = event.target.closest('[data-floor-open]');
+    if (floorControl) {
+      try {
+        const voteId = floorControl.dataset.floorOpen;
+        const vote = store.openVotes().find(item => item.id === voteId);
+        if (!vote) throw new Error('Questa votazione non è più aperta.');
+        const mode = floorControl.dataset.floorMode === 'diretta' && !vote.deferred ? 'diretta' : 'simulata';
+        store.setFloorMode(voteId, mode);
+        const [floor, aulaModule] = await Promise.all([import('./floor-view.js?v=20261110-24'), import('./aula-view.js?v=20261110-24')]);
+        const motion = document.documentElement.dataset.sceneMotion ?? settings.sceneMotion;
+        // The Aula of the vote just counted: the Chambers through the hemicycle, a council through the totals of its groups.
+        const aulaOf = () => {
+          const state = store.getState();
+          if (vote.scope === 'nazionale') return aulaModule.parliamentAula(state, { voteId: vote.voteId, chamber: vote.assembly, politicians: realDatabase.politicians ?? [], db: realDatabase });
+          const inst = (state.local?.institutions ?? []).find(item => item.id === vote.instId);
+          const act = [...(inst?.acts ?? []), ...(inst?.archive ?? [])].find(item => item.id === vote.actId);
+          return inst && act ? aulaModule.localAula(inst, act, { colorOf: group => ({ maggioranza: '#3f7fb5', opposizione: '#b5653f' })[group.side] ?? '#7d8b84' }) : null;
+        };
+        floor.openFloor(vote, {
+          mode, motion,
+          cast: choice => { const out = store.castOpenVote(voteId, choice, { mode }); playSound('confirm'); return out; },
+          aulaOf: () => { const aula = vote.voteId ? aulaOf() : null; if (!aula && vote.voteId) store.markAulaSeen(vote.voteId); return aula; },
+          play: aula => aulaModule.openAula(aula, { motion, place: vote.place, onProgress: (shown, total) => store.setAulaProgress(vote.voteId, shown, total) }),
+          review: aula => aulaModule.openAula(aula, { motion: 'off', review: true, place: vote.place })
+        });
+        playSound('confirm');
+      } catch (error) { playSound('failure'); store.getState().ui.toast = error.message; render(store.getState(), store.getLastSaved()); }
+      return;
+    }
     // The Aula: a vote the game already decided, replayed seat by seat. Read only; loaded when someone enters it.
     const dismissAula = event.target.closest('[data-aula-dismiss]');
     if (dismissAula) { store.markAulaSeen(dismissAula.dataset.aulaDismiss); return; }
@@ -2215,6 +2245,15 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     }
     const action = event.target.closest('[data-action]')?.dataset.action;
     if (action === 'advance') {
+      // An open vote of an assembly where the player sits stops the week: Home shows which measure waits, and where.
+      if (store.openVotes().length) {
+        store.advance(7);
+        playSound('alert');
+        if (store.getState().ui.activePage !== 'panoramica') { setHash('panoramica'); await ensurePageData('panoramica'); }
+        render(store.getState(), store.getLastSaved());
+        requestAnimationFrame(() => root.querySelector('[data-floor-band]')?.scrollIntoView({ block: 'center', behavior: 'auto' }));
+        return;
+      }
       const run = () => {
         store.advanceTurn();
         const game = store.getState().game;

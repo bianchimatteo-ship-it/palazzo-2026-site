@@ -92,9 +92,12 @@ const allBills = s => [...s.parliament.laws.filter(law => law.auto), ...(s.parli
   assert.ok(vote.yes === against.yes + 1 && against.against === vote.against + 1, 'Favorevole o contrario: il voto del giocatore sposta esattamente un voto.');
   assert.ok(abstaining.yes === against.yes && abstaining.abstain === against.abstain + 1 && abstaining.against === against.against - 1, 'L’astensione del giocatore è contata tra gli astenuti.');
   assert.deepEqual(vote.byGroup.filter(row => row.groupId !== 'cam-xix-02'), against.byGroup.filter(row => row.groupId !== 'cam-xix-02'), 'Gli altri parlamentari restano simulati, indipendenti dalla scelta del giocatore.');
-  const absent = LM.autoVote(withBill, bill, 'camera', { date: s.clock.currentDate, world: s.world, playerChoice: 'assente' });
-  assert.equal(absent.byGroup.find(row => row.groupId === 'cam-xix-02').yesVotes + absent.byGroup.find(row => row.groupId === 'cam-xix-02').noVotes + absent.byGroup.find(row => row.groupId === 'cam-xix-02').abstainVotes, own.simulatedSeats - 1, 'Chi non partecipa al voto non è contato.');
+  // The player's ballot is always expressed: no count without it, no «line of the group» by default, no absence for want of a choice.
+  for (const missing of [null, undefined, 'linea', 'assente', 'forse']) assert.throws(() => LM.autoVote(withBill, bill, 'camera', { date: s.clock.currentDate, world: s.world, playerChoice: missing }), /manca il tuo voto/, `Senza il voto del giocatore (${missing}) la votazione non si conta.`);
+  assert.deepEqual(Object.keys(LM.PLAYER_VOTE_CHOICES), ['favorevole', 'contrario', 'astenuto'], 'Tre scelte: favorevole, contrario, astenuto.');
+  assert.equal(abstaining.absent, 0, 'L’astensione è un voto espresso, non un’assenza.');
   assert.throws(() => LM.setPlayerVote(withBill, 'prova-governo', 'forse'), /non valida/);
+  assert.throws(() => LM.setPlayerVote(withBill, 'prova-governo', 'linea'), /non valida/, 'La linea del gruppo non è più una scelta di voto.');
   assert.throws(() => LM.setPlayerVote({ ...withBill, laws: [{ ...bill, currentChamber: 'senato' }] }, 'prova-governo', 'contrario'), /Senato/, 'Si vota solo nella propria Camera.');
   assert.ok(LM.amendmentOdds(withBill, bill, { influence: 50 }) > 0 && LM.amendmentOdds(withBill, { ...bill, confidence: true }) === 0, 'Sulla fiducia niente emendamenti.');
   // With the Chambers at work, a Government in office acts through its bills and decrees: no automatic measures.
@@ -121,18 +124,20 @@ for (const [index, [level, groupId, name]] of [['deputato', 'cam-xix-01', 'Maggi
   for (let week = 0; week < 46; week++) {
     keepAlive();
     const s = store.getState();
-    for (const item of [...s.game.inbox]) {
-      if (item.templateId !== 'voto-aula') continue;
+    assert.ok(!s.game.inbox.some(item => ['voto-aula', 'voto-fiducia'].includes(item.templateId)), 'Nessuna richiesta di voto con una scelta predefinita in agenda: si vota sulla votazione aperta.');
+    // The votes that opened in the player's Chamber wait for the player's own ballot: the first against the line of the group, then with it.
+    for (const open of store.openVotes().filter(item => item.scope === 'nazionale')) {
       asked += 1;
-      const law = s.parliament.laws.find(entry => entry.id === item.params.lawId);
-      assert.ok(law?.auto && item.params.lineLabel && item.params.forecast && !/undefined|NaN/.test(item.title + item.body), 'La decisione di voto spiega proposta, linea del gruppo e previsione.');
-      // First vote against the line, then with the group.
-      const choice = asked === 1 ? (item.params.lineShort === 'a favore' ? 'contrario' : 'favorevole') : 'linea';
+      const law = s.parliament.laws.find(entry => entry.id === open.lawId);
+      assert.ok(law?.auto && law.floor && law.votes.every(vote => vote.floorKey !== law.floor.key) && open.title === law.title && open.assemblyName && open.proposer && open.summary && !/undefined|NaN/.test(JSON.stringify(open)), 'La votazione aperta dice provvedimento, assemblea, proponente e contenuto; nessun esito esiste ancora.');
+      const choice = asked === 1 ? (open.line === 'favorevole' ? 'contrario' : 'favorevole') : open.line;
       if (asked === 1) firstLawId = law.id;
       choices.push(choice);
-      store.resolveAgendaItem(item.id, choice);
-      assert.equal(store.getState().parliament.laws.find(entry => entry.id === law.id).pendingPlayerVote, choice, 'La scelta dell’agenda diventa il voto del giocatore.');
+      const out = store.castOpenVote(open.id, choice);
+      assert.equal(out.result.playerChoice, choice, 'Il voto espresso è quello contato.');
+      assert.equal(store.getState().parliament.laws.find(entry => entry.id === law.id)?.floor ?? null, null, 'Contato il voto, la votazione è chiusa.');
     }
+    assert.equal(store.openVotes().filter(item => item.scope === 'nazionale').length, 0);
     store.advance(7);
   }
   const s = store.getState();
@@ -214,9 +219,8 @@ for (const item of outcomes) console.log(`  ${item.name}: ${item.bills} proposte
   let votedRow = null;
   for (let week = 0; week < 12 && !votedRow; week++) {
     keepAlive();
-    for (const item of [...store.getState().game.inbox]) if (item.templateId === 'voto-aula' && item.params.lawId !== target.id) store.resolveAgendaItem(item.id, 'linea');
-    const pending = store.getState().game.inbox.find(item => item.templateId === 'voto-aula' && item.params.lawId === target.id);
-    if (pending) store.resolveAgendaItem(pending.id, 'astenuto');
+    // the intention declared from the card is confirmed on the open vote (here: abstention); the other open votes follow the line
+    for (const open of store.openVotes()) store.castOpenVote(open.id, open.lawId === target.id ? (assert.equal(open.intention, 'astenuto', 'L’intenzione dichiarata è proposta sulla votazione aperta.'), 'astenuto') : open.line);
     store.advance(7);
     const current = store.getState().parliament.laws.find(item => item.id === target.id) ?? null;
     votedRow = current?.votes?.find(vote => vote.chamber === 'camera' && vote.playerChoice)?.byGroup.find(row => row.groupId === 'cam-xix-02') ?? null;

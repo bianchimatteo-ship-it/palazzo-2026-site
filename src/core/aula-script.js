@@ -33,7 +33,10 @@ export function aulaScript({ assembly = 'camera', id = '', label = '', kind = 'l
   const random = seededRandom(`aula|${id}|${assembly}`);
   // the order: absent seats are not shown voting (they stay as they are), the others in a deterministic sequence
   const present = seats.map(seat => seat.index).filter(index => choices[index] !== 'assente');
-  const order = [...present].map(index => ({ index, key: random() })).sort((a, b) => a.key - b.key).map(item => item.index);
+  const drawn = [...present].map(index => ({ index, key: random() })).sort((a, b) => a.key - b.key).map(item => item.index);
+  // the player has already cast the ballot when the count begins: the player's seat is the first to light up (the rest of the order is the same deterministic draw)
+  const playerSeat = seats.find(seat => seat.player && choices[seat.index] !== 'assente');
+  const order = playerSeat ? [playerSeat.index, ...drawn.filter(index => index !== playerSeat.index)] : drawn;
   const full = tally(choices, order.length, order);
   const final = totals ?? { yes: full.yes, against: full.against, abstain: full.abstain };
   const total = seats.length, president = spec.president, noun = spec.noun;
@@ -47,8 +50,10 @@ export function aulaScript({ assembly = 'camera', id = '', label = '', kind = 'l
   steps.push({ at: order.length, text: fill(pickOf(bank, `${id}|r`), [president, noun, final.yes, final.against, final.abstain]), result: true });
   if (secret) steps.push({ at: order.length, text: pickOf(AULA.secretResult, `${id}|sr`) });
   const player = seats.find(seat => seat.player);
-  if (player) steps.push({ at: order.length, text: choices[player.index] === 'assente' ? pickOf(AULA.youAbsent, `${id}|ya`) : secret ? '' : fill(pickOf(AULA.you, `${id}|y`), [{ favorevole: 'Favorevole', contrario: 'Contrario', astenuto: 'Astenuto' }[choices[player.index]] ?? '']) });
-  return { assembly, kind, secret, confidence, passed, order, steps: steps.filter(step => step.text), final, total, kindLabel: spec.label, president, noun, label };
+  // the player's own vote is said when the player's seat lights up (the first), not at the end
+  if (player) steps.push({ at: choices[player.index] === 'assente' ? order.length : 1, mine: true, text: choices[player.index] === 'assente' ? pickOf(AULA.youAbsent, `${id}|ya`) : secret ? '' : fill(pickOf(AULA.you, `${id}|y`), [{ favorevole: 'Favorevole', contrario: 'Contrario', astenuto: 'Astenuto' }[choices[player.index]] ?? '']) });
+  const said = steps.filter(step => step.text).map((step, index) => ({ ...step, index })).sort((a, b) => a.at - b.at || a.index - b.index);
+  return { assembly, kind, secret, confidence, passed, order, steps: said, final, total, kindLabel: spec.label, president, noun, label, playerChoice: player && choices[player.index] !== 'assente' && !secret ? choices[player.index] : null };
 }
 // What is on the board when `shown` seats have voted: the sums of the seats shown (never invented), the seats not yet shown, who has voted.
 export const boardAt = (script, choices, shown) => { const counts = tally(choices, Math.min(shown, script.order.length), script.order); return { ...counts, shown: Math.min(shown, script.order.length), left: script.order.length - Math.min(shown, script.order.length) }; };

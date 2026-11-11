@@ -2,6 +2,7 @@
 // quando l'amministrazione attua la misura: in tempo e bene, in ritardo, senza risultati o mai. Una mozione non ha alcuna misura. L'effetto non esce dal territorio dell'ente:
 // alla regione arriva solo il peso del comune (o della provincia) nella regione, mai una quota fissa.
 import assert from 'node:assert/strict';
+import { lineVoter } from './lib/floor.mjs';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
@@ -24,7 +25,7 @@ const groups = [
 ];
 const territory = { servizi: 50, sicurezza: 50, ambiente: 50, trasporti: 50, infrastrutture: 50, economia: 50 };
 const make = (extra = {}) => ({ ...L.createInstitution({ kind: 'comune', name: 'Comune di prova', date: '2027-01-10', role: 'sindaco', side: 'maggioranza', playerGroupId: 'pd', leaderGroupId: 'pd', leaderIsPlayer: true, groups, territory }), ...extra });
-const week = (inst, date) => L.advanceInstitutionWeek(inst, { date, rand: seededRandom(`impl|${date}`) });
+const week = (inst, date) => L.advanceInstitutionWeek(inst, { voter: lineVoter, date, rand: seededRandom(`impl|${date}`) });
 const at = (inst, id, date) => ({ ...inst, acts: inst.acts.map(item => item.id === id ? { ...item, stage: 'aula', nextStepAt: date } : item) });
 const approve = (inst, area, category, extra = {}) => {
   const proposed = L.proposeLocalAct(inst, area, '2027-01-10', { category, ...extra });

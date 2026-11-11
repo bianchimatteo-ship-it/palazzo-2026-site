@@ -442,10 +442,16 @@ export function forecastAct(inst, act) {
   const tally = { yes: sum('yes'), against: sum('no'), abstain: sum('abstain'), absent: sum('absent') };
   return { organ: 'consiglio', ...tally, needed: neededFor(rule, tally.against), quorum: rule.quorum, legal: rule.legal, total: inst.seats, passes: carriedBy(tally, rule), positions, playerChoice };
 }
-function voteAct(inst, act, date) {
-  const decided = act.pendingPlayerVote;
+// Whether the player has a seat with the right to vote in the council (or in the plenary) of this institution.
+export const playerVotesIn = inst => Boolean(inst?.playerGroupId && inst.groups?.some(group => group.id === inst.playerGroupId && group.seats > 0));
+// The key of one vote of one act (an act can be voted more than once: readings, second call, the statute).
+export const localFloorKey = act => `${act.id}|${(act.votes ?? []).length + 1}`;
+// `ballot`: the player's own vote, cast on the open vote (required whenever the player votes in this assembly). The
+// draw of the day is seeded by the day the vote opened, so the live sitting and the simulated one count the same votes.
+function voteAct(inst, act, date, cast = null) {
+  const decided = cast;
   let choice = null, line = null;
-  const rand = seededRandom(`${act.id}|${date}`);
+  const rand = seededRandom(`${act.id}|${act.floor?.openedAt ?? date}`);
   const byGroup = inst.groups.map(group => {
     const value = support(inst, act, group);
     const own = group.id === inst.playerGroupId;
@@ -456,11 +462,12 @@ function voteAct(inst, act, date) {
     let yes = Math.round(others * cohesiveShare(mood));
     const split = splitGroupVote({ seats: others, yes, seed: `${act.id}|${group.id}` });
     let no = split.no, abstain = split.abstain;
-    if (own) {
-      // The player's seat: one of the group's votes, as the player chose (or with the line of the group).
+    if (own && group.seats > 0) {
+      // The player's seat: one of the group's votes, as the player PERSONALLY chose (never a default, never an absence for want of a choice).
       line = lineOf(value);
-      choice = !decided || decided === 'linea' ? line : BALLOT[decided] ? decided : 'assente';
-      if (choice === 'favorevole') yes += 1; else if (choice === 'contrario') no += 1; else if (choice === 'astenuto') abstain += 1; else absent += 1;
+      if (!LOCAL_BALLOTS.includes(decided)) throw new Error('La votazione non può essere conclusa: manca il tuo voto (favorevole, contrario o astenuto).');
+      choice = decided;
+      if (choice === 'favorevole') yes += 1; else if (choice === 'contrario') no += 1; else abstain += 1;
     }
     return { groupId: group.id, yesVotes: yes, noVotes: no, abstainVotes: abstain, absent, line: groupLine({ yes, no, abstain }), seats: group.seats, ...(own ? { playerChoice: choice } : {}) };
   });
@@ -471,11 +478,13 @@ function voteAct(inst, act, date) {
   const others = { yes: total('yesVotes') - (ballot === 'yes' ? 1 : 0), against: total('noVotes') - (ballot === 'no' ? 1 : 0), abstain: total('abstainVotes') - (ballot === 'abstain' ? 1 : 0), absent: total('absent') - (ballot === 'absent' ? 1 : 0) };
   const rule = voteRule(inst, act);
   const count = countVote(others, choice, rule);
-  return { date, organ: 'consiglio', quorum: rule.quorum, needed: count.needed, legal: rule.legal, valid: count.valid, yes: count.yes, against: count.against, abstain: count.abstain, absent: count.absent, total: inst.seats, passed: count.passed, byGroup, playerChoice: choice, playerLine: line, decided: Boolean(decided), decisive: count.decisive, source: SIM };
+  return { date, organ: 'consiglio', quorum: rule.quorum, needed: count.needed, legal: rule.legal, valid: count.valid, yes: count.yes, against: count.against, abstain: count.abstain, absent: count.absent, total: inst.seats, passed: count.passed, byGroup, playerChoice: choice, playerLine: line, decided: Boolean(choice), decisive: count.decisive, ...(act.floor ? { floorKey: act.floor.key } : {}), source: SIM };
 }
 
 // ---------- the player ----------
-export const LOCAL_VOTE_CHOICES = Object.freeze({ linea: 'Con il tuo gruppo', favorevole: 'Favorevole', contrario: 'Contrario', astenuto: 'Astenuto', assente: 'Assente' });
+// Three choices, always expressed (an abstention is a vote, not an absence); chosen in advance from the act's card it is an intention, confirmed on the open vote.
+export const LOCAL_VOTE_CHOICES = Object.freeze({ favorevole: 'Favorevole', contrario: 'Contrario', astenuto: 'Astenuto' });
+const LOCAL_BALLOTS = Object.freeze(['favorevole', 'contrario', 'astenuto']);
 export function setLocalVote(inst, actId, choice) {
   if (!LOCAL_VOTE_CHOICES[choice]) throw new Error('Scelta di voto non valida.');
   const act = inst.acts.find(item => item.id === actId);
@@ -770,11 +779,13 @@ export function requestCommittee(inst, committeeId, { influence = 30, rand = Mat
   return { inst: record({ ...inst, ep }, date, moved ? `Passi alla commissione ${target.code} (${target.label}).` : `Il gruppo respinge la richiesta di passare alla commissione ${target.code}.`, 'commissione'), moved, committee: target, leftRole: moved ? inst.ep.role : null };
 }
 // The vote in committee (about sixty members, the groups in proportion): the player votes as a full member.
-function committeeVote(inst, act, date) {
+// Whether the player votes in the committee that examines the dossier (a full member with a group).
+export const playerVotesInCommittee = (inst, act) => Boolean(inst?.ep?.member && inst.ep.member === act?.committee && playerVotesIn(inst));
+function committeeVote(inst, act, date, cast = null) {
   const total = inst.seats || 1;
   const groups = inst.groups.map(group => ({ ...group, seats: Math.max(1, Math.round(group.seats / total * COMMITTEE_SEATS)) }));
-  const member = inst.ep?.member === act.committee;
-  return voteAct({ ...inst, groups, seats: groups.reduce((sum, group) => sum + group.seats, 0), playerGroupId: member ? inst.playerGroupId : null }, act, date);
+  const member = playerVotesInCommittee(inst, act);
+  return voteAct({ ...inst, groups, seats: groups.reduce((sum, group) => sum + group.seats, 0), playerGroupId: member ? inst.playerGroupId : null }, act, date, member ? cast : null);
 }
 
 // ---------- effects of the acts ----------
@@ -979,11 +990,25 @@ function answerQuestion(inst, act, date, territory, events) {
   return next;
 }
 
+// The player casts the vote on an open floor of the council: the act is voted now, once, with that ballot (the same code of the weekly calendar, limited to that act).
+export function castLocalFloorVote(inst, actId, choice, ctx = {}) {
+  if (!LOCAL_BALLOTS.includes(choice)) throw new Error('Scegli come votare: Favorevole, Contrario o Astenuto.');
+  const act = inst?.acts?.find(item => item.id === actId);
+  if (!act?.floor || CLOSED.includes(act.stage)) throw new Error('Non c’è una votazione aperta su questo atto.');
+  if (!playerVotesIn(inst)) throw new Error('Non hai diritto di voto in questa assemblea.');
+  return advanceInstitutionWeek(inst, { ...ctx, onlyAct: actId, ballot: choice });
+}
+// The open votes of an institution that wait for the player.
+export const openLocalFloors = inst => inst?.status === 'active' ? (inst.acts ?? []).filter(act => act.floor && !CLOSED.includes(act.stage)) : [];
+
 // ---------- one week ----------
 // ctx: { date, rand, issues: [area], territory }: the problems of the territory and, for a regione, the indicators of
 // the region (society simulation). Returns { inst, events, lines }: events for the career (votes of the player, effects
 // of the acts, answers, commitments, requests, the fall of the executive and the early vote).
-export function advanceInstitutionWeek(input, { date, rand = Math.random, issues = [], territory = null } = {}) {
+// `onlyAct` + `ballot`: the player casts the vote on an open floor (castLocalFloorVote): only that act is voted, with that ballot, and nothing else of the week moves.
+// `voter(act, line)`: only for the scripts that run an institution without a page and without the store — the function that casts the player's ballot when a vote comes (it must return favorevole, contrario
+// or astenuto, otherwise the vote opens and waits). The game never passes it: on a device the ballot is cast by the player on the open vote.
+export function advanceInstitutionWeek(input, { date, rand = Math.random, issues = [], territory = null, onlyAct = null, ballot = null, voter = null } = {}) {
   let inst = withLocalState(withEuropeanSeat(input, date));
   if (!inst || inst.status !== 'active') return { inst: input, events: [], lines: [] };
   // A region keeps the services of its territory (a term that began before this was recorded takes its starting point from the first week it sees); a comune and a province have their own.
@@ -1001,6 +1026,7 @@ export function advanceInstitutionWeek(input, { date, rand = Math.random, issues
   const leaderGroup = inst.groups.find(group => group.id === inst.executive?.groupId);
   const budgetSponsor = { kind: 'budget', groupId: inst.executive?.leader === 'player' ? inst.playerGroupId : leaderGroup?.id ?? null, label: rules.executive, axis: leaderGroup?.axis ?? 0 };
   const localIssues = issues.filter(area => (COMPETENCES[inst.kind] ?? []).includes(area));
+  if (!onlyAct) {
   // The territory: the city's services move with the approved acts; a region in provisional budget loses ground.
   if (['comune', 'provincia'].includes(inst.kind)) inst = cityWeek(inst, seededRandom(`${inst.id}|servizi|${date}`));
   // The public works of the institution: authorisations, design, tender, site, opening, upkeep; the money follows the work.
@@ -1055,18 +1081,30 @@ export function advanceInstitutionWeek(input, { date, rand = Math.random, issues
       if (group.id !== inst.playerGroupId) add(newAct(inst, { kind: 'opposition', sponsor: { kind: 'opposition', groupId: group.id, label: group.label, axis: group.axis ?? 0 }, area, title: actTitle(inst.kind, 'interrogazione', area), date, category: 'interrogazione' }));
     }
   }
+  }
   // The calendar: the committee, then the Giunta or the floor; town plans wait for the citizens' observations, statutes
   // for their second reading; questions get their answer.
-  for (const act of inst.acts.filter(item => !CLOSED.includes(item.stage) && item.nextStepAt <= date)) {
+  for (const act of inst.acts.filter(item => !CLOSED.includes(item.stage) && (onlyAct ? item.id === onlyAct && item.floor : item.nextStepAt <= date))) {
     if (act.stage === 'commissione' && inst.kind === 'europa') {
+      // The player is a full member of the committee: the vote opens and waits for the player's own ballot, as in the plenary.
+      const member = playerVotesInCommittee(inst, act);
+      const memberLine = member ? lineOf(support(inst, act, inst.groups.find(group => group.id === inst.playerGroupId))) : null;
+      const memberCast = !member ? null : onlyAct === act.id && LOCAL_BALLOTS.includes(ballot) ? ballot : typeof voter === 'function' ? voter(act, memberLine) : null;
+      if (member && !LOCAL_BALLOTS.includes(memberCast)) {
+        if (!act.floor) {
+          inst = record(setAct(inst, act.id, { floor: { key: `${act.id}|commissione`, openedAt: date, line: memberLine, committee: true } }), date, `Commissione ${committeeById(act.committee)?.code ?? ''}: si apre la votazione su “${act.title}”, la commissione attende il tuo voto.`, 'commissione');
+          events.push({ type: 'votazione-aperta', actId: act.id, title: act.title, label: act.label, committee: true, line: memberLine, date });
+        }
+        continue;
+      }
       // A dossier without a rapporteur gets one from a group (by weight); then the committee votes the report.
       const pool = inst.groups.filter(group => !group.nonAttached);
       const weights = pool.map(group => group.seats);
       let pick = rand() * weights.reduce((sum, value) => sum + value, 0);
       const assigned = act.rapporteur ?? (act.kind === 'player' ? { groupId: inst.playerGroupId, player: true } : { groupId: (pool.find((group, index) => (pick -= weights[index]) < 0) ?? pool[0])?.id ?? null, player: false });
-      const vote = committeeVote(inst, { ...act, rapporteur: assigned }, date);
+      const vote = committeeVote(inst, { ...act, rapporteur: assigned }, date, memberCast);
       const code = committeeById(act.committee)?.code ?? '';
-      inst = { ...inst, acts: inst.acts.map(item => item.id === act.id ? { ...item, rapporteur: assigned, committeeVote: { yes: vote.yes, against: vote.against, abstain: vote.abstain, total: vote.total, passed: vote.passed, playerChoice: vote.playerChoice, date }, ...(vote.passed ? { stage: 'aula', nextStepAt: advanceDays(date, 7) } : { stage: 'respinto', closedAt: date }) } : item) };
+      inst = { ...inst, acts: inst.acts.map(item => item.id === act.id ? { ...item, floor: null, rapporteur: assigned, committeeVote: { yes: vote.yes, against: vote.against, abstain: vote.abstain, absent: vote.absent, total: vote.yes + vote.against + vote.abstain + vote.absent, needed: vote.needed, passed: vote.passed, playerChoice: vote.playerChoice, decisive: vote.decisive, ...(act.floor ? { floorKey: act.floor.key } : {}), date }, ...(vote.passed ? { stage: 'aula', nextStepAt: advanceDays(date, 7) } : { stage: 'respinto', closedAt: date }) } : item) };
       inst = record(inst, date, `Commissione ${code}: “${act.title}” ${vote.passed ? 'approvato, va in plenaria' : 'respinto'} (${vote.yes} sì, ${vote.against} no).`, 'commissione');
       if (inCommittee(inst, act) || assigned.player) events.push({ type: 'commissione-votata', actId: act.id, title: act.title, committee: code, passed: vote.passed, rapporteur: assigned.player, playerChoice: vote.playerChoice, playerLine: vote.playerLine, decisive: vote.decisive });
       if (assigned.player && !vote.passed) inst = { ...inst, ep: { ...inst.ep, merit: inst.ep.merit + 1 } };
@@ -1082,7 +1120,20 @@ export function advanceInstitutionWeek(input, { date, rand = Math.random, issues
       events.push({ type: 'atto-ritirato', actId: act.id, title: act.title, reason: gap, player: act.kind === 'player' });
       continue;
     }
-    const vote = act.stage === 'giunta' ? giuntaVote(inst, act, date) : voteAct(inst, act, date);
+    // The player sits in the assembly that votes: the vote opens and waits for the player's own ballot. Nothing is counted, recorded or applied until it is cast (castLocalFloorVote).
+    const seated = act.stage !== 'giunta' && playerVotesIn(inst);
+    const groupLineNow = seated ? forecastAct(inst, { ...act, pendingPlayerVote: null }).positions.find(item => item.groupId === inst.playerGroupId)?.line ?? 'astenuto' : null;
+    const cast = !seated ? null : onlyAct === act.id && LOCAL_BALLOTS.includes(ballot) ? ballot : typeof voter === 'function' ? voter(act, groupLineNow) : null;
+    if (seated && !LOCAL_BALLOTS.includes(cast)) {
+      if (!act.floor) {
+        const line = groupLineNow;
+        inst = record(setAct(inst, act.id, { floor: { key: `${localFloorKey(act)}${act.secondCall ? '|2' : ''}`, openedAt: date, line } }), date, `${rules.label}: si apre la votazione su “${act.title}”, l’aula attende il tuo voto.`, 'seduta');
+        events.push({ type: 'votazione-aperta', actId: act.id, title: act.title, label: act.label, budget: Boolean(act.budget), line, date });
+      }
+      continue;
+    }
+    const vote = act.stage === 'giunta' ? giuntaVote(inst, act, date) : voteAct(inst, act, date, cast);
+    if (act.floor) inst = setAct(inst, act.id, { floor: null });
     // Without the legal number the sitting is adjourned to a second call; failing again, the act lapses.
     if (!vote.valid) {
       if (act.secondCall) {
@@ -1139,18 +1190,12 @@ export function advanceInstitutionWeek(input, { date, rand = Math.random, issues
       events.push({ type: 'relazione-votata', actId: act.id, title: act.title, committee: committeeById(act.committee)?.code ?? '', area: act.area, passed: vote.passed, own: act.kind === 'player' });
     }
   }
+  if (onlyAct) return { inst, events, lines };
   // The commitments of the motions: past the deadline without an act of the executive, the council's word is ignored.
   for (const item of (inst.commitments ?? []).filter(entry => entry.status === 'aperto' && entry.dueAt <= date)) {
     inst = { ...inst, commitments: inst.commitments.map(entry => entry.id === item.id ? { ...entry, status: 'disatteso', closedAt: date } : entry), pressure: clamp(inst.pressure + 4, 0, 100), executive: inst.executive ? { ...inst.executive, stability: clamp(inst.executive.stability - 4, 0, 100) } : inst.executive };
     inst = record(inst, date, `Impegno non rispettato: la mozione “${item.title}” è rimasta senza seguito.`, 'impegno');
     events.push({ type: 'impegno-disatteso', title: item.title, area: item.area, player: item.player });
-  }
-  // Acts of the player's council coming to the vote within the week: the player is asked (the important ones).
-  for (const act of inst.acts.filter(item => item.stage === 'aula' && item.nextStepAt <= advanceDays(date, 7) && !item.pendingPlayerVote && !item.asked)) {
-    const forecast = forecastAct(inst, act);
-    inst = { ...inst, acts: inst.acts.map(item => item.id === act.id ? { ...item, asked: true } : item) };
-    const important = act.budget || act.kind === 'sfiducia' || act.sponsor.groupId === inst.playerGroupId || act.rapporteur?.player || Math.abs(forecast.yes - forecast.needed) <= 1 || (act.kind === 'executive' && rand() < 0.2);
-    if (important && act.sponsor.kind !== 'player') events.push({ type: 'voto-locale', actId: act.id, title: act.title, label: act.label, budget: act.budget, line: forecast.positions.find(item => item.groupId === inst.playerGroupId)?.line ?? 'astenuto', yes: forecast.yes, against: forecast.against, needed: forecast.needed, date: act.nextStepAt });
   }
   // Groups and executive: cohesion drifts, the opposition presses, a group of the majority may walk out.
   inst = { ...inst, groups: inst.groups.map(group => ({ ...group, cohesion: clamp(Math.round(group.cohesion + (rand() - 0.5) * 4 + (68 - group.cohesion) * 0.04), 0, 100) })), pressure: clamp(Math.round(inst.pressure + (rand() - 0.45) * 3 + (inst.executive ? (50 - inst.executive.stability) * 0.02 : 0)), 0, 100) };

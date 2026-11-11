@@ -3,6 +3,7 @@
 // provinciale pende da quello nel comune), il consiglio e la sua presidenza (strade, scuole, pianificazione; niente tributi), il voto
 // di secondo livello (votano sindaci e consiglieri), il calendario, i vecchi salvataggi, le candidature e il legame con il Comune.
 import assert from 'node:assert/strict';
+import { lineVoter } from './lib/floor.mjs';
 import { readFile } from 'node:fs/promises';
 import { startCareer } from './lib/long-run.mjs';
 
@@ -83,7 +84,7 @@ const db = { ...first.db, municipalities: realData.realDatabase.municipalities, 
   let date = '2026-09-27', effects = 0, votes = 0, ratio = null;
   for (let week = 0; week < 60; week++) {
     date = advanceDays(date, 7);
-    const out = L.advanceInstitutionWeek(inst, { date, rand, territory });
+    const out = L.advanceInstitutionWeek(inst, { voter: lineVoter, date, rand, territory });
     inst = out.inst;
     for (const event of out.events) {
       if (event.type === 'atto-votato') votes++;

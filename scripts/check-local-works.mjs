@@ -2,6 +2,7 @@
 // who can decide on it (the head of the executive; a councillor or an assessore proposes or follows and spends nothing), the services of the province, the saves made before the works,
 // and the determinism of the whole. Pure engines (no career): the store and the screens are checked by check-local and check-province.
 import assert from 'node:assert/strict';
+import { lineVoter } from './lib/floor.mjs';
 import { readFile } from 'node:fs/promises';
 
 const mem = new Map();
@@ -21,7 +22,7 @@ const make = (kind, extra = {}) => L.createInstitution({ kind, name: `${kind} di
 // An institution with a settled budget (no budget vote in the way) whose executive is not the player's, so that the council runs by itself.
 const settled = inst => ({ ...inst, budget: { ...inst.budget, approvedYear: 2040 }, executive: { ...inst.executive, leader: 'simulato' } });
 const at = (inst, id, stage, date) => ({ ...inst, acts: inst.acts.map(item => item.id === id ? { ...item, stage, nextStepAt: date } : item) });
-const week = (inst, date, key = 'w') => L.advanceInstitutionWeek(inst, { date, rand: seededRandom(`${key}|${date}`) });
+const week = (inst, date, key = 'w') => L.advanceInstitutionWeek(inst, { voter: lineVoter, date, rand: seededRandom(`${key}|${date}`) });
 const throwsWith = (fn, pattern, message) => assert.throws(fn, pattern, message);
 
 // ---------- 1. the catalog and the competences ----------
@@ -124,7 +125,7 @@ assert.ok(W.euroOf(make('regione'), 1) > W.euroOf(make('provincia'), 1) && W.eur
   const proposed = L.proposeLocalAct(mayor, 'sport', '2027-01-10', { category: 'opere', work: { typeId: 'piscina', funding: 100, site: 'periferia' } });
   let inst = { ...proposed, budget: { ...proposed.budget, approvedYear: 2040 } };
   inst = at(inst, inst.acts.at(-1).id, 'aula', '2027-01-17');
-  inst = L.advanceInstitutionWeek({ ...inst, executive: { ...inst.executive, leader: 'player' } }, { date: '2027-01-17', rand: seededRandom('x') }).inst;
+  inst = L.advanceInstitutionWeek({ ...inst, executive: { ...inst.executive, leader: 'player' } }, { voter: lineVoter, date: '2027-01-17', rand: seededRandom('x') }).inst;
   const id = inst.works[0].id;
   const margin0 = inst.budget.margin;
   // Funding before the site opens: the difference is paid (or given back) at once.
@@ -200,7 +201,7 @@ assert.ok(W.euroOf(make('regione'), 1) > W.euroOf(make('provincia'), 1) && W.eur
   let inst = settled(at(proposed, proposed.acts.at(-1).id, 'aula', '2027-01-17'));
   let date = '2027-01-17', completed = null;
   const territory = { sanita: 45, servizi: 50, istruzione: 50, infrastrutture: 50, trasporti: 50, economia: 50, occupazione: 50, sicurezza: 50, ambiente: 50 };
-  for (let n = 0; n < 200 && !completed; n++) { const out = L.advanceInstitutionWeek(inst, { date, rand: seededRandom(`r|${date}`), territory }); inst = out.inst; if (inst.works[0]?.stage === 'completato') completed = out; date = advanceDays(date, 7); }
+  for (let n = 0; n < 200 && !completed; n++) { const out = L.advanceInstitutionWeek(inst, { voter: lineVoter, date, rand: seededRandom(`r|${date}`), territory }); inst = out.inst; if (inst.works[0]?.stage === 'completato') completed = out; date = advanceDays(date, 7); }
   assert.ok(completed && completed.events.some(item => item.type === 'effetti' && item.kind === 'regione' && item.indicators.sanita > 0), 'Un’opera sanitaria regionale migliora la sanità della regione, a opera finita');
 }
 
