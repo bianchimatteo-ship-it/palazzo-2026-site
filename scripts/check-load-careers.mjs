@@ -50,5 +50,5 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   await evaluate(`document.querySelector('[data-menu=continua]').click(), true`); await wait(() => evaluate(`Boolean(document.querySelector('.page-wrap'))`));
   assert.equal((await who()).name, 'Anna Prima', 'Dopo la ricarica del browser la carriera caricata è quella in corso.');
   assert.deepEqual(errors, [], 'Nessun errore in pagina.');
-});
+}, { voter: false });
 console.log('Più carriere verificate in Chrome: due carriere create e salvate, «Carica partita» dalla schermata iniziale e da dentro la partita entra davvero nella carriera scelta (nome, ruolo, partito, settimana, data), anche con i cinque slot pieni (nessuno toccato, la carriera lasciata nella sua copia automatica) e dopo la ricarica del browser.');

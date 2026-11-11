@@ -3908,7 +3908,7 @@ function runPlanOperation(op) {
 // A vote in an assembly where the player sits is counted only when the player casts the ballot: here, once, with the same deterministic resolution whether the sitting is followed live or simulated.
 // In the browser nothing can cast it for the player. The scripts that play whole careers without a page (Node, no document) register a voter of their own, which casts an explicit ballot for every
 // open vote (by default the line of the player's group): it is never used by the game on a device.
-let headlessVoter = typeof document === 'undefined' ? vote => vote.line ?? 'astenuto' : null;
+let headlessVoter = typeof document === 'undefined' || globalThis.__testVoter ? vote => vote.intention ?? vote.line ?? 'astenuto' : null;
 function castOpenVoteIn(voteId, choice, { mode = 'simulata' } = {}) {
   if (!BALLOTS[choice]) throw new Error('Scegli come votare: Favorevole, Contrario o Astenuto.');
   const vote = openVotesOf(state).find(item => item.id === voteId);

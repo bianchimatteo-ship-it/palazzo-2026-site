@@ -4,6 +4,9 @@ import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261110-
 export const ALL_PAIRS = [
   ...GUEST_PAIRS,
   // ---- the guided programme editor ----
+  ['SCRIVI UNA NUOVA PROPOSTA', 'WRITE A NEW PROPOSAL'], ['#/# nel programma', '#/# in the programme'], ['Le tue proposte (#)', 'Your proposals (#)'],
+  ['Il programma è vuoto: scrivi la prima proposta qui sopra. Una proposta è una pagina del programma, non ancora una promessa.', 'The programme is empty: write the first proposal above. A proposal is a page of the programme, not yet a promise.'],
+  ['Territorio', 'Territory'],
   ['Area politica', 'Policy area'],
   ['Parti da un tema consigliato (facoltativo)', 'Start from a suggested theme (optional)'],
   ['Tema: compila titolo, problema, obiettivo e misure insieme', 'Theme: fills title, problem, objective and measures together'],
