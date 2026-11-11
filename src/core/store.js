@@ -3973,6 +3973,8 @@ export const store = {
   getState: () => state,
   // The votes that wait for the player's ballot (Home, the bill's card, the council's page).
   openVotes: () => openVotesOf(state),
+  // The open votes that stop the week from closing (none when a test voter casts the ballots: only scripts and test pages have one).
+  votesStoppingTheWeek: () => headlessVoter ? [] : openVotesOf(state),
   // The way the player chose to attend an open vote ('diretta' | 'simulata'): kept in the save, so a sitting left before voting reopens as it was.
   setFloorMode(voteId, mode) {
     if (!state.game || !openVotesOf(state).some(item => item.id === voteId)) return null;
@@ -6494,7 +6496,7 @@ export const store = {
 };
 // While the election night lasts (night-engine.js) the simulation is suspended: no week, no world update, no campaign activity, no decision of the career. Only what the night itself needs
 // (its own actions), what reads (views, previews, odds), the saves, the menu and the settings of the account stay available. Everything else refuses and changes nothing.
-const NIGHT_ALLOWED = new Set(['subscribe', 'navigate', 'save', 'preserveCheck', 'saveToSlot', 'loadSlot', 'exportSlot', 'restoreLocalVersion', 'exportLocalVersion', 'deleteSlot', 'loadGame', 'exportSave', 'careerIdsOnDevice', 'resumeLastCareer', 'clearAllSaves', 'setRealReference',
+const NIGHT_ALLOWED = new Set(['subscribe', 'openVotes', 'votesStoppingTheWeek', 'setHeadlessVoter', 'navigate', 'save', 'preserveCheck', 'saveToSlot', 'loadSlot', 'exportSlot', 'restoreLocalVersion', 'exportLocalVersion', 'deleteSlot', 'loadGame', 'exportSave', 'careerIdsOnDevice', 'resumeLastCareer', 'clearAllSaves', 'setRealReference',
   'setElectionNightLive', 'electionNightLive', 'sceneChoose', 'sceneAbandon', 'sceneSkip', 'sceneMarkSeen', 'sceneView', 'advanceElectionNight', 'answerElectionNight', 'concludeElectionNight', 'dismissCelebration', 'dismissOutcome', 'homePlace', 'races', 'raceLapses', 'raceCandidates', 'hallOfFame', 'retirementProblem', 'legacyPreview',
   'addPlayTime', 'confirmPlayTime', 'setRewardsAuthoritative', 'creditDailyReward', 'creditCommunityReward', 'onRewardCredit', 'claimAdReward', 'reconcileRewards', 'setMunicipalPopulation', 'setLocalCalendar', 'setElectoralGeography', 'nationalOverview', 'reset', 'createCareer',
   'setReferenceGovernment', 'setParliamentaryGroups', 'setTerritorialData', 'weeklyNewsPopup', 'dismissHomeNews', 'syncRealContacts', 'cloudSnapshot', 'hasCareer', 'getState', 'getLastSaved', 'revision', 'removeHallEntry', 'retireCareer', 'changeMember', 'planPreview', 'presidencyView', 'pollScenarioView']);

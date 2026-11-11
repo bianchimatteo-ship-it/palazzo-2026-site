@@ -2246,7 +2246,7 @@ export function mountApp(root, store, { retryData = null, refreshReference = nul
     const action = event.target.closest('[data-action]')?.dataset.action;
     if (action === 'advance') {
       // An open vote of an assembly where the player sits stops the week: Home shows which measure waits, and where.
-      if (store.openVotes().length) {
+      if (store.votesStoppingTheWeek().length) {
         store.advance(7);
         playSound('alert');
         if (store.getState().ui.activePage !== 'panoramica') { setHash('panoramica'); await ensurePageData('panoramica'); }
