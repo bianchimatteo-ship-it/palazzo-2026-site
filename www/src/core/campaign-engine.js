@@ -1,11 +1,12 @@
-import { advanceDays } from './time.js?v=20261110-24';
-import { difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261110-24';
-import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261110-24';
-import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261110-24';
-import { aggregateShares, listVote, mateForce, runFinalElection, runFirstRound, voteScale } from './election-engine.js?v=20261110-24';
-import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261110-24';
-import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261110-24';
-import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261110-24';
+import { advanceDays } from './time.js?v=20261111-2';
+import { genderOf } from './avatar.js?v=20261111-2';
+import { difficultyId, difficultyOf } from '../data/simulation/difficulty-rules.js?v=20261111-2';
+import { CAMPAIGN_ACTIVITIES, CAMPAIGN_AUDIENCE, CAMPAIGN_EVENTS, CAMPAIGN_PHASES, CAMPAIGN_POLL_RULES, CAMPAIGN_STRATEGIES, CREW_RULES, CREW_TEAMS, DEBATE_TOPICS, ELECTION_MODELS, ENDORSEMENT_KINDS, ENDORSEMENT_RULES, EUROPEAN_THRESHOLD, INCUMBENCY_RULES, LIST_RULES, RIVAL_PERSISTENCE, RUNOFF_RULES, TOPIC_AREA, phaseOf } from '../data/simulation/campaign-rules.js?v=20261111-2';
+import { POLL_INSTITUTES } from '../data/simulation/polling-rules.js?v=20261111-2';
+import { aggregateShares, listVote, mateForce, runFinalElection, runFirstRound, voteScale } from './election-engine.js?v=20261111-2';
+import { ITALIAN_REGIONS, regionIdOf } from '../data/regions.js?v=20261111-2';
+import { CAMP_PRIORITIES } from '../data/simulation/policy-rules.js?v=20261111-2';
+import { averageOf, flowsOf, hash as pollHash, readInstitute, secondChoice, segmentSupport, stanceOf, themesOf } from './poll-observatory.js?v=20261111-2';
 
 const SOURCE = 'simulation';
 const clamp = (value, min = 0, max = 100) => Math.min(max, Math.max(min, value));
@@ -326,6 +327,8 @@ function createCandidate({ id, player = false, partyId = null, displayName, seed
   const rand = randomFrom(seed);
   return {
     id, partyId, displayName, displayLabel:displayName, source:SOURCE, isPlayer:player, status:'active', strategy:'territoriale',
+    // the gender of the candidate, explicit in the data (the real politicians of the database carry none: for them the first name is the only evidence); the avatar of the scenes follows it
+    gender:player ? null : genderOf({ name:displayName }),
     resources:{ money:Math.round(500+rand()*900), volunteers:Math.round(8+rand()*10), organization:Math.round(30+rand()*35), politicalCapital:Math.round(5+rand()*5) },
     campaignStats:player ? { ...stats, momentum:round((rand()-.5)*4), source:SOURCE } : {
       reputation:Math.round(42+rand()*24), notoriety:Math.round(25+rand()*45), experience:Math.round(15+rand()*70),

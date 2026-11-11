@@ -5,8 +5,8 @@
 // What a proposal does in the game, all deterministic and read from the situation: a published proposal whose cost is covered (by the budget room, by savings, by European funds, by revenue) makes the
 // programme more credible, one that is not covered makes it less; its area enters the rally and the debate (the player can present it, the opponents attack it where it is not covered); and it
 // comes first in the priorities suggested for the Government. A draft does nothing: it is only a draft. Plain data, additive to the save (`game.proposals`, absent in older saves = none).
-import { AREA_BY_ID, INSTRUMENT_KINDS } from '../data/simulation/policy-rules.js?v=20261110-24';
-import { fiscalRoom, promisesOf, promiseQuote } from './program-engine.js?v=20261110-24';
+import { AREA_BY_ID, INSTRUMENT_KINDS } from '../data/simulation/policy-rules.js?v=20261111-2';
+import { fiscalRoom, promisesOf, promiseQuote } from './program-engine.js?v=20261111-2';
 
 export const PROPOSAL_LIMIT = 12;
 export const PROPOSAL_STATES = Object.freeze({ bozza: 'Bozza', pubblicata: 'Pubblicata' });
@@ -47,12 +47,14 @@ function normalise(input, previous = null) {
   };
 }
 
+// A new proposal goes on top of the list (priority 1: the one just written is the first the player sees); `placeProposal` shifts the others down by one.
+export const placeProposal = (game, proposal) => [proposal, ...proposalsOf(game).sort((a, b) => a.priority - b.priority).map((item, i) => ({ ...item, priority: i + 2 }))];
 export function createProposal(game, input, { week = 0, date = null } = {}) {
   const list = proposalsOf(game);
   if (list.length >= PROPOSAL_LIMIT) throw new Error(`Un programma leggibile ha al massimo ${PROPOSAL_LIMIT} proposte: elimina o unisci quelle meno importanti.`);
   const made = normalise(input);
   const id = `prop-${week}-${made.area}-${list.length + 1}-${(list.reduce((n, item) => Math.max(n, Number(String(item.id).split('-').at(-1)) || 0), 0)) + 1}`;
-  return { ...made, id, status: 'bozza', priority: list.length + 1, linkedPromiseId: null, createdWeek: week, createdOn: date, history: [{ week, text: 'Proposta scritta' }] };
+  return { ...made, id, status: 'bozza', priority: 1, linkedPromiseId: null, createdWeek: week, createdOn: date, history: [{ week, text: 'Proposta scritta' }] };
 }
 export function updateProposal(game, id, input, { week = 0 } = {}) {
   const previous = proposalsOf(game).find(item => item.id === id);

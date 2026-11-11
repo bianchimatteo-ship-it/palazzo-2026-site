@@ -3,15 +3,15 @@
 // Chambers and their groups, the formation of the Government. Everything that happens is simulation: the real data are
 // the geography, the seats and the 2022 results the vote starts from; parties, coalitions, votes and seats of the game
 // are estimates of the game and never presented as real results.
-import { populationReferenceDate, residentsOfItaly } from './municipal-rules.js?v=20261110-24';
-import { actualTurnout } from './electorate.js?v=20261110-24';
-import { uniqueId } from './ids.js?v=20261110-24';
-import { advanceDays, formatDate } from './time.js?v=20261110-24';
-import { axisOf, nationalShares } from './world-engine.js?v=20261110-24';
-import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20261110-24';
-import { archiveGovernment, voteGovernmentConfidence } from './parliament-engine.js?v=20261110-24';
-import { seededRandom } from './vote-engine.js?v=20261110-24';
-import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20261110-24';
+import { populationReferenceDate, residentsOfItaly } from './municipal-rules.js?v=20261111-2';
+import { actualTurnout } from './electorate.js?v=20261111-2';
+import { uniqueId } from './ids.js?v=20261111-2';
+import { advanceDays, formatDate } from './time.js?v=20261111-2';
+import { axisOf, nationalShares } from './world-engine.js?v=20261111-2';
+import { MINISTRIES } from '../data/simulation/policy-rules.js?v=20261111-2';
+import { archiveGovernment, confidenceBallotMissing, voteGovernmentConfidence } from './parliament-engine.js?v=20261111-2';
+import { seededRandom } from './vote-engine.js?v=20261111-2';
+import { EUROPEAN_CONSTITUENCIES } from '../data/simulation/campaign-rules.js?v=20261111-2';
 
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -1025,6 +1025,8 @@ export function formationStep({ formation, parliament, result, world = null, dat
     if (date < (next.confidenceAt ?? date)) return done();
     // The request of the vote reaches the player in a weekly close and the vote cannot happen in the same one: it waits for the next (the player decides in between).
     if (chambers.government?.confidenceRequestedAt && date <= chambers.government.confidenceRequestedAt) return done();
+    // …and it waits for the player's own ballot (favorevole, contrario, astenuto): the Chambers do not count a vote the player has not cast.
+    if (confidenceBallotMissing(chambers)) return done();
     const government = chambers.government;
     if (government?.status === 'awaiting-confidence') chambers = voteGovernmentConfidence(chambers, date);
     const status = chambers.government?.status;

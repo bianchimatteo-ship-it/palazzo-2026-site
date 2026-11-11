@@ -1,16 +1,16 @@
 // Main menu, how-to-play, settings, save slots and the end-of-week report.
-import { renderTutorialInvite } from './tutorial.js?v=20261110-24';
-import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261110-24';
-import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261110-24';
-import { formatDate } from '../core/time.js?v=20261110-24';
-import { illustration } from './illustrations.js?v=20261110-24';
-import { glyph } from './visuals.js?v=20261110-24';
-import { identityMark, identityVars } from './party-identity.js?v=20261110-24';
-import { CAREER_LEVELS } from '../data/regions.js?v=20261110-24';
-import { hallView } from './hall-view.js?v=20261110-24';
-import { renderLogoCatalog } from './logo-catalog.js?v=20261110-24';
-import { esc, signed } from './charts.js?v=20261110-24';
-import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261110-24';
+import { renderTutorialInvite } from './tutorial.js?v=20261111-2';
+import { SETTINGS_SCHEMA } from '../core/settings.js?v=20261111-2';
+import { STAT_LABELS } from '../data/simulation/career-rules.js?v=20261111-2';
+import { formatDate } from '../core/time.js?v=20261111-2';
+import { illustration } from './illustrations.js?v=20261111-2';
+import { glyph } from './visuals.js?v=20261111-2';
+import { identityMark, identityVars } from './party-identity.js?v=20261111-2';
+import { CAREER_LEVELS } from '../data/regions.js?v=20261111-2';
+import { hallView } from './hall-view.js?v=20261111-2';
+import { renderLogoCatalog } from './logo-catalog.js?v=20261111-2';
+import { esc, signed } from './charts.js?v=20261111-2';
+import { publicSiteBase } from '../data/repositories/account-sync.js?v=20261111-2';
 
 const when = iso => { try { return new Intl.DateTimeFormat('it-IT', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }).format(new Date(iso)); } catch { return ''; } };
 // The actions of the opening screen, in order of importance: starting a career and resuming one are the two main ones (drawn apart, below); then what concerns the
@@ -115,7 +115,7 @@ function loadView({ hasCareer, meta, account = null, gate = null, protectedCount
   const ended = slot => slot.status && slot.status !== 'active';
   const active = slots.filter(slot => !ended(slot)), concluded = slots.filter(ended);
   const group = (title, list, empty, tag) => `<div class="load-group" data-load-group="${tag}"><h4>${title} <span class="load-count">${list.length}</span></h4><div class="slot-list">${list.map(rowOf).join('') || `<p class="quiet-copy">${empty}</p>`}</div></div>`;
-  return `<h2>Carica partita</h2><p class="section-subtitle">La partita in corso si salva da sola; qui conservi fino a 5 salvataggi e li porti su altri dispositivi con un file. Il gioco non elimina mai da solo un salvataggio.</p>
+  return `<h2>Carica partita</h2><p class="section-subtitle">La partita in corso si salva da sola; qui conservi fino a 5 salvataggi tuoi e li porti su altri dispositivi con un file. Il gioco non elimina mai un salvataggio fatto da te; le copie automatiche (una per carriera, al massimo 5) non occupano i tuoi slot: la più vecchia passa tra le copie di sicurezza.</p>
     <p class="load-legend" data-load-legend><span><b>Carica</b> apre uno slot (la partita in corso viene prima messa da parte)</span><span><b>Ripristina</b> riporta una copia di sicurezza</span><span><b>Esporta / Importa</b> passa da un file</span><span class="is-danger"><b>Elimina</b> è definitivo</span></p>
     <section class="load-section" data-load-section="current"><h3>${glyph('clock', 16)} Partita in corso</h3>
     ${hasCareer && !gate ? `<article class="slot-row is-current">${identity ? identityMark(identity, 'sm') : ''}<div><strong>Partita in corso</strong><span>${esc(meta.player)} · ${esc(meta.role ?? 'Senza incarico')}</span><small>Settimana ${meta.week} · ${esc(formatDate(meta.gameDate))}</small>${currentStatus(saving, lastSaved, unsaved)}</div><div class="slot-actions"><button class="secondary-button" data-menu-action="save-slot">Salva in uno slot</button><button class="secondary-button" data-menu-action="export">Esporta su file</button></div></article>` : ''}

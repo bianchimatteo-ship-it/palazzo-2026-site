@@ -8,9 +8,9 @@
 //   - the minister who contests the line in public and, if nobody listens, resigns with a quarrel.
 // The Prime Minister decides: when it is the player, requests, conflicts and meetings wait for him (and turn into their default if he lets them pass); when it is a simulated one, the same
 // rules are answered by chance seeded on the date. Everything is pure: the store passes the parliament and gets it back with the lines to tell.
-import { DATA_SOURCES } from '../data/schema.js?v=20261110-24';
-import { AREA_BY_ID, areasOfPortfolio } from '../data/simulation/policy-rules.js?v=20261110-24';
-import { activeMinisters, assignMinister, changePartner, groupProfile, parliamentInternals } from './parliament-engine.js?v=20261110-24';
+import { DATA_SOURCES } from '../data/schema.js?v=20261111-2';
+import { AREA_BY_ID, areasOfPortfolio } from '../data/simulation/policy-rules.js?v=20261111-2';
+import { activeMinisters, assignMinister, changePartner, groupProfile, parliamentInternals } from './parliament-engine.js?v=20261111-2';
 
 const { getGroup, record } = parliamentInternals;
 const SIM = DATA_SOURCES.SIMULATION;

@@ -58,3 +58,93 @@ export const avatarOf = player => player ? (player.avatar && typeof player.avata
 // A value given with a wrong trait is refused; a missing trait is not a problem (it is completed with the default one).
 const shapeOk = value => value?.shape == null || (typeof value.shape === 'object' && !Array.isArray(value.shape) && Object.keys(value.shape).every(key => SHAPE_FIELDS.includes(key) && Number.isInteger(value.shape[key]) && Math.abs(value.shape[key]) <= SHAPE_LIMIT));
 export const avatarProblems = value => value == null || (typeof value === 'object' && !Array.isArray(value) && AVATAR_FIELDS.every(field => !(field in value) || IDS[field].has(value[field])) && shapeOk(value)) ? [] : ['Scegli un aspetto valido per l’avatar.'];
+
+// ---------- the gender of the characters of the scenes (written in the data) ----------
+// The gender of the people of the scenes, written in the data (not left to chance and not drawn from a hash): every invented character (a guest, a host, a rival the game makes up, a scrutineer) has an explicit
+// gender, and the avatar follows it. Three tables:
+//   · FIRST_NAMES  – the first names the game uses, each with its gender;
+//   · ROLE_GENDER  – the roles of the guests (the Italian label as shown), when the grammar of the role fixes the gender («Ministra», «Delegato», «Una maestra»); `x` = the role can be held by anyone;
+//   · the real politicians of the database carry no gender (the field is empty in the verified data): for them the first name is the only evidence, and the character says so (`genderSource: 'nome'`).
+// The player is never touched: the gender and the look chosen at the start stay as they are (they are saved in the career).
+export const M = 'maschile', F = 'femminile';
+const list = (gender, text) => Object.fromEntries(text.split(/\s+/).filter(Boolean).map(name => [name, gender]));
+export const FIRST_NAMES = Object.freeze({
+  ...list(M, `Marco Luca Andrea Paolo Giorgio Stefano Roberto Davide Matteo Fabio Claudio Enrico Sergio Alberto Franco Daniele Antonio Corrado Edoardo Elio Enzo Giacomo Ivan Massimo Mario Piero Renato Riccardo Salvatore Simone
+    Tommaso Vittorio Ludovico Giuseppe Giovanni Francesco Carlo Pietro Alessandro Michele Nicola Gianluca Maurizio Fabrizio Flavio Raffaele Vincenzo Domenico Emilio Lorenzo Federico Filippo Gabriele Leonardo Mattia Samuele
+    Cesare Ettore Fausto Guido Ignazio Lamberto Leone Livio Manuel Marcello Mauro Nunzio Orazio Osvaldo Pasquale Rocco Romano Rosario Saverio Silvano Tullio Umberto Valerio Walter Gianni Gino Bruno Aldo Dario Gianfranco Ugo`),
+  ...list(F, `Elena Chiara Giulia Francesca Laura Marta Silvia Paola Anna Sara Federica Monica Cristina Valentina Irene Barbara Daniela Elisa Lucia Livia Matilde Noemi Rossella Valeria Ilaria Alessia Beatrice Bianca Carla Caterina
+    Claudia Eleonora Emanuela Erica Giada Giorgia Ginevra Giovanna Giuliana Letizia Lidia Loredana Lorena Manuela Margherita Maria Martina Michela Nadia Nicoletta Patrizia Raffaella Roberta Rosa Simona Stefania Teresa Tiziana
+    Vanessa Veronica Viola Alice Aurora Camilla Elly Emma Greta Ludovica Mara Marina Morena Paola Sabrina Serena Sofia Susanna Vittoria Wanda Debora Donatella Fiorella Gabriella Gianna Luisa Miriam Oriana Rita Tania`)
+});
+export const TITLES = Object.freeze({ 'Prof.': null, 'Dott.': M, 'Dott.ssa': F, 'Avv.': null, 'Ing.': null, 'Sig.': M, 'Sig.ra': F, 'On.': null, 'Sen.': null });
+const stripTitle = name => String(name ?? '').trim().replace(/^(Prof\.|Dott\.ssa|Dott\.|Avv\.|Ing\.|Sig\.ra|Sig\.|On\.|Sen\.)\s+/, '');
+// The gender of a person from the data: the explicit `gender` field first (when it is one of the two), then the title («Dott.ssa»), then the table of the first names. null when nothing says it.
+export function genderOf(person) {
+  const explicit = String(person?.gender ?? '').toLowerCase();
+  if (['maschile', 'm', 'uomo', 'male'].includes(explicit)) return M;
+  if (['femminile', 'f', 'donna', 'female'].includes(explicit)) return F;
+  const name = String(person?.name ?? person?.fullName ?? person?.displayName ?? '').trim();
+  const title = name.match(/^(Prof\.|Dott\.ssa|Dott\.|Avv\.|Ing\.|Sig\.ra|Sig\.|On\.|Sen\.)\s/)?.[1];
+  if (title && TITLES[title]) return TITLES[title];
+  return FIRST_NAMES[stripTitle(name).split(/\s+/)[0]] ?? null;
+}
+export const firstNameKnown = name => Boolean(FIRST_NAMES[stripTitle(name).split(/\s+/)[0]]);
+
+// The roles of the guests whose grammar fixes the gender. The label is the Italian one as it is shown; everything not listed is `x` (anyone: «Presidente del comitato», «Portavoce», «Responsabile»…).
+const roles = (gender, text) => Object.fromEntries(text.split('\n').map(line => line.trim()).filter(Boolean).map(line => [line, gender]));
+export const ROLE_GENDER = Object.freeze({
+  ...roles(F, `Dirigente scolastica
+Delegata dei giovani
+Direttrice del quotidiano
+Ministra per i rapporti con il Parlamento
+Ministra per gli Affari europei
+Ministra per le Riforme
+Una madre con due bambini piccoli
+Un’operaia pendolare
+Una maestra di scuola elementare
+Una commerciante del quartiere
+Una ragazza dei comitati per il clima
+Una lavoratrice precaria
+Dott.ssa Irene Bassi`),
+  ...roles(M, `Medico di base del quartiere
+Delegato del sindacato degli inquilini
+Delegato sindacale
+Direttore dei lavori
+Delegato sindacale dei lavoratori
+Direttore tecnico dell’impresa
+Ragioniere dell’ente appaltante
+Comandante della polizia locale
+Ingegnere collaudatore
+Capocantiere
+Funzionario della soprintendenza
+Segretario di sezione
+Tesoriere della sezione
+Militante storico
+Direttore generale di un’azienda sanitaria
+Geologo del dipartimento di protezione civile
+Commercialista esperto in partite IVA
+Caporedattore economia
+Caporedattore della cronaca locale
+Caposervizio politica
+Ministro dell’Economia
+Ministro del Lavoro
+Ministro dell’Interno
+Ministro degli Esteri
+Ministro delle Infrastrutture
+Sottosegretario alla Presidenza
+Un pensionato in lista d’attesa
+Uno studente delle superiori
+Un padre di due alunni
+Un anziano con lo sfratto in corso
+Un residente di via Mazzini
+Un contadino della zona
+Un artigiano con la bottega in difficoltà`)
+});
+// The gender a role asks for: 'maschile' | 'femminile' | null (anyone). A role the table does not know is anyone's.
+export const roleGender = label => ROLE_GENDER[String(label ?? '').trim()] ?? null;
+
+// Names to fall back on when the pool of a scene has no one of the gender the role asks for: complete names, each with its gender.
+export const EXTRA_NAMES = Object.freeze({
+  [M]: Object.freeze(['Gianni Moretti', 'Roberto Salvi', 'Carlo Benedetti', 'Nicola Ferri', 'Fabrizio Ruggeri', 'Lorenzo Gallo', 'Emilio Sartori', 'Davide Monti']),
+  [F]: Object.freeze(['Paola Ricci', 'Monica Galli', 'Alessia Conte', 'Beatrice Fabbri', 'Roberta Mazza', 'Elena Sorrentino', 'Teresa Lombardo', 'Simona Costa'])
+});

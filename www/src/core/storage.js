@@ -1,4 +1,4 @@
-import { createTier } from './tiered-storage.js?v=20261110-24';
+import { createTier } from './tiered-storage.js?v=20261111-2';
 const STORAGE_KEY = 'palazzo-2026.career.v1';
 const BACKUP_KEY = `${STORAGE_KEY}.backup`;
 const HISTORY_KEY = `${STORAGE_KEY}.history`;
@@ -9,6 +9,10 @@ const LOCK_TTL = 5000;
 const SLOT_INDEX = 'politicando.slots.v1';
 const SLOT_PREFIX = 'politicando.slot.';
 export const MAX_SLOTS = 5;
+// The copies the game makes by itself before another career takes the place of the running one («Copia automatica prima di cambiare partita») do not use the player's five slots: they have an
+// allowance of their own, one per career. When it is full the oldest automatic copy gives its place to the new one and goes to the safety copies (it can be restored from there): a save made by
+// the player is never touched, and a career can always be loaded.
+export const MAX_AUTO_SLOTS = 5;
 // The Hall of Fame (the careers concluded and their legacy) belongs to the player: it is not part of any save and
 // outlives every career, every slot and “delete all saves”.
 const HALL_KEY = 'politicando.hall.v1';
@@ -403,9 +407,13 @@ export const storage = {
       }).filter(Boolean) : [];
       const bestAutomatic = automatic.reduce((best, item) => !best || compareSaveVersion(item.state, best.state) > 0 ? item : best, null);
       if (bestAutomatic && compareSaveVersion(bestAutomatic.state, savedState) > 0) return bestAutomatic.entry.id;
-      const slotId = id ?? bestAutomatic?.entry.id ?? `slot-${Date.now().toString(36)}`;
-      const known = slots.some(entry => entry.id === slotId);
-      if (!known && slots.length >= MAX_SLOTS) throw new Error(`Puoi conservare al massimo ${MAX_SLOTS} salvataggi: eliminane uno.`);
+      let slotId = id ?? bestAutomatic?.entry.id ?? `slot-${Date.now().toString(36)}`;
+      let known = slots.some(entry => entry.id === slotId);
+      if (!known && meta?.autoPreserve) {
+        // an automatic copy: its own allowance; full → the oldest automatic copy gives its place (its content is archived below, before it is replaced)
+        const automatics = slots.filter(entry => entry.autoPreserve).sort((a, b) => String(a.savedAt).localeCompare(String(b.savedAt)));
+        if (automatics.length >= MAX_AUTO_SLOTS) { slotId = automatics[0].id; known = true; }
+      } else if (!known && slots.filter(entry => !entry.autoPreserve).length >= MAX_SLOTS) throw new Error(`Puoi conservare al massimo ${MAX_SLOTS} salvataggi: eliminane uno.`);
       const savedAt = new Date().toISOString();
       const key = SLOT_PREFIX + slotId;
       let payload;

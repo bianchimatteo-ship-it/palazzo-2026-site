@@ -4,14 +4,14 @@
 // Pure functions on a plain state (`state.presidency`): nothing here touches the store, the parliament or the world;
 // the store applies the consequences. Every draw comes from a seeded sequence: the same state gives the same vote.
 // Everything is simulation: the candidates are figures of the game and the incumbent is never named.
-import { uniqueId } from './ids.js?v=20261110-24';
-import { advanceDays, formatDate } from './time.js?v=20261110-24';
-import { seededRandom } from './vote-engine.js?v=20261110-24';
-import { campOfAxis } from './parliament-engine.js?v=20261110-24';
-import { linkGroupsToParties } from './lawmaking-engine.js?v=20261110-24';
-import { regionalShares } from './world-engine.js?v=20261110-24';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261110-24';
-import { AFFINITY, CAMP_LABELS, CANDIDATE_TYPES, LEDGER_KEEP, LEDGER_RULES, PRESIDENCY_RULES, PRESIDENT_ACTIVITIES, PRESIDENT_ACTS } from '../data/simulation/presidency-rules.js?v=20261110-24';
+import { uniqueId } from './ids.js?v=20261111-2';
+import { advanceDays, formatDate } from './time.js?v=20261111-2';
+import { seededRandom } from './vote-engine.js?v=20261111-2';
+import { campOfAxis } from './parliament-engine.js?v=20261111-2';
+import { linkGroupsToParties } from './lawmaking-engine.js?v=20261111-2';
+import { regionalShares } from './world-engine.js?v=20261111-2';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261111-2';
+import { AFFINITY, CAMP_LABELS, CANDIDATE_TYPES, LEDGER_KEEP, LEDGER_RULES, PRESIDENCY_RULES, PRESIDENT_ACTIVITIES, PRESIDENT_ACTS } from '../data/simulation/presidency-rules.js?v=20261111-2';
 
 const SIM = 'simulation';
 const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
@@ -555,7 +555,8 @@ export function proclaim(presidency, { elected, player = null, politician = null
   const number = election.number;
   const incumbent = isPlayer
     ? playerIncumbent({ number, since, politician, electedOn: elected.date, ballot: elected.ballot, votes: elected.votes, reelected: old.kind === 'giocatore' })
-    : candidate?.type === 'uscente' && old.kind === 'simulato'
+    // (the stand-in who held the office after a resignation is not a «re-elected» President with an expiring term: when the Parliament chooses him he becomes a regular one — the other branch)
+    : candidate?.type === 'uscente' && old.kind === 'simulato' && !old.interim
       ? { ...old, since, number, electedOn: elected.date, ballot: elected.ballot, votes: elected.votes, reelected: true }
       : { ...simulatedIncumbent({ since, number, seed: presidency.seed, electedOn: elected.date }), camp: candidate?.camp ?? 'centro', activism: round2(0.2 + (candidate?.partisan ?? 0.3) * 0.5), label: `${(candidate?.label ?? 'Il nuovo Presidente').replace(/\s*\(figura simulata\)$/, '')}, eletto Presidente (figura simulata)`, ballot: elected.ballot, votes: elected.votes, sponsors: candidate?.sponsors ?? [], source: SIM };
   const record = { number: number - 1, date: elected.date, president: incumbent.label, kind: incumbent.kind, camp: incumbent.camp, ballots: elected.ballot, votes: elected.votes, needed: elected.needed, total: elected.total, rule: elected.rule, forced: elected.forced, reelected: Boolean(incumbent.reelected), candidateLabel: candidate?.label ?? null, sponsors: candidate?.sponsors ?? [], source: SIM };

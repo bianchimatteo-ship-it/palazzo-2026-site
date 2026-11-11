@@ -6,10 +6,10 @@
 // made, the answers are judged on competence, charisma, preparation and political coherence (the credibility of the programme), the rivals attack where the player is weak and answer as their
 // personality and their programme say. Nothing is drawn from the random sequence of the campaign: the little variation of a beat comes from a hash of the scene's seed, so a scene resumed or
 // replayed from the same choices is the same scene. The player's avatar is always the one chosen at the start of the career: the scene may change the face for a moment (expression), never the person.
-import { defaultAvatarFor, normalizeAvatar } from './avatar.js?v=20261110-24';
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261110-24';
-import { line, formatOf } from './studio-lines.js?v=20261110-24';
-import { createRallyScene, createVoteScene, rallyChoose, rallyEffects, rallyNode, rallyProgress, voteChoose, voteNode, voteProgress } from './rally-scene.js?v=20261110-24';
+import { defaultAvatarFor, genderOf, normalizeAvatar } from './avatar.js?v=20261111-2';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261111-2';
+import { line, formatOf } from './studio-lines.js?v=20261111-2';
+import { createRallyScene, createVoteScene, rallyChoose, rallyEffects, rallyNode, rallyProgress, voteChoose, voteNode, voteProgress } from './rally-scene.js?v=20261111-2';
 export { createRallyScene, createVoteScene, formatOf };
 
 // Scenes of other kinds (the optional scenes of the weekly activities, core/activity-scenes.js) are loaded on demand and register here: { node, choose, effects, progress }. Nothing of them is in the first screen.
@@ -33,6 +33,12 @@ export const STYLES = Object.freeze({
 export const REPLIES = Object.freeze({ fatti: { label: 'Rispondi con i fatti', detail: 'Smonti l’accusa con i numeri: serve preparazione.' }, calma: { label: 'Resta calmo', detail: 'Non raccogli la provocazione: sobrio, ma sembri sulla difensiva.' }, contrattacco: { label: 'Contrattacca', detail: 'Rispondi colpo su colpo: il pubblico si accende, con rischi.' }, ignora: { label: 'Ignora l’attacco', detail: 'Cambi argomento: lascia il segno all’avversario.' } });
 export const ASKS = Object.freeze({ conti: { label: 'Chiedi come finanzia le promesse', detail: 'Mette alla prova il suo programma.' }, coerenza: { label: 'Chiedi conto delle contraddizioni', detail: 'Colpisce se ha cambiato idea.' }, passato: { label: 'Ricordagli il suo passato', detail: 'Rischioso: se ricordi male, si ritorce.' }, salta: { label: 'Non fare domande', detail: 'Lasci il tempo al conduttore.' } });
 export const CLOSINGS = Object.freeze({ sobrio: { label: 'Chiusura sobria', detail: 'Ringrazi e riassumi con misura.' }, appello: { label: 'Appello agli elettori', detail: 'Parli al Paese: carisma e visione.' }, sfida: { label: 'Sfida finale', detail: 'Ti rivolgi all’avversario: forte, ma divisivo.' } });
+// The choices of a beat, in the words of the topic being discussed (data/studio-lines.js DEBATE_CHOICES): a health debate offers waiting lists, hospitals and funding, an economy debate taxes, firms and jobs.
+// The id and the evaluation are those of the engine (the generic wording below is the fallback for a topic the catalogue does not know).
+let DEBATE_CHOICES = {};
+// (registered by data/debate-choices.js, which is loaded with the scene page and not at start)
+export const setDebateChoices = table => { DEBATE_CHOICES = table; };
+const choicesFor = (group, base, topicId) => Object.entries(base).map(([id, spec]) => { const own = DEBATE_CHOICES[topicId]?.[group]?.[id]; return [id, own ? own[0][0] : spec.label, false, own ? own[1][0] : spec.detail]; });
 // The television formats: three different studios (the stage draws each one with its own scenery, lights, cameras and audience) and the shows of the schedule that use them. The names are invented.
 export const SHOWS = Object.freeze({
   'tg-sera': { id: 'tg-sera', format: 'intervista', name: 'Il Telegiornale della Sera', slot: 'Edizione della sera', host: 'giornalista' },
@@ -60,7 +66,9 @@ const CONTROL_WORDS = /^\s*(partecipa|partecipare|non partecipare|simula|salta|s
 export const personName = (name, fallback) => { const text = String(name ?? '').trim(); return !text || CONTROL_WORDS.test(text) || /^(undefined|null|\[object)/i.test(text) ? fallback : text; };
 export function characterAvatar(character) {
   if (character.avatar) return normalizeAvatar(character.avatar);
-  const base = defaultAvatarFor(character.id);
+  // the face follows the gender written in the data (explicit, or from the first name when the person is a real politician whose gender the verified data does not give)
+  const gender = genderOf(character);
+  const base = { ...defaultAvatarFor(character.id), ...(gender ? { face: gender } : {}) };
   const h = hashOf(`${character.id}|aspetto`);
   const out = { ...base, beard: base.face === 'maschile' && h % 5 === 0 ? 'corta' : base.beard, glasses: h % 4 === 0 ? 'tondi' : h % 7 === 0 ? 'rettangolari' : base.glasses, expression: character.role === 'rivale' && h % 3 === 0 ? 'determinata' : base.expression };
   if (character.role === 'conduttore') out.jacket = 'antracite';
@@ -70,8 +78,8 @@ export function characterAvatar(character) {
 export function createDebateScene({ id, seed, player, playerAvatar, rival, host, topic, promises = [], credibility = 60, prep = 0, rivalProgram = [], rivalReadiness = 50, rivalAggression = 50, crisis = false, campaignId = null, date = null, salientTopic = null, secondTopic = null, show = 'faccia-a-faccia', ticker = [], events = [], rivalProgramLabels = [], weakProposal = null }) {
   const cast = [
     { id: 'giocatore', role: 'giocatore', name: personName(player.name, 'Il candidato'), avatar: normalizeAvatar(playerAvatar), position: 'sinistra', tag: player.tag ?? '' },
-    { id: rival.id, role: 'rivale', name: personName(rival.name, rival.tag?.startsWith('Ospite') ? 'L’ospite' : 'Lo sfidante'), avatar: characterAvatar({ id: rival.id, role: 'rivale' }), position: 'destra', partyId: rival.partyId ?? null, tag: rival.tag ?? '' },
-    { id: host.id, role: 'conduttore', name: personName(host.name, host.tag === 'Giornalista' ? 'Il giornalista' : host.tag === 'Moderatore' ? 'Il moderatore' : 'Il conduttore'), avatar: characterAvatar({ id: host.id, role: 'conduttore' }), position: 'centro', tag: host.tag ?? '' }
+    { id: rival.id, role: 'rivale', name: personName(rival.name, rival.tag?.startsWith('Ospite') ? 'L’ospite' : 'Lo sfidante'), gender: genderOf({ gender: rival.gender, name: rival.name }), avatar: characterAvatar({ id: rival.id, role: 'rivale', gender: rival.gender, name: rival.name }), position: 'destra', partyId: rival.partyId ?? null, tag: rival.tag ?? '' },
+    { id: host.id, role: 'conduttore', name: personName(host.name, host.tag === 'Giornalista' ? 'Il giornalista' : host.tag === 'Moderatore' ? 'Il moderatore' : 'Il conduttore'), gender: genderOf({ gender: host.gender, name: host.name }), avatar: characterAvatar({ id: host.id, role: 'conduttore', gender: host.gender, name: host.name }), position: 'centro', tag: host.tag ?? '' }
   ];
   const showSpec = showFor(show, 'faccia-a-faccia');
   const topicPromises = promises.filter(item => item.topic === topic.id);
@@ -131,15 +139,15 @@ export function sceneNode(scene) {
     case 'invito': return { ...base, speaker: host.id, expression: 'sorridente', gesture: 'accoglie', camera: 'host', text: line(scene, 'invito', [scene.show?.name ?? 'Faccia a faccia', topic.label, rival.name]), choices: [['accetta', 'Accetta l’invito'], ['rifiuta', 'Rifiuta (la sedia vuota farà rumore)']] };
     case 'preparazione': return { ...base, speaker: me.id, expression: 'determinata', gesture: 'pensa', camera: 'player', text: `Hai un’ora prima di andare in onda. Su cosa ti prepari? ${ctx.topicPromises.length ? 'Hai promesse sul tema: puoi difenderle.' : 'Non hai promesse su questo tema: sarà difficile citare qualcosa di concreto.'}`, choices: [['programma', 'Ripassa il tuo programma', !ctx.topicPromises.length], ['dati', 'Studia dati e cifre'], ['empatia', 'Prepara storie e volti'], ['attacco', 'Studia i punti deboli dell’avversario']] };
     case 'ingresso': return { ...base, speaker: host.id, expression: 'serena', gesture: 'presenta', camera: 'wide', text: line(scene, 'ingresso', [me.name, rival.name, scene.show?.name ?? 'Faccia a faccia']), choices: [['continua', 'Inizia il dibattito']] };
-    case 'q1': return { ...base, speaker: host.id, expression: 'serena', gesture: 'domanda', camera: 'host', text: line(scene, 'q1', [me.name, topic.label]), choices: Object.entries(STYLES).map(([id, spec]) => [id, spec.label, false, spec.detail]) };
+    case 'q1': return { ...base, speaker: host.id, expression: 'serena', gesture: 'domanda', camera: 'host', text: line(scene, 'q1', [me.name, topic.label]), choices: choicesFor('styles', STYLES, topic.id) };
     case 'r1': return reactionNode(scene, base, 'Reazioni alla prima risposta');
-    case 'domanda': return { ...base, speaker: me.id, expression: 'determinata', gesture: 'indica', camera: 'player', text: line(scene, 'domanda', [rival.name]), choices: Object.entries(ASKS).map(([id, spec]) => [id, spec.label, false, spec.detail]) };
+    case 'domanda': return { ...base, speaker: me.id, expression: 'determinata', gesture: 'indica', camera: 'player', text: line(scene, 'domanda', [rival.name]), choices: choicesFor('asks', ASKS, topic.id) };
     case 'risposta-rivale': return reactionNode(scene, base, `${rival.name} risponde`);
-    case 'q2': return { ...base, speaker: host.id, expression: 'serena', gesture: 'domanda', camera: 'host', text: secondQuestion(scene, me.name), choices: Object.entries(STYLES).map(([id, spec]) => [id, spec.label, false, spec.detail]) };
+    case 'q2': return { ...base, speaker: host.id, expression: 'serena', gesture: 'domanda', camera: 'host', text: secondQuestion(scene, me.name), choices: choicesFor('styles', STYLES, (scene.secondTopic ?? topic).id) };
     case 'r2': return reactionNode(scene, base, 'Reazioni alla seconda risposta');
-    case 'attacco': return { ...base, speaker: rival.id, expression: 'determinata', gesture: 'attacca', camera: 'rival', text: scene.attackLine ?? line(scene, 'attacco.any', [rival.name]), choices: Object.entries(REPLIES).map(([id, spec]) => [id, spec.label, false, spec.detail]) };
+    case 'attacco': return { ...base, speaker: rival.id, expression: 'determinata', gesture: 'attacca', camera: 'rival', text: scene.attackLine ?? line(scene, 'attacco.any', [rival.name]), choices: choicesFor('replies', REPLIES, topic.id) };
     case 'r3': return reactionNode(scene, base, 'Reazioni alla replica');
-    case 'chiusura': return { ...base, speaker: host.id, expression: 'sorridente', gesture: 'accoglie', camera: 'host', text: line(scene, 'chiusura'), choices: Object.entries(CLOSINGS).map(([id, spec]) => [id, spec.label, false, spec.detail]) };
+    case 'chiusura': return { ...base, speaker: host.id, expression: 'sorridente', gesture: 'accoglie', camera: 'host', text: line(scene, 'chiusura'), choices: choicesFor('closings', CLOSINGS, topic.id) };
     default: return { ...base, speaker: host.id, expression: 'serena', gesture: 'saluta', camera: 'wide', text: scene.outcome?.summary ?? 'Il dibattito è concluso.', choices: [['fine', 'Esci dallo studio']], final: true };
   }
 }

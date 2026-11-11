@@ -1,21 +1,22 @@
-import { activeMinisters, canManageParliament, CHAMBERS, CONTEST_COST, CONTEST_WINDOW_DAYS, GOVERNMENT_POST_REQUIREMENTS, governingGroupIds, governmentPostProblems, MINISTERIAL_PORTFOLIOS, nextParliamentaryRole, parliamentGroupFacts, playerInMajority } from '../core/parliament-engine.js?v=20261110-24';
-import { amendmentOdds, forecastVote, LAW_SPONSORS, PLAYER_VOTE_CHOICES } from '../core/lawmaking-engine.js?v=20261110-24';
-import { competenceIn } from '../core/standing-engine.js?v=20261110-24';
-import { heldOfficesOf } from '../core/roles.js?v=20261110-24';
-import { AREA_BY_ID, FINANCING, GOVERNMENT_LINES, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261110-24';
+import { activeMinisters, canManageParliament, CHAMBERS, CONTEST_COST, CONTEST_WINDOW_DAYS, GOVERNMENT_POST_REQUIREMENTS, governingGroupIds, governmentPostProblems, MINISTERIAL_PORTFOLIOS, nextParliamentaryRole, parliamentGroupFacts, playerInMajority } from '../core/parliament-engine.js?v=20261111-2';
+import { amendmentOdds, forecastVote, LAW_SPONSORS, openVotesOf, PLAYER_VOTE_CHOICES } from '../core/lawmaking-engine.js?v=20261111-2';
+import { floorOffer } from './floor-view.js?v=20261111-2';
+import { competenceIn } from '../core/standing-engine.js?v=20261111-2';
+import { heldOfficesOf } from '../core/roles.js?v=20261111-2';
+import { AREA_BY_ID, FINANCING, GOVERNMENT_LINES, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261111-2';
 const GOVERNMENT_LINE_LABELS = Object.fromEntries(Object.entries(GOVERNMENT_LINES).map(([id, item]) => [id, item.label]));
-import { AMENDMENT_CAPITAL_COST, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20261110-24';
-import { DATA_SOURCES } from '../data/schema.js?v=20261110-24';
-import { careerOverview } from '../core/career-overview.js?v=20261110-24';
-import { voteSummary } from '../core/vote-engine.js?v=20261110-24';
-import { artTile, glyph, LAW_ICONS } from './visuals.js?v=20261110-24';
-import { measureDesign, projectLaw } from '../core/society-engine.js?v=20261110-24';
-import { dossierPanel } from './dossier-view.js?v=20261110-24';
-import { accordPanel, govNav, govSectionClose, govSectionOpen, governmentDesk, governmentGlance, lawContent, policyFields, policyPreview } from './policy-mode.js?v=20261110-24';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261110-24';
-import { avatarOf } from '../core/avatar.js?v=20261110-24';
-import { avatarSvg } from './avatar-svg.js?v=20261110-24';
-import { legislatureLabel } from '../core/legislature-engine.js?v=20261110-24';
+import { AMENDMENT_CAPITAL_COST, PARLIAMENT_TIME_COSTS } from '../data/simulation/career-rules.js?v=20261111-2';
+import { DATA_SOURCES } from '../data/schema.js?v=20261111-2';
+import { careerOverview } from '../core/career-overview.js?v=20261111-2';
+import { voteSummary } from '../core/vote-engine.js?v=20261111-2';
+import { artTile, glyph, LAW_ICONS } from './visuals.js?v=20261111-2';
+import { measureDesign, projectLaw } from '../core/society-engine.js?v=20261111-2';
+import { dossierPanel } from './dossier-view.js?v=20261111-2';
+import { accordPanel, govNav, govSectionClose, govSectionOpen, governmentDesk, governmentGlance, lawContent, policyFields, policyPreview } from './policy-mode.js?v=20261111-2';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261111-2';
+import { avatarOf } from '../core/avatar.js?v=20261111-2';
+import { avatarSvg } from './avatar-svg.js?v=20261111-2';
+import { legislatureLabel } from '../core/legislature-engine.js?v=20261111-2';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const icon = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
@@ -190,9 +191,9 @@ function confidenceChoice(parliament, government) {
   const seat = parliament.player;
   if (!seat?.groupId || !['crisis', 'awaiting-confidence'].includes(government.status) || government.primeMinister === 'player' || government.formedBy === 'player') return '';
   const inside = [...government.coalitionGroupIds, ...government.supportingGroupIds].includes(seat.groupId);
-  const current = government.pendingPlayerVote ?? 'linea';
-  const labels = { linea: 'Con il gruppo (' + (inside ? 'a favore' : 'contro') + ')', favorevole: 'Vota la fiducia', contrario: 'Vota contro', astenuto: 'Astieniti', assente: 'Non partecipare' };
-  return '<div class="bill-vote confidence-vote"><span>Il tuo voto sulla fiducia' + (government.status === 'crisis' ? ' (il governo torna alle Camere due settimane dopo l’apertura della crisi)' : '') + '</span><div class="bill-vote-choices" role="group" aria-label="Il tuo voto sulla fiducia">' + Object.entries(labels).map(([id, label]) => '<button type="button" class="chip-button' + (current === id ? ' active' : '') + '" data-confidence-vote="' + id + '" data-government-id="' + esc(government.id) + '" aria-pressed="' + (current === id) + '">' + esc(label) + '</button>').join('') + '</div></div>' + directiveControl(parliament, 'confidence', government.id);
+  const current = government.pendingPlayerVoteFor && government.pendingPlayerVoteFor !== government.id ? null : government.pendingPlayerVote ?? null;
+  const labels = { favorevole: 'Vota la fiducia', contrario: 'Vota contro', astenuto: 'Astieniti' };
+  return '<div class="bill-vote confidence-vote"><span>Il tuo voto sulla fiducia: lo esprimi di persona (il tuo gruppo vota ' + (inside ? 'a favore' : 'contro') + ')' + (government.status === 'crisis' ? ' (il governo torna alle Camere due settimane dopo l’apertura della crisi)' : '') + '</span><div class="bill-vote-choices" role="group" aria-label="Il tuo voto sulla fiducia">' + Object.entries(labels).map(([id, label]) => '<button type="button" class="chip-button' + (current === id ? ' active' : '') + '" data-confidence-vote="' + id + '" data-government-id="' + esc(government.id) + '" aria-pressed="' + (current === id) + '">' + esc(label) + '</button>').join('') + '</div></div>' + directiveControl(parliament, 'confidence', government.id);
 }
 function governmentView(parliament, politicians = [], approval = null, extras = {}) {
   const government = parliament.government;
@@ -252,8 +253,9 @@ function lawCard(law, parliament, society = null, state = null) {
   const chamber = CHAMBERS[law.currentChamber]?.label ?? law.currentChamber;
   const controls = canAct && ['amendments', 'final-vote'].includes(law.stage) ? negotiationControls(law, parliament) : '';
   // The player's own vote on the bill, counted when it comes to the floor of the player's Chamber (in favour unless decided otherwise).
-  const ownChoice = law.pendingPlayerVote && law.pendingPlayerVote !== 'linea' ? law.pendingPlayerVote : 'favorevole';
-  const ownVote = canAct && ['proposal', 'commission', 'amendments'].includes(law.stage) && law.currentChamber === parliament.player?.chamber ? '<div class="bill-vote"><span>Il tuo voto in Aula</span><div class="bill-vote-choices" role="group" aria-label="Il tuo voto">' + ['favorevole', 'contrario', 'astenuto'].map(id => '<button type="button" class="chip-button' + (ownChoice === id ? ' active' : '') + '" data-bill-vote="' + id + '" data-law-id="' + esc(law.id) + '" aria-pressed="' + (ownChoice === id) + '">' + esc(PLAYER_VOTE_CHOICES[id]) + '</button>').join('') + '</div></div>' : '';
+  const ownChoice = PLAYER_VOTE_CHOICES[law.pendingPlayerVote] ? law.pendingPlayerVote : null;
+  const ownFloor = law.floor ? openVotesOf({ game: { status: 'active' }, parliament }).find(item => item.lawId === law.id) : null;
+  const ownVote = ownFloor ? floorOffer(ownFloor, { compact: true }) : canAct && ['proposal', 'commission', 'amendments'].includes(law.stage) && law.currentChamber === parliament.player?.chamber ? '<div class="bill-vote"><span>La tua intenzione di voto (il voto lo esprimi in Aula, quando si apre la votazione)</span><div class="bill-vote-choices" role="group" aria-label="Il tuo voto">' + ['favorevole', 'contrario', 'astenuto'].map(id => '<button type="button" class="chip-button' + (ownChoice === id ? ' active' : '') + '" data-bill-vote="' + id + '" data-law-id="' + esc(law.id) + '" aria-pressed="' + (ownChoice === id) + '">' + esc(PLAYER_VOTE_CHOICES[id]) + '</button>').join('') + '</div></div>' : '';
   const votes = (law.votes ?? []).map((vote, index) => { const summary = voteSummary({ ...vote, id: vote.id ?? `${law.id}-voto-${index + 1}` }); return '<div class="law-vote-result"><strong>' + esc(CHAMBERS[vote.chamber]?.shortLabel || vote.chamber) + '</strong><span>Favorevoli <b>' + whole(summary.yes) + '</b></span><span>Contrari <b>' + whole(summary.against) + '</b></span><span>Astenuti <b>' + whole(summary.abstain) + '</b></span><span>Soglia <b>' + whole(vote.needed) + '</b></span>' + (vote.playerChoice ? '<span>Il tuo voto <b>' + esc(PLAYER_VOTE_CHOICES[vote.playerChoice] ?? vote.playerChoice) + '</b>' + (vote.decisive ? ' (decisivo)' : '') + '</span>' : '') + (parliament.player?.leadsGroup && vote.byGroup?.find(row => row.groupId === parliament.player.groupId)?.directive ? (row => '<span data-directive-result>Direttiva del capogruppo: ' + row.follow + ' seguono la direttiva, ' + row.dissent + ' dissentono</span>')(vote.byGroup.find(row => row.groupId === parliament.player.groupId).directive) : '') + '<em>' + (vote.passed ? 'APPROVATA' : 'RESPINTA') + (vote.forced ? ' · voto forzato' : '') + (vote.secret ? ' · voto segreto' : '') + ' · VOTAZIONE SIMULATA</em><button type="button" class="text-link" data-hemi-vote="' + esc(vote.id ?? `${law.id}-voto-${index + 1}`) + '" data-hemi-vote-chamber="' + esc(vote.chamber) + '">Vedi i voti nell’emiciclo</button></div>'; }).join('');
   const impact = society?.lawsApplied?.find(item => item.lawId === law.id);
   const segment = id => SEGMENTS.find(item => item.id === id)?.label.toLowerCase() ?? id;
@@ -327,7 +329,8 @@ function billActions(law, parliament, extras) {
   const open = law.kind !== 'manovra' && ['commission', 'amendments'].includes(law.stage);
   const deal = law.sponsor?.groupId !== seat.groupId && !law.playerDeal ? '<label class="bill-deal"><input type="checkbox" name="deal" value="1" /> Offri il tuo voto favorevole in cambio (probabilità ' + Math.round(oddsOf(true) * 100) + '%): se poi non lo rispetti, il proponente non lo dimentica</label>' : '';
   const amend = open ? (law.confidence ? '<p class="parliament-note">Sul testo c’è la fiducia: niente più emendamenti.</p>' : '<form class="bill-amend" data-bill-amend-form data-law-id="' + esc(law.id) + '"><label>Il tuo emendamento<select name="patch">' + billAmendments(law).map(([value, label]) => '<option value="' + esc(value) + '">' + esc(label) + '</option>').join('') + '</select></label><button class="secondary-button" type="submit">Presenta · 1 giorno · ' + AMENDMENT_CAPITAL_COST + ' cap. · probabilità ' + Math.round(oddsOf(false) * 100) + '%</button>' + deal + '</form>') : '';
-  const voting = ['commission', 'amendments', 'final-vote'].includes(law.stage) ? '<div class="bill-vote"><span>Il tuo voto quando arriva in Aula</span><div class="bill-vote-choices" role="group" aria-label="Il tuo voto">' + Object.entries(PLAYER_VOTE_CHOICES).map(([id, label]) => '<button type="button" class="chip-button' + ((law.pendingPlayerVote ?? 'linea') === id ? ' active' : '') + '" data-bill-vote="' + id + '" data-law-id="' + esc(law.id) + '" aria-pressed="' + ((law.pendingPlayerVote ?? 'linea') === id) + '">' + esc(label) + '</button>').join('') + '</div></div>' : '';
+  const floor = law.floor ? openVotesOf({ game: { status: 'active' }, parliament, world: extras.state?.world }).find(item => item.lawId === law.id) : null;
+  const voting = floor ? floorOffer(floor, { compact: true }) : ['commission', 'amendments', 'final-vote'].includes(law.stage) ? '<div class="bill-vote"><span>La tua intenzione di voto (il voto lo esprimi in Aula, quando si apre la votazione)</span><div class="bill-vote-choices" role="group" aria-label="La tua intenzione di voto">' + Object.entries(PLAYER_VOTE_CHOICES).map(([id, label]) => '<button type="button" class="chip-button' + (law.pendingPlayerVote === id ? ' active' : '') + '" data-bill-vote="' + id + '" data-law-id="' + esc(law.id) + '" aria-pressed="' + (law.pendingPlayerVote === id) + '">' + esc(label) + '</button>').join('') + '</div></div>' : '';
   return '<div class="bill-actions"><div class="bill-speak">' + speak + '</div>' + amend + voting + directiveBlock(parliament, law) + '</div>';
 }
 function billCard(law, parliament, extras = {}) {

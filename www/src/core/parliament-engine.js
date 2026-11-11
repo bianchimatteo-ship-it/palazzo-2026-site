@@ -1,8 +1,8 @@
-import { DATA_SOURCES } from '../data/schema.js?v=20261110-24';
-import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, SPENDING_REVIEW, STAGE_WEEKS, areaOf, governmentKindOf } from '../data/simulation/policy-rules.js?v=20261110-24';
-import { BUDGET_SECTORS } from '../data/simulation/project-rules.js?v=20261110-24';
-import { evaluateAdvancement } from './progression-engine.js?v=20261110-24';
-import { groupLine, splitGroupVote } from './vote-engine.js?v=20261110-24';
+import { DATA_SOURCES } from '../data/schema.js?v=20261111-2';
+import { AREA_BY_ID, CAMP_PRIORITIES, DECREE_RULES, FINANCING, GOVERNMENT_LINES, MINISTRIES, POLICY_AREAS, SPENDING_REVIEW, STAGE_WEEKS, areaOf, governmentKindOf } from '../data/simulation/policy-rules.js?v=20261111-2';
+import { BUDGET_SECTORS } from '../data/simulation/project-rules.js?v=20261111-2';
+import { evaluateAdvancement } from './progression-engine.js?v=20261111-2';
+import { groupLine, splitGroupVote } from './vote-engine.js?v=20261111-2';
 
 export const CHAMBERS = Object.freeze({
   camera: { label: 'Camera dei deputati', shortLabel: 'Camera', source: DATA_SOURCES.REAL },
@@ -609,9 +609,10 @@ function calculateVote(parliament, law, chamber, currentDate = null) {
     }
     if (seated) {
       playerLine = groupLine(split);
-      playerChoice = !law.pendingPlayerVote || law.pendingPlayerVote === 'linea' ? playerLine : law.pendingPlayerVote;
-      // The player who does not take part is counted as absent (every seat is accounted for).
-      if (playerChoice === 'favorevole') votes += 1; else if (playerChoice === 'contrario') no += 1; else if (playerChoice === 'astenuto') abstain += 1; else absent += 1;
+      // The player's own ballot, cast on the open vote (never a default: without it the vote is not counted).
+      if (!PLAYER_BALLOTS.includes(law.pendingPlayerVote)) throw new Error('La votazione non può essere conclusa: manca il tuo voto (favorevole, contrario o astenuto).');
+      playerChoice = law.pendingPlayerVote;
+      if (playerChoice === 'favorevole') votes += 1; else if (playerChoice === 'contrario') no += 1; else abstain += 1;
     }
     yes += votes;
     return { groupId: group.groupId, yesVotes: votes, noVotes: no, abstainVotes: abstain, ...(absent ? { absentVotes: absent } : {}), ...(directive ? { directive } : {}), line: seated ? groupLine({ yes: votes, no, abstain }) : groupLine(split), snipers, governing: governing.has(group.groupId), simulatedSeats: group.simulatedSeats, ...(seated ? { playerChoice } : {}), source: DATA_SOURCES.SIMULATION };
@@ -857,6 +858,17 @@ export function assignMinister(parliament, portfolio, groupId, currentDate, { ap
 // The confidence vote in both Chambers (roll call): the majority votes in favour except the defections of the crisis,
 // the opposition against with a few abstentions. The player's seat votes as the player decided (the Government's
 // pendingPlayerVote, from the agenda or the Governo page), otherwise with the group.
+const PLAYER_BALLOTS = Object.freeze(['favorevole', 'contrario', 'astenuto']);
+// Whether the player sits in the Chamber that votes the player's own bill now (the player must cast a ballot before the count).
+export const playerSeatedOn = (parliament, law) => Boolean(law && parliament?.player?.groupId && parliament.player.chamber === law.currentChamber);
+// A confidence vote on a Government of others waits for the ballot of a player who has a seat: without it the Chambers do not vote.
+export function confidenceBallotMissing(parliament) {
+  const government = parliament?.government;
+  if (!parliament?.player?.groupId || !government || !['awaiting-confidence', 'crisis'].includes(government.status)) return false;
+  if (government.primeMinister === 'player' || government.formedBy === 'player') return false;
+  const decided = government.pendingPlayerVoteFor && government.pendingPlayerVoteFor !== government.id ? null : government.pendingPlayerVote ?? null;
+  return !PLAYER_BALLOTS.includes(decided);
+}
 export function voteGovernmentConfidence(parliament, currentDate) {
   const government = parliament.government;
   if (!government || !['awaiting-confidence', 'crisis'].includes(government.status)) throw new Error('Non è prevista una votazione di fiducia in questa fase.');
@@ -900,7 +912,9 @@ export function voteGovernmentConfidence(parliament, currentDate) {
     const own = seat?.chamber === chamber ? byGroup.find(row => row.groupId === seat.groupId) : null;
     if (own) {
       const line = own.governing ? 'favorevole' : own.line;
-      const choice = !decided || decided === 'linea' ? line : decided;
+      // The player's ballot on a Government of others is always the one the player cast (the callers wait for it); the player who asks the confidence for the own Government votes it.
+      if (!PLAYER_BALLOTS.includes(decided) && confidenceBallotMissing(parliament)) throw new Error('Il voto di fiducia non può essere concluso: manca il tuo voto (favorevole, contrario o astenuto).');
+      const choice = PLAYER_BALLOTS.includes(decided) ? decided : line;
       const bucket = { favorevole: 'yesVotes', contrario: 'noVotes', astenuto: 'abstainVotes' };
       if (own[bucket[line]] > 0) own[bucket[line]] -= 1; else if (own.noVotes > 0) own.noVotes -= 1; else if (own.abstainVotes > 0) own.abstainVotes -= 1; else own.yesVotes = Math.max(0, own.yesVotes - 1);
       // Not taking part: the seat is counted as absent.
@@ -928,7 +942,7 @@ export function voteGovernmentConfidence(parliament, currentDate) {
 export function setConfidenceVote(parliament, choice, governmentId = null) {
   const government = parliament?.government;
   if (governmentId && government && government.id !== governmentId) throw new Error('Questa richiesta di fiducia riguarda un altro governo o è scaduta.');
-  if (!['linea', 'favorevole', 'contrario', 'astenuto', 'assente'].includes(choice)) throw new Error('Scelta di voto non valida.');
+  if (!PLAYER_BALLOTS.includes(choice)) throw new Error('Scegli come votare: Favorevole, Contrario o Astenuto.');
   if (!parliament?.player?.groupId) throw new Error('Serve un seggio con un gruppo parlamentare.');
   if (!government || !['awaiting-confidence', 'crisis'].includes(government.status)) throw new Error('Non è prevista una votazione di fiducia.');
   if (government.primeMinister === 'player' || government.formedBy === 'player') throw new Error('È il tuo governo: la fiducia la chiedi tu.');
@@ -1268,7 +1282,7 @@ export function advanceGovernmentWeek(parliament, currentDate, roll = 0.5, rand 
   // A Government led by the simulated Prime Minister goes back to the Chambers by itself, two weeks into a crisis.
   const led = next?.government && !playerLeadsGovernment(next) && next.government.formedBy !== 'player';
   // (a request that reached the player in this very close is voted in the next one)
-  if (led && ['crisis', 'awaiting-confidence'].includes(next.government.status) && weeksBetween(next.government.crisisOpenedAt ?? next.government.proposedAt ?? currentDate, currentDate) >= 2 && !(next.government.confidenceRequestedAt && currentDate <= next.government.confidenceRequestedAt)) {
+  if (led && ['crisis', 'awaiting-confidence'].includes(next.government.status) && weeksBetween(next.government.crisisOpenedAt ?? next.government.proposedAt ?? currentDate, currentDate) >= 2 && !(next.government.confidenceRequestedAt && currentDate <= next.government.confidenceRequestedAt) && !confidenceBallotMissing(next)) {
     next = record(next, currentDate, 'fiducia-richiesta', 'Il Presidente del Consiglio (simulato) torna alle Camere e chiede la fiducia.', { governmentId: next.government.id, source: DATA_SOURCES.SIMULATION });
     return voteGovernmentConfidence(next, currentDate);
   }

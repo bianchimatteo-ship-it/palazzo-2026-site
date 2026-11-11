@@ -2,10 +2,10 @@
 // its person (avatar-svg.js: always the avatar saved for the player, a stable one for the others) plus a body drawn here — torso, two arms with an elbow, two legs — in separate groups, so that the
 // player (ui/stage-player.js) can make them walk, sit, gesture. Every group carries the data the player needs (class, data-*); the poses come from core/stage-script.js. No animation is started here:
 // what is drawn is the FINAL pose of the beat, so with the motion off or reduced, or in a scene resumed, the stage is already right.
-import { avatarColors, avatarParts, shade } from './avatar-svg.js?v=20261110-24';
-import { depthScale, STAGE_W, STAGE_H } from '../core/stage-script.js?v=20261110-24';
-import { defaultAvatarFor } from '../core/avatar.js?v=20261110-24';
-import { isEnglish, translateText } from '../core/i18n.js?v=20261110-24';
+import { avatarColors, avatarParts, shade } from './avatar-svg.js?v=20261111-2';
+import { depthScale, STAGE_W, STAGE_H } from '../core/stage-script.js?v=20261111-2';
+import { defaultAvatarFor, genderOf } from '../core/avatar.js?v=20261111-2';
+import { isEnglish, translateText } from '../core/i18n.js?v=20261111-2';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const hash = text => { let h = 2166136261 >>> 0; for (const ch of String(text)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; } return h; };
@@ -25,7 +25,8 @@ export const gestureAngles = (name, posture) => GESTURES[name] ?? (posture === '
 // ---------- a character ----------
 // Local coordinates: the feet at (0, 0), the figure about 270 units tall, the shoulders at y = -200, the hips at y = -105. `pose` is the final pose of the beat.
 export function actorSvg(member, pose, uid, { speaking = false, expression = null } = {}) {
-  const avatar = member.avatar ?? defaultAvatarFor(member.id);
+  // a character without a saved avatar (an older scene): the stable default of its id, with the face of its gender when the data gives it (gender field, title or first name)
+  const avatar = member.avatar ?? (() => { const gender = genderOf(member); return gender ? { ...defaultAvatarFor(member.id), face: gender } : defaultAvatarFor(member.id); })();
   const parts = avatarParts(avatar, uid, { expression });
   const { skin, jacket } = avatarColors(avatar);
   const trousers = shade(jacket, -0.45), sleeve = shade(jacket, -0.06), forearm = shade(jacket, -0.14);
@@ -126,12 +127,25 @@ const screenWall = (x, y, w, h, uid, label, count) => `<g class="st-screens">${A
 
 function studioFaccia(scene, uid, crowd) {
   const members = ['giocatore', 'rivale', 'conduttore'].map(role => scene.cast.find(item => item.role === role));
-  const last = member => String(member?.name ?? '').split(' ').slice(-1)[0];
-  const lectern = (x, color, name) => `<g class="st-desk"><rect x="${x - 78}" y="248" width="156" height="52" rx="5" fill="#26333f"/><rect x="${x - 78}" y="248" width="156" height="6" rx="3" fill="#8fb4c6"/><rect x="${x - 70}" y="262" width="140" height="28" rx="3" fill="${color}" opacity=".9"/></g>`;
+  // The name of the candidate on the coloured panel of the lectern: the whole name on one line when it fits, otherwise first names above and surname below (centred, white on a dark outline so it reads on the blue and on the orange), every line compressed rather than cut.
+  const plate = (x, name) => {
+    const words = String(name ?? '').trim().split(/\s+/).filter(Boolean);
+    if (!words.length) return '';
+    const room = 128, size = 11.5, fits = text => text.length * size * 0.62 <= room;
+    const full = words.join(' ');
+    // the surname (with its particle: «De Angelis», «Dalla Valle») stays whole on the second line
+    let cut = words.length - 1;
+    while (cut > 1 && /^(de|di|del|della|dal|dalla|da|la|lo|le|van|von|dei|degli|d’|dell’)$/i.test(words[cut - 1])) cut--;
+    const lines = fits(full) || words.length < 2 ? [full] : [words.slice(0, cut).join(' '), words.slice(cut).join(' ')];
+    const rows = lines.length === 1 ? [[full, 281]] : [[lines[0], 272.5], [lines[1], 284.5]];
+    const fontSize = lines.length === 1 ? size : 10.4;
+    return rows.map(([text, y]) => `<text class="st-lectern-name" x="${x}" y="${y}" text-anchor="middle" font-size="${fontSize}" font-weight="800" letter-spacing=".3" fill="#fff" stroke="#0b1218" stroke-width="2.2" paint-order="stroke" stroke-linejoin="round"${text.length * fontSize * 0.62 > room ? ` textLength="${room}" lengthAdjust="spacingAndGlyphs"` : ''}>${esc(text)}</text>`).join('');
+  };
+  const lectern = (x, color, name) => `<g class="st-desk"><rect x="${x - 78}" y="248" width="156" height="52" rx="5" fill="#26333f"/><rect x="${x - 78}" y="248" width="156" height="6" rx="3" fill="#8fb4c6"/><rect x="${x - 70}" y="262" width="140" height="28" rx="3" fill="${color}" opacity=".9"/>${plate(x, name)}</g>`;
   const back = `${studioFloor(uid, FORMAT_LOOK.faccia, [[128, 300, 150], [512, 300, 150], [320, 270, 120]])}${screenWall(70, 26, 500, 84, uid, '', 3)}`
     + `<text x="320" y="58" text-anchor="middle" font-size="19" font-weight="900" letter-spacing="3" fill="#f0d68a">${esc(scene.show?.name ? scene.show.name.toUpperCase() : 'FACCIA A FACCIA')}</text><text x="320" y="84" text-anchor="middle" font-size="11" font-weight="700" fill="#cfe7f1">${esc(scene.topic.label)}</text>`
     + `<path d="M0 196H640" stroke="#58a3c4" stroke-opacity=".25"/>${rigLights([40, 150, 260, 380, 490, 600])}`;
-  const front = `${lectern(128, '#2f6fa8', last(members[0]))}${lectern(512, '#c05a2c', last(members[1]))}<g class="st-desk"><rect x="${320 - 52}" y="230" width="104" height="44" rx="5" fill="#33414d"/><rect x="${320 - 52}" y="230" width="104" height="5" rx="2.5" fill="#d9bd7e"/></g>${cameraRig(46, true)}${cameraRig(594, false, true)}`;
+  const front = `${lectern(128, '#2f6fa8', members[0]?.name)}${lectern(512, '#c05a2c', members[1]?.name)}<g class="st-desk"><rect x="${320 - 52}" y="230" width="104" height="44" rx="5" fill="#33414d"/><rect x="${320 - 52}" y="230" width="104" height="5" rx="2.5" fill="#d9bd7e"/></g>${cameraRig(46, true)}${cameraRig(594, false, true)}`;
   const audience = `<g class="st-crowd is-${crowd}" data-crowd>${crowdSvg(`${scene.seed}|aud`, [[236, 0.34, 28], [226, 0.3, 30]], { x0: 14, x1: 626 })}</g>`;
   return { back, front, audience };
 }

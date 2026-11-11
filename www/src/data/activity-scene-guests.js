@@ -118,10 +118,39 @@ export const REFS = Object.freeze({
   }
 });
 export const BODIES = Object.freeze({ associazioni: ['Società civile', 'Civil society'], cantiere: ['Opera pubblica', 'Public works'], sede: ['Partito', 'Party'], commissione: ['Commissione parlamentare', 'Parliamentary committee'], redazione: ['Stampa', 'Press'], consiglio: ['Governo', 'Government'] });
+// ---------- the citizens in the square: a scene of its own ----------
+// «Incontra i cittadini» is not a meeting of committees: it is the market square, the neighbourhood, ordinary people with a daily problem and no agenda. The setting is the market (`mercato`), the people are
+// passers-by and shoppers, the voice is plain and the problems are the ones of the street, the market, the bus stop. `ACTIVITY_SCENES.associazioni` keeps the civic hall, the delegates and the organised
+// discussion for «Incontra le associazioni».
+export const CITIZENS = Object.freeze({
+  place: ['Piazza e mercato del quartiere', 'The neighbourhood square and market'],
+  intro: ['È giorno di mercato: bancarelle, borse della spesa, un passeggino ferma la fila. Ti avvicini senza microfono e la gente si stringe attorno, ognuno con la sua storia.', 'It is market day: stalls, shopping bags, a pushchair holding up the queue. You walk up without a microphone and people gather round, each with a story of their own.'],
+  families: {
+    sanita: { open: ['Ho settant’anni e per una visita mi hanno dato una data fra otto mesi: nel frattempo che faccio, aspetto?', 'I am seventy and for a check-up they gave me a date in eight months: what do I do in the meantime, wait?'], follow: ['Mia moglie è stata in pronto soccorso tutta la notte su una sedia: nessuno ci ha detto nulla fino al mattino.', 'My wife spent the whole night in the emergency room on a chair: nobody told us anything until morning.'] },
+    trasporti: { open: ['L’autobus delle sette non passa più e io alle otto sono in fabbrica: mi tocca prendere la macchina e pagare il parcheggio.', 'The seven o’clock bus no longer runs and I am at the factory by eight: I have to take the car and pay for parking.'], follow: ['Mia figlia torna da scuola a piedi al buio: la fermata è lontana e la corsa del pomeriggio l’hanno tolta.', 'My daughter walks home from school in the dark: the stop is far away and they removed the afternoon run.'] },
+    scuola: { open: ['Il pulmino dei bambini è stato soppresso e la mensa costa il doppio: noi due stipendi non li abbiamo.', 'The children’s school bus has been cut and the canteen costs double: we do not have two salaries.'], follow: ['La maestra ci ha detto che mancano gli insegnanti di sostegno: mio figlio resta indietro e nessuno risponde.', 'The teacher told us there are no support teachers: my son is falling behind and nobody answers.'] },
+    casa: { open: ['Mi hanno dato lo sfratto: l’affitto è salito e la pensione è la stessa, dove vado a quasi ottant’anni?', 'I have been given an eviction notice: the rent went up and my pension is the same, where do I go at nearly eighty?'], follow: ['Con mio marito cerchiamo casa da due anni: agli annunci rispondono in cinquanta e vince chi paga di più.', 'My husband and I have been looking for a flat for two years: fifty people answer each ad and whoever pays more wins.'] },
+    sicurezza: { open: ['Il mio negozio è stato svaligiato due volte quest’anno: la sera abbasso la serranda e ho paura anche a tornare a casa.', 'My shop has been burgled twice this year: in the evening I pull down the shutter and I am afraid even to go home.'], follow: ['Il lampione davanti al portone è spento da mesi: l’abbiamo segnalato dieci volte e nessuno è venuto.', 'The street lamp in front of our door has been out for months: we reported it ten times and nobody came.'] },
+    ambiente: { open: ['Qui dietro c’è un cumulo di rifiuti da settimane e d’estate l’odore non si regge: i bambini giocano lì vicino.', 'There has been a pile of rubbish behind here for weeks and in summer the smell is unbearable: the children play right next to it.'], follow: ['Quando piove la strada si allaga: ogni volta ci tocca spalare l’acqua dal garage, e il Comune manda solo promesse.', 'When it rains the street floods: each time we have to shovel the water out of the garage, and the municipality only sends promises.'] },
+    lavoro: { open: ['Faccio la stagionale da dieci anni e ogni autunno ricomincio da capo: un contratto vero, una volta, è chiedere troppo?', 'I have been a seasonal worker for ten years and every autumn I start again from scratch: is a real contract, just once, too much to ask?'], follow: ['Il mio banco qui al mercato regge a fatica: tasse, affitto del suolo e i supermercati che aprono la domenica.', 'My stall here in the market barely holds on: taxes, rent for the pitch and the supermarkets opening on Sundays.'] }
+  },
+  reactions: {
+    good: [['Qualcuno ti tende la mano: «Parla chiaro, lei. Mi fido di più».', 'Someone holds out a hand: “You speak plainly. I trust you more.”'], ['Una signora con la borsa della spesa annuisce e dice agli altri: «Ha ascoltato davvero».', 'A woman with a shopping bag nods and tells the others: “He really listened.”']],
+    mid: [['La piccola folla si divide: chi sorride, chi scuote la testa e torna al banco.', 'The small crowd splits: some smile, some shake their heads and go back to the stall.'], ['Un ragazzo dice sottovoce: «Vediamo se poi si fa vedere ancora».', 'A boy says under his breath: “Let’s see whether he shows up again.”']],
+    bad: [['Dal fondo gridano: «Sempre le stesse parole, poi non vi vediamo più!».', 'From the back they shout: “Always the same words, then we never see you again!”'], ['Una donna si volta verso il banco accanto: «Ho sentito abbastanza» e se ne va.', 'A woman turns to the next stall: “I have heard enough” and walks off.']]
+  },
+  closings: {
+    good: ['Te ne vai tra strette di mano e saluti dalle bancarelle: la gente del quartiere ti ha riconosciuto.', 'You leave amid handshakes and greetings from the stalls: the people of the neighbourhood recognised you.'],
+    mid: ['Esci dalla piazza senza clamore: qualcuno ti ha ascoltato, qualcuno aspetta di vedere i fatti.', 'You leave the square quietly: some listened, some are waiting to see results.'],
+    bad: ['Attraversi la piazza tra sguardi diffidenti: al mercato si dice che sei venuto per la foto.', 'You cross the square amid wary looks: at the market they say you came for the photo.']
+  }
+});
+
 export const ALL_PAIRS = [
   ...Object.values(BODIES),
   ...Object.values(CITIZEN_GUESTS).flat(),
   ...Object.values(HEADINGS).flatMap(item => [item.kicker, item.title, item.banner, item.body]),
+  CITIZENS.place, CITIZENS.intro, ...Object.values(CITIZENS.families).flatMap(item => [item.open, item.follow]), ...Object.values(CITIZENS.reactions).flat(), ...Object.values(CITIZENS.closings),
   ...Object.values(GUESTS).flatMap(kind => Object.values(kind).flat()),
   ...Object.values(REFS).flatMap(group => Object.values(group))
 ].filter((pair, index, all) => all.findIndex(other => other[0] === pair[0]) === index);

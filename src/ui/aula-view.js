@@ -2,11 +2,11 @@
 // hemicycle model, a city council / a regional council / the European Parliament via the totals of each group) and lights the seats one after the other in the order the script gives, with the counters
 // as the sums of the seats shown and the President's announcements. With the motion off or reduced (or prefers-reduced-motion) the window opens on the final picture; «Vai all’esito» does the same
 // at any moment; the vote can be left at any moment (Esc or «Chiudi»). It is loaded only when someone enters the Aula.
-import { aulaFromParliamentVote, aulaFromTallies, boardAt, saidAt } from '../core/aula-script.js?v=20261110-24';
-import { hemicycleModel } from './hemicycle-view.js?v=20261110-24';
-import { hemicycleLayout } from '../core/hemicycle.js?v=20261110-24';
-import { VOTE_CHOICES } from '../core/vote-engine.js?v=20261110-24';
-import { motionAllows } from './stage-player.js?v=20261110-24';
+import { aulaFromParliamentVote, aulaFromTallies, boardAt, saidAt } from '../core/aula-script.js?v=20261111-2';
+import { hemicycleModel } from './hemicycle-view.js?v=20261111-2';
+import { hemicycleLayout } from '../core/hemicycle.js?v=20261111-2';
+import { VOTE_CHOICES } from '../core/vote-engine.js?v=20261111-2';
+import { motionAllows } from './stage-player.js?v=20261111-2';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const COLORS = { ...Object.fromEntries(Object.entries(VOTE_CHOICES).map(([id, spec]) => [id, spec.color])), waiting: '#3a4540' };

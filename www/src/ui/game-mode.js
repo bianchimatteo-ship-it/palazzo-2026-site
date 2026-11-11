@@ -1,38 +1,40 @@
-import { invitedShows } from '../core/scene-engine.js?v=20261110-24';
-import { voteCatalog } from '../core/vote-engine.js?v=20261110-24';
-import { endedHeadline } from './hall-view.js?v=20261110-24';
-import { activityFor, activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261110-24';
-import { playerRoles } from '../core/roles.js?v=20261110-24';
-import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20261110-24';
-import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, currentObjectiveLabel, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261110-24';
-import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261110-24';
-import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20261110-24';
-import { careerLevelLabel } from '../data/regions.js?v=20261110-24';
-import { advanceDays, formatDate } from '../core/time.js?v=20261110-24';
-import { renderBarometerPanel } from './polls-mode.js?v=20261110-24';
-import { PRESIDENT_ACTIVITIES } from '../data/simulation/presidency-rules.js?v=20261110-24';
-import { politicalCrisis } from '../core/presidency-engine.js?v=20261110-24';
-import { candidacyAccess } from './campaign-mode.js?v=20261110-24';
-import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20261110-24';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261110-24';
-import { societyMood } from '../core/society-engine.js?v=20261110-24';
-import { financeOutlook } from '../core/finance-engine.js?v=20261110-24';
-import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20261110-24';
-import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20261110-24';
-import { activeInstitutions, institutionLabel } from './local-mode.js?v=20261110-24';
-import { renderFinanceCard } from './finance-mode.js?v=20261110-24';
-import { renderStaffBand } from './staff-view.js?v=20261110-24';
-import { planAddButton } from './plan-view.js?v=20261110-24';
-import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20261110-24';
-import { stateBadge, statusChip } from './charts.js?v=20261110-24';
-import { articleHtml, newsMedia, renderNewsroomTabs } from './news-view.js?v=20261110-24';
-import { relevantArticles } from '../core/news-engine.js?v=20261110-24';
-import { identityMark, kindChip } from './party-identity.js?v=20261110-24';
-import { illustration } from './illustrations.js?v=20261110-24';
-import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261110-24';
-import { avatarOf } from '../core/avatar.js?v=20261110-24';
-import { avatarSvg } from './avatar-svg.js?v=20261110-24';
-import { regionPriorities } from '../core/society-engine.js?v=20261110-24';
+import { invitedShows } from '../core/scene-engine.js?v=20261111-2';
+import { voteCatalog } from '../core/vote-engine.js?v=20261111-2';
+import { openVotesOf } from '../core/lawmaking-engine.js?v=20261111-2';
+import { floorBand } from './floor-view.js?v=20261111-2';
+import { endedHeadline } from './hall-view.js?v=20261111-2';
+import { activityFor, activityProblem, CANDIDACY_RULES, costProblem, describeChoice, describeEffects, nextPartyRank, objectiveProgress, partyAdvancementOdds, situation, upcomingElections } from '../core/career-engine.js?v=20261111-2';
+import { playerRoles } from '../core/roles.js?v=20261111-2';
+import { activeMinisters, CHAMBERS, parliamentGroupFacts } from '../core/parliament-engine.js?v=20261111-2';
+import { ACTIVITY_CATEGORIES, COMMUNICATION_STYLES, CURRENT_AREAS, currentObjectiveLabel, PARTY_INVESTMENTS, PARTY_LINES, PARTY_RANKS, STAT_LABELS, WEEKLY_ACTIVITIES } from '../data/simulation/career-rules.js?v=20261111-2';
+import { AREA_BY_ID, AREA_GROUPS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261111-2';
+import { memoryBalance, MEMORY_KINDS } from '../core/career-engine.js?v=20261111-2';
+import { careerLevelLabel } from '../data/regions.js?v=20261111-2';
+import { advanceDays, formatDate } from '../core/time.js?v=20261111-2';
+import { renderBarometerPanel } from './polls-mode.js?v=20261111-2';
+import { PRESIDENT_ACTIVITIES } from '../data/simulation/presidency-rules.js?v=20261111-2';
+import { politicalCrisis } from '../core/presidency-engine.js?v=20261111-2';
+import { candidacyAccess } from './campaign-mode.js?v=20261111-2';
+import { artTile, CATEGORY_VISUALS, EVENT_ICONS, glyph, officeIcon } from './visuals.js?v=20261111-2';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261111-2';
+import { societyMood } from '../core/society-engine.js?v=20261111-2';
+import { financeOutlook } from '../core/finance-engine.js?v=20261111-2';
+import { isPartyLeader, organOf } from '../core/organization-engine.js?v=20261111-2';
+import { renderCountryCard, renderTerritoryCard } from './society-mode.js?v=20261111-2';
+import { activeInstitutions, institutionLabel } from './local-mode.js?v=20261111-2';
+import { renderFinanceCard } from './finance-mode.js?v=20261111-2';
+import { renderStaffBand } from './staff-view.js?v=20261111-2';
+import { planAddButton } from './plan-view.js?v=20261111-2';
+import { renderContactsPanel, renderPartyCard } from './organization-mode.js?v=20261111-2';
+import { stateBadge, statusChip } from './charts.js?v=20261111-2';
+import { articleHtml, newsMedia, renderNewsroomTabs } from './news-view.js?v=20261111-2';
+import { relevantArticles } from '../core/news-engine.js?v=20261111-2';
+import { identityMark, kindChip } from './party-identity.js?v=20261111-2';
+import { illustration } from './illustrations.js?v=20261111-2';
+import { SEGMENTS } from '../data/simulation/society-rules.js?v=20261111-2';
+import { avatarOf } from '../core/avatar.js?v=20261111-2';
+import { avatarSvg } from './avatar-svg.js?v=20261111-2';
+import { regionPriorities } from '../core/society-engine.js?v=20261111-2';
 
 const weeks = count => `${count} ${count === 1 ? 'settimana' : 'settimane'}`;
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -645,12 +647,15 @@ export function liveVoteOffer(state) {
   const limit = today ? advanceDays(today, -14) : '';
   const left = state.game.flags?.aulaProgress;
   const resumeOf = id => left?.voteId === id ? { shown: left.shown, total: left.total } : null;
+  // A vote the player cast on an open floor is offered again only as a live sitting left half way (the count goes on from where it was); a simulated one has already told its result.
+  const liveId = state.game.flags?.aulaLive ?? null;
+  const offered = (vote, id) => !vote.floorKey || liveId === id || left?.voteId === id;
   // the chamber of the player (Camera or Senato): a vote the game already decided, held in the last two weeks
   const parliament = state.parliament;
   if (parliament?.player) {
     const chamber = parliament.player.chamber;
-    const vote = voteCatalog(parliament).find(item => item.chamber === chamber && item.id && !seen.has(item.id) && (!item.date || !today || item.date <= today) && (!item.date || !limit || item.date >= limit) && (item.byGroup?.length ?? 0) > 0);
-    if (vote) return { id: vote.id, kind: 'nazionale', chamber, assembly: chamber, label: vote.label ?? vote.title ?? 'Votazione in Aula', date: vote.date ?? null, secret: Boolean(vote.secret), resume: resumeOf(vote.id) };
+    const vote = voteCatalog(parliament).find(item => item.chamber === chamber && item.id && !seen.has(item.id) && offered(item, item.id) && (!item.date || !today || item.date <= today) && (!item.date || !limit || item.date >= limit) && (item.byGroup?.length ?? 0) > 0);
+    if (vote) return { id: vote.id, kind: 'nazionale', chamber, assembly: chamber, label: vote.label ?? vote.title ?? 'Votazione in Aula', date: vote.date ?? null, secret: Boolean(vote.secret), resume: resumeOf(vote.id), cast: Boolean(vote.floorKey || liveId === vote.id) };
   }
   // the council, the provincial or regional council, the European Parliament of the institutions of the player: an act closed with a vote of the groups (the giunta does not vote in an Aula)
   for (const inst of state.local?.institutions ?? []) {
@@ -658,9 +663,9 @@ export function liveVoteOffer(state) {
     for (const act of [...(inst.acts ?? [])].reverse()) {
       const vote = act.votes?.at(-1);
       const key = `local:${inst.id}|${act.id}`;
-      if (!vote?.byGroup?.length || vote.organ === 'giunta' || !act.closedAt || seen.has(key)) continue;
+      if (!vote?.byGroup?.length || vote.organ === 'giunta' || !act.closedAt || seen.has(key) || !offered(vote, key)) continue;
       if (today && (act.closedAt > today || (limit && act.closedAt < limit))) continue;
-      return { id: key, kind: 'locale', local: `${inst.id}|${act.id}`, chamber: null, assembly: inst.kind, institution: LOCAL_ASSEMBLIES[inst.kind] ?? 'Assemblea', place: inst.name ?? '', label: act.title ?? 'Votazione in Aula', date: act.closedAt, secret: false, resume: resumeOf(key) };
+      return { id: key, kind: 'locale', local: `${inst.id}|${act.id}`, chamber: null, assembly: inst.kind, institution: LOCAL_ASSEMBLIES[inst.kind] ?? 'Assemblea', place: inst.name ?? '', label: act.title ?? 'Votazione in Aula', date: act.closedAt, secret: false, resume: resumeOf(key), cast: Boolean(vote.floorKey) };
     }
   }
   return null;
@@ -670,7 +675,7 @@ function liveVoteBand(state) {
   if (!offer) return '';
   const where = offer.kind === 'locale' ? `${offer.institution}${offer.place ? ` · ${offer.place}` : ''}` : 'VOTAZIONE IN AULA';
   const control = offer.kind === 'locale' ? `data-aula-local="${esc(offer.local)}"` : `data-aula-open="${esc(offer.id)}" data-aula-chamber="${esc(offer.chamber)}"`;
-  return `<section class="aula-live" data-aula-live data-aula-kind="${esc(offer.kind)}" aria-label="Votazione in Aula"><div><span class="section-kicker">${esc(offer.kind === 'locale' ? where.toUpperCase() : where)}${offer.date ? ` · ${esc(formatDate(offer.date).toUpperCase())}` : ''}</span><strong>${esc(offer.label)}</strong><small>${offer.secret ? 'Voto segreto: ' : ''}Il presidente di turno aprirà la seduta e i seggi voteranno uno dopo l’altro. L’esito si saprà solo alla fine.</small>${offer.resume ? `<small data-aula-resume>Ripresa dal punto in cui l’hai lasciata: ${offer.resume.shown} seggi su ${offer.resume.total}.</small>` : ''}</div><div class="aula-live-actions"><button type="button" class="primary-button aula-follow" ${control} data-aula-live-key="${esc(offer.id)}" data-aula-follow="${esc(offer.id)}">SEGUI LA VOTAZIONE IN AULA</button><button type="button" class="ghost-button" data-aula-dismiss="${esc(offer.id)}">Non seguire</button></div></section>`;
+  return `<section class="aula-live" data-aula-live data-aula-kind="${esc(offer.kind)}" aria-label="Votazione in Aula"><div><span class="section-kicker">${esc(offer.kind === 'locale' ? where.toUpperCase() : where)}${offer.date ? ` · ${esc(formatDate(offer.date).toUpperCase())}` : ''}</span><strong>${esc(offer.label)}</strong><small>${offer.secret ? 'Voto segreto: ' : ''}${offer.cast ? 'Hai già votato: i seggi votano uno dopo l’altro e l’esito si saprà solo alla fine.' : 'Il presidente di turno aprirà la seduta e i seggi voteranno uno dopo l’altro. L’esito si saprà solo alla fine.'}</small>${offer.resume ? `<small data-aula-resume>Ripresa dal punto in cui l’hai lasciata: ${offer.resume.shown} seggi su ${offer.resume.total}.</small>` : ''}</div><div class="aula-live-actions"><button type="button" class="primary-button aula-follow" ${control} data-aula-live-key="${esc(offer.id)}" data-aula-follow="${esc(offer.id)}">${offer.cast ? 'RIPRENDI LA DIRETTA' : 'SEGUI LA VOTAZIONE IN AULA'}</button><button type="button" class="secondary-button aula-skip" data-aula-dismiss="${esc(offer.id)}">Non seguire</button></div></section>`;
 }
 export function renderHeadquarters(state, options = {}) {
   const gc = gameContext(state);
@@ -688,6 +693,7 @@ export function renderHeadquarters(state, options = {}) {
   const upcoming = upcomingElections(game)[0];
   return `<div class="hq hqc">${endedBanner(state, gc)}
     ${commandHeader(state, gc, options)}
+    ${floorBand(openVotesOf(state), id => state.game.flags?.floorMode?.id === id ? state.game.flags.floorMode.mode : null)}
     ${liveVoteBand(state)}
     ${resourcesBar(state, gc)}
     ${prioritiesBand(state, gc, expanded)}
