@@ -6,14 +6,13 @@
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const BALLOT_LABELS = Object.freeze({ favorevole: 'Favorevole', contrario: 'Contrario', astenuto: 'Astenuto' });
 const LINE_LABELS = Object.freeze({ favorevole: 'a favore', contrario: 'contro', astenuto: 'per l’astensione' });
-const whereOf = vote => `${vote.assemblyName}${vote.place ? ` · ${vote.place}` : ''}`;
 
 // The notice of an open vote, with the two ways to attend it: on Home, in the bill's card, in the act's card. It names the measure and the assembly; it never tells a result (there is none yet).
 export function floorOffer(vote, { mode = null, compact = false } = {}) {
   const resume = mode ? `<small data-floor-resume>${mode === 'diretta' ? 'Avevi scelto la diretta: la seduta riprende dal tuo voto.' : 'Avevi scelto la simulazione: manca solo il tuo voto.'}</small>` : '';
   const text = compact ? '' : `<small>${esc(vote.summary)}</small>`;
   return `<section class="floor-offer${compact ? ' is-compact' : ''}" data-floor-offer="${esc(vote.id)}" data-floor-scope="${esc(vote.scope)}" aria-label="Votazione aperta">
-    <div><span class="section-kicker">VOTAZIONE APERTA · ${esc(vote.reading.toUpperCase())}</span><b class="floor-where">${esc(whereOf(vote).toUpperCase())}</b><strong>${esc(vote.title)}</strong>${text}<small>${esc(vote.kindLabel)} · Proponente: ${esc(vote.proposer)}. L’Aula attende il tuo voto: Favorevole, Contrario o Astenuto. La settimana non si chiude finché non hai votato.</small>${resume}</div>
+    <div><span class="section-kicker"><span>Votazione aperta</span> · <span>${esc(vote.reading)}</span></span><b class="floor-where"><span>${esc(vote.assemblyName)}</span>${vote.place ? ` · <span>${esc(vote.place)}</span>` : ''}</b><strong>${esc(vote.title)}</strong>${text}<small class="floor-meta"><span>${esc(vote.kindLabel)}</span> · <span>Proponente:</span> <b>${esc(vote.proposer)}</b></small><small>L’Aula attende il tuo voto: Favorevole, Contrario o Astenuto. La settimana non si chiude finché non hai votato.</small>${resume}</div>
     <div class="floor-offer-actions">${vote.deferred ? '' : `<button type="button" class="primary-button floor-live" data-floor-open="${esc(vote.id)}" data-floor-mode="diretta">SEGUI IN DIRETTA</button>`}<button type="button" class="${vote.deferred ? 'primary-button floor-live' : 'secondary-button'}" data-floor-open="${esc(vote.id)}" data-floor-mode="simulata">${vote.deferred ? 'ESPRIMI IL TUO VOTO' : 'SIMULA VOTAZIONE'}</button></div>
   </section>`;
 }
@@ -51,7 +50,7 @@ function resultHtml(vote, out) {
   const voted = Number(result.yes ?? 0) + Number(result.against ?? 0) + Number(result.abstain ?? 0);
   return `<p class="floor-outcome ${result.passed ? 'is-yes' : 'is-no'}" data-floor-outcome="${result.passed ? 'approvato' : 'respinto'}">${result.passed ? 'APPROVATO' : 'RESPINTO'}</p>
     <div class="aula-board floor-board">${cell('yes', 'Favorevoli', result.yes, 'is-yes')}${cell('against', 'Contrari', result.against, 'is-no')}${cell('abstain', 'Astenuti', result.abstain, 'is-abs')}${cell('absent', 'Assenti', absent, 'is-absent')}${cell('voted', 'Hanno votato', voted, 'is-voted')}${cell('total', 'Seggi', result.total, 'is-total')}</div>
-    <p class="floor-mine" data-floor-mine="${esc(out.choice)}">Il tuo voto: <b>${esc(BALLOT_LABELS[out.choice])}</b>${result.decisive ? ' — decisivo' : ''}. ${result.needed ? `Voti favorevoli necessari: ${Number(result.needed)}.` : ''}</p>`;
+    <p class="floor-mine" data-floor-mine="${esc(out.choice)}"><span>Il tuo voto:</span> <b>${esc(BALLOT_LABELS[out.choice])}</b>${result.decisive ? ' <span>— decisivo.</span>' : ''} ${result.needed ? `<span>Voti favorevoli necessari: ${Number(result.needed)}.</span>` : ''}</p>`;
 }
 
 // Opens the sitting. `cast(choice)` counts the vote in the game (the store) and returns what the store returns; `aulaOf(out)` gives the Aula of the vote just counted (null when the assembly has no
@@ -67,8 +66,8 @@ export function openFloor(vote, { mode = 'simulata', motion = 'full', cast, aula
   root.dataset.floorId = vote.id; root.dataset.floorMode = live ? 'diretta' : 'simulata'; root.dataset.floorPhase = 'seduta'; root.dataset.floorAssembly = vote.assembly;
   const content = vote.content.length ? `<dl class="floor-content">${vote.content.map(item => `<div><dt>${esc(item.label)}</dt><dd>${esc(item.value)}</dd></div>`).join('')}</dl>` : '';
   const choices = Object.entries(BALLOT_LABELS).map(([id, label]) => `<button type="button" class="floor-choice is-${id}" data-floor-choice="${id}" aria-pressed="false">${label}</button>`).join('');
-  root.innerHTML = `<div class="aula-window floor-window"><header><div><span class="section-kicker">${live ? 'IN DIRETTA' : vote.deferred ? 'VOTO DI FIDUCIA' : 'VOTAZIONE SIMULATA'} · ${esc(vote.reading.toUpperCase())}</span><p class="floor-assembly" data-floor-assembly-name>${esc(vote.assemblyName.toUpperCase())}</p><small>${esc([vote.hall, vote.place].filter(Boolean).join(' · '))}</small></div><button type="button" class="ghost-button" data-floor-close>Chiudi</button></header>
-    <section class="floor-text"><span class="floor-kind">${esc(vote.kindLabel)}</span><h2 id="floor-title">${esc(vote.title)}</h2><p class="floor-summary">${esc(vote.summary)}</p>${content}<p class="floor-proposer">Proponente: <b>${esc(vote.proposer)}</b></p></section>
+  root.innerHTML = `<div class="aula-window floor-window"><header><div><span class="section-kicker"><span>${live ? 'In diretta' : vote.deferred ? 'Voto di fiducia' : 'Votazione simulata'}</span> · <span>${esc(vote.reading)}</span></span><p class="floor-assembly" data-floor-assembly-name>${esc(vote.assemblyName)}</p><small>${esc(vote.hall)}${vote.place ? ` · ${esc(vote.place)}` : ''}</small></div><button type="button" class="ghost-button" data-floor-close>Chiudi</button></header>
+    <section class="floor-text"><span class="floor-kind">${esc(vote.kindLabel)}</span><h2 id="floor-title">${esc(vote.title)}</h2><p class="floor-summary">${esc(vote.summary)}</p>${content}<p class="floor-proposer"><span>Proponente:</span> <b>${esc(vote.proposer)}</b></p></section>
     <ol class="aula-said floor-said" aria-live="polite"></ol>
     <section class="floor-ballot" data-floor-ballot hidden><h3>IL TUO VOTO</h3><p>Voti di persona: scegli e conferma. L’astensione è un voto espresso, non un’assenza.</p><div class="floor-choices" role="group" aria-label="Il tuo voto">${choices}</div><p class="floor-hint" data-floor-hint>Il tuo gruppo è orientato a votare ${esc(LINE_LABELS[vote.line] ?? vote.line)}: la scelta resta tua.</p><div class="floor-confirm"><button type="button" class="primary-button" data-floor-confirm disabled>CONFERMA IL VOTO</button><small data-floor-picked>Nessun voto scelto.</small></div></section>
     <section class="floor-result" data-floor-result hidden></section></div>`;

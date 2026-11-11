@@ -44,7 +44,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   await wait(() => evaluate(`Boolean(document.querySelector('.aula-overlay'))`), 8000);
   assert.equal(await evaluate(`document.querySelector('.aula-overlay').dataset.aulaMode`), 'storico', 'Dallo storico si rivede l’esito: è distinto dalla diretta.');
   assert.equal(await evaluate(`document.querySelector('.aula-overlay').dataset.aulaFinal`), '1', 'Lo storico mostra già l’esito ufficiale.');
-  assert.ok(/STORICO · VOTAZIONE CONCLUSA/.test(await evaluate(`document.querySelector('.aula-overlay .section-kicker').textContent`)), 'Ed è dichiarato concluso.');
+  assert.ok(/Storico · Votazione conclusa/.test(await evaluate(`document.querySelector('.aula-overlay .section-kicker').textContent`)), 'Ed è dichiarato concluso.');
   assert.equal(await evaluate(`Boolean(document.querySelector('[data-aula-pause]')) && !document.querySelector('[data-aula-pause]').hidden`), false, 'Nello storico non c’è nulla da mettere in pausa.');
   await click('[data-aula-close]');
   assert.equal(await evaluate(`Boolean(document.querySelector('.aula-overlay'))`), false);

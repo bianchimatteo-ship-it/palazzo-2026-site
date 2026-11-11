@@ -21,7 +21,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
     await evaluate(`location.hash = '#panoramica'; true`); await pause(900);
     await wait(() => has('[data-floor-offer]'), 20000);
     const home = await evaluate(`(() => { const band = document.querySelector('[data-floor-offer]'); const skip = document.querySelector('[data-aula-dismiss]'); return { text: band.textContent.replace(/\\s+/g, ' '), live: band.querySelector('[data-floor-mode="diretta"]')?.textContent.trim(), sim: band.querySelector('[data-floor-mode="simulata"]')?.textContent.trim(), skipClass: skip?.className ?? null, skipOpacity: skip ? getComputedStyle(skip).opacity : null }; })()`);
-    assert.ok(home.text.includes(open.title) && home.text.includes(open.assemblyName.toUpperCase()), `${width}px: la Home dice quale provvedimento si vota e dove (${open.title} · ${open.assemblyName}).`);
+    assert.ok(home.text.includes(open.title) && home.text.toLowerCase().includes(open.assemblyName.toLowerCase()), `${width}px: la Home dice quale provvedimento si vota e dove (${open.title} · ${open.assemblyName}).`);
     assert.equal(home.live, 'SEGUI IN DIRETTA'); assert.equal(home.sim, 'SIMULA VOTAZIONE');
     assert.ok(!/(approvata|respinta) con|\d+ (sì|favorevoli|contrari)|soglia/i.test(home.text), 'La Home non anticipa nessun esito.');
     if (home.skipClass) { assert.ok(/secondary-button/.test(home.skipClass) && home.skipOpacity === '1', '«Non seguire» è un pulsante secondario ben visibile, non grigio.'); }
@@ -36,8 +36,8 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   await viewport(1440, 900, false);
   await click('[data-floor-open][data-floor-mode="diretta"]');
   await wait(() => has('.floor-overlay'), 8000);
-  const sitting = await evaluate(`({ assembly: document.querySelector('[data-floor-assembly-name]').textContent, size: parseFloat(getComputedStyle(document.querySelector('[data-floor-assembly-name]')).fontSize), title: document.querySelector('#floor-title').textContent, content: document.querySelectorAll('.floor-content div').length, mode: document.querySelector('.floor-overlay').dataset.floorMode })`);
-  assert.equal(sitting.assembly, open.assemblyName.toUpperCase(), 'L’assemblea è scritta per esteso.'); assert.ok(sitting.size >= 20, `E in grande (${sitting.size}px).`);
+  const sitting = await evaluate(`({ assembly: document.querySelector('[data-floor-assembly-name]').textContent, upper: getComputedStyle(document.querySelector('[data-floor-assembly-name]')).textTransform, size: parseFloat(getComputedStyle(document.querySelector('[data-floor-assembly-name]')).fontSize), title: document.querySelector('#floor-title').textContent, content: document.querySelectorAll('.floor-content div').length, mode: document.querySelector('.floor-overlay').dataset.floorMode })`);
+  assert.equal(sitting.assembly.toLowerCase(), open.assemblyName.toLowerCase(), 'L’assemblea è scritta per esteso.'); assert.ok(sitting.size >= 20 && sitting.upper === 'uppercase', `E in grande, maiuscolo (${sitting.size}px).`);
   assert.equal(sitting.title, open.title); assert.ok(sitting.content >= 1, 'Il contenuto del provvedimento si legge.'); assert.equal(sitting.mode, 'diretta');
   await wait(() => evaluate(`document.querySelector('.floor-overlay')?.dataset.floorPhase === 'voto'`), 20000);
   assert.ok(await evaluate(`/Presidente/.test(document.querySelector('.floor-said').textContent)`), 'Il Presidente apre la seduta.');
@@ -53,7 +53,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   assert.equal(await S(`return store.openVotes().length`), 0, 'Confermato il voto la votazione non è più aperta.');
   assert.equal(await evaluate(`document.querySelectorAll('.aula-overlay').length`), 1);
   assert.equal(await evaluate(`document.querySelector('.aula-overlay').dataset.aulaMode`), 'diretta');
-  assert.ok(/ASTENUTO/.test(await evaluate(`document.querySelector('[data-aula-mine]')?.textContent ?? ''`)), 'Il voto del giocatore è evidenziato.');
+  assert.ok(/astenuto/i.test(await evaluate(`document.querySelector('[data-aula-mine]')?.textContent ?? ''`)), 'Il voto del giocatore è evidenziato.');
   const final = await S(`const v = store.getState().parliament.laws.find(l => l.id === ${JSON.stringify(open.lawId)}).votes.at(-1); return { yes: v.yes, against: v.against, abstain: v.abstain, total: v.total }`);
   // while the count is under way: only the votes already cast, never the final numbers, never the outcome
   const mid = await evaluate(`({ final: document.querySelector('.aula-overlay').dataset.aulaFinal, board: Object.fromEntries([...document.querySelectorAll('[data-aula-count]')].map(el => [el.dataset.aulaCount, Number(el.textContent)])), said: document.querySelector('.aula-said').textContent, shown: Number(document.querySelector('.aula-overlay').dataset.aulaShown) })`);
