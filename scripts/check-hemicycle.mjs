@@ -94,13 +94,16 @@ let date = '2026-09-25';
 const later = days => { const value = new Date(`${date}T12:00:00`); value.setDate(value.getDate() + days); date = value.toISOString().slice(0, 10); return date; };
 // A Government first (its confidence is a roll-call vote with a breakdown by group), then a bill of the majority.
 let state = engine.formGovernment(parliament, ['cam-xix-01', 'cam-xix-03', 'cam-xix-04', 'cam-xix-09', 'senato-xix-gruppo-85', 'senato-xix-gruppo-33', 'senato-xix-gruppo-56', 'senato-xix-gruppo-92'], later(7));
-state = engine.voteGovernmentConfidence(state, later(1));
+// (the player's own ballot on a confidence vote is always expressed: without it the Chambers do not count the vote)
+assert.throws(() => engine.voteGovernmentConfidence(state, later(1)), /manca il tuo voto/, 'Senza il voto del giocatore la fiducia non si conta.');
+state = engine.setConfidenceVote(state, 'favorevole');
+state = engine.voteGovernmentConfidence(state, later(0));
 let result = engine.proposeLaw(state, { title: 'Riforma di prova delle commissioni', category: 'Pubblica amministrazione', summary: 'Proposta simulata per il test delle commissioni.', currentDate: date });
 state = result.parliament;
 const lawId = result.law.id;
 state = engine.advanceLaw(state, lawId, 'present', later(70)).parliament;
 state = engine.advanceLaw(state, lawId, 'complete-commission', later(70)).parliament;
-state = { ...state, laws: state.laws.map(law => law.id === lawId ? { ...law, snipers: true } : law) };
+state = { ...state, laws: state.laws.map(law => law.id === lawId ? { ...law, snipers: true, pendingPlayerVote: 'favorevole' } : law) };
 const voted = engine.advanceLaw(state, lawId, 'vote', later(70));
 state = voted.parliament;
 const vote = voted.vote;
