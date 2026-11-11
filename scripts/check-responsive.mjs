@@ -38,6 +38,8 @@ try {
   const base = `http://127.0.0.1:${PORT}/`;
   await send('Page.enable');
   await send('Runtime.enable');
+  // (a vote of an assembly where the player sits waits for the player's own ballot: the tour that closes weeks through the store has a test voter, as the other browser tests do)
+  await send('Page.addScriptToEvaluateOnNewDocument', { source: 'globalThis.__testVoter = true;' });
   await viewport(1280, 800, false);
   await send('Page.navigate', { url: base });
   await waitFor(() => evaluate('Boolean(document.querySelector("[data-menu], .main-menu, .language-gate"))'));

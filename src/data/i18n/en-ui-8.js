@@ -6347,6 +6347,7 @@ export const PHRASES = [
   ["Cerca la sintesi tra i ministri sulle opere", "Seek a synthesis between the ministers on the works"],
   ["Chiedi coperture e cronoprogramma di ogni opera", "Ask for the funding and schedule of each work"],
   ["Richiama tutti alle priorità condivise", "Call everyone back to the shared priorities"],
+  ["La partita in corso si salva da sola; qui conservi fino a 5 salvataggi tuoi e li porti su altri dispositivi con un file. Il gioco non elimina mai un salvataggio fatto da te; le copie automatiche (una per carriera, al massimo 5) non occupano i tuoi slot: la più vecchia passa tra le copie di sicurezza.", "The game in progress saves itself; here you keep up to 5 saves of your own and carry them to other devices with a file. The game never deletes a save you made; automatic copies (one per career, at most 5) do not use your slots: the oldest moves to the safety copies."],
   ["Votazione aperta", "Open vote"],
   ["Chiama nominale", "Roll call"],
   ["Seconda convocazione", "Second call"],

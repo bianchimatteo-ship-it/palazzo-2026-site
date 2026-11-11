@@ -119,7 +119,7 @@ export const REFS = Object.freeze({
 });
 export const BODIES = Object.freeze({ associazioni: ['Società civile', 'Civil society'], cantiere: ['Opera pubblica', 'Public works'], sede: ['Partito', 'Party'], commissione: ['Commissione parlamentare', 'Parliamentary committee'], redazione: ['Stampa', 'Press'], consiglio: ['Governo', 'Government'] });
 // ---------- the citizens in the square: a scene of its own ----------
-// «Incontra i cittadini» is not a meeting of committees: it is the market square, the neighbourhood, ordinary people with a daily problem and no agenda. The setting is the square (`piazza`), the people are
+// «Incontra i cittadini» is not a meeting of committees: it is the market square, the neighbourhood, ordinary people with a daily problem and no agenda. The setting is the market (`mercato`), the people are
 // passers-by and shoppers, the voice is plain and the problems are the ones of the street, the market, the bus stop. `ACTIVITY_SCENES.associazioni` keeps the civic hall, the delegates and the organised
 // discussion for «Incontra le associazioni».
 export const CITIZENS = Object.freeze({

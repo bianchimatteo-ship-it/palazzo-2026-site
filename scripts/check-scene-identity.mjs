@@ -114,14 +114,14 @@ console.log(`  Scelte: ${topics.length} temi del dibattito × 15 scelte, ${famil
 // ---------- 3. citizens and associations ----------
 const mkAct = (activityId) => scenes.createActivityScene({ id: `x-${activityId}`, seed: 'x1', sceneKey: 'associazioni', activityId, player, playerAvatar: null, prefer: 'casa' });
 const assoc = mkAct('associazioni'), citizens = mkAct('cittadini');
-assert.equal(assoc.setting, 'sala'); assert.equal(citizens.setting, 'piazza', 'I cittadini si incontrano in piazza, non in sala civica.');
+assert.equal(assoc.setting, 'sala'); assert.equal(citizens.setting, 'mercato', 'I cittadini si incontrano in piazza, non in sala civica.');
 assert.notEqual(assoc.place.label, citizens.place.label);
-assert.ok(room.ROOMS.includes('piazza') && room.ROOMS.includes('sala'), 'Due sfondi diversi.');
+assert.ok(room.ROOMS.includes('mercato') && room.ROOMS.includes('sala'), 'Due sfondi diversi.');
 const nodeOf = (scene, id) => { scene.nodeId = id; return scenes.activityNode(scene); };
 for (const id of ['apertura', 'q1', 'q2']) assert.notEqual(nodeOf(assoc, id).text, nodeOf(citizens, id).text, `${id}: parole diverse.`);
 const svg = scene => { const node = nodeOf(scene, 'q1'); return art.renderStageSvg(scene, scenes.activityStage(scene, node), node, {}); };
 const squareSvg = svg(citizens), hallSvg = svg(assoc);
-assert.ok(squareSvg.includes('data-room="piazza"') && hallSvg.includes('data-room="sala"'), 'Il disegno è della sede giusta.');
+assert.ok(squareSvg.includes('data-room="mercato"') && hallSvg.includes('data-room="sala"'), 'Il disegno è della sede giusta.');
 assert.ok(squareSvg.includes('INCONTRO CON I CITTADINI') && !squareSvg.includes('COMITATI E ASSOCIAZIONI') && hallSvg.includes('COMITATI E ASSOCIAZIONI'), 'Striscioni diversi.');
 assert.ok(!/<g transform="translate\(\d+,2(26|44)\)"><rect[^>]*width="30"/.test(squareSvg), 'In piazza non ci sono file di sedie.');
 assert.notEqual(squareSvg.length, hallSvg.length);

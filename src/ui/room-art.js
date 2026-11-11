@@ -19,7 +19,7 @@ const BACK = {
     + `<g>${R(20, 84, 74, 70, '#f4f1e6', 'stroke="#8f8573"')}<path d="M30 104H80M30 118H72M30 132H84" stroke="#3a6b72" stroke-width="3"/>${R(20, 154, 3, 56, '#6b5a40')}${R(91, 154, 3, 56, '#6b5a40')}</g>`,
   // the market square of the neighbourhood (the citizens): open sky, the facades of the houses, the stalls with their striped awnings and crates, trees, a fountain, bunting, passers-by with shopping bags;
   // nothing here is a hall: no chairs in rows, no table, no committee banner
-  piazza: scene => `${R(-200, -100, 1040, 330, '#bfdcec')}<path d="M-200 120C-80 96 80 112 220 92S470 84 640 104 840 100 840 100V230H-200Z" fill="#d8e5cf" opacity=".7"/>`
+  mercato: scene => `${R(-200, -100, 1040, 330, '#bfdcec')}<path d="M-200 120C-80 96 80 112 220 92S470 84 640 104 840 100 840 100V230H-200Z" fill="#d8e5cf" opacity=".7"/>`
     + `${[[-20, 60, 120, 150, '#e3c79a'], [100, 40, 110, 170, '#d99f7c'], [214, 70, 100, 140, '#ecd7a8'], [318, 48, 120, 162, '#c9b08a'], [442, 62, 104, 148, '#e6b98f'], [550, 36, 130, 174, '#dcc79c']].map(([x, y, w, h, c]) => `<g>${R(x, y, w, h, c)}${R(x, y, w, 8, 'rgba(0,0,0,.12)')}${[0, 1].map(r => [0, 1, 2].map(k => `${R(x + 14 + k * (w - 28) / 3, y + 22 + r * 46, 20, 28, '#7aa6bd')}${R(x + 14 + k * (w - 28) / 3, y + 22 + r * 46, 20, 28, 'none', 'stroke="#6b5a40" stroke-width="2"')}`).join('')).join('')}</g>`).join('')}`
     + `${R(-200, 214, 1040, 200, '#b7ab97')}${Array.from({ length: 26 }, (_, i) => R(-40 + i * 34, 220 + (i % 4) * 22, 22, 3, 'rgba(0,0,0,.10)')).join('')}`
     + `<path d="M-10 66Q80 94 170 70T350 72T530 70T650 66" stroke="#8a6a4a" stroke-width="2" fill="none"/>${Array.from({ length: 12 }, (_, i) => `<path d="M${14 + i * 54} ${72 + Math.sin(i) * 4}l9 18l9 -18z" fill="${['#cd2b35', '#f5f3ec', '#1f8a4c', '#f2c300'][i % 4]}"/>`).join('')}`
@@ -58,7 +58,7 @@ const BACK = {
 // ---------- the front layers: the table in front of whoever sits ----------
 const FRONT = {
   sala: () => '',
-  piazza: () => `<g>${R(-200, 328, 1040, 40, '#a89a82', 'opacity=".5"')}</g>`,
+  mercato: () => `<g>${R(-200, 328, 1040, 40, '#a89a82', 'opacity=".5"')}</g>`,
   cantiere: () => `<g>${R(-200, 322, 1040, 60, '#7b6948', 'opacity=".55"')}</g>`,
   sede: () => `<g>${R(70, 270, 560, 52, '#7a5a3c')}${R(70, 270, 560, 8, '#a07f57')}${[130, 250, 350, 470].map((x, i) => R(x, 278, 34, 22, '#f1ecdd', 'stroke="#8f8573"')).join('')}</g>`,
   commissione: () => `<g>${R(90, 272, 540, 50, '#6a4a30')}${R(90, 272, 540, 8, '#9a7752')}${[150, 300, 430].map(x => R(x, 282, 44, 8, '#f4efe0')).join('')}</g>`,

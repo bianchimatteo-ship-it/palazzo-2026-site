@@ -28,7 +28,7 @@ export const sceneKeyOf = activityId => SCENE_KEYS.find(key => ACTIVITY_SCENES[k
 export const activityHasScene = activityId => Boolean(sceneKeyOf(activityId));
 // «Incontra i cittadini» is a scene of its own: the market square with passers-by and a daily problem each, not the civic hall with delegates (data/activity-scene-guests.js CITIZENS). The rest of the engine is the same.
 const isCitizens = scene => scene.sceneKey === 'associazioni' && scene.activityId === 'cittadini';
-export const CITIZENS_SETTING = 'piazza';
+export const CITIZENS_SETTING = 'mercato';
 // What the player says for an approach in a family of topics: the words of the family (APPROACH_LABELS) with the id and the stat of the approach of the kind of scene; the generic wording where a family has none.
 const approachText = (spec, sceneKey, familyId, approach) => {
   const index = spec.approaches.findIndex(item => item.id === approach.id);
@@ -184,7 +184,7 @@ registerSceneKind(SCENE_KIND, { node: activityNode, choose: activityChoose, effe
 // Where the people stand: the building site and the civic hall standing, the other four rooms around a table. The player arrives from the left in the opening; everyone else is already there.
 const LAYOUT = {
   sala: { posture: 'stand', giocatore: [150, 300, 1], ospite1: [452, 296, -1], ospite2: [548, 300, -1] },
-  piazza: { posture: 'stand', giocatore: [130, 304, 1], ospite1: [330, 300, -1], ospite2: [470, 304, -1] },
+  mercato: { posture: 'stand', giocatore: [130, 304, 1], ospite1: [330, 300, -1], ospite2: [470, 304, -1] },
   cantiere: { posture: 'stand', giocatore: [150, 302, 1], ospite1: [420, 298, -1], ospite2: [536, 302, -1] },
   sede: { posture: 'sit', giocatore: [150, 300, 1], ospite1: [460, 292, -1], ospite2: [556, 296, -1] },
   commissione: { posture: 'sit', giocatore: [150, 300, 1], ospite1: [460, 292, -1], ospite2: [556, 296, -1] },
