@@ -9,7 +9,6 @@
 import { defaultAvatarFor, genderOf, normalizeAvatar } from './avatar.js?v=20261110-24';
 import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261110-24';
 import { line, formatOf } from './studio-lines.js?v=20261110-24';
-import { DEBATE_CHOICES } from '../data/studio-lines.js?v=20261110-24';
 import { createRallyScene, createVoteScene, rallyChoose, rallyEffects, rallyNode, rallyProgress, voteChoose, voteNode, voteProgress } from './rally-scene.js?v=20261110-24';
 export { createRallyScene, createVoteScene, formatOf };
 
@@ -36,6 +35,9 @@ export const ASKS = Object.freeze({ conti: { label: 'Chiedi come finanzia le pro
 export const CLOSINGS = Object.freeze({ sobrio: { label: 'Chiusura sobria', detail: 'Ringrazi e riassumi con misura.' }, appello: { label: 'Appello agli elettori', detail: 'Parli al Paese: carisma e visione.' }, sfida: { label: 'Sfida finale', detail: 'Ti rivolgi all’avversario: forte, ma divisivo.' } });
 // The choices of a beat, in the words of the topic being discussed (data/studio-lines.js DEBATE_CHOICES): a health debate offers waiting lists, hospitals and funding, an economy debate taxes, firms and jobs.
 // The id and the evaluation are those of the engine (the generic wording below is the fallback for a topic the catalogue does not know).
+let DEBATE_CHOICES = {};
+// (registered by data/debate-choices.js, which is loaded with the scene page and not at start)
+export const setDebateChoices = table => { DEBATE_CHOICES = table; };
 const choicesFor = (group, base, topicId) => Object.entries(base).map(([id, spec]) => { const own = DEBATE_CHOICES[topicId]?.[group]?.[id]; return [id, own ? own[0][0] : spec.label, false, own ? own[1][0] : spec.detail]; });
 // The television formats: three different studios (the stage draws each one with its own scenery, lights, cameras and audience) and the shows of the schedule that use them. The names are invented.
 export const SHOWS = Object.freeze({

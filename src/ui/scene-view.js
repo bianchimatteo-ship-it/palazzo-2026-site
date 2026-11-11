@@ -8,6 +8,7 @@ import { ROOMS } from './room-art.js?v=20261110-24';
 export const SCENE_ROOMS = ROOMS; // the rooms of the optional scenes register themselves when room-art.js is imported
 import { ACTIVITY_SCENES } from '../core/activity-scenes.js?v=20261110-24';
 import { esc } from './charts.js?v=20261110-24';
+import '../data/debate-choices.js?v=20261110-24';
 
 const KIND_LABELS = { risposta: 'Risposta', domanda: 'Domanda', replica: 'Replica', chiusura: 'Chiusura', saluto: 'Saluto', discorso: 'Discorso', contestazione: 'Contestazione' };
 const STYLE_LABELS = { ...Object.fromEntries([...Object.entries(STYLES), ...Object.entries(REPLIES), ...Object.entries(ASKS), ...Object.entries(CLOSINGS)].map(([id, spec]) => [id, spec.label])), caloroso: 'Saluto caloroso', sobrio: 'Saluto sobrio', locale: 'Saluto locale', combattivo: 'Apertura all’attacco', promessa: 'Dalle promesse', territorio: 'Dal territorio', attualita: 'Dall’attualità', governo: 'Dal Governo', proposta: 'Dalla proposta del partito', attacco: 'All’attacco', ascolta: 'Ascoltare', rispondi: 'Rispondere', prosegui: 'Proseguire', interrompi: 'Interrompere', appello: 'Appello al voto', impegno: 'Impegno pubblico', ringraziamento: 'Ringraziamento', coro: 'Slogan' };
