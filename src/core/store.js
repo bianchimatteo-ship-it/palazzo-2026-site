@@ -4238,7 +4238,7 @@ export const store = {
     const { events, ticker } = studioTicker(state, { topic: main.label, rivalName: label, rivalProgramLabels: rivalAreas });
     const tags = studioTags(state, { rivalTag: `Candidato · ${rival.partyLabel ?? state.world?.parties?.find(item => item.id === rival.partyId)?.label ?? 'Indipendente'}`, hostTag: 'Moderatore' });
     const scene = sceneWithStats(createDebateScene({
-      id, seed: `${campaign.seed}|${id}`, show: show.id, ticker, events, rivalProgramLabels: rivalAreas, weakProposal: proposalContext(state.game, { society: state.society }).weak?.title ?? null, player: { name: player?.displayName ?? 'Tu', tag: tags.player }, playerAvatar: avatarOf(player), rival: { id: rival.id, name: label, partyId: rival.partyId ?? null, tag: tags.rival }, host: { id: `conduttore-${hosts[hashSeed(id) % hosts.length]}`, name: hosts[hashSeed(id) % hosts.length], tag: tags.host },
+      id, seed: `${campaign.seed}|${id}`, show: show.id, ticker, events, rivalProgramLabels: rivalAreas, weakProposal: proposalContext(state.game, { society: state.society }).weak?.title ?? null, player: { name: player?.displayName ?? 'Tu', tag: tags.player }, playerAvatar: avatarOf(player), rival: { id: rival.id, name: label, gender: rival.gender ?? null, partyId: rival.partyId ?? null, tag: tags.rival }, host: { id: `conduttore-${hosts[hashSeed(id) % hosts.length]}`, name: hosts[hashSeed(id) % hosts.length], tag: tags.host },
       topic: main, secondTopic: second, salientTopic: campaign.nationalContext?.salientTopic ?? null, promises: promisesOf(state.game).filter(item => !['mantenuta', 'parzialmente-mantenuta', 'non-mantenuta', 'modificata'].includes(item.status) || item.status === 'non-mantenuta').map(item => ({ id: item.id, label: item.label, topic: topicOfArea(item.area), status: item.status, intervention: item.intervention, cost: item.cost })),
       credibility: quality.score, prep: campaign.preparationByTopic?.[main.id] ?? 0, rivalProgram: rivalProgram(state.world, rival.partyId), rivalReadiness: rival.campaignStats?.debateReadiness ?? 50, rivalAggression: 30 + hashSeed(`${rival.id}|aggressivita`) % 50, crisis: Boolean(campaign.crisis), campaignId: campaign.id, date: state.clock.currentDate
     }), { competence: (playerStat(state, 'experience') + playerStat(state, 'influence')) / 2, charisma: (playerStat(state, 'notoriety') + playerStat(state, 'reputation')) / 2 });
@@ -5685,7 +5685,10 @@ export const store = {
       advanceLaw({ ...state.parliament, laws: state.parliament.laws.map(item => item.id === lawId ? { ...item, pendingPlayerVote: 'favorevole' } : item) }, lawId, action, state.clock.currentDate);
       const spent = withTime(PARLIAMENT_TIME_COSTS.advanceLaw);
       const parliament = { ...spent.parliament, laws: spent.parliament.laws.map(item => item.id === lawId ? { ...item, floor: { key: floorKeyOf(item), chamber: item.currentChamber, stage: item.stage, openedAt: spent.clock.currentDate, own: true, action, line: 'favorevole' } } : item) };
-      return applyParliamentUpdate(spent, parliament, 'Votazione aperta: l’Aula attende il tuo voto');
+      const opened = applyParliamentUpdate(spent, parliament, 'Votazione aperta: l’Aula attende il tuo voto');
+      // (scripts that play without a page have no one to ask: their voter casts the ballot at once; a person in the game always votes on the open vote)
+      if (headlessVoter) { const open = openVotesOf(state).find(item => item.lawId === lawId); if (open) castOpenVoteIn(open.id, headlessVoter(open)); persist(); emit(); }
+      return opened;
     }
     const next = withTime(PARLIAMENT_TIME_COSTS.advanceLaw);
     const result = advanceLaw(withContactSupport(next.parliament, next.game?.contacts ?? [], lawId), lawId, action, next.clock.currentDate);

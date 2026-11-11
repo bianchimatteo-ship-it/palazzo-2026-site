@@ -4,7 +4,7 @@
 // what is drawn is the FINAL pose of the beat, so with the motion off or reduced, or in a scene resumed, the stage is already right.
 import { avatarColors, avatarParts, shade } from './avatar-svg.js?v=20261110-24';
 import { depthScale, STAGE_W, STAGE_H } from '../core/stage-script.js?v=20261110-24';
-import { defaultAvatarFor } from '../core/avatar.js?v=20261110-24';
+import { defaultAvatarFor, genderOf } from '../core/avatar.js?v=20261110-24';
 import { isEnglish, translateText } from '../core/i18n.js?v=20261110-24';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -25,7 +25,8 @@ export const gestureAngles = (name, posture) => GESTURES[name] ?? (posture === '
 // ---------- a character ----------
 // Local coordinates: the feet at (0, 0), the figure about 270 units tall, the shoulders at y = -200, the hips at y = -105. `pose` is the final pose of the beat.
 export function actorSvg(member, pose, uid, { speaking = false, expression = null } = {}) {
-  const avatar = member.avatar ?? defaultAvatarFor(member.id);
+  // a character without a saved avatar (an older scene): the stable default of its id, with the face of its gender when the data gives it (gender field, title or first name)
+  const avatar = member.avatar ?? (() => { const gender = genderOf(member); return gender ? { ...defaultAvatarFor(member.id), face: gender } : defaultAvatarFor(member.id); })();
   const parts = avatarParts(avatar, uid, { expression });
   const { skin, jacket } = avatarColors(avatar);
   const trousers = shade(jacket, -0.45), sleeve = shade(jacket, -0.06), forearm = shade(jacket, -0.14);
@@ -132,7 +133,10 @@ function studioFaccia(scene, uid, crowd) {
     if (!words.length) return '';
     const room = 128, size = 11.5, fits = text => text.length * size * 0.62 <= room;
     const full = words.join(' ');
-    const lines = fits(full) || words.length < 2 ? [full] : [words.slice(0, -1).join(' '), words.at(-1)];
+    // the surname (with its particle: «De Angelis», «Dalla Valle») stays whole on the second line
+    let cut = words.length - 1;
+    while (cut > 1 && /^(de|di|del|della|dal|dalla|da|la|lo|le|van|von|dei|degli|d’|dell’)$/i.test(words[cut - 1])) cut--;
+    const lines = fits(full) || words.length < 2 ? [full] : [words.slice(0, cut).join(' '), words.slice(cut).join(' ')];
     const rows = lines.length === 1 ? [[full, 281]] : [[lines[0], 272.5], [lines[1], 284.5]];
     const fontSize = lines.length === 1 ? size : 10.4;
     return rows.map(([text, y]) => `<text class="st-lectern-name" x="${x}" y="${y}" text-anchor="middle" font-size="${fontSize}" font-weight="800" letter-spacing=".3" fill="#fff" stroke="#0b1218" stroke-width="2.2" paint-order="stroke" stroke-linejoin="round"${text.length * fontSize * 0.62 > room ? ` textLength="${room}" lengthAdjust="spacingAndGlyphs"` : ''}>${esc(text)}</text>`).join('');

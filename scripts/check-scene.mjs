@@ -15,7 +15,7 @@ const FLOW = ['accetta', 'dati', 'continua', 'dati', 'continua', 'conti', 'conti
 const scene = make();
 assert.equal(scene.cast.length, 3, 'Giocatore, avversario e conduttore.');
 assert.deepEqual(scene.cast.find(item => item.role === 'giocatore').avatar, myAvatar, 'Il giocatore ha esattamente l’avatar scelto a inizio carriera.');
-const again = characterAvatar({ id: 'riv-1', role: 'rivale' });
+const again = characterAvatar({ id: 'riv-1', role: 'rivale', name: 'Luca Bianchi' });
 assert.deepEqual(again, scene.cast.find(item => item.role === 'rivale').avatar, 'Lo stesso avversario ha sempre lo stesso aspetto.');
 assert.notDeepEqual(characterAvatar({ id: 'riv-2', role: 'rivale' }), again, 'Avversari diversi hanno aspetti diversi.');
 assert.equal(characterAvatar({ id: 'conduttore-1', role: 'conduttore' }).jacket, 'antracite', 'Il conduttore è in giacca antracite.');

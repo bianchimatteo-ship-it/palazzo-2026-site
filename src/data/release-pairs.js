@@ -1,8 +1,12 @@
 // English phrase-book pairs of the last release pass (data/i18n/en-ui-8.js reads `ALL_PAIRS`): the guided programme editor, the days of the Quirinale and the rule on the parties, the government room, the live
 // votes of the assemblies, the party headquarters, the TV name plates and the tutorial. Format as in the phrase-book: [Italian as shown, English]; `#` a number, `{}` a free part.
 import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261110-24';
+import { DEBATE_PAIRS } from './studio-lines.js?v=20261110-24';
+import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261110-24';
 export const ALL_PAIRS = [
   ...GUEST_PAIRS,
+  ...DEBATE_PAIRS,
+  ...APPROACH_PAIRS,
   // ---- the guided programme editor ----
   ['SCRIVI UNA NUOVA PROPOSTA', 'WRITE A NEW PROPOSAL'], ['#/# nel programma', '#/# in the programme'], ['Le tue proposte (#)', 'Your proposals (#)'],
   ['Il programma è vuoto: scrivi la prima proposta qui sopra. Una proposta è una pagina del programma, non ancora una promessa.', 'The programme is empty: write the first proposal above. A proposal is a page of the programme, not yet a promise.'],

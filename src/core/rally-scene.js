@@ -9,6 +9,7 @@
 //
 // VOTE ('voto'): the player votes in his polling station — entrance, desk, booth, ballot folded, urn, exit. It decides nothing: the result of the election is the one of election-engine.js.
 import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261110-24';
+import { defaultAvatarFor, genderOf, normalizeAvatar } from './avatar.js?v=20261110-24';
 import { RALLY_CROWD_EXTRA, RALLY_EXTRA } from '../data/studio-lines.js?v=20261110-24';
 
 const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
@@ -48,8 +49,8 @@ export function createVoteScene({ id, seed, player, playerAvatar, electionLabel 
   const a = hashOf(`${seed}|scrutatore`) % names.length;
   const cast = [
     { id: 'giocatore', role: 'giocatore', name: player.name, avatar: playerAvatar, position: 'seggio' },
-    { id: 'scrutatore-1', role: 'scrutatore', name: names[a], x: 246, y: 270 },
-    { id: 'scrutatore-2', role: 'scrutatore', name: names[(a + 3) % names.length], x: 372, y: 270 }
+    // the scrutineers have an explicit gender (from the table of first names of the data) and the avatar follows it
+    ...[[1, names[a], 246], [2, names[(a + 3) % names.length], 372]].map(([n, name, x]) => { const gender = genderOf({ name }); return { id: `scrutatore-${n}`, role: 'scrutatore', name, gender, avatar: normalizeAvatar({ ...defaultAvatarFor(`${seed}|scrutatore-${n}`), face: gender }), x, y: 270 }; })
   ];
   return { id, kind: 'voto', setting: 'seggio', seed, date, status: 'active', nodeId: 'ingresso', prevNodeId: null, cast, place: { label: place.municipality ?? place.region ?? 'il tuo comune' }, electionLabel, topic: { id: 'voto', label: electionLabel }, audience: { mood: 50, history: [] }, scores: [], history: [], outcome: null };
 }

@@ -17,6 +17,17 @@ const BACK = {
     + `${Array.from({ length: 10 }, (_, i) => `<g transform="translate(${60 + (i % 5) * 54},${i < 5 ? 226 : 244})">${R(0, 0, 30, 6, '#b9ad94')}${R(2, 6, 3, 14, '#7c7260')}${R(25, 6, 3, 14, '#7c7260')}</g>`).join('')}`
     + `<g>${R(330, 176, 112, 8, '#7c5e3d')}${R(338, 184, 5, 36, '#5e472e')}${R(430, 184, 5, 36, '#5e472e')}${[350, 380, 410].map(x => `<ellipse cx="${x}" cy="172" rx="9" ry="5" fill="#f4efe0" stroke="#8f8573"/>`).join('')}</g>`
     + `<g>${R(20, 84, 74, 70, '#f4f1e6', 'stroke="#8f8573"')}<path d="M30 104H80M30 118H72M30 132H84" stroke="#3a6b72" stroke-width="3"/>${R(20, 154, 3, 56, '#6b5a40')}${R(91, 154, 3, 56, '#6b5a40')}</g>`,
+  // the market square of the neighbourhood (the citizens): open sky, the facades of the houses, the stalls with their striped awnings and crates, trees, a fountain, bunting, passers-by with shopping bags;
+  // nothing here is a hall: no chairs in rows, no table, no committee banner
+  piazza: scene => `${R(-200, -100, 1040, 330, '#bfdcec')}<path d="M-200 120C-80 96 80 112 220 92S470 84 640 104 840 100 840 100V230H-200Z" fill="#d8e5cf" opacity=".7"/>`
+    + `${[[-20, 60, 120, 150, '#e3c79a'], [100, 40, 110, 170, '#d99f7c'], [214, 70, 100, 140, '#ecd7a8'], [318, 48, 120, 162, '#c9b08a'], [442, 62, 104, 148, '#e6b98f'], [550, 36, 130, 174, '#dcc79c']].map(([x, y, w, h, c]) => `<g>${R(x, y, w, h, c)}${R(x, y, w, 8, 'rgba(0,0,0,.12)')}${[0, 1].map(r => [0, 1, 2].map(k => `${R(x + 14 + k * (w - 28) / 3, y + 22 + r * 46, 20, 28, '#7aa6bd')}${R(x + 14 + k * (w - 28) / 3, y + 22 + r * 46, 20, 28, 'none', 'stroke="#6b5a40" stroke-width="2"')}`).join('')).join('')}</g>`).join('')}`
+    + `${R(-200, 214, 1040, 200, '#b7ab97')}${Array.from({ length: 26 }, (_, i) => R(-40 + i * 34, 220 + (i % 4) * 22, 22, 3, 'rgba(0,0,0,.10)')).join('')}`
+    + `<path d="M-10 66Q80 94 170 70T350 72T530 70T650 66" stroke="#8a6a4a" stroke-width="2" fill="none"/>${Array.from({ length: 12 }, (_, i) => `<path d="M${14 + i * 54} ${72 + Math.sin(i) * 4}l9 18l9 -18z" fill="${['#cd2b35', '#f5f3ec', '#1f8a4c', '#f2c300'][i % 4]}"/>`).join('')}`
+    + `${[[40, '#cd2b35', '#f5f3ec'], [250, '#1f8a4c', '#f5f3ec'], [470, '#2d6fa8', '#f5f3ec']].map(([x, a, b]) => `<g transform="translate(${x},118)">${R(2, 40, 4, 96, '#6b5a40')}${R(98, 40, 4, 96, '#6b5a40')}${Array.from({ length: 8 }, (_, i) => `<path d="M${i * 13} 40h13l-3 22h-13z" fill="${i % 2 ? b : a}"/>`).join('')}${R(0, 98, 104, 12, '#9c7a52')}${[8, 38, 68].map((cx, i) => `<g>${R(cx, 84, 24, 14, '#7c5e3d')}<circle cx="${cx + 6}" cy="82" r="6" fill="${['#e2573a', '#7ab648', '#f2b632'][i]}"/><circle cx="${cx + 16}" cy="82" r="6" fill="${['#f2b632', '#e2573a', '#7ab648'][i]}"/></g>`).join('')}</g>`).join('')}`
+    + `<g transform="translate(570,150)">${R(-3, 40, 6, 70, '#6b5a40')}<circle cx="0" cy="26" r="34" fill="#5a8a4c"/><circle cx="-18" cy="40" r="22" fill="#4c7a40"/><circle cx="20" cy="38" r="24" fill="#66964f"/></g>`
+    + `<g transform="translate(318,214)"><ellipse cx="0" cy="12" rx="46" ry="11" fill="#9aa6a8"/>${R(-30, -2, 60, 14, '#b9c3c4')}${R(-6, -30, 12, 30, '#a8b4b6')}<path d="M0 -30Q-18 -42 -22 -22M0 -30Q18 -42 22 -22" stroke="#7fb6d6" stroke-width="3" fill="none"/></g>`
+    + `${[[290, 242, '#3a5a7a'], [360, 244, '#7a3a4a'], [60, 250, '#4a6a4a']].map(([x, y, c]) => `<g transform="translate(${x},${y})">${R(-6, 0, 12, 26, c)}<circle cx="0" cy="-7" r="7" fill="#d9a97e"/>${R(7, 8, 8, 12, '#caa24a')}</g>`).join('')}`
+    + `<g class="rm-banner">${R(214, 22, 212, 26, '#8a3b2a')}<text x="320" y="40" text-anchor="middle" font-size="11" font-weight="900" fill="#f7efe0" letter-spacing="1">${esc(scene?.heading?.banner ?? 'INCONTRO CON I CITTADINI')}</text></g>`,
   cantiere: () => `${R(-200, -100, 1040, 340, '#a9cfe6')}<path d="M-200 150C-60 118 40 140 160 118S400 104 560 130 760 118 840 126V240H-200Z" fill="#cbdbc4"/>${R(-200, 214, 1040, 200, '#8e7a5a')}`
     + `<g stroke="#e5a31c" stroke-width="5" fill="none"><path d="M520 214V28M520 28H640M520 28L470 56M498 28V214M520 60L498 90M520 100L498 130M520 140L498 170" stroke-width="3"/><path d="M630 28V80" stroke="#444" stroke-width="2"/></g>${R(620, 80, 18, 12, '#e5a31c')}`
     + `<g>${[200, 280, 360].map((x, i) => R(x, 96 + i * 4, 14, 118 - i * 4, '#b8b4ac')).join('')}${R(190, 88, 200, 10, '#a39f96')}${R(190, 150, 200, 8, '#a39f96')}${R(190, 200, 200, 8, '#a39f96')}</g>`
@@ -47,6 +58,7 @@ const BACK = {
 // ---------- the front layers: the table in front of whoever sits ----------
 const FRONT = {
   sala: () => '',
+  piazza: () => `<g>${R(-200, 328, 1040, 40, '#a89a82', 'opacity=".5"')}</g>`,
   cantiere: () => `<g>${R(-200, 322, 1040, 60, '#7b6948', 'opacity=".55"')}</g>`,
   sede: () => `<g>${R(70, 270, 560, 52, '#7a5a3c')}${R(70, 270, 560, 8, '#a07f57')}${[130, 250, 350, 470].map((x, i) => R(x, 278, 34, 22, '#f1ecdd', 'stroke="#8f8573"')).join('')}</g>`,
   commissione: () => `<g>${R(90, 272, 540, 50, '#6a4a30')}${R(90, 272, 540, 8, '#9a7752')}${[150, 300, 430].map(x => R(x, 282, 44, 8, '#f4efe0')).join('')}</g>`,

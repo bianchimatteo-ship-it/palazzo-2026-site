@@ -232,7 +232,7 @@ assert.ok(s.parliament.government.status !== 'active' || s.parliament.government
     parliament.government.coalitionGroupIds = ['cam-xix-11', 'senato-xix-gruppo-9'];
     parliament.government.supportingGroupIds = [];
     const law = { id: 'legge-fiducia', title: 'Riforma della giustizia', category: 'Giustizia', summary: 'Prova di fiducia', stage: 'final-vote', status: 'final-vote', introducedAt: '2026-01-01', updatedAt: '2026-01-01', stageSince: '2026-01-01', firstChamber: 'camera', currentChamber: 'camera', negotiatedGroupIds: [], amendments: [], compromiseLevel: 0, forcedVote: false, demands: {}, origin: 'governo', kind: 'ddl', policy: { area: 'giustizia' }, votes: [], confidence: true, source: 'simulation' };
-    parliament.laws.push(law);
+    parliament.laws.push({ ...law, pendingPlayerVote: 'contrario' });   // (the player's own ballot: no count without it)
     const result = engine.advanceLaw(parliament, law.id, 'final-vote', store.getState().clock.currentDate);
     assert.equal(result.law.stage, 'rejected');
     assert.equal(result.parliament.government.status, 'fallen', 'Persa la fiducia su un testo, il governo cade.');
