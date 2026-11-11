@@ -129,7 +129,7 @@ export function activityNode(scene) {
   const base = { id: scene.nodeId, setting: scene.setting };
   const approaches = spec.approaches.map(item => [item.id, approachText(spec, scene.sceneKey, scene.familyId, item)[0], false, item.detail[0]]);
   switch (scene.nodeId) {
-    case 'apertura': return { ...base, speaker: me(scene).id, expression: 'serena', gesture: 'saluta', camera: 'wide', title: spec.title[0], text: (isCitizens(scene) ? CITIZENS.intro : (spec.intro[scene.variant] ?? spec.intro.default))[0], ...(scene.ref?.text ? { lines: [scene.ref.text] } : {}), choices: [['continua', 'Continua']] };
+    case 'apertura': return { ...base, speaker: me(scene).id, expression: 'serena', gesture: 'saluta', camera: 'wide', title: scene.heading?.title ?? spec.title[0], text: (isCitizens(scene) ? CITIZENS.intro : (spec.intro[scene.variant] ?? spec.intro.default))[0], ...(scene.ref?.text ? { lines: [scene.ref.text] } : {}), choices: [['continua', 'Continua']] };
     case 'q1': return { ...base, speaker: guest(scene, 1).id, expression: 'determinata', gesture: 'sottolinea', camera: 'wide', title: family.label[0], text: (isCitizens(scene) ? CITIZENS.families[family.id]?.open ?? family.open : family.open)[0], choices: approaches };
     case 'q2': return { ...base, speaker: guest(scene, 2).id, expression: 'determinata', gesture: 'indica', camera: 'wide', title: family.label[0], text: (isCitizens(scene) ? CITIZENS.families[family.id]?.follow ?? family.follow : family.follow)[0], choices: approaches };
     case 'r1': case 'r2': {

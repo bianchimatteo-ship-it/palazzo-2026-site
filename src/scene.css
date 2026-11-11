@@ -195,3 +195,4 @@ html[data-scene-motion="full"] .cm-protest .cm-arm { animation: st-arms .45s eas
 .floor-result-actions button { min-height: 44px; }
 @media (max-width: 640px) { .floor-board, .aula-board { grid-template-columns: repeat(3, minmax(0, 1fr)); } .floor-choices { grid-template-columns: 1fr; } .floor-offer-actions, .floor-offer-actions button, .floor-confirm .primary-button, .floor-result-actions button { width: 100%; } }
 .floor-skip { justify-self: start; min-height: 40px; padding: 0 16px; }
+.aula-mine b { margin-left: .4em; }

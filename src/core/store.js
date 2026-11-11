@@ -1055,7 +1055,13 @@ function buildTalkScene(s, source, showId = null) {
   const rivals = (s.world?.parties ?? []).filter(item => item.active && !item.isPlayer && item.baseline >= 3);
   const rivalParty = rivals.length ? rivals[hashSeed(id) % rivals.length] : null;
   const guestName = GUESTS[hashSeed(`${id}|ospite`) % GUESTS.length];
-  const topicLabel = (s.society?.issues ?? [])[0]?.topic ?? 'Attualità';
+  // The subject of the evening: the first problem of the country when there is one (its area gives the topic of the debate catalogue), otherwise one of the eight topics by the seed — so what the
+  // player can say (data/studio-lines.js DEBATE_CHOICES) is about the subject of the show, not the same four sentences every time.
+  const firstIssue = (s.society?.issues ?? [])[0] ?? null;
+  const issueArea = firstIssue ? INDICATOR_AREA[firstIssue.indicator] ?? null : null;
+  const topicIds = DEBATE_TOPICS.map(item => item.id);
+  const talkTopicId = issueArea ? topicOfArea(issueArea) : topicIds[hashSeed(`${id}|tema`) % topicIds.length];
+  const topicLabel = firstIssue?.topic ?? DEBATE_TOPICS.find(item => item.id === talkTopicId)?.label ?? 'Attualità';
   const ctx = stageContext(s);
   const invited = invitedShows(`${s.career.id ?? ''}|${game.week.index}`, playerStat(s, 'notoriety', 20));
   const show = showFor(showId && invited.some(item => item.id === showId) ? showId : (showId && showFor(showId, 'salotto').id === showId ? showId : invited[hashSeed(`${id}|show`) % Math.max(1, invited.length)]?.id ?? 'salotto'), 'salotto');
@@ -1065,7 +1071,7 @@ function buildTalkScene(s, source, showId = null) {
   const tags = studioTags(s, { rivalTag: guestTag, hostTag: show.host === 'giornalista' ? 'Giornalista' : 'Conduttore' });
   return createTalkShowScene({
     id, seed: `${s.career.id ?? 'carriera'}|${id}`, show: show.id, player: { name: player?.displayName ?? 'Tu', tag: tags.player }, playerAvatar: avatarOf(player), rival: { id: `ospite-${guestName.split(' ')[0].toLowerCase()}`, name: guestName, partyId: rivalParty?.id ?? null, tag: tags.rival },
-    host: { id: `conduttore-${hostName}`, name: hostName, tag: tags.host }, topic: { id: 'attualita', label: topicLabel }, promises: ctx.promises.filter(item => item.status !== 'non-mantenuta' || true).map(item => ({ ...item, topic: item.area })),
+    host: { id: `conduttore-${hostName}`, name: hostName, tag: tags.host }, topic: { id: talkTopicId, label: topicLabel }, promises: ctx.promises.filter(item => item.status !== 'non-mantenuta' || true).map(item => ({ ...item, topic: item.area })),
     credibility: ctx.credibility, prep: 0, rivalProgram: [], rivalReadiness: 45 + hashSeed(`${id}|prep`) % 25, rivalAggression: 30 + hashSeed(`${id}|agg`) % 50, crisis: false, date: s.clock.currentDate, ticker, events
   });
 }
