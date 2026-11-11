@@ -1,6 +1,6 @@
 // English phrase book, part 8 of 8: the administrative area, the account and sign-out screens, the personal logo catalogue, the tutorial invitation and the engine's law-effect and government lines. Same format as part 6: [Italian as shown, English]; `#` stands for a number, `{}` for a free part; in the English a free part is named by its position (`{2}` for the second one).
-import { ALL_PAIRS } from '../studio-lines.js?v=20261111-2';
-import { ALL_PAIRS as ACTIVITY_SCENE_PAIRS } from '../activity-scene-lines.js?v=20261111-2';
+import { ALL_PAIRS } from '../studio-lines.js?v=20261111-3';
+import { ALL_PAIRS as ACTIVITY_SCENE_PAIRS } from '../activity-scene-lines.js?v=20261111-3';
 
 // The explanations of the opening of a general or European campaign (campaign-engine.js campaignOpeningNotes): signed numbers come in both signs.
 function campaignNotePairs() {
@@ -6347,6 +6347,11 @@ export const PHRASES = [
   ["Cerca la sintesi tra i ministri sulle opere", "Seek a synthesis between the ministers on the works"],
   ["Chiedi coperture e cronoprogramma di ogni opera", "Ask for the funding and schedule of each work"],
   ["Richiama tutti alle priorità condivise", "Call everyone back to the shared priorities"],
+  ["Congresso — Forza delle aree: Si misura il peso di ogni area: iscritti, quadri, comitati, risorse.", "Congress — Strength of the areas: The weight of each area is measured: members, cadres, committees, resources."],
+  ["Congresso — Preparazione: Le aree mobilitano i quadri e aprono le federazioni ai loro candidati.", "Congress — Preparation: The areas mobilise the cadres and open the federations to their candidates."],
+  ["Congresso — Elezione dei delegati: Le federazioni eleggono i delegati: contano iscritti, vitalità e chi guida il comitato.", "Congress — Election of the delegates: The federations elect the delegates: members, vitality and who leads the committee count."],
+  ["Congresso — Trattative: Delegati in cambio di posti, linea e liste: ogni accordo pesa sul voto.", "Congress — Negotiations: Delegates in exchange for posts, line and lists: every agreement weighs on the vote."],
+  ["Congresso — Voto: Il congresso vota: i delegati decidono la leadership.", "Congress — Vote: The congress votes: the delegates decide the leadership."],
   ["La partita in corso si salva da sola; qui conservi fino a 5 salvataggi tuoi e li porti su altri dispositivi con un file. Il gioco non elimina mai un salvataggio fatto da te; le copie automatiche (una per carriera, al massimo 5) non occupano i tuoi slot: la più vecchia passa tra le copie di sicurezza.", "The game in progress saves itself; here you keep up to 5 saves of your own and carry them to other devices with a file. The game never deletes a save you made; automatic copies (one per career, at most 5) do not use your slots: the oldest moves to the safety copies."],
   ["Votazione aperta", "Open vote"],
   ["Chiama nominale", "Roll call"],
@@ -6596,6 +6601,8 @@ export const PHRASES = [
   ["Un anniversario, un concerto, una mostra, una giornata della memoria: il Presidente tiene insieme il Paese attorno a ciò che è condiviso.", "An anniversary, a concert, an exhibition, a day of remembrance: the President holds the country together around what is shared."],
   ["Solo rappresentanza", "Representation only"],
   ["Riservato al Presidente della Repubblica.", "Reserved for the President of the Republic."],
+  ["Governo in carica all’avvio ha la fiducia di # gruppi (di cui # dall’esterno); la stabilità è a #/# e il margine nella Camera più stretta è di +# seggi.", "The government in office at the start has the confidence of # groups (# from outside); stability stands at #/# and the margin in the narrower Chamber is +# seats."],
+  ["Governo in carica all’avvio ha la fiducia di # gruppi (di cui # dall’esterno); la stabilità è a #/# e il margine nella Camera più stretta è di -# seggi.", "The government in office at the start has the confidence of # groups (# from outside); stability stands at #/# and the margin in the narrower Chamber is -# seats."],
   // <release-pairs:end>
   ...campaignNotePairs(),
   ...promiseToolPairs(),

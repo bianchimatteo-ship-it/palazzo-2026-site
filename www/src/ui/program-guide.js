@@ -1,12 +1,12 @@
 // The guided fields of the programme editor. Every field of a proposal has a list of choices that suits the policy area chosen (data/program-catalog.js: titles, problems, objectives and measures written for the
 // sector) and, next to it, the text itself, which stays editable: a choice only fills it, the player can always write his own. What is sent to the store is the same named fields as before (title, problem, objective,
 // measure0..3 with instrument0..3, cost, financing, deadlineWeeks, territory, region, municipality): the choices are not a separate layer, they are the data of the proposal.
-import { AREA_BY_ID, INSTRUMENT_KINDS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261111-2';
-import { measuresOf, themesOf } from '../data/program-catalog.js?v=20261111-2';
-import { promiseQuote } from '../core/program-engine.js?v=20261111-2';
-import { COST_BANDS, DEADLINES, FINANCING, TERRITORIES } from '../core/program-proposals.js?v=20261111-2';
-import { ITALIAN_REGIONS } from '../data/regions.js?v=20261111-2';
-import { esc } from './sections-kit.js?v=20261111-2';
+import { AREA_BY_ID, INSTRUMENT_KINDS, POLICY_AREAS } from '../data/simulation/policy-rules.js?v=20261111-3';
+import { measuresOf, themesOf } from '../data/program-catalog.js?v=20261111-3';
+import { promiseQuote } from '../core/program-engine.js?v=20261111-3';
+import { COST_BANDS, DEADLINES, FINANCING, TERRITORIES } from '../core/program-proposals.js?v=20261111-3';
+import { ITALIAN_REGIONS } from '../data/regions.js?v=20261111-3';
+import { esc } from './sections-kit.js?v=20261111-3';
 
 const CUSTOM = '__custom';
 const MEASURE_SLOTS = 4;

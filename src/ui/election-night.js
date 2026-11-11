@@ -1,11 +1,11 @@
 // The election night: the screen of the twelve hours (night-engine.js decides what is known at each hour; this file only draws it).
 // A television special in the colours, type and components of the rest of the game (cards, tabs, badges, tables): the clock and the hours, the ticker, the live feed, the count, the results with
 // their bars, the territories, the map, the polls and projections (always apart from the official partial result), the seats, the statements and, at the twelfth hour, the summary.
-import { NIGHT_HOURS, exitPoll, nightClock, nightView, pendingPrompts, projection, statementPromptFor } from '../core/night-engine.js?v=20261111-2';
-import { forceColor, stableColor } from './political-colors.js?v=20261111-2';
-import { MAP_SCOPES, italyMapSvg } from './italy-map.js?v=20261111-2';
-import { badge, card, esc, kpi, num, pct, sectionTabs } from './sections-kit.js?v=20261111-2';
-import { glyph } from './visuals.js?v=20261111-2';
+import { NIGHT_HOURS, exitPoll, nightClock, nightView, pendingPrompts, projection, statementPromptFor } from '../core/night-engine.js?v=20261111-3';
+import { forceColor, stableColor } from './political-colors.js?v=20261111-3';
+import { MAP_SCOPES, italyMapSvg } from './italy-map.js?v=20261111-3';
+import { badge, card, esc, kpi, num, pct, sectionTabs } from './sections-kit.js?v=20261111-3';
+import { glyph } from './visuals.js?v=20261111-3';
 
 export const NIGHT_TABS = Object.freeze([['diretta', 'Diretta'], ['scrutinio', 'Scrutinio'], ['risultati', 'Risultati'], ['territorio', 'Territorio'], ['mappa', 'Mappa'], ['previsioni', 'Sondaggi e previsioni'], ['parlamento', 'Parlamento'], ['dichiarazioni', 'Dichiarazioni']]);
 const TAG_TONE = Object.freeze({ 'EXIT POLL': 'info', PROIEZIONE: 'info', SONDAGGI: 'info', SCRUTINIO: 'good', RISULTATO: 'good', SORPASSO: 'warning', SORPRESA: 'warning', SOGLIA: 'warning', RIMONTA: 'warning', RIBALTAMENTO: 'warning', BALLOTTAGGIO: 'warning', MAGGIORANZA: 'good', DICHIARAZIONE: 'neutral', TU: 'good' });
@@ -219,6 +219,6 @@ export function renderElectionNight(state, { tab = 'diretta', area = null, bound
     ${footer(night)}
   </section>`;
 }
-import { nightTally } from '../core/night-engine.js?v=20261111-2';
+import { nightTally } from '../core/night-engine.js?v=20261111-3';
 const nightTallyOf = night => nightTally(night);
 export { statementPromptFor };

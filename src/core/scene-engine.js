@@ -6,10 +6,10 @@
 // made, the answers are judged on competence, charisma, preparation and political coherence (the credibility of the programme), the rivals attack where the player is weak and answer as their
 // personality and their programme say. Nothing is drawn from the random sequence of the campaign: the little variation of a beat comes from a hash of the scene's seed, so a scene resumed or
 // replayed from the same choices is the same scene. The player's avatar is always the one chosen at the start of the career: the scene may change the face for a moment (expression), never the person.
-import { defaultAvatarFor, genderOf, normalizeAvatar } from './avatar.js?v=20261111-2';
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261111-2';
-import { line, formatOf } from './studio-lines.js?v=20261111-2';
-import { createRallyScene, createVoteScene, rallyChoose, rallyEffects, rallyNode, rallyProgress, voteChoose, voteNode, voteProgress } from './rally-scene.js?v=20261111-2';
+import { defaultAvatarFor, genderOf, normalizeAvatar } from './avatar.js?v=20261111-3';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261111-3';
+import { line, formatOf } from './studio-lines.js?v=20261111-3';
+import { createRallyScene, createVoteScene, rallyChoose, rallyEffects, rallyNode, rallyProgress, voteChoose, voteNode, voteProgress } from './rally-scene.js?v=20261111-3';
 export { createRallyScene, createVoteScene, formatOf };
 
 // Scenes of other kinds (the optional scenes of the weekly activities, core/activity-scenes.js) are loaded on demand and register here: { node, choose, effects, progress }. Nothing of them is in the first screen.

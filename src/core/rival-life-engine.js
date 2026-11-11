@@ -1,9 +1,9 @@
 // Rival life between campaigns (rival-life-rules.js): the rivals the player has already met (game.rivalRegistry, the same record the campaigns write) keep acting on their own. Pure and deterministic
 // (hash of week and key, no random numbers): by personality (RIVAL_PERSONALITIES of the campaign engine), by what they remember of the player (the same memory types) and by what the player promised
 // (game.promises). A move is a situation event; the answer is written back in the registry, so the next campaign meets a rival who remembers.
-import { RIVAL_PERSONALITIES } from './campaign-engine.js?v=20261111-2';
-import { RIVAL_LIFE, RIVAL_SITUATIONS } from '../data/simulation/rival-life-rules.js?v=20261111-2';
-import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261111-2';
+import { RIVAL_PERSONALITIES } from './campaign-engine.js?v=20261111-3';
+import { RIVAL_LIFE, RIVAL_SITUATIONS } from '../data/simulation/rival-life-rules.js?v=20261111-3';
+import { AREA_BY_ID } from '../data/simulation/policy-rules.js?v=20261111-3';
 
 const hash = text => { let h = 2166136261; for (const ch of String(text)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967296; };
 const round1 = value => Math.round(value * 10) / 10;

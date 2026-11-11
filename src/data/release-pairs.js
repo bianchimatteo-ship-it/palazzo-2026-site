@@ -1,14 +1,21 @@
 // English phrase-book pairs of the last release pass (data/i18n/en-ui-8.js reads `ALL_PAIRS`): the guided programme editor, the days of the Quirinale and the rule on the parties, the government room, the live
 // votes of the assemblies, the party headquarters, the TV name plates and the tutorial. Format as in the phrase-book: [Italian as shown, English]; `#` a number, `{}` a free part.
-import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261111-2';
-import { DEBATE_PAIRS } from './debate-choices.js?v=20261111-2';
-import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261111-2';
+import { ALL_PAIRS as GUEST_PAIRS } from './activity-scene-guests.js?v=20261111-3';
+import { DEBATE_PAIRS } from './debate-choices.js?v=20261111-3';
+import { APPROACH_PAIRS } from './activity-scene-approaches.js?v=20261111-3';
 export const ALL_PAIRS = [
   ...GUEST_PAIRS,
   ...DEBATE_PAIRS,
   ...APPROACH_PAIRS,
   // ---- the guided programme editor ----
   // ---- the open votes (the player's own ballot) ----
+  ['Congresso — Forza delle aree: Si misura il peso di ogni area: iscritti, quadri, comitati, risorse.', 'Congress — Strength of the areas: The weight of each area is measured: members, cadres, committees, resources.'],
+  ['Congresso — Preparazione: Le aree mobilitano i quadri e aprono le federazioni ai loro candidati.', 'Congress — Preparation: The areas mobilise the cadres and open the federations to their candidates.'],
+  ['Congresso — Elezione dei delegati: Le federazioni eleggono i delegati: contano iscritti, vitalità e chi guida il comitato.', 'Congress — Election of the delegates: The federations elect the delegates: members, vitality and who leads the committee count.'],
+  ['Congresso — Alleanze: Le aree si cercano: chi corre insieme somma i delegati.', 'Congress — Alliances: The areas look for each other: those who run together add up their delegates.'],
+  ['Congresso — Trattative: Delegati in cambio di posti, linea e liste: ogni accordo pesa sul voto.', 'Congress — Negotiations: Delegates in exchange for posts, line and lists: every agreement weighs on the vote.'],
+  ['Congresso — Mozioni: Le aree depositano la loro mozione e il candidato alla segreteria.', 'Congress — Motions: The areas file their motion and the candidate for secretary.'],
+  ['Congresso — Voto: Il congresso vota: i delegati decidono la leadership.', 'Congress — Vote: The congress votes: the delegates decide the leadership.'],
   ['La partita in corso si salva da sola; qui conservi fino a 5 salvataggi tuoi e li porti su altri dispositivi con un file. Il gioco non elimina mai un salvataggio fatto da te; le copie automatiche (una per carriera, al massimo 5) non occupano i tuoi slot: la più vecchia passa tra le copie di sicurezza.', 'The game in progress saves itself; here you keep up to 5 saves of your own and carry them to other devices with a file. The game never deletes a save you made; automatic copies (one per career, at most 5) do not use your slots: the oldest moves to the safety copies.'],
   ['Votazione aperta', 'Open vote'],
   ['Votazione finale', 'Final vote'],
@@ -228,5 +235,7 @@ export const ALL_PAIRS = [
   ['Celebrazione o iniziativa culturale', 'Celebration or cultural initiative'],
   ['Un anniversario, un concerto, una mostra, una giornata della memoria: il Presidente tiene insieme il Paese attorno a ciò che è condiviso.', 'An anniversary, a concert, an exhibition, a day of remembrance: the President holds the country together around what is shared.'],
   ['Costo', 'Cost'], ['Solo rappresentanza', 'Representation only'],
-  ['Riservato al Presidente della Repubblica.', 'Reserved for the President of the Republic.']
+  ['Riservato al Presidente della Repubblica.', 'Reserved for the President of the Republic.'],
+  ["Governo in carica all’avvio ha la fiducia di # gruppi (di cui # dall’esterno); la stabilità è a #/# e il margine nella Camera più stretta è di +# seggi.", "The government in office at the start has the confidence of # groups (# from outside); stability stands at #/# and the margin in the narrower Chamber is +# seats."],
+  ["Governo in carica all’avvio ha la fiducia di # gruppi (di cui # dall’esterno); la stabilità è a #/# e il margine nella Camera più stretta è di -# seggi.", "The government in office at the start has the confidence of # groups (# from outside); stability stands at #/# and the margin in the narrower Chamber is -# seats."],
 ];
