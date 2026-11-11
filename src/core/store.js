@@ -8,7 +8,7 @@ import { DATA_SOURCES, emptyDataset, isSelectableParty, isUsableReal } from '../
 import { makeDemoState } from '../data/demo.js?v=20261110-24';
 import { CAREER_LEVELS, ITALIAN_REGIONS, hasProvincialLevel, initialCareerStatistics, regionIdOf } from '../data/regions.js?v=20261110-24';
 import { withVotes } from './electorate.js?v=20261110-24';
-import { MAX_SLOTS, compareSaveProgress, storage } from './storage.js?v=20261110-24';
+import { MAX_AUTO_SLOTS, MAX_SLOTS, compareSaveProgress, storage } from './storage.js?v=20261110-24';
 import { loadSettings } from './settings.js?v=20261110-24';
 import { advanceNight, answerStatement, createNight, NIGHT_HOURS } from './night-engine.js?v=20261110-24';
 import { avatarOf } from './avatar.js?v=20261110-24';
@@ -564,7 +564,10 @@ function persist({ force = false } = {}) {
 // The game about to be replaced (by another one loaded or a new career) is kept in a slot first; if it cannot be kept, nothing is replaced.
 function keepCurrent(name, { requireDurable = true } = {}) {
   try {
-    const existing = storage.listSlots().find(entry => {
+    const slots = storage.listSlots();
+    const content = value => JSON.stringify({ ...value, ui: null, saveMeta: null, exportedAt: null });
+    const now = content(state);
+    const existing = slots.find(entry => {
       if (!entry.autoPreserve) return false;
       try { return storage.loadSlot(entry.id)?.career?.id === state.career.id; } catch { return false; }
     });
@@ -573,8 +576,7 @@ function keepCurrent(name, { requireDurable = true } = {}) {
     if (existing) {
       try {
         const kept = storage.loadSlot(existing.id);
-        const content = value => JSON.stringify({ ...value, ui: null, saveMeta: null, exportedAt: null });
-        if (content(kept) === content(state) && storage.slotDurability(existing.id).durable) return existing.id;
+        if (content(kept) === now && storage.slotDurability(existing.id).durable) return existing.id;
       } catch { /* a copy that cannot be compared is written again */ }
     }
     const slotId = store.saveToSlot(name, existing?.id ?? null, { autoPreserve: true });
@@ -4072,8 +4074,9 @@ export const store = {
     let slots = [];
     try { slots = storage.listSlots(); } catch (error) { return { ok: false, reason: 'unreadable', message: `Gli slot di questo browser non si leggono (${error.message}): la carriera in corso non può essere conservata.` }; }
     const own = slots.some(entry => { if (!entry.autoPreserve) return false; try { return storage.loadSlot(entry.id)?.career?.id === state.career.id; } catch { return false; } });
-    if (own || slots.length < MAX_SLOTS) return { ok: true };
-    return { ok: false, reason: 'full', message: `Gli slot sono pieni (${MAX_SLOTS}): la carriera in corso non può essere conservata e per questo la nuova carriera non parte. Esportala su file, poi libera uno slot dal menu Carica partita (nessuno slot viene eliminato da sé).` };
+    // The automatic copy of the running career has an allowance of its own (storage.js MAX_AUTO_SLOTS: the oldest automatic copy gives its place and goes to the safety copies), so the player's five
+    // slots never stop a career from being kept: only a browser that cannot write does, and then the save itself says why.
+    return { ok: true, automatic: own ? 'own' : slots.filter(entry => entry.autoPreserve).length < MAX_AUTO_SLOTS ? 'free' : 'rotate', manualFull: slots.filter(entry => !entry.autoPreserve).length >= MAX_SLOTS };
   },
   // Before another career takes the place of the running one: its copy is written and waited for until the browser has confirmed it. Resolves true; throws (and nothing is replaced) when it cannot be kept.
   async preserveCurrent(name = 'Partita precedente (salvataggio automatico)') {

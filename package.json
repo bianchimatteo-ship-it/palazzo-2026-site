@@ -279,7 +279,8 @@
     "check:aula-ui": "node scripts/check-aula-ui.mjs",
     "check:runoff-eliminated": "node scripts/check-runoff-eliminated.mjs",
     "check:runoff-rule": "node scripts/check-runoff-rule.mjs",
-    "check:challenges-ui": "node scripts/check-challenges-ui.mjs"
+    "check:challenges-ui": "node scripts/check-challenges-ui.mjs",
+    "check:load-careers": "node scripts/check-load-careers.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.3",

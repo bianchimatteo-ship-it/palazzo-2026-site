@@ -237,8 +237,13 @@ store.loadGame(old);
 const cleanBeforeFullSlots = store.getState();
 for (const entry of storage.listSlots()) storage.deleteSlot(entry.id);
 for (let index = 0; index < MAX_SLOTS; index++) storage.saveSlot(cleanBeforeFullSlots, { name: `Capienza ${index}` }, `capienza-${index}`);
-assert.throws(() => store.loadGame(otherCareerCopy), /non può essere conservata.*al massimo/);
-assert.strictEqual(store.getState(), cleanBeforeFullSlots, 'Con tutti gli slot occupati, il caricamento non sostituisce nemmeno una partita pulita.');
+// (the player's five slots are full: the copy the game keeps by itself does not use them, so the load goes through and no slot of the player is touched)
+const fullNames = storage.listSlots().map(entry => entry.name).sort();
+store.loadGame(otherCareerCopy);
+assert.equal(store.getState().career.id, otherCareerCopy.career.id, 'Con i cinque slot del giocatore pieni il caricamento riesce.');
+assert.deepEqual(storage.listSlots().filter(entry => !entry.autoPreserve).map(entry => entry.name).sort(), fullNames, 'E nessun slot del giocatore è stato toccato.');
+assert.throws(() => storage.saveSlot(store.getState(), { name: 'Sesto' }), /al massimo/, 'Un sesto salvataggio del giocatore resta rifiutato.');
+store.loadGame(old);   // (back to the career the next checks use)
 for (const entry of storage.listSlots()) storage.deleteSlot(entry.id);
 saveSetting('autosave', 'action');
 store.save();

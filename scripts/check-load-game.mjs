@@ -79,7 +79,7 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, errors, version
   await evaluate(`(() => { Storage.prototype.setItem = window.__realSet; return true; })()`);
 
   // ---------- 5. slots full: refused with the reason, nothing deleted by the game ----------
-  await run(`for (let i = store.listSlots().length; i < 5; i++) store.saveToSlot('Slot ' + i, null, { manual: true }); return store.listSlots().length;`);
+  await run(`for (let i = 0; i < 6 && store.listSlots().filter(slot => !slot.autoPreserve).length < 5; i++) store.saveToSlot('Slot ' + i, null, { manual: true }); return store.listSlots().length;`);
   await click('[data-menu="carica"]'); await click('[data-menu="carica"]'); await wait(() => has('.slot-list'));
   await open();
   const names = await evaluate(`[...document.querySelectorAll('[data-slot-row] strong')].map(el => el.textContent)`);

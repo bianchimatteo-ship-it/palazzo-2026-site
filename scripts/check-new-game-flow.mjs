@@ -127,25 +127,22 @@ await withBrowser(async ({ evaluate, goto, waitFor: wait, pause, viewport, error
   assert.equal(await core(), coreBefore, 'Su telefono la carriera è intatta.');
   await viewport(1280, 800, false);
 
-  // ---------- 6. a career that cannot be kept (slots full) blocks the new one and offers its file ----------
-  await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); const names = ['uno', 'due', 'tre', 'quattro', 'cinque']; for (const name of names) store.saveToSlot(name, null, { manual: true }); return store.listSlots().length; })()`);
+  // ---------- 6. the player's five slots are full: the running career is still kept (its automatic copy does not use them), the new career starts and no slot of the player is touched ----------
+  await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); const names = ['uno', 'due', 'tre', 'quattro', 'cinque']; for (const name of names) { try { store.saveToSlot(name, null, { manual: true }); } catch { /* the five are full */ } } return store.listSlots().length; })()`);
+  const slotsOf = () => evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); return store.listSlots().map(slot => ({ name: slot.name, auto: Boolean(slot.autoPreserve), careerId: slot.careerId })); })()`);
+  const fullBefore = await slotsOf();
+  assert.equal(fullBefore.filter(slot => !slot.auto).length, 5, 'I cinque slot del giocatore sono pieni.');
+  assert.match(await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); try { store.saveToSlot('sesto'); return 'salvato'; } catch (error) { return error.message; } })()`), /al massimo 5 salvataggi/, 'Un sesto salvataggio del giocatore resta rifiutato con il motivo.');
   const verdict = await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); return store.preserveCheck(); })()`);
-  assert.equal(verdict.ok, false, 'Con gli slot pieni la carriera in corso non può essere conservata.');
-  assert.equal(verdict.reason, 'full');
-  const slotsBefore = await evaluate(`Object.keys(localStorage).filter(key => key.includes('slot')).length`);
-  await evaluate(`(() => { window.__downloads = []; const make = URL.createObjectURL.bind(URL); URL.createObjectURL = blob => { window.__downloads.push(blob.size); return make(blob); }; return true; })()`);
+  assert.equal(verdict.ok, true, 'Con i cinque slot pieni la carriera in corso può comunque essere conservata: la copia automatica non occupa gli slot del giocatore.');
+  const oldCareer = await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); return store.getState().career.id; })()`);
   await reach(6);
   await click('.wizard-footer [data-wizard-action="finish"]');
-  await wait(() => has('.wizard-blocked'));
-  assert.match(await evaluate(`document.querySelector('.wizard-errors').textContent`), /slot sono pieni/, 'Il gioco spiega perché la nuova carriera non parte.');
-  assert.ok(await has('.career-wizard'), 'La creazione resta aperta: nulla è stato creato.');
-  assert.equal(await has('[data-confirm="ok"]'), false, 'Nessuna conferma che prometta una perdita: la sostituzione è bloccata.');
-  assert.equal(await core(), coreBefore, 'La carriera in corso non è stata toccata.');
-  await click('[data-wizard-action="export-current"]');
-  await wait(() => has('.wizard-blocked span'));
-  assert.ok((await evaluate(`window.__downloads.length`)) >= 1 && (await evaluate(`window.__downloads[0]`)) > 10000, 'Il file della carriera in corso viene scaricato.');
-  await click('.wizard-cancel'); assert.ok(await onMenu());
-  assert.equal(await evaluate(`Object.keys(localStorage).filter(key => key.includes('slot')).length`), slotsBefore, 'Nessuno slot è stato eliminato da sé.');
+  if (await has('[data-confirm="ok"]')) await click('[data-confirm="ok"]');
+  await wait(async () => (await evaluate(`(async () => { const { store } = await import('/src/core/store.js?v=${version}'); return store.getState().career.id; })()`)) !== oldCareer, 30000);
+  const fullAfter = await slotsOf();
+  assert.deepEqual(fullAfter.filter(slot => !slot.auto).map(slot => slot.name).sort(), fullBefore.filter(slot => !slot.auto).map(slot => slot.name).sort(), 'I cinque salvataggi del giocatore sono intatti: nessuno eliminato o sovrascritto.');
+  assert.ok(fullAfter.some(slot => slot.auto && slot.careerId === oldCareer), 'La carriera precedente è conservata nella sua copia automatica e si può ricaricare.');
   assert.deepEqual(errors, [], 'Nessun errore in pagina.');
 });
-console.log('Nuova partita verificata in Chrome: la creazione è un popup sopra la homepage (inerte; la carriera in corso non è disegnata), ×, «Annulla», Escape e lo sfondo tornano al menu iniziale (un clic dentro il popup non annulla) senza creare né caricare nulla, una risposta tardiva dei dati dopo l’annullamento non riapre nulla, dal menu, dalla pagina Carriera, dalle impostazioni e su telefono la carriera resta identica (id, settimana, data, revisione, byte), con gli slot pieni la nuova carriera è bloccata e nessuno slot viene eliminato.');
+console.log('Nuova partita verificata in Chrome: la creazione è un popup sopra la homepage (inerte; la carriera in corso non è disegnata), ×, «Annulla», Escape e lo sfondo tornano al menu iniziale (un clic dentro il popup non annulla) senza creare né caricare nulla, una risposta tardiva dei dati dopo l’annullamento non riapre nulla, dal menu, dalla pagina Carriera, dalle impostazioni e su telefono la carriera resta identica (id, settimana, data, revisione, byte), con i cinque slot del giocatore pieni la carriera in corso è conservata nella sua copia automatica, la nuova parte e nessun salvataggio del giocatore viene toccato.');
