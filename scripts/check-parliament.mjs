@@ -92,12 +92,15 @@ assert.ok(renderedWizard.includes('Parti da un contesto parlamentare reale'));
 let law = store.proposeLaw({ title: 'Fondo per i servizi locali', category: 'Welfare', summary: 'Istituisce un fondo simulato per rafforzare i servizi di prossimità.' });
 // The vote in the player's own Chamber: the player calls it (the floor opens: nothing is counted yet), then casts the ballot on the open vote, and only then the count is made.
 const voteOwn = (lawId, action = 'vote', ballot = 'favorevole') => {
+  store.setHeadlessVoter(null);   // (the scripts without a page have a voter that casts at once; here the player casts by hand)
   store.advanceLaw(lawId, action);
   const pending = store.getState().parliament.laws.find(item => item.id === lawId);
   assert.ok(pending.floor && pending.stage === 'amendments' && !pending.votes.some(vote => vote.chamber === pending.currentChamber), 'Chiamato il voto, la votazione è aperta e attende il voto del giocatore: nessun esito esiste ancora.');
   const open = store.openVotes().find(item => item.lawId === lawId);
   assert.ok(open?.own && open.title === pending.title, 'La votazione aperta sulla propria proposta è tra quelle che attendono il giocatore.');
-  return store.castOpenVote(open.id, ballot);
+  const out = store.castOpenVote(open.id, ballot);
+  store.setHeadlessVoter(vote => vote.intention ?? vote.line ?? 'astenuto');
+  return out;
 };
 store.advanceLaw(law.id, 'present');
 store.advanceLaw(law.id, 'complete-commission');

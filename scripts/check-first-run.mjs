@@ -14,6 +14,7 @@ globalThis.sessionStorage = { getItem: key => session.get(key) ?? null, setItem:
 globalThis.window = { innerWidth: 1200 };
 const windowListeners = {};
 globalThis.addEventListener = (type, fn) => { (windowListeners[type] ??= []).push(fn); };
+globalThis.__testVoter = true;   // (a script that plays weeks through the store has a voter that casts the player's ballot: a person in the game always votes on the open vote)
 globalThis.document = { baseURI: 'http://localhost/', activeElement: null, documentElement: { dataset: {}, style: { setProperty() {} } }, createElement: () => ({ style: {}, dataset: {}, hidden: false, children: [], replaceChildren() {}, append() {} }), createTextNode: text => text, body: { append() {} } };
 globalThis.indexedDB = undefined;
 globalThis.confirm = () => { throw new Error('Il gioco non deve usare il confirm() del browser.'); };

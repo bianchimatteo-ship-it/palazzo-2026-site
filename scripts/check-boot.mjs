@@ -17,6 +17,7 @@ globalThis.location = { href: 'http://localhost:4173/', origin: 'http://localhos
 globalThis.indexedDB = undefined;
 const listeners = {};
 const root = { innerHTML: '', addEventListener: (type, fn) => { (listeners[type] ??= []).push(fn); }, querySelector: () => null, querySelectorAll: () => [] };
+globalThis.__testVoter = true;   // (a script that plays weeks through the store has a voter that casts the player's ballot: a person in the game always votes on the open vote)
 globalThis.document = { baseURI: 'http://localhost/', activeElement: null, querySelector: selector => selector === '#app' ? root : null, documentElement: { dataset: {}, style: { setProperty() {} } }, createElement: () => ({ style: {}, dataset: {}, hidden: false, children: [], replaceChildren() {}, append() {} }), createTextNode: text => text, body: { append() {} } };
 
 // The network: files from disk; a collection that fails (coalitions), one that arrives damaged (politicians: an

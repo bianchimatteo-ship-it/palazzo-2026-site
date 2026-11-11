@@ -13,6 +13,7 @@ const html = { dataset: {}, style: { props: {}, setProperty(name, value) { this.
 const bodyChildren = [];
 const windowListeners = {};
 globalThis.addEventListener = (type, fn) => { (windowListeners[type] ??= []).push(fn); };
+globalThis.__testVoter = true;   // (a script that plays weeks through the store has a voter that casts the player's ballot: a person in the game always votes on the open vote)
 globalThis.document = { baseURI: 'http://localhost/', activeElement: null, documentElement: html, createElement: () => ({ style: {}, dataset: {}, hidden: false, children: [], replaceChildren(...items) { this.children = items; }, append() {} }), createTextNode: text => text, body: { append: element => bodyChildren.push(element) } };
 globalThis.indexedDB = undefined;
 // Sensitive actions use the game's own confirmation dialog, never the browser's confirm().

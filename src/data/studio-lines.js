@@ -277,13 +277,13 @@ export const DEBATE_CHOICES = Object.freeze({
       salta: C(P('Lascia la parola al conduttore', 'Leave the floor to the host'), P('Non fai domande sul lavoro.', 'You ask nothing on jobs.'))
     },
     replies: {
-      fatti: C(P('Rispondi con i dati dell’occupazione', 'Answer with the employment data'), P('Smonti l’accusa con i numeri: serve preparazione.', 'You dismantle the charge with figures: preparation is needed.')),
+      fatti: C(P('Rispondi con i dati dell’occupazione', 'Answer with the employment data'), P('Smonti l’accusa con i numeri: serve preparazione.', 'You dismantle the charge with numbers: it takes preparation.')),
       calma: C(P('Resta calmo e spiega le tue scelte sul lavoro', 'Stay calm and explain your jobs choices'), P('Sobrio, ma sembri sulla difensiva.', 'Sober, but you seem defensive.')),
       contrattacco: C(P('Contrattacca sui cantieri fermi e le fabbriche chiuse', 'Counter-attack on stalled sites and closed factories'), P('Colpo su colpo: il pubblico si accende, con rischi.', 'Blow for blow: the audience warms up, with risks.')),
-      ignora: C(P('Ignora e torna ai salari', 'Ignore it and go back to wages'), P('Cambi argomento: lascia il segno all’avversario.', 'You change the subject: it leaves the mark on the rival.'))
+      ignora: C(P('Ignora e torna ai salari', 'Ignore it and go back to wages'), P('Cambi argomento: lascia il segno all’avversario.', 'You change the subject: it leaves the mark on the opponent.'))
     },
     closings: {
-      sobrio: C(P('Riassumi: lavoro stabile e imprese che assumono', 'Sum up: stable jobs and firms that hire'), P('Ringrazi e riassumi con misura.', 'You thank and sum up with measure.')),
+      sobrio: C(P('Riassumi: lavoro stabile e imprese che assumono', 'Sum up: stable jobs and firms that hire'), P('Ringrazi e riassumi con misura.', 'You thank and sum up with restraint.')),
       appello: C(P('Appello ai giovani senza contratto', 'Appeal to the young without a contract'), P('Parli al Paese: carisma e visione.', 'You speak to the country: charisma and vision.')),
       sfida: C(P('Sfida: «Dimmi quanti posti crei, con quali soldi»', 'Challenge: “Tell me how many jobs you create, with what money”'), P('Forte, ma divisivo.', 'Strong, but divisive.'))
     }
@@ -296,8 +296,8 @@ export const DEBATE_CHOICES = Object.freeze({
       attacco: C(P('Attacca i tagli ai servizi dell’avversario', 'Attack the rival’s cuts to services'), P('Premia se è debole, punisce se non sei preparato.', 'It pays if he is weak, punishes if you are unprepared.'))
     },
     asks: {
-      conti: C(P('Chiedi con quali fondi riapre gli sportelli', 'Ask with what funds he reopens the counters'), P('Mette alla prova il suo programma.', 'Tests his programme.')),
-      coerenza: C(P('Chiedi perché ha chiuso i presìdi che ora promette', 'Ask why he closed the outposts he now promises'), P('Colpisce se ha cambiato idea.', 'Hits if he has changed his mind.')),
+      conti: C(P('Chiedi con quali fondi riapre gli sportelli', 'Ask with what funds he reopens the counters'), P('Mette alla prova il suo programma.', 'It tests his programme.')),
+      coerenza: C(P('Chiedi perché ha chiuso i presìdi che ora promette', 'Ask why he closed the outposts he now promises'), P('Colpisce se ha cambiato idea.', 'It hits if he has changed his mind.')),
       passato: C(P('Ricordagli le liste d’attesa del suo mandato', 'Remind him of the waiting lists of his term'), P('Rischioso: se ricordi male, si ritorce.', 'Risky: if you remember wrongly, it backfires.')),
       salta: C(P('Lascia che sia il conduttore a chiedere sugli sportelli', 'Let the host ask about the counters'), P('Lasci il tempo al conduttore.', 'You leave the time to the host.'))
     },
@@ -321,14 +321,14 @@ export const DEBATE_CHOICES = Object.freeze({
       attacco: C(P('Attacca i cantieri sbagliati dell’avversario', 'Attack the rival’s wrong sites'), P('Premia se è impreparato.', 'It pays if he is unprepared.'))
     },
     asks: {
-      conti: C(P('Chiedi chi paga la transizione energetica', 'Ask who pays for the energy transition'), P('Mette alla prova il suo programma.', 'Tests his programme.')),
-      coerenza: C(P('Chiedi perché ha approvato quell’inceneritore', 'Ask why he approved that incinerator'), P('Colpisce se ha cambiato idea.', 'Hits if he has changed his mind.')),
+      conti: C(P('Chiedi chi paga la transizione energetica', 'Ask who pays for the energy transition'), P('Mette alla prova il suo programma.', 'It tests his programme.')),
+      coerenza: C(P('Chiedi perché ha approvato quell’inceneritore', 'Ask why he approved that incinerator'), P('Colpisce se ha cambiato idea.', 'It hits if he has changed his mind.')),
       passato: C(P('Ricordagli la frana che non ha prevenuto', 'Remind him of the landslide he did not prevent'), P('Rischioso: se ricordi male, si ritorce.', 'Risky: if you remember wrongly, it backfires.')),
       salta: C(P('Lascia al conduttore le domande sul clima', 'Leave the questions on climate to the host'), P('Lasci il tempo al conduttore.', 'You leave the time to the host.'))
     },
     replies: {
       fatti: C(P('Rispondi con i dati sulle opere concluse', 'Answer with the data on completed works'), P('Serve preparazione.', 'Preparation is needed.')),
-      calma: C(P('Resta calmo: i tempi di un cantiere non sono slogan', 'Stay calm: the times of a site are not slogans'), P('Sobrio, ma sembri sulla difensiva.', 'Sober, but you seem defensive.')),
+      calma: C(P('Resta calmo: i tempi di un cantiere non sono catchphrase', 'Stay calm: the times of a site are not catchphrases'), P('Sobrio, ma sembri sulla difensiva.', 'Sober, but you seem defensive.')),
       contrattacco: C(P('Contrattacca sul consumo di suolo', 'Counter-attack on land consumption'), P('Il pubblico si accende, con rischi.', 'The audience warms up, with risks.')),
       ignora: C(P('Ignora e torna al clima e all’energia', 'Ignore it and go back to climate and energy'), P('Cambi argomento.', 'You change the subject.'))
     },
@@ -346,8 +346,8 @@ export const DEBATE_CHOICES = Object.freeze({
       attacco: C(P('Attacca i privilegi e le promesse mancate dell’avversario', 'Attack the rival’s privileges and broken promises'), P('Premia se è debole.', 'It pays if he is weak.'))
     },
     asks: {
-      conti: C(P('Chiedi quanto costa la sua riforma', 'Ask how much his reform costs'), P('Mette alla prova il suo programma.', 'Tests his programme.')),
-      coerenza: C(P('Chiedi perché oggi chiede ciò che ha bloccato ieri', 'Ask why he now asks for what he blocked yesterday'), P('Colpisce se ha cambiato idea.', 'Hits if he has changed his mind.')),
+      conti: C(P('Chiedi quanto costa la sua riforma', 'Ask how much his reform costs'), P('Mette alla prova il suo programma.', 'It tests his programme.')),
+      coerenza: C(P('Chiedi perché oggi chiede ciò che ha bloccato ieri', 'Ask why he now asks for what he blocked yesterday'), P('Colpisce se ha cambiato idea.', 'It hits if he has changed his mind.')),
       passato: C(P('Ricordagli le inchieste sul suo partito', 'Remind him of the inquiries into his party'), P('Rischioso: se ricordi male, si ritorce.', 'Risky: if you remember wrongly, it backfires.')),
       salta: C(P('Rinuncia alla domanda: parlino gli atti', 'Give up the question: let the acts speak'), P('Lasci il tempo al conduttore.', 'You leave the time to the host.'))
     },
@@ -371,14 +371,14 @@ export const DEBATE_CHOICES = Object.freeze({
       attacco: C(P('Attacca i tagli ai reparti dell’avversario', 'Attack the rival’s cuts to wards'), P('Premia se è debole, punisce se non sei preparato.', 'It pays if he is weak, punishes if you are unprepared.'))
     },
     asks: {
-      conti: C(P('Chiedi con quali fondi assume medici e infermieri', 'Ask with what funds he hires doctors and nurses'), P('Mette alla prova il suo programma.', 'Tests his programme.')),
-      coerenza: C(P('Chiedi perché ha chiuso quell’ospedale', 'Ask why he closed that hospital'), P('Colpisce se ha cambiato idea.', 'Hits if he has changed his mind.')),
+      conti: C(P('Chiedi con quali fondi assume medici e infermieri', 'Ask with what funds he hires doctors and nurses'), P('Mette alla prova il suo programma.', 'It tests his programme.')),
+      coerenza: C(P('Chiedi perché ha chiuso quell’ospedale', 'Ask why he closed that hospital'), P('Colpisce se ha cambiato idea.', 'It hits if he has changed his mind.')),
       passato: C(P('Ricordagli i commissariamenti della sanità', 'Remind him of the health-service receiverships'), P('Rischioso: se ricordi male, si ritorce.', 'Risky: if you remember wrongly, it backfires.')),
       salta: C(P('Non incalzare: lascia spazio sulla sanità', 'Do not press: leave room on healthcare'), P('Lasci il tempo al conduttore.', 'You leave the time to the host.'))
     },
     replies: {
       fatti: C(P('Rispondi con i dati su posti letto e personale', 'Answer with the data on beds and staff'), P('Serve preparazione.', 'Preparation is needed.')),
-      calma: C(P('Resta calmo: la sanità non si governa a slogan', 'Stay calm: healthcare is not run on slogans'), P('Sobrio, ma sembri sulla difensiva.', 'Sober, but you seem defensive.')),
+      calma: C(P('Resta calmo: la sanità non si governa a catchphrase', 'Stay calm: healthcare is not run on catchphrases'), P('Sobrio, ma sembri sulla difensiva.', 'Sober, but you seem defensive.')),
       contrattacco: C(P('Contrattacca sulle convenzioni coi privati', 'Counter-attack on the agreements with private providers'), P('Il pubblico si accende, con rischi.', 'The audience warms up, with risks.')),
       ignora: C(P('Ignora e torna alla prevenzione', 'Ignore it and go back to prevention'), P('Cambi argomento.', 'You change the subject.'))
     },
@@ -396,14 +396,14 @@ export const DEBATE_CHOICES = Object.freeze({
       attacco: C(P('Attacca le promesse mancate dell’avversario sulla sicurezza', 'Attack the rival’s broken promises on safety'), P('Premia se è debole.', 'It pays if he is weak.'))
     },
     asks: {
-      conti: C(P('Chiedi con quali fondi assume agenti e vigili', 'Ask with what funds he hires officers and wardens'), P('Mette alla prova il suo programma.', 'Tests his programme.')),
-      coerenza: C(P('Chiedi perché ha tagliato i presìdi di quartiere', 'Ask why he cut the neighbourhood patrols'), P('Colpisce se ha cambiato idea.', 'Hits if he has changed his mind.')),
+      conti: C(P('Chiedi con quali fondi assume agenti e vigili', 'Ask with what funds he hires officers and wardens'), P('Mette alla prova il suo programma.', 'It tests his programme.')),
+      coerenza: C(P('Chiedi perché ha tagliato i presìdi di quartiere', 'Ask why he cut the neighbourhood patrols'), P('Colpisce se ha cambiato idea.', 'It hits if he has changed his mind.')),
       passato: C(P('Ricordagli i fatti avvenuti sotto la sua guida', 'Remind him of what happened under his leadership'), P('Rischioso: se ricordi male, si ritorce.', 'Risky: if you remember wrongly, it backfires.')),
       salta: C(P('Non fare domande: lascia al conduttore la sicurezza', 'Ask nothing: leave safety to the host'), P('Lasci il tempo al conduttore.', 'You leave the time to the host.'))
     },
     replies: {
       fatti: C(P('Rispondi con i numeri sui reati', 'Answer with the crime figures'), P('Serve preparazione.', 'Preparation is needed.')),
-      calma: C(P('Resta calmo: la sicurezza non è una gara di slogan', 'Stay calm: safety is not a slogan contest'), P('Sobrio, ma sembri sulla difensiva.', 'Sober, but you seem defensive.')),
+      calma: C(P('Resta calmo: la sicurezza non è una gara di catchphrase', 'Stay calm: safety is not a catchphrase contest'), P('Sobrio, ma sembri sulla difensiva.', 'Sober, but you seem defensive.')),
       contrattacco: C(P('Contrattacca sui rischi che ha minimizzato', 'Counter-attack on the risks he played down'), P('Il pubblico si accende, con rischi.', 'The audience warms up, with risks.')),
       ignora: C(P('Ignora e torna alla prevenzione sociale', 'Ignore it and go back to social prevention'), P('Cambi argomento.', 'You change the subject.'))
     },
@@ -421,14 +421,14 @@ export const DEBATE_CHOICES = Object.freeze({
       attacco: C(P('Attacca le tasse nascoste dell’avversario', 'Attack the rival’s hidden taxes'), P('Premia se è debole.', 'It pays if he is weak.'))
     },
     asks: {
-      conti: C(P('Chiedi dove trova i soldi per tagliare le tasse', 'Ask where he finds the money to cut taxes'), P('Mette alla prova il suo programma.', 'Tests his programme.')),
-      coerenza: C(P('Chiedi perché ha alzato le aliquote che ora vuole ridurre', 'Ask why he raised the rates he now wants to cut'), P('Colpisce se ha cambiato idea.', 'Hits if he has changed his mind.')),
-      passato: C(P('Ricordagli l’aumento delle tariffe nel suo mandato', 'Remind him of the fare increases in his term'), P('Rischioso: se ricordi male, si ritorce.', 'Risky: if you remember wrongly, it backfires.')),
+      conti: C(P('Chiedi dove trova i soldi per tagliare le tasse', 'Ask where he finds the money to cut taxes'), P('Mette alla prova il suo programma.', 'It tests his programme.')),
+      coerenza: C(P('Chiedi perché ha alzato le aliquote che ora vuole ridurre', 'Ask why he raised the rates he now wants to cut'), P('Colpisce se ha cambiato idea.', 'It hits if he has changed his mind.')),
+      passato: C(P('Ricordagli l’aumento delle tariffe nel suo mandato', 'Remind him of the ticket price rises in his term'), P('Rischioso: se ricordi male, si ritorce.', 'Risky: if you remember wrongly, it backfires.')),
       salta: C(P('Lascia al conduttore le domande sui prezzi', 'Leave the questions on prices to the host'), P('Lasci il tempo al conduttore.', 'You leave the time to the host.'))
     },
     replies: {
       fatti: C(P('Rispondi con i dati su prezzi e stipendi', 'Answer with the data on prices and salaries'), P('Serve preparazione.', 'Preparation is needed.')),
-      calma: C(P('Resta calmo: il carovita non si risolve in uno slogan', 'Stay calm: the cost of living is not solved by a slogan'), P('Sobrio, ma sembri sulla difensiva.', 'Sober, but you seem defensive.')),
+      calma: C(P('Resta calmo: il carovita non si risolve in uno catchphrase', 'Stay calm: the cost of living is not solved by a catchphrase'), P('Sobrio, ma sembri sulla difensiva.', 'Sober, but you seem defensive.')),
       contrattacco: C(P('Contrattacca sul debito che lascerebbe', 'Counter-attack on the debt he would leave'), P('Il pubblico si accende, con rischi.', 'The audience warms up, with risks.')),
       ignora: C(P('Ignora e parla del carrello della spesa', 'Ignore it and talk about the shopping basket'), P('Cambi argomento.', 'You change the subject.'))
     },
@@ -446,14 +446,14 @@ export const DEBATE_CHOICES = Object.freeze({
       attacco: C(P('Attacca i tagli alla scuola dell’avversario', 'Attack the rival’s cuts to schools'), P('Premia se è debole.', 'It pays if he is weak.'))
     },
     asks: {
-      conti: C(P('Chiedi come finanzia borse di studio e alloggi', 'Ask how he funds scholarships and housing'), P('Mette alla prova il suo programma.', 'Tests his programme.')),
-      coerenza: C(P('Chiedi perché ha bocciato quel fondo per i giovani', 'Ask why he rejected that youth fund'), P('Colpisce se ha cambiato idea.', 'Hits if he has changed his mind.')),
+      conti: C(P('Chiedi come finanzia borse di studio e alloggi', 'Ask how he funds scholarships and housing'), P('Mette alla prova il suo programma.', 'It tests his programme.')),
+      coerenza: C(P('Chiedi perché ha bocciato quel fondo per i giovani', 'Ask why he rejected that youth fund'), P('Colpisce se ha cambiato idea.', 'It hits if he has changed his mind.')),
       passato: C(P('Ricordagli le scuole chiuse nel suo mandato', 'Remind him of the schools closed in his term'), P('Rischioso: se ricordi male, si ritorce.', 'Risky: if you remember wrongly, it backfires.')),
       salta: C(P('Cedi la domanda al conduttore sulla scuola', 'Hand the question on school to the host'), P('Lasci il tempo al conduttore.', 'You leave the time to the host.'))
     },
     replies: {
       fatti: C(P('Rispondi con i dati su diplomi e primo impiego', 'Answer with the data on diplomas and first jobs'), P('Serve preparazione.', 'Preparation is needed.')),
-      calma: C(P('Resta calmo: la scuola chiede tempo, non slogan', 'Stay calm: school needs time, not slogans'), P('Sobrio, ma sembri sulla difensiva.', 'Sober, but you seem defensive.')),
+      calma: C(P('Resta calmo: la scuola chiede tempo, non catchphrase', 'Stay calm: school needs time, not catchphrases'), P('Sobrio, ma sembri sulla difensiva.', 'Sober, but you seem defensive.')),
       contrattacco: C(P('Contrattacca sulle classi pollaio', 'Counter-attack on overcrowded classes'), P('Il pubblico si accende, con rischi.', 'The audience warms up, with risks.')),
       ignora: C(P('Ignora e parla di università e tirocini', 'Ignore it and talk about university and internships'), P('Cambi argomento.', 'You change the subject.'))
     },

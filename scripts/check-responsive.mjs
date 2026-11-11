@@ -2,7 +2,6 @@
 // phone, tablet and desktop width. A page must never scroll sideways, no element may stick out of the screen (unless
 // it lives in a container that scrolls on purpose), no content may be hidden by overflow:hidden and no text may be cut
 // with an ellipsis. When Chrome is not installed the audit is skipped with a message.
-import { lineVoter } from './lib/floor.mjs';
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
@@ -172,7 +171,7 @@ try {
     ];
     let comune = L.createInstitution({ kind: 'comune', name: 'Comune di Siena', date, role: 'sindaco', side: 'maggioranza', playerGroupId: 'pd', leaderGroupId: 'pd', leaderIsPlayer: true, groups });
     let europa = L.createInstitution({ kind: 'europa', name: 'Parlamento europeo', date, role: 'eurodeputato', side: 'maggioranza', playerGroupId: 'sd', committee: 'envi', groups: L.EP_GROUPS_2024.groups.map(group => ({ ...group, side: ['epp', 'sd', 'renew'].includes(group.id) ? 'maggioranza' : 'opposizione' })) });
-    for (let week = 0; week < 5; week++) { comune = L.advanceInstitutionWeek(comune, { voter: lineVoter, date, rand }).inst; europa = L.advanceInstitutionWeek(europa, { voter: lineVoter, date, rand }).inst; }
+    for (let week = 0; week < 5; week++) { comune = L.advanceInstitutionWeek(comune, { voter: (act, line) => line, date, rand }).inst; europa = L.advanceInstitutionWeek(europa, { voter: (act, line) => line, date, rand }).inst; }
     // Their seats have people (one dot each): made here as the store makes them at the next week.
     const R = await import('/src/core/seat-roster.js?v=${version}');
     const seat = inst => { const out = R.syncRoster({ assembly: inst.id, kind: inst.kind, label: inst.name, groups: inst.groups.map(group => ({ id: group.id, label: group.label, partyId: group.partyId ?? null, seats: group.seats })), player: inst.playerGroupId ? { personId: s.career.playerId, groupId: inst.playerGroupId, partyId: s.career.partyId ?? null } : null, date: inst.since, place: { name: inst.name, region: inst.region ?? null, municipality: 'Siena' } }); s.dataset.politicians.push(...out.created); return { ...inst, roster: out.roster }; };
